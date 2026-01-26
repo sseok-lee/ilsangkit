@@ -5,6 +5,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import facilitiesRouter from './routes/facilities.js';
+import metaRouter from './routes/meta.js';
 
 const app: Application = express();
 
@@ -25,6 +26,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 // API routes
 app.use('/api/facilities', facilitiesRouter);
+app.use('/api/meta', metaRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
