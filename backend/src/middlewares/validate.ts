@@ -48,6 +48,7 @@ export function validate<T extends ZodSchema>(
 
 /**
  * 여러 소스를 동시에 검증하는 미들웨어
+ * 검증된 데이터는 res.locals.validated에 저장됩니다.
  *
  * @param schemas - 소스별 스키마 객체
  * @returns Express 미들웨어
@@ -58,7 +59,10 @@ export function validate<T extends ZodSchema>(
  *     params: FacilityDetailParamsSchema,
  *     query: PaginationSchema,
  *   }),
- *   facilityController.getDetail
+ *   (req, res, next) => {
+ *     const { params, query } = res.locals.validated;
+ *     // ...
+ *   }
  * );
  */
 export function validateMultiple(schemas: {
@@ -68,12 +72,17 @@ export function validateMultiple(schemas: {
 }) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const errors: Record<string, unknown> = {};
+    const validated: Record<string, unknown> = {};
 
     for (const [source, schema] of Object.entries(schemas)) {
       if (schema) {
         try {
           const data = schema.parse(req[source as ValidationSource]);
-          req[source as ValidationSource] = data;
+          validated[source] = data;
+          // body는 직접 할당 가능
+          if (source === 'body') {
+            req.body = data;
+          }
         } catch (error) {
           if (error instanceof ZodError) {
             errors[source] = error.flatten();
@@ -96,6 +105,9 @@ export function validateMultiple(schemas: {
       });
       return;
     }
+
+    // 검증된 데이터를 res.locals.validated에 저장
+    res.locals.validated = validated;
 
     next();
   };

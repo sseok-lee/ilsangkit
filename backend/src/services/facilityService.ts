@@ -1,9 +1,9 @@
-// @TASK T1.1, T1.2 - 시설 검색 및 상세 조회 서비스
+// @TASK T1.1, T1.2, T1.3 - 시설 검색, 상세 조회, 지역별 조회 서비스
 // @SPEC docs/planning/02-trd.md#API-설계
 
 import prisma from '../lib/prisma.js';
 import { FacilitySearchInput } from '../schemas/facility.js';
-import { Prisma } from '@prisma/client';
+import { Prisma, FacilityCategory } from '@prisma/client';
 
 // 기본 select 필드
 const FACILITY_SELECT_FIELDS = {
@@ -278,5 +278,112 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
     ...facility,
     lat: Number(facility.lat),
     lng: Number(facility.lng),
+  };
+}
+
+// @TASK T1.3 - 지역별 조회 서비스
+// @SPEC docs/planning/02-trd.md#API-설계
+
+// 지역별 조회 결과 타입
+interface RegionSearchResult {
+  region: {
+    city: string;
+    district: string;
+    bjdCode: string | null;
+  };
+  category: string;
+  items: FacilityItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+/**
+ * slug 또는 한글 지역명을 실제 지역 정보로 변환
+ * @param city - 시/도 (한글 또는 slug)
+ * @param district - 구/군 (한글 또는 slug)
+ * @returns 해결된 지역 정보
+ */
+async function resolveRegion(
+  city: string,
+  district: string
+): Promise<{ city: string; district: string; bjdCode: string | null }> {
+  // Region 테이블에서 조회 (city + district 또는 city + slug)
+  const region = await prisma.region.findFirst({
+    where: {
+      OR: [
+        { city, district },
+        { city, slug: district },
+      ],
+    },
+  });
+
+  if (region) {
+    return {
+      city: region.city,
+      district: region.district,
+      bjdCode: region.bjdCode,
+    };
+  }
+
+  // Region 테이블에 없으면 입력값 그대로 반환
+  return {
+    city,
+    district,
+    bjdCode: null,
+  };
+}
+
+/**
+ * 지역별 시설 조회
+ * @param city - 시/도 (한글 또는 slug)
+ * @param district - 구/군 (한글 또는 slug)
+ * @param category - 시설 카테고리
+ * @param options - 페이지네이션 옵션
+ * @returns 지역별 시설 목록
+ */
+export async function getByRegion(
+  city: string,
+  district: string,
+  category: string,
+  options: { page?: number; limit?: number } = {}
+): Promise<RegionSearchResult> {
+  const { page = 1, limit = 20 } = options;
+
+  // slug -> 한글 변환
+  const resolved = await resolveRegion(city, district);
+
+  const where = {
+    city: resolved.city,
+    district: resolved.district,
+    category: category as FacilityCategory,
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.facility.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { name: 'asc' },
+      select: FACILITY_SELECT_FIELDS,
+    }),
+    prisma.facility.count({ where }),
+  ]);
+
+  return {
+    region: {
+      city: resolved.city,
+      district: resolved.district,
+      bjdCode: resolved.bjdCode,
+    },
+    category,
+    items: items.map((f) => ({
+      ...f,
+      lat: Number(f.lat),
+      lng: Number(f.lng),
+    })),
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
   };
 }

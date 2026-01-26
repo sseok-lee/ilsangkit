@@ -20,6 +20,7 @@ function createMockRes(): Response {
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
+    locals: {},
   } as unknown as Response;
   return res;
 }
@@ -113,8 +114,11 @@ describe('validateMultiple middleware', () => {
       query: querySchema,
     })(req, res, mockNext);
 
-    expect(req.params).toEqual({ id: 'abc123' });
-    expect(req.query).toEqual({ page: 2 });
+    // 검증된 데이터는 res.locals.validated에 저장됨
+    expect(res.locals.validated).toEqual({
+      params: { id: 'abc123' },
+      query: { page: 2 },
+    });
     expect(mockNext).toHaveBeenCalled();
   });
 
