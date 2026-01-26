@@ -4,6 +4,7 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import facilitiesRouter from './routes/facilities.js';
 
 const app: Application = express();
 
@@ -21,6 +22,9 @@ app.get('/api/health', (_req: Request, res: Response) => {
     uptime: process.uptime(),
   });
 });
+
+// API routes
+app.use('/api/facilities', facilitiesRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
