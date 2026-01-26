@@ -1,4 +1,4 @@
-// @TASK T1.1 - 시설 검색 서비스
+// @TASK T1.1, T1.2 - 시설 검색 및 상세 조회 서비스
 // @SPEC docs/planning/02-trd.md#API-설계
 
 import prisma from '../lib/prisma.js';
@@ -196,5 +196,87 @@ async function searchWithoutLocation(options: {
     total,
     page,
     totalPages: Math.ceil(total / limit),
+  };
+}
+
+// @TASK T1.2 - 시설 상세 조회
+// @SPEC docs/planning/02-trd.md#시설-상세-조회
+
+// 상세 조회용 select 필드 (모든 필드 포함)
+const FACILITY_DETAIL_SELECT_FIELDS = {
+  id: true,
+  category: true,
+  name: true,
+  address: true,
+  roadAddress: true,
+  lat: true,
+  lng: true,
+  city: true,
+  district: true,
+  bjdCode: true,
+  details: true,
+  sourceId: true,
+  sourceUrl: true,
+  viewCount: true,
+  createdAt: true,
+  updatedAt: true,
+  syncedAt: true,
+} as const;
+
+// 상세 조회 응답 타입
+interface FacilityDetail {
+  id: string;
+  category: string;
+  name: string;
+  address: string | null;
+  roadAddress: string | null;
+  lat: number;
+  lng: number;
+  city: string;
+  district: string;
+  bjdCode: string | null;
+  details: unknown;
+  sourceId: string;
+  sourceUrl: string | null;
+  viewCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  syncedAt: Date;
+}
+
+/**
+ * 시설 상세 조회
+ * - 카테고리와 ID로 시설 조회
+ * - 조회 시 viewCount 증가 (비동기, 응답 대기 안함)
+ *
+ * @param category - 시설 카테고리
+ * @param id - 시설 ID
+ * @returns 시설 상세 정보 또는 null
+ */
+export async function getDetail(category: string, id: string): Promise<FacilityDetail | null> {
+  const facility = await prisma.facility.findFirst({
+    where: {
+      id,
+      category: category as Prisma.EnumFacilityCategoryFilter['equals'],
+    },
+    select: FACILITY_DETAIL_SELECT_FIELDS,
+  });
+
+  if (!facility) return null;
+
+  // 조회수 증가 (비동기, 응답 대기 안함)
+  prisma.facility
+    .update({
+      where: { id },
+      data: { viewCount: { increment: 1 } },
+    })
+    .catch(() => {
+      // 실패해도 무시 (로깅 추가 가능)
+    });
+
+  return {
+    ...facility,
+    lat: Number(facility.lat),
+    lng: Number(facility.lng),
   };
 }
