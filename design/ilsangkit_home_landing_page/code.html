@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>일상킷 - 생활 편의 정보</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3c83f6",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d131c] dark:text-white overflow-x-hidden transition-colors duration-200">
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-[#e7ecf4] dark:border-gray-800 bg-white/80 dark:bg-[#101722]/80 backdrop-blur-md px-6 py-4 lg:px-20">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center size-8 bg-primary rounded-lg text-white">
+<span class="material-symbols-outlined text-[20px]">explore</span>
+</div>
+<h2 class="text-[#0d131c] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">ilsangkit</h2>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-[#0d131c] dark:text-gray-300 hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">서비스 소개</a>
+<a class="text-[#0d131c] dark:text-gray-300 hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">로그인</a>
+<a class="px-5 py-2 rounded-full bg-primary text-white text-sm font-bold hover:bg-blue-600 transition-colors" href="#">회원가입</a>
+</div>
+<div class="md:hidden">
+<button class="flex items-center justify-center text-[#0d131c] dark:text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<main class="flex flex-col min-h-screen">
+<section class="relative flex flex-col items-center justify-center px-4 py-20 lg:py-32 bg-cover bg-center" data-alt="Abstract blurred city map view" style="background-image: linear-gradient(rgba(245, 247, 248, 0.85), rgba(245, 247, 248, 0.95)), url('https://lh3.googleusercontent.com/aida-public/AB6AXuAEXTHAslJBxhueU1VLrRY6Z5wpNMBj7jeQA32q9Uuu3ao6nohlYcDMkiuSh9myOufNg7kEwZahxa3UxU-RHD4b4q-eYc7rwOXxZjSvaBFKcDywDbEjIFvA66nHX8f6oEobUfxUJ4jtSO1xtyqmy0YxSa41-lMevLnLIdicS3HYzKzqjwT-8bPuX6Ehvuy3hAKAoXp23luiZpLyR-86YBxVtf9nOgRk_xZQqpyGIwPzytg_xCivbsGRZQ6H8AywZIeSRpe3HVQH04LY');">
+<div class="w-full max-w-4xl flex flex-col items-center gap-8 text-center z-10">
+<div class="space-y-4">
+<h1 class="text-4xl lg:text-6xl font-black leading-tight tracking-tight text-[#0d131c] dark:text-white">
+                        내 주변 편의 정보,<br class="md:hidden"/> 한 번에 찾기
+                    </h1>
+<p class="text-lg text-slate-500 dark:text-slate-400 font-normal">
+                        주변의 생활 정보를 한곳에서 확인하세요.
+                    </p>
+</div>
+<div class="w-full max-w-2xl relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400">search</span>
+</div>
+<input class="w-full h-14 pl-12 pr-32 rounded-full border-0 shadow-lg ring-1 ring-slate-200 dark:ring-slate-700 bg-white dark:bg-slate-800 text-[#0d131c] dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:outline-none text-base transition-all" placeholder="찾으시는 역 이름이나 동네를 입력하세요" type="text"/>
+<button class="absolute right-2 top-2 bottom-2 bg-primary hover:bg-blue-600 text-white font-bold py-1 px-6 rounded-full transition-colors">
+                        검색
+                    </button>
+</div>
+<div class="flex flex-wrap justify-center gap-3 w-full max-w-3xl mt-2">
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
+<span class="text-lg">🚻</span>
+<span class="text-sm font-bold text-purple-700 dark:text-purple-300">화장실</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
+<span class="text-lg">🗑️</span>
+<span class="text-sm font-bold text-emerald-700 dark:text-emerald-300">쓰레기</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
+<span class="text-lg">📶</span>
+<span class="text-sm font-bold text-orange-700 dark:text-orange-300">와이파이</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-pink-50 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-800 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
+<span class="text-lg">👕</span>
+<span class="text-sm font-bold text-pink-700 dark:text-pink-300">의류수거함</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
+<span class="text-lg">🔋</span>
+<span class="text-sm font-bold text-cyan-700 dark:text-cyan-300">폐건전지</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
+<span class="text-lg">🏧</span>
+<span class="text-sm font-bold text-indigo-700 dark:text-indigo-300">무인민원발급기</span>
+</button>
+</div>
+<button class="mt-6 flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:shadow-md transition-all text-slate-700 dark:text-slate-200 font-bold text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">my_location</span>
+                    현 위치로 검색
+                </button>
+</div>
+</section>
+<section class="w-full max-w-[1200px] mx-auto px-6 py-12">
+<div class="flex flex-col gap-6">
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+<div>
+<div class="flex items-baseline gap-2">
+<h3 class="text-2xl font-bold text-[#0d131c] dark:text-white">내 주변 자치구</h3>
+</div>
+<p class="text-sm text-slate-500 mt-1">주변 지역의 편의 시설을 확인해보세요.</p>
+</div>
+<button class="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-primary border border-blue-100 dark:border-blue-800 font-bold text-sm transition-all shadow-sm">
+<span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">my_location</span>
+                        내 위치 다시 감지
+                    </button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="group relative flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer">
+<div class="h-28 bg-[#e5e7eb] dark:bg-slate-700 relative overflow-hidden">
+<div class="absolute top-0 left-1/4 w-3 h-full bg-white dark:bg-slate-600/50"></div>
+<div class="absolute top-1/2 left-0 w-full h-3 bg-white dark:bg-slate-600/50 -translate-y-1/2 rotate-12 origin-center"></div>
+<div class="absolute bottom-0 right-1/4 w-2 h-full bg-white dark:bg-slate-600/50 skew-x-12"></div>
+<div class="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-2/3 group-hover:-translate-y-full transition-transform duration-500 ease-out">
+<span class="material-symbols-outlined text-4xl text-primary drop-shadow-md">location_on</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-1">
+<h4 class="text-lg font-bold text-[#0d131c] dark:text-white group-hover:text-primary transition-colors">강남구</h4>
+<span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold">1.2km</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-4">서울</p>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
+<div class="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+<span class="text-sm font-bold text-slate-700 dark:text-slate-200">642개의 시설 이용 가능</span>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer">
+<div class="h-28 bg-[#e5e7eb] dark:bg-slate-700 relative overflow-hidden">
+<div class="absolute top-0 right-1/3 w-3 h-full bg-white dark:bg-slate-600/50"></div>
+<div class="absolute top-1/3 left-0 w-full h-4 bg-white dark:bg-slate-600/50 -translate-y-1/2 -rotate-6 origin-center"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-2/3 group-hover:-translate-y-full transition-transform duration-500 ease-out">
+<span class="material-symbols-outlined text-4xl text-emerald-500 drop-shadow-md">location_on</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-1">
+<h4 class="text-lg font-bold text-[#0d131c] dark:text-white group-hover:text-primary transition-colors">서초구</h4>
+<span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold">2.5km</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-4">서울</p>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
+<div class="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">list</span>
+</div>
+<span class="text-sm font-bold text-slate-700 dark:text-slate-200">538개의 시설 이용 가능</span>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer">
+<div class="h-28 bg-[#e5e7eb] dark:bg-slate-700 relative overflow-hidden">
+<div class="absolute top-0 left-1/2 w-8 h-full bg-white dark:bg-slate-600/50 opacity-50"></div>
+<div class="absolute top-1/2 left-0 w-full h-2 bg-white dark:bg-slate-600/50"></div>
+<div class="absolute top-1/2 right-1/4 -translate-x-1/2 -translate-y-2/3 group-hover:-translate-y-full transition-transform duration-500 ease-out">
+<span class="material-symbols-outlined text-4xl text-orange-500 drop-shadow-md">location_on</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-1">
+<h4 class="text-lg font-bold text-[#0d131c] dark:text-white group-hover:text-primary transition-colors">송파구</h4>
+<span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold">3.1km</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-4">서울</p>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
+<div class="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">list</span>
+</div>
+<span class="text-sm font-bold text-slate-700 dark:text-slate-200">491개의 시설 이용 가능</span>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer">
+<div class="h-28 bg-[#e5e7eb] dark:bg-slate-700 relative overflow-hidden">
+<div class="absolute inset-0 border-4 border-white dark:border-slate-600/50 m-4 rounded-lg opacity-50"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-2/3 group-hover:-translate-y-full transition-transform duration-500 ease-out">
+<span class="material-symbols-outlined text-4xl text-purple-500 drop-shadow-md">location_on</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-1">
+<h4 class="text-lg font-bold text-[#0d131c] dark:text-white group-hover:text-primary transition-colors">용산구</h4>
+<span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold">4.2km</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-4">서울</p>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
+<div class="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">list</span>
+</div>
+<span class="text-sm font-bold text-slate-700 dark:text-slate-200">312개의 시설 이용 가능</span>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer">
+<div class="h-28 bg-[#e5e7eb] dark:bg-slate-700 relative overflow-hidden">
+<div class="absolute top-1/2 left-0 w-full h-6 bg-white dark:bg-slate-600/50 -translate-y-1/2 rotate-3"></div>
+<div class="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-2/3 group-hover:-translate-y-full transition-transform duration-500 ease-out">
+<span class="material-symbols-outlined text-4xl text-cyan-500 drop-shadow-md">location_on</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-1">
+<h4 class="text-lg font-bold text-[#0d131c] dark:text-white group-hover:text-primary transition-colors">마포구</h4>
+<span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold">5.8km</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-4">서울</p>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
+<div class="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">list</span>
+</div>
+<span class="text-sm font-bold text-slate-700 dark:text-slate-200">420개의 시설 이용 가능</span>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer">
+<div class="h-28 bg-[#e5e7eb] dark:bg-slate-700 relative overflow-hidden">
+<div class="absolute top-0 right-1/4 w-3 h-full bg-white dark:bg-slate-600/50"></div>
+<div class="absolute top-1/4 left-0 w-full h-3 bg-white dark:bg-slate-600/50"></div>
+<div class="absolute top-1/2 right-1/4 -translate-x-1/2 -translate-y-2/3 group-hover:-translate-y-full transition-transform duration-500 ease-out">
+<span class="material-symbols-outlined text-4xl text-rose-500 drop-shadow-md">location_on</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-1">
+<h4 class="text-lg font-bold text-[#0d131c] dark:text-white group-hover:text-primary transition-colors">성동구</h4>
+<span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold">6.4km</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-4">서울</p>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
+<div class="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">list</span>
+</div>
+<span class="text-sm font-bold text-slate-700 dark:text-slate-200">285개의 시설 이용 가능</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<footer class="mt-auto border-t border-[#e7ecf4] dark:border-slate-800 py-10 px-6 bg-white dark:bg-[#101722]">
+<div class="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="size-6 bg-slate-200 dark:bg-slate-700 rounded-md flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px] text-slate-500 dark:text-slate-300">explore</span>
+</div>
+<span class="text-lg font-bold text-[#0d131c] dark:text-white">ilsangkit</span>
+</div>
+<div class="flex gap-6 text-sm text-slate-500 dark:text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">개인정보처리방침</a>
+<a class="hover:text-primary transition-colors" href="#">이용약관</a>
+<a class="hover:text-primary transition-colors" href="#">고객지원</a>
+</div>
+<p class="text-sm text-slate-400">© 2024 ilsangkit Inc.</p>
+</div>
+</footer>
+</main>
+
+</body></html>

@@ -1,0 +1,113 @@
+// @TASK T0.4 - Prisma 스키마 정의
+// @SPEC docs/planning/04-database-design.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum FacilityCategory {
+  toilet
+  trash
+  wifi
+  clothes
+  battery
+  kiosk
+}
+
+enum SyncStatus {
+  running
+  success
+  failed
+}
+
+// @TASK T0.4 - 편의시설 테이블
+// @SPEC docs/planning/04-database-design.md#facility-table
+model Facility {
+  id          String           @id @db.VarChar(50)
+  category    FacilityCategory
+  name        String           @db.VarChar(200)
+  address     String?          @db.VarChar(500)
+  roadAddress String?          @db.VarChar(500)
+  lat         Decimal          @db.Decimal(10, 7)
+  lng         Decimal          @db.Decimal(10, 7)
+  city        String           @db.VarChar(50)
+  district    String           @db.VarChar(50)
+  bjdCode     String?          @db.VarChar(5)
+  details     Json?
+  sourceId    String           @db.VarChar(100)
+  sourceUrl   String?          @db.VarChar(500)
+  viewCount   Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  syncedAt    DateTime         @default(now())
+
+  @@unique([category, sourceId])
+  @@index([category, city, district])
+  @@index([lat, lng])
+  @@index([city, district])
+  @@index([bjdCode])
+}
+
+// @TASK T0.4 - 카테고리 마스터 테이블
+// @SPEC docs/planning/04-database-design.md#category-table
+model Category {
+  id          String  @id @db.VarChar(20)
+  name        String  @db.VarChar(50)
+  icon        String  @db.VarChar(10)
+  description String? @db.VarChar(200)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+}
+
+// @TASK T0.4 - 지역 마스터 테이블
+// @SPEC docs/planning/04-database-design.md#region-table
+model Region {
+  id       Int     @id @default(autoincrement())
+  bjdCode  String  @db.VarChar(5)
+  city     String  @db.VarChar(50)
+  district String  @db.VarChar(50)
+  slug     String  @db.VarChar(50)
+  lat      Decimal @db.Decimal(10, 7)
+  lng      Decimal @db.Decimal(10, 7)
+
+  @@unique([bjdCode])
+  @@unique([city, district])
+  @@unique([city, slug])
+}
+
+// @TASK T0.4 - 검색 로그 테이블
+// @SPEC docs/planning/04-database-design.md#search-log-table
+model SearchLog {
+  id          Int      @id @default(autoincrement())
+  sessionId   String   @db.VarChar(32)
+  keyword     String?  @db.VarChar(200)
+  category    String?  @db.VarChar(20)
+  city        String?  @db.VarChar(50)
+  district    String?  @db.VarChar(50)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  resultCount Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([keyword])
+}
+
+// @TASK T0.4 - 동기화 히스토리 테이블
+// @SPEC docs/planning/04-database-design.md#sync-history-table
+model SyncHistory {
+  id             Int        @id @default(autoincrement())
+  category       String     @db.VarChar(20)
+  status         SyncStatus
+  totalRecords   Int        @default(0)
+  newRecords     Int        @default(0)
+  updatedRecords Int        @default(0)
+  errorMessage   String?    @db.Text
+  startedAt      DateTime   @default(now())
+  completedAt    DateTime?
+}

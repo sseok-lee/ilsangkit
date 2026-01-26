@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ilsangkit - 검색 결과</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;family=Public+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3c83f6",
+                        "background-light": "#f8f9fc",
+                        "background-dark": "#101722",
+                        "text-main": "#0d131c",
+                        "text-sub": "#49699c",
+                        "border-light": "#e7ecf4",
+                    },
+                    fontFamily: {
+                        "display": ["Noto Sans KR", "Public Sans", "sans-serif"],
+                        "body": ["Noto Sans KR", "Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main font-display overflow-hidden h-screen flex flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-light bg-white dark:bg-[#1a202c] px-6 py-3 h-16 shrink-0 z-20 shadow-sm relative">
+<div class="flex items-center gap-8 w-full md:w-auto">
+<div class="flex items-center gap-4 text-text-main">
+<div class="size-8 text-primary">
+<span class="material-symbols-outlined !text-[32px]">location_on</span>
+</div>
+<h2 class="text-text-main dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">ilsangkit</h2>
+</div>
+<label class="hidden md:flex flex-col min-w-40 !h-10 w-[360px]">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+<div class="text-text-sub flex border-none bg-background-light dark:bg-gray-800 items-center justify-center pl-4 rounded-l-xl border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-text-main dark:text-white focus:outline-0 focus:ring-0 border-none bg-background-light dark:bg-gray-800 focus:border-none h-full placeholder:text-text-sub px-4 rounded-l-none border-l-0 pl-2 text-sm font-normal leading-normal" placeholder="화장실, 와이파이 등을 검색해보세요" value=""/>
+</div>
+</label>
+</div>
+<div class="hidden md:flex flex-1 justify-end gap-8">
+<div class="flex items-center gap-9">
+<a class="text-text-main dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">탐색</a>
+<a class="text-text-main dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">커뮤니티</a>
+<a class="text-text-main dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">마이페이지</a>
+</div>
+<div class="flex gap-2">
+<button class="flex cursor-pointer items-center justify-center overflow-hidden rounded-xl size-10 bg-background-light dark:bg-gray-800 text-text-main dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex cursor-pointer items-center justify-center overflow-hidden rounded-xl size-10 bg-background-light dark:bg-gray-800 text-text-main dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+<button class="md:hidden flex items-center justify-center size-10 text-text-main">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</header>
+<main class="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
+<div class="w-full md:w-[420px] lg:w-[480px] flex flex-col bg-white dark:bg-[#1a202c] border-r border-border-light shadow-lg z-10 shrink-0">
+<div class="flex flex-col border-b border-border-light bg-white dark:bg-[#1a202c]">
+<div class="flex gap-2 px-4 py-3 overflow-x-auto hide-scrollbar items-center">
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary text-white pl-3 pr-3 shadow-sm shadow-primary/30 transition-all hover:bg-primary/90">
+<span class="material-symbols-outlined !text-[18px]">grid_view</span>
+<p class="text-xs font-bold leading-normal">전체</p>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-background-light dark:bg-gray-800 border border-transparent hover:border-gray-300 pl-3 pr-3 transition-all group">
+<span class="material-symbols-outlined !text-[18px] text-text-sub group-hover:text-primary">wc</span>
+<p class="text-text-main dark:text-gray-200 text-xs font-medium leading-normal">화장실</p>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-background-light dark:bg-gray-800 border border-transparent hover:border-gray-300 pl-3 pr-3 transition-all group">
+<span class="material-symbols-outlined !text-[18px] text-text-sub group-hover:text-primary">wifi</span>
+<p class="text-text-main dark:text-gray-200 text-xs font-medium leading-normal">와이파이</p>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-background-light dark:bg-gray-800 border border-transparent hover:border-gray-300 pl-3 pr-3 transition-all group">
+<span class="material-symbols-outlined !text-[18px] text-text-sub group-hover:text-primary">delete</span>
+<p class="text-text-main dark:text-gray-200 text-xs font-medium leading-normal">쓰레기</p>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-background-light dark:bg-gray-800 border border-transparent hover:border-gray-300 pl-3 pr-3 transition-all group">
+<span class="material-symbols-outlined !text-[18px] text-text-sub group-hover:text-primary">schedule</span>
+<p class="text-text-main dark:text-gray-200 text-xs font-medium leading-normal">영업중</p>
+</button>
+</div>
+<div class="px-4 py-2 flex items-center justify-between border-t border-border-light/50">
+<h1 class="text-text-main dark:text-white text-base font-bold leading-tight">42개의 장소를 찾았습니다</h1>
+<div class="flex items-center gap-2">
+<label class="flex items-center gap-1 cursor-pointer">
+<span class="text-xs font-medium text-text-sub">정렬:</span>
+<select class="form-select bg-transparent border-none text-xs font-bold text-text-main dark:text-white focus:ring-0 p-0 pr-6 cursor-pointer">
+<option>거리순</option>
+<option>평점순</option>
+<option>리뷰 많은순</option>
+</select>
+</label>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto bg-background-light dark:bg-gray-900/50 p-4 space-y-3">
+<div class="flex gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-primary ring-1 ring-primary/20 cursor-pointer hover:shadow-md transition-all group relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex items-start gap-4 w-full">
+<div class="text-primary bg-primary/10 flex items-center justify-center rounded-xl shrink-0 size-12 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined">wc</span>
+</div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<div class="flex justify-between items-start">
+<p class="text-text-main dark:text-white text-base font-bold leading-tight">강남역 공중화장실</p>
+<span class="bg-primary/10 text-primary text-[11px] font-bold px-2 py-0.5 rounded-full">120m</span>
+</div>
+<div class="flex items-center gap-2 text-text-sub text-xs">
+<span class="flex items-center gap-1 text-green-600 font-medium"><span class="block size-2 rounded-full bg-green-500"></span>영업중</span>
+<span>·</span>
+<span>영업 종료 23:00</span>
+</div>
+<p class="text-text-sub text-xs font-normal leading-normal truncate w-64">서울 강남구 강남대로 123</p>
+<div class="flex gap-2 mt-2">
+<button class="flex-1 h-8 rounded-lg bg-primary text-white text-xs font-bold hover:bg-blue-600 transition-colors">길찾기</button>
+<button class="h-8 w-8 rounded-lg border border-border-light flex items-center justify-center text-text-sub hover:bg-background-light dark:hover:bg-gray-700">
+<span class="material-symbols-outlined !text-[18px]">share</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-border-light cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group">
+<div class="flex items-start gap-4 w-full">
+<div class="text-text-sub bg-background-light dark:bg-gray-700 flex items-center justify-center rounded-xl shrink-0 size-12 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">wifi</span>
+</div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<div class="flex justify-between items-start">
+<p class="text-text-main dark:text-white text-base font-bold leading-tight">스타벅스 강남R점</p>
+<span class="bg-gray-100 dark:bg-gray-700 text-text-sub text-[11px] font-bold px-2 py-0.5 rounded-full">240m</span>
+</div>
+<div class="flex items-center gap-2 text-text-sub text-xs">
+<span class="flex items-center gap-1 text-green-600 font-medium"><span class="block size-2 rounded-full bg-green-500"></span>영업중</span>
+<span>·</span>
+<span>영업 종료 22:00</span>
+</div>
+<p class="text-text-sub text-xs font-normal leading-normal truncate w-64">서울 강남대로 125</p>
+</div>
+</div>
+</div>
+<div class="flex gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-border-light cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group">
+<div class="flex items-start gap-4 w-full">
+<div class="text-text-sub bg-background-light dark:bg-gray-700 flex items-center justify-center rounded-xl shrink-0 size-12 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<div class="flex justify-between items-start">
+<p class="text-text-main dark:text-white text-base font-bold leading-tight">역삼공원 쓰레기통</p>
+<span class="bg-gray-100 dark:bg-gray-700 text-text-sub text-[11px] font-bold px-2 py-0.5 rounded-full">450m</span>
+</div>
+<div class="flex items-center gap-2 text-text-sub text-xs">
+<span class="flex items-center gap-1 text-text-sub font-medium">24시간 개방</span>
+</div>
+<p class="text-text-sub text-xs font-normal leading-normal truncate w-64">서울 역삼동</p>
+</div>
+</div>
+</div>
+<div class="flex gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-border-light cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group">
+<div class="flex items-start gap-4 w-full">
+<div class="text-text-sub bg-background-light dark:bg-gray-700 flex items-center justify-center rounded-xl shrink-0 size-12 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">wc</span>
+</div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<div class="flex justify-between items-start">
+<p class="text-text-main dark:text-white text-base font-bold leading-tight">지하철역 4번 출구</p>
+<span class="bg-gray-100 dark:bg-gray-700 text-text-sub text-[11px] font-bold px-2 py-0.5 rounded-full">510m</span>
+</div>
+<div class="flex items-center gap-2 text-text-sub text-xs">
+<span class="flex items-center gap-1 text-green-600 font-medium"><span class="block size-2 rounded-full bg-green-500"></span>영업중</span>
+<span>·</span>
+<span>영업 종료 24:00</span>
+</div>
+<p class="text-text-sub text-xs font-normal leading-normal truncate w-64">서울 테헤란로</p>
+</div>
+</div>
+</div>
+<div class="py-4 flex justify-center">
+<button class="text-sm font-bold text-primary hover:text-blue-700 flex items-center gap-1">
+                        장소 더 보기
+                        <span class="material-symbols-outlined !text-lg">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<div class="hidden md:flex flex-1 relative bg-gray-100 w-full h-full overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center grayscale opacity-80" data-alt="Map of Gangnam district showing streets and blocks" data-location="Seoul, South Korea" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAZdaUIb8Qv49rAbHqRSloAe33ShWanORQ1Gz64pTY4Wh64Gbc7XW4o7DNZAsYpDJxVW4tRYcx7uVZT7hOZgB84a78qW6diebnGKbQmRZYu6TXx_Jksg239CeC_6eUi_ddYsN4rroNzoyETbM4O_Kq9qZJ1AU0KMyMnYGRNn9Nq9yKlowjbE5XpnDCFZcF-ULK_nvUGB_mZow-s2uU7TeGQJhlqxXQ6v9fAQ3XSSc2Zbciic8DFtNpyMV7bbXz36R6m6lua_EApltCn');"></div>
+<div class="absolute inset-0 bg-blue-50/10 mix-blend-multiply"></div>
+<div class="absolute top-6 left-1/2 -translate-x-1/2 z-10">
+<button class="bg-white dark:bg-gray-800 text-text-main dark:text-white px-4 py-2 rounded-full shadow-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-50 transition-transform hover:scale-105">
+<span class="material-symbols-outlined !text-[18px] text-primary">refresh</span>
+                    이 지역 재검색
+                </button>
+</div>
+<div class="absolute top-[40%] left-[45%] z-20 flex flex-col items-center cursor-pointer group hover:-translate-y-1 transition-transform duration-200">
+<div class="relative bg-primary text-white p-3 rounded-full shadow-xl shadow-blue-500/40 border-4 border-white dark:border-gray-800">
+<span class="material-symbols-outlined block !text-[24px]">wc</span>
+</div>
+<div class="absolute bottom-full mb-3 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-xl text-center min-w-[140px] animate-fade-in-up">
+<p class="font-bold text-xs text-text-main dark:text-white">강남역 화장실</p>
+<p class="text-[10px] text-green-600 font-bold">영업중</p>
+<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white dark:bg-gray-800 rotate-45"></div>
+</div>
+<div class="w-1 h-3 bg-primary/50 mt-[-2px] rounded-full blur-[1px]"></div>
+</div>
+<div class="absolute top-[30%] left-[60%] z-10 flex flex-col items-center cursor-pointer hover:z-20 hover:-translate-y-1 transition-transform">
+<div class="bg-white dark:bg-gray-700 text-text-sub hover:text-white hover:bg-primary p-2 rounded-full shadow-md border-2 border-white dark:border-gray-800 transition-colors">
+<span class="material-symbols-outlined block !text-[20px]">wifi</span>
+</div>
+</div>
+<div class="absolute top-[65%] left-[30%] z-10 flex flex-col items-center cursor-pointer hover:z-20 hover:-translate-y-1 transition-transform">
+<div class="bg-white dark:bg-gray-700 text-text-sub hover:text-white hover:bg-primary p-2 rounded-full shadow-md border-2 border-white dark:border-gray-800 transition-colors">
+<span class="material-symbols-outlined block !text-[20px]">delete</span>
+</div>
+</div>
+<div class="absolute top-[55%] left-[70%] z-10 flex flex-col items-center cursor-pointer hover:z-20 hover:-translate-y-1 transition-transform">
+<div class="bg-white dark:bg-gray-700 text-text-sub hover:text-white hover:bg-primary p-2 rounded-full shadow-md border-2 border-white dark:border-gray-800 transition-colors">
+<span class="material-symbols-outlined block !text-[20px]">wc</span>
+</div>
+</div>
+<div class="absolute bottom-8 right-8 flex flex-col gap-2 z-10">
+<button class="bg-white dark:bg-gray-800 text-text-main dark:text-white p-2.5 rounded-xl shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+<span class="material-symbols-outlined block">my_location</span>
+</button>
+<div class="flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+<button class="text-text-main dark:text-white p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-border-light dark:border-gray-600">
+<span class="material-symbols-outlined block">add</span>
+</button>
+<button class="text-text-main dark:text-white p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700">
+<span class="material-symbols-outlined block">remove</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Simple script to inject animation keyframes for the tooltip
+        const style = document.createElement('style');
+        style.innerHTML = `
+          @keyframes fade-in-up {
+            from { opacity: 0; transform: translate(-50%, 10px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+          }
+          .animate-fade-in-up {
+            animation: fade-in-up 0.3s ease-out forwards;transform: translateX(-50%); 
+          }
+        `;
+        document.head.appendChild(style);
+    </script>
+
+</body></html>
