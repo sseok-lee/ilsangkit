@@ -312,7 +312,7 @@ flowchart TD
 
 ## M1: 백엔드 핵심 API
 
-### [ ] Phase 1, T1.1: 시설 검색 API RED→GREEN
+### [x] Phase 1, T1.1: 시설 검색 API RED→GREEN ✅
 
 **담당**: backend-specialist
 
@@ -375,16 +375,16 @@ git worktree remove ../ilsangkit-phase1-search && git branch -d phase/1-search
 ```
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨 (RED 확인)
-- [ ] 모든 테스트 통과 (GREEN)
-- [ ] 키워드 검색 동작
-- [ ] 카테고리 필터 동작
-- [ ] 위치 기반 검색 동작 (Haversine 공식)
-- [ ] 페이지네이션 동작
+- [x] 테스트 먼저 작성됨 (RED 확인)
+- [x] 모든 테스트 통과 (GREEN)
+- [x] 키워드 검색 동작
+- [x] 카테고리 필터 동작
+- [x] 위치 기반 검색 동작 (Haversine 공식)
+- [x] 페이지네이션 동작
 
 ---
 
-### [ ] Phase 1, T1.2: 시설 상세 조회 API RED→GREEN
+### [x] Phase 1, T1.2: 시설 상세 조회 API RED→GREEN ✅
 
 **담당**: backend-specialist
 
@@ -436,15 +436,15 @@ git worktree remove ../ilsangkit-phase1-detail && git branch -d phase/1-detail
 ```
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 상세 정보 반환
-- [ ] 조회수 증가
-- [ ] 존재하지 않는 ID 시 404
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] 상세 정보 반환
+- [x] 조회수 증가
+- [x] 존재하지 않는 ID 시 404
 
 ---
 
-### [ ] Phase 1, T1.3: 지역별 조회 API RED→GREEN
+### [x] Phase 1, T1.3: 지역별 조회 API RED→GREEN ✅
 
 **담당**: backend-specialist
 
@@ -496,14 +496,14 @@ git worktree remove ../ilsangkit-phase1-region && git branch -d phase/1-region
 ```
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] slug → 한글 지역명 변환
-- [ ] 페이지네이션 동작
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] slug → 한글 지역명 변환
+- [x] 페이지네이션 동작
 
 ---
 
-### [ ] Phase 1, T1.4: 메타 API RED→GREEN
+### [x] Phase 1, T1.4: 메타 API RED→GREEN ✅
 
 **담당**: backend-specialist
 
@@ -555,11 +555,11 @@ git worktree remove ../ilsangkit-phase1-meta && git branch -d phase/1-meta
 ```
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 카테고리 목록 반환 (활성화된 것만)
-- [ ] 지역 목록 반환
-- [ ] 헬스체크 응답
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] 카테고리 목록 반환 (활성화된 것만)
+- [x] 지역 목록 반환
+- [x] 헬스체크 응답
 
 ---
 
