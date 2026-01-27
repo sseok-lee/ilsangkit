@@ -35,7 +35,7 @@ router.get(
     params: RegionFacilitiesParamsSchema,
     query: RegionFacilitiesQuerySchema,
   }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const { params, query } = res.locals.validated as {
         params: { city: string; district: string; category: string };
@@ -58,16 +58,18 @@ router.get(
 router.get(
   '/:category/:id',
   validate(FacilityDetailParamsSchema, 'params'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { category, id } = req.params;
+      const category = Array.isArray(req.params.category) ? req.params.category[0] : req.params.category;
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       const facility = await facilityService.getDetail(category, id);
 
       if (!facility) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: { code: 'NOT_FOUND', message: '시설을 찾을 수 없습니다' },
         });
+        return;
       }
 
       res.json({ success: true, data: facility });
