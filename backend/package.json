@@ -22,7 +22,8 @@
 "sync:toilet": "tsx src/scripts/syncToilet.ts",
     "sync:trash": "tsx src/scripts/syncTrash.ts",
     "sync:wifi": "tsx src/scripts/syncWifi.ts",
-    "sync:clothes": "tsx src/scripts/syncClothes.ts"
+    "sync:clothes": "tsx src/scripts/syncClothes.ts",
+    "sync:battery": "tsx src/scripts/syncBattery.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
