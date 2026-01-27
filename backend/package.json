@@ -18,7 +18,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "sync:kiosk": "tsx src/scripts/syncKiosk.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
