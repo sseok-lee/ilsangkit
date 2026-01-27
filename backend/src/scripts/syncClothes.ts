@@ -3,7 +3,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma.js';
-import { fetchPublicApi, PublicApiResponse } from '../lib/publicApiClient.js';
+import { publicApiClient } from '../lib/publicApiClient.js';
 
 /**
  * 의류수거함 API 응답 아이템 인터페이스
@@ -130,7 +130,7 @@ export function transformClothesData(item: ClothesApiItem): Prisma.FacilityCreat
 /**
  * API 엔드포인트
  */
-const CLOTHES_API_ENDPOINT = '/openapi/tn_pubr_public_clothing_collect_bins_api';
+const CLOTHES_API_ENDPOINT = 'https://apis.data.go.kr/openapi/tn_pubr_public_clothing_collect_bins_api';
 
 /**
  * 의류수거함 데이터 동기화 실행
@@ -153,30 +153,13 @@ export async function syncClothesData(options: SyncOptions = {}): Promise<SyncRe
   });
 
   try {
-    let pageNo = 1;
-    let hasMore = true;
-    const allItems: ClothesApiItem[] = [];
+    // 모든 데이터 조회
+    const allItems = await publicApiClient.fetchAll<ClothesApiItem>({
+      endpoint: CLOTHES_API_ENDPOINT,
+      pageSize: numOfRows,
+    });
 
-    // 페이지네이션 처리
-    while (hasMore) {
-      const response: PublicApiResponse<ClothesApiItem> = await fetchPublicApi(
-        CLOTHES_API_ENDPOINT,
-        {
-          pageNo,
-          numOfRows,
-        }
-      );
-
-      const items = response.response.body.items || [];
-      allItems.push(...items);
-
-      result.totalRecords = response.response.body.totalCount;
-
-      // 다음 페이지 확인
-      const totalPages = Math.ceil(response.response.body.totalCount / numOfRows);
-      hasMore = pageNo < totalPages;
-      pageNo++;
-    }
+    result.totalRecords = allItems.length;
 
     // 유효한 데이터만 필터링
     const validItems = allItems.filter(isValidClothesData);
