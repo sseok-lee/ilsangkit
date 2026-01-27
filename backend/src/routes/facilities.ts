@@ -58,15 +58,14 @@ router.get(
 router.get(
   '/:category/:id',
   validate(FacilityDetailParamsSchema, 'params'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const categoryParam = req.params.category;
+const categoryParam = req.params.category;
       const idParam = req.params.id;
 
       // 배열인 경우 첫 번째 값 사용
       const category = Array.isArray(categoryParam) ? categoryParam[0] : categoryParam;
       const id = Array.isArray(idParam) ? idParam[0] : idParam;
-
       const facility = await facilityService.getDetail(category, id);
 
       if (!facility) {

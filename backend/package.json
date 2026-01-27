@@ -20,7 +20,8 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
 "sync:toilet": "tsx src/scripts/syncToilet.ts",
-    "sync:trash": "tsx src/scripts/syncTrash.ts"
+    "sync:trash": "tsx src/scripts/syncTrash.ts",
+    "sync:wifi": "tsx src/scripts/syncWifi.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
