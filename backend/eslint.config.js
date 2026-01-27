@@ -22,7 +22,7 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
-        // Node.js 18+ globals (Fetch API)
+// Node.js 18+ globals (Fetch API)
         fetch: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',

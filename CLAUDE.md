@@ -32,7 +32,7 @@ npm run db:generate      # Prisma 클라이언트 생성
 npm run db:migrate       # Prisma 마이그레이션 (development)
 npm run db:push          # Prisma 스키마 동기화 (dev only)
 npm run db:studio        # Prisma Studio GUI
-npm run sync:facilities  # 공공데이터 동기화
+npm run sync:clothes     # 의류수거함 데이터 동기화
 ```
 
 ### Frontend (from `frontend/`)
