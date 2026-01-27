@@ -811,7 +811,7 @@ cd ../ilsangkit-phase2-kiosk
 
 ---
 
-### [ ] Phase 2, T2.4: 통합 동기화 스케줄러
+### [x] Phase 2, T2.4: 통합 동기화 스케줄러 ✅
 
 **담당**: backend-specialist
 
@@ -842,10 +842,12 @@ cd ../ilsangkit-phase2-scheduler
 - `backend/package.json` (script 추가)
 
 **인수 조건**:
-- [ ] `npm run sync:facilities` 실행 성공
-- [ ] **6개 카테고리** 모두 동기화
-- [ ] 실패 시 에러 로깅
-- [ ] SyncHistory 기록 정확
+- [x] `npm run sync:facilities` 실행 성공
+- [x] **6개 카테고리** 모두 동기화
+- [x] 실패 시 에러 로깅
+- [x] SyncHistory 기록 정확
+- [x] --only, --skip 옵션 동작
+- [x] 테스트 통과 (10개)
 
 ---
 
