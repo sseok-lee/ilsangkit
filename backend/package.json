@@ -18,7 +18,9 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "sync:trash": "tsx src/scripts/syncTrash.ts",
+    "sync:trash:dry": "tsx src/scripts/syncTrash.ts --dry-run"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
