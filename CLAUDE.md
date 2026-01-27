@@ -175,14 +175,22 @@ NUXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 - **E2E**: Playwright (사용자 플로우 테스트)
 - **Coverage Target**: 80% 이상
 
-## Public Data API Integration
+## Public Data Integration
 
-### MVP 데이터
-- **공공화장실**: data.go.kr/15075531
-- **생활쓰레기 배출**: data.go.kr/15155080
-- **무료 와이파이**: data.go.kr/15013116
+### 데이터 소스 (6개 카테고리)
+
+| 카테고리 | 데이터 번호 | 제공 방식 |
+|----------|------------|----------|
+| 공공화장실 | 15012892 | **CSV 파일** |
+| 생활쓰레기 | 15155080 | Open API |
+| 무료와이파이 | 15013116 | **CSV 파일** |
+| 의류수거함 | 15139214 | Open API |
+| 폐형광등/건전지 | 15155673 | Open API |
+| 무인민원발급기 | 15154774 | Open API |
 
 ### 데이터 동기화 전략
+- **CSV 기반** (toilet, wifi): `csv-parse` + `iconv-lite`로 파싱
+- **API 기반** (trash, clothes, battery, kiosk): REST API 호출
 - 주기적 DB 동기화 (크론잡, 일 1회)
 - 증분 업데이트 지원
 

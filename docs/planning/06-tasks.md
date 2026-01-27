@@ -565,16 +565,27 @@ git worktree remove ../ilsangkit-phase1-meta && git branch -d phase/1-meta
 
 ## M2: 공공데이터 동기화
 
-### [ ] Phase 2, T2.1: 공공화장실 데이터 동기화 RED→GREEN
+### [x] Phase 2, T2.1: 공공화장실 데이터 동기화 RED→GREEN (CSV 파일) ✅
 
 **담당**: backend-specialist
 
 **의존성**: T0.4
 
+**데이터 소스**:
+- **번호**: data.go.kr/15012892
+- **형식**: CSV 파일 (REST API 아님)
+- **URL**: `https://www.localdata.go.kr/datafile/each/07_24_05_P_CSV.zip`
+
 **Git Worktree 설정**:
 ```bash
 git worktree add ../ilsangkit-phase2-toilet -b phase/2-toilet
 cd ../ilsangkit-phase2-toilet
+```
+
+**사전 작업**:
+```bash
+# CSV 파싱 라이브러리 설치
+npm install csv-parse iconv-lite
 ```
 
 **TDD 사이클**:
@@ -587,27 +598,29 @@ cd ../ilsangkit-phase2-toilet
 
 2. **GREEN**: 구현
    ```bash
-   # 구현 파일: backend/src/services/publicApiClient.ts
+   # 구현 파일: backend/src/services/csvParser.ts
    # 구현 파일: backend/src/scripts/syncToilet.ts
    npm run test -- backend/__tests__/services/toiletSync.test.ts
    ```
 
 **작업 내용**:
-- 공공화장실 API 클라이언트 (data.go.kr/15075531)
-- 데이터 변환 로직 (원본 → Facility 스키마)
+- CSV 파일 다운로드 및 압축 해제
+- CSV 파서 구현 (csv-parse + iconv-lite 인코딩 처리)
+- 데이터 변환 로직 (CSV 컬럼 → Facility 스키마)
 - 동기화 스크립트
 
 **산출물**:
 - `backend/__tests__/services/toiletSync.test.ts`
-- `backend/src/services/publicApiClient.ts`
+- `backend/src/services/csvParser.ts` (CSV 파싱 공통 모듈)
 - `backend/src/scripts/syncToilet.ts`
 
 **완료 시 자동 실행**:
 ```bash
 git add -A && git commit -m "$(cat <<'EOF'
-기능: 공공화장실 데이터 동기화
+기능: 공공화장실 데이터 동기화 (CSV 파일)
 
-- data.go.kr API 클라이언트 구현
+- CSV 파일 다운로드 및 파싱 구현
+- EUC-KR/UTF-8 인코딩 처리
 - 데이터 변환 로직 구현
 - 동기화 스크립트 작성
 
@@ -619,20 +632,27 @@ git worktree remove ../ilsangkit-phase2-toilet && git branch -d phase/2-toilet
 ```
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] API 호출 성공
-- [ ] 데이터 변환 정확
-- [ ] DB 저장 성공
-- [ ] SyncHistory 기록
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과 (14개)
+- [x] CSV 파일 다운로드 성공
+- [x] CSV 파싱 및 인코딩 처리 정확
+- [x] 데이터 변환 정확
+- [x] DB 저장 성공
+- [x] SyncHistory 기록
 
 ---
 
-### [ ] Phase 2, T2.2: 쓰레기 배출 데이터 동기화 RED→GREEN
+### [x] Phase 2, T2.2: 쓰레기 배출 데이터 동기화 RED→GREEN (Open API) ✅
 
 **담당**: backend-specialist
 
 **의존성**: T0.4
+
+**데이터 소스**:
+- **번호**: data.go.kr/15155080
+- **형식**: Open API (JSON/XML)
+- **엔드포인트**: `apis.data.go.kr/1741000/household_waste_info`
+- **⚠️ 활용신청 필요**: 승인 대기 필요
 
 **Git Worktree 설정**:
 ```bash
@@ -640,29 +660,36 @@ git worktree add ../ilsangkit-phase2-trash -b phase/2-trash
 cd ../ilsangkit-phase2-trash
 ```
 
-**TDD 사이클**: (T2.1과 동일 패턴)
+**TDD 사이클**: (REST API 호출 패턴)
 
 **작업 내용**:
-- 쓰레기 배출 API 클라이언트 (data.go.kr/15155080)
+- 쓰레기 배출 Open API 클라이언트 (axios 기반)
 - 데이터 변환 로직
 - 동기화 스크립트
 
 **산출물**:
 - `backend/__tests__/services/trashSync.test.ts`
+- `backend/src/services/publicApiClient.ts` (API 호출 공통 모듈)
 - `backend/src/scripts/syncTrash.ts`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 배출 요일/시간 정확히 저장
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과 (18개)
+- [x] API 호출 성공
+- [x] 배출 요일/시간 정확히 저장
 
 ---
 
-### [ ] Phase 2, T2.3: 무료 와이파이 데이터 동기화 RED→GREEN
+### [x] Phase 2, T2.3: 무료 와이파이 데이터 동기화 RED→GREEN (CSV 파일) ✅
 
 **담당**: backend-specialist
 
-**의존성**: T0.4
+**의존성**: T0.4, T2.1 (csvParser.ts 공유)
+
+**데이터 소스**:
+- **번호**: data.go.kr/15013116
+- **형식**: CSV 파일 (REST API 아님)
+- **URL**: `https://www.localdata.go.kr/datafile/each/07_24_04_P_CSV.zip`
 
 **Git Worktree 설정**:
 ```bash
@@ -670,11 +697,12 @@ git worktree add ../ilsangkit-phase2-wifi -b phase/2-wifi
 cd ../ilsangkit-phase2-wifi
 ```
 
-**TDD 사이클**: (T2.1과 동일 패턴)
+**TDD 사이클**: (T2.1과 동일 패턴 - CSV 파싱)
 
 **작업 내용**:
-- 무료 와이파이 API 클라이언트 (data.go.kr/15013116)
-- 데이터 변환 로직
+- CSV 파일 다운로드 및 압축 해제
+- T2.1에서 만든 csvParser.ts 재사용
+- 데이터 변환 로직 (CSV 컬럼 → Facility 스키마)
 - 동기화 스크립트
 
 **산출물**:
@@ -682,13 +710,14 @@ cd ../ilsangkit-phase2-wifi
 - `backend/src/scripts/syncWifi.ts`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] SSID 정보 정확히 저장
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과 (19개)
+- [x] CSV 파일 다운로드 및 파싱 성공
+- [x] SSID 정보 정확히 저장
 
 ---
 
-### [ ] Phase 2, T2.3.1: 의류수거함 데이터 동기화 RED→GREEN
+### [x] Phase 2, T2.3.1: 의류수거함 데이터 동기화 RED→GREEN ✅
 
 **담당**: backend-specialist
 
@@ -712,13 +741,13 @@ cd ../ilsangkit-phase2-clothes
 - `backend/src/scripts/syncClothes.ts`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 관리번호, 설치위치, 수거품목 정확히 저장
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과 (11개)
+- [x] 관리번호, 설치위치, 수거품목 정확히 저장
 
 ---
 
-### [ ] Phase 2, T2.3.2: 폐형광등/폐건전지 데이터 동기화 RED→GREEN
+### [x] Phase 2, T2.3.2: 폐형광등/폐건전지 데이터 동기화 RED→GREEN ✅
 
 **담당**: backend-specialist
 
@@ -742,13 +771,13 @@ cd ../ilsangkit-phase2-battery
 - `backend/src/scripts/syncBattery.ts`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 수거품목, 수거함수량 정확히 저장
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과 (15개)
+- [x] 수거품목, 수거함수량 정확히 저장
 
 ---
 
-### [ ] Phase 2, T2.3.3: 무인민원발급기 데이터 동기화 RED→GREEN
+### [x] Phase 2, T2.3.3: 무인민원발급기 데이터 동기화 RED→GREEN ✅
 
 **담당**: backend-specialist
 
@@ -774,11 +803,11 @@ cd ../ilsangkit-phase2-kiosk
 - `backend/src/services/geocodingService.ts`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 운영시간, 발급서류, 장애인편의시설 정확히 저장
-- [ ] 지오코딩으로 위도/경도 변환 성공
-- [ ] Rate limit 고려한 배치 처리
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과 (41개)
+- [x] 운영시간, 발급서류, 장애인편의시설 정확히 저장
+- [x] 지오코딩으로 위도/경도 변환 성공
+- [x] Rate limit 고려한 배치 처리
 
 ---
 

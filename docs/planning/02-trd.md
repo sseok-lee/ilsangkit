@@ -47,42 +47,60 @@ Internet ──────────▶│   Nginx :80     │
 
 ---
 
-## 공공데이터 API 연동
+## 공공데이터 연동
 
-### API 목록
+### 데이터 소스 목록
 
-#### 1. 공공화장실 (data.go.kr/15075531)
-- **API**: 전국공중화장실표준데이터
-- **형식**: REST API (JSON)
+| 카테고리 | 데이터 번호 | 제공 방식 | 활용신청 | 다운로드/엔드포인트 |
+|----------|------------|----------|---------|-------------------|
+| 공공화장실 | 15012892 | **CSV 파일** | 불필요 | `file.localdata.go.kr/file/public_restroom_info/info` |
+| 생활쓰레기 | 15155080 | Open API | 필요 | `apis.data.go.kr/1741000/household_waste_info` |
+| 무료와이파이 | 15013116 | **CSV 파일** | 불필요 | `file.localdata.go.kr/file/free_wifi_info/info` |
+| 의류수거함 | 15139214 | Open API | 자동승인 | `api.data.go.kr/openapi/tn_pubr_public_clothing_collect_bins_api` |
+| 폐형광등/건전지 | 15155673 | Open API | 자동승인 | `api.data.go.kr/openapi/tn_pubr_public_waste_lamp_battery_collection_box_api` |
+| 무인민원발급기 | 15154774 | Open API | 자동승인 | `apis.data.go.kr/1741000/kiosk_info/installation_info` |
+
+### 상세 정보
+
+#### 1. 공공화장실 (data.go.kr/15012892) - CSV 파일
+- **데이터셋**: 전국공중화장실표준데이터
+- **형식**: CSV 파일 다운로드 (인코딩: EUC-KR 또는 UTF-8)
+- **다운로드 URL**: `https://www.localdata.go.kr/datafile/each/07_24_05_P_CSV.zip`
 - **주요 필드**: 화장실명, 주소, 위도, 경도, 운영시간
 - **갱신 주기**: 월 1회
+- **⚠️ 특이사항**: REST API 아님, CSV 파일 파싱 필요
 
-#### 2. 생활쓰레기 배출 (data.go.kr/15155080)
+#### 2. 생활쓰레기 배출 (data.go.kr/15155080) - Open API
 - **API**: 생활폐기물 배출정보
-- **형식**: REST API (JSON)
+- **엔드포인트**: `apis.data.go.kr/1741000/household_waste_info`
+- **형식**: REST API (JSON/XML)
 - **주요 필드**: 지역, 배출요일, 배출시간, 배출장소
 - **갱신 주기**: 수시
+- **활용신청**: 필요 (승인 대기)
 
-#### 3. 무료 와이파이 (data.go.kr/15013116)
-- **API**: 전국무료와이파이표준데이터
-- **형식**: REST API (JSON)
+#### 3. 무료 와이파이 (data.go.kr/15013116) - CSV 파일
+- **데이터셋**: 전국무료와이파이표준데이터
+- **형식**: CSV 파일 다운로드
+- **다운로드 URL**: `https://www.localdata.go.kr/datafile/each/07_24_04_P_CSV.zip`
 - **주요 필드**: 설치장소명, 주소, 위도, 경도, SSID
 - **갱신 주기**: 월 1회
+- **⚠️ 특이사항**: REST API 아님, CSV 파일 파싱 필요
 
-#### 4. 의류수거함 (data.go.kr/15139214)
+#### 4. 의류수거함 (data.go.kr/15139214) - Open API
 - **API**: 전국의류수거함표준데이터
+- **엔드포인트**: `api.data.go.kr/openapi/tn_pubr_public_clothing_collect_bins_api`
 - **형식**: REST API (JSON, 자동승인)
 - **주요 필드**: 관리번호, 설치장소명, 시도명, 시군구명, 주소, 위도, 경도, 관리기관명
 - **갱신 주기**: 수시
 
-#### 5. 폐형광등/폐건전지 수거함 (data.go.kr/15155673)
+#### 5. 폐형광등/폐건전지 수거함 (data.go.kr/15155673) - Open API
 - **API**: 전국폐형광등폐건전지수거함표준데이터
 - **엔드포인트**: `api.data.go.kr/openapi/tn_pubr_public_waste_lamp_battery_collection_box_api`
 - **형식**: REST API (JSON, 자동승인)
 - **주요 필드**: 설치장소명, 세부위치내용, 시도명, 시군구명, 주소, 위도, 경도, 수거품목명, 수거함수량, 관리기관명, 관리기관전화번호
 - **갱신 주기**: 수시
 
-#### 6. 무인민원발급기 (data.go.kr/15154774)
+#### 6. 무인민원발급기 (data.go.kr/15154774) - Open API
 - **API**: 무인민원발급기정보 조회서비스
 - **엔드포인트**: `apis.data.go.kr/1741000/kiosk_info/installation_info`
 - **형식**: REST API (JSON/XML, 자동승인)
@@ -115,17 +133,33 @@ Internet ──────────▶│   Nginx :80     │
 ### 연동 전략
 
 ```
-┌──────────────────────────────────────────────┐
-│              데이터 동기화 전략                │
-├──────────────────────────────────────────────┤
-│                                              │
-│  공공데이터 API  ──(Cron 일 1회)──▶  MySQL   │
-│                                              │
-│  - 전체 데이터 주기적 동기화                   │
-│  - 증분 업데이트 (변경분만)                    │
-│  - 실패 시 재시도 로직                        │
-│                                              │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│              데이터 동기화 전략 (유형별 분리)               │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  [CSV 파일 기반] toilet, wifi                             │
+│  ─────────────────────────────────────────────           │
+│  1. fetch(CSV_URL) → 파일 다운로드                        │
+│  2. csv-parse로 파싱 (인코딩 처리)                        │
+│  3. 데이터 변환 (컬럼명 → Facility 스키마)                  │
+│  4. prisma.facility.upsert() 배치 저장                    │
+│                                                          │
+│  [Open API 기반] trash, clothes, battery, kiosk           │
+│  ─────────────────────────────────────────────           │
+│  1. axios.get(API_URL) → JSON 응답                       │
+│  2. 데이터 변환                                           │
+│  3. prisma.facility.upsert() 배치 저장                    │
+│  4. (kiosk) Kakao 지오코딩으로 좌표 변환                   │
+│                                                          │
+│  공통: Cron 일 1회 실행, 실패 시 재시도                     │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 필수 npm 의존성 (backend)
+```bash
+npm install csv-parse  # CSV 파일 파싱 (toilet, wifi)
+npm install iconv-lite # EUC-KR 인코딩 처리
 ```
 
 ---
