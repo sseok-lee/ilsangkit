@@ -1,153 +1,358 @@
-// @TASK T2.3.1 - 공공데이터 API 클라이언트 테스트
+// @TASK T2.3.3 - 공공데이터 API 클라이언트 테스트
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-describe('publicApiClient', () => {
-  const originalFetch = global.fetch;
+// Mock fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
+import { publicApiClient, type PublicApiConfig } from '../../src/lib/publicApiClient.js';
+
+describe('PublicApiClient', () => {
   beforeEach(() => {
-    vi.resetModules();
-    // 환경 변수 설정
+    vi.clearAllMocks();
     process.env.OPENAPI_SERVICE_KEY = 'test-service-key';
   });
 
-  describe('fetchPublicApi', () => {
-    it('API 엔드포인트에 올바른 파라미터로 요청해야 한다', async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('fetchPage', () => {
+    it('should fetch a single page of data', async () => {
       const mockResponse = {
         response: {
-          header: { resultCode: '00', resultMsg: 'SUCCESS' },
-          body: { items: [], totalCount: 0 },
+          header: {
+            resultCode: '00',
+            resultMsg: 'NORMAL SERVICE.',
+          },
+          body: {
+            items: [
+              { addrCtpvNm: '서울특별시', addrSggNm: '강남구' },
+              { addrCtpvNm: '서울특별시', addrSggNm: '서초구' },
+            ],
+            totalCount: 100,
+            pageNo: 1,
+            numOfRows: 2,
+          },
         },
       };
 
-      const mockFetch = vi.fn().mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
       });
-      global.fetch = mockFetch;
 
-      const { fetchPublicApi } = await import('../../src/lib/publicApiClient.js');
+      const config: PublicApiConfig = {
+        endpoint: 'https://apis.data.go.kr/1741000/kiosk_info/installation_info',
+        pageSize: 100,
+      };
 
-      await fetchPublicApi('/test/endpoint', { param1: 'value1' });
+      const result = await publicApiClient.fetchPage(config, 1);
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      const calledUrl = mockFetch.mock.calls[0][0];
-
-      expect(calledUrl).toContain('/test/endpoint');
-      expect(calledUrl).toContain('serviceKey=test-service-key');
-      expect(calledUrl).toContain('param1=value1');
-      expect(calledUrl).toContain('type=json');
-
-      global.fetch = originalFetch;
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('apis.data.go.kr'),
+        expect.anything()
+      );
+      expect(result.items).toHaveLength(2);
+      expect(result.totalCount).toBe(100);
     });
 
-    it('API 응답이 성공이 아니면 에러를 던져야 한다', async () => {
+    it('should include service key in request', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            response: {
+              header: { resultCode: '00' },
+              body: { items: [], totalCount: 0 },
+            },
+          }),
+      });
+
+      await publicApiClient.fetchPage(
+        { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+        1
+      );
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('serviceKey='),
+        expect.anything()
+      );
+    });
+
+    it('should handle API error response', async () => {
       const mockResponse = {
         response: {
-          header: { resultCode: '99', resultMsg: 'SERVICE ERROR' },
-          body: null,
+          header: {
+            resultCode: '99',
+            resultMsg: 'SERVICE ERROR',
+          },
         },
       };
 
-      const mockFetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
       });
-      global.fetch = mockFetch;
-
-      const { fetchPublicApi } = await import('../../src/lib/publicApiClient.js');
 
       await expect(
-        fetchPublicApi('/test/endpoint', {}, { maxRetries: 1, retryDelay: 0 })
+        publicApiClient.fetchPage(
+          { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+          1
+        )
       ).rejects.toThrow('SERVICE ERROR');
-
-      global.fetch = originalFetch;
     });
 
-    it('네트워크 오류 시 에러를 던져야 한다', async () => {
-      const mockFetch = vi.fn().mockRejectedValue(new Error('Network Error'));
-      global.fetch = mockFetch;
-
-      const { fetchPublicApi } = await import('../../src/lib/publicApiClient.js');
+    it('should handle network errors', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       await expect(
-        fetchPublicApi('/test/endpoint', {}, { maxRetries: 1, retryDelay: 0 })
-      ).rejects.toThrow('Network Error');
-
-      global.fetch = originalFetch;
+        publicApiClient.fetchPage(
+          { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+          1
+        )
+      ).rejects.toThrow('Network error');
     });
 
-    it('HTTP 오류 응답 시 에러를 던져야 한다', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
+    it('should handle HTTP errors', async () => {
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
       });
-      global.fetch = mockFetch;
-
-      const { fetchPublicApi } = await import('../../src/lib/publicApiClient.js');
 
       await expect(
-        fetchPublicApi('/test/endpoint', {}, { maxRetries: 1, retryDelay: 0 })
-      ).rejects.toThrow('HTTP error: 500 Internal Server Error');
-
-      global.fetch = originalFetch;
-    });
-
-    it('재시도 로직이 동작해야 한다 (3회 시도)', async () => {
-      const mockFetch = vi
-        .fn()
-        .mockRejectedValueOnce(new Error('Temporary Error'))
-        .mockRejectedValueOnce(new Error('Temporary Error'))
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              response: {
-                header: { resultCode: '00', resultMsg: 'SUCCESS' },
-                body: { items: [], totalCount: 0 },
-              },
-            }),
-        });
-      global.fetch = mockFetch;
-
-      const { fetchPublicApi } = await import('../../src/lib/publicApiClient.js');
-
-      const result = await fetchPublicApi('/test/endpoint', {}, { maxRetries: 3, retryDelay: 10 });
-
-      expect(mockFetch).toHaveBeenCalledTimes(3);
-      expect(result.response.header.resultCode).toBe('00');
-
-      global.fetch = originalFetch;
-    });
-
-    it('최대 재시도 횟수 초과 시 에러를 던져야 한다', async () => {
-      const mockFetch = vi.fn().mockRejectedValue(new Error('Persistent Error'));
-      global.fetch = mockFetch;
-
-      const { fetchPublicApi } = await import('../../src/lib/publicApiClient.js');
-
-      await expect(
-        fetchPublicApi('/test/endpoint', {}, { maxRetries: 2, retryDelay: 10 })
-      ).rejects.toThrow('Persistent Error');
-
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-
-      global.fetch = originalFetch;
+        publicApiClient.fetchPage(
+          { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+          1
+        )
+      ).rejects.toThrow();
     });
   });
 
-  describe('buildApiUrl', () => {
-    it('기본 URL과 파라미터를 조합해야 한다', async () => {
-      const { buildApiUrl } = await import('../../src/lib/publicApiClient.js');
+  describe('fetchAll', () => {
+    it('should fetch all pages of data', async () => {
+      // First page response
+      const page1Response = {
+        response: {
+          header: { resultCode: '00' },
+          body: {
+            items: [{ id: 1 }, { id: 2 }],
+            totalCount: 3,
+            pageNo: 1,
+            numOfRows: 2,
+          },
+        },
+      };
 
-      const url = buildApiUrl('/api/test', { page: 1, limit: 10 });
+      // Second page response
+      const page2Response = {
+        response: {
+          header: { resultCode: '00' },
+          body: {
+            items: [{ id: 3 }],
+            totalCount: 3,
+            pageNo: 2,
+            numOfRows: 2,
+          },
+        },
+      };
 
-      expect(url).toContain('api.data.go.kr');
-      expect(url).toContain('/api/test');
-      expect(url).toContain('page=1');
-      expect(url).toContain('limit=10');
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(page1Response),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(page2Response),
+        });
+
+      const config: PublicApiConfig = {
+        endpoint: 'https://apis.data.go.kr/test',
+        pageSize: 2,
+      };
+
+      const results = await publicApiClient.fetchAll(config);
+
+      expect(results).toHaveLength(3);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle empty response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            response: {
+              header: { resultCode: '00' },
+              body: { items: [], totalCount: 0 },
+            },
+          }),
+      });
+
+      const results = await publicApiClient.fetchAll({
+        endpoint: 'https://apis.data.go.kr/test',
+        pageSize: 100,
+      });
+
+      expect(results).toEqual([]);
+    });
+
+    it('should call onProgress callback', async () => {
+      const mockResponse = {
+        response: {
+          header: { resultCode: '00' },
+          body: {
+            items: [{ id: 1 }],
+            totalCount: 1,
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const onProgress = vi.fn();
+
+      await publicApiClient.fetchAll(
+        { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+        { onProgress }
+      );
+
+      expect(onProgress).toHaveBeenCalled();
+    });
+
+    it('should respect maxPages option', async () => {
+      const mockResponse = {
+        response: {
+          header: { resultCode: '00' },
+          body: {
+            items: Array.from({ length: 100 }, (_, i) => ({ id: i })),
+            totalCount: 1000,
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const results = await publicApiClient.fetchAll(
+        { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+        { maxPages: 2 }
+      );
+
+      expect(results).toHaveLength(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('response format handling', () => {
+    it('should handle items as array', async () => {
+      const mockResponse = {
+        response: {
+          header: { resultCode: '00' },
+          body: {
+            items: [{ id: 1 }, { id: 2 }],
+            totalCount: 2,
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await publicApiClient.fetchPage(
+        { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+        1
+      );
+
+      expect(result.items).toHaveLength(2);
+    });
+
+    it('should handle items as object with item array', async () => {
+      const mockResponse = {
+        response: {
+          header: { resultCode: '00' },
+          body: {
+            items: {
+              item: [{ id: 1 }, { id: 2 }],
+            },
+            totalCount: 2,
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await publicApiClient.fetchPage(
+        { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+        1
+      );
+
+      expect(result.items).toHaveLength(2);
+    });
+
+    it('should handle single item as object', async () => {
+      const mockResponse = {
+        response: {
+          header: { resultCode: '00' },
+          body: {
+            items: {
+              item: { id: 1 },
+            },
+            totalCount: 1,
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await publicApiClient.fetchPage(
+        { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+        1
+      );
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).toEqual({ id: 1 });
+    });
+
+    it('should handle null items', async () => {
+      const mockResponse = {
+        response: {
+          header: { resultCode: '00' },
+          body: {
+            items: null,
+            totalCount: 0,
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await publicApiClient.fetchPage(
+        { endpoint: 'https://apis.data.go.kr/test', pageSize: 100 },
+        1
+      );
+
+      expect(result.items).toEqual([]);
     });
   });
 });

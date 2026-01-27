@@ -1,106 +1,155 @@
-// @TASK T2.3.1 - 공공데이터 API 클라이언트
+// @TASK T2.3.3 - 공공데이터 API 클라이언트
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 
-const BASE_URL = 'https://api.data.go.kr';
+/**
+ * 공공데이터 API 설정
+ */
+export interface PublicApiConfig {
+  /** API 엔드포인트 URL */
+  endpoint: string;
+  /** 페이지당 데이터 수 */
+  pageSize: number;
+  /** 응답 형식 (기본값: json) */
+  responseType?: 'json' | 'xml';
+}
 
 /**
- * API 응답 인터페이스
+ * 공공데이터 API 응답 형식
  */
-export interface PublicApiResponse<T = unknown> {
+interface PublicApiResponse<T> {
   response: {
     header: {
       resultCode: string;
       resultMsg: string;
     };
     body: {
-      items: T[];
-      numOfRows: number;
-      pageNo: number;
+      items: T[] | { item: T | T[] } | null;
       totalCount: number;
+      pageNo?: number;
+      numOfRows?: number;
     };
   };
 }
 
 /**
- * 재시도 옵션
+ * 페이지 조회 결과
  */
-interface RetryOptions {
-  maxRetries?: number;
-  retryDelay?: number;
+export interface PageResult<T> {
+  items: T[];
+  totalCount: number;
+  pageNo: number;
+  numOfRows: number;
 }
 
 /**
- * 지연 함수
+ * fetchAll 옵션
  */
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export interface FetchAllOptions {
+  /** 진행 상황 콜백 */
+  onProgress?: (current: number, total: number) => void;
+  /** 최대 페이지 수 (테스트용) */
+  maxPages?: number;
+  /** 페이지 간 딜레이 (ms) */
+  delayMs?: number;
 }
 
 /**
- * API URL 빌드
- * @param endpoint - API 엔드포인트
- * @param params - 쿼리 파라미터
- * @returns 완성된 URL
+ * items 필드를 배열로 정규화
  */
-export function buildApiUrl(endpoint: string, params: Record<string, string | number> = {}): string {
-  const serviceKey = process.env.OPENAPI_SERVICE_KEY || '';
-  const url = new URL(endpoint, BASE_URL);
-
-  // 기본 파라미터
-  url.searchParams.append('serviceKey', serviceKey);
-  url.searchParams.append('type', 'json');
-
-  // 추가 파라미터
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.append(key, String(value));
+function normalizeItems<T>(items: T[] | { item: T | T[] } | null | undefined): T[] {
+  if (!items) return [];
+  if (Array.isArray(items)) return items;
+  if ('item' in items) {
+    const item = items.item;
+    return Array.isArray(item) ? item : [item];
   }
-
-  return url.toString();
+  return [];
 }
 
 /**
- * 공공데이터 API 호출
- * @param endpoint - API 엔드포인트
- * @param params - 쿼리 파라미터
- * @param options - 재시도 옵션
- * @returns API 응답
+ * 공공데이터 API 클라이언트
  */
-export async function fetchPublicApi<T = unknown>(
-  endpoint: string,
-  params: Record<string, string | number> = {},
-  options: RetryOptions = {}
-): Promise<PublicApiResponse<T>> {
-  const { maxRetries = 3, retryDelay = 1000 } = options;
-  const url = buildApiUrl(endpoint, params);
+export const publicApiClient = {
+  /**
+   * 단일 페이지 데이터 조회
+   */
+  async fetchPage<T>(config: PublicApiConfig, pageNo: number): Promise<PageResult<T>> {
+    const serviceKey = process.env.OPENAPI_SERVICE_KEY;
+    if (!serviceKey) {
+      throw new Error('OPENAPI_SERVICE_KEY environment variable is not set');
+    }
 
-  let lastError: Error = new Error('Unknown error');
+    const url = new URL(config.endpoint);
+    url.searchParams.set('serviceKey', serviceKey);
+    url.searchParams.set('pageNo', String(pageNo));
+    url.searchParams.set('numOfRows', String(config.pageSize));
+    url.searchParams.set('type', config.responseType || 'json');
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url);
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = (await response.json()) as PublicApiResponse<T>;
+
+    // API 에러 체크
+    if (data.response.header.resultCode !== '00') {
+      throw new Error(data.response.header.resultMsg);
+    }
+
+    const items = normalizeItems(data.response.body.items);
+
+    return {
+      items,
+      totalCount: data.response.body.totalCount || 0,
+      pageNo: data.response.body.pageNo || pageNo,
+      numOfRows: data.response.body.numOfRows || config.pageSize,
+    };
+  },
+
+  /**
+   * 모든 페이지 데이터 조회
+   */
+  async fetchAll<T>(config: PublicApiConfig, options: FetchAllOptions = {}): Promise<T[]> {
+    const { onProgress, maxPages, delayMs = 100 } = options;
+    const allItems: T[] = [];
+
+    // 첫 페이지 조회하여 총 개수 확인
+    const firstPage = await this.fetchPage<T>(config, 1);
+    allItems.push(...firstPage.items);
+
+    if (firstPage.totalCount === 0) {
+      return allItems;
+    }
+
+    const totalPages = Math.ceil(firstPage.totalCount / config.pageSize);
+    const pagesToFetch = maxPages ? Math.min(totalPages, maxPages) : totalPages;
+
+    if (onProgress) {
+      onProgress(1, pagesToFetch);
+    }
+
+    // 나머지 페이지 조회
+    for (let pageNo = 2; pageNo <= pagesToFetch; pageNo++) {
+      // Rate limit 대응 딜레이
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
 
-      const data = (await response.json()) as PublicApiResponse<T>;
+      const page = await this.fetchPage<T>(config, pageNo);
+      allItems.push(...page.items);
 
-      // API 응답 코드 확인
-      if (data.response.header.resultCode !== '00') {
-        throw new Error(data.response.header.resultMsg);
-      }
-
-      return data;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      // 마지막 시도가 아니면 재시도
-      if (attempt < maxRetries) {
-        await delay(retryDelay * attempt); // 지수 백오프
-        continue;
+      if (onProgress) {
+        onProgress(pageNo, pagesToFetch);
       }
     }
-  }
 
-  throw lastError;
-}
+    return allItems;
+  },
+};
