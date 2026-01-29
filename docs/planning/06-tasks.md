@@ -1107,7 +1107,7 @@ cd ../ilsangkit-phase3-region
 
 ## M4: 지도 연동
 
-### [ ] Phase 4, T4.1: Kakao Maps 연동
+### [x] Phase 4, T4.1: Kakao Maps 연동 ✅
 
 **담당**: frontend-specialist
 
@@ -1132,10 +1132,10 @@ cd ../ilsangkit-phase4-map
 - `frontend/app/composables/useKakaoMap.ts`
 
 **인수 조건**:
-- [ ] 지도 렌더링 성공
-- [ ] 마커 표시 동작
-- [ ] 마커 클릭 시 정보 창 표시
-- [ ] 카테고리별 마커 스타일 적용
+- [x] 지도 렌더링 성공
+- [x] 마커 표시 동작
+- [x] 마커 클릭 시 정보 창 표시
+- [x] 카테고리별 마커 스타일 적용
 
 ---
 
