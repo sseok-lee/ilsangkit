@@ -11,6 +11,14 @@ config.global.mocks = {
   },
 }
 
+// Stub NuxtLink component
+config.global.stubs = {
+  NuxtLink: {
+    template: '<a :href="to"><slot /></a>',
+    props: ['to'],
+  },
+}
+
 // Global test setup
 beforeEach(() => {
   // Reset any global state before each test
