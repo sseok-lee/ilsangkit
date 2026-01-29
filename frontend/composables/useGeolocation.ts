@@ -1,3 +1,5 @@
+import { ref, readonly } from 'vue'
+
 interface GeolocationPosition {
   lat: number
   lng: number

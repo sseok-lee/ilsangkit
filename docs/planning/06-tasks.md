@@ -1139,7 +1139,7 @@ cd ../ilsangkit-phase4-map
 
 ---
 
-### [ ] Phase 4, T4.2: 현재 위치 기반 검색
+### [x] Phase 4, T4.2: 현재 위치 기반 검색 ✅
 
 **담당**: frontend-specialist
 
@@ -1158,14 +1158,18 @@ cd ../ilsangkit-phase4-geolocation
 - 위치 기반 검색 연동
 
 **산출물**:
-- `frontend/app/composables/useGeolocation.ts`
+- `frontend/composables/useGeolocation.ts` (이미 구현됨)
 - `frontend/app/components/location/CurrentLocationButton.vue`
+- `frontend/tests/composables/useGeolocation.test.ts`
+- `frontend/tests/components/location/CurrentLocationButton.test.ts`
 
 **인수 조건**:
-- [ ] 위치 권한 요청 동작
-- [ ] 현재 위치 가져오기 성공
-- [ ] 위치 기반 검색 연동
-- [ ] 권한 거부 시 안내 메시지
+- [x] 위치 권한 요청 동작
+- [x] 현재 위치 가져오기 성공
+- [x] 위치 기반 검색 연동 (search.vue)
+- [x] 권한 거부 시 안내 메시지
+- [x] 모든 테스트 통과 (203개)
+- [x] 빌드 성공
 
 ---
 

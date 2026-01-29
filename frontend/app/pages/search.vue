@@ -17,7 +17,7 @@
         ⚠️ {{ error }}
       </div>
 
-      <!-- View Toggle (Mobile/Desktop) -->
+      <!-- View Toggle & Current Location (Mobile/Desktop) -->
       <div class="mb-6 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <button
@@ -43,6 +43,12 @@
             🗺️ 지도
           </button>
         </div>
+
+        <!-- Current Location Button -->
+        <CurrentLocationButton
+          @location-found="handleLocationFound"
+          @error="handleLocationError"
+        />
       </div>
 
       <!-- Main Content (Responsive Layout) -->
@@ -135,6 +141,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
+import CurrentLocationButton from '~/app/components/location/CurrentLocationButton.vue'
 import type { FacilityCategory } from '~/types/facility'
 
 const route = useRoute()
@@ -216,6 +223,26 @@ const handlePageChange = (page: number) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 
   performSearch()
+}
+
+const handleLocationFound = (position: { lat: number; lng: number }) => {
+  // 현재 위치 기반 검색
+  const params: any = {
+    lat: position.lat,
+    lng: position.lng,
+    radius: 5000, // 5km 반경
+    category: selectedCategory.value,
+    sort: selectedSort.value,
+    page: 1,
+    limit: 20,
+  }
+
+  search(params)
+}
+
+const handleLocationError = (message: string) => {
+  console.error('위치 확인 실패:', message)
+  // 에러는 CurrentLocationButton에서 표시됨
 }
 
 // Lifecycle
