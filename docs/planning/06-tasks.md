@@ -847,7 +847,7 @@ cd ../ilsangkit-phase2-scheduler
 
 ## M3: 프론트엔드 핵심 UI
 
-### [ ] Phase 3, T3.1: 레이아웃 및 공통 컴포넌트
+### [x] Phase 3, T3.1: 레이아웃 및 공통 컴포넌트 ✅
 
 **담당**: frontend-specialist
 
@@ -888,15 +888,15 @@ cd ../ilsangkit-phase3-layout
 - `frontend/app/components/common/BaseCard.vue`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] **반응형 레이아웃**: Mobile/Tablet/Desktop 브레이크포인트 동작
-- [ ] **터치 타겟**: 모든 버튼/링크 최소 44x44px
-- [ ] TailwindCSS 스타일 적용
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] **반응형 레이아웃**: Mobile/Tablet/Desktop 브레이크포인트 동작
+- [x] **터치 타겟**: 모든 버튼/링크 최소 44x44px
+- [x] TailwindCSS 스타일 적용
 
 ---
 
-### [ ] Phase 3, T3.2: 메인 페이지 RED→GREEN
+### [x] Phase 3, T3.2: 메인 페이지 RED→GREEN ✅
 
 **담당**: frontend-specialist
 
@@ -946,17 +946,17 @@ cd ../ilsangkit-phase3-main
 - `frontend/app/components/category/CategoryChips.vue`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 검색 입력 동작
-- [ ] 카테고리 선택 동작
-- [ ] 검색 시 /search 페이지 이동
-- [ ] **모바일**: 검색창 풀 너비, 카테고리 가로 스크롤
-- [ ] **데스크톱**: 검색창 중앙 정렬, 카테고리 그리드
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] 검색 입력 동작
+- [x] 카테고리 선택 동작
+- [x] 검색 시 /search 페이지 이동
+- [x] **모바일**: 검색창 풀 너비, 카테고리 가로 스크롤
+- [x] **데스크톱**: 검색창 중앙 정렬, 카테고리 그리드
 
 ---
 
-### [ ] Phase 3, T3.3: 검색 결과 페이지 RED→GREEN
+### [x] Phase 3, T3.3: 검색 결과 페이지 RED→GREEN ✅
 
 **담당**: frontend-specialist
 
@@ -1000,18 +1000,18 @@ cd ../ilsangkit-phase3-search
 - `frontend/app/composables/useFacilitySearch.ts`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 검색 결과 목록 표시
-- [ ] 필터 동작
-- [ ] 페이지네이션 동작
-- [ ] 목록/지도 토글 동작
-- [ ] **모바일**: 목록만 표시, 지도는 하단 토글 버튼으로 전환
-- [ ] **데스크톱**: 좌측 목록(400px) + 우측 지도 2컬럼 레이아웃
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] 검색 결과 목록 표시
+- [x] 필터 동작
+- [x] 페이지네이션 동작
+- [x] 목록/지도 토글 동작
+- [x] **모바일**: 목록만 표시, 지도는 하단 토글 버튼으로 전환
+- [x] **데스크톱**: 좌측 목록(400px) + 우측 지도 2컬럼 레이아웃
 
 ---
 
-### [ ] Phase 3, T3.4: 상세 페이지 RED→GREEN (카테고리별 컴포넌트)
+### [x] Phase 3, T3.4: 상세 페이지 RED→GREEN (카테고리별 컴포넌트) ✅
 
 **담당**: frontend-specialist
 
@@ -1056,18 +1056,18 @@ cd ../ilsangkit-phase3-detail
 | kiosk | weekdayOperatingHours, saturdayOperatingHours, holidayOperatingHours, availableDocuments, 장애인편의시설 |
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 5개 카테고리별 상세 정보 표시
-- [ ] null/undefined 필드 숨김 처리
-- [ ] 지도 마커 표시
-- [ ] 길찾기 링크 동작
-- [ ] **모바일**: 지도 상단 고정(180px), 정보 스크롤, 길찾기 버튼 하단 고정
-- [ ] **데스크톱**: 좌측 정보 + 우측 지도(400px) 2컬럼
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] 5개 카테고리별 상세 정보 표시
+- [x] null/undefined 필드 숨김 처리
+- [x] 지도 마커 표시
+- [x] 길찾기 링크 동작
+- [x] **모바일**: 지도 상단 고정(180px), 정보 스크롤, 길찾기 버튼 하단 고정
+- [x] **데스크톱**: 좌측 정보 + 우측 지도(400px) 2컬럼
 
 ---
 
-### [ ] Phase 3, T3.5: 지역별 페이지 RED→GREEN
+### [x] Phase 3, T3.5: 지역별 페이지 RED→GREEN ✅
 
 **담당**: frontend-specialist
 
@@ -1094,14 +1094,14 @@ cd ../ilsangkit-phase3-region
 - `frontend/app/composables/useRegionFacilities.ts`
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 지역별 시설 목록 표시
-- [ ] SEO 메타태그 적용
-- [ ] 브레드크럼 동작
-- [ ] **모바일**: 단일 컬럼 목록
-- [ ] **태블릿**: 2컬럼 그리드
-- [ ] **데스크톱**: 3컬럼 그리드
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] 지역별 시설 목록 표시
+- [x] SEO 메타태그 적용
+- [x] 브레드크럼 동작
+- [x] **모바일**: 단일 컬럼 목록
+- [x] **태블릿**: 2컬럼 그리드
+- [x] **데스크톱**: 3컬럼 그리드
 
 ---
 
