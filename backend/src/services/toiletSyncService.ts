@@ -2,7 +2,7 @@
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 
 import { prisma } from '../lib/prisma.js';
-import { parseToiletCSV, transformToiletRow, TransformedFacility } from './csvParser.js';
+import { parseToiletCSV, transformToiletRow, TransformedToilet } from './csvParser.js';
 import type { SyncStatus, SyncHistory } from '@prisma/client';
 
 // 동기화 통계 타입
@@ -55,61 +55,62 @@ export async function updateSyncHistory(
 }
 
 /**
- * 배치 단위로 Facility 데이터 upsert
+ * 배치 단위로 Toilet 데이터 upsert
  */
-async function upsertFacilities(
-  facilities: TransformedFacility[],
+async function upsertToilets(
+  toilets: TransformedToilet[],
   batchSize: number = 100
 ): Promise<{ newCount: number; updateCount: number }> {
   let newCount = 0;
   let updateCount = 0;
 
   // 배치 처리
-  for (let i = 0; i < facilities.length; i += batchSize) {
-    const batch = facilities.slice(i, i + batchSize);
+  for (let i = 0; i < toilets.length; i += batchSize) {
+    const batch = toilets.slice(i, i + batchSize);
 
     await Promise.all(
-      batch.map(async (facility) => {
+      batch.map(async (toilet) => {
         // 기존 레코드 확인
-        const existing = await prisma.facility.findUnique({
-          where: {
-            category_sourceId: {
-              category: 'toilet',
-              sourceId: facility.sourceId,
-            },
-          },
+        const existing = await prisma.toilet.findUnique({
+          where: { sourceId: toilet.sourceId },
         });
 
-        await prisma.facility.upsert({
-          where: {
-            category_sourceId: {
-              category: 'toilet',
-              sourceId: facility.sourceId,
-            },
-          },
+        await prisma.toilet.upsert({
+          where: { sourceId: toilet.sourceId },
           update: {
-            name: facility.name,
-            address: facility.address,
-            roadAddress: facility.roadAddress,
-            lat: facility.lat,
-            lng: facility.lng,
-            city: facility.city,
-            district: facility.district,
-            details: facility.details,
+            name: toilet.name,
+            address: toilet.address,
+            roadAddress: toilet.roadAddress,
+            lat: toilet.lat,
+            lng: toilet.lng,
+            city: toilet.city,
+            district: toilet.district,
+            operatingHours: toilet.operatingHours,
+            maleToilets: toilet.maleToilets,
+            maleUrinals: toilet.maleUrinals,
+            femaleToilets: toilet.femaleToilets,
+            hasDisabledToilet: toilet.hasDisabledToilet,
+            openTime: toilet.openTime,
+            managingOrg: toilet.managingOrg,
             syncedAt: new Date(),
           },
           create: {
-            id: facility.id,
-            category: 'toilet',
-            name: facility.name,
-            address: facility.address,
-            roadAddress: facility.roadAddress,
-            lat: facility.lat,
-            lng: facility.lng,
-            city: facility.city,
-            district: facility.district,
-            sourceId: facility.sourceId,
-            details: facility.details,
+            id: `toilet-${toilet.sourceId}`,
+            name: toilet.name,
+            address: toilet.address,
+            roadAddress: toilet.roadAddress,
+            lat: toilet.lat,
+            lng: toilet.lng,
+            city: toilet.city,
+            district: toilet.district,
+            sourceId: toilet.sourceId,
+            operatingHours: toilet.operatingHours,
+            maleToilets: toilet.maleToilets,
+            maleUrinals: toilet.maleUrinals,
+            femaleToilets: toilet.femaleToilets,
+            hasDisabledToilet: toilet.hasDisabledToilet,
+            openTime: toilet.openTime,
+            managingOrg: toilet.managingOrg,
           },
         });
 
@@ -122,7 +123,7 @@ async function upsertFacilities(
     );
 
     // 진행 상황 로깅
-    console.info(`Processed ${Math.min(i + batchSize, facilities.length)}/${facilities.length} records`);
+    console.info(`Processed ${Math.min(i + batchSize, toilets.length)}/${toilets.length} records`);
   }
 
   return { newCount, updateCount };
@@ -155,13 +156,13 @@ export async function syncToilets(csvFilePath: string): Promise<SyncStats> {
 
     // 3. 데이터 변환
     console.info('Transforming data...');
-    const facilities: TransformedFacility[] = [];
+    const toilets: TransformedToilet[] = [];
 
     for (const row of rows) {
       try {
-        const facility = transformToiletRow(row);
-        if (facility) {
-          facilities.push(facility);
+        const toilet = transformToiletRow(row);
+        if (toilet) {
+          toilets.push(toilet);
         } else {
           stats.skippedRecords++;
         }
@@ -172,11 +173,18 @@ export async function syncToilets(csvFilePath: string): Promise<SyncStats> {
       }
     }
 
-    console.info(`Transformed ${facilities.length} valid records, skipped ${stats.skippedRecords}`);
+    // 중복 sourceId 제거
+    const uniqueToilets = Array.from(
+      new Map(toilets.map((t) => [t.sourceId, t])).values()
+    );
+    const duplicateCount = toilets.length - uniqueToilets.length;
+    stats.skippedRecords += duplicateCount;
+
+    console.info(`Transformed ${uniqueToilets.length} unique records, skipped ${stats.skippedRecords} (including ${duplicateCount} duplicates)`);
 
     // 4. DB Upsert
     console.info('Upserting to database...');
-    const { newCount, updateCount } = await upsertFacilities(facilities);
+    const { newCount, updateCount } = await upsertToilets(uniqueToilets);
     stats.newRecords = newCount;
     stats.updatedRecords = updateCount;
 

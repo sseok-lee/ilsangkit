@@ -7,7 +7,7 @@
 │                         Facility                            │
 ├─────────────────────────────────────────────────────────────┤
 │ id            VARCHAR(50)    PK                             │
-│ category      ENUM           (toilet, trash, wifi, clothes, battery, kiosk)  │
+│ category      ENUM           (toilet, trash, wifi, clothes, kiosk)           │
 │ name          VARCHAR(200)   시설명                          │
 │ address       VARCHAR(500)   주소                            │
 │ roadAddress   VARCHAR(500)   도로명주소                       │
@@ -112,7 +112,6 @@ enum FacilityCategory {
   trash
   wifi
   clothes
-  battery
   kiosk
 }
 
@@ -328,33 +327,7 @@ model SyncHistory {
 | managementAgency | string | 관리 기관 |
 | phoneNumber | string | 연락처 |
 
-### 5. 폐형광등/폐건전지 수거함 (battery)
-
-```json
-{
-  "detailLocation": "아파트 관리사무소 앞",
-  "collectionItems": "폐형광등, 폐건전지",
-  "boxCount": 2,
-  "collectionCycle": "월 2회",
-  "locationType": "옥외",
-  "lastCollectionDate": "2024-01-15",
-  "managementAgency": "강남구청",
-  "phoneNumber": "02-1234-5678"
-}
-```
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| detailLocation | string | 상세 위치 |
-| collectionItems | string | 수거 품목 |
-| boxCount | number | 수거함 개수 |
-| collectionCycle | string | 수거 주기 |
-| locationType | string | 위치 유형 (옥내/옥외) |
-| lastCollectionDate | string | 최근 수거일 (YYYY-MM-DD) |
-| managementAgency | string | 관리 기관 |
-| phoneNumber | string | 연락처 |
-
-### 6. 무인민원발급기 (kiosk)
+### 5. 무인민원발급기 (kiosk)
 
 ```json
 {
@@ -404,8 +377,7 @@ INSERT INTO Category (id, name, icon, description, sortOrder, isActive) VALUES
 ('trash', '쓰레기 배출', '🗑️', '생활쓰레기/음식물쓰레기 배출 정보', 2, true),
 ('wifi', '무료 와이파이', '📶', '공공 무료 와이파이 위치', 3, true),
 ('clothes', '의류수거함', '👕', '전국 의류수거함 위치 정보', 4, true),
-('battery', '폐형광등/폐건전지', '🔋', '전국 폐형광등/폐건전지 수거함 위치 정보', 5, true),
-('kiosk', '무인민원발급기', '🏧', '전국 무인민원발급기 위치 및 운영시간 정보', 6, true);
+('kiosk', '무인민원발급기', '🏧', '전국 무인민원발급기 위치 및 운영시간 정보', 5, true);
 ```
 
 ### Region 초기 데이터 (서울 예시, 법정동코드 포함)

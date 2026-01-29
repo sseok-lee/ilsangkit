@@ -8,12 +8,11 @@ import prisma from '../../src/lib/prisma';
 
 describe('POST /api/facilities/search', () => {
   beforeAll(async () => {
-    // 테스트 데이터 삽입
-    await prisma.facility.createMany({
+    // 테스트 데이터 삽입 (각 테이블에 별도로)
+    await prisma.toilet.createMany({
       data: [
         {
           id: 'toilet-test-1',
-          category: 'toilet',
           name: '테스트 화장실 1',
           address: '서울시 강남구 테스트로 1',
           lat: 37.5,
@@ -24,7 +23,6 @@ describe('POST /api/facilities/search', () => {
         },
         {
           id: 'toilet-test-2',
-          category: 'toilet',
           name: '테스트 화장실 2',
           address: '서울시 강남구 테스트로 2',
           lat: 37.501,
@@ -33,9 +31,12 @@ describe('POST /api/facilities/search', () => {
           district: '강남구',
           sourceId: 'test-2',
         },
+      ],
+    });
+    await prisma.wifi.createMany({
+      data: [
         {
           id: 'wifi-test-1',
-          category: 'wifi',
           name: '테스트 와이파이',
           address: '서울시 서초구 테스트로 3',
           lat: 37.49,
@@ -49,7 +50,10 @@ describe('POST /api/facilities/search', () => {
   });
 
   afterAll(async () => {
-    await prisma.facility.deleteMany({
+    await prisma.toilet.deleteMany({
+      where: { sourceId: { startsWith: 'test-' } },
+    });
+    await prisma.wifi.deleteMany({
       where: { sourceId: { startsWith: 'test-' } },
     });
     await prisma.$disconnect();

@@ -31,12 +31,27 @@ interface PublicApiResponse<T = unknown> {
       resultMsg: string;
     };
     body: {
-      items: T[];
+      items: T[] | { item: T | T[] } | null;
       numOfRows: number;
       pageNo: number;
       totalCount: number;
+      dataType?: string;
     };
   };
+}
+
+/**
+ * items 필드를 배열로 정규화
+ * 새 API는 items: { item: [...] } 구조를 사용
+ */
+function normalizeItems<T>(items: T[] | { item: T | T[] } | null | undefined): T[] {
+  if (!items) return [];
+  if (Array.isArray(items)) return items;
+  if (typeof items === 'object' && 'item' in items) {
+    const item = items.item;
+    return Array.isArray(item) ? item : [item];
+  }
+  return [];
 }
 
 export class PublicApiClient {
@@ -83,6 +98,13 @@ export class PublicApiClient {
         }
 
         const data = (await response.json()) as PublicApiResponse<T>;
+
+        // API 에러 체크 (resultCode: "00" 또는 "0" 모두 성공)
+        const resultCode = data.response?.header?.resultCode;
+        if (resultCode && resultCode !== '00' && resultCode !== '0') {
+          throw new Error(`API Error: ${resultCode} - ${data.response.header.resultMsg}`);
+        }
+
         return data;
       } catch (error) {
         lastError = error as Error;
@@ -113,7 +135,7 @@ export class PublicApiClient {
     });
 
     totalCount = firstResponse.response.body.totalCount;
-    allItems.push(...firstResponse.response.body.items);
+    allItems.push(...normalizeItems(firstResponse.response.body.items));
     currentPage++;
 
     // 나머지 페이지 조회
@@ -125,7 +147,7 @@ export class PublicApiClient {
         numOfRows: pageSize,
       });
 
-      allItems.push(...response.response.body.items);
+      allItems.push(...normalizeItems(response.response.body.items));
       currentPage++;
     }
 

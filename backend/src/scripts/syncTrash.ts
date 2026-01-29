@@ -1,59 +1,67 @@
-// @TASK T2.2 - 쓰레기 배출 데이터 동기화 스크립트
+// @TASK T2.2 - 쓰레기 배출 일정 데이터 동기화 스크립트
 // @SPEC docs/planning/02-trd.md#데이터-동기화
+// NOTE: 쓰레기 배출 데이터는 좌표가 없어 지도 마커 표시 불가 → WasteSchedule 테이블에 저장
 
 import { PublicApiClient } from '../services/publicApiClient.js';
 import prisma from '../lib/prisma.js';
-import { FacilityCategory } from '@prisma/client';
+import crypto from 'crypto';
 
 /**
  * 공공데이터 API 응답 타입 (생활쓰레기 배출정보)
  * API: https://www.data.go.kr/data/15155080/openapi.do
+ *
+ * 실제 API 응답 필드 (대문자 + 언더스코어)
  */
 export interface TrashApiResponse {
   /** 시도명 */
-  ctpvNm: string;
+  CTPV_NM: string;
   /** 시군구명 */
-  sggNm: string;
-  /** 행정동명 */
-  adongNm: string;
-  /** 법정동코드 (5자리) */
-  ldongCd: string;
-  /** 배출장소명 */
-  dsbdPlcNm: string;
+  SGG_NM: string;
+  /** 관리구역대상지역명 */
+  MNG_ZONE_TRGT_RGN_NM?: string;
+  /** 배출장소 */
+  EMSN_PLC?: string;
+  /** 배출품목 */
+  EMSN_ITM?: string;
   /** 배출요일 */
-  dsbdWeekday: string;
-  /** 배출시작시간 */
-  dsbdBgngTm: string;
-  /** 배출종료시간 */
-  dsbdEndTm: string;
-  /** 배출순번 */
-  dsbdSrtnSn: string;
-  /** 위도 */
-  lat: string;
-  /** 경도 */
-  lot: string;
+  EMSN_DAY?: string;
+  /** 배출시간 */
+  EMSN_TIME?: string;
+  /** 배출방법 */
+  EMSN_MTH?: string;
+  /** 수거요일 */
+  CLLCT_DAY?: string;
+  /** 수거시간 */
+  CLLCT_TIME?: string;
+  /** 수거방법 */
+  CLLCT_MTH?: string;
+  /** 관리기관명 */
+  MNG_INST_NM?: string;
+  /** 관리기관전화번호 */
+  MNG_INST_TELNO?: string;
+  /** 데이터기준일자 */
+  DATA_STDR_DE?: string;
 }
 
 /**
- * Facility 모델에 저장할 데이터 타입
+ * WasteSchedule 모델에 저장할 데이터 타입
  */
-interface TransformedFacility {
-  id: string;
-  category: FacilityCategory;
-  name: string;
-  address: string | null;
-  roadAddress: string | null;
-  lat: number;
-  lng: number;
+interface TransformedWasteSchedule {
   city: string;
   district: string;
-  bjdCode: string | null;
+  targetRegion: string | null;
+  emissionPlace: string | null;
   details: {
-    neighborhood: string;
-    collectionDays: string;
-    startTime: string;
-    endTime: string;
-    serialNumber: string;
+    emissionItem?: string;
+    emissionDay?: string;
+    emissionTime?: string;
+    emissionMethod?: string;
+    collectDay?: string;
+    collectTime?: string;
+    collectMethod?: string;
+    manageInstitute?: string;
+    managePhone?: string;
+    dataStandardDate?: string;
   };
   sourceId: string;
   sourceUrl: string;
@@ -82,42 +90,45 @@ interface SyncResult {
 }
 
 /**
- * API 응답 데이터를 Facility 모델로 변환
+ * API 응답 데이터를 WasteSchedule 모델로 변환
  * @param row - API 응답 데이터
- * @returns 변환된 Facility 데이터 또는 null (유효하지 않은 경우)
+ * @returns 변환된 WasteSchedule 데이터 또는 null (유효하지 않은 경우)
  */
-export function transformTrashData(row: TrashApiResponse): TransformedFacility | null {
-  // 좌표 유효성 검사
-  const lat = parseFloat(row.lat);
-  const lng = parseFloat(row.lot);
-
-  if (!row.lat || !row.lot || isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+export function transformTrashData(row: TrashApiResponse): TransformedWasteSchedule | null {
+  // 필수 필드 검사
+  if (!row.CTPV_NM || !row.SGG_NM) {
     return null;
   }
 
-  // sourceId 생성 (법정동코드 + 배출순번)
-  const sourceId = `${row.ldongCd}-${row.dsbdSrtnSn}`;
+  // sourceId 생성 (시도+시군구+지역+장소 해시)
+  const sourceIdParts = [
+    row.CTPV_NM,
+    row.SGG_NM,
+    row.MNG_ZONE_TRGT_RGN_NM || '',
+    row.EMSN_PLC || '',
+    row.EMSN_ITM || '',
+    row.EMSN_DAY || '',
+  ].join('-');
 
-  // ID 생성 (trash 카테고리 prefix + sourceId)
-  const id = `trash-${sourceId}`;
+  // MD5 해시 생성 (중복 방지용, 32자 고정)
+  const sourceId = crypto.createHash('md5').update(sourceIdParts).digest('hex');
 
   return {
-    id,
-    category: 'trash' as FacilityCategory,
-    name: row.dsbdPlcNm || `${row.adongNm} 생활쓰레기 배출장소`,
-    address: null,
-    roadAddress: null,
-    lat,
-    lng,
-    city: row.ctpvNm,
-    district: row.sggNm,
-    bjdCode: row.ldongCd?.substring(0, 5) || null,
+    city: row.CTPV_NM,
+    district: row.SGG_NM,
+    targetRegion: row.MNG_ZONE_TRGT_RGN_NM || null,
+    emissionPlace: row.EMSN_PLC || null,
     details: {
-      neighborhood: row.adongNm || '',
-      collectionDays: row.dsbdWeekday || '',
-      startTime: row.dsbdBgngTm || '',
-      endTime: row.dsbdEndTm || '',
-      serialNumber: row.dsbdSrtnSn || '',
+      emissionItem: row.EMSN_ITM,
+      emissionDay: row.EMSN_DAY,
+      emissionTime: row.EMSN_TIME,
+      emissionMethod: row.EMSN_MTH,
+      collectDay: row.CLLCT_DAY,
+      collectTime: row.CLLCT_TIME,
+      collectMethod: row.CLLCT_MTH,
+      manageInstitute: row.MNG_INST_NM,
+      managePhone: row.MNG_INST_TELNO,
+      dataStandardDate: row.DATA_STDR_DE,
     },
     sourceId,
     sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',
@@ -125,7 +136,7 @@ export function transformTrashData(row: TrashApiResponse): TransformedFacility |
 }
 
 /**
- * 쓰레기 배출 데이터 동기화 실행
+ * 쓰레기 배출 일정 데이터 동기화 실행
  * @param options - 동기화 옵션
  * @returns 동기화 결과
  */
@@ -142,7 +153,7 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
   // SyncHistory 생성
   const syncHistory = await prisma.syncHistory.create({
     data: {
-      category: 'trash',
+      category: 'waste_schedule',
       status: 'running',
     },
   });
@@ -150,7 +161,7 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
   try {
     // API 클라이언트 생성
     const client = new PublicApiClient(
-      'https://apis.data.go.kr/1741000/household_waste_info',
+      'https://apis.data.go.kr/1741000/household_waste_info/info',
       serviceKey,
       { maxRetries: 3, retryDelay: 1000 }
     );
@@ -173,9 +184,10 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
 
       if (!dryRun) {
         // 기존 데이터 존재 여부 확인
-        const existingCount = await prisma.facility.count({
+        const existingCount = await prisma.wasteSchedule.count({
           where: {
-            category: 'trash',
+            city: transformed.city,
+            district: transformed.district,
             sourceId: transformed.sourceId,
           },
         });
@@ -187,10 +199,11 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
         }
 
         // Upsert 실행
-        await prisma.facility.upsert({
+        await prisma.wasteSchedule.upsert({
           where: {
-            category_sourceId: {
-              category: 'trash',
+            city_district_sourceId: {
+              city: transformed.city,
+              district: transformed.district,
               sourceId: transformed.sourceId,
             },
           },
@@ -199,12 +212,8 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
             syncedAt: new Date(),
           },
           update: {
-            name: transformed.name,
-            lat: transformed.lat,
-            lng: transformed.lng,
-            city: transformed.city,
-            district: transformed.district,
-            bjdCode: transformed.bjdCode,
+            targetRegion: transformed.targetRegion,
+            emissionPlace: transformed.emissionPlace,
             details: transformed.details,
             syncedAt: new Date(),
           },

@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 describe('syncAll CLI 옵션 파싱', () => {
   it('--only 옵션으로 특정 카테고리만 선택', () => {
     const args = ['--only', 'toilet,wifi'];
-    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'battery', 'kiosk'];
+    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk'];
 
     // --only 옵션 처리
     const onlyIndex = args.indexOf('--only');
@@ -25,7 +25,7 @@ describe('syncAll CLI 옵션 파싱', () => {
 
   it('--skip 옵션으로 특정 카테고리 제외', () => {
     const args = ['--skip', 'kiosk'];
-    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'battery', 'kiosk'];
+    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk'];
 
     // --skip 옵션 처리
     const skipIndex = args.indexOf('--skip');
@@ -36,12 +36,12 @@ describe('syncAll CLI 옵션 파싱', () => {
       categoriesToSync = categoriesToSync.filter(c => !skipCategories.includes(c));
     }
 
-    expect(categoriesToSync).toEqual(['toilet', 'trash', 'wifi', 'clothes', 'battery']);
+    expect(categoriesToSync).toEqual(['toilet', 'trash', 'wifi', 'clothes']);
   });
 
   it('--only와 --skip 혼용 시 --only 우선', () => {
     const args = ['--only', 'toilet,wifi,trash', '--skip', 'wifi'];
-    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'battery', 'kiosk'];
+    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk'];
 
     let categoriesToSync = [...allCategories];
 
@@ -73,7 +73,6 @@ describe('syncAll 결과 집계', () => {
       { category: 'trash', success: true, duration: 2000 },
       { category: 'wifi', success: false, error: 'Network error', duration: 500 },
       { category: 'clothes', success: true, duration: 1500 },
-      { category: 'battery', success: false, error: 'API key missing', duration: 100 },
       { category: 'kiosk', success: true, duration: 3000 },
     ];
 
@@ -81,7 +80,7 @@ describe('syncAll 결과 집계', () => {
     const failed = results.filter(r => !r.success).length;
 
     expect(success).toBe(4);
-    expect(failed).toBe(2);
+    expect(failed).toBe(1);
   });
 
   it('실패한 카테고리 목록 추출', () => {

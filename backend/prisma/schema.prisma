@@ -10,47 +10,135 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum FacilityCategory {
-  toilet
-  trash
-  wifi
-  clothes
-  battery
-  kiosk
-}
-
 enum SyncStatus {
   running
   success
   failed
 }
 
-// @TASK T0.4 - 편의시설 테이블
-// @SPEC docs/planning/04-database-design.md#facility-table
-model Facility {
-  id          String           @id @db.VarChar(50)
-  category    FacilityCategory
-  name        String           @db.VarChar(200)
-  address     String?          @db.VarChar(500)
-  roadAddress String?          @db.VarChar(500)
-  lat         Decimal          @db.Decimal(10, 7)
-  lng         Decimal          @db.Decimal(10, 7)
-  city        String           @db.VarChar(50)
-  district    String           @db.VarChar(50)
-  bjdCode     String?          @db.VarChar(5)
-  details     Json?
-  sourceId    String           @db.VarChar(100)
-  sourceUrl   String?          @db.VarChar(500)
-  viewCount   Int              @default(0)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  syncedAt    DateTime         @default(now())
+// @TASK T0.4 - 공공화장실 테이블
+model Toilet {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
 
-  @@unique([category, sourceId])
-  @@index([category, city, district])
-  @@index([lat, lng])
+  // 화장실 전용 필드
+  operatingHours    String?  @db.VarChar(200)
+  maleToilets       Int      @default(0)
+  maleUrinals       Int      @default(0)
+  femaleToilets     Int      @default(0)
+  hasDisabledToilet Boolean  @default(false)
+  openTime          String?  @db.VarChar(100)
+  managingOrg       String?  @db.VarChar(200)
+
   @@index([city, district])
-  @@index([bjdCode])
+  @@index([lat, lng])
+}
+
+// @TASK T0.4 - 무료와이파이 테이블
+model Wifi {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // 와이파이 전용 필드
+  ssid             String?  @db.VarChar(100)
+  installDate      String?  @db.VarChar(50)
+  serviceProvider  String?  @db.VarChar(100)
+  installLocation  String?  @db.VarChar(200)
+  managementAgency String?  @db.VarChar(200)
+  phoneNumber      String?  @db.VarChar(50)
+
+  @@index([city, district])
+  @@index([lat, lng])
+}
+
+// @TASK T0.4 - 의류수거함 테이블
+model Clothes {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // 의류수거함 전용 필드
+  managementAgency String?  @db.VarChar(200)
+  phoneNumber      String?  @db.VarChar(50)
+  dataDate         String?  @db.VarChar(50)
+  detailLocation   String?  @db.VarChar(500)
+
+  @@index([city, district])
+  @@index([lat, lng])
+}
+
+// @TASK T0.4 - 무인민원발급기 테이블
+model Kiosk {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // 무인민원발급기 전용 필드
+  detailLocation         String?  @db.VarChar(500)
+  operationAgency        String?  @db.VarChar(200)
+  weekdayOperatingHours  String?  @db.VarChar(100)
+  saturdayOperatingHours String?  @db.VarChar(100)
+  holidayOperatingHours  String?  @db.VarChar(100)
+  blindKeypad            Boolean  @default(false)
+  voiceGuide             Boolean  @default(false)
+  brailleOutput          Boolean  @default(false)
+  wheelchairAccessible   Boolean  @default(false)
+  mngNo                  String?  @db.VarChar(50)  // 관리번호 (API 연결키)
+  availableDocuments     Json?                     // 발급 가능 민원 목록
+
+  @@index([city, district])
+  @@index([lat, lng])
+  @@index([mngNo])
 }
 
 // @TASK T0.4 - 카테고리 마스터 테이블
@@ -110,4 +198,23 @@ model SyncHistory {
   errorMessage   String?    @db.Text
   startedAt      DateTime   @default(now())
   completedAt    DateTime?
+}
+
+// 쓰레기 배출 일정 테이블 (좌표 없음 - 지도 마커 X)
+// API: https://www.data.go.kr/data/15155080/openapi.do
+model WasteSchedule {
+  id            Int      @id @default(autoincrement())
+  city          String   @db.VarChar(50)  // 시도명 (CTPV_NM)
+  district      String   @db.VarChar(50)  // 시군구명 (SGG_NM)
+  targetRegion  String?  @db.Text // 관리구역대상지역명 (MNG_ZONE_TRGT_RGN_NM)
+  emissionPlace String?  @db.VarChar(100) // 배출장소 (EMSN_PLC)
+  details       Json?                     // 기타 상세 정보 (배출요일, 시간 등)
+  sourceId      String   @db.VarChar(100) // 원본 데이터 ID
+  sourceUrl     String?  @db.VarChar(500) // 데이터 출처
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  @@unique([city, district, sourceId])
+  @@index([city, district])
 }

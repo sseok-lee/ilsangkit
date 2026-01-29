@@ -8,8 +8,11 @@ import prisma from '../../src/lib/prisma';
 
 describe('GET /api/facilities/region/:city/:district/:category', () => {
   beforeAll(async () => {
-    // 기존 테스트 데이터 정리
-    await prisma.facility.deleteMany({
+    // 기존 테스트 데이터 정리 (각 테이블별로)
+    await prisma.toilet.deleteMany({
+      where: { sourceId: { startsWith: 'region-' } },
+    });
+    await prisma.wifi.deleteMany({
       where: { sourceId: { startsWith: 'region-' } },
     });
     await prisma.region.deleteMany({
@@ -39,12 +42,11 @@ describe('GET /api/facilities/region/:city/:district/:category', () => {
       },
     });
 
-    // Facility 테스트 데이터 삽입
-    await prisma.facility.createMany({
+    // Toilet 테스트 데이터 삽입
+    await prisma.toilet.createMany({
       data: [
         {
           id: 'region-test-1',
-          category: 'toilet',
           name: '테스트구 화장실 1',
           address: '테스트시 테스트구 테스트로 1',
           lat: 37.5,
@@ -55,7 +57,6 @@ describe('GET /api/facilities/region/:city/:district/:category', () => {
         },
         {
           id: 'region-test-2',
-          category: 'toilet',
           name: '테스트구 화장실 2',
           address: '테스트시 테스트구 테스트로 2',
           lat: 37.501,
@@ -64,9 +65,14 @@ describe('GET /api/facilities/region/:city/:district/:category', () => {
           district: '테스트구',
           sourceId: 'region-2',
         },
+      ],
+    });
+
+    // Wifi 테스트 데이터 삽입
+    await prisma.wifi.createMany({
+      data: [
         {
           id: 'region-test-3',
-          category: 'wifi',
           name: '테스트2구 와이파이',
           address: '테스트시 테스트2구 테스트로 3',
           lat: 37.49,
@@ -80,7 +86,10 @@ describe('GET /api/facilities/region/:city/:district/:category', () => {
   });
 
   afterAll(async () => {
-    await prisma.facility.deleteMany({
+    await prisma.toilet.deleteMany({
+      where: { sourceId: { startsWith: 'region-' } },
+    });
+    await prisma.wifi.deleteMany({
       where: { sourceId: { startsWith: 'region-' } },
     });
     await prisma.region.deleteMany({

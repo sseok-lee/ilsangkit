@@ -443,7 +443,6 @@ Mobile (기본)     Tablet (sm/md)      Desktop (lg/xl)
 --trash:   #10b981;   /* 초록 - 쓰레기 배출 */
 --wifi:    #f59e0b;   /* 주황 - 와이파이 */
 --clothes: #ec4899;   /* 핑크 - 의류수거함 */
---battery: #06b6d4;   /* 시안 - 폐형광등/폐건전지 */
 --kiosk:   #6366f1;   /* 인디고 - 무인민원발급기 */
 ```
 
@@ -657,7 +656,6 @@ font-family:
 .marker-trash   { border: 2px solid #10b981; }
 .marker-wifi    { border: 2px solid #f59e0b; }
 .marker-clothes { border: 2px solid #ec4899; }
-.marker-battery { border: 2px solid #06b6d4; }
 .marker-kiosk   { border: 2px solid #6366f1; }
 
 .marker-selected {
@@ -732,7 +730,6 @@ xl: 1280px  /* 데스크톱 */
 | 쓰레기 배출 | 🗑️ | 쓰레기통 | #10b981 (초록) |
 | 와이파이 | 📶 | 와이파이 | #f59e0b (주황) |
 | 의류수거함 | 👕 | 의류 | #ec4899 (핑크) |
-| 폐형광등/폐건전지 | 🔋 | 배터리 | #06b6d4 (시안) |
 | 무인민원발급기 | 🏧 | 키오스크 | #6366f1 (인디고) |
 
 ### UI 아이콘 (Heroicons)
@@ -903,7 +900,6 @@ export function useDetailFields(details: Record<string, unknown>) {
 .detail-header-trash   { border-left: 4px solid #10b981; }
 .detail-header-wifi    { border-left: 4px solid #f59e0b; }
 .detail-header-clothes { border-left: 4px solid #ec4899; }
-.detail-header-battery { border-left: 4px solid #06b6d4; }
 .detail-header-kiosk   { border-left: 4px solid #6366f1; }
 ```
 
@@ -956,7 +952,6 @@ module.exports = {
         trash: '#10b981',
         wifi: '#f59e0b',
         clothes: '#ec4899',
-        battery: '#06b6d4',
         kiosk: '#6366f1',
       },
       fontFamily: {

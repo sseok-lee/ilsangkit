@@ -1,7 +1,8 @@
 // @TASK T0.5.1 - 시설 관련 타입 정의
 // @SPEC docs/planning/02-trd.md#facility-types
 
-import { FacilityCategory } from '@prisma/client';
+// 시설 카테고리 (지도 마커 표시 가능한 시설만)
+export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk';
 
 /**
  * 시설 기본 정보

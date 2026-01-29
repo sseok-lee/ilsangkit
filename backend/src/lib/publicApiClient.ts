@@ -98,9 +98,13 @@ export const publicApiClient = {
 
     const data = (await response.json()) as PublicApiResponse<T>;
 
-    // API 에러 체크
-    if (data.response.header.resultCode !== '00') {
-      throw new Error(data.response.header.resultMsg);
+    // API 에러 체크 (00: 정상, 03: 데이터 없음도 허용)
+    const successCodes = ['00', '03'];
+    if (!successCodes.includes(data.response.header.resultCode)) {
+      // resultMsg가 "정상"인 경우도 성공으로 처리
+      if (data.response.header.resultMsg !== '정상') {
+        throw new Error(data.response.header.resultMsg);
+      }
     }
 
     const items = normalizeItems(data.response.body.items);
@@ -128,7 +132,10 @@ export const publicApiClient = {
       return allItems;
     }
 
-    const totalPages = Math.ceil(firstPage.totalCount / config.pageSize);
+    // API가 요청한 pageSize를 무시하고 최대 100개만 반환하는 경우가 있음
+    // 실제 응답의 numOfRows를 사용하여 정확한 페이지 수 계산
+    const actualPageSize = firstPage.numOfRows || config.pageSize;
+    const totalPages = Math.ceil(firstPage.totalCount / actualPageSize);
     const pagesToFetch = maxPages ? Math.min(totalPages, maxPages) : totalPages;
 
     if (onProgress) {

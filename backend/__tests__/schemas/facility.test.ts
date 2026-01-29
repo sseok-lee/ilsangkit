@@ -12,7 +12,8 @@ import {
 
 describe('FacilityCategorySchema', () => {
   it('유효한 카테고리를 파싱해야 한다', () => {
-    const categories = ['toilet', 'trash', 'wifi', 'clothes', 'battery', 'kiosk'];
+    // trash는 좌표 없는 일정 데이터로 WasteSchedule 별도 테이블에서 관리 (지도 마커 X)
+    const categories = ['toilet', 'wifi', 'clothes', 'kiosk'];
     categories.forEach((cat) => {
       expect(FacilityCategorySchema.parse(cat)).toBe(cat);
     });

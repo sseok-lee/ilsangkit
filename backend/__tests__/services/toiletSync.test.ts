@@ -12,8 +12,9 @@ import * as iconv from 'iconv-lite';
 // Mock Prisma
 vi.mock('../../src/lib/prisma', () => ({
   prisma: {
-    facility: {
+    toilet: {
       upsert: vi.fn(),
+      findUnique: vi.fn(),
       count: vi.fn(),
     },
     syncHistory: {
@@ -21,7 +22,7 @@ vi.mock('../../src/lib/prisma', () => ({
       update: vi.fn(),
     },
     $transaction: vi.fn((callback) => callback({
-      facility: {
+      toilet: {
         upsert: vi.fn(),
       },
     })),
@@ -39,8 +40,8 @@ describe('CSV Parser - parseToiletCSV', () => {
     }
 
     // UTF-8 sample CSV
-    const csvContent = `화장실명,소재지도로명주소,소재지지번주소,위도,경도,운영시간상세,남성용-대변기수,남성용-소변기수,여성용-대변기수,장애인용대변기유무,개방시간,관리기관명
-테스트화장실,서울특별시 강남구 테헤란로 123,서울특별시 강남구 역삼동 123,37.5012345,127.0367890,24시간,2,3,3,Y,상시개방,강남구청`;
+    const csvContent = `화장실명,소재지도로명주소,소재지지번주소,WGS84위도,WGS84경도,개방시간상세,남성용-대변기수,남성용-소변기수,여성용-대변기수,남성용-장애인용대변기수,개방시간,관리기관명
+테스트화장실,서울특별시 강남구 테헤란로 123,서울특별시 강남구 역삼동 123,37.5012345,127.0367890,24시간,2,3,3,1,상시개방,강남구청`;
 
     fs.writeFileSync(sampleCSVPath, csvContent, 'utf8');
   });
@@ -58,8 +59,8 @@ describe('CSV Parser - parseToiletCSV', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]['화장실명']).toBe('테스트화장실');
     expect(rows[0]['소재지도로명주소']).toBe('서울특별시 강남구 테헤란로 123');
-    expect(rows[0]['위도']).toBe('37.5012345');
-    expect(rows[0]['경도']).toBe('127.0367890');
+    expect(rows[0]['WGS84위도']).toBe('37.5012345');
+    expect(rows[0]['WGS84경도']).toBe('127.0367890');
   });
 
   it('should handle empty CSV gracefully', async () => {
@@ -74,7 +75,7 @@ describe('CSV Parser - parseToiletCSV', () => {
 
   it('should skip rows with missing required fields', async () => {
     const invalidCSVPath = path.join(__dirname, '../fixtures/invalid-toilet.csv');
-    const csvContent = `화장실명,소재지도로명주소,소재지지번주소,위도,경도,운영시간상세
+    const csvContent = `화장실명,소재지도로명주소,소재지지번주소,WGS84위도,WGS84경도,개방시간상세
 테스트화장실,서울특별시 강남구 테헤란로 123,,37.5012345,127.0367890,24시간
 ,,,,,,`;
 
@@ -87,7 +88,7 @@ describe('CSV Parser - parseToiletCSV', () => {
 
   it('should parse EUC-KR encoded CSV file correctly', async () => {
     const eucKrCSVPath = path.join(__dirname, '../fixtures/euckr-toilet.csv');
-    const csvContent = `화장실명,소재지도로명주소,소재지지번주소,위도,경도,운영시간상세
+    const csvContent = `화장실명,소재지도로명주소,소재지지번주소,WGS84위도,WGS84경도,개방시간상세
 부산역화장실,부산광역시 동구 중앙대로 206,부산광역시 동구 초량동 1191,35.1149975,129.0396538,24시간`;
 
     // EUC-KR로 인코딩하여 저장
@@ -105,41 +106,40 @@ describe('CSV Parser - parseToiletCSV', () => {
 });
 
 describe('CSV Parser - transformToiletRow', () => {
-  it('should transform CSV row to Facility format', () => {
+  it('should transform CSV row to Toilet format', () => {
     const row: ToiletCSVRow = {
       '화장실명': '강남역 지하화장실',
       '소재지도로명주소': '서울특별시 강남구 강남대로 396',
       '소재지지번주소': '서울특별시 강남구 역삼동 858',
-      '위도': '37.4979517',
-      '경도': '127.0276188',
-      '운영시간상세': '06:00~23:00',
+      'WGS84위도': '37.4979517',
+      'WGS84경도': '127.0276188',
+      '개방시간상세': '06:00~23:00',
       '남성용-대변기수': '3',
       '남성용-소변기수': '5',
       '여성용-대변기수': '4',
-      '장애인용대변기유무': 'Y',
+      '남성용-장애인용대변기수': '1',
       '개방시간': '06:00~23:00',
       '관리기관명': '강남구청',
     };
 
-    const facility = transformToiletRow(row);
+    const toilet = transformToiletRow(row);
 
-    expect(facility.category).toBe('toilet');
-    expect(facility.name).toBe('강남역 지하화장실');
-    expect(facility.roadAddress).toBe('서울특별시 강남구 강남대로 396');
-    expect(facility.address).toBe('서울특별시 강남구 역삼동 858');
-    expect(facility.lat).toBeCloseTo(37.4979517, 6);
-    expect(facility.lng).toBeCloseTo(127.0276188, 6);
-    expect(facility.city).toBe('서울특별시');
-    expect(facility.district).toBe('강남구');
-    expect(facility.details).toEqual({
-      operatingHours: '06:00~23:00',
-      maleToilets: 3,
-      maleUrinals: 5,
-      femaleToilets: 4,
-      hasDisabledToilet: true,
-      openTime: '06:00~23:00',
-      managingOrg: '강남구청',
-    });
+    expect(toilet).not.toBeNull();
+    expect(toilet!.name).toBe('강남역 지하화장실');
+    expect(toilet!.roadAddress).toBe('서울특별시 강남구 강남대로 396');
+    expect(toilet!.address).toBe('서울특별시 강남구 역삼동 858');
+    expect(toilet!.lat).toBeCloseTo(37.4979517, 6);
+    expect(toilet!.lng).toBeCloseTo(127.0276188, 6);
+    expect(toilet!.city).toBe('서울특별시');
+    expect(toilet!.district).toBe('강남구');
+    // Toilet 전용 필드
+    expect(toilet!.operatingHours).toBe('06:00~23:00');
+    expect(toilet!.maleToilets).toBe(3);
+    expect(toilet!.maleUrinals).toBe(5);
+    expect(toilet!.femaleToilets).toBe(4);
+    expect(toilet!.hasDisabledToilet).toBe(true);
+    expect(toilet!.openTime).toBe('06:00~23:00');
+    expect(toilet!.managingOrg).toBe('강남구청');
   });
 
   it('should generate unique sourceId from row data', () => {
@@ -147,15 +147,16 @@ describe('CSV Parser - transformToiletRow', () => {
       '화장실명': '테스트화장실',
       '소재지도로명주소': '',
       '소재지지번주소': '서울특별시 강남구 역삼동 123',
-      '위도': '37.5012345',
-      '경도': '127.0367890',
-      '운영시간상세': '24시간',
+      'WGS84위도': '37.5012345',
+      'WGS84경도': '127.0367890',
+      '개방시간상세': '24시간',
     };
 
-    const facility = transformToiletRow(row);
+    const toilet = transformToiletRow(row);
 
-    expect(facility.sourceId).toBeDefined();
-    expect(facility.sourceId.length).toBeGreaterThan(0);
+    expect(toilet).not.toBeNull();
+    expect(toilet!.sourceId).toBeDefined();
+    expect(toilet!.sourceId.length).toBeGreaterThan(0);
   });
 
   it('should use jibun address when road address is empty', () => {
@@ -163,16 +164,17 @@ describe('CSV Parser - transformToiletRow', () => {
       '화장실명': '테스트화장실',
       '소재지도로명주소': '',
       '소재지지번주소': '서울특별시 강남구 역삼동 123',
-      '위도': '37.5012345',
-      '경도': '127.0367890',
-      '운영시간상세': '24시간',
+      'WGS84위도': '37.5012345',
+      'WGS84경도': '127.0367890',
+      '개방시간상세': '24시간',
     };
 
-    const facility = transformToiletRow(row);
+    const toilet = transformToiletRow(row);
 
-    expect(facility.address).toBe('서울특별시 강남구 역삼동 123');
-    expect(facility.city).toBe('서울특별시');
-    expect(facility.district).toBe('강남구');
+    expect(toilet).not.toBeNull();
+    expect(toilet!.address).toBe('서울특별시 강남구 역삼동 123');
+    expect(toilet!.city).toBe('서울특별시');
+    expect(toilet!.district).toBe('강남구');
   });
 
   it('should handle missing optional fields gracefully', () => {
@@ -180,16 +182,17 @@ describe('CSV Parser - transformToiletRow', () => {
       '화장실명': '최소화장실',
       '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
       '소재지지번주소': '',
-      '위도': '37.5',
-      '경도': '127.0',
-      '운영시간상세': '',
+      'WGS84위도': '37.5',
+      'WGS84경도': '127.0',
+      '개방시간상세': '',
     };
 
-    const facility = transformToiletRow(row);
+    const toilet = transformToiletRow(row);
 
-    expect(facility.name).toBe('최소화장실');
-    expect(facility.details.operatingHours).toBe('');
-    expect(facility.details.maleToilets).toBe(0);
+    expect(toilet).not.toBeNull();
+    expect(toilet!.name).toBe('최소화장실');
+    expect(toilet!.operatingHours).toBe('');
+    expect(toilet!.maleToilets).toBe(0);
   });
 
   it('should return null for rows with invalid coordinates', () => {
@@ -197,14 +200,14 @@ describe('CSV Parser - transformToiletRow', () => {
       '화장실명': '잘못된화장실',
       '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
       '소재지지번주소': '',
-      '위도': 'invalid',
-      '경도': '127.0',
-      '운영시간상세': '',
+      'WGS84위도': 'invalid',
+      'WGS84경도': '127.0',
+      '개방시간상세': '',
     };
 
-    const facility = transformToiletRow(row);
+    const toilet = transformToiletRow(row);
 
-    expect(facility).toBeNull();
+    expect(toilet).toBeNull();
   });
 
   it('should return null for rows without name', () => {
@@ -212,14 +215,14 @@ describe('CSV Parser - transformToiletRow', () => {
       '화장실명': '',
       '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
       '소재지지번주소': '',
-      '위도': '37.5',
-      '경도': '127.0',
-      '운영시간상세': '',
+      'WGS84위도': '37.5',
+      'WGS84경도': '127.0',
+      '개방시간상세': '',
     };
 
-    const facility = transformToiletRow(row);
+    const toilet = transformToiletRow(row);
 
-    expect(facility).toBeNull();
+    expect(toilet).toBeNull();
   });
 });
 
@@ -323,10 +326,9 @@ describe('Toilet Sync Service - Data Upsert', () => {
   });
 
   it('should upsert facility data to database', async () => {
-    const mockUpsert = vi.mocked(prisma.facility.upsert);
+    const mockUpsert = vi.mocked(prisma.toilet.upsert);
     mockUpsert.mockResolvedValue({
       id: 'toilet-abc123',
-      category: 'toilet',
       name: '테스트화장실',
       address: '서울특별시 강남구 역삼동 123',
       roadAddress: '서울특별시 강남구 테헤란로 123',
@@ -335,18 +337,24 @@ describe('Toilet Sync Service - Data Upsert', () => {
       city: '서울특별시',
       district: '강남구',
       bjdCode: null,
-      details: {},
       sourceId: 'abc123',
       sourceUrl: null,
       viewCount: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
       syncedAt: new Date(),
+      // Toilet 전용 필드
+      operatingHours: '24시간',
+      maleToilets: 2,
+      maleUrinals: 3,
+      femaleToilets: 3,
+      hasDisabledToilet: true,
+      openTime: '상시개방',
+      managingOrg: '강남구청',
     });
 
-    const facilityData = {
+    const toiletData = {
       id: 'toilet-abc123',
-      category: 'toilet' as const,
       name: '테스트화장실',
       address: '서울특별시 강남구 역삼동 123',
       roadAddress: '서울특별시 강남구 테헤란로 123',
@@ -355,29 +363,25 @@ describe('Toilet Sync Service - Data Upsert', () => {
       city: '서울특별시',
       district: '강남구',
       sourceId: 'abc123',
-      details: {},
+      operatingHours: '24시간',
+      maleToilets: 2,
+      maleUrinals: 3,
+      femaleToilets: 3,
+      hasDisabledToilet: true,
+      openTime: '상시개방',
+      managingOrg: '강남구청',
     };
 
-    await prisma.facility.upsert({
-      where: {
-        category_sourceId: {
-          category: 'toilet',
-          sourceId: 'abc123',
-        },
-      },
-      update: facilityData,
-      create: facilityData,
+    await prisma.toilet.upsert({
+      where: { sourceId: 'abc123' },
+      update: toiletData,
+      create: toiletData,
     });
 
     expect(mockUpsert).toHaveBeenCalledWith({
-      where: {
-        category_sourceId: {
-          category: 'toilet',
-          sourceId: 'abc123',
-        },
-      },
-      update: facilityData,
-      create: facilityData,
+      where: { sourceId: 'abc123' },
+      update: toiletData,
+      create: toiletData,
     });
   });
 });

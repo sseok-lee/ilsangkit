@@ -57,7 +57,6 @@ Internet ──────────▶│   Nginx :80     │
 | 생활쓰레기 | 15155080 | Open API | 필요 | `apis.data.go.kr/1741000/household_waste_info` |
 | 무료와이파이 | 15013116 | **CSV 파일** | 불필요 | `file.localdata.go.kr/file/free_wifi_info/info` |
 | 의류수거함 | 15139214 | Open API | 자동승인 | `api.data.go.kr/openapi/tn_pubr_public_clothing_collect_bins_api` |
-| 폐형광등/건전지 | 15155673 | Open API | 자동승인 | `api.data.go.kr/openapi/tn_pubr_public_waste_lamp_battery_collection_box_api` |
 | 무인민원발급기 | 15154774 | Open API | 자동승인 | `apis.data.go.kr/1741000/kiosk_info/installation_info` |
 
 ### 상세 정보
@@ -93,14 +92,7 @@ Internet ──────────▶│   Nginx :80     │
 - **주요 필드**: 관리번호, 설치장소명, 시도명, 시군구명, 주소, 위도, 경도, 관리기관명
 - **갱신 주기**: 수시
 
-#### 5. 폐형광등/폐건전지 수거함 (data.go.kr/15155673) - Open API
-- **API**: 전국폐형광등폐건전지수거함표준데이터
-- **엔드포인트**: `api.data.go.kr/openapi/tn_pubr_public_waste_lamp_battery_collection_box_api`
-- **형식**: REST API (JSON, 자동승인)
-- **주요 필드**: 설치장소명, 세부위치내용, 시도명, 시군구명, 주소, 위도, 경도, 수거품목명, 수거함수량, 관리기관명, 관리기관전화번호
-- **갱신 주기**: 수시
-
-#### 6. 무인민원발급기 (data.go.kr/15154774) - Open API
+#### 5. 무인민원발급기 (data.go.kr/15154774) - Open API
 - **API**: 무인민원발급기정보 조회서비스
 - **엔드포인트**: `apis.data.go.kr/1741000/kiosk_info/installation_info`
 - **형식**: REST API (JSON/XML, 자동승인)
@@ -144,7 +136,7 @@ Internet ──────────▶│   Nginx :80     │
 │  3. 데이터 변환 (컬럼명 → Facility 스키마)                  │
 │  4. prisma.facility.upsert() 배치 저장                    │
 │                                                          │
-│  [Open API 기반] trash, clothes, battery, kiosk           │
+│  [Open API 기반] trash, clothes, kiosk                    │
 │  ─────────────────────────────────────────────           │
 │  1. axios.get(API_URL) → JSON 응답                       │
 │  2. 데이터 변환                                           │
@@ -348,7 +340,6 @@ GET /api/health             # 헬스체크
 /seoul/gangnam/wifi         # 지역별 페이지
 /seoul/gangnam/trash        # 지역별 페이지
 /seoul/gangnam/clothes      # 지역별 페이지
-/seoul/gangnam/battery      # 지역별 페이지
 /seoul/gangnam/kiosk        # 지역별 페이지
 ```
 

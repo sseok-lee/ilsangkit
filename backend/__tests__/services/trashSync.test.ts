@@ -1,6 +1,7 @@
-// @TASK T2.2 - 쓰레기 배출 데이터 동기화 테스트
+// @TASK T2.2 - 쓰레기 배출 일정 데이터 동기화 테스트
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 // @TEST __tests__/services/trashSync.test.ts
+// NOTE: 쓰레기 배출 데이터는 좌표가 없어 WasteSchedule 테이블에 저장됨 (지도 마커 X)
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PublicApiClient } from '../../src/services/publicApiClient.js';
@@ -13,7 +14,7 @@ import {
 // Mock Prisma
 vi.mock('../../src/lib/prisma.js', () => ({
   default: {
-    facility: {
+    wasteSchedule: {
       upsert: vi.fn().mockResolvedValue({}),
       count: vi.fn().mockResolvedValue(0),
     },
@@ -197,138 +198,116 @@ describe('PublicApiClient', () => {
 });
 
 describe('transformTrashData', () => {
-  it('should transform API response to Facility model format', () => {
+  it('should transform API response to WasteSchedule model format', () => {
     const apiResponse: TrashApiResponse = {
-      ctpvNm: '서울특별시',
-      sggNm: '강남구',
-      adongNm: '삼성동',
-      ldongCd: '11680',
-      dsbdPlcNm: '삼성1동 생활쓰레기 배출장소',
-      dsbdWeekday: '월,수,금',
-      dsbdBgngTm: '18:00',
-      dsbdEndTm: '21:00',
-      dsbdSrtnSn: '1',
-      lat: '37.5145',
-      lot: '127.0592',
+      CTPV_NM: '경상남도',
+      SGG_NM: '거창군',
+      MNG_ZONE_TRGT_RGN_NM: '남상면+신원면',
+      EMSN_PLC: '집앞',
+      EMSN_ITM: '일반쓰레기',
+      EMSN_DAY: '월,수,금',
+      EMSN_TIME: '18:00~21:00',
+      EMSN_MTH: '봉투배출',
+      CLLCT_DAY: '화,목,토',
+      CLLCT_TIME: '06:00~08:00',
+      CLLCT_MTH: '수거차량',
+      MNG_INST_NM: '거창군청',
+      MNG_INST_TELNO: '055-940-3000',
+      DATA_STDR_DE: '2024-01-01',
     };
 
     const result = transformTrashData(apiResponse);
 
     expect(result).toEqual({
-      id: expect.stringContaining('trash-'),
-      category: 'trash',
-      name: '삼성1동 생활쓰레기 배출장소',
-      address: null,
-      roadAddress: null,
-      lat: 37.5145,
-      lng: 127.0592,
-      city: '서울특별시',
-      district: '강남구',
-      bjdCode: '11680',
+      city: '경상남도',
+      district: '거창군',
+      targetRegion: '남상면+신원면',
+      emissionPlace: '집앞',
       details: {
-        neighborhood: '삼성동',
-        collectionDays: '월,수,금',
-        startTime: '18:00',
-        endTime: '21:00',
-        serialNumber: '1',
+        emissionItem: '일반쓰레기',
+        emissionDay: '월,수,금',
+        emissionTime: '18:00~21:00',
+        emissionMethod: '봉투배출',
+        collectDay: '화,목,토',
+        collectTime: '06:00~08:00',
+        collectMethod: '수거차량',
+        manageInstitute: '거창군청',
+        managePhone: '055-940-3000',
+        dataStandardDate: '2024-01-01',
       },
-      sourceId: expect.stringContaining('11680'),
+      sourceId: expect.any(String),
       sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',
     });
   });
 
   it('should handle missing optional fields', () => {
     const apiResponse: TrashApiResponse = {
-      ctpvNm: '서울특별시',
-      sggNm: '강남구',
-      adongNm: '',
-      ldongCd: '11680',
-      dsbdPlcNm: '배출장소',
-      dsbdWeekday: '',
-      dsbdBgngTm: '',
-      dsbdEndTm: '',
-      dsbdSrtnSn: '1',
-      lat: '37.5145',
-      lot: '127.0592',
+      CTPV_NM: '서울특별시',
+      SGG_NM: '강남구',
     };
 
     const result = transformTrashData(apiResponse);
 
-    expect(result.details).toEqual({
-      neighborhood: '',
-      collectionDays: '',
-      startTime: '',
-      endTime: '',
-      serialNumber: '1',
+    expect(result).toEqual({
+      city: '서울특별시',
+      district: '강남구',
+      targetRegion: null,
+      emissionPlace: null,
+      details: {
+        emissionItem: undefined,
+        emissionDay: undefined,
+        emissionTime: undefined,
+        emissionMethod: undefined,
+        collectDay: undefined,
+        collectTime: undefined,
+        collectMethod: undefined,
+        manageInstitute: undefined,
+        managePhone: undefined,
+        dataStandardDate: undefined,
+      },
+      sourceId: expect.any(String),
+      sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',
     });
   });
 
-  it('should generate unique sourceId based on ldongCd and dsbdSrtnSn', () => {
+  it('should generate unique sourceId based on city, district, and other fields', () => {
     const apiResponse1: TrashApiResponse = {
-      ctpvNm: '서울특별시',
-      sggNm: '강남구',
-      adongNm: '삼성동',
-      ldongCd: '11680',
-      dsbdPlcNm: '배출장소1',
-      dsbdWeekday: '월,수,금',
-      dsbdBgngTm: '18:00',
-      dsbdEndTm: '21:00',
-      dsbdSrtnSn: '1',
-      lat: '37.5145',
-      lot: '127.0592',
+      CTPV_NM: '서울특별시',
+      SGG_NM: '강남구',
+      MNG_ZONE_TRGT_RGN_NM: '삼성동',
+      EMSN_PLC: '집앞',
+      EMSN_DAY: '월,수,금',
     };
 
     const apiResponse2: TrashApiResponse = {
-      ...apiResponse1,
-      dsbdSrtnSn: '2',
+      CTPV_NM: '서울특별시',
+      SGG_NM: '강남구',
+      MNG_ZONE_TRGT_RGN_NM: '삼성동',
+      EMSN_PLC: '집앞',
+      EMSN_DAY: '화,목,토', // 다른 배출요일
     };
 
     const result1 = transformTrashData(apiResponse1);
     const result2 = transformTrashData(apiResponse2);
 
-    expect(result1.sourceId).not.toEqual(result2.sourceId);
-    expect(result1.sourceId).toContain('11680');
-    expect(result2.sourceId).toContain('11680');
+    expect(result1!.sourceId).not.toEqual(result2!.sourceId);
   });
 
-  it('should skip invalid data with missing coordinates', () => {
-    const apiResponse: TrashApiResponse = {
-      ctpvNm: '서울특별시',
-      sggNm: '강남구',
-      adongNm: '삼성동',
-      ldongCd: '11680',
-      dsbdPlcNm: '배출장소',
-      dsbdWeekday: '월,수,금',
-      dsbdBgngTm: '18:00',
-      dsbdEndTm: '21:00',
-      dsbdSrtnSn: '1',
-      lat: '',
-      lot: '',
+  it('should return null for data missing required fields', () => {
+    // 시도명 없음
+    const apiResponse1: TrashApiResponse = {
+      CTPV_NM: '',
+      SGG_NM: '강남구',
     };
 
-    const result = transformTrashData(apiResponse);
-
-    expect(result).toBeNull();
-  });
-
-  it('should skip invalid data with zero coordinates', () => {
-    const apiResponse: TrashApiResponse = {
-      ctpvNm: '서울특별시',
-      sggNm: '강남구',
-      adongNm: '삼성동',
-      ldongCd: '11680',
-      dsbdPlcNm: '배출장소',
-      dsbdWeekday: '월,수,금',
-      dsbdBgngTm: '18:00',
-      dsbdEndTm: '21:00',
-      dsbdSrtnSn: '1',
-      lat: '0',
-      lot: '0',
+    // 시군구명 없음
+    const apiResponse2: TrashApiResponse = {
+      CTPV_NM: '서울특별시',
+      SGG_NM: '',
     };
 
-    const result = transformTrashData(apiResponse);
-
-    expect(result).toBeNull();
+    expect(transformTrashData(apiResponse1)).toBeNull();
+    expect(transformTrashData(apiResponse2)).toBeNull();
   });
 });
 
@@ -362,7 +341,7 @@ describe('syncTrashData', () => {
 
     expect(prisma.syncHistory.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        category: 'trash',
+        category: 'waste_schedule',
         status: 'running',
       }),
     });
@@ -380,17 +359,10 @@ describe('syncTrashData', () => {
             body: {
               items: [
                 {
-                  ctpvNm: '서울특별시',
-                  sggNm: '강남구',
-                  adongNm: '삼성동',
-                  ldongCd: '11680',
-                  dsbdPlcNm: '배출장소',
-                  dsbdWeekday: '월,수,금',
-                  dsbdBgngTm: '18:00',
-                  dsbdEndTm: '21:00',
-                  dsbdSrtnSn: '1',
-                  lat: '37.5145',
-                  lot: '127.0592',
+                  CTPV_NM: '경상남도',
+                  SGG_NM: '거창군',
+                  MNG_ZONE_TRGT_RGN_NM: '남상면',
+                  EMSN_PLC: '집앞',
                 },
               ],
               numOfRows: 100,
@@ -432,7 +404,7 @@ describe('syncTrashData', () => {
     });
   });
 
-  it('should upsert facilities in dry run mode without actual DB writes', async () => {
+  it('should not call wasteSchedule.upsert in dry run mode', async () => {
     const prisma = (await import('../../src/lib/prisma.js')).default;
 
     mockFetch.mockResolvedValueOnce({
@@ -444,17 +416,10 @@ describe('syncTrashData', () => {
             body: {
               items: [
                 {
-                  ctpvNm: '서울특별시',
-                  sggNm: '강남구',
-                  adongNm: '삼성동',
-                  ldongCd: '11680',
-                  dsbdPlcNm: '배출장소',
-                  dsbdWeekday: '월,수,금',
-                  dsbdBgngTm: '18:00',
-                  dsbdEndTm: '21:00',
-                  dsbdSrtnSn: '1',
-                  lat: '37.5145',
-                  lot: '127.0592',
+                  CTPV_NM: '서울특별시',
+                  SGG_NM: '강남구',
+                  MNG_ZONE_TRGT_RGN_NM: '삼성동',
+                  EMSN_PLC: '집앞',
                 },
               ],
               numOfRows: 100,
@@ -469,12 +434,12 @@ describe('syncTrashData', () => {
 
     const result = await syncTrashData({ serviceKey: 'test-key', dryRun: true });
 
-    // In dry run mode, facility.upsert should not be called
-    expect(prisma.facility.upsert).not.toHaveBeenCalled();
+    // In dry run mode, wasteSchedule.upsert should not be called
+    expect(prisma.wasteSchedule.upsert).not.toHaveBeenCalled();
     expect(result.totalRecords).toBe(1);
   });
 
-  it('should upsert facilities when not in dry run mode', async () => {
+  it('should call wasteSchedule.upsert when not in dry run mode', async () => {
     const prisma = (await import('../../src/lib/prisma.js')).default;
 
     mockFetch.mockResolvedValueOnce({
@@ -486,17 +451,10 @@ describe('syncTrashData', () => {
             body: {
               items: [
                 {
-                  ctpvNm: '서울특별시',
-                  sggNm: '강남구',
-                  adongNm: '삼성동',
-                  ldongCd: '11680',
-                  dsbdPlcNm: '배출장소',
-                  dsbdWeekday: '월,수,금',
-                  dsbdBgngTm: '18:00',
-                  dsbdEndTm: '21:00',
-                  dsbdSrtnSn: '1',
-                  lat: '37.5145',
-                  lot: '127.0592',
+                  CTPV_NM: '서울특별시',
+                  SGG_NM: '강남구',
+                  MNG_ZONE_TRGT_RGN_NM: '삼성동',
+                  EMSN_PLC: '집앞',
                 },
               ],
               numOfRows: 100,
@@ -508,11 +466,11 @@ describe('syncTrashData', () => {
     });
 
     vi.mocked(prisma.syncHistory.create).mockResolvedValueOnce({ id: 1 } as never);
-    vi.mocked(prisma.facility.count).mockResolvedValueOnce(0 as never);
+    vi.mocked(prisma.wasteSchedule.count).mockResolvedValueOnce(0 as never);
 
     await syncTrashData({ serviceKey: 'test-key', dryRun: false });
 
-    expect(prisma.facility.upsert).toHaveBeenCalled();
+    expect(prisma.wasteSchedule.upsert).toHaveBeenCalled();
   });
 
   it('should count new and updated records correctly', async () => {
@@ -527,30 +485,18 @@ describe('syncTrashData', () => {
             body: {
               items: [
                 {
-                  ctpvNm: '서울특별시',
-                  sggNm: '강남구',
-                  adongNm: '삼성동',
-                  ldongCd: '11680',
-                  dsbdPlcNm: '배출장소1',
-                  dsbdWeekday: '월,수,금',
-                  dsbdBgngTm: '18:00',
-                  dsbdEndTm: '21:00',
-                  dsbdSrtnSn: '1',
-                  lat: '37.5145',
-                  lot: '127.0592',
+                  CTPV_NM: '서울특별시',
+                  SGG_NM: '강남구',
+                  MNG_ZONE_TRGT_RGN_NM: '삼성동',
+                  EMSN_PLC: '집앞',
+                  EMSN_DAY: '월,수,금',
                 },
                 {
-                  ctpvNm: '서울특별시',
-                  sggNm: '강남구',
-                  adongNm: '삼성동',
-                  ldongCd: '11680',
-                  dsbdPlcNm: '배출장소2',
-                  dsbdWeekday: '화,목,토',
-                  dsbdBgngTm: '18:00',
-                  dsbdEndTm: '21:00',
-                  dsbdSrtnSn: '2',
-                  lat: '37.5146',
-                  lot: '127.0593',
+                  CTPV_NM: '서울특별시',
+                  SGG_NM: '강남구',
+                  MNG_ZONE_TRGT_RGN_NM: '역삼동',
+                  EMSN_PLC: '집앞',
+                  EMSN_DAY: '화,목,토',
                 },
               ],
               numOfRows: 100,
@@ -563,7 +509,7 @@ describe('syncTrashData', () => {
 
     vi.mocked(prisma.syncHistory.create).mockResolvedValueOnce({ id: 1 } as never);
     // First record exists, second is new
-    vi.mocked(prisma.facility.count)
+    vi.mocked(prisma.wasteSchedule.count)
       .mockResolvedValueOnce(1 as never)
       .mockResolvedValueOnce(0 as never);
 

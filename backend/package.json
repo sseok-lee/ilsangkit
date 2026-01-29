@@ -19,12 +19,12 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "sync:toilet": "tsx src/scripts/syncToilet.ts",
+    "sync:toilet": "node --use-system-ca node_modules/.bin/tsx src/scripts/syncToilet.ts",
     "sync:trash": "tsx src/scripts/syncTrash.ts",
-    "sync:wifi": "tsx src/scripts/syncWifi.ts",
+    "sync:wifi": "node --use-system-ca node_modules/.bin/tsx src/scripts/syncWifi.ts",
     "sync:clothes": "tsx src/scripts/syncClothes.ts",
-    "sync:battery": "tsx src/scripts/syncBattery.ts",
     "sync:kiosk": "tsx src/scripts/syncKiosk.ts",
+    "sync:regions": "tsx src/scripts/syncRegion.ts",
     "sync:facilities": "tsx src/scripts/syncAll.ts"
   },
   "prisma": {

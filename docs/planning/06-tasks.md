@@ -56,13 +56,12 @@ flowchart TD
         T1.4[T1.4: 메타 API]
     end
 
-    subgraph M2[M2: 공공데이터 동기화 - 6개 카테고리]
+    subgraph M2[M2: 공공데이터 동기화 - 5개 카테고리]
         T2.1[T2.1: 화장실 동기화]
         T2.2[T2.2: 쓰레기 배출 동기화]
         T2.3[T2.3: 와이파이 동기화]
         T2.3.1[T2.3.1: 의류수거함 동기화]
-        T2.3.2[T2.3.2: 폐형광등/폐건전지 동기화]
-        T2.3.3[T2.3.3: 무인민원발급기 동기화]
+        T2.3.2[T2.3.2: 무인민원발급기 동기화]
         T2.4[T2.4: 동기화 스케줄러]
     end
 
@@ -747,37 +746,7 @@ cd ../ilsangkit-phase2-clothes
 
 ---
 
-### [x] Phase 2, T2.3.2: 폐형광등/폐건전지 데이터 동기화 RED→GREEN ✅
-
-**담당**: backend-specialist
-
-**의존성**: T0.4
-
-**Git Worktree 설정**:
-```bash
-git worktree add ../ilsangkit-phase2-battery -b phase/2-battery
-cd ../ilsangkit-phase2-battery
-```
-
-**TDD 사이클**: (T2.1과 동일 패턴)
-
-**작업 내용**:
-- 폐형광등/폐건전지 API 클라이언트 (data.go.kr/15155673)
-- 데이터 변환 로직 (모든 필드 → details JSON)
-- 동기화 스크립트
-
-**산출물**:
-- `backend/__tests__/services/batterySync.test.ts`
-- `backend/src/scripts/syncBattery.ts`
-
-**인수 조건**:
-- [x] 테스트 먼저 작성됨
-- [x] 모든 테스트 통과 (15개)
-- [x] 수거품목, 수거함수량 정확히 저장
-
----
-
-### [x] Phase 2, T2.3.3: 무인민원발급기 데이터 동기화 RED→GREEN ✅
+### [x] Phase 2, T2.3.2: 무인민원발급기 데이터 동기화 RED→GREEN ✅
 
 **담당**: backend-specialist
 
@@ -809,13 +778,39 @@ cd ../ilsangkit-phase2-kiosk
 - [x] 지오코딩으로 위도/경도 변환 성공
 - [x] Rate limit 고려한 배치 처리
 
+**추가 작업 (2026-01-29)**:
+
+1. **pageSize 문제 해결**:
+   - 문제: API가 pageSize=1000을 무시하고 최대 100개만 반환
+   - 해결: `publicApiClient.ts`에서 실제 응답의 `numOfRows` 사용하여 페이지 계산
+   - 결과: 5,786개 전체 데이터 조회 성공 (기존 600개 → 5,786개)
+
+2. **중복 데이터 처리**:
+   - API 데이터에 동일 MNG_NO가 다수 중복 (예: MNG_NO 410이 19회 등장)
+   - MNG_NO 기준 upsert로 312개 고유 키오스크 저장
+
+3. **지오코딩 100% 완료**:
+   - Kakao REST API 키 수정 후 지오코딩 재실행
+   - 1차: 282/312 성공 (90.4%)
+   - 2차: 주소 정규화 (`[지번주소]` 제거, 괄호 제거) 적용하여 29개 추가 성공
+   - 3차: 나머지 1개 수동 처리
+   - **최종: 312/312 (100%) 좌표 입력 완료**
+
+**지오코딩 주소 정규화 로직**:
+```typescript
+// 대괄호 앞 부분만 추출 (도로명 주소)
+const beforeBracket = address.split('[')[0].trim();
+// 괄호 제거
+const noParens = beforeBracket.replace(/\([^)]*\)/g, '').trim();
+```
+
 ---
 
 ### [x] Phase 2, T2.4: 통합 동기화 스케줄러 ✅
 
 **담당**: backend-specialist
 
-**의존성**: T2.1, T2.2, T2.3, T2.3.1, T2.3.2, T2.3.3
+**의존성**: T2.1, T2.2, T2.3, T2.3.1, T2.3.2
 
 **Git Worktree 설정**:
 ```bash
@@ -824,18 +819,17 @@ cd ../ilsangkit-phase2-scheduler
 ```
 
 **작업 내용**:
-- 통합 동기화 스크립트 (**6개 카테고리 모두**)
+- 통합 동기화 스크립트 (**5개 카테고리 모두**)
 - npm script 추가 (`npm run sync:facilities`)
 - 에러 처리 및 재시도 로직
 - 지오코딩 Rate limit 관리 (kiosk)
 
-**6개 카테고리**:
+**5개 카테고리**:
 1. toilet (공공화장실)
 2. trash (쓰레기 배출)
 3. wifi (무료 와이파이)
 4. clothes (의류수거함)
-5. battery (폐형광등/폐건전지)
-6. kiosk (무인민원발급기)
+5. kiosk (무인민원발급기)
 
 **산출물**:
 - `backend/src/scripts/syncAll.ts`
@@ -1048,7 +1042,6 @@ cd ../ilsangkit-phase3-detail
 - `frontend/app/components/facility/details/TrashDetail.vue`
 - `frontend/app/components/facility/details/WifiDetail.vue`
 - `frontend/app/components/facility/details/ClothesDetail.vue`
-- `frontend/app/components/facility/details/BatteryDetail.vue`
 - `frontend/app/components/facility/details/KioskDetail.vue`
 - `frontend/app/composables/useFacilityDetail.ts`
 
@@ -1060,13 +1053,12 @@ cd ../ilsangkit-phase3-detail
 | trash | trashType, collectionDays, collectionStartTime, collectionEndTime, disposalMethod, notes |
 | wifi | ssid, securityType, speedGrade, serviceProvider, operationStatus |
 | clothes | managementNo, collectionItems, collectionCycle, clothesType |
-| battery | collectionItems, boxCount, collectionCycle, locationType, lastCollectionDate |
 | kiosk | weekdayOperatingHours, saturdayOperatingHours, holidayOperatingHours, availableDocuments, 장애인편의시설 |
 
 **인수 조건**:
 - [ ] 테스트 먼저 작성됨
 - [ ] 모든 테스트 통과
-- [ ] 6개 카테고리별 상세 정보 표시
+- [ ] 5개 카테고리별 상세 정보 표시
 - [ ] null/undefined 필드 숨김 처리
 - [ ] 지도 마커 표시
 - [ ] 길찾기 링크 동작

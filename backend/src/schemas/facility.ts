@@ -4,13 +4,12 @@
 import { z } from 'zod';
 import { PaginationSchema, RadiusSchema } from './common.js';
 
-// 카테고리 enum
+// 카테고리 enum (지도 마커 표시 가능한 시설만)
+// trash는 좌표 없는 일정 데이터로 WasteSchedule 별도 테이블에서 관리
 export const FacilityCategorySchema = z.enum([
   'toilet',
-  'trash',
   'wifi',
   'clothes',
-  'battery',
   'kiosk',
 ]);
 

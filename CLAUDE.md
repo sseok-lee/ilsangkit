@@ -185,12 +185,11 @@ NUXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 | 생활쓰레기 | 15155080 | Open API |
 | 무료와이파이 | 15013116 | **CSV 파일** |
 | 의류수거함 | 15139214 | Open API |
-| 폐형광등/건전지 | 15155673 | Open API |
 | 무인민원발급기 | 15154774 | Open API |
 
 ### 데이터 동기화 전략
 - **CSV 기반** (toilet, wifi): `csv-parse` + `iconv-lite`로 파싱
-- **API 기반** (trash, clothes, battery, kiosk): REST API 호출
+- **API 기반** (trash, clothes, kiosk): REST API 호출
 - 주기적 DB 동기화 (크론잡, 일 1회)
 - 증분 업데이트 지원
 

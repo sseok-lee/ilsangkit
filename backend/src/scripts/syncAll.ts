@@ -3,7 +3,7 @@
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 
 /**
- * 6개 카테고리 통합 동기화 스크립트
+ * 5개 카테고리 통합 동기화 스크립트
  *
  * 사용법:
  *   npm run sync:facilities                     # 전체 동기화
@@ -16,9 +16,14 @@ import * as fs from 'fs';
 import { syncToilets } from '../services/toiletSyncService.js';
 import { syncTrashData } from './syncTrash.js';
 import { syncWifiData } from './syncWifi.js';
-import { syncClothesData } from './syncClothes.js';
-import { syncBatteryData } from './syncBattery.js';
+import { syncClothes } from '../services/clothesSyncService.js';
 import { syncKiosks } from './syncKiosk.js';
+
+// 의류수거함 기본 CSV 파일 경로
+const CLOTHES_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/전국의류수거함표준데이터.csv'
+);
 
 /**
  * 동기화 결과 타입
@@ -34,7 +39,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'battery', 'kiosk'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -102,17 +107,7 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'clothes': {
-        const result = await syncClothesData();
-        return {
-          category,
-          success: true,
-          count: result.newRecords + result.updatedRecords,
-          duration: Date.now() - start,
-        };
-      }
-
-      case 'battery': {
-        const result = await syncBatteryData();
+        const result = await syncClothes(CLOTHES_CSV_PATH);
         return {
           category,
           success: true,

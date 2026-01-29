@@ -7,50 +7,65 @@ import { batchGeocode, type Coordinates } from '../services/geocodingService.js'
 import crypto from 'crypto';
 
 /**
- * 무인민원발급기 API 응답 타입
- * data.go.kr/15154774 기준
+ * 무인민원발급기 설치정보 API 응답 타입
+ * data.go.kr/15154774 - installation_info
+ * 2026년 1월 기준 새로운 필드명
  */
 export interface KioskApiResponse {
-  /** 설치장소주소 시도 */
-  addrCtpvNm: string;
-  /** 설치장소주소 시군구 */
-  addrSggNm: string;
-  /** 설치장소주소 읍면동 */
-  addrEmdNm: string;
-  /** 설치장소주소 도로명 */
-  addrRn: string;
+  /** 관리번호 (API 연결키) */
+  MNG_NO: string;
+  /** 개방자치단체코드 */
+  OPN_ATMY_GRP_CD: string;
+  /** 설치장소주소 (전체 주소) */
+  INSTL_PLC_ADDR: string;
   /** 설치장소상세위치 */
-  instlPlcDtlLocCn: string;
-  /** 운영기관명 */
-  operInstNm: string;
+  INSTL_PLC_DTL_PSTN: string;
+  /** 발급기명 */
+  ISSUMCHN_NM: string;
+  /** 관리기관명 */
+  MNG_INST_NM: string;
   /** 평일운영시작시간 */
-  wdayOperBgngTm: string;
+  WKDY_OPER_BGNG_TM: string;
   /** 평일운영종료시간 */
-  wdayOperEndTm: string;
-  /** 토요일운영시작시간 */
-  satOperBgngTm: string;
-  /** 토요일운영종료시간 */
-  satOperEndTm: string;
+  WKDY_OPER_END_TM: string;
   /** 공휴일운영시작시간 */
-  hldyOperBgngTm: string;
+  LHLDY_OPER_BGNG_TM: string;
   /** 공휴일운영종료시간 */
-  hldyOperEndTm: string;
-  /** 시각장애인용키패드유무 */
-  vdiYn: string;
-  /** 음성안내유무 */
-  vcgdYn: string;
-  /** 점자출력유무 */
-  brllPrnYn: string;
-  /** 휠체어사용가능유무 */
-  whlchUseYn: string;
+  LHLDY_OPER_END_TM: string;
+  /** 시각장애인용키패드 (제공/미제공) */
+  FRBLND_KPD: string;
+  /** 음성안내 (제공/미제공) */
+  FRBLND_VOICE_GD: string;
+  /** 점자라벨부착 (부착/미부착) */
+  BRL_LBL_ATCMNT: string;
+  /** 휠체어사용가능 (가능/불가능) */
+  WHCHR_USER_MNPLT: string;
+  /** 설치장소위치 (읍면동 등) */
+  INSTL_PLC_PSTN: string;
 }
 
 /**
- * 변환된 Facility 데이터 타입
+ * 무인민원발급기 민원정보 API 응답 타입
+ * data.go.kr/15154774 - certificate_info
  */
-interface FacilityData {
+export interface CertificateApiResponse {
+  /** 관리번호 (certificate_info 내부 키, 긴 알파벳+숫자 코드) */
+  MNG_NO: string;
+  /** 개방자치단체코드 */
+  OPN_ATMY_GRP_CD: string;
+  /** 발급기번호 (installation_info.MNG_NO와 매칭되는 키) */
+  ISSUMCHN_NO: string;
+  /** 민원사무분류명 */
+  CVLCPT_OFCWORK_CLSF_NM: string;
+  /** 초기메뉴명 */
+  INITA_MENU_NM: string;
+}
+
+/**
+ * 변환된 Kiosk 데이터 타입
+ */
+interface KioskData {
   id: string;
-  category: 'kiosk';
   name: string;
   address: string;
   roadAddress: string | null;
@@ -58,35 +73,42 @@ interface FacilityData {
   lng: number;
   city: string;
   district: string;
-  details: {
-    detailLocation: string;
-    operationAgency: string;
-    weekdayOperatingHours: string | null;
-    saturdayOperatingHours: string | null;
-    holidayOperatingHours: string | null;
-    blindKeypad: boolean;
-    voiceGuide: boolean;
-    brailleOutput: boolean;
-    wheelchairAccessible: boolean;
-  };
   sourceId: string;
   sourceUrl: string | null;
   syncedAt: Date;
+  // Kiosk 전용 필드
+  detailLocation: string;
+  operationAgency: string;
+  weekdayOperatingHours: string | null;
+  saturdayOperatingHours: string | null;
+  holidayOperatingHours: string | null;
+  blindKeypad: boolean;
+  voiceGuide: boolean;
+  brailleOutput: boolean;
+  wheelchairAccessible: boolean;
+  mngNo: string | null;
+  availableDocuments: string[];
 }
 
 /**
  * API 엔드포인트 설정
  */
-const KIOSK_API_CONFIG = {
+const INSTALLATION_API_CONFIG = {
   endpoint: 'https://apis.data.go.kr/1741000/kiosk_info/installation_info',
-  pageSize: 1000,
+  pageSize: 100, // API가 최대 100개만 반환하므로 100으로 설정
+} as const;
+
+const CERTIFICATE_API_CONFIG = {
+  endpoint: 'https://apis.data.go.kr/1741000/kiosk_info/certificate_info',
+  pageSize: 100, // API가 최대 100개만 반환하므로 100으로 설정
 } as const;
 
 /**
- * Y/N 문자열을 boolean으로 변환
+ * 제공/가능/부착 등의 문자열을 boolean으로 변환
  */
-function parseYN(value: string | undefined | null): boolean {
-  return value?.toUpperCase() === 'Y';
+function parseProvided(value: string | undefined | null): boolean {
+  const v = value?.trim();
+  return v === '제공' || v === '가능' || v === '부착';
 }
 
 /**
@@ -110,65 +132,132 @@ function formatOperatingHours(start: string, end: string): string | null {
  * API 응답 행에서 주소 생성
  */
 export function buildAddressFromKioskRow(row: KioskApiResponse): string {
-  const city = row.addrCtpvNm?.trim() || '';
-  const district = row.addrSggNm?.trim() || '';
-  const dong = row.addrEmdNm?.trim() || '';
-  const road = row.addrRn?.trim() || '';
-
-  // 도로명 주소가 있으면 도로명 사용, 없으면 읍면동 사용
-  if (road) {
-    return `${city} ${district} ${road}`.trim();
-  }
-  return `${city} ${district} ${dong}`.trim();
+  // 새 API는 전체 주소를 INSTL_PLC_ADDR 필드로 제공
+  return row.INSTL_PLC_ADDR?.trim() || '';
 }
 
 /**
- * sourceId 생성 (주소 + 상세위치 기반 해시)
+ * 지오코딩을 위한 주소 정규화
+ * - 괄호 내용 제거: "서울시 강남구 (역삼빌딩)" → "서울시 강남구"
+ * - 쉼표 이후 제거: "서울시 강남구, 1층 로비" → "서울시 강남구"
+ * - 상세주소 제거: "서울시 강남구 123-45 OO빌딩 3층" → "서울시 강남구 123-45"
+ */
+function normalizeAddressForGeocode(address: string): string {
+  if (!address) return '';
+
+  const normalized = address
+    .replace(/\([^)]*\)/g, '') // 괄호 내용 제거
+    .replace(/,.*$/, '') // 쉼표 이후 제거
+    .replace(/\s+\d+층.*$/i, '') // "N층" 이후 제거
+    .replace(/\s+[가-힣]+빌딩.*$/, '') // "OO빌딩" 이후 제거
+    .replace(/\s+[가-힣]+센터.*$/, '') // "OO센터" 이후 제거
+    .replace(/\s+[가-힣]+타워.*$/, '') // "OO타워" 이후 제거
+    .trim()
+    .replace(/\s+/g, ' '); // 연속 공백 제거
+
+  return normalized;
+}
+
+/**
+ * 주소에서 시/도 추출
+ */
+function extractCity(address: string): string {
+  const parts = address.split(' ');
+  return parts[0] || '';
+}
+
+/**
+ * 주소에서 시/군/구 추출
+ */
+function extractDistrict(address: string): string {
+  const parts = address.split(' ');
+  return parts[1] || '';
+}
+
+/**
+ * sourceId 생성 (MNG_NO 기반 - API의 고유 키 사용)
  */
 function generateSourceId(row: KioskApiResponse): string {
+  // MNG_NO가 있으면 사용, 없으면 주소+상세위치 해시
+  const mngNo = row.MNG_NO?.trim();
+  if (mngNo) {
+    return `mng_${mngNo}`;
+  }
+
   const address = buildAddressFromKioskRow(row);
-  const detail = row.instlPlcDtlLocCn?.trim() || '';
+  const detail = row.INSTL_PLC_DTL_PSTN?.trim() || '';
   const combined = `${address}|${detail}`;
 
   return crypto.createHash('md5').update(combined).digest('hex').substring(0, 16);
 }
 
 /**
- * API 응답 데이터를 Facility 모델 형식으로 변환
+ * API 응답 데이터를 Kiosk 모델 형식으로 변환
  */
 export function transformKioskData(
   row: KioskApiResponse,
-  coords: Coordinates | null
-): FacilityData {
+  coords: Coordinates | null,
+  availableDocuments: string[] = []
+): KioskData {
   const address = buildAddressFromKioskRow(row);
   const sourceId = generateSourceId(row);
-  const detailLocation = row.instlPlcDtlLocCn?.trim() || '';
+  const detailLocation = row.INSTL_PLC_DTL_PSTN?.trim() || '';
+  const kioskName = row.ISSUMCHN_NM?.trim() || '';
+  const mngNo = row.MNG_NO?.trim() || null;
 
   return {
     id: `kiosk_${sourceId}`,
-    category: 'kiosk',
-    name: detailLocation ? `${detailLocation} 무인민원발급기` : '무인민원발급기',
+    name: kioskName ? `${kioskName} 무인민원발급기` : (detailLocation ? `${detailLocation} 무인민원발급기` : '무인민원발급기'),
     address,
-    roadAddress: row.addrRn?.trim() ? `${row.addrCtpvNm?.trim()} ${row.addrSggNm?.trim()} ${row.addrRn?.trim()}` : null,
+    roadAddress: address, // 새 API는 전체 주소가 도로명 주소
     lat: coords?.lat ?? 0,
     lng: coords?.lng ?? 0,
-    city: row.addrCtpvNm?.trim() || '',
-    district: row.addrSggNm?.trim() || '',
-    details: {
-      detailLocation,
-      operationAgency: row.operInstNm?.trim() || '',
-      weekdayOperatingHours: formatOperatingHours(row.wdayOperBgngTm, row.wdayOperEndTm),
-      saturdayOperatingHours: formatOperatingHours(row.satOperBgngTm, row.satOperEndTm),
-      holidayOperatingHours: formatOperatingHours(row.hldyOperBgngTm, row.hldyOperEndTm),
-      blindKeypad: parseYN(row.vdiYn),
-      voiceGuide: parseYN(row.vcgdYn),
-      brailleOutput: parseYN(row.brllPrnYn),
-      wheelchairAccessible: parseYN(row.whlchUseYn),
-    },
+    city: extractCity(address),
+    district: extractDistrict(address),
     sourceId,
     sourceUrl: 'https://www.data.go.kr/data/15154774/openapi.do',
     syncedAt: new Date(),
+    // Kiosk 전용 필드
+    detailLocation,
+    operationAgency: row.MNG_INST_NM?.trim() || '',
+    weekdayOperatingHours: formatOperatingHours(row.WKDY_OPER_BGNG_TM, row.WKDY_OPER_END_TM),
+    saturdayOperatingHours: null, // 새 API에서는 토요일 운영시간 필드 없음
+    holidayOperatingHours: formatOperatingHours(row.LHLDY_OPER_BGNG_TM, row.LHLDY_OPER_END_TM),
+    blindKeypad: parseProvided(row.FRBLND_KPD),
+    voiceGuide: parseProvided(row.FRBLND_VOICE_GD),
+    brailleOutput: parseProvided(row.BRL_LBL_ATCMNT),
+    wheelchairAccessible: parseProvided(row.WHCHR_USER_MNPLT),
+    mngNo,
+    availableDocuments,
   };
+}
+
+/**
+ * 민원 목록을 발급기번호(ISSUMCHN_NO) 기준으로 그룹핑
+ * ISSUMCHN_NO가 installation_info의 MNG_NO와 매칭됨
+ */
+function groupCertificatesByMngNo(
+  certificates: CertificateApiResponse[]
+): Map<string, string[]> {
+  const grouped = new Map<string, string[]>();
+
+  for (const cert of certificates) {
+    // ISSUMCHN_NO를 사용하여 installation_info.MNG_NO와 매칭
+    const issumchnNo = cert.ISSUMCHN_NO?.trim();
+    if (!issumchnNo) continue;
+
+    const docName = cert.CVLCPT_OFCWORK_CLSF_NM?.trim();
+    if (!docName) continue;
+
+    const existing = grouped.get(issumchnNo) || [];
+    // 중복 제거
+    if (!existing.includes(docName)) {
+      existing.push(docName);
+    }
+    grouped.set(issumchnNo, existing);
+  }
+
+  return grouped;
 }
 
 /**
@@ -190,18 +279,18 @@ export async function syncKiosks(): Promise<void> {
   try {
     console.log('무인민원발급기 데이터 동기화 시작...');
 
-    // 1. 공공데이터 API에서 모든 데이터 조회
-    console.log('API 데이터 조회 중...');
-    const apiData = await publicApiClient.fetchAll<KioskApiResponse>({
-      ...KIOSK_API_CONFIG,
+    // 1. 설치정보 API에서 모든 데이터 조회
+    console.log('설치정보 API 데이터 조회 중...');
+    const installationData = await publicApiClient.fetchAll<KioskApiResponse>({
+      ...INSTALLATION_API_CONFIG,
     }, {
       onProgress: (current, total) => {
-        console.log(`페이지 ${current}/${total} 조회 완료`);
+        console.log(`설치정보 페이지 ${current}/${total} 조회 완료`);
       },
     });
 
-    totalRecords = apiData.length;
-    console.log(`총 ${totalRecords}개 데이터 조회 완료`);
+    totalRecords = installationData.length;
+    console.log(`설치정보 총 ${totalRecords}개 데이터 조회 완료`);
 
     if (totalRecords === 0) {
       await prisma.syncHistory.update({
@@ -217,9 +306,27 @@ export async function syncKiosks(): Promise<void> {
       return;
     }
 
-    // 2. 주소 추출 및 지오코딩
+    // 2. 민원정보 API에서 모든 데이터 조회
+    console.log('민원정보 API 데이터 조회 중...');
+    const certificateData = await publicApiClient.fetchAll<CertificateApiResponse>({
+      ...CERTIFICATE_API_CONFIG,
+    }, {
+      onProgress: (current, total) => {
+        console.log(`민원정보 페이지 ${current}/${total} 조회 완료`);
+      },
+    });
+    console.log(`민원정보 총 ${certificateData.length}개 데이터 조회 완료`);
+
+    // 3. MNG_NO 기준으로 민원 목록 그룹핑
+    console.log('민원 목록 그룹핑 중...');
+    const certByMngNo = groupCertificatesByMngNo(certificateData);
+    console.log(`${certByMngNo.size}개 발급기에 민원 정보 매핑 완료`);
+
+    // 4. 주소 추출 및 지오코딩 (주소 정규화 적용)
     console.log('지오코딩 진행 중...');
-    const addresses = apiData.map((row) => buildAddressFromKioskRow(row));
+    const addresses = installationData.map((row) =>
+      normalizeAddressForGeocode(buildAddressFromKioskRow(row))
+    );
     const coordinates = await batchGeocode(addresses, {
       batchSize: 10,
       delayMs: 200, // Kakao API rate limit 고려
@@ -228,34 +335,68 @@ export async function syncKiosks(): Promise<void> {
     const successfulGeocode = coordinates.filter((c) => c !== null).length;
     console.log(`지오코딩 완료: ${successfulGeocode}/${totalRecords} 성공`);
 
-    // 3. 데이터 변환 및 upsert
+    // 5. 데이터 변환 및 upsert
     console.log('데이터베이스 저장 중...');
-    for (let i = 0; i < apiData.length; i++) {
-      const row = apiData[i];
+    for (let i = 0; i < installationData.length; i++) {
+      const row = installationData[i];
       const coords = coordinates[i];
-      const facilityData = transformKioskData(row, coords);
+      const mngNo = row.MNG_NO?.trim();
+      const availableDocuments = mngNo ? certByMngNo.get(mngNo) || [] : [];
+      const kioskData = transformKioskData(row, coords, availableDocuments);
 
       try {
-        const existing = await prisma.facility.findUnique({
-          where: { id: facilityData.id },
+        const existing = await prisma.kiosk.findUnique({
+          where: { id: kioskData.id },
         });
 
-        await prisma.facility.upsert({
-          where: { id: facilityData.id },
+        await prisma.kiosk.upsert({
+          where: { id: kioskData.id },
           create: {
-            ...facilityData,
-            details: facilityData.details,
+            id: kioskData.id,
+            name: kioskData.name,
+            address: kioskData.address,
+            roadAddress: kioskData.roadAddress,
+            lat: kioskData.lat,
+            lng: kioskData.lng,
+            city: kioskData.city,
+            district: kioskData.district,
+            sourceId: kioskData.sourceId,
+            sourceUrl: kioskData.sourceUrl,
+            syncedAt: kioskData.syncedAt,
+            // Kiosk 전용 필드
+            detailLocation: kioskData.detailLocation,
+            operationAgency: kioskData.operationAgency,
+            weekdayOperatingHours: kioskData.weekdayOperatingHours,
+            saturdayOperatingHours: kioskData.saturdayOperatingHours,
+            holidayOperatingHours: kioskData.holidayOperatingHours,
+            blindKeypad: kioskData.blindKeypad,
+            voiceGuide: kioskData.voiceGuide,
+            brailleOutput: kioskData.brailleOutput,
+            wheelchairAccessible: kioskData.wheelchairAccessible,
+            mngNo: kioskData.mngNo,
+            availableDocuments: kioskData.availableDocuments,
           },
           update: {
-            name: facilityData.name,
-            address: facilityData.address,
-            roadAddress: facilityData.roadAddress,
-            lat: facilityData.lat,
-            lng: facilityData.lng,
-            city: facilityData.city,
-            district: facilityData.district,
-            details: facilityData.details,
-            syncedAt: facilityData.syncedAt,
+            name: kioskData.name,
+            address: kioskData.address,
+            roadAddress: kioskData.roadAddress,
+            lat: kioskData.lat,
+            lng: kioskData.lng,
+            city: kioskData.city,
+            district: kioskData.district,
+            syncedAt: kioskData.syncedAt,
+            // Kiosk 전용 필드
+            detailLocation: kioskData.detailLocation,
+            operationAgency: kioskData.operationAgency,
+            weekdayOperatingHours: kioskData.weekdayOperatingHours,
+            saturdayOperatingHours: kioskData.saturdayOperatingHours,
+            holidayOperatingHours: kioskData.holidayOperatingHours,
+            blindKeypad: kioskData.blindKeypad,
+            voiceGuide: kioskData.voiceGuide,
+            brailleOutput: kioskData.brailleOutput,
+            wheelchairAccessible: kioskData.wheelchairAccessible,
+            mngNo: kioskData.mngNo,
+            availableDocuments: kioskData.availableDocuments,
           },
         });
 
@@ -270,11 +411,11 @@ export async function syncKiosks(): Promise<void> {
           console.log(`저장 진행: ${i + 1}/${totalRecords}`);
         }
       } catch (error) {
-        console.error(`저장 실패 (${facilityData.id}):`, error);
+        console.error(`저장 실패 (${kioskData.id}):`, error);
       }
     }
 
-    // 4. 동기화 히스토리 업데이트 (성공)
+    // 6. 동기화 히스토리 업데이트 (성공)
     await prisma.syncHistory.update({
       where: { id: syncHistory.id },
       data: {

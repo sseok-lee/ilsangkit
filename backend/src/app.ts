@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
+import wasteSchedulesRouter from './routes/wasteSchedules.js';
 
 const app: Application = express();
 
@@ -27,6 +28,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // API routes
 app.use('/api/facilities', facilitiesRouter);
 app.use('/api/meta', metaRouter);
+app.use('/api/waste-schedules', wasteSchedulesRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

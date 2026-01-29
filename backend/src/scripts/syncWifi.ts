@@ -3,33 +3,37 @@
 
 import { parseCSV, downloadAndExtractCSV } from '../lib/csvParser.js';
 import prisma from '../lib/prisma.js';
-import { FacilityCategory, SyncStatus } from '@prisma/client';
+import { SyncStatus } from '@prisma/client';
 import { createHash } from 'crypto';
+import * as fs from 'fs';
+import * as iconv from 'iconv-lite';
 
 // 와이파이 CSV 데이터 URL
 const WIFI_DATA_URL = 'https://www.localdata.go.kr/datafile/each/07_24_04_P_CSV.zip';
 
-// CSV 행 타입 정의
+// CSV 행 타입 정의 (localdata.go.kr 표준데이터 형식)
 export interface WifiCSVRow extends Record<string, string> {
-  연번: string;
+  관리번호: string;
   설치장소명: string;
+  설치장소상세: string;
+  설치시도명: string;
+  설치시군구명: string;
+  설치시설구분명: string;
+  서비스제공사명: string;
+  와이파이SSID: string;
+  설치연월: string;
   소재지도로명주소: string;
   소재지지번주소: string;
-  위도: string;
-  경도: string;
-  와이파이SSID: string;
-  설치년월: string;
-  통신사: string;
-  설치환경: string;
   관리기관명: string;
   관리기관전화번호: string;
+  WGS84위도: string;
+  WGS84경도: string;
   데이터기준일자: string;
 }
 
-// 변환된 시설 데이터 타입
-export interface TransformedFacility {
+// 변환된 Wifi 데이터 타입 (flat structure)
+export interface TransformedWifi {
   id: string;
-  category: FacilityCategory;
   name: string;
   address: string | null;
   roadAddress: string | null;
@@ -39,14 +43,13 @@ export interface TransformedFacility {
   district: string;
   sourceId: string;
   sourceUrl: string;
-  details: {
-    ssid: string;
-    installDate: string;
-    serviceProvider: string;
-    installLocation: string;
-    managementAgency: string;
-    phoneNumber: string;
-  };
+  // Wifi 전용 필드
+  ssid: string;
+  installDate: string;
+  serviceProvider: string;
+  installLocation: string;
+  managementAgency: string;
+  phoneNumber: string;
 }
 
 // 동기화 결과 타입
@@ -146,9 +149,9 @@ export function parseAddress(
 }
 
 /**
- * 와이파이 CSV 데이터를 Facility 모델 형식으로 변환
+ * 와이파이 CSV 데이터를 Wifi 모델 형식으로 변환
  */
-export function transformWifiData(row: WifiCSVRow): TransformedFacility | null {
+export function transformWifiData(row: WifiCSVRow): TransformedWifi | null {
   // 필수 필드 검증
   const name = row.설치장소명?.trim();
   if (!name) {
@@ -156,10 +159,15 @@ export function transformWifiData(row: WifiCSVRow): TransformedFacility | null {
   }
 
   // 좌표 검증
-  const lat = parseFloat(row.위도?.trim() || '');
-  const lng = parseFloat(row.경도?.trim() || '');
+  const lat = parseFloat(row.WGS84위도?.trim() || '');
+  const lng = parseFloat(row.WGS84경도?.trim() || '');
 
   if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+    return null;
+  }
+
+  // 한국 좌표 범위 검증 (위도 33~39, 경도 124~132)
+  if (lat < 33 || lat > 39 || lng < 124 || lng > 132) {
     return null;
   }
 
@@ -167,13 +175,13 @@ export function transformWifiData(row: WifiCSVRow): TransformedFacility | null {
   const roadAddress = row.소재지도로명주소?.trim() || null;
   const address = row.소재지지번주소?.trim() || null;
 
-  // 주소에서 시/도, 구/군 추출
-  const parsedAddress = parseAddress(roadAddress || address || '');
-  const city = parsedAddress?.city || 'unknown';
-  const district = parsedAddress?.district || 'unknown';
+  // 시/도, 구/군 - CSV에서 직접 제공되는 값 사용
+  const rawCity = row.설치시도명?.trim() || '';
+  const city = CITY_MAP[rawCity] || rawCity || 'unknown';
+  const district = row.설치시군구명?.trim() || 'unknown';
 
   // 고유 ID 생성
-  const sourceId = `wifi_${row.연번}`;
+  const sourceId = `wifi_${row.관리번호}`;
   const idHash = createHash('md5')
     .update(`${sourceId}_${row.와이파이SSID}_${lat}_${lng}`)
     .digest('hex')
@@ -182,7 +190,6 @@ export function transformWifiData(row: WifiCSVRow): TransformedFacility | null {
 
   return {
     id,
-    category: 'wifi' as FacilityCategory,
     name,
     address,
     roadAddress,
@@ -192,14 +199,13 @@ export function transformWifiData(row: WifiCSVRow): TransformedFacility | null {
     district,
     sourceId,
     sourceUrl: WIFI_DATA_URL,
-    details: {
-      ssid: row.와이파이SSID?.trim() || '',
-      installDate: row.설치년월?.trim() || '',
-      serviceProvider: row.통신사?.trim() || '',
-      installLocation: row.설치환경?.trim() || '',
-      managementAgency: row.관리기관명?.trim() || '',
-      phoneNumber: row.관리기관전화번호?.trim() || '',
-    },
+    // Wifi 전용 필드 (flat)
+    ssid: row.와이파이SSID?.trim() || '',
+    installDate: row.설치연월?.trim() || '',
+    serviceProvider: row.서비스제공사명?.trim() || '',
+    installLocation: row.설치시설구분명?.trim() || '',
+    managementAgency: row.관리기관명?.trim() || '',
+    phoneNumber: row.관리기관전화번호?.trim() || '',
   };
 }
 
@@ -242,10 +248,10 @@ async function updateSyncHistory(
 }
 
 /**
- * 시설 데이터 배치 Upsert
+ * Wifi 데이터 배치 Upsert
  */
-async function batchUpsertFacilities(
-  facilities: TransformedFacility[]
+async function batchUpsertWifi(
+  wifiData: TransformedWifi[]
 ): Promise<{ newCount: number; updatedCount: number }> {
   let newCount = 0;
   let updatedCount = 0;
@@ -253,51 +259,55 @@ async function batchUpsertFacilities(
   // 배치 크기
   const BATCH_SIZE = 100;
 
-  for (let i = 0; i < facilities.length; i += BATCH_SIZE) {
-    const batch = facilities.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < wifiData.length; i += BATCH_SIZE) {
+    const batch = wifiData.slice(i, i + BATCH_SIZE);
 
     await Promise.all(
-      batch.map(async (facility) => {
-        const existing = await prisma.facility.findUnique({
-          where: {
-            category_sourceId: {
-              category: facility.category,
-              sourceId: facility.sourceId,
-            },
-          },
+      batch.map(async (wifi) => {
+        const existing = await prisma.wifi.findUnique({
+          where: { sourceId: wifi.sourceId },
         });
 
         if (existing) {
-          await prisma.facility.update({
+          await prisma.wifi.update({
             where: { id: existing.id },
             data: {
-              name: facility.name,
-              address: facility.address,
-              roadAddress: facility.roadAddress,
-              lat: facility.lat,
-              lng: facility.lng,
-              city: facility.city,
-              district: facility.district,
-              details: facility.details,
+              name: wifi.name,
+              address: wifi.address,
+              roadAddress: wifi.roadAddress,
+              lat: wifi.lat,
+              lng: wifi.lng,
+              city: wifi.city,
+              district: wifi.district,
+              ssid: wifi.ssid,
+              installDate: wifi.installDate,
+              serviceProvider: wifi.serviceProvider,
+              installLocation: wifi.installLocation,
+              managementAgency: wifi.managementAgency,
+              phoneNumber: wifi.phoneNumber,
               syncedAt: new Date(),
             },
           });
           updatedCount++;
         } else {
-          await prisma.facility.create({
+          await prisma.wifi.create({
             data: {
-              id: facility.id,
-              category: facility.category,
-              name: facility.name,
-              address: facility.address,
-              roadAddress: facility.roadAddress,
-              lat: facility.lat,
-              lng: facility.lng,
-              city: facility.city,
-              district: facility.district,
-              sourceId: facility.sourceId,
-              sourceUrl: facility.sourceUrl,
-              details: facility.details,
+              id: wifi.id,
+              name: wifi.name,
+              address: wifi.address,
+              roadAddress: wifi.roadAddress,
+              lat: wifi.lat,
+              lng: wifi.lng,
+              city: wifi.city,
+              district: wifi.district,
+              sourceId: wifi.sourceId,
+              sourceUrl: wifi.sourceUrl,
+              ssid: wifi.ssid,
+              installDate: wifi.installDate,
+              serviceProvider: wifi.serviceProvider,
+              installLocation: wifi.installLocation,
+              managementAgency: wifi.managementAgency,
+              phoneNumber: wifi.phoneNumber,
             },
           });
           newCount++;
@@ -306,16 +316,46 @@ async function batchUpsertFacilities(
     );
 
     // 진행 상황 로깅
-    console.info(`Processed ${Math.min(i + BATCH_SIZE, facilities.length)} / ${facilities.length} records`);
+    console.info(`Processed ${Math.min(i + BATCH_SIZE, wifiData.length)} / ${wifiData.length} records`);
   }
 
   return { newCount, updatedCount };
 }
 
 /**
+ * 로컬 CSV 파일 읽기 (EUC-KR/UTF-8 자동 감지)
+ */
+function readLocalCSV(filePath: string): string {
+  const buffer = fs.readFileSync(filePath);
+
+  // UTF-8 BOM 체크
+  if (buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf) {
+    return buffer.toString('utf8').slice(1);
+  }
+
+  // EUC-KR 감지: 0xA1-0xFE 범위의 2바이트 쌍이 많으면 EUC-KR
+  let eucKrScore = 0;
+  for (let i = 0; i < Math.min(buffer.length, 2000); i++) {
+    if (buffer[i] >= 0xa1 && buffer[i] <= 0xfe && i + 1 < buffer.length) {
+      const next = buffer[i + 1];
+      if (next >= 0xa1 && next <= 0xfe) {
+        eucKrScore++;
+        i++;
+      }
+    }
+  }
+
+  if (eucKrScore > 10) {
+    return iconv.decode(buffer, 'euc-kr');
+  }
+
+  return buffer.toString('utf8');
+}
+
+/**
  * 와이파이 데이터 동기화 실행
  */
-export async function syncWifiData(csvContent?: string): Promise<WifiSyncResult> {
+export async function syncWifiData(csvContentOrPath?: string): Promise<WifiSyncResult> {
   const result: WifiSyncResult = {
     totalRecords: 0,
     newRecords: 0,
@@ -330,8 +370,13 @@ export async function syncWifiData(csvContent?: string): Promise<WifiSyncResult>
   try {
     // CSV 데이터 가져오기
     let content: string;
-    if (csvContent) {
-      content = csvContent;
+    if (csvContentOrPath && fs.existsSync(csvContentOrPath)) {
+      // 로컬 파일 경로인 경우
+      console.info('Reading local CSV file:', csvContentOrPath);
+      content = readLocalCSV(csvContentOrPath);
+    } else if (csvContentOrPath) {
+      // CSV 내용이 직접 전달된 경우
+      content = csvContentOrPath;
     } else {
       console.info('Downloading wifi data from:', WIFI_DATA_URL);
       content = await downloadAndExtractCSV(WIFI_DATA_URL);
@@ -345,29 +390,36 @@ export async function syncWifiData(csvContent?: string): Promise<WifiSyncResult>
 
     // 데이터 변환
     console.info('Transforming data...');
-    const facilities: TransformedFacility[] = [];
+    const wifiData: TransformedWifi[] = [];
 
     for (const row of rows) {
       try {
         const transformed = transformWifiData(row);
         if (transformed) {
-          facilities.push(transformed);
+          wifiData.push(transformed);
         } else {
           result.skippedRecords++;
         }
       } catch (error) {
         result.skippedRecords++;
         result.errors.push(
-          `Row ${row.연번}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          `Row ${row.관리번호}: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
       }
     }
 
-    console.info(`Transformed ${facilities.length} valid records, skipped ${result.skippedRecords}`);
+    // 중복 sourceId 제거
+    const uniqueWifiData = Array.from(
+      new Map(wifiData.map((w) => [w.sourceId, w])).values()
+    );
+    const duplicateCount = wifiData.length - uniqueWifiData.length;
+    result.skippedRecords += duplicateCount;
+
+    console.info(`Transformed ${uniqueWifiData.length} unique records, skipped ${result.skippedRecords} (including ${duplicateCount} duplicates)`);
 
     // DB 저장
     console.info('Saving to database...');
-    const { newCount, updatedCount } = await batchUpsertFacilities(facilities);
+    const { newCount, updatedCount } = await batchUpsertWifi(uniqueWifiData);
     result.newRecords = newCount;
     result.updatedRecords = updatedCount;
 
@@ -391,7 +443,12 @@ export async function syncWifiData(csvContent?: string): Promise<WifiSyncResult>
 // 직접 실행 시
 const isMainModule = import.meta.url === `file://${process.argv[1]}`;
 if (isMainModule) {
-  syncWifiData()
+  // --local 옵션으로 로컬 파일 경로 지정 가능
+  const args = process.argv.slice(2);
+  const localIndex = args.indexOf('--local');
+  const localPath = localIndex !== -1 ? args[localIndex + 1] : undefined;
+
+  syncWifiData(localPath)
     .then((result) => {
       console.info('Sync result:', result);
       process.exit(0);
