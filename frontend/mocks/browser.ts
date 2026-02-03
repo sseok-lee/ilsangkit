@@ -3,5 +3,6 @@
 
 import { setupWorker } from 'msw/browser';
 import { facilityHandlers } from './handlers/facilities';
+import { wasteScheduleHandlers } from './handlers/waste-schedules';
 
-export const worker = setupWorker(...facilityHandlers);
+export const worker = setupWorker(...facilityHandlers, ...wasteScheduleHandlers);

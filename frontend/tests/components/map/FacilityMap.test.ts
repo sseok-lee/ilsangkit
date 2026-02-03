@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import FacilityMap from '~/app/components/map/FacilityMap.vue'
+import FacilityMap from '~/components/map/FacilityMap.vue'
 import type { FacilitySearchItem } from '~/types/api'
 
 // Mock useKakaoMap composable

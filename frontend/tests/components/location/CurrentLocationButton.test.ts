@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
-import CurrentLocationButton from '~/app/components/location/CurrentLocationButton.vue'
+import CurrentLocationButton from '~/components/location/CurrentLocationButton.vue'
 
 // Mock useGeolocation composable
 const mockGetCurrentPosition = vi.fn()
@@ -37,8 +37,8 @@ describe('CurrentLocationButton', () => {
     it('아이콘이 표시되는지 확인', () => {
       const wrapper = mount(CurrentLocationButton)
 
-      // SVG 아이콘 또는 아이콘 컴포넌트가 있는지 확인
-      expect(wrapper.find('svg').exists()).toBe(true)
+      // Material Symbols 아이콘이 있는지 확인 (SVG에서 Material Symbols로 변경)
+      expect(wrapper.find('.material-symbols-outlined').exists()).toBe(true)
     })
   })
 
@@ -178,7 +178,8 @@ describe('CurrentLocationButton', () => {
     it('기본 상태: 위치 아이콘 + "현재 위치"', () => {
       const wrapper = mount(CurrentLocationButton)
 
-      expect(wrapper.find('svg').exists()).toBe(true)
+      // Material Symbols 아이콘이 있는지 확인 (SVG에서 Material Symbols로 변경)
+      expect(wrapper.find('.material-symbols-outlined').exists()).toBe(true)
       expect(wrapper.text()).toContain('현재 위치')
     })
 

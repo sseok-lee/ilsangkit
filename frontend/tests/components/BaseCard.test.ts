@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import BaseCard from '~/app/components/common/BaseCard.vue'
+import BaseCard from '~/components/common/BaseCard.vue'
 
 describe('BaseCard', () => {
   describe('Rendering', () => {

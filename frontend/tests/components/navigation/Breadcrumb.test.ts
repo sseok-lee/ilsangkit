@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
-import Breadcrumb from '../../../app/components/navigation/Breadcrumb.vue';
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue';
 
 describe('Breadcrumb', () => {
   it('renders breadcrumb items', () => {

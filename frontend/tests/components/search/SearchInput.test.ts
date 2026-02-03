@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import SearchInput from '~/app/components/search/SearchInput.vue'
+import SearchInput from '~/components/search/SearchInput.vue'
 
 describe('SearchInput', () => {
   it('renders with placeholder', () => {
@@ -71,11 +71,13 @@ describe('SearchInput', () => {
 
     const button = wrapper.find('button')
     expect(button.exists()).toBe(true)
-    // Button should have min-h-11 (44px) or larger
-    expect(button.classes()).toContain('min-h-11')
+    // Updated design: button uses rounded-xl (from Stitch design system)
+    expect(button.classes()).toContain('rounded-xl')
+    // Updated: now uses 'bg-primary' instead of 'bg-primary-600'
+    expect(button.classes()).toContain('bg-primary')
   })
 
-  it('displays search icon', () => {
+  it('displays search icon in left side', () => {
     const wrapper = mount(SearchInput, {
       props: {
         modelValue: '',
@@ -83,8 +85,36 @@ describe('SearchInput', () => {
       },
     })
 
-    // Should render an icon (svg or icon component)
+    // Updated design: search icon container uses pl-4 instead of left-4
+    const iconContainer = wrapper.find('div.absolute')
+    expect(iconContainer.exists()).toBe(true)
+    expect(iconContainer.classes()).toContain('pl-4')
+    // Updated: now uses Material Symbols instead of SVG
+    expect(iconContainer.html()).toContain('material-symbols-outlined')
+  })
+
+  it('displays custom button text when provided', () => {
+    const wrapper = mount(SearchInput, {
+      props: {
+        modelValue: '',
+        placeholder: '검색',
+        buttonText: '현재 위치로 검색',
+      },
+    })
+
     const button = wrapper.find('button')
-    expect(button.html()).toContain('svg')
+    expect(button.text()).toBe('현재 위치로 검색')
+  })
+
+  it('displays default button text when not provided', () => {
+    const wrapper = mount(SearchInput, {
+      props: {
+        modelValue: '',
+        placeholder: '검색',
+      },
+    })
+
+    const button = wrapper.find('button')
+    expect(button.text()).toBe('검색')
   })
 })

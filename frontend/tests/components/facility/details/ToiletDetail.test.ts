@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import ToiletDetail from '../../../../app/components/facility/details/ToiletDetail.vue'
-import DetailRow from '../../../../app/components/facility/DetailRow.vue'
+import ToiletDetail from '~/components/facility/details/ToiletDetail.vue'
+import DetailRow from '~/components/facility/DetailRow.vue'
 import type { ToiletDetails } from '../../../../types/facility'
 
 describe('ToiletDetail', () => {

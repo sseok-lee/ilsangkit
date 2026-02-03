@@ -1,15 +1,25 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import DefaultLayout from '~/app/layouts/default.vue'
+import { createRouter, createMemoryHistory } from 'vue-router'
+import DefaultLayout from '~/layouts/default.vue'
+
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [
+    { path: '/', name: 'index', component: { template: '<div>Home</div>' } },
+  ],
+})
 
 describe('Default Layout', () => {
   describe('Structure', () => {
     it('should render layout with header, main, and footer', () => {
       const wrapper = mount(DefaultLayout, {
         global: {
+          plugins: [router],
           stubs: {
             AppHeader: { template: '<header data-testid="app-header">Header</header>' },
             AppFooter: { template: '<footer data-testid="app-footer">Footer</footer>' },
+            BottomNavigation: { template: '<nav data-testid="bottom-nav">Bottom Nav</nav>' },
             NuxtPage: { template: '<div data-testid="nuxt-page">Page Content</div>' },
           },
         },
@@ -23,9 +33,11 @@ describe('Default Layout', () => {
     it('should have minimum height of full viewport', () => {
       const wrapper = mount(DefaultLayout, {
         global: {
+          plugins: [router],
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
+            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
             NuxtPage: { template: '<div>Page</div>' },
           },
         },
@@ -37,9 +49,11 @@ describe('Default Layout', () => {
     it('should use flexbox layout', () => {
       const wrapper = mount(DefaultLayout, {
         global: {
+          plugins: [router],
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
+            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
             NuxtPage: { template: '<div>Page</div>' },
           },
         },
@@ -54,9 +68,11 @@ describe('Default Layout', () => {
     it('should have main element with flex-1 for content', () => {
       const wrapper = mount(DefaultLayout, {
         global: {
+          plugins: [router],
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
+            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
             NuxtPage: { template: '<div>Page</div>' },
           },
         },
@@ -120,9 +136,11 @@ describe('Default Layout', () => {
     it('should have responsive container classes', () => {
       const wrapper = mount(DefaultLayout, {
         global: {
+          plugins: [router],
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
+            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
             NuxtPage: { template: '<div>Page</div>' },
           },
         },

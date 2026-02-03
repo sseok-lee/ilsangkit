@@ -3,13 +3,29 @@
 
 export default defineNuxtPlugin(async () => {
   const config = useRuntimeConfig();
-  const isDisabled = process.env.NUXT_PUBLIC_DISABLE_MSW === 'true';
+  const isDisabled = config.public.disableMsw;
 
-  if (process.env.NODE_ENV === 'development' && !isDisabled) {
+  if (import.meta.dev && !isDisabled) {
     const { worker } = await import('~/mocks/browser');
 
     await worker.start({
-      onUnhandledRequest: 'bypass',
+      onUnhandledRequest(request, print) {
+        // 정적 파일 요청은 무시 (Service Worker 네트워크 에러 방지)
+        const url = new URL(request.url);
+        if (
+          url.pathname.startsWith('/icons/') ||
+          url.pathname.startsWith('/_nuxt/') ||
+          url.pathname.endsWith('.png') ||
+          url.pathname.endsWith('.jpg') ||
+          url.pathname.endsWith('.svg') ||
+          url.pathname.endsWith('.ico') ||
+          url.pathname.endsWith('.woff') ||
+          url.pathname.endsWith('.woff2')
+        ) {
+          return;
+        }
+        print.warning();
+      },
       serviceWorker: {
         url: '/mockServiceWorker.js',
       },

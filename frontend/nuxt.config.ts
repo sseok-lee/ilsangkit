@@ -7,6 +7,10 @@ export default defineNuxtConfig({
     '@pinia/nuxt'
   ],
 
+  components: [
+    { path: '~/components', pathPrefix: false }
+  ],
+
   typescript: {
     strict: true,
     typeCheck: false
@@ -16,7 +20,8 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000',
       kakaoMapKey: process.env.NUXT_PUBLIC_KAKAO_MAP_KEY || '',
-      gaId: process.env.NUXT_PUBLIC_GA_ID || ''
+      gaId: process.env.NUXT_PUBLIC_GA_ID || '',
+      disableMsw: process.env.NUXT_PUBLIC_DISABLE_MSW === 'true'
     }
   },
 
@@ -30,7 +35,9 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css' }
+        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap' }
       ]
     }
   },

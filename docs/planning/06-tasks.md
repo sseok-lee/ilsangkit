@@ -16,6 +16,7 @@
 | M4 | 지도 연동 | Phase 4 | T4.1 ~ T4.2 |
 | M5 | SEO 최적화 | Phase 5 | T5.1 ~ T5.3 |
 | M6 | 배포 & 모니터링 | Phase 6 | T6.1 ~ T6.3 |
+| M7 | 디자인 목업 반영 | Phase 7 | T7.1 ~ T7.4 |
 
 ---
 
@@ -882,7 +883,7 @@ cd ../ilsangkit-phase3-layout
 **산출물**:
 - `frontend/tests/components/AppHeader.test.ts`
 - `frontend/app/layouts/default.vue`
-- `frontend/app/components/common/AppHeader.vue`
+- `frontend/app/components/common/AppHeader.vue` (데스크톱 네비게이션 + 모바일 햄버거 메뉴)
 - `frontend/app/components/common/AppFooter.vue`
 - `frontend/app/components/common/BaseButton.vue`
 - `frontend/app/components/common/BaseCard.vue`
@@ -893,6 +894,8 @@ cd ../ilsangkit-phase3-layout
 - [x] **반응형 레이아웃**: Mobile/Tablet/Desktop 브레이크포인트 동작
 - [x] **터치 타겟**: 모든 버튼/링크 최소 44x44px
 - [x] TailwindCSS 스타일 적용
+- [x] 데스크톱: 가로 방향 카테고리 네비게이션 링크
+- [x] 모바일: 햄버거 메뉴로 토글되는 드롭다운 네비게이션
 
 ---
 
@@ -933,9 +936,9 @@ cd ../ilsangkit-phase3-main
    ```
 
 **작업 내용**:
-- 메인 페이지 (/)
+- 메인 페이지 (/) - 카테고리 그리드로 탭 페이지 진입점 역할
 - 검색 입력창
-- 카테고리 선택 칩
+- 카테고리 선택 칩 (CategoryChips) - 카테고리 탭 페이지 링크
 - 현재 위치 검색 버튼
 - 인기 지역 목록
 
@@ -951,6 +954,7 @@ cd ../ilsangkit-phase3-main
 - [x] 검색 입력 동작
 - [x] 카테고리 선택 동작
 - [x] 검색 시 /search 페이지 이동
+- [x] 카테고리 클릭 시 해당 카테고리 필터로 검색 이동
 - [x] **모바일**: 검색창 풀 너비, 카테고리 가로 스크롤
 - [x] **데스크톱**: 검색창 중앙 정렬, 카테고리 그리드
 
@@ -985,11 +989,12 @@ cd ../ilsangkit-phase3-search
    ```
 
 **작업 내용**:
-- 검색 결과 페이지 (/search)
+- 검색 결과 페이지 (/search) - 통합 검색 기능
 - 목록 뷰 / 지도 뷰 토글
 - 검색 필터 (카테고리, 거리)
 - 시설 카드 컴포넌트
 - 페이지네이션
+- 현재 위치 기반 검색 버튼 통합
 
 **산출물**:
 - `frontend/tests/pages/search.test.ts`
@@ -998,6 +1003,7 @@ cd ../ilsangkit-phase3-search
 - `frontend/app/components/facility/FacilityList.vue`
 - `frontend/app/components/search/SearchFilters.vue`
 - `frontend/app/composables/useFacilitySearch.ts`
+- `frontend/app/components/location/CurrentLocationButton.vue`
 
 **인수 조건**:
 - [x] 테스트 먼저 작성됨
@@ -1128,7 +1134,6 @@ cd ../ilsangkit-phase4-map
 **산출물**:
 - `frontend/plugins/kakaoMaps.client.ts`
 - `frontend/app/components/map/FacilityMap.vue`
-- `frontend/app/components/map/FacilityMarker.vue`
 - `frontend/app/composables/useKakaoMap.ts`
 
 **인수 조건**:
@@ -1136,6 +1141,7 @@ cd ../ilsangkit-phase4-map
 - [x] 마커 표시 동작
 - [x] 마커 클릭 시 정보 창 표시
 - [x] 카테고리별 마커 스타일 적용
+- [x] center/facilities prop 변경 시 자동 업데이트
 
 ---
 
@@ -1158,7 +1164,7 @@ cd ../ilsangkit-phase4-geolocation
 - 위치 기반 검색 연동
 
 **산출물**:
-- `frontend/composables/useGeolocation.ts` (이미 구현됨)
+- `frontend/composables/useGeolocation.ts`
 - `frontend/app/components/location/CurrentLocationButton.vue`
 - `frontend/tests/composables/useGeolocation.test.ts`
 - `frontend/tests/components/location/CurrentLocationButton.test.ts`
@@ -1166,7 +1172,7 @@ cd ../ilsangkit-phase4-geolocation
 **인수 조건**:
 - [x] 위치 권한 요청 동작
 - [x] 현재 위치 가져오기 성공
-- [x] 위치 기반 검색 연동 (search.vue)
+- [x] 위치 기반 검색 연동 (search.vue에서 lat/lng + radius 파라미터)
 - [x] 권한 거부 시 안내 메시지
 - [x] 모든 테스트 통과 (203개)
 - [x] 빌드 성공
@@ -1343,6 +1349,136 @@ cd ../ilsangkit-phase6-cicd
 - [ ] Search Console 사이트 소유권 확인
 - [ ] 사이트맵 제출
 - [ ] 기본 트래픽 모니터링 가능
+
+---
+
+## M7: 디자인 목업 반영
+
+### [x] Phase 7, T7.1: 랜딩 페이지 디자인 개선 ✅
+
+**담당**: frontend-specialist
+
+**의존성**: T4.1
+
+**작업 내용**:
+- CategoryChips → CategoryCards로 변경 (세로 배치: 아이콘 + 라벨)
+- 카테고리별 배경색 적용 (purple, green, orange, pink, indigo)
+- Search Near Me 버튼 검색창 바로 아래로 이동
+- 인기 지역 가로 한 줄 배치로 변경
+
+**디자인 레퍼런스**:
+| 파일 | 경로 |
+|------|------|
+| HTML | [code.html](../../../design/desktop_landing_page/code.html) |
+| PNG | ![목업](../../../design/desktop_landing_page/screen.png) |
+
+**산출물**:
+- `frontend/app/components/category/CategoryCards.vue`
+- `frontend/app/pages/index.vue` (업데이트)
+
+**인수 조건**:
+- [x] 카테고리 카드 형태로 표시
+- [x] 카테고리별 색상 적용
+- [x] Search Near Me 버튼 검색창 바로 아래 배치
+- [x] 인기 지역 가로 한 줄 배치
+
+---
+
+### [x] Phase 7, T7.2: 검색 결과 페이지 디자인 개선 ✅
+
+**담당**: frontend-specialist
+
+**의존성**: T4.1
+
+**작업 내용**:
+- 좌측 목록 + 우측 지도 레이아웃 (지도 항상 표시)
+- 상단에 카테고리 탭 필터 추가
+- 목록 아이템에 운영상태 뱃지 추가
+- 필터 드롭다운 스타일 통일
+- "이 지역에서 검색" 버튼 지도 위에 추가
+
+**디자인 레퍼런스**:
+| 파일 | 경로 |
+|------|------|
+| HTML | [code.html](../../../design/desktop_search_results_map_view/code.html) |
+| PNG | ![목업](../../../design/desktop_search_results_map_view/screen.png) |
+
+**산출물**:
+- `frontend/app/pages/search.vue` (업데이트)
+- `frontend/app/components/facility/FacilityCard.vue` (업데이트)
+- `frontend/app/components/facility/OperatingStatusBadge.vue` (신규)
+- `frontend/app/components/location/CurrentLocationButton.vue` (compact 옵션 추가)
+
+**인수 조건**:
+- [x] 좌측 목록 + 우측 지도 레이아웃
+- [x] 카테고리 탭 필터 동작
+- [x] 운영상태 뱃지 표시 (24시간, 운영 중, 운영 중지)
+- [x] "이 지역에서 검색" 버튼 표시
+- [x] 지도 컨트롤 버튼 (현재 위치, 줌 인/아웃)
+
+---
+
+### [x] Phase 7, T7.3: 시설 상세 페이지 디자인 개선 (데스크톱) ✅
+
+**담당**: frontend-specialist
+
+**의존성**: T4.1
+
+**작업 내용**:
+- 브레드크럼 네비게이션 추가
+- 카테고리 + 운영상태 뱃지 추가
+- Facility Features 아이콘 그리드 레이아웃
+- Get Directions 버튼 + Share/Save 버튼 추가
+- 좌측 정보 + 우측 지도 레이아웃 적용
+
+**디자인 레퍼런스**:
+| 파일 | 경로 |
+|------|------|
+| HTML | [code.html](../../../design/desktop_facility_detail_page/code.html) |
+| PNG | ![목업](../../../design/desktop_facility_detail_page/screen.png) |
+
+**산출물**:
+- `frontend/app/pages/[category]/[id].vue` (업데이트)
+- `frontend/app/components/facility/FacilityFeatureCard.vue` (신규)
+
+**인수 조건**:
+- [x] 브레드크럼 네비게이션 동작
+- [x] 카테고리 + 운영상태 뱃지 표시
+- [x] Facility Features 아이콘 그리드 표시
+- [x] 길찾기/공유/저장 버튼 동작
+- [x] 좌측 정보 + 우측 지도 레이아웃
+
+---
+
+### [x] Phase 7, T7.4: 시설 상세 페이지 디자인 개선 (모바일) ✅
+
+**담당**: frontend-specialist
+
+**의존성**: T7.3
+
+**작업 내용**:
+- 상단 지도 영역 (마커 표시)
+- 정보 카드 슬라이드업 형태
+- Facility Info 아이콘 + 숫자 표시
+- 체크리스트 형태 편의시설 표시
+- 하단 고정 "길찾기" 버튼
+
+**디자인 레퍼런스**:
+| 파일 | 경로 |
+|------|------|
+| HTML | [code.html](../../../design/mobile_facility_detail_page_(toilet)/code.html) |
+| PNG | ![목업](../../../design/mobile_facility_detail_page_(toilet)/screen.png) |
+
+**산출물**:
+- `frontend/app/pages/[category]/[id].vue` (반응형 업데이트)
+
+**인수 조건**:
+- [x] 상단 지도 영역 표시 (180px)
+- [x] 카테고리 뱃지 + 시설명 표시
+- [x] 주소/전화/운영시간 목록 표시
+- [x] 화장실 개수 카드 (여성/남성)
+- [x] 편의시설 체크리스트
+- [x] 하단 고정 길찾기 버튼
 
 ---
 

@@ -48,6 +48,26 @@ export function useFacilitySearch() {
     }
   }
 
+  const searchNearby = async (params: {
+    lat: number
+    lng: number
+    category: string
+    radius?: number
+  }): Promise<{ items: Facility[] }> => {
+    const { lat, lng, category, radius = 1000 } = params
+
+    await search({
+      category,
+      lat,
+      lng,
+      radius,
+      page: 1,
+      limit: 20
+    })
+
+    return { items: facilities.value }
+  }
+
   return {
     loading: readonly(loading),
     facilities: readonly(facilities),
@@ -56,5 +76,6 @@ export function useFacilitySearch() {
     totalPages: readonly(totalPages),
     error: readonly(error),
     search,
+    searchNearby,
   }
 }

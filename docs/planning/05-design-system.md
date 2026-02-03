@@ -516,6 +516,81 @@ font-family:
 
 ## 컴포넌트
 
+### 0. 헤더 네비게이션 (AppHeader)
+
+헤더에 데스크톱 네비게이션과 모바일 햄버거 메뉴 포함.
+
+```html
+<!-- AppHeader.vue -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="container mx-auto px-4">
+    <div class="h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <NuxtLink to="/" class="text-2xl font-bold text-primary-600">
+        일상킷
+      </NuxtLink>
+
+      <!-- Desktop Navigation -->
+      <nav class="hidden md:flex items-center gap-6">
+        <NuxtLink to="/toilet" class="text-gray-700 hover:text-primary-600 font-medium">
+          화장실
+        </NuxtLink>
+        <NuxtLink to="/trash" class="text-gray-700 hover:text-primary-600 font-medium">
+          쓰레기
+        </NuxtLink>
+        <NuxtLink to="/wifi" class="text-gray-700 hover:text-primary-600 font-medium">
+          와이파이
+        </NuxtLink>
+        <NuxtLink to="/clothes" class="text-gray-700 hover:text-primary-600 font-medium">
+          의류수거함
+        </NuxtLink>
+        <NuxtLink to="/kiosk" class="text-gray-700 hover:text-primary-600 font-medium">
+          무인민원발급기
+        </NuxtLink>
+      </nav>
+
+      <!-- Mobile Menu Button -->
+      <button class="md:hidden min-h-11 min-w-11 text-gray-700">
+        <svg class="w-6 h-6">...</svg>
+      </button>
+    </div>
+  </div>
+</header>
+```
+
+**반응형 동작:**
+- **모바일 (< 768px)**: 햄버거 메뉴로 토글되는 드롭다운 네비게이션
+- **데스크톱 (≥ 768px)**: 가로 방향 네비게이션 링크 표시
+
+### 0-1. 카테고리 칩 (CategoryChips)
+
+메인 페이지에서 카테고리 선택에 사용되는 칩 그룹.
+
+```html
+<!-- CategoryChips.vue -->
+<div class="flex flex-wrap justify-center gap-2 md:gap-3">
+  <button
+    v-for="category in categories"
+    :key="category.id"
+    :class="[
+      'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+      selectedCategory === category.id
+        ? 'bg-primary-600 text-white'
+        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+    ]"
+  >
+    {{ category.label }}
+  </button>
+</div>
+```
+
+**카테고리 목록:**
+- 공공화장실 (toilet)
+- 쓰레기 배출 (trash)
+- 무료 와이파이 (wifi)
+- 의류수거함 (clothes)
+- 무인민원발급기 (kiosk)
+
 ### 1. 버튼
 
 ```html
@@ -666,6 +741,64 @@ font-family:
 }
 ```
 
+### 6. 지도 컴포넌트 (FacilityMap)
+
+Kakao Maps SDK를 사용한 지도 컴포넌트.
+
+```html
+<!-- FacilityMap.vue -->
+<template>
+  <div
+    ref="mapContainer"
+    class="w-full h-full min-h-[400px] rounded-lg overflow-hidden"
+  />
+</template>
+
+<script setup>
+// Props: center, level, facilities
+// Emits: markerClick
+
+// 카테고리별 마커 색상
+const CATEGORY_COLORS = {
+  toilet: '#3b82f6',  // blue-500
+  wifi: '#10b981',    // green-500
+  clothes: '#8b5cf6', // purple-500
+  kiosk: '#f97316',   // orange-500
+  trash: '#ef4444',   // red-500
+}
+</script>
+```
+
+**주요 기능:**
+- Kakao Maps SDK 연동
+- 시설 목록 마커 표시
+- 마커 클릭 시 정보 표시
+- 카테고리별 마커 색상 구분
+- center/facilities prop 변경 시 자동 업데이트
+
+### 7. 현재 위치 버튼 (CurrentLocationButton)
+
+Geolocation API를 사용한 현재 위치 검색 버튼.
+
+```html
+<!-- CurrentLocationButton.vue -->
+<button
+  class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg
+         hover:bg-gray-50 disabled:opacity-50"
+  :disabled="loading"
+>
+  <svg v-if="!loading" class="w-5 h-5"><!-- Location icon --></svg>
+  <svg v-else class="w-5 h-5 animate-spin"><!-- Spinner --></svg>
+  <span>{{ loading ? '위치 확인 중...' : '현재 위치' }}</span>
+</button>
+```
+
+**상태 처리:**
+- 로딩 상태: 스피너 표시
+- 성공: `location-found` 이벤트 발생 (lat, lng)
+- 실패: `error` 이벤트 발생 (에러 메시지)
+- 권한 거부: 안내 메시지 표시
+
 ---
 
 ## 레이아웃
@@ -702,21 +835,50 @@ xl: 1280px  /* 데스크톱 */
 ### 페이지 레이아웃
 
 ```html
-<!-- 기본 레이아웃 -->
+<!-- 기본 레이아웃 (layouts/default.vue) -->
 <div class="min-h-screen flex flex-col">
-  <header class="h-16 border-b border-gray-200">
-    <!-- 헤더 -->
-  </header>
+  <!-- Header with Navigation -->
+  <AppHeader />
 
   <main class="flex-1">
-    <!-- 콘텐츠 -->
+    <NuxtPage />
   </main>
 
-  <footer class="py-8 bg-gray-50 border-t border-gray-200">
-    <!-- 푸터 -->
-  </footer>
+  <!-- Footer -->
+  <AppFooter />
 </div>
 ```
+
+### 탭 페이지 레이아웃 (/search)
+
+```
+┌────────────────────────────────────────────┐
+│ 헤더 (AppHeader)                           │
+├────────────────────────────────────────────┤
+│ 검색 결과 영역                              │
+│ ┌────────────────────────────────────────┐ │
+│ │ [목록] [지도]        [📍 현재 위치]    │ │
+│ └────────────────────────────────────────┘ │
+│                                            │
+│ ┌──────────┐  ┌──────────────────────────┐│
+│ │ 필터     │  │ 시설 목록                ││
+│ │          │  │ ┌──────────────────────┐ ││
+│ │ 카테고리 │  │ │ 시설 카드 1          │ ││
+│ │ ○ 전체   │  │ └──────────────────────┘ ││
+│ │ ○ 화장실 │  │ ┌──────────────────────┐ ││
+│ │ ○ 쓰레기 │  │ │ 시설 카드 2          │ ││
+│ │ ...      │  │ └──────────────────────┘ ││
+│ │          │  │ ...                      ││
+│ │ 정렬     │  │                          ││
+│ │ ○ 거리순 │  │ 페이지네이션             ││
+│ │ ○ 이름순 │  │ [◀] [1] [2] [3] [▶]     ││
+│ └──────────┘  └──────────────────────────┘│
+└────────────────────────────────────────────┘
+```
+
+**반응형 동작:**
+- **모바일**: 단일 컬럼, 필터는 상단 또는 드롭다운
+- **데스크톱**: 좌측 필터(md:col-span-3) + 우측 목록(md:col-span-9)
 
 ---
 

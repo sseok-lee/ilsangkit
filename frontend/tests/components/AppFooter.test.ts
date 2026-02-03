@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import AppFooter from '~/app/components/common/AppFooter.vue'
+import AppFooter from '~/components/common/AppFooter.vue'
 
 describe('AppFooter', () => {
   describe('Rendering', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import SearchFilters from '~/app/components/search/SearchFilters.vue'
+import SearchFilters from '~/components/search/SearchFilters.vue'
 
 describe('SearchFilters', () => {
   it('카테고리 필터를 렌더링하는지 확인', () => {

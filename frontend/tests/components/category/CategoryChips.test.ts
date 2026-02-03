@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import CategoryChips from '~/app/components/category/CategoryChips.vue'
+import CategoryChips from '~/components/category/CategoryChips.vue'
 
 describe('CategoryChips', () => {
   const categories = [

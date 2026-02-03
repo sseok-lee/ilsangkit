@@ -94,10 +94,17 @@ export function useKakaoMap() {
         return
       }
 
+      // API key validation
+      const apiKey = config.public.kakaoMapKey
+      if (!apiKey) {
+        console.error('[KakaoMap] NUXT_PUBLIC_KAKAO_MAP_KEY가 설정되지 않았습니다. frontend/.env 파일을 확인하세요.')
+        reject(new Error('Kakao Maps API key is not configured'))
+        return
+      }
+
       // Load script
       const script = document.createElement('script')
-      const apiKey = config.public.kakaoMapKey || ''
-      script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`
       script.async = true
 
       script.onload = () => {

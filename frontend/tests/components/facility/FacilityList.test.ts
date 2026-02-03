@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import FacilityList from '~/app/components/facility/FacilityList.vue'
+import FacilityList from '~/components/facility/FacilityList.vue'
 
 describe('FacilityList', () => {
   const mockFacilities = [

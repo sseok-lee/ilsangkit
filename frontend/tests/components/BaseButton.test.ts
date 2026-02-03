@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import BaseButton from '~/app/components/common/BaseButton.vue'
+import BaseButton from '~/components/common/BaseButton.vue'
 
 describe('BaseButton', () => {
   describe('Rendering', () => {

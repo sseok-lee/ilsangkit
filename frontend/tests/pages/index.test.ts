@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import IndexPage from '~/app/pages/index.vue'
+import IndexPage from '~/pages/index.vue'
 
 // Mock navigateTo
 const mockNavigateTo = vi.fn()
@@ -16,23 +16,28 @@ describe('Index Page', () => {
   it('renders title and subtitle', () => {
     const wrapper = mount(IndexPage)
 
-    expect(wrapper.text()).toContain('일상킷')
-    expect(wrapper.text()).toContain('내 주변 생활 편의 정보, 한 번에 찾기')
-    expect(wrapper.text()).toContain('위치 기반으로 공공화장실')
+    // New Stitch design has Korean title
+    expect(wrapper.text()).toContain('내 주변 생활 편의 정보')
+    expect(wrapper.text()).toContain('한 번에 찾기')
+    // Mobile subtitle
+    expect(wrapper.text()).toContain('화장실부터 와이파이까지')
   })
 
-  it('renders search input component', () => {
+  it('renders search input', () => {
     const wrapper = mount(IndexPage)
 
-    const searchInput = wrapper.findComponent({ name: 'SearchInput' })
+    // Search input is now a direct input element, not a separate component
+    const searchInput = wrapper.find('input[placeholder*="검색"]')
     expect(searchInput.exists()).toBe(true)
   })
 
-  it('renders category chips component', () => {
+  it('renders category chips and cards', () => {
     const wrapper = mount(IndexPage)
 
-    const categoryChips = wrapper.findComponent({ name: 'CategoryChips' })
-    expect(categoryChips.exists()).toBe(true)
+    // Categories are now rendered directly in the page
+    expect(wrapper.text()).toContain('화장실')
+    expect(wrapper.text()).toContain('쓰레기')
+    expect(wrapper.text()).toContain('와이파이')
   })
 
   it('renders current location search button', () => {
@@ -40,70 +45,38 @@ describe('Index Page', () => {
 
     const locationButton = wrapper.find('[data-testid="location-button"]')
     expect(locationButton.exists()).toBe(true)
-    expect(locationButton.text()).toContain('현재 위치에서 검색')
+    expect(locationButton.text()).toContain('현재 위치로 검색')
   })
 
   it('renders popular regions section', () => {
     const wrapper = mount(IndexPage)
 
     expect(wrapper.text()).toContain('인기 지역')
-    expect(wrapper.text()).toContain('서울 강남구')
-    expect(wrapper.text()).toContain('서울 송파구')
-    expect(wrapper.text()).toContain('부산 해운대구')
+    expect(wrapper.text()).toContain('서울')
+    expect(wrapper.text()).toContain('부산')
+    expect(wrapper.text()).toContain('인천')
   })
 
   it('navigates to search page when search is triggered', async () => {
     const wrapper = mount(IndexPage)
 
     // Set search keyword
-    const searchInput = wrapper.findComponent({ name: 'SearchInput' })
-    await searchInput.vm.$emit('update:modelValue', '화장실')
+    const searchInput = wrapper.find('input[placeholder*="검색"]')
+    await searchInput.setValue('화장실')
 
-    // Trigger search
-    await searchInput.vm.$emit('search')
+    // Trigger search with Enter key
+    await searchInput.trigger('keydown.enter')
 
     // Should navigate to /search with keyword (URL encoded)
     expect(mockNavigateTo).toHaveBeenCalledWith('/search?keyword=%ED%99%94%EC%9E%A5%EC%8B%A4')
   })
 
-  it('navigates to search page with category when category is selected', async () => {
-    const wrapper = mount(IndexPage)
-
-    // Select category
-    const categoryChips = wrapper.findComponent({ name: 'CategoryChips' })
-    await categoryChips.vm.$emit('select', 'toilet')
-
-    // Set search keyword
-    const searchInput = wrapper.findComponent({ name: 'SearchInput' })
-    await searchInput.vm.$emit('update:modelValue', '강남')
-
-    // Trigger search
-    await searchInput.vm.$emit('search')
-
-    // Should navigate with both keyword and category (keyword URL encoded)
-    expect(mockNavigateTo).toHaveBeenCalledWith('/search?keyword=%EA%B0%95%EB%82%A8&category=toilet')
-  })
-
-  it('navigates to search page with only category when no keyword', async () => {
-    const wrapper = mount(IndexPage)
-
-    // Select category
-    const categoryChips = wrapper.findComponent({ name: 'CategoryChips' })
-    await categoryChips.vm.$emit('select', 'wifi')
-
-    // Trigger search without keyword
-    const searchInput = wrapper.findComponent({ name: 'SearchInput' })
-    await searchInput.vm.$emit('search')
-
-    expect(mockNavigateTo).toHaveBeenCalledWith('/search?category=wifi')
-  })
-
   it('does not navigate when search is empty', async () => {
     const wrapper = mount(IndexPage)
 
-    // Trigger search without keyword or category
-    const searchInput = wrapper.findComponent({ name: 'SearchInput' })
-    await searchInput.vm.$emit('search')
+    // Trigger search without keyword
+    const searchInput = wrapper.find('input[placeholder*="검색"]')
+    await searchInput.trigger('keydown.enter')
 
     expect(mockNavigateTo).not.toHaveBeenCalled()
   })
@@ -111,9 +84,11 @@ describe('Index Page', () => {
   it('applies responsive layout classes', () => {
     const wrapper = mount(IndexPage)
 
-    // Check for responsive container
-    const container = wrapper.find('[data-testid="main-container"]')
-    expect(container.classes()).toContain('container')
+    // Check for root container with flexbox layout
+    const rootDiv = wrapper.find('.min-h-screen')
+    expect(rootDiv.exists()).toBe(true)
+    expect(rootDiv.classes()).toContain('flex')
+    expect(rootDiv.classes()).toContain('flex-col')
   })
 
   it('popular region buttons navigate to search with region', async () => {
@@ -125,5 +100,14 @@ describe('Index Page', () => {
     await regionButtons[0].trigger('click')
 
     expect(mockNavigateTo).toHaveBeenCalledWith(expect.stringContaining('/search'))
+  })
+
+  it('location button navigates to search with useLocation', async () => {
+    const wrapper = mount(IndexPage)
+
+    const locationButton = wrapper.find('[data-testid="location-button"]')
+    await locationButton.trigger('click')
+
+    expect(mockNavigateTo).toHaveBeenCalledWith('/search?useLocation=true')
   })
 })
