@@ -36,6 +36,10 @@ jobs:
           cd frontend
           npm ci
           npm run build
+        env:
+          NUXT_PUBLIC_API_BASE: ${{ secrets.NUXT_PUBLIC_API_BASE }}
+          NUXT_PUBLIC_KAKAO_MAP_KEY: ${{ secrets.NUXT_PUBLIC_KAKAO_MAP_KEY }}
+          NUXT_PUBLIC_GA_ID: ${{ secrets.NUXT_PUBLIC_GA_ID }}
 
       - name: Deploy to Cafe24 Server
         uses: appleboy/scp-action@master
