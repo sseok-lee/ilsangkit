@@ -65,7 +65,7 @@ jobs:
             if [ $? -eq 0 ]; then
               pm2 restart ilsangkit-backend
             else
-              pm2 start dist/index.js --name ilsangkit-backend
+              pm2 start dist/server.js --name ilsangkit-backend
             fi
 
             # PM2로 프론트엔드 재시작 (또는 첫 실행)
