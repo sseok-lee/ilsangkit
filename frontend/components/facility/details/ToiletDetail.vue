@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ToiletDetails } from '../../../../types/facility'
+import type { ToiletDetails } from '~/types/facility'
 
 defineProps<{
   details: ToiletDetails

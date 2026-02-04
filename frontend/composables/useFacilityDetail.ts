@@ -1,5 +1,5 @@
 import { ref, readonly } from 'vue'
-import type { FacilityDetail, FacilityCategory } from '../types/facility'
+import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 
 export function useFacilityDetail() {
   const loading = ref(false)

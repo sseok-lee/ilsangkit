@@ -434,9 +434,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilityDetail } from '~/composables/useFacilityDetail'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import FacilityMap from '~/components/map/FacilityMap.vue'
@@ -444,6 +446,8 @@ import FacilityFeatureCard from '~/components/facility/FacilityFeatureCard.vue'
 
 const route = useRoute()
 const router = useRouter()
+const { setFacilityDetailMeta } = useFacilityMeta()
+const { setFacilitySchema, setBreadcrumbSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
@@ -453,6 +457,25 @@ const { loading, error, facility, fetchDetail } = useFacilityDetail()
 // Fetch facility detail on mount
 onMounted(async () => {
   await fetchDetail(category.value, id.value)
+})
+
+// 시설 정보 로드 후 메타태그 및 JSON-LD 설정
+watch(facility, (newFacility) => {
+  if (newFacility) {
+    // SEO 메타태그
+    setFacilityDetailMeta(newFacility)
+
+    // JSON-LD 구조화된 데이터
+    setFacilitySchema(newFacility)
+
+    // 브레드크럼 스키마
+    const categoryName = CATEGORY_META[newFacility.category]?.label || newFacility.category
+    setBreadcrumbSchema([
+      { name: '홈', url: '/' },
+      { name: categoryName, url: `/search?category=${newFacility.category}` },
+      { name: newFacility.name, url: `/${newFacility.category}/${newFacility.id}` },
+    ])
+  }
 })
 
 // Category metadata

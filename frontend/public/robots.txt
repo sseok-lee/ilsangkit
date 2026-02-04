@@ -1,0 +1,26 @@
+# @TASK T5.3 - robots.txt
+# 일상킷 - 내 주변 생활 편의 정보, 한 번에 찾기
+
+User-agent: *
+Allow: /
+
+# 사이트맵
+Sitemap: https://ilsangkit.com/sitemap.xml
+
+# 크롤러 제한
+Disallow: /api/
+Disallow: /_nuxt/
+Disallow: /msw-demo
+
+# 검색엔진별 설정
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Yeti
+Allow: /
+
+User-agent: Daumoa
+Allow: /

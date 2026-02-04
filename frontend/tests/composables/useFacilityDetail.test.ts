@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { FacilityDetail } from '../../types/facility'
+import type { FacilityDetail } from '~/types/facility'
 
 // Mock Nuxt composables
 global.useRuntimeConfig = vi.fn(() => ({

@@ -171,6 +171,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { CategoryId } from '~/utils/categoryIcons'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { useStructuredData } from '~/composables/useStructuredData'
+
+// SEO 메타태그
+const { setHomeMeta } = useFacilityMeta()
+setHomeMeta()
+
+// JSON-LD 구조화된 데이터
+const { setWebsiteSchema } = useStructuredData()
+setWebsiteSchema()
 
 const searchKeyword = ref('')
 

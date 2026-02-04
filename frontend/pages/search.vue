@@ -452,10 +452,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useGeolocation } from '~/composables/useGeolocation'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { FacilityCategory, Facility } from '~/types/facility'
 
 const route = useRoute()
 const router = useRouter()
+const { setSearchMeta } = useFacilityMeta()
 
 // Search State
 const { loading, facilities, total, currentPage, totalPages, error, search } = useFacilitySearch()
@@ -728,8 +730,22 @@ onMounted(() => {
     selectedCategory.value = route.query.category as FacilityCategory
   }
 
+  // SEO 메타태그 설정
+  setSearchMeta({
+    keyword: searchKeyword.value || undefined,
+    category: selectedCategory.value !== 'all' ? selectedCategory.value : undefined,
+  })
+
   // Initial search
   performSearch()
+})
+
+// 검색 조건 변경 시 메타태그 업데이트
+watch([searchKeyword, selectedCategory], () => {
+  setSearchMeta({
+    keyword: searchKeyword.value || undefined,
+    category: selectedCategory.value !== 'all' ? selectedCategory.value : undefined,
+  })
 })
 </script>
 

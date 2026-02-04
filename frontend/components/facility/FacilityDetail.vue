@@ -72,8 +72,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { FacilityDetail } from '../../../types/facility'
-import { CATEGORY_META } from '../../../types/facility'
+import type { FacilityDetail } from '~/types/facility'
+import { CATEGORY_META } from '~/types/facility'
 import ToiletDetail from './details/ToiletDetail.vue'
 import WifiDetail from './details/WifiDetail.vue'
 import ClothesDetail from './details/ClothesDetail.vue'

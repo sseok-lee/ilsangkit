@@ -22,14 +22,14 @@ describe('FacilityCard', () => {
     expect(wrapper.text()).toContain('서울특별시 강남구 강남대로 396')
   })
 
-  it('카테고리에 따라 올바른 Material 아이콘을 표시하는지 확인', () => {
+  it('카테고리에 따라 올바른 아이콘을 표시하는지 확인', () => {
     const wrapper = mount(FacilityCard, {
       props: { facility: mockFacility },
     })
 
-    // Material Icon 'wc' for toilet category
-    expect(wrapper.html()).toContain('wc')
-    expect(wrapper.find('.material-symbols-outlined').exists()).toBe(true)
+    // CategoryIcon component renders as img with alt attribute
+    const icon = wrapper.find('img[alt="toilet"]')
+    expect(icon.exists()).toBe(true)
   })
 
   it('거리가 있을 때 표시하는지 확인', () => {
@@ -49,23 +49,18 @@ describe('FacilityCard', () => {
     expect(wrapper.text()).not.toContain('m')
   })
 
-  it('카테고리별 Material 아이콘이 표시되는지 확인', () => {
-    const categories = [
-      { category: 'toilet' as const, icon: 'wc' },
-      { category: 'wifi' as const, icon: 'wifi' },
-      { category: 'trash' as const, icon: 'delete' },
-      { category: 'clothes' as const, icon: 'checkroom' },
-      { category: 'kiosk' as const, icon: 'account_balance' },
-    ]
+  it('카테고리별 아이콘이 표시되는지 확인', () => {
+    const categories = ['toilet', 'wifi', 'trash', 'clothes', 'kiosk'] as const
 
-    categories.forEach(({ category, icon }) => {
+    categories.forEach((category) => {
       const facility = { ...mockFacility, category }
       const wrapper = mount(FacilityCard, {
         props: { facility },
       })
 
-      expect(wrapper.html()).toContain(icon)
-      expect(wrapper.find('.material-symbols-outlined').exists()).toBe(true)
+      // CategoryIcon renders as img with alt matching category
+      const icon = wrapper.find(`img[alt="${category}"]`)
+      expect(icon.exists()).toBe(true)
     })
   })
 

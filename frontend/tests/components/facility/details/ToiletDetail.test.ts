@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ToiletDetail from '~/components/facility/details/ToiletDetail.vue'
 import DetailRow from '~/components/facility/DetailRow.vue'
-import type { ToiletDetails } from '../../../../types/facility'
+import type { ToiletDetails } from '~/types/facility'
 
 describe('ToiletDetail', () => {
   it('모든 필드가 있을 때 올바르게 렌더링', () => {

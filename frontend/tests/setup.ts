@@ -13,6 +13,11 @@ const mockRuntimeConfig = {
 // Make useRuntimeConfig globally available
 ;(globalThis as any).useRuntimeConfig = () => mockRuntimeConfig
 
+// Mock Nuxt SEO/Head composables
+;(globalThis as any).useSeoMeta = vi.fn()
+;(globalThis as any).useHead = vi.fn()
+;(globalThis as any).useServerSeoMeta = vi.fn()
+
 // Mock Nuxt auto-imports
 config.global.mocks = {
   $config: mockRuntimeConfig,

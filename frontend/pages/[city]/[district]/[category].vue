@@ -92,6 +92,10 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useRegionFacilities } from '~/composables/useRegionFacilities';
+import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions';
+import { useFacilityMeta } from '~/composables/useFacilityMeta';
+import { CATEGORY_META } from '~/types/facility';
+import type { FacilityCategory } from '~/types/facility';
 
 // Route params
 const route = useRoute();
@@ -99,48 +103,16 @@ const city = computed(() => route.params.city as string);
 const district = computed(() => route.params.district as string);
 const category = computed(() => route.params.category as string);
 
-// Mapping tables
-const CITY_MAP: Record<string, string> = {
-  seoul: '서울',
-  busan: '부산',
-  daegu: '대구',
-  incheon: '인천',
-  gwangju: '광주',
-  daejeon: '대전',
-  ulsan: '울산',
-  sejong: '세종',
-  gyeonggi: '경기',
-  gangwon: '강원',
-  chungbuk: '충북',
-  chungnam: '충남',
-  jeonbuk: '전북',
-  jeonnam: '전남',
-  gyeongbuk: '경북',
-  gyeongnam: '경남',
-  jeju: '제주',
-};
+// Dynamic region data
+const { loadRegions, getCityName, getDistrictName, isLoaded: regionsLoaded } = useRegions();
 
-const DISTRICT_MAP: Record<string, string> = {
-  gangnam: '강남구',
-  songpa: '송파구',
-  seocho: '서초구',
-  gangdong: '강동구',
-  haeundae: '해운대구',
-  busanjin: '부산진구',
-};
-
-const CATEGORY_MAP: Record<string, string> = {
-  toilet: '공공화장실',
-  wifi: '무료 와이파이',
-  trash: '생활쓰레기',
-  clothes: '의류수거함',
-  kiosk: '무인민원발급기',
-};
-
-// Korean names
-const cityName = computed(() => CITY_MAP[city.value] || city.value);
-const districtName = computed(() => DISTRICT_MAP[district.value] || district.value);
-const categoryName = computed(() => CATEGORY_MAP[category.value] || category.value);
+// Korean names (동적으로 가져옴)
+const cityName = computed(() => getCityName(city.value));
+const districtName = computed(() => getDistrictName(city.value, district.value));
+const categoryName = computed(() => {
+  const meta = CATEGORY_META[category.value as keyof typeof CATEGORY_META];
+  return meta?.label || category.value;
+});
 
 // Breadcrumb
 const breadcrumbItems = computed(() => [
@@ -190,16 +162,24 @@ function goToPage(pageNum: number) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// SEO
-useSeoMeta({
-  title: `${cityName.value} ${districtName.value} ${categoryName.value} - 일상킷`,
-  description: `${cityName.value} ${districtName.value}의 ${categoryName.value} 위치 정보를 확인하세요.`,
-  ogTitle: `${cityName.value} ${districtName.value} ${categoryName.value} - 일상킷`,
-  ogDescription: `${cityName.value} ${districtName.value}의 ${categoryName.value} 위치 정보를 확인하세요.`,
-});
+// SEO (composable 사용)
+const { setRegionMeta } = useFacilityMeta();
 
 // Load on mount
-onMounted(() => {
+onMounted(async () => {
+  // 지역 정보 먼저 로드
+  await loadRegions();
+
+  // SEO 메타태그 설정
+  setRegionMeta({
+    city: city.value,
+    cityName: cityName.value,
+    district: district.value,
+    districtName: districtName.value,
+    category: category.value as FacilityCategory,
+  });
+
+  // 시설 정보 로드
   loadFacilities();
 });
 </script>

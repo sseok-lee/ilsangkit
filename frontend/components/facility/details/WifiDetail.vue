@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import type { WifiDetails } from '../../../../types/facility'
+import type { WifiDetails } from '~/types/facility'
 
 defineProps<{
   details: WifiDetails

@@ -1,5 +1,5 @@
-// 시설 카테고리
-export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk'
+// 시설 카테고리 (Prisma enum 대응)
+export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk'
 
 // 시설 기본 정보 (목록용)
 export interface Facility {
@@ -120,6 +120,11 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     icon: '🚻',
     color: 'blue',
   },
+  trash: {
+    label: '쓰레기배출',
+    icon: '🗑️',
+    color: 'red',
+  },
   wifi: {
     label: '무료와이파이',
     icon: '📶',
@@ -135,4 +140,116 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     icon: '🖨️',
     color: 'orange',
   },
+}
+
+// ============================================
+// API 공통 타입
+// ============================================
+
+/**
+ * 페이지네이션 요청 파라미터
+ */
+export interface PaginationParams {
+  page?: number
+  limit?: number
+}
+
+/**
+ * 페이지네이션 응답
+ */
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+/**
+ * API 에러 상세
+ */
+export interface ApiErrorDetail {
+  code: string
+  message: string
+  details?: unknown
+}
+
+/**
+ * 헬스체크 응답
+ */
+export interface HealthCheckResponse {
+  status: 'ok' | 'error'
+  timestamp: string
+  uptime: number
+}
+
+// ============================================
+// 카테고리 타입
+// ============================================
+
+/**
+ * 카테고리 정보
+ */
+export interface CategoryInfo {
+  id: string
+  name: string
+  icon: string
+  description: string | null
+  sortOrder: number
+  isActive: boolean
+}
+
+/**
+ * 카테고리별 시설 수
+ */
+export interface CategoryCount {
+  category: string
+  count: number
+}
+
+// ============================================
+// 지역 타입
+// ============================================
+
+/**
+ * 지역 정보
+ */
+export interface RegionInfo {
+  id: number
+  bjdCode: string
+  city: string
+  district: string
+  slug: string
+  lat: number
+  lng: number
+}
+
+/**
+ * 시/도 정보
+ */
+export interface CityInfo {
+  city: string
+  districtCount: number
+}
+
+/**
+ * 구/군 정보
+ */
+export interface DistrictInfo {
+  district: string
+  slug: string
+  lat: number
+  lng: number
+}
+
+// ============================================
+// 쓰레기 배출 관련 타입
+// ============================================
+
+export interface TrashDetails {
+  trashType?: string | null
+  collectionDays?: string[] | null
+  collectionStartTime?: string | null
+  collectionEndTime?: string | null
+  disposalMethod?: string | null
+  notes?: string | null
 }

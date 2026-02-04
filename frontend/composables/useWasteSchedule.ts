@@ -1,3 +1,5 @@
+import { ref, readonly } from 'vue'
+
 interface WasteSchedule {
   id: string
   wasteType: string

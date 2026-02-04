@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { KioskDetails } from '../../../../types/facility'
+import type { KioskDetails } from '~/types/facility'
 
 const props = defineProps<{
   details: KioskDetails

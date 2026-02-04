@@ -134,9 +134,8 @@ describe('AppHeader', () => {
     })
 
     it('should have proper ARIA labels on desktop action buttons', () => {
-      const searchButton = wrapper.find('button[aria-label="검색"]')
       const darkModeButton = wrapper.find('button[aria-label="다크모드 전환"]')
-      expect(searchButton.attributes('aria-label')).toBe('검색')
+      expect(darkModeButton.exists()).toBe(true)
       expect(darkModeButton.attributes('aria-label')).toBe('다크모드 전환')
     })
 

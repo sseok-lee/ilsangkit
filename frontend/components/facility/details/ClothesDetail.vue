@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ClothesDetails } from '../../../../types/facility'
+import type { ClothesDetails } from '~/types/facility'
 
 defineProps<{
   details: ClothesDetails

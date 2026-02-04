@@ -20,13 +20,15 @@ describe('Default Layout', () => {
             AppHeader: { template: '<header data-testid="app-header">Header</header>' },
             AppFooter: { template: '<footer data-testid="app-footer">Footer</footer>' },
             BottomNavigation: { template: '<nav data-testid="bottom-nav">Bottom Nav</nav>' },
-            NuxtPage: { template: '<div data-testid="nuxt-page">Page Content</div>' },
           },
+        },
+        slots: {
+          default: '<div data-testid="slot-content">Slot Content</div>',
         },
       })
 
       expect(wrapper.find('[data-testid="app-header"]').exists()).toBe(true)
-      expect(wrapper.find('[data-testid="nuxt-page"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="slot-content"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="app-footer"]').exists()).toBe(true)
     })
 
@@ -83,14 +85,18 @@ describe('Default Layout', () => {
       expect(main.classes()).toContain('flex-1')
     })
 
-    it('should render NuxtPage component in main', () => {
+    it('should render slot content in main', () => {
       const wrapper = mount(DefaultLayout, {
         global: {
+          plugins: [router],
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
-            NuxtPage: { template: '<div data-testid="page-content">Page Content</div>' },
+            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
           },
+        },
+        slots: {
+          default: '<div data-testid="page-content">Page Content</div>',
         },
       })
 

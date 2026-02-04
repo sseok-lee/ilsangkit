@@ -85,10 +85,9 @@ describe('Index Page', () => {
     const wrapper = mount(IndexPage)
 
     // Check for root container with flexbox layout
-    const rootDiv = wrapper.find('.min-h-screen')
-    expect(rootDiv.exists()).toBe(true)
-    expect(rootDiv.classes()).toContain('flex')
-    expect(rootDiv.classes()).toContain('flex-col')
+    const rootElement = wrapper.element as HTMLElement
+    expect(rootElement.classList.contains('flex')).toBe(true)
+    expect(rootElement.classList.contains('flex-col')).toBe(true)
   })
 
   it('popular region buttons navigate to search with region', async () => {

@@ -49,6 +49,42 @@ vi.mock('~/composables/useKakaoMap', () => ({
   }),
 }))
 
+// Mock useFacilityMeta
+vi.mock('~/composables/useFacilityMeta', () => ({
+  useFacilityMeta: () => ({
+    setMeta: vi.fn(),
+    setSearchMeta: vi.fn(),
+    setCategoryMeta: vi.fn(),
+    setDetailMeta: vi.fn(),
+    setRegionMeta: vi.fn(),
+    SITE_NAME: '일상킷',
+  }),
+}))
+
+// Mock useWasteSchedule
+vi.mock('~/composables/useWasteSchedule', () => ({
+  useWasteSchedule: () => ({
+    isLoading: { value: false },
+    error: { value: null },
+    getCities: vi.fn().mockResolvedValue([]),
+    getDistricts: vi.fn().mockResolvedValue([]),
+    getSchedules: vi.fn().mockResolvedValue({ schedules: [] }),
+  }),
+}))
+
+// Mock useRegions
+vi.mock('~/composables/useRegions', () => ({
+  useRegions: () => ({
+    cities: { value: [] },
+    districts: { value: [] },
+    selectedCity: { value: '' },
+    selectedDistrict: { value: '' },
+    isLoading: { value: false },
+    setCity: vi.fn(),
+    setDistrict: vi.fn(),
+  }),
+}))
+
 // Global stubs for Nuxt components
 const globalStubs = {
   ClientOnly: { template: '<div><slot /></div>' },
