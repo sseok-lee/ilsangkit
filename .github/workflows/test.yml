@@ -8,6 +8,17 @@ on:
 jobs:
   test-backend:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: ilsangkit_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    env:
+      DATABASE_URL: mysql://root:testpassword@localhost:3306/ilsangkit_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,6 +27,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
       - run: cd backend && npm ci
+      - run: cd backend && npx prisma db push --skip-generate
       - run: cd backend && npm run lint
       - run: cd backend && npm run test
 
@@ -29,6 +41,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - run: cd frontend && npm ci
+      - run: cd frontend && npx nuxt prepare
       - run: cd frontend && npm run lint
       - run: cd frontend && npm run test
       - run: cd frontend && npm run build

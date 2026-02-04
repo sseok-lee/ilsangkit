@@ -1,5 +1,7 @@
 // @ts-check
-export default [
+import withNuxt from './.nuxt/eslint.config.mjs'
+
+export default withNuxt([
   {
     ignores: [
       '.nuxt/**',
@@ -23,4 +25,4 @@ export default [
       'no-console': 'off',
     },
   },
-]
+])
