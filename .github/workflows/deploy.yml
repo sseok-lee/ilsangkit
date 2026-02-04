@@ -20,20 +20,32 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
-            cd /home/project2
+            # Load environment
+            export PATH=$PATH:/usr/local/bin:/usr/bin
+            source ~/.bashrc 2>/dev/null || source ~/.profile 2>/dev/null || true
+
+            PROJECT_DIR=/home/project2
+            REPO_URL=https://github.com/sseok-lee/ilsangkit.git
+
+            # Clone if not exists
+            if [ ! -d "$PROJECT_DIR" ]; then
+              git clone $REPO_URL $PROJECT_DIR
+            fi
+
+            cd $PROJECT_DIR
             git pull origin main
 
             # Backend build
-            cd backend
-            npm ci --production=false
+            cd $PROJECT_DIR/backend
+            npm ci
             npm run build
             npm run db:migrate
 
             # Frontend build
-            cd ../frontend
-            npm ci --production=false
+            cd $PROJECT_DIR/frontend
+            npm ci
             npm run build
 
             # Restart PM2 processes
-            cd ..
-            pm2 reload ecosystem.config.js --env production
+            cd $PROJECT_DIR
+            pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
