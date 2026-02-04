@@ -20,6 +20,9 @@ design/
 docs/
 specs/
 
+# Temp data files
+backend/temp/
+
 # Misc
 nul
 *.log
