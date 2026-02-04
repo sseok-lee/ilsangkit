@@ -15,6 +15,11 @@ Thumbs.db
 # Playwright MCP screenshots
 .playwright-mcp/
 
+# Planning & Design (local only)
+design/
+docs/
+specs/
+
 # Misc
 nul
 *.log
