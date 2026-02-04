@@ -27,6 +27,7 @@ export default [
       globals: {
         // Nuxt auto-imports
         useHead: 'readonly',
+        useSeoMeta: 'readonly',
         useRoute: 'readonly',
         useRouter: 'readonly',
         useRuntimeConfig: 'readonly',
