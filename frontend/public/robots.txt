@@ -5,7 +5,7 @@ User-agent: *
 Allow: /
 
 # 사이트맵
-Sitemap: https://ilsangkit.com/sitemap.xml
+Sitemap: https://ilsangkit.co.kr/sitemap.xml
 
 # 크롤러 제한
 Disallow: /api/

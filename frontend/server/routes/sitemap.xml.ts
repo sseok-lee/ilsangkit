@@ -1,7 +1,7 @@
 // @TASK T5.2 - 동적 사이트맵 생성
 import { defineEventHandler, setHeader } from 'h3'
 
-const SITE_URL = 'https://ilsangkit.com'
+const SITE_URL = 'https://ilsangkit.co.kr'
 
 // 카테고리 목록
 const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk']

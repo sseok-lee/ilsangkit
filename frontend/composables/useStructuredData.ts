@@ -3,7 +3,7 @@ import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 
 const SITE_NAME = '일상킷'
-const SITE_URL = 'https://ilsangkit.com'
+const SITE_URL = 'https://ilsangkit.co.kr'
 
 /**
  * BreadcrumbList 스키마

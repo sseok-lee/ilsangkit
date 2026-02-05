@@ -32,7 +32,7 @@ describe('useFacilityMeta', () => {
       )
 
       expect(mockUseHead).toHaveBeenCalledWith({
-        link: [{ rel: 'canonical', href: 'https://ilsangkit.com/' }],
+        link: [{ rel: 'canonical', href: 'https://ilsangkit.co.kr/' }],
       })
     })
   })
@@ -164,7 +164,7 @@ describe('useFacilityMeta', () => {
       const { SITE_NAME, SITE_URL, SITE_DESCRIPTION } = useFacilityMeta()
 
       expect(SITE_NAME).toBe('일상킷')
-      expect(SITE_URL).toBe('https://ilsangkit.com')
+      expect(SITE_URL).toBe('https://ilsangkit.co.kr')
       expect(SITE_DESCRIPTION).toContain('내 주변')
     })
   })
