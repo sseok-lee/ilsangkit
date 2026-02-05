@@ -176,14 +176,19 @@ export function useKakaoMap() {
 
       markers.value.push(marker)
 
-      // Create custom overlay for marker content
+      // Create custom overlay for marker content (XSS-safe)
       const overlayContent = document.createElement('div')
       overlayContent.className = 'kakao-marker-overlay'
-      overlayContent.innerHTML = `
-        <div class="px-2 py-1 rounded-full text-white text-xs font-medium shadow-md cursor-pointer" style="background-color: ${color};">
-          ${facility.name.substring(0, 10)}${facility.name.length > 10 ? '...' : ''}
-        </div>
-      `
+
+      const innerDiv = document.createElement('div')
+      innerDiv.className = 'px-2 py-1 rounded-full text-white text-xs font-medium shadow-md cursor-pointer'
+      innerDiv.style.backgroundColor = color
+
+      // Use textContent instead of innerHTML to prevent XSS
+      const displayName = facility.name.substring(0, 10) + (facility.name.length > 10 ? '...' : '')
+      innerDiv.textContent = displayName
+
+      overlayContent.appendChild(innerDiv)
 
       if (onClick) {
         overlayContent.addEventListener('click', () => onClick(facility))

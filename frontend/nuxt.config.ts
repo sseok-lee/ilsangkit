@@ -7,6 +7,19 @@ export default defineNuxtConfig({
     '@pinia/nuxt'
   ],
 
+  // Security headers
+  nitro: {
+    routeRules: {
+      '/**': {
+        headers: {
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+          'Referrer-Policy': 'strict-origin-when-cross-origin',
+        },
+      },
+    },
+  },
+
   components: [
     { path: '~/components', pathPrefix: false }
   ],
