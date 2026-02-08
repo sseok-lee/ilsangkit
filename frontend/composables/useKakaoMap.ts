@@ -28,8 +28,14 @@ interface KakaoMapOptions {
   level: number
 }
 
+interface KakaoLatLngBounds {
+  getSouthWest(): KakaoLatLng
+  getNorthEast(): KakaoLatLng
+}
+
 interface KakaoMap {
   getCenter(): KakaoLatLng
+  getBounds(): KakaoLatLngBounds
   setCenter(latlng: KakaoLatLng): void
   panTo(latlng: KakaoLatLng): void
   setLevel(level: number): void
@@ -80,6 +86,7 @@ export function useKakaoMap() {
   const map = ref<KakaoMap | null>(null)
   const markers = ref<KakaoMarker[]>([])
   const overlays = ref<KakaoCustomOverlay[]>([])
+  const userLocationOverlay = ref<KakaoCustomOverlay | null>(null)
   const isLoaded = ref(false)
 
   // Load Kakao Maps SDK
@@ -206,6 +213,47 @@ export function useKakaoMap() {
     })
   }
 
+  // Set user location marker (pulsing blue dot)
+  function setUserLocationMarker(lat: number, lng: number): void {
+    if (!map.value) return
+
+    if (userLocationOverlay.value) {
+      userLocationOverlay.value.setMap(null)
+    }
+
+    const position = new window.kakao.maps.LatLng(lat, lng)
+
+    const content = document.createElement('div')
+    content.className = 'user-location-marker'
+    content.innerHTML = '<div class="user-location-dot"><div class="user-location-pulse"></div></div>'
+
+    userLocationOverlay.value = new window.kakao.maps.CustomOverlay({
+      map: map.value,
+      position,
+      content,
+      yAnchor: 0.5,
+    })
+  }
+
+  // Get current map center
+  function getCenter(): { lat: number; lng: number } | null {
+    if (!map.value) return null
+    const center = map.value.getCenter()
+    return { lat: center.getLat(), lng: center.getLng() }
+  }
+
+  // Get current map bounds (SW, NE corners)
+  function getBounds(): { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null {
+    if (!map.value) return null
+    const bounds = map.value.getBounds()
+    const sw = bounds.getSouthWest()
+    const ne = bounds.getNorthEast()
+    return {
+      sw: { lat: sw.getLat(), lng: sw.getLng() },
+      ne: { lat: ne.getLat(), lng: ne.getLng() },
+    }
+  }
+
   return {
     map: readonly(map),
     isLoaded: readonly(isLoaded),
@@ -213,6 +261,9 @@ export function useKakaoMap() {
     setCenter,
     panTo,
     clearMarkers,
-    addMarkers
+    addMarkers,
+    setUserLocationMarker,
+    getCenter,
+    getBounds,
   }
 }

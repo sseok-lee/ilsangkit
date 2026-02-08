@@ -386,21 +386,12 @@
             :center="mapCenter"
             :facilities="facilities"
             :level="mapLevel"
+            :user-location="userLocation"
             class="w-full h-full"
             @marker-click="handleFacilitySelect"
+            @bounds-changed="handleMapBoundsChanged"
           />
         </ClientOnly>
-
-        <!-- Floating "Search in this area" Button -->
-        <div class="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-          <button
-            class="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm font-semibold border border-slate-100 dark:border-slate-700"
-            @click="searchInArea"
-          >
-            <span class="material-symbols-outlined text-[18px] text-primary">refresh</span>
-            이 지역에서 검색
-          </button>
-        </div>
 
         <!-- Map Controls -->
         <div class="absolute bottom-8 right-6 flex flex-col gap-2 z-10">
@@ -460,7 +451,7 @@ const router = useRouter()
 const { setSearchMeta } = useFacilityMeta()
 
 // Search State
-const { loading, facilities, total, currentPage, totalPages, error, search } = useFacilitySearch()
+const { loading, facilities, total, currentPage, totalPages, error, search, resetPage, setPage, clearResults } = useFacilitySearch()
 const { getCurrentPosition } = useGeolocation()
 
 // Waste Schedule State (지역 기반 검색)
@@ -493,16 +484,17 @@ const selectedSort = ref<'distance' | 'name'>('distance')
 const selectedFacilityId = ref<string | null>(null)
 const showMobileMap = ref(false)
 const userLocation = ref<{ lat: number; lng: number } | null>(null)
+const mapBounds = ref<{ center: { lat: number; lng: number }; sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null>(null)
 const mapLevel = ref(5)
 
 // Category tabs with 3D icons
 const categoryTabs = [
   { id: 'all' as const, label: '전체' },
   { id: 'toilet' as const, label: '화장실' },
-  { id: 'trash' as const, label: '쓰레기' },
   { id: 'wifi' as const, label: '와이파이' },
   { id: 'clothes' as const, label: '의류수거함' },
   { id: 'kiosk' as const, label: '발급기' },
+  { id: 'trash' as const, label: '쓰레기' },
 ]
 
 // Computed
@@ -545,7 +537,16 @@ const performSearch = () => {
     params.category = selectedCategory.value
   }
 
-  if (userLocation.value) {
+  // bounds가 있으면 영역 기반, 없으면 기존 반경 기반
+  if (mapBounds.value) {
+    const { center, sw, ne } = mapBounds.value
+    params.lat = center.lat
+    params.lng = center.lng
+    params.swLat = sw.lat
+    params.swLng = sw.lng
+    params.neLat = ne.lat
+    params.neLng = ne.lng
+  } else if (userLocation.value) {
     params.lat = userLocation.value.lat
     params.lng = userLocation.value.lng
     params.radius = 5000
@@ -555,7 +556,7 @@ const performSearch = () => {
 }
 
 const handleSearch = () => {
-  currentPage.value = 1
+  resetPage()
   performSearch()
 }
 
@@ -566,7 +567,7 @@ const clearSearch = () => {
 
 const handleCategoryChange = async (category: FacilityCategory | 'all') => {
   selectedCategory.value = category
-  currentPage.value = 1
+  resetPage()
 
   if (category === 'trash') {
     // 쓰레기 선택 시 시/도 목록 로드
@@ -574,7 +575,7 @@ const handleCategoryChange = async (category: FacilityCategory | 'all') => {
       cities.value = await getCities()
     }
     // 기존 검색 결과 초기화
-    facilities.value = []
+    clearResults()
   } else {
     // 다른 카테고리는 기존 검색 수행
     // 쓰레기 관련 상태 초기화
@@ -612,11 +613,12 @@ const handleDistrictChange = async (district: string) => {
 
 const handleFacilitySelect = (facility: Facility) => {
   selectedFacilityId.value = facility.id
+  navigateTo(`/${facility.category}/${facility.id}`)
 }
 
 const handleLocationFound = (position: { lat: number; lng: number }) => {
   userLocation.value = position
-  currentPage.value = 1
+  resetPage()
   performSearch()
 }
 
@@ -625,7 +627,7 @@ const handleLocationError = (message: string) => {
 }
 
 const loadMore = () => {
-  currentPage.value += 1
+  setPage(currentPage.value + 1)
   performSearch()
 }
 
@@ -638,10 +640,17 @@ const toggleMobileMap = () => {
   showMobileMap.value = !showMobileMap.value
 }
 
-const searchInArea = () => {
-  // This would use the current map bounds to search
-  // For now, just refresh the search
-  performSearch()
+let boundsSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+const handleMapBoundsChanged = (bounds: { center: { lat: number; lng: number }; sw: { lat: number; lng: number }; ne: { lat: number; lng: number } }) => {
+  mapBounds.value = bounds
+
+  // 디바운스: 지도 이동 중 과도한 검색 방지
+  if (boundsSearchTimer) clearTimeout(boundsSearchTimer)
+  boundsSearchTimer = setTimeout(() => {
+    resetPage()
+    performSearch()
+  }, 300)
 }
 
 const goToCurrentLocation = async () => {
@@ -706,15 +715,33 @@ const getOperatingStatus = (facility: Facility): OperatingStatus => {
 // Watch for route query changes
 watch(
   () => route.query,
-  (query) => {
+  (query, oldQuery) => {
+    const keywordChanged = query.keyword !== oldQuery?.keyword
+    const categoryChanged = query.category !== oldQuery?.category
+
     if (query.keyword) {
       searchKeyword.value = query.keyword as string
+    } else if (keywordChanged) {
+      searchKeyword.value = ''
     }
+
     if (query.category) {
-      selectedCategory.value = query.category as FacilityCategory
+      const newCategory = query.category as FacilityCategory
+      if (categoryChanged) {
+        handleCategoryChange(newCategory)
+      } else {
+        selectedCategory.value = newCategory
+      }
+    } else if (categoryChanged) {
+      handleCategoryChange('all')
     }
+
     if (query.useLocation === 'true') {
       goToCurrentLocation()
+    } else if (keywordChanged && !categoryChanged) {
+      // 키워드만 변경된 경우 검색 수행
+      resetPage()
+      performSearch()
     }
   },
   { immediate: true }

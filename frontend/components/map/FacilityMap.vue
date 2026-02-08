@@ -16,10 +16,18 @@ interface Props {
   center: { lat: number; lng: number }
   level?: number
   facilities?: FacilitySearchItem[]
+  userLocation?: { lat: number; lng: number } | null
+}
+
+interface MapBounds {
+  center: { lat: number; lng: number }
+  sw: { lat: number; lng: number }
+  ne: { lat: number; lng: number }
 }
 
 interface Emits {
   (e: 'markerClick', facility: FacilitySearchItem): void
+  (e: 'boundsChanged', bounds: MapBounds): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -30,7 +38,15 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const mapContainer = ref<HTMLElement | null>(null)
-const { initMap, addMarkers, clearMarkers, panTo } = useKakaoMap()
+const { map, initMap, addMarkers, clearMarkers, panTo, setUserLocationMarker, getCenter, getBounds } = useKakaoMap()
+
+function emitBounds() {
+  const center = getCenter()
+  const bounds = getBounds()
+  if (center && bounds) {
+    emit('boundsChanged', { center, sw: bounds.sw, ne: bounds.ne })
+  }
+}
 
 // 카테고리별 마커 색상
 const CATEGORY_COLORS: Record<string, string> = {
@@ -49,6 +65,12 @@ onMounted(async () => {
       center: props.center,
       level: props.level,
     })
+
+    // 지도 이동/줌 시 bounds emit
+    if (map.value) {
+      window.kakao.maps.event.addListener(map.value, 'dragend', emitBounds)
+      window.kakao.maps.event.addListener(map.value, 'zoom_changed', emitBounds)
+    }
 
     // 초기 마커 표시
     if (props.facilities.length > 0) {
@@ -91,6 +113,15 @@ watch(
   }
 )
 
+// userLocation prop 변경 감지
+watch(
+  () => props.userLocation,
+  (loc) => {
+    if (loc) setUserLocationMarker(loc.lat, loc.lng)
+  },
+  { immediate: true }
+)
+
 // 정리
 onUnmounted(() => {
   clearMarkers()
@@ -107,5 +138,38 @@ onUnmounted(() => {
 :deep(.kakao-marker-overlay:hover) {
   transform: scale(1.05);
   z-index: 20;
+}
+
+:deep(.user-location-dot) {
+  width: 16px;
+  height: 16px;
+  background: #4285f4;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+:deep(.user-location-pulse) {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(66, 133, 244, 0.2);
+  border-radius: 50%;
+  animation: pulse 2s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0;
+  }
 }
 </style>
