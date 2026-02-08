@@ -55,7 +55,7 @@ describe('useFacilityDetail', () => {
       syncedAt: '2024-01-01T00:00:00Z',
     }
 
-    vi.mocked(global.$fetch).mockResolvedValueOnce(mockFacility)
+    vi.mocked(global.$fetch).mockResolvedValueOnce({ success: true, data: mockFacility })
 
     const { loading, error, facility, fetchDetail } = useFacilityDetail()
 
@@ -91,9 +91,12 @@ describe('useFacilityDetail', () => {
           setTimeout(
             () =>
               resolve({
-                id: 'toilet-1',
-                category: 'toilet',
-                name: 'Test',
+                success: true,
+                data: {
+                  id: 'toilet-1',
+                  category: 'toilet',
+                  name: 'Test',
+                },
               }),
             100
           )
