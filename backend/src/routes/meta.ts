@@ -20,6 +20,32 @@ router.get('/categories', async (_req: Request, res: Response, next: NextFunctio
   }
 });
 
+// GET /api/meta/stats - 카테고리별 시설 개수
+router.get('/stats', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [toiletCount, wifiCount, clothesCount, kioskCount, trashCount] = await Promise.all([
+      prisma.toilet.count(),
+      prisma.wifi.count(),
+      prisma.clothes.count(),
+      prisma.kiosk.count(),
+      prisma.wasteSchedule.count(),
+    ]);
+
+    const stats = {
+      toilet: toiletCount,
+      wifi: wifiCount,
+      clothes: clothesCount,
+      kiosk: kioskCount,
+      trash: trashCount,
+      total: toiletCount + wifiCount + clothesCount + kioskCount + trashCount,
+    };
+
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/meta/regions - 지역 목록
 router.get('/regions', async (req: Request, res: Response, next: NextFunction) => {
   try {

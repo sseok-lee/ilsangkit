@@ -68,6 +68,21 @@ export function useFacilitySearch() {
     return { items: facilities.value }
   }
 
+  const resetPage = () => {
+    currentPage.value = 1
+  }
+
+  const setPage = (page: number) => {
+    currentPage.value = page
+  }
+
+  const clearResults = () => {
+    facilities.value = []
+    total.value = 0
+    currentPage.value = 1
+    totalPages.value = 0
+  }
+
   return {
     loading: readonly(loading),
     facilities: readonly(facilities),
@@ -77,5 +92,8 @@ export function useFacilitySearch() {
     error: readonly(error),
     search,
     searchNearby,
+    resetPage,
+    setPage,
+    clearResults,
   }
 }

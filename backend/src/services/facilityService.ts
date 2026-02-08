@@ -223,6 +223,37 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
     allItems = [...toilets, ...wifis, ...clothes, ...kiosks];
   }
 
+  // 영역(bounds) 기반 검색
+  const { swLat, swLng, neLat, neLng } = params;
+  if (swLat !== undefined && swLng !== undefined && neLat !== undefined && neLng !== undefined) {
+    const boundsItems = allItems
+      .filter((item) => item.lat >= swLat && item.lat <= neLat && item.lng >= swLng && item.lng <= neLng);
+
+    // 중심 좌표가 있으면 거리 계산 및 정렬
+    let resultItems: FacilityItem[];
+    if (lat !== undefined && lng !== undefined) {
+      resultItems = boundsItems
+        .map((item) => ({
+          ...item,
+          distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
+        }))
+        .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+    } else {
+      resultItems = boundsItems;
+    }
+
+    const total = resultItems.length;
+    const startIndex = (page - 1) * limit;
+    const paginatedItems = resultItems.slice(startIndex, startIndex + limit);
+
+    return {
+      items: paginatedItems,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   // 위치 기반 검색 (Haversine 공식)
   if (lat !== undefined && lng !== undefined) {
     // 거리 계산 및 필터링
@@ -406,6 +437,7 @@ function kioskToDetail(kiosk: Kiosk): FacilityDetail {
       voiceGuide: kiosk.voiceGuide,
       brailleOutput: kiosk.brailleOutput,
       wheelchairAccessible: kiosk.wheelchairAccessible,
+      availableDocuments: kiosk.availableDocuments,
     },
     sourceId: kiosk.sourceId,
     sourceUrl: kiosk.sourceUrl,

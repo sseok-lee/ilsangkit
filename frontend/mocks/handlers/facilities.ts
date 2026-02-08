@@ -32,6 +32,27 @@ export const facilityHandlers = [
     });
   }),
 
+  // 카테고리별 시설 개수 통계
+  http.get(`${API_BASE}/api/meta/stats`, () => {
+    const toiletCount = mockFacilities.filter(f => f.category === 'toilet').length;
+    const wifiCount = mockFacilities.filter(f => f.category === 'wifi').length;
+    const clothesCount = mockFacilities.filter(f => f.category === 'clothes').length;
+    const kioskCount = mockFacilities.filter(f => f.category === 'kiosk').length;
+    const trashCount = mockFacilities.filter(f => f.category === 'trash').length;
+
+    return HttpResponse.json({
+      success: true,
+      data: {
+        toilet: toiletCount,
+        wifi: wifiCount,
+        clothes: clothesCount,
+        kiosk: kioskCount,
+        trash: trashCount,
+        total: toiletCount + wifiCount + clothesCount + kioskCount + trashCount,
+      },
+    });
+  }),
+
   // 시설 검색
   http.post(`${API_BASE}/api/facilities/search`, async ({ request }) => {
     const body = await request.json() as Record<string, unknown>;

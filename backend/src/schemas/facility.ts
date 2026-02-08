@@ -23,6 +23,11 @@ export const FacilitySearchSchema = z
     lat: z.coerce.number().min(-90).max(90).optional(),
     lng: z.coerce.number().min(-180).max(180).optional(),
     radius: RadiusSchema.optional(),
+    // 지도 영역(bounds) 기반 검색
+    swLat: z.coerce.number().min(-90).max(90).optional(),
+    swLng: z.coerce.number().min(-180).max(180).optional(),
+    neLat: z.coerce.number().min(-90).max(90).optional(),
+    neLng: z.coerce.number().min(-180).max(180).optional(),
     city: z.string().max(50).optional(),
     district: z.string().max(50).optional(),
     page: z.coerce.number().int().min(1).default(1),
@@ -37,6 +42,15 @@ export const FacilitySearchSchema = z
       return true;
     },
     { message: 'lat과 lng는 함께 제공되어야 합니다' }
+  )
+  .refine(
+    (data) => {
+      // bounds 4개 필드는 모두 있거나 모두 없어야 함
+      const boundsFields = [data.swLat, data.swLng, data.neLat, data.neLng];
+      const defined = boundsFields.filter((f) => f !== undefined).length;
+      return defined === 0 || defined === 4;
+    },
+    { message: 'swLat, swLng, neLat, neLng는 모두 함께 제공되어야 합니다' }
   );
 
 // 시설 상세 조회 파라미터 스키마

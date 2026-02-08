@@ -39,13 +39,6 @@
         화장실
       </NuxtLink>
       <NuxtLink
-        to="/search?category=trash"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="trash" size="sm" />
-        쓰레기
-      </NuxtLink>
-      <NuxtLink
         to="/search?category=wifi"
         class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
       >
@@ -65,6 +58,13 @@
       >
         <CategoryIcon category-id="kiosk" size="sm" />
         발급기
+      </NuxtLink>
+      <NuxtLink
+        to="/search?category=trash"
+        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
+      >
+        <CategoryIcon category-id="trash" size="sm" />
+        쓰레기
       </NuxtLink>
     </nav>
 
@@ -131,14 +131,6 @@
           화장실
         </NuxtLink>
         <NuxtLink
-          to="/search?category=trash"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="trash" size="sm" />
-          쓰레기
-        </NuxtLink>
-        <NuxtLink
           to="/search?category=wifi"
           class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
           @click="closeMobileMenu"
@@ -161,6 +153,14 @@
         >
           <CategoryIcon category-id="kiosk" size="sm" />
           발급기
+        </NuxtLink>
+        <NuxtLink
+          to="/search?category=trash"
+          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+          @click="closeMobileMenu"
+        >
+          <CategoryIcon category-id="trash" size="sm" />
+          쓰레기
         </NuxtLink>
       </nav>
     </div>

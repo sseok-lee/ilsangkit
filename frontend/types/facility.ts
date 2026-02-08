@@ -73,6 +73,7 @@ export interface KioskDetails {
   voiceGuide?: boolean
   brailleOutput?: boolean
   wheelchairAccessible?: boolean
+  availableDocuments?: string[]
 }
 
 // 검색 파라미터
@@ -82,6 +83,11 @@ export interface SearchParams {
   lat?: number
   lng?: number
   radius?: number
+  // 지도 영역(bounds) 기반 검색
+  swLat?: number
+  swLng?: number
+  neLat?: number
+  neLng?: number
   city?: string
   district?: string
   page?: number

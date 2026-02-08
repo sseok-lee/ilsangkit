@@ -18,12 +18,12 @@ export function useFacilityDetail() {
       const config = useRuntimeConfig()
       const apiBase = config.public.apiBase
 
-      const data = await $fetch<FacilityDetail>(
+      const response = await $fetch<{ success: boolean; data: FacilityDetail }>(
         `${apiBase}/api/facilities/${category}/${id}`
       )
 
-      facility.value = data
-      return data
+      facility.value = response.data
+      return response.data
     } catch (err) {
       error.value = err as Error
       return null

@@ -169,7 +169,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -182,26 +182,64 @@ setHomeMeta()
 const { setWebsiteSchema } = useStructuredData()
 setWebsiteSchema()
 
+const config = useRuntimeConfig()
 const searchKeyword = ref('')
+
+// 카테고리별 시설 개수 통계
+const stats = ref<Record<string, number>>({
+  toilet: 0,
+  wifi: 0,
+  clothes: 0,
+  kiosk: 0,
+  trash: 0,
+  total: 0,
+})
+
+// 통계 API 호출
+onMounted(async () => {
+  try {
+    const response = await $fetch<{ success: boolean; data: Record<string, number> }>(
+      `${config.public.apiBase}/api/meta/stats`
+    )
+    if (response.success) {
+      stats.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch stats:', error)
+  }
+})
+
+// 숫자 포맷 함수
+function formatCount(count: number): string {
+  return count.toLocaleString('ko-KR') + '개'
+}
 
 // 모바일용 카테고리 (가로 스크롤 칩)
 const categories: Array<{ id: CategoryId; label: string }> = [
   { id: 'toilet', label: '화장실' },
-  { id: 'trash', label: '쓰레기' },
   { id: 'wifi', label: '와이파이' },
   { id: 'clothes', label: '의류수거함' },
   { id: 'kiosk', label: '발급기' },
+  { id: 'trash', label: '쓰레기' },
 ]
 
-// 데스크톱용 카테고리 (그리드 카드)
-const categoriesDesktop: Array<{ id: CategoryId | 'all'; label: string; count: string; bgColor: string }> = [
-  { id: 'toilet', label: '화장실', count: '12,345개', bgColor: 'bg-purple-50 dark:bg-purple-900/30' },
-  { id: 'trash', label: '쓰레기', count: '8,234개', bgColor: 'bg-green-50 dark:bg-green-900/30' },
-  { id: 'wifi', label: '와이파이', count: '5,678개', bgColor: 'bg-orange-50 dark:bg-orange-900/30' },
-  { id: 'clothes', label: '의류수거함', count: '3,456개', bgColor: 'bg-pink-50 dark:bg-pink-900/30' },
-  { id: 'kiosk', label: '발급기', count: '2,345개', bgColor: 'bg-indigo-50 dark:bg-indigo-900/30' },
-  { id: 'all', label: '전체', count: '32,058개', bgColor: 'bg-slate-50 dark:bg-slate-700' },
+// 카테고리 기본 정보
+const categoryConfig: Array<{ id: CategoryId | 'all'; label: string; bgColor: string }> = [
+  { id: 'toilet', label: '화장실', bgColor: 'bg-purple-50 dark:bg-purple-900/30' },
+  { id: 'wifi', label: '와이파이', bgColor: 'bg-orange-50 dark:bg-orange-900/30' },
+  { id: 'clothes', label: '의류수거함', bgColor: 'bg-pink-50 dark:bg-pink-900/30' },
+  { id: 'kiosk', label: '발급기', bgColor: 'bg-indigo-50 dark:bg-indigo-900/30' },
+  { id: 'trash', label: '쓰레기', bgColor: 'bg-green-50 dark:bg-green-900/30' },
+  { id: 'all', label: '전체', bgColor: 'bg-slate-50 dark:bg-slate-700' },
 ]
+
+// 데스크톱용 카테고리 (그리드 카드) - 실제 데이터 연동
+const categoriesDesktop = computed(() =>
+  categoryConfig.map(cat => ({
+    ...cat,
+    count: formatCount(cat.id === 'all' ? stats.value.total : stats.value[cat.id] || 0),
+  }))
+)
 
 // 모바일용 인기 지역 (# 태그 형식)
 const popularRegionsMobile = [
