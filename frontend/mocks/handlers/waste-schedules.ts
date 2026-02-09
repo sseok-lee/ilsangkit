@@ -83,21 +83,20 @@ function getMockSchedules(district: string) {
 export const wasteScheduleHandlers = [
   // GET /api/waste-schedules/cities - 시/도 목록
   http.get(`${API_BASE}/api/waste-schedules/cities`, () => {
-    return HttpResponse.json({ cities: mockCities });
+    return HttpResponse.json({ success: true, data: { items: mockCities } });
   }),
 
-  // GET /api/waste-schedules/districts - 구/군 목록
-  http.get(`${API_BASE}/api/waste-schedules/districts`, ({ request }) => {
-    const url = new URL(request.url);
-    const city = url.searchParams.get('city') || '';
+  // GET /api/waste-schedules/districts/:city - 구/군 목록
+  http.get(`${API_BASE}/api/waste-schedules/districts/:city`, ({ params }) => {
+    const city = params.city as string;
     const districts = districtMap[city] || ['중구', '동구', '서구', '남구', '북구'];
-    return HttpResponse.json({ districts });
+    return HttpResponse.json({ success: true, data: { items: districts } });
   }),
 
   // GET /api/waste-schedules - 배출 일정 조회
   http.get(`${API_BASE}/api/waste-schedules`, ({ request }) => {
     const url = new URL(request.url);
     const district = url.searchParams.get('district') || '강남구';
-    return HttpResponse.json(getMockSchedules(district));
+    return HttpResponse.json({ success: true, data: getMockSchedules(district) });
   }),
 ];

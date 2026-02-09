@@ -30,10 +30,10 @@ export function useWasteSchedule() {
    */
   async function getCities(): Promise<string[]> {
     try {
-      const response = await $fetch<{ cities: string[] }>(
+      const response = await $fetch<{ success: boolean; data: { items: string[] } }>(
         `${apiBase}/api/waste-schedules/cities`
       )
-      return response.cities
+      return response.data.items
     } catch (e) {
       console.error('Failed to fetch cities:', e)
       // Return mock data for development
@@ -46,10 +46,10 @@ export function useWasteSchedule() {
    */
   async function getDistricts(city: string): Promise<string[]> {
     try {
-      const response = await $fetch<{ districts: string[] }>(
-        `${apiBase}/api/waste-schedules/districts?city=${encodeURIComponent(city)}`
+      const response = await $fetch<{ success: boolean; data: { items: string[] } }>(
+        `${apiBase}/api/waste-schedules/districts/${encodeURIComponent(city)}`
       )
-      return response.districts
+      return response.data.items
     } catch (e) {
       console.error('Failed to fetch districts:', e)
       // Return mock data for development
@@ -65,10 +65,10 @@ export function useWasteSchedule() {
     error.value = null
 
     try {
-      const response = await $fetch<ScheduleResponse>(
+      const response = await $fetch<{ success: boolean; data: ScheduleResponse }>(
         `${apiBase}/api/waste-schedules?city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`
       )
-      return response
+      return response.data
     } catch (e) {
       console.error('Failed to fetch schedules:', e)
       error.value = e as Error
