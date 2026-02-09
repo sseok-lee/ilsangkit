@@ -4,6 +4,7 @@
 
 import { PublicApiClient } from '../services/publicApiClient.js';
 import prisma from '../lib/prisma.js';
+import type { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 
 /**
@@ -303,6 +304,7 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
         }
 
         // Upsert 실행
+        const detailsJson = transformed.details as unknown as Prisma.InputJsonValue;
         await prisma.wasteSchedule.upsert({
           where: {
             city_district_sourceId: {
@@ -313,12 +315,13 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
           },
           create: {
             ...transformed,
+            details: detailsJson,
             syncedAt: new Date(),
           },
           update: {
             targetRegion: transformed.targetRegion,
             emissionPlace: transformed.emissionPlace,
-            details: transformed.details,
+            details: detailsJson,
             syncedAt: new Date(),
           },
         });

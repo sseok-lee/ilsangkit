@@ -86,15 +86,18 @@ router.get('/districts/:city', async (req: Request, res: Response, next: NextFun
  * GET /api/waste-schedules/:id
  * 단건 조회 (상세 페이지용)
  */
-router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const idParam = req.params.id as string;
+    const id = parseInt(idParam, 10);
     if (isNaN(id)) {
-      return res.status(400).json({ success: false, error: 'Invalid id' });
+      res.status(400).json({ success: false, error: 'Invalid id' });
+      return;
     }
     const item = await wasteScheduleService.getById(id);
     if (!item) {
-      return res.status(404).json({ success: false, error: 'Not found' });
+      res.status(404).json({ success: false, error: 'Not found' });
+      return;
     }
     res.json({ success: true, data: item });
   } catch (error) {
