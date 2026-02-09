@@ -36,6 +36,14 @@
         <p class="text-sm text-gray-600">
           © {{ currentYear }} 일상킷. All rights reserved.
         </p>
+        <p class="text-xs text-gray-400 mt-1">
+          <a
+            href="https://www.data.go.kr"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-gray-500 transition-colors"
+          >공공데이터포털(data.go.kr)</a> 제공 공공데이터 활용 | 공공누리 제1유형
+        </p>
       </div>
     </div>
   </footer>

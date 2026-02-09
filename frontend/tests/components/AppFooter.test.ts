@@ -97,6 +97,24 @@ describe('AppFooter', () => {
     })
   })
 
+  describe('Public Data Attribution', () => {
+    it('should display public data source text', () => {
+      const wrapper = mount(AppFooter)
+
+      expect(wrapper.text()).toContain('공공데이터포털(data.go.kr)')
+      expect(wrapper.text()).toContain('공공누리 제1유형')
+    })
+
+    it('should have hyperlink to data.go.kr', () => {
+      const wrapper = mount(AppFooter)
+
+      const link = wrapper.find('a[href="https://www.data.go.kr"]')
+      expect(link.exists()).toBe(true)
+      expect(link.attributes('target')).toBe('_blank')
+      expect(link.attributes('rel')).toContain('noopener')
+    })
+  })
+
   describe('Accessibility', () => {
     it('should have minimum spacing between links', () => {
       const wrapper = mount(AppFooter, {

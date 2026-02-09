@@ -26,7 +26,7 @@ export function useStructuredData() {
       '@type': 'WebSite',
       name: SITE_NAME,
       url: SITE_URL,
-      description: '내 주변 생활 편의 정보, 한 번에 찾기. 위치 기반으로 공공화장실, 쓰레기 배출, 무료 와이파이 정보를 통합 검색합니다.',
+      description: '내 주변 생활 편의 정보, 한 번에 찾기. 위치 기반으로 내 주변 공공시설과 생활 편의 정보를 통합 검색합니다.',
       potentialAction: {
         '@type': 'SearchAction',
         target: {
@@ -159,7 +159,7 @@ export function useStructuredData() {
       '@type': 'Organization',
       name: SITE_NAME,
       url: SITE_URL,
-      logo: `${SITE_URL}/logo.png`,
+      logo: `${SITE_URL}/icons/logo.png`,
       sameAs: [
         // 소셜 미디어 링크 추가 가능
       ],

@@ -32,9 +32,40 @@
           </button>
         </div>
         <!-- Filter Icon Button -->
-        <button class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors relative">
-          <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">tune</span>
-        </button>
+        <div class="relative">
+          <button
+            class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            @click="showFilterDropdown = !showFilterDropdown"
+          >
+            <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">tune</span>
+          </button>
+          <!-- Backdrop -->
+          <div v-if="showFilterDropdown" class="fixed inset-0 z-40" @click="showFilterDropdown = false" />
+          <!-- Sort Dropdown -->
+          <div
+            v-if="showFilterDropdown"
+            class="absolute right-0 top-12 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg z-50 py-1 border border-slate-100 dark:border-slate-700"
+          >
+            <button
+              class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              :class="selectedSort === 'distance' ? 'text-primary' : 'text-slate-700 dark:text-slate-200'"
+              @click="selectSort('distance')"
+            >
+              <span class="material-symbols-outlined text-[20px]">near_me</span>
+              거리순
+              <span v-if="selectedSort === 'distance'" class="material-symbols-outlined text-[20px] ml-auto">check</span>
+            </button>
+            <button
+              class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              :class="selectedSort === 'name' ? 'text-primary' : 'text-slate-700 dark:text-slate-200'"
+              @click="selectSort('name')"
+            >
+              <span class="material-symbols-outlined text-[20px]">sort_by_alpha</span>
+              이름순
+              <span v-if="selectedSort === 'name'" class="material-symbols-outlined text-[20px] ml-auto">check</span>
+            </button>
+          </div>
+        </div>
       </div>
       <!-- Scrollable Filter Chips -->
       <div class="px-4 pb-2 w-full overflow-x-auto no-scrollbar flex items-center gap-2">
@@ -435,14 +466,70 @@
       </main>
     </div>
 
+    <!-- Mobile Fullscreen Map Overlay -->
+    <div
+      v-if="showMobileMap && selectedCategory !== 'trash'"
+      class="md:hidden fixed inset-0 z-40 bg-background-light dark:bg-background-dark flex flex-col"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <h2 class="text-slate-900 dark:text-white text-base font-bold">지도</h2>
+        <button
+          class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          @click="toggleMobileMap"
+        >
+          <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">close</span>
+        </button>
+      </div>
+      <!-- Map -->
+      <div class="flex-1 relative">
+        <ClientOnly>
+          <FacilityMap
+            :center="mapCenter"
+            :facilities="facilities"
+            :level="mapLevel"
+            :user-location="userLocation"
+            class="w-full h-full"
+            @marker-click="handleFacilitySelect"
+            @bounds-changed="handleMapBoundsChanged"
+          />
+        </ClientOnly>
+        <!-- Map Controls -->
+        <div class="absolute bottom-8 right-4 flex flex-col gap-2 z-10">
+          <button
+            class="size-10 bg-white dark:bg-slate-800 rounded-lg shadow-md flex items-center justify-center text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border border-slate-100 dark:border-slate-700"
+            @click="goToCurrentLocation"
+          >
+            <span class="material-symbols-outlined">my_location</span>
+          </button>
+          <div
+            class="flex flex-col rounded-lg shadow-md overflow-hidden bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700"
+          >
+            <button
+              class="size-10 flex items-center justify-center text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              @click="zoomIn"
+            >
+              <span class="material-symbols-outlined">add</span>
+            </button>
+            <button
+              class="size-10 flex items-center justify-center text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              @click="zoomOut"
+            >
+              <span class="material-symbols-outlined">remove</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Mobile FAB: "지도에서 보기" (쓰레기 카테고리가 아닐 때만 표시) -->
     <div v-if="selectedCategory !== 'trash'" class="md:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 flex justify-center pointer-events-none">
       <button
         class="pointer-events-auto bg-primary text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 active:translate-y-0 transition-all duration-300 rounded-full py-3.5 px-6 flex items-center gap-2.5 font-bold text-base"
         @click="toggleMobileMap"
       >
-        <span class="material-symbols-outlined" style="font-size: 20px;">map</span>
-        지도에서 보기
+        <span class="material-symbols-outlined" style="font-size: 20px;">{{ showMobileMap ? 'list' : 'map' }}</span>
+        {{ showMobileMap ? '목록 보기' : '지도에서 보기' }}
       </button>
     </div>
 
@@ -458,12 +545,14 @@ import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useGeolocation } from '~/composables/useGeolocation'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { useStructuredData } from '~/composables/useStructuredData'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory, Facility } from '~/types/facility'
 
 const route = useRoute()
 const router = useRouter()
 const { setSearchMeta } = useFacilityMeta()
+const { setItemListSchema } = useStructuredData()
 
 // Search State
 const { loading, facilities, total, currentPage, totalPages, error, search, resetPage, setPage, clearResults } = useFacilitySearch()
@@ -486,6 +575,7 @@ const selectedCategory = ref<FacilityCategory | 'all'>('all')
 const selectedSort = ref<'distance' | 'name'>('distance')
 const selectedFacilityId = ref<string | null>(null)
 const showMobileMap = ref(false)
+const showFilterDropdown = ref(false)
 const userLocation = ref<{ lat: number; lng: number } | null>(null)
 const mapBounds = ref<{ center: { lat: number; lng: number }; sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null>(null)
 const mapLevel = ref(5)
@@ -562,6 +652,7 @@ const performSearch = () => {
 }
 
 const handleSearch = () => {
+  showFilterDropdown.value = false
   resetPage()
   performSearch()
 }
@@ -572,6 +663,7 @@ const clearSearch = () => {
 }
 
 const handleCategoryChange = async (category: FacilityCategory | 'all') => {
+  showFilterDropdown.value = false
   selectedCategory.value = category
   resetPage()
 
@@ -660,6 +752,14 @@ const toggleSortDropdown = () => {
 
 const toggleMobileMap = () => {
   showMobileMap.value = !showMobileMap.value
+}
+
+const selectSort = (sort: 'distance' | 'name') => {
+  if (selectedSort.value !== sort) {
+    selectedSort.value = sort
+    performSearch()
+  }
+  showFilterDropdown.value = false
 }
 
 let boundsSearchTimer: ReturnType<typeof setTimeout> | null = null
@@ -795,6 +895,40 @@ watch([searchKeyword, selectedCategory], () => {
     keyword: searchKeyword.value || undefined,
     category: selectedCategory.value !== 'all' ? selectedCategory.value : undefined,
   })
+})
+
+// ItemList 구조화 데이터 + 페이지네이션 link 태그
+watch([facilities, currentPage, totalPages], () => {
+  if (facilities.value.length > 0 && selectedCategory.value !== 'trash') {
+    setItemListSchema(
+      facilities.value.map((f, index) => ({
+        name: f.name,
+        url: `/${f.category}/${f.id}`,
+        position: (currentPage.value - 1) * 20 + index + 1,
+      }))
+    )
+  }
+
+  // 페이지네이션 rel link 태그
+  const paginationLinks: Array<{ rel: string; href: string }> = []
+  const baseUrl = 'https://ilsangkit.co.kr/search'
+  const queryParams = new URLSearchParams()
+  if (searchKeyword.value) queryParams.set('keyword', searchKeyword.value)
+  if (selectedCategory.value !== 'all') queryParams.set('category', selectedCategory.value)
+  const baseQuery = queryParams.toString()
+
+  if (currentPage.value > 1) {
+    const prevParams = new URLSearchParams(baseQuery)
+    prevParams.set('page', String(currentPage.value - 1))
+    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?${prevParams.toString()}` })
+  }
+  if (currentPage.value < totalPages.value) {
+    const nextParams = new URLSearchParams(baseQuery)
+    nextParams.set('page', String(currentPage.value + 1))
+    paginationLinks.push({ rel: 'next', href: `${baseUrl}?${nextParams.toString()}` })
+  }
+
+  useHead({ link: paginationLinks })
 })
 </script>
 

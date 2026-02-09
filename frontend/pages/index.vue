@@ -66,7 +66,7 @@
 
         <!-- Popular Regions (Mobile) -->
         <div class="mt-4">
-          <h3 class="text-[#111418] dark:text-white text-lg font-bold leading-tight mb-4">인기 지역</h3>
+          <h2 class="text-[#111418] dark:text-white text-lg font-bold leading-tight mb-4">인기 지역</h2>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="region in popularRegionsMobile"
@@ -94,9 +94,9 @@
       <section class="hidden md:block w-full pt-16 pb-12 px-4 sm:px-6">
         <div class="max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
           <div class="space-y-4">
-            <h2 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
               내 주변 생활 편의 정보, 한 번에 찾기
-            </h2>
+            </h1>
             <p class="text-lg text-slate-600 dark:text-slate-400 font-normal">
               화장실부터 와이파이까지, 지금 필요한 시설을 검색해보세요.
             </p>
@@ -139,7 +139,7 @@
               <CategoryIcon v-if="category.id !== 'all'" :category-id="category.id" size="lg" />
               <span v-else class="material-symbols-outlined text-slate-600 dark:text-slate-300 text-[28px]">apps</span>
             </div>
-            <h3 class="text-slate-900 dark:text-white font-bold text-lg mb-1">{{ category.label }}</h3>
+            <h2 class="text-slate-900 dark:text-white font-bold text-lg mb-1">{{ category.label }}</h2>
             <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">{{ category.count }}</p>
           </a>
         </div>
@@ -148,10 +148,10 @@
       <!-- Popular Regions Section (Desktop) -->
       <section class="hidden md:block w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex flex-col gap-4">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span class="material-symbols-outlined text-primary">trending_up</span>
             인기 지역
-          </h3>
+          </h2>
           <div class="flex flex-wrap gap-3">
             <button
               v-for="region in popularRegions"

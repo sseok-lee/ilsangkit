@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-일상킷 (ilsangkit) - 내 주변 생활 편의 정보, 한 번에 찾기. 위치 기반으로 공공화장실, 쓰레기 배출, 무료 와이파이 정보를 통합 검색합니다.
+일상킷 (ilsangkit) - 내 주변 생활 편의 정보, 한 번에 찾기. 위치 기반으로 내 주변 공공시설과 생활 편의 정보를 통합 검색합니다.
 
 ## Tech Stack
 

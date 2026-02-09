@@ -17,6 +17,10 @@ export default defineNuxtConfig({
           'Referrer-Policy': 'strict-origin-when-cross-origin',
         },
       },
+      '/': { prerender: true },
+      '/about': { prerender: true },
+      '/privacy': { prerender: true },
+      '/terms': { prerender: true },
     },
   },
 
@@ -40,11 +44,15 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      htmlAttrs: {
+        lang: 'ko',
+      },
       title: '일상킷 - 내 주변 생활 편의 정보',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: '위치 기반으로 공공화장실, 쓰레기 배출, 무료 와이파이 정보를 통합 검색합니다.' }
+        { name: 'description', content: '위치 기반으로 내 주변 공공시설과 생활 편의 정보를 통합 검색합니다.' },
+        { name: 'theme-color', content: '#3b82f6' }
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },

@@ -19,7 +19,6 @@ describe('Default Layout', () => {
           stubs: {
             AppHeader: { template: '<header data-testid="app-header">Header</header>' },
             AppFooter: { template: '<footer data-testid="app-footer">Footer</footer>' },
-            BottomNavigation: { template: '<nav data-testid="bottom-nav">Bottom Nav</nav>' },
           },
         },
         slots: {
@@ -39,7 +38,6 @@ describe('Default Layout', () => {
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
-            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
             NuxtPage: { template: '<div>Page</div>' },
           },
         },
@@ -55,7 +53,6 @@ describe('Default Layout', () => {
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
-            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
             NuxtPage: { template: '<div>Page</div>' },
           },
         },
@@ -74,7 +71,6 @@ describe('Default Layout', () => {
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
-            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
             NuxtPage: { template: '<div>Page</div>' },
           },
         },
@@ -92,7 +88,6 @@ describe('Default Layout', () => {
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
-            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
           },
         },
         slots: {
@@ -146,7 +141,6 @@ describe('Default Layout', () => {
           stubs: {
             AppHeader: { template: '<header>Header</header>' },
             AppFooter: { template: '<footer>Footer</footer>' },
-            BottomNavigation: { template: '<nav>Bottom Nav</nav>' },
             NuxtPage: { template: '<div>Page</div>' },
           },
         },

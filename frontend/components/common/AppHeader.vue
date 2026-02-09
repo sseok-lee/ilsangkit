@@ -20,9 +20,7 @@
       </button>
 
       <NuxtLink v-if="!props.showBackButton" to="/" class="flex items-center gap-2">
-        <div class="text-primary flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <span class="material-symbols-outlined text-[24px]">location_on</span>
-        </div>
+        <img src="/icons/logo.png" alt="일상킷 로고" class="size-10 shrink-0 rounded-lg" />
         <h2 class="text-[#111418] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">
           일상킷
         </h2>

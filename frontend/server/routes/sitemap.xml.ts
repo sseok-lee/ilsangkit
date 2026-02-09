@@ -614,6 +614,26 @@ export default defineEventHandler((event) => {
     priority: 1.0,
   })
 
+  // 정적 페이지
+  urls.push({
+    loc: `${SITE_URL}/about`,
+    lastmod: today,
+    changefreq: 'monthly',
+    priority: 0.5,
+  })
+  urls.push({
+    loc: `${SITE_URL}/privacy`,
+    lastmod: today,
+    changefreq: 'monthly',
+    priority: 0.3,
+  })
+  urls.push({
+    loc: `${SITE_URL}/terms`,
+    lastmod: today,
+    changefreq: 'monthly',
+    priority: 0.3,
+  })
+
   // 검색 페이지
   urls.push({
     loc: `${SITE_URL}/search`,
