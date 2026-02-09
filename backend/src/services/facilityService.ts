@@ -499,6 +499,28 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   return facility;
 }
 
+/**
+ * 사이트맵용 전체 ID 조회
+ * @param category - 시설 카테고리
+ * @returns { id, updatedAt } 배열
+ */
+export async function getAllIds(
+  category: FacilityCategory
+): Promise<{ id: string; updatedAt: Date }[]> {
+  switch (category) {
+    case 'toilet':
+      return prisma.toilet.findMany({ select: { id: true, updatedAt: true } });
+    case 'wifi':
+      return prisma.wifi.findMany({ select: { id: true, updatedAt: true } });
+    case 'clothes':
+      return prisma.clothes.findMany({ select: { id: true, updatedAt: true } });
+    case 'kiosk':
+      return prisma.kiosk.findMany({ select: { id: true, updatedAt: true } });
+    default:
+      return [];
+  }
+}
+
 // @TASK T1.3 - 지역별 조회 서비스
 // @SPEC docs/planning/02-trd.md#API-설계
 

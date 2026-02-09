@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
 import wasteSchedulesRouter from './routes/wasteSchedules.js';
+import sitemapRouter from './routes/sitemap.js';
 
 const app: Application = express();
 
@@ -34,6 +35,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use('/api/facilities', facilitiesRouter);
 app.use('/api/meta', metaRouter);
 app.use('/api/waste-schedules', wasteSchedulesRouter);
+app.use('/api/sitemap', sitemapRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

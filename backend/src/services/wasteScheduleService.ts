@@ -176,6 +176,14 @@ export async function getDistricts(city: string): Promise<string[]> {
 }
 
 /**
+ * 사이트맵용 전체 ID 조회
+ * @returns { id, updatedAt } 배열
+ */
+export async function getAllIds(): Promise<{ id: number; updatedAt: Date }[]> {
+  return prisma.wasteSchedule.findMany({ select: { id: true, updatedAt: true } });
+}
+
+/**
  * 단건 조회 (상세 페이지용)
  * @param id - WasteSchedule id
  * @returns 배출 일정 아이템 또는 null

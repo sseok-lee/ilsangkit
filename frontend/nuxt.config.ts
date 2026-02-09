@@ -17,6 +17,8 @@ export default defineNuxtConfig({
           'Referrer-Policy': 'strict-origin-when-cross-origin',
         },
       },
+      '/sitemap.xml': { swr: 86400 },
+      '/sitemap/**': { swr: 86400 },
       '/': { prerender: true },
       '/about': { prerender: true },
       '/privacy': { prerender: true },
