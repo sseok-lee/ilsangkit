@@ -18,6 +18,56 @@ interface ScheduleResponse {
   contact?: ContactInfo
 }
 
+// Backend response types
+interface BackendScheduleItem {
+  id: number
+  city: string
+  district: string
+  targetRegion: string | null
+  emissionPlace: string | null
+  details: {
+    emissionItem?: string
+    emissionDay?: string
+    emissionTime?: string
+    emissionMethod?: string
+    collectDay?: string
+    collectTime?: string
+    collectMethod?: string
+    manageInstitute?: string
+    managePhone?: string
+    dataStandardDate?: string
+  } | null
+}
+
+interface BackendScheduleData {
+  items: BackendScheduleItem[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+function parseDayOfWeek(dayStr?: string): string[] {
+  if (!dayStr) return []
+  return dayStr.split(/[,\s]+/).filter(Boolean)
+}
+
+function transformScheduleResponse(data: BackendScheduleData): ScheduleResponse {
+  const schedules: WasteSchedule[] = data.items.map(item => ({
+    id: String(item.id),
+    wasteType: item.details?.emissionItem || '미분류',
+    dayOfWeek: parseDayOfWeek(item.details?.emissionDay),
+    time: item.details?.emissionTime || undefined,
+    note: item.details?.emissionMethod || undefined,
+  }))
+
+  const contactItem = data.items.find(item => item.details?.manageInstitute)
+  const contact: ContactInfo | undefined = contactItem?.details?.manageInstitute
+    ? { name: contactItem.details.manageInstitute, phone: contactItem.details.managePhone }
+    : undefined
+
+  return { schedules, contact }
+}
+
 export function useWasteSchedule() {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase || 'http://localhost:8000'
@@ -65,10 +115,10 @@ export function useWasteSchedule() {
     error.value = null
 
     try {
-      const response = await $fetch<{ success: boolean; data: ScheduleResponse }>(
+      const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(
         `${apiBase}/api/waste-schedules?city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`
       )
-      return response.data
+      return transformScheduleResponse(response.data)
     } catch (e) {
       console.error('Failed to fetch schedules:', e)
       error.value = e as Error

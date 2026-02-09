@@ -43,41 +43,62 @@ const districtMap: Record<string, string[]> = {
 };
 
 function getMockSchedules(district: string) {
-  return {
-    schedules: [
-      {
-        id: '1',
-        wasteType: '일반쓰레기',
-        dayOfWeek: ['월', '수', '금'],
-        time: '저녁 7시 ~ 밤 12시',
-        note: '종량제 봉투 사용',
+  const items = [
+    {
+      id: 1,
+      city: '서울특별시',
+      district,
+      targetRegion: null,
+      emissionPlace: null,
+      details: {
+        emissionItem: '일반쓰레기',
+        emissionDay: '월, 수, 금',
+        emissionTime: '저녁 7시 ~ 밤 12시',
+        emissionMethod: '종량제 봉투 사용',
+        manageInstitute: `${district} 청소행정과`,
+        managePhone: '02-1234-5678',
       },
-      {
-        id: '2',
-        wasteType: '음식물쓰레기',
-        dayOfWeek: ['화', '목', '토'],
-        time: '저녁 7시 ~ 밤 12시',
-        note: '음식물 전용 봉투 또는 RFID 카드 사용',
-      },
-      {
-        id: '3',
-        wasteType: '재활용',
-        dayOfWeek: ['수', '토'],
-        time: '오전 6시 ~ 저녁 8시',
-        note: '플라스틱, 비닐, 캔, 유리, 종이류 분리배출',
-      },
-      {
-        id: '4',
-        wasteType: '대형폐기물',
-        dayOfWeek: ['예약제'],
-        note: '구청 또는 주민센터에 신고 후 스티커 부착',
-      },
-    ],
-    contact: {
-      name: `${district} 청소행정과`,
-      phone: '02-1234-5678',
     },
-  };
+    {
+      id: 2,
+      city: '서울특별시',
+      district,
+      targetRegion: null,
+      emissionPlace: null,
+      details: {
+        emissionItem: '음식물쓰레기',
+        emissionDay: '화, 목, 토',
+        emissionTime: '저녁 7시 ~ 밤 12시',
+        emissionMethod: '음식물 전용 봉투 또는 RFID 카드 사용',
+      },
+    },
+    {
+      id: 3,
+      city: '서울특별시',
+      district,
+      targetRegion: null,
+      emissionPlace: null,
+      details: {
+        emissionItem: '재활용',
+        emissionDay: '수, 토',
+        emissionTime: '오전 6시 ~ 저녁 8시',
+        emissionMethod: '플라스틱, 비닐, 캔, 유리, 종이류 분리배출',
+      },
+    },
+    {
+      id: 4,
+      city: '서울특별시',
+      district,
+      targetRegion: null,
+      emissionPlace: null,
+      details: {
+        emissionItem: '대형폐기물',
+        emissionDay: '예약제',
+        emissionMethod: '구청 또는 주민센터에 신고 후 스티커 부착',
+      },
+    },
+  ];
+  return { items, total: items.length, page: 1, totalPages: 1 };
 }
 
 export const wasteScheduleHandlers = [
