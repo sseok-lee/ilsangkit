@@ -158,6 +158,8 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { useStructuredData } from '~/composables/useStructuredData'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
 
 const route = useRoute()
