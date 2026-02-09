@@ -523,6 +523,9 @@ const mapCenter = computed(() => {
 
 // Methods
 const performSearch = () => {
+  // trash는 시설 검색이 아닌 별도 waste-schedules API 사용
+  if (selectedCategory.value === 'trash') return
+
   const params: Record<string, unknown> = {
     page: currentPage.value,
     limit: 20,
