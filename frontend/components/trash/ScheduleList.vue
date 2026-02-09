@@ -19,8 +19,8 @@
               {{ day }}
             </span>
           </div>
-          <p v-if="schedule.time" class="text-sm text-gray-500 mt-2">
-            <span class="font-medium">배출 시간:</span> {{ schedule.time }}
+          <p v-if="schedule.timeRange" class="text-sm text-gray-500 mt-2">
+            <span class="font-medium">배출 시간:</span> {{ schedule.timeRange }}
           </p>
           <p v-if="schedule.note" class="text-sm text-gray-500 mt-1">
             {{ schedule.note }}
@@ -36,8 +36,9 @@ interface WasteSchedule {
   id: string
   wasteType: string
   dayOfWeek: string[]
-  time?: string
+  timeRange?: string
   note?: string
+  sourceItemId?: number
 }
 
 defineProps<{

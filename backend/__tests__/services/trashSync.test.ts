@@ -202,18 +202,32 @@ describe('transformTrashData', () => {
     const apiResponse: TrashApiResponse = {
       CTPV_NM: '경상남도',
       SGG_NM: '거창군',
+      MNG_ZONE_NM: '남상면',
       MNG_ZONE_TRGT_RGN_NM: '남상면+신원면',
       EMSN_PLC: '집앞',
-      EMSN_ITM: '일반쓰레기',
-      EMSN_DAY: '월,수,금',
-      EMSN_TIME: '18:00~21:00',
-      EMSN_MTH: '봉투배출',
-      CLLCT_DAY: '화,목,토',
-      CLLCT_TIME: '06:00~08:00',
-      CLLCT_MTH: '수거차량',
-      MNG_INST_NM: '거창군청',
-      MNG_INST_TELNO: '055-940-3000',
-      DATA_STDR_DE: '2024-01-01',
+      EMSN_PLC_TYPE: '문전수거',
+      LF_WST_EMSN_DOW: '월,수,금',
+      LF_WST_EMSN_BGNG_TM: '18:00',
+      LF_WST_EMSN_END_TM: '21:00',
+      LF_WST_EMSN_MTHD: '규격봉투 배출',
+      FOD_WST_EMSN_DOW: '화,목,토',
+      FOD_WST_EMSN_BGNG_TM: '18:00',
+      FOD_WST_EMSN_END_TM: '21:00',
+      FOD_WST_EMSN_MTHD: '전용봉투',
+      RCYCL_EMSN_DOW: '수,토',
+      RCYCL_EMSN_BGNG_TM: '06:00',
+      RCYCL_EMSN_END_TM: '20:00',
+      RCYCL_EMSN_MTHD: '분리배출',
+      TMPRY_BULK_WASTE_EMSN_BGNG_TM: '09:00',
+      TMPRY_BULK_WASTE_EMSN_END_TM: '18:00',
+      TMPRY_BULK_WASTE_EMSN_MTHD: '스티커 부착',
+      TMPRY_BULK_WASTE_EMSN_PLC: '주민센터 앞',
+      UNCLLT_DAY: '설,추석',
+      MNG_DEPT_NM: '환경과',
+      MNG_DEPT_TELNO: '055-940-3503',
+      MNG_NO: 'GC-001',
+      DAT_CRTR_YMD: '2024-01-01',
+      LAST_MDFCN_PNT: '2024-06-15',
     };
 
     const result = transformTrashData(apiResponse);
@@ -224,18 +238,39 @@ describe('transformTrashData', () => {
       targetRegion: '남상면+신원면',
       emissionPlace: '집앞',
       details: {
-        emissionItem: '일반쓰레기',
-        emissionDay: '월,수,금',
-        emissionTime: '18:00~21:00',
-        emissionMethod: '봉투배출',
-        collectDay: '화,목,토',
-        collectTime: '06:00~08:00',
-        collectMethod: '수거차량',
-        manageInstitute: '거창군청',
-        managePhone: '055-940-3000',
-        dataStandardDate: '2024-01-01',
+        emissionPlaceType: '문전수거',
+        managementZone: '남상면',
+        livingWaste: {
+          dayOfWeek: '월,수,금',
+          beginTime: '18:00',
+          endTime: '21:00',
+          method: '규격봉투 배출',
+        },
+        foodWaste: {
+          dayOfWeek: '화,목,토',
+          beginTime: '18:00',
+          endTime: '21:00',
+          method: '전용봉투',
+        },
+        recyclable: {
+          dayOfWeek: '수,토',
+          beginTime: '06:00',
+          endTime: '20:00',
+          method: '분리배출',
+        },
+        bulkWaste: {
+          beginTime: '09:00',
+          endTime: '18:00',
+          method: '스티커 부착',
+          place: '주민센터 앞',
+        },
+        uncollectedDay: '설,추석',
+        manageDepartment: '환경과',
+        managePhone: '055-940-3503',
+        dataCreatedDate: '2024-01-01',
+        lastModified: '2024-06-15',
       },
-      sourceId: expect.any(String),
+      sourceId: 'GC-001',
       sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',
     });
   });
@@ -254,53 +289,79 @@ describe('transformTrashData', () => {
       targetRegion: null,
       emissionPlace: null,
       details: {
-        emissionItem: undefined,
-        emissionDay: undefined,
-        emissionTime: undefined,
-        emissionMethod: undefined,
-        collectDay: undefined,
-        collectTime: undefined,
-        collectMethod: undefined,
-        manageInstitute: undefined,
+        emissionPlaceType: undefined,
+        managementZone: undefined,
+        livingWaste: undefined,
+        foodWaste: undefined,
+        recyclable: undefined,
+        bulkWaste: undefined,
+        uncollectedDay: undefined,
+        manageDepartment: undefined,
         managePhone: undefined,
-        dataStandardDate: undefined,
+        dataCreatedDate: undefined,
+        lastModified: undefined,
       },
       sourceId: expect.any(String),
       sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',
     });
   });
 
-  it('should generate unique sourceId based on city, district, and other fields', () => {
+  it('should use MNG_NO as sourceId when available', () => {
+    const apiResponse: TrashApiResponse = {
+      CTPV_NM: '서울특별시',
+      SGG_NM: '강남구',
+      MNG_NO: 'TEST-123',
+    };
+
+    const result = transformTrashData(apiResponse);
+    expect(result!.sourceId).toBe('TEST-123');
+  });
+
+  it('should use hash fallback when MNG_NO is missing', () => {
     const apiResponse1: TrashApiResponse = {
       CTPV_NM: '서울특별시',
       SGG_NM: '강남구',
       MNG_ZONE_TRGT_RGN_NM: '삼성동',
       EMSN_PLC: '집앞',
-      EMSN_DAY: '월,수,금',
     };
 
     const apiResponse2: TrashApiResponse = {
       CTPV_NM: '서울특별시',
       SGG_NM: '강남구',
-      MNG_ZONE_TRGT_RGN_NM: '삼성동',
+      MNG_ZONE_TRGT_RGN_NM: '역삼동',
       EMSN_PLC: '집앞',
-      EMSN_DAY: '화,목,토', // 다른 배출요일
     };
 
     const result1 = transformTrashData(apiResponse1);
     const result2 = transformTrashData(apiResponse2);
 
+    // Hash-based, should be 32-char hex
+    expect(result1!.sourceId).toMatch(/^[a-f0-9]{32}$/);
     expect(result1!.sourceId).not.toEqual(result2!.sourceId);
   });
 
+  it('should only create sub-objects when related fields exist', () => {
+    const apiResponse: TrashApiResponse = {
+      CTPV_NM: '서울특별시',
+      SGG_NM: '강남구',
+      LF_WST_EMSN_DOW: '월,수,금',
+      // No food waste, recyclable, or bulk waste fields
+    };
+
+    const result = transformTrashData(apiResponse);
+
+    expect(result!.details.livingWaste).toBeDefined();
+    expect(result!.details.foodWaste).toBeUndefined();
+    expect(result!.details.recyclable).toBeUndefined();
+    expect(result!.details.bulkWaste).toBeUndefined();
+  });
+
   it('should return null for data missing required fields', () => {
-    // 시도명 없음
     const apiResponse1: TrashApiResponse = {
       CTPV_NM: '',
       SGG_NM: '강남구',
     };
 
-    // 시군구명 없음
     const apiResponse2: TrashApiResponse = {
       CTPV_NM: '서울특별시',
       SGG_NM: '',
@@ -363,6 +424,7 @@ describe('syncTrashData', () => {
                   SGG_NM: '거창군',
                   MNG_ZONE_TRGT_RGN_NM: '남상면',
                   EMSN_PLC: '집앞',
+                  MNG_NO: 'GC-001',
                 },
               ],
               numOfRows: 100,
@@ -420,6 +482,7 @@ describe('syncTrashData', () => {
                   SGG_NM: '강남구',
                   MNG_ZONE_TRGT_RGN_NM: '삼성동',
                   EMSN_PLC: '집앞',
+                  MNG_NO: 'GN-001',
                 },
               ],
               numOfRows: 100,
@@ -455,6 +518,7 @@ describe('syncTrashData', () => {
                   SGG_NM: '강남구',
                   MNG_ZONE_TRGT_RGN_NM: '삼성동',
                   EMSN_PLC: '집앞',
+                  MNG_NO: 'GN-002',
                 },
               ],
               numOfRows: 100,
@@ -489,14 +553,16 @@ describe('syncTrashData', () => {
                   SGG_NM: '강남구',
                   MNG_ZONE_TRGT_RGN_NM: '삼성동',
                   EMSN_PLC: '집앞',
-                  EMSN_DAY: '월,수,금',
+                  MNG_NO: 'GN-003',
+                  LF_WST_EMSN_DOW: '월,수,금',
                 },
                 {
                   CTPV_NM: '서울특별시',
                   SGG_NM: '강남구',
                   MNG_ZONE_TRGT_RGN_NM: '역삼동',
                   EMSN_PLC: '집앞',
-                  EMSN_DAY: '화,목,토',
+                  MNG_NO: 'GN-004',
+                  LF_WST_EMSN_DOW: '화,목,토',
                 },
               ],
               numOfRows: 100,

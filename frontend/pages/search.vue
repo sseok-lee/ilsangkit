@@ -238,6 +238,20 @@
                 </select>
                 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
               </div>
+              <!-- 동/지역 이름 검색 -->
+              <div class="relative">
+                <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <span class="material-symbols-outlined text-slate-400 text-[18px]">search</span>
+                </div>
+                <input
+                  v-model="wasteKeyword"
+                  :disabled="!selectedDistrict"
+                  class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 pl-9 pr-3 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="text"
+                  placeholder="동/지역 이름 검색"
+                  @input="handleWasteSearch"
+                />
+              </div>
             </div>
 
             <!-- 로딩 상태 -->
@@ -267,9 +281,9 @@
             <!-- 배출 일정 목록 -->
             <template v-if="wasteSchedules.length > 0 && !wasteLoading">
               <WasteScheduleCard
-                v-for="schedule in wasteSchedules"
-                :key="schedule.id"
-                :schedule="schedule"
+                v-for="region in wasteSchedules"
+                :key="region.id"
+                :region="region"
               />
             </template>
 
@@ -444,6 +458,7 @@ import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useGeolocation } from '~/composables/useGeolocation'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory, Facility } from '~/types/facility'
 
 const route = useRoute()
@@ -457,25 +472,13 @@ const { getCurrentPosition } = useGeolocation()
 // Waste Schedule State (지역 기반 검색)
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 
-interface WasteSchedule {
-  id: string
-  wasteType: string
-  dayOfWeek: string[]
-  time?: string
-  note?: string
-}
-
-interface ContactInfo {
-  name: string
-  phone?: string
-}
-
 const selectedCity = ref<string>('')
 const selectedDistrict = ref<string>('')
+const wasteKeyword = ref<string>('')
 const cities = ref<string[]>([])
 const districts = ref<string[]>([])
-const wasteSchedules = ref<WasteSchedule[]>([])
-const wasteContact = ref<ContactInfo | null>(null)
+const wasteSchedules = ref<RegionSchedule[]>([])
+const wasteContact = ref<{ name: string; phone?: string } | null>(null)
 
 // UI State
 const searchKeyword = ref('')
@@ -584,6 +587,7 @@ const handleCategoryChange = async (category: FacilityCategory | 'all') => {
     // 쓰레기 관련 상태 초기화
     selectedCity.value = ''
     selectedDistrict.value = ''
+    wasteKeyword.value = ''
     wasteSchedules.value = []
     wasteContact.value = null
     performSearch()
@@ -593,6 +597,7 @@ const handleCategoryChange = async (category: FacilityCategory | 'all') => {
 const handleCityChange = async (city: string) => {
   selectedCity.value = city
   selectedDistrict.value = ''
+  wasteKeyword.value = ''
   wasteSchedules.value = []
   wasteContact.value = null
   if (city) {
@@ -604,6 +609,7 @@ const handleCityChange = async (city: string) => {
 
 const handleDistrictChange = async (district: string) => {
   selectedDistrict.value = district
+  wasteKeyword.value = ''
   if (district) {
     const result = await getSchedules(selectedCity.value, district)
     wasteSchedules.value = result.schedules
@@ -612,6 +618,19 @@ const handleDistrictChange = async (district: string) => {
     wasteSchedules.value = []
     wasteContact.value = null
   }
+}
+
+let wasteSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+const handleWasteSearch = () => {
+  if (wasteSearchTimer) clearTimeout(wasteSearchTimer)
+  wasteSearchTimer = setTimeout(async () => {
+    if (selectedCity.value && selectedDistrict.value) {
+      const result = await getSchedules(selectedCity.value, selectedDistrict.value, wasteKeyword.value || undefined)
+      wasteSchedules.value = result.schedules
+      wasteContact.value = result.contact || null
+    }
+  }, 300)
 }
 
 const handleFacilitySelect = (facility: Facility) => {

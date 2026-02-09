@@ -8,6 +8,7 @@ import { PaginationSchema } from './common.js';
 export const WasteScheduleQuerySchema = z.object({
   city: z.string().min(1).max(50),
   district: z.string().max(50).optional(),
+  keyword: z.string().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

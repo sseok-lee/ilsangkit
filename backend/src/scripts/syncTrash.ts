@@ -10,37 +10,97 @@ import crypto from 'crypto';
  * 공공데이터 API 응답 타입 (생활쓰레기 배출정보)
  * API: https://www.data.go.kr/data/15155080/openapi.do
  *
- * 실제 API 응답 필드 (대문자 + 언더스코어)
+ * 실제 API 응답 필드 (대문자 + 언더스코어) - 1 row에 4개 유형 포함
  */
 export interface TrashApiResponse {
   /** 시도명 */
   CTPV_NM: string;
   /** 시군구명 */
   SGG_NM: string;
+  /** 관리구역명 */
+  MNG_ZONE_NM?: string;
   /** 관리구역대상지역명 */
   MNG_ZONE_TRGT_RGN_NM?: string;
   /** 배출장소 */
   EMSN_PLC?: string;
-  /** 배출품목 */
-  EMSN_ITM?: string;
-  /** 배출요일 */
-  EMSN_DAY?: string;
-  /** 배출시간 */
-  EMSN_TIME?: string;
-  /** 배출방법 */
-  EMSN_MTH?: string;
-  /** 수거요일 */
-  CLLCT_DAY?: string;
-  /** 수거시간 */
-  CLLCT_TIME?: string;
-  /** 수거방법 */
-  CLLCT_MTH?: string;
-  /** 관리기관명 */
-  MNG_INST_NM?: string;
-  /** 관리기관전화번호 */
-  MNG_INST_TELNO?: string;
-  /** 데이터기준일자 */
-  DATA_STDR_DE?: string;
+  /** 배출장소유형 */
+  EMSN_PLC_TYPE?: string;
+
+  // 생활쓰레기
+  /** 생활쓰레기 배출요일 */
+  LF_WST_EMSN_DOW?: string;
+  /** 생활쓰레기 배출시작시간 */
+  LF_WST_EMSN_BGNG_TM?: string;
+  /** 생활쓰레기 배출종료시간 */
+  LF_WST_EMSN_END_TM?: string;
+  /** 생활쓰레기 배출방법 */
+  LF_WST_EMSN_MTHD?: string;
+
+  // 음식물쓰레기
+  /** 음식물쓰레기 배출요일 */
+  FOD_WST_EMSN_DOW?: string;
+  /** 음식물쓰레기 배출시작시간 */
+  FOD_WST_EMSN_BGNG_TM?: string;
+  /** 음식물쓰레기 배출종료시간 */
+  FOD_WST_EMSN_END_TM?: string;
+  /** 음식물쓰레기 배출방법 */
+  FOD_WST_EMSN_MTHD?: string;
+
+  // 재활용
+  /** 재활용 배출요일 */
+  RCYCL_EMSN_DOW?: string;
+  /** 재활용 배출시작시간 */
+  RCYCL_EMSN_BGNG_TM?: string;
+  /** 재활용 배출종료시간 */
+  RCYCL_EMSN_END_TM?: string;
+  /** 재활용 배출방법 */
+  RCYCL_EMSN_MTHD?: string;
+
+  // 대형폐기물
+  /** 대형폐기물 배출시작시간 */
+  TMPRY_BULK_WASTE_EMSN_BGNG_TM?: string;
+  /** 대형폐기물 배출종료시간 */
+  TMPRY_BULK_WASTE_EMSN_END_TM?: string;
+  /** 대형폐기물 배출방법 */
+  TMPRY_BULK_WASTE_EMSN_MTHD?: string;
+  /** 대형폐기물 배출장소 */
+  TMPRY_BULK_WASTE_EMSN_PLC?: string;
+
+  // 관리
+  /** 미수거일 */
+  UNCLLT_DAY?: string;
+  /** 관리부서명 */
+  MNG_DEPT_NM?: string;
+  /** 관리부서전화번호 */
+  MNG_DEPT_TELNO?: string;
+  /** 관리번호 */
+  MNG_NO?: string;
+  /** 개방자치단체그룹코드 */
+  OPN_ATMY_GRP_CD?: string;
+  /** 데이터생성일자 */
+  DAT_CRTR_YMD?: string;
+  /** 최종수정시점 */
+  LAST_MDFCN_PNT?: string;
+}
+
+/**
+ * 유형별 배출 정보
+ */
+interface WasteTypeInfo {
+  dayOfWeek?: string;
+  beginTime?: string;
+  endTime?: string;
+  method?: string;
+}
+
+/**
+ * 대형폐기물 배출 정보
+ */
+interface BulkWasteInfo {
+  beginTime?: string;
+  endTime?: string;
+  method?: string;
+  place?: string;
 }
 
 /**
@@ -52,16 +112,17 @@ interface TransformedWasteSchedule {
   targetRegion: string | null;
   emissionPlace: string | null;
   details: {
-    emissionItem?: string;
-    emissionDay?: string;
-    emissionTime?: string;
-    emissionMethod?: string;
-    collectDay?: string;
-    collectTime?: string;
-    collectMethod?: string;
-    manageInstitute?: string;
+    emissionPlaceType?: string;
+    managementZone?: string;
+    livingWaste?: WasteTypeInfo;
+    foodWaste?: WasteTypeInfo;
+    recyclable?: WasteTypeInfo;
+    bulkWaste?: BulkWasteInfo;
+    uncollectedDay?: string;
+    manageDepartment?: string;
     managePhone?: string;
-    dataStandardDate?: string;
+    dataCreatedDate?: string;
+    lastModified?: string;
   };
   sourceId: string;
   sourceUrl: string;
@@ -100,18 +161,60 @@ export function transformTrashData(row: TrashApiResponse): TransformedWasteSched
     return null;
   }
 
-  // sourceId 생성 (시도+시군구+지역+장소 해시)
-  const sourceIdParts = [
-    row.CTPV_NM,
-    row.SGG_NM,
-    row.MNG_ZONE_TRGT_RGN_NM || '',
-    row.EMSN_PLC || '',
-    row.EMSN_ITM || '',
-    row.EMSN_DAY || '',
-  ].join('-');
+  // sourceId: MNG_NO 우선, 없으면 해시 폴백
+  let sourceId: string;
+  if (row.MNG_NO) {
+    sourceId = row.MNG_NO;
+  } else {
+    const sourceIdParts = [
+      row.CTPV_NM,
+      row.SGG_NM,
+      row.MNG_ZONE_TRGT_RGN_NM || '',
+      row.EMSN_PLC || '',
+    ].join('-');
+    sourceId = crypto.createHash('md5').update(sourceIdParts).digest('hex');
+  }
 
-  // MD5 해시 생성 (중복 방지용, 32자 고정)
-  const sourceId = crypto.createHash('md5').update(sourceIdParts).digest('hex');
+  // 유형별 sub-object: 관련 필드가 하나라도 있을 때만 생성
+  const livingWaste: WasteTypeInfo | undefined =
+    row.LF_WST_EMSN_DOW || row.LF_WST_EMSN_BGNG_TM || row.LF_WST_EMSN_END_TM || row.LF_WST_EMSN_MTHD
+      ? {
+          dayOfWeek: row.LF_WST_EMSN_DOW,
+          beginTime: row.LF_WST_EMSN_BGNG_TM,
+          endTime: row.LF_WST_EMSN_END_TM,
+          method: row.LF_WST_EMSN_MTHD,
+        }
+      : undefined;
+
+  const foodWaste: WasteTypeInfo | undefined =
+    row.FOD_WST_EMSN_DOW || row.FOD_WST_EMSN_BGNG_TM || row.FOD_WST_EMSN_END_TM || row.FOD_WST_EMSN_MTHD
+      ? {
+          dayOfWeek: row.FOD_WST_EMSN_DOW,
+          beginTime: row.FOD_WST_EMSN_BGNG_TM,
+          endTime: row.FOD_WST_EMSN_END_TM,
+          method: row.FOD_WST_EMSN_MTHD,
+        }
+      : undefined;
+
+  const recyclable: WasteTypeInfo | undefined =
+    row.RCYCL_EMSN_DOW || row.RCYCL_EMSN_BGNG_TM || row.RCYCL_EMSN_END_TM || row.RCYCL_EMSN_MTHD
+      ? {
+          dayOfWeek: row.RCYCL_EMSN_DOW,
+          beginTime: row.RCYCL_EMSN_BGNG_TM,
+          endTime: row.RCYCL_EMSN_END_TM,
+          method: row.RCYCL_EMSN_MTHD,
+        }
+      : undefined;
+
+  const bulkWaste: BulkWasteInfo | undefined =
+    row.TMPRY_BULK_WASTE_EMSN_BGNG_TM || row.TMPRY_BULK_WASTE_EMSN_END_TM || row.TMPRY_BULK_WASTE_EMSN_MTHD || row.TMPRY_BULK_WASTE_EMSN_PLC
+      ? {
+          beginTime: row.TMPRY_BULK_WASTE_EMSN_BGNG_TM,
+          endTime: row.TMPRY_BULK_WASTE_EMSN_END_TM,
+          method: row.TMPRY_BULK_WASTE_EMSN_MTHD,
+          place: row.TMPRY_BULK_WASTE_EMSN_PLC,
+        }
+      : undefined;
 
   return {
     city: row.CTPV_NM,
@@ -119,16 +222,17 @@ export function transformTrashData(row: TrashApiResponse): TransformedWasteSched
     targetRegion: row.MNG_ZONE_TRGT_RGN_NM || null,
     emissionPlace: row.EMSN_PLC || null,
     details: {
-      emissionItem: row.EMSN_ITM,
-      emissionDay: row.EMSN_DAY,
-      emissionTime: row.EMSN_TIME,
-      emissionMethod: row.EMSN_MTH,
-      collectDay: row.CLLCT_DAY,
-      collectTime: row.CLLCT_TIME,
-      collectMethod: row.CLLCT_MTH,
-      manageInstitute: row.MNG_INST_NM,
-      managePhone: row.MNG_INST_TELNO,
-      dataStandardDate: row.DATA_STDR_DE,
+      emissionPlaceType: row.EMSN_PLC_TYPE,
+      managementZone: row.MNG_ZONE_NM,
+      livingWaste,
+      foodWaste,
+      recyclable,
+      bulkWaste,
+      uncollectedDay: row.UNCLLT_DAY,
+      manageDepartment: row.MNG_DEPT_NM,
+      managePhone: row.MNG_DEPT_TELNO,
+      dataCreatedDate: row.DAT_CRTR_YMD,
+      lastModified: row.LAST_MDFCN_PNT,
     },
     sourceId,
     sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',

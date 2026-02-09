@@ -1,11 +1,33 @@
 import { ref, readonly } from 'vue'
 
-interface WasteSchedule {
-  id: string
-  wasteType: string
+interface WasteTypeInfo {
+  dayOfWeek?: string
+  beginTime?: string
+  endTime?: string
+  method?: string
+}
+
+interface BulkWasteInfo {
+  beginTime?: string
+  endTime?: string
+  method?: string
+  place?: string
+}
+
+export type WasteType = '일반쓰레기' | '음식물쓰레기' | '재활용' | '대형폐기물'
+
+export interface WasteTypeBadge {
+  type: WasteType
   dayOfWeek: string[]
-  time?: string
-  note?: string
+}
+
+export interface RegionSchedule {
+  id: number
+  targetRegion: string
+  emissionPlace?: string
+  emissionPlaceType?: string
+  uncollectedDay?: string
+  wasteTypes: WasteTypeBadge[]
 }
 
 interface ContactInfo {
@@ -13,8 +35,8 @@ interface ContactInfo {
   phone?: string
 }
 
-interface ScheduleResponse {
-  schedules: WasteSchedule[]
+interface RegionScheduleResponse {
+  schedules: RegionSchedule[]
   contact?: ContactInfo
 }
 
@@ -26,16 +48,17 @@ interface BackendScheduleItem {
   targetRegion: string | null
   emissionPlace: string | null
   details: {
-    emissionItem?: string
-    emissionDay?: string
-    emissionTime?: string
-    emissionMethod?: string
-    collectDay?: string
-    collectTime?: string
-    collectMethod?: string
-    manageInstitute?: string
+    emissionPlaceType?: string
+    managementZone?: string
+    livingWaste?: WasteTypeInfo
+    foodWaste?: WasteTypeInfo
+    recyclable?: WasteTypeInfo
+    bulkWaste?: BulkWasteInfo
+    uncollectedDay?: string
+    manageDepartment?: string
     managePhone?: string
-    dataStandardDate?: string
+    dataCreatedDate?: string
+    lastModified?: string
   } | null
 }
 
@@ -51,18 +74,37 @@ function parseDayOfWeek(dayStr?: string): string[] {
   return dayStr.split(/[,\s]+/).filter(Boolean)
 }
 
-function transformScheduleResponse(data: BackendScheduleData): ScheduleResponse {
-  const schedules: WasteSchedule[] = data.items.map(item => ({
-    id: String(item.id),
-    wasteType: item.details?.emissionItem || '미분류',
-    dayOfWeek: parseDayOfWeek(item.details?.emissionDay),
-    time: item.details?.emissionTime || undefined,
-    note: item.details?.emissionMethod || undefined,
-  }))
+function transformToRegionSchedules(data: BackendScheduleData): RegionScheduleResponse {
+  const schedules: RegionSchedule[] = data.items.map((item) => {
+    const details = item.details
+    const wasteTypes: WasteTypeBadge[] = []
 
-  const contactItem = data.items.find(item => item.details?.manageInstitute)
-  const contact: ContactInfo | undefined = contactItem?.details?.manageInstitute
-    ? { name: contactItem.details.manageInstitute, phone: contactItem.details.managePhone }
+    if (details?.livingWaste) {
+      wasteTypes.push({ type: '일반쓰레기', dayOfWeek: parseDayOfWeek(details.livingWaste.dayOfWeek) })
+    }
+    if (details?.foodWaste) {
+      wasteTypes.push({ type: '음식물쓰레기', dayOfWeek: parseDayOfWeek(details.foodWaste.dayOfWeek) })
+    }
+    if (details?.recyclable) {
+      wasteTypes.push({ type: '재활용', dayOfWeek: parseDayOfWeek(details.recyclable.dayOfWeek) })
+    }
+    if (details?.bulkWaste) {
+      wasteTypes.push({ type: '대형폐기물', dayOfWeek: [] })
+    }
+
+    return {
+      id: item.id,
+      targetRegion: item.targetRegion || '지역 미상',
+      emissionPlace: item.emissionPlace || undefined,
+      emissionPlaceType: details?.emissionPlaceType || undefined,
+      uncollectedDay: details?.uncollectedDay || undefined,
+      wasteTypes,
+    }
+  })
+
+  const contactItem = data.items.find(item => item.details?.manageDepartment)
+  const contact: ContactInfo | undefined = contactItem?.details?.manageDepartment
+    ? { name: contactItem.details.manageDepartment, phone: contactItem.details.managePhone }
     : undefined
 
   return { schedules, contact }
@@ -75,9 +117,6 @@ export function useWasteSchedule() {
   const isLoading = ref(false)
   const error = ref<Error | null>(null)
 
-  /**
-   * Get list of cities
-   */
   async function getCities(): Promise<string[]> {
     try {
       const response = await $fetch<{ success: boolean; data: { items: string[] } }>(
@@ -86,14 +125,10 @@ export function useWasteSchedule() {
       return response.data.items
     } catch (e) {
       console.error('Failed to fetch cities:', e)
-      // Return mock data for development
       return getMockCities()
     }
   }
 
-  /**
-   * Get districts for a city
-   */
   async function getDistricts(city: string): Promise<string[]> {
     try {
       const response = await $fetch<{ success: boolean; data: { items: string[] } }>(
@@ -102,30 +137,39 @@ export function useWasteSchedule() {
       return response.data.items
     } catch (e) {
       console.error('Failed to fetch districts:', e)
-      // Return mock data for development
       return getMockDistricts(city)
     }
   }
 
-  /**
-   * Get schedules for a region
-   */
-  async function getSchedules(city: string, district: string): Promise<ScheduleResponse> {
+  async function getSchedules(city: string, district: string, keyword?: string): Promise<RegionScheduleResponse> {
     isLoading.value = true
     error.value = null
 
     try {
-      const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(
-        `${apiBase}/api/waste-schedules?city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`
-      )
-      return transformScheduleResponse(response.data)
+      let url = `${apiBase}/api/waste-schedules?city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`
+      if (keyword) {
+        url += `&keyword=${encodeURIComponent(keyword)}`
+      }
+      const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(url)
+      return transformToRegionSchedules(response.data)
     } catch (e) {
       console.error('Failed to fetch schedules:', e)
       error.value = e as Error
-      // Return mock data for development
       return getMockSchedules(district)
     } finally {
       isLoading.value = false
+    }
+  }
+
+  async function getScheduleDetail(id: number): Promise<BackendScheduleItem | null> {
+    try {
+      const response = await $fetch<{ success: boolean; data: BackendScheduleItem }>(
+        `${apiBase}/api/waste-schedules/${id}`
+      )
+      return response.data
+    } catch (e) {
+      console.error('Failed to fetch schedule detail:', e)
+      return null
     }
   }
 
@@ -134,7 +178,8 @@ export function useWasteSchedule() {
     error: readonly(error),
     getCities,
     getDistricts,
-    getSchedules
+    getSchedules,
+    getScheduleDetail,
   }
 }
 
@@ -181,40 +226,36 @@ function getMockDistricts(city: string): string[] {
   return districtMap[city] || ['중구', '동구', '서구', '남구', '북구']
 }
 
-function getMockSchedules(district: string): ScheduleResponse {
+function getMockSchedules(district: string): RegionScheduleResponse {
   return {
     schedules: [
       {
-        id: '1',
-        wasteType: '일반쓰레기',
-        dayOfWeek: ['월', '수', '금'],
-        time: '저녁 7시 ~ 밤 12시',
-        note: '종량제 봉투 사용'
+        id: 1,
+        targetRegion: `${district} 1동~3동`,
+        emissionPlace: '각 세대 앞',
+        emissionPlaceType: '문전수거',
+        uncollectedDay: '명절(설 및 추석)',
+        wasteTypes: [
+          { type: '일반쓰레기', dayOfWeek: ['월', '수', '금'] },
+          { type: '음식물쓰레기', dayOfWeek: ['화', '목', '토'] },
+          { type: '재활용', dayOfWeek: ['수', '토'] },
+          { type: '대형폐기물', dayOfWeek: [] },
+        ],
       },
       {
-        id: '2',
-        wasteType: '음식물쓰레기',
-        dayOfWeek: ['화', '목', '토'],
-        time: '저녁 7시 ~ 밤 12시',
-        note: '음식물 전용 봉투 또는 RFID 카드 사용'
+        id: 2,
+        targetRegion: `${district} 4동~6동`,
+        emissionPlace: '거점 수거',
+        emissionPlaceType: '거점수거',
+        wasteTypes: [
+          { type: '일반쓰레기', dayOfWeek: ['월', '수', '금'] },
+          { type: '재활용', dayOfWeek: ['화', '목'] },
+        ],
       },
-      {
-        id: '3',
-        wasteType: '재활용',
-        dayOfWeek: ['수', '토'],
-        time: '오전 6시 ~ 저녁 8시',
-        note: '플라스틱, 비닐, 캔, 유리, 종이류 분리배출'
-      },
-      {
-        id: '4',
-        wasteType: '대형폐기물',
-        dayOfWeek: ['예약제'],
-        note: '구청 또는 주민센터에 신고 후 스티커 부착'
-      }
     ],
     contact: {
       name: `${district} 청소행정과`,
-      phone: '02-1234-5678'
-    }
+      phone: '02-1234-5678',
+    },
   }
 }

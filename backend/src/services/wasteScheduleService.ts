@@ -3,6 +3,21 @@
 
 import prisma from '../lib/prisma.js';
 
+// 유형별 배출 정보 타입
+interface WasteTypeInfo {
+  dayOfWeek?: string;
+  beginTime?: string;
+  endTime?: string;
+  method?: string;
+}
+
+interface BulkWasteInfo {
+  beginTime?: string;
+  endTime?: string;
+  method?: string;
+  place?: string;
+}
+
 // 배출 일정 아이템 타입
 interface WasteScheduleItem {
   id: number;
@@ -11,16 +26,17 @@ interface WasteScheduleItem {
   targetRegion: string | null;
   emissionPlace: string | null;
   details: {
-    emissionItem?: string;
-    emissionDay?: string;
-    emissionTime?: string;
-    emissionMethod?: string;
-    collectDay?: string;
-    collectTime?: string;
-    collectMethod?: string;
-    manageInstitute?: string;
+    emissionPlaceType?: string;
+    managementZone?: string;
+    livingWaste?: WasteTypeInfo;
+    foodWaste?: WasteTypeInfo;
+    recyclable?: WasteTypeInfo;
+    bulkWaste?: BulkWasteInfo;
+    uncollectedDay?: string;
+    manageDepartment?: string;
     managePhone?: string;
-    dataStandardDate?: string;
+    dataCreatedDate?: string;
+    lastModified?: string;
   } | null;
 }
 
@@ -56,13 +72,17 @@ interface RegionsResult {
 export async function getByRegion(
   city: string,
   district?: string,
+  keyword?: string,
   options: { page?: number; limit?: number } = {}
 ): Promise<WasteScheduleResult> {
   const { page = 1, limit = 20 } = options;
 
-  const where: { city: string; district?: string } = { city };
+  const where: { city: string; district?: string; targetRegion?: { contains: string } } = { city };
   if (district) {
     where.district = district;
+  }
+  if (keyword) {
+    where.targetRegion = { contains: keyword };
   }
 
   const [items, total] = await Promise.all([
@@ -153,4 +173,30 @@ export async function getDistricts(city: string): Promise<string[]> {
   });
 
   return districts.map((item) => item.district);
+}
+
+/**
+ * 단건 조회 (상세 페이지용)
+ * @param id - WasteSchedule id
+ * @returns 배출 일정 아이템 또는 null
+ */
+export async function getById(id: number): Promise<WasteScheduleItem | null> {
+  const item = await prisma.wasteSchedule.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      city: true,
+      district: true,
+      targetRegion: true,
+      emissionPlace: true,
+      details: true,
+    },
+  });
+
+  if (!item) return null;
+
+  return {
+    ...item,
+    details: item.details as WasteScheduleItem['details'],
+  };
 }

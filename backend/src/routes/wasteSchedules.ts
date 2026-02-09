@@ -19,11 +19,11 @@ router.get(
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const { query } = res.locals.validated as {
-        query: { city: string; district?: string; page: number; limit: number };
+        query: { city: string; district?: string; keyword?: string; page: number; limit: number };
       };
-      const { city, district, page, limit } = query;
+      const { city, district, keyword, page, limit } = query;
 
-      const result = await wasteScheduleService.getByRegion(city, district, { page, limit });
+      const result = await wasteScheduleService.getByRegion(city, district, keyword, { page, limit });
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -77,6 +77,26 @@ router.get('/districts/:city', async (req: Request, res: Response, next: NextFun
     const city = Array.isArray(cityParam) ? cityParam[0] : cityParam;
     const districts = await wasteScheduleService.getDistricts(city);
     res.json({ success: true, data: { items: districts } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/waste-schedules/:id
+ * 단건 조회 (상세 페이지용)
+ */
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid id' });
+    }
+    const item = await wasteScheduleService.getById(id);
+    if (!item) {
+      return res.status(404).json({ success: false, error: 'Not found' });
+    }
+    res.json({ success: true, data: item });
   } catch (error) {
     next(error);
   }

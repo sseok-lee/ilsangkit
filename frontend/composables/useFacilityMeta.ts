@@ -158,6 +158,29 @@ export function useFacilityMeta() {
   }
 
   /**
+   * 쓰레기 배출 상세 페이지 메타태그
+   */
+  function setWasteScheduleDetailMeta(schedule: {
+    id: number
+    city: string
+    district: string
+    targetRegion?: string | null
+  }) {
+    const location = `${schedule.city} ${schedule.district}`
+    const title = `${location} 쓰레기 배출 일정`
+    const description = schedule.targetRegion
+      ? `${location} ${schedule.targetRegion} 지역의 쓰레기 배출 요일, 시간, 방법을 확인하세요.`
+      : `${location} 지역의 쓰레기 배출 요일, 시간, 방법을 확인하세요.`
+
+    setMeta({
+      title,
+      description,
+      path: `/trash/${schedule.id}`,
+      type: 'article',
+    })
+  }
+
+  /**
    * 에러 페이지 메타태그
    */
   function setErrorMeta(statusCode: number) {
@@ -180,6 +203,7 @@ export function useFacilityMeta() {
     setHomeMeta,
     setSearchMeta,
     setFacilityDetailMeta,
+    setWasteScheduleDetailMeta,
     setRegionMeta,
     setErrorMeta,
     SITE_NAME,

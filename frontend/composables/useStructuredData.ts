@@ -175,11 +175,45 @@ export function useStructuredData() {
     })
   }
 
+  /**
+   * GovernmentService 스키마 (쓰레기 배출 상세용)
+   */
+  function setWasteScheduleSchema(schedule: {
+    id: number
+    city: string
+    district: string
+    targetRegion?: string | null
+    details?: { manageDepartment?: string; managePhone?: string } | null
+  }) {
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'GovernmentService',
+      name: `${schedule.city} ${schedule.district} 쓰레기 배출 안내`,
+      description: `${schedule.city} ${schedule.district} 지역 쓰레기 배출 일정 및 방법`,
+      serviceType: '쓰레기 배출 안내',
+      areaServed: {
+        '@type': 'AdministrativeArea',
+        name: `${schedule.city} ${schedule.district}`,
+      },
+      url: `${SITE_URL}/trash/${schedule.id}`,
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
   return {
     setWebsiteSchema,
     setBreadcrumbSchema,
     setFacilitySchema,
     setItemListSchema,
     setOrganizationSchema,
+    setWasteScheduleSchema,
   }
 }

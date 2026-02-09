@@ -42,59 +42,74 @@ const districtMap: Record<string, string[]> = {
   ],
 };
 
+function getMockScheduleItem(id: number, district: string) {
+  return {
+    id,
+    city: '서울특별시',
+    district,
+    targetRegion: `${district} 1동~3동`,
+    emissionPlace: '각 세대 앞',
+    details: {
+      emissionPlaceType: '문전수거',
+      managementZone: `${district} 관리구역`,
+      livingWaste: {
+        dayOfWeek: '월, 수, 금',
+        beginTime: '20:00',
+        endTime: '05:00',
+        method: '규격봉투 배출',
+      },
+      foodWaste: {
+        dayOfWeek: '화, 목, 토',
+        beginTime: '20:00',
+        endTime: '05:00',
+        method: '전용봉투 또는 RFID 카드 사용',
+      },
+      recyclable: {
+        dayOfWeek: '수, 토',
+        beginTime: '06:00',
+        endTime: '20:00',
+        method: '플라스틱, 비닐, 캔, 유리, 종이류 분리배출',
+      },
+      bulkWaste: {
+        beginTime: '09:00',
+        endTime: '18:00',
+        method: '구청 또는 주민센터에 신고 후 스티커 부착',
+        place: '주민센터 앞 지정장소',
+      },
+      uncollectedDay: '명절(설 및 추석)',
+      manageDepartment: `${district} 청소행정과`,
+      managePhone: '02-1234-5678',
+      dataCreatedDate: '2024-01-01',
+      lastModified: '2024-06-15',
+    },
+  };
+}
+
 function getMockSchedules(district: string) {
   const items = [
-    {
-      id: 1,
-      city: '서울특별시',
-      district,
-      targetRegion: null,
-      emissionPlace: null,
-      details: {
-        emissionItem: '일반쓰레기',
-        emissionDay: '월, 수, 금',
-        emissionTime: '저녁 7시 ~ 밤 12시',
-        emissionMethod: '종량제 봉투 사용',
-        manageInstitute: `${district} 청소행정과`,
-        managePhone: '02-1234-5678',
-      },
-    },
+    getMockScheduleItem(1, district),
     {
       id: 2,
       city: '서울특별시',
       district,
-      targetRegion: null,
-      emissionPlace: null,
+      targetRegion: `${district} 4동~6동`,
+      emissionPlace: '거점 수거',
       details: {
-        emissionItem: '음식물쓰레기',
-        emissionDay: '화, 목, 토',
-        emissionTime: '저녁 7시 ~ 밤 12시',
-        emissionMethod: '음식물 전용 봉투 또는 RFID 카드 사용',
-      },
-    },
-    {
-      id: 3,
-      city: '서울특별시',
-      district,
-      targetRegion: null,
-      emissionPlace: null,
-      details: {
-        emissionItem: '재활용',
-        emissionDay: '수, 토',
-        emissionTime: '오전 6시 ~ 저녁 8시',
-        emissionMethod: '플라스틱, 비닐, 캔, 유리, 종이류 분리배출',
-      },
-    },
-    {
-      id: 4,
-      city: '서울특별시',
-      district,
-      targetRegion: null,
-      emissionPlace: null,
-      details: {
-        emissionItem: '대형폐기물',
-        emissionDay: '예약제',
-        emissionMethod: '구청 또는 주민센터에 신고 후 스티커 부착',
+        emissionPlaceType: '거점수거',
+        livingWaste: {
+          dayOfWeek: '월, 수, 금',
+          beginTime: '19:00',
+          endTime: '04:00',
+          method: '규격봉투 배출',
+        },
+        recyclable: {
+          dayOfWeek: '화, 목',
+          beginTime: '08:00',
+          endTime: '18:00',
+          method: '분리배출',
+        },
+        manageDepartment: `${district} 청소행정과`,
+        managePhone: '02-1234-5678',
       },
     },
   ];
@@ -114,10 +129,28 @@ export const wasteScheduleHandlers = [
     return HttpResponse.json({ success: true, data: { items: districts } });
   }),
 
+  // GET /api/waste-schedules/:id - 단건 조회
+  http.get(`${API_BASE}/api/waste-schedules/:id`, ({ params }) => {
+    const id = parseInt(params.id as string, 10);
+    if (isNaN(id)) {
+      return HttpResponse.json({ success: false, error: 'Invalid id' }, { status: 400 });
+    }
+    const item = getMockScheduleItem(id, '강남구');
+    return HttpResponse.json({ success: true, data: item });
+  }),
+
   // GET /api/waste-schedules - 배출 일정 조회
   http.get(`${API_BASE}/api/waste-schedules`, ({ request }) => {
     const url = new URL(request.url);
     const district = url.searchParams.get('district') || '강남구';
-    return HttpResponse.json({ success: true, data: getMockSchedules(district) });
+    const keyword = url.searchParams.get('keyword');
+    const data = getMockSchedules(district);
+    if (keyword) {
+      data.items = data.items.filter(item =>
+        item.targetRegion?.includes(keyword)
+      );
+      data.total = data.items.length;
+    }
+    return HttpResponse.json({ success: true, data });
   }),
 ];
