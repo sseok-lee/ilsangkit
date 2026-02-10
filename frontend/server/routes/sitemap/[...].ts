@@ -1,4 +1,4 @@
-// 동적 카테고리 사이트맵 — slug에서 카테고리 + 페이지 파싱
+// catch-all 동적 카테고리 사이트맵 — Nitro가 [slug].xml.ts를 인식 못하는 문제 우회
 import { defineEventHandler, setHeader, createError } from 'h3'
 import {
   SITE_URL,
@@ -27,7 +27,16 @@ function parseSlug(slug: string): { category: string; page: number } | null {
 }
 
 export default defineEventHandler(async (event) => {
-  const slug = event.context.params?.slug
+  // URL path에서 slug 추출: /sitemap/wifi-1.xml → wifi-1
+  const path = event.path || ''
+  const lastSegment = path.split('/').pop() || ''
+
+  // .xml 확장자 필수
+  if (!lastSegment.endsWith('.xml')) {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+  }
+
+  const slug = lastSegment.replace(/\.xml$/, '')
   if (!slug) {
     throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
