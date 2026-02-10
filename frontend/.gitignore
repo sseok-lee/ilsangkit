@@ -24,3 +24,8 @@ logs
 # Coverage
 coverage
 *.lcov
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/

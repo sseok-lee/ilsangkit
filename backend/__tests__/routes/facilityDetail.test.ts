@@ -47,6 +47,8 @@ describe('GET /api/facilities/:category/:id', () => {
   });
 
   it('조회수 증가', async () => {
+    // 이전 테스트의 비동기 조회수 업데이트가 완료될 때까지 대기
+    await new Promise((resolve) => setTimeout(resolve, 150));
     const before = await prisma.toilet.findUnique({ where: { id: testToilet.id } });
 
     await request(app).get('/api/facilities/toilet/toilet-detail-test');

@@ -82,7 +82,7 @@
 
         <!-- Map Placeholder (Mobile) -->
         <div class="mt-4 flex-1 min-h-[160px] w-full rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 overflow-hidden relative">
-          <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80')] bg-cover bg-center opacity-60 dark:opacity-40"></div>
+          <div class="absolute inset-0 bg-[url('/images/map-bg.webp')] bg-cover bg-center opacity-60 dark:opacity-40"></div>
           <div class="absolute inset-0 bg-gradient-to-t from-white/90 via-white/50 to-transparent dark:from-[#1e293b]/90 dark:via-[#1e293b]/50"></div>
           <div class="absolute bottom-4 left-4 right-4 text-center">
             <p class="text-sm text-slate-600 dark:text-slate-300 font-medium">지금 내 주변 350+개 편의시설 검색 가능</p>

@@ -6,7 +6,7 @@
       <div class="px-4 py-3 flex items-center gap-3">
         <!-- Back Button -->
         <button
-          class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          class="shrink-0 flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           @click="$router.back()"
         >
           <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">arrow_back</span>
@@ -34,7 +34,7 @@
         <!-- Filter Icon Button -->
         <div class="relative">
           <button
-            class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            class="shrink-0 flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
             @click="showFilterDropdown = !showFilterDropdown"
           >
             <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">tune</span>
@@ -427,7 +427,7 @@
       <main v-if="selectedCategory !== 'trash'" class="hidden md:flex flex-1 relative bg-slate-200 dark:bg-slate-800 h-full w-full overflow-hidden">
         <!-- Map Component -->
         <ClientOnly>
-          <FacilityMap
+          <LazyFacilityMap
             :center="mapCenter"
             :facilities="facilities"
             :level="mapLevel"
@@ -475,7 +475,7 @@
       <div class="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
         <h2 class="text-slate-900 dark:text-white text-base font-bold">지도</h2>
         <button
-          class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          class="flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           @click="toggleMobileMap"
         >
           <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">close</span>
@@ -484,7 +484,7 @@
       <!-- Map -->
       <div class="flex-1 relative">
         <ClientOnly>
-          <FacilityMap
+          <LazyFacilityMap
             :center="mapCenter"
             :facilities="facilities"
             :level="mapLevel"

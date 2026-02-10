@@ -6,11 +6,11 @@
 export type CategoryId = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk'
 
 export const CATEGORY_ICONS: Record<CategoryId, string> = {
-  toilet: '/icons/category/toilet.png',
-  trash: '/icons/category/trash.png',
-  wifi: '/icons/category/wifi.png',
-  clothes: '/icons/category/clothes.png',
-  kiosk: '/icons/category/kiosk.png',
+  toilet: '/icons/category/toilet.webp',
+  trash: '/icons/category/trash.webp',
+  wifi: '/icons/category/wifi.webp',
+  clothes: '/icons/category/clothes.webp',
+  kiosk: '/icons/category/kiosk.webp',
 } as const
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = {

@@ -89,6 +89,7 @@ vi.mock('~/composables/useRegions', () => ({
 const globalStubs = {
   ClientOnly: { template: '<div><slot /></div>' },
   FacilityMap: { template: '<div data-testid="facility-map">Map</div>' },
+  LazyFacilityMap: { template: '<div data-testid="facility-map">Map</div>' },
   SearchFilters: { template: '<div data-testid="search-filters">SearchFilters</div>' },
   FacilityList: { template: '<div data-testid="facility-list">FacilityList</div>' },
   FacilityCard: { template: '<div>FacilityCard</div>' },

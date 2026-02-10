@@ -1,5 +1,5 @@
 <template>
-  <img :src="iconSrc" :alt="categoryLabel" :class="sizeClass" class="object-contain" />
+  <img :src="iconSrc" :alt="categoryLabel" :class="sizeClass" :width="sizePixels" :height="sizePixels" loading="lazy" class="object-contain" />
 </template>
 
 <script setup lang="ts">
@@ -26,5 +26,10 @@ const sizeClass = computed(() => {
     xl: 'w-16 h-16', // 64px
   }
   return sizeMap[props.size]
+})
+
+const sizePixels = computed(() => {
+  const pixelMap = { sm: 20, md: 32, lg: 48, xl: 64 }
+  return pixelMap[props.size]
 })
 </script>

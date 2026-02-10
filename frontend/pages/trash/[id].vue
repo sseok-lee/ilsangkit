@@ -5,7 +5,7 @@
       <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
         <button
           aria-label="이전 페이지로 돌아가기"
-          class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          class="shrink-0 flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           @click="goBack"
         >
           <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">arrow_back</span>

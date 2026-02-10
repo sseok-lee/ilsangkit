@@ -38,7 +38,7 @@
 
           <!-- Back Button & Name Overlay -->
           <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-            <div class="flex size-10 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="router.back()">
+            <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="router.back()">
               <span class="material-symbols-outlined text-[#111518]">arrow_back</span>
             </div>
             <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-[#111518] shadow-sm backdrop-blur-sm">{{ facility.name }}</span>
@@ -682,14 +682,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilityDetail } from '~/composables/useFacilityDetail'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
-import FacilityMap from '~/components/map/FacilityMap.vue'
+const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 import FacilityFeatureCard from '~/components/facility/FacilityFeatureCard.vue'
 
 const route = useRoute()
