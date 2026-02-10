@@ -1,5 +1,7 @@
 export const SITE_URL = 'https://ilsangkit.co.kr'
 
+export const MAX_URLS_PER_SITEMAP = 45_000
+
 export interface SitemapUrl {
   loc: string
   lastmod?: string
