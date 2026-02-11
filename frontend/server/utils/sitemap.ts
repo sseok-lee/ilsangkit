@@ -77,15 +77,24 @@ export async function fetchFacilityIds(
   const cached = getCached<{ id: string; updatedAt: string }>(cacheKey)
   if (cached) return cached
 
-  const res = await fetch(`${apiBase}/api/sitemap/facilities/${category}`)
-  if (!res.ok) {
-    console.error(`[sitemap] fetchFacilityIds(${category}) failed: ${res.status}`)
-    return []
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`${apiBase}/api/sitemap/facilities/${category}`)
+      if (!res.ok) {
+        console.error(`[sitemap] fetchFacilityIds(${category}) attempt ${attempt}: HTTP ${res.status}`)
+        continue
+      }
+      const json = await res.json()
+      const data = json.data || []
+      if (data.length > 0) {
+        setCache(cacheKey, data)
+      }
+      return data
+    } catch (err) {
+      console.error(`[sitemap] fetchFacilityIds(${category}) attempt ${attempt} error:`, err)
+    }
   }
-  const json = await res.json()
-  const data = json.data || []
-  setCache(cacheKey, data)
-  return data
+  return []
 }
 
 export async function fetchWasteScheduleIds(
@@ -95,13 +104,22 @@ export async function fetchWasteScheduleIds(
   const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
   if (cached) return cached
 
-  const res = await fetch(`${apiBase}/api/sitemap/waste-schedules`)
-  if (!res.ok) {
-    console.error(`[sitemap] fetchWasteScheduleIds failed: ${res.status}`)
-    return []
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`${apiBase}/api/sitemap/waste-schedules`)
+      if (!res.ok) {
+        console.error(`[sitemap] fetchWasteScheduleIds attempt ${attempt}: HTTP ${res.status}`)
+        continue
+      }
+      const json = await res.json()
+      const data = json.data || []
+      if (data.length > 0) {
+        setCache(cacheKey, data)
+      }
+      return data
+    } catch (err) {
+      console.error(`[sitemap] fetchWasteScheduleIds attempt ${attempt} error:`, err)
+    }
   }
-  const json = await res.json()
-  const data = json.data || []
-  setCache(cacheKey, data)
-  return data
+  return []
 }
