@@ -51,21 +51,57 @@ export function formatDateForSitemap(date: string | Date): string {
   return d.toISOString().split('T')[0]
 }
 
+// 캐시: 카테고리별 ID 목록을 10분간 메모리에 보관
+const cache = new Map<string, { data: unknown[]; expires: number }>()
+const CACHE_TTL = 10 * 60 * 1000 // 10분
+
+function getCached<T>(key: string): T[] | null {
+  const entry = cache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expires) {
+    cache.delete(key)
+    return null
+  }
+  return entry.data as T[]
+}
+
+function setCache(key: string, data: unknown[]): void {
+  cache.set(key, { data, expires: Date.now() + CACHE_TTL })
+}
+
 export async function fetchFacilityIds(
   category: string,
   apiBase: string
 ): Promise<{ id: string; updatedAt: string }[]> {
+  const cacheKey = `facility:${category}`
+  const cached = getCached<{ id: string; updatedAt: string }>(cacheKey)
+  if (cached) return cached
+
   const res = await fetch(`${apiBase}/api/sitemap/facilities/${category}`)
-  if (!res.ok) return []
+  if (!res.ok) {
+    console.error(`[sitemap] fetchFacilityIds(${category}) failed: ${res.status}`)
+    return []
+  }
   const json = await res.json()
-  return json.data || []
+  const data = json.data || []
+  setCache(cacheKey, data)
+  return data
 }
 
 export async function fetchWasteScheduleIds(
   apiBase: string
 ): Promise<{ id: number; updatedAt: string }[]> {
+  const cacheKey = 'waste-schedules'
+  const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
+  if (cached) return cached
+
   const res = await fetch(`${apiBase}/api/sitemap/waste-schedules`)
-  if (!res.ok) return []
+  if (!res.ok) {
+    console.error(`[sitemap] fetchWasteScheduleIds failed: ${res.status}`)
+    return []
+  }
   const json = await res.json()
-  return json.data || []
+  const data = json.data || []
+  setCache(cacheKey, data)
+  return data
 }

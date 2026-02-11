@@ -56,10 +56,11 @@ export default defineEventHandler(async (event) => {
       ? await fetchWasteScheduleIds(apiBase)
       : await fetchFacilityIds(category, apiBase)
 
-  // 페이지 유효성 검증
+  // 페이지 유효성 검증 — fetch 실패(빈 배열) 시 빈 sitemap 반환 (404 대신)
   const totalPages = Math.max(1, Math.ceil(items.length / MAX_URLS_PER_SITEMAP))
   if (page > totalPages) {
-    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    setHeader(event, 'Content-Type', 'application/xml')
+    return generateSitemapXml([])
   }
 
   // slice로 해당 페이지 항목 추출

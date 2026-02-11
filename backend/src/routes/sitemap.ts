@@ -6,7 +6,7 @@ import type { FacilityCategory } from '../services/facilityService.js';
 
 const router = Router();
 
-const VALID_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk'];
+const VALID_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking'];
 
 /**
  * GET /api/sitemap/facilities/:category
