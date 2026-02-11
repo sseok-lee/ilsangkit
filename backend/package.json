@@ -24,6 +24,7 @@
     "sync:wifi": "node --use-system-ca node_modules/.bin/tsx src/scripts/syncWifi.ts",
     "sync:clothes": "tsx src/scripts/syncClothes.ts",
     "sync:kiosk": "tsx src/scripts/syncKiosk.ts",
+    "sync:parking": "tsx src/scripts/syncParking.ts",
     "sync:regions": "tsx src/scripts/syncRegion.ts",
     "sync:facilities": "tsx src/scripts/syncAll.ts"
   },

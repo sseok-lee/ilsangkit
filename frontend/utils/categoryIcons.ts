@@ -3,7 +3,7 @@
  * 3D 아이소메트릭 카테고리 아이콘 경로 관리
  */
 
-export type CategoryId = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk'
+export type CategoryId = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking'
 
 export const CATEGORY_ICONS: Record<CategoryId, string> = {
   toilet: '/icons/category/toilet.webp',
@@ -11,6 +11,7 @@ export const CATEGORY_ICONS: Record<CategoryId, string> = {
   wifi: '/icons/category/wifi.webp',
   clothes: '/icons/category/clothes.webp',
   kiosk: '/icons/category/kiosk.webp',
+  parking: '/icons/category/parking.webp',
 } as const
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = {
@@ -19,6 +20,7 @@ export const CATEGORY_LABELS: Record<CategoryId, string> = {
   wifi: '와이파이',
   clothes: '의류수거함',
   kiosk: '발급기',
+  parking: '주차장',
 } as const
 
 export const CATEGORY_COLORS: Record<CategoryId, { primary: string; bg: string; bgDark: string }> = {
@@ -46,6 +48,11 @@ export const CATEGORY_COLORS: Record<CategoryId, { primary: string; bg: string; 
     primary: '#6366f1',
     bg: 'bg-indigo-50',
     bgDark: 'dark:bg-indigo-900/20',
+  },
+  parking: {
+    primary: '#0ea5e9',
+    bg: 'bg-sky-50',
+    bgDark: 'dark:bg-sky-900/20',
   },
 } as const
 

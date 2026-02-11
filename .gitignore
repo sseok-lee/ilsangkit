@@ -16,6 +16,7 @@ Thumbs.db
 # Claude Code
 .claude/
 .mcp.json
+.omc/
 
 # Playwright MCP screenshots
 .playwright-mcp/

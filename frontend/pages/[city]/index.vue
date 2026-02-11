@@ -91,6 +91,7 @@ const categories = computed(() => [
   { id: 'wifi' as const, label: CATEGORY_META.wifi.label },
   { id: 'clothes' as const, label: CATEGORY_META.clothes.label },
   { id: 'kiosk' as const, label: CATEGORY_META.kiosk.label },
+  { id: 'parking' as const, label: CATEGORY_META.parking.label },
 ])
 
 // SEO

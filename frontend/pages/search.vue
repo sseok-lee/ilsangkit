@@ -622,7 +622,6 @@ const performSearch = () => {
   const params: Record<string, unknown> = {
     page: currentPage.value,
     limit: 20,
-    sort: selectedSort.value,
   }
 
   if (searchKeyword.value) {
@@ -633,22 +632,12 @@ const performSearch = () => {
     params.category = selectedCategory.value
   }
 
-  // bounds가 있으면 영역 기반, 없으면 기존 반경 기반
-  if (mapBounds.value) {
-    const { center, sw, ne } = mapBounds.value
-    params.lat = center.lat
-    params.lng = center.lng
-    params.swLat = sw.lat
-    params.swLng = sw.lng
-    params.neLat = ne.lat
-    params.neLng = ne.lng
-  } else if (userLocation.value) {
-    params.lat = userLocation.value.lat
-    params.lng = userLocation.value.lng
-    params.radius = 5000
-  }
-
-  search(params)
+  // GPS 좌표는 서버로 전송하지 않음 (위치정보사업 신고 의무 회피)
+  // 거리 계산, 영역 필터링은 클라이언트에서 수행
+  search(params, {
+    userLocation: userLocation.value,
+    mapBounds: mapBounds.value ? { sw: mapBounds.value.sw, ne: mapBounds.value.ne } : null,
+  })
 }
 
 const handleSearch = () => {

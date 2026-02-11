@@ -44,11 +44,6 @@
             <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-[#111518] shadow-sm backdrop-blur-sm">{{ facility.name }}</span>
           </div>
 
-          <!-- Map Marker Overlay -->
-          <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[80%] flex flex-col items-center pointer-events-none">
-            <span class="material-symbols-outlined filled text-5xl text-primary drop-shadow-md">location_on</span>
-          </div>
-
           <!-- Gradient Overlay at bottom -->
           <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent dark:from-background-dark"></div>
         </div>
@@ -78,7 +73,7 @@
               <div class="flex flex-col gap-3 pt-2">
                 <div class="flex items-start justify-between">
                   <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-900/40 dark:text-purple-300">
-                    <span class="material-symbols-outlined text-[14px]">{{ categoryMeta.icon === '🚻' ? 'wc' : 'place' }}</span> {{ categoryMeta.label }}
+                    <span class="material-symbols-outlined text-[14px]">place</span> {{ categoryMeta.label }}
                   </span>
                   <div class="flex gap-2">
                     <button class="text-[#60708a] hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800" @click="handleShare">
@@ -345,23 +340,6 @@
                   />
                 </ClientOnly>
 
-                <!-- Custom Marker -->
-                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-10 flex flex-col items-center group cursor-pointer">
-                  <!-- Tooltip -->
-                  <div class="mb-2 bg-white px-3 py-1.5 rounded-lg shadow-lg border border-gray-100 flex flex-col items-center whitespace-nowrap animate-bounce dark:bg-gray-900 dark:border-gray-700">
-                    <span class="text-sm font-bold text-gray-900 dark:text-white">{{ facility.name }}</span>
-                    <div class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b border-r border-gray-100 transform rotate-45 dark:bg-gray-900 dark:border-gray-700"></div>
-                  </div>
-                  <!-- Pin Icon -->
-                  <div class="relative">
-                    <div class="w-12 h-12 bg-primary rounded-full border-4 border-white shadow-xl flex items-center justify-center text-white z-20 relative dark:border-gray-800">
-                      <span class="material-symbols-outlined text-[24px]">wc</span>
-                    </div>
-                    <!-- Ripple Effect -->
-                    <div class="absolute top-0 left-0 w-12 h-12 bg-primary rounded-full opacity-30 animate-ping"></div>
-                  </div>
-                </div>
-
                 <!-- Map Controls -->
                 <div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
                   <button aria-label="My Location" class="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center text-gray-700 hover:text-primary transition-colors border border-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
@@ -407,7 +385,7 @@
           <div class="flex flex-col gap-3">
             <div class="flex items-start justify-between">
               <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-900/40 dark:text-purple-300">
-                <span class="material-symbols-outlined text-[14px]">{{ categoryMeta.icon === '🚻' ? 'wc' : 'place' }}</span> {{ categoryMeta.label }}
+                <span class="material-symbols-outlined text-[14px]">place</span> {{ categoryMeta.label }}
               </span>
               <button class="text-[#60708a] hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800" @click="handleShare">
                 <span class="material-symbols-outlined">share</span>

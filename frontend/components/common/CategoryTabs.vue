@@ -38,6 +38,7 @@ const categories: Category[] = [
   { id: 'clothes', name: '의류수거함', icon: '👕' },
   { id: 'kiosk', name: '무인민원', icon: '🏧' },
   { id: 'trash', name: '쓰레기배출', icon: '🗑️' },
+  { id: 'parking', name: '주차장', icon: '🅿️' },
 ]
 
 const categoryColors: Record<string, string> = {
@@ -46,6 +47,7 @@ const categoryColors: Record<string, string> = {
   wifi: '#f59e0b',
   clothes: '#ec4899',
   kiosk: '#6366f1',
+  parking: '#0ea5e9',
 }
 
 const route = useRoute()

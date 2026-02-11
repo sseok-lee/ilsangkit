@@ -81,6 +81,69 @@ export interface TransformedClothes {
   detailLocation: string;
 }
 
+// Parking CSV 로우 타입
+export interface ParkingCSVRow {
+  '주차장관리번호': string;
+  '주차장명': string;
+  '주차장구분': string;       // 공영/민영
+  '주차장유형': string;       // 노외/노상/부설
+  '소재지도로명주소': string;
+  '소재지지번주소': string;
+  '주차구획수': string;
+  '급지구분'?: string;
+  '부제시행구분'?: string;
+  '운영요일': string;
+  '평일운영시작시각': string;
+  '평일운영종료시각': string;
+  '토요일운영시작시각'?: string;
+  '토요일운영종료시각'?: string;
+  '공휴일운영시작시각'?: string;
+  '공휴일운영종료시각'?: string;
+  '요금정보': string;         // 유료/무료
+  '주차기본시간': string;
+  '주차기본요금': string;
+  '추가단위시간': string;
+  '추가단위요금': string;
+  '1일주차권요금'?: string;
+  '월정기권요금'?: string;
+  '결제방법'?: string;
+  '특기사항'?: string;
+  '장애인전용주차구역보유여부'?: string;
+  '전화번호'?: string;
+  '위도': string;
+  '경도': string;
+  '관리기관명'?: string;
+  [key: string]: string | undefined;
+}
+
+// Parking 변환 결과 타입
+export interface TransformedParking {
+  id: string;
+  name: string;
+  address: string;
+  roadAddress: string | null;
+  lat: number | null;
+  lng: number | null;
+  city: string;
+  district: string;
+  sourceId: string;
+  // Parking 전용 필드
+  parkingType: string;
+  lotType: string;
+  capacity: number;
+  baseFee: number | null;
+  baseTime: number | null;
+  additionalFee: number | null;
+  additionalTime: number | null;
+  dailyMaxFee: number | null;
+  monthlyFee: number | null;
+  operatingHours: string;
+  phone: string;
+  paymentMethod: string;
+  remarks: string;
+  hasDisabledParking: boolean;
+}
+
 // 하위 호환성을 위한 타입 (deprecated - 사용 지양)
 export type TransformedFacility = TransformedToilet | TransformedClothes;
 
@@ -411,9 +474,165 @@ export function transformClothesRow(row: ClothesCSVRow): TransformedClothes | nu
   };
 }
 
+/**
+ * CSV 파일을 파싱하여 ParkingCSVRow 배열 반환
+ */
+export async function parseParkingCSV(filePath: string): Promise<ParkingCSVRow[]> {
+  return new Promise((resolve, reject) => {
+    const buffer = fs.readFileSync(filePath);
+    const encoding = detectEncoding(buffer);
+
+    let content: string;
+    if (encoding === 'euc-kr') {
+      content = iconv.decode(buffer, 'euc-kr');
+    } else {
+      content = buffer.toString('utf8');
+      // BOM 제거
+      if (content.charCodeAt(0) === 0xfeff) {
+        content = content.slice(1);
+      }
+    }
+
+    const rows: ParkingCSVRow[] = [];
+
+    parse(content, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      relaxColumnCount: true,
+      relaxQuotes: true,
+    })
+      .on('data', (row: ParkingCSVRow) => {
+        rows.push(row);
+      })
+      .on('error', (err: Error) => {
+        reject(err);
+      })
+      .on('end', () => {
+        resolve(rows);
+      });
+  });
+}
+
+/**
+ * 운영시간 문자열 생성
+ */
+function buildParkingOperatingHours(row: ParkingCSVRow): string {
+  const parts: string[] = [];
+
+  const weekdayStart = row['평일운영시작시각']?.trim();
+  const weekdayEnd = row['평일운영종료시각']?.trim();
+  if (weekdayStart && weekdayEnd) {
+    parts.push(`평일 ${weekdayStart}~${weekdayEnd}`);
+  }
+
+  const satStart = row['토요일운영시작시각']?.trim();
+  const satEnd = row['토요일운영종료시각']?.trim();
+  if (satStart && satEnd) {
+    parts.push(`토요일 ${satStart}~${satEnd}`);
+  }
+
+  const holStart = row['공휴일운영시작시각']?.trim();
+  const holEnd = row['공휴일운영종료시각']?.trim();
+  if (holStart && holEnd) {
+    parts.push(`공휴일 ${holStart}~${holEnd}`);
+  }
+
+  return parts.join(', ');
+}
+
+/**
+ * 공영주차장 CSV 로우를 Parking 형식으로 변환
+ */
+export function transformParkingRow(row: ParkingCSVRow): TransformedParking | null {
+  const mngNo = row['주차장관리번호']?.trim() || '';
+  const name = row['주차장명']?.trim() || '';
+  const roadAddress = row['소재지도로명주소']?.trim() || '';
+  const jibunAddress = row['소재지지번주소']?.trim() || '';
+  const latStr = row['위도']?.trim() || '';
+  const lngStr = row['경도']?.trim() || '';
+
+  if (!name) {
+    return null;
+  }
+
+  // 주소 결정 (도로명 우선, 없으면 지번)
+  const primaryAddress = roadAddress || jibunAddress;
+  if (!primaryAddress) {
+    return null;
+  }
+
+  const { city, district } = parseAddress(primaryAddress);
+  const normalizedCity = normalizeCityName(city);
+
+  if (!normalizedCity || !district) {
+    return null;
+  }
+
+  // 좌표 파싱 및 유효성 검사
+  const lat = parseFloat(latStr);
+  const lng = parseFloat(lngStr);
+
+  const hasValidCoords =
+    !isNaN(lat) &&
+    !isNaN(lng) &&
+    lat !== 0 &&
+    lng !== 0 &&
+    lat >= 33 &&
+    lat <= 39 &&
+    lng >= 124 &&
+    lng <= 132;
+
+  const finalLat = hasValidCoords ? lat : null;
+  const finalLng = hasValidCoords ? lng : null;
+
+  // sourceId: 관리번호 사용, 없으면 해시 생성
+  const hashInput = mngNo
+    ? `parking-${mngNo}`
+    : `parking-${normalizedCity}-${district}-${name}-${latStr}-${lngStr}`;
+  const sourceId = createHash('md5').update(hashInput).digest('hex').substring(0, 16);
+  const parkingId = `parking-${sourceId}`;
+
+  // 요금 정보 파싱
+  const parseIntSafe = (val: string | undefined): number | null => {
+    if (!val) return null;
+    const n = parseInt(val.trim(), 10);
+    return isNaN(n) ? null : n;
+  };
+
+  return {
+    id: parkingId,
+    name,
+    address: jibunAddress || roadAddress,
+    roadAddress: roadAddress || null,
+    lat: finalLat,
+    lng: finalLng,
+    city: normalizedCity,
+    district,
+    sourceId,
+    // Parking 전용 필드
+    parkingType: row['주차장구분']?.trim() || '',
+    lotType: row['주차장유형']?.trim() || '',
+    capacity: parseInt(row['주차구획수'] || '0', 10) || 0,
+    baseFee: parseIntSafe(row['주차기본요금']),
+    baseTime: parseIntSafe(row['주차기본시간']),
+    additionalFee: parseIntSafe(row['추가단위요금']),
+    additionalTime: parseIntSafe(row['추가단위시간']),
+    dailyMaxFee: parseIntSafe(row['1일주차권요금']),
+    monthlyFee: parseIntSafe(row['월정기권요금']),
+    operatingHours: buildParkingOperatingHours(row),
+    phone: row['전화번호']?.trim() || '',
+    paymentMethod: row['결제방법']?.trim() || '',
+    remarks: row['특기사항']?.trim() || '',
+    hasDisabledParking: row['장애인전용주차구역보유여부']?.trim() === 'Y',
+  };
+}
+
 export default {
   parseToiletCSV,
   transformToiletRow,
   parseClothesCSV,
   transformClothesRow,
+  parseParkingCSV,
+  transformParkingRow,
 };

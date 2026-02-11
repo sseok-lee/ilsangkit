@@ -56,6 +56,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   kiosk: '#f97316', // orange-500
   trash: '#ef4444', // red-500
   battery: '#eab308', // yellow-500
+  parking: '#0ea5e9', // sky-500
 }
 
 // 지도 초기화

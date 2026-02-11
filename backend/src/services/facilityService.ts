@@ -3,10 +3,10 @@
 
 import prisma from '../lib/prisma.js';
 import { FacilitySearchInput } from '../schemas/facility.js';
-import type { Toilet, Wifi, Clothes, Kiosk } from '@prisma/client';
+import type { Toilet, Wifi, Clothes, Kiosk, Parking } from '@prisma/client';
 
 // 카테고리 타입
-export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk';
+export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk' | 'parking';
 
 // 기본 select 필드 (공통 필드)
 const BASE_SELECT_FIELDS = {
@@ -31,7 +31,6 @@ interface FacilityItem {
   lng: number;
   city: string;
   district: string;
-  distance?: number;
 }
 
 interface SearchResult {
@@ -42,7 +41,7 @@ interface SearchResult {
 }
 
 // 각 테이블 레코드를 FacilityItem으로 변환
-type FacilityRecord = Pick<Toilet | Wifi | Clothes | Kiosk,
+type FacilityRecord = Pick<Toilet | Wifi | Clothes | Kiosk | Parking,
   'id' | 'name' | 'address' | 'roadAddress' | 'lat' | 'lng' | 'city' | 'district'>;
 
 function toFacilityItem(record: FacilityRecord, category: FacilityCategory): FacilityItem {
@@ -57,37 +56,6 @@ function toFacilityItem(record: FacilityRecord, category: FacilityCategory): Fac
     city: record.city,
     district: record.district,
   };
-}
-
-/**
- * Haversine 공식을 사용한 두 지점 간 거리 계산
- * @param lat1 - 기준점 위도
- * @param lng1 - 기준점 경도
- * @param lat2 - 대상점 위도
- * @param lng2 - 대상점 경도
- * @returns 거리 (km)
- */
-function haversineDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371; // 지구 반경 (km)
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRad(deg: number): number {
-  return deg * (Math.PI / 180);
 }
 
 /**
@@ -176,6 +144,21 @@ async function searchKiosks(params: FacilitySearchInput): Promise<FacilityItem[]
   return records.map((r) => toFacilityItem(r, 'kiosk'));
 }
 
+async function searchParkings(params: FacilitySearchInput): Promise<FacilityItem[]> {
+  const { keyword, city, district } = params;
+  const where = {
+    ...buildKeywordFilter(keyword),
+    ...buildRegionFilter(city, district),
+  };
+
+  const records = await prisma.parking.findMany({
+    where,
+    select: BASE_SELECT_FIELDS,
+  });
+
+  return records.map((r) => toFacilityItem(r, 'parking'));
+}
+
 /**
  * 단일 카테고리 검색
  */
@@ -192,6 +175,8 @@ async function searchSingleCategory(
       return searchClothes(params);
     case 'kiosk':
       return searchKiosks(params);
+    case 'parking':
+      return searchParkings(params);
     default:
       return [];
   }
@@ -202,85 +187,29 @@ async function searchSingleCategory(
  * - 키워드 검색
  * - 카테고리 필터
  * - 지역 필터
- * - 위치 기반 검색 (Haversine 공식)
  * - 페이지네이션
+ *
+ * NOTE: 거리 계산/정렬은 클라이언트에서 수행 (위치정보사업 신고 의무 회피)
  */
 export async function search(params: FacilitySearchInput): Promise<SearchResult> {
-  const { category, lat, lng, radius = 1000, page = 1, limit = 20 } = params;
+  const { category, page = 1, limit = 20 } = params;
 
   let allItems: FacilityItem[];
 
-  // 특정 카테고리면 해당 테이블만, 아니면 4개 테이블 병렬 쿼리
+  // 특정 카테고리면 해당 테이블만, 아니면 전체 테이블 병렬 쿼리
   if (category) {
     allItems = await searchSingleCategory(category as FacilityCategory, params);
   } else {
-    const [toilets, wifis, clothes, kiosks] = await Promise.all([
+    const [toilets, wifis, clothes, kiosks, parkings] = await Promise.all([
       searchToilets(params),
       searchWifis(params),
       searchClothes(params),
       searchKiosks(params),
+      searchParkings(params),
     ]);
-    allItems = [...toilets, ...wifis, ...clothes, ...kiosks];
+    allItems = [...toilets, ...wifis, ...clothes, ...kiosks, ...parkings];
   }
 
-  // 영역(bounds) 기반 검색
-  const { swLat, swLng, neLat, neLng } = params;
-  if (swLat !== undefined && swLng !== undefined && neLat !== undefined && neLng !== undefined) {
-    const boundsItems = allItems
-      .filter((item) => item.lat >= swLat && item.lat <= neLat && item.lng >= swLng && item.lng <= neLng);
-
-    // 중심 좌표가 있으면 거리 계산 및 정렬
-    let resultItems: FacilityItem[];
-    if (lat !== undefined && lng !== undefined) {
-      resultItems = boundsItems
-        .map((item) => ({
-          ...item,
-          distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
-        }))
-        .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
-    } else {
-      resultItems = boundsItems;
-    }
-
-    const total = resultItems.length;
-    const startIndex = (page - 1) * limit;
-    const paginatedItems = resultItems.slice(startIndex, startIndex + limit);
-
-    return {
-      items: paginatedItems,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
-    };
-  }
-
-  // 위치 기반 검색 (Haversine 공식)
-  if (lat !== undefined && lng !== undefined) {
-    // 거리 계산 및 필터링
-    const itemsWithDistance = allItems
-      .map((item) => {
-        const distanceKm = haversineDistance(lat, lng, item.lat, item.lng);
-        return {
-          ...item,
-          distance: Math.round(distanceKm * 1000), // km to meters
-        };
-      })
-      .filter((item) => item.distance <= radius)
-      .sort((a, b) => a.distance - b.distance);
-
-    const total = itemsWithDistance.length;
-    const startIndex = (page - 1) * limit;
-    const paginatedItems = itemsWithDistance.slice(startIndex, startIndex + limit);
-
-    return {
-      items: paginatedItems,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
-    };
-  }
-
-  // 일반 검색 (위치 없음)
   const total = allItems.length;
   const startIndex = (page - 1) * limit;
   const paginatedItems = allItems.slice(startIndex, startIndex + limit);
@@ -449,6 +378,46 @@ function kioskToDetail(kiosk: Kiosk): FacilityDetail {
 }
 
 /**
+ * Parking 레코드를 FacilityDetail로 변환
+ */
+function parkingToDetail(parking: Parking): FacilityDetail {
+  return {
+    id: parking.id,
+    category: 'parking',
+    name: parking.name,
+    address: parking.address,
+    roadAddress: parking.roadAddress,
+    lat: Number(parking.lat),
+    lng: Number(parking.lng),
+    city: parking.city,
+    district: parking.district,
+    bjdCode: parking.bjdCode,
+    details: {
+      parkingType: parking.parkingType,
+      lotType: parking.lotType,
+      capacity: parking.capacity,
+      baseFee: parking.baseFee,
+      baseTime: parking.baseTime,
+      additionalFee: parking.additionalFee,
+      additionalTime: parking.additionalTime,
+      dailyMaxFee: parking.dailyMaxFee,
+      monthlyFee: parking.monthlyFee,
+      operatingHours: parking.operatingHours,
+      phone: parking.phone,
+      paymentMethod: parking.paymentMethod,
+      remarks: parking.remarks,
+      hasDisabledParking: parking.hasDisabledParking,
+    },
+    sourceId: parking.sourceId,
+    sourceUrl: parking.sourceUrl,
+    viewCount: parking.viewCount,
+    createdAt: parking.createdAt,
+    updatedAt: parking.updatedAt,
+    syncedAt: parking.syncedAt,
+  };
+}
+
+/**
  * 시설 상세 조회
  * - 카테고리와 ID로 시설 조회
  * - 조회 시 viewCount 증가 (비동기, 응답 대기 안함)
@@ -494,6 +463,14 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
       }
       break;
     }
+    case 'parking': {
+      const parking = await prisma.parking.findUnique({ where: { id } });
+      if (parking) {
+        facility = parkingToDetail(parking);
+        prisma.parking.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+      }
+      break;
+    }
   }
 
   return facility;
@@ -516,6 +493,8 @@ export async function getAllIds(
       return prisma.clothes.findMany({ select: { id: true, updatedAt: true } });
     case 'kiosk':
       return prisma.kiosk.findMany({ select: { id: true, updatedAt: true } });
+    case 'parking':
+      return prisma.parking.findMany({ select: { id: true, updatedAt: true } });
     default:
       return [];
   }
@@ -659,6 +638,21 @@ export async function getByRegion(
         prisma.kiosk.count({ where }),
       ]);
       items = records.map((r) => toFacilityItem(r, 'kiosk'));
+      total = count;
+      break;
+    }
+    case 'parking': {
+      const [records, count] = await Promise.all([
+        prisma.parking.findMany({
+          where,
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy: { name: 'asc' },
+          select: BASE_SELECT_FIELDS,
+        }),
+        prisma.parking.count({ where }),
+      ]);
+      items = records.map((r) => toFacilityItem(r, 'parking'));
       total = count;
       break;
     }

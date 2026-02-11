@@ -1,5 +1,5 @@
 // 시설 카테고리 (Prisma enum 대응)
-export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk'
+export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking'
 
 // 시설 기본 정보 (목록용)
 export interface Facility {
@@ -27,7 +27,7 @@ export interface FacilityDetail {
   city: string
   district: string
   bjdCode: string | null
-  details: ToiletDetails | WifiDetails | ClothesDetails | KioskDetails
+  details: ToiletDetails | WifiDetails | ClothesDetails | KioskDetails | ParkingDetails
   sourceId: string
   sourceUrl: string | null
   viewCount: number
@@ -76,23 +76,33 @@ export interface KioskDetails {
   availableDocuments?: string[]
 }
 
+export interface ParkingDetails {
+  parkingType?: string | null
+  lotType?: string | null
+  capacity?: number
+  baseFee?: number | null
+  baseTime?: number | null
+  additionalFee?: number | null
+  additionalTime?: number | null
+  dailyMaxFee?: number | null
+  monthlyFee?: number | null
+  operatingHours?: string | null
+  phone?: string | null
+  paymentMethod?: string | null
+  remarks?: string | null
+  hasDisabledParking?: boolean
+}
+
 // 검색 파라미터
+// NOTE: 사용자 GPS 좌표(lat/lng)는 위치정보사업 신고 의무 회피를 위해
+// 서버로 전송하지 않음. 거리 계산/정렬/영역 필터는 클라이언트에서 수행.
 export interface SearchParams {
   keyword?: string
   category?: FacilityCategory
-  lat?: number
-  lng?: number
-  radius?: number
-  // 지도 영역(bounds) 기반 검색
-  swLat?: number
-  swLng?: number
-  neLat?: number
-  neLng?: number
   city?: string
   district?: string
   page?: number
   limit?: number
-  sort?: 'distance' | 'name'
 }
 
 // 검색 응답
@@ -145,6 +155,11 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     label: '무인민원발급기',
     icon: '🖨️',
     color: 'orange',
+  },
+  parking: {
+    label: '공영주차장',
+    icon: '🅿️',
+    color: 'sky',
   },
 }
 

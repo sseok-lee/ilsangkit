@@ -23,12 +23,13 @@ router.get('/categories', async (_req: Request, res: Response, next: NextFunctio
 // GET /api/meta/stats - 카테고리별 시설 개수
 router.get('/stats', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const [toiletCount, wifiCount, clothesCount, kioskCount, trashCount] = await Promise.all([
+    const [toiletCount, wifiCount, clothesCount, kioskCount, trashCount, parkingCount] = await Promise.all([
       prisma.toilet.count(),
       prisma.wifi.count(),
       prisma.clothes.count(),
       prisma.kiosk.count(),
       prisma.wasteSchedule.count(),
+      prisma.parking.count(),
     ]);
 
     const stats = {
@@ -37,7 +38,8 @@ router.get('/stats', async (_req: Request, res: Response, next: NextFunction) =>
       clothes: clothesCount,
       kiosk: kioskCount,
       trash: trashCount,
-      total: toiletCount + wifiCount + clothesCount + kioskCount + trashCount,
+      parking: parkingCount,
+      total: toiletCount + wifiCount + clothesCount + kioskCount + trashCount + parkingCount,
     };
 
     res.json({ success: true, data: stats });

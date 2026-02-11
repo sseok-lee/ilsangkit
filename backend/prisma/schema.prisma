@@ -141,6 +141,44 @@ model Kiosk {
   @@index([mngNo])
 }
 
+// @TASK T9.1.1 - 공영주차장 테이블
+model Parking {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // 주차장 전용 필드
+  parkingType      String?  @db.VarChar(50)   // 주차구분 (공영/민영)
+  lotType          String?  @db.VarChar(50)   // 주차장유형 (노외/노상/부설)
+  capacity         Int      @default(0)       // 주차면수
+  baseFee          Int?                       // 기본요금 (원)
+  baseTime         Int?                       // 기본시간 (분)
+  additionalFee    Int?                       // 추가요금 (원)
+  additionalTime   Int?                       // 추가시간 (분)
+  dailyMaxFee      Int?                       // 일최대요금 (원)
+  monthlyFee       Int?                       // 월정기권요금 (원)
+  operatingHours   String?  @db.VarChar(200)  // 운영시간
+  phone            String?  @db.VarChar(50)   // 전화번호
+  paymentMethod    String?  @db.VarChar(200)  // 결제방법
+  remarks          String?  @db.Text          // 특기사항
+  hasDisabledParking Boolean @default(false)  // 장애인전용주차구역보유여부
+
+  @@index([city, district])
+  @@index([lat, lng])
+}
+
 // @TASK T0.4 - 카테고리 마스터 테이블
 // @SPEC docs/planning/04-database-design.md#category-table
 model Category {

@@ -192,6 +192,7 @@ const stats = ref<Record<string, number>>({
   clothes: 0,
   kiosk: 0,
   trash: 0,
+  parking: 0,
   total: 0,
 })
 
@@ -221,6 +222,7 @@ const categories: Array<{ id: CategoryId; label: string }> = [
   { id: 'clothes', label: '의류수거함' },
   { id: 'kiosk', label: '발급기' },
   { id: 'trash', label: '쓰레기' },
+  { id: 'parking', label: '주차장' },
 ]
 
 // 카테고리 기본 정보
@@ -230,6 +232,7 @@ const categoryConfig: Array<{ id: CategoryId | 'all'; label: string; bgColor: st
   { id: 'clothes', label: '의류수거함', bgColor: 'bg-pink-50 dark:bg-pink-900/30' },
   { id: 'kiosk', label: '발급기', bgColor: 'bg-indigo-50 dark:bg-indigo-900/30' },
   { id: 'trash', label: '쓰레기', bgColor: 'bg-green-50 dark:bg-green-900/30' },
+  { id: 'parking', label: '주차장', bgColor: 'bg-sky-50 dark:bg-sky-900/30' },
   { id: 'all', label: '전체', bgColor: 'bg-slate-50 dark:bg-slate-700' },
 ]
 

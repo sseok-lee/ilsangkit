@@ -96,6 +96,7 @@ const categories = computed(() => [
   { id: 'wifi' as const, label: CATEGORY_META.wifi.label, bgColor: 'bg-green-50 dark:bg-green-900/30' },
   { id: 'clothes' as const, label: CATEGORY_META.clothes.label, bgColor: 'bg-pink-50 dark:bg-pink-900/30' },
   { id: 'kiosk' as const, label: CATEGORY_META.kiosk.label, bgColor: 'bg-orange-50 dark:bg-orange-900/30' },
+  { id: 'parking' as const, label: CATEGORY_META.parking.label, bgColor: 'bg-sky-50 dark:bg-sky-900/30' },
 ])
 
 // SEO

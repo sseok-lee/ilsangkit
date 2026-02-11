@@ -64,6 +64,13 @@
         <CategoryIcon category-id="trash" size="sm" />
         쓰레기
       </NuxtLink>
+      <NuxtLink
+        to="/search?category=parking"
+        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
+      >
+        <CategoryIcon category-id="parking" size="sm" />
+        주차장
+      </NuxtLink>
     </nav>
 
     <!-- Right: Desktop Actions & Mobile Menu Button -->
@@ -159,6 +166,14 @@
         >
           <CategoryIcon category-id="trash" size="sm" />
           쓰레기
+        </NuxtLink>
+        <NuxtLink
+          to="/search?category=parking"
+          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+          @click="closeMobileMenu"
+        >
+          <CategoryIcon category-id="parking" size="sm" />
+          주차장
         </NuxtLink>
       </nav>
     </div>

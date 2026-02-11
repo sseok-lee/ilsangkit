@@ -78,6 +78,7 @@ import ToiletDetail from './details/ToiletDetail.vue'
 import WifiDetail from './details/WifiDetail.vue'
 import ClothesDetail from './details/ClothesDetail.vue'
 import KioskDetail from './details/KioskDetail.vue'
+import ParkingDetail from './details/ParkingDetail.vue'
 
 const props = defineProps<{
   facility: FacilityDetail
@@ -95,6 +96,8 @@ const detailComponent = computed(() => {
       return ClothesDetail
     case 'kiosk':
       return KioskDetail
+    case 'parking':
+      return ParkingDetail
     default:
       return null
   }

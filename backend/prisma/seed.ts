@@ -47,6 +47,14 @@ const categories = [
     sortOrder: 5,
     isActive: true,
   },
+  {
+    id: 'parking',
+    name: '공영주차장',
+    icon: '🅿️',
+    description: '공영주차장 위치 및 요금 정보',
+    sortOrder: 6,
+    isActive: true,
+  },
 ];
 
 async function main() {

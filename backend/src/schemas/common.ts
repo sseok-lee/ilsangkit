@@ -15,9 +15,6 @@ export const CoordinatesSchema = z.object({
   lng: z.coerce.number().min(-180).max(180),
 });
 
-// 반경 스키마 (미터 단위)
-export const RadiusSchema = z.coerce.number().int().min(100).max(10000).default(1000);
-
 // 정렬 방향 스키마
 export const SortOrderSchema = z.enum(['asc', 'desc']).default('asc');
 
