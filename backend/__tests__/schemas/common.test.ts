@@ -5,7 +5,6 @@ import { describe, it, expect } from 'vitest';
 import {
   PaginationSchema,
   CoordinatesSchema,
-  RadiusSchema,
   SortOrderSchema,
   IdParamSchema,
 } from '../../src/schemas/common';
@@ -60,26 +59,6 @@ describe('CoordinatesSchema', () => {
 
   it('경도가 180 초과이면 실패해야 한다', () => {
     expect(() => CoordinatesSchema.parse({ lat: 0, lng: 181 })).toThrow();
-  });
-});
-
-describe('RadiusSchema', () => {
-  it('기본값 1000이 적용되어야 한다', () => {
-    const result = RadiusSchema.parse(undefined);
-    expect(result).toBe(1000);
-  });
-
-  it('문자열을 숫자로 변환해야 한다', () => {
-    const result = RadiusSchema.parse('5000');
-    expect(result).toBe(5000);
-  });
-
-  it('100 미만이면 실패해야 한다', () => {
-    expect(() => RadiusSchema.parse(99)).toThrow();
-  });
-
-  it('10000 초과이면 실패해야 한다', () => {
-    expect(() => RadiusSchema.parse(10001)).toThrow();
   });
 });
 

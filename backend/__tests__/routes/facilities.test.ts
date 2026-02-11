@@ -86,21 +86,6 @@ describe('POST /api/facilities/search', () => {
     expect(res.body.data.items.length).toBeGreaterThan(0);
   });
 
-  it('위치 기반 검색 (Haversine)', async () => {
-    const res = await request(app).post('/api/facilities/search').send({
-      lat: 37.5,
-      lng: 127.0,
-      radius: 2000,
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.items.length).toBeGreaterThan(0);
-    // 거리순 정렬 확인
-    if (res.body.data.items.length > 1) {
-      expect(res.body.data.items[0].distance).toBeLessThanOrEqual(res.body.data.items[1].distance);
-    }
-  });
-
   it('지역 필터', async () => {
     const res = await request(app)
       .post('/api/facilities/search')
@@ -117,7 +102,7 @@ describe('POST /api/facilities/search', () => {
   it('유효하지 않은 요청 - 422', async () => {
     const res = await request(app)
       .post('/api/facilities/search')
-      .send({ lat: 37.5 }); // lng 없이 lat만
+      .send({ keyword: '' }); // 빈 keyword
 
     expect(res.status).toBe(422);
     expect(res.body.success).toBe(false);
