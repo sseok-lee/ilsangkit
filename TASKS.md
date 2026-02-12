@@ -186,30 +186,30 @@
 > 우선순위: **Medium-Low** | 병렬 가능: T1~T4 독립 실행
 
 - P13-T1: ADR 작성 (아키텍처 결정 기록)
-  - [ ] `docs/adr/001-category-specific-tables.md` - 단일 테이블 → 카테고리별 테이블 결정
-  - [ ] `docs/adr/002-ssr-ssg-strategy.md` - Nuxt SSR/ISR 선택 근거
+  - [x] `docs/adr/001-category-specific-tables.md` - 단일 테이블 → 카테고리별 테이블 결정
+  - [x] `docs/adr/002-ssr-ssg-strategy.md` - Nuxt SSR/ISR 선택 근거
   - Assignee: backend-specialist
   - Depends: none
 
 - P13-T2: 기획 문서 현행화
-  - [ ] PRD 카테고리 5개 → 7개 반영
-  - [ ] DB 설계 문서에 카테고리별 테이블 구조 반영
-  - [ ] 태스크 목록에 Phase 9~10 추가
+  - [x] PRD 카테고리 5개 → 7개 반영
+  - [x] DB 설계 문서에 카테고리별 테이블 구조 반영
+  - [x] 태스크 목록에 Phase 9~10 추가
   - Assignee: docs-specialist
   - Depends: none
 
 - P13-T3: 배포 아키텍처 문서
-  - [ ] `docs/deployment.md` 생성
-  - [ ] Nginx 리버스 프록시 설정
-  - [ ] PM2 클러스터 구성 (2 backend + 2 frontend)
-  - [ ] GitHub Actions CI/CD 파이프라인 설명
+  - [x] `docs/deployment.md` 생성
+  - [x] Nginx 리버스 프록시 설정
+  - [x] PM2 클러스터 구성 (2 backend + 2 frontend)
+  - [x] GitHub Actions CI/CD 파이프라인 설명
   - Assignee: docs-specialist
   - Depends: none
 
 - P13-T4: 환경 변수 문서
-  - [ ] `docs/env-variables.md` - 모든 환경 변수 목록
-  - [ ] Backend/Frontend 각 `.env.example` 최신화
-  - [ ] 비밀키 관리 방법 설명
+  - [x] `docs/env-variables.md` - 모든 환경 변수 목록
+  - [x] Backend/Frontend 각 `.env.example` 최신화
+  - [x] 비밀키 관리 방법 설명
   - Assignee: docs-specialist
   - Depends: none
 
@@ -279,6 +279,6 @@ Phase 10 (Critical)     Phase 11 (High)         Phase 12 (Medium)    Phase 13 (D
 | P10 | 7 tasks | ✅ 완료 | Critical 갭 해소 |
 | P11 | 6 tasks | ✅ 완료 | 프로덕션 안정성 |
 | P12 | 6 tasks | ✅ 완료 | 기술 부채 |
-| P13 | 4 tasks | ⬜ 대기 | 문서 보완 |
+| P13 | 4 tasks | ✅ 완료 | 문서 보완 |
 | P14 | 4 tasks | ⬜ 대기 | QA 검증 |
 | **합계** | **27 tasks** | | Post-MVP |
