@@ -10,8 +10,8 @@ export const SearchLogSchema = z.object({
   category: z.string().max(20).optional(),
   city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
-  lat: z.coerce.number().optional(),
-  lng: z.coerce.number().optional(),
+  lat: z.coerce.number().min(33, '한국 영역 외 좌표입니다').max(39, '한국 영역 외 좌표입니다').optional(),
+  lng: z.coerce.number().min(124, '한국 영역 외 좌표입니다').max(132, '한국 영역 외 좌표입니다').optional(),
   resultCount: z.number().int().min(0),
 });
 

@@ -102,28 +102,64 @@ export async function runSync(
 }
 
 /**
- * 배치 upsert 헬퍼
+ * 배치 upsert 헬퍼 (트랜잭션 래핑)
+ * 각 배치를 독립된 트랜잭션으로 실행하여 원자성 보장
+ * 배치 실패 시 해당 배치만 롤백, 이전 배치는 유지
  */
 export async function batchUpsert<T>(
   items: T[],
   upsertFn: (item: T) => Promise<'new' | 'updated'>,
-  batchSize: number = 100
+  batchSize: number = 100,
+  syncHistoryId?: number
 ): Promise<{ newCount: number; updateCount: number }> {
   let newCount = 0;
   let updateCount = 0;
+  let processedRecords = 0;
 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
+    const batchNumber = Math.floor(i / batchSize) + 1;
+    const totalBatches = Math.ceil(items.length / batchSize);
 
-    await Promise.all(
-      batch.map(async (item) => {
-        const result = await upsertFn(item);
-        if (result === 'new') newCount++;
-        else updateCount++;
-      })
-    );
+    try {
+      // 각 배치를 트랜잭션으로 래핑
+      await prisma.$transaction(async (_tx) => {
+        const results = await Promise.all(
+          batch.map(async (item) => {
+            const result = await upsertFn(item);
+            return result;
+          })
+        );
 
-    console.info(`Processed ${Math.min(i + batchSize, items.length)}/${items.length} records`);
+        // 배치 내 결과 집계
+        for (const result of results) {
+          if (result === 'new') newCount++;
+          else updateCount++;
+        }
+      });
+
+      processedRecords += batch.length;
+
+      // SyncHistory 진행 상황 업데이트 (배치 완료마다)
+      if (syncHistoryId) {
+        await prisma.syncHistory.update({
+          where: { id: syncHistoryId },
+          data: {
+            newRecords: newCount,
+            updatedRecords: updateCount,
+          },
+        });
+      }
+
+      console.info(`Batch ${batchNumber}/${totalBatches} completed: ${Math.min(i + batchSize, items.length)}/${items.length} records`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Batch ${batchNumber}/${totalBatches} failed: ${errorMsg}`);
+      console.error(`Processed records before failure: ${processedRecords}`);
+
+      // 배치 실패 시 이전 배치는 유지되고 해당 배치만 롤백됨
+      throw new Error(`Batch ${batchNumber} upsert failed: ${errorMsg}. Processed: ${processedRecords}/${items.length}`);
+    }
   }
 
   return { newCount, updateCount };

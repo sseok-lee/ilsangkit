@@ -20,7 +20,7 @@
       </button>
 
       <NuxtLink v-if="!props.showBackButton" to="/" class="flex items-center gap-2">
-        <img src="/icons/logo.png" alt="일상킷 로고" class="size-10 shrink-0 rounded-lg" />
+        <img src="/icons/logo.webp" alt="일상킷 로고" class="size-10 shrink-0 rounded-lg" />
         <h2 class="text-[#111418] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">
           일상킷
         </h2>
@@ -58,18 +58,32 @@
         발급기
       </NuxtLink>
       <NuxtLink
-        to="/search?category=trash"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="trash" size="sm" />
-        쓰레기
-      </NuxtLink>
-      <NuxtLink
         to="/search?category=parking"
         class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
       >
         <CategoryIcon category-id="parking" size="sm" />
         주차장
+      </NuxtLink>
+      <NuxtLink
+        to="/search?category=aed"
+        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
+      >
+        <CategoryIcon category-id="aed" size="sm" />
+        AED
+      </NuxtLink>
+      <NuxtLink
+        to="/search?category=library"
+        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
+      >
+        <CategoryIcon category-id="library" size="sm" />
+        도서관
+      </NuxtLink>
+      <NuxtLink
+        to="/search?category=trash"
+        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
+      >
+        <CategoryIcon category-id="trash" size="sm" />
+        쓰레기
       </NuxtLink>
     </nav>
 
@@ -160,20 +174,36 @@
           발급기
         </NuxtLink>
         <NuxtLink
-          to="/search?category=trash"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="trash" size="sm" />
-          쓰레기
-        </NuxtLink>
-        <NuxtLink
           to="/search?category=parking"
           class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
           @click="closeMobileMenu"
         >
           <CategoryIcon category-id="parking" size="sm" />
           주차장
+        </NuxtLink>
+        <NuxtLink
+          to="/search?category=aed"
+          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+          @click="closeMobileMenu"
+        >
+          <CategoryIcon category-id="aed" size="sm" />
+          AED
+        </NuxtLink>
+        <NuxtLink
+          to="/search?category=library"
+          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+          @click="closeMobileMenu"
+        >
+          <CategoryIcon category-id="library" size="sm" />
+          도서관
+        </NuxtLink>
+        <NuxtLink
+          to="/search?category=trash"
+          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+          @click="closeMobileMenu"
+        >
+          <CategoryIcon category-id="trash" size="sm" />
+          쓰레기
         </NuxtLink>
       </nav>
     </div>

@@ -9,6 +9,7 @@ import metaRouter from './routes/meta.js';
 import wasteSchedulesRouter from './routes/wasteSchedules.js';
 import sitemapRouter from './routes/sitemap.js';
 import { AppError, ValidationError } from './lib/errors.js';
+import { requestIdMiddleware } from './middlewares/requestId.js';
 
 const app: Application = express();
 
@@ -20,6 +21,7 @@ app.use(
     credentials: true,
   })
 );
+app.use(requestIdMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -47,23 +49,29 @@ app.use((_req: Request, res: Response) => {
 });
 
 // Error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
       error: {
         code: err.code,
         message: err.message,
+        requestId: req.requestId,
         ...(err instanceof ValidationError && err.details ? { details: err.details } : {}),
       },
     });
     return;
   }
 
+  // Handle unexpected errors with standard format
   console.error('Unhandled error:', err);
   res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: process.env.NODE_ENV === 'development' ? err.message : '서버 오류가 발생했습니다',
+      requestId: req.requestId,
+    },
   });
 });
 

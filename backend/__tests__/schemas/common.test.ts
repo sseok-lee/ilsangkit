@@ -45,20 +45,25 @@ describe('CoordinatesSchema', () => {
     expect(result).toEqual({ lat: 37.5665, lng: 126.978 });
   });
 
-  it('위도가 -90 미만이면 실패해야 한다', () => {
-    expect(() => CoordinatesSchema.parse({ lat: -91, lng: 0 })).toThrow();
+  it('위도가 33 미만이면 실패해야 한다 (한국 영역 외)', () => {
+    expect(() => CoordinatesSchema.parse({ lat: 32.9, lng: 127 })).toThrow('한국 영역 외 좌표입니다');
   });
 
-  it('위도가 90 초과이면 실패해야 한다', () => {
-    expect(() => CoordinatesSchema.parse({ lat: 91, lng: 0 })).toThrow();
+  it('위도가 39 초과이면 실패해야 한다 (한국 영역 외)', () => {
+    expect(() => CoordinatesSchema.parse({ lat: 39.1, lng: 127 })).toThrow('한국 영역 외 좌표입니다');
   });
 
-  it('경도가 -180 미만이면 실패해야 한다', () => {
-    expect(() => CoordinatesSchema.parse({ lat: 0, lng: -181 })).toThrow();
+  it('경도가 124 미만이면 실패해야 한다 (한국 영역 외)', () => {
+    expect(() => CoordinatesSchema.parse({ lat: 37, lng: 123.9 })).toThrow('한국 영역 외 좌표입니다');
   });
 
-  it('경도가 180 초과이면 실패해야 한다', () => {
-    expect(() => CoordinatesSchema.parse({ lat: 0, lng: 181 })).toThrow();
+  it('경도가 132 초과이면 실패해야 한다 (한국 영역 외)', () => {
+    expect(() => CoordinatesSchema.parse({ lat: 37, lng: 132.1 })).toThrow('한국 영역 외 좌표입니다');
+  });
+
+  it('한국 경계값을 허용해야 한다', () => {
+    expect(() => CoordinatesSchema.parse({ lat: 33, lng: 124 })).not.toThrow();
+    expect(() => CoordinatesSchema.parse({ lat: 39, lng: 132 })).not.toThrow();
   });
 });
 

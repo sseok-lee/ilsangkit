@@ -335,99 +335,122 @@ export async function syncKiosks(): Promise<void> {
     const successfulGeocode = coordinates.filter((c) => c !== null).length;
     console.log(`지오코딩 완료: ${successfulGeocode}/${totalRecords} 성공`);
 
-    // 5. 데이터 변환 및 upsert
-    console.log('데이터베이스 저장 중...');
+    // 5. 데이터 변환
+    console.log('데이터 변환 중...');
+    const kioskDataList: KioskData[] = [];
     for (let i = 0; i < installationData.length; i++) {
       const row = installationData[i];
       const coords = coordinates[i];
       const mngNo = row.MNG_NO?.trim();
       const availableDocuments = mngNo ? certByMngNo.get(mngNo) || [] : [];
       const kioskData = transformKioskData(row, coords, availableDocuments);
+      kioskDataList.push(kioskData);
+    }
+    console.log(`변환 완료: ${kioskDataList.length}개`);
+
+    // 6. 배치 upsert (트랜잭션 래핑)
+    console.log('데이터베이스 저장 중...');
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < kioskDataList.length; i += BATCH_SIZE) {
+      const batch = kioskDataList.slice(i, i + BATCH_SIZE);
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(kioskDataList.length / BATCH_SIZE);
 
       try {
-        const existing = await prisma.kiosk.findUnique({
-          where: { id: kioskData.id },
+        // 각 배치를 트랜잭션으로 래핑
+        await prisma.$transaction(async (tx) => {
+          for (const kioskData of batch) {
+            const existing = await tx.kiosk.findUnique({
+              where: { id: kioskData.id },
+            });
+
+            await tx.kiosk.upsert({
+              where: { id: kioskData.id },
+              create: {
+                id: kioskData.id,
+                name: kioskData.name,
+                address: kioskData.address,
+                roadAddress: kioskData.roadAddress,
+                lat: kioskData.lat,
+                lng: kioskData.lng,
+                city: kioskData.city,
+                district: kioskData.district,
+                sourceId: kioskData.sourceId,
+                sourceUrl: kioskData.sourceUrl,
+                syncedAt: kioskData.syncedAt,
+                detailLocation: kioskData.detailLocation,
+                operationAgency: kioskData.operationAgency,
+                weekdayOperatingHours: kioskData.weekdayOperatingHours,
+                saturdayOperatingHours: kioskData.saturdayOperatingHours,
+                holidayOperatingHours: kioskData.holidayOperatingHours,
+                blindKeypad: kioskData.blindKeypad,
+                voiceGuide: kioskData.voiceGuide,
+                brailleOutput: kioskData.brailleOutput,
+                wheelchairAccessible: kioskData.wheelchairAccessible,
+                mngNo: kioskData.mngNo,
+                availableDocuments: kioskData.availableDocuments,
+              },
+              update: {
+                name: kioskData.name,
+                address: kioskData.address,
+                roadAddress: kioskData.roadAddress,
+                lat: kioskData.lat,
+                lng: kioskData.lng,
+                city: kioskData.city,
+                district: kioskData.district,
+                syncedAt: kioskData.syncedAt,
+                detailLocation: kioskData.detailLocation,
+                operationAgency: kioskData.operationAgency,
+                weekdayOperatingHours: kioskData.weekdayOperatingHours,
+                saturdayOperatingHours: kioskData.saturdayOperatingHours,
+                holidayOperatingHours: kioskData.holidayOperatingHours,
+                blindKeypad: kioskData.blindKeypad,
+                voiceGuide: kioskData.voiceGuide,
+                brailleOutput: kioskData.brailleOutput,
+                wheelchairAccessible: kioskData.wheelchairAccessible,
+                mngNo: kioskData.mngNo,
+                availableDocuments: kioskData.availableDocuments,
+              },
+            });
+
+            if (existing) {
+              updatedRecords++;
+            } else {
+              newRecords++;
+            }
+          }
         });
 
-        await prisma.kiosk.upsert({
-          where: { id: kioskData.id },
-          create: {
-            id: kioskData.id,
-            name: kioskData.name,
-            address: kioskData.address,
-            roadAddress: kioskData.roadAddress,
-            lat: kioskData.lat,
-            lng: kioskData.lng,
-            city: kioskData.city,
-            district: kioskData.district,
-            sourceId: kioskData.sourceId,
-            sourceUrl: kioskData.sourceUrl,
-            syncedAt: kioskData.syncedAt,
-            // Kiosk 전용 필드
-            detailLocation: kioskData.detailLocation,
-            operationAgency: kioskData.operationAgency,
-            weekdayOperatingHours: kioskData.weekdayOperatingHours,
-            saturdayOperatingHours: kioskData.saturdayOperatingHours,
-            holidayOperatingHours: kioskData.holidayOperatingHours,
-            blindKeypad: kioskData.blindKeypad,
-            voiceGuide: kioskData.voiceGuide,
-            brailleOutput: kioskData.brailleOutput,
-            wheelchairAccessible: kioskData.wheelchairAccessible,
-            mngNo: kioskData.mngNo,
-            availableDocuments: kioskData.availableDocuments,
-          },
-          update: {
-            name: kioskData.name,
-            address: kioskData.address,
-            roadAddress: kioskData.roadAddress,
-            lat: kioskData.lat,
-            lng: kioskData.lng,
-            city: kioskData.city,
-            district: kioskData.district,
-            syncedAt: kioskData.syncedAt,
-            // Kiosk 전용 필드
-            detailLocation: kioskData.detailLocation,
-            operationAgency: kioskData.operationAgency,
-            weekdayOperatingHours: kioskData.weekdayOperatingHours,
-            saturdayOperatingHours: kioskData.saturdayOperatingHours,
-            holidayOperatingHours: kioskData.holidayOperatingHours,
-            blindKeypad: kioskData.blindKeypad,
-            voiceGuide: kioskData.voiceGuide,
-            brailleOutput: kioskData.brailleOutput,
-            wheelchairAccessible: kioskData.wheelchairAccessible,
-            mngNo: kioskData.mngNo,
-            availableDocuments: kioskData.availableDocuments,
+        // 배치 완료마다 SyncHistory 진행 상황 업데이트
+        await prisma.syncHistory.update({
+          where: { id: syncHistory.id },
+          data: {
+            newRecords,
+            updatedRecords,
           },
         });
 
-        if (existing) {
-          updatedRecords++;
-        } else {
-          newRecords++;
-        }
-
-        // 진행률 출력 (100개마다)
-        if ((i + 1) % 100 === 0) {
-          console.log(`저장 진행: ${i + 1}/${totalRecords}`);
-        }
+        console.log(`Batch ${batchNumber}/${totalBatches} 완료: ${Math.min(i + BATCH_SIZE, kioskDataList.length)}/${kioskDataList.length}`);
       } catch (error) {
-        console.error(`저장 실패 (${kioskData.id}):`, error);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`Batch ${batchNumber} 저장 실패:`, errorMsg);
+        throw new Error(`Batch ${batchNumber} upsert failed: ${errorMsg}. Processed: ${i}/${kioskDataList.length}`);
       }
     }
 
-    // 6. 동기화 히스토리 업데이트 (성공)
+    // 7. 동기화 히스토리 업데이트 (성공)
     await prisma.syncHistory.update({
       where: { id: syncHistory.id },
       data: {
         status: 'success',
-        totalRecords,
+        totalRecords: kioskDataList.length,
         newRecords,
         updatedRecords,
         completedAt: new Date(),
       },
     });
 
-    console.log(`동기화 완료: 총 ${totalRecords}개 (신규: ${newRecords}, 업데이트: ${updatedRecords})`);
+    console.log(`동기화 완료: 총 ${kioskDataList.length}개 (신규: ${newRecords}, 업데이트: ${updatedRecords})`);
   } catch (error) {
     // 동기화 히스토리 업데이트 (실패)
     await prisma.syncHistory.update({

@@ -23,8 +23,9 @@ Thumbs.db
 
 # Planning & Design (local only)
 design/
-docs/
-specs/
+design_backup/
+docs_backup/
+specs_backup/
 
 # Temp data files
 backend/temp/

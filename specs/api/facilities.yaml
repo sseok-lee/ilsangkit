@@ -1,0 +1,299 @@
+version: "2.0"
+date: "2026-02-12"
+basePath: /api/facilities
+description: 시설 검색, 상세 조회, 지역별 조회 API
+
+endpoints:
+  search:
+    path: /search
+    method: POST
+    description: 키워드, 위치, 카테고리 기반 시설 통합 검색
+    tags: [facilities, search]
+    source: backend/src/routes/facilities.ts:18-25
+
+    request:
+      contentType: application/json
+      body:
+        type: object
+        schema: FacilitySearchSchema
+        properties:
+          keyword:
+            type: string
+            required: false
+            minLength: 1
+            maxLength: 100
+            description: 검색 키워드
+
+          category:
+            type: string
+            required: false
+            enum: [toilet, wifi, clothes, kiosk, parking, aed, library]
+            description: 시설 카테고리 필터
+
+          lat:
+            type: number
+            required: false
+            min: -90
+            max: 90
+            description: 중심점 위도 (lng와 함께 제공 필수)
+
+          lng:
+            type: number
+            required: false
+            min: -180
+            max: 180
+            description: 중심점 경도 (lat과 함께 제공 필수)
+
+          radius:
+            type: integer
+            required: false
+            min: 100
+            max: 10000
+            default: 1000
+            description: 반경 검색 거리 (미터 단위, 정수)
+
+          swLat:
+            type: number
+            required: false
+            min: -90
+            max: 90
+            description: 남서쪽 위도 (bounds 검색, 4개 필드 모두 필수)
+
+          swLng:
+            type: number
+            required: false
+            min: -180
+            max: 180
+            description: 남서쪽 경도 (bounds 검색, 4개 필드 모두 필수)
+
+          neLat:
+            type: number
+            required: false
+            min: -90
+            max: 90
+            description: 북동쪽 위도 (bounds 검색, 4개 필드 모두 필수)
+
+          neLng:
+            type: number
+            required: false
+            min: -180
+            max: 180
+            description: 북동쪽 경도 (bounds 검색, 4개 필드 모두 필수)
+
+          city:
+            type: string
+            required: false
+            maxLength: 50
+            description: 시/도 필터
+
+          district:
+            type: string
+            required: false
+            maxLength: 50
+            description: 구/군 필터
+
+          page:
+            type: number
+            required: false
+            min: 1
+            default: 1
+            description: 페이지 번호
+
+          limit:
+            type: number
+            required: false
+            min: 1
+            max: 100
+            default: 20
+            description: 페이지당 항목 수
+
+        validation:
+          - rule: lat과 lng는 함께 제공되어야 합니다
+            condition: (lat !== undefined) === (lng !== undefined)
+          - rule: swLat, swLng, neLat, neLng는 모두 함께 제공되어야 합니다
+            condition: all or none of bounds fields
+
+    response:
+      200:
+        description: 검색 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  description: 시설 목록
+                total:
+                  type: number
+                  description: 전체 항목 수
+                page:
+                  type: number
+                  description: 현재 페이지
+                totalPages:
+                  type: number
+                  description: 전체 페이지 수
+
+      422:
+        description: 유효성 검사 실패
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: false
+            error:
+              type: object
+              properties:
+                code:
+                  type: string
+                  value: VALIDATION_ERROR
+                message:
+                  type: string
+                details:
+                  type: object
+
+  detail:
+    path: /:category/:id
+    method: GET
+    description: 시설 상세 정보 조회
+    tags: [facilities, detail]
+    source: backend/src/routes/facilities.ts:51-73
+
+    request:
+      params:
+        category:
+          type: string
+          required: true
+          enum: [toilet, wifi, clothes, kiosk, parking, aed, library]
+          description: 시설 카테고리
+        id:
+          type: string
+          required: true
+          minLength: 1
+          maxLength: 50
+          description: 시설 ID
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              description: 시설 상세 정보 (카테고리별 스키마 상이)
+
+      404:
+        description: 시설을 찾을 수 없음
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: false
+            error:
+              type: object
+              properties:
+                code:
+                  type: string
+                  value: NOT_FOUND
+                message:
+                  type: string
+                  value: 시설을 찾을 수 없습니다
+
+      422:
+        description: 유효성 검사 실패 (잘못된 카테고리)
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: false
+            error:
+              type: object
+
+  regionFacilities:
+    path: /region/:city/:district/:category
+    method: GET
+    description: 특정 지역의 카테고리별 시설 목록 조회
+    tags: [facilities, region]
+    source: backend/src/routes/facilities.ts:29-46
+
+    request:
+      params:
+        city:
+          type: string
+          required: true
+          minLength: 1
+          maxLength: 50
+          description: 시/도명
+        district:
+          type: string
+          required: true
+          minLength: 1
+          maxLength: 50
+          description: 구/군명
+        category:
+          type: string
+          required: true
+          enum: [toilet, wifi, clothes, kiosk, parking, aed, library]
+          description: 시설 카테고리
+
+      query:
+        page:
+          type: number
+          required: false
+          min: 1
+          default: 1
+          description: 페이지 번호
+        limit:
+          type: number
+          required: false
+          min: 1
+          max: 100
+          default: 20
+          description: 페이지당 항목 수
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  description: 시설 목록
+                total:
+                  type: number
+                  description: 전체 항목 수
+                page:
+                  type: number
+                  description: 현재 페이지
+                totalPages:
+                  type: number
+                  description: 전체 페이지 수
+
+      422:
+        description: 유효성 검사 실패
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: false
+            error:
+              type: object

@@ -276,58 +276,90 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
 
     console.info(`[syncTrashData] Fetched ${allItems.length} items from API`);
 
-    // 데이터 변환 및 저장
+    // 데이터 변환
+    console.info('Transforming data...');
+    const transformedItems: TransformedWasteSchedule[] = [];
     for (const item of allItems) {
       const transformed = transformTrashData(item);
-
-      if (!transformed) {
-        result.skippedRecords++;
-        continue;
-      }
-
-      result.totalRecords++;
-
-      if (!dryRun) {
-        // 기존 데이터 존재 여부 확인
-        const existingCount = await prisma.wasteSchedule.count({
-          where: {
-            city: transformed.city,
-            district: transformed.district,
-            sourceId: transformed.sourceId,
-          },
-        });
-
-        if (existingCount > 0) {
-          result.updatedRecords++;
-        } else {
-          result.newRecords++;
-        }
-
-        // Upsert 실행
-        const detailsJson = transformed.details as unknown as Prisma.InputJsonValue;
-        await prisma.wasteSchedule.upsert({
-          where: {
-            city_district_sourceId: {
-              city: transformed.city,
-              district: transformed.district,
-              sourceId: transformed.sourceId,
-            },
-          },
-          create: {
-            ...transformed,
-            details: detailsJson,
-            syncedAt: new Date(),
-          },
-          update: {
-            targetRegion: transformed.targetRegion,
-            emissionPlace: transformed.emissionPlace,
-            details: detailsJson,
-            syncedAt: new Date(),
-          },
-        });
+      if (transformed) {
+        transformedItems.push(transformed);
       } else {
-        // Dry run 모드: 카운트만
-        result.newRecords++;
+        result.skippedRecords++;
+      }
+    }
+    result.totalRecords = transformedItems.length;
+    console.info(`Transformed ${transformedItems.length} items, skipped ${result.skippedRecords}`);
+
+    if (dryRun) {
+      result.newRecords = transformedItems.length;
+    } else {
+      // 배치 upsert (트랜잭션 래핑)
+      console.info('Upserting to database...');
+      const BATCH_SIZE = 100;
+      for (let i = 0; i < transformedItems.length; i += BATCH_SIZE) {
+        const batch = transformedItems.slice(i, i + BATCH_SIZE);
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(transformedItems.length / BATCH_SIZE);
+
+        try {
+          // 각 배치를 트랜잭션으로 래핑
+          await prisma.$transaction(async (tx) => {
+            for (const transformed of batch) {
+              const existing = await tx.wasteSchedule.findUnique({
+                where: {
+                  city_district_sourceId: {
+                    city: transformed.city,
+                    district: transformed.district,
+                    sourceId: transformed.sourceId,
+                  },
+                },
+              });
+
+              const detailsJson = transformed.details as unknown as Prisma.InputJsonValue;
+              await tx.wasteSchedule.upsert({
+                where: {
+                  city_district_sourceId: {
+                    city: transformed.city,
+                    district: transformed.district,
+                    sourceId: transformed.sourceId,
+                  },
+                },
+                create: {
+                  ...transformed,
+                  details: detailsJson,
+                  syncedAt: new Date(),
+                },
+                update: {
+                  targetRegion: transformed.targetRegion,
+                  emissionPlace: transformed.emissionPlace,
+                  details: detailsJson,
+                  syncedAt: new Date(),
+                },
+              });
+
+              if (existing) {
+                result.updatedRecords++;
+              } else {
+                result.newRecords++;
+              }
+            }
+          });
+
+          // 배치 완료마다 SyncHistory 진행 상황 업데이트
+          await prisma.syncHistory.update({
+            where: { id: syncHistory.id },
+            data: {
+              newRecords: result.newRecords,
+              updatedRecords: result.updatedRecords,
+            },
+          });
+
+          console.info(`Batch ${batchNumber}/${totalBatches} completed: ${Math.min(i + BATCH_SIZE, transformedItems.length)}/${transformedItems.length}`);
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`Batch ${batchNumber}/${totalBatches} failed: ${errorMsg}`);
+          throw new Error(`Batch ${batchNumber} upsert failed: ${errorMsg}. Processed: ${i}/${transformedItems.length}`);
+        }
       }
     }
 

@@ -1,0 +1,81 @@
+version: "2.0"
+date: "2026-02-12"
+
+screen:
+  name: 시/도 선택 페이지
+  route: /[city]
+  file: frontend/pages/[city]/index.vue
+
+purpose:
+  description: 특정 시/도의 구/군 목록을 표시하고 선택할 수 있는 중간 탐색 페이지
+  userGoals:
+    - 선택한 시/도의 구/군 목록 확인
+    - 구/군 선택하여 해당 지역 시설 탐색
+    - 카테고리별로 시/도 전체 검색
+
+layouts:
+  all:
+    breakpoint: "전체"
+    sections:
+      - breadcrumb
+      - pageHeader
+      - districtsGrid
+      - categorySection
+
+sections:
+  breadcrumb:
+    name: 브레드크럼
+    elements:
+      - Breadcrumb 컴포넌트
+      - 홈 > {cityName} 경로
+
+  pageHeader:
+    name: 페이지 헤더
+    elements:
+      - 제목: "{cityName} 생활 편의시설"
+      - 설명: "{cityName}의 구/군을 선택하여 주변 시설을 찾아보세요."
+
+  districtsGrid:
+    name: 구/군 선택 그리드
+    elements:
+      - 로딩 상태 (스피너)
+      - 빈 상태 ("해당 지역의 정보가 없습니다")
+      - 그리드 레이아웃 (2-3-4-5 컬럼 반응형)
+      - 각 구/군 카드: 이름, 호버 효과, 클릭 가능
+
+  categorySection:
+    name: 카테고리별 검색 섹션
+    elements:
+      - 섹션 제목: "카테고리별 검색"
+      - 5개 카테고리 카드 (toilet, trash, wifi, clothes, kiosk, parking)
+      - CategoryIcon 컴포넌트
+      - 클릭 시 /search?keyword={cityName}&category={categoryId} 이동
+
+state:
+  composables:
+    - name: useRegions
+      usage: 지역 데이터 로드 및 관리
+    - name: useFacilityMeta
+      usage: 시/도 페이지 SEO 메타태그 설정
+  data:
+    - loading (ref<boolean>): 로딩 상태
+    - districts (ref<Array<{slug, name}>>): 구/군 목록
+  computed:
+    - cityName: 시/도 한글 이름 (CITY_SLUG_MAP에서 가져옴)
+    - breadcrumbItems: 브레드크럼 아이템 배열
+
+handlers:
+  districtClick:
+    trigger: 구/군 카드 클릭
+    action: /{city}/{district} 페이지로 이동
+  categoryClick:
+    trigger: 카테고리 카드 클릭
+    action: /search?keyword={cityName}&category={categoryId} 페이지로 이동
+
+seo:
+  title: "{cityName} 생활 편의시설 - 일상킷"
+  description: "{cityName}의 공공화장실, 무료 와이파이, 의류수거함 등 생활 편의시설 정보를 찾아보세요."
+
+dataRequirements:
+  - resource: 구/군 목록
+    via: useRegions.getDistrictsByCity()

@@ -159,7 +159,7 @@ export function useStructuredData() {
       '@type': 'Organization',
       name: SITE_NAME,
       url: SITE_URL,
-      logo: `${SITE_URL}/icons/logo.png`,
+      logo: `${SITE_URL}/icons/logo.webp`,
       sameAs: [
         // 소셜 미디어 링크 추가 가능
       ],

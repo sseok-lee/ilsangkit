@@ -9,7 +9,7 @@ import {
   type SyncHistoryUpdateData,
   createSyncHistory,
   updateSyncHistory,
-  runSync,
+  createSyncStats,
   transformAndDedupe,
   batchUpsert,
 } from './baseSyncService.js';
@@ -85,7 +85,7 @@ async function upsertOneParking(parking: TransformedParking): Promise<'new' | 'u
 /**
  * 공통 parking 동기화 로직 (CSV rows 또는 API rows를 받아 처리)
  */
-async function syncParkingRows(rows: ParkingCSVRow[], stats: SyncStats): Promise<void> {
+async function syncParkingRows(rows: ParkingCSVRow[], stats: SyncStats, syncHistoryId: number): Promise<void> {
   stats.totalRecords = rows.length;
   console.info(`Found ${rows.length} records`);
 
@@ -100,9 +100,9 @@ async function syncParkingRows(rows: ParkingCSVRow[], stats: SyncStats): Promise
 
   console.info(`Transformed ${uniqueParkings.length} valid records, skipped ${stats.skippedRecords}`);
 
-  // DB Upsert
+  // DB Upsert (트랜잭션 래핑 + 진행 상황 추적)
   console.info('Upserting to database...');
-  const { newCount, updateCount } = await batchUpsert(uniqueParkings, upsertOneParking);
+  const { newCount, updateCount } = await batchUpsert(uniqueParkings, upsertOneParking, 100, syncHistoryId);
   stats.newRecords = newCount;
   stats.updatedRecords = updateCount;
 }
@@ -111,14 +111,39 @@ async function syncParkingRows(rows: ParkingCSVRow[], stats: SyncStats): Promise
  * 공영주차장 데이터 동기화 메인 함수
  */
 export async function syncParking(csvFilePath: string): Promise<SyncStats> {
-  return runSync('parking', async (stats) => {
+  const stats = createSyncStats();
+  const syncHistory = await createSyncHistory('parking');
+
+  try {
     console.info(`CSV file: ${csvFilePath}`);
 
     // CSV 파싱
     console.info('Parsing CSV file...');
     const rows = await parseParkingCSV(csvFilePath);
-    await syncParkingRows(rows, stats);
-  });
+    await syncParkingRows(rows, stats, syncHistory.id);
+
+    // 성공 시 SyncHistory 업데이트
+    await updateSyncHistory(syncHistory.id, {
+      status: 'success',
+      totalRecords: stats.totalRecords,
+      newRecords: stats.newRecords,
+      updatedRecords: stats.updatedRecords,
+    });
+
+    console.info(`parking sync completed: Total=${stats.totalRecords}, New=${stats.newRecords}, Updated=${stats.updatedRecords}, Skipped=${stats.skippedRecords}`);
+    return stats;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    stats.errors.push(errorMessage);
+
+    await updateSyncHistory(syncHistory.id, {
+      status: 'failed',
+      errorMessage,
+    });
+
+    console.error('parking sync failed:', errorMessage);
+    throw error;
+  }
 }
 
 /**
@@ -130,7 +155,10 @@ export async function syncParkingFromApi(): Promise<SyncStats> {
     throw new Error('OPENAPI_SERVICE_KEY 환경변수가 설정되지 않았습니다.');
   }
 
-  return runSync('parking', async (stats) => {
+  const stats = createSyncStats();
+  const syncHistory = await createSyncHistory('parking');
+
+  try {
     console.info('Starting parking data sync (API mode)...');
 
     const client = new PublicApiClient(
@@ -140,8 +168,30 @@ export async function syncParkingFromApi(): Promise<SyncStats> {
     );
 
     const rows = await client.fetchAllPages<ParkingCSVRow>(100);
-    await syncParkingRows(rows, stats);
-  });
+    await syncParkingRows(rows, stats, syncHistory.id);
+
+    // 성공 시 SyncHistory 업데이트
+    await updateSyncHistory(syncHistory.id, {
+      status: 'success',
+      totalRecords: stats.totalRecords,
+      newRecords: stats.newRecords,
+      updatedRecords: stats.updatedRecords,
+    });
+
+    console.info(`parking API sync completed: Total=${stats.totalRecords}, New=${stats.newRecords}, Updated=${stats.updatedRecords}, Skipped=${stats.skippedRecords}`);
+    return stats;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    stats.errors.push(errorMessage);
+
+    await updateSyncHistory(syncHistory.id, {
+      status: 'failed',
+      errorMessage,
+    });
+
+    console.error('parking API sync failed:', errorMessage);
+    throw error;
+  }
 }
 
 export default {
