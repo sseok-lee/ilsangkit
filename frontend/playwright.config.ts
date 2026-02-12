@@ -12,23 +12,46 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
+    // Desktop browsers
     {
-      name: 'Mobile',
-      use: {
-        ...devices['iPhone 14'],
-      },
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+
+    // Mobile browsers
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'Mobile Safari',
+      use: { ...devices['iPhone 14'] },
+    },
+
+    // Tablet
     {
       name: 'Tablet',
       use: {
         viewport: { width: 768, height: 1024 },
       },
     },
+
+    // Additional mobile viewports
     {
-      name: 'Desktop',
-      use: {
-        viewport: { width: 1280, height: 800 },
-      },
+      name: 'iPhone SE',
+      use: { ...devices['iPhone SE'] },
+    },
+    {
+      name: 'Samsung Galaxy',
+      use: { ...devices['Galaxy S9+'] },
     },
   ],
   webServer: {
