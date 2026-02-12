@@ -1,0 +1,146 @@
+version: "2.0"
+date: "2026-02-12"
+basePath: /api/meta
+description: 카테고리 및 지역 메타 정보 API
+
+endpoints:
+  categories:
+    path: /categories
+    method: GET
+    description: 활성화된 카테고리 목록 조회
+    tags: [meta, categories]
+    source: backend/src/routes/meta.ts:11-18
+
+    request: {}
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: number
+                    description: 카테고리 ID
+                  slug:
+                    type: string
+                    description: 카테고리 슬러그 (toilet, wifi, clothes, kiosk, parking, aed, library)
+                  nameKo:
+                    type: string
+                    description: 한글 이름
+                  icon:
+                    type: string
+                    description: 아이콘 경로
+                  isActive:
+                    type: boolean
+                    description: 활성화 여부
+                  sortOrder:
+                    type: number
+                    description: 정렬 순서
+
+  stats:
+    path: /stats
+    method: GET
+    description: 카테고리별 시설 개수 통계
+    tags: [meta, stats]
+    source: backend/src/routes/meta.ts:21-46
+
+    request: {}
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              properties:
+                toilet:
+                  type: number
+                  description: 공공화장실 개수
+                wifi:
+                  type: number
+                  description: 무료와이파이 개수
+                clothes:
+                  type: number
+                  description: 의류수거함 개수
+                kiosk:
+                  type: number
+                  description: 무인민원발급기 개수
+                trash:
+                  type: number
+                  description: 쓰레기 배출 일정 개수
+                parking:
+                  type: number
+                  description: 공영주차장 개수
+                aed:
+                  type: number
+                  description: AED(자동심장충격기) 개수
+                library:
+                  type: number
+                  description: 도서관 개수
+                total:
+                  type: number
+                  description: 전체 시설 개수 합계
+
+  regions:
+    path: /regions
+    method: GET
+    description: 지역 목록 조회 (시/도별 필터링 가능)
+    tags: [meta, regions]
+    source: backend/src/routes/meta.ts:49-74
+
+    request:
+      query:
+        city:
+          type: string
+          required: false
+          description: 시/도명 필터 (선택)
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: number
+                    description: 지역 ID
+                  bjdCode:
+                    type: string
+                    description: 법정동 코드
+                  city:
+                    type: string
+                    description: 시/도명
+                  district:
+                    type: string
+                    description: 구/군명
+                  slug:
+                    type: string
+                    description: URL 슬러그 (city-district)
+                  lat:
+                    type: number
+                    description: 위도
+                  lng:
+                    type: number
+                    description: 경도

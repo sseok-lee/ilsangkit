@@ -144,7 +144,7 @@
                   <h2 class="text-[#111418] dark:text-white text-lg font-bold">시설현황</h2>
                 </div>
                 <div class="p-5">
-                  <div class="grid grid-cols-2 gap-4">
+                  <div v-if="hasGridContent" class="grid grid-cols-2 gap-4">
                     <!-- Toilet Stalls (if applicable) -->
                     <template v-if="facility.category === 'toilet'">
                       <div v-if="facility.details?.maleToilets" class="col-span-2 bg-[#f9fafb] dark:bg-[#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5] dark:border-gray-700">
@@ -190,7 +190,7 @@
 
                   <!-- Toilet Extra Details -->
                   <template v-if="facility.category === 'toilet'">
-                    <div v-if="facility.details?.openTime || facility.details?.managingOrg" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                    <div v-if="facility.details?.openTime || facility.details?.managingOrg" :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                       <div v-if="facility.details?.openTime" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">개방시간</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.openTime }}</span>
@@ -204,7 +204,7 @@
 
                   <!-- Wifi Details -->
                   <template v-if="facility.category === 'wifi'">
-                    <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                    <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                       <div v-if="facility.details?.ssid" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">SSID</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.ssid }}</span>
@@ -234,7 +234,7 @@
 
                   <!-- Clothes Details -->
                   <template v-if="facility.category === 'clothes'">
-                    <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                    <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                       <div v-if="facility.details?.detailLocation" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">상세 위치</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.detailLocation }}</span>
@@ -256,7 +256,7 @@
 
                   <!-- Kiosk Details -->
                   <template v-if="facility.category === 'kiosk'">
-                    <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                    <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                       <div v-if="facility.details?.detailLocation" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">설치 위치</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.detailLocation }}</span>
@@ -309,9 +309,72 @@
                     </div>
                   </template>
 
+                  <!-- Parking Details -->
+                  <template v-if="facility.category === 'parking'">
+                    <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '']">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">요금 정보</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-if="facility.details?.baseFee != null && facility.details?.baseTime != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">기본요금</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.baseFee }}원 / {{ facility.details.baseTime }}분</span>
+                        </div>
+                        <div v-if="facility.details?.additionalFee != null && facility.details?.additionalTime != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">추가요금</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.additionalFee }}원 / {{ facility.details.additionalTime }}분</span>
+                        </div>
+                        <div v-if="facility.details?.dailyMaxFee != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">일 최대요금</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.dailyMaxFee }}원</span>
+                        </div>
+                        <div v-if="facility.details?.monthlyFee != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">월정기권</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.monthlyFee }}원</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">기본 정보</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-if="facility.details?.parkingType" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">주차 구분</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.parkingType }}</span>
+                        </div>
+                        <div v-if="facility.details?.lotType" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">주차장 유형</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.lotType }}</span>
+                        </div>
+                        <div v-if="facility.details?.capacity" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">주차면수</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.capacity }}면</span>
+                        </div>
+                        <div v-if="facility.details?.operatingHours" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">운영시간</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.operatingHours }}</span>
+                        </div>
+                        <div v-if="facility.details?.paymentMethod" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">결제방법</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.paymentMethod }}</span>
+                        </div>
+                        <div v-if="facility.details?.phone" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">전화번호</span>
+                          <a :href="`tel:${facility.details.phone}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.phone }}</a>
+                        </div>
+                        <div v-if="facility.details?.hasDisabledParking !== undefined" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">장애인 주차구역</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.hasDisabledParking ? '있음' : '없음' }}</span>
+                        </div>
+                        <div v-if="facility.details?.remarks" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">특기사항</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.remarks }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
                   <!-- Library Details -->
                   <template v-if="facility.category === 'library'">
-                    <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                    <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                       <div v-if="facility.details?.libraryType" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">도서관유형</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.libraryType }}</span>
@@ -380,7 +443,7 @@
 
                   <!-- AED Details -->
                   <template v-if="facility.category === 'aed'">
-                    <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                    <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                       <div v-if="facility.details?.buildPlace" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">설치위치</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.buildPlace }}</span>
@@ -564,7 +627,7 @@
               <h2 class="text-[#111418] dark:text-white text-lg font-bold">시설현황</h2>
             </div>
             <div class="p-5">
-              <div class="grid grid-cols-2 gap-4">
+              <div v-if="hasGridContent" class="grid grid-cols-2 gap-4">
                 <!-- Toilet Stalls -->
                 <template v-if="facility.category === 'toilet'">
                   <div v-if="facility.details?.maleToilets" class="col-span-2 bg-[#f9fafb] dark:bg-[#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5] dark:border-gray-700">
@@ -610,7 +673,7 @@
 
               <!-- Toilet Extra Details -->
               <template v-if="facility.category === 'toilet'">
-                <div v-if="facility.details?.openTime || facility.details?.managingOrg" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                <div v-if="facility.details?.openTime || facility.details?.managingOrg" :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                   <div v-if="facility.details?.openTime" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">개방시간</span>
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.openTime }}</span>
@@ -624,7 +687,7 @@
 
               <!-- Wifi Details -->
               <template v-if="facility.category === 'wifi'">
-                <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                   <div v-if="facility.details?.ssid" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">SSID</span>
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.ssid }}</span>
@@ -654,7 +717,7 @@
 
               <!-- Clothes Details -->
               <template v-if="facility.category === 'clothes'">
-                <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                   <div v-if="facility.details?.detailLocation" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">상세 위치</span>
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.detailLocation }}</span>
@@ -676,7 +739,7 @@
 
               <!-- Kiosk Details -->
               <template v-if="facility.category === 'kiosk'">
-                <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                   <div v-if="facility.details?.detailLocation" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">설치 위치</span>
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.detailLocation }}</span>
@@ -729,9 +792,72 @@
                 </div>
               </template>
 
+              <!-- Parking Details -->
+              <template v-if="facility.category === 'parking'">
+                <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '']">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">요금 정보</h3>
+                  <div class="flex flex-col gap-3">
+                    <div v-if="facility.details?.baseFee != null && facility.details?.baseTime != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">기본요금</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.baseFee }}원 / {{ facility.details.baseTime }}분</span>
+                    </div>
+                    <div v-if="facility.details?.additionalFee != null && facility.details?.additionalTime != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">추가요금</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.additionalFee }}원 / {{ facility.details.additionalTime }}분</span>
+                    </div>
+                    <div v-if="facility.details?.dailyMaxFee != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">일 최대요금</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.dailyMaxFee }}원</span>
+                    </div>
+                    <div v-if="facility.details?.monthlyFee != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">월정기권</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.monthlyFee }}원</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">기본 정보</h3>
+                  <div class="flex flex-col gap-3">
+                    <div v-if="facility.details?.parkingType" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">주차 구분</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.parkingType }}</span>
+                    </div>
+                    <div v-if="facility.details?.lotType" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">주차장 유형</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.lotType }}</span>
+                    </div>
+                    <div v-if="facility.details?.capacity" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">주차면수</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.capacity }}면</span>
+                    </div>
+                    <div v-if="facility.details?.operatingHours" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">운영시간</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.operatingHours }}</span>
+                    </div>
+                    <div v-if="facility.details?.paymentMethod" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">결제방법</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.paymentMethod }}</span>
+                    </div>
+                    <div v-if="facility.details?.phone" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">전화번호</span>
+                      <a :href="`tel:${facility.details.phone}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.phone }}</a>
+                    </div>
+                    <div v-if="facility.details?.hasDisabledParking !== undefined" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">장애인 주차구역</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.hasDisabledParking ? '있음' : '없음' }}</span>
+                    </div>
+                    <div v-if="facility.details?.remarks" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">특기사항</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.remarks }}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
               <!-- Library Details -->
               <template v-if="facility.category === 'library'">
-                <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                   <div v-if="facility.details?.libraryType" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">도서관유형</span>
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.libraryType }}</span>
@@ -800,7 +926,7 @@
 
               <!-- AED Details -->
               <template v-if="facility.category === 'aed'">
-                <div class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5 flex flex-col gap-3">
+                <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
                   <div v-if="facility.details?.buildPlace" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">설치위치</span>
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.buildPlace }}</span>
@@ -1012,6 +1138,13 @@ const facilityFeatures = computed(() => {
   }
 
   return features
+})
+
+// Check if the grid area has visible content (toilet stalls or amenity cards)
+const hasGridContent = computed(() => {
+  if (!facility.value?.details) return false
+  if (facility.value.category === 'toilet') return true
+  return facilityAmenities.value.length > 0
 })
 
 // Facility amenities checklist

@@ -9,10 +9,10 @@ export const PaginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-// 좌표 스키마
+// 좌표 스키마 (한국 영역)
 export const CoordinatesSchema = z.object({
-  lat: z.coerce.number().min(-90).max(90),
-  lng: z.coerce.number().min(-180).max(180),
+  lat: z.coerce.number().min(33, '한국 영역 외 좌표입니다').max(39, '한국 영역 외 좌표입니다'),
+  lng: z.coerce.number().min(124, '한국 영역 외 좌표입니다').max(132, '한국 영역 외 좌표입니다'),
 });
 
 // 정렬 방향 스키마

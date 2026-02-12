@@ -1,0 +1,243 @@
+version: "2.0"
+date: "2026-02-12"
+basePath: /api/waste-schedules
+description: 쓰레기 배출 일정 조회 API (지도 마커가 아닌 지역별 일정 조회용)
+
+endpoints:
+  list:
+    path: /
+    method: GET
+    description: 지역별 쓰레기 배출 일정 조회
+    tags: [waste-schedules, region]
+    source: backend/src/routes/wasteSchedules.ts:17-29
+
+    request:
+      query:
+        city:
+          type: string
+          required: true
+          minLength: 1
+          maxLength: 50
+          description: 시/도명 (필수)
+
+        district:
+          type: string
+          required: false
+          maxLength: 50
+          description: 구/군명 (선택)
+
+        keyword:
+          type: string
+          required: false
+          maxLength: 100
+          description: 검색 키워드 (선택)
+
+        page:
+          type: integer
+          required: false
+          min: 1
+          default: 1
+          description: 페이지 번호
+
+        limit:
+          type: integer
+          required: false
+          min: 1
+          max: 100
+          default: 20
+          description: 페이지당 항목 수
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  description: 배출 일정 목록
+                total:
+                  type: number
+                  description: 전체 항목 수
+                page:
+                  type: number
+                  description: 현재 페이지
+                totalPages:
+                  type: number
+                  description: 전체 페이지 수
+
+      422:
+        description: 유효성 검사 실패
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: false
+            error:
+              type: object
+
+  detail:
+    path: /:id
+    method: GET
+    description: 쓰레기 배출 일정 단건 조회 (상세 페이지용)
+    tags: [waste-schedules, detail]
+    source: backend/src/routes/wasteSchedules.ts:74-87
+
+    request:
+      params:
+        id:
+          type: number
+          required: true
+          description: 배출 일정 ID
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              description: 배출 일정 상세 정보
+
+      400:
+        description: 잘못된 ID 형식
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: false
+            error:
+              type: string
+              value: Invalid id
+
+      404:
+        description: 일정을 찾을 수 없음
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: false
+            error:
+              type: string
+              value: Not found
+
+  regions:
+    path: /regions
+    method: GET
+    description: 배출 일정이 있는 지역 목록 조회
+    tags: [waste-schedules, regions]
+    source: backend/src/routes/wasteSchedules.ts:36-48
+
+    request:
+      query:
+        page:
+          type: integer
+          required: false
+          min: 1
+          default: 1
+          description: 페이지 번호
+
+        limit:
+          type: integer
+          required: false
+          min: 1
+          max: 100
+          default: 20
+          description: 페이지당 항목 수
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  description: 지역 목록
+                total:
+                  type: number
+                  description: 전체 항목 수
+                page:
+                  type: number
+                  description: 현재 페이지
+                totalPages:
+                  type: number
+                  description: 전체 페이지 수
+
+  cities:
+    path: /cities
+    method: GET
+    description: 시/도 목록 조회
+    tags: [waste-schedules, cities]
+    source: backend/src/routes/wasteSchedules.ts:54-57
+
+    request: {}
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: string
+                  description: 시/도 목록
+
+  districts:
+    path: /districts/:city
+    method: GET
+    description: 특정 시/도의 구/군 목록 조회
+    tags: [waste-schedules, districts]
+    source: backend/src/routes/wasteSchedules.ts:63-68
+
+    request:
+      params:
+        city:
+          type: string
+          required: true
+          description: 시/도명
+
+    response:
+      200:
+        description: 조회 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              value: true
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: string
+                  description: 구/군 목록

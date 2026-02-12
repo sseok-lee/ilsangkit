@@ -1,0 +1,425 @@
+version: "2.0"
+project: ilsangkit
+generated: 2026-02-12
+
+sync_processes:
+  syncRegion:
+    category: region
+    script: backend/src/scripts/syncRegion.ts
+    description: 시/도, 시/군/구 지역 마스터 데이터 동기화
+    method: Static
+    source:
+      type: hardcoded
+      description: REGION_COORDINATES 상수에서 전국 250+개 지역 좌표 로드
+    process:
+      - 정적 좌표 데이터 (REGION_COORDINATES 객체)에서 전국 시/군/구 목록 추출
+      - 각 지역에 대해 bjdCode 생성 (city 기반 2자리 + district 해시 3자리)
+      - slug 생성 (KOREAN_TO_ROMANIZATION 매핑으로 한글 → 로마자 변환)
+      - Region 테이블에 upsert (bjdCode, city+district 기준 중복 체크)
+    fields:
+      - bjdCode (법정동코드 5자리)
+      - city (시/도, CITY_NAME_MAP으로 정규화)
+      - district (시/군/구)
+      - slug (로마자 URL slug)
+      - lat, lng (중심 좌표)
+    output: Region 테이블
+
+  syncToilet:
+    category: toilet
+    script: backend/src/scripts/syncToilet.ts
+    service: backend/src/services/toiletSyncService.ts
+    description: 공공화장실 데이터 동기화
+    method: CSV
+    source:
+      dataNumber: "15012892"
+      url: https://www.localdata.go.kr/datafile/each/07_24_05_P_CSV.zip
+      format: ZIP containing CSV files
+      encoding: EUC-KR or UTF-8 (auto-detect)
+    process:
+      - ZIP 파일 다운로드 (리다이렉트 처리)
+      - adm-zip으로 압축 해제, CSV 파일 추출
+      - 각 CSV 파일 읽기 (iconv-lite로 EUC-KR → UTF-8 변환)
+      - csv-parse로 CSV 파싱
+      - 각 행을 Toilet 모델로 변환 (좌표 검증, 주소 파싱)
+      - sourceId 기준으로 upsert (Batch 100개씩)
+      - SyncHistory에 결과 기록
+    validation:
+      - 좌표 범위: 위도 33-39, 경도 124-132
+      - 필수 필드: name, city, district
+    output: Toilet 테이블
+
+  syncWifi:
+    category: wifi
+    script: backend/src/scripts/syncWifi.ts
+    description: 무료 와이파이 데이터 동기화
+    method: CSV
+    source:
+      dataNumber: "15013116"
+      url: https://www.localdata.go.kr/datafile/each/07_24_04_P_CSV.zip
+      format: ZIP containing CSV files
+      encoding: EUC-KR or UTF-8 (auto-detect)
+    process:
+      - downloadAndExtractCSV()로 ZIP 다운로드 및 압축 해제
+      - parseCSV<WifiCSVRow>()로 CSV 파싱
+      - transformWifiData()로 각 행 변환 (좌표 검증, CITY_MAP으로 시/도 정규화)
+      - 중복 sourceId 제거 (Map으로 dedupe)
+      - batchUpsertWifi()로 Batch 100개씩 upsert
+      - SyncHistory에 결과 기록
+    validation:
+      - 좌표 범위: 위도 33-39, 경도 124-132
+      - 필수 필드: name (설치장소명), lat, lng
+    output: Wifi 테이블
+
+  syncClothes:
+    category: clothes
+    script: backend/src/scripts/syncClothes.ts
+    service: backend/src/services/clothesSyncService.ts
+    description: 의류수거함 데이터 동기화
+    method: CSV
+    source:
+      dataNumber: "15139214"
+      url: https://www.localdata.go.kr/data/15139214/standard.do
+      format: CSV file
+      encoding: EUC-KR or UTF-8 (auto-detect)
+      localPath: prisma/data/clothes.csv (기본값)
+    process:
+      - 로컬 CSV 파일 읽기 (fs.readFileSync)
+      - iconv-lite로 인코딩 감지 및 UTF-8 변환
+      - parseClothesCSV()로 CSV 파싱
+      - transformClothesRow()로 각 행 변환 (좌표 검증, 주소 파싱)
+      - transformAndDedupe()로 중복 제거
+      - batchUpsert()로 Batch 100개씩 upsert
+      - SyncHistory에 결과 기록
+    validation:
+      - 좌표 범위: 위도 33-39, 경도 124-132
+      - 필수 필드: name, lat, lng
+    output: Clothes 테이블
+
+  syncKiosk:
+    category: kiosk
+    script: backend/src/scripts/syncKiosk.ts
+    description: 무인민원발급기 데이터 동기화
+    method: API (2-step)
+    source:
+      dataNumber: "15154774"
+      endpoints:
+        - name: installation_info
+          url: https://apis.data.go.kr/1741000/kiosk_info/installation_info
+          description: 발급기 설치 정보
+        - name: certificate_info
+          url: https://apis.data.go.kr/1741000/kiosk_info/certificate_info
+          description: 발급 가능 민원 정보
+      format: JSON (REST API)
+      pageSize: 100
+    process:
+      - publicApiClient.fetchAll()로 installation_info 전체 조회 (페이지네이션)
+      - publicApiClient.fetchAll()로 certificate_info 전체 조회
+      - groupCertificatesByMngNo()로 민원정보를 MNG_NO 기준 그룹핑
+      - installation_info의 MNG_NO와 certificate_info의 ISSUMCHN_NO 매칭
+      - 주소 정규화 (normalizeAddressForGeocode: 괄호/쉼표/층수 제거)
+      - batchGeocode()로 Kakao Maps API 지오코딩 (Batch 10개, 200ms delay)
+      - transformKioskData()로 각 행 변환 (좌표, 민원목록 포함)
+      - Kiosk 테이블에 upsert (id 기준)
+      - SyncHistory에 결과 기록
+    validation:
+      - 필수 필드: INSTL_PLC_ADDR (주소), MNG_NO
+      - 지오코딩 성공률 추적
+    rateLimit:
+      - Kakao API: Batch 10개, 200ms delay
+    output: Kiosk 테이블
+
+  syncParking:
+    category: parking
+    script: backend/src/scripts/syncParking.ts
+    service: backend/src/services/parkingSyncService.ts
+    description: 공영주차장 데이터 동기화
+    method: CSV (or API)
+    source:
+      dataNumber: "15050093"
+      url: https://www.localdata.go.kr/data/15050093/standard.do
+      format: CSV file
+      encoding: EUC-KR or UTF-8 (auto-detect)
+      localPath: prisma/data/parking.csv (기본값)
+    process:
+      - CLI 모드 결정 (--mode csv 또는 --mode api)
+      - CSV 모드: parseParkingCSV()로 로컬 파일 파싱
+      - API 모드: publicApiClient.fetchAll()로 전체 조회
+      - transformParkingRow()로 각 행 변환 (좌표 검증, 요금 파싱)
+      - transformAndDedupe()로 중복 제거
+      - batchUpsert()로 Batch 100개씩 upsert
+      - SyncHistory에 결과 기록
+    validation:
+      - 좌표 범위: 위도 33-39, 경도 124-132
+      - 필수 필드: name, lat, lng
+    output: Parking 테이블
+
+  syncAed:
+    category: aed
+    script: backend/src/scripts/syncAed.ts
+    description: 자동심장충격기(AED) 데이터 동기화
+    method: API (XML)
+    source:
+      dataNumber: "15000652"
+      url: http://apis.data.go.kr/B552657/AEDInfoInqireService/getEgytAedManageInfoInqire
+      format: XML
+      pageSize: 100
+    process:
+      - fetchPage()로 첫 페이지 조회, totalCount 확인
+      - 전체 페이지 수 계산 (Math.ceil(totalCount / pageSize))
+      - 각 페이지 조회 (300ms 간격, 429 재시도 로직: 최대 5회, 지수 백오프)
+      - fast-xml-parser로 XML 파싱
+      - resultCode 검증 ("00" 또는 "0" 확인)
+      - 단일 항목 정규화 (item이 배열이 아니면 배열로 감싸기)
+      - sourceId = serialSeq (시리얼번호, 고유)
+      - Aed 테이블에 upsert (id 기준)
+      - SyncHistory에 결과 기록
+    validation:
+      - 필수 필드: serialSeq (sourceId), buildAddress
+      - city, district 비어있으면 스킵
+    rateLimit:
+      - 기본: 300ms per page
+      - 429 Rate Limit: 10→20→40→80→160초 지수 백오프
+    output: Aed 테이블
+
+  syncLibrary:
+    category: library
+    script: backend/src/services/librarySyncService.ts
+    description: 공공도서관 데이터 동기화
+    method: CSV
+    source:
+      dataNumber: "15013093"
+      url: https://www.localdata.go.kr/data/15013093/standard.do
+      format: CSV file
+      encoding: EUC-KR or UTF-8 (auto-detect)
+      localPath: prisma/data/library.csv (기본값)
+    process:
+      - parseLibraryCSV()로 로컬 CSV 파일 파싱
+      - transformLibraryRow()로 각 행 변환 (좌표 검증, 개관시간 파싱)
+      - transformAndDedupe()로 중복 제거 (sourceId 기준)
+      - batchUpsert()로 Batch 100개씩 upsert
+      - SyncHistory에 결과 기록
+    validation:
+      - 좌표 범위: 위도 33-39, 경도 124-132
+      - 필수 필드: name, lat, lng
+    output: Library 테이블
+
+  syncTrash:
+    category: waste_schedule
+    script: backend/src/scripts/syncTrash.ts
+    description: 생활쓰레기 배출 일정 동기화 (좌표 없음)
+    method: API
+    source:
+      dataNumber: "15155080"
+      url: https://apis.data.go.kr/1741000/household_waste_info/info
+      format: JSON (REST API)
+      pageSize: 100
+    process:
+      - "PublicApiClient 생성 (maxRetries: 3, retryDelay: 1000ms)"
+      - "fetchAllPages<TrashApiResponse>()로 전체 조회 (페이지네이션)"
+      - transformTrashData()로 각 행 변환
+      - 4개 유형 정보 sub-object 생성 (livingWaste, foodWaste, recyclable, bulkWaste)
+      - sourceId = MNG_NO (우선) 또는 해시 폴백
+      - WasteSchedule 테이블에 upsert (city+district+sourceId 기준)
+      - SyncHistory에 결과 기록
+    validation:
+      - 필수 필드: CTPV_NM (시도명), SGG_NM (시군구명)
+      - 좌표 없음: 지도 마커 표시 불가
+    output: WasteSchedule 테이블
+    note: 1개 행에 4개 유형(생활/음식물/재활용/대형폐기물) 정보 포함
+
+  syncAll:
+    category: all
+    script: backend/src/scripts/syncAll.ts
+    description: 전체 카테고리 통합 동기화 스케줄러
+    method: Orchestrator
+    categories: [toilet, trash, wifi, clothes, kiosk, parking, aed, library]
+    process:
+      - CLI 인자 파싱 (--only, --skip 옵션)
+      - 동기화 순서: toilet → trash → wifi → clothes → parking → aed → library → kiosk (마지막)
+      - kiosk는 지오코딩 rate limit 때문에 마지막에 실행
+      - 각 카테고리 동기화 함수 호출
+      - 카테고리 간 1초 대기 (API rate limit 고려)
+      - 전체 결과 요약 (성공/실패 카운트, 실패 상세)
+    options:
+      - --only toilet,wifi: 특정 카테고리만 동기화
+      - --skip kiosk: 특정 카테고리 제외
+    output: 모든 리소스 테이블 + SyncHistory
+
+common_patterns:
+  encoding_detection:
+    description: CSV 파일 인코딩 자동 감지
+    libraries: [iconv-lite]
+    logic:
+      - UTF-8 BOM 체크 (0xEF 0xBB 0xBF)
+      - EUC-KR 휴리스틱 (0xA1-0xFE 2바이트 쌍 빈도)
+      - 10개 이상 매칭시 EUC-KR, 아니면 UTF-8
+
+  coordinate_validation:
+    description: 한국 영역 좌표 검증
+    range:
+      lat: [33, 39]
+      lng: [124, 132]
+    rejects:
+      - lat/lng이 0인 경우
+      - NaN인 경우
+      - 범위 밖 좌표
+
+  batch_upsert:
+    description: 대량 데이터 Batch Upsert 패턴
+    batchSize: 100
+    logic:
+      - sourceId 기준 기존 레코드 존재 여부 확인
+      - 존재하면 update, 없으면 create
+      - 100개씩 Promise.all()로 병렬 처리
+      - 진행률 로깅 (100개마다)
+
+  sync_history:
+    description: 동기화 이력 추적 패턴
+    flow:
+      - 시작시 SyncHistory 생성 (status: running)
+      - 성공시 update (status: success, totalRecords, newRecords, updatedRecords, completedAt)
+      - 실패시 update (status: failed, errorMessage, completedAt)
+
+  geocoding:
+    description: Kakao Maps API 지오코딩 (Kiosk만 사용)
+    service: backend/src/services/geocodingService.ts
+    function: batchGeocode()
+    rateLimit:
+      batchSize: 10
+      delayMs: 200
+    note: 나머지 카테고리는 CSV/API에서 좌표 제공
+
+tools:
+  csv_parsing:
+    - csv-parse: CSV 파싱
+    - iconv-lite: 인코딩 변환 (EUC-KR ↔ UTF-8)
+    - adm-zip: ZIP 압축 해제
+
+  api_client:
+    - PublicApiClient: 공공데이터 API 페이지네이션 클라이언트
+    - fast-xml-parser: XML 파싱 (AED API)
+    - fetch: HTTP 요청
+
+  database:
+    - Prisma Client: ORM
+    - MySQL: 데이터베이스
+
+dependencies:
+  - Region 동기화가 최우선 (다른 모든 리소스가 Region 참조)
+  - Kiosk는 마지막 실행 (지오코딩 rate limit)
+  - 나머지 순서는 무관 (병렬 실행 가능)
+
+failure_recovery:
+  description: 동기화 실패 시 복구 전략
+
+  rollback_strategy:
+    description: 중간 실패 시 롤백 전략
+    transaction_unit: batch
+    implementation:
+      - Prisma $transaction을 사용한 배치 단위 원자적 처리
+      - 각 Batch(100개)를 독립된 트랜잭션으로 실행
+      - Batch 실패 시 해당 Batch만 롤백, 이전 Batch는 유지
+      - upsert 패턴 사용으로 멱등성(idempotency) 보장
+    edge_cases:
+      - "파싱 실패: CSV/XML 파싱 단계에서 실패 시 전체 중단 (DB 변경 전)"
+      - "네트워크 실패: API 호출 실패 시 재시도, 최대 재시도 초과 시 중단"
+      - "DB 연결 끊김: 트랜잭션 롤백 후 재연결 시도"
+    data_consistency:
+      - sourceId 기준 중복 체크로 재실행 시 중복 방지
+      - syncedAt 타임스탬프로 최신 데이터 추적
+      - SyncHistory.status로 동기화 상태 추적
+
+  retry_policy:
+    description: 재시도 정책
+    max_attempts: 3
+    backoff_strategy: exponential
+    backoff_intervals: [1000, 2000, 4000] # ms
+    retryable_errors:
+      - "network_timeout: API 호출 타임아웃"
+      - "rate_limit_429: API Rate Limit (특히 Kakao Maps, AED API)"
+      - "connection_refused: DB 연결 거부"
+      - "temporary_dns_failure: DNS 일시적 실패"
+      - "service_unavailable_503: 외부 API 일시적 불가"
+    non_retryable_errors:
+      - "validation_error: 데이터 검증 실패 (좌표 범위, 필수 필드)"
+      - "auth_error_401: 인증 실패 (OPENAPI_SERVICE_KEY 오류)"
+      - "forbidden_403: 권한 없음"
+      - "not_found_404: API 엔드포인트 없음"
+      - "duplicate_key_error: DB 유니크 제약 위반 (이미 처리됨)"
+    implementation:
+      - PublicApiClient의 maxRetries/retryDelay 파라미터 활용
+      - "AED API의 429 재시도: 10→20→40→80→160초 지수 백오프 (최대 5회)"
+      - "Kakao Maps API 재시도: 200ms 기본 delay + 실패 시 재시도"
+      - "CSV 다운로드 실패: 최대 3회 재시도 (네트워크 에러만)"
+
+  sync_history_failure_details:
+    description: SyncHistory 테이블에 실패 상세 기록
+    existing_fields:
+      - "status: SyncStatus (running/success/failed)"
+      - "errorMessage: String? (에러 메시지)"
+      - "totalRecords: Int (전체 레코드 수)"
+      - "newRecords: Int (신규 추가 수)"
+      - "updatedRecords: Int (업데이트 수)"
+    recommended_new_fields:
+      - "processedRecords: Int (처리 완료된 레코드 수, 실패 지점 추적)"
+      - "failedRecords: Int (실패한 레코드 수)"
+      - "failurePoint: String? (실패 단계 - download/parse/transform/upsert)"
+      - "retryCount: Int (재시도 횟수, 기본값 0)"
+      - "lastRetryAt: DateTime? (마지막 재시도 시각)"
+    usage_example:
+      - "다운로드 실패: failurePoint='download', processedRecords=0"
+      - "파싱 중 실패: failurePoint='parse', processedRecords=0"
+      - "Batch 5 실패: failurePoint='upsert', processedRecords=400 (Batch 1-4 완료)"
+      - "재시도 후 성공: retryCount=2, status='success'"
+    implementation_note:
+      - 현재는 errorMessage만 기록, 향후 확장 시 위 필드 추가 고려
+      - failurePoint로 어느 단계에서 실패했는지 명확히 추적
+      - processedRecords로 재개 지점 파악 가능 (부분 재실행 지원)
+
+  monitoring_and_alerts:
+    description: 실패 모니터링 및 알림
+    logging:
+      - console.error()로 실패 상세 로그 출력
+      - syncAll.ts에서 카테고리별 성공/실패 요약 제공
+      - SyncHistory 테이블에 모든 동기화 이력 영구 저장
+    failure_detection:
+      - SyncHistory.status='failed' 조회로 실패한 동기화 식별
+      - completedAt - startedAt으로 소요 시간 추적
+      - errorMessage로 실패 원인 분석
+    manual_intervention:
+      - SyncHistory 조회로 실패 이력 확인
+      - 실패한 카테고리만 재실행 (syncAll.ts --only 옵션)
+      - API Key 만료/Rate Limit 등은 수동 대응 필요
+
+  recovery_procedures:
+    description: 카테고리별 복구 절차
+    csv_based_sync: # toilet, wifi, clothes, parking, library
+      - "파일 다운로드 실패: 네트워크 확인 후 재시도"
+      - "인코딩 오류: iconv-lite로 자동 감지, 실패 시 수동 확인"
+      - "파싱 오류: CSV 형식 변경 여부 확인, transformRow 로직 수정"
+      - "Batch upsert 실패: DB 연결 확인, 트랜잭션 롤백 후 재실행"
+    api_based_sync: # trash, kiosk, aed
+      - "Rate Limit 429: 지수 백오프 후 자동 재시도"
+      - "API Key 오류: OPENAPI_SERVICE_KEY 환경변수 확인"
+      - "페이지네이션 오류: totalCount 확인, pageSize 조정"
+      - "JSON/XML 파싱 오류: 응답 형식 변경 여부 확인"
+    geocoding_sync: # kiosk only
+      - "Kakao API Rate Limit: batchSize 줄이기 (10→5), delay 늘리기 (200ms→500ms)"
+      - "지오코딩 실패: normalizeAddressForGeocode 로직 개선"
+      - "부분 성공: 지오코딩 성공한 것만 저장, 실패는 로그 기록"
+
+  partial_success_handling:
+    description: 부분 성공 처리 전략
+    batch_isolation:
+      - 각 Batch(100개)는 독립적으로 처리
+      - Batch N 실패해도 Batch N-1까지는 DB에 커밋됨
+      - 실패한 Batch만 재처리 가능 (sourceId 기반 중복 방지)
+    skip_and_continue:
+      - 개별 레코드 검증 실패 시 해당 레코드만 스킵 (skippedRecords 카운트)
+      - 좌표 범위 벗어남: 로그 후 스킵
+      - 필수 필드 누락: 로그 후 스킵
+      - 나머지 레코드는 계속 처리
+    final_status:
+      - 전체 성공: status='success', errorMessage=null
+      - 부분 성공: status='success', errorMessage='일부 레코드 스킵됨 (skippedRecords 참조)'
+      - 전체 실패: status='failed', errorMessage='상세 에러 메시지'

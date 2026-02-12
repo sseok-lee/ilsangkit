@@ -3,6 +3,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// Create persistent mock functions for transaction context
+const mockTxUpsert = vi.fn().mockResolvedValue({});
+const mockTxFindUnique = vi.fn().mockResolvedValue(null);
+
 // Mock modules before importing
 vi.mock('../../src/lib/prisma.js', () => ({
   default: {
@@ -15,7 +19,16 @@ vi.mock('../../src/lib/prisma.js', () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
-    $transaction: vi.fn(),
+    $transaction: vi.fn().mockImplementation(async (callback) => {
+      // Mock transaction context with persistent mocks
+      const tx = {
+        kiosk: {
+          upsert: mockTxUpsert,
+          findUnique: mockTxFindUnique,
+        },
+      };
+      return callback(tx);
+    }),
   },
 }));
 
@@ -276,6 +289,11 @@ describe('KioskSync', () => {
   });
 
   describe('syncKiosks', () => {
+    beforeEach(() => {
+      mockTxUpsert.mockClear();
+      mockTxFindUnique.mockClear();
+    });
+
     const mockInstallationData: KioskApiResponse[] = [
       {
         MNG_NO: 'TEST001',
@@ -340,15 +358,13 @@ describe('KioskSync', () => {
       vi.mocked(batchGeocode).mockResolvedValue([{ lat: 37.5012, lng: 127.0396 }]);
       vi.mocked(prisma.syncHistory.create).mockResolvedValue({ id: 1 } as never);
       vi.mocked(prisma.syncHistory.update).mockResolvedValue({} as never);
-      vi.mocked(prisma.kiosk.upsert).mockResolvedValue({} as never);
-      vi.mocked(prisma.kiosk.findUnique).mockResolvedValue(null as never);
 
       await syncKiosks();
 
       expect(batchGeocode).toHaveBeenCalled();
-      expect(prisma.kiosk.upsert).toHaveBeenCalled();
+      expect(mockTxUpsert).toHaveBeenCalled();
 
-      const upsertCall = vi.mocked(prisma.kiosk.upsert).mock.calls[0][0];
+      const upsertCall = mockTxUpsert.mock.calls[0][0];
       expect(upsertCall.create.mngNo).toBe('TEST001');
       expect(upsertCall.create.availableDocuments).toEqual(['주민등록등본', '가족관계증명서']);
     });
@@ -435,12 +451,10 @@ describe('KioskSync', () => {
       vi.mocked(batchGeocode).mockResolvedValue([{ lat: 37.5012, lng: 127.0396 }]);
       vi.mocked(prisma.syncHistory.create).mockResolvedValue({ id: 1 } as never);
       vi.mocked(prisma.syncHistory.update).mockResolvedValue({} as never);
-      vi.mocked(prisma.kiosk.upsert).mockResolvedValue({} as never);
-      vi.mocked(prisma.kiosk.findUnique).mockResolvedValue(null as never);
 
       await syncKiosks();
 
-      const upsertCall = vi.mocked(prisma.kiosk.upsert).mock.calls[0][0];
+      const upsertCall = mockTxUpsert.mock.calls[0][0];
       expect(upsertCall.create.availableDocuments).toEqual([]);
     });
   });

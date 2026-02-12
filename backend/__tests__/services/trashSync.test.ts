@@ -11,17 +11,32 @@ import {
   TrashApiResponse,
 } from '../../src/scripts/syncTrash.js';
 
+// Create persistent mock functions for transaction context
+const mockTxUpsert = vi.fn().mockResolvedValue({});
+const mockTxFindUnique = vi.fn().mockResolvedValue(null);
+
 // Mock Prisma
 vi.mock('../../src/lib/prisma.js', () => ({
   default: {
     wasteSchedule: {
       upsert: vi.fn().mockResolvedValue({}),
       count: vi.fn().mockResolvedValue(0),
+      findUnique: vi.fn().mockResolvedValue(null),
     },
     syncHistory: {
       create: vi.fn().mockResolvedValue({ id: 1 }),
       update: vi.fn().mockResolvedValue({}),
     },
+    $transaction: vi.fn().mockImplementation(async (callback) => {
+      // Mock transaction context with persistent mocks
+      const tx = {
+        wasteSchedule: {
+          upsert: mockTxUpsert,
+          findUnique: mockTxFindUnique,
+        },
+      };
+      return callback(tx);
+    }),
   },
 }));
 
@@ -376,6 +391,8 @@ describe('syncTrashData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockReset();
+    mockTxUpsert.mockClear();
+    mockTxFindUnique.mockClear();
   });
 
   it('should create SyncHistory record at start', async () => {
@@ -497,8 +514,9 @@ describe('syncTrashData', () => {
 
     const result = await syncTrashData({ serviceKey: 'test-key', dryRun: true });
 
-    // In dry run mode, wasteSchedule.upsert should not be called
-    expect(prisma.wasteSchedule.upsert).not.toHaveBeenCalled();
+    // In dry run mode, transaction should not be called
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(mockTxUpsert).not.toHaveBeenCalled();
     expect(result.totalRecords).toBe(1);
   });
 
@@ -530,11 +548,12 @@ describe('syncTrashData', () => {
     });
 
     vi.mocked(prisma.syncHistory.create).mockResolvedValueOnce({ id: 1 } as never);
-    vi.mocked(prisma.wasteSchedule.count).mockResolvedValueOnce(0 as never);
 
     await syncTrashData({ serviceKey: 'test-key', dryRun: false });
 
-    expect(prisma.wasteSchedule.upsert).toHaveBeenCalled();
+    // Should call transaction and upsert within transaction context
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(mockTxUpsert).toHaveBeenCalled();
   });
 
   it('should count new and updated records correctly', async () => {
@@ -574,10 +593,10 @@ describe('syncTrashData', () => {
     });
 
     vi.mocked(prisma.syncHistory.create).mockResolvedValueOnce({ id: 1 } as never);
-    // First record exists, second is new
-    vi.mocked(prisma.wasteSchedule.count)
-      .mockResolvedValueOnce(1 as never)
-      .mockResolvedValueOnce(0 as never);
+    // First record exists (update), second is new (create)
+    mockTxFindUnique
+      .mockResolvedValueOnce({ id: 1, city: '서울특별시', district: '강남구', sourceId: 'GN-003' } as never)
+      .mockResolvedValueOnce(null);
 
     const result = await syncTrashData({ serviceKey: 'test-key', dryRun: false });
 

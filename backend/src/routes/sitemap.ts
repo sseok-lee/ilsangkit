@@ -18,7 +18,13 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const category = req.params.category as FacilityCategory;
     if (!VALID_CATEGORIES.includes(category)) {
-      res.status(400).json({ success: false, error: 'Invalid category' });
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'BAD_REQUEST',
+          message: '유효하지 않은 카테고리입니다',
+        },
+      });
       return;
     }
 

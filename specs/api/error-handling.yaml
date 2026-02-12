@@ -1,0 +1,436 @@
+version: "2.0"
+date: "2026-02-12"
+description: 표준 에러 응답 명세 및 에러 처리 계약
+
+# 에러 클래스 계약
+errorClasses:
+  AppError:
+    description: 애플리케이션 기본 에러 클래스
+    source: backend/src/lib/errors.ts:1-14
+    properties:
+      statusCode:
+        type: number
+        description: HTTP 상태 코드
+      code:
+        type: string
+        description: 에러 코드 (enum 참조)
+      message:
+        type: string
+        description: 에러 메시지
+      isOperational:
+        type: boolean
+        description: 운영 에러 여부 (예상 가능한 에러)
+        default: true
+    constructor:
+      params:
+        - statusCode: number
+        - message: string
+        - code: string
+        - isOperational: boolean = true
+
+  ValidationError:
+    description: 입력 유효성 검증 실패 에러
+    extends: AppError
+    source: backend/src/lib/errors.ts:22-29
+    properties:
+      statusCode:
+        type: number
+        value: 422
+      code:
+        type: string
+        value: VALIDATION_ERROR
+      message:
+        type: string
+        default: Validation failed
+      details:
+        type: object
+        description: Zod 에러 상세 정보 (flatten 형식)
+        optional: true
+    constructor:
+      params:
+        - message: string = "Validation failed"
+        - details: unknown = undefined
+
+  NotFoundError:
+    description: 리소스를 찾을 수 없음 에러
+    extends: AppError
+    source: backend/src/lib/errors.ts:16-20
+    properties:
+      statusCode:
+        type: number
+        value: 404
+      code:
+        type: string
+        value: NOT_FOUND
+      message:
+        type: string
+        default: Resource not found
+    constructor:
+      params:
+        - message: string = "Resource not found"
+
+  ConflictError:
+    description: 리소스 충돌 에러
+    extends: AppError
+    source: backend/src/lib/errors.ts:31-35
+    properties:
+      statusCode:
+        type: number
+        value: 409
+      code:
+        type: string
+        value: CONFLICT
+      message:
+        type: string
+        default: Resource conflict
+    constructor:
+      params:
+        - message: string = "Resource conflict"
+
+# 에러 코드 정의
+errorCodes:
+  VALIDATION_ERROR:
+    statusCode: 422
+    description: 입력 유효성 검증 실패
+    class: ValidationError
+    usage: Zod 스키마 검증 실패 시
+
+  NOT_FOUND:
+    statusCode: 404
+    description: 요청한 리소스를 찾을 수 없음
+    class: NotFoundError
+    usage: 시설/일정 상세 조회 시 데이터 없음
+
+  CONFLICT:
+    statusCode: 409
+    description: 리소스 상태 충돌
+    class: ConflictError
+    usage: 중복 생성, 동시성 문제 등
+
+  INTERNAL_ERROR:
+    statusCode: 500
+    description: 서버 내부 에러
+    class: AppError
+    usage: 예상치 못한 런타임 에러
+
+  BAD_REQUEST:
+    statusCode: 400
+    description: 잘못된 요청 형식
+    class: AppError
+    usage: 파싱 불가능한 요청, 잘못된 타입 등
+
+# HTTP 상태 코드별 표준 응답 스키마
+responses:
+  400:
+    description: 잘못된 요청
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          value: false
+        error:
+          oneOf:
+            - type: string
+              description: 간단한 에러 메시지
+              example: "Invalid id"
+            - type: object
+              description: 구조화된 에러 객체
+              properties:
+                code:
+                  type: string
+                  enum: [BAD_REQUEST]
+                message:
+                  type: string
+                  example: "잘못된 요청입니다"
+    examples:
+      - case: 잘못된 ID 형식
+        source: backend/src/routes/wasteSchedules.ts:78
+        response:
+          success: false
+          error: "Invalid id"
+
+  404:
+    description: 리소스를 찾을 수 없음
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          value: false
+        error:
+          oneOf:
+            - type: string
+              description: 간단한 에러 메시지
+              example: "Not found"
+            - type: object
+              description: 구조화된 에러 객체
+              properties:
+                code:
+                  type: string
+                  enum: [NOT_FOUND]
+                message:
+                  type: string
+                  example: "시설을 찾을 수 없습니다"
+    examples:
+      - case: 시설 상세 조회 실패
+        source: backend/src/routes/facilities.ts:64-67
+        response:
+          success: false
+          error:
+            code: "NOT_FOUND"
+            message: "시설을 찾을 수 없습니다"
+      - case: 쓰레기 일정 조회 실패
+        source: backend/src/routes/wasteSchedules.ts:83
+        response:
+          success: false
+          error: "Not found"
+
+  409:
+    description: 리소스 충돌
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          value: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum: [CONFLICT]
+            message:
+              type: string
+              example: "리소스가 이미 존재합니다"
+
+  422:
+    description: 유효성 검증 실패
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          value: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum: [VALIDATION_ERROR]
+            message:
+              type: string
+              value: "입력값이 올바르지 않습니다"
+            details:
+              type: object
+              description: Zod flatten() 형식의 에러 상세
+              properties:
+                formErrors:
+                  type: array
+                  items:
+                    type: string
+                  description: 전체 폼 레벨 에러
+                fieldErrors:
+                  type: object
+                  description: 필드별 에러 메시지 배열
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+    source: backend/src/middlewares/validate.ts:34-41, 98-105
+    examples:
+      - case: 단일 필드 검증 실패
+        middleware: validate()
+        response:
+          success: false
+          error:
+            code: "VALIDATION_ERROR"
+            message: "입력값이 올바르지 않습니다"
+            details:
+              formErrors: []
+              fieldErrors:
+                category: ["Invalid enum value"]
+      - case: 다중 소스 검증 실패
+        middleware: validateMultiple()
+        response:
+          success: false
+          error:
+            code: "VALIDATION_ERROR"
+            message: "입력값이 올바르지 않습니다"
+            details:
+              params:
+                formErrors: []
+                fieldErrors:
+                  id: ["Required"]
+              query:
+                formErrors: []
+                fieldErrors:
+                  page: ["Number must be greater than or equal to 1"]
+
+  500:
+    description: 서버 내부 에러
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          value: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum: [INTERNAL_ERROR]
+            message:
+              type: string
+              example: "서버 오류가 발생했습니다"
+    notes:
+      - 프로덕션 환경에서는 스택 트레이스를 클라이언트에 노출하지 않습니다
+      - isOperational: false인 에러는 500으로 처리됩니다
+
+# 에러 미들웨어 사용 패턴
+middleware:
+  validate:
+    description: 단일 소스 유효성 검증 미들웨어
+    source: backend/src/middlewares/validate.ts:22-47
+    usage: |
+      validate(schema: ZodSchema, source: 'body' | 'query' | 'params')
+    behavior:
+      - Zod 스키마로 req[source] 검증
+      - 성공 시 파싱된 데이터로 req[source] 교체 (타입 변환 및 기본값 적용)
+      - 실패 시 422 응답 반환 (error.code: VALIDATION_ERROR)
+    example: |
+      router.post('/search',
+        validate(FacilitySearchSchema, 'body'),
+        asyncHandler(async (req, res) => { ... })
+      )
+
+  validateMultiple:
+    description: 다중 소스 유효성 검증 미들웨어
+    source: backend/src/middlewares/validate.ts:68-114
+    usage: |
+      validateMultiple({ body?: ZodSchema, query?: ZodSchema, params?: ZodSchema })
+    behavior:
+      - 여러 소스를 동시에 검증
+      - 검증된 데이터는 res.locals.validated에 저장
+      - body는 req.body로도 교체
+      - 하나라도 실패 시 422 응답 반환 (details에 소스별 에러 포함)
+    example: |
+      router.get('/region/:city/:district/:category',
+        validateMultiple({
+          params: RegionFacilitiesParamsSchema,
+          query: RegionFacilitiesQuerySchema,
+        }),
+        asyncHandler(async (_req, res) => {
+          const { params, query } = res.locals.validated;
+          // ...
+        })
+      )
+
+  asyncHandler:
+    description: 비동기 라우트 핸들러 래퍼
+    source: backend/src/lib/asyncHandler.ts:5-9
+    behavior:
+      - Promise rejection을 Express error handler로 전달
+      - try-catch 없이 async/await 사용 가능
+    example: |
+      router.get('/facilities/:id',
+        asyncHandler(async (req, res) => {
+          const facility = await facilityService.getById(req.params.id);
+          if (!facility) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '...' } });
+            return;
+          }
+          res.json({ success: true, data: facility });
+        })
+      )
+
+# 에러 응답 일관성 규칙
+conventions:
+  responseStructure:
+    rule: "모든 에러 응답은 { success: false, error: ... } 형식을 따릅니다"
+    exceptions:
+      - "일부 레거시 엔드포인트는 error를 문자열로 반환 (예: waste-schedules/:id)"
+      - "향후 표준화 예정 (구조화된 객체로 통일)"
+
+  errorObject:
+    description: 표준 에러 객체 형식
+    standardFormat:
+      example: |
+        {
+          "success": false,
+          "error": {
+            "code": "ERROR_CODE",
+            "message": "사용자 친화적 메시지",
+            "details": "추가 정보 (선택)"
+          }
+        }
+    legacyFormat:
+      example: |
+        {
+          "success": false,
+          "error": "Simple error message"
+        }
+
+  statusCodes:
+    rule: |
+      - 400: 파싱 불가능한 요청 (잘못된 타입, 형식)
+      - 404: 리소스 없음
+      - 409: 리소스 충돌
+      - 422: 유효성 검증 실패 (Zod)
+      - 500: 서버 내부 에러
+
+  zodValidation:
+    rule: "Zod 에러는 반드시 flatten() 형식으로 반환합니다"
+    format: |
+      {
+        formErrors: string[],
+        fieldErrors: { [field: string]: string[] }
+      }
+
+# 프론트엔드 에러 처리 가이드
+clientHandling:
+  typeGuard:
+    description: 에러 응답 타입 체크
+    example: |
+      if (!response.success) {
+        if (typeof response.error === 'string') {
+          // 레거시 형식
+          showToast(response.error);
+        } else {
+          // 표준 형식
+          showToast(response.error.message);
+          if (response.error.details) {
+            // 유효성 검증 에러 처리
+          }
+        }
+      }
+
+  statusCodeHandling:
+    400:
+      action: "요청 파라미터 재검토 및 사용자에게 안내"
+    404:
+      action: "리소스 없음 안내 또는 목록 페이지로 리다이렉트"
+    422:
+      action: "필드별 에러 메시지 표시 (details.fieldErrors 활용)"
+    500:
+      action: "일시적인 오류입니다 안내 및 재시도 유도"
+
+# 향후 개선 사항
+improvements:
+  - task: "레거시 에러 응답 표준화"
+    description: "error를 문자열로 반환하는 엔드포인트를 구조화된 객체로 변경"
+    affected:
+      - "GET /api/waste-schedules/:id (400, 404)"
+    priority: medium
+
+  - task: "글로벌 에러 핸들러 미들웨어 추가"
+    description: |
+      - AppError 인스턴스를 자동으로 표준 응답 형식으로 변환
+      - isOperational: false 에러는 500으로 처리하고 스택 트레이스 숨김
+      - 로깅 통합 (Sentry, Winston 등)
+    priority: high
+
+  - task: "에러 코드 enum 타입 정의"
+    description: "backend/src/types/errors.ts에 ErrorCode enum 추가"
+    priority: low

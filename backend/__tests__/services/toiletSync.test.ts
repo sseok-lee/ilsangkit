@@ -21,11 +21,16 @@ vi.mock('../../src/lib/prisma', () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
-    $transaction: vi.fn((callback) => callback({
-      toilet: {
-        upsert: vi.fn(),
-      },
-    })),
+    $transaction: vi.fn().mockImplementation(async (callback) => {
+      // Mock transaction context
+      const tx = {
+        toilet: {
+          upsert: vi.fn().mockResolvedValue({}),
+          findUnique: vi.fn().mockResolvedValue(null),
+        },
+      };
+      return callback(tx);
+    }),
   },
 }));
 

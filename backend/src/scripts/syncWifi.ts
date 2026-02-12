@@ -248,75 +248,92 @@ async function updateSyncHistory(
 }
 
 /**
- * Wifi 데이터 배치 Upsert
+ * Wifi 데이터 배치 Upsert (트랜잭션 래핑)
  */
 async function batchUpsertWifi(
-  wifiData: TransformedWifi[]
+  wifiData: TransformedWifi[],
+  syncHistoryId: number
 ): Promise<{ newCount: number; updatedCount: number }> {
   let newCount = 0;
   let updatedCount = 0;
 
-  // 배치 크기
   const BATCH_SIZE = 100;
 
   for (let i = 0; i < wifiData.length; i += BATCH_SIZE) {
     const batch = wifiData.slice(i, i + BATCH_SIZE);
+    const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(wifiData.length / BATCH_SIZE);
 
-    await Promise.all(
-      batch.map(async (wifi) => {
-        const existing = await prisma.wifi.findUnique({
-          where: { sourceId: wifi.sourceId },
-        });
+    try {
+      // 각 배치를 트랜잭션으로 래핑
+      await prisma.$transaction(async (tx) => {
+        for (const wifi of batch) {
+          const existing = await tx.wifi.findUnique({
+            where: { sourceId: wifi.sourceId },
+          });
 
-        if (existing) {
-          await prisma.wifi.update({
-            where: { id: existing.id },
-            data: {
-              name: wifi.name,
-              address: wifi.address,
-              roadAddress: wifi.roadAddress,
-              lat: wifi.lat,
-              lng: wifi.lng,
-              city: wifi.city,
-              district: wifi.district,
-              ssid: wifi.ssid,
-              installDate: wifi.installDate,
-              serviceProvider: wifi.serviceProvider,
-              installLocation: wifi.installLocation,
-              managementAgency: wifi.managementAgency,
-              phoneNumber: wifi.phoneNumber,
-              syncedAt: new Date(),
-            },
-          });
-          updatedCount++;
-        } else {
-          await prisma.wifi.create({
-            data: {
-              id: wifi.id,
-              name: wifi.name,
-              address: wifi.address,
-              roadAddress: wifi.roadAddress,
-              lat: wifi.lat,
-              lng: wifi.lng,
-              city: wifi.city,
-              district: wifi.district,
-              sourceId: wifi.sourceId,
-              sourceUrl: wifi.sourceUrl,
-              ssid: wifi.ssid,
-              installDate: wifi.installDate,
-              serviceProvider: wifi.serviceProvider,
-              installLocation: wifi.installLocation,
-              managementAgency: wifi.managementAgency,
-              phoneNumber: wifi.phoneNumber,
-            },
-          });
-          newCount++;
+          if (existing) {
+            await tx.wifi.update({
+              where: { id: existing.id },
+              data: {
+                name: wifi.name,
+                address: wifi.address,
+                roadAddress: wifi.roadAddress,
+                lat: wifi.lat,
+                lng: wifi.lng,
+                city: wifi.city,
+                district: wifi.district,
+                ssid: wifi.ssid,
+                installDate: wifi.installDate,
+                serviceProvider: wifi.serviceProvider,
+                installLocation: wifi.installLocation,
+                managementAgency: wifi.managementAgency,
+                phoneNumber: wifi.phoneNumber,
+                syncedAt: new Date(),
+              },
+            });
+            updatedCount++;
+          } else {
+            await tx.wifi.create({
+              data: {
+                id: wifi.id,
+                name: wifi.name,
+                address: wifi.address,
+                roadAddress: wifi.roadAddress,
+                lat: wifi.lat,
+                lng: wifi.lng,
+                city: wifi.city,
+                district: wifi.district,
+                sourceId: wifi.sourceId,
+                sourceUrl: wifi.sourceUrl,
+                ssid: wifi.ssid,
+                installDate: wifi.installDate,
+                serviceProvider: wifi.serviceProvider,
+                installLocation: wifi.installLocation,
+                managementAgency: wifi.managementAgency,
+                phoneNumber: wifi.phoneNumber,
+              },
+            });
+            newCount++;
+          }
         }
-      })
-    );
+      });
 
-    // 진행 상황 로깅
-    console.info(`Processed ${Math.min(i + BATCH_SIZE, wifiData.length)} / ${wifiData.length} records`);
+      // 배치 완료마다 SyncHistory 진행 상황 업데이트
+      await prisma.syncHistory.update({
+        where: { id: syncHistoryId },
+        data: {
+          newRecords: newCount,
+          updatedRecords: updatedCount,
+        },
+      });
+
+      console.info(`Batch ${batchNumber}/${totalBatches} completed: ${Math.min(i + BATCH_SIZE, wifiData.length)}/${wifiData.length} records`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Batch ${batchNumber}/${totalBatches} failed: ${errorMsg}`);
+      throw new Error(`Batch ${batchNumber} upsert failed: ${errorMsg}. Processed: ${i}/${wifiData.length}`);
+    }
   }
 
   return { newCount, updatedCount };
@@ -419,7 +436,7 @@ export async function syncWifiData(csvContentOrPath?: string): Promise<WifiSyncR
 
     // DB 저장
     console.info('Saving to database...');
-    const { newCount, updatedCount } = await batchUpsertWifi(uniqueWifiData);
+    const { newCount, updatedCount } = await batchUpsertWifi(uniqueWifiData, historyId);
     result.newRecords = newCount;
     result.updatedRecords = updatedCount;
 

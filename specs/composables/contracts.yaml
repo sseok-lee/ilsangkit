@@ -1,0 +1,997 @@
+version: "2.0"
+project: ilsangkit
+description: "Frontend composable contracts - input/output interfaces for all Vue 3 composables"
+generatedAt: "2026-02-12"
+
+composables:
+  useErrorHandler:
+    file: frontend/composables/useErrorHandler.ts
+    description: 중앙 집중 에러 핸들링 및 표준화
+
+    input:
+      params: {}
+
+    output:
+      reactive:
+        error:
+          type: Ref<StandardError | null>
+          readonly: true
+          description: 표준화된 에러 객체
+        isError:
+          type: Ref<boolean>
+          readonly: true
+          description: 에러 발생 여부
+
+      methods:
+        setError:
+          params:
+            - name: err
+              type: unknown
+          returns: void
+          description: 에러를 표준 형식으로 변환하여 설정
+
+        clearError:
+          params: []
+          returns: void
+          description: 에러 상태 초기화
+
+        withErrorHandling:
+          params:
+            - name: fn
+              type: () => Promise<T>
+            - name: options
+              type: "{ onError?: (error: StandardError) => void }"
+              required: false
+          returns: Promise<T | null>
+          description: async 함수를 에러 핸들링으로 래핑
+
+        normalizeError:
+          params:
+            - name: error
+              type: unknown
+          returns: StandardError
+          description: 에러를 표준 형식으로 변환 (유틸)
+
+        getErrorType:
+          params:
+            - name: error
+              type: StandardError
+          returns: ErrorType
+          description: 에러 타입 판별 (network/validation/notfound/server/unknown)
+
+    types:
+      StandardError: |
+        interface StandardError {
+          code: string
+          message: string
+          statusCode?: number
+          details?: unknown
+          originalError?: Error
+        }
+
+      ErrorType: "type ErrorType = 'network' | 'validation' | 'notfound' | 'server' | 'unknown'"
+
+    dependencies:
+      composables: []
+      external: [vue]
+      api: []
+
+    sideEffects:
+      - description: "개발 환경에서 에러를 콘솔에 로깅 (console.error)"
+
+    usedIn: []
+
+  useFacilityDetail:
+    file: frontend/composables/useFacilityDetail.ts
+    description: 시설 상세 정보 조회
+
+    input:
+      params: {}
+
+    output:
+      reactive:
+        loading:
+          type: Ref<boolean>
+          readonly: true
+          description: API 호출 진행 중 여부
+        error:
+          type: Ref<Error | null>
+          readonly: true
+          description: 에러 객체
+        facility:
+          type: Ref<FacilityDetail | null>
+          readonly: true
+          description: 조회된 시설 상세 정보
+
+      methods:
+        fetchDetail:
+          params:
+            - name: category
+              type: FacilityCategory
+            - name: id
+              type: string
+          returns: Promise<FacilityDetail | null>
+          description: 특정 카테고리의 시설 상세 정보 조회
+
+    dependencies:
+      composables: []
+      external: [vue, nuxt]
+      api:
+        - endpoint: GET /api/facilities/{category}/{id}
+          description: 시설 상세 정보 조회 API
+
+    sideEffects: []
+
+    usedIn:
+      - frontend/pages/[category]/[id].vue
+
+  useFacilityMeta:
+    file: frontend/composables/useFacilityMeta.ts
+    description: SEO 메타태그 및 Open Graph 설정
+
+    input:
+      params: {}
+
+    output:
+      reactive: {}
+
+      methods:
+        setMeta:
+          params:
+            - name: options
+              type: "MetaOptions"
+          returns: void
+          description: 공통 메타태그 설정 (title, description, og, twitter)
+
+        setHomeMeta:
+          params: []
+          returns: void
+          description: 홈페이지 메타태그 설정
+
+        setSearchMeta:
+          params:
+            - name: params
+              type: "{ keyword?: string; category?: FacilityCategory; city?: string; district?: string }"
+          returns: void
+          description: 검색 결과 페이지 메타태그
+
+        setFacilityDetailMeta:
+          params:
+            - name: facility
+              type: FacilityDetail
+          returns: void
+          description: 시설 상세 페이지 메타태그
+
+        setRegionMeta:
+          params:
+            - name: params
+              type: "{ city: string; cityName: string; district: string; districtName: string; category: FacilityCategory }"
+          returns: void
+          description: 지역별 페이지 메타태그
+
+        setWasteScheduleDetailMeta:
+          params:
+            - name: schedule
+              type: "{ id: number; city: string; district: string; targetRegion?: string | null }"
+          returns: void
+          description: 쓰레기 배출 상세 페이지 메타태그
+
+        setErrorMeta:
+          params:
+            - name: statusCode
+              type: number
+          returns: void
+          description: 에러 페이지 메타태그 (404, 500 등)
+
+      constants:
+        SITE_NAME:
+          type: string
+          value: "일상킷"
+        SITE_URL:
+          type: string
+          value: "https://ilsangkit.co.kr"
+        SITE_DESCRIPTION:
+          type: string
+          value: "내 주변 생활 편의 정보, 한 번에 찾기. 위치 기반으로 내 주변 공공시설과 생활 편의 정보를 통합 검색합니다."
+
+    types:
+      MetaOptions: |
+        interface MetaOptions {
+          title: string
+          description: string
+          path?: string
+          image?: string
+          type?: 'website' | 'article'
+        }
+
+    dependencies:
+      composables: []
+      external: [nuxt, "@unhead/vue"]
+      api: []
+
+    sideEffects:
+      - description: "useSeoMeta()와 useHead()를 사용하여 HTML head 메타태그 수정"
+
+    usedIn:
+      - frontend/pages/[category]/[id].vue
+      - frontend/pages/index.vue
+      - frontend/pages/search.vue
+      - frontend/pages/[city]/[district]/index.vue
+      - frontend/pages/[city]/index.vue
+      - frontend/pages/trash/[id].vue
+      - frontend/pages/about.vue
+      - frontend/pages/terms.vue
+      - frontend/pages/privacy.vue
+      - frontend/pages/[city]/[district]/[category].vue
+
+  useFacilitySearch:
+    file: frontend/composables/useFacilitySearch.ts
+    description: 시설 검색 (키워드, 카테고리, 위치 기반)
+
+    input:
+      params: {}
+
+    output:
+      reactive:
+        loading:
+          type: Ref<boolean>
+          readonly: true
+          description: 검색 API 호출 진행 중 여부
+        facilities:
+          type: Ref<Facility[]>
+          readonly: true
+          description: 검색 결과 시설 목록
+        total:
+          type: Ref<number>
+          readonly: true
+          description: 전체 검색 결과 수
+        currentPage:
+          type: Ref<number>
+          readonly: true
+          description: 현재 페이지 번호
+        totalPages:
+          type: Ref<number>
+          readonly: true
+          description: 전체 페이지 수
+        error:
+          type: Ref<string | null>
+          readonly: true
+          description: 에러 메시지
+
+      methods:
+        search:
+          params:
+            - name: params
+              type: SearchParams
+          returns: Promise<void>
+          description: 시설 검색 실행 (키워드, 카테고리, 위치, 페이지네이션)
+
+        searchNearby:
+          params:
+            - name: params
+              type: "{ lat: number; lng: number; category: string; radius?: number }"
+          returns: "Promise<{ items: Facility[] }>"
+          description: 반경 기반 근처 시설 검색 (기본 반경 1000m)
+
+        resetPage:
+          params: []
+          returns: void
+          description: 현재 페이지를 1로 초기화
+
+        setPage:
+          params:
+            - name: page
+              type: number
+          returns: void
+          description: 페이지 번호 설정
+
+        clearResults:
+          params: []
+          returns: void
+          description: 검색 결과 및 상태 초기화
+
+    types:
+      SearchParams: |
+        interface SearchParams {
+          keyword?: string
+          category?: FacilityCategory
+          lat?: number
+          lng?: number
+          radius?: number
+          swLat?: number
+          swLng?: number
+          neLat?: number
+          neLng?: number
+          city?: string
+          district?: string
+          page?: number
+          limit?: number
+        }
+
+    dependencies:
+      composables: []
+      external: [vue, nuxt]
+      api:
+        - endpoint: POST /api/facilities/search
+          description: 시설 통합 검색 API
+
+    sideEffects: []
+
+    usedIn:
+      - frontend/pages/search.vue
+
+  useGeolocation:
+    file: frontend/composables/useGeolocation.ts
+    description: 브라우저 Geolocation API 래퍼
+
+    input:
+      params: {}
+
+    output:
+      reactive:
+        position:
+          type: Ref<GeolocationPosition | null>
+          readonly: true
+          description: 현재 위치 좌표
+        error:
+          type: Ref<GeolocationError | null>
+          readonly: true
+          description: Geolocation 에러
+        isLoading:
+          type: Ref<boolean>
+          readonly: true
+          description: 위치 조회 중 여부
+
+      methods:
+        getCurrentPosition:
+          params: []
+          returns: Promise<GeolocationPosition>
+          description: 현재 위치 조회 (일회성)
+
+        watchPosition:
+          params:
+            - name: callback
+              type: (pos: GeolocationPosition) => void
+          returns: () => void
+          description: 위치 변화 감시 시작 (반환값은 cleanup 함수)
+
+        calculateDistance:
+          params:
+            - name: lat1
+              type: number
+            - name: lng1
+              type: number
+            - name: lat2
+              type: number
+            - name: lng2
+              type: number
+          returns: number
+          description: Haversine 공식으로 두 좌표 간 거리 계산 (미터)
+
+    types:
+      GeolocationPosition: |
+        interface GeolocationPosition {
+          lat: number
+          lng: number
+        }
+
+      GeolocationError: |
+        interface GeolocationError {
+          code: number
+          message: string
+        }
+
+    dependencies:
+      composables: []
+      external: [vue]
+      api: []
+
+    sideEffects:
+      - description: "navigator.geolocation API 호출 (브라우저 위치 권한 요청)"
+
+    usedIn:
+      - frontend/pages/search.vue
+      - frontend/components/location/CurrentLocationButton.vue
+
+  useKakaoMap:
+    file: frontend/composables/useKakaoMap.ts
+    description: Kakao Maps API 통합 (지도 초기화, 마커, Geocoding)
+
+    input:
+      params: {}
+
+    output:
+      reactive:
+        map:
+          type: Ref<KakaoMap | null>
+          readonly: true
+          description: Kakao 지도 인스턴스
+        isLoaded:
+          type: Ref<boolean>
+          readonly: true
+          description: Kakao Maps SDK 로드 완료 여부
+
+      methods:
+        loadKakaoMaps:
+          params: []
+          returns: Promise<void>
+          description: Kakao Maps SDK 동적 로드
+
+        initMap:
+          params:
+            - name: container
+              type: HTMLElement
+            - name: options
+              type: MapInitOptions
+          returns: Promise<void>
+          description: 지도 초기화 및 생성
+
+        setCenter:
+          params:
+            - name: lat
+              type: number
+            - name: lng
+              type: number
+          returns: void
+          description: 지도 중심 이동 (즉시)
+
+        panTo:
+          params:
+            - name: lat
+              type: number
+            - name: lng
+              type: number
+          returns: void
+          description: 지도 중심 이동 (애니메이션)
+
+        clearMarkers:
+          params: []
+          returns: void
+          description: 모든 마커와 오버레이 제거
+
+        addMarkers:
+          params:
+            - name: facilities
+              type: FacilitySearchItem[]
+            - name: options
+              type: "MarkerOptions"
+              required: false
+          returns: void
+          description: 시설 목록을 지도에 마커로 추가 (XSS 방지 적용)
+
+        setUserLocationMarker:
+          params:
+            - name: lat
+              type: number
+            - name: lng
+              type: number
+          returns: void
+          description: 사용자 현재 위치 마커 표시 (파란색 펄스 애니메이션)
+
+        getCenter:
+          params: []
+          returns: "{ lat: number; lng: number } | null"
+          description: 현재 지도 중심 좌표 반환
+
+        getBounds:
+          params: []
+          returns: "{ sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null"
+          description: 현재 지도 표시 영역 경계 좌표 (남서, 북동)
+
+        coordToRegion:
+          params:
+            - name: lat
+              type: number
+            - name: lng
+              type: number
+          returns: "Promise<{ city: string; district: string } | null>"
+          description: GPS 좌표를 시/도, 구/군 명칭으로 역지오코딩
+
+    types:
+      MapInitOptions: |
+        interface MapInitOptions {
+          center: { lat: number; lng: number }
+          level?: number // default: 15
+        }
+
+      MarkerOptions: |
+        interface MarkerOptions {
+          color?: string // default: '#3b82f6'
+          onClick?: (facility: FacilitySearchItem) => void
+        }
+
+    dependencies:
+      composables: []
+      external: [vue, nuxt]
+      api:
+        - endpoint: Kakao Maps JavaScript SDK
+          description: "https://dapi.kakao.com/v2/maps/sdk.js"
+
+    sideEffects:
+      - description: "Kakao Maps SDK 스크립트를 동적으로 document.head에 추가"
+      - description: "DOM 요소에 지도 렌더링 및 마커/오버레이 추가"
+
+    usedIn:
+      - frontend/components/map/FacilityMap.vue
+
+  useRegionFacilities:
+    file: frontend/composables/useRegionFacilities.ts
+    description: 지역별 시설 목록 조회 (시/도 + 구/군 + 카테고리)
+
+    input:
+      params: {}
+
+    output:
+      reactive:
+        facilities:
+          type: Ref<Facility[]>
+          readonly: true
+          description: 지역별 시설 목록
+        loading:
+          type: Ref<boolean>
+          readonly: true
+          description: API 호출 진행 중 여부
+        error:
+          type: Ref<string | null>
+          readonly: true
+          description: 에러 메시지
+        total:
+          type: Ref<number>
+          readonly: true
+          description: 전체 시설 수
+        page:
+          type: Ref<number>
+          readonly: true
+          description: 현재 페이지 번호
+        totalPages:
+          type: Ref<number>
+          readonly: true
+          description: 전체 페이지 수
+
+      methods:
+        fetchFacilities:
+          params:
+            - name: city
+              type: string
+            - name: district
+              type: string
+            - name: category
+              type: string
+            - name: currentPage
+              type: number
+              required: false
+              default: 1
+            - name: pageSize
+              type: number
+              required: false
+              default: 20
+          returns: Promise<void>
+          description: 특정 지역의 카테고리별 시설 목록 조회
+
+    dependencies:
+      composables: []
+      external: [vue, nuxt]
+      api:
+        - endpoint: GET /api/facilities/region/{city}/{district}/{category}
+          description: 지역별 시설 목록 조회 API
+
+    sideEffects: []
+
+    usedIn:
+      - frontend/pages/[city]/[district]/[category].vue
+
+  useRegions:
+    file: frontend/composables/useRegions.ts
+    description: 전국 지역 정보 조회 및 캐싱 (시/도, 구/군, slug 매핑)
+
+    input:
+      params: {}
+
+    output:
+      reactive:
+        regions:
+          type: Ref<RegionInfo[]>
+          readonly: true
+          description: 캐시된 전체 지역 정보 배열
+        isLoaded:
+          type: Ref<boolean>
+          readonly: true
+          description: 지역 데이터 로드 완료 여부
+        isLoading:
+          type: Ref<boolean>
+          readonly: true
+          description: 지역 데이터 로딩 중 여부
+        error:
+          type: Ref<string | null>
+          readonly: true
+          description: 에러 메시지
+        citiesWithDistricts:
+          type: ComputedRef<CityData[]>
+          readonly: true
+          description: 시/도별로 그룹화된 구/군 목록 (computed)
+
+      methods:
+        loadRegions:
+          params: []
+          returns: Promise<RegionInfo[]>
+          description: API에서 전체 지역 정보 로드 (1회 호출 후 캐시)
+
+        findRegionBySlug:
+          params:
+            - name: citySlug
+              type: string
+            - name: districtSlug
+              type: string
+          returns: RegionInfo | undefined
+          description: slug로 지역 정보 조회
+
+        getDistrictsByCity:
+          params:
+            - name: citySlug
+              type: string
+          returns: DistrictData[]
+          description: 특정 시/도의 구/군 목록 반환
+
+        getCityName:
+          params:
+            - name: citySlug
+              type: string
+          returns: string
+          description: 시/도 slug를 한글명으로 변환
+
+        getDistrictName:
+          params:
+            - name: citySlug
+              type: string
+            - name: districtSlug
+              type: string
+          returns: string
+          description: 구/군 slug를 한글명으로 변환
+
+      functions:
+        generateSlug:
+          params:
+            - name: koreanName
+              type: string
+          returns: string
+          description: 한글 지역명을 slug(로마자)로 변환
+
+    types:
+      CityData: |
+        interface CityData {
+          slug: string
+          name: string
+          districts: DistrictData[]
+        }
+
+      DistrictData: |
+        interface DistrictData {
+          slug: string
+          name: string
+          lat: number
+          lng: number
+          bjdCode: string
+        }
+
+      CITY_SLUG_MAP: "Record<string, string> // slug → 한글명 매핑 (정적)"
+      CITY_NAME_TO_SLUG: "Record<string, string> // 한글명 → slug 역매핑"
+
+    dependencies:
+      composables: []
+      external: [vue, nuxt]
+      api:
+        - endpoint: GET /api/meta/regions
+          description: 전체 지역 정보 조회 API
+
+    sideEffects:
+      - description: "모듈 레벨에서 지역 데이터 캐싱 (cachedRegions ref)"
+
+    usedIn:
+      - frontend/pages/[city]/[district]/index.vue
+      - frontend/pages/[city]/index.vue
+      - frontend/pages/[city]/[district]/[category].vue
+
+  useStructuredData:
+    file: frontend/composables/useStructuredData.ts
+    description: JSON-LD 구조화된 데이터 (Schema.org) 생성
+
+    input:
+      params: {}
+
+    output:
+      reactive: {}
+
+      methods:
+        setWebsiteSchema:
+          params: []
+          returns: void
+          description: WebSite 스키마 설정 (홈페이지, SearchAction 포함)
+
+        setBreadcrumbSchema:
+          params:
+            - name: items
+              type: "BreadcrumbItem[]"
+          returns: void
+          description: BreadcrumbList 스키마 설정
+
+        setFacilitySchema:
+          params:
+            - name: facility
+              type: FacilityDetail
+          returns: void
+          description: LocalBusiness/Place 스키마 (시설 상세)
+
+        setItemListSchema:
+          params:
+            - name: items
+              type: "Array<{ name: string; url: string; position?: number }>"
+          returns: void
+          description: ItemList 스키마 (검색 결과/목록)
+
+        setOrganizationSchema:
+          params: []
+          returns: void
+          description: Organization 스키마 (사이트 전체)
+
+        setWasteScheduleSchema:
+          params:
+            - name: schedule
+              type: "{ id: number; city: string; district: string; targetRegion?: string | null; details?: { manageDepartment?: string; managePhone?: string } | null }"
+          returns: void
+          description: GovernmentService 스키마 (쓰레기 배출 안내)
+
+    types:
+      BreadcrumbItem: |
+        interface BreadcrumbItem {
+          name: string
+          url: string
+        }
+
+    dependencies:
+      composables: []
+      external: [nuxt, "@unhead/vue"]
+      api: []
+
+    sideEffects:
+      - description: "useHead()를 사용하여 HTML head에 JSON-LD script 태그 추가"
+
+    usedIn:
+      - frontend/pages/[category]/[id].vue
+      - frontend/pages/index.vue
+      - frontend/pages/search.vue
+      - frontend/pages/trash/[id].vue
+      - frontend/pages/about.vue
+      - frontend/pages/terms.vue
+      - frontend/pages/privacy.vue
+      - frontend/layouts/default.vue
+
+  useWasteSchedule:
+    file: frontend/composables/useWasteSchedule.ts
+    description: 쓰레기 배출 일정 조회 (시/도, 구/군별)
+
+    input:
+      params: {}
+
+    output:
+      reactive:
+        isLoading:
+          type: Ref<boolean>
+          readonly: true
+          description: API 호출 진행 중 여부
+        error:
+          type: Ref<Error | null>
+          readonly: true
+          description: 에러 객체
+
+      methods:
+        getCities:
+          params: []
+          returns: Promise<string[]>
+          description: 쓰레기 배출 데이터가 있는 시/도 목록 조회
+
+        getDistricts:
+          params:
+            - name: city
+              type: string
+          returns: Promise<string[]>
+          description: 특정 시/도의 구/군 목록 조회
+
+        getSchedules:
+          params:
+            - name: city
+              type: string
+            - name: district
+              type: string
+            - name: keyword
+              type: string
+              required: false
+          returns: Promise<RegionScheduleResponse>
+          description: 지역별 쓰레기 배출 일정 목록 조회 (지역/동 키워드 필터링 가능)
+
+        getScheduleDetail:
+          params:
+            - name: id
+              type: number
+          returns: Promise<BackendScheduleItem | null>
+          description: 특정 배출 일정 상세 정보 조회
+
+    types:
+      RegionScheduleResponse: |
+        interface RegionScheduleResponse {
+          schedules: RegionSchedule[]
+          contact?: ContactInfo
+        }
+
+      RegionSchedule: |
+        interface RegionSchedule {
+          id: number
+          targetRegion: string
+          emissionPlace?: string
+          emissionPlaceType?: string
+          uncollectedDay?: string
+          wasteTypes: WasteTypeBadge[]
+        }
+
+      WasteTypeBadge: |
+        interface WasteTypeBadge {
+          type: WasteType
+          dayOfWeek: string[]
+        }
+
+      WasteType: "type WasteType = '일반쓰레기' | '음식물쓰레기' | '재활용' | '대형폐기물'"
+
+      ContactInfo: |
+        interface ContactInfo {
+          name: string
+          phone?: string
+        }
+
+    dependencies:
+      composables: []
+      external: [vue, nuxt]
+      api:
+        - endpoint: GET /api/waste-schedules/cities
+          description: 쓰레기 배출 데이터가 있는 시/도 목록
+        - endpoint: GET /api/waste-schedules/districts/{city}
+          description: 특정 시/도의 구/군 목록
+        - endpoint: GET /api/waste-schedules?city={city}&district={district}&keyword={keyword}
+          description: 지역별 쓰레기 배출 일정 조회
+        - endpoint: GET /api/waste-schedules/{id}
+          description: 배출 일정 상세 정보
+
+    sideEffects:
+      - description: "API 호출 실패 시 Mock 데이터 반환 (개발 환경 fallback)"
+
+    usedIn:
+      - frontend/pages/search.vue
+      - frontend/pages/trash/[id].vue
+      - frontend/components/facility/WasteScheduleCard.vue
+
+# ============================================
+# Shared Type Definitions
+# ============================================
+sharedTypes:
+  FacilityCategory: "type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library'"
+
+  Facility: |
+    interface Facility {
+      id: string
+      name: string
+      category: FacilityCategory
+      address: string | null
+      roadAddress: string | null
+      lat: number
+      lng: number
+      city: string
+      district: string
+      distance?: number
+    }
+
+  FacilityDetail: |
+    interface FacilityDetail {
+      id: string
+      category: FacilityCategory
+      name: string
+      address: string | null
+      roadAddress: string | null
+      lat: number
+      lng: number
+      city: string
+      district: string
+      bjdCode: string | null
+      details: ToiletDetails | WifiDetails | ClothesDetails | KioskDetails | ParkingDetails | AedDetails | LibraryDetails
+      sourceId: string
+      sourceUrl: string | null
+      viewCount: number
+      createdAt: string
+      updatedAt: string
+      syncedAt: string
+    }
+
+  RegionInfo: |
+    interface RegionInfo {
+      id: number
+      bjdCode: string
+      city: string
+      district: string
+      slug: string
+      lat: number
+      lng: number
+    }
+
+# ============================================
+# Usage Patterns
+# ============================================
+usagePatterns:
+  errorHandling: |
+    // 표준 에러 핸들링 패턴
+    const { error, isError, withErrorHandling } = useErrorHandler()
+
+    await withErrorHandling(async () => {
+      await someAsyncOperation()
+    }, {
+      onError: (err) => {
+        console.error('Custom handling:', err)
+      }
+    })
+
+  facilitySearch: |
+    // 시설 검색 패턴
+    const { loading, facilities, search } = useFacilitySearch()
+
+    await search({
+      keyword: '화장실',
+      category: 'toilet',
+      city: '서울',
+      district: '강남구',
+      page: 1,
+      limit: 20
+    })
+
+  geolocationWithMap: |
+    // 위치 기반 검색 + 지도 표시 패턴
+    const { getCurrentPosition } = useGeolocation()
+    const { initMap, addMarkers, setUserLocationMarker } = useKakaoMap()
+    const { searchNearby } = useFacilitySearch()
+
+    const pos = await getCurrentPosition()
+    await initMap(mapContainer, { center: pos })
+    setUserLocationMarker(pos.lat, pos.lng)
+
+    const { items } = await searchNearby({ ...pos, category: 'toilet' })
+    addMarkers(items)
+
+  seoOptimization: |
+    // SEO 최적화 패턴 (메타태그 + 구조화된 데이터)
+    const { setFacilityDetailMeta } = useFacilityMeta()
+    const { setFacilitySchema, setBreadcrumbSchema } = useStructuredData()
+
+    setFacilityDetailMeta(facility)
+    setFacilitySchema(facility)
+    setBreadcrumbSchema([
+      { name: '홈', url: '/' },
+      { name: facility.category, url: `/search?category=${facility.category}` },
+      { name: facility.name, url: `/${facility.category}/${facility.id}` }
+    ])
+
+  regionNavigation: |
+    // 지역 탐색 패턴
+    const { loadRegions, citiesWithDistricts, findRegionBySlug } = useRegions()
+
+    await loadRegions()
+    const cities = citiesWithDistricts.value // 시/도 목록 + 구/군
+    const region = findRegionBySlug('seoul', 'gangnam') // 지역 조회
+
+# ============================================
+# Notes
+# ============================================
+notes:
+  - "모든 composable은 Vue 3 Composition API 패턴을 따릅니다"
+  - "reactive 상태는 readonly()로 래핑되어 외부에서 직접 수정할 수 없습니다"
+  - "useFacilityMeta와 useStructuredData는 Nuxt의 useSeoMeta/useHead를 사용합니다"
+  - "useKakaoMap은 Kakao Maps SDK를 동적으로 로드하며, XSS 방지를 위해 textContent를 사용합니다"
+  - "useRegions는 모듈 레벨 캐싱을 통해 중복 API 호출을 방지합니다"
+  - "useWasteSchedule는 API 실패 시 Mock 데이터로 폴백합니다 (개발 환경)"
+  - "API 호출은 Nuxt의 $fetch를 사용하며, useRuntimeConfig()로 API Base URL을 가져옵니다"
+  - "GeolocationError 코드: 1=권한거부, 2=위치정보불가, 3=타임아웃"
+  - "Haversine 공식(useGeolocation.calculateDistance)의 반환값은 미터 단위입니다"

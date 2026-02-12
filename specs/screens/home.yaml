@@ -1,0 +1,138 @@
+version: "2.0"
+date: "2026-02-12"
+
+screen:
+  name: 홈 (메인 페이지)
+  route: /
+  file: frontend/pages/index.vue
+
+purpose:
+  description: 일상킷 서비스의 랜딩 페이지로, 사용자가 주변 생활 편의시설을 검색하고 카테고리별로 탐색할 수 있는 진입점
+  userGoals:
+    - 키워드 또는 현재 위치로 주변 시설 빠르게 검색
+    - 카테고리별 시설 탐색 (화장실, 와이파이, 의류수거함 등)
+    - 인기 지역 바로가기로 특정 지역 시설 조회
+
+layouts:
+  mobile:
+    breakpoint: "< 768px"
+    sections:
+      - heroMobile
+      - searchBarMobile
+      - categoryChipsMobile
+      - locationCTAMobile
+      - popularRegionsMobile
+      - mapPlaceholder
+  desktop:
+    breakpoint: ">= 768px"
+    sections:
+      - heroDesktop
+      - searchBarDesktop
+      - categoryGridDesktop
+      - popularRegionsDesktop
+
+sections:
+  heroMobile:
+    name: 모바일 히어로 섹션
+    elements:
+      - 메인 타이틀 ("내 주변 생활 편의 정보, 한 번에 찾기")
+      - 서브타이틀 ("화장실부터 와이파이까지, 일상킷이 도와드려요.")
+
+  searchBarMobile:
+    name: 검색 입력창 (모바일)
+    elements:
+      - 텍스트 입력 필드 (placeholder: "장소, 시설 검색...")
+      - 검색 아이콘
+      - Enter 키 입력 지원
+
+  categoryChipsMobile:
+    name: 카테고리 칩 (모바일 가로 스크롤)
+    elements:
+      - 8개 카테고리 버튼 (toilet, wifi, clothes, kiosk, parking, aed, library, trash)
+      - CategoryIcon 컴포넌트 사용
+      - 가로 스크롤 (no-scrollbar)
+
+  locationCTAMobile:
+    name: 위치 기반 검색 CTA (모바일)
+    elements:
+      - "현재 위치로 검색" 버튼
+      - my_location 아이콘
+      - 그라디언트 오버레이 효과
+
+  popularRegionsMobile:
+    name: 인기 지역 (모바일)
+    elements:
+      - 섹션 타이틀 "인기 지역"
+      - 6개 지역 태그 버튼 (강남, 홍대, 신촌, 명동, 이태원, 건대입구)
+      - 해시태그 스타일 표시
+
+  mapPlaceholder:
+    name: 지도 플레이스홀더 (모바일)
+    elements:
+      - 배경 이미지 (/images/map-bg.webp)
+      - 그라디언트 오버레이
+      - "지금 내 주변 350+개 편의시설 검색 가능" 안내 텍스트
+
+  heroDesktop:
+    name: 데스크톱 히어로 섹션
+    elements:
+      - 메인 타이틀 (중앙 정렬)
+      - 서브타이틀
+
+  searchBarDesktop:
+    name: 검색 입력창 (데스크톱)
+    elements:
+      - 큰 검색 입력 필드 (max-width: 560px)
+      - 검색 아이콘
+      - "현재 위치로 검색" 버튼 (입력창 우측 내부)
+
+  categoryGridDesktop:
+    name: 카테고리 그리드 (데스크톱)
+    elements:
+      - 9개 카테고리 카드 (all + 8개 카테고리)
+      - 각 카드: 아이콘, 라벨, 시설 개수 표시
+      - 그리드 레이아웃 (2-3-3-9 컬럼 반응형)
+
+  popularRegionsDesktop:
+    name: 인기 지역 (데스크톱)
+    elements:
+      - 섹션 타이틀 "인기 지역" + trending_up 아이콘
+      - 8개 지역 버튼 (서울, 경기, 부산, 대구, 인천, 광주, 대전, 울산)
+      - pill 스타일 버튼
+
+state:
+  composables:
+    - name: useFacilityMeta
+      usage: 홈 페이지 SEO 메타태그 설정
+    - name: useStructuredData
+      usage: WebSite JSON-LD 구조화 데이터 추가
+  data:
+    - searchKeyword (ref<string>): 검색어 입력 값
+    - stats (ref<Record<string, number>>): 카테고리별 시설 개수 통계 (API에서 가져옴)
+  computed:
+    - categoriesDesktop: 카테고리 설정 + 실시간 개수 데이터 병합
+
+handlers:
+  handleSearch:
+    trigger: 검색창 Enter 키 또는 검색 버튼 클릭
+    action: /search?keyword={searchKeyword} 페이지로 이동
+  handleLocationSearch:
+    trigger: "현재 위치로 검색" 버튼 클릭
+    action: /search?useLocation=true 페이지로 이동
+  handleRegionClick:
+    trigger: 인기 지역 버튼 클릭
+    action: /search?keyword={regionName} 페이지로 이동
+  categoryClick:
+    trigger: 카테고리 칩/카드 클릭
+    action: /search?category={categoryId} 페이지로 이동
+
+seo:
+  title: "일상킷 - 내 주변 생활 편의 정보, 한 번에 찾기"
+  description: "화장실부터 와이파이까지, 일상킷이 도와드려요. 위치 기반 생활 편의 시설 통합 검색 서비스."
+  structuredData: WebSite schema (setWebsiteSchema)
+
+dataRequirements:
+  - resource: 카테고리별 시설 통계
+    endpoint: /api/meta/stats
+    fields: [toilet, wifi, clothes, kiosk, trash, parking, aed, library, total]
+    via: onMounted fetch

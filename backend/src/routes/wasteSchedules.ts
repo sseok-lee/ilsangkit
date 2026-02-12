@@ -75,12 +75,24 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const idParam = req.params.id as string;
   const id = parseInt(idParam, 10);
   if (isNaN(id)) {
-    res.status(400).json({ success: false, error: 'Invalid id' });
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'BAD_REQUEST',
+        message: '유효하지 않은 ID입니다',
+      },
+    });
     return;
   }
   const item = await wasteScheduleService.getById(id);
   if (!item) {
-    res.status(404).json({ success: false, error: 'Not found' });
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: '배출 일정을 찾을 수 없습니다',
+      },
+    });
     return;
   }
   res.json({ success: true, data: item });
