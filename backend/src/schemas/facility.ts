@@ -3,6 +3,7 @@
 
 import { z } from 'zod';
 import { PaginationSchema } from './common.js';
+import { KOREA_BOUNDS, SEARCH_DEFAULTS, PAGINATION } from '../constants/index.js';
 
 // 카테고리 enum (지도 마커 표시 가능한 시설만)
 // trash는 좌표 없는 일정 데이터로 WasteSchedule 별도 테이블에서 관리
@@ -23,17 +24,17 @@ export const FacilitySearchSchema = z
   .object({
     keyword: z.string().min(1).max(100).optional(),
     category: FacilityCategorySchema.optional(),
-    lat: z.coerce.number().min(33, '한국 영역 외 좌표입니다').max(39, '한국 영역 외 좌표입니다').optional(),
-    lng: z.coerce.number().min(124, '한국 영역 외 좌표입니다').max(132, '한국 영역 외 좌표입니다').optional(),
-    radius: z.coerce.number().int().min(100).max(10000).default(1000).optional(),
-    swLat: z.coerce.number().min(33, '한국 영역 외 좌표입니다').max(39, '한국 영역 외 좌표입니다').optional(),
-    swLng: z.coerce.number().min(124, '한국 영역 외 좌표입니다').max(132, '한국 영역 외 좌표입니다').optional(),
-    neLat: z.coerce.number().min(33, '한국 영역 외 좌표입니다').max(39, '한국 영역 외 좌표입니다').optional(),
-    neLng: z.coerce.number().min(124, '한국 영역 외 좌표입니다').max(132, '한국 영역 외 좌표입니다').optional(),
+    lat: z.coerce.number().min(KOREA_BOUNDS.LAT_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LAT_MAX, '한국 영역 외 좌표입니다').optional(),
+    lng: z.coerce.number().min(KOREA_BOUNDS.LNG_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LNG_MAX, '한국 영역 외 좌표입니다').optional(),
+    radius: z.coerce.number().int().min(SEARCH_DEFAULTS.MIN_RADIUS_METERS).max(SEARCH_DEFAULTS.MAX_RADIUS_METERS).default(SEARCH_DEFAULTS.RADIUS_METERS).optional(),
+    swLat: z.coerce.number().min(KOREA_BOUNDS.LAT_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LAT_MAX, '한국 영역 외 좌표입니다').optional(),
+    swLng: z.coerce.number().min(KOREA_BOUNDS.LNG_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LNG_MAX, '한국 영역 외 좌표입니다').optional(),
+    neLat: z.coerce.number().min(KOREA_BOUNDS.LAT_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LAT_MAX, '한국 영역 외 좌표입니다').optional(),
+    neLng: z.coerce.number().min(KOREA_BOUNDS.LNG_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LNG_MAX, '한국 영역 외 좌표입니다').optional(),
     city: z.string().max(50).optional(),
     district: z.string().max(50).optional(),
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
+    page: z.coerce.number().int().min(PAGINATION.DEFAULT_PAGE).default(PAGINATION.DEFAULT_PAGE),
+    limit: z.coerce.number().int().min(PAGINATION.DEFAULT_PAGE).max(PAGINATION.MAX_LIMIT).default(PAGINATION.DEFAULT_LIMIT),
   })
   .refine(
     (data) => {

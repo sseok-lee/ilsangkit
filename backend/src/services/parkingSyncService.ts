@@ -13,6 +13,7 @@ import {
   transformAndDedupe,
   batchUpsert,
 } from './baseSyncService.js';
+import { SYNC } from '../constants/index.js';
 
 // Re-export for backward compatibility (tests import from here)
 export { createSyncHistory, updateSyncHistory };
@@ -164,7 +165,7 @@ export async function syncParkingFromApi(): Promise<SyncStats> {
     const client = new PublicApiClient(
       'http://api.data.go.kr/openapi/tn_pubr_prkplce_info_api',
       serviceKey,
-      { maxRetries: 3, retryDelay: 1000 }
+      { maxRetries: SYNC.MAX_RETRIES, retryDelay: SYNC.RETRY_BASE_DELAY_MS }
     );
 
     const rows = await client.fetchAllPages<ParkingCSVRow>(100);

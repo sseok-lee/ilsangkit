@@ -3,6 +3,7 @@
 
 import { prisma } from '../lib/prisma.js';
 import type { SyncStatus, SyncHistory } from '@prisma/client';
+import { SYNC } from '../constants/index.js';
 
 export interface SyncStats {
   totalRecords: number;
@@ -109,7 +110,7 @@ export async function runSync(
 export async function batchUpsert<T>(
   items: T[],
   upsertFn: (item: T) => Promise<'new' | 'updated'>,
-  batchSize: number = 100,
+  batchSize: number = SYNC.BATCH_SIZE,
   syncHistoryId?: number
 ): Promise<{ newCount: number; updateCount: number }> {
   let newCount = 0;

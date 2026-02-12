@@ -2,6 +2,7 @@
 // NOTE: 지도 마커가 아닌 지역별 일정 조회용
 
 import prisma from '../lib/prisma.js';
+import { PAGINATION } from '../constants/index.js';
 
 // 유형별 배출 정보 타입
 interface WasteTypeInfo {
@@ -75,7 +76,7 @@ export async function getByRegion(
   keyword?: string,
   options: { page?: number; limit?: number } = {}
 ): Promise<WasteScheduleResult> {
-  const { page = 1, limit = 20 } = options;
+  const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = options;
 
   const where: { city: string; district?: string; targetRegion?: { contains: string } } = { city };
   if (district) {
@@ -122,7 +123,7 @@ export async function getByRegion(
 export async function getRegions(
   options: { page?: number; limit?: number } = {}
 ): Promise<RegionsResult> {
-  const { page = 1, limit = 20 } = options;
+  const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = options;
 
   // 그룹별 카운트 조회
   const grouped = await prisma.wasteSchedule.groupBy({

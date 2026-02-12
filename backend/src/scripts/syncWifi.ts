@@ -7,6 +7,7 @@ import { SyncStatus } from '@prisma/client';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as iconv from 'iconv-lite';
+import { KOREA_BOUNDS, SYNC } from '../constants/index.js';
 
 // 와이파이 CSV 데이터 URL
 const WIFI_DATA_URL = 'https://www.localdata.go.kr/datafile/each/07_24_04_P_CSV.zip';
@@ -166,8 +167,8 @@ export function transformWifiData(row: WifiCSVRow): TransformedWifi | null {
     return null;
   }
 
-  // 한국 좌표 범위 검증 (위도 33~39, 경도 124~132)
-  if (lat < 33 || lat > 39 || lng < 124 || lng > 132) {
+  // 한국 좌표 범위 검증
+  if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX || lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) {
     return null;
   }
 
@@ -257,7 +258,7 @@ async function batchUpsertWifi(
   let newCount = 0;
   let updatedCount = 0;
 
-  const BATCH_SIZE = 100;
+  const BATCH_SIZE = SYNC.BATCH_SIZE;
 
   for (let i = 0; i < wifiData.length; i += BATCH_SIZE) {
     const batch = wifiData.slice(i, i + BATCH_SIZE);

@@ -137,46 +137,47 @@
 > 우선순위: **Medium** | 병렬 가능: T1~T5 독립 실행
 
 - P12-T1: DB 시드 스크립트 작성
-  - [ ] `prisma/seed.ts` 생성 (최소 데이터셋)
-  - [ ] 카테고리별 10건 + Region 10건 + Category 7건
-  - [ ] `package.json` prisma.seed 설정
+  - [x] `prisma/seed.ts` 생성 (최소 데이터셋)
+  - [x] 카테고리별 10건 + Region 10건 + Category 7건
+  - [x] `package.json` prisma.seed 설정
   - Assignee: backend-specialist
   - Depends: none
 
 - P12-T2: 프론트엔드 타입 통합
-  - [ ] `types/api.ts`와 `types/facility.ts` 중복 타입 통합
-  - [ ] 단일 소스(types/index.ts)에서 re-export
-  - [ ] 모든 import 경로 업데이트
+  - [x] `types/api.ts`와 `types/facility.ts` 중복 타입 통합
+  - [x] 단일 소스(types/index.ts)에서 re-export
+  - [x] 모든 import 경로 업데이트
   - Assignee: frontend-specialist
   - Depends: none
 
 - P12-T3: 매직 넘버 상수화
-  - [ ] 페이지네이션 기본값 → `constants/defaults.ts`
-  - [ ] 좌표 범위 → `constants/geo.ts`
-  - [ ] API 타임아웃 → `constants/api.ts`
+  - [x] 페이지네이션 기본값 → `constants/defaults.ts`
+  - [x] 좌표 범위 → `constants/geo.ts`
+  - [x] API 타임아웃 → `constants/sync.ts`
   - Assignee: backend-specialist
   - Depends: none
 
 - P12-T4: 네이밍 통일 (trash vs wasteSchedule)
-  - [ ] 프론트엔드 라우트: `/trash/` 유지 (사용자 친화적)
-  - [ ] 백엔드 모델/서비스: `wasteSchedule` 유지 (도메인 정확성)
-  - [ ] 매핑 문서 작성 (프론트 ↔ 백엔드 네이밍 규칙)
+  - [x] 프론트엔드 라우트: `/trash/` 유지 (사용자 친화적)
+  - [x] 백엔드 모델/서비스: `wasteSchedule` 유지 (도메인 정확성)
+  - [x] 매핑 문서 작성 (프론트 ↔ 백엔드 네이밍 규칙)
   - Assignee: frontend-specialist
   - Depends: none
 
 - P12-T5: 테스트 커버리지 측정 및 보고
-  - [ ] Backend vitest coverage 실행 및 현재 커버리지 확인
-  - [ ] Frontend vitest coverage 실행 및 현재 커버리지 확인
-  - [ ] 80% 미만 파일 목록 정리 → 테스트 추가 계획
+  - [x] Backend vitest coverage 실행 및 현재 커버리지 확인
+  - [x] Frontend vitest coverage 실행 및 현재 커버리지 확인
+  - [x] 80% 미만 파일 목록 정리 → 테스트 추가 계획
   - Assignee: test-specialist
   - Depends: none
 
 ### P12-V: Phase 12 검증
-- [ ] `npx prisma db seed` 성공 확인
-- [ ] 타입 import 오류 0건 (`npx tsc --noEmit`)
-- [ ] 상수 파일에서만 기본값 참조 확인
-- [ ] Backend/Frontend 테스트 전체 통과
+- [x] `npx prisma db seed` 성공 확인
+- [x] 타입 import 오류 0건 (`npx tsc --noEmit`)
+- [x] 상수 파일에서만 기본값 참조 확인
+- [x] Backend/Frontend 테스트 전체 통과
 - Depends: P12-T1~T5
+- ✅ **검증 완료**: 26 test files, 275 tests passed
 
 ---
 
@@ -277,7 +278,7 @@ Phase 10 (Critical)     Phase 11 (High)         Phase 12 (Medium)    Phase 13 (D
 | P0~P9 | 53 tasks | ✅ 완료 | MVP + 카테고리 확장 |
 | P10 | 7 tasks | ✅ 완료 | Critical 갭 해소 |
 | P11 | 6 tasks | ✅ 완료 | 프로덕션 안정성 |
-| P12 | 6 tasks | ⬜ 대기 | 기술 부채 |
+| P12 | 6 tasks | ✅ 완료 | 기술 부채 |
 | P13 | 4 tasks | ⬜ 대기 | 문서 보완 |
 | P14 | 4 tasks | ⬜ 대기 | QA 검증 |
 | **합계** | **27 tasks** | | Post-MVP |

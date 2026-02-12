@@ -2,6 +2,7 @@
 // @SPEC docs/planning/02-trd.md#API-설계
 
 import { z } from 'zod';
+import { KOREA_BOUNDS } from '../constants/index.js';
 
 // 검색 로그 스키마
 export const SearchLogSchema = z.object({
@@ -10,8 +11,8 @@ export const SearchLogSchema = z.object({
   category: z.string().max(20).optional(),
   city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
-  lat: z.coerce.number().min(33, '한국 영역 외 좌표입니다').max(39, '한국 영역 외 좌표입니다').optional(),
-  lng: z.coerce.number().min(124, '한국 영역 외 좌표입니다').max(132, '한국 영역 외 좌표입니다').optional(),
+  lat: z.coerce.number().min(KOREA_BOUNDS.LAT_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LAT_MAX, '한국 영역 외 좌표입니다').optional(),
+  lng: z.coerce.number().min(KOREA_BOUNDS.LNG_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LNG_MAX, '한국 영역 외 좌표입니다').optional(),
   resultCount: z.number().int().min(0),
 });
 

@@ -9,6 +9,8 @@
  * - 에러 핸들링 및 재시도 로직
  */
 
+import { SYNC } from '../constants/index.js';
+
 interface PublicApiClientOptions {
   /** 최대 재시도 횟수 (기본값: 3) */
   maxRetries?: number;
@@ -64,8 +66,8 @@ export class PublicApiClient {
   constructor(baseUrl: string, serviceKey: string, options: PublicApiClientOptions = {}) {
     this.baseUrl = baseUrl;
     this.serviceKey = serviceKey;
-    this.maxRetries = options.maxRetries ?? 3;
-    this.retryDelay = options.retryDelay ?? 1000;
+    this.maxRetries = options.maxRetries ?? SYNC.MAX_RETRIES;
+    this.retryDelay = options.retryDelay ?? SYNC.RETRY_BASE_DELAY_MS;
     this.timeout = options.timeout ?? 30000;
   }
 
@@ -123,7 +125,7 @@ export class PublicApiClient {
    * @param pageSize - 페이지당 항목 수 (기본값: 100)
    * @returns 모든 항목 배열
    */
-  async fetchAllPages<T = unknown>(pageSize: number = 100): Promise<T[]> {
+  async fetchAllPages<T = unknown>(pageSize: number = SYNC.PAGE_SIZE): Promise<T[]> {
     const allItems: T[] = [];
     let currentPage = 1;
     let totalCount = 0;

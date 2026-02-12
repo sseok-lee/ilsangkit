@@ -1,6 +1,8 @@
 // @TASK T2.3.3 - 공공데이터 API 클라이언트
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 
+import { API_TIMEOUT } from '../constants/index.js';
+
 /**
  * 공공데이터 API 설정
  */
@@ -121,7 +123,7 @@ export const publicApiClient = {
    * 모든 페이지 데이터 조회
    */
   async fetchAll<T>(config: PublicApiConfig, options: FetchAllOptions = {}): Promise<T[]> {
-    const { onProgress, maxPages, delayMs = 100 } = options;
+    const { onProgress, maxPages, delayMs = API_TIMEOUT.DEFAULT_DELAY_MS } = options;
     const allItems: T[] = [];
 
     // 첫 페이지 조회하여 총 개수 확인

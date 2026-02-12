@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import type { FacilitySearchItem, FacilityCategory } from '~/types/api'
+import type { FacilitySearchItem, FacilityCategory } from '~/types'
 
 interface Props {
   facilities: FacilitySearchItem[]
