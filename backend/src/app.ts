@@ -3,27 +3,25 @@
 
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
 import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
 import wasteSchedulesRouter from './routes/wasteSchedules.js';
 import sitemapRouter from './routes/sitemap.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
+import { globalRateLimiter } from './middlewares/rateLimit.js';
+import { helmetConfig, corsOptions, sanitizeInput } from './middlewares/security.js';
 
 const app: Application = express();
 
 // Middleware
-app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: true,
-  })
-);
+app.use(helmetConfig);
+app.use(cors(corsOptions));
 app.use(requestIdMiddleware);
+app.use(globalRateLimiter); // Apply global rate limiter
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(sanitizeInput);
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {

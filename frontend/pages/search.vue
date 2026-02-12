@@ -6,6 +6,7 @@
       <div class="px-4 py-3 flex items-center gap-3">
         <!-- Back Button -->
         <button
+          aria-label="뒤로가기"
           class="shrink-0 flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           @click="$router.back()"
         >
@@ -26,6 +27,7 @@
           />
           <button
             v-if="searchKeyword"
+            aria-label="검색어 지우기"
             class="absolute inset-y-0 right-3 flex items-center cursor-pointer"
             @click="clearSearch"
           >
@@ -35,13 +37,15 @@
         <!-- Filter Icon Button -->
         <div class="relative">
           <button
+            aria-label="필터 메뉴"
+            :aria-expanded="showFilterDropdown"
             class="shrink-0 flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
             @click="showFilterDropdown = !showFilterDropdown"
           >
             <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">tune</span>
           </button>
           <!-- Backdrop -->
-          <div v-if="showFilterDropdown" class="fixed inset-0 z-40" @click="showFilterDropdown = false" />
+          <div v-if="showFilterDropdown" class="fixed inset-0 z-40" @click="showFilterDropdown = false" @keydown.esc="showFilterDropdown = false" />
           <!-- Sort Dropdown -->
           <div
             v-if="showFilterDropdown"
@@ -242,7 +246,7 @@
         </div>
 
         <!-- Scrollable List -->
-        <main role="list" aria-label="검색 결과 목록" class="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-3 pb-8 md:p-3 md:bg-slate-50 md:dark:bg-slate-900">
+        <main role="region" aria-label="검색 결과 목록" class="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-3 pb-8 md:p-3 md:bg-slate-50 md:dark:bg-slate-900">
           <!-- 쓰레기 카테고리: 지역 필터 UI -->
           <template v-if="selectedCategory === 'trash'">
             <!-- 지역 선택 드롭다운 -->
@@ -293,7 +297,7 @@
             </div>
 
             <!-- 로딩 상태 -->
-            <div v-if="wasteLoading" class="flex items-center justify-center py-10">
+            <div v-if="wasteLoading" class="flex items-center justify-center py-10" aria-live="polite" aria-busy="true">
               <div class="text-center">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
                 <p class="text-slate-500 dark:text-slate-400 text-sm">배출 일정 조회 중...</p>
@@ -345,7 +349,7 @@
           <!-- 다른 카테고리: 기존 시설 목록 -->
           <template v-else>
             <!-- Loading State -->
-            <div v-if="loading" class="flex items-center justify-center py-20">
+            <div v-if="loading" class="flex items-center justify-center py-20" aria-live="polite" aria-busy="true">
               <div class="text-center">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
                 <p class="text-slate-500 dark:text-slate-400 text-sm">검색 중...</p>
@@ -842,6 +846,17 @@ watch(
   { immediate: true }
 )
 
+// Escape 키로 필터 드롭다운/모바일 지도 닫기
+const handleEscapeKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    if (showFilterDropdown.value) {
+      showFilterDropdown.value = false
+    } else if (showMobileMap.value) {
+      showMobileMap.value = false
+    }
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   // Read initial query params
@@ -860,6 +875,13 @@ onMounted(() => {
 
   // Initial search
   performSearch()
+
+  // Escape 키 리스너 등록
+  document.addEventListener('keydown', handleEscapeKey)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleEscapeKey)
 })
 
 // 검색 조건 변경 시 메타태그 업데이트

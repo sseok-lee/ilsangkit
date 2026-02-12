@@ -3,7 +3,7 @@
     <div class="container mx-auto px-4">
       <!-- Footer Links -->
       <div class="mb-6 flex flex-wrap justify-center gap-4" data-testid="footer-links">
-        <nav class="contents">
+        <nav class="contents" aria-label="푸터 네비게이션">
           <NuxtLink
             to="/about"
             class="text-gray-600 hover:text-primary-600 transition-colors text-sm min-h-11 flex items-center px-2"
@@ -41,6 +41,7 @@
             href="https://www.data.go.kr"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="새 창에서 공공데이터포털 열기"
             class="hover:text-gray-500 transition-colors"
           >공공데이터포털(data.go.kr)</a> 제공 공공데이터 활용 | 공공누리 제1유형
         </p>

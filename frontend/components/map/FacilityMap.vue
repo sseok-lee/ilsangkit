@@ -1,16 +1,22 @@
 <template>
-  <div
-    ref="mapContainer"
-    data-testid="map-container"
-    class="w-full h-full min-h-[400px] rounded-lg overflow-hidden"
-  />
+  <div class="relative w-full h-full min-h-[400px] rounded-lg overflow-hidden">
+    <div
+      ref="mapContainer"
+      role="application"
+      aria-label="시설 위치 지도"
+      data-testid="map-container"
+      class="w-full h-full"
+    />
+    <div class="sr-only" aria-live="polite" aria-atomic="true">
+      {{ facilities.length }}개의 시설이 지도에 표시됩니다. 마커를 클릭하면 상세 정보를 확인할 수 있습니다.
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useKakaoMap } from '~/composables/useKakaoMap'
 import type { FacilitySearchItem } from '~/types/api'
-import { CATEGORY_META } from '~/types/facility'
 
 interface Props {
   center: { lat: number; lng: number }

@@ -2,3 +2,4 @@
 // @SPEC docs/planning/02-trd.md#API-설계
 
 export * from './validate.js';
+export * from './rateLimit.js';

@@ -11,12 +11,14 @@ import {
 } from '../schemas/facility.js';
 import * as facilityService from '../services/facilityService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { searchRateLimiter } from '../middlewares/rateLimit.js';
 
 const router = Router();
 
 // POST /api/facilities/search
 router.post(
   '/search',
+  searchRateLimiter, // Apply stricter rate limit for search endpoint
   validate(FacilitySearchSchema, 'body'),
   asyncHandler(async (req: Request, res: Response) => {
     const result = await facilityService.search(req.body);

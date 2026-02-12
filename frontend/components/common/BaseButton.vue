@@ -2,6 +2,7 @@
   <button
     :class="buttonClasses"
     :disabled="disabled"
+    :aria-disabled="disabled"
     @click="handleClick"
   >
     <slot />
@@ -35,8 +36,8 @@ const buttonClasses = computed(() => {
     'transition-all',
     'duration-200',
     'focus:outline-none',
-    'focus:ring-2',
-    'focus:ring-offset-2',
+    'focus-visible:ring-2',
+    'focus-visible:ring-offset-2',
     // Minimum touch target (44x44px)
     'min-h-11',
     'min-w-11',
@@ -48,7 +49,7 @@ const buttonClasses = computed(() => {
       'bg-primary-600',
       'text-white',
       'hover:bg-primary-700',
-      'focus:ring-primary-500',
+      'focus-visible:ring-primary-500',
       'active:bg-primary-800'
     )
   } else if (props.variant === 'secondary') {
@@ -56,7 +57,7 @@ const buttonClasses = computed(() => {
       'bg-gray-600',
       'text-white',
       'hover:bg-gray-700',
-      'focus:ring-gray-500',
+      'focus-visible:ring-gray-500',
       'active:bg-gray-800'
     )
   } else if (props.variant === 'outline') {
@@ -66,7 +67,7 @@ const buttonClasses = computed(() => {
       'bg-transparent',
       'text-primary-600',
       'hover:bg-primary-50',
-      'focus:ring-primary-500',
+      'focus-visible:ring-primary-500',
       'active:bg-primary-100'
     )
   }
