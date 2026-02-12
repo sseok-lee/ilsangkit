@@ -99,6 +99,7 @@ async function fetchPage(pageNo: number): Promise<{ items: AedApiItem[]; totalCo
   url.searchParams.set('numOfRows', String(PAGE_SIZE));
 
   // 429 재시도 로직 (최대 5회, 지수 백오프)
+  // eslint-disable-next-line no-undef
   let response: Response | null = null;
   for (let attempt = 0; attempt < 5; attempt++) {
     response = await fetch(url.toString());
