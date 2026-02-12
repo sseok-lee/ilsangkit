@@ -220,32 +220,32 @@
 > 우선순위: **Medium** | 순차 실행
 
 - P14-T1: Lighthouse 성능 측정
-  - [ ] Desktop Performance > 90
-  - [ ] Mobile Performance > 85
-  - [ ] SEO Score > 90
-  - [ ] Accessibility Score > 85
+  - [x] Desktop Performance > 90
+  - [x] Mobile Performance > 85
+  - [x] SEO Score > 90
+  - [x] Accessibility Score > 85
   - Assignee: frontend-specialist
   - Depends: P11-R3-T2
 
 - P14-T2: 크로스 브라우저 테스트
-  - [ ] Chrome (Desktop + Mobile)
-  - [ ] Safari (Desktop + iOS)
-  - [ ] Samsung Internet
-  - [ ] Firefox
+  - [x] Chrome (Desktop + Mobile)
+  - [x] Safari (Desktop + iOS)
+  - [x] Samsung Internet
+  - [x] Firefox
   - Assignee: test-specialist
   - Depends: none
 
 - P14-T3: Google Search Console 확인
-  - [ ] 사이트맵 제출 완료
-  - [ ] 인덱싱 상태 확인
-  - [ ] 모바일 사용성 리포트 확인
+  - [x] 사이트맵 제출 완료
+  - [x] 인덱싱 상태 확인
+  - [x] 모바일 사용성 리포트 확인
   - Assignee: frontend-specialist
   - Depends: none
 
 - P14-T4: 부하 테스트
-  - [ ] 동시 1000명 검색 시 p95 < 500ms
-  - [ ] 사이트맵 50K+ URL 생성 성능
-  - [ ] Kakao API 쿼터 사용량 모니터링
+  - [x] 동시 1000명 검색 시 p95 < 500ms
+  - [x] 사이트맵 50K+ URL 생성 성능
+  - [x] Kakao API 쿼터 사용량 모니터링
   - Assignee: backend-specialist
   - Depends: P11-R1-T1
 
@@ -280,5 +280,5 @@ Phase 10 (Critical)     Phase 11 (High)         Phase 12 (Medium)    Phase 13 (D
 | P11 | 6 tasks | ✅ 완료 | 프로덕션 안정성 |
 | P12 | 6 tasks | ✅ 완료 | 기술 부채 |
 | P13 | 4 tasks | ✅ 완료 | 문서 보완 |
-| P14 | 4 tasks | ⬜ 대기 | QA 검증 |
+| P14 | 4 tasks | ✅ 완료 | QA 검증 |
 | **합계** | **27 tasks** | | Post-MVP |
