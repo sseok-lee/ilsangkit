@@ -16,7 +16,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useKakaoMap } from '~/composables/useKakaoMap'
-import type { FacilitySearchItem } from '~/types/api'
+import type { FacilitySearchItem } from '~/types'
 
 interface Props {
   center: { lat: number; lng: number }

@@ -1,4 +1,4 @@
-import type { FacilitySearchItem } from '~/types/api'
+import type { FacilitySearchItem } from '~/types'
 
 declare global {
   interface Window {

@@ -5,6 +5,7 @@ import prisma from '../lib/prisma.js';
 import { publicApiClient } from '../lib/publicApiClient.js';
 import { batchGeocode, type Coordinates } from '../services/geocodingService.js';
 import crypto from 'crypto';
+import { SYNC } from '../constants/index.js';
 
 /**
  * 무인민원발급기 설치정보 API 응답 타입
@@ -95,12 +96,12 @@ interface KioskData {
  */
 const INSTALLATION_API_CONFIG = {
   endpoint: 'https://apis.data.go.kr/1741000/kiosk_info/installation_info',
-  pageSize: 100, // API가 최대 100개만 반환하므로 100으로 설정
+  pageSize: SYNC.PAGE_SIZE, // API가 최대 100개만 반환하므로 PAGE_SIZE로 설정
 } as const;
 
 const CERTIFICATE_API_CONFIG = {
   endpoint: 'https://apis.data.go.kr/1741000/kiosk_info/certificate_info',
-  pageSize: 100, // API가 최대 100개만 반환하므로 100으로 설정
+  pageSize: SYNC.PAGE_SIZE, // API가 최대 100개만 반환하므로 PAGE_SIZE로 설정
 } as const;
 
 /**
@@ -350,7 +351,7 @@ export async function syncKiosks(): Promise<void> {
 
     // 6. 배치 upsert (트랜잭션 래핑)
     console.log('데이터베이스 저장 중...');
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = SYNC.BATCH_SIZE;
     for (let i = 0; i < kioskDataList.length; i += BATCH_SIZE) {
       const batch = kioskDataList.slice(i, i + BATCH_SIZE);
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;

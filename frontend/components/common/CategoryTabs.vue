@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import type { FacilityCategory } from '~/types/api'
+import type { FacilityCategory } from '~/types'
 
 interface Category {
   id: FacilityCategory | 'home'

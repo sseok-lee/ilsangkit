@@ -6,6 +6,7 @@ import { PublicApiClient } from '../services/publicApiClient.js';
 import prisma from '../lib/prisma.js';
 import type { Prisma } from '@prisma/client';
 import crypto from 'crypto';
+import { SYNC } from '../constants/index.js';
 
 /**
  * 공공데이터 API 응답 타입 (생활쓰레기 배출정보)
@@ -246,7 +247,7 @@ export function transformTrashData(row: TrashApiResponse): TransformedWasteSched
  * @returns 동기화 결과
  */
 export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
-  const { serviceKey, dryRun = false, pageSize = 100 } = options;
+  const { serviceKey, dryRun = false, pageSize = SYNC.PAGE_SIZE } = options;
 
   const result: SyncResult = {
     totalRecords: 0,
@@ -268,7 +269,7 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
     const client = new PublicApiClient(
       'https://apis.data.go.kr/1741000/household_waste_info/info',
       serviceKey,
-      { maxRetries: 3, retryDelay: 1000 }
+      { maxRetries: SYNC.MAX_RETRIES, retryDelay: SYNC.RETRY_BASE_DELAY_MS }
     );
 
     // 모든 페이지 데이터 조회
@@ -295,7 +296,7 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
     } else {
       // 배치 upsert (트랜잭션 래핑)
       console.info('Upserting to database...');
-      const BATCH_SIZE = 100;
+      const BATCH_SIZE = SYNC.BATCH_SIZE;
       for (let i = 0; i < transformedItems.length; i += BATCH_SIZE) {
         const batch = transformedItems.slice(i, i + BATCH_SIZE);
         const batchNumber = Math.floor(i / BATCH_SIZE) + 1;

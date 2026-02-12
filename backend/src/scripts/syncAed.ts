@@ -5,6 +5,7 @@ import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import crypto from 'crypto';
 import { XMLParser } from 'fast-xml-parser';
+import { SYNC } from '../constants/index.js';
 
 /**
  * AED API 응답 아이템 타입
@@ -41,7 +42,7 @@ interface AedApiItem {
  * API 설정
  */
 const API_URL = 'http://apis.data.go.kr/B552657/AEDInfoInqireService/getEgytAedManageInfoInqire';
-const PAGE_SIZE = 100;
+const PAGE_SIZE = SYNC.PAGE_SIZE;
 
 /**
  * XML 파서 인스턴스
@@ -321,7 +322,7 @@ export async function syncAeds(): Promise<{ totalRecords: number; newRecords: nu
 
     // 3. 배치 upsert (트랜잭션 래핑)
     console.log('데이터베이스 저장 중...');
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = SYNC.BATCH_SIZE;
     for (let i = 0; i < transformedItems.length; i += BATCH_SIZE) {
       const batch = transformedItems.slice(i, i + BATCH_SIZE);
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;

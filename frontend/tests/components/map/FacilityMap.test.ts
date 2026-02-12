@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import FacilityMap from '~/components/map/FacilityMap.vue'
-import type { FacilitySearchItem } from '~/types/api'
+import type { FacilitySearchItem } from '~/types'
 
 // Mock useKakaoMap composable
 const mockInitMap = vi.fn()

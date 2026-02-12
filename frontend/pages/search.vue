@@ -550,7 +550,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useGeolocation } from '~/composables/useGeolocation'

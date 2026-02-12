@@ -1,30 +1,7 @@
-// @TASK T8.1 - API 타입 파일 (facility.ts에서 re-export)
-// @DEPRECATED 직접 사용 대신 ~/types/facility 사용 권장
-// 하위 호환성을 위해 유지
+// @TASK P12-T2 - API 타입 파일
+// @DEPRECATED - 이 파일은 하위 호환성을 위해 유지됩니다.
+// 새 코드에서는 ~/types 또는 ~/types/facility를 사용하세요.
+//
+// 이 파일은 index.ts로 통합되었으며, 모든 타입은 index.ts에서 re-export됩니다.
 
-export {
-  type FacilityCategory,
-  type Facility,
-  type FacilityDetail,
-  type SearchParams,
-  type SearchResponse,
-  type ApiResponse,
-  type PaginationParams,
-  type PaginatedResponse,
-  type ApiErrorDetail,
-  type HealthCheckResponse,
-  type CategoryInfo,
-  type CategoryCount,
-  type RegionInfo,
-  type CityInfo,
-  type DistrictInfo,
-  type CategoryMeta,
-  CATEGORY_META,
-} from './facility'
-
-// Legacy aliases for backward compatibility
-export type { Facility as FacilityBase } from './facility'
-export type { Facility as FacilitySearchItem } from './facility'
-export type { SearchParams as FacilitySearchRequest } from './facility'
-export type { SearchParams as RegionFacilitiesRequest } from './facility'
-export type { SearchParams as NearbyFacilitiesRequest } from './facility'
+export * from './index'

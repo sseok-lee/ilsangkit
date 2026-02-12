@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import SearchPage from '~/pages/search.vue'
 
+// Mock Vue lifecycle hooks
+vi.mock('vue', async () => {
+  const actual = await vi.importActual('vue')
+  return {
+    ...actual,
+    onUnmounted: vi.fn(),
+  }
+})
+
 // Mock vue-router
 const mockPush = vi.fn()
 vi.mock('vue-router', () => ({
@@ -96,6 +105,13 @@ const globalStubs = {
   CurrentLocationButton: { template: '<button>Location</button>' },
   SearchInput: { template: '<input />' },
   CategoryTabs: { template: '<div>CategoryTabs</div>' },
+  WasteScheduleCard: { template: '<div>WasteScheduleCard</div>' },
+  OperatingStatusBadge: { template: '<div>OperatingStatusBadge</div>' },
+}
+
+// Global mocks for Vue lifecycle
+const globalMocks = {
+  onUnmounted: vi.fn(),
 }
 
 describe('SearchPage', () => {
@@ -107,6 +123,7 @@ describe('SearchPage', () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
+        mocks: globalMocks,
       },
     })
 
@@ -117,6 +134,7 @@ describe('SearchPage', () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
+        mocks: globalMocks,
       },
     })
 
@@ -128,6 +146,7 @@ describe('SearchPage', () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
+        mocks: globalMocks,
       },
     })
 
@@ -139,6 +158,7 @@ describe('SearchPage', () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
+        mocks: globalMocks,
       },
     })
 
@@ -151,6 +171,7 @@ describe('SearchPage', () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
+        mocks: globalMocks,
       },
     })
 
@@ -178,6 +199,7 @@ describe('SearchPage', () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
+        mocks: globalMocks,
       },
     })
 

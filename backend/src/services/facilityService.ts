@@ -3,6 +3,7 @@
 
 import prisma from '../lib/prisma.js';
 import { FacilitySearchInput } from '../schemas/facility.js';
+import { PAGINATION, SEARCH_DEFAULTS } from '../constants/index.js';
 
 // 카테고리 타입
 export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library';
@@ -155,7 +156,7 @@ function buildBoundsFilter(swLat: number, swLng: number, neLat: number, neLng: n
  * - 지역 필터
  */
 export async function search(params: FacilitySearchInput): Promise<SearchResult> {
-  const { category, keyword, lat, lng, radius = 1000, swLat, swLng, neLat, neLng, city, district, page = 1, limit = 20 } = params;
+  const { category, keyword, lat, lng, radius = SEARCH_DEFAULTS.RADIUS_METERS, swLat, swLng, neLat, neLng, city, district, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = params;
 
   // --- 좌표 기반 검색: Haversine 거리 계산 ---
   if (lat !== undefined && lng !== undefined) {
@@ -457,7 +458,7 @@ export async function getByRegion(
   category: string,
   options: { page?: number; limit?: number } = {}
 ): Promise<RegionSearchResult> {
-  const { page = 1, limit = 20 } = options;
+  const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = options;
 
   // slug -> 한글 변환
   const resolved = await resolveRegion(city, district);

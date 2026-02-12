@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import { parse } from 'csv-parse';
 import * as iconv from 'iconv-lite';
 import { createHash } from 'crypto';
+import { KOREA_BOUNDS } from '../constants/index.js';
 
 // CSV 로우 타입 정의
 export interface ClothesCSVRow {
@@ -349,8 +350,8 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
     return null;
   }
 
-  // 한국 좌표 범위 검증 (위도 33~39, 경도 124~132)
-  if (lat < 33 || lat > 39 || lng < 124 || lng > 132) {
+  // 한국 좌표 범위 검증
+  if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX || lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) {
     return null;
   }
 
@@ -500,10 +501,10 @@ export function transformClothesRow(row: ClothesCSVRow): TransformedClothes | nu
     !isNaN(lng) &&
     lat !== 0 &&
     lng !== 0 &&
-    lat >= 33 &&
-    lat <= 39 &&
-    lng >= 124 &&
-    lng <= 132;
+    lat >= KOREA_BOUNDS.LAT_MIN &&
+    lat <= KOREA_BOUNDS.LAT_MAX &&
+    lng >= KOREA_BOUNDS.LNG_MIN &&
+    lng <= KOREA_BOUNDS.LNG_MAX;
 
   const finalLat = hasValidCoords ? lat : null;
   const finalLng = hasValidCoords ? lng : null;
@@ -637,10 +638,10 @@ export function transformParkingRow(row: ParkingCSVRow): TransformedParking | nu
     !isNaN(lng) &&
     lat !== 0 &&
     lng !== 0 &&
-    lat >= 33 &&
-    lat <= 39 &&
-    lng >= 124 &&
-    lng <= 132;
+    lat >= KOREA_BOUNDS.LAT_MIN &&
+    lat <= KOREA_BOUNDS.LAT_MAX &&
+    lng >= KOREA_BOUNDS.LNG_MIN &&
+    lng <= KOREA_BOUNDS.LNG_MAX;
 
   const finalLat = hasValidCoords ? lat : null;
   const finalLng = hasValidCoords ? lng : null;
@@ -758,10 +759,10 @@ export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | nu
     !isNaN(lng) &&
     lat !== 0 &&
     lng !== 0 &&
-    lat >= 33 &&
-    lat <= 39 &&
-    lng >= 124 &&
-    lng <= 132;
+    lat >= KOREA_BOUNDS.LAT_MIN &&
+    lat <= KOREA_BOUNDS.LAT_MAX &&
+    lng >= KOREA_BOUNDS.LNG_MIN &&
+    lng <= KOREA_BOUNDS.LNG_MAX;
 
   const finalLat = hasValidCoords ? lat : null;
   const finalLng = hasValidCoords ? lng : null;
