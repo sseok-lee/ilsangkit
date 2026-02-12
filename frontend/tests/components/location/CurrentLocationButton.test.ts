@@ -5,9 +5,9 @@ import CurrentLocationButton from '~/components/location/CurrentLocationButton.v
 
 // Mock useGeolocation composable
 const mockGetCurrentPosition = vi.fn()
-let mockIsLoading = ref(false)
-let mockError = ref<any>(null)
-let mockPosition = ref<any>(null)
+const mockIsLoading = ref(false)
+const mockError = ref<any>(null)
+const mockPosition = ref<any>(null)
 
 vi.mock('~/composables/useGeolocation', () => ({
   useGeolocation: () => ({

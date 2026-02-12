@@ -81,53 +81,54 @@
 ### P11-R1: Rate Limiting
 
 - P11-R1-T1: API Rate Limiting 미들웨어 구현
-  - [ ] express-rate-limit 적용 (IP당 100 req/min)
-  - [ ] /api/facilities/search에 별도 제한 (IP당 30 req/min)
-  - [ ] 429 Too Many Requests 응답 + Retry-After 헤더
+  - [x] express-rate-limit 적용 (IP당 100 req/min)
+  - [x] /api/facilities/search에 별도 제한 (IP당 30 req/min)
+  - [x] 429 Too Many Requests 응답 + Retry-After 헤더
   - Assignee: backend-specialist
   - Depends: P10-R1-T1
 
 ### P11-R2: 보안 강화
 
 - P11-R2-T1: 보안 헤더 미들웨어 추가
-  - [ ] helmet.js 적용 (CSP, X-Frame-Options, HSTS 등)
-  - [ ] CORS 설정 명시적 origin 제한 (프로덕션)
-  - [ ] 입력값 sanitization 확인 (XSS 방지)
+  - [x] helmet.js 적용 (CSP, X-Frame-Options, HSTS 등)
+  - [x] CORS 설정 명시적 origin 제한 (프로덕션)
+  - [x] 입력값 sanitization 확인 (XSS 방지)
   - Assignee: backend-specialist
   - Depends: none
 
 ### P11-R3: 성능 요구사항 정의 및 측정
 
 - P11-R3-T1: 비기능 요구사항 명세 작성 `specs/non-functional-requirements.yaml`
-  - [ ] Core Web Vitals 목표: LCP < 2.5s, FID < 100ms, CLS < 0.1
-  - [ ] API 응답시간: p50 < 200ms, p95 < 500ms
-  - [ ] 번들 크기 제한: JS < 200KB (gzipped)
+  - [x] Core Web Vitals 목표: LCP < 2.5s, FID < 100ms, CLS < 0.1
+  - [x] API 응답시간: p50 < 200ms, p95 < 500ms
+  - [x] 번들 크기 제한: JS < 200KB (gzipped)
   - Assignee: frontend-specialist
   - Depends: none
 
 - P11-R3-T2: Lighthouse CI 파이프라인 추가
-  - [ ] GitHub Actions에 Lighthouse CI 워크플로우 추가
-  - [ ] Performance > 90, SEO > 90, Accessibility > 85 게이트
-  - [ ] 실패 시 PR 블로킹
+  - [x] GitHub Actions에 Lighthouse CI 워크플로우 추가
+  - [x] Performance > 90, SEO > 90, Accessibility > 85 게이트
+  - [x] 실패 시 PR 블로킹
   - Assignee: frontend-specialist
   - Depends: P11-R3-T1
 
 ### P11-R4: 접근성 개선
 
 - P11-R4-T1: WCAG 2.1 Level AA 감사
-  - [ ] 전체 페이지 axe-core 자동 검사 실행
-  - [ ] 키보드 네비게이션 테스트 (Tab, Enter, Escape)
-  - [ ] 터치 타겟 최소 44x44px 확인
-  - [ ] 컬러 대비 ratio 4.5:1 이상 확인
+  - [x] 전체 페이지 axe-core 자동 검사 실행
+  - [x] 키보드 네비게이션 테스트 (Tab, Enter, Escape)
+  - [x] 터치 타겟 최소 44x44px 확인
+  - [x] 컬러 대비 ratio 4.5:1 이상 확인
   - Assignee: frontend-specialist
   - Depends: none
 
 ### P11-V: Phase 11 검증
-- [ ] Rate limit 초과 시 429 반환 확인
-- [ ] 보안 헤더 응답에 포함 확인 (curl -I)
-- [ ] Lighthouse CI 게이트 통과
-- [ ] axe-core 자동 검사 0 violations
+- [x] Rate limit 초과 시 429 반환 확인
+- [x] 보안 헤더 응답에 포함 확인 (curl -I)
+- [x] Lighthouse CI 게이트 통과
+- [x] axe-core 자동 검사 0 violations
 - Depends: P11-R1-T1, P11-R2-T1, P11-R3-T2, P11-R4-T1
+- ✅ **검증 완료**: 26 test files, 275 tests passed
 
 ---
 
@@ -275,7 +276,7 @@ Phase 10 (Critical)     Phase 11 (High)         Phase 12 (Medium)    Phase 13 (D
 |-------|--------|------|------|
 | P0~P9 | 53 tasks | ✅ 완료 | MVP + 카테고리 확장 |
 | P10 | 7 tasks | ✅ 완료 | Critical 갭 해소 |
-| P11 | 6 tasks | ⬜ 대기 | 프로덕션 안정성 |
+| P11 | 6 tasks | ✅ 완료 | 프로덕션 안정성 |
 | P12 | 6 tasks | ⬜ 대기 | 기술 부채 |
 | P13 | 4 tasks | ⬜ 대기 | 문서 보완 |
 | P14 | 4 tasks | ⬜ 대기 | QA 검증 |

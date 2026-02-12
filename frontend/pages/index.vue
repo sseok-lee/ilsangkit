@@ -21,6 +21,7 @@
             </div>
             <input
               v-model="searchKeyword"
+              aria-label="장소 또는 시설 검색"
               class="flex w-full min-w-0 flex-1 resize-none bg-transparent text-[#111418] dark:text-white placeholder:text-[#94a3b8] px-2 text-base font-medium leading-normal focus:outline-none border-none focus:ring-0 rounded-xl"
               placeholder="장소, 시설 검색..."
               @keydown.enter="handleSearch"
@@ -34,6 +35,7 @@
             <button
               v-for="category in categories"
               :key="category.id"
+              :aria-label="`${category.label} 카테고리로 이동`"
               :class="[
                 'flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-3 pr-4 shadow-sm active:scale-95 transition-transform',
                 category.id === 'toilet'
@@ -54,6 +56,7 @@
         <div class="pt-2">
           <button
             data-testid="location-button"
+            aria-label="현재 위치로 검색"
             class="relative w-full h-14 bg-primary rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 hover:bg-blue-600 active:scale-[0.98] transition-all group overflow-hidden"
             @click="handleLocationSearch"
           >
@@ -108,6 +111,7 @@
             </div>
             <input
               v-model="searchKeyword"
+              aria-label="장소 또는 시설 검색"
               class="block w-full pl-12 pr-4 py-4 bg-white dark:bg-surface-dark border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-base text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm hover:border-slate-300 dark:hover:border-slate-600"
               placeholder="장소, 시설 검색..."
               type="text"
@@ -116,6 +120,7 @@
             <div class="absolute inset-y-2 right-2">
               <button
                 data-testid="location-button"
+                aria-label="현재 위치로 검색"
                 class="h-full px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
                 @click="handleLocationSearch"
               >

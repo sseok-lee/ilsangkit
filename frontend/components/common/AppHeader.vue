@@ -104,6 +104,7 @@
       <button
         class="md:hidden flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-[#111418] dark:text-white"
         aria-label="메뉴"
+        :aria-expanded="isMobileMenuOpen"
         @click="toggleMobileMenu"
       >
         <span class="material-symbols-outlined text-[28px]">menu</span>
@@ -123,6 +124,8 @@
     <div
       v-if="isMobileMenuOpen"
       data-testid="mobile-menu"
+      role="navigation"
+      aria-label="모바일 메뉴"
       class="md:hidden fixed top-[60px] left-0 right-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 shadow-lg"
     >
       <nav class="flex flex-col p-4 gap-2">
@@ -211,8 +214,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { CategoryId } from '~/utils/categoryIcons'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 interface Props {
   transparent?: boolean
@@ -246,6 +248,21 @@ const handleBack = () => {
 const handleDarkModeToggle = () => {
   emit('darkModeToggle')
 }
+
+// Escape 키로 모바일 메뉴 닫기
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && isMobileMenuOpen.value) {
+    closeMobileMenu()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <style scoped>
