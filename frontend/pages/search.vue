@@ -18,6 +18,7 @@
           </div>
           <input
             v-model="searchKeyword"
+            aria-label="시설 검색"
             class="w-full bg-white dark:bg-slate-800 border-none rounded-2xl py-3 pl-10 pr-10 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary/20 shadow-sm text-base font-medium"
             type="text"
             placeholder="장소를 검색하세요..."
@@ -73,6 +74,8 @@
         <button
           v-for="cat in categoryTabs"
           :key="cat.id"
+          :aria-label="`${cat.label} 카테고리 필터`"
+          :aria-pressed="selectedCategory === cat.id"
           :class="[
             'shrink-0 px-3 py-2 rounded-2xl text-sm font-semibold transition-transform active:scale-95 flex items-center gap-1.5',
             selectedCategory === cat.id
@@ -101,6 +104,7 @@
             </div>
             <input
               v-model="searchKeyword"
+              aria-label="시설 검색"
               class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-0 border-none bg-transparent h-full placeholder:text-slate-400 px-3 text-sm font-normal leading-normal"
               placeholder="장소를 검색하세요..."
               @keyup.enter="handleSearch"
@@ -123,6 +127,8 @@
           <button
             v-for="cat in categoryTabs"
             :key="cat.id"
+            :aria-label="`${cat.label} 카테고리 필터`"
+            :aria-pressed="selectedCategory === cat.id"
             :class="[
               'px-4 py-1.5 rounded-md text-sm font-medium leading-normal transition-all',
               selectedCategory === cat.id
@@ -229,13 +235,14 @@
         <!-- Error State -->
         <div
           v-if="error"
+          role="alert"
           class="p-5 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm"
         >
           {{ error }}
         </div>
 
         <!-- Scrollable List -->
-        <main class="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-3 pb-8 md:p-3 md:bg-slate-50 md:dark:bg-slate-900">
+        <main role="list" aria-label="검색 결과 목록" class="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-3 pb-8 md:p-3 md:bg-slate-50 md:dark:bg-slate-900">
           <!-- 쓰레기 카테고리: 지역 필터 UI -->
           <template v-if="selectedCategory === 'trash'">
             <!-- 지역 선택 드롭다운 -->
@@ -548,6 +555,8 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory, Facility } from '~/types/facility'
+import { formatDistance } from '~/utils/formatters'
+import { getOperatingStatus } from '~/utils/facilityStatus'
 
 const route = useRoute()
 const router = useRouter()
@@ -587,6 +596,9 @@ const categoryTabs = [
   { id: 'wifi' as const, label: '와이파이' },
   { id: 'clothes' as const, label: '의류수거함' },
   { id: 'kiosk' as const, label: '발급기' },
+  { id: 'parking' as const, label: '주차장' },
+  { id: 'aed' as const, label: 'AED' },
+  { id: 'library' as const, label: '도서관' },
   { id: 'trash' as const, label: '쓰레기' },
 ]
 
@@ -615,7 +627,7 @@ const mapCenter = computed(() => {
 })
 
 // Methods
-const performSearch = () => {
+const performSearch = async () => {
   // trash는 시설 검색이 아닌 별도 waste-schedules API 사용
   if (selectedCategory.value === 'trash') return
 
@@ -632,12 +644,21 @@ const performSearch = () => {
     params.category = selectedCategory.value
   }
 
-  // GPS 좌표는 서버로 전송하지 않음 (위치정보사업 신고 의무 회피)
-  // 거리 계산, 영역 필터링은 클라이언트에서 수행
-  search(params, {
-    userLocation: userLocation.value,
-    mapBounds: mapBounds.value ? { sw: mapBounds.value.sw, ne: mapBounds.value.ne } : null,
-  })
+  // 위치 기반 검색: lat/lng를 서버로 직접 전송
+  if (userLocation.value && !searchKeyword.value) {
+    params.lat = userLocation.value.lat
+    params.lng = userLocation.value.lng
+  }
+
+  // bounds 기반 검색: 지도 영역을 서버로 전송
+  if (mapBounds.value && !searchKeyword.value) {
+    params.swLat = mapBounds.value.sw.lat
+    params.swLng = mapBounds.value.sw.lng
+    params.neLat = mapBounds.value.ne.lat
+    params.neLng = mapBounds.value.ne.lng
+  }
+
+  search(params)
 }
 
 const handleSearch = () => {
@@ -784,43 +805,6 @@ const zoomOut = () => {
   if (mapLevel.value < 14) {
     mapLevel.value += 1
   }
-}
-
-// Helper Functions
-const formatDistance = (distance: number): string => {
-  if (distance >= 1000) {
-    return `${(distance / 1000).toFixed(1)}km`
-  }
-  return `${Math.round(distance)}m`
-}
-
-type OperatingStatus = 'open24h' | 'openNow' | 'closed' | 'limited' | null
-
-const getOperatingStatus = (facility: Facility): OperatingStatus => {
-  const details = facility.details
-  if (!details) return null
-
-  // Check for 24h operation (toilet, kiosk)
-  if (details.operatingHours === '24시간' || details.is24Hour) {
-    return 'open24h'
-  }
-
-  // Check for operating status in wifi
-  if (details.operationStatus === '운영') {
-    return 'openNow'
-  }
-
-  // Check for closed status
-  if (details.operationStatus === '중지' || details.status === 'closed') {
-    return 'closed'
-  }
-
-  // Check for time-limited operation
-  if (details.operatingHours || details.weekdayOperatingHours) {
-    return 'limited'
-  }
-
-  return null
 }
 
 // Watch for route query changes

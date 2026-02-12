@@ -3,10 +3,67 @@
 
 import prisma from '../lib/prisma.js';
 import { FacilitySearchInput } from '../schemas/facility.js';
-import type { Toilet, Wifi, Clothes, Kiosk, Parking } from '@prisma/client';
 
 // 카테고리 타입
-export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk' | 'parking';
+export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library';
+
+const ALL_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'];
+
+// --- Haversine 거리 계산 ---
+
+function toRad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
+
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// --- Category Registry ---
+
+interface CategoryConfig {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model: () => any;
+  detailFields: string[];
+}
+
+const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
+  toilet: {
+    model: () => prisma.toilet,
+    detailFields: ['operatingHours', 'maleToilets', 'maleUrinals', 'femaleToilets', 'hasDisabledToilet', 'openTime', 'managingOrg'],
+  },
+  wifi: {
+    model: () => prisma.wifi,
+    detailFields: ['ssid', 'installDate', 'serviceProvider', 'installLocation', 'managementAgency', 'phoneNumber'],
+  },
+  clothes: {
+    model: () => prisma.clothes,
+    detailFields: ['managementAgency', 'phoneNumber', 'dataDate', 'detailLocation'],
+  },
+  kiosk: {
+    model: () => prisma.kiosk,
+    detailFields: ['detailLocation', 'operationAgency', 'weekdayOperatingHours', 'saturdayOperatingHours', 'holidayOperatingHours', 'blindKeypad', 'voiceGuide', 'brailleOutput', 'wheelchairAccessible', 'availableDocuments'],
+  },
+  parking: {
+    model: () => prisma.parking,
+    detailFields: ['parkingType', 'lotType', 'capacity', 'baseFee', 'baseTime', 'additionalFee', 'additionalTime', 'dailyMaxFee', 'monthlyFee', 'operatingHours', 'phone', 'paymentMethod', 'remarks', 'hasDisabledParking'],
+  },
+  aed: {
+    model: () => prisma.aed,
+    detailFields: ['buildPlace', 'org', 'clerkTel', 'mfg', 'model', 'monSttTme', 'monEndTme', 'tueSttTme', 'tueEndTme', 'wedSttTme', 'wedEndTme', 'thuSttTme', 'thuEndTme', 'friSttTme', 'friEndTme', 'satSttTme', 'satEndTme', 'sunSttTme', 'sunEndTme', 'holSttTme', 'holEndTme'],
+  },
+  library: {
+    model: () => prisma.library,
+    detailFields: ['libraryType', 'closedDays', 'weekdayOpenTime', 'weekdayCloseTime', 'saturdayOpenTime', 'saturdayCloseTime', 'holidayOpenTime', 'holidayCloseTime', 'seatCount', 'bookCount', 'serialCount', 'nonBookCount', 'loanableBooks', 'loanableDays', 'phoneNumber', 'homepageUrl', 'operatingOrg'],
+  },
+};
 
 // 기본 select 필드 (공통 필드)
 const BASE_SELECT_FIELDS = {
@@ -31,6 +88,7 @@ interface FacilityItem {
   lng: number;
   city: string;
   district: string;
+  distance?: number;
 }
 
 interface SearchResult {
@@ -40,11 +98,8 @@ interface SearchResult {
   totalPages: number;
 }
 
-// 각 테이블 레코드를 FacilityItem으로 변환
-type FacilityRecord = Pick<Toilet | Wifi | Clothes | Kiosk | Parking,
-  'id' | 'name' | 'address' | 'roadAddress' | 'lat' | 'lng' | 'city' | 'district'>;
-
-function toFacilityItem(record: FacilityRecord, category: FacilityCategory): FacilityItem {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toFacilityItem(record: any, category: FacilityCategory): FacilityItem {
   return {
     id: record.id,
     category,
@@ -82,140 +137,161 @@ function buildRegionFilter(city?: string, district?: string) {
 }
 
 /**
- * 단일 테이블 검색 함수들
+ * bounds 필터 조건 생성
  */
-async function searchToilets(params: FacilitySearchInput): Promise<FacilityItem[]> {
-  const { keyword, city, district } = params;
-  const where = {
-    ...buildKeywordFilter(keyword),
-    ...buildRegionFilter(city, district),
+function buildBoundsFilter(swLat: number, swLng: number, neLat: number, neLng: number) {
+  return {
+    lat: { gte: swLat, lte: neLat },
+    lng: { gte: swLng, lte: neLng },
   };
-
-  const records = await prisma.toilet.findMany({
-    where,
-    select: BASE_SELECT_FIELDS,
-  });
-
-  return records.map((r) => toFacilityItem(r, 'toilet'));
-}
-
-async function searchWifis(params: FacilitySearchInput): Promise<FacilityItem[]> {
-  const { keyword, city, district } = params;
-  const where = {
-    ...buildKeywordFilter(keyword),
-    ...buildRegionFilter(city, district),
-  };
-
-  const records = await prisma.wifi.findMany({
-    where,
-    select: BASE_SELECT_FIELDS,
-  });
-
-  return records.map((r) => toFacilityItem(r, 'wifi'));
-}
-
-async function searchClothes(params: FacilitySearchInput): Promise<FacilityItem[]> {
-  const { keyword, city, district } = params;
-  const where = {
-    ...buildKeywordFilter(keyword),
-    ...buildRegionFilter(city, district),
-  };
-
-  const records = await prisma.clothes.findMany({
-    where,
-    select: BASE_SELECT_FIELDS,
-  });
-
-  return records.map((r) => toFacilityItem(r, 'clothes'));
-}
-
-async function searchKiosks(params: FacilitySearchInput): Promise<FacilityItem[]> {
-  const { keyword, city, district } = params;
-  const where = {
-    ...buildKeywordFilter(keyword),
-    ...buildRegionFilter(city, district),
-  };
-
-  const records = await prisma.kiosk.findMany({
-    where,
-    select: BASE_SELECT_FIELDS,
-  });
-
-  return records.map((r) => toFacilityItem(r, 'kiosk'));
-}
-
-async function searchParkings(params: FacilitySearchInput): Promise<FacilityItem[]> {
-  const { keyword, city, district } = params;
-  const where = {
-    ...buildKeywordFilter(keyword),
-    ...buildRegionFilter(city, district),
-  };
-
-  const records = await prisma.parking.findMany({
-    where,
-    select: BASE_SELECT_FIELDS,
-  });
-
-  return records.map((r) => toFacilityItem(r, 'parking'));
-}
-
-/**
- * 단일 카테고리 검색
- */
-async function searchSingleCategory(
-  category: FacilityCategory,
-  params: FacilitySearchInput
-): Promise<FacilityItem[]> {
-  switch (category) {
-    case 'toilet':
-      return searchToilets(params);
-    case 'wifi':
-      return searchWifis(params);
-    case 'clothes':
-      return searchClothes(params);
-    case 'kiosk':
-      return searchKiosks(params);
-    case 'parking':
-      return searchParkings(params);
-    default:
-      return [];
-  }
 }
 
 /**
  * 시설 검색
+ * - 좌표 기반 검색 (lat/lng + radius)
+ * - bounds 기반 검색 (swLat/swLng/neLat/neLng)
  * - 키워드 검색
  * - 카테고리 필터
  * - 지역 필터
- * - 페이지네이션
- *
- * NOTE: 거리 계산/정렬은 클라이언트에서 수행 (위치정보사업 신고 의무 회피)
  */
 export async function search(params: FacilitySearchInput): Promise<SearchResult> {
-  const { category, page = 1, limit = 20 } = params;
+  const { category, keyword, lat, lng, radius = 1000, swLat, swLng, neLat, neLng, city, district, page = 1, limit = 20 } = params;
 
-  let allItems: FacilityItem[];
+  // --- 좌표 기반 검색: Haversine 거리 계산 ---
+  if (lat !== undefined && lng !== undefined) {
+    const categories = category ? [category as FacilityCategory] : ALL_CATEGORIES;
+    const keywordFilter = buildKeywordFilter(keyword);
+    const radiusKm = radius / 1000;
 
-  // 특정 카테고리면 해당 테이블만, 아니면 전체 테이블 병렬 쿼리
-  if (category) {
-    allItems = await searchSingleCategory(category as FacilityCategory, params);
-  } else {
-    const [toilets, wifis, clothes, kiosks, parkings] = await Promise.all([
-      searchToilets(params),
-      searchWifis(params),
-      searchClothes(params),
-      searchKiosks(params),
-      searchParkings(params),
-    ]);
-    allItems = [...toilets, ...wifis, ...clothes, ...kiosks, ...parkings];
+    // 대략적인 위경도 범위로 사전 필터링 (성능 최적화)
+    const latDelta = radiusKm / 111;
+    const lngDelta = radiusKm / (111 * Math.cos(toRad(lat)));
+    const approxBounds = {
+      lat: { gte: lat - latDelta, lte: lat + latDelta },
+      lng: { gte: lng - lngDelta, lte: lng + lngDelta },
+    };
+
+    const allItems: FacilityItem[] = [];
+
+    const fetchResults = await Promise.all(
+      categories.map(async (cat) => {
+        const where = { ...keywordFilter, ...approxBounds };
+        const records = await CATEGORY_REGISTRY[cat].model().findMany({
+          where,
+          select: BASE_SELECT_FIELDS,
+        });
+        return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
+      }),
+    );
+
+    for (const items of fetchResults) {
+      allItems.push(...items);
+    }
+
+    // Haversine으로 정확한 거리 계산 + radius 필터
+    const withDistance = allItems
+      .map((item) => ({
+        ...item,
+        distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
+      }))
+      .filter((item) => item.distance <= radius)
+      .sort((a, b) => a.distance - b.distance);
+
+    const total = withDistance.length;
+    const skip = (page - 1) * limit;
+    const paged = withDistance.slice(skip, skip + limit);
+
+    return { items: paged, total, page, totalPages: Math.ceil(total / limit) };
   }
 
-  const total = allItems.length;
-  const startIndex = (page - 1) * limit;
-  const paginatedItems = allItems.slice(startIndex, startIndex + limit);
+  // --- bounds 기반 검색 ---
+  if (swLat !== undefined && swLng !== undefined && neLat !== undefined && neLng !== undefined) {
+    const categories = category ? [category as FacilityCategory] : ALL_CATEGORIES;
+    const keywordFilter = buildKeywordFilter(keyword);
+    const boundsFilter = buildBoundsFilter(swLat, swLng, neLat, neLng);
+
+    const allItems: FacilityItem[] = [];
+
+    const fetchResults = await Promise.all(
+      categories.map(async (cat) => {
+        const where = { ...keywordFilter, ...boundsFilter };
+        const records = await CATEGORY_REGISTRY[cat].model().findMany({
+          where,
+          select: BASE_SELECT_FIELDS,
+        });
+        return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
+      }),
+    );
+
+    for (const items of fetchResults) {
+      allItems.push(...items);
+    }
+
+    const total = allItems.length;
+    const skip = (page - 1) * limit;
+    const paged = allItems.slice(skip, skip + limit);
+
+    return { items: paged, total, page, totalPages: Math.ceil(total / limit) };
+  }
+
+  // --- 키워드/지역 기반 검색 (기존 로직) ---
+  const skip = (page - 1) * limit;
+
+  const where = {
+    ...buildKeywordFilter(keyword),
+    ...buildRegionFilter(city, district),
+  };
+
+  // 단일 카테고리: DB skip/take + count
+  if (category) {
+    const model = CATEGORY_REGISTRY[category as FacilityCategory].model();
+    const [records, total] = await Promise.all([
+      model.findMany({ where, skip, take: limit, select: BASE_SELECT_FIELDS }),
+      model.count({ where }),
+    ]);
+    const items = records.map((r: any) => toFacilityItem(r, category as FacilityCategory)); // eslint-disable-line @typescript-eslint/no-explicit-any
+    return { items, total, page, totalPages: Math.ceil(total / limit) };
+  }
+
+  // 전체 카테고리: 카운트 먼저 → 필요한 카테고리만 fetch
+  const counts = await Promise.all(
+    ALL_CATEGORIES.map((cat) => CATEGORY_REGISTRY[cat].model().count({ where })),
+  );
+  const total = counts.reduce((sum, c) => sum + c, 0);
+
+  // 어떤 카테고리에서 몇 개씩 가져올지 계산
+  const fetchParams: { cat: FacilityCategory; catSkip: number; catTake: number }[] = [];
+  let remainingSkip = skip;
+  let remainingTake = limit;
+
+  for (let i = 0; i < ALL_CATEGORIES.length && remainingTake > 0; i++) {
+    const catCount = counts[i];
+    if (remainingSkip >= catCount) {
+      remainingSkip -= catCount;
+      continue;
+    }
+    const catSkip = remainingSkip;
+    const catTake = Math.min(remainingTake, catCount - catSkip);
+    remainingSkip = 0;
+    remainingTake -= catTake;
+    fetchParams.push({ cat: ALL_CATEGORIES[i], catSkip, catTake });
+  }
+
+  // 필요한 카테고리만 병렬 fetch
+  const fetchResults = await Promise.all(
+    fetchParams.map(async ({ cat, catSkip, catTake }) => {
+      const records = await CATEGORY_REGISTRY[cat].model().findMany({
+        where,
+        skip: catSkip,
+        take: catTake,
+        select: BASE_SELECT_FIELDS,
+      });
+      return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
+    }),
+  );
 
   return {
-    items: paginatedItems,
+    items: fetchResults.flat(),
     total,
     page,
     totalPages: Math.ceil(total / limit),
@@ -247,173 +323,34 @@ interface FacilityDetail {
 }
 
 /**
- * Toilet 레코드를 FacilityDetail로 변환
+ * 레코드를 FacilityDetail로 변환 (레지스트리 기반)
  */
-function toiletToDetail(toilet: Toilet): FacilityDetail {
-  return {
-    id: toilet.id,
-    category: 'toilet',
-    name: toilet.name,
-    address: toilet.address,
-    roadAddress: toilet.roadAddress,
-    lat: Number(toilet.lat),
-    lng: Number(toilet.lng),
-    city: toilet.city,
-    district: toilet.district,
-    bjdCode: toilet.bjdCode,
-    details: {
-      operatingHours: toilet.operatingHours,
-      maleToilets: toilet.maleToilets,
-      maleUrinals: toilet.maleUrinals,
-      femaleToilets: toilet.femaleToilets,
-      hasDisabledToilet: toilet.hasDisabledToilet,
-      openTime: toilet.openTime,
-      managingOrg: toilet.managingOrg,
-    },
-    sourceId: toilet.sourceId,
-    sourceUrl: toilet.sourceUrl,
-    viewCount: toilet.viewCount,
-    createdAt: toilet.createdAt,
-    updatedAt: toilet.updatedAt,
-    syncedAt: toilet.syncedAt,
-  };
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toDetail(record: any, category: FacilityCategory): FacilityDetail {
+  const { detailFields } = CATEGORY_REGISTRY[category];
+  const details: Record<string, unknown> = {};
+  for (const field of detailFields) {
+    details[field] = record[field];
+  }
 
-/**
- * Wifi 레코드를 FacilityDetail로 변환
- */
-function wifiToDetail(wifi: Wifi): FacilityDetail {
   return {
-    id: wifi.id,
-    category: 'wifi',
-    name: wifi.name,
-    address: wifi.address,
-    roadAddress: wifi.roadAddress,
-    lat: Number(wifi.lat),
-    lng: Number(wifi.lng),
-    city: wifi.city,
-    district: wifi.district,
-    bjdCode: wifi.bjdCode,
-    details: {
-      ssid: wifi.ssid,
-      installDate: wifi.installDate,
-      serviceProvider: wifi.serviceProvider,
-      installLocation: wifi.installLocation,
-      managementAgency: wifi.managementAgency,
-      phoneNumber: wifi.phoneNumber,
-    },
-    sourceId: wifi.sourceId,
-    sourceUrl: wifi.sourceUrl,
-    viewCount: wifi.viewCount,
-    createdAt: wifi.createdAt,
-    updatedAt: wifi.updatedAt,
-    syncedAt: wifi.syncedAt,
-  };
-}
-
-/**
- * Clothes 레코드를 FacilityDetail로 변환
- */
-function clothesToDetail(clothes: Clothes): FacilityDetail {
-  return {
-    id: clothes.id,
-    category: 'clothes',
-    name: clothes.name,
-    address: clothes.address,
-    roadAddress: clothes.roadAddress,
-    lat: Number(clothes.lat),
-    lng: Number(clothes.lng),
-    city: clothes.city,
-    district: clothes.district,
-    bjdCode: clothes.bjdCode,
-    details: {
-      managementAgency: clothes.managementAgency,
-      phoneNumber: clothes.phoneNumber,
-      dataDate: clothes.dataDate,
-      detailLocation: clothes.detailLocation,
-    },
-    sourceId: clothes.sourceId,
-    sourceUrl: clothes.sourceUrl,
-    viewCount: clothes.viewCount,
-    createdAt: clothes.createdAt,
-    updatedAt: clothes.updatedAt,
-    syncedAt: clothes.syncedAt,
-  };
-}
-
-/**
- * Kiosk 레코드를 FacilityDetail로 변환
- */
-function kioskToDetail(kiosk: Kiosk): FacilityDetail {
-  return {
-    id: kiosk.id,
-    category: 'kiosk',
-    name: kiosk.name,
-    address: kiosk.address,
-    roadAddress: kiosk.roadAddress,
-    lat: Number(kiosk.lat),
-    lng: Number(kiosk.lng),
-    city: kiosk.city,
-    district: kiosk.district,
-    bjdCode: kiosk.bjdCode,
-    details: {
-      detailLocation: kiosk.detailLocation,
-      operationAgency: kiosk.operationAgency,
-      weekdayOperatingHours: kiosk.weekdayOperatingHours,
-      saturdayOperatingHours: kiosk.saturdayOperatingHours,
-      holidayOperatingHours: kiosk.holidayOperatingHours,
-      blindKeypad: kiosk.blindKeypad,
-      voiceGuide: kiosk.voiceGuide,
-      brailleOutput: kiosk.brailleOutput,
-      wheelchairAccessible: kiosk.wheelchairAccessible,
-      availableDocuments: kiosk.availableDocuments,
-    },
-    sourceId: kiosk.sourceId,
-    sourceUrl: kiosk.sourceUrl,
-    viewCount: kiosk.viewCount,
-    createdAt: kiosk.createdAt,
-    updatedAt: kiosk.updatedAt,
-    syncedAt: kiosk.syncedAt,
-  };
-}
-
-/**
- * Parking 레코드를 FacilityDetail로 변환
- */
-function parkingToDetail(parking: Parking): FacilityDetail {
-  return {
-    id: parking.id,
-    category: 'parking',
-    name: parking.name,
-    address: parking.address,
-    roadAddress: parking.roadAddress,
-    lat: Number(parking.lat),
-    lng: Number(parking.lng),
-    city: parking.city,
-    district: parking.district,
-    bjdCode: parking.bjdCode,
-    details: {
-      parkingType: parking.parkingType,
-      lotType: parking.lotType,
-      capacity: parking.capacity,
-      baseFee: parking.baseFee,
-      baseTime: parking.baseTime,
-      additionalFee: parking.additionalFee,
-      additionalTime: parking.additionalTime,
-      dailyMaxFee: parking.dailyMaxFee,
-      monthlyFee: parking.monthlyFee,
-      operatingHours: parking.operatingHours,
-      phone: parking.phone,
-      paymentMethod: parking.paymentMethod,
-      remarks: parking.remarks,
-      hasDisabledParking: parking.hasDisabledParking,
-    },
-    sourceId: parking.sourceId,
-    sourceUrl: parking.sourceUrl,
-    viewCount: parking.viewCount,
-    createdAt: parking.createdAt,
-    updatedAt: parking.updatedAt,
-    syncedAt: parking.syncedAt,
+    id: record.id,
+    category,
+    name: record.name,
+    address: record.address,
+    roadAddress: record.roadAddress,
+    lat: Number(record.lat),
+    lng: Number(record.lng),
+    city: record.city,
+    district: record.district,
+    bjdCode: record.bjdCode,
+    details,
+    sourceId: record.sourceId,
+    sourceUrl: record.sourceUrl,
+    viewCount: record.viewCount,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    syncedAt: record.syncedAt,
   };
 }
 
@@ -427,53 +364,17 @@ function parkingToDetail(parking: Parking): FacilityDetail {
  * @returns 시설 상세 정보 또는 null
  */
 export async function getDetail(category: string, id: string): Promise<FacilityDetail | null> {
-  let facility: FacilityDetail | null = null;
+  const config = CATEGORY_REGISTRY[category as FacilityCategory];
+  if (!config) return null;
 
-  switch (category) {
-    case 'toilet': {
-      const toilet = await prisma.toilet.findUnique({ where: { id } });
-      if (toilet) {
-        facility = toiletToDetail(toilet);
-        // 조회수 증가 (비동기)
-        prisma.toilet.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
-      }
-      break;
-    }
-    case 'wifi': {
-      const wifi = await prisma.wifi.findUnique({ where: { id } });
-      if (wifi) {
-        facility = wifiToDetail(wifi);
-        prisma.wifi.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
-      }
-      break;
-    }
-    case 'clothes': {
-      const clothes = await prisma.clothes.findUnique({ where: { id } });
-      if (clothes) {
-        facility = clothesToDetail(clothes);
-        prisma.clothes.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
-      }
-      break;
-    }
-    case 'kiosk': {
-      const kiosk = await prisma.kiosk.findUnique({ where: { id } });
-      if (kiosk) {
-        facility = kioskToDetail(kiosk);
-        prisma.kiosk.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
-      }
-      break;
-    }
-    case 'parking': {
-      const parking = await prisma.parking.findUnique({ where: { id } });
-      if (parking) {
-        facility = parkingToDetail(parking);
-        prisma.parking.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
-      }
-      break;
-    }
-  }
+  const model = config.model();
+  const record = await model.findUnique({ where: { id } });
+  if (!record) return null;
 
-  return facility;
+  // 조회수 증가 (비동기)
+  model.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+
+  return toDetail(record, category as FacilityCategory);
 }
 
 /**
@@ -484,20 +385,9 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
 export async function getAllIds(
   category: FacilityCategory
 ): Promise<{ id: string; updatedAt: Date }[]> {
-  switch (category) {
-    case 'toilet':
-      return prisma.toilet.findMany({ select: { id: true, updatedAt: true } });
-    case 'wifi':
-      return prisma.wifi.findMany({ select: { id: true, updatedAt: true } });
-    case 'clothes':
-      return prisma.clothes.findMany({ select: { id: true, updatedAt: true } });
-    case 'kiosk':
-      return prisma.kiosk.findMany({ select: { id: true, updatedAt: true } });
-    case 'parking':
-      return prisma.parking.findMany({ select: { id: true, updatedAt: true } });
-    default:
-      return [];
-  }
+  const config = CATEGORY_REGISTRY[category];
+  if (!config) return [];
+  return config.model().findMany({ select: { id: true, updatedAt: true } });
 }
 
 // @TASK T1.3 - 지역별 조회 서비스
@@ -577,85 +467,24 @@ export async function getByRegion(
     district: resolved.district,
   };
 
+  const config = CATEGORY_REGISTRY[category as FacilityCategory];
   let items: FacilityItem[] = [];
   let total = 0;
 
-  switch (category) {
-    case 'toilet': {
-      const [records, count] = await Promise.all([
-        prisma.toilet.findMany({
-          where,
-          skip: (page - 1) * limit,
-          take: limit,
-          orderBy: { name: 'asc' },
-          select: BASE_SELECT_FIELDS,
-        }),
-        prisma.toilet.count({ where }),
-      ]);
-      items = records.map((r) => toFacilityItem(r, 'toilet'));
-      total = count;
-      break;
-    }
-    case 'wifi': {
-      const [records, count] = await Promise.all([
-        prisma.wifi.findMany({
-          where,
-          skip: (page - 1) * limit,
-          take: limit,
-          orderBy: { name: 'asc' },
-          select: BASE_SELECT_FIELDS,
-        }),
-        prisma.wifi.count({ where }),
-      ]);
-      items = records.map((r) => toFacilityItem(r, 'wifi'));
-      total = count;
-      break;
-    }
-    case 'clothes': {
-      const [records, count] = await Promise.all([
-        prisma.clothes.findMany({
-          where,
-          skip: (page - 1) * limit,
-          take: limit,
-          orderBy: { name: 'asc' },
-          select: BASE_SELECT_FIELDS,
-        }),
-        prisma.clothes.count({ where }),
-      ]);
-      items = records.map((r) => toFacilityItem(r, 'clothes'));
-      total = count;
-      break;
-    }
-    case 'kiosk': {
-      const [records, count] = await Promise.all([
-        prisma.kiosk.findMany({
-          where,
-          skip: (page - 1) * limit,
-          take: limit,
-          orderBy: { name: 'asc' },
-          select: BASE_SELECT_FIELDS,
-        }),
-        prisma.kiosk.count({ where }),
-      ]);
-      items = records.map((r) => toFacilityItem(r, 'kiosk'));
-      total = count;
-      break;
-    }
-    case 'parking': {
-      const [records, count] = await Promise.all([
-        prisma.parking.findMany({
-          where,
-          skip: (page - 1) * limit,
-          take: limit,
-          orderBy: { name: 'asc' },
-          select: BASE_SELECT_FIELDS,
-        }),
-        prisma.parking.count({ where }),
-      ]);
-      items = records.map((r) => toFacilityItem(r, 'parking'));
-      total = count;
-      break;
-    }
+  if (config) {
+    const model = config.model();
+    const [records, count] = await Promise.all([
+      model.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { name: 'asc' },
+        select: BASE_SELECT_FIELDS,
+      }),
+      model.count({ where }),
+    ]);
+    items = records.map((r: any) => toFacilityItem(r, category as FacilityCategory)); // eslint-disable-line @typescript-eslint/no-explicit-any
+    total = count;
   }
 
   return {

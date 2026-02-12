@@ -19,11 +19,19 @@ import { syncWifiData } from './syncWifi.js';
 import { syncClothes } from '../services/clothesSyncService.js';
 import { syncKiosks } from './syncKiosk.js';
 import { syncParking } from '../services/parkingSyncService.js';
+import { syncAeds } from './syncAed.js';
+import { syncLibraries } from '../services/librarySyncService.js';
 
 // 공영주차장 기본 CSV 파일 경로
 const PARKING_CSV_PATH = path.resolve(
   import.meta.dirname,
   '../../prisma/data/parking.csv'
+);
+
+// 공공도서관 기본 CSV 파일 경로
+const LIBRARY_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/library.csv'
 );
 
 // 의류수거함 기본 CSV 파일 경로
@@ -46,7 +54,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -134,6 +142,26 @@ async function syncCategory(category: Category): Promise<SyncResult> {
 
       case 'parking': {
         const result = await syncParking(PARKING_CSV_PATH);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'aed': {
+        const result = await syncAeds();
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'library': {
+        const result = await syncLibraries(LIBRARY_CSV_PATH);
         return {
           category,
           success: true,

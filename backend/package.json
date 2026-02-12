@@ -25,6 +25,7 @@
     "sync:clothes": "tsx src/scripts/syncClothes.ts",
     "sync:kiosk": "tsx src/scripts/syncKiosk.ts",
     "sync:parking": "tsx src/scripts/syncParking.ts",
+    "sync:aed": "tsx src/scripts/syncAed.ts",
     "sync:regions": "tsx src/scripts/syncRegion.ts",
     "sync:facilities": "tsx src/scripts/syncAll.ts"
   },
@@ -45,6 +46,7 @@
     "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "fast-xml-parser": "^5.3.5",
     "helmet": "^8.1.0",
     "iconv-lite": "^0.7.2",
     "prisma": "^6.19.2",

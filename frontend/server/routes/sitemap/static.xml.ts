@@ -3,7 +3,7 @@ import { defineEventHandler, setHeader } from 'h3'
 import { SITE_URL, generateSitemapXml } from '../../utils/sitemap'
 import type { SitemapUrl } from '../../utils/sitemap'
 
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking']
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library']
 
 const CITY_SLUGS: Record<string, string> = {
   서울: 'seoul',

@@ -13,9 +13,24 @@ declare global {
         event: {
           addListener: (target: unknown, type: string, callback: () => void) => void
         }
+        services: {
+          Geocoder: new () => KakaoGeocoder
+          Status: { OK: string; ZERO_RESULT: string; ERROR: string }
+        }
       }
     }
   }
+}
+
+interface KakaoRegionResult {
+  region_type: string
+  region_1depth_name: string
+  region_2depth_name: string
+  region_3depth_name: string
+}
+
+interface KakaoGeocoder {
+  coord2RegionCode(lng: number, lat: number, callback: (result: KakaoRegionResult[], status: string) => void): void
 }
 
 interface KakaoLatLng {
@@ -111,7 +126,7 @@ export function useKakaoMap() {
 
       // Load script
       const script = document.createElement('script')
-      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false&libraries=services`
       script.async = true
 
       script.onload = () => {
@@ -242,6 +257,24 @@ export function useKakaoMap() {
     return { lat: center.getLat(), lng: center.getLng() }
   }
 
+  // Reverse geocode: GPS coordinates → city/district
+  async function coordToRegion(lat: number, lng: number): Promise<{ city: string; district: string } | null> {
+    await loadKakaoMaps()
+    return new Promise((resolve) => {
+      const geocoder = new window.kakao.maps.services.Geocoder()
+      geocoder.coord2RegionCode(lng, lat, (result, status) => {
+        if (status === window.kakao.maps.services.Status.OK) {
+          const region = result.find((r) => r.region_type === 'H') || result[0]
+          if (region) {
+            resolve({ city: region.region_1depth_name, district: region.region_2depth_name })
+            return
+          }
+        }
+        resolve(null)
+      })
+    })
+  }
+
   // Get current map bounds (SW, NE corners)
   function getBounds(): { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null {
     if (!map.value) return null
@@ -265,5 +298,6 @@ export function useKakaoMap() {
     setUserLocationMarker,
     getCenter,
     getBounds,
+    coordToRegion,
   }
 }

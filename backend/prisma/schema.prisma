@@ -179,6 +179,92 @@ model Parking {
   @@index([lat, lng])
 }
 
+// @TASK T9.2 - 자동심장충격기(AED) 테이블
+model Aed {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // AED 전용 필드
+  buildPlace    String?  @db.VarChar(500)   // 설치 상세위치
+  org           String?  @db.VarChar(200)   // 설치기관
+  clerkTel      String?  @db.VarChar(50)    // 담당자 전화
+  mfg           String?  @db.VarChar(100)   // 제조사
+  model         String?  @db.VarChar(100)   // 모델명
+  monSttTme     String?  @db.VarChar(4)     // 월요일 시작
+  monEndTme     String?  @db.VarChar(4)     // 월요일 종료
+  tueSttTme     String?  @db.VarChar(4)
+  tueEndTme     String?  @db.VarChar(4)
+  wedSttTme     String?  @db.VarChar(4)
+  wedEndTme     String?  @db.VarChar(4)
+  thuSttTme     String?  @db.VarChar(4)
+  thuEndTme     String?  @db.VarChar(4)
+  friSttTme     String?  @db.VarChar(4)
+  friEndTme     String?  @db.VarChar(4)
+  satSttTme     String?  @db.VarChar(4)
+  satEndTme     String?  @db.VarChar(4)
+  sunSttTme     String?  @db.VarChar(4)
+  sunEndTme     String?  @db.VarChar(4)
+  holSttTme     String?  @db.VarChar(4)     // 공휴일 시작
+  holEndTme     String?  @db.VarChar(4)     // 공휴일 종료
+
+  @@index([city, district])
+  @@index([lat, lng])
+}
+
+// @TASK T9.3 - 공공도서관 테이블
+model Library {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // 도서관 전용 필드
+  libraryType       String?  @db.VarChar(50)
+  closedDays        String?  @db.VarChar(200)
+  weekdayOpenTime   String?  @db.VarChar(10)
+  weekdayCloseTime  String?  @db.VarChar(10)
+  saturdayOpenTime  String?  @db.VarChar(10)
+  saturdayCloseTime String?  @db.VarChar(10)
+  holidayOpenTime   String?  @db.VarChar(10)
+  holidayCloseTime  String?  @db.VarChar(10)
+  seatCount         Int      @default(0)
+  bookCount         Int      @default(0)
+  serialCount       Int      @default(0)       // 자료수(연속간행물)
+  nonBookCount      Int      @default(0)       // 자료수(비도서)
+  loanableBooks     Int      @default(0)       // 대출가능권수
+  loanableDays      Int      @default(0)       // 대출가능일수
+  phoneNumber       String?  @db.VarChar(50)
+  homepageUrl       String?  @db.VarChar(500)
+  operatingOrg      String?  @db.VarChar(200)
+
+  @@index([city, district])
+  @@index([lat, lng])
+}
+
 // @TASK T0.4 - 카테고리 마스터 테이블
 // @SPEC docs/planning/04-database-design.md#category-table
 model Category {

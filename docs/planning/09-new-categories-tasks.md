@@ -271,27 +271,108 @@ npm ls csv-parse iconv-lite
 
 ---
 
-### [ ] Phase 9, T9.2: AED (aed) 데이터 동기화 + API + UI
+### [x] Phase 9, T9.2: AED (aed) 데이터 동기화 + API + UI
 
 **담당**: backend-specialist (동기화/API), frontend-specialist (UI)
 
 **의존성**: M8 완료
 
 **데이터 소스**:
-- **번호**: data.go.kr #15021103 (표준), #15000652 (API)
-- **형식**: CSV + API
-- **예상 건수**: ~4만 대+
-- **좌표**: O (지오코딩 불필요)
+- **번호**: data.go.kr #15000652 (국립중앙의료원 AED 조회 서비스)
+- **엔드포인트**: `http://apis.data.go.kr/B552657/AEDInfoInqireService/getEgytAedManageInfoInqire`
+- **형식**: Open API (**XML만 지원**, JSON 미지원)
+- **확인 건수**: **60,917건** (2026-02-11 테스트 확인)
+- **좌표**: O — WGS84 (wgs84Lat, wgs84Lon) 포함, 지오코딩 불필요
 - **좌표계 변환**: 불필요
+- **⚠️ 특수사항**: XML 전용 API → `fast-xml-parser` 패키지 추가 필요
+
+**API 테스트 결과** (2026-02-11 확인):
+```
+resultCode: 00 (NORMAL SERVICE)
+totalCount: 60,917
+pageNo/numOfRows 페이지네이션 정상 동작
+```
+
+**API 응답 필드 (item)**:
+| API 필드 | 설명 | DB 매핑 |
+|----------|------|---------|
+| `buildAddress` | 주소 | `address` |
+| `buildPlace` | 설치 상세위치 (예: "2층 관리사무소 입구") | `buildPlace` |
+| `org` | 설치기관명 (예: "영화아파트") | `name`, `org` |
+| `clerkTel` | 담당자 전화번호 | `clerkTel` |
+| `mfg` | 제조사 (예: "라디안큐바이오") | `mfg` |
+| `model` | 모델명 (예: "HR701 Plus A") | `model` |
+| `serialSeq` | 시리얼번호 (**고유키**) | `sourceId` |
+| `wgs84Lat` | 위도 | `lat` |
+| `wgs84Lon` | 경도 | `lng` |
+| `mon/tue/wed/thu/fri/sat/sun/holSttTme` | 요일별 시작시간 (0000~2400) | 동일 필드명 |
+| `mon/tue/wed/thu/fri/sat/sun/holEndTme` | 요일별 종료시간 (0000~2400) | 동일 필드명 |
+| `manager` | 관리자명 (마스킹됨) | 저장 불필요 |
+| `managerTel` | 관리자 전화 (마스킹됨) | 저장 불필요 |
+| `zipcode1`, `zipcode2` | 우편번호 | 저장 불필요 |
 
 #### T9.2.1: Prisma 스키마 + 마이그레이션
 
 **담당**: database-specialist
 
+**사전 작업**:
+```bash
+# XML 파싱 라이브러리 설치
+cd backend && npm install fast-xml-parser
+```
+
 **작업 내용**:
 - `schema.prisma`에 `Aed` 모델 추가
-- 전용 필드: 설치장소(`installLocation`), 상세위치(`detailLocation`), 관리기관(`managementAgency`), 관리기관전화번호(`managementPhone`), 설치일자(`installDate`)
+- 공통 필드: id, name, address, roadAddress, lat, lng, city, district, bjdCode, sourceId, sourceUrl, viewCount, createdAt, updatedAt, syncedAt
+- 전용 필드: 설치상세위치(`buildPlace`), 설치기관(`org`), 담당자전화(`clerkTel`), 제조사(`mfg`), 모델명(`model`), 요일별 운영시간(mon~hol × Stt/EndTme, 16개 필드)
 - 마이그레이션 실행, seed 데이터 추가
+
+**Prisma 모델**:
+```prisma
+model Aed {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // AED-specific fields
+  buildPlace    String?  @db.VarChar(500)
+  org           String?  @db.VarChar(200)
+  clerkTel      String?  @db.VarChar(50)
+  mfg           String?  @db.VarChar(100)
+  model         String?  @db.VarChar(100)
+  monSttTme     String?  @db.VarChar(4)
+  monEndTme     String?  @db.VarChar(4)
+  tueSttTme     String?  @db.VarChar(4)
+  tueEndTme     String?  @db.VarChar(4)
+  wedSttTme     String?  @db.VarChar(4)
+  wedEndTme     String?  @db.VarChar(4)
+  thuSttTme     String?  @db.VarChar(4)
+  thuEndTme     String?  @db.VarChar(4)
+  friSttTme     String?  @db.VarChar(4)
+  friEndTme     String?  @db.VarChar(4)
+  satSttTme     String?  @db.VarChar(4)
+  satEndTme     String?  @db.VarChar(4)
+  sunSttTme     String?  @db.VarChar(4)
+  sunEndTme     String?  @db.VarChar(4)
+  holSttTme     String?  @db.VarChar(4)
+  holEndTme     String?  @db.VarChar(4)
+
+  @@index([city, district])
+  @@index([lat, lng])
+}
+```
 
 **산출물**:
 - `backend/prisma/schema.prisma` (수정)
@@ -299,12 +380,12 @@ npm ls csv-parse iconv-lite
 - `backend/prisma/seed.ts` (수정)
 
 **인수 조건**:
-- [ ] `npm run db:migrate` 성공
-- [ ] `npm run db:generate` 성공
-- [ ] Prisma Studio에서 Aed 테이블 확인 가능
-- [ ] Category seed에 `{ id: 'aed', name: 'AED', icon: '💓', sortOrder: 7 }` 추가됨
+- [x] `npm run db:migrate` 성공
+- [x] `npm run db:generate` 성공
+- [x] Prisma Studio에서 Aed 테이블 확인 가능
+- [x] Category seed에 `{ id: 'aed', name: '자동심장충격기', icon: '💓', sortOrder: 7 }` 추가됨
 
-#### T9.2.2: 동기화 서비스 구현
+#### T9.2.2: 동기화 서비스 구현 (XML API)
 
 **담당**: backend-specialist
 
@@ -321,29 +402,47 @@ npm ls csv-parse iconv-lite
 2. **GREEN**: 구현
    ```bash
    # 구현 파일: backend/src/services/aedSyncService.ts
-   # 구현 파일: backend/src/scripts/sync-aed.ts
+   # 구현 파일: backend/src/scripts/syncAed.ts
    npm run test -- backend/__tests__/services/aedSync.test.ts
    ```
 
 **작업 내용**:
-- CSV/API 기반 데이터 수집
-- 데이터 변환 로직 (컬럼 → Aed 스키마)
-- 시도명 정규화 (`cityNameMap` 재사용)
-- 동기화 스크립트 작성
+- `fast-xml-parser`로 XML 응답 파싱 (기존 `publicApiClient.ts`는 JSON 전용이므로 직접 수정하지 않음)
+- 페이지네이션 처리 (pageNo=1~610, numOfRows=100, totalCount=60,917)
+- 주소에서 city/district 추출 (기존 `extractCityDistrict()` 패턴 재사용)
+- sourceId = serialSeq (시리얼번호, 고유)
+- id = `aed-${hash(sourceId)}`
+- prisma.aed.upsert로 저장
 - `syncAll.ts`에 aed 추가
+- SyncHistory 기록
+
+**핵심 로직**:
+```typescript
+import { XMLParser } from 'fast-xml-parser';
+
+const API_URL = 'http://apis.data.go.kr/B552657/AEDInfoInqireService/getEgytAedManageInfoInqire';
+const parser = new XMLParser();
+
+// 1. fetch → XML text → parser.parse()
+// 2. response.body.items.item 배열 추출
+// 3. 페이지네이션: totalCount / numOfRows 로 전체 페이지 계산
+// 4. 배치 upsert (100건 단위)
+```
 
 **산출물**:
 - `backend/__tests__/services/aedSync.test.ts`
 - `backend/src/services/aedSyncService.ts`
-- `backend/src/scripts/sync-aed.ts`
+- `backend/src/scripts/syncAed.ts`
 - `backend/src/scripts/syncAll.ts` (수정)
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 설치장소, 상세위치, 관리기관 정확히 저장
-- [ ] DB upsert(sourceId 기준) 성공
-- [ ] SyncHistory 기록
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] XML 파싱 정상 동작
+- [x] 60,917건 전체 동기화 완료
+- [x] 설치위치, 기관명, 제조사, 모델명, 요일별 운영시간 정확히 저장
+- [x] DB upsert(sourceId=serialSeq 기준) 성공
+- [x] SyncHistory 기록
 
 #### T9.2.3: API 확장
 
@@ -353,8 +452,9 @@ npm ls csv-parse iconv-lite
 
 **작업 내용**:
 - `FacilityCategorySchema`에 `'aed'` 추가
-- `facilityService.ts` switch-case에 aed 분기 추가
+- `facilityService.ts` switch-case에 aed 분기 추가 (검색, 상세, 지역별, 카운트)
 - `meta.ts` stats에 aed count 추가
+- routes/facilities.ts 수정 불필요 (제네릭 라우팅)
 
 **산출물**:
 - `backend/src/schemas/facility.ts` (수정)
@@ -362,10 +462,10 @@ npm ls csv-parse iconv-lite
 - `backend/src/routes/meta.ts` (수정)
 
 **인수 조건**:
-- [ ] `GET /api/facilities/search?category=aed` 정상 동작
-- [ ] `GET /api/facilities/:id?category=aed` 정상 동작
-- [ ] `GET /api/meta/stats`에 aed count 포함
-- [ ] 기존 카테고리 API 동작 영향 없음
+- [x] `GET /api/facilities/search?category=aed` 정상 동작
+- [x] `GET /api/facilities/aed/:id` 정상 동작
+- [x] `GET /api/meta/stats`에 aed count 포함
+- [x] 기존 카테고리 API 동작 영향 없음
 
 #### T9.2.4: 프론트엔드 UI
 
@@ -375,11 +475,21 @@ npm ls csv-parse iconv-lite
 
 **작업 내용**:
 - `CategoryId` 타입에 `'aed'` 추가
-- `categoryConfig`에 `{ id: 'aed', label: 'AED', bgColor: 'bg-red-50', color: 'red-500' }` 추가
+- `CATEGORY_META`에 `aed: { label: '자동심장충격기', slug: 'aed', icon: '/icons/aed.webp', color: 'red' }` 추가
 - `AppHeader.vue`, `CategoryTabs.vue`, `FacilityBottomSheet.vue` 카테고리 목록 확장
 - `useFacilitySearch.ts`, `useFacilityDetail.ts` 카테고리 목록 확장
-- `AedDetail.vue` 전용 상세 컴포넌트 생성 (설치장소, 상세위치, 관리기관, 설치일자)
+- `AedDetail.vue` 전용 상세 컴포넌트 생성
 - 카테고리 아이콘 `aed.webp` 추가
+
+**AedDetail.vue 표시 필드**:
+| 라벨 | 필드 | 비고 |
+|------|------|------|
+| 설치위치 | `buildPlace` | 건물 내 상세위치 |
+| 설치기관 | `org` | |
+| 전화번호 | `clerkTel` | |
+| 제조사 | `mfg` | |
+| 모델명 | `model` | |
+| 운영시간 | 요일별 시간 | "0000"~"2400" → "00:00~24:00" 포맷 변환 |
 
 **산출물**:
 - `frontend/types/facility.ts` (수정)
@@ -393,16 +503,16 @@ npm ls csv-parse iconv-lite
 - `frontend/public/icons/category/aed.webp` (신규)
 
 **인수 조건**:
-- [ ] 메인 페이지 카테고리 그리드에 AED 표시
-- [ ] 카테고리 탭/헤더에서 AED 선택 가능
-- [ ] 검색 결과에 AED 목록 정상 노출
-- [ ] 상세 페이지에 설치장소, 상세위치, 관리기관, 설치일자 표시
-- [ ] 아이콘 WebP 형식, 10KB 이하
-- [ ] 기존 카테고리 UI 동작 영향 없음
+- [x] 메인 페이지 카테고리 그리드에 AED 표시
+- [x] 카테고리 탭/헤더에서 AED 선택 가능
+- [x] 검색 결과에 AED 목록 정상 노출
+- [x] 상세 페이지에 설치위치, 기관명, 제조사, 모델명, 운영시간 표시
+- [x] 아이콘 WebP 형식, 10KB 이하
+- [x] 기존 카테고리 UI 동작 영향 없음
 
 ---
 
-### [ ] Phase 9, T9.3: 공공도서관 (library) 데이터 동기화 + API + UI
+### [x] Phase 9, T9.3: 공공도서관 (library) 데이터 동기화 + API + UI
 
 **담당**: backend-specialist (동기화/API), frontend-specialist (UI)
 
@@ -430,10 +540,10 @@ npm ls csv-parse iconv-lite
 - `backend/prisma/seed.ts` (수정)
 
 **인수 조건**:
-- [ ] `npm run db:migrate` 성공
-- [ ] `npm run db:generate` 성공
-- [ ] Prisma Studio에서 Library 테이블 확인 가능
-- [ ] Category seed에 `{ id: 'library', name: '공공도서관', icon: '📚', sortOrder: 8 }` 추가됨
+- [x] `npm run db:migrate` 성공
+- [x] `npm run db:generate` 성공
+- [x] Prisma Studio에서 Library 테이블 확인 가능
+- [x] Category seed에 `{ id: 'library', name: '공공도서관', icon: '📚', sortOrder: 8 }` 추가됨
 
 #### T9.3.2: 동기화 서비스 구현
 
@@ -470,12 +580,12 @@ npm ls csv-parse iconv-lite
 - `backend/src/scripts/syncAll.ts` (수정)
 
 **인수 조건**:
-- [ ] 테스트 먼저 작성됨
-- [ ] 모든 테스트 통과
-- [ ] 도서관유형, 운영시간, 휴관일, 장서수, 좌석수 정확히 저장
-- [ ] DB upsert(sourceId 기준) 성공
-- [ ] SyncHistory 기록
-- [ ] 데이터 규모가 작으므로(~1,200) 전체 동기화 1분 이내 완료
+- [x] 테스트 먼저 작성됨
+- [x] 모든 테스트 통과
+- [x] 도서관유형, 운영시간, 휴관일, 장서수, 좌석수 정확히 저장
+- [x] DB upsert(sourceId 기준) 성공
+- [x] SyncHistory 기록
+- [x] 데이터 규모가 작으므로(~1,200) 전체 동기화 1분 이내 완료
 
 #### T9.3.3: API 확장
 
@@ -494,10 +604,10 @@ npm ls csv-parse iconv-lite
 - `backend/src/routes/meta.ts` (수정)
 
 **인수 조건**:
-- [ ] `GET /api/facilities/search?category=library` 정상 동작
-- [ ] `GET /api/facilities/:id?category=library` 정상 동작
-- [ ] `GET /api/meta/stats`에 library count 포함
-- [ ] 기존 카테고리 API 동작 영향 없음
+- [x] `GET /api/facilities/search?category=library` 정상 동작
+- [x] `GET /api/facilities/:id?category=library` 정상 동작
+- [x] `GET /api/meta/stats`에 library count 포함
+- [x] 기존 카테고리 API 동작 영향 없음
 
 #### T9.3.4: 프론트엔드 UI
 
@@ -525,12 +635,12 @@ npm ls csv-parse iconv-lite
 - `frontend/public/icons/category/library.webp` (신규)
 
 **인수 조건**:
-- [ ] 메인 페이지 카테고리 그리드에 도서관 표시
-- [ ] 카테고리 탭/헤더에서 도서관 선택 가능
-- [ ] 검색 결과에 도서관 목록 정상 노출
-- [ ] 상세 페이지에 운영시간, 휴관일, 장서수, 좌석수, 홈페이지 링크 표시
-- [ ] 아이콘 WebP 형식, 10KB 이하
-- [ ] 기존 카테고리 UI 동작 영향 없음
+- [x] 메인 페이지 카테고리 그리드에 도서관 표시
+- [x] 카테고리 탭/헤더에서 도서관 선택 가능
+- [x] 검색 결과에 도서관 목록 정상 노출
+- [x] 상세 페이지에 운영시간, 휴관일, 장서수, 좌석수, 홈페이지 링크 표시
+- [x] 아이콘 WebP 형식, 10KB 이하
+- [x] 기존 카테고리 UI 동작 영향 없음
 
 ---
 
@@ -567,7 +677,7 @@ npm ls csv-parse iconv-lite
 
 ## M10: 리팩토링
 
-### [ ] Phase 10, T10.1: facilityService switch-case → 레지스트리 패턴
+### [x] Phase 10, T10.1: facilityService switch-case → 레지스트리 패턴
 
 **담당**: backend-specialist
 
@@ -597,11 +707,11 @@ npm ls csv-parse iconv-lite
 - `backend/__tests__/services/facilityRegistry.test.ts` (신규)
 
 **인수 조건**:
-- [ ] facilityService.ts에서 switch-case 완전 제거
-- [ ] 기존 8개 카테고리 전체 API 테스트 통과 (회귀 없음)
-- [ ] 새 카테고리 추가 시 `facilityRegistry.ts`에 1곳만 등록하면 됨
-- [ ] TypeScript 컴파일 에러 없음
-- [ ] `npm run test` 전체 통과
+- [x] facilityService.ts에서 switch-case 완전 제거
+- [x] 기존 8개 카테고리 전체 API 테스트 통과 (회귀 없음)
+- [x] 새 카테고리 추가 시 `facilityRegistry.ts`에 1곳만 등록하면 됨
+- [x] TypeScript 컴파일 에러 없음
+- [x] `npm run test` 전체 통과
 
 ---
 
@@ -638,7 +748,7 @@ npm ls csv-parse iconv-lite
 
 ---
 
-### [ ] Phase 10, T10.3: 동기화 서비스 공통 추상화
+### [x] Phase 10, T10.3: 동기화 서비스 공통 추상화
 
 **담당**: backend-specialist
 
@@ -662,10 +772,10 @@ npm ls csv-parse iconv-lite
 - `backend/__tests__/services/sync/baseSyncService.test.ts` (신규)
 
 **인수 조건**:
-- [ ] 기존 8개 동기화 서비스 전체 정상 동작 (회귀 없음)
-- [ ] 새 카테고리 추가 시 동기화 서비스 보일러플레이트 50% 이상 감소
-- [ ] 동기화 로그 포맷 통일 (시작/건수/성공·실패/소요시간)
-- [ ] `npm run test` 전체 통과
+- [x] 기존 8개 동기화 서비스 전체 정상 동작 (회귀 없음)
+- [x] 새 카테고리 추가 시 동기화 서비스 보일러플레이트 50% 이상 감소
+- [x] 동기화 로그 포맷 통일 (시작/건수/성공·실패/소요시간)
+- [x] `npm run test` 전체 통과
 
 ---
 
@@ -1127,7 +1237,7 @@ cd backend && npm install proj4 @types/proj4
 | 카테고리 | data.go.kr | 방식 | 좌표 | 좌표변환 | 예상 건수 | 특수사항 |
 |---------|-----------|------|:----:|:-------:|----------|---------|
 | parking | #15012896 | CSV+API | O | 불필요 | ~5만 | — |
-| aed | #15021103 | CSV+API | O | 불필요 | ~4만 | — |
+| aed | #15000652 | API (XML only) | O | 불필요 | **60,917** | `fast-xml-parser` 필요 |
 | library | #15013109 | API | O | 불필요 | ~1,200 | 소규모 |
 | ev | #15013115, #15076352 | CSV+API | O | 불필요 | ~43만 | 대규모, API 제한 |
 | pharmacy | #15096290 | CSV | O | EPSG:5174→WGS84 | ~6.7만 | proj4 필요 |

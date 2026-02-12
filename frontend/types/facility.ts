@@ -1,5 +1,5 @@
 // 시설 카테고리 (Prisma enum 대응)
-export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking'
+export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library'
 
 // 시설 기본 정보 (목록용)
 export interface Facility {
@@ -27,7 +27,7 @@ export interface FacilityDetail {
   city: string
   district: string
   bjdCode: string | null
-  details: ToiletDetails | WifiDetails | ClothesDetails | KioskDetails | ParkingDetails
+  details: ToiletDetails | WifiDetails | ClothesDetails | KioskDetails | ParkingDetails | AedDetails | LibraryDetails
   sourceId: string
   sourceUrl: string | null
   viewCount: number
@@ -93,12 +93,61 @@ export interface ParkingDetails {
   hasDisabledParking?: boolean
 }
 
+export interface AedDetails {
+  buildPlace?: string | null
+  org?: string | null
+  clerkTel?: string | null
+  mfg?: string | null
+  model?: string | null
+  monSttTme?: string | null
+  monEndTme?: string | null
+  tueSttTme?: string | null
+  tueEndTme?: string | null
+  wedSttTme?: string | null
+  wedEndTme?: string | null
+  thuSttTme?: string | null
+  thuEndTme?: string | null
+  friSttTme?: string | null
+  friEndTme?: string | null
+  satSttTme?: string | null
+  satEndTme?: string | null
+  sunSttTme?: string | null
+  sunEndTme?: string | null
+  holSttTme?: string | null
+  holEndTme?: string | null
+}
+
+export interface LibraryDetails {
+  libraryType?: string | null
+  closedDays?: string | null
+  weekdayOpenTime?: string | null
+  weekdayCloseTime?: string | null
+  saturdayOpenTime?: string | null
+  saturdayCloseTime?: string | null
+  holidayOpenTime?: string | null
+  holidayCloseTime?: string | null
+  seatCount?: number
+  bookCount?: number
+  serialCount?: number
+  nonBookCount?: number
+  loanableBooks?: number
+  loanableDays?: number
+  phoneNumber?: string | null
+  homepageUrl?: string | null
+  operatingOrg?: string | null
+}
+
 // 검색 파라미터
-// NOTE: 사용자 GPS 좌표(lat/lng)는 위치정보사업 신고 의무 회피를 위해
-// 서버로 전송하지 않음. 거리 계산/정렬/영역 필터는 클라이언트에서 수행.
 export interface SearchParams {
   keyword?: string
   category?: FacilityCategory
+  lat?: number
+  lng?: number
+  radius?: number
+  swLat?: number
+  swLng?: number
+  neLat?: number
+  neLng?: number
   city?: string
   district?: string
   page?: number
@@ -160,6 +209,16 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     label: '공영주차장',
     icon: '🅿️',
     color: 'sky',
+  },
+  aed: {
+    label: '자동심장충격기',
+    icon: '❤️‍🩹',
+    color: 'red',
+  },
+  library: {
+    label: '공공도서관',
+    icon: '📚',
+    color: 'amber',
   },
 }
 

@@ -116,6 +116,65 @@ export interface ParkingCSVRow {
   [key: string]: string | undefined;
 }
 
+// Library CSV 로우 타입
+export interface LibraryCSVRow {
+  '도서관명': string;
+  '시도명': string;
+  '시군구명': string;
+  '도서관유형': string;
+  '휴관일': string;
+  '평일운영시작시각': string;
+  '평일운영종료시각': string;
+  '토요일운영시작시각'?: string;
+  '토요일운영종료시각'?: string;
+  '공휴일운영시작시각'?: string;
+  '공휴일운영종료시각'?: string;
+  '열람좌석수': string;
+  '자료수(도서)': string;
+  '소재지도로명주소': string;
+  '운영기관명'?: string;
+  '도서관전화번호'?: string;
+  '홈페이지주소'?: string;
+  '자료수(연속간행물)'?: string;
+  '자료수(비도서)'?: string;
+  '대출가능권수'?: string;
+  '대출가능일수'?: string;
+  '위도': string;
+  '경도': string;
+  [key: string]: string | undefined;
+}
+
+// Library 변환 결과 타입
+export interface TransformedLibrary {
+  id: string;
+  name: string;
+  address: string;
+  roadAddress: string | null;
+  lat: number | null;
+  lng: number | null;
+  city: string;
+  district: string;
+  sourceId: string;
+  // Library 전용 필드
+  libraryType: string;
+  closedDays: string;
+  weekdayOpenTime: string;
+  weekdayCloseTime: string;
+  saturdayOpenTime: string;
+  saturdayCloseTime: string;
+  holidayOpenTime: string;
+  holidayCloseTime: string;
+  seatCount: number;
+  bookCount: number;
+  serialCount: number;
+  nonBookCount: number;
+  loanableBooks: number;
+  loanableDays: number;
+  phoneNumber: string;
+  homepageUrl: string;
+  operatingOrg: string;
+}
+
 // Parking 변환 결과 타입
 export interface TransformedParking {
   id: string;
@@ -339,7 +398,7 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
 /**
  * 시도명 정규화 맵
  */
-const CITY_NAME_MAP: Record<string, string> = {
+export const CITY_NAME_MAP: Record<string, string> = {
   '서울특별시': '서울',
   '부산광역시': '부산',
   '대구광역시': '대구',
@@ -628,6 +687,119 @@ export function transformParkingRow(row: ParkingCSVRow): TransformedParking | nu
   };
 }
 
+/**
+ * CSV 파일을 파싱하여 LibraryCSVRow 배열 반환
+ */
+export async function parseLibraryCSV(filePath: string): Promise<LibraryCSVRow[]> {
+  return new Promise((resolve, reject) => {
+    const buffer = fs.readFileSync(filePath);
+    const encoding = detectEncoding(buffer);
+
+    let content: string;
+    if (encoding === 'euc-kr') {
+      content = iconv.decode(buffer, 'euc-kr');
+    } else {
+      content = buffer.toString('utf8');
+      // BOM 제거
+      if (content.charCodeAt(0) === 0xfeff) {
+        content = content.slice(1);
+      }
+    }
+
+    const rows: LibraryCSVRow[] = [];
+
+    parse(content, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      relaxColumnCount: true,
+      relaxQuotes: true,
+    })
+      .on('data', (row: LibraryCSVRow) => {
+        rows.push(row);
+      })
+      .on('error', (err: Error) => {
+        reject(err);
+      })
+      .on('end', () => {
+        resolve(rows);
+      });
+  });
+}
+
+/**
+ * 도서관 CSV 로우를 Library 형식으로 변환
+ */
+export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | null {
+  const name = row['도서관명']?.trim() || '';
+  const city = row['시도명']?.trim() || '';
+  const district = row['시군구명']?.trim() || '';
+  const roadAddress = row['소재지도로명주소']?.trim() || '';
+  const latStr = row['위도']?.trim() || '';
+  const lngStr = row['경도']?.trim() || '';
+
+  if (!name) {
+    return null;
+  }
+
+  // 시도명 정규화
+  const normalizedCity = normalizeCityName(city);
+
+  if (!normalizedCity || !district) {
+    return null;
+  }
+
+  // 좌표 파싱 및 유효성 검사
+  const lat = parseFloat(latStr);
+  const lng = parseFloat(lngStr);
+
+  const hasValidCoords =
+    !isNaN(lat) &&
+    !isNaN(lng) &&
+    lat !== 0 &&
+    lng !== 0 &&
+    lat >= 33 &&
+    lat <= 39 &&
+    lng >= 124 &&
+    lng <= 132;
+
+  const finalLat = hasValidCoords ? lat : null;
+  const finalLng = hasValidCoords ? lng : null;
+
+  const sourceId = generateSourceId(name, latStr, lngStr);
+  const libraryId = `library-${sourceId}`;
+
+  return {
+    id: libraryId,
+    name,
+    address: roadAddress,
+    roadAddress: roadAddress || null,
+    lat: finalLat,
+    lng: finalLng,
+    city: normalizedCity,
+    district,
+    sourceId,
+    // Library 전용 필드
+    libraryType: row['도서관유형']?.trim() || '',
+    closedDays: row['휴관일']?.trim() || '',
+    weekdayOpenTime: row['평일운영시작시각']?.trim() || '',
+    weekdayCloseTime: row['평일운영종료시각']?.trim() || '',
+    saturdayOpenTime: row['토요일운영시작시각']?.trim() || '',
+    saturdayCloseTime: row['토요일운영종료시각']?.trim() || '',
+    holidayOpenTime: row['공휴일운영시작시각']?.trim() || '',
+    holidayCloseTime: row['공휴일운영종료시각']?.trim() || '',
+    seatCount: parseInt(row['열람좌석수'] || '0', 10) || 0,
+    bookCount: parseInt(row['자료수(도서)'] || '0', 10) || 0,
+    serialCount: parseInt(row['자료수(연속간행물)'] || '0', 10) || 0,
+    nonBookCount: parseInt(row['자료수(비도서)'] || '0', 10) || 0,
+    loanableBooks: parseInt(row['대출가능권수'] || '0', 10) || 0,
+    loanableDays: parseInt(row['대출가능일수'] || '0', 10) || 0,
+    phoneNumber: row['도서관전화번호']?.trim() || '',
+    homepageUrl: row['홈페이지주소']?.trim() || '',
+    operatingOrg: row['운영기관명']?.trim() || '',
+  };
+}
+
 export default {
   parseToiletCSV,
   transformToiletRow,
@@ -635,4 +807,6 @@ export default {
   transformClothesRow,
   parseParkingCSV,
   transformParkingRow,
+  parseLibraryCSV,
+  transformLibraryRow,
 };

@@ -128,7 +128,7 @@
 
       <!-- Category Grid Section (Desktop) -->
       <section class="hidden md:block w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-9 gap-4">
           <a
             v-for="category in categoriesDesktop"
             :key="category.id"
@@ -193,6 +193,8 @@ const stats = ref<Record<string, number>>({
   kiosk: 0,
   trash: 0,
   parking: 0,
+  aed: 0,
+  library: 0,
   total: 0,
 })
 
@@ -223,6 +225,8 @@ const categories: Array<{ id: CategoryId; label: string }> = [
   { id: 'kiosk', label: '발급기' },
   { id: 'trash', label: '쓰레기' },
   { id: 'parking', label: '주차장' },
+  { id: 'aed', label: 'AED' },
+  { id: 'library', label: '도서관' },
 ]
 
 // 카테고리 기본 정보
@@ -233,6 +237,8 @@ const categoryConfig: Array<{ id: CategoryId | 'all'; label: string; bgColor: st
   { id: 'kiosk', label: '발급기', bgColor: 'bg-indigo-50 dark:bg-indigo-900/30' },
   { id: 'trash', label: '쓰레기', bgColor: 'bg-green-50 dark:bg-green-900/30' },
   { id: 'parking', label: '주차장', bgColor: 'bg-sky-50 dark:bg-sky-900/30' },
+  { id: 'aed', label: 'AED', bgColor: 'bg-red-50 dark:bg-red-900/30' },
+  { id: 'library', label: '도서관', bgColor: 'bg-amber-50 dark:bg-amber-900/30' },
   { id: 'all', label: '전체', bgColor: 'bg-slate-50 dark:bg-slate-700' },
 ]
 

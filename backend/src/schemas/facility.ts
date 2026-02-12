@@ -12,21 +12,44 @@ export const FacilityCategorySchema = z.enum([
   'clothes',
   'kiosk',
   'parking',
+  'aed',
+  'library',
 ]);
 
 export type FacilityCategory = z.infer<typeof FacilityCategorySchema>;
 
 // 시설 검색 요청 스키마
-// NOTE: 사용자 GPS 좌표(lat/lng)는 위치정보사업 신고 의무 회피를 위해
-// 서버로 전송하지 않음. 거리 계산은 클라이언트에서 수행.
-export const FacilitySearchSchema = z.object({
-  keyword: z.string().min(1).max(100).optional(),
-  category: FacilityCategorySchema.optional(),
-  city: z.string().max(50).optional(),
-  district: z.string().max(50).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
+export const FacilitySearchSchema = z
+  .object({
+    keyword: z.string().min(1).max(100).optional(),
+    category: FacilityCategorySchema.optional(),
+    lat: z.coerce.number().min(-90).max(90).optional(),
+    lng: z.coerce.number().min(-180).max(180).optional(),
+    radius: z.coerce.number().int().min(100).max(10000).default(1000).optional(),
+    swLat: z.coerce.number().min(-90).max(90).optional(),
+    swLng: z.coerce.number().min(-180).max(180).optional(),
+    neLat: z.coerce.number().min(-90).max(90).optional(),
+    neLng: z.coerce.number().min(-180).max(180).optional(),
+    city: z.string().max(50).optional(),
+    district: z.string().max(50).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .refine(
+    (data) => {
+      if ((data.lat !== undefined) !== (data.lng !== undefined)) return false;
+      return true;
+    },
+    { message: 'lat과 lng는 함께 제공되어야 합니다' }
+  )
+  .refine(
+    (data) => {
+      const boundsFields = [data.swLat, data.swLng, data.neLat, data.neLng];
+      const defined = boundsFields.filter((f) => f !== undefined).length;
+      return defined === 0 || defined === 4;
+    },
+    { message: 'swLat, swLng, neLat, neLng는 모두 함께 제공되어야 합니다' }
+  );
 
 // 시설 상세 조회 파라미터 스키마
 export const FacilityDetailParamsSchema = z.object({

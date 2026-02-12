@@ -55,6 +55,22 @@ const categories = [
     sortOrder: 6,
     isActive: true,
   },
+  {
+    id: 'aed',
+    name: '자동심장충격기',
+    icon: '❤️‍🩹',
+    description: '자동심장충격기(AED) 설치 위치',
+    sortOrder: 7,
+    isActive: true,
+  },
+  {
+    id: 'library',
+    name: '공공도서관',
+    icon: '📚',
+    description: '공공도서관 위치 및 운영 정보',
+    sortOrder: 8,
+    isActive: true,
+  },
 ];
 
 async function main() {

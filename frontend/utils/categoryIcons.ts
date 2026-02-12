@@ -3,7 +3,7 @@
  * 3D 아이소메트릭 카테고리 아이콘 경로 관리
  */
 
-export type CategoryId = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking'
+export type CategoryId = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library'
 
 export const CATEGORY_ICONS: Record<CategoryId, string> = {
   toilet: '/icons/category/toilet.webp',
@@ -12,6 +12,8 @@ export const CATEGORY_ICONS: Record<CategoryId, string> = {
   clothes: '/icons/category/clothes.webp',
   kiosk: '/icons/category/kiosk.webp',
   parking: '/icons/category/parking.webp',
+  aed: '/icons/category/aed.webp',
+  library: '/icons/category/library.webp',
 } as const
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = {
@@ -21,6 +23,8 @@ export const CATEGORY_LABELS: Record<CategoryId, string> = {
   clothes: '의류수거함',
   kiosk: '발급기',
   parking: '주차장',
+  aed: 'AED',
+  library: '도서관',
 } as const
 
 export const CATEGORY_COLORS: Record<CategoryId, { primary: string; bg: string; bgDark: string }> = {
@@ -53,6 +57,16 @@ export const CATEGORY_COLORS: Record<CategoryId, { primary: string; bg: string; 
     primary: '#0ea5e9',
     bg: 'bg-sky-50',
     bgDark: 'dark:bg-sky-900/20',
+  },
+  aed: {
+    primary: '#ef4444',
+    bg: 'bg-red-50',
+    bgDark: 'dark:bg-red-900/20',
+  },
+  library: {
+    primary: '#d97706',
+    bg: 'bg-amber-50',
+    bgDark: 'dark:bg-amber-900/20',
   },
 } as const
 
