@@ -64,7 +64,7 @@ export const helmetConfig = helmet({
  * CORS 설정 (환경별 origin 제한)
  */
 export const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void => {
     const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
 
     // origin이 없는 경우 (same-origin 요청)는 허용

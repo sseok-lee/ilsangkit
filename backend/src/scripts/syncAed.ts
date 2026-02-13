@@ -155,7 +155,7 @@ async function fetchPage(pageNo: number, retryCount = 0): Promise<{ items: AedAp
     return { items, totalCount };
   } catch (error) {
     // 네트워크 에러는 최대 3회 재시도
-    if (retryCount < 3 && (error instanceof TypeError || (error as any).code === 'ECONNREFUSED')) {
+    if (retryCount < 3 && (error instanceof TypeError || (error as { code?: string }).code === 'ECONNREFUSED')) {
       const waitMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
       console.log(`네트워크 에러 - ${waitMs}ms 대기 후 재시도 (${retryCount + 1}/3, page ${pageNo})`);
       await new Promise((resolve) => setTimeout(resolve, waitMs));

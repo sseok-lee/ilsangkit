@@ -117,7 +117,7 @@ function toFacilityItem(record: any, category: FacilityCategory): FacilityItem {
 /**
  * 키워드 기반 검색 조건 생성
  */
-function buildKeywordFilter(keyword?: string) {
+function buildKeywordFilter(keyword?: string): Record<string, unknown> {
   if (!keyword) return {};
   return {
     OR: [
@@ -130,7 +130,7 @@ function buildKeywordFilter(keyword?: string) {
 /**
  * 지역 필터 조건 생성
  */
-function buildRegionFilter(city?: string, district?: string) {
+function buildRegionFilter(city?: string, district?: string): { city?: string; district?: string } {
   const filter: { city?: string; district?: string } = {};
   if (city) filter.city = city;
   if (district) filter.district = district;
@@ -140,7 +140,7 @@ function buildRegionFilter(city?: string, district?: string) {
 /**
  * bounds 필터 조건 생성
  */
-function buildBoundsFilter(swLat: number, swLng: number, neLat: number, neLng: number) {
+function buildBoundsFilter(swLat: number, swLng: number, neLat: number, neLng: number): { lat: { gte: number; lte: number }; lng: { gte: number; lte: number } } {
   return {
     lat: { gte: swLat, lte: neLat },
     lng: { gte: swLng, lte: neLng },

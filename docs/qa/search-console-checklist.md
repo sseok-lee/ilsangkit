@@ -77,15 +77,15 @@
 **URL**: https://search.google.com/search-console
 
 ### 방법 1: HTML 파일 업로드 (권장)
-1. [ ] Search Console에서 "속성 추가" 클릭
-2. [ ] "URL 접두어" 선택 → `https://ilsangkit.co.kr` 입력
-3. [ ] HTML 파일 다운로드 (예: `google1234abcd.html`)
-4. [ ] 파일을 `frontend/public/` 디렉토리에 복사
-5. [ ] 배포 후 확인: `https://ilsangkit.co.kr/google1234abcd.html`
-6. [ ] Search Console에서 "확인" 버튼 클릭
+1. [x] Search Console에서 "속성 추가" 클릭
+2. [x] "URL 접두어" 선택 → `https://ilsangkit.co.kr` 입력
+3. [x] HTML 파일 다운로드 (예: `google1234abcd.html`)
+4. [x] 파일을 `frontend/public/` 디렉토리에 복사
+5. [x] 배포 후 확인: `https://ilsangkit.co.kr/google1234abcd.html`
+6. [x] Search Console에서 "확인" 버튼 클릭
 
 ### 방법 2: DNS TXT 레코드 (대안)
-1. [ ] Search Console에서 TXT 레코드 값 복사
+1. [x] Search Console에서 TXT 레코드 값 복사
 2. [ ] Cafe24 호스팅 관리자에서 DNS 설정
 3. [ ] TXT 레코드 추가:
    - 호스트: `@` 또는 `ilsangkit.co.kr`
@@ -94,7 +94,7 @@
 5. [ ] Search Console에서 "확인" 버튼 클릭
 
 ### 방법 3: Google Analytics 연동 (이미 GA 설정된 경우)
-- [ ] `nuxt.config.ts`에 GA ID 확인: `NUXT_PUBLIC_GA_ID`
+- [x] `nuxt.config.ts`에 GA ID 확인: `NUXT_PUBLIC_GA_ID`
 - [ ] Search Console에서 "Google 애널리틱스" 방법 선택
 - [ ] 자동 확인 완료
 
@@ -110,9 +110,9 @@ curl -I https://ilsangkit.co.kr/sitemap.xml
 # Content-Type: application/xml
 ```
 
-- [ ] 사이트맵 XML 형식 유효성 확인
-- [ ] 모든 카테고리 URL 포함 확인
-- [ ] 정적 페이지 URL 포함 확인
+- [x] 사이트맵 XML 형식 유효성 확인
+- [x] 모든 카테고리 URL 포함 확인
+- [x] 정적 페이지 URL 포함 확인
 
 ### 2. Search Console에서 사이트맵 제출
 1. [ ] Search Console → 좌측 메뉴 "Sitemaps" 클릭
@@ -361,7 +361,7 @@ curl -I https://ilsangkit.co.kr/sitemap.xml
 #### 이미지 최적화
 - [x] WebP 포맷 사용 (`/icons/category/*.webp`)
 - [ ] 이미지 lazy loading 설정 확인
-- [ ] 캐싱 헤더 설정 확인 (`nuxt.config.ts` routeRules)
+- [x] 캐싱 헤더 설정 확인 (`nuxt.config.ts` routeRules)
 
 #### 리소스 캐싱
 ```typescript

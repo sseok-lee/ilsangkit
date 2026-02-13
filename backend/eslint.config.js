@@ -42,6 +42,13 @@ export default [
     },
   },
   {
+    files: ['src/scripts/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+  {
     ignores: ['dist/**', 'node_modules/**', '__tests__/**', '*.config.js'],
   },
 ];
