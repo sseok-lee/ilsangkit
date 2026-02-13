@@ -8,7 +8,7 @@ import {
   fetchWasteScheduleIds,
 } from '../utils/sitemap'
 
-const FACILITY_CATEGORIES = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking'] as const
+const FACILITY_CATEGORIES = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'] as const
 
 export default defineEventHandler(async (event) => {
   setHeader(event, 'Content-Type', 'application/xml')
