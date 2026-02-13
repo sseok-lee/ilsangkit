@@ -8,6 +8,7 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as iconv from 'iconv-lite';
 import { KOREA_BOUNDS, SYNC } from '../constants/index.js';
+import { CITY_NORMALIZATION_MAP } from '../lib/addressParser.js';
 
 // 와이파이 CSV 데이터 URL
 const WIFI_DATA_URL = 'https://www.localdata.go.kr/datafile/each/07_24_04_P_CSV.zip';
@@ -62,92 +63,10 @@ export interface WifiSyncResult {
   errors: string[];
 }
 
-// 시/도 정규화 맵
-const CITY_MAP: Record<string, string> = {
-  서울특별시: '서울',
-  서울시: '서울',
-  서울: '서울',
-  부산광역시: '부산',
-  부산시: '부산',
-  부산: '부산',
-  대구광역시: '대구',
-  대구시: '대구',
-  대구: '대구',
-  인천광역시: '인천',
-  인천시: '인천',
-  인천: '인천',
-  광주광역시: '광주',
-  광주시: '광주',
-  광주: '광주',
-  대전광역시: '대전',
-  대전시: '대전',
-  대전: '대전',
-  울산광역시: '울산',
-  울산시: '울산',
-  울산: '울산',
-  세종특별자치시: '세종',
-  세종시: '세종',
-  세종: '세종',
-  경기도: '경기',
-  경기: '경기',
-  강원특별자치도: '강원',
-  강원도: '강원',
-  강원: '강원',
-  충청북도: '충북',
-  충북: '충북',
-  충청남도: '충남',
-  충남: '충남',
-  전북특별자치도: '전북',
-  전라북도: '전북',
-  전북: '전북',
-  전라남도: '전남',
-  전남: '전남',
-  경상북도: '경북',
-  경북: '경북',
-  경상남도: '경남',
-  경남: '경남',
-  제주특별자치도: '제주',
-  제주도: '제주',
-  제주: '제주',
-};
-
-/**
- * 주소에서 시/도, 구/군 추출
- */
-export function parseAddress(
-  address: string
-): { city: string; district: string } | null {
-  if (!address || address.trim() === '') {
-    return null;
-  }
-
-  const trimmedAddress = address.trim();
-
-  // 세종시 특별 처리 (구/군이 없음)
-  if (
-    trimmedAddress.includes('세종특별자치시') ||
-    trimmedAddress.includes('세종시') ||
-    trimmedAddress.startsWith('세종')
-  ) {
-    return { city: '세종', district: '세종시' };
-  }
-
-  // 정규식으로 시/도, 구/군/시 추출
-  const regex =
-    /^(서울특별시|서울시|서울|부산광역시|부산시|부산|대구광역시|대구시|대구|인천광역시|인천시|인천|광주광역시|광주시|광주|대전광역시|대전시|대전|울산광역시|울산시|울산|세종특별자치시|세종시|세종|경기도|경기|강원특별자치도|강원도|강원|충청북도|충북|충청남도|충남|전북특별자치도|전라북도|전북|전라남도|전남|경상북도|경북|경상남도|경남|제주특별자치도|제주도|제주)\s+(\S+[구군시])/;
-
-  const match = trimmedAddress.match(regex);
-
-  if (!match) {
-    return null;
-  }
-
-  const rawCity = match[1];
-  const district = match[2];
-  const city = CITY_MAP[rawCity] || rawCity;
-
-  return { city, district };
-}
+// CITY_MAP → addressParser.ts의 CITY_NORMALIZATION_MAP으로 통합됨
+// parseAddress → addressParser.ts로 통합됨
+// Re-export for backward compatibility (tests import from here)
+export { parseAddress } from '../lib/addressParser.js';
 
 /**
  * 와이파이 CSV 데이터를 Wifi 모델 형식으로 변환
@@ -178,7 +97,7 @@ export function transformWifiData(row: WifiCSVRow): TransformedWifi | null {
 
   // 시/도, 구/군 - CSV에서 직접 제공되는 값 사용
   const rawCity = row.설치시도명?.trim() || '';
-  const city = CITY_MAP[rawCity] || rawCity || 'unknown';
+  const city = CITY_NORMALIZATION_MAP[rawCity] || rawCity || 'unknown';
   const district = row.설치시군구명?.trim() || 'unknown';
 
   // 고유 ID 생성

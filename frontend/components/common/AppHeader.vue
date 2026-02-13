@@ -28,62 +28,15 @@
     </div>
 
     <!-- Center: Desktop Navigation -->
-    <nav class="hidden md:flex items-center gap-6">
+    <nav class="hidden md:flex items-center gap-3 overflow-x-auto no-scrollbar">
       <NuxtLink
-        to="/search?category=toilet"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
+        v-for="(meta, key) in CATEGORY_META"
+        :key="key"
+        :to="`/search?category=${key}`"
+        class="flex shrink-0 items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
       >
-        <CategoryIcon category-id="toilet" size="sm" />
-        화장실
-      </NuxtLink>
-      <NuxtLink
-        to="/search?category=wifi"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="wifi" size="sm" />
-        와이파이
-      </NuxtLink>
-      <NuxtLink
-        to="/search?category=clothes"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="clothes" size="sm" />
-        의류수거함
-      </NuxtLink>
-      <NuxtLink
-        to="/search?category=kiosk"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="kiosk" size="sm" />
-        발급기
-      </NuxtLink>
-      <NuxtLink
-        to="/search?category=parking"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="parking" size="sm" />
-        주차장
-      </NuxtLink>
-      <NuxtLink
-        to="/search?category=aed"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="aed" size="sm" />
-        AED
-      </NuxtLink>
-      <NuxtLink
-        to="/search?category=library"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="library" size="sm" />
-        도서관
-      </NuxtLink>
-      <NuxtLink
-        to="/search?category=trash"
-        class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
-      >
-        <CategoryIcon category-id="trash" size="sm" />
-        쓰레기
+        <CategoryIcon :category-id="key" size="sm" />
+        {{ meta.shortLabel }}
       </NuxtLink>
     </nav>
 
@@ -145,68 +98,14 @@
         </NuxtLink>
         <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
         <NuxtLink
-          to="/search?category=toilet"
+          v-for="(meta, key) in CATEGORY_META"
+          :key="key"
+          :to="`/search?category=${key}`"
           class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
           @click="closeMobileMenu"
         >
-          <CategoryIcon category-id="toilet" size="sm" />
-          화장실
-        </NuxtLink>
-        <NuxtLink
-          to="/search?category=wifi"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="wifi" size="sm" />
-          와이파이
-        </NuxtLink>
-        <NuxtLink
-          to="/search?category=clothes"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="clothes" size="sm" />
-          의류수거함
-        </NuxtLink>
-        <NuxtLink
-          to="/search?category=kiosk"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="kiosk" size="sm" />
-          발급기
-        </NuxtLink>
-        <NuxtLink
-          to="/search?category=parking"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="parking" size="sm" />
-          주차장
-        </NuxtLink>
-        <NuxtLink
-          to="/search?category=aed"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="aed" size="sm" />
-          AED
-        </NuxtLink>
-        <NuxtLink
-          to="/search?category=library"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="library" size="sm" />
-          도서관
-        </NuxtLink>
-        <NuxtLink
-          to="/search?category=trash"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-          @click="closeMobileMenu"
-        >
-          <CategoryIcon category-id="trash" size="sm" />
-          쓰레기
+          <CategoryIcon :category-id="key" size="sm" />
+          {{ meta.shortLabel }}
         </NuxtLink>
       </nav>
     </div>
@@ -215,6 +114,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { CATEGORY_META } from '~/types/facility'
 
 interface Props {
   transparent?: boolean
@@ -268,5 +168,14 @@ onUnmounted(() => {
 <style scoped>
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 </style>

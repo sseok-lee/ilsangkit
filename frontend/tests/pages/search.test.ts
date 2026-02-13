@@ -104,7 +104,6 @@ const globalStubs = {
   FacilityCard: { template: '<div>FacilityCard</div>' },
   CurrentLocationButton: { template: '<button>Location</button>' },
   SearchInput: { template: '<input />' },
-  CategoryTabs: { template: '<div>CategoryTabs</div>' },
   WasteScheduleCard: { template: '<div>WasteScheduleCard</div>' },
   OperatingStatusBadge: { template: '<div>OperatingStatusBadge</div>' },
 }

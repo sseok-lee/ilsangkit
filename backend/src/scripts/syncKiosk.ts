@@ -6,6 +6,7 @@ import { publicApiClient } from '../lib/publicApiClient.js';
 import { batchGeocode, type Coordinates } from '../services/geocodingService.js';
 import crypto from 'crypto';
 import { SYNC } from '../constants/index.js';
+import { extractCityDistrict } from '../lib/addressParser.js';
 
 /**
  * 무인민원발급기 설치정보 API 응답 타입
@@ -159,21 +160,7 @@ function normalizeAddressForGeocode(address: string): string {
   return normalized;
 }
 
-/**
- * 주소에서 시/도 추출
- */
-function extractCity(address: string): string {
-  const parts = address.split(' ');
-  return parts[0] || '';
-}
-
-/**
- * 주소에서 시/군/구 추출
- */
-function extractDistrict(address: string): string {
-  const parts = address.split(' ');
-  return parts[1] || '';
-}
+// extractCity/extractDistrict → addressParser.ts의 extractCityDistrict로 통합됨
 
 /**
  * sourceId 생성 (MNG_NO 기반 - API의 고유 키 사용)
@@ -205,6 +192,7 @@ export function transformKioskData(
   const detailLocation = row.INSTL_PLC_DTL_PSTN?.trim() || '';
   const kioskName = row.ISSUMCHN_NM?.trim() || '';
   const mngNo = row.MNG_NO?.trim() || null;
+  const { city, district } = extractCityDistrict(address);
 
   return {
     id: `kiosk_${sourceId}`,
@@ -213,8 +201,8 @@ export function transformKioskData(
     roadAddress: address, // 새 API는 전체 주소가 도로명 주소
     lat: coords?.lat ?? 0,
     lng: coords?.lng ?? 0,
-    city: extractCity(address),
-    district: extractDistrict(address),
+    city,
+    district,
     sourceId,
     sourceUrl: 'https://www.data.go.kr/data/15154774/openapi.do',
     syncedAt: new Date(),

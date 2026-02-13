@@ -6,6 +6,7 @@ import prisma from '../lib/prisma.js';
 import crypto from 'crypto';
 import { XMLParser } from 'fast-xml-parser';
 import { SYNC } from '../constants/index.js';
+import { extractCityDistrict } from '../lib/addressParser.js';
 
 /**
  * AED API 응답 아이템 타입
@@ -53,21 +54,7 @@ const xmlParser = new XMLParser({
   trimValues: true,
 });
 
-/**
- * 주소에서 시/도 추출
- */
-function extractCity(address: string): string {
-  const parts = address.trim().split(/\s+/);
-  return parts[0] || '';
-}
-
-/**
- * 주소에서 시/군/구 추출
- */
-function extractDistrict(address: string): string {
-  const parts = address.trim().split(/\s+/);
-  return parts[1] || '';
-}
+// extractCity/extractDistrict → addressParser.ts의 extractCityDistrict로 통합됨
 
 /**
  * sourceId에서 ID 생성
@@ -278,8 +265,7 @@ export async function syncAeds(): Promise<{ totalRecords: number; newRecords: nu
       const sourceId = serialSeq;
       const id = generateId(sourceId);
       const address = safeString(item.buildAddress);
-      const city = address ? extractCity(address) : '';
-      const district = address ? extractDistrict(address) : '';
+      const { city, district } = address ? extractCityDistrict(address) : { city: '', district: '' };
       const orgName = safeString(item.org);
 
       if (!city || !district) continue;

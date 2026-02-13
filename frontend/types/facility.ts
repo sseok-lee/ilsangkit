@@ -175,6 +175,7 @@ export interface ApiResponse<T> {
 // 카테고리 메타데이터
 export interface CategoryMeta {
   label: string
+  shortLabel: string
   icon: string
   color: string
 }
@@ -182,41 +183,49 @@ export interface CategoryMeta {
 export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
   toilet: {
     label: '공공화장실',
+    shortLabel: '화장실',
     icon: '🚻',
     color: 'blue',
   },
   trash: {
     label: '쓰레기배출',
+    shortLabel: '쓰레기',
     icon: '🗑️',
     color: 'red',
   },
   wifi: {
     label: '무료와이파이',
+    shortLabel: '와이파이',
     icon: '📶',
     color: 'green',
   },
   clothes: {
     label: '의류수거함',
+    shortLabel: '의류수거함',
     icon: '👕',
     color: 'purple',
   },
   kiosk: {
     label: '무인민원발급기',
+    shortLabel: '발급기',
     icon: '🖨️',
     color: 'orange',
   },
   parking: {
     label: '공영주차장',
+    shortLabel: '주차장',
     icon: '🅿️',
     color: 'sky',
   },
   aed: {
     label: '자동심장충격기',
+    shortLabel: 'AED',
     icon: '❤️‍🩹',
     color: 'red',
   },
   library: {
     label: '공공도서관',
+    shortLabel: '도서관',
     icon: '📚',
     color: 'amber',
   },
