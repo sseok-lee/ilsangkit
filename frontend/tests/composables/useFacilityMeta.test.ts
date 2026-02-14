@@ -24,14 +24,13 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
+          title: '일상킷 - 내 주변 생활 편의 정보',
           ogTitle: '일상킷 - 내 주변 생활 편의 정보',
           ogSiteName: '일상킷',
           ogLocale: 'ko_KR',
           twitterCard: 'summary_large_image',
         })
       )
-      // 홈페이지는 title 키 미포함 → titleTemplate 기본값 사용
-      expect(mockUseSeoMeta.mock.calls[0][0]).not.toHaveProperty('title')
 
       expect(mockUseHead).toHaveBeenCalledWith({
         link: [{ rel: 'canonical', href: 'https://ilsangkit.co.kr/' }],

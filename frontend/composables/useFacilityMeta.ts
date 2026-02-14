@@ -28,20 +28,15 @@ export function useFacilityMeta() {
    * 기본 메타태그 설정
    */
   function setMeta(options: MetaOptions) {
-    const isHome = options.title === SITE_NAME
-    // titleTemplate이 "- 일상킷" suffix를 붙이므로 title은 raw 값만 설정
-    // 홈페이지는 title 미설정 → titleTemplate 기본값 사용
-    // OG/Twitter는 titleTemplate 적용 안 되므로 fullTitle 필요
-    const fullTitle = isHome
+    // titleTemplate은 pass-through이므로 여기서 완전한 title 구성
+    const fullTitle = options.title === SITE_NAME
       ? `${SITE_NAME} - 내 주변 생활 편의 정보`
       : `${options.title} - ${SITE_NAME}`
 
     const canonicalUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL
 
     useSeoMeta({
-      // 홈페이지: title 키 생략 → titleTemplate 기본값 적용
-      // 그 외: raw title 설정 → titleTemplate이 suffix 추가
-      ...(!isHome && { title: options.title }),
+      title: fullTitle,
       description: options.description,
 
       // Open Graph
