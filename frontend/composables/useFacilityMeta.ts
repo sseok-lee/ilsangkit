@@ -28,6 +28,9 @@ export function useFacilityMeta() {
    * 기본 메타태그 설정
    */
   function setMeta(options: MetaOptions) {
+    // titleTemplate이 자동으로 "- 일상킷" 을 붙이므로 title은 raw 값만 설정
+    const pageTitle = options.title === SITE_NAME ? '' : options.title
+    // OG/Twitter는 titleTemplate 적용 안 되므로 fullTitle 필요
     const fullTitle = options.title === SITE_NAME
       ? SITE_NAME
       : `${options.title} - ${SITE_NAME}`
@@ -35,8 +38,8 @@ export function useFacilityMeta() {
     const canonicalUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL
 
     useSeoMeta({
-      // 기본 메타태그
-      title: fullTitle,
+      // 기본 메타태그 (titleTemplate이 suffix 처리)
+      title: pageTitle || undefined,
       description: options.description,
 
       // Open Graph

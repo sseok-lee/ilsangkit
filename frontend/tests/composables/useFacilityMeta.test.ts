@@ -24,7 +24,7 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: '일상킷',
+          title: undefined,
           ogSiteName: '일상킷',
           ogLocale: 'ko_KR',
           twitterCard: 'summary_large_image',
