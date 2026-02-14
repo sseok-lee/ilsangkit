@@ -27,16 +27,68 @@
       </NuxtLink>
     </div>
 
-    <!-- Center: Desktop Navigation -->
-    <nav class="hidden md:flex items-center gap-3 overflow-x-auto no-scrollbar">
-      <NuxtLink
-        v-for="(meta, key) in CATEGORY_META"
-        :key="key"
-        :to="`/search?category=${key}`"
-        class="flex shrink-0 items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary transition-colors"
+    <!-- Center: Desktop Navigation (Group Dropdowns) -->
+    <nav class="hidden md:flex items-center gap-1">
+      <!-- Category Group Dropdowns -->
+      <div
+        v-for="group in CATEGORY_GROUPS"
+        :key="group.title"
+        class="relative"
+        @mouseenter="openDropdown(group.title)"
+        @mouseleave="scheduleCloseDropdown"
       >
-        <CategoryIcon :category-id="key" size="sm" />
-        {{ meta.shortLabel }}
+        <button
+          class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        >
+          <span class="material-symbols-outlined text-[18px]">{{ group.icon }}</span>
+          {{ group.title }}
+          <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === group.title }">expand_more</span>
+        </button>
+        <Transition
+          enter-active-class="transition duration-150 ease-out"
+          enter-from-class="opacity-0 scale-95 -translate-y-1"
+          enter-to-class="opacity-100 scale-100 translate-y-0"
+          leave-active-class="transition duration-100 ease-in"
+          leave-from-class="opacity-100 scale-100 translate-y-0"
+          leave-to-class="opacity-0 scale-95 -translate-y-1"
+        >
+          <div
+            v-if="activeDropdown === group.title"
+            class="absolute top-full left-0 mt-1 min-w-[180px] bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 p-2 z-50"
+            @mouseenter="cancelCloseDropdown"
+            @mouseleave="scheduleCloseDropdown"
+          >
+            <NuxtLink
+              v-for="catId in group.categories"
+              :key="catId"
+              :to="`/search?category=${catId}`"
+              class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-[15px] text-slate-700 dark:text-slate-300 transition-colors"
+              @click="closeDropdown"
+            >
+              <CategoryIcon :category-id="catId" size="sm" />
+              {{ CATEGORY_META[catId].shortLabel }}
+            </NuxtLink>
+          </div>
+        </Transition>
+      </div>
+
+      <!-- Utility Links Divider -->
+      <div class="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+      <!-- Utility Links -->
+      <NuxtLink
+        to="/search"
+        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">search</span>
+        검색
+      </NuxtLink>
+      <NuxtLink
+        to="/about"
+        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">info</span>
+        소개
       </NuxtLink>
     </nav>
 
@@ -81,7 +133,7 @@
       aria-label="모바일 메뉴"
       class="md:hidden fixed top-[60px] left-0 right-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 shadow-lg"
     >
-      <nav class="flex flex-col p-4 gap-2">
+      <nav class="flex flex-col p-4 gap-1">
         <NuxtLink
           to="/"
           class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
@@ -94,18 +146,35 @@
           class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
-          지도
+          검색
         </NuxtLink>
         <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
+
+        <!-- Category Groups -->
+        <div v-for="group in CATEGORY_GROUPS" :key="group.title" class="mb-1">
+          <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
+            {{ group.title }}
+          </div>
+          <NuxtLink
+            v-for="catId in group.categories"
+            :key="catId"
+            :to="`/search?category=${catId}`"
+            class="pl-6 pr-4 py-2.5 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+            @click="closeMobileMenu"
+          >
+            <CategoryIcon :category-id="catId" size="sm" />
+            {{ CATEGORY_META[catId].shortLabel }}
+          </NuxtLink>
+        </div>
+
+        <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
         <NuxtLink
-          v-for="(meta, key) in CATEGORY_META"
-          :key="key"
-          :to="`/search?category=${key}`"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+          to="/about"
+          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
-          <CategoryIcon :category-id="key" size="sm" />
-          {{ meta.shortLabel }}
+          소개
         </NuxtLink>
       </nav>
     </div>
@@ -114,7 +183,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { CATEGORY_META } from '~/types/facility'
+import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 
 interface Props {
   transparent?: boolean
@@ -132,6 +201,8 @@ const emit = defineEmits<{
 }>()
 
 const isMobileMenuOpen = ref(false)
+const activeDropdown = ref<string | null>(null)
+let dropdownTimer: ReturnType<typeof setTimeout> | null = null
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
@@ -139,6 +210,29 @@ const toggleMobileMenu = () => {
 
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false
+}
+
+const openDropdown = (title: string) => {
+  cancelCloseDropdown()
+  activeDropdown.value = title
+}
+
+const scheduleCloseDropdown = () => {
+  dropdownTimer = setTimeout(() => {
+    activeDropdown.value = null
+  }, 150)
+}
+
+const cancelCloseDropdown = () => {
+  if (dropdownTimer) {
+    clearTimeout(dropdownTimer)
+    dropdownTimer = null
+  }
+}
+
+const closeDropdown = () => {
+  cancelCloseDropdown()
+  activeDropdown.value = null
 }
 
 const handleBack = () => {
@@ -149,10 +243,14 @@ const handleDarkModeToggle = () => {
   emit('darkModeToggle')
 }
 
-// Escape 키로 모바일 메뉴 닫기
+// Escape 키로 모바일 메뉴/드롭다운 닫기
 const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && isMobileMenuOpen.value) {
-    closeMobileMenu()
+  if (event.key === 'Escape') {
+    if (activeDropdown.value) {
+      closeDropdown()
+    } else if (isMobileMenuOpen.value) {
+      closeMobileMenu()
+    }
   }
 }
 
@@ -162,6 +260,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
+  cancelCloseDropdown()
 })
 </script>
 

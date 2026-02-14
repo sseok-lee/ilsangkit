@@ -71,14 +71,17 @@ interface RegionsResult {
  * @returns 배출 일정 목록
  */
 export async function getByRegion(
-  city: string,
+  city?: string,
   district?: string,
   keyword?: string,
   options: { page?: number; limit?: number } = {}
 ): Promise<WasteScheduleResult> {
   const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = options;
 
-  const where: { city: string; district?: string; targetRegion?: { contains: string } } = { city };
+  const where: { city?: string; district?: string; targetRegion?: { contains: string } } = {};
+  if (city) {
+    where.city = city;
+  }
   if (district) {
     where.district = district;
   }

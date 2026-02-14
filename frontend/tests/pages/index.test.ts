@@ -20,7 +20,7 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('내 주변 생활 편의 정보')
     expect(wrapper.text()).toContain('한 번에 찾기')
     // Mobile subtitle
-    expect(wrapper.text()).toContain('화장실부터 와이파이까지')
+    expect(wrapper.text()).toContain('지금 필요한 생활 시설을')
   })
 
   it('renders search input', () => {
@@ -40,12 +40,12 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('와이파이')
   })
 
-  it('renders current location search button', () => {
+  it('renders stats banner', () => {
     const wrapper = mount(IndexPage)
 
-    const locationButton = wrapper.find('[data-testid="location-button"]')
-    expect(locationButton.exists()).toBe(true)
-    expect(locationButton.text()).toContain('현재 위치로 검색')
+    expect(wrapper.text()).toContain('생활 편의')
+    expect(wrapper.text()).toContain('안전·건강')
+    expect(wrapper.text()).toContain('환경')
   })
 
   it('renders popular regions section', () => {
@@ -101,12 +101,11 @@ describe('Index Page', () => {
     expect(mockNavigateTo).toHaveBeenCalledWith(expect.stringContaining('/search'))
   })
 
-  it('location button navigates to search with useLocation', async () => {
+  it('renders grouped category sections', () => {
     const wrapper = mount(IndexPage)
 
-    const locationButton = wrapper.find('[data-testid="location-button"]')
-    await locationButton.trigger('click')
-
-    expect(mockNavigateTo).toHaveBeenCalledWith('/search?useLocation=true')
+    expect(wrapper.text()).toContain('생활 편의')
+    expect(wrapper.text()).toContain('안전·건강')
+    expect(wrapper.text()).toContain('환경')
   })
 })

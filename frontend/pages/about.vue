@@ -11,7 +11,7 @@
         </h2>
         <p>
           일상킷은 내 주변 생활 편의 정보를 한 번에 찾을 수 있는 서비스입니다.
-          위치 기반으로 공공시설과 생활 정보를 통합 검색하여,
+          전국 공공시설과 생활 정보를 지역별로 통합 검색하여,
           일상에서 필요한 정보를 빠르고 편리하게 제공합니다.
         </p>
       </section>
@@ -41,6 +41,18 @@
             <strong class="text-slate-900 dark:text-white">무인민원발급기</strong>
             — 무인민원발급기의 위치와 운영 시간을 확인할 수 있습니다.
           </li>
+          <li>
+            <strong class="text-slate-900 dark:text-white">공영주차장</strong>
+            — 전국 공영주차장의 위치, 요금, 운영 시간 등을 확인할 수 있습니다.
+          </li>
+          <li>
+            <strong class="text-slate-900 dark:text-white">자동심장충격기(AED)</strong>
+            — 주변 자동심장충격기(AED) 설치 위치를 확인할 수 있습니다.
+          </li>
+          <li>
+            <strong class="text-slate-900 dark:text-white">공공도서관</strong>
+            — 전국 공공도서관의 위치와 운영 정보를 확인할 수 있습니다.
+          </li>
         </ul>
       </section>
 
@@ -50,16 +62,16 @@
         </h2>
         <ul class="list-disc pl-5 space-y-2">
           <li>
-            <strong class="text-slate-900 dark:text-white">위치 기반 검색</strong>
-            — 현재 위치를 기반으로 가장 가까운 시설을 찾아줍니다.
+            <strong class="text-slate-900 dark:text-white">지역별 검색</strong>
+            — 시/도, 구/군 단위로 원하는 지역의 시설을 검색할 수 있습니다.
           </li>
           <li>
             <strong class="text-slate-900 dark:text-white">통합 검색</strong>
             — 여러 종류의 생활 편의 시설을 하나의 서비스에서 검색할 수 있습니다.
           </li>
           <li>
-            <strong class="text-slate-900 dark:text-white">지도 연동</strong>
-            — 카카오맵을 통해 시설 위치를 지도에서 직접 확인할 수 있습니다.
+            <strong class="text-slate-900 dark:text-white">지도 확인</strong>
+            — 시설 상세 페이지에서 카카오맵으로 정확한 위치를 확인할 수 있습니다.
           </li>
           <li>
             <strong class="text-slate-900 dark:text-white">무료 이용</strong>
@@ -134,6 +146,27 @@
                     <a href="https://www.data.go.kr/data/15154774/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
                   </td>
                 </tr>
+                <tr>
+                  <td class="py-2 pr-4">전국공영주차장표준데이터</td>
+                  <td class="py-2 pr-4">행정안전부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">자동심장충격기(AED) 설치장소</td>
+                  <td class="py-2 pr-4">보건복지부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15000652/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">전국공공도서관표준데이터</td>
+                  <td class="py-2 pr-4">행정안전부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15013109/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -164,7 +197,7 @@ const { setBreadcrumbSchema } = useStructuredData()
 
 setMeta({
   title: '소개',
-  description: '일상킷은 내 주변 생활 편의 정보를 한 번에 찾을 수 있는 서비스입니다. 공공시설과 생활 편의 정보를 위치 기반으로 통합 검색합니다.',
+  description: '일상킷은 내 주변 생활 편의 정보를 한 번에 찾을 수 있는 서비스입니다. 전국 공공시설과 생활 편의 정보를 지역별로 통합 검색합니다.',
   path: '/about',
 })
 

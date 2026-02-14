@@ -38,6 +38,9 @@ interface ContactInfo {
 interface RegionScheduleResponse {
   schedules: RegionSchedule[]
   contact?: ContactInfo
+  total: number
+  page: number
+  totalPages: number
 }
 
 // Backend response types
@@ -107,7 +110,7 @@ function transformToRegionSchedules(data: BackendScheduleData): RegionScheduleRe
     ? { name: contactItem.details.manageDepartment, phone: contactItem.details.managePhone }
     : undefined
 
-  return { schedules, contact }
+  return { schedules, contact, total: data.total, page: data.page, totalPages: data.totalPages }
 }
 
 export function useWasteSchedule() {
@@ -141,21 +144,30 @@ export function useWasteSchedule() {
     }
   }
 
-  async function getSchedules(city: string, district: string, keyword?: string): Promise<RegionScheduleResponse> {
+  async function getSchedules(options?: {
+    city?: string
+    district?: string
+    keyword?: string
+    page?: number
+    limit?: number
+  }): Promise<RegionScheduleResponse> {
     isLoading.value = true
     error.value = null
 
     try {
-      let url = `${apiBase}/api/waste-schedules?city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`
-      if (keyword) {
-        url += `&keyword=${encodeURIComponent(keyword)}`
-      }
+      const params = new URLSearchParams()
+      if (options?.city) params.set('city', options.city)
+      if (options?.district) params.set('district', options.district)
+      if (options?.keyword) params.set('keyword', options.keyword)
+      if (options?.page) params.set('page', String(options.page))
+      if (options?.limit) params.set('limit', String(options.limit))
+      const url = `${apiBase}/api/waste-schedules?${params.toString()}`
       const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(url)
       return transformToRegionSchedules(response.data)
     } catch (e) {
       console.error('Failed to fetch schedules:', e)
       error.value = e as Error
-      return getMockSchedules(district)
+      return getMockSchedules(options?.district || '전체')
     } finally {
       isLoading.value = false
     }
@@ -257,5 +269,8 @@ function getMockSchedules(district: string): RegionScheduleResponse {
       name: `${district} 청소행정과`,
       phone: '02-1234-5678',
     },
+    total: 2,
+    page: 1,
+    totalPages: 1,
   }
 }

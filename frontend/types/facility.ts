@@ -137,6 +137,31 @@ export interface LibraryDetails {
   operatingOrg?: string | null
 }
 
+// 카테고리 그룹 (헤더, 홈페이지 등에서 공유)
+export interface CategoryGroup {
+  title: string
+  icon: string
+  categories: FacilityCategory[]
+}
+
+export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
+  {
+    title: '생활 편의',
+    icon: 'home',
+    categories: ['toilet', 'wifi', 'parking', 'kiosk'],
+  },
+  {
+    title: '안전·건강',
+    icon: 'health_and_safety',
+    categories: ['aed', 'library'],
+  },
+  {
+    title: '환경',
+    icon: 'recycling',
+    categories: ['clothes', 'trash'],
+  },
+] as const
+
 // 검색 파라미터
 export interface SearchParams {
   keyword?: string

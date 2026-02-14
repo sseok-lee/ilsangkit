@@ -7,9 +7,8 @@ const router = createRouter({
   history: createMemoryHistory(),
   routes: [
     { path: '/', name: 'index', component: { template: '<div>Home</div>' } },
-    { path: '/toilet', name: 'toilet', component: { template: '<div>Toilet</div>' } },
-    { path: '/trash', name: 'trash', component: { template: '<div>Trash</div>' } },
-    { path: '/wifi', name: 'wifi', component: { template: '<div>Wifi</div>' } },
+    { path: '/search', name: 'search', component: { template: '<div>Search</div>' } },
+    { path: '/about', name: 'about', component: { template: '<div>About</div>' } },
   ],
 })
 
@@ -42,34 +41,44 @@ describe('AppHeader', () => {
     })
   })
 
-  describe('Navigation', () => {
-    it('should render navigation menu', () => {
-      const nav = wrapper.find('nav')
+  describe('Desktop Navigation', () => {
+    it('should render navigation with group dropdowns', () => {
+      const nav = wrapper.find('nav.hidden.md\\:flex')
       expect(nav.exists()).toBe(true)
     })
 
-    it('should have links to all category pages', () => {
-      const links = wrapper.findAll('nav a')
-      const hrefs = links.map((link) => link.attributes('href'))
-
-      // Desktop nav shows all category links
-      expect(hrefs).toContain('/search?category=toilet')
-      expect(hrefs).toContain('/search?category=trash')
-      expect(hrefs).toContain('/search?category=wifi')
-      expect(hrefs).toContain('/search?category=clothes')
-      expect(hrefs).toContain('/search?category=kiosk')
+    it('should display group titles', () => {
+      const nav = wrapper.find('nav.hidden.md\\:flex')
+      const text = nav.text()
+      expect(text).toContain('생활 편의')
+      expect(text).toContain('안전·건강')
+      expect(text).toContain('환경')
     })
 
-    it('should display Korean labels for categories', () => {
-      const nav = wrapper.find('nav')
-      const text = nav.text()
+    it('should have utility links for search and about', () => {
+      const nav = wrapper.find('nav.hidden.md\\:flex')
+      const links = nav.findAll('a')
+      const hrefs = links.map((link) => link.attributes('href'))
+      expect(hrefs).toContain('/search')
+      expect(hrefs).toContain('/about')
+    })
 
-      // Desktop nav shows: 화장실, 쓰레기, 와이파이, 의류수거함, 발급기
-      expect(text).toContain('화장실')
-      expect(text).toContain('쓰레기')
-      expect(text).toContain('와이파이')
-      expect(text).toContain('의류수거함')
-      expect(text).toContain('발급기')
+    it('should show dropdown with category links on hover', async () => {
+      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
+      expect(groupButtons.length).toBe(3)
+
+      // Hover over first group (생활 편의)
+      await groupButtons[0].trigger('mouseenter')
+
+      // Dropdown should appear with category links
+      const dropdown = groupButtons[0].find('.absolute')
+      expect(dropdown.exists()).toBe(true)
+      const links = dropdown.findAll('a')
+      const hrefs = links.map((l) => l.attributes('href'))
+      expect(hrefs).toContain('/search?category=toilet')
+      expect(hrefs).toContain('/search?category=wifi')
+      expect(hrefs).toContain('/search?category=parking')
+      expect(hrefs).toContain('/search?category=kiosk')
     })
   })
 
@@ -97,7 +106,7 @@ describe('AppHeader', () => {
       expect(mobileMenu.exists()).toBe(false)
     })
 
-    it('should have category links in mobile menu', async () => {
+    it('should have category links in mobile menu grouped by section', async () => {
       const menuButton = wrapper.find('button[aria-label="메뉴"]')
       await menuButton.trigger('click')
 
@@ -105,12 +114,33 @@ describe('AppHeader', () => {
       const links = mobileMenu.findAll('a')
       const hrefs = links.map((link) => link.attributes('href'))
 
-      // Mobile menu uses search page with category query params
+      // Category links
       expect(hrefs).toContain('/search?category=toilet')
       expect(hrefs).toContain('/search?category=trash')
       expect(hrefs).toContain('/search?category=wifi')
       expect(hrefs).toContain('/search?category=clothes')
       expect(hrefs).toContain('/search?category=kiosk')
+    })
+
+    it('should display group headers in mobile menu', async () => {
+      const menuButton = wrapper.find('button[aria-label="메뉴"]')
+      await menuButton.trigger('click')
+
+      const mobileMenu = wrapper.find('[data-testid="mobile-menu"]')
+      const text = mobileMenu.text()
+      expect(text).toContain('생활 편의')
+      expect(text).toContain('안전·건강')
+      expect(text).toContain('환경')
+    })
+
+    it('should have about link in mobile menu', async () => {
+      const menuButton = wrapper.find('button[aria-label="메뉴"]')
+      await menuButton.trigger('click')
+
+      const mobileMenu = wrapper.find('[data-testid="mobile-menu"]')
+      const links = mobileMenu.findAll('a')
+      const hrefs = links.map((link) => link.attributes('href'))
+      expect(hrefs).toContain('/about')
     })
   })
 
@@ -121,7 +151,6 @@ describe('AppHeader', () => {
     })
 
     it('should have desktop navigation with hidden mobile class', () => {
-      // Desktop nav uses hidden md:flex classes
       const desktopNav = wrapper.find('nav.hidden.md\\:flex')
       expect(desktopNav.exists()).toBe(true)
     })

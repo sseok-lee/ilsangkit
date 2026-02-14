@@ -9,7 +9,7 @@
             <span class="text-primary">한 번에 찾기</span>
           </h1>
           <p class="text-[#60708a] dark:text-slate-400 text-base font-normal leading-normal">
-            화장실부터 와이파이까지, 일상킷이 도와드려요.
+            지금 필요한 생활 시설을 검색해보세요.
           </p>
         </div>
 
@@ -29,42 +29,20 @@
           </div>
         </label>
 
-        <!-- Category Chips (Mobile - Horizontal Scroll) -->
-        <div class="w-full overflow-hidden">
-          <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-            <button
-              v-for="category in categories"
-              :key="category.id"
-              :aria-label="`${category.label} 카테고리로 이동`"
-              :class="[
-                'flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-3 pr-4 shadow-sm active:scale-95 transition-transform',
-                category.id === 'toilet'
-                  ? 'bg-primary text-white'
-                  : 'bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-              ]"
-              @click="navigateTo(`/search?category=${category.id}`)"
-            >
-              <CategoryIcon :category-id="category.id" size="sm" />
-              <span :class="category.id === 'toilet' ? 'text-sm font-bold leading-normal' : 'text-[#111418] dark:text-slate-200 text-sm font-medium leading-normal'">
-                {{ category.label }}
-              </span>
-            </button>
+        <!-- Hero Stats Banner (Mobile) -->
+        <div class="flex justify-center gap-6 mt-2">
+          <div class="text-center">
+            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.living) }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">생활 편의</div>
           </div>
-        </div>
-
-        <!-- Primary CTA (Mobile) -->
-        <div class="pt-2">
-          <button
-            data-testid="location-button"
-            aria-label="현재 위치로 검색"
-            class="relative w-full h-14 bg-primary rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 hover:bg-blue-600 active:scale-[0.98] transition-all group overflow-hidden"
-            @click="handleLocationSearch"
-          >
-            <!-- Subtle gradient overlay -->
-            <div class="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <span class="material-symbols-outlined text-white">my_location</span>
-            <span class="text-white text-lg font-bold">현재 위치로 검색</span>
-          </button>
+          <div class="text-center">
+            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.safety) }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">안전·건강</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.environment) }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">환경</div>
+          </div>
         </div>
 
         <!-- Popular Regions (Mobile) -->
@@ -82,15 +60,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Map Placeholder (Mobile) -->
-        <div class="mt-4 flex-1 min-h-[160px] w-full rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 overflow-hidden relative">
-          <div class="absolute inset-0 bg-[url('/images/map-bg.webp')] bg-cover bg-center opacity-60 dark:opacity-40"></div>
-          <div class="absolute inset-0 bg-gradient-to-t from-white/90 via-white/50 to-transparent dark:from-[#1e293b]/90 dark:via-[#1e293b]/50"></div>
-          <div class="absolute bottom-4 left-4 right-4 text-center">
-            <p class="text-sm text-slate-600 dark:text-slate-300 font-medium">지금 내 주변 350+개 편의시설 검색 가능</p>
-          </div>
-        </div>
       </section>
 
       <!-- Desktop Hero Section -->
@@ -101,7 +70,7 @@
               내 주변 생활 편의 정보, 한 번에 찾기
             </h1>
             <p class="text-lg text-slate-600 dark:text-slate-400 font-normal">
-              화장실부터 와이파이까지, 지금 필요한 시설을 검색해보세요.
+              지금 필요한 생활 시설을 검색해보세요.
             </p>
           </div>
           <!-- Search Input Component (Desktop) -->
@@ -119,34 +88,56 @@
             />
             <div class="absolute inset-y-2 right-2">
               <button
-                data-testid="location-button"
-                aria-label="현재 위치로 검색"
+                aria-label="검색"
                 class="h-full px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
-                @click="handleLocationSearch"
+                @click="handleSearch"
               >
-                <span>현재 위치로 검색</span>
+                <span class="material-symbols-outlined text-[18px]">search</span>
+                <span>검색</span>
               </button>
+            </div>
+          </div>
+
+          <!-- Hero Stats Banner (Desktop) -->
+          <div class="flex justify-center gap-10 mt-6">
+            <div class="text-center">
+              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.living) }}</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">생활 편의</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.safety) }}</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">안전·건강</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.environment) }}</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">환경</div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Category Grid Section (Desktop) -->
-      <section class="hidden md:block w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-9 gap-4">
-          <a
-            v-for="category in categoriesDesktop"
-            :key="category.id"
-            :href="`/search?category=${category.id}`"
-            class="group flex flex-col items-center justify-center p-6 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-          >
-            <div :class="`w-14 h-14 rounded-full ${category.bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`">
-              <CategoryIcon v-if="category.id !== 'all'" :category-id="category.id" size="lg" />
-              <span v-else class="material-symbols-outlined text-slate-600 dark:text-slate-300 text-[28px]">apps</span>
-            </div>
-            <h2 class="text-slate-900 dark:text-white font-bold text-lg mb-1">{{ category.label }}</h2>
-            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">{{ category.count }}</p>
-          </a>
+      <!-- Grouped Category Cards (Unified Responsive) -->
+      <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div v-for="group in categoryGroups" :key="group.title" class="mb-8">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary text-[24px]">{{ group.icon }}</span>
+            {{ group.title }}
+          </h2>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            <a
+              v-for="item in group.items"
+              :key="item.id"
+              :href="`/search?category=${item.id}`"
+              class="group flex flex-col p-4 md:p-5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+            >
+              <div :class="`w-12 h-12 rounded-full ${getCategoryBgColor(item.id)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`">
+                <CategoryIcon :category-id="item.id" size="lg" />
+              </div>
+              <h3 class="text-slate-900 dark:text-white font-bold text-base mb-1">{{ CATEGORY_LABELS[item.id] }}</h3>
+              <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm leading-snug mb-2">{{ item.desc }}</p>
+              <span class="text-primary font-bold text-sm mt-auto">{{ formatCount(stats[item.id] || 0) }}</span>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -176,6 +167,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import type { CategoryId } from '~/utils/categoryIcons'
+import { CATEGORY_LABELS } from '~/utils/categoryIcons'
+import { CATEGORY_GROUPS } from '~/types/facility'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
@@ -217,22 +210,24 @@ onMounted(async () => {
   }
 })
 
+// 그룹별 합산 통계
+const groupStats = computed(() => ({
+  living: stats.value.toilet + stats.value.wifi + stats.value.parking + stats.value.kiosk,
+  safety: stats.value.aed + stats.value.library,
+  environment: stats.value.clothes + stats.value.trash,
+}))
+
 // 숫자 포맷 함수
 function formatCount(count: number): string {
   return count.toLocaleString('ko-KR') + '개'
 }
 
-// 모바일용 카테고리 (가로 스크롤 칩)
-const categories: Array<{ id: CategoryId; label: string }> = [
-  { id: 'toilet', label: '화장실' },
-  { id: 'wifi', label: '와이파이' },
-  { id: 'clothes', label: '의류수거함' },
-  { id: 'kiosk', label: '발급기' },
-  { id: 'parking', label: '주차장' },
-  { id: 'aed', label: 'AED' },
-  { id: 'library', label: '도서관' },
-  { id: 'trash', label: '쓰레기' },
-]
+// 통계 배너용 포맷 (1000 단위 반올림)
+function formatStatCount(count: number): string {
+  if (count === 0) return '-'
+  const rounded = Math.floor(count / 1000) * 1000
+  return rounded.toLocaleString('ko-KR') + '+'
+}
 
 // 카테고리 기본 정보
 const categoryConfig: Array<{ id: CategoryId | 'all'; label: string; bgColor: string }> = [
@@ -247,13 +242,33 @@ const categoryConfig: Array<{ id: CategoryId | 'all'; label: string; bgColor: st
   { id: 'trash', label: '쓰레기', bgColor: 'bg-green-50 dark:bg-green-900/30' },
 ]
 
-// 데스크톱용 카테고리 (그리드 카드) - 실제 데이터 연동
-const categoriesDesktop = computed(() =>
-  categoryConfig.map(cat => ({
-    ...cat,
-    count: formatCount(cat.id === 'all' ? stats.value.total : stats.value[cat.id] || 0),
-  }))
-)
+// 카테고리 배경색 헬퍼
+function getCategoryBgColor(id: CategoryId): string {
+  const config = categoryConfig.find(c => c.id === id)
+  return config?.bgColor || 'bg-slate-50 dark:bg-slate-700'
+}
+
+// 카테고리별 설명 (홈페이지 전용)
+const categoryDescriptions: Record<string, string> = {
+  toilet: '전국 공공화장실 위치 정보',
+  wifi: '무료 무선 인터넷 존',
+  parking: '공영 주차 시설 안내',
+  kiosk: '무인 민원 서류 발급',
+  aed: '자동심장충격기 위치',
+  library: '공공도서관 이용 안내',
+  clothes: '의류 수거함 위치 안내',
+  trash: '쓰레기 배출 일정 및 장소',
+}
+
+// 그룹화된 카테고리 (공유 상수 + 페이지 전용 desc)
+const categoryGroups = CATEGORY_GROUPS.map(group => ({
+  title: group.title,
+  icon: group.icon,
+  items: group.categories.map(id => ({
+    id: id as CategoryId,
+    desc: categoryDescriptions[id] || '',
+  })),
+}))
 
 // 모바일용 인기 지역 (# 태그 형식)
 const popularRegionsMobile = [
@@ -285,11 +300,6 @@ function handleSearch() {
   navigateTo(`/search?keyword=${encodeURIComponent(searchKeyword.value)}`)
 }
 
-function handleLocationSearch() {
-  // Navigate to search page which will request location
-  navigateTo('/search?useLocation=true')
-}
-
 function handleRegionClick(query: string) {
   navigateTo(`/search?keyword=${encodeURIComponent(query)}`)
 }
@@ -298,17 +308,6 @@ function handleRegionClick(query: string) {
 <style>
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-}
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-/* Hide scrollbar for IE, Edge and Firefox */
-.no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
 }
 
 /* Fill icon for active bottom nav */

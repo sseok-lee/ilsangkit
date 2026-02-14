@@ -6,7 +6,7 @@ import { PaginationSchema } from './common.js';
 
 // 쓰레기 배출 일정 조회 스키마
 export const WasteScheduleQuerySchema = z.object({
-  city: z.string().min(1).max(50),
+  city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
   keyword: z.string().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),

@@ -19,7 +19,7 @@ router.get(
   validateMultiple({ query: WasteScheduleQuerySchema }),
   asyncHandler(async (_req: Request, res: Response) => {
     const { query } = res.locals.validated as {
-      query: { city: string; district?: string; keyword?: string; page: number; limit: number };
+      query: { city?: string; district?: string; keyword?: string; page: number; limit: number };
     };
     const { city, district, keyword, page, limit } = query;
 
