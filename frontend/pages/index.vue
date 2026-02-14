@@ -165,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import { CATEGORY_LABELS } from '~/utils/categoryIcons'
 import { CATEGORY_GROUPS } from '~/types/facility'
@@ -183,8 +183,13 @@ setWebsiteSchema()
 const config = useRuntimeConfig()
 const searchKeyword = ref('')
 
-// 카테고리별 시설 개수 통계
-const stats = ref<Record<string, number>>({
+// SSR: 통계 API를 useAsyncData로 fetch
+const { data: statsResponse } = await useAsyncData('home-stats', () =>
+  $fetch<{ success: boolean; data: Record<string, number> }>(
+    `${config.public.apiBase}/api/meta/stats`
+  )
+)
+const stats = computed(() => statsResponse.value?.data ?? {
   toilet: 0,
   wifi: 0,
   clothes: 0,
@@ -194,20 +199,6 @@ const stats = ref<Record<string, number>>({
   aed: 0,
   library: 0,
   total: 0,
-})
-
-// 통계 API 호출
-onMounted(async () => {
-  try {
-    const response = await $fetch<{ success: boolean; data: Record<string, number> }>(
-      `${config.public.apiBase}/api/meta/stats`
-    )
-    if (response.success) {
-      stats.value = response.data
-    }
-  } catch (error) {
-    console.error('Failed to fetch stats:', error)
-  }
 })
 
 // 그룹별 합산 통계

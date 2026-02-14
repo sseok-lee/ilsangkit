@@ -501,3 +501,35 @@ export async function getByRegion(
     totalPages: Math.ceil(total / limit),
   };
 }
+
+/**
+ * 사이트맵용: 실제 데이터가 있는 지역-카테고리 조합 조회
+ */
+export async function getRegionCategoryCombinations(): Promise<
+  Array<{ city: string; district: string; category: string }>
+> {
+  const results: Array<{ city: string; district: string; category: string }> = [];
+
+  for (const category of ALL_CATEGORIES) {
+    const config = CATEGORY_REGISTRY[category];
+    const model = config.model();
+    const regions = await model.findMany({
+      select: { city: true, district: true },
+      distinct: ['city', 'district'],
+      where: {
+        city: { not: '' },
+        district: { not: '' },
+      },
+    });
+
+    for (const region of regions) {
+      results.push({
+        city: region.city,
+        district: region.district,
+        category,
+      });
+    }
+  }
+
+  return results;
+}

@@ -352,7 +352,7 @@ function getDistrictSlug(koreanName: string): string {
   return KOREAN_TO_ROMANIZATION[koreanName] || koreanName.toLowerCase().replace(/\s+/g, '-')
 }
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   setHeader(event, 'Content-Type', 'application/xml')
 
   const today = new Date().toISOString().split('T')[0]
@@ -374,21 +374,61 @@ export default defineEventHandler((event) => {
     urls.push({ loc: `${SITE_URL}/search?category=${category}`, lastmod: today, changefreq: 'weekly', priority: 0.8 })
   }
 
-  // 전국 지역별 페이지 (시/도 + 구/군 + 카테고리)
-  for (const [cityName, districts] of Object.entries(REGIONS)) {
-    const citySlug = CITY_SLUGS[cityName]
-    if (!citySlug) continue
+  // API에서 실제 데이터가 있는 지역-카테고리 조합만 가져오기
+  const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
+  try {
+    const res = await fetch(`${apiBase}/api/sitemap/region-categories`)
+    if (res.ok) {
+      const json = await res.json()
+      const combinations: Array<{ city: string; district: string; category: string }> = json.data || []
 
-    for (const district of districts) {
-      const districtSlug = getDistrictSlug(district)
+      for (const combo of combinations) {
+        const citySlug = CITY_SLUGS[combo.city]
+        if (!citySlug) continue
+        const districtSlug = getDistrictSlug(combo.district)
 
-      for (const category of CATEGORIES) {
         urls.push({
-          loc: `${SITE_URL}/${citySlug}/${districtSlug}/${category}`,
+          loc: `${SITE_URL}/${citySlug}/${districtSlug}/${combo.category}`,
           lastmod: today,
           changefreq: 'weekly',
           priority: 0.7,
         })
+      }
+    } else {
+      console.error(`[sitemap] Failed to fetch region-categories: HTTP ${res.status}`)
+      // Fallback: 하드코딩된 조합 사용
+      for (const [cityName, districts] of Object.entries(REGIONS)) {
+        const citySlug = CITY_SLUGS[cityName]
+        if (!citySlug) continue
+        for (const district of districts) {
+          const districtSlug = getDistrictSlug(district)
+          for (const category of CATEGORIES) {
+            urls.push({
+              loc: `${SITE_URL}/${citySlug}/${districtSlug}/${category}`,
+              lastmod: today,
+              changefreq: 'weekly',
+              priority: 0.7,
+            })
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[sitemap] Failed to fetch region-categories:', err)
+    // Fallback: 하드코딩된 조합 사용
+    for (const [cityName, districts] of Object.entries(REGIONS)) {
+      const citySlug = CITY_SLUGS[cityName]
+      if (!citySlug) continue
+      for (const district of districts) {
+        const districtSlug = getDistrictSlug(district)
+        for (const category of CATEGORIES) {
+          urls.push({
+            loc: `${SITE_URL}/${citySlug}/${districtSlug}/${category}`,
+            lastmod: today,
+            changefreq: 'weekly',
+            priority: 0.7,
+          })
+        }
       }
     }
   }

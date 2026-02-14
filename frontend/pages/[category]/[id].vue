@@ -1006,46 +1006,45 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useFacilityDetail } from '~/composables/useFacilityDetail'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
-import type { FacilityCategory } from '~/types/facility'
+import type { FacilityCategory, FacilityDetail } from '~/types/facility'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
-import FacilityFeatureCard from '~/components/facility/FacilityFeatureCard.vue'
 
 const route = useRoute()
 const router = useRouter()
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
 const { setFacilityDetailMeta } = useFacilityMeta()
 const { setFacilitySchema, setBreadcrumbSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
 
-const { loading, error, facility, fetchDetail } = useFacilityDetail()
+// SSR: useAsyncData로 서버에서 데이터 fetch
+const { data: facilityResponse, status, error: fetchError } = await useAsyncData(
+  `facility-${category.value}-${id.value}`,
+  () => $fetch<{ success: boolean; data: FacilityDetail }>(
+    `${apiBase}/api/facilities/${category.value}/${id.value}`
+  )
+)
+const facility = computed(() => facilityResponse.value?.data ?? null)
+const loading = computed(() => status.value === 'pending')
+const error = computed(() => fetchError.value ? { message: '시설 정보를 불러올 수 없습니다' } : null)
 
-// Fetch facility detail on mount
-onMounted(async () => {
-  await fetchDetail(category.value, id.value)
-})
-
-// 시설 정보 로드 후 메타태그 및 JSON-LD 설정
-watch(facility, (newFacility) => {
-  if (newFacility) {
-    // SEO 메타태그
-    setFacilityDetailMeta(newFacility)
-
-    // JSON-LD 구조화된 데이터
-    setFacilitySchema(newFacility)
-
-    // 브레드크럼 스키마
-    const categoryName = CATEGORY_META[newFacility.category]?.label || newFacility.category
+// SSR에서 메타태그 및 JSON-LD 설정
+watchEffect(() => {
+  if (facility.value) {
+    setFacilityDetailMeta(facility.value)
+    setFacilitySchema(facility.value)
+    const categoryName = CATEGORY_META[facility.value.category]?.label || facility.value.category
     setBreadcrumbSchema([
       { name: '홈', url: '/' },
-      { name: categoryName, url: `/search?category=${newFacility.category}` },
-      { name: newFacility.name, url: `/${newFacility.category}/${newFacility.id}` },
+      { name: categoryName, url: `/search?category=${facility.value.category}` },
+      { name: facility.value.name, url: `/${facility.value.category}/${facility.value.id}` },
     ])
   }
 })

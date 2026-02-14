@@ -60,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -70,13 +70,25 @@ const route = useRoute()
 const city = computed(() => route.params.city as string)
 
 // Region data
-const { loadRegions, getDistrictsByCity, getCityName, isLoading } = useRegions()
+const { loadRegions, getDistrictsByCity, getCityName } = useRegions()
 
-const loading = ref(true)
-const districts = ref<Array<{ slug: string; name: string }>>([])
+// SSR: 서버에서 지역 정보 로드
+const { status } = await useAsyncData(
+  `city-${city.value}`,
+  () => loadRegions()
+)
+const loading = computed(() => status.value === 'pending')
 
 // City name
 const cityName = computed(() => getCityName(city.value))
+
+// Districts
+const districts = computed(() =>
+  getDistrictsByCity(city.value).map((d) => ({
+    slug: d.slug,
+    name: d.name,
+  }))
+)
 
 // Breadcrumb
 const breadcrumbItems = computed(() => [
@@ -94,29 +106,11 @@ const categories = computed(() => [
   { id: 'parking' as const, label: CATEGORY_META.parking.label },
 ])
 
-// SEO
+// SEO - top-level에서 설정 (SSR에서 메타태그 렌더링)
 const { setMeta } = useFacilityMeta()
-
-onMounted(async () => {
-  loading.value = true
-
-  // Load regions
-  await loadRegions()
-
-  // Get districts for this city
-  const districtData = getDistrictsByCity(city.value)
-  districts.value = districtData.map((d) => ({
-    slug: d.slug,
-    name: d.name,
-  }))
-
-  // Set SEO meta
-  setMeta({
-    title: `${cityName.value} 생활 편의시설`,
-    description: `${cityName.value}의 공공화장실, 무료 와이파이, 의류수거함 등 생활 편의시설 정보를 찾아보세요.`,
-    path: `/${city.value}`,
-  })
-
-  loading.value = false
+setMeta({
+  title: `${cityName.value} 생활 편의시설`,
+  description: `${cityName.value}의 공공화장실, 무료 와이파이, 의류수거함 등 생활 편의시설 정보를 찾아보세요.`,
+  path: `/${city.value}`,
 })
 </script>

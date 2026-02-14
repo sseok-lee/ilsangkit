@@ -1,5 +1,21 @@
 import { config } from '@vue/test-utils'
 import { vi } from 'vitest'
+import { ref } from 'vue'
+
+// Mock useAsyncData globally - returns thenable object (same as Nuxt's pattern)
+;(globalThis as any).useAsyncData = vi.fn((_key?: string, _fetcher?: Function) => {
+  const result = {
+    data: ref(null),
+    status: ref('idle'),
+    error: ref(null),
+    refresh: vi.fn(),
+    pending: ref(false),
+  }
+  return Object.assign(Promise.resolve(result), result)
+})
+
+// Mock $fetch globally
+;(globalThis as any).$fetch = vi.fn().mockResolvedValue({ success: true, data: {} })
 
 // Mock useRuntimeConfig globally - must be defined before any imports that use it
 const mockRuntimeConfig = {

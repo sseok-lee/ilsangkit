@@ -45,4 +45,16 @@ router.get(
   })
 );
 
+/**
+ * GET /api/sitemap/region-categories
+ * 실제 데이터가 있는 지역-카테고리 조합 조회 (사이트맵용)
+ */
+router.get(
+  '/region-categories',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const data = await facilityService.getRegionCategoryCombinations();
+    res.json({ success: true, data });
+  })
+);
+
 export default router;

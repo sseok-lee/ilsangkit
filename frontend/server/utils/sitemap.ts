@@ -123,3 +123,30 @@ export async function fetchWasteScheduleIds(
   }
   return []
 }
+
+export async function fetchRegionCategories(
+  apiBase: string
+): Promise<Array<{ city: string; district: string; category: string }>> {
+  const cacheKey = 'region-categories'
+  const cached = getCached<{ city: string; district: string; category: string }>(cacheKey)
+  if (cached) return cached
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`${apiBase}/api/sitemap/region-categories`)
+      if (!res.ok) {
+        console.error(`[sitemap] fetchRegionCategories attempt ${attempt}: HTTP ${res.status}`)
+        continue
+      }
+      const json = await res.json()
+      const data = json.data || []
+      if (data.length > 0) {
+        setCache(cacheKey, data)
+      }
+      return data
+    } catch (err) {
+      console.error(`[sitemap] fetchRegionCategories attempt ${attempt} error:`, err)
+    }
+  }
+  return []
+}

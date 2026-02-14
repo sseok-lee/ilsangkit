@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
-import { ref } from 'vue'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import { ref, defineComponent, h, Suspense } from 'vue'
 import DetailPage from '~/pages/[category]/[id].vue'
 import type { FacilityDetail } from '~/types/facility'
 
@@ -28,16 +28,6 @@ const mockFacility: FacilityDetail = {
   updatedAt: '2024-01-01T00:00:00Z',
   syncedAt: '2024-01-01T00:00:00Z',
 }
-
-// Mock composable
-vi.mock('~/composables/useFacilityDetail', () => ({
-  useFacilityDetail: vi.fn(() => ({
-    loading: ref(false),
-    error: ref(null),
-    facility: ref(mockFacility),
-    fetchDetail: vi.fn(),
-  })),
-}))
 
 // Mock useRoute
 vi.mock('vue-router', () => ({
@@ -79,34 +69,60 @@ const globalStubs = {
   Breadcrumb: { template: '<nav>Breadcrumb</nav>' },
 }
 
-describe('DetailPage', () => {
-  it('시설 이름과 주소를 표시', () => {
-    const wrapper = mount(DetailPage, {
-      global: {
-        stubs: globalStubs,
+// Helper to mount async components with Suspense
+async function mountSuspended(component: any, options?: any) {
+  const wrapper = mount(
+    defineComponent({
+      render() {
+        return h(Suspense, null, {
+          default: () => h(component),
+        })
       },
+    }),
+    { global: options?.global },
+  )
+  await flushPromises()
+  return wrapper
+}
+
+// Helper to set useAsyncData mock with specific data
+function mockUseAsyncDataWith(data: any, status = 'success', error: any = null) {
+  const result = {
+    data: ref(data),
+    status: ref(status),
+    error: ref(error),
+    refresh: vi.fn(),
+    pending: ref(status === 'pending'),
+  }
+  ;(globalThis as any).useAsyncData = vi.fn(() => Object.assign(Promise.resolve(result), result))
+}
+
+describe('DetailPage', () => {
+  beforeEach(() => {
+    // Default: return facility data
+    mockUseAsyncDataWith({ success: true, data: mockFacility })
+  })
+
+  it('시설 이름과 주소를 표시', async () => {
+    const wrapper = await mountSuspended(DetailPage, {
+      global: { stubs: globalStubs },
     })
 
     expect(wrapper.text()).toContain('강남역 공중화장실')
     expect(wrapper.text()).toContain('서울특별시 강남구 강남대로 396')
   })
 
-  it('카테고리별 상세 컴포넌트를 렌더링', () => {
-    const wrapper = mount(DetailPage, {
-      global: {
-        stubs: globalStubs,
-      },
+  it('카테고리별 상세 컴포넌트를 렌더링', async () => {
+    const wrapper = await mountSuspended(DetailPage, {
+      global: { stubs: globalStubs },
     })
 
-    // Should render facility info
     expect(wrapper.html()).toContain('강남역 공중화장실')
   })
 
-  it('길찾기 링크가 올바른 URL을 가짐', () => {
-    const wrapper = mount(DetailPage, {
-      global: {
-        stubs: globalStubs,
-      },
+  it('길찾기 링크가 올바른 URL을 가짐', async () => {
+    const wrapper = await mountSuspended(DetailPage, {
+      global: { stubs: globalStubs },
     })
 
     // Check for direction link/button
@@ -121,49 +137,30 @@ describe('DetailPage', () => {
     }
   })
 
-  it('뒤로가기 버튼이 존재', () => {
-    const wrapper = mount(DetailPage, {
-      global: {
-        stubs: globalStubs,
-      },
+  it('뒤로가기 버튼이 존재', async () => {
+    const wrapper = await mountSuspended(DetailPage, {
+      global: { stubs: globalStubs },
     })
 
-    // Back button should exist (either button or link)
     const buttons = wrapper.findAll('button')
     expect(buttons.length).toBeGreaterThan(0)
   })
 
   it('로딩 중 상태 표시', async () => {
-    const { useFacilityDetail } = await import('~/composables/useFacilityDetail')
-    vi.mocked(useFacilityDetail).mockReturnValueOnce({
-      loading: ref(true),
-      error: ref(null),
-      facility: ref(null),
-      fetchDetail: vi.fn(),
-    } as any)
+    mockUseAsyncDataWith(null, 'pending')
 
-    const wrapper = mount(DetailPage, {
-      global: {
-        stubs: globalStubs,
-      },
+    const wrapper = await mountSuspended(DetailPage, {
+      global: { stubs: globalStubs },
     })
 
     expect(wrapper.text()).toContain('로딩')
   })
 
   it('에러 상태 표시', async () => {
-    const { useFacilityDetail } = await import('~/composables/useFacilityDetail')
-    vi.mocked(useFacilityDetail).mockReturnValueOnce({
-      loading: ref(false),
-      error: ref(new Error('Failed to fetch')),
-      facility: ref(null),
-      fetchDetail: vi.fn(),
-    } as any)
+    mockUseAsyncDataWith(null, 'error', new Error('Failed to fetch'))
 
-    const wrapper = mount(DetailPage, {
-      global: {
-        stubs: globalStubs,
-      },
+    const wrapper = await mountSuspended(DetailPage, {
+      global: { stubs: globalStubs },
     })
 
     expect(wrapper.text()).toContain('시설 정보를 불러올 수 없습니다')

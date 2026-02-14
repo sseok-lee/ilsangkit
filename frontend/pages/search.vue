@@ -559,6 +559,14 @@ watch(
   { immediate: true }
 )
 
+// SSR: 초기 쿼리 파라미터에서 메타태그 설정 (top-level)
+const initialKeyword = (route.query.keyword as string) || ''
+const initialCategory = route.query.category as FacilityCategory | undefined
+setSearchMeta({
+  keyword: initialKeyword || undefined,
+  category: initialCategory || undefined,
+})
+
 // Lifecycle
 onMounted(async () => {
   // Read initial query params
@@ -568,12 +576,6 @@ onMounted(async () => {
   if (route.query.category) {
     selectedCategory.value = route.query.category as FacilityCategory
   }
-
-  // SEO 메타태그 설정
-  setSearchMeta({
-    keyword: searchKeyword.value || undefined,
-    category: selectedCategory.value !== 'all' ? selectedCategory.value : undefined,
-  })
 
   // Load cities for region filter
   cities.value = await getCities()

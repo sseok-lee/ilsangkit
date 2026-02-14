@@ -89,30 +89,54 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
-import { useRegionFacilities } from '~/composables/useRegionFacilities';
-import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions';
-import { useFacilityMeta } from '~/composables/useFacilityMeta';
-import { CATEGORY_META } from '~/types/facility';
-import type { FacilityCategory } from '~/types/facility';
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { useRegionFacilities } from '~/composables/useRegionFacilities'
+import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { CATEGORY_META } from '~/types/facility'
+import type { FacilityCategory } from '~/types/facility'
 
 // Route params
-const route = useRoute();
-const city = computed(() => route.params.city as string);
-const district = computed(() => route.params.district as string);
-const category = computed(() => route.params.category as string);
+const route = useRoute()
+const city = computed(() => route.params.city as string)
+const district = computed(() => route.params.district as string)
+const category = computed(() => route.params.category as string)
 
 // Dynamic region data
-const { loadRegions, getCityName, getDistrictName, isLoaded: regionsLoaded } = useRegions();
+const { loadRegions, getCityName, getDistrictName } = useRegions()
+
+// SSR: 서버에서 지역 정보 로드
+await useAsyncData(
+  `region-${city.value}-${district.value}`,
+  () => loadRegions()
+)
 
 // Korean names (동적으로 가져옴)
-const cityName = computed(() => getCityName(city.value));
-const districtName = computed(() => getDistrictName(city.value, district.value));
+const cityName = computed(() => getCityName(city.value))
+const districtName = computed(() => getDistrictName(city.value, district.value))
 const categoryName = computed(() => {
-  const meta = CATEGORY_META[category.value as keyof typeof CATEGORY_META];
-  return meta?.label || category.value;
-});
+  const meta = CATEGORY_META[category.value as keyof typeof CATEGORY_META]
+  return meta?.label || category.value
+})
+
+// SEO - top-level에서 설정 (SSR에서 메타태그 렌더링)
+const { setRegionMeta } = useFacilityMeta()
+setRegionMeta({
+  city: city.value,
+  cityName: cityName.value,
+  district: district.value,
+  districtName: districtName.value,
+  category: category.value as FacilityCategory,
+})
+
+// 시설 0건일 때 noindex 안전장치
+useHead(computed(() => {
+  if (!loading.value && facilities.value.length === 0) {
+    return { meta: [{ name: 'robots', content: 'noindex' }] }
+  }
+  return {}
+}))
 
 // Breadcrumb
 const breadcrumbItems = computed(() => [
@@ -124,7 +148,7 @@ const breadcrumbItems = computed(() => [
     href: `/${city.value}/${district.value}/${category.value}`,
     current: true,
   },
-]);
+])
 
 // Other categories
 const allCategories = [
@@ -133,11 +157,11 @@ const allCategories = [
   { slug: 'trash', name: '생활쓰레기' },
   { slug: 'clothes', name: '의류수거함' },
   { slug: 'kiosk', name: '무인민원발급기' },
-];
+]
 
 const otherCategories = computed(() =>
   allCategories.filter((cat) => cat.slug !== category.value)
-);
+)
 
 // Facilities data
 const {
@@ -148,38 +172,22 @@ const {
   page,
   totalPages,
   fetchFacilities,
-} = useRegionFacilities();
+} = useRegionFacilities()
 
-const currentPage = ref(1);
+const currentPage = ref(1)
 
 async function loadFacilities() {
-  await fetchFacilities(city.value, district.value, category.value, currentPage.value);
+  await fetchFacilities(city.value, district.value, category.value, currentPage.value)
 }
 
 function goToPage(pageNum: number) {
-  currentPage.value = pageNum;
-  loadFacilities();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  currentPage.value = pageNum
+  loadFacilities()
+  if (import.meta.client) {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 }
 
-// SEO (composable 사용)
-const { setRegionMeta } = useFacilityMeta();
-
-// Load on mount
-onMounted(async () => {
-  // 지역 정보 먼저 로드
-  await loadRegions();
-
-  // SEO 메타태그 설정
-  setRegionMeta({
-    city: city.value,
-    cityName: cityName.value,
-    district: district.value,
-    districtName: districtName.value,
-    category: category.value as FacilityCategory,
-  });
-
-  // 시설 정보 로드
-  loadFacilities();
-});
+// 시설 정보 로드
+loadFacilities()
 </script>

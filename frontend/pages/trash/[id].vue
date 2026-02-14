@@ -155,16 +155,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { getScheduleDetail } = useWasteSchedule()
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
 const { setWasteScheduleDetailMeta } = useFacilityMeta()
 const { setBreadcrumbSchema, setWasteScheduleSchema } = useStructuredData()
 
@@ -203,9 +203,26 @@ interface ScheduleDetail {
   } | null
 }
 
-const loading = ref(true)
-const errorMsg = ref<string | null>(null)
-const data = ref<ScheduleDetail | null>(null)
+// SSR: useAsyncData로 서버에서 데이터 fetch
+const scheduleId = computed(() => parseInt(route.params.id as string, 10))
+const { data: scheduleResponse, status, error: fetchError } = await useAsyncData(
+  `trash-${route.params.id}`,
+  () => {
+    if (isNaN(scheduleId.value)) {
+      throw createError({ statusCode: 400, message: '잘못된 요청입니다' })
+    }
+    return $fetch<{ success: boolean; data: ScheduleDetail }>(
+      `${apiBase}/api/waste-schedules/${scheduleId.value}`
+    )
+  }
+)
+const data = computed(() => scheduleResponse.value?.data ?? null)
+const loading = computed(() => status.value === 'pending')
+const errorMsg = computed(() => {
+  if (isNaN(scheduleId.value)) return '잘못된 요청입니다'
+  if (fetchError.value) return '배출 정보를 찾을 수 없습니다'
+  return null
+})
 
 function formatTimeRange(begin?: string, end?: string): string | null {
   if (!begin && !end) return null
@@ -214,39 +231,22 @@ function formatTimeRange(begin?: string, end?: string): string | null {
 }
 
 function goBack() {
-  if (window.history.length > 1) {
+  if (import.meta.client && window.history.length > 1) {
     router.back()
   } else {
     navigateTo('/search?category=trash')
   }
 }
 
-onMounted(async () => {
-  const id = parseInt(route.params.id as string, 10)
-  if (isNaN(id)) {
-    errorMsg.value = '잘못된 요청입니다'
-    loading.value = false
-    return
-  }
-
-  const result = await getScheduleDetail(id)
-  if (!result) {
-    errorMsg.value = '배출 정보를 찾을 수 없습니다'
-  } else {
-    data.value = result
-  }
-  loading.value = false
-})
-
-// 데이터 로드 후 메타태그 및 JSON-LD 설정
-watch(data, (newData) => {
-  if (newData) {
-    setWasteScheduleDetailMeta(newData)
-    setWasteScheduleSchema(newData)
+// SSR에서 메타태그 및 JSON-LD 설정
+watchEffect(() => {
+  if (data.value) {
+    setWasteScheduleDetailMeta(data.value)
+    setWasteScheduleSchema(data.value)
     setBreadcrumbSchema([
       { name: '홈', url: '/' },
       { name: '쓰레기 배출', url: '/search?category=trash' },
-      { name: `${newData.city} ${newData.district}`, url: `/trash/${newData.id}` },
+      { name: `${data.value.city} ${data.value.district}`, url: `/trash/${data.value.id}` },
     ])
   }
 })
