@@ -495,6 +495,26 @@ const CITY_SLUG_TO_FULL: Record<string, string> = {
   jeju: '제주특별자치도',
 };
 
+const CITY_SLUG_TO_SHORT: Record<string, string> = {
+  seoul: '서울',
+  busan: '부산',
+  daegu: '대구',
+  incheon: '인천',
+  gwangju: '광주',
+  daejeon: '대전',
+  ulsan: '울산',
+  sejong: '세종',
+  gyeonggi: '경기',
+  gangwon: '강원',
+  chungbuk: '충북',
+  chungnam: '충남',
+  jeonbuk: '전북',
+  jeonnam: '전남',
+  gyeongbuk: '경북',
+  gyeongnam: '경남',
+  jeju: '제주',
+};
+
 /**
  * slug 또는 한글 지역명을 실제 지역 정보로 변환
  * @param city - 시/도 (한글 또는 slug)
@@ -506,17 +526,27 @@ async function resolveRegion(
   district: string
 ): Promise<{ city: string; district: string; bjdCode: string | null }> {
   const fullCityName = CITY_SLUG_TO_FULL[city];
+  const shortCityName = CITY_SLUG_TO_SHORT[city];
 
   // Region 테이블에서 조회 (city + district 또는 city + slug, slug city도 지원)
   const region = await prisma.region.findFirst({
     where: {
       OR: [
+        // 기존 조건 (slug 그대로)
         { city, district },
         { city, slug: district },
+        // fullCityName (서울특별시) 조건
         ...(fullCityName
           ? [
               { city: fullCityName, district },
               { city: fullCityName, slug: district },
+            ]
+          : []),
+        // shortCityName (서울) 조건
+        ...(shortCityName
+          ? [
+              { city: shortCityName, district },
+              { city: shortCityName, slug: district },
             ]
           : []),
       ],
@@ -558,8 +588,18 @@ export async function getByRegion(
   // slug -> 한글 변환
   const resolved = await resolveRegion(city, district);
 
+  // 시설 테이블은 '서울특별시', Region 테이블은 '서울'처럼 city 형태가 다를 수 있음
+  const cityVariants = [
+    resolved.city,
+    CITY_SLUG_TO_FULL[city],
+    CITY_SLUG_TO_SHORT[city],
+  ].filter((v): v is string => !!v && v !== resolved.city);
+  const cityCondition = cityVariants.length > 0
+    ? { in: [resolved.city, ...cityVariants] }
+    : resolved.city;
+
   const where = {
-    city: resolved.city,
+    city: cityCondition,
     district: resolved.district,
   };
 
@@ -617,8 +657,17 @@ export async function getByRegionAll(
 
   const resolved = await resolveRegion(city, district);
 
+  // 시설 테이블은 '서울특별시', Region 테이블은 '서울'처럼 city 형태가 다를 수 있음
+  const cityVariants = [
+    CITY_SLUG_TO_FULL[city],
+    CITY_SLUG_TO_SHORT[city],
+  ].filter((v): v is string => !!v && v !== resolved.city);
+  const cityCondition = cityVariants.length > 0
+    ? { in: [resolved.city, ...cityVariants] }
+    : resolved.city;
+
   const where = {
-    city: resolved.city,
+    city: cityCondition,
     district: resolved.district,
   };
 
@@ -677,9 +726,29 @@ export async function getByRegionAll(
  * 사이트맵용: 실제 데이터가 있는 지역-카테고리 조합 조회
  */
 export async function getRegionCategoryCombinations(): Promise<
-  Array<{ city: string; district: string; category: string }>
+  Array<{ city: string; district: string; citySlug: string; districtSlug: string; category: string }>
 > {
-  const results: Array<{ city: string; district: string; category: string }> = [];
+  // Region 테이블에서 slug 조회
+  const allRegions = await prisma.region.findMany({
+    select: { city: true, district: true, slug: true },
+  });
+
+  // district slug lookup: "서울|강남구" -> "gangnam"
+  const regionSlugMap = new Map<string, string>();
+  for (const r of allRegions) {
+    regionSlugMap.set(`${r.city}|${r.district}`, r.slug);
+  }
+
+  // city name -> slug reverse map (서울 -> seoul, 서울특별시 -> seoul)
+  const cityToSlug = new Map<string, string>();
+  for (const [slug, shortName] of Object.entries(CITY_SLUG_TO_SHORT)) {
+    cityToSlug.set(shortName, slug);
+  }
+  for (const [slug, fullName] of Object.entries(CITY_SLUG_TO_FULL)) {
+    cityToSlug.set(fullName, slug);
+  }
+
+  const results: Array<{ city: string; district: string; citySlug: string; districtSlug: string; category: string }> = [];
 
   for (const category of ALL_CATEGORIES) {
     const config = CATEGORY_REGISTRY[category];
@@ -694,9 +763,19 @@ export async function getRegionCategoryCombinations(): Promise<
     });
 
     for (const region of regions) {
+      const cs = cityToSlug.get(region.city);
+      if (!cs) continue;
+
+      // 시설 테이블 city(서울특별시)와 Region 테이블 city(서울) 불일치 대응
+      const ds = regionSlugMap.get(`${region.city}|${region.district}`)
+        || regionSlugMap.get(`${CITY_SLUG_TO_SHORT[cs]}|${region.district}`);
+      if (!ds) continue;
+
       results.push({
         city: region.city,
         district: region.district,
+        citySlug: cs,
+        districtSlug: ds,
         category,
       });
     }

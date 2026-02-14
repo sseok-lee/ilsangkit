@@ -133,14 +133,6 @@ setRegionMeta({
   category: category.value as FacilityCategory,
 })
 
-// 시설 0건일 때 noindex 안전장치
-useHead(computed(() => {
-  if (!loading.value && facilities.value.length === 0) {
-    return { meta: [{ name: 'robots', content: 'noindex' }] }
-  }
-  return {}
-}))
-
 // Breadcrumb JSON-LD
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
@@ -163,11 +155,13 @@ const breadcrumbItems = computed(() => [
 ])
 
 // Other categories (dynamically from CATEGORY_GROUPS, excluding current)
+// trash는 좌표 없는 일정 데이터이므로 지역 허브에서 제외
+const EXCLUDED_REGION_CATEGORIES = new Set(['trash'])
 const otherCategories = computed(() => {
   const all: { slug: string; name: string }[] = []
   for (const group of CATEGORY_GROUPS) {
     for (const id of group.categories) {
-      if (id !== category.value) {
+      if (id !== category.value && !EXCLUDED_REGION_CATEGORIES.has(id)) {
         all.push({ slug: id, name: CATEGORY_META[id].label })
       }
     }
@@ -187,6 +181,14 @@ const {
 } = useRegionFacilities()
 
 const currentPage = ref(1)
+
+// 시설 0건일 때 noindex 안전장치
+useHead(computed(() => {
+  if (!loading.value && facilities.value.length === 0) {
+    return { meta: [{ name: 'robots', content: 'noindex' }] }
+  }
+  return {}
+}))
 
 async function loadFacilities() {
   await fetchFacilities(city.value, district.value, category.value, currentPage.value)

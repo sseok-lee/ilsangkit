@@ -181,17 +181,20 @@ const categoryBgColors: Record<FacilityCategory, string> = {
   trash: 'bg-green-50 dark:bg-green-900/30',
 }
 
-// Categories (grouped)
+// Categories (grouped) — trash는 좌표 없는 일정 데이터이므로 지역 허브에서 제외
+const EXCLUDED_REGION_CATEGORIES = new Set(['trash'])
 const categoryGroups = computed(() =>
   CATEGORY_GROUPS.map(group => ({
     title: group.title,
     icon: group.icon,
-    items: group.categories.map(id => ({
-      id,
-      label: CATEGORY_META[id].label,
-      bgColor: categoryBgColors[id],
-    })),
-  }))
+    items: group.categories
+      .filter(id => !EXCLUDED_REGION_CATEGORIES.has(id))
+      .map(id => ({
+        id,
+        label: CATEGORY_META[id].label,
+        bgColor: categoryBgColors[id],
+      })),
+  })).filter(group => group.items.length > 0)
 )
 
 // SEO - top-level에서 설정 (SSR에서 메타태그 렌더링)

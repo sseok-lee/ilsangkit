@@ -405,22 +405,20 @@ export default defineEventHandler(async (event) => {
     const res = await fetch(`${apiBase}/api/sitemap/region-categories`)
     if (res.ok) {
       const json = await res.json()
-      const combinations: Array<{ city: string; district: string; category: string }> = json.data || []
+      const combinations: Array<{ city: string; district: string; citySlug: string; districtSlug: string; category: string }> = json.data || []
 
       // 고유 도시, 도시+구군 조합 추출
       const citySet = new Set<string>()
       const districtSet = new Set<string>()
 
       for (const combo of combinations) {
-        const citySlug = CITY_SLUGS[combo.city]
-        if (!citySlug) continue
-        const districtSlug = getDistrictSlug(combo.district)
+        if (!combo.citySlug || !combo.districtSlug) continue
 
-        citySet.add(citySlug)
-        districtSet.add(`${citySlug}/${districtSlug}`)
+        citySet.add(combo.citySlug)
+        districtSet.add(`${combo.citySlug}/${combo.districtSlug}`)
 
         urls.push({
-          loc: `${SITE_URL}/${citySlug}/${districtSlug}/${combo.category}`,
+          loc: `${SITE_URL}/${combo.citySlug}/${combo.districtSlug}/${combo.category}`,
           lastmod: today,
           changefreq: 'weekly',
           priority: 0.7,
@@ -437,7 +435,7 @@ export default defineEventHandler(async (event) => {
         })
       })
 
-      // 구/군 허브 페이지 (예: /seoul/gangnam-gu)
+      // 구/군 허브 페이지 (예: /seoul/gangnam)
       Array.from(districtSet).forEach((path) => {
         urls.push({
           loc: `${SITE_URL}/${path}`,
