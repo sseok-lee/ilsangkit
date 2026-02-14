@@ -61,6 +61,9 @@ jobs:
             cd /home/project2/backend
             npm ci --production
 
+            # Prisma 스키마를 프로덕션 DB에 동기화
+            npx prisma db push --accept-data-loss
+
             # Prisma 클라이언트 생성
             npx prisma generate
 
