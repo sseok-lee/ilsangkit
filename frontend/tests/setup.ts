@@ -3,7 +3,7 @@ import { vi } from 'vitest'
 import { ref } from 'vue'
 
 // Mock useAsyncData globally - returns thenable object (same as Nuxt's pattern)
-;(globalThis as any).useAsyncData = vi.fn((_key?: string, _fetcher?: Function) => {
+;(globalThis as any).useAsyncData = vi.fn((_key?: string, _fetcher?: () => unknown) => {
   const result = {
     data: ref(null),
     status: ref('idle'),
