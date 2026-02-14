@@ -352,6 +352,31 @@ function getDistrictSlug(koreanName: string): string {
   return KOREAN_TO_ROMANIZATION[koreanName] || koreanName.toLowerCase().replace(/\s+/g, '-')
 }
 
+// Fallback: API 실패 시 도시/구군 허브 페이지만 추가 (빈 카테고리 조합은 제외)
+function addFallbackHubPages(urls: SitemapUrl[], today: string): void {
+  for (const [cityName, districts] of Object.entries(REGIONS)) {
+    const citySlug = CITY_SLUGS[cityName]
+    if (!citySlug) continue
+
+    urls.push({
+      loc: `${SITE_URL}/${citySlug}`,
+      lastmod: today,
+      changefreq: 'weekly',
+      priority: 0.8,
+    })
+
+    for (const district of districts) {
+      const districtSlug = getDistrictSlug(district)
+      urls.push({
+        loc: `${SITE_URL}/${citySlug}/${districtSlug}`,
+        lastmod: today,
+        changefreq: 'weekly',
+        priority: 0.7,
+      })
+    }
+  }
+}
+
 export default defineEventHandler(async (event) => {
   setHeader(event, 'Content-Type', 'application/xml')
 
@@ -361,10 +386,10 @@ export default defineEventHandler(async (event) => {
   // 홈페이지
   urls.push({ loc: SITE_URL, lastmod: today, changefreq: 'daily', priority: 1.0 })
 
-  // 정적 페이지
-  urls.push({ loc: `${SITE_URL}/about`, lastmod: today, changefreq: 'monthly', priority: 0.5 })
-  urls.push({ loc: `${SITE_URL}/privacy`, lastmod: today, changefreq: 'monthly', priority: 0.3 })
-  urls.push({ loc: `${SITE_URL}/terms`, lastmod: today, changefreq: 'monthly', priority: 0.3 })
+  // 정적 페이지 — 거의 변하지 않으므로 고정 날짜 사용
+  urls.push({ loc: `${SITE_URL}/about`, lastmod: '2025-06-01', changefreq: 'monthly', priority: 0.5 })
+  urls.push({ loc: `${SITE_URL}/privacy`, lastmod: '2025-06-01', changefreq: 'monthly', priority: 0.3 })
+  urls.push({ loc: `${SITE_URL}/terms`, lastmod: '2025-06-01', changefreq: 'monthly', priority: 0.3 })
 
   // 검색 페이지
   urls.push({ loc: `${SITE_URL}/search`, lastmod: today, changefreq: 'daily', priority: 0.9 })
@@ -382,10 +407,17 @@ export default defineEventHandler(async (event) => {
       const json = await res.json()
       const combinations: Array<{ city: string; district: string; category: string }> = json.data || []
 
+      // 고유 도시, 도시+구군 조합 추출
+      const citySet = new Set<string>()
+      const districtSet = new Set<string>()
+
       for (const combo of combinations) {
         const citySlug = CITY_SLUGS[combo.city]
         if (!citySlug) continue
         const districtSlug = getDistrictSlug(combo.district)
+
+        citySet.add(citySlug)
+        districtSet.add(`${citySlug}/${districtSlug}`)
 
         urls.push({
           loc: `${SITE_URL}/${citySlug}/${districtSlug}/${combo.category}`,
@@ -394,43 +426,33 @@ export default defineEventHandler(async (event) => {
           priority: 0.7,
         })
       }
+
+      // 도시 허브 페이지 (예: /seoul)
+      Array.from(citySet).forEach((citySlug) => {
+        urls.push({
+          loc: `${SITE_URL}/${citySlug}`,
+          lastmod: today,
+          changefreq: 'weekly',
+          priority: 0.8,
+        })
+      })
+
+      // 구/군 허브 페이지 (예: /seoul/gangnam-gu)
+      Array.from(districtSet).forEach((path) => {
+        urls.push({
+          loc: `${SITE_URL}/${path}`,
+          lastmod: today,
+          changefreq: 'weekly',
+          priority: 0.7,
+        })
+      })
     } else {
       console.error(`[sitemap] Failed to fetch region-categories: HTTP ${res.status}`)
-      // Fallback: 하드코딩된 조합 사용
-      for (const [cityName, districts] of Object.entries(REGIONS)) {
-        const citySlug = CITY_SLUGS[cityName]
-        if (!citySlug) continue
-        for (const district of districts) {
-          const districtSlug = getDistrictSlug(district)
-          for (const category of CATEGORIES) {
-            urls.push({
-              loc: `${SITE_URL}/${citySlug}/${districtSlug}/${category}`,
-              lastmod: today,
-              changefreq: 'weekly',
-              priority: 0.7,
-            })
-          }
-        }
-      }
+      addFallbackHubPages(urls, today)
     }
   } catch (err) {
     console.error('[sitemap] Failed to fetch region-categories:', err)
-    // Fallback: 하드코딩된 조합 사용
-    for (const [cityName, districts] of Object.entries(REGIONS)) {
-      const citySlug = CITY_SLUGS[cityName]
-      if (!citySlug) continue
-      for (const district of districts) {
-        const districtSlug = getDistrictSlug(district)
-        for (const category of CATEGORIES) {
-          urls.push({
-            loc: `${SITE_URL}/${citySlug}/${districtSlug}/${category}`,
-            lastmod: today,
-            changefreq: 'weekly',
-            priority: 0.7,
-          })
-        }
-      }
-    }
+    addFallbackHubPages(urls, today)
   }
 
   return generateSitemapXml(urls)
