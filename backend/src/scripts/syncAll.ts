@@ -12,7 +12,6 @@
  */
 
 import * as path from 'path';
-import * as fs from 'fs';
 import { syncToilets } from '../services/toiletSyncService.js';
 import { syncTrashData } from './syncTrash.js';
 import { syncWifiData } from './syncWifi.js';
@@ -34,10 +33,22 @@ const LIBRARY_CSV_PATH = path.resolve(
   '../../prisma/data/library.csv'
 );
 
+// 공공화장실 기본 CSV 파일 경로
+const TOILET_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/toilet.csv'
+);
+
+// 무료와이파이 기본 CSV 파일 경로
+const WIFI_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/wifi.csv'
+);
+
 // 의류수거함 기본 CSV 파일 경로
 const CLOTHES_CSV_PATH = path.resolve(
   import.meta.dirname,
-  '../../prisma/data/전국의류수거함표준데이터.csv'
+  '../../prisma/data/clothes.csv'
 );
 
 /**
@@ -68,30 +79,11 @@ async function syncCategory(category: Category): Promise<SyncResult> {
   try {
     switch (category) {
       case 'toilet': {
-        // CSV 파일 경로 (임시로 다운로드된 파일 사용)
-        const tempDir = path.join(process.cwd(), 'temp', 'toilet-data');
-        if (!fs.existsSync(tempDir)) {
-          throw new Error('Toilet CSV 파일이 없습니다. npm run sync:toilet을 먼저 실행하세요.');
-        }
-
-        const csvFiles = fs.readdirSync(tempDir)
-          .filter(f => f.endsWith('.csv'))
-          .map(f => path.join(tempDir, f));
-
-        if (csvFiles.length === 0) {
-          throw new Error('Toilet CSV 파일을 찾을 수 없습니다.');
-        }
-
-        let totalCount = 0;
-        for (const csvFile of csvFiles) {
-          const result = await syncToilets(csvFile);
-          totalCount += result.newRecords + result.updatedRecords;
-        }
-
+        const result = await syncToilets(TOILET_CSV_PATH);
         return {
           category,
           success: true,
-          count: totalCount,
+          count: result.newRecords + result.updatedRecords,
           duration: Date.now() - start,
         };
       }
@@ -112,7 +104,7 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'wifi': {
-        const result = await syncWifiData();
+        const result = await syncWifiData(WIFI_CSV_PATH);
         return {
           category,
           success: true,
