@@ -1,5 +1,5 @@
 import { ref, readonly } from 'vue'
-import type { SearchParams, SearchResponse, ApiResponse, Facility } from '~/types/facility'
+import type { SearchParams, SearchResponse, GroupedSearchResponse, GroupedCategory, ApiResponse, Facility } from '~/types/facility'
 
 export function useFacilitySearch() {
   const loading = ref(false)
@@ -8,6 +8,8 @@ export function useFacilitySearch() {
   const currentPage = ref(1)
   const totalPages = ref(0)
   const error = ref<string | null>(null)
+  const groupedResults = ref<GroupedCategory[]>([])
+  const groupedTotalCount = ref(0)
 
   const search = async (params: SearchParams) => {
     loading.value = true
@@ -69,11 +71,47 @@ export function useFacilitySearch() {
     currentPage.value = page
   }
 
+  const searchGrouped = async (params: Omit<SearchParams, 'grouped'>) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      let apiBase = 'http://localhost:8000'
+      try {
+        const config = useRuntimeConfig()
+        apiBase = config.public.apiBase
+      } catch (e) {
+        // In test environment, useRuntimeConfig might not be available
+      }
+
+      const response = await $fetch<ApiResponse<GroupedSearchResponse>>(
+        `${apiBase}/api/facilities/search`,
+        {
+          method: 'POST',
+          body: { ...params, grouped: true },
+        }
+      )
+
+      if (response.success && response.data) {
+        groupedResults.value = response.data.categories
+        groupedTotalCount.value = response.data.totalCount
+      }
+    } catch (err: any) {
+      error.value = err?.message || '검색 중 오류가 발생했습니다'
+      groupedResults.value = []
+      groupedTotalCount.value = 0
+    } finally {
+      loading.value = false
+    }
+  }
+
   const clearResults = () => {
     facilities.value = []
     total.value = 0
     currentPage.value = 1
     totalPages.value = 0
+    groupedResults.value = []
+    groupedTotalCount.value = 0
   }
 
   return {
@@ -83,7 +121,10 @@ export function useFacilitySearch() {
     currentPage: readonly(currentPage),
     totalPages: readonly(totalPages),
     error: readonly(error),
+    groupedResults: readonly(groupedResults),
+    groupedTotalCount: readonly(groupedTotalCount),
     search,
+    searchGrouped,
     searchNearby,
     resetPage,
     setPage,

@@ -22,7 +22,10 @@ vi.mock('~/composables/useFacilitySearch', () => ({
     currentPage: ref(1),
     totalPages: ref(0),
     error: ref(null),
+    groupedResults: ref([]),
+    groupedTotalCount: ref(0),
     search: vi.fn(),
+    searchGrouped: vi.fn(),
     resetPage: vi.fn(),
     setPage: vi.fn(),
     clearResults: vi.fn(),
@@ -100,8 +103,8 @@ describe('SearchPage', () => {
       },
     })
 
-    // Card grid area exists
-    expect(wrapper.find('.grid').exists()).toBe(true)
+    // 그룹 결과가 비어있으면 빈 상태 메시지가 표시됨
+    expect(wrapper.text()).toContain('검색 결과가 없습니다')
   })
 
   it('페이지네이션이 렌더링되는지 확인', () => {
@@ -156,9 +159,7 @@ describe('SearchPage', () => {
       },
     })
 
-    // Card grid with responsive columns
-    const grid = wrapper.find('.grid')
-    expect(grid.exists()).toBe(true)
-    expect(grid.classes()).toContain('grid-cols-1')
+    // 그룹 결과가 비어있으면 빈 상태가 표시되고, 그리드는 카테고리 선택 또는 그룹 결과가 있을 때 렌더링됨
+    expect(wrapper.find('.min-h-screen').exists()).toBe(true)
   })
 })

@@ -48,6 +48,11 @@ async function upsertOneLibrary(library: TransformedLibrary): Promise<'new' | 'u
       phoneNumber: library.phoneNumber,
       homepageUrl: library.homepageUrl,
       operatingOrg: library.operatingOrg,
+      lotArea: library.lotArea,
+      buildingArea: library.buildingArea,
+      dataDate: library.dataDate,
+      providerCode: library.providerCode,
+      providerName: library.providerName,
     },
     create: {
       id: library.id,
@@ -76,6 +81,11 @@ async function upsertOneLibrary(library: TransformedLibrary): Promise<'new' | 'u
       phoneNumber: library.phoneNumber,
       homepageUrl: library.homepageUrl,
       operatingOrg: library.operatingOrg,
+      lotArea: library.lotArea,
+      buildingArea: library.buildingArea,
+      dataDate: library.dataDate,
+      providerCode: library.providerCode,
+      providerName: library.providerName,
     },
   });
 

@@ -10,6 +10,13 @@ export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk' | 'parkin
 
 const ALL_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'];
 
+// 정렬 옵션 매핑
+const ORDER_BY_MAP: Record<string, Record<string, string>> = {
+  name: { name: 'asc' },
+  latest: { updatedAt: 'desc' },
+  popular: { viewCount: 'desc' },
+};
+
 // --- Haversine 거리 계산 ---
 
 function toRad(deg: number): number {
@@ -38,23 +45,23 @@ interface CategoryConfig {
 const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
   toilet: {
     model: () => prisma.toilet,
-    detailFields: ['operatingHours', 'maleToilets', 'maleUrinals', 'femaleToilets', 'hasDisabledToilet', 'openTime', 'managingOrg'],
+    detailFields: ['operatingHours', 'maleToilets', 'maleUrinals', 'femaleToilets', 'hasDisabledToilet', 'openTime', 'managingOrg', 'phoneNumber', 'installDate', 'ownershipType', 'sewageTreatment', 'hasEmergencyBell', 'emergencyBellLocation', 'hasCCTV', 'hasDiaperChangingTable', 'diaperChangingLocation', 'maleDisabledToilets', 'maleDisabledUrinals', 'maleChildToilets', 'maleChildUrinals', 'femaleDisabledToilets', 'femaleChildToilets', 'remodelingDate', 'facilityType', 'legalBasis', 'govCode', 'dataDate'],
   },
   wifi: {
     model: () => prisma.wifi,
-    detailFields: ['ssid', 'installDate', 'serviceProvider', 'installLocation', 'managementAgency', 'phoneNumber'],
+    detailFields: ['ssid', 'installDate', 'serviceProvider', 'installLocation', 'managementAgency', 'phoneNumber', 'installLocationDetail', 'govCode', 'dataDate'],
   },
   clothes: {
     model: () => prisma.clothes,
-    detailFields: ['managementAgency', 'phoneNumber', 'dataDate', 'detailLocation'],
+    detailFields: ['managementAgency', 'phoneNumber', 'dataDate', 'detailLocation', 'providerCode', 'providerName'],
   },
   kiosk: {
     model: () => prisma.kiosk,
-    detailFields: ['detailLocation', 'operationAgency', 'weekdayOperatingHours', 'saturdayOperatingHours', 'holidayOperatingHours', 'blindKeypad', 'voiceGuide', 'brailleOutput', 'wheelchairAccessible', 'availableDocuments'],
+    detailFields: ['detailLocation', 'operationAgency', 'weekdayOperatingHours', 'saturdayOperatingHours', 'holidayOperatingHours', 'blindKeypad', 'voiceGuide', 'brailleOutput', 'wheelchairAccessible', 'availableDocuments', 'govCode', 'installPosition'],
   },
   parking: {
     model: () => prisma.parking,
-    detailFields: ['parkingType', 'lotType', 'capacity', 'baseFee', 'baseTime', 'additionalFee', 'additionalTime', 'dailyMaxFee', 'monthlyFee', 'operatingHours', 'phone', 'paymentMethod', 'remarks', 'hasDisabledParking'],
+    detailFields: ['parkingType', 'lotType', 'capacity', 'baseFee', 'baseTime', 'additionalFee', 'additionalTime', 'dailyMaxFee', 'monthlyFee', 'operatingHours', 'phone', 'paymentMethod', 'remarks', 'hasDisabledParking', 'zoneClass', 'alternateParking', 'operatingDays', 'feeType', 'dailyMaxFeeHours', 'managingOrg', 'dataDate', 'providerCode', 'providerName'],
   },
   aed: {
     model: () => prisma.aed,
@@ -62,7 +69,7 @@ const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
   },
   library: {
     model: () => prisma.library,
-    detailFields: ['libraryType', 'closedDays', 'weekdayOpenTime', 'weekdayCloseTime', 'saturdayOpenTime', 'saturdayCloseTime', 'holidayOpenTime', 'holidayCloseTime', 'seatCount', 'bookCount', 'serialCount', 'nonBookCount', 'loanableBooks', 'loanableDays', 'phoneNumber', 'homepageUrl', 'operatingOrg'],
+    detailFields: ['libraryType', 'closedDays', 'weekdayOpenTime', 'weekdayCloseTime', 'saturdayOpenTime', 'saturdayCloseTime', 'holidayOpenTime', 'holidayCloseTime', 'seatCount', 'bookCount', 'serialCount', 'nonBookCount', 'loanableBooks', 'loanableDays', 'phoneNumber', 'homepageUrl', 'operatingOrg', 'lotArea', 'buildingArea', 'dataDate', 'providerCode', 'providerName'],
   },
 };
 
@@ -147,6 +154,64 @@ function buildBoundsFilter(swLat: number, swLng: number, neLat: number, neLng: n
   };
 }
 
+// 그룹별 검색 응답 타입
+interface GroupedCategoryResult {
+  category: FacilityCategory;
+  label: string;
+  count: number;
+  items: FacilityItem[];
+}
+
+interface GroupedSearchResult {
+  categories: GroupedCategoryResult[];
+  totalCount: number;
+}
+
+const CATEGORY_LABELS: Record<FacilityCategory, string> = {
+  toilet: '공공화장실',
+  wifi: '무료와이파이',
+  clothes: '의류수거함',
+  kiosk: '무인민원발급기',
+  parking: '공영주차장',
+  aed: '자동심장충격기',
+  library: '공공도서관',
+};
+
+/**
+ * 카테고리별 그룹핑 검색
+ * - 각 카테고리별 건수 + 상위 3건 미리보기 반환
+ * - count가 0인 카테고리는 제외
+ */
+export async function searchGrouped(params: FacilitySearchInput): Promise<GroupedSearchResult> {
+  const { keyword, city, district } = params;
+
+  const where = {
+    ...buildKeywordFilter(keyword),
+    ...buildRegionFilter(city, district),
+  };
+
+  const results = await Promise.all(
+    ALL_CATEGORIES.map(async (cat) => {
+      const model = CATEGORY_REGISTRY[cat].model();
+      const [count, records] = await Promise.all([
+        model.count({ where }),
+        model.findMany({ where, take: 3, select: BASE_SELECT_FIELDS }),
+      ]);
+      return {
+        category: cat,
+        label: CATEGORY_LABELS[cat],
+        count,
+        items: records.map((r: any) => toFacilityItem(r, cat)), // eslint-disable-line @typescript-eslint/no-explicit-any
+      };
+    }),
+  );
+
+  const categories = results.filter((r) => r.count > 0);
+  const totalCount = categories.reduce((sum, r) => sum + r.count, 0);
+
+  return { categories, totalCount };
+}
+
 /**
  * 시설 검색
  * - 좌표 기반 검색 (lat/lng + radius)
@@ -156,7 +221,7 @@ function buildBoundsFilter(swLat: number, swLng: number, neLat: number, neLng: n
  * - 지역 필터
  */
 export async function search(params: FacilitySearchInput): Promise<SearchResult> {
-  const { category, keyword, lat, lng, radius = SEARCH_DEFAULTS.RADIUS_METERS, swLat, swLng, neLat, neLng, city, district, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = params;
+  const { category, keyword, lat, lng, radius = SEARCH_DEFAULTS.RADIUS_METERS, swLat, swLng, neLat, neLng, city, district, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT, sort = 'name' } = params;
 
   // --- 좌표 기반 검색: Haversine 거리 계산 ---
   if (lat !== undefined && lng !== undefined) {
@@ -244,10 +309,11 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
   };
 
   // 단일 카테고리: DB skip/take + count
+  const orderBy = ORDER_BY_MAP[sort] || ORDER_BY_MAP.name;
   if (category) {
     const model = CATEGORY_REGISTRY[category as FacilityCategory].model();
     const [records, total] = await Promise.all([
-      model.findMany({ where, skip, take: limit, select: BASE_SELECT_FIELDS }),
+      model.findMany({ where, skip, take: limit, orderBy, select: BASE_SELECT_FIELDS }),
       model.count({ where }),
     ]);
     const items = records.map((r: any) => toFacilityItem(r, category as FacilityCategory)); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -285,6 +351,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         where,
         skip: catSkip,
         take: catTake,
+        orderBy,
         select: BASE_SELECT_FIELDS,
       });
       return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -408,6 +475,26 @@ interface RegionSearchResult {
   totalPages: number;
 }
 
+const CITY_SLUG_TO_FULL: Record<string, string> = {
+  seoul: '서울특별시',
+  busan: '부산광역시',
+  daegu: '대구광역시',
+  incheon: '인천광역시',
+  gwangju: '광주광역시',
+  daejeon: '대전광역시',
+  ulsan: '울산광역시',
+  sejong: '세종특별자치시',
+  gyeonggi: '경기도',
+  gangwon: '강원특별자치도',
+  chungbuk: '충청북도',
+  chungnam: '충청남도',
+  jeonbuk: '전북특별자치도',
+  jeonnam: '전라남도',
+  gyeongbuk: '경상북도',
+  gyeongnam: '경상남도',
+  jeju: '제주특별자치도',
+};
+
 /**
  * slug 또는 한글 지역명을 실제 지역 정보로 변환
  * @param city - 시/도 (한글 또는 slug)
@@ -418,12 +505,20 @@ async function resolveRegion(
   city: string,
   district: string
 ): Promise<{ city: string; district: string; bjdCode: string | null }> {
-  // Region 테이블에서 조회 (city + district 또는 city + slug)
+  const fullCityName = CITY_SLUG_TO_FULL[city];
+
+  // Region 테이블에서 조회 (city + district 또는 city + slug, slug city도 지원)
   const region = await prisma.region.findFirst({
     where: {
       OR: [
         { city, district },
         { city, slug: district },
+        ...(fullCityName
+          ? [
+              { city: fullCityName, district },
+              { city: fullCityName, slug: district },
+            ]
+          : []),
       ],
     },
   });
@@ -496,6 +591,82 @@ export async function getByRegion(
     },
     category,
     items,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+/**
+ * 지역별 전체 카테고리 시설 조회
+ * - 모든 카테고리의 시설을 합산하여 페이지네이션
+ * - search()의 전체-카테고리 페이지네이션 로직 재활용
+ */
+export async function getByRegionAll(
+  city: string,
+  district: string,
+  options: { page?: number; limit?: number } = {}
+): Promise<{
+  region: { city: string; district: string; bjdCode: string | null };
+  items: FacilityItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+}> {
+  const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = options;
+
+  const resolved = await resolveRegion(city, district);
+
+  const where = {
+    city: resolved.city,
+    district: resolved.district,
+  };
+
+  // 전체 카테고리 카운트
+  const counts = await Promise.all(
+    ALL_CATEGORIES.map((cat) => CATEGORY_REGISTRY[cat].model().count({ where })),
+  );
+  const total = counts.reduce((sum, c) => sum + c, 0);
+
+  // skip/take 계산 → 필요한 카테고리만 병렬 fetch
+  const skip = (page - 1) * limit;
+  const fetchParams: { cat: FacilityCategory; catSkip: number; catTake: number }[] = [];
+  let remainingSkip = skip;
+  let remainingTake = limit;
+
+  for (let i = 0; i < ALL_CATEGORIES.length && remainingTake > 0; i++) {
+    const catCount = counts[i];
+    if (remainingSkip >= catCount) {
+      remainingSkip -= catCount;
+      continue;
+    }
+    const catSkip = remainingSkip;
+    const catTake = Math.min(remainingTake, catCount - catSkip);
+    remainingSkip = 0;
+    remainingTake -= catTake;
+    fetchParams.push({ cat: ALL_CATEGORIES[i], catSkip, catTake });
+  }
+
+  const fetchResults = await Promise.all(
+    fetchParams.map(async ({ cat, catSkip, catTake }) => {
+      const records = await CATEGORY_REGISTRY[cat].model().findMany({
+        where,
+        skip: catSkip,
+        take: catTake,
+        orderBy: { name: 'asc' },
+        select: BASE_SELECT_FIELDS,
+      });
+      return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
+    }),
+  );
+
+  return {
+    region: {
+      city: resolved.city,
+      district: resolved.district,
+      bjdCode: resolved.bjdCode,
+    },
+    items: fetchResults.flat(),
     total,
     page,
     totalPages: Math.ceil(total / limit),

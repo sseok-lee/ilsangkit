@@ -35,6 +35,8 @@ export const FacilitySearchSchema = z
     district: z.string().max(50).optional(),
     page: z.coerce.number().int().min(PAGINATION.DEFAULT_PAGE).default(PAGINATION.DEFAULT_PAGE),
     limit: z.coerce.number().int().min(PAGINATION.DEFAULT_PAGE).max(PAGINATION.MAX_LIMIT).default(PAGINATION.DEFAULT_LIMIT),
+    grouped: z.boolean().optional().default(false),
+    sort: z.enum(['name', 'latest', 'popular']).optional().default('name'),
   })
   .refine(
     (data) => {
@@ -65,6 +67,12 @@ export const RegionFacilitiesParamsSchema = z.object({
   category: FacilityCategorySchema,
 });
 
+// 지역별 전체 카테고리 시설 조회 파라미터 스키마
+export const RegionAllFacilitiesParamsSchema = z.object({
+  city: z.string().min(1).max(50),
+  district: z.string().min(1).max(50),
+});
+
 // 지역별 시설 조회 쿼리 스키마
 export const RegionFacilitiesQuerySchema = PaginationSchema;
 
@@ -72,4 +80,5 @@ export const RegionFacilitiesQuerySchema = PaginationSchema;
 export type FacilitySearchInput = z.infer<typeof FacilitySearchSchema>;
 export type FacilityDetailParams = z.infer<typeof FacilityDetailParamsSchema>;
 export type RegionFacilitiesParams = z.infer<typeof RegionFacilitiesParamsSchema>;
+export type RegionAllFacilitiesParams = z.infer<typeof RegionAllFacilitiesParamsSchema>;
 export type RegionFacilitiesQuery = z.infer<typeof RegionFacilitiesQuerySchema>;

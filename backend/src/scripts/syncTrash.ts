@@ -128,6 +128,7 @@ interface TransformedWasteSchedule {
   };
   sourceId: string;
   sourceUrl: string;
+  govCode: string | null;
 }
 
 /**
@@ -238,6 +239,7 @@ export function transformTrashData(row: TrashApiResponse): TransformedWasteSched
     },
     sourceId,
     sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',
+    govCode: row.OPN_ATMY_GRP_CD?.trim() || null,
   };
 }
 
@@ -334,6 +336,7 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
                   targetRegion: transformed.targetRegion,
                   emissionPlace: transformed.emissionPlace,
                   details: detailsJson,
+                  govCode: transformed.govCode,
                   syncedAt: new Date(),
                 },
               });

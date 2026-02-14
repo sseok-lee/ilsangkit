@@ -7,6 +7,7 @@ import {
   FacilitySearchSchema,
   FacilityDetailParamsSchema,
   RegionFacilitiesParamsSchema,
+  RegionAllFacilitiesParamsSchema,
   RegionFacilitiesQuerySchema,
 } from '../schemas/facility.js';
 import * as facilityService from '../services/facilityService.js';
@@ -21,7 +22,33 @@ router.post(
   searchRateLimiter, // Apply stricter rate limit for search endpoint
   validate(FacilitySearchSchema, 'body'),
   asyncHandler(async (req: Request, res: Response) => {
+    if (req.body.grouped) {
+      const result = await facilityService.searchGrouped(req.body);
+      res.json({ success: true, data: result });
+      return;
+    }
     const result = await facilityService.search(req.body);
+    res.json({ success: true, data: result });
+  })
+);
+
+// 지역별 전체 카테고리 시설 조회 API
+// GET /api/facilities/region/:city/:district
+router.get(
+  '/region/:city/:district',
+  validateMultiple({
+    params: RegionAllFacilitiesParamsSchema,
+    query: RegionFacilitiesQuerySchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { params, query } = res.locals.validated as {
+      params: { city: string; district: string };
+      query: { page: number; limit: number };
+    };
+    const { city, district } = params;
+    const { page, limit } = query;
+
+    const result = await facilityService.getByRegionAll(city, district, { page, limit });
     res.json({ success: true, data: result });
   })
 );

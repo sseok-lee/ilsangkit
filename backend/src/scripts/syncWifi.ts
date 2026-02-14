@@ -52,6 +52,10 @@ export interface TransformedWifi {
   installLocation: string;
   managementAgency: string;
   phoneNumber: string;
+  // 추가 상세 필드
+  installLocationDetail: string;
+  govCode: string;
+  dataDate: string;
 }
 
 // 동기화 결과 타입
@@ -126,6 +130,10 @@ export function transformWifiData(row: WifiCSVRow): TransformedWifi | null {
     installLocation: row.설치시설구분명?.trim() || '',
     managementAgency: row.관리기관명?.trim() || '',
     phoneNumber: row.관리기관전화번호?.trim() || '',
+    // 추가 상세 필드
+    installLocationDetail: row.설치장소상세?.trim() || '',
+    govCode: '',  // CSV에서 개방자치단체코드 필드가 있으면 매핑
+    dataDate: row.데이터기준일자?.trim() || '',
   };
 }
 
@@ -209,6 +217,9 @@ async function batchUpsertWifi(
                 installLocation: wifi.installLocation,
                 managementAgency: wifi.managementAgency,
                 phoneNumber: wifi.phoneNumber,
+                installLocationDetail: wifi.installLocationDetail,
+                govCode: wifi.govCode,
+                dataDate: wifi.dataDate,
                 syncedAt: new Date(),
               },
             });
@@ -232,6 +243,9 @@ async function batchUpsertWifi(
                 installLocation: wifi.installLocation,
                 managementAgency: wifi.managementAgency,
                 phoneNumber: wifi.phoneNumber,
+                installLocationDetail: wifi.installLocationDetail,
+                govCode: wifi.govCode,
+                dataDate: wifi.dataDate,
               },
             });
             newCount++;

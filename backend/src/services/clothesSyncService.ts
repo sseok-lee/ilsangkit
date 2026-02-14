@@ -68,6 +68,8 @@ export async function syncClothes(csvFilePath: string): Promise<SyncStats> {
             phoneNumber: clothes.phoneNumber,
             dataDate: clothes.dataDate,
             detailLocation: clothes.detailLocation,
+            providerCode: clothes.providerCode,
+            providerName: clothes.providerName,
           },
           create: {
             id: clothes.id,
@@ -83,6 +85,8 @@ export async function syncClothes(csvFilePath: string): Promise<SyncStats> {
             phoneNumber: clothes.phoneNumber,
             dataDate: clothes.dataDate,
             detailLocation: clothes.detailLocation,
+            providerCode: clothes.providerCode,
+            providerName: clothes.providerName,
           },
         });
 

@@ -90,6 +90,9 @@ interface KioskData {
   wheelchairAccessible: boolean;
   mngNo: string | null;
   availableDocuments: string[];
+  // 추가 상세 필드
+  govCode: string;
+  installPosition: string;
 }
 
 /**
@@ -218,6 +221,9 @@ export function transformKioskData(
     wheelchairAccessible: parseProvided(row.WHCHR_USER_MNPLT),
     mngNo,
     availableDocuments,
+    // 추가 상세 필드
+    govCode: row.OPN_ATMY_GRP_CD?.trim() || '',
+    installPosition: row.INSTL_PLC_PSTN?.trim() || '',
   };
 }
 
@@ -378,6 +384,8 @@ export async function syncKiosks(): Promise<void> {
                 wheelchairAccessible: kioskData.wheelchairAccessible,
                 mngNo: kioskData.mngNo,
                 availableDocuments: kioskData.availableDocuments,
+                govCode: kioskData.govCode,
+                installPosition: kioskData.installPosition,
               },
               update: {
                 name: kioskData.name,
@@ -399,6 +407,8 @@ export async function syncKiosks(): Promise<void> {
                 wheelchairAccessible: kioskData.wheelchairAccessible,
                 mngNo: kioskData.mngNo,
                 availableDocuments: kioskData.availableDocuments,
+                govCode: kioskData.govCode,
+                installPosition: kioskData.installPosition,
               },
             });
 

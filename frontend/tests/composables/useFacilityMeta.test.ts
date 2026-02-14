@@ -107,7 +107,7 @@ describe('useFacilityMeta', () => {
         expect.objectContaining({
           title: expect.stringContaining('강남역 공중화장실'),
           description: expect.stringContaining('서울'),
-          ogType: 'article',
+          ogType: 'website',
         })
       )
     })

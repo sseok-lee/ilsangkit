@@ -6,7 +6,7 @@
     <NuxtLink
       v-for="category in categories"
       :key="category.id"
-      :to="`/search?category=${category.id}`"
+      :to="`/${category.id}`"
       :class="[
         'group flex flex-col items-center justify-center gap-4 rounded-2xl p-6 transition-all hover:-translate-y-1 hover:shadow-lg',
         getCategoryBgClass(category.id),

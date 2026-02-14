@@ -41,7 +41,7 @@ describe('FacilitySearchSchema', () => {
       limit: 10,
     };
     const result = FacilitySearchSchema.parse(input);
-    expect(result).toEqual({ ...input, radius: 1000 });
+    expect(result).toEqual({ ...input, radius: 1000, grouped: false, sort: 'name' });
   });
 
   it('keyword가 100자를 초과하면 실패해야 한다', () => {

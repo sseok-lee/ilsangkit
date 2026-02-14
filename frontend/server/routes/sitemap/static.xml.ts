@@ -391,12 +391,12 @@ export default defineEventHandler(async (event) => {
   urls.push({ loc: `${SITE_URL}/privacy`, lastmod: '2025-06-01', changefreq: 'monthly', priority: 0.3 })
   urls.push({ loc: `${SITE_URL}/terms`, lastmod: '2025-06-01', changefreq: 'monthly', priority: 0.3 })
 
-  // 검색 페이지
-  urls.push({ loc: `${SITE_URL}/search`, lastmod: today, changefreq: 'daily', priority: 0.9 })
+  // 검색 페이지 (키워드 검색 전용)
+  urls.push({ loc: `${SITE_URL}/search`, lastmod: today, changefreq: 'daily', priority: 0.5 })
 
-  // 카테고리별 검색 페이지
+  // 카테고리 랜딩 페이지
   for (const category of CATEGORIES) {
-    urls.push({ loc: `${SITE_URL}/search?category=${category}`, lastmod: today, changefreq: 'weekly', priority: 0.8 })
+    urls.push({ loc: `${SITE_URL}/${category}`, lastmod: today, changefreq: 'daily', priority: 0.9 })
   }
 
   // API에서 실제 데이터가 있는 지역-카테고리 조합만 가져오기

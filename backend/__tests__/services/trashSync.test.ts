@@ -287,6 +287,7 @@ describe('transformTrashData', () => {
       },
       sourceId: 'GC-001',
       sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',
+      govCode: null,
     });
   });
 
@@ -318,6 +319,7 @@ describe('transformTrashData', () => {
       },
       sourceId: expect.any(String),
       sourceUrl: 'https://www.data.go.kr/data/15155080/openapi.do',
+      govCode: null,
     });
   });
 

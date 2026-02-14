@@ -61,7 +61,7 @@
             <NuxtLink
               v-for="catId in group.categories"
               :key="catId"
-              :to="`/search?category=${catId}`"
+              :to="`/${catId}`"
               class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-[15px] text-slate-700 dark:text-slate-300 transition-colors"
               @click="closeDropdown"
             >
@@ -159,7 +159,7 @@
           <NuxtLink
             v-for="catId in group.categories"
             :key="catId"
-            :to="`/search?category=${catId}`"
+            :to="`/${catId}`"
             class="pl-6 pr-4 py-2.5 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
             @click="closeMobileMenu"
           >

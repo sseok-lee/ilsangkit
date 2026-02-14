@@ -43,6 +43,9 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
+// Mock Nuxt compiler macros
+vi.stubGlobal('definePageMeta', vi.fn())
+
 // Mock useKakaoMap
 vi.mock('~/composables/useKakaoMap', () => ({
   useKakaoMap: () => ({

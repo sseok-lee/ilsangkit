@@ -22,24 +22,26 @@ describe('useRegionFacilities', () => {
   });
 
   it('fetches region facilities successfully', async () => {
-    const mockData = {
-      items: [
-        {
-          id: 'toilet-1',
-          name: '강남역 공중화장실',
-          category: 'toilet',
-          address: '서울특별시 강남구',
-          latitude: 37.5,
-          longitude: 127.0,
-        },
-      ],
-      total: 1,
-      page: 1,
-      pageSize: 20,
-      totalPages: 1,
-    };
+    const mockItems = [
+      {
+        id: 'toilet-1',
+        name: '강남역 공중화장실',
+        category: 'toilet',
+        address: '서울특별시 강남구',
+        latitude: 37.5,
+        longitude: 127.0,
+      },
+    ];
 
-    mockFetch.mockResolvedValueOnce(mockData);
+    mockFetch.mockResolvedValueOnce({
+      success: true,
+      data: {
+        items: mockItems,
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      },
+    });
 
     const { facilities, loading, error, fetchFacilities, total, totalPages } = useRegionFacilities();
 
@@ -47,7 +49,7 @@ describe('useRegionFacilities', () => {
 
     expect(loading.value).toBe(false);
     expect(error.value).toBeNull();
-    expect(facilities.value).toEqual(mockData.items);
+    expect(facilities.value).toEqual(mockItems);
     expect(total.value).toBe(1);
     expect(totalPages.value).toBe(1);
   });
@@ -66,24 +68,24 @@ describe('useRegionFacilities', () => {
   });
 
   it('calls API with correct parameters', async () => {
-    const mockData = {
-      items: [],
-      total: 0,
-      page: 2,
-      pageSize: 20,
-      totalPages: 0,
-    };
-
-    mockFetch.mockResolvedValueOnce(mockData);
+    mockFetch.mockResolvedValueOnce({
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+        page: 2,
+        totalPages: 0,
+      },
+    });
 
     const { fetchFacilities } = useRegionFacilities();
 
     await fetchFacilities('seoul', 'gangnam', 'wifi', 2);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/facilities/region/seoul/gangnam/wifi',
+      'http://localhost:8000/api/facilities/region/seoul/gangnam/wifi',
       {
-        query: { page: 2, pageSize: 20 },
+        query: { page: 2, limit: 20 },
       }
     );
   });
@@ -105,11 +107,13 @@ describe('useRegionFacilities', () => {
 
     // Resolve the promise
     resolvePromise!({
-      items: [],
-      total: 0,
-      page: 1,
-      pageSize: 20,
-      totalPages: 0,
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+        page: 1,
+        totalPages: 0,
+      },
     });
 
     await fetchPromise;
@@ -119,24 +123,24 @@ describe('useRegionFacilities', () => {
   });
 
   it('supports custom page size', async () => {
-    const mockData = {
-      items: [],
-      total: 0,
-      page: 1,
-      pageSize: 50,
-      totalPages: 0,
-    };
-
-    mockFetch.mockResolvedValueOnce(mockData);
+    mockFetch.mockResolvedValueOnce({
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+        page: 1,
+        totalPages: 0,
+      },
+    });
 
     const { fetchFacilities } = useRegionFacilities();
 
     await fetchFacilities('seoul', 'gangnam', 'toilet', 1, 50);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/facilities/region/seoul/gangnam/toilet',
+      'http://localhost:8000/api/facilities/region/seoul/gangnam/toilet',
       {
-        query: { page: 1, pageSize: 50 },
+        query: { page: 1, limit: 50 },
       }
     );
   });

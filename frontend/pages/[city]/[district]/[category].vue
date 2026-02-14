@@ -89,12 +89,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRegionFacilities } from '~/composables/useRegionFacilities'
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
-import { CATEGORY_META } from '~/types/facility'
+import { useStructuredData } from '~/composables/useStructuredData'
+import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 
 // Route params
@@ -104,13 +105,15 @@ const district = computed(() => route.params.district as string)
 const category = computed(() => route.params.category as string)
 
 // Dynamic region data
-const { loadRegions, getCityName, getDistrictName } = useRegions()
+const { loadRegions, syncFromHydration, getCityName, getDistrictName } = useRegions()
 
 // SSR: 서버에서 지역 정보 로드
-await useAsyncData(
+const { data: regionsData } = await useAsyncData(
   `region-${city.value}-${district.value}`,
   () => loadRegions()
 )
+// useAsyncData의 hydrated data로 캐시 동기화
+syncFromHydration(regionsData)
 
 // Korean names (동적으로 가져옴)
 const cityName = computed(() => getCityName(city.value))
@@ -138,6 +141,15 @@ useHead(computed(() => {
   return {}
 }))
 
+// Breadcrumb JSON-LD
+const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: cityName.value, url: `/${city.value}` },
+  { name: districtName.value, url: `/${city.value}/${district.value}` },
+  { name: categoryName.value, url: `/${city.value}/${district.value}/${category.value}` },
+])
+
 // Breadcrumb
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
@@ -150,18 +162,18 @@ const breadcrumbItems = computed(() => [
   },
 ])
 
-// Other categories
-const allCategories = [
-  { slug: 'toilet', name: '공공화장실' },
-  { slug: 'wifi', name: '무료 와이파이' },
-  { slug: 'trash', name: '생활쓰레기' },
-  { slug: 'clothes', name: '의류수거함' },
-  { slug: 'kiosk', name: '무인민원발급기' },
-]
-
-const otherCategories = computed(() =>
-  allCategories.filter((cat) => cat.slug !== category.value)
-)
+// Other categories (dynamically from CATEGORY_GROUPS, excluding current)
+const otherCategories = computed(() => {
+  const all: { slug: string; name: string }[] = []
+  for (const group of CATEGORY_GROUPS) {
+    for (const id of group.categories) {
+      if (id !== category.value) {
+        all.push({ slug: id, name: CATEGORY_META[id].label })
+      }
+    }
+  }
+  return all
+})
 
 // Facilities data
 const {
@@ -190,4 +202,29 @@ function goToPage(pageNum: number) {
 
 // 시설 정보 로드
 loadFacilities()
+
+// ItemList 구조화 데이터 + 페이지네이션 rel link 태그
+watch([facilities, currentPage, totalPages], () => {
+  if (facilities.value.length > 0) {
+    setItemListSchema(
+      facilities.value.map((f, index) => ({
+        name: f.name,
+        url: `/${f.category}/${f.id}`,
+        position: (currentPage.value - 1) * 20 + index + 1,
+      }))
+    )
+  }
+
+  const paginationLinks: Array<{ rel: string; href: string }> = []
+  const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
+
+  if (currentPage.value > 1) {
+    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${currentPage.value - 1}` })
+  }
+  if (currentPage.value < totalPages.value) {
+    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${currentPage.value + 1}` })
+  }
+
+  useHead({ link: paginationLinks })
+})
 </script>

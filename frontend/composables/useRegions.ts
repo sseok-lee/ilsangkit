@@ -1,4 +1,5 @@
-import { ref, readonly, computed } from 'vue'
+import { ref, readonly, computed, watch } from 'vue'
+import type { Ref } from 'vue'
 import type { RegionInfo } from '~/types/facility'
 
 /**
@@ -21,10 +22,6 @@ export interface DistrictData {
   bjdCode: string
 }
 
-// 캐시된 지역 데이터
-const cachedRegions = ref<RegionInfo[]>([])
-const isLoaded = ref(false)
-const isLoading = ref(false)
 
 /**
  * 시/도 slug → 한글명 매핑 (정적)
@@ -56,6 +53,29 @@ export const CITY_NAME_TO_SLUG: Record<string, string> = Object.entries(CITY_SLU
   (acc, [slug, name]) => ({ ...acc, [name]: slug }),
   {} as Record<string, string>
 )
+
+/**
+ * DB 풀네임 → slug 매핑 (서울특별시 → seoul 등)
+ */
+const CITY_FULL_NAME_TO_SLUG: Record<string, string> = {
+  서울특별시: 'seoul',
+  부산광역시: 'busan',
+  대구광역시: 'daegu',
+  인천광역시: 'incheon',
+  광주광역시: 'gwangju',
+  대전광역시: 'daejeon',
+  울산광역시: 'ulsan',
+  세종특별자치시: 'sejong',
+  경기도: 'gyeonggi',
+  강원특별자치도: 'gangwon',
+  충청북도: 'chungbuk',
+  충청남도: 'chungnam',
+  전북특별자치도: 'jeonbuk',
+  전라남도: 'jeonnam',
+  경상북도: 'gyeongbuk',
+  경상남도: 'gyeongnam',
+  제주특별자치도: 'jeju',
+}
 
 /**
  * 한글명에서 slug 생성 (한글 → 로마자 변환)
@@ -133,6 +153,10 @@ export function generateSlug(koreanName: string): string {
     동두천시: 'dongducheon',
     가평군: 'gapyeong',
     연천군: 'yeoncheon',
+    // 인천
+    강화군: 'ganghwa',
+    // 세종
+    세종시: 'sejong',
   }
 
   // 매핑에 있으면 반환
@@ -151,6 +175,9 @@ export function generateSlug(koreanName: string): string {
  * 지역 정보 조회 및 캐싱 composable
  */
 export function useRegions() {
+  const cachedRegions = useState<RegionInfo[]>('regions-cache', () => [])
+  const isLoaded = useState<boolean>('regions-loaded', () => false)
+  const isLoading = useState<boolean>('regions-loading', () => false)
   const error = ref<string | null>(null)
 
   /**
@@ -206,13 +233,19 @@ export function useRegions() {
     const cityMap = new Map<string, DistrictData[]>()
 
     for (const region of cachedRegions.value) {
-      const citySlug = CITY_NAME_TO_SLUG[region.city] || generateSlug(region.city)
+      const citySlug = CITY_NAME_TO_SLUG[region.city]
+        || CITY_FULL_NAME_TO_SLUG[region.city]
+        || generateSlug(region.city)
 
       if (!cityMap.has(citySlug)) {
         cityMap.set(citySlug, [])
       }
 
-      cityMap.get(citySlug)!.push({
+      // slug 중복 방지 (같은 구가 다른 city 형식으로 중복 저장된 경우)
+      const existingDistricts = cityMap.get(citySlug)!
+      if (existingDistricts.some((d) => d.slug === region.slug)) continue
+
+      existingDistricts.push({
         slug: region.slug,
         name: region.district,
         lat: region.lat,
@@ -236,7 +269,7 @@ export function useRegions() {
     if (!cityName) return undefined
 
     return cachedRegions.value.find(
-      (r) => r.city === cityName && r.slug === districtSlug
+      (r) => (r.city === cityName || r.city.startsWith(cityName)) && r.slug === districtSlug
     )
   }
 
@@ -260,6 +293,23 @@ export function useRegions() {
     return region?.district || districtSlug
   }
 
+  /**
+   * useAsyncData의 hydrated data로 캐시 동기화
+   * 페이지에서 useAsyncData 후 호출하여 SSR→클라이언트 하이드레이션 보장
+   */
+  function syncFromHydration(data: Ref<RegionInfo[] | null>) {
+    if (data.value?.length && !isLoaded.value) {
+      cachedRegions.value = data.value
+      isLoaded.value = true
+    }
+    watch(data, (newData) => {
+      if (newData?.length) {
+        cachedRegions.value = newData
+        isLoaded.value = true
+      }
+    })
+  }
+
   return {
     regions: readonly(cachedRegions),
     isLoaded: readonly(isLoaded),
@@ -267,6 +317,7 @@ export function useRegions() {
     error: readonly(error),
     citiesWithDistricts,
     loadRegions,
+    syncFromHydration,
     findRegionBySlug,
     getDistrictsByCity,
     getCityName,

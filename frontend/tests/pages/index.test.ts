@@ -61,7 +61,7 @@ describe('Index Page', () => {
     const wrapper = await mountSuspended(IndexPage)
 
     expect(wrapper.text()).toContain('생활 편의')
-    expect(wrapper.text()).toContain('안전·건강')
+    expect(wrapper.text()).toContain('공공 서비스')
     expect(wrapper.text()).toContain('환경')
   })
 
@@ -121,7 +121,7 @@ describe('Index Page', () => {
     const wrapper = await mountSuspended(IndexPage)
 
     expect(wrapper.text()).toContain('생활 편의')
-    expect(wrapper.text()).toContain('안전·건강')
+    expect(wrapper.text()).toContain('공공 서비스')
     expect(wrapper.text()).toContain('환경')
   })
 })

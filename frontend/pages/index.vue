@@ -36,8 +36,8 @@
             <div class="text-xs text-slate-500 dark:text-slate-400">생활 편의</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.safety) }}</div>
-            <div class="text-xs text-slate-500 dark:text-slate-400">안전·건강</div>
+            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.service) }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">공공 서비스</div>
           </div>
           <div class="text-center">
             <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.environment) }}</div>
@@ -105,8 +105,8 @@
               <div class="text-sm text-slate-500 dark:text-slate-400">생활 편의</div>
             </div>
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.safety) }}</div>
-              <div class="text-sm text-slate-500 dark:text-slate-400">안전·건강</div>
+              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.service) }}</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">공공 서비스</div>
             </div>
             <div class="text-center">
               <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.environment) }}</div>
@@ -127,7 +127,7 @@
             <a
               v-for="item in group.items"
               :key="item.id"
-              :href="`/search?category=${item.id}`"
+              :href="`/${item.id}`"
               class="group flex flex-col p-4 md:p-5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
             >
               <div :class="`w-12 h-12 rounded-full ${getCategoryBgColor(item.id)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`">
@@ -203,8 +203,8 @@ const stats = computed(() => statsResponse.value?.data ?? {
 
 // 그룹별 합산 통계
 const groupStats = computed(() => ({
-  living: stats.value.toilet + stats.value.wifi + stats.value.parking + stats.value.kiosk,
-  safety: stats.value.aed + stats.value.library,
+  living: stats.value.toilet + stats.value.wifi + stats.value.parking,
+  service: stats.value.kiosk + stats.value.library + stats.value.aed,
   environment: stats.value.clothes + stats.value.trash,
 }))
 

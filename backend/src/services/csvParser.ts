@@ -37,9 +37,27 @@ export interface ToiletCSVRow {
   '남성용-소변기수'?: string;
   '여성용-대변기수'?: string;
   '남성용-장애인용대변기수'?: string;
+  '남성용-장애인용소변기수'?: string;
+  '남성용-어린이용대변기수'?: string;
+  '남성용-어린이용소변기수'?: string;
   '여성용-장애인용대변기수'?: string;
+  '여성용-어린이용대변기수'?: string;
   '개방시간'?: string;
   '관리기관명'?: string;
+  '전화번호'?: string;
+  '설치연월'?: string;
+  '화장실소유구분명'?: string;
+  '오물처리방식'?: string;
+  '비상벨설치여부'?: string;
+  '비상벨설치장소'?: string;
+  '화장실입구CCTV설치유무'?: string;
+  '기저귀교환대유무'?: string;
+  '기저귀교환대장소'?: string;
+  '리모델링연월'?: string;
+  '구분명'?: string;
+  '근거법령명'?: string;
+  '개방자치단체코드'?: string;
+  '데이터기준일자'?: string;
   [key: string]: string | undefined;
 }
 
@@ -62,6 +80,27 @@ export interface TransformedToilet {
   hasDisabledToilet: boolean;
   openTime: string;
   managingOrg: string;
+  // 추가 상세 필드
+  phoneNumber: string;
+  installDate: string;
+  ownershipType: string;
+  sewageTreatment: string;
+  hasEmergencyBell: boolean;
+  emergencyBellLocation: string;
+  hasCCTV: boolean;
+  hasDiaperChangingTable: boolean;
+  diaperChangingLocation: string;
+  maleDisabledToilets: number;
+  maleDisabledUrinals: number;
+  maleChildToilets: number;
+  maleChildUrinals: number;
+  femaleDisabledToilets: number;
+  femaleChildToilets: number;
+  remodelingDate: string;
+  facilityType: string;
+  legalBasis: string;
+  govCode: string;
+  dataDate: string;
 }
 
 // Clothes 변환 결과 타입
@@ -80,6 +119,9 @@ export interface TransformedClothes {
   phoneNumber: string;
   dataDate: string;
   detailLocation: string;
+  // 추가 상세 필드
+  providerCode: string;
+  providerName: string;
 }
 
 // Parking CSV 로우 타입
@@ -114,6 +156,10 @@ export interface ParkingCSVRow {
   '위도': string;
   '경도': string;
   '관리기관명'?: string;
+  '1일주차권요금적용시간'?: string;
+  '데이터기준일자'?: string;
+  '제공기관코드'?: string;
+  '제공기관명'?: string;
   [key: string]: string | undefined;
 }
 
@@ -142,6 +188,11 @@ export interface LibraryCSVRow {
   '대출가능일수'?: string;
   '위도': string;
   '경도': string;
+  '부지면적'?: string;
+  '건물면적'?: string;
+  '데이터기준일자'?: string;
+  '제공기관코드'?: string;
+  '제공기관명'?: string;
   [key: string]: string | undefined;
 }
 
@@ -174,6 +225,12 @@ export interface TransformedLibrary {
   phoneNumber: string;
   homepageUrl: string;
   operatingOrg: string;
+  // 추가 상세 필드
+  lotArea: string;
+  buildingArea: string;
+  dataDate: string;
+  providerCode: string;
+  providerName: string;
 }
 
 // Parking 변환 결과 타입
@@ -202,6 +259,16 @@ export interface TransformedParking {
   paymentMethod: string;
   remarks: string;
   hasDisabledParking: boolean;
+  // 추가 상세 필드
+  zoneClass: string;
+  alternateParking: string;
+  operatingDays: string;
+  feeType: string;
+  dailyMaxFeeHours: string;
+  managingOrg: string;
+  dataDate: string;
+  providerCode: string;
+  providerName: string;
 }
 
 // 하위 호환성을 위한 타입 (deprecated - 사용 지양)
@@ -393,6 +460,27 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
     hasDisabledToilet,
     openTime: row['개방시간']?.trim() || '',
     managingOrg: row['관리기관명']?.trim() || '',
+    // 추가 상세 필드
+    phoneNumber: row['전화번호']?.trim() || '',
+    installDate: row['설치연월']?.trim() || '',
+    ownershipType: row['화장실소유구분명']?.trim() || '',
+    sewageTreatment: row['오물처리방식']?.trim() || '',
+    hasEmergencyBell: row['비상벨설치여부']?.trim() === 'Y',
+    emergencyBellLocation: row['비상벨설치장소']?.trim() || '',
+    hasCCTV: row['화장실입구CCTV설치유무']?.trim() === 'Y',
+    hasDiaperChangingTable: row['기저귀교환대유무']?.trim() === 'Y',
+    diaperChangingLocation: row['기저귀교환대장소']?.trim() || '',
+    maleDisabledToilets: maleDisabled,
+    maleDisabledUrinals: parseInt(row['남성용-장애인용소변기수'] || '0', 10) || 0,
+    maleChildToilets: parseInt(row['남성용-어린이용대변기수'] || '0', 10) || 0,
+    maleChildUrinals: parseInt(row['남성용-어린이용소변기수'] || '0', 10) || 0,
+    femaleDisabledToilets: femaleDisabled,
+    femaleChildToilets: parseInt(row['여성용-어린이용대변기수'] || '0', 10) || 0,
+    remodelingDate: row['리모델링연월']?.trim() || '',
+    facilityType: row['구분명']?.trim() || '',
+    legalBasis: row['근거법령명']?.trim() || '',
+    govCode: row['개방자치단체코드']?.trim() || '',
+    dataDate: row['데이터기준일자']?.trim() || '',
   };
 }
 
@@ -531,6 +619,9 @@ export function transformClothesRow(row: ClothesCSVRow): TransformedClothes | nu
     phoneNumber: row['관리기관전화번호']?.trim() || '',
     dataDate: row['데이터기준일자']?.trim() || '',
     detailLocation: row['상세위치']?.trim() || '',
+    // 추가 상세 필드
+    providerCode: row['제공기관코드']?.trim() || '',
+    providerName: row['제공기관명']?.trim() || '',
   };
 }
 
@@ -685,6 +776,16 @@ export function transformParkingRow(row: ParkingCSVRow): TransformedParking | nu
     paymentMethod: row['결제방법']?.trim() || '',
     remarks: row['특기사항']?.trim() || '',
     hasDisabledParking: row['장애인전용주차구역보유여부']?.trim() === 'Y',
+    // 추가 상세 필드
+    zoneClass: row['급지구분']?.trim() || '',
+    alternateParking: row['부제시행구분']?.trim() || '',
+    operatingDays: row['운영요일']?.trim() || '',
+    feeType: row['요금정보']?.trim() || '',
+    dailyMaxFeeHours: row['1일주차권요금적용시간']?.trim() || '',
+    managingOrg: row['관리기관명']?.trim() || '',
+    dataDate: row['데이터기준일자']?.trim() || '',
+    providerCode: row['제공기관코드']?.trim() || '',
+    providerName: row['제공기관명']?.trim() || '',
   };
 }
 
@@ -798,6 +899,12 @@ export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | nu
     phoneNumber: row['도서관전화번호']?.trim() || '',
     homepageUrl: row['홈페이지주소']?.trim() || '',
     operatingOrg: row['운영기관명']?.trim() || '',
+    // 추가 상세 필드
+    lotArea: row['부지면적']?.trim() || '',
+    buildingArea: row['건물면적']?.trim() || '',
+    dataDate: row['데이터기준일자']?.trim() || '',
+    providerCode: row['제공기관코드']?.trim() || '',
+    providerName: row['제공기관명']?.trim() || '',
   };
 }
 

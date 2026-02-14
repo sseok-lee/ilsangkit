@@ -51,7 +51,7 @@ describe('AppHeader', () => {
       const nav = wrapper.find('nav.hidden.md\\:flex')
       const text = nav.text()
       expect(text).toContain('생활 편의')
-      expect(text).toContain('안전·건강')
+      expect(text).toContain('공공 서비스')
       expect(text).toContain('환경')
     })
 
@@ -75,10 +75,9 @@ describe('AppHeader', () => {
       expect(dropdown.exists()).toBe(true)
       const links = dropdown.findAll('a')
       const hrefs = links.map((l) => l.attributes('href'))
-      expect(hrefs).toContain('/search?category=toilet')
-      expect(hrefs).toContain('/search?category=wifi')
-      expect(hrefs).toContain('/search?category=parking')
-      expect(hrefs).toContain('/search?category=kiosk')
+      expect(hrefs).toContain('/toilet')
+      expect(hrefs).toContain('/wifi')
+      expect(hrefs).toContain('/parking')
     })
   })
 
@@ -115,11 +114,11 @@ describe('AppHeader', () => {
       const hrefs = links.map((link) => link.attributes('href'))
 
       // Category links
-      expect(hrefs).toContain('/search?category=toilet')
-      expect(hrefs).toContain('/search?category=trash')
-      expect(hrefs).toContain('/search?category=wifi')
-      expect(hrefs).toContain('/search?category=clothes')
-      expect(hrefs).toContain('/search?category=kiosk')
+      expect(hrefs).toContain('/toilet')
+      expect(hrefs).toContain('/trash')
+      expect(hrefs).toContain('/wifi')
+      expect(hrefs).toContain('/clothes')
+      expect(hrefs).toContain('/kiosk')
     })
 
     it('should display group headers in mobile menu', async () => {
@@ -129,7 +128,7 @@ describe('AppHeader', () => {
       const mobileMenu = wrapper.find('[data-testid="mobile-menu"]')
       const text = mobileMenu.text()
       expect(text).toContain('생활 편의')
-      expect(text).toContain('안전·건강')
+      expect(text).toContain('공공 서비스')
       expect(text).toContain('환경')
     })
 

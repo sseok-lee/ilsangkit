@@ -43,6 +43,28 @@ model Toilet {
   openTime          String?  @db.VarChar(100)
   managingOrg       String?  @db.VarChar(200)
 
+  // 추가 상세 필드
+  phoneNumber              String?  @db.VarChar(50)
+  installDate              String?  @db.VarChar(50)
+  ownershipType            String?  @db.VarChar(50)
+  sewageTreatment          String?  @db.VarChar(100)
+  hasEmergencyBell         Boolean  @default(false)
+  emergencyBellLocation    String?  @db.VarChar(200)
+  hasCCTV                  Boolean  @default(false)
+  hasDiaperChangingTable   Boolean  @default(false)
+  diaperChangingLocation   String?  @db.VarChar(200)
+  maleDisabledToilets      Int      @default(0)
+  maleDisabledUrinals      Int      @default(0)
+  maleChildToilets         Int      @default(0)
+  maleChildUrinals         Int      @default(0)
+  femaleDisabledToilets    Int      @default(0)
+  femaleChildToilets       Int      @default(0)
+  remodelingDate           String?  @db.VarChar(50)
+  facilityType             String?  @db.VarChar(100)
+  legalBasis               String?  @db.VarChar(200)
+  govCode                  String?  @db.VarChar(20)
+  dataDate                 String?  @db.VarChar(20)
+
   @@index([city, district])
   @@index([lat, lng])
 }
@@ -73,6 +95,11 @@ model Wifi {
   managementAgency String?  @db.VarChar(200)
   phoneNumber      String?  @db.VarChar(50)
 
+  // 추가 상세 필드
+  installLocationDetail String?  @db.VarChar(500)
+  govCode              String?  @db.VarChar(20)
+  dataDate             String?  @db.VarChar(20)
+
   @@index([city, district])
   @@index([lat, lng])
 }
@@ -100,6 +127,10 @@ model Clothes {
   phoneNumber      String?  @db.VarChar(50)
   dataDate         String?  @db.VarChar(50)
   detailLocation   String?  @db.VarChar(500)
+
+  // 추가 상세 필드
+  providerCode     String?  @db.VarChar(20)
+  providerName     String?  @db.VarChar(200)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -135,6 +166,10 @@ model Kiosk {
   wheelchairAccessible   Boolean  @default(false)
   mngNo                  String?  @db.VarChar(50)  // 관리번호 (API 연결키)
   availableDocuments     Json?                     // 발급 가능 민원 목록
+
+  // 추가 상세 필드
+  govCode                String?  @db.VarChar(20)
+  installPosition        String?  @db.VarChar(200)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -174,6 +209,17 @@ model Parking {
   paymentMethod    String?  @db.VarChar(200)  // 결제방법
   remarks          String?  @db.Text          // 특기사항
   hasDisabledParking Boolean @default(false)  // 장애인전용주차구역보유여부
+
+  // 추가 상세 필드
+  zoneClass        String?  @db.VarChar(50)
+  alternateParking String?  @db.VarChar(50)
+  operatingDays    String?  @db.VarChar(100)
+  feeType          String?  @db.VarChar(50)
+  dailyMaxFeeHours String?  @db.VarChar(50)
+  managingOrg      String?  @db.VarChar(200)
+  dataDate         String?  @db.VarChar(20)
+  providerCode     String?  @db.VarChar(20)
+  providerName     String?  @db.VarChar(200)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -261,6 +307,13 @@ model Library {
   homepageUrl       String?  @db.VarChar(500)
   operatingOrg      String?  @db.VarChar(200)
 
+  // 추가 상세 필드
+  lotArea           String?  @db.VarChar(50)
+  buildingArea      String?  @db.VarChar(50)
+  dataDate          String?  @db.VarChar(20)
+  providerCode      String?  @db.VarChar(20)
+  providerName      String?  @db.VarChar(200)
+
   @@index([city, district])
   @@index([lat, lng])
 }
@@ -335,6 +388,7 @@ model WasteSchedule {
   details       Json?                     // 기타 상세 정보 (배출요일, 시간 등)
   sourceId      String   @db.VarChar(100) // 원본 데이터 ID
   sourceUrl     String?  @db.VarChar(500) // 데이터 출처
+  govCode       String?  @db.VarChar(20)  // 개방자치단체코드
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   syncedAt      DateTime @default(now())

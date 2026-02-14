@@ -1,9 +1,7 @@
 // @TASK T5.3 - JSON-LD 구조화된 데이터
 import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-
-const SITE_NAME = '일상킷'
-const SITE_URL = 'https://ilsangkit.co.kr'
+import { SITE_NAME, SITE_URL } from '~/utils/seoConstants'
 
 /**
  * BreadcrumbList 스키마

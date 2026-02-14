@@ -45,6 +45,26 @@ export interface ToiletDetails {
   hasDisabledToilet?: boolean
   openTime?: string | null
   managingOrg?: string | null
+  phoneNumber?: string | null
+  installDate?: string | null
+  ownershipType?: string | null
+  sewageTreatment?: string | null
+  hasEmergencyBell?: boolean
+  emergencyBellLocation?: string | null
+  hasCCTV?: boolean
+  hasDiaperChangingTable?: boolean
+  diaperChangingLocation?: string | null
+  maleDisabledToilets?: number
+  maleDisabledUrinals?: number
+  maleChildToilets?: number
+  maleChildUrinals?: number
+  femaleDisabledToilets?: number
+  femaleChildToilets?: number
+  remodelingDate?: string | null
+  facilityType?: string | null
+  legalBasis?: string | null
+  govCode?: string | null
+  dataDate?: string | null
 }
 
 export interface WifiDetails {
@@ -54,6 +74,9 @@ export interface WifiDetails {
   installLocation?: string | null
   managementAgency?: string | null
   phoneNumber?: string | null
+  installLocationDetail?: string | null
+  govCode?: string | null
+  dataDate?: string | null
 }
 
 export interface ClothesDetails {
@@ -61,6 +84,8 @@ export interface ClothesDetails {
   phoneNumber?: string | null
   dataDate?: string | null
   detailLocation?: string | null
+  providerCode?: string | null
+  providerName?: string | null
 }
 
 export interface KioskDetails {
@@ -74,6 +99,8 @@ export interface KioskDetails {
   brailleOutput?: boolean
   wheelchairAccessible?: boolean
   availableDocuments?: string[]
+  govCode?: string | null
+  installPosition?: string | null
 }
 
 export interface ParkingDetails {
@@ -91,6 +118,15 @@ export interface ParkingDetails {
   paymentMethod?: string | null
   remarks?: string | null
   hasDisabledParking?: boolean
+  zoneClass?: string | null
+  alternateParking?: string | null
+  operatingDays?: string | null
+  feeType?: string | null
+  dailyMaxFeeHours?: string | null
+  managingOrg?: string | null
+  dataDate?: string | null
+  providerCode?: string | null
+  providerName?: string | null
 }
 
 export interface AedDetails {
@@ -135,6 +171,11 @@ export interface LibraryDetails {
   phoneNumber?: string | null
   homepageUrl?: string | null
   operatingOrg?: string | null
+  lotArea?: string | null
+  buildingArea?: string | null
+  dataDate?: string | null
+  providerCode?: string | null
+  providerName?: string | null
 }
 
 // 카테고리 그룹 (헤더, 홈페이지 등에서 공유)
@@ -148,12 +189,12 @@ export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
   {
     title: '생활 편의',
     icon: 'home',
-    categories: ['toilet', 'wifi', 'parking', 'kiosk'],
+    categories: ['toilet', 'wifi', 'parking'],
   },
   {
-    title: '안전·건강',
-    icon: 'health_and_safety',
-    categories: ['aed', 'library'],
+    title: '공공 서비스',
+    icon: 'account_balance',
+    categories: ['kiosk', 'library', 'aed'],
   },
   {
     title: '환경',
@@ -177,6 +218,7 @@ export interface SearchParams {
   district?: string
   page?: number
   limit?: number
+  grouped?: boolean
 }
 
 // 검색 응답
@@ -185,6 +227,19 @@ export interface SearchResponse {
   total: number
   page: number
   totalPages: number
+}
+
+// 그룹별 검색 응답
+export interface GroupedCategory {
+  category: FacilityCategory
+  label: string
+  count: number
+  items: Facility[]
+}
+
+export interface GroupedSearchResponse {
+  categories: GroupedCategory[]
+  totalCount: number
 }
 
 // API 응답
