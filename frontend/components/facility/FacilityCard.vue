@@ -71,14 +71,17 @@ interface Props {
   facility: Facility
   index?: number
   isActive?: boolean
+  highlightDistance?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   index: undefined,
   isActive: false,
+  highlightDistance: false,
 })
 
 const isCloseDistance = (): boolean => {
+  if (props.highlightDistance) return true
   return props.facility.distance !== undefined && props.facility.distance <= 300
 }
 </script>
