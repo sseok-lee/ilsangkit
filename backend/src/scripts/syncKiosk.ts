@@ -186,11 +186,18 @@ function generateSourceId(row: KioskApiResponse): string {
 }
 
 /**
- * YYYYMMDDHHMMSS 형식의 날짜를 YYYY-MM-DD로 변환
+ * 날짜 문자열을 YYYY-MM-DD로 변환
+ * - YYYY-MM-DD 형식: 그대로 반환
+ * - YYYYMMDD(HHMMSS) 형식: 변환하여 반환
  */
 function parseDataDate(value: string | undefined | null): string | null {
   const v = value?.trim();
   if (!v || v.length < 8) return null;
+  // 이미 YYYY-MM-DD 형식이면 그대로 반환
+  if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
+    return v.substring(0, 10);
+  }
+  // YYYYMMDD(HHMMSS) 형식이면 변환
   return `${v.substring(0, 4)}-${v.substring(4, 6)}-${v.substring(6, 8)}`;
 }
 
