@@ -39,36 +39,44 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 interface CategoryConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   model: () => any;
+  listFields: string[];
   detailFields: string[];
 }
 
 const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
   toilet: {
     model: () => prisma.toilet,
+    listFields: ['operatingHours', 'hasDisabledToilet'],
     detailFields: ['operatingHours', 'maleToilets', 'maleUrinals', 'femaleToilets', 'hasDisabledToilet', 'openTime', 'managingOrg', 'phoneNumber', 'installDate', 'ownershipType', 'sewageTreatment', 'hasEmergencyBell', 'emergencyBellLocation', 'hasCCTV', 'hasDiaperChangingTable', 'diaperChangingLocation', 'maleDisabledToilets', 'maleDisabledUrinals', 'maleChildToilets', 'maleChildUrinals', 'femaleDisabledToilets', 'femaleChildToilets', 'remodelingDate', 'facilityType', 'legalBasis', 'govCode', 'dataDate'],
   },
   wifi: {
     model: () => prisma.wifi,
+    listFields: ['ssid', 'installLocation'],
     detailFields: ['ssid', 'installDate', 'serviceProvider', 'installLocation', 'managementAgency', 'phoneNumber', 'installLocationDetail', 'govCode', 'dataDate'],
   },
   clothes: {
     model: () => prisma.clothes,
+    listFields: ['detailLocation'],
     detailFields: ['managementAgency', 'phoneNumber', 'dataDate', 'detailLocation', 'providerCode', 'providerName'],
   },
   kiosk: {
     model: () => prisma.kiosk,
-    detailFields: ['detailLocation', 'operationAgency', 'weekdayOperatingHours', 'saturdayOperatingHours', 'holidayOperatingHours', 'blindKeypad', 'voiceGuide', 'brailleOutput', 'wheelchairAccessible', 'availableDocuments', 'govCode', 'installPosition'],
+    listFields: ['weekdayOperatingHours', 'wheelchairAccessible'],
+    detailFields: ['detailLocation', 'operationAgency', 'weekdayOperatingHours', 'saturdayOperatingHours', 'holidayOperatingHours', 'blindKeypad', 'voiceGuide', 'brailleOutput', 'wheelchairAccessible', 'availableDocuments', 'govCode', 'installPosition', 'dataDate'],
   },
   parking: {
     model: () => prisma.parking,
+    listFields: ['capacity', 'baseFee', 'feeType'],
     detailFields: ['parkingType', 'lotType', 'capacity', 'baseFee', 'baseTime', 'additionalFee', 'additionalTime', 'dailyMaxFee', 'monthlyFee', 'operatingHours', 'phone', 'paymentMethod', 'remarks', 'hasDisabledParking', 'zoneClass', 'alternateParking', 'operatingDays', 'feeType', 'dailyMaxFeeHours', 'managingOrg', 'dataDate', 'providerCode', 'providerName'],
   },
   aed: {
     model: () => prisma.aed,
-    detailFields: ['buildPlace', 'org', 'clerkTel', 'mfg', 'model', 'monSttTme', 'monEndTme', 'tueSttTme', 'tueEndTme', 'wedSttTme', 'wedEndTme', 'thuSttTme', 'thuEndTme', 'friSttTme', 'friEndTme', 'satSttTme', 'satEndTme', 'sunSttTme', 'sunEndTme', 'holSttTme', 'holEndTme'],
+    listFields: ['buildPlace', 'org'],
+    detailFields: ['buildPlace', 'org', 'clerkTel', 'mfg', 'model', 'monSttTme', 'monEndTme', 'tueSttTme', 'tueEndTme', 'wedSttTme', 'wedEndTme', 'thuSttTme', 'thuEndTme', 'friSttTme', 'friEndTme', 'satSttTme', 'satEndTme', 'sunSttTme', 'sunEndTme', 'holSttTme', 'holEndTme', 'dataDate'],
   },
   library: {
     model: () => prisma.library,
+    listFields: ['weekdayOpenTime', 'weekdayCloseTime', 'seatCount'],
     detailFields: ['libraryType', 'closedDays', 'weekdayOpenTime', 'weekdayCloseTime', 'saturdayOpenTime', 'saturdayCloseTime', 'holidayOpenTime', 'holidayCloseTime', 'seatCount', 'bookCount', 'serialCount', 'nonBookCount', 'loanableBooks', 'loanableDays', 'phoneNumber', 'homepageUrl', 'operatingOrg', 'lotArea', 'buildingArea', 'dataDate', 'providerCode', 'providerName'],
   },
 };
@@ -85,6 +93,18 @@ const BASE_SELECT_FIELDS = {
   district: true,
 } as const;
 
+/**
+ * 카테고리별 리스트 select 필드 생성
+ * BASE_SELECT_FIELDS + 카테고리별 listFields
+ */
+function buildListSelect(category: FacilityCategory): Record<string, boolean> {
+  const { listFields } = CATEGORY_REGISTRY[category];
+  return {
+    ...BASE_SELECT_FIELDS,
+    ...Object.fromEntries(listFields.map((f) => [f, true])),
+  };
+}
+
 // 응답 타입 정의
 interface FacilityItem {
   id: string;
@@ -97,6 +117,7 @@ interface FacilityItem {
   city: string;
   district: string;
   distance?: number;
+  extras?: Record<string, unknown>;
 }
 
 interface SearchResult {
@@ -108,6 +129,14 @@ interface SearchResult {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toFacilityItem(record: any, category: FacilityCategory): FacilityItem {
+  const { listFields } = CATEGORY_REGISTRY[category];
+  const extras: Record<string, unknown> = {};
+  for (const field of listFields) {
+    if (record[field] !== undefined && record[field] !== null && record[field] !== '') {
+      extras[field] = record[field];
+    }
+  }
+
   return {
     id: record.id,
     category,
@@ -118,6 +147,7 @@ function toFacilityItem(record: any, category: FacilityCategory): FacilityItem {
     lng: Number(record.lng) || 0,
     city: record.city,
     district: record.district,
+    ...(Object.keys(extras).length > 0 ? { extras } : {}),
   };
 }
 
@@ -195,7 +225,7 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
       const model = CATEGORY_REGISTRY[cat].model();
       const [count, records] = await Promise.all([
         model.count({ where }),
-        model.findMany({ where, take: 3, select: BASE_SELECT_FIELDS }),
+        model.findMany({ where, take: 3, select: buildListSelect(cat) }),
       ]);
       return {
         category: cat,
@@ -244,7 +274,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         const where = { ...keywordFilter, ...approxBounds };
         const records = await CATEGORY_REGISTRY[cat].model().findMany({
           where,
-          select: BASE_SELECT_FIELDS,
+          select: buildListSelect(cat),
         });
         return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
       }),
@@ -283,7 +313,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         const where = { ...keywordFilter, ...boundsFilter };
         const records = await CATEGORY_REGISTRY[cat].model().findMany({
           where,
-          select: BASE_SELECT_FIELDS,
+          select: buildListSelect(cat),
         });
         return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
       }),
@@ -313,7 +343,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
   if (category) {
     const model = CATEGORY_REGISTRY[category as FacilityCategory].model();
     const [records, total] = await Promise.all([
-      model.findMany({ where, skip, take: limit, orderBy, select: BASE_SELECT_FIELDS }),
+      model.findMany({ where, skip, take: limit, orderBy, select: buildListSelect(category as FacilityCategory) }),
       model.count({ where }),
     ]);
     const items = records.map((r: any) => toFacilityItem(r, category as FacilityCategory)); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -352,7 +382,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         skip: catSkip,
         take: catTake,
         orderBy,
-        select: BASE_SELECT_FIELDS,
+        select: buildListSelect(cat),
       });
       return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
     }),
@@ -615,7 +645,7 @@ export async function getByRegion(
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { name: 'asc' },
-        select: BASE_SELECT_FIELDS,
+        select: buildListSelect(category as FacilityCategory),
       }),
       model.count({ where }),
     ]);
@@ -703,7 +733,7 @@ export async function getByRegionAll(
         skip: catSkip,
         take: catTake,
         orderBy: { name: 'asc' },
-        select: BASE_SELECT_FIELDS,
+        select: buildListSelect(cat),
       });
       return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
     }),

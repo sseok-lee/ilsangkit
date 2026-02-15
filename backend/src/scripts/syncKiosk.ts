@@ -44,6 +44,8 @@ export interface KioskApiResponse {
   WHCHR_USER_MNPLT: string;
   /** 설치장소위치 (읍면동 등) */
   INSTL_PLC_PSTN: string;
+  /** 최종수정시점 (YYYYMMDDHHMMSS) */
+  LAST_MDFCN_PNT?: string;
 }
 
 /**
@@ -93,6 +95,7 @@ interface KioskData {
   // 추가 상세 필드
   govCode: string;
   installPosition: string;
+  dataDate: string | null;
 }
 
 /**
@@ -183,6 +186,15 @@ function generateSourceId(row: KioskApiResponse): string {
 }
 
 /**
+ * YYYYMMDDHHMMSS 형식의 날짜를 YYYY-MM-DD로 변환
+ */
+function parseDataDate(value: string | undefined | null): string | null {
+  const v = value?.trim();
+  if (!v || v.length < 8) return null;
+  return `${v.substring(0, 4)}-${v.substring(4, 6)}-${v.substring(6, 8)}`;
+}
+
+/**
  * API 응답 데이터를 Kiosk 모델 형식으로 변환
  */
 export function transformKioskData(
@@ -224,6 +236,7 @@ export function transformKioskData(
     // 추가 상세 필드
     govCode: row.OPN_ATMY_GRP_CD?.trim() || '',
     installPosition: row.INSTL_PLC_PSTN?.trim() || '',
+    dataDate: parseDataDate(row.LAST_MDFCN_PNT),
   };
 }
 
@@ -386,6 +399,7 @@ export async function syncKiosks(): Promise<void> {
                 availableDocuments: kioskData.availableDocuments,
                 govCode: kioskData.govCode,
                 installPosition: kioskData.installPosition,
+                dataDate: kioskData.dataDate,
               },
               update: {
                 name: kioskData.name,
@@ -409,6 +423,7 @@ export async function syncKiosks(): Promise<void> {
                 availableDocuments: kioskData.availableDocuments,
                 govCode: kioskData.govCode,
                 installPosition: kioskData.installPosition,
+                dataDate: kioskData.dataDate,
               },
             });
 

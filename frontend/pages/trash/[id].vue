@@ -53,6 +53,9 @@
             <p v-if="data.details?.emissionPlaceType" class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
               {{ data.details.emissionPlaceType }}
             </p>
+            <p v-if="data.details?.managementZone" class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              관리구역: {{ data.details.managementZone }}
+            </p>
           </div>
         </div>
       </section>
@@ -150,6 +153,30 @@
           {{ data.details.managePhone }}
         </a>
       </section>
+
+      <!-- 데이터 정보 -->
+      <section class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-slate-500 dark:text-slate-400 text-[20px]">description</span>
+          <h3 class="font-bold text-slate-900 dark:text-white">데이터 정보</h3>
+        </div>
+        <div class="space-y-2">
+          <div v-if="data.details?.lastModified" class="flex items-center justify-between text-sm">
+            <span class="text-slate-500 dark:text-slate-400">데이터 기준일</span>
+            <span class="font-medium text-slate-900 dark:text-white">{{ formatDataDate(data.details.lastModified) }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-500 dark:text-slate-400">출처</span>
+            <a href="https://www.data.go.kr/data/15155080/openapi.do" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">
+              공공데이터포털
+            </a>
+          </div>
+          <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+            <span class="material-symbols-outlined text-[14px] mt-px">info</span>
+            <span>공공데이터포털 기준 정보입니다</span>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </template>
@@ -228,6 +255,19 @@ function formatTimeRange(begin?: string, end?: string): string | null {
   if (!begin && !end) return null
   if (begin && end) return `${begin} ~ ${end}`
   return begin || end || null
+}
+
+function formatDataDate(raw: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  if (/^\d{8}/.test(raw)) return `${raw.substring(0, 4)}-${raw.substring(4, 6)}-${raw.substring(6, 8)}`
+  const d = new Date(raw)
+  if (!isNaN(d.getTime())) {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  return raw
 }
 
 function goBack() {

@@ -170,6 +170,7 @@ model Kiosk {
   // 추가 상세 필드
   govCode                String?  @db.VarChar(20)
   installPosition        String?  @db.VarChar(200)
+  dataDate               String?  @db.VarChar(20)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -265,6 +266,7 @@ model Aed {
   sunEndTme     String?  @db.VarChar(4)
   holSttTme     String?  @db.VarChar(4)     // 공휴일 시작
   holEndTme     String?  @db.VarChar(4)     // 공휴일 종료
+  dataDate      String?  @db.VarChar(20)
 
   @@index([city, district])
   @@index([lat, lng])

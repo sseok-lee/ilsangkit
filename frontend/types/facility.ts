@@ -13,6 +13,7 @@ export interface Facility {
   city: string
   district: string
   distance?: number
+  extras?: Record<string, unknown>
 }
 
 // 시설 상세 정보
@@ -101,6 +102,7 @@ export interface KioskDetails {
   availableDocuments?: string[]
   govCode?: string | null
   installPosition?: string | null
+  dataDate?: string | null
 }
 
 export interface ParkingDetails {
@@ -151,6 +153,7 @@ export interface AedDetails {
   sunEndTme?: string | null
   holSttTme?: string | null
   holEndTme?: string | null
+  dataDate?: string | null
 }
 
 export interface LibraryDetails {
@@ -309,6 +312,18 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     icon: '📚',
     color: 'amber',
   },
+}
+
+// 카테고리별 공공데이터포털 URL 매핑
+export const CATEGORY_DATA_PORTAL_URL: Record<FacilityCategory, string> = {
+  toilet: 'https://www.data.go.kr/data/15012892/standard.do',
+  trash: 'https://www.data.go.kr/data/15155080/openapi.do',
+  wifi: 'https://www.data.go.kr/data/15013116/standard.do',
+  clothes: 'https://www.data.go.kr/data/15139214/standard.do',
+  kiosk: 'https://www.data.go.kr/data/15154774/openapi.do',
+  parking: 'https://www.data.go.kr/data/15012896/standard.do',
+  aed: 'https://www.data.go.kr/data/15000652/openapi.do',
+  library: 'https://www.data.go.kr/data/15013109/standard.do',
 }
 
 // ============================================

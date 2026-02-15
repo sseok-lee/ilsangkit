@@ -190,7 +190,11 @@
 
                   <!-- Toilet Extra Details -->
                   <template v-if="facility.category === 'toilet'">
-                    <div v-if="facility.details?.openTime || facility.details?.managingOrg" :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
+                    <div v-if="facility.details?.openTime || facility.details?.managingOrg || facility.details?.facilityType || facility.details?.ownershipType || facility.details?.installDate" :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
+                      <div v-if="facility.details?.facilityType" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">시설유형</span>
+                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.facilityType }}</span>
+                      </div>
                       <div v-if="facility.details?.openTime" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">개방시간</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.openTime }}</span>
@@ -198,6 +202,44 @@
                       <div v-if="facility.details?.managingOrg" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">관리기관</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.managingOrg }}</span>
+                      </div>
+                      <div v-if="facility.details?.ownershipType" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">소유구분</span>
+                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.ownershipType }}</span>
+                      </div>
+                      <div v-if="facility.details?.installDate" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">설치일</span>
+                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.installDate }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Toilet Accessibility Details -->
+                    <div v-if="toiletAccessibilityDetails.length > 0" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">접근성 상세</h3>
+                      <div class="grid grid-cols-2 gap-3">
+                        <div
+                          v-for="item in toiletAccessibilityDetails"
+                          :key="item.label"
+                          class="bg-[#f9fafb] dark:bg-[#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5] dark:border-gray-700"
+                        >
+                          <span class="text-sm text-[#4b5563] dark:text-slate-300">{{ item.label }}</span>
+                          <span class="text-sm font-bold text-[#111418] dark:text-white">{{ item.value }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Emergency Bell / Diaper Changing Location -->
+                    <div v-if="facility.details?.emergencyBellLocation || facility.details?.diaperChangingLocation" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">편의시설 위치</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-if="facility.details?.emergencyBellLocation" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">비상벨 위치</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.emergencyBellLocation }}</span>
+                        </div>
+                        <div v-if="facility.details?.diaperChangingLocation" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">기저귀교환대 위치</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.diaperChangingLocation }}</span>
+                        </div>
                       </div>
                     </div>
                   </template>
@@ -212,6 +254,10 @@
                       <div v-if="facility.details?.installLocation" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">설치 장소</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.installLocation }}</span>
+                      </div>
+                      <div v-if="facility.details?.installLocationDetail && facility.details?.installLocationDetail !== facility.details?.installLocation" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">설치 장소 상세</span>
+                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.installLocationDetail }}</span>
                       </div>
                       <div v-if="facility.details?.serviceProvider" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">서비스 제공사</span>
@@ -247,10 +293,6 @@
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">연락처</span>
                         <a :href="`tel:${facility.details.phoneNumber}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.phoneNumber }}</a>
                       </div>
-                      <div v-if="facility.details?.dataDate" class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563] dark:text-slate-400">데이터 기준일</span>
-                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.dataDate }}</span>
-                      </div>
                     </div>
                   </template>
 
@@ -261,9 +303,21 @@
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">설치 위치</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.detailLocation }}</span>
                       </div>
+                      <div v-if="facility.details?.installPosition && facility.details?.installPosition !== facility.details?.detailLocation" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">건물 내 위치</span>
+                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.installPosition }}</span>
+                      </div>
                       <div v-if="facility.details?.operationAgency" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">운영기관</span>
                         <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.operationAgency }}</span>
+                      </div>
+                      <div v-if="facility.details?.weekdayOperatingHours" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">평일 운영시간</span>
+                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.weekdayOperatingHours }}</span>
+                      </div>
+                      <div v-if="facility.details?.saturdayOperatingHours" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">토요일 운영시간</span>
+                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.saturdayOperatingHours }}</span>
                       </div>
                       <div v-if="facility.details?.holidayOperatingHours" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">공휴일 운영시간</span>
@@ -314,6 +368,10 @@
                     <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '']">
                       <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">요금 정보</h3>
                       <div class="flex flex-col gap-3">
+                        <div v-if="facility.details?.feeType" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">요금구분</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.feeType }}</span>
+                        </div>
                         <div v-if="facility.details?.baseFee != null && facility.details?.baseTime != null" class="flex items-center justify-between">
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">기본요금</span>
                           <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.baseFee }}원 / {{ facility.details.baseTime }}분</span>
@@ -325,6 +383,10 @@
                         <div v-if="facility.details?.dailyMaxFee != null" class="flex items-center justify-between">
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">일 최대요금</span>
                           <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.dailyMaxFee }}원</span>
+                        </div>
+                        <div v-if="facility.details?.dailyMaxFeeHours" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">일최대요금 적용시간</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.dailyMaxFeeHours }}</span>
                         </div>
                         <div v-if="facility.details?.monthlyFee != null" class="flex items-center justify-between">
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">월정기권</span>
@@ -352,6 +414,10 @@
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">운영시간</span>
                           <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.operatingHours }}</span>
                         </div>
+                        <div v-if="facility.details?.operatingDays" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">운영요일</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.operatingDays }}</span>
+                        </div>
                         <div v-if="facility.details?.paymentMethod" class="flex items-center justify-between">
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">결제방법</span>
                           <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.paymentMethod }}</span>
@@ -360,9 +426,17 @@
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">전화번호</span>
                           <a :href="`tel:${facility.details.phone}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.phone }}</a>
                         </div>
+                        <div v-if="facility.details?.managingOrg" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">관리기관</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.managingOrg }}</span>
+                        </div>
                         <div v-if="facility.details?.hasDisabledParking !== undefined" class="flex items-center justify-between">
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">장애인 주차구역</span>
                           <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.hasDisabledParking ? '있음' : '없음' }}</span>
+                        </div>
+                        <div v-if="facility.details?.alternateParking" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">부제 운영</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.alternateParking }}</span>
                         </div>
                         <div v-if="facility.details?.remarks" class="flex items-center justify-between">
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">특기사항</span>
@@ -437,6 +511,21 @@
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563] dark:text-slate-400">홈페이지</span>
                         <a :href="facility.details.homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">바로가기</a>
+                      </div>
+                    </div>
+
+                    <!-- Library Facility Size -->
+                    <div v-if="facility.details?.lotArea || facility.details?.buildingArea" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">시설 규모</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-if="facility.details?.lotArea" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">부지면적</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.lotArea }}㎡</span>
+                        </div>
+                        <div v-if="facility.details?.buildingArea" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">건물면적</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.buildingArea }}㎡</span>
+                        </div>
                       </div>
                     </div>
                   </template>
@@ -521,7 +610,7 @@
               </div>
 
               <!-- Data Info Card -->
-              <div v-if="dataDate || facility.sourceUrl" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+              <div v-if="dataDate || dataPortalUrl" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
                   <span class="material-symbols-outlined text-[#60708a] dark:text-gray-400 text-[20px]">description</span>
                   <h2 class="text-[#111418] dark:text-white text-lg font-bold">데이터 정보</h2>
@@ -531,9 +620,9 @@
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">데이터 기준일</span>
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ dataDate }}</span>
                   </div>
-                  <div v-if="facility.sourceUrl" class="flex items-center justify-between">
+                  <div v-if="dataPortalUrl" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">출처</span>
-                    <a :href="facility.sourceUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">공공데이터포털</a>
+                    <a :href="dataPortalUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">공공데이터포털</a>
                   </div>
                   <div class="mt-1 flex items-start gap-1.5 text-xs text-[#9ca3af] dark:text-slate-500">
                     <span class="material-symbols-outlined text-[14px] mt-px">info</span>
@@ -738,6 +827,36 @@
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.installDate }}</span>
                   </div>
                 </div>
+
+                <!-- Toilet Accessibility Details -->
+                <div v-if="toiletAccessibilityDetails.length > 0" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">접근성 상세</h3>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div
+                      v-for="item in toiletAccessibilityDetails"
+                      :key="item.label"
+                      class="bg-[#f9fafb] dark:bg-[#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5] dark:border-gray-700"
+                    >
+                      <span class="text-sm text-[#4b5563] dark:text-slate-300">{{ item.label }}</span>
+                      <span class="text-sm font-bold text-[#111418] dark:text-white">{{ item.value }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Emergency Bell / Diaper Changing Location -->
+                <div v-if="facility.details?.emergencyBellLocation || facility.details?.diaperChangingLocation" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">편의시설 위치</h3>
+                  <div class="flex flex-col gap-3">
+                    <div v-if="facility.details?.emergencyBellLocation" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">비상벨 위치</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.emergencyBellLocation }}</span>
+                    </div>
+                    <div v-if="facility.details?.diaperChangingLocation" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">기저귀교환대 위치</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.diaperChangingLocation }}</span>
+                    </div>
+                  </div>
+                </div>
               </template>
 
               <!-- Wifi Details -->
@@ -798,6 +917,10 @@
                   <div v-if="facility.details?.detailLocation" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">설치 위치</span>
                     <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.detailLocation }}</span>
+                  </div>
+                  <div v-if="facility.details?.installPosition && facility.details?.installPosition !== facility.details?.detailLocation" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563] dark:text-slate-400">건물 내 위치</span>
+                    <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.installPosition }}</span>
                   </div>
                   <div v-if="facility.details?.operationAgency" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">운영기관</span>
@@ -876,6 +999,10 @@
                       <span class="text-sm text-[#4b5563] dark:text-slate-400">일 최대요금</span>
                       <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.dailyMaxFee }}원</span>
                     </div>
+                    <div v-if="facility.details?.dailyMaxFeeHours" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">일최대요금 적용시간</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.dailyMaxFeeHours }}</span>
+                    </div>
                     <div v-if="facility.details?.monthlyFee != null" class="flex items-center justify-between">
                       <span class="text-sm text-[#4b5563] dark:text-slate-400">월정기권</span>
                       <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.monthlyFee }}원</span>
@@ -921,6 +1048,10 @@
                     <div v-if="facility.details?.hasDisabledParking !== undefined" class="flex items-center justify-between">
                       <span class="text-sm text-[#4b5563] dark:text-slate-400">장애인 주차구역</span>
                       <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.hasDisabledParking ? '있음' : '없음' }}</span>
+                    </div>
+                    <div v-if="facility.details?.alternateParking" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">부제 운영</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.alternateParking }}</span>
                     </div>
                     <div v-if="facility.details?.remarks" class="flex items-center justify-between">
                       <span class="text-sm text-[#4b5563] dark:text-slate-400">특기사항</span>
@@ -995,6 +1126,21 @@
                   <div class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563] dark:text-slate-400">홈페이지</span>
                     <a :href="facility.details.homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">바로가기</a>
+                  </div>
+                </div>
+
+                <!-- Library Facility Size -->
+                <div v-if="facility.details?.lotArea || facility.details?.buildingArea" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">시설 규모</h3>
+                  <div class="flex flex-col gap-3">
+                    <div v-if="facility.details?.lotArea" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">부지면적</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.lotArea }}㎡</span>
+                    </div>
+                    <div v-if="facility.details?.buildingArea" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">건물면적</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.buildingArea }}㎡</span>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -1078,7 +1224,7 @@
           </div>
 
           <!-- Data Info Card -->
-          <div v-if="dataDate || facility.sourceUrl" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+          <div v-if="dataDate || dataPortalUrl" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
               <span class="material-symbols-outlined text-[#60708a] dark:text-gray-400 text-[20px]">description</span>
               <h2 class="text-[#111418] dark:text-white text-lg font-bold">데이터 정보</h2>
@@ -1088,9 +1234,9 @@
                 <span class="text-sm text-[#4b5563] dark:text-slate-400">데이터 기준일</span>
                 <span class="text-sm font-medium text-[#111418] dark:text-white">{{ dataDate }}</span>
               </div>
-              <div v-if="facility.sourceUrl" class="flex items-center justify-between">
+              <div v-if="dataPortalUrl" class="flex items-center justify-between">
                 <span class="text-sm text-[#4b5563] dark:text-slate-400">출처</span>
-                <a :href="facility.sourceUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">공공데이터포털</a>
+                <a :href="dataPortalUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">공공데이터포털</a>
               </div>
               <div class="mt-1 flex items-start gap-1.5 text-xs text-[#9ca3af] dark:text-slate-500">
                 <span class="material-symbols-outlined text-[14px] mt-px">info</span>
@@ -1130,7 +1276,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { CATEGORY_META } from '~/types/facility'
+import { CATEGORY_META, CATEGORY_DATA_PORTAL_URL } from '~/types/facility'
 import { CITY_NAME_TO_SLUG } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail } from '~/types/facility'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
@@ -1192,10 +1338,31 @@ const kakaoMapUrl = computed(() => {
   return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`
 })
 
+// 다양한 형식의 날짜 문자열을 "YYYY-MM-DD"로 정규화
+function formatDataDate(raw: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  if (/^\d{8}/.test(raw)) return `${raw.substring(0, 4)}-${raw.substring(4, 6)}-${raw.substring(6, 8)}`
+  const d = new Date(raw)
+  if (!isNaN(d.getTime())) {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  return raw
+}
+
 // Data info card
 const dataDate = computed(() => {
   if (!facility.value?.details) return null
-  return (facility.value.details as { dataDate?: string | null }).dataDate ?? null
+  const raw = (facility.value.details as { dataDate?: string | null }).dataDate
+  if (!raw) return null
+  return formatDataDate(raw)
+})
+
+const dataPortalUrl = computed(() => {
+  if (!facility.value) return null
+  return CATEGORY_DATA_PORTAL_URL[facility.value.category] ?? null
 })
 
 // Format distance
@@ -1230,6 +1397,20 @@ const aedOperatingHours = computed(() => {
   return days
     .map(({ day, start, end }) => ({ day, time: formatAedTime(start, end) }))
     .filter((item): item is { day: string; time: string } => item.time !== null)
+})
+
+// Toilet accessibility details (disabled/child toilet counts)
+const toiletAccessibilityDetails = computed(() => {
+  if (facility.value?.category !== 'toilet' || !facility.value?.details) return []
+  const d = facility.value.details as import('~/types/facility').ToiletDetails
+  const items: Array<{ label: string; value: string }> = []
+  if (d.maleDisabledToilets) items.push({ label: '남성 장애인 대변기', value: `${d.maleDisabledToilets}개` })
+  if (d.maleDisabledUrinals) items.push({ label: '남성 장애인 소변기', value: `${d.maleDisabledUrinals}개` })
+  if (d.femaleDisabledToilets) items.push({ label: '여성 장애인 대변기', value: `${d.femaleDisabledToilets}개` })
+  if (d.maleChildToilets) items.push({ label: '남성 어린이 대변기', value: `${d.maleChildToilets}개` })
+  if (d.maleChildUrinals) items.push({ label: '남성 어린이 소변기', value: `${d.maleChildUrinals}개` })
+  if (d.femaleChildToilets) items.push({ label: '여성 어린이 대변기', value: `${d.femaleChildToilets}개` })
+  return items
 })
 
 // Facility features for cards (using Material Icons)
