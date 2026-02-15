@@ -35,6 +35,11 @@
       label="관리기관"
       :value="details.managingOrg"
     />
+    <DetailRow
+      v-if="details.dataDate"
+      label="데이터 기준일"
+      :value="details.dataDate"
+    />
   </div>
 </template>
 

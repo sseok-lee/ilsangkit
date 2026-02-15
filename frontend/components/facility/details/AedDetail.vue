@@ -26,6 +26,12 @@
       :value="details.model"
     />
 
+    <DetailRow
+      v-if="details.dataDate"
+      label="데이터 기준일"
+      :value="details.dataDate"
+    />
+
     <div v-if="operatingHours.length > 0" class="pt-3 border-t border-gray-200">
       <p class="text-sm font-medium text-gray-600 mb-2">운영시간</p>
       <div class="space-y-1">

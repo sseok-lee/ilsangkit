@@ -26,6 +26,12 @@
       :value="details.holidayOperatingHours"
     />
 
+    <DetailRow
+      v-if="details.dataDate"
+      label="데이터 기준일"
+      :value="details.dataDate"
+    />
+
     <div v-if="hasAccessibilityFeatures" class="pt-3 border-t border-gray-200">
       <p class="text-sm font-medium text-gray-600 mb-2">장애인 편의시설</p>
       <div class="grid grid-cols-2 gap-2">
