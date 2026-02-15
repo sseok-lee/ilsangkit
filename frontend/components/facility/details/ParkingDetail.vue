@@ -36,12 +36,6 @@
       value="보유"
     />
 
-    <DetailRow
-      v-if="details.dataDate"
-      label="데이터 기준일"
-      :value="details.dataDate"
-    />
-
     <div v-if="hasFeeInfo" class="pt-3 border-t border-gray-200">
       <p class="text-sm font-medium text-gray-600 mb-2">요금 정보</p>
       <div class="space-y-1.5">

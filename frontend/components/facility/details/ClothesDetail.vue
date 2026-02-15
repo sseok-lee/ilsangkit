@@ -15,11 +15,6 @@
       label="연락처"
       :value="details.phoneNumber"
     />
-    <DetailRow
-      v-if="details.dataDate"
-      label="데이터 기준일"
-      :value="details.dataDate"
-    />
   </div>
 </template>
 
