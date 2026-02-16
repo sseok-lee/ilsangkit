@@ -56,7 +56,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: '위치 기반으로 내 주변 공공시설과 생활 편의 정보를 통합 검색합니다.' },
+        { name: 'description', content: '공공시설과 생활 편의 정보를 통합 검색합니다.' },
         { name: 'theme-color', content: '#3b82f6' }
       ],
       link: [

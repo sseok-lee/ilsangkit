@@ -24,7 +24,7 @@ export function useStructuredData() {
       '@type': 'WebSite',
       name: SITE_NAME,
       url: SITE_URL,
-      description: '내 주변 생활 편의 정보, 한 번에 찾기. 위치 기반으로 내 주변 공공시설과 생활 편의 정보를 통합 검색합니다.',
+      description: '내 주변 생활 편의 정보, 한 번에 찾기. 공공시설과 생활 편의 정보를 통합 검색합니다.',
       potentialAction: {
         '@type': 'SearchAction',
         target: {

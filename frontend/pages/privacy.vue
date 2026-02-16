@@ -55,7 +55,7 @@
           </li>
           <li>
             <strong class="text-slate-900 dark:text-white">Kakao Maps API</strong>:
-            지도 표시 및 위치 기반 서비스 제공을 위해 사용됩니다.
+            지도 표시를 위해 사용됩니다.
           </li>
           <li>
             <strong class="text-slate-900 dark:text-white">Google AdSense</strong>:
