@@ -20,6 +20,8 @@ import { syncKiosks } from './syncKiosk.js';
 import { syncParking } from '../services/parkingSyncService.js';
 import { syncAeds } from './syncAed.js';
 import { syncLibraries } from '../services/librarySyncService.js';
+import { syncHospitals } from './syncHospital.js';
+import { syncPharmacies } from './syncPharmacy.js';
 
 // 공영주차장 기본 CSV 파일 경로
 const PARKING_CSV_PATH = path.resolve(
@@ -65,7 +67,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'kiosk', 'parking', 'aed', 'library'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -115,6 +117,26 @@ async function syncCategory(category: Category): Promise<SyncResult> {
 
       case 'clothes': {
         const result = await syncClothes(CLOTHES_CSV_PATH);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'hospital': {
+        const result = await syncHospitals();
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'pharmacy': {
+        const result = await syncPharmacies();
         return {
           category,
           success: true,

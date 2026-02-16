@@ -570,6 +570,84 @@
                       </div>
                     </div>
                   </template>
+
+                  <!-- Hospital Details -->
+                  <template v-if="facility.category === 'hospital'">
+                    <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
+                      <div v-if="facility.details?.clCdNm" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">종별</span>
+                        <span class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-700 border border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800">{{ facility.details.clCdNm }}</span>
+                      </div>
+                      <div v-if="facility.details?.phone" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">전화번호</span>
+                        <a :href="`tel:${facility.details.phone}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.phone }}</a>
+                      </div>
+                      <div v-if="facility.details?.homepage" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">홈페이지</span>
+                        <a :href="facility.details.homepage" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ facility.details.homepage }}</a>
+                      </div>
+                      <div v-if="facility.details?.estbDd" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">개설일자</span>
+                        <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.estbDd }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Hospital Staff Info -->
+                    <div v-if="facility.details?.drTotCnt" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">의료진 현황</h3>
+                      <div class="flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">의사 총수</span>
+                          <span class="text-sm font-bold text-[#111418] dark:text-white">{{ facility.details.drTotCnt }}명</span>
+                        </div>
+                        <div v-if="facility.details?.mdeptSdrCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">의과 전문의</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.mdeptSdrCnt }}명</span>
+                        </div>
+                        <div v-if="facility.details?.mdeptGdrCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">의과 일반의</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.mdeptGdrCnt }}명</span>
+                        </div>
+                        <div v-if="facility.details?.detySdrCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">치과 전문의</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.detySdrCnt }}명</span>
+                        </div>
+                        <div v-if="facility.details?.cmdcSdrCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 전문의</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.cmdcSdrCnt }}명</span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Pharmacy Details -->
+                  <template v-if="facility.category === 'pharmacy'">
+                    <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
+                      <div v-if="facility.details?.phone" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">전화번호</span>
+                        <a :href="`tel:${facility.details.phone}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.phone }}</a>
+                      </div>
+                      <div v-if="facility.details?.dutyTel3" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563] dark:text-slate-400">응급전화</span>
+                        <a :href="`tel:${facility.details.dutyTel3}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.dutyTel3 }}</a>
+                      </div>
+                    </div>
+
+                    <!-- Pharmacy Operating Hours -->
+                    <div v-if="pharmacyOperatingHours.length > 0" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">운영시간</h3>
+                      <div class="flex flex-col gap-3">
+                        <div
+                          v-for="item in pharmacyOperatingHours"
+                          :key="item.day"
+                          class="flex items-center justify-between"
+                        >
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">{{ item.day }}</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ item.time }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
                 </div>
               </div>
 
@@ -1185,6 +1263,84 @@
                   </div>
                 </div>
               </template>
+
+              <!-- Hospital Details -->
+              <template v-if="facility.category === 'hospital'">
+                <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
+                  <div v-if="facility.details?.clCdNm" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563] dark:text-slate-400">종별</span>
+                    <span class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-700 border border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800">{{ facility.details.clCdNm }}</span>
+                  </div>
+                  <div v-if="facility.details?.phone" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563] dark:text-slate-400">전화번호</span>
+                    <a :href="`tel:${facility.details.phone}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.phone }}</a>
+                  </div>
+                  <div v-if="facility.details?.homepage" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563] dark:text-slate-400">홈페이지</span>
+                    <a :href="facility.details.homepage" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ facility.details.homepage }}</a>
+                  </div>
+                  <div v-if="facility.details?.estbDd" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563] dark:text-slate-400">개설일자</span>
+                    <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.estbDd }}</span>
+                  </div>
+                </div>
+
+                <!-- Hospital Staff Info -->
+                <div v-if="facility.details?.drTotCnt" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">의료진 현황</h3>
+                  <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">의사 총수</span>
+                      <span class="text-sm font-bold text-[#111418] dark:text-white">{{ facility.details.drTotCnt }}명</span>
+                    </div>
+                    <div v-if="facility.details?.mdeptSdrCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">의과 전문의</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.mdeptSdrCnt }}명</span>
+                    </div>
+                    <div v-if="facility.details?.mdeptGdrCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">의과 일반의</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.mdeptGdrCnt }}명</span>
+                    </div>
+                    <div v-if="facility.details?.detySdrCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">치과 전문의</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.detySdrCnt }}명</span>
+                    </div>
+                    <div v-if="facility.details?.cmdcSdrCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 전문의</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ facility.details.cmdcSdrCnt }}명</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Pharmacy Details -->
+              <template v-if="facility.category === 'pharmacy'">
+                <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5' : '', 'flex flex-col gap-3']">
+                  <div v-if="facility.details?.phone" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563] dark:text-slate-400">전화번호</span>
+                    <a :href="`tel:${facility.details.phone}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.phone }}</a>
+                  </div>
+                  <div v-if="facility.details?.dutyTel3" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563] dark:text-slate-400">응급전화</span>
+                    <a :href="`tel:${facility.details.dutyTel3}`" class="text-sm font-medium text-primary hover:underline">{{ facility.details.dutyTel3 }}</a>
+                  </div>
+                </div>
+
+                <!-- Pharmacy Operating Hours -->
+                <div v-if="pharmacyOperatingHours.length > 0" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">운영시간</h3>
+                  <div class="flex flex-col gap-3">
+                    <div
+                      v-for="item in pharmacyOperatingHours"
+                      :key="item.day"
+                      class="flex items-center justify-between"
+                    >
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">{{ item.day }}</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ item.time }}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
 
@@ -1399,6 +1555,32 @@ const aedOperatingHours = computed(() => {
     .filter((item): item is { day: string; time: string } => item.time !== null)
 })
 
+// Pharmacy operating hours
+const formatPharmacyTime = (start?: string | null, end?: string | null): string | null => {
+  if (!start || !end) return null
+  const s = String(start).padStart(4, '0')
+  const e = String(end).padStart(4, '0')
+  return `${s.slice(0, 2)}:${s.slice(2)} ~ ${e.slice(0, 2)}:${e.slice(2)}`
+}
+
+const pharmacyOperatingHours = computed(() => {
+  if (facility.value?.category !== 'pharmacy' || !facility.value?.details) return []
+  const d = facility.value.details as import('~/types/facility').PharmacyDetails
+  const days = [
+    { day: '월요일', start: d.dutyTime1s, end: d.dutyTime1c },
+    { day: '화요일', start: d.dutyTime2s, end: d.dutyTime2c },
+    { day: '수요일', start: d.dutyTime3s, end: d.dutyTime3c },
+    { day: '목요일', start: d.dutyTime4s, end: d.dutyTime4c },
+    { day: '금요일', start: d.dutyTime5s, end: d.dutyTime5c },
+    { day: '토요일', start: d.dutyTime6s, end: d.dutyTime6c },
+    { day: '일요일', start: d.dutyTime7s, end: d.dutyTime7c },
+    { day: '공휴일', start: d.dutyTime8s, end: d.dutyTime8c },
+  ]
+  return days
+    .map(({ day, start, end }) => ({ day, time: formatPharmacyTime(start, end) }))
+    .filter((item): item is { day: string; time: string } => item.time !== null)
+})
+
 // Toilet accessibility details (disabled/child toilet counts)
 const toiletAccessibilityDetails = computed(() => {
   if (facility.value?.category !== 'toilet' || !facility.value?.details) return []
@@ -1457,6 +1639,7 @@ const facilityFeatures = computed(() => {
 const hasGridContent = computed(() => {
   if (!facility.value?.details) return false
   if (facility.value.category === 'toilet') return true
+  if (facility.value.category === 'hospital' || facility.value.category === 'pharmacy') return false
   return facilityAmenities.value.length > 0
 })
 

@@ -6,9 +6,9 @@ import { FacilitySearchInput } from '../schemas/facility.js';
 import { PAGINATION, SEARCH_DEFAULTS } from '../constants/index.js';
 
 // 카테고리 타입
-export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library';
+export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy';
 
-const ALL_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'];
+const ALL_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'];
 
 // 정렬 옵션 매핑
 const ORDER_BY_MAP: Record<string, Record<string, string>> = {
@@ -78,6 +78,16 @@ const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
     model: () => prisma.library,
     listFields: ['weekdayOpenTime', 'weekdayCloseTime', 'seatCount'],
     detailFields: ['libraryType', 'closedDays', 'weekdayOpenTime', 'weekdayCloseTime', 'saturdayOpenTime', 'saturdayCloseTime', 'holidayOpenTime', 'holidayCloseTime', 'seatCount', 'bookCount', 'serialCount', 'nonBookCount', 'loanableBooks', 'loanableDays', 'phoneNumber', 'homepageUrl', 'operatingOrg', 'lotArea', 'buildingArea', 'dataDate', 'providerCode', 'providerName'],
+  },
+  hospital: {
+    model: () => prisma.hospital,
+    listFields: ['clCdNm', 'phone', 'drTotCnt'],
+    detailFields: ['phone', 'homepage', 'postNo', 'estbDd', 'ykiho', 'clCd', 'clCdNm', 'sidoCd', 'sgguCd', 'emdongNm', 'drTotCnt', 'mdeptSdrCnt', 'mdeptGdrCnt', 'mdeptIntnCnt', 'mdeptResdntCnt', 'detySdrCnt', 'detyGdrCnt', 'detyIntnCnt', 'detyResdntCnt', 'cmdcSdrCnt', 'cmdcGdrCnt', 'cmdcIntnCnt', 'cmdcResdntCnt', 'pnursCnt', 'dataDate'],
+  },
+  pharmacy: {
+    model: () => prisma.pharmacy,
+    listFields: ['phone', 'dutyTime1s', 'dutyTime1c'],
+    detailFields: ['phone', 'dutyTel3', 'hpid', 'postCdn1', 'postCdn2', 'dutyTime1s', 'dutyTime1c', 'dutyTime2s', 'dutyTime2c', 'dutyTime3s', 'dutyTime3c', 'dutyTime4s', 'dutyTime4c', 'dutyTime5s', 'dutyTime5c', 'dutyTime6s', 'dutyTime6c', 'dutyTime7s', 'dutyTime7c', 'dutyTime8s', 'dutyTime8c', 'dutyMapimg', 'dutyInf', 'dutyEtc', 'dataDate'],
   },
 };
 
@@ -205,6 +215,8 @@ const CATEGORY_LABELS: Record<FacilityCategory, string> = {
   parking: '공영주차장',
   aed: '자동심장충격기',
   library: '공공도서관',
+  hospital: '병원',
+  pharmacy: '약국',
 };
 
 /**

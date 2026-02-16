@@ -15,6 +15,8 @@ export const FacilityCategorySchema = z.enum([
   'parking',
   'aed',
   'library',
+  'hospital',
+  'pharmacy',
 ]);
 
 export type FacilityCategory = z.infer<typeof FacilityCategorySchema>;

@@ -1,5 +1,5 @@
 // 시설 카테고리 (Prisma enum 대응)
-export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library'
+export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy'
 
 // 시설 기본 정보 (목록용)
 export interface Facility {
@@ -28,7 +28,7 @@ export interface FacilityDetail {
   city: string
   district: string
   bjdCode: string | null
-  details: ToiletDetails | WifiDetails | ClothesDetails | KioskDetails | ParkingDetails | AedDetails | LibraryDetails
+  details: ToiletDetails | WifiDetails | ClothesDetails | KioskDetails | ParkingDetails | AedDetails | LibraryDetails | HospitalDetails | PharmacyDetails
   sourceId: string
   sourceUrl: string | null
   viewCount: number
@@ -181,6 +181,62 @@ export interface LibraryDetails {
   providerName?: string | null
 }
 
+export interface HospitalDetails {
+  phone?: string | null
+  homepage?: string | null
+  postNo?: string | null
+  estbDd?: string | null
+  ykiho?: string | null
+  clCd?: string | null
+  clCdNm?: string | null
+  sidoCd?: string | null
+  sgguCd?: string | null
+  emdongNm?: string | null
+  drTotCnt?: number | null
+  mdeptSdrCnt?: number | null
+  mdeptGdrCnt?: number | null
+  mdeptIntnCnt?: number | null
+  mdeptResdntCnt?: number | null
+  detySdrCnt?: number | null
+  detyGdrCnt?: number | null
+  detyIntnCnt?: number | null
+  detyResdntCnt?: number | null
+  cmdcSdrCnt?: number | null
+  cmdcGdrCnt?: number | null
+  cmdcIntnCnt?: number | null
+  cmdcResdntCnt?: number | null
+  pnursCnt?: number | null
+  dataDate?: string | null
+}
+
+export interface PharmacyDetails {
+  phone?: string | null
+  dutyTel3?: string | null
+  hpid?: string | null
+  postCdn1?: string | null
+  postCdn2?: string | null
+  dutyTime1s?: string | null
+  dutyTime1c?: string | null
+  dutyTime2s?: string | null
+  dutyTime2c?: string | null
+  dutyTime3s?: string | null
+  dutyTime3c?: string | null
+  dutyTime4s?: string | null
+  dutyTime4c?: string | null
+  dutyTime5s?: string | null
+  dutyTime5c?: string | null
+  dutyTime6s?: string | null
+  dutyTime6c?: string | null
+  dutyTime7s?: string | null
+  dutyTime7c?: string | null
+  dutyTime8s?: string | null
+  dutyTime8c?: string | null
+  dutyMapimg?: string | null
+  dutyInf?: string | null
+  dutyEtc?: string | null
+  dataDate?: string | null
+}
+
 // 카테고리 그룹 (헤더, 홈페이지 등에서 공유)
 export interface CategoryGroup {
   title: string
@@ -203,6 +259,11 @@ export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
     title: '환경',
     icon: 'recycling',
     categories: ['clothes', 'trash'],
+  },
+  {
+    title: '병원',
+    icon: 'local_hospital',
+    categories: ['hospital', 'pharmacy'],
   },
 ] as const
 
@@ -312,6 +373,18 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     icon: '📚',
     color: 'amber',
   },
+  hospital: {
+    label: '병원',
+    shortLabel: '병원',
+    icon: '🏥',
+    color: 'teal',
+  },
+  pharmacy: {
+    label: '약국',
+    shortLabel: '약국',
+    icon: '💊',
+    color: 'emerald',
+  },
 }
 
 // 카테고리별 공공데이터포털 URL 매핑
@@ -324,6 +397,8 @@ export const CATEGORY_DATA_PORTAL_URL: Record<FacilityCategory, string> = {
   parking: 'https://www.data.go.kr/data/15012896/standard.do',
   aed: 'https://www.data.go.kr/data/15000652/openapi.do',
   library: 'https://www.data.go.kr/data/15013109/standard.do',
+  hospital: 'https://www.data.go.kr/data/15001698/openapi.do',
+  pharmacy: 'https://www.data.go.kr/data/15000576/openapi.do',
 }
 
 // ============================================
