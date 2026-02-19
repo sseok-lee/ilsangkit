@@ -93,7 +93,7 @@ describe('AppFooter', () => {
 
     it('should have proper padding', () => {
       const wrapper = mount(AppFooter)
-      expect(wrapper.classes()).toContain('py-8')
+      expect(wrapper.classes()).toContain('py-6')
     })
   })
 

@@ -1,0 +1,3 @@
+# ads.txt - Authorized Digital Sellers
+# 애드센스 승인 후 아래 형식으로 퍼블리셔 ID를 추가하세요:
+google.com, pub-2088264360250020, DIRECT, f08c47fec0942fa0

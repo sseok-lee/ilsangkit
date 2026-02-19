@@ -1,30 +1,30 @@
 <template>
-  <footer class="hidden md:block bg-gray-50 border-t border-gray-200 py-8">
+  <footer class="bg-gray-50 border-t border-gray-200 py-6 md:py-8">
     <div class="container mx-auto px-4">
       <!-- Footer Links -->
-      <div class="mb-6 flex flex-wrap justify-center gap-4" data-testid="footer-links">
+      <div class="mb-4 md:mb-6 flex flex-wrap justify-center gap-2 md:gap-4" data-testid="footer-links">
         <nav class="contents" aria-label="푸터 네비게이션">
           <NuxtLink
             to="/about"
-            class="text-gray-600 hover:text-primary-600 transition-colors text-sm min-h-11 flex items-center px-2"
+            class="text-gray-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
           >
             소개
           </NuxtLink>
           <NuxtLink
             to="/privacy"
-            class="text-gray-600 hover:text-primary-600 transition-colors text-sm min-h-11 flex items-center px-2"
+            class="text-gray-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
           >
             개인정보처리방침
           </NuxtLink>
           <NuxtLink
             to="/terms"
-            class="text-gray-600 hover:text-primary-600 transition-colors text-sm min-h-11 flex items-center px-2"
+            class="text-gray-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
           >
             이용약관
           </NuxtLink>
           <NuxtLink
             to="/contact"
-            class="text-gray-600 hover:text-primary-600 transition-colors text-sm min-h-11 flex items-center px-2"
+            class="text-gray-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
           >
             문의
           </NuxtLink>
@@ -33,7 +33,7 @@
 
       <!-- Copyright -->
       <div class="text-center">
-        <p class="text-sm text-gray-600">
+        <p class="text-xs md:text-sm text-gray-600">
           © {{ currentYear }} 일상킷. All rights reserved.
         </p>
         <p class="text-xs text-gray-400 mt-1">
