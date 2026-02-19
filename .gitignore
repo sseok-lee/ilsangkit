@@ -36,3 +36,8 @@ backend/temp/
 # Misc
 nul
 *.log
+
+
+아카이브.zip
+specs/
+docs/
