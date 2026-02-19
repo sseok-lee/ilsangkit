@@ -216,7 +216,7 @@ const emit = defineEmits<{
   back: []
 }>()
 
-const colorMode = useColorMode()
+const colorMode = useColorMode() // eslint-disable-line no-undef
 const darkModeIcon = computed(() => colorMode.value === 'dark' ? 'light_mode' : 'dark_mode')
 
 const isMobileMenuOpen = ref(false)
