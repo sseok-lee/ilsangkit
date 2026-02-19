@@ -61,8 +61,8 @@ describe('Index Page', () => {
     const wrapper = await mountSuspended(IndexPage)
 
     expect(wrapper.text()).toContain('생활 편의')
-    expect(wrapper.text()).toContain('공공 서비스')
-    expect(wrapper.text()).toContain('환경')
+    expect(wrapper.text()).toContain('건강/안전')
+    expect(wrapper.text()).toContain('문화/환경')
   })
 
   it('renders popular regions section', async () => {
@@ -121,7 +121,7 @@ describe('Index Page', () => {
     const wrapper = await mountSuspended(IndexPage)
 
     expect(wrapper.text()).toContain('생활 편의')
-    expect(wrapper.text()).toContain('공공 서비스')
-    expect(wrapper.text()).toContain('환경')
+    expect(wrapper.text()).toContain('건강/안전')
+    expect(wrapper.text()).toContain('문화/환경')
   })
 })

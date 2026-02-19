@@ -36,12 +36,12 @@
             <div class="text-xs text-slate-500 dark:text-slate-400">생활 편의</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.service) }}</div>
-            <div class="text-xs text-slate-500 dark:text-slate-400">공공 서비스</div>
+            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.health) }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">건강/안전</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.environment) }}</div>
-            <div class="text-xs text-slate-500 dark:text-slate-400">환경</div>
+            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.culture) }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">문화/환경</div>
           </div>
         </div>
 
@@ -105,12 +105,12 @@
               <div class="text-sm text-slate-500 dark:text-slate-400">생활 편의</div>
             </div>
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.service) }}</div>
-              <div class="text-sm text-slate-500 dark:text-slate-400">공공 서비스</div>
+              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.health) }}</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">건강/안전</div>
             </div>
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.environment) }}</div>
-              <div class="text-sm text-slate-500 dark:text-slate-400">환경</div>
+              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.culture) }}</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">문화/환경</div>
             </div>
           </div>
         </div>
@@ -205,10 +205,9 @@ const stats = computed(() => statsResponse.value?.data ?? {
 
 // 그룹별 합산 통계
 const groupStats = computed(() => ({
-  living: stats.value.toilet + stats.value.wifi + stats.value.parking,
-  service: stats.value.kiosk + stats.value.library + stats.value.aed,
-  environment: stats.value.clothes + stats.value.trash,
-  hospital: stats.value.hospital + stats.value.pharmacy,
+  living: stats.value.toilet + stats.value.wifi + stats.value.parking + stats.value.kiosk,
+  health: stats.value.hospital + stats.value.pharmacy + stats.value.aed,
+  culture: stats.value.library + stats.value.clothes + stats.value.trash,
 }))
 
 // 숫자 포맷 함수
