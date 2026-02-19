@@ -219,6 +219,63 @@ const CATEGORY_LABELS: Record<FacilityCategory, string> = {
   pharmacy: '약국',
 };
 
+// 크로스 카테고리 추천 맵
+const CROSS_CATEGORY_MAP: Record<FacilityCategory, FacilityCategory[]> = {
+  hospital: ['pharmacy'],
+  pharmacy: ['hospital'],
+  parking: ['toilet', 'library', 'kiosk'],
+  library: ['parking', 'toilet', 'wifi'],
+  toilet: ['wifi'],
+  wifi: ['toilet'],
+  aed: ['hospital'],
+  kiosk: ['parking'],
+  clothes: [],
+};
+
+/**
+ * 크로스 카테고리 주변 시설 조회
+ * - 현재 카테고리와 연관된 다른 카테고리 시설을 조회
+ * - 거리순 정렬, 최대 6개 반환
+ */
+export async function getNearbyFacilities(
+  category: FacilityCategory,
+  lat: number,
+  lng: number,
+  radius = 1000
+): Promise<FacilityItem[]> {
+  const targetCategories = CROSS_CATEGORY_MAP[category];
+  if (!targetCategories || targetCategories.length === 0) return [];
+
+  const radiusKm = radius / 1000;
+  const latDelta = radiusKm / 111;
+  const lngDelta = radiusKm / (111 * Math.cos(toRad(lat)));
+  const approxBounds = {
+    lat: { gte: lat - latDelta, lte: lat + latDelta },
+    lng: { gte: lng - lngDelta, lte: lng + lngDelta },
+  };
+
+  const fetchResults = await Promise.all(
+    targetCategories.map(async (cat) => {
+      const records = await CATEGORY_REGISTRY[cat].model().findMany({
+        where: approxBounds,
+        select: buildListSelect(cat),
+      });
+      return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
+    }),
+  );
+
+  const allItems = fetchResults.flat();
+
+  return allItems
+    .map((item) => ({
+      ...item,
+      distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
+    }))
+    .filter((item) => item.distance <= radius)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 6);
+}
+
 /**
  * 카테고리별 그룹핑 검색
  * - 각 카테고리별 건수 + 상위 3건 미리보기 반환

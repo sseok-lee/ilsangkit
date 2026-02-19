@@ -34,6 +34,12 @@ const mockRuntimeConfig = {
 ;(globalThis as any).useHead = vi.fn()
 ;(globalThis as any).useServerSeoMeta = vi.fn()
 
+// Mock @nuxtjs/color-mode composable
+;(globalThis as any).useColorMode = vi.fn(() => {
+  const mode = ref('light')
+  return Object.assign(mode, { preference: ref('system'), value: mode })
+})
+
 // Mock Nuxt auto-imports
 config.global.mocks = {
   $config: mockRuntimeConfig,

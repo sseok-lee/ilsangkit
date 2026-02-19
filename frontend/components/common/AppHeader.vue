@@ -101,7 +101,7 @@
           class="p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-lg transition-colors"
           @click="handleDarkModeToggle"
         >
-          <span class="material-symbols-outlined text-[24px]">dark_mode</span>
+          <span class="material-symbols-outlined text-[24px]">{{ darkModeIcon }}</span>
         </button>
       </div>
 
@@ -176,13 +176,30 @@
         >
           소개
         </NuxtLink>
+        <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2">
+          <NuxtLink
+            to="/privacy"
+            class="text-xs text-slate-400 dark:text-slate-500 hover:text-primary transition-colors"
+            @click="closeMobileMenu"
+          >
+            개인정보처리방침
+          </NuxtLink>
+          <NuxtLink
+            to="/terms"
+            class="text-xs text-slate-400 dark:text-slate-500 hover:text-primary transition-colors"
+            @click="closeMobileMenu"
+          >
+            이용약관
+          </NuxtLink>
+        </div>
       </nav>
     </div>
   </Transition>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 
 interface Props {
@@ -197,8 +214,10 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   back: []
-  darkModeToggle: []
 }>()
+
+const colorMode = useColorMode()
+const darkModeIcon = computed(() => colorMode.value === 'dark' ? 'light_mode' : 'dark_mode')
 
 const isMobileMenuOpen = ref(false)
 const activeDropdown = ref<string | null>(null)
@@ -240,7 +259,7 @@ const handleBack = () => {
 }
 
 const handleDarkModeToggle = () => {
-  emit('darkModeToggle')
+  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
 
 // Escape 키로 모바일 메뉴/드롭다운 닫기

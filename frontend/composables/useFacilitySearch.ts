@@ -10,6 +10,8 @@ export function useFacilitySearch() {
   const error = ref<string | null>(null)
   const groupedResults = ref<GroupedCategory[]>([])
   const groupedTotalCount = ref(0)
+  const crossFacilities = ref<Facility[]>([])
+  const crossLoading = ref(false)
 
   const search = async (params: SearchParams) => {
     loading.value = true
@@ -105,6 +107,31 @@ export function useFacilitySearch() {
     }
   }
 
+  const searchNearbyCross = async (category: string, id: string) => {
+    crossLoading.value = true
+    try {
+      let apiBase = 'http://localhost:8000'
+      try {
+        const config = useRuntimeConfig()
+        apiBase = config.public.apiBase
+      } catch (e) {
+        // In test environment, useRuntimeConfig might not be available
+      }
+
+      const response = await $fetch<ApiResponse<{ items: Facility[] }>>(
+        `${apiBase}/api/facilities/${category}/${id}/nearby`
+      )
+
+      if (response.success && response.data) {
+        crossFacilities.value = response.data.items
+      }
+    } catch (err: any) {
+      crossFacilities.value = []
+    } finally {
+      crossLoading.value = false
+    }
+  }
+
   const clearResults = () => {
     facilities.value = []
     total.value = 0
@@ -112,6 +139,7 @@ export function useFacilitySearch() {
     totalPages.value = 0
     groupedResults.value = []
     groupedTotalCount.value = 0
+    crossFacilities.value = []
   }
 
   return {
@@ -123,9 +151,12 @@ export function useFacilitySearch() {
     error: readonly(error),
     groupedResults: readonly(groupedResults),
     groupedTotalCount: readonly(groupedTotalCount),
+    crossFacilities: readonly(crossFacilities),
+    crossLoading: readonly(crossLoading),
     search,
     searchGrouped,
     searchNearby,
+    searchNearbyCross,
     resetPage,
     setPage,
     clearResults,

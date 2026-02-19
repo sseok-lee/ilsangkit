@@ -31,6 +31,7 @@
         <div class="relative">
           <select
             v-model="selectedCity"
+            aria-label="시/도 선택"
             class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 px-3 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
             @change="handleCityChange"
           >
@@ -44,6 +45,7 @@
           <select
             v-model="selectedDistrict"
             :disabled="!selectedCity"
+            aria-label="구/군 선택"
             class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 px-3 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             @change="handleDistrictChange"
           >
@@ -109,31 +111,20 @@
         </template>
 
         <!-- 쓰레기 페이지네이션 -->
-        <div v-if="wasteTotalPages > 1 && !wasteLoading" class="flex justify-center items-center space-x-4 py-8">
-          <button
-            :disabled="wasteCurrentPage === 1"
-            class="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 text-sm font-medium"
-            @click="goToWastePage(wasteCurrentPage - 1)"
-          >
-            이전
-          </button>
-          <span class="text-slate-700 dark:text-slate-300 text-sm">
-            {{ wasteCurrentPage }} / {{ wasteTotalPages }}
-          </span>
-          <button
-            :disabled="wasteCurrentPage === wasteTotalPages"
-            class="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 text-sm font-medium"
-            @click="goToWastePage(wasteCurrentPage + 1)"
-          >
-            다음
-          </button>
-        </div>
+        <Pagination v-if="!wasteLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" @page-change="goToWastePage" />
 
         <!-- 결과 없음 -->
-        <div v-if="wasteSchedules.length === 0 && !wasteLoading" class="py-10 text-center">
-          <div class="text-4xl mb-4">📭</div>
+        <div v-if="wasteSchedules.length === 0 && !wasteLoading" class="py-20 text-center">
+          <span class="material-symbols-outlined text-[48px] text-slate-300 dark:text-slate-600 mb-4 block">inbox</span>
           <p class="text-slate-600 dark:text-slate-400 font-medium">등록된 배출 일정이 없습니다</p>
-          <p class="text-slate-400 dark:text-slate-500 text-sm mt-1">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
+          <p class="text-slate-400 dark:text-slate-500 text-sm mt-1 mb-6">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
+          <NuxtLink
+            to="/"
+            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">home</span>
+            홈으로 돌아가기
+          </NuxtLink>
         </div>
       </template>
 
@@ -169,31 +160,20 @@
 
           <!-- Empty State -->
           <div v-if="facilities.length === 0" class="py-20 text-center">
-            <div class="text-5xl mb-4">🔍</div>
+            <span class="material-symbols-outlined text-[48px] text-slate-300 dark:text-slate-600 mb-4 block">search_off</span>
             <p class="text-slate-600 dark:text-slate-400 font-medium">검색 결과가 없습니다</p>
-            <p class="text-slate-400 dark:text-slate-500 text-sm mt-1">다른 지역을 선택해보세요</p>
+            <p class="text-slate-400 dark:text-slate-500 text-sm mt-1 mb-6">다른 지역을 선택해보세요</p>
+            <NuxtLink
+              to="/"
+              class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+            >
+              <span class="material-symbols-outlined text-[18px]">home</span>
+              홈으로 돌아가기
+            </NuxtLink>
           </div>
 
           <!-- Pagination -->
-          <div v-if="totalPages > 1" class="flex justify-center items-center space-x-4 py-8">
-            <button
-              :disabled="currentPage === 1"
-              class="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 text-sm font-medium"
-              @click="goToPage(currentPage - 1)"
-            >
-              이전
-            </button>
-            <span class="text-slate-700 dark:text-slate-300 text-sm">
-              {{ currentPage }} / {{ totalPages }}
-            </span>
-            <button
-              :disabled="currentPage === totalPages"
-              class="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 text-sm font-medium"
-              @click="goToPage(currentPage + 1)"
-            >
-              다음
-            </button>
-          </div>
+          <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
         </template>
       </template>
     </div>

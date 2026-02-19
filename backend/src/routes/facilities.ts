@@ -74,6 +74,33 @@ router.get(
   })
 );
 
+// 크로스 카테고리 주변 시설 조회 API
+// GET /api/facilities/:category/:id/nearby
+router.get(
+  '/:category/:id/nearby',
+  validate(FacilityDetailParamsSchema, 'params'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const category = Array.isArray(req.params.category) ? req.params.category[0] : req.params.category;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    const facility = await facilityService.getDetail(category, id);
+    if (!facility) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: '시설을 찾을 수 없습니다' },
+      });
+      return;
+    }
+
+    const items = await facilityService.getNearbyFacilities(
+      category as Parameters<typeof facilityService.getNearbyFacilities>[0],
+      facility.lat,
+      facility.lng
+    );
+    res.json({ success: true, data: { items } });
+  })
+);
+
 // @TASK T1.2 - 시설 상세 조회 API
 // @SPEC docs/planning/02-trd.md#시설-상세-조회
 // GET /api/facilities/:category/:id

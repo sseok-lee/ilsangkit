@@ -46,7 +46,7 @@
         </div>
 
         <!-- Popular Regions (Mobile) -->
-        <div class="mt-4">
+        <div class="mt-4" role="region" aria-label="인기 지역">
           <h2 class="text-[#111418] dark:text-white text-lg font-bold leading-tight mb-4">인기 지역</h2>
           <div class="flex flex-wrap gap-2">
             <button
@@ -128,6 +128,7 @@
               v-for="item in group.items"
               :key="item.id"
               :href="`/${item.id}`"
+              :aria-label="`${CATEGORY_LABELS[item.id]} - ${item.desc} - ${formatCount(stats[item.id] || 0)}`"
               class="group flex flex-col p-4 md:p-5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
             >
               <div :class="`w-12 h-12 rounded-full ${getCategoryBgColor(item.id)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`">
@@ -142,7 +143,7 @@
       </section>
 
       <!-- Popular Regions Section (Desktop) -->
-      <section class="hidden md:block w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section class="hidden md:block w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8" role="region" aria-label="인기 지역">
         <div class="flex flex-col gap-4">
           <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span class="material-symbols-outlined text-primary">trending_up</span>
@@ -154,7 +155,7 @@
               :key="region.name"
               :data-testid="`region-${region.name}`"
               class="px-5 py-2.5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-full text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-primary hover:border-primary hover:text-white dark:hover:bg-primary dark:hover:border-primary dark:hover:text-white transition-all shadow-sm"
-              @click="handleRegionClick(region.query)"
+              @click="handleRegionClick(region.query, 'city')"
             >
               {{ region.name }}
             </button>
@@ -297,8 +298,12 @@ function handleSearch() {
   navigateTo(`/search?keyword=${encodeURIComponent(searchKeyword.value)}`)
 }
 
-function handleRegionClick(query: string) {
-  navigateTo(`/search?keyword=${encodeURIComponent(query)}`)
+function handleRegionClick(query: string, type: 'keyword' | 'city' = 'keyword') {
+  if (type === 'city') {
+    navigateTo(`/search?city=${encodeURIComponent(query)}`)
+  } else {
+    navigateTo(`/search?keyword=${encodeURIComponent(query)}`)
+  }
 }
 </script>
 

@@ -1,19 +1,9 @@
 <template>
   <div class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen">
-    <!-- Mobile Header with Back Button + Search -->
+    <!-- Mobile Search Bar -->
     <header class="md:hidden sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md transition-colors duration-200">
-      <!-- Top Search Bar Area -->
-      <div class="px-4 py-3 flex items-center gap-3">
-        <!-- Back Button -->
-        <button
-          aria-label="뒤로가기"
-          class="shrink-0 flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-          @click="$router.back()"
-        >
-          <span class="material-symbols-outlined text-slate-700 dark:text-slate-200 text-[24px]">arrow_back</span>
-        </button>
-        <!-- Search Input -->
-        <div class="flex-1 relative group">
+      <div class="px-4 py-3">
+        <div class="relative group">
           <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
             <span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
           </div>
@@ -37,46 +27,35 @@
       </div>
     </header>
 
-    <!-- Desktop Header -->
-    <header class="hidden md:flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 z-20 shadow-sm">
-      <div class="flex items-center gap-8">
-        <!-- Persistent Search (Desktop) -->
-        <label class="flex flex-col min-w-64 h-10 lg:w-96">
-          <div
-            class="flex w-full flex-1 items-stretch rounded-xl h-full bg-slate-100 dark:bg-slate-800 transition-colors focus-within:ring-2 focus-within:ring-primary/20"
-          >
-            <div class="text-slate-400 flex border-none items-center justify-center pl-3">
-              <span class="material-symbols-outlined text-[20px]">search</span>
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-4">
+      <!-- Desktop Search Bar (replaces removed custom header) -->
+      <div class="hidden md:block mb-4">
+        <div class="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="flex-1 relative">
+            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
             </div>
             <input
               v-model="searchKeyword"
               aria-label="시설 검색"
-              class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-0 border-none bg-transparent h-full placeholder:text-slate-400 px-3 text-sm font-normal leading-normal"
+              class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 pl-10 pr-10 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              type="text"
               placeholder="장소를 검색하세요..."
               @keyup.enter="handleSearch"
             />
             <button
               v-if="searchKeyword"
-              class="px-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              aria-label="검색어 지우기"
+              class="absolute inset-y-0 right-3 flex items-center cursor-pointer"
               @click="clearSearch"
             >
-              <span class="material-symbols-outlined text-[20px]">cancel</span>
+              <span class="material-symbols-outlined text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[20px]">cancel</span>
             </button>
           </div>
-        </label>
+        </div>
       </div>
 
-      <!-- Right Side Nav -->
-      <div class="flex items-center gap-6">
-        <!-- Bookmark button -->
-        <button class="text-slate-500 hover:text-primary transition-colors">
-          <span class="material-symbols-outlined">bookmark</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 md:px-6 py-4">
       <!-- Error State -->
       <div
         v-if="error"
@@ -96,6 +75,7 @@
         <div class="relative">
           <select
             v-model="selectedCity"
+            aria-label="시/도 선택"
             class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 px-3 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
             @change="handleCityChange"
           >
@@ -109,6 +89,7 @@
           <select
             v-model="selectedDistrict"
             :disabled="!selectedCity"
+            aria-label="구/군 선택"
             class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 px-3 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             @change="handleDistrictChange"
           >
@@ -143,7 +124,7 @@
           ]"
           @click="selectCategory(group.category)"
         >
-          {{ CATEGORY_META[group.category]?.icon }} {{ CATEGORY_META[group.category]?.shortLabel || group.label }} ({{ group.count }})
+          <span class="material-symbols-outlined text-[16px] align-middle">{{ CATEGORY_META[group.category]?.icon }}</span> {{ CATEGORY_META[group.category]?.shortLabel || group.label }} ({{ group.count }})
         </button>
       </div>
 
@@ -163,7 +144,7 @@
         </div>
       </div>
 
-      <template v-else>
+      <div v-else aria-live="polite">
         <!-- Grouped View (no category selected) -->
         <div v-if="!selectedCategory && groupedResults.length > 0" class="space-y-6">
           <div
@@ -174,7 +155,7 @@
             <!-- Group Header -->
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-2">
-                <span class="text-lg">{{ CATEGORY_META[group.category]?.icon }}</span>
+                <span class="material-symbols-outlined text-lg">{{ CATEGORY_META[group.category]?.icon }}</span>
                 <h2 class="text-slate-900 dark:text-white text-base font-bold">
                   {{ group.label }}
                 </h2>
@@ -211,40 +192,36 @@
 
           <!-- Empty State (flat view) -->
           <div v-if="facilities.length === 0" class="py-20 text-center">
-            <div class="text-5xl mb-4">🔍</div>
+            <span class="material-symbols-outlined text-[48px] text-slate-300 dark:text-slate-600 mb-4 block">search_off</span>
             <p class="text-slate-600 dark:text-slate-400 font-medium">검색 결과가 없습니다</p>
-            <p class="text-slate-400 dark:text-slate-500 text-sm mt-1">다른 검색어를 입력해보세요</p>
+            <p class="text-slate-400 dark:text-slate-500 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
+            <NuxtLink
+              to="/"
+              class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+            >
+              <span class="material-symbols-outlined text-[18px]">home</span>
+              홈으로 돌아가기
+            </NuxtLink>
           </div>
 
           <!-- Pagination -->
-          <div v-if="totalPages > 1" class="flex justify-center items-center space-x-4 py-8">
-            <button
-              :disabled="currentPage === 1"
-              class="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 text-sm font-medium"
-              @click="goToPage(currentPage - 1)"
-            >
-              이전
-            </button>
-            <span class="text-slate-700 dark:text-slate-300 text-sm">
-              {{ currentPage }} / {{ totalPages }}
-            </span>
-            <button
-              :disabled="currentPage === totalPages"
-              class="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 text-sm font-medium"
-              @click="goToPage(currentPage + 1)"
-            >
-              다음
-            </button>
-          </div>
+          <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
         </template>
 
         <!-- Empty State (grouped view) -->
         <div v-if="!selectedCategory && groupedResults.length === 0" class="py-20 text-center">
-          <div class="text-5xl mb-4">🔍</div>
+          <span class="material-symbols-outlined text-[48px] text-slate-300 dark:text-slate-600 mb-4 block">search_off</span>
           <p class="text-slate-600 dark:text-slate-400 font-medium">검색 결과가 없습니다</p>
-          <p class="text-slate-400 dark:text-slate-500 text-sm mt-1">다른 검색어를 입력해보세요</p>
+          <p class="text-slate-400 dark:text-slate-500 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
+          <NuxtLink
+            to="/"
+            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">home</span>
+            홈으로 돌아가기
+          </NuxtLink>
         </div>
-      </template>
+      </div>
     </div>
   </div>
 </template>
@@ -428,6 +405,16 @@ onMounted(async () => {
 
   // Load cities for region filter
   cities.value = await getCities()
+
+  // Read city filter from query param
+  if (route.query.city) {
+    const cityName = route.query.city as string
+    selectedCity.value = cityName
+    // Load districts for the selected city
+    if (cityName) {
+      districts.value = await getDistricts(cityName)
+    }
+  }
 
   // Initial search (grouped)
   performSearch()

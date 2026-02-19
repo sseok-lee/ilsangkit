@@ -5,7 +5,7 @@
       <div class="flex items-start justify-between mb-4">
         <div class="flex-1">
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-2xl">{{ categoryMeta.icon }}</span>
+            <span class="material-symbols-outlined text-2xl">{{ categoryMeta.icon }}</span>
             <h1 class="text-2xl font-bold text-gray-900">{{ facility.name }}</h1>
           </div>
           <p class="text-sm text-gray-600">{{ categoryMeta.label }}</p>
