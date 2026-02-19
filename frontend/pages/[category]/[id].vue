@@ -46,7 +46,72 @@
 
           <!-- Gradient Overlay at bottom -->
           <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent dark:from-background-dark"></div>
+
+          <!-- Map expand button -->
+          <button
+            class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white dark:hover:bg-slate-800 transition-colors"
+            @click="isMapExpanded = true"
+          >
+            <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+            지도 크게 보기
+          </button>
+
+          <!-- Directions Button (Mobile) -->
+          <a
+            :href="`https://map.kakao.com/link/to/${encodeURIComponent(facility.name)},${facility.lat},${facility.lng}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-full shadow-lg text-sm font-bold hover:bg-primary-dark transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">directions</span>
+            길찾기
+          </a>
         </div>
+
+        <!-- Fullscreen Map Overlay (Mobile) -->
+        <Teleport to="body">
+          <Transition
+            enter-active-class="transition-opacity duration-200"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-200"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div
+              v-if="isMapExpanded && facility"
+              class="md:hidden fixed inset-0 z-[60] bg-background-light dark:bg-background-dark"
+            >
+              <!-- Header -->
+              <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 dark:from-slate-900/80 to-transparent">
+                <button
+                  class="flex size-10 items-center justify-center rounded-full bg-white/90 dark:bg-slate-800/90 shadow-sm backdrop-blur-sm"
+                  @click="isMapExpanded = false"
+                >
+                  <span class="material-symbols-outlined text-slate-700 dark:text-slate-200">close</span>
+                </button>
+                <span class="text-sm font-bold text-slate-900 dark:text-white bg-white/90 dark:bg-slate-800/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ facility.name }}</span>
+                <a
+                  :href="`https://map.kakao.com/link/to/${encodeURIComponent(facility.name)},${facility.lat},${facility.lng}`"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex size-10 items-center justify-center rounded-full bg-primary text-white shadow-sm"
+                >
+                  <span class="material-symbols-outlined text-[20px]">directions</span>
+                </a>
+              </div>
+              <!-- Full screen map -->
+              <ClientOnly>
+                <FacilityMap
+                  :center="{ lat: facility.lat, lng: facility.lng }"
+                  :facilities="[facility]"
+                  :level="3"
+                  class="w-full h-full"
+                />
+              </ClientOnly>
+            </div>
+          </Transition>
+        </Teleport>
 
         <!-- Desktop: Two Column Layout -->
         <div class="hidden md:block max-w-[1280px] mx-auto px-6 py-8">
@@ -105,7 +170,7 @@
                     <button class="ml-auto text-primary text-sm font-medium hover:underline whitespace-nowrap" @click="copyAddress">복사</button>
                   </div>
 
-                  <div class="h-px bg-[#f0f2f5] dark:bg-gray-700 w-full"></div>
+                  <div v-if="facility.details?.operatingHours || isOpen24Hours || facility.details?.phoneNumber" class="h-px bg-[#f0f2f5] dark:bg-gray-700 w-full"></div>
 
                   <!-- Operating Hours -->
                   <div v-if="facility.details?.operatingHours || isOpen24Hours" class="flex gap-4 items-start">
@@ -126,7 +191,7 @@
                     </div>
                   </div>
 
-                  <div v-if="facility.details?.phoneNumber" class="h-px bg-[#f0f2f5] dark:bg-gray-700 w-full"></div>
+                  <div v-if="facility.details?.phoneNumber && (facility.details?.operatingHours || isOpen24Hours)" class="h-px bg-[#f0f2f5] dark:bg-gray-700 w-full"></div>
 
                   <!-- Phone -->
                   <div v-if="facility.details?.phoneNumber" class="flex gap-4 items-center">
@@ -687,6 +752,32 @@
                 </div>
               </div>
 
+              <!-- Cross-Category Nearby Facilities -->
+              <template v-if="crossLoading">
+                <div class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+                  <div class="p-4 flex flex-col gap-3">
+                    <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800 h-[72px]"></div>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <div v-for="group in crossFacilitiesGrouped" :key="group.category"
+                     class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+                  <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">{{ group.meta.icon }}</span>
+                    <h2 class="text-[#111418] dark:text-white text-lg font-bold">주변 {{ group.meta.label }}</h2>
+                  </div>
+                  <div class="p-4 flex flex-col gap-3">
+                    <FacilityCard
+                      v-for="item in group.items"
+                      :key="item.id"
+                      :facility="item"
+                      highlight-distance
+                    />
+                  </div>
+                </div>
+              </template>
+
               <!-- Data Info Card -->
               <div v-if="dataDate || dataPortalUrl" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
@@ -725,9 +816,6 @@
 
                 <!-- Map Controls -->
                 <div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
-                  <button aria-label="My Location" class="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center text-gray-700 hover:text-primary transition-colors border border-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
-                    <span class="material-symbols-outlined">my_location</span>
-                  </button>
                   <div class="flex flex-col bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                     <button aria-label="Zoom In" class="w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-50 border-b border-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 dark:border-gray-700">
                       <span class="material-symbols-outlined">add</span>
@@ -748,15 +836,25 @@
                   <span class="material-symbols-outlined">share</span>
                   공유하기
                 </button>
-                <a
-                  :href="kakaoMapUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex-[2] h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
-                >
-                  <span class="material-symbols-outlined">directions</span>
-                  길찾기
-                </a>
+                <div class="relative flex-[2]">
+                  <button
+                    class="w-full h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
+                    @click="showNavDropdown = !showNavDropdown"
+                  >
+                    <span class="material-symbols-outlined">directions</span>
+                    길찾기
+                    <span class="material-symbols-outlined text-[18px]">expand_more</span>
+                  </button>
+                  <div v-if="showNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-[#1a2630] rounded-xl shadow-lg border border-[#e5e7eb] dark:border-gray-700 overflow-hidden z-20">
+                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+                      <span class="text-base">🗺️</span> 카카오맵으로 길찾기
+                    </button>
+                    <div class="h-px bg-[#f0f2f5] dark:bg-gray-700"></div>
+                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                      <span class="text-base">🧭</span> 네이버맵으로 길찾기
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -798,7 +896,7 @@
                 <button class="ml-auto text-primary text-sm font-medium hover:underline whitespace-nowrap shrink-0" @click="copyAddress">복사</button>
               </div>
 
-              <div class="h-px bg-[#f0f2f5] dark:bg-gray-700 w-full"></div>
+              <div v-if="facility.details?.operatingHours || isOpen24Hours || facility.details?.phoneNumber" class="h-px bg-[#f0f2f5] dark:bg-gray-700 w-full"></div>
 
               <!-- Operating Hours -->
               <div v-if="facility.details?.operatingHours || isOpen24Hours" class="flex gap-4 items-start">
@@ -819,7 +917,7 @@
                 </div>
               </div>
 
-              <div v-if="facility.details?.phoneNumber" class="h-px bg-[#f0f2f5] dark:bg-gray-700 w-full"></div>
+              <div v-if="facility.details?.phoneNumber && (facility.details?.operatingHours || isOpen24Hours)" class="h-px bg-[#f0f2f5] dark:bg-gray-700 w-full"></div>
 
               <!-- Phone -->
               <div v-if="facility.details?.phoneNumber" class="flex gap-4 items-center">
@@ -1379,6 +1477,32 @@
             </div>
           </div>
 
+          <!-- Cross-Category Nearby Facilities (Mobile) -->
+          <template v-if="crossLoading">
+            <div class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+              <div class="p-4 flex flex-col gap-3">
+                <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800 h-[72px]"></div>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <div v-for="group in crossFacilitiesGrouped" :key="group.category"
+                 class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+              <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">{{ group.meta.icon }}</span>
+                <h2 class="text-[#111418] dark:text-white text-lg font-bold">주변 {{ group.meta.label }}</h2>
+              </div>
+              <div class="p-4 flex flex-col gap-3">
+                <FacilityCard
+                  v-for="item in group.items"
+                  :key="item.id"
+                  :facility="item"
+                  highlight-distance
+                />
+              </div>
+            </div>
+          </template>
+
           <!-- Data Info Card -->
           <div v-if="dataDate || dataPortalUrl" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
@@ -1406,15 +1530,22 @@
 
         <!-- Mobile: Sticky Bottom CTA -->
         <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pb-8 pt-4 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm dark:bg-[#101b22]/95 dark:border-t dark:border-gray-800">
-          <a
-            :href="kakaoMapUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3b82f6] py-4 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-[0.98]"
-          >
-            <span class="material-symbols-outlined text-[20px]">near_me</span>
-            길찾기
-          </a>
+          <div class="flex gap-3">
+            <button
+              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#f0f2f5] py-4 text-base font-bold text-[#111418] transition hover:bg-gray-200 active:scale-[0.98] dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+              @click="openNavigation(naverMapUrl)"
+            >
+              <span class="text-base">🧭</span>
+              네이버맵
+            </button>
+            <button
+              class="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-[#3b82f6] py-4 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-[0.98]"
+              @click="openNavigation(kakaoMapUrl)"
+            >
+              <span class="material-symbols-outlined text-[20px]">near_me</span>
+              카카오맵 길찾기
+            </button>
+          </div>
         </div>
 
         <!-- Bottom padding for mobile CTA -->
@@ -1427,7 +1558,7 @@
 <script setup lang="ts">
 definePageMeta({})
 
-import { computed, defineAsyncComponent, watch, watchEffect } from 'vue'
+import { computed, defineAsyncComponent, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
@@ -1492,11 +1623,30 @@ const isOpen24Hours = computed(() => {
   return facility.value.details.operatingHours === '24시간' || facility.value.details.is24Hour
 })
 
-// Generate map URL
+// Generate map URLs (길찾기)
 const kakaoMapUrl = computed(() => {
   if (!facility.value) return '#'
   const { lat, lng, name } = facility.value
-  return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`
+  return `https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lng}`
+})
+
+const naverMapUrl = computed(() => {
+  if (!facility.value) return '#'
+  const { lat, lng, name } = facility.value
+  return `https://map.naver.com/v5/directions/-/${lng},${lat},${encodeURIComponent(name)}/-/walk`
+})
+
+const showNavDropdown = ref(false)
+const openNavigation = (url: string) => {
+  window.open(url, '_blank')
+  showNavDropdown.value = false
+}
+
+const isMapExpanded = ref(false)
+watch(isMapExpanded, (expanded) => {
+  if (import.meta.client) {
+    document.body.style.overflow = expanded ? 'hidden' : ''
+  }
 })
 
 // 다양한 형식의 날짜 문자열을 "YYYY-MM-DD"로 정규화
@@ -1715,23 +1865,45 @@ const handleShare = async () => {
 }
 
 // 주변 시설
-const { search: searchNearby, facilities: nearbyFacilities, loading: nearbyLoading } = useFacilitySearch()
+const { search: searchNearby, facilities: nearbyFacilities, loading: nearbyLoading, searchNearbyCross, crossFacilities, crossLoading } = useFacilitySearch()
 
 watch(() => facility.value, async (f) => {
   if (!f?.lat || !f?.lng) return
-  await searchNearby({
-    lat: f.lat,
-    lng: f.lng,
-    category: f.category,
-    radius: 1000,
-    page: 1,
-    limit: 5,
-  })
+  await Promise.all([
+    searchNearby({
+      lat: f.lat,
+      lng: f.lng,
+      category: f.category,
+      radius: 1000,
+      page: 1,
+      limit: 5,
+    }),
+    searchNearbyCross(f.category, f.id),
+  ])
 }, { immediate: true })
 
 const nearbyFiltered = computed(() =>
   (nearbyFacilities.value ?? []).filter(f => f.id !== facility.value?.id).slice(0, 4)
 )
+
+const crossFacilitiesGrouped = computed(() => {
+  const items = crossFacilities?.value ?? []
+  if (items.length === 0) return []
+
+  const grouped = new Map<string, typeof items>()
+  for (const item of items) {
+    const list = grouped.get(item.category) ?? []
+    list.push(item)
+    grouped.set(item.category, list)
+  }
+
+  return Array.from(grouped.entries()).map(([cat, facilities]) => ({
+    category: cat as FacilityCategory,
+    meta: CATEGORY_META[cat as FacilityCategory],
+    items: facilities,
+  }))
+})
+
 </script>
 
 <style>
