@@ -291,18 +291,21 @@ setBreadcrumbSchema([
   { name: catLabel, url: `/${route.params.category}` },
 ])
 
-// Canonical URL: city+district → region route, otherwise self
+// Canonical URL: city+district → region route, city only → city route, otherwise self
 const canonicalPath = computed(() => {
   const citySlug = queryCitySlug.value
   const districtSlug = (route.query.district as string) || ''
   if (citySlug && districtSlug) {
     return `/${citySlug}/${districtSlug}/${categoryParam.value}`
   }
+  if (citySlug) {
+    return `/${citySlug}/${categoryParam.value}`
+  }
   return `/${categoryParam.value}`
 })
-useHead({
+useHead(computed(() => ({
   link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${canonicalPath.value}` }],
-})
+})))
 
 // Methods
 async function performSearch() {

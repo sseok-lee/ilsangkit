@@ -1460,6 +1460,11 @@ const { data: facilityResponse, status, error: fetchError } = await useAsyncData
     `${apiBase}/api/facilities/${category.value}/${id.value}`
   )
 )
+// Soft 404 방지: 시설 데이터가 없으면 404 에러 반환
+if (status.value === 'success' && !facilityResponse.value?.data) {
+  throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
+}
+
 const facility = computed(() => facilityResponse.value?.data ?? null)
 const loading = computed(() => status.value === 'pending')
 const error = computed(() => fetchError.value ? { message: '시설 정보를 불러올 수 없습니다' } : null)

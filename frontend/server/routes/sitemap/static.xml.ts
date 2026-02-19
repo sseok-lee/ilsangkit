@@ -386,10 +386,10 @@ export default defineEventHandler(async (event) => {
   // 홈페이지
   urls.push({ loc: SITE_URL, lastmod: today, changefreq: 'daily', priority: 1.0 })
 
-  // 정적 페이지 — 거의 변하지 않으므로 고정 날짜 사용
-  urls.push({ loc: `${SITE_URL}/about`, lastmod: '2025-06-01', changefreq: 'monthly', priority: 0.5 })
-  urls.push({ loc: `${SITE_URL}/privacy`, lastmod: '2025-06-01', changefreq: 'monthly', priority: 0.3 })
-  urls.push({ loc: `${SITE_URL}/terms`, lastmod: '2025-06-01', changefreq: 'monthly', priority: 0.3 })
+  // 정적 페이지
+  urls.push({ loc: `${SITE_URL}/about`, lastmod: today, changefreq: 'monthly', priority: 0.5 })
+  urls.push({ loc: `${SITE_URL}/privacy`, lastmod: today, changefreq: 'monthly', priority: 0.3 })
+  urls.push({ loc: `${SITE_URL}/terms`, lastmod: today, changefreq: 'monthly', priority: 0.3 })
 
   // 검색 페이지 (키워드 검색 전용)
   urls.push({ loc: `${SITE_URL}/search`, lastmod: today, changefreq: 'daily', priority: 0.5 })
@@ -421,7 +421,7 @@ export default defineEventHandler(async (event) => {
           loc: `${SITE_URL}/${combo.citySlug}/${combo.districtSlug}/${combo.category}`,
           lastmod: today,
           changefreq: 'weekly',
-          priority: 0.7,
+          priority: 0.8,
         })
       }
 

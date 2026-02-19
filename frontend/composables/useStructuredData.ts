@@ -83,6 +83,11 @@ export function useStructuredData() {
       wifi: 'LocalBusiness',
       clothes: 'RecyclingCenter',
       kiosk: 'GovernmentOffice',
+      parking: 'ParkingFacility',
+      aed: 'EmergencyService',
+      library: 'Library',
+      hospital: 'Hospital',
+      pharmacy: 'Pharmacy',
     }
 
     const schema = {

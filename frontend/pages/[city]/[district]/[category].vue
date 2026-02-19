@@ -182,12 +182,12 @@ const {
 
 const currentPage = ref(1)
 
-// 시설 0건일 때 noindex 안전장치
+// 시설 0건일 때 noindex 안전장치 (SSR loading 상태에서 잘못 적용되지 않도록 error 체크 추가)
 useHead(computed(() => {
-  if (!loading.value && facilities.value.length === 0) {
-    return { meta: [{ name: 'robots', content: 'noindex' }] }
+  if (!loading.value && facilities.value.length === 0 && !error.value) {
+    return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
   }
-  return {}
+  return { meta: [] }
 }))
 
 async function loadFacilities() {
