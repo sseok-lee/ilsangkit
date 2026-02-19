@@ -80,3 +80,118 @@ describe('GET /api/facilities/:category/:id', () => {
     expect(res.status).toBe(422);
   });
 });
+
+describe('GET /api/facilities/hospital/:id', () => {
+  const testHospital = {
+    id: 'hospital-detail-test',
+    name: '상세 테스트 병원',
+    address: '서울시 강남구 테스트로 200',
+    roadAddress: '서울시 강남구 테스트로 200',
+    lat: 37.5,
+    lng: 127.0,
+    city: '서울',
+    district: '강남구',
+    sourceId: 'detail-test-h1',
+    phone: '02-1234-5678',
+    clCdNm: '의원',
+    drTotCnt: 5,
+    viewCount: 10,
+  };
+
+  beforeAll(async () => {
+    await prisma.hospital.create({ data: testHospital });
+  });
+
+  afterAll(async () => {
+    await prisma.hospital.delete({ where: { id: testHospital.id } });
+    await prisma.$disconnect();
+  });
+
+  it('병원 상세 정보 반환', async () => {
+    const res = await request(app).get('/api/facilities/hospital/hospital-detail-test');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe('hospital-detail-test');
+    expect(res.body.data.name).toBe('상세 테스트 병원');
+    expect(res.body.data.details?.clCdNm).toBe('의원');
+  });
+
+  it('조회수 증가', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const before = await prisma.hospital.findUnique({ where: { id: testHospital.id } });
+
+    await request(app).get('/api/facilities/hospital/hospital-detail-test');
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const after = await prisma.hospital.findUnique({ where: { id: testHospital.id } });
+    expect(after!.viewCount).toBe(before!.viewCount + 1);
+  });
+
+  it('존재하지 않는 병원 - 404', async () => {
+    const res = await request(app).get('/api/facilities/hospital/non-existent-id');
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+});
+
+describe('GET /api/facilities/pharmacy/:id', () => {
+  const testPharmacy = {
+    id: 'pharmacy-detail-test',
+    name: '상세 테스트 약국',
+    address: '서울시 강남구 테스트로 300',
+    roadAddress: '서울시 강남구 테스트로 300',
+    lat: 37.5,
+    lng: 127.0,
+    city: '서울',
+    district: '강남구',
+    sourceId: 'detail-test-p1',
+    phone: '02-9876-5432',
+    hpid: 'PHARM-TEST-001',
+    dutyTime1s: '0900',
+    dutyTime1c: '1800',
+    viewCount: 5,
+  };
+
+  beforeAll(async () => {
+    await prisma.pharmacy.create({ data: testPharmacy });
+  });
+
+  afterAll(async () => {
+    await prisma.pharmacy.delete({ where: { id: testPharmacy.id } });
+    await prisma.$disconnect();
+  });
+
+  it('약국 상세 정보 반환', async () => {
+    const res = await request(app).get('/api/facilities/pharmacy/pharmacy-detail-test');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe('pharmacy-detail-test');
+    expect(res.body.data.details?.phone).toBe('02-9876-5432');
+    expect(res.body.data.details?.dutyTime1s).toBe('0900');
+  });
+
+  it('조회수 증가', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const before = await prisma.pharmacy.findUnique({ where: { id: testPharmacy.id } });
+
+    await request(app).get('/api/facilities/pharmacy/pharmacy-detail-test');
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const after = await prisma.pharmacy.findUnique({ where: { id: testPharmacy.id } });
+    expect(after!.viewCount).toBe(before!.viewCount + 1);
+  });
+
+  it('존재하지 않는 약국 - 404', async () => {
+    const res = await request(app).get('/api/facilities/pharmacy/non-existent-id');
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+});

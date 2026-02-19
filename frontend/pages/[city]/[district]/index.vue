@@ -179,6 +179,8 @@ const categoryBgColors: Record<FacilityCategory, string> = {
   library: 'bg-amber-50 dark:bg-amber-900/30',
   clothes: 'bg-pink-50 dark:bg-pink-900/30',
   trash: 'bg-green-50 dark:bg-green-900/30',
+  hospital: 'bg-teal-50 dark:bg-teal-900/30',
+  pharmacy: 'bg-emerald-50 dark:bg-emerald-900/30',
 }
 
 // Categories (grouped) — trash는 좌표 없는 일정 데이터이므로 지역 허브에서 제외
@@ -201,7 +203,7 @@ const categoryGroups = computed(() =>
 const { setMeta } = useFacilityMeta()
 setMeta({
   title: `${cityName.value} ${districtName.value} 생활 편의시설`,
-  description: `${cityName.value} ${districtName.value}의 공공화장실, 무료 와이파이, 의류수거함 등 생활 편의시설 정보를 찾아보세요.`,
+  description: `${cityName.value} ${districtName.value}의 공공화장실, 무료 와이파이, 병원, 약국 등 생활 편의시설 정보를 찾아보세요.`,
   path: `/${city.value}/${district.value}`,
 })
 

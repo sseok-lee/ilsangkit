@@ -17,6 +17,11 @@
       :value="details.installLocation"
     />
     <DetailRow
+      v-if="details.installLocationDetail"
+      label="설치장소 상세"
+      :value="details.installLocationDetail"
+    />
+    <DetailRow
       v-if="details.managementAgency"
       label="관리기관"
       :value="details.managementAgency"

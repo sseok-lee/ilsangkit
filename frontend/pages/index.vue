@@ -198,6 +198,8 @@ const stats = computed(() => statsResponse.value?.data ?? {
   parking: 0,
   aed: 0,
   library: 0,
+  hospital: 0,
+  pharmacy: 0,
   total: 0,
 })
 
@@ -206,6 +208,7 @@ const groupStats = computed(() => ({
   living: stats.value.toilet + stats.value.wifi + stats.value.parking,
   service: stats.value.kiosk + stats.value.library + stats.value.aed,
   environment: stats.value.clothes + stats.value.trash,
+  hospital: stats.value.hospital + stats.value.pharmacy,
 }))
 
 // 숫자 포맷 함수
@@ -231,6 +234,8 @@ const categoryConfig: Array<{ id: CategoryId | 'all'; label: string; bgColor: st
   { id: 'aed', label: 'AED', bgColor: 'bg-red-50 dark:bg-red-900/30' },
   { id: 'library', label: '도서관', bgColor: 'bg-amber-50 dark:bg-amber-900/30' },
   { id: 'trash', label: '쓰레기', bgColor: 'bg-green-50 dark:bg-green-900/30' },
+  { id: 'hospital', label: '병원', bgColor: 'bg-teal-50 dark:bg-teal-900/30' },
+  { id: 'pharmacy', label: '약국', bgColor: 'bg-emerald-50 dark:bg-emerald-900/30' },
 ]
 
 // 카테고리 배경색 헬퍼
@@ -249,6 +254,8 @@ const categoryDescriptions: Record<string, string> = {
   library: '공공도서관 이용 안내',
   clothes: '의류 수거함 위치 안내',
   trash: '쓰레기 배출 일정 및 장소',
+  hospital: '병원 및 의원 진료 안내',
+  pharmacy: '약국 위치 및 운영 정보',
 }
 
 // 그룹화된 카테고리 (공유 상수 + 페이지 전용 desc)

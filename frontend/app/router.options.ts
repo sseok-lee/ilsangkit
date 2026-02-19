@@ -2,7 +2,7 @@ import type { RouterConfig } from '@nuxt/schema'
 
 export default <RouterConfig>{
   routes: (_routes) => {
-    const validCategories = 'toilet|trash|wifi|clothes|kiosk|parking|aed|library'
+    const validCategories = 'toilet|trash|wifi|clothes|kiosk|parking|aed|library|hospital|pharmacy'
     const validCities = 'seoul|busan|daegu|incheon|gwangju|daejeon|ulsan|sejong|gyeonggi|gangwon|chungbuk|chungnam|jeonbuk|jeonnam|gyeongbuk|gyeongnam|jeju'
 
     // [category]/index — /toilet, /wifi 등

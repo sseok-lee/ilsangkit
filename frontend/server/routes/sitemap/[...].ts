@@ -9,7 +9,7 @@ import {
   fetchWasteScheduleIds,
 } from '../../utils/sitemap'
 
-const FACILITY_CATEGORIES = new Set(['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'])
+const FACILITY_CATEGORIES = new Set(['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'])
 
 function parseSlug(slug: string): { category: string; page: number } | null {
   // "wifi-2" → category='wifi', page=2

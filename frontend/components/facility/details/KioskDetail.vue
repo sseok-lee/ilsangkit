@@ -26,6 +26,19 @@
       :value="details.holidayOperatingHours"
     />
 
+    <div v-if="availableDocumentsList.length > 0" class="pt-3 border-t border-gray-200">
+      <p class="text-sm font-medium text-gray-600 mb-2">발급 가능 서류</p>
+      <ul class="list-disc list-inside space-y-0.5">
+        <li
+          v-for="doc in availableDocumentsList"
+          :key="doc"
+          class="text-sm text-gray-700"
+        >
+          {{ doc }}
+        </li>
+      </ul>
+    </div>
+
     <div v-if="hasAccessibilityFeatures" class="pt-3 border-t border-gray-200">
       <p class="text-sm font-medium text-gray-600 mb-2">장애인 편의시설</p>
       <div class="grid grid-cols-2 gap-2">
@@ -57,6 +70,12 @@ import type { KioskDetails } from '~/types/facility'
 const props = defineProps<{
   details: KioskDetails
 }>()
+
+const availableDocumentsList = computed(() => {
+  if (!props.details.availableDocuments) return []
+  if (Array.isArray(props.details.availableDocuments)) return props.details.availableDocuments.filter(Boolean)
+  return []
+})
 
 const hasAccessibilityFeatures = computed(() => {
   return (

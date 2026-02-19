@@ -208,7 +208,7 @@ import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
-import { CITY_SLUG_MAP } from '~/composables/useRegions'
+import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
 
@@ -224,6 +224,7 @@ const queryCitySlug = computed(() => (route.query.city as string) || '')
 // Search composables
 const { loading, facilities, total, currentPage, totalPages, error: facilityError, search, resetPage, setPage } = useFacilitySearch()
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
+const { loadRegions, citiesWithDistricts } = useRegions()
 const { setMeta } = useFacilityMeta()
 const { setItemListSchema, setBreadcrumbSchema } = useStructuredData()
 
@@ -338,7 +339,12 @@ async function handleCityChange() {
   filterKeyword.value = ''
 
   if (selectedCity.value) {
-    districtList.value = await getDistricts(selectedCity.value)
+    if (categoryParam.value === 'trash') {
+      districtList.value = await getDistricts(selectedCity.value)
+    } else {
+      const cityData = citiesWithDistricts.value.find(c => c.name === selectedCity.value)
+      districtList.value = cityData?.districts.map(d => d.name) || []
+    }
   } else {
     districtList.value = []
   }
@@ -394,14 +400,24 @@ function goToPage(page: number) {
 // Initialize
 onMounted(async () => {
   // Load cities for dropdown
-  cities.value = await getCities()
+  if (categoryParam.value === 'trash') {
+    cities.value = await getCities()
+  } else {
+    await loadRegions()
+    cities.value = citiesWithDistricts.value.map(c => c.name)
+  }
 
   // Restore city from query param (slug → Korean)
   if (queryCitySlug.value) {
     const cityName = CITY_SLUG_MAP[queryCitySlug.value]
     if (cityName && cities.value.includes(cityName)) {
       selectedCity.value = cityName
-      districtList.value = await getDistricts(cityName)
+      if (categoryParam.value === 'trash') {
+        districtList.value = await getDistricts(cityName)
+      } else {
+        const cityData = citiesWithDistricts.value.find(c => c.name === cityName)
+        districtList.value = cityData?.districts.map(d => d.name) || []
+      }
     }
   }
 

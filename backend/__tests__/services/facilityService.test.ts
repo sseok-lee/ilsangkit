@@ -25,6 +25,9 @@ vi.mock('../../src/lib/prisma.js', () => {
       parking: model,
       aed: model,
       library: model,
+      hospital: model,
+      pharmacy: model,
+      wasteSchedule: model,
       region: { findFirst: mockFindFirst },
     },
   };
@@ -86,7 +89,7 @@ describe('search', () => {
 
     const result = await search({ page: 1, limit: 20 });
 
-    expect(result.total).toBe(7);
+    expect(result.total).toBe(9);
     expect(result.items.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -122,6 +125,26 @@ describe('search', () => {
         }),
       })
     );
+  });
+
+  it('searches hospital category', async () => {
+    mockFindMany.mockResolvedValue([sampleRecord]);
+    mockCount.mockResolvedValue(1);
+
+    const result = await search({ category: 'hospital', page: 1, limit: 20 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].category).toBe('hospital');
+  });
+
+  it('searches pharmacy category', async () => {
+    mockFindMany.mockResolvedValue([sampleRecord]);
+    mockCount.mockResolvedValue(1);
+
+    const result = await search({ category: 'pharmacy', page: 1, limit: 20 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].category).toBe('pharmacy');
   });
 });
 
@@ -159,6 +182,45 @@ describe('getDetail', () => {
       where: { id: 'test-1' },
       data: { viewCount: { increment: 1 } },
     });
+  });
+
+  it('returns hospital details with detailFields', async () => {
+    const hospitalRecord = {
+      ...sampleRecord,
+      phone: '02-1234-5678',
+      clCdNm: '의원',
+      drTotCnt: 5,
+      homepage: 'https://example.com',
+      estbDd: '2020-01-01',
+    };
+    mockFindUnique.mockResolvedValue(hospitalRecord);
+
+    const result = await getDetail('hospital', 'test-1');
+
+    expect(result).not.toBeNull();
+    expect(result!.category).toBe('hospital');
+    expect(result!.details).toHaveProperty('phone', '02-1234-5678');
+    expect(result!.details).toHaveProperty('clCdNm', '의원');
+    expect(result!.details).toHaveProperty('drTotCnt', 5);
+  });
+
+  it('returns pharmacy details with detailFields', async () => {
+    const pharmacyRecord = {
+      ...sampleRecord,
+      phone: '02-9876-5432',
+      dutyTime1s: '0900',
+      dutyTime1c: '1800',
+      hpid: 'PHARM-001',
+    };
+    mockFindUnique.mockResolvedValue(pharmacyRecord);
+
+    const result = await getDetail('pharmacy', 'test-1');
+
+    expect(result).not.toBeNull();
+    expect(result!.category).toBe('pharmacy');
+    expect(result!.details).toHaveProperty('phone', '02-9876-5432');
+    expect(result!.details).toHaveProperty('dutyTime1s', '0900');
+    expect(result!.details).toHaveProperty('dutyTime1c', '1800');
   });
 });
 

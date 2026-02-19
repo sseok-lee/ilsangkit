@@ -376,7 +376,7 @@ function goToPage(page: number) {
 }
 
 // SSR redirect: /search?category=X → /X (301)
-const validCategoryList = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library']
+const validCategoryList = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy']
 if (route.query.category && validCategoryList.includes(route.query.category as string)) {
   const redirectCategory = route.query.category as string
   const redirectParams = new URLSearchParams()

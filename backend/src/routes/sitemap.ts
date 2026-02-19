@@ -7,7 +7,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 
 const router = Router();
 
-const VALID_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'];
+const VALID_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'];
 
 /**
  * GET /api/sitemap/facilities/:category

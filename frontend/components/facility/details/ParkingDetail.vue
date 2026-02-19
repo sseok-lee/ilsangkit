@@ -16,6 +16,11 @@
       :value="`${details.capacity}면`"
     />
     <DetailRow
+      v-if="details.operatingDays"
+      label="운영요일"
+      :value="details.operatingDays"
+    />
+    <DetailRow
       v-if="details.operatingHours"
       label="운영시간"
       :value="details.operatingHours"
@@ -29,6 +34,11 @@
       v-if="details.paymentMethod"
       label="결제방법"
       :value="details.paymentMethod"
+    />
+    <DetailRow
+      v-if="details.managingOrg"
+      label="관리기관"
+      :value="details.managingOrg"
     />
     <DetailRow
       v-if="details.hasDisabledParking"

@@ -51,8 +51,8 @@ describe('AppHeader', () => {
       const nav = wrapper.find('nav.hidden.md\\:flex')
       const text = nav.text()
       expect(text).toContain('생활 편의')
-      expect(text).toContain('공공 서비스')
-      expect(text).toContain('환경')
+      expect(text).toContain('건강/안전')
+      expect(text).toContain('문화/환경')
     })
 
     it('should have utility links for search and about', () => {
@@ -128,8 +128,8 @@ describe('AppHeader', () => {
       const mobileMenu = wrapper.find('[data-testid="mobile-menu"]')
       const text = mobileMenu.text()
       expect(text).toContain('생활 편의')
-      expect(text).toContain('공공 서비스')
-      expect(text).toContain('환경')
+      expect(text).toContain('건강/안전')
+      expect(text).toContain('문화/환경')
     })
 
     it('should have about link in mobile menu', async () => {

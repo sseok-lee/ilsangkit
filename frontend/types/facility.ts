@@ -248,22 +248,17 @@ export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
   {
     title: '생활 편의',
     icon: 'home',
-    categories: ['toilet', 'wifi', 'parking'],
+    categories: ['toilet', 'wifi', 'parking', 'kiosk'],
   },
   {
-    title: '공공 서비스',
-    icon: 'account_balance',
-    categories: ['kiosk', 'library', 'aed'],
+    title: '건강/안전',
+    icon: 'health_and_safety',
+    categories: ['hospital', 'pharmacy', 'aed'],
   },
   {
-    title: '환경',
-    icon: 'recycling',
-    categories: ['clothes', 'trash'],
-  },
-  {
-    title: '병원',
-    icon: 'local_hospital',
-    categories: ['hospital', 'pharmacy'],
+    title: '문화/환경',
+    icon: 'eco',
+    categories: ['library', 'clothes', 'trash'],
   },
 ] as const
 

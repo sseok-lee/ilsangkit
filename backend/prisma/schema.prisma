@@ -398,3 +398,102 @@ model WasteSchedule {
   @@unique([city, district, sourceId])
   @@index([city, district])
 }
+
+// 병원 테이블
+model Hospital {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // 병원 전용 필드
+  phone          String?  @db.VarChar(50)
+  homepage       String?  @db.VarChar(500)
+  postNo         String?  @db.VarChar(20)
+  estbDd         String?  @db.VarChar(20)
+  ykiho          String?  @db.VarChar(100)
+  clCd           String?  @db.VarChar(20)
+  clCdNm         String?  @db.VarChar(100)
+  sidoCd         String?  @db.VarChar(20)
+  sgguCd         String?  @db.VarChar(20)
+  emdongNm       String?  @db.VarChar(100)
+  drTotCnt       Int?
+  mdeptSdrCnt    Int?
+  mdeptGdrCnt    Int?
+  mdeptIntnCnt   Int?
+  mdeptResdntCnt Int?
+  detySdrCnt     Int?
+  detyGdrCnt     Int?
+  detyIntnCnt    Int?
+  detyResdntCnt  Int?
+  cmdcSdrCnt     Int?
+  cmdcGdrCnt     Int?
+  cmdcIntnCnt    Int?
+  cmdcResdntCnt  Int?
+  pnursCnt       Int?
+  dataDate       String?  @db.VarChar(20)
+
+  @@index([city, district])
+  @@index([lat, lng])
+}
+
+// 약국 테이블
+model Pharmacy {
+  id            String   @id @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  lat           Decimal? @db.Decimal(10, 7)
+  lng           Decimal? @db.Decimal(10, 7)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  bjdCode       String?  @db.VarChar(5)
+  sourceId      String   @unique @db.VarChar(100)
+  sourceUrl     String?  @db.VarChar(500)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  // 약국 전용 필드
+  phone         String?  @db.VarChar(50)
+  dutyTel3      String?  @db.VarChar(50)
+  hpid          String   @db.VarChar(100)
+  postCdn1      String?  @db.VarChar(20)
+  postCdn2      String?  @db.VarChar(20)
+  dutyTime1s    String?  @db.VarChar(10)
+  dutyTime1c    String?  @db.VarChar(10)
+  dutyTime2s    String?  @db.VarChar(10)
+  dutyTime2c    String?  @db.VarChar(10)
+  dutyTime3s    String?  @db.VarChar(10)
+  dutyTime3c    String?  @db.VarChar(10)
+  dutyTime4s    String?  @db.VarChar(10)
+  dutyTime4c    String?  @db.VarChar(10)
+  dutyTime5s    String?  @db.VarChar(10)
+  dutyTime5c    String?  @db.VarChar(10)
+  dutyTime6s    String?  @db.VarChar(10)
+  dutyTime6c    String?  @db.VarChar(10)
+  dutyTime7s    String?  @db.VarChar(10)
+  dutyTime7c    String?  @db.VarChar(10)
+  dutyTime8s    String?  @db.VarChar(10)
+  dutyTime8c    String?  @db.VarChar(10)
+  dutyMapimg    String?  @db.Text
+  dutyInf       String?  @db.Text
+  dutyEtc       String?  @db.Text
+  dataDate      String?  @db.VarChar(20)
+
+  @@index([city, district])
+  @@index([lat, lng])
+  @@index([hpid])
+}

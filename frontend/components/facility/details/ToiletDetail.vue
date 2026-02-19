@@ -35,13 +35,45 @@
       label="관리기관"
       :value="details.managingOrg"
     />
+    <DetailRow
+      v-if="details.phoneNumber"
+      label="연락처"
+      :value="details.phoneNumber"
+    />
+
+    <div v-if="hasSafetyFeatures" class="pt-3 border-t border-gray-200">
+      <p class="text-sm font-medium text-gray-600 mb-2">안전/편의시설</p>
+      <div class="grid grid-cols-2 gap-2">
+        <div v-if="details.hasCCTV !== undefined" class="flex items-center gap-1.5 text-sm text-gray-700">
+          <span :class="details.hasCCTV ? 'text-green-600' : 'text-gray-400'">{{ details.hasCCTV ? '✓' : '✗' }}</span>
+          <span>CCTV</span>
+        </div>
+        <div v-if="details.hasEmergencyBell !== undefined" class="flex items-center gap-1.5 text-sm text-gray-700">
+          <span :class="details.hasEmergencyBell ? 'text-green-600' : 'text-gray-400'">{{ details.hasEmergencyBell ? '✓' : '✗' }}</span>
+          <span>비상벨</span>
+        </div>
+        <div v-if="details.hasDiaperChangingTable !== undefined" class="flex items-center gap-1.5 text-sm text-gray-700">
+          <span :class="details.hasDiaperChangingTable ? 'text-green-600' : 'text-gray-400'">{{ details.hasDiaperChangingTable ? '✓' : '✗' }}</span>
+          <span>기저귀교환대</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ToiletDetails } from '~/types/facility'
 
-defineProps<{
+const props = defineProps<{
   details: ToiletDetails
 }>()
+
+const hasSafetyFeatures = computed(() => {
+  return (
+    props.details.hasCCTV !== undefined ||
+    props.details.hasEmergencyBell !== undefined ||
+    props.details.hasDiaperChangingTable !== undefined
+  )
+})
 </script>

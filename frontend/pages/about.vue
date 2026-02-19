@@ -53,6 +53,14 @@
             <strong class="text-slate-900 dark:text-white">공공도서관</strong>
             — 전국 공공도서관의 위치와 운영 정보를 확인할 수 있습니다.
           </li>
+          <li>
+            <strong class="text-slate-900 dark:text-white">병원</strong>
+            — 전국 병원의 위치, 진료과목, 운영 시간 등을 확인할 수 있습니다.
+          </li>
+          <li>
+            <strong class="text-slate-900 dark:text-white">약국</strong>
+            — 전국 약국의 위치와 운영 시간을 확인할 수 있습니다.
+          </li>
         </ul>
       </section>
 

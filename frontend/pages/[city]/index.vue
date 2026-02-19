@@ -121,7 +121,7 @@ const categoryGroups = computed(() =>
 const { setMeta } = useFacilityMeta()
 setMeta({
   title: `${cityName.value} 생활 편의시설`,
-  description: `${cityName.value}의 공공화장실, 무료 와이파이, 의류수거함 등 생활 편의시설 정보를 찾아보세요.`,
+  description: `${cityName.value}의 공공화장실, 무료 와이파이, 병원, 약국 등 생활 편의시설 정보를 찾아보세요.`,
   path: `/${city.value}`,
 })
 
