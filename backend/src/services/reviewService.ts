@@ -142,7 +142,8 @@ export async function verifyPasswordAndUpdate(id: number, input: UpdateReviewInp
     throw new AppError(403, '비밀번호가 일치하지 않습니다', 'INVALID_PASSWORD');
   }
 
-  const { password: _, ...updateData } = input;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password, ...updateData } = input;
   const updated = await prisma.review.update({
     where: { id },
     data: updateData,
