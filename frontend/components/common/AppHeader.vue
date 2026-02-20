@@ -19,11 +19,8 @@
         <span class="material-symbols-outlined text-[24px]">arrow_back</span>
       </button>
 
-      <NuxtLink v-if="!props.showBackButton" to="/" class="flex items-center gap-2">
-        <img src="/icons/logo.webp" alt="일상킷 로고" class="size-10 shrink-0 rounded-lg" />
-        <h2 class="text-[#111418] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">
-          일상킷
-        </h2>
+      <NuxtLink v-if="!props.showBackButton" to="/" class="flex items-center">
+        <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 shrink-0" />
       </NuxtLink>
     </div>
 

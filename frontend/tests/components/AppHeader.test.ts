@@ -30,14 +30,16 @@ describe('AppHeader', () => {
   })
 
   describe('Logo', () => {
-    it('should render logo with text "일상킷"', () => {
-      expect(wrapper.text()).toContain('일상킷')
+    it('should render logo image with alt text', () => {
+      const logoImg = wrapper.find('img[alt="일상킷"]')
+      expect(logoImg.exists()).toBe(true)
+      expect(logoImg.attributes('src')).toBe('/icons/logo.webp')
     })
 
     it('should have logo link to home', () => {
       const logoLink = wrapper.find('a[href="/"]')
       expect(logoLink.exists()).toBe(true)
-      expect(logoLink.text()).toContain('일상킷')
+      expect(logoLink.find('img').exists()).toBe(true)
     })
   })
 
