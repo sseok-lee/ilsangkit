@@ -1,7 +1,17 @@
 <template>
   <div class="flex flex-col">
       <!-- Mobile Hero Section -->
-      <section class="md:hidden flex flex-col gap-6 px-4 pb-8 pt-4">
+      <section class="md:hidden flex flex-col gap-6 px-4 pb-8 pt-4 relative overflow-hidden">
+        <!-- 배경 이미지 레이어 -->
+        <div class="absolute inset-0 opacity-10 dark:opacity-[0.07]">
+          <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom dark:hidden" alt="" aria-hidden="true" />
+          <img src="/images/hero-bg-dark.png" class="w-full h-full object-cover object-bottom hidden dark:block" alt="" aria-hidden="true" />
+        </div>
+        <!-- 하단 그라데이션 페이드 -->
+        <div class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent"></div>
+
+        <!-- 콘텐츠 -->
+        <div class="relative z-10 flex flex-col gap-6">
         <!-- Title & Subtitle -->
         <div class="flex flex-col gap-2 pt-4">
           <h1 class="text-[#111418] dark:text-white tracking-tight text-[32px] font-bold leading-[1.2]">
@@ -60,11 +70,20 @@
             </button>
           </div>
         </div>
+        </div>
       </section>
 
       <!-- Desktop Hero Section -->
-      <section class="hidden md:block w-full pt-16 pb-12 px-4 sm:px-6">
-        <div class="max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
+      <section class="hidden md:block w-full pt-16 pb-12 px-4 sm:px-6 relative overflow-hidden">
+        <!-- 배경 이미지 레이어 -->
+        <div class="absolute inset-0 opacity-[0.08] dark:opacity-[0.05]">
+          <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom dark:hidden" alt="" aria-hidden="true" />
+          <img src="/images/hero-bg-dark.png" class="w-full h-full object-cover object-bottom hidden dark:block" alt="" aria-hidden="true" />
+        </div>
+        <!-- 하단 그라데이션 페이드 -->
+        <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent"></div>
+
+        <div class="relative z-10 max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
           <div class="space-y-4">
             <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
               내 주변 생활 편의 정보, 한 번에 찾기
