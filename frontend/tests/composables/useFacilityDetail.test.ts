@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { FacilityDetail } from '~/types/facility'
 
 // Mock Nuxt composables
-global.useRuntimeConfig = vi.fn(() => ({
+;(global as any).useRuntimeConfig = vi.fn(() => ({
   public: {
     apiBase: 'http://localhost:8000',
   },
 }))
 
-global.$fetch = vi.fn()
+;(global as any).$fetch = vi.fn()
 
 // Import after mocks are set up
 const { useFacilityDetail } = await import('../../composables/useFacilityDetail')
@@ -55,7 +55,7 @@ describe('useFacilityDetail', () => {
       syncedAt: '2024-01-01T00:00:00Z',
     }
 
-    vi.mocked(global.$fetch).mockResolvedValueOnce({ success: true, data: mockFacility })
+    vi.mocked((global as any).$fetch).mockResolvedValueOnce({ success: true, data: mockFacility })
 
     const { loading, error, facility, fetchDetail } = useFacilityDetail()
 
@@ -65,14 +65,14 @@ describe('useFacilityDetail', () => {
     expect(error.value).toBeNull()
     expect(facility.value).toEqual(mockFacility)
     expect(result).toEqual(mockFacility)
-    expect(global.$fetch).toHaveBeenCalledWith(
+    expect((global as any).$fetch).toHaveBeenCalledWith(
       'http://localhost:8000/api/facilities/toilet/toilet-1'
     )
   })
 
   it('에러 발생 시 에러 상태 설정', async () => {
     const mockError = new Error('Network error')
-    vi.mocked(global.$fetch).mockRejectedValueOnce(mockError)
+    vi.mocked((global as any).$fetch).mockRejectedValueOnce(mockError)
 
     const { loading, error, facility, fetchDetail } = useFacilityDetail()
 
@@ -85,7 +85,7 @@ describe('useFacilityDetail', () => {
   })
 
   it('로딩 중 상태 관리', async () => {
-    vi.mocked(global.$fetch).mockImplementationOnce(
+    vi.mocked((global as any).$fetch).mockImplementationOnce(
       () =>
         new Promise((resolve) =>
           setTimeout(
@@ -115,7 +115,7 @@ describe('useFacilityDetail', () => {
   it('404 에러 시 null 반환', async () => {
     const notFoundError = new Error('Not Found')
     ;(notFoundError as any).statusCode = 404
-    vi.mocked(global.$fetch).mockRejectedValueOnce(notFoundError)
+    vi.mocked((global as any).$fetch).mockRejectedValueOnce(notFoundError)
 
     const { error, facility, fetchDetail } = useFacilityDetail()
 

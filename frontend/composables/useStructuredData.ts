@@ -112,9 +112,10 @@ export function useStructuredData() {
     }
 
     // 운영시간 추가 (있는 경우)
-    if (facility.details?.operatingHours) {
+    const d = facility.details as Record<string, unknown>
+    if (d?.operatingHours) {
       Object.assign(schema, {
-        openingHours: facility.details.operatingHours,
+        openingHours: d.operatingHours,
       })
     }
 

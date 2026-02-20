@@ -9,8 +9,11 @@ describe('FacilityList', () => {
       name: '강남역 지하 공중화장실',
       category: 'toilet' as const,
       address: '서울특별시 강남구 강남대로 396',
+      roadAddress: '서울특별시 강남구 강남대로 396',
       lat: 37.4979,
       lng: 127.0276,
+      city: '서울특별시',
+      district: '강남구',
       distance: 150,
     },
     {
@@ -18,8 +21,11 @@ describe('FacilityList', () => {
       name: '강남구청 무료와이파이',
       category: 'wifi' as const,
       address: '서울특별시 강남구 학동로 426',
+      roadAddress: '서울특별시 강남구 학동로 426',
       lat: 37.5172,
       lng: 127.0473,
+      city: '서울특별시',
+      district: '강남구',
       distance: 300,
     },
   ]
@@ -46,7 +52,7 @@ describe('FacilityList', () => {
     })
 
     // 스켈레톤 UI 확인
-    expect(wrapper.find('[data-testid="skeleton"]').exists() || wrapper.html().toContain('skeleton')).toBe(true)
+    expect(wrapper.find('[data-testid="skeleton"]').exists() || wrapper.html().includes('skeleton')).toBe(true)
   })
 
   it('시설이 없을 때 빈 상태를 표시하는지 확인', () => {

@@ -8,8 +8,11 @@ describe('FacilityCard', () => {
     name: '강남역 지하 공중화장실',
     category: 'toilet' as const,
     address: '서울특별시 강남구 강남대로 396',
+    roadAddress: '서울특별시 강남구 강남대로 396',
     lat: 37.4979,
     lng: 127.0276,
+    city: '서울특별시',
+    district: '강남구',
     distance: 150,
   }
 

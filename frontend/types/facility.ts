@@ -278,6 +278,7 @@ export interface SearchParams {
   page?: number
   limit?: number
   grouped?: boolean
+  sort?: string
 }
 
 // 검색 응답
@@ -507,3 +508,7 @@ export interface TrashDetails {
   disposalMethod?: string | null
   notes?: string | null
 }
+
+// Vue 템플릿용 - 모든 상세 타입의 프로퍼티를 optional로 통합
+// 런타임 안전성은 템플릿의 v-if 카테고리 가드가 보장
+export type FacilityDetailsAll = ToiletDetails & WifiDetails & ClothesDetails & KioskDetails & ParkingDetails & AedDetails & LibraryDetails & HospitalDetails & PharmacyDetails & TrashDetails

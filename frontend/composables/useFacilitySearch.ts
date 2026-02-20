@@ -1,5 +1,5 @@
 import { ref, readonly } from 'vue'
-import type { SearchParams, SearchResponse, GroupedSearchResponse, GroupedCategory, ApiResponse, Facility } from '~/types/facility'
+import type { SearchParams, SearchResponse, GroupedSearchResponse, GroupedCategory, ApiResponse, Facility, FacilityCategory } from '~/types/facility'
 
 export function useFacilitySearch() {
   const loading = ref(false)
@@ -55,7 +55,7 @@ export function useFacilitySearch() {
   const searchNearby = async (params: {
     lat: number
     lng: number
-    category: string
+    category: FacilityCategory
     radius?: number
   }): Promise<{ items: Facility[] }> => {
     const { lat, lng, category, radius = 1000 } = params
