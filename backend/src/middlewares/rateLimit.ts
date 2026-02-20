@@ -37,6 +37,34 @@ export const globalRateLimiter = rateLimit({
 });
 
 /**
+ * 리뷰 작성/수정/삭제 Rate Limiter
+ * IP당 10 requests/min
+ */
+export const reviewWriteRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: '리뷰 요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.',
+    },
+  },
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      error: {
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: '리뷰 요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.',
+        requestId: req.requestId,
+      },
+    });
+  },
+});
+
+/**
  * 시설 검색 전용 Rate Limiter
  * /api/facilities/search 엔드포인트에 별도 제한: IP당 30 requests/min
  */

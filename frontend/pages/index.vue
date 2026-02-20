@@ -161,6 +161,21 @@
         </div>
       </section>
 
+      <!-- Recent Reviews Section -->
+      <section v-if="recentReviews.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-primary">rate_review</span>
+          최근 리뷰
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          <RecentReviewCard
+            v-for="review in recentReviews"
+            :key="review.id"
+            :review="review"
+          />
+        </div>
+      </section>
+
       <!-- Popular Regions Section (Desktop) -->
       <section class="hidden md:block w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8" role="region" aria-label="인기 지역">
         <div class="flex flex-col gap-4">
@@ -185,11 +200,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import { CATEGORY_LABELS } from '~/utils/categoryIcons'
 import { CATEGORY_GROUPS } from '~/types/facility'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { useRecentReviews } from '~/composables/useReviews'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 // SEO 메타태그
@@ -202,6 +218,12 @@ setWebsiteSchema()
 
 const config = useRuntimeConfig()
 const searchKeyword = ref('')
+
+// 최근 리뷰 (client-side fetch)
+const { recentReviews, fetchRecentReviews } = useRecentReviews()
+onMounted(() => {
+  fetchRecentReviews()
+})
 
 // SSR: 통계 API를 useAsyncData로 fetch
 const { data: statsResponse } = await useAsyncData('home-stats', () =>

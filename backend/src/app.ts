@@ -7,6 +7,7 @@ import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
 import wasteSchedulesRouter from './routes/wasteSchedules.js';
 import sitemapRouter from './routes/sitemap.js';
+import reviewsRouter from './routes/reviews.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
@@ -37,6 +38,7 @@ app.use('/api/facilities', facilitiesRouter);
 app.use('/api/meta', metaRouter);
 app.use('/api/waste-schedules', wasteSchedulesRouter);
 app.use('/api/sitemap', sitemapRouter);
+app.use('/api/reviews', reviewsRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
