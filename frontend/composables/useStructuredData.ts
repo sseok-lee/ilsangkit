@@ -23,6 +23,7 @@ export function useStructuredData() {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
       name: SITE_NAME,
+      alternateName: 'ilsangkit',
       url: SITE_URL,
       description: '내 주변 생활 편의 정보, 한 번에 찾기. 공공시설과 생활 편의 정보를 통합 검색합니다.',
       potentialAction: {

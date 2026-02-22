@@ -1,0 +1,11 @@
+{
+  "name": "일상킷 - 내 주변 생활 편의 정보",
+  "short_name": "일상킷",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ]
+}
