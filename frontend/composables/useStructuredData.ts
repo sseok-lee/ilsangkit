@@ -111,12 +111,91 @@ export function useStructuredData() {
       isAccessibleForFree: true,
     }
 
-    // 운영시간 추가 (있는 경우)
+    // 카테고리별 상세 필드 추가
     const d = facility.details as Record<string, unknown>
+
+    // 운영시간
     if (d?.operatingHours) {
-      Object.assign(schema, {
-        openingHours: d.operatingHours,
-      })
+      Object.assign(schema, { openingHours: d.operatingHours })
+    }
+
+    // 전화번호
+    const phone = d?.phone || d?.phoneNumber || d?.clerkTel
+    if (phone) {
+      Object.assign(schema, { telephone: phone })
+    }
+
+    // 카테고리별 추가 필드
+    switch (facility.category) {
+      case 'toilet': {
+        const amenities: Array<{ '@type': string; name: string; value: boolean }> = []
+        if (d?.hasDisabledToilet) amenities.push({ '@type': 'LocationFeatureSpecification', name: '장애인 화장실', value: true })
+        if (d?.hasDiaperChangingTable) amenities.push({ '@type': 'LocationFeatureSpecification', name: '기저귀 교환대', value: true })
+        if (d?.hasEmergencyBell) amenities.push({ '@type': 'LocationFeatureSpecification', name: '비상벨', value: true })
+        if (amenities.length) Object.assign(schema, { amenityFeature: amenities })
+        break
+      }
+      case 'kiosk': {
+        const amenities: Array<{ '@type': string; name: string; value: boolean }> = []
+        if (d?.voiceGuide) amenities.push({ '@type': 'LocationFeatureSpecification', name: '음성안내', value: true })
+        if (d?.brailleOutput) amenities.push({ '@type': 'LocationFeatureSpecification', name: '점자출력', value: true })
+        if (d?.wheelchairAccessible) amenities.push({ '@type': 'LocationFeatureSpecification', name: '휠체어 접근 가능', value: true })
+        if (amenities.length) Object.assign(schema, { amenityFeature: amenities })
+        if (d?.weekdayOperatingHours) Object.assign(schema, { openingHours: d.weekdayOperatingHours })
+        break
+      }
+      case 'parking': {
+        if (d?.capacity) Object.assign(schema, { totalNumberOfParkingSpaces: d.capacity })
+        break
+      }
+      case 'library': {
+        if (d?.weekdayOpenTime && d?.weekdayCloseTime) {
+          Object.assign(schema, { openingHours: `Mo-Fr ${d.weekdayOpenTime}-${d.weekdayCloseTime}` })
+        }
+        break
+      }
+      case 'pharmacy': {
+        const specs: Array<{ '@type': string; dayOfWeek: string; opens: string; closes: string }> = []
+        const dayMap: Array<[string, string, string]> = [
+          ['Monday', 'dutyTime1s', 'dutyTime1c'],
+          ['Tuesday', 'dutyTime2s', 'dutyTime2c'],
+          ['Wednesday', 'dutyTime3s', 'dutyTime3c'],
+          ['Thursday', 'dutyTime4s', 'dutyTime4c'],
+          ['Friday', 'dutyTime5s', 'dutyTime5c'],
+          ['Saturday', 'dutyTime6s', 'dutyTime6c'],
+          ['Sunday', 'dutyTime7s', 'dutyTime7c'],
+        ]
+        for (const [day, sKey, cKey] of dayMap) {
+          if (d?.[sKey] && d?.[cKey]) {
+            specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: String(d[sKey]), closes: String(d[cKey]) })
+          }
+        }
+        if (specs.length) Object.assign(schema, { openingHoursSpecification: specs })
+        break
+      }
+      case 'aed': {
+        const specs: Array<{ '@type': string; dayOfWeek: string; opens: string; closes: string }> = []
+        const aedDays: Array<[string, string, string]> = [
+          ['Monday', 'monSttTme', 'monEndTme'],
+          ['Tuesday', 'tueSttTme', 'tueEndTme'],
+          ['Wednesday', 'wedSttTme', 'wedEndTme'],
+          ['Thursday', 'thuSttTme', 'thuEndTme'],
+          ['Friday', 'friSttTme', 'friEndTme'],
+          ['Saturday', 'satSttTme', 'satEndTme'],
+          ['Sunday', 'sunSttTme', 'sunEndTme'],
+        ]
+        for (const [day, sKey, cKey] of aedDays) {
+          if (d?.[sKey] && d?.[cKey]) {
+            specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: String(d[sKey]), closes: String(d[cKey]) })
+          }
+        }
+        if (specs.length) Object.assign(schema, { openingHoursSpecification: specs })
+        break
+      }
+      case 'hospital': {
+        if (d?.clCdNm) Object.assign(schema, { medicalSpecialty: d.clCdNm })
+        break
+      }
     }
 
     useHead({

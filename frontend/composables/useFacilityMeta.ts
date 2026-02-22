@@ -1,4 +1,4 @@
-import type { FacilityCategory, FacilityDetail } from '~/types/facility'
+import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, KioskDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 
@@ -11,6 +11,101 @@ interface MetaOptions {
   path?: string
   image?: string
   type?: 'website' | 'article'
+}
+
+/**
+ * 카테고리별 시설 description 생성
+ */
+function buildFacilityDescription(facility: FacilityDetail): string {
+  const location = facility.district
+    ? `${facility.city} ${facility.district}`
+    : facility.city
+  const address = facility.roadAddress || facility.address || location
+  const parts: string[] = []
+
+  if (address) parts.push(address)
+
+  const d = facility.details as Record<string, unknown>
+
+  switch (facility.category) {
+    case 'toilet': {
+      const det = d as ToiletDetails
+      if (det.operatingHours) parts.push(det.operatingHours)
+      const features: string[] = []
+      if (det.maleToilets || det.femaleToilets) features.push('남녀 분리')
+      if (det.hasDisabledToilet) features.push('장애인 화장실 있음')
+      if (det.hasDiaperChangingTable) features.push('기저귀 교환대')
+      if (features.length) parts.push(features.join(', '))
+      break
+    }
+    case 'wifi': {
+      const det = d as WifiDetails
+      if (det.ssid) parts.push(`SSID: ${det.ssid}`)
+      if (det.serviceProvider) parts.push(det.serviceProvider)
+      break
+    }
+    case 'parking': {
+      const det = d as ParkingDetails
+      if (det.capacity) parts.push(`주차면수 ${det.capacity}면`)
+      if (det.baseFee != null && det.baseTime) parts.push(`기본 ${det.baseTime}분 ${det.baseFee.toLocaleString()}원`)
+      if (det.operatingHours) parts.push(det.operatingHours)
+      break
+    }
+    case 'kiosk': {
+      const det = d as KioskDetails
+      if (det.weekdayOperatingHours) parts.push(`평일 ${det.weekdayOperatingHours}`)
+      const access: string[] = []
+      if (det.voiceGuide) access.push('음성안내')
+      if (det.brailleOutput) access.push('점자출력')
+      if (det.wheelchairAccessible) access.push('휠체어 접근')
+      if (access.length) parts.push(access.join(', '))
+      break
+    }
+    case 'hospital': {
+      const det = d as HospitalDetails
+      if (det.clCdNm) parts.push(det.clCdNm)
+      if (det.drTotCnt) parts.push(`의사 ${det.drTotCnt}명`)
+      if (det.phone) parts.push(`☎ ${det.phone}`)
+      break
+    }
+    case 'pharmacy': {
+      const det = d as PharmacyDetails
+      if (det.phone) parts.push(`☎ ${det.phone}`)
+      if (det.dutyTime1s && det.dutyTime1c) parts.push(`월 ${det.dutyTime1s}~${det.dutyTime1c}`)
+      break
+    }
+    case 'aed': {
+      const det = d as AedDetails
+      if (det.buildPlace) parts.push(`설치장소: ${det.buildPlace}`)
+      if (det.org) parts.push(det.org)
+      break
+    }
+    case 'library': {
+      const det = d as LibraryDetails
+      const info: string[] = []
+      if (det.seatCount) info.push(`좌석 ${det.seatCount}석`)
+      if (det.bookCount) info.push(`장서 ${det.bookCount.toLocaleString()}권`)
+      if (info.length) parts.push(info.join(', '))
+      if (det.weekdayOpenTime && det.weekdayCloseTime) parts.push(`평일 ${det.weekdayOpenTime}~${det.weekdayCloseTime}`)
+      if (det.phoneNumber) parts.push(`☎ ${det.phoneNumber}`)
+      break
+    }
+    case 'clothes': {
+      const det = d as ClothesDetails
+      if (det.managementAgency) parts.push(`관리: ${det.managementAgency}`)
+      if (det.detailLocation) parts.push(det.detailLocation)
+      break
+    }
+  }
+
+  parts.push('주소 및 상세 정보 확인')
+
+  // 155자 이내로 자르기
+  let desc = parts.join('. ')
+  if (desc.length > 155) {
+    desc = desc.slice(0, 152) + '...'
+  }
+  return desc
 }
 
 /**
@@ -117,8 +212,8 @@ export function useFacilityMeta() {
       ? `${facility.city} ${facility.district}`
       : facility.city
 
-    const title = facility.name
-    const description = `${location}에 위치한 ${categoryName}입니다. ${facility.roadAddress || facility.address || ''}`
+    const title = `${facility.name} - ${location} ${categoryName}`
+    const description = buildFacilityDescription(facility)
 
     setMeta({
       title,
