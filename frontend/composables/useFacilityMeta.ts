@@ -143,10 +143,10 @@ export function useFacilityMeta() {
       twitterImage: options.image || DEFAULT_OG_IMAGE,
     })
 
-    // Canonical URL
+    // Canonical URL (key로 중복 방지 - 페이지에서 별도 canonical 설정 시 덮어씀)
     useHead({
       link: [
-        { rel: 'canonical', href: canonicalUrl },
+        { rel: 'canonical', href: canonicalUrl, key: 'canonical' },
       ],
     })
   }

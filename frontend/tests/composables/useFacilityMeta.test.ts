@@ -33,7 +33,7 @@ describe('useFacilityMeta', () => {
       )
 
       expect(mockUseHead).toHaveBeenCalledWith({
-        link: [{ rel: 'canonical', href: 'https://ilsangkit.co.kr/' }],
+        link: [{ rel: 'canonical', href: 'https://ilsangkit.co.kr/', key: 'canonical' }],
       })
     })
   })

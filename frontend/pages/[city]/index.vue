@@ -76,6 +76,11 @@ import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 const route = useRoute()
 const city = computed(() => route.params.city as string)
 
+// Validate city slug (Soft 404 방지)
+if (!CITY_SLUG_MAP[route.params.city as string]) {
+  throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
+}
+
 // Region data
 const { loadRegions, syncFromHydration, getDistrictsByCity, getCityName } = useRegions()
 

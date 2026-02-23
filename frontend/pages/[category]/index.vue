@@ -198,6 +198,11 @@ const route = useRoute()
 const categoryParam = computed(() => route.params.category as FacilityCategory)
 const categoryMeta = computed(() => CATEGORY_META[categoryParam.value])
 
+// Validate category slug (Soft 404 방지)
+if (!CATEGORY_META[route.params.category as FacilityCategory]) {
+  throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
+}
+
 // Query params (city slug → Korean name)
 const queryCitySlug = computed(() => (route.query.city as string) || '')
 
@@ -284,8 +289,14 @@ const canonicalPath = computed(() => {
   return `/${categoryParam.value}`
 })
 useHead(computed(() => ({
-  link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${canonicalPath.value}` }],
+  link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${canonicalPath.value}`, key: 'canonical' }],
 })))
+
+// Pagination: page 2+ noindex (검색엔진 중복 콘텐츠 방지)
+const pageQueryParam = Number(route.query.page) || 1
+if (pageQueryParam >= 2) {
+  useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
+}
 
 // Methods
 async function performSearch() {

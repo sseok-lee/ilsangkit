@@ -104,8 +104,18 @@ const city = computed(() => route.params.city as string)
 const district = computed(() => route.params.district as string)
 const category = computed(() => route.params.category as string)
 
+// Validate city slug (Soft 404 방지)
+if (!CITY_SLUG_MAP[city.value]) {
+  throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
+}
+
+// Validate category (Soft 404 방지)
+if (!CATEGORY_META[category.value as FacilityCategory]) {
+  throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
+}
+
 // Dynamic region data
-const { loadRegions, syncFromHydration, getCityName, getDistrictName } = useRegions()
+const { loadRegions, syncFromHydration, getCityName, getDistrictName, getDistrictsByCity } = useRegions()
 
 // SSR: 서버에서 지역 정보 로드
 const { data: regionsData } = await useAsyncData(
@@ -114,6 +124,14 @@ const { data: regionsData } = await useAsyncData(
 )
 // useAsyncData의 hydrated data로 캐시 동기화
 syncFromHydration(regionsData)
+
+// Validate district slug (Soft 404 방지)
+if (regionsData.value?.length) {
+  const validDistricts = getDistrictsByCity(city.value)
+  if (validDistricts.length > 0 && !validDistricts.some(d => d.slug === district.value)) {
+    throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
+  }
+}
 
 // Korean names (동적으로 가져옴)
 const cityName = computed(() => getCityName(city.value))
@@ -182,9 +200,10 @@ const {
 
 const currentPage = ref(1)
 
-// 시설 0건일 때 noindex 안전장치 (SSR loading 상태에서 잘못 적용되지 않도록 error 체크 추가)
+// 시설 0건 또는 페이지 2 이상일 때 noindex (중복 콘텐츠 방지)
+const pageQueryParam = Number(route.query.page) || 1
 useHead(computed(() => {
-  if (!loading.value && facilities.value.length === 0 && !error.value) {
+  if ((!loading.value && facilities.value.length === 0 && !error.value) || pageQueryParam > 1) {
     return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
   }
   return { meta: [] }

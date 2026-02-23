@@ -135,7 +135,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useRegions } from '~/composables/useRegions'
+import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useRegionFacilities } from '~/composables/useRegionFacilities'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -146,8 +146,13 @@ const route = useRoute()
 const city = computed(() => route.params.city as string)
 const district = computed(() => route.params.district as string)
 
+// Validate city slug (Soft 404 방지)
+if (!CITY_SLUG_MAP[city.value]) {
+  throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
+}
+
 // Region data
-const { loadRegions, syncFromHydration, getCityName, getDistrictName } = useRegions()
+const { loadRegions, syncFromHydration, getCityName, getDistrictName, getDistrictsByCity } = useRegions()
 
 // SSR: 서버에서 지역 정보 로드
 const { data: regionsData, status } = await useAsyncData(
@@ -156,6 +161,15 @@ const { data: regionsData, status } = await useAsyncData(
 )
 // useAsyncData의 hydrated data로 캐시 동기화
 syncFromHydration(regionsData)
+
+// Validate district slug (Soft 404 방지)
+if (regionsData.value?.length) {
+  const validDistricts = getDistrictsByCity(city.value)
+  if (validDistricts.length > 0 && !validDistricts.some(d => d.slug === district.value)) {
+    throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
+  }
+}
+
 const loading = computed(() => status.value === 'pending')
 
 // Names
