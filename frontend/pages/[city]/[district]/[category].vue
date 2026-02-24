@@ -110,7 +110,8 @@ if (!CITY_SLUG_MAP[city.value]) {
 }
 
 // Validate category (Soft 404 방지)
-if (!CATEGORY_META[category.value as FacilityCategory]) {
+// trash는 좌표 없는 일정 데이터이므로 지역 라우트에서 제외
+if (!CATEGORY_META[category.value as FacilityCategory] || category.value === 'trash') {
   throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
 }
 
