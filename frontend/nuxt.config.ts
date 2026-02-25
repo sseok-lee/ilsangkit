@@ -14,9 +14,10 @@ export default defineNuxtConfig({
     fallback: 'light',
   },
 
-  // Security headers
+  // Security headers + API proxy
   nitro: {
     routeRules: {
+      '/api/**': { proxy: 'http://localhost:8000/api/**' },
       '/**': {
         headers: {
           'X-Content-Type-Options': 'nosniff',

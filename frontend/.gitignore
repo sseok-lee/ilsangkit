@@ -29,3 +29,6 @@ coverage
 playwright-report/
 test-results/
 blob-report/
+
+# MSW (dev only)
+public/mockServiceWorker.js

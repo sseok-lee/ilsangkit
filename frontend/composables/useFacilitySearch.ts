@@ -18,20 +18,12 @@ export function useFacilitySearch() {
     error.value = null
 
     try {
-      // Get API base URL (with fallback for tests)
-      let apiBase = 'http://localhost:8000'
-      try {
-        const config = useRuntimeConfig()
-        apiBase = config.public.apiBase
-      } catch (e) {
-        // In test environment, useRuntimeConfig might not be available
-      }
-
       const response = await $fetch<ApiResponse<SearchResponse>>(
-        `${apiBase}/api/facilities/search`,
+        '/api/facilities/search',
         {
           method: 'POST',
           body: params,
+          retry: 1,
         }
       )
 
@@ -78,19 +70,12 @@ export function useFacilitySearch() {
     error.value = null
 
     try {
-      let apiBase = 'http://localhost:8000'
-      try {
-        const config = useRuntimeConfig()
-        apiBase = config.public.apiBase
-      } catch (e) {
-        // In test environment, useRuntimeConfig might not be available
-      }
-
       const response = await $fetch<ApiResponse<GroupedSearchResponse>>(
-        `${apiBase}/api/facilities/search`,
+        '/api/facilities/search',
         {
           method: 'POST',
           body: { ...params, grouped: true },
+          retry: 1,
         }
       )
 
@@ -110,16 +95,9 @@ export function useFacilitySearch() {
   const searchNearbyCross = async (category: string, id: string) => {
     crossLoading.value = true
     try {
-      let apiBase = 'http://localhost:8000'
-      try {
-        const config = useRuntimeConfig()
-        apiBase = config.public.apiBase
-      } catch (e) {
-        // In test environment, useRuntimeConfig might not be available
-      }
-
       const response = await $fetch<ApiResponse<{ items: Facility[] }>>(
-        `${apiBase}/api/facilities/${category}/${id}/nearby`
+        `/api/facilities/${category}/${id}/nearby`,
+        { retry: 1 }
       )
 
       if (response.success && response.data) {

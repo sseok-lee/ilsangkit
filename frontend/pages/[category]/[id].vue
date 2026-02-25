@@ -1580,8 +1580,6 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 
 const route = useRoute()
 const router = useRouter()
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
 const { setFacilityDetailMeta } = useFacilityMeta()
 const { setFacilitySchema, setBreadcrumbSchema } = useStructuredData()
 
@@ -1598,7 +1596,7 @@ function getCityHubPath(cityName: string): string {
 const { data: facilityResponse, status, error: fetchError } = await useAsyncData(
   `facility-${category.value}-${id.value}`,
   () => $fetch<{ success: boolean; data: FacilityDetail }>(
-    `${apiBase}/api/facilities/${category.value}/${id.value}`
+    `/api/facilities/${category.value}/${id.value}`
   )
 )
 // Soft 404 방지: 시설 데이터가 없으면 404 에러 반환
