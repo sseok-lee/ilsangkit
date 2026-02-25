@@ -177,9 +177,18 @@ function buildKeywordFilter(keyword?: string): Record<string, unknown> {
 /**
  * 지역 필터 조건 생성
  */
-function buildRegionFilter(city?: string, district?: string): { city?: string; district?: string } {
-  const filter: { city?: string; district?: string } = {};
-  if (city) filter.city = city;
+function buildRegionFilter(city?: string, district?: string): Record<string, unknown> {
+  const filter: Record<string, unknown> = {};
+  if (city) {
+    // city variants: short(서울) ↔ full(서울특별시) 모두 매칭
+    const slug = SHORT_TO_SLUG[city] || FULL_TO_SLUG[city];
+    if (slug) {
+      const variants = new Set([city, CITY_SLUG_TO_FULL[slug], CITY_SLUG_TO_SHORT[slug]].filter(Boolean));
+      filter.city = variants.size > 1 ? { in: [...variants] } : city;
+    } else {
+      filter.city = city;
+    }
+  }
   if (district) filter.district = district;
   return filter;
 }
@@ -613,6 +622,14 @@ const CITY_SLUG_TO_SHORT: Record<string, string> = {
   gyeongnam: '경남',
   jeju: '제주',
 };
+
+// 역매핑: short name(서울) → slug, full name(서울특별시) → slug
+const SHORT_TO_SLUG = Object.fromEntries(
+  Object.entries(CITY_SLUG_TO_SHORT).map(([slug, name]) => [name, slug])
+);
+const FULL_TO_SLUG = Object.fromEntries(
+  Object.entries(CITY_SLUG_TO_FULL).map(([slug, name]) => [name, slug])
+);
 
 /**
  * slug 또는 한글 지역명을 실제 지역 정보로 변환

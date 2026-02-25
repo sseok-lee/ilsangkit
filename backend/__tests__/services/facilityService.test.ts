@@ -120,7 +120,7 @@ describe('search', () => {
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          city: '서울특별시',
+          city: { in: expect.arrayContaining(['서울특별시', '서울']) },
           district: '강남구',
         }),
       })

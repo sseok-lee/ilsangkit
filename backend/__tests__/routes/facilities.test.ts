@@ -95,7 +95,7 @@ describe('POST /api/facilities/search', () => {
     expect(
       res.body.data.items.every(
         (f: { city: string; district: string }) =>
-          f.city === '서울' && f.district === '강남구'
+          (f.city === '서울' || f.city === '서울특별시') && f.district === '강남구'
       )
     ).toBe(true);
   });
