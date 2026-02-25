@@ -1,9 +1,10 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-background-light dark:bg-background-dark">
-    <!-- Header -->
-    <AppHeader />
+  <NuxtLayout>
+    <Head>
+      <Title>{{ errorTitle }}</Title>
+      <Meta name="robots" content="noindex, nofollow" />
+    </Head>
 
-    <!-- Error Content -->
     <main class="flex-1 flex items-center justify-center px-4 py-16">
       <div class="max-w-lg w-full text-center">
         <!-- Error Code -->
@@ -47,17 +48,12 @@
         </div>
       </div>
     </main>
-
-    <!-- Footer -->
-    <AppFooter />
-  </div>
+  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NuxtError } from '#app'
-import AppHeader from '~/components/common/AppHeader.vue'
-import AppFooter from '~/components/common/AppFooter.vue'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 
 const props = defineProps<{
@@ -92,14 +88,6 @@ const categoryShortcuts = computed(() => {
 })
 
 const handleError = () => clearError({ redirect: '/' })
-
-// 에러 페이지 색인 방지
-useHead({
-  title: errorTitle.value,
-  meta: [
-    { name: 'robots', content: 'noindex, nofollow' },
-  ],
-})
 </script>
 
 <style scoped>
