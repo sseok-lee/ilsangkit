@@ -2,6 +2,7 @@ import { ref, readonly } from 'vue'
 import type { SearchParams, SearchResponse, GroupedSearchResponse, GroupedCategory, ApiResponse, Facility, FacilityCategory } from '~/types/facility'
 
 export function useFacilitySearch() {
+  const { apiBase } = useRuntimeConfig().public
   const loading = ref(false)
   const facilities = ref<Facility[]>([])
   const total = ref(0)
@@ -19,7 +20,7 @@ export function useFacilitySearch() {
 
     try {
       const response = await $fetch<ApiResponse<SearchResponse>>(
-        '/api/facilities/search',
+        `${apiBase}/api/facilities/search`,
         {
           method: 'POST',
           body: params,
@@ -71,7 +72,7 @@ export function useFacilitySearch() {
 
     try {
       const response = await $fetch<ApiResponse<GroupedSearchResponse>>(
-        '/api/facilities/search',
+        `${apiBase}/api/facilities/search`,
         {
           method: 'POST',
           body: { ...params, grouped: true },
@@ -96,7 +97,7 @@ export function useFacilitySearch() {
     crossLoading.value = true
     try {
       const response = await $fetch<ApiResponse<{ items: Facility[] }>>(
-        `/api/facilities/${category}/${id}/nearby`,
+        `${apiBase}/api/facilities/${category}/${id}/nearby`,
         { retry: 1 }
       )
 

@@ -1593,10 +1593,12 @@ function getCityHubPath(cityName: string): string {
 }
 
 // SSR: useAsyncData로 서버에서 데이터 fetch
+const config = useRuntimeConfig()
+
 const { data: facilityResponse, status, error: fetchError } = await useAsyncData(
   `facility-${category.value}-${id.value}`,
   () => $fetch<{ success: boolean; data: FacilityDetail }>(
-    `/api/facilities/${category.value}/${id.value}`
+    `${config.public.apiBase}/api/facilities/${category.value}/${id.value}`
   )
 )
 // Soft 404 방지: 시설 데이터가 없으면 404 에러 반환
