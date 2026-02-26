@@ -44,9 +44,9 @@ describe('useRegions', () => {
 
   describe('generateSlug', () => {
     it('generates slug for known districts', () => {
-      expect(generateSlug('강남구')).toBe('gangnam')
-      expect(generateSlug('송파구')).toBe('songpa')
-      expect(generateSlug('해운대구')).toBe('haeundae')
+      expect(generateSlug('강남구')).toBe('gangnam-gu')
+      expect(generateSlug('송파구')).toBe('songpa-gu')
+      expect(generateSlug('해운대구')).toBe('haeundae-gu')
     })
 
     it('handles unknown districts', () => {
@@ -81,8 +81,8 @@ describe('useRegions', () => {
 
   describe('syncFromHydration', () => {
     const mockRegions: RegionInfo[] = [
-      { id: 1, city: '서울', district: '강남구', slug: 'gangnam', lat: 37.5172, lng: 127.0473, bjdCode: '1168000000' },
-      { id: 2, city: '서울', district: '송파구', slug: 'songpa', lat: 37.5146, lng: 127.1050, bjdCode: '1171000000' },
+      { id: 1, city: '서울', district: '강남구', slug: 'gangnam-gu', lat: 37.5172, lng: 127.0473, bjdCode: '1168000000' },
+      { id: 2, city: '서울', district: '송파구', slug: 'songpa-gu', lat: 37.5146, lng: 127.1050, bjdCode: '1171000000' },
     ]
 
     it('syncs hydrated data into cache when not yet loaded', () => {
@@ -105,7 +105,7 @@ describe('useRegions', () => {
 
       // Second sync with different data should not overwrite (isLoaded is already true)
       const otherData = ref<RegionInfo[] | null>([
-        { id: 3, city: '부산', district: '해운대구', slug: 'haeundae', lat: 35.1631, lng: 129.1635, bjdCode: '2635000000' },
+        { id: 3, city: '부산', district: '해운대구', slug: 'haeundae-gu', lat: 35.1631, lng: 129.1635, bjdCode: '2635000000' },
       ])
       syncFromHydration(otherData)
 

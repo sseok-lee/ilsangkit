@@ -9,7 +9,10 @@
         {{ cityName }} {{ districtName }} {{ categoryName }}
       </h1>
       <p class="text-gray-600">
-        {{ cityName }} {{ districtName }}의 {{ categoryName }} 위치 정보를 확인하세요.
+        {{ category === 'trash'
+          ? `${cityName} ${districtName}의 쓰레기 배출 일정 정보를 확인하세요.`
+          : `${cityName} ${districtName}의 ${categoryName} 위치 정보를 확인하세요.`
+        }}
       </p>
     </header>
 
@@ -42,11 +45,36 @@
         v-else
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
       >
-        <FacilityCard
-          v-for="facility in facilities"
-          :key="facility.id"
-          :facility="facility"
-        />
+        <!-- trash: 일정 카드 -->
+        <template v-if="category === 'trash'">
+          <div
+            v-for="item in facilities"
+            :key="item.id"
+            class="border rounded-lg p-4 hover:shadow-md transition-shadow"
+          >
+            <h3 class="font-semibold text-gray-900 mb-2">{{ item.name }}</h3>
+            <p v-if="item.address" class="text-sm text-gray-600 mb-2">{{ item.address }}</p>
+            <div v-if="item.extras?.details" class="text-sm text-gray-500 space-y-1">
+              <p v-if="(item.extras.details as any)?.livingWaste?.dayOfWeek">
+                생활쓰레기: {{ (item.extras.details as any).livingWaste.dayOfWeek }}
+              </p>
+              <p v-if="(item.extras.details as any)?.foodWaste?.dayOfWeek">
+                음식물쓰레기: {{ (item.extras.details as any).foodWaste.dayOfWeek }}
+              </p>
+              <p v-if="(item.extras.details as any)?.recyclable?.dayOfWeek">
+                재활용: {{ (item.extras.details as any).recyclable.dayOfWeek }}
+              </p>
+            </div>
+          </div>
+        </template>
+        <!-- 일반 시설 카드 -->
+        <template v-else>
+          <FacilityCard
+            v-for="facility in facilities"
+            :key="facility.id"
+            :facility="facility"
+          />
+        </template>
       </div>
 
       <!-- Pagination -->
@@ -110,8 +138,7 @@ if (!CITY_SLUG_MAP[city.value]) {
 }
 
 // Validate category (Soft 404 방지)
-// trash는 좌표 없는 일정 데이터이므로 지역 라우트에서 제외
-if (!CATEGORY_META[category.value as FacilityCategory] || category.value === 'trash') {
+if (!CATEGORY_META[category.value as FacilityCategory]) {
   throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
 }
 
@@ -174,8 +201,7 @@ const breadcrumbItems = computed(() => [
 ])
 
 // Other categories (dynamically from CATEGORY_GROUPS, excluding current)
-// trash는 좌표 없는 일정 데이터이므로 지역 허브에서 제외
-const EXCLUDED_REGION_CATEGORIES = new Set(['trash'])
+const EXCLUDED_REGION_CATEGORIES = new Set<string>([])
 const otherCategories = computed(() => {
   const all: { slug: string; name: string }[] = []
   for (const group of CATEGORY_GROUPS) {

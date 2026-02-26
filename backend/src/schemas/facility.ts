@@ -62,11 +62,16 @@ export const FacilityDetailParamsSchema = z.object({
   id: z.string().min(1).max(50),
 });
 
+// 지역별 시설 조회용 카테고리 (trash 포함)
+export const RegionCategorySchema = z.enum([
+  'toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'trash',
+]);
+
 // 지역별 시설 조회 파라미터 스키마
 export const RegionFacilitiesParamsSchema = z.object({
   city: z.string().min(1).max(50),
   district: z.string().min(1).max(50),
-  category: FacilityCategorySchema,
+  category: RegionCategorySchema,
 });
 
 // 지역별 전체 카테고리 시설 조회 파라미터 스키마

@@ -719,6 +719,53 @@ export async function getByRegion(
     district: resolved.district,
   };
 
+  // trash: WasteSchedule 테이블 조회 (좌표 없는 일정 데이터)
+  if (category === 'trash') {
+    const cityVariants = [
+      resolved.city,
+      CITY_SLUG_TO_FULL[city],
+      CITY_SLUG_TO_SHORT[city],
+    ].filter((v): v is string => !!v);
+    const uniqueCities = [...new Set(cityVariants)];
+
+    const wasteWhere = {
+      city: uniqueCities.length > 1 ? { in: uniqueCities } : uniqueCities[0],
+      district: resolved.district,
+    };
+
+    const [records, total] = await Promise.all([
+      prisma.wasteSchedule.findMany({
+        where: wasteWhere,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: [{ targetRegion: 'asc' }],
+      }),
+      prisma.wasteSchedule.count({ where: wasteWhere }),
+    ]);
+
+    const items = records.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      id: String(r.id),
+      category: 'trash' as FacilityCategory,
+      name: r.targetRegion || `${r.district} 쓰레기 배출`,
+      address: r.emissionPlace || null,
+      roadAddress: null,
+      lat: 0,
+      lng: 0,
+      city: r.city,
+      district: r.district,
+      extras: r.details ? (r.details as Record<string, unknown>) : undefined,
+    }));
+
+    return {
+      region: { city: resolved.city, district: resolved.district, bjdCode: resolved.bjdCode },
+      category: 'trash',
+      items,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   const config = CATEGORY_REGISTRY[category as FacilityCategory];
   let items: FacilityItem[] = [];
   let total = 0;
@@ -895,6 +942,33 @@ export async function getRegionCategoryCombinations(): Promise<
         category,
       });
     }
+  }
+
+  // trash(WasteSchedule) 지역 조합 추가
+  const wasteRegions = await prisma.wasteSchedule.findMany({
+    select: { city: true, district: true },
+    distinct: ['city', 'district'],
+    where: {
+      city: { not: '' },
+      district: { not: '' },
+    },
+  });
+
+  for (const region of wasteRegions) {
+    const cs = cityToSlug.get(region.city);
+    if (!cs) continue;
+
+    const ds = regionSlugMap.get(`${region.city}|${region.district}`)
+      || regionSlugMap.get(`${CITY_SLUG_TO_SHORT[cs]}|${region.district}`);
+    if (!ds) continue;
+
+    results.push({
+      city: region.city,
+      district: region.district,
+      citySlug: cs,
+      districtSlug: ds,
+      category: 'trash',
+    });
   }
 
   return results;
