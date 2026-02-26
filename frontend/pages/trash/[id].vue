@@ -190,8 +190,6 @@ import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
 
 const route = useRoute()
 const router = useRouter()
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
 const { setWasteScheduleDetailMeta } = useFacilityMeta()
 const { setBreadcrumbSchema, setWasteScheduleSchema } = useStructuredData()
 
@@ -239,7 +237,7 @@ const { data: scheduleResponse, status, error: fetchError } = await useAsyncData
       throw createError({ statusCode: 400, message: '잘못된 요청입니다' })
     }
     return $fetch<{ success: boolean; data: ScheduleDetail }>(
-      `${apiBase}/api/waste-schedules/${scheduleId.value}`
+      `/api/waste-schedules/${scheduleId.value}`
     )
   }
 )

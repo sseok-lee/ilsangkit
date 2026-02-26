@@ -216,7 +216,6 @@ setHomeMeta()
 const { setWebsiteSchema } = useStructuredData()
 setWebsiteSchema()
 
-const config = useRuntimeConfig()
 const searchKeyword = ref('')
 
 // 최근 리뷰 (client-side fetch)
@@ -228,7 +227,7 @@ onMounted(() => {
 // SSR: 통계 API를 useAsyncData로 fetch
 const { data: statsResponse } = await useAsyncData('home-stats', () =>
   $fetch<{ success: boolean; data: Record<string, number> }>(
-    `${config.public.apiBase}/api/meta/stats`
+    '/api/meta/stats'
   )
 )
 const stats = computed(() => statsResponse.value?.data ?? {
