@@ -93,4 +93,10 @@ export const searchRateLimiter = rateLimit({
       },
     });
   },
+  skip: (req: Request) => {
+    // SSR/내부 요청 (Nitro 프록시)은 rate limit 제외
+    const ip = req.ip || req.socket.remoteAddress || '';
+    if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+    return false;
+  },
 });

@@ -27,7 +27,7 @@ export default defineNuxtConfig({
       },
       '/sitemap.xml': { swr: 86400 },
       '/sitemap/**': { swr: 86400 },
-      '/': { prerender: true },
+      '/': { swr: 300 },
       '/about': { prerender: true },
       '/privacy': { prerender: true },
       '/terms': { prerender: true },
