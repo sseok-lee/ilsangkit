@@ -681,6 +681,91 @@
                           <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 전문의</span>
                           <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.cmdcSdrCnt }}명</span>
                         </div>
+                        <div v-if="details?.mdeptIntnCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">의과 인턴</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.mdeptIntnCnt }}명</span>
+                        </div>
+                        <div v-if="details?.mdeptResdntCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">의과 레지던트</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.mdeptResdntCnt }}명</span>
+                        </div>
+                        <div v-if="details?.detyGdrCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">치과 일반의</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.detyGdrCnt }}명</span>
+                        </div>
+                        <div v-if="details?.detyIntnCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">치과 인턴</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.detyIntnCnt }}명</span>
+                        </div>
+                        <div v-if="details?.detyResdntCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">치과 레지던트</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.detyResdntCnt }}명</span>
+                        </div>
+                        <div v-if="details?.cmdcGdrCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 일반의</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.cmdcGdrCnt }}명</span>
+                        </div>
+                        <div v-if="details?.cmdcIntnCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 인턴</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.cmdcIntnCnt }}명</span>
+                        </div>
+                        <div v-if="details?.cmdcResdntCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 레지던트</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.cmdcResdntCnt }}명</span>
+                        </div>
+                        <div v-if="details?.pnursCnt" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">간호사</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.pnursCnt }}명</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Hospital Departments -->
+                    <div v-if="details?.departments?.length" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">진료과목</h3>
+                      <div class="flex flex-wrap gap-1.5">
+                        <span v-for="dept in details.departments" :key="dept.dgsbjtCdNm"
+                          class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700 border border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800">
+                          {{ dept.dgsbjtCdNm }}
+                          <span v-if="dept.dgsbjtPrSdrCnt" class="ml-1 text-teal-500">({{ dept.dgsbjtPrSdrCnt }}명)</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Hospital Operating Hours -->
+                    <div v-if="hospitalOperatingHours.length > 0" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">진료시간</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-for="item in hospitalOperatingHours" :key="item.day" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">{{ item.day }}</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ item.time }}</span>
+                        </div>
+                        <div v-if="details?.lunchWeek" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">점심(평일)</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details.lunchWeek }}</span>
+                        </div>
+                        <div v-if="details?.lunchSat" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">점심(토)</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details.lunchSat }}</span>
+                        </div>
+                      </div>
+                      <p v-if="details?.noTrmtSun" class="mt-3 text-xs text-[#6b7280] dark:text-slate-500">
+                        <span class="font-medium">일요일 안내:</span> {{ details.noTrmtSun }}
+                      </p>
+                      <p v-if="details?.noTrmtHoli" class="mt-1 text-xs text-[#6b7280] dark:text-slate-500">
+                        <span class="font-medium">공휴일 안내:</span> {{ details.noTrmtHoli }}
+                      </p>
+                    </div>
+
+                    <!-- Hospital Parking Info -->
+                    <div v-if="details?.parkQty != null || details?.parkEtc" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">주차정보</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-if="details?.parkQty != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563] dark:text-slate-400">주차가능대수</span>
+                          <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details.parkQty }}대</span>
+                        </div>
+                        <p v-if="details?.parkEtc" class="text-sm text-[#4b5563] dark:text-slate-400">{{ details.parkEtc }}</p>
                       </div>
                     </div>
                   </template>
@@ -1412,6 +1497,91 @@
                       <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 전문의</span>
                       <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.cmdcSdrCnt }}명</span>
                     </div>
+                    <div v-if="details?.mdeptIntnCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">의과 인턴</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.mdeptIntnCnt }}명</span>
+                    </div>
+                    <div v-if="details?.mdeptResdntCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">의과 레지던트</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.mdeptResdntCnt }}명</span>
+                    </div>
+                    <div v-if="details?.detyGdrCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">치과 일반의</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.detyGdrCnt }}명</span>
+                    </div>
+                    <div v-if="details?.detyIntnCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">치과 인턴</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.detyIntnCnt }}명</span>
+                    </div>
+                    <div v-if="details?.detyResdntCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">치과 레지던트</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.detyResdntCnt }}명</span>
+                    </div>
+                    <div v-if="details?.cmdcGdrCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 일반의</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.cmdcGdrCnt }}명</span>
+                    </div>
+                    <div v-if="details?.cmdcIntnCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 인턴</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.cmdcIntnCnt }}명</span>
+                    </div>
+                    <div v-if="details?.cmdcResdntCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">한방 레지던트</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.cmdcResdntCnt }}명</span>
+                    </div>
+                    <div v-if="details?.pnursCnt" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">간호사</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details?.pnursCnt }}명</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Hospital Departments -->
+                <div v-if="details?.departments?.length" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">진료과목</h3>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span v-for="dept in details.departments" :key="dept.dgsbjtCdNm"
+                      class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700 border border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800">
+                      {{ dept.dgsbjtCdNm }}
+                      <span v-if="dept.dgsbjtPrSdrCnt" class="ml-1 text-teal-500">({{ dept.dgsbjtPrSdrCnt }}명)</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Hospital Operating Hours -->
+                <div v-if="hospitalOperatingHours.length > 0" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">진료시간</h3>
+                  <div class="flex flex-col gap-3">
+                    <div v-for="item in hospitalOperatingHours" :key="item.day" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">{{ item.day }}</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ item.time }}</span>
+                    </div>
+                    <div v-if="details?.lunchWeek" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">점심(평일)</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details.lunchWeek }}</span>
+                    </div>
+                    <div v-if="details?.lunchSat" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">점심(토)</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details.lunchSat }}</span>
+                    </div>
+                  </div>
+                  <p v-if="details?.noTrmtSun" class="mt-3 text-xs text-[#6b7280] dark:text-slate-500">
+                    <span class="font-medium">일요일 안내:</span> {{ details.noTrmtSun }}
+                  </p>
+                  <p v-if="details?.noTrmtHoli" class="mt-1 text-xs text-[#6b7280] dark:text-slate-500">
+                    <span class="font-medium">공휴일 안내:</span> {{ details.noTrmtHoli }}
+                  </p>
+                </div>
+
+                <!-- Hospital Parking Info -->
+                <div v-if="details?.parkQty != null || details?.parkEtc" class="mt-5 border-t border-[#f0f2f5] dark:border-gray-700 pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] dark:text-white mb-3">주차정보</h3>
+                  <div class="flex flex-col gap-3">
+                    <div v-if="details?.parkQty != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563] dark:text-slate-400">주차가능대수</span>
+                      <span class="text-sm font-medium text-[#111418] dark:text-white">{{ details.parkQty }}대</span>
+                    </div>
+                    <p v-if="details?.parkEtc" class="text-sm text-[#4b5563] dark:text-slate-400">{{ details.parkEtc }}</p>
                   </div>
                 </div>
               </template>
@@ -1745,6 +1915,32 @@ const pharmacyOperatingHours = computed(() => {
   ]
   return days
     .map(({ day, start, end }) => ({ day, time: formatPharmacyTime(start, end) }))
+    .filter((item): item is { day: string; time: string } => item.time !== null)
+})
+
+// Hospital operating hours
+const formatHospitalTime = (start?: string | null, end?: string | null): string | null => {
+  if (!start || !end) return null
+  const s = String(start).replace(':', '')
+  const e = String(end).replace(':', '')
+  if (s.length === 4 && e.length === 4) return `${s.slice(0, 2)}:${s.slice(2)} ~ ${e.slice(0, 2)}:${e.slice(2)}`
+  return `${start} ~ ${end}`
+}
+
+const hospitalOperatingHours = computed(() => {
+  if (facility.value?.category !== 'hospital' || !facility.value?.details) return []
+  const d = facility.value.details as import('~/types/facility').HospitalDetails
+  const days = [
+    { day: '월요일', start: d.trmtMonStart, end: d.trmtMonEnd },
+    { day: '화요일', start: d.trmtTueStart, end: d.trmtTueEnd },
+    { day: '수요일', start: d.trmtWedStart, end: d.trmtWedEnd },
+    { day: '목요일', start: d.trmtThuStart, end: d.trmtThuEnd },
+    { day: '금요일', start: d.trmtFriStart, end: d.trmtFriEnd },
+    { day: '토요일', start: d.trmtSatStart, end: d.trmtSatEnd },
+    { day: '일요일', start: d.trmtSunStart, end: d.trmtSunEnd },
+  ]
+  return days
+    .map(({ day, start, end }) => ({ day, time: formatHospitalTime(start, end) }))
     .filter((item): item is { day: string; time: string } => item.time !== null)
 })
 
