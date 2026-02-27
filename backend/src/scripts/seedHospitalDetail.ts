@@ -193,7 +193,7 @@ async function seedDetailInfo(workbook: ExcelJS.Workbook, ykihoMap: Map<string, 
     batch.length = 0;
   };
 
-  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+  sheet.eachRow({ includeEmpty: false }, (_row, rowNumber) => {
     if (rowNumber === 1) return; // 헤더 스킵
     // eachRow는 동기적이므로 배치 수집만 진행
   });
