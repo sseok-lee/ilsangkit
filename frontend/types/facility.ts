@@ -181,6 +181,11 @@ export interface LibraryDetails {
   providerName?: string | null
 }
 
+export interface HospitalDepartment {
+  dgsbjtCdNm: string
+  dgsbjtPrSdrCnt?: number | null
+}
+
 export interface HospitalDetails {
   phone?: string | null
   homepage?: string | null
@@ -207,6 +212,28 @@ export interface HospitalDetails {
   cmdcResdntCnt?: number | null
   pnursCnt?: number | null
   dataDate?: string | null
+  trmtMonStart?: string | null
+  trmtMonEnd?: string | null
+  trmtTueStart?: string | null
+  trmtTueEnd?: string | null
+  trmtWedStart?: string | null
+  trmtWedEnd?: string | null
+  trmtThuStart?: string | null
+  trmtThuEnd?: string | null
+  trmtFriStart?: string | null
+  trmtFriEnd?: string | null
+  trmtSatStart?: string | null
+  trmtSatEnd?: string | null
+  trmtSunStart?: string | null
+  trmtSunEnd?: string | null
+  lunchWeek?: string | null
+  lunchSat?: string | null
+  noTrmtSun?: string | null
+  noTrmtHoli?: string | null
+  parkQty?: number | null
+  parkEtc?: string | null
+  detailSyncedAt?: string | null
+  departments?: HospitalDepartment[]
 }
 
 export interface PharmacyDetails {

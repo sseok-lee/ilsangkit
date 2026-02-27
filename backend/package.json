@@ -28,7 +28,8 @@
     "sync:parking": "tsx src/scripts/syncParking.ts",
     "sync:aed": "tsx src/scripts/syncAed.ts",
     "sync:regions": "tsx src/scripts/syncRegion.ts",
-    "sync:facilities": "tsx src/scripts/syncAll.ts"
+    "sync:facilities": "tsx src/scripts/syncAll.ts",
+    "seed:hospital-detail": "tsx src/scripts/seedHospitalDetail.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -47,6 +48,7 @@
     "cors": "^2.8.6",
     "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "fast-xml-parser": "^5.3.5",

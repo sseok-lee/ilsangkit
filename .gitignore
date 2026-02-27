@@ -24,6 +24,9 @@ Thumbs.db
 # Playwright MCP screenshots
 .playwright-mcp/
 
+# Shrimp Task Manager
+.shrimp-data/
+
 # Planning & Design (local only)
 design/
 design_backup/
@@ -32,6 +35,11 @@ specs_backup/
 
 # Temp data files
 backend/temp/
+
+# HIRA xlsx data files (large, download separately)
+backend/data/*.xlsx
+backend/data/*.xls
+backend/data/*.zip
 
 # Misc
 nul

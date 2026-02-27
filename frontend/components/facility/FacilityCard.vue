@@ -86,6 +86,11 @@
 
           <!-- clothes -->
           <span v-if="facility.extras.detailLocation" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 max-w-[180px] truncate">{{ facility.extras.detailLocation }}</span>
+
+          <!-- hospital -->
+          <span v-if="facility.extras.clCdNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">{{ facility.extras.clCdNm }}</span>
+          <span v-if="facility.extras.phone" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{{ facility.extras.phone }}</span>
+          <span v-if="facility.extras.drTotCnt" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">의사 {{ facility.extras.drTotCnt }}명</span>
         </div>
       </div>
     </div>

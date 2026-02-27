@@ -81,8 +81,12 @@ const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
   },
   hospital: {
     model: () => prisma.hospital,
-    listFields: ['clCdNm', 'phone', 'drTotCnt'],
-    detailFields: ['phone', 'homepage', 'postNo', 'estbDd', 'ykiho', 'clCd', 'clCdNm', 'sidoCd', 'sgguCd', 'emdongNm', 'drTotCnt', 'mdeptSdrCnt', 'mdeptGdrCnt', 'mdeptIntnCnt', 'mdeptResdntCnt', 'detySdrCnt', 'detyGdrCnt', 'detyIntnCnt', 'detyResdntCnt', 'cmdcSdrCnt', 'cmdcGdrCnt', 'cmdcIntnCnt', 'cmdcResdntCnt', 'pnursCnt', 'dataDate'],
+    listFields: ['clCdNm', 'phone', 'drTotCnt',
+      'trmtMonStart', 'trmtMonEnd', 'trmtTueStart', 'trmtTueEnd',
+      'trmtWedStart', 'trmtWedEnd', 'trmtThuStart', 'trmtThuEnd',
+      'trmtFriStart', 'trmtFriEnd', 'trmtSatStart', 'trmtSatEnd',
+      'trmtSunStart', 'trmtSunEnd', 'lunchWeek', 'noTrmtSun', 'noTrmtHoli'],
+    detailFields: ['phone', 'homepage', 'postNo', 'estbDd', 'ykiho', 'clCd', 'clCdNm', 'sidoCd', 'sgguCd', 'emdongNm', 'drTotCnt', 'mdeptSdrCnt', 'mdeptGdrCnt', 'mdeptIntnCnt', 'mdeptResdntCnt', 'detySdrCnt', 'detyGdrCnt', 'detyIntnCnt', 'detyResdntCnt', 'cmdcSdrCnt', 'cmdcGdrCnt', 'cmdcIntnCnt', 'cmdcResdntCnt', 'pnursCnt', 'dataDate', 'trmtMonStart', 'trmtMonEnd', 'trmtTueStart', 'trmtTueEnd', 'trmtWedStart', 'trmtWedEnd', 'trmtThuStart', 'trmtThuEnd', 'trmtFriStart', 'trmtFriEnd', 'trmtSatStart', 'trmtSatEnd', 'trmtSunStart', 'trmtSunEnd', 'lunchWeek', 'lunchSat', 'noTrmtSun', 'noTrmtHoli', 'parkQty', 'parkEtc', 'detailSyncedAt'],
   },
   pharmacy: {
     model: () => prisma.pharmacy,
@@ -508,6 +512,13 @@ function toDetail(record: any, category: FacilityCategory): FacilityDetail {
   for (const field of detailFields) {
     details[field] = record[field];
   }
+  // hospital: departments 관계 포함
+  if (category === 'hospital' && record.departments) {
+    details.departments = record.departments.map((d: { dgsbjtCdNm: string; dgsbjtPrSdrCnt: number | null }) => ({
+      dgsbjtCdNm: d.dgsbjtCdNm,
+      dgsbjtPrSdrCnt: d.dgsbjtPrSdrCnt,
+    }));
+  }
 
   return {
     id: record.id,
@@ -544,7 +555,11 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   if (!config) return null;
 
   const model = config.model();
-  const record = await model.findUnique({ where: { id } });
+  const findOptions: { where: { id: string }; include?: Record<string, boolean> } = { where: { id } };
+  if (category === 'hospital') {
+    findOptions.include = { departments: true };
+  }
+  const record = await model.findUnique(findOptions);
   if (!record) return null;
 
   // 조회수 증가 (비동기)

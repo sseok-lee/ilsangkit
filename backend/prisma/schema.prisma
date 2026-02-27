@@ -459,8 +459,45 @@ model Hospital {
   pnursCnt       Int?
   dataDate       String?  @db.VarChar(20)
 
+  // 상세정보 (의료기관별상세정보서비스 15001699)
+  trmtMonStart   String?  @db.VarChar(10)
+  trmtMonEnd     String?  @db.VarChar(10)
+  trmtTueStart   String?  @db.VarChar(10)
+  trmtTueEnd     String?  @db.VarChar(10)
+  trmtWedStart   String?  @db.VarChar(10)
+  trmtWedEnd     String?  @db.VarChar(10)
+  trmtThuStart   String?  @db.VarChar(10)
+  trmtThuEnd     String?  @db.VarChar(10)
+  trmtFriStart   String?  @db.VarChar(10)
+  trmtFriEnd     String?  @db.VarChar(10)
+  trmtSatStart   String?  @db.VarChar(10)
+  trmtSatEnd     String?  @db.VarChar(10)
+  trmtSunStart   String?  @db.VarChar(10)
+  trmtSunEnd     String?  @db.VarChar(10)
+  lunchWeek      String?  @db.VarChar(200)
+  lunchSat       String?  @db.VarChar(200)
+  noTrmtSun      String?  @db.VarChar(200)
+  noTrmtHoli     String?  @db.VarChar(200)
+  parkQty        Int?
+  parkEtc        String?  @db.VarChar(500)
+  detailSyncedAt DateTime?
+
+  departments    HospitalDepartment[]
+
   @@index([city, district])
   @@index([lat, lng])
+}
+
+// 병원 진료과목 테이블 (1:N)
+model HospitalDepartment {
+  id             Int      @id @default(autoincrement())
+  hospitalId     String   @db.VarChar(50)
+  hospital       Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  dgsbjtCdNm     String   @db.VarChar(100)
+  dgsbjtPrSdrCnt Int?
+
+  @@unique([hospitalId, dgsbjtCdNm])
+  @@index([hospitalId])
 }
 
 // 약국 테이블
