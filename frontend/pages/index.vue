@@ -2,10 +2,16 @@
   <div class="flex flex-col">
       <!-- Mobile Hero Section -->
       <section class="md:hidden flex flex-col gap-6 px-4 pb-8 pt-4 relative overflow-hidden">
-        <!-- 배경 이미지 레이어 -->
+        <!-- 배경 이미지 레이어 (목표: 각 WebP 200KB 이하) -->
         <div class="absolute inset-0 opacity-10 dark:opacity-[0.07]">
-          <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom dark:hidden" alt="" aria-hidden="true" />
-          <img src="/images/hero-bg-dark.png" class="w-full h-full object-cover object-bottom hidden dark:block" alt="" aria-hidden="true" />
+          <picture>
+            <source srcset="/images/hero-bg-light.webp" type="image/webp" />
+            <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom dark:hidden" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
+          </picture>
+          <picture>
+            <source srcset="/images/hero-bg-dark.webp" type="image/webp" />
+            <img src="/images/hero-bg-dark.png" class="w-full h-full object-cover object-bottom hidden dark:block" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
+          </picture>
         </div>
         <!-- 하단 그라데이션 페이드 -->
         <div class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent"></div>
@@ -75,10 +81,16 @@
 
       <!-- Desktop Hero Section -->
       <section class="hidden md:block w-full pt-16 pb-12 px-4 sm:px-6 relative overflow-hidden">
-        <!-- 배경 이미지 레이어 -->
+        <!-- 배경 이미지 레이어 (목표: 각 WebP 200KB 이하) -->
         <div class="absolute inset-0 opacity-[0.08] dark:opacity-[0.05]">
-          <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom dark:hidden" alt="" aria-hidden="true" />
-          <img src="/images/hero-bg-dark.png" class="w-full h-full object-cover object-bottom hidden dark:block" alt="" aria-hidden="true" />
+          <picture>
+            <source srcset="/images/hero-bg-light.webp" type="image/webp" />
+            <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom dark:hidden" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
+          </picture>
+          <picture>
+            <source srcset="/images/hero-bg-dark.webp" type="image/webp" />
+            <img src="/images/hero-bg-dark.png" class="w-full h-full object-cover object-bottom hidden dark:block" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
+          </picture>
         </div>
         <!-- 하단 그라데이션 페이드 -->
         <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent"></div>

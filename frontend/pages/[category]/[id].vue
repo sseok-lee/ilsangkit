@@ -1738,11 +1738,12 @@
 <script setup lang="ts">
 definePageMeta({})
 
-import { computed, defineAsyncComponent, ref, watch, watchEffect } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META, CATEGORY_DATA_PORTAL_URL } from '~/types/facility'
 import { CITY_NAME_TO_SLUG } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
@@ -1825,6 +1826,18 @@ const openNavigation = (url: string) => {
 }
 
 const isMapExpanded = ref(false)
+
+const { trackFacilityView } = useAnalytics()
+onMounted(() => {
+  if (facility.value) {
+    trackFacilityView({
+      facilityId: facility.value.id,
+      category: facility.value.category,
+      name: facility.value.name,
+    })
+  }
+})
+
 watch(isMapExpanded, (expanded) => {
   if (import.meta.client) {
     document.body.style.overflow = expanded ? 'hidden' : ''

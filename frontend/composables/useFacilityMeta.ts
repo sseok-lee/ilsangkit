@@ -1,6 +1,6 @@
 import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, KioskDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_CTA } from '~/utils/seoConstants'
 
 /**
  * 메타태그 옵션
@@ -98,7 +98,7 @@ function buildFacilityDescription(facility: FacilityDetail): string {
     }
   }
 
-  parts.push('주소 및 상세 정보 확인')
+  parts.push(CATEGORY_CTA[facility.category])
 
   // 155자 이내로 자르기
   let desc = parts.join('. ')
@@ -119,7 +119,9 @@ export function useFacilityMeta() {
     // titleTemplate은 pass-through이므로 여기서 완전한 title 구성
     const fullTitle = options.title === SITE_NAME
       ? `${SITE_NAME} - 내 주변 생활 편의 정보`
-      : `${options.title} - ${SITE_NAME}`
+      : options.title.includes(SITE_NAME)
+        ? options.title
+        : `${options.title} - ${SITE_NAME}`
 
     const canonicalUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL
 
@@ -156,9 +158,26 @@ export function useFacilityMeta() {
    */
   function setHomeMeta() {
     setMeta({
-      title: SITE_NAME,
+      title: '일상킷 - 병원/약국/화장실/주차장 통합검색',
       description: SITE_DESCRIPTION,
       path: '/',
+    })
+  }
+
+  /**
+   * 카테고리 페이지 메타태그
+   */
+  function setCategoryMeta(category: FacilityCategory) {
+    const categoryName = CATEGORY_META[category]?.label || category
+    const cta = CATEGORY_CTA[category]
+
+    const title = `${categoryName} 위치 및 운영시간 - 일상킷`
+    const description = `${cta}. 전국 ${categoryName} 정보를 한 번에 검색하세요.`
+
+    setMeta({
+      title,
+      description,
+      path: `/${category}`,
     })
   }
 
@@ -288,6 +307,7 @@ export function useFacilityMeta() {
   return {
     setMeta,
     setHomeMeta,
+    setCategoryMeta,
     setSearchMeta,
     setFacilityDetailMeta,
     setWasteScheduleDetailMeta,

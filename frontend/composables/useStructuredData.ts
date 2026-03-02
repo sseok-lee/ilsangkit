@@ -292,6 +292,58 @@ export function useStructuredData() {
     })
   }
 
+  /**
+   * FAQPage 스키마
+   */
+  function setFAQSchema(faqs: Array<{ question: string; answer: string }>) {
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      })),
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
+  /**
+   * AggregateRating 스키마
+   */
+  function setAggregateRatingSchema(params: { ratingValue: number; reviewCount: number }) {
+    if (params.reviewCount === 0) return
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'AggregateRating',
+      ratingValue: Math.min(5, Math.max(1, params.ratingValue)),
+      reviewCount: params.reviewCount,
+      bestRating: 5,
+      worstRating: 1,
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
   return {
     setWebsiteSchema,
     setBreadcrumbSchema,
@@ -299,5 +351,7 @@ export function useStructuredData() {
     setItemListSchema,
     setOrganizationSchema,
     setWasteScheduleSchema,
+    setFAQSchema,
+    setAggregateRatingSchema,
   }
 }

@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Pretendard font-display: swap override
+ * CDN(jsdelivr)은 display=swap 파라미터를 지원하지 않으므로
+ * @font-face로 명시적으로 재선언해 FOIT(Flash of Invisible Text)를 방지한다.
+ *
+ * TODO(장기): 셀프 호스팅 전환 검토
+ *   - /public/fonts/에 woff2 파일 배치 후 nuxt.config의 CDN 링크 제거
+ *   - 장점: 추가 DNS 조회 없음, Cache-Control 직접 제어, 오프라인 지원
+ *   - 참고: https://github.com/orioncactus/pretendard (릴리스에서 woff2 다운로드)
+ */
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-display: swap;
+  src: local('Pretendard Variable');
+}
+
 @layer base {
   html {
     font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;

@@ -122,6 +122,8 @@
 </template>
 
 <script setup lang="ts">
+useSeoMeta({ robots: 'noindex,nofollow' })
+
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 

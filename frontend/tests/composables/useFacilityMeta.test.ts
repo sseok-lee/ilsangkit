@@ -24,8 +24,8 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: '일상킷 - 내 주변 생활 편의 정보',
-          ogTitle: '일상킷 - 내 주변 생활 편의 정보',
+          title: '일상킷 - 병원/약국/화장실/주차장 통합검색',
+          ogTitle: '일상킷 - 병원/약국/화장실/주차장 통합검색',
           ogSiteName: '일상킷',
           ogLocale: 'ko_KR',
           twitterCard: 'summary_large_image',
@@ -167,6 +167,121 @@ describe('useFacilityMeta', () => {
       expect(SITE_NAME).toBe('일상킷')
       expect(SITE_URL).toBe('https://ilsangkit.co.kr')
       expect(SITE_DESCRIPTION).toContain('내 주변')
+    })
+  })
+
+  describe('setHomeMeta - CTR 최적화', () => {
+    it('홈 타이틀에 병원, 약국, 화장실, 주차장 중 일부 포함', () => {
+      const { setHomeMeta } = useFacilityMeta()
+
+      setHomeMeta()
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      const title: string = call.title
+      const hasKeyword = ['병원', '약국', '화장실', '주차장'].some(kw => title.includes(kw))
+      expect(hasKeyword).toBe(true)
+    })
+
+    it('홈 타이틀 60자 이내', () => {
+      const { setHomeMeta } = useFacilityMeta()
+
+      setHomeMeta()
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title.length).toBeLessThanOrEqual(60)
+    })
+  })
+
+  describe('setCategoryMeta - CTR 최적화', () => {
+    it('toilet 카테고리 타이틀에 위치 또는 운영시간 포함', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+
+      setCategoryMeta('toilet')
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      const title: string = call.title
+      const hasKeyword = ['위치', '운영시간'].some(kw => title.includes(kw))
+      expect(hasKeyword).toBe(true)
+    })
+
+    it('hospital 카테고리 타이틀 60자 이내', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+
+      setCategoryMeta('hospital')
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title.length).toBeLessThanOrEqual(60)
+    })
+  })
+
+  describe('buildFacilityDescription - CTA', () => {
+    const baseToiletFacility: FacilityDetail = {
+      id: 'toilet-1',
+      category: 'toilet',
+      name: '강남역 공중화장실',
+      address: '서울시 강남구',
+      roadAddress: '서울시 강남구 강남대로 396',
+      lat: 37.4979,
+      lng: 127.0276,
+      city: '서울',
+      district: '강남구',
+      bjdCode: '11680',
+      details: {},
+      sourceId: 'test-source',
+      sourceUrl: null,
+      viewCount: 100,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      syncedAt: '2024-01-01T00:00:00Z',
+    }
+
+    const baseHospitalFacility: FacilityDetail = {
+      id: 'hospital-1',
+      category: 'hospital',
+      name: '강남세브란스병원',
+      address: '서울시 강남구',
+      roadAddress: '서울시 강남구 언주로 211',
+      lat: 37.4979,
+      lng: 127.0276,
+      city: '서울',
+      district: '강남구',
+      bjdCode: '11680',
+      details: {},
+      sourceId: 'test-source',
+      sourceUrl: null,
+      viewCount: 200,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      syncedAt: '2024-01-01T00:00:00Z',
+    }
+
+    it('toilet description이 "주소 및 상세 정보 확인"으로 끝나지 않음', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+
+      setFacilityDetailMeta(baseToiletFacility)
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.description).not.toMatch(/주소 및 상세 정보 확인$/)
+    })
+
+    it('toilet description에 카테고리별 CTA 문구 포함 (가까운 공공화장실 위치 확인)', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+
+      setFacilityDetailMeta(baseToiletFacility)
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.description).toContain('가까운 공공화장실')
+    })
+
+    it('hospital description에 병원 또는 진료 관련 CTA 포함', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+
+      setFacilityDetailMeta(baseHospitalFacility)
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      const desc: string = call.description
+      const hasMedicalCTA = ['병원', '진료'].some(kw => desc.includes(kw))
+      expect(hasMedicalCTA).toBe(true)
     })
   })
 })

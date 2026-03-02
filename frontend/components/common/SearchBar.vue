@@ -8,7 +8,7 @@
         class="w-full h-10 pl-10 pr-4 rounded-full border border-gray-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm transition-colors"
         :placeholder="placeholder"
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-        @keydown.enter="$emit('search')"
+        @keydown.enter="handleSearch"
       />
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -25,13 +25,23 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { useAnalytics } from '~/composables/useAnalytics'
+
+const props = defineProps<{
   modelValue: string
   placeholder?: string
+  category?: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'search'): void
 }>()
+
+const { trackSearch } = useAnalytics()
+
+function handleSearch() {
+  trackSearch({ keyword: props.modelValue, category: props.category })
+  emit('search')
+}
 </script>

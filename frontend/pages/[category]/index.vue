@@ -21,6 +21,9 @@
         {{ facilityError }}
       </div>
 
+      <!-- Category Intro -->
+      <CategoryIntro :category="categoryParam" />
+
       <!-- Region Filter -->
       <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 space-y-3 mb-4">
         <div class="flex items-center gap-2 mb-2">
@@ -188,6 +191,7 @@ import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
+import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
@@ -211,7 +215,7 @@ const { loading, facilities, total, currentPage, totalPages, error: facilityErro
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const { loadRegions, citiesWithDistricts } = useRegions()
 const { setMeta } = useFacilityMeta()
-const { setItemListSchema, setBreadcrumbSchema } = useStructuredData()
+const { setItemListSchema, setBreadcrumbSchema, setFAQSchema } = useStructuredData()
 
 // Region state
 const selectedCity = ref('')
@@ -275,6 +279,12 @@ setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: catLabel, url: `/${route.params.category}` },
 ])
+
+// FAQ JSON-LD
+const categoryFAQ = CATEGORY_FAQ[route.params.category as FacilityCategory]
+if (categoryFAQ) {
+  setFAQSchema(categoryFAQ)
+}
 
 // Canonical URL: city+district → region route, city only → city route, otherwise self
 const canonicalPath = computed(() => {
