@@ -327,7 +327,7 @@ const trashRegionLink = computed(() => {
   const shortCity = city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
   const citySlug = CITY_NAME_TO_SLUG[city] || CITY_NAME_TO_SLUG[shortCity]
   if (!citySlug) return null
-  const districtSlug = generateSlug(data.value.district)
+  const districtSlug = generateSlug(data.value.district).replace(/-(gu|si|gun)$/, '')
   return {
     searchHref: `/search?category=trash&city=${encodeURIComponent(data.value.city)}&district=${encodeURIComponent(data.value.district)}`,
     searchLabel: `${data.value.city} ${data.value.district} 쓰레기 배출 전체보기`,

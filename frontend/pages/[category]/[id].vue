@@ -1881,7 +1881,7 @@ const regionLink = computed(() => {
   const shortCity = city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
   const citySlug = CITY_NAME_TO_SLUG[city] || CITY_NAME_TO_SLUG[shortCity]
   if (!citySlug) return null
-  const districtSlug = generateSlug(facility.value.district)
+  const districtSlug = generateSlug(facility.value.district).replace(/-(gu|si|gun)$/, '')
   return {
     href: `/${citySlug}/${districtSlug}/${category.value}`,
     label: `${facility.value.city} ${facility.value.district} ${categoryMeta.value.label} 전체보기`,
