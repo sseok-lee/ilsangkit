@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref, defineComponent, h, Suspense } from 'vue'
+import { ref, defineComponent, h, Suspense, onErrorCaptured } from 'vue'
 import DetailPage from '~/pages/[category]/[id].vue'
 import type { FacilityDetail } from '~/types/facility'
 
@@ -43,8 +43,14 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
-// Mock Nuxt compiler macros
+// Mock Nuxt compiler macros & utilities
 vi.stubGlobal('definePageMeta', vi.fn())
+const createErrorMock = vi.fn((opts: any) => {
+  const err = new Error(opts.statusMessage || 'Error')
+  ;(err as any).statusCode = opts.statusCode
+  return err
+})
+vi.stubGlobal('createError', createErrorMock)
 
 // Mock useKakaoMap
 vi.mock('~/composables/useKakaoMap', () => ({
@@ -159,13 +165,32 @@ describe('DetailPage', () => {
     expect(wrapper.text()).toContain('로딩')
   })
 
-  it('에러 상태 표시', async () => {
+  it('에러 시 createError로 404 반환', async () => {
+    createErrorMock.mockClear()
     mockUseAsyncDataWith(null, 'error', new Error('Failed to fetch'))
 
-    const wrapper = await mountSuspended(DetailPage, {
-      global: { stubs: globalStubs },
-    })
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          onErrorCaptured(() => true)
+          return () => h(Suspense, null, {
+            default: () => h(DetailPage),
+          })
+        },
+      }),
+      {
+        global: {
+          stubs: globalStubs,
+          config: { errorHandler: () => {} },
+        },
+      },
+    )
+    await flushPromises()
 
-    expect(wrapper.text()).toContain('시설 정보를 불러올 수 없습니다')
+    expect(createErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 404, statusMessage: 'Facility not found' })
+    )
+
+    wrapper.unmount()
   })
 })
