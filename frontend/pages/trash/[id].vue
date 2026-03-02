@@ -16,6 +16,11 @@
       </div>
     </header>
 
+    <!-- Breadcrumb -->
+    <div v-if="data" class="max-w-2xl mx-auto px-4 pt-4">
+      <Breadcrumb :items="breadcrumbItems" />
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <div class="text-center">
@@ -28,12 +33,12 @@
     <div v-else-if="errorMsg" class="max-w-2xl mx-auto px-4 py-20 text-center">
       <div class="text-4xl mb-4">😔</div>
       <p class="text-slate-600 dark:text-slate-400 font-medium">{{ errorMsg }}</p>
-      <button
-        class="mt-4 text-primary hover:text-primary/80 font-medium text-sm"
-        @click="goBack"
+      <NuxtLink
+        to="/search?category=trash"
+        class="mt-4 inline-block text-primary hover:text-primary/80 font-medium text-sm"
       >
-        돌아가기
-      </button>
+        쓰레기 배출 목록으로
+      </NuxtLink>
     </div>
 
     <!-- Content -->
@@ -154,6 +159,30 @@
         </a>
       </section>
 
+      <!-- 같은 지역 링크 -->
+      <nav v-if="trashRegionLink" class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
+          <h3 class="font-bold text-slate-900 dark:text-white">같은 지역</h3>
+        </div>
+        <div class="flex flex-col gap-2">
+          <NuxtLink
+            :to="trashRegionLink.searchHref"
+            class="flex items-center gap-2 text-primary hover:text-blue-600 text-sm font-medium transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            {{ trashRegionLink.searchLabel }}
+          </NuxtLink>
+          <NuxtLink
+            :to="trashRegionLink.regionHref"
+            class="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary text-sm font-medium transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            {{ trashRegionLink.regionLabel }}
+          </NuxtLink>
+        </div>
+      </nav>
+
       <!-- 데이터 정보 -->
       <section class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
         <div class="flex items-center gap-2 mb-3">
@@ -186,6 +215,7 @@ import { computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
 
 const route = useRoute()
@@ -275,6 +305,32 @@ function goBack() {
     navigateTo('/search?category=trash')
   }
 }
+
+// 브레드크럼 아이템
+const breadcrumbItems = computed(() => {
+  if (!data.value) return []
+  return [
+    { label: '홈', href: '/', current: false },
+    { label: '쓰레기 배출', href: '/search?category=trash', current: false },
+    { label: `${data.value.city} ${data.value.district}`, href: `/trash/${data.value.id}`, current: true },
+  ]
+})
+
+// 같은 지역 링크
+const trashRegionLink = computed(() => {
+  if (!data.value) return null
+  const city = data.value.city
+  const shortCity = city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+  const citySlug = CITY_NAME_TO_SLUG[city] || CITY_NAME_TO_SLUG[shortCity]
+  if (!citySlug) return null
+  const districtSlug = generateSlug(data.value.district)
+  return {
+    searchHref: `/search?category=trash&city=${encodeURIComponent(data.value.city)}&district=${encodeURIComponent(data.value.district)}`,
+    searchLabel: `${data.value.city} ${data.value.district} 쓰레기 배출 전체보기`,
+    regionHref: `/${citySlug}/${districtSlug}`,
+    regionLabel: `${data.value.city} ${data.value.district} 전체 시설 보기`,
+  }
+})
 
 // SSR에서 메타태그 및 JSON-LD 설정
 watchEffect(() => {

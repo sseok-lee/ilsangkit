@@ -15,12 +15,14 @@
         <span class="material-symbols-outlined text-[64px] text-red-500 mb-4">error</span>
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">시설 정보를 불러올 수 없습니다</h2>
         <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error.message }}</p>
-        <button
-          class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
-          @click="router.back()"
-        >
-          돌아가기
-        </button>
+        <div class="flex items-center justify-center gap-4">
+          <NuxtLink
+            :to="`/${category}`"
+            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            {{ categoryMeta.label }} 목록으로
+          </NuxtLink>
+        </div>
       </div>
 
       <!-- Facility Detail -->
@@ -122,13 +124,20 @@
             </NuxtLink>
             <span class="material-symbols-outlined text-[#94a3b8] text-[16px]">chevron_right</span>
             <NuxtLink
+              :to="`/${category}`"
+              class="text-[#48699d] dark:text-gray-400 font-medium hover:text-primary transition-colors"
+            >
+              {{ categoryMeta.label }}
+            </NuxtLink>
+            <span class="material-symbols-outlined text-[#94a3b8] text-[16px]">chevron_right</span>
+            <NuxtLink
               :to="getCityHubPath(facility.city)"
               class="text-[#48699d] dark:text-gray-400 font-medium hover:text-primary transition-colors"
             >
               {{ facility.city }}
             </NuxtLink>
             <span class="material-symbols-outlined text-[#94a3b8] text-[16px]">chevron_right</span>
-            <span class="text-[#0d131c] dark:text-white font-semibold">{{ facility.district }}</span>
+            <span class="text-[#0d131c] dark:text-white font-semibold truncate max-w-[300px]">{{ facility.name }}</span>
           </nav>
 
           <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-10 items-start">
@@ -868,6 +877,30 @@
                 </div>
               </template>
 
+              <!-- 같은 지역 시설 링크 -->
+              <nav v-if="regionLink" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+                <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
+                  <h2 class="text-[#111418] dark:text-white text-lg font-bold">같은 지역 시설</h2>
+                </div>
+                <div class="p-5 flex flex-col gap-3">
+                  <NuxtLink
+                    :to="regionLink.href"
+                    class="flex items-center gap-2 text-primary hover:text-blue-600 text-sm font-medium transition-colors"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                    {{ regionLink.label }}
+                  </NuxtLink>
+                  <NuxtLink
+                    :to="regionLink.cityHref"
+                    class="flex items-center gap-2 text-[#48699d] hover:text-primary text-sm font-medium transition-colors"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                    {{ regionLink.cityLabel }}
+                  </NuxtLink>
+                </div>
+              </nav>
+
               <!-- Data Info Card -->
               <div v-if="dataDate || dataPortalUrl" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
@@ -952,6 +985,9 @@
 
         <!-- Mobile: Info Section (Desktop-style cards) -->
         <div class="md:hidden px-4 flex flex-col gap-6 pt-4">
+          <!-- Mobile Breadcrumb -->
+          <Breadcrumb :items="breadcrumbItems" />
+
           <!-- Page Heading & Badges -->
           <div class="flex flex-col gap-3">
             <div class="flex items-start justify-between">
@@ -1683,6 +1719,30 @@
             </div>
           </template>
 
+          <!-- 같은 지역 시설 링크 -->
+          <nav v-if="regionLink" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+            <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
+              <h2 class="text-[#111418] dark:text-white text-lg font-bold">같은 지역 시설</h2>
+            </div>
+            <div class="p-5 flex flex-col gap-3">
+              <NuxtLink
+                :to="regionLink.href"
+                class="flex items-center gap-2 text-primary hover:text-blue-600 text-sm font-medium transition-colors"
+              >
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                {{ regionLink.label }}
+              </NuxtLink>
+              <NuxtLink
+                :to="regionLink.cityHref"
+                class="flex items-center gap-2 text-[#48699d] hover:text-primary text-sm font-medium transition-colors"
+              >
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                {{ regionLink.cityLabel }}
+              </NuxtLink>
+            </div>
+          </nav>
+
           <!-- Data Info Card -->
           <div v-if="dataDate || dataPortalUrl" class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
@@ -1745,7 +1805,7 @@ import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META, CATEGORY_DATA_PORTAL_URL } from '~/types/facility'
-import { CITY_NAME_TO_SLUG } from '~/composables/useRegions'
+import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
@@ -1759,7 +1819,8 @@ const id = computed(() => route.params.id as string)
 
 // 도시명(한글) → 도시 허브 페이지 경로
 function getCityHubPath(cityName: string): string {
-  const slug = CITY_NAME_TO_SLUG[cityName]
+  const shortCity = cityName.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+  const slug = CITY_NAME_TO_SLUG[cityName] || CITY_NAME_TO_SLUG[shortCity]
   return slug ? `/${slug}` : `/search?keyword=${encodeURIComponent(cityName)}`
 }
 
@@ -1798,6 +1859,32 @@ watchEffect(() => {
 
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })
+
+// 모바일 브레드크럼 아이템
+const breadcrumbItems = computed(() => {
+  if (!facility.value) return []
+  return [
+    { label: '홈', href: '/', current: false },
+    { label: categoryMeta.value.label, href: `/${category.value}`, current: false },
+    { label: facility.value.name, href: `/${category.value}/${facility.value.id}`, current: true },
+  ]
+})
+
+// 같은 지역 시설 링크
+const regionLink = computed(() => {
+  if (!facility.value) return null
+  const city = facility.value.city
+  const shortCity = city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+  const citySlug = CITY_NAME_TO_SLUG[city] || CITY_NAME_TO_SLUG[shortCity]
+  if (!citySlug) return null
+  const districtSlug = generateSlug(facility.value.district)
+  return {
+    href: `/${citySlug}/${districtSlug}/${category.value}`,
+    label: `${facility.value.city} ${facility.value.district} ${categoryMeta.value.label} 전체보기`,
+    cityHref: `/${citySlug}`,
+    cityLabel: `${facility.value.city} 전체 시설 보기`,
+  }
+})
 
 // Check if 24 hours
 const isOpen24Hours = computed(() => {
