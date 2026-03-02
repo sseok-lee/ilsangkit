@@ -271,11 +271,15 @@ const { data: scheduleResponse, status, error: fetchError } = await useAsyncData
     )
   }
 )
+// Soft 404 방지: fetch 에러 시 실제 HTTP 404 반환
+if (fetchError.value) {
+  throw createError({ statusCode: fetchError.value.statusCode || 404, statusMessage: '배출 정보를 찾을 수 없습니다' })
+}
+
 const data = computed(() => scheduleResponse.value?.data ?? null)
 const loading = computed(() => status.value === 'pending')
 const errorMsg = computed(() => {
   if (isNaN(scheduleId.value)) return '잘못된 요청입니다'
-  if (fetchError.value) return '배출 정보를 찾을 수 없습니다'
   return null
 })
 

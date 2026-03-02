@@ -1831,14 +1831,18 @@ const { data: facilityResponse, status, error: fetchError } = await useAsyncData
     `/api/facilities/${category.value}/${id.value}`
   )
 )
-// Soft 404 방지: 시설 데이터가 없으면 404 에러 반환
+// Soft 404 방지: fetch 에러 또는 데이터 없으면 실제 HTTP 404 반환
+if (fetchError.value) {
+  throw createError({ statusCode: fetchError.value.statusCode || 404, statusMessage: 'Facility not found' })
+}
 if (status.value === 'success' && !facilityResponse.value?.data) {
   throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
 }
 
 const facility = computed(() => facilityResponse.value?.data ?? null)
 const loading = computed(() => status.value === 'pending')
-const error = computed(() => fetchError.value ? { message: '시설 정보를 불러올 수 없습니다' } : null)
+// SSR에서는 createError로 에러 페이지 전환, 클라이언트 fallback용
+const error = ref<{ message: string } | null>(null)
 
 // 템플릿용 타입 안전 details 접근 (v-if 카테고리 가드로 런타임 보호)
 const details = computed(() => facility.value?.details as FacilityDetailsAll | undefined)
