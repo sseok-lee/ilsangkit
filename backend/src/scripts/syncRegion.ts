@@ -2,6 +2,7 @@
 // @SPEC docs/planning/04-database-design.md#region-table
 
 import prisma from '../lib/prisma.js';
+import { geocode } from '../services/geocodingService.js';
 
 /**
  * 동기화 결과 인터페이스
@@ -20,6 +21,7 @@ interface SyncResult {
 interface SyncOptions {
   testMode?: boolean;
   testData?: RegionData[];
+  localOnly?: boolean;
 }
 
 /**
@@ -40,6 +42,42 @@ interface ParsedRegion {
   bjdCode: string;
   city: string;
   district: string;
+}
+
+/**
+ * 법정동코드 API 응답 타입 (행정안전부 StanReginCd)
+ * @see http://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList
+ */
+interface ApiRegion {
+  region_cd: string;
+  sido_cd: string;
+  sgg_cd: string;
+  umd_cd: string;
+  ri_cd: string;
+  locatjumin_cd: string;
+  locatjijuk_cd: string;
+  locatadd_nm: string;
+  locat_order: number;
+  locat_rm: string;
+  locathigh_cd: string;
+  locallow_nm: string;
+  adpt_de: string;
+}
+
+/**
+ * 법정동코드 API 응답 래퍼 (StanReginCd 포맷)
+ */
+interface StanReginCdResponse {
+  StanReginCd: [
+    {
+      head: [
+        { totalCount: number },
+        { numOfRows: string; pageNo: string; type: string },
+        { RESULT: { resultCode: string; resultMsg: string } },
+      ];
+    },
+    { row: ApiRegion[] },
+  ];
 }
 
 /**
@@ -690,6 +728,127 @@ export function getRegionCoordinates(
 }
 
 /**
+ * 법정동코드 API에서 단일 페이지 조회
+ */
+async function fetchRegionPage(
+  serviceKey: string,
+  pageNo: number,
+  numOfRows: number
+): Promise<{ rows: ApiRegion[]; totalCount: number }> {
+  const baseUrl = 'http://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList';
+  // serviceKey는 이미 인코딩된 상태일 수 있으므로 직접 붙임
+  const url = `${baseUrl}?serviceKey=${serviceKey}&pageNo=${pageNo}&numOfRows=${numOfRows}&type=json`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as StanReginCdResponse;
+
+  const head = data.StanReginCd[0].head;
+  const resultCode = head[2].RESULT.resultCode;
+  if (resultCode !== 'INFO-0') {
+    throw new Error(`API error: ${resultCode} ${head[2].RESULT.resultMsg}`);
+  }
+
+  const totalCount = head[0].totalCount;
+  const rows = data.StanReginCd[1]?.row ?? [];
+
+  return { rows, totalCount };
+}
+
+/**
+ * 법정동코드 API에서 전체 행정구역 데이터를 가져옴
+ * 시군구 레벨만 필터링하여 반환
+ */
+async function fetchRegionsFromApi(): Promise<ApiRegion[]> {
+  const serviceKey = process.env.OPENAPI_SERVICE_KEY;
+  if (!serviceKey) {
+    throw new Error('OPENAPI_SERVICE_KEY environment variable is not set');
+  }
+
+  const PAGE_SIZE = 1000;
+  const DELAY_MS = 300;
+
+  console.log('법정동코드 API 호출 시작...');
+
+  // 첫 페이지로 totalCount 확인
+  const firstPage = await fetchRegionPage(serviceKey, 1, PAGE_SIZE);
+  const allRegions: ApiRegion[] = [...firstPage.rows];
+  const totalPages = Math.ceil(firstPage.totalCount / PAGE_SIZE);
+
+  console.log(`  총 ${firstPage.totalCount}개 레코드, ${totalPages} 페이지`);
+
+  // 나머지 페이지 순회
+  for (let pageNo = 2; pageNo <= totalPages; pageNo++) {
+    await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+    const page = await fetchRegionPage(serviceKey, pageNo, PAGE_SIZE);
+    allRegions.push(...page.rows);
+    console.log(`  페이지 ${pageNo}/${totalPages} 조회 완료 (${page.rows.length}건)`);
+  }
+
+  // 시군구 레벨 필터링
+  const sggRegions = allRegions.filter((r) => {
+    if (!r.region_cd || r.region_cd.length !== 10) return false;
+    // 끝 5자리가 00000 (시군구 레벨)
+    if (!r.region_cd.endsWith('00000')) return false;
+    // 앞 5자리가 XX000이면 시도 레벨이므로 제외
+    if (r.region_cd.substring(2, 5) === '000') return false;
+    return true;
+  });
+
+  console.log(`  시군구 ${sggRegions.length}개 필터링 완료`);
+  return sggRegions;
+}
+
+/**
+ * API 응답을 RegionData로 변환
+ * 좌표는 하드코딩 데이터에서 조회, 없으면 (0, 0) 반환
+ */
+function parseApiRegion(apiRegion: ApiRegion): RegionData | null {
+  const nameParts = apiRegion.locatadd_nm.trim().split(' ');
+  if (nameParts.length < 2) return null;
+
+  const city = normalizeCityName(nameParts[0]);
+  const district = nameParts.slice(1).join(' ');
+  const bjdCode = apiRegion.region_cd.substring(0, 5);
+
+  const coords = REGION_COORDINATES[city]?.[district];
+
+  return {
+    bjdCode,
+    city,
+    district,
+    lat: coords?.lat ?? 0,
+    lng: coords?.lng ?? 0,
+  };
+}
+
+/**
+ * 하드코딩된 REGION_COORDINATES에서 RegionData 배열 생성 (로컬/fallback용)
+ */
+function buildRegionsFromCoordinates(): RegionData[] {
+  const regions: RegionData[] = [];
+
+  for (const [city, districts] of Object.entries(REGION_COORDINATES)) {
+    for (const [district, coords] of Object.entries(districts)) {
+      const bjdCode = generateBjdCode(city, district);
+      regions.push({
+        bjdCode,
+        city,
+        district,
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+    }
+  }
+
+  return regions;
+}
+
+/**
  * CSV 데이터에서 시/군/구 레벨 추출
  * 법정동코드 형식: 10자리 (시도 2자리 + 시군구 3자리 + 읍면동 3자리 + 리 2자리)
  * 시/군/구 레벨: 앞 5자리가 유효하고 나머지가 00000인 경우
@@ -737,7 +896,7 @@ export function parseRegionCsv(csvContent: string): ParsedRegion[] {
  * Region 데이터 동기화 실행
  */
 export async function syncRegionData(options: SyncOptions = {}): Promise<SyncResult> {
-  const { testMode = false, testData = [] } = options;
+  const { testMode = false, testData = [], localOnly = false } = options;
 
   const result: SyncResult = {
     status: 'success',
@@ -755,23 +914,55 @@ export async function syncRegionData(options: SyncOptions = {}): Promise<SyncRes
         ...r,
         slug: normalizeKoreanToSlug(r.district),
       }));
+    } else if (localOnly) {
+      // 로컬 모드: 하드코딩된 좌표 데이터만 사용
+      console.log('로컬 모드: 하드코딩 데이터 사용');
+      regionsToSync = buildRegionsFromCoordinates();
     } else {
-      // 실제 동기화: 정적 좌표 데이터 사용
-      regionsToSync = [];
+      // API 모드: 법정동코드 API 호출, 실패 시 로컬 fallback
+      try {
+        const apiRegions = await fetchRegionsFromApi();
+        regionsToSync = [];
+        const needsGeocode: { index: number; address: string }[] = [];
 
-      for (const [city, districts] of Object.entries(REGION_COORDINATES)) {
-        for (const [district, coords] of Object.entries(districts)) {
-          // bjdCode는 좌표 데이터에 없으므로, city+district 조합으로 생성
-          const bjdCode = generateBjdCode(city, district);
+        for (const apiRegion of apiRegions) {
+          const parsed = parseApiRegion(apiRegion);
+          if (!parsed) continue;
 
-          regionsToSync.push({
-            bjdCode,
-            city,
-            district,
-            lat: coords.lat,
-            lng: coords.lng,
-          });
+          const idx = regionsToSync.length;
+          regionsToSync.push(parsed);
+
+          if (parsed.lat === 0 && parsed.lng === 0) {
+            needsGeocode.push({
+              index: idx,
+              address: apiRegion.locatadd_nm,
+            });
+          }
         }
+
+        // 좌표 없는 지역은 Kakao 지오코딩으로 보충
+        if (needsGeocode.length > 0) {
+          console.log(`좌표 없는 ${needsGeocode.length}개 지역 Kakao 지오코딩 중...`);
+          for (const item of needsGeocode) {
+            const coords = await geocode(item.address);
+            if (coords) {
+              regionsToSync[item.index].lat = coords.lat;
+              regionsToSync[item.index].lng = coords.lng;
+              console.log(`  ${item.address} → ${coords.lat}, ${coords.lng}`);
+            } else {
+              console.warn(`  ${item.address} 지오코딩 실패`);
+            }
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          }
+        }
+
+        console.log(`API에서 ${regionsToSync.length}개 시군구 데이터 로드 완료`);
+      } catch (apiError) {
+        console.warn(
+          'API 호출 실패, 하드코딩 데이터로 fallback:',
+          apiError instanceof Error ? apiError.message : String(apiError)
+        );
+        regionsToSync = buildRegionsFromCoordinates();
       }
     }
 
@@ -786,21 +977,31 @@ export async function syncRegionData(options: SyncOptions = {}): Promise<SyncRes
         .filter(([, short]) => short === region.city)
         .map(([full]) => full);
 
-      // 기존 데이터 확인 (풀네임 city로 저장된 레코드도 매칭)
+      // 기존 데이터 확인 (city+district 우선, bjdCode도 매칭)
       const existing = await prisma.region.findFirst({
         where: {
           OR: [
-            { bjdCode: region.bjdCode },
             { city: region.city, district: region.district },
             ...cityFullNames.map((fullName) => ({
               city: fullName,
               district: region.district,
             })),
+            { bjdCode: region.bjdCode },
           ],
         },
       });
 
       if (existing) {
+        // bjdCode가 변경되는 경우 충돌 방지
+        if (existing.bjdCode !== region.bjdCode) {
+          const conflicting = await prisma.region.findFirst({
+            where: { bjdCode: region.bjdCode, id: { not: existing.id } },
+          });
+          if (conflicting) {
+            await prisma.region.delete({ where: { id: conflicting.id } });
+          }
+        }
+
         await prisma.region.update({
           where: { id: existing.id },
           data: {
@@ -814,6 +1015,14 @@ export async function syncRegionData(options: SyncOptions = {}): Promise<SyncRes
         });
         result.updatedRecords++;
       } else {
+        // 새 레코드 생성 시에도 bjdCode 충돌 방지
+        const conflicting = await prisma.region.findFirst({
+          where: { bjdCode: region.bjdCode },
+        });
+        if (conflicting) {
+          await prisma.region.delete({ where: { id: conflicting.id } });
+        }
+
         await prisma.region.create({
           data: {
             bjdCode: region.bjdCode,
@@ -841,6 +1050,7 @@ export async function syncRegionData(options: SyncOptions = {}): Promise<SyncRes
 
 /**
  * city+district로 가상의 bjdCode 생성 (해시 기반)
+ * 로컬/fallback 모드에서만 사용. API 모드에서는 실제 법정동코드 사용.
  */
 function generateBjdCode(city: string, district: string): string {
   const cityCodeMap: Record<string, string> = {
@@ -876,9 +1086,16 @@ function generateBjdCode(city: string, district: string): string {
 
 // CLI 실행용
 if (import.meta.url === `file://${process.argv[1]}`) {
-  console.log('Region 데이터 동기화 시작...');
+  const localOnly = process.argv.includes('--local');
 
-  syncRegionData()
+  console.log('Region 데이터 동기화 시작...');
+  if (localOnly) {
+    console.log('로컬 모드: 하드코딩 데이터만 사용');
+  } else {
+    console.log('API 모드: 법정동코드 API 연동 (실패 시 하드코딩 fallback)');
+  }
+
+  syncRegionData({ localOnly })
     .then((result) => {
       console.log('동기화 완료:', result);
       console.log(`- 총 ${result.totalRecords}개 지역`);
