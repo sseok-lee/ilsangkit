@@ -349,8 +349,7 @@ const REGIONS: Record<string, string[]> = {
 }
 
 function getDistrictSlug(koreanName: string): string {
-  const raw = KOREAN_TO_ROMANIZATION[koreanName] || koreanName.toLowerCase().replace(/\s+/g, '-')
-  return raw.replace(/-(gu|si|gun)$/, '')
+  return KOREAN_TO_ROMANIZATION[koreanName] || koreanName.toLowerCase().replace(/\s+/g, '-')
 }
 
 // Fallback: API 실패 시 도시/구군 허브 페이지만 추가 (빈 카테고리 조합은 제외)
