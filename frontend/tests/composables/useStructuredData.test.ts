@@ -152,4 +152,159 @@ describe('useStructuredData', () => {
       expect(Array.isArray(parsed.sameAs)).toBe(true)
     })
   })
+
+  // ─── Task 13: HowTo 스키마 - 쓰레기배출 ────────────────────────────────────
+
+  describe('setHowToSchema', () => {
+    it('setHowToSchema 호출 시 useHead를 호출한다', () => {
+      const { setHowToSchema } = useStructuredData()
+      setHowToSchema({
+        name: '쓰레기 배출 방법',
+        description: '올바른 쓰레기 배출 절차 안내',
+        steps: [{ name: '분리수거', text: '재활용 가능한 쓰레기를 분리합니다.' }],
+      })
+      expect(mockUseHead).toHaveBeenCalled()
+    })
+
+    it('JSON-LD @type이 HowTo인지 검증한다', () => {
+      const { setHowToSchema } = useStructuredData()
+      setHowToSchema({
+        name: '쓰레기 배출 방법',
+        description: '올바른 쓰레기 배출 절차 안내',
+        steps: [{ name: '분리수거', text: '재활용 가능한 쓰레기를 분리합니다.' }],
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed['@type']).toBe('HowTo')
+    })
+
+    it('step 배열 각 항목이 @type HowToStep, name, text를 포함한다', () => {
+      const { setHowToSchema } = useStructuredData()
+      setHowToSchema({
+        name: '쓰레기 배출 방법',
+        description: '올바른 쓰레기 배출 절차 안내',
+        steps: [
+          { name: '분리수거 기준 확인', text: '지역별 분리수거 기준을 확인합니다.' },
+          { name: '쓰레기봉투 구매', text: '규격 종량제 봉투를 구매합니다.' },
+        ],
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(Array.isArray(parsed.step)).toBe(true)
+      expect(parsed.step).toHaveLength(2)
+      parsed.step.forEach((s: any) => {
+        expect(s['@type']).toBe('HowToStep')
+        expect(typeof s.name).toBe('string')
+        expect(typeof s.text).toBe('string')
+      })
+    })
+
+    it('steps 빈 배열이면 스키마를 생성하지 않는다', () => {
+      const { setHowToSchema } = useStructuredData()
+      setHowToSchema({
+        name: '쓰레기 배출 방법',
+        description: '올바른 쓰레기 배출 절차 안내',
+        steps: [],
+      })
+      expect(mockUseHead).not.toHaveBeenCalled()
+    })
+
+    it('totalTime 선택적 필드를 포함하면 JSON-LD에 반영된다', () => {
+      const { setHowToSchema } = useStructuredData()
+      setHowToSchema({
+        name: '쓰레기 배출 방법',
+        description: '올바른 쓰레기 배출 절차 안내',
+        steps: [{ name: '배출', text: '지정 장소에 배출합니다.' }],
+        totalTime: 'PT10M',
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.totalTime).toBe('PT10M')
+    })
+
+    it('@context가 schema.org이다', () => {
+      const { setHowToSchema } = useStructuredData()
+      setHowToSchema({
+        name: '쓰레기 배출 방법',
+        description: '올바른 쓰레기 배출 절차 안내',
+        steps: [{ name: '배출', text: '지정 장소에 배출합니다.' }],
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed['@context']).toBe('https://schema.org')
+    })
+  })
+
+  // ─── Task 14: Hospital OpeningHoursSpecification ───────────────────────────
+
+  describe('setFacilitySchema - hospital OpeningHours', () => {
+    const makeHospitalFacility = (detailsOverride = {}) => ({
+      id: 'hosp-1',
+      category: 'hospital' as const,
+      name: '테스트병원',
+      address: '서울시 강남구 테헤란로 1',
+      roadAddress: '서울시 강남구 테헤란로 1',
+      lat: 37.5,
+      lng: 127.0,
+      city: '서울시',
+      district: '강남구',
+      bjdCode: null,
+      sourceId: 'H001',
+      sourceUrl: null,
+      viewCount: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      syncedAt: '2024-01-01T00:00:00Z',
+      details: {
+        phone: '02-1234-5678',
+        clCdNm: '종합병원',
+        ...detailsOverride,
+      },
+    })
+
+    it('hospital facility에 dutyTime1s/dutyTime1c 있을 때 openingHoursSpecification이 포함된다', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeHospitalFacility({ dutyTime1s: '0900', dutyTime1c: '1800' }))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(Array.isArray(parsed.openingHoursSpecification)).toBe(true)
+      expect(parsed.openingHoursSpecification.length).toBeGreaterThan(0)
+    })
+
+    it('OpeningHoursSpecification 배열에 Monday 항목이 포함된다', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeHospitalFacility({ dutyTime1s: '0900', dutyTime1c: '1800' }))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      const monday = parsed.openingHoursSpecification.find((s: any) => s.dayOfWeek === 'Monday')
+      expect(monday).toBeDefined()
+      expect(monday['@type']).toBe('OpeningHoursSpecification')
+      expect(monday.opens).toBe('0900')
+      expect(monday.closes).toBe('1800')
+    })
+
+    it('pharmacy와 동일한 dutyTime 패턴으로 여러 요일을 매핑한다', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeHospitalFacility({
+        dutyTime1s: '0900', dutyTime1c: '1800',
+        dutyTime2s: '0900', dutyTime2c: '1800',
+        dutyTime6s: '0900', dutyTime6c: '1300',
+      }))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.openingHoursSpecification).toHaveLength(3)
+      const days = parsed.openingHoursSpecification.map((s: any) => s.dayOfWeek)
+      expect(days).toContain('Monday')
+      expect(days).toContain('Tuesday')
+      expect(days).toContain('Saturday')
+    })
+
+    it('dutyTime 필드가 없으면 openingHoursSpecification이 포함되지 않는다', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeHospitalFacility())
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.openingHoursSpecification).toBeUndefined()
+    })
+  })
 })

@@ -5,8 +5,50 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
-    '@nuxtjs/color-mode'
+    '@nuxtjs/color-mode',
+    '@vite-pwa/nuxt'
   ],
+
+  // PWA 설정: MSW(개발용 서비스워커)와 충돌 방지를 위해 production에서만 SW 등록
+  // NUXT_PUBLIC_DISABLE_MSW=true 시 MSW 비활성화 (production 배포 시 자동 적용)
+  pwa: {
+    // 외부 site.webmanifest 사용 (manifest: false)
+    manifest: false,
+    registerType: 'autoUpdate',
+    // production 환경에서만 SW 등록하여 MSW 개발용 SW와 scope 충돌 방지
+    devOptions: {
+      enabled: false,
+    },
+    workbox: {
+      // API 요청: NetworkFirst (네트워크 우선, 오프라인 시 캐시 사용)
+      runtimeCaching: [
+        {
+          urlPattern: /^https?:\/\/.*\/api\/.*/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache',
+            networkTimeoutSeconds: 10,
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60, // 1 hour
+            },
+          },
+        },
+        {
+          // 정적 자산: CacheFirst (캐시 우선)
+          urlPattern: /\.(js|css|woff2?|png|jpg|webp|svg|ico)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'static-assets',
+            expiration: {
+              maxEntries: 200,
+              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+            },
+          },
+        },
+      ],
+    },
+  },
 
   colorMode: {
     classSuffix: '',

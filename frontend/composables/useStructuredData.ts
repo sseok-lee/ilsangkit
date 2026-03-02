@@ -11,6 +11,31 @@ interface BreadcrumbItem {
   url: string
 }
 
+type OpeningHoursSpec = { '@type': string; dayOfWeek: string; opens: string; closes: string }
+
+/**
+ * dutyTime 패턴(Monday~Sunday)으로 OpeningHoursSpecification 배열 생성
+ * pharmacy와 hospital이 공유하는 헬퍼
+ */
+function buildOpeningHoursSpecs(d: Record<string, unknown>): OpeningHoursSpec[] {
+  const specs: OpeningHoursSpec[] = []
+  const dayMap: Array<[string, string, string]> = [
+    ['Monday', 'dutyTime1s', 'dutyTime1c'],
+    ['Tuesday', 'dutyTime2s', 'dutyTime2c'],
+    ['Wednesday', 'dutyTime3s', 'dutyTime3c'],
+    ['Thursday', 'dutyTime4s', 'dutyTime4c'],
+    ['Friday', 'dutyTime5s', 'dutyTime5c'],
+    ['Saturday', 'dutyTime6s', 'dutyTime6c'],
+    ['Sunday', 'dutyTime7s', 'dutyTime7c'],
+  ]
+  for (const [day, sKey, cKey] of dayMap) {
+    if (d?.[sKey] && d?.[cKey]) {
+      specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: String(d[sKey]), closes: String(d[cKey]) })
+    }
+  }
+  return specs
+}
+
 /**
  * 구조화된 데이터 composable
  */
@@ -156,26 +181,12 @@ export function useStructuredData() {
         break
       }
       case 'pharmacy': {
-        const specs: Array<{ '@type': string; dayOfWeek: string; opens: string; closes: string }> = []
-        const dayMap: Array<[string, string, string]> = [
-          ['Monday', 'dutyTime1s', 'dutyTime1c'],
-          ['Tuesday', 'dutyTime2s', 'dutyTime2c'],
-          ['Wednesday', 'dutyTime3s', 'dutyTime3c'],
-          ['Thursday', 'dutyTime4s', 'dutyTime4c'],
-          ['Friday', 'dutyTime5s', 'dutyTime5c'],
-          ['Saturday', 'dutyTime6s', 'dutyTime6c'],
-          ['Sunday', 'dutyTime7s', 'dutyTime7c'],
-        ]
-        for (const [day, sKey, cKey] of dayMap) {
-          if (d?.[sKey] && d?.[cKey]) {
-            specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: String(d[sKey]), closes: String(d[cKey]) })
-          }
-        }
+        const specs = buildOpeningHoursSpecs(d)
         if (specs.length) Object.assign(schema, { openingHoursSpecification: specs })
         break
       }
       case 'aed': {
-        const specs: Array<{ '@type': string; dayOfWeek: string; opens: string; closes: string }> = []
+        const specs: OpeningHoursSpec[] = []
         const aedDays: Array<[string, string, string]> = [
           ['Monday', 'monSttTme', 'monEndTme'],
           ['Tuesday', 'tueSttTme', 'tueEndTme'],
@@ -195,6 +206,8 @@ export function useStructuredData() {
       }
       case 'hospital': {
         if (d?.clCdNm) Object.assign(schema, { medicalSpecialty: d.clCdNm })
+        const specs = buildOpeningHoursSpecs(d)
+        if (specs.length) Object.assign(schema, { openingHoursSpecification: specs })
         break
       }
     }
@@ -344,6 +357,43 @@ export function useStructuredData() {
     })
   }
 
+  /**
+   * HowTo 스키마 (쓰레기배출 등 절차 안내용)
+   */
+  function setHowToSchema(params: {
+    name: string
+    description: string
+    steps: Array<{ name: string; text: string }>
+    totalTime?: string
+  }) {
+    if (params.steps.length === 0) return
+
+    const schema: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: params.name,
+      description: params.description,
+      step: params.steps.map((s) => ({
+        '@type': 'HowToStep',
+        name: s.name,
+        text: s.text,
+      })),
+    }
+
+    if (params.totalTime) {
+      schema.totalTime = params.totalTime
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
   return {
     setWebsiteSchema,
     setBreadcrumbSchema,
@@ -353,5 +403,6 @@ export function useStructuredData() {
     setWasteScheduleSchema,
     setFAQSchema,
     setAggregateRatingSchema,
+    setHowToSchema,
   }
 }
