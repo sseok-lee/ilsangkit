@@ -21,11 +21,16 @@ export const FacilityCategorySchema = z.enum([
 
 export type FacilityCategory = z.infer<typeof FacilityCategorySchema>;
 
+// 검색/지역 조회용 카테고리 (trash 포함)
+export const RegionCategorySchema = z.enum([
+  'toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'trash',
+]);
+
 // 시설 검색 요청 스키마
 export const FacilitySearchSchema = z
   .object({
     keyword: z.string().min(1).max(100).optional(),
-    category: FacilityCategorySchema.optional(),
+    category: RegionCategorySchema.optional(),
     lat: z.coerce.number().min(KOREA_BOUNDS.LAT_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LAT_MAX, '한국 영역 외 좌표입니다').optional(),
     lng: z.coerce.number().min(KOREA_BOUNDS.LNG_MIN, '한국 영역 외 좌표입니다').max(KOREA_BOUNDS.LNG_MAX, '한국 영역 외 좌표입니다').optional(),
     radius: z.coerce.number().int().min(SEARCH_DEFAULTS.MIN_RADIUS_METERS).max(SEARCH_DEFAULTS.MAX_RADIUS_METERS).default(SEARCH_DEFAULTS.RADIUS_METERS).optional(),
@@ -61,11 +66,6 @@ export const FacilityDetailParamsSchema = z.object({
   category: FacilityCategorySchema,
   id: z.string().min(1).max(50),
 });
-
-// 지역별 시설 조회용 카테고리 (trash 포함)
-export const RegionCategorySchema = z.enum([
-  'toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'trash',
-]);
 
 // 지역별 시설 조회 파라미터 스키마
 export const RegionFacilitiesParamsSchema = z.object({

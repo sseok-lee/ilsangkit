@@ -27,7 +27,12 @@ export function validate<T extends ZodSchema>(
     try {
       const data = schema.parse(req[source]);
       // 파싱된 데이터로 교체 (타입 변환 및 기본값 적용됨)
-      req[source] = data;
+      // Express 5: req.query/params는 read-only getter이므로 Object.defineProperty 사용
+      if (source === 'query' || source === 'params') {
+        Object.defineProperty(req, source, { value: data, writable: true, configurable: true });
+      } else {
+        req[source] = data;
+      }
       next();
     } catch (error) {
       if (error instanceof ZodError) {

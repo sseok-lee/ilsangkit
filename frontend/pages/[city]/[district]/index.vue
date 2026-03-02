@@ -114,7 +114,7 @@
       <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">빠른 검색</h2>
       <div class="flex flex-col sm:flex-row gap-4">
         <NuxtLink
-          :to="`/search?keyword=${encodeURIComponent(cityName + ' ' + districtName)}`"
+          :to="`/search?city=${encodeURIComponent(cityName)}&district=${encodeURIComponent(districtName)}`"
           class="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors"
         >
           <span class="material-symbols-outlined">search</span>
@@ -197,8 +197,8 @@ const categoryBgColors: Record<FacilityCategory, string> = {
   pharmacy: 'bg-emerald-50 dark:bg-emerald-900/30',
 }
 
-// Categories (grouped) — trash는 좌표 없는 일정 데이터이므로 지역 허브에서 제외
-const EXCLUDED_REGION_CATEGORIES = new Set(['trash'])
+// Categories (grouped)
+const EXCLUDED_REGION_CATEGORIES = new Set<string>([])
 const categoryGroups = computed(() =>
   CATEGORY_GROUPS.map(group => ({
     title: group.title,

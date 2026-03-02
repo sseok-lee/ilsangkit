@@ -274,6 +274,10 @@ const searchTitle = computed(() => {
   if (categoryLabel) {
     return `${categoryLabel} 검색 결과`
   }
+  if (selectedCity.value || selectedDistrict.value) {
+    const regionParts = [selectedCity.value, selectedDistrict.value].filter(Boolean)
+    return `"${regionParts.join(' ')}" 검색 결과`
+  }
   return '주변 시설'
 })
 
@@ -408,12 +412,18 @@ onMounted(async () => {
 
   // Read city filter from query param
   if (route.query.city) {
-    const cityName = route.query.city as string
-    selectedCity.value = cityName
-    // Load districts for the selected city
-    if (cityName) {
-      districts.value = await getDistricts(cityName)
+    const cityParam = route.query.city as string
+    // 단축명(서울)→풀네임(서울특별시) 정규화
+    const matchedCity = cities.value.find(c => c === cityParam || c.startsWith(cityParam))
+    selectedCity.value = matchedCity || cityParam
+    if (selectedCity.value) {
+      districts.value = await getDistricts(selectedCity.value)
     }
+  }
+
+  // Read district filter from query param
+  if (route.query.district) {
+    selectedDistrict.value = route.query.district as string
   }
 
   // Initial search (grouped)

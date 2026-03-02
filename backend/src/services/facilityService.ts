@@ -319,6 +319,41 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
   );
 
   const categories = results.filter((r) => r.count > 0);
+
+  // trash(WasteSchedule) 별도 조회 — 좌표 없는 일정 데이터이므로 ALL_CATEGORIES와 분리
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const trashWhere: any = {
+    ...buildRegionFilter(city, district),
+  };
+  if (keyword) {
+    trashWhere.OR = [
+      { targetRegion: { contains: keyword } },
+      { emissionPlace: { contains: keyword } },
+    ];
+  }
+  const [trashCount, trashRecords] = await Promise.all([
+    prisma.wasteSchedule.count({ where: trashWhere }),
+    prisma.wasteSchedule.findMany({ where: trashWhere, take: 3, orderBy: { targetRegion: 'asc' } }),
+  ]);
+  if (trashCount > 0) {
+    categories.push({
+      category: 'trash' as FacilityCategory,
+      label: '쓰레기배출',
+      count: trashCount,
+      items: trashRecords.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+        id: String(r.id),
+        category: 'trash' as FacilityCategory,
+        name: r.targetRegion || `${r.district} 쓰레기 배출`,
+        address: r.emissionPlace || null,
+        roadAddress: null,
+        lat: 0,
+        lng: 0,
+        city: r.city,
+        district: r.district,
+      })),
+    });
+  }
+
   const totalCount = categories.reduce((sum, r) => sum + r.count, 0);
 
   return { categories, totalCount };
@@ -334,6 +369,35 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
  */
 export async function search(params: FacilitySearchInput): Promise<SearchResult> {
   const { category, keyword, lat, lng, radius = SEARCH_DEFAULTS.RADIUS_METERS, swLat, swLng, neLat, neLng, city, district, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT, sort = 'name' } = params;
+
+  // trash: WasteSchedule 별도 처리 (좌표 없는 일정 데이터)
+  if (category === 'trash') {
+    const skip = (page - 1) * limit;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const trashWhere: any = { ...buildRegionFilter(city, district) };
+    if (keyword) {
+      trashWhere.OR = [
+        { targetRegion: { contains: keyword } },
+        { emissionPlace: { contains: keyword } },
+      ];
+    }
+    const [records, total] = await Promise.all([
+      prisma.wasteSchedule.findMany({ where: trashWhere, skip, take: limit, orderBy: { targetRegion: 'asc' } }),
+      prisma.wasteSchedule.count({ where: trashWhere }),
+    ]);
+    const items: FacilityItem[] = records.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      id: String(r.id),
+      category: 'trash' as FacilityCategory,
+      name: r.targetRegion || `${r.district} 쓰레기 배출`,
+      address: r.emissionPlace || null,
+      roadAddress: null,
+      lat: 0,
+      lng: 0,
+      city: r.city,
+      district: r.district,
+    }));
+    return { items, total, page, totalPages: Math.ceil(total / limit) };
+  }
 
   // --- 좌표 기반 검색: Haversine 거리 계산 ---
   if (lat !== undefined && lng !== undefined) {
@@ -849,11 +913,13 @@ export async function getByRegionAll(
     district: resolved.district,
   };
 
-  // 전체 카테고리 카운트
-  const counts = await Promise.all(
-    ALL_CATEGORIES.map((cat) => CATEGORY_REGISTRY[cat].model().count({ where })),
-  );
-  const total = counts.reduce((sum, c) => sum + c, 0);
+  // 전체 카테고리 카운트 (trash 포함)
+  const trashWhere = { city: cityCondition, district: resolved.district };
+  const [counts, trashCount] = await Promise.all([
+    Promise.all(ALL_CATEGORIES.map((cat) => CATEGORY_REGISTRY[cat].model().count({ where }))),
+    prisma.wasteSchedule.count({ where: trashWhere }),
+  ]);
+  const total = counts.reduce((sum, c) => sum + c, 0) + trashCount;
 
   // skip/take 계산 → 필요한 카테고리만 병렬 fetch
   const skip = (page - 1) * limit;
@@ -887,13 +953,42 @@ export async function getByRegionAll(
     }),
   );
 
+  const allItems = fetchResults.flat();
+
+  // trash(WasteSchedule) 페이지네이션 처리
+  if (remainingTake > 0 && trashCount > 0) {
+    if (remainingSkip < trashCount) {
+      const trashSkip = remainingSkip;
+      const trashTake = Math.min(remainingTake, trashCount - trashSkip);
+      const trashRecords = await prisma.wasteSchedule.findMany({
+        where: trashWhere,
+        skip: trashSkip,
+        take: trashTake,
+        orderBy: { targetRegion: 'asc' },
+      });
+      allItems.push(
+        ...trashRecords.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          id: String(r.id),
+          category: 'trash' as FacilityCategory,
+          name: r.targetRegion || `${r.district} 쓰레기 배출`,
+          address: r.emissionPlace || null,
+          roadAddress: null,
+          lat: 0,
+          lng: 0,
+          city: r.city,
+          district: r.district,
+        })),
+      );
+    }
+  }
+
   return {
     region: {
       city: resolved.city,
       district: resolved.district,
       bjdCode: resolved.bjdCode,
     },
-    items: fetchResults.flat(),
+    items: allItems,
     total,
     page,
     totalPages: Math.ceil(total / limit),

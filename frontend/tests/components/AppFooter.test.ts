@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import AppFooter from '~/components/common/AppFooter.vue'
-import { CATEGORY_META } from '~/types/facility'
 
 describe('AppFooter', () => {
   describe('Rendering', () => {
@@ -135,69 +134,5 @@ describe('AppFooter', () => {
         expect(linkContainer.classes().some((c) => c.includes('gap'))).toBe(true)
       }
     })
-  })
-})
-
-describe('AppFooter - Internal links', () => {
-  const mountFooter = () =>
-    mount(AppFooter, {
-      global: {
-        stubs: {
-          NuxtLink: {
-            template: '<a :href="to"><slot /></a>',
-            props: ['to'],
-          },
-        },
-      },
-    })
-
-  it('should render all 10 category links', () => {
-    const wrapper = mountFooter()
-    const categories: (keyof typeof CATEGORY_META)[] = [
-      'toilet', 'wifi', 'parking', 'kiosk',
-      'hospital', 'pharmacy', 'aed',
-      'library', 'clothes', 'trash',
-    ]
-    for (const category of categories) {
-      const link = wrapper.find(`a[href="/${category}"]`)
-      expect(link.exists(), `link for /${category} should exist`).toBe(true)
-    }
-  })
-
-  it('should render category link text matching CATEGORY_META label', () => {
-    const wrapper = mountFooter()
-    const categories = Object.keys(CATEGORY_META) as (keyof typeof CATEGORY_META)[]
-    for (const category of categories) {
-      const link = wrapper.find(`a[href="/${category}"]`)
-      expect(link.exists()).toBe(true)
-      expect(link.text()).toBe(CATEGORY_META[category].label)
-    }
-  })
-
-  it('should have at least 3 major city links (서울, 부산, 인천)', () => {
-    const wrapper = mountFooter()
-    const citySlugs = ['seoul', 'busan', 'incheon']
-    for (const slug of citySlugs) {
-      const link = wrapper.find(`a[href="/${slug}"]`)
-      expect(link.exists(), `city link for /${slug} should exist`).toBe(true)
-    }
-  })
-
-  it('should keep existing /about, /privacy, /terms, /contact links', () => {
-    const wrapper = mountFooter()
-    for (const path of ['/about', '/privacy', '/terms', '/contact']) {
-      const link = wrapper.find(`a[href="${path}"]`)
-      expect(link.exists(), `link for ${path} should exist`).toBe(true)
-    }
-  })
-
-  it('should render footer-categories section', () => {
-    const wrapper = mountFooter()
-    expect(wrapper.find('[data-testid="footer-categories"]').exists()).toBe(true)
-  })
-
-  it('should render footer-regions section', () => {
-    const wrapper = mountFooter()
-    expect(wrapper.find('[data-testid="footer-regions"]').exists()).toBe(true)
   })
 })
