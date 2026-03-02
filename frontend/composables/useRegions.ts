@@ -244,12 +244,17 @@ export function useRegions() {
         cityMap.set(citySlug, [])
       }
 
+      // slug가 한글이면 로마자로 변환 (DB 데이터 방어)
+      const districtSlug = /[가-힣]/.test(region.slug)
+        ? generateSlug(region.district)
+        : region.slug
+
       // slug 중복 방지 (같은 구가 다른 city 형식으로 중복 저장된 경우)
       const existingDistricts = cityMap.get(citySlug)!
-      if (existingDistricts.some((d) => d.slug === region.slug)) continue
+      if (existingDistricts.some((d) => d.slug === districtSlug)) continue
 
       existingDistricts.push({
-        slug: region.slug,
+        slug: districtSlug,
         name: region.district,
         lat: region.lat,
         lng: region.lng,
@@ -272,7 +277,12 @@ export function useRegions() {
     if (!cityName) return undefined
 
     return cachedRegions.value.find(
-      (r) => (r.city === cityName || r.city.startsWith(cityName)) && r.slug === districtSlug
+      (r) => {
+        if (!(r.city === cityName || r.city.startsWith(cityName))) return false
+        // DB slug가 한글이면 generateSlug로 변환하여 비교
+        const rSlug = /[가-힣]/.test(r.slug) ? generateSlug(r.district) : r.slug
+        return rSlug === districtSlug
+      }
     )
   }
 
