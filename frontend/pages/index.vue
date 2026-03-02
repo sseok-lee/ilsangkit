@@ -196,15 +196,15 @@
             인기 지역
           </h2>
           <div class="flex flex-wrap gap-3">
-            <button
+            <NuxtLink
               v-for="region in popularRegions"
-              :key="region.name"
+              :key="region.slug"
+              :to="`/${region.slug}`"
               :data-testid="`region-${region.name}`"
               class="px-5 py-2.5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-full text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-primary hover:border-primary hover:text-white dark:hover:bg-primary dark:hover:border-primary dark:hover:text-white transition-all shadow-sm"
-              @click="handleRegionClick(region.query, 'city')"
             >
               {{ region.name }}
-            </button>
+            </NuxtLink>
           </div>
         </div>
       </section>
@@ -330,16 +330,25 @@ const popularRegionsMobile = [
   { name: '건대입구', query: '건대입구' },
 ]
 
-// 데스크톱용 인기 지역
+// 데스크톱용 인기 지역 (17개 시/도 허브 링크)
 const popularRegions = [
-  { name: '서울', query: '서울' },
-  { name: '경기', query: '경기' },
-  { name: '부산', query: '부산' },
-  { name: '대구', query: '대구' },
-  { name: '인천', query: '인천' },
-  { name: '광주', query: '광주' },
-  { name: '대전', query: '대전' },
-  { name: '울산', query: '울산' },
+  { name: '서울', slug: 'seoul' },
+  { name: '경기', slug: 'gyeonggi' },
+  { name: '부산', slug: 'busan' },
+  { name: '대구', slug: 'daegu' },
+  { name: '인천', slug: 'incheon' },
+  { name: '광주', slug: 'gwangju' },
+  { name: '대전', slug: 'daejeon' },
+  { name: '울산', slug: 'ulsan' },
+  { name: '세종', slug: 'sejong' },
+  { name: '강원', slug: 'gangwon' },
+  { name: '충북', slug: 'chungbuk' },
+  { name: '충남', slug: 'chungnam' },
+  { name: '전북', slug: 'jeonbuk' },
+  { name: '전남', slug: 'jeonnam' },
+  { name: '경북', slug: 'gyeongbuk' },
+  { name: '경남', slug: 'gyeongnam' },
+  { name: '제주', slug: 'jeju' },
 ]
 
 function handleSearch() {

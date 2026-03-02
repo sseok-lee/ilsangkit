@@ -349,7 +349,8 @@ const REGIONS: Record<string, string[]> = {
 }
 
 function getDistrictSlug(koreanName: string): string {
-  return KOREAN_TO_ROMANIZATION[koreanName] || koreanName.toLowerCase().replace(/\s+/g, '-')
+  const raw = KOREAN_TO_ROMANIZATION[koreanName] || koreanName.toLowerCase().replace(/\s+/g, '-')
+  return raw.replace(/-(gu|si|gun)$/, '')
 }
 
 // Fallback: API 실패 시 도시/구군 허브 페이지만 추가 (빈 카테고리 조합은 제외)
@@ -409,6 +410,7 @@ export default defineEventHandler(async (event) => {
       // 고유 도시, 도시+구군 조합 추출
       const citySet = new Set<string>()
       const districtSet = new Set<string>()
+      const urlSet = new Set<string>()
 
       for (const combo of combinations) {
         if (!combo.citySlug || !combo.districtSlug) continue
@@ -416,12 +418,11 @@ export default defineEventHandler(async (event) => {
         citySet.add(combo.citySlug)
         districtSet.add(`${combo.citySlug}/${combo.districtSlug}`)
 
-        urls.push({
-          loc: `${SITE_URL}/${combo.citySlug}/${combo.districtSlug}/${combo.category}`,
-          lastmod: today,
-          changefreq: 'weekly',
-          priority: 0.8,
-        })
+        const loc = `${SITE_URL}/${combo.citySlug}/${combo.districtSlug}/${combo.category}`
+        if (!urlSet.has(loc)) {
+          urlSet.add(loc)
+          urls.push({ loc, lastmod: today, changefreq: 'weekly', priority: 0.8 })
+        }
       }
 
       // 도시 허브 페이지 (예: /seoul)

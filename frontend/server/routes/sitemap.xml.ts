@@ -22,33 +22,43 @@ export default defineEventHandler(async (event) => {
     { loc: `${SITE_URL}/sitemap/static.xml`, lastmod: today },
   ]
 
-  // 시설 카테고리별 count 조회 → 페이지 수 계산
+  // 시설 카테고리별 count 조회 → 페이지 수 계산 + 최신 updatedAt 추출
   const counts = await Promise.all(
     FACILITY_CATEGORIES.map(async (cat) => {
       const items = await fetchFacilityIds(cat, apiBase)
-      return { category: cat, count: items.length }
+      const latestDate = items.reduce((max, item) => {
+        const d = item.updatedAt?.split('T')[0]
+        return d && d > max ? d : max
+      }, '')
+      return { category: cat, count: items.length, latestDate }
     })
   )
 
-  for (const { category, count } of counts) {
+  for (const { category, count, latestDate } of counts) {
+    const lastmod = latestDate || today
     const pages = Math.max(1, Math.ceil(count / MAX_URLS_PER_SITEMAP))
     if (pages === 1) {
-      sitemaps.push({ loc: `${SITE_URL}/sitemap/${category}.xml`, lastmod: today })
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/${category}.xml`, lastmod })
     } else {
       for (let i = 1; i <= pages; i++) {
-        sitemaps.push({ loc: `${SITE_URL}/sitemap/${category}-${i}.xml`, lastmod: today })
+        sitemaps.push({ loc: `${SITE_URL}/sitemap/${category}-${i}.xml`, lastmod })
       }
     }
   }
 
   // trash (waste schedules)
   const trashItems = await fetchWasteScheduleIds(apiBase)
+  const trashLatestDate = trashItems.reduce((max, item) => {
+    const d = item.updatedAt?.split('T')[0]
+    return d && d > max ? d : max
+  }, '')
+  const trashLastmod = trashLatestDate || today
   const trashPages = Math.max(1, Math.ceil(trashItems.length / MAX_URLS_PER_SITEMAP))
   if (trashPages === 1) {
-    sitemaps.push({ loc: `${SITE_URL}/sitemap/trash.xml`, lastmod: today })
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/trash.xml`, lastmod: trashLastmod })
   } else {
     for (let i = 1; i <= trashPages; i++) {
-      sitemaps.push({ loc: `${SITE_URL}/sitemap/trash-${i}.xml`, lastmod: today })
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/trash-${i}.xml`, lastmod: trashLastmod })
     }
   }
 
