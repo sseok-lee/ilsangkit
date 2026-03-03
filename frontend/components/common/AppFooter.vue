@@ -22,6 +22,12 @@
             이용약관
           </NuxtLink>
           <NuxtLink
+            to="/faq"
+            class="text-gray-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
+          >
+            자주 묻는 질문
+          </NuxtLink>
+          <NuxtLink
             to="/contact"
             class="text-gray-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
           >

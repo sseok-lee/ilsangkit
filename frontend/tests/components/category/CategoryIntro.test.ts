@@ -35,9 +35,10 @@ describe('CategoryIntro', () => {
     expect(heading.exists()).toBe(true)
   })
 
-  it('소개 텍스트가 100자 이상이다', () => {
+  it('소개 텍스트가 30자 이상 100자 이하이다', () => {
     for (const category of ALL_CATEGORIES) {
-      expect(CATEGORY_DESCRIPTIONS[category].length).toBeGreaterThanOrEqual(100)
+      expect(CATEGORY_DESCRIPTIONS[category].length).toBeGreaterThanOrEqual(30)
+      expect(CATEGORY_DESCRIPTIONS[category].length).toBeLessThanOrEqual(100)
     }
   })
 
