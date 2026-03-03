@@ -198,7 +198,7 @@
             <div class="aspect-video bg-slate-100 dark:bg-slate-700 overflow-hidden">
               <img
                 v-if="guide.thumbnailUrl"
-                :src="guide.thumbnailUrl"
+                :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
                 :alt="guide.title"
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
@@ -267,6 +267,8 @@ import { useRecentReviews } from '~/composables/useReviews'
 import { useGuides } from '~/composables/useGuides'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useStructuredData } from '~/composables/useStructuredData'
+
+const config = useRuntimeConfig()
 
 // SEO 메타태그
 const { setHomeMeta } = useFacilityMeta()

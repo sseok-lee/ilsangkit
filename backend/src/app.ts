@@ -2,6 +2,8 @@
 // @SPEC docs/planning/02-trd.md#백엔드-아키텍처
 
 import express, { Application, Request, Response, NextFunction } from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
@@ -24,6 +26,17 @@ app.use(globalRateLimiter); // Apply global rate limiter
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(sanitizeInput);
+
+// Static file serving (uploaded images)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadDir = process.env.UPLOAD_DIR || path.resolve(__dirname, '../../assets/images');
+app.use('/api/images', (_req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(uploadDir, {
+  maxAge: '7d',
+  immutable: true,
+}));
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {

@@ -31,6 +31,10 @@
 
       <!-- Meta -->
       <div class="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mb-6 pb-6 border-b border-slate-200 dark:border-slate-700">
+        <span class="flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">edit_note</span>
+          일상킷 편집팀
+        </span>
         <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
         <span class="flex items-center gap-1">
           <span class="material-symbols-outlined text-[16px]">visibility</span>
@@ -41,7 +45,7 @@
       <!-- Thumbnail -->
       <div v-if="guide.thumbnailUrl" class="mb-8 rounded-xl overflow-hidden">
         <img
-          :src="guide.thumbnailUrl"
+          :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
           :alt="guide.title"
           class="w-full aspect-video object-cover"
         />
@@ -74,6 +78,17 @@
             #{{ keyword }}
           </span>
         </div>
+      </div>
+
+      <!-- AI 작성 안내 -->
+      <div class="mt-8 border-l-4 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 rounded-r-lg p-4">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">AI 작성 안내</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+          본 콘텐츠는 인공지능(AI) 기술을 활용하여 정보를 정리 및 요약한 글입니다.
+          내용의 정확성을 보증하지 않으며, 투자나 법적 판단의 근거로 활용하기에는
+          적합하지 않을 수 있습니다. 정확한 정보는 관련 기관의 공식 자료를 확인해
+          주시기 바랍니다.
+        </p>
       </div>
 
       <!-- Back to list -->
@@ -117,6 +132,7 @@ import type { FacilityCategory } from '~/types/facility'
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 
+const config = useRuntimeConfig()
 const { fetchGuideBySlug } = useGuides()
 const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema } = useStructuredData()
@@ -154,7 +170,7 @@ onMounted(async () => {
       description: guide.value.summary,
       path: `/guide/${guide.value.slug}`,
       type: 'article',
-      image: guide.value.thumbnailUrl || undefined,
+      image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
     })
 
     // Breadcrumb
@@ -174,10 +190,15 @@ onMounted(async () => {
             '@type': 'Article',
             headline: guide.value.title,
             description: guide.value.summary,
-            image: guide.value.thumbnailUrl || undefined,
+            image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
             datePublished: guide.value.createdAt,
             dateModified: guide.value.updatedAt,
             url: `${SITE_URL}/guide/${guide.value.slug}`,
+            author: {
+              '@type': 'Organization',
+              name: '일상킷 편집팀',
+              url: SITE_URL,
+            },
             publisher: {
               '@type': 'Organization',
               name: '일상킷',

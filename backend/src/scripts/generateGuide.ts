@@ -116,19 +116,25 @@ export async function collectNewsTitles(category: string): Promise<string[]> {
 
 const ARTICLE_TEMPLATE = `
 ## 최근 이슈: {뉴스에서 영감받은 소제목}
-(수집된 뉴스 2~3건을 자연스럽게 언급하며 최근 동향 해설. 왜 지금 이 주제가 중요한지 맥락 제공. 2~3문단)
+(수집된 뉴스 2~3건을 자연스럽게 언급하며 최근 동향 해설. 왜 지금 이 주제가 중요한지 맥락 제공. 3~4문단)
 
 ## {카테고리}, 제대로 알고 계신가요?
-(이 시설/서비스의 정의, 위치, 법적 근거, 설치 기준 등 기본 정보. 2~3문단)
+(이 시설/서비스의 정의, 위치, 법적 근거, 설치 기준 등 기본 정보. 역사적 배경이나 제도 변화 포함. 3~4문단)
 
 ## 똑똑하게 활용하는 방법
-(이용 절차, 찾는 법, 사용법을 번호 리스트로 구체적 설명. 유용한 앱/웹사이트 소개 포함)
+(이용 절차, 찾는 법, 사용법을 번호 리스트로 구체적 설명. 유용한 앱/웹사이트 소개 포함. 5개 이상 항목)
+
+## 관련 제도와 정책
+(이 시설/서비스와 관련된 법률, 조례, 정부 정책, 지자체 지원 제도 등을 2~3문단으로 설명)
+
+## 자주 하는 실수와 해결법
+(이용 시 흔히 하는 실수나 오해 3~5가지를 "**실수:** 설명 → **해결:** 올바른 방법" 형식으로 정리)
 
 ## 이것만은 꼭! 실용 꿀팁
-(대부분 모르는 유용한 팁 3~5개. 각각 "**팁제목:** 설명" 형식의 리스트)
+(대부분 모르는 유용한 팁 5~7개. 각각 "**팁제목:** 설명" 형식의 리스트)
 
 ## 마무리
-(핵심 1줄 요약 + "일상킷에서 내 주변 {카테고리}를 바로 찾아보세요!")
+(핵심 2~3줄 요약 + "일상킷에서 내 주변 {카테고리}를 바로 찾아보세요!")
 `;
 
 // ---------------------------------------------------------------------------
@@ -161,18 +167,19 @@ async function generateArticle(
 참고 뉴스 제목:
 ${titlesBlock}
 
-## 글 구조 (반드시 아래 5개 섹션을 순서대로 작성)
+## 글 구조 (반드시 아래 7개 섹션을 순서대로 작성)
 
 ${ARTICLE_TEMPLATE.split('{카테고리}').join(categoryLabel)}
 
 ## 작성 규칙
-- 전체 1200~2000자 분량
+- 전체 2500~3500자 분량 (반드시 2500자 이상)
 - 마크다운 형식 (## 소제목, **강조**, - 리스트, 1. 번호 리스트)
 - 참고 뉴스 제목을 자연스럽게 녹여서 해설 (원문 복사 금지)
 - 독자가 바로 실천할 수 있는 구체적 정보 위주
+- 각 섹션마다 2~4문단 또는 3개 이상의 리스트 항목 포함
 - 친근하고 자연스러운 한국어 경어체
 - 반드시 순수 한국어로 작성 (영어 단어 사용 금지, 고유명사/약어 제외)
-- content 필드에 위 5개 섹션의 마크다운만 포함
+- content 필드에 위 7개 섹션의 마크다운만 포함
 
 다음 JSON 형식으로 응답:
 {
@@ -318,12 +325,12 @@ export async function generateOneGuide(category: string): Promise<GeneratedGuide
   // 4. Generate thumbnail image
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const projectRoot = path.resolve(__dirname, '../../../');
-  const imagePath = path.join(projectRoot, 'frontend', 'public', 'images', 'guides', `${slug}.webp`);
+  const uploadDir = process.env.UPLOAD_DIR || path.resolve(__dirname, '../../../assets/images');
+  const imagePath = path.join(uploadDir, 'guides', `${slug}.webp`);
 
   console.log('썸네일 이미지 생성 중...');
   const imageGenerated = await generateThumbnail(openai, article.title, article.content, imagePath);
-  const thumbnailUrl = imageGenerated ? `/images/guides/${slug}.webp` : null;
+  const thumbnailUrl = imageGenerated ? `/api/images/guides/${slug}.webp` : null;
   if (!thumbnailUrl) {
     console.log('썸네일 없이 진행합니다.');
   }

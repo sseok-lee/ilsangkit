@@ -57,7 +57,7 @@
           <div class="aspect-video bg-slate-100 dark:bg-slate-700 overflow-hidden">
             <img
               v-if="guide.thumbnailUrl"
-              :src="guide.thumbnailUrl"
+              :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
               :alt="guide.title"
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
@@ -150,6 +150,7 @@ setBreadcrumbSchema([
   { name: '생활 가이드', url: '/guide' },
 ])
 
+const config = useRuntimeConfig()
 const { fetchGuides } = useGuides()
 
 const guides = ref<GuideSummary[]>([])

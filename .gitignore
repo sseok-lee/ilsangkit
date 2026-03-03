@@ -33,6 +33,9 @@ design_backup/
 docs_backup/
 specs_backup/
 
+# Uploaded assets (images etc)
+assets/
+
 # Temp data files
 backend/temp/
 
