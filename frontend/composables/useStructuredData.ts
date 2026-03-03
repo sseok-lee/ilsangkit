@@ -257,6 +257,13 @@ export function useStructuredData() {
       name: SITE_NAME,
       url: SITE_URL,
       logo: `${SITE_URL}/icons/logo.webp`,
+      description: '전국 공공시설 정보를 한곳에서 찾을 수 있는 생활 편의 서비스. 병원, 약국, 공공화장실, 무료 와이파이 등 10개 카테고리의 생활 편의시설을 통합 검색합니다.',
+      contactPoint: {
+        '@type': 'ContactPoint',
+        contactType: 'customer service',
+        email: 'contact@ilsangkit.co.kr',
+        availableLanguage: 'Korean',
+      },
       sameAs: [
         // 소셜 미디어 링크 추가 가능
       ],

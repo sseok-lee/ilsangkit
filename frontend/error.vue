@@ -1,9 +1,18 @@
 <template>
-  <NuxtLayout>
+  <div class="min-h-screen flex flex-col">
     <Head>
       <Title>{{ errorTitle }}</Title>
       <Meta name="robots" content="noindex, nofollow" />
     </Head>
+
+    <!-- Inline Header (에러 페이지에서 NuxtLayout 사용 시 cascading error 방지) -->
+    <header class="bg-white border-b border-gray-200 px-4 py-3">
+      <div class="max-w-screen-xl mx-auto flex items-center">
+        <NuxtLink to="/" class="text-xl font-bold text-primary" @click.prevent="handleError">
+          일상킷
+        </NuxtLink>
+      </div>
+    </header>
 
     <main class="flex-1 flex items-center justify-center px-4 py-16">
       <div class="max-w-lg w-full text-center">
@@ -48,7 +57,12 @@
         </div>
       </div>
     </main>
-  </NuxtLayout>
+
+    <!-- Inline Footer -->
+    <footer class="bg-white border-t border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
+      <p>&copy; {{ new Date().getFullYear() }} 일상킷. All rights reserved.</p>
+    </footer>
+  </div>
 </template>
 
 <script setup lang="ts">

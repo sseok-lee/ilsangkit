@@ -118,15 +118,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed } from 'vue'
 import { marked } from 'marked'
 import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL } from '~/utils/seoConstants'
-import type { GuideDetail } from '~/composables/useGuides'
 import type { FacilityCategory } from '~/types/facility'
 
 const route = useRoute()
@@ -137,8 +135,18 @@ const { fetchGuideBySlug } = useGuides()
 const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema } = useStructuredData()
 
-const guide = ref<GuideDetail | null>(null)
-const loading = ref(true)
+// SSR 호환: useAsyncData로 가이드 데이터 가져오기 (서버에서도 실행)
+const { data: guide, status } = await useAsyncData(
+  `guide-${slug.value}`,
+  () => fetchGuideBySlug(slug.value),
+)
+
+// 가이드를 찾을 수 없으면 404 반환 (SSR에서 HTTP 404 상태 코드 전송)
+if (!guide.value) {
+  throw createError({ statusCode: 404, statusMessage: '가이드를 찾을 수 없습니다' })
+}
+
+const loading = computed(() => status.value === 'pending')
 
 const categoryLabel = computed(() => {
   if (!guide.value) return ''
@@ -160,62 +168,58 @@ function formatDate(dateStr: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
-onMounted(async () => {
-  try {
-    guide.value = await fetchGuideBySlug(slug.value)
+// SEO meta
+if (guide.value) {
+  setMeta({
+    title: guide.value.title,
+    description: guide.value.summary,
+    path: `/guide/${guide.value.slug}`,
+    type: 'article',
+    image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
+  })
 
-    // SEO meta
-    setMeta({
-      title: guide.value.title,
-      description: guide.value.summary,
-      path: `/guide/${guide.value.slug}`,
-      type: 'article',
-      image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
-    })
+  // Breadcrumb
+  setBreadcrumbSchema([
+    { name: '홈', url: '/' },
+    { name: '생활 가이드', url: '/guide' },
+    { name: guide.value.title, url: `/guide/${guide.value.slug}` },
+  ])
 
-    // Breadcrumb
-    setBreadcrumbSchema([
-      { name: '홈', url: '/' },
-      { name: '생활 가이드', url: '/guide' },
-      { name: guide.value.title, url: `/guide/${guide.value.slug}` },
-    ])
-
-    // Article JSON-LD
-    useHead({
-      script: [
-        {
-          type: 'application/ld+json',
-          innerHTML: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: guide.value.title,
-            description: guide.value.summary,
-            image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
-            datePublished: guide.value.createdAt,
-            dateModified: guide.value.updatedAt,
-            url: `${SITE_URL}/guide/${guide.value.slug}`,
-            author: {
-              '@type': 'Organization',
-              name: '일상킷 편집팀',
-              url: SITE_URL,
+  // Article JSON-LD (publisher.logo 포함)
+  useHead({
+    script: [
+      {
+        type: 'application/ld+json',
+        innerHTML: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: guide.value.title,
+          description: guide.value.summary,
+          image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
+          datePublished: guide.value.createdAt,
+          dateModified: guide.value.updatedAt,
+          url: `${SITE_URL}/guide/${guide.value.slug}`,
+          author: {
+            '@type': 'Organization',
+            name: '일상킷 편집팀',
+            url: `${SITE_URL}/about`,
+          },
+          publisher: {
+            '@type': 'Organization',
+            name: '일상킷',
+            url: SITE_URL,
+            logo: {
+              '@type': 'ImageObject',
+              url: `${SITE_URL}/icons/logo.webp`,
             },
-            publisher: {
-              '@type': 'Organization',
-              name: '일상킷',
-              url: SITE_URL,
-            },
-            mainEntityOfPage: {
-              '@type': 'WebPage',
-              '@id': `${SITE_URL}/guide/${guide.value.slug}`,
-            },
-          }),
-        },
-      ],
-    })
-  } catch {
-    guide.value = null
-  } finally {
-    loading.value = false
-  }
-})
+          },
+          mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': `${SITE_URL}/guide/${guide.value.slug}`,
+          },
+        }),
+      },
+    ],
+  })
+}
 </script>
