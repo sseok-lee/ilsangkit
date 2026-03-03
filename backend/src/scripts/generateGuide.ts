@@ -88,7 +88,13 @@ async function fetchNewsTitles(keyword: string, maxItems = 10): Promise<string[]
     const items = parsed?.rss?.channel?.item;
     if (!items) return [];
     const itemList = Array.isArray(items) ? items : [items];
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     return itemList
+      .filter((item: { pubDate?: string }) => {
+        if (!item.pubDate) return false;
+        const pubTime = new Date(item.pubDate).getTime();
+        return !isNaN(pubTime) && pubTime >= oneDayAgo;
+      })
       .slice(0, maxItems)
       .map((item: { title?: string | number }) => (item.title ? String(item.title).trim() : ''))
       .filter(Boolean);
@@ -296,7 +302,7 @@ export interface GeneratedGuide {
   category: string;
 }
 
-export async function generateOneGuide(category: string): Promise<GeneratedGuide> {
+export async function generateOneGuide(category: string): Promise<GeneratedGuide | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다.');
@@ -311,6 +317,11 @@ export async function generateOneGuide(category: string): Promise<GeneratedGuide
   const newsTitles = await collectNewsTitles(category);
   console.log(`수집된 뉴스 제목 ${newsTitles.length}건:`);
   newsTitles.forEach((t, i) => console.log(`  ${i + 1}. ${t}`));
+
+  if (newsTitles.length === 0) {
+    console.log('24시간 이내 관련 뉴스가 없어 글 생성을 건너뜁니다.');
+    return null;
+  }
 
   // 2. Generate article via OpenAI
   console.log('OpenAI 기사 생성 중...');
@@ -330,10 +341,10 @@ export async function generateOneGuide(category: string): Promise<GeneratedGuide
 
   console.log('썸네일 이미지 생성 중...');
   const imageGenerated = await generateThumbnail(openai, article.title, article.content, imagePath);
-  const thumbnailUrl = imageGenerated ? `/api/images/guides/${slug}.webp` : null;
-  if (!thumbnailUrl) {
-    console.log('썸네일 없이 진행합니다.');
+  if (!imageGenerated) {
+    throw new Error(`썸네일 이미지 생성 실패 - 글 등록을 중단합니다. (category: ${category})`);
   }
+  const thumbnailUrl = `/api/images/guides/${slug}.webp`;
 
   // 5. Upsert Guide record in DB
   console.log('데이터베이스에 저장 중...');
@@ -369,7 +380,10 @@ export async function generateOneGuide(category: string): Promise<GeneratedGuide
 
 async function main(): Promise<void> {
   const category = parseCategory();
-  await generateOneGuide(category);
+  const result = await generateOneGuide(category);
+  if (!result) {
+    console.log('24시간 이내 관련 뉴스가 없어 글 생성을 건너뛰었습니다.');
+  }
 }
 
 // ---------------------------------------------------------------------------
