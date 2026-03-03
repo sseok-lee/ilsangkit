@@ -71,6 +71,7 @@ export default defineNuxtConfig({
       '/sitemap/**': { swr: 86400 },
       '/': { swr: 300 },
       '/about': { prerender: true },
+      '/faq': { prerender: true },
       '/privacy': { prerender: true },
       '/terms': { prerender: true },
       '/_nuxt/**': { headers: { 'cache-control': 'public, max-age=31536000, immutable' } },
