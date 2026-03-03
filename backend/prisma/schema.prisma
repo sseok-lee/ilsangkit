@@ -394,6 +394,26 @@ model SyncHistory {
   completedAt    DateTime?
 }
 
+// 가이드 콘텐츠 테이블
+model Guide {
+  id           String   @id @default(cuid())
+  title        String   @db.VarChar(200)
+  slug         String   @unique @db.VarChar(200)
+  content      String   @db.LongText
+  summary      String   @db.VarChar(500)
+  category     String   @db.VarChar(50)
+  thumbnailUrl String?  @db.VarChar(500)
+  keywords     String?  @db.VarChar(500)
+  published    Boolean  @default(true)
+  viewCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([published, createdAt])
+  @@index([slug])
+}
+
 // 쓰레기 배출 일정 테이블 (좌표 없음 - 지도 마커 X)
 // API: https://www.data.go.kr/data/15155080/openapi.do
 model WasteSchedule {

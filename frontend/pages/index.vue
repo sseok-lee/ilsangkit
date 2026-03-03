@@ -173,6 +173,52 @@
         </div>
       </section>
 
+      <!-- Recent Guides Section -->
+      <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">menu_book</span>
+            생활 가이드
+          </h2>
+          <NuxtLink
+            to="/guide"
+            class="text-sm text-primary font-medium hover:underline flex items-center gap-1"
+          >
+            더보기
+            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </NuxtLink>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <NuxtLink
+            v-for="guide in recentGuides"
+            :key="guide.id"
+            :to="`/guide/${guide.slug}`"
+            class="group bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          >
+            <div class="aspect-video bg-slate-100 dark:bg-slate-700 overflow-hidden">
+              <img
+                v-if="guide.thumbnailUrl"
+                :src="guide.thumbnailUrl"
+                :alt="guide.title"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-[36px] text-slate-300 dark:text-slate-600">article</span>
+              </div>
+            </div>
+            <div class="p-3">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">
+                {{ guide.title }}
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+                {{ guide.summary }}
+              </p>
+            </div>
+          </NuxtLink>
+        </div>
+      </section>
+
       <!-- Recent Reviews Section -->
       <section v-if="recentReviews.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
@@ -218,6 +264,8 @@ import { CATEGORY_LABELS } from '~/utils/categoryIcons'
 import { CATEGORY_GROUPS } from '~/types/facility'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useRecentReviews } from '~/composables/useReviews'
+import { useGuides } from '~/composables/useGuides'
+import type { GuideSummary } from '~/composables/useGuides'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 // SEO 메타태그
@@ -232,8 +280,18 @@ const searchKeyword = ref('')
 
 // 최근 리뷰 (client-side fetch)
 const { recentReviews, fetchRecentReviews } = useRecentReviews()
-onMounted(() => {
+
+// 최근 가이드 (client-side fetch)
+const { fetchRecentGuides } = useGuides()
+const recentGuides = ref<GuideSummary[]>([])
+
+onMounted(async () => {
   fetchRecentReviews()
+  try {
+    recentGuides.value = await fetchRecentGuides(4)
+  } catch {
+    // 가이드 로드 실패 시 무시
+  }
 })
 
 // SSR: 통계 API를 useAsyncData로 fetch

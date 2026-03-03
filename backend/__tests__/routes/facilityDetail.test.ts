@@ -48,13 +48,13 @@ describe('GET /api/facilities/:category/:id', () => {
 
   it('조회수 증가', async () => {
     // 이전 테스트의 비동기 조회수 업데이트가 완료될 때까지 대기
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const before = await prisma.toilet.findUnique({ where: { id: testToilet.id } });
 
     await request(app).get('/api/facilities/toilet/toilet-detail-test');
 
-    // 비동기 조회수 업데이트를 기다림
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // 비동기 조회수 업데이트를 기다림 (fire-and-forget이므로 넉넉히 대기)
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const after = await prisma.toilet.findUnique({ where: { id: testToilet.id } });
     expect(after!.viewCount).toBe(before!.viewCount + 1);
@@ -118,12 +118,13 @@ describe('GET /api/facilities/hospital/:id', () => {
   });
 
   it('조회수 증가', async () => {
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const before = await prisma.hospital.findUnique({ where: { id: testHospital.id } });
 
     await request(app).get('/api/facilities/hospital/hospital-detail-test');
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // 비동기 조회수 업데이트를 기다림 (fire-and-forget이므로 넉넉히 대기)
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const after = await prisma.hospital.findUnique({ where: { id: testHospital.id } });
     expect(after!.viewCount).toBe(before!.viewCount + 1);
@@ -176,12 +177,13 @@ describe('GET /api/facilities/pharmacy/:id', () => {
   });
 
   it('조회수 증가', async () => {
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const before = await prisma.pharmacy.findUnique({ where: { id: testPharmacy.id } });
 
     await request(app).get('/api/facilities/pharmacy/pharmacy-detail-test');
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // 비동기 조회수 업데이트를 기다림 (fire-and-forget이므로 넉넉히 대기)
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const after = await prisma.pharmacy.findUnique({ where: { id: testPharmacy.id } });
     expect(after!.viewCount).toBe(before!.viewCount + 1);

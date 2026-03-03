@@ -398,6 +398,24 @@ export default defineEventHandler(async (event) => {
     urls.push({ loc: `${SITE_URL}/${category}`, lastmod: today, changefreq: 'daily', priority: 0.9 })
   }
 
+  // 가이드 목록 페이지
+  urls.push({ loc: `${SITE_URL}/guide`, lastmod: today, changefreq: 'daily', priority: 0.8 })
+
+  // 가이드 개별 글
+  try {
+    const guidesRes = await fetch(`${apiBase}/api/guides?limit=100`)
+    if (guidesRes.ok) {
+      const guidesJson = await guidesRes.json()
+      const guides: Array<{ slug: string; createdAt: string }> = guidesJson.data?.items || []
+      for (const guide of guides) {
+        const lastmod = guide.createdAt ? new Date(guide.createdAt).toISOString().split('T')[0] : today
+        urls.push({ loc: `${SITE_URL}/guide/${guide.slug}`, lastmod, changefreq: 'weekly', priority: 0.7 })
+      }
+    }
+  } catch (err) {
+    console.error('[sitemap] Failed to fetch guides:', err)
+  }
+
   // API에서 실제 데이터가 있는 지역-카테고리 조합만 가져오기
   const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
   try {

@@ -74,6 +74,13 @@
 
       <!-- Utility Links -->
       <NuxtLink
+        to="/guide"
+        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">menu_book</span>
+        가이드
+      </NuxtLink>
+      <NuxtLink
         to="/search"
         class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
       >
@@ -144,6 +151,13 @@
           @click="closeMobileMenu"
         >
           검색
+        </NuxtLink>
+        <NuxtLink
+          to="/guide"
+          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          @click="closeMobileMenu"
+        >
+          가이드
         </NuxtLink>
         <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
 

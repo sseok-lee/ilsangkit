@@ -230,7 +230,7 @@ const currentPage = ref(1)
 // 시설 0건 또는 페이지 2 이상일 때 noindex (중복 콘텐츠 방지)
 const pageQueryParam = Number(route.query.page) || 1
 useHead(computed(() => {
-  if ((!loading.value && facilities.value.length === 0 && !error.value) || pageQueryParam > 1) {
+  if ((!loading.value && facilities.value.length < 5 && !error.value) || pageQueryParam > 1) {
     return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
   }
   return { meta: [] }
