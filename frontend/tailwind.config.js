@@ -2,7 +2,6 @@ import typography from '@tailwindcss/typography'
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class',
   content: [
     './app/**/*.{vue,js,ts}',
     './components/**/*.{vue,js,ts}',
@@ -32,10 +31,8 @@ export default {
         secondary: '#8b5cf6',
         // Background colors (Stitch 디자인 시스템)
         'background-light': '#f9fafb',
-        'background-dark': '#101722',
         // Surface colors (Stitch 디자인 시스템)
         'surface-light': '#ffffff',
-        'surface-dark': '#1e293b',
         // Category accent color (purple for toilet)
         'accent-purple': '#8b5cf6',
         // Category colors

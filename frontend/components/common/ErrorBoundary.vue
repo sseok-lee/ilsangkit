@@ -4,11 +4,11 @@
 
     <template #error="{ error, clearError }">
       <div
-        class="flex flex-col items-center justify-center min-h-[200px] p-6 bg-red-50 dark:bg-red-900/20 rounded-lg"
+        class="flex flex-col items-center justify-center min-h-[200px] p-6 bg-red-50 rounded-lg"
         data-testid="error-boundary"
       >
         <!-- Error Icon -->
-        <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center mb-4">
+        <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
           <svg
             class="w-8 h-8 text-red-500"
             fill="none"
@@ -25,10 +25,10 @@
         </div>
 
         <!-- Error Message -->
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+        <h3 class="text-lg font-semibold text-slate-900 mb-2">
           {{ title || '오류가 발생했습니다' }}
         </h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400 text-center mb-4 max-w-md">
+        <p class="text-sm text-slate-600 text-center mb-4 max-w-md">
           {{ formatErrorMessage(error) }}
         </p>
 
@@ -43,7 +43,7 @@
           </button>
           <button
             v-if="showHomeButton"
-            class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium"
+            class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium"
             @click="navigateToHome"
           >
             홈으로 이동
@@ -58,7 +58,7 @@
           <summary class="text-xs text-slate-500 cursor-pointer hover:text-slate-700">
             오류 상세 정보
           </summary>
-          <pre class="mt-2 p-3 bg-slate-100 dark:bg-slate-800 rounded text-xs overflow-auto max-h-40 text-slate-700 dark:text-slate-300">{{ formatErrorDetails(error) }}</pre>
+          <pre class="mt-2 p-3 bg-slate-100 rounded text-xs overflow-auto max-h-40 text-slate-700">{{ formatErrorDetails(error) }}</pre>
         </details>
       </div>
     </template>

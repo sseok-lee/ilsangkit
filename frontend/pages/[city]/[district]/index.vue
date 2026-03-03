@@ -5,10 +5,10 @@
 
     <!-- Page Header -->
     <header class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
         {{ cityName }} {{ districtName }} 생활 편의시설
       </h1>
-      <p class="text-gray-600 dark:text-gray-400">
+      <p class="text-gray-600">
         {{ cityName }} {{ districtName }}의 시설 카테고리를 선택하세요.
       </p>
     </header>
@@ -16,15 +16,15 @@
     <!-- Loading State -->
     <div v-if="loading" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      <p class="mt-4 text-gray-600 dark:text-gray-400">정보를 불러오는 중...</p>
+      <p class="mt-4 text-gray-600">정보를 불러오는 중...</p>
     </div>
 
     <!-- Categories Grid -->
     <div v-else>
-      <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">카테고리 선택</h2>
+      <h2 class="text-xl font-bold text-gray-900 mb-4">카테고리 선택</h2>
 
       <div v-for="group in categoryGroups" :key="group.title" class="mb-8">
-        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+        <h3 class="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-xl">{{ group.icon }}</span>
           {{ group.title }}
         </h3>
@@ -33,23 +33,23 @@
             v-for="cat in group.items"
             :key="cat.id"
             :to="`/${city}/${district}/${cat.id}`"
-            class="group flex flex-col items-center p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl hover:shadow-lg hover:-translate-y-1 hover:border-primary/50 transition-all"
+            class="group flex flex-col items-center p-6 bg-white border border-gray-200 rounded-xl hover:shadow-lg hover:-translate-y-1 hover:border-primary/50 transition-all"
           >
             <div :class="`w-16 h-16 rounded-full ${cat.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`">
               <CategoryIcon :category-id="cat.id" size="lg" />
             </div>
-            <span class="text-lg font-bold text-gray-900 dark:text-white">{{ cat.label }}</span>
-            <span class="mt-1 text-sm text-gray-500 dark:text-gray-400">시설 목록 보기</span>
+            <span class="text-lg font-bold text-gray-900">{{ cat.label }}</span>
+            <span class="mt-1 text-sm text-gray-500">시설 목록 보기</span>
           </NuxtLink>
         </div>
       </div>
     </div>
 
     <!-- All Facilities List -->
-    <section class="mt-12 border-t border-gray-200 dark:border-slate-700 pt-8">
-      <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+    <section class="mt-12 border-t border-gray-200 pt-8">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">
         전체 시설 목록
-        <span v-if="allTotal > 0" class="text-base font-normal text-gray-500 dark:text-gray-400 ml-2">
+        <span v-if="allTotal > 0" class="text-base font-normal text-gray-500 ml-2">
           총 {{ allTotal.toLocaleString() }}개
         </span>
       </h2>
@@ -57,12 +57,12 @@
       <!-- Loading -->
       <div v-if="allLoading" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-        <p class="mt-4 text-gray-600 dark:text-gray-400">시설 정보를 불러오는 중...</p>
+        <p class="mt-4 text-gray-600">시설 정보를 불러오는 중...</p>
       </div>
 
       <!-- Error -->
-      <div v-else-if="allError" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
-        <p class="text-red-800 dark:text-red-300">{{ allError }}</p>
+      <div v-else-if="allError" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <p class="text-red-800">{{ allError }}</p>
         <button
           @click="loadAllFacilities()"
           class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
@@ -73,7 +73,7 @@
 
       <!-- Empty -->
       <div v-else-if="allFacilities.length === 0" class="text-center py-12">
-        <p class="text-gray-600 dark:text-gray-400">해당 지역에 등록된 시설이 없습니다.</p>
+        <p class="text-gray-600">해당 지역에 등록된 시설이 없습니다.</p>
       </div>
 
       <!-- Facility Grid -->
@@ -91,17 +91,17 @@
           <button
             :disabled="allCurrentPage === 1"
             @click="goToAllPage(allCurrentPage - 1)"
-            class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200"
+            class="px-4 py-2 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
           >
             이전
           </button>
-          <span class="text-gray-700 dark:text-gray-300">
+          <span class="text-gray-700">
             {{ allCurrentPage }} / {{ allTotalPages }}
           </span>
           <button
             :disabled="allCurrentPage === allTotalPages"
             @click="goToAllPage(allCurrentPage + 1)"
-            class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200"
+            class="px-4 py-2 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
           >
             다음
           </button>
@@ -110,8 +110,8 @@
     </section>
 
     <!-- Quick Search -->
-    <section class="mt-12 border-t border-gray-200 dark:border-slate-700 pt-8">
-      <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">빠른 검색</h2>
+    <section class="mt-12 border-t border-gray-200 pt-8">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">빠른 검색</h2>
       <div class="flex flex-col sm:flex-row gap-4">
         <NuxtLink
           :to="`/search?city=${encodeURIComponent(cityName)}&district=${encodeURIComponent(districtName)}`"
@@ -122,7 +122,7 @@
         </NuxtLink>
         <NuxtLink
           :to="`/${city}`"
-          class="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+          class="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
         >
           <span class="material-symbols-outlined">arrow_back</span>
           {{ cityName }} 다른 지역 보기
@@ -185,16 +185,16 @@ const breadcrumbItems = computed(() => [
 
 // Category bg color mapping
 const categoryBgColors: Record<FacilityCategory, string> = {
-  toilet: 'bg-purple-50 dark:bg-purple-900/30',
-  wifi: 'bg-blue-50 dark:bg-blue-900/30',
-  parking: 'bg-sky-50 dark:bg-sky-900/30',
-  kiosk: 'bg-orange-50 dark:bg-orange-900/30',
-  aed: 'bg-red-50 dark:bg-red-900/30',
-  library: 'bg-amber-50 dark:bg-amber-900/30',
-  clothes: 'bg-pink-50 dark:bg-pink-900/30',
-  trash: 'bg-green-50 dark:bg-green-900/30',
-  hospital: 'bg-teal-50 dark:bg-teal-900/30',
-  pharmacy: 'bg-emerald-50 dark:bg-emerald-900/30',
+  toilet: 'bg-purple-50',
+  wifi: 'bg-blue-50',
+  parking: 'bg-sky-50',
+  kiosk: 'bg-orange-50',
+  aed: 'bg-red-50',
+  library: 'bg-amber-50',
+  clothes: 'bg-pink-50',
+  trash: 'bg-green-50',
+  hospital: 'bg-teal-50',
+  pharmacy: 'bg-emerald-50',
 }
 
 // Categories (grouped)

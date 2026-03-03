@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen">
+  <div class="bg-background-light text-slate-900 font-display min-h-screen">
     <!-- Mobile Search Bar -->
-    <header class="md:hidden sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md transition-colors duration-200">
+    <header class="md:hidden sticky top-0 z-30 bg-background-light/95 backdrop-blur-md transition-colors duration-200">
       <div class="px-4 py-3">
         <div class="relative group">
           <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -10,7 +10,7 @@
           <input
             v-model="searchKeyword"
             aria-label="시설 검색"
-            class="w-full bg-white dark:bg-slate-800 border-none rounded-2xl py-3 pl-10 pr-10 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary/20 shadow-sm text-base font-medium"
+            class="w-full bg-white border-none rounded-2xl py-3 pl-10 pr-10 text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-primary/20 shadow-sm text-base font-medium"
             type="text"
             placeholder="장소를 검색하세요..."
             @keyup.enter="handleSearch"
@@ -21,7 +21,7 @@
             class="absolute inset-y-0 right-3 flex items-center cursor-pointer"
             @click="clearSearch"
           >
-            <span class="material-symbols-outlined text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[20px]">cancel</span>
+            <span class="material-symbols-outlined text-slate-400 hover:text-slate-600 text-[20px]">cancel</span>
           </button>
         </div>
       </div>
@@ -31,7 +31,7 @@
     <div class="max-w-7xl mx-auto px-4 md:px-6 py-4">
       <!-- Desktop Search Bar (replaces removed custom header) -->
       <div class="hidden md:block mb-4">
-        <div class="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm border border-slate-100">
           <div class="flex-1 relative">
             <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
@@ -39,7 +39,7 @@
             <input
               v-model="searchKeyword"
               aria-label="시설 검색"
-              class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 pl-10 pr-10 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pl-10 pr-10 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
               type="text"
               placeholder="장소를 검색하세요..."
               @keyup.enter="handleSearch"
@@ -50,7 +50,7 @@
               class="absolute inset-y-0 right-3 flex items-center cursor-pointer"
               @click="clearSearch"
             >
-              <span class="material-symbols-outlined text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[20px]">cancel</span>
+              <span class="material-symbols-outlined text-slate-400 hover:text-slate-600 text-[20px]">cancel</span>
             </button>
           </div>
         </div>
@@ -60,23 +60,23 @@
       <div
         v-if="error"
         role="alert"
-        class="p-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm mb-4"
+        class="p-5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm mb-4"
       >
         {{ error }}
       </div>
 
       <!-- Region Filter Card -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 space-y-3 mb-4">
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-100 space-y-3 mb-4">
         <div class="flex items-center gap-2 mb-2">
           <span class="material-symbols-outlined text-amber-500 text-[20px]">location_city</span>
-          <span class="font-semibold text-slate-900 dark:text-white text-sm">지역 선택</span>
+          <span class="font-semibold text-slate-900 text-sm">지역 선택</span>
         </div>
         <!-- 시/도 선택 -->
         <div class="relative">
           <select
             v-model="selectedCity"
             aria-label="시/도 선택"
-            class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 px-3 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
             @change="handleCityChange"
           >
             <option value="">시/도 선택</option>
@@ -90,7 +90,7 @@
             v-model="selectedDistrict"
             :disabled="!selectedCity"
             aria-label="구/군 선택"
-            class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 px-3 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             @change="handleDistrictChange"
           >
             <option value="">구/군 선택</option>
@@ -107,7 +107,7 @@
             'shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border',
             !selectedCategory
               ? 'bg-primary text-white border-primary'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/40',
+              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
           ]"
           @click="selectCategory(null)"
         >
@@ -120,7 +120,7 @@
             'shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border',
             selectedCategory === group.category
               ? 'bg-primary text-white border-primary'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/40',
+              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
           ]"
           @click="selectCategory(group.category)"
         >
@@ -130,7 +130,7 @@
 
       <!-- Results count -->
       <div class="flex items-center justify-between mb-4">
-        <h1 class="text-slate-900 dark:text-white text-base font-bold">
+        <h1 class="text-slate-900 text-base font-bold">
           {{ searchTitle }}
         </h1>
         <span class="text-xs text-slate-500 font-medium">{{ displayTotalCount }}건</span>
@@ -140,7 +140,7 @@
       <div v-if="loading" class="flex items-center justify-center py-20" aria-live="polite" aria-busy="true">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-          <p class="text-slate-500 dark:text-slate-400 text-sm">검색 중...</p>
+          <p class="text-slate-500 text-sm">검색 중...</p>
         </div>
       </div>
 
@@ -150,13 +150,13 @@
           <div
             v-for="group in groupedResults"
             :key="group.category"
-            class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700"
+            class="bg-white rounded-xl p-5 shadow-sm border border-slate-100"
           >
             <!-- Group Header -->
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-lg">{{ CATEGORY_META[group.category]?.icon }}</span>
-                <h2 class="text-slate-900 dark:text-white text-base font-bold">
+                <h2 class="text-slate-900 text-base font-bold">
                   {{ group.label }}
                 </h2>
                 <span class="text-xs text-slate-400 font-medium">({{ group.count }}건)</span>
@@ -192,9 +192,9 @@
 
           <!-- Empty State (flat view) -->
           <div v-if="facilities.length === 0" class="py-20 text-center">
-            <span class="material-symbols-outlined text-[48px] text-slate-300 dark:text-slate-600 mb-4 block">search_off</span>
-            <p class="text-slate-600 dark:text-slate-400 font-medium">검색 결과가 없습니다</p>
-            <p class="text-slate-400 dark:text-slate-500 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
+            <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">search_off</span>
+            <p class="text-slate-600 font-medium">검색 결과가 없습니다</p>
+            <p class="text-slate-400 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
             <NuxtLink
               to="/"
               class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
@@ -210,9 +210,9 @@
 
         <!-- Empty State (grouped view) -->
         <div v-if="!selectedCategory && groupedResults.length === 0" class="py-20 text-center">
-          <span class="material-symbols-outlined text-[48px] text-slate-300 dark:text-slate-600 mb-4 block">search_off</span>
-          <p class="text-slate-600 dark:text-slate-400 font-medium">검색 결과가 없습니다</p>
-          <p class="text-slate-400 dark:text-slate-500 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
+          <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">search_off</span>
+          <p class="text-slate-600 font-medium">검색 결과가 없습니다</p>
+          <p class="text-slate-400 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
           <NuxtLink
             to="/"
             class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"

@@ -9,7 +9,7 @@
       :value="modelValue"
       type="text"
       :placeholder="placeholder"
-      class="block w-full pl-12 pr-4 py-4 bg-white dark:bg-surface-dark border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-base text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm hover:border-slate-300 dark:hover:border-slate-600"
+      class="block w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm hover:border-slate-300"
       @input="onInput"
       @keydown.enter="onSearch"
     />

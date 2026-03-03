@@ -1,12 +1,12 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12">
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-8">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-8">
       이용약관
     </h1>
 
-    <div class="space-y-8 text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed">
+    <div class="space-y-8 text-slate-600 text-sm md:text-base leading-relaxed">
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제1조 (목적)
         </h2>
         <p>
@@ -16,7 +16,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제2조 (서비스의 내용)
         </h2>
         <p>서비스는 다음과 같은 정보를 제공합니다.</p>
@@ -39,7 +39,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제3조 (서비스 이용)
         </h2>
         <p>
@@ -49,7 +49,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제4조 (지도 서비스)
         </h2>
         <p>
@@ -63,7 +63,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제5조 (정보의 정확성)
         </h2>
         <p>
@@ -75,7 +75,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제6조 (지적재산권)
         </h2>
         <p>
@@ -85,7 +85,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제7조 (면책 조항)
         </h2>
         <ul class="list-disc pl-5 space-y-1">
@@ -97,7 +97,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제8조 (이용자의 의무)
         </h2>
         <p>이용자는 다음 행위를 하여서는 안 됩니다.</p>
@@ -109,7 +109,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제9조 (약관의 변경)
         </h2>
         <p>
@@ -120,7 +120,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           부칙
         </h2>
         <p>이 약관은 2026년 2월 13일부터 시행합니다.</p>

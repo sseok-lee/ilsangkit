@@ -2,8 +2,8 @@
   <header
     :class="[
       'sticky top-0 z-50 flex items-center justify-between p-4 pb-2 md:px-6 md:py-4',
-      'bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm',
-      'border-b border-transparent dark:border-slate-800',
+      'bg-background-light/95 backdrop-blur-sm',
+      'border-b border-transparent',
       'transition-colors duration-300',
       props.transparent ? 'bg-transparent backdrop-blur-none border-transparent' : ''
     ]"
@@ -12,7 +12,7 @@
     <div class="flex items-center gap-2">
       <button
         v-if="props.showBackButton"
-        class="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-[#111418] dark:text-white"
+        class="flex size-10 items-center justify-center rounded-full hover:bg-black/5 transition-colors text-[#111418]"
         aria-label="뒤로가기"
         @click="handleBack"
       >
@@ -35,7 +35,7 @@
         @mouseleave="scheduleCloseDropdown"
       >
         <button
-          class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
         >
           <span class="material-symbols-outlined text-[18px]">{{ group.icon }}</span>
           {{ group.title }}
@@ -51,7 +51,7 @@
         >
           <div
             v-if="activeDropdown === group.title"
-            class="absolute top-full left-0 mt-1 min-w-[180px] bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 p-2 z-50"
+            class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-slate-100 p-2 z-50"
             @mouseenter="cancelCloseDropdown"
             @mouseleave="scheduleCloseDropdown"
           >
@@ -59,7 +59,7 @@
               v-for="catId in group.categories"
               :key="catId"
               :to="`/${catId}`"
-              class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-[15px] text-slate-700 dark:text-slate-300 transition-colors"
+              class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
               @click="closeDropdown"
             >
               <CategoryIcon :category-id="catId" size="sm" />
@@ -70,26 +70,26 @@
       </div>
 
       <!-- Utility Links Divider -->
-      <div class="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+      <div class="h-5 w-px bg-slate-200 mx-1"></div>
 
       <!-- Utility Links -->
       <NuxtLink
         to="/guide"
-        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">menu_book</span>
         가이드
       </NuxtLink>
       <NuxtLink
         to="/search"
-        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">search</span>
         검색
       </NuxtLink>
       <NuxtLink
         to="/about"
-        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">info</span>
         소개
@@ -98,20 +98,9 @@
 
     <!-- Right: Desktop Actions & Mobile Menu Button -->
     <div class="flex items-center justify-end">
-      <!-- Desktop Actions -->
-      <div class="hidden md:flex items-center gap-3">
-        <button
-          aria-label="다크모드 전환"
-          class="p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-lg transition-colors"
-          @click="handleDarkModeToggle"
-        >
-          <span class="material-symbols-outlined text-[24px]">{{ darkModeIcon }}</span>
-        </button>
-      </div>
-
       <!-- Mobile Menu Button -->
       <button
-        class="md:hidden flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-[#111418] dark:text-white"
+        class="md:hidden flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-[#111418]"
         aria-label="메뉴"
         :aria-expanded="isMobileMenuOpen"
         @click="toggleMobileMenu"
@@ -135,35 +124,35 @@
       data-testid="mobile-menu"
       role="navigation"
       aria-label="모바일 메뉴"
-      class="md:hidden fixed top-[60px] left-0 right-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 shadow-lg"
+      class="md:hidden fixed top-[60px] left-0 right-0 z-40 bg-background-light border-b border-slate-200 shadow-lg"
     >
       <nav class="flex flex-col p-4 gap-1">
         <NuxtLink
           to="/"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           홈
         </NuxtLink>
         <NuxtLink
           to="/search"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           검색
         </NuxtLink>
         <NuxtLink
           to="/guide"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           가이드
         </NuxtLink>
-        <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
+        <div class="h-px bg-slate-200 my-2"></div>
 
         <!-- Category Groups -->
         <div v-for="group in CATEGORY_GROUPS" :key="group.title" class="mb-1">
-          <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
             {{ group.title }}
           </div>
@@ -171,7 +160,7 @@
             v-for="catId in group.categories"
             :key="catId"
             :to="`/${catId}`"
-            class="pl-6 pr-4 py-2.5 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+            class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
             @click="closeMobileMenu"
           >
             <CategoryIcon :category-id="catId" size="sm" />
@@ -179,26 +168,26 @@
           </NuxtLink>
         </div>
 
-        <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
+        <div class="h-px bg-slate-200 my-2"></div>
         <NuxtLink
           to="/about"
-          class="px-4 py-3 text-[#111418] dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           소개
         </NuxtLink>
-        <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
+        <div class="h-px bg-slate-200 my-2"></div>
         <div class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2">
           <NuxtLink
             to="/privacy"
-            class="text-xs text-slate-400 dark:text-slate-500 hover:text-primary transition-colors"
+            class="text-xs text-slate-400 hover:text-primary transition-colors"
             @click="closeMobileMenu"
           >
             개인정보처리방침
           </NuxtLink>
           <NuxtLink
             to="/terms"
-            class="text-xs text-slate-400 dark:text-slate-500 hover:text-primary transition-colors"
+            class="text-xs text-slate-400 hover:text-primary transition-colors"
             @click="closeMobileMenu"
           >
             이용약관
@@ -210,7 +199,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 
 interface Props {
@@ -226,9 +215,6 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   back: []
 }>()
-
-const colorMode = useColorMode() // eslint-disable-line no-undef
-const darkModeIcon = computed(() => colorMode.value === 'dark' ? 'light_mode' : 'dark_mode')
 
 const isMobileMenuOpen = ref(false)
 const activeDropdown = ref<string | null>(null)
@@ -267,10 +253,6 @@ const closeDropdown = () => {
 
 const handleBack = () => {
   emit('back')
-}
-
-const handleDarkModeToggle = () => {
-  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
 
 // Escape 키로 모바일 메뉴/드롭다운 닫기

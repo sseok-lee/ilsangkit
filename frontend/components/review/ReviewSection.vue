@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-white dark:bg-[#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-gray-800 overflow-hidden">
+  <div class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
     <!-- Header -->
-    <div class="px-5 py-4 border-b border-[#f0f2f5] dark:border-gray-700 flex items-center gap-2">
+    <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
       <span class="material-symbols-outlined text-primary text-[20px]">rate_review</span>
-      <h2 class="text-[#111418] dark:text-white text-lg font-bold">리뷰 ({{ total }})</h2>
+      <h2 class="text-[#111418] text-lg font-bold">리뷰 ({{ total }})</h2>
     </div>
 
     <div class="p-5 flex flex-col gap-5">
@@ -15,14 +15,14 @@
             type="text"
             placeholder="닉네임"
             maxlength="30"
-            class="flex-1 min-w-0 px-3 py-2 text-sm bg-[#f9fafb] dark:bg-[#23303b] border border-[#e5e7eb] dark:border-gray-700 rounded-lg text-[#111418] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            class="flex-1 min-w-0 px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
           <input
             v-model="form.password"
             type="password"
             placeholder="비밀번호 (4~20자)"
             maxlength="20"
-            class="flex-1 min-w-0 px-3 py-2 text-sm bg-[#f9fafb] dark:bg-[#23303b] border border-[#e5e7eb] dark:border-gray-700 rounded-lg text-[#111418] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            class="flex-1 min-w-0 px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
         <div class="relative">
@@ -31,7 +31,7 @@
             placeholder="리뷰를 작성해주세요..."
             maxlength="1000"
             rows="3"
-            class="w-full px-3 py-2 text-sm bg-[#f9fafb] dark:bg-[#23303b] border border-[#e5e7eb] dark:border-gray-700 rounded-lg text-[#111418] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
           <span class="absolute bottom-2 right-3 text-xs text-[#94a3b8]">{{ form.content.length }}/1000</span>
         </div>
@@ -48,7 +48,7 @@
       </form>
 
       <!-- Divider -->
-      <div v-if="reviews.length > 0" class="h-px bg-[#f0f2f5] dark:bg-gray-700"></div>
+      <div v-if="reviews.length > 0" class="h-px bg-[#f0f2f5]"></div>
 
       <!-- Review List -->
       <div v-if="loading && reviews.length === 0" class="flex justify-center py-6">
@@ -68,7 +68,7 @@
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-bold text-[#111418] dark:text-white">{{ review.nickname }}</span>
+              <span class="text-sm font-bold text-[#111418]">{{ review.nickname }}</span>
               <span class="text-xs text-[#94a3b8]">{{ formatDate(review.createdAt) }}</span>
               <span v-if="review.updatedAt !== review.createdAt" class="text-xs text-[#94a3b8]">(수정됨)</span>
             </div>
@@ -87,8 +87,8 @@
               </button>
             </div>
           </div>
-          <p class="text-sm text-[#4b5563] dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{{ review.content }}</p>
-          <div v-if="review !== reviews[reviews.length - 1]" class="h-px bg-[#f0f2f5] dark:bg-gray-700 mt-2"></div>
+          <p class="text-sm text-[#4b5563] leading-relaxed whitespace-pre-wrap">{{ review.content }}</p>
+          <div v-if="review !== reviews[reviews.length - 1]" class="h-px bg-[#f0f2f5] mt-2"></div>
         </div>
       </div>
 
@@ -119,8 +119,8 @@
           class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
           @click.self="closeModal"
         >
-          <div class="bg-white dark:bg-[#1a2630] rounded-xl shadow-xl border border-[#e5e7eb] dark:border-gray-700 w-full max-w-sm p-6">
-            <h3 class="text-lg font-bold text-[#111418] dark:text-white mb-4">
+          <div class="bg-white#1a2630] rounded-xl shadow-xl border border-[#e5e7eb] w-full max-w-sm p-6">
+            <h3 class="text-lg font-bold text-[#111418] mb-4">
               {{ modalState.type === 'edit' ? '리뷰 수정' : '리뷰 삭제' }}
             </h3>
 
@@ -132,32 +132,32 @@
                   type="text"
                   placeholder="닉네임 (변경시 입력)"
                   maxlength="30"
-                  class="w-full px-3 py-2 text-sm bg-[#f9fafb] dark:bg-[#23303b] border border-[#e5e7eb] dark:border-gray-700 rounded-lg text-[#111418] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
                 <textarea
                   v-model="modalState.content"
                   placeholder="수정할 내용"
                   maxlength="1000"
                   rows="4"
-                  class="w-full px-3 py-2 text-sm bg-[#f9fafb] dark:bg-[#23303b] border border-[#e5e7eb] dark:border-gray-700 rounded-lg text-[#111418] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+                  class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
                 />
                 <input
                   v-model="modalState.password"
                   type="password"
                   placeholder="비밀번호 확인"
-                  class="w-full px-3 py-2 text-sm bg-[#f9fafb] dark:bg-[#23303b] border border-[#e5e7eb] dark:border-gray-700 rounded-lg text-[#111418] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
             </template>
 
             <!-- Delete confirmation -->
             <template v-else>
-              <p class="text-sm text-[#4b5563] dark:text-slate-300 mb-4">삭제하려면 비밀번호를 입력해주세요.</p>
+              <p class="text-sm text-[#4b5563] mb-4">삭제하려면 비밀번호를 입력해주세요.</p>
               <input
                 v-model="modalState.password"
                 type="password"
                 placeholder="비밀번호"
-                class="w-full px-3 py-2 text-sm bg-[#f9fafb] dark:bg-[#23303b] border border-[#e5e7eb] dark:border-gray-700 rounded-lg text-[#111418] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary mb-4"
+                class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary mb-4"
                 @keydown.enter="handleModalConfirm"
               />
             </template>
@@ -166,7 +166,7 @@
 
             <div class="flex gap-3 justify-end">
               <button
-                class="px-4 py-2 text-sm font-medium text-[#60708a] border border-[#e5e7eb] dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                class="px-4 py-2 text-sm font-medium text-[#60708a] border border-[#e5e7eb] rounded-lg hover:bg-gray-50 transition-colors"
                 @click="closeModal"
               >
                 취소

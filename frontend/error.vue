@@ -13,10 +13,10 @@
         </p>
 
         <!-- Error Message -->
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+        <h1 class="text-2xl font-bold text-gray-900 mb-3">
           {{ errorTitle }}
         </h1>
-        <p class="text-gray-500 dark:text-slate-400 mb-10">
+        <p class="text-gray-500 mb-10">
           {{ errorDescription }}
         </p>
 
@@ -30,8 +30,8 @@
         </button>
 
         <!-- Category Shortcuts -->
-        <div class="border-t border-gray-200 dark:border-slate-700 pt-8">
-          <p class="text-sm text-gray-500 dark:text-slate-400 mb-4">
+        <div class="border-t border-gray-200 pt-8">
+          <p class="text-sm text-gray-500 mb-4">
             찾고 있는 정보가 있다면 아래 카테고리를 이용해 보세요
           </p>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -39,7 +39,7 @@
               v-for="cat in categoryShortcuts"
               :key="cat.slug"
               :to="`/${cat.slug}`"
-              class="flex items-center gap-2 px-4 py-3 bg-white dark:bg-surface-dark border border-gray-200 dark:border-slate-700 rounded-lg hover:shadow-md hover:border-primary/30 transition-all text-sm font-medium text-gray-700 dark:text-slate-300"
+              class="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-primary/30 transition-all text-sm font-medium text-gray-700"
             >
               <span class="material-symbols-outlined text-[18px] text-primary">{{ cat.icon }}</span>
               {{ cat.label }}

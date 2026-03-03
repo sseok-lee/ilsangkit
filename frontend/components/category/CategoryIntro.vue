@@ -1,9 +1,9 @@
 <template>
   <section class="mb-6">
-    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-2">
+    <h2 class="text-lg font-bold text-slate-900 mb-2">
       {{ categoryLabel }} 안내
     </h2>
-    <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+    <p class="text-sm text-slate-600 leading-relaxed">
       {{ description }}
     </p>
   </section>

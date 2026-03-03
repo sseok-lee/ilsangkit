@@ -53,43 +53,43 @@ defineProps<Props>()
 
 const getCategoryBgClass = (categoryId: string): string => {
   const bgMap: Record<string, string> = {
-    toilet: 'bg-purple-50 dark:bg-purple-900/20',
-    trash: 'bg-green-50 dark:bg-green-900/20',
-    wifi: 'bg-orange-50 dark:bg-orange-900/20',
-    clothes: 'bg-pink-50 dark:bg-pink-900/20',
-    kiosk: 'bg-indigo-50 dark:bg-indigo-900/20',
-    parking: 'bg-sky-50 dark:bg-sky-900/20',
-    aed: 'bg-red-50 dark:bg-red-900/20',
-    library: 'bg-amber-50 dark:bg-amber-900/20',
+    toilet: 'bg-purple-50',
+    trash: 'bg-green-50',
+    wifi: 'bg-orange-50',
+    clothes: 'bg-pink-50',
+    kiosk: 'bg-indigo-50',
+    parking: 'bg-sky-50',
+    aed: 'bg-red-50',
+    library: 'bg-amber-50',
   }
-  return bgMap[categoryId] || 'bg-gray-50 dark:bg-gray-900/20'
+  return bgMap[categoryId] || 'bg-gray-50'
 }
 
 const getCategoryIconBgClass = (categoryId: string): string => {
   const bgMap: Record<string, string> = {
-    toilet: 'dark:bg-purple-900/40',
-    trash: 'dark:bg-green-900/40',
-    wifi: 'dark:bg-orange-900/40',
-    clothes: 'dark:bg-pink-900/40',
-    kiosk: 'dark:bg-indigo-900/40',
-    parking: 'dark:bg-sky-900/40',
-    aed: 'dark:bg-red-900/40',
-    library: 'dark:bg-amber-900/40',
+    toilet: '',
+    trash: '',
+    wifi: '',
+    clothes: '',
+    kiosk: '',
+    parking: '',
+    aed: '',
+    library: '',
   }
-  return bgMap[categoryId] || 'dark:bg-gray-900/40'
+  return bgMap[categoryId] || ''
 }
 
 const getCategoryTextClass = (categoryId: string): string => {
   const textMap: Record<string, string> = {
-    toilet: 'text-purple-900 dark:text-purple-100',
-    trash: 'text-green-900 dark:text-green-100',
-    wifi: 'text-orange-900 dark:text-orange-100',
-    clothes: 'text-pink-900 dark:text-pink-100',
-    kiosk: 'text-indigo-900 dark:text-indigo-100',
-    parking: 'text-sky-900 dark:text-sky-100',
-    aed: 'text-red-900 dark:text-red-100',
-    library: 'text-amber-900 dark:text-amber-100',
+    toilet: 'text-purple-900',
+    trash: 'text-green-900',
+    wifi: 'text-orange-900',
+    clothes: 'text-pink-900',
+    kiosk: 'text-indigo-900',
+    parking: 'text-sky-900',
+    aed: 'text-red-900',
+    library: 'text-amber-900',
   }
-  return textMap[categoryId] || 'text-gray-900 dark:text-gray-100'
+  return textMap[categoryId] || 'text-gray-900'
 }
 </script>

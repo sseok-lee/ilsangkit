@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex items-center gap-4 p-4 rounded-xl border border-[#e7ecf4] dark:border-gray-700 bg-white dark:bg-[#1a2634] shadow-sm hover:shadow-md transition-shadow"
+    class="flex items-center gap-4 p-4 rounded-xl border border-[#e7ecf4] bg-white#1a2634] shadow-sm hover:shadow-md transition-shadow"
   >
     <div
       :class="[
@@ -13,10 +13,10 @@
       <span v-else class="text-lg">{{ icon }}</span>
     </div>
     <div>
-      <p class="text-xs font-semibold text-[#48699d] dark:text-gray-400 uppercase tracking-wide">
+      <p class="text-xs font-semibold text-[#48699d] uppercase tracking-wide">
         {{ label }}
       </p>
-      <p class="text-xl font-bold text-[#0d131c] dark:text-white">
+      <p class="text-xl font-bold text-[#0d131c]">
         {{ value }}
       </p>
     </div>
@@ -41,15 +41,15 @@ const props = withDefaults(defineProps<Props>(), {
 
 const colorClasses = computed(() => {
   const colorMap: Record<string, { bg: string; text: string }> = {
-    pink: { bg: 'bg-pink-50 dark:bg-pink-900/20', text: 'text-pink-500' },
-    blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-500' },
-    purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-500' },
-    orange: { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-500' },
-    green: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-500' },
-    red: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-500' },
-    teal: { bg: 'bg-teal-50 dark:bg-teal-900/20', text: 'text-teal-600' },
-    indigo: { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-500' },
-    gray: { bg: 'bg-gray-50 dark:bg-gray-900/20', text: 'text-gray-500' },
+    pink: { bg: 'bg-pink-50', text: 'text-pink-500' },
+    blue: { bg: 'bg-blue-50', text: 'text-blue-500' },
+    purple: { bg: 'bg-purple-50', text: 'text-purple-500' },
+    orange: { bg: 'bg-orange-50', text: 'text-orange-500' },
+    green: { bg: 'bg-green-50', text: 'text-green-500' },
+    red: { bg: 'bg-red-50', text: 'text-red-500' },
+    teal: { bg: 'bg-teal-50', text: 'text-teal-600' },
+    indigo: { bg: 'bg-indigo-50', text: 'text-indigo-500' },
+    gray: { bg: 'bg-gray-50', text: 'text-gray-500' },
   }
   return colorMap[props.color] || colorMap.gray
 })

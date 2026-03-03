@@ -1,22 +1,22 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12">
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-8">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-8">
       문의하기
     </h1>
 
-    <div class="space-y-8 text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed">
+    <div class="space-y-8 text-slate-600 text-sm md:text-base leading-relaxed">
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           연락처
         </h2>
         <p>
           일상킷 서비스 이용 중 궁금한 점이나 건의사항이 있으시면
           아래 이메일로 문의해 주세요. 확인 후 빠르게 답변드리겠습니다.
         </p>
-        <div class="mt-4 bg-slate-50 dark:bg-slate-800 rounded-lg p-6">
+        <div class="mt-4 bg-slate-50 rounded-lg p-6">
           <dl class="space-y-3">
             <div>
-              <dt class="text-xs text-slate-500 dark:text-slate-400">이메일</dt>
+              <dt class="text-xs text-slate-500">이메일</dt>
               <dd class="mt-1">
                 <a
                   href="mailto:contact@ilsangkit.co.kr"
@@ -31,7 +31,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           문의 안내
         </h2>
         <ul class="list-disc pl-5 space-y-2">
@@ -43,7 +43,7 @@
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">
           관련 페이지
         </h2>
         <ul class="list-disc pl-5 space-y-2">

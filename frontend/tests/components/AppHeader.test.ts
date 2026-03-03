@@ -163,12 +163,6 @@ describe('AppHeader', () => {
       expect(menuButton.attributes('aria-label')).toBe('메뉴')
     })
 
-    it('should have proper ARIA labels on desktop action buttons', () => {
-      const darkModeButton = wrapper.find('button[aria-label="다크모드 전환"]')
-      expect(darkModeButton.exists()).toBe(true)
-      expect(darkModeButton.attributes('aria-label')).toBe('다크모드 전환')
-    })
-
     it('should have minimum 40px touch target for menu button', () => {
       const menuButton = wrapper.find('button[aria-label="메뉴"]')
       // size-10 = 40px (2.5rem)

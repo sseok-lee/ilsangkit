@@ -24,15 +24,15 @@ const props = defineProps<Props>()
 const statusClasses = computed(() => {
   switch (props.status) {
     case 'open24h':
-      return 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50'
+      return 'text-slate-700 bg-slate-100'
     case 'openNow':
-      return 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50'
+      return 'text-slate-700 bg-slate-100'
     case 'closed':
-      return 'text-slate-500 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/30'
+      return 'text-slate-500 bg-slate-100'
     case 'limited':
-      return 'text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50'
+      return 'text-slate-600 bg-slate-100'
     default:
-      return 'text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50'
+      return 'text-slate-600 bg-slate-100'
   }
 })
 

@@ -5,7 +5,6 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
-    '@nuxtjs/color-mode',
     '@vite-pwa/nuxt'
   ],
 
@@ -48,12 +47,6 @@ export default defineNuxtConfig({
         },
       ],
     },
-  },
-
-  colorMode: {
-    classSuffix: '',
-    preference: 'system',
-    fallback: 'light',
   },
 
   // Security headers + API proxy

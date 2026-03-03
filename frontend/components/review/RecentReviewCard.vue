@@ -1,7 +1,7 @@
 <template>
   <a
     :href="`/${review.facilityCategory}/${review.facilityId}`"
-    class="group flex flex-col p-4 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+    class="group flex flex-col p-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
   >
     <!-- Category Badge + Facility Name -->
     <div class="flex items-center gap-2 mb-2">
@@ -11,18 +11,18 @@
       >
         {{ categoryLabel }}
       </span>
-      <span class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ review.facilityName }}</span>
+      <span class="text-sm font-bold text-slate-900 truncate">{{ review.facilityName }}</span>
     </div>
 
     <!-- Review Content (2-line truncate) -->
-    <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2 mb-3">
+    <p class="text-sm text-slate-600 leading-relaxed line-clamp-2 mb-3">
       {{ review.content }}
     </p>
 
     <!-- Footer: Nickname + Date -->
     <div class="flex items-center justify-between mt-auto">
-      <span class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ review.nickname }}</span>
-      <span class="text-xs text-slate-400 dark:text-slate-500">{{ formatDate(review.createdAt) }}</span>
+      <span class="text-xs font-medium text-slate-500">{{ review.nickname }}</span>
+      <span class="text-xs text-slate-400">{{ formatDate(review.createdAt) }}</span>
     </div>
   </a>
 </template>
@@ -44,16 +44,16 @@ const categoryLabel = computed(() => {
 
 const categoryBadgeClass = computed(() => {
   const colorMap: Record<string, string> = {
-    toilet: 'bg-purple-50 text-purple-700 ring-purple-700/10 dark:bg-purple-900/30 dark:text-purple-300 dark:ring-purple-400/20',
-    wifi: 'bg-orange-50 text-orange-700 ring-orange-700/10 dark:bg-orange-900/30 dark:text-orange-300 dark:ring-orange-400/20',
-    parking: 'bg-sky-50 text-sky-700 ring-sky-700/10 dark:bg-sky-900/30 dark:text-sky-300 dark:ring-sky-400/20',
-    kiosk: 'bg-indigo-50 text-indigo-700 ring-indigo-700/10 dark:bg-indigo-900/30 dark:text-indigo-300 dark:ring-indigo-400/20',
-    hospital: 'bg-teal-50 text-teal-700 ring-teal-700/10 dark:bg-teal-900/30 dark:text-teal-300 dark:ring-teal-400/20',
-    pharmacy: 'bg-emerald-50 text-emerald-700 ring-emerald-700/10 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/20',
-    aed: 'bg-red-50 text-red-700 ring-red-700/10 dark:bg-red-900/30 dark:text-red-300 dark:ring-red-400/20',
-    library: 'bg-amber-50 text-amber-700 ring-amber-700/10 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-400/20',
-    clothes: 'bg-pink-50 text-pink-700 ring-pink-700/10 dark:bg-pink-900/30 dark:text-pink-300 dark:ring-pink-400/20',
-    trash: 'bg-green-50 text-green-700 ring-green-700/10 dark:bg-green-900/30 dark:text-green-300 dark:ring-green-400/20',
+    toilet: 'bg-purple-50 text-purple-700 ring-purple-700/10',
+    wifi: 'bg-orange-50 text-orange-700 ring-orange-700/10',
+    parking: 'bg-sky-50 text-sky-700 ring-sky-700/10',
+    kiosk: 'bg-indigo-50 text-indigo-700 ring-indigo-700/10',
+    hospital: 'bg-teal-50 text-teal-700 ring-teal-700/10',
+    pharmacy: 'bg-emerald-50 text-emerald-700 ring-emerald-700/10',
+    aed: 'bg-red-50 text-red-700 ring-red-700/10',
+    library: 'bg-amber-50 text-amber-700 ring-amber-700/10',
+    clothes: 'bg-pink-50 text-pink-700 ring-pink-700/10',
+    trash: 'bg-green-50 text-green-700 ring-green-700/10',
   }
   return colorMap[props.review.facilityCategory] || 'bg-slate-50 text-slate-700 ring-slate-700/10'
 })
