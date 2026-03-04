@@ -8,10 +8,6 @@
             <source srcset="/images/hero-bg-light.webp" type="image/webp" />
             <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
           </picture>
-          <picture>
-            <source srcset="/images/hero-bg-dark.webp" type="image/webp" />
-            <img src="/images/hero-bg-dark.png" class="w-full h-full object-cover object-bottom hidden" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
-          </picture>
         </div>
         <!-- 하단 그라데이션 페이드 -->
         <div class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background-light to-transparent"></div>
@@ -87,19 +83,15 @@
             <source srcset="/images/hero-bg-light.webp" type="image/webp" />
             <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
           </picture>
-          <picture>
-            <source srcset="/images/hero-bg-dark.webp" type="image/webp" />
-            <img src="/images/hero-bg-dark.png" class="w-full h-full object-cover object-bottom hidden" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
-          </picture>
         </div>
         <!-- 하단 그라데이션 페이드 -->
         <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background-light to-transparent"></div>
 
         <div class="relative z-10 max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
           <div class="space-y-4">
-            <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+            <p class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight" aria-hidden="true">
               내 주변 생활 편의 정보, 한 번에 찾기
-            </h1>
+            </p>
             <p class="text-lg text-slate-600 font-normal">
               지금 필요한 생활 시설을 검색해보세요.
             </p>

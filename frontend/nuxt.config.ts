@@ -105,6 +105,13 @@ export default defineNuxtConfig({
         { name: 'application-name', content: '일상킷' },
         { name: 'apple-mobile-web-app-title', content: '일상킷' },
       ],
+      script: [
+        {
+          src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2088264360250020',
+          async: true,
+          crossorigin: 'anonymous'
+        }
+      ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },

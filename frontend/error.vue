@@ -1,111 +1,61 @@
 <template>
-  <div class="min-h-screen flex flex-col">
+  <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
     <Head>
-      <Title>{{ errorTitle }}</Title>
+      <Title>{{ statusCode === 404 ? '페이지를 찾을 수 없습니다' : '오류가 발생했습니다' }} - 일상킷</Title>
+      <Meta name="description" :content="description" />
       <Meta name="robots" content="noindex, nofollow" />
+      <Meta property="og:title" :content="`${title} - 일상킷`" />
+      <Meta property="og:description" :content="description" />
     </Head>
 
-    <!-- Inline Header (에러 페이지에서 NuxtLayout 사용 시 cascading error 방지) -->
-    <header class="bg-white border-b border-gray-200 px-4 py-3">
-      <div class="max-w-screen-xl mx-auto flex items-center">
-        <NuxtLink to="/" class="text-xl font-bold text-primary" @click.prevent="handleError">
-          일상킷
-        </NuxtLink>
-      </div>
-    </header>
+    <div class="max-w-lg w-full text-center">
+      <p class="text-8xl font-bold text-blue-500 mb-4">{{ statusCode }}</p>
+      <h1 class="text-2xl font-bold text-gray-900 mb-3">{{ title }}</h1>
+      <p class="text-gray-500 mb-8">{{ description }}</p>
 
-    <main class="flex-1 flex items-center justify-center px-4 py-16">
-      <div class="max-w-lg w-full text-center">
-        <!-- Error Code -->
-        <p class="text-8xl font-bold text-primary mb-4">
-          {{ error?.statusCode || 500 }}
-        </p>
+      <a
+        href="/"
+        class="inline-block px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+      >
+        홈으로 돌아가기
+      </a>
 
-        <!-- Error Message -->
-        <h1 class="text-2xl font-bold text-gray-900 mb-3">
-          {{ errorTitle }}
-        </h1>
-        <p class="text-gray-500 mb-10">
-          {{ errorDescription }}
-        </p>
-
-        <!-- Home Button -->
-        <button
-          class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors mb-12"
-          @click="handleError"
-        >
-          <span class="material-symbols-outlined text-[20px]">home</span>
-          홈으로 돌아가기
-        </button>
-
-        <!-- Category Shortcuts -->
-        <div class="border-t border-gray-200 pt-8">
-          <p class="text-sm text-gray-500 mb-4">
-            찾고 있는 정보가 있다면 아래 카테고리를 이용해 보세요
-          </p>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <NuxtLink
-              v-for="cat in categoryShortcuts"
-              :key="cat.slug"
-              :to="`/${cat.slug}`"
-              class="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-primary/30 transition-all text-sm font-medium text-gray-700"
-            >
-              <span class="material-symbols-outlined text-[18px] text-primary">{{ cat.icon }}</span>
-              {{ cat.label }}
-            </NuxtLink>
-          </div>
+      <!-- 404일 때 카테고리 바로가기 -->
+      <div v-if="statusCode === 404" class="mt-12">
+        <p class="text-sm text-gray-500 mb-4">찾으시는 정보가 있으신가요?</p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <a
+            v-for="cat in categories"
+            :key="cat.slug"
+            :href="`/${cat.slug}`"
+            class="p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-blue-300 transition-all text-center text-sm font-medium text-gray-700"
+          >
+            {{ cat.label }}
+          </a>
         </div>
       </div>
-    </main>
-
-    <!-- Inline Footer -->
-    <footer class="bg-white border-t border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
-      <p>&copy; {{ new Date().getFullYear() }} 일상킷. All rights reserved.</p>
-    </footer>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { NuxtError } from '#app'
-import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
-
 const props = defineProps<{
-  error: NuxtError
+  error: { statusCode?: number; statusMessage?: string }
 }>()
 
-const is404 = computed(() => props.error?.statusCode === 404)
+const statusCode = props.error?.statusCode ?? 500
+const title = statusCode === 404 ? '페이지를 찾을 수 없습니다' : '오류가 발생했습니다'
+const description = statusCode === 404
+  ? '요청하신 페이지가 존재하지 않거나 이동되었을 수 있습니다.'
+  : '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
 
-const errorTitle = computed(() =>
-  is404.value ? '페이지를 찾을 수 없습니다' : '오류가 발생했습니다'
-)
-
-const errorDescription = computed(() =>
-  is404.value
-    ? '요청하신 페이지가 존재하지 않거나 이동되었을 수 있습니다.'
-    : '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
-)
-
-// 주요 카테고리 바로가기 (6개)
-const categoryShortcuts = computed(() => {
-  const shortcuts: { slug: string; label: string; icon: string }[] = []
-  for (const group of CATEGORY_GROUPS) {
-    for (const id of group.categories) {
-      shortcuts.push({
-        slug: id,
-        label: CATEGORY_META[id].shortLabel,
-        icon: CATEGORY_META[id].icon,
-      })
-    }
-  }
-  return shortcuts.slice(0, 6)
-})
-
-const handleError = () => clearError({ redirect: '/' })
+// 카테고리 바로가기 (inline으로 정의 - SSR 안전)
+const categories = [
+  { slug: 'toilet', label: '공공화장실' },
+  { slug: 'wifi', label: '무료 와이파이' },
+  { slug: 'parking', label: '공영주차장' },
+  { slug: 'hospital', label: '병원' },
+  { slug: 'pharmacy', label: '약국' },
+  { slug: 'aed', label: '자동심장충격기' },
+]
 </script>
-
-<style scoped>
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-}
-</style>

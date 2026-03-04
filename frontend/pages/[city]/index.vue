@@ -8,9 +8,19 @@
       <h1 class="text-3xl font-bold text-gray-900 mb-2">
         {{ cityName }} 생활 편의시설
       </h1>
-      <p class="text-gray-600">
+      <p class="text-gray-600 mb-4">
         {{ cityName }}의 구/군을 선택하여 주변 시설을 찾아보세요.
       </p>
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 text-sm text-slate-600 leading-relaxed space-y-2">
+        <p>
+          일상킷에서 {{ cityName }} 지역의 공공화장실, 무료 와이파이, 공영주차장, 병원, 약국 등
+          다양한 생활 편의시설 정보를 한눈에 확인할 수 있습니다.
+        </p>
+        <p>
+          아래에서 구/군을 선택하면 해당 지역의 시설 목록을 상세하게 볼 수 있으며,
+          카테고리별 검색을 통해 원하는 시설을 빠르게 찾을 수 있습니다.
+        </p>
+      </div>
     </header>
 
     <!-- Loading State -->

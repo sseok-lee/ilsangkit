@@ -998,9 +998,9 @@
                 <span class="material-symbols-outlined">share</span>
               </button>
             </div>
-            <h1 class="text-[#111418] text-2xl font-bold leading-tight tracking-tight">
+            <h2 class="text-[#111418] text-2xl font-bold leading-tight tracking-tight">
               {{ facility.name }}
-            </h1>
+            </h2>
           </div>
 
           <!-- Basic Info Card -->
