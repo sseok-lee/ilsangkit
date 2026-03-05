@@ -4,6 +4,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { getStatsByCity } from '../services/facilityService.js';
 
 const router = Router();
 
@@ -45,6 +46,19 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
     pharmacy: pharmacyCount,
     total: toiletCount + wifiCount + clothesCount + kioskCount + trashCount + parkingCount + aedCount + libraryCount + hospitalCount + pharmacyCount,
   };
+
+  res.json({ success: true, data: stats });
+}));
+
+// GET /api/meta/stats/:citySlug - 시/도별 카테고리별 시설 통계
+router.get('/stats/:citySlug', asyncHandler(async (req: Request, res: Response) => {
+  const citySlug = req.params.citySlug as string;
+  const stats = await getStatsByCity(citySlug);
+
+  if (!stats) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
+    return;
+  }
 
   res.json({ success: true, data: stats });
 }));

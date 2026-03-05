@@ -996,6 +996,81 @@ export async function getByRegionAll(
 }
 
 /**
+ * 시/도별 카테고리별 시설 통계 조회
+ * - City Hub 페이지에서 동적 콘텐츠 생성용
+ * - district별 total도 포함
+ */
+export async function getStatsByCity(citySlug: string): Promise<{
+  city: string;
+  citySlug: string;
+  total: number;
+  categories: Record<string, number>;
+  topCategories: string[];
+  districts: Array<{ district: string; total: number }>;
+} | null> {
+  const fullName = CITY_SLUG_TO_FULL[citySlug];
+  const shortName = CITY_SLUG_TO_SHORT[citySlug];
+  if (!fullName) return null;
+
+  // city variants for matching
+  const cityVariants = [fullName, shortName].filter(Boolean);
+  const cityCondition = cityVariants.length > 1 ? { in: cityVariants } : fullName;
+  const where = { city: cityCondition };
+
+  // 10개 카테고리 count 병렬 실행
+  const [categoryCounts, trashCount] = await Promise.all([
+    Promise.all(
+      ALL_CATEGORIES.map(async (cat) => ({
+        category: cat,
+        count: await CATEGORY_REGISTRY[cat].model().count({ where }),
+      }))
+    ),
+    prisma.wasteSchedule.count({ where }),
+  ]);
+
+  const categories: Record<string, number> = {};
+  for (const { category, count } of categoryCounts) {
+    categories[category] = count;
+  }
+  categories.trash = trashCount;
+
+  const total = Object.values(categories).reduce((sum, c) => sum + c, 0);
+
+  // 상위 3개 카테고리
+  const topCategories = Object.entries(categories)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([cat]) => cat);
+
+  // district별 total 조회 (Region 테이블에서 district 목록을 가져와 각각 count)
+  const regions = await prisma.region.findMany({
+    where: { city: { in: cityVariants } },
+    select: { district: true },
+    orderBy: { district: 'asc' },
+  });
+
+  const districtTotals = await Promise.all(
+    regions.map(async (r) => {
+      const distWhere = { city: cityCondition, district: r.district };
+      const counts = await Promise.all([
+        ...ALL_CATEGORIES.map((cat) => CATEGORY_REGISTRY[cat].model().count({ where: distWhere })),
+        prisma.wasteSchedule.count({ where: distWhere }),
+      ]);
+      return { district: r.district, total: counts.reduce((sum, c) => sum + c, 0) };
+    })
+  );
+
+  return {
+    city: fullName,
+    citySlug,
+    total,
+    categories,
+    topCategories,
+    districts: districtTotals.filter((d) => d.total > 0),
+  };
+}
+
+/**
  * 사이트맵용: 실제 데이터가 있는 지역-카테고리 조합 조회
  */
 export async function getRegionCategoryCombinations(): Promise<
