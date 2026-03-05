@@ -19,9 +19,9 @@ import { fileURLToPath } from 'url';
 // 설정 — xlsx 파일 구조에 맞게 조정 필요
 // ============================================
 
-// xlsx 파일 경로 (backend/prisma/data/extra_hospital_2025.12/ 기준)
+// xlsx 파일 경로 (backend/prisma/data/extra_hospital_latest/ 기준)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.resolve(__dirname, '../../prisma/data/extra_hospital_2025.12');
+const DATA_DIR = path.resolve(__dirname, '../../prisma/data/extra_hospital_latest');
 
 // 시트명/컬럼명 매핑 — 실제 파일 확인 후 조정
 // HIRA 데이터 기준 추정 컬럼명
