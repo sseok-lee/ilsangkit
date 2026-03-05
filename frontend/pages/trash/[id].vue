@@ -183,6 +183,34 @@
         </div>
       </nav>
 
+      <!-- 이용 팁 -->
+      <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-slate-500 text-[20px]">lightbulb</span>
+          <h3 class="font-bold text-slate-900">쓰레기 배출 이용 팁</h3>
+        </div>
+        <ul class="space-y-2">
+          <li v-for="(tip, i) in trashTips" :key="i" class="flex items-start gap-2 text-sm text-slate-600 leading-relaxed">
+            <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">check</span>
+            {{ tip }}
+          </li>
+        </ul>
+      </section>
+
+      <!-- FAQ -->
+      <section v-if="trashFaqItems.length > 0" class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-slate-500 text-[20px]">help</span>
+          <h3 class="font-bold text-slate-900">자주 묻는 질문</h3>
+        </div>
+        <div class="space-y-4">
+          <div v-for="(faq, i) in trashFaqItems" :key="i">
+            <h4 class="text-sm font-bold text-slate-900 mb-1">Q. {{ faq.question }}</h4>
+            <p class="text-sm text-slate-600 leading-relaxed">{{ faq.answer }}</p>
+          </div>
+        </div>
+      </section>
+
       <!-- 데이터 정보 -->
       <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
         <div class="flex items-center gap-2 mb-3">
@@ -217,6 +245,11 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
+import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
+import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
+
+const trashTips = CATEGORY_TIPS.trash
+const trashFaqItems = CATEGORY_FAQ.trash.slice(0, 3)
 
 const route = useRoute()
 const router = useRouter()

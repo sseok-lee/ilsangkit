@@ -17,6 +17,15 @@
           <span class="ml-1">{{ info.dayOfWeek }}</span>
         </p>
       </div>
+      <ClientOnly>
+        <div v-if="nextCollectionText" class="flex items-start gap-2">
+          <span class="material-symbols-outlined text-[18px] shrink-0 mt-0.5" :class="iconTextClass">event_upcoming</span>
+          <p>
+            <span class="font-medium" :class="iconTextClass">다음 배출일:</span>
+            <span class="ml-1 font-medium text-slate-800">{{ nextCollectionText }}</span>
+          </p>
+        </div>
+      </ClientOnly>
       <div v-if="timeRange" class="flex items-start gap-2">
         <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0 mt-0.5">schedule</span>
         <p>
@@ -66,5 +75,34 @@ const timeRange = computed(() => {
   if (!props.info.beginTime && !props.info.endTime) return null
   if (props.info.beginTime && props.info.endTime) return `${props.info.beginTime} ~ ${props.info.endTime}`
   return props.info.beginTime || props.info.endTime
+})
+
+// 다음 배출일 계산 (dayOfWeek: "월, 수, 금" 등에서 파싱)
+const DAY_MAP: Record<string, number> = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 }
+
+const nextCollectionText = computed(() => {
+  if (!props.info.dayOfWeek) return null
+  const days = props.info.dayOfWeek
+    .split(/[,\s·]+/)
+    .map((d) => d.trim())
+    .filter((d) => d in DAY_MAP)
+    .map((d) => DAY_MAP[d])
+  if (days.length === 0) return null
+
+  const now = new Date()
+  const today = now.getDay()
+  // 오늘 포함, 가장 가까운 배출 요일 찾기
+  let minDiff = 7
+  for (const day of days) {
+    const diff = (day - today + 7) % 7
+    if (diff < minDiff) minDiff = diff
+  }
+  const next = new Date(now)
+  next.setDate(next.getDate() + minDiff)
+  const month = next.getMonth() + 1
+  const date = next.getDate()
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토']
+  const label = minDiff === 0 ? '오늘' : minDiff === 1 ? '내일' : `${minDiff}일 후`
+  return `${month}/${date}(${dayNames[next.getDay()]}) — ${label}`
 })
 </script>

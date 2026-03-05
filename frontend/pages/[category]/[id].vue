@@ -369,6 +369,10 @@
                         <span class="text-sm text-[#4b5563]">상세 위치</span>
                         <span class="text-sm font-medium text-[#111418]">{{ details?.detailLocation }}</span>
                       </div>
+                      <div v-if="details?.providerName" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">운영기관</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details?.providerName }}</span>
+                      </div>
                       <div v-if="details?.managementAgency" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563]">관리기관</span>
                         <span class="text-sm font-medium text-[#111418]">{{ details?.managementAgency }}</span>
@@ -895,6 +899,34 @@
                   </NuxtLink>
                 </div>
               </nav>
+
+              <!-- 이용 팁 -->
+              <div v-if="categoryTips.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[#60708a] text-[20px]">lightbulb</span>
+                  <h2 class="text-[#111418] text-lg font-bold">{{ categoryMeta.label }} 이용 팁</h2>
+                </div>
+                <ul class="p-5 flex flex-col gap-2.5">
+                  <li v-for="(tip, i) in categoryTips" :key="i" class="flex items-start gap-2 text-sm text-[#4b5563] leading-relaxed">
+                    <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">check</span>
+                    {{ tip }}
+                  </li>
+                </ul>
+              </div>
+
+              <!-- FAQ -->
+              <div v-if="categoryFaqItems.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[#60708a] text-[20px]">help</span>
+                  <h2 class="text-[#111418] text-lg font-bold">자주 묻는 질문</h2>
+                </div>
+                <div class="p-5 flex flex-col gap-4">
+                  <div v-for="(faq, i) in categoryFaqItems" :key="i">
+                    <h3 class="text-sm font-bold text-[#111418] mb-1">Q. {{ faq.question }}</h3>
+                    <p class="text-sm text-[#4b5563] leading-relaxed">{{ faq.answer }}</p>
+                  </div>
+                </div>
+              </div>
 
               <!-- Data Info Card -->
               <div v-if="dataDate || dataPortalUrl" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
@@ -1733,6 +1765,34 @@
             </div>
           </nav>
 
+          <!-- 이용 팁 (Mobile) -->
+          <div v-if="categoryTips.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+            <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
+              <span class="material-symbols-outlined text-[#60708a] text-[20px]">lightbulb</span>
+              <h2 class="text-[#111418] text-lg font-bold">{{ categoryMeta.label }} 이용 팁</h2>
+            </div>
+            <ul class="p-5 flex flex-col gap-2.5">
+              <li v-for="(tip, i) in categoryTips" :key="i" class="flex items-start gap-2 text-sm text-[#4b5563] leading-relaxed">
+                <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">check</span>
+                {{ tip }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- FAQ (Mobile) -->
+          <div v-if="categoryFaqItems.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+            <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
+              <span class="material-symbols-outlined text-[#60708a] text-[20px]">help</span>
+              <h2 class="text-[#111418] text-lg font-bold">자주 묻는 질문</h2>
+            </div>
+            <div class="p-5 flex flex-col gap-4">
+              <div v-for="(faq, i) in categoryFaqItems" :key="i">
+                <h3 class="text-sm font-bold text-[#111418] mb-1">Q. {{ faq.question }}</h3>
+                <p class="text-sm text-[#4b5563] leading-relaxed">{{ faq.answer }}</p>
+              </div>
+            </div>
+          </div>
+
           <!-- Data Info Card -->
           <div v-if="dataDate || dataPortalUrl" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
@@ -1797,6 +1857,8 @@ import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META, CATEGORY_DATA_PORTAL_URL } from '~/types/facility'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
+import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
+import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
@@ -1853,6 +1915,10 @@ watchEffect(() => {
 
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })
+
+// 카테고리별 이용 팁 & FAQ (상세 페이지 하단 콘텐츠 보강)
+const categoryTips = computed(() => CATEGORY_TIPS[category.value as FacilityCategory] ?? [])
+const categoryFaqItems = computed(() => (CATEGORY_FAQ[category.value as FacilityCategory] ?? []).slice(0, 3))
 
 // 모바일 브레드크럼 아이템
 const breadcrumbItems = computed(() => {
