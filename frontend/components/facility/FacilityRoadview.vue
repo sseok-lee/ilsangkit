@@ -19,6 +19,8 @@
 </template>
 
 <script setup lang="ts">
+import { useKakaoMap } from '~/composables/useKakaoMap'
+
 const props = defineProps<{
   lat: number
   lng: number
