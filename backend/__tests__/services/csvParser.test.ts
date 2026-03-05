@@ -2,7 +2,7 @@
 // @SPEC docs/planning/02-trd.md#공공데이터-동기화
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { parseCSV, downloadAndExtractCSV, CSVParseOptions } from '../../src/lib/csvParser.js';
+import { parseCSV, CSVParseOptions } from '../../src/lib/csvParser.js';
 
 describe('csvParser', () => {
   describe('parseCSV', () => {
@@ -127,11 +127,4 @@ describe('csvParser', () => {
     });
   });
 
-  describe('downloadAndExtractCSV', () => {
-    it('should throw error for invalid URL', async () => {
-      await expect(downloadAndExtractCSV('invalid-url')).rejects.toThrow();
-    });
-
-    // Note: 실제 다운로드 테스트는 통합 테스트에서 수행
-  });
 });

@@ -1,31 +1,30 @@
 #!/usr/bin/env tsx
-// @TASK T2.3.1 - 의류수거함 데이터 동기화 (API + CSV)
+// @TASK T9.3.2 - 공공도서관 동기화 스크립트
 
 /**
- * 의류수거함 데이터 동기화 CLI
+ * 공공도서관 데이터 동기화 CLI
  *
  * 사용법:
- *   npm run sync:clothes                          # CSV 모드 (기본)
- *   npm run sync:clothes -- --mode api            # API 모드
- *   npm run sync:clothes -- --file /path/to.csv   # CSV 파일 경로 지정
+ *   npm run sync:library                          # CSV 모드 (기본)
+ *   npm run sync:library -- --mode api            # API 모드
+ *   npm run sync:library -- --file /path/to.csv   # CSV 파일 경로 지정
  */
 
 import * as path from 'path';
 import * as fs from 'fs';
-import { syncClothes, syncClothesFromApi } from '../services/clothesSyncService.js';
+import { syncLibraries, syncLibrariesFromApi } from '../services/librarySyncService.js';
 
 async function main(): Promise<void> {
-  console.log('=== 의류수거함 데이터 동기화 시작 ===\n');
+  console.log('=== 공공도서관 데이터 동기화 시작 ===\n');
 
   const args = process.argv.slice(2);
   const fileIndex = args.indexOf('--file');
   const modeIndex = args.indexOf('--mode');
-  const localIndex = args.indexOf('--local');
 
-  // 모드 결정: --file/--local이 있으면 CSV, --mode로 명시적 지정, 기본은 CSV
+  // 모드 결정: --file이 있으면 CSV, --mode로 명시적 지정, 기본은 CSV
   let mode: 'api' | 'csv' = 'csv';
 
-  if (fileIndex !== -1 || localIndex !== -1) {
+  if (fileIndex !== -1) {
     mode = 'csv';
   } else if (modeIndex !== -1 && args[modeIndex + 1]) {
     const modeArg = args[modeIndex + 1];
@@ -39,7 +38,7 @@ async function main(): Promise<void> {
 
   if (mode === 'api') {
     console.log('모드: API (data.go.kr Open API)');
-    const result = await syncClothesFromApi();
+    const result = await syncLibrariesFromApi();
 
     console.log('\n=== 동기화 결과 ===');
     console.log(`전체: ${result.totalRecords}건`);
@@ -60,12 +59,10 @@ async function main(): Promise<void> {
 
     if (fileIndex !== -1 && args[fileIndex + 1]) {
       csvFilePath = path.resolve(args[fileIndex + 1]);
-    } else if (localIndex !== -1 && args[localIndex + 1]) {
-      csvFilePath = path.resolve(process.cwd(), args[localIndex + 1]);
     } else {
       csvFilePath = path.resolve(
         import.meta.dirname,
-        '../../prisma/data/clothes.csv'
+        '../../prisma/data/library.csv'
       );
     }
 
@@ -78,7 +75,7 @@ async function main(): Promise<void> {
     console.log(`모드: CSV 파일`);
     console.log(`CSV 파일: ${csvFilePath}`);
 
-    const result = await syncClothes(csvFilePath);
+    const result = await syncLibraries(csvFilePath);
 
     console.log('\n=== 동기화 결과 ===');
     console.log(`전체: ${result.totalRecords}건`);

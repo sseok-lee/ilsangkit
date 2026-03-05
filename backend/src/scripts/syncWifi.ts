@@ -1,17 +1,21 @@
 // @TASK T2.3 - 무료 와이파이 데이터 동기화 스크립트
 // @SPEC docs/planning/04-database-design.md#무료-와이파이
 
-import { parseCSV, downloadAndExtractCSV } from '../lib/csvParser.js';
+import { parseCSV } from '../lib/csvParser.js';
 import prisma from '../lib/prisma.js';
 import { SyncStatus } from '@prisma/client';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as iconv from 'iconv-lite';
 import { KOREA_BOUNDS, SYNC } from '../constants/index.js';
 import { CITY_NORMALIZATION_MAP } from '../lib/addressParser.js';
 
-// 와이파이 CSV 데이터 URL
-const WIFI_DATA_URL = 'https://www.localdata.go.kr/datafile/each/07_24_04_P_CSV.zip';
+// 와이파이 기본 CSV 경로
+const DEFAULT_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/wifi.csv'
+);
 
 // CSV 행 타입 정의 (localdata.go.kr 표준데이터 형식)
 export interface WifiCSVRow extends Record<string, string> {
@@ -122,7 +126,7 @@ export function transformWifiData(row: WifiCSVRow): TransformedWifi | null {
     city,
     district,
     sourceId,
-    sourceUrl: WIFI_DATA_URL,
+    sourceUrl: 'https://www.data.go.kr/data/15013116/standard.do',
     // Wifi 전용 필드 (flat)
     ssid: row.와이파이SSID?.trim() || '',
     installDate: row.설치연월?.trim() || '',
@@ -329,8 +333,12 @@ export async function syncWifiData(csvContentOrPath?: string): Promise<WifiSyncR
       // CSV 내용이 직접 전달된 경우
       content = csvContentOrPath;
     } else {
-      console.info('Downloading wifi data from:', WIFI_DATA_URL);
-      content = await downloadAndExtractCSV(WIFI_DATA_URL);
+      // 기본 CSV 경로 사용
+      console.info('Reading default CSV file:', DEFAULT_CSV_PATH);
+      if (!fs.existsSync(DEFAULT_CSV_PATH)) {
+        throw new Error(`CSV 파일을 찾을 수 없습니다: ${DEFAULT_CSV_PATH}. prisma/data/wifi.csv에 파일을 넣어주세요.`);
+      }
+      content = readLocalCSV(DEFAULT_CSV_PATH);
     }
 
     // CSV 파싱

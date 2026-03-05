@@ -6,9 +6,8 @@
  *
  * 사용법:
  *   npm run sync:parking                          # CSV 모드 (기본)
- *   npm run sync:parking -- --file /path/to.csv   # CSV 파일 모드 (경로 지정)
  *   npm run sync:parking -- --mode api            # API 모드 (서비스키 필요)
- *   npm run sync:parking -- --mode csv            # 기본 CSV 파일 경로로 동기화
+ *   npm run sync:parking -- --file /path/to.csv   # CSV 파일 경로 지정
  */
 
 import * as path from 'path';

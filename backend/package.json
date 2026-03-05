@@ -27,6 +27,7 @@
     "sync:kiosk": "tsx src/scripts/syncKiosk.ts",
     "sync:parking": "tsx src/scripts/syncParking.ts",
     "sync:aed": "tsx src/scripts/syncAed.ts",
+    "sync:library": "tsx src/scripts/syncLibrary.ts",
     "sync:regions": "tsx src/scripts/syncRegion.ts",
     "sync:facilities": "tsx src/scripts/syncAll.ts",
     "seed:hospital-detail": "tsx src/scripts/seedHospitalDetail.ts",

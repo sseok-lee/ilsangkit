@@ -2,8 +2,6 @@
 // @SPEC docs/planning/02-trd.md#공공데이터-동기화
 
 import * as fs from 'fs';
-import * as https from 'https';
-import * as http from 'http';
 
 export interface CSVParseOptions {
   delimiter?: string;
@@ -147,66 +145,6 @@ function parseCSVRows(content: string, delimiter: string): string[][] {
 
   // 빈 행 필터링
   return rows.filter((row) => row.some((field) => field.trim() !== ''));
-}
-
-/**
- * URL에서 ZIP 파일을 다운로드하고 CSV를 추출하여 반환
- * @param url - 다운로드할 ZIP 파일 URL
- * @returns CSV 파일 내용
- */
-export async function downloadAndExtractCSV(url: string): Promise<string> {
-  // URL 유효성 검사
-  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-    throw new Error('Invalid URL: URL must start with http:// or https://');
-  }
-
-  return new Promise((resolve, reject) => {
-    const protocol = url.startsWith('https') ? https : http;
-
-    const request = protocol.get(url, (response) => {
-      // 리다이렉트 처리
-      if (response.statusCode === 301 || response.statusCode === 302) {
-        const redirectUrl = response.headers.location;
-        if (redirectUrl) {
-          downloadAndExtractCSV(redirectUrl).then(resolve).catch(reject);
-          return;
-        }
-      }
-
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
-        return;
-      }
-
-      const chunks: Buffer[] = [];
-      response.on('data', (chunk: Buffer) => chunks.push(chunk));
-      response.on('end', async () => {
-        try {
-          const buffer = Buffer.concat(chunks);
-          // ZIP 파일인지 확인 (PK 시그니처)
-          if (buffer[0] === 0x50 && buffer[1] === 0x4b) {
-            // ZIP 파일 처리는 별도 구현 필요
-            // 일단 간단히 에러 처리
-            reject(new Error('ZIP file extraction not implemented'));
-          } else {
-            // 일반 텍스트 (CSV) 파일로 처리
-            // 인코딩 자동 감지 시도 (EUC-KR vs UTF-8)
-            const content = decodeContent(buffer);
-            resolve(content);
-          }
-        } catch (error) {
-          reject(error);
-        }
-      });
-      response.on('error', reject);
-    });
-
-    request.on('error', reject);
-    request.setTimeout(30000, () => {
-      request.destroy();
-      reject(new Error('Request timeout'));
-    });
-  });
 }
 
 /**
