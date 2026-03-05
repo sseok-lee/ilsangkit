@@ -13,6 +13,8 @@ declare global {
         event: {
           addListener: (target: unknown, type: string, callback: () => void) => void
         }
+        Roadview: new (container: HTMLElement) => KakaoRoadview
+        RoadviewClient: new () => KakaoRoadviewClient
         services: {
           Geocoder: new () => KakaoGeocoder
           Status: { OK: string; ZERO_RESULT: string; ERROR: string }
@@ -86,6 +88,14 @@ interface KakaoCustomOverlay {
   setMap(map: KakaoMap | null): void
 }
 
+interface KakaoRoadview {
+  setPanoId(panoId: number, position: KakaoLatLng): void
+}
+
+interface KakaoRoadviewClient {
+  getNearestPanoId(position: KakaoLatLng, radius: number, callback: (panoId: number | null) => void): void
+}
+
 interface MapInitOptions {
   center: { lat: number; lng: number }
   level?: number
@@ -96,22 +106,24 @@ interface MarkerOptions {
   onClick?: (facility: FacilitySearchItem) => void
 }
 
+// Module-level singleton — shared across all useKakaoMap() instances
+let sdkLoadPromise: Promise<void> | null = null
+
 export function useKakaoMap() {
   const config = useRuntimeConfig()
   const map = ref<KakaoMap | null>(null)
   const markers = ref<KakaoMarker[]>([])
   const overlays = ref<KakaoCustomOverlay[]>([])
   const userLocationOverlay = ref<KakaoCustomOverlay | null>(null)
-  const isLoaded = ref(false)
+  const isLoaded = computed(() => sdkLoadPromise !== null && typeof window !== 'undefined' && !!window.kakao?.maps)
 
-  // Load Kakao Maps SDK
+  // Load Kakao Maps SDK (singleton — only one <script> tag ever created)
   async function loadKakaoMaps(): Promise<void> {
-    if (isLoaded.value) return
+    if (sdkLoadPromise) return sdkLoadPromise
 
-    return new Promise((resolve, reject) => {
+    sdkLoadPromise = new Promise((resolve, reject) => {
       // Check if already loaded
       if (window.kakao && window.kakao.maps) {
-        isLoaded.value = true
         resolve()
         return
       }
@@ -131,17 +143,19 @@ export function useKakaoMap() {
 
       script.onload = () => {
         window.kakao.maps.load(() => {
-          isLoaded.value = true
           resolve()
         })
       }
 
       script.onerror = () => {
+        sdkLoadPromise = null  // Allow retry on failure
         reject(new Error('Failed to load Kakao Maps SDK'))
       }
 
       document.head.appendChild(script)
     })
+
+    return sdkLoadPromise
   }
 
   // Initialize map
@@ -287,10 +301,34 @@ export function useKakaoMap() {
     }
   }
 
+  // Initialize Roadview
+  async function initRoadview(
+    container: HTMLElement,
+    lat: number,
+    lng: number,
+    onResult: (available: boolean) => void
+  ): Promise<void> {
+    await loadKakaoMaps()
+
+    const position = new window.kakao.maps.LatLng(lat, lng)
+    const client = new window.kakao.maps.RoadviewClient()
+
+    client.getNearestPanoId(position, 50, (panoId) => {
+      if (!panoId) {
+        onResult(false)
+        return
+      }
+      const roadview = new window.kakao.maps.Roadview(container)
+      roadview.setPanoId(panoId, position)
+      onResult(true)
+    })
+  }
+
   return {
     map: readonly(map),
-    isLoaded: readonly(isLoaded),
+    isLoaded,
     initMap,
+    initRoadview,
     setCenter,
     panTo,
     clearMarkers,

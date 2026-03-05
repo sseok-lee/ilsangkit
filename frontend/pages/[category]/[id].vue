@@ -212,6 +212,16 @@
                 </div>
               </div>
 
+              <!-- Roadview Card (Desktop) -->
+              <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                <div class="px-5 py-4 border-b border-[#f0f2f5]">
+                  <h2 class="text-[#111418] text-lg font-bold">로드뷰</h2>
+                </div>
+                <div class="p-5">
+                  <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+                </div>
+              </div>
+
               <!-- Facility Status Card -->
               <div class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5]">
@@ -810,26 +820,6 @@
                 </div>
               </div>
 
-              <!-- Review Section (Desktop Left Column) -->
-              <ClientOnly>
-                <ReviewSection :category="category" :facility-id="id" />
-              </ClientOnly>
-
-              <!-- Location Guide Card -->
-              <div v-if="facility.city || facility.district" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
-                <div class="px-5 py-4 border-b border-[#f0f2f5]">
-                  <h2 class="text-[#111418] text-lg font-bold">위치안내</h2>
-                </div>
-                <div class="p-5">
-                  <div class="flex gap-3">
-                    <span class="material-symbols-outlined text-primary shrink-0">info</span>
-                    <p class="text-[#4b5563] text-sm leading-relaxed">
-                      {{ facility.district || facility.city }} 지역에 위치해 있습니다.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <!-- Nearby Facilities -->
               <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
@@ -876,6 +866,11 @@
                   </div>
                 </div>
               </template>
+
+              <!-- Review Section (Desktop Left Column) -->
+              <ClientOnly>
+                <ReviewSection :category="category" :facility-id="id" />
+              </ClientOnly>
 
               <!-- 같은 지역 시설 링크 -->
               <nav v-if="regionLink" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
@@ -1052,6 +1047,16 @@
                 </div>
                 <a :href="`tel:${details?.phoneNumber}`" class="text-primary text-base font-medium hover:underline">{{ details?.phoneNumber }}</a>
               </div>
+            </div>
+          </div>
+
+          <!-- Roadview Card (Mobile) -->
+          <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+            <div class="px-5 py-4 border-b border-[#f0f2f5]">
+              <h2 class="text-[#111418] text-lg font-bold">로드뷰</h2>
+            </div>
+            <div class="p-5">
+              <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
             </div>
           </div>
 
@@ -1653,26 +1658,6 @@
             </div>
           </div>
 
-          <!-- Review Section (Mobile) -->
-          <ClientOnly>
-            <ReviewSection :category="category" :facility-id="id" />
-          </ClientOnly>
-
-          <!-- Location Guide Card -->
-          <div v-if="facility.city || facility.district" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
-            <div class="px-5 py-4 border-b border-[#f0f2f5]">
-              <h2 class="text-[#111418] text-lg font-bold">위치안내</h2>
-            </div>
-            <div class="p-5">
-              <div class="flex gap-3">
-                <span class="material-symbols-outlined text-primary shrink-0">info</span>
-                <p class="text-[#4b5563] text-sm leading-relaxed">
-                  {{ facility.district || facility.city }} 지역에 위치해 있습니다.
-                </p>
-              </div>
-            </div>
-          </div>
-
           <!-- Nearby Facilities -->
           <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
@@ -1718,6 +1703,11 @@
               </div>
             </div>
           </template>
+
+          <!-- Review Section (Mobile) -->
+          <ClientOnly>
+            <ReviewSection :category="category" :facility-id="id" />
+          </ClientOnly>
 
           <!-- 같은 지역 시설 링크 -->
           <nav v-if="regionLink" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
