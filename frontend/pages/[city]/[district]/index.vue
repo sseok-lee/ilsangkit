@@ -14,7 +14,7 @@
     </header>
 
     <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12">
+    <div v-if="loading" class="text-center py-12" role="status" aria-label="정보 로딩 중">
       <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       <p class="mt-4 text-gray-600">정보를 불러오는 중...</p>
     </div>
@@ -55,7 +55,7 @@
       </h2>
 
       <!-- Loading -->
-      <div v-if="allLoading" class="text-center py-12">
+      <div v-if="allLoading" class="text-center py-12" role="status" aria-label="시설 정보 로딩 중">
         <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
         <p class="mt-4 text-gray-600">시설 정보를 불러오는 중...</p>
       </div>
@@ -163,11 +163,10 @@ const { data: regionsData, status } = await useAsyncData(
 syncFromHydration(regionsData)
 
 // Validate district slug (Soft 404 방지)
-if (regionsData.value?.length) {
-  const validDistricts = getDistrictsByCity(city.value)
-  if (validDistricts.length > 0 && !validDistricts.some(d => d.slug === district.value)) {
-    throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
-  }
+// regionsData가 비어있어도 유효하지 않은 district로 간주
+const validDistricts = getDistrictsByCity(city.value)
+if (validDistricts.length === 0 || !validDistricts.some(d => d.slug === district.value)) {
+  throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
 }
 
 const loading = computed(() => status.value === 'pending')
@@ -269,7 +268,8 @@ watch([allFacilities, allCurrentPage, allTotalPages], () => {
   }
 
   const paginationLinks: Array<{ rel: string; href: string }> = []
-  const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}`
+  const siteUrl = useRuntimeConfig().public.siteUrl || 'https://ilsangkit.co.kr'
+  const baseUrl = `${siteUrl}/${city.value}/${district.value}`
 
   if (allCurrentPage.value > 1) {
     paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${allCurrentPage.value - 1}` })

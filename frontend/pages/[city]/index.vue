@@ -28,7 +28,7 @@
     </header>
 
     <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12">
+    <div v-if="loading" class="text-center py-12" role="status" aria-label="지역 정보 로딩 중">
       <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       <p class="mt-4 text-gray-600">지역 정보를 불러오는 중...</p>
     </div>
@@ -120,8 +120,14 @@ const [{ data: regionsData, status }, { data: statsData }] = await Promise.all([
 syncFromHydration(regionsData)
 const loading = computed(() => status.value === 'pending')
 
-// City stats
-const cityStats = computed(() => statsData.value?.data ?? null)
+// City stats - 응답 구조 검증
+const cityStats = computed(() => {
+  const raw = statsData.value
+  if (!raw || typeof raw !== 'object' || !('data' in raw)) return null
+  const data = raw.data
+  if (!data || typeof data.total !== 'number') return null
+  return data
+})
 
 // 상위 카테고리 텍스트 (예: "병원 12,456개, 약국 4,532개, 공공화장실 3,245개")
 const topCategoryText = computed(() => {

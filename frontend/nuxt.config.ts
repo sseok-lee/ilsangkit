@@ -87,6 +87,7 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000',
       kakaoMapKey: process.env.NUXT_PUBLIC_KAKAO_MAP_KEY || '',
       gaId: process.env.NUXT_PUBLIC_GA_ID || '',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://ilsangkit.co.kr',
       disableMsw: process.env.NUXT_PUBLIC_DISABLE_MSW === 'true'
     }
   },

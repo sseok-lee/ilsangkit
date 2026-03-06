@@ -461,7 +461,8 @@ watch([facilities, currentPage, totalPages], () => {
 
   // 페이지네이션 rel link 태그
   const paginationLinks: Array<{ rel: string; href: string }> = []
-  const baseUrl = `https://ilsangkit.co.kr/${categoryParam.value}`
+  const siteUrl = useRuntimeConfig().public.siteUrl || 'https://ilsangkit.co.kr'
+  const baseUrl = `${siteUrl}/${categoryParam.value}`
 
   if (currentPage.value > 1) {
     paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${currentPage.value - 1}` })
