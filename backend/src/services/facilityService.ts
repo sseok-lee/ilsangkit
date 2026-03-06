@@ -1073,6 +1073,26 @@ export async function getStatsByCity(citySlug: string): Promise<{
 /**
  * 사이트맵용: 실제 데이터가 있는 지역-카테고리 조합 조회
  */
+/**
+ * 카테고리별 최신 동기화 완료 시간 조회
+ */
+export async function getSyncStatus(): Promise<Record<string, string | null>> {
+  const categories = [...ALL_CATEGORIES, 'trash'] as const;
+
+  const results = await Promise.all(
+    categories.map(async (cat) => {
+      const record = await prisma.syncHistory.findFirst({
+        where: { category: cat, status: 'success' },
+        orderBy: { completedAt: 'desc' },
+        select: { completedAt: true },
+      });
+      return [cat, record?.completedAt?.toISOString() ?? null] as const;
+    }),
+  );
+
+  return Object.fromEntries(results);
+}
+
 export async function getRegionCategoryCombinations(): Promise<
   Array<{ city: string; district: string; citySlug: string; districtSlug: string; category: string }>
 > {

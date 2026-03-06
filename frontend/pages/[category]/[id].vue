@@ -929,7 +929,7 @@
               </div>
 
               <!-- Data Info Card -->
-              <div v-if="dataDate || dataPortalUrl" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+              <div v-if="dataDate || lastSyncDate || dataPortalUrl" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
                   <span class="material-symbols-outlined text-[#60708a] text-[20px]">description</span>
                   <h2 class="text-[#111418] text-lg font-bold">데이터 정보</h2>
@@ -938,6 +938,10 @@
                   <div v-if="dataDate" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563]">데이터 기준일</span>
                     <span class="text-sm font-medium text-[#111418]">{{ dataDate }}</span>
+                  </div>
+                  <div v-if="lastSyncDate" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">최근 동기화</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ lastSyncDate }}</span>
                   </div>
                   <div v-if="dataPortalUrl" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563]">출처</span>
@@ -1794,7 +1798,7 @@
           </div>
 
           <!-- Data Info Card -->
-          <div v-if="dataDate || dataPortalUrl" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+          <div v-if="dataDate || lastSyncDate || dataPortalUrl" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
               <span class="material-symbols-outlined text-[#60708a] text-[20px]">description</span>
               <h2 class="text-[#111418] text-lg font-bold">데이터 정보</h2>
@@ -1803,6 +1807,10 @@
               <div v-if="dataDate" class="flex items-center justify-between">
                 <span class="text-sm text-[#4b5563]">데이터 기준일</span>
                 <span class="text-sm font-medium text-[#111418]">{{ dataDate }}</span>
+              </div>
+              <div v-if="lastSyncDate" class="flex items-center justify-between">
+                <span class="text-sm text-[#4b5563]">최근 동기화</span>
+                <span class="text-sm font-medium text-[#111418]">{{ lastSyncDate }}</span>
               </div>
               <div v-if="dataPortalUrl" class="flex items-center justify-between">
                 <span class="text-sm text-[#4b5563]">출처</span>
@@ -2016,6 +2024,20 @@ const dataDate = computed(() => {
 const dataPortalUrl = computed(() => {
   if (!facility.value) return null
   return CATEGORY_DATA_PORTAL_URL[facility.value.category] ?? null
+})
+
+// 카테고리별 최근 동기화 날짜
+const { data: syncStatusResponse } = await useAsyncData(
+  'sync-status',
+  () => $fetch<{ success: boolean; data: Record<string, string | null> }>('/api/meta/sync-status'),
+  { lazy: true }
+)
+const lastSyncDate = computed(() => {
+  if (!facility.value || !syncStatusResponse.value?.data) return null
+  const cat = facility.value.category
+  const iso = syncStatusResponse.value.data[cat]
+  if (!iso) return null
+  return iso.slice(0, 10)
 })
 
 // Format distance

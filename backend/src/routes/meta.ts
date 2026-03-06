@@ -4,7 +4,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { getStatsByCity } from '../services/facilityService.js';
+import { getStatsByCity, getSyncStatus } from '../services/facilityService.js';
 
 const router = Router();
 
@@ -61,6 +61,12 @@ router.get('/stats/:citySlug', asyncHandler(async (req: Request, res: Response) 
   }
 
   res.json({ success: true, data: stats });
+}));
+
+// GET /api/meta/sync-status - 카테고리별 최근 동기화 날짜
+router.get('/sync-status', asyncHandler(async (_req: Request, res: Response) => {
+  const syncStatus = await getSyncStatus();
+  res.json({ success: true, data: syncStatus });
 }));
 
 // GET /api/meta/regions - 지역 목록
