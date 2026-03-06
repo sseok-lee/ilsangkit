@@ -62,7 +62,7 @@ jobs:
             mkdir -p /home/project2/assets/images/guides
 
             cd /home/project2/backend
-            npm ci --production
+            npm ci
 
             # Prisma 스키마를 프로덕션 DB에 동기화
             npx prisma db push --accept-data-loss
