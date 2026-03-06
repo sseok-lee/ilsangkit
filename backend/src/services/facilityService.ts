@@ -1071,6 +1071,56 @@ export async function getStatsByCity(citySlug: string): Promise<{
 }
 
 /**
+ * 구/군별 카테고리별 시설 통계 조회
+ */
+export async function getStatsByDistrict(citySlug: string, districtSlug: string): Promise<{
+  total: number;
+  categories: Record<string, number>;
+  topCategories: string[];
+} | null> {
+  const fullName = CITY_SLUG_TO_FULL[citySlug];
+  const shortName = CITY_SLUG_TO_SHORT[citySlug];
+  if (!fullName) return null;
+
+  const cityVariants = [fullName, shortName].filter(Boolean);
+
+  // districtSlug로 district name 조회
+  const region = await prisma.region.findFirst({
+    where: { city: { in: cityVariants }, slug: districtSlug },
+    select: { district: true },
+  });
+  if (!region) return null;
+
+  const cityCondition = cityVariants.length > 1 ? { in: cityVariants } : fullName;
+  const where = { city: cityCondition, district: region.district };
+
+  const [categoryCounts, trashCount] = await Promise.all([
+    Promise.all(
+      ALL_CATEGORIES.map(async (cat) => ({
+        category: cat,
+        count: await CATEGORY_REGISTRY[cat].model().count({ where }),
+      }))
+    ),
+    prisma.wasteSchedule.count({ where }),
+  ]);
+
+  const categories: Record<string, number> = {};
+  for (const { category, count } of categoryCounts) {
+    categories[category] = count;
+  }
+  categories.trash = trashCount;
+
+  const total = Object.values(categories).reduce((sum, c) => sum + c, 0);
+
+  const topCategories = Object.entries(categories)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([cat]) => cat);
+
+  return { total, categories, topCategories };
+}
+
+/**
  * 사이트맵용: 실제 데이터가 있는 지역-카테고리 조합 조회
  */
 /**

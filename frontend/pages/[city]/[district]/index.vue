@@ -8,9 +8,23 @@
       <h1 class="text-3xl font-bold text-gray-900 mb-2">
         {{ cityName }} {{ districtName }} 생활 편의시설
       </h1>
-      <p class="text-gray-600">
+      <p class="text-gray-600 mb-4">
         {{ cityName }} {{ districtName }}의 시설 카테고리를 선택하세요.
       </p>
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 text-sm text-slate-600 leading-relaxed space-y-2">
+        <p v-if="districtStats">
+          {{ cityName }} {{ districtName }}에는 {{ districtTopCategoryText }} 등
+          총 {{ districtStats.total.toLocaleString() }}개의 편의시설이 등록되어 있습니다.
+        </p>
+        <p v-else>
+          일상킷에서 {{ cityName }} {{ districtName }} 지역의 공공화장실, 무료 와이파이, 공영주차장, 병원, 약국 등
+          다양한 생활 편의시설 정보를 한눈에 확인할 수 있습니다.
+        </p>
+        <p>
+          아래에서 카테고리를 선택하면 해당 시설 목록을 상세하게 볼 수 있으며,
+          빠른 검색을 통해 원하는 시설을 찾을 수 있습니다.
+        </p>
+      </div>
     </header>
 
     <!-- Loading State -->
@@ -212,11 +226,50 @@ const categoryGroups = computed(() =>
   })).filter(group => group.items.length > 0)
 )
 
+// 구/군 통계 로드
+interface DistrictStats {
+  total: number
+  categories: Record<string, number>
+  topCategories: string[]
+}
+
+const { data: districtStatsData } = await useAsyncData(
+  `district-stats-${city.value}-${district.value}`,
+  () => $fetch<{ success: boolean; data: DistrictStats }>(
+    `/api/meta/stats/${city.value}/${district.value}`
+  ).catch(() => null)
+)
+
+const districtStats = computed(() => {
+  const raw = districtStatsData.value
+  if (!raw || typeof raw !== 'object' || !('data' in raw)) return null
+  const data = raw.data
+  if (!data || typeof data.total !== 'number') return null
+  return data
+})
+
+const districtTopCategoryText = computed(() => {
+  if (!districtStats.value?.topCategories) return ''
+  return districtStats.value.topCategories
+    .map((cat) => {
+      const meta = CATEGORY_META[cat as FacilityCategory]
+      const count = districtStats.value!.categories[cat] ?? 0
+      return `${meta?.label ?? cat} ${count.toLocaleString()}개`
+    })
+    .join(', ')
+})
+
 // SEO - top-level에서 설정 (SSR에서 메타태그 렌더링)
 const { setMeta } = useFacilityMeta()
+const metaDescription = computed(() => {
+  if (districtStats.value) {
+    return `${cityName.value} ${districtName.value}의 ${districtTopCategoryText.value} 등 총 ${districtStats.value.total.toLocaleString()}개 편의시설 정보를 찾아보세요.`
+  }
+  return `${cityName.value} ${districtName.value}의 공공화장실, 무료 와이파이, 병원, 약국 등 생활 편의시설 정보를 찾아보세요.`
+})
 setMeta({
   title: `${cityName.value} ${districtName.value} 생활 편의시설`,
-  description: `${cityName.value} ${districtName.value}의 공공화장실, 무료 와이파이, 병원, 약국 등 생활 편의시설 정보를 찾아보세요.`,
+  description: metaDescription.value,
   path: `/${city.value}/${district.value}`,
 })
 

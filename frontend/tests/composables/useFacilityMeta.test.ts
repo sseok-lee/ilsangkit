@@ -264,13 +264,14 @@ describe('useFacilityMeta', () => {
       expect(call.description).not.toMatch(/주소 및 상세 정보 확인$/)
     })
 
-    it('toilet description에 카테고리별 CTA 문구 포함 (가까운 공공화장실 위치 확인)', () => {
+    it('toilet description에 시설명과 카테고리 포함', () => {
       const { setFacilityDetailMeta } = useFacilityMeta()
 
       setFacilityDetailMeta(baseToiletFacility)
 
       const call = mockUseSeoMeta.mock.calls[0][0]
-      expect(call.description).toContain('가까운 공공화장실')
+      expect(call.description).toContain('강남역 공중화장실')
+      expect(call.description).toContain('공공화장실')
     })
 
     it('hospital description에 병원 또는 진료 관련 CTA 포함', () => {

@@ -158,6 +158,9 @@
                 <h1 class="text-[#111418] text-3xl font-bold leading-tight tracking-tight">
                   {{ facility.name }}
                 </h1>
+                <p v-if="facilityIntro" class="text-sm text-[#4b5563] leading-relaxed">
+                  {{ facilityIntro }}
+                </p>
               </div>
 
               <!-- Basic Info Card -->
@@ -1023,11 +1026,11 @@
                   </button>
                   <div v-if="showNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white#1a2630] rounded-xl shadow-lg border border-[#e5e7eb] overflow-hidden z-20">
                     <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
-                      <span class="text-base">🗺️</span> 카카오맵으로 길찾기
+                      <span class="inline-block w-5 h-5 rounded bg-[#FEE500]"></span> 카카오맵으로 길찾기
                     </button>
                     <div class="h-px bg-[#f0f2f5]"></div>
                     <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
-                      <span class="text-base">🧭</span> 네이버맵으로 길찾기
+                      <span class="inline-block w-5 h-5 rounded bg-[#03C75A]"></span> 네이버맵으로 길찾기
                     </button>
                   </div>
                 </div>
@@ -1054,6 +1057,9 @@
             <h2 class="text-[#111418] text-2xl font-bold leading-tight tracking-tight">
               {{ facility.name }}
             </h2>
+            <p v-if="facilityIntro" class="text-sm text-[#4b5563] leading-relaxed">
+              {{ facilityIntro }}
+            </p>
           </div>
 
           <!-- Basic Info Card -->
@@ -1878,17 +1884,15 @@
         <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pb-8 pt-4 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm#101b22]/95">
           <div class="flex gap-3">
             <button
-              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#f0f2f5] py-4 text-base font-bold text-[#111418] transition hover:bg-gray-200 active:scale-[0.98]"
+              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#03C75A] py-4 text-base font-bold text-white transition hover:bg-[#02b350] active:scale-[0.98]"
               @click="openNavigation(naverMapUrl)"
             >
-              <span class="text-base">🧭</span>
-              네이버맵
+              네이버 지도
             </button>
             <button
-              class="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-[#3b82f6] py-4 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-[0.98]"
+              class="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-4 text-base font-bold text-[#191919] shadow-lg shadow-yellow-500/30 transition hover:bg-[#FDD835] active:scale-[0.98]"
               @click="openNavigation(kakaoMapUrl)"
             >
-              <span class="material-symbols-outlined text-[20px]">near_me</span>
               카카오맵 길찾기
             </button>
           </div>
@@ -1920,6 +1924,7 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 const route = useRoute()
 const router = useRouter()
 const { setFacilityDetailMeta } = useFacilityMeta()
+import { buildFacilityIntro } from '~/composables/useFacilityMeta'
 const { setFacilitySchema, setBreadcrumbSchema, setFAQSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
@@ -2002,6 +2007,12 @@ watchEffect(() => {
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })
 
+// h1 아래 자연어 설명문
+const facilityIntro = computed(() => {
+  if (!facility.value) return ''
+  return buildFacilityIntro(facility.value)
+})
+
 // 카테고리별 이용 팁 & FAQ (상세 페이지 하단 콘텐츠 보강)
 const categoryTips = computed(() => {
   if (!facility.value) return []
@@ -2026,15 +2037,23 @@ const breadcrumbItems = computed(() => {
 const regionLink = computed(() => {
   if (!facility.value) return null
   const city = facility.value.city
+  const district = facility.value.district
   const shortCity = city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
   const citySlug = CITY_NAME_TO_SLUG[city] || CITY_NAME_TO_SLUG[shortCity]
   if (!citySlug) return null
-  const districtSlug = generateSlug(facility.value.district)
+  const districtSlug = district ? generateSlug(district) : ''
+  // district slug가 없으면 시/도 허브로 연결
+  const href = districtSlug
+    ? `/${citySlug}/${districtSlug}/${category.value}`
+    : `/${citySlug}`
+  const label = districtSlug
+    ? `${city} ${district} ${categoryMeta.value.label} 전체보기`
+    : `${city} 전체 시설 보기`
   return {
-    href: `/${citySlug}/${districtSlug}/${category.value}`,
-    label: `${facility.value.city} ${facility.value.district} ${categoryMeta.value.label} 전체보기`,
+    href,
+    label,
     cityHref: `/${citySlug}`,
-    cityLabel: `${facility.value.city} 전체 시설 보기`,
+    cityLabel: `${city} 전체 시설 보기`,
   }
 })
 

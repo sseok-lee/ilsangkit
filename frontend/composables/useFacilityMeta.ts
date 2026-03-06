@@ -16,25 +16,102 @@ interface MetaOptions {
 /**
  * 카테고리별 시설 description 생성
  */
-function buildFacilityDescription(facility: FacilityDetail): string {
+/**
+ * 상세 페이지 h1 아래 자연어 설명문 생성
+ */
+export function buildFacilityIntro(facility: FacilityDetail): string {
+  const categoryName = CATEGORY_META[facility.category]?.label || facility.category
+  const location = facility.district
+    ? `${facility.city} ${facility.district}`
+    : facility.city
+
+  const parts: string[] = []
+  parts.push(`${facility.name}은(는) ${location}에 위치한 ${categoryName}입니다`)
+
+  const d = facility.details as Record<string, unknown>
+  switch (facility.category) {
+    case 'toilet': {
+      const det = d as ToiletDetails
+      const features: string[] = []
+      if (det.operatingHours === '24시간' || det.is24Hour) features.push('상시 개방')
+      if (det.hasCCTV) features.push('CCTV 설치')
+      if (det.hasDisabledToilet) features.push('장애인 화장실 있음')
+      if (det.hasDiaperChangingTable) features.push('기저귀 교환대 있음')
+      if (features.length) parts.push(features.join(', '))
+      break
+    }
+    case 'wifi': {
+      const det = d as WifiDetails
+      if (det.ssid) parts.push(`SSID: ${det.ssid}`)
+      break
+    }
+    case 'parking': {
+      const det = d as ParkingDetails
+      if (det.capacity) parts.push(`주차면수 ${det.capacity}면`)
+      if (det.baseFee != null && det.baseTime) parts.push(`기본 ${det.baseTime}분 ${det.baseFee.toLocaleString()}원`)
+      break
+    }
+    case 'kiosk': {
+      const det = d as KioskDetails
+      if (det.weekdayOperatingHours) parts.push(`평일 ${det.weekdayOperatingHours}`)
+      break
+    }
+    case 'hospital': {
+      const det = d as HospitalDetails
+      if (det.clCdNm) parts.push(det.clCdNm)
+      if (det.drTotCnt) parts.push(`의사 ${det.drTotCnt}명`)
+      break
+    }
+    case 'pharmacy': {
+      const det = d as PharmacyDetails
+      if (det.dutyTime1s && det.dutyTime1c) parts.push(`평일 ${det.dutyTime1s}~${det.dutyTime1c}`)
+      break
+    }
+    case 'aed': {
+      const det = d as AedDetails
+      if (det.buildPlace) parts.push(`설치장소: ${det.buildPlace}`)
+      break
+    }
+    case 'library': {
+      const det = d as LibraryDetails
+      const info: string[] = []
+      if (det.seatCount) info.push(`좌석 ${det.seatCount}석`)
+      if (det.bookCount) info.push(`장서 ${det.bookCount.toLocaleString()}권`)
+      if (info.length) parts.push(info.join(', '))
+      break
+    }
+    case 'clothes': {
+      const det = d as ClothesDetails
+      if (det.managementAgency) parts.push(`관리: ${det.managementAgency}`)
+      break
+    }
+  }
+
+  return parts.join('. ') + '.'
+}
+
+export function buildFacilityDescription(facility: FacilityDetail): string {
+  const categoryName = CATEGORY_META[facility.category]?.label || facility.category
   const location = facility.district
     ? `${facility.city} ${facility.district}`
     : facility.city
   const address = facility.roadAddress || facility.address || location
   const parts: string[] = []
 
-  if (address) parts.push(address)
+  // 시설명 + 지역 + 카테고리를 먼저 배치
+  parts.push(`${facility.name}은(는) ${location}에 위치한 ${categoryName}입니다`)
 
   const d = facility.details as Record<string, unknown>
 
   switch (facility.category) {
     case 'toilet': {
       const det = d as ToiletDetails
-      if (det.operatingHours) parts.push(det.operatingHours)
       const features: string[] = []
+      if (det.operatingHours === '24시간' || det.is24Hour) features.push('상시 개방')
+      else if (det.operatingHours) features.push(det.operatingHours)
       if (det.maleToilets || det.femaleToilets) features.push('남녀 분리')
-      if (det.hasDisabledToilet) features.push('장애인 화장실 있음')
-      if (det.hasDiaperChangingTable) features.push('기저귀 교환대')
+      if (det.hasCCTV) features.push('CCTV 설치')
+      if (det.hasDisabledToilet) features.push('장애인 화장실')
       if (features.length) parts.push(features.join(', '))
       break
     }
@@ -65,12 +142,10 @@ function buildFacilityDescription(facility: FacilityDetail): string {
       const det = d as HospitalDetails
       if (det.clCdNm) parts.push(det.clCdNm)
       if (det.drTotCnt) parts.push(`의사 ${det.drTotCnt}명`)
-      if (det.phone) parts.push(`☎ ${det.phone}`)
       break
     }
     case 'pharmacy': {
       const det = d as PharmacyDetails
-      if (det.phone) parts.push(`☎ ${det.phone}`)
       if (det.dutyTime1s && det.dutyTime1c) parts.push(`월 ${det.dutyTime1s}~${det.dutyTime1c}`)
       break
     }
@@ -87,7 +162,6 @@ function buildFacilityDescription(facility: FacilityDetail): string {
       if (det.bookCount) info.push(`장서 ${det.bookCount.toLocaleString()}권`)
       if (info.length) parts.push(info.join(', '))
       if (det.weekdayOpenTime && det.weekdayCloseTime) parts.push(`평일 ${det.weekdayOpenTime}~${det.weekdayCloseTime}`)
-      if (det.phoneNumber) parts.push(`☎ ${det.phoneNumber}`)
       break
     }
     case 'clothes': {
@@ -98,10 +172,10 @@ function buildFacilityDescription(facility: FacilityDetail): string {
     }
   }
 
-  parts.push(CATEGORY_CTA[facility.category])
+  if (address) parts.push(address)
 
   // 155자 이내로 자르기
-  let desc = parts.join('. ')
+  let desc = parts.join('. ') + '.'
   if (desc.length > 155) {
     desc = desc.slice(0, 152) + '...'
   }
