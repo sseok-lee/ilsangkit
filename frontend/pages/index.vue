@@ -89,7 +89,7 @@
 
         <div class="relative z-10 max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
           <div class="space-y-4">
-            <p class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight" aria-hidden="true">
+            <p class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
               내 주변 생활 편의 정보, 한 번에 찾기
             </p>
             <p class="text-lg text-slate-600 font-normal">

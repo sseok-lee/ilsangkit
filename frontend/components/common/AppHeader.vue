@@ -33,9 +33,15 @@
         class="relative"
         @mouseenter="openDropdown(group.title)"
         @mouseleave="scheduleCloseDropdown"
+        @focusout="handleDropdownFocusout($event, group.title)"
       >
         <button
           class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+          aria-haspopup="true"
+          :aria-expanded="activeDropdown === group.title"
+          @click="toggleDropdown(group.title)"
+          @keydown.enter.prevent="openDropdown(group.title)"
+          @keydown.space.prevent="openDropdown(group.title)"
         >
           <span class="material-symbols-outlined text-[18px]">{{ group.icon }}</span>
           {{ group.title }}
@@ -103,7 +109,7 @@
         class="md:hidden flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-[#111418]"
         aria-label="메뉴"
         :aria-expanded="isMobileMenuOpen"
-        @click="toggleMobileMenu"
+        @click="toggleMobileMenu($event)"
       >
         <span class="material-symbols-outlined text-[28px]">menu</span>
       </button>
@@ -121,10 +127,12 @@
   >
     <div
       v-if="isMobileMenuOpen"
+      ref="mobileMenuRef"
       data-testid="mobile-menu"
       role="navigation"
       aria-label="모바일 메뉴"
       class="md:hidden fixed top-[60px] left-0 right-0 z-40 bg-background-light border-b border-slate-200 shadow-lg"
+      @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">
         <NuxtLink
@@ -199,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 
 interface Props {
@@ -218,14 +226,64 @@ const emit = defineEmits<{
 
 const isMobileMenuOpen = ref(false)
 const activeDropdown = ref<string | null>(null)
+const mobileMenuRef = ref<HTMLElement | null>(null)
+const mobileMenuTriggerRef = ref<HTMLElement | null>(null)
 let dropdownTimer: ReturnType<typeof setTimeout> | null = null
 
-const toggleMobileMenu = () => {
+const toggleMobileMenu = (event?: Event) => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
+  if (event) {
+    mobileMenuTriggerRef.value = event.currentTarget as HTMLElement
+  }
 }
 
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false
+}
+
+// Focus trap for mobile menu
+watch(isMobileMenuOpen, async (isOpen) => {
+  if (isOpen) {
+    document.body.setAttribute('aria-hidden', 'true')
+    await nextTick()
+    const firstFocusable = mobileMenuRef.value?.querySelector<HTMLElement>('a, button')
+    firstFocusable?.focus()
+  } else {
+    document.body.removeAttribute('aria-hidden')
+    mobileMenuTriggerRef.value?.focus()
+  }
+})
+
+const handleMobileMenuTab = (event: KeyboardEvent) => {
+  if (!mobileMenuRef.value) return
+  const focusables = mobileMenuRef.value.querySelectorAll<HTMLElement>('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+  if (focusables.length === 0) return
+  const first = focusables[0]
+  const last = focusables[focusables.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+const toggleDropdown = (title: string) => {
+  if (activeDropdown.value === title) {
+    closeDropdown()
+  } else {
+    openDropdown(title)
+  }
+}
+
+const handleDropdownFocusout = (event: FocusEvent, title: string) => {
+  const container = (event.currentTarget as HTMLElement)
+  if (!container.contains(event.relatedTarget as Node)) {
+    if (activeDropdown.value === title) {
+      activeDropdown.value = null
+    }
+  }
 }
 
 const openDropdown = (title: string) => {

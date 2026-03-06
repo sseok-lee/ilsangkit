@@ -3,7 +3,7 @@
     <!-- Main Content -->
     <main class="flex-1 w-full">
       <!-- Loading State -->
-      <div v-if="loading" class="flex items-center justify-center py-20">
+      <div v-if="loading" class="flex items-center justify-center py-20" role="status" aria-label="정보 로딩 중">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
           <p class="text-gray-600">로딩 중...</p>
@@ -40,7 +40,7 @@
 
           <!-- Back Button & Name Overlay -->
           <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-            <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="router.back()">
+            <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="handleBack">
               <span class="material-symbols-outlined text-[#111518]">arrow_back</span>
             </div>
             <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-[#111518] shadow-sm backdrop-blur-sm">{{ facility.name }}</span>
@@ -150,7 +150,7 @@
                     <span class="material-symbols-outlined text-[14px]">place</span> {{ categoryMeta.label }}
                   </span>
                   <div class="flex gap-2">
-                    <button class="text-[#60708a] hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" @click="handleShare">
+                    <button class="text-[#60708a] hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 시설 공유하기" @click="handleShare">
                       <span class="material-symbols-outlined">share</span>
                     </button>
                   </div>
@@ -1010,6 +1010,7 @@
               <div class="mt-4 p-4 bg-white border-t border-[#e5e7eb] flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] rounded-xl#1a2630]">
                 <button
                   class="flex-1 h-12 rounded-xl bg-[#f0f2f5] text-[#111418] font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
+                  aria-label="이 시설 공유하기"
                   @click="handleShare"
                 >
                   <span class="material-symbols-outlined">share</span>
@@ -1050,7 +1051,7 @@
               <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10">
                 <span class="material-symbols-outlined text-[14px]">place</span> {{ categoryMeta.label }}
               </span>
-              <button class="text-[#60708a] hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" @click="handleShare">
+              <button class="text-[#60708a] hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 시설 공유하기" @click="handleShare">
                 <span class="material-symbols-outlined">share</span>
               </button>
             </div>
@@ -1881,20 +1882,35 @@
         </div>
 
         <!-- Mobile: Sticky Bottom CTA -->
-        <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pb-8 pt-4 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm#101b22]/95">
+        <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
           <div class="flex gap-3">
             <button
-              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#03C75A] py-4 text-base font-bold text-white transition hover:bg-[#02b350] active:scale-[0.98]"
-              @click="openNavigation(naverMapUrl)"
+              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#f0f2f5] py-3.5 text-base font-bold text-[#111418] border border-gray-200 transition hover:bg-gray-200 active:scale-[0.98]"
+              aria-label="이 시설 공유하기"
+              @click="handleShare"
             >
-              네이버 지도
+              <span class="material-symbols-outlined text-[20px]">share</span>
+              공유하기
             </button>
-            <button
-              class="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-4 text-base font-bold text-[#191919] shadow-lg shadow-yellow-500/30 transition hover:bg-[#FDD835] active:scale-[0.98]"
-              @click="openNavigation(kakaoMapUrl)"
-            >
-              카카오맵 길찾기
-            </button>
+            <div class="relative flex-[2]">
+              <button
+                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-[0.98]"
+                @click="showMobileNavDropdown = !showMobileNavDropdown"
+              >
+                <span class="material-symbols-outlined text-[20px]">directions</span>
+                길찾기
+                <span class="material-symbols-outlined text-[16px]">expand_more</span>
+              </button>
+              <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-[#e5e7eb] overflow-hidden z-20">
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl); showMobileNavDropdown = false">
+                  <span class="inline-block w-5 h-5 rounded bg-[#FEE500]"></span> 카카오맵으로 길찾기
+                </button>
+                <div class="h-px bg-[#f0f2f5]"></div>
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl); showMobileNavDropdown = false">
+                  <span class="inline-block w-5 h-5 rounded bg-[#03C75A]"></span> 네이버맵으로 길찾기
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2093,6 +2109,7 @@ const naverMapUrl = computed(() => {
 })
 
 const showNavDropdown = ref(false)
+const showMobileNavDropdown = ref(false)
 const openNavigation = (url: string) => {
   window.open(url, '_blank')
   showNavDropdown.value = false
@@ -2348,6 +2365,14 @@ const copyAddress = async () => {
     alert('주소가 복사되었습니다.')
   } catch (err) {
     console.error('주소 복사 실패:', err)
+  }
+}
+
+const handleBack = () => {
+  if (window.history.length <= 1) {
+    navigateTo(`/${category.value}`)
+  } else {
+    router.back()
   }
 }
 

@@ -11,7 +11,7 @@
       <p class="text-gray-600 mb-4">
         {{ cityName }} {{ districtName }}의 시설 카테고리를 선택하세요.
       </p>
-      <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 text-sm text-slate-600 leading-relaxed space-y-2">
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 text-base md:text-sm text-slate-600 leading-relaxed space-y-2">
         <p v-if="districtStats">
           {{ cityName }} {{ districtName }}에는 {{ districtTopCategoryText }} 등
           총 {{ districtStats.total.toLocaleString() }}개의 편의시설이 등록되어 있습니다.
@@ -104,8 +104,9 @@
         <div v-if="allTotalPages > 1" class="flex justify-center items-center space-x-4">
           <button
             :disabled="allCurrentPage === 1"
+            aria-label="이전 페이지"
             @click="goToAllPage(allCurrentPage - 1)"
-            class="px-4 py-2 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
+            class="min-w-[44px] min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
           >
             이전
           </button>
@@ -114,8 +115,9 @@
           </span>
           <button
             :disabled="allCurrentPage === allTotalPages"
+            aria-label="다음 페이지"
             @click="goToAllPage(allCurrentPage + 1)"
-            class="px-4 py-2 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
+            class="min-w-[44px] min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
           >
             다음
           </button>

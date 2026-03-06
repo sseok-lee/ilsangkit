@@ -44,7 +44,7 @@
         </div>
 
         <!-- Address -->
-        <p class="text-slate-500 text-xs font-normal mt-1 truncate">
+        <p class="text-slate-500 text-sm md:text-xs font-normal mt-1 truncate">
           {{ facility.address }}
         </p>
 

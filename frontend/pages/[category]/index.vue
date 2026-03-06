@@ -35,7 +35,7 @@
           <select
             v-model="selectedCity"
             aria-label="시/도 선택"
-            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-[16px] md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
             @change="handleCityChange"
           >
             <option value="">시/도 선택</option>
@@ -49,7 +49,7 @@
             v-model="selectedDistrict"
             :disabled="!selectedCity"
             aria-label="구/군 선택"
-            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-[16px] md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             @change="handleDistrictChange"
           >
             <option value="">구/군 선택</option>
@@ -64,7 +64,7 @@
           </div>
           <input
             v-model="filterKeyword"
-            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pl-9 pr-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pl-9 pr-3 text-slate-900 text-[16px] md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
             type="text"
             :placeholder="categoryParam === 'trash' ? '동/지역 이름 검색' : '시설명/주소 검색'"
             @input="handleFilterSearch"
@@ -75,7 +75,7 @@
       <!-- Trash category: waste schedule UI -->
       <template v-if="categoryParam === 'trash'">
         <!-- 로딩 상태 -->
-        <div v-if="wasteLoading" class="flex items-center justify-center py-10" aria-live="polite" aria-busy="true">
+        <div v-if="wasteLoading" class="flex items-center justify-center py-10" role="status" aria-label="배출 일정 로딩 중" aria-live="polite" aria-busy="true">
           <div class="text-center">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
             <p class="text-slate-500 text-sm">배출 일정 조회 중...</p>
@@ -144,7 +144,7 @@
         </div>
 
         <!-- Loading State -->
-        <div v-if="loading" class="flex items-center justify-center py-20" aria-live="polite" aria-busy="true">
+        <div v-if="loading" class="flex items-center justify-center py-20" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
           <div class="text-center">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
             <p class="text-slate-500 text-sm">검색 중...</p>
