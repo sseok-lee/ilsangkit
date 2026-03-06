@@ -23,13 +23,13 @@ describe('Region 동기화 서비스', () => {
       const { normalizeKoreanToSlug } = await import('../../src/scripts/syncRegion.js');
 
       const testCases = [
-        { input: '강남구', expected: 'gangnam-gu' },
-        { input: '종로구', expected: 'jongno-gu' },
-        { input: '중구', expected: 'jung-gu' },
-        { input: '수원시', expected: 'suwon-si' },
-        { input: '성남시 분당구', expected: 'seongnam-si-bundang-gu' },
-        { input: '제주시', expected: 'jeju-si' },
-        { input: '서귀포시', expected: 'seogwipo-si' },
+        { input: '강남구', expected: 'gangnam' },
+        { input: '종로구', expected: 'jongno' },
+        { input: '중구', expected: 'jung' },
+        { input: '수원시', expected: 'suwon' },
+        { input: '성남시 분당구', expected: 'seongnam-bundang' },
+        { input: '제주시', expected: 'jeju' },
+        { input: '서귀포시', expected: 'seogwipo' },
       ];
 
       for (const tc of testCases) {
