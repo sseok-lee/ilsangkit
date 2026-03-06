@@ -65,7 +65,8 @@ router.get('/stats/:citySlug', asyncHandler(async (req: Request, res: Response) 
 
 // GET /api/meta/stats/:citySlug/:districtSlug - 구/군별 카테고리별 시설 통계
 router.get('/stats/:citySlug/:districtSlug', asyncHandler(async (req: Request, res: Response) => {
-  const { citySlug, districtSlug } = req.params;
+  const citySlug = req.params.citySlug as string;
+  const districtSlug = req.params.districtSlug as string;
   const stats = await getStatsByDistrict(citySlug, districtSlug);
 
   if (!stats) {
