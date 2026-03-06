@@ -152,14 +152,20 @@
               :key="item.id"
               :href="`/${item.id}`"
               :aria-label="`${CATEGORY_LABELS[item.id]} - ${item.desc} - ${formatCount(stats[item.id] || 0)}`"
-              class="group flex flex-col p-4 md:p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              :class="[
+                'group relative flex flex-col p-4 md:p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300',
+                getCategoryHoverBg(item.id),
+              ]"
             >
-              <div :class="`w-12 h-12 rounded-full ${getCategoryBgColor(item.id)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`">
+              <div :class="`w-14 h-14 rounded-full ${getCategoryBgColor(item.id)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`">
                 <CategoryIcon :category-id="item.id" size="lg" />
               </div>
               <h3 class="text-slate-900 font-bold text-base mb-1">{{ CATEGORY_LABELS[item.id] }}</h3>
               <p class="text-slate-500 text-xs md:text-sm leading-snug mb-2">{{ item.desc }}</p>
-              <span class="text-primary font-bold text-sm mt-auto">{{ formatCount(stats[item.id] || 0) }}</span>
+              <div class="flex items-center justify-between mt-auto">
+                <span class="text-primary font-bold text-sm">{{ formatCount(stats[item.id] || 0) }}</span>
+                <span class="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 text-lg">→</span>
+              </div>
             </a>
           </div>
         </div>
@@ -317,7 +323,7 @@ const groupStats = computed(() => ({
 
 // 숫자 포맷 함수
 function formatCount(count: number): string {
-  return count.toLocaleString('ko-KR') + '개'
+  return '전국 ' + count.toLocaleString('ko-KR') + '곳'
 }
 
 // 통계 배너용 포맷 (1000 단위 반올림)
@@ -348,18 +354,36 @@ function getCategoryBgColor(id: CategoryId): string {
   return config?.bgColor || 'bg-slate-50'
 }
 
+// 카테고리별 호버 배경색
+const categoryHoverBgMap: Record<string, string> = {
+  toilet: 'bg-white hover:bg-purple-50',
+  wifi: 'bg-white hover:bg-orange-50',
+  parking: 'bg-white hover:bg-sky-50',
+  kiosk: 'bg-white hover:bg-indigo-50',
+  aed: 'bg-white hover:bg-red-50',
+  library: 'bg-white hover:bg-amber-50',
+  clothes: 'bg-white hover:bg-pink-50',
+  trash: 'bg-white hover:bg-green-50',
+  hospital: 'bg-white hover:bg-teal-50',
+  pharmacy: 'bg-white hover:bg-emerald-50',
+}
+
+function getCategoryHoverBg(id: CategoryId): string {
+  return categoryHoverBgMap[id] || 'bg-white'
+}
+
 // 카테고리별 설명 (홈페이지 전용)
 const categoryDescriptions: Record<string, string> = {
-  toilet: '전국 공공화장실 위치 정보',
-  wifi: '무료 무선 인터넷 존',
-  parking: '공영 주차 시설 안내',
-  kiosk: '무인 민원 서류 발급',
-  aed: '자동심장충격기 위치',
-  library: '공공도서관 이용 안내',
-  clothes: '의류 수거함 위치 안내',
-  trash: '쓰레기 배출 일정 및 장소',
-  hospital: '병원 및 의원 진료 안내',
-  pharmacy: '약국 위치 및 운영 정보',
+  toilet: '급할 때 바로, 24시간 운영 포함',
+  wifi: '비밀번호 없이 무료, 전국 핫스팟',
+  parking: '민영보다 저렴한 공영주차장 요금 비교',
+  kiosk: '주민센터 안 가도 OK, 주말도 운영',
+  aed: '내 주변 AED 위치, 미리 알아두세요',
+  library: '열람실 좌석·장서 정보, 휴관일 확인',
+  clothes: '헌 옷 기부·재활용, 가까운 수거함',
+  trash: '오늘 버려도 되나요? 배출 요일 확인',
+  hospital: '오늘 진료 가능한 병원, 과목별 검색',
+  pharmacy: '야간·주말 운영 약국 바로 찾기',
 }
 
 // 그룹화된 카테고리 (공유 상수 + 페이지 전용 desc)

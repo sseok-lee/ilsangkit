@@ -1,0 +1,89 @@
+import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
+import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
+
+/**
+ * 시설 데이터 기반 동적 이용 팁 생성
+ * 시설의 실제 속성에 맞는 팁을 우선 배치하고, 정적 팁으로 보충하여 총 5개 반환
+ */
+export function generateDynamicTips(facility: FacilityDetail): string[] {
+  const d = facility.details as FacilityDetailsAll
+  const cat = facility.category
+
+  const dynamic: string[] = []
+
+  switch (cat) {
+    case 'toilet':
+      if (d.hasCCTV) dynamic.push('이 화장실에는 CCTV가 설치되어 있어 안전하게 이용할 수 있습니다.')
+      if (d.hasEmergencyBell) dynamic.push('비상벨이 설치되어 있으니, 긴급 상황 시 이용하세요.')
+      if (d.hasDisabledToilet) dynamic.push('장애인 화장실이 설치되어 있어 휠체어 이용자도 사용 가능합니다.')
+      if (d.hasDiaperChangingTable) dynamic.push('기저귀 교환대가 비치되어 있어 영유아 동반 시 편리합니다.')
+      if (d.openTime === '상시' || d.openTime === '24시간') dynamic.push('24시간 개방 화장실로, 야간에도 이용할 수 있습니다.')
+      break
+
+    case 'wifi':
+      if (d.ssid) dynamic.push(`와이파이 설정에서 "${d.ssid}"를 선택하면 무료로 접속할 수 있습니다.`)
+      if (d.installLocation) dynamic.push(`${d.installLocation} 주변에서 접속이 가능합니다.`)
+      break
+
+    case 'clothes':
+      if (d.detailLocation) dynamic.push(`수거함 위치: ${d.detailLocation}`)
+      if (d.managementAgency) dynamic.push(`관리기관(${d.managementAgency})에 문의하면 수거 요청이 가능합니다.`)
+      break
+
+    case 'kiosk':
+      if (d.wheelchairAccessible) dynamic.push('휠체어 접근이 가능한 기기입니다.')
+      if (d.voiceGuide) dynamic.push('음성 안내 기능이 지원되어 시각장애인도 이용 가능합니다.')
+      if (d.brailleOutput) dynamic.push('점자 출력 기능을 지원합니다.')
+      if (d.weekdayOperatingHours) dynamic.push(`평일 운영시간은 ${d.weekdayOperatingHours}입니다. 방문 전 확인하세요.`)
+      if (d.saturdayOperatingHours) dynamic.push(`토요일에도 ${d.saturdayOperatingHours}에 운영합니다.`)
+      break
+
+    case 'parking':
+      if (d.hasDisabledParking) dynamic.push('장애인 전용 주차 구역이 마련되어 있습니다.')
+      if (d.feeType === '무료' || (d.baseFee !== undefined && d.baseFee !== null && d.baseFee === 0)) dynamic.push('무료 주차장으로, 별도의 주차 요금이 없습니다.')
+      else if (d.baseFee && d.baseTime) dynamic.push(`기본 ${d.baseTime}분 ${d.baseFee.toLocaleString()}원으로 이용할 수 있습니다.`)
+      if (d.monthlyFee) dynamic.push(`월정기 주차는 ${d.monthlyFee.toLocaleString()}원에 이용 가능합니다.`)
+      if (d.paymentMethod) dynamic.push(`결제 방법: ${d.paymentMethod}`)
+      break
+
+    case 'aed':
+      if (d.buildPlace) dynamic.push(`AED는 ${d.buildPlace}에 설치되어 있습니다. 위치를 미리 확인해 두세요.`)
+      if (d.monSttTme && d.monEndTme) dynamic.push(`평일 ${d.monSttTme}~${d.monEndTme}에 접근 가능합니다.`)
+      if (d.satSttTme && d.satEndTme) dynamic.push(`토요일에도 ${d.satSttTme}~${d.satEndTme}에 이용할 수 있습니다.`)
+      break
+
+    case 'library':
+      if (d.closedDays) dynamic.push(`휴관일은 ${d.closedDays}이니 방문 전 확인하세요.`)
+      if (d.loanableBooks && d.loanableDays) dynamic.push(`1인 최대 ${d.loanableBooks}권, ${d.loanableDays}일간 대출이 가능합니다.`)
+      if (d.seatCount) dynamic.push(`열람석 ${d.seatCount}석을 이용할 수 있습니다.`)
+      if (d.homepageUrl) dynamic.push('도서관 홈페이지에서 온라인 도서 검색과 전자책 대출이 가능합니다.')
+      break
+
+    case 'hospital':
+      if (d.departments && d.departments.length > 0) {
+        const depts = d.departments.slice(0, 4).map(dep => dep.dgsbjtCdNm).join(', ')
+        dynamic.push(`${depts} 등의 진료과목에서 진료를 받을 수 있습니다.`)
+      }
+      if (d.parkQty && d.parkQty > 0) dynamic.push(`주차 ${d.parkQty}대 가능합니다.${d.parkEtc ? ` ${d.parkEtc}` : ''}`)
+      if (d.lunchWeek) dynamic.push(`점심시간(${d.lunchWeek})에는 진료가 제한될 수 있으니 참고하세요.`)
+      if (d.noTrmtSun === 'Y') dynamic.push('일요일은 휴진입니다.')
+      break
+
+    case 'pharmacy':
+      if (d.dutyTel3) dynamic.push(`응급 상황 시 ${d.dutyTel3}으로 연락하실 수 있습니다.`)
+      if (d.dutyTime7s && d.dutyTime7c) dynamic.push(`일요일에도 ${d.dutyTime7s}~${d.dutyTime7c}에 운영합니다.`)
+      if (d.dutyTime8s && d.dutyTime8c) dynamic.push(`공휴일에도 ${d.dutyTime8s}~${d.dutyTime8c}에 운영합니다.`)
+      break
+
+    case 'trash':
+      break
+  }
+
+  // 동적 팁 최대 3개 + 정적 팁 보충하여 총 5개
+  const dynamicSlice = dynamic.slice(0, 3)
+  const staticTips = CATEGORY_TIPS[cat] ?? []
+  const needed = 5 - dynamicSlice.length
+  const staticSlice = staticTips.slice(0, needed)
+
+  return [...dynamicSlice, ...staticSlice]
+}

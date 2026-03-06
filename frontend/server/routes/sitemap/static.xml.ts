@@ -402,6 +402,9 @@ export default defineEventHandler(async (event) => {
   // 가이드 목록 페이지
   urls.push({ loc: `${SITE_URL}/guide`, lastmod: today, changefreq: 'daily', priority: 0.8 })
 
+  // API base URL
+  const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
+
   // 가이드 개별 글
   try {
     const guidesRes = await fetch(`${apiBase}/api/guides?limit=100`)
@@ -418,7 +421,6 @@ export default defineEventHandler(async (event) => {
   }
 
   // API에서 실제 데이터가 있는 지역-카테고리 조합만 가져오기
-  const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
   try {
     const res = await fetch(`${apiBase}/api/sitemap/region-categories`)
     if (res.ok) {

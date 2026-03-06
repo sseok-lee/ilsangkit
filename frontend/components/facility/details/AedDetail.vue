@@ -14,6 +14,7 @@
       v-if="details.clerkTel"
       label="전화번호"
       :value="details.clerkTel"
+      type="phone"
     />
     <DetailRow
       v-if="details.mfg"

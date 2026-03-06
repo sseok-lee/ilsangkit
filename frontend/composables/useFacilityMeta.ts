@@ -158,8 +158,8 @@ export function useFacilityMeta() {
    */
   function setHomeMeta() {
     setMeta({
-      title: '일상킷 - 병원/약국/화장실/주차장 통합검색',
-      description: SITE_DESCRIPTION,
+      title: '병원·약국·화장실 등 전국 생활시설 검색 - 일상킷',
+      description: '전국 병원, 약국, 화장실, 주차장, 도서관, 의류수거함, 쓰레기배출 등 10개 카테고리 생활시설을 한 번에 검색. 운영시간, 위치 정보를 무료로 확인하세요.',
       path: '/',
     })
   }

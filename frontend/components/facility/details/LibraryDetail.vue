@@ -14,6 +14,7 @@
       v-if="details.phoneNumber"
       label="전화번호"
       :value="details.phoneNumber"
+      type="phone"
     />
     <DetailRow
       v-if="details.closedDays"

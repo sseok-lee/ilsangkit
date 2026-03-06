@@ -24,8 +24,8 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: '일상킷 - 병원/약국/화장실/주차장 통합검색',
-          ogTitle: '일상킷 - 병원/약국/화장실/주차장 통합검색',
+          title: '병원·약국·화장실 등 전국 생활시설 검색 - 일상킷',
+          ogTitle: '병원·약국·화장실 등 전국 생활시설 검색 - 일상킷',
           ogSiteName: '일상킷',
           ogLocale: 'ko_KR',
           twitterCard: 'summary_large_image',

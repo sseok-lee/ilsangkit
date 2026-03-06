@@ -29,6 +29,7 @@
       v-if="details.phone"
       label="전화번호"
       :value="details.phone"
+      type="phone"
     />
     <DetailRow
       v-if="details.paymentMethod"

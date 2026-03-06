@@ -39,6 +39,7 @@
       v-if="details.phoneNumber"
       label="연락처"
       :value="details.phoneNumber"
+      type="phone"
     />
 
     <div v-if="hasSafetyFeatures" class="pt-3 border-t border-gray-200">

@@ -32,6 +32,7 @@
         v-if="details.phoneNumber"
         label="연락처"
         :value="details.phoneNumber"
+        type="phone"
       />
     </div>
 

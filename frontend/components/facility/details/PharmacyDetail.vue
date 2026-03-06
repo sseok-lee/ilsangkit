@@ -4,11 +4,13 @@
       v-if="details.phone"
       label="전화번호"
       :value="details.phone"
+      type="phone"
     />
     <DetailRow
       v-if="details.dutyTel3"
       label="응급전화"
       :value="details.dutyTel3"
+      type="phone"
     />
 
     <div v-if="details.dutyInf" class="pt-3 border-t border-gray-200">
