@@ -33,8 +33,27 @@
       <p class="mt-4 text-gray-600">지역 정보를 불러오는 중...</p>
     </div>
 
-    <!-- Districts Grid -->
+    <!-- Content -->
     <div v-else>
+      <!-- 인기 구/군 TOP 5 -->
+      <section v-if="topDistricts.length > 0" class="mb-10">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">{{ cityName }} 인기 지역</h2>
+        <p class="text-sm text-gray-500 mb-4">시설이 가장 많은 상위 {{ topDistricts.length }}개 지역입니다.</p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <NuxtLink
+            v-for="(d, idx) in topDistricts"
+            :key="d.slug"
+            :to="`/${city}/${d.slug}`"
+            class="relative block p-4 bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-lg hover:shadow-md hover:border-blue-400 transition-all text-center"
+          >
+            <span class="absolute top-2 left-2 text-xs font-bold text-blue-500">TOP {{ idx + 1 }}</span>
+            <div class="font-semibold text-gray-900 mt-2">{{ d.name }}</div>
+            <div class="text-sm text-blue-600 font-medium">시설 {{ d.count.toLocaleString() }}개</div>
+          </NuxtLink>
+        </div>
+      </section>
+
+      <!-- 구/군 선택 -->
       <h2 class="text-xl font-bold text-gray-900 mb-4">구/군 선택</h2>
 
       <!-- No Districts -->
@@ -54,6 +73,7 @@
           <div v-if="district.count > 0" class="text-sm text-gray-500">시설 {{ district.count.toLocaleString() }}개</div>
         </NuxtLink>
       </div>
+
     </div>
 
     <!-- Category Section -->
@@ -73,7 +93,19 @@
           >
             <CategoryIcon :category-id="cat.id" size="lg" />
             <span class="mt-2 font-medium text-gray-900">{{ cat.label }}</span>
+            <span v-if="cat.count > 0" class="text-sm text-gray-500">{{ cat.count.toLocaleString() }}개</span>
           </NuxtLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- 지역 생활 FAQ -->
+    <section v-if="regionFAQs.length > 0" class="mt-12 border-t border-gray-200 pt-8">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">{{ cityName }} 생활 편의시설 자주 묻는 질문</h2>
+      <div class="space-y-6">
+        <div v-for="(faq, idx) in regionFAQs" :key="idx" class="bg-white border border-gray-200 rounded-lg p-5">
+          <h3 class="font-semibold text-gray-900 mb-2">{{ faq.question }}</h3>
+          <p class="text-sm text-gray-600 leading-relaxed">{{ faq.answer }}</p>
         </div>
       </div>
     </section>
@@ -88,6 +120,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
+import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 
 interface CityStats {
   city: string
@@ -165,7 +198,27 @@ const breadcrumbItems = computed(() => [
   { label: cityName.value, href: `/${city.value}`, current: true },
 ])
 
-// Categories (grouped)
+// 인기 구/군 TOP 5 (시설 수 기준 내림차순)
+const topDistricts = computed(() =>
+  [...districts.value]
+    .filter((d) => d.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+)
+
+// 지역 생활 FAQ (상위 3개 카테고리에서 각 1개 FAQ 선택)
+const regionFAQs = computed(() => {
+  if (!cityStats.value?.topCategories) return []
+  return cityStats.value.topCategories
+    .slice(0, 3)
+    .map((cat) => {
+      const faqs = CATEGORY_FAQ[cat as FacilityCategory]
+      return faqs?.[0] ?? null
+    })
+    .filter((faq): faq is { question: string; answer: string } => faq !== null)
+})
+
+// Categories (grouped) with facility counts
 const categoryGroups = computed(() =>
   CATEGORY_GROUPS.map(group => ({
     title: group.title,
@@ -173,6 +226,7 @@ const categoryGroups = computed(() =>
     items: group.categories.map(id => ({
       id,
       label: CATEGORY_META[id].label,
+      count: cityStats.value?.categories[id] ?? 0,
     })),
   }))
 )
@@ -192,9 +246,14 @@ setMeta({
 })
 
 // Breadcrumb JSON-LD
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setFAQSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: cityName.value, url: `/${city.value}` },
 ])
+
+// FAQ JSON-LD
+if (regionFAQs.value.length > 0) {
+  setFAQSchema(regionFAQs.value)
+}
 </script>
