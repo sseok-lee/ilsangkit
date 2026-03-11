@@ -2009,7 +2009,14 @@ const isThinContent = computed(() => {
     if (val === null || val === undefined || val === '') continue
     fieldCount++
   }
-  return fieldCount < 3
+  // 카테고리별 noindex 기준: 색인 가치가 낮은 카테고리는 더 많은 필드 요구
+  const thresholds: Record<string, number> = {
+    aed: 6,
+    pharmacy: 6,
+    wifi: 5,
+  }
+  const threshold = thresholds[cat] ?? 3
+  return fieldCount < threshold
 })
 
 watchEffect(() => {
@@ -2019,6 +2026,11 @@ watchEffect(() => {
     })
   }
 })
+
+// Canonical URL 설정 (중복 색인 방지)
+useHead(computed(() => ({
+  link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${route.path}`, key: 'canonical' }],
+})))
 
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })
