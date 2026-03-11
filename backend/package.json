@@ -32,7 +32,8 @@
     "sync:facilities": "tsx src/scripts/syncAll.ts",
     "seed:hospital-detail": "tsx src/scripts/seedHospitalDetail.ts",
     "generate:guide": "tsx src/scripts/generateGuide.ts",
-    "generate:guide:category": "tsx src/scripts/generateGuide.ts --category"
+    "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
+    "fix:region-slugs": "tsx src/scripts/fixRegionSlugs.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

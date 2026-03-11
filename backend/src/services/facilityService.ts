@@ -1152,9 +1152,12 @@ export async function getRegionCategoryCombinations(): Promise<
   });
 
   // district slug lookup: "서울|강남구" -> "gangnam"
+  // DB slug에서 잔존하는 -(gu|si|gun) 접미사 정규화 (slug 변경 후 미동기화 대응)
+  const SUFFIX_RE = /-(gu|si|gun)$/;
   const regionSlugMap = new Map<string, string>();
   for (const r of allRegions) {
-    regionSlugMap.set(`${r.city}|${r.district}`, r.slug);
+    const normalized = SUFFIX_RE.test(r.slug) ? r.slug.replace(SUFFIX_RE, '') : r.slug;
+    regionSlugMap.set(`${r.city}|${r.district}`, normalized);
   }
 
   // city name -> slug reverse map (서울 -> seoul, 서울특별시 -> seoul)
