@@ -6,12 +6,14 @@ const VALID_CITIES = new Set([
   'jeonbuk', 'jeonnam', 'gyeongbuk', 'gyeongnam', 'jeju',
 ])
 
-const SUFFIX_PATTERN = /-(gu|si|gun)(?=$|-)/g
+const SUFFIX_TEST = /-(gu|si|gun)(?=$|-)/
+const SUFFIX_REPLACE = /-(gu|si|gun)(?=$|-)/g
 
 export default defineEventHandler((event) => {
   const path = getRequestURL(event).pathname
 
   if (path.startsWith('/api/') || path.startsWith('/_nuxt/') ||
+      path.startsWith('/_ipx/') || path.startsWith('/__nuxt') ||
       path.startsWith('/sitemap') || path.startsWith('/icons/')) return
 
   const match = path.match(/^\/([^/]+)\/([^/]+)(\/.*)?$/)
@@ -19,11 +21,9 @@ export default defineEventHandler((event) => {
 
   const [, city, district, rest] = match
   if (!VALID_CITIES.has(city)) return
-  if (!SUFFIX_PATTERN.test(district)) return
+  if (!SUFFIX_TEST.test(district)) return
 
-  // Reset lastIndex since we use global flag
-  SUFFIX_PATTERN.lastIndex = 0
-  const newSlug = district.replace(SUFFIX_PATTERN, '')
+  const newSlug = district.replace(SUFFIX_REPLACE, '')
   const newPath = `/${city}/${newSlug}${rest || ''}`
   return sendRedirect(event, newPath, 301)
 })

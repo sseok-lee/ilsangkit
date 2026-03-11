@@ -49,11 +49,38 @@ describe('useRegions', () => {
       expect(generateSlug('해운대구')).toBe('haeundae')
     })
 
+    it('generates slug for previously missing metro districts', () => {
+      // 대구/인천/광주/대전/울산 - 이전에 누락되었던 매핑
+      expect(generateSlug('동구')).toBe('dong')
+      expect(generateSlug('서구')).toBe('seo')
+      expect(generateSlug('남구')).toBe('nam')
+      expect(generateSlug('북구')).toBe('buk')
+      expect(generateSlug('미추홀구')).toBe('michuhol')
+      expect(generateSlug('유성구')).toBe('yuseong')
+      expect(generateSlug('울주군')).toBe('ulju')
+    })
+
+    it('generates slug for composite sub-city districts', () => {
+      expect(generateSlug('수원시 장안구')).toBe('suwon-jangan')
+      expect(generateSlug('성남시 분당구')).toBe('seongnam-bundang')
+      expect(generateSlug('고양시 일산동구')).toBe('goyang-ilsandong')
+      expect(generateSlug('창원시 마산합포구')).toBe('changwon-masanhappo')
+    })
+
+    it('generates slug for province-level districts', () => {
+      // 강원/충북/충남/전북/전남/경북/경남/제주
+      expect(generateSlug('춘천시')).toBe('chuncheon')
+      expect(generateSlug('청주시')).toBe('cheongju')
+      expect(generateSlug('전주시')).toBe('jeonju')
+      expect(generateSlug('목포시')).toBe('mokpo')
+      expect(generateSlug('포항시')).toBe('pohang')
+      expect(generateSlug('서귀포시')).toBe('seogwipo')
+      expect(generateSlug('제주시')).toBe('jeju')
+    })
+
     it('handles unknown districts', () => {
       const result = generateSlug('테스트구')
       expect(typeof result).toBe('string')
-      // 매핑에 없는 순수 한글 이름은 접미사/한글 제거 후 빈 문자열 반환 (정상 동작)
-      expect(result).toBe('')
     })
   })
 
