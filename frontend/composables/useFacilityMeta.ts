@@ -2,6 +2,26 @@ import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, Park
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_CTA } from '~/utils/seoConstants'
 
+/** 받침 유무에 따라 조사 선택 (은/는, 이/가, 을/를 등) */
+function getJosa(word: string, josaWithBatchim: string, josaWithout: string): string {
+  if (!word) return josaWithBatchim
+  const lastChar = word.charCodeAt(word.length - 1)
+  if (lastChar < 0xAC00 || lastChar > 0xD7A3) {
+    const lastDigitMap: Record<string, boolean> = { '0': true, '1': true, '3': true, '6': true, '7': true, '8': true }
+    const lastStr = word[word.length - 1]
+    if (lastStr in lastDigitMap) return josaWithBatchim
+    return josaWithout
+  }
+  const hasBatchim = (lastChar - 0xAC00) % 28 !== 0
+  return hasBatchim ? josaWithBatchim : josaWithout
+}
+
+/** "0900" → "09:00" */
+function formatTimeStr(t: string): string {
+  const s = String(t).padStart(4, '0')
+  return `${s.slice(0, 2)}:${s.slice(2)}`
+}
+
 /**
  * 메타태그 옵션
  */
@@ -24,70 +44,8 @@ export function buildFacilityIntro(facility: FacilityDetail): string {
   const location = facility.district
     ? `${facility.city} ${facility.district}`
     : facility.city
-
-  const parts: string[] = []
-  parts.push(`${facility.name}은(는) ${location}에 위치한 ${categoryName}입니다`)
-
-  const d = facility.details as Record<string, unknown>
-  switch (facility.category) {
-    case 'toilet': {
-      const det = d as ToiletDetails
-      const features: string[] = []
-      if (det.operatingHours === '24시간' || det.is24Hour) features.push('상시 개방')
-      if (det.hasCCTV) features.push('CCTV 설치')
-      if (det.hasDisabledToilet) features.push('장애인 화장실 있음')
-      if (det.hasDiaperChangingTable) features.push('기저귀 교환대 있음')
-      if (features.length) parts.push(features.join(', '))
-      break
-    }
-    case 'wifi': {
-      const det = d as WifiDetails
-      if (det.ssid) parts.push(`SSID: ${det.ssid}`)
-      break
-    }
-    case 'parking': {
-      const det = d as ParkingDetails
-      if (det.capacity) parts.push(`주차면수 ${det.capacity}면`)
-      if (det.baseFee != null && det.baseTime) parts.push(`기본 ${det.baseTime}분 ${det.baseFee.toLocaleString()}원`)
-      break
-    }
-    case 'kiosk': {
-      const det = d as KioskDetails
-      if (det.weekdayOperatingHours) parts.push(`평일 ${det.weekdayOperatingHours}`)
-      break
-    }
-    case 'hospital': {
-      const det = d as HospitalDetails
-      if (det.clCdNm) parts.push(det.clCdNm)
-      if (det.drTotCnt) parts.push(`의사 ${det.drTotCnt}명`)
-      break
-    }
-    case 'pharmacy': {
-      const det = d as PharmacyDetails
-      if (det.dutyTime1s && det.dutyTime1c) parts.push(`평일 ${det.dutyTime1s}~${det.dutyTime1c}`)
-      break
-    }
-    case 'aed': {
-      const det = d as AedDetails
-      if (det.buildPlace) parts.push(`설치장소: ${det.buildPlace}`)
-      break
-    }
-    case 'library': {
-      const det = d as LibraryDetails
-      const info: string[] = []
-      if (det.seatCount) info.push(`좌석 ${det.seatCount}석`)
-      if (det.bookCount) info.push(`장서 ${det.bookCount.toLocaleString()}권`)
-      if (info.length) parts.push(info.join(', '))
-      break
-    }
-    case 'clothes': {
-      const det = d as ClothesDetails
-      if (det.managementAgency) parts.push(`관리: ${det.managementAgency}`)
-      break
-    }
-  }
-
-  return parts.join('. ') + '.'
+  const josa = getJosa(facility.name, '은', '는')
+  return `${facility.name}${josa} ${location}에 위치한 ${categoryName}입니다.`
 }
 
 export function buildFacilityDescription(facility: FacilityDetail): string {
@@ -99,7 +57,8 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
   const parts: string[] = []
 
   // 시설명 + 지역 + 카테고리를 먼저 배치
-  parts.push(`${facility.name}은(는) ${location}에 위치한 ${categoryName}입니다`)
+  const josa = getJosa(facility.name, '은', '는')
+  parts.push(`${facility.name}${josa} ${location}에 위치한 ${categoryName}입니다`)
 
   const d = facility.details as Record<string, unknown>
 
@@ -146,7 +105,7 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
     }
     case 'pharmacy': {
       const det = d as PharmacyDetails
-      if (det.dutyTime1s && det.dutyTime1c) parts.push(`월 ${det.dutyTime1s}~${det.dutyTime1c}`)
+      if (det.dutyTime1s && det.dutyTime1c) parts.push(`월 ${formatTimeStr(det.dutyTime1s)}~${formatTimeStr(det.dutyTime1c)}`)
       break
     }
     case 'aed': {
