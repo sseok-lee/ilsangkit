@@ -10,13 +10,13 @@ export const CreateReviewSchema = z.object({
   facilityCategory: ReviewCategorySchema,
   facilityId: z.string().min(1).max(50),
   nickname: z.string().min(1, '닉네임을 입력해주세요').max(30, '닉네임은 30자 이내로 입력해주세요'),
-  password: z.string().min(4, '비밀번호는 4자 이상이어야 합니다').max(20, '비밀번호는 20자 이내로 입력해주세요'),
+  password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다').max(20, '비밀번호는 20자 이내로 입력해주세요'),
   content: z.string().min(1, '리뷰 내용을 입력해주세요').max(1000, '리뷰는 1000자 이내로 입력해주세요'),
 });
 
 // 리뷰 수정 스키마
 export const UpdateReviewSchema = z.object({
-  password: z.string().min(4).max(20),
+  password: z.string().min(6).max(20),
   content: z.string().min(1).max(1000).optional(),
   nickname: z.string().min(1).max(30).optional(),
 }).refine(
@@ -26,7 +26,7 @@ export const UpdateReviewSchema = z.object({
 
 // 리뷰 삭제 스키마
 export const DeleteReviewSchema = z.object({
-  password: z.string().min(4).max(20),
+  password: z.string().min(6).max(20),
 });
 
 // 리뷰 ID 파라미터 스키마

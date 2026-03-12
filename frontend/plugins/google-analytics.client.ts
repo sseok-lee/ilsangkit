@@ -9,8 +9,8 @@ export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
   const gaId = config.public.gaId
 
-  // Skip if no GA ID or in development
-  if (!gaId) {
+  // Skip if no GA ID, invalid format, or in development
+  if (!gaId || !/^G-[A-Z0-9]{4,}$/.test(gaId)) {
     return
   }
 

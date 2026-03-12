@@ -120,6 +120,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { marked } from 'marked'
+import DOMPurify from 'isomorphic-dompurify'
 import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -155,7 +156,8 @@ const categoryLabel = computed(() => {
 
 const renderedContent = computed(() => {
   if (!guide.value?.content) return ''
-  return marked(guide.value.content) as string
+  const rawHtml = marked(guide.value.content) as string
+  return DOMPurify.sanitize(rawHtml)
 })
 
 const keywordList = computed(() => {

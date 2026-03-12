@@ -735,7 +735,7 @@ async function fetchRegionPage(
   pageNo: number,
   numOfRows: number
 ): Promise<{ rows: ApiRegion[]; totalCount: number }> {
-  const baseUrl = 'http://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList';
+  const baseUrl = 'https://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList';
   // serviceKey는 이미 인코딩된 상태일 수 있으므로 직접 붙임
   const url = `${baseUrl}?serviceKey=${serviceKey}&pageNo=${pageNo}&numOfRows=${numOfRows}&type=json`;
 

@@ -45,7 +45,7 @@ interface PharmacyApiItem {
 /**
  * API 설정
  */
-const API_URL = 'http://apis.data.go.kr/B552657/ErmctInsttInfoInqireService/getParmacyListInfoInqire';
+const API_URL = 'https://apis.data.go.kr/B552657/ErmctInsttInfoInqireService/getParmacyListInfoInqire';
 const PAGE_SIZE = SYNC.PAGE_SIZE;
 
 /**

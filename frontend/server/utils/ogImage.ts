@@ -27,6 +27,13 @@ export interface OgImageOptions {
   district?: string
 }
 
+function sanitizeForSvg(str: string, maxLen = 100): string {
+  return str
+    .slice(0, maxLen)
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // remove control chars
+}
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -37,12 +44,14 @@ function escapeXml(str: string): string {
 }
 
 export function generateOgImageSvg(options: OgImageOptions): string {
-  const { category, city, district } = options
+  const { category } = options
+  const city = options.city ? sanitizeForSvg(options.city, 30) : undefined
+  const district = options.district ? sanitizeForSvg(options.district, 30) : undefined
   const meta = CATEGORY_META[category as FacilityCategory]
   const bgColor = CATEGORY_COLORS[category as FacilityCategory] ?? FALLBACK_COLOR
 
   // title fallback: empty string → use category label
-  const title = options.title || meta?.label || String(category)
+  const title = sanitizeForSvg(options.title || meta?.label || String(category), 80)
   const categoryLabel = meta?.label || String(category)
 
   const locationParts: string[] = []

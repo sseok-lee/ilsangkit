@@ -33,7 +33,14 @@
     "seed:hospital-detail": "tsx src/scripts/seedHospitalDetail.ts",
     "generate:guide": "tsx src/scripts/generateGuide.ts",
     "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
-    "fix:region-slugs": "tsx src/scripts/fixRegionSlugs.ts"
+    "fix:region-slugs": "tsx src/scripts/fixRegionSlugs.ts",
+    "sync:geocode-real-estate": "tsx src/scripts/geocodeRealEstate.ts",
+    "sync:apt-sale": "tsx src/scripts/syncAptSale.ts",
+    "sync:apt-rent": "tsx src/scripts/syncAptRent.ts",
+    "sync:villa-sale": "tsx src/scripts/syncVillaSale.ts",
+    "sync:villa-rent": "tsx src/scripts/syncVillaRent.ts",
+    "sync:offitel-sale": "tsx src/scripts/syncOffitelSale.ts",
+    "sync:offitel-rent": "tsx src/scripts/syncOffitelRent.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -55,7 +62,7 @@
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.2.1",
+    "express-rate-limit": "^8.3.1",
     "fast-xml-parser": "^5.3.5",
     "helmet": "^8.1.0",
     "iconv-lite": "^0.7.2",

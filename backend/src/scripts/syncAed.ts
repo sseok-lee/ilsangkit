@@ -42,7 +42,7 @@ interface AedApiItem {
 /**
  * API 설정
  */
-const API_URL = 'http://apis.data.go.kr/B552657/AEDInfoInqireService/getEgytAedManageInfoInqire';
+const API_URL = 'https://apis.data.go.kr/B552657/AEDInfoInqireService/getEgytAedManageInfoInqire';
 const PAGE_SIZE = SYNC.PAGE_SIZE;
 
 /**

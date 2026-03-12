@@ -11,12 +11,16 @@ import wasteSchedulesRouter from './routes/wasteSchedules.js';
 import sitemapRouter from './routes/sitemap.js';
 import reviewsRouter from './routes/reviews.js';
 import guidesRouter from './routes/guides.js';
+import realEstateRouter from './routes/realEstate.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
 import { helmetConfig, corsOptions, sanitizeInput } from './middlewares/security.js';
 
 const app: Application = express();
+
+// Trust first proxy (Nginx/Nitro) — ensures req.ip reflects the real client IP
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(helmetConfig);
@@ -54,6 +58,7 @@ app.use('/api/waste-schedules', wasteSchedulesRouter);
 app.use('/api/sitemap', sitemapRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/guides', guidesRouter);
+app.use('/api/real-estate', realEstateRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

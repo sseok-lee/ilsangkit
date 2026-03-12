@@ -65,7 +65,12 @@ export const helmetConfig = helmet({
  */
 export const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void => {
-    const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
+    const allowedOrigins = process.env.CORS_ORIGIN?.split(',');
+    if (!allowedOrigins && process.env.NODE_ENV === 'production') {
+      callback(new Error('CORS_ORIGIN must be set in production'));
+      return;
+    }
+    const origins = allowedOrigins || ['http://localhost:3000'];
 
     // origin이 없는 경우 (same-origin 요청)는 허용
     if (!origin) {
@@ -73,7 +78,7 @@ export const corsOptions = {
       return;
     }
 
-    if (allowedOrigins.includes(origin)) {
+    if (origins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
