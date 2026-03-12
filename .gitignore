@@ -25,7 +25,7 @@ Thumbs.db
 .playwright-mcp/
 
 # Shrimp Task Manager
-.shrimp-data/
+.shrimp_data/
 
 # Planning & Design (local only)
 design/
