@@ -26,9 +26,9 @@
 
     <!-- Center: Desktop Navigation (Group Dropdowns) -->
     <nav class="hidden md:flex items-center gap-1">
-      <!-- Category Group Dropdowns -->
+      <!-- Nav Group Dropdowns (시설 카테고리 + 부동산 링크) -->
       <div
-        v-for="group in CATEGORY_GROUPS"
+        v-for="group in NAV_GROUPS"
         :key="group.title"
         class="relative"
         @mouseenter="openDropdown(group.title)"
@@ -61,16 +61,32 @@
             @mouseenter="cancelCloseDropdown"
             @mouseleave="scheduleCloseDropdown"
           >
-            <NuxtLink
-              v-for="catId in group.categories"
-              :key="catId"
-              :to="`/${catId}`"
-              class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
-              @click="closeDropdown"
-            >
-              <CategoryIcon :category-id="catId" size="sm" />
-              {{ CATEGORY_META[catId].shortLabel }}
-            </NuxtLink>
+            <!-- 시설 카테고리 그룹 -->
+            <template v-if="!isLinkGroup(group)">
+              <NuxtLink
+                v-for="catId in group.categories"
+                :key="catId"
+                :to="`/${catId}`"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
+                @click="closeDropdown"
+              >
+                <CategoryIcon :category-id="catId" size="sm" />
+                {{ CATEGORY_META[catId].shortLabel }}
+              </NuxtLink>
+            </template>
+            <!-- 부동산 링크 그룹 -->
+            <template v-else>
+              <NuxtLink
+                v-for="link in group.links"
+                :key="link.to"
+                :to="link.to"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
+                @click="closeDropdown"
+              >
+                <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
+                {{ link.label }}
+              </NuxtLink>
+            </template>
           </div>
         </Transition>
       </div>
@@ -158,22 +174,38 @@
         </NuxtLink>
         <div class="h-px bg-slate-200 my-2"></div>
 
-        <!-- Category Groups -->
-        <div v-for="group in CATEGORY_GROUPS" :key="group.title" class="mb-1">
+        <!-- Nav Groups (시설 카테고리 + 부동산 링크) -->
+        <div v-for="group in NAV_GROUPS" :key="group.title" class="mb-1">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
             {{ group.title }}
           </div>
-          <NuxtLink
-            v-for="catId in group.categories"
-            :key="catId"
-            :to="`/${catId}`"
-            class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-            @click="closeMobileMenu"
-          >
-            <CategoryIcon :category-id="catId" size="sm" />
-            {{ CATEGORY_META[catId].shortLabel }}
-          </NuxtLink>
+          <!-- 시설 카테고리 -->
+          <template v-if="!isLinkGroup(group)">
+            <NuxtLink
+              v-for="catId in group.categories"
+              :key="catId"
+              :to="`/${catId}`"
+              class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              @click="closeMobileMenu"
+            >
+              <CategoryIcon :category-id="catId" size="sm" />
+              {{ CATEGORY_META[catId].shortLabel }}
+            </NuxtLink>
+          </template>
+          <!-- 부동산 링크 -->
+          <template v-else>
+            <NuxtLink
+              v-for="link in group.links"
+              :key="link.to"
+              :to="link.to"
+              class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              @click="closeMobileMenu"
+            >
+              <span class="material-symbols-outlined text-[16px]">{{ group.icon }}</span>
+              {{ link.label }}
+            </NuxtLink>
+          </template>
         </div>
 
         <div class="h-px bg-slate-200 my-2"></div>
@@ -208,7 +240,8 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
+import { CATEGORY_META, CATEGORY_GROUPS, NAV_GROUPS, isLinkGroup } from '~/types/facility'
+import type { NavGroup } from '~/types/facility'
 
 interface Props {
   transparent?: boolean

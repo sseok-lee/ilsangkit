@@ -569,3 +569,229 @@ model Pharmacy {
   @@index([lat, lng])
   @@index([hpid])
 }
+
+// ============================================
+// 부동산 실거래가 - 매매
+// ============================================
+
+model AptSaleTransaction {
+  id               Int      @id @default(autoincrement())
+  city             String   @db.VarChar(50)
+  district         String   @db.VarChar(50)
+  bjdCode          String   @db.VarChar(10)
+  dongName         String   @db.VarChar(50)
+  buildingName     String   @db.VarChar(200)
+  aptDong          String?  @db.VarChar(50)
+  buildYear        Int?
+  floor            Int?
+  exclusiveArea    Decimal? @db.Decimal(10, 2)
+  jibun            String?  @db.VarChar(20)
+  roadName         String?  @db.VarChar(100)
+  lat              Decimal? @db.Decimal(10, 7)
+  lng              Decimal? @db.Decimal(10, 7)
+  dealYear         Int
+  dealMonth        Int
+  dealDay          Int?
+  dealAmount       BigInt
+  dealType         String?  @db.VarChar(20)
+  cancelDealDay    String?  @db.VarChar(10)
+  cancelDealType   String?  @db.VarChar(20)
+  buyerType        String?  @db.VarChar(10)
+  sellerType       String?  @db.VarChar(10)
+  registrationDate String?  @db.VarChar(20)
+  sourceId         String   @unique @db.VarChar(100)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  syncedAt         DateTime @default(now())
+
+  @@index([bjdCode, dealYear, dealMonth])
+  @@index([buildingName, bjdCode])
+  @@index([city, district])
+  @@index([dealYear, dealMonth])
+}
+
+model VillaSaleTransaction {
+  id               Int      @id @default(autoincrement())
+  city             String   @db.VarChar(50)
+  district         String   @db.VarChar(50)
+  bjdCode          String   @db.VarChar(10)
+  dongName         String   @db.VarChar(50)
+  buildingName     String   @db.VarChar(200)
+  houseType        String?  @db.VarChar(20)
+  buildYear        Int?
+  floor            Int?
+  exclusiveArea    Decimal? @db.Decimal(10, 2)
+  jibun            String?  @db.VarChar(20)
+  roadName         String?  @db.VarChar(100)
+  lat              Decimal? @db.Decimal(10, 7)
+  lng              Decimal? @db.Decimal(10, 7)
+  dealYear         Int
+  dealMonth        Int
+  dealDay          Int?
+  dealAmount       BigInt
+  dealType         String?  @db.VarChar(20)
+  cancelDealDay    String?  @db.VarChar(10)
+  cancelDealType   String?  @db.VarChar(20)
+  buyerType        String?  @db.VarChar(10)
+  sellerType       String?  @db.VarChar(10)
+  registrationDate String?  @db.VarChar(20)
+  sourceId         String   @unique @db.VarChar(100)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  syncedAt         DateTime @default(now())
+
+  @@index([bjdCode, dealYear, dealMonth])
+  @@index([buildingName, bjdCode])
+  @@index([city, district])
+  @@index([dealYear, dealMonth])
+}
+
+model OffitelSaleTransaction {
+  id               Int      @id @default(autoincrement())
+  city             String   @db.VarChar(50)
+  district         String   @db.VarChar(50)
+  bjdCode          String   @db.VarChar(10)
+  dongName         String   @db.VarChar(50)
+  buildingName     String   @db.VarChar(200)
+  buildYear        Int?
+  floor            Int?
+  exclusiveArea    Decimal? @db.Decimal(10, 2)
+  jibun            String?  @db.VarChar(20)
+  roadName         String?  @db.VarChar(100)
+  lat              Decimal? @db.Decimal(10, 7)
+  lng              Decimal? @db.Decimal(10, 7)
+  dealYear         Int
+  dealMonth        Int
+  dealDay          Int?
+  dealAmount       BigInt
+  dealType         String?  @db.VarChar(20)
+  cancelDealDay    String?  @db.VarChar(10)
+  cancelDealType   String?  @db.VarChar(20)
+  buyerType        String?  @db.VarChar(10)
+  sellerType       String?  @db.VarChar(10)
+  sourceId         String   @unique @db.VarChar(100)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  syncedAt         DateTime @default(now())
+
+  @@index([bjdCode, dealYear, dealMonth])
+  @@index([buildingName, bjdCode])
+  @@index([city, district])
+  @@index([dealYear, dealMonth])
+}
+
+// ============================================
+// 부동산 실거래가 - 전월세
+// ============================================
+
+model AptRentTransaction {
+  id              Int      @id @default(autoincrement())
+  city            String   @db.VarChar(50)
+  district        String   @db.VarChar(50)
+  bjdCode         String   @db.VarChar(10)
+  dongName        String   @db.VarChar(50)
+  buildingName    String   @db.VarChar(200)
+  buildYear       Int?
+  floor           Int?
+  exclusiveArea   Decimal? @db.Decimal(10, 2)
+  jibun           String?  @db.VarChar(20)
+  roadName        String?  @db.VarChar(100)
+  lat             Decimal? @db.Decimal(10, 7)
+  lng             Decimal? @db.Decimal(10, 7)
+  dealYear        Int
+  dealMonth       Int
+  dealDay         Int?
+  rentType        String   @db.VarChar(10)
+  deposit         BigInt
+  monthlyRent     Int?
+  contractTerm    String?  @db.VarChar(30)
+  contractType    String?  @db.VarChar(10)
+  preDeposit      BigInt?
+  preMonthlyRent  Int?
+  useRenewalRight String?  @db.VarChar(10)
+  sourceId        String   @unique @db.VarChar(100)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  syncedAt        DateTime @default(now())
+
+  @@index([bjdCode, dealYear, dealMonth])
+  @@index([buildingName, bjdCode])
+  @@index([city, district])
+  @@index([dealYear, dealMonth])
+  @@index([rentType])
+}
+
+model VillaRentTransaction {
+  id              Int      @id @default(autoincrement())
+  city            String   @db.VarChar(50)
+  district        String   @db.VarChar(50)
+  bjdCode         String   @db.VarChar(10)
+  dongName        String   @db.VarChar(50)
+  buildingName    String   @db.VarChar(200)
+  houseType       String?  @db.VarChar(20)
+  buildYear       Int?
+  floor           Int?
+  exclusiveArea   Decimal? @db.Decimal(10, 2)
+  jibun           String?  @db.VarChar(20)
+  roadName        String?  @db.VarChar(100)
+  lat             Decimal? @db.Decimal(10, 7)
+  lng             Decimal? @db.Decimal(10, 7)
+  dealYear        Int
+  dealMonth       Int
+  dealDay         Int?
+  rentType        String   @db.VarChar(10)
+  deposit         BigInt
+  monthlyRent     Int?
+  contractTerm    String?  @db.VarChar(30)
+  contractType    String?  @db.VarChar(10)
+  preDeposit      BigInt?
+  preMonthlyRent  Int?
+  useRenewalRight String?  @db.VarChar(10)
+  sourceId        String   @unique @db.VarChar(100)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  syncedAt        DateTime @default(now())
+
+  @@index([bjdCode, dealYear, dealMonth])
+  @@index([buildingName, bjdCode])
+  @@index([city, district])
+  @@index([dealYear, dealMonth])
+  @@index([rentType])
+}
+
+model OffitelRentTransaction {
+  id              Int      @id @default(autoincrement())
+  city            String   @db.VarChar(50)
+  district        String   @db.VarChar(50)
+  bjdCode         String   @db.VarChar(10)
+  dongName        String   @db.VarChar(50)
+  buildingName    String   @db.VarChar(200)
+  buildYear       Int?
+  floor           Int?
+  exclusiveArea   Decimal? @db.Decimal(10, 2)
+  jibun           String?  @db.VarChar(20)
+  roadName        String?  @db.VarChar(100)
+  lat             Decimal? @db.Decimal(10, 7)
+  lng             Decimal? @db.Decimal(10, 7)
+  dealYear        Int
+  dealMonth       Int
+  dealDay         Int?
+  rentType        String   @db.VarChar(10)
+  deposit         BigInt
+  monthlyRent     Int?
+  contractTerm    String?  @db.VarChar(30)
+  contractType    String?  @db.VarChar(10)
+  preDeposit      BigInt?
+  preMonthlyRent  Int?
+  useRenewalRight String?  @db.VarChar(10)
+  sourceId        String   @unique @db.VarChar(100)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  syncedAt        DateTime @default(now())
+
+  @@index([bjdCode, dealYear, dealMonth])
+  @@index([buildingName, bjdCode])
+  @@index([city, district])
+  @@index([dealYear, dealMonth])
+  @@index([rentType])
+}

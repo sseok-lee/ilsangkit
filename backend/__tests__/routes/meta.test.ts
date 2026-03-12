@@ -118,6 +118,49 @@ describe('GET /api/meta/regions', () => {
   });
 });
 
+describe('GET /api/meta/stats', () => {
+  it('시설 통계 반환 (기존 필드 유지)', async () => {
+    const res = await request(app).get('/api/meta/stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('toilet');
+    expect(res.body.data).toHaveProperty('wifi');
+    expect(res.body.data).toHaveProperty('clothes');
+    expect(res.body.data).toHaveProperty('kiosk');
+    expect(res.body.data).toHaveProperty('trash');
+    expect(res.body.data).toHaveProperty('parking');
+    expect(res.body.data).toHaveProperty('aed');
+    expect(res.body.data).toHaveProperty('library');
+    expect(res.body.data).toHaveProperty('hospital');
+    expect(res.body.data).toHaveProperty('pharmacy');
+    expect(res.body.data).toHaveProperty('total');
+  });
+
+  it('부동산 거래 통계 포함', async () => {
+    const res = await request(app).get('/api/meta/stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('realEstate');
+
+    const { realEstate } = res.body.data;
+    expect(realEstate).toHaveProperty('aptSale');
+    expect(realEstate).toHaveProperty('aptRent');
+    expect(realEstate).toHaveProperty('villaSale');
+    expect(realEstate).toHaveProperty('villaRent');
+    expect(realEstate).toHaveProperty('offitelSale');
+    expect(realEstate).toHaveProperty('offitelRent');
+
+    expect(typeof realEstate.aptSale).toBe('number');
+    expect(typeof realEstate.aptRent).toBe('number');
+    expect(typeof realEstate.villaSale).toBe('number');
+    expect(typeof realEstate.villaRent).toBe('number');
+    expect(typeof realEstate.offitelSale).toBe('number');
+    expect(typeof realEstate.offitelRent).toBe('number');
+  });
+});
+
 describe('GET /api/health', () => {
   it('헬스체크 응답', async () => {
     const res = await request(app).get('/api/health');

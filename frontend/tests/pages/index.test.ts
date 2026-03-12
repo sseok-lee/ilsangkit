@@ -65,15 +65,6 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('문화/환경')
   })
 
-  it('renders popular regions section', async () => {
-    const wrapper = await mountSuspended(IndexPage)
-
-    expect(wrapper.text()).toContain('인기 지역')
-    expect(wrapper.text()).toContain('서울')
-    expect(wrapper.text()).toContain('부산')
-    expect(wrapper.text()).toContain('인천')
-  })
-
   it('navigates to search page when search is triggered', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
@@ -104,17 +95,6 @@ describe('Index Page', () => {
     // Check for Suspense wrapper's child
     const indexRoot = wrapper.find('.flex.flex-col')
     expect(indexRoot.exists()).toBe(true)
-  })
-
-  it('popular region buttons navigate to search with region', async () => {
-    const wrapper = await mountSuspended(IndexPage)
-
-    const regionButtons = wrapper.findAll('[data-testid^="region-"]')
-    expect(regionButtons.length).toBeGreaterThan(0)
-
-    await regionButtons[0].trigger('click')
-
-    expect(mockNavigateTo).toHaveBeenCalledWith(expect.stringContaining('/search'))
   })
 
   it('renders grouped category sections', async () => {

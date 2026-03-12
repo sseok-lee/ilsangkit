@@ -51,6 +51,15 @@ npm run sync:kiosk       # 무인민원발급기
 npm run sync:parking     # 공영주차장
 npm run sync:aed         # 자동심장충격기 (AED)
 npm run sync:regions     # 지역 정보
+
+# 부동산 실거래가 동기화
+npm run sync:apt-sale       # 아파트 매매
+npm run sync:apt-rent       # 아파트 전월세
+npm run sync:villa-sale     # 연립다세대 매매
+npm run sync:villa-rent     # 연립다세대 전월세
+npm run sync:offitel-sale   # 오피스텔 매매
+npm run sync:offitel-rent   # 오피스텔 전월세
+npm run sync:geocode-real-estate  # 부동산 좌표 geocoding
 ```
 
 ## Architecture Overview
@@ -60,7 +69,7 @@ npm run sync:regions     # 지역 정보
 - **Backend**: Express 5 + TypeScript (ESM)
 - **Database**: MySQL 8 (Docker, port 3307) + Prisma ORM
 - **Testing**: Vitest (unit), Playwright (E2E), MSW (API mocking)
-- **Data Source**: 공공데이터포털 API/CSV
+- **Data Source**: 공공데이터포털 API/CSV, 국토교통부 실거래가 API
 
 ### System Flow
 ```
@@ -83,14 +92,30 @@ Frontend에서 `$fetch`로 API 호출 (runtime config `apiBase` 사용).
 | | clothes | `clothes` | 의류수거함 |
 | | trash | `trash` | 쓰레기배출 |
 
+### Real Estate (부동산 실거래가, 6개)
+| 건물유형 | 거래방식 | API type slug | 한글 |
+|---------|---------|---------------|------|
+| 아파트 | 매매 | `apt-sale` | 아파트 매매 |
+| 아파트 | 전월세 | `apt-rent` | 아파트 전월세 |
+| 연립다세대 | 매매 | `villa-sale` | 빌라 매매 |
+| 연립다세대 | 전월세 | `villa-rent` | 빌라 전월세 |
+| 오피스텔 | 매매 | `offitel-sale` | 오피스텔 매매 |
+| 오피스텔 | 전월세 | `offitel-rent` | 오피스텔 전월세 |
+
 ### Route Structure
 - **Frontend pages**: `/[category]/`, `/[city]/[district]/`, `/search`, `/[category]/[id]`
+- **Frontend pages (부동산)**: `/real-estate/`, `/real-estate/[propertyType]/`, `/real-estate/[propertyType]/[buildingName]`
 - **Backend API routes**: `facilities.ts` (CRUD/검색), `meta.ts` (메타), `sitemap.ts`, `wasteSchedules.ts`
+- **Backend API routes (부동산)**: `realEstate.ts` (검색/통계/단지목록/건물정보)
 
 ### Data Sync Pipeline
 각 카테고리별 sync 스크립트가 공공데이터 API/CSV를 받아 Prisma로 MySQL에 upsert.
 - 카테고리별 Prisma 모델은 별도 테이블 (Toilet, Wifi, Parking 등)
 - `syncAll.ts`로 전체 일괄 동기화
+
+부동산 실거래가 동기화는 국토교통부 XML API → transform → Prisma upsert(sourceId 기준) 구조.
+- 6개 건물유형×거래방식별 sync 스크립트가 `syncRealEstateBase.ts` 공통 유틸 사용
+- `geocodeRealEstate.ts`로 좌표 데이터 보강
 
 ## Key Conventions
 
@@ -113,3 +138,13 @@ Frontend에서 `$fetch`로 API 호출 (runtime config `apiBase` 사용).
 4. `backend/src/scripts/sync*.ts` - 동기화 스크립트
 5. `frontend/components/facility/details/*Detail.vue` - 상세 컴포넌트
 6. `frontend/tests/components/facility/details/*Detail.test.ts` - 테스트
+
+### 부동산 카테고리 추가 시 수정 필요 파일
+1. `backend/prisma/schema.prisma` - 새 트랜잭션 모델
+2. `backend/src/scripts/sync*.ts` - 동기화 스크립트
+3. `backend/src/services/syncRealEstateBase.ts` - 공통 유틸 (필요시)
+4. `backend/src/services/realEstateService.ts` - getModel() 레지스트리에 추가
+5. `backend/src/schemas/realEstate.ts` - RealEstateTypeSchema enum 추가
+6. `frontend/types/realEstate.ts` - 타입/slug 매핑 추가
+7. `frontend/utils/realEstateMeta.ts` - 메타/FAQ/설명 추가
+8. `frontend/composables/useRealEstate.ts` - API 래퍼 (보통 변경 불필요)

@@ -180,6 +180,32 @@
           </div>
         </div>
 
+        <!-- 부동산 검색 결과 -->
+        <div v-if="!selectedCategory && realEstateResults.length > 0" class="mt-6 bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-lg">apartment</span>
+            <h2 class="text-slate-900 text-base font-bold">부동산 실거래가</h2>
+            <span class="text-xs text-slate-400 font-medium">
+              ({{ realEstateResults.reduce((s, r) => s + r.count, 0) }}건)
+            </span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <NuxtLink
+              v-for="item in realEstatePreviewItems"
+              :key="`${item.type}-${item.buildingName}-${item.bjdCode}`"
+              :to="`/real-estate/${item.propertyType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}&tab=${item.tab}`"
+              class="p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary/5 transition-colors"
+            >
+              <p class="font-medium text-slate-800 text-sm truncate">{{ item.buildingName }}</p>
+              <div class="flex items-center justify-between mt-1">
+                <span class="text-xs text-slate-500">{{ item.typeLabel }}</span>
+                <span v-if="item.dealAmount" class="text-xs font-semibold text-primary">{{ formatRealEstatePrice(item.dealAmount) }}</span>
+              </div>
+              <p v-if="item.city" class="text-xs text-slate-400 mt-0.5 truncate">{{ item.city }} {{ item.district }}</p>
+            </NuxtLink>
+          </div>
+        </div>
+
         <!-- Flat View (category selected) -->
         <template v-if="selectedCategory">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -209,7 +235,7 @@
         </template>
 
         <!-- Empty State (grouped view) -->
-        <div v-if="!selectedCategory && groupedResults.length === 0" class="py-20 text-center">
+        <div v-if="!selectedCategory && groupedResults.length === 0 && realEstateResults.length === 0" class="py-20 text-center">
           <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">search_off</span>
           <p class="text-slate-600 font-medium">검색 결과가 없습니다</p>
           <p class="text-slate-400 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
@@ -230,13 +256,16 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
+import { useRealEstate } from '~/composables/useRealEstate'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
+import type { RealEstateType } from '~/types/realEstate'
 
 const route = useRoute()
+const { searchAll: searchRealEstate } = useRealEstate()
 const { setSearchMeta } = useFacilityMeta()
 const { setItemListSchema } = useStructuredData()
 
@@ -258,6 +287,49 @@ const districts = ref<string[]>([])
 // UI State
 const searchKeyword = ref('')
 const selectedCategory = ref<FacilityCategory | null>(null)
+interface RealEstateResultCategory {
+  type: RealEstateType
+  count: number
+  items: Array<{ buildingName: string; bjdCode: string; [key: string]: unknown }>
+}
+const realEstateResults = ref<RealEstateResultCategory[]>([])
+
+const RE_TYPE_LABELS: Record<string, string> = {
+  'apt-sale': '아파트 매매', 'apt-rent': '아파트 전월세',
+  'villa-sale': '빌라 매매', 'villa-rent': '빌라 전월세',
+  'offitel-sale': '오피스텔 매매', 'offitel-rent': '오피스텔 전월세',
+}
+
+const realEstatePreviewItems = computed(() => {
+  const items: Array<{ type: string; buildingName: string; bjdCode: string; propertyType: string; tab: string; typeLabel: string; dealAmount: number | null; city: string; district: string }> = []
+  for (const cat of realEstateResults.value) {
+    const propertyType = cat.type.replace(/-(?:sale|rent)$/, '')
+    const tab = cat.type.endsWith('-rent') ? 'rent' : 'sale'
+    const priceKey = tab === 'sale' ? 'dealAmount' : 'deposit'
+    for (const item of cat.items) {
+      items.push({
+        type: cat.type,
+        buildingName: item.buildingName,
+        bjdCode: item.bjdCode,
+        propertyType,
+        tab,
+        typeLabel: RE_TYPE_LABELS[cat.type] || cat.type,
+        dealAmount: (item[priceKey] as number) ?? null,
+        city: (item.city as string) || '',
+        district: (item.district as string) || '',
+      })
+    }
+  }
+  return items.slice(0, 6)
+})
+
+function formatRealEstatePrice(amount: number): string {
+  const uk = Math.floor(amount / 10000)
+  const man = amount % 10000
+  if (uk > 0 && man > 0) return `${uk}억 ${man.toLocaleString()}만원`
+  if (uk > 0) return `${uk}억`
+  return `${amount.toLocaleString()}만원`
+}
 
 // Computed
 const searchTitle = computed(() => {
@@ -281,11 +353,13 @@ const searchTitle = computed(() => {
   return '주변 시설'
 })
 
+const realEstateTotalCount = computed(() => realEstateResults.value.reduce((s, r) => s + r.count, 0))
+
 const displayTotalCount = computed(() => {
   if (selectedCategory.value) {
     return total.value
   }
-  return groupedTotalCount.value
+  return groupedTotalCount.value + realEstateTotalCount.value
 })
 
 // Build common search params
@@ -298,7 +372,7 @@ function buildSearchParams(): Record<string, unknown> {
 }
 
 // Methods
-function performSearch() {
+async function performSearch() {
   if (selectedCategory.value) {
     // Flat view: single category with pagination
     search({
@@ -307,9 +381,17 @@ function performSearch() {
       page: currentPage.value,
       limit: 20,
     })
+    realEstateResults.value = []
   } else {
-    // Grouped view
-    searchGrouped(buildSearchParams())
+    const keyword = searchKeyword.value
+    // 시설 + 부동산 병렬 검색
+    const [, reResult] = await Promise.all([
+      searchGrouped(buildSearchParams()),
+      keyword
+        ? searchRealEstate(keyword, selectedCity.value || undefined, selectedDistrict.value || undefined).catch(() => null)
+        : Promise.resolve(null),
+    ])
+    realEstateResults.value = (reResult?.categories as RealEstateResultCategory[])?.filter(c => c.count > 0) || []
   }
 }
 

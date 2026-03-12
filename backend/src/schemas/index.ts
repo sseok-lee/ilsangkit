@@ -4,3 +4,4 @@
 export * from './common.js';
 export * from './facility.js';
 export * from './search.js';
+export * from './realEstate.js';

@@ -20,7 +20,10 @@ router.get('/categories', asyncHandler(async (_req: Request, res: Response) => {
 
 // GET /api/meta/stats - 카테고리별 시설 개수
 router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
-  const [toiletCount, wifiCount, clothesCount, kioskCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount] = await Promise.all([
+  const [
+    toiletCount, wifiCount, clothesCount, kioskCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount,
+    aptSaleCount, aptRentCount, villaSaleCount, villaRentCount, offitelSaleCount, offitelRentCount,
+  ] = await Promise.all([
     prisma.toilet.count(),
     prisma.wifi.count(),
     prisma.clothes.count(),
@@ -31,6 +34,12 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
     prisma.library.count(),
     prisma.hospital.count(),
     prisma.pharmacy.count(),
+    prisma.aptSaleTransaction.count(),
+    prisma.aptRentTransaction.count(),
+    prisma.villaSaleTransaction.count(),
+    prisma.villaRentTransaction.count(),
+    prisma.offitelSaleTransaction.count(),
+    prisma.offitelRentTransaction.count(),
   ]);
 
   const stats = {
@@ -45,6 +54,14 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
     hospital: hospitalCount,
     pharmacy: pharmacyCount,
     total: toiletCount + wifiCount + clothesCount + kioskCount + trashCount + parkingCount + aedCount + libraryCount + hospitalCount + pharmacyCount,
+    realEstate: {
+      aptSale: aptSaleCount,
+      aptRent: aptRentCount,
+      villaSale: villaSaleCount,
+      villaRent: villaRentCount,
+      offitelSale: offitelSaleCount,
+      offitelRent: offitelRentCount,
+    },
   };
 
   res.json({ success: true, data: stats });

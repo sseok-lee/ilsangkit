@@ -271,6 +271,21 @@ export interface CategoryGroup {
   categories: FacilityCategory[]
 }
 
+// 부동산 링크 그룹 인터페이스
+export interface LinkGroup {
+  title: string
+  icon: string
+  links: Array<{ to: string; label: string }>
+}
+
+// 네비게이션 그룹 = 기존 카테고리 그룹 | 링크 그룹
+export type NavGroup = CategoryGroup | LinkGroup
+
+// 타입 가드
+export function isLinkGroup(group: NavGroup): group is LinkGroup {
+  return 'links' in group
+}
+
 export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
   {
     title: '생활 편의',
@@ -286,6 +301,19 @@ export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
     title: '문화/환경',
     icon: 'eco',
     categories: ['library', 'clothes', 'trash'],
+  },
+] as const
+
+export const NAV_GROUPS: readonly NavGroup[] = [
+  ...CATEGORY_GROUPS,
+  {
+    title: '부동산',
+    icon: 'apartment',
+    links: [
+      { to: '/real-estate/apt', label: '아파트' },
+      { to: '/real-estate/villa', label: '빌라' },
+      { to: '/real-estate/offitel', label: '오피스텔' },
+    ],
   },
 ] as const
 

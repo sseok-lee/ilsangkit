@@ -57,21 +57,6 @@
           </div>
         </div>
 
-        <!-- Popular Regions (Mobile) -->
-        <div class="mt-4" role="region" aria-label="인기 지역">
-          <h2 class="text-[#111418] text-lg font-bold leading-tight mb-4">인기 지역</h2>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="region in popularRegionsMobile"
-              :key="region.name"
-              :data-testid="`region-${region.name}`"
-              class="px-4 py-2.5 bg-white#1e293b] rounded-lg text-sm font-medium text-slate-700 shadow-sm border border-slate-100 hover:border-primary/50 hover:text-primary transition-colors"
-              @click="handleRegionClick(region.query)"
-            >
-              # {{ region.name }}
-            </button>
-          </div>
-        </div>
         </div>
       </section>
 
@@ -171,6 +156,39 @@
         </div>
       </section>
 
+      <!-- 부동산 실거래가 Section -->
+      <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary text-[24px]">apartment</span>
+            부동산 실거래가
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <NuxtLink
+              v-for="link in realEstateLinks"
+              :key="link.to"
+              :to="link.to"
+              class="group relative flex flex-col items-center p-4 md:p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 bg-white hover:bg-primary/5"
+            >
+              <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined text-[24px] text-primary">{{ link.icon }}</span>
+              </div>
+              <h3 class="text-slate-900 font-bold text-sm text-center">{{ link.label }}</h3>
+              <p class="text-xs text-primary/60 font-medium mt-0.5">{{ link.sub }}</p>
+            </NuxtLink>
+          </div>
+          <div class="mt-4 text-center">
+            <NuxtLink
+              to="/real-estate"
+              class="inline-flex items-center gap-1 text-sm text-primary font-medium hover:underline"
+            >
+              부동산 실거래가 더보기
+              <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </NuxtLink>
+          </div>
+        </div>
+      </section>
+
       <!-- Recent Guides Section -->
       <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex items-center justify-between mb-4">
@@ -232,26 +250,6 @@
         </div>
       </section>
 
-      <!-- Popular Regions Section (Desktop) -->
-      <section class="hidden md:block w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8" role="region" aria-label="인기 지역">
-        <div class="flex flex-col gap-4">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary">trending_up</span>
-            인기 지역
-          </h2>
-          <div class="flex flex-wrap gap-3">
-            <NuxtLink
-              v-for="region in popularRegions"
-              :key="region.slug"
-              :to="`/${region.slug}`"
-              :data-testid="`region-${region.name}`"
-              class="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-sm font-medium text-slate-700 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm"
-            >
-              {{ region.name }}
-            </NuxtLink>
-          </div>
-        </div>
-      </section>
   </div>
 </template>
 
@@ -396,36 +394,13 @@ const categoryGroups = CATEGORY_GROUPS.map(group => ({
   })),
 }))
 
-// 모바일용 인기 지역 (# 태그 형식)
-const popularRegionsMobile = [
-  { name: '강남', query: '강남' },
-  { name: '홍대', query: '홍대' },
-  { name: '신촌', query: '신촌' },
-  { name: '명동', query: '명동' },
-  { name: '이태원', query: '이태원' },
-  { name: '건대입구', query: '건대입구' },
+// 부동산 실거래가 링크
+const realEstateLinks = [
+  { to: '/real-estate/apt', label: '아파트', icon: 'apartment', sub: '매매 · 전월세' },
+  { to: '/real-estate/villa', label: '빌라', icon: 'holiday_village', sub: '매매 · 전월세' },
+  { to: '/real-estate/offitel', label: '오피스텔', icon: 'business', sub: '매매 · 전월세' },
 ]
 
-// 데스크톱용 인기 지역 (17개 시/도 허브 링크)
-const popularRegions = [
-  { name: '서울', slug: 'seoul' },
-  { name: '경기', slug: 'gyeonggi' },
-  { name: '부산', slug: 'busan' },
-  { name: '대구', slug: 'daegu' },
-  { name: '인천', slug: 'incheon' },
-  { name: '광주', slug: 'gwangju' },
-  { name: '대전', slug: 'daejeon' },
-  { name: '울산', slug: 'ulsan' },
-  { name: '세종', slug: 'sejong' },
-  { name: '강원', slug: 'gangwon' },
-  { name: '충북', slug: 'chungbuk' },
-  { name: '충남', slug: 'chungnam' },
-  { name: '전북', slug: 'jeonbuk' },
-  { name: '전남', slug: 'jeonnam' },
-  { name: '경북', slug: 'gyeongbuk' },
-  { name: '경남', slug: 'gyeongnam' },
-  { name: '제주', slug: 'jeju' },
-]
 
 function handleSearch() {
   if (!searchKeyword.value) {
@@ -435,13 +410,6 @@ function handleSearch() {
   navigateTo(`/search?keyword=${encodeURIComponent(searchKeyword.value)}`)
 }
 
-function handleRegionClick(query: string, type: 'keyword' | 'city' = 'keyword') {
-  if (type === 'city') {
-    navigateTo(`/search?city=${encodeURIComponent(query)}`)
-  } else {
-    navigateTo(`/search?keyword=${encodeURIComponent(query)}`)
-  }
-}
 </script>
 
 <style>
