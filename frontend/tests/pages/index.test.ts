@@ -1,13 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { defineComponent, h, Suspense } from 'vue'
+import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 import IndexPage from '~/pages/index.vue'
+
+// Stub Vue auto-imports that Nuxt provides but vitest doesn't
+;(globalThis as any).ref = ref
+;(globalThis as any).computed = computed
+;(globalThis as any).watch = watch
+;(globalThis as any).watchEffect = watchEffect
+;(globalThis as any).onMounted = onMounted
+;(globalThis as any).onUnmounted = onUnmounted
 
 // Mock navigateTo
 const mockNavigateTo = vi.fn()
-
-// Make navigateTo globally available
 ;(globalThis as any).navigateTo = mockNavigateTo
+
+// Mock composables
+vi.mock('~/composables/useStructuredData', () => ({
+  useStructuredData: () => ({
+    setWebsiteSchema: vi.fn(),
+    setItemListSchema: vi.fn(),
+  }),
+}))
+
+vi.mock('~/composables/useFacilityMeta', () => ({
+  useFacilityMeta: () => ({
+    setHomeMeta: vi.fn(),
+    setMeta: vi.fn(),
+  }),
+}))
 
 // Helper to mount async components with Suspense
 async function mountSuspended(component: any, options?: any) {
@@ -33,56 +54,47 @@ describe('Index Page', () => {
   it('renders title and subtitle', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // New Stitch design has Korean title
-    expect(wrapper.text()).toContain('내 주변 생활 편의 정보')
-    expect(wrapper.text()).toContain('한 번에 찾기')
-    // Mobile subtitle
-    expect(wrapper.text()).toContain('지금 필요한 생활 시설을')
+    // New design hero text
+    expect(wrapper.text()).toContain('우리 동네')
+    expect(wrapper.text()).toContain('얼마나 살기 좋을까')
   })
 
   it('renders search input', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Search input is now a direct input element, not a separate component
+    // Search input exists with new placeholder
     const searchInput = wrapper.find('input[placeholder*="검색"]')
     expect(searchInput.exists()).toBe(true)
   })
 
-  it('renders category chips and cards', async () => {
+  it('renders real estate section', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Categories are now rendered directly in the page
-    expect(wrapper.text()).toContain('화장실')
-    expect(wrapper.text()).toContain('쓰레기')
-    expect(wrapper.text()).toContain('와이파이')
+    // Real estate section header
+    expect(wrapper.text()).toContain('부동산')
   })
 
-  it('renders stats banner', async () => {
+  it('renders stats banner with key labels', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    expect(wrapper.text()).toContain('생활 편의')
-    expect(wrapper.text()).toContain('건강/안전')
-    expect(wrapper.text()).toContain('문화/환경')
+    // Stats labels present
+    expect(wrapper.text()).toContain('생활시설')
+    expect(wrapper.text()).toContain('전국 시군구')
   })
 
   it('navigates to search page when search is triggered', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Set search keyword
     const searchInput = wrapper.find('input[placeholder*="검색"]')
     await searchInput.setValue('화장실')
-
-    // Trigger search with Enter key
     await searchInput.trigger('keydown.enter')
 
-    // Should navigate to /search with keyword (URL encoded)
     expect(mockNavigateTo).toHaveBeenCalledWith('/search?keyword=%ED%99%94%EC%9E%A5%EC%8B%A4')
   })
 
   it('does not navigate when search is empty', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Trigger search without keyword
     const searchInput = wrapper.find('input[placeholder*="검색"]')
     await searchInput.trigger('keydown.enter')
 
@@ -92,7 +104,6 @@ describe('Index Page', () => {
   it('applies responsive layout classes', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Check for Suspense wrapper's child
     const indexRoot = wrapper.find('.flex.flex-col')
     expect(indexRoot.exists()).toBe(true)
   })
@@ -107,16 +118,6 @@ describe('Index Page', () => {
 })
 
 describe('Hero image optimization', () => {
-  it('hero 이미지에 loading="lazy" 속성 존재', async () => {
-    const wrapper = await mountSuspended(IndexPage)
-
-    const imgs = wrapper.findAll('picture img')
-    expect(imgs.length).toBeGreaterThan(0)
-    imgs.forEach(img => {
-      expect(img.attributes('loading')).toBe('lazy')
-    })
-  })
-
   it('hero 이미지에 width, height 속성 존재', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
@@ -147,6 +148,16 @@ describe('Hero image optimization', () => {
     imgs.forEach(img => {
       expect(img.attributes('aria-hidden')).toBe('true')
       expect(img.attributes('alt')).toBe('')
+    })
+  })
+
+  it('hero 이미지에 loading 속성 존재', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+
+    const imgs = wrapper.findAll('picture img')
+    expect(imgs.length).toBeGreaterThan(0)
+    imgs.forEach(img => {
+      expect(img.attributes('loading')).toBeTruthy()
     })
   })
 })

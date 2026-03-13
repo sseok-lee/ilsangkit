@@ -12,29 +12,30 @@ describe('NAV_GROUPS', () => {
     expect(NAV_GROUPS).toHaveLength(4)
   })
 
-  it('4번째 그룹이 LinkGroup이어야 한다', () => {
-    const fourthGroup = NAV_GROUPS[3]
-    expect(isLinkGroup(fourthGroup)).toBe(true)
+  it('첫 번째 그룹이 LinkGroup이어야 한다', () => {
+    const firstGroup = NAV_GROUPS[0]
+    expect(isLinkGroup(firstGroup)).toBe(true)
   })
 
   it('부동산 그룹에 3개 링크가 있어야 한다', () => {
-    const fourthGroup = NAV_GROUPS[3] as LinkGroup
-    expect(fourthGroup.links).toHaveLength(3)
+    const firstGroup = NAV_GROUPS[0] as LinkGroup
+    expect(firstGroup.links).toHaveLength(3)
   })
 
   it('부동산 그룹의 제목이 "부동산"이어야 한다', () => {
-    const fourthGroup = NAV_GROUPS[3] as LinkGroup
-    expect(fourthGroup.title).toBe('부동산')
+    const firstGroup = NAV_GROUPS[0] as LinkGroup
+    expect(firstGroup.title).toBe('부동산')
   })
 
   it('부동산 그룹의 링크 경로가 올바르게 정의되어야 한다', () => {
-    const fourthGroup = NAV_GROUPS[3] as LinkGroup
+    const firstGroup = NAV_GROUPS[0] as LinkGroup
+    const links = firstGroup.links.map(({ to, label }) => ({ to, label }))
     const expectedLinks = [
       { to: '/real-estate/apt', label: '아파트' },
       { to: '/real-estate/villa', label: '빌라' },
       { to: '/real-estate/offitel', label: '오피스텔' },
     ]
-    expect(fourthGroup.links).toEqual(expectedLinks)
+    expect(links).toEqual(expectedLinks)
   })
 })
 
@@ -55,9 +56,9 @@ describe('CATEGORY_GROUPS 하위 호환', () => {
     expect(CATEGORY_GROUPS[2].title).toBe('문화/환경')
   })
 
-  it('NAV_GROUPS의 처음 3개 그룹이 CATEGORY_GROUPS와 동일해야 한다', () => {
-    const firstThree = NAV_GROUPS.slice(0, 3)
-    firstThree.forEach((group, i) => {
+  it('NAV_GROUPS의 마지막 3개 그룹이 CATEGORY_GROUPS와 동일해야 한다', () => {
+    const lastThree = NAV_GROUPS.slice(1, 4)
+    lastThree.forEach((group, i) => {
       expect(group.title).toBe(CATEGORY_GROUPS[i].title)
       expect(group.icon).toBe(CATEGORY_GROUPS[i].icon)
     })

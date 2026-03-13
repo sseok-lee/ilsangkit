@@ -24,8 +24,8 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: '병원·약국·화장실 등 전국 생활시설 검색 - 일상킷',
-          ogTitle: '병원·약국·화장실 등 전국 생활시설 검색 - 일상킷',
+          title: '일상킷 - 부동산 실거래가·생활시설 통합 검색',
+          ogTitle: '일상킷 - 부동산 실거래가·생활시설 통합 검색',
           ogSiteName: '일상킷',
           ogLocale: 'ko_KR',
           twitterCard: 'summary_large_image',
@@ -171,14 +171,14 @@ describe('useFacilityMeta', () => {
   })
 
   describe('setHomeMeta - CTR 최적화', () => {
-    it('홈 타이틀에 병원, 약국, 화장실, 주차장 중 일부 포함', () => {
+    it('홈 타이틀에 부동산 또는 생활시설 키워드 포함', () => {
       const { setHomeMeta } = useFacilityMeta()
 
       setHomeMeta()
 
       const call = mockUseSeoMeta.mock.calls[0][0]
       const title: string = call.title
-      const hasKeyword = ['병원', '약국', '화장실', '주차장'].some(kw => title.includes(kw))
+      const hasKeyword = ['부동산', '생활시설', '일상킷'].some(kw => title.includes(kw))
       expect(hasKeyword).toBe(true)
     })
 
