@@ -41,6 +41,16 @@ jobs:
           NUXT_PUBLIC_KAKAO_MAP_KEY: ${{ secrets.NUXT_PUBLIC_KAKAO_MAP_KEY }}
           NUXT_PUBLIC_GA_ID: ${{ secrets.NUXT_PUBLIC_GA_ID }}
 
+      - name: Clean old build artifacts on server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            rm -rf /home/project2/frontend/.output
+            rm -rf /home/project2/backend/dist
+
       - name: Deploy to Cafe24 Server
         uses: appleboy/scp-action@master
         with:
