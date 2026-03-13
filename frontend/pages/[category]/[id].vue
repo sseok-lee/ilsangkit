@@ -116,7 +116,7 @@
         </Teleport>
 
         <!-- Desktop: Two Column Layout -->
-        <div class="hidden md:block max-w-[1280px] mx-auto px-6 py-8">
+        <div class="hidden md:block max-w-6xl mx-auto px-6 py-8">
           <!-- Breadcrumbs -->
           <nav class="flex flex-wrap gap-2 mb-6 items-center text-sm">
             <NuxtLink to="/" class="text-[#48699d] font-medium hover:text-primary transition-colors">

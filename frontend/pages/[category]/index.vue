@@ -1,17 +1,19 @@
 <template>
   <div class="bg-background-light text-slate-900 font-display min-h-screen">
-    <!-- Page Header -->
-    <div class="max-w-7xl mx-auto px-4 md:px-6 py-6">
-      <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
-        {{ pageTitle }}
-      </h1>
-      <p class="text-slate-500 text-sm">
-        {{ pageDescription }}
-      </p>
+    <!-- 히어로 -->
+    <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
+      <div class="max-w-6xl mx-auto px-4 py-8 md:px-6 md:py-10">
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
+          {{ pageTitle }}
+        </h1>
+        <p class="mt-2 text-slate-500 text-sm">
+          {{ pageDescription }}
+        </p>
+      </div>
     </div>
 
     <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 md:px-6 pb-8">
+    <div class="max-w-6xl mx-auto px-4 md:px-6 pb-8">
       <!-- Error State -->
       <div
         v-if="facilityError"
@@ -25,50 +27,61 @@
       <CategoryIntro :category="categoryParam" />
 
       <!-- Region Filter -->
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-100 space-y-3 mb-4">
-        <div class="flex items-center gap-2 mb-2">
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
+        <div class="flex items-center gap-2 mb-3 md:hidden">
           <span class="material-symbols-outlined text-amber-500 text-[20px]">location_city</span>
           <span class="font-semibold text-slate-900 text-sm">지역 선택</span>
         </div>
-        <!-- 시/도 선택 -->
-        <div class="relative">
-          <select
-            v-model="selectedCity"
-            aria-label="시/도 선택"
-            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-[16px] md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
-            @change="handleCityChange"
-          >
-            <option value="">시/도 선택</option>
-            <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
-          </select>
-          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
-        </div>
-        <!-- 구/군 선택 -->
-        <div class="relative">
-          <select
-            v-model="selectedDistrict"
-            :disabled="!selectedCity"
-            aria-label="구/군 선택"
-            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-[16px] md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            @change="handleDistrictChange"
-          >
-            <option value="">구/군 선택</option>
-            <option v-for="dist in districtList" :key="dist" :value="dist">{{ dist }}</option>
-          </select>
-          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
-        </div>
-        <!-- 키워드 검색 -->
-        <div class="relative">
-          <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <span class="material-symbols-outlined text-slate-400 text-[18px]">search</span>
+        <div class="flex flex-col md:flex-row gap-3">
+          <!-- 시/도 선택 -->
+          <div class="flex-1">
+            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">시/도</label>
+            <div class="relative">
+              <select
+                v-model="selectedCity"
+                aria-label="시/도 선택"
+                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+                @change="handleCityChange"
+              >
+                <option value="">시/도 선택</option>
+                <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+            </div>
           </div>
-          <input
-            v-model="filterKeyword"
-            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pl-9 pr-3 text-slate-900 text-[16px] md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            type="text"
-            :placeholder="categoryParam === 'trash' ? '동/지역 이름 검색' : '시설명/주소 검색'"
-            @input="handleFilterSearch"
-          />
+          <!-- 구/군 선택 -->
+          <div class="flex-1">
+            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">구/군</label>
+            <div class="relative">
+              <select
+                v-model="selectedDistrict"
+                :disabled="!selectedCity"
+                aria-label="구/군 선택"
+                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                @change="handleDistrictChange"
+              >
+                <option value="">구/군 선택</option>
+                <option v-for="dist in districtList" :key="dist" :value="dist">{{ dist }}</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+            </div>
+          </div>
+          <!-- 키워드 검색 -->
+          <div class="flex-1">
+            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">키워드</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <span class="material-symbols-outlined text-slate-400 text-[18px]">search</span>
+              </div>
+              <input
+                v-model="filterKeyword"
+                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pl-9 pr-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                type="text"
+                :placeholder="categoryParam === 'trash' ? '동/지역 이름 검색' : '시설명/주소 검색'"
+                @input="handleFilterSearch"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -117,17 +130,29 @@
         <Pagination v-if="!wasteLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" @page-change="goToWastePage" />
 
         <!-- 결과 없음 -->
-        <div v-if="wasteSchedules.length === 0 && !wasteLoading" class="py-20 text-center">
-          <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">inbox</span>
-          <p class="text-slate-600 font-medium">등록된 배출 일정이 없습니다</p>
+        <div v-if="wasteSchedules.length === 0 && !wasteLoading" class="py-16 text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[32px] text-slate-400">delete</span>
+          </div>
+          <p class="text-slate-700 font-semibold text-lg">등록된 배출 일정이 없습니다</p>
           <p class="text-slate-400 text-sm mt-1 mb-6">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
-          <NuxtLink
-            to="/"
-            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
-          >
-            <span class="material-symbols-outlined text-[18px]">home</span>
-            홈으로 돌아가기
-          </NuxtLink>
+          <div class="flex items-center justify-center gap-3">
+            <button
+              v-if="selectedCity || selectedDistrict"
+              class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+              @click="selectedCity = ''; selectedDistrict = ''; filterKeyword = ''; loadWasteSchedules()"
+            >
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+              필터 초기화
+            </button>
+            <NuxtLink
+              to="/"
+              class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+            >
+              <span class="material-symbols-outlined text-[16px]">home</span>
+              홈으로 돌아가기
+            </NuxtLink>
+          </div>
         </div>
       </template>
 
@@ -143,11 +168,22 @@
           </span>
         </div>
 
-        <!-- Loading State -->
-        <div v-if="loading" class="flex items-center justify-center py-20" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
-          <div class="text-center">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-            <p class="text-slate-500 text-sm">검색 중...</p>
+        <!-- Loading Skeleton -->
+        <div v-if="loading" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-slate-200 animate-pulse">
+              <div class="flex items-start gap-4">
+                <div class="shrink-0 w-12 h-12 rounded-full bg-slate-200"></div>
+                <div class="flex-1 space-y-2.5">
+                  <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                  <div class="h-3 bg-slate-100 rounded w-full"></div>
+                  <div class="flex gap-2 mt-1">
+                    <div class="h-5 bg-slate-100 rounded-md w-14"></div>
+                    <div class="h-5 bg-slate-100 rounded-md w-20"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -162,17 +198,29 @@
           </div>
 
           <!-- Empty State -->
-          <div v-if="facilities.length === 0" class="py-20 text-center">
-            <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">search_off</span>
-            <p class="text-slate-600 font-medium">검색 결과가 없습니다</p>
-            <p class="text-slate-400 text-sm mt-1 mb-6">다른 지역을 선택해보세요</p>
-            <NuxtLink
-              to="/"
-              class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
-            >
-              <span class="material-symbols-outlined text-[18px]">home</span>
-              홈으로 돌아가기
-            </NuxtLink>
+          <div v-if="facilities.length === 0" class="py-16 text-center">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[32px] text-slate-400">{{ categoryMeta?.icon || 'search_off' }}</span>
+            </div>
+            <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
+            <p class="text-slate-400 text-sm mt-1 mb-6">다른 지역이나 검색어를 시도해보세요</p>
+            <div class="flex items-center justify-center gap-3">
+              <button
+                v-if="selectedCity || selectedDistrict || filterKeyword"
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                @click="selectedCity = ''; selectedDistrict = ''; filterKeyword = ''; performSearch()"
+              >
+                <span class="material-symbols-outlined text-[16px]">refresh</span>
+                필터 초기화
+              </button>
+              <NuxtLink
+                to="/"
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+              >
+                <span class="material-symbols-outlined text-[16px]">home</span>
+                홈으로 돌아가기
+              </NuxtLink>
+            </div>
           </div>
 
           <!-- Pagination -->
@@ -247,9 +295,9 @@ const pageTitle = computed(() => {
 const pageDescription = computed(() => {
   const catLabel = categoryMeta.value?.label || categoryParam.value
   if (selectedCity.value) {
-    return `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''}의 ${catLabel} 위치 정보를 확인하세요.`
+    return `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''}의 ${catLabel} 위치와 운영시간을 확인하세요.`
   }
-  return `전국 ${catLabel} 위치 정보를 검색하고 확인하세요.`
+  return `전국 ${catLabel} 위치와 운영시간을 검색하세요.`
 })
 
 const resultTitle = computed(() => {
@@ -269,8 +317,8 @@ const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label
 setMeta({
   title: initialCityName ? `${initialCityName} ${catLabel}` : `전국 ${catLabel} 찾기`,
   description: initialCityName
-    ? `${initialCityName}의 ${catLabel} 위치 정보를 확인하세요.`
-    : `전국 ${catLabel} 위치 정보를 검색하고 확인하세요.`,
+    ? `${initialCityName}의 ${catLabel} 위치와 운영시간을 확인하세요. 주변 생활시설 정보를 한눈에 검색할 수 있습니다.`
+    : `전국 ${catLabel} 위치와 운영시간을 검색하세요. 지역별 생활시설 정보를 한눈에 확인할 수 있습니다.`,
   path: `/${route.params.category}`,
 })
 
@@ -441,8 +489,8 @@ watch([selectedCity, selectedDistrict], () => {
     ? `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''} ${catName}`
     : `전국 ${catName} 찾기`
   const description = selectedCity.value
-    ? `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''}의 ${catName} 위치 정보를 확인하세요.`
-    : `전국 ${catName} 위치 정보를 검색하고 확인하세요.`
+    ? `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''}의 ${catName} 위치와 운영시간을 확인하세요. 주변 생활시설 정보를 한눈에 검색할 수 있습니다.`
+    : `전국 ${catName} 위치와 운영시간을 검색하세요. 지역별 생활시설 정보를 한눈에 확인할 수 있습니다.`
 
   setMeta({ title, description, path: `/${cat}` })
 })

@@ -149,6 +149,33 @@ export async function fetchWasteScheduleIds(
   return []
 }
 
+export async function fetchRealEstateBuildings(
+  apiBase: string
+): Promise<Array<{ propertyType: string; buildingName: string; bjdCode: string }>> {
+  const cacheKey = 'real-estate-buildings'
+  const cached = getCached<{ propertyType: string; buildingName: string; bjdCode: string }>(cacheKey)
+  if (cached) return cached
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`${apiBase}/api/sitemap/real-estate-buildings`)
+      if (!res.ok) {
+        console.error(`[sitemap] fetchRealEstateBuildings attempt ${attempt}: HTTP ${res.status}`)
+        continue
+      }
+      const json = await res.json()
+      const data = json.data || []
+      if (data.length > 0) {
+        setCache(cacheKey, data)
+      }
+      return data
+    } catch (err) {
+      console.error(`[sitemap] fetchRealEstateBuildings attempt ${attempt} error:`, err)
+    }
+  }
+  return []
+}
+
 export async function fetchRegionCategories(
   apiBase: string
 ): Promise<Array<{ city: string; district: string; category: string }>> {

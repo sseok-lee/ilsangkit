@@ -275,7 +275,7 @@ export interface CategoryGroup {
 export interface LinkGroup {
   title: string
   icon: string
-  links: Array<{ to: string; label: string }>
+  links: Array<{ to: string; label: string; icon: string; iconImg?: string }>
 }
 
 // 네비게이션 그룹 = 기존 카테고리 그룹 | 링크 그룹
@@ -305,16 +305,16 @@ export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
 ] as const
 
 export const NAV_GROUPS: readonly NavGroup[] = [
-  ...CATEGORY_GROUPS,
   {
     title: '부동산',
     icon: 'apartment',
     links: [
-      { to: '/real-estate/apt', label: '아파트' },
-      { to: '/real-estate/villa', label: '빌라' },
-      { to: '/real-estate/offitel', label: '오피스텔' },
+      { to: '/real-estate/apt', label: '아파트', icon: 'apartment', iconImg: 'apt' },
+      { to: '/real-estate/villa', label: '빌라', icon: 'holiday_village', iconImg: 'villa' },
+      { to: '/real-estate/offitel', label: '오피스텔', icon: 'business', iconImg: 'offitel' },
     ],
   },
+  ...CATEGORY_GROUPS,
 ] as const
 
 // 검색 파라미터

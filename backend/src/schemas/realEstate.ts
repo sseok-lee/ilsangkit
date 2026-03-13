@@ -57,7 +57,7 @@ export type RealEstateComplex = z.infer<typeof RealEstateComplexSchema>;
 
 // 부동산 통합 검색 스키마
 export const RealEstateUnifiedSearchSchema = z.object({
-  keyword: z.string().min(1).max(100),
+  keyword: z.string().max(100).optional(),
   city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
 });

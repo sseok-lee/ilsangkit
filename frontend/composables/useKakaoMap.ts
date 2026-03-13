@@ -111,7 +111,7 @@ let sdkLoadPromise: Promise<void> | null = null
 
 export function useKakaoMap() {
   const config = useRuntimeConfig()
-  const map = ref<KakaoMap | null>(null)
+  const map = shallowRef<KakaoMap | null>(null)
   const markers = ref<KakaoMarker[]>([])
   const overlays = ref<KakaoCustomOverlay[]>([])
   const userLocationOverlay = ref<KakaoCustomOverlay | null>(null)
@@ -325,7 +325,7 @@ export function useKakaoMap() {
   }
 
   return {
-    map: readonly(map),
+    map: shallowReadonly(map),
     isLoaded,
     initMap,
     initRoadview,

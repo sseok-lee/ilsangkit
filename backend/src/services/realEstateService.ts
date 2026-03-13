@@ -294,6 +294,8 @@ export interface BuildingInfo {
   latestDealAmount: number | null;
   latestDealYear: number | null;
   latestDealMonth: number | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 /**
@@ -335,6 +337,8 @@ export async function getBuildingInfo(
     latestDealAmount: latest[priceField] !== null ? Number(latest[priceField]) : null,
     latestDealYear: latest.dealYear,
     latestDealMonth: latest.dealMonth,
+    lat: latest.lat !== null ? Number(latest.lat) : null,
+    lng: latest.lng !== null ? Number(latest.lng) : null,
   };
 }
 
@@ -355,14 +359,13 @@ const ALL_TYPES: RealEstateType[] = [
  * 통합 검색 - 6개 테이블 buildingName LIKE 검색 (병렬)
  */
 export async function searchAll(
-  keyword: string,
+  keyword?: string,
   city?: string,
   district?: string
 ): Promise<SearchAllResult> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = {
-    buildingName: { contains: keyword },
-  };
+  const where: Record<string, any> = {};
+  if (keyword) where.buildingName = { contains: keyword };
   if (city) where.city = city;
   if (district) where.district = district;
 

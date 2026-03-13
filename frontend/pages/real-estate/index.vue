@@ -1,10 +1,11 @@
 <template>
   <div class="bg-background-light">
-    <main class="mx-auto max-w-5xl px-4 py-8 md:px-6">
+    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
       <div class="mb-8">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">부동산 실거래가</h1>
-        <p class="mt-2 text-slate-600">
-          국토교통부 공식 데이터 기반 아파트, 빌라, 오피스텔 매매·전월세 실거래가 정보를 확인하세요.
+        <p class="mt-2 text-slate-500 text-sm">
+          전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요.<br />
+          국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.
         </p>
       </div>
 
@@ -12,7 +13,7 @@
 
       <section class="mt-12">
         <h2 class="text-lg font-bold text-slate-800 mb-4">부동산 실거래가란?</h2>
-        <div class="rounded-2xl bg-white border border-slate-100 p-6 text-[15px] text-slate-600 leading-relaxed space-y-3">
+        <div class="rounded-2xl bg-white border border-slate-200 p-6 text-base text-slate-600 leading-relaxed space-y-3">
           <p>
             부동산 실거래가는 실제 거래가 완료된 가격으로, 국토교통부에 신고된 공식 데이터입니다.
             매매·전월세 계약 체결 후 30일 이내에 신고된 금액이므로, 호가(희망 가격)와 다를 수 있습니다.
@@ -28,15 +29,34 @@
 </template>
 
 <script setup lang="ts">
+import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { useStructuredData } from '~/composables/useStructuredData'
+
+const title = '부동산 실거래가 | 일상킷'
+const description = '전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.'
+const canonicalUrl = `${SITE_URL}/real-estate`
+
 useHead({
-  title: '부동산 실거래가 | 일상킷',
+  title,
   meta: [
-    {
-      name: 'description',
-      content: '전국 아파트, 빌라, 오피스텔 매매 및 전월세 실거래가를 확인하세요. 국토교통부 공식 데이터 기반 실거래 정보 제공.',
-    },
+    { name: 'description', content: description },
+    { property: 'og:title', content: title },
+    { property: 'og:description', content: description },
+    { property: 'og:image', content: DEFAULT_OG_IMAGE },
+    { property: 'og:url', content: canonicalUrl },
+    { property: 'og:type', content: 'website' },
+  ],
+  link: [
+    { rel: 'canonical', href: canonicalUrl },
   ],
 })
+
+// Breadcrumb JSON-LD
+const { setBreadcrumbSchema } = useStructuredData()
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: '부동산 실거래가', url: '/real-estate' },
+])
 
 useHead({
   script: [
@@ -46,7 +66,7 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'WebPage',
         name: '부동산 실거래가',
-        description: '전국 아파트, 빌라, 오피스텔 매매 및 전월세 실거래가를 확인하세요.',
+        description: '전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.',
       }),
     },
   ],

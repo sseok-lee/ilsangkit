@@ -69,7 +69,7 @@ describe('isLinkGroup 타입 가드', () => {
     const linkGroup: NavGroup = {
       title: '테스트',
       icon: 'test',
-      links: [{ to: '/test', label: '테스트' }],
+      links: [{ to: '/test', label: '테스트', icon: 'test_icon' }],
     }
     expect(isLinkGroup(linkGroup)).toBe(true)
   })

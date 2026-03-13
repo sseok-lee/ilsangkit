@@ -10,20 +10,20 @@
           서비스 소개
         </h2>
         <p class="mb-3">
-          일상킷은 내 주변 생활 편의 정보를 한 번에 찾을 수 있는 서비스입니다.
-          전국 공공시설과 생활 정보를 지역별로 통합 검색하여,
+          일상킷은 부동산 실거래가와 내 주변 생활시설 정보를 한곳에서 찾을 수 있는 서비스입니다.
+          아파트·빌라·오피스텔 시세 조회부터 병원, 약국, 주차장 등 전국 생활시설 검색까지,
           일상에서 필요한 정보를 빠르고 편리하게 제공합니다.
         </p>
         <p class="mb-3">
-          "가까운 공공화장실이 어디 있지?", "우리 동네 쓰레기 배출 요일이 언제지?",
-          "근처에 무료 와이파이를 쓸 수 있는 곳은?" 같은 일상의 소소한 궁금증을 해결하기 위해
-          만들어졌습니다. 공공데이터를 기반으로 정확한 위치와 이용 정보를 제공하며,
-          회원가입 없이 누구나 무료로 이용할 수 있습니다.
+          "우리 동네 아파트 시세가 얼마지?", "가까운 공공화장실이 어디 있지?",
+          "우리 동네 쓰레기 배출 요일이 언제지?" 같은 일상의 궁금증을 해결하기 위해
+          만들어졌습니다. 국토교통부 실거래 데이터와 공공데이터를 기반으로 정확한 정보를 제공하며,
+          회원가입 없이 누구나 이용할 수 있습니다.
         </p>
         <p>
           일상킷은 단순한 시설 검색을 넘어, 카테고리별 생활 가이드 콘텐츠를 통해
           실생활에서 바로 활용할 수 있는 유용한 팁과 최신 정보를 함께 제공합니다.
-          공공시설을 더 잘 이해하고 똑똑하게 활용하는 데 도움이 되는 정보를 만나보세요.
+          생활시설을 더 잘 이해하고 똑똑하게 활용하는 데 도움이 되는 정보를 만나보세요.
         </p>
       </section>
 
@@ -48,7 +48,7 @@
           제공 정보
         </h2>
         <p class="mb-4">
-          일상킷은 10개 카테고리의 전국 공공시설 및 생활 정보를 제공합니다.
+          일상킷은 부동산 실거래가와 다양한 카테고리의 전국 생활시설 정보를 제공합니다.
         </p>
         <ul class="list-disc pl-5 space-y-2">
           <li>
@@ -90,6 +90,18 @@
           <li>
             <strong class="text-slate-900">약국</strong>
             — 전국 약국의 위치와 운영 시간을 확인할 수 있습니다.
+          </li>
+          <li>
+            <strong class="text-slate-900">아파트 실거래가</strong>
+            — 전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회할 수 있습니다.
+          </li>
+          <li>
+            <strong class="text-slate-900">빌라 실거래가</strong>
+            — 전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 확인할 수 있습니다.
+          </li>
+          <li>
+            <strong class="text-slate-900">오피스텔 실거래가</strong>
+            — 전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회할 수 있습니다.
           </li>
         </ul>
       </section>
@@ -134,7 +146,8 @@
             rel="noopener noreferrer"
             class="text-primary hover:text-primary-600"
           >공공데이터포털(data.go.kr)</a>에서
-          제공하는 공공데이터를 기반으로 합니다.
+          제공하는 공공데이터를 기반으로 하며, 부동산 실거래가 데이터는
+          국토교통부 실거래가 공개시스템에서 제공하는 공식 데이터를 활용합니다.
           데이터는 주기적으로 동기화되며, 실제 현장 상황과 차이가 있을 수 있습니다.
           정확한 정보는 해당 기관에 직접 문의해 주시기 바랍니다.
         </p>
@@ -210,6 +223,34 @@
                     <a href="https://www.data.go.kr/data/15013109/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
                   </td>
                 </tr>
+                <tr>
+                  <td class="py-2 pr-4">아파트매매 실거래 자료</td>
+                  <td class="py-2 pr-4">국토교통부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15057511/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">아파트 전월세 실거래 자료</td>
+                  <td class="py-2 pr-4">국토교통부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15058017/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">연립다세대 매매/전월세 실거래 자료</td>
+                  <td class="py-2 pr-4">국토교통부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15058038/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">오피스텔 매매/전월세 실거래 자료</td>
+                  <td class="py-2 pr-4">국토교통부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15058452/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -256,7 +297,7 @@ const { setBreadcrumbSchema } = useStructuredData()
 
 setMeta({
   title: '소개',
-  description: '일상킷은 내 주변 생활 편의 정보를 한 번에 찾을 수 있는 서비스입니다. 전국 공공시설과 생활 편의 정보를 지역별로 통합 검색합니다.',
+  description: '일상킷은 부동산 실거래가와 내 주변 생활시설 정보를 한곳에서 제공하는 생활 정보 서비스입니다. 아파트·빌라·오피스텔 시세와 병원, 약국, 주차장 등 주요 생활시설을 검색하세요.',
   path: '/about',
 })
 

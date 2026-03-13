@@ -107,6 +107,8 @@ export interface BuildingInfo {
   latestDealAmount: number | null
   latestDealYear: number | null
   latestDealMonth: number | null
+  lat: number | null
+  lng: number | null
 }
 
 // 건물 목록 응답 (페이지네이션)

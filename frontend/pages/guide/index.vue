@@ -1,11 +1,11 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <div class="max-w-7xl mx-auto px-4 md:px-6 py-6">
+    <div class="max-w-6xl mx-auto px-4 md:px-6 py-6">
       <!-- Page Header -->
       <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
         생활 가이드
       </h1>
-      <p class="text-slate-500 text-sm mb-6">
+      <p class="mt-2 text-slate-500 text-sm mb-6">
         카테고리별 생활 정보와 유용한 가이드를 확인하세요.
       </p>
 
@@ -111,7 +111,7 @@ import type { GuideSummary } from '~/composables/useGuides'
 const { setMeta } = useFacilityMeta()
 setMeta({
   title: '생활 가이드 - 일상킷',
-  description: '공공시설 이용 가이드, 생활 정보, 유용한 팁을 확인하세요. 화장실, 병원, 약국, 주차장 등 카테고리별 생활 가이드.',
+  description: '부동산 가이드부터 병원, 약국, 주차장 등 생활시설 이용 팁까지. 카테고리별 생활 가이드를 확인하세요.',
   path: '/guide',
 })
 

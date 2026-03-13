@@ -4,6 +4,7 @@ import * as facilityService from '../services/facilityService.js';
 import * as wasteScheduleService from '../services/wasteScheduleService.js';
 import type { FacilityCategory } from '../services/facilityService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import prisma from '../lib/prisma.js';
 
 const router = Router();
 
@@ -54,6 +55,36 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const data = await facilityService.getRegionCategoryCombinations();
     res.json({ success: true, data });
+  })
+);
+
+/**
+ * GET /api/sitemap/real-estate-buildings
+ * 부동산 건물 목록 (사이트맵용) - propertyType + buildingName + bjdCode
+ */
+router.get(
+  '/real-estate-buildings',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const buildings = await prisma.$queryRaw<
+      Array<{ propertyType: string; buildingName: string; bjdCode: string }>
+    >`
+      SELECT 'apt' AS propertyType, buildingName, bjdCode FROM (
+        SELECT DISTINCT buildingName, bjdCode FROM AptSaleTransaction
+        UNION SELECT DISTINCT buildingName, bjdCode FROM AptRentTransaction
+      ) apt WHERE buildingName IS NOT NULL AND buildingName != ''
+      UNION ALL
+      SELECT 'villa' AS propertyType, buildingName, bjdCode FROM (
+        SELECT DISTINCT buildingName, bjdCode FROM VillaSaleTransaction
+        UNION SELECT DISTINCT buildingName, bjdCode FROM VillaRentTransaction
+      ) villa WHERE buildingName IS NOT NULL AND buildingName != ''
+      UNION ALL
+      SELECT 'offitel' AS propertyType, buildingName, bjdCode FROM (
+        SELECT DISTINCT buildingName, bjdCode FROM OffitelSaleTransaction
+        UNION SELECT DISTINCT buildingName, bjdCode FROM OffitelRentTransaction
+      ) offitel WHERE buildingName IS NOT NULL AND buildingName != ''
+    `;
+
+    res.json({ success: true, data: buildings });
   })
 );
 

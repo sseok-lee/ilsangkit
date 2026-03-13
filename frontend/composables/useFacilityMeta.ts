@@ -66,7 +66,7 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
     case 'toilet': {
       const det = d as ToiletDetails
       const features: string[] = []
-      if (det.operatingHours === '24시간' || det.is24Hour) features.push('상시 개방')
+      if (det.operatingHours === '24시간') features.push('상시 개방')
       else if (det.operatingHours) features.push(det.operatingHours)
       if (det.maleToilets || det.femaleToilets) features.push('남녀 분리')
       if (det.hasCCTV) features.push('CCTV 설치')
@@ -191,8 +191,8 @@ export function useFacilityMeta() {
    */
   function setHomeMeta() {
     setMeta({
-      title: '병원·약국·화장실 등 전국 생활시설 검색 - 일상킷',
-      description: '전국 병원, 약국, 화장실, 주차장, 도서관, 의류수거함, 쓰레기배출 등 10개 카테고리 생활시설을 한 번에 검색. 운영시간, 위치 정보를 무료로 확인하세요.',
+      title: '일상킷 - 부동산 실거래가·생활시설 통합 검색',
+      description: '아파트·빌라·오피스텔 실거래가 조회와 병원, 약국, 주차장을 비롯한 주요 생활시설을 한 번에 검색. 시세 조회부터 주변 시설 정보까지 한곳에서 확인하세요.',
       path: '/',
     })
   }
@@ -240,7 +240,7 @@ export function useFacilityMeta() {
 
     const title = parts.length > 0
       ? parts.join(' - ')
-      : '시설 검색'
+      : '부동산·생활시설 검색'
 
     const description = params.keyword
       ? `${params.keyword} 관련 시설 검색 결과입니다.`

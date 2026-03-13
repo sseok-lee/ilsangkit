@@ -12,14 +12,15 @@ export interface RealEstateCategoryMeta {
 export interface PropertyTypeMeta {
   label: string
   icon: string
+  iconImg: string
   color: string
   description: string
 }
 
 export const PROPERTY_TYPE_META: Record<RealEstatePropertyType, PropertyTypeMeta> = {
-  apt: { label: '아파트', icon: 'apartment', color: 'blue', description: '전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회하세요.' },
-  villa: { label: '빌라', icon: 'holiday_village', color: 'amber', description: '전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 조회하세요.' },
-  offitel: { label: '오피스텔', icon: 'business', color: 'sky', description: '전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회하세요.' },
+  apt: { label: '아파트', icon: 'apartment', iconImg: 'apt', color: 'blue', description: '전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회하세요. 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.' },
+  villa: { label: '빌라', icon: 'holiday_village', iconImg: 'villa', color: 'amber', description: '전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 조회하세요. 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.' },
+  offitel: { label: '오피스텔', icon: 'business', iconImg: 'offitel', color: 'sky', description: '전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회하세요. 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.' },
 }
 
 export const REAL_ESTATE_META: Record<RealEstateCategory, RealEstateCategoryMeta> = {

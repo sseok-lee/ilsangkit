@@ -7,11 +7,20 @@ import {
   formatDateForSitemap,
   fetchFacilityIds,
   fetchWasteScheduleIds,
+  fetchRealEstateBuildings,
 } from '../../utils/sitemap'
 
 const FACILITY_CATEGORIES = new Set(['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'])
 
 function parseSlug(slug: string): { category: string; page: number } | null {
+  // "real-estate" → category='real-estate', page=1
+  // "real-estate-3" → category='real-estate', page=3
+  const reMatch = slug.match(/^real-estate(?:-(\d+))?$/)
+  if (reMatch) {
+    const page = reMatch[1] ? parseInt(reMatch[1], 10) : 1
+    return page >= 1 ? { category: 'real-estate', page } : null
+  }
+
   // "wifi-2" → category='wifi', page=2
   // "toilet" → category='toilet', page=1
   const match = slug.match(/^([a-z]+?)(?:-(\d+))?$/)
@@ -50,7 +59,29 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase as string
 
-  // 데이터 fetch
+  setHeader(event, 'Content-Type', 'application/xml')
+
+  // 부동산 건물 상세 페이지
+  if (category === 'real-estate') {
+    const buildings = await fetchRealEstateBuildings(apiBase)
+    const totalPages = Math.max(1, Math.ceil(buildings.length / MAX_URLS_PER_SITEMAP))
+    if (page > totalPages) return generateSitemapXml([])
+
+    const offset = (page - 1) * MAX_URLS_PER_SITEMAP
+    const pageItems = buildings.slice(offset, offset + MAX_URLS_PER_SITEMAP)
+    const today = new Date().toISOString().split('T')[0]
+
+    const urls = pageItems.map((item) => ({
+      loc: `${SITE_URL}/real-estate/${item.propertyType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}`,
+      lastmod: today,
+      changefreq: 'weekly' as const,
+      priority: 0.6,
+    }))
+
+    return generateSitemapXml(urls)
+  }
+
+  // 시설 카테고리 + trash
   const items =
     category === 'trash'
       ? await fetchWasteScheduleIds(apiBase)
@@ -58,10 +89,7 @@ export default defineEventHandler(async (event) => {
 
   // 페이지 유효성 검증 — fetch 실패(빈 배열) 시 빈 sitemap 반환 (404 대신)
   const totalPages = Math.max(1, Math.ceil(items.length / MAX_URLS_PER_SITEMAP))
-  if (page > totalPages) {
-    setHeader(event, 'Content-Type', 'application/xml')
-    return generateSitemapXml([])
-  }
+  if (page > totalPages) return generateSitemapXml([])
 
   // slice로 해당 페이지 항목 추출
   const offset = (page - 1) * MAX_URLS_PER_SITEMAP
@@ -74,6 +102,5 @@ export default defineEventHandler(async (event) => {
     priority: 0.6,
   }))
 
-  setHeader(event, 'Content-Type', 'application/xml')
   return generateSitemapXml(urls)
 })

@@ -20,7 +20,7 @@
       </button>
 
       <NuxtLink v-if="!props.showBackButton" to="/" class="flex items-center">
-        <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 shrink-0" />
+        <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 w-auto shrink-0" width="91" height="36" />
       </NuxtLink>
     </div>
 
@@ -36,7 +36,7 @@
         @focusout="handleDropdownFocusout($event, group.title)"
       >
         <button
-          class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+          class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
           aria-haspopup="true"
           :aria-expanded="activeDropdown === group.title"
           @click="toggleDropdown(group.title)"
@@ -57,7 +57,7 @@
         >
           <div
             v-if="activeDropdown === group.title"
-            class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-slate-100 p-2 z-50"
+            class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-slate-200 p-2 z-50"
             @mouseenter="cancelCloseDropdown"
             @mouseleave="scheduleCloseDropdown"
           >
@@ -67,10 +67,10 @@
                 v-for="catId in group.categories"
                 :key="catId"
                 :to="`/${catId}`"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
                 @click="closeDropdown"
               >
-                <CategoryIcon :category-id="catId" size="sm" />
+                <img :src="`/icons/category/${catId}.webp`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
                 {{ CATEGORY_META[catId].shortLabel }}
               </NuxtLink>
             </template>
@@ -80,10 +80,11 @@
                 v-for="link in group.links"
                 :key="link.to"
                 :to="link.to"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
                 @click="closeDropdown"
               >
-                <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
+                <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
+                <span v-else class="material-symbols-outlined text-[16px] text-primary">{{ link.icon }}</span>
                 {{ link.label }}
               </NuxtLink>
             </template>
@@ -97,21 +98,21 @@
       <!-- Utility Links -->
       <NuxtLink
         to="/guide"
-        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+        class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">menu_book</span>
         가이드
       </NuxtLink>
       <NuxtLink
         to="/search"
-        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+        class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">search</span>
         검색
       </NuxtLink>
       <NuxtLink
         to="/about"
-        class="flex items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+        class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">info</span>
         소개
@@ -147,7 +148,7 @@
       data-testid="mobile-menu"
       role="navigation"
       aria-label="모바일 메뉴"
-      class="md:hidden fixed top-[60px] left-0 right-0 z-40 bg-background-light border-b border-slate-200 shadow-lg"
+      class="md:hidden fixed top-[60px] left-0 right-0 bottom-0 z-40 bg-background-light border-b border-slate-200 shadow-lg overflow-y-auto"
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">
@@ -172,6 +173,13 @@
         >
           가이드
         </NuxtLink>
+        <NuxtLink
+          to="/about"
+          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          @click="closeMobileMenu"
+        >
+          소개
+        </NuxtLink>
         <div class="h-px bg-slate-200 my-2"></div>
 
         <!-- Nav Groups (시설 카테고리 + 부동산 링크) -->
@@ -189,7 +197,7 @@
               class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
-              <CategoryIcon :category-id="catId" size="sm" />
+              <img :src="`/icons/category/${catId}.webp`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
               {{ CATEGORY_META[catId].shortLabel }}
             </NuxtLink>
           </template>
@@ -202,20 +210,13 @@
               class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
-              <span class="material-symbols-outlined text-[16px]">{{ group.icon }}</span>
+              <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
+              <span v-else class="material-symbols-outlined text-[16px] text-primary">{{ link.icon }}</span>
               {{ link.label }}
             </NuxtLink>
           </template>
         </div>
 
-        <div class="h-px bg-slate-200 my-2"></div>
-        <NuxtLink
-          to="/about"
-          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
-          @click="closeMobileMenu"
-        >
-          소개
-        </NuxtLink>
         <div class="h-px bg-slate-200 my-2"></div>
         <div class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2">
           <NuxtLink

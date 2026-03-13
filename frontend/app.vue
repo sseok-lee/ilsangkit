@@ -9,7 +9,7 @@
 useHead({
   titleTemplate: (title) => title || '일상킷 - 내 주변 생활 편의 정보',
   meta: [
-    { name: 'description', content: '공공시설과 생활 편의 정보를 통합 검색합니다.' }
+    { name: 'description', content: '아파트·빌라·오피스텔 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.' }
   ]
 })
 </script>

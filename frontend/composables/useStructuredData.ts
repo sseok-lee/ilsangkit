@@ -50,7 +50,7 @@ export function useStructuredData() {
       name: SITE_NAME,
       alternateName: 'ilsangkit',
       url: SITE_URL,
-      description: '내 주변 생활 편의 정보, 한 번에 찾기. 공공시설과 생활 편의 정보를 통합 검색합니다.',
+      description: '아파트·빌라·오피스텔 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.',
       potentialAction: {
         '@type': 'SearchAction',
         target: {
@@ -257,7 +257,7 @@ export function useStructuredData() {
       name: SITE_NAME,
       url: SITE_URL,
       logo: `${SITE_URL}/icons/logo.webp`,
-      description: '전국 공공시설 정보를 한곳에서 찾을 수 있는 생활 편의 서비스. 병원, 약국, 공공화장실, 무료 와이파이 등 10개 카테고리의 생활 편의시설을 통합 검색합니다.',
+      description: '부동산 실거래가와 전국 생활시설 정보를 한곳에서 제공하는 생활 정보 서비스. 아파트·빌라·오피스텔 시세 조회와 병원·약국·주차장을 비롯한 주요 생활시설을 통합 검색합니다.',
       contactPoint: {
         '@type': 'ContactPoint',
         contactType: 'customer service',
@@ -365,6 +365,95 @@ export function useStructuredData() {
   }
 
   /**
+   * Place 스키마 (부동산 건물 상세용)
+   */
+  function setBuildingPlaceSchema(options: {
+    name: string
+    address: string
+    lat: number
+    lng: number
+    buildYear?: number | null
+    propertyType: string
+  }) {
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Place',
+            name: options.name,
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: options.address,
+            },
+            geo: {
+              '@type': 'GeoCoordinates',
+              latitude: options.lat,
+              longitude: options.lng,
+            },
+            additionalProperty: [
+              {
+                '@type': 'PropertyValue',
+                name: 'propertyType',
+                value: options.propertyType,
+              },
+              ...(options.buildYear
+                ? [{
+                    '@type': 'PropertyValue',
+                    name: 'buildYear',
+                    value: String(options.buildYear),
+                  }]
+                : []),
+            ],
+          }),
+        },
+      ],
+    })
+  }
+
+  /**
+   * Place 스키마 (지역 리포트용)
+   */
+  function setAreaReportSchema(options: {
+    city: string
+    district: string
+    facilityTotal: number
+    topCategories: string[]
+  }) {
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Place',
+            name: `${options.city} ${options.district}`,
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: options.district,
+              addressRegion: options.city,
+              addressCountry: 'KR',
+            },
+            additionalProperty: [
+              {
+                '@type': 'PropertyValue',
+                name: 'publicFacilityCount',
+                value: String(options.facilityTotal),
+              },
+              {
+                '@type': 'PropertyValue',
+                name: 'topFacilityCategories',
+                value: options.topCategories.join(', '),
+              },
+            ],
+          }),
+        },
+      ],
+    })
+  }
+
+  /**
    * HowTo 스키마 (쓰레기배출 등 절차 안내용)
    */
   function setHowToSchema(params: {
@@ -411,5 +500,7 @@ export function useStructuredData() {
     setFAQSchema,
     setAggregateRatingSchema,
     setHowToSchema,
+    setBuildingPlaceSchema,
+    setAreaReportSchema,
   }
 }

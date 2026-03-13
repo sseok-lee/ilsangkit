@@ -97,11 +97,12 @@ export function useRealEstate() {
   }
 
   async function searchAll(
-    keyword: string,
+    keyword?: string,
     city?: string,
     district?: string
   ): Promise<RealEstateGroupedResponse> {
-    const query = new URLSearchParams({ keyword })
+    const query = new URLSearchParams()
+    if (keyword) query.set('keyword', keyword)
     if (city) query.set('city', city)
     if (district) query.set('district', district)
 

@@ -662,7 +662,7 @@ interface RegionSearchResult {
   totalPages: number;
 }
 
-const CITY_SLUG_TO_FULL: Record<string, string> = {
+export const CITY_SLUG_TO_FULL: Record<string, string> = {
   seoul: '서울특별시',
   busan: '부산광역시',
   daegu: '대구광역시',
@@ -682,7 +682,7 @@ const CITY_SLUG_TO_FULL: Record<string, string> = {
   jeju: '제주특별자치도',
 };
 
-const CITY_SLUG_TO_SHORT: Record<string, string> = {
+export const CITY_SLUG_TO_SHORT: Record<string, string> = {
   seoul: '서울',
   busan: '부산',
   daegu: '대구',
@@ -703,7 +703,7 @@ const CITY_SLUG_TO_SHORT: Record<string, string> = {
 };
 
 // 역매핑: short name(서울) → slug, full name(서울특별시) → slug
-const SHORT_TO_SLUG = Object.fromEntries(
+export const SHORT_TO_SLUG = Object.fromEntries(
   Object.entries(CITY_SLUG_TO_SHORT).map(([slug, name]) => [name, slug])
 );
 const FULL_TO_SLUG = Object.fromEntries(

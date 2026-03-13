@@ -1,338 +1,271 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
+  <div class="bg-background-light min-h-screen">
+    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
+      <!-- 브레드크럼 -->
+      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-6">
+        <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
+        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+        <NuxtLink :to="`/${city}`" class="hover:text-primary">{{ cityName }}</NuxtLink>
+        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+        <span class="text-slate-800">{{ districtName }}</span>
+      </nav>
 
-    <!-- Page Header -->
-    <header class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
-        {{ cityName }} {{ districtName }} 생활 편의시설
-      </h1>
-      <p class="text-gray-600 mb-4">
-        {{ cityName }} {{ districtName }}의 시설 카테고리를 선택하세요.
-      </p>
-      <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 text-base md:text-sm text-slate-600 leading-relaxed space-y-2">
-        <p v-if="districtStats">
-          {{ cityName }} {{ districtName }}에는 {{ districtTopCategoryText }} 등
-          총 {{ districtStats.total.toLocaleString() }}개의 편의시설이 등록되어 있습니다.
-        </p>
-        <p v-else>
-          일상킷에서 {{ cityName }} {{ districtName }} 지역의 공공화장실, 무료 와이파이, 공영주차장, 병원, 약국 등
-          다양한 생활 편의시설 정보를 한눈에 확인할 수 있습니다.
-        </p>
-        <p>
-          아래에서 카테고리를 선택하면 해당 시설 목록을 상세하게 볼 수 있으며,
-          빠른 검색을 통해 원하는 시설을 찾을 수 있습니다.
-        </p>
-      </div>
-    </header>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12" role="status" aria-label="정보 로딩 중">
-      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      <p class="mt-4 text-gray-600">정보를 불러오는 중...</p>
-    </div>
-
-    <!-- Categories Grid -->
-    <div v-else>
-      <h2 class="text-xl font-bold text-gray-900 mb-4">카테고리 선택</h2>
-
-      <div v-for="group in categoryGroups" :key="group.title" class="mb-8">
-        <h3 class="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <span class="material-symbols-outlined text-xl">{{ group.icon }}</span>
-          {{ group.title }}
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <NuxtLink
-            v-for="cat in group.items"
-            :key="cat.id"
-            :to="`/${city}/${district}/${cat.id}`"
-            class="group flex flex-col items-center p-6 bg-white border border-gray-200 rounded-xl hover:shadow-lg hover:-translate-y-1 hover:border-primary/50 transition-all"
-          >
-            <div :class="`w-16 h-16 rounded-full ${cat.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`">
-              <CategoryIcon :category-id="cat.id" size="lg" />
-            </div>
-            <span class="text-lg font-bold text-gray-900">{{ cat.label }}</span>
-            <span class="mt-1 text-sm text-gray-500">시설 목록 보기</span>
-          </NuxtLink>
+      <!-- 히어로 -->
+      <div class="mb-8">
+        <div class="mb-2">
+          <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
+            {{ districtName }} 생활 정보
+          </h1>
         </div>
-      </div>
-    </div>
-
-    <!-- All Facilities List -->
-    <section class="mt-12 border-t border-gray-200 pt-8">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">
-        전체 시설 목록
-        <span v-if="allTotal > 0" class="text-base font-normal text-gray-500 ml-2">
-          총 {{ allTotal.toLocaleString() }}개
-        </span>
-      </h2>
-
-      <!-- Loading -->
-      <div v-if="allLoading" class="text-center py-12" role="status" aria-label="시설 정보 로딩 중">
-        <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-        <p class="mt-4 text-gray-600">시설 정보를 불러오는 중...</p>
+        <p class="mt-2 text-slate-500 text-sm">{{ cityName }} {{ districtName }}의 부동산 시세와 생활시설을 한눈에 확인하세요</p>
       </div>
 
-      <!-- Error -->
-      <div v-else-if="allError" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <p class="text-red-800">{{ allError }}</p>
-        <button
-          @click="loadAllFacilities()"
-          class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-        >
-          다시 시도
-        </button>
+      <!-- 로딩 -->
+      <div v-if="pending" class="flex justify-center py-20">
+        <div class="size-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
 
-      <!-- Empty -->
-      <div v-else-if="allFacilities.length === 0" class="text-center py-12">
-        <p class="text-gray-600">해당 지역에 등록된 시설이 없습니다.</p>
+      <!-- 콘텐츠 -->
+      <div v-else-if="areaData">
+        <!-- ① 부동산 시세 현황 -->
+        <section v-if="areaData.realEstate" id="real-estate" class="mb-10">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
+            부동산 시세 현황
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <NuxtLink
+              v-for="item in realEstateCards"
+              :key="item.type"
+              :to="`/real-estate/${item.type}`"
+              class="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <div class="flex items-center gap-2 mb-4">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <img :src="`/icons/category/${item.type}.webp`" :alt="item.label" class="w-7 h-7" width="28" height="28" />
+                </div>
+                <h3 class="font-bold text-slate-900">{{ item.label }}</h3>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-slate-100">
+                <span class="text-sm text-slate-500">매매 평균</span>
+                <span class="text-sm font-semibold text-slate-800">{{ item.saleAvg }}</span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-slate-100">
+                <span class="text-sm text-slate-500">매매 거래</span>
+                <span class="text-sm text-slate-600">{{ item.saleCount }}건</span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-slate-100">
+                <span class="text-sm text-slate-500">전월세 평균 보증금</span>
+                <span class="text-sm font-semibold text-slate-800">{{ item.rentAvg }}</span>
+              </div>
+              <div class="flex items-center justify-between py-2">
+                <span class="text-sm text-slate-500">전월세 거래</span>
+                <span class="text-sm text-slate-600">{{ item.rentCount }}건</span>
+              </div>
+            </NuxtLink>
+          </div>
+        </section>
+
+        <!-- ② 생활시설 현황 -->
+        <section v-if="areaData.facilities" id="facilities" class="mb-10">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
+            생활시설 현황
+          </h2>
+          <p class="text-sm text-slate-500 mb-4">총 {{ areaData.facilities.total.toLocaleString() }}개 시설</p>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <NuxtLink
+              v-for="(count, cat) in sortedFacilityCategories"
+              :key="cat"
+              :to="`/${city}/${district}/${cat}`"
+              :class="[
+                'group flex flex-col items-center p-4 rounded-2xl border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
+                areaData.facilities.topCategories?.includes(String(cat))
+                  ? 'border-primary/30 bg-primary/5'
+                  : 'border-slate-200 bg-white hover:bg-slate-50',
+              ]"
+            >
+              <img :src="`/icons/category/${cat}.webp`" :alt="CATEGORY_META[cat as FacilityCategory]?.label" class="w-8 h-8 mb-2" width="32" height="32" loading="lazy" />
+              <span class="text-xs text-slate-600 mb-1">{{ CATEGORY_META[cat as FacilityCategory]?.label }}</span>
+              <span class="text-sm font-bold text-slate-800">{{ count }}개</span>
+            </NuxtLink>
+          </div>
+        </section>
+
+        <!-- ③ 교차 CTA -->
+        <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 md:p-8 text-center">
+          <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
+            {{ districtName }} 부동산 실거래가 상세 보기
+          </h3>
+          <p class="text-sm text-slate-600 mb-4">아파트, 빌라, 오피스텔 실거래가를 확인해보세요</p>
+          <div class="flex justify-center gap-3">
+            <NuxtLink
+              to="/real-estate/apt"
+              class="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors"
+            >
+              아파트
+            </NuxtLink>
+            <NuxtLink
+              to="/real-estate/villa"
+              class="px-4 py-2 bg-white text-primary text-sm font-semibold rounded-xl border border-primary hover:bg-primary/5 transition-colors"
+            >
+              빌라
+            </NuxtLink>
+            <NuxtLink
+              to="/real-estate/offitel"
+              class="px-4 py-2 bg-white text-primary text-sm font-semibold rounded-xl border border-primary hover:bg-primary/5 transition-colors"
+            >
+              오피스텔
+            </NuxtLink>
+          </div>
+        </section>
       </div>
 
-      <!-- Facility Grid -->
-      <template v-else>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <FacilityCard
-            v-for="facility in allFacilities"
-            :key="`${facility.category}-${facility.id}`"
-            :facility="facility"
-          />
-        </div>
-
-        <!-- Pagination -->
-        <div v-if="allTotalPages > 1" class="flex justify-center items-center space-x-4">
-          <button
-            :disabled="allCurrentPage === 1"
-            aria-label="이전 페이지"
-            @click="goToAllPage(allCurrentPage - 1)"
-            class="min-w-[44px] min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
-          >
-            이전
-          </button>
-          <span class="text-gray-700">
-            {{ allCurrentPage }} / {{ allTotalPages }}
-          </span>
-          <button
-            :disabled="allCurrentPage === allTotalPages"
-            aria-label="다음 페이지"
-            @click="goToAllPage(allCurrentPage + 1)"
-            class="min-w-[44px] min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
-          >
-            다음
-          </button>
-        </div>
-      </template>
-    </section>
-
-    <!-- Quick Search -->
-    <section class="mt-12 border-t border-gray-200 pt-8">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">빠른 검색</h2>
-      <div class="flex flex-col sm:flex-row gap-4">
-        <NuxtLink
-          :to="`/search?city=${encodeURIComponent(cityName)}&district=${encodeURIComponent(districtName)}`"
-          class="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors"
-        >
-          <span class="material-symbols-outlined">search</span>
-          {{ districtName }} 전체 시설 검색
-        </NuxtLink>
-        <NuxtLink
-          :to="`/${city}`"
-          class="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-        >
-          <span class="material-symbols-outlined">arrow_back</span>
-          {{ cityName }} 다른 지역 보기
-        </NuxtLink>
+      <!-- 에러 -->
+      <div v-else class="py-20 text-center text-slate-500">
+        데이터를 불러올 수 없습니다.
       </div>
-    </section>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
-import { useRegionFacilities } from '~/composables/useRegionFacilities'
-import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
+import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
+import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
 const district = computed(() => route.params.district as string)
 
-// Validate city slug (Soft 404 방지)
+// city slug 유효성 검사
 if (!CITY_SLUG_MAP[city.value]) {
   throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
 }
 
-// Region data
+// 지역 이름 해석
 const { loadRegions, syncFromHydration, getCityName, getDistrictName, getDistrictsByCity } = useRegions()
 
-// SSR: 서버에서 지역 정보 로드
-const { data: regionsData, status } = await useAsyncData(
-  `district-${city.value}-${district.value}`,
+const { data: regionsData } = await useAsyncData(
+  `hub-regions-${city.value}`,
   () => loadRegions()
 )
-// useAsyncData의 hydrated data로 캐시 동기화
 syncFromHydration(regionsData)
 
-// Validate district slug (Soft 404 방지)
-// regionsData가 비어있어도 유효하지 않은 district로 간주
+// district slug 유효성 검사
 const validDistricts = getDistrictsByCity(city.value)
 if (validDistricts.length === 0 || !validDistricts.some(d => d.slug === district.value)) {
   throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
 }
 
-const loading = computed(() => status.value === 'pending')
-
-// Names
 const cityName = computed(() => getCityName(city.value))
 const districtName = computed(() => getDistrictName(city.value, district.value))
 
-// Breadcrumb
-const breadcrumbItems = computed(() => [
-  { label: '홈', href: '/', current: false },
-  { label: cityName.value, href: `/${city.value}`, current: false },
-  { label: districtName.value, href: `/${city.value}/${district.value}`, current: true },
-])
-
-// Category bg color mapping
-const categoryBgColors: Record<FacilityCategory, string> = {
-  toilet: 'bg-purple-50',
-  wifi: 'bg-blue-50',
-  parking: 'bg-sky-50',
-  kiosk: 'bg-orange-50',
-  aed: 'bg-red-50',
-  library: 'bg-amber-50',
-  clothes: 'bg-pink-50',
-  trash: 'bg-green-50',
-  hospital: 'bg-teal-50',
-  pharmacy: 'bg-emerald-50',
-}
-
-// Categories (grouped)
-const EXCLUDED_REGION_CATEGORIES = new Set<string>([])
-const categoryGroups = computed(() =>
-  CATEGORY_GROUPS.map(group => ({
-    title: group.title,
-    icon: group.icon,
-    items: group.categories
-      .filter(id => !EXCLUDED_REGION_CATEGORIES.has(id))
-      .map(id => ({
-        id,
-        label: CATEGORY_META[id].label,
-        bgColor: categoryBgColors[id],
-      })),
-  })).filter(group => group.items.length > 0)
+// Area API 단일 호출
+const { data: response, pending } = await useAsyncData(
+  `area-${city.value}-${district.value}`,
+  () => $fetch<any>(`/api/area/${encodeURIComponent(city.value)}/${encodeURIComponent(district.value)}`)
+    .catch(() => null)
 )
 
-// 구/군 통계 로드
-interface DistrictStats {
-  total: number
-  categories: Record<string, number>
-  topCategories: string[]
-}
+const areaData = computed(() => response.value?.data ?? null)
 
-const { data: districtStatsData } = await useAsyncData(
-  `district-stats-${city.value}-${district.value}`,
-  () => $fetch<{ success: boolean; data: DistrictStats }>(
-    `/api/meta/stats/${city.value}/${district.value}`
-  ).catch(() => null)
-)
-
-const districtStats = computed(() => {
-  const raw = districtStatsData.value
-  if (!raw || typeof raw !== 'object' || !('data' in raw)) return null
-  const data = raw.data
-  if (!data || typeof data.total !== 'number') return null
-  return data
+// 시설 카테고리 정렬 (개수 내림차순)
+const sortedFacilityCategories = computed(() => {
+  if (!areaData.value?.facilities?.categories) return {}
+  const cats = areaData.value.facilities.categories as Record<string, number>
+  return Object.fromEntries(
+    Object.entries(cats)
+      .filter(([, v]) => v > 0)
+      .sort(([, a], [, b]) => b - a)
+  )
 })
 
-const districtTopCategoryText = computed(() => {
-  if (!districtStats.value?.topCategories) return ''
-  return districtStats.value.topCategories
-    .map((cat) => {
-      const meta = CATEGORY_META[cat as FacilityCategory]
-      const count = districtStats.value!.categories[cat] ?? 0
-      return `${meta?.label ?? cat} ${count.toLocaleString()}개`
-    })
-    .join(', ')
-})
-
-// SEO - top-level에서 설정 (SSR에서 메타태그 렌더링)
-const { setMeta } = useFacilityMeta()
-const metaDescription = computed(() => {
-  if (districtStats.value) {
-    return `${cityName.value} ${districtName.value}의 ${districtTopCategoryText.value} 등 총 ${districtStats.value.total.toLocaleString()}개 편의시설 정보를 찾아보세요.`
+// 금액 포맷
+function formatPrice(amount: number | null): string {
+  if (!amount || amount === 0) return '데이터 없음'
+  if (amount >= 10000) {
+    const eok = Math.floor(amount / 10000)
+    const remainder = amount % 10000
+    return remainder > 0 ? `${eok}억 ${remainder.toLocaleString()}만원` : `${eok}억`
   }
-  return `${cityName.value} ${districtName.value}의 공공화장실, 무료 와이파이, 병원, 약국 등 생활 편의시설 정보를 찾아보세요.`
-})
-setMeta({
-  title: `${cityName.value} ${districtName.value} 생활 편의시설`,
-  description: metaDescription.value,
-  path: `/${city.value}/${district.value}`,
+  return `${amount.toLocaleString()}만원`
+}
+
+const realEstateCards = computed(() => {
+  const re = areaData.value?.realEstate
+  if (!re) return []
+  return [
+    {
+      type: 'apt',
+      label: '아파트',
+      icon: 'apartment',
+      saleAvg: formatPrice(re.apt?.sale?.avg),
+      saleCount: (re.apt?.sale?.count ?? 0).toLocaleString(),
+      rentAvg: formatPrice(re.apt?.rent?.avg),
+      rentCount: (re.apt?.rent?.count ?? 0).toLocaleString(),
+    },
+    {
+      type: 'villa',
+      label: '빌라',
+      icon: 'holiday_village',
+      saleAvg: formatPrice(re.villa?.sale?.avg),
+      saleCount: (re.villa?.sale?.count ?? 0).toLocaleString(),
+      rentAvg: formatPrice(re.villa?.rent?.avg),
+      rentCount: (re.villa?.rent?.count ?? 0).toLocaleString(),
+    },
+    {
+      type: 'offitel',
+      label: '오피스텔',
+      icon: 'business',
+      saleAvg: formatPrice(re.offitel?.sale?.avg),
+      saleCount: (re.offitel?.sale?.count ?? 0).toLocaleString(),
+      rentAvg: formatPrice(re.offitel?.rent?.avg),
+      rentCount: (re.offitel?.rent?.count ?? 0).toLocaleString(),
+    },
+  ]
 })
 
-// Breadcrumb JSON-LD
-const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
+// SEO 메타
+const canonicalUrl = `${SITE_URL}/${city.value}/${district.value}`
+useHead(() => {
+  const title = `${cityName.value} ${districtName.value} 생활 정보 | 일상킷`
+  const description = `${cityName.value} ${districtName.value} 아파트·빌라·오피스텔 실거래가와 주요 생활시설 현황을 확인하세요. 병원, 약국, 주차장, 화장실 등 생활 인프라 정보를 한눈에 제공합니다.`
+  return {
+    title,
+    meta: [
+      { name: 'description', content: description },
+      { property: 'og:title', content: title },
+      { property: 'og:description', content: description },
+      { property: 'og:image', content: DEFAULT_OG_IMAGE },
+      { property: 'og:url', content: canonicalUrl },
+      { property: 'og:type', content: 'website' },
+    ],
+    link: [
+      { rel: 'canonical', href: canonicalUrl },
+    ],
+  }
+})
+
+// JSON-LD 구조화 데이터
+const { setAreaReportSchema, setBreadcrumbSchema } = useStructuredData()
+
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: cityName.value, url: `/${city.value}` },
   { name: districtName.value, url: `/${city.value}/${district.value}` },
 ])
 
-// All facilities data
-const {
-  facilities: allFacilities,
-  loading: allLoading,
-  error: allError,
-  total: allTotal,
-  totalPages: allTotalPages,
-  fetchAllFacilities,
-} = useRegionFacilities()
-
-const allCurrentPage = ref(1)
-
-async function loadAllFacilities() {
-  await fetchAllFacilities(city.value, district.value, allCurrentPage.value)
-}
-
-function goToAllPage(pageNum: number) {
-  allCurrentPage.value = pageNum
-  loadAllFacilities()
-  if (import.meta.client) {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+watch(areaData, (data) => {
+  if (data?.facilities) {
+    setAreaReportSchema({
+      city: cityName.value,
+      district: districtName.value,
+      facilityTotal: data.facilities.total,
+      topCategories: data.facilities.topCategories || [],
+    })
   }
-}
-
-// 시설 정보 로드
-loadAllFacilities()
-
-// ItemList 구조화 데이터 + 페이지네이션 rel link 태그
-watch([allFacilities, allCurrentPage, allTotalPages], () => {
-  if (allFacilities.value.length > 0) {
-    setItemListSchema(
-      allFacilities.value.map((f, index) => ({
-        name: f.name,
-        url: `/${f.category}/${f.id}`,
-        position: (allCurrentPage.value - 1) * 20 + index + 1,
-      }))
-    )
-  }
-
-  const paginationLinks: Array<{ rel: string; href: string }> = []
-  const siteUrl = useRuntimeConfig().public.siteUrl || 'https://ilsangkit.co.kr'
-  const baseUrl = `${siteUrl}/${city.value}/${district.value}`
-
-  if (allCurrentPage.value > 1) {
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${allCurrentPage.value - 1}` })
-  }
-  if (allCurrentPage.value < allTotalPages.value) {
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${allCurrentPage.value + 1}` })
-  }
-
-  useHead({ link: paginationLinks })
-})
+}, { immediate: true })
 </script>

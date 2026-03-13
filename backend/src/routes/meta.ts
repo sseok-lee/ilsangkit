@@ -4,7 +4,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { getStatsByCity, getStatsByDistrict, getSyncStatus } from '../services/facilityService.js';
+import { getStatsByCity, getStatsByDistrict, getSyncStatus, SHORT_TO_SLUG } from '../services/facilityService.js';
 
 const router = Router();
 
@@ -23,6 +23,7 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
   const [
     toiletCount, wifiCount, clothesCount, kioskCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount,
     aptSaleCount, aptRentCount, villaSaleCount, villaRentCount, offitelSaleCount, offitelRentCount,
+    buildingCountResult, regionCount,
   ] = await Promise.all([
     prisma.toilet.count(),
     prisma.wifi.count(),
@@ -40,6 +41,16 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
     prisma.villaRentTransaction.count(),
     prisma.offitelSaleTransaction.count(),
     prisma.offitelRentTransaction.count(),
+    prisma.$queryRaw<[{ cnt: bigint }]>`
+      SELECT COUNT(*) as cnt FROM (
+        SELECT DISTINCT buildingName, bjdCode FROM AptSaleTransaction
+        UNION SELECT DISTINCT buildingName, bjdCode FROM AptRentTransaction
+        UNION SELECT DISTINCT buildingName, bjdCode FROM VillaSaleTransaction
+        UNION SELECT DISTINCT buildingName, bjdCode FROM VillaRentTransaction
+        UNION SELECT DISTINCT buildingName, bjdCode FROM OffitelSaleTransaction
+        UNION SELECT DISTINCT buildingName, bjdCode FROM OffitelRentTransaction
+      ) t`,
+    prisma.region.count(),
   ]);
 
   const stats = {
@@ -62,9 +73,83 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
       offitelSale: offitelSaleCount,
       offitelRent: offitelRentCount,
     },
+    buildingCount: Number(buildingCountResult[0]?.cnt ?? 0),
+    regionCount,
   };
 
   res.json({ success: true, data: stats });
+}));
+
+// GET /api/meta/region-facilities-summary - 한글 지역명으로 카테고리별 시설 인프라 요약 조회
+router.get('/region-facilities-summary', asyncHandler(async (req: Request, res: Response) => {
+  const city = req.query.city as string | undefined;
+  const district = req.query.district as string | undefined;
+
+  if (!city) {
+    res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'city 파라미터가 필요합니다' } });
+    return;
+  }
+
+  // city 한글명(short name) → citySlug 변환
+  const citySlug = SHORT_TO_SLUG[city];
+
+  if (!citySlug) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
+    return;
+  }
+
+  if (!district) {
+    // city 통계
+    const stats = await getStatsByCity(citySlug);
+    if (!stats) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
+      return;
+    }
+    res.json({
+      success: true,
+      data: {
+        city: stats.city,
+        categories: stats.categories,
+        total: stats.total,
+        topCategories: stats.topCategories,
+      },
+    });
+    return;
+  }
+
+  // district 한글명 → districtSlug 변환
+  const districtRegion = await prisma.region.findFirst({
+    where: { city, district },
+    select: { slug: true },
+  });
+
+  if (!districtRegion) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
+    return;
+  }
+
+  // districtSlug: slug 전체 또는 하이픈 이후 부분 — getStatsByDistrict는 districtSlug (하이픈 이후) 기대
+  // 실제 slug 형식 확인 필요: "gangnam" 또는 "seoul-gangnam"
+  const districtSlug = districtRegion.slug.includes('-')
+    ? districtRegion.slug.split('-').slice(1).join('-')
+    : districtRegion.slug;
+
+  const stats = await getStatsByDistrict(citySlug, districtSlug);
+  if (!stats) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: {
+      city,
+      district,
+      categories: stats.categories,
+      total: stats.total,
+      topCategories: stats.topCategories,
+    },
+  });
 }));
 
 // GET /api/meta/stats/:citySlug - 시/도별 카테고리별 시설 통계

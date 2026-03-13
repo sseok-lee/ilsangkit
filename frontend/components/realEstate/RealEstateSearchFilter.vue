@@ -1,56 +1,70 @@
 <template>
-  <div class="bg-white border border-gray-200 rounded-xl p-5">
+  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div class="flex items-center gap-2 mb-3 md:hidden">
+      <span class="material-symbols-outlined text-amber-500 text-[20px]">location_city</span>
+      <span class="font-semibold text-slate-900 text-sm">검색 조건</span>
+    </div>
     <div class="flex flex-col md:flex-row gap-3">
       <!-- 시/도 select -->
       <div class="flex-1">
-        <label class="block text-xs font-medium text-gray-600 mb-1">시/도</label>
-        <select
-          v-model="filter.city"
-          class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          @change="onCityChange"
-        >
-          <option value="">전체</option>
-          <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
-        </select>
+        <label class="block text-xs font-medium text-slate-600 mb-1">시/도</label>
+        <div class="relative">
+          <select
+            v-model="filter.city"
+            class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+          >
+            <option value="">전체</option>
+            <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
+          </select>
+          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+        </div>
       </div>
 
       <!-- 구/군 select -->
       <div class="flex-1">
-        <label class="block text-xs font-medium text-gray-600 mb-1">구/군</label>
-        <select
-          v-model="filter.district"
-          :disabled="!filter.city"
-          class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-        >
-          <option value="">전체</option>
-          <option v-for="d in districts" :key="d" :value="d">
-            {{ d }}
-          </option>
-        </select>
+        <label class="block text-xs font-medium text-slate-600 mb-1">구/군</label>
+        <div class="relative">
+          <select
+            v-model="filter.district"
+            :disabled="!filter.city"
+            class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">전체</option>
+            <option v-for="d in districts" :key="d" :value="d">
+              {{ d }}
+            </option>
+          </select>
+          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+        </div>
       </div>
 
       <!-- 건물명 입력 -->
       <div class="flex-1">
-        <label class="block text-xs font-medium text-gray-600 mb-1">건물명</label>
-        <input
-          v-model="filter.buildingName"
-          type="text"
-          placeholder="건물명 입력"
-          class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          @keyup.enter="handleSearch"
-        />
+        <label class="block text-xs font-medium text-slate-600 mb-1">건물명</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+            <span class="material-symbols-outlined text-slate-400 text-[18px]">search</span>
+          </div>
+          <input
+            v-model="filter.buildingName"
+            type="text"
+            placeholder="건물명 입력"
+            class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            @keyup.enter="handleSearch"
+          />
+        </div>
       </div>
 
       <!-- 버튼 -->
       <div class="flex items-end gap-2">
         <button
-          class="px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+          class="px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
           @click="handleSearch"
         >
           검색
         </button>
         <button
-          class="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+          class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
           @click="handleReset"
         >
           초기화

@@ -1,30 +1,44 @@
 <template>
-  <div class="bg-white border border-gray-200 rounded-xl p-5">
-    <h3 class="text-sm font-semibold text-gray-700 mb-4">주변 공공시설</h3>
-
+  <div>
     <!-- 로딩 스피너 -->
-    <div v-if="loading" data-testid="loading" class="flex items-center justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+    <div v-if="loading" data-testid="loading" class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
     </div>
 
     <!-- 빈 상태 -->
-    <div v-else-if="facilityGroups.length === 0" class="text-center py-8 text-gray-400 text-sm">
+    <div v-else-if="facilityGroups.length === 0" class="rounded-2xl bg-slate-50 p-8 text-center text-slate-400 text-sm">
       주변에 등록된 시설이 없습니다
     </div>
 
-    <!-- 카테고리별 시설 목록 -->
-    <div v-else class="space-y-4">
-      <div v-for="group in facilityGroups" :key="group.category">
-        <h4 class="text-xs font-medium text-gray-500 mb-2">{{ group.label }}</h4>
-        <ul class="space-y-2">
-          <li
-            v-for="facility in group.items"
-            :key="facility.id"
-            class="flex items-center gap-3 text-sm"
-          >
-            <span class="text-base">{{ group.icon }}</span>
-            <span class="flex-1 text-gray-700 truncate">{{ facility.name }}</span>
-            <span class="text-xs text-gray-400 shrink-0">{{ facility.distance }}m</span>
+    <!-- 카테고리별 시설 카드 그리드 -->
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div
+        v-for="group in facilityGroups"
+        :key="group.category"
+        class="rounded-2xl bg-white border border-slate-100 overflow-hidden"
+      >
+        <!-- 카테고리 헤더 -->
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-50" :class="categoryBgClass(group.category)">
+          <span class="text-lg">{{ group.icon }}</span>
+          <h4 class="text-sm font-semibold text-slate-700">{{ group.label }}</h4>
+          <span class="ml-auto text-[11px] text-slate-400 font-medium">{{ group.items.length }}곳</span>
+        </div>
+        <!-- 시설 목록 -->
+        <ul class="divide-y divide-slate-50">
+          <li v-for="facility in group.items" :key="facility.id">
+            <NuxtLink
+              :to="`/${facility.category}/${facility.id}`"
+              class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+            >
+              <span class="flex-1 text-sm text-slate-700 truncate">{{ facility.name }}</span>
+              <span
+                class="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full"
+                :class="distanceBadgeClass(facility.distance)"
+              >
+                {{ facility.distance }}m
+              </span>
+              <span class="material-symbols-outlined text-[16px] text-slate-300">chevron_right</span>
+            </NuxtLink>
           </li>
         </ul>
       </div>
@@ -79,6 +93,28 @@ const CATEGORY_ICONS: Partial<Record<FacilityCategory, string>> = {
 
 const DISPLAY_CATEGORIES: FacilityCategory[] = ['toilet', 'parking', 'pharmacy', 'aed', 'wifi', 'hospital', 'library']
 const MAX_PER_CATEGORY = 3
+
+function categoryBgClass(category: FacilityCategory): string {
+  const map: Partial<Record<FacilityCategory, string>> = {
+    toilet: 'bg-blue-50/60',
+    parking: 'bg-sky-50/60',
+    pharmacy: 'bg-amber-50/60',
+    aed: 'bg-red-50/60',
+    wifi: 'bg-green-50/60',
+    hospital: 'bg-rose-50/60',
+    library: 'bg-orange-50/60',
+    kiosk: 'bg-violet-50/60',
+    clothes: 'bg-purple-50/60',
+    trash: 'bg-slate-50/60',
+  }
+  return map[category] ?? 'bg-slate-50/60'
+}
+
+function distanceBadgeClass(distance?: number): string {
+  if (!distance || distance <= 100) return 'bg-emerald-50 text-emerald-600'
+  if (distance <= 300) return 'bg-blue-50 text-blue-500'
+  return 'bg-slate-100 text-slate-400'
+}
 
 onMounted(async () => {
   try {

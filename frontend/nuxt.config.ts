@@ -62,7 +62,7 @@ export default defineNuxtConfig({
           'Referrer-Policy': 'strict-origin-when-cross-origin',
           'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
           'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
-          'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.kakao.com http://*.daumcdn.net https://*.daumcdn.net https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' ${apiBase} data: https://*.kakaocdn.net http://*.kakaocdn.net https://*.daumcdn.net http://*.daumcdn.net https://*.kakao.com http://*.kakao.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${apiBase} https://*.kakao.com https://*.daumcdn.net http://*.daumcdn.net https://www.google-analytics.com https://analytics.google.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://*.googlesyndication.com; frame-src https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; object-src 'none'; worker-src 'self' blob:`,
+          'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.kakao.com http://*.daumcdn.net https://*.daumcdn.net https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' ${apiBase} data: https://*.kakaocdn.net http://*.kakaocdn.net https://*.daumcdn.net http://*.daumcdn.net https://*.kakao.com http://*.kakao.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' ${apiBase} https://*.kakao.com https://*.daumcdn.net http://*.daumcdn.net https://www.google-analytics.com https://analytics.google.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://*.googlesyndication.com https://cdn.jsdelivr.net; frame-src https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; object-src 'none'; worker-src 'self' blob:`,
         },
       },
       '/sitemap.xml': { swr: 86400 },
@@ -106,7 +106,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: '공공시설과 생활 편의 정보를 통합 검색합니다.' },
+        { name: 'description', content: '아파트·빌라·오피스텔 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.' },
         { name: 'theme-color', content: '#3b82f6' },
         { name: 'application-name', content: '일상킷' },
         { name: 'apple-mobile-web-app-title', content: '일상킷' },
@@ -116,6 +116,7 @@ export default defineNuxtConfig({
         {
           src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2088264360250020',
           async: true,
+          defer: true,
           crossorigin: 'anonymous'
         }
       ],
@@ -123,7 +124,9 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap' },
+        { rel: 'preconnect', href: 'https://cdn.jsdelivr.net', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=add,apartment,arrow_back,arrow_forward,article,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,close,delete,description,directions,eco,edit_note,emergency,error,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,search,search_off,share,support_agent,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap' },
+        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
         { rel: 'manifest', href: '/site.webmanifest' },
       ]
     }

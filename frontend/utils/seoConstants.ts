@@ -3,7 +3,7 @@
  */
 export const SITE_NAME = '일상킷'
 export const SITE_URL = 'https://ilsangkit.co.kr'
-export const SITE_DESCRIPTION = '내 주변 생활 편의 정보, 한 번에 찾기. 공공시설과 생활 편의 정보를 통합 검색합니다.'
+export const SITE_DESCRIPTION = '아파트·빌라·오피스텔 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.'
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`
 
 /**

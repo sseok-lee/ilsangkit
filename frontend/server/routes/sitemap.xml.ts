@@ -6,6 +6,7 @@ import {
   generateSitemapIndexXml,
   fetchFacilityIds,
   fetchWasteScheduleIds,
+  fetchRealEstateBuildings,
 } from '../utils/sitemap'
 
 const FACILITY_CATEGORIES = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'] as const
@@ -59,6 +60,17 @@ export default defineEventHandler(async (event) => {
   } else {
     for (let i = 1; i <= trashPages; i++) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/trash-${i}.xml`, lastmod: trashLastmod })
+    }
+  }
+
+  // 부동산 건물 상세 페이지
+  const realEstateBuildings = await fetchRealEstateBuildings(apiBase)
+  const realEstatePages = Math.max(1, Math.ceil(realEstateBuildings.length / MAX_URLS_PER_SITEMAP))
+  if (realEstatePages === 1) {
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: today })
+  } else {
+    for (let i = 1; i <= realEstatePages; i++) {
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: today })
     }
   }
 

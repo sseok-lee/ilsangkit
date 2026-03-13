@@ -6,7 +6,7 @@
         <div class="absolute inset-0 opacity-10">
           <picture>
             <source srcset="/images/hero-bg-light.webp" type="image/webp" />
-            <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
+            <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="" />
           </picture>
         </div>
         <!-- 하단 그라데이션 페이드 -->
@@ -16,12 +16,12 @@
         <div class="relative z-10 flex flex-col gap-6">
         <!-- Title & Subtitle -->
         <div class="flex flex-col gap-2 pt-4">
-          <h1 class="text-[#111418] tracking-tight text-[32px] font-bold leading-[1.2]">
-            내 주변 생활 편의 정보,<br />
-            <span class="text-primary">한 번에 찾기</span>
+          <h1 class="text-slate-900 tracking-tight text-[32px] font-bold leading-[1.25]">
+            우리 동네,<br />
+            <span class="text-primary">얼마나 살기 좋을까?</span>
           </h1>
-          <p class="text-[#60708a] text-base font-normal leading-normal">
-            지금 필요한 생활 시설을 검색해보세요.
+          <p class="text-slate-500 text-base">
+            일상 속 궁금한 동네 정보를 한곳에
           </p>
         </div>
 
@@ -35,25 +35,27 @@
               v-model="searchKeyword"
               aria-label="장소 또는 시설 검색"
               class="flex w-full min-w-0 flex-1 resize-none bg-transparent text-[#111418] placeholder:text-[#94a3b8] px-2 text-base font-medium leading-normal focus:outline-none border-none focus:ring-0 rounded-xl"
-              placeholder="장소, 시설 검색..."
+              placeholder="아파트명, 지역명, 생활시설 검색..."
               @keydown.enter="handleSearch"
             />
           </div>
         </label>
 
         <!-- Hero Stats Banner (Mobile) -->
-        <div class="flex justify-center gap-6 mt-2">
+        <div class="flex justify-center gap-5 mt-2">
           <div class="text-center">
-            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.living) }}</div>
-            <div class="text-xs text-slate-500">생활 편의</div>
+            <div class="text-2xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.buildingCount || 0) }}</div>
+            <div class="text-sm text-slate-500">부동산</div>
           </div>
+          <div class="w-px bg-slate-200 self-stretch my-1"></div>
           <div class="text-center">
-            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.health) }}</div>
-            <div class="text-xs text-slate-500">건강/안전</div>
+            <div class="text-2xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.total || 0) }}</div>
+            <div class="text-sm text-slate-500">생활시설</div>
           </div>
+          <div class="w-px bg-slate-200 self-stretch my-1"></div>
           <div class="text-center">
-            <div class="text-2xl font-black text-primary">{{ formatStatCount(groupStats.culture) }}</div>
-            <div class="text-xs text-slate-500">문화/환경</div>
+            <div class="text-2xl font-black text-primary whitespace-nowrap">{{ stats.regionCount || 0 }}개</div>
+            <div class="text-sm text-slate-500">전국 시군구</div>
           </div>
         </div>
 
@@ -66,7 +68,7 @@
         <div class="absolute inset-0 opacity-[0.08]">
           <picture>
             <source srcset="/images/hero-bg-light.webp" type="image/webp" />
-            <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom" loading="lazy" width="1920" height="1080" fetchpriority="low" aria-hidden="true" alt="" />
+            <img src="/images/hero-bg-light.png" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="" />
           </picture>
         </div>
         <!-- 하단 그라데이션 페이드 -->
@@ -74,11 +76,12 @@
 
         <div class="relative z-10 max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
           <div class="space-y-4">
-            <p class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-              내 주변 생활 편의 정보, 한 번에 찾기
-            </p>
-            <p class="text-lg text-slate-600 font-normal">
-              지금 필요한 생활 시설을 검색해보세요.
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+              우리 동네,<br />
+              <span class="text-primary">얼마나 살기 좋을까?</span>
+            </h1>
+            <p class="text-lg text-slate-500">
+              일상 속 궁금한 동네 정보를 한곳에
             </p>
           </div>
           <!-- Search Input Component (Desktop) -->
@@ -90,7 +93,7 @@
               v-model="searchKeyword"
               aria-label="장소 또는 시설 검색"
               class="block w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm hover:border-slate-300"
-              placeholder="장소, 시설 검색..."
+              placeholder="아파트명, 지역명, 생활시설 검색..."
               type="text"
               @keydown.enter="handleSearch"
             />
@@ -109,83 +112,132 @@
           <!-- Hero Stats Banner (Desktop) -->
           <div class="flex justify-center gap-10 mt-6">
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.living) }}</div>
-              <div class="text-sm text-slate-500">생활 편의</div>
+              <div class="text-3xl font-black text-primary">{{ formatStatCount(stats.buildingCount || 0) }}</div>
+              <div class="text-sm text-slate-500">부동산</div>
             </div>
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.health) }}</div>
-              <div class="text-sm text-slate-500">건강/안전</div>
+              <div class="text-3xl font-black text-primary">{{ formatStatCount(stats.total || 0) }}</div>
+              <div class="text-sm text-slate-500">생활시설</div>
             </div>
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ formatStatCount(groupStats.culture) }}</div>
-              <div class="text-sm text-slate-500">문화/환경</div>
+              <div class="text-3xl font-black text-primary">{{ stats.regionCount || 0 }}개</div>
+              <div class="text-sm text-slate-500">전국 시군구</div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Grouped Category Cards (Unified Responsive) -->
+      <!-- 부동산 + 시설 카테고리 통합 Section -->
       <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 부동산 실거래가 -->
+        <div class="mb-8">
+          <h2 class="text-xl font-extrabold text-slate-900 flex items-center gap-2 mb-5">
+            <span class="material-symbols-outlined text-primary text-[28px]">apartment</span>
+            부동산
+          </h2>
+          <!-- 모바일: 3열 아이콘 그리드 -->
+          <div class="md:hidden grid grid-cols-3 gap-y-4 gap-x-2">
+            <NuxtLink
+              v-for="link in realEstateLinks"
+              :key="link.to"
+              :to="link.to"
+              :aria-label="`${link.label} 실거래가`"
+              class="flex flex-col items-center gap-1.5"
+            >
+              <div class="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center">
+                <img :src="`/icons/category/${link.iconImg}.webp`" :alt="link.label" class="w-8 h-8" width="32" height="32" loading="lazy" />
+              </div>
+              <span class="text-sm text-slate-700 font-medium">{{ link.label }}</span>
+              <div class="flex gap-1">
+                <span class="px-1 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium">매매</span>
+                <span class="px-1 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-medium">전월세</span>
+              </div>
+            </NuxtLink>
+          </div>
+          <!-- 데스크톱: 가로형 카드 -->
+          <div class="hidden md:grid md:grid-cols-3 gap-4">
+            <NuxtLink
+              v-for="link in realEstateLinks"
+              :key="link.to"
+              :to="link.to"
+              :aria-label="`${link.label} 실거래가 - ${link.sub}`"
+              class="group flex items-center gap-4 p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:bg-primary/5 transition-all duration-300 bg-white"
+            >
+              <div class="w-12 h-12 rounded-xl bg-primary/10 shrink-0 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <img :src="`/icons/category/${link.iconImg}.webp`" :alt="link.label" class="w-9 h-9" width="36" height="36" loading="lazy" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-slate-900 font-semibold text-[17px]">{{ link.label }}</h3>
+                <div class="flex gap-1.5 text-[11px] mt-1">
+                  <span class="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">매매</span>
+                  <span class="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">전월세</span>
+                </div>
+                <p class="text-slate-400 text-xs leading-snug mt-1 truncate">{{ link.sub }}</p>
+              </div>
+              <span class="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 text-lg shrink-0">→</span>
+            </NuxtLink>
+          </div>
+        </div>
+        <!-- 시설 카테고리 그룹 -->
         <div v-for="group in categoryGroups" :key="group.title" class="mb-8">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
-            <span class="material-symbols-outlined text-primary text-[24px]">{{ group.icon }}</span>
+          <h2 class="text-xl font-extrabold text-slate-900 flex items-center gap-2 mb-5">
+            <span class="material-symbols-outlined text-[28px]" :class="group.colors.iconText">{{ group.icon }}</span>
             {{ group.title }}
           </h2>
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          <!-- 모바일: 4열 아이콘 그리드 -->
+          <div class="md:hidden grid grid-cols-4 gap-y-5 gap-x-3">
+            <a
+              v-for="item in group.items"
+              :key="item.id"
+              :href="`/${item.id}`"
+              :aria-label="`${CATEGORY_LABELS[item.id]} - ${item.desc}`"
+              class="flex flex-col items-center gap-2"
+            >
+              <div class="w-14 h-14 rounded-2xl flex items-center justify-center" :class="group.colors.bg">
+                <img :src="`/icons/category/${item.id}.webp`" :alt="CATEGORY_LABELS[item.id]" class="w-9 h-9" width="36" height="36" loading="lazy" />
+              </div>
+              <span class="text-sm text-slate-700 font-medium text-center leading-tight">{{ CATEGORY_LABELS[item.id] }}</span>
+              <span v-if="stats[item.id]" class="text-xs text-slate-400 font-medium -mt-1">{{ (stats[item.id] as number).toLocaleString('ko-KR') }}곳</span>
+            </a>
+          </div>
+          <!-- 데스크톱: 가로형 카드 -->
+          <div class="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-3">
             <a
               v-for="item in group.items"
               :key="item.id"
               :href="`/${item.id}`"
               :aria-label="`${CATEGORY_LABELS[item.id]} - ${item.desc} - ${formatCount(stats[item.id] || 0)}`"
-              :class="[
-                'group relative flex flex-col p-4 md:p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300',
-                getCategoryHoverBg(item.id),
-              ]"
+              class="group flex items-center gap-4 p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:bg-primary/5 transition-all duration-300 bg-white"
             >
-              <div :class="`w-14 h-14 rounded-full ${getCategoryBgColor(item.id)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`">
-                <CategoryIcon :category-id="item.id" size="lg" />
+              <div class="w-12 h-12 rounded-xl bg-primary/5 shrink-0 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <img :src="`/icons/category/${item.id}.webp`" :alt="CATEGORY_LABELS[item.id]" class="w-8 h-8" width="32" height="32" loading="lazy" />
               </div>
-              <h3 class="text-slate-900 font-bold text-base mb-1">{{ CATEGORY_LABELS[item.id] }}</h3>
-              <p class="text-slate-500 text-xs md:text-sm leading-snug mb-2">{{ item.desc }}</p>
-              <div class="flex items-center justify-between mt-auto">
-                <span class="text-primary font-bold text-sm">{{ formatCount(stats[item.id] || 0) }}</span>
-                <span class="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 text-lg">→</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-slate-900 font-semibold text-[17px]">{{ CATEGORY_LABELS[item.id] }}</h3>
+                <p class="text-slate-400 text-xs mt-1 truncate">{{ item.desc }}</p>
               </div>
+              <span class="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 text-lg shrink-0">→</span>
             </a>
           </div>
         </div>
       </section>
 
-      <!-- 부동산 실거래가 Section -->
-      <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="mb-8">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
-            <span class="material-symbols-outlined text-primary text-[24px]">apartment</span>
-            부동산 실거래가
-          </h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-            <NuxtLink
-              v-for="link in realEstateLinks"
-              :key="link.to"
-              :to="link.to"
-              class="group relative flex flex-col items-center p-4 md:p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 bg-white hover:bg-primary/5"
-            >
-              <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <span class="material-symbols-outlined text-[24px] text-primary">{{ link.icon }}</span>
-              </div>
-              <h3 class="text-slate-900 font-bold text-sm text-center">{{ link.label }}</h3>
-              <p class="text-xs text-primary/60 font-medium mt-0.5">{{ link.sub }}</p>
-            </NuxtLink>
-          </div>
-          <div class="mt-4 text-center">
-            <NuxtLink
-              to="/real-estate"
-              class="inline-flex items-center gap-1 text-sm text-primary font-medium hover:underline"
-            >
-              부동산 실거래가 더보기
-              <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </NuxtLink>
-          </div>
+      <!-- 교차 시너지 CTA -->
+      <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 md:p-8 text-center">
+          <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
+            이사할 동네, 꼼꼼하게 알아보세요
+          </h3>
+          <p class="text-sm text-slate-600 mb-4">
+            아파트 주변 생활 인프라도 함께 확인할 수 있어요
+          </p>
+          <NuxtLink
+            to="/real-estate"
+            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors shadow-sm"
+          >
+            부동산 실거래가 둘러보기
+            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+          </NuxtLink>
         </div>
       </section>
 
@@ -218,6 +270,8 @@
                 :alt="guide.title"
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
+                width="400"
+                height="225"
               />
               <div v-else class="w-full h-full flex items-center justify-center">
                 <span class="material-symbols-outlined text-[36px] text-slate-300">article</span>
@@ -254,13 +308,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import { CATEGORY_LABELS } from '~/utils/categoryIcons'
-import { CATEGORY_GROUPS } from '~/types/facility'
+import { CATEGORY_GROUPS, CATEGORY_META } from '~/types/facility'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
-import { useRecentReviews } from '~/composables/useReviews'
-import { useGuides } from '~/composables/useGuides'
+import type { ReviewWithFacility } from '~/types/review'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useStructuredData } from '~/composables/useStructuredData'
 
@@ -276,26 +329,28 @@ setWebsiteSchema()
 
 const searchKeyword = ref('')
 
-// 최근 리뷰 (client-side fetch)
-const { recentReviews, fetchRecentReviews } = useRecentReviews()
+// SSR: 최근 리뷰
+const { data: recentReviewsData } = await useAsyncData('recent-reviews', () =>
+  $fetch<{ success: boolean; data: ReviewWithFacility[] }>(
+    `${config.public.apiBase}/api/reviews/recent`,
+    { query: { limit: 6 } }
+  )
+)
+const recentReviews = computed(() => recentReviewsData.value?.data ?? [])
 
-// 최근 가이드 (client-side fetch)
-const { fetchRecentGuides } = useGuides()
-const recentGuides = ref<GuideSummary[]>([])
-
-onMounted(async () => {
-  fetchRecentReviews()
-  try {
-    recentGuides.value = await fetchRecentGuides(4)
-  } catch {
-    // 가이드 로드 실패 시 무시
-  }
-})
+// SSR: 최근 가이드
+const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
+  $fetch<{ success: boolean; data: GuideSummary[] }>(
+    `${config.public.apiBase}/api/guides/recent`,
+    { query: { limit: 4 } }
+  )
+)
+const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
 
 // SSR: 통계 API를 useAsyncData로 fetch
 const { data: statsResponse } = await useAsyncData('home-stats', () =>
-  $fetch<{ success: boolean; data: Record<string, number> }>(
-    '/api/meta/stats'
+  $fetch<{ success: boolean; data: Record<string, any> }>(
+    `${config.public.apiBase}/api/meta/stats`
   )
 )
 const stats = computed(() => statsResponse.value?.data ?? {
@@ -310,14 +365,29 @@ const stats = computed(() => statsResponse.value?.data ?? {
   hospital: 0,
   pharmacy: 0,
   total: 0,
+  buildingCount: 0,
+  regionCount: 0,
+})
+
+const realEstateStats = computed(() => {
+  const data = statsResponse.value?.data as any
+  return data?.realEstate ?? {
+    aptSale: 0, aptRent: 0,
+    villaSale: 0, villaRent: 0,
+    offitelSale: 0, offitelRent: 0,
+  }
 })
 
 // 그룹별 합산 통계
-const groupStats = computed(() => ({
-  living: stats.value.toilet + stats.value.wifi + stats.value.parking + stats.value.kiosk,
-  health: stats.value.hospital + stats.value.pharmacy + stats.value.aed,
-  culture: stats.value.library + stats.value.clothes + stats.value.trash,
-}))
+const groupStats = computed(() => {
+  const re = realEstateStats.value
+  return {
+    realEstate: re.aptSale + re.aptRent + re.villaSale + re.villaRent + re.offitelSale + re.offitelRent,
+    living: stats.value.toilet + stats.value.wifi + stats.value.parking + stats.value.kiosk,
+    health: stats.value.hospital + stats.value.pharmacy + stats.value.aed,
+    culture: stats.value.library + stats.value.clothes + stats.value.trash,
+  }
+})
 
 // 숫자 포맷 함수
 function formatCount(count: number): string {
@@ -331,75 +401,56 @@ function formatStatCount(count: number): string {
   return rounded.toLocaleString('ko-KR') + '+'
 }
 
-// 카테고리 기본 정보
-const categoryConfig: Array<{ id: CategoryId | 'all'; label: string; bgColor: string }> = [
-  { id: 'all', label: '전체', bgColor: 'bg-slate-50' },
-  { id: 'toilet', label: '화장실', bgColor: 'bg-purple-50' },
-  { id: 'wifi', label: '와이파이', bgColor: 'bg-orange-50' },
-  { id: 'clothes', label: '의류수거함', bgColor: 'bg-pink-50' },
-  { id: 'kiosk', label: '발급기', bgColor: 'bg-indigo-50' },
-  { id: 'parking', label: '주차장', bgColor: 'bg-sky-50' },
-  { id: 'aed', label: 'AED', bgColor: 'bg-red-50' },
-  { id: 'library', label: '도서관', bgColor: 'bg-amber-50' },
-  { id: 'trash', label: '쓰레기', bgColor: 'bg-green-50' },
-  { id: 'hospital', label: '병원', bgColor: 'bg-teal-50' },
-  { id: 'pharmacy', label: '약국', bgColor: 'bg-emerald-50' },
-]
-
-// 카테고리 배경색 헬퍼
-function getCategoryBgColor(id: CategoryId): string {
-  const config = categoryConfig.find(c => c.id === id)
-  return config?.bgColor || 'bg-slate-50'
-}
-
-// 카테고리별 호버 배경색
-const categoryHoverBgMap: Record<string, string> = {
-  toilet: 'bg-white hover:bg-purple-50',
-  wifi: 'bg-white hover:bg-orange-50',
-  parking: 'bg-white hover:bg-sky-50',
-  kiosk: 'bg-white hover:bg-indigo-50',
-  aed: 'bg-white hover:bg-red-50',
-  library: 'bg-white hover:bg-amber-50',
-  clothes: 'bg-white hover:bg-pink-50',
-  trash: 'bg-white hover:bg-green-50',
-  hospital: 'bg-white hover:bg-teal-50',
-  pharmacy: 'bg-white hover:bg-emerald-50',
-}
-
-function getCategoryHoverBg(id: CategoryId): string {
-  return categoryHoverBgMap[id] || 'bg-white'
+// 부동산 통계 배너용 포맷 (10000 단위)
+function formatRealEstateCount(count: number): string {
+  if (count === 0) return '-'
+  const rounded = Math.floor(count / 10000)
+  if (rounded > 0) return rounded.toLocaleString('ko-KR') + '만+'
+  return Math.floor(count / 1000).toLocaleString('ko-KR') + '천+'
 }
 
 // 카테고리별 설명 (홈페이지 전용)
 const categoryDescriptions: Record<string, string> = {
-  toilet: '급할 때 바로, 24시간 운영 포함',
-  wifi: '비밀번호 없이 무료, 전국 핫스팟',
-  parking: '민영보다 저렴한 공영주차장 요금 비교',
-  kiosk: '주민센터 안 가도 OK, 주말도 운영',
-  aed: '내 주변 AED 위치, 미리 알아두세요',
-  library: '열람실 좌석·장서 정보, 휴관일 확인',
-  clothes: '헌 옷 기부·재활용, 가까운 수거함',
-  trash: '오늘 버려도 되나요? 배출 요일 확인',
-  hospital: '오늘 진료 가능한 병원, 과목별 검색',
-  pharmacy: '야간·주말 운영 약국 바로 찾기',
+  toilet: '가까운 화장실 바로 찾기',
+  wifi: '무료 와이파이 접속 장소',
+  parking: '주차장 위치·요금 비교',
+  kiosk: '서류 발급, 주말도 OK',
+  aed: '가까운 AED 위치 확인',
+  library: '좌석·장서·휴관일 확인',
+  clothes: '가까운 의류수거함 찾기',
+  trash: '배출 요일·방법 안내',
+  hospital: '과목별 병원 검색',
+  pharmacy: '야간·주말 약국 찾기',
 }
 
-// 그룹화된 카테고리 (공유 상수 + 페이지 전용 desc)
+// 그룹별 컬러 테마
+const GROUP_COLORS: Record<string, { bg: string; iconText: string }> = {
+  '생활 편의': { bg: 'bg-amber-50', iconText: 'text-amber-500' },
+  '건강/안전': { bg: 'bg-emerald-50', iconText: 'text-emerald-500' },
+  '문화/환경': { bg: 'bg-violet-50', iconText: 'text-violet-500' },
+}
+
+// 그룹화된 카테고리 (공유 상수 + 페이지 전용 desc + 그룹 컬러)
 const categoryGroups = CATEGORY_GROUPS.map(group => ({
   title: group.title,
   icon: group.icon,
+  colors: GROUP_COLORS[group.title] || { bg: 'bg-primary/5', iconText: 'text-primary' },
   items: group.categories.map(id => ({
     id: id as CategoryId,
     desc: categoryDescriptions[id] || '',
+    icon: CATEGORY_META[id as keyof typeof CATEGORY_META]?.icon || '',
   })),
 }))
 
 // 부동산 실거래가 링크
-const realEstateLinks = [
-  { to: '/real-estate/apt', label: '아파트', icon: 'apartment', sub: '매매 · 전월세' },
-  { to: '/real-estate/villa', label: '빌라', icon: 'holiday_village', sub: '매매 · 전월세' },
-  { to: '/real-estate/offitel', label: '오피스텔', icon: 'business', sub: '매매 · 전월세' },
-]
+const realEstateLinks = computed(() => {
+  const re = realEstateStats.value
+  return [
+    { to: '/real-estate/apt', label: '아파트', iconImg: 'apt', sub: '최근 실거래가 확인', count: formatCount(re.aptSale + re.aptRent) },
+    { to: '/real-estate/villa', label: '빌라', iconImg: 'villa', sub: '최근 실거래가 확인', count: formatCount(re.villaSale + re.villaRent) },
+    { to: '/real-estate/offitel', label: '오피스텔', iconImg: 'offitel', sub: '최근 실거래가 확인', count: formatCount(re.offitelSale + re.offitelRent) },
+  ]
+})
 
 
 function handleSearch() {
