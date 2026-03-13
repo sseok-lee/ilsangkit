@@ -173,11 +173,14 @@ describe('RealEstateUnifiedSearchSchema', () => {
     expect(result.district).toBe('강남구');
   });
 
-  it('keyword가 없으면 실패해야 한다', () => {
-    expect(() => RealEstateUnifiedSearchSchema.parse({ city: '서울특별시' })).toThrow();
+  it('keyword 없이도 파싱 성공해야 한다 (optional)', () => {
+    const result = RealEstateUnifiedSearchSchema.parse({ city: '서울특별시' });
+    expect(result.city).toBe('서울특별시');
+    expect(result.keyword).toBeUndefined();
   });
 
-  it('빈 keyword는 실패해야 한다 (min 1)', () => {
-    expect(() => RealEstateUnifiedSearchSchema.parse({ keyword: '' })).toThrow();
+  it('빈 keyword도 파싱 성공해야 한다 (optional)', () => {
+    const result = RealEstateUnifiedSearchSchema.parse({ keyword: '' });
+    expect(result.keyword).toBe('');
   });
 });
