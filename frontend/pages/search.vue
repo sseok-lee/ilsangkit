@@ -121,20 +121,7 @@
           ]"
           @click="searchTab = 'all'"
         >
-          전체 ({{ displayTotalCount }})
-        </button>
-        <button
-          :class="[
-            'px-4 py-2 rounded-full text-sm font-semibold transition-colors border',
-            searchTab === 'facility'
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
-            groupedResults.length === 0 ? 'opacity-50 cursor-not-allowed' : '',
-          ]"
-          :disabled="groupedResults.length === 0"
-          @click="searchTab = 'facility'"
-        >
-          시설 ({{ groupedTotalCount }})
+          전체
         </button>
         <button
           :class="[
@@ -147,7 +134,20 @@
           :disabled="realEstateResults.length === 0"
           @click="searchTab = 'realEstate'"
         >
-          부동산 ({{ realEstateTotalCount }})
+          부동산
+        </button>
+        <button
+          :class="[
+            'px-4 py-2 rounded-full text-sm font-semibold transition-colors border',
+            searchTab === 'facility'
+              ? 'bg-primary text-white border-primary'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
+            groupedResults.length === 0 ? 'opacity-50 cursor-not-allowed' : '',
+          ]"
+          :disabled="groupedResults.length === 0"
+          @click="searchTab = 'facility'"
+        >
+          생활시설
         </button>
       </div>
 
@@ -163,7 +163,7 @@
           ]"
           @click="clearChipFilter"
         >
-          전체 ({{ displayTotalCount }})
+          전체
         </button>
         <!-- 부동산 유형 chips (전체/부동산 탭) -->
         <template v-if="searchTab !== 'facility' && realEstateResults.length > 0">
@@ -179,7 +179,7 @@
             @click="selectRealEstateType(group.propertyType)"
           >
             <img :src="`/icons/category/${group.iconImg}.webp`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
-            {{ group.label }} ({{ group.totalCount }})
+            {{ group.label }}
           </button>
         </template>
         <!-- 시설 카테고리 chips (전체/시설 탭) -->
@@ -196,7 +196,7 @@
             @click="selectCategory(group.category)"
           >
             <img :src="`/icons/category/${group.category}.webp`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
-            {{ CATEGORY_META[group.category]?.shortLabel || group.label }} ({{ group.count }})
+            {{ CATEGORY_META[group.category]?.shortLabel || group.label }}
           </button>
         </template>
       </div>
@@ -229,35 +229,72 @@
       </div>
 
       <div v-else aria-live="polite">
-        <!-- 부동산 검색 결과 (시설 위에 배치) -->
-        <div v-if="!selectedCategory && realEstateResults.length > 0 && searchTab !== 'facility'" class="mb-6 bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+        <!-- 부동산 페이징 뷰 (유형 선택 시) -->
+        <template v-if="selectedRealEstateType && searchTab !== 'facility'">
+          <div v-if="reLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-slate-200 animate-pulse">
+              <div class="space-y-2.5">
+                <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                <div class="h-3 bg-slate-100 rounded w-full"></div>
+                <div class="h-3 bg-slate-100 rounded w-1/2"></div>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="reComplexItems.length > 0">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <NuxtLink
+                v-for="item in reComplexItems"
+                :key="`${item.buildingName}-${item.bjdCode}`"
+                :to="`/real-estate/${selectedRealEstateType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}`"
+                class="bg-white rounded-xl p-4 border border-slate-200 hover:border-primary/30 hover:shadow-sm transition-all"
+              >
+                <div class="flex items-start gap-3">
+                  <img :src="`/icons/category/${selectedRealEstateType}.webp`" :alt="RE_PROPERTY_META[selectedRealEstateType]?.label" class="w-10 h-10 shrink-0" width="40" height="40" />
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-slate-800 text-sm truncate">{{ item.buildingName }}</p>
+                    <p class="text-xs text-slate-400 mt-0.5 truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
+                    <div class="flex items-center gap-2 mt-2">
+                      <span v-if="item.latestPrice" class="text-xs font-semibold text-primary">{{ formatRealEstatePrice(item.latestPrice) }}</span>
+                      <span class="text-[10px] text-slate-400">거래 {{ item.transactionCount }}건</span>
+                    </div>
+                  </div>
+                </div>
+              </NuxtLink>
+            </div>
+            <Pagination :current-page="reCurrentPage" :total-pages="reTotalPages" @page-change="goToRealEstatePage" />
+          </div>
+          <div v-else class="py-16 text-center">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[32px] text-slate-400">search_off</span>
+            </div>
+            <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
+          </div>
+        </template>
+
+        <!-- 부동산 그룹 뷰 (유형 미선택 시) -->
+        <div v-else-if="!selectedCategory && realEstateResults.length > 0 && searchTab !== 'facility'" class="mb-6 bg-white rounded-xl p-5 shadow-sm border border-slate-200">
           <div class="flex items-center gap-2 mb-5">
             <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
             <h2 class="text-slate-900 text-base font-bold">부동산 실거래가</h2>
-            <span class="text-xs text-slate-400 font-medium">
-              ({{ realEstateTotalCount }}건)
-            </span>
           </div>
-          <!-- 유형별 서브 섹션 -->
           <div class="space-y-5">
-            <div v-for="group in (searchTab === 'realEstate' ? filteredRealEstateGrouped : realEstateGrouped)" :key="group.propertyType">
+            <div v-for="group in realEstateGrouped" :key="group.propertyType">
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2">
                   <img :src="`/icons/category/${group.iconImg}.webp`" :alt="group.label" class="w-6 h-6" width="24" height="24" />
                   <h3 class="text-slate-800 text-sm font-bold">{{ group.label }}</h3>
-                  <span class="text-xs text-slate-400">({{ group.totalCount }}건)</span>
                 </div>
-                <NuxtLink
-                  :to="`/real-estate/${group.propertyType}`"
+                <button
                   class="text-primary text-xs font-medium hover:underline flex items-center gap-0.5"
+                  @click="selectRealEstateType(group.propertyType)"
                 >
                   더보기
                   <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
-                </NuxtLink>
+                </button>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <NuxtLink
-                  v-for="item in (searchTab === 'realEstate' ? group.items : group.items.slice(0, 3))"
+                  v-for="item in group.items.slice(0, 3)"
                   :key="`${item.type}-${item.buildingName}-${item.bjdCode}`"
                   :to="`/real-estate/${item.propertyType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}&tab=${item.tab}`"
                   class="p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary/5 transition-colors"
@@ -288,7 +325,6 @@
             <div class="flex items-center gap-2 mb-5">
               <span class="material-symbols-outlined text-primary text-[22px]">{{ section.icon }}</span>
               <h2 class="text-slate-900 text-base font-bold">{{ section.title }}</h2>
-              <span class="text-xs text-slate-400 font-medium">({{ section.totalCount }}건)</span>
             </div>
             <!-- 카테고리별 서브 섹션 -->
             <div class="space-y-5">
@@ -297,7 +333,6 @@
                   <div class="flex items-center gap-2">
                     <img :src="`/icons/category/${group.category}.webp`" :alt="group.label" class="w-6 h-6" width="24" height="24" />
                     <h3 class="text-slate-800 text-sm font-bold">{{ group.label }}</h3>
-                    <span class="text-xs text-slate-400">({{ group.count }}건)</span>
                   </div>
                   <button
                     class="text-primary text-xs font-medium hover:underline flex items-center gap-0.5"
@@ -429,10 +464,10 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
-import type { RealEstateType } from '~/types/realEstate'
+import type { RealEstateType, ComplexInfo } from '~/types/realEstate'
 
 const route = useRoute()
-const { searchAll: searchRealEstate } = useRealEstate()
+const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
 const { setSearchMeta } = useFacilityMeta()
 const { setItemListSchema } = useStructuredData()
 
@@ -548,11 +583,52 @@ const realEstateGrouped = computed(() => {
 
 // 부동산 탭 유형 필터
 const selectedRealEstateType = ref('')
+const reComplexItems = ref<ComplexInfo[]>([])
+const reCurrentPage = ref(1)
+const reTotalPages = ref(0)
+const reTotal = ref(0)
+const reLoading = ref(false)
+
+const rePaginationRange = computed(() => {
+  const total = reTotalPages.value
+  const current = reCurrentPage.value
+  const delta = 2
+  const range: number[] = []
+  for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
+    range.push(i)
+  }
+  return range
+})
 
 const filteredRealEstateGrouped = computed(() => {
   if (!selectedRealEstateType.value) return realEstateGrouped.value
   return realEstateGrouped.value.filter(g => g.propertyType === selectedRealEstateType.value)
 })
+
+async function searchRealEstatePaged(propertyType: string, page: number = 1) {
+  reLoading.value = true
+  try {
+    const type = `${propertyType}-sale` as RealEstateType
+    const result = await getComplexList(
+      type,
+      selectedCity.value || undefined,
+      selectedDistrict.value || undefined,
+      searchKeyword.value || undefined,
+      page,
+      20
+    )
+    reComplexItems.value = result.items
+    reCurrentPage.value = result.page
+    reTotalPages.value = result.totalPages
+    reTotal.value = result.total
+  } catch {
+    reComplexItems.value = []
+    reTotalPages.value = 0
+    reTotal.value = 0
+  } finally {
+    reLoading.value = false
+  }
+}
 
 function formatRealEstatePrice(amount: number): string {
   const uk = Math.floor(amount / 10000)
@@ -589,6 +665,9 @@ const realEstateTotalCount = computed(() => realEstateResults.value.reduce((s, r
 const displayTotalCount = computed(() => {
   if (selectedCategory.value) {
     return total.value
+  }
+  if (selectedRealEstateType.value) {
+    return reTotal.value
   }
   return groupedTotalCount.value + realEstateTotalCount.value
 })
@@ -638,6 +717,9 @@ function clearSearch() {
 function clearChipFilter() {
   selectedCategory.value = null
   selectedRealEstateType.value = ''
+  reComplexItems.value = []
+  reCurrentPage.value = 1
+  reTotalPages.value = 0
   resetPage()
   performSearch()
 }
@@ -652,9 +734,17 @@ function selectCategory(category: FacilityCategory | null) {
 function selectRealEstateType(type: string) {
   selectedRealEstateType.value = type
   selectedCategory.value = null
+  reCurrentPage.value = 1
   if (searchTab.value === 'all') {
     searchTab.value = 'realEstate'
   }
+  searchRealEstatePaged(type, 1)
+}
+
+function goToRealEstatePage(page: number) {
+  reCurrentPage.value = page
+  searchRealEstatePaged(selectedRealEstateType.value, page)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function handleCityChange() {

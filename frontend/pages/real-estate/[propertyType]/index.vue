@@ -93,35 +93,7 @@
         </div>
 
         <!-- 페이지네이션 -->
-        <nav v-if="totalPages > 1" class="mt-8 flex items-center justify-center gap-1">
-          <button
-            :disabled="currentPage <= 1"
-            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 text-slate-600"
-            @click="goToPage(currentPage - 1)"
-          >
-            이전
-          </button>
-          <button
-            v-for="p in paginationRange"
-            :key="p"
-            :class="[
-              'min-w-[36px] px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              p === currentPage
-                ? 'bg-primary text-white'
-                : 'text-slate-600 hover:bg-slate-100',
-            ]"
-            @click="goToPage(p)"
-          >
-            {{ p }}
-          </button>
-          <button
-            :disabled="currentPage >= totalPages"
-            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 text-slate-600"
-            @click="goToPage(currentPage + 1)"
-          >
-            다음
-          </button>
-        </nav>
+        <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
       </div>
 
       <div v-else-if="!pending" class="rounded-xl bg-slate-50 p-12 text-center">
