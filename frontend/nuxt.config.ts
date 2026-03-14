@@ -82,7 +82,7 @@ export default defineNuxtConfig({
       },
       '/sitemap.xml': { swr: 86400 },
       '/sitemap/**': { swr: 86400 },
-      '/': { swr: 300 },
+      '/': { swr: 3600 },
       '/about': { prerender: true },
       '/faq': { prerender: true },
       '/privacy': { prerender: true },
@@ -166,8 +166,6 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'preconnect', href: 'https://cdn.jsdelivr.net', crossorigin: '' },
-        { rel: 'preload', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=add,apartment,arrow_back,arrow_forward,article,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,close,delete,description,directions,eco,edit_note,emergency,error,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,search,search_off,share,support_agent,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap', as: 'style', crossorigin: '' },
-        { rel: 'preload', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css', as: 'style', crossorigin: '' },
         { rel: 'manifest', href: '/site.webmanifest' },
       ]
     }

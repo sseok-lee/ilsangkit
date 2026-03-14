@@ -323,26 +323,28 @@ setWebsiteSchema()
 
 const searchKeyword = ref('')
 
-// SSR: 3개 API 병렬 호출로 TTFB 개선
-const [{ data: recentReviewsData }, { data: recentGuidesData }, { data: statsResponse }] = await Promise.all([
-  useAsyncData('recent-reviews', () =>
-    $fetch<{ success: boolean; data: ReviewWithFacility[] }>(
-      `${config.public.apiBase}/api/reviews/recent`,
-      { query: { limit: 6 } }
-    )
+// SSR: 통계는 above-fold이므로 SSR에서 대기, 리뷰/가이드는 below-fold이므로 lazy 로딩
+const { data: statsResponse } = await useAsyncData('home-stats', () =>
+  $fetch<{ success: boolean; data: Record<string, any> }>(
+    `${config.public.apiBase}/api/meta/stats`
+  )
+)
+
+// Below-fold: lazy로 SSR 블로킹 없이 클라이언트에서 로딩
+const { data: recentReviewsData } = useAsyncData('recent-reviews', () =>
+  $fetch<{ success: boolean; data: ReviewWithFacility[] }>(
+    `${config.public.apiBase}/api/reviews/recent`,
+    { query: { limit: 6 } }
   ),
-  useAsyncData('recent-guides', () =>
-    $fetch<{ success: boolean; data: GuideSummary[] }>(
-      `${config.public.apiBase}/api/guides/recent`,
-      { query: { limit: 4 } }
-    )
+  { lazy: true }
+)
+const { data: recentGuidesData } = useAsyncData('recent-guides', () =>
+  $fetch<{ success: boolean; data: GuideSummary[] }>(
+    `${config.public.apiBase}/api/guides/recent`,
+    { query: { limit: 4 } }
   ),
-  useAsyncData('home-stats', () =>
-    $fetch<{ success: boolean; data: Record<string, any> }>(
-      `${config.public.apiBase}/api/meta/stats`
-    )
-  ),
-])
+  { lazy: true }
+)
 const recentReviews = computed(() => recentReviewsData.value?.data ?? [])
 const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
 const stats = computed(() => statsResponse.value?.data ?? {
