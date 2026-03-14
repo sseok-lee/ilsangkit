@@ -158,6 +158,21 @@ const faqs = computed(() => PROPERTY_TYPE_FAQ[propertyTypeParam.value] || [])
 
 const lastSearch = ref<{ city: string; district: string; buildingName: string } | null>(null)
 
+const { getComplexList } = useRealEstate()
+
+// SSR: 초기 인기 건물 목록 로드
+const { data: initialData } = await useAsyncData(
+  `complexes-${apiSlug.value}`,
+  () => getComplexList(apiSlug.value)
+)
+
+const complexes = ref<ComplexInfo[]>(initialData.value?.items ?? [])
+const totalComplexes = ref(initialData.value?.total ?? 0)
+const currentPage = ref(initialData.value?.page ?? 1)
+const totalPages = ref(initialData.value?.totalPages ?? 0)
+const pending = ref(false)
+const error = ref(false)
+
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 useHead(() => {
@@ -210,21 +225,6 @@ const paginationRange = computed(() => {
   }
   return range
 })
-
-const { getComplexList } = useRealEstate()
-
-// SSR: 초기 인기 건물 목록 로드
-const { data: initialData } = await useAsyncData(
-  `complexes-${apiSlug.value}`,
-  () => getComplexList(apiSlug.value)
-)
-
-const complexes = ref<ComplexInfo[]>(initialData.value?.items ?? [])
-const totalComplexes = ref(initialData.value?.total ?? 0)
-const currentPage = ref(initialData.value?.page ?? 1)
-const totalPages = ref(initialData.value?.totalPages ?? 0)
-const pending = ref(false)
-const error = ref(false)
 
 async function handleSearch(params: { city: string; district: string; buildingName: string }) {
   if (!params.city && !params.district && !params.buildingName) return
