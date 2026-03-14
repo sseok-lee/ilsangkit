@@ -10,6 +10,9 @@ vi.mock('lightweight-charts', () => ({
       setData: vi.fn(),
     })),
     applyOptions: vi.fn(),
+    priceScale: vi.fn(() => ({
+      applyOptions: vi.fn(),
+    })),
     timeScale: vi.fn(() => ({
       fitContent: vi.fn(),
     })),
