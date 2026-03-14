@@ -293,7 +293,7 @@ Style: Minimal clean illustration. No text, image only. Bright and friendly tone
       await writeFile(outputPath, buffer);
       console.log(`썸네일 저장 (리사이즈 건너뜀): ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
     } finally {
-      import('fs').then(fs => { try { fs.unlinkSync(tmpPath); } catch {} });
+      import('fs').then(fs => { try { fs.unlinkSync(tmpPath); } catch { /* tmp 파일 이미 삭제됨 */ } });
     }
     return true;
   } catch (err) {
