@@ -51,4 +51,10 @@ nul
 
 아카이브.zip
 specs/
-docs/lighthouse-results/
+docs/
+lighthouse-results/
+lighthouse-results-*/
+
+# Root package files (workspaces not used)
+/package.json
+/package-lock.json

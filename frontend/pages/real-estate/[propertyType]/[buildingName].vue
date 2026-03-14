@@ -148,27 +148,42 @@
         </div>
 
         <!-- 페이지네이션 -->
-        <div v-if="transactions.totalPages > 1" class="flex justify-center gap-2 mt-6">
-          <button
-            v-for="p in Math.min(transactions.totalPages, 10)"
-            :key="p"
-            :class="[
-              'size-10 rounded-lg text-sm font-medium transition-colors',
-              p === currentPage
-                ? 'bg-primary text-white'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            ]"
-            @click="goToPage(p)"
-          >
-            {{ p }}
-          </button>
-        </div>
+        <Pagination
+          v-if="transactions.totalPages > 1"
+          :current-page="currentPage"
+          :total-pages="transactions.totalPages"
+          @page-change="goToPage"
+        />
       </section>
 
       <!-- 주변 생활시설 -->
       <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mt-8">
         <h2 class="text-lg font-semibold text-slate-800 mb-4">주변 생활시설</h2>
         <NearbyFacilities :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
+      </section>
+
+      <!-- 데이터 정보 -->
+      <section v-if="lastSyncDate" class="mt-8">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-400 text-[20px]">description</span>
+            <h2 class="text-slate-800 text-lg font-bold">데이터 정보</h2>
+          </div>
+          <div class="p-5 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-slate-500">최근 동기화</span>
+              <span class="text-sm font-medium text-slate-800">{{ lastSyncDate }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-slate-500">출처</span>
+              <a href="https://rt.molit.go.kr" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">국토교통부 실거래가 공개시스템</a>
+            </div>
+            <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-400">
+              <span class="material-symbols-outlined text-[14px] mt-px">info</span>
+              <span>국토교통부 실거래가 공개시스템 기준 정보입니다</span>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -243,6 +258,21 @@ setBreadcrumbSchema([
 ])
 
 const buildingInfo = ref<BuildingInfo | null>(null)
+
+// 최근 동기화 날짜
+const { data: syncStatusResponse } = await useAsyncData(
+  'real-estate-sync-status',
+  () => $fetch<{ success: boolean; data: Record<string, string | null> }>('/api/meta/sync-status'),
+  { lazy: true }
+)
+const lastSyncDate = computed(() => {
+  if (!syncStatusResponse.value?.data) return null
+  // apiSlugは "apt-sale" 형식 → 백엔드 키는 "aptSale" (camelCase)
+  const key = apiSlug.value.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+  const iso = syncStatusResponse.value.data[key]
+  if (!iso) return null
+  return iso.slice(0, 10)
+})
 
 const fullAddress = computed(() => {
   if (!buildingInfo.value) return '-'

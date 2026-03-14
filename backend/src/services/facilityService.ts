@@ -1140,7 +1140,27 @@ export async function getSyncStatus(): Promise<Record<string, string | null>> {
     }),
   );
 
-  return Object.fromEntries(results);
+  // 부동산 카테고리: SyncHistory 대신 각 테이블의 MAX(syncedAt) 조회
+  const realEstateModels = [
+    { key: 'aptSale', model: prisma.aptSaleTransaction },
+    { key: 'aptRent', model: prisma.aptRentTransaction },
+    { key: 'villaSale', model: prisma.villaSaleTransaction },
+    { key: 'villaRent', model: prisma.villaRentTransaction },
+    { key: 'offitelSale', model: prisma.offitelSaleTransaction },
+    { key: 'offitelRent', model: prisma.offitelRentTransaction },
+  ] as const;
+
+  const reResults = await Promise.all(
+    realEstateModels.map(async ({ key, model }) => {
+      const record = await (model as any).findFirst({
+        orderBy: { syncedAt: 'desc' },
+        select: { syncedAt: true },
+      });
+      return [key, record?.syncedAt?.toISOString() ?? null] as const;
+    }),
+  );
+
+  return Object.fromEntries([...results, ...reResults]);
 }
 
 export async function getRegionCategoryCombinations(): Promise<
