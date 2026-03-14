@@ -323,30 +323,28 @@ setWebsiteSchema()
 
 const searchKeyword = ref('')
 
-// SSR: 최근 리뷰
-const { data: recentReviewsData } = await useAsyncData('recent-reviews', () =>
-  $fetch<{ success: boolean; data: ReviewWithFacility[] }>(
-    `${config.public.apiBase}/api/reviews/recent`,
-    { query: { limit: 6 } }
-  )
-)
+// SSR: 3개 API 병렬 호출로 TTFB 개선
+const [{ data: recentReviewsData }, { data: recentGuidesData }, { data: statsResponse }] = await Promise.all([
+  useAsyncData('recent-reviews', () =>
+    $fetch<{ success: boolean; data: ReviewWithFacility[] }>(
+      `${config.public.apiBase}/api/reviews/recent`,
+      { query: { limit: 6 } }
+    )
+  ),
+  useAsyncData('recent-guides', () =>
+    $fetch<{ success: boolean; data: GuideSummary[] }>(
+      `${config.public.apiBase}/api/guides/recent`,
+      { query: { limit: 4 } }
+    )
+  ),
+  useAsyncData('home-stats', () =>
+    $fetch<{ success: boolean; data: Record<string, any> }>(
+      `${config.public.apiBase}/api/meta/stats`
+    )
+  ),
+])
 const recentReviews = computed(() => recentReviewsData.value?.data ?? [])
-
-// SSR: 최근 가이드
-const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
-  $fetch<{ success: boolean; data: GuideSummary[] }>(
-    `${config.public.apiBase}/api/guides/recent`,
-    { query: { limit: 4 } }
-  )
-)
 const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
-
-// SSR: 통계 API를 useAsyncData로 fetch
-const { data: statsResponse } = await useAsyncData('home-stats', () =>
-  $fetch<{ success: boolean; data: Record<string, any> }>(
-    `${config.public.apiBase}/api/meta/stats`
-  )
-)
 const stats = computed(() => statsResponse.value?.data ?? {
   toilet: 0,
   wifi: 0,
