@@ -7,9 +7,9 @@ import { createId } from '@paralleldrive/cuid2';
 import { XMLParser } from 'fast-xml-parser';
 import OpenAI from 'openai';
 import { writeFile, mkdir } from 'fs/promises';
+import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import sharp from 'sharp';
 import prisma from '../lib/prisma.js';
 
 // ---------------------------------------------------------------------------
@@ -269,7 +269,7 @@ Style: Minimal clean illustration. No text, image only. Bright and friendly tone
       model: 'gpt-image-1',
       prompt: imagePrompt,
       n: 1,
-      size: '1536x1024',
+      size: '1024x1024',
     });
 
     const imageData = response.data?.[0]?.b64_json;
@@ -281,13 +281,20 @@ Style: Minimal clean illustration. No text, image only. Bright and friendly tone
     const buffer = Buffer.from(imageData, 'base64');
     await mkdir(path.dirname(outputPath), { recursive: true });
 
-    // 원본(1536x1024) → 800px 리사이즈 + WebP 압축 (quality 80)
-    const optimized = await sharp(buffer)
-      .resize(800, undefined, { withoutEnlargement: true })
-      .webp({ quality: 80 })
-      .toBuffer();
-    await writeFile(outputPath, optimized);
-    console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(optimized.length / 1024).toFixed(0)}KB)`);
+    // 원본 임시 저장 후 ImageMagick으로 800px WebP 리사이즈
+    const tmpPath = outputPath + '.tmp.png';
+    await writeFile(tmpPath, buffer);
+    try {
+      execSync(`convert "${tmpPath}" -resize 800x -quality 80 "${outputPath}"`, { stdio: 'pipe' });
+      const { size: optimizedSize } = await import('fs').then(fs => fs.statSync(outputPath));
+      console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(optimizedSize / 1024).toFixed(0)}KB)`);
+    } catch {
+      // ImageMagick 없으면 원본 그대로 저장
+      await writeFile(outputPath, buffer);
+      console.log(`썸네일 저장 (리사이즈 건너뜀): ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
+    } finally {
+      import('fs').then(fs => { try { fs.unlinkSync(tmpPath); } catch {} });
+    }
     return true;
   } catch (err) {
     console.warn(
