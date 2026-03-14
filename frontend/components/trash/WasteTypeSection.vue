@@ -11,7 +11,7 @@
     </div>
     <div class="text-sm text-slate-600 space-y-2 pl-1">
       <div v-if="info.dayOfWeek" class="flex items-start gap-2">
-        <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0 mt-0.5">calendar_month</span>
+        <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">calendar_month</span>
         <p>
           <span class="font-medium text-slate-700">배출 요일:</span>
           <span class="ml-1">{{ info.dayOfWeek }}</span>
@@ -27,14 +27,14 @@
         </div>
       </ClientOnly>
       <div v-if="timeRange" class="flex items-start gap-2">
-        <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0 mt-0.5">schedule</span>
+        <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">schedule</span>
         <p>
           <span class="font-medium text-slate-700">배출 시간:</span>
           <span class="ml-1">{{ timeRange }}</span>
         </p>
       </div>
       <div v-if="info.method" class="flex items-start gap-2">
-        <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0 mt-0.5">info</span>
+        <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">info</span>
         <p>
           <span class="font-medium text-slate-700">배출 방법:</span>
           <span class="ml-1">{{ info.method }}</span>

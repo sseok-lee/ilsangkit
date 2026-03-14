@@ -6,7 +6,7 @@
     </div>
 
     <!-- 빈 상태 -->
-    <div v-else-if="facilityGroups.length === 0" class="rounded-2xl bg-slate-50 p-8 text-center text-slate-400 text-sm">
+    <div v-else-if="facilityGroups.length === 0" class="rounded-2xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
       주변에 등록된 시설이 없습니다
     </div>
 
@@ -21,7 +21,7 @@
         <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-50" :class="categoryBgClass(group.category)">
           <span class="text-lg">{{ group.icon }}</span>
           <h4 class="text-sm font-semibold text-slate-700">{{ group.label }}</h4>
-          <span class="ml-auto text-[11px] text-slate-400 font-medium">{{ group.items.length }}곳</span>
+          <span class="ml-auto text-[11px] text-slate-500 font-medium">{{ group.items.length }}곳</span>
         </div>
         <!-- 시설 목록 -->
         <ul class="divide-y divide-slate-50">
@@ -113,7 +113,7 @@ function categoryBgClass(category: FacilityCategory): string {
 function distanceBadgeClass(distance?: number): string {
   if (!distance || distance <= 100) return 'bg-emerald-50 text-emerald-600'
   if (distance <= 300) return 'bg-blue-50 text-blue-500'
-  return 'bg-slate-100 text-slate-400'
+  return 'bg-slate-100 text-slate-500'
 }
 
 onMounted(async () => {

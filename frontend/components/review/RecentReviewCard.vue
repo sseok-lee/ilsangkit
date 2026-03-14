@@ -22,7 +22,7 @@
     <!-- Footer: Nickname + Date -->
     <div class="flex items-center justify-between mt-auto">
       <span class="text-xs font-medium text-slate-500">{{ review.nickname }}</span>
-      <span class="text-xs text-slate-400">{{ formatDate(review.createdAt) }}</span>
+      <span class="text-xs text-slate-500">{{ formatDate(review.createdAt) }}</span>
     </div>
   </a>
 </template>

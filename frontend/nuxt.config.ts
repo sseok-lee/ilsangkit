@@ -155,7 +155,8 @@ export default defineNuxtConfig({
           src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2088264360250020',
           async: true,
           defer: true,
-          crossorigin: 'anonymous'
+          crossorigin: 'anonymous',
+          body: true
         },
         {
           innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=add,apartment,arrow_back,arrow_forward,article,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,close,delete,description,directions,eco,edit_note,emergency,error,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,search,search_off,share,support_agent,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,

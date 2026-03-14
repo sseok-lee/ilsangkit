@@ -1,7 +1,7 @@
 <template>
   <div class="relative w-full group">
     <!-- 검색 아이콘 (좌측) -->
-    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary transition-colors">
       <span class="material-symbols-outlined text-[24px]">search</span>
     </div>
     <!-- 검색 입력 -->

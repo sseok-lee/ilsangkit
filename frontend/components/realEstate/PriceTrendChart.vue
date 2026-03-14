@@ -10,7 +10,7 @@
     <!-- Empty state -->
     <div
       v-else-if="stats.length === 0"
-      class="flex items-center justify-center h-80 text-slate-400 text-sm"
+      class="flex items-center justify-center h-80 text-slate-500 text-sm"
     >
       데이터가 없습니다
     </div>

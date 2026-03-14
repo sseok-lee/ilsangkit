@@ -47,6 +47,8 @@
         <img
           :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
           :alt="guide.title"
+          width="800"
+          height="450"
           class="w-full aspect-video object-cover"
         />
       </div>
@@ -83,7 +85,7 @@
       <!-- AI 작성 안내 -->
       <div class="mt-8 border-l-4 border-slate-300 bg-slate-50 rounded-r-lg p-4">
         <p class="text-xs font-semibold text-slate-500 mb-1">AI 작성 안내</p>
-        <p class="text-xs text-slate-400 leading-relaxed">
+        <p class="text-xs text-slate-500 leading-relaxed">
           본 콘텐츠는 인공지능(AI) 기술을 활용하여 정보를 정리 및 요약한 글입니다.
           내용의 정확성을 보증하지 않으며, 투자나 법적 판단의 근거로 활용하기에는
           적합하지 않을 수 있습니다. 정확한 정보는 관련 기관의 공식 자료를 확인해

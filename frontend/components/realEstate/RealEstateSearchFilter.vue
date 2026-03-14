@@ -16,7 +16,7 @@
             <option value="">전체</option>
             <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
           </select>
-          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
         </div>
       </div>
 
@@ -34,7 +34,7 @@
               {{ d }}
             </option>
           </select>
-          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
         </div>
       </div>
 
@@ -43,7 +43,7 @@
         <label class="block text-xs font-medium text-slate-600 mb-1">건물명</label>
         <div class="relative">
           <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <span class="material-symbols-outlined text-slate-400 text-[18px]">search</span>
+            <span class="material-symbols-outlined text-slate-500 text-[18px]">search</span>
           </div>
           <input
             v-model="filter.buildingName"

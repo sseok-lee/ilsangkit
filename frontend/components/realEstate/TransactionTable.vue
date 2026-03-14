@@ -48,7 +48,7 @@
     <!-- Empty state -->
     <div
       v-else-if="transactions.length === 0"
-      class="flex items-center justify-center py-16 text-slate-400 text-sm"
+      class="flex items-center justify-center py-16 text-slate-500 text-sm"
     >
       거래 내역이 없습니다
     </div>
@@ -212,7 +212,7 @@
             <div class="mt-1.5 text-sm text-slate-500">
               {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ tx.exclusiveArea != null ? `${tx.exclusiveArea}㎡` : '-' }}
             </div>
-            <div v-if="(tx as SaleTransaction).buyerType || (tx as SaleTransaction).sellerType" class="mt-1 text-xs text-slate-400">
+            <div v-if="(tx as SaleTransaction).buyerType || (tx as SaleTransaction).sellerType" class="mt-1 text-xs text-slate-500">
               매수 {{ (tx as SaleTransaction).buyerType || '-' }} / 매도 {{ (tx as SaleTransaction).sellerType || '-' }}
             </div>
           </template>
@@ -270,7 +270,7 @@
               </template>
               {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ tx.exclusiveArea != null ? `${tx.exclusiveArea}㎡` : '-' }}
             </div>
-            <div v-if="(tx as RentTransaction).contractTerm" class="mt-1 text-xs text-slate-400">
+            <div v-if="(tx as RentTransaction).contractTerm" class="mt-1 text-xs text-slate-500">
               계약 {{ (tx as RentTransaction).contractTerm }}
             </div>
           </template>

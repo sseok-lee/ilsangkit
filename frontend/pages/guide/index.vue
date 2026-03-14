@@ -31,6 +31,8 @@
               v-if="guide.thumbnailUrl"
               :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
               :alt="guide.title"
+              width="400"
+              height="225"
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
             />
@@ -57,7 +59,7 @@
             </p>
 
             <!-- Meta -->
-            <div class="flex items-center justify-between text-xs text-slate-400">
+            <div class="flex items-center justify-between text-xs text-slate-500">
               <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
@@ -72,7 +74,7 @@
       <div v-else class="py-20 text-center">
         <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">article</span>
         <p class="text-slate-600 font-medium">아직 등록된 가이드가 없습니다</p>
-        <p class="text-slate-400 text-sm mt-1">곧 유용한 생활 가이드가 업데이트됩니다.</p>
+        <p class="text-slate-500 text-sm mt-1">곧 유용한 생활 가이드가 업데이트됩니다.</p>
       </div>
 
       <!-- Pagination -->
