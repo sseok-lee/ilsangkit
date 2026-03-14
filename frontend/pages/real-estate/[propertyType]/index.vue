@@ -126,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
@@ -156,22 +156,15 @@ const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
 const propertyDescription = computed(() => PROPERTY_TYPE_DESCRIPTIONS[propertyTypeParam.value])
 const faqs = computed(() => PROPERTY_TYPE_FAQ[propertyTypeParam.value] || [])
 
-const lastSearch = ref<{ city: string; district: string; buildingName: string } | null>(null)
-
 const { getComplexList } = useRealEstate()
 
-// SSR: 초기 인기 건물 목록 로드
-const { data: initialData } = await useAsyncData(
-  `complexes-${apiSlug.value}`,
-  () => getComplexList(apiSlug.value)
-)
-
-const complexes = ref<ComplexInfo[]>(initialData.value?.items ?? [])
-const totalComplexes = ref(initialData.value?.total ?? 0)
-const currentPage = ref(initialData.value?.page ?? 1)
-const totalPages = ref(initialData.value?.totalPages ?? 0)
+const complexes = ref<ComplexInfo[]>([])
+const totalComplexes = ref(0)
+const currentPage = ref(1)
+const totalPages = ref(0)
 const pending = ref(false)
 const error = ref(false)
+const lastSearch = ref<{ city: string; district: string; buildingName: string } | null>(null)
 
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
@@ -265,6 +258,15 @@ function retryLoad() {
   const s = lastSearch.value
   loadComplexes(s?.city || undefined, s?.district || undefined, s?.buildingName || undefined, currentPage.value)
 }
+
+// 마운트 시 인기 건물 자동 로드
+onMounted(() => {
+  if (lastSearch.value) {
+    loadComplexes(lastSearch.value.city || undefined, lastSearch.value.district || undefined, lastSearch.value.buildingName || undefined)
+  } else {
+    loadComplexes()
+  }
+})
 
 // 탭 전환 시 마지막 검색 조건으로 재로드
 watch(currentTab, () => {

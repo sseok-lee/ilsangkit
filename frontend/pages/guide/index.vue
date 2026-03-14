@@ -102,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -126,15 +126,10 @@ setBreadcrumbSchema([
 const config = useRuntimeConfig()
 const { fetchGuides } = useGuides()
 
-// SSR: 초기 가이드 목록 로드
-const { data: initialData } = await useAsyncData('guides-list', () =>
-  fetchGuides({ page: 1, limit: 12 })
-)
-
-const guides = ref<GuideSummary[]>(initialData.value?.items ?? [])
-const loading = ref(false)
+const guides = ref<GuideSummary[]>([])
+const loading = ref(true)
 const currentPage = ref(1)
-const totalPages = ref(initialData.value?.totalPages ?? 1)
+const totalPages = ref(1)
 
 function getCategoryLabel(category: string): string {
   return CATEGORY_META[category as keyof typeof CATEGORY_META]?.label ?? category
@@ -168,4 +163,8 @@ function goToPage(page: number) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
+
+onMounted(() => {
+  loadGuides()
+})
 </script>
