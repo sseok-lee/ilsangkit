@@ -14,6 +14,12 @@
   }
 }
 
+/* 폰트 로딩 중 레이아웃 시프트 방지 */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-display: swap;
+}
+
 @layer components {
   /* Button Components */
   .btn-primary {

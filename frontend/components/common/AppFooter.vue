@@ -41,7 +41,7 @@
         <p class="text-xs md:text-sm text-gray-600">
           © {{ currentYear }} 일상킷. All rights reserved.
         </p>
-        <p class="text-xs text-gray-400 mt-1">
+        <p class="text-xs text-gray-500 mt-1">
           <a
             href="https://www.data.go.kr"
             target="_blank"

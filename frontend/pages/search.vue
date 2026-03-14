@@ -252,10 +252,10 @@
                   <img :src="`/icons/category/${selectedRealEstateType}.webp`" :alt="RE_PROPERTY_META[selectedRealEstateType]?.label" class="w-10 h-10 shrink-0" width="40" height="40" />
                   <div class="flex-1 min-w-0">
                     <p class="font-semibold text-slate-800 text-sm truncate">{{ item.buildingName }}</p>
-                    <p class="text-xs text-slate-400 mt-0.5 truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
+                    <p class="text-xs text-slate-500 mt-0.5 truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
                     <div class="flex items-center gap-2 mt-2">
                       <span v-if="item.latestPrice" class="text-xs font-semibold text-primary">{{ formatRealEstatePrice(item.latestPrice) }}</span>
-                      <span class="text-[10px] text-slate-400">거래 {{ item.transactionCount }}건</span>
+                      <span class="text-[10px] text-slate-500">거래 {{ item.transactionCount }}건</span>
                     </div>
                   </div>
                 </div>
@@ -307,7 +307,7 @@
                     ]">{{ item.tab === 'sale' ? '매매' : '전월세' }}</span>
                     <span v-if="item.dealAmount" class="text-xs font-semibold text-primary ml-auto">{{ formatRealEstatePrice(item.dealAmount) }}</span>
                   </div>
-                  <p v-if="item.city" class="text-xs text-slate-400 mt-0.5 truncate">{{ item.city }} {{ item.district }}</p>
+                  <p v-if="item.city" class="text-xs text-slate-500 mt-0.5 truncate">{{ item.city }} {{ item.district }}</p>
                 </NuxtLink>
               </div>
             </div>
@@ -355,7 +355,7 @@
                         {{ CATEGORY_META[facility.category]?.shortLabel || CATEGORY_META[facility.category]?.label }}
                       </span>
                     </div>
-                    <p v-if="facility.roadAddress || facility.address" class="text-xs text-slate-400 mt-0.5 truncate">
+                    <p v-if="facility.roadAddress || facility.address" class="text-xs text-slate-500 mt-0.5 truncate">
                       {{ facility.roadAddress || facility.address }}
                     </p>
                   </NuxtLink>
@@ -381,7 +381,7 @@
               <span class="material-symbols-outlined text-[32px] text-slate-400">search_off</span>
             </div>
             <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-            <p class="text-slate-400 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
+            <p class="text-slate-500 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
             <div class="flex items-center justify-center gap-3">
               <button
                 v-if="searchKeyword"
@@ -411,7 +411,7 @@
             <span class="material-symbols-outlined text-[32px] text-slate-400">search_off</span>
           </div>
           <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-          <p class="text-slate-400 text-sm mt-1 mb-5">다른 검색어를 입력해보세요</p>
+          <p class="text-slate-500 text-sm mt-1 mb-5">다른 검색어를 입력해보세요</p>
           <div class="flex flex-wrap items-center justify-center gap-2 mb-6">
             <NuxtLink
               v-for="cat in ['toilet', 'hospital', 'parking', 'pharmacy']"
@@ -783,11 +783,20 @@ if (route.query.category && validCategoryList.includes(route.query.category as s
   navigateTo(`/${redirectCategory}${redirectQuery ? '?' + redirectQuery : ''}`, { replace: true, redirectCode: 301 })
 }
 
-// 검색 결과 페이지는 크롤링 방지 (중복 콘텐츠 인덱싱 방지)
-useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
-
 // SSR: 초기 쿼리 파라미터에서 메타태그 설정
 const initialKeyword = (route.query.keyword as string) || ''
+
+// 검색 결과 페이지: 동적 메타 + 크롤링 방지
+useHead({
+  title: initialKeyword ? `${initialKeyword} 검색 결과 - 일상킷` : '검색 - 일상킷',
+  meta: [
+    { name: 'robots', content: 'noindex, follow' },
+    { name: 'description', content: initialKeyword ? `${initialKeyword} 관련 생활시설 및 부동산 정보를 찾아보세요.` : '주변 생활시설과 부동산 정보를 검색하세요.' },
+  ],
+  link: [
+    { rel: 'canonical', href: 'https://ilsangkit.co.kr/search' },
+  ],
+})
 setSearchMeta({
   keyword: initialKeyword || undefined,
 })
@@ -853,6 +862,9 @@ onMounted(async () => {
 watch(searchKeyword, () => {
   setSearchMeta({
     keyword: searchKeyword.value || undefined,
+  })
+  useHead({
+    title: searchKeyword.value ? `${searchKeyword.value} 검색 결과 - 일상킷` : '검색 - 일상킷',
   })
 })
 

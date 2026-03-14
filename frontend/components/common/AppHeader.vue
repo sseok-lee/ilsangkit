@@ -1,7 +1,7 @@
 <template>
   <header
     :class="[
-      'sticky top-0 z-50 flex items-center justify-between p-4 pb-2 md:px-6 md:py-4',
+      'sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 h-14 md:h-16',
       'bg-background-light/95 backdrop-blur-sm',
       'border-b border-transparent',
       'transition-colors duration-300',
@@ -148,7 +148,7 @@
       data-testid="mobile-menu"
       role="navigation"
       aria-label="모바일 메뉴"
-      class="md:hidden fixed top-[60px] left-0 right-0 bottom-0 z-40 bg-background-light border-b border-slate-200 shadow-lg overflow-y-auto"
+      class="md:hidden fixed top-[56px] left-0 right-0 bottom-0 z-40 bg-background-light border-b border-slate-200 shadow-lg overflow-y-auto"
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">

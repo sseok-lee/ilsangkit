@@ -7,7 +7,8 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
-    '@vite-pwa/nuxt'
+    '@vite-pwa/nuxt',
+    '@nuxt/image'
   ],
 
   // PWA 설정: MSW(개발용 서비스워커)와 충돌 방지를 위해 production에서만 SW 등록
@@ -51,8 +52,22 @@ export default defineNuxtConfig({
     },
   },
 
+  // @nuxt/image: 자동 리사이징 및 WebP 변환
+  image: {
+    quality: 80,
+    format: ['webp'],
+    screens: {
+      xs: 320,
+      sm: 640,
+      md: 768,
+      lg: 1024,
+      xl: 1280,
+    },
+  },
+
   // Security headers + API proxy
   nitro: {
+    compressPublicAssets: true,
     routeRules: {
       '/api/**': { proxy: 'http://localhost:8000/api/**' },
       '/**': {
@@ -75,6 +90,29 @@ export default defineNuxtConfig({
       '/_nuxt/**': { headers: { 'cache-control': 'public, max-age=31536000, immutable' } },
       '/icons/**': { headers: { 'cache-control': 'public, max-age=86400' } },
       '/images/**': { headers: { 'cache-control': 'public, max-age=86400' } },
+    },
+  },
+
+  // Vendor chunk 분리: 큰 라이브러리를 별도 chunk로 분리하여 캐싱 효율 향상
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (id.includes('node_modules')) {
+              if (id.includes('vue') || id.includes('@vue') || id.includes('pinia')) {
+                return 'vendor-vue'
+              }
+              if (id.includes('lightweight-charts')) {
+                return 'vendor-charts'
+              }
+              if (id.includes('marked') || id.includes('dompurify')) {
+                return 'vendor-markdown'
+              }
+            }
+          },
+        },
+      },
     },
   },
 
@@ -118,6 +156,10 @@ export default defineNuxtConfig({
           async: true,
           defer: true,
           crossorigin: 'anonymous'
+        },
+        {
+          innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=add,apartment,arrow_back,arrow_forward,article,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,close,delete,description,directions,eco,edit_note,emergency,error,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,search,search_off,share,support_agent,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
+          type: 'text/javascript',
         }
       ],
       link: [
@@ -125,8 +167,8 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'preconnect', href: 'https://cdn.jsdelivr.net', crossorigin: '' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=add,apartment,arrow_back,arrow_forward,article,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,close,delete,description,directions,eco,edit_note,emergency,error,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,search,search_off,share,support_agent,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap' },
-        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
+        { rel: 'preload', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=add,apartment,arrow_back,arrow_forward,article,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,close,delete,description,directions,eco,edit_note,emergency,error,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,search,search_off,share,support_agent,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap', as: 'style', crossorigin: '' },
+        { rel: 'preload', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css', as: 'style', crossorigin: '' },
         { rel: 'manifest', href: '/site.webmanifest' },
       ]
     }

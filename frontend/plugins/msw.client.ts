@@ -31,7 +31,6 @@ export default defineNuxtPlugin(async () => {
       },
     });
 
-    console.log('[MSW] Mock Service Worker started');
-    console.log('[MSW] API Base:', config.public.apiBase);
+    console.debug('[MSW] Mock Service Worker started');
   }
 });

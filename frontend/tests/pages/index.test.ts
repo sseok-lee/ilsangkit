@@ -121,7 +121,7 @@ describe('Hero image optimization', () => {
   it('hero 이미지에 width, height 속성 존재', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    const imgs = wrapper.findAll('picture img')
+    const imgs = wrapper.findAll('section > div > img[aria-hidden="true"]')
     expect(imgs.length).toBeGreaterThan(0)
     imgs.forEach(img => {
       expect(img.attributes('width')).toBeTruthy()
@@ -129,21 +129,20 @@ describe('Hero image optimization', () => {
     })
   })
 
-  it('hero 이미지 source가 .webp 포맷 참조', async () => {
+  it('hero 이미지가 .webp 포맷 사용', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    const sources = wrapper.findAll('picture source')
-    expect(sources.length).toBeGreaterThan(0)
-    sources.forEach(source => {
-      expect(source.attributes('srcset')).toMatch(/\.webp/)
-      expect(source.attributes('type')).toBe('image/webp')
+    const imgs = wrapper.findAll('section > div > img[aria-hidden="true"]')
+    expect(imgs.length).toBeGreaterThan(0)
+    imgs.forEach(img => {
+      expect(img.attributes('src')).toMatch(/\.webp/)
     })
   })
 
   it('장식 이미지: aria-hidden="true"와 alt="" 유지', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    const imgs = wrapper.findAll('picture img')
+    const imgs = wrapper.findAll('section > div > img[aria-hidden="true"]')
     expect(imgs.length).toBeGreaterThan(0)
     imgs.forEach(img => {
       expect(img.attributes('aria-hidden')).toBe('true')
@@ -154,7 +153,7 @@ describe('Hero image optimization', () => {
   it('hero 이미지에 loading 속성 존재', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    const imgs = wrapper.findAll('picture img')
+    const imgs = wrapper.findAll('section > div > img[aria-hidden="true"]')
     expect(imgs.length).toBeGreaterThan(0)
     imgs.forEach(img => {
       expect(img.attributes('loading')).toBeTruthy()

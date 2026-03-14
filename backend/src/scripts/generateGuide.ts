@@ -9,6 +9,7 @@ import OpenAI from 'openai';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 import prisma from '../lib/prisma.js';
 
 // ---------------------------------------------------------------------------
@@ -279,8 +280,14 @@ Style: Minimal clean illustration. No text, image only. Bright and friendly tone
 
     const buffer = Buffer.from(imageData, 'base64');
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, buffer);
-    console.log(`썸네일 저장: ${outputPath}`);
+
+    // 원본(1536x1024) → 800px 리사이즈 + WebP 압축 (quality 80)
+    const optimized = await sharp(buffer)
+      .resize(800, undefined, { withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+    await writeFile(outputPath, optimized);
+    console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(optimized.length / 1024).toFixed(0)}KB)`);
     return true;
   } catch (err) {
     console.warn(
