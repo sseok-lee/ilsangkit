@@ -143,7 +143,7 @@
               </div>
               <span class="text-sm text-slate-700 font-medium">{{ link.label }}</span>
               <div class="flex gap-1">
-                <span class="px-1 py-0.5 rounded-full bg-primary/15 text-primary-dark text-[10px] font-medium">매매</span>
+                <span class="px-1 py-0.5 rounded-full bg-primary/15 text-primary-700 text-[10px] font-medium">매매</span>
                 <span class="px-1 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium">전월세</span>
               </div>
             </NuxtLink>
@@ -163,7 +163,7 @@
               <div class="flex-1 min-w-0">
                 <h3 class="text-slate-900 font-semibold text-[17px]">{{ link.label }}</h3>
                 <div class="flex gap-1.5 text-[11px] mt-1">
-                  <span class="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary-dark font-medium">매매</span>
+                  <span class="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary-700 font-medium">매매</span>
                   <span class="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">전월세</span>
                 </div>
                 <p class="text-slate-500 text-xs leading-snug mt-1 truncate">{{ link.sub }}</p>
@@ -227,7 +227,7 @@
           </p>
           <NuxtLink
             to="/real-estate"
-            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors shadow-sm"
+            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary-dark text-white text-sm font-semibold rounded-xl hover:bg-primary-700 transition-colors shadow-sm"
           >
             부동산 실거래가 둘러보기
             <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
@@ -244,7 +244,7 @@
           </h2>
           <NuxtLink
             to="/guide"
-            class="text-sm text-primary font-medium hover:underline flex items-center gap-1"
+            class="text-sm text-primary-700 font-medium hover:underline flex items-center gap-1"
           >
             더보기
             <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
