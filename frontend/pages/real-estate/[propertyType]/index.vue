@@ -156,12 +156,6 @@ const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
 const propertyDescription = computed(() => PROPERTY_TYPE_DESCRIPTIONS[propertyTypeParam.value])
 const faqs = computed(() => PROPERTY_TYPE_FAQ[propertyTypeParam.value] || [])
 
-const complexes = ref<ComplexInfo[]>([])
-const totalComplexes = ref(0)
-const currentPage = ref(1)
-const totalPages = ref(0)
-const pending = ref(false)
-const error = ref(false)
 const lastSearch = ref<{ city: string; district: string; buildingName: string } | null>(null)
 
 // SEO 메타
@@ -219,6 +213,19 @@ const paginationRange = computed(() => {
 
 const { getComplexList } = useRealEstate()
 
+// SSR: 초기 인기 건물 목록 로드
+const { data: initialData } = await useAsyncData(
+  `complexes-${apiSlug.value}`,
+  () => getComplexList(apiSlug.value)
+)
+
+const complexes = ref<ComplexInfo[]>(initialData.value?.items ?? [])
+const totalComplexes = ref(initialData.value?.total ?? 0)
+const currentPage = ref(initialData.value?.page ?? 1)
+const totalPages = ref(initialData.value?.totalPages ?? 0)
+const pending = ref(false)
+const error = ref(false)
+
 async function handleSearch(params: { city: string; district: string; buildingName: string }) {
   if (!params.city && !params.district && !params.buildingName) return
   lastSearch.value = params
@@ -258,15 +265,6 @@ function retryLoad() {
   const s = lastSearch.value
   loadComplexes(s?.city || undefined, s?.district || undefined, s?.buildingName || undefined, currentPage.value)
 }
-
-// 마운트 시 인기 건물 자동 로드 (SSR에서는 실행하지 않음)
-onMounted(() => {
-  if (lastSearch.value) {
-    loadComplexes(lastSearch.value.city || undefined, lastSearch.value.district || undefined, lastSearch.value.buildingName || undefined)
-  } else {
-    loadComplexes()
-  }
-})
 
 // 탭 전환 시 마지막 검색 조건으로 재로드
 watch(currentTab, () => {
