@@ -234,7 +234,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -242,7 +241,7 @@ import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
-import type { FacilityCategory } from '~/types/facility'
+import type { FacilityCategory, Facility, ApiResponse, SearchResponse } from '~/types/facility'
 
 const route = useRoute()
 
@@ -258,8 +257,7 @@ if (!CATEGORY_META[route.params.category as FacilityCategory]) {
 // Query params (city slug → Korean name)
 const queryCitySlug = computed(() => (route.query.city as string) || '')
 
-// Search composables
-const { loading, facilities, total, currentPage, totalPages, error: facilityError, search, resetPage, setPage } = useFacilitySearch()
+// Search state (SSR-compatible local refs)
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const { loadRegions, citiesWithDistricts } = useRegions()
 const { setMeta } = useFacilityMeta()
@@ -270,6 +268,23 @@ const selectedCity = ref('')
 const selectedDistrict = ref('')
 const cities = ref<string[]>([])
 const districtList = ref<string[]>([])
+
+// SSR: 초기 시설 목록 로드 (trash 제외)
+const { data: ssrFacilities } = categoryParam.value !== 'trash'
+  ? await useAsyncData(`facilities-${categoryParam.value}`, () =>
+      $fetch<ApiResponse<SearchResponse>>('/api/facilities/search', {
+        method: 'POST',
+        body: { category: categoryParam.value, page: 1, limit: 20 },
+      })
+    )
+  : { data: ref(null) }
+
+const facilities = ref<Facility[]>(ssrFacilities.value?.data?.items ?? [])
+const total = ref(ssrFacilities.value?.data?.total ?? 0)
+const currentPage = ref(ssrFacilities.value?.data?.page ?? 1)
+const totalPages = ref(ssrFacilities.value?.data?.totalPages ?? 0)
+const loading = ref(false)
+const facilityError = ref<string | null>(null)
 
 // Filter state
 const filterKeyword = ref('')
@@ -360,16 +375,38 @@ if (pageQueryParam >= 2) {
 async function performSearch() {
   if (categoryParam.value === 'trash') return
 
-  const params: Record<string, unknown> = {
-    page: currentPage.value,
-    limit: 20,
-    category: categoryParam.value,
-  }
-  if (selectedCity.value) params.city = selectedCity.value
-  if (selectedDistrict.value) params.district = selectedDistrict.value
-  if (filterKeyword.value) params.keyword = filterKeyword.value
+  loading.value = true
+  facilityError.value = null
+  try {
+    const params: Record<string, unknown> = {
+      page: currentPage.value,
+      limit: 20,
+      category: categoryParam.value,
+    }
+    if (selectedCity.value) params.city = selectedCity.value
+    if (selectedDistrict.value) params.district = selectedDistrict.value
+    if (filterKeyword.value) params.keyword = filterKeyword.value
 
-  search(params)
+    const response = await $fetch<ApiResponse<SearchResponse>>('/api/facilities/search', {
+      method: 'POST',
+      body: params,
+      retry: 1,
+    })
+    if (response.success && response.data) {
+      facilities.value = response.data.items
+      total.value = response.data.total
+      currentPage.value = response.data.page
+      totalPages.value = response.data.totalPages
+    }
+  } catch (err: any) {
+    facilityError.value = err?.message || '검색 중 오류가 발생했습니다'
+    facilities.value = []
+    total.value = 0
+    currentPage.value = 1
+    totalPages.value = 0
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadWasteSchedules() {
@@ -405,7 +442,7 @@ async function handleCityChange() {
     wasteCurrentPage.value = 1
     await loadWasteSchedules()
   } else {
-    resetPage()
+    currentPage.value = 1
     performSearch()
   }
 }
@@ -417,7 +454,7 @@ async function handleDistrictChange() {
     wasteCurrentPage.value = 1
     await loadWasteSchedules()
   } else {
-    resetPage()
+    currentPage.value = 1
     performSearch()
   }
 }
@@ -431,7 +468,7 @@ function handleFilterSearch() {
       wasteCurrentPage.value = 1
       await loadWasteSchedules()
     } else {
-      resetPage()
+      currentPage.value = 1
       performSearch()
     }
   }, 300)
@@ -444,7 +481,7 @@ function goToWastePage(page: number) {
 }
 
 function goToPage(page: number) {
-  setPage(page)
+  currentPage.value = page
   performSearch()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -469,16 +506,17 @@ onMounted(async () => {
       } else {
         const cityData = citiesWithDistricts.value.find(c => c.name === cityName)
         districtList.value = cityData?.districts.map(d => d.name) || []
+        // 도시 필터가 있으면 해당 조건으로 재검색
+        performSearch()
       }
     }
   }
 
-  // Initial data load
+  // trash: 초기 로드 (SSR 미적용)
   if (categoryParam.value === 'trash') {
     await loadWasteSchedules()
-  } else {
-    performSearch()
   }
+  // non-trash: SSR에서 초기 데이터를 이미 로드했으므로 추가 호출 불필요
 })
 
 // Update meta when filters change
