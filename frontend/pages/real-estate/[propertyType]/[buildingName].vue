@@ -120,50 +120,55 @@
 
       <!-- 지도 + 로드뷰 (데스크톱) -->
       <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mb-6 hidden md:block">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-slate-800">위치</h2>
-          <div class="hidden md:flex items-center gap-2">
-            <button
-              class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-50"
-              aria-label="이 건물 공유하기"
-              @click="handleShare"
-            >
-              <span class="material-symbols-outlined text-[18px]">share</span>
-              공유
-            </button>
-            <div class="relative">
-              <button
-                class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50"
-                @click="showNavDropdown = !showNavDropdown"
-              >
-                <span class="material-symbols-outlined text-[18px]">directions</span>
-                길찾기
-                <span class="material-symbols-outlined text-[14px]">expand_more</span>
-              </button>
-              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
-                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-lg font-semibold text-slate-800">위치</h2>
+              <div class="flex items-center gap-1">
+                <button
+                  class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
+                  aria-label="이 건물 공유하기"
+                  @click="handleShare"
+                >
+                  <span class="material-symbols-outlined text-[18px]">share</span>
+                  공유
                 </button>
-                <div class="h-px bg-slate-100"></div>
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
-                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                </button>
+                <div class="relative">
+                  <button
+                    class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
+                    @click="showNavDropdown = !showNavDropdown"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">directions</span>
+                    길찾기
+                    <span class="material-symbols-outlined text-[14px]">expand_more</span>
+                  </button>
+                  <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
+                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+                      <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
+                    </button>
+                    <div class="h-px bg-slate-100"></div>
+                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                      <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+            <div class="rounded-2xl bg-white border border-slate-100 overflow-hidden h-[300px]">
+              <ClientOnly>
+                <FacilityMap
+                  :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
+                  :facilities="buildingMarker"
+                  :level="3"
+                />
+              </ClientOnly>
+            </div>
           </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="rounded-2xl bg-white border border-slate-100 overflow-hidden h-[250px] md:h-[300px]">
-            <ClientOnly>
-              <FacilityMap
-                :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
-                :facilities="buildingMarker"
-                :level="3"
-              />
-            </ClientOnly>
-          </div>
-          <div class="roadview-wrapper rounded-2xl bg-white border border-slate-100 overflow-hidden h-[250px] md:h-[300px]">
-            <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
+          <div>
+            <h2 class="text-lg font-semibold text-slate-800 mb-2">로드뷰</h2>
+            <div class="roadview-wrapper rounded-2xl bg-white border border-slate-100 overflow-hidden h-[300px]">
+              <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
+            </div>
           </div>
         </div>
       </section>
