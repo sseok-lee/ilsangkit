@@ -259,10 +259,12 @@ function retryLoad() {
   loadComplexes(s?.city || undefined, s?.district || undefined, s?.buildingName || undefined, currentPage.value)
 }
 
-// 마운트 시 마지막 검색이 있으면 재로드
+// 마운트 시 인기 건물 자동 로드 (SSR에서는 실행하지 않음)
 onMounted(() => {
   if (lastSearch.value) {
     loadComplexes(lastSearch.value.city || undefined, lastSearch.value.district || undefined, lastSearch.value.buildingName || undefined)
+  } else {
+    loadComplexes()
   }
 })
 
