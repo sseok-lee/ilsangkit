@@ -143,8 +143,8 @@
               </div>
               <span class="text-sm text-slate-700 font-medium">{{ link.label }}</span>
               <div class="flex gap-1">
-                <span class="px-1 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium">매매</span>
-                <span class="px-1 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-medium">전월세</span>
+                <span class="px-1 py-0.5 rounded-full bg-primary/15 text-primary-dark text-[10px] font-medium">매매</span>
+                <span class="px-1 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium">전월세</span>
               </div>
             </NuxtLink>
           </div>
@@ -163,10 +163,10 @@
               <div class="flex-1 min-w-0">
                 <h3 class="text-slate-900 font-semibold text-[17px]">{{ link.label }}</h3>
                 <div class="flex gap-1.5 text-[11px] mt-1">
-                  <span class="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">매매</span>
-                  <span class="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">전월세</span>
+                  <span class="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary-dark font-medium">매매</span>
+                  <span class="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">전월세</span>
                 </div>
-                <p class="text-slate-400 text-xs leading-snug mt-1 truncate">{{ link.sub }}</p>
+                <p class="text-slate-500 text-xs leading-snug mt-1 truncate">{{ link.sub }}</p>
               </div>
               <span class="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 text-lg shrink-0">→</span>
             </NuxtLink>
@@ -191,7 +191,7 @@
                 <img :src="`/icons/category/${item.id}.webp`" :alt="CATEGORY_LABELS[item.id]" class="w-9 h-9" width="36" height="36" loading="lazy" />
               </div>
               <span class="text-sm text-slate-700 font-medium text-center leading-tight">{{ CATEGORY_LABELS[item.id] }}</span>
-              <span v-if="stats[item.id]" class="text-xs text-slate-400 font-medium -mt-1">{{ (stats[item.id] as number).toLocaleString('ko-KR') }}곳</span>
+              <span v-if="stats[item.id]" class="text-xs text-slate-500 font-medium -mt-1">{{ (stats[item.id] as number).toLocaleString('ko-KR') }}곳</span>
             </a>
           </div>
           <!-- 데스크톱: 가로형 카드 -->
@@ -208,7 +208,7 @@
               </div>
               <div class="flex-1 min-w-0">
                 <h3 class="text-slate-900 font-semibold text-[17px]">{{ CATEGORY_LABELS[item.id] }}</h3>
-                <p class="text-slate-400 text-xs mt-1 truncate">{{ item.desc }}</p>
+                <p class="text-slate-500 text-xs mt-1 truncate">{{ item.desc }}</p>
               </div>
               <span class="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 text-lg shrink-0">→</span>
             </a>
