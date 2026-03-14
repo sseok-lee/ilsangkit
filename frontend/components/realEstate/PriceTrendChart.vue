@@ -131,7 +131,12 @@ async function renderChart() {
 
   const maxCount = Math.max(...props.stats.map((s) => s.count), 1)
 
-  // 히스토그램 (거래량) — 먼저 추가해서 뒤에 그려지도록
+  // 가격 스케일: 상단 70% 영역 사용
+  chart.priceScale('right').applyOptions({
+    scaleMargins: { top: 0.05, bottom: 0.35 },
+  })
+
+  // 히스토그램 (거래량) — 하단 25% 영역 사용
   const histogramSeries = chart.addSeries(HistogramSeries, {
     priceScaleId: 'volume',
     lastValueVisible: false,
@@ -140,6 +145,9 @@ async function renderChart() {
       type: 'custom',
       formatter: (price: number) => `${Math.round(price)}건`,
     },
+  })
+  chart.priceScale('volume').applyOptions({
+    scaleMargins: { top: 0.8, bottom: 0.02 },
   })
 
   const histogramData = props.stats.map((s) => ({

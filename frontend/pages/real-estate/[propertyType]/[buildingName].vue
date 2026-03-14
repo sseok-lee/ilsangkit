@@ -1,14 +1,91 @@
 <template>
   <div class="bg-background-light">
-    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
+    <!-- Mobile: Map at top -->
+    <div v-if="buildingInfo?.lat && buildingInfo?.lng" class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
+      <ClientOnly>
+        <FacilityMap
+          :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
+          :facilities="buildingMarker"
+          :level="3"
+          class="w-full h-full !min-h-0 !rounded-none"
+        />
+      </ClientOnly>
+
+      <!-- Back & Name Overlay -->
+      <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
+        <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="$router.back()">
+          <span class="material-symbols-outlined text-slate-800">arrow_back</span>
+        </div>
+        <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow-sm backdrop-blur-sm">{{ buildingName }}</span>
+      </div>
+
+      <!-- Gradient Overlay -->
+      <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
+
+      <!-- Map expand button -->
+      <button
+        class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+        @click="isMapExpanded = true"
+      >
+        <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+        지도 크게 보기
+      </button>
+    </div>
+
+    <!-- Fullscreen Map Overlay (Mobile) -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-opacity duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-200"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="isMapExpanded && buildingInfo?.lat && buildingInfo?.lng"
+          class="md:hidden fixed inset-0 z-[60] bg-background-light"
+        >
+          <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
+            <button
+              class="flex size-10 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm"
+              @click="isMapExpanded = false"
+            >
+              <span class="material-symbols-outlined text-slate-700">close</span>
+            </button>
+            <span class="text-sm font-bold text-slate-900 bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ buildingName }}</span>
+            <div class="size-10"></div>
+          </div>
+          <ClientOnly>
+            <FacilityMap
+              :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
+              :facilities="buildingMarker"
+              :level="3"
+              class="w-full h-full"
+            />
+          </ClientOnly>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6 pb-20 md:pb-0">
       <div class="mb-6">
-        <nav class="flex items-center gap-1 text-sm text-slate-500 mb-3">
+        <nav class="hidden md:flex items-center gap-1 text-sm text-slate-500 mb-3">
           <NuxtLink to="/real-estate" class="hover:text-primary">부동산</NuxtLink>
           <span class="material-symbols-outlined text-[14px]">chevron_right</span>
           <NuxtLink :to="`/real-estate/${propertyTypeParam}`" class="hover:text-primary">{{ propertyMeta?.label }}</NuxtLink>
           <span class="material-symbols-outlined text-[14px]">chevron_right</span>
           <span class="text-slate-800">{{ buildingName }}</span>
         </nav>
+        <!-- Mobile: badge + share -->
+        <div class="md:hidden flex items-start justify-between mb-3">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10">
+            <span class="material-symbols-outlined text-[14px]">place</span> {{ propertyMeta?.label }}
+          </span>
+          <button class="text-slate-400 hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 건물 공유하기" @click="handleShare">
+            <span class="material-symbols-outlined">share</span>
+          </button>
+        </div>
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
           {{ buildingName }}
         </h1>
@@ -41,19 +118,39 @@
         </div>
       </section>
 
-      <!-- 지도 + 로드뷰 -->
-      <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mb-6">
+      <!-- 지도 + 로드뷰 (데스크톱) -->
+      <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mb-6 hidden md:block">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-slate-800">위치</h2>
-          <a
-            :href="`https://map.kakao.com/link/to/${encodeURIComponent(buildingName)},${buildingInfo.lat},${buildingInfo.lng}`"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors"
-          >
-            <span class="material-symbols-outlined text-[18px]">directions</span>
-            길찾기
-          </a>
+          <div class="hidden md:flex items-center gap-2">
+            <button
+              class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-50"
+              aria-label="이 건물 공유하기"
+              @click="handleShare"
+            >
+              <span class="material-symbols-outlined text-[18px]">share</span>
+              공유
+            </button>
+            <div class="relative">
+              <button
+                class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50"
+                @click="showNavDropdown = !showNavDropdown"
+              >
+                <span class="material-symbols-outlined text-[18px]">directions</span>
+                길찾기
+                <span class="material-symbols-outlined text-[14px]">expand_more</span>
+              </button>
+              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
+                </button>
+                <div class="h-px bg-slate-100"></div>
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="rounded-2xl bg-white border border-slate-100 overflow-hidden h-[250px] md:h-[300px]">
@@ -67,6 +164,20 @@
           </div>
           <div class="roadview-wrapper rounded-2xl bg-white border border-slate-100 overflow-hidden h-[250px] md:h-[300px]">
             <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 로드뷰 (모바일) -->
+      <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mb-6 md:hidden">
+        <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-100">
+            <h2 class="text-slate-800 text-lg font-bold">로드뷰</h2>
+          </div>
+          <div class="p-4">
+            <div class="roadview-wrapper rounded-xl overflow-hidden h-[200px]">
+              <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
+            </div>
           </div>
         </div>
       </section>
@@ -186,11 +297,44 @@
         </div>
       </section>
     </main>
+
+    <!-- Mobile: Sticky Bottom Action Bar -->
+    <div v-if="buildingInfo?.lat && buildingInfo?.lng" class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
+      <div class="flex gap-3">
+        <button
+          class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-3.5 text-base font-bold text-slate-800 border border-slate-200 transition hover:bg-slate-200 active:scale-[0.98]"
+          aria-label="이 건물 공유하기"
+          @click="handleShare"
+        >
+          <span class="material-symbols-outlined text-[20px]">share</span>
+          공유하기
+        </button>
+        <div class="relative flex-[2]">
+          <button
+            class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-[0.98]"
+            @click="showMobileNavDropdown = !showMobileNavDropdown"
+          >
+            <span class="material-symbols-outlined text-[20px]">directions</span>
+            길찾기
+            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
+            <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl); showMobileNavDropdown = false">
+              <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
+            </button>
+            <div class="h-px bg-slate-100"></div>
+            <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl); showMobileNavDropdown = false">
+              <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo } from '~/types/realEstate'
@@ -258,6 +402,57 @@ setBreadcrumbSchema([
 ])
 
 const buildingInfo = ref<BuildingInfo | null>(null)
+
+// 길찾기 URL
+const kakaoMapUrl = computed(() =>
+  `https://map.kakao.com/link/to/${encodeURIComponent(buildingName.value)},${buildingInfo.value?.lat},${buildingInfo.value?.lng}`)
+const naverMapUrl = computed(() =>
+  `https://map.naver.com/v5/directions/-/${buildingInfo.value?.lng},${buildingInfo.value?.lat},${encodeURIComponent(buildingName.value)}/-/walk`)
+
+// 드롭다운 상태
+const isMapExpanded = ref(false)
+const showNavDropdown = ref(false)
+const showMobileNavDropdown = ref(false)
+
+function openNavigation(url: string) {
+  window.open(url, '_blank')
+  showNavDropdown.value = false
+  showMobileNavDropdown.value = false
+}
+
+// 공유
+async function handleShare() {
+  const shareData = {
+    title: buildingName.value,
+    text: `${buildingName.value} ${propertyMeta.value?.label} 실거래가`,
+    url: window.location.href,
+  }
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData)
+    } else {
+      await navigator.clipboard.writeText(window.location.href)
+      alert('링크가 복사되었습니다.')
+    }
+  } catch (err) {
+    console.error('공유 실패:', err)
+  }
+}
+
+// 외부 클릭 시 드롭다운 닫기
+function handleClickOutside(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.relative')) {
+    showNavDropdown.value = false
+    showMobileNavDropdown.value = false
+  }
+}
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 // 최근 동기화 날짜
 const { data: syncStatusResponse } = await useAsyncData(

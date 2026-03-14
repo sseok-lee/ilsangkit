@@ -34,7 +34,7 @@
               :center="{ lat: facility.lat, lng: facility.lng }"
               :facilities="[facility]"
               :level="3"
-              class="w-full h-full"
+              class="w-full h-full !min-h-0 !rounded-none"
             />
           </ClientOnly>
 
@@ -58,16 +58,6 @@
             지도 크게 보기
           </button>
 
-          <!-- Directions Button (Mobile) -->
-          <a
-            :href="`https://map.kakao.com/link/to/${encodeURIComponent(facility.name)},${facility.lat},${facility.lng}`"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-full shadow-lg text-sm font-bold hover:bg-primary-dark transition-colors"
-          >
-            <span class="material-symbols-outlined text-[18px]">directions</span>
-            길찾기
-          </a>
         </div>
 
         <!-- Fullscreen Map Overlay (Mobile) -->
@@ -1025,13 +1015,13 @@
                     길찾기
                     <span class="material-symbols-outlined text-[18px]">expand_more</span>
                   </button>
-                  <div v-if="showNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white#1a2630] rounded-xl shadow-lg border border-[#e5e7eb] overflow-hidden z-20">
+                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-[#e5e7eb] overflow-hidden z-20">
                     <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
-                      <span class="inline-block w-5 h-5 rounded bg-[#FEE500]"></span> 카카오맵으로 길찾기
+                      <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                     </button>
                     <div class="h-px bg-[#f0f2f5]"></div>
                     <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
-                      <span class="inline-block w-5 h-5 rounded bg-[#03C75A]"></span> 네이버맵으로 길찾기
+                      <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
                     </button>
                   </div>
                 </div>
@@ -1903,11 +1893,11 @@
               </button>
               <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-[#e5e7eb] overflow-hidden z-20">
                 <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl); showMobileNavDropdown = false">
-                  <span class="inline-block w-5 h-5 rounded bg-[#FEE500]"></span> 카카오맵으로 길찾기
+                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                 </button>
                 <div class="h-px bg-[#f0f2f5]"></div>
                 <button class="w-full px-4 py-3 text-left text-sm font-medium text-[#111418] hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl); showMobileNavDropdown = false">
-                  <span class="inline-block w-5 h-5 rounded bg-[#03C75A]"></span> 네이버맵으로 길찾기
+                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
                 </button>
               </div>
             </div>
