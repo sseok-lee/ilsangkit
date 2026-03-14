@@ -124,15 +124,33 @@ export async function searchTransactions(
   if (city) where.city = city;
   if (district) where.district = district;
   if (bjdCode) where.bjdCode = bjdCode;
-  if (buildingName) where.buildingName = { contains: buildingName };
+  if (buildingName) where.buildingName = { startsWith: buildingName };
   if (dealYear !== undefined) where.dealYear = dealYear;
   if (dealMonth !== undefined) where.dealMonth = dealMonth;
 
   const skip = (page - 1) * limit;
 
+  const select = isSaleType(type)
+    ? {
+        id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
+        floor: true, exclusiveArea: true, buildYear: true,
+        dealYear: true, dealMonth: true, dealDay: true,
+        dealAmount: true, dealType: true, buyerType: true, sellerType: true,
+        cancelDealDay: true,
+      }
+    : {
+        id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
+        floor: true, exclusiveArea: true, buildYear: true,
+        dealYear: true, dealMonth: true, dealDay: true,
+        deposit: true, monthlyRent: true, rentType: true,
+        contractType: true, contractTerm: true,
+        preDeposit: true, preMonthlyRent: true,
+      };
+
   const [items, total] = await Promise.all([
     model.findMany({
       where,
+      select,
       skip,
       take: limit,
       orderBy: [
@@ -232,7 +250,7 @@ export async function getComplexList(
   const where: Record<string, any> = {};
   if (city) where.city = city;
   if (district) where.district = district;
-  if (buildingName) where.buildingName = { contains: buildingName };
+  if (buildingName) where.buildingName = { startsWith: buildingName };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const groupByResult: any[] = await model.groupBy({
@@ -248,31 +266,47 @@ export async function getComplexList(
   const skip = (page - 1) * limit;
   const paged = groupByResult.slice(skip, skip + limit);
 
-  // 각 건물의 최신 거래 1건에서 city/district/dongName/price 가져오기
+  // 각 건물의 최신 거래 1건에서 city/district/dongName/price 가져오기 (단일 쿼리)
   const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
-  const details = await Promise.all(
-    paged.map((row) =>
-      model.findFirst({
-        where: { buildingName: row.buildingName, bjdCode: row.bjdCode },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const details: any[] = paged.length > 0
+    ? await model.findMany({
+        where: {
+          OR: paged.map((row: { buildingName: string; bjdCode: string }) => ({
+            buildingName: row.buildingName,
+            bjdCode: row.bjdCode,
+          })),
+        },
         orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
-        select: { city: true, district: true, dongName: true, [priceField]: true },
+        distinct: ['buildingName', 'bjdCode'],
+        select: {
+          buildingName: true, bjdCode: true,
+          city: true, district: true, dongName: true,
+          [priceField]: true,
+        },
       })
-    )
+    : [];
+
+  const detailMap = new Map(
+    details.map((d) => [`${d.buildingName}|${d.bjdCode}`, d])
   );
 
-  const items = paged.map((row, i) => ({
-    buildingName: row.buildingName,
-    bjdCode: row.bjdCode,
-    city: details[i]?.city ?? '',
-    district: details[i]?.district ?? '',
-    dongName: details[i]?.dongName ?? '',
-    transactionCount: row._count.buildingName,
-    latestPrice: details[i]?.[priceField] != null ? Number(details[i][priceField]) : null,
-    lat: row._max.lat !== null ? Number(row._max.lat) : null,
-    lng: row._max.lng !== null ? Number(row._max.lng) : null,
-    lastDealYear: row._max.dealYear,
-    lastDealMonth: row._max.dealMonth,
-  }));
+  const items = paged.map((row) => {
+    const detail = detailMap.get(`${row.buildingName}|${row.bjdCode}`);
+    return {
+      buildingName: row.buildingName,
+      bjdCode: row.bjdCode,
+      city: detail?.city ?? '',
+      district: detail?.district ?? '',
+      dongName: detail?.dongName ?? '',
+      transactionCount: row._count.buildingName,
+      latestPrice: detail?.[priceField] != null ? Number(detail[priceField]) : null,
+      lat: row._max.lat !== null ? Number(row._max.lat) : null,
+      lng: row._max.lng !== null ? Number(row._max.lng) : null,
+      lastDealYear: row._max.dealYear,
+      lastDealMonth: row._max.dealMonth,
+    };
+  });
 
   return { items, total, page, totalPages };
 }
@@ -365,7 +399,7 @@ export async function searchAll(
 ): Promise<SearchAllResult> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = {};
-  if (keyword) where.buildingName = { contains: keyword };
+  if (keyword) where.buildingName = { startsWith: keyword };
   if (city) where.city = city;
   if (district) where.district = district;
 

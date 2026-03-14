@@ -297,7 +297,7 @@ describe('searchTransactions', () => {
     expect(mockAptSaleFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          buildingName: expect.objectContaining({ contains: '래미안' }),
+          buildingName: expect.objectContaining({ startsWith: '래미안' }),
         }),
       })
     );
@@ -630,13 +630,13 @@ describe('searchAll', () => {
     expect(mockOffitelRentFindMany).toHaveBeenCalledTimes(1);
   });
 
-  it('searches buildingName with LIKE (contains) for each model', async () => {
+  it('searches buildingName with startsWith for each model', async () => {
     await searchAll('래미안');
 
     expect(mockAptSaleFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          buildingName: expect.objectContaining({ contains: '래미안' }),
+          buildingName: expect.objectContaining({ startsWith: '래미안' }),
         }),
       })
     );

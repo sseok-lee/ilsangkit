@@ -223,7 +223,13 @@ async function handleSearch(params: { city: string; district: string; buildingNa
   if (!params.city && !params.district && !params.buildingName) return
   lastSearch.value = params
   currentPage.value = 1
-  await loadComplexes(params.city || undefined, params.district || undefined, params.buildingName || undefined)
+
+  // 건물 목록 + 시설 요약을 병렬로 요청
+  const complexPromise = loadComplexes(params.city || undefined, params.district || undefined, params.buildingName || undefined)
+  const facilityPromise = params.city
+    ? fetchFacilitySummary(params.city, params.district || undefined)
+    : Promise.resolve()
+  await Promise.all([complexPromise, facilityPromise])
 }
 
 async function loadComplexes(city?: string, district?: string, buildingName?: string, page: number = 1) {
@@ -253,9 +259,11 @@ function retryLoad() {
   loadComplexes(s?.city || undefined, s?.district || undefined, s?.buildingName || undefined, currentPage.value)
 }
 
-// 마운트 시 인기 건물 자동 로드 (SSR에서는 실행하지 않음)
+// 마운트 시 마지막 검색이 있으면 재로드
 onMounted(() => {
-  loadComplexes()
+  if (lastSearch.value) {
+    loadComplexes(lastSearch.value.city || undefined, lastSearch.value.district || undefined, lastSearch.value.buildingName || undefined)
+  }
 })
 
 // 탭 전환 시 마지막 검색 조건으로 재로드
@@ -271,15 +279,11 @@ watch(currentTab, () => {
 const facilityStats = ref<{ categories: Record<string, number>; total: number; topCategories: string[] } | null>(null)
 const facilityLoading = ref(false)
 
-watch(lastSearch, async (search) => {
-  if (!search?.city) {
-    facilityStats.value = null
-    return
-  }
+async function fetchFacilitySummary(city: string, district?: string) {
   facilityLoading.value = true
   try {
     const res = await $fetch<any>('/api/meta/region-facilities-summary', {
-      params: { city: search.city, district: search.district || undefined },
+      params: { city, district },
     })
     facilityStats.value = res?.data ?? null
   } catch {
@@ -287,7 +291,7 @@ watch(lastSearch, async (search) => {
   } finally {
     facilityLoading.value = false
   }
-})
+}
 
 const topFacilityCategories = computed(() => {
   if (!facilityStats.value) return {}
