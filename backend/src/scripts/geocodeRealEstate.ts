@@ -106,7 +106,7 @@ export const geocodeByKeyword = searchByKeyword;
 export function cleanBuildingName(name: string): string {
   let cleaned = name;
   cleaned = cleaned.replace(/\(\d+-\d+\)/g, '');
-  cleaned = cleaned.replace(/\([A-Za-z가-힣0-9,\-]+동\)/g, '');
+  cleaned = cleaned.replace(/\([A-Za-z가-힣0-9,-]+동\)/g, '');
   cleaned = cleaned.replace(/\d+동$/, '');
   cleaned = cleaned.replace(/[A-Za-z]+동$/, '');
   cleaned = cleaned.replace(/[가나다라마바사]동$/, '');
