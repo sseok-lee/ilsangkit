@@ -178,7 +178,7 @@ describe('transformVillaSaleItem', () => {
     };
 
     const result = transformVillaSaleItem(item, '서울특별시', '강남구');
-    expect(result.sourceId).toBe('villaSale-11680-2005-2024-5-20-3-59.99');
+    expect(result.sourceId).toBe('villaSale-11680-2005-2024-5-20-3-59.99-15000');
   });
 });
 

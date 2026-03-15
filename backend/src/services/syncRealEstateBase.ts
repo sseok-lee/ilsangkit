@@ -17,6 +17,9 @@ export interface SourceIdFields {
   dealDay: string;
   floor: string;
   area: string;
+  dealAmount?: string;
+  deposit?: string;
+  monthlyRent?: string;
 }
 
 /**
@@ -31,14 +34,18 @@ export interface ParsedXmlResponse {
 
 /**
  * 고유 sourceId 생성
- * 형식: {category}-{bjdCode}-{buildYear}-{dealYear}-{dealMonth}-{dealDay}-{floor}-{area}
+ * 형식: {category}-{bjdCode}-{buildYear}-{dealYear}-{dealMonth}-{dealDay}-{floor}-{area}[-dealAmount][-deposit-monthlyRent]
  */
 export function generateSourceId(
   category: string,
   fields: SourceIdFields
 ): string {
-  const { bjdCode, buildYear, dealYear, dealMonth, dealDay, floor, area } = fields;
-  return [category, bjdCode, buildYear, dealYear, dealMonth, dealDay, floor, area].join('-');
+  const { bjdCode, buildYear, dealYear, dealMonth, dealDay, floor, area, dealAmount, deposit, monthlyRent } = fields;
+  const parts = [category, bjdCode, buildYear, dealYear, dealMonth, dealDay, floor, area];
+  if (dealAmount !== undefined) parts.push(dealAmount);
+  if (deposit !== undefined) parts.push(deposit);
+  if (monthlyRent !== undefined) parts.push(monthlyRent);
+  return parts.join('-');
 }
 
 /**

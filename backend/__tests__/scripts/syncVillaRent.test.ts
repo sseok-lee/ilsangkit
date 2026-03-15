@@ -84,7 +84,7 @@ describe('transformVillaRentItem', () => {
 
   it('sourceId 생성 형식 확인', () => {
     const result = transformVillaRentItem(baseItem);
-    expect(result!.sourceId).toBe('villaRent-11680-2005-2024-3-15-3-59.98');
+    expect(result!.sourceId).toBe('villaRent-11680-2005-2024-3-15-3-59.98-10000-50');
   });
 
   it('보증금액에 쉼표 없는 경우도 정상 처리', () => {

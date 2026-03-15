@@ -96,10 +96,32 @@ export const geocodeAddress = searchByKeyword;
 export const geocodeByKeyword = searchByKeyword;
 
 /**
- * 3단계 지오코딩 전략
+ * buildingName 정제: 카카오 검색에 방해되는 패턴 제거
+ * - "(xxx-xx)" 번지 괄호: 삼도주택(414-11) → 삼도주택
+ * - "(A동)", "(C동)", "(A-B동)" 등 동 괄호: 렉스빌(C동) → 렉스빌
+ * - 끝의 "27동" 등 숫자+동: 효성빌라27동 → 효성빌라
+ * - 끝의 "D동" 등 영문+동: 삼성에센빌D동 → 삼성에센빌
+ * - 끝의 "가동" 등 한글+동: 유동빌라가동 → 유동빌라
+ */
+export function cleanBuildingName(name: string): string {
+  let cleaned = name;
+  cleaned = cleaned.replace(/\(\d+-\d+\)/g, '');
+  cleaned = cleaned.replace(/\([A-Za-z가-힣0-9,\-]+동\)/g, '');
+  cleaned = cleaned.replace(/\d+동$/, '');
+  cleaned = cleaned.replace(/[A-Za-z]+동$/, '');
+  cleaned = cleaned.replace(/[가나다라마바사]동$/, '');
+  cleaned = cleaned.replace(/\(\s*\)/g, '');
+  return cleaned.trim();
+}
+
+/**
+ * 6단계 지오코딩 전략
  * 1) 주소 API: "시 구 동 지번" (가장 정확)
- * 2) 키워드 API: "구 건물명 아파트"
- * 3) 키워드 API: "시 구 건물명"
+ * 2) 주소 API: 도로명 주소
+ * 3) 키워드 API: "구 건물명 아파트"
+ * 4) 키워드 API: "시 구 동 건물명"
+ * 5) 키워드 API: "구 정제된건물명" (괄호/동호수 제거)
+ * 6) 키워드 API: "시 구 동 정제된건물명"
  */
 async function geocodeBuilding(
   building: UniqueBuilding,
@@ -134,7 +156,23 @@ async function geocodeBuilding(
   // 4) 키워드 API: "시 구 동 건물명"
   if (dongName) {
     const lastQuery = `${city} ${district} ${dongName} ${buildingName}`;
-    return searchByKeyword(lastQuery);
+    const coords3 = await searchByKeyword(lastQuery);
+    if (coords3) return coords3;
+    await sleep(100);
+  }
+
+  // 5) 정제된 건물명으로 재시도 (괄호/동호수 제거)
+  const cleaned = cleanBuildingName(buildingName);
+  if (cleaned && cleaned !== buildingName) {
+    const coords4 = await searchByKeyword(`${district} ${cleaned}`);
+    if (coords4) return coords4;
+    await sleep(100);
+
+    // 6) "시 구 동 정제된건물명"
+    if (dongName) {
+      const coords5 = await searchByKeyword(`${city} ${district} ${dongName} ${cleaned}`);
+      if (coords5) return coords5;
+    }
   }
 
   return null;

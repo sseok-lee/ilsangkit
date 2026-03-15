@@ -2,9 +2,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock fetch before imports
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+// apiKey가 모듈 로드 시점에 캡처되므로 import 전에 제거해야 함
+const { mockFetch } = vi.hoisted(() => {
+  delete process.env.KAKAO_REST_API_KEY;
+  const mockFetch = vi.fn();
+  global.fetch = mockFetch;
+  return { mockFetch };
+});
 
 // Mock PrismaClient
 const mockFindMany = vi.fn();
@@ -29,6 +33,7 @@ import {
   buildSearchQuery,
   parseKakaoCoordinates,
   geocodeAddress,
+  cleanBuildingName,
   getUniqueBuildings,
   updateBuildingCoordinates,
   type UniqueBuilding,
@@ -73,6 +78,40 @@ describe('buildSearchQuery', () => {
       jibun: null,
     };
     expect(buildSearchQuery(building)).toBe('서울특별시 강남구 현대아파트');
+  });
+});
+
+describe('cleanBuildingName', () => {
+  it('번지 괄호 제거: 삼도주택(414-11) → 삼도주택', () => {
+    expect(cleanBuildingName('삼도주택(414-11)')).toBe('삼도주택');
+  });
+
+  it('동 괄호 제거: 렉스빌(C동) → 렉스빌', () => {
+    expect(cleanBuildingName('렉스빌(C동)')).toBe('렉스빌');
+  });
+
+  it('복합 동 괄호 제거: 궁전빌라(A-B동) → 궁전빌라', () => {
+    expect(cleanBuildingName('궁전빌라(A-B동)')).toBe('궁전빌라');
+  });
+
+  it('숫자+동 제거: 효성빌라27동 → 효성빌라', () => {
+    expect(cleanBuildingName('효성빌라27동')).toBe('효성빌라');
+  });
+
+  it('영문+동 제거: 삼성에센빌D동 → 삼성에센빌', () => {
+    expect(cleanBuildingName('삼성에센빌D동')).toBe('삼성에센빌');
+  });
+
+  it('한글+동 제거: 유동빌라가동 → 유동빌라', () => {
+    expect(cleanBuildingName('유동빌라가동')).toBe('유동빌라');
+  });
+
+  it('번지+동 복합 제거: 삼성에센빌D동(175-45) → 삼성에센빌', () => {
+    expect(cleanBuildingName('삼성에센빌D동(175-45)')).toBe('삼성에센빌');
+  });
+
+  it('정제 불필요한 이름은 그대로 반환', () => {
+    expect(cleanBuildingName('래미안아파트')).toBe('래미안아파트');
   });
 });
 

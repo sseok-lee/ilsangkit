@@ -180,7 +180,7 @@ describe('transformAptRentItem', () => {
     };
 
     const result = transformAptRentItem(item, '서울특별시', '강남구');
-    expect(result.sourceId).toBe('aptRent-11680-2010-2024-3-10-10-84.99');
+    expect(result.sourceId).toBe('aptRent-11680-2010-2024-3-10-10-84.99-30000-0');
   });
 });
 

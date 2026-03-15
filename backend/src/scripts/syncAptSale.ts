@@ -63,6 +63,7 @@ export function transformAptSaleItem(item: AptSaleItem, city: string, district: 
     dealDay: dayStr,
     floor: floorStr,
     area: areaStr,
+    dealAmount: dealAmountStr,
   });
 
   return {

@@ -109,6 +109,8 @@ export function transformVillaRentItem(item: RawVillaRentItem): VillaRentRecord 
     dealDay: String(item.dealDay ?? '').trim(),
     floor,
     area: exclusiveAreaStr,
+    deposit: depositStr,
+    monthlyRent: String(item.monthlyRent ?? '').trim(),
   });
 
   const monthlyRentInt = parseIntOrNull(String(item.monthlyRent ?? '').trim());

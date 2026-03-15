@@ -75,6 +75,8 @@ export function transformOffitelRentItem(item: RawOffitelRentItem) {
     dealDay: dayStr,
     floor: floorStr,
     area: areaStr,
+    deposit: depositStr,
+    monthlyRent: monthlyRentStr,
   });
 
   return {

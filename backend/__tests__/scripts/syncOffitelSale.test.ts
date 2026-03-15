@@ -63,7 +63,7 @@ describe('transformOffitelSaleItem', () => {
 
   it('sourceId 생성 형식 확인', () => {
     const result = transformOffitelSaleItem(baseItem);
-    expect(result!.sourceId).toBe('offitelSale-11680-2010-2024-6-20-5-84.97');
+    expect(result!.sourceId).toBe('offitelSale-11680-2010-2024-6-20-5-84.97-85000');
   });
 
   it('거래금액에 쉼표 여러 개인 경우 처리', () => {

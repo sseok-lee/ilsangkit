@@ -70,6 +70,7 @@ export function transformOffitelSaleItem(item: RawOffitelSaleItem) {
     dealDay: dayStr,
     floor: floorStr,
     area: areaStr,
+    dealAmount: dealAmountStr,
   });
 
   return {

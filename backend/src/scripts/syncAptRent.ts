@@ -68,6 +68,8 @@ export function transformAptRentItem(item: AptRentItem, city: string, district: 
     dealDay: dayStr,
     floor: floorStr,
     area: areaStr,
+    deposit: depositStr,
+    monthlyRent: monthlyRentStr,
   });
 
   return {

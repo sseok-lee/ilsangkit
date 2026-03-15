@@ -151,7 +151,7 @@ describe('transformAptSaleItem', () => {
     };
 
     const result = transformAptSaleItem(item, '서울특별시', '강남구');
-    expect(result.sourceId).toBe('aptSale-11680-2010-2024-3-15-10-84.99');
+    expect(result.sourceId).toBe('aptSale-11680-2010-2024-3-15-10-84.99-50000');
   });
 
   it('sourceId - 선택 필드 없을 때 빈 문자열로 처리', () => {
@@ -177,7 +177,7 @@ describe('transformAptSaleItem', () => {
     };
 
     const result = transformAptSaleItem(item, '서울특별시', '강남구');
-    expect(result.sourceId).toBe('aptSale-11680--2024-6---84.99');
+    expect(result.sourceId).toBe('aptSale-11680--2024-6---84.99-30000');
   });
 });
 

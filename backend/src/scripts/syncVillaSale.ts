@@ -63,6 +63,7 @@ export function transformVillaSaleItem(item: VillaSaleItem, city: string, distri
     dealDay: dayStr,
     floor: floorStr,
     area: areaStr,
+    dealAmount: dealAmountStr,
   });
 
   return {

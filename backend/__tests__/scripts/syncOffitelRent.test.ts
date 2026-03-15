@@ -74,7 +74,7 @@ describe('transformOffitelRentItem', () => {
 
   it('sourceId 생성 형식 확인', () => {
     const result = transformOffitelRentItem(baseItem);
-    expect(result!.sourceId).toBe('offitelRent-11680-2015-2024-9-5-7-33.55');
+    expect(result!.sourceId).toBe('offitelRent-11680-2015-2024-9-5-7-33.55-5000-80');
   });
 
   it('월세금액이 빈 문자열이면 null', () => {
