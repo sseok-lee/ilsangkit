@@ -8,7 +8,7 @@ import prisma from '../lib/prisma.js';
 
 const router = Router();
 
-const VALID_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market'];
+const VALID_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'];
 
 /**
  * GET /api/sitemap/facilities/:category
