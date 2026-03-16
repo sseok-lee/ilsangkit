@@ -219,7 +219,7 @@ export async function fetchSportsPage(
     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
   }
 
-  const json = await response.json();
+  const json: any = await response.json(); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const body = json?.response?.body;
   if (!body) {

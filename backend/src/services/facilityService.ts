@@ -272,7 +272,7 @@ const CROSS_CATEGORY_MAP: Record<FacilityCategory, FacilityCategory[]> = {
   toilet: ['parking'],
   wifi: ['toilet'],
   aed: ['hospital', 'pharmacy'],
-  clothes: ['trash'],
+  clothes: [],
   park: ['toilet', 'parking', 'sports'],
   school: ['childcare', 'hospital', 'pharmacy'],
   market: ['parking', 'toilet'],
