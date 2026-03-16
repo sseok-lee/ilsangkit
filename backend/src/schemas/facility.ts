@@ -11,19 +11,24 @@ export const FacilityCategorySchema = z.enum([
   'toilet',
   'wifi',
   'clothes',
-  'kiosk',
   'parking',
   'aed',
   'library',
   'hospital',
   'pharmacy',
+  'park',
+  'school',
+  'market',
+  'childcare',
+  'ev-charger',
+  'sports',
 ]);
 
 export type FacilityCategory = z.infer<typeof FacilityCategorySchema>;
 
 // 검색/지역 조회용 카테고리 (trash 포함)
 export const RegionCategorySchema = z.enum([
-  'toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'trash',
+  'toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'trash', 'childcare', 'ev-charger', 'sports',
 ]);
 
 // 시설 검색 요청 스키마

@@ -88,7 +88,7 @@
       <!-- Trash category: waste schedule UI -->
       <template v-if="categoryParam === 'trash'">
         <!-- 로딩 상태 -->
-        <div v-if="wasteLoading" class="flex items-center justify-center py-10" role="status" aria-label="배출 일정 로딩 중" aria-live="polite" aria-busy="true">
+        <div v-if="wasteLoading || initialLoading" class="flex items-center justify-center py-10" role="status" aria-label="배출 일정 로딩 중" aria-live="polite" aria-busy="true">
           <div class="text-center">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
             <p class="text-slate-500 text-sm">배출 일정 조회 중...</p>
@@ -96,7 +96,7 @@
         </div>
 
         <!-- 담당 부서 연락처 -->
-        <div v-if="wasteContact && !wasteLoading" class="bg-blue-50 rounded-xl p-4 border border-blue-100 mb-4">
+        <div v-if="wasteContact && !wasteLoading && !initialLoading" class="bg-blue-50 rounded-xl p-4 border border-blue-100 mb-4">
           <div class="flex items-center gap-2 mb-1">
             <span class="material-symbols-outlined text-blue-500 text-[18px]">support_agent</span>
             <span class="font-semibold text-blue-900 text-sm">{{ wasteContact.name }}</span>
@@ -112,7 +112,7 @@
         </div>
 
         <!-- 배출 일정 목록 -->
-        <template v-if="wasteSchedules.length > 0 && !wasteLoading">
+        <template v-if="wasteSchedules.length > 0 && !wasteLoading && !initialLoading">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-slate-900 text-base font-bold">배출 일정</h2>
             <span class="text-xs text-slate-500 font-medium">{{ wasteTotal }}건</span>
@@ -127,10 +127,10 @@
         </template>
 
         <!-- 쓰레기 페이지네이션 -->
-        <Pagination v-if="!wasteLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" @page-change="goToWastePage" />
+        <Pagination v-if="!wasteLoading && !initialLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" @page-change="goToWastePage" />
 
         <!-- 결과 없음 -->
-        <div v-if="wasteSchedules.length === 0 && !wasteLoading" class="py-16 text-center">
+        <div v-if="wasteSchedules.length === 0 && !wasteLoading && !initialLoading" class="py-16 text-center">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
             <span class="material-symbols-outlined text-[32px] text-slate-400">delete</span>
           </div>
@@ -169,7 +169,7 @@
         </div>
 
         <!-- Loading Skeleton -->
-        <div v-if="loading" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
+        <div v-if="loading || initialLoading" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-slate-200 animate-pulse">
               <div class="flex items-start gap-4">
@@ -187,7 +187,7 @@
           </div>
         </div>
 
-        <template v-else>
+        <template v-else-if="!initialLoading">
           <!-- Card Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FacilityCard
@@ -270,6 +270,9 @@ const selectedCity = ref('')
 const selectedDistrict = ref('')
 const cities = ref<string[]>([])
 const districtList = ref<string[]>([])
+
+// Initial loading state (스켈레톤 표시용 - 첫 데이터 로드 전까지 true)
+const initialLoading = ref(true)
 
 // Filter state
 const filterKeyword = ref('')
@@ -477,8 +480,9 @@ onMounted(async () => {
   if (categoryParam.value === 'trash') {
     await loadWasteSchedules()
   } else {
-    performSearch()
+    await performSearch()
   }
+  initialLoading.value = false
 })
 
 // Update meta when filters change
