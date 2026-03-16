@@ -1,4 +1,4 @@
-import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, KioskDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails } from '~/types/facility'
+import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails, ParkDetails, SchoolDetails, MarketDetails, ChildcareDetails, EvChargerDetails, SportsDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_CTA } from '~/utils/seoConstants'
 
@@ -87,16 +87,6 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
       if (det.operatingHours) parts.push(det.operatingHours)
       break
     }
-    case 'kiosk': {
-      const det = d as KioskDetails
-      if (det.weekdayOperatingHours) parts.push(`평일 ${det.weekdayOperatingHours}`)
-      const access: string[] = []
-      if (det.voiceGuide) access.push('음성안내')
-      if (det.brailleOutput) access.push('점자출력')
-      if (det.wheelchairAccessible) access.push('휠체어 접근')
-      if (access.length) parts.push(access.join(', '))
-      break
-    }
     case 'hospital': {
       const det = d as HospitalDetails
       if (det.clCdNm) parts.push(det.clCdNm)
@@ -127,6 +117,48 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
       const det = d as ClothesDetails
       if (det.managementAgency) parts.push(`관리: ${det.managementAgency}`)
       if (det.detailLocation) parts.push(det.detailLocation)
+      break
+    }
+    case 'park': {
+      const det = d as ParkDetails
+      if (det.parkType) parts.push(det.parkType)
+      if (det.area) parts.push(`면적 ${det.area.toLocaleString()}㎡`)
+      if (det.managingOrg) parts.push(`관리: ${det.managingOrg}`)
+      break
+    }
+    case 'school': {
+      const det = d as SchoolDetails
+      if (det.schoolLevel) parts.push(det.schoolLevel)
+      if (det.foundationType) parts.push(det.foundationType)
+      if (det.operationStatus) parts.push(det.operationStatus)
+      break
+    }
+    case 'market': {
+      const det = d as MarketDetails
+      if (det.marketType) parts.push(det.marketType)
+      if (det.openingCycle) parts.push(`개장: ${det.openingCycle}`)
+      if (det.storeCount) parts.push(`점포 ${det.storeCount.toLocaleString()}개`)
+      break
+    }
+    case 'childcare': {
+      const det = d as ChildcareDetails
+      if (det.crtypename) parts.push(det.crtypename)
+      if (det.crcapat) parts.push(`정원 ${det.crcapat}명`)
+      if (det.crchcnt) parts.push(`현원 ${det.crchcnt}명`)
+      break
+    }
+    case 'ev-charger': {
+      const det = d as EvChargerDetails
+      if (det.chgerType) parts.push(`충전기 타입: ${det.chgerType}`)
+      if (det.output) parts.push(`출력 ${det.output}kW`)
+      if (det.useTime) parts.push(det.useTime)
+      break
+    }
+    case 'sports': {
+      const det = d as SportsDetails
+      if (det.ftypeNm) parts.push(det.ftypeNm)
+      if (det.faciGbNm) parts.push(det.faciGbNm)
+      if (det.faciGfa) parts.push(`연면적 ${det.faciGfa}`)
       break
     }
   }

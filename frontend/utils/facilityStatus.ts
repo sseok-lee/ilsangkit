@@ -24,7 +24,7 @@ export function getOperatingStatus(facility: Record<string, any>): OperatingStat
   const details = facility.details
   if (!details) return null
 
-  // Check for 24h operation (toilet, kiosk)
+  // Check for 24h operation
   if (details.operatingHours === '24시간' || details.is24Hour) {
     return 'open24h'
   }

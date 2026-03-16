@@ -4,7 +4,7 @@ import { SITE_URL, generateSitemapXml } from '../../utils/sitemap'
 import type { SitemapUrl } from '../../utils/sitemap'
 import { CITY_SLUGS, DISTRICT_SLUG_MAP, REGIONS, getDistrictSlug } from '../../../shared/regionSlugs'
 
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy']
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports']
 
 // Fallback: API 실패 시 도시/구군 허브 페이지만 추가 (빈 카테고리 조합은 제외)
 function addFallbackHubPages(urls: SitemapUrl[], today: string): void {

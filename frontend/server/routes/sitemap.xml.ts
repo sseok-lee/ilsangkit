@@ -9,7 +9,7 @@ import {
   fetchRealEstateBuildings,
 } from '../utils/sitemap'
 
-const FACILITY_CATEGORIES = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'] as const
+const FACILITY_CATEGORIES = ['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'] as const
 
 export default defineEventHandler(async (event) => {
   setHeader(event, 'Content-Type', 'application/xml')

@@ -37,7 +37,7 @@ export const facilityHandlers = [
     const toiletCount = mockFacilities.filter(f => f.category === 'toilet').length;
     const wifiCount = mockFacilities.filter(f => f.category === 'wifi').length;
     const clothesCount = mockFacilities.filter(f => f.category === 'clothes').length;
-    const kioskCount = mockFacilities.filter(f => f.category === 'kiosk').length;
+    const parkCount = mockFacilities.filter(f => f.category === 'park').length;
     const trashCount = mockFacilities.filter(f => f.category === 'trash').length;
 
     return HttpResponse.json({
@@ -46,9 +46,9 @@ export const facilityHandlers = [
         toilet: toiletCount,
         wifi: wifiCount,
         clothes: clothesCount,
-        kiosk: kioskCount,
+        park: parkCount,
         trash: trashCount,
-        total: toiletCount + wifiCount + clothesCount + kioskCount + trashCount,
+        total: toiletCount + wifiCount + clothesCount + parkCount + trashCount,
       },
     });
   }),

@@ -30,14 +30,6 @@ export function generateDynamicTips(facility: FacilityDetail): string[] {
       if (d.managementAgency) dynamic.push(`관리기관(${d.managementAgency})에 문의하면 수거 요청이 가능합니다.`)
       break
 
-    case 'kiosk':
-      if (d.wheelchairAccessible) dynamic.push('휠체어 접근이 가능한 기기입니다.')
-      if (d.voiceGuide) dynamic.push('음성 안내 기능이 지원되어 시각장애인도 이용 가능합니다.')
-      if (d.brailleOutput) dynamic.push('점자 출력 기능을 지원합니다.')
-      if (d.weekdayOperatingHours) dynamic.push(`평일 운영시간은 ${d.weekdayOperatingHours}입니다. 방문 전 확인하세요.`)
-      if (d.saturdayOperatingHours) dynamic.push(`토요일에도 ${d.saturdayOperatingHours}에 운영합니다.`)
-      break
-
     case 'parking':
       if (d.hasDisabledParking) dynamic.push('장애인 전용 주차 구역이 마련되어 있습니다.')
       if (d.feeType === '무료' || (d.baseFee !== undefined && d.baseFee !== null && d.baseFee === 0)) dynamic.push('무료 주차장으로, 별도의 주차 요금이 없습니다.')
@@ -76,6 +68,47 @@ export function generateDynamicTips(facility: FacilityDetail): string[] {
       break
 
     case 'trash':
+      break
+
+    case 'park':
+      if (d.area) dynamic.push(`공원 면적은 약 ${d.area.toLocaleString()}㎡입니다.`)
+      if (d.exerciseFacilities) dynamic.push(`운동시설: ${d.exerciseFacilities}`)
+      if (d.playFacilities) dynamic.push(`놀이시설: ${d.playFacilities}`)
+      if (d.managingOrg) dynamic.push(`관리기관: ${d.managingOrg}`)
+      break
+
+    case 'school':
+      if (d.schoolLevel) dynamic.push(`${d.schoolLevel} 학교입니다.`)
+      if (d.foundationType) dynamic.push(`설립 유형: ${d.foundationType}`)
+      if (d.operationStatus) dynamic.push(`운영 현황: ${d.operationStatus}`)
+      break
+
+    case 'market':
+      if (d.openingCycle) dynamic.push(`개장 주기: ${d.openingCycle}`)
+      if (d.storeCount) dynamic.push(`총 ${d.storeCount.toLocaleString()}개 점포가 입점해 있습니다.`)
+      if (d.hasPublicToilet) dynamic.push('공중화장실이 설치되어 있습니다.')
+      if (d.hasParking) dynamic.push('주차 시설이 마련되어 있습니다.')
+      break
+
+    case 'childcare':
+      if (d.crtypename) dynamic.push(`${d.crtypename}입니다.`)
+      if (d.crcapat && d.crchcnt) dynamic.push(`정원 ${d.crcapat}명, 현원 ${d.crchcnt}명입니다.`)
+      if (d.cctvinstlcnt) dynamic.push(`CCTV ${d.cctvinstlcnt}대가 설치되어 있습니다.`)
+      if (d.crcargbname) dynamic.push('통학차량을 운행합니다.')
+      break
+
+    case 'ev-charger':
+      if (d.output) dynamic.push(`충전 출력: ${d.output}kW`)
+      if (d.chgerType) dynamic.push(`충전기 타입: ${d.chgerType}`)
+      if (d.parkingFree === 'Y') dynamic.push('충전 중 주차 요금이 무료입니다.')
+      if (d.useTime) dynamic.push(`이용 가능 시간: ${d.useTime}`)
+      break
+
+    case 'sports':
+      if (d.ftypeNm) dynamic.push(`시설 종류: ${d.ftypeNm}`)
+      if (d.faciGbNm) dynamic.push(`시설 구분: ${d.faciGbNm}`)
+      if (d.faciGfa) dynamic.push(`연면적: ${d.faciGfa}`)
+      if (d.standCptPsnCnt) dynamic.push(`수용 인원: ${d.standCptPsnCnt.toLocaleString()}명`)
       break
   }
 

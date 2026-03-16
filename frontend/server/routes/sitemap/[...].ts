@@ -10,7 +10,7 @@ import {
   fetchRealEstateBuildings,
 } from '../../utils/sitemap'
 
-const FACILITY_CATEGORIES = new Set(['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'])
+const FACILITY_CATEGORIES = new Set(['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'])
 
 function parseSlug(slug: string): { category: string; page: number } | null {
   // "real-estate" → category='real-estate', page=1
@@ -19,6 +19,14 @@ function parseSlug(slug: string): { category: string; page: number } | null {
   if (reMatch) {
     const page = reMatch[1] ? parseInt(reMatch[1], 10) : 1
     return page >= 1 ? { category: 'real-estate', page } : null
+  }
+
+  // "ev-charger" → category='ev-charger', page=1
+  // "ev-charger-2" → category='ev-charger', page=2
+  const evMatch = slug.match(/^ev-charger(?:-(\d+))?$/)
+  if (evMatch) {
+    const page = evMatch[1] ? parseInt(evMatch[1], 10) : 1
+    return page >= 1 ? { category: 'ev-charger', page } : null
   }
 
   // "wifi-2" → category='wifi', page=2

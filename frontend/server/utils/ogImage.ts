@@ -10,12 +10,17 @@ export const CATEGORY_COLORS: Record<FacilityCategory, string> = {
   trash: '#ef4444',    // red-500
   wifi: '#22c55e',     // green-500
   clothes: '#a855f7',  // purple-500
-  kiosk: '#f97316',    // orange-500
   parking: '#0ea5e9',  // sky-500
   aed: '#ef4444',      // red-500
   library: '#f59e0b',  // amber-500
   hospital: '#14b8a6', // teal-500
   pharmacy: '#10b981', // emerald-500
+  park: '#22c55e',     // green-500
+  school: '#6366f1',   // indigo-500
+  market: '#f97316',   // orange-500
+  childcare: '#ec4899', // pink-500
+  'ev-charger': '#14b8a6', // teal-500
+  sports: '#06b6d4',    // cyan-500
 }
 
 const FALLBACK_COLOR = '#6366f1' // indigo-500

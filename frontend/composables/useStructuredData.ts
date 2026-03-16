@@ -108,12 +108,17 @@ export function useStructuredData() {
       trash: 'CivicStructure',
       wifi: 'LocalBusiness',
       clothes: 'RecyclingCenter',
-      kiosk: 'GovernmentOffice',
       parking: 'ParkingFacility',
       aed: 'EmergencyService',
       library: 'Library',
       hospital: 'Hospital',
       pharmacy: 'Pharmacy',
+      park: 'Park',
+      school: 'School',
+      market: 'LocalBusiness',
+      childcare: 'ChildCare',
+      'ev-charger': 'LocalBusiness',
+      sports: 'SportsActivityLocation',
     }
 
     const schema = {
@@ -159,15 +164,6 @@ export function useStructuredData() {
         if (d?.hasDiaperChangingTable) amenities.push({ '@type': 'LocationFeatureSpecification', name: '기저귀 교환대', value: true })
         if (d?.hasEmergencyBell) amenities.push({ '@type': 'LocationFeatureSpecification', name: '비상벨', value: true })
         if (amenities.length) Object.assign(schema, { amenityFeature: amenities })
-        break
-      }
-      case 'kiosk': {
-        const amenities: Array<{ '@type': string; name: string; value: boolean }> = []
-        if (d?.voiceGuide) amenities.push({ '@type': 'LocationFeatureSpecification', name: '음성안내', value: true })
-        if (d?.brailleOutput) amenities.push({ '@type': 'LocationFeatureSpecification', name: '점자출력', value: true })
-        if (d?.wheelchairAccessible) amenities.push({ '@type': 'LocationFeatureSpecification', name: '휠체어 접근 가능', value: true })
-        if (amenities.length) Object.assign(schema, { amenityFeature: amenities })
-        if (d?.weekdayOperatingHours) Object.assign(schema, { openingHours: d.weekdayOperatingHours })
         break
       }
       case 'parking': {

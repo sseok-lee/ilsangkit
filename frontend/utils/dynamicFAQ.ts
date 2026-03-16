@@ -73,39 +73,6 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
       }
       break
 
-    case 'kiosk': {
-      const hours: string[] = []
-      if (d.weekdayOperatingHours) hours.push(`평일 ${d.weekdayOperatingHours}`)
-      if (d.saturdayOperatingHours) hours.push(`토요일 ${d.saturdayOperatingHours}`)
-      if (d.holidayOperatingHours) hours.push(`공휴일 ${d.holidayOperatingHours}`)
-      if (hours.length > 0) {
-        dynamic.push({
-          question: `${name} 운영 시간은 어떻게 되나요?`,
-          answer: `${name}의 운영 시간은 다음과 같습니다: ${hours.join(', ')}. 방문 전 시간을 확인해 주세요.`,
-        })
-      }
-      if (d.availableDocuments && d.availableDocuments.length > 0) {
-        const docs = d.availableDocuments.slice(0, 5).join(', ')
-        const more = d.availableDocuments.length > 5 ? ` 외 ${d.availableDocuments.length - 5}종` : ''
-        dynamic.push({
-          question: `${name}에서 어떤 서류를 발급할 수 있나요?`,
-          answer: `${name}에서는 ${docs}${more} 등의 서류를 발급할 수 있습니다. 발급 가능한 전체 서류 목록은 기기에서 직접 확인할 수 있습니다.`,
-        })
-      }
-      const accessibility: string[] = []
-      if (d.wheelchairAccessible) accessibility.push('휠체어 접근 가능')
-      if (d.voiceGuide) accessibility.push('음성 안내')
-      if (d.brailleOutput) accessibility.push('점자 출력')
-      if (d.blindKeypad) accessibility.push('시각장애인 키패드')
-      if (accessibility.length > 0) {
-        dynamic.push({
-          question: `${name}은(는) 장애인도 이용 가능한가요?`,
-          answer: `네, ${name}은(는) ${accessibility.join(', ')} 기능을 지원하여 장애인도 이용할 수 있습니다.`,
-        })
-      }
-      break
-    }
-
     case 'parking':
       if (d.baseFee !== undefined && d.baseFee !== null && d.baseTime) {
         let feeInfo = `기본 ${d.baseTime}분 ${d.baseFee.toLocaleString()}원`
@@ -243,6 +210,99 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
       break
 
     case 'trash':
+      break
+
+    case 'park':
+      if (d.area) {
+        dynamic.push({
+          question: `${name}의 면적은 얼마나 되나요?`,
+          answer: `${name}의 면적은 약 ${d.area.toLocaleString()}㎡입니다.`,
+        })
+      }
+      if (d.managingOrg) {
+        dynamic.push({
+          question: `${name}은(는) 어디서 관리하나요?`,
+          answer: `${name}은(는) ${d.managingOrg}에서 관리하고 있습니다. 문의사항은 관리기관으로 연락하세요.`,
+        })
+      }
+      break
+
+    case 'school':
+      if (d.schoolLevel) {
+        dynamic.push({
+          question: `${name}은(는) 어떤 학교인가요?`,
+          answer: `${name}은(는) ${d.schoolLevel}입니다.${d.foundationType ? ` 설립 유형은 ${d.foundationType}입니다.` : ''}`,
+        })
+      }
+      if (d.sidoEduName || d.localEduName) {
+        const eduOrg = d.localEduName || d.sidoEduName
+        dynamic.push({
+          question: `${name}의 관할 교육청은 어디인가요?`,
+          answer: `${name}의 관할 교육청은 ${eduOrg}입니다. 입학 및 전학 관련 문의는 해당 교육지원청으로 연락하세요.`,
+        })
+      }
+      break
+
+    case 'market':
+      if (d.openingCycle) {
+        dynamic.push({
+          question: `${name}은(는) 언제 열리나요?`,
+          answer: `${name}의 개장 주기는 ${d.openingCycle}입니다. 방문 전 일정을 확인하세요.`,
+        })
+      }
+      if (d.storeCount) {
+        dynamic.push({
+          question: `${name}에는 몇 개의 점포가 있나요?`,
+          answer: `${name}에는 총 ${d.storeCount.toLocaleString()}개의 점포가 입점해 있습니다.`,
+        })
+      }
+      break
+
+    case 'childcare':
+      if (d.crtypename) {
+        dynamic.push({
+          question: `${name}은(는) 어떤 유형의 어린이집인가요?`,
+          answer: `${name}은(는) ${d.crtypename}입니다.${d.crstatusname ? ` 현재 운영 상태는 ${d.crstatusname}입니다.` : ''}`,
+        })
+      }
+      if (d.crcapat !== undefined && d.crchcnt !== undefined) {
+        dynamic.push({
+          question: `${name}의 정원과 현원은 어떻게 되나요?`,
+          answer: `${name}의 정원은 ${d.crcapat}명이며, 현재 재원 중인 아동 수(현원)는 ${d.crchcnt}명입니다. 입소 여부는 해당 어린이집에 직접 문의하세요.`,
+        })
+      }
+      break
+
+    case 'ev-charger':
+      if (d.output && d.chgerType) {
+        dynamic.push({
+          question: `${name}의 충전기 종류와 출력은 어떻게 되나요?`,
+          answer: `${name}의 충전기 타입은 ${d.chgerType}이며, 출력은 ${d.output}kW입니다. 차량 사양에 맞는 충전기를 확인하고 이용하세요.`,
+        })
+      }
+      if (d.parkingFree !== undefined) {
+        dynamic.push({
+          question: `${name}에서 충전 중 주차 요금이 무료인가요?`,
+          answer: d.parkingFree === 'Y'
+            ? `네, ${name}은(는) 충전 중 주차 요금이 무료입니다. 단, 충전 완료 후 장시간 점유 시 주차 요금이 부과될 수 있으니 안내문을 확인하세요.`
+            : `${name}은(는) 충전 중에도 주차 요금이 부과될 수 있습니다. 방문 전 요금 안내를 확인하세요.`,
+        })
+      }
+      break
+
+    case 'sports':
+      if (d.ftypeNm) {
+        dynamic.push({
+          question: `${name}은(는) 어떤 종류의 체육시설인가요?`,
+          answer: `${name}은(는) ${d.ftypeNm}입니다.${d.faciGbNm ? ` 시설 구분은 ${d.faciGbNm}입니다.` : ''}`,
+        })
+      }
+      if (d.standCptPsnCnt) {
+        dynamic.push({
+          question: `${name}의 수용 인원은 얼마나 되나요?`,
+          answer: `${name}의 수용 가능 인원은 ${d.standCptPsnCnt.toLocaleString()}명입니다.${d.faciGfa ? ` 연면적은 ${d.faciGfa}입니다.` : ''}`,
+        })
+      }
       break
   }
 
