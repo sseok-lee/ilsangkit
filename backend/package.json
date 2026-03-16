@@ -24,11 +24,13 @@
     "sync:trash": "tsx src/scripts/syncTrash.ts",
     "sync:wifi": "tsx src/scripts/syncWifi.ts",
     "sync:clothes": "tsx src/scripts/syncClothes.ts",
-    "sync:kiosk": "tsx src/scripts/syncKiosk.ts",
     "sync:parking": "tsx src/scripts/syncParking.ts",
     "sync:aed": "tsx src/scripts/syncAed.ts",
     "sync:library": "tsx src/scripts/syncLibrary.ts",
     "sync:regions": "tsx src/scripts/syncRegion.ts",
+    "sync:park": "tsx src/scripts/syncPark.ts",
+    "sync:school": "tsx src/scripts/syncSchool.ts",
+    "sync:market": "tsx src/scripts/syncMarket.ts",
     "sync:facilities": "tsx src/scripts/syncAll.ts",
     "seed:hospital-detail": "tsx src/scripts/seedHospitalDetail.ts",
     "generate:guide": "tsx src/scripts/generateGuide.ts",
@@ -40,7 +42,11 @@
     "sync:villa-sale": "tsx src/scripts/syncVillaSale.ts",
     "sync:villa-rent": "tsx src/scripts/syncVillaRent.ts",
     "sync:offitel-sale": "tsx src/scripts/syncOffitelSale.ts",
-    "sync:offitel-rent": "tsx src/scripts/syncOffitelRent.ts"
+    "sync:offitel-rent": "tsx src/scripts/syncOffitelRent.ts",
+    "sync:childcare": "tsx src/scripts/syncChildcare.ts",
+    "sync:ev-charger": "tsx src/scripts/syncEvCharger.ts",
+    "sync:sports": "tsx src/scripts/syncSports.ts",
+    "submit:indexing": "tsx src/scripts/submitIndexing.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -64,6 +70,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
     "fast-xml-parser": "^5.3.5",
+    "googleapis": "^171.4.0",
     "helmet": "^8.1.0",
     "iconv-lite": "^0.7.2",
     "openai": "^6.25.0",

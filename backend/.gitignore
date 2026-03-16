@@ -21,3 +21,9 @@ coverage/
 prisma/*.db
 prisma/*.db-journal
 
+# Indexing API 제출 로그
+data/indexing-log.json
+
+# Google Service Account 키 파일
+study-*.json
+
