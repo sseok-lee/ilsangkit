@@ -140,8 +140,8 @@ describe('GET /api/facilities/region/:city/:district/:category', () => {
 
   it('빈 결과', async () => {
     const res = await request(app).get(
-      '/api/facilities/region/' + encodeURIComponent('테스트시') + '/' + encodeURIComponent('테스트구') + '/kiosk'
-    ); // kiosk는 없음
+      '/api/facilities/region/' + encodeURIComponent('테스트시') + '/' + encodeURIComponent('테스트구') + '/wifi'
+    ); // 테스트구에는 wifi 데이터 없음
 
     expect(res.status).toBe(200);
     expect(res.body.data.items).toHaveLength(0);

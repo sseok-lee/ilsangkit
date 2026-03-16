@@ -127,7 +127,9 @@ describe('GET /api/meta/stats', () => {
     expect(res.body.data).toHaveProperty('toilet');
     expect(res.body.data).toHaveProperty('wifi');
     expect(res.body.data).toHaveProperty('clothes');
-    expect(res.body.data).toHaveProperty('kiosk');
+    expect(res.body.data).toHaveProperty('park');
+    expect(res.body.data).toHaveProperty('school');
+    expect(res.body.data).toHaveProperty('market');
     expect(res.body.data).toHaveProperty('trash');
     expect(res.body.data).toHaveProperty('parking');
     expect(res.body.data).toHaveProperty('aed');

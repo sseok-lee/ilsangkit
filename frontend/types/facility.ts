@@ -1,5 +1,5 @@
 // 시설 카테고리 (Prisma enum 대응)
-export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy'
+export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market' | 'childcare' | 'ev-charger' | 'sports'
 
 // 시설 기본 정보 (목록용)
 export interface Facility {
@@ -28,7 +28,7 @@ export interface FacilityDetail {
   city: string
   district: string
   bjdCode: string | null
-  details: ToiletDetails | WifiDetails | ClothesDetails | KioskDetails | ParkingDetails | AedDetails | LibraryDetails | HospitalDetails | PharmacyDetails
+  details: ToiletDetails | WifiDetails | ClothesDetails | ParkingDetails | AedDetails | LibraryDetails | HospitalDetails | PharmacyDetails | ParkDetails | SchoolDetails | MarketDetails | ChildcareDetails | EvChargerDetails | SportsDetails
   sourceId: string
   sourceUrl: string | null
   viewCount: number
@@ -87,22 +87,6 @@ export interface ClothesDetails {
   detailLocation?: string | null
   providerCode?: string | null
   providerName?: string | null
-}
-
-export interface KioskDetails {
-  detailLocation?: string | null
-  operationAgency?: string | null
-  weekdayOperatingHours?: string | null
-  saturdayOperatingHours?: string | null
-  holidayOperatingHours?: string | null
-  blindKeypad?: boolean
-  voiceGuide?: boolean
-  brailleOutput?: boolean
-  wheelchairAccessible?: boolean
-  availableDocuments?: string[]
-  govCode?: string | null
-  installPosition?: string | null
-  dataDate?: string | null
 }
 
 export interface ParkingDetails {
@@ -264,6 +248,126 @@ export interface PharmacyDetails {
   dataDate?: string | null
 }
 
+export interface ParkDetails {
+  parkType?: string | null
+  area?: number | null
+  exerciseFacilities?: string | null
+  playFacilities?: string | null
+  convenienceFacilities?: string | null
+  cultureFacilities?: string | null
+  otherFacilities?: string | null
+  designatedDate?: string | null
+  managingOrg?: string | null
+  phoneNumber?: string | null
+  dataDate?: string | null
+  providerCode?: string | null
+  providerName?: string | null
+}
+
+export interface SchoolDetails {
+  schoolLevel?: string | null
+  foundedDate?: string | null
+  foundationType?: string | null
+  branchType?: string | null
+  operationStatus?: string | null
+  sidoEduCode?: string | null
+  sidoEduName?: string | null
+  localEduCode?: string | null
+  localEduName?: string | null
+  createdDate?: string | null
+  modifiedDate?: string | null
+  dataDate?: string | null
+  providerCode?: string | null
+  providerName?: string | null
+}
+
+export interface MarketDetails {
+  marketType?: string | null
+  openingCycle?: string | null
+  storeCount?: number | null
+  products?: string | null
+  giftCertificates?: string | null
+  homepageUrl?: string | null
+  hasPublicToilet?: boolean | null
+  hasParking?: boolean | null
+  foundedYear?: number | null
+  phoneNumber?: string | null
+  dataDate?: string | null
+  providerCode?: string | null
+  providerName?: string | null
+}
+
+export interface ChildcareDetails {
+  sidoname?: string
+  sigunname?: string
+  crtypename?: string
+  crstatusname?: string
+  zipcode?: string
+  crtelno?: string
+  crfaxno?: string
+  crhome?: string
+  nrtrroomcnt?: number
+  nrtrroomsize?: string
+  plgrdco?: number
+  cctvinstlcnt?: number
+  chcrtescnt?: number
+  crcapat?: number
+  crchcnt?: number
+  crcargbname?: string
+  crcnfmdt?: string
+  crpausebegindt?: string
+  crpauseenddt?: string
+  crabldt?: string
+  datastdrdt?: string
+  crspec?: string
+  crrepname?: string
+}
+
+export interface EvChargerItem {
+  chgerId?: string
+  chgerType?: string
+  output?: string
+  stat?: string
+  statUpdDt?: string
+  method?: string
+  maker?: string
+}
+
+export interface EvChargerDetails {
+  statId?: string
+  useTime?: string
+  busiNm?: string
+  busiCall?: string
+  parkingFree?: string
+  limitYn?: string
+  limitDetail?: string
+  location?: string
+  addrDetail?: string
+  note?: string
+  year?: string
+  chargers?: EvChargerItem[]
+}
+
+export interface SportsDetails {
+  faciNm?: string
+  faciGbNm?: string
+  fcobNm?: string
+  ftypeNm?: string
+  fmngCpNm?: string
+  fmngCpbNm?: string
+  faciRoadAddr?: string
+  faciGfa?: string
+  standCptPsnCnt?: number
+  faciHomepage?: string
+  faciStatCd?: string
+  addrCtpvNm?: string
+  addrCpbNm?: string
+  addrEmdNm?: string
+  nationYn?: string
+  fmngTypeGbNm?: string
+  delYn?: string
+}
+
 // 카테고리 그룹 (헤더, 홈페이지 등에서 공유)
 export interface CategoryGroup {
   title: string
@@ -288,19 +392,24 @@ export function isLinkGroup(group: NavGroup): group is LinkGroup {
 
 export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
   {
-    title: '생활 편의',
+    title: '생활/편의',
     icon: 'home',
-    categories: ['toilet', 'wifi', 'parking', 'kiosk'],
+    categories: ['park', 'parking', 'ev-charger', 'toilet'],
+  },
+  {
+    title: '교육/육아',
+    icon: 'local_library',
+    categories: ['school', 'library'], // childcare: 데이터 승인 후 추가
   },
   {
     title: '건강/안전',
     icon: 'health_and_safety',
-    categories: ['hospital', 'pharmacy', 'aed'],
+    categories: ['hospital', 'pharmacy', 'aed', 'sports'],
   },
   {
-    title: '문화/환경',
+    title: '환경/생활',
     icon: 'eco',
-    categories: ['library', 'clothes', 'trash'],
+    categories: ['clothes', 'trash', 'market'],
   },
 ] as const
 
@@ -400,12 +509,6 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     icon: 'checkroom',
     color: 'purple',
   },
-  kiosk: {
-    label: '무인민원발급기',
-    shortLabel: '발급기',
-    icon: 'print',
-    color: 'orange',
-  },
   parking: {
     label: '공영주차장',
     shortLabel: '주차장',
@@ -436,6 +539,42 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     icon: 'local_pharmacy',
     color: 'emerald',
   },
+  park: {
+    label: '공원',
+    shortLabel: '공원',
+    icon: 'park',
+    color: 'green',
+  },
+  school: {
+    label: '학교',
+    shortLabel: '학교',
+    icon: 'school',
+    color: 'indigo',
+  },
+  market: {
+    label: '전통시장',
+    shortLabel: '시장',
+    icon: 'storefront',
+    color: 'orange',
+  },
+  childcare: {
+    label: '어린이집',
+    shortLabel: '어린이집',
+    icon: 'child_care',
+    color: 'pink',
+  },
+  'ev-charger': {
+    label: '전기차 충전소',
+    shortLabel: '충전소',
+    icon: 'ev_station',
+    color: 'teal',
+  },
+  sports: {
+    label: '체육시설',
+    shortLabel: '체육',
+    icon: 'sports',
+    color: 'cyan',
+  },
 }
 
 // 카테고리별 공공데이터포털 URL 매핑
@@ -444,12 +583,17 @@ export const CATEGORY_DATA_PORTAL_URL: Record<FacilityCategory, string> = {
   trash: 'https://www.data.go.kr/data/15155080/openapi.do',
   wifi: 'https://www.data.go.kr/data/15013116/standard.do',
   clothes: 'https://www.data.go.kr/data/15139214/standard.do',
-  kiosk: 'https://www.data.go.kr/data/15154774/openapi.do',
   parking: 'https://www.data.go.kr/data/15012896/standard.do',
   aed: 'https://www.data.go.kr/data/15000652/openapi.do',
   library: 'https://www.data.go.kr/data/15013109/standard.do',
   hospital: 'https://www.data.go.kr/data/15001698/openapi.do',
   pharmacy: 'https://www.data.go.kr/data/15000576/openapi.do',
+  park: 'https://www.data.go.kr/data/15012900/standard.do',
+  school: 'https://www.data.go.kr/data/15021148/standard.do',
+  market: 'https://www.data.go.kr/data/15012874/standard.do',
+  childcare: 'https://info.childcare.go.kr/',
+  'ev-charger': 'https://www.data.go.kr/data/15076352/openapi.do',
+  sports: 'https://www.data.go.kr/data/15107764/openapi.do',
 }
 
 // ============================================
@@ -566,4 +710,4 @@ export interface TrashDetails {
 
 // Vue 템플릿용 - 모든 상세 타입의 프로퍼티를 optional로 통합
 // 런타임 안전성은 템플릿의 v-if 카테고리 가드가 보장
-export type FacilityDetailsAll = ToiletDetails & WifiDetails & ClothesDetails & KioskDetails & ParkingDetails & AedDetails & LibraryDetails & HospitalDetails & PharmacyDetails & TrashDetails
+export type FacilityDetailsAll = ToiletDetails & WifiDetails & ClothesDetails & ParkingDetails & AedDetails & LibraryDetails & HospitalDetails & PharmacyDetails & TrashDetails & ParkDetails & SchoolDetails & MarketDetails & ChildcareDetails & EvChargerDetails & SportsDetails

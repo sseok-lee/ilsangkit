@@ -8,7 +8,7 @@
  * 사용법:
  *   npm run sync:facilities                     # 전체 동기화
  *   npm run sync:facilities -- --only toilet,wifi  # 특정 카테고리만
- *   npm run sync:facilities -- --skip kiosk        # 특정 카테고리 제외
+ *   npm run sync:facilities -- --skip wifi         # 특정 카테고리 제외
  */
 
 import * as path from 'path';
@@ -16,8 +16,10 @@ import { syncToilets } from '../services/toiletSyncService.js';
 import { syncTrashData } from './syncTrash.js';
 import { syncWifiData } from './syncWifi.js';
 import { syncClothes } from '../services/clothesSyncService.js';
-import { syncKiosks } from './syncKiosk.js';
 import { syncParking } from '../services/parkingSyncService.js';
+import { syncParks } from '../services/parkSyncService.js';
+import { syncSchools } from '../services/schoolSyncService.js';
+import { syncMarkets } from '../services/marketSyncService.js';
 import { syncAeds } from './syncAed.js';
 import { syncLibraries } from '../services/librarySyncService.js';
 import { syncHospitals } from './syncHospital.js';
@@ -53,6 +55,24 @@ const CLOTHES_CSV_PATH = path.resolve(
   '../../prisma/data/clothes.csv'
 );
 
+// 공원 기본 CSV 파일 경로
+const PARK_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/park.csv'
+);
+
+// 학교 기본 CSV 파일 경로
+const SCHOOL_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/school.csv'
+);
+
+// 시장 기본 CSV 파일 경로
+const MARKET_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/market.csv'
+);
+
 /**
  * 동기화 결과 타입
  */
@@ -67,7 +87,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'kiosk', 'parking', 'aed', 'library'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -145,15 +165,6 @@ async function syncCategory(category: Category): Promise<SyncResult> {
         };
       }
 
-      case 'kiosk': {
-        await syncKiosks();
-        return {
-          category,
-          success: true,
-          duration: Date.now() - start,
-        };
-      }
-
       case 'parking': {
         const result = await syncParking(PARKING_CSV_PATH);
         return {
@@ -176,6 +187,36 @@ async function syncCategory(category: Category): Promise<SyncResult> {
 
       case 'library': {
         const result = await syncLibraries(LIBRARY_CSV_PATH);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'park': {
+        const result = await syncParks(PARK_CSV_PATH);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'school': {
+        const result = await syncSchools(SCHOOL_CSV_PATH);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'market': {
+        const result = await syncMarkets(MARKET_CSV_PATH);
         return {
           category,
           success: true,
@@ -228,13 +269,6 @@ async function main(): Promise<void> {
   console.log(`동기화 대상: ${categoriesToSync.join(', ')}\n`);
 
   const results: SyncResult[] = [];
-
-  // kiosk는 마지막에 실행 (지오코딩 rate limit 때문)
-  const kioskIndex = categoriesToSync.indexOf('kiosk');
-  if (kioskIndex !== -1) {
-    categoriesToSync.splice(kioskIndex, 1);
-    categoriesToSync.push('kiosk');
-  }
 
   for (const category of categoriesToSync) {
     console.log(`\n[${category}] 동기화 시작...`);

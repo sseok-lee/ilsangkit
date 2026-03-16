@@ -1,5 +1,5 @@
 // 주소 파싱 유틸리티
-// syncWifi, syncKiosk, syncAed 등에서 중복되던 주소 파싱 로직 통합
+// syncWifi, syncAed 등에서 중복되던 주소 파싱 로직 통합
 
 /**
  * 시/도 정규화 맵

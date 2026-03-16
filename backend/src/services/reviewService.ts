@@ -10,12 +10,14 @@ const modelMap: Record<string, () => { findUnique: (args: { where: { id: string 
   toilet: () => prisma.toilet as never,
   wifi: () => prisma.wifi as never,
   clothes: () => prisma.clothes as never,
-  kiosk: () => prisma.kiosk as never,
   parking: () => prisma.parking as never,
   aed: () => prisma.aed as never,
   library: () => prisma.library as never,
   hospital: () => prisma.hospital as never,
   pharmacy: () => prisma.pharmacy as never,
+  park: () => prisma.park as never,
+  school: () => prisma.school as never,
+  market: () => prisma.market as never,
 };
 
 /**

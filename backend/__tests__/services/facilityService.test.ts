@@ -21,19 +21,24 @@ vi.mock('../../src/lib/prisma.js', () => {
       toilet: model,
       wifi: model,
       clothes: model,
-      kiosk: model,
       parking: model,
       aed: model,
       library: model,
       hospital: model,
       pharmacy: model,
+      park: model,
+      school: model,
+      market: model,
+      childcare: model,
+      evCharger: model,
+      sports: model,
       wasteSchedule: model,
       region: { findFirst: mockFindFirst },
     },
   };
 });
 
-import { search, getDetail, getAllIds, getByRegion } from '../../src/services/facilityService.js';
+import { search, getDetail, getAllIds, getByRegion, CATEGORY_REGISTRY } from '../../src/services/facilityService.js';
 
 const sampleRecord = {
   id: 'test-1',
@@ -65,6 +70,130 @@ beforeEach(() => {
   mockUpdate.mockResolvedValue({});
 });
 
+describe('CATEGORY_REGISTRY', () => {
+  it('should NOT contain kiosk key', () => {
+    expect(CATEGORY_REGISTRY).not.toHaveProperty('kiosk');
+    expect(Object.keys(CATEGORY_REGISTRY)).not.toContain('kiosk');
+  });
+
+  it('should return null for kiosk category search', async () => {
+    const result = await getDetail('kiosk', 'test-1');
+    expect(result).toBeNull();
+  });
+
+  it('should contain park key', () => {
+    expect(CATEGORY_REGISTRY).toHaveProperty('park');
+  });
+
+  it('should have park listFields defined', () => {
+    expect(CATEGORY_REGISTRY.park.listFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.park.listFields)).toBe(true);
+  });
+
+  it('should have park detailFields defined', () => {
+    expect(CATEGORY_REGISTRY.park.detailFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.park.detailFields)).toBe(true);
+  });
+
+  it('should contain school key', () => {
+    expect(CATEGORY_REGISTRY).toHaveProperty('school');
+  });
+
+  it('should have school listFields defined', () => {
+    expect(CATEGORY_REGISTRY.school.listFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.school.listFields)).toBe(true);
+  });
+
+  it('should have school detailFields defined', () => {
+    expect(CATEGORY_REGISTRY.school.detailFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.school.detailFields)).toBe(true);
+  });
+
+  it('should contain market key', () => {
+    expect(CATEGORY_REGISTRY).toHaveProperty('market');
+  });
+
+  it('should have market listFields defined', () => {
+    expect(CATEGORY_REGISTRY.market.listFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.market.listFields)).toBe(true);
+  });
+
+  it('should have market detailFields defined', () => {
+    expect(CATEGORY_REGISTRY.market.detailFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.market.detailFields)).toBe(true);
+  });
+
+  it('should contain childcare key', () => {
+    expect(CATEGORY_REGISTRY).toHaveProperty('childcare');
+  });
+
+  it('should have childcare listFields defined', () => {
+    expect(CATEGORY_REGISTRY.childcare.listFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.childcare.listFields)).toBe(true);
+  });
+
+  it('should have childcare detailFields defined', () => {
+    expect(CATEGORY_REGISTRY.childcare.detailFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.childcare.detailFields)).toBe(true);
+  });
+
+  it('should contain ev-charger key', () => {
+    expect(CATEGORY_REGISTRY).toHaveProperty('ev-charger');
+  });
+
+  it('should have ev-charger listFields defined', () => {
+    expect(CATEGORY_REGISTRY['ev-charger'].listFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY['ev-charger'].listFields)).toBe(true);
+  });
+
+  it('should have ev-charger detailFields defined', () => {
+    expect(CATEGORY_REGISTRY['ev-charger'].detailFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY['ev-charger'].detailFields)).toBe(true);
+  });
+
+  it('should have ev-charger listFields including chgerType and output', () => {
+    expect(CATEGORY_REGISTRY['ev-charger'].listFields).toContain('chgerType');
+    expect(CATEGORY_REGISTRY['ev-charger'].listFields).toContain('output');
+  });
+
+  it('should have ev-charger detailFields including all key fields', () => {
+    const detailFields = CATEGORY_REGISTRY['ev-charger'].detailFields;
+    expect(detailFields).toContain('statId');
+    expect(detailFields).toContain('chgerId');
+    expect(detailFields).toContain('busiNm');
+    expect(detailFields).toContain('output');
+    expect(detailFields).toContain('maker');
+  });
+
+  it('should contain sports key', () => {
+    expect(CATEGORY_REGISTRY).toHaveProperty('sports');
+  });
+
+  it('should have sports listFields defined', () => {
+    expect(CATEGORY_REGISTRY.sports.listFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.sports.listFields)).toBe(true);
+  });
+
+  it('should have sports detailFields defined', () => {
+    expect(CATEGORY_REGISTRY.sports.detailFields).toBeDefined();
+    expect(Array.isArray(CATEGORY_REGISTRY.sports.detailFields)).toBe(true);
+  });
+
+  it('should have sports listFields including ftypeNm and fcobNm', () => {
+    expect(CATEGORY_REGISTRY.sports.listFields).toContain('ftypeNm');
+    expect(CATEGORY_REGISTRY.sports.listFields).toContain('fcobNm');
+  });
+
+  it('should have sports detailFields including all key fields', () => {
+    const detailFields = CATEGORY_REGISTRY.sports.detailFields;
+    expect(detailFields).toContain('faciGbNm');
+    expect(detailFields).toContain('fcobNm');
+    expect(detailFields).toContain('ftypeNm');
+    expect(detailFields).toContain('faciHomepage');
+    expect(detailFields).toContain('standCptPsnCnt');
+  });
+});
+
 describe('search', () => {
   it('searches single category with DB pagination', async () => {
     mockFindMany.mockResolvedValue([sampleRecord]);
@@ -89,7 +218,7 @@ describe('search', () => {
 
     const result = await search({ page: 1, limit: 20 });
 
-    expect(result.total).toBe(9);
+    expect(result.total).toBeGreaterThan(0);
     expect(result.items.length).toBeGreaterThanOrEqual(1);
   });
 

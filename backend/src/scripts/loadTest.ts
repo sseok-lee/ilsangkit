@@ -165,7 +165,7 @@ async function testSearchLoad(config: LoadTestConfig): Promise<TestResult> {
 async function testSitemapLoad(config: LoadTestConfig): Promise<TestResult> {
   console.log(`📊 시나리오 2: 사이트맵 부하 테스트 (동시 접속: ${Math.min(config.connections, 20)})`);
 
-  const categories = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'];
+  const categories = ['toilet', 'wifi', 'clothes', 'park', 'parking', 'aed', 'library'];
   const latencies: number[] = [];
   let successCount = 0;
   let failCount = 0;
@@ -228,7 +228,7 @@ async function testSitemapLoad(config: LoadTestConfig): Promise<TestResult> {
 async function testDetailLoad(config: LoadTestConfig): Promise<TestResult> {
   console.log(`📊 시나리오 3: 상세 조회 부하 테스트 (동시 접속: ${config.connections})`);
 
-  const categories = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library'];
+  const categories = ['toilet', 'wifi', 'clothes', 'park', 'parking', 'aed', 'library'];
   const latencies: number[] = [];
   let successCount = 0;
   let failCount = 0;

@@ -2,7 +2,7 @@
 // @SPEC docs/planning/02-trd.md#facility-types
 
 // 시설 카테고리 (지도 마커 표시 가능한 시설만)
-export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk';
+export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market';
 
 /**
  * 시설 기본 정보

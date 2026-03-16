@@ -908,6 +908,413 @@ export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | nu
   };
 }
 
+// Park CSV 로우 타입
+export interface ParkCSVRow {
+  '관리번호': string;
+  '공원명': string;
+  '공원구분': string;
+  '소재지도로명주소': string;
+  '소재지지번주소': string;
+  '위도': string;
+  '경도': string;
+  '공원면적'?: string;
+  '공원보유시설(운동시설)'?: string;
+  '공원보유시설(유희시설)'?: string;
+  '공원보유시설(편익시설)'?: string;
+  '공원보유시설(교양시설)'?: string;
+  '공원보유시설(기타시설)'?: string;
+  '지정고시일'?: string;
+  '관리기관명'?: string;
+  '전화번호'?: string;
+  '데이터기준일자'?: string;
+  '제공기관코드'?: string;
+  '제공기관명'?: string;
+  [key: string]: string | undefined;
+}
+
+// Park 변환 결과 타입
+export interface TransformedPark {
+  id: string;
+  name: string;
+  address: string;
+  roadAddress: string | null;
+  lat: number | null;
+  lng: number | null;
+  city: string;
+  district: string;
+  sourceId: string;
+  // Park 전용 필드
+  parkType: string;
+  area: number | null;
+  exerciseFacilities: string;
+  playFacilities: string;
+  convenienceFacilities: string;
+  cultureFacilities: string;
+  otherFacilities: string;
+  designatedDate: string;
+  managingOrg: string;
+  phoneNumber: string;
+  dataDate: string;
+  providerCode: string;
+  providerName: string;
+}
+
+// School CSV 로우 타입
+export interface SchoolCSVRow {
+  '학교ID': string;
+  '학교명': string;
+  '학교급구분': string;
+  '설립일자'?: string;
+  '설립형태'?: string;
+  '본교분교구분'?: string;
+  '운영상태'?: string;
+  '소재지지번주소'?: string;
+  '소재지도로명주소': string;
+  '시도교육청코드'?: string;
+  '시도교육청명'?: string;
+  '교육지원청코드'?: string;
+  '교육지원청명'?: string;
+  '생성일자'?: string;
+  '변경일자'?: string;
+  '위도': string;
+  '경도': string;
+  '데이터기준일자'?: string;
+  '제공기관코드'?: string;
+  '제공기관명'?: string;
+  [key: string]: string | undefined;
+}
+
+// School 변환 결과 타입
+export interface TransformedSchool {
+  id: string;
+  name: string;
+  address: string;
+  roadAddress: string | null;
+  lat: number | null;
+  lng: number | null;
+  city: string;
+  district: string;
+  sourceId: string;
+  // School 전용 필드
+  schoolLevel: string;
+  foundedDate: string;
+  foundationType: string;
+  branchType: string;
+  operationStatus: string;
+  sidoEduCode: string;
+  sidoEduName: string;
+  localEduCode: string;
+  localEduName: string;
+  createdDate: string;
+  modifiedDate: string;
+  dataDate: string;
+  providerCode: string;
+  providerName: string;
+}
+
+// Market CSV 로우 타입
+export interface MarketCSVRow {
+  '시장명': string;
+  '시장유형'?: string;
+  '소재지도로명주소': string;
+  '소재지지번주소'?: string;
+  '시장개설주기'?: string;
+  '위도': string;
+  '경도': string;
+  '점포수'?: string;
+  '취급품목'?: string;
+  '사용가능상품권'?: string;
+  '홈페이지주소'?: string;
+  '공중화장실보유여부'?: string;
+  '주차장보유여부'?: string;
+  '개설연도'?: string;
+  '전화번호'?: string;
+  '데이터기준일자'?: string;
+  '제공기관코드'?: string;
+  '제공기관명'?: string;
+  [key: string]: string | undefined;
+}
+
+// Market 변환 결과 타입
+export interface TransformedMarket {
+  id: string;
+  name: string;
+  address: string;
+  roadAddress: string | null;
+  lat: number | null;
+  lng: number | null;
+  city: string;
+  district: string;
+  sourceId: string;
+  // Market 전용 필드
+  marketType: string;
+  openingCycle: string;
+  storeCount: number | null;
+  products: string;
+  giftCertificates: string;
+  homepageUrl: string;
+  hasPublicToilet: boolean | null;
+  hasParking: boolean | null;
+  foundedYear: number | null;
+  phoneNumber: string;
+  dataDate: string;
+  providerCode: string;
+  providerName: string;
+}
+
+/**
+ * CSV 파일을 파싱하는 공통 헬퍼
+ */
+function parseCSVFile<T>(filePath: string): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    const buffer = fs.readFileSync(filePath);
+    const encoding = detectEncoding(buffer);
+
+    let content: string;
+    if (encoding === 'euc-kr') {
+      content = iconv.decode(buffer, 'euc-kr');
+    } else {
+      content = buffer.toString('utf8');
+      if (content.charCodeAt(0) === 0xfeff) {
+        content = content.slice(1);
+      }
+    }
+
+    const rows: T[] = [];
+
+    parse(content, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      relaxColumnCount: true,
+      relaxQuotes: true,
+    })
+      .on('data', (row: T) => {
+        rows.push(row);
+      })
+      .on('error', (err: Error) => {
+        reject(err);
+      })
+      .on('end', () => {
+        resolve(rows);
+      });
+  });
+}
+
+/**
+ * CSV 파일을 파싱하여 ParkCSVRow 배열 반환
+ */
+export async function parseParkCSV(filePath: string): Promise<ParkCSVRow[]> {
+  return parseCSVFile<ParkCSVRow>(filePath);
+}
+
+/**
+ * 공원 CSV 로우를 Park 형식으로 변환
+ */
+export function transformParkRow(row: ParkCSVRow): TransformedPark | null {
+  const sourceId = row['관리번호']?.trim() || '';
+  const name = row['공원명']?.trim() || '';
+  const roadAddress = row['소재지도로명주소']?.trim() || '';
+  const jibunAddress = row['소재지지번주소']?.trim() || '';
+  const latStr = row['위도']?.trim() || '';
+  const lngStr = row['경도']?.trim() || '';
+
+  if (!name) return null;
+  if (!sourceId) return null;
+
+  const lat = parseFloat(latStr);
+  const lng = parseFloat(lngStr);
+
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX || lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) {
+    return null;
+  }
+
+  const primaryAddress = roadAddress || jibunAddress;
+  if (!primaryAddress) return null;
+
+  const { city, district } = parseAddress(primaryAddress);
+  const normalizedCity = normalizeCityName(city);
+
+  if (!normalizedCity || !district) return null;
+
+  const areaStr = row['공원면적']?.trim() || '';
+  const area = areaStr ? parseFloat(areaStr) : null;
+
+  return {
+    id: `park-${sourceId}`,
+    name,
+    address: jibunAddress || roadAddress,
+    roadAddress: roadAddress || null,
+    lat,
+    lng,
+    city: normalizedCity,
+    district,
+    sourceId,
+    parkType: row['공원구분']?.trim() || '',
+    area: area !== null && !isNaN(area) ? area : null,
+    exerciseFacilities: row['공원보유시설(운동시설)']?.trim() || '',
+    playFacilities: row['공원보유시설(유희시설)']?.trim() || '',
+    convenienceFacilities: row['공원보유시설(편익시설)']?.trim() || '',
+    cultureFacilities: row['공원보유시설(교양시설)']?.trim() || '',
+    otherFacilities: row['공원보유시설(기타시설)']?.trim() || '',
+    designatedDate: row['지정고시일']?.trim() || '',
+    managingOrg: row['관리기관명']?.trim() || '',
+    phoneNumber: row['전화번호']?.trim() || '',
+    dataDate: row['데이터기준일자']?.trim() || '',
+    providerCode: row['제공기관코드']?.trim() || '',
+    providerName: row['제공기관명']?.trim() || '',
+  };
+}
+
+/**
+ * CSV 파일을 파싱하여 SchoolCSVRow 배열 반환
+ */
+export async function parseSchoolCSV(filePath: string): Promise<SchoolCSVRow[]> {
+  return parseCSVFile<SchoolCSVRow>(filePath);
+}
+
+/**
+ * 학교 CSV 로우를 School 형식으로 변환
+ */
+export function transformSchoolRow(row: SchoolCSVRow): TransformedSchool | null {
+  const sourceId = row['학교ID']?.trim() || '';
+  const name = row['학교명']?.trim() || '';
+  const roadAddress = row['소재지도로명주소']?.trim() || '';
+  const jibunAddress = row['소재지지번주소']?.trim() || '';
+  const latStr = row['위도']?.trim() || '';
+  const lngStr = row['경도']?.trim() || '';
+
+  if (!name) return null;
+  if (!sourceId) return null;
+
+  const lat = parseFloat(latStr);
+  const lng = parseFloat(lngStr);
+
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX || lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) {
+    return null;
+  }
+
+  const primaryAddress = roadAddress || jibunAddress;
+  if (!primaryAddress) return null;
+
+  const { city, district } = parseAddress(primaryAddress);
+  const normalizedCity = normalizeCityName(city);
+
+  if (!normalizedCity || !district) return null;
+
+  return {
+    id: `school-${sourceId}`,
+    name,
+    address: jibunAddress || roadAddress,
+    roadAddress: roadAddress || null,
+    lat,
+    lng,
+    city: normalizedCity,
+    district,
+    sourceId,
+    schoolLevel: row['학교급구분']?.trim() || '',
+    foundedDate: row['설립일자']?.trim() || '',
+    foundationType: row['설립형태']?.trim() || '',
+    branchType: row['본교분교구분']?.trim() || '',
+    operationStatus: row['운영상태']?.trim() || '',
+    sidoEduCode: row['시도교육청코드']?.trim() || '',
+    sidoEduName: row['시도교육청명']?.trim() || '',
+    localEduCode: row['교육지원청코드']?.trim() || '',
+    localEduName: row['교육지원청명']?.trim() || '',
+    createdDate: row['생성일자']?.trim() || '',
+    modifiedDate: row['변경일자']?.trim() || '',
+    dataDate: row['데이터기준일자']?.trim() || '',
+    providerCode: row['제공기관코드']?.trim() || '',
+    providerName: row['제공기관명']?.trim() || '',
+  };
+}
+
+/**
+ * Y/N 문자열을 Boolean 또는 null로 변환
+ */
+function parseYN(val: string | undefined): boolean | null {
+  if (!val || val.trim() === '') return null;
+  return val.trim() === 'Y';
+}
+
+/**
+ * CSV 파일을 파싱하여 MarketCSVRow 배열 반환
+ */
+export async function parseMarketCSV(filePath: string): Promise<MarketCSVRow[]> {
+  return parseCSVFile<MarketCSVRow>(filePath);
+}
+
+/**
+ * 전통시장 CSV 로우를 Market 형식으로 변환
+ */
+export function transformMarketRow(row: MarketCSVRow): TransformedMarket | null {
+  const name = row['시장명']?.trim() || '';
+  const roadAddress = row['소재지도로명주소']?.trim() || '';
+  const jibunAddress = row['소재지지번주소']?.trim() || '';
+  const latStr = row['위도']?.trim() || '';
+  const lngStr = row['경도']?.trim() || '';
+
+  if (!name) return null;
+
+  const lat = parseFloat(latStr);
+  const lng = parseFloat(lngStr);
+
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX || lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) {
+    return null;
+  }
+
+  const primaryAddress = roadAddress || jibunAddress;
+  if (!primaryAddress) return null;
+
+  const { city, district } = parseAddress(primaryAddress);
+  const normalizedCity = normalizeCityName(city);
+
+  if (!normalizedCity || !district) return null;
+
+  // sourceId: MD5(시장명+주소)
+  const sourceId = createHash('md5')
+    .update(`${name}${roadAddress}`)
+    .digest('hex')
+    .substring(0, 16);
+
+  const storeCountStr = row['점포수']?.trim() || '';
+  const storeCount = storeCountStr ? parseInt(storeCountStr, 10) : null;
+
+  const foundedYearStr = row['개설연도']?.trim() || '';
+  const foundedYear = foundedYearStr ? parseInt(foundedYearStr, 10) : null;
+
+  return {
+    id: `market-${sourceId}`,
+    name,
+    address: jibunAddress || roadAddress,
+    roadAddress: roadAddress || null,
+    lat,
+    lng,
+    city: normalizedCity,
+    district,
+    sourceId,
+    marketType: row['시장유형']?.trim() || '',
+    openingCycle: row['시장개설주기']?.trim() || '',
+    storeCount: storeCount !== null && !isNaN(storeCount) ? storeCount : null,
+    products: row['취급품목']?.trim() || '',
+    giftCertificates: row['사용가능상품권']?.trim() || '',
+    homepageUrl: row['홈페이지주소']?.trim() || '',
+    hasPublicToilet: parseYN(row['공중화장실보유여부']),
+    hasParking: parseYN(row['주차장보유여부']),
+    foundedYear: foundedYear !== null && !isNaN(foundedYear) ? foundedYear : null,
+    phoneNumber: row['전화번호']?.trim() || '',
+    dataDate: row['데이터기준일자']?.trim() || '',
+    providerCode: row['제공기관코드']?.trim() || '',
+    providerName: row['제공기관명']?.trim() || '',
+  };
+}
+
 export default {
   parseToiletCSV,
   transformToiletRow,
@@ -917,4 +1324,10 @@ export default {
   transformParkingRow,
   parseLibraryCSV,
   transformLibraryRow,
+  parseParkCSV,
+  transformParkRow,
+  parseSchoolCSV,
+  transformSchoolRow,
+  parseMarketCSV,
+  transformMarketRow,
 };

@@ -32,7 +32,6 @@ import type {
   PharmacyDetails,
   AedDetails,
   LibraryDetails,
-  KioskDetails,
   FacilityDetailsAll,
 } from '~/types/facility'
 
@@ -158,20 +157,6 @@ const statusInfo = computed<StatusInfo | null>(() => {
       }
       return checkTimeRange(l.weekdayOpenTime, l.weekdayCloseTime, currentTime)
         ?? { isOpen: false, description: '운영시간 정보 없음' }
-    }
-
-    case 'kiosk': {
-      const k = d as KioskDetails
-      if (dayOfWeek === 0) {
-        if (!k.holidayOperatingHours) return { isOpen: false, description: '공휴일 미운영' }
-        return { isOpen: true, description: k.holidayOperatingHours }
-      }
-      if (dayOfWeek === 6) {
-        if (!k.saturdayOperatingHours) return { isOpen: false, description: '토요일 미운영' }
-        return { isOpen: true, description: k.saturdayOperatingHours }
-      }
-      if (!k.weekdayOperatingHours) return null
-      return { isOpen: true, description: k.weekdayOperatingHours }
     }
 
     case 'parking':

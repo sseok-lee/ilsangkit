@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 describe('syncAll CLI 옵션 파싱', () => {
   it('--only 옵션으로 특정 카테고리만 선택', () => {
     const args = ['--only', 'toilet,wifi'];
-    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk'];
+    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'park'];
 
     // --only 옵션 처리
     const onlyIndex = args.indexOf('--only');
@@ -24,8 +24,8 @@ describe('syncAll CLI 옵션 파싱', () => {
   });
 
   it('--skip 옵션으로 특정 카테고리 제외', () => {
-    const args = ['--skip', 'kiosk'];
-    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk'];
+    const args = ['--skip', 'park'];
+    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'park'];
 
     // --skip 옵션 처리
     const skipIndex = args.indexOf('--skip');
@@ -41,7 +41,7 @@ describe('syncAll CLI 옵션 파싱', () => {
 
   it('--only와 --skip 혼용 시 --only 우선', () => {
     const args = ['--only', 'toilet,wifi,trash', '--skip', 'wifi'];
-    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk'];
+    const allCategories = ['toilet', 'trash', 'wifi', 'clothes', 'park'];
 
     let categoriesToSync = [...allCategories];
 
@@ -73,7 +73,7 @@ describe('syncAll 결과 집계', () => {
       { category: 'trash', success: true, duration: 2000 },
       { category: 'wifi', success: false, error: 'Network error', duration: 500 },
       { category: 'clothes', success: true, duration: 1500 },
-      { category: 'kiosk', success: true, duration: 3000 },
+      { category: 'park', success: true, duration: 3000 },
     ];
 
     const success = results.filter(r => r.success).length;
@@ -118,46 +118,5 @@ describe('syncAll 결과 집계', () => {
     const exitCode = failed > 0 ? 1 : 0;
 
     expect(exitCode).toBe(1);
-  });
-});
-
-/**
- * kiosk 우선순위 테스트
- */
-describe('kiosk 동기화 순서', () => {
-  it('kiosk가 있으면 마지막으로 이동', () => {
-    const categoriesToSync = ['toilet', 'kiosk', 'trash', 'wifi'];
-
-    const kioskIndex = categoriesToSync.indexOf('kiosk');
-    if (kioskIndex !== -1) {
-      categoriesToSync.splice(kioskIndex, 1);
-      categoriesToSync.push('kiosk');
-    }
-
-    expect(categoriesToSync).toEqual(['toilet', 'trash', 'wifi', 'kiosk']);
-  });
-
-  it('kiosk가 이미 마지막이면 그대로', () => {
-    const categoriesToSync = ['toilet', 'trash', 'wifi', 'kiosk'];
-
-    const kioskIndex = categoriesToSync.indexOf('kiosk');
-    if (kioskIndex !== -1) {
-      categoriesToSync.splice(kioskIndex, 1);
-      categoriesToSync.push('kiosk');
-    }
-
-    expect(categoriesToSync).toEqual(['toilet', 'trash', 'wifi', 'kiosk']);
-  });
-
-  it('kiosk가 없으면 변경 없음', () => {
-    const categoriesToSync = ['toilet', 'trash', 'wifi'];
-
-    const kioskIndex = categoriesToSync.indexOf('kiosk');
-    if (kioskIndex !== -1) {
-      categoriesToSync.splice(kioskIndex, 1);
-      categoriesToSync.push('kiosk');
-    }
-
-    expect(categoriesToSync).toEqual(['toilet', 'trash', 'wifi']);
   });
 });

@@ -15,10 +15,12 @@ async function main() {
     { id: 'toilet', name: '공공화장실', icon: '🚻', description: '공공 화장실 위치 정보', sortOrder: 1, isActive: true },
     { id: 'wifi', name: '무료와이파이', icon: '📶', description: '무료 와이파이 존', sortOrder: 2, isActive: true },
     { id: 'clothes', name: '의류수거함', icon: '👕', description: '의류 수거함 위치', sortOrder: 3, isActive: true },
-    { id: 'kiosk', name: '무인민원발급기', icon: '🖥️', description: '무인민원발급기 위치', sortOrder: 4, isActive: true },
-    { id: 'parking', name: '공영주차장', icon: '🅿️', description: '공영 주차장 정보', sortOrder: 5, isActive: true },
-    { id: 'aed', name: '자동심장충격기', icon: '❤️', description: 'AED(제세동기) 위치', sortOrder: 6, isActive: true },
-    { id: 'library', name: '공공도서관', icon: '📚', description: '공공 도서관 정보', sortOrder: 7, isActive: true },
+    { id: 'parking', name: '공영주차장', icon: '🅿️', description: '공영 주차장 정보', sortOrder: 4, isActive: true },
+    { id: 'aed', name: '자동심장충격기', icon: '❤️', description: 'AED(제세동기) 위치', sortOrder: 5, isActive: true },
+    { id: 'library', name: '공공도서관', icon: '📚', description: '공공 도서관 정보', sortOrder: 6, isActive: true },
+    { id: 'park', name: '공원', icon: '🌳', description: '공원 위치 정보', sortOrder: 7, isActive: true },
+    { id: 'school', name: '학교', icon: '🏫', description: '학교 위치 정보', sortOrder: 8, isActive: true },
+    { id: 'market', name: '전통시장', icon: '🏪', description: '전통시장 위치 정보', sortOrder: 9, isActive: true },
   ];
 
   for (const category of categories) {
@@ -126,31 +128,7 @@ async function main() {
   }
   console.log(`✅ Created ${clothes.length} clothes bins`);
 
-  // 6. Kiosk 시드 (10건)
-  console.log('🖥️ Seeding kiosks...');
-  const kiosks = [
-    { id: 'kiosk-seed-1', name: '시청역 무인민원발급기', address: '서울특별시 중구 세종대로 110', roadAddress: '서울특별시 중구 세종대로 110', lat: new Decimal('37.5663901'), lng: new Decimal('126.9784147'), city: '서울특별시', district: '중구', bjdCode: '11140', sourceId: 'seed-kiosk-1', detailLocation: '시청역 지하 대합실', operationAgency: '행정안전부', weekdayOperatingHours: '06:00-23:00', saturdayOperatingHours: '06:00-23:00', holidayOperatingHours: '06:00-23:00', blindKeypad: true, voiceGuide: true, brailleOutput: false, wheelchairAccessible: true, mngNo: 'SEED-001', availableDocuments: { documents: ['주민등록등본', '주민등록초본', '인감증명서'] } },
-    { id: 'kiosk-seed-2', name: '광화문 무인민원발급기', address: '서울특별시 종로구 세종대로 172', roadAddress: '서울특별시 종로구 세종대로 172', lat: new Decimal('37.5719505'), lng: new Decimal('126.9767758'), city: '서울특별시', district: '종로구', bjdCode: '11110', sourceId: 'seed-kiosk-2', detailLocation: '광화문 D타워 1층', operationAgency: '행정안전부', weekdayOperatingHours: '08:00-20:00', saturdayOperatingHours: '09:00-18:00', holidayOperatingHours: '휴무', blindKeypad: true, voiceGuide: true, brailleOutput: true, wheelchairAccessible: true, mngNo: 'SEED-002', availableDocuments: { documents: ['주민등록등본', '주민등록초본'] } },
-    { id: 'kiosk-seed-3', name: '용산역 무인민원발급기', address: '서울특별시 용산구 한강대로23길 55', roadAddress: '서울특별시 용산구 한강대로23길 55', lat: new Decimal('37.5294591'), lng: new Decimal('126.9645304'), city: '서울특별시', district: '용산구', bjdCode: '11170', sourceId: 'seed-kiosk-3', detailLocation: '용산역 대합실', operationAgency: '행정안전부', weekdayOperatingHours: '05:00-24:00', saturdayOperatingHours: '05:00-24:00', holidayOperatingHours: '05:00-24:00', blindKeypad: true, voiceGuide: true, brailleOutput: false, wheelchairAccessible: true, mngNo: 'SEED-003' },
-    { id: 'kiosk-seed-4', name: '성동구청 무인민원발급기', address: '서울특별시 성동구 고산자로 270', roadAddress: '서울특별시 성동구 고산자로 270', lat: new Decimal('37.5631012'), lng: new Decimal('127.0365145'), city: '서울특별시', district: '성동구', bjdCode: '11200', sourceId: 'seed-kiosk-4', detailLocation: '성동구청 민원실', operationAgency: '행정안전부', weekdayOperatingHours: '09:00-18:00', saturdayOperatingHours: '휴무', holidayOperatingHours: '휴무', blindKeypad: false, voiceGuide: false, brailleOutput: false, wheelchairAccessible: true, mngNo: 'SEED-004' },
-    { id: 'kiosk-seed-5', name: '건대입구역 무인민원발급기', address: '서울특별시 광진구 능동로 110', roadAddress: '서울특별시 광진구 능동로 110', lat: new Decimal('37.5400456'), lng: new Decimal('127.0696799'), city: '서울특별시', district: '광진구', bjdCode: '11230', sourceId: 'seed-kiosk-5', detailLocation: '건대입구역 지하 매표소', operationAgency: '행정안전부', weekdayOperatingHours: '06:00-23:00', saturdayOperatingHours: '06:00-23:00', holidayOperatingHours: '06:00-23:00', blindKeypad: true, voiceGuide: true, brailleOutput: true, wheelchairAccessible: true, mngNo: 'SEED-005' },
-    { id: 'kiosk-seed-6', name: '수원역 무인민원발급기', address: '경기도 수원시 팔달구 덕영대로 924', roadAddress: '경기도 수원시 팔달구 덕영대로 924', lat: new Decimal('37.2660737'), lng: new Decimal('127.0014581'), city: '경기도', district: '수원시', bjdCode: '41111', sourceId: 'seed-kiosk-6', detailLocation: '수원역 대합실', operationAgency: '행정안전부', weekdayOperatingHours: '05:30-23:30', saturdayOperatingHours: '05:30-23:30', holidayOperatingHours: '05:30-23:30', blindKeypad: true, voiceGuide: true, brailleOutput: false, wheelchairAccessible: true, mngNo: 'SEED-006' },
-    { id: 'kiosk-seed-7', name: '성남시청 무인민원발급기', address: '경기도 성남시 중원구 성남대로 997', roadAddress: '경기도 성남시 중원구 성남대로 997', lat: new Decimal('37.4212251'), lng: new Decimal('127.1265149'), city: '경기도', district: '성남시', bjdCode: '41131', sourceId: 'seed-kiosk-7', detailLocation: '성남시청 민원실', operationAgency: '행정안전부', weekdayOperatingHours: '09:00-18:00', saturdayOperatingHours: '휴무', holidayOperatingHours: '휴무', blindKeypad: false, voiceGuide: false, brailleOutput: false, wheelchairAccessible: true, mngNo: 'SEED-007' },
-    { id: 'kiosk-seed-8', name: '안양시청 무인민원발급기', address: '경기도 안양시 만안구 안양로 122', roadAddress: '경기도 안양시 만안구 안양로 122', lat: new Decimal('37.3948644'), lng: new Decimal('126.9567571'), city: '경기도', district: '안양시', bjdCode: '41150', sourceId: 'seed-kiosk-8', detailLocation: '안양시청 1층 로비', operationAgency: '행정안전부', weekdayOperatingHours: '09:00-18:00', saturdayOperatingHours: '휴무', holidayOperatingHours: '휴무', blindKeypad: true, voiceGuide: false, brailleOutput: false, wheelchairAccessible: true, mngNo: 'SEED-008' },
-    { id: 'kiosk-seed-9', name: '부산 중구청 무인민원발급기', address: '부산광역시 중구 중앙대로 120', roadAddress: '부산광역시 중구 중앙대로 120', lat: new Decimal('35.1030212'), lng: new Decimal('129.0327968'), city: '부산광역시', district: '중구', bjdCode: '26110', sourceId: 'seed-kiosk-9', detailLocation: '중구청 민원실', operationAgency: '행정안전부', weekdayOperatingHours: '09:00-18:00', saturdayOperatingHours: '휴무', holidayOperatingHours: '휴무', blindKeypad: true, voiceGuide: true, brailleOutput: false, wheelchairAccessible: true, mngNo: 'SEED-009' },
-    { id: 'kiosk-seed-10', name: '부산 서구청 무인민원발급기', address: '부산광역시 서구 구덕로 120', roadAddress: '부산광역시 서구 구덕로 120', lat: new Decimal('35.0969678'), lng: new Decimal('129.0244085'), city: '부산광역시', district: '서구', bjdCode: '26140', sourceId: 'seed-kiosk-10', detailLocation: '서구청 민원실', operationAgency: '행정안전부', weekdayOperatingHours: '09:00-18:00', saturdayOperatingHours: '휴무', holidayOperatingHours: '휴무', blindKeypad: false, voiceGuide: false, brailleOutput: false, wheelchairAccessible: true, mngNo: 'SEED-010' },
-  ];
-
-  for (const kiosk of kiosks) {
-    await prisma.kiosk.upsert({
-      where: { sourceId: kiosk.sourceId },
-      update: kiosk,
-      create: kiosk,
-    });
-  }
-  console.log(`✅ Created ${kiosks.length} kiosks`);
-
-  // 7. Parking 시드 (10건)
+  // 6. Parking 시드 (10건)
   console.log('🅿️ Seeding parking lots...');
   const parkings = [
     { id: 'parking-seed-1', name: '시청 공영주차장', address: '서울특별시 중구 세종대로 110', roadAddress: '서울특별시 중구 세종대로 110', lat: new Decimal('37.5663901'), lng: new Decimal('126.9784147'), city: '서울특별시', district: '중구', bjdCode: '11140', sourceId: 'seed-parking-1', parkingType: '공영', lotType: '노외', capacity: 150, baseFee: 2000, baseTime: 30, additionalFee: 500, additionalTime: 10, dailyMaxFee: 20000, monthlyFee: 150000, operatingHours: '24시간', phone: '02-120', paymentMethod: '신용카드, 현금', hasDisabledParking: true },

@@ -6,9 +6,9 @@ import { FacilitySearchInput } from '../schemas/facility.js';
 import { PAGINATION, SEARCH_DEFAULTS } from '../constants/index.js';
 
 // 카테고리 타입
-export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy';
+export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market' | 'childcare' | 'ev-charger' | 'sports';
 
-const ALL_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'];
+const ALL_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'];
 
 // 정렬 옵션 매핑
 const ORDER_BY_MAP: Record<string, Record<string, string>> = {
@@ -43,7 +43,8 @@ interface CategoryConfig {
   detailFields: string[];
 }
 
-const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
   toilet: {
     model: () => prisma.toilet,
     listFields: ['operatingHours', 'hasDisabledToilet'],
@@ -58,11 +59,6 @@ const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
     model: () => prisma.clothes,
     listFields: ['detailLocation'],
     detailFields: ['managementAgency', 'phoneNumber', 'dataDate', 'detailLocation', 'providerCode', 'providerName'],
-  },
-  kiosk: {
-    model: () => prisma.kiosk,
-    listFields: ['weekdayOperatingHours', 'wheelchairAccessible'],
-    detailFields: ['detailLocation', 'operationAgency', 'weekdayOperatingHours', 'saturdayOperatingHours', 'holidayOperatingHours', 'blindKeypad', 'voiceGuide', 'brailleOutput', 'wheelchairAccessible', 'availableDocuments', 'govCode', 'installPosition', 'dataDate'],
   },
   parking: {
     model: () => prisma.parking,
@@ -92,6 +88,36 @@ const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
     model: () => prisma.pharmacy,
     listFields: ['phone', 'dutyTime1s', 'dutyTime1c'],
     detailFields: ['phone', 'dutyTel3', 'hpid', 'postCdn1', 'postCdn2', 'dutyTime1s', 'dutyTime1c', 'dutyTime2s', 'dutyTime2c', 'dutyTime3s', 'dutyTime3c', 'dutyTime4s', 'dutyTime4c', 'dutyTime5s', 'dutyTime5c', 'dutyTime6s', 'dutyTime6c', 'dutyTime7s', 'dutyTime7c', 'dutyTime8s', 'dutyTime8c', 'dutyMapimg', 'dutyInf', 'dutyEtc', 'dataDate'],
+  },
+  park: {
+    model: () => prisma.park,
+    listFields: ['parkType', 'area'],
+    detailFields: ['parkType', 'area', 'exerciseFacilities', 'playFacilities', 'convenienceFacilities', 'cultureFacilities', 'otherFacilities', 'designatedDate', 'managingOrg', 'phoneNumber', 'dataDate', 'providerCode', 'providerName'],
+  },
+  school: {
+    model: () => prisma.school,
+    listFields: ['schoolLevel', 'operationStatus'],
+    detailFields: ['schoolLevel', 'foundedDate', 'foundationType', 'branchType', 'operationStatus', 'sidoEduCode', 'sidoEduName', 'localEduCode', 'localEduName', 'createdDate', 'modifiedDate', 'dataDate', 'providerCode', 'providerName'],
+  },
+  market: {
+    model: () => prisma.market,
+    listFields: ['marketType', 'storeCount'],
+    detailFields: ['marketType', 'openingCycle', 'storeCount', 'products', 'giftCertificates', 'homepageUrl', 'hasPublicToilet', 'hasParking', 'foundedYear', 'phoneNumber', 'dataDate', 'providerCode', 'providerName'],
+  },
+  childcare: {
+    model: () => prisma.childcare,
+    listFields: ['crtypename', 'crcapat', 'crchcnt'],
+    detailFields: ['crtypename', 'crstatusname', 'zipcode', 'crtelno', 'crfaxno', 'crhome', 'crrepname', 'nrtrroomcnt', 'nrtrroomsize', 'plgrdco', 'cctvinstlcnt', 'chcrtescnt', 'crcapat', 'crchcnt', 'crcargbname', 'crcnfmdt', 'crpausebegindt', 'crpauseenddt', 'crabldt', 'datastdrdt', 'crspec', 'classCnt00', 'classCnt01', 'classCnt02', 'classCnt03', 'classCnt04', 'classCnt05', 'classCntM2', 'classCntM5', 'classCntSp', 'classCntTot', 'childCnt00', 'childCnt01', 'childCnt02', 'childCnt03', 'childCnt04', 'childCnt05', 'childCntM2', 'childCntM5', 'childCntSp', 'childCntTot', 'emCnt0y', 'emCnt1y', 'emCnt2y', 'emCnt4y', 'emCnt6y', 'emCntA1', 'emCntA2', 'emCntA3', 'emCntA4', 'emCntA5', 'emCntA6', 'emCntA10', 'emCntA7', 'emCntA8', 'emCntTot', 'ewCnt00', 'ewCnt01', 'ewCnt02', 'ewCnt03', 'ewCnt04', 'ewCnt05', 'ewCntM6', 'ewCntTot'],
+  },
+  'ev-charger': {
+    model: () => prisma.evCharger,
+    listFields: ['chgerType', 'output', 'busiNm', 'stat'],
+    detailFields: ['statId', 'chgerId', 'chgerType', 'addrDetail', 'location', 'useTime', 'busiId', 'bnm', 'busiNm', 'busiCall', 'stat', 'statUpdDt', 'lastTsdt', 'lastTedt', 'nowTsdt', 'powerType', 'output', 'method', 'zcode', 'zscode', 'kind', 'kindDetail', 'parkingFree', 'note', 'limitYn', 'limitDetail', 'delYn', 'delDetail', 'trafficYn', 'year', 'floorNum', 'floorType', 'maker'],
+  },
+  sports: {
+    model: () => prisma.sports,
+    listFields: ['ftypeNm', 'fcobNm', 'faciGbNm'],
+    detailFields: ['faciGbNm', 'fcobNm', 'ftypeNm', 'fmngCpNm', 'fmngCpbNm', 'faciGfa', 'standCptPsnCnt', 'faciHomepage', 'faciStatCd', 'addrCtpvNm', 'addrCpbNm', 'addrEmdNm', 'nationYn', 'fmngTypeGbNm', 'delYn', 'rowNum'],
   },
 };
 
@@ -224,26 +250,191 @@ const CATEGORY_LABELS: Record<FacilityCategory, string> = {
   toilet: '공공화장실',
   wifi: '무료와이파이',
   clothes: '의류수거함',
-  kiosk: '무인민원발급기',
   parking: '공영주차장',
   aed: '자동심장충격기',
   library: '공공도서관',
   hospital: '병원',
   pharmacy: '약국',
+  park: '공원',
+  school: '학교',
+  market: '전통시장',
+  childcare: '어린이집',
+  'ev-charger': '전기차충전소',
+  sports: '체육시설',
 };
 
 // 크로스 카테고리 추천 맵
 const CROSS_CATEGORY_MAP: Record<FacilityCategory, FacilityCategory[]> = {
-  hospital: ['pharmacy'],
+  hospital: ['pharmacy', 'aed'],
   pharmacy: ['hospital'],
-  parking: ['toilet', 'library', 'kiosk'],
-  library: ['parking', 'toilet', 'wifi'],
-  toilet: ['wifi'],
+  parking: ['toilet', 'library', 'ev-charger'],
+  library: ['parking', 'toilet'],
+  toilet: ['parking'],
   wifi: ['toilet'],
-  aed: ['hospital'],
-  kiosk: ['parking'],
-  clothes: [],
+  aed: ['hospital', 'pharmacy'],
+  clothes: ['trash'],
+  park: ['toilet', 'parking', 'sports'],
+  school: ['childcare', 'hospital', 'pharmacy'],
+  market: ['parking', 'toilet'],
+  childcare: ['school', 'hospital', 'pharmacy'],
+  'ev-charger': ['parking', 'library', 'park', 'market'],
+  sports: ['parking', 'toilet', 'pharmacy'],
 };
+
+// --- EV Charger 충전소 단위 검색 ---
+
+/**
+ * ev-charger 충전소(station) 단위 검색 — $queryRaw로 GROUP BY statId
+ */
+async function evChargerStationSearch(params: {
+  keyword?: string; city?: string; district?: string;
+  lat?: number; lng?: number; radius?: number;
+  swLat?: number; swLng?: number; neLat?: number; neLng?: number;
+  page: number; limit: number;
+}): Promise<SearchResult> {
+  const { keyword, city, district, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit } = params;
+  const conditions: string[] = ['statId IS NOT NULL'];
+  const values: unknown[] = [];
+
+  if (keyword) {
+    conditions.push('(name LIKE ? OR address LIKE ?)');
+    values.push(`%${keyword}%`, `%${keyword}%`);
+  }
+  if (city) { conditions.push('city = ?'); values.push(city); }
+  if (district) { conditions.push('district = ?'); values.push(district); }
+
+  // 좌표 기반 범위 필터
+  if (lat !== undefined && lng !== undefined && radius !== undefined) {
+    const radiusKm = radius / 1000;
+    const latDelta = radiusKm / 111;
+    const lngDelta = radiusKm / (111 * Math.cos(toRad(lat)));
+    conditions.push('lat BETWEEN ? AND ?');
+    values.push(lat - latDelta, lat + latDelta);
+    conditions.push('lng BETWEEN ? AND ?');
+    values.push(lng - lngDelta, lng + lngDelta);
+  }
+
+  // bounds 기반 필터
+  if (swLat !== undefined && swLng !== undefined && neLat !== undefined && neLng !== undefined) {
+    conditions.push('lat BETWEEN ? AND ?');
+    values.push(swLat, neLat);
+    conditions.push('lng BETWEEN ? AND ?');
+    values.push(swLng, neLng);
+  }
+
+  const whereClause = conditions.join(' AND ');
+  const offset = (page - 1) * limit;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const countResult: any[] = await prisma.$queryRawUnsafe(
+    `SELECT COUNT(DISTINCT statId) as cnt FROM EvCharger WHERE ${whereClause}`,
+    ...values,
+  );
+  const total = Number(countResult[0]?.cnt || 0);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows: any[] = await prisma.$queryRawUnsafe(
+    `SELECT statId, MIN(name) as name, MIN(address) as address, MIN(roadAddress) as roadAddress,
+            MIN(lat) as lat, MIN(lng) as lng, MIN(city) as city, MIN(district) as district,
+            COUNT(*) as totalChargers,
+            SUM(CASE WHEN CAST(output AS DECIMAL) >= 50 THEN 1 ELSE 0 END) as rapidCount,
+            SUM(CASE WHEN CAST(output AS DECIMAL) < 50 THEN 1 ELSE 0 END) as slowCount
+     FROM EvCharger WHERE ${whereClause}
+     GROUP BY statId ORDER BY name ASC LIMIT ? OFFSET ?`,
+    ...values, limit, offset,
+  );
+
+  let items: FacilityItem[] = rows.map((r) => ({
+    id: r.statId,
+    category: 'ev-charger' as FacilityCategory,
+    name: r.name || '',
+    address: r.address || null,
+    roadAddress: r.roadAddress || null,
+    lat: Number(r.lat) || 0,
+    lng: Number(r.lng) || 0,
+    city: r.city || '',
+    district: r.district || '',
+    extras: {
+      totalChargers: Number(r.totalChargers),
+      rapidCount: Number(r.rapidCount),
+      slowCount: Number(r.slowCount),
+    },
+  }));
+
+  // 좌표 검색 시 Haversine 거리 계산 + 거리순 정렬
+  if (lat !== undefined && lng !== undefined && radius !== undefined) {
+    items = items
+      .map((item) => ({
+        ...item,
+        distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
+      }))
+      .filter((item) => item.distance! <= radius)
+      .sort((a, b) => a.distance! - b.distance!);
+    return { items: items.slice(0, limit), total: items.length, page, totalPages: Math.ceil(items.length / limit) };
+  }
+
+  return { items, total, page, totalPages: Math.ceil(total / limit) };
+}
+
+/**
+ * ev-charger 충전소 상세 조회 — statId로 조회, 모든 충전기 포함
+ */
+async function getEvChargerStationDetail(statId: string): Promise<FacilityDetail | null> {
+  const chargers = await prisma.evCharger.findMany({
+    where: { statId },
+    orderBy: [{ chgerId: 'asc' }],
+  });
+
+  if (chargers.length === 0) return null;
+
+  const first = chargers[0];
+
+  // 조회수 증가 (첫 번째 레코드만)
+  prisma.evCharger.update({ where: { id: first.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+
+  const chargerList = chargers.map((c) => ({
+    chgerId: c.chgerId,
+    chgerType: c.chgerType,
+    output: c.output,
+    stat: c.stat,
+    statUpdDt: c.statUpdDt,
+    method: c.method,
+    maker: c.maker,
+  }));
+
+  return {
+    id: statId,
+    category: 'ev-charger' as FacilityCategory,
+    name: first.name,
+    address: first.address,
+    roadAddress: first.roadAddress,
+    lat: Number(first.lat),
+    lng: Number(first.lng),
+    city: first.city,
+    district: first.district,
+    bjdCode: first.bjdCode,
+    details: {
+      statId: first.statId,
+      useTime: first.useTime,
+      busiNm: first.busiNm,
+      busiCall: first.busiCall,
+      parkingFree: first.parkingFree,
+      limitYn: first.limitYn,
+      limitDetail: first.limitDetail,
+      location: first.location,
+      addrDetail: first.addrDetail,
+      note: first.note,
+      year: first.year,
+      chargers: chargerList,
+    },
+    sourceId: first.sourceId,
+    sourceUrl: first.sourceUrl,
+    viewCount: first.viewCount,
+    createdAt: first.createdAt,
+    updatedAt: first.updatedAt,
+    syncedAt: first.syncedAt,
+  };
+}
 
 /**
  * 크로스 카테고리 주변 시설 조회
@@ -269,6 +460,14 @@ export async function getNearbyFacilities(
 
   const fetchResults = await Promise.all(
     targetCategories.map(async (cat) => {
+      // ev-charger: 충전소 단위 그룹핑
+      if (cat === 'ev-charger') {
+        const stationResult = await evChargerStationSearch({
+          lat, lng, radius,
+          page: 1, limit: 10,
+        });
+        return stationResult.items;
+      }
       const records = await CATEGORY_REGISTRY[cat].model().findMany({
         where: approxBounds,
         select: buildListSelect(cat),
@@ -279,13 +478,14 @@ export async function getNearbyFacilities(
 
   const allItems = fetchResults.flat();
 
+  // ev-charger는 이미 거리 계산됨, 나머지만 계산
   return allItems
-    .map((item) => ({
+    .map((item) => item.distance !== undefined ? item : {
       ...item,
       distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
-    }))
-    .filter((item) => item.distance <= radius)
-    .sort((a, b) => a.distance - b.distance)
+    })
+    .filter((item) => item.distance! <= radius)
+    .sort((a, b) => a.distance! - b.distance!)
     .slice(0, 6);
 }
 
@@ -304,6 +504,18 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
 
   const results = await Promise.all(
     ALL_CATEGORIES.map(async (cat) => {
+      // ev-charger: 충전소(station) 단위 카운트
+      if (cat === 'ev-charger') {
+        const stationResult = await evChargerStationSearch({
+          keyword, city, district, page: 1, limit: 3,
+        });
+        return {
+          category: cat,
+          label: CATEGORY_LABELS[cat],
+          count: stationResult.total,
+          items: stationResult.items,
+        };
+      }
       const model = CATEGORY_REGISTRY[cat].model();
       const [count, records] = await Promise.all([
         model.count({ where }),
@@ -369,6 +581,11 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
  */
 export async function search(params: FacilitySearchInput): Promise<SearchResult> {
   const { category, keyword, lat, lng, radius = SEARCH_DEFAULTS.RADIUS_METERS, swLat, swLng, neLat, neLng, city, district, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT, sort = 'name' } = params;
+
+  // ev-charger: 충전소 단위 그룹 검색 (모든 검색 유형)
+  if (category === 'ev-charger') {
+    return evChargerStationSearch({ keyword, city, district, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit });
+  }
 
   // trash: WasteSchedule 별도 처리 (좌표 없는 일정 데이터)
   if (category === 'trash') {
@@ -618,6 +835,11 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   const config = CATEGORY_REGISTRY[category as FacilityCategory];
   if (!config) return null;
 
+  // ev-charger: statId로 충전소 단위 조회
+  if (category === 'ev-charger') {
+    return getEvChargerStationDetail(id);
+  }
+
   const model = config.model();
   const findOptions: { where: { id: string }; include?: Record<string, boolean> } = { where: { id } };
   if (category === 'hospital') {
@@ -642,6 +864,17 @@ export async function getAllIds(
 ): Promise<{ id: string; updatedAt: Date }[]> {
   const config = CATEGORY_REGISTRY[category];
   if (!config) return [];
+
+  // ev-charger: statId 단위로 반환 (충전소 단위 사이트맵)
+  if (category === 'ev-charger') {
+    const stations = await prisma.evCharger.findMany({
+      where: { statId: { not: null } },
+      select: { statId: true, updatedAt: true },
+      distinct: ['statId'],
+    });
+    return stations.map((s) => ({ id: s.statId!, updatedAt: s.updatedAt }));
+  }
+
   return config.model().findMany({ select: { id: true, updatedAt: true } });
 }
 
