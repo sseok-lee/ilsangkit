@@ -5,8 +5,9 @@ import { CATEGORY_DESCRIPTIONS } from '~/utils/categoryDescriptions'
 import type { FacilityCategory } from '~/types/facility'
 
 const ALL_CATEGORIES: FacilityCategory[] = [
-  'toilet', 'trash', 'wifi', 'clothes', 'kiosk',
+  'toilet', 'trash', 'wifi', 'clothes',
   'parking', 'aed', 'library', 'hospital', 'pharmacy',
+  'park', 'school', 'market',
 ]
 
 describe('CategoryIntro', () => {

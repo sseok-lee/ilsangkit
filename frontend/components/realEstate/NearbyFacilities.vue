@@ -86,9 +86,14 @@ const CATEGORY_ICONS: Partial<Record<FacilityCategory, string>> = {
   wifi: '📶',
   hospital: '🏥',
   library: '📚',
-  kiosk: '🖨️',
+  park: '🌳',
+  school: '🏫',
+  market: '🏪',
   clothes: '👕',
   trash: '🗑️',
+  childcare: '🧒',
+  'ev-charger': '⚡',
+  sports: '🏅',
 }
 
 const DISPLAY_CATEGORIES: FacilityCategory[] = ['toilet', 'parking', 'pharmacy', 'aed', 'wifi', 'hospital', 'library']
@@ -103,9 +108,14 @@ function categoryBgClass(category: FacilityCategory): string {
     wifi: 'bg-green-50/60',
     hospital: 'bg-rose-50/60',
     library: 'bg-orange-50/60',
-    kiosk: 'bg-violet-50/60',
+    park: 'bg-green-50/60',
+    school: 'bg-indigo-50/60',
+    market: 'bg-orange-50/60',
     clothes: 'bg-purple-50/60',
     trash: 'bg-slate-50/60',
+    childcare: 'bg-pink-50/60',
+    'ev-charger': 'bg-teal-50/60',
+    sports: 'bg-cyan-50/60',
   }
   return map[category] ?? 'bg-slate-50/60'
 }

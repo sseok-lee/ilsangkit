@@ -31,7 +31,7 @@ describe('OG Image generation', () => {
     })
 
     it('카테고리별 배경색이 CATEGORY_COLORS에 정의됨', () => {
-      const validCategories = ['toilet', 'trash', 'wifi', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'] as const
+      const validCategories = ['toilet', 'trash', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market'] as const
       for (const cat of validCategories) {
         expect(CATEGORY_COLORS[cat]).toBeTypeOf('string')
         // hex color format: #rrggbb

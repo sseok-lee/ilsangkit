@@ -15,7 +15,7 @@ describe('SearchFilters', () => {
     expect(wrapper.text()).toContain('공공화장실')
     expect(wrapper.text()).toContain('무료와이파이')
     expect(wrapper.text()).toContain('의류수거함')
-    expect(wrapper.text()).toContain('무인민원발급기')
+    expect(wrapper.text()).toContain('공원')
   })
 
   it('정렬 옵션을 렌더링하는지 확인', () => {

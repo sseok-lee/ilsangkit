@@ -59,13 +59,18 @@ const categories = [
   { label: '공공화장실', value: 'toilet' as FacilityCategory },
   { label: '무료와이파이', value: 'wifi' as FacilityCategory },
   { label: '의류수거함', value: 'clothes' as FacilityCategory },
-  { label: '무인민원발급기', value: 'kiosk' as FacilityCategory },
+  { label: '공원', value: 'park' as FacilityCategory },
+  { label: '학교', value: 'school' as FacilityCategory },
+  { label: '전통시장', value: 'market' as FacilityCategory },
   { label: '공영주차장', value: 'parking' as FacilityCategory },
   { label: '자동심장충격기', value: 'aed' as FacilityCategory },
   { label: '공공도서관', value: 'library' as FacilityCategory },
   { label: '쓰레기배출', value: 'trash' as FacilityCategory },
   { label: '병원', value: 'hospital' as FacilityCategory },
   { label: '약국', value: 'pharmacy' as FacilityCategory },
+  { label: '어린이집', value: 'childcare' as FacilityCategory },
+  { label: '전기차 충전소', value: 'ev-charger' as FacilityCategory },
+  { label: '체육시설', value: 'sports' as FacilityCategory },
 ]
 
 const handleCategoryChange = (value: FacilityCategory | undefined) => {

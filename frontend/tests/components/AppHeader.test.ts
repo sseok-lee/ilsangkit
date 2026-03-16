@@ -52,9 +52,10 @@ describe('AppHeader', () => {
     it('should display group titles', () => {
       const nav = wrapper.find('nav.hidden.md\\:flex')
       const text = nav.text()
-      expect(text).toContain('생활 편의')
+      expect(text).toContain('생활/편의')
+      expect(text).toContain('교육/육아')
       expect(text).toContain('건강/안전')
-      expect(text).toContain('문화/환경')
+      expect(text).toContain('환경/생활')
     })
 
     it('should have utility links for search and about', () => {
@@ -67,9 +68,9 @@ describe('AppHeader', () => {
 
     it('should show dropdown with category links on hover', async () => {
       const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
-      expect(groupButtons.length).toBe(4)
+      expect(groupButtons.length).toBe(5)
 
-      // Hover over second group (생활 편의, index 1 since 부동산 is first)
+      // Hover over second group (생활/편의, index 1 since 부동산 is first)
       await groupButtons[1].trigger('mouseenter')
 
       // Dropdown should appear with category links
@@ -78,8 +79,8 @@ describe('AppHeader', () => {
       const links = dropdown.findAll('a')
       const hrefs = links.map((l) => l.attributes('href'))
       expect(hrefs).toContain('/toilet')
-      expect(hrefs).toContain('/wifi')
       expect(hrefs).toContain('/parking')
+      expect(hrefs).toContain('/park')
     })
 
     it('should show 3 real estate links in navigation', async () => {
@@ -133,9 +134,8 @@ describe('AppHeader', () => {
       // Category links
       expect(hrefs).toContain('/toilet')
       expect(hrefs).toContain('/trash')
-      expect(hrefs).toContain('/wifi')
       expect(hrefs).toContain('/clothes')
-      expect(hrefs).toContain('/kiosk')
+      expect(hrefs).toContain('/park')
     })
 
     it('should display group headers in mobile menu', async () => {
@@ -144,9 +144,10 @@ describe('AppHeader', () => {
 
       const mobileMenu = wrapper.find('[data-testid="mobile-menu"]')
       const text = mobileMenu.text()
-      expect(text).toContain('생활 편의')
+      expect(text).toContain('생활/편의')
+      expect(text).toContain('교육/육아')
       expect(text).toContain('건강/안전')
-      expect(text).toContain('문화/환경')
+      expect(text).toContain('환경/생활')
     })
 
     it('should have about link in mobile menu', async () => {

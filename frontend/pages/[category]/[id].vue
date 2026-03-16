@@ -273,29 +273,6 @@
                     </div>
                   </template>
 
-                  <!-- Kiosk -->
-                  <template v-if="facility.category === 'kiosk' && (details?.operationAgency || details?.weekdayOperatingHours || details?.saturdayOperatingHours || details?.holidayOperatingHours)">
-                    <div class="h-px bg-[#f0f2f5] w-full"></div>
-                    <div class="flex flex-col gap-3">
-                      <div v-if="details?.operationAgency" class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563]">운영기관</span>
-                        <span class="text-sm font-medium text-[#111418]">{{ details?.operationAgency }}</span>
-                      </div>
-                      <div v-if="details?.weekdayOperatingHours" class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563]">평일 운영시간</span>
-                        <span class="text-sm font-medium text-[#111418]">{{ details?.weekdayOperatingHours }}</span>
-                      </div>
-                      <div v-if="details?.saturdayOperatingHours" class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563]">토요일 운영시간</span>
-                        <span class="text-sm font-medium text-[#111418]">{{ details?.saturdayOperatingHours }}</span>
-                      </div>
-                      <div v-if="details?.holidayOperatingHours" class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563]">공휴일 운영시간</span>
-                        <span class="text-sm font-medium text-[#111418]">{{ details?.holidayOperatingHours }}</span>
-                      </div>
-                    </div>
-                  </template>
-
                   <!-- Parking -->
                   <template v-if="facility.category === 'parking' && (details?.parkingType || details?.operatingDays || details?.managingOrg)">
                     <div class="h-px bg-[#f0f2f5] w-full"></div>
@@ -569,57 +546,6 @@
                     </div>
                   </template>
 
-                  <!-- Kiosk Details -->
-                  <template v-if="facility.category === 'kiosk'">
-                    <div v-if="details?.detailLocation || (details?.installPosition && details?.installPosition !== details?.detailLocation)" :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] pt-5' : '', 'flex flex-col gap-3']">
-                      <div v-if="details?.detailLocation" class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563]">설치 위치</span>
-                        <span class="text-sm font-medium text-[#111418]">{{ details?.detailLocation }}</span>
-                      </div>
-                      <div v-if="details?.installPosition && details?.installPosition !== details?.detailLocation" class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563]">건물 내 위치</span>
-                        <span class="text-sm font-medium text-[#111418]">{{ details?.installPosition }}</span>
-                      </div>
-                    </div>
-
-                    <!-- Kiosk Accessibility -->
-                    <div v-if="details?.blindKeypad !== undefined || details?.voiceGuide !== undefined || details?.brailleOutput !== undefined || details?.wheelchairAccessible !== undefined" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                      <h3 class="text-sm font-bold text-[#111418] mb-3">접근성</h3>
-                      <div class="grid grid-cols-2 gap-3">
-                        <div v-if="details?.blindKeypad !== undefined" class="flex items-center gap-2">
-                          <span class="material-symbols-outlined text-base" :class="details?.blindKeypad ? 'text-green-500' : 'text-gray-300'">{{ details?.blindKeypad ? 'check_circle' : 'cancel' }}</span>
-                          <span class="text-sm text-[#4b5563]">시각장애인 키패드</span>
-                        </div>
-                        <div v-if="details?.voiceGuide !== undefined" class="flex items-center gap-2">
-                          <span class="material-symbols-outlined text-base" :class="details?.voiceGuide ? 'text-green-500' : 'text-gray-300'">{{ details?.voiceGuide ? 'check_circle' : 'cancel' }}</span>
-                          <span class="text-sm text-[#4b5563]">음성 안내</span>
-                        </div>
-                        <div v-if="details?.brailleOutput !== undefined" class="flex items-center gap-2">
-                          <span class="material-symbols-outlined text-base" :class="details?.brailleOutput ? 'text-green-500' : 'text-gray-300'">{{ details?.brailleOutput ? 'check_circle' : 'cancel' }}</span>
-                          <span class="text-sm text-[#4b5563]">점자 출력</span>
-                        </div>
-                        <div v-if="details?.wheelchairAccessible !== undefined" class="flex items-center gap-2">
-                          <span class="material-symbols-outlined text-base" :class="details?.wheelchairAccessible ? 'text-green-500' : 'text-gray-300'">{{ details?.wheelchairAccessible ? 'check_circle' : 'cancel' }}</span>
-                          <span class="text-sm text-[#4b5563]">휠체어 접근</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Kiosk Available Documents -->
-                    <div v-if="details?.availableDocuments?.length" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                      <h3 class="text-sm font-bold text-[#111418] mb-3">발급 가능 민원</h3>
-                      <div class="flex flex-wrap gap-2">
-                        <span
-                          v-for="doc in details?.availableDocuments"
-                          :key="doc"
-                          class="inline-flex items-center rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 border border-orange-200"
-                        >
-                          {{ doc }}
-                        </span>
-                      </div>
-                    </div>
-                  </template>
-
                   <!-- Parking Details -->
                   <template v-if="facility.category === 'parking'">
                     <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] pt-5' : '']">
@@ -742,6 +668,218 @@
                       <div v-if="details?.model" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563]">모델명</span>
                         <span class="text-sm font-medium text-[#111418]">{{ details?.model }}</span>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Park Details -->
+                  <template v-if="facility.category === 'park'">
+                    <div class="flex flex-col gap-3">
+                      <div v-if="details?.parkType" class="flex items-center gap-2">
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="parkTypeBadgeClass">{{ details.parkType }}</span>
+                      </div>
+                      <div v-if="details?.area != null" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">면적</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.area.toLocaleString() }}㎡ (약 {{ Math.round(details.area * 0.3025).toLocaleString() }}평)</span>
+                      </div>
+                      <div v-if="details?.designatedDate" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">지정일</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.designatedDate }}</span>
+                      </div>
+                      <div v-if="details?.managingOrg" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">관리기관</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.managingOrg }}</span>
+                      </div>
+                    </div>
+                    <div v-if="parkHasFacilities" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <div v-if="details?.exerciseFacilities">
+                        <h3 class="text-sm font-bold text-[#111418] mb-2">운동시설</h3>
+                        <div class="flex flex-wrap gap-1.5">
+                          <span v-for="tag in details.exerciseFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'e-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        </div>
+                      </div>
+                      <div v-if="details?.playFacilities">
+                        <h3 class="text-sm font-bold text-[#111418] mb-2">놀이시설</h3>
+                        <div class="flex flex-wrap gap-1.5">
+                          <span v-for="tag in details.playFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'p-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        </div>
+                      </div>
+                      <div v-if="details?.convenienceFacilities">
+                        <h3 class="text-sm font-bold text-[#111418] mb-2">편의시설</h3>
+                        <div class="flex flex-wrap gap-1.5">
+                          <span v-for="tag in details.convenienceFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'c-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        </div>
+                      </div>
+                      <div v-if="details?.cultureFacilities">
+                        <h3 class="text-sm font-bold text-[#111418] mb-2">교양시설</h3>
+                        <div class="flex flex-wrap gap-1.5">
+                          <span v-for="tag in details.cultureFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'cu-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        </div>
+                      </div>
+                      <div v-if="details?.otherFacilities">
+                        <h3 class="text-sm font-bold text-[#111418] mb-2">기타시설</h3>
+                        <div class="flex flex-wrap gap-1.5">
+                          <span v-for="tag in details.otherFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'o-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- School Details -->
+                  <template v-if="facility.category === 'school'">
+                    <div class="flex flex-col gap-3">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span v-if="details?.schoolLevel" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="schoolLevelBadgeClass">{{ details.schoolLevel }}</span>
+                        <span v-if="details?.foundationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="foundationTypeBadgeClass">{{ details.foundationType }}</span>
+                        <span v-if="details?.branchType?.includes('분교')" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800">분교</span>
+                      </div>
+                      <div v-if="details?.foundedDate" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">설립일</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.foundedDate }}</span>
+                      </div>
+                    </div>
+                    <div v-if="details?.sidoEduName || details?.localEduName" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">관할 교육청</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-if="details?.sidoEduName" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">시도교육청</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ details.sidoEduName }}</span>
+                        </div>
+                        <div v-if="details?.localEduName" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">교육지원청</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ details.localEduName }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Market Details -->
+                  <template v-if="facility.category === 'market'">
+                    <div class="flex flex-col gap-3">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span v-if="details?.marketType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="details.marketType.includes('상설') ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'">{{ details.marketType }}</span>
+                        <span v-if="details?.openingCycle" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800">{{ marketOpeningCycleLabel }}</span>
+                      </div>
+                      <div v-if="details?.storeCount != null" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">점포 수</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.storeCount.toLocaleString() }}개</span>
+                      </div>
+                      <div v-if="details?.foundedYear != null" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">개설연도</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.foundedYear }}년</span>
+                      </div>
+                    </div>
+                    <div v-if="marketProductTags.length" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">주요 판매품목</h3>
+                      <div class="flex flex-wrap gap-1">
+                        <span v-for="tag in marketProductTags" :key="tag" class="inline-block bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-xs">{{ tag }}</span>
+                      </div>
+                    </div>
+                    <div v-if="details?.hasPublicToilet != null || details?.hasParking != null" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">편의시설</h3>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div v-if="details?.hasPublicToilet != null" class="flex items-center gap-1.5 text-sm text-gray-700">
+                          <span :class="details.hasPublicToilet ? 'text-green-600' : 'text-gray-400'">{{ details.hasPublicToilet ? '✓' : '✗' }}</span>
+                          <span>공중화장실</span>
+                        </div>
+                        <div v-if="details?.hasParking != null" class="flex items-center gap-1.5 text-sm text-gray-700">
+                          <span :class="details.hasParking ? 'text-green-600' : 'text-gray-400'">{{ details.hasParking ? '✓' : '✗' }}</span>
+                          <span>주차시설</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="details?.homepageUrl" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">홈페이지</span>
+                        <a :href="details.homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm text-primary font-medium underline">{{ details.homepageUrl }}</a>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Childcare Details -->
+                  <template v-if="facility.category === 'childcare'">
+                    <div class="flex flex-col gap-3">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span v-if="details?.crtypename" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareTypeBadgeClass">{{ details.crtypename }}</span>
+                        <span v-if="details?.crstatusname" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareStatusBadgeClass">{{ details.crstatusname }}</span>
+                      </div>
+                      <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-gray-600">
+                        휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
+                      </div>
+                      <template v-if="details?.crcapat != null && details?.crchcnt != null">
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">정원</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ details.crcapat }}명</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">현원</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ details.crchcnt }}명</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">가용률</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ childcareAvailabilityRate }}</span>
+                        </div>
+                      </template>
+                    </div>
+                    <div v-if="details?.nrtrroomcnt != null || details?.cctvinstlcnt != null || details?.plgrdco != null || details?.chcrtescnt != null" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">시설 정보</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-if="details?.nrtrroomcnt != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">보육실</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ details.nrtrroomcnt }}개</span>
+                        </div>
+                        <div v-if="details?.cctvinstlcnt != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">CCTV</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ details.cctvinstlcnt }}대</span>
+                        </div>
+                        <div v-if="details?.plgrdco != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">놀이터</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ details.plgrdco }}개</span>
+                        </div>
+                        <div v-if="details?.chcrtescnt != null" class="flex items-center justify-between">
+                          <span class="text-sm text-[#4b5563]">교직원 수</span>
+                          <span class="text-sm font-medium text-[#111418]">{{ details.chcrtescnt }}명</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="details?.crcargbname" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">통학차량</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.crcargbname }}</span>
+                      </div>
+                    </div>
+                    <div v-if="details?.crhome" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">홈페이지</span>
+                        <a :href="details.crhome" target="_blank" rel="noopener noreferrer" class="text-sm text-primary font-medium underline">{{ details.crhome }}</a>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- EvCharger Details -->
+                  <template v-if="facility.category === 'ev-charger'">
+                    <EvChargerDetail :details="details as any" />
+                  </template>
+
+                  <!-- Sports Details -->
+                  <template v-if="facility.category === 'sports'">
+                    <div class="flex flex-col gap-3">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span v-if="details?.ftypeNm" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="sportsTypeBadgeClass">{{ details.ftypeNm }}</span>
+                        <span v-if="details?.faciGbNm" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="sportsGbBadgeClass">{{ details.faciGbNm }}</span>
+                        <span v-if="details?.nationYn === 'Y'" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-red-100 text-red-800">국가대표시설</span>
+                      </div>
+                      <div v-if="details?.fcobNm" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">업종명</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.fcobNm }}</span>
+                      </div>
+                      <div v-if="details?.faciGfa" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">시설면적</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.faciGfa }}㎡</span>
+                      </div>
+                      <div v-if="details?.standCptPsnCnt != null" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">관람석수</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.standCptPsnCnt.toLocaleString() }}석</span>
                       </div>
                     </div>
                   </template>
@@ -1173,29 +1311,6 @@
                 </div>
               </template>
 
-              <!-- Kiosk -->
-              <template v-if="facility.category === 'kiosk' && (details?.operationAgency || details?.weekdayOperatingHours || details?.saturdayOperatingHours || details?.holidayOperatingHours)">
-                <div class="h-px bg-[#f0f2f5] w-full"></div>
-                <div class="flex flex-col gap-3">
-                  <div v-if="details?.operationAgency" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">운영기관</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ details?.operationAgency }}</span>
-                  </div>
-                  <div v-if="details?.weekdayOperatingHours" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">평일 운영시간</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ details?.weekdayOperatingHours }}</span>
-                  </div>
-                  <div v-if="details?.saturdayOperatingHours" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">토요일 운영시간</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ details?.saturdayOperatingHours }}</span>
-                  </div>
-                  <div v-if="details?.holidayOperatingHours" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">공휴일 운영시간</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ details?.holidayOperatingHours }}</span>
-                  </div>
-                </div>
-              </template>
-
               <!-- Parking -->
               <template v-if="facility.category === 'parking' && (details?.parkingType || details?.operatingDays || details?.managingOrg)">
                 <div class="h-px bg-[#f0f2f5] w-full"></div>
@@ -1469,57 +1584,6 @@
                 </div>
               </template>
 
-              <!-- Kiosk Details -->
-              <template v-if="facility.category === 'kiosk'">
-                <div v-if="details?.detailLocation || (details?.installPosition && details?.installPosition !== details?.detailLocation)" :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] pt-5' : '', 'flex flex-col gap-3']">
-                  <div v-if="details?.detailLocation" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">설치 위치</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ details?.detailLocation }}</span>
-                  </div>
-                  <div v-if="details?.installPosition && details?.installPosition !== details?.detailLocation" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">건물 내 위치</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ details?.installPosition }}</span>
-                  </div>
-                </div>
-
-                <!-- Kiosk Accessibility -->
-                <div v-if="details?.blindKeypad !== undefined || details?.voiceGuide !== undefined || details?.brailleOutput !== undefined || details?.wheelchairAccessible !== undefined" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                  <h3 class="text-sm font-bold text-[#111418] mb-3">접근성</h3>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div v-if="details?.blindKeypad !== undefined" class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base" :class="details?.blindKeypad ? 'text-green-500' : 'text-gray-300'">{{ details?.blindKeypad ? 'check_circle' : 'cancel' }}</span>
-                      <span class="text-sm text-[#4b5563]">시각장애인 키패드</span>
-                    </div>
-                    <div v-if="details?.voiceGuide !== undefined" class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base" :class="details?.voiceGuide ? 'text-green-500' : 'text-gray-300'">{{ details?.voiceGuide ? 'check_circle' : 'cancel' }}</span>
-                      <span class="text-sm text-[#4b5563]">음성 안내</span>
-                    </div>
-                    <div v-if="details?.brailleOutput !== undefined" class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base" :class="details?.brailleOutput ? 'text-green-500' : 'text-gray-300'">{{ details?.brailleOutput ? 'check_circle' : 'cancel' }}</span>
-                      <span class="text-sm text-[#4b5563]">점자 출력</span>
-                    </div>
-                    <div v-if="details?.wheelchairAccessible !== undefined" class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base" :class="details?.wheelchairAccessible ? 'text-green-500' : 'text-gray-300'">{{ details?.wheelchairAccessible ? 'check_circle' : 'cancel' }}</span>
-                      <span class="text-sm text-[#4b5563]">휠체어 접근</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Kiosk Available Documents -->
-                <div v-if="details?.availableDocuments?.length" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                  <h3 class="text-sm font-bold text-[#111418] mb-3">발급 가능 민원</h3>
-                  <div class="flex flex-wrap gap-2">
-                    <span
-                      v-for="doc in details?.availableDocuments"
-                      :key="doc"
-                      class="inline-flex items-center rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 border border-orange-200"
-                    >
-                      {{ doc }}
-                    </span>
-                  </div>
-                </div>
-              </template>
-
               <!-- Parking Details -->
               <template v-if="facility.category === 'parking'">
                 <div :class="[hasGridContent ? 'mt-5 border-t border-[#f0f2f5] pt-5' : '']">
@@ -1642,6 +1706,206 @@
                   <div v-if="details?.model" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563]">모델명</span>
                     <span class="text-sm font-medium text-[#111418]">{{ details?.model }}</span>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Park Details (Mobile) -->
+              <template v-if="facility.category === 'park'">
+                <div class="flex flex-col gap-3">
+                  <div v-if="details?.parkType" class="flex items-center gap-2">
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="parkTypeBadgeClass">{{ details.parkType }}</span>
+                  </div>
+                  <div v-if="details?.area != null" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">면적</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.area.toLocaleString() }}㎡ (약 {{ Math.round(details.area * 0.3025).toLocaleString() }}평)</span>
+                  </div>
+                  <div v-if="details?.designatedDate" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">지정일</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.designatedDate }}</span>
+                  </div>
+                  <div v-if="details?.managingOrg" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">관리기관</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.managingOrg }}</span>
+                  </div>
+                </div>
+                <div v-if="parkHasFacilities" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] mb-3">보유 시설</h3>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span v-for="tag in details.exerciseFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'e-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      <span class="w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] leading-none">운</span>{{ tag }}
+                    </span>
+                    <span v-for="tag in details.playFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'p-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                      <span class="w-4 h-4 rounded-full bg-green-500 text-white flex items-center justify-center text-[10px] leading-none">놀</span>{{ tag }}
+                    </span>
+                    <span v-for="tag in details.convenienceFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'c-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      <span class="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] leading-none">편</span>{{ tag }}
+                    </span>
+                    <span v-for="tag in details.cultureFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'cu-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                      <span class="w-4 h-4 rounded-full bg-purple-500 text-white flex items-center justify-center text-[10px] leading-none">교</span>{{ tag }}
+                    </span>
+                    <span v-for="tag in details.otherFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'o-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
+                      <span class="w-4 h-4 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] leading-none">기</span>{{ tag }}
+                    </span>
+                  </div>
+                </div>
+              </template>
+
+              <!-- School Details (Mobile) -->
+              <template v-if="facility.category === 'school'">
+                <div class="flex flex-col gap-3">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span v-if="details?.schoolLevel" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="schoolLevelBadgeClass">{{ details.schoolLevel }}</span>
+                    <span v-if="details?.foundationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="foundationTypeBadgeClass">{{ details.foundationType }}</span>
+                    <span v-if="details?.branchType?.includes('분교')" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800">분교</span>
+                  </div>
+                  <div v-if="details?.foundedDate" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">설립일</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.foundedDate }}</span>
+                  </div>
+                </div>
+                <div v-if="details?.sidoEduName || details?.localEduName" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] mb-3">관할 교육청</h3>
+                  <div class="flex flex-col gap-3">
+                    <div v-if="details?.sidoEduName" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">시도교육청</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ details.sidoEduName }}</span>
+                    </div>
+                    <div v-if="details?.localEduName" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">교육지원청</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ details.localEduName }}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Market Details (Mobile) -->
+              <template v-if="facility.category === 'market'">
+                <div class="flex flex-col gap-3">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span v-if="details?.marketType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="details.marketType.includes('상설') ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'">{{ details.marketType }}</span>
+                    <span v-if="details?.openingCycle" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800">{{ marketOpeningCycleLabel }}</span>
+                  </div>
+                  <div v-if="details?.storeCount != null" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">점포 수</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.storeCount.toLocaleString() }}개</span>
+                  </div>
+                  <div v-if="details?.foundedYear != null" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">개설연도</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.foundedYear }}년</span>
+                  </div>
+                </div>
+                <div v-if="marketProductTags.length" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] mb-3">주요 판매품목</h3>
+                  <div class="flex flex-wrap gap-1">
+                    <span v-for="tag in marketProductTags" :key="tag" class="inline-block bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-xs">{{ tag }}</span>
+                  </div>
+                </div>
+                <div v-if="details?.hasPublicToilet != null || details?.hasParking != null" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] mb-3">편의시설</h3>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div v-if="details?.hasPublicToilet != null" class="flex items-center gap-1.5 text-sm text-gray-700">
+                      <span :class="details.hasPublicToilet ? 'text-green-600' : 'text-gray-400'">{{ details.hasPublicToilet ? '✓' : '✗' }}</span>
+                      <span>공중화장실</span>
+                    </div>
+                    <div v-if="details?.hasParking != null" class="flex items-center gap-1.5 text-sm text-gray-700">
+                      <span :class="details.hasParking ? 'text-green-600' : 'text-gray-400'">{{ details.hasParking ? '✓' : '✗' }}</span>
+                      <span>주차시설</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="details?.homepageUrl" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">홈페이지</span>
+                    <a :href="details.homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm text-primary font-medium underline">{{ details.homepageUrl }}</a>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Childcare Details (Mobile) -->
+              <template v-if="facility.category === 'childcare'">
+                <div class="flex flex-col gap-3">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span v-if="details?.crtypename" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareTypeBadgeClass">{{ details.crtypename }}</span>
+                    <span v-if="details?.crstatusname" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareStatusBadgeClass">{{ details.crstatusname }}</span>
+                  </div>
+                  <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-gray-600">
+                    휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
+                  </div>
+                  <template v-if="details?.crcapat != null && details?.crchcnt != null">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">정원</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ details.crcapat }}명</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">현원</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ details.crchcnt }}명</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">가용률</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ childcareAvailabilityRate }}</span>
+                    </div>
+                  </template>
+                </div>
+                <div v-if="details?.nrtrroomcnt != null || details?.cctvinstlcnt != null || details?.plgrdco != null || details?.chcrtescnt != null" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] mb-3">시설 정보</h3>
+                  <div class="flex flex-col gap-3">
+                    <div v-if="details?.nrtrroomcnt != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">보육실</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ details.nrtrroomcnt }}개</span>
+                    </div>
+                    <div v-if="details?.cctvinstlcnt != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">CCTV</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ details.cctvinstlcnt }}대</span>
+                    </div>
+                    <div v-if="details?.plgrdco != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">놀이터</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ details.plgrdco }}개</span>
+                    </div>
+                    <div v-if="details?.chcrtescnt != null" class="flex items-center justify-between">
+                      <span class="text-sm text-[#4b5563]">교직원 수</span>
+                      <span class="text-sm font-medium text-[#111418]">{{ details.chcrtescnt }}명</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="details?.crcargbname" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">통학차량</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.crcargbname }}</span>
+                  </div>
+                </div>
+                <div v-if="details?.crhome" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">홈페이지</span>
+                    <a :href="details.crhome" target="_blank" rel="noopener noreferrer" class="text-sm text-primary font-medium underline">{{ details.crhome }}</a>
+                  </div>
+                </div>
+              </template>
+
+              <!-- EvCharger Details (Mobile) -->
+              <template v-if="facility.category === 'ev-charger'">
+                <EvChargerDetail :details="details as any" />
+              </template>
+
+              <!-- Sports Details (Mobile) -->
+              <template v-if="facility.category === 'sports'">
+                <div class="flex flex-col gap-3">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span v-if="details?.ftypeNm" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="sportsTypeBadgeClass">{{ details.ftypeNm }}</span>
+                    <span v-if="details?.faciGbNm" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="sportsGbBadgeClass">{{ details.faciGbNm }}</span>
+                    <span v-if="details?.nationYn === 'Y'" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-red-100 text-red-800">국가대표시설</span>
+                  </div>
+                  <div v-if="details?.fcobNm" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">업종명</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.fcobNm }}</span>
+                  </div>
+                  <div v-if="details?.faciGfa" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">시설면적</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.faciGfa }}㎡</span>
+                  </div>
+                  <div v-if="details?.standCptPsnCnt != null" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">관람석수</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.standCptPsnCnt.toLocaleString() }}석</span>
                   </div>
                 </div>
               </template>
@@ -2097,6 +2361,99 @@ const hasFacilityStatus = computed(() => {
   return true
 })
 
+// Park badge class
+const parkTypeBadgeClass = computed(() => {
+  const type = (details.value as any)?.parkType || ''
+  if (type.includes('어린이')) return 'bg-green-100 text-green-800'
+  if (type.includes('근린')) return 'bg-blue-100 text-blue-800'
+  if (type.includes('문화')) return 'bg-purple-100 text-purple-800'
+  if (type.includes('체육')) return 'bg-orange-100 text-orange-800'
+  if (type.includes('수변')) return 'bg-cyan-100 text-cyan-800'
+  if (type.includes('역사')) return 'bg-amber-100 text-amber-800'
+  return 'bg-gray-100 text-gray-800'
+})
+
+const parkHasFacilities = computed(() => {
+  const d = details.value as any
+  return !!(d?.exerciseFacilities || d?.playFacilities || d?.convenienceFacilities || d?.cultureFacilities || d?.otherFacilities)
+})
+
+// School badge classes
+const schoolLevelBadgeClass = computed(() => {
+  const level = (details.value as any)?.schoolLevel || ''
+  if (level.includes('초등')) return 'bg-green-100 text-green-800'
+  if (level.includes('중학')) return 'bg-blue-100 text-blue-800'
+  if (level.includes('고등')) return 'bg-purple-100 text-purple-800'
+  return 'bg-gray-100 text-gray-800'
+})
+
+const foundationTypeBadgeClass = computed(() => {
+  const type = (details.value as any)?.foundationType || ''
+  if (type.includes('국립')) return 'bg-red-100 text-red-800'
+  if (type.includes('공립')) return 'bg-blue-100 text-blue-800'
+  if (type.includes('사립')) return 'bg-purple-100 text-purple-800'
+  return 'bg-gray-100 text-gray-800'
+})
+
+// Market computed
+const marketOpeningCycleLabel = computed(() => {
+  const cycle = (details.value as any)?.openingCycle || ''
+  if (cycle === '매일') return '매일'
+  if (/\d/.test(cycle)) {
+    const days = cycle.split('+').map((s: string) => s.trim()).filter(Boolean)
+    return `매월 ${days.join(', ')}`
+  }
+  return cycle
+})
+
+const marketProductTags = computed(() =>
+  (details.value as any)?.products?.split('+').map((s: string) => s.trim()).filter(Boolean) ?? []
+)
+
+// Childcare computed
+const childcareTypeBadgeClass = computed(() => {
+  const type = (details.value as any)?.crtypename || ''
+  if (type.includes('국공립')) return 'bg-blue-100 text-blue-800'
+  if (type.includes('민간')) return 'bg-orange-100 text-orange-800'
+  if (type.includes('가정')) return 'bg-green-100 text-green-800'
+  if (type.includes('직장')) return 'bg-purple-100 text-purple-800'
+  if (type.includes('협동')) return 'bg-teal-100 text-teal-800'
+  return 'bg-gray-100 text-gray-800'
+})
+
+const childcareStatusBadgeClass = computed(() => {
+  const status = (details.value as any)?.crstatusname || ''
+  if (status.includes('운영')) return 'bg-green-100 text-green-800'
+  if (status.includes('휴지')) return 'bg-yellow-100 text-yellow-800'
+  if (status.includes('폐지')) return 'bg-red-100 text-red-800'
+  return 'bg-gray-100 text-gray-800'
+})
+
+const childcareAvailabilityRate = computed(() => {
+  const cap = (details.value as any)?.crcapat
+  const cur = (details.value as any)?.crchcnt
+  if (cap == null || cur == null || cap === 0) return '-'
+  return `${((cap - cur) / cap * 100).toFixed(0)}%`
+})
+
+
+// Sports computed
+const sportsTypeBadgeClass = computed(() => {
+  const type = (details.value as any)?.ftypeNm || ''
+  if (type.includes('축구')) return 'bg-green-100 text-green-800'
+  if (type.includes('농구')) return 'bg-orange-100 text-orange-800'
+  if (type.includes('수영')) return 'bg-blue-100 text-blue-800'
+  if (type.includes('체육관')) return 'bg-purple-100 text-purple-800'
+  return 'bg-gray-100 text-gray-800'
+})
+
+const sportsGbBadgeClass = computed(() => {
+  const gb = (details.value as any)?.faciGbNm || ''
+  if (gb.includes('공공')) return 'bg-blue-100 text-blue-800'
+  if (gb.includes('민간')) return 'bg-orange-100 text-orange-800'
+  return 'bg-gray-100 text-gray-800'
+})
+
 // Generate map URLs (길찾기)
 const kakaoMapUrl = computed(() => {
   if (!facility.value) return '#'
@@ -2297,16 +2654,6 @@ const facilityFeatures = computed(() => {
     }
   }
 
-  // Kiosk specific
-  if (facility.value.category === 'kiosk') {
-    if (d.weekdayOperatingHours) {
-      features.push({ icon: '🕐', label: '평일', value: d.weekdayOperatingHours, color: 'indigo', materialIcon: 'schedule' })
-    }
-    if (d.saturdayOperatingHours) {
-      features.push({ icon: '🕐', label: '토요일', value: d.saturdayOperatingHours, color: 'purple', materialIcon: 'schedule' })
-    }
-  }
-
   // Wifi specific
   if (facility.value.category === 'wifi') {
     if (d.ssid) {
@@ -2339,7 +2686,6 @@ const facilityAmenities = computed(() => {
   if (d.hasCCTV) amenities.push('CCTV')
   if ((d as any).hasChildToilet) amenities.push('어린이 화장실')
 
-  // Kiosk amenities
   if ((d as any).hasDisabledAccess) amenities.push('장애인 편의시설')
 
   return amenities

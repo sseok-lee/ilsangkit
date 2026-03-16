@@ -100,9 +100,11 @@ const categoryIcons: Record<string, string> = {
   toilet: '🚻',
   wifi: '📶',
   clothes: '👕',
-  kiosk: '🏧',
   trash: '🗑️',
   parking: '🅿️',
+  park: '🌳',
+  school: '🏫',
+  market: '🏪',
 }
 
 const categoryColors: Record<string, string> = {
@@ -110,8 +112,10 @@ const categoryColors: Record<string, string> = {
   trash: '#10b981',
   wifi: '#f59e0b',
   clothes: '#ec4899',
-  kiosk: '#6366f1',
   parking: '#0ea5e9',
+  park: '#22c55e',
+  school: '#6366f1',
+  market: '#f97316',
 }
 
 function getCategoryIcon(category: string): string {

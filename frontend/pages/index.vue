@@ -351,13 +351,15 @@ const stats = computed(() => statsResponse.value?.data ?? {
   toilet: 0,
   wifi: 0,
   clothes: 0,
-  kiosk: 0,
+  park: 0,
   trash: 0,
   parking: 0,
   aed: 0,
   library: 0,
   hospital: 0,
   pharmacy: 0,
+  school: 0,
+  market: 0,
   total: 0,
   buildingCount: 0,
   regionCount: 0,
@@ -377,7 +379,7 @@ const groupStats = computed(() => {
   const re = realEstateStats.value
   return {
     realEstate: re.aptSale + re.aptRent + re.villaSale + re.villaRent + re.offitelSale + re.offitelRent,
-    living: stats.value.toilet + stats.value.wifi + stats.value.parking + stats.value.kiosk,
+    living: stats.value.toilet + stats.value.parking + stats.value.park,
     health: stats.value.hospital + stats.value.pharmacy + stats.value.aed,
     culture: stats.value.library + stats.value.clothes + stats.value.trash,
   }
@@ -408,20 +410,26 @@ const categoryDescriptions: Record<string, string> = {
   toilet: '가까운 화장실 바로 찾기',
   wifi: '무료 와이파이 접속 장소',
   parking: '주차장 위치·요금 비교',
-  kiosk: '서류 발급, 주말도 OK',
+  park: '공원 위치·시설 정보 확인',
+  school: '학교 위치·학교급 확인',
+  market: '전통시장 개장 정보 확인',
   aed: '가까운 AED 위치 확인',
   library: '좌석·장서·휴관일 확인',
   clothes: '가까운 의류수거함 찾기',
   trash: '배출 요일·방법 안내',
   hospital: '과목별 병원 검색',
   pharmacy: '야간·주말 약국 찾기',
+  childcare: '어린이집 정원·현원 확인',
+  'ev-charger': '충전소 위치·충전기 현황',
+  sports: '체육시설 종류·규모 확인',
 }
 
 // 그룹별 컬러 테마
 const GROUP_COLORS: Record<string, { bg: string; iconText: string }> = {
-  '생활 편의': { bg: 'bg-amber-50', iconText: 'text-amber-500' },
+  '생활/편의': { bg: 'bg-amber-50', iconText: 'text-amber-500' },
+  '교육/육아': { bg: 'bg-sky-50', iconText: 'text-sky-500' },
   '건강/안전': { bg: 'bg-emerald-50', iconText: 'text-emerald-500' },
-  '문화/환경': { bg: 'bg-violet-50', iconText: 'text-violet-500' },
+  '환경/생활': { bg: 'bg-violet-50', iconText: 'text-violet-500' },
 }
 
 // 그룹화된 카테고리 (공유 상수 + 페이지 전용 desc + 그룹 컬러)

@@ -72,9 +72,8 @@
           </span>
           <span v-if="facility.extras.capacity" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-sky-50 text-sky-700">{{ facility.extras.capacity }}면</span>
 
-          <!-- kiosk -->
-          <span v-if="facility.extras.weekdayOperatingHours" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-orange-50 text-orange-700">{{ facility.extras.weekdayOperatingHours }}</span>
-          <span v-if="facility.extras.wheelchairAccessible" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-50 text-violet-700">휠체어 접근</span>
+          <!-- opening cycle (market) -->
+          <span v-if="facility.extras.openingCycle" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-orange-50 text-orange-700">{{ facility.extras.openingCycle }}</span>
 
           <!-- aed -->
           <span v-if="facility.extras.buildPlace" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-700 max-w-[160px] truncate">{{ facility.extras.buildPlace }}</span>
@@ -91,6 +90,10 @@
           <span v-if="facility.extras.clCdNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-700">{{ facility.extras.clCdNm }}</span>
           <span v-if="facility.extras.phone" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ facility.extras.phone }}</span>
           <span v-if="facility.extras.drTotCnt" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">의사 {{ facility.extras.drTotCnt }}명</span>
+
+          <!-- ev-charger (충전소 단위) -->
+          <span v-if="facility.extras.rapidCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">급속 {{ facility.extras.rapidCount }}대</span>
+          <span v-if="facility.extras.slowCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-50 text-green-700">완속 {{ facility.extras.slowCount }}대</span>
         </div>
       </div>
     </div>

@@ -53,7 +53,7 @@ describe('FacilityCard', () => {
   })
 
   it('카테고리별 아이콘이 표시되는지 확인', () => {
-    const categories = ['toilet', 'wifi', 'trash', 'clothes', 'kiosk', 'parking', 'aed', 'library', 'hospital', 'pharmacy'] as const
+    const categories = ['toilet', 'wifi', 'trash', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market'] as const
 
     categories.forEach((category) => {
       const facility = { ...mockFacility, category }

@@ -8,8 +8,8 @@ import {
 } from '../../types/facility'
 
 describe('NAV_GROUPS', () => {
-  it('4개 그룹을 포함해야 한다', () => {
-    expect(NAV_GROUPS).toHaveLength(4)
+  it('5개 그룹을 포함해야 한다', () => {
+    expect(NAV_GROUPS).toHaveLength(5)
   })
 
   it('첫 번째 그룹이 LinkGroup이어야 한다', () => {
@@ -39,26 +39,30 @@ describe('NAV_GROUPS', () => {
   })
 })
 
-describe('CATEGORY_GROUPS 하위 호환', () => {
-  it('CATEGORY_GROUPS는 3개 그룹을 유지해야 한다', () => {
-    expect(CATEGORY_GROUPS).toHaveLength(3)
+describe('CATEGORY_GROUPS', () => {
+  it('CATEGORY_GROUPS는 4개 그룹을 유지해야 한다', () => {
+    expect(CATEGORY_GROUPS).toHaveLength(4)
   })
 
-  it('CATEGORY_GROUPS의 첫 번째 그룹은 생활 편의여야 한다', () => {
-    expect(CATEGORY_GROUPS[0].title).toBe('생활 편의')
+  it('CATEGORY_GROUPS의 첫 번째 그룹은 생활/편의여야 한다', () => {
+    expect(CATEGORY_GROUPS[0].title).toBe('생활/편의')
   })
 
-  it('CATEGORY_GROUPS의 두 번째 그룹은 건강/안전이어야 한다', () => {
-    expect(CATEGORY_GROUPS[1].title).toBe('건강/안전')
+  it('CATEGORY_GROUPS의 두 번째 그룹은 교육/육아여야 한다', () => {
+    expect(CATEGORY_GROUPS[1].title).toBe('교육/육아')
   })
 
-  it('CATEGORY_GROUPS의 세 번째 그룹은 문화/환경이어야 한다', () => {
-    expect(CATEGORY_GROUPS[2].title).toBe('문화/환경')
+  it('CATEGORY_GROUPS의 세 번째 그룹은 건강/안전이어야 한다', () => {
+    expect(CATEGORY_GROUPS[2].title).toBe('건강/안전')
   })
 
-  it('NAV_GROUPS의 마지막 3개 그룹이 CATEGORY_GROUPS와 동일해야 한다', () => {
-    const lastThree = NAV_GROUPS.slice(1, 4)
-    lastThree.forEach((group, i) => {
+  it('CATEGORY_GROUPS의 네 번째 그룹은 환경/생활이어야 한다', () => {
+    expect(CATEGORY_GROUPS[3].title).toBe('환경/생활')
+  })
+
+  it('NAV_GROUPS의 마지막 4개 그룹이 CATEGORY_GROUPS와 동일해야 한다', () => {
+    const lastFour = NAV_GROUPS.slice(1, 5)
+    lastFour.forEach((group, i) => {
       expect(group.title).toBe(CATEGORY_GROUPS[i].title)
       expect(group.icon).toBe(CATEGORY_GROUPS[i].icon)
     })

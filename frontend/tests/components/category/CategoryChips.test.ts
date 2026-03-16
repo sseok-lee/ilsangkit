@@ -8,7 +8,7 @@ describe('CategoryChips', () => {
     { id: 'trash', label: '쓰레기 배출' },
     { id: 'wifi', label: '무료 와이파이' },
     { id: 'clothes', label: '의류수거함' },
-    { id: 'kiosk', label: '무인민원발급기' },
+    { id: 'park', label: '공원' },
   ]
 
   it('renders all 5 categories', () => {
@@ -36,7 +36,7 @@ describe('CategoryChips', () => {
     expect(chips[1].text()).toContain('쓰레기 배출')
     expect(chips[2].text()).toContain('무료 와이파이')
     expect(chips[3].text()).toContain('의류수거함')
-    expect(chips[4].text()).toContain('무인민원발급기')
+    expect(chips[4].text()).toContain('공원')
   })
 
   it('highlights selected category', () => {

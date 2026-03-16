@@ -111,9 +111,10 @@ describe('Index Page', () => {
   it('renders grouped category sections', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    expect(wrapper.text()).toContain('생활 편의')
+    expect(wrapper.text()).toContain('생활/편의')
+    expect(wrapper.text()).toContain('교육/육아')
     expect(wrapper.text()).toContain('건강/안전')
-    expect(wrapper.text()).toContain('문화/환경')
+    expect(wrapper.text()).toContain('환경/생활')
   })
 })
 

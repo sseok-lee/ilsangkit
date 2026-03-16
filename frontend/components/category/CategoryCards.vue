@@ -57,10 +57,12 @@ const getCategoryBgClass = (categoryId: string): string => {
     trash: 'bg-green-50',
     wifi: 'bg-orange-50',
     clothes: 'bg-pink-50',
-    kiosk: 'bg-indigo-50',
     parking: 'bg-sky-50',
     aed: 'bg-red-50',
     library: 'bg-amber-50',
+    park: 'bg-green-50',
+    school: 'bg-indigo-50',
+    market: 'bg-orange-50',
   }
   return bgMap[categoryId] || 'bg-gray-50'
 }
@@ -71,10 +73,12 @@ const getCategoryIconBgClass = (categoryId: string): string => {
     trash: '',
     wifi: '',
     clothes: '',
-    kiosk: '',
     parking: '',
     aed: '',
     library: '',
+    park: '',
+    school: '',
+    market: '',
   }
   return bgMap[categoryId] || ''
 }
@@ -85,10 +89,12 @@ const getCategoryTextClass = (categoryId: string): string => {
     trash: 'text-green-900',
     wifi: 'text-orange-900',
     clothes: 'text-pink-900',
-    kiosk: 'text-indigo-900',
     parking: 'text-sky-900',
     aed: 'text-red-900',
     library: 'text-amber-900',
+    park: 'text-green-900',
+    school: 'text-indigo-900',
+    market: 'text-orange-900',
   }
   return textMap[categoryId] || 'text-gray-900'
 }

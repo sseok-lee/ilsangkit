@@ -67,7 +67,7 @@ describe('Region Page Logic', () => {
       wifi: '무료 와이파이',
       trash: '생활쓰레기',
       clothes: '의류수거함',
-      kiosk: '무인민원발급기',
+      park: '공원',
     };
 
     expect(CATEGORY_MAP['toilet']).toBe('공공화장실');
@@ -133,7 +133,7 @@ describe('Region Page Logic', () => {
     const district = 'gangnam';
     const currentCategory = 'toilet';
 
-    const categories = ['toilet', 'wifi', 'trash', 'clothes', 'kiosk'];
+    const categories = ['toilet', 'wifi', 'trash', 'clothes', 'park'];
     const otherCategories = categories.filter(cat => cat !== currentCategory);
 
     expect(otherCategories).toHaveLength(4);

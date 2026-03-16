@@ -59,11 +59,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   toilet: '#3b82f6', // blue-500
   wifi: '#10b981', // green-500
   clothes: '#8b5cf6', // purple-500
-  kiosk: '#f97316', // orange-500
   trash: '#ef4444', // red-500
   parking: '#0ea5e9', // sky-500
   aed: '#ef4444', // red-500
   library: '#d97706', // amber-600
+  park: '#22c55e', // green-500
+  school: '#6366f1', // indigo-500
+  market: '#f97316', // orange-500
 }
 
 // 지도 초기화

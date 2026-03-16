@@ -77,12 +77,14 @@ import { CATEGORY_META } from '~/types/facility'
 import ToiletDetail from './details/ToiletDetail.vue'
 import WifiDetail from './details/WifiDetail.vue'
 import ClothesDetail from './details/ClothesDetail.vue'
-import KioskDetail from './details/KioskDetail.vue'
 import ParkingDetail from './details/ParkingDetail.vue'
 import AedDetail from './details/AedDetail.vue'
 import LibraryDetail from './details/LibraryDetail.vue'
 import HospitalDetail from './details/HospitalDetail.vue'
 import PharmacyDetail from './details/PharmacyDetail.vue'
+import ParkDetail from './details/ParkDetail.vue'
+import SchoolDetail from './details/SchoolDetail.vue'
+import MarketDetail from './details/MarketDetail.vue'
 
 const props = defineProps<{
   facility: FacilityDetail
@@ -98,8 +100,6 @@ const detailComponent = computed(() => {
       return WifiDetail
     case 'clothes':
       return ClothesDetail
-    case 'kiosk':
-      return KioskDetail
     case 'parking':
       return ParkingDetail
     case 'aed':
@@ -110,6 +110,12 @@ const detailComponent = computed(() => {
       return HospitalDetail
     case 'pharmacy':
       return PharmacyDetail
+    case 'park':
+      return ParkDetail
+    case 'school':
+      return SchoolDetail
+    case 'market':
+      return MarketDetail
     default:
       return null
   }
