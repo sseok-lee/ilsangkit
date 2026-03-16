@@ -8,11 +8,7 @@
  *   npm run submit:indexing              # 기본 200개 제출
  *   npm run submit:indexing -- --limit 10  # 10개만 제출
  */
-// 프로덕션 DB 사용: prisma import 전에 DATABASE_URL 교체
 import 'dotenv/config';
-if (process.env.PRODUCTION_DATABASE_URL) {
-  process.env.DATABASE_URL = process.env.PRODUCTION_DATABASE_URL;
-}
 
 import { google } from 'googleapis';
 import fs from 'fs';
@@ -22,7 +18,7 @@ import prisma from '../lib/prisma.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOG_FILE = path.resolve(__dirname, '../../data/indexing-log.json');
-const SITE_BASE = 'https://ilsangkit.com';
+const SITE_BASE = 'https://ilsangkit.co.kr';
 
 interface IndexingLog {
   submittedUrls: string[];
