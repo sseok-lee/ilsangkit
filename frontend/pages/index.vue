@@ -139,7 +139,7 @@
               class="flex flex-col items-center gap-1.5"
             >
               <div class="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center">
-                <img :src="`/icons/category/${link.iconImg}.webp`" :alt="link.label" class="w-8 h-8" width="32" height="32" loading="lazy" />
+                <img :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-8 h-8" width="32" height="32" loading="lazy" />
               </div>
               <span class="text-sm text-slate-700 font-medium">{{ link.label }}</span>
               <div class="flex gap-1">
@@ -158,7 +158,7 @@
               class="group flex items-center gap-4 p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:bg-primary/5 transition-all duration-300 bg-white"
             >
               <div class="w-12 h-12 rounded-xl bg-primary/10 shrink-0 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <img :src="`/icons/category/${link.iconImg}.webp`" :alt="link.label" class="w-9 h-9" width="36" height="36" loading="lazy" />
+                <img :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-9 h-9" width="36" height="36" loading="lazy" />
               </div>
               <div class="flex-1 min-w-0">
                 <h3 class="text-slate-900 font-semibold text-[17px]">{{ link.label }}</h3>
@@ -188,7 +188,7 @@
               class="flex flex-col items-center gap-2"
             >
               <div class="w-14 h-14 rounded-2xl flex items-center justify-center" :class="group.colors.bg">
-                <img :src="`/icons/category/${item.id}.webp`" :alt="CATEGORY_LABELS[item.id]" class="w-9 h-9" width="36" height="36" loading="lazy" />
+                <img :src="`/icons/category/${item.id}.webp?v2`" :alt="CATEGORY_LABELS[item.id]" class="w-9 h-9" width="36" height="36" loading="lazy" />
               </div>
               <span class="text-sm text-slate-700 font-medium text-center leading-tight">{{ CATEGORY_LABELS[item.id] }}</span>
               <span v-if="stats[item.id]" class="text-xs text-slate-500 font-medium -mt-1">{{ (stats[item.id] as number).toLocaleString('ko-KR') }}곳</span>
@@ -204,7 +204,7 @@
               class="group flex items-center gap-4 p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:bg-primary/5 transition-all duration-300 bg-white"
             >
               <div class="w-12 h-12 rounded-xl bg-primary/5 shrink-0 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <img :src="`/icons/category/${item.id}.webp`" :alt="CATEGORY_LABELS[item.id]" class="w-8 h-8" width="32" height="32" loading="lazy" />
+                <img :src="`/icons/category/${item.id}.webp?v2`" :alt="CATEGORY_LABELS[item.id]" class="w-8 h-8" width="32" height="32" loading="lazy" />
               </div>
               <div class="flex-1 min-w-0">
                 <h3 class="text-slate-900 font-semibold text-[17px]">{{ CATEGORY_LABELS[item.id] }}</h3>

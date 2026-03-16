@@ -145,7 +145,7 @@
           :to="`/${city}/${district}/${cat.slug}`"
           class="group flex flex-col items-center p-4 rounded-2xl border border-slate-200 bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
         >
-          <img :src="`/icons/category/${cat.slug}.webp`" :alt="cat.name" class="w-8 h-8 mb-2" width="32" height="32" loading="lazy" />
+          <img :src="`/icons/category/${cat.slug}.webp?v2`" :alt="cat.name" class="w-8 h-8 mb-2" width="32" height="32" loading="lazy" />
           <span class="text-xs text-slate-600 font-medium">{{ cat.name }}</span>
         </NuxtLink>
       </div>

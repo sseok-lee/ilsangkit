@@ -5,17 +5,19 @@
 
 export type CategoryId = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'kiosk' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy'
 
+export const ICON_VERSION = 'v2'
+
 export const CATEGORY_ICONS: Record<CategoryId, string> = {
-  toilet: '/icons/category/toilet.webp',
-  trash: '/icons/category/trash.webp',
-  wifi: '/icons/category/wifi.webp',
-  clothes: '/icons/category/clothes.webp',
-  kiosk: '/icons/category/kiosk.webp',
-  parking: '/icons/category/parking.webp',
-  aed: '/icons/category/aed.webp',
-  library: '/icons/category/library.webp',
-  hospital: '/icons/category/hospital.webp',
-  pharmacy: '/icons/category/pharmacy.webp',
+  toilet: `/icons/category/toilet.webp?${ICON_VERSION}`,
+  trash: `/icons/category/trash.webp?${ICON_VERSION}`,
+  wifi: `/icons/category/wifi.webp?${ICON_VERSION}`,
+  clothes: `/icons/category/clothes.webp?${ICON_VERSION}`,
+  kiosk: `/icons/category/kiosk.webp?${ICON_VERSION}`,
+  parking: `/icons/category/parking.webp?${ICON_VERSION}`,
+  aed: `/icons/category/aed.webp?${ICON_VERSION}`,
+  library: `/icons/category/library.webp?${ICON_VERSION}`,
+  hospital: `/icons/category/hospital.webp?${ICON_VERSION}`,
+  pharmacy: `/icons/category/pharmacy.webp?${ICON_VERSION}`,
 } as const
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = {

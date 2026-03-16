@@ -70,7 +70,7 @@
                 class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
                 @click="closeDropdown"
               >
-                <img :src="`/icons/category/${catId}.webp`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
+                <img :src="`/icons/category/${catId}.webp?v2`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
                 {{ CATEGORY_META[catId].shortLabel }}
               </NuxtLink>
             </template>
@@ -83,7 +83,7 @@
                 class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
                 @click="closeDropdown"
               >
-                <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
+                <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
                 <span v-else class="material-symbols-outlined text-[16px] text-primary">{{ link.icon }}</span>
                 {{ link.label }}
               </NuxtLink>
@@ -197,7 +197,7 @@
               class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
-              <img :src="`/icons/category/${catId}.webp`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
+              <img :src="`/icons/category/${catId}.webp?v2`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
               {{ CATEGORY_META[catId].shortLabel }}
             </NuxtLink>
           </template>
@@ -210,7 +210,7 @@
               class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
-              <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
+              <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
               <span v-else class="material-symbols-outlined text-[16px] text-primary">{{ link.icon }}</span>
               {{ link.label }}
             </NuxtLink>

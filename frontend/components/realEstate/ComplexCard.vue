@@ -11,7 +11,7 @@
           propertyTypeColor,
         ]"
       >
-        <img :src="`/icons/category/${propertyTypeImg}.webp`" :alt="props.propertyType" class="w-7 h-7" width="28" height="28" />
+        <img :src="`/icons/category/${propertyTypeImg}.webp?v2`" :alt="props.propertyType" class="w-7 h-7" width="28" height="28" />
       </div>
 
       <div class="flex-1 min-w-0">

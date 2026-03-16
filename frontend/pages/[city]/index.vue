@@ -40,7 +40,7 @@
             >
               <div class="flex items-center gap-2 mb-4">
                 <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <img :src="`/icons/category/${item.type}.webp`" :alt="item.label" class="w-7 h-7" width="28" height="28" />
+                  <img :src="`/icons/category/${item.type}.webp?v2`" :alt="item.label" class="w-7 h-7" width="28" height="28" />
                 </div>
                 <h3 class="font-bold text-slate-900">{{ item.label }}</h3>
               </div>

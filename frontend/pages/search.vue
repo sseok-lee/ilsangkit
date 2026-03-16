@@ -178,7 +178,7 @@
             ]"
             @click="selectRealEstateType(group.propertyType)"
           >
-            <img :src="`/icons/category/${group.iconImg}.webp`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
+            <img :src="`/icons/category/${group.iconImg}.webp?v2`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
             {{ group.label }}
           </button>
         </template>
@@ -195,7 +195,7 @@
             ]"
             @click="selectCategory(group.category)"
           >
-            <img :src="`/icons/category/${group.category}.webp`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
+            <img :src="`/icons/category/${group.category}.webp?v2`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
             {{ CATEGORY_META[group.category]?.shortLabel || group.label }}
           </button>
         </template>
@@ -249,7 +249,7 @@
                 class="bg-white rounded-xl p-4 border border-slate-200 hover:border-primary/30 hover:shadow-sm transition-all"
               >
                 <div class="flex items-start gap-3">
-                  <img :src="`/icons/category/${selectedRealEstateType}.webp`" :alt="RE_PROPERTY_META[selectedRealEstateType]?.label" class="w-10 h-10 shrink-0" width="40" height="40" />
+                  <img :src="`/icons/category/${selectedRealEstateType}.webp?v2`" :alt="RE_PROPERTY_META[selectedRealEstateType]?.label" class="w-10 h-10 shrink-0" width="40" height="40" />
                   <div class="flex-1 min-w-0">
                     <p class="font-semibold text-slate-800 text-sm truncate">{{ item.buildingName }}</p>
                     <p class="text-xs text-slate-500 mt-0.5 truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
@@ -281,7 +281,7 @@
             <div v-for="group in realEstateGrouped" :key="group.propertyType">
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2">
-                  <img :src="`/icons/category/${group.iconImg}.webp`" :alt="group.label" class="w-6 h-6" width="24" height="24" />
+                  <img :src="`/icons/category/${group.iconImg}.webp?v2`" :alt="group.label" class="w-6 h-6" width="24" height="24" />
                   <h3 class="text-slate-800 text-sm font-bold">{{ group.label }}</h3>
                 </div>
                 <button
@@ -331,7 +331,7 @@
               <div v-for="group in section.items" :key="group.category">
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-2">
-                    <img :src="`/icons/category/${group.category}.webp`" :alt="group.label" class="w-6 h-6" width="24" height="24" />
+                    <img :src="`/icons/category/${group.category}.webp?v2`" :alt="group.label" class="w-6 h-6" width="24" height="24" />
                     <h3 class="text-slate-800 text-sm font-bold">{{ group.label }}</h3>
                   </div>
                   <button

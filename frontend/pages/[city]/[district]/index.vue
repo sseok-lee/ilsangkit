@@ -42,7 +42,7 @@
             >
               <div class="flex items-center gap-2 mb-4">
                 <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <img :src="`/icons/category/${item.type}.webp`" :alt="item.label" class="w-7 h-7" width="28" height="28" />
+                  <img :src="`/icons/category/${item.type}.webp?v2`" :alt="item.label" class="w-7 h-7" width="28" height="28" />
                 </div>
                 <h3 class="font-bold text-slate-900">{{ item.label }}</h3>
               </div>
@@ -85,7 +85,7 @@
                   : 'border-slate-200 bg-white hover:bg-slate-50',
               ]"
             >
-              <img :src="`/icons/category/${cat}.webp`" :alt="CATEGORY_META[cat as FacilityCategory]?.label" class="w-8 h-8 mb-2" width="32" height="32" loading="lazy" />
+              <img :src="`/icons/category/${cat}.webp?v2`" :alt="CATEGORY_META[cat as FacilityCategory]?.label" class="w-8 h-8 mb-2" width="32" height="32" loading="lazy" />
               <span class="text-xs text-slate-600 mb-1">{{ CATEGORY_META[cat as FacilityCategory]?.label }}</span>
               <span class="text-sm font-bold text-slate-800">{{ count }}개</span>
             </NuxtLink>

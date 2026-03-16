@@ -98,7 +98,7 @@
 
       <div v-else-if="!pending" class="rounded-xl bg-slate-50 p-12 text-center">
         <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-white flex items-center justify-center shadow-sm">
-          <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
+          <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp?v2`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
         </div>
         <p class="text-slate-700 font-semibold text-lg">지역을 선택해주세요</p>
         <p class="text-slate-400 text-sm mt-1">시/도와 구/군을 선택하면 거래 내역을 확인할 수 있습니다</p>

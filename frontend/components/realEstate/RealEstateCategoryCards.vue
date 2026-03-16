@@ -9,7 +9,7 @@
       <div
         class="flex size-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors"
       >
-        <img :src="`/icons/category/${PROPERTY_TYPE_META[pt].iconImg}.webp`" :alt="PROPERTY_TYPE_META[pt].label" class="w-8 h-8" width="32" height="32" />
+        <img :src="`/icons/category/${PROPERTY_TYPE_META[pt].iconImg}.webp?v2`" :alt="PROPERTY_TYPE_META[pt].label" class="w-8 h-8" width="32" height="32" />
       </div>
       <div class="text-center">
         <p class="text-base font-semibold text-slate-800 group-hover:text-primary transition-colors">
