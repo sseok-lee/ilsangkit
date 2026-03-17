@@ -373,8 +373,13 @@ const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 useHead(() => {
-  const title = `${buildingName.value} ${propertyMeta.value?.label} ${tabLabel.value} 실거래가 | 일상킷`
-  const description = `${buildingName.value} ${propertyMeta.value?.label} ${tabLabel.value} 실거래가를 확인하세요. 국토교통부 데이터 기반 최신 거래 내역과 시세 추이를 제공합니다.`
+  const tab = tabLabel.value
+  const title = tab === '매매'
+    ? `${buildingName.value} 매매 실거래가·시세 - 일상킷`
+    : `${buildingName.value} 전월세 실거래가·전세가 - 일상킷`
+  const description = tab === '매매'
+    ? `${buildingName.value}의 최신 매매 실거래가와 시세 변동 추이를 확인하세요. 국토부 공식 데이터 기반 거래 내역과 주변 생활 인프라 정보를 함께 제공합니다.`
+    : `${buildingName.value}의 최신 전월세 실거래가를 확인하세요. 전세가와 월세 시세, 거래 내역을 국토부 공식 데이터로 제공합니다.`
   const canonicalBase = `${SITE_URL}/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}`
   const canonicalUrl = bjdCode.value ? `${canonicalBase}?bjdCode=${bjdCode.value}` : canonicalBase
   return {

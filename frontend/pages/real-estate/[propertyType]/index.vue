@@ -169,8 +169,26 @@ const lastSearch = ref<{ city: string; district: string; buildingName: string } 
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 useHead(() => {
-  const title = `${propertyMeta.value?.label} ${tabLabel.value} 실거래가 | 일상킷`
-  const description = propertyDescription.value
+  const label = propertyMeta.value?.label || ''
+  const tab = tabLabel.value
+  const title = tab === '매매'
+    ? `${label} 매매 실거래가·시세 조회 - 일상킷`
+    : `${label} 전월세 실거래가·전세가 조회 - 일상킷`
+  const seoDescriptions: Record<string, Record<string, string>> = {
+    apt: {
+      매매: '전국 아파트 매매 실거래가와 시세를 단지별로 조회하세요. 국토부 공식 데이터 기반 최근 거래 내역과 매매가 추이를 한눈에 확인할 수 있습니다.',
+      전월세: '전국 아파트 전월세 실거래가를 단지별로 조회하세요. 전세가와 월세 시세, 최근 거래 내역을 국토부 공식 데이터로 비교할 수 있습니다.',
+    },
+    villa: {
+      매매: '전국 연립다세대(빌라) 매매 실거래가와 시세를 지역별로 확인하세요. 최근 거래 내역과 매매가 흐름을 한눈에 비교할 수 있습니다.',
+      전월세: '전국 연립다세대(빌라) 전월세 실거래가를 지역별로 조회하세요. 전세가와 월세 시세, 최근 거래 내역을 확인할 수 있습니다.',
+    },
+    offitel: {
+      매매: '전국 오피스텔 매매 실거래가와 시세를 건물별로 조회하세요. 국토부 공식 데이터 기반 최근 거래 내역과 매매가 추이를 제공합니다.',
+      전월세: '전국 오피스텔 전월세 실거래가를 건물별로 조회하세요. 전세가와 월세 시세, 최근 거래 내역을 한곳에서 비교할 수 있습니다.',
+    },
+  }
+  const description = seoDescriptions[propertyTypeParam.value]?.[tab] || propertyDescription.value
   const canonicalUrl = `${SITE_URL}/real-estate/${propertyTypeParam.value}`
   const meta: Array<{ name?: string; property?: string; content: string }> = [
     { name: 'description', content: description },
