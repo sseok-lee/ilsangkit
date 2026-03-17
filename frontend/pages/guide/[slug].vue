@@ -127,6 +127,7 @@ import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
+import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
 import { SITE_URL } from '~/utils/seoConstants'
 import type { FacilityCategory } from '~/types/facility'
 
@@ -153,7 +154,11 @@ const loading = computed(() => status.value === 'pending')
 
 const categoryLabel = computed(() => {
   if (!guide.value) return ''
-  return CATEGORY_META[guide.value.category as FacilityCategory]?.label ?? guide.value.category
+  const category = guide.value.category
+  const facilityLabel = CATEGORY_META[category as FacilityCategory]?.label
+  if (facilityLabel) return facilityLabel
+  const camelKey = category.replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase())
+  return REAL_ESTATE_META[camelKey as keyof typeof REAL_ESTATE_META]?.label ?? category
 })
 
 const renderedContent = computed(() => {

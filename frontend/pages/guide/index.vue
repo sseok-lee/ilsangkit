@@ -107,6 +107,7 @@ import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
+import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
 import type { GuideSummary } from '~/composables/useGuides'
 
 // SEO
@@ -132,7 +133,11 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 
 function getCategoryLabel(category: string): string {
-  return CATEGORY_META[category as keyof typeof CATEGORY_META]?.label ?? category
+  // 시설 카테고리 먼저 확인, 없으면 부동산 카테고리 확인 (kebab-case → camelCase 변환)
+  const facilityLabel = CATEGORY_META[category as keyof typeof CATEGORY_META]?.label
+  if (facilityLabel) return facilityLabel
+  const camelKey = category.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+  return REAL_ESTATE_META[camelKey as keyof typeof REAL_ESTATE_META]?.label ?? category
 }
 
 function formatDate(dateStr: string): string {
