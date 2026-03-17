@@ -22,6 +22,14 @@ export default defineNuxtPlugin(() => {
     window.dataLayer.push(args)
   }
 
+  // Consent mode: 기본 granted (한국 사이트, GDPR 배너 유지하면서 GA4 수집 허용)
+  window.gtag('consent', 'default', {
+    analytics_storage: 'granted',
+    ad_storage: 'granted',
+    ad_user_data: 'granted',
+    ad_personalization: 'granted',
+  })
+
   // Initialize GA
   window.gtag('js', new Date())
   window.gtag('config', gaId, {
