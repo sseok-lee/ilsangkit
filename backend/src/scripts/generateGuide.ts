@@ -7,16 +7,9 @@ import { createId } from '@paralleldrive/cuid2';
 import { XMLParser } from 'fast-xml-parser';
 import OpenAI from 'openai';
 import { writeFile, mkdir } from 'fs/promises';
+import { execSync } from 'child_process';
 import path from 'path';
 
-// sharp는 optional — 프로덕션 CPU에서 로드 실패할 수 있음
-let sharpFn: ((input: Buffer) => import('sharp').Sharp) | null = null;
-try {
-  const mod = await import('sharp');
-  sharpFn = mod.default;
-} catch {
-  console.warn('sharp 로드 실패 — 이미지 리사이징 없이 원본 저장합니다.');
-}
 import { fileURLToPath } from 'url';
 import prisma from '../lib/prisma.js';
 
@@ -356,18 +349,19 @@ Style: ${style}`;
     const buffer = Buffer.from(imageData, 'base64');
     await mkdir(path.dirname(outputPath), { recursive: true });
 
-    if (sharpFn) {
-      // sharp로 800px WebP 리사이즈
-      const optimized = await sharpFn(buffer)
-        .resize(800, null, { withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer();
-      await writeFile(outputPath, optimized);
-      console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(optimized.length / 1024).toFixed(0)}KB)`);
-    } else {
-      // sharpFn 없으면 원본 그대로 저장
+    // 원본 임시 저장 후 ImageMagick으로 800px WebP 리사이즈
+    const tmpPath = outputPath + '.tmp.png';
+    await writeFile(tmpPath, buffer);
+    try {
+      execSync(`convert "${tmpPath}" -resize 800x -quality 80 "${outputPath}"`, { stdio: 'pipe' });
+      const { size: optimizedSize } = await import('fs').then(fs => fs.statSync(outputPath));
+      console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(optimizedSize / 1024).toFixed(0)}KB)`);
+    } catch {
+      // ImageMagick 없으면 원본 그대로 저장
       await writeFile(outputPath, buffer);
       console.log(`썸네일 저장 (리사이즈 건너뜀): ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
+    } finally {
+      import('fs').then(fs => { try { fs.unlinkSync(tmpPath); } catch { /* tmp 파일 이미 삭제됨 */ } });
     }
     return true;
   } catch (err) {
