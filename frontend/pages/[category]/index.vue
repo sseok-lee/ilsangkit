@@ -283,6 +283,41 @@ const wasteCurrentPage = ref(1)
 const wasteTotalPages = ref(1)
 const wasteTotal = ref(0)
 
+// 카테고리별 SEO 타이틀/설명
+const SEO_TITLES: Record<string, string> = {
+  toilet: '근처 공공화장실 찾기 · 위치/개방시간 확인',
+  parking: '근처 공영주차장 찾기 · 요금/운영시간 비교',
+  'ev-charger': '가까운 전기차 충전소 찾기 · 급속/완속 현황',
+  park: '내 주변 공원 찾기 · 시설/면적 정보',
+  school: '내 주변 학교 찾기 · 초/중/고 위치 확인',
+  childcare: '내 주변 어린이집 찾기 · 정원/빈자리 확인',
+  library: '집 근처 도서관 찾기 · 운영시간/휴관일 안내',
+  hospital: '내 주변 병원 찾기 · 진료과목/운영시간 확인',
+  pharmacy: '근처 약국 찾기 · 문 연 약국/야간 운영 확인',
+  aed: '가까운 AED 찾기 · 자동심장충격기 위치',
+  sports: '내 주변 체육시설 찾기 · 종류/규모 안내',
+  market: '근처 전통시장 찾기 · 개장일/상점 정보',
+  clothes: '내 주변 의류수거함 위치 · 헌옷 배출 안내',
+  trash: '우리 동네 쓰레기 배출일 · 분리수거 방법 안내',
+}
+
+const SEO_DESCRIPTIONS: Record<string, string> = {
+  toilet: '지금 이용 가능한 주변 공공화장실과 개방화장실 위치를 확인하세요. 24시간 운영 여부와 장애인화장실 정보를 제공합니다.',
+  parking: '목적지 근처 공영주차장의 위치와 요금을 한눈에 비교하세요. 무료 주차 여부와 주차 가능 면수 정보를 제공합니다.',
+  'ev-charger': '주변 전기차 충전소 위치와 급속/완속 충전기 대수를 확인하세요. 운영기관, 주차 요금, 이용 시간 정보를 제공합니다.',
+  park: '산책하기 좋은 주변 공원을 찾아보세요. 운동시설, 놀이시설, 편의시설 정보와 면적을 한눈에 확인할 수 있습니다.',
+  school: '주변 초등학교, 중학교, 고등학교 위치와 학교 정보를 검색하세요. 설립유형, 교육청 정보를 제공합니다.',
+  childcare: '집 근처 어린이집의 정원, 현원, 빈자리 현황을 확인하세요. 국공립/민간/가정 유형별 검색이 가능합니다.',
+  library: '가까운 공공도서관의 운영시간과 휴관일을 확인하세요. 좌석수, 장서 정보를 한눈에 볼 수 있습니다.',
+  hospital: '현재 진료 중인 가까운 병원을 빠르게 찾으세요. 진료과목별 검색과 야간/주말 진료 여부를 확인할 수 있습니다.',
+  pharmacy: '지금 문 연 주변 약국을 찾아보세요. 야간 운영, 주말/공휴일 영업 약국 위치와 연락처를 제공합니다.',
+  aed: '골든타임을 지키는 가장 가까운 자동심장충격기(AED) 위치를 미리 확인하세요. 설치 장소와 이용 시간을 안내합니다.',
+  sports: '운동하기 좋은 주변 공공체육시설을 검색하세요. 시설 종류, 규모, 관리기관 정보를 제공합니다.',
+  market: '주변 전통시장의 위치와 개장 정보를 확인하세요. 취급품목, 주차장/화장실 유무, 상점 수 정보를 제공합니다.',
+  clothes: '안 입는 옷을 버릴 수 있는 가장 가까운 의류수거함 위치를 지도에서 확인하세요.',
+  trash: '지역별 쓰레기 배출 요일과 분리수거 방법을 확인하세요. 일반/음식물/재활용 배출 일정을 안내합니다.',
+}
+
 // Page title
 const pageTitle = computed(() => {
   const catLabel = categoryMeta.value?.label || categoryParam.value
@@ -292,7 +327,7 @@ const pageTitle = computed(() => {
   if (selectedCity.value) {
     return `${selectedCity.value} ${catLabel}`
   }
-  return `전국 ${catLabel} 찾기`
+  return SEO_TITLES[categoryParam.value] || `전국 ${catLabel} 찾기`
 })
 
 const pageDescription = computed(() => {
@@ -300,7 +335,7 @@ const pageDescription = computed(() => {
   if (selectedCity.value) {
     return `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''}의 ${catLabel} 위치와 운영시간을 확인하세요.`
   }
-  return `전국 ${catLabel} 위치와 운영시간을 검색하세요.`
+  return SEO_DESCRIPTIONS[categoryParam.value] || `전국 ${catLabel} 위치와 운영시간을 검색하세요.`
 })
 
 const resultTitle = computed(() => {
@@ -318,10 +353,12 @@ const initialCityName = CITY_SLUG_MAP[route.query.city as string] || ''
 const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label || (route.params.category as string)
 
 setMeta({
-  title: initialCityName ? `${initialCityName} ${catLabel}` : `전국 ${catLabel} 찾기`,
+  title: initialCityName
+    ? `${initialCityName} ${catLabel}`
+    : SEO_TITLES[route.params.category as string] || `전국 ${catLabel} 찾기`,
   description: initialCityName
     ? `${initialCityName}의 ${catLabel} 위치와 운영시간을 확인하세요. 주변 생활시설 정보를 한눈에 검색할 수 있습니다.`
-    : `전국 ${catLabel} 위치와 운영시간을 검색하세요. 지역별 생활시설 정보를 한눈에 확인할 수 있습니다.`,
+    : SEO_DESCRIPTIONS[route.params.category as string] || `전국 ${catLabel} 위치와 운영시간을 검색하세요.`,
   path: `/${route.params.category}`,
 })
 
@@ -491,10 +528,10 @@ watch([selectedCity, selectedDistrict], () => {
   const catName = categoryMeta.value?.label || cat
   const title = selectedCity.value
     ? `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''} ${catName}`
-    : `전국 ${catName} 찾기`
+    : SEO_TITLES[cat] || `전국 ${catName} 찾기`
   const description = selectedCity.value
     ? `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''}의 ${catName} 위치와 운영시간을 확인하세요. 주변 생활시설 정보를 한눈에 검색할 수 있습니다.`
-    : `전국 ${catName} 위치와 운영시간을 검색하세요. 지역별 생활시설 정보를 한눈에 확인할 수 있습니다.`
+    : SEO_DESCRIPTIONS[cat] || `전국 ${catName} 위치와 운영시간을 검색하세요.`
 
   setMeta({ title, description, path: `/${cat}` })
 })
