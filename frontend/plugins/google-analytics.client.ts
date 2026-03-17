@@ -28,15 +28,11 @@ export default defineNuxtPlugin(() => {
     page_path: useRoute().fullPath
   })
 
-  // Load gtag.js script
-  useHead({
-    script: [
-      {
-        src: `https://www.googletagmanager.com/gtag/js?id=${gaId}`,
-        async: true
-      }
-    ]
-  })
+  // Load gtag.js script directly via DOM (useHead may not inject reliably in client plugins)
+  const script = document.createElement('script')
+  script.async = true
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`
+  document.head.appendChild(script)
 
   // Track route changes
   const router = useRouter()
