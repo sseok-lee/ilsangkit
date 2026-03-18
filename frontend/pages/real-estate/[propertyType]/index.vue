@@ -79,9 +79,12 @@
       </div>
 
       <div v-else-if="complexes.length > 0" class="mt-6">
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">
-          건물 목록 ({{ totalComplexes }}개)
-        </h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-slate-800">건물 목록</h2>
+          <span class="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
+            {{ totalComplexes.toLocaleString() }}건
+          </span>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <ComplexCard
             v-for="complex in complexes"

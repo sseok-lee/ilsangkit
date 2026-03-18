@@ -33,7 +33,7 @@
 
           <!-- 거래 건수 배지 -->
           <span class="shrink-0 bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-md">
-            {{ complex.transactionCount }}건
+            거래 {{ complex.transactionCount }}건
           </span>
         </div>
       </div>
