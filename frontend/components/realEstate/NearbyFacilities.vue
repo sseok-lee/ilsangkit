@@ -142,17 +142,12 @@ onMounted(async () => {
     // 카테고리별로 그룹화 (상위 3개씩)
     const grouped: FacilityGroup[] = []
 
+    // 부동산 상세 페이지에 표시할 6개 카테고리만 필터링
     const usedCategories = DISPLAY_CATEGORIES.filter((cat) =>
       items.some((item) => item.category === cat)
     )
 
-    // DISPLAY_CATEGORIES에 없는 카테고리도 포함
-    const allCategories = Array.from(new Set([
-      ...usedCategories,
-      ...items.map((item) => item.category).filter((cat) => !DISPLAY_CATEGORIES.includes(cat)),
-    ]))
-
-    for (const cat of allCategories) {
+    for (const cat of usedCategories) {
       const catItems = items
         .filter((item) => item.category === cat)
         .slice(0, MAX_PER_CATEGORY)

@@ -13,18 +13,18 @@ describe('NearbyFacilities', () => {
     data: {
       items: [
         {
-          id: 'toilet-1',
-          name: '강남역 공중화장실',
-          category: 'toilet',
+          id: 'school-1',
+          name: '강남초등학교',
+          category: 'school',
           address: '서울특별시 강남구',
           lat: 37.4980,
           lng: 127.0277,
           distance: 100,
         },
         {
-          id: 'parking-1',
-          name: '강남 공영주차장',
-          category: 'parking',
+          id: 'hospital-1',
+          name: '강남병원',
+          category: 'hospital',
           address: '서울특별시 강남구',
           lat: 37.4981,
           lng: 127.0278,
@@ -88,8 +88,8 @@ describe('NearbyFacilities', () => {
     const wrapper = mount(NearbyFacilities, { props: defaultProps })
     await flushPromises()
 
-    expect(wrapper.text()).toContain('강남역 공중화장실')
-    expect(wrapper.text()).toContain('강남 공영주차장')
+    expect(wrapper.text()).toContain('강남초등학교')
+    expect(wrapper.text()).toContain('강남병원')
     expect(wrapper.text()).toContain('강남약국')
   })
 
@@ -141,8 +141,8 @@ describe('NearbyFacilities', () => {
     expect(html).toContain('강남병원')
     expect(html).toContain('강남약국')
 
-    // school이 toilet보다 먼저 나옴 (DISPLAY_CATEGORIES 우선순위)
-    expect(html.indexOf('강남초등학교')).toBeLessThan(html.indexOf('공공화장실'))
+    // DISPLAY_CATEGORIES에 없는 toilet은 표시되지 않음
+    expect(html).not.toContain('공공화장실')
   })
 
   it('DISPLAY_CATEGORIES에 toilet, wifi, aed, parking, library가 포함되지 않는지 확인', async () => {
