@@ -44,16 +44,16 @@ describe('CATEGORY_GROUPS', () => {
     expect(CATEGORY_GROUPS).toHaveLength(4)
   })
 
-  it('CATEGORY_GROUPS의 첫 번째 그룹은 생활/편의여야 한다', () => {
-    expect(CATEGORY_GROUPS[0].title).toBe('생활/편의')
+  it('CATEGORY_GROUPS의 첫 번째 그룹은 교육/육아여야 한다', () => {
+    expect(CATEGORY_GROUPS[0].title).toBe('교육/육아')
   })
 
-  it('CATEGORY_GROUPS의 두 번째 그룹은 교육/육아여야 한다', () => {
-    expect(CATEGORY_GROUPS[1].title).toBe('교육/육아')
+  it('CATEGORY_GROUPS의 두 번째 그룹은 건강/안전이어야 한다', () => {
+    expect(CATEGORY_GROUPS[1].title).toBe('건강/안전')
   })
 
-  it('CATEGORY_GROUPS의 세 번째 그룹은 건강/안전이어야 한다', () => {
-    expect(CATEGORY_GROUPS[2].title).toBe('건강/안전')
+  it('CATEGORY_GROUPS의 세 번째 그룹은 생활/편의여야 한다', () => {
+    expect(CATEGORY_GROUPS[2].title).toBe('생활/편의')
   })
 
   it('CATEGORY_GROUPS의 네 번째 그룹은 환경/생활이어야 한다', () => {

@@ -70,17 +70,18 @@ describe('AppHeader', () => {
       const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
       expect(groupButtons.length).toBe(5)
 
-      // Hover over second group (생활/편의, index 1 since 부동산 is first)
-      await groupButtons[1].trigger('mouseenter')
+      // Hover over 생활/편의 group (index 3: 부동산=0, 교육/육아=1, 건강/안전=2, 생활/편의=3)
+      await groupButtons[3].trigger('mouseenter')
 
       // Dropdown should appear with category links
-      const dropdown = groupButtons[1].find('.absolute')
+      const dropdown = groupButtons[3].find('.absolute')
       expect(dropdown.exists()).toBe(true)
       const links = dropdown.findAll('a')
       const hrefs = links.map((l) => l.attributes('href'))
-      expect(hrefs).toContain('/toilet')
-      expect(hrefs).toContain('/parking')
       expect(hrefs).toContain('/park')
+      expect(hrefs).toContain('/market')
+      expect(hrefs).toContain('/parking')
+      expect(hrefs).toContain('/toilet')
     })
 
     it('should show 3 real estate links in navigation', async () => {
