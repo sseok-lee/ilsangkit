@@ -321,6 +321,54 @@ export interface ChildcareDetails {
   datastdrdt?: string
   crspec?: string
   crrepname?: string
+  // 반별 정원
+  classCnt00?: number
+  classCnt01?: number
+  classCnt02?: number
+  classCnt03?: number
+  classCnt04?: number
+  classCnt05?: number
+  classCntM2?: number
+  classCntM5?: number
+  classCntSp?: number
+  classCntTot?: number
+  // 아동별 현원
+  childCnt00?: number
+  childCnt01?: number
+  childCnt02?: number
+  childCnt03?: number
+  childCnt04?: number
+  childCnt05?: number
+  childCntM2?: number
+  childCntM5?: number
+  childCntSp?: number
+  childCntTot?: number
+  // 직원 현황 (경력별)
+  emCnt0y?: number
+  emCnt1y?: number
+  emCnt2y?: number
+  emCnt4y?: number
+  emCnt6y?: number
+  // 직원 현황 (직종별)
+  emCntA1?: number   // 원장
+  emCntA2?: number   // 보육교사
+  emCntA3?: number   // 특수교사
+  emCntA4?: number   // 치료사
+  emCntA5?: number   // 영양사
+  emCntA6?: number   // 간호사(조무사)
+  emCntA10?: number  // 조리원
+  emCntA7?: number   // 사무원
+  emCntA8?: number   // 기타
+  emCntTot?: number  // 직원 총수
+  // 기타 직원
+  ewCnt00?: number
+  ewCnt01?: number
+  ewCnt02?: number
+  ewCnt03?: number
+  ewCnt04?: number
+  ewCnt05?: number
+  ewCntM6?: number
+  ewCntTot?: number
 }
 
 export interface EvChargerItem {
@@ -392,24 +440,24 @@ export function isLinkGroup(group: NavGroup): group is LinkGroup {
 
 export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
   {
-    title: '생활/편의',
-    icon: 'home',
-    categories: ['park', 'parking', 'ev-charger', 'toilet'],
-  },
-  {
     title: '교육/육아',
     icon: 'local_library',
-    categories: ['school', 'library'], // childcare: 데이터 승인 후 추가
+    categories: ['school', 'childcare', 'library'],
   },
   {
     title: '건강/안전',
     icon: 'health_and_safety',
-    categories: ['hospital', 'pharmacy', 'aed', 'sports'],
+    categories: ['hospital', 'pharmacy', 'sports', 'aed'],
+  },
+  {
+    title: '생활/편의',
+    icon: 'home',
+    categories: ['park', 'market', 'parking', 'ev-charger', 'toilet'],
   },
   {
     title: '환경/생활',
     icon: 'eco',
-    categories: ['clothes', 'trash', 'market'],
+    categories: ['clothes', 'trash'],
   },
 ] as const
 

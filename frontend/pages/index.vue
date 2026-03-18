@@ -191,7 +191,6 @@
                 <img :src="`/icons/category/${item.id}.webp?v2`" :alt="CATEGORY_LABELS[item.id]" class="w-9 h-9" width="36" height="36" loading="lazy" />
               </div>
               <span class="text-sm text-slate-700 font-medium text-center leading-tight">{{ CATEGORY_LABELS[item.id] }}</span>
-              <span v-if="stats[item.id]" class="text-xs text-slate-500 font-medium -mt-1">{{ (stats[item.id] as number).toLocaleString('ko-KR') }}곳</span>
             </a>
           </div>
           <!-- 데스크톱: 가로형 카드 -->
@@ -431,6 +430,7 @@ const GROUP_COLORS: Record<string, { bg: string; iconText: string }> = {
   '건강/안전': { bg: 'bg-emerald-50', iconText: 'text-emerald-500' },
   '환경/생활': { bg: 'bg-violet-50', iconText: 'text-violet-500' },
 }
+
 
 // 그룹화된 카테고리 (공유 상수 + 페이지 전용 desc + 그룹 컬러)
 const categoryGroups = CATEGORY_GROUPS.map(group => ({

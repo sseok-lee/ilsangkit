@@ -42,25 +42,25 @@ describe('CATEGORY_GROUPS', () => {
   it("'생활/편의' 그룹은 ['park', 'parking', 'ev-charger', 'toilet'] 순서로 포함", () => {
     const group = CATEGORY_GROUPS.find(g => g.title === '생활/편의')
     expect(group).toBeDefined()
-    expect(group!.categories).toEqual(['park', 'parking', 'ev-charger', 'toilet'])
+    expect(group!.categories).toEqual(['park', 'market', 'parking', 'ev-charger', 'toilet'])
   })
 
-  it("'교육/육아' 그룹은 ['school', 'library'] 순서로 포함 (childcare: 데이터 승인 후 추가)", () => {
+  it("'교육/육아' 그룹은 ['school', 'library', 'childcare'] 순서로 포함", () => {
     const group = CATEGORY_GROUPS.find(g => g.title === '교육/육아')
     expect(group).toBeDefined()
-    expect(group!.categories).toEqual(['school', 'library'])
+    expect(group!.categories).toEqual(['school', 'childcare', 'library'])
   })
 
   it("'건강/안전' 그룹은 ['hospital', 'pharmacy', 'aed', 'sports'] 순서로 포함", () => {
     const group = CATEGORY_GROUPS.find(g => g.title === '건강/안전')
     expect(group).toBeDefined()
-    expect(group!.categories).toEqual(['hospital', 'pharmacy', 'aed', 'sports'])
+    expect(group!.categories).toEqual(['hospital', 'pharmacy', 'sports', 'aed'])
   })
 
   it("'환경/생활' 그룹은 ['clothes', 'trash', 'market'] 순서로 포함", () => {
     const group = CATEGORY_GROUPS.find(g => g.title === '환경/생활')
     expect(group).toBeDefined()
-    expect(group!.categories).toEqual(['clothes', 'trash', 'market'])
+    expect(group!.categories).toEqual(['clothes', 'trash'])
   })
 
   it('wifi 미포함', () => {
