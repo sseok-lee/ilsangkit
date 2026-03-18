@@ -46,8 +46,8 @@
     />
 
     <!-- 홈페이지 -->
-    <div v-if="details.faciHomepage" class="flex flex-col sm:flex-row py-2 border-b border-gray-100 last:border-0 gap-0.5 sm:gap-4">
-      <dt class="text-sm font-medium text-gray-600 min-w-[7rem] shrink-0">홈페이지</dt>
+    <div v-if="details.faciHomepage" class="flex flex-row py-2 border-b border-gray-100 last:border-0 gap-4">
+      <dt class="text-xs font-medium text-gray-500 min-w-[7rem] shrink-0 pt-0.5">홈페이지</dt>
       <dd class="text-sm text-gray-900">
         <a
           :href="details.faciHomepage"

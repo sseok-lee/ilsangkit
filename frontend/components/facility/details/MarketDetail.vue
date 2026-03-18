@@ -36,7 +36,7 @@
 
     <!-- 주요 판매 품목 -->
     <div v-if="productTags.length" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">주요 판매품목</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">주요 판매품목</p>
       <div class="flex flex-wrap gap-1">
         <span v-for="tag in productTags" :key="tag" class="inline-block bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-xs">{{ tag }}</span>
       </div>
@@ -44,7 +44,7 @@
 
     <!-- 편의시설 -->
     <div v-if="details.hasPublicToilet !== undefined && details.hasPublicToilet !== null || details.hasParking !== undefined && details.hasParking !== null" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">편의시설</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">편의시설</p>
       <div class="grid grid-cols-2 gap-2">
         <div v-if="details.hasPublicToilet !== undefined && details.hasPublicToilet !== null" class="flex items-center gap-1.5 text-sm text-gray-700">
           <span :class="details.hasPublicToilet ? 'text-green-600' : 'text-gray-400'">{{ details.hasPublicToilet ? '✓' : '✗' }}</span>
@@ -58,8 +58,8 @@
     </div>
 
     <!-- 홈페이지 -->
-    <div v-if="details.homepageUrl" class="flex flex-col sm:flex-row py-2 border-b border-gray-100 last:border-0 gap-0.5 sm:gap-4">
-      <dt class="text-sm font-medium text-gray-600 min-w-[7rem] shrink-0">홈페이지</dt>
+    <div v-if="details.homepageUrl" class="flex flex-row py-2 border-b border-gray-100 last:border-0 gap-4">
+      <dt class="text-xs font-medium text-gray-500 min-w-[7rem] shrink-0 pt-0.5">홈페이지</dt>
       <dd class="text-sm text-gray-900">
         <a
           :href="details.homepageUrl"

@@ -28,7 +28,7 @@
     />
 
     <div v-if="operatingHours.length > 0" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">운영시간</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">운영시간</p>
       <div class="space-y-1">
         <div
           v-for="item in operatingHours"

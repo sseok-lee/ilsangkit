@@ -31,14 +31,14 @@
     />
 
     <div v-if="details.sidoEduName || details.localEduName" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">관할 교육청</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">관할 교육청</p>
       <div class="space-y-2">
-        <div v-if="details.sidoEduName" class="flex flex-col sm:flex-row py-1 gap-0.5 sm:gap-4">
-          <dt class="text-sm font-medium text-gray-600 min-w-[7rem] shrink-0">시도교육청</dt>
+        <div v-if="details.sidoEduName" class="flex flex-row py-1 gap-4">
+          <dt class="text-xs font-medium text-gray-500 min-w-[7rem] shrink-0 pt-0.5">시도교육청</dt>
           <dd class="text-sm text-gray-900">{{ details.sidoEduName }}</dd>
         </div>
-        <div v-if="details.localEduName" class="flex flex-col sm:flex-row py-1 gap-0.5 sm:gap-4">
-          <dt class="text-sm font-medium text-gray-600 min-w-[7rem] shrink-0">교육지원청</dt>
+        <div v-if="details.localEduName" class="flex flex-row py-1 gap-4">
+          <dt class="text-xs font-medium text-gray-500 min-w-[7rem] shrink-0 pt-0.5">교육지원청</dt>
           <dd class="text-sm text-gray-900">{{ details.localEduName }}</dd>
         </div>
       </div>

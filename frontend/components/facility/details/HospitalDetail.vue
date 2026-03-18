@@ -18,7 +18,7 @@
     />
 
     <div v-if="details.homepage" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-1">홈페이지</p>
+      <p class="text-xs font-medium text-gray-500 mb-1">홈페이지</p>
       <a
         :href="details.homepage"
         target="_blank"
@@ -31,7 +31,7 @@
 
     <!-- 진료과목 -->
     <div v-if="details.departments && details.departments.length > 0" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">진료과목</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">진료과목</p>
       <div class="flex flex-wrap gap-1.5">
         <span
           v-for="dept in details.departments"
@@ -46,7 +46,7 @@
 
     <!-- 진료시간 -->
     <div v-if="hasSchedule" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">진료시간</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">진료시간</p>
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
@@ -81,7 +81,7 @@
 
     <!-- 주차정보 -->
     <div v-if="details.parkQty != null || details.parkEtc" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">주차정보</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">주차정보</p>
       <div class="space-y-1">
         <div v-if="details.parkQty != null" class="flex items-center justify-between text-sm">
           <span class="text-gray-600">주차가능대수</span>
@@ -93,7 +93,7 @@
 
     <!-- 의료진 현황 -->
     <div v-if="details.drTotCnt" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">의료진 현황</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">의료진 현황</p>
       <div class="space-y-1">
         <div class="flex items-center justify-between text-sm">
           <span class="text-gray-600">의사 총수</span>
