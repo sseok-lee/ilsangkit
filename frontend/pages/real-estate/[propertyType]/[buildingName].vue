@@ -346,6 +346,7 @@ import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse,
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { useAnalytics } from '~/composables/useAnalytics'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
@@ -424,7 +425,11 @@ const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
 const showMobileNavDropdown = ref(false)
 
+const { trackBuildingView, trackDirectionsClick, trackShareClick } = useAnalytics()
+
 function openNavigation(url: string) {
+  const provider = url.includes('kakao') ? 'kakao' : 'naver'
+  trackDirectionsClick({ facilityId: buildingName.value, category: propertyTypeParam.value, provider })
   window.open(url, '_blank')
   showNavDropdown.value = false
   showMobileNavDropdown.value = false
@@ -432,6 +437,12 @@ function openNavigation(url: string) {
 
 // 공유
 async function handleShare() {
+  trackShareClick({
+    contentType: 'building',
+    contentId: buildingName.value,
+    method: navigator.share ? 'native' : 'clipboard',
+  })
+
   const shareData = {
     title: buildingName.value,
     text: `${buildingName.value} ${propertyMeta.value?.label} 실거래가`,
@@ -625,8 +636,16 @@ watch(selectedMonths, async () => {
   }
 })
 
-// buildingInfo 로드 후 구조화 데이터 설정 + thin content noindex
+// buildingInfo 로드 후 building_viewed 이벤트 + 구조화 데이터 설정 + thin content noindex
 watch(() => buildingInfo.value, (info) => {
+  if (info) {
+    trackBuildingView({
+      propertyType: propertyTypeParam.value,
+      buildingName: buildingName.value,
+      city: info.city,
+      district: info.district,
+    })
+  }
   if (info?.lat && info?.lng) {
     setBuildingPlaceSchema({
       name: buildingName.value,

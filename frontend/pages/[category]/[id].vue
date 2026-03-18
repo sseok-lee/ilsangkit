@@ -207,7 +207,7 @@
                     <div class="text-[#60708a]">
                       <span class="material-symbols-outlined">call</span>
                     </div>
-                    <a :href="`tel:${facilityPhone}`" class="text-primary text-base font-medium hover:underline">{{ facilityPhone }}</a>
+                    <a :href="`tel:${facilityPhone}`" class="text-primary text-base font-medium hover:underline" @click="facility && trackPhoneClick({ facilityId: facility.id, category: facility.category })">{{ facilityPhone }}</a>
                   </div>
 
                   <!-- Category-specific Basic Info -->
@@ -1332,7 +1332,7 @@
                 <div class="text-[#60708a]">
                   <span class="material-symbols-outlined">call</span>
                 </div>
-                <a :href="`tel:${facilityPhone}`" class="text-primary text-base font-medium hover:underline">{{ facilityPhone }}</a>
+                <a :href="`tel:${facilityPhone}`" class="text-primary text-base font-medium hover:underline" @click="facility && trackPhoneClick({ facilityId: facility.id, category: facility.category })">{{ facilityPhone }}</a>
               </div>
 
               <!-- Category-specific Basic Info -->
@@ -2719,13 +2719,17 @@ const naverMapUrl = computed(() => {
 const showNavDropdown = ref(false)
 const showMobileNavDropdown = ref(false)
 const openNavigation = (url: string) => {
+  if (facility.value) {
+    const provider = url.includes('kakao') ? 'kakao' : 'naver'
+    trackDirectionsClick({ facilityId: facility.value.id, category: facility.value.category, provider })
+  }
   window.open(url, '_blank')
   showNavDropdown.value = false
 }
 
 const isMapExpanded = ref(false)
 
-const { trackFacilityView } = useAnalytics()
+const { trackFacilityView, trackDirectionsClick, trackPhoneClick, trackShareClick } = useAnalytics()
 onMounted(() => {
   if (facility.value) {
     trackFacilityView({
@@ -2975,6 +2979,12 @@ const handleBack = () => {
 
 const handleShare = async () => {
   if (!facility.value) return
+
+  trackShareClick({
+    contentType: 'facility',
+    contentId: facility.value.id,
+    method: navigator.share ? 'native' : 'clipboard',
+  })
 
   const shareData = {
     title: facility.value.name,

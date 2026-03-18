@@ -455,6 +455,7 @@ const realEstateLinks = computed(() => {
 })
 
 
+
 function handleSearch() {
   if (!searchKeyword.value) {
     return

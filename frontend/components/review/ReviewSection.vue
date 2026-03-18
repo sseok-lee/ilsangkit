@@ -191,11 +191,14 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import type { Review } from '~/types/review'
 import { useReviews } from '~/composables/useReviews'
+import { useAnalytics } from '~/composables/useAnalytics'
 
 const props = defineProps<{
   category: string
   facilityId: string
 }>()
+
+const { trackReviewSubmit } = useAnalytics()
 
 const {
   reviews,
@@ -273,6 +276,7 @@ async function handleSubmit() {
   submitting.value = false
 
   if (result) {
+    trackReviewSubmit({ facilityId: props.facilityId, category: props.category })
     form.content = ''
     form.password = ''
   } else {
