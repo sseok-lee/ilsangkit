@@ -264,21 +264,21 @@ const CATEGORY_LABELS: Record<FacilityCategory, string> = {
 };
 
 // 크로스 카테고리 추천 맵
-const CROSS_CATEGORY_MAP: Record<FacilityCategory, FacilityCategory[]> = {
+export const CROSS_CATEGORY_MAP: Record<FacilityCategory, FacilityCategory[]> = {
+  toilet: ['park', 'wifi'],
+  wifi: ['library', 'park', 'toilet'],
+  parking: ['ev-charger', 'toilet', 'market'],
   hospital: ['pharmacy', 'aed'],
-  pharmacy: ['hospital'],
-  parking: ['toilet', 'library', 'ev-charger'],
-  library: ['parking', 'toilet'],
-  toilet: ['parking'],
-  wifi: ['toilet'],
+  pharmacy: ['hospital', 'childcare'],
   aed: ['hospital', 'pharmacy'],
-  clothes: [],
+  library: ['parking', 'wifi', 'park'],
+  clothes: ['toilet', 'park'],
   park: ['toilet', 'parking', 'sports'],
-  school: ['childcare', 'hospital', 'pharmacy'],
+  school: ['childcare', 'library', 'park'],
   market: ['parking', 'toilet'],
-  childcare: ['school', 'hospital', 'pharmacy'],
-  'ev-charger': ['parking', 'library', 'park', 'market'],
-  sports: ['parking', 'toilet', 'pharmacy'],
+  childcare: ['school', 'hospital', 'pharmacy', 'park'],
+  'ev-charger': ['parking', 'park', 'market', 'library'],
+  sports: ['parking', 'park', 'toilet'],
 };
 
 // --- EV Charger 충전소 단위 검색 ---
@@ -634,6 +634,14 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
 
     const fetchResults = await Promise.all(
       categories.map(async (cat) => {
+        // ev-charger: 충전소 단위 그룹핑
+        if (cat === 'ev-charger') {
+          const stationResult = await evChargerStationSearch({
+            keyword, lat, lng, radius, swLat, swLng, neLat, neLng,
+            page: 1, limit: 100,
+          });
+          return stationResult.items;
+        }
         const where = { ...keywordFilter, ...approxBounds };
         const records = await CATEGORY_REGISTRY[cat].model().findMany({
           where,
@@ -648,8 +656,9 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
     }
 
     // Haversine으로 정확한 거리 계산 + radius 필터
+    // ev-charger는 이미 거리 계산됨, 나머지만 계산
     const withDistance = allItems
-      .map((item) => ({
+      .map((item) => item.distance !== undefined ? item : ({
         ...item,
         distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
       }))
