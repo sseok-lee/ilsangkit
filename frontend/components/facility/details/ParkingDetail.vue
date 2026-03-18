@@ -23,7 +23,7 @@
     <DetailRow
       v-if="details.operatingHours"
       label="운영시간"
-      :value="details.operatingHours"
+      :value="formatOperatingHours(details.operatingHours)"
     />
     <DetailRow
       v-if="details.phone"
@@ -48,7 +48,7 @@
     />
 
     <div v-if="hasFeeInfo" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">요금 정보</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">요금 정보</p>
       <div class="space-y-1.5">
         <div v-if="details.baseFee != null" class="flex justify-between text-sm">
           <span class="text-gray-500">기본요금</span>
@@ -70,7 +70,7 @@
     </div>
 
     <div v-if="details.remarks" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-1">특기사항</p>
+      <p class="text-xs font-medium text-gray-500 mb-1">특기사항</p>
       <p class="text-sm text-gray-700">{{ details.remarks }}</p>
     </div>
   </div>
@@ -79,6 +79,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ParkingDetails } from '~/types/facility'
+import { formatOperatingHours } from '~/utils/formatOperatingHours'
 
 const props = defineProps<{
   details: ParkingDetails

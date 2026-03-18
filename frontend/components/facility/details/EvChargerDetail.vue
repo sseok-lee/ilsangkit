@@ -17,7 +17,7 @@
     <DetailRow
       v-if="details.useTime"
       label="이용시간"
-      :value="details.useTime"
+      :value="formatOperatingHours(details.useTime)"
     />
     <DetailRow
       v-if="details.busiNm"
@@ -41,7 +41,7 @@
       v-if="details.parkingFree != null || details.limitYn != null"
       class="pt-3 border-t border-gray-200"
     >
-      <p class="text-sm font-medium text-gray-600 mb-2">이용 정보</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">이용 정보</p>
       <div class="flex flex-col gap-2">
         <div v-if="details.parkingFree != null" class="flex items-center gap-1.5 text-sm text-gray-700">
           <span :class="details.parkingFree === 'Y' ? 'text-green-600' : 'text-gray-400'">{{ details.parkingFree === 'Y' ? '✓' : '✗' }}</span>
@@ -57,7 +57,7 @@
 
     <!-- 위치 정보 -->
     <div v-if="details.addrDetail || details.location" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">위치 정보</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">위치 정보</p>
       <div class="flex flex-col gap-1">
         <p v-if="details.addrDetail" class="text-sm text-gray-900">{{ details.addrDetail }}</p>
         <p v-if="details.location" class="text-sm text-gray-500">{{ details.location }}</p>
@@ -66,13 +66,13 @@
 
     <!-- 안내사항 -->
     <div v-if="details.note" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">안내사항</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">안내사항</p>
       <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ details.note }}</p>
     </div>
 
     <!-- 충전기 목록 -->
     <div v-if="details.chargers?.length" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-3">충전기 현황</p>
+      <p class="text-xs font-medium text-gray-500 mb-3">충전기 현황</p>
       <div class="space-y-2">
         <div
           v-for="(charger, index) in details.chargers"
@@ -105,6 +105,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { EvChargerDetails, EvChargerItem } from '~/types/facility'
+import { formatOperatingHours } from '~/utils/formatOperatingHours'
 
 const props = defineProps<{
   details: EvChargerDetails

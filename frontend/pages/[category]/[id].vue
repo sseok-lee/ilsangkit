@@ -188,7 +188,7 @@
                     </div>
                     <div class="flex flex-col gap-1">
                       <div class="flex items-center gap-2">
-                        <p class="text-[#111418] text-base font-medium">{{ details?.operatingHours || '24시간 운영' }}</p>
+                        <p class="text-[#111418] text-base font-medium whitespace-pre-line">{{ details?.operatingHours ? formatOperatingHours(details.operatingHours) : '24시간 운영' }}</p>
                         <span v-if="isOpen24Hours" class="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
                           <span class="relative flex h-2 w-2">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -798,61 +798,145 @@
 
                   <!-- Childcare Details -->
                   <template v-if="facility.category === 'childcare'">
-                    <div class="flex flex-col gap-3">
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <span v-if="details?.crtypename" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareTypeBadgeClass">{{ details.crtypename }}</span>
-                        <span v-if="details?.crstatusname" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareStatusBadgeClass">{{ details.crstatusname }}</span>
-                      </div>
-                      <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-gray-600">
-                        휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
-                      </div>
-                      <template v-if="details?.crcapat != null && details?.crchcnt != null">
-                        <div class="flex items-center justify-between">
-                          <span class="text-sm text-[#4b5563]">정원</span>
-                          <span class="text-sm font-medium text-[#111418]">{{ details.crcapat }}명</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                          <span class="text-sm text-[#4b5563]">현원</span>
-                          <span class="text-sm font-medium text-[#111418]">{{ details.crchcnt }}명</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                          <span class="text-sm text-[#4b5563]">가용률</span>
-                          <span class="text-sm font-medium text-[#111418]">{{ childcareAvailabilityRate }}</span>
-                        </div>
-                      </template>
+                    <!-- 뱃지 + 휴지 알림 -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span v-if="details?.crtypename" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareTypeBadgeClass"><span class="text-xs opacity-70 mr-1">유형</span> {{ details.crtypename }}</span>
+                      <span v-if="details?.crstatusname" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareStatusBadgeClass"><span class="text-xs opacity-70 mr-1">상태</span> {{ details.crstatusname }}</span>
                     </div>
-                    <div v-if="details?.nrtrroomcnt != null || details?.cctvinstlcnt != null || details?.plgrdco != null || details?.chcrtescnt != null" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                      <h3 class="text-sm font-bold text-[#111418] mb-3">시설 정보</h3>
-                      <div class="flex flex-col gap-3">
-                        <div v-if="details?.nrtrroomcnt != null" class="flex items-center justify-between">
-                          <span class="text-sm text-[#4b5563]">보육실</span>
-                          <span class="text-sm font-medium text-[#111418]">{{ details.nrtrroomcnt }}개</span>
+                    <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                      휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
+                    </div>
+
+                    <!-- 기본 정보 테이블 -->
+                    <div class="mt-4">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">기본 정보</h3>
+                      <table class="w-full text-sm">
+                        <tbody class="divide-y divide-[#f0f2f5]">
+                          <tr v-if="details?.crcnfmdt">
+                            <td class="py-2.5 text-[#4b5563] w-28">인가일</td>
+                            <td class="py-2.5 text-[#111418] font-medium text-right">{{ details.crcnfmdt }}</td>
+                          </tr>
+                          <tr v-if="details?.crrepname">
+                            <td class="py-2.5 text-[#4b5563]">대표자</td>
+                            <td class="py-2.5 text-[#111418] font-medium text-right">{{ details.crrepname }}</td>
+                          </tr>
+                          <tr v-if="details?.crtelno">
+                            <td class="py-2.5 text-[#4b5563]">연락처</td>
+                            <td class="py-2.5 text-right"><a :href="'tel:' + details.crtelno" class="font-medium text-blue-600 hover:underline">{{ details.crtelno }}</a></td>
+                          </tr>
+                          <tr v-if="details?.crfaxno">
+                            <td class="py-2.5 text-[#4b5563]">팩스</td>
+                            <td class="py-2.5 text-[#111418] font-medium text-right">{{ details.crfaxno }}</td>
+                          </tr>
+                          <tr v-if="details?.crcargbname">
+                            <td class="py-2.5 text-[#4b5563]">통학차량</td>
+                            <td class="py-2.5 text-[#111418] font-medium text-right">{{ details.crcargbname }}</td>
+                          </tr>
+                          <tr v-if="details?.crhome">
+                            <td class="py-2.5 text-[#4b5563]">홈페이지</td>
+                            <td class="py-2.5 text-right"><a :href="details.crhome" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-600 hover:underline truncate inline-block max-w-[200px]">{{ details.crhome }}</a></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- 정원·현원 + 시설 정보 (2열 그리드) -->
+                    <div class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">정원·시설 현황</h3>
+                      <div class="grid grid-cols-2 gap-3">
+                        <div v-if="details?.crcapat != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">정원</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.crcapat }}<span class="text-xs font-normal text-[#4b5563]">명</span></p>
                         </div>
-                        <div v-if="details?.cctvinstlcnt != null" class="flex items-center justify-between">
-                          <span class="text-sm text-[#4b5563]">CCTV</span>
-                          <span class="text-sm font-medium text-[#111418]">{{ details.cctvinstlcnt }}대</span>
+                        <div v-if="details?.crchcnt != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">현원</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.crchcnt }}<span class="text-xs font-normal text-[#4b5563]">명</span></p>
                         </div>
-                        <div v-if="details?.plgrdco != null" class="flex items-center justify-between">
-                          <span class="text-sm text-[#4b5563]">놀이터</span>
-                          <span class="text-sm font-medium text-[#111418]">{{ details.plgrdco }}개</span>
+                        <div v-if="details?.nrtrroomcnt != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">보육실</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.nrtrroomcnt }}<span class="text-xs font-normal text-[#4b5563]">개</span></p>
                         </div>
-                        <div v-if="details?.chcrtescnt != null" class="flex items-center justify-between">
-                          <span class="text-sm text-[#4b5563]">교직원 수</span>
-                          <span class="text-sm font-medium text-[#111418]">{{ details.chcrtescnt }}명</span>
+                        <div v-if="details?.cctvinstlcnt != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">CCTV</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.cctvinstlcnt }}<span class="text-xs font-normal text-[#4b5563]">대</span></p>
+                        </div>
+                        <div v-if="details?.plgrdco != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">놀이터</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.plgrdco }}<span class="text-xs font-normal text-[#4b5563]">개</span></p>
+                        </div>
+                        <div v-if="details?.chcrtescnt != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">교직원</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.chcrtescnt }}<span class="text-xs font-normal text-[#4b5563]">명</span></p>
+                        </div>
+                      </div>
+                      <div v-if="details?.crcapat != null && details?.crchcnt != null && details.crcapat > 0" class="mt-3">
+                        <div class="flex items-center justify-between text-xs text-[#4b5563] mb-1">
+                          <span>가용률</span>
+                          <span class="font-medium">{{ childcareAvailabilityRate }}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                          <div class="h-2 rounded-full transition-all" :class="childcareOccupancyPct >= 90 ? 'bg-red-400' : childcareOccupancyPct >= 70 ? 'bg-yellow-400' : 'bg-green-400'" :style="{ width: Math.min(childcareOccupancyPct, 100) + '%' }" />
                         </div>
                       </div>
                     </div>
-                    <div v-if="details?.crcargbname" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                      <div class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563]">통학차량</span>
-                        <span class="text-sm font-medium text-[#111418]">{{ details.crcargbname }}</span>
+
+                    <!-- 반별 정원·현원 -->
+                    <div v-if="childcareClassRows.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">연령별 반·아동 현황</h3>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                          <thead>
+                            <tr class="bg-[#f8f9fa]">
+                              <th class="py-2 px-3 text-left text-[#4b5563] font-medium rounded-tl-lg">연령</th>
+                              <th class="py-2 px-2 text-right text-[#4b5563] font-medium">반 수</th>
+                              <th class="py-2 px-2 text-right text-[#4b5563] font-medium">아동 수</th>
+                              <th class="py-2 px-3 text-right text-[#4b5563] font-medium rounded-tr-lg">반당 평균</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-[#f0f2f5]">
+                            <tr v-for="row in childcareClassRows" :key="row.label" :class="row.label === '합계' ? 'bg-[#f8f9fa] font-semibold' : ''">
+                              <td class="py-2 px-3 text-[#111418]">{{ row.label }}</td>
+                              <td class="py-2 px-2 text-right text-[#4b5563]">{{ row.classes != null ? row.classes + '개' : '-' }}</td>
+                              <td class="py-2 px-2 text-right text-[#4b5563]">{{ row.children != null ? row.children + '명' : '-' }}</td>
+                              <td class="py-2 px-3 text-right text-[#4b5563]">{{ row.avg != null ? row.avg + '명' : '-' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-                    <div v-if="details?.crhome" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                      <div class="flex items-center justify-between">
-                        <span class="text-sm text-[#4b5563]">홈페이지</span>
-                        <a :href="details.crhome" target="_blank" rel="noopener noreferrer" class="text-sm text-primary font-medium underline">{{ details.crhome }}</a>
+
+                    <!-- 직원 현황 -->
+                    <div v-if="(details as any)?.emCntTot || childcareStaffRoles.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">직원 현황 <span v-if="(details as any)?.emCntTot" class="text-[#4b5563] font-normal">(총 {{ (details as any).emCntTot }}명)</span></h3>
+                      <table class="w-full text-sm">
+                        <tbody class="divide-y divide-[#f0f2f5]">
+                          <tr v-for="role in childcareStaffRoles" :key="role.label">
+                            <td class="py-2 text-[#4b5563]">{{ role.label }}</td>
+                            <td class="py-2 text-[#111418] font-medium text-right">{{ role.cnt }}명</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- 교사 경력 분포 -->
+                    <div v-if="childcareCareerItems.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">교사 경력 분포</h3>
+                      <div class="flex flex-wrap gap-2">
+                        <span v-for="item in childcareCareerItems" :key="item.label" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" :class="item.colorClass">
+                          {{ item.label }} <span class="font-semibold">{{ item.cnt }}명</span>
+                        </span>
                       </div>
+                    </div>
+
+                    <!-- 특이사항 -->
+                    <div v-if="details?.crspec" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-2">특이사항</h3>
+                      <p class="text-sm text-[#4b5563] bg-[#f8f9fa] border border-[#e5e7eb] rounded-lg px-3 py-2">{{ details.crspec }}</p>
+                    </div>
+
+                    <!-- 데이터 기준일 -->
+                    <div v-if="details?.datastdrdt" class="mt-4 pt-3 border-t border-[#f0f2f5]">
+                      <p class="text-xs text-[#9ca3af]">데이터 기준일: {{ details.datastdrdt }}</p>
                     </div>
                   </template>
 
@@ -1226,7 +1310,7 @@
                 </div>
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <p class="text-[#111418] text-base font-medium">{{ details?.operatingHours || '24시간 운영' }}</p>
+                    <p class="text-[#111418] text-base font-medium whitespace-pre-line">{{ details?.operatingHours ? formatOperatingHours(details.operatingHours) : '24시간 운영' }}</p>
                     <span v-if="isOpen24Hours" class="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
                       <span class="relative flex h-2 w-2">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -1824,62 +1908,146 @@
 
               <!-- Childcare Details (Mobile) -->
               <template v-if="facility.category === 'childcare'">
-                <div class="flex flex-col gap-3">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span v-if="details?.crtypename" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareTypeBadgeClass">{{ details.crtypename }}</span>
-                    <span v-if="details?.crstatusname" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareStatusBadgeClass">{{ details.crstatusname }}</span>
-                  </div>
-                  <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-gray-600">
-                    휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
-                  </div>
-                  <template v-if="details?.crcapat != null && details?.crchcnt != null">
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-[#4b5563]">정원</span>
-                      <span class="text-sm font-medium text-[#111418]">{{ details.crcapat }}명</span>
+                    <!-- 뱃지 + 휴지 알림 -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span v-if="details?.crtypename" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareTypeBadgeClass"><span class="text-xs opacity-70 mr-1">유형</span> {{ details.crtypename }}</span>
+                      <span v-if="details?.crstatusname" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareStatusBadgeClass"><span class="text-xs opacity-70 mr-1">상태</span> {{ details.crstatusname }}</span>
                     </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-[#4b5563]">현원</span>
-                      <span class="text-sm font-medium text-[#111418]">{{ details.crchcnt }}명</span>
+                    <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                      휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
                     </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-[#4b5563]">가용률</span>
-                      <span class="text-sm font-medium text-[#111418]">{{ childcareAvailabilityRate }}</span>
+
+                    <!-- 기본 정보 테이블 -->
+                    <div class="mt-4">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">기본 정보</h3>
+                      <table class="w-full text-sm">
+                        <tbody class="divide-y divide-[#f0f2f5]">
+                          <tr v-if="details?.crcnfmdt">
+                            <td class="py-2.5 text-[#4b5563] w-28">인가일</td>
+                            <td class="py-2.5 text-[#111418] font-medium text-right">{{ details.crcnfmdt }}</td>
+                          </tr>
+                          <tr v-if="details?.crrepname">
+                            <td class="py-2.5 text-[#4b5563]">대표자</td>
+                            <td class="py-2.5 text-[#111418] font-medium text-right">{{ details.crrepname }}</td>
+                          </tr>
+                          <tr v-if="details?.crtelno">
+                            <td class="py-2.5 text-[#4b5563]">연락처</td>
+                            <td class="py-2.5 text-right"><a :href="'tel:' + details.crtelno" class="font-medium text-blue-600 hover:underline">{{ details.crtelno }}</a></td>
+                          </tr>
+                          <tr v-if="details?.crfaxno">
+                            <td class="py-2.5 text-[#4b5563]">팩스</td>
+                            <td class="py-2.5 text-[#111418] font-medium text-right">{{ details.crfaxno }}</td>
+                          </tr>
+                          <tr v-if="details?.crcargbname">
+                            <td class="py-2.5 text-[#4b5563]">통학차량</td>
+                            <td class="py-2.5 text-[#111418] font-medium text-right">{{ details.crcargbname }}</td>
+                          </tr>
+                          <tr v-if="details?.crhome">
+                            <td class="py-2.5 text-[#4b5563]">홈페이지</td>
+                            <td class="py-2.5 text-right"><a :href="details.crhome" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-600 hover:underline truncate inline-block max-w-[200px]">{{ details.crhome }}</a></td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-                  </template>
-                </div>
-                <div v-if="details?.nrtrroomcnt != null || details?.cctvinstlcnt != null || details?.plgrdco != null || details?.chcrtescnt != null" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                  <h3 class="text-sm font-bold text-[#111418] mb-3">시설 정보</h3>
-                  <div class="flex flex-col gap-3">
-                    <div v-if="details?.nrtrroomcnt != null" class="flex items-center justify-between">
-                      <span class="text-sm text-[#4b5563]">보육실</span>
-                      <span class="text-sm font-medium text-[#111418]">{{ details.nrtrroomcnt }}개</span>
+
+                    <!-- 정원·시설 현황 (2열 그리드) -->
+                    <div class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">정원·시설 현황</h3>
+                      <div class="grid grid-cols-2 gap-3">
+                        <div v-if="details?.crcapat != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">정원</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.crcapat }}<span class="text-xs font-normal text-[#4b5563]">명</span></p>
+                        </div>
+                        <div v-if="details?.crchcnt != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">현원</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.crchcnt }}<span class="text-xs font-normal text-[#4b5563]">명</span></p>
+                        </div>
+                        <div v-if="details?.nrtrroomcnt != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">보육실</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.nrtrroomcnt }}<span class="text-xs font-normal text-[#4b5563]">개</span></p>
+                        </div>
+                        <div v-if="details?.cctvinstlcnt != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">CCTV</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.cctvinstlcnt }}<span class="text-xs font-normal text-[#4b5563]">대</span></p>
+                        </div>
+                        <div v-if="details?.plgrdco != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">놀이터</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.plgrdco }}<span class="text-xs font-normal text-[#4b5563]">개</span></p>
+                        </div>
+                        <div v-if="details?.chcrtescnt != null" class="bg-[#f8f9fa] rounded-lg p-3 text-center">
+                          <p class="text-xs text-[#4b5563] mb-1">교직원</p>
+                          <p class="text-lg font-bold text-[#111418]">{{ details.chcrtescnt }}<span class="text-xs font-normal text-[#4b5563]">명</span></p>
+                        </div>
+                      </div>
+                      <div v-if="details?.crcapat != null && details?.crchcnt != null && details.crcapat > 0" class="mt-3">
+                        <div class="flex items-center justify-between text-xs text-[#4b5563] mb-1">
+                          <span>가용률</span>
+                          <span class="font-medium">{{ childcareAvailabilityRate }}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                          <div class="h-2 rounded-full transition-all" :class="childcareOccupancyPct >= 90 ? 'bg-red-400' : childcareOccupancyPct >= 70 ? 'bg-yellow-400' : 'bg-green-400'" :style="{ width: Math.min(childcareOccupancyPct, 100) + '%' }" />
+                        </div>
+                      </div>
                     </div>
-                    <div v-if="details?.cctvinstlcnt != null" class="flex items-center justify-between">
-                      <span class="text-sm text-[#4b5563]">CCTV</span>
-                      <span class="text-sm font-medium text-[#111418]">{{ details.cctvinstlcnt }}대</span>
+
+                    <!-- 반별 정원·현원 -->
+                    <div v-if="childcareClassRows.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">연령별 반·아동 현황</h3>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                          <thead>
+                            <tr class="bg-[#f8f9fa]">
+                              <th class="py-2 px-3 text-left text-[#4b5563] font-medium rounded-tl-lg">연령</th>
+                              <th class="py-2 px-2 text-right text-[#4b5563] font-medium">반 수</th>
+                              <th class="py-2 px-2 text-right text-[#4b5563] font-medium">아동 수</th>
+                              <th class="py-2 px-3 text-right text-[#4b5563] font-medium rounded-tr-lg">반당 평균</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-[#f0f2f5]">
+                            <tr v-for="row in childcareClassRows" :key="row.label" :class="row.label === '합계' ? 'bg-[#f8f9fa] font-semibold' : ''">
+                              <td class="py-2 px-3 text-[#111418]">{{ row.label }}</td>
+                              <td class="py-2 px-2 text-right text-[#4b5563]">{{ row.classes != null ? row.classes + '개' : '-' }}</td>
+                              <td class="py-2 px-2 text-right text-[#4b5563]">{{ row.children != null ? row.children + '명' : '-' }}</td>
+                              <td class="py-2 px-3 text-right text-[#4b5563]">{{ row.avg != null ? row.avg + '명' : '-' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                    <div v-if="details?.plgrdco != null" class="flex items-center justify-between">
-                      <span class="text-sm text-[#4b5563]">놀이터</span>
-                      <span class="text-sm font-medium text-[#111418]">{{ details.plgrdco }}개</span>
+
+                    <!-- 직원 현황 -->
+                    <div v-if="(details as any)?.emCntTot || childcareStaffRoles.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">직원 현황 <span v-if="(details as any)?.emCntTot" class="text-[#4b5563] font-normal">(총 {{ (details as any).emCntTot }}명)</span></h3>
+                      <table class="w-full text-sm">
+                        <tbody class="divide-y divide-[#f0f2f5]">
+                          <tr v-for="role in childcareStaffRoles" :key="role.label">
+                            <td class="py-2 text-[#4b5563]">{{ role.label }}</td>
+                            <td class="py-2 text-[#111418] font-medium text-right">{{ role.cnt }}명</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-                    <div v-if="details?.chcrtescnt != null" class="flex items-center justify-between">
-                      <span class="text-sm text-[#4b5563]">교직원 수</span>
-                      <span class="text-sm font-medium text-[#111418]">{{ details.chcrtescnt }}명</span>
+
+                    <!-- 교사 경력 분포 -->
+                    <div v-if="childcareCareerItems.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">교사 경력 분포</h3>
+                      <div class="flex flex-wrap gap-2">
+                        <span v-for="item in childcareCareerItems" :key="item.label" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" :class="item.colorClass">
+                          {{ item.label }} <span class="font-semibold">{{ item.cnt }}명</span>
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div v-if="details?.crcargbname" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">통학차량</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ details.crcargbname }}</span>
-                  </div>
-                </div>
-                <div v-if="details?.crhome" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">홈페이지</span>
-                    <a :href="details.crhome" target="_blank" rel="noopener noreferrer" class="text-sm text-primary font-medium underline">{{ details.crhome }}</a>
-                  </div>
-                </div>
+
+                    <!-- 특이사항 -->
+                    <div v-if="details?.crspec" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-2">특이사항</h3>
+                      <p class="text-sm text-[#4b5563] bg-[#f8f9fa] border border-[#e5e7eb] rounded-lg px-3 py-2">{{ details.crspec }}</p>
+                    </div>
+
+                    <!-- 데이터 기준일 -->
+                    <div v-if="details?.datastdrdt" class="mt-4 pt-3 border-t border-[#f0f2f5]">
+                      <p class="text-xs text-[#9ca3af]">데이터 기준일: {{ details.datastdrdt }}</p>
+                    </div>
               </template>
 
               <!-- EvCharger Details (Mobile) -->
@@ -2189,6 +2357,7 @@ import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
+import { formatOperatingHours } from '~/utils/formatOperatingHours'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
@@ -2434,6 +2603,83 @@ const childcareAvailabilityRate = computed(() => {
   const cur = (details.value as any)?.crchcnt
   if (cap == null || cur == null || cap === 0) return '-'
   return `${((cap - cur) / cap * 100).toFixed(0)}%`
+})
+
+const childcareOccupancyPct = computed(() => {
+  const cap = (details.value as any)?.crcapat
+  const cur = (details.value as any)?.crchcnt
+  if (cap == null || cur == null || cap === 0) return 0
+  return Math.min(Math.round((cur / cap) * 100), 100)
+})
+
+// 반별 정원·현원
+const CLASS_DEFS = [
+  { label: '0세', classKey: 'classCnt00', childKey: 'childCnt00' },
+  { label: '1세', classKey: 'classCnt01', childKey: 'childCnt01' },
+  { label: '2세', classKey: 'classCnt02', childKey: 'childCnt02' },
+  { label: '3세', classKey: 'classCnt03', childKey: 'childCnt03' },
+  { label: '4세', classKey: 'classCnt04', childKey: 'childCnt04' },
+  { label: '5세', classKey: 'classCnt05', childKey: 'childCnt05' },
+  { label: '만2세미만', classKey: 'classCntM2', childKey: 'childCntM2' },
+  { label: '만5세이상', classKey: 'classCntM5', childKey: 'childCntM5' },
+  { label: '장애아', classKey: 'classCntSp', childKey: 'childCntSp' },
+  { label: '합계', classKey: 'classCntTot', childKey: 'childCntTot' },
+] as const
+
+const childcareClassRows = computed(() => {
+  const d = details.value as any
+  if (!d) return []
+  return CLASS_DEFS
+    .map(({ label, classKey, childKey }) => {
+      const classes = d[classKey] as number | undefined
+      const children = d[childKey] as number | undefined
+      const avg = (classes != null && classes > 0 && children != null) ? Math.round(children / classes * 10) / 10 : null
+      return { label, classes, children, avg }
+    })
+    .filter(row => (row.classes != null && row.classes > 0) || (row.children != null && row.children > 0))
+})
+
+const STAFF_ROLE_DEFS = [
+  { label: '원장', key: 'emCntA1' },
+  { label: '보육교사', key: 'emCntA2' },
+  { label: '특수교사', key: 'emCntA3' },
+  { label: '치료사', key: 'emCntA4' },
+  { label: '영양사', key: 'emCntA5' },
+  { label: '간호사(조무사)', key: 'emCntA6' },
+  { label: '조리원', key: 'emCntA10' },
+  { label: '사무원', key: 'emCntA7' },
+  { label: '기타', key: 'emCntA8' },
+] as const
+
+const childcareStaffRoles = computed(() => {
+  const d = details.value as any
+  if (!d) return []
+  return STAFF_ROLE_DEFS
+    .map(({ label, key }) => ({ label, cnt: d[key] as number | undefined }))
+    .filter(r => r.cnt != null && r.cnt > 0)
+})
+
+const CAREER_COLORS = [
+  'bg-sky-100 text-sky-800',
+  'bg-blue-100 text-blue-800',
+  'bg-indigo-100 text-indigo-800',
+  'bg-violet-100 text-violet-800',
+  'bg-purple-100 text-purple-800',
+]
+
+const childcareCareerItems = computed(() => {
+  const d = details.value as any
+  if (!d) return []
+  const defs = [
+    { label: '1년 미만', key: 'emCnt0y' },
+    { label: '1년 이상', key: 'emCnt1y' },
+    { label: '2년 이상', key: 'emCnt2y' },
+    { label: '4년 이상', key: 'emCnt4y' },
+    { label: '6년 이상', key: 'emCnt6y' },
+  ] as const
+  return defs
+    .map(({ label, key }, i) => ({ label, cnt: d[key] as number | undefined, colorClass: CAREER_COLORS[i] }))
+    .filter(item => item.cnt != null && item.cnt > 0)
 })
 
 

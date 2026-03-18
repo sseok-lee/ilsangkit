@@ -3,7 +3,7 @@
     <DetailRow
       v-if="details.operatingHours"
       label="운영시간"
-      :value="details.operatingHours"
+      :value="formatOperatingHours(details.operatingHours)"
     />
     <DetailRow
       v-if="details.openTime"
@@ -43,7 +43,7 @@
     />
 
     <div v-if="hasSafetyFeatures" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-medium text-gray-600 mb-2">안전/편의시설</p>
+      <p class="text-xs font-medium text-gray-500 mb-2">안전/편의시설</p>
       <div class="grid grid-cols-2 gap-2">
         <div v-if="details.hasCCTV !== undefined" class="flex items-center gap-1.5 text-sm text-gray-700">
           <span :class="details.hasCCTV ? 'text-green-600' : 'text-gray-400'">{{ details.hasCCTV ? '✓' : '✗' }}</span>
@@ -65,6 +65,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ToiletDetails } from '~/types/facility'
+import { formatOperatingHours } from '~/utils/formatOperatingHours'
 
 const props = defineProps<{
   details: ToiletDetails
