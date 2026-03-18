@@ -96,7 +96,7 @@ const CATEGORY_ICONS: Partial<Record<FacilityCategory, string>> = {
   sports: '🏅',
 }
 
-const DISPLAY_CATEGORIES: FacilityCategory[] = ['toilet', 'parking', 'pharmacy', 'aed', 'wifi', 'hospital', 'library']
+const DISPLAY_CATEGORIES: FacilityCategory[] = ['school', 'childcare', 'park', 'sports', 'hospital', 'pharmacy']
 const MAX_PER_CATEGORY = 3
 
 function categoryBgClass(category: FacilityCategory): string {
