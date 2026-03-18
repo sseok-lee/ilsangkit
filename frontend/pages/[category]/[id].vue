@@ -154,7 +154,7 @@
               </div>
 
               <!-- Basic Info Card -->
-              <div class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+              <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center justify-between">
                   <h2 class="text-[#111418] text-lg font-bold">기본정보</h2>
                 </div>
@@ -428,6 +428,8 @@
                 </div>
               </div>
 
+              <!-- Roadview + Facility Status 2-col grid (Desktop) -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               <!-- Roadview Card (Desktop) -->
               <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5]">
@@ -439,7 +441,7 @@
               </div>
 
               <!-- Facility Status Card -->
-              <div v-if="hasFacilityStatus" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+              <div v-if="hasFacilityStatus" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5]">
                   <h2 class="text-[#111418] text-lg font-bold">시설현황</h2>
                 </div>
@@ -447,7 +449,7 @@
                   <div v-if="hasGridContent" class="grid grid-cols-2 gap-4">
                     <!-- Toilet Stalls (if applicable) -->
                     <template v-if="facility.category === 'toilet'">
-                      <div v-if="details?.maleToilets" class="col-span-2 bg-[#f9fafb]#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
+                      <div v-if="details?.maleToilets" class="col-span-1 bg-[#f9fafb] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
                         <div class="flex items-center gap-3">
                           <div class="p-2 bg-blue-50 text-blue-600 rounded-full">
                             <span class="material-symbols-outlined">man</span>
@@ -456,7 +458,7 @@
                         </div>
                         <span class="text-base font-bold text-[#111418]">{{ details?.maleToilets }}칸</span>
                       </div>
-                      <div v-if="details?.femaleToilets" class="col-span-2 bg-[#f9fafb]#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
+                      <div v-if="details?.femaleToilets" class="col-span-1 bg-[#f9fafb] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
                         <div class="flex items-center gap-3">
                           <div class="p-2 bg-pink-50 text-pink-600 rounded-full">
                             <span class="material-symbols-outlined">woman</span>
@@ -465,7 +467,7 @@
                         </div>
                         <span class="text-base font-bold text-[#111418]">{{ details?.femaleToilets }}칸</span>
                       </div>
-                      <div v-if="details?.maleUrinals" class="col-span-2 bg-[#f9fafb]#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
+                      <div v-if="details?.maleUrinals" class="col-span-1 bg-[#f9fafb] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
                         <div class="flex items-center gap-3">
                           <div class="p-2 bg-blue-50 text-blue-600 rounded-full">
                             <span class="material-symbols-outlined">man</span>
@@ -480,7 +482,7 @@
                     <div
                       v-for="amenity in facilityAmenities"
                       :key="amenity"
-                      class="bg-white#1a2630] border border-[#e5e7eb] rounded-lg p-3 flex flex-col items-center justify-center gap-2 text-center"
+                      class="bg-white border border-[#e5e7eb] rounded-lg p-3 flex flex-col items-center justify-center gap-2 text-center"
                     >
                       <span class="material-symbols-outlined text-primary text-3xl">{{ getAmenityIcon(amenity) }}</span>
                       <span class="text-sm font-medium text-[#111418]">{{ amenity }}</span>
@@ -504,7 +506,7 @@
                         <div
                           v-for="item in toiletAccessibilityDetails"
                           :key="item.label"
-                          class="bg-[#f9fafb]#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]"
+                          class="bg-[#f9fafb] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]"
                         >
                           <span class="text-sm text-[#4b5563]">{{ item.label }}</span>
                           <span class="text-sm font-bold text-[#111418]">{{ item.value }}</span>
@@ -1060,14 +1062,15 @@
 
                 </div>
               </div>
+              </div><!-- end Roadview + Facility Status grid -->
 
               <!-- Nearby Facilities -->
-              <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+              <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
                   <span class="material-symbols-outlined text-primary text-[20px]">near_me</span>
                   <h2 class="text-[#111418] text-lg font-bold">주변 {{ categoryMeta.label }}</h2>
                 </div>
-                <div class="p-4 flex flex-col gap-3">
+                <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <template v-if="nearbyLoading">
                     <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
                   </template>
@@ -1084,20 +1087,20 @@
 
               <!-- Cross-Category Nearby Facilities -->
               <template v-if="crossLoading">
-                <div class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
-                  <div class="p-4 flex flex-col gap-3">
+                <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                  <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
                   </div>
                 </div>
               </template>
               <template v-else>
                 <div v-for="group in crossFacilitiesGrouped" :key="group.category"
-                     class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                     class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                   <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
                     <span class="material-symbols-outlined text-base">{{ group.meta.icon }}</span>
                     <h2 class="text-[#111418] text-lg font-bold">주변 {{ group.meta.label }}</h2>
                   </div>
-                  <div class="p-4 flex flex-col gap-3">
+                  <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <FacilityCard
                       v-for="item in group.items"
                       :key="item.id"
@@ -1114,7 +1117,7 @@
               </ClientOnly>
 
               <!-- 같은 지역 시설 링크 -->
-              <nav v-if="regionLink" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+              <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
                   <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
                   <h2 class="text-[#111418] text-lg font-bold">같은 지역 시설</h2>
@@ -1166,7 +1169,7 @@
               </div>
 
               <!-- Data Info Card -->
-              <div v-if="dataDate || lastSyncDate || dataPortalUrl" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+              <div v-if="dataDate || lastSyncDate || dataPortalUrl" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
                   <span class="material-symbols-outlined text-[#60708a] text-[20px]">description</span>
                   <h2 class="text-[#111418] text-lg font-bold">데이터 정보</h2>
@@ -1276,7 +1279,7 @@
           </div>
 
           <!-- Basic Info Card -->
-          <div class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+          <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center justify-between">
               <h2 class="text-[#111418] text-lg font-bold">기본정보</h2>
             </div>
@@ -1561,7 +1564,7 @@
           </div>
 
           <!-- Facility Status Card -->
-          <div v-if="hasFacilityStatus" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+          <div v-if="hasFacilityStatus" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5]">
               <h2 class="text-[#111418] text-lg font-bold">시설현황</h2>
             </div>
@@ -1569,7 +1572,7 @@
               <div v-if="hasGridContent" class="grid grid-cols-2 gap-4">
                 <!-- Toilet Stalls -->
                 <template v-if="facility.category === 'toilet'">
-                  <div v-if="details?.maleToilets" class="col-span-2 bg-[#f9fafb]#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
+                  <div v-if="details?.maleToilets" class="col-span-2 bg-[#f9fafb] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
                     <div class="flex items-center gap-3">
                       <div class="p-2 bg-blue-50 text-blue-600 rounded-full">
                         <span class="material-symbols-outlined">man</span>
@@ -1578,7 +1581,7 @@
                     </div>
                     <span class="text-base font-bold text-[#111418]">{{ details?.maleToilets }}칸</span>
                   </div>
-                  <div v-if="details?.femaleToilets" class="col-span-2 bg-[#f9fafb]#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
+                  <div v-if="details?.femaleToilets" class="col-span-2 bg-[#f9fafb] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
                     <div class="flex items-center gap-3">
                       <div class="p-2 bg-pink-50 text-pink-600 rounded-full">
                         <span class="material-symbols-outlined">woman</span>
@@ -1587,7 +1590,7 @@
                     </div>
                     <span class="text-base font-bold text-[#111418]">{{ details?.femaleToilets }}칸</span>
                   </div>
-                  <div v-if="details?.maleUrinals" class="col-span-2 bg-[#f9fafb]#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
+                  <div v-if="details?.maleUrinals" class="col-span-2 bg-[#f9fafb] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]">
                     <div class="flex items-center gap-3">
                       <div class="p-2 bg-blue-50 text-blue-600 rounded-full">
                         <span class="material-symbols-outlined">man</span>
@@ -1602,7 +1605,7 @@
                 <div
                   v-for="amenity in facilityAmenities"
                   :key="amenity"
-                  class="bg-white#1a2630] border border-[#e5e7eb] rounded-lg p-3 flex flex-col items-center justify-center gap-2 text-center"
+                  class="bg-white border border-[#e5e7eb] rounded-lg p-3 flex flex-col items-center justify-center gap-2 text-center"
                 >
                   <span class="material-symbols-outlined text-primary text-3xl">{{ getAmenityIcon(amenity) }}</span>
                   <span class="text-sm font-medium text-[#111418]">{{ amenity }}</span>
@@ -1626,7 +1629,7 @@
                     <div
                       v-for="item in toiletAccessibilityDetails"
                       :key="item.label"
-                      class="bg-[#f9fafb]#23303b] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]"
+                      class="bg-[#f9fafb] rounded-lg p-3 flex items-center justify-between border border-[#f0f2f5]"
                     >
                       <span class="text-sm text-[#4b5563]">{{ item.label }}</span>
                       <span class="text-sm font-bold text-[#111418]">{{ item.value }}</span>
@@ -2172,7 +2175,7 @@
           </div>
 
           <!-- Nearby Facilities -->
-          <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+          <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
               <span class="material-symbols-outlined text-primary text-[20px]">near_me</span>
               <h2 class="text-[#111418] text-lg font-bold">주변 {{ categoryMeta.label }}</h2>
@@ -2193,7 +2196,7 @@
 
           <!-- Cross-Category Nearby Facilities (Mobile) -->
           <template v-if="crossLoading">
-            <div class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
               <div class="p-4 flex flex-col gap-3">
                 <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
               </div>
@@ -2201,7 +2204,7 @@
           </template>
           <template v-else>
             <div v-for="group in crossFacilitiesGrouped" :key="group.category"
-                 class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                 class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
               <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
                 <span class="material-symbols-outlined text-base">{{ group.meta.icon }}</span>
                 <h2 class="text-[#111418] text-lg font-bold">주변 {{ group.meta.label }}</h2>
@@ -2223,7 +2226,7 @@
           </ClientOnly>
 
           <!-- 같은 지역 시설 링크 -->
-          <nav v-if="regionLink" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+          <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
               <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
               <h2 class="text-[#111418] text-lg font-bold">같은 지역 시설</h2>
@@ -2275,7 +2278,7 @@
           </div>
 
           <!-- Data Info Card -->
-          <div v-if="dataDate || lastSyncDate || dataPortalUrl" class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+          <div v-if="dataDate || lastSyncDate || dataPortalUrl" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
               <span class="material-symbols-outlined text-[#60708a] text-[20px]">description</span>
               <h2 class="text-[#111418] text-lg font-bold">데이터 정보</h2>
