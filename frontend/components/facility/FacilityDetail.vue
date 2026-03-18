@@ -85,6 +85,7 @@ import PharmacyDetail from './details/PharmacyDetail.vue'
 import ParkDetail from './details/ParkDetail.vue'
 import SchoolDetail from './details/SchoolDetail.vue'
 import MarketDetail from './details/MarketDetail.vue'
+import ChildcareDetail from './details/ChildcareDetail.vue'
 
 const props = defineProps<{
   facility: FacilityDetail
@@ -116,6 +117,8 @@ const detailComponent = computed(() => {
       return SchoolDetail
     case 'market':
       return MarketDetail
+    case 'childcare':
+      return ChildcareDetail
     default:
       return null
   }
