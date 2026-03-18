@@ -662,8 +662,8 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         ...item,
         distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
       }))
-      .filter((item) => item.distance <= radius)
-      .sort((a, b) => a.distance - b.distance);
+      .filter((item) => item.distance! <= radius)
+      .sort((a, b) => a.distance! - b.distance!);
 
     const total = withDistance.length;
     const skip = (page - 1) * limit;
