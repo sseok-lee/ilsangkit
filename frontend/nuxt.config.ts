@@ -1,4 +1,5 @@
 const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
+const gaId = process.env.NUXT_PUBLIC_GA_ID || ''
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
@@ -151,6 +152,15 @@ export default defineNuxtConfig({
         { name: 'naver-site-verification', content: 'naver4a270427c00c2dcdbb553b6af5637cb1' },
       ],
       script: [
+        ...(gaId ? [
+          {
+            src: `https://www.googletagmanager.com/gtag/js?id=${gaId}`,
+            async: true,
+          },
+          {
+            innerHTML: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`,
+          },
+        ] : []),
         {
           src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2088264360250020',
           async: true,
