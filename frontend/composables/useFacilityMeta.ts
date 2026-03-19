@@ -224,7 +224,7 @@ export function useFacilityMeta() {
   function setHomeMeta() {
     setMeta({
       title: '일상킷 - 부동산 실거래가·생활시설 통합 검색',
-      description: '아파트·빌라·오피스텔 실거래가 조회와 병원, 약국, 주차장을 비롯한 주요 생활시설을 한 번에 검색. 시세 조회부터 주변 시설 정보까지 한곳에서 확인하세요.',
+      description: '아파트·빌라·오피스텔 실거래가 조회와 학교, 어린이집, 공원 등 생활시설을 한번에 검색. 시세 조회부터 주변 시설 정보까지 한곳에서 확인하세요.',
       path: '/',
     })
   }

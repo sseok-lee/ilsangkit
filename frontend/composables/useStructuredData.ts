@@ -253,7 +253,7 @@ export function useStructuredData() {
       name: SITE_NAME,
       url: SITE_URL,
       logo: `${SITE_URL}/icons/logo.webp`,
-      description: '부동산 실거래가와 전국 생활시설 정보를 한곳에서 제공하는 생활 정보 서비스. 아파트·빌라·오피스텔 시세 조회와 병원·약국·주차장을 비롯한 주요 생활시설을 통합 검색합니다.',
+      description: '부동산 실거래가와 전국 생활시설 정보를 한곳에서 제공하는 생활 정보 서비스. 아파트·빌라·오피스텔 시세 조회와 학교·어린이집·공원 등 생활시설을 통합 검색합니다.',
       contactPoint: {
         '@type': 'ContactPoint',
         contactType: 'customer service',
