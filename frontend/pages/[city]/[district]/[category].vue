@@ -323,12 +323,12 @@ if (isTrash.value) {
   loadFacilities()
 }
 
-// noindex 조건: 시설 5건 미만 또는 페이지 2 이상
+// noindex 조건: 시설 0건(완전히 비어있는 경우) 또는 페이지 2 이상
 const pageQueryParam = Number(route.query.page) || 1
 useHead(computed(() => {
   const isEmpty = isTrash.value
-    ? (!wasteLoading.value && wasteSchedules.value.length < 5)
-    : (!loading.value && facilities.value.length < 5 && !error.value)
+    ? (!wasteLoading.value && wasteSchedules.value.length === 0)
+    : (!loading.value && facilities.value.length === 0 && !error.value)
   if (isEmpty || pageQueryParam > 1) {
     return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
   }

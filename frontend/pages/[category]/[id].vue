@@ -2435,14 +2435,8 @@ const isThinContent = computed(() => {
     if (val === null || val === undefined || val === '') continue
     fieldCount++
   }
-  // 카테고리별 noindex 기준: 색인 가치가 낮은 카테고리는 더 많은 필드 요구
-  const thresholds: Record<string, number> = {
-    aed: 6,
-    pharmacy: 6,
-    wifi: 5,
-  }
-  const threshold = thresholds[cat] ?? 3
-  return fieldCount < threshold
+  // 이름+주소만 있는 극빈 데이터만 noindex (색인 복구를 위해 기준 완화)
+  return fieldCount < 2
 })
 
 watchEffect(() => {

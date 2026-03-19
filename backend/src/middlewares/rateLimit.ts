@@ -35,6 +35,9 @@ export const globalRateLimiter = rateLimit({
     // SSR/내부 요청 (Nitro 프록시)은 rate limit 제외
     const ip = req.ip || req.socket.remoteAddress || '';
     if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+    // 검색엔진 봇 rate limit 제외 (색인 크롤링 효율 개선)
+    const ua = req.get('user-agent') || '';
+    if (/Googlebot|bingbot|Yeti|Daumoa/i.test(ua)) return true;
     return false;
   },
 });
@@ -97,6 +100,9 @@ export const searchRateLimiter = rateLimit({
     // SSR/내부 요청 (Nitro 프록시)은 rate limit 제외
     const ip = req.ip || req.socket.remoteAddress || '';
     if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+    // 검색엔진 봇 rate limit 제외 (색인 크롤링 효율 개선)
+    const ua = req.get('user-agent') || '';
+    if (/Googlebot|bingbot|Yeti|Daumoa/i.test(ua)) return true;
     return false;
   },
 });
