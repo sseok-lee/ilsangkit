@@ -9,6 +9,7 @@ import {
   generateSourceId,
   getAllLawdCodes,
 } from '../services/syncRealEstateBase.js';
+import { submitIndexNow, buildRealEstateUrls } from '../services/indexNowService.js';
 
 const API_ENDPOINT = 'RTMSDataSvcOffiTrade/getRTMSDataSvcOffiTrade';
 
@@ -166,6 +167,20 @@ async function main(): Promise<void> {
         console.error(`[offitelSale] ${lawdCd}/${ym} 실패: ${msg}`);
       }
     }
+  }
+
+  // IndexNow: 동기화된 건물 URL 제출
+  const buildings = await prisma.offitelSaleTransaction.findMany({
+    where: { syncedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) } },
+    select: { buildingName: true, bjdCode: true },
+    distinct: ['buildingName', 'bjdCode'],
+  });
+  if (buildings.length > 0) {
+    const urls = buildRealEstateUrls('offitel', buildings.map(b => ({
+      buildingName: b.buildingName,
+      bjdCode: b.bjdCode,
+    })));
+    await submitIndexNow(urls);
   }
 
   console.info('\n=== offitelSale sync completed ===');

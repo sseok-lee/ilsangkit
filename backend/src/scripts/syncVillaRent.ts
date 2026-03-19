@@ -10,6 +10,7 @@ import {
   getAllLawdCodes,
 } from '../services/syncRealEstateBase.js';
 import { runSync, batchUpsert, transformAndDedupe } from '../services/baseSyncService.js';
+import { submitIndexNow, buildRealEstateUrls } from '../services/indexNowService.js';
 
 const API_ENDPOINT = 'RTMSDataSvcRHRent/getRTMSDataSvcRHRent';
 const CATEGORY = 'villaRent';
@@ -244,6 +245,21 @@ async function main(): Promise<void> {
   const dealYmd = ymIndex !== -1 ? args[ymIndex + 1] : undefined;
 
   await syncVillaRent({ lawdCd, dealYmd });
+
+  // IndexNow: 동기화된 건물 URL 제출
+  const buildings = await prisma.villaRentTransaction.findMany({
+    where: { syncedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) } },
+    select: { buildingName: true, bjdCode: true },
+    distinct: ['buildingName', 'bjdCode'],
+  });
+  if (buildings.length > 0) {
+    const urls = buildRealEstateUrls('villa', buildings.map(b => ({
+      buildingName: b.buildingName,
+      bjdCode: b.bjdCode,
+    })));
+    await submitIndexNow(urls);
+  }
+
   console.info('\n=== villaRent sync completed ===');
 }
 

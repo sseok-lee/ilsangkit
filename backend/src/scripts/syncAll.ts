@@ -24,6 +24,8 @@ import { syncAeds } from './syncAed.js';
 import { syncLibraries } from '../services/librarySyncService.js';
 import { syncHospitals } from './syncHospital.js';
 import { syncPharmacies } from './syncPharmacy.js';
+import { prisma } from '../lib/prisma.js';
+import { submitIndexNow, buildFacilityUrls } from '../services/indexNowService.js';
 
 // 공영주차장 기본 CSV 파일 경로
 const PARKING_CSV_PATH = path.resolve(
@@ -308,6 +310,50 @@ async function main(): Promise<void> {
       console.log(`  - ${r.category}: ${r.error}`);
     });
     process.exit(1);
+  }
+
+  // IndexNow: 동기화된 시설 URL 제출
+  const syncedCategories = results.filter(r => r.success && (r.count ?? 0) > 0);
+  if (syncedCategories.length > 0) {
+    console.log('\n[IndexNow] 변경된 URL 제출 중...');
+    const syncCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000); // 2시간 이내
+
+    const modelQueries: Record<string, () => Promise<{ id: string | number }[]>> = {
+      toilet: () => prisma.toilet.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      trash: () => prisma.wasteSchedule.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      wifi: () => prisma.wifi.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      clothes: () => prisma.clothes.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      hospital: () => prisma.hospital.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      pharmacy: () => prisma.pharmacy.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      parking: () => prisma.parking.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      aed: () => prisma.aed.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      library: () => prisma.library.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      park: () => prisma.park.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      school: () => prisma.school.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      market: () => prisma.market.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      childcare: () => prisma.childcare.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      'ev-charger': () => prisma.evCharger.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      sports: () => prisma.sports.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+    };
+
+    const allUrls: string[] = [];
+    for (const { category } of syncedCategories) {
+      const queryFn = modelQueries[category];
+      if (!queryFn) continue;
+      try {
+        const items = await queryFn();
+        const urls = buildFacilityUrls(category, items.map(i => String(i.id)));
+        allUrls.push(...urls);
+        console.log(`[IndexNow] ${category}: ${urls.length}개 URL`);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`[IndexNow] ${category} URL 조회 실패: ${msg}`);
+      }
+    }
+
+    if (allUrls.length > 0) {
+      await submitIndexNow(allUrls);
+    }
   }
 
   console.log('\n모든 동기화가 성공적으로 완료되었습니다.');
