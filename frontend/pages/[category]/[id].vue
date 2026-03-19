@@ -160,11 +160,13 @@
                 </div>
                 <div class="p-5 flex flex-col gap-4">
                   <!-- Operating Status Banner -->
-                  <OperatingStatusBanner
-                    v-if="facility.details"
-                    :category="facility.category"
-                    :details="facility.details as FacilityDetailsAll"
-                  />
+                  <ClientOnly>
+                    <OperatingStatusBanner
+                      v-if="facility.details"
+                      :category="facility.category"
+                      :details="facility.details as FacilityDetailsAll"
+                    />
+                  </ClientOnly>
 
                   <!-- Address -->
                   <div class="flex gap-4 items-start">
@@ -1285,11 +1287,13 @@
             </div>
             <div class="p-5 flex flex-col gap-4">
               <!-- Operating Status Banner -->
-              <OperatingStatusBanner
-                v-if="facility.details"
-                :category="facility.category"
-                :details="facility.details as FacilityDetailsAll"
-              />
+              <ClientOnly>
+                <OperatingStatusBanner
+                  v-if="facility.details"
+                  :category="facility.category"
+                  :details="facility.details as FacilityDetailsAll"
+                />
+              </ClientOnly>
 
               <!-- Address -->
               <div class="flex gap-4 items-start">

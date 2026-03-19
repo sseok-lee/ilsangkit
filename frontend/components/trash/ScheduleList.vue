@@ -32,6 +32,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
 interface WasteSchedule {
   id: string
   wasteType: string
@@ -67,17 +69,23 @@ function getWasteIcon(wasteType: string): string {
   return '🗑️'
 }
 
+const clientToday = ref<number | null>(null)
+onMounted(() => {
+  clientToday.value = new Date().getDay()
+})
+
 function getDayClass(day: string): string {
   const baseClass = 'bg-gray-100 text-gray-700'
   const todayClass = 'bg-primary-100 text-primary-700 ring-1 ring-primary-500'
 
-  const today = new Date().getDay()
+  if (clientToday.value === null) return baseClass
+
   const dayMap: Record<string, number> = {
     '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6,
     '일요일': 0, '월요일': 1, '화요일': 2, '수요일': 3, '목요일': 4, '금요일': 5, '토요일': 6
   }
 
   const dayNum = dayMap[day]
-  return dayNum === today ? todayClass : baseClass
+  return dayNum === clientToday.value ? todayClass : baseClass
 }
 </script>

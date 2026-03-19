@@ -22,7 +22,12 @@
     <!-- Footer: Nickname + Date -->
     <div class="flex items-center justify-between mt-auto">
       <span class="text-xs font-medium text-slate-500">{{ review.nickname }}</span>
-      <span class="text-xs text-slate-500">{{ formatDate(review.createdAt) }}</span>
+      <ClientOnly>
+        <span class="text-xs text-slate-500">{{ formatDate(review.createdAt) }}</span>
+        <template #fallback>
+          <span class="text-xs text-slate-500">{{ formatDateStatic(review.createdAt) }}</span>
+        </template>
+      </ClientOnly>
     </div>
   </a>
 </template>
@@ -73,6 +78,11 @@ function formatDate(dateStr: string): string {
   if (diffHour < 24) return `${diffHour}시간 전`
   if (diffDay < 7) return `${diffDay}일 전`
 
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
+}
+
+function formatDateStatic(dateStr: string): string {
+  const date = new Date(dateStr)
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 </script>

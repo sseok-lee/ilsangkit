@@ -69,7 +69,12 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-sm font-bold text-[#111418]">{{ review.nickname }}</span>
-              <span class="text-xs text-[#94a3b8]">{{ formatDate(review.createdAt) }}</span>
+              <ClientOnly>
+                <span class="text-xs text-[#94a3b8]">{{ formatDate(review.createdAt) }}</span>
+                <template #fallback>
+                  <span class="text-xs text-[#94a3b8]">{{ formatDateStatic(review.createdAt) }}</span>
+                </template>
+              </ClientOnly>
               <span v-if="review.updatedAt !== review.createdAt" class="text-xs text-[#94a3b8]">(수정됨)</span>
             </div>
             <div class="flex gap-1">
@@ -256,6 +261,11 @@ function formatDate(dateStr: string): string {
   if (diffHour < 24) return `${diffHour}시간 전`
   if (diffDay < 7) return `${diffDay}일 전`
 
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
+}
+
+function formatDateStatic(dateStr: string): string {
+  const date = new Date(dateStr)
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 
