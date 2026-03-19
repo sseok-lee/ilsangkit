@@ -608,6 +608,16 @@ async function loadData() {
   transactions.value = txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 }
   buildingInfo.value = infoResult.status === 'fulfilled' ? infoResult.value : null
 
+  // 현재 탭에 거래 데이터가 없으면 반대 탭으로 자동 전환 (최초 로드 시)
+  if (transactions.value.total === 0 && stats.value.length === 0 && !route.query.tab) {
+    const otherTab: TransactionMode = currentTab.value === 'sale' ? 'rent' : 'sale'
+    currentTab.value = otherTab
+    // watch가 재로드를 트리거하므로 여기서 return
+    statsLoading.value = false
+    txLoading.value = false
+    return
+  }
+
   statsLoading.value = false
   txLoading.value = false
 }
