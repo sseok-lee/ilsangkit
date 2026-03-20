@@ -344,7 +344,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
-import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
+import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ } from '~/utils/realEstateMeta'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
 
@@ -389,9 +389,17 @@ useHead(() => {
       { name: 'description', content: description },
       { property: 'og:title', content: title },
       { property: 'og:description', content: description },
-      { property: 'og:image', content: DEFAULT_OG_IMAGE },
+      { property: 'og:image', content: buildingInfo.value
+        ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
+        : DEFAULT_OG_IMAGE },
       { property: 'og:url', content: canonicalUrl },
       { property: 'og:type', content: 'place' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: title },
+      { name: 'twitter:description', content: description },
+      { name: 'twitter:image', content: buildingInfo.value
+        ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
+        : DEFAULT_OG_IMAGE },
     ],
     link: [
       { rel: 'canonical', href: canonicalUrl },
@@ -402,7 +410,13 @@ useHead(() => {
 const { useRealEstate } = await import('~/composables/useRealEstate')
 const { searchTransactions, getTransactionStats, getBuildingInfo } = useRealEstate()
 
-const { setBuildingPlaceSchema, setBreadcrumbSchema } = useStructuredData()
+const { setBuildingPlaceSchema, setBreadcrumbSchema, setFAQSchema } = useStructuredData()
+
+// FAQ Schema — propertyType별 FAQ 주입
+const faqs = PROPERTY_TYPE_FAQ[propertyTypeParam.value]
+if (faqs?.length) {
+  setFAQSchema(faqs.slice(0, 5).map(f => ({ question: f.q, answer: f.a })))
+}
 
 // Breadcrumb JSON-LD
 setBreadcrumbSchema([
@@ -672,6 +686,8 @@ watch(() => buildingInfo.value, (info) => {
 const noindex = computed(() => {
   if (!bjdCode.value) return true
   if (!statsLoading.value && !txLoading.value && buildingInfo.value === null) return true
+  // 거래 데이터가 0건이면 thin content
+  if (!statsLoading.value && !txLoading.value && transactions.value.items.length === 0 && !buildingInfo.value?.latestDealAmount) return true
   return false
 })
 

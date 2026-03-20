@@ -3,7 +3,10 @@ import { generateOgImageSvg } from '../utils/ogImage'
 import type { FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 
-const VALID_CATEGORIES = new Set<string>(Object.keys(CATEGORY_META))
+const VALID_CATEGORIES = new Set<string>([
+  ...Object.keys(CATEGORY_META),
+  'apt', 'villa', 'offitel',
+])
 
 export default defineEventHandler((event) => {
   const query = getQuery(event)

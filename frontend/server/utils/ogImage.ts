@@ -23,6 +23,19 @@ export const CATEGORY_COLORS: Record<FacilityCategory, string> = {
   sports: '#06b6d4',    // cyan-500
 }
 
+// 부동산 카테고리 색상/라벨
+export const REAL_ESTATE_COLORS: Record<string, string> = {
+  apt: '#2563eb',      // blue-600
+  villa: '#7c3aed',    // violet-600
+  offitel: '#0d9488',  // teal-600
+}
+
+export const REAL_ESTATE_LABELS: Record<string, string> = {
+  apt: '아파트 실거래가',
+  villa: '빌라 실거래가',
+  offitel: '오피스텔 실거래가',
+}
+
 const FALLBACK_COLOR = '#6366f1' // indigo-500
 
 export interface OgImageOptions {
@@ -53,11 +66,12 @@ export function generateOgImageSvg(options: OgImageOptions): string {
   const city = options.city ? sanitizeForSvg(options.city, 30) : undefined
   const district = options.district ? sanitizeForSvg(options.district, 30) : undefined
   const meta = CATEGORY_META[category as FacilityCategory]
-  const bgColor = CATEGORY_COLORS[category as FacilityCategory] ?? FALLBACK_COLOR
+  const bgColor = CATEGORY_COLORS[category as FacilityCategory]
+    ?? REAL_ESTATE_COLORS[category] ?? FALLBACK_COLOR
 
   // title fallback: empty string → use category label
-  const title = sanitizeForSvg(options.title || meta?.label || String(category), 80)
-  const categoryLabel = meta?.label || String(category)
+  const title = sanitizeForSvg(options.title || meta?.label || REAL_ESTATE_LABELS[category] || String(category), 80)
+  const categoryLabel = meta?.label ?? REAL_ESTATE_LABELS[category] ?? String(category)
 
   const locationParts: string[] = []
   if (city) locationParts.push(city)
