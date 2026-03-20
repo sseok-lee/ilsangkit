@@ -371,6 +371,7 @@ const currentTab = computed<TransactionMode>({
 
 const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.value))
 const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
+const buildingInfo = ref<BuildingInfo | null>(null)
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 useHead(() => {
@@ -425,8 +426,6 @@ setBreadcrumbSchema([
   { name: propertyMeta.value?.label || '', url: `/real-estate/${propertyTypeParam.value}` },
   { name: buildingName.value, url: `/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}` },
 ])
-
-const buildingInfo = ref<BuildingInfo | null>(null)
 
 // 길찾기 URL
 const kakaoMapUrl = computed(() =>
