@@ -734,12 +734,26 @@
                       <div class="flex items-center gap-2 flex-wrap">
                         <span v-if="details?.schoolLevel" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="schoolLevelBadgeClass">{{ details.schoolLevel }}</span>
                         <span v-if="details?.foundationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="foundationTypeBadgeClass">{{ details.foundationType }}</span>
+                        <span v-if="details?.coeducationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-indigo-100 text-indigo-800">{{ details.coeducationType }}</span>
+                        <span v-if="details?.highSchoolType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-violet-100 text-violet-800">{{ details.highSchoolType }}</span>
                         <span v-if="details?.branchType?.includes('분교')" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800">분교</span>
                       </div>
                       <div v-if="details?.foundedDate" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563]">설립일</span>
                         <span class="text-sm font-medium text-[#111418]">{{ details.foundedDate }}</span>
                       </div>
+                      <div v-if="details?.phoneNumber" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">연락처</span>
+                        <a :href="`tel:${details.phoneNumber}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.phoneNumber }}</a>
+                      </div>
+                      <div v-if="details?.faxNumber" class="flex items-center justify-between">
+                        <span class="text-sm text-[#4b5563]">팩스</span>
+                        <span class="text-sm font-medium text-[#111418]">{{ details.faxNumber }}</span>
+                      </div>
+                    </div>
+                    <div v-if="details?.homepageUrl" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-2">홈페이지</h3>
+                      <a :href="schoolHomepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:underline break-all">{{ details.homepageUrl }}</a>
                     </div>
                     <div v-if="details?.sidoEduName || details?.localEduName" class="mt-5 border-t border-[#f0f2f5] pt-5">
                       <h3 class="text-sm font-bold text-[#111418] mb-3">관할 교육청</h3>
@@ -752,6 +766,31 @@
                           <span class="text-sm text-[#4b5563]">교육지원청</span>
                           <span class="text-sm font-medium text-[#111418]">{{ details.localEduName }}</span>
                         </div>
+                      </div>
+                    </div>
+                    <div v-if="schoolEnrollmentRows.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">학급 현황</h3>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                          <thead>
+                            <tr class="border-b border-gray-200">
+                              <th class="py-1.5 pr-3 text-left text-gray-500 font-medium">학년</th>
+                              <th class="py-1.5 pl-2 text-right text-gray-500 font-medium">반 수</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100">
+                            <tr v-for="row in schoolEnrollmentRows" :key="row.label" :class="row.isTotal ? 'bg-gray-50 font-semibold' : ''">
+                              <td class="py-1.5 pr-3 font-medium text-gray-700">{{ row.label }}</td>
+                              <td class="py-1.5 pl-2 text-right text-gray-600">{{ row.classCount != null ? row.classCount + '개' : '-' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div v-if="schoolDepartments.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">계열 정보</h3>
+                      <div class="flex flex-wrap gap-2">
+                        <span v-for="dept in schoolDepartments" :key="dept" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-sky-100 text-sky-800">{{ dept }}</span>
                       </div>
                     </div>
                   </template>
@@ -1846,12 +1885,26 @@
                   <div class="flex items-center gap-2 flex-wrap">
                     <span v-if="details?.schoolLevel" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="schoolLevelBadgeClass">{{ details.schoolLevel }}</span>
                     <span v-if="details?.foundationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="foundationTypeBadgeClass">{{ details.foundationType }}</span>
+                    <span v-if="details?.coeducationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-indigo-100 text-indigo-800">{{ details.coeducationType }}</span>
+                    <span v-if="details?.highSchoolType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-violet-100 text-violet-800">{{ details.highSchoolType }}</span>
                     <span v-if="details?.branchType?.includes('분교')" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800">분교</span>
                   </div>
                   <div v-if="details?.foundedDate" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563]">설립일</span>
                     <span class="text-sm font-medium text-[#111418]">{{ details.foundedDate }}</span>
                   </div>
+                  <div v-if="details?.phoneNumber" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">연락처</span>
+                    <a :href="`tel:${details.phoneNumber}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.phoneNumber }}</a>
+                  </div>
+                  <div v-if="details?.faxNumber" class="flex items-center justify-between">
+                    <span class="text-sm text-[#4b5563]">팩스</span>
+                    <span class="text-sm font-medium text-[#111418]">{{ details.faxNumber }}</span>
+                  </div>
+                </div>
+                <div v-if="details?.homepageUrl" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] mb-2">홈페이지</h3>
+                  <a :href="schoolHomepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:underline break-all">{{ details.homepageUrl }}</a>
                 </div>
                 <div v-if="details?.sidoEduName || details?.localEduName" class="mt-5 border-t border-[#f0f2f5] pt-5">
                   <h3 class="text-sm font-bold text-[#111418] mb-3">관할 교육청</h3>
@@ -1864,6 +1917,31 @@
                       <span class="text-sm text-[#4b5563]">교육지원청</span>
                       <span class="text-sm font-medium text-[#111418]">{{ details.localEduName }}</span>
                     </div>
+                  </div>
+                </div>
+                <div v-if="schoolEnrollmentRows.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] mb-3">학급 현황</h3>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                      <thead>
+                        <tr class="border-b border-gray-200">
+                          <th class="py-1.5 pr-3 text-left text-gray-500 font-medium">학년</th>
+                          <th class="py-1.5 pl-2 text-right text-gray-500 font-medium">반 수</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100">
+                        <tr v-for="row in schoolEnrollmentRows" :key="row.label" :class="row.isTotal ? 'bg-gray-50 font-semibold' : ''">
+                          <td class="py-1.5 pr-3 font-medium text-gray-700">{{ row.label }}</td>
+                          <td class="py-1.5 pl-2 text-right text-gray-600">{{ row.classCount != null ? row.classCount + '개' : '-' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div v-if="schoolDepartments.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
+                  <h3 class="text-sm font-bold text-[#111418] mb-3">계열 정보</h3>
+                  <div class="flex flex-wrap gap-2">
+                    <span v-for="dept in schoolDepartments" :key="dept" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-sky-100 text-sky-800">{{ dept }}</span>
                   </div>
                 </div>
               </template>
@@ -2561,6 +2639,38 @@ const foundationTypeBadgeClass = computed(() => {
   if (type.includes('공립')) return 'bg-blue-100 text-blue-800'
   if (type.includes('사립')) return 'bg-purple-100 text-purple-800'
   return 'bg-gray-100 text-gray-800'
+})
+
+// School computed
+const schoolHomepageUrl = computed(() => {
+  const url = (details.value as any)?.homepageUrl || ''
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `http://${url}`
+})
+
+const schoolEnrollmentRows = computed(() => {
+  const enrollments = (details.value as any)?.enrollments || []
+  if (enrollments.length === 0) return []
+  const sorted = [...enrollments].sort((a: any, b: any) => a.grade - b.grade)
+  const rows = sorted.map((e: any) => ({
+    label: `${e.grade}학년`,
+    classCount: e.classCount,
+    isTotal: false,
+  }))
+  if (rows.length > 1) {
+    let totalClasses = 0
+    for (const e of enrollments) {
+      totalClasses += e.classCount || 0
+    }
+    rows.push({ label: '합계', classCount: totalClasses, isTotal: true })
+  }
+  return rows
+})
+
+const schoolDepartments = computed(() => {
+  const depts = (details.value as any)?.departments || []
+  return depts.map((d: any) => d.departmentName)
 })
 
 // Market computed
