@@ -24,6 +24,9 @@ import { syncAeds } from './syncAed.js';
 import { syncLibraries } from '../services/librarySyncService.js';
 import { syncHospitals } from './syncHospital.js';
 import { syncPharmacies } from './syncPharmacy.js';
+import { syncChildcare } from '../services/childcareSyncService.js';
+import { syncEvChargers } from '../services/evChargerSyncService.js';
+import { syncSports } from '../services/sportsSyncService.js';
 import { prisma } from '../lib/prisma.js';
 import { submitIndexNow, buildFacilityUrls } from '../services/indexNowService.js';
 
@@ -83,7 +86,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -213,6 +216,38 @@ async function syncCategory(category: Category): Promise<SyncResult> {
 
       case 'market': {
         const result = await syncMarkets(MARKET_CSV_PATH);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'childcare': {
+        const regions = await prisma.region.findMany({ select: { bjdCode: true } });
+        const arcodes = regions.map(r => r.bjdCode);
+        const result = await syncChildcare(arcodes);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'ev-charger': {
+        const result = await syncEvChargers();
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'sports': {
+        const result = await syncSports();
         return {
           category,
           success: true,

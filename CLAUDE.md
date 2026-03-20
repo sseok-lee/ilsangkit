@@ -43,12 +43,7 @@ npm run db:seed      # 시드 데이터 삽입
 ```
 
 ### Data Sync (`cd backend`)
-```bash
-npm run sync:facilities  # 전체 시설 동기화 (syncAll.ts)
-npm run sync:[slug]      # 개별 카테고리: toilet, trash, wifi, clothes, kiosk, parking, aed, regions
-npm run sync:apt-sale    # 부동산: apt-sale, apt-rent, villa-sale, villa-rent, offitel-sale, offitel-rent
-npm run sync:geocode-real-estate  # 부동산 좌표 geocoding
-```
+상세 가이드: [SYNC.md](./backend/SYNC.md)
 
 ## Architecture Overview
 
