@@ -91,6 +91,11 @@
           <span v-if="facility.extras.phone" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ facility.extras.phone }}</span>
           <span v-if="facility.extras.drTotCnt" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">의사 {{ facility.extras.drTotCnt }}명</span>
 
+          <!-- school -->
+          <a v-if="facility.extras.phoneNumber && facility.category === 'school'" :href="`tel:${facility.extras.phoneNumber}`" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 hover:underline" @click.stop>{{ facility.extras.phoneNumber }}</a>
+          <span v-if="facility.extras.coeducationType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700">{{ facility.extras.coeducationType }}</span>
+          <span v-if="facility.extras.highSchoolType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-50 text-violet-700">{{ facility.extras.highSchoolType }}</span>
+
           <!-- ev-charger (충전소 단위) -->
           <span v-if="facility.extras.rapidCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">급속 {{ facility.extras.rapidCount }}대</span>
           <span v-if="facility.extras.slowCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-50 text-green-700">완속 {{ facility.extras.slowCount }}대</span>

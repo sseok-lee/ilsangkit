@@ -96,7 +96,7 @@ export const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
   },
   school: {
     model: () => prisma.school,
-    listFields: ['schoolLevel', 'operationStatus'],
+    listFields: ['schoolLevel', 'operationStatus', 'phoneNumber', 'coeducationType', 'highSchoolType'],
     detailFields: ['schoolLevel', 'foundedDate', 'foundationType', 'branchType', 'operationStatus', 'sidoEduCode', 'sidoEduName', 'localEduCode', 'localEduName', 'createdDate', 'modifiedDate', 'dataDate', 'providerCode', 'providerName', 'neisEduCode', 'phoneNumber', 'faxNumber', 'homepageUrl', 'coeducationType', 'highSchoolType', 'dayNightType'],
   },
   market: {

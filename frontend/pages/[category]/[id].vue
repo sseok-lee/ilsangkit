@@ -678,8 +678,11 @@
                   <!-- Park Details -->
                   <template v-if="facility.category === 'park'">
                     <div class="flex flex-col gap-3">
-                      <div v-if="details?.parkType" class="flex items-center gap-2">
-                        <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="parkTypeBadgeClass">{{ details.parkType }}</span>
+                      <div v-if="details?.parkType" class="grid grid-cols-2 gap-2">
+                        <div class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">공원유형</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ details.parkType }}</span>
+                        </div>
                       </div>
                       <div v-if="details?.area != null" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563]">면적</span>
@@ -695,34 +698,27 @@
                       </div>
                     </div>
                     <div v-if="parkHasFacilities" class="mt-5 border-t border-[#f0f2f5] pt-5">
-                      <div v-if="details?.exerciseFacilities">
-                        <h3 class="text-sm font-bold text-[#111418] mb-2">운동시설</h3>
-                        <div class="flex flex-wrap gap-1.5">
-                          <span v-for="tag in details.exerciseFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'e-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                      <h3 class="text-sm font-bold text-[#111418] mb-3">보유 시설</h3>
+                      <div class="flex flex-col gap-3">
+                        <div v-if="details?.exerciseFacilities" class="flex items-start justify-between gap-4">
+                          <span class="text-sm text-[#4b5563] shrink-0">운동시설</span>
+                          <span class="text-sm font-medium text-[#111418] text-right">{{ details.exerciseFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
                         </div>
-                      </div>
-                      <div v-if="details?.playFacilities">
-                        <h3 class="text-sm font-bold text-[#111418] mb-2">놀이시설</h3>
-                        <div class="flex flex-wrap gap-1.5">
-                          <span v-for="tag in details.playFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'p-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        <div v-if="details?.playFacilities" class="flex items-start justify-between gap-4">
+                          <span class="text-sm text-[#4b5563] shrink-0">놀이시설</span>
+                          <span class="text-sm font-medium text-[#111418] text-right">{{ details.playFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
                         </div>
-                      </div>
-                      <div v-if="details?.convenienceFacilities">
-                        <h3 class="text-sm font-bold text-[#111418] mb-2">편의시설</h3>
-                        <div class="flex flex-wrap gap-1.5">
-                          <span v-for="tag in details.convenienceFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'c-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        <div v-if="details?.convenienceFacilities" class="flex items-start justify-between gap-4">
+                          <span class="text-sm text-[#4b5563] shrink-0">편의시설</span>
+                          <span class="text-sm font-medium text-[#111418] text-right">{{ details.convenienceFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
                         </div>
-                      </div>
-                      <div v-if="details?.cultureFacilities">
-                        <h3 class="text-sm font-bold text-[#111418] mb-2">교양시설</h3>
-                        <div class="flex flex-wrap gap-1.5">
-                          <span v-for="tag in details.cultureFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'cu-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        <div v-if="details?.cultureFacilities" class="flex items-start justify-between gap-4">
+                          <span class="text-sm text-[#4b5563] shrink-0">교양시설</span>
+                          <span class="text-sm font-medium text-[#111418] text-right">{{ details.cultureFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
                         </div>
-                      </div>
-                      <div v-if="details?.otherFacilities">
-                        <h3 class="text-sm font-bold text-[#111418] mb-2">기타시설</h3>
-                        <div class="flex flex-wrap gap-1.5">
-                          <span v-for="tag in details.otherFacilities.split('+').map(s => s.trim()).filter(Boolean)" :key="'o-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+                        <div v-if="details?.otherFacilities" class="flex items-start justify-between gap-4">
+                          <span class="text-sm text-[#4b5563] shrink-0">기타시설</span>
+                          <span class="text-sm font-medium text-[#111418] text-right">{{ details.otherFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
                         </div>
                       </div>
                     </div>
@@ -731,12 +727,27 @@
                   <!-- School Details -->
                   <template v-if="facility.category === 'school'">
                     <div class="flex flex-col gap-3">
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <span v-if="details?.schoolLevel" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="schoolLevelBadgeClass">{{ details.schoolLevel }}</span>
-                        <span v-if="details?.foundationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="foundationTypeBadgeClass">{{ details.foundationType }}</span>
-                        <span v-if="details?.coeducationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-indigo-100 text-indigo-800">{{ details.coeducationType }}</span>
-                        <span v-if="details?.highSchoolType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-violet-100 text-violet-800">{{ details.highSchoolType }}</span>
-                        <span v-if="details?.branchType?.includes('분교')" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800">분교</span>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div v-if="details?.schoolLevel" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">학교급</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ details.schoolLevel }}</span>
+                        </div>
+                        <div v-if="details?.foundationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">설립형태</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ details.foundationType }}</span>
+                        </div>
+                        <div v-if="details?.coeducationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">남녀공학</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ details.coeducationType }}</span>
+                        </div>
+                        <div v-if="details?.highSchoolType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">고교유형</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ details.highSchoolType }}</span>
+                        </div>
+                        <div v-if="details?.branchType?.includes('분교')" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">분교여부</span>
+                          <span class="text-sm font-bold text-[#111418]">분교</span>
+                        </div>
                       </div>
                       <div v-if="details?.foundedDate" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563]">설립일</span>
@@ -770,21 +781,11 @@
                     </div>
                     <div v-if="schoolEnrollmentRows.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
                       <h3 class="text-sm font-bold text-[#111418] mb-3">학급 현황</h3>
-                      <div class="overflow-x-auto">
-                        <table class="w-full text-xs">
-                          <thead>
-                            <tr class="border-b border-gray-200">
-                              <th class="py-1.5 pr-3 text-left text-gray-500 font-medium">학년</th>
-                              <th class="py-1.5 pl-2 text-right text-gray-500 font-medium">반 수</th>
-                            </tr>
-                          </thead>
-                          <tbody class="divide-y divide-gray-100">
-                            <tr v-for="row in schoolEnrollmentRows" :key="row.label" :class="row.isTotal ? 'bg-gray-50 font-semibold' : ''">
-                              <td class="py-1.5 pr-3 font-medium text-gray-700">{{ row.label }}</td>
-                              <td class="py-1.5 pl-2 text-right text-gray-600">{{ row.classCount != null ? row.classCount + '개' : '-' }}</td>
-                            </tr>
-                          </tbody>
-                        </table>
+                      <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        <div v-for="row in schoolEnrollmentRows" :key="row.label" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2" :class="row.isTotal ? 'bg-indigo-50 col-span-full' : 'bg-[#f8f9fa]'">
+                          <span class="text-xs text-[#4b5563]">{{ row.label }}</span>
+                          <span class="text-sm font-bold" :class="row.isTotal ? 'text-indigo-600' : 'text-[#111418]'">{{ row.classCount }}반</span>
+                        </div>
                       </div>
                     </div>
                     <div v-if="schoolDepartments.length > 0" class="mt-5 border-t border-[#f0f2f5] pt-5">
@@ -798,9 +799,15 @@
                   <!-- Market Details -->
                   <template v-if="facility.category === 'market'">
                     <div class="flex flex-col gap-3">
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <span v-if="details?.marketType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="details.marketType.includes('상설') ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'">{{ details.marketType }}</span>
-                        <span v-if="details?.openingCycle" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800">{{ marketOpeningCycleLabel }}</span>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div v-if="details?.marketType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">시장유형</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ details.marketType }}</span>
+                        </div>
+                        <div v-if="details?.openingCycle" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">개설주기</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ marketOpeningCycleLabel }}</span>
+                        </div>
                       </div>
                       <div v-if="details?.storeCount != null" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563]">점포 수</span>
@@ -840,10 +847,16 @@
 
                   <!-- Childcare Details -->
                   <template v-if="facility.category === 'childcare'">
-                    <!-- 뱃지 + 휴지 알림 -->
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span v-if="details?.crtypename" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareTypeBadgeClass"><span class="text-xs opacity-70 mr-1">유형</span> {{ details.crtypename }}</span>
-                      <span v-if="details?.crstatusname" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareStatusBadgeClass"><span class="text-xs opacity-70 mr-1">상태</span> {{ details.crstatusname }}</span>
+                    <!-- 카드형 속성 + 휴지 알림 -->
+                    <div class="grid grid-cols-2 gap-2">
+                      <div v-if="details?.crtypename" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                        <span class="text-xs text-[#4b5563]">어린이집 유형</span>
+                        <span class="text-sm font-bold text-[#111418]">{{ details.crtypename }}</span>
+                      </div>
+                      <div v-if="details?.crstatusname" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                        <span class="text-xs text-[#4b5563]">운영 상태</span>
+                        <span class="text-sm font-bold text-[#111418]">{{ details.crstatusname }}</span>
+                      </div>
                     </div>
                     <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
                       휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
@@ -990,10 +1003,19 @@
                   <!-- Sports Details -->
                   <template v-if="facility.category === 'sports'">
                     <div class="flex flex-col gap-3">
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <span v-if="details?.ftypeNm" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="sportsTypeBadgeClass">{{ details.ftypeNm }}</span>
-                        <span v-if="details?.faciGbNm" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="sportsGbBadgeClass">{{ details.faciGbNm }}</span>
-                        <span v-if="details?.nationYn === 'Y'" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-red-100 text-red-800">국가대표시설</span>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div v-if="details?.ftypeNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">시설유형</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ details.ftypeNm }}</span>
+                        </div>
+                        <div v-if="details?.faciGbNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">시설구분</span>
+                          <span class="text-sm font-bold text-[#111418]">{{ details.faciGbNm }}</span>
+                        </div>
+                        <div v-if="details?.nationYn === 'Y'" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                          <span class="text-xs text-[#4b5563]">국가대표시설</span>
+                          <span class="text-sm font-bold text-[#111418]">Y</span>
+                        </div>
                       </div>
                       <div v-if="details?.fcobNm" class="flex items-center justify-between">
                         <span class="text-sm text-[#4b5563]">업종명</span>
@@ -1841,8 +1863,11 @@
               <!-- Park Details (Mobile) -->
               <template v-if="facility.category === 'park'">
                 <div class="flex flex-col gap-3">
-                  <div v-if="details?.parkType" class="flex items-center gap-2">
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="parkTypeBadgeClass">{{ details.parkType }}</span>
+                  <div v-if="details?.parkType" class="grid grid-cols-2 gap-2">
+                    <div class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">공원유형</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ details.parkType }}</span>
+                    </div>
                   </div>
                   <div v-if="details?.area != null" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563]">면적</span>
@@ -1859,22 +1884,27 @@
                 </div>
                 <div v-if="parkHasFacilities" class="mt-5 border-t border-[#f0f2f5] pt-5">
                   <h3 class="text-sm font-bold text-[#111418] mb-3">보유 시설</h3>
-                  <div class="flex flex-wrap gap-1.5">
-                    <span v-for="tag in details.exerciseFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'e-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                      <span class="w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] leading-none">운</span>{{ tag }}
-                    </span>
-                    <span v-for="tag in details.playFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'p-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                      <span class="w-4 h-4 rounded-full bg-green-500 text-white flex items-center justify-center text-[10px] leading-none">놀</span>{{ tag }}
-                    </span>
-                    <span v-for="tag in details.convenienceFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'c-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                      <span class="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] leading-none">편</span>{{ tag }}
-                    </span>
-                    <span v-for="tag in details.cultureFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'cu-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                      <span class="w-4 h-4 rounded-full bg-purple-500 text-white flex items-center justify-center text-[10px] leading-none">교</span>{{ tag }}
-                    </span>
-                    <span v-for="tag in details.otherFacilities?.split('+').map(s => s.trim()).filter(Boolean) ?? []" :key="'o-'+tag" class="inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
-                      <span class="w-4 h-4 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] leading-none">기</span>{{ tag }}
-                    </span>
+                  <div class="flex flex-col gap-3">
+                    <div v-if="details?.exerciseFacilities" class="flex items-start justify-between gap-4">
+                      <span class="text-sm text-[#4b5563] shrink-0">운동시설</span>
+                      <span class="text-sm font-medium text-[#111418] text-right">{{ details.exerciseFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
+                    </div>
+                    <div v-if="details?.playFacilities" class="flex items-start justify-between gap-4">
+                      <span class="text-sm text-[#4b5563] shrink-0">놀이시설</span>
+                      <span class="text-sm font-medium text-[#111418] text-right">{{ details.playFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
+                    </div>
+                    <div v-if="details?.convenienceFacilities" class="flex items-start justify-between gap-4">
+                      <span class="text-sm text-[#4b5563] shrink-0">편의시설</span>
+                      <span class="text-sm font-medium text-[#111418] text-right">{{ details.convenienceFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
+                    </div>
+                    <div v-if="details?.cultureFacilities" class="flex items-start justify-between gap-4">
+                      <span class="text-sm text-[#4b5563] shrink-0">교양시설</span>
+                      <span class="text-sm font-medium text-[#111418] text-right">{{ details.cultureFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
+                    </div>
+                    <div v-if="details?.otherFacilities" class="flex items-start justify-between gap-4">
+                      <span class="text-sm text-[#4b5563] shrink-0">기타시설</span>
+                      <span class="text-sm font-medium text-[#111418] text-right">{{ details.otherFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -1882,12 +1912,27 @@
               <!-- School Details (Mobile) -->
               <template v-if="facility.category === 'school'">
                 <div class="flex flex-col gap-3">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span v-if="details?.schoolLevel" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="schoolLevelBadgeClass">{{ details.schoolLevel }}</span>
-                    <span v-if="details?.foundationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="foundationTypeBadgeClass">{{ details.foundationType }}</span>
-                    <span v-if="details?.coeducationType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-indigo-100 text-indigo-800">{{ details.coeducationType }}</span>
-                    <span v-if="details?.highSchoolType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-violet-100 text-violet-800">{{ details.highSchoolType }}</span>
-                    <span v-if="details?.branchType?.includes('분교')" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800">분교</span>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div v-if="details?.schoolLevel" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">학교급</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ details.schoolLevel }}</span>
+                    </div>
+                    <div v-if="details?.foundationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">설립형태</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ details.foundationType }}</span>
+                    </div>
+                    <div v-if="details?.coeducationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">남녀공학</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ details.coeducationType }}</span>
+                    </div>
+                    <div v-if="details?.highSchoolType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">고교유형</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ details.highSchoolType }}</span>
+                    </div>
+                    <div v-if="details?.branchType?.includes('분교')" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">분교여부</span>
+                      <span class="text-sm font-bold text-[#111418]">분교</span>
+                    </div>
                   </div>
                   <div v-if="details?.foundedDate" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563]">설립일</span>
@@ -1949,9 +1994,15 @@
               <!-- Market Details (Mobile) -->
               <template v-if="facility.category === 'market'">
                 <div class="flex flex-col gap-3">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span v-if="details?.marketType" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="details.marketType.includes('상설') ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'">{{ details.marketType }}</span>
-                    <span v-if="details?.openingCycle" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800">{{ marketOpeningCycleLabel }}</span>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div v-if="details?.marketType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">시장유형</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ details.marketType }}</span>
+                    </div>
+                    <div v-if="details?.openingCycle" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">개설주기</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ marketOpeningCycleLabel }}</span>
+                    </div>
                   </div>
                   <div v-if="details?.storeCount != null" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563]">점포 수</span>
@@ -1991,10 +2042,16 @@
 
               <!-- Childcare Details (Mobile) -->
               <template v-if="facility.category === 'childcare'">
-                    <!-- 뱃지 + 휴지 알림 -->
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span v-if="details?.crtypename" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareTypeBadgeClass"><span class="text-xs opacity-70 mr-1">유형</span> {{ details.crtypename }}</span>
-                      <span v-if="details?.crstatusname" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="childcareStatusBadgeClass"><span class="text-xs opacity-70 mr-1">상태</span> {{ details.crstatusname }}</span>
+                    <!-- 카드형 속성 + 휴지 알림 -->
+                    <div class="grid grid-cols-2 gap-2">
+                      <div v-if="details?.crtypename" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                        <span class="text-xs text-[#4b5563]">어린이집 유형</span>
+                        <span class="text-sm font-bold text-[#111418]">{{ details.crtypename }}</span>
+                      </div>
+                      <div v-if="details?.crstatusname" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                        <span class="text-xs text-[#4b5563]">운영 상태</span>
+                        <span class="text-sm font-bold text-[#111418]">{{ details.crstatusname }}</span>
+                      </div>
                     </div>
                     <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
                       휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
@@ -2141,10 +2198,19 @@
               <!-- Sports Details (Mobile) -->
               <template v-if="facility.category === 'sports'">
                 <div class="flex flex-col gap-3">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span v-if="details?.ftypeNm" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="sportsTypeBadgeClass">{{ details.ftypeNm }}</span>
-                    <span v-if="details?.faciGbNm" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" :class="sportsGbBadgeClass">{{ details.faciGbNm }}</span>
-                    <span v-if="details?.nationYn === 'Y'" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-red-100 text-red-800">국가대표시설</span>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div v-if="details?.ftypeNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">시설유형</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ details.ftypeNm }}</span>
+                    </div>
+                    <div v-if="details?.faciGbNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">시설구분</span>
+                      <span class="text-sm font-bold text-[#111418]">{{ details.faciGbNm }}</span>
+                    </div>
+                    <div v-if="details?.nationYn === 'Y'" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-[#f8f9fa]">
+                      <span class="text-xs text-[#4b5563]">국가대표시설</span>
+                      <span class="text-sm font-bold text-[#111418]">Y</span>
+                    </div>
                   </div>
                   <div v-if="details?.fcobNm" class="flex items-center justify-between">
                     <span class="text-sm text-[#4b5563]">업종명</span>
@@ -2607,38 +2673,9 @@ const hasFacilityStatus = computed(() => {
   return true
 })
 
-// Park badge class
-const parkTypeBadgeClass = computed(() => {
-  const type = (details.value as any)?.parkType || ''
-  if (type.includes('어린이')) return 'bg-green-100 text-green-800'
-  if (type.includes('근린')) return 'bg-blue-100 text-blue-800'
-  if (type.includes('문화')) return 'bg-purple-100 text-purple-800'
-  if (type.includes('체육')) return 'bg-orange-100 text-orange-800'
-  if (type.includes('수변')) return 'bg-cyan-100 text-cyan-800'
-  if (type.includes('역사')) return 'bg-amber-100 text-amber-800'
-  return 'bg-gray-100 text-gray-800'
-})
-
 const parkHasFacilities = computed(() => {
   const d = details.value as any
   return !!(d?.exerciseFacilities || d?.playFacilities || d?.convenienceFacilities || d?.cultureFacilities || d?.otherFacilities)
-})
-
-// School badge classes
-const schoolLevelBadgeClass = computed(() => {
-  const level = (details.value as any)?.schoolLevel || ''
-  if (level.includes('초등')) return 'bg-green-100 text-green-800'
-  if (level.includes('중학')) return 'bg-blue-100 text-blue-800'
-  if (level.includes('고등')) return 'bg-purple-100 text-purple-800'
-  return 'bg-gray-100 text-gray-800'
-})
-
-const foundationTypeBadgeClass = computed(() => {
-  const type = (details.value as any)?.foundationType || ''
-  if (type.includes('국립')) return 'bg-red-100 text-red-800'
-  if (type.includes('공립')) return 'bg-blue-100 text-blue-800'
-  if (type.includes('사립')) return 'bg-purple-100 text-purple-800'
-  return 'bg-gray-100 text-gray-800'
 })
 
 // School computed
@@ -2687,25 +2724,6 @@ const marketOpeningCycleLabel = computed(() => {
 const marketProductTags = computed(() =>
   (details.value as any)?.products?.split('+').map((s: string) => s.trim()).filter(Boolean) ?? []
 )
-
-// Childcare computed
-const childcareTypeBadgeClass = computed(() => {
-  const type = (details.value as any)?.crtypename || ''
-  if (type.includes('국공립')) return 'bg-blue-100 text-blue-800'
-  if (type.includes('민간')) return 'bg-orange-100 text-orange-800'
-  if (type.includes('가정')) return 'bg-green-100 text-green-800'
-  if (type.includes('직장')) return 'bg-purple-100 text-purple-800'
-  if (type.includes('협동')) return 'bg-teal-100 text-teal-800'
-  return 'bg-gray-100 text-gray-800'
-})
-
-const childcareStatusBadgeClass = computed(() => {
-  const status = (details.value as any)?.crstatusname || ''
-  if (status.includes('운영')) return 'bg-green-100 text-green-800'
-  if (status.includes('휴지')) return 'bg-yellow-100 text-yellow-800'
-  if (status.includes('폐지')) return 'bg-red-100 text-red-800'
-  return 'bg-gray-100 text-gray-800'
-})
 
 const childcareAvailabilityRate = computed(() => {
   const cap = (details.value as any)?.crcapat
@@ -2791,23 +2809,6 @@ const childcareCareerItems = computed(() => {
     .filter(item => item.cnt != null && item.cnt > 0)
 })
 
-
-// Sports computed
-const sportsTypeBadgeClass = computed(() => {
-  const type = (details.value as any)?.ftypeNm || ''
-  if (type.includes('축구')) return 'bg-green-100 text-green-800'
-  if (type.includes('농구')) return 'bg-orange-100 text-orange-800'
-  if (type.includes('수영')) return 'bg-blue-100 text-blue-800'
-  if (type.includes('체육관')) return 'bg-purple-100 text-purple-800'
-  return 'bg-gray-100 text-gray-800'
-})
-
-const sportsGbBadgeClass = computed(() => {
-  const gb = (details.value as any)?.faciGbNm || ''
-  if (gb.includes('공공')) return 'bg-blue-100 text-blue-800'
-  if (gb.includes('민간')) return 'bg-orange-100 text-orange-800'
-  return 'bg-gray-100 text-gray-800'
-})
 
 // Generate map URLs (길찾기)
 const kakaoMapUrl = computed(() => {
