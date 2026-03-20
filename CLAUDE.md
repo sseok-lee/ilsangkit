@@ -1,15 +1,17 @@
-# CLAUDE.md - ilsangkit Project Guide
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Build & Development Commands
 
 ### Prerequisites
-- **Node 20 필수** (`nvm use 20`) - CI/호스팅 서버가 Node 20 기준
+- **Node 20 필수** (`nvm use 20`) — CI/호스팅 서버가 Node 20 기준
 - Docker Compose로 MySQL 8 실행: `docker compose up -d`
 - MySQL 접속: `localhost:3307`, user: `ilsangkit`, pw: `ilsangkit123`, db: `ilsangkit`
 
 ### Backend (`cd backend`)
 ```bash
-npm run dev          # tsx watch 개발 서버
+npm run dev          # tsx watch 개발 서버 (port 8000)
 npm run build        # tsc 빌드
 npm run test         # vitest run (전체 테스트)
 npm run test:watch   # vitest (watch 모드)
@@ -20,7 +22,7 @@ npm run lint:fix     # ESLint 자동 수정
 
 ### Frontend (`cd frontend`)
 ```bash
-npm run dev          # nuxt dev 개발 서버
+npm run dev          # nuxt dev 개발 서버 (port 3000)
 npm run build        # nuxt build (SSR)
 npm run generate     # nuxt generate (SSG)
 npm run test         # vitest run (전체 테스트)
@@ -31,7 +33,7 @@ npm run test:e2e:ui  # Playwright UI 모드
 npm run lint         # ESLint
 ```
 
-### Prisma (backend)
+### Prisma (`cd backend`)
 ```bash
 npm run db:push      # 스키마를 DB에 반영 (dev용)
 npm run db:migrate   # 마이그레이션 생성/적용
@@ -40,25 +42,11 @@ npm run db:studio    # Prisma Studio (DB GUI)
 npm run db:seed      # 시드 데이터 삽입
 ```
 
-### Data Sync (backend)
+### Data Sync (`cd backend`)
 ```bash
 npm run sync:facilities  # 전체 시설 동기화 (syncAll.ts)
-npm run sync:toilet      # 공공화장실
-npm run sync:trash       # 쓰레기배출
-npm run sync:wifi        # 무료와이파이
-npm run sync:clothes     # 의류수거함
-npm run sync:kiosk       # 무인민원발급기
-npm run sync:parking     # 공영주차장
-npm run sync:aed         # 자동심장충격기 (AED)
-npm run sync:regions     # 지역 정보
-
-# 부동산 실거래가 동기화
-npm run sync:apt-sale       # 아파트 매매
-npm run sync:apt-rent       # 아파트 전월세
-npm run sync:villa-sale     # 연립다세대 매매
-npm run sync:villa-rent     # 연립다세대 전월세
-npm run sync:offitel-sale   # 오피스텔 매매
-npm run sync:offitel-rent   # 오피스텔 전월세
+npm run sync:[slug]      # 개별 카테고리: toilet, trash, wifi, clothes, kiosk, parking, aed, regions
+npm run sync:apt-sale    # 부동산: apt-sale, apt-rent, villa-sale, villa-rent, offitel-sale, offitel-rent
 npm run sync:geocode-real-estate  # 부동산 좌표 geocoding
 ```
 
@@ -69,82 +57,129 @@ npm run sync:geocode-real-estate  # 부동산 좌표 geocoding
 - **Backend**: Express 5 + TypeScript (ESM)
 - **Database**: MySQL 8 (Docker, port 3307) + Prisma ORM
 - **Testing**: Vitest (unit), Playwright (E2E), MSW (API mocking)
+- **Deploy**: GitHub Actions → Cafe24 서버 (SSH/SCP), PM2 프로세스 매니저
 - **Data Source**: 공공데이터포털 API/CSV, 국토교통부 실거래가 API
 
 ### System Flow
 ```
-Nuxt 3 SSR (Frontend) → Express 5 API (Backend) → MySQL 8 (Prisma) → 공공데이터 API
+Nuxt 3 SSR (port 3000) → Express 5 API (port 8000) → MySQL 8 (Prisma) → 공공데이터 API
 ```
+Frontend에서 `$fetch`로 API 호출 (`useRuntimeConfig().public.apiBase` 사용). nuxt.config에서 `/api/**` → `http://localhost:8000/api/**` 프록시 설정.
 
-Frontend에서 `$fetch`로 API 호출 (runtime config `apiBase` 사용).
+### Categories
 
-### Categories (10개, 3그룹)
-| 그룹 | 카테고리 | slug | 한글 |
-|------|---------|------|------|
-| 생활 편의 | toilet | `toilet` | 공공화장실 |
-| | wifi | `wifi` | 무료와이파이 |
-| | parking | `parking` | 공영주차장 |
-| | kiosk | `kiosk` | 무인민원발급기 |
-| 건강/안전 | hospital | `hospital` | 병원 |
-| | pharmacy | `pharmacy` | 약국 |
-| | aed | `aed` | 자동심장충격기 |
-| 문화/환경 | library | `library` | 공공도서관 |
-| | clothes | `clothes` | 의류수거함 |
-| | trash | `trash` | 쓰레기배출 |
+**시설 카테고리 (프론트엔드 10개, 백엔드 14개)**
 
-### Real Estate (부동산 실거래가, 6개)
-| 건물유형 | 거래방식 | API type slug | 한글 |
-|---------|---------|---------------|------|
-| 아파트 | 매매 | `apt-sale` | 아파트 매매 |
-| 아파트 | 전월세 | `apt-rent` | 아파트 전월세 |
-| 연립다세대 | 매매 | `villa-sale` | 빌라 매매 |
-| 연립다세대 | 전월세 | `villa-rent` | 빌라 전월세 |
-| 오피스텔 | 매매 | `offitel-sale` | 오피스텔 매매 |
-| 오피스텔 | 전월세 | `offitel-rent` | 오피스텔 전월세 |
+프론트엔드 3그룹: 생활편의(toilet, wifi, parking, kiosk), 건강안전(hospital, pharmacy, aed), 문화환경(library, clothes, trash)
+
+백엔드 추가 4개: park, school, market, childcare, ev-charger, sports (프론트엔드 미노출)
+
+**부동산 실거래가 (6개)**: `apt-sale`, `apt-rent`, `villa-sale`, `villa-rent`, `offitel-sale`, `offitel-rent`
+- 주의: 오피스텔 slug는 `offitel` (officetel 아님)
 
 ### Route Structure
 - **Frontend pages**: `/[category]/`, `/[city]/[district]/`, `/search`, `/[category]/[id]`
 - **Frontend pages (부동산)**: `/real-estate/`, `/real-estate/[propertyType]/`, `/real-estate/[propertyType]/[buildingName]`
-- **Backend API routes**: `facilities.ts` (CRUD/검색), `meta.ts` (메타), `sitemap.ts`, `wasteSchedules.ts`
-- **Backend API routes (부동산)**: `realEstate.ts` (검색/통계/단지목록/건물정보)
+- **Backend API**: `/api/facilities`, `/api/real-estate`, `/api/waste-schedules`, `/api/meta`, `/api/sitemap`, `/api/reviews`, `/api/guides`, `/api/area`
 
-### Data Sync Pipeline
+## Backend Patterns
+
+### Category Registry (`src/services/facilityService.ts`)
+핵심 추상화. 모든 시설 CRUD가 이 레지스트리를 통해 동작:
+```typescript
+CATEGORY_REGISTRY: Record<FacilityCategory, { model(), listFields[], detailFields[] }>
+```
+새 카테고리 추가 시 이 레지스트리에 등록해야 라우트가 자동으로 동작.
+
+### Route Handler 패턴
+모든 라우트 핸들러는 반드시 `asyncHandler()`로 래핑:
+```typescript
+router.get('/path', validate(Schema, 'query'), asyncHandler(async (req, res) => { ... }));
+```
+- `asyncHandler` (`src/lib/asyncHandler.ts`): Promise rejection을 에러 미들웨어로 전파
+- `validate` (`src/middlewares/validate.ts`): Zod 스키마로 요청 검증 → 실패 시 422
+
+### Error Classes (`src/lib/errors.ts`)
+수동 `res.status().json()` 대신 에러 클래스를 throw:
+- `NotFoundError` (404), `ValidationError` (422, with details), `ConflictError` (409)
+- 글로벌 에러 핸들러가 `{ success: false, error: { code, message, requestId } }` 형태로 응답
+
+### Sync Pipeline (`src/services/baseSyncService.ts`)
+공공데이터 동기화 공통 패턴:
+- `runSync()`: SyncHistory 생성/업데이트, 상태 추적 (running → success/failed)
+- `batchUpsert()`: 500건 배치 트랜잭셔널 upsert, `sourceId` 기준 중복 방지
+- 새 sync 스크립트는 기존 것(예: `syncToilet.ts`)을 참고하여 동일 패턴 사용
+
+### ESM Import 규칙
+Backend는 ESM — 모든 로컬 import에 `.js` 확장자 필수:
+```typescript
+import prisma from '../lib/prisma.js';
+```
+
+### BigInt/Decimal 직렬화
+부동산 서비스(`realEstateService.ts`)에서 BigInt/Decimal을 Number로 변환하는 `serializeRow()` 사용. JSON 응답 시 필수.
+
+### Express 5 주의점
+query/params가 read-only. validation 미들웨어에서 `Object.defineProperty`로 교체.
+
+## Frontend Patterns
+
+### Composable 패턴
+- `readonly()` ref 반환으로 불변성 보장
+- `$fetch` + `useRuntimeConfig().public.apiBase`로 API 호출
+- 주요 composable: `useFacilitySearch`, `useRealEstate`, `useFacilityDetail`, `useKakaoMap`
+
+### Test Setup (`tests/setup.ts`)
+Nuxt auto-import 함수들을 글로벌 mock으로 등록:
+- `useAsyncData`, `$fetch`, `useRuntimeConfig`, `useSeoMeta`, `useHead` 등
+- `NuxtLink`, `CategoryIcon` 컴포넌트 stub
+- Vitest 환경: `happy-dom`
+
+### MSW (Mock Service Worker)
+- `frontend/mocks/handlers/`에 핸들러 정의
+- `NUXT_PUBLIC_DISABLE_MSW=true`로 프로덕션에서 비활성화
+
+### Server Routes (`server/`)
+Nitro 서버사이드: 사이트맵(`/sitemap.xml`), OG 이미지(`/og`), URL 리다이렉트 미들웨어
+
+## Data Sync Pipeline
 각 카테고리별 sync 스크립트가 공공데이터 API/CSV를 받아 Prisma로 MySQL에 upsert.
 - 카테고리별 Prisma 모델은 별도 테이블 (Toilet, Wifi, Parking 등)
-- `syncAll.ts`로 전체 일괄 동기화
-
-부동산 실거래가 동기화는 국토교통부 XML API → transform → Prisma upsert(sourceId 기준) 구조.
-- 6개 건물유형×거래방식별 sync 스크립트가 `syncRealEstateBase.ts` 공통 유틸 사용
+- 부동산: 국토교통부 XML API → transform → `syncRealEstateBase.ts` 공통 유틸로 upsert
 - `geocodeRealEstate.ts`로 좌표 데이터 보강
 
-## Key Conventions
+## Environment Variables
 
-### TypeScript
-- **strict mode** 양쪽 모두 사용
-- Backend: ESM (`"type": "module"`)
-- Frontend: Nuxt 3 auto-import (composables, components)
+### Backend
+`DATABASE_URL`, `PORT` (default 8000), `NODE_ENV`, `CORS_ORIGIN` (콤마 구분), `UPLOAD_DIR`
 
-### Validation & Mocking
-- **Backend**: Zod로 요청 파라미터 검증
-- **Frontend dev**: MSW로 API mocking (`public/mockServiceWorker.js`)
+### Frontend
+`NUXT_PUBLIC_API_BASE` (default `http://localhost:8000`), `NUXT_PUBLIC_KAKAO_MAP_KEY`, `NUXT_PUBLIC_GA_ID`, `NUXT_PUBLIC_SITE_URL` (default `https://ilsangkit.co.kr`), `NUXT_PUBLIC_DISABLE_MSW`
 
-### Security (Backend)
-- Helmet, CORS, express-rate-limit, input sanitization 적용
+## Constants (`backend/src/constants/`)
+- Pagination: DEFAULT_PAGE=1, DEFAULT_LIMIT=20, MAX_LIMIT=100
+- Korea bounds: lat 33-39, lng 124-131
+- Search: radius 100-50000m, default 1000m
+- Sync: batch 500건, API timeout 30초
 
-### 카테고리 추가 시 수정 필요 파일
-1. `frontend/types/facility.ts` - `FacilityCategory` 타입, `CATEGORY_GROUPS`, `CATEGORY_META`, `CATEGORY_DATA_PORTAL_URL`
-2. `backend/prisma/schema.prisma` - 새 모델 추가
-3. `backend/src/routes/facilities.ts` - 라우트 핸들러
-4. `backend/src/scripts/sync*.ts` - 동기화 스크립트
-5. `frontend/components/facility/details/*Detail.vue` - 상세 컴포넌트
-6. `frontend/tests/components/facility/details/*Detail.test.ts` - 테스트
+## Deploy
+- CI: GitHub Actions — Test 워크플로우 성공 시 Deploy 워크플로우 자동 트리거
+- 서버: Cafe24, PM2 (`ilsangkit-backend`, `ilsangkit-frontend`)
+- 프로덕션 도메인: `ilsangkit.co.kr`
 
-### 부동산 카테고리 추가 시 수정 필요 파일
-1. `backend/prisma/schema.prisma` - 새 트랜잭션 모델
-2. `backend/src/scripts/sync*.ts` - 동기화 스크립트
-3. `backend/src/services/syncRealEstateBase.ts` - 공통 유틸 (필요시)
-4. `backend/src/services/realEstateService.ts` - getModel() 레지스트리에 추가
-5. `backend/src/schemas/realEstate.ts` - RealEstateTypeSchema enum 추가
-6. `frontend/types/realEstate.ts` - 타입/slug 매핑 추가
-7. `frontend/utils/realEstateMeta.ts` - 메타/FAQ/설명 추가
-8. `frontend/composables/useRealEstate.ts` - API 래퍼 (보통 변경 불필요)
+## 카테고리 추가 시 수정 필요 파일
+1. `frontend/types/facility.ts` — `FacilityCategory` 타입, `CATEGORY_GROUPS`, `CATEGORY_META`, `CATEGORY_DATA_PORTAL_URL`
+2. `backend/prisma/schema.prisma` — 새 모델 추가
+3. `backend/src/services/facilityService.ts` — `CATEGORY_REGISTRY`에 등록
+4. `backend/src/routes/facilities.ts` — 라우트 핸들러 (보통 변경 불필요)
+5. `backend/src/scripts/sync*.ts` — 동기화 스크립트
+6. `frontend/components/facility/details/*Detail.vue` — 상세 컴포넌트
+7. `frontend/tests/components/facility/details/*Detail.test.ts` — 테스트
+
+## 부동산 카테고리 추가 시 수정 필요 파일
+1. `backend/prisma/schema.prisma` — 새 트랜잭션 모델
+2. `backend/src/scripts/sync*.ts` — 동기화 스크립트
+3. `backend/src/services/realEstateService.ts` — `getModel()` 레지스트리에 추가
+4. `backend/src/schemas/realEstate.ts` — `RealEstateTypeSchema` enum 추가
+5. `frontend/types/realEstate.ts` — 타입/slug 매핑 추가
+6. `frontend/utils/realEstateMeta.ts` — 메타/FAQ/설명 추가

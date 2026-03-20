@@ -430,8 +430,7 @@
                 </div>
               </div>
 
-              <!-- Roadview + Facility Status 2-col grid (Desktop) -->
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
               <!-- Roadview Card (Desktop) -->
               <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5]">
@@ -1064,7 +1063,6 @@
 
                 </div>
               </div>
-              </div><!-- end Roadview + Facility Status grid -->
 
               <!-- Nearby Facilities -->
               <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
