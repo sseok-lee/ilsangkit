@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { getStatsByDistrict, CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from '../services/facilityService.js';
+import { getStatsByDistrict, getDistrictStatsByCity, CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from '../services/facilityService.js';
 import prisma from '../lib/prisma.js';
 
 const router = Router();
@@ -78,21 +78,21 @@ router.get('/:citySlug', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  // 각 구/군별 시설 통계 병렬 조회
-  const districtResults = await Promise.all(
-    regions.map(async (region) => {
-      const stats = await getStatsByDistrict(citySlug, region.slug);
-      const facilityTotal = stats?.total ?? 0;
-      const infraScore = Math.min(100, Math.round((facilityTotal / 500) * 100));
-      return {
-        slug: region.slug,
-        name: region.district,
-        facilityTotal,
-        topCategories: stats?.topCategories ?? [],
-        infraScore,
-      };
-    })
-  );
+  // 시 전체 구/군별 시설 통계 — groupBy로 일괄 조회 (N+1 제거)
+  const statsByDistrict = await getDistrictStatsByCity(citySlug);
+
+  const districtResults = regions.map((region) => {
+    const stats = statsByDistrict.get(region.district);
+    const facilityTotal = stats?.total ?? 0;
+    const infraScore = Math.min(100, Math.round((facilityTotal / 500) * 100));
+    return {
+      slug: region.slug,
+      name: region.district,
+      facilityTotal,
+      topCategories: stats?.topCategories ?? [],
+      infraScore,
+    };
+  });
 
   // 시 전체 부동산 집계
   const bjdCodes = regions.map(r => r.bjdCode).filter(Boolean) as string[];
@@ -102,6 +102,7 @@ router.get('/:citySlug', asyncHandler(async (req: Request, res: Response) => {
   const totalFacilities = districtResults.reduce((sum, d) => sum + d.facilityTotal, 0);
   const cityInfraScore = Math.min(100, Math.round((totalFacilities / (regions.length * 500)) * 100));
 
+  res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
   res.json({
     success: true,
     data: {

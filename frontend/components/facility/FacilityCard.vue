@@ -92,7 +92,7 @@
           <span v-if="facility.extras.drTotCnt" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">의사 {{ facility.extras.drTotCnt }}명</span>
 
           <!-- school -->
-          <a v-if="facility.extras.phoneNumber && facility.category === 'school'" :href="`tel:${facility.extras.phoneNumber}`" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 hover:underline" @click.stop>{{ facility.extras.phoneNumber }}</a>
+          <a v-if="facility.extras.phoneNumber && facility.category === 'school'" :href="`tel:${facility.extras.phoneNumber}`" class="inline-flex items-center min-h-[44px] px-3 py-2 rounded-md text-xs font-medium bg-slate-100 text-slate-600 hover:underline" @click.stop>{{ facility.extras.phoneNumber }}</a>
           <span v-if="facility.extras.coeducationType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700">{{ facility.extras.coeducationType }}</span>
           <span v-if="facility.extras.highSchoolType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-50 text-violet-700">{{ facility.extras.highSchoolType }}</span>
 

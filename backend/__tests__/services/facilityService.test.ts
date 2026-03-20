@@ -234,6 +234,7 @@ describe('search', () => {
           OR: [
             { name: { contains: '강남' } },
             { address: { contains: '강남' } },
+            { roadAddress: { contains: '강남' } },
           ],
         }),
       })

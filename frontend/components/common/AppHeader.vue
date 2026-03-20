@@ -277,6 +277,7 @@ const closeMobileMenu = () => {
 
 // Focus trap for mobile menu
 watch(isMobileMenuOpen, async (isOpen) => {
+  if (!import.meta.client) return
   if (isOpen) {
     document.body.setAttribute('aria-hidden', 'true')
     await nextTick()

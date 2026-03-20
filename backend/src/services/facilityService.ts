@@ -200,6 +200,7 @@ function buildKeywordFilter(keyword?: string): Record<string, unknown> {
     OR: [
       { name: { contains: keyword } },
       { address: { contains: keyword } },
+      { roadAddress: { contains: keyword } },
     ],
   };
 }
@@ -297,10 +298,29 @@ async function evChargerStationSearch(params: {
   const values: unknown[] = [];
 
   if (keyword) {
-    conditions.push('(name LIKE ? OR address LIKE ?)');
-    values.push(`%${keyword}%`, `%${keyword}%`);
+    conditions.push('(name LIKE ? OR address LIKE ? OR roadAddress LIKE ?)');
+    values.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
-  if (city) { conditions.push('city = ?'); values.push(city); }
+  if (city) {
+    // city variants: short(서울) ↔ full(서울특별시) 모두 매칭
+    const slug = SHORT_TO_SLUG[city] || FULL_TO_SLUG[city];
+    if (slug) {
+      const full = CITY_SLUG_TO_FULL[slug];
+      const short = CITY_SLUG_TO_SHORT[slug];
+      const variants = [city, full, short].filter(Boolean);
+      const unique = [...new Set(variants)];
+      if (unique.length > 1) {
+        conditions.push(`city IN (${unique.map(() => '?').join(', ')})`);
+        values.push(...unique);
+      } else {
+        conditions.push('city = ?');
+        values.push(city);
+      }
+    } else {
+      conditions.push('city = ?');
+      values.push(city);
+    }
+  }
   if (district) { conditions.push('district = ?'); values.push(district); }
 
   // 좌표 기반 범위 필터
@@ -1284,62 +1304,132 @@ export async function getStatsByCity(citySlug: string): Promise<{
   const shortName = CITY_SLUG_TO_SHORT[citySlug];
   if (!fullName) return null;
 
-  // city variants for matching
   const cityVariants = [fullName, shortName].filter(Boolean);
   const cityCondition = cityVariants.length > 1 ? { in: cityVariants } : fullName;
-  const where = { city: cityCondition };
 
-  // 10개 카테고리 count 병렬 실행
-  const [categoryCounts, trashCount] = await Promise.all([
+  // groupBy district로 일괄 조회 — N+1 제거 (14 categories × 1 groupBy = 14 queries)
+  const [categoryGroupResults, trashGroups] = await Promise.all([
     Promise.all(
-      ALL_CATEGORIES.map(async (cat) => ({
-        category: cat,
-        count: await CATEGORY_REGISTRY[cat].model().count({ where }),
-      }))
+      ALL_CATEGORIES.map(async (cat) => {
+        const groups = await CATEGORY_REGISTRY[cat].model().groupBy({
+          by: ['district'],
+          where: { city: cityCondition },
+          _count: true,
+        });
+        return { category: cat, groups };
+      })
     ),
-    prisma.wasteSchedule.count({ where }),
+    prisma.wasteSchedule.groupBy({
+      by: ['district'],
+      where: { city: cityCondition },
+      _count: true,
+    }),
   ]);
 
-  const categories: Record<string, number> = {};
-  for (const { category, count } of categoryCounts) {
-    categories[category] = count;
+  // 시 전체 카테고리별 합계 + district별 카테고리 카운트 동시 집계
+  const cityCategories: Record<string, number> = {};
+  const districtMap = new Map<string, Record<string, number>>();
+
+  for (const { category, groups } of categoryGroupResults) {
+    let catTotal = 0;
+    for (const g of groups) {
+      catTotal += g._count;
+      if (g.district) {
+        if (!districtMap.has(g.district)) districtMap.set(g.district, {});
+        districtMap.get(g.district)![category] = g._count;
+      }
+    }
+    cityCategories[category] = catTotal;
   }
-  categories.trash = trashCount;
 
-  const total = Object.values(categories).reduce((sum, c) => sum + c, 0);
+  let trashTotal = 0;
+  for (const g of trashGroups) {
+    trashTotal += g._count;
+    if (g.district) {
+      if (!districtMap.has(g.district)) districtMap.set(g.district, {});
+      districtMap.get(g.district)!.trash = g._count;
+    }
+  }
+  cityCategories.trash = trashTotal;
 
-  // 상위 3개 카테고리
-  const topCategories = Object.entries(categories)
+  const total = Object.values(cityCategories).reduce((sum, c) => sum + c, 0);
+
+  const topCategories = Object.entries(cityCategories)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([cat]) => cat);
 
-  // district별 total 조회 (Region 테이블에서 district 목록을 가져와 각각 count)
-  const regions = await prisma.region.findMany({
-    where: { city: { in: cityVariants } },
-    select: { district: true },
-    orderBy: { district: 'asc' },
-  });
+  // district별 total
+  const districts = [...districtMap.entries()]
+    .map(([district, cats]) => ({
+      district,
+      total: Object.values(cats).reduce((sum, c) => sum + c, 0),
+    }))
+    .filter((d) => d.total > 0)
+    .sort((a, b) => a.district.localeCompare(b.district));
 
-  const districtTotals = await Promise.all(
-    regions.map(async (r) => {
-      const distWhere = { city: cityCondition, district: r.district };
-      const counts = await Promise.all([
-        ...ALL_CATEGORIES.map((cat) => CATEGORY_REGISTRY[cat].model().count({ where: distWhere })),
-        prisma.wasteSchedule.count({ where: distWhere }),
-      ]);
-      return { district: r.district, total: counts.reduce((sum, c) => sum + c, 0) };
-    })
-  );
+  return { city: fullName, citySlug, total, categories: cityCategories, topCategories, districts };
+}
 
-  return {
-    city: fullName,
-    citySlug,
-    total,
-    categories,
-    topCategories,
-    districts: districtTotals.filter((d) => d.total > 0),
-  };
+/**
+ * 시 단위 전체 구/군별 시설 통계 — area 라우트용 (groupBy로 N+1 제거)
+ * 기존: 14 categories × 25 districts = 350 COUNT queries
+ * 개선: 14 categories × 1 groupBy = 14 GROUP BY queries
+ */
+export async function getDistrictStatsByCity(citySlug: string): Promise<Map<string, { total: number; categories: Record<string, number>; topCategories: string[] }>> {
+  const fullName = CITY_SLUG_TO_FULL[citySlug];
+  const shortName = CITY_SLUG_TO_SHORT[citySlug];
+  if (!fullName) return new Map();
+
+  const cityVariants = [fullName, shortName].filter(Boolean);
+  const cityCondition = cityVariants.length > 1 ? { in: cityVariants } : fullName;
+
+  const [categoryGroupResults, trashGroups] = await Promise.all([
+    Promise.all(
+      ALL_CATEGORIES.map(async (cat) => {
+        const groups = await CATEGORY_REGISTRY[cat].model().groupBy({
+          by: ['district'],
+          where: { city: cityCondition },
+          _count: true,
+        });
+        return { category: cat, groups };
+      })
+    ),
+    prisma.wasteSchedule.groupBy({
+      by: ['district'],
+      where: { city: cityCondition },
+      _count: true,
+    }),
+  ]);
+
+  const districtMap = new Map<string, Record<string, number>>();
+
+  for (const { category, groups } of categoryGroupResults) {
+    for (const g of groups) {
+      if (!g.district) continue;
+      if (!districtMap.has(g.district)) districtMap.set(g.district, {});
+      districtMap.get(g.district)![category] = g._count;
+    }
+  }
+
+  for (const g of trashGroups) {
+    if (!g.district) continue;
+    if (!districtMap.has(g.district)) districtMap.set(g.district, {});
+    districtMap.get(g.district)!.trash = g._count;
+  }
+
+  const result = new Map<string, { total: number; categories: Record<string, number>; topCategories: string[] }>();
+
+  for (const [district, categories] of districtMap) {
+    const total = Object.values(categories).reduce((sum, c) => sum + c, 0);
+    const topCategories = Object.entries(categories)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3)
+      .map(([cat]) => cat);
+    result.set(district, { total, categories, topCategories });
+  }
+
+  return result;
 }
 
 /**
