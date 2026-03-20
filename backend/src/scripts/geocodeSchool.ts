@@ -83,6 +83,14 @@ async function main(): Promise<void> {
       coords = await searchByKeyword(school.name, apiKey);
     }
 
+    // 3차: 괄호 제거한 학교명으로 재시도 (예: "장대현중고등학교(중)" → "장대현중고등학교")
+    if (!coords) {
+      const cleanName = school.name.replace(/\(.*?\)/g, '').trim();
+      if (cleanName !== school.name) {
+        coords = await searchByKeyword(cleanName, apiKey);
+      }
+    }
+
     if (coords) {
       await prisma.school.update({
         where: { id: school.id },

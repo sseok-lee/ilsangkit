@@ -114,6 +114,13 @@ export async function syncSchoolsNeis(): Promise<SyncStats> {
           continue;
         }
 
+        // 검정고시/비학교 데이터 필터링
+        const schoolKind = row.SCHUL_KND_SC_NM?.trim() || '';
+        if (!schoolKind || name.includes('검정고시')) {
+          skipCount++;
+          continue;
+        }
+
         const roadAddress = [row.ORG_RDNMA?.trim(), row.ORG_RDNDA?.trim()]
           .filter(Boolean)
           .join(' ');
