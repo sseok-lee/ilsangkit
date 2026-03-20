@@ -97,7 +97,7 @@ export const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
   school: {
     model: () => prisma.school,
     listFields: ['schoolLevel', 'operationStatus'],
-    detailFields: ['schoolLevel', 'foundedDate', 'foundationType', 'branchType', 'operationStatus', 'sidoEduCode', 'sidoEduName', 'localEduCode', 'localEduName', 'createdDate', 'modifiedDate', 'dataDate', 'providerCode', 'providerName'],
+    detailFields: ['schoolLevel', 'foundedDate', 'foundationType', 'branchType', 'operationStatus', 'sidoEduCode', 'sidoEduName', 'localEduCode', 'localEduName', 'createdDate', 'modifiedDate', 'dataDate', 'providerCode', 'providerName', 'neisEduCode', 'phoneNumber', 'faxNumber', 'homepageUrl', 'coeducationType', 'highSchoolType', 'dayNightType'],
   },
   market: {
     model: () => prisma.market,
@@ -809,6 +809,20 @@ function toDetail(record: any, category: FacilityCategory): FacilityDetail {
       dgsbjtPrSdrCnt: d.dgsbjtPrSdrCnt,
     }));
   }
+  // school: enrollments + departments 관계 포함
+  if (category === 'school') {
+    if (record.enrollments) {
+      details.enrollments = record.enrollments.map((e: { grade: number; classCount: number | null }) => ({
+        grade: e.grade,
+        classCount: e.classCount,
+      }));
+    }
+    if (record.departments) {
+      details.departments = record.departments.map((d: { departmentName: string }) => ({
+        departmentName: d.departmentName,
+      }));
+    }
+  }
 
   return {
     id: record.id,
@@ -853,6 +867,9 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   const findOptions: { where: { id: string }; include?: Record<string, boolean> } = { where: { id } };
   if (category === 'hospital') {
     findOptions.include = { departments: true };
+  }
+  if (category === 'school') {
+    findOptions.include = { enrollments: true, departments: true };
   }
   const record = await model.findUnique(findOptions);
   if (!record) return null;

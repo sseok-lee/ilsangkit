@@ -264,6 +264,15 @@ export interface ParkDetails {
   providerName?: string | null
 }
 
+export interface SchoolEnrollment {
+  grade: number
+  classCount?: number | null
+}
+
+export interface SchoolDepartmentInfo {
+  departmentName: string
+}
+
 export interface SchoolDetails {
   schoolLevel?: string | null
   foundedDate?: string | null
@@ -279,6 +288,16 @@ export interface SchoolDetails {
   dataDate?: string | null
   providerCode?: string | null
   providerName?: string | null
+  // NEIS 추가 필드
+  neisEduCode?: string | null
+  phoneNumber?: string | null
+  faxNumber?: string | null
+  homepageUrl?: string | null
+  coeducationType?: string | null
+  highSchoolType?: string | null
+  dayNightType?: string | null
+  enrollments?: SchoolEnrollment[]
+  departments?: SchoolDepartmentInfo[]
 }
 
 export interface MarketDetails {

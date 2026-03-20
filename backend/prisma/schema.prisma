@@ -208,10 +208,45 @@ model School {
   providerCode   String?  @db.VarChar(20)
   providerName   String?  @db.VarChar(200)
 
+  // NEIS API 추가 필드
+  neisSchoolCode  String?  @db.VarChar(20)   // SD_SCHUL_CODE (NEIS 표준학교코드)
+  neisEduCode     String?  @db.VarChar(10)   // ATPT_OFCDC_SC_CODE
+  phoneNumber     String?  @db.VarChar(50)
+  faxNumber       String?  @db.VarChar(50)
+  homepageUrl     String?  @db.VarChar(500)
+  coeducationType String?  @db.VarChar(20)   // 남/여/남여공학
+  highSchoolType  String?  @db.VarChar(50)   // 일반고/특목고/자율고/특성화고
+  dayNightType    String?  @db.VarChar(10)   // 주간/야간
+
+  enrollments    SchoolEnrollment[]
+  departments    SchoolDepartment[]
+
   @@index([city, district])
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([schoolLevel])
+}
+
+model SchoolEnrollment {
+  id          Int      @id @default(autoincrement())
+  schoolId    String   @db.VarChar(50)
+  year        Int
+  grade       Int
+  classCount  Int?
+  school      School   @relation(fields: [schoolId], references: [id])
+
+  @@unique([schoolId, year, grade])
+  @@index([schoolId])
+}
+
+model SchoolDepartment {
+  id             Int      @id @default(autoincrement())
+  schoolId       String   @db.VarChar(50)
+  departmentName String   @db.VarChar(100)
+  school         School   @relation(fields: [schoolId], references: [id])
+
+  @@unique([schoolId, departmentName])
+  @@index([schoolId])
 }
 
 // 어린이집 테이블

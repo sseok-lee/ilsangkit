@@ -18,7 +18,7 @@ import { syncWifiData } from './syncWifi.js';
 import { syncClothes } from '../services/clothesSyncService.js';
 import { syncParking } from '../services/parkingSyncService.js';
 import { syncParks } from '../services/parkSyncService.js';
-import { syncSchools } from '../services/schoolSyncService.js';
+import { syncSchoolsNeis } from './syncSchoolNeis.js';
 import { syncMarkets } from '../services/marketSyncService.js';
 import { syncAeds } from './syncAed.js';
 import { syncLibraries } from '../services/librarySyncService.js';
@@ -61,12 +61,6 @@ const CLOTHES_CSV_PATH = path.resolve(
 const PARK_CSV_PATH = path.resolve(
   import.meta.dirname,
   '../../prisma/data/park.csv'
-);
-
-// 학교 기본 CSV 파일 경로
-const SCHOOL_CSV_PATH = path.resolve(
-  import.meta.dirname,
-  '../../prisma/data/school.csv'
 );
 
 // 시장 기본 CSV 파일 경로
@@ -208,7 +202,7 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'school': {
-        const result = await syncSchools(SCHOOL_CSV_PATH);
+        const result = await syncSchoolsNeis();
         return {
           category,
           success: true,

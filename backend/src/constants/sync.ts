@@ -11,3 +11,14 @@ export const SYNC = {
 export const API_TIMEOUT = {
   DEFAULT_DELAY_MS: 100,
 } as const;
+
+export const NEIS = {
+  BASE_URL: 'https://open.neis.go.kr/hub',
+  PAGE_SIZE: 1000,
+  ENDPOINTS: {
+    SCHOOL_INFO: '/schoolInfo',
+    ENROLLMENT: '/schoolInfo',  // 학생수는 별도 API: /classInfo
+    CLASS_INFO: '/classInfo',
+    DEPARTMENT: '/schulAflcoinfo',
+  },
+} as const;

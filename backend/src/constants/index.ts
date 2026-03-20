@@ -3,4 +3,4 @@
 
 export { PAGINATION } from './pagination.js';
 export { KOREA_BOUNDS, SEARCH_DEFAULTS } from './geo.js';
-export { SYNC, API_TIMEOUT } from './sync.js';
+export { SYNC, API_TIMEOUT, NEIS } from './sync.js';
