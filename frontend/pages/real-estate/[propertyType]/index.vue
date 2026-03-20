@@ -118,7 +118,7 @@
           >
             <summary class="cursor-pointer px-5 py-4 text-base font-medium text-slate-800 flex items-center justify-between">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-[18px] text-slate-400 group-open:rotate-180 transition-transform">expand_more</span>
+              <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
             </summary>
             <p class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
           </details>

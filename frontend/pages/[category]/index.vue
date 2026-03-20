@@ -46,7 +46,7 @@
                 <option value="">시/도 선택</option>
                 <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
               </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
             </div>
           </div>
           <!-- 구/군 선택 -->
@@ -63,7 +63,7 @@
                 <option value="">구/군 선택</option>
                 <option v-for="dist in districtList" :key="dist" :value="dist">{{ dist }}</option>
               </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
             </div>
           </div>
           <!-- 키워드 검색 -->
@@ -71,7 +71,7 @@
             <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">키워드</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <span class="material-symbols-outlined text-slate-400 text-[18px]">search</span>
+                <span class="material-symbols-outlined text-slate-500 text-[18px]">search</span>
               </div>
               <input
                 v-model="filterKeyword"
@@ -132,10 +132,10 @@
         <!-- 결과 없음 -->
         <div v-if="wasteSchedules.length === 0 && !wasteLoading && !initialLoading" class="py-16 text-center">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-            <span class="material-symbols-outlined text-[32px] text-slate-400">delete</span>
+            <span class="material-symbols-outlined text-[32px] text-slate-500">delete</span>
           </div>
           <p class="text-slate-700 font-semibold text-lg">등록된 배출 일정이 없습니다</p>
-          <p class="text-slate-400 text-sm mt-1 mb-6">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
+          <p class="text-slate-500 text-sm mt-1 mb-6">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
           <div class="flex items-center justify-center gap-3">
             <button
               v-if="selectedCity || selectedDistrict"
@@ -200,10 +200,10 @@
           <!-- Empty State -->
           <div v-if="facilities.length === 0" class="py-16 text-center">
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-              <span class="material-symbols-outlined text-[32px] text-slate-400">{{ categoryMeta?.icon || 'search_off' }}</span>
+              <span class="material-symbols-outlined text-[32px] text-slate-500">{{ categoryMeta?.icon || 'search_off' }}</span>
             </div>
             <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-            <p class="text-slate-400 text-sm mt-1 mb-6">다른 지역이나 검색어를 시도해보세요</p>
+            <p class="text-slate-500 text-sm mt-1 mb-6">다른 지역이나 검색어를 시도해보세요</p>
             <div class="flex items-center justify-center gap-3">
               <button
                 v-if="selectedCity || selectedDistrict || filterKeyword"

@@ -50,6 +50,7 @@
           width="800"
           height="450"
           class="w-full aspect-video object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 90vw, 800px"
         />
       </div>
 

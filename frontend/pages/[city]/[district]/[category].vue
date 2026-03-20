@@ -61,10 +61,10 @@
         <!-- 결과 없음 -->
         <div v-else class="py-16 text-center">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-            <span class="material-symbols-outlined text-[32px] text-slate-400">delete</span>
+            <span class="material-symbols-outlined text-[32px] text-slate-500">delete</span>
           </div>
           <p class="text-slate-700 font-semibold text-lg">등록된 배출 일정이 없습니다</p>
-          <p class="text-slate-400 text-sm mt-1">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
+          <p class="text-slate-500 text-sm mt-1">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
         </div>
 
         <!-- 페이지네이션 -->

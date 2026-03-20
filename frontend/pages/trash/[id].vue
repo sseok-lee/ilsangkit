@@ -58,7 +58,7 @@
             <p v-if="data.details?.emissionPlaceType" class="text-sm text-slate-500 mt-0.5">
               {{ data.details.emissionPlaceType }}
             </p>
-            <p v-if="data.details?.managementZone" class="text-xs text-slate-400 mt-0.5">
+            <p v-if="data.details?.managementZone" class="text-xs text-slate-500 mt-0.5">
               관리구역: {{ data.details.managementZone }}
             </p>
           </div>
@@ -105,21 +105,21 @@
         </div>
         <div class="text-sm text-slate-600 space-y-2 pl-1">
           <div v-if="formatTimeRange(data.details.bulkWaste.beginTime, data.details.bulkWaste.endTime)" class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0 mt-0.5">schedule</span>
+            <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">schedule</span>
             <p>
               <span class="font-medium text-slate-700">배출 시간:</span>
               <span class="ml-1">{{ formatTimeRange(data.details.bulkWaste.beginTime, data.details.bulkWaste.endTime) }}</span>
             </p>
           </div>
           <div v-if="data.details.bulkWaste.method" class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0 mt-0.5">info</span>
+            <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">info</span>
             <p>
               <span class="font-medium text-slate-700">배출 방법:</span>
               <span class="ml-1">{{ data.details.bulkWaste.method }}</span>
             </p>
           </div>
           <div v-if="data.details.bulkWaste.place" class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0 mt-0.5">place</span>
+            <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">place</span>
             <p>
               <span class="font-medium text-slate-700">배출 장소:</span>
               <span class="ml-1">{{ data.details.bulkWaste.place }}</span>
@@ -228,7 +228,7 @@
               공공데이터포털
             </a>
           </div>
-          <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-400">
+          <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-500">
             <span class="material-symbols-outlined text-[14px] mt-px">info</span>
             <span>공공데이터포털 기준 정보입니다</span>
           </div>

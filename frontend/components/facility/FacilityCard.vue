@@ -1,7 +1,7 @@
 <template>
   <NuxtLink
     :to="`/${facility.category}/${facility.id}`"
-    :aria-label="`${facility.name} - ${CATEGORY_META[facility.category]?.label || facility.category}${facility.distance !== undefined ? `, ${formatDistance(facility.distance)} 거리` : ''} 상세보기`"
+    :aria-label="`${facility.name} 상세보기`"
     :aria-current="isActive ? 'location' : undefined"
     :class="[
       'group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer',

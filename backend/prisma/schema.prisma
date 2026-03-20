@@ -67,6 +67,7 @@ model Toilet {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([name])
 }
 
 // @TASK T0.4 - 무료와이파이 테이블
@@ -102,6 +103,7 @@ model Wifi {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([name])
 }
 
 // @TASK T0.4 - 의류수거함 테이블
@@ -134,6 +136,7 @@ model Clothes {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([name])
 }
 
 // 공원 테이블
@@ -172,6 +175,7 @@ model Park {
   @@index([city, district])
   @@index([lat, lng])
   @@index([bjdCode])
+  @@index([name])
 }
 
 // 학교 테이블
@@ -225,6 +229,7 @@ model School {
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([schoolLevel])
+  @@index([name])
 }
 
 model SchoolEnrollment {
@@ -349,6 +354,7 @@ model Childcare {
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([crtypename])
+  @@index([name])
 }
 
 // 전통시장 테이블
@@ -386,6 +392,7 @@ model Market {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([name])
 }
 
 // @TASK T9.1.1 - 공영주차장 테이블
@@ -435,6 +442,7 @@ model Parking {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([name])
 }
 
 // @TASK T9.2 - 자동심장충격기(AED) 테이블
@@ -481,6 +489,7 @@ model Aed {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([name])
 }
 
 // @TASK T9.3 - 공공도서관 테이블
@@ -529,6 +538,7 @@ model Library {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([name])
 }
 
 // 전기차 충전소 테이블
@@ -589,6 +599,7 @@ model EvCharger {
   @@index([bjdCode])
   @@index([chgerType])
   @@index([statId])
+  @@index([name])
 }
 
 // 체육시설 테이블
@@ -631,6 +642,7 @@ model Sports {
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([ftypeNm])
+  @@index([name])
 }
 
 // 리뷰 테이블
@@ -819,6 +831,7 @@ model Hospital {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([name])
 }
 
 // 병원 진료과목 테이블 (1:N)
@@ -881,6 +894,7 @@ model Pharmacy {
   @@index([city, district])
   @@index([lat, lng])
   @@index([hpid])
+  @@index([name])
 }
 
 // ============================================

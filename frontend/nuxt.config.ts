@@ -81,6 +81,28 @@ export default defineNuxtConfig({
           'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.kakao.com http://*.daumcdn.net https://*.daumcdn.net https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://www.googletagservices.com https://adservice.google.com https://partner.googleadservices.com https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' ${apiBase} data: https://*.kakaocdn.net http://*.kakaocdn.net https://*.daumcdn.net http://*.daumcdn.net https://*.kakao.com http://*.kakao.com https://www.google-analytics.com https://*.google-analytics.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google https://www.googletagservices.com https://www.googletagmanager.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' ${apiBase} https://*.kakao.com https://*.daumcdn.net http://*.daumcdn.net https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://*.googlesyndication.com https://cdn.jsdelivr.net https://googleads.g.doubleclick.net https://fundingchoicesmessages.google.com; frame-src https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; object-src 'none'; worker-src 'self' blob:`,
         },
       },
+      // 시설 카테고리 — 10분 SWR
+      '/toilet/**': { swr: 600 },
+      '/wifi/**': { swr: 600 },
+      '/parking/**': { swr: 600 },
+      '/hospital/**': { swr: 600 },
+      '/pharmacy/**': { swr: 600 },
+      '/library/**': { swr: 600 },
+      '/aed/**': { swr: 600 },
+      '/clothes/**': { swr: 600 },
+      '/park/**': { swr: 600 },
+      '/school/**': { swr: 600 },
+      '/market/**': { swr: 600 },
+      '/trash/**': { swr: 600 },
+      '/childcare/**': { swr: 600 },
+      '/ev-charger/**': { swr: 600 },
+      '/sports/**': { swr: 600 },
+      // 지역 허브
+      '/*/*/**': { swr: 600 },
+      // 부동산 — 5분
+      '/real-estate/**': { swr: 300 },
+      // 가이드 — 1시간
+      '/guide/**': { swr: 3600 },
       '/sitemap.xml': { swr: 86400 },
       '/sitemap/**': { swr: 86400 },
       '/': { swr: 3600 },
@@ -169,6 +191,7 @@ export default defineNuxtConfig({
         {
           innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_forward,article,baby_changing_station,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,child_care,close,delete,description,directions,eco,edit_note,emergency,error,ev_station,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,park,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,share,sports,storefront,support_agent,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
           type: 'text/javascript',
+          tagPosition: 'bodyClose',
         }
       ],
       link: [
@@ -176,10 +199,16 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'preconnect', href: 'https://cdn.jsdelivr.net', crossorigin: '' },
+        { rel: 'preconnect', href: 'https://dapi.kakao.com' },
+        { rel: 'dns-prefetch', href: 'https://dapi.kakao.com' },
         { rel: 'manifest', href: '/site.webmanifest' },
       ]
     }
   },
 
-  css: ['~/assets/css/main.css']
+  css: ['~/assets/css/main.css'],
+
+  experimental: {
+    treeshakeClientOnly: true
+  }
 })

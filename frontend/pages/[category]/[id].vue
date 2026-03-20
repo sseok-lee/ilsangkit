@@ -3,7 +3,7 @@
     <!-- Main Content -->
     <main class="flex-1 w-full">
       <!-- Loading State -->
-      <div v-if="loading" class="flex items-center justify-center py-20" role="status" aria-label="정보 로딩 중">
+      <div v-if="loading" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
           <p class="text-gray-600">로딩 중...</p>
@@ -77,7 +77,7 @@
               <!-- Header -->
               <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
                 <button
-                  class="flex size-10 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm"
+                  class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm"
                   @click="isMapExpanded = false"
                 >
                   <span class="material-symbols-outlined text-slate-700">close</span>
@@ -87,7 +87,7 @@
                   :href="`https://map.kakao.com/link/to/${encodeURIComponent(facility.name)},${facility.lat},${facility.lng}`"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="flex size-10 items-center justify-center rounded-full bg-primary text-white shadow-sm"
+                  class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-sm"
                 >
                   <span class="material-symbols-outlined text-[20px]">directions</span>
                 </a>
@@ -1259,7 +1259,7 @@
             <!-- Right Column: Map & Actions (Desktop) -->
             <div class="lg:sticky lg:top-24 w-full flex flex-col">
               <!-- Map Container -->
-              <div class="relative w-full aspect-square bg-[#e5e7eb] h-full rounded-xl overflow-hidden shadow-md">
+              <div class="relative w-full aspect-square bg-[#e5e7eb] h-full rounded-xl overflow-hidden shadow-md min-h-[300px]" role="img" aria-label="시설 위치 지도">
                 <ClientOnly>
                   <FacilityMap
                     :center="{ lat: facility.lat, lng: facility.lng }"
@@ -1272,10 +1272,10 @@
                 <!-- Map Controls -->
                 <div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
                   <div class="flex flex-col bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-                    <button aria-label="Zoom In" class="w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-50 border-b border-gray-100">
+                    <button aria-label="Zoom In" class="w-11 h-11 flex items-center justify-center text-gray-700 hover:bg-gray-50 border-b border-gray-100">
                       <span class="material-symbols-outlined">add</span>
                     </button>
-                    <button aria-label="Zoom Out" class="w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-50">
+                    <button aria-label="Zoom Out" class="w-11 h-11 flex items-center justify-center text-gray-700 hover:bg-gray-50">
                       <span class="material-symbols-outlined">remove</span>
                     </button>
                   </div>

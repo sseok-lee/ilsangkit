@@ -24,7 +24,7 @@
             >
               <span>Q. {{ faq.question }}</span>
               <span
-                class="material-symbols-outlined text-[18px] text-slate-400 transition-transform group-open:rotate-180 shrink-0"
+                class="material-symbols-outlined text-[18px] text-slate-500 transition-transform group-open:rotate-180 shrink-0"
               >expand_more</span>
             </summary>
             <div class="px-4 pb-4 text-sm text-slate-600 leading-relaxed">
@@ -61,7 +61,7 @@
               >
                 <span>Q. {{ faq.question }}</span>
                 <span
-                  class="material-symbols-outlined text-[18px] text-slate-400 transition-transform group-open:rotate-180 shrink-0"
+                  class="material-symbols-outlined text-[18px] text-slate-500 transition-transform group-open:rotate-180 shrink-0"
                 >expand_more</span>
               </summary>
               <div class="px-4 pb-4 text-sm text-slate-600 leading-relaxed">

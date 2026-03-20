@@ -9,7 +9,7 @@
         <!-- Separator -->
         <span
           v-if="index > 0"
-          class="mx-2 text-gray-400"
+          class="mx-2 text-gray-500"
           aria-hidden="true"
         >
           /

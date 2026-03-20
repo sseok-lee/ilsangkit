@@ -4,7 +4,7 @@
       <section class="md:hidden flex flex-col gap-6 px-4 pb-8 pt-4 relative overflow-hidden">
         <!-- 배경 이미지 레이어 (목표: 각 WebP 200KB 이하) -->
         <div class="absolute inset-0 opacity-10">
-          <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="" />
+          <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="" sizes="100vw" />
         </div>
         <!-- 하단 그라데이션 페이드 -->
         <div class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background-light to-transparent"></div>
@@ -63,7 +63,7 @@
       <section class="hidden md:block w-full pt-16 pb-12 px-4 sm:px-6 relative overflow-hidden">
         <!-- 배경 이미지 레이어 (목표: 각 WebP 200KB 이하) -->
         <div class="absolute inset-0 opacity-[0.08]">
-          <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="" />
+          <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="" sizes="100vw" />
         </div>
         <!-- 하단 그라데이션 페이드 -->
         <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background-light to-transparent"></div>
@@ -80,7 +80,7 @@
           </div>
           <!-- Search Input Component (Desktop) -->
           <div class="w-full max-w-[560px] relative group mt-4">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary transition-colors">
               <span class="material-symbols-outlined text-[24px]">search</span>
             </div>
             <input
@@ -92,6 +92,7 @@
               @keydown.enter="handleSearch"
             />
             <div class="absolute inset-y-2 right-2">
+
               <button
                 aria-label="검색"
                 class="h-full px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
@@ -265,6 +266,7 @@
                 loading="lazy"
                 width="400"
                 height="225"
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
               />
               <div v-else class="w-full h-full flex items-center justify-center">
                 <span class="material-symbols-outlined text-[36px] text-slate-300">article</span>

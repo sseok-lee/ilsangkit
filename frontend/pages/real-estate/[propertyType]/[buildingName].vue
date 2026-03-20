@@ -82,7 +82,7 @@
           <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10">
             <span class="material-symbols-outlined text-[14px]">place</span> {{ propertyMeta?.label }}
           </span>
-          <button class="text-slate-400 hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 건물 공유하기" @click="handleShare">
+          <button class="text-slate-500 hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 건물 공유하기" @click="handleShare">
             <span class="material-symbols-outlined">share</span>
           </button>
         </div>
@@ -97,22 +97,22 @@
         <!-- 주소 + 동 -->
         <div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 text-sm">
           <p class="font-medium text-slate-800">{{ fullAddress }}</p>
-          <span v-if="buildingInfo.dongName" class="text-slate-400 text-xs">{{ buildingInfo.dongName }}</span>
+          <span v-if="buildingInfo.dongName" class="text-slate-500 text-xs">{{ buildingInfo.dongName }}</span>
         </div>
         <!-- 상세 정보 -->
         <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <div v-if="buildingInfo.buildYear" class="flex items-center gap-1.5">
-            <span class="text-slate-400">건축</span>
+            <span class="text-slate-500">건축</span>
             <span class="font-medium text-slate-700">{{ buildingInfo.buildYear }}년</span>
           </div>
           <span v-if="buildingInfo.buildYear && areaRange !== '-'" class="text-slate-200">|</span>
           <div v-if="areaRange !== '-'" class="flex items-center gap-1.5">
-            <span class="text-slate-400">전용</span>
+            <span class="text-slate-500">전용</span>
             <span class="font-medium text-slate-700">{{ areaRange }}</span>
           </div>
           <span v-if="latestPrice !== '-'" class="text-slate-200">|</span>
           <div v-if="latestPrice !== '-'" class="flex items-center gap-1.5">
-            <span class="text-slate-400">최근 거래</span>
+            <span class="text-slate-500">최근 거래</span>
             <span class="font-semibold text-primary">{{ latestPrice }}</span>
           </div>
         </div>
@@ -215,11 +215,11 @@
         <!-- 시세 요약 카드 -->
         <div v-if="stats.length > 0 && !statsLoading" class="grid grid-cols-3 gap-3 mb-4">
           <div class="rounded-xl bg-white border border-slate-100 p-4 text-center">
-            <p class="text-xs text-slate-400 mb-1">최근 평균가</p>
+            <p class="text-xs text-slate-500 mb-1">최근 평균가</p>
             <p class="text-base sm:text-lg font-bold text-slate-800">{{ summaryLatestAvg }}</p>
           </div>
           <div class="rounded-xl bg-white border border-slate-100 p-4 text-center">
-            <p class="text-xs text-slate-400 mb-1">전월 대비</p>
+            <p class="text-xs text-slate-500 mb-1">전월 대비</p>
             <p
               class="text-base sm:text-lg font-bold"
               :class="changeRateColor"
@@ -228,7 +228,7 @@
             </p>
           </div>
           <div class="rounded-xl bg-white border border-slate-100 p-4 text-center">
-            <p class="text-xs text-slate-400 mb-1">총 거래</p>
+            <p class="text-xs text-slate-500 mb-1">총 거래</p>
             <p class="text-base sm:text-lg font-bold text-slate-800">{{ summaryTotalCount }}건</p>
           </div>
         </div>

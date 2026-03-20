@@ -502,30 +502,43 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
     ...buildRegionFilter(city, district),
   };
 
-  const results = await Promise.all(
+  // Phase 1: count만 먼저 — 14개 병렬
+  const countResults = await Promise.all(
     ALL_CATEGORIES.map(async (cat) => {
-      // ev-charger: 충전소(station) 단위 카운트
       if (cat === 'ev-charger') {
         const stationResult = await evChargerStationSearch({
           keyword, city, district, page: 1, limit: 3,
         });
-        return {
-          category: cat,
-          label: CATEGORY_LABELS[cat],
-          count: stationResult.total,
-          items: stationResult.items,
-        };
+        return { category: cat, count: stationResult.total, items: stationResult.items };
       }
       const model = CATEGORY_REGISTRY[cat].model();
-      const [count, records] = await Promise.all([
-        model.count({ where }),
-        model.findMany({ where, take: 3, select: buildListSelect(cat) }),
-      ]);
+      const count = await model.count({ where });
+      return { category: cat, count, items: null };
+    }),
+  );
+
+  // Phase 2: count > 0인 카테고리만 findMany — N개 병렬 (보통 5~8개)
+  const results = await Promise.all(
+    countResults.map(async (cr) => {
+      if (cr.items !== null) {
+        // ev-charger: 이미 Phase 1에서 items 포함
+        return {
+          category: cr.category,
+          label: CATEGORY_LABELS[cr.category],
+          count: cr.count,
+          items: cr.items,
+        };
+      }
+      if (cr.count === 0) {
+        return { category: cr.category, label: CATEGORY_LABELS[cr.category], count: 0, items: [] };
+      }
+      const model = CATEGORY_REGISTRY[cr.category].model();
+      const records = await model.findMany({ where, take: 3, select: buildListSelect(cr.category) });
       return {
-        category: cat,
-        label: CATEGORY_LABELS[cat],
-        count,
-        items: records.map((r: any) => toFacilityItem(r, cat)), // eslint-disable-line @typescript-eslint/no-explicit-any
+        category: cr.category,
+        label: CATEGORY_LABELS[cr.category],
+        count: cr.count,
+        items: records.map((r: any) => toFacilityItem(r, cr.category)), // eslint-disable-line @typescript-eslint/no-explicit-any
       };
     }),
   );

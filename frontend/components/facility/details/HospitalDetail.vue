@@ -56,7 +56,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in scheduleRows" :key="row.day" :class="{ 'text-gray-400': row.closed }">
+            <tr v-for="row in scheduleRows" :key="row.day" :class="{ 'text-gray-500': row.closed }">
               <td class="py-1.5 pr-3 font-medium" :class="row.day === '일' ? 'text-red-500' : row.day === '토' ? 'text-blue-500' : 'text-gray-700'">{{ row.day }}</td>
               <td class="py-1.5 text-gray-600">{{ row.time }}</td>
             </tr>
@@ -156,7 +156,7 @@
 
     <!-- 데이터 기준일 -->
     <div v-if="details.dataDate" class="pt-3 border-t border-gray-200">
-      <p class="text-xs text-gray-400">데이터 기준일: {{ details.dataDate }}</p>
+      <p class="text-xs text-gray-500">데이터 기준일: {{ details.dataDate }}</p>
     </div>
   </div>
 </template>

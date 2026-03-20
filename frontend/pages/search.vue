@@ -5,7 +5,7 @@
       <div class="px-4 py-3">
         <div class="relative group">
           <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
+            <span class="material-symbols-outlined text-slate-500 text-[20px]">search</span>
           </div>
           <input
             v-model="searchKeyword"
@@ -21,7 +21,7 @@
             class="absolute inset-y-0 right-3 flex items-center cursor-pointer"
             @click="clearSearch"
           >
-            <span class="material-symbols-outlined text-slate-400 hover:text-slate-600 text-[20px]">cancel</span>
+            <span class="material-symbols-outlined text-slate-500 hover:text-slate-600 text-[20px]">cancel</span>
           </button>
         </div>
       </div>
@@ -34,7 +34,7 @@
         <div class="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm border border-slate-200">
           <div class="flex-1 relative">
             <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
+              <span class="material-symbols-outlined text-slate-500 text-[20px]">search</span>
             </div>
             <input
               v-model="searchKeyword"
@@ -50,7 +50,7 @@
               class="absolute inset-y-0 right-3 flex items-center cursor-pointer"
               @click="clearSearch"
             >
-              <span class="material-symbols-outlined text-slate-400 hover:text-slate-600 text-[20px]">cancel</span>
+              <span class="material-symbols-outlined text-slate-500 hover:text-slate-600 text-[20px]">cancel</span>
             </button>
           </div>
         </div>
@@ -85,7 +85,7 @@
                 <option value="">시/도 선택</option>
                 <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
               </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
             </div>
           </div>
           <!-- 구/군 선택 -->
@@ -102,7 +102,7 @@
                 <option value="">구/군 선택</option>
                 <option v-for="dist in districts" :key="dist" :value="dist">{{ dist }}</option>
               </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
             </div>
           </div>
         </div>
@@ -265,7 +265,7 @@
           </div>
           <div v-else class="py-16 text-center">
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-              <span class="material-symbols-outlined text-[32px] text-slate-400">search_off</span>
+              <span class="material-symbols-outlined text-[32px] text-slate-500">search_off</span>
             </div>
             <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
           </div>
@@ -378,7 +378,7 @@
           <!-- Empty State (flat view) -->
           <div v-if="facilities.length === 0" class="py-16 text-center">
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-              <span class="material-symbols-outlined text-[32px] text-slate-400">search_off</span>
+              <span class="material-symbols-outlined text-[32px] text-slate-500">search_off</span>
             </div>
             <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
             <p class="text-slate-500 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
@@ -408,7 +408,7 @@
         <!-- Empty State (grouped view) -->
         <div v-if="!selectedCategory && groupedResults.length === 0 && realEstateResults.length === 0" class="py-16 text-center">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-            <span class="material-symbols-outlined text-[32px] text-slate-400">search_off</span>
+            <span class="material-symbols-outlined text-[32px] text-slate-500">search_off</span>
           </div>
           <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
           <p class="text-slate-500 text-sm mt-1 mb-5">다른 검색어를 입력해보세요</p>
