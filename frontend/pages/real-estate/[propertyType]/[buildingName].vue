@@ -685,8 +685,6 @@ watch(() => buildingInfo.value, (info) => {
 const noindex = computed(() => {
   if (!bjdCode.value) return true
   if (!statsLoading.value && !txLoading.value && buildingInfo.value === null) return true
-  // 거래 데이터가 0건이면 thin content
-  if (!statsLoading.value && !txLoading.value && transactions.value.items.length === 0 && !buildingInfo.value?.latestDealAmount) return true
   return false
 })
 
