@@ -601,7 +601,7 @@ const txLoading = ref(true)
 const currentPage = ref(1)
 
 async function loadData() {
-  if (!bjdCode.value || !buildingName.value) return
+  if (!buildingName.value) return
 
   statsLoading.value = true
   txLoading.value = true
@@ -648,7 +648,7 @@ watch(() => [apiSlug.value, buildingName.value, bjdCode.value], () => {
 
 // 기간 변경 시 시세 데이터만 재로드
 watch(selectedMonths, async () => {
-  if (!bjdCode.value || !buildingName.value) return
+  if (!buildingName.value) return
   statsLoading.value = true
   try {
     stats.value = await getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value)
