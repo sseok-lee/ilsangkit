@@ -145,14 +145,24 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const lawdIndex = args.indexOf('--lawd');
   const ymIndex = args.indexOf('--ym');
+  const fromIndex = args.indexOf('--from');
+  const toIndex = args.indexOf('--to');
   const lawdCdArg = lawdIndex !== -1 ? args[lawdIndex + 1] : undefined;
   const dealYmdArg = ymIndex !== -1 ? args[ymIndex + 1] : undefined;
+  const fromArg = fromIndex !== -1 ? args[fromIndex + 1] : undefined;
+  const toArg = toIndex !== -1 ? args[toIndex + 1] : undefined;
 
   const lawdCodes = lawdCdArg ? [lawdCdArg] : await getAllLawdCodes();
   const now = new Date();
   const ymList: string[] = [];
 
-  if (dealYmdArg) {
+  if (fromArg && toArg) {
+    const start = new Date(parseInt(fromArg.slice(0, 4), 10), parseInt(fromArg.slice(4, 6), 10) - 1, 1);
+    const end = new Date(parseInt(toArg.slice(0, 4), 10), parseInt(toArg.slice(4, 6), 10) - 1, 1);
+    for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+      ymList.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+  } else if (dealYmdArg) {
     ymList.push(dealYmdArg);
   } else {
     for (let i = 0; i < 12; i++) {

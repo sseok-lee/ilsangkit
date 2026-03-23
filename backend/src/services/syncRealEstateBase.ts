@@ -138,33 +138,46 @@ export async function fetchRealEstateData(
   dealYmd: string,
   serviceKey: string
 ): Promise<Record<string, unknown>[]> {
-  const url = buildApiUrl(apiEndpoint, {
-    serviceKey,
-    LAWD_CD: lawdCd,
-    DEAL_YMD: dealYmd,
-    numOfRows: '1000',
-    pageNo: '1',
-  });
+  const allItems: Record<string, unknown>[] = [];
+  let pageNo = 1;
 
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { Accept: 'application/xml, text/xml' },
-  });
+  while (true) {
+    const url = buildApiUrl(apiEndpoint, {
+      serviceKey,
+      LAWD_CD: lawdCd,
+      DEAL_YMD: dealYmd,
+      numOfRows: '1000',
+      pageNo: String(pageNo),
+    });
 
-  if (!response.ok) {
-    throw new Error(
-      `API request failed: ${response.status} ${response.statusText} (${apiEndpoint})`
-    );
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/xml, text/xml' },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText} (${apiEndpoint})`
+      );
+    }
+
+    const xmlText = await response.text();
+    const parsed = parseXmlResponse(xmlText);
+
+    if (parsed.resultCode !== '000' && parsed.resultCode !== '00' && parsed.resultCode !== '0') {
+      throw new Error(
+        `API error: ${parsed.resultCode} - ${parsed.resultMsg} (${apiEndpoint})`
+      );
+    }
+
+    allItems.push(...parsed.items);
+
+    if (allItems.length >= parsed.totalCount || parsed.items.length === 0) {
+      break;
+    }
+
+    pageNo++;
   }
 
-  const xmlText = await response.text();
-  const parsed = parseXmlResponse(xmlText);
-
-  if (parsed.resultCode !== '000' && parsed.resultCode !== '00' && parsed.resultCode !== '0') {
-    throw new Error(
-      `API error: ${parsed.resultCode} - ${parsed.resultMsg} (${apiEndpoint})`
-    );
-  }
-
-  return parsed.items;
+  return allItems;
 }

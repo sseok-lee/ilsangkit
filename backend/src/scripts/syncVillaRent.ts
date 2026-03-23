@@ -191,7 +191,7 @@ async function syncByLawdAndYm(
 /**
  * 메인 동기화 함수
  */
-async function syncVillaRent(options: { lawdCd?: string; dealYmd?: string }): Promise<void> {
+async function syncVillaRent(options: { lawdCd?: string; dealYmd?: string; fromYm?: string; toYm?: string }): Promise<void> {
   const serviceKey = process.env.OPENAPI_SERVICE_KEY ?? '';
   if (!serviceKey) {
     throw new Error('OPENAPI_SERVICE_KEY environment variable is not set');
@@ -210,7 +210,13 @@ async function syncVillaRent(options: { lawdCd?: string; dealYmd?: string }): Pr
     const now = new Date();
     const ymList: string[] = [];
 
-    if (options.dealYmd) {
+    if (options.fromYm && options.toYm) {
+      const start = new Date(parseInt(options.fromYm.slice(0, 4), 10), parseInt(options.fromYm.slice(4, 6), 10) - 1, 1);
+      const end = new Date(parseInt(options.toYm.slice(0, 4), 10), parseInt(options.toYm.slice(4, 6), 10) - 1, 1);
+      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+        ymList.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    } else if (options.dealYmd) {
       ymList.push(options.dealYmd);
     } else {
       for (let i = 0; i < 12; i++) {
@@ -240,11 +246,15 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const lawdIndex = args.indexOf('--lawd');
   const ymIndex = args.indexOf('--ym');
+  const fromIndex = args.indexOf('--from');
+  const toIndex = args.indexOf('--to');
 
   const lawdCd = lawdIndex !== -1 ? args[lawdIndex + 1] : undefined;
   const dealYmd = ymIndex !== -1 ? args[ymIndex + 1] : undefined;
+  const fromYm = fromIndex !== -1 ? args[fromIndex + 1] : undefined;
+  const toYm = toIndex !== -1 ? args[toIndex + 1] : undefined;
 
-  await syncVillaRent({ lawdCd, dealYmd });
+  await syncVillaRent({ lawdCd, dealYmd, fromYm, toYm });
 
   // IndexNow: 동기화된 건물 URL 제출
   const buildings = await prisma.villaRentTransaction.findMany({
