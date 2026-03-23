@@ -43,6 +43,10 @@ npm run db:seed      # 시드 데이터 삽입
 ```
 
 ### Data Sync (`cd backend`)
+```bash
+npx tsx src/scripts/syncAll.ts       # 전체 동기화
+npx tsx src/scripts/syncToilet.ts    # 개별 카테고리 동기화
+```
 상세 가이드: [SYNC.md](./backend/SYNC.md)
 
 ## Architecture Overview
@@ -63,18 +67,22 @@ Frontend에서 `$fetch`로 API 호출 (`useRuntimeConfig().public.apiBase` 사�
 
 ### Categories
 
-**시설 카테고리 (프론트엔드 10개, 백엔드 14개)**
+**시설 카테고리 (15개)**
 
-프론트엔드 3그룹: 생활편의(toilet, wifi, parking, kiosk), 건강안전(hospital, pharmacy, aed), 문화환경(library, clothes, trash)
+`toilet`, `trash`, `wifi`, `clothes`, `parking`, `aed`, `library`, `hospital`, `pharmacy`, `park`, `school`, `market`, `childcare`, `ev-charger`, `sports`
 
-백엔드 추가 4개: park, school, market, childcare, ev-charger, sports (프론트엔드 미노출)
+프론트엔드 `CATEGORY_GROUPS` 3그룹: 교육/육아(school, childcare, library), 생활편의(parking, ev-charger, toilet, wifi), 생활환경(park, market, clothes, aed, hospital, pharmacy, sports)
+
+- `trash`(쓰레기배출)는 좌표 없는 일정 데이터 — `WasteSchedule` 별도 모델, 시설 카테고리와 분리 처리
+- `ev-charger`는 충전소(station) 단위 그룹핑 — `statId` 기준 `$queryRaw` GROUP BY 사용 (일반 Prisma findMany가 아님)
 
 **부동산 실거래가 (6개)**: `apt-sale`, `apt-rent`, `villa-sale`, `villa-rent`, `offitel-sale`, `offitel-rent`
 - 주의: 오피스텔 slug는 `offitel` (officetel 아님)
 
 ### Route Structure
-- **Frontend pages**: `/[category]/`, `/[city]/[district]/`, `/search`, `/[category]/[id]`
-- **Frontend pages (부동산)**: `/real-estate/`, `/real-estate/[propertyType]/`, `/real-estate/[propertyType]/[buildingName]`
+- **Frontend pages**: `/[category]/`, `/[category]/[id]`, `/search`, `/guide`, `/guide/[slug]`
+- **지역 페이지**: `/[city]/` (지역 허브), `/[city]/[district]/`, `/[city]/[district]/[category]`
+- **부동산**: `/real-estate/`, `/real-estate/[propertyType]/`, `/real-estate/[propertyType]/[buildingName]`
 - **Backend API**: `/api/facilities`, `/api/real-estate`, `/api/waste-schedules`, `/api/meta`, `/api/sitemap`, `/api/reviews`, `/api/guides`, `/api/area`
 
 ## Backend Patterns
@@ -85,6 +93,15 @@ Frontend에서 `$fetch`로 API 호출 (`useRuntimeConfig().public.apiBase` 사�
 CATEGORY_REGISTRY: Record<FacilityCategory, { model(), listFields[], detailFields[] }>
 ```
 새 카테고리 추가 시 이 레지스트리에 등록해야 라우트가 자동으로 동작.
+
+### City Variant Matching
+DB에 `서울특별시`/`서울` 두 형태가 혼재. `CITY_SLUG_TO_FULL`, `CITY_SLUG_TO_SHORT` 맵으로 양방향 변환:
+```typescript
+// slug → 정식명, 축약명
+CITY_SLUG_TO_FULL['seoul']  // '서울특별시'
+CITY_SLUG_TO_SHORT['seoul'] // '서울'
+```
+지역 필터 시 반드시 `buildRegionFilter()` 사용하거나 `{ city: { in: cityVariants } }` 패턴으로 양쪽 매칭. raw query에서도 `IN (?, ?)` 패턴 적용 필수.
 
 ### Route Handler 패턴
 모든 라우트 핸들러는 반드시 `asyncHandler()`로 래핑:
@@ -104,6 +121,7 @@ router.get('/path', validate(Schema, 'query'), asyncHandler(async (req, res) => 
 - `runSync()`: SyncHistory 생성/업데이트, 상태 추적 (running → success/failed)
 - `batchUpsert()`: 500건 배치 트랜잭셔널 upsert, `sourceId` 기준 중복 방지
 - 새 sync 스크립트는 기존 것(예: `syncToilet.ts`)을 참고하여 동일 패턴 사용
+- 부동산: 국토교통부 XML API → transform → `syncRealEstateBase.ts` 공통 유틸로 upsert
 
 ### ESM Import 규칙
 Backend는 ESM — 모든 로컬 import에 `.js` 확장자 필수:
@@ -119,10 +137,17 @@ query/params가 read-only. validation 미들웨어에서 `Object.defineProperty`
 
 ## Frontend Patterns
 
+### SSR 주의사항
+브라우저 API(`document`, `window`) 직접 접근 시 반드시 클라이언트 가드:
+```typescript
+if (!import.meta.client) return  // 또는 if (process.server) return
+```
+`watch`, `onMounted` 내부라도 SSR 시점에 실행될 수 있으므로 가드 필수. Hydration mismatch 방지.
+
 ### Composable 패턴
 - `readonly()` ref 반환으로 불변성 보장
 - `$fetch` + `useRuntimeConfig().public.apiBase`로 API 호출
-- 주요 composable: `useFacilitySearch`, `useRealEstate`, `useFacilityDetail`, `useKakaoMap`
+- 주요 composable: `useFacilitySearch`, `useRealEstate`, `useFacilityDetail`, `useKakaoMap`, `useRegionFacilities`, `useWasteSchedule`
 
 ### Test Setup (`tests/setup.ts`)
 Nuxt auto-import 함수들을 글로벌 mock으로 등록:
@@ -135,13 +160,7 @@ Nuxt auto-import 함수들을 글로벌 mock으로 등록:
 - `NUXT_PUBLIC_DISABLE_MSW=true`로 프로덕션에서 비활성화
 
 ### Server Routes (`server/`)
-Nitro 서버사이드: 사이트맵(`/sitemap.xml`), OG 이미지(`/og`), URL 리다이렉트 미들웨어
-
-## Data Sync Pipeline
-각 카테고리별 sync 스크립트가 공공데이터 API/CSV를 받아 Prisma로 MySQL에 upsert.
-- 카테고리별 Prisma 모델은 별도 테이블 (Toilet, Wifi, Parking 등)
-- 부동산: 국토교통부 XML API → transform → `syncRealEstateBase.ts` 공통 유틸로 upsert
-- `geocodeRealEstate.ts`로 좌표 데이터 보강
+Nitro 서버사이드: 사이트맵(`/sitemap.xml`, `/sitemap/[...].ts`), OG 이미지(`/og`), URL 리다이렉트 미들웨어(`redirects.ts`, `real-estate-redirect.ts`)
 
 ## Environment Variables
 
@@ -158,14 +177,16 @@ Nitro 서버사이드: 사이트맵(`/sitemap.xml`), OG 이미지(`/og`), URL �
 - Sync: batch 500건, API timeout 30초
 
 ## Deploy
-- CI: GitHub Actions — Test 워크플로우 성공 시 Deploy 워크플로우 자동 트리거
+- CI: GitHub Actions — `Test` 워크플로우(lint+test+build) 성공 시 `Deploy to Cafe24` 워크플로우 자동 트리거
+- Test: backend(MySQL 서비스 컨테이너 + prisma db push) / frontend(nuxt prepare + lint + test + build) 병렬
+- Deploy: backend/frontend 빌드 → SCP → 서버에서 `npm ci` + `prisma db push` + `pm2 restart`
 - 서버: Cafe24, PM2 (`ilsangkit-backend`, `ilsangkit-frontend`)
 - 프로덕션 도메인: `ilsangkit.co.kr`
 
 ## 카테고리 추가 시 수정 필요 파일
 1. `frontend/types/facility.ts` — `FacilityCategory` 타입, `CATEGORY_GROUPS`, `CATEGORY_META`, `CATEGORY_DATA_PORTAL_URL`
 2. `backend/prisma/schema.prisma` — 새 모델 추가
-3. `backend/src/services/facilityService.ts` — `CATEGORY_REGISTRY`에 등록
+3. `backend/src/services/facilityService.ts` — `CATEGORY_REGISTRY`에 등록, `ALL_CATEGORIES` 배열에 추가
 4. `backend/src/routes/facilities.ts` — 라우트 핸들러 (보통 변경 불필요)
 5. `backend/src/scripts/sync*.ts` — 동기화 스크립트
 6. `frontend/components/facility/details/*Detail.vue` — 상세 컴포넌트
@@ -173,7 +194,7 @@ Nitro 서버사이드: 사이트맵(`/sitemap.xml`), OG 이미지(`/og`), URL �
 
 ## 부동산 카테고리 추가 시 수정 필요 파일
 1. `backend/prisma/schema.prisma` — 새 트랜잭션 모델
-2. `backend/src/scripts/sync*.ts` — 동기화 스크립트
+2. `backend/src/scripts/sync*.ts` — 동기화 스크립트 (`syncRealEstateBase.ts` 공통 유틸 활용)
 3. `backend/src/services/realEstateService.ts` — `getModel()` 레지스트리에 추가
 4. `backend/src/schemas/realEstate.ts` — `RealEstateTypeSchema` enum 추가
 5. `frontend/types/realEstate.ts` — 타입/slug 매핑 추가
