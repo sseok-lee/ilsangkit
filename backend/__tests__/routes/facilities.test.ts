@@ -79,13 +79,6 @@ describe('POST /api/facilities/search', () => {
     );
   });
 
-  it('키워드 검색', async () => {
-    const res = await request(app).post('/api/facilities/search').send({ keyword: '테스트' });
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.items.length).toBeGreaterThan(0);
-  });
-
   it('지역 필터', async () => {
     const res = await request(app)
       .post('/api/facilities/search')

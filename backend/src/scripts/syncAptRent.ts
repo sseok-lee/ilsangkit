@@ -192,6 +192,11 @@ async function main(): Promise<void> {
     await submitIndexNow(urls);
   }
 
+  // Summary 테이블 갱신
+  console.info('\n[Summary] apt-rent 요약 갱신 중...');
+  const { refreshSummary } = await import('../services/realEstateSummaryService.js');
+  await refreshSummary('apt-rent');
+
   console.info('\n=== aptRent sync completed ===');
   await prisma.$disconnect();
 }

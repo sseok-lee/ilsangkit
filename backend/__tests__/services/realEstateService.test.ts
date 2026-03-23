@@ -26,6 +26,9 @@ const {
   mockVillaRentFindFirst,
   mockOffitelSaleFindFirst,
   mockOffitelRentFindFirst,
+  mockQueryRawUnsafe,
+  mockSummaryFindMany,
+  mockSummaryCount,
 } = vi.hoisted(() => ({
   mockAptSaleFindMany: vi.fn(),
   mockAptSaleCount: vi.fn(),
@@ -51,6 +54,9 @@ const {
   mockOffitelRentCount: vi.fn(),
   mockOffitelRentGroupBy: vi.fn(),
   mockOffitelRentFindFirst: vi.fn(),
+  mockQueryRawUnsafe: vi.fn(),
+  mockSummaryFindMany: vi.fn(),
+  mockSummaryCount: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -92,7 +98,16 @@ vi.mock('../../src/lib/prisma.js', () => {
       groupBy: mockOffitelRentGroupBy,
     },
   };
-  return { prisma: models, default: models };
+  const summary = {
+    realEstateBuildingSummary: {
+      findMany: mockSummaryFindMany,
+      count: mockSummaryCount,
+    },
+  };
+  return {
+    prisma: { ...models, ...summary, $queryRawUnsafe: mockQueryRawUnsafe },
+    default: { ...models, ...summary, $queryRawUnsafe: mockQueryRawUnsafe },
+  };
 });
 
 import {
@@ -505,91 +520,90 @@ describe('getTransactionStats', () => {
 // getComplexList
 // ─────────────────────────────────────────────
 describe('getComplexList', () => {
-  const groupByResult = [
+  const summaryRows = [
     {
-      buildingName: '래미안',
-      bjdCode: '11680',
-      _count: { buildingName: 10 },
-      _max: { dealYear: 2024, dealMonth: 1, lat: 37.5, lng: 127.0 },
+      id: 1, type: 'apt-sale',
+      buildingName: '래미안', bjdCode: '11680',
+      city: '서울특별시', district: '강남구', dongName: '역삼동',
+      transactionCount: 10, latestPrice: BigInt(150000),
+      latestDealYear: 2024, latestDealMonth: 1,
+      lat: 37.5, lng: 127.0, updatedAt: new Date(),
     },
     {
-      buildingName: '아이파크',
-      bjdCode: '11680',
-      _count: { buildingName: 5 },
-      _max: { dealYear: 2023, dealMonth: 12, lat: 37.6, lng: 127.1 },
+      id: 2, type: 'apt-sale',
+      buildingName: '아이파크', bjdCode: '11680',
+      city: '서울특별시', district: '강남구', dongName: '역삼동',
+      transactionCount: 5, latestPrice: BigInt(120000),
+      latestDealYear: 2023, latestDealMonth: 12,
+      lat: 37.6, lng: 127.1, updatedAt: new Date(),
     },
   ];
 
-  const mockDetail = { city: '서울특별시', district: '강남구', dongName: '역삼동', dealAmount: 150000 };
+  beforeEach(() => {
+    mockSummaryFindMany.mockReset();
+    mockSummaryCount.mockReset();
+  });
 
-  it('calls groupBy on aptSaleTransaction for apt-sale type', async () => {
-    mockAptSaleGroupBy.mockResolvedValue(groupByResult);
-    mockAptSaleFindFirst.mockResolvedValue(mockDetail);
+  it('queries summary table for apt-sale type', async () => {
+    mockSummaryFindMany.mockResolvedValue(summaryRows);
+    mockSummaryCount.mockResolvedValue(2);
 
     await getComplexList('apt-sale', '서울특별시', '강남구');
 
-    expect(mockAptSaleGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockSummaryFindMany).toHaveBeenCalledTimes(1);
+    expect(mockSummaryCount).toHaveBeenCalledTimes(1);
   });
 
-  it('calls groupBy on villaRentTransaction for villa-rent type', async () => {
-    mockVillaRentGroupBy.mockResolvedValue([]);
+  it('queries summary table for villa-rent type', async () => {
+    mockSummaryFindMany.mockResolvedValue([]);
+    mockSummaryCount.mockResolvedValue(0);
 
     await getComplexList('villa-rent', '서울특별시', '강남구');
 
-    expect(mockVillaRentGroupBy).toHaveBeenCalledTimes(1);
-  });
-
-  it('groups by buildingName and bjdCode', async () => {
-    mockAptSaleGroupBy.mockResolvedValue([]);
-
-    await getComplexList('apt-sale', '서울특별시', '강남구');
-
-    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+    expect(mockSummaryFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        by: expect.arrayContaining(['buildingName', 'bjdCode']),
+        where: expect.objectContaining({ type: 'villa-rent', city: '서울특별시', district: '강남구' }),
       })
     );
   });
 
   it('filters by city and district', async () => {
-    mockAptSaleGroupBy.mockResolvedValue([]);
+    mockSummaryFindMany.mockResolvedValue(summaryRows);
+    mockSummaryCount.mockResolvedValue(2);
 
     await getComplexList('apt-sale', '서울특별시', '강남구');
 
-    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+    expect(mockSummaryFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          city: '서울특별시',
-          district: '강남구',
-        }),
+        where: expect.objectContaining({ type: 'apt-sale', city: '서울특별시', district: '강남구' }),
       })
     );
   });
 
   it('returns paginated result with items, total, page, totalPages', async () => {
-    mockAptSaleGroupBy.mockResolvedValue(groupByResult);
-    mockAptSaleFindFirst.mockResolvedValue(mockDetail);
+    mockSummaryFindMany.mockResolvedValue(summaryRows);
+    mockSummaryCount.mockResolvedValue(2);
 
     const result = await getComplexList('apt-sale', '서울특별시', '강남구');
 
     expect(result).toHaveProperty('items');
-    expect(result).toHaveProperty('total');
-    expect(result).toHaveProperty('page');
-    expect(result).toHaveProperty('totalPages');
+    expect(result).toHaveProperty('total', 2);
+    expect(result).toHaveProperty('page', 1);
+    expect(result).toHaveProperty('totalPages', 1);
     expect(Array.isArray(result.items)).toBe(true);
-    expect(result.items[0]).toHaveProperty('buildingName');
-    expect(result.items[0]).toHaveProperty('bjdCode');
-    expect(result.items[0]).toHaveProperty('transactionCount');
+    expect(result.items[0]).toHaveProperty('buildingName', '래미안');
+    expect(result.items[0]).toHaveProperty('bjdCode', '11680');
+    expect(result.items[0]).toHaveProperty('transactionCount', 10);
   });
 
-  it('returns lat and lng from aggregated result', async () => {
-    mockAptSaleGroupBy.mockResolvedValue(groupByResult);
-    mockAptSaleFindFirst.mockResolvedValue(mockDetail);
+  it('returns lat and lng from summary', async () => {
+    mockSummaryFindMany.mockResolvedValue(summaryRows);
+    mockSummaryCount.mockResolvedValue(2);
 
     const result = await getComplexList('apt-sale', '서울특별시', '강남구');
 
-    expect(result.items[0]).toHaveProperty('lat');
-    expect(result.items[0]).toHaveProperty('lng');
+    expect(result.items[0]).toHaveProperty('lat', 37.5);
+    expect(result.items[0]).toHaveProperty('lng', 127.0);
   });
 
   it('throws for unknown type slug', async () => {

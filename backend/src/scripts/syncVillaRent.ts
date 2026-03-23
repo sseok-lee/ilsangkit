@@ -270,6 +270,11 @@ async function main(): Promise<void> {
     await submitIndexNow(urls);
   }
 
+  // Summary 테이블 갱신
+  console.info('\n[Summary] villa-rent 요약 갱신 중...');
+  const { refreshSummary } = await import('../services/realEstateSummaryService.js');
+  await refreshSummary('villa-rent');
+
   console.info('\n=== villaRent sync completed ===');
 }
 

@@ -91,6 +91,21 @@ function isSaleType(type: string): boolean {
   return SALE_TYPES.includes(type as RealEstateType);
 }
 
+export const TABLE_NAME_MAP: Record<string, string> = {
+  'apt-sale': 'AptSaleTransaction',
+  'apt-rent': 'AptRentTransaction',
+  'villa-sale': 'VillaSaleTransaction',
+  'villa-rent': 'VillaRentTransaction',
+  'offitel-sale': 'OffitelSaleTransaction',
+  'offitel-rent': 'OffitelRentTransaction',
+};
+
+export function getTableName(type: string): string {
+  const name = TABLE_NAME_MAP[type];
+  if (!name) throw new Error(`Unknown real estate type: ${type}`);
+  return name;
+}
+
 /**
  * BigInt/Decimal → Number 변환 (JSON 직렬화 호환)
  */
@@ -234,7 +249,7 @@ export interface ComplexListResult {
 }
 
 /**
- * 건물 목록 집계 - DISTINCT buildingName별 최근거래가, 거래건수, 좌표
+ * 건물 목록 조회 — RealEstateBuildingSummary 테이블 (GROUP BY 제거)
  */
 export async function getComplexList(
   type: string,
@@ -244,71 +259,42 @@ export async function getComplexList(
   page: number = 1,
   limit: number = 15
 ): Promise<ComplexListResult> {
-  const model = getModel(type);
+  if (!TABLE_NAME_MAP[type]) throw new Error(`Unknown real estate type: ${type}`);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = {};
+  const where: Record<string, any> = { type };
   if (city) where.city = city;
   if (district) where.district = district;
   if (buildingName) where.buildingName = { startsWith: buildingName };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const groupByResult: any[] = await model.groupBy({
-    by: ['buildingName', 'bjdCode'],
-    where,
-    _count: { buildingName: true },
-    _max: { dealYear: true, dealMonth: true, lat: true, lng: true },
-    orderBy: [{ _count: { buildingName: 'desc' } }],
-  });
+  const [items, total] = await Promise.all([
+    prisma.realEstateBuildingSummary.findMany({
+      where,
+      orderBy: { transactionCount: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.realEstateBuildingSummary.count({ where }),
+  ]);
 
-  const total = groupByResult.length;
-  const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
-  const skip = (page - 1) * limit;
-  const paged = groupByResult.slice(skip, skip + limit);
-
-  // 각 건물의 최신 거래 1건에서 city/district/dongName/price 가져오기 (단일 쿼리)
-  const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const details: any[] = paged.length > 0
-    ? await model.findMany({
-        where: {
-          OR: paged.map((row: { buildingName: string; bjdCode: string }) => ({
-            buildingName: row.buildingName,
-            bjdCode: row.bjdCode,
-          })),
-        },
-        orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
-        distinct: ['buildingName', 'bjdCode'],
-        select: {
-          buildingName: true, bjdCode: true,
-          city: true, district: true, dongName: true,
-          [priceField]: true,
-        },
-      })
-    : [];
-
-  const detailMap = new Map(
-    details.map((d) => [`${d.buildingName}|${d.bjdCode}`, d])
-  );
-
-  const items = paged.map((row) => {
-    const detail = detailMap.get(`${row.buildingName}|${row.bjdCode}`);
-    return {
+  return {
+    items: items.map((row) => ({
       buildingName: row.buildingName,
       bjdCode: row.bjdCode,
-      city: detail?.city ?? '',
-      district: detail?.district ?? '',
-      dongName: detail?.dongName ?? '',
-      transactionCount: row._count.buildingName,
-      latestPrice: detail?.[priceField] != null ? Number(detail[priceField]) : null,
-      lat: row._max.lat !== null ? Number(row._max.lat) : null,
-      lng: row._max.lng !== null ? Number(row._max.lng) : null,
-      lastDealYear: row._max.dealYear,
-      lastDealMonth: row._max.dealMonth,
-    };
-  });
-
-  return { items, total, page, totalPages };
+      city: row.city,
+      district: row.district,
+      dongName: row.dongName,
+      transactionCount: row.transactionCount,
+      latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
+      lat: row.lat != null ? Number(row.lat) : null,
+      lng: row.lng != null ? Number(row.lng) : null,
+      lastDealYear: row.latestDealYear,
+      lastDealMonth: row.latestDealMonth,
+    })),
+    total,
+    page,
+    totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+  };
 }
 
 // ─────────────────────────────────────────────

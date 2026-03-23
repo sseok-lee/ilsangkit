@@ -385,6 +385,15 @@ async function main(): Promise<void> {
     }
   }
 
+  // 부동산 Summary 테이블 갱신
+  const realEstateCategories = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'];
+  const syncedRealEstate = results.filter(r => r.success && realEstateCategories.includes(r.category));
+  if (syncedRealEstate.length > 0) {
+    console.log('\n[Summary] 부동산 요약 테이블 갱신 중...');
+    const { refreshAllSummaries } = await import('../services/realEstateSummaryService.js');
+    await refreshAllSummaries();
+  }
+
   console.log('\n모든 동기화가 성공적으로 완료되었습니다.');
 }
 

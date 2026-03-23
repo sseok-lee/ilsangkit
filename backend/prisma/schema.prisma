@@ -933,6 +933,7 @@ model AptSaleTransaction {
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([buildingName, bjdCode])
+  @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
@@ -970,6 +971,7 @@ model VillaSaleTransaction {
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([buildingName, bjdCode])
+  @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
@@ -1005,6 +1007,7 @@ model OffitelSaleTransaction {
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([buildingName, bjdCode])
+  @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
@@ -1046,6 +1049,7 @@ model AptRentTransaction {
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([buildingName, bjdCode])
+  @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
@@ -1085,6 +1089,7 @@ model VillaRentTransaction {
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([buildingName, bjdCode])
+  @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
@@ -1123,8 +1128,35 @@ model OffitelRentTransaction {
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([buildingName, bjdCode])
+  @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
   @@index([rentType])
+}
+
+// ============================================
+// 부동산 건물 요약 (집계 캐시 테이블)
+// ============================================
+
+model RealEstateBuildingSummary {
+  id               Int      @id @default(autoincrement())
+  type             String   @db.VarChar(20)
+  buildingName     String   @db.VarChar(200)
+  bjdCode          String   @db.VarChar(10)
+  city             String   @db.VarChar(50)
+  district         String   @db.VarChar(50)
+  dongName         String   @db.VarChar(50)
+  latestPrice      BigInt?
+  latestDealYear   Int?
+  latestDealMonth  Int?
+  lat              Decimal? @db.Decimal(10, 7)
+  lng              Decimal? @db.Decimal(10, 7)
+  transactionCount Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  @@unique([type, buildingName, bjdCode])
+  @@index([type, transactionCount])
+  @@index([type, city, district, transactionCount])
+  @@index([type, buildingName])
 }
