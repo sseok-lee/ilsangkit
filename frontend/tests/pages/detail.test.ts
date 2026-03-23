@@ -165,9 +165,10 @@ describe('DetailPage', () => {
     expect(wrapper.text()).toContain('로딩')
   })
 
-  it('에러 시 createError로 404 반환', async () => {
+  it('실제 404 에러 시 createError로 404 반환', async () => {
     createErrorMock.mockClear()
-    mockUseAsyncDataWith(null, 'error', new Error('Failed to fetch'))
+    const notFoundError = Object.assign(new Error('Not Found'), { statusCode: 404 })
+    mockUseAsyncDataWith(null, 'error', notFoundError)
 
     const wrapper = mount(
       defineComponent({
@@ -190,6 +191,33 @@ describe('DetailPage', () => {
     expect(createErrorMock).toHaveBeenCalledWith(
       expect.objectContaining({ statusCode: 404, statusMessage: 'Facility not found' })
     )
+
+    wrapper.unmount()
+  })
+
+  it('네트워크/서버 에러 시 404를 반환하지 않음 (SEO 보호)', async () => {
+    createErrorMock.mockClear()
+    mockUseAsyncDataWith(null, 'error', new Error('Failed to fetch'))
+
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          onErrorCaptured(() => true)
+          return () => h(Suspense, null, {
+            default: () => h(DetailPage),
+          })
+        },
+      }),
+      {
+        global: {
+          stubs: globalStubs,
+          config: { errorHandler: () => {} },
+        },
+      },
+    )
+    await flushPromises()
+
+    expect(createErrorMock).not.toHaveBeenCalled()
 
     wrapper.unmount()
   })

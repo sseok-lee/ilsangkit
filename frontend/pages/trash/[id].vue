@@ -304,9 +304,13 @@ const { data: scheduleResponse, status, error: fetchError } = await useAsyncData
     )
   }
 )
-// Soft 404 방지: fetch 에러 시 실제 HTTP 404 반환
+// fetch 에러 처리: 실제 404만 hard 404, 네트워크/서버 에러는 soft error로 처리 (SEO 보호)
 if (fetchError.value) {
-  throw createError({ statusCode: fetchError.value.statusCode || 404, statusMessage: '배출 정보를 찾을 수 없습니다' })
+  const errStatus = fetchError.value.statusCode
+  if (errStatus === 404 || errStatus === 422) {
+    throw createError({ statusCode: 404, statusMessage: '배출 정보를 찾을 수 없습니다' })
+  }
+  // 5xx/네트워크 에러는 페이지를 유지하여 Googlebot이 404로 인식하지 않도록 함
 }
 
 const data = computed(() => scheduleResponse.value?.data ?? null)
