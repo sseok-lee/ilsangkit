@@ -16,12 +16,7 @@ import {
   RealEstateBuildingInfoSchema,
   RealEstateUnifiedSearchSchema,
 } from '../schemas/realEstate.js';
-import { searchRateLimiter } from '../middlewares/rateLimit.js';
-
 const router = Router();
-
-// 부동산 검색 전용 rate limiter 적용
-router.use(searchRateLimiter);
 
 // 타입 파라미터 검증 미들웨어
 function validateType(req: Request, res: Response, next: NextFunction): void {
