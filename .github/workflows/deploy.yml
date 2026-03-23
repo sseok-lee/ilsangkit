@@ -82,7 +82,7 @@ jobs:
             npx prisma generate
 
             # 부동산 Summary 테이블 갱신
-            npx tsx src/scripts/refreshRealEstateSummary.ts
+            node dist/scripts/refreshRealEstateSummary.js
 
             # PM2로 백엔드 재시작 (또는 첫 실행)
             pm2 describe ilsangkit-backend > /dev/null
