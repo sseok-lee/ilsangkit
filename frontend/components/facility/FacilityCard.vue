@@ -91,7 +91,27 @@
           <span v-if="facility.extras.phone" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ facility.extras.phone }}</span>
           <span v-if="facility.extras.drTotCnt" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">의사 {{ facility.extras.drTotCnt }}명</span>
 
+          <!-- sports -->
+          <span v-if="facility.extras.ftypeNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">{{ facility.extras.ftypeNm }}</span>
+          <span v-if="facility.extras.faciGbNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium" :class="facility.extras.faciGbNm === '공공' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ facility.extras.faciGbNm }}</span>
+
+          <!-- childcare -->
+          <span v-if="facility.extras.crtypename" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-50 text-violet-700">{{ facility.extras.crtypename }}</span>
+          <span v-if="facility.extras.crcapat" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">정원 {{ facility.extras.crcapat }}명</span>
+
+          <!-- park -->
+          <span v-if="facility.extras.parkType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700">{{ facility.extras.parkType }}</span>
+          <span v-if="facility.extras.area" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ Number(facility.extras.area).toLocaleString() }}㎡</span>
+
+          <!-- pharmacy -->
+          <span v-if="facility.extras.dutyTime1s && facility.extras.dutyTime1c" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">{{ formatDutyTime(facility.extras.dutyTime1s) }}~{{ formatDutyTime(facility.extras.dutyTime1c) }}</span>
+
+          <!-- market -->
+          <span v-if="facility.extras.marketType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-orange-50 text-orange-700">{{ facility.extras.marketType }}</span>
+          <span v-if="facility.extras.storeCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ facility.extras.storeCount }}개 점포</span>
+
           <!-- school -->
+          <span v-if="facility.extras.schoolLevel" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-sky-50 text-sky-700">{{ facility.extras.schoolLevel }}</span>
           <a v-if="facility.extras.phoneNumber && facility.category === 'school'" :href="`tel:${facility.extras.phoneNumber}`" class="inline-flex items-center min-h-[44px] px-3 py-2 rounded-md text-xs font-medium bg-slate-100 text-slate-600 hover:underline" @click.stop>{{ facility.extras.phoneNumber }}</a>
           <span v-if="facility.extras.coeducationType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700">{{ facility.extras.coeducationType }}</span>
           <span v-if="facility.extras.highSchoolType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-50 text-violet-700">{{ facility.extras.highSchoolType }}</span>
@@ -124,6 +144,11 @@ const props = withDefaults(defineProps<Props>(), {
   isActive: false,
   highlightDistance: false,
 })
+
+function formatDutyTime(raw: string | number): string {
+  const s = String(raw).padStart(4, '0')
+  return `${s.slice(0, 2)}:${s.slice(2)}`
+}
 
 const isCloseDistance = (): boolean => {
   if (props.highlightDistance) return true

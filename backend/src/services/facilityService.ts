@@ -1137,6 +1137,24 @@ export async function getByRegion(
     };
   }
 
+  // ev-charger: 충전소 단위 그룹 검색 (search()와 동일)
+  if (category === 'ev-charger') {
+    const result = await evChargerStationSearch({
+      city: resolved.city,
+      district: resolved.district,
+      page,
+      limit,
+    });
+    return {
+      region: { city: resolved.city, district: resolved.district, bjdCode: resolved.bjdCode },
+      category,
+      items: result.items,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+    };
+  }
+
   const config = CATEGORY_REGISTRY[category as FacilityCategory];
   let items: FacilityItem[] = [];
   let total = 0;
