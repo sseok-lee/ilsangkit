@@ -22,7 +22,7 @@ router.get('/categories', asyncHandler(async (_req: Request, res: Response) => {
 router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
   const [
     toiletCount, wifiCount, clothesCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount,
-    parkCount, schoolCount, marketCount,
+    parkCount, schoolCount, marketCount, childcareCount, evChargerCount, sportsCount,
     aptSaleCount, aptRentCount, villaSaleCount, villaRentCount, offitelSaleCount, offitelRentCount,
     buildingCountResult, regionCount,
   ] = await Promise.all([
@@ -38,6 +38,9 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
     prisma.park.count(),
     prisma.school.count(),
     prisma.market.count(),
+    prisma.childcare.count(),
+    prisma.evCharger.count(),
+    prisma.sports.count(),
     prisma.aptSaleTransaction.count(),
     prisma.aptRentTransaction.count(),
     prisma.villaSaleTransaction.count(),
@@ -69,7 +72,10 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
     park: parkCount,
     school: schoolCount,
     market: marketCount,
-    total: toiletCount + wifiCount + clothesCount + trashCount + parkingCount + aedCount + libraryCount + hospitalCount + pharmacyCount + parkCount + schoolCount + marketCount,
+    childcare: childcareCount,
+    'ev-charger': evChargerCount,
+    sports: sportsCount,
+    total: toiletCount + wifiCount + clothesCount + trashCount + parkingCount + aedCount + libraryCount + hospitalCount + pharmacyCount + parkCount + schoolCount + marketCount + childcareCount + evChargerCount + sportsCount,
     realEstate: {
       aptSale: aptSaleCount,
       aptRent: aptRentCount,

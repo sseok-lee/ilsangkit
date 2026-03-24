@@ -126,7 +126,7 @@
         <!-- 부동산 실거래가 -->
         <div class="mb-8">
           <h2 class="text-xl font-extrabold text-slate-900 flex items-center gap-2 mb-5">
-            <span class="material-symbols-outlined text-primary text-[28px]">apartment</span>
+            <span class="material-symbols-outlined text-primary text-[28px]" aria-hidden="true">apartment</span>
             부동산
           </h2>
           <!-- 모바일: 3열 아이콘 그리드 -->
@@ -175,7 +175,7 @@
         <!-- 시설 카테고리 그룹 -->
         <div v-for="group in categoryGroups" :key="group.title" class="mb-8">
           <h2 class="text-xl font-extrabold text-slate-900 flex items-center gap-2 mb-5">
-            <span class="material-symbols-outlined text-[28px]" :class="group.colors.iconText">{{ group.icon }}</span>
+            <span class="material-symbols-outlined text-[28px]" :class="group.colors.iconText" aria-hidden="true">{{ group.icon }}</span>
             {{ group.title }}
           </h2>
           <!-- 모바일: 4열 아이콘 그리드 -->
@@ -251,7 +251,7 @@
       <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary">menu_book</span>
+            <span class="material-symbols-outlined text-primary" aria-hidden="true">menu_book</span>
             생활 가이드
           </h2>
           <NuxtLink
@@ -374,6 +374,9 @@ const stats = computed(() => statsResponse.value?.data ?? {
   pharmacy: 0,
   school: 0,
   market: 0,
+  childcare: 0,
+  'ev-charger': 0,
+  sports: 0,
   total: 0,
   buildingCount: 0,
   regionCount: 0,
