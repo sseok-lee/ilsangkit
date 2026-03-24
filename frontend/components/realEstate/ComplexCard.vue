@@ -1,6 +1,7 @@
 <template>
   <NuxtLink
     :to="linkUrl"
+    :prefetch="false"
     class="group bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 border border-slate-200 hover:border-primary/30 cursor-pointer block"
   >
     <div class="flex gap-3">

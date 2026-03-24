@@ -2,6 +2,7 @@
   <NuxtLink
     :to="'/trash/' + region.id"
     :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세보기`"
+    :prefetch="false"
     class="group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer border-transparent hover:border-primary/20"
   >
     <div class="flex items-start gap-4">

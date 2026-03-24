@@ -23,6 +23,7 @@
           v-for="guide in guides"
           :key="guide.id"
           :to="`/guide/${guide.slug}`"
+          :prefetch="false"
           class="group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
         >
           <!-- Thumbnail -->
