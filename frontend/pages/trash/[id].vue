@@ -51,10 +51,14 @@
           </div>
           <div>
             <h2 class="font-bold text-slate-900">{{ data.city }} {{ data.district }}</h2>
-            <p v-if="data.targetRegion" class="text-sm text-slate-500 mt-0.5">
-              {{ data.targetRegion }}
-              <span v-if="data.emissionPlace"> · {{ data.emissionPlace }}</span>
-            </p>
+            <div v-if="data.targetRegion" class="flex flex-wrap gap-1 mt-1.5">
+              <span
+                v-for="dong in data.targetRegion.split('+').map((d: string) => d.trim()).filter(Boolean)"
+                :key="dong"
+                class="inline-block px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full"
+              >{{ dong }}</span>
+              <span v-if="data.emissionPlace" class="inline-block px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full">{{ data.emissionPlace }}</span>
+            </div>
             <p v-if="data.details?.emissionPlaceType" class="text-sm text-slate-500 mt-0.5">
               {{ data.details.emissionPlaceType }}
             </p>

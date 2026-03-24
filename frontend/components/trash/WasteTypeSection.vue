@@ -11,11 +11,18 @@
     </div>
     <div class="text-sm text-slate-600 space-y-2 pl-1">
       <div v-if="info.dayOfWeek" class="flex items-start gap-2">
-        <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">calendar_month</span>
-        <p>
-          <span class="font-medium text-slate-700">배출 요일:</span>
-          <span class="ml-1">{{ info.dayOfWeek }}</span>
-        </p>
+        <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-1">calendar_month</span>
+        <div>
+          <span class="font-medium text-slate-700">배출 요일</span>
+          <div class="flex flex-wrap gap-1 mt-1">
+            <span
+              v-for="day in parseDays(info.dayOfWeek)"
+              :key="day"
+              class="inline-flex items-center justify-center w-7 h-7 text-xs font-semibold rounded-full"
+              :class="dayChipClass(day)"
+            >{{ day }}</span>
+          </div>
+        </div>
       </div>
       <ClientOnly>
         <div v-if="nextCollectionText" class="flex items-start gap-2">
@@ -71,6 +78,19 @@ const colorMap = {
 const iconBgClass = computed(() => colorMap[props.iconColor].bg)
 const iconTextClass = computed(() => colorMap[props.iconColor].text)
 
+const ALL_DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const
+
+function parseDays(raw: string): string[] {
+  const days = raw.split(/[+,\s·]+/).map(d => d.trim()).filter(Boolean)
+  return ALL_DAYS.filter(d => days.includes(d))
+}
+
+function dayChipClass(day: string): string {
+  if (day === '토') return 'bg-blue-100 text-blue-700'
+  if (day === '일') return 'bg-red-100 text-red-700'
+  return 'bg-slate-100 text-slate-700'
+}
+
 const timeRange = computed(() => {
   if (!props.info.beginTime && !props.info.endTime) return null
   if (props.info.beginTime && props.info.endTime) return `${props.info.beginTime} ~ ${props.info.endTime}`
@@ -83,7 +103,7 @@ const DAY_MAP: Record<string, number> = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4
 const nextCollectionText = computed(() => {
   if (!props.info.dayOfWeek) return null
   const days = props.info.dayOfWeek
-    .split(/[,\s·]+/)
+    .split(/[+,\s·]+/)
     .map((d) => d.trim())
     .filter((d) => d in DAY_MAP)
     .map((d) => DAY_MAP[d])
