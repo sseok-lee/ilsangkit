@@ -15,7 +15,27 @@ describe('generateRssXml', () => {
 
   it('<rss version="2.0"> 태그를 포함해야 한다', () => {
     const xml = generateRssXml([], channelInfo)
-    expect(xml).toContain('<rss version="2.0">')
+    expect(xml).toContain('<rss version="2.0"')
+  })
+
+  it('atom:link self 참조를 포함해야 한다', () => {
+    const xml = generateRssXml([], channelInfo)
+    expect(xml).toContain('xmlns:atom=')
+    expect(xml).toContain('rel="self"')
+  })
+
+  it('lastBuildDate를 포함해야 한다', () => {
+    const xml = generateRssXml([], channelInfo)
+    expect(xml).toContain('<lastBuildDate>')
+  })
+
+  it('item에 guid를 포함해야 한다', () => {
+    const items = [{
+      title: '테스트', link: 'https://ilsangkit.co.kr/guide/test',
+      description: '설명', pubDate: '2024-01-01T00:00:00Z',
+    }]
+    const xml = generateRssXml(items, channelInfo)
+    expect(xml).toContain('<guid isPermaLink="true">')
   })
 
   it('<channel> 태그를 포함해야 한다', () => {
@@ -52,7 +72,7 @@ describe('generateRssXml', () => {
 
   it('items가 비어있어도 유효한 XML을 반환해야 한다', () => {
     const xml = generateRssXml([], channelInfo)
-    expect(xml).toContain('<rss version="2.0">')
+    expect(xml).toContain('<rss version="2.0"')
     expect(xml).toContain('</rss>')
     expect(xml).not.toContain('<item>')
   })
