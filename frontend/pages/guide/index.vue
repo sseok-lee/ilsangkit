@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -128,10 +128,17 @@ setBreadcrumbSchema([
 const config = useRuntimeConfig()
 const { fetchGuides } = useGuides()
 
-const guides = ref<GuideSummary[]>([])
-const loading = ref(true)
 const currentPage = ref(1)
-const totalPages = ref(1)
+
+// SSR: useAsyncData로 첫 페이지 데이터 서버에서 로드
+const { data: guidesData, status } = await useAsyncData(
+  'guide-list',
+  () => fetchGuides({ page: currentPage.value, limit: 12 }),
+)
+
+const guides = computed(() => guidesData.value?.items ?? [])
+const totalPages = computed(() => guidesData.value?.totalPages ?? 1)
+const loading = computed(() => status.value === 'pending')
 
 function getCategoryLabel(category: string): string {
   // 시설 카테고리 먼저 확인, 없으면 부동산 카테고리 확인 (kebab-case → camelCase 변환)
@@ -146,31 +153,11 @@ function formatDate(dateStr: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
-async function loadGuides() {
-  loading.value = true
-  try {
-    const result = await fetchGuides({
-      page: currentPage.value,
-      limit: 12,
-    })
-    guides.value = result.items
-    totalPages.value = result.totalPages
-  } catch {
-    guides.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-function goToPage(page: number) {
+async function goToPage(page: number) {
   currentPage.value = page
-  loadGuides()
+  guidesData.value = await fetchGuides({ page, limit: 12 })
   if (import.meta.client) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
-
-onMounted(() => {
-  loadGuides()
-})
 </script>

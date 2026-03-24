@@ -177,7 +177,7 @@
             {{ resultTitle }}
           </h2>
           <span class="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
-            {{ total }}건
+            {{ displayTotal }}건
           </span>
         </div>
 
@@ -204,14 +204,14 @@
           <!-- Card Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FacilityCard
-              v-for="facility in facilities"
+              v-for="facility in displayFacilities"
               :key="facility.id"
               :facility="facility"
             />
           </div>
 
           <!-- Empty State -->
-          <div v-if="facilities.length === 0" class="py-16 text-center">
+          <div v-if="displayFacilities.length === 0" class="py-16 text-center">
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
               <span class="material-symbols-outlined text-[32px] text-slate-500">{{ categoryMeta?.icon || 'search_off' }}</span>
             </div>
@@ -237,7 +237,7 @@
           </div>
 
           <!-- Pagination -->
-          <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
+          <Pagination :current-page="currentPage" :total-pages="displayTotalPages" @page-change="goToPage" />
         </template>
       </template>
 
@@ -320,17 +320,47 @@ const selectedDistrict = ref('')
 const cities = ref<string[]>([])
 const districtList = ref<string[]>([])
 
-// Initial loading state (스켈레톤 표시용 - 첫 데이터 로드 전까지 true)
-const initialLoading = ref(true)
+// SSR: 초기 데이터를 서버에서 로드
+const isTrash = categoryParam.value === 'trash'
+const { data: ssrData } = await useAsyncData(
+  `cat-list-${categoryParam.value}`,
+  () => isTrash
+    ? $fetch<any>('/api/waste-schedules', { params: { page: 1, limit: 20 } })
+    : $fetch<any>('/api/facilities/search', { method: 'POST', body: { category: categoryParam.value, page: 1, limit: 20 } }),
+)
+
+// SSR 데이터가 있으면 초기 로딩 완료
+const initialLoading = ref(!ssrData.value?.data)
 
 // Filter state
 const filterKeyword = ref('')
-// Waste schedule state
-const wasteSchedules = ref<RegionSchedule[]>([])
-const wasteContact = ref<{ name: string; phone?: string } | null>(null)
+// Waste schedule state — SSR 데이터로 초기화
+const ssrItems = ssrData.value?.data
+const wasteSchedules = ref<RegionSchedule[]>(isTrash && ssrItems ? ssrItems.schedules ?? ssrItems.items ?? [] : [])
+const wasteContact = ref<{ name: string; phone?: string } | null>(isTrash && ssrItems ? ssrItems.contact ?? null : null)
 const wasteCurrentPage = ref(1)
-const wasteTotalPages = ref(1)
-const wasteTotal = ref(0)
+const wasteTotalPages = ref(isTrash && ssrItems ? ssrItems.totalPages ?? 1 : 1)
+const wasteTotal = ref(isTrash && ssrItems ? ssrItems.total ?? 0 : 0)
+
+// 시설 목록 — SSR 데이터가 있으면 composable 대신 표시
+const ssrFacilities = ref(!isTrash && ssrItems ? ssrItems.items ?? [] : [])
+const ssrTotal = ref(!isTrash && ssrItems ? ssrItems.total ?? 0 : 0)
+const ssrTotalPages = ref(!isTrash && ssrItems ? ssrItems.totalPages ?? 0 : 0)
+const ssrConsumed = ref(false)
+
+// 템플릿용 display computed — SSR 데이터 우선, 이후 composable 데이터
+const displayFacilities = computed(() => {
+  if (ssrConsumed.value || facilities.value.length > 0) return facilities.value
+  return ssrFacilities.value
+})
+const displayTotal = computed(() => {
+  if (ssrConsumed.value || total.value > 0) return total.value
+  return ssrTotal.value
+})
+const displayTotalPages = computed(() => {
+  if (ssrConsumed.value || totalPages.value > 0) return totalPages.value
+  return ssrTotalPages.value
+})
 
 // 카테고리별 SEO 타이틀/설명
 const SEO_TITLES: Record<string, string> = {
@@ -452,6 +482,7 @@ if (pageQueryParam >= 2) {
 // Methods
 async function performSearch() {
   if (categoryParam.value === 'trash') return
+  ssrConsumed.value = true
 
   const params: Record<string, unknown> = {
     page: currentPage.value,
@@ -566,11 +597,13 @@ onMounted(async () => {
     }
   }
 
-  // Initial data load
-  if (categoryParam.value === 'trash') {
-    await loadWasteSchedules()
-  } else {
-    await performSearch()
+  // Initial data load — SSR 데이터가 있으면 스킵
+  if (!ssrData.value?.data) {
+    if (categoryParam.value === 'trash') {
+      await loadWasteSchedules()
+    } else {
+      await performSearch()
+    }
   }
   initialLoading.value = false
 })

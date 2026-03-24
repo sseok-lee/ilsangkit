@@ -602,6 +602,37 @@ const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 
 const txLoading = ref(true)
 const currentPage = ref(1)
 
+// SSR: 초기 데이터를 서버에서 로드
+const { data: ssrData } = await useAsyncData(
+  `re-detail-${propertyTypeParam.value}-${buildingName.value}-${bjdCode.value}`,
+  async () => {
+    const [statsResult, txResult, infoResult] = await Promise.allSettled([
+      getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value),
+      searchTransactions(apiSlug.value, {
+        bjdCode: bjdCode.value,
+        buildingName: buildingName.value,
+        page: 1,
+        limit: 5,
+      }),
+      getBuildingInfo(apiSlug.value, bjdCode.value, buildingName.value),
+    ])
+    return {
+      stats: statsResult.status === 'fulfilled' ? statsResult.value : [],
+      transactions: txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 },
+      buildingInfo: infoResult.status === 'fulfilled' ? infoResult.value : null,
+    }
+  },
+)
+
+// SSR 데이터로 refs 초기화
+if (ssrData.value) {
+  stats.value = ssrData.value.stats as TransactionStats[]
+  transactions.value = ssrData.value.transactions as RealEstateSearchResponse
+  buildingInfo.value = ssrData.value.buildingInfo as BuildingInfo | null
+}
+statsLoading.value = false
+txLoading.value = false
+
 async function loadData() {
   if (!buildingName.value) return
 
@@ -627,7 +658,6 @@ async function loadData() {
   if (transactions.value.total === 0 && stats.value.length === 0 && !route.query.tab) {
     const otherTab: TransactionMode = currentTab.value === 'sale' ? 'rent' : 'sale'
     currentTab.value = otherTab
-    // watch가 재로드를 트리거하므로 여기서 return
     statsLoading.value = false
     txLoading.value = false
     return
@@ -642,11 +672,11 @@ function goToPage(page: number) {
   loadData()
 }
 
-// 탭 전환 또는 파라미터 변경 시 데이터 재로드
+// 탭 전환 또는 파라미터 변경 시 데이터 재로드 (초기 로드는 SSR이 처리)
 watch(() => [apiSlug.value, buildingName.value, bjdCode.value], () => {
   currentPage.value = 1
   loadData()
-}, { immediate: true })
+})
 
 // 기간 변경 시 시세 데이터만 재로드
 watch(selectedMonths, async () => {

@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
@@ -165,9 +165,22 @@ const complexes = ref<ComplexInfo[]>([])
 const totalComplexes = ref(0)
 const currentPage = ref(1)
 const totalPages = ref(0)
-const pending = ref(false)
+const pending = ref(true)
 const error = ref(false)
 const lastSearch = ref<{ city: string; district: string; buildingName: string } | null>(null)
+
+// SSR: 초기 건물 목록을 서버에서 로드
+const { data: initialData } = await useAsyncData(
+  `re-complexes-${apiSlug.value}`,
+  () => getComplexList(apiSlug.value),
+)
+if (initialData.value) {
+  complexes.value = initialData.value.items
+  totalComplexes.value = initialData.value.total
+  totalPages.value = initialData.value.totalPages
+  currentPage.value = initialData.value.page
+}
+pending.value = false
 
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
@@ -281,14 +294,10 @@ function retryLoad() {
   loadComplexes(s?.city || undefined, s?.district || undefined, s?.buildingName || undefined, currentPage.value)
 }
 
-// 마운트 시 인기 건물 자동 로드
-onMounted(() => {
-  if (lastSearch.value) {
-    loadComplexes(lastSearch.value.city || undefined, lastSearch.value.district || undefined, lastSearch.value.buildingName || undefined)
-  } else {
-    loadComplexes()
-  }
-})
+// 탭 전환 시 SSR 데이터와 다른 탭이면 재로드 (클라이언트)
+if (import.meta.client && !initialData.value) {
+  loadComplexes()
+}
 
 // 탭 전환 시 마지막 검색 조건으로 재로드
 watch(currentTab, () => {
