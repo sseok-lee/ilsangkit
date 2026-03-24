@@ -96,15 +96,20 @@ function setCache(key: string, data: unknown[]): void {
 
 export async function fetchFacilityIds(
   category: string,
-  apiBase: string
+  apiBase: string,
+  limit?: number
 ): Promise<{ id: string; updatedAt: string }[]> {
-  const cacheKey = `facility:${category}`
+  const cacheKey = `facility:${category}${limit !== undefined ? `:limit${limit}` : ''}`
   const cached = getCached<{ id: string; updatedAt: string }>(cacheKey)
   if (cached) return cached
 
+  const url = limit !== undefined
+    ? `${apiBase}/api/sitemap/facilities/${category}?limit=${limit}`
+    : `${apiBase}/api/sitemap/facilities/${category}`
+
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const res = await fetch(`${apiBase}/api/sitemap/facilities/${category}`)
+      const res = await fetch(url)
       if (!res.ok) {
         console.error(`[sitemap] fetchFacilityIds(${category}) attempt ${attempt}: HTTP ${res.status}`)
         continue

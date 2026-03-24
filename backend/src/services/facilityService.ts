@@ -919,7 +919,8 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
  * @returns { id, updatedAt } 배열
  */
 export async function getAllIds(
-  category: FacilityCategory
+  category: FacilityCategory,
+  limit?: number
 ): Promise<{ id: string; updatedAt: Date }[]> {
   const config = CATEGORY_REGISTRY[category];
   if (!config) return [];
@@ -930,11 +931,15 @@ export async function getAllIds(
       where: { statId: { not: null } },
       select: { statId: true, updatedAt: true },
       distinct: ['statId'],
+      ...(limit !== undefined ? { take: limit } : {}),
     });
     return stations.map((s) => ({ id: s.statId!, updatedAt: s.updatedAt }));
   }
 
-  return config.model().findMany({ select: { id: true, updatedAt: true } });
+  return config.model().findMany({
+    select: { id: true, updatedAt: true },
+    ...(limit !== undefined ? { take: limit } : {}),
+  });
 }
 
 // @TASK T1.3 - 지역별 조회 서비스

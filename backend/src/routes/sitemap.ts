@@ -29,7 +29,10 @@ router.get(
       return;
     }
 
-    const data = await facilityService.getAllIds(category);
+    const limitParam = req.query.limit;
+    const parsedLimit = limitParam !== undefined ? parseInt(String(limitParam), 10) : undefined;
+    const limit = parsedLimit !== undefined && Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined;
+    const data = await facilityService.getAllIds(category, limit);
     res.json({ success: true, data });
   })
 );
@@ -69,19 +72,49 @@ router.get(
       Array<{ propertyType: string; buildingName: string; bjdCode: string }>
     >`
       SELECT 'apt' AS propertyType, buildingName, bjdCode FROM (
-        SELECT DISTINCT buildingName, bjdCode FROM AptSaleTransaction
-        UNION SELECT DISTINCT buildingName, bjdCode FROM AptRentTransaction
-      ) apt WHERE buildingName IS NOT NULL AND buildingName != ''
+        SELECT buildingName, bjdCode, SUM(cnt) AS total
+        FROM (
+          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM AptSaleTransaction
+          WHERE buildingName IS NOT NULL AND buildingName != ''
+          GROUP BY buildingName, bjdCode
+          UNION ALL
+          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM AptRentTransaction
+          WHERE buildingName IS NOT NULL AND buildingName != ''
+          GROUP BY buildingName, bjdCode
+        ) apt_counts
+        GROUP BY buildingName, bjdCode
+        HAVING SUM(cnt) >= 50
+      ) apt
       UNION ALL
       SELECT 'villa' AS propertyType, buildingName, bjdCode FROM (
-        SELECT DISTINCT buildingName, bjdCode FROM VillaSaleTransaction
-        UNION SELECT DISTINCT buildingName, bjdCode FROM VillaRentTransaction
-      ) villa WHERE buildingName IS NOT NULL AND buildingName != ''
+        SELECT buildingName, bjdCode, SUM(cnt) AS total
+        FROM (
+          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM VillaSaleTransaction
+          WHERE buildingName IS NOT NULL AND buildingName != ''
+          GROUP BY buildingName, bjdCode
+          UNION ALL
+          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM VillaRentTransaction
+          WHERE buildingName IS NOT NULL AND buildingName != ''
+          GROUP BY buildingName, bjdCode
+        ) villa_counts
+        GROUP BY buildingName, bjdCode
+        HAVING SUM(cnt) >= 50
+      ) villa
       UNION ALL
       SELECT 'offitel' AS propertyType, buildingName, bjdCode FROM (
-        SELECT DISTINCT buildingName, bjdCode FROM OffitelSaleTransaction
-        UNION SELECT DISTINCT buildingName, bjdCode FROM OffitelRentTransaction
-      ) offitel WHERE buildingName IS NOT NULL AND buildingName != ''
+        SELECT buildingName, bjdCode, SUM(cnt) AS total
+        FROM (
+          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM OffitelSaleTransaction
+          WHERE buildingName IS NOT NULL AND buildingName != ''
+          GROUP BY buildingName, bjdCode
+          UNION ALL
+          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM OffitelRentTransaction
+          WHERE buildingName IS NOT NULL AND buildingName != ''
+          GROUP BY buildingName, bjdCode
+        ) offitel_counts
+        GROUP BY buildingName, bjdCode
+        HAVING SUM(cnt) >= 50
+      ) offitel
     `;
 
     res.json({ success: true, data: buildings });

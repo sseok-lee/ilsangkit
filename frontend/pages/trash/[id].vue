@@ -254,7 +254,7 @@ const trashFaqItems = CATEGORY_FAQ.trash.slice(0, 3)
 const route = useRoute()
 const router = useRouter()
 const { setWasteScheduleDetailMeta } = useFacilityMeta()
-const { setBreadcrumbSchema, setWasteScheduleSchema } = useStructuredData()
+const { setBreadcrumbSchema, setWasteScheduleSchema, setFAQSchema } = useStructuredData()
 
 interface WasteTypeInfo {
   dayOfWeek?: string
@@ -383,6 +383,10 @@ watchEffect(() => {
       { name: '쓰레기 배출', url: '/search?category=trash' },
       { name: `${data.value.city} ${data.value.district}`, url: `/trash/${data.value.id}` },
     ])
+    // FAQPage 스키마 — Google FAQ rich result 노출용
+    if (trashFaqItems.length > 0) {
+      setFAQSchema(trashFaqItems)
+    }
   }
 })
 </script>
