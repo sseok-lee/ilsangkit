@@ -124,6 +124,7 @@ router.get(
       return;
     }
 
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     res.json({ success: true, data: facility });
   })
 );

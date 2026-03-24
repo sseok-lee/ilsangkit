@@ -97,8 +97,24 @@ export default defineNuxtConfig({
       '/childcare/**': { swr: 600 },
       '/ev-charger/**': { swr: 600 },
       '/sports/**': { swr: 600 },
-      // 지역 허브
-      '/*/*/**': { swr: 600 },
+      // 지역 허브 — 시 단위 (무거운 집계 쿼리 → 30분 SWR)
+      '/seoul/**': { swr: 1800 },
+      '/busan/**': { swr: 1800 },
+      '/daegu/**': { swr: 1800 },
+      '/incheon/**': { swr: 1800 },
+      '/gwangju/**': { swr: 1800 },
+      '/daejeon/**': { swr: 1800 },
+      '/ulsan/**': { swr: 1800 },
+      '/sejong/**': { swr: 1800 },
+      '/gyeonggi/**': { swr: 1800 },
+      '/gangwon/**': { swr: 1800 },
+      '/chungbuk/**': { swr: 1800 },
+      '/chungnam/**': { swr: 1800 },
+      '/jeonbuk/**': { swr: 1800 },
+      '/jeonnam/**': { swr: 1800 },
+      '/gyeongbuk/**': { swr: 1800 },
+      '/gyeongnam/**': { swr: 1800 },
+      '/jeju/**': { swr: 1800 },
       // 부동산 — 5분
       '/real-estate/**': { swr: 300 },
       // 가이드 — 1시간

@@ -5,6 +5,24 @@ import prisma from '../lib/prisma.js';
 
 const router = Router();
 
+// 인메모리 캐시 (TTL 기반)
+const areaCache = new Map<string, { data: unknown; expiresAt: number }>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10분
+
+function getCached<T>(key: string): T | null {
+  const entry = areaCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    areaCache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function setCache(key: string, data: unknown): void {
+  areaCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
 /**
  * 부동산 6개 모델 집계 헬퍼
  * bjdCodes: startsWith 매칭할 bjdCode 배열 (OR 조건)
@@ -60,15 +78,27 @@ router.get('/:citySlug', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
+  // 인메모리 캐시 확인
+  const cacheKey = `city-${citySlug}`;
+  const cached = getCached<object>(cacheKey);
+  if (cached) {
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    res.json({ success: true, data: cached });
+    return;
+  }
+
   const shortName = CITY_SLUG_TO_SHORT[citySlug];
   const cityVariants = [fullName, shortName].filter(Boolean) as string[];
 
-  // 해당 시의 모든 구/군 조회
-  const regions = await prisma.region.findMany({
-    where: { city: { in: cityVariants } },
-    select: { district: true, slug: true, bjdCode: true },
-    orderBy: { district: 'asc' },
-  });
+  // ★ 병렬 실행: regions + 시설 통계를 동시에 조회
+  const [regions, statsByDistrict] = await Promise.all([
+    prisma.region.findMany({
+      where: { city: { in: cityVariants } },
+      select: { district: true, slug: true, bjdCode: true },
+      orderBy: { district: 'asc' },
+    }),
+    getDistrictStatsByCity(citySlug),
+  ]);
 
   if (regions.length === 0) {
     res.status(404).json({
@@ -77,9 +107,6 @@ router.get('/:citySlug', asyncHandler(async (req: Request, res: Response) => {
     });
     return;
   }
-
-  // 시 전체 구/군별 시설 통계 — groupBy로 일괄 조회 (N+1 제거)
-  const statsByDistrict = await getDistrictStatsByCity(citySlug);
 
   const districtResults = regions.map((region) => {
     const stats = statsByDistrict.get(region.district);
@@ -94,7 +121,7 @@ router.get('/:citySlug', asyncHandler(async (req: Request, res: Response) => {
     };
   });
 
-  // 시 전체 부동산 집계
+  // 부동산 집계 (regions 결과 필요)
   const bjdCodes = regions.map(r => r.bjdCode).filter(Boolean) as string[];
   const realEstate = await aggregateRealEstate(bjdCodes);
 
@@ -102,16 +129,18 @@ router.get('/:citySlug', asyncHandler(async (req: Request, res: Response) => {
   const totalFacilities = districtResults.reduce((sum, d) => sum + d.facilityTotal, 0);
   const cityInfraScore = Math.min(100, Math.round((totalFacilities / (regions.length * 500)) * 100));
 
+  const responseData = {
+    cityName: fullName,
+    districts: districtResults,
+    realEstate,
+    cityInfraScore,
+  };
+
+  // 캐시 저장
+  setCache(cacheKey, responseData);
+
   res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
-  res.json({
-    success: true,
-    data: {
-      cityName: fullName,
-      districts: districtResults,
-      realEstate,
-      cityInfraScore,
-    },
-  });
+  res.json({ success: true, data: responseData });
 }));
 
 // GET /api/area/:citySlug/:districtSlug — 지역 리포트 데이터
@@ -119,8 +148,27 @@ router.get('/:citySlug/:districtSlug', asyncHandler(async (req: Request, res: Re
   const citySlug = req.params.citySlug as string;
   const districtSlug = req.params.districtSlug as string;
 
-  // 시설 통계
-  const facilityStats = await getStatsByDistrict(citySlug, districtSlug);
+  // 인메모리 캐시 확인
+  const cacheKey = `district-${citySlug}-${districtSlug}`;
+  const cached = getCached<object>(cacheKey);
+  if (cached) {
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    res.json({ success: true, data: cached });
+    return;
+  }
+
+  const fullName = CITY_SLUG_TO_FULL[citySlug];
+  const shortName = CITY_SLUG_TO_SHORT[citySlug];
+  const cityVariants = [fullName, shortName].filter(Boolean) as string[];
+
+  // ★ 병렬 실행: 시설 통계 + region 조회
+  const [facilityStats, region] = await Promise.all([
+    getStatsByDistrict(citySlug, districtSlug),
+    prisma.region.findFirst({
+      where: { city: { in: cityVariants }, slug: districtSlug },
+      select: { bjdCode: true },
+    }),
+  ]);
 
   if (!facilityStats) {
     res.status(404).json({
@@ -130,16 +178,6 @@ router.get('/:citySlug/:districtSlug', asyncHandler(async (req: Request, res: Re
     return;
   }
 
-  // Region bjdCode 조회 (부동산 집계용)
-  const fullName = CITY_SLUG_TO_FULL[citySlug];
-  const shortName = CITY_SLUG_TO_SHORT[citySlug];
-  const cityVariants = [fullName, shortName].filter(Boolean) as string[];
-
-  const region = await prisma.region.findFirst({
-    where: { city: { in: cityVariants }, slug: districtSlug },
-    select: { bjdCode: true },
-  });
-
   // 부동산 집계 (bjdCode 5자리로 10자리 코드 prefix 매칭)
   const realEstateData = region?.bjdCode
     ? await aggregateRealEstate([region.bjdCode])
@@ -148,14 +186,16 @@ router.get('/:citySlug/:districtSlug', asyncHandler(async (req: Request, res: Re
   // 인프라 점수: 시설 total 기반 정규화 (500개 이상 만점)
   const infraScore = Math.min(100, Math.round((facilityStats.total / 500) * 100));
 
-  res.json({
-    success: true,
-    data: {
-      facilities: facilityStats,
-      realEstate: realEstateData,
-      infraScore,
-    },
-  });
+  const responseData = {
+    facilities: facilityStats,
+    realEstate: realEstateData,
+    infraScore,
+  };
+
+  setCache(cacheKey, responseData);
+
+  res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+  res.json({ success: true, data: responseData });
 }));
 
 export default router;
