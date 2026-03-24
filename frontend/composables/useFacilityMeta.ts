@@ -339,8 +339,9 @@ export function useFacilityMeta() {
   }) {
     const location = `${schedule.city} ${schedule.district}`
     const title = `${location} 쓰레기 배출 일정`
-    const description = schedule.targetRegion
-      ? `${location} ${schedule.targetRegion} 지역의 쓰레기 배출 요일, 시간, 방법을 확인하세요.`
+    const region = schedule.targetRegion?.replaceAll('+', ', ')
+    const description = region
+      ? `${location} ${region} 지역의 쓰레기 배출 요일, 시간, 방법을 확인하세요.`
       : `${location} 지역의 쓰레기 배출 요일, 시간, 방법을 확인하세요.`
 
     setMeta({

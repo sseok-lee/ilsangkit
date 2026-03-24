@@ -70,10 +70,10 @@
 
         <div class="relative z-10 max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
           <div class="space-y-4">
-            <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+            <div class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight" aria-hidden="true">
               우리 동네,<br />
               <span class="text-primary">얼마나 살기 좋을까?</span>
-            </h1>
+            </div>
             <p class="text-lg text-slate-500">
               일상 속 궁금한 동네 정보를 한곳에
             </p>
