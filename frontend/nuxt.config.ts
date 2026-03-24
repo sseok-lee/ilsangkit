@@ -172,6 +172,7 @@ export default defineNuxtConfig({
         { name: 'application-name', content: '일상킷' },
         { name: 'apple-mobile-web-app-title', content: '일상킷' },
         { name: 'naver-site-verification', content: 'naver4a270427c00c2dcdbb553b6af5637cb1' },
+        { name: 'robots', content: 'index, follow, max-image-preview:large, max-snippet:-1' },
       ],
       script: [
         ...(gaId ? [

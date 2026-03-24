@@ -18,6 +18,7 @@
           </h1>
         </div>
         <p class="mt-2 text-slate-500 text-sm">{{ cityName }} {{ districtName }}의 부동산 시세와 생활시설을 한눈에 확인하세요</p>
+        <p v-if="areaDescription" class="text-gray-600 text-sm leading-relaxed mt-4">{{ areaDescription }}</p>
       </div>
 
       <!-- 로딩 -->
@@ -135,6 +136,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { generateAreaDescription } from '~/utils/seoHelpers'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -228,10 +230,25 @@ const realEstateCards = computed(() => {
   ]
 })
 
+// 서술형 설명
+const areaDescription = computed(() => {
+  if (!areaData.value?.facilities) return ''
+  const cats = areaData.value.facilities.categories as Record<string, number> | undefined
+  return generateAreaDescription({
+    city: cityName.value,
+    district: districtName.value,
+    facilityStats: cats,
+    totalFacilities: areaData.value.facilities.total,
+  })
+})
+
 // SEO 메타
 const canonicalUrl = `${SITE_URL}/${city.value}/${district.value}`
 useHead(() => {
-  const title = `${cityName.value} ${districtName.value} 생활 정보 | 일상킷`
+  const count = areaData.value?.facilities?.total
+  const title = count
+    ? `${districtName.value} 생활 정보 - 시설 ${count.toLocaleString()}곳 | 일상킷`
+    : `${cityName.value} ${districtName.value} 생활 정보 | 일상킷`
   const description = `${cityName.value} ${districtName.value} 아파트·빌라·오피스텔 실거래가와 주요 생활시설 현황을 확인하세요. 병원, 약국, 주차장, 화장실 등 생활 인프라 정보를 한눈에 제공합니다.`
   return {
     title,

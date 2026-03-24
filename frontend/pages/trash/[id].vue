@@ -258,7 +258,7 @@ const trashFaqItems = CATEGORY_FAQ.trash.slice(0, 3)
 const route = useRoute()
 const router = useRouter()
 const { setWasteScheduleDetailMeta } = useFacilityMeta()
-const { setBreadcrumbSchema, setWasteScheduleSchema, setFAQSchema } = useStructuredData()
+const { setBreadcrumbSchema, setWasteScheduleSchema, setFAQSchema, setHowToSchema } = useStructuredData()
 
 interface WasteTypeInfo {
   dayOfWeek?: string
@@ -391,6 +391,18 @@ watchEffect(() => {
     if (trashFaqItems.length > 0) {
       setFAQSchema(trashFaqItems)
     }
+    // HowTo 스키마 — 쓰레기 배출 절차 안내
+    setHowToSchema({
+      name: `${data.value.city} ${data.value.district} 쓰레기 올바르게 배출하는 방법`,
+      description: `${data.value.city} ${data.value.district} 지역 쓰레기 배출 절차 안내`,
+      totalTime: 'PT10M',
+      steps: [
+        { name: '종량제 봉투 구매', text: '주민센터 또는 인근 편의점·마트에서 해당 지역 종량제 봉투를 구매하세요.' },
+        { name: '분리배출', text: '재활용 가능한 품목(종이, 플라스틱, 유리, 금속)은 분리하여 전용 수거함에 배출하세요.' },
+        { name: '배출 요일 확인', text: '지역별 배출 요일이 다르니 반드시 해당 페이지에서 배출 요일을 확인하세요.' },
+        { name: '지정 장소 배출', text: '지정된 배출 장소에 배출 시간에 맞춰 쓰레기를 내놓으세요.' },
+      ],
+    })
   }
 })
 </script>

@@ -1201,6 +1201,24 @@
                 </div>
               </nav>
 
+              <!-- 이 지역 다른 시설 (Desktop) -->
+              <nav v-if="relatedCategories.length > 0" data-testid="related-categories" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary text-[20px]">category</span>
+                  <h2 class="text-[#111418] text-lg font-bold">이 지역 다른 시설</h2>
+                </div>
+                <div class="p-5 flex flex-wrap gap-2">
+                  <NuxtLink
+                    v-for="cat in relatedCategories"
+                    :key="cat"
+                    :to="regionLink && regionLink.href.endsWith(category) ? regionLink.href.replace(category, cat) : `/${cat}`"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
+                  >
+                    {{ CATEGORY_META[cat as any]?.label || cat }}
+                  </NuxtLink>
+                </div>
+              </nav>
+
               <!-- 이용 팁 -->
               <div v-if="categoryTips.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
@@ -2395,6 +2413,24 @@
             </div>
           </nav>
 
+          <!-- 이 지역 다른 시설 (Mobile) -->
+          <nav v-if="relatedCategories.length > 0" data-testid="related-categories-mobile" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+            <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">category</span>
+              <h2 class="text-[#111418] text-lg font-bold">이 지역 다른 시설</h2>
+            </div>
+            <div class="p-5 flex flex-wrap gap-2">
+              <NuxtLink
+                v-for="cat in relatedCategories"
+                :key="cat"
+                :to="regionLink && regionLink.href.endsWith(category) ? regionLink.href.replace(category, cat) : `/${cat}`"
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
+              >
+                {{ CATEGORY_META[cat as any]?.label || cat }}
+              </NuxtLink>
+            </div>
+          </nav>
+
           <!-- 이용 팁 (Mobile) -->
           <div v-if="categoryTips.length > 0" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
@@ -2507,6 +2543,7 @@ import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/typ
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
+import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
@@ -2653,6 +2690,12 @@ const regionLink = computed(() => {
     cityHref: `/${citySlug}`,
     cityLabel: `${city} 전체 시설 보기`,
   }
+})
+
+// 이 지역 다른 시설 관련 카테고리
+const relatedCategories = computed(() => {
+  const cat = category.value
+  return (RELATED_CATEGORIES[cat] || []).filter(c => c !== cat)
 })
 
 // Check if 24 hours

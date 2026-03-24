@@ -26,6 +26,19 @@
       <!-- Category Intro -->
       <CategoryIntro :category="categoryParam" />
 
+      <!-- Related Categories -->
+      <div v-if="relatedCategories.length > 0" class="flex flex-wrap items-center gap-2 mb-4">
+        <span class="text-sm text-gray-500">관련 카테고리</span>
+        <NuxtLink
+          v-for="cat in relatedCategories"
+          :key="cat.slug"
+          :to="`/${cat.slug}`"
+          class="px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-sm transition-colors"
+        >
+          {{ cat.label }}
+        </NuxtLink>
+      </div>
+
       <!-- Region Filter -->
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
         <div class="flex items-center gap-2 mb-3 md:hidden">
@@ -227,6 +240,34 @@
           <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
         </template>
       </template>
+
+      <!-- FAQ Section -->
+      <section v-if="faqItems && faqItems.length > 0" class="mt-12">
+        <h2 class="text-lg font-semibold mb-4">자주 묻는 질문</h2>
+        <div class="space-y-1">
+          <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-gray-200">
+            <summary class="py-3 cursor-pointer font-medium text-gray-800 hover:text-blue-600">
+              {{ faq.question }}
+            </summary>
+            <p class="pb-3 text-gray-600 text-sm leading-relaxed">{{ faq.answer }}</p>
+          </details>
+        </div>
+      </section>
+
+      <!-- Popular Regions -->
+      <section v-if="popularRegionLinks.length > 0" class="mt-8">
+        <h2 class="text-lg font-semibold mb-4">인기 지역</h2>
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink
+            v-for="region in popularRegionLinks"
+            :key="`${region.citySlug}-${region.districtSlug}`"
+            :to="`/${region.citySlug}/${region.districtSlug}/${categoryParam}`"
+            class="px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-sm transition-colors"
+          >
+            {{ region.label }} {{ catLabel }}
+          </NuxtLink>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -240,6 +281,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
+import { RELATED_CATEGORIES, POPULAR_REGIONS } from '~/utils/seoConstants'
 import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
@@ -249,6 +291,13 @@ const route = useRoute()
 // Route params
 const categoryParam = computed(() => route.params.category as FacilityCategory)
 const categoryMeta = computed(() => CATEGORY_META[categoryParam.value])
+
+const relatedCategories = computed(() => {
+  const related = RELATED_CATEGORIES[categoryParam.value] || []
+  return related
+    .filter(c => c !== categoryParam.value)
+    .map(c => ({ slug: c, label: CATEGORY_META[c as FacilityCategory]?.label || c }))
+})
 
 // Validate category slug (Soft 404 방지)
 if (!CATEGORY_META[route.params.category as FacilityCategory]) {
@@ -368,11 +417,15 @@ setBreadcrumbSchema([
   { name: catLabel, url: `/${route.params.category}` },
 ])
 
-// FAQ JSON-LD
+// FAQ JSON-LD + HTML
 const categoryFAQ = CATEGORY_FAQ[route.params.category as FacilityCategory]
 if (categoryFAQ) {
   setFAQSchema(categoryFAQ)
 }
+const faqItems = computed(() => CATEGORY_FAQ[categoryParam.value as FacilityCategory] || [])
+
+// Popular regions
+const popularRegionLinks = computed(() => POPULAR_REGIONS || [])
 
 // Canonical URL: city+district → region route, city only → city route, otherwise self
 const canonicalPath = computed(() => {

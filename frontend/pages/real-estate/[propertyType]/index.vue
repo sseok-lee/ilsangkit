@@ -174,9 +174,10 @@ const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월
 useHead(() => {
   const label = propertyMeta.value?.label || ''
   const tab = tabLabel.value
+  const year = new Date().getFullYear()
   const title = tab === '매매'
-    ? `${label} 매매 실거래가·시세 조회 - 일상킷`
-    : `${label} 전월세 실거래가·전세가 조회 - 일상킷`
+    ? `${year}년 ${label} 매매 실거래가·시세 조회 - 일상킷`
+    : `${year}년 ${label} 전월세 실거래가·전세가 조회 - 일상킷`
   const seoDescriptions: Record<string, Record<string, string>> = {
     apt: {
       매매: '전국 아파트 매매 실거래가와 시세를 단지별로 조회하세요. 국토부 공식 데이터 기반 최근 거래 내역과 매매가 추이를 한눈에 확인할 수 있습니다.',

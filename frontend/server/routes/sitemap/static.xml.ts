@@ -125,6 +125,16 @@ export default defineEventHandler(async (event) => {
           priority: 0.7,
         })
       })
+
+      // 구/군 × 부동산 교차 페이지 (예: /seoul/gangnam/real-estate)
+      Array.from(districtSet).forEach((path) => {
+        urls.push({
+          loc: `${SITE_URL}/${path}/real-estate`,
+          lastmod: today,
+          changefreq: 'weekly',
+          priority: 0.7,
+        })
+      })
     } else {
       console.error(`[sitemap] Failed to fetch region-categories: HTTP ${res.status}`)
       addFallbackHubPages(urls, today)

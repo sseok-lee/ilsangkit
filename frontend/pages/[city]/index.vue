@@ -16,6 +16,9 @@
           </h1>
         </div>
         <p class="mt-2 text-slate-500 text-sm">{{ cityName }}의 부동산 시세와 생활시설을 한눈에 확인하세요</p>
+        <p v-if="cityData?.districts?.length" class="text-gray-600 text-sm leading-relaxed mt-2">
+          {{ cityName }}에는 {{ cityData.districts.length }}개 시군구에 걸쳐 생활시설 정보를 제공하고 있습니다.
+        </p>
       </div>
 
       <!-- 로딩 -->

@@ -13,10 +13,10 @@
         <div class="relative z-10 flex flex-col gap-6">
         <!-- Title & Subtitle -->
         <div class="flex flex-col gap-2 pt-4">
-          <h1 class="text-slate-900 tracking-tight text-[32px] font-bold leading-[1.25]">
-            우리 동네,<br />
-            <span class="text-primary">얼마나 살기 좋을까?</span>
-          </h1>
+          <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
+          <div class="text-slate-900 tracking-tight text-[32px] font-bold leading-[1.25]">
+            우리 동네, 얼마나 살기 좋을까?
+          </div>
           <p class="text-slate-500 text-base">
             일상 속 궁금한 동네 정보를 한곳에
           </p>
@@ -71,8 +71,7 @@
         <div class="relative z-10 max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
           <div class="space-y-4">
             <div class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight" aria-hidden="true">
-              우리 동네,<br />
-              <span class="text-primary">얼마나 살기 좋을까?</span>
+              우리 동네, 얼마나 살기 좋을까?
             </div>
             <p class="text-lg text-slate-500">
               일상 속 궁금한 동네 정보를 한곳에
@@ -216,6 +215,19 @@
         </div>
       </section>
 
+      <!-- 지역별 생활 정보 -->
+      <section class="py-8">
+        <div class="max-w-6xl mx-auto px-4">
+          <h2 class="text-lg font-semibold mb-4">지역별 생활 정보</h2>
+          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            <NuxtLink v-for="city in CITY_LINKS" :key="city.slug" :to="`/${city.slug}/`"
+              class="px-3 py-2 text-center text-sm bg-gray-50 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+              {{ city.label }}
+            </NuxtLink>
+          </div>
+        </div>
+      </section>
+
       <!-- 교차 시너지 CTA -->
       <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 md:p-8 text-center">
@@ -311,6 +323,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { ReviewWithFacility } from '~/types/review'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { CITY_LINKS } from '~/utils/seoConstants'
 
 const config = useRuntimeConfig()
 

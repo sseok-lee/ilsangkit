@@ -31,6 +31,7 @@ interface MetaOptions {
   path?: string
   image?: string
   type?: 'website' | 'article'
+  category?: string
 }
 
 /**
@@ -190,6 +191,10 @@ export function useFacilityMeta() {
 
     const canonicalUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL
 
+    const dynamicOgImage = options.image || (options.category
+      ? `${SITE_URL}/og?category=${encodeURIComponent(options.category)}&title=${encodeURIComponent(options.title || '')}`
+      : DEFAULT_OG_IMAGE)
+
     useSeoMeta({
       title: fullTitle,
       description: options.description,
@@ -197,7 +202,7 @@ export function useFacilityMeta() {
       // Open Graph
       ogTitle: fullTitle,
       ogDescription: options.description,
-      ogImage: options.image || DEFAULT_OG_IMAGE,
+      ogImage: dynamicOgImage,
       ogUrl: canonicalUrl,
       ogSiteName: SITE_NAME,
       ogType: options.type || 'website',
@@ -207,7 +212,7 @@ export function useFacilityMeta() {
       twitterCard: 'summary_large_image',
       twitterTitle: fullTitle,
       twitterDescription: options.description,
-      twitterImage: options.image || DEFAULT_OG_IMAGE,
+      twitterImage: dynamicOgImage,
     })
 
     // Canonical URL (key로 중복 방지 - 페이지에서 별도 canonical 설정 시 덮어씀)

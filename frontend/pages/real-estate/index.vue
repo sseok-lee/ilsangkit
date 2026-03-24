@@ -9,7 +9,10 @@
         </p>
       </div>
 
-      <RealEstateCategoryCards />
+      <section class="mb-12">
+        <h2 class="text-lg font-bold text-slate-800 mb-4">부동산 유형별 실거래가</h2>
+        <RealEstateCategoryCards />
+      </section>
 
       <section class="mt-12">
         <h2 class="text-lg font-bold text-slate-800 mb-4">부동산 실거래가란?</h2>
@@ -22,6 +25,25 @@
             일상킷은 국토교통부 실거래가 공개시스템의 데이터를 매일 수집하여 아파트, 연립다세대(빌라),
             오피스텔의 매매 및 전월세 실거래 내역을 제공합니다.
           </p>
+        </div>
+      </section>
+
+      <section class="mt-12">
+        <h2 class="text-lg font-bold text-slate-800 mb-4">자주 묻는 질문</h2>
+        <div class="space-y-3">
+          <details
+            v-for="(faq, index) in realEstateFAQs"
+            :key="index"
+            class="rounded-xl bg-white border border-slate-200 overflow-hidden"
+          >
+            <summary class="flex items-center justify-between px-5 py-4 cursor-pointer text-slate-800 font-medium text-sm hover:bg-slate-50 transition-colors list-none">
+              {{ faq.question }}
+              <span class="material-symbols-outlined text-slate-400 text-lg flex-shrink-0 ml-3">expand_more</span>
+            </summary>
+            <div class="px-5 pb-4 text-slate-600 text-sm leading-relaxed border-t border-slate-100 pt-3">
+              {{ faq.answer }}
+            </div>
+          </details>
         </div>
       </section>
     </main>
@@ -51,12 +73,22 @@ useHead({
   ],
 })
 
+const realEstateFAQs = [
+  { question: '실거래가란 무엇인가요?', answer: '실거래가는 부동산 거래 시 실제로 거래된 금액으로, 국토교통부에 신고된 공식 데이터입니다.' },
+  { question: '실거래가 데이터는 얼마나 자주 업데이트되나요?', answer: '국토교통부 실거래가 공개시스템을 통해 매월 업데이트됩니다.' },
+  { question: '아파트, 빌라, 오피스텔의 차이는 무엇인가요?', answer: '아파트는 5층 이상 공동주택, 빌라는 4층 이하 다세대/다가구 주택, 오피스텔은 업무와 주거를 겸할 수 있는 건물입니다.' },
+  { question: '전세와 월세의 차이는 무엇인가요?', answer: '전세는 보증금을 맡기고 월 임대료 없이 거주하는 방식이고, 월세는 보증금과 함께 매월 임대료를 지불하는 방식입니다.' },
+]
+
 // Breadcrumb JSON-LD
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setFAQSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
 ])
+
+// FAQPage JSON-LD
+setFAQSchema(realEstateFAQs)
 
 useHead({
   script: [

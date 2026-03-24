@@ -99,7 +99,7 @@ export function useStructuredData() {
   /**
    * LocalBusiness/Place 스키마 (시설 상세용)
    */
-  function setFacilitySchema(facility: FacilityDetail) {
+  function setFacilitySchema(facility: FacilityDetail, rating?: { ratingValue: number; reviewCount: number }) {
     const categoryName = CATEGORY_META[facility.category]?.label || facility.category
 
     // 시설 유형에 따른 @type 결정
@@ -206,6 +206,18 @@ export function useStructuredData() {
         if (specs.length) Object.assign(schema, { openingHoursSpecification: specs })
         break
       }
+    }
+
+    if (rating && rating.reviewCount > 0) {
+      Object.assign(schema, {
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: rating.ratingValue,
+          reviewCount: rating.reviewCount,
+          bestRating: 5,
+          worstRating: 1,
+        },
+      })
     }
 
     useHead({
@@ -337,6 +349,7 @@ export function useStructuredData() {
 
   /**
    * AggregateRating 스키마
+   * @deprecated setFacilitySchema의 rating 파라미터를 사용하세요
    */
   function setAggregateRatingSchema(params: { ratingValue: number; reviewCount: number }) {
     if (params.reviewCount === 0) return

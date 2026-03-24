@@ -94,6 +94,21 @@
         </p>
       </div>
 
+      <!-- 관련 정보 -->
+      <nav data-testid="guide-related-categories" class="mt-8 pt-6 border-t border-slate-200">
+        <h2 class="text-base font-bold text-slate-900 mb-3">관련 정보</h2>
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink
+            v-for="cat in relatedGuideCategories"
+            :key="cat"
+            :to="`/${cat}`"
+            class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
+          >
+            {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
+          </NuxtLink>
+        </div>
+      </nav>
+
       <!-- Back to list -->
       <div class="mt-8">
         <NuxtLink
@@ -129,7 +144,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
-import { SITE_URL } from '~/utils/seoConstants'
+import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
 import type { FacilityCategory } from '~/types/facility'
 
 const route = useRoute()
@@ -173,6 +188,17 @@ const keywordList = computed(() => {
   return guide.value.keywords.split(',').map(k => k.trim()).filter(Boolean)
 })
 
+// 가이드 카테고리 기반 관련 카테고리 링크
+const DEFAULT_RELATED_CATEGORIES = ['hospital', 'school', 'park']
+
+const relatedGuideCategories = computed(() => {
+  if (!guide.value) return DEFAULT_RELATED_CATEGORIES
+  const cat = guide.value.category
+  const related = RELATED_CATEGORIES[cat]
+  if (!related || related.length === 0) return DEFAULT_RELATED_CATEGORIES
+  return related.filter(c => c !== cat)
+})
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
@@ -180,8 +206,9 @@ function formatDate(dateStr: string): string {
 
 // SEO meta
 if (guide.value) {
+  const guideYear = new Date(guide.value.updatedAt || guide.value.createdAt).getFullYear()
   setMeta({
-    title: guide.value.title,
+    title: `${guide.value.title} [${guideYear}년]`,
     description: guide.value.summary,
     path: `/guide/${guide.value.slug}`,
     type: 'article',
