@@ -104,7 +104,7 @@
           <span v-if="facility.extras.area" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ Number(facility.extras.area).toLocaleString() }}㎡</span>
 
           <!-- pharmacy -->
-          <span v-if="facility.extras.dutyTime1s && facility.extras.dutyTime1c" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">{{ formatDutyTime(facility.extras.dutyTime1s) }}~{{ formatDutyTime(facility.extras.dutyTime1c) }}</span>
+          <span v-if="facility.extras.dutyTime1s && facility.extras.dutyTime1c" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">{{ formatDutyTime(facility.extras.dutyTime1s as string | number) }}~{{ formatDutyTime(facility.extras.dutyTime1c as string | number) }}</span>
 
           <!-- market -->
           <span v-if="facility.extras.marketType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-orange-50 text-orange-700">{{ facility.extras.marketType }}</span>

@@ -1214,7 +1214,7 @@
                     :to="regionLink && regionLink.href.endsWith(category) ? regionLink.href.replace(category, cat) : `/${cat}`"
                     class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
                   >
-                    {{ CATEGORY_META[cat as any]?.label || cat }}
+                    {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
                   </NuxtLink>
                 </div>
               </nav>
@@ -2426,7 +2426,7 @@
                 :to="regionLink && regionLink.href.endsWith(category) ? regionLink.href.replace(category, cat) : `/${cat}`"
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
               >
-                {{ CATEGORY_META[cat as any]?.label || cat }}
+                {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
               </NuxtLink>
             </div>
           </nav>
@@ -3134,10 +3134,11 @@ const handleBack = () => {
 const handleShare = async () => {
   if (!facility.value) return
 
+  const canShare = !!navigator.share
   trackShareClick({
     contentType: 'facility',
     contentId: facility.value.id,
-    method: navigator.share ? 'native' : 'clipboard',
+    method: canShare ? 'native' : 'clipboard',
   })
 
   const shareData = {
@@ -3147,7 +3148,7 @@ const handleShare = async () => {
   }
 
   try {
-    if (navigator.share) {
+    if (canShare) {
       await navigator.share(shareData)
     } else {
       await navigator.clipboard.writeText(window.location.href)

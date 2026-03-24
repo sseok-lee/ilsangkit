@@ -451,10 +451,11 @@ function openNavigation(url: string) {
 
 // 공유
 async function handleShare() {
+  const canShare = !!navigator.share
   trackShareClick({
     contentType: 'building',
     contentId: buildingName.value,
-    method: navigator.share ? 'native' : 'clipboard',
+    method: canShare ? 'native' : 'clipboard',
   })
 
   const shareData = {
@@ -463,7 +464,7 @@ async function handleShare() {
     url: window.location.href,
   }
   try {
-    if (navigator.share) {
+    if (canShare) {
       await navigator.share(shareData)
     } else {
       await navigator.clipboard.writeText(window.location.href)

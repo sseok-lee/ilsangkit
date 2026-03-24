@@ -273,11 +273,12 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
       }
       break
 
-    case 'ev-charger':
-      if (d.output && d.chgerType) {
+    case 'ev-charger': {
+      const charger = d.chargers?.[0]
+      if (charger?.output && charger?.chgerType) {
         dynamic.push({
           question: `${name}의 충전기 종류와 출력은 어떻게 되나요?`,
-          answer: `${name}의 충전기 타입은 ${d.chgerType}이며, 출력은 ${d.output}kW입니다. 차량 사양에 맞는 충전기를 확인하고 이용하세요.`,
+          answer: `${name}의 충전기 타입은 ${charger.chgerType}이며, 출력은 ${charger.output}kW입니다. 차량 사양에 맞는 충전기를 확인하고 이용하세요.`,
         })
       }
       if (d.parkingFree !== undefined) {
@@ -289,7 +290,7 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
         })
       }
       break
-
+    }
     case 'sports':
       if (d.ftypeNm) {
         dynamic.push({

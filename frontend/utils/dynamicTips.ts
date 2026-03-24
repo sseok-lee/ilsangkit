@@ -97,12 +97,14 @@ export function generateDynamicTips(facility: FacilityDetail): string[] {
       if (d.crcargbname) dynamic.push('통학차량을 운행합니다.')
       break
 
-    case 'ev-charger':
-      if (d.output) dynamic.push(`충전 출력: ${d.output}kW`)
-      if (d.chgerType) dynamic.push(`충전기 타입: ${d.chgerType}`)
+    case 'ev-charger': {
+      const charger = d.chargers?.[0]
+      if (charger?.output) dynamic.push(`충전 출력: ${charger.output}kW`)
+      if (charger?.chgerType) dynamic.push(`충전기 타입: ${charger.chgerType}`)
       if (d.parkingFree === 'Y') dynamic.push('충전 중 주차 요금이 무료입니다.')
       if (d.useTime) dynamic.push(`이용 가능 시간: ${d.useTime}`)
       break
+    }
 
     case 'sports':
       if (d.ftypeNm) dynamic.push(`시설 종류: ${d.ftypeNm}`)

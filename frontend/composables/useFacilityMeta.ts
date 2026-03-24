@@ -150,8 +150,9 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
     }
     case 'ev-charger': {
       const det = d as EvChargerDetails
-      if (det.chgerType) parts.push(`충전기 타입: ${det.chgerType}`)
-      if (det.output) parts.push(`출력 ${det.output}kW`)
+      const charger = det.chargers?.[0]
+      if (charger?.chgerType) parts.push(`충전기 타입: ${charger.chgerType}`)
+      if (charger?.output) parts.push(`출력 ${charger.output}kW`)
       if (det.useTime) parts.push(det.useTime)
       break
     }

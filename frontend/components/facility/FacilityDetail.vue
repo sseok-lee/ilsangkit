@@ -60,7 +60,7 @@
     <!-- 상세 정보 -->
     <div class="p-6 border-b border-gray-200">
       <h2 class="text-lg font-semibold text-gray-900 mb-4">상세 정보</h2>
-      <component :is="detailComponent" :details="facility.details" />
+      <component :is="detailComponent" :details="(facility.details as any)" />
     </div>
 
     <!-- 지도 슬롯 -->

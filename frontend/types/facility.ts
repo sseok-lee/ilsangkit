@@ -271,6 +271,8 @@ export interface SchoolEnrollment {
 
 export interface SchoolDepartmentInfo {
   departmentName: string
+  dgsbjtCdNm?: string
+  dgsbjtPrSdrCnt?: number | null
 }
 
 export interface SchoolDetails {
