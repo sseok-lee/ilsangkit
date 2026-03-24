@@ -1,7 +1,7 @@
 <template>
   <NuxtLink
     :to="'/trash/' + region.id"
-    :aria-label="`${region.targetRegion} 쓰레기 배출 일정 상세보기`"
+    :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세보기`"
     class="group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer border-transparent hover:border-primary/20"
   >
     <div class="flex items-start gap-4">
@@ -14,7 +14,7 @@
       <div class="flex-1 min-w-0 pt-0.5">
         <!-- Title -->
         <h3 class="text-slate-900 text-base font-bold truncate">
-          {{ region.targetRegion }}
+          {{ region.targetRegion?.replaceAll('+', ', ') }}
         </h3>
 
         <!-- Subtitle: emission place + type -->
