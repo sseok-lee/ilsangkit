@@ -6,8 +6,8 @@ export default defineEventHandler(async (event) => {
   const apiBase = (config.public.apiBase as string) || 'http://localhost:8000'
 
   try {
-    const guides = await $fetch<{ data?: Array<{ title: string; slug: string; summary?: string | null; createdAt?: string | null }> }>(`${apiBase}/api/guides?limit=50`)
-    const items = (guides.data || []).map(guide => ({
+    const guides = await $fetch<{ data?: { items: Array<{ title: string; slug: string; summary?: string | null; createdAt?: string | null }> } }>(`${apiBase}/api/guides?limit=50`)
+    const items = (guides.data?.items || []).map(guide => ({
       title: guide.title,
       link: `https://ilsangkit.co.kr/guide/${guide.slug}`,
       description: guide.summary || guide.title,
