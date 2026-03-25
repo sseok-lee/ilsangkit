@@ -337,12 +337,11 @@ setWebsiteSchema()
 
 const searchKeyword = ref('')
 
-// Stats: lazy 로딩 — SSR 블로킹 해제 (fallback 0으로 즉시 렌더, 데이터 도착 시 업데이트)
-const { data: statsResponse } = useAsyncData('home-stats', () =>
+// Stats: SSR에서 대기 (above-fold 콘텐츠, lazy 시 CLS 발생) — 백엔드 5분 캐시로 응답 빠름
+const { data: statsResponse } = await useAsyncData('home-stats', () =>
   $fetch<{ success: boolean; data: Record<string, any> }>(
     `${config.public.apiBase}/api/meta/stats`
-  ),
-  { lazy: true }
+  )
 )
 
 // Below-fold: lazy로 SSR 블로킹 없이 클라이언트에서 로딩
