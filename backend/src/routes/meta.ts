@@ -8,6 +8,10 @@ import { getStatsByCity, getStatsByDistrict, getSyncStatus, SHORT_TO_SLUG } from
 
 const router = Router();
 
+// Stats 인메모리 캐시 (5분 TTL) — 23개 병렬 COUNT 쿼리 부하 감소
+let statsCache: { data: Record<string, unknown>; expiry: number } | null = null;
+const STATS_CACHE_TTL = 5 * 60 * 1000;
+
 // GET /api/meta/categories - 활성화된 카테고리 목록
 router.get('/categories', asyncHandler(async (_req: Request, res: Response) => {
   const categories = await prisma.category.findMany({
@@ -18,8 +22,13 @@ router.get('/categories', asyncHandler(async (_req: Request, res: Response) => {
   res.json({ success: true, data: categories });
 }));
 
-// GET /api/meta/stats - 카테고리별 시설 개수
+// GET /api/meta/stats - 카테고리별 시설 개수 (5분 인메모리 캐시)
 router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
+  if (statsCache && Date.now() < statsCache.expiry) {
+    res.json({ success: true, data: statsCache.data });
+    return;
+  }
+
   const [
     toiletCount, wifiCount, clothesCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount,
     parkCount, schoolCount, marketCount, childcareCount, evChargerCount, sportsCount,
@@ -88,6 +97,7 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
     regionCount,
   };
 
+  statsCache = { data: stats, expiry: Date.now() + STATS_CACHE_TTL };
   res.json({ success: true, data: stats });
 }));
 

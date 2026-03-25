@@ -129,6 +129,8 @@ export default defineNuxtConfig({
       '/_nuxt/**': { headers: { 'cache-control': 'public, max-age=31536000, immutable' } },
       '/icons/**': { headers: { 'cache-control': 'public, max-age=2592000' } },
       '/images/**': { headers: { 'cache-control': 'public, max-age=2592000' } },
+      '/favicon.ico': { headers: { 'cache-control': 'public, max-age=2592000' } },
+      '/site.webmanifest': { headers: { 'cache-control': 'public, max-age=2592000' } },
     },
   },
 
@@ -191,33 +193,30 @@ export default defineNuxtConfig({
         { name: 'robots', content: 'index, follow, max-image-preview:large, max-snippet:-1' },
       ],
       script: [
-        ...(gaId ? [
-          {
-            src: `https://www.googletagmanager.com/gtag/js?id=${gaId}`,
-            async: true,
-          },
-          {
-            innerHTML: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`,
-          },
-        ] : []),
+        // GA: requestIdleCallback으로 유휴 시점에 로드 (pageview 누락 없음)
+        ...(gaId ? [{
+          innerHTML: `(function(){var cb=function(){var s=document.createElement('script');s.src='https://www.googletagmanager.com/gtag/js?id=${gaId}';s.async=true;document.head.appendChild(s);s.onload=function(){window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaId}');}};('requestIdleCallback' in window)?requestIdleCallback(cb):setTimeout(cb,1);})()`,
+        }] : []),
+        // AdSense: async 유지 (수익 영향 방지)
         {
           src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2088264360250020',
           async: true,
           crossorigin: 'anonymous',
         },
-        {
-          innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_forward,article,baby_changing_station,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,child_care,close,delete,description,directions,eco,edit_note,emergency,error,ev_station,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,park,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,share,sports,storefront,support_agent,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
-          type: 'text/javascript',
-          tagPosition: 'bodyClose',
-        }
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        // 히어로 이미지 preload
+        { rel: 'preload', href: '/images/hero-bg-light.webp', as: 'image', type: 'image/webp' },
+        // 폰트 preconnect
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'preconnect', href: 'https://cdn.jsdelivr.net', crossorigin: '' },
         { rel: 'preconnect', href: 'https://dapi.kakao.com' },
         { rel: 'dns-prefetch', href: 'https://dapi.kakao.com' },
+        // 폰트 CSS를 head에서 직접 로드 (bodyClose IIFE 제거)
+        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_forward,article,baby_changing_station,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,child_care,close,delete,description,directions,eco,edit_note,emergency,error,ev_station,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,park,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,share,sports,storefront,support_agent,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap' },
         { rel: 'manifest', href: '/site.webmanifest' },
       ]
     }
@@ -226,6 +225,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   experimental: {
-    treeshakeClientOnly: true
+    treeshakeClientOnly: true,
+    inlineSSRStyles: true,
   }
 })
