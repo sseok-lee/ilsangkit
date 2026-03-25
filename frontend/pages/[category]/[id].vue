@@ -1174,7 +1174,7 @@
 
               <!-- Review Section (Desktop Left Column) -->
               <ClientOnly>
-                <ReviewSection :category="category" :facility-id="id" />
+                <ReviewSection v-if="id" :category="category" :facility-id="id" />
               </ClientOnly>
 
               <!-- 같은 지역 시설 링크 -->
@@ -2386,7 +2386,7 @@
 
           <!-- Review Section (Mobile) -->
           <ClientOnly>
-            <ReviewSection :category="category" :facility-id="id" />
+            <ReviewSection v-if="id" :category="category" :facility-id="id" />
           </ClientOnly>
 
           <!-- 같은 지역 시설 링크 -->
