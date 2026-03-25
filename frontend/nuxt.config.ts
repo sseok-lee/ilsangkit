@@ -203,6 +203,11 @@ export default defineNuxtConfig({
           async: true,
           crossorigin: 'anonymous',
         },
+        // 폰트 CSS: head에서 JS로 비동기 삽입 (논블로킹 + 빠른 시작)
+        {
+          innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_forward,article,baby_changing_station,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,child_care,close,delete,description,directions,eco,edit_note,emergency,error,ev_station,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,park,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,share,sports,storefront,support_agent,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
+          type: 'text/javascript',
+        },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
@@ -214,9 +219,6 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://cdn.jsdelivr.net', crossorigin: '' },
         { rel: 'preconnect', href: 'https://dapi.kakao.com' },
         { rel: 'dns-prefetch', href: 'https://dapi.kakao.com' },
-        // 폰트 CSS를 head에서 직접 로드 (bodyClose IIFE 제거)
-        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_forward,article,baby_changing_station,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checkroom,chevron_left,chevron_right,child_care,close,delete,description,directions,eco,edit_note,emergency,error,ev_station,event_upcoming,expand_more,explore,favorite,first_page,health_and_safety,help,holiday_village,home,info,last_page,lightbulb,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_on,man,menu,menu_book,near_me,open_in_full,park,place,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,share,sports,storefront,support_agent,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap' },
         { rel: 'manifest', href: '/site.webmanifest' },
       ]
     }
