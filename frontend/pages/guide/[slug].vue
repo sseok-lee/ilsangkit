@@ -215,6 +215,13 @@ if (guide.value) {
     image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
   })
 
+  useHead({
+    meta: [
+      { property: 'article:published_time', content: guide.value.createdAt },
+      { property: 'article:modified_time', content: guide.value.updatedAt || guide.value.createdAt },
+    ],
+  })
+
   // Breadcrumb
   setBreadcrumbSchema([
     { name: '홈', url: '/' },
