@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const title = '부동산 실거래가·시세 조회 · 아파트/빌라/오피스텔 - 일상킷'
@@ -67,6 +67,14 @@ useHead({
     { property: 'og:image', content: DEFAULT_OG_IMAGE },
     { property: 'og:url', content: canonicalUrl },
     { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: SITE_NAME },
+    { property: 'og:locale', content: 'ko_KR' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: title },
+    { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
   ],
   link: [
     { rel: 'canonical', href: canonicalUrl },

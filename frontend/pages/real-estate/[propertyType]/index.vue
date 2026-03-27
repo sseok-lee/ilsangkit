@@ -134,7 +134,7 @@ import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListR
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 
 const route = useRoute()
@@ -218,6 +218,10 @@ useHead(() => {
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
     { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
+    { property: 'og:site_name', content: SITE_NAME },
+    { property: 'og:locale', content: 'ko_KR' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
   ]
   // 페이지 2 이상은 noindex (thin content 방지)
   if (currentPage.value > 1) {

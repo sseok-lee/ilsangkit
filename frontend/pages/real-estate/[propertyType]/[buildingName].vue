@@ -345,7 +345,7 @@ import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ } from '~/utils/realEstateMeta'
-import { SITE_URL, DEFAULT_OG_IMAGE, getCurrentYearMonth } from '~/utils/seoConstants'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getCurrentYearMonth } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
@@ -402,6 +402,10 @@ useHead(() => {
       { name: 'twitter:image', content: buildingInfo.value
         ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
         : DEFAULT_OG_IMAGE },
+      { property: 'og:site_name', content: SITE_NAME },
+      { property: 'og:locale', content: 'ko_KR' },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
     ],
     link: [
       { rel: 'canonical', href: canonicalUrl },
