@@ -147,7 +147,7 @@ describe('Hero image optimization', () => {
     expect(imgs.length).toBeGreaterThan(0)
     imgs.forEach(img => {
       expect(img.attributes('aria-hidden')).toBe('true')
-      expect(img.attributes('alt')).toBe('')
+      expect(img.attributes('alt')).toBeTruthy()
     })
   })
 

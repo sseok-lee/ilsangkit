@@ -26,54 +26,6 @@ describe('useStructuredData', () => {
 
   // ─── FAQPage/HowTo 스키마 제거됨 (2023.08 상업사이트 제한 / 2023.09 폐기) ──
 
-  // ─── Task 4: AggregateRating 스키마 ───────────────────────────────────────
-
-  describe('setAggregateRatingSchema', () => {
-    it('setAggregateRatingSchema 호출 시 useHead를 호출한다', () => {
-      const { setAggregateRatingSchema } = useStructuredData()
-      setAggregateRatingSchema({ ratingValue: 4.2, reviewCount: 15 })
-      expect(mockUseHead).toHaveBeenCalled()
-    })
-
-    it('JSON-LD @type이 AggregateRating이고 ratingValue/reviewCount를 포함한다', () => {
-      const { setAggregateRatingSchema } = useStructuredData()
-      setAggregateRatingSchema({ ratingValue: 4.2, reviewCount: 15 })
-
-      const call = mockUseHead.mock.calls[0][0]
-      const parsed = JSON.parse(call.script[0].innerHTML)
-      expect(parsed['@type']).toBe('AggregateRating')
-      expect(parsed.ratingValue).toBe(4.2)
-      expect(parsed.reviewCount).toBe(15)
-    })
-
-    it('ratingValue가 1~5 범위로 clamp된다', () => {
-      const { setAggregateRatingSchema } = useStructuredData()
-
-      setAggregateRatingSchema({ ratingValue: 8, reviewCount: 5 })
-      let parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
-      expect(parsed.ratingValue).toBe(5)
-
-      mockUseHead.mockClear()
-
-      setAggregateRatingSchema({ ratingValue: -1, reviewCount: 5 })
-      parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
-      expect(parsed.ratingValue).toBe(1)
-    })
-
-    it('reviewCount가 0이면 스키마를 생성하지 않는다', () => {
-      const { setAggregateRatingSchema } = useStructuredData()
-      setAggregateRatingSchema({ ratingValue: 4.2, reviewCount: 0 })
-      expect(mockUseHead).not.toHaveBeenCalled()
-    })
-
-    it('bestRating:5, worstRating:1 기본값을 포함한다', () => {
-      const { setAggregateRatingSchema } = useStructuredData()
-      setAggregateRatingSchema({ ratingValue: 3.5, reviewCount: 10 })
-      const parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
-      expect(parsed.bestRating).toBe(5)
-      expect(parsed.worstRating).toBe(1)
-    })
-  })
 
   // ─── Task 8: Organization sameAs ──────────────────────────────────────────
 

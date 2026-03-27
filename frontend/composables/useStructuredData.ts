@@ -321,31 +321,6 @@ export function useStructuredData() {
   }
 
 
-  /**
-   * AggregateRating 스키마
-   * @deprecated setFacilitySchema의 rating 파라미터를 사용하세요
-   */
-  function setAggregateRatingSchema(params: { ratingValue: number; reviewCount: number }) {
-    if (params.reviewCount === 0) return
-
-    const schema = {
-      '@context': 'https://schema.org',
-      '@type': 'AggregateRating',
-      ratingValue: Math.min(5, Math.max(1, params.ratingValue)),
-      reviewCount: params.reviewCount,
-      bestRating: 5,
-      worstRating: 1,
-    }
-
-    useHead({
-      script: [
-        {
-          type: 'application/ld+json',
-          innerHTML: JSON.stringify(schema),
-        },
-      ],
-    })
-  }
 
   /**
    * Place 스키마 (부동산 건물 상세용)
@@ -444,7 +419,6 @@ export function useStructuredData() {
     setItemListSchema,
     setOrganizationSchema,
     setWasteScheduleSchema,
-    setAggregateRatingSchema,
     setBuildingPlaceSchema,
     setAreaReportSchema,
   }
