@@ -135,7 +135,7 @@ import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
-import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { generateAreaDescription } from '~/utils/seoHelpers'
 
 const route = useRoute()
@@ -257,8 +257,16 @@ useHead(() => {
       { property: 'og:title', content: title },
       { property: 'og:description', content: description },
       { property: 'og:image', content: DEFAULT_OG_IMAGE },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
       { property: 'og:url', content: canonicalUrl },
       { property: 'og:type', content: 'website' },
+      { property: 'og:site_name', content: SITE_NAME },
+      { property: 'og:locale', content: 'ko_KR' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: title },
+      { name: 'twitter:description', content: description },
+      { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
     ],
     link: [
       { rel: 'canonical', href: canonicalUrl },

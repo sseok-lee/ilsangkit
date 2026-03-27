@@ -23,3 +23,29 @@ Allow: /
 
 User-agent: Daumoa
 Allow: /
+
+# AI 검색 크롤러 — 허용 (AI 검색 노출)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# AI 훈련 크롤러 — 차단 (훈련 데이터 수집 방지)
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /

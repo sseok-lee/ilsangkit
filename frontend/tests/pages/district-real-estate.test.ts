@@ -33,7 +33,6 @@ vi.mock('~/composables/useRegions', () => ({
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
     setBreadcrumbSchema: vi.fn(),
-    setFAQSchema: vi.fn(),
   }),
 }))
 

@@ -81,14 +81,11 @@ const realEstateFAQs = [
 ]
 
 // Breadcrumb JSON-LD
-const { setBreadcrumbSchema, setFAQSchema } = useStructuredData()
+const { setBreadcrumbSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
 ])
-
-// FAQPage JSON-LD
-setFAQSchema(realEstateFAQs)
 
 useHead({
   script: [

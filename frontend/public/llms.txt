@@ -1,0 +1,27 @@
+# 일상킷 (ilsangkit)
+> 부동산 실거래가와 전국 생활시설 정보를 한곳에서 제공하는 생활 정보 서비스
+
+## 주요 서비스
+- 부동산 실거래가: 아파트, 빌라, 오피스텔 매매/전월세 시세 조회
+- 생활시설 검색: 병원, 약국, 학교, 어린이집, 공원, 도서관 등 15개 카테고리
+- 지역 정보: 전국 17개 시도별 생활 편의 정보
+- 생활 가이드: 부동산, 의료, 교통 등 생활 정보 콘텐츠
+
+## 주요 페이지
+- 부동산: https://ilsangkit.co.kr/real-estate
+- 아파트 실거래가: https://ilsangkit.co.kr/real-estate/apt
+- 빌라 실거래가: https://ilsangkit.co.kr/real-estate/villa
+- 오피스텔 실거래가: https://ilsangkit.co.kr/real-estate/offitel
+- 병원: https://ilsangkit.co.kr/hospital
+- 약국: https://ilsangkit.co.kr/pharmacy
+- 학교: https://ilsangkit.co.kr/school
+- 어린이집: https://ilsangkit.co.kr/childcare
+- 공원: https://ilsangkit.co.kr/park
+- 도서관: https://ilsangkit.co.kr/library
+- 주차장: https://ilsangkit.co.kr/parking
+- 전기차 충전소: https://ilsangkit.co.kr/ev-charger
+- 가이드: https://ilsangkit.co.kr/guide
+
+## 데이터 출처
+- 국토교통부 실거래가 공개시스템
+- 공공데이터포털 (data.go.kr)

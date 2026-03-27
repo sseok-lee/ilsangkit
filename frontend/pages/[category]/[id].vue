@@ -2550,7 +2550,7 @@ const route = useRoute()
 const router = useRouter()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro } from '~/composables/useFacilityMeta'
-const { setFacilitySchema, setBreadcrumbSchema, setFAQSchema } = useStructuredData()
+const { setFacilitySchema, setBreadcrumbSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
@@ -2600,10 +2600,6 @@ watchEffect(() => {
       { name: categoryName, url: `/${facility.value.category}` },
       { name: facility.value.name, url: `/${facility.value.category}/${facility.value.id}` },
     ])
-    const faqItems = generateDynamicFAQ(facility.value)
-    if (faqItems.length > 0) {
-      setFAQSchema(faqItems)
-    }
   }
 })
 

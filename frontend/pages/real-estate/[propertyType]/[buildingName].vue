@@ -412,13 +412,7 @@ useHead(() => {
 const { useRealEstate } = await import('~/composables/useRealEstate')
 const { searchTransactions, getTransactionStats, getBuildingInfo } = useRealEstate()
 
-const { setBuildingPlaceSchema, setBreadcrumbSchema, setFAQSchema } = useStructuredData()
-
-// FAQ Schema — propertyType별 FAQ 주입
-const faqs = PROPERTY_TYPE_FAQ[propertyTypeParam.value]
-if (faqs?.length) {
-  setFAQSchema(faqs.slice(0, 5).map(f => ({ question: f.q, answer: f.a })))
-}
+const { setBuildingPlaceSchema, setBreadcrumbSchema } = useStructuredData()
 
 // Breadcrumb JSON-LD
 setBreadcrumbSchema([

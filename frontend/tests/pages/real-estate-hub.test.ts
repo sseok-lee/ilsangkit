@@ -11,12 +11,11 @@ import RealEstateHubPage from '~/pages/real-estate/index.vue'
 ;(globalThis as any).onMounted = onMounted
 ;(globalThis as any).onUnmounted = onUnmounted
 
-const mockSetFAQSchema = vi.fn()
+
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
     setBreadcrumbSchema: vi.fn(),
-    setFAQSchema: mockSetFAQSchema,
   }),
 }))
 
@@ -73,15 +72,4 @@ describe('부동산 허브 페이지 콘텐츠 강화 (Task 3.3)', () => {
     expect(texts.some(t => t.includes('부동산 실거래가란'))).toBe(true)
   })
 
-  it('FAQPage JSON-LD 스키마가 setFAQSchema에 전달되어야 한다', async () => {
-    mockSetFAQSchema.mockClear()
-    await mountSuspended(RealEstateHubPage)
-
-    expect(mockSetFAQSchema).toHaveBeenCalled()
-    const calledWith = mockSetFAQSchema.mock.calls[0][0]
-    expect(Array.isArray(calledWith)).toBe(true)
-    expect(calledWith.length).toBeGreaterThan(0)
-    expect(calledWith[0]).toHaveProperty('question')
-    expect(calledWith[0]).toHaveProperty('answer')
-  })
 })

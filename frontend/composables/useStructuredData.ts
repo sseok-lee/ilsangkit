@@ -320,32 +320,6 @@ export function useStructuredData() {
     })
   }
 
-  /**
-   * FAQPage 스키마
-   */
-  function setFAQSchema(faqs: Array<{ question: string; answer: string }>) {
-    const schema = {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: faqs.map((faq) => ({
-        '@type': 'Question',
-        name: faq.question,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: faq.answer,
-        },
-      })),
-    }
-
-    useHead({
-      script: [
-        {
-          type: 'application/ld+json',
-          innerHTML: JSON.stringify(schema),
-        },
-      ],
-    })
-  }
 
   /**
    * AggregateRating 스키마
@@ -462,42 +436,6 @@ export function useStructuredData() {
     })
   }
 
-  /**
-   * HowTo 스키마 (쓰레기배출 등 절차 안내용)
-   */
-  function setHowToSchema(params: {
-    name: string
-    description: string
-    steps: Array<{ name: string; text: string }>
-    totalTime?: string
-  }) {
-    if (params.steps.length === 0) return
-
-    const schema: Record<string, unknown> = {
-      '@context': 'https://schema.org',
-      '@type': 'HowTo',
-      name: params.name,
-      description: params.description,
-      step: params.steps.map((s) => ({
-        '@type': 'HowToStep',
-        name: s.name,
-        text: s.text,
-      })),
-    }
-
-    if (params.totalTime) {
-      schema.totalTime = params.totalTime
-    }
-
-    useHead({
-      script: [
-        {
-          type: 'application/ld+json',
-          innerHTML: JSON.stringify(schema),
-        },
-      ],
-    })
-  }
 
   return {
     setWebsiteSchema,
@@ -506,9 +444,7 @@ export function useStructuredData() {
     setItemListSchema,
     setOrganizationSchema,
     setWasteScheduleSchema,
-    setFAQSchema,
     setAggregateRatingSchema,
-    setHowToSchema,
     setBuildingPlaceSchema,
     setAreaReportSchema,
   }

@@ -84,7 +84,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const { setMeta } = useFacilityMeta()
-const { setFAQSchema, setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema } = useStructuredData()
 
 // SEO meta
 setMeta({
@@ -107,9 +107,8 @@ const realEstateFaqItems = [
   ...REAL_ESTATE_FAQ.offitelSale.slice(0, 2),
 ].map(faq => ({ question: faq.q, answer: faq.a }))
 
-// FAQPage JSON-LD (시설 + 부동산 FAQ 합산)
+// FAQ 데이터 (HTML 렌더링용, JSON-LD 제거 — FAQPage 리치결과 상업 사이트 미지원)
 const allFaqs = [...Object.values(CATEGORY_FAQ).flat(), ...realEstateFaqItems]
-setFAQSchema(allFaqs)
 
 // 그룹 데이터
 const groups = CATEGORY_GROUPS
