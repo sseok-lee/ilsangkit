@@ -34,6 +34,10 @@ jobs:
               node "dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" || echo "[WARN] ${SCRIPT} 실패"
             done
 
+            # 좌표 없는 건물 지오코딩
+            echo "--- 지오코딩 ---"
+            node dist/scripts/geocodeRealEstate.js || echo "[WARN] 지오코딩 실패"
+
             # Summary 테이블 갱신
             echo "--- Summary 테이블 갱신 ---"
             node dist/scripts/refreshRealEstateSummary.js
