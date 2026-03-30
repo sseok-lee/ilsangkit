@@ -1,0 +1,41 @@
+name: Sync Real Estate Data
+
+on:
+  schedule:
+    # 매일 새벽 3시 (KST) = UTC 18:00 전날
+    - cron: '0 18 * * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sync Real Estate Data on Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          command_timeout: 30m
+          script: |
+            cd /home/project2/backend
+
+            # 현재 월과 직전 월만 동기화 (YYYYMM)
+            CURRENT_YM=$(date +%Y%m)
+            PREV_YM=$(date -d "1 month ago" +%Y%m 2>/dev/null || date -v-1m +%Y%m)
+
+            echo "=== 부동산 실거래가 동기화 시작 ==="
+            echo "대상: ${PREV_YM}, ${CURRENT_YM}"
+
+            # 6개 부동산 타입 순차 실행 (API 부하 분산)
+            for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSale syncOffitelRent; do
+              echo "--- ${SCRIPT} 동기화 ---"
+              node "dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" || echo "[WARN] ${SCRIPT} 실패"
+            done
+
+            # Summary 테이블 갱신
+            echo "--- Summary 테이블 갱신 ---"
+            node dist/scripts/refreshRealEstateSummary.js
+
+            echo "=== 동기화 완료 ==="
