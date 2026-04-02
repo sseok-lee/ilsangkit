@@ -412,6 +412,70 @@ export function useStructuredData() {
   }
 
 
+  /**
+   * FAQPage 스키마 (가이드 howto/guide 유형용)
+   */
+  function setFAQSchema(faqs: Array<{ question: string; answer: string }>) {
+    if (faqs.length === 0) return
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map(faq => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      })),
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
+  /**
+   * HowTo 스키마 (가이드 howto 유형용)
+   */
+  function setHowToSchema(options: {
+    name: string
+    description: string
+    steps: Array<{ name: string; text: string }>
+    url: string
+  }) {
+    if (options.steps.length === 0) return
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: options.name,
+      description: options.description,
+      url: options.url.startsWith('http') ? options.url : `${SITE_URL}${options.url}`,
+      step: options.steps.map((step, index) => ({
+        '@type': 'HowToStep',
+        position: index + 1,
+        name: step.name,
+        text: step.text,
+      })),
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
   return {
     setWebsiteSchema,
     setBreadcrumbSchema,
@@ -421,5 +485,7 @@ export function useStructuredData() {
     setWasteScheduleSchema,
     setBuildingPlaceSchema,
     setAreaReportSchema,
+    setFAQSchema,
+    setHowToSchema,
   }
 }

@@ -727,6 +727,7 @@ model Guide {
   content      String   @db.LongText
   summary      String   @db.VarChar(500)
   category     String   @db.VarChar(50)
+  articleType  String   @default("news") @db.VarChar(20)
   thumbnailUrl String?  @db.VarChar(500)
   keywords     String?  @db.VarChar(500)
   published    Boolean  @default(true)
@@ -737,6 +738,7 @@ model Guide {
   @@index([category])
   @@index([published, createdAt])
   @@index([slug])
+  @@index([articleType, category])
 }
 
 // 쓰레기 배출 일정 테이블 (좌표 없음 - 지도 마커 X)

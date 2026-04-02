@@ -153,7 +153,7 @@ const slug = computed(() => route.params.slug as string)
 const config = useRuntimeConfig()
 const { fetchGuideBySlug } = useGuides()
 const { setMeta } = useFacilityMeta()
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setFAQSchema, setHowToSchema } = useStructuredData()
 
 // SSR 호환: useAsyncData로 가이드 데이터 가져오기 (서버에서도 실행)
 const { data: guide, status } = await useAsyncData(
@@ -265,5 +265,45 @@ if (guide.value) {
       },
     ],
   })
+
+  // FAQ JSON-LD: "자주 묻는 질문" 섹션에서 Q/A 추출
+  const articleType = guide.value.articleType ?? 'news'
+  const content = guide.value.content ?? ''
+
+  if (articleType === 'howto' || articleType === 'guide') {
+    const faqMatch = content.match(/## 자주 묻는 질문[\s\S]*?(?=\n## |$)/)
+    if (faqMatch) {
+      const faqBlock = faqMatch[0]
+      const faqs: Array<{ question: string; answer: string }> = []
+      const qaPairs = faqBlock.matchAll(/\*\*Q\.\s*(.+?)\*\*\s*\n\s*A\.\s*([\s\S]*?)(?=\n\*\*Q\.|$)/g)
+      for (const match of qaPairs) {
+        faqs.push({ question: match[1].trim(), answer: match[2].trim() })
+      }
+      if (faqs.length > 0) {
+        setFAQSchema(faqs)
+      }
+    }
+  }
+
+  // HowTo JSON-LD: "단계별 방법" 섹션에서 steps 추출
+  if (articleType === 'howto') {
+    const stepsMatch = content.match(/## 단계별 방법[\s\S]*?(?=\n## |$)/)
+    if (stepsMatch) {
+      const stepsBlock = stepsMatch[0]
+      const steps: Array<{ name: string; text: string }> = []
+      const stepItems = stepsBlock.matchAll(/\d+\.\s*\*\*(.+?)\*\*\s*\n([\s\S]*?)(?=\n\d+\.\s*\*\*|$)/g)
+      for (const match of stepItems) {
+        steps.push({ name: match[1].trim(), text: match[2].trim() })
+      }
+      if (steps.length > 0) {
+        setHowToSchema({
+          name: guide.value.title,
+          description: guide.value.summary,
+          steps,
+          url: `/guide/${guide.value.slug}`,
+        })
+      }
+    }
+  }
 }
 </script>

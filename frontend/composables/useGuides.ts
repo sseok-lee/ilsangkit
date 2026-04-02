@@ -1,9 +1,12 @@
+export type GuideArticleType = 'news' | 'howto' | 'listicle' | 'guide'
+
 export interface GuideSummary {
   id: string
   title: string
   slug: string
   summary: string
   category: string
+  articleType: GuideArticleType
   thumbnailUrl: string | null
   keywords: string | null
   viewCount: number

@@ -9,6 +9,7 @@ const GuideListQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
   category: z.string().optional(),
+  articleType: z.enum(['news', 'howto', 'listicle', 'guide']).optional(),
 });
 
 const GuideRecentQuerySchema = z.object({
@@ -28,12 +29,13 @@ router.get(
       return;
     }
 
-    const { page, limit, category } = parsed.data;
+    const { page, limit, category, articleType } = parsed.data;
     const skip = (page - 1) * limit;
 
     const where = {
       published: true,
       ...(category ? { category } : {}),
+      ...(articleType ? { articleType } : {}),
     };
 
     const [total, items] = await Promise.all([
@@ -49,6 +51,7 @@ router.get(
           slug: true,
           summary: true,
           category: true,
+          articleType: true,
           thumbnailUrl: true,
           keywords: true,
           viewCount: true,
@@ -91,6 +94,7 @@ router.get(
         slug: true,
         summary: true,
         category: true,
+        articleType: true,
         thumbnailUrl: true,
         keywords: true,
         viewCount: true,
