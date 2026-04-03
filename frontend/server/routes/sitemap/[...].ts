@@ -72,8 +72,13 @@ export default defineEventHandler(async (event) => {
   // 부동산 건물 상세 페이지
   if (category === 'real-estate') {
     const buildings = await fetchRealEstateBuildings(apiBase)
+    if (buildings.length === 0 && page > 1) {
+      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    }
     const totalPages = Math.max(1, Math.ceil(buildings.length / MAX_URLS_PER_SITEMAP))
-    if (page > totalPages) return generateSitemapXml([])
+    if (page > totalPages) {
+      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    }
 
     const offset = (page - 1) * MAX_URLS_PER_SITEMAP
     const pageItems = buildings.slice(offset, offset + MAX_URLS_PER_SITEMAP)
@@ -95,9 +100,14 @@ export default defineEventHandler(async (event) => {
       ? await fetchWasteScheduleIds(apiBase)
       : await fetchFacilityIds(category, apiBase)
 
-  // 페이지 유효성 검증 — fetch 실패(빈 배열) 시 빈 sitemap 반환 (404 대신)
+  // API 실패로 데이터 없음 — 503으로 크롤러 재시도 유도 (빈 sitemap 캐시 방지)
+  if (items.length === 0 && page > 1) {
+    throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+  }
   const totalPages = Math.max(1, Math.ceil(items.length / MAX_URLS_PER_SITEMAP))
-  if (page > totalPages) return generateSitemapXml([])
+  if (page > totalPages) {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+  }
 
   // slice로 해당 페이지 항목 추출
   const offset = (page - 1) * MAX_URLS_PER_SITEMAP
