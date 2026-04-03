@@ -21,6 +21,8 @@ export interface SearchTransactionParams {
   buildingName?: string;
   dealYear?: number;
   dealMonth?: number;
+  exclusiveArea?: number;
+  rentType?: string;
   page: number;
   limit: number;
 }
@@ -39,6 +41,20 @@ export interface MonthlyStats {
   maxPrice: number | null;
   minPrice: number | null;
   count: number;
+}
+
+export interface StatsSummary {
+  recentAvg: number | null;
+  previousAvg: number | null;
+  changeRate: number | null;
+  totalCount: number;
+  lowVolume: boolean;
+  priceLabel: string;
+}
+
+export interface StatsResponse {
+  monthly: MonthlyStats[];
+  summary: StatsSummary;
 }
 
 export interface ComplexItem {
@@ -132,7 +148,7 @@ export async function searchTransactions(
   params: SearchTransactionParams
 ): Promise<TransactionResult> {
   const model = getModel(type);
-  const { city, district, bjdCode, buildingName, dealYear, dealMonth, page, limit } = params;
+  const { city, district, bjdCode, buildingName, dealYear, dealMonth, page, limit, exclusiveArea, rentType } = params;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = {};
@@ -142,6 +158,8 @@ export async function searchTransactions(
   if (buildingName) where.buildingName = { startsWith: buildingName };
   if (dealYear !== undefined) where.dealYear = dealYear;
   if (dealMonth !== undefined) where.dealMonth = dealMonth;
+  if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
+  if (rentType) where.rentType = rentType;
 
   const skip = (page - 1) * limit;
 
@@ -190,20 +208,32 @@ export async function searchTransactions(
 // ─────────────────────────────────────────────
 
 /**
- * 시세 시계열 - 최근 N개월 월별 통계
+ * 시세 시계열 - 최근 N개월 월별 통계 + 3개월 이동평균 summary
  */
 export async function getTransactionStats(
   type: string,
   bjdCode: string,
   buildingName: string | undefined,
-  months: number
-): Promise<MonthlyStats[]> {
+  months: number,
+  exclusiveArea?: number,
+  rentType?: string
+): Promise<StatsResponse> {
   const model = getModel(type);
-  const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
+  const tableName = getTableName(type);
+  const isSale = isSaleType(type);
 
+  // 환산보증금 상수: 전환율 5% 기준 (12 / 0.05 = 240개월)
+  const CONVERSION_MONTHS = 240;
+
+  // 월세 또는 전체(rent) 중 월세 포함 시 → raw query로 환산보증금 계산
+  const needsConvertedDeposit = !isSale && (rentType === '월세' || !rentType);
+
+  // where 조건 구성
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = { bjdCode };
   if (buildingName) where.buildingName = buildingName;
+  if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
+  if (rentType) where.rentType = rentType;
 
   // Limit to recent N months
   const now = new Date();
@@ -216,25 +246,116 @@ export async function getTransactionStats(
     },
   ];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const groupByResult: any[] = await model.groupBy({
-    by: ['dealYear', 'dealMonth'],
-    where,
-    _avg: { [priceField]: true },
-    _max: { [priceField]: true },
-    _min: { [priceField]: true },
-    _count: { [priceField]: true },
-    orderBy: [{ dealYear: 'asc' }, { dealMonth: 'asc' }],
-  });
+  let monthly: MonthlyStats[];
 
-  return groupByResult.map((row) => ({
-    year: row.dealYear,
-    month: row.dealMonth,
-    avgPrice: row._avg[priceField] !== null ? Number(row._avg[priceField]) : null,
-    maxPrice: row._max[priceField] !== null ? Number(row._max[priceField]) : null,
-    minPrice: row._min[priceField] !== null ? Number(row._min[priceField]) : null,
-    count: row._count[priceField],
-  }));
+  if (needsConvertedDeposit) {
+    // 월세 포함 시: raw query로 환산보증금 계산
+    // 전세: deposit 그대로, 월세: deposit + monthlyRent * 240
+    const whereClauses: string[] = [`bjdCode = ?`];
+    const params: (string | number)[] = [bjdCode];
+
+    if (buildingName) { whereClauses.push(`buildingName = ?`); params.push(buildingName); }
+    if (exclusiveArea) {
+      whereClauses.push(`exclusiveArea >= ? AND exclusiveArea <= ?`);
+      params.push(exclusiveArea - 2, exclusiveArea + 2);
+    }
+    if (rentType) { whereClauses.push(`rentType = ?`); params.push(rentType); }
+    whereClauses.push(`(dealYear > ? OR (dealYear = ? AND dealMonth >= ?))`);
+    params.push(cutoff.getFullYear(), cutoff.getFullYear(), cutoff.getMonth() + 1);
+
+    const priceExpr = rentType === '월세'
+      ? `deposit + monthlyRent * ${CONVERSION_MONTHS}`
+      : `CASE WHEN rentType = '월세' THEN deposit + monthlyRent * ${CONVERSION_MONTHS} ELSE deposit END`;
+
+    const sql = `
+      SELECT dealYear, dealMonth,
+        AVG(${priceExpr}) as avgPrice,
+        MAX(${priceExpr}) as maxPrice,
+        MIN(${priceExpr}) as minPrice,
+        COUNT(*) as count
+      FROM ${tableName}
+      WHERE ${whereClauses.join(' AND ')}
+      GROUP BY dealYear, dealMonth
+      ORDER BY dealYear ASC, dealMonth ASC
+    `;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawResult: any[] = await prisma.$queryRawUnsafe(sql, ...params);
+    monthly = rawResult.map((row) => ({
+      year: Number(row.dealYear),
+      month: Number(row.dealMonth),
+      avgPrice: row.avgPrice !== null ? Number(row.avgPrice) : null,
+      maxPrice: row.maxPrice !== null ? Number(row.maxPrice) : null,
+      minPrice: row.minPrice !== null ? Number(row.minPrice) : null,
+      count: Number(row.count),
+    }));
+  } else {
+    // 매매 또는 전세 전용: Prisma groupBy 사용
+    const priceField = isSale ? 'dealAmount' : 'deposit';
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const groupByResult: any[] = await model.groupBy({
+      by: ['dealYear', 'dealMonth'],
+      where,
+      _avg: { [priceField]: true },
+      _max: { [priceField]: true },
+      _min: { [priceField]: true },
+      _count: { [priceField]: true },
+      orderBy: [{ dealYear: 'asc' }, { dealMonth: 'asc' }],
+    });
+
+    monthly = groupByResult.map((row) => ({
+      year: row.dealYear,
+      month: row.dealMonth,
+      avgPrice: row._avg[priceField] !== null ? Number(row._avg[priceField]) : null,
+      maxPrice: row._max[priceField] !== null ? Number(row._max[priceField]) : null,
+      minPrice: row._min[priceField] !== null ? Number(row._min[priceField]) : null,
+      count: row._count[priceField],
+    }));
+  }
+
+  // 3개월 이동평균 summary 계산
+  const sorted = [...monthly].sort((a, b) =>
+    a.year !== b.year ? a.year - b.year : a.month - b.month
+  );
+  const recent3 = sorted.slice(-3);
+  const previous3 = sorted.slice(-6, -3);
+
+  const calcAvg = (rows: MonthlyStats[]): number | null => {
+    const valid = rows.filter((r) => r.avgPrice !== null);
+    if (valid.length === 0) return null;
+    return valid.reduce((sum, r) => sum + r.avgPrice!, 0) / valid.length;
+  };
+
+  const recentAvg = calcAvg(recent3);
+  const previousAvg = calcAvg(previous3);
+  const changeRate =
+    recentAvg !== null && previousAvg !== null && previousAvg !== 0
+      ? ((recentAvg - previousAvg) / previousAvg) * 100
+      : null;
+
+  const recentCount = recent3.reduce((sum, r) => sum + r.count, 0);
+  const totalCount = monthly.reduce((sum, r) => sum + r.count, 0);
+
+  // 가격 지표명 결정
+  let priceLabel = '매매가';
+  if (!isSale) {
+    if (rentType === '전세') priceLabel = '보증금';
+    else if (rentType === '월세') priceLabel = '환산보증금';
+    else priceLabel = '환산보증금'; // 전체: 전세+환산월세 통합
+  }
+
+  return {
+    monthly,
+    summary: {
+      recentAvg,
+      previousAvg,
+      changeRate,
+      totalCount,
+      lowVolume: recentCount < 3,
+      priceLabel,
+    },
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -360,6 +481,62 @@ export async function getBuildingInfo(
     lat: latest.lat !== null ? Number(latest.lat) : null,
     lng: latest.lng !== null ? Number(latest.lng) : null,
   };
+}
+
+// ─────────────────────────────────────────────
+// getAreaGroups
+// ─────────────────────────────────────────────
+
+export interface AreaGroup {
+  area: number;
+  pyeong: number;
+  count: number;
+}
+
+/**
+ * 전용면적 그룹 목록 - ±2㎡ 이내 병합, count 내림차순
+ */
+export async function getAreaGroups(
+  type: string,
+  bjdCode: string,
+  buildingName?: string
+): Promise<AreaGroup[]> {
+  const model = getModel(type);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: Record<string, any> = { bjdCode };
+  if (buildingName) where.buildingName = buildingName;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const groupByResult: any[] = await model.groupBy({
+    by: ['exclusiveArea'],
+    where,
+    _count: { exclusiveArea: true },
+  });
+
+  // Math.round 반올림 후 ±2㎡ 그룹 병합
+  const raw = groupByResult.map((row) => ({
+    area: Math.round(Number(row.exclusiveArea)),
+    count: row._count.exclusiveArea as number,
+  }));
+
+  const merged: { area: number; count: number }[] = [];
+  for (const item of raw) {
+    const existing = merged.find((g) => Math.abs(g.area - item.area) <= 2);
+    if (existing) {
+      existing.count += item.count;
+    } else {
+      merged.push({ area: item.area, count: item.count });
+    }
+  }
+
+  return merged
+    .sort((a, b) => a.area - b.area)
+    .map((g) => ({
+      area: g.area,
+      pyeong: Math.round(g.area / 3.305),
+      count: g.count,
+    }));
 }
 
 // ─────────────────────────────────────────────

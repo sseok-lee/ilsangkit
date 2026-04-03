@@ -3,10 +3,11 @@
 import type {
   RealEstateType,
   RealEstateSearchResponse,
-  TransactionStats,
   ComplexListResponse,
   BuildingInfo,
   RealEstateGroupedResponse,
+  AreaGroup,
+  StatsResponse,
 } from '~/types/realEstate'
 
 export function useRealEstate() {
@@ -22,6 +23,8 @@ export function useRealEstate() {
       buildingName?: string
       dealYear?: number
       dealMonth?: number
+      exclusiveArea?: number
+      rentType?: string
       page?: number
       limit?: number
     }
@@ -33,6 +36,8 @@ export function useRealEstate() {
     if (params.buildingName) query.set('buildingName', params.buildingName)
     if (params.dealYear) query.set('dealYear', String(params.dealYear))
     if (params.dealMonth) query.set('dealMonth', String(params.dealMonth))
+    if (params.exclusiveArea != null) query.set('exclusiveArea', String(params.exclusiveArea))
+    if (params.rentType) query.set('rentType', params.rentType)
     if (params.page) query.set('page', String(params.page))
     if (params.limit) query.set('limit', String(params.limit))
 
@@ -46,13 +51,17 @@ export function useRealEstate() {
     type: RealEstateType,
     bjdCode: string,
     buildingName?: string,
-    months?: number
-  ): Promise<TransactionStats[]> {
+    months?: number,
+    exclusiveArea?: number,
+    rentType?: string
+  ): Promise<StatsResponse> {
     const query = new URLSearchParams({ bjdCode })
     if (buildingName) query.set('buildingName', buildingName)
     if (months) query.set('months', String(months))
+    if (exclusiveArea != null) query.set('exclusiveArea', String(exclusiveArea))
+    if (rentType) query.set('rentType', rentType)
 
-    const res = await $fetch<{ success: boolean; data: TransactionStats[] }>(
+    const res = await $fetch<{ success: boolean; data: StatsResponse }>(
       `${apiBase}/api/real-estate/${type}/stats?${query.toString()}`
     )
     return res.data
@@ -96,6 +105,20 @@ export function useRealEstate() {
     }
   }
 
+  async function getAreaGroups(
+    type: RealEstateType,
+    bjdCode: string,
+    buildingName?: string
+  ): Promise<AreaGroup[]> {
+    const query = new URLSearchParams({ bjdCode })
+    if (buildingName) query.set('buildingName', buildingName)
+
+    const res = await $fetch<{ success: boolean; data: AreaGroup[] }>(
+      `${apiBase}/api/real-estate/${type}/area-groups?${query.toString()}`
+    )
+    return res.data
+  }
+
   async function searchAll(
     keyword?: string,
     city?: string,
@@ -118,5 +141,6 @@ export function useRealEstate() {
     getComplexList,
     getBuildingInfo,
     searchAll,
+    getAreaGroups,
   }
 }

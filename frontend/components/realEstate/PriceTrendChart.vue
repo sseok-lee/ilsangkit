@@ -57,6 +57,7 @@ import type { TransactionStats } from '~/types/realEstate'
 interface Props {
   stats: TransactionStats[]
   loading: boolean
+  priceLabel?: string
 }
 
 const props = defineProps<Props>()
@@ -77,6 +78,7 @@ let resizeObserver: ResizeObserver | null = null
 
 function formatPrice(price: number): string {
   const rounded = Math.round(price)
+  // 환산보증금/보증금/매매가 모두 억/만원 단위로 동일 포맷
   const eok = Math.floor(rounded / 10000)
   const man = rounded % 10000
   if (eok > 0 && man > 0) return `${eok}억 ${man.toLocaleString()}만`

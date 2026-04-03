@@ -7,6 +7,7 @@ import {
   getComplexList,
   getBuildingInfo,
   searchAll,
+  getAreaGroups,
 } from '../services/realEstateService.js';
 import {
   RealEstateTypeSchema,
@@ -15,6 +16,7 @@ import {
   RealEstateComplexSchema,
   RealEstateBuildingInfoSchema,
   RealEstateUnifiedSearchSchema,
+  AreaGroupsQuerySchema,
 } from '../schemas/realEstate.js';
 const router = Router();
 
@@ -64,9 +66,9 @@ router.get('/:type/search', validateType, async (req: Request, res: Response, ne
       return;
     }
 
-    const { city, district, bjdCode, buildingName, dealYear, dealMonth, page, limit } = parsed.data;
+    const { city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType, page, limit } = parsed.data;
     const result = await searchTransactions(req.params.type as string, {
-      city, district, bjdCode, buildingName, dealYear, dealMonth,
+      city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType,
       page: page ?? 1,
       limit: limit ?? 20,
     });
@@ -89,8 +91,8 @@ router.get('/:type/stats', validateType, async (req: Request, res: Response, nex
       return;
     }
 
-    const { bjdCode, buildingName, months } = parsed.data;
-    const result = await getTransactionStats(req.params.type as string, bjdCode, buildingName, months ?? 12);
+    const { bjdCode, buildingName, months, exclusiveArea, rentType } = parsed.data;
+    const result = await getTransactionStats(req.params.type as string, bjdCode, buildingName, months ?? 12, exclusiveArea, rentType);
 
     res.json({ success: true, data: result });
   } catch (error) {
@@ -141,6 +143,27 @@ router.get('/:type/building-info', validateType, async (req: Request, res: Respo
       });
       return;
     }
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/real-estate/:type/area-groups - 면적 그룹 목록
+router.get('/:type/area-groups', validateType, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = AreaGroupsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '입력값 오류' },
+      });
+      return;
+    }
+
+    const { bjdCode, buildingName } = parsed.data;
+    const result = await getAreaGroups(req.params.type as string, bjdCode, buildingName);
 
     res.json({ success: true, data: result });
   } catch (error) {

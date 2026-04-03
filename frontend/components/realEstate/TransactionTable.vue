@@ -96,10 +96,13 @@
                 {{ tx.exclusiveArea != null ? `${tx.exclusiveArea}㎡` : '-' }}
               </td>
 
-              <!-- 매매 전용: 거래금액 + 거래유형 + 매수/매도자 -->
+              <!-- 매매 전용: 거래금액 + 평당가 + 거래유형 + 매수/매도자 -->
               <template v-if="type === 'sale'">
                 <td class="px-4 py-3 font-semibold text-slate-900">
                   {{ formatAmount((tx as SaleTransaction).dealAmount) }}
+                </td>
+                <td class="px-4 py-3 text-slate-600">
+                  {{ pricePerPyeong(tx as SaleTransaction) }}
                 </td>
                 <td class="px-4 py-3 text-slate-600">
                   {{ (tx as SaleTransaction).dealType || '-' }}
@@ -211,6 +214,7 @@
             </div>
             <div class="mt-1.5 text-sm text-slate-500">
               {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ tx.exclusiveArea != null ? `${tx.exclusiveArea}㎡` : '-' }}
+              <span v-if="pricePerPyeong(tx as SaleTransaction) !== '-'" class="ml-1">· 평당 {{ pricePerPyeong(tx as SaleTransaction) }}</span>
             </div>
             <div v-if="(tx as SaleTransaction).buyerType || (tx as SaleTransaction).sellerType" class="mt-1 text-xs text-slate-500">
               매수 {{ (tx as SaleTransaction).buyerType || '-' }} / 매도 {{ (tx as SaleTransaction).sellerType || '-' }}
@@ -304,6 +308,7 @@ const saleColumnsAll: Column[] = [
   { key: 'floor', label: '층' },
   { key: 'exclusiveArea', label: '전용면적(㎡)' },
   { key: 'dealAmount', label: '거래금액' },
+  { key: 'pricePerPyeong', label: '평당가' },
   { key: 'dealType', label: '거래유형' },
   { key: 'parties', label: '매수/매도' },
 ]
@@ -349,6 +354,13 @@ function formatAmount(amount: number): string {
     return `${uk}억`
   }
   return `${amount.toLocaleString()}만원`
+}
+
+function pricePerPyeong(tx: SaleTransaction): string {
+  if (tx.exclusiveArea == null || tx.exclusiveArea === 0) return '-'
+  const pyeong = tx.exclusiveArea / 3.305
+  const price = Math.round(tx.dealAmount / pyeong)
+  return formatAmount(price)
 }
 
 function isCancelled(tx: SaleTransaction | RentTransaction): boolean {

@@ -115,6 +115,7 @@ import {
   getTransactionStats,
   getComplexList,
   searchAll,
+  getAreaGroups,
 } from '../../src/services/realEstateService.js';
 
 // Sample sale transaction record
@@ -409,12 +410,12 @@ describe('getTransactionStats', () => {
     expect(mockAptSaleGroupBy).toHaveBeenCalledTimes(1);
   });
 
-  it('calls groupBy on aptRentTransaction for apt-rent type', async () => {
-    mockAptRentGroupBy.mockResolvedValue(rentGroupByResult);
+  it('uses raw query for apt-rent type (환산보증금)', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getTransactionStats('apt-rent', '11680', undefined, 6);
 
-    expect(mockAptRentGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockQueryRawUnsafe).toHaveBeenCalled();
   });
 
   it('calls groupBy on villaSaleTransaction for villa-sale type', async () => {
@@ -425,12 +426,12 @@ describe('getTransactionStats', () => {
     expect(mockVillaSaleGroupBy).toHaveBeenCalledTimes(1);
   });
 
-  it('calls groupBy on villaRentTransaction for villa-rent type', async () => {
-    mockVillaRentGroupBy.mockResolvedValue(rentGroupByResult);
+  it('uses raw query for villa-rent type (환산보증금)', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getTransactionStats('villa-rent', '11680', undefined, 6);
 
-    expect(mockVillaRentGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockQueryRawUnsafe).toHaveBeenCalled();
   });
 
   it('calls groupBy on offitelSaleTransaction for offitel-sale type', async () => {
@@ -441,36 +442,77 @@ describe('getTransactionStats', () => {
     expect(mockOffitelSaleGroupBy).toHaveBeenCalledTimes(1);
   });
 
-  it('calls groupBy on offitelRentTransaction for offitel-rent type', async () => {
-    mockOffitelRentGroupBy.mockResolvedValue(rentGroupByResult);
+  it('uses raw query for offitel-rent type (환산보증금)', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getTransactionStats('offitel-rent', '11680', undefined, 6);
 
-    expect(mockOffitelRentGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockQueryRawUnsafe).toHaveBeenCalled();
   });
 
-  it('returns monthly stats with avgPrice, maxPrice, minPrice, count for sale type', async () => {
+  it('returns StatsResponse with monthly array and summary', async () => {
     mockAptSaleGroupBy.mockResolvedValue(saleGroupByResult);
 
     const result = await getTransactionStats('apt-sale', '11680', undefined, 6);
 
-    expect(Array.isArray(result)).toBe(true);
-    expect(result[0]).toHaveProperty('year');
-    expect(result[0]).toHaveProperty('month');
-    expect(result[0]).toHaveProperty('avgPrice');
-    expect(result[0]).toHaveProperty('maxPrice');
-    expect(result[0]).toHaveProperty('minPrice');
-    expect(result[0]).toHaveProperty('count');
+    expect(result).toHaveProperty('monthly');
+    expect(result).toHaveProperty('summary');
+    expect(Array.isArray(result.monthly)).toBe(true);
+    expect(result.monthly[0]).toHaveProperty('year');
+    expect(result.monthly[0]).toHaveProperty('month');
+    expect(result.monthly[0]).toHaveProperty('avgPrice');
+    expect(result.monthly[0]).toHaveProperty('maxPrice');
+    expect(result.monthly[0]).toHaveProperty('minPrice');
+    expect(result.monthly[0]).toHaveProperty('count');
   });
 
-  it('returns monthly stats using deposit for rent type', async () => {
-    mockAptRentGroupBy.mockResolvedValue(rentGroupByResult);
+  it('returns monthly stats via raw query for rent type', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([
+      { dealYear: 2024, dealMonth: 1, avgPrice: 50000, maxPrice: 70000, minPrice: 35000, count: BigInt(4) },
+    ]);
 
     const result = await getTransactionStats('apt-rent', '11680', undefined, 6);
 
-    expect(Array.isArray(result)).toBe(true);
-    expect(result[0]).toHaveProperty('avgPrice');
-    expect(result[0]).toHaveProperty('count');
+    expect(Array.isArray(result.monthly)).toBe(true);
+    expect(result.monthly[0]).toHaveProperty('avgPrice');
+    expect(result.monthly[0]).toHaveProperty('count');
+  });
+
+  it('filters by rentType when provided', async () => {
+    mockAptRentGroupBy.mockResolvedValue([]);
+
+    await getTransactionStats('apt-rent', '11680', undefined, 6, undefined, '전세');
+
+    expect(mockAptRentGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ rentType: '전세' }),
+      })
+    );
+  });
+
+  it('uses 환산보증금 raw query when rentType is 월세', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([
+      { dealYear: 2024, dealMonth: 1, avgPrice: 37000, maxPrice: 49000, minPrice: 25000, count: BigInt(3) },
+    ]);
+
+    const result = await getTransactionStats('apt-rent', '11680', undefined, 6, undefined, '월세');
+
+    expect(mockQueryRawUnsafe).toHaveBeenCalled();
+    const sql = mockQueryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).toContain('deposit + monthlyRent * 240');
+    expect(result.monthly[0].avgPrice).toBe(37000);
+  });
+
+  it('uses deposit as priceField when rentType is 전세', async () => {
+    mockAptRentGroupBy.mockResolvedValue(rentGroupByResult);
+
+    await getTransactionStats('apt-rent', '11680', undefined, 6, undefined, '전세');
+
+    expect(mockAptRentGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        _avg: expect.objectContaining({ deposit: true }),
+      })
+    );
   });
 
   it('groups by dealYear and dealMonth', async () => {
@@ -513,6 +555,79 @@ describe('getTransactionStats', () => {
     await expect(
       getTransactionStats('unknown-type', '11680', undefined, 6)
     ).rejects.toThrow();
+  });
+
+  // ── 이동평균 / summary 계산 ──
+
+  it('calculates changeRate correctly from 6 months of data', async () => {
+    // previous3: months 10-12/2023, avgPrice=100 → previousAvg=100
+    // recent3: months 1-3/2024, avgPrice=110 → recentAvg=110
+    // changeRate = (110-100)/100 * 100 = 10
+    const sixMonthData = [
+      { dealYear: 2023, dealMonth: 10, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 2 } },
+      { dealYear: 2023, dealMonth: 11, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 2 } },
+      { dealYear: 2023, dealMonth: 12, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 2 } },
+      { dealYear: 2024, dealMonth: 1,  _avg: { dealAmount: 110 }, _max: { dealAmount: 110 }, _min: { dealAmount: 110 }, _count: { dealAmount: 2 } },
+      { dealYear: 2024, dealMonth: 2,  _avg: { dealAmount: 110 }, _max: { dealAmount: 110 }, _min: { dealAmount: 110 }, _count: { dealAmount: 2 } },
+      { dealYear: 2024, dealMonth: 3,  _avg: { dealAmount: 110 }, _max: { dealAmount: 110 }, _min: { dealAmount: 110 }, _count: { dealAmount: 2 } },
+    ];
+    mockAptSaleGroupBy.mockResolvedValue(sixMonthData);
+
+    const result = await getTransactionStats('apt-sale', '11680', undefined, 6);
+
+    expect(result.summary.recentAvg).toBe(110);
+    expect(result.summary.previousAvg).toBe(100);
+    expect(result.summary.changeRate).toBeCloseTo(10, 5);
+  });
+
+  it('sets changeRate to null when no previous 3 months data', async () => {
+    // Only 3 months → previous3 is empty → previousAvg=null → changeRate=null
+    const threeMonthData = [
+      { dealYear: 2024, dealMonth: 1, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 2 } },
+      { dealYear: 2024, dealMonth: 2, _avg: { dealAmount: 110 }, _max: { dealAmount: 110 }, _min: { dealAmount: 110 }, _count: { dealAmount: 2 } },
+      { dealYear: 2024, dealMonth: 3, _avg: { dealAmount: 120 }, _max: { dealAmount: 120 }, _min: { dealAmount: 120 }, _count: { dealAmount: 2 } },
+    ];
+    mockAptSaleGroupBy.mockResolvedValue(threeMonthData);
+
+    const result = await getTransactionStats('apt-sale', '11680', undefined, 6);
+
+    expect(result.summary.previousAvg).toBeNull();
+    expect(result.summary.changeRate).toBeNull();
+  });
+
+  it('sets lowVolume=true when recent 3 months total count < 3', async () => {
+    const lowData = [
+      { dealYear: 2024, dealMonth: 1, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 1 } },
+      { dealYear: 2024, dealMonth: 2, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 1 } },
+    ];
+    mockAptSaleGroupBy.mockResolvedValue(lowData);
+
+    const result = await getTransactionStats('apt-sale', '11680', undefined, 6);
+
+    expect(result.summary.lowVolume).toBe(true);
+  });
+
+  it('sets lowVolume=false when recent 3 months total count >= 3', async () => {
+    const normalData = [
+      { dealYear: 2024, dealMonth: 1, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 3 } },
+    ];
+    mockAptSaleGroupBy.mockResolvedValue(normalData);
+
+    const result = await getTransactionStats('apt-sale', '11680', undefined, 6);
+
+    expect(result.summary.lowVolume).toBe(false);
+  });
+
+  it('returns correct totalCount as sum of all monthly counts', async () => {
+    const data = [
+      { dealYear: 2024, dealMonth: 1, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 4 } },
+      { dealYear: 2024, dealMonth: 2, _avg: { dealAmount: 100 }, _max: { dealAmount: 100 }, _min: { dealAmount: 100 }, _count: { dealAmount: 6 } },
+    ];
+    mockAptSaleGroupBy.mockResolvedValue(data);
+
+    const result = await getTransactionStats('apt-sale', '11680', undefined, 6);
+
+    expect(result.summary.totalCount).toBe(10);
   });
 });
 
@@ -777,5 +892,154 @@ describe('searchAll', () => {
 
     // All 6 findMany calls should have been made
     expect(callOrder.filter((c) => c.endsWith('-findMany'))).toHaveLength(6);
+  });
+});
+
+// ─────────────────────────────────────────────
+// getTransactionStats - exclusiveArea 필터 (TEST-1)
+// ─────────────────────────────────────────────
+describe('getTransactionStats - exclusiveArea 필터', () => {
+  it('exclusiveArea=84 전달 시 where에 ±2㎡ 범위 필터가 적용되어야 한다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([]);
+
+    await getTransactionStats('apt-sale', '11680', '래미안', 6, 84);
+
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          exclusiveArea: { gte: 82, lte: 86 },
+        }),
+      })
+    );
+  });
+
+  it('exclusiveArea=59 전달 시 where에 { gte: 57, lte: 61 } 범위가 적용되어야 한다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([]);
+
+    await getTransactionStats('apt-sale', '11680', '래미안', 6, 59);
+
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          exclusiveArea: { gte: 57, lte: 61 },
+        }),
+      })
+    );
+  });
+
+  it('exclusiveArea 미전달 시 where에 exclusiveArea 필드가 없어야 한다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([]);
+
+    await getTransactionStats('apt-sale', '11680', '래미안', 6);
+
+    const callArg = mockAptSaleGroupBy.mock.calls[0][0];
+    expect(callArg.where).not.toHaveProperty('exclusiveArea');
+  });
+
+  it('84㎡ 필터는 59㎡ 거래를 포함하지 않는 범위여야 한다 (gte 82 > 59)', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([]);
+
+    await getTransactionStats('apt-sale', '11680', '래미안', 6, 84);
+
+    const callArg = mockAptSaleGroupBy.mock.calls[0][0];
+    const { gte } = callArg.where.exclusiveArea;
+    expect(gte).toBeGreaterThan(59);
+  });
+});
+
+// ─────────────────────────────────────────────
+// getAreaGroups (TEST-4)
+// ─────────────────────────────────────────────
+describe('getAreaGroups', () => {
+  it('calls groupBy on aptSaleTransaction by exclusiveArea', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([]);
+
+    await getAreaGroups('apt-sale', '11680');
+
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({ by: ['exclusiveArea'] })
+    );
+  });
+
+  it('59.5㎡와 58.8㎡은 ±2㎡ 이내이므로 같은 그룹으로 병합된다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([
+      { exclusiveArea: 59.5, _count: { exclusiveArea: 3 } },
+      { exclusiveArea: 58.8, _count: { exclusiveArea: 2 } },
+    ]);
+
+    const result = await getAreaGroups('apt-sale', '11680');
+
+    expect(result).toHaveLength(1);
+    expect(result[0].count).toBe(5);
+  });
+
+  it('59㎡와 84㎡는 ±2㎡를 초과하므로 별도 그룹으로 분리된다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([
+      { exclusiveArea: 59.5, _count: { exclusiveArea: 4 } },
+      { exclusiveArea: 84.82, _count: { exclusiveArea: 6 } },
+    ]);
+
+    const result = await getAreaGroups('apt-sale', '11680');
+
+    expect(result).toHaveLength(2);
+    const areas = result.map((g) => g.area);
+    expect(areas).toContain(Math.round(59.5));
+    expect(areas).toContain(Math.round(84.82));
+  });
+
+  it('pyeong은 Math.round(area / 3.305)로 환산되어야 한다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([
+      { exclusiveArea: 84.82, _count: { exclusiveArea: 5 } },
+    ]);
+
+    const result = await getAreaGroups('apt-sale', '11680');
+
+    expect(result[0].pyeong).toBe(Math.round(85 / 3.305));
+  });
+
+  it('결과는 면적 오름차순으로 정렬되어야 한다 (작은 평수부터)', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([
+      { exclusiveArea: 84.82, _count: { exclusiveArea: 10 } },
+      { exclusiveArea: 59.5, _count: { exclusiveArea: 3 } },
+      { exclusiveArea: 114.9, _count: { exclusiveArea: 7 } },
+    ]);
+
+    const result = await getAreaGroups('apt-sale', '11680');
+
+    expect(result[0].area).toBe(60);  // 59.5 → 60
+    expect(result[1].area).toBe(85);  // 84.82 → 85
+    expect(result[2].area).toBe(115); // 114.9 → 115
+  });
+
+  it('buildingName 전달 시 where에 buildingName이 포함된다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([]);
+
+    await getAreaGroups('apt-sale', '11680', '래미안');
+
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ bjdCode: '11680', buildingName: '래미안' }),
+      })
+    );
+  });
+
+  it('각 그룹은 area, pyeong, count 필드를 가져야 한다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([
+      { exclusiveArea: 59.5, _count: { exclusiveArea: 3 } },
+    ]);
+
+    const result = await getAreaGroups('apt-sale', '11680');
+
+    expect(result[0]).toHaveProperty('area');
+    expect(result[0]).toHaveProperty('pyeong');
+    expect(result[0]).toHaveProperty('count');
+  });
+
+  it('빈 결과 시 빈 배열을 반환한다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([]);
+
+    const result = await getAreaGroups('apt-sale', '11680');
+
+    expect(result).toEqual([]);
   });
 });

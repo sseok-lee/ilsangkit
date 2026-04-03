@@ -22,6 +22,8 @@ export const RealEstateSearchSchema = z.object({
   buildingName: z.string().max(100).optional(),
   dealYear: z.coerce.number().optional(),
   dealMonth: z.coerce.number().optional(),
+  exclusiveArea: z.coerce.number().positive().optional(),
+  rentType: z.enum(['전세', '월세']).optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(20),
 });
@@ -33,6 +35,8 @@ export const RealEstateStatsSchema = z.object({
   bjdCode: z.string().max(10),
   buildingName: z.string().max(100),
   months: z.coerce.number().default(12),
+  exclusiveArea: z.coerce.number().positive().optional(),
+  rentType: z.enum(['전세', '월세']).optional(),
 });
 
 export type RealEstateStats = z.infer<typeof RealEstateStatsSchema>;
@@ -63,3 +67,11 @@ export const RealEstateUnifiedSearchSchema = z.object({
 });
 
 export type RealEstateUnifiedSearch = z.infer<typeof RealEstateUnifiedSearchSchema>;
+
+// 면적 그룹 조회 스키마
+export const AreaGroupsQuerySchema = z.object({
+  bjdCode: z.string(),
+  buildingName: z.string().optional(),
+});
+
+export type AreaGroupsQuery = z.infer<typeof AreaGroupsQuerySchema>;

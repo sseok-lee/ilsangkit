@@ -80,6 +80,29 @@ export interface TransactionStats {
   count: number
 }
 
+// 면적별 거래 그룹
+export interface AreaGroup {
+  area: number
+  pyeong: number
+  count: number
+}
+
+// 통계 요약
+export interface StatsSummary {
+  recentAvg: number | null
+  previousAvg: number | null
+  changeRate: number | null
+  totalCount: number
+  lowVolume: boolean
+  priceLabel: string
+}
+
+// 통계 응답 (monthly + summary)
+export interface StatsResponse {
+  monthly: TransactionStats[]
+  summary: StatsSummary
+}
+
 // 건물 정보
 export interface ComplexInfo {
   buildingName: string

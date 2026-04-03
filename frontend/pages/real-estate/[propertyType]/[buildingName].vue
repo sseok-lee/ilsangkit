@@ -212,8 +212,23 @@
           </div>
         </div>
 
+        <!-- 전월세 구분 토글 -->
+        <RentTypeToggle
+          v-if="currentTab === 'rent'"
+          v-model="selectedRentType"
+          class="mb-4"
+        />
+
+        <!-- 면적 선택 -->
+        <AreaSelector
+          v-if="areaGroups.length > 0"
+          v-model="selectedArea"
+          :areas="areaGroups"
+          class="mb-4"
+        />
+
         <!-- 시세 요약 카드 -->
-        <div v-if="stats.length > 0 && !statsLoading" class="grid grid-cols-3 gap-3 mb-4">
+        <div v-if="monthly.length > 0 && !statsLoading" class="grid grid-cols-3 gap-3 mb-4">
           <div class="rounded-xl bg-white border border-slate-100 p-4 text-center">
             <p class="text-xs text-slate-500 mb-1">최근 평균가</p>
             <p class="text-base sm:text-lg font-bold text-slate-800">{{ summaryLatestAvg }}</p>
@@ -233,13 +248,19 @@
           </div>
         </div>
 
+        <!-- lowVolume 경고 -->
+        <p v-if="summary?.lowVolume === true && !statsLoading" class="mb-3 text-xs text-amber-600">
+          거래 건수가 적어 변동률이 부정확할 수 있습니다
+        </p>
+
         <div v-if="statsLoading" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
         <PriceTrendChart
-          v-else-if="stats.length > 0"
-          :stats="stats"
+          v-else-if="monthly.length > 0"
+          :stats="monthly"
           :loading="false"
+          :price-label="summary?.priceLabel"
         />
         <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
           시세 데이터가 아직 없습니다.
@@ -342,7 +363,7 @@
 import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
-import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getCurrentYearMonth } from '~/utils/seoConstants'
@@ -414,7 +435,7 @@ useHead(() => {
 })
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
-const { searchTransactions, getTransactionStats, getBuildingInfo } = useRealEstate()
+const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema } = useStructuredData()
 
@@ -544,8 +565,12 @@ const latestPrice = computed(() => {
   return `${amount.toLocaleString()}만원`
 })
 
-const stats = ref<TransactionStats[]>([])
+const monthly = ref<TransactionStats[]>([])
+const summary = ref<StatsSummary | null>(null)
 const statsLoading = ref(true)
+const areaGroups = ref<AreaGroup[]>([])
+const selectedArea = ref<number | null>(null)
+const selectedRentType = ref<'all' | 'jeonse' | 'wolse'>('all')
 
 // 기간 선택
 const selectedMonths = ref(12)
@@ -556,35 +581,28 @@ const periodOptions = [
   { label: '5년', value: 60 },
 ]
 
-// 시세 요약 computed
+// 시세 요약 computed (서버 summary 사용)
 const summaryLatestAvg = computed(() => {
-  if (stats.value.length === 0) return '-'
-  const latest = stats.value[stats.value.length - 1]
-  return formatSummaryPrice(latest.avgPrice)
+  if (summary.value?.recentAvg == null) return '-'
+  return formatSummaryPrice(summary.value.recentAvg)
 })
 
 const summaryChangeRate = computed(() => {
-  if (stats.value.length < 2) return '-'
-  const latest = stats.value[stats.value.length - 1]
-  const prev = stats.value[stats.value.length - 2]
-  if (!prev.avgPrice) return '-'
-  const rate = ((latest.avgPrice - prev.avgPrice) / prev.avgPrice * 100)
+  if (summary.value?.changeRate == null) return '-'
+  const rate = summary.value.changeRate
   const sign = rate > 0 ? '▲' : rate < 0 ? '▼' : ''
   return `${sign} ${Math.abs(rate).toFixed(1)}%`
 })
 
 const changeRateColor = computed(() => {
-  if (stats.value.length < 2) return 'text-slate-500'
-  const latest = stats.value[stats.value.length - 1]
-  const prev = stats.value[stats.value.length - 2]
-  const rate = latest.avgPrice - prev.avgPrice
-  if (rate > 0) return 'text-red-500'
-  if (rate < 0) return 'text-blue-500'
+  if (summary.value?.changeRate == null) return 'text-slate-500'
+  if (summary.value.changeRate > 0) return 'text-red-500'
+  if (summary.value.changeRate < 0) return 'text-blue-500'
   return 'text-slate-500'
 })
 
 const summaryTotalCount = computed(() => {
-  return stats.value.reduce((sum, s) => sum + s.count, 0).toLocaleString()
+  return (summary.value?.totalCount ?? 0).toLocaleString()
 })
 
 function formatSummaryPrice(price: number): string {
@@ -601,35 +619,80 @@ const txLoading = ref(true)
 const currentPage = ref(1)
 
 // SSR: 초기 데이터를 서버에서 로드
-const { data: ssrData } = await useAsyncData(
+const { data: ssrData, error: ssrError } = await useAsyncData(
   `re-detail-${propertyTypeParam.value}-${buildingName.value}-${bjdCode.value}`,
   async () => {
-    const [statsResult, txResult, infoResult] = await Promise.allSettled([
+    console.log('[SSR DEBUG] useAsyncData callback started', { apiSlug: apiSlug.value, bjdCode: bjdCode.value, buildingName: buildingName.value })
+    const [statsResult, txResult, infoResult, areaResult] = await Promise.allSettled([
       getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value),
       searchTransactions(apiSlug.value, {
         bjdCode: bjdCode.value,
         buildingName: buildingName.value,
+        exclusiveArea: selectedArea.value ?? undefined,
+        rentType: getRentTypeParam(),
         page: 1,
         limit: 5,
       }),
       getBuildingInfo(apiSlug.value, bjdCode.value, buildingName.value),
+      getAreaGroups(apiSlug.value, bjdCode.value, buildingName.value),
     ])
-    return {
-      stats: statsResult.status === 'fulfilled' ? statsResult.value : [],
+    const result = {
+      statsResponse: statsResult.status === 'fulfilled' ? statsResult.value : { monthly: [], summary: null },
       transactions: txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 },
       buildingInfo: infoResult.status === 'fulfilled' ? infoResult.value : null,
+      areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
     }
+    console.log('[SSR DEBUG] useAsyncData result:', JSON.stringify({ hasStats: result.statsResponse.monthly.length, hasTx: result.transactions.items.length, hasInfo: !!result.buildingInfo, areaCount: result.areaGroups.length }))
+    return result
   },
 )
-
 // SSR 데이터로 refs 초기화
 if (ssrData.value) {
-  stats.value = ssrData.value.stats as TransactionStats[]
+  monthly.value = ssrData.value.statsResponse.monthly as TransactionStats[]
+  summary.value = ssrData.value.statsResponse.summary as StatsSummary | null
   transactions.value = ssrData.value.transactions as RealEstateSearchResponse
   buildingInfo.value = ssrData.value.buildingInfo as BuildingInfo | null
+  areaGroups.value = (ssrData.value.areaGroups ?? []) as AreaGroup[]
+  statsLoading.value = false
+  txLoading.value = false
+} else if (import.meta.client) {
+  // SSR 페이로드가 없을 때 클라이언트에서 직접 로드
+  loadData()
+  loadAreaGroups()
 }
-statsLoading.value = false
-txLoading.value = false
+
+function getRentTypeParam(): string | undefined {
+  if (selectedRentType.value === 'jeonse') return '전세'
+  if (selectedRentType.value === 'wolse') return '월세'
+  return undefined
+}
+
+async function reloadStats() {
+  if (!buildingName.value) return
+  statsLoading.value = true
+  try {
+    const res = await getTransactionStats(
+      apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value,
+      selectedArea.value ?? undefined,
+      getRentTypeParam()
+    )
+    monthly.value = res.monthly
+    summary.value = res.summary
+  } catch (e) {
+    console.error('Failed to load stats:', e)
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+async function loadAreaGroups() {
+  if (!bjdCode.value) return
+  try {
+    areaGroups.value = await getAreaGroups(apiSlug.value, bjdCode.value, buildingName.value)
+  } catch {
+    areaGroups.value = []
+  }
+}
 
 async function loadData() {
   if (!buildingName.value) return
@@ -638,22 +701,31 @@ async function loadData() {
   txLoading.value = true
 
   const [statsResult, txResult, infoResult] = await Promise.allSettled([
-    getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value),
+    getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value,
+      selectedArea.value ?? undefined, getRentTypeParam()),
     searchTransactions(apiSlug.value, {
       bjdCode: bjdCode.value,
       buildingName: buildingName.value,
+      exclusiveArea: selectedArea.value ?? undefined,
+      rentType: getRentTypeParam(),
       page: currentPage.value,
       limit: 5,
     }),
     getBuildingInfo(apiSlug.value, bjdCode.value, buildingName.value),
   ])
 
-  stats.value = statsResult.status === 'fulfilled' ? statsResult.value : []
+  if (statsResult.status === 'fulfilled') {
+    monthly.value = statsResult.value.monthly
+    summary.value = statsResult.value.summary
+  } else {
+    monthly.value = []
+    summary.value = null
+  }
   transactions.value = txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 }
   buildingInfo.value = infoResult.status === 'fulfilled' ? infoResult.value : null
 
   // 현재 탭에 거래 데이터가 없으면 반대 탭으로 자동 전환 (최초 로드 시)
-  if (transactions.value.total === 0 && stats.value.length === 0 && !route.query.tab) {
+  if (transactions.value.total === 0 && monthly.value.length === 0 && !route.query.tab) {
     const otherTab: TransactionMode = currentTab.value === 'sale' ? 'rent' : 'sale'
     currentTab.value = otherTab
     statsLoading.value = false
@@ -673,21 +745,20 @@ function goToPage(page: number) {
 // 탭 전환 또는 파라미터 변경 시 데이터 재로드 (초기 로드는 SSR이 처리)
 watch(() => [apiSlug.value, buildingName.value, bjdCode.value], () => {
   currentPage.value = 1
+  selectedArea.value = null
+  selectedRentType.value = 'all'
   loadData()
+  loadAreaGroups()
 })
 
 // 기간 변경 시 시세 데이터만 재로드
-watch(selectedMonths, async () => {
-  if (!buildingName.value) return
-  statsLoading.value = true
-  try {
-    stats.value = await getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value)
-  } catch (e) {
-    console.error('Failed to load stats:', e)
-  } finally {
-    statsLoading.value = false
-  }
-})
+watch(selectedMonths, reloadStats)
+
+// 면적 선택 변경 시 시세 + 거래 내역 재로드
+watch(selectedArea, () => { currentPage.value = 1; loadData() })
+
+// 전월세 구분 변경 시 시세 + 거래 내역 재로드
+watch(selectedRentType, () => { currentPage.value = 1; loadData() })
 
 // buildingInfo 로드 후 building_viewed 이벤트 + 구조화 데이터 설정 + thin content noindex
 watch(() => buildingInfo.value, (info) => {
