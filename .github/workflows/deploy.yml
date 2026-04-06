@@ -68,7 +68,6 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 20m
           script: |
             # assets 디렉토리 보장
             mkdir -p /home/project2/assets/images/guides
@@ -81,9 +80,6 @@ jobs:
 
             # Prisma 클라이언트 생성
             npx prisma generate
-
-            # 부동산 Summary 테이블 갱신
-            node dist/scripts/refreshRealEstateSummary.js
 
             # PM2로 백엔드 재시작 (또는 첫 실행)
             pm2 describe ilsangkit-backend > /dev/null
