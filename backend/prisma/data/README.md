@@ -12,6 +12,9 @@ data.go.kr에서 표준데이터를 다운로드하여 아래 파일명으로 �
 | 의류수거함 | https://www.data.go.kr/data/15139214/standard.do | `clothes.csv` |
 | 공영주차장 | https://www.data.go.kr/data/15012896/standard.do | `parking.csv` |
 | 공공도서관 | https://www.data.go.kr/data/15013109/standard.do | `library.csv` |
+| 도시공원 | https://www.data.go.kr/data/15012890/standard.do | `park.csv` |
+| 전통시장 | https://www.data.go.kr/data/15012894/standard.do | `market.csv` |
+| 학교 | https://www.data.go.kr/data/15021148/standard.do | `school.csv` |
 
 ## 다운로드 방법
 
@@ -23,15 +26,25 @@ data.go.kr에서 표준데이터를 다운로드하여 아래 파일명으로 �
 ## 동기화 실행
 
 ```bash
-npm run sync:toilet     # 공공화장실
-npm run sync:wifi       # 무료와이파이
-npm run sync:clothes    # 의류수거함
-npm run sync:parking    # 공영주차장
-npm run sync:library    # 공공도서관 (추가 예정)
-npm run sync:facilities # 전체 동기화
+npm run sync:facilities                          # 전체 동기화 (15개 카테고리)
+npm run sync:facilities -- --skip hospital       # hospital 제외 (xlsx 시딩 별도)
+npm run sync:facilities -- --only toilet,wifi    # 특정 카테고리만
 ```
 
-clothes, parking, library는 `--mode api` 옵션으로 API 모드도 사용 가능합니다.
+## API 기반 카테고리
+
+아래 카테고리는 CSV가 아닌 API로 동기화됩니다. 환경변수 설정 필요:
+
+| 카테고리 | API | 필요한 환경변수 |
+|---------|-----|----------------|
+| trash (쓰레기배출) | 공공데이터포털 | `OPENAPI_SERVICE_KEY` |
+| hospital (병원) | 공공데이터포털 | `OPENAPI_SERVICE_KEY` |
+| pharmacy (약국) | 공공데이터포털 | `OPENAPI_SERVICE_KEY` |
+| aed (제세동기) | 공공데이터포털 | `OPENAPI_SERVICE_KEY` |
+| school (학교) | NEIS | `NEIS_API_KEY` |
+| childcare (어린이집) | 보육정보 | `CHILDCARE_BASIC_API_KEY`, `CHILDCARE_LIST_API_KEY` |
+| ev-charger (충전소) | 공공데이터포털 | `OPENAPI_SERVICE_KEY` |
+| sports (체육시설) | 공공데이터포털 | `OPENAPI_SERVICE_KEY` |
 
 ## 병원 상세정보 (extra_hospital_latest)
 
