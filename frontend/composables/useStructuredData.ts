@@ -13,13 +13,19 @@ interface BreadcrumbItem {
 
 type OpeningHoursSpec = { '@type': string; dayOfWeek: string; opens: string; closes: string }
 
+/** "900" / "0900" → "09:00" (schema.org HH:MM 형식) */
+function formatTime(t: string): string {
+  const s = String(t).padStart(4, '0')
+  return `${s.slice(0, 2)}:${s.slice(2)}`
+}
+
 /**
  * dutyTime 패턴(Monday~Sunday)으로 OpeningHoursSpecification 배열 생성
  * pharmacy와 hospital이 공유하는 헬퍼
  */
-function buildOpeningHoursSpecs(d: Record<string, unknown>): OpeningHoursSpec[] {
+function buildOpeningHoursSpecs(d: Record<string, unknown>, fieldMap?: Array<[string, string, string]>): OpeningHoursSpec[] {
   const specs: OpeningHoursSpec[] = []
-  const dayMap: Array<[string, string, string]> = [
+  const dayMap = fieldMap ?? [
     ['Monday', 'dutyTime1s', 'dutyTime1c'],
     ['Tuesday', 'dutyTime2s', 'dutyTime2c'],
     ['Wednesday', 'dutyTime3s', 'dutyTime3c'],
@@ -30,7 +36,7 @@ function buildOpeningHoursSpecs(d: Record<string, unknown>): OpeningHoursSpec[] 
   ]
   for (const [day, sKey, cKey] of dayMap) {
     if (d?.[sKey] && d?.[cKey]) {
-      specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: String(d[sKey]), closes: String(d[cKey]) })
+      specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: formatTime(String(d[sKey])), closes: formatTime(String(d[cKey])) })
     }
   }
   return specs
@@ -133,11 +139,15 @@ export function useStructuredData() {
         addressRegion: facility.city,
         addressCountry: 'KR',
       },
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: facility.lat,
-        longitude: facility.lng,
-      },
+      ...(facility.lat && facility.lng
+        ? {
+            geo: {
+              '@type': 'GeoCoordinates',
+              latitude: facility.lat,
+              longitude: facility.lng,
+            },
+          }
+        : {}),
       url: `${SITE_URL}/${facility.category}/${facility.id}`,
       isAccessibleForFree: true,
     }
@@ -194,7 +204,7 @@ export function useStructuredData() {
         ]
         for (const [day, sKey, cKey] of aedDays) {
           if (d?.[sKey] && d?.[cKey]) {
-            specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: String(d[sKey]), closes: String(d[cKey]) })
+            specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: formatTime(String(d[sKey])), closes: formatTime(String(d[cKey])) })
           }
         }
         if (specs.length) Object.assign(schema, { openingHoursSpecification: specs })
@@ -202,7 +212,16 @@ export function useStructuredData() {
       }
       case 'hospital': {
         if (d?.clCdNm) Object.assign(schema, { medicalSpecialty: d.clCdNm })
-        const specs = buildOpeningHoursSpecs(d)
+        const hospitalDayMap: Array<[string, string, string]> = [
+          ['Monday', 'trmtMonStart', 'trmtMonEnd'],
+          ['Tuesday', 'trmtTueStart', 'trmtTueEnd'],
+          ['Wednesday', 'trmtWedStart', 'trmtWedEnd'],
+          ['Thursday', 'trmtThuStart', 'trmtThuEnd'],
+          ['Friday', 'trmtFriStart', 'trmtFriEnd'],
+          ['Saturday', 'trmtSatStart', 'trmtSatEnd'],
+          ['Sunday', 'trmtSunStart', 'trmtSunEnd'],
+        ]
+        const specs = buildOpeningHoursSpecs(d, hospitalDayMap)
         if (specs.length) Object.assign(schema, { openingHoursSpecification: specs })
         break
       }
@@ -272,10 +291,7 @@ export function useStructuredData() {
         email: 'contact@ilsangkit.co.kr',
         availableLanguage: 'Korean',
       },
-      sameAs: [
-        // 소셜 미디어 링크 추가 가능
-      ],
-    }
+      }
 
     useHead({
       script: [
