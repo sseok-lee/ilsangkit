@@ -123,7 +123,7 @@ export async function batchUpsert<T>(
     const totalBatches = Math.ceil(items.length / batchSize);
 
     try {
-      // 각 배치를 트랜잭션으로 래핑
+      // 각 배치를 트랜잭션으로 래핑 (대량 데이터 대비 타임아웃 30초)
       await prisma.$transaction(async (_tx) => {
         const results = await Promise.all(
           batch.map(async (item) => {
@@ -137,7 +137,7 @@ export async function batchUpsert<T>(
           if (result === 'new') newCount++;
           else updateCount++;
         }
-      });
+      }, { timeout: 30000 });
 
       processedRecords += batch.length;
 
