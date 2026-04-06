@@ -30,12 +30,12 @@ describe('useStructuredData', () => {
   // ─── Task 8: Organization sameAs ──────────────────────────────────────────
 
   describe('setOrganizationSchema sameAs', () => {
-    it('setOrganizationSchema 호출 시 sameAs 배열이 포함된다', () => {
+    it('setOrganizationSchema 호출 시 sameAs 필드가 포함되지 않는다', () => {
       const { setOrganizationSchema } = useStructuredData()
       setOrganizationSchema()
       const call = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(call.script[0].innerHTML)
-      expect(Array.isArray(parsed.sameAs)).toBe(true)
+      expect(parsed.sameAs).toBeUndefined()
     })
   })
 
@@ -67,33 +67,33 @@ describe('useStructuredData', () => {
       },
     })
 
-    it('hospital facility에 dutyTime1s/dutyTime1c 있을 때 openingHoursSpecification이 포함된다', () => {
+    it('hospital facility에 trmtMonStart/trmtMonEnd 있을 때 openingHoursSpecification이 포함된다', () => {
       const { setFacilitySchema } = useStructuredData()
-      setFacilitySchema(makeHospitalFacility({ dutyTime1s: '0900', dutyTime1c: '1800' }))
+      setFacilitySchema(makeHospitalFacility({ trmtMonStart: '0900', trmtMonEnd: '1800' }))
       const call = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(call.script[0].innerHTML)
       expect(Array.isArray(parsed.openingHoursSpecification)).toBe(true)
       expect(parsed.openingHoursSpecification.length).toBeGreaterThan(0)
     })
 
-    it('OpeningHoursSpecification 배열에 Monday 항목이 포함된다', () => {
+    it('OpeningHoursSpecification 배열에 Monday 항목이 HH:MM 형식으로 포함된다', () => {
       const { setFacilitySchema } = useStructuredData()
-      setFacilitySchema(makeHospitalFacility({ dutyTime1s: '0900', dutyTime1c: '1800' }))
+      setFacilitySchema(makeHospitalFacility({ trmtMonStart: '0900', trmtMonEnd: '1800' }))
       const call = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(call.script[0].innerHTML)
       const monday = parsed.openingHoursSpecification.find((s: any) => s.dayOfWeek === 'Monday')
       expect(monday).toBeDefined()
       expect(monday['@type']).toBe('OpeningHoursSpecification')
-      expect(monday.opens).toBe('0900')
-      expect(monday.closes).toBe('1800')
+      expect(monday.opens).toBe('09:00')
+      expect(monday.closes).toBe('18:00')
     })
 
-    it('pharmacy와 동일한 dutyTime 패턴으로 여러 요일을 매핑한다', () => {
+    it('trmtXxxStart/End 패턴으로 여러 요일을 매핑한다', () => {
       const { setFacilitySchema } = useStructuredData()
       setFacilitySchema(makeHospitalFacility({
-        dutyTime1s: '0900', dutyTime1c: '1800',
-        dutyTime2s: '0900', dutyTime2c: '1800',
-        dutyTime6s: '0900', dutyTime6c: '1300',
+        trmtMonStart: '0900', trmtMonEnd: '1800',
+        trmtTueStart: '0900', trmtTueEnd: '1800',
+        trmtSatStart: '0900', trmtSatEnd: '1300',
       }))
       const call = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(call.script[0].innerHTML)
@@ -104,7 +104,7 @@ describe('useStructuredData', () => {
       expect(days).toContain('Saturday')
     })
 
-    it('dutyTime 필드가 없으면 openingHoursSpecification이 포함되지 않는다', () => {
+    it('trmtXxxStart 필드가 없으면 openingHoursSpecification이 포함되지 않는다', () => {
       const { setFacilitySchema } = useStructuredData()
       setFacilitySchema(makeHospitalFacility())
       const call = mockUseHead.mock.calls[0][0]
