@@ -1,5 +1,14 @@
 <template>
   <div class="bg-background-light">
+    <!-- Loading State (lazy navigation) -->
+    <div v-if="ssrLoading" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
+      <div class="text-center">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p class="text-gray-600">로딩 중...</p>
+      </div>
+    </div>
+
+    <template v-else>
     <!-- Mobile: Map at top -->
     <div v-if="buildingInfo?.lat && buildingInfo?.lng" class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
       <ClientOnly>
@@ -356,6 +365,7 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -619,10 +629,10 @@ const txLoading = ref(true)
 const currentPage = ref(1)
 
 // SSR: 초기 데이터를 서버에서 로드
-const { data: ssrData, error: ssrError } = await useAsyncData(
+// lazy: true → 클라이언트 네비게이션 시 즉시 페이지 전환 (SSR은 기존대로 서버에서 resolve)
+const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData(
   `re-detail-${propertyTypeParam.value}-${buildingName.value}-${bjdCode.value}`,
   async () => {
-    console.log('[SSR DEBUG] useAsyncData callback started', { apiSlug: apiSlug.value, bjdCode: bjdCode.value, buildingName: buildingName.value })
     const [statsResult, txResult, infoResult, areaResult] = await Promise.allSettled([
       getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value),
       searchTransactions(apiSlug.value, {
@@ -636,27 +646,29 @@ const { data: ssrData, error: ssrError } = await useAsyncData(
       getBuildingInfo(apiSlug.value, bjdCode.value, buildingName.value),
       getAreaGroups(apiSlug.value, bjdCode.value, buildingName.value),
     ])
-    const result = {
+    return {
       statsResponse: statsResult.status === 'fulfilled' ? statsResult.value : { monthly: [], summary: null },
       transactions: txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 },
       buildingInfo: infoResult.status === 'fulfilled' ? infoResult.value : null,
       areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
     }
-    console.log('[SSR DEBUG] useAsyncData result:', JSON.stringify({ hasStats: result.statsResponse.monthly.length, hasTx: result.transactions.items.length, hasInfo: !!result.buildingInfo, areaCount: result.areaGroups.length }))
-    return result
   },
+  { lazy: true }
 )
-// SSR 데이터로 refs 초기화
-if (ssrData.value) {
-  monthly.value = ssrData.value.statsResponse.monthly as TransactionStats[]
-  summary.value = ssrData.value.statsResponse.summary as StatsSummary | null
-  transactions.value = ssrData.value.transactions as RealEstateSearchResponse
-  buildingInfo.value = ssrData.value.buildingInfo as BuildingInfo | null
-  areaGroups.value = (ssrData.value.areaGroups ?? []) as AreaGroup[]
+const ssrLoading = computed(() => ssrStatus.value === 'pending')
+// SSR 데이터로 refs 초기화 (immediate: true로 SSR 페이로드 즉시 반영 + lazy 로드 완료 시 반영)
+watch(ssrData, (data) => {
+  if (!data) return
+  monthly.value = data.statsResponse.monthly as TransactionStats[]
+  summary.value = data.statsResponse.summary as StatsSummary | null
+  transactions.value = data.transactions as RealEstateSearchResponse
+  buildingInfo.value = data.buildingInfo as BuildingInfo | null
+  areaGroups.value = (data.areaGroups ?? []) as AreaGroup[]
   statsLoading.value = false
   txLoading.value = false
-} else if (import.meta.client) {
-  // SSR 페이로드가 없을 때 클라이언트에서 직접 로드
+}, { immediate: true })
+// SSR 페이로드가 없을 때 클라이언트에서 직접 로드 (lazy 모드에서 fallback)
+if (import.meta.client && !ssrData.value && ssrStatus.value !== 'pending') {
   loadData()
   loadAreaGroups()
 }

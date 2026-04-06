@@ -67,6 +67,8 @@ model Toilet {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -103,6 +105,8 @@ model Wifi {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -136,6 +140,8 @@ model Clothes {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -175,6 +181,7 @@ model Park {
   @@index([city, district])
   @@index([lat, lng])
   @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -229,6 +236,7 @@ model School {
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([schoolLevel])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -354,6 +362,7 @@ model Childcare {
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([crtypename])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -392,6 +401,8 @@ model Market {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -442,6 +453,8 @@ model Parking {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -489,6 +502,8 @@ model Aed {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -538,6 +553,8 @@ model Library {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -599,6 +616,8 @@ model EvCharger {
   @@index([bjdCode])
   @@index([chgerType])
   @@index([statId])
+  @@index([statId, city, district])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -642,6 +661,7 @@ model Sports {
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([ftypeNm])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -833,6 +853,8 @@ model Hospital {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -895,7 +917,9 @@ model Pharmacy {
 
   @@index([city, district])
   @@index([lat, lng])
+  @@index([bjdCode])
   @@index([hpid])
+  @@index([viewCount])
   @@index([name])
 }
 
@@ -934,7 +958,8 @@ model AptSaleTransaction {
   syncedAt         DateTime @default(now())
 
   @@index([bjdCode, dealYear, dealMonth])
-  @@index([buildingName, bjdCode])
+  @@index([bjdCode, buildingName])
+  @@index([bjdCode, exclusiveArea])
   @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
@@ -972,7 +997,8 @@ model VillaSaleTransaction {
   syncedAt         DateTime @default(now())
 
   @@index([bjdCode, dealYear, dealMonth])
-  @@index([buildingName, bjdCode])
+  @@index([bjdCode, buildingName])
+  @@index([bjdCode, exclusiveArea])
   @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
@@ -1008,7 +1034,8 @@ model OffitelSaleTransaction {
   syncedAt         DateTime @default(now())
 
   @@index([bjdCode, dealYear, dealMonth])
-  @@index([buildingName, bjdCode])
+  @@index([bjdCode, buildingName])
+  @@index([bjdCode, exclusiveArea])
   @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
@@ -1050,7 +1077,8 @@ model AptRentTransaction {
   syncedAt        DateTime @default(now())
 
   @@index([bjdCode, dealYear, dealMonth])
-  @@index([buildingName, bjdCode])
+  @@index([bjdCode, buildingName])
+  @@index([bjdCode, exclusiveArea])
   @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
@@ -1090,7 +1118,8 @@ model VillaRentTransaction {
   syncedAt        DateTime @default(now())
 
   @@index([bjdCode, dealYear, dealMonth])
-  @@index([buildingName, bjdCode])
+  @@index([bjdCode, buildingName])
+  @@index([bjdCode, exclusiveArea])
   @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
@@ -1129,7 +1158,8 @@ model OffitelRentTransaction {
   syncedAt        DateTime @default(now())
 
   @@index([bjdCode, dealYear, dealMonth])
-  @@index([buildingName, bjdCode])
+  @@index([bjdCode, buildingName])
+  @@index([bjdCode, exclusiveArea])
   @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])

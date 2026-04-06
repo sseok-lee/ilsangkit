@@ -121,6 +121,35 @@ export const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
   },
 };
 
+// --- 조회수 배치 처리 ---
+// 매 요청마다 DB write 대신 인메모리 버퍼에 누적 → 30초 간격 일괄 flush
+const viewCountBuffer = new Map<string, { category: FacilityCategory; id: string; count: number }>();
+
+function bufferViewCount(category: FacilityCategory, id: string): void {
+  const key = `${category}:${id}`;
+  const existing = viewCountBuffer.get(key);
+  if (existing) {
+    existing.count += 1;
+  } else {
+    viewCountBuffer.set(key, { category, id, count: 1 });
+  }
+}
+
+export async function flushViewCounts(): Promise<void> {
+  if (viewCountBuffer.size === 0) return;
+  const entries = Array.from(viewCountBuffer.values());
+  viewCountBuffer.clear();
+  await Promise.allSettled(
+    entries.map(({ category, id, count }) => {
+      const config = CATEGORY_REGISTRY[category];
+      if (!config) return Promise.resolve();
+      return config.model().update({ where: { id }, data: { viewCount: { increment: count } } });
+    })
+  );
+}
+
+setInterval(flushViewCounts, 30_000);
+
 // 기본 select 필드 (공통 필드)
 const BASE_SELECT_FIELDS = {
   id: true,
@@ -409,8 +438,8 @@ async function getEvChargerStationDetail(statId: string): Promise<FacilityDetail
 
   const first = chargers[0];
 
-  // 조회수 증가 (첫 번째 레코드만)
-  prisma.evCharger.update({ where: { id: first.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+  // 조회수 증가 (배치 처리)
+  bufferViewCount('ev-charger', first.id);
 
   const chargerList = chargers.map((c) => ({
     chgerId: c.chgerId,
@@ -907,8 +936,8 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   const record = await model.findUnique(findOptions);
   if (!record) return null;
 
-  // 조회수 증가 (비동기)
-  model.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+  // 조회수 증가 (배치 처리 — 인메모리 버퍼에 누적 후 일괄 flush)
+  bufferViewCount(category as FacilityCategory, id);
 
   return toDetail(record, category as FacilityCategory);
 }

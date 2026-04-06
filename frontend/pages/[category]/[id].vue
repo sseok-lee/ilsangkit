@@ -2563,23 +2563,32 @@ function getCityHubPath(cityName: string): string {
 }
 
 // SSR: useAsyncData로 서버에서 데이터 fetch
+// lazy: true → 클라이언트 네비게이션 시 즉시 페이지 전환 (SSR은 기존대로 서버에서 resolve)
 const { data: facilityResponse, status, error: fetchError } = await useAsyncData(
   `facility-${category.value}-${id.value}`,
   () => $fetch<{ success: boolean; data: FacilityDetail }>(
     `/api/facilities/${category.value}/${id.value}`
-  )
+  ),
+  { lazy: true }
 )
-// fetch 에러 처리: 실제 404만 hard 404, 네트워크/서버 에러는 soft error로 처리 (SEO 보호)
-if (fetchError.value) {
+// fetch 에러 처리: SSR에서는 즉시, 클라이언트에서는 watch로 처리
+if (import.meta.server && fetchError.value) {
   const errStatus = fetchError.value.statusCode
   if (errStatus === 404 || errStatus === 422) {
     throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
   }
-  // 5xx/네트워크 에러는 페이지를 유지하여 Googlebot이 404로 인식하지 않도록 함
 }
-if (status.value === 'success' && !facilityResponse.value?.data) {
+if (import.meta.server && status.value === 'success' && !facilityResponse.value?.data) {
   throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
 }
+// 클라이언트 네비게이션 시 lazy 로드 후 에러 처리
+watch(fetchError, (err) => {
+  if (!err) return
+  const errStatus = err.statusCode
+  if (errStatus === 404 || errStatus === 422) {
+    throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
+  }
+}, { immediate: true })
 
 const facility = computed(() => facilityResponse.value?.data ?? null)
 const loading = computed(() => status.value === 'pending')

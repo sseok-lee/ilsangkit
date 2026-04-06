@@ -38,7 +38,7 @@ vi.mock('../../src/lib/prisma.js', () => {
   };
 });
 
-import { search, getDetail, getAllIds, getByRegion, CATEGORY_REGISTRY } from '../../src/services/facilityService.js';
+import { search, getDetail, getAllIds, getByRegion, CATEGORY_REGISTRY, flushViewCounts } from '../../src/services/facilityService.js';
 
 const sampleRecord = {
   id: 'test-1',
@@ -65,7 +65,11 @@ const sampleRecord = {
   managingOrg: '강남구청',
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  vi.clearAllMocks();
+  mockUpdate.mockResolvedValue({});
+  // 이전 테스트에서 남은 viewCount 버퍼 비우기
+  await flushViewCounts();
   vi.clearAllMocks();
   mockUpdate.mockResolvedValue({});
 });
@@ -303,11 +307,14 @@ describe('getDetail', () => {
     expect(result).toBeNull();
   });
 
-  it('increments viewCount asynchronously', async () => {
+  it('increments viewCount via batch flush', async () => {
     mockFindUnique.mockResolvedValue(sampleRecord);
 
     await getDetail('toilet', 'test-1');
 
+    // viewCount는 버퍼에 누적 → flush 시 일괄 반영
+    expect(mockUpdate).not.toHaveBeenCalled();
+    await flushViewCounts();
     expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: 'test-1' },
       data: { viewCount: { increment: 1 } },
