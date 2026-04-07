@@ -70,6 +70,7 @@ export interface ComplexItem {
   lng: number | null;
   lastDealYear: number | null;
   lastDealMonth: number | null;
+  buildYear: number | null;
 }
 
 export interface SearchAllResult {
@@ -432,6 +433,7 @@ export async function getComplexList(
       lng: row.lng != null ? Number(row.lng) : null,
       lastDealYear: row.latestDealYear,
       lastDealMonth: row.latestDealMonth,
+      buildYear: row.buildYear,
     })),
     total,
     page,

@@ -1188,6 +1188,7 @@ model RealEstateBuildingSummary {
   latestPrice      BigInt?
   latestDealYear   Int?
   latestDealMonth  Int?
+  buildYear        Int?
   lat              Decimal? @db.Decimal(10, 7)
   lng              Decimal? @db.Decimal(10, 7)
   transactionCount Int      @default(0)

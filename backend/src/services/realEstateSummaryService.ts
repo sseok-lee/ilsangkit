@@ -20,7 +20,7 @@ export async function refreshSummary(type: string): Promise<number> {
     return tx.$queryRawUnsafe(
       `INSERT INTO RealEstateBuildingSummary
         (type, buildingName, bjdCode, city, district, dongName,
-         latestPrice, latestDealYear, latestDealMonth, lat, lng,
+         latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng,
          transactionCount, updatedAt)
       SELECT
         ? as type,
@@ -28,6 +28,7 @@ export async function refreshSummary(type: string): Promise<number> {
         d.city, d.district, d.dongName,
         d.${priceField} as latestPrice,
         g.lastDealYear, g.lastDealMonth,
+        d.buildYear,
         g.lat, g.lng,
         g.transactionCount,
         NOW()

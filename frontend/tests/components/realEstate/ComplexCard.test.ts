@@ -13,6 +13,9 @@ const mockComplex: ComplexInfo = {
   transactionCount: 25,
   lat: 37.5,
   lng: 127.0,
+  lastDealYear: 2026,
+  lastDealMonth: 3,
+  buildYear: 2015,
 }
 
 const mockComplexNoPrice: ComplexInfo = {
@@ -25,6 +28,9 @@ const mockComplexNoPrice: ComplexInfo = {
   transactionCount: 0,
   lat: null,
   lng: null,
+  lastDealYear: null,
+  lastDealMonth: null,
+  buildYear: null,
 }
 
 describe('ComplexCard', () => {
@@ -42,20 +48,20 @@ describe('ComplexCard', () => {
     expect(wrapper.text()).toContain('25')
   })
 
-  describe('금액 포맷팅', () => {
-    it('1억 이상 최근 거래가를 "X억 Y만원"으로 표시한다', () => {
+  describe('거래일/건축년도 표시', () => {
+    it('최근 거래일과 건축년도를 표시한다', () => {
       const wrapper = mount(ComplexCard, {
         props: { complex: mockComplex, propertyType: 'apt', tab: 'sale' },
       })
-      // 150000만원 = 15억
-      expect(wrapper.text()).toContain('15억')
+      expect(wrapper.text()).toContain('2026.03')
+      expect(wrapper.text()).toContain('2015년')
     })
 
-    it('latestPrice가 null이면 가격 정보 없음 메시지를 표시한다', () => {
+    it('거래일/건축년도가 null이면 표시하지 않는다', () => {
       const wrapper = mount(ComplexCard, {
         props: { complex: mockComplexNoPrice, propertyType: 'apt', tab: 'sale' },
       })
-      expect(wrapper.text()).toContain('거래 정보 확인')
+      expect(wrapper.text()).not.toContain('년')
     })
   })
 

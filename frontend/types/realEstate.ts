@@ -114,6 +114,9 @@ export interface ComplexInfo {
   transactionCount: number
   lat: number | null
   lng: number | null
+  lastDealYear: number | null
+  lastDealMonth: number | null
+  buildYear: number | null
 }
 
 // 건물 상세 정보

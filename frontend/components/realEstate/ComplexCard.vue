@@ -26,10 +26,18 @@
         </p>
 
         <div class="flex items-center justify-between mt-2">
-          <!-- 최근 거래가 -->
-          <span class="text-primary font-bold text-lg leading-tight">
-            {{ complex.latestPrice != null ? formatAmount(complex.latestPrice) : '거래 정보 확인' }}
-          </span>
+          <div class="flex items-center gap-2 text-xs text-slate-500">
+            <!-- 최근 거래일 -->
+            <span v-if="complex.lastDealYear" class="flex items-center gap-0.5">
+              <span class="material-symbols-outlined text-[14px]">calendar_month</span>
+              {{ complex.lastDealYear }}.{{ String(complex.lastDealMonth).padStart(2, '0') }}
+            </span>
+            <!-- 건축년도 -->
+            <span v-if="complex.buildYear" class="flex items-center gap-0.5">
+              <span class="material-symbols-outlined text-[14px]">apartment</span>
+              {{ complex.buildYear }}년
+            </span>
+          </div>
 
           <!-- 거래 건수 배지 -->
           <span class="shrink-0 bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-md">
@@ -66,16 +74,4 @@ const PROPERTY_ICONS: Record<string, { img: string; bg: string }> = {
 
 const propertyTypeImg = computed(() => PROPERTY_ICONS[props.propertyType]?.img || 'apt')
 const propertyTypeColor = computed(() => PROPERTY_ICONS[props.propertyType]?.bg || 'bg-slate-100')
-
-function formatAmount(amount: number): string {
-  const uk = Math.floor(amount / 10000)
-  const man = amount % 10000
-  if (uk > 0 && man > 0) {
-    return `${uk}억 ${man.toLocaleString()}만원`
-  }
-  if (uk > 0) {
-    return `${uk}억`
-  }
-  return `${amount.toLocaleString()}만원`
-}
 </script>
