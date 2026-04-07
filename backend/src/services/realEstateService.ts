@@ -161,6 +161,7 @@ export async function searchTransactions(
   if (dealMonth !== undefined) where.dealMonth = dealMonth;
   if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
   if (rentType) where.rentType = rentType;
+  if (isSaleType(type)) where.cancelDealDay = null;
 
   // 기간 필터: months 전달 시 최근 N개월로 제한
   if (months) {
@@ -248,6 +249,7 @@ export async function getTransactionStats(
   if (buildingName) where.buildingName = buildingName;
   if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
   if (rentType) where.rentType = rentType;
+  if (isSale) where.cancelDealDay = null;
 
   // Limit to recent N months (months 미지정 시 전체 기간)
   let cutoff: Date | null = null;
