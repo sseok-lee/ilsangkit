@@ -256,7 +256,7 @@ useHead(() => {
       { name: 'description', content: description },
       { property: 'og:title', content: title },
       { property: 'og:description', content: description },
-      { property: 'og:image', content: DEFAULT_OG_IMAGE },
+      { property: 'og:image', content: `${SITE_URL}/og?city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}` },
       { property: 'og:image:width', content: '1200' },
       { property: 'og:image:height', content: '630' },
       { property: 'og:url', content: canonicalUrl },
@@ -266,7 +266,7 @@ useHead(() => {
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: title },
       { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
+      { name: 'twitter:image', content: `${SITE_URL}/og?city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}` },
     ],
     link: [
       { rel: 'canonical', href: canonicalUrl },

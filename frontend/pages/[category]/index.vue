@@ -312,7 +312,7 @@ const { loading, facilities, total, currentPage, totalPages, error: facilityErro
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const { loadRegions, citiesWithDistricts } = useRegions()
 const { setMeta } = useFacilityMeta()
-const { setItemListSchema, setBreadcrumbSchema } = useStructuredData()
+const { setItemListSchema, setBreadcrumbSchema, setFAQSchema } = useStructuredData()
 
 // Region state
 const selectedCity = ref('')
@@ -447,9 +447,17 @@ setBreadcrumbSchema([
   { name: catLabel, url: `/${route.params.category}` },
 ])
 
-// FAQ HTML (JSON-LD 제거 — FAQPage 리치결과 상업 사이트 미지원)
+// FAQ HTML + JSON-LD (정보성 사이트는 FAQPage 리치결과 대상)
 const categoryFAQ = CATEGORY_FAQ[route.params.category as FacilityCategory]
 const faqItems = computed(() => CATEGORY_FAQ[categoryParam.value as FacilityCategory] || [])
+
+// FAQPage JSON-LD — SERP 점유 면적 확대
+if (categoryFAQ && categoryFAQ.length > 0) {
+  setFAQSchema(categoryFAQ.map((faq: { question: string; answer: string }) => ({
+    question: faq.question,
+    answer: faq.answer,
+  })))
+}
 
 // Popular regions
 const popularRegionLinks = computed(() => POPULAR_REGIONS || [])

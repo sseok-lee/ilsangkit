@@ -298,3 +298,52 @@ Nitro 서버사이드: 사이트맵(`/sitemap.xml`, `/sitemap/[...].ts`), OG 이
 | 날짜 | 변경 내용 | 대상 | 사유 |
 |------|----------|------|------|
 | 2026-04-07 | 초기 구성 | 전체 | 디자인 UI/UX 하네스 구축 |
+
+## 하네스: SEO + 수익 최적화
+
+**목표:** 기술 SEO, GSC 색인, Google/Naver 노출·CTR, AdSense 수익을 종합 최적화
+
+**에이전트 팀:**
+| 에이전트 | 역할 |
+|---------|------|
+| seo-auditor | 기술 SEO 감사 (사이트맵, 구조화 데이터, Core Web Vitals, canonical, 크롤 예산) |
+| indexing-optimizer | GSC 색인 커버리지 분석 및 Naver 검색 노출 최적화 |
+| ctr-optimizer | SERP CTR 최적화 (메타 태그, 리치 스니펫, Featured Snippet, OG) |
+| adsense-optimizer | AdSense 수익 최적화 (광고 배치, 뷰어빌리티, RPM, CLS 방지) |
+
+**스킬:**
+| 스킬 | 용도 | 사용 에이전트 |
+|------|------|-------------|
+| seo-audit | 기술 SEO 감사 워크플로우 | seo-auditor |
+| indexing-optimization | GSC 색인 + Naver 최적화 워크플로우 | indexing-optimizer |
+| ctr-optimization | CTR 최적화 워크플로우 | ctr-optimizer |
+| adsense-optimization | AdSense 수익 최적화 워크플로우 | adsense-optimizer |
+| seo-revenue-orchestrator | 4개 에이전트 병렬 실행 및 통합 리포트 생성 | 오케스트레이터 |
+
+**실행 규칙:**
+- SEO/검색/수익 관련 종합 요청 시 `seo-revenue-orchestrator` 스킬을 통해 에이전트를 병렬 실행하라
+- 단일 영역 요청(SEO 감사만, CTR만 등)은 해당 개별 스킬을 직접 실행
+- 단순 SEO 질문은 에이전트 없이 직접 응답해도 무방
+- 모든 에이전트는 `model: "opus"` 사용
+- 중간 산출물: `_workspace/` 디렉토리
+
+**디렉토리 구조:**
+```
+.claude/
+├── agents/
+│   ├── seo-auditor.md
+│   ├── indexing-optimizer.md
+│   ├── ctr-optimizer.md
+│   └── adsense-optimizer.md
+└── skills/
+    ├── seo-audit/SKILL.md
+    ├── indexing-optimization/SKILL.md
+    ├── ctr-optimization/SKILL.md
+    ├── adsense-optimization/SKILL.md
+    └── seo-revenue-orchestrator/SKILL.md
+```
+
+**변경 이력:**
+| 날짜 | 변경 내용 | 대상 | 사유 |
+|------|----------|------|------|
+| 2026-04-07 | 초기 구성 | 전체 | SEO + 수익 최적화 하네스 구축 |

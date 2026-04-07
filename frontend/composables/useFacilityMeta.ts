@@ -209,6 +209,10 @@ export function useFacilityMeta() {
       ogType: options.type || 'website',
       ogLocale: 'ko_KR',
 
+      // OG Image dimensions
+      ogImageWidth: 1200,
+      ogImageHeight: 630,
+
       // Twitter Card
       twitterCard: 'summary_large_image',
       twitterTitle: fullTitle,
@@ -229,7 +233,7 @@ export function useFacilityMeta() {
    */
   function setHomeMeta() {
     setMeta({
-      title: '일상킷 - 부동산 실거래가·생활시설 통합 검색',
+      title: '부동산 실거래가·내 주변 생활시설 검색 - 일상킷',
       description: '아파트·빌라·오피스텔 실거래가 조회와 학교, 어린이집, 공원 등 생활시설을 한번에 검색. 시세 조회부터 주변 시설 정보까지 한곳에서 확인하세요.',
       path: '/',
     })

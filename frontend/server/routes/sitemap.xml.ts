@@ -7,6 +7,7 @@ import {
   fetchFacilityIds,
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
+  getWeekStartDate,
 } from '../utils/sitemap'
 
 // 검색 트렌드 기반 사이트맵 포함 카테고리 (2026-03 네이버 데이터랩 분석)
@@ -19,6 +20,7 @@ const FACILITY_CATEGORY_LIMITS: Partial<Record<string, number>> = {
   'ev-charger': 20000,  // ~100K → 20K
   'childcare': 15000,   // ~60K → 15K
   'sports': 10000,      // ~40K → 10K
+  'clothes': 10000,     // ~20K → 10K (검색 수요 최하위)
 }
 
 export default defineEventHandler(async (event) => {
@@ -73,14 +75,15 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // 부동산 건물 상세 페이지
+  // 부동산 건물 상세 페이지 — lastmod는 주 단위로 설정 (매일 변경 방지)
   const realEstateBuildings = await fetchRealEstateBuildings(apiBase)
+  const weekStart = getWeekStartDate()
   const realEstatePages = Math.max(1, Math.ceil(realEstateBuildings.length / MAX_URLS_PER_SITEMAP))
   if (realEstatePages === 1) {
-    sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: today })
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
   } else {
     for (let i = 1; i <= realEstatePages; i++) {
-      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: today })
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: weekStart })
     }
   }
 

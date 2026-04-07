@@ -2612,6 +2612,20 @@ watchEffect(() => {
   }
 })
 
+// wifi/aed 상세 페이지 noindex (사이트맵 제외 카테고리 — 크롤 예산 절감)
+const isLowValueCategory = computed(() => {
+  const cat = facility.value?.category
+  return cat === 'wifi' || cat === 'aed'
+})
+
+watchEffect(() => {
+  if (isLowValueCategory.value) {
+    useHead({
+      meta: [{ name: 'robots', content: 'noindex, follow' }],
+    })
+  }
+})
+
 // 빈약한 데이터 페이지 noindex 처리
 const isThinContent = computed(() => {
   if (!facility.value?.details) return false
@@ -2619,6 +2633,8 @@ const isThinContent = computed(() => {
   const cat = facility.value.category
   // clothes/trash는 원래 필드가 적으므로 noindex 제외
   if (cat === 'clothes' || cat === 'trash') return false
+  // wifi/aed는 위에서 별도 처리
+  if (cat === 'wifi' || cat === 'aed') return false
   // 주소 외 의미있는 상세 필드 수 계산
   const skipKeys = new Set(['govCode', 'dataDate', 'providerCode', 'providerName', 'postNo', 'postCdn1', 'postCdn2', 'sidoCd', 'sgguCd', 'emdongNm', 'ykiho', 'clCd', 'hpid', 'dutyMapimg'])
   let fieldCount = 0

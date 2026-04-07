@@ -110,7 +110,7 @@ export function useStructuredData() {
 
     // 시설 유형에 따른 @type 결정
     const typeMap: Record<FacilityCategory, string> = {
-      toilet: 'PublicToilet',
+      toilet: 'CivicStructure',
       trash: 'CivicStructure',
       wifi: 'LocalBusiness',
       clothes: 'RecyclingCenter',
@@ -291,7 +291,10 @@ export function useStructuredData() {
         email: 'contact@ilsangkit.co.kr',
         availableLanguage: 'Korean',
       },
-      }
+      sameAs: [
+        'https://ilsangkit.co.kr',
+      ],
+    }
 
     useHead({
       script: [

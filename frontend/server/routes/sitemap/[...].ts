@@ -10,7 +10,8 @@ import {
   fetchRealEstateBuildings,
 } from '../../utils/sitemap'
 
-const FACILITY_CATEGORIES = new Set(['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'])
+// wifi/aed는 사이트맵 인덱스에서 제외된 카테고리 — 동적 핸들러에서도 제외하여 404 반환
+const FACILITY_CATEGORIES = new Set(['toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'])
 
 function parseSlug(slug: string): { category: string; page: number } | null {
   // "real-estate" → category='real-estate', page=1

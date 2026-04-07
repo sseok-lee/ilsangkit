@@ -196,15 +196,19 @@ const realEstateCards = computed(() => {
 // SEO 메타
 const canonicalUrl = `${SITE_URL}/${city.value}`
 useHead(() => {
-  const title = `${cityName.value} 생활 정보 | 일상킷`
+  const year = new Date().getFullYear()
+  const title = `${cityName.value} 부동산 시세·생활시설 현황 (${year}) | 일상킷`
   const description = `${cityName.value} 아파트·빌라·오피스텔 실거래가와 주요 생활시설 현황을 확인하세요. 구/군별 시세 비교와 병원, 약국, 주차장, 화장실 등 생활 인프라 정보를 제공합니다.`
+  const dynamicOgImage = `${SITE_URL}/og?city=${encodeURIComponent(cityName.value)}&title=${encodeURIComponent(title)}`
   return {
     title,
     meta: [
       { name: 'description', content: description },
       { property: 'og:title', content: title },
       { property: 'og:description', content: description },
-      { property: 'og:image', content: DEFAULT_OG_IMAGE },
+      { property: 'og:image', content: dynamicOgImage },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
       { property: 'og:url', content: canonicalUrl },
       { property: 'og:type', content: 'website' },
     ],

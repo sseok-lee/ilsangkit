@@ -793,9 +793,7 @@ useHead({
     { name: 'robots', content: 'noindex, follow' },
     { name: 'description', content: initialKeyword ? `${initialKeyword} 관련 생활시설 및 부동산 정보를 찾아보세요.` : '주변 생활시설과 부동산 정보를 검색하세요.' },
   ],
-  link: [
-    { rel: 'canonical', href: 'https://ilsangkit.co.kr/search' },
-  ],
+  // noindex 페이지에서는 canonical 제거 (Google 신호 충돌 방지)
 })
 setSearchMeta({
   keyword: initialKeyword || undefined,
