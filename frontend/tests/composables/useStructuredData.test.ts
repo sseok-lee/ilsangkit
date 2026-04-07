@@ -30,12 +30,12 @@ describe('useStructuredData', () => {
   // ─── Task 8: Organization sameAs ──────────────────────────────────────────
 
   describe('setOrganizationSchema sameAs', () => {
-    it('setOrganizationSchema 호출 시 sameAs 필드가 포함되지 않는다', () => {
+    it('setOrganizationSchema 호출 시 sameAs 필드가 포함된다', () => {
       const { setOrganizationSchema } = useStructuredData()
       setOrganizationSchema()
       const call = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(call.script[0].innerHTML)
-      expect(parsed.sameAs).toBeUndefined()
+      expect(parsed.sameAs).toEqual(['https://ilsangkit.co.kr'])
     })
   })
 
