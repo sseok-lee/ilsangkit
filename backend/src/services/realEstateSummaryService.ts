@@ -48,7 +48,7 @@ export async function refreshSummary(type: string): Promise<number> {
       )`,
       type,
     );
-  });
+  }, { timeout: 60000 });
 
   const inserted = Number(result) || 0;
   return inserted;
