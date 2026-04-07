@@ -1,7 +1,7 @@
 // 쓰레기 배출 일정 서비스
 // NOTE: 지도 마커가 아닌 지역별 일정 조회용
 
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import { PAGINATION } from '../constants/index.js';
 
 // 유형별 배출 정보 타입

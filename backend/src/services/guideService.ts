@@ -1,4 +1,4 @@
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 
 export const guideViewBuffer = new Map<string, number>();
 

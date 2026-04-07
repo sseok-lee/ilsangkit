@@ -5,6 +5,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { NotFoundError } from '../lib/errors.js';
 import { getStatsByCity, getStatsByDistrict, getSyncStatus, SHORT_TO_SLUG } from '../services/facilityService.js';
 import { getCategories, getStats, getRegionByDistrictName, getRegions } from '../services/metaService.js';
 
@@ -49,16 +50,14 @@ router.get('/region-facilities-summary', validate(RegionFacilitiesSummaryQuerySc
   const citySlug = SHORT_TO_SLUG[city];
 
   if (!citySlug) {
-    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
-    return;
+    throw new NotFoundError('해당 지역을 찾을 수 없습니다');
   }
 
   if (!district) {
     // city 통계
     const stats = await getStatsByCity(citySlug);
     if (!stats) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
-      return;
+      throw new NotFoundError('해당 지역을 찾을 수 없습니다');
     }
     res.json({
       success: true,
@@ -76,8 +75,7 @@ router.get('/region-facilities-summary', validate(RegionFacilitiesSummaryQuerySc
   const districtRegion = await getRegionByDistrictName(city, district);
 
   if (!districtRegion) {
-    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
-    return;
+    throw new NotFoundError('해당 지역을 찾을 수 없습니다');
   }
 
   // districtSlug: slug 전체 또는 하이픈 이후 부분 — getStatsByDistrict는 districtSlug (하이픈 이후) 기대
@@ -87,8 +85,7 @@ router.get('/region-facilities-summary', validate(RegionFacilitiesSummaryQuerySc
 
   const stats = await getStatsByDistrict(citySlug, districtSlug);
   if (!stats) {
-    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
-    return;
+    throw new NotFoundError('해당 지역을 찾을 수 없습니다');
   }
 
   res.json({
@@ -109,8 +106,7 @@ router.get('/stats/:citySlug', validate(SlugParamsSchema, 'params'), asyncHandle
   const stats = await getStatsByCity(citySlug);
 
   if (!stats) {
-    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
-    return;
+    throw new NotFoundError('해당 지역을 찾을 수 없습니다');
   }
 
   res.json({ success: true, data: stats });
@@ -123,8 +119,7 @@ router.get('/stats/:citySlug/:districtSlug', validate(SlugDistrictParamsSchema, 
   const stats = await getStatsByDistrict(citySlug, districtSlug);
 
   if (!stats) {
-    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' } });
-    return;
+    throw new NotFoundError('해당 지역을 찾을 수 없습니다');
   }
 
   res.json({ success: true, data: stats });

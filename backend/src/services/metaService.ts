@@ -1,4 +1,4 @@
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 
 // Stats 인메모리 캐시 (5분 TTL) — 23개 병렬 COUNT 쿼리 부하 감소
 let statsCache: { data: Record<string, unknown>; expiry: number } | null = null;

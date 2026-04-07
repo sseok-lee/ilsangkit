@@ -22,13 +22,17 @@ export async function flushViewCounts(): Promise<void> {
   if (viewCountBuffer.size === 0) return;
   const entries = Array.from(viewCountBuffer.values());
   viewCountBuffer.clear();
-  await Promise.allSettled(
-    entries.map(({ category, id, count }) => {
-      const config = CATEGORY_REGISTRY[category];
-      if (!config) return Promise.resolve();
-      return config.model().update({ where: { id }, data: { viewCount: { increment: count } } });
-    })
-  );
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+    const batch = entries.slice(i, i + BATCH_SIZE);
+    await Promise.allSettled(
+      batch.map(({ category, id, count }) => {
+        const config = CATEGORY_REGISTRY[category];
+        if (!config) return Promise.resolve();
+        return config.model().update({ where: { id }, data: { viewCount: { increment: count } } });
+      })
+    );
+  }
 }
 
 if (process.env.NODE_ENV !== 'test') {

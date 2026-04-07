@@ -15,6 +15,7 @@ const IdParamsSchema = z.object({
 });
 import * as wasteScheduleService from '../services/wasteScheduleService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { NotFoundError } from '../lib/errors.js';
 
 const router = Router();
 
@@ -83,14 +84,7 @@ router.get('/:id', validate(IdParamsSchema, 'params'), asyncHandler(async (req: 
   const id = (req.params as unknown as { id: number }).id;
   const item = await wasteScheduleService.getById(id);
   if (!item) {
-    res.status(404).json({
-      success: false,
-      error: {
-        code: 'NOT_FOUND',
-        message: '배출 일정을 찾을 수 없습니다',
-      },
-    });
-    return;
+    throw new NotFoundError('배출 일정을 찾을 수 없습니다');
   }
   res.json({ success: true, data: item });
 }));

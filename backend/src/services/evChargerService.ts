@@ -3,7 +3,7 @@
  * - $queryRaw GROUP BY statId 기반 충전소 단위 그룹핑
  */
 
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, SHORT_TO_SLUG, FULL_TO_SLUG } from './cityMapping.js';
 import { bufferViewCount } from './viewCountService.js';

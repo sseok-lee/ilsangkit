@@ -1,15 +1,11 @@
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import * as facilityService from './facilityService.js';
 import * as wasteScheduleService from './wasteScheduleService.js';
 import type { FacilityCategory } from './facilityService.js';
-
-export const VALID_CATEGORIES: FacilityCategory[] = [
-  'toilet', 'wifi', 'clothes', 'parking', 'aed', 'library',
-  'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports',
-];
+import { ALL_CATEGORIES } from './categoryRegistry.js';
 
 export function isValidCategory(category: string): category is FacilityCategory {
-  return VALID_CATEGORIES.includes(category as FacilityCategory);
+  return ALL_CATEGORIES.includes(category as FacilityCategory);
 }
 
 export async function getFacilityIds(category: FacilityCategory, limit?: number) {

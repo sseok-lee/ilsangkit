@@ -3,6 +3,7 @@
 
 import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
+import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * Helmet 보안 헤더 설정
@@ -54,7 +55,7 @@ export const helmetConfig = helmet({
     action: 'deny', // X-Frame-Options: DENY
   },
   noSniff: true, // X-Content-Type-Options: nosniff
-  xssFilter: true, // X-XSS-Protection: 1; mode=block
+  xssFilter: false, // X-XSS-Protection 헤더 비활성화 (deprecated, 일부 브라우저에서 취약점 유발)
   referrerPolicy: {
     policy: 'strict-origin-when-cross-origin',
   },
@@ -107,12 +108,7 @@ function sanitizeObject(obj: Record<string, unknown>): void {
   for (const key in obj) {
     const value = obj[key];
     if (typeof value === 'string') {
-      // HTML 태그 제거 (기본적인 XSS 방어)
-      obj[key] = value
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // 이벤트 핸들러 제거
-        .replace(/javascript:/gi, '');
+      obj[key] = DOMPurify.sanitize(value, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
     } else if (typeof value === 'object' && value !== null) {
       sanitizeObject(value as Record<string, unknown>);
     }

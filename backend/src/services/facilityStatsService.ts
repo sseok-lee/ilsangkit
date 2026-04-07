@@ -4,7 +4,7 @@
  * - 동기화 상태 조회
  */
 
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './cityMapping.js';
 import { CATEGORY_REGISTRY } from './categoryRegistry.js';
 import type { FacilityCategory } from './categoryRegistry.js';
@@ -228,20 +228,19 @@ export async function getStatsByDistrict(citySlug: string, districtSlug: string)
 
 /**
  * 카테고리별 최신 동기화 완료 시간 조회
+ * 시설/trash: SyncHistory GROUP BY 1쿼리로 통합 (기존 15개 → 1개)
  */
 export async function getSyncStatus(): Promise<Record<string, string | null>> {
-  const categories = [...ALL_CATEGORIES, 'trash'] as const;
+  const syncRows = await prisma.$queryRaw<Array<{ category: string; completedAt: Date | null }>>`
+    SELECT category, MAX(completedAt) AS completedAt
+    FROM SyncHistory
+    WHERE status = 'success'
+    GROUP BY category
+  `;
+  const syncMap = new Map(syncRows.map((r) => [r.category, r.completedAt?.toISOString() ?? null]));
 
-  const results = await Promise.all(
-    categories.map(async (cat) => {
-      const record = await prisma.syncHistory.findFirst({
-        where: { category: cat, status: 'success' },
-        orderBy: { completedAt: 'desc' },
-        select: { completedAt: true },
-      });
-      return [cat, record?.completedAt?.toISOString() ?? null] as const;
-    }),
-  );
+  const categories = [...ALL_CATEGORIES, 'trash'] as const;
+  const results: [string, string | null][] = categories.map((cat) => [cat, syncMap.get(cat) ?? null]);
 
   // 부동산 카테고리: SyncHistory 대신 각 테이블의 MAX(syncedAt) 조회
   const realEstateModels = [

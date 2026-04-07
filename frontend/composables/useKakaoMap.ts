@@ -119,6 +119,7 @@ export function useKakaoMap() {
 
   // Load Kakao Maps SDK (singleton — only one <script> tag ever created)
   async function loadKakaoMaps(): Promise<void> {
+    if (import.meta.server) return
     if (sdkLoadPromise) return sdkLoadPromise
 
     sdkLoadPromise = new Promise((resolve, reject) => {

@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import { AppError } from '../lib/errors.js';
 import type { CreateReviewInput, UpdateReviewInput } from '../schemas/review.js';
 

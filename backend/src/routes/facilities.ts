@@ -12,6 +12,7 @@ import {
 } from '../schemas/facility.js';
 import * as facilityService from '../services/facilityService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { NotFoundError } from '../lib/errors.js';
 import { searchRateLimiter } from '../middlewares/rateLimit.js';
 
 const router = Router();
@@ -85,11 +86,7 @@ router.get(
 
     const facility = await facilityService.getDetail(category, id);
     if (!facility) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: '시설을 찾을 수 없습니다' },
-      });
-      return;
+      throw new NotFoundError('시설을 찾을 수 없습니다');
     }
 
     const items = await facilityService.getNearbyFacilities(
@@ -117,11 +114,7 @@ router.get(
     const facility = await facilityService.getDetail(category, id);
 
     if (!facility) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: '시설을 찾을 수 없습니다' },
-      });
-      return;
+      throw new NotFoundError('시설을 찾을 수 없습니다');
     }
 
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');

@@ -24,17 +24,9 @@ const GuideSlugParamsSchema = z.object({
 // GET /api/guides — Guide list with pagination and category filter
 router.get(
   '/',
+  validate(GuideListQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
-    const parsed = GuideListQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.message },
-      });
-      return;
-    }
-
-    const result = await listGuides(parsed.data);
+    const result = await listGuides(req.query as unknown as z.infer<typeof GuideListQuerySchema>);
     res.json({ success: true, data: result });
   })
 );
@@ -42,17 +34,10 @@ router.get(
 // GET /api/guides/recent — Recent N guides for homepage
 router.get(
   '/recent',
+  validate(GuideRecentQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
-    const parsed = GuideRecentQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.message },
-      });
-      return;
-    }
-
-    const items = await listRecentGuides(parsed.data.limit);
+    const { limit } = req.query as unknown as z.infer<typeof GuideRecentQuerySchema>;
+    const items = await listRecentGuides(limit);
     res.json({ success: true, data: items });
   })
 );

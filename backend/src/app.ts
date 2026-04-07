@@ -41,6 +41,8 @@ app.use('/api/images', (_req, res, next) => {
 }, express.static(uploadDir, {
   maxAge: '7d',
   immutable: true,
+  dotfiles: 'deny',
+  index: false,
 }));
 
 // Health check endpoint
@@ -86,7 +88,12 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   }
 
   // Handle unexpected errors with standard format
-  console.error('Unhandled error:', err);
+  // 민감 정보(DB 연결 문자열 등) 노출 방지: 전체 객체 대신 message/stack만 로깅
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('Unhandled error:', err.message, err.stack);
+  } else {
+    console.error('Unhandled error:', err.message);
+  }
   res.status(500).json({
     success: false,
     error: {

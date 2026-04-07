@@ -3,7 +3,7 @@
  * 다른 서비스들이 이 파일을 import하여 순환 의존성을 방지
  */
 
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 
 // 카테고리 타입
 export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market' | 'childcare' | 'ev-charger' | 'sports';

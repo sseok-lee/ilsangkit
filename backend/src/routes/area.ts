@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { NotFoundError } from '../lib/errors.js';
 import { CITY_SLUG_TO_FULL } from '../services/facilityService.js';
 import { getCityAreaData, getDistrictAreaData } from '../services/areaService.js';
 
@@ -23,21 +24,13 @@ router.get('/:citySlug', validate(CitySlugParamsSchema, 'params'), asyncHandler(
   const citySlug = req.params.citySlug as string;
 
   if (!CITY_SLUG_TO_FULL[citySlug]) {
-    res.status(404).json({
-      success: false,
-      error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' },
-    });
-    return;
+    throw new NotFoundError('해당 지역을 찾을 수 없습니다');
   }
 
   const result = await getCityAreaData(citySlug);
 
   if (!result) {
-    res.status(404).json({
-      success: false,
-      error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' },
-    });
-    return;
+    throw new NotFoundError('해당 지역을 찾을 수 없습니다');
   }
 
   if (result.cached) {
@@ -47,11 +40,7 @@ router.get('/:citySlug', validate(CitySlugParamsSchema, 'params'), asyncHandler(
   }
 
   if (!result.data) {
-    res.status(404).json({
-      success: false,
-      error: { code: 'NOT_FOUND', message: '해당 지역의 구/군 정보가 없습니다' },
-    });
-    return;
+    throw new NotFoundError('해당 지역의 구/군 정보가 없습니다');
   }
 
   res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
@@ -72,11 +61,7 @@ router.get('/:citySlug/:districtSlug', validate(CityDistrictSlugParamsSchema, 'p
   }
 
   if (!result.data) {
-    res.status(404).json({
-      success: false,
-      error: { code: 'NOT_FOUND', message: '해당 지역을 찾을 수 없습니다' },
-    });
-    return;
+    throw new NotFoundError('해당 지역을 찾을 수 없습니다');
   }
 
   res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');

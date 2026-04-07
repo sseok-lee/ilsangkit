@@ -1,9 +1,10 @@
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import { getStatsByDistrict, getDistrictStatsByCity, CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './facilityService.js';
 
 // 인메모리 캐시 (TTL 기반)
 const areaCache = new Map<string, { data: unknown; expiresAt: number }>();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10분
+const MAX_CACHE_SIZE = 500;
 
 export function getCached<T>(key: string): T | null {
   const entry = areaCache.get(key);
@@ -16,6 +17,10 @@ export function getCached<T>(key: string): T | null {
 }
 
 export function setCache(key: string, data: unknown): void {
+  if (areaCache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = areaCache.keys().next().value;
+    if (oldestKey !== undefined) areaCache.delete(oldestKey);
+  }
   areaCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 

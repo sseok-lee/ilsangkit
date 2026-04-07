@@ -1,7 +1,7 @@
 // @TASK T1.1, T1.2, T1.3 - 시설 검색, 상세 조회, 지역별 조회 서비스
 // @SPEC docs/planning/02-trd.md#API-설계
 
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import { FacilitySearchInput } from '../schemas/facility.js';
 import { PAGINATION, SEARCH_DEFAULTS } from '../constants/index.js';
 
@@ -125,6 +125,21 @@ function toFacilityItem(record: any, category: FacilityCategory): FacilityItem {
     city: record.city,
     district: record.district,
     ...(Object.keys(extras).length > 0 ? { extras } : {}),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapWasteScheduleToFacilityItem(r: any): FacilityItem {
+  return {
+    id: String(r.id),
+    category: 'trash' as FacilityCategory,
+    name: r.targetRegion || `${r.district} 쓰레기 배출`,
+    address: r.emissionPlace || null,
+    roadAddress: null,
+    lat: 0,
+    lng: 0,
+    city: r.city,
+    district: r.district,
   };
 }
 
@@ -330,17 +345,7 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
       category: 'trash' as FacilityCategory,
       label: '쓰레기배출',
       count: trashCount,
-      items: trashRecords.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-        id: String(r.id),
-        category: 'trash' as FacilityCategory,
-        name: r.targetRegion || `${r.district} 쓰레기 배출`,
-        address: r.emissionPlace || null,
-        roadAddress: null,
-        lat: 0,
-        lng: 0,
-        city: r.city,
-        district: r.district,
-      })),
+      items: trashRecords.map(mapWasteScheduleToFacilityItem),
     });
   }
 
@@ -380,17 +385,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
       prisma.wasteSchedule.findMany({ where: trashWhere, skip, take: limit, orderBy: { targetRegion: 'asc' } }),
       prisma.wasteSchedule.count({ where: trashWhere }),
     ]);
-    const items: FacilityItem[] = records.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-      id: String(r.id),
-      category: 'trash' as FacilityCategory,
-      name: r.targetRegion || `${r.district} 쓰레기 배출`,
-      address: r.emissionPlace || null,
-      roadAddress: null,
-      lat: 0,
-      lng: 0,
-      city: r.city,
-      district: r.district,
-    }));
+    const items: FacilityItem[] = records.map(mapWasteScheduleToFacilityItem);
     return { items, total, page, totalPages: Math.ceil(total / limit) };
   }
 
@@ -819,17 +814,10 @@ export async function getByRegion(
       prisma.wasteSchedule.count({ where: wasteWhere }),
     ]);
 
-    const items = records.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-      id: String(r.id),
-      category: 'trash' as FacilityCategory,
-      name: r.targetRegion || `${r.district} 쓰레기 배출`,
-      address: r.emissionPlace || null,
-      roadAddress: null,
-      lat: 0,
-      lng: 0,
-      city: r.city,
-      district: r.district,
-      extras: r.details ? (r.details as Record<string, unknown>) : undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items = records.map((r: any) => ({
+      ...mapWasteScheduleToFacilityItem(r),
+      ...(r.details ? { extras: r.details as Record<string, unknown> } : {}),
     }));
 
     return {
@@ -981,19 +969,7 @@ export async function getByRegionAll(
         take: trashTake,
         orderBy: { targetRegion: 'asc' },
       });
-      allItems.push(
-        ...trashRecords.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-          id: String(r.id),
-          category: 'trash' as FacilityCategory,
-          name: r.targetRegion || `${r.district} 쓰레기 배출`,
-          address: r.emissionPlace || null,
-          roadAddress: null,
-          lat: 0,
-          lng: 0,
-          city: r.city,
-          district: r.district,
-        })),
-      );
+      allItems.push(...trashRecords.map(mapWasteScheduleToFacilityItem));
     }
   }
 
