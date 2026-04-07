@@ -583,8 +583,9 @@ const selectedArea = ref<number | null>(null)
 const selectedRentType = ref<'all' | 'jeonse' | 'wolse'>('all')
 
 // 기간 선택
-const selectedMonths = ref(12)
-const periodOptions = [
+const selectedMonths = ref<number | null>(null)
+const periodOptions: { label: string; value: number | null }[] = [
+  { label: '전체', value: null },
   { label: '6개월', value: 6 },
   { label: '1년', value: 12 },
   { label: '3년', value: 36 },
@@ -634,12 +635,13 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
   `re-detail-${propertyTypeParam.value}-${buildingName.value}-${bjdCode.value}`,
   async () => {
     const [statsResult, txResult, infoResult, areaResult] = await Promise.allSettled([
-      getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value),
+      getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value ?? undefined),
       searchTransactions(apiSlug.value, {
         bjdCode: bjdCode.value,
         buildingName: buildingName.value,
         exclusiveArea: selectedArea.value ?? undefined,
         rentType: getRentTypeParam(),
+        months: selectedMonths.value ?? undefined,
         page: 1,
         limit: 5,
       }),
@@ -684,7 +686,7 @@ async function reloadStats() {
   statsLoading.value = true
   try {
     const res = await getTransactionStats(
-      apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value,
+      apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value ?? undefined,
       selectedArea.value ?? undefined,
       getRentTypeParam()
     )
@@ -713,13 +715,14 @@ async function loadData() {
   txLoading.value = true
 
   const [statsResult, txResult, infoResult] = await Promise.allSettled([
-    getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value,
+    getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value ?? undefined,
       selectedArea.value ?? undefined, getRentTypeParam()),
     searchTransactions(apiSlug.value, {
       bjdCode: bjdCode.value,
       buildingName: buildingName.value,
       exclusiveArea: selectedArea.value ?? undefined,
       rentType: getRentTypeParam(),
+      months: selectedMonths.value ?? undefined,
       page: currentPage.value,
       limit: 5,
     }),
@@ -763,8 +766,8 @@ watch(() => [apiSlug.value, buildingName.value, bjdCode.value], () => {
   loadAreaGroups()
 })
 
-// 기간 변경 시 시세 데이터만 재로드
-watch(selectedMonths, reloadStats)
+// 기간 변경 시 시세 + 거래 내역 재로드
+watch(selectedMonths, () => { currentPage.value = 1; loadData() })
 
 // 면적 선택 변경 시 시세 + 거래 내역 재로드
 watch(selectedArea, () => { currentPage.value = 1; loadData() })

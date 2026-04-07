@@ -86,7 +86,7 @@ describe('RealEstateStatsSchema', () => {
     });
     expect(result.bjdCode).toBe('1168010100');
     expect(result.buildingName).toBe('래미안');
-    expect(result.months).toBe(12);
+    expect(result.months).toBeUndefined();
   });
 
   it('months를 직접 지정할 수 있어야 한다', () => {

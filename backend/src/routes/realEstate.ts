@@ -50,10 +50,10 @@ router.get(
   }),
   asyncHandler(async (_req: Request, res: Response) => {
     const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
-    const { city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType, page, limit } =
+    const { city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType, months, page, limit } =
       res.locals.validated.query as z.infer<typeof RealEstateSearchSchema>;
     const result = await searchTransactions(type, {
-      city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType,
+      city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType, months,
       page: page ?? 1,
       limit: limit ?? 20,
     });
@@ -72,7 +72,7 @@ router.get(
     const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
     const { bjdCode, buildingName, months, exclusiveArea, rentType } =
       res.locals.validated.query as z.infer<typeof RealEstateStatsSchema>;
-    const result = await getTransactionStats(type, bjdCode, buildingName, months ?? 12, exclusiveArea, rentType);
+    const result = await getTransactionStats(type, bjdCode, buildingName, months, exclusiveArea, rentType);
     res.json({ success: true, data: result });
   })
 );

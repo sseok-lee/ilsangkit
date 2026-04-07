@@ -23,6 +23,7 @@ export interface SearchTransactionParams {
   dealMonth?: number;
   exclusiveArea?: number;
   rentType?: string;
+  months?: number;
   page: number;
   limit: number;
 }
@@ -148,7 +149,7 @@ export async function searchTransactions(
   params: SearchTransactionParams
 ): Promise<TransactionResult> {
   const model = getModel(type);
-  const { city, district, bjdCode, buildingName, dealYear, dealMonth, page, limit, exclusiveArea, rentType } = params;
+  const { city, district, bjdCode, buildingName, dealYear, dealMonth, page, limit, exclusiveArea, rentType, months } = params;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = {};
@@ -160,6 +161,19 @@ export async function searchTransactions(
   if (dealMonth !== undefined) where.dealMonth = dealMonth;
   if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
   if (rentType) where.rentType = rentType;
+
+  // 기간 필터: months 전달 시 최근 N개월로 제한
+  if (months) {
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+    where.OR = [
+      { dealYear: { gt: cutoff.getFullYear() } },
+      {
+        dealYear: cutoff.getFullYear(),
+        dealMonth: { gte: cutoff.getMonth() + 1 },
+      },
+    ];
+  }
 
   const skip = (page - 1) * limit;
 
@@ -214,7 +228,7 @@ export async function getTransactionStats(
   type: string,
   bjdCode: string,
   buildingName: string | undefined,
-  months: number,
+  months?: number,
   exclusiveArea?: number,
   rentType?: string
 ): Promise<StatsResponse> {
@@ -235,16 +249,19 @@ export async function getTransactionStats(
   if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
   if (rentType) where.rentType = rentType;
 
-  // Limit to recent N months
-  const now = new Date();
-  const cutoff = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
-  where.OR = [
-    { dealYear: { gt: cutoff.getFullYear() } },
-    {
-      dealYear: cutoff.getFullYear(),
-      dealMonth: { gte: cutoff.getMonth() + 1 },
-    },
-  ];
+  // Limit to recent N months (months 미지정 시 전체 기간)
+  let cutoff: Date | null = null;
+  if (months) {
+    const now = new Date();
+    cutoff = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+    where.OR = [
+      { dealYear: { gt: cutoff.getFullYear() } },
+      {
+        dealYear: cutoff.getFullYear(),
+        dealMonth: { gte: cutoff.getMonth() + 1 },
+      },
+    ];
+  }
 
   let monthly: MonthlyStats[];
 
@@ -260,8 +277,10 @@ export async function getTransactionStats(
       params.push(exclusiveArea - 2, exclusiveArea + 2);
     }
     if (rentType) { whereClauses.push(`rentType = ?`); params.push(rentType); }
-    whereClauses.push(`(dealYear > ? OR (dealYear = ? AND dealMonth >= ?))`);
-    params.push(cutoff.getFullYear(), cutoff.getFullYear(), cutoff.getMonth() + 1);
+    if (cutoff) {
+      whereClauses.push(`(dealYear > ? OR (dealYear = ? AND dealMonth >= ?))`);
+      params.push(cutoff.getFullYear(), cutoff.getFullYear(), cutoff.getMonth() + 1);
+    }
 
     const priceExpr = rentType === '월세'
       ? `deposit + monthlyRent * ${CONVERSION_MONTHS}`

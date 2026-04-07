@@ -25,6 +25,7 @@ export function useRealEstate() {
       dealMonth?: number
       exclusiveArea?: number
       rentType?: string
+      months?: number
       page?: number
       limit?: number
     }
@@ -38,6 +39,7 @@ export function useRealEstate() {
     if (params.dealMonth) query.set('dealMonth', String(params.dealMonth))
     if (params.exclusiveArea != null) query.set('exclusiveArea', String(params.exclusiveArea))
     if (params.rentType) query.set('rentType', params.rentType)
+    if (params.months) query.set('months', String(params.months))
     if (params.page) query.set('page', String(params.page))
     if (params.limit) query.set('limit', String(params.limit))
 

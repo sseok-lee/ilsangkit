@@ -24,6 +24,7 @@ export const RealEstateSearchSchema = z.object({
   dealMonth: z.coerce.number().optional(),
   exclusiveArea: z.coerce.number().positive().optional(),
   rentType: z.enum(['전세', '월세']).optional(),
+  months: z.coerce.number().positive().optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(20),
 });
@@ -34,7 +35,7 @@ export type RealEstateSearch = z.infer<typeof RealEstateSearchSchema>;
 export const RealEstateStatsSchema = z.object({
   bjdCode: z.string().max(10),
   buildingName: z.string().max(100),
-  months: z.coerce.number().default(12),
+  months: z.coerce.number().positive().optional(),
   exclusiveArea: z.coerce.number().positive().optional(),
   rentType: z.enum(['전세', '월세']).optional(),
 });
