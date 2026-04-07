@@ -112,7 +112,13 @@ export async function getStatsByCity(citySlug: string): Promise<{
  * 기존: 14 categories × 25 districts = 350 COUNT queries
  * 개선: 14 categories × 1 groupBy = 14 GROUP BY queries
  */
+const districtStatsByCityCache = new Map<string, { data: Map<string, { total: number; categories: Record<string, number>; topCategories: string[] }>; expiresAt: number }>();
+
 export async function getDistrictStatsByCity(citySlug: string): Promise<Map<string, { total: number; categories: Record<string, number>; topCategories: string[] }>> {
+  // 캐시 체크 (5분 TTL)
+  const cached = districtStatsByCityCache.get(citySlug);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+
   const fullName = CITY_SLUG_TO_FULL[citySlug];
   const shortName = CITY_SLUG_TO_SHORT[citySlug];
   if (!fullName) return new Map();
@@ -165,6 +171,7 @@ export async function getDistrictStatsByCity(citySlug: string): Promise<Map<stri
     result.set(district, { total, categories, topCategories });
   }
 
+  districtStatsByCityCache.set(citySlug, { data: result, expiresAt: Date.now() + STATS_CACHE_TTL });
   return result;
 }
 
