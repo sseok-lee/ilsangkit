@@ -16,25 +16,27 @@ vi.mock('../../src/lib/prisma.js', () => {
     findUnique: mockFindUnique,
     update: mockUpdate,
   };
+  const prismaClient = {
+    toilet: model,
+    wifi: model,
+    clothes: model,
+    parking: model,
+    aed: model,
+    library: model,
+    hospital: model,
+    pharmacy: model,
+    park: model,
+    school: model,
+    market: model,
+    childcare: model,
+    evCharger: model,
+    sports: model,
+    wasteSchedule: model,
+    region: { findFirst: mockFindFirst },
+  };
   return {
-    default: {
-      toilet: model,
-      wifi: model,
-      clothes: model,
-      parking: model,
-      aed: model,
-      library: model,
-      hospital: model,
-      pharmacy: model,
-      park: model,
-      school: model,
-      market: model,
-      childcare: model,
-      evCharger: model,
-      sports: model,
-      wasteSchedule: model,
-      region: { findFirst: mockFindFirst },
-    },
+    default: prismaClient,
+    prisma: prismaClient,
   };
 });
 

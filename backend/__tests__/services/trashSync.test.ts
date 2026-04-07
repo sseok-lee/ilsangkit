@@ -16,8 +16,8 @@ const mockTxUpsert = vi.fn().mockResolvedValue({});
 const mockTxFindUnique = vi.fn().mockResolvedValue(null);
 
 // Mock Prisma
-vi.mock('../../src/lib/prisma.js', () => ({
-  default: {
+vi.mock('../../src/lib/prisma.js', () => {
+  const prismaClient = {
     wasteSchedule: {
       upsert: vi.fn().mockResolvedValue({}),
       count: vi.fn().mockResolvedValue(0),
@@ -37,8 +37,9 @@ vi.mock('../../src/lib/prisma.js', () => ({
       };
       return callback(tx);
     }),
-  },
-}));
+  };
+  return { default: prismaClient, prisma: prismaClient };
+});
 
 // Mock fetch for API calls
 const mockFetch = vi.fn();

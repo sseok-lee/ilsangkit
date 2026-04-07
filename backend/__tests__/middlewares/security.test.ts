@@ -17,9 +17,9 @@ describe('Security Middleware', () => {
       expect(response.headers['x-frame-options']).toBe('DENY');
     });
 
-    it('should include X-XSS-Protection header', async () => {
+    it('should not include deprecated X-XSS-Protection header', async () => {
       const response = await request(app).get('/api/health');
-      expect(response.headers['x-xss-protection']).toBeDefined();
+      expect(response.headers['x-xss-protection']).toBeUndefined();
     });
 
     it('should include Content-Security-Policy header', async () => {
