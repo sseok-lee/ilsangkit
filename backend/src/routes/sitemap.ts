@@ -1,14 +1,22 @@
 // 사이트맵용 ID 조회 API
 import { Router, Request, Response } from 'express';
-import * as facilityService from '../services/facilityService.js';
-import * as wasteScheduleService from '../services/wasteScheduleService.js';
+import { z } from 'zod';
+import { validate } from '../middlewares/validate.js';
 import type { FacilityCategory } from '../services/facilityService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import prisma from '../lib/prisma.js';
+import {
+  isValidCategory,
+  getFacilityIds,
+  getWasteScheduleIds,
+  getRegionCategoryCombinations,
+  getRealEstateBuildings,
+} from '../services/sitemapService.js';
+
+const SitemapFacilitiesQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().optional(),
+});
 
 const router = Router();
-
-const VALID_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'];
 
 /**
  * GET /api/sitemap/facilities/:category
@@ -16,9 +24,10 @@ const VALID_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'park
  */
 router.get(
   '/facilities/:category',
+  validate(SitemapFacilitiesQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
-    const category = req.params.category as FacilityCategory;
-    if (!VALID_CATEGORIES.includes(category)) {
+    const category = req.params.category as string;
+    if (!isValidCategory(category)) {
       res.status(400).json({
         success: false,
         error: {
@@ -29,10 +38,8 @@ router.get(
       return;
     }
 
-    const limitParam = req.query.limit;
-    const parsedLimit = limitParam !== undefined ? parseInt(String(limitParam), 10) : undefined;
-    const limit = parsedLimit !== undefined && Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined;
-    const data = await facilityService.getAllIds(category, limit);
+    const limit = (req.query as unknown as { limit?: number }).limit;
+    const data = await getFacilityIds(category as FacilityCategory, limit);
     res.json({ success: true, data });
   })
 );
@@ -44,7 +51,7 @@ router.get(
 router.get(
   '/waste-schedules',
   asyncHandler(async (_req: Request, res: Response) => {
-    const data = await wasteScheduleService.getAllIds();
+    const data = await getWasteScheduleIds();
     res.json({ success: true, data });
   })
 );
@@ -56,7 +63,7 @@ router.get(
 router.get(
   '/region-categories',
   asyncHandler(async (_req: Request, res: Response) => {
-    const data = await facilityService.getRegionCategoryCombinations();
+    const data = await getRegionCategoryCombinations();
     res.json({ success: true, data });
   })
 );
@@ -68,55 +75,7 @@ router.get(
 router.get(
   '/real-estate-buildings',
   asyncHandler(async (_req: Request, res: Response) => {
-    const buildings = await prisma.$queryRaw<
-      Array<{ propertyType: string; buildingName: string; bjdCode: string }>
-    >`
-      SELECT 'apt' AS propertyType, buildingName, bjdCode FROM (
-        SELECT buildingName, bjdCode, SUM(cnt) AS total
-        FROM (
-          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM AptSaleTransaction
-          WHERE buildingName IS NOT NULL AND buildingName != ''
-          GROUP BY buildingName, bjdCode
-          UNION ALL
-          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM AptRentTransaction
-          WHERE buildingName IS NOT NULL AND buildingName != ''
-          GROUP BY buildingName, bjdCode
-        ) apt_counts
-        GROUP BY buildingName, bjdCode
-        HAVING SUM(cnt) >= 50
-      ) apt
-      UNION ALL
-      SELECT 'villa' AS propertyType, buildingName, bjdCode FROM (
-        SELECT buildingName, bjdCode, SUM(cnt) AS total
-        FROM (
-          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM VillaSaleTransaction
-          WHERE buildingName IS NOT NULL AND buildingName != ''
-          GROUP BY buildingName, bjdCode
-          UNION ALL
-          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM VillaRentTransaction
-          WHERE buildingName IS NOT NULL AND buildingName != ''
-          GROUP BY buildingName, bjdCode
-        ) villa_counts
-        GROUP BY buildingName, bjdCode
-        HAVING SUM(cnt) >= 50
-      ) villa
-      UNION ALL
-      SELECT 'offitel' AS propertyType, buildingName, bjdCode FROM (
-        SELECT buildingName, bjdCode, SUM(cnt) AS total
-        FROM (
-          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM OffitelSaleTransaction
-          WHERE buildingName IS NOT NULL AND buildingName != ''
-          GROUP BY buildingName, bjdCode
-          UNION ALL
-          SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM OffitelRentTransaction
-          WHERE buildingName IS NOT NULL AND buildingName != ''
-          GROUP BY buildingName, bjdCode
-        ) offitel_counts
-        GROUP BY buildingName, bjdCode
-        HAVING SUM(cnt) >= 50
-      ) offitel
-    `;
-
+    const buildings = await getRealEstateBuildings();
     res.json({ success: true, data: buildings });
   })
 );

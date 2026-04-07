@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import prisma from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { validate } from '../middlewares/validate.js';
+import { listGuides, listRecentGuides, getGuideBySlug } from '../services/guideService.js';
 
 const router = Router();
 
@@ -14,6 +15,10 @@ const GuideListQuerySchema = z.object({
 
 const GuideRecentQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(20).default(4),
+});
+
+const GuideSlugParamsSchema = z.object({
+  slug: z.string().regex(/^[a-z0-9-]+$/).max(100),
 });
 
 // GET /api/guides — Guide list with pagination and category filter
@@ -29,43 +34,8 @@ router.get(
       return;
     }
 
-    const { page, limit, category, articleType } = parsed.data;
-    const skip = (page - 1) * limit;
-
-    const where = {
-      published: true,
-      ...(category ? { category } : {}),
-      ...(articleType ? { articleType } : {}),
-    };
-
-    const [total, items] = await Promise.all([
-      prisma.guide.count({ where }),
-      prisma.guide.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          summary: true,
-          category: true,
-          articleType: true,
-          thumbnailUrl: true,
-          keywords: true,
-          viewCount: true,
-          createdAt: true,
-        },
-      }),
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    res.json({
-      success: true,
-      data: { items, total, page, totalPages },
-    });
+    const result = await listGuides(parsed.data);
+    res.json({ success: true, data: result });
   })
 );
 
@@ -82,26 +52,7 @@ router.get(
       return;
     }
 
-    const { limit } = parsed.data;
-
-    const items = await prisma.guide.findMany({
-      where: { published: true },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        summary: true,
-        category: true,
-        articleType: true,
-        thumbnailUrl: true,
-        keywords: true,
-        viewCount: true,
-        createdAt: true,
-      },
-    });
-
+    const items = await listRecentGuides(parsed.data.limit);
     res.json({ success: true, data: items });
   })
 );
@@ -109,12 +60,12 @@ router.get(
 // GET /api/guides/:slug — Guide detail
 router.get(
   '/:slug',
+  validate(GuideSlugParamsSchema, 'params'),
   asyncHandler(async (req: Request, res: Response) => {
     const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
+    const guide = await getGuideBySlug(slug);
 
-    const guide = await prisma.guide.findUnique({ where: { slug } });
-
-    if (!guide || !guide.published) {
+    if (!guide) {
       res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: '가이드를 찾을 수 없습니다' },
@@ -122,12 +73,7 @@ router.get(
       return;
     }
 
-    await prisma.guide.update({
-      where: { slug },
-      data: { viewCount: { increment: 1 } },
-    });
-
-    res.json({ success: true, data: { ...guide, viewCount: guide.viewCount + 1 } });
+    res.json({ success: true, data: guide });
   })
 );
 

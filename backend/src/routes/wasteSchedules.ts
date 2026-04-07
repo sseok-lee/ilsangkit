@@ -2,8 +2,17 @@
 // NOTE: 지도 마커가 아닌 지역별 일정 조회용
 
 import { Router, Request, Response } from 'express';
-import { validateMultiple } from '../middlewares/validate.js';
+import { z } from 'zod';
+import { validate, validateMultiple } from '../middlewares/validate.js';
 import { WasteScheduleQuerySchema, WasteScheduleRegionsQuerySchema } from '../schemas/wasteSchedule.js';
+
+const CityParamsSchema = z.object({
+  city: z.string().min(1).max(50),
+});
+
+const IdParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
 import * as wasteScheduleService from '../services/wasteScheduleService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 
@@ -60,9 +69,8 @@ router.get('/cities', asyncHandler(async (_req: Request, res: Response) => {
  * GET /api/waste-schedules/districts/:city
  * 특정 시/도의 구/군 목록 조회
  */
-router.get('/districts/:city', asyncHandler(async (req: Request, res: Response) => {
-  const cityParam = req.params.city;
-  const city = Array.isArray(cityParam) ? cityParam[0] : cityParam;
+router.get('/districts/:city', validate(CityParamsSchema, 'params'), asyncHandler(async (req: Request, res: Response) => {
+  const city = req.params.city as string;
   const districts = await wasteScheduleService.getDistricts(city);
   res.json({ success: true, data: { items: districts } });
 }));
@@ -71,19 +79,8 @@ router.get('/districts/:city', asyncHandler(async (req: Request, res: Response) 
  * GET /api/waste-schedules/:id
  * 단건 조회 (상세 페이지용)
  */
-router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
-  const idParam = req.params.id as string;
-  const id = parseInt(idParam, 10);
-  if (isNaN(id)) {
-    res.status(400).json({
-      success: false,
-      error: {
-        code: 'BAD_REQUEST',
-        message: '유효하지 않은 ID입니다',
-      },
-    });
-    return;
-  }
+router.get('/:id', validate(IdParamsSchema, 'params'), asyncHandler(async (req: Request, res: Response) => {
+  const id = (req.params as unknown as { id: number }).id;
   const item = await wasteScheduleService.getById(id);
   if (!item) {
     res.status(404).json({

@@ -167,6 +167,135 @@ export async function batchUpsert<T>(
 }
 
 /**
+ * 배치 bulk upsert 헬퍼 — INSERT ... ON DUPLICATE KEY UPDATE 방식
+ *
+ * 개별 Prisma upsert 루프 대신 단일 bulk SQL로 처리하여 대용량 데이터(EV 충전기 49만건 등)에서
+ * 수십 배 빠른 성능을 제공한다.
+ *
+ * @param tableName  MySQL 테이블명 (CATEGORY_REGISTRY에서 오는 값 — 신뢰 가능한 소스)
+ * @param items      삽입/업데이트할 레코드 배열. 각 객체의 키가 컬럼명이 된다.
+ *                   주의: 모든 항목의 키 집합이 동일해야 한다 (배치 단위로 첫 항목 기준).
+ * @param batchSize  배치 크기 (기본값: SYNC.BATCH_SIZE)
+ * @param syncHistoryId  진행 상황을 기록할 SyncHistory ID (선택)
+ *
+ * 동작:
+ *  - `id`, `sourceId`는 INSERT 컬럼에 포함되며 ON DUPLICATE KEY UPDATE에서는 제외
+ *  - `viewCount`, `createdAt`은 UPDATE에서 제외 (기존 값 유지)
+ *  - `updatedAt`, `syncedAt`은 UPDATE 시 NOW()로 자동 갱신
+ *  - 나머지 컬럼은 VALUES(col) 패턴으로 갱신
+ *  - 모든 값은 파라미터 바인딩으로 처리 (SQL 인젝션 방지)
+ *  - 신규/업데이트 구분: INSERT 후 ROW_COUNT()가 1이면 신규(insert), 2면 업데이트(duplicate)
+ *    → bulk 실행이므로 전체 affected rows로 추정 (affectedRows / 2 = updated, 나머지 = new)
+ */
+export async function batchUpsertRaw<T extends Record<string, unknown>>(
+  tableName: string,
+  items: T[],
+  batchSize: number = SYNC.BATCH_SIZE,
+  syncHistoryId?: number
+): Promise<{ newCount: number; updateCount: number }> {
+  if (items.length === 0) return { newCount: 0, updateCount: 0 };
+
+  // 테이블명 안전성 검증 (영문자, 숫자, 하이픈, 언더스코어만 허용)
+  if (!/^[A-Za-z0-9_-]+$/.test(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
+
+  let newCount = 0;
+  let updateCount = 0;
+  let processedRecords = 0;
+
+  // ON DUPLICATE KEY UPDATE에서 제외할 컬럼 (삽입 시 세팅되고 이후 불변이어야 하는 것들)
+  const SKIP_UPDATE_COLS = new Set(['id', 'sourceId', 'viewCount', 'createdAt', 'updatedAt', 'syncedAt']);
+
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchNumber = Math.floor(i / batchSize) + 1;
+    const totalBatches = Math.ceil(items.length / batchSize);
+
+    try {
+      // 컬럼 목록은 배치 첫 항목 기준으로 결정
+      const columns = Object.keys(batch[0]);
+
+      // camelCase → snake_case 변환 (Prisma는 camelCase, MySQL은 camelCase 그대로 저장)
+      // Prisma가 MySQL 컬럼명을 camelCase로 매핑하므로 그대로 사용
+      const colList = columns.map((c) => `\`${c}\``).join(', ');
+
+      // VALUES 절: 각 행마다 (?, ?, ...) 플레이스홀더
+      const rowPlaceholders = columns.map(() => '?').join(', ');
+      const allPlaceholders = batch.map(() => `(${rowPlaceholders})`).join(', ');
+
+      // ON DUPLICATE KEY UPDATE 절: 제외 컬럼 제외, updatedAt/syncedAt은 NOW()
+      const updateClauses = columns
+        .filter((c) => !SKIP_UPDATE_COLS.has(c))
+        .map((c) => `\`${c}\` = VALUES(\`${c}\`)`)
+        .join(', ');
+
+      // updatedAt, syncedAt이 데이터에 없더라도 항상 갱신
+      const timestampUpdates: string[] = [];
+      if (columns.includes('updatedAt')) {
+        // already handled via VALUES() above if not in SKIP list — but we do skip it,
+        // so we add it explicitly as NOW()
+        timestampUpdates.push('`updatedAt` = NOW()');
+      }
+      if (columns.includes('syncedAt')) {
+        timestampUpdates.push('`syncedAt` = NOW()');
+      }
+
+      const fullUpdateClause = [updateClauses, ...timestampUpdates].filter(Boolean).join(', ');
+
+      const sql = `INSERT INTO \`${tableName}\` (${colList}) VALUES ${allPlaceholders} ON DUPLICATE KEY UPDATE ${fullUpdateClause}`;
+
+      // 파라미터 배열: 모든 행의 값을 평탄화
+      const params: unknown[] = batch.flatMap((item) =>
+        columns.map((col) => {
+          const val = item[col];
+          // undefined → null 변환
+          return val === undefined ? null : val;
+        })
+      );
+
+      // 트랜잭션으로 배치 실행 (원자성 보장)
+      const affectedRows = await prisma.$transaction(async (tx) => {
+        return tx.$executeRawUnsafe(sql, ...params);
+      }, { timeout: 30000 });
+
+      // MySQL INSERT ... ON DUPLICATE KEY UPDATE 규칙:
+      //   신규 삽입: affected rows += 1
+      //   업데이트: affected rows += 2
+      //   변경 없음: affected rows += 0
+      // 따라서: updated = affectedRows - batchLength, new = batchLength - updated
+      const updatedInBatch = Math.max(0, affectedRows - batch.length);
+      const newInBatch = batch.length - updatedInBatch;
+      newCount += newInBatch;
+      updateCount += updatedInBatch;
+
+      processedRecords += batch.length;
+
+      // SyncHistory 진행 상황 업데이트 (배치 완료마다)
+      if (syncHistoryId) {
+        await prisma.syncHistory.update({
+          where: { id: syncHistoryId },
+          data: {
+            newRecords: newCount,
+            updatedRecords: updateCount,
+          },
+        });
+      }
+
+      console.info(`Batch ${batchNumber}/${totalBatches} completed: ${Math.min(i + batchSize, items.length)}/${items.length} records (new=${newInBatch}, updated=${updatedInBatch})`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Batch ${batchNumber}/${totalBatches} failed: ${errorMsg}`);
+      console.error(`Processed records before failure: ${processedRecords}`);
+
+      throw new Error(`Batch ${batchNumber} upsert failed: ${errorMsg}. Processed: ${processedRecords}/${items.length}`);
+    }
+  }
+
+  return { newCount, updateCount };
+}
+
+/**
  * 데이터 변환 + 중복 제거 헬퍼
  */
 export function transformAndDedupe<TRaw, TTransformed>(

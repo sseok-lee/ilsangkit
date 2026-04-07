@@ -225,7 +225,7 @@ Nitro 서버사이드: 사이트맵(`/sitemap.xml`, `/sitemap/[...].ts`), OG 이
 - 코드 리뷰/검토 요청 시 `code-review-orchestrator` 스킬을 통해 에이전트를 병렬 실행하라
 - 특정 영역만 리뷰 시에도 오케스트레이터를 통해 해당 에이전트만 실행
 - 단순 코드 질문은 에이전트 없이 직접 응답해도 무방
-- 모든 에이전트는 `model: "opus"` 사용
+- 모델 라우팅: arch/security → `opus`, perf/style → `sonnet` (비용 절감)
 - 중간 산출물: `_workspace/` 디렉토리
 
 **디렉토리 구조:**
