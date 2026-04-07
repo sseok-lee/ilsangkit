@@ -8,7 +8,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { XMLParser } from 'fast-xml-parser';
 import OpenAI from 'openai';
 import { writeFile, mkdir } from 'fs/promises';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import path from 'path';
 
 import { fileURLToPath } from 'url';
@@ -669,7 +669,7 @@ Style: ${style}`;
     const tmpPath = outputPath + '.tmp.png';
     await writeFile(tmpPath, buffer);
     try {
-      execSync(`convert "${tmpPath}" -resize 800x -quality 80 "${outputPath}"`, { stdio: 'pipe' });
+      execFileSync('convert', [tmpPath, '-resize', '800x', '-quality', '80', outputPath], { stdio: 'pipe' });
       const { size: optimizedSize } = await import('fs').then(fs => fs.statSync(outputPath));
       console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(optimizedSize / 1024).toFixed(0)}KB)`);
     } catch {

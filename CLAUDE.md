@@ -199,3 +199,52 @@ Nitro 서버사이드: 사이트맵(`/sitemap.xml`, `/sitemap/[...].ts`), OG 이
 4. `backend/src/schemas/realEstate.ts` — `RealEstateTypeSchema` enum 추가
 5. `frontend/types/realEstate.ts` — 타입/slug 매핑 추가
 6. `frontend/utils/realEstateMeta.ts` — 메타/FAQ/설명 추가
+
+## 하네스: Code Review
+
+**목표:** 4개 전문 에이전트를 병렬 실행하여 종합 코드 리뷰 리포트를 생성
+
+**에이전트 팀:**
+| 에이전트 | 역할 |
+|---------|------|
+| arch-reviewer | 아키텍처 리뷰 (레이어 분리, 의존성, 패턴 일관성) |
+| security-reviewer | 보안 취약점 (OWASP Top 10, 인젝션, 인증/인가) |
+| perf-reviewer | 성능 병목 (DB 쿼리, SSR, 번들, 캐싱) |
+| style-reviewer | 코드 스타일 (네이밍, 복잡도, DRY, 컨벤션) |
+
+**스킬:**
+| 스킬 | 용도 | 사용 에이전트 |
+|------|------|-------------|
+| arch-review | 아키텍처 분석 기준 및 워크플로우 | arch-reviewer |
+| security-review | 보안 취약점 탐지 기준 및 워크플로우 | security-reviewer |
+| perf-review | 성능 병목 탐지 기준 및 워크플로우 | perf-reviewer |
+| style-review | 스타일 일관성 평가 기준 및 워크플로우 | style-reviewer |
+| code-review-orchestrator | 4개 에이전트 병렬 실행 및 통합 리포트 생성 | 오케스트레이터 |
+
+**실행 규칙:**
+- 코드 리뷰/검토 요청 시 `code-review-orchestrator` 스킬을 통해 에이전트를 병렬 실행하라
+- 특정 영역만 리뷰 시에도 오케스트레이터를 통해 해당 에이전트만 실행
+- 단순 코드 질문은 에이전트 없이 직접 응답해도 무방
+- 모든 에이전트는 `model: "opus"` 사용
+- 중간 산출물: `_workspace/` 디렉토리
+
+**디렉토리 구조:**
+```
+.claude/
+├── agents/
+│   ├── arch-reviewer.md
+│   ├── security-reviewer.md
+│   ├── perf-reviewer.md
+│   └── style-reviewer.md
+└── skills/
+    ├── arch-review/SKILL.md
+    ├── security-review/SKILL.md
+    ├── perf-review/SKILL.md
+    ├── style-review/SKILL.md
+    └── code-review-orchestrator/SKILL.md
+```
+
+**변경 이력:**
+| 날짜 | 변경 내용 | 대상 | 사유 |
+|------|----------|------|------|
+| 2026-04-07 | 초기 구성 | 전체 | 종합 코드 리뷰 하네스 구축 |

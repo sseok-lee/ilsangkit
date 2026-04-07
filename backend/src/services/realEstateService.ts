@@ -566,11 +566,25 @@ export async function searchAll(
   if (city) where.city = city;
   if (district) where.district = district;
 
+  const searchAllSelect = {
+    id: true,
+    buildingName: true,
+    city: true,
+    district: true,
+    bjdCode: true,
+    dealYear: true,
+    dealMonth: true,
+    dealDay: true,
+    exclusiveArea: true,
+    floor: true,
+    dealAmount: true,
+  };
+
   const results = await Promise.all(
     ALL_TYPES.map(async (type) => {
       const model = getModel(type);
       const [items, count] = await Promise.all([
-        model.findMany({ where, take: 3 }),
+        model.findMany({ where, take: 3, select: searchAllSelect }),
         model.count({ where }),
       ]);
       return { type, count, items: items.map(serializeRow) };

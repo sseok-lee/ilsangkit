@@ -1,6 +1,6 @@
 // @TASK Phase3-3 - 부동산 실거래가 API 라우트
 
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import {
   searchTransactions,
   getTransactionStats,
@@ -9,6 +9,9 @@ import {
   searchAll,
   getAreaGroups,
 } from '../services/realEstateService.js';
+import { validate, validateMultiple } from '../middlewares/validate.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { NotFoundError } from '../lib/errors.js';
 import {
   RealEstateTypeSchema,
   RealEstateSearchSchema,
@@ -18,157 +21,111 @@ import {
   RealEstateUnifiedSearchSchema,
   AreaGroupsQuerySchema,
 } from '../schemas/realEstate.js';
+import { z } from 'zod';
+
 const router = Router();
 
-// 타입 파라미터 검증 미들웨어
-function validateType(req: Request, res: Response, next: NextFunction): void {
-  const result = RealEstateTypeSchema.safeParse(req.params.type);
-  if (!result.success) {
-    res.status(400).json({
-      success: false,
-      error: { code: 'INVALID_TYPE', message: `유효하지 않은 부동산 유형입니다: ${req.params.type}` },
-    });
-    return;
-  }
-  next();
-}
-
-// GET /api/real-estate/search - 통합 검색 (must be before /:type routes)
-router.get('/search', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const parsed = RealEstateUnifiedSearchSchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '입력값 오류' },
-      });
-      return;
-    }
-
-    const { keyword, city, district } = parsed.data;
-    const result = await searchAll(keyword, city, district);
-
-    res.json({ success: true, data: result });
-  } catch (error) {
-    next(error);
-  }
+// 타입 파라미터 검증 스키마
+const TypeParamsSchema = z.object({
+  type: RealEstateTypeSchema,
 });
 
-// GET /api/real-estate/:type/search - 거래 검색
-router.get('/:type/search', validateType, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const parsed = RealEstateSearchSchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '입력값 오류' },
-      });
-      return;
-    }
+// GET /api/real-estate/search - 통합 검색 (must be before /:type routes)
+router.get(
+  '/search',
+  validate(RealEstateUnifiedSearchSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { keyword, city, district } = req.query as unknown as z.infer<typeof RealEstateUnifiedSearchSchema>;
+    const result = await searchAll(keyword, city, district);
+    res.json({ success: true, data: result });
+  })
+);
 
-    const { city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType, page, limit } = parsed.data;
-    const result = await searchTransactions(req.params.type as string, {
+// GET /api/real-estate/:type/search - 거래 검색
+router.get(
+  '/:type/search',
+  validateMultiple({
+    params: TypeParamsSchema,
+    query: RealEstateSearchSchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
+    const { city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType, page, limit } =
+      res.locals.validated.query as z.infer<typeof RealEstateSearchSchema>;
+    const result = await searchTransactions(type, {
       city, district, bjdCode, buildingName, dealYear, dealMonth, exclusiveArea, rentType,
       page: page ?? 1,
       limit: limit ?? 20,
     });
-
     res.json({ success: true, data: result });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
 // GET /api/real-estate/:type/stats - 시세 시계열
-router.get('/:type/stats', validateType, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const parsed = RealEstateStatsSchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '입력값 오류' },
-      });
-      return;
-    }
-
-    const { bjdCode, buildingName, months, exclusiveArea, rentType } = parsed.data;
-    const result = await getTransactionStats(req.params.type as string, bjdCode, buildingName, months ?? 12, exclusiveArea, rentType);
-
+router.get(
+  '/:type/stats',
+  validateMultiple({
+    params: TypeParamsSchema,
+    query: RealEstateStatsSchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
+    const { bjdCode, buildingName, months, exclusiveArea, rentType } =
+      res.locals.validated.query as z.infer<typeof RealEstateStatsSchema>;
+    const result = await getTransactionStats(type, bjdCode, buildingName, months ?? 12, exclusiveArea, rentType);
     res.json({ success: true, data: result });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
 // GET /api/real-estate/:type/complexes - 건물 목록
-router.get('/:type/complexes', validateType, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const parsed = RealEstateComplexSchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '입력값 오류' },
-      });
-      return;
-    }
-
-    const { city, district, buildingName, page, limit } = parsed.data;
-    const result = await getComplexList(req.params.type as string, city, district, buildingName, page, limit);
-
+router.get(
+  '/:type/complexes',
+  validateMultiple({
+    params: TypeParamsSchema,
+    query: RealEstateComplexSchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
+    const { city, district, buildingName, page, limit } =
+      res.locals.validated.query as z.infer<typeof RealEstateComplexSchema>;
+    const result = await getComplexList(type, city, district, buildingName, page, limit);
     res.json({ success: true, data: result });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
 // GET /api/real-estate/:type/building-info - 건물 정보
-router.get('/:type/building-info', validateType, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const parsed = RealEstateBuildingInfoSchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '입력값 오류' },
-      });
-      return;
-    }
-
-    const { bjdCode, buildingName } = parsed.data;
-    const result = await getBuildingInfo(req.params.type as string, bjdCode, buildingName);
-
+router.get(
+  '/:type/building-info',
+  validateMultiple({
+    params: TypeParamsSchema,
+    query: RealEstateBuildingInfoSchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
+    const { bjdCode, buildingName } =
+      res.locals.validated.query as z.infer<typeof RealEstateBuildingInfoSchema>;
+    const result = await getBuildingInfo(type, bjdCode, buildingName);
     if (!result) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: '건물 정보를 찾을 수 없습니다.' },
-      });
-      return;
+      throw new NotFoundError('건물 정보를 찾을 수 없습니다.');
     }
-
     res.json({ success: true, data: result });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
 // GET /api/real-estate/:type/area-groups - 면적 그룹 목록
-router.get('/:type/area-groups', validateType, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const parsed = AreaGroupsQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '입력값 오류' },
-      });
-      return;
-    }
-
-    const { bjdCode, buildingName } = parsed.data;
-    const result = await getAreaGroups(req.params.type as string, bjdCode, buildingName);
-
+router.get(
+  '/:type/area-groups',
+  validateMultiple({
+    params: TypeParamsSchema,
+    query: AreaGroupsQuerySchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
+    const { bjdCode, buildingName } =
+      res.locals.validated.query as z.infer<typeof AreaGroupsQuerySchema>;
+    const result = await getAreaGroups(type, bjdCode, buildingName);
     res.json({ success: true, data: result });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
 export default router;

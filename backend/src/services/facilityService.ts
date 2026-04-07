@@ -520,6 +520,7 @@ export async function getNearbyFacilities(
       const records = await CATEGORY_REGISTRY[cat].model().findMany({
         where: approxBounds,
         select: buildListSelect(cat),
+        take: 500,
       });
       return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
     }),
@@ -708,6 +709,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         const records = await CATEGORY_REGISTRY[cat].model().findMany({
           where,
           select: buildListSelect(cat),
+          take: 1000,
         });
         return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
       }),
@@ -748,6 +750,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         const records = await CATEGORY_REGISTRY[cat].model().findMany({
           where,
           select: buildListSelect(cat),
+          take: 1000,
         });
         return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
       }),
