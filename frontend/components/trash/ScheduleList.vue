@@ -8,7 +8,7 @@
       <div class="flex items-start gap-3">
         <span class="text-2xl">{{ getWasteIcon(schedule.wasteType) }}</span>
         <div class="flex-1">
-          <h4 class="font-medium text-gray-900">{{ schedule.wasteType }}</h4>
+          <h4 class="font-medium text-slate-900">{{ schedule.wasteType }}</h4>
           <div class="mt-2 flex flex-wrap gap-1">
             <span
               v-for="day in schedule.dayOfWeek"
@@ -19,10 +19,10 @@
               {{ day }}
             </span>
           </div>
-          <p v-if="schedule.timeRange" class="text-sm text-gray-500 mt-2">
+          <p v-if="schedule.timeRange" class="text-sm text-slate-500 mt-2">
             <span class="font-medium">배출 시간:</span> {{ schedule.timeRange }}
           </p>
-          <p v-if="schedule.note" class="text-sm text-gray-500 mt-1">
+          <p v-if="schedule.note" class="text-sm text-slate-500 mt-1">
             {{ schedule.note }}
           </p>
         </div>
@@ -75,7 +75,7 @@ onMounted(() => {
 })
 
 function getDayClass(day: string): string {
-  const baseClass = 'bg-gray-100 text-gray-700'
+  const baseClass = 'bg-slate-100 text-slate-700'
   const todayClass = 'bg-primary-100 text-primary-700 ring-1 ring-primary-500'
 
   if (clientToday.value === null) return baseClass

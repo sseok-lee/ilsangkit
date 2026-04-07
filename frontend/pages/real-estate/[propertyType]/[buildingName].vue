@@ -312,7 +312,7 @@
       <section v-if="lastSyncDate" class="mt-8">
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-            <span class="material-symbols-outlined text-slate-400 text-[20px]">description</span>
+            <span class="material-symbols-outlined text-slate-500 text-[20px]">description</span>
             <h2 class="text-slate-800 text-lg font-bold">데이터 정보</h2>
           </div>
           <div class="p-5 flex flex-col gap-3">
@@ -324,7 +324,7 @@
               <span class="text-sm text-slate-500">출처</span>
               <a href="https://rt.molit.go.kr" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">국토교통부 실거래가 공개시스템</a>
             </div>
-            <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-400">
+            <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-500">
               <span class="material-symbols-outlined text-[14px] mt-px">info</span>
               <span>국토교통부 실거래가 공개시스템 기준 정보입니다</span>
             </div>

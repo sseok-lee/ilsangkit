@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply text-gray-900 bg-white;
+    @apply text-slate-900 bg-white;
   }
 }
 
@@ -27,17 +27,26 @@
   }
 
   .btn-secondary {
-    @apply px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors;
+    @apply px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors;
   }
 
   /* Input Components */
   .input-base {
-    @apply w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-gray-400;
+    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-slate-400;
   }
 
   /* Card Components */
   .card-base {
-    @apply p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow;
+    @apply p-4 bg-white border border-slate-200 rounded-lg hover:shadow-md transition-shadow;
+  }
+}
+
+@layer base {
+  /* Global focus-visible styles for all interactive elements */
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    @apply ring-2 ring-primary/50 ring-offset-1 outline-none rounded;
   }
 }
 

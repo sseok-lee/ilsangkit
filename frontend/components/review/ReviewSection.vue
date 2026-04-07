@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-white#1a2630] rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <!-- Header -->
-    <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
       <span class="material-symbols-outlined text-primary text-[20px]">rate_review</span>
-      <h2 class="text-[#111418] text-lg font-bold">리뷰 ({{ total }})</h2>
+      <h2 class="text-slate-900 text-lg font-bold">리뷰 ({{ total }})</h2>
     </div>
 
     <div class="p-5 flex flex-col gap-5">
@@ -15,14 +15,14 @@
             type="text"
             placeholder="닉네임"
             maxlength="30"
-            class="flex-1 min-w-0 px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            class="flex-1 min-w-0 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
           <input
             v-model="form.password"
             type="password"
             placeholder="비밀번호 (4~20자)"
             maxlength="20"
-            class="flex-1 min-w-0 px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            class="flex-1 min-w-0 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
         <div class="relative">
@@ -31,9 +31,9 @@
             placeholder="리뷰를 작성해주세요..."
             maxlength="1000"
             rows="3"
-            class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
-          <span class="absolute bottom-2 right-3 text-xs text-[#94a3b8]">{{ form.content.length }}/1000</span>
+          <span class="absolute bottom-2 right-3 text-xs text-slate-500">{{ form.content.length }}/1000</span>
         </div>
         <div class="flex justify-end">
           <button
@@ -48,7 +48,7 @@
       </form>
 
       <!-- Divider -->
-      <div v-if="reviews.length > 0" class="h-px bg-[#f0f2f5]"></div>
+      <div v-if="reviews.length > 0" class="h-px bg-slate-100"></div>
 
       <!-- Review List -->
       <div v-if="loading && reviews.length === 0" class="flex justify-center py-6">
@@ -56,8 +56,8 @@
       </div>
 
       <div v-else-if="reviews.length === 0 && !loading" class="text-center py-6">
-        <span class="material-symbols-outlined text-[40px] text-[#94a3b8] mb-2">chat_bubble_outline</span>
-        <p class="text-sm text-[#94a3b8]">아직 리뷰가 없습니다. 첫 리뷰를 작성해보세요!</p>
+        <span class="material-symbols-outlined text-[40px] text-slate-500 mb-2">chat_bubble_outline</span>
+        <p class="text-sm text-slate-500">아직 리뷰가 없습니다. 첫 리뷰를 작성해보세요!</p>
       </div>
 
       <div v-else class="flex flex-col gap-4">
@@ -68,32 +68,34 @@
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-bold text-[#111418]">{{ review.nickname }}</span>
+              <span class="text-sm font-bold text-slate-900">{{ review.nickname }}</span>
               <ClientOnly>
-                <span class="text-xs text-[#94a3b8]">{{ formatDate(review.createdAt) }}</span>
+                <span class="text-xs text-slate-500">{{ formatDate(review.createdAt) }}</span>
                 <template #fallback>
-                  <span class="text-xs text-[#94a3b8]">{{ formatDateStatic(review.createdAt) }}</span>
+                  <span class="text-xs text-slate-500">{{ formatDateStatic(review.createdAt) }}</span>
                 </template>
               </ClientOnly>
-              <span v-if="review.updatedAt !== review.createdAt" class="text-xs text-[#94a3b8]">(수정됨)</span>
+              <span v-if="review.updatedAt !== review.createdAt" class="text-xs text-slate-500">(수정됨)</span>
             </div>
             <div class="flex gap-1">
               <button
-                class="text-xs text-[#60708a] hover:text-primary transition-colors px-2 py-1"
+                :aria-label="`${review.nickname}님의 리뷰 수정`"
+                class="text-xs text-slate-500 hover:text-primary transition-colors min-h-11 min-w-11 px-3 py-2"
                 @click="openEditModal(review)"
               >
                 수정
               </button>
               <button
-                class="text-xs text-[#60708a] hover:text-red-500 transition-colors px-2 py-1"
+                :aria-label="`${review.nickname}님의 리뷰 삭제`"
+                class="text-xs text-slate-500 hover:text-red-500 transition-colors min-h-11 min-w-11 px-3 py-2"
                 @click="openDeleteModal(review.id)"
               >
                 삭제
               </button>
             </div>
           </div>
-          <p class="text-sm text-[#4b5563] leading-relaxed whitespace-pre-wrap">{{ review.content }}</p>
-          <div v-if="review !== reviews[reviews.length - 1]" class="h-px bg-[#f0f2f5] mt-2"></div>
+          <p class="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{{ review.content }}</p>
+          <div v-if="review !== reviews[reviews.length - 1]" class="h-px bg-slate-100 mt-2"></div>
         </div>
       </div>
 
@@ -124,8 +126,8 @@
           class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
           @click.self="closeModal"
         >
-          <div class="bg-white#1a2630] rounded-xl shadow-xl border border-[#e5e7eb] w-full max-w-sm p-6">
-            <h3 class="text-lg font-bold text-[#111418] mb-4">
+          <div ref="modalRef" role="dialog" aria-modal="true" aria-labelledby="review-modal-title" class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-sm p-6" @keydown="handleModalKeydown">
+            <h3 id="review-modal-title" class="text-lg font-bold text-slate-900 mb-4">
               {{ modalState.type === 'edit' ? '리뷰 수정' : '리뷰 삭제' }}
             </h3>
 
@@ -137,32 +139,32 @@
                   type="text"
                   placeholder="닉네임 (변경시 입력)"
                   maxlength="30"
-                  class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
                 <textarea
                   v-model="modalState.content"
                   placeholder="수정할 내용"
                   maxlength="1000"
                   rows="4"
-                  class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+                  class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
                 />
                 <input
                   v-model="modalState.password"
                   type="password"
                   placeholder="비밀번호 확인"
-                  class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
             </template>
 
             <!-- Delete confirmation -->
             <template v-else>
-              <p class="text-sm text-[#4b5563] mb-4">삭제하려면 비밀번호를 입력해주세요.</p>
+              <p class="text-sm text-slate-600 mb-4">삭제하려면 비밀번호를 입력해주세요.</p>
               <input
                 v-model="modalState.password"
                 type="password"
                 placeholder="비밀번호"
-                class="w-full px-3 py-2 text-sm bg-[#f9fafb]#23303b] border border-[#e5e7eb] rounded-lg text-[#111418] placeholder:text-[#94a3b8] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary mb-4"
+                class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary mb-4"
                 @keydown.enter="handleModalConfirm"
               />
             </template>
@@ -171,7 +173,7 @@
 
             <div class="flex gap-3 justify-end">
               <button
-                class="px-4 py-2 text-sm font-medium text-[#60708a] border border-[#e5e7eb] rounded-lg hover:bg-gray-50 transition-colors"
+                class="px-4 py-2 text-sm font-medium text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                 @click="closeModal"
               >
                 취소
@@ -193,7 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch, nextTick, onUnmounted } from 'vue'
 import type { Review } from '~/types/review'
 import { useReviews } from '~/composables/useReviews'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -216,6 +218,41 @@ const {
   updateReview,
   deleteReview,
 } = useReviews()
+
+const modalRef = ref<HTMLElement | null>(null)
+
+// Focus trap for modal
+watch(() => modalState.show, async (isOpen) => {
+  if (!import.meta.client) return
+  if (isOpen) {
+    await nextTick()
+    const firstFocusable = modalRef.value?.querySelector<HTMLElement>('input, textarea, button')
+    firstFocusable?.focus()
+  }
+})
+
+function handleModalTab(event: KeyboardEvent) {
+  if (!modalRef.value) return
+  const focusables = modalRef.value.querySelectorAll<HTMLElement>('input, textarea, button, [tabindex]:not([tabindex="-1"])')
+  if (focusables.length === 0) return
+  const first = focusables[0]
+  const last = focusables[focusables.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+function handleModalKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    closeModal()
+  } else if (event.key === 'Tab') {
+    handleModalTab(event)
+  }
+}
 
 // Form state
 const form = reactive({

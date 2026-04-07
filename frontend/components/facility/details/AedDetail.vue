@@ -27,16 +27,16 @@
       :value="details.model"
     />
 
-    <div v-if="operatingHours.length > 0" class="pt-3 border-t border-gray-200">
-      <p class="text-xs font-medium text-gray-500 mb-2">운영시간</p>
+    <div v-if="operatingHours.length > 0" class="pt-3 border-t border-slate-200">
+      <p class="text-xs font-medium text-slate-500 mb-2">운영시간</p>
       <div class="space-y-1">
         <div
           v-for="item in operatingHours"
           :key="item.day"
           class="flex items-center justify-between text-sm"
         >
-          <span class="text-gray-600 w-16">{{ item.day }}</span>
-          <span class="text-gray-700">{{ item.time }}</span>
+          <span class="text-slate-600 w-16">{{ item.day }}</span>
+          <span class="text-slate-700">{{ item.time }}</span>
         </div>
       </div>
     </div>

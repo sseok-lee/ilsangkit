@@ -9,7 +9,7 @@
         <!-- Separator -->
         <span
           v-if="index > 0"
-          class="mx-2 text-gray-500"
+          class="mx-2 text-slate-500"
           aria-hidden="true"
         >
           /
@@ -19,7 +19,7 @@
         <NuxtLink
           v-if="!item.current"
           :to="item.href"
-          class="text-gray-600 hover:text-gray-900 transition-colors"
+          class="text-slate-600 hover:text-slate-900 transition-colors"
         >
           {{ item.label }}
         </NuxtLink>
@@ -28,7 +28,7 @@
         <span
           v-else
           aria-current="page"
-          class="font-semibold text-gray-900"
+          class="font-semibold text-slate-900"
         >
           {{ item.label }}
         </span>

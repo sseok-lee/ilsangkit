@@ -44,35 +44,35 @@
     </div>
 
     <!-- 기본 정보 -->
-    <div class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-bold text-gray-900 mb-2">기본 정보</p>
+    <div class="pt-3 border-t border-slate-200">
+      <p class="text-sm font-bold text-slate-900 mb-2">기본 정보</p>
       <div class="flex flex-col gap-2">
         <div v-if="details.foundedDate" class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">설립일</span>
-          <span class="text-sm font-medium text-gray-900">{{ details.foundedDate }}</span>
+          <span class="text-sm text-slate-600">설립일</span>
+          <span class="text-sm font-medium text-slate-900">{{ details.foundedDate }}</span>
         </div>
         <div v-if="details.phoneNumber" class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">연락처</span>
+          <span class="text-sm text-slate-600">연락처</span>
           <a :href="`tel:${details.phoneNumber}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.phoneNumber }}</a>
         </div>
         <div v-if="details.faxNumber" class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">팩스</span>
-          <span class="text-sm font-medium text-gray-900">{{ details.faxNumber }}</span>
+          <span class="text-sm text-slate-600">팩스</span>
+          <span class="text-sm font-medium text-slate-900">{{ details.faxNumber }}</span>
         </div>
         <div v-if="details.dayNightType" class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">주야구분</span>
-          <span class="text-sm font-medium text-gray-900">{{ details.dayNightType }}</span>
+          <span class="text-sm text-slate-600">주야구분</span>
+          <span class="text-sm font-medium text-slate-900">{{ details.dayNightType }}</span>
         </div>
         <div v-if="details.branchType && !isBranch" class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">본교/분교</span>
-          <span class="text-sm font-medium text-gray-900">{{ details.branchType }}</span>
+          <span class="text-sm text-slate-600">본교/분교</span>
+          <span class="text-sm font-medium text-slate-900">{{ details.branchType }}</span>
         </div>
       </div>
     </div>
 
     <!-- 홈페이지 -->
-    <div v-if="details.homepageUrl" class="pt-3 border-t border-gray-200">
-      <p class="text-xs font-medium text-gray-500 mb-1">홈페이지</p>
+    <div v-if="details.homepageUrl" class="pt-3 border-t border-slate-200">
+      <p class="text-xs font-medium text-slate-500 mb-1">홈페이지</p>
       <a
         :href="normalizedHomepageUrl"
         target="_blank"
@@ -84,35 +84,35 @@
     </div>
 
     <!-- 관할 교육청 -->
-    <div v-if="details.sidoEduName || details.localEduName" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-bold text-gray-900 mb-2">관할 교육청</p>
+    <div v-if="details.sidoEduName || details.localEduName" class="pt-3 border-t border-slate-200">
+      <p class="text-sm font-bold text-slate-900 mb-2">관할 교육청</p>
       <div class="flex flex-col gap-2">
         <div v-if="details.sidoEduName" class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">시도교육청</span>
-          <span class="text-sm font-medium text-gray-900">{{ details.sidoEduName }}</span>
+          <span class="text-sm text-slate-600">시도교육청</span>
+          <span class="text-sm font-medium text-slate-900">{{ details.sidoEduName }}</span>
         </div>
         <div v-if="details.localEduName" class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">교육지원청</span>
-          <span class="text-sm font-medium text-gray-900">{{ details.localEduName }}</span>
+          <span class="text-sm text-slate-600">교육지원청</span>
+          <span class="text-sm font-medium text-slate-900">{{ details.localEduName }}</span>
         </div>
       </div>
     </div>
 
     <!-- 학급 현황 -->
-    <div v-if="hasEnrollmentData" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-bold text-gray-900 mb-2">학급 현황</p>
+    <div v-if="hasEnrollmentData" class="pt-3 border-t border-slate-200">
+      <p class="text-sm font-bold text-slate-900 mb-2">학급 현황</p>
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
-            <tr class="border-b border-gray-200">
-              <th class="py-1.5 pr-3 text-left text-gray-500 font-medium">학년</th>
-              <th class="py-1.5 pl-2 text-right text-gray-500 font-medium">반 수</th>
+            <tr class="border-b border-slate-200">
+              <th class="py-1.5 pr-3 text-left text-slate-500 font-medium">학년</th>
+              <th class="py-1.5 pl-2 text-right text-slate-500 font-medium">반 수</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in enrollmentRows" :key="row.label" :class="row.isTotal ? 'bg-gray-50 font-semibold' : ''">
-              <td class="py-1.5 pr-3 font-medium text-gray-700">{{ row.label }}</td>
-              <td class="py-1.5 pl-2 text-right text-gray-600">{{ row.classCount != null ? row.classCount + '개' : '-' }}</td>
+          <tbody class="divide-y divide-slate-100">
+            <tr v-for="row in enrollmentRows" :key="row.label" :class="row.isTotal ? 'bg-slate-50 font-semibold' : ''">
+              <td class="py-1.5 pr-3 font-medium text-slate-700">{{ row.label }}</td>
+              <td class="py-1.5 pl-2 text-right text-slate-600">{{ row.classCount != null ? row.classCount + '개' : '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -120,8 +120,8 @@
     </div>
 
     <!-- 학과 정보 (특성화고) -->
-    <div v-if="hasDepartments" class="pt-3 border-t border-gray-200">
-      <p class="text-sm font-bold text-gray-900 mb-2">학과 정보</p>
+    <div v-if="hasDepartments" class="pt-3 border-t border-slate-200">
+      <p class="text-sm font-bold text-slate-900 mb-2">학과 정보</p>
       <div class="flex flex-wrap gap-2">
         <span
           v-for="dept in details.departments"
@@ -149,7 +149,7 @@ const schoolLevelBadgeClass = computed(() => {
   if (level.includes('중학')) return 'bg-blue-100 text-blue-800'
   if (level.includes('고등')) return 'bg-purple-100 text-purple-800'
   if (level.includes('특수')) return 'bg-amber-100 text-amber-800'
-  return 'bg-gray-100 text-gray-800'
+  return 'bg-slate-100 text-slate-800'
 })
 
 const foundationTypeBadgeClass = computed(() => {
@@ -157,7 +157,7 @@ const foundationTypeBadgeClass = computed(() => {
   if (type.includes('국립')) return 'bg-red-100 text-red-800'
   if (type.includes('공립')) return 'bg-blue-100 text-blue-800'
   if (type.includes('사립')) return 'bg-purple-100 text-purple-800'
-  return 'bg-gray-100 text-gray-800'
+  return 'bg-slate-100 text-slate-800'
 })
 
 const isBranch = computed(() => {
@@ -168,7 +168,7 @@ const operationStatusBadgeClass = computed(() => {
   const status = props.details.operationStatus || ''
   if (status.includes('운영')) return 'bg-green-100 text-green-800'
   if (status.includes('폐교') || status.includes('폐쇄')) return 'bg-red-100 text-red-800'
-  return 'bg-gray-100 text-gray-800'
+  return 'bg-slate-100 text-slate-800'
 })
 
 const normalizedHomepageUrl = computed(() => {

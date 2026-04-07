@@ -97,12 +97,12 @@ describe('BaseCard', () => {
   describe('Styling', () => {
     it('should have rounded corners', () => {
       const wrapper = mount(BaseCard)
-      expect(wrapper.classes()).toContain('rounded-lg')
+      expect(wrapper.classes()).toContain('rounded-xl')
     })
 
     it('should have shadow', () => {
       const wrapper = mount(BaseCard)
-      expect(wrapper.classes()).toContain('shadow-md')
+      expect(wrapper.classes()).toContain('shadow-sm')
     })
 
     it('should have padding', () => {

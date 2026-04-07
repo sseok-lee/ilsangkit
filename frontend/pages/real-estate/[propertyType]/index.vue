@@ -41,7 +41,7 @@
             <span class="font-semibold text-slate-800">{{ count }}개</span>
           </div>
         </div>
-        <p class="mt-2 text-xs text-slate-400">총 {{ facilityStats.total.toLocaleString() }}개 시설</p>
+        <p class="mt-2 text-xs text-slate-500">총 {{ facilityStats.total.toLocaleString() }}개 시설</p>
       </div>
 
       <!-- 결과 -->
@@ -104,7 +104,7 @@
           <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp?v2`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
         </div>
         <p class="text-slate-700 font-semibold text-lg">지역을 선택해주세요</p>
-        <p class="text-slate-400 text-sm mt-1">시/도와 구/군을 선택하면 거래 내역을 확인할 수 있습니다</p>
+        <p class="text-slate-500 text-sm mt-1">시/도와 구/군을 선택하면 거래 내역을 확인할 수 있습니다</p>
       </div>
 
       <!-- FAQ -->

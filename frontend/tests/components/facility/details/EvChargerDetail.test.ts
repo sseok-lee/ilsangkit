@@ -184,7 +184,7 @@ describe('EvChargerDetail', () => {
 
     expect(wrapper.text()).toContain('통신이상')
     expect(wrapper.text()).toContain('상태미확인')
-    const grayBadges = wrapper.findAll('.bg-gray-100')
+    const grayBadges = wrapper.findAll('.bg-slate-100')
     expect(grayBadges.length).toBeGreaterThanOrEqual(2)
   })
 

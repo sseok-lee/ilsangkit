@@ -1,21 +1,21 @@
 <template>
   <div class="bg-white">
     <!-- 기본 정보 -->
-    <div class="p-6 border-b border-gray-200">
+    <div class="p-6 border-b border-slate-200">
       <div class="flex items-start justify-between mb-4">
         <div class="flex-1">
           <div class="flex items-center gap-2 mb-2">
             <span class="material-symbols-outlined text-2xl">{{ categoryMeta.icon }}</span>
-            <h1 class="text-2xl font-bold text-gray-900">{{ facility.name }}</h1>
+            <h1 class="text-2xl font-bold text-slate-900">{{ facility.name }}</h1>
           </div>
-          <p class="text-sm text-gray-600">{{ categoryMeta.label }}</p>
+          <p class="text-sm text-slate-600">{{ categoryMeta.label }}</p>
         </div>
       </div>
 
       <div class="space-y-2">
         <div class="flex items-start gap-2">
           <svg
-            class="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0"
+            class="w-5 h-5 text-slate-500 mt-0.5 flex-shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -34,16 +34,16 @@
             />
           </svg>
           <div>
-            <p v-if="facility.roadAddress" class="text-sm text-gray-700">
+            <p v-if="facility.roadAddress" class="text-sm text-slate-700">
               {{ facility.roadAddress }}
             </p>
-            <p v-else-if="facility.address" class="text-sm text-gray-700">
+            <p v-else-if="facility.address" class="text-sm text-slate-700">
               {{ facility.address }}
             </p>
           </div>
         </div>
 
-        <div v-if="facility.city || facility.district" class="flex items-center gap-2 text-sm text-gray-500">
+        <div v-if="facility.city || facility.district" class="flex items-center gap-2 text-sm text-slate-500">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -58,13 +58,13 @@
     </div>
 
     <!-- 상세 정보 -->
-    <div class="p-6 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4">상세 정보</h2>
+    <div class="p-6 border-b border-slate-200">
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">상세 정보</h2>
       <component :is="detailComponent" :details="(facility.details as any)" />
     </div>
 
     <!-- 지도 슬롯 -->
-    <div v-if="$slots.map" class="border-b border-gray-200">
+    <div v-if="$slots.map" class="border-b border-slate-200">
       <slot name="map" />
     </div>
   </div>

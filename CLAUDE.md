@@ -248,3 +248,53 @@ Nitro 서버사이드: 사이트맵(`/sitemap.xml`, `/sitemap/[...].ts`), OG 이
 | 날짜 | 변경 내용 | 대상 | 사유 |
 |------|----------|------|------|
 | 2026-04-07 | 초기 구성 | 전체 | 종합 코드 리뷰 하네스 구축 |
+
+## 하네스: Design UI/UX
+
+**목표:** 웹사이트 디자인을 체계적으로 분석·개선·검증하는 4단계 파이프라인
+
+**에이전트 팀:**
+| 에이전트 | 역할 |
+|---------|------|
+| ux-auditor | UX 감사 (사용자 흐름, 정보 구조, 유저빌리티 분석) |
+| visual-designer | 비주얼 디자인 제안 (색상, 타이포, 레이아웃, 시각 계층) |
+| design-implementer | Vue/TailwindCSS 코드 구현 |
+| design-qa | 반응형, 접근성(a11y), 디자인 일관성 검증 |
+
+**스킬:**
+| 스킬 | 용도 | 사용 에이전트 |
+|------|------|-------------|
+| ux-audit | UX 감사 워크플로우 (IA, 흐름, 휴리스틱 평가) | ux-auditor |
+| visual-design | 비주얼 디자인 분석 및 개선안 도출 | visual-designer |
+| design-implement | 디자인 제안서를 코드로 변환·적용 | design-implementer |
+| design-qa | 구현 결과의 반응형/접근성/일관성 검증 | design-qa |
+| design-orchestrator | 4개 에이전트 파이프라인 조율 및 통합 | 오케스트레이터 |
+
+**실행 규칙:**
+- 디자인/UI/UX 개선 요청 시 `design-orchestrator` 스킬을 통해 에이전트를 실행하라
+- UX 분석만 요청 시 `ux-audit` 스킬 단독 실행 가능
+- 디자인 검증만 요청 시 `design-qa` 스킬 단독 실행 가능
+- 단순 스타일 질문은 에이전트 없이 직접 응답해도 무방
+- 모든 에이전트는 `model: "opus"` 사용
+- 중간 산출물: `_workspace/` 디렉토리
+
+**디렉토리 구조:**
+```
+.claude/
+├── agents/
+│   ├── ux-auditor.md
+│   ├── visual-designer.md
+│   ├── design-implementer.md
+│   └── design-qa.md
+└── skills/
+    ├── ux-audit/SKILL.md
+    ├── visual-design/SKILL.md
+    ├── design-implement/SKILL.md
+    ├── design-qa/SKILL.md
+    └── design-orchestrator/SKILL.md
+```
+
+**변경 이력:**
+| 날짜 | 변경 내용 | 대상 | 사유 |
+|------|----------|------|------|
+| 2026-04-07 | 초기 구성 | 전체 | 디자인 UI/UX 하네스 구축 |

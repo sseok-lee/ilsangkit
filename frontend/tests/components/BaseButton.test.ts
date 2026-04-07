@@ -34,7 +34,7 @@ describe('BaseButton', () => {
         props: { variant: 'secondary' },
       })
 
-      expect(wrapper.classes()).toContain('bg-gray-600')
+      expect(wrapper.classes()).toContain('bg-slate-600')
     })
 
     it('should apply outline variant styles', () => {

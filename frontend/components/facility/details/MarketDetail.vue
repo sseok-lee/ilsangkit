@@ -11,7 +11,7 @@
       </span>
       <span
         v-if="details.openingCycle"
-        class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800"
+        class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-slate-100 text-slate-800"
       >
         {{ openingCycleLabel }}
       </span>
@@ -35,32 +35,32 @@
     />
 
     <!-- 주요 판매 품목 -->
-    <div v-if="productTags.length" class="pt-3 border-t border-gray-200">
-      <p class="text-xs font-medium text-gray-500 mb-2">주요 판매품목</p>
+    <div v-if="productTags.length" class="pt-3 border-t border-slate-200">
+      <p class="text-xs font-medium text-slate-500 mb-2">주요 판매품목</p>
       <div class="flex flex-wrap gap-1">
-        <span v-for="tag in productTags" :key="tag" class="inline-block bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-xs">{{ tag }}</span>
+        <span v-for="tag in productTags" :key="tag" class="inline-block bg-slate-100 text-slate-700 rounded-full px-2.5 py-0.5 text-xs">{{ tag }}</span>
       </div>
     </div>
 
     <!-- 편의시설 -->
-    <div v-if="details.hasPublicToilet !== undefined && details.hasPublicToilet !== null || details.hasParking !== undefined && details.hasParking !== null" class="pt-3 border-t border-gray-200">
-      <p class="text-xs font-medium text-gray-500 mb-2">편의시설</p>
+    <div v-if="details.hasPublicToilet !== undefined && details.hasPublicToilet !== null || details.hasParking !== undefined && details.hasParking !== null" class="pt-3 border-t border-slate-200">
+      <p class="text-xs font-medium text-slate-500 mb-2">편의시설</p>
       <div class="grid grid-cols-2 gap-2">
-        <div v-if="details.hasPublicToilet !== undefined && details.hasPublicToilet !== null" class="flex items-center gap-1.5 text-sm text-gray-700">
-          <span :class="details.hasPublicToilet ? 'text-green-600' : 'text-gray-400'">{{ details.hasPublicToilet ? '✓' : '✗' }}</span>
+        <div v-if="details.hasPublicToilet !== undefined && details.hasPublicToilet !== null" class="flex items-center gap-1.5 text-sm text-slate-700">
+          <span :class="details.hasPublicToilet ? 'text-green-600' : 'text-slate-500'">{{ details.hasPublicToilet ? '✓' : '✗' }}</span>
           <span>공중화장실</span>
         </div>
-        <div v-if="details.hasParking !== undefined && details.hasParking !== null" class="flex items-center gap-1.5 text-sm text-gray-700">
-          <span :class="details.hasParking ? 'text-green-600' : 'text-gray-400'">{{ details.hasParking ? '✓' : '✗' }}</span>
+        <div v-if="details.hasParking !== undefined && details.hasParking !== null" class="flex items-center gap-1.5 text-sm text-slate-700">
+          <span :class="details.hasParking ? 'text-green-600' : 'text-slate-500'">{{ details.hasParking ? '✓' : '✗' }}</span>
           <span>주차시설</span>
         </div>
       </div>
     </div>
 
     <!-- 홈페이지 -->
-    <div v-if="details.homepageUrl" class="flex flex-row py-2 border-b border-gray-100 last:border-0 gap-4">
-      <dt class="text-xs font-medium text-gray-500 min-w-[7rem] shrink-0 pt-0.5">홈페이지</dt>
-      <dd class="text-sm text-gray-900">
+    <div v-if="details.homepageUrl" class="flex flex-row py-2 border-b border-slate-100 last:border-0 gap-4">
+      <dt class="text-xs font-medium text-slate-500 min-w-[7rem] shrink-0 pt-0.5">홈페이지</dt>
+      <dd class="text-sm text-slate-900">
         <a
           :href="details.homepageUrl"
           target="_blank"

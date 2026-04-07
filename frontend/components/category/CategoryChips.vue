@@ -11,7 +11,7 @@
         'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border-2 min-h-11',
         selectedCategory === category.id
           ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg'
-          : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:bg-indigo-50',
+          : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-400 hover:bg-indigo-50',
       ]"
       @click="onSelect(category.id)"
     >

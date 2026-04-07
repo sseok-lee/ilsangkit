@@ -64,7 +64,7 @@ const getCategoryBgClass = (categoryId: string): string => {
     school: 'bg-indigo-50',
     market: 'bg-orange-50',
   }
-  return bgMap[categoryId] || 'bg-gray-50'
+  return bgMap[categoryId] || 'bg-slate-50'
 }
 
 const getCategoryIconBgClass = (categoryId: string): string => {
@@ -96,6 +96,6 @@ const getCategoryTextClass = (categoryId: string): string => {
     school: 'text-indigo-900',
     market: 'text-orange-900',
   }
-  return textMap[categoryId] || 'text-gray-900'
+  return textMap[categoryId] || 'text-slate-900'
 }
 </script>

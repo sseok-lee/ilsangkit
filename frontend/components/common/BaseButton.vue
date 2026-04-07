@@ -54,11 +54,11 @@ const buttonClasses = computed(() => {
     )
   } else if (props.variant === 'secondary') {
     classes.push(
-      'bg-gray-600',
+      'bg-slate-600',
       'text-white',
-      'hover:bg-gray-700',
-      'focus-visible:ring-gray-500',
-      'active:bg-gray-800'
+      'hover:bg-slate-700',
+      'focus-visible:ring-slate-500',
+      'active:bg-slate-800'
     )
   } else if (props.variant === 'outline') {
     classes.push(

@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import type {
   FacilityCategory,
   HospitalDetails,
@@ -84,11 +84,20 @@ function checkTimeRange(
   }
 }
 
+// Defer time computation to client to prevent SSR/client hydration mismatch
+const clientNow = ref<Date | null>(null)
+onMounted(() => {
+  clientNow.value = new Date()
+})
+
 const statusInfo = computed<StatusInfo | null>(() => {
   const d = props.details
   if (!d) return null
 
-  const now = new Date()
+  // Return null during SSR to avoid hydration mismatch
+  if (!clientNow.value) return null
+
+  const now = clientNow.value
   const dayOfWeek = now.getDay() // 0=Sun, 1=Mon, ...
   const currentTime = { hour: now.getHours(), minute: now.getMinutes() }
 

@@ -7,21 +7,22 @@
   >
     <!-- Handle -->
     <div
-      class="handle flex justify-center py-2 cursor-pointer"
+      class="handle flex justify-center py-3 cursor-pointer"
       @click="isExpanded = !isExpanded"
     >
-      <div class="w-10 h-1 bg-gray-300 rounded-full"></div>
+      <div class="w-10 h-1 bg-slate-300 rounded-full"></div>
     </div>
 
     <!-- Header -->
     <div class="px-4 pb-2 flex items-center justify-between">
-      <h3 class="text-sm font-medium text-gray-700">
+      <h3 class="text-sm font-medium text-slate-700">
         주변 시설 <span class="text-primary-500">{{ facilities.length }}</span>곳
       </h3>
       <button
         v-if="isExpanded"
         type="button"
-        class="text-sm text-gray-500 hover:text-gray-700"
+        aria-label="시설 목록 접기"
+        class="text-sm text-slate-500 hover:text-slate-700 min-h-11 px-3 py-2"
         @click="isExpanded = false"
       >
         접기
@@ -36,25 +37,25 @@
       </div>
 
       <!-- Empty -->
-      <div v-else-if="facilities.length === 0" class="text-center py-8 text-gray-500">
+      <div v-else-if="facilities.length === 0" class="text-center py-8 text-slate-500">
         <p>주변에 시설이 없습니다</p>
         <p class="text-sm mt-1">지도를 이동하거나 검색해보세요</p>
       </div>
 
       <!-- List -->
-      <ul v-else class="divide-y divide-gray-100">
+      <ul v-else class="divide-y divide-slate-100">
         <li
           v-for="facility in facilities"
           :key="facility.id"
-          class="facility-item px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+          class="facility-item px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
           :class="{ 'bg-primary-50': selectedId === facility.id }"
           @click="$emit('select', facility)"
         >
           <div class="flex items-start gap-3">
             <span class="text-xl flex-shrink-0">{{ getCategoryIcon(category) }}</span>
             <div class="flex-1 min-w-0">
-              <h4 class="font-medium text-gray-900 truncate">{{ facility.name }}</h4>
-              <p class="text-sm text-gray-500 truncate mt-0.5">
+              <h4 class="font-medium text-slate-900 truncate">{{ facility.name }}</h4>
+              <p class="text-sm text-slate-500 truncate mt-0.5">
                 {{ facility.roadAddress || facility.address }}
               </p>
             </div>
@@ -76,6 +77,7 @@
 
 <script setup lang="ts">
 import type { FacilitySearchItem, FacilityCategory } from '~/types'
+import { getMarkerColor as getSharedCategoryColor } from '~/utils/categoryColors'
 
 interface Props {
   facilities: FacilitySearchItem[]
@@ -107,23 +109,14 @@ const categoryIcons: Record<string, string> = {
   market: '🏪',
 }
 
-const categoryColors: Record<string, string> = {
-  toilet: '#8b5cf6',
-  trash: '#10b981',
-  wifi: '#f59e0b',
-  clothes: '#ec4899',
-  parking: '#0ea5e9',
-  park: '#22c55e',
-  school: '#6366f1',
-  market: '#f97316',
-}
+// Category colors — shared constant from utils/categoryColors.ts
 
 function getCategoryIcon(category: string): string {
   return categoryIcons[category] || '📍'
 }
 
 function getCategoryColor(category: string): string {
-  return categoryColors[category] || '#3b82f6'
+  return getSharedCategoryColor(category)
 }
 
 function formatDistance(meters: number): string {

@@ -38,7 +38,7 @@
           >
             <summary class="flex items-center justify-between px-5 py-4 cursor-pointer text-slate-800 font-medium text-sm hover:bg-slate-50 transition-colors list-none">
               {{ faq.question }}
-              <span class="material-symbols-outlined text-slate-400 text-lg flex-shrink-0 ml-3">expand_more</span>
+              <span class="material-symbols-outlined text-slate-500 text-lg flex-shrink-0 ml-3">expand_more</span>
             </summary>
             <div class="px-5 pb-4 text-slate-600 text-sm leading-relaxed border-t border-slate-100 pt-3">
               {{ faq.answer }}

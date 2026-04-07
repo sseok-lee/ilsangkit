@@ -42,19 +42,19 @@
       type="phone"
     />
 
-    <div v-if="hasSafetyFeatures" class="pt-3 border-t border-gray-200">
-      <p class="text-xs font-medium text-gray-500 mb-2">안전/편의시설</p>
+    <div v-if="hasSafetyFeatures" class="pt-3 border-t border-slate-200">
+      <p class="text-xs font-medium text-slate-500 mb-2">안전/편의시설</p>
       <div class="grid grid-cols-2 gap-2">
-        <div v-if="details.hasCCTV !== undefined" class="flex items-center gap-1.5 text-sm text-gray-700">
-          <span :class="details.hasCCTV ? 'text-green-600' : 'text-gray-400'">{{ details.hasCCTV ? '✓' : '✗' }}</span>
+        <div v-if="details.hasCCTV !== undefined" class="flex items-center gap-1.5 text-sm text-slate-700">
+          <span :class="details.hasCCTV ? 'text-green-600' : 'text-slate-500'">{{ details.hasCCTV ? '✓' : '✗' }}</span>
           <span>CCTV</span>
         </div>
-        <div v-if="details.hasEmergencyBell !== undefined" class="flex items-center gap-1.5 text-sm text-gray-700">
-          <span :class="details.hasEmergencyBell ? 'text-green-600' : 'text-gray-400'">{{ details.hasEmergencyBell ? '✓' : '✗' }}</span>
+        <div v-if="details.hasEmergencyBell !== undefined" class="flex items-center gap-1.5 text-sm text-slate-700">
+          <span :class="details.hasEmergencyBell ? 'text-green-600' : 'text-slate-500'">{{ details.hasEmergencyBell ? '✓' : '✗' }}</span>
           <span>비상벨</span>
         </div>
-        <div v-if="details.hasDiaperChangingTable !== undefined" class="flex items-center gap-1.5 text-sm text-gray-700">
-          <span :class="details.hasDiaperChangingTable ? 'text-green-600' : 'text-gray-400'">{{ details.hasDiaperChangingTable ? '✓' : '✗' }}</span>
+        <div v-if="details.hasDiaperChangingTable !== undefined" class="flex items-center gap-1.5 text-sm text-slate-700">
+          <span :class="details.hasDiaperChangingTable ? 'text-green-600' : 'text-slate-500'">{{ details.hasDiaperChangingTable ? '✓' : '✗' }}</span>
           <span>기저귀교환대</span>
         </div>
       </div>

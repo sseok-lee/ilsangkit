@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex items-center gap-4 p-4 rounded-xl border border-[#e7ecf4] bg-white#1a2634] shadow-sm hover:shadow-md transition-shadow"
+    class="flex items-center gap-4 p-4 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow"
   >
     <div
       :class="[
@@ -13,10 +13,10 @@
       <span v-else class="text-lg">{{ icon }}</span>
     </div>
     <div>
-      <p class="text-xs font-semibold text-[#48699d] uppercase tracking-wide">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
         {{ label }}
       </p>
-      <p class="text-xl font-bold text-[#0d131c]">
+      <p class="text-xl font-bold text-slate-900">
         {{ value }}
       </p>
     </div>
@@ -49,7 +49,7 @@ const colorClasses = computed(() => {
     red: { bg: 'bg-red-50', text: 'text-red-500' },
     teal: { bg: 'bg-teal-50', text: 'text-teal-600' },
     indigo: { bg: 'bg-indigo-50', text: 'text-indigo-500' },
-    gray: { bg: 'bg-gray-50', text: 'text-gray-500' },
+    gray: { bg: 'bg-slate-50', text: 'text-slate-500' },
   }
   return colorMap[props.color] || colorMap.gray
 })

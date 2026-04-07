@@ -221,14 +221,14 @@
         <div class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2">
           <NuxtLink
             to="/privacy"
-            class="text-xs text-slate-400 hover:text-primary transition-colors"
+            class="text-xs text-slate-500 hover:text-primary transition-colors"
             @click="closeMobileMenu"
           >
             개인정보처리방침
           </NuxtLink>
           <NuxtLink
             to="/terms"
-            class="text-xs text-slate-400 hover:text-primary transition-colors"
+            class="text-xs text-slate-500 hover:text-primary transition-colors"
             @click="closeMobileMenu"
           >
             이용약관

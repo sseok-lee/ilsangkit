@@ -3,8 +3,8 @@
     :to="linkUrl"
     class="group bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 border border-slate-200 hover:border-primary/30 cursor-pointer block"
   >
-    <div class="flex gap-3">
-      <!-- 건물 유형 컬러 인디케이터 -->
+    <!-- 상단: 아이콘 + 건물명/주소 -->
+    <div class="flex items-start gap-3">
       <div
         :class="[
           'shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
@@ -15,35 +15,32 @@
       </div>
 
       <div class="flex-1 min-w-0">
-        <!-- 건물명 -->
-        <h3 class="text-slate-900 text-base font-bold truncate">
+        <h3 class="text-slate-900 text-[15px] font-bold truncate">
           {{ complex.buildingName }}
         </h3>
-
-        <!-- 지역 정보 -->
         <p class="text-slate-500 text-xs truncate mt-0.5">
           {{ complex.city }} {{ complex.district }} {{ complex.dongName }}
         </p>
+      </div>
+    </div>
 
-        <div class="flex items-center justify-between mt-2">
-          <div class="flex items-center gap-2 text-xs text-slate-500">
-            <!-- 최근 거래일 -->
-            <span v-if="complex.lastDealYear" class="flex items-center gap-0.5">
-              <span class="material-symbols-outlined text-[14px]">calendar_month</span>
-              {{ complex.lastDealYear }}.{{ String(complex.lastDealMonth).padStart(2, '0') }}
-            </span>
-            <!-- 건축년도 -->
-            <span v-if="complex.buildYear" class="flex items-center gap-0.5">
-              <span class="material-symbols-outlined text-[14px]">apartment</span>
-              {{ complex.buildYear }}년
-            </span>
-          </div>
-
-          <!-- 거래 건수 배지 -->
-          <span class="shrink-0 bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-md">
-            거래 {{ complex.transactionCount }}건
-          </span>
-        </div>
+    <!-- 하단: 메타 정보 3열 -->
+    <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100">
+      <div class="text-center">
+        <p class="text-[10px] text-slate-500 tracking-wide">최근 거래</p>
+        <p class="text-sm font-semibold text-slate-700 mt-0.5">
+          {{ complex.lastDealYear ? `${complex.lastDealYear}.${String(complex.lastDealMonth).padStart(2, '0')}` : '-' }}
+        </p>
+      </div>
+      <div class="text-center">
+        <p class="text-[10px] text-slate-500 tracking-wide">건축년도</p>
+        <p class="text-sm font-semibold text-slate-700 mt-0.5">
+          {{ complex.buildYear ? `${complex.buildYear}년` : '-' }}
+        </p>
+      </div>
+      <div class="text-center">
+        <p class="text-[10px] text-slate-500 tracking-wide">거래</p>
+        <p class="text-sm font-semibold text-slate-700 mt-0.5">{{ complex.transactionCount }}건</p>
       </div>
     </div>
   </NuxtLink>

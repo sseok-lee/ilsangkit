@@ -33,34 +33,34 @@
     />
 
     <template v-if="hasFacilities">
-      <div v-if="exerciseTags.length" class="pt-3 border-t border-gray-200">
-        <p class="text-sm font-bold text-gray-900 mb-2">운동시설</p>
+      <div v-if="exerciseTags.length" class="pt-3 border-t border-slate-200">
+        <p class="text-sm font-bold text-slate-900 mb-2">운동시설</p>
         <div class="flex flex-wrap gap-1.5">
-          <span v-for="tag in exerciseTags" :key="'e-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+          <span v-for="tag in exerciseTags" :key="'e-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">{{ tag }}</span>
         </div>
       </div>
-      <div v-if="playTags.length" class="pt-3 border-t border-gray-200">
-        <p class="text-sm font-bold text-gray-900 mb-2">놀이시설</p>
+      <div v-if="playTags.length" class="pt-3 border-t border-slate-200">
+        <p class="text-sm font-bold text-slate-900 mb-2">놀이시설</p>
         <div class="flex flex-wrap gap-1.5">
-          <span v-for="tag in playTags" :key="'p-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+          <span v-for="tag in playTags" :key="'p-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">{{ tag }}</span>
         </div>
       </div>
-      <div v-if="convenienceTags.length" class="pt-3 border-t border-gray-200">
-        <p class="text-sm font-bold text-gray-900 mb-2">편의시설</p>
+      <div v-if="convenienceTags.length" class="pt-3 border-t border-slate-200">
+        <p class="text-sm font-bold text-slate-900 mb-2">편의시설</p>
         <div class="flex flex-wrap gap-1.5">
-          <span v-for="tag in convenienceTags" :key="'c-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+          <span v-for="tag in convenienceTags" :key="'c-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">{{ tag }}</span>
         </div>
       </div>
-      <div v-if="cultureTags.length" class="pt-3 border-t border-gray-200">
-        <p class="text-sm font-bold text-gray-900 mb-2">교양시설</p>
+      <div v-if="cultureTags.length" class="pt-3 border-t border-slate-200">
+        <p class="text-sm font-bold text-slate-900 mb-2">교양시설</p>
         <div class="flex flex-wrap gap-1.5">
-          <span v-for="tag in cultureTags" :key="'cu-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+          <span v-for="tag in cultureTags" :key="'cu-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">{{ tag }}</span>
         </div>
       </div>
-      <div v-if="otherTags.length" class="pt-3 border-t border-gray-200">
-        <p class="text-sm font-bold text-gray-900 mb-2">기타시설</p>
+      <div v-if="otherTags.length" class="pt-3 border-t border-slate-200">
+        <p class="text-sm font-bold text-slate-900 mb-2">기타시설</p>
         <div class="flex flex-wrap gap-1.5">
-          <span v-for="tag in otherTags" :key="'o-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ tag }}</span>
+          <span v-for="tag in otherTags" :key="'o-'+tag" class="inline-block rounded-full px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">{{ tag }}</span>
         </div>
       </div>
     </template>
@@ -83,8 +83,8 @@ const parkTypeBadgeClass = computed(() => {
   if (type.includes('체육')) return 'bg-orange-100 text-orange-800'
   if (type.includes('수변')) return 'bg-cyan-100 text-cyan-800'
   if (type.includes('역사')) return 'bg-amber-100 text-amber-800'
-  if (type.includes('소공원')) return 'bg-gray-100 text-gray-800'
-  return 'bg-gray-100 text-gray-800'
+  if (type.includes('소공원')) return 'bg-slate-100 text-slate-800'
+  return 'bg-slate-100 text-slate-800'
 })
 
 const areaFormatted = computed(() => {

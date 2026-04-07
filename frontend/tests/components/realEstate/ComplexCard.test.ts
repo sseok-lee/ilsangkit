@@ -57,11 +57,15 @@ describe('ComplexCard', () => {
       expect(wrapper.text()).toContain('2015년')
     })
 
-    it('거래일/건축년도가 null이면 표시하지 않는다', () => {
+    it('거래일/건축년도가 null이면 "-"으로 표시한다', () => {
       const wrapper = mount(ComplexCard, {
         props: { complex: mockComplexNoPrice, propertyType: 'apt', tab: 'sale' },
       })
-      expect(wrapper.text()).not.toContain('년')
+      const text = wrapper.text()
+      expect(text).toContain('최근 거래')
+      expect(text).toContain('건축년도')
+      expect(text).not.toContain('2026')
+      expect(text).not.toContain('2015')
     })
   })
 

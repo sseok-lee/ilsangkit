@@ -83,7 +83,7 @@ describe('AppFooter', () => {
   describe('Styling', () => {
     it('should have background color', () => {
       const wrapper = mount(AppFooter)
-      expect(wrapper.classes()).toContain('bg-gray-50')
+      expect(wrapper.classes()).toContain('bg-slate-50')
     })
 
     it('should have border-top', () => {

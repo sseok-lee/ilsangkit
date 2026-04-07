@@ -46,7 +46,7 @@ describe('SportsDetail', () => {
   it('ftypeNm 뱃지 색상: 기타 (gray)', () => {
     const details: SportsDetails = { ftypeNm: '테니스장' }
     const wrapper = mount(SportsDetail, { props: { details }, ...globalConfig })
-    const ftypeBadge = wrapper.find('.bg-gray-100')
+    const ftypeBadge = wrapper.find('.bg-slate-100')
     expect(ftypeBadge.exists()).toBe(true)
   })
 

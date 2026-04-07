@@ -4,7 +4,7 @@
     <div class="flex-1 relative">
       <select
         :value="city"
-        class="w-full h-10 px-3 pr-8 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm bg-white appearance-none cursor-pointer"
+        class="w-full h-10 px-3 pr-8 rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm bg-white appearance-none cursor-pointer"
         :disabled="loading"
         @change="$emit('update:city', ($event.target as HTMLSelectElement).value)"
       >
@@ -12,7 +12,7 @@
         <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
       </select>
       <svg
-        class="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none"
+        class="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -25,7 +25,7 @@
     <div class="flex-1 relative">
       <select
         :value="district"
-        class="w-full h-10 px-3 pr-8 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm bg-white appearance-none cursor-pointer"
+        class="w-full h-10 px-3 pr-8 rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm bg-white appearance-none cursor-pointer"
         :disabled="loading || !city"
         @change="$emit('update:district', ($event.target as HTMLSelectElement).value)"
       >
@@ -33,7 +33,7 @@
         <option v-for="d in districts" :key="d" :value="d">{{ d }}</option>
       </select>
       <svg
-        class="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none"
+        class="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
