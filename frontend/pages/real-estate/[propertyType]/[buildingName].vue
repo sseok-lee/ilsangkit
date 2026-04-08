@@ -274,6 +274,9 @@
         <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
           시세 데이터가 아직 없습니다.
         </div>
+        <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-400">
+          ※ 월세 거래는 전환율 5% 기준 환산보증금으로 표시됩니다
+        </p>
       </section>
 
       <!-- 거래 내역 테이블 -->
