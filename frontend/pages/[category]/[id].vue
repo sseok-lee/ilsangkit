@@ -1177,6 +1177,11 @@
                 <ReviewSection v-if="id" :category="category" :facility-id="id" />
               </ClientOnly>
 
+              <!-- 관련 가이드 (Desktop) -->
+              <ClientOnly>
+                <RelatedGuides :category="category" />
+              </ClientOnly>
+
               <!-- 같은 지역 시설 링크 -->
               <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
@@ -1204,7 +1209,7 @@
               <!-- 이 지역 다른 시설 (Desktop) -->
               <nav v-if="relatedCategories.length > 0" data-testid="related-categories" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-[20px]">category</span>
+                  <span class="material-symbols-outlined text-primary text-[20px]">grid_view</span>
                   <h2 class="text-[#111418] text-lg font-bold">이 지역 다른 시설</h2>
                 </div>
                 <div class="p-5 flex flex-wrap gap-2">
@@ -2389,6 +2394,11 @@
             <ReviewSection v-if="id" :category="category" :facility-id="id" />
           </ClientOnly>
 
+          <!-- 관련 가이드 (Mobile) -->
+          <ClientOnly>
+            <RelatedGuides :category="category" />
+          </ClientOnly>
+
           <!-- 같은 지역 시설 링크 -->
           <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
@@ -2416,7 +2426,7 @@
           <!-- 이 지역 다른 시설 (Mobile) -->
           <nav v-if="relatedCategories.length > 0" data-testid="related-categories-mobile" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">category</span>
+              <span class="material-symbols-outlined text-primary text-[20px]">grid_view</span>
               <h2 class="text-[#111418] text-lg font-bold">이 지역 다른 시설</h2>
             </div>
             <div class="p-5 flex flex-wrap gap-2">

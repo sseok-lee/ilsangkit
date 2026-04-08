@@ -254,6 +254,11 @@
         </div>
       </section>
 
+      <!-- 관련 가이드 -->
+      <ClientOnly>
+        <RelatedGuides :category="categoryParam" class="mt-8" />
+      </ClientOnly>
+
       <!-- Popular Regions -->
       <section v-if="popularRegionLinks.length > 0" class="mt-8">
         <h2 class="text-lg font-semibold mb-4">인기 지역</h2>

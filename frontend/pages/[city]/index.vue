@@ -86,7 +86,18 @@
           </div>
         </section>
 
-        <!-- ③ 교차 CTA -->
+        <!-- ③ 생활 가이드 -->
+        <section class="mb-10">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary text-[22px]">menu_book</span>
+            생활 가이드
+          </h2>
+          <ClientOnly>
+            <RecentGuides />
+          </ClientOnly>
+        </section>
+
+        <!-- ④ 교차 CTA -->
         <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 md:p-8 text-center">
           <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
             {{ cityName }} 부동산 실거래가 상세 보기

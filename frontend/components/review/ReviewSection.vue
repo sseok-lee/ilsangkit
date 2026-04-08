@@ -221,6 +221,18 @@ const {
 
 const modalRef = ref<HTMLElement | null>(null)
 
+// Modal state
+const modalState = reactive({
+  show: false,
+  type: 'edit' as 'edit' | 'delete',
+  reviewId: 0,
+  nickname: '',
+  content: '',
+  password: '',
+  error: '',
+  processing: false,
+})
+
 // Focus trap for modal
 watch(() => modalState.show, async (isOpen) => {
   if (!import.meta.client) return
@@ -268,18 +280,6 @@ const isFormValid = computed(() =>
   form.password.length >= 4 &&
   form.content.length > 0
 )
-
-// Modal state
-const modalState = reactive({
-  show: false,
-  type: 'edit' as 'edit' | 'delete',
-  reviewId: 0,
-  nickname: '',
-  content: '',
-  password: '',
-  error: '',
-  processing: false,
-})
 
 onMounted(() => {
   fetchReviews(props.category, props.facilityId)
