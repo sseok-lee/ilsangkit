@@ -1,6 +1,10 @@
 // Guide 자동 생성 스크립트
-// Usage: tsx src/scripts/generateGuide.ts [--category <slug>] [--type <news|howto|listicle|guide>]
+// Usage:
+//   tsx src/scripts/generateGuide.ts [--category <slug>] [--type <news|howto|listicle|guide>] [--topic "주제"]
+//   tsx src/scripts/generateGuide.ts --from-file prisma/data/guide-topics.json
 // Pipeline: CLI args → RSS 뉴스 수집 → OpenAI 기사 생성 → 이미지 생성 → DB upsert
+// --topic: 직접 주제 지정 (RSS/EVERGREEN 스킵)
+// --from-file: JSON 파일에서 주제 목록 배치 생성 (완료 시 generated: true 마킹)
 // 뉴스가 없을 경우 evergreen(howto/listicle/guide) 글을 자동 생성
 
 import 'dotenv/config';
@@ -220,6 +224,24 @@ function parseArticleType(): ArticleType | undefined {
       process.exit(1);
     }
     return t;
+  }
+  return undefined;
+}
+
+function parseTopic(): string | undefined {
+  const args = process.argv.slice(2);
+  const idx = args.indexOf('--topic');
+  if (idx !== -1 && args[idx + 1]) {
+    return args[idx + 1];
+  }
+  return undefined;
+}
+
+function parseFromFile(): string | undefined {
+  const args = process.argv.slice(2);
+  const idx = args.indexOf('--from-file');
+  if (idx !== -1 && args[idx + 1]) {
+    return args[idx + 1];
   }
   return undefined;
 }
@@ -526,6 +548,7 @@ async function generateArticle(
   articleType: ArticleType,
   newsTitles: string[],
   dbStats: string,
+  topic?: string,
 ): Promise<ArticleResult> {
   const categoryLabel = CATEGORY_LABELS[category] ?? category;
   const { template, sectionCount } = getTemplate(articleType, category);
@@ -535,11 +558,13 @@ async function generateArticle(
 
   // 뉴스 컨텍스트 (news 유형만) 또는 evergreen 주제
   let contextBlock: string;
-  if (isNews && newsTitles.length > 0) {
+  if (topic) {
+    contextBlock = `글 주제: ${topic}`;
+  } else if (isNews && newsTitles.length > 0) {
     contextBlock = `참고 뉴스 제목:\n${newsTitles.join('\n')}`;
   } else {
-    const topic = pickEvergreenTopic(category, articleType);
-    contextBlock = `글 주제: ${topic}`;
+    const evergreenTopic = pickEvergreenTopic(category, articleType);
+    contextBlock = `글 주제: ${evergreenTopic}`;
   }
 
   const role = isRealEstate ? '부동산 전문 기자' : '생활 정보 전문 기자';
@@ -715,6 +740,7 @@ export interface GeneratedGuide {
 export async function generateOneGuide(
   category: string,
   requestedType?: ArticleType,
+  topic?: string,
 ): Promise<GeneratedGuide | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -725,11 +751,15 @@ export async function generateOneGuide(
 
   console.log(`카테고리: ${category} (${CATEGORY_LABELS[category]})`);
 
-  // 1. Determine article type & collect news (evergreen은 RSS 스킵)
+  // 1. Determine article type & collect news (topic 지정 시 RSS/EVERGREEN 스킵)
   let articleType: ArticleType;
   let newsTitles: string[] = [];
 
-  if (requestedType && requestedType !== 'news') {
+  if (topic) {
+    // topic 직접 지정 → RSS 스킵, 유형은 지정값 또는 guide 기본
+    articleType = requestedType ?? 'guide';
+    console.log(`직접 지정 주제: "${topic}" (유형: ${articleType})`);
+  } else if (requestedType && requestedType !== 'news') {
     // evergreen 유형 지정 → RSS 수집 불필요
     articleType = requestedType;
     console.log(`지정된 글 유형: ${articleType} (evergreen — RSS 스킵)`);
@@ -759,7 +789,7 @@ export async function generateOneGuide(
 
   // 4. Generate article via OpenAI
   console.log('OpenAI 기사 생성 중...');
-  const article = await generateArticle(openai, category, articleType, newsTitles, dbStats);
+  const article = await generateArticle(openai, category, articleType, newsTitles, dbStats, topic);
   console.log(`기사 제목: ${article.title}`);
 
   // 5. Generate slug
@@ -817,10 +847,66 @@ export async function generateOneGuide(
 // Main (CLI)
 // ---------------------------------------------------------------------------
 
+interface TopicEntry {
+  category: string;
+  type?: ArticleType;
+  topic: string;
+  generated?: boolean;
+}
+
+async function runFromFile(filePath: string): Promise<void> {
+  const { readFile, writeFile: writeJson } = await import('fs/promises');
+  const absPath = path.resolve(filePath);
+  const raw = await readFile(absPath, 'utf-8');
+  const topics: TopicEntry[] = JSON.parse(raw);
+
+  const pending = topics.filter((t) => !t.generated);
+  if (pending.length === 0) {
+    console.log('모든 주제가 이미 생성되었습니다.');
+    return;
+  }
+
+  console.log(`총 ${topics.length}건 중 미생성 ${pending.length}건 처리 시작\n`);
+
+  for (const entry of pending) {
+    if (!ALL_CATEGORIES.includes(entry.category)) {
+      console.warn(`알 수 없는 카테고리 "${entry.category}" — 건너뜁니다.`);
+      continue;
+    }
+
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`주제: ${entry.topic}`);
+    console.log(`카테고리: ${entry.category}, 유형: ${entry.type ?? 'guide'}`);
+    console.log('='.repeat(60));
+
+    try {
+      const result = await generateOneGuide(entry.category, entry.type, entry.topic);
+      if (result) {
+        entry.generated = true;
+        // 진행 상황을 파일에 즉시 저장
+        await writeJson(absPath, JSON.stringify(topics, null, 2) + '\n', 'utf-8');
+        console.log(`✓ 완료: ${result.title}`);
+      }
+    } catch (err) {
+      console.error(`✗ 실패 (${entry.topic}):`, err instanceof Error ? err.message : err);
+    }
+  }
+
+  const doneCount = topics.filter((t) => t.generated).length;
+  console.log(`\n완료: ${doneCount}/${topics.length}건 생성됨`);
+}
+
 async function main(): Promise<void> {
+  const fromFile = parseFromFile();
+  if (fromFile) {
+    await runFromFile(fromFile);
+    return;
+  }
+
   const category = parseCategory();
   const articleType = parseArticleType();
-  const result = await generateOneGuide(category, articleType);
+  const topic = parseTopic();
+  const result = await generateOneGuide(category, articleType, topic);
   if (!result) {
     console.log('글 생성을 건너뛰었습니다.');
   }

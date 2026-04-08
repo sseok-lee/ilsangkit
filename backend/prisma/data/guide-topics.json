@@ -1,0 +1,22 @@
+[
+  { "category": "apt-sale", "type": "guide", "topic": "아파트 매매 계약 전 꼭 확인해야 할 체크리스트" },
+  { "category": "apt-rent", "type": "guide", "topic": "전월세 계약 시 꼭 확인해야 할 체크리스트" },
+  { "category": "apt-rent", "type": "howto", "topic": "전세사기 예방 가이드: 등기부등본 보는 법" },
+  { "category": "apt-sale", "type": "howto", "topic": "아파트 실거래가 조회하는 방법 총정리" },
+  { "category": "apt-rent", "type": "guide", "topic": "신혼부부 전세자금대출 조건과 신청 방법 2026" },
+  { "category": "parking", "type": "listicle", "topic": "공영주차장 vs 민영주차장, 요금 비교와 할인 팁" },
+  { "category": "wifi", "type": "howto", "topic": "우리 동네 무료 와이파이 찾는 법" },
+  { "category": "aed", "type": "howto", "topic": "응급 상황 시 AED(자동심장충격기) 사용법" },
+  { "category": "clothes", "type": "listicle", "topic": "의류수거함 넣어도 되는 것 vs 안 되는 것" },
+  { "category": "childcare", "type": "guide", "topic": "어린이집 선택 가이드: 국공립 vs 민간 비교" },
+  { "category": "library", "type": "howto", "topic": "우리 동네 도서관 활용법: 대출·프로그램·시설 총정리" },
+  { "category": "trash", "type": "guide", "topic": "쓰레기 배출 요일·분류 한눈에 보기" },
+  { "category": "pharmacy", "type": "howto", "topic": "약국 야간·휴일 당번 찾는 방법" },
+  { "category": "market", "type": "listicle", "topic": "전통시장 온누리상품권 사용처와 할인 꿀팁" },
+  { "category": "ev-charger", "type": "howto", "topic": "전기차 충전소 찾기부터 요금 절약까지 총정리" },
+  { "category": "villa-sale", "type": "guide", "topic": "빌라 매매 전 반드시 확인할 사항 총정리" },
+  { "category": "villa-rent", "type": "howto", "topic": "빌라 전세 사기 예방을 위한 확인 절차" },
+  { "category": "offitel-sale", "type": "guide", "topic": "오피스텔 투자 수익률 계산법과 주의사항" },
+  { "category": "offitel-rent", "type": "listicle", "topic": "오피스텔 월세 계약 시 관리비 폭탄 피하는 팁" },
+  { "category": "hospital", "type": "howto", "topic": "야간·주말 진료 병원 찾는 가장 빠른 방법" }
+]
