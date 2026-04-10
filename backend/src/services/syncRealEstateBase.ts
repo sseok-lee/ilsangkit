@@ -132,6 +132,42 @@ export async function getAllLawdCodes(): Promise<string[]> {
  * @param dealYmd - 계약년월 (YYYYMM)
  * @param serviceKey - 공공데이터포털 서비스키 (인코딩된 값)
  */
+const MAX_RETRIES = 5;
+const BASE_BACKOFF_MS = 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url: string, endpoint: string): Promise<string> {
+  let attempt = 0;
+  while (true) {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/xml, text/xml' },
+    });
+
+    if (response.ok) {
+      return response.text();
+    }
+
+    // 429 또는 5xx는 재시도
+    const retryable = response.status === 429 || (response.status >= 500 && response.status < 600);
+    if (!retryable || attempt >= MAX_RETRIES) {
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText} (${endpoint})`
+      );
+    }
+
+    attempt += 1;
+    const backoff = BASE_BACKOFF_MS * 2 ** (attempt - 1); // 1s, 2s, 4s, 8s, 16s
+    console.warn(
+      `[${endpoint}] ${response.status} 수신 — ${backoff}ms 대기 후 재시도 (${attempt}/${MAX_RETRIES})`
+    );
+    await sleep(backoff);
+  }
+}
+
 export async function fetchRealEstateData(
   apiEndpoint: string,
   lawdCd: string,
@@ -150,18 +186,7 @@ export async function fetchRealEstateData(
       pageNo: String(pageNo),
     });
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/xml, text/xml' },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText} (${apiEndpoint})`
-      );
-    }
-
-    const xmlText = await response.text();
+    const xmlText = await fetchWithRetry(url, apiEndpoint);
     const parsed = parseXmlResponse(xmlText);
 
     if (parsed.resultCode !== '000' && parsed.resultCode !== '00' && parsed.resultCode !== '0') {
