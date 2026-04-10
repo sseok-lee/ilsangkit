@@ -4,7 +4,7 @@
       <div class="mb-8">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">부동산 실거래가</h1>
         <p class="mt-2 text-slate-500 text-sm">
-          전국 아파트·빌라·오피스텔·상가·토지 매매·전월세 실거래가를 지역별로 조회하세요.<br />
+          전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요.<br />
           국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.
         </p>
       </div>
@@ -23,7 +23,7 @@
           </p>
           <p>
             일상킷은 국토교통부 실거래가 공개시스템의 데이터를 매일 수집하여 아파트, 연립다세대(빌라),
-            오피스텔의 매매 및 전월세 실거래 내역과, 상가(상업·업무용 부동산) 및 토지의 매매 실거래 내역을 제공합니다.
+            오피스텔의 매매 및 전월세 실거래 내역을 제공합니다.
           </p>
         </div>
       </section>
@@ -54,8 +54,8 @@
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
 
-const title = '부동산 실거래가·시세 조회 · 아파트/빌라/오피스텔/상가/토지 - 일상킷'
-const description = '아파트·빌라·오피스텔·상가·토지 실거래가와 시세를 한곳에서 조회하세요. 국토부 공식 데이터 기반 매매가, 전세가, 최근 거래 내역을 확인할 수 있습니다.'
+const title = '부동산 실거래가·시세 조회 · 아파트/빌라/오피스텔 - 일상킷'
+const description = '아파트·빌라·오피스텔 실거래가와 시세를 한곳에서 조회하세요. 국토부 공식 데이터 기반 매매가, 전세가, 최근 거래 내역을 확인할 수 있습니다.'
 const canonicalUrl = `${SITE_URL}/real-estate`
 
 useHead({
@@ -103,7 +103,7 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'WebPage',
         name: '부동산 실거래가',
-        description: '전국 아파트·빌라·오피스텔·상가·토지 매매·전월세 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.',
+        description: '전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.',
       }),
     },
   ],

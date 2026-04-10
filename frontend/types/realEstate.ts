@@ -10,8 +10,16 @@ export type RealEstatePropertyType = 'apt' | 'villa' | 'offitel' | 'store' | 'la
 // 거래 유형
 export type TransactionMode = 'sale' | 'rent'
 
-// 건물 유형 배열
+// 건물 유형 배열 (전체)
 export const PROPERTY_TYPES = ['apt', 'villa', 'offitel', 'store', 'land'] as const
+
+// 데이터 수집 중 — 출시 전까지 UI에 노출하지 않음
+export const HIDDEN_PROPERTY_TYPES: readonly RealEstatePropertyType[] = ['store', 'land'] as const
+
+// 공개된 건물 유형 (메인 카드/메뉴 렌더링용)
+export const VISIBLE_PROPERTY_TYPES: readonly RealEstatePropertyType[] = PROPERTY_TYPES.filter(
+  (pt) => !(HIDDEN_PROPERTY_TYPES as readonly string[]).includes(pt)
+) as readonly RealEstatePropertyType[]
 
 // sale-only 건물 유형
 export const SALE_ONLY_PROPERTY_TYPES = ['store', 'land'] as const

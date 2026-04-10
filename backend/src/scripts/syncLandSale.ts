@@ -194,17 +194,23 @@ async function main(): Promise<void> {
   }
 
   // IndexNow: 동기화된 건물 URL 제출
-  const buildings = await prisma.landSaleTransaction.findMany({
-    where: { syncedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) } },
-    select: { buildingName: true, bjdCode: true },
-    distinct: ['buildingName', 'bjdCode'],
-  });
-  if (buildings.length > 0) {
-    const urls = buildRealEstateUrls('land', buildings.map(b => ({
-      buildingName: b.buildingName,
-      bjdCode: b.bjdCode,
-    })));
-    await submitIndexNow(urls);
+  // store/land는 출시 전까지 검색엔진 제출을 건너뜀. 출시 시점에
+  // REAL_ESTATE_LAUNCH_STORE_LAND=true 환경변수로 활성화
+  if (process.env.REAL_ESTATE_LAUNCH_STORE_LAND === 'true') {
+    const buildings = await prisma.landSaleTransaction.findMany({
+      where: { syncedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) } },
+      select: { buildingName: true, bjdCode: true },
+      distinct: ['buildingName', 'bjdCode'],
+    });
+    if (buildings.length > 0) {
+      const urls = buildRealEstateUrls('land', buildings.map(b => ({
+        buildingName: b.buildingName,
+        bjdCode: b.bjdCode,
+      })));
+      await submitIndexNow(urls);
+    }
+  } else {
+    console.info('[IndexNow] land-sale 출시 전 — 제출 건너뜀 (REAL_ESTATE_LAUNCH_STORE_LAND=true로 활성화)');
   }
 
   // Summary 테이블 갱신
