@@ -347,3 +347,60 @@ Nitro 서버사이드: 사이트맵(`/sitemap.xml`, `/sitemap/[...].ts`), OG 이
 | 날짜 | 변경 내용 | 대상 | 사유 |
 |------|----------|------|------|
 | 2026-04-07 | 초기 구성 | 전체 | SEO + 수익 최적화 하네스 구축 |
+
+## 하네스: Real Estate Expansion
+
+**목표:** 신규 부동산 유형(상가 매매, 토지 거래 등)을 "요구사항 한 줄 → 국토교통부 API 연동 → Prisma 모델 → 백엔드/프론트 → 검증"까지 5단계 파이프라인으로 자동화
+
+**에이전트 팀:**
+| 에이전트 | 역할 |
+|---------|------|
+| re-expansion-planner | 요구사항 분석, 국토교통부 실거래가 API 후보 자동 조사, slug 규약 검증, 영향 파일 6개 체크리스트 |
+| re-schema-architect | Prisma 트랜잭션 모델 설계 (BigInt/Decimal, 인덱스), 기존 RealEstate*Transaction 일관성 |
+| re-backend-expander | sync 스크립트, realEstateService 등록, RealEstateTypeSchema enum, TDD 우선 |
+| re-frontend-expander | types/realEstate.ts, utils/realEstateMeta.ts (메타/FAQ/설명), 동적 라우트 |
+| re-expansion-verifier | lint/test/build, 실 API 스모크 sync, BigInt 직렬화, 사이트맵, SEO 메타 |
+
+**스킬:**
+| 스킬 | 용도 | 사용 에이전트 |
+|------|------|-------------|
+| re-expansion-planning | 국토교통부 API 리서치 + slug 규약 + 영향 파일 매핑 | re-expansion-planner |
+| re-schema-architecture | Prisma 모델 패턴 + BigInt/Decimal + 인덱스 설계 | re-schema-architect |
+| re-backend-expansion | syncRealEstateBase 사용 + enum 등록 + 직렬화 TDD | re-backend-expander |
+| re-frontend-expansion | 타입/메타/FAQ/slug 매핑 구현 레시피 | re-frontend-expander |
+| re-expansion-verification | 실 API smoke + 회귀 체크리스트 | re-expansion-verifier |
+| re-expansion-orchestrator | 5개 에이전트 파이프라인 조율 (Plan → Schema → [Backend ‖ Frontend] → Verify) | 오케스트레이터 |
+
+**실행 규칙:**
+- "부동산 카테고리 추가", "새 부동산 유형", "상가 매매 추가", "토지 거래 추가" 등 요청 시 `re-expansion-orchestrator` 스킬을 통해 파이프라인 실행
+- 특정 단계만 재작업 시(스키마만/백엔드만/프론트만/검증만) 오케스트레이터가 해당 에이전트만 재호출
+- **slug 규약 엄수**: 하이픈 케이스, 오피스텔은 `offitel` (officetel 아님)
+- **공통 유틸 강제**: `syncRealEstateBase.ts` 경유, 직접 upsert 금지
+- **직렬화 강제**: 서비스 응답에 `serializeRow()` 필수 (BigInt/Decimal → Number)
+- **TDD 우선** (`feedback_tdd_workflow.md` 메모리), **데이터 수집 최대화** (`feedback_data_collection.md` 메모리)
+- 모델 라우팅: planner/schema → `opus`, backend/frontend/verifier → `sonnet`
+- 중간 산출물: `_workspace/` 디렉토리
+- 완료 후 후속 연계 제안: `code-review-orchestrator`, `seo-revenue-orchestrator`
+
+**디렉토리 구조:**
+```
+.claude/
+├── agents/
+│   ├── re-expansion-planner.md
+│   ├── re-schema-architect.md
+│   ├── re-backend-expander.md
+│   ├── re-frontend-expander.md
+│   └── re-expansion-verifier.md
+└── skills/
+    ├── re-expansion-planning/SKILL.md
+    ├── re-schema-architecture/SKILL.md
+    ├── re-backend-expansion/SKILL.md
+    ├── re-frontend-expansion/SKILL.md
+    ├── re-expansion-verification/SKILL.md
+    └── re-expansion-orchestrator/SKILL.md
+```
+
+**변경 이력:**
+| 날짜 | 변경 내용 | 대상 | 사유 |
+|------|----------|------|------|
+| 2026-04-10 | 초기 구성 | 전체 | 부동산 카테고리 확장 자동화 하네스 구축 |

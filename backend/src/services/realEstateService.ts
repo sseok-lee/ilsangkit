@@ -10,9 +10,11 @@ export type RealEstateType =
   | 'villa-sale'
   | 'villa-rent'
   | 'offitel-sale'
-  | 'offitel-rent';
+  | 'offitel-rent'
+  | 'store-sale'
+  | 'land-sale';
 
-const SALE_TYPES: RealEstateType[] = ['apt-sale', 'villa-sale', 'offitel-sale'];
+const SALE_TYPES: RealEstateType[] = ['apt-sale', 'villa-sale', 'offitel-sale', 'store-sale', 'land-sale'];
 
 export interface SearchTransactionParams {
   city?: string;
@@ -100,6 +102,10 @@ function getModel(type: string): any {
       return prisma.offitelSaleTransaction;
     case 'offitel-rent':
       return prisma.offitelRentTransaction;
+    case 'store-sale':
+      return prisma.storeSaleTransaction;
+    case 'land-sale':
+      return prisma.landSaleTransaction;
     default:
       throw new Error(`Unknown real estate type: ${type}`);
   }
@@ -116,6 +122,8 @@ export const TABLE_NAME_MAP: Record<string, string> = {
   'villa-rent': 'VillaRentTransaction',
   'offitel-sale': 'OffitelSaleTransaction',
   'offitel-rent': 'OffitelRentTransaction',
+  'store-sale': 'StoreSaleTransaction',
+  'land-sale': 'LandSaleTransaction',
 };
 
 export function getTableName(type: string): string {
@@ -573,6 +581,8 @@ const ALL_TYPES: RealEstateType[] = [
   'villa-rent',
   'offitel-sale',
   'offitel-rent',
+  'store-sale',
+  'land-sale',
 ];
 
 /**
