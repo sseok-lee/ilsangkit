@@ -1,6 +1,6 @@
 <template>
-  <a
-    :href="`/${review.facilityCategory}/${review.facilityId}`"
+  <NuxtLink
+    :to="reviewLink"
     class="group flex flex-col p-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
   >
     <!-- Category Badge + Facility Name -->
@@ -29,7 +29,7 @@
         </template>
       </ClientOnly>
     </div>
-  </a>
+  </NuxtLink>
 </template>
 
 <script setup lang="ts">
@@ -42,7 +42,22 @@ const props = defineProps<{
   review: ReviewWithFacility
 }>()
 
+const REAL_ESTATE_CATEGORIES = ['apt', 'villa', 'offitel']
+const REAL_ESTATE_LABELS: Record<string, string> = {
+  apt: '아파트', villa: '빌라', offitel: '오피스텔',
+}
+
+const reviewLink = computed(() => {
+  if (REAL_ESTATE_CATEGORIES.includes(props.review.facilityCategory)) {
+    return `/real-estate/${props.review.facilityCategory}/${encodeURIComponent(props.review.facilityId)}`
+  }
+  return `/${props.review.facilityCategory}/${props.review.facilityId}`
+})
+
 const categoryLabel = computed(() => {
+  if (REAL_ESTATE_LABELS[props.review.facilityCategory]) {
+    return REAL_ESTATE_LABELS[props.review.facilityCategory]
+  }
   const meta = CATEGORY_META[props.review.facilityCategory as FacilityCategory]
   return meta?.shortLabel || props.review.facilityCategory
 })
@@ -61,6 +76,9 @@ const categoryBadgeClass = computed(() => {
     library: 'bg-amber-50 text-amber-700 ring-amber-700/10',
     clothes: 'bg-pink-50 text-pink-700 ring-pink-700/10',
     trash: 'bg-green-50 text-green-700 ring-green-700/10',
+    apt: 'bg-blue-50 text-blue-700 ring-blue-700/10',
+    villa: 'bg-violet-50 text-violet-700 ring-violet-700/10',
+    offitel: 'bg-cyan-50 text-cyan-700 ring-cyan-700/10',
   }
   return colorMap[props.review.facilityCategory] || 'bg-slate-50 text-slate-700 ring-slate-700/10'
 })

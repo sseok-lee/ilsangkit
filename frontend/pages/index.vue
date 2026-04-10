@@ -1,120 +1,66 @@
 <template>
   <div class="flex flex-col">
-      <!-- Mobile Hero Section -->
-      <section class="md:hidden flex flex-col gap-6 px-4 pb-8 pt-4 relative overflow-hidden">
-        <!-- 배경 이미지 레이어 (목표: 각 WebP 200KB 이하) -->
-        <div class="absolute inset-0 opacity-10">
+      <!-- Hero Section (통합 반응형) -->
+      <section class="relative overflow-hidden px-4 sm:px-6 pb-8 pt-4 md:pt-16 md:pb-12">
+        <!-- 배경 이미지 레이어 -->
+        <div class="absolute inset-0 opacity-10 md:opacity-[0.08]">
           <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="일상킷 생활 정보 서비스" sizes="100vw" />
         </div>
         <!-- 하단 그라데이션 페이드 -->
-        <div class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background-light to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 h-12 md:h-16 bg-gradient-to-t from-background-light to-transparent"></div>
 
-        <!-- 콘텐츠 -->
-        <div class="relative z-10 flex flex-col gap-6">
-        <!-- Title & Subtitle -->
-        <div class="flex flex-col gap-2 pt-4">
-          <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
-          <div class="text-slate-900 tracking-tight text-[32px] font-bold leading-[1.25]">
-            우리 동네, 얼마나 살기 좋을까?
-          </div>
-          <p class="text-slate-500 text-base">
-            일상 속 궁금한 동네 정보를 한곳에
-          </p>
-        </div>
-
-        <!-- Search Bar (Mobile) -->
-        <label class="flex flex-col h-14 w-full shadow-sm rounded-xl">
-          <div class="flex w-full flex-1 items-stretch rounded-xl bg-white#1e293b] border border-slate-200 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-            <div class="text-[#60708a] flex items-center justify-center pl-4 pr-2">
-              <span class="material-symbols-outlined">search</span>
-            </div>
-            <input
-              v-model="searchKeyword"
-              aria-label="장소 또는 시설 검색"
-              class="flex w-full min-w-0 flex-1 resize-none bg-transparent text-[#111418] placeholder:text-[#94a3b8] px-2 text-base font-medium leading-normal focus:outline-none border-none focus:ring-0 rounded-xl"
-              placeholder="아파트명, 지역명, 생활시설 검색..."
-              @keydown.enter="handleSearch"
-            />
-          </div>
-        </label>
-
-        <!-- Hero Stats Banner (Mobile) -->
-        <div class="flex justify-center gap-5 mt-2">
-          <div class="text-center">
-            <div class="text-2xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.buildingCount || 0) }}</div>
-            <div class="text-sm text-slate-500">부동산</div>
-          </div>
-          <div class="w-px bg-slate-200 self-stretch my-1"></div>
-          <div class="text-center">
-            <div class="text-2xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.total || 0) }}</div>
-            <div class="text-sm text-slate-500">생활시설</div>
-          </div>
-          <div class="w-px bg-slate-200 self-stretch my-1"></div>
-          <div class="text-center">
-            <div class="text-2xl font-black text-primary whitespace-nowrap">{{ stats.regionCount || 0 }}개</div>
-            <div class="text-sm text-slate-500">전국 시군구</div>
-          </div>
-        </div>
-
-        </div>
-      </section>
-
-      <!-- Desktop Hero Section -->
-      <section class="hidden md:block w-full pt-16 pb-12 px-4 sm:px-6 relative overflow-hidden">
-        <!-- 배경 이미지 레이어 (목표: 각 WebP 200KB 이하) -->
-        <div class="absolute inset-0 opacity-[0.08]">
-          <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="일상킷 생활 정보 서비스" sizes="100vw" />
-        </div>
-        <!-- 하단 그라데이션 페이드 -->
-        <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background-light to-transparent"></div>
-
-        <div class="relative z-10 max-w-3xl mx-auto flex flex-col gap-6 items-center text-center">
-          <div class="space-y-4">
-            <div class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight" aria-hidden="true">
+        <div class="relative z-10 flex flex-col gap-6 md:max-w-3xl md:mx-auto md:items-center md:text-center">
+          <!-- 제목 -->
+          <div class="flex flex-col gap-2 pt-4">
+            <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
+            <div class="text-slate-900 tracking-tight text-[32px] font-bold leading-[1.25] md:text-5xl md:font-black md:leading-tight">
               우리 동네, 얼마나 살기 좋을까?
             </div>
-            <p class="text-lg text-slate-500">
-              일상 속 궁금한 동네 정보를 한곳에
-            </p>
-          </div>
-          <!-- Search Input Component (Desktop) -->
-          <div class="w-full max-w-[560px] relative group mt-4">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary transition-colors">
-              <span class="material-symbols-outlined text-[24px]">search</span>
-            </div>
-            <input
-              v-model="searchKeyword"
-              aria-label="장소 또는 시설 검색"
-              class="block w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm hover:border-slate-300"
-              placeholder="아파트명, 지역명, 생활시설 검색..."
-              type="text"
-              @keydown.enter="handleSearch"
-            />
-            <div class="absolute inset-y-2 right-2">
-
-              <button
-                aria-label="검색"
-                class="h-full px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
-                @click="handleSearch"
-              >
-                <span class="material-symbols-outlined text-[18px]">search</span>
-                <span>검색</span>
-              </button>
-            </div>
+            <p class="text-slate-500 text-base md:text-lg">일상 속 궁금한 동네 정보를 한곳에</p>
           </div>
 
-          <!-- Hero Stats Banner (Desktop) -->
-          <div class="flex justify-center gap-10 mt-6">
+          <!-- 검색바 -->
+          <div class="w-full md:max-w-[560px] md:mt-4">
+            <label class="relative block">
+              <div class="flex items-stretch h-14 md:h-auto rounded-xl md:rounded-2xl bg-white border border-slate-200 md:border-2 shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-slate-300 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
+                <div class="flex items-center pl-4 pr-2 text-slate-400">
+                  <span class="material-symbols-outlined">search</span>
+                </div>
+                <input
+                  v-model="searchKeyword"
+                  aria-label="장소 또는 시설 검색"
+                  class="flex-1 min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
+                  placeholder="아파트명, 지역명, 생활시설 검색..."
+                  @keydown.enter="handleSearch"
+                />
+                <div class="hidden md:flex items-center pr-2">
+                  <button
+                    aria-label="검색"
+                    class="h-10 px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
+                    @click="handleSearch"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">search</span>
+                    <span>검색</span>
+                  </button>
+                </div>
+              </div>
+            </label>
+          </div>
+
+          <!-- 통계 -->
+          <div class="flex justify-center gap-5 md:gap-10 mt-2 md:mt-6">
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ formatStatCount(stats.buildingCount || 0) }}</div>
+              <div class="text-2xl md:text-3xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.buildingCount || 0) }}</div>
               <div class="text-sm text-slate-500">부동산</div>
             </div>
+            <div class="w-px bg-slate-200 self-stretch my-1 md:hidden"></div>
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ formatStatCount(stats.total || 0) }}</div>
+              <div class="text-2xl md:text-3xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.total || 0) }}</div>
               <div class="text-sm text-slate-500">생활시설</div>
             </div>
+            <div class="w-px bg-slate-200 self-stretch my-1 md:hidden"></div>
             <div class="text-center">
-              <div class="text-3xl font-black text-primary">{{ stats.regionCount || 0 }}개</div>
+              <div class="text-2xl md:text-3xl font-black text-primary whitespace-nowrap">{{ stats.regionCount || 0 }}개</div>
               <div class="text-sm text-slate-500">전국 시군구</div>
             </div>
           </div>
@@ -125,21 +71,21 @@
       <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- 부동산 실거래가 -->
         <div class="mb-8">
-          <h2 class="text-xl font-extrabold text-slate-900 flex items-center gap-2 mb-5">
-            <span class="material-symbols-outlined text-primary text-[28px]" aria-hidden="true">apartment</span>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-5">
+            <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">apartment</span>
             부동산
           </h2>
           <!-- 모바일: 3열 아이콘 그리드 -->
-          <div class="md:hidden grid grid-cols-3 gap-y-4 gap-x-2">
+          <div class="md:hidden grid grid-cols-3 gap-y-5 gap-x-3">
             <NuxtLink
               v-for="link in realEstateLinks"
               :key="link.to"
               :to="link.to"
               :aria-label="`${link.label} 실거래가`"
-              class="flex flex-col items-center gap-1.5"
+              class="flex flex-col items-center gap-2"
             >
-              <div class="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center">
-                <img :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-8 h-8" width="32" height="32" loading="lazy" />
+              <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <img :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-9 h-9" width="36" height="36" loading="lazy" />
               </div>
               <span class="text-sm text-slate-700 font-medium">{{ link.label }}</span>
               <div class="flex gap-1">
@@ -174,16 +120,16 @@
         </div>
         <!-- 시설 카테고리 그룹 -->
         <div v-for="group in categoryGroups" :key="group.title" class="mb-8">
-          <h2 class="text-xl font-extrabold text-slate-900 flex items-center gap-2 mb-5">
-            <span class="material-symbols-outlined text-[28px]" :class="group.colors.iconText" aria-hidden="true">{{ group.icon }}</span>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-5">
+            <span class="material-symbols-outlined text-[24px]" :class="group.colors.iconText" aria-hidden="true">{{ group.icon }}</span>
             {{ group.title }}
           </h2>
           <!-- 모바일: 4열 아이콘 그리드 -->
           <div class="md:hidden grid grid-cols-4 gap-y-5 gap-x-3">
-            <a
+            <NuxtLink
               v-for="item in group.items"
               :key="item.id"
-              :href="`/${item.id}`"
+              :to="`/${item.id}`"
               :aria-label="`${CATEGORY_LABELS[item.id]} - ${item.desc}`"
               class="flex flex-col items-center gap-2"
             >
@@ -191,14 +137,14 @@
                 <img :src="`/icons/category/${item.id}.webp?v2`" :alt="CATEGORY_LABELS[item.id]" class="w-9 h-9" width="36" height="36" loading="lazy" />
               </div>
               <span class="text-sm text-slate-700 font-medium text-center leading-tight">{{ CATEGORY_LABELS[item.id] }}</span>
-            </a>
+            </NuxtLink>
           </div>
           <!-- 데스크톱: 가로형 카드 -->
           <div class="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-3">
-            <a
+            <NuxtLink
               v-for="item in group.items"
               :key="item.id"
-              :href="`/${item.id}`"
+              :to="`/${item.id}`"
               :aria-label="`${CATEGORY_LABELS[item.id]} - ${item.desc} - ${formatCount(stats[item.id] || 0)}`"
               class="group flex items-center gap-4 p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:bg-primary/5 transition-all duration-300 bg-white"
             >
@@ -210,40 +156,8 @@
                 <p class="text-slate-500 text-xs mt-1 truncate">{{ item.desc }}</p>
               </div>
               <span class="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 text-lg shrink-0">→</span>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <!-- 지역별 생활 정보 -->
-      <section class="py-8">
-        <div class="max-w-6xl mx-auto px-4">
-          <h2 class="text-lg font-semibold mb-4">지역별 생활 정보</h2>
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            <NuxtLink v-for="city in CITY_LINKS" :key="city.slug" :to="`/${city.slug}/`"
-              class="px-3 py-2 text-center text-sm bg-gray-50 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
-              {{ city.label }}
             </NuxtLink>
           </div>
-        </div>
-      </section>
-
-      <!-- 교차 시너지 CTA -->
-      <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 md:p-8 text-center">
-          <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
-            이사할 동네, 꼼꼼하게 알아보세요
-          </h3>
-          <p class="text-sm text-slate-600 mb-4">
-            아파트 주변 생활 인프라도 함께 확인할 수 있어요
-          </p>
-          <NuxtLink
-            to="/real-estate"
-            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary-dark text-white text-sm font-semibold rounded-xl hover:bg-primary-700 transition-colors shadow-sm"
-          >
-            부동산 실거래가 둘러보기
-            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-          </NuxtLink>
         </div>
       </section>
 
@@ -251,7 +165,7 @@
       <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary" aria-hidden="true">menu_book</span>
+            <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">menu_book</span>
             생활 가이드
           </h2>
           <NuxtLink
@@ -296,10 +210,24 @@
         </div>
       </section>
 
+      <!-- 지역별 생활 정보 -->
+      <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">location_on</span>
+          지역별 생활 정보
+        </h2>
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+          <NuxtLink v-for="city in CITY_LINKS" :key="city.slug" :to="`/${city.slug}/`"
+            class="px-3 py-2 text-center text-sm bg-white border border-slate-200 rounded-xl shadow-sm hover:border-primary hover:bg-primary/5 hover:text-primary transition-all">
+            {{ city.label }}
+          </NuxtLink>
+        </div>
+      </section>
+
       <!-- Recent Reviews Section -->
       <section v-if="recentReviews.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-primary">rate_review</span>
+          <span class="material-symbols-outlined text-primary text-[24px]">rate_review</span>
           최근 리뷰
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -391,17 +319,6 @@ const realEstateStats = computed(() => {
   }
 })
 
-// 그룹별 합산 통계
-const groupStats = computed(() => {
-  const re = realEstateStats.value
-  return {
-    realEstate: re.aptSale + re.aptRent + re.villaSale + re.villaRent + re.offitelSale + re.offitelRent,
-    living: stats.value.toilet + stats.value.parking + stats.value.park,
-    health: stats.value.hospital + stats.value.pharmacy + stats.value.aed,
-    culture: stats.value.library + stats.value.clothes + stats.value.trash,
-  }
-})
-
 // 숫자 포맷 함수
 function formatCount(count: number): string {
   return '전국 ' + count.toLocaleString('ko-KR') + '곳'
@@ -412,14 +329,6 @@ function formatStatCount(count: number): string {
   if (count === 0) return '-'
   const rounded = Math.floor(count / 1000) * 1000
   return rounded.toLocaleString('ko-KR') + '+'
-}
-
-// 부동산 통계 배너용 포맷 (10000 단위)
-function formatRealEstateCount(count: number): string {
-  if (count === 0) return '-'
-  const rounded = Math.floor(count / 10000)
-  if (rounded > 0) return rounded.toLocaleString('ko-KR') + '만+'
-  return Math.floor(count / 1000).toLocaleString('ko-KR') + '천+'
 }
 
 // 카테고리별 설명 (홈페이지 전용)

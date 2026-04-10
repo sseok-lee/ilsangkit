@@ -18,6 +18,9 @@ const modelMap: Record<string, () => { findUnique: (args: { where: { id: string 
   park: () => prisma.park as never,
   school: () => prisma.school as never,
   market: () => prisma.market as never,
+  childcare: () => prisma.childcare as never,
+  'ev-charger': () => prisma.evCharger as never,
+  sports: () => prisma.sports as never,
 };
 
 /**
@@ -99,21 +102,28 @@ export async function getRecentReviews(limit: number) {
   });
 
   // 시설명 조회
+  const REAL_ESTATE_CATEGORIES = ['apt', 'villa', 'offitel'];
   const reviewsWithFacilityName = await Promise.all(
     reviews.map(async (review) => {
       let facilityName = '알 수 없는 시설';
-      const getModel = modelMap[review.facilityCategory];
-      if (getModel) {
-        try {
-          const facility = await getModel().findUnique({
-            where: { id: review.facilityId },
-            select: { name: true },
-          });
-          if (facility) {
-            facilityName = facility.name;
+
+      if (REAL_ESTATE_CATEGORIES.includes(review.facilityCategory)) {
+        // 부동산: facilityId가 건물명
+        facilityName = review.facilityId;
+      } else {
+        const getModel = modelMap[review.facilityCategory];
+        if (getModel) {
+          try {
+            const facility = await getModel().findUnique({
+              where: { id: review.facilityId },
+              select: { name: true },
+            });
+            if (facility) {
+              facilityName = facility.name;
+            }
+          } catch {
+            // trash 등 좌표 없는 카테고리는 무시
           }
-        } catch {
-          // trash 등 좌표 없는 카테고리는 무시
         }
       }
       return {
