@@ -1,7 +1,9 @@
 import { prisma } from '../lib/prisma.js';
 import { TABLE_NAME_MAP, type RealEstateType } from './realEstateService.js';
 
-const SALE_TYPES = new Set(['apt-sale', 'villa-sale', 'offitel-sale']);
+const SALE_TYPES = new Set(['apt-sale', 'villa-sale', 'offitel-sale', 'store-sale', 'land-sale']);
+// buildYear 컬럼이 없는 타입 (토지는 건축년도 개념 없음)
+const NO_BUILD_YEAR_TYPES = new Set(['land-sale']);
 
 /**
  * 특정 타입의 Summary 테이블을 갱신 (DELETE + INSERT)
@@ -11,6 +13,7 @@ export async function refreshSummary(type: string): Promise<number> {
   if (!table) throw new Error(`Unknown real estate type: ${type}`);
 
   const priceField = SALE_TYPES.has(type) ? 'dealAmount' : 'deposit';
+  const buildYearExpr = NO_BUILD_YEAR_TYPES.has(type) ? 'NULL' : 'd.buildYear';
 
   // 트랜잭션으로 DELETE + INSERT 원자적 실행
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,7 +31,7 @@ export async function refreshSummary(type: string): Promise<number> {
         d.city, d.district, d.dongName,
         d.${priceField} as latestPrice,
         g.lastDealYear, g.lastDealMonth,
-        d.buildYear,
+        ${buildYearExpr} as buildYear,
         g.lat, g.lng,
         g.transactionCount,
         NOW()

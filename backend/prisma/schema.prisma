@@ -1050,17 +1050,16 @@ model StoreSaleTransaction {
   city             String   @db.VarChar(50)
   district         String   @db.VarChar(50)
   bjdCode          String   @db.VarChar(10)
+  sggNm            String?  @db.VarChar(50)
   dongName         String   @db.VarChar(50)
   buildingName     String   @db.VarChar(200)
-  buildingDong     String?  @db.VarChar(50)
-  unitNo           String?  @db.VarChar(30)
   buildYear        Int?
   floor            Int?
-  exclusiveArea    Decimal? @db.Decimal(12, 2)
   buildingAr       Decimal? @db.Decimal(12, 2)
   plottageAr       Decimal? @db.Decimal(12, 2)
   buildingUse      String?  @db.VarChar(100)
-  buildingCls      String?  @db.VarChar(20)
+  buildingType     String?  @db.VarChar(20)
+  landUse          String?  @db.VarChar(100)
   jibun            String?  @db.VarChar(20)
   roadName         String?  @db.VarChar(100)
   lat              Decimal? @db.Decimal(10, 7)
@@ -1070,11 +1069,12 @@ model StoreSaleTransaction {
   dealDay          Int?
   dealAmount       BigInt
   dealType         String?  @db.VarChar(20)
+  shareDealingType String?  @db.VarChar(20)
+  estateAgentSggNm String?  @db.VarChar(200)
   cancelDealDay    String?  @db.VarChar(10)
   cancelDealType   String?  @db.VarChar(20)
   buyerType        String?  @db.VarChar(10)
   sellerType       String?  @db.VarChar(10)
-  registrationDate String?  @db.VarChar(20)
   sourceId         String   @unique @db.VarChar(100)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -1082,13 +1082,13 @@ model StoreSaleTransaction {
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
-  @@index([bjdCode, exclusiveArea])
   @@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
   @@index([syncedAt])
   @@index([buildingUse])
+  @@index([landUse])
 }
 
 model LandSaleTransaction {
@@ -1096,6 +1096,7 @@ model LandSaleTransaction {
   city             String   @db.VarChar(50)
   district         String   @db.VarChar(50)
   bjdCode          String   @db.VarChar(10)
+  sggNm            String?  @db.VarChar(50)
   dongName         String   @db.VarChar(50)
   buildingName     String   @db.VarChar(200)
   jibun            String?  @db.VarChar(20)
@@ -1107,16 +1108,13 @@ model LandSaleTransaction {
   dealDay          Int?
   dealAmount       BigInt
   dealArea         Decimal? @db.Decimal(14, 2)
-  landCategory     String?  @db.VarChar(20)
-  landUse          String?  @db.VarChar(50)
-  shareRatio       String?  @db.VarChar(20)
-  shareType        String?  @db.VarChar(20)
+  jimok            String?  @db.VarChar(20)
+  landUse          String?  @db.VarChar(100)
+  shareDealingType String?  @db.VarChar(20)
+  estateAgentSggNm String?  @db.VarChar(200)
   dealType         String?  @db.VarChar(20)
   cancelDealDay    String?  @db.VarChar(10)
   cancelDealType   String?  @db.VarChar(20)
-  buyerType        String?  @db.VarChar(10)
-  sellerType       String?  @db.VarChar(10)
-  registrationDate String?  @db.VarChar(20)
   sourceId         String   @unique @db.VarChar(100)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -1128,7 +1126,7 @@ model LandSaleTransaction {
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
   @@index([syncedAt])
-  @@index([landCategory])
+  @@index([jimok])
   @@index([landUse])
 }
 

@@ -14,25 +14,24 @@ import { submitIndexNow, buildRealEstateUrls } from '../services/indexNowService
 const API_ENDPOINT = 'RTMSDataSvcLandTrade/getRTMSDataSvcLandTrade';
 const CATEGORY = 'landSale';
 
+// 국토교통부 토지 매매 API(LandTrade) 실제 응답 필드
 export interface LandSaleItem {
-  dealAmount: string;
+  sggCd: string;
+  sggNm: string;
+  umdNm: string;
+  jibun: string;
   dealYear: string;
   dealMonth: string;
   dealDay: string;
-  umdNm: string;
-  jibun: string;
-  sggCd: string;
-  dealArea: string;
-  landCategory: string;
-  landUse: string;
-  shareRatio: string;
-  shareType: string;
-  dealingGbn: string;
+  dealAmount: string;            // 콤마 포함 — "750,000"
+  dealArea: string;              // 거래면적 m²
+  jimok: string;                 // 지목 (대/전/답/임야 등)
+  landUse: string;               // 용도지역 (제1종일반주거지역 등)
+  dealingGbn: string;            // 중개거래/직거래
+  shareDealingType: string;      // 지분 거래 유형
+  estateAgentSggNm: string;      // 중개사 소재지
   cdealDay: string;
   cdealType: string;
-  buyerGbn: string;
-  slerGbn: string;
-  rgstDate: string;
 }
 
 function parseIntOrNull(value: string): number | null {
@@ -50,10 +49,11 @@ export function transformLandSaleItem(item: LandSaleItem, city: string, district
   const jibunStr = String(item.jibun ?? '').trim();
   const dealTypeStr = String(item.dealingGbn ?? '').trim();
   const dealAreaStr = String(item.dealArea ?? '').trim();
-  const landCategoryStr = String(item.landCategory ?? '').trim();
+  const jimokStr = String(item.jimok ?? '').trim();
   const landUseStr = String(item.landUse ?? '').trim();
-  const shareRatioStr = String(item.shareRatio ?? '').trim();
-  const shareTypeStr = String(item.shareType ?? '').trim();
+  const shareDealingTypeStr = String(item.shareDealingType ?? '').trim();
+  const estateAgentSggNmStr = String(item.estateAgentSggNm ?? '').trim();
+  const sggNmStr = String(item.sggNm ?? '').trim();
   const dongNameStr = String(item.umdNm ?? '').trim();
 
   const dealAmountStr = String(item.dealAmount ?? '').replace(/,/g, '').trim();
@@ -78,6 +78,7 @@ export function transformLandSaleItem(item: LandSaleItem, city: string, district
     city,
     district,
     bjdCode,
+    sggNm: sggNmStr || null,
     dongName: dongNameStr,
     buildingName,
     jibun: jibunStr || null,
@@ -89,16 +90,13 @@ export function transformLandSaleItem(item: LandSaleItem, city: string, district
     dealDay: parseIntOrNull(dayStr),
     dealAmount: dealAmountVal,
     dealArea: dealAreaStr || null,
-    landCategory: landCategoryStr || null,
+    jimok: jimokStr || null,
     landUse: landUseStr || null,
-    shareRatio: shareRatioStr || null,
-    shareType: shareTypeStr || null,
+    shareDealingType: shareDealingTypeStr || null,
+    estateAgentSggNm: estateAgentSggNmStr || null,
     dealType: dealTypeStr || null,
     cancelDealDay: String(item.cdealDay ?? '').trim() || null,
     cancelDealType: String(item.cdealType ?? '').trim() || null,
-    buyerType: String(item.buyerGbn ?? '').trim() || null,
-    sellerType: String(item.slerGbn ?? '').trim() || null,
-    registrationDate: String(item.rgstDate ?? '').trim() || null,
   };
 }
 

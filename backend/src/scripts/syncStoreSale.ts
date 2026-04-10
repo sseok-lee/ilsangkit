@@ -14,30 +14,30 @@ import { submitIndexNow, buildRealEstateUrls } from '../services/indexNowService
 const API_ENDPOINT = 'RTMSDataSvcNrgTrade/getRTMSDataSvcNrgTrade';
 const CATEGORY = 'storeSale';
 
+// 국토교통부 상업·업무용 부동산 매매 API(NRG) 실제 응답 필드
 export interface StoreSaleItem {
-  dealAmount: string;
-  buildYear: string;
+  sggCd: string;
+  sggNm: string;
+  umdNm: string;
+  jibun: string;
   dealYear: string;
   dealMonth: string;
   dealDay: string;
-  umdNm: string;
-  bldgNm: string;
-  excluUseAr: string;
-  bldgAr: string;
-  plotAr: string;
-  mainPurpsCode: string;
-  bldgCls: string;
-  jibun: string;
-  sggCd: string;
+  dealAmount: string;            // 콤마 포함 — "372,900"
+  buildYear: string;
   floor: string;
-  dealingGbn: string;
-  bldgDong: string;
-  unitNo: string;
+  buildingAr: string;            // 건물면적 m²
+  plottageAr: string;            // 대지면적 m² (집합은 빈 값)
+  buildingUse: string;           // 주용도 (제1종근린생활시설 등)
+  buildingType: string;          // 집합/일반
+  landUse: string;               // 용도지역 (제3종일반주거 등)
+  dealingGbn: string;            // 중개거래/직거래
+  shareDealingType: string;      // 지분 거래 유형
+  estateAgentSggNm: string;      // 중개사 소재지
   cdealDay: string;
   cdealType: string;
   buyerGbn: string;
   slerGbn: string;
-  rgstDate: string;
 }
 
 function parseIntOrNull(value: string): number | null {
@@ -53,17 +53,24 @@ export function transformStoreSaleItem(item: StoreSaleItem, city: string, distri
   const dealMonth = parseInt(String(item.dealMonth ?? '').trim(), 10);
   const buildYearStr = String(item.buildYear ?? '').trim();
   const floorStr = String(item.floor ?? '').trim();
-  const exclusiveAreaStr = String(item.excluUseAr ?? '').trim();
-  const buildingArStr = String(item.bldgAr ?? '').trim();
-  const plottageArStr = String(item.plotAr ?? '').trim();
+  const buildingArStr = String(item.buildingAr ?? '').trim();
+  const plottageArStr = String(item.plottageAr ?? '').trim();
   const dayStr = String(item.dealDay ?? '').trim();
+  const dongNameStr = String(item.umdNm ?? '').trim();
   const jibunStr = String(item.jibun ?? '').trim();
   const dealTypeStr = String(item.dealingGbn ?? '').trim();
-  const buildingUseStr = String(item.mainPurpsCode ?? '').trim();
-  const buildingClsStr = String(item.bldgCls ?? '').trim();
+  const buildingUseStr = String(item.buildingUse ?? '').trim();
+  const buildingTypeStr = String(item.buildingType ?? '').trim();
+  const landUseStr = String(item.landUse ?? '').trim();
+  const shareDealingTypeStr = String(item.shareDealingType ?? '').trim();
+  const estateAgentSggNmStr = String(item.estateAgentSggNm ?? '').trim();
+  const sggNmStr = String(item.sggNm ?? '').trim();
 
   const dealAmountStr = String(item.dealAmount ?? '').replace(/,/g, '').trim();
   const dealAmountVal = BigInt(dealAmountStr || '0');
+
+  // 상가 API는 건물명을 제공하지 않으므로 "{법정동} {지번}" 합성값 사용
+  const buildingName = `${dongNameStr} ${jibunStr}`.trim() || '미상';
 
   const sourceId = generateSourceId(CATEGORY, {
     bjdCode,
@@ -72,7 +79,7 @@ export function transformStoreSaleItem(item: StoreSaleItem, city: string, distri
     dealMonth: String(dealMonth),
     dealDay: dayStr,
     floor: floorStr,
-    area: exclusiveAreaStr,
+    area: buildingArStr,
     dealAmount: dealAmountStr,
   });
 
@@ -81,15 +88,16 @@ export function transformStoreSaleItem(item: StoreSaleItem, city: string, distri
     city,
     district,
     bjdCode,
-    dongName: String(item.umdNm ?? '').trim(),
-    buildingName: String(item.bldgNm ?? '').trim(),
+    sggNm: sggNmStr || null,
+    dongName: dongNameStr,
+    buildingName,
     buildYear: parseIntOrNull(buildYearStr),
     floor: parseIntOrNull(floorStr),
-    exclusiveArea: exclusiveAreaStr || null,
     buildingAr: buildingArStr || null,
     plottageAr: plottageArStr || null,
     buildingUse: buildingUseStr || null,
-    buildingCls: buildingClsStr || null,
+    buildingType: buildingTypeStr || null,
+    landUse: landUseStr || null,
     jibun: jibunStr || null,
     roadName: null,
     dealYear,
@@ -97,13 +105,12 @@ export function transformStoreSaleItem(item: StoreSaleItem, city: string, distri
     dealDay: parseIntOrNull(dayStr),
     dealAmount: dealAmountVal,
     dealType: dealTypeStr || null,
-    buildingDong: String(item.bldgDong ?? '').trim() || null,
-    unitNo: String(item.unitNo ?? '').trim() || null,
+    shareDealingType: shareDealingTypeStr || null,
+    estateAgentSggNm: estateAgentSggNmStr || null,
     cancelDealDay: String(item.cdealDay ?? '').trim() || null,
     cancelDealType: String(item.cdealType ?? '').trim() || null,
     buyerType: String(item.buyerGbn ?? '').trim() || null,
     sellerType: String(item.slerGbn ?? '').trim() || null,
-    registrationDate: String(item.rgstDate ?? '').trim() || null,
   };
 }
 
