@@ -115,6 +115,13 @@ function isSaleType(type: string): boolean {
   return SALE_TYPES.includes(type as RealEstateType);
 }
 
+// store-sale, land-sale은 exclusiveArea 필드가 없음
+// store는 buildingAr(건물면적), land는 dealArea(거래면적)로 대체
+const NO_EXCLUSIVE_AREA_TYPES = new Set(['store-sale', 'land-sale']);
+function hasExclusiveArea(type: string): boolean {
+  return !NO_EXCLUSIVE_AREA_TYPES.has(type);
+}
+
 export const TABLE_NAME_MAP: Record<string, string> = {
   'apt-sale': 'AptSaleTransaction',
   'apt-rent': 'AptRentTransaction',
@@ -168,7 +175,7 @@ export async function searchTransactions(
   if (buildingName) where.buildingName = { startsWith: buildingName };
   if (dealYear !== undefined) where.dealYear = dealYear;
   if (dealMonth !== undefined) where.dealMonth = dealMonth;
-  if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
+  if (exclusiveArea && hasExclusiveArea(type)) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
   if (rentType) where.rentType = rentType;
   if (isSaleType(type)) where.cancelDealDay = null;
 
@@ -187,22 +194,45 @@ export async function searchTransactions(
 
   const skip = (page - 1) * limit;
 
-  const select = isSaleType(type)
-    ? {
-        id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
-        floor: true, exclusiveArea: true, buildYear: true,
-        dealYear: true, dealMonth: true, dealDay: true,
-        dealAmount: true, dealType: true, buyerType: true, sellerType: true,
-        cancelDealDay: true,
-      }
-    : {
-        id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
-        floor: true, exclusiveArea: true, buildYear: true,
-        dealYear: true, dealMonth: true, dealDay: true,
-        deposit: true, monthlyRent: true, rentType: true,
-        contractType: true, contractTerm: true,
-        preDeposit: true, preMonthlyRent: true,
-      };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let select: Record<string, any>;
+  if (type === 'store-sale') {
+    select = {
+      id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
+      floor: true, buildYear: true,
+      buildingAr: true, plottageAr: true, buildingUse: true, buildingType: true, landUse: true,
+      dealYear: true, dealMonth: true, dealDay: true,
+      dealAmount: true, dealType: true, buyerType: true, sellerType: true,
+      shareDealingType: true, estateAgentSggNm: true,
+      cancelDealDay: true,
+    };
+  } else if (type === 'land-sale') {
+    select = {
+      id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
+      dealYear: true, dealMonth: true, dealDay: true,
+      dealAmount: true, dealType: true,
+      dealArea: true, jimok: true, landUse: true,
+      shareDealingType: true, estateAgentSggNm: true,
+      cancelDealDay: true,
+    };
+  } else if (isSaleType(type)) {
+    select = {
+      id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
+      floor: true, exclusiveArea: true, buildYear: true,
+      dealYear: true, dealMonth: true, dealDay: true,
+      dealAmount: true, dealType: true, buyerType: true, sellerType: true,
+      cancelDealDay: true,
+    };
+  } else {
+    select = {
+      id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
+      floor: true, exclusiveArea: true, buildYear: true,
+      dealYear: true, dealMonth: true, dealDay: true,
+      deposit: true, monthlyRent: true, rentType: true,
+      contractType: true, contractTerm: true,
+      preDeposit: true, preMonthlyRent: true,
+    };
+  }
 
   const [items, total] = await Promise.all([
     model.findMany({
@@ -256,7 +286,7 @@ export async function getTransactionStats(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = { bjdCode };
   if (buildingName) where.buildingName = buildingName;
-  if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
+  if (exclusiveArea && hasExclusiveArea(type)) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
   if (rentType) where.rentType = rentType;
   if (isSale) where.cancelDealDay = null;
 
@@ -482,6 +512,9 @@ export async function getBuildingInfo(
   const where = { bjdCode, buildingName };
   const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
 
+  // store-sale: buildingAr로 대체, land-sale: dealArea로 대체, 나머지: exclusiveArea
+  const areaField = type === 'store-sale' ? 'buildingAr' : type === 'land-sale' ? 'dealArea' : 'exclusiveArea';
+
   const [latest, agg] = await Promise.all([
     model.findFirst({
       where,
@@ -489,8 +522,8 @@ export async function getBuildingInfo(
     }),
     model.aggregate({
       where,
-      _min: { exclusiveArea: true },
-      _max: { exclusiveArea: true },
+      _min: { [areaField]: true },
+      _max: { [areaField]: true },
     }),
   ]);
 
@@ -504,8 +537,8 @@ export async function getBuildingInfo(
     roadName: latest.roadName ?? null,
     jibun: latest.jibun ?? null,
     buildYear: latest.buildYear ?? null,
-    minArea: agg._min.exclusiveArea !== null ? Number(agg._min.exclusiveArea) : null,
-    maxArea: agg._max.exclusiveArea !== null ? Number(agg._max.exclusiveArea) : null,
+    minArea: agg._min[areaField] !== null && agg._min[areaField] !== undefined ? Number(agg._min[areaField]) : null,
+    maxArea: agg._max[areaField] !== null && agg._max[areaField] !== undefined ? Number(agg._max[areaField]) : null,
     latestDealAmount: latest[priceField] !== null ? Number(latest[priceField]) : null,
     latestDealYear: latest.dealYear,
     latestDealMonth: latest.dealMonth,
@@ -534,22 +567,27 @@ export async function getAreaGroups(
 ): Promise<AreaGroup[]> {
   const model = getModel(type);
 
+  // store-sale: buildingAr, land-sale: dealArea, 나머지: exclusiveArea
+  const areaField = type === 'store-sale' ? 'buildingAr' : type === 'land-sale' ? 'dealArea' : 'exclusiveArea';
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = { bjdCode };
   if (buildingName) where.buildingName = buildingName;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const groupByResult: any[] = await model.groupBy({
-    by: ['exclusiveArea'],
+    by: [areaField],
     where,
-    _count: { exclusiveArea: true },
+    _count: { [areaField]: true },
   });
 
   // Math.round 반올림 후 ±2㎡ 그룹 병합
-  const raw = groupByResult.map((row) => ({
-    area: Math.round(Number(row.exclusiveArea)),
-    count: row._count.exclusiveArea as number,
-  }));
+  const raw = groupByResult
+    .filter((row) => row[areaField] !== null && row[areaField] !== undefined)
+    .map((row) => ({
+      area: Math.round(Number(row[areaField])),
+      count: row._count[areaField] as number,
+    }));
 
   const merged: { area: number; count: number }[] = [];
   for (const item of raw) {
@@ -599,7 +637,7 @@ export async function searchAll(
   if (city) where.city = city;
   if (district) where.district = district;
 
-  const searchAllSelect = {
+  const baseSelect = {
     id: true,
     buildingName: true,
     city: true,
@@ -608,16 +646,23 @@ export async function searchAll(
     dealYear: true,
     dealMonth: true,
     dealDay: true,
-    exclusiveArea: true,
-    floor: true,
     dealAmount: true,
   };
 
   const results = await Promise.all(
     ALL_TYPES.map(async (type) => {
       const model = getModel(type);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let select: Record<string, any>;
+      if (type === 'store-sale') {
+        select = { ...baseSelect, buildingAr: true, floor: true };
+      } else if (type === 'land-sale') {
+        select = { ...baseSelect, dealArea: true };
+      } else {
+        select = { ...baseSelect, exclusiveArea: true, floor: true };
+      }
       const [items, count] = await Promise.all([
-        model.findMany({ where, take: 3, select: searchAllSelect }),
+        model.findMany({ where, take: 3, select }),
         model.count({ where }),
       ]);
       return { type, count, items: items.map(serializeRow) };
