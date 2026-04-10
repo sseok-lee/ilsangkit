@@ -93,7 +93,7 @@
                 {{ tx.floor != null ? `${tx.floor}층` : '-' }}
               </td>
               <td class="px-4 py-3 text-slate-600">
-                {{ tx.exclusiveArea != null ? `${tx.exclusiveArea}㎡` : '-' }}
+                {{ formatArea(tx) }}
               </td>
 
               <!-- 매매 전용: 거래금액 + 평당가 + 거래유형 + 매수/매도자 -->
@@ -213,7 +213,7 @@
               </span>
             </div>
             <div class="mt-1.5 text-sm text-slate-500">
-              {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ tx.exclusiveArea != null ? `${tx.exclusiveArea}㎡` : '-' }}
+              {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
               <span v-if="pricePerPyeong(tx as SaleTransaction) !== '-'" class="ml-1">· 평당 {{ pricePerPyeong(tx as SaleTransaction) }}</span>
             </div>
             <div v-if="(tx as SaleTransaction).buyerType || (tx as SaleTransaction).sellerType" class="mt-1 text-xs text-slate-500">
@@ -272,7 +272,7 @@
                 </span>
                 ·
               </template>
-              {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ tx.exclusiveArea != null ? `${tx.exclusiveArea}㎡` : '-' }}
+              {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
             </div>
             <div v-if="(tx as RentTransaction).contractTerm" class="mt-1 text-xs text-slate-500">
               계약 {{ (tx as RentTransaction).contractTerm }}
@@ -356,9 +356,26 @@ function formatAmount(amount: number): string {
   return `${amount.toLocaleString()}만원`
 }
 
+// store-sale은 buildingAr, land-sale은 dealArea, 나머지는 exclusiveArea 사용
+// Prisma Decimal은 문자열로 직렬화되므로 Number 변환
+function getArea(tx: SaleTransaction | RentTransaction): number | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anyTx = tx as any
+  const raw = anyTx.exclusiveArea ?? anyTx.buildingAr ?? anyTx.dealArea
+  if (raw == null || raw === '') return null
+  const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
+  return Number.isFinite(num) && num > 0 ? num : null
+}
+
+function formatArea(tx: SaleTransaction | RentTransaction): string {
+  const area = getArea(tx)
+  return area != null ? `${area}㎡` : '-'
+}
+
 function pricePerPyeong(tx: SaleTransaction): string {
-  if (tx.exclusiveArea == null || tx.exclusiveArea === 0) return '-'
-  const pyeong = tx.exclusiveArea / 3.305
+  const area = getArea(tx)
+  if (area == null) return '-'
+  const pyeong = area / 3.305
   const price = Math.round(tx.dealAmount / pyeong)
   return formatAmount(price)
 }

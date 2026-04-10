@@ -33,7 +33,9 @@ export type RealEstateTable =
   | 'villaSaleTransaction'
   | 'villaRentTransaction'
   | 'offitelSaleTransaction'
-  | 'offitelRentTransaction';
+  | 'offitelRentTransaction'
+  | 'storeSaleTransaction'
+  | 'landSaleTransaction';
 
 const REAL_ESTATE_TABLES: RealEstateTable[] = [
   'aptSaleTransaction',
@@ -42,6 +44,8 @@ const REAL_ESTATE_TABLES: RealEstateTable[] = [
   'villaRentTransaction',
   'offitelSaleTransaction',
   'offitelRentTransaction',
+  'storeSaleTransaction',
+  'landSaleTransaction',
 ];
 
 function getPropertySuffix(table: RealEstateTable): string {
@@ -223,7 +227,7 @@ export function parseKakaoCoordinates(response: KakaoResponse): Coordinates | nu
   return parseCoords(response);
 }
 
-async function processTable(prisma: PrismaClient, table: RealEstateTable): Promise<void> {
+export async function processTable(prisma: PrismaClient, table: RealEstateTable): Promise<void> {
   console.info(`\n[${table}] 좌표 없는 건물 추출 중...`);
   const buildings = await getUniqueBuildings(prisma, table);
 

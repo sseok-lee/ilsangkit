@@ -1,7 +1,7 @@
 <template>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     <NuxtLink
-      v-for="pt in PROPERTY_TYPES"
+      v-for="pt in VISIBLE_PROPERTY_TYPES"
       :key="pt"
       :to="`/real-estate/${pt}`"
       class="group flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
@@ -25,6 +25,6 @@
 </template>
 
 <script setup lang="ts">
-import { PROPERTY_TYPES } from '~/types/realEstate'
+import { VISIBLE_PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 </script>

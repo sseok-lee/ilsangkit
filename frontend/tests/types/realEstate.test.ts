@@ -75,12 +75,12 @@ describe('slugToCategory', () => {
 })
 
 describe('REAL_ESTATE_CATEGORIES', () => {
-  it('6개 카테고리를 포함해야 한다', () => {
-    expect(REAL_ESTATE_CATEGORIES).toHaveLength(6)
+  it('8개 카테고리를 포함해야 한다', () => {
+    expect(REAL_ESTATE_CATEGORIES).toHaveLength(8)
   })
 
   it('모든 카테고리 값을 포함해야 한다', () => {
-    const expected: RealEstateCategory[] = ['aptSale', 'aptRent', 'villaSale', 'villaRent', 'offitelSale', 'offitelRent']
+    const expected: RealEstateCategory[] = ['aptSale', 'aptRent', 'villaSale', 'villaRent', 'offitelSale', 'offitelRent', 'storeSale', 'landSale']
     expected.forEach((cat) => {
       expect(REAL_ESTATE_CATEGORIES).toContain(cat)
     })
@@ -88,12 +88,12 @@ describe('REAL_ESTATE_CATEGORIES', () => {
 })
 
 describe('REAL_ESTATE_TYPES', () => {
-  it('6개 타입(slug)을 포함해야 한다', () => {
-    expect(REAL_ESTATE_TYPES).toHaveLength(6)
+  it('8개 타입(slug)을 포함해야 한다', () => {
+    expect(REAL_ESTATE_TYPES).toHaveLength(8)
   })
 
   it('모든 slug 값을 포함해야 한다', () => {
-    const expected: RealEstateType[] = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent']
+    const expected: RealEstateType[] = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent', 'store-sale', 'land-sale']
     expected.forEach((slug) => {
       expect(REAL_ESTATE_TYPES).toContain(slug)
     })
