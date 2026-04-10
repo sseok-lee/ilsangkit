@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import EvChargerDetail from '~/components/facility/details/EvChargerDetail.vue'
 import DetailRow from '~/components/facility/DetailRow.vue'
 import type { EvChargerDetails } from '~/types/facility'
@@ -220,5 +221,151 @@ describe('EvChargerDetail', () => {
     })
 
     expect(wrapper.html()).not.toContain('충전기 현황')
+  })
+})
+
+describe('EvChargerDetail 실시간 폴링', () => {
+  const globalConfig = {
+    global: {
+      components: { DetailRow },
+    },
+  }
+
+  const detailsWithChargers: EvChargerDetails = {
+    statId: 'ME101010',
+    chargers: [
+      { chgerId: '01', output: '100', stat: '2', method: 'DC콤보' },
+      { chgerId: '02', output: '7', stat: '3', method: 'AC완속' },
+    ],
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    ;(globalThis as any).$fetch = vi.fn().mockResolvedValue({
+      success: true,
+      data: [
+        { chgerId: '01', stat: '3', statUpdDt: '20260410120000' },
+        { chgerId: '02', stat: '2', statUpdDt: '20260410120100' },
+      ],
+    })
+    // SSR 가드용
+    ;(globalThis as any).import = { meta: { client: true } }
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('statId가 있으면 마운트 시 상태를 폴링한다', async () => {
+    mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    // 초기 fetch 호출 확인
+    await vi.advanceTimersByTimeAsync(100)
+    expect((globalThis as any).$fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/ev-charger/ME101010/status'),
+      expect.any(Object)
+    )
+  })
+
+  it('폴링 응답으로 충전기 상태가 갱신된다', async () => {
+    const wrapper = mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    // 폴링 실행 대기
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+    await nextTick()
+
+    // 충전기 #01: stat 2→3 (충전대기→충전중)
+    // 충전기 #02: stat 3→2 (충전중→충전대기)
+    const text = wrapper.text()
+    // 두 충전기 모두 상태가 바뀌어야 함
+    expect(text).toContain('충전대기')
+    expect(text).toContain('충전중')
+  })
+
+  it('30초 간격으로 폴링을 반복한다', async () => {
+    mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    const initialCallCount = (globalThis as any).$fetch.mock.calls.length
+
+    // 30초 후 추가 호출
+    await vi.advanceTimersByTimeAsync(30000)
+    expect((globalThis as any).$fetch.mock.calls.length).toBeGreaterThan(initialCallCount)
+  })
+
+  it('언마운트 시 폴링이 정리된다', async () => {
+    const wrapper = mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    const callCountBefore = (globalThis as any).$fetch.mock.calls.length
+
+    wrapper.unmount()
+
+    await vi.advanceTimersByTimeAsync(60000)
+    expect((globalThis as any).$fetch.mock.calls.length).toBe(callCountBefore)
+  })
+
+  it('statId가 없으면 폴링하지 않는다', async () => {
+    mount(EvChargerDetail, {
+      props: { details: { chargers: detailsWithChargers.chargers } },
+      ...globalConfig,
+    })
+
+    await vi.advanceTimersByTimeAsync(30000)
+    // status 엔드포인트 호출이 없어야 함
+    const statusCalls = (globalThis as any).$fetch.mock.calls.filter(
+      (call: any[]) => String(call[0]).includes('/status')
+    )
+    expect(statusCalls).toHaveLength(0)
+  })
+
+  it('폴링 실패 시 기존 상태를 유지한다', async () => {
+    ;(globalThis as any).$fetch = vi.fn().mockRejectedValue(new Error('Network error'))
+
+    const wrapper = mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+
+    // 원래 상태 유지
+    expect(wrapper.text()).toContain('충전대기') // stat=2
+    expect(wrapper.text()).toContain('충전중')   // stat=3
+  })
+
+  it('마지막 갱신 시각을 표시한다', async () => {
+    ;(globalThis as any).$fetch = vi.fn().mockResolvedValue({
+      success: true,
+      data: [
+        { chgerId: '01', stat: '2', statUpdDt: '20260410120000' },
+      ],
+    })
+
+    const wrapper = mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+    await nextTick()
+
+    expect(wrapper.text()).toContain('실시간')
   })
 })
