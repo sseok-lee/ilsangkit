@@ -47,13 +47,15 @@ export interface SaleTransaction {
   // P2: 매수/매도자 유형
   buyerType: string | null
   sellerType: string | null
-  // 상가 고유 필드 (선택사항)
-  buildingAr?: number | null  // 건물면적 (㎡)
-  plottageAr?: number | null  // 대지면적 (㎡)
+  // 상가 고유 필드 (선택사항 — store-sale 전용)
+  sggNm?: string | null  // 시군구 한글명
+  buildingAr?: string | null  // 건물면적 (㎡) — Decimal 직렬화 문자열
+  plottageAr?: string | null  // 대지면적 (㎡)
   buildingUse?: string | null  // 주용도
-  buildingCls?: string | null  // 부동산 구분
-  buildingDong?: string | null  // 동 번호
-  unitNo?: string | null  // 호수
+  buildingType?: string | null  // 부동산 구분 (집합/일반)
+  landUse?: string | null  // 용도지역 (상가에도 있음)
+  shareDealingType?: string | null  // 지분 거래 유형
+  estateAgentSggNm?: string | null  // 중개사 소재지
 }
 
 // 토지 매매 거래
@@ -62,6 +64,7 @@ export interface LandSaleTransaction {
   city: string
   district: string
   bjdCode: string
+  sggNm: string | null  // 시군구 한글명
   dongName: string
   buildingName: string  // "{dongName} {jibun}" 합성값
   jibun: string | null
@@ -72,18 +75,15 @@ export interface LandSaleTransaction {
   dealMonth: number
   dealDay: number | null
   dealAmount: number  // 만원 단위
-  dealArea: number | null  // 거래면적 (㎡)
-  landCategory: string | null  // 지목
+  dealArea: string | null  // 거래면적 (㎡) — Decimal 직렬화 문자열
+  jimok: string | null  // 지목 (대/전/답/임야 등)
   landUse: string | null  // 용도지역
-  shareRatio: string | null  // 지분 거래 비율
-  shareType: string | null  // 지분 구분
+  shareDealingType: string | null  // 지분 거래 유형
+  estateAgentSggNm: string | null  // 중개사 소재지
   dealType: string | null
-  // P0: 취소 거래
+  // 취소 거래
   cancelDealDay: string | null
   cancelDealType: string | null
-  // P2: 매수/매도자 유형
-  buyerType: string | null
-  sellerType: string | null
 }
 
 // 전월세 거래
