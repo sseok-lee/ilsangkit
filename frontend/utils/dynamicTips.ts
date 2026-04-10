@@ -103,6 +103,7 @@ export function generateDynamicTips(facility: FacilityDetail): string[] {
       if (charger?.chgerType) dynamic.push(`충전기 타입: ${charger.chgerType}`)
       if (d.parkingFree === 'Y') dynamic.push('충전 중 주차 요금이 무료입니다.')
       if (d.useTime) dynamic.push(`이용 가능 시간: ${d.useTime}`)
+      dynamic.push('충전기 상태가 실시간으로 갱신되고 있습니다.')
       break
     }
 

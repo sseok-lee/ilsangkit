@@ -289,6 +289,10 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
             : `${name}은(는) 충전 중에도 주차 요금이 부과될 수 있습니다. 방문 전 요금 안내를 확인하세요.`,
         })
       }
+      dynamic.push({
+        question: `${name}의 충전기가 지금 사용 가능한가요?`,
+        answer: `${name}의 충전기 상태는 이 페이지에서 실시간으로 확인할 수 있습니다. 각 충전기별 충전대기·충전중·운영중지 상태가 30초마다 자동 갱신됩니다.`,
+      })
       break
     }
     case 'sports':
