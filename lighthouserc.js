@@ -1,9 +1,9 @@
 module.exports = {
   ci: {
     collect: {
-      startServerCommand: 'npm run preview',
-      startServerReadyPattern: 'Local',
-      startServerReadyTimeout: 30000,
+      startServerCommand: 'PORT=4173 npm run preview',
+      startServerReadyPattern: 'Listening',
+      startServerReadyTimeout: 60000,
       url: ['http://localhost:4173/'],
       numberOfRuns: 3,
       settings: {
