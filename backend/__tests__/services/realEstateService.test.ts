@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Hoisted mocks for all 6 real estate models
+// Hoisted mocks for all 8 real estate models
 const {
   mockAptSaleFindMany,
   mockAptSaleCount,
@@ -20,6 +20,10 @@ const {
   mockOffitelRentFindMany,
   mockOffitelRentCount,
   mockOffitelRentGroupBy,
+  mockStoreSaleFindMany,
+  mockStoreSaleCount,
+  mockLandSaleFindMany,
+  mockLandSaleCount,
   mockAptSaleFindFirst,
   mockAptRentFindFirst,
   mockVillaSaleFindFirst,
@@ -54,6 +58,10 @@ const {
   mockOffitelRentCount: vi.fn(),
   mockOffitelRentGroupBy: vi.fn(),
   mockOffitelRentFindFirst: vi.fn(),
+  mockStoreSaleFindMany: vi.fn(),
+  mockStoreSaleCount: vi.fn(),
+  mockLandSaleFindMany: vi.fn(),
+  mockLandSaleCount: vi.fn(),
   mockQueryRawUnsafe: vi.fn(),
   mockSummaryFindMany: vi.fn(),
   mockSummaryCount: vi.fn(),
@@ -96,6 +104,14 @@ vi.mock('../../src/lib/prisma.js', () => {
       findFirst: mockOffitelRentFindFirst,
       count: mockOffitelRentCount,
       groupBy: mockOffitelRentGroupBy,
+    },
+    storeSaleTransaction: {
+      findMany: mockStoreSaleFindMany,
+      count: mockStoreSaleCount,
+    },
+    landSaleTransaction: {
+      findMany: mockLandSaleFindMany,
+      count: mockLandSaleCount,
     },
   };
   const summary = {
@@ -746,9 +762,13 @@ describe('searchAll', () => {
     mockOffitelSaleCount.mockResolvedValue(0);
     mockOffitelRentFindMany.mockResolvedValue([]);
     mockOffitelRentCount.mockResolvedValue(0);
+    mockStoreSaleFindMany.mockResolvedValue([]);
+    mockStoreSaleCount.mockResolvedValue(0);
+    mockLandSaleFindMany.mockResolvedValue([]);
+    mockLandSaleCount.mockResolvedValue(0);
   });
 
-  it('calls findMany on all 6 models in parallel', async () => {
+  it('calls findMany on all 8 models in parallel', async () => {
     await searchAll('래미안');
 
     expect(mockAptSaleFindMany).toHaveBeenCalledTimes(1);
@@ -757,6 +777,8 @@ describe('searchAll', () => {
     expect(mockVillaRentFindMany).toHaveBeenCalledTimes(1);
     expect(mockOffitelSaleFindMany).toHaveBeenCalledTimes(1);
     expect(mockOffitelRentFindMany).toHaveBeenCalledTimes(1);
+    expect(mockStoreSaleFindMany).toHaveBeenCalledTimes(1);
+    expect(mockLandSaleFindMany).toHaveBeenCalledTimes(1);
   });
 
   it('searches buildingName with startsWith for each model', async () => {
@@ -799,10 +821,10 @@ describe('searchAll', () => {
     expect(aptSale!.items).toHaveLength(3);
   });
 
-  it('returns all 6 categories in result', async () => {
+  it('returns all 8 categories in result', async () => {
     const result = await searchAll('테스트');
 
-    expect(result.categories).toHaveLength(6);
+    expect(result.categories).toHaveLength(8);
     const types = result.categories.map((c) => c.type);
     expect(types).toContain('apt-sale');
     expect(types).toContain('apt-rent');
@@ -810,6 +832,8 @@ describe('searchAll', () => {
     expect(types).toContain('villa-rent');
     expect(types).toContain('offitel-sale');
     expect(types).toContain('offitel-rent');
+    expect(types).toContain('store-sale');
+    expect(types).toContain('land-sale');
   });
 
   it('filters by city when provided', async () => {
@@ -836,7 +860,7 @@ describe('searchAll', () => {
     );
   });
 
-  it('runs all 6 model queries in parallel (Promise.all)', async () => {
+  it('runs all 8 model queries in parallel (Promise.all)', async () => {
     // Verify that all mocks are called within same tick by tracking call order
     const callOrder: string[] = [];
     mockAptSaleFindMany.mockImplementation(async () => {
@@ -887,11 +911,27 @@ describe('searchAll', () => {
       callOrder.push('offitel-rent-count');
       return 0;
     });
+    mockStoreSaleFindMany.mockImplementation(async () => {
+      callOrder.push('store-sale-findMany');
+      return [];
+    });
+    mockStoreSaleCount.mockImplementation(async () => {
+      callOrder.push('store-sale-count');
+      return 0;
+    });
+    mockLandSaleFindMany.mockImplementation(async () => {
+      callOrder.push('land-sale-findMany');
+      return [];
+    });
+    mockLandSaleCount.mockImplementation(async () => {
+      callOrder.push('land-sale-count');
+      return 0;
+    });
 
     await searchAll('래미안');
 
-    // All 6 findMany calls should have been made
-    expect(callOrder.filter((c) => c.endsWith('-findMany'))).toHaveLength(6);
+    // All 8 findMany calls should have been made
+    expect(callOrder.filter((c) => c.endsWith('-findMany'))).toHaveLength(8);
   });
 });
 

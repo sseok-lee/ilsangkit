@@ -10,6 +10,8 @@ export const RealEstateTypeSchema = z.enum([
   'villa-rent',
   'offitel-sale',
   'offitel-rent',
+  'store-sale',
+  'land-sale',
 ]);
 
 export type RealEstateType = z.infer<typeof RealEstateTypeSchema>;
