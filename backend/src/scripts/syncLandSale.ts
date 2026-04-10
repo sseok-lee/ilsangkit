@@ -179,6 +179,20 @@ async function main(): Promise<void> {
     }
   }
 
+  // 좌표 보강 (Kakao Geocoding) — 좌표 없는 신규 위치만 대상
+  if (process.env.KAKAO_REST_API_KEY) {
+    console.info('\n[Geocode] landSaleTransaction 좌표 보강 중...');
+    const { processTable } = await import('./geocodeRealEstate.js');
+    try {
+      await processTable(prisma, 'landSaleTransaction');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      console.warn(`[Geocode] landSaleTransaction 보강 실패: ${msg}`);
+    }
+  } else {
+    console.info('\n[Geocode] KAKAO_REST_API_KEY 미설정 — 좌표 보강 건너뜀');
+  }
+
   // IndexNow: 동기화된 건물 URL 제출
   const buildings = await prisma.landSaleTransaction.findMany({
     where: { syncedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) } },
