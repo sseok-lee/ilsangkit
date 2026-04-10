@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-3">
     <!-- 충전기 요약 뱃지 -->
-    <div v-if="details.chargers?.length" class="flex items-center gap-2 flex-wrap">
+    <div v-if="displayChargers?.length" class="flex items-center gap-2 flex-wrap">
       <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-slate-100 text-slate-800">
-        총 {{ details.chargers.length }}대
+        총 {{ displayChargers.length }}대
       </span>
       <span v-if="rapidCount > 0" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800">
         급속 {{ rapidCount }}대
@@ -71,11 +71,16 @@
     </div>
 
     <!-- 충전기 목록 -->
-    <div v-if="details.chargers?.length" class="pt-3 border-t border-slate-200">
-      <p class="text-xs font-medium text-slate-500 mb-3">충전기 현황</p>
+    <div v-if="displayChargers?.length" class="pt-3 border-t border-slate-200">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs font-medium text-slate-500">충전기 현황</p>
+        <span v-if="lastUpdated" class="text-xs text-emerald-600 font-medium">
+          실시간 갱신중
+        </span>
+      </div>
       <div class="space-y-2">
         <div
-          v-for="(charger, index) in details.chargers"
+          v-for="(charger, index) in displayChargers"
           :key="charger.chgerId || index"
           class="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
         >
@@ -103,20 +108,71 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { EvChargerDetails, EvChargerItem } from '~/types/facility'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
+
+const POLL_INTERVAL = 30_000
 
 const props = defineProps<{
   details: EvChargerDetails
 }>()
 
+const liveStatuses = ref<Map<string, { stat: string; statUpdDt: string }>>(new Map())
+const lastUpdated = ref<Date | null>(null)
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+const displayChargers = computed(() => {
+  if (!props.details.chargers) return []
+  if (liveStatuses.value.size === 0) return props.details.chargers
+  return props.details.chargers.map(charger => {
+    const live = liveStatuses.value.get(charger.chgerId || '')
+    if (!live) return charger
+    return { ...charger, stat: live.stat, statUpdDt: live.statUpdDt }
+  })
+})
+
 const rapidCount = computed(() =>
-  props.details.chargers?.filter(c => parseFloat(c.output || '0') >= 50).length || 0
+  displayChargers.value.filter(c => parseFloat(c.output || '0') >= 50).length || 0
 )
 const slowCount = computed(() =>
-  props.details.chargers?.filter(c => parseFloat(c.output || '0') < 50).length || 0
+  displayChargers.value.filter(c => parseFloat(c.output || '0') < 50).length || 0
 )
+
+async function pollStatus() {
+  if (!props.details.statId) return
+  try {
+    const config = useRuntimeConfig()
+    const res = await $fetch<{ success: boolean; data: Array<{ chgerId: string; stat: string; statUpdDt: string }> }>(
+      `${config.public.apiBase}/api/facilities/ev-charger/${props.details.statId}/status`,
+      { timeout: 10_000 }
+    )
+    if (res.success && res.data) {
+      const newMap = new Map<string, { stat: string; statUpdDt: string }>()
+      for (const item of res.data) {
+        newMap.set(item.chgerId, { stat: item.stat, statUpdDt: item.statUpdDt })
+      }
+      liveStatuses.value = newMap
+      lastUpdated.value = new Date()
+    }
+  } catch {
+    // 실패 시 기존 상태 유지
+  }
+}
+
+onMounted(() => {
+  if (typeof window === 'undefined') return
+  if (!props.details.statId) return
+  pollStatus()
+  pollTimer = setInterval(pollStatus, POLL_INTERVAL)
+})
+
+onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+})
 
 function getTypeLabel(charger: EvChargerItem): string {
   return parseFloat(charger.output || '0') >= 50 ? '급속' : '완속'

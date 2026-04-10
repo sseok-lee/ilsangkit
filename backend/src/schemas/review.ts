@@ -3,6 +3,8 @@ import { z } from 'zod';
 // 리뷰 카테고리 (trash 포함 - 모든 시설에 리뷰 가능)
 const ReviewCategorySchema = z.enum([
   'toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'trash',
+  'childcare', 'ev-charger', 'sports',
+  'apt', 'villa', 'offitel',
 ]);
 
 // 리뷰 작성 스키마

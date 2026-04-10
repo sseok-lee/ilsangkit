@@ -93,6 +93,6 @@ export const CATEGORY_CTA: Record<FacilityCategory, string> = {
   school: '주변 학교 위치와 기본 정보를 확인하세요',
   market: '가까운 전통시장 위치와 개장 정보를 확인하세요',
   childcare: '주변 어린이집 위치와 유형, 정원 정보를 확인하세요',
-  'ev-charger': '가까운 전기차 충전소 위치와 충전기 타입을 확인하세요',
+  'ev-charger': '가까운 전기차 충전소 위치와 실시간 충전 상태를 확인하세요',
   sports: '주변 공공체육시설 위치와 시설 정보를 확인하세요',
 }

@@ -75,6 +75,20 @@ router.get(
   })
 );
 
+// 전기차 충전소 실시간 상태 조회 API
+// GET /api/facilities/ev-charger/:statId/status
+router.get(
+  '/ev-charger/:statId/status',
+  asyncHandler(async (req: Request, res: Response) => {
+    const statId = Array.isArray(req.params.statId) ? req.params.statId[0] : req.params.statId;
+    const { fetchChargerStatus } = await import('../services/evChargerService.js');
+    const data = await fetchChargerStatus(statId);
+
+    res.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=20');
+    res.json({ success: true, data });
+  })
+);
+
 // 크로스 카테고리 주변 시설 조회 API
 // GET /api/facilities/:category/:id/nearby
 router.get(

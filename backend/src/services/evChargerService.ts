@@ -235,3 +235,68 @@ export async function getEvChargerStationDetail(statId: string): Promise<Facilit
     syncedAt: first.syncedAt,
   };
 }
+
+/**
+ * 충전기 실시간 상태 조회 — 공공데이터 getChargerStatus API
+ * 상세페이지 폴링용 경량 엔드포인트
+ */
+
+const EV_STATUS_API_URL = 'https://apis.data.go.kr/B552584/EvCharger/getChargerStatus';
+
+interface ChargerStatusItem {
+  statId?: string;
+  chgerId?: string;
+  stat?: string | number;
+  statUpdDt?: string;
+}
+
+export interface ChargerStatusResult {
+  chgerId: string;
+  stat: string;
+  statUpdDt: string;
+}
+
+export async function fetchChargerStatus(statId: string): Promise<ChargerStatusResult[]> {
+  const serviceKey = process.env.OPENAPI_SERVICE_KEY;
+  if (!serviceKey) {
+    throw new Error('OPENAPI_SERVICE_KEY 환경변수가 설정되지 않았습니다.');
+  }
+
+  const params = new URLSearchParams({
+    serviceKey,
+    statId,
+    numOfRows: '100',
+    pageNo: '1',
+    dataType: 'JSON',
+  });
+
+  let response: Awaited<ReturnType<typeof fetch>>;
+  try {
+    response = await fetch(`${EV_STATUS_API_URL}?${params.toString()}`);
+  } catch {
+    return [];
+  }
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const json = await response.json() as {
+    items?: { item?: ChargerStatusItem | ChargerStatusItem[] };
+    totalCount?: number | string;
+  };
+
+  let rawItems = json?.items?.item;
+  if (!rawItems) return [];
+  if (!Array.isArray(rawItems)) rawItems = [rawItems];
+
+  return rawItems
+    .filter((item): item is Required<Pick<ChargerStatusItem, 'chgerId' | 'stat' | 'statUpdDt'>> & ChargerStatusItem =>
+      item.chgerId != null && item.stat != null && item.statUpdDt != null
+    )
+    .map((item) => ({
+      chgerId: String(item.chgerId),
+      stat: String(item.stat),
+      statUpdDt: String(item.statUpdDt),
+    }));
+}
