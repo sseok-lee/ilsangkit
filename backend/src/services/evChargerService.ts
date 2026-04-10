@@ -270,7 +270,7 @@ export async function fetchChargerStatus(statId: string): Promise<ChargerStatusR
     dataType: 'JSON',
   });
 
-  let response: Response;
+  let response: Awaited<ReturnType<typeof fetch>>;
   try {
     response = await fetch(`${EV_STATUS_API_URL}?${params.toString()}`);
   } catch {
