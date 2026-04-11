@@ -418,11 +418,14 @@ const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월
 useHead(() => {
   const tab = tabLabel.value
   const year = new Date().getFullYear()
-  const districtLabel = buildingInfo.value?.district || ''
-  // 건물명 최전방 배치 + 도시 중복 제거(district만 사용) + 연도 최신성 신호
+  // 축약 도시명(서울특별시→서울) + district로 동명 구 혼동 방지
+  const cityShort = (buildingInfo.value?.city || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+  const districtName = buildingInfo.value?.district || ''
+  const locLabel = cityShort && districtName ? `${cityShort} ${districtName}` : (districtName || cityShort)
+  // 건물명 최전방 배치 + 도시 축약 + 연도 최신성 신호
   const title = tab === '매매'
-    ? `${buildingName.value} 실거래가 · ${districtLabel} 매매 시세 (${year}년) - 일상킷`
-    : `${buildingName.value} 전세·월세 시세 · ${districtLabel} 실거래가 (${year}년) - 일상킷`
+    ? `${buildingName.value} 실거래가 · ${locLabel} 매매 시세 (${year}년) - 일상킷`
+    : `${buildingName.value} 전세·월세 시세 · ${locLabel} 실거래가 (${year}년) - 일상킷`
   const description = tab === '매매'
     ? `${buildingName.value}의 최신 매매 실거래가와 시세 변동 추이를 확인하세요. 국토부 공식 데이터 기반 거래 내역과 주변 생활 인프라 정보를 함께 제공합니다.`
     : `${buildingName.value}의 최신 전월세 실거래가를 확인하세요. 전세가와 월세 시세, 거래 내역을 국토부 공식 데이터로 제공합니다.`
