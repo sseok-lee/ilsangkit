@@ -83,6 +83,89 @@ const ALL_CATEGORIES = Object.keys(CATEGORY_KEYWORDS);
 
 const REAL_ESTATE_CATEGORIES = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'];
 
+// 가이드 글 생성 후 본문 뒤에 삽입할 관련 카테고리 매핑 (내부 링크 자동 삽입용)
+const RELATED_GUIDE_CATEGORIES: Record<string, string[]> = {
+  // 생활시설
+  hospital: ['pharmacy', 'aed'],
+  pharmacy: ['hospital'],
+  aed: ['hospital'],
+  school: ['childcare', 'library'],
+  childcare: ['school', 'park'],
+  library: ['school'],
+  park: ['sports', 'childcare'],
+  sports: ['park'],
+  parking: ['ev-charger'],
+  'ev-charger': ['parking'],
+  toilet: ['parking'],
+  clothes: ['trash'],
+  trash: ['clothes'],
+  market: ['parking'],
+  wifi: [],
+  // 부동산 (매매/전월세 쌍)
+  'apt-sale': ['apt-rent', 'villa-sale', 'offitel-sale'],
+  'apt-rent': ['apt-sale', 'villa-rent', 'offitel-rent'],
+  'villa-sale': ['apt-sale', 'villa-rent'],
+  'villa-rent': ['apt-rent', 'villa-sale'],
+  'offitel-sale': ['apt-sale', 'offitel-rent'],
+  'offitel-rent': ['apt-rent', 'offitel-sale'],
+};
+
+// 카테고리 → 허브 URL (부동산은 /real-estate/{propertyType}, 그 외는 /{category})
+function getCategoryHubUrl(category: string): string {
+  if (REAL_ESTATE_CATEGORIES.includes(category)) {
+    const propertyType = category.split('-')[0]; // apt-sale → apt
+    return `/real-estate/${propertyType}`;
+  }
+  return `/${category}`;
+}
+
+/**
+ * 생성된 가이드 본문 뒤에 "함께 보면 좋은 글" 내부 링크 블록을 만든다.
+ * - 같은 카테고리 다른 가이드 최대 3개 (최신순, 현재 slug 제외)
+ * - 해당 카테고리 허브 링크
+ * - 관련 카테고리 허브 링크 (RELATED_GUIDE_CATEGORIES에서 1개)
+ * 유효한 URL만 사용 → AI 환각 없음
+ */
+async function buildInternalLinksSection(
+  category: string,
+  currentSlug: string,
+): Promise<string> {
+  const lines: string[] = [];
+  lines.push('## 함께 보면 좋은 글');
+  lines.push('');
+
+  // 1) 같은 카테고리 다른 가이드 (최대 3개)
+  const sameCatGuides = await prisma.guide.findMany({
+    where: {
+      category,
+      published: true,
+      slug: { not: currentSlug },
+    },
+    select: { slug: true, title: true },
+    orderBy: { createdAt: 'desc' },
+    take: 3,
+  });
+  for (const g of sameCatGuides) {
+    lines.push(`- [${g.title}](/guide/${g.slug})`);
+  }
+
+  // 2) 카테고리 허브 링크
+  const hubUrl = getCategoryHubUrl(category);
+  const categoryLabel = CATEGORY_LABELS[category] ?? category;
+  lines.push(`- [${categoryLabel} 전체 정보 보러가기](${hubUrl})`);
+
+  // 3) 관련 카테고리 허브 (1개만)
+  const related = RELATED_GUIDE_CATEGORIES[category] ?? [];
+  if (related.length > 0) {
+    const rel = related[0];
+    const relHub = getCategoryHubUrl(rel);
+    const relLabel = CATEGORY_LABELS[rel] ?? rel;
+    lines.push(`- [${relLabel} 정보도 함께 확인하기](${relHub})`);
+  }
+
+  return lines.join('\n');
+}
+
 // ---------------------------------------------------------------------------
 // Evergreen topic pools (뉴스 없을 때 사용할 상시 주제)
 // ---------------------------------------------------------------------------
@@ -795,6 +878,12 @@ export async function generateOneGuide(
   // 5. Generate slug
   const slug = generateSlug(category, articleType);
   console.log(`슬러그: ${slug}`);
+
+  // 5b. Append internal links block (유효한 URL만 사용 — 환각 없음)
+  const linksBlock = await buildInternalLinksSection(category, slug);
+  article.content = `${article.content.trimEnd()}\n\n${linksBlock}\n`;
+  const linkCount = (linksBlock.match(/\]\(/g) ?? []).length;
+  console.log(`내부 링크 블록 삽입 완료 (${linkCount}개 링크)`);
 
   // 6. Generate thumbnail image
   const __filename = fileURLToPath(import.meta.url);
