@@ -311,6 +311,13 @@
         <NearbyFacilities :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
       </section>
 
+      <!-- 리뷰 섹션 -->
+      <section class="mt-8">
+        <ClientOnly>
+          <ReviewSection :category="propertyTypeParam" :facility-id="buildingName" />
+        </ClientOnly>
+      </section>
+
       <!-- 데이터 정보 -->
       <section v-if="lastSyncDate" class="mt-8">
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -367,12 +374,6 @@
           </div>
         </div>
       </div>
-    </div>
-    <!-- 리뷰 섹션 -->
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <ClientOnly>
-        <ReviewSection :category="propertyTypeParam" :facility-id="buildingName" />
-      </ClientOnly>
     </div>
     </template>
   </div>
