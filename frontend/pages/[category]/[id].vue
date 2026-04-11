@@ -1253,30 +1253,12 @@
               </div>
 
               <!-- Data Info Card -->
-              <div v-if="dataDate || lastSyncDate || dataPortalUrl" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
-                <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
-                  <span class="material-symbols-outlined text-[#60708a] text-[20px]">description</span>
-                  <h2 class="text-[#111418] text-lg font-bold">데이터 정보</h2>
-                </div>
-                <div class="p-5 flex flex-col gap-3">
-                  <div v-if="dataDate" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">데이터 기준일</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ dataDate }}</span>
-                  </div>
-                  <div v-if="lastSyncDate" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">최근 동기화</span>
-                    <span class="text-sm font-medium text-[#111418]">{{ lastSyncDate }}</span>
-                  </div>
-                  <div v-if="dataPortalUrl" class="flex items-center justify-between">
-                    <span class="text-sm text-[#4b5563]">출처</span>
-                    <a :href="dataPortalUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">공공데이터포털</a>
-                  </div>
-                  <div class="mt-1 flex items-start gap-1.5 text-xs text-[#9ca3af]">
-                    <span class="material-symbols-outlined text-[14px] mt-px">info</span>
-                    <span>공공데이터포털 기준 정보입니다</span>
-                  </div>
-                </div>
-              </div>
+              <DataSourceCard
+                v-if="dataSource"
+                :source="dataSource"
+                :data-date="dataDate"
+                :last-sync-date="lastSyncDate"
+              />
             </div>
 
             <!-- Right Column: Map & Actions (Desktop) -->
@@ -2470,30 +2452,12 @@
           </div>
 
           <!-- Data Info Card -->
-          <div v-if="dataDate || lastSyncDate || dataPortalUrl" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
-            <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
-              <span class="material-symbols-outlined text-[#60708a] text-[20px]">description</span>
-              <h2 class="text-[#111418] text-lg font-bold">데이터 정보</h2>
-            </div>
-            <div class="p-5 flex flex-col gap-3">
-              <div v-if="dataDate" class="flex items-center justify-between">
-                <span class="text-sm text-[#4b5563]">데이터 기준일</span>
-                <span class="text-sm font-medium text-[#111418]">{{ dataDate }}</span>
-              </div>
-              <div v-if="lastSyncDate" class="flex items-center justify-between">
-                <span class="text-sm text-[#4b5563]">최근 동기화</span>
-                <span class="text-sm font-medium text-[#111418]">{{ lastSyncDate }}</span>
-              </div>
-              <div v-if="dataPortalUrl" class="flex items-center justify-between">
-                <span class="text-sm text-[#4b5563]">출처</span>
-                <a :href="dataPortalUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">공공데이터포털</a>
-              </div>
-              <div class="mt-1 flex items-start gap-1.5 text-xs text-[#9ca3af]">
-                <span class="material-symbols-outlined text-[14px] mt-px">info</span>
-                <span>공공데이터포털 기준 정보입니다</span>
-              </div>
-            </div>
-          </div>
+          <DataSourceCard
+            v-if="dataSource"
+            :source="dataSource"
+            :data-date="dataDate"
+            :last-sync-date="lastSyncDate"
+          />
 
           <div class="h-8"></div>
         </div>
@@ -2547,7 +2511,9 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
-import { CATEGORY_META, CATEGORY_DATA_PORTAL_URL } from '~/types/facility'
+import { CATEGORY_META } from '~/types/facility'
+import { FACILITY_DATA_SOURCE, type DataSourceInfo } from '~/utils/dataSource'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
@@ -2953,9 +2919,9 @@ const dataDate = computed(() => {
   return formatDataDate(raw)
 })
 
-const dataPortalUrl = computed(() => {
+const dataSource = computed<DataSourceInfo | null>(() => {
   if (!facility.value) return null
-  return CATEGORY_DATA_PORTAL_URL[facility.value.category] ?? null
+  return FACILITY_DATA_SOURCE[facility.value.category] ?? null
 })
 
 // 카테고리별 최근 동기화 날짜

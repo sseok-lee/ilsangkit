@@ -46,6 +46,10 @@
           </details>
         </div>
       </section>
+
+      <section class="mt-12">
+        <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
+      </section>
     </main>
   </div>
 </template>
@@ -53,6 +57,8 @@
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
 
 const title = `${new Date().getFullYear()} 부동산 실거래가 · 아파트·빌라·오피스텔 매매/전월세 시세 - 일상킷`
 const description = '아파트·빌라·오피스텔 실거래가와 시세를 한곳에서 조회하세요. 국토부 공식 데이터 기반 매매가, 전세가, 최근 거래 내역을 확인할 수 있습니다.'

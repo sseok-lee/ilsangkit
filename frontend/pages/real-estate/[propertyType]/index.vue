@@ -124,6 +124,10 @@
           </details>
         </div>
       </section>
+
+      <section class="mt-12">
+        <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
+      </section>
     </main>
   </div>
 </template>
@@ -136,6 +140,8 @@ import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } fro
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
+import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
 
 const route = useRoute()
 const router = useRouter()

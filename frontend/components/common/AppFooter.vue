@@ -48,7 +48,13 @@
             rel="noopener noreferrer"
             aria-label="새 창에서 공공데이터포털 열기"
             class="hover:text-slate-500 transition-colors"
-          >공공데이터포털(data.go.kr)</a> 제공 공공데이터 활용 | 공공누리 제1유형
+          >공공데이터포털(data.go.kr)</a> 및 <a
+            href="https://rt.molit.go.kr"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="새 창에서 국토교통부 실거래가 공개시스템 열기"
+            class="hover:text-slate-500 transition-colors"
+          >국토교통부 실거래가 공개시스템</a> 자료를 공공누리(KOGL) 조건에 따라 이용합니다 · 데이터셋별 출처는 각 상세페이지 참조
         </p>
       </div>
     </div>
