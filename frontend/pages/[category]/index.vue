@@ -273,6 +273,11 @@
           </NuxtLink>
         </div>
       </section>
+
+      <!-- 데이터 출처 -->
+      <section v-if="categoryDataSource" class="mt-8">
+        <DataSourceCard :source="categoryDataSource" />
+      </section>
     </div>
   </div>
 </template>
@@ -287,6 +292,8 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { RELATED_CATEGORIES, POPULAR_REGIONS } from '~/utils/seoConstants'
+import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
@@ -296,6 +303,7 @@ const route = useRoute()
 // Route params
 const categoryParam = computed(() => route.params.category as FacilityCategory)
 const categoryMeta = computed(() => CATEGORY_META[categoryParam.value])
+const categoryDataSource = computed(() => FACILITY_DATA_SOURCE[categoryParam.value] ?? null)
 
 const relatedCategories = computed(() => {
   const related = RELATED_CATEGORIES[categoryParam.value] || []

@@ -102,7 +102,8 @@ describe('AppFooter', () => {
       const wrapper = mount(AppFooter)
 
       expect(wrapper.text()).toContain('공공데이터포털(data.go.kr)')
-      expect(wrapper.text()).toContain('공공누리 제1유형')
+      expect(wrapper.text()).toContain('국토교통부 실거래가 공개시스템')
+      expect(wrapper.text()).toContain('공공누리(KOGL)')
     })
 
     it('should have hyperlink to data.go.kr', () => {

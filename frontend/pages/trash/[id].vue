@@ -216,28 +216,10 @@
       </section>
 
       <!-- 데이터 정보 -->
-      <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="material-symbols-outlined text-slate-500 text-[20px]">description</span>
-          <h3 class="font-bold text-slate-900">데이터 정보</h3>
-        </div>
-        <div class="space-y-2">
-          <div v-if="data.details?.lastModified" class="flex items-center justify-between text-sm">
-            <span class="text-slate-500">데이터 기준일</span>
-            <span class="font-medium text-slate-900">{{ formatDataDate(data.details.lastModified) }}</span>
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-slate-500">출처</span>
-            <a href="https://www.data.go.kr/data/15155080/openapi.do" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">
-              공공데이터포털
-            </a>
-          </div>
-          <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-500">
-            <span class="material-symbols-outlined text-[14px] mt-px">info</span>
-            <span>공공데이터포털 기준 정보입니다</span>
-          </div>
-        </div>
-      </section>
+      <DataSourceCard
+        :source="FACILITY_DATA_SOURCE.trash"
+        :data-date="data.details?.lastModified ? formatDataDate(data.details.lastModified) : null"
+      />
     </main>
   </div>
 </template>
@@ -249,6 +231,8 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 

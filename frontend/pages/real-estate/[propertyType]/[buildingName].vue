@@ -320,26 +320,10 @@
 
       <!-- 데이터 정보 -->
       <section v-if="lastSyncDate" class="mt-8">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-            <span class="material-symbols-outlined text-slate-500 text-[20px]">description</span>
-            <h2 class="text-slate-800 text-lg font-bold">데이터 정보</h2>
-          </div>
-          <div class="p-5 flex flex-col gap-3">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-slate-500">최근 동기화</span>
-              <span class="text-sm font-medium text-slate-800">{{ lastSyncDate }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-slate-500">출처</span>
-              <a href="https://rt.molit.go.kr" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">국토교통부 실거래가 공개시스템</a>
-            </div>
-            <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-500">
-              <span class="material-symbols-outlined text-[14px] mt-px">info</span>
-              <span>국토교통부 실거래가 공개시스템 기준 정보입니다</span>
-            </div>
-          </div>
-        </div>
+        <DataSourceCard
+          :source="REAL_ESTATE_DATA_SOURCE"
+          :last-sync-date="lastSyncDate"
+        />
       </section>
     </main>
 
@@ -388,6 +372,8 @@ import { toApiSlug, PROPERTY_TYPES, isSaleOnly } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
+import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
