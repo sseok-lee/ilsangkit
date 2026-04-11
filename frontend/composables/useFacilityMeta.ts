@@ -302,7 +302,10 @@ export function useFacilityMeta() {
    * {name} + 의도 키워드 + {loc} + {categoryName} 구조
    */
   function buildDetailTitle(facility: FacilityDetail): string {
-    const loc = facility.district || facility.city
+    // 도시명은 축약형(서울특별시 → 서울), district와 조합해
+    // 동명 구(중구/동구/서구/남구/북구) 혼동 방지
+    const cityShort = facility.city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+    const loc = facility.district ? `${cityShort} ${facility.district}` : cityShort
     const name = facility.name
 
     switch (facility.category) {
