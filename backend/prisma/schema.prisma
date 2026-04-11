@@ -956,6 +956,7 @@ model AptSaleTransaction {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   syncedAt         DateTime @default(now())
+  geocodedAt       DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
@@ -996,6 +997,7 @@ model VillaSaleTransaction {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   syncedAt         DateTime @default(now())
+  geocodedAt       DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
@@ -1034,6 +1036,7 @@ model OffitelSaleTransaction {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   syncedAt         DateTime @default(now())
+  geocodedAt       DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
@@ -1079,6 +1082,7 @@ model StoreSaleTransaction {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   syncedAt         DateTime @default(now())
+  geocodedAt       DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
@@ -1119,6 +1123,7 @@ model LandSaleTransaction {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   syncedAt         DateTime @default(now())
+  geocodedAt       DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
@@ -1163,6 +1168,7 @@ model AptRentTransaction {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   syncedAt        DateTime @default(now())
+  geocodedAt      DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
@@ -1205,6 +1211,7 @@ model VillaRentTransaction {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   syncedAt        DateTime @default(now())
+  geocodedAt      DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
@@ -1246,6 +1253,7 @@ model OffitelRentTransaction {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   syncedAt        DateTime @default(now())
+  geocodedAt      DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
