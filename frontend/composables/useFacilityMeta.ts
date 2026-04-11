@@ -298,15 +298,54 @@ export function useFacilityMeta() {
   }
 
   /**
+   * 카테고리별 상세 타이틀 — 검색 의도 키워드를 전면 배치해 CTR 최적화
+   * {name} + 의도 키워드 + {loc} + {categoryName} 구조
+   */
+  function buildDetailTitle(facility: FacilityDetail): string {
+    const loc = facility.district || facility.city
+    const name = facility.name
+
+    switch (facility.category) {
+      case 'toilet':
+        return `${name} 위치·개방시간 · ${loc} 공공화장실`
+      case 'parking':
+        return `${name} 주차요금·운영시간 · ${loc} 공영주차장`
+      case 'ev-charger':
+        return `${name} 실시간 충전 상태 · ${loc} 전기차 충전소`
+      case 'park':
+        return `${name} 운동시설·산책로 · ${loc} 공원`
+      case 'school':
+        return `${name} 학교 정보·설립유형 · ${loc} 초·중·고`
+      case 'childcare':
+        return `${name} 정원·현원·빈자리 · ${loc} 어린이집`
+      case 'library':
+        return `${name} 운영시간·휴관일 · ${loc} 도서관`
+      case 'hospital':
+        return `${name} 진료시간·진료과 · ${loc} 병원`
+      case 'pharmacy':
+        return `${name} 영업시간·야간운영 · ${loc} 약국`
+      case 'aed':
+        return `${name} 설치 위치 · ${loc} AED 자동심장충격기`
+      case 'sports':
+        return `${name} 시설 정보·규모 · ${loc} 공공체육시설`
+      case 'market':
+        return `${name} 장날·상점 정보 · ${loc} 전통시장`
+      case 'clothes':
+        return `${name} 위치 · ${loc} 의류수거함 배출 안내`
+      case 'wifi':
+        return `${name} · ${loc} 공공 와이파이`
+      default: {
+        const categoryName = CATEGORY_META[facility.category]?.label || facility.category
+        return `${name} - ${loc} ${categoryName}`
+      }
+    }
+  }
+
+  /**
    * 시설 상세 페이지 메타태그
    */
   function setFacilityDetailMeta(facility: FacilityDetail) {
-    const categoryName = CATEGORY_META[facility.category]?.label || facility.category
-    const location = facility.district
-      ? `${facility.city} ${facility.district}`
-      : facility.city
-
-    const title = `${facility.name} - ${location} ${categoryName}`
+    const title = buildDetailTitle(facility)
     const description = buildFacilityDescription(facility)
 
     setMeta({
