@@ -348,7 +348,7 @@ export function useFacilityMeta() {
     targetRegion?: string | null
   }) {
     const location = `${schedule.city} ${schedule.district}`
-    const title = `${location} 쓰레기 배출 일정`
+    const title = `${location} 쓰레기 배출일 달력 · 재활용·음식물 요일`
     const region = schedule.targetRegion?.replaceAll('+', ', ')
     const description = region
       ? `${location} ${region} 지역의 쓰레기 배출 요일, 시간, 방법을 확인하세요.`
