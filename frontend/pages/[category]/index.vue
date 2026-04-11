@@ -370,11 +370,11 @@ const displayTotalPages = computed(() => {
 // 카테고리별 SEO 타이틀/설명
 const SEO_TITLES: Record<string, string> = {
   toilet: '지금 이용 가능한 공공화장실 · 24시간 개방 위치 지도',
-  parking: '공영주차장 실시간 요금·빈자리 · 무료 주차장 검색',
+  parking: '내 주변 공영주차장 요금·운영시간 · 무료 주차장 검색',
   'ev-charger': '전기차 충전소 실시간 현황 · 급속/완속 사용 가능 확인',
   park: '산책하기 좋은 내 주변 공원 · 운동시설·산책로 한눈에',
   school: '우리 동네 학군 정보 · 초·중·고 학교 위치 찾기',
-  childcare: '어린이집 빈자리 실시간 확인 · 국공립·민간 검색',
+  childcare: '내 주변 어린이집 · 정원·현원·빈자리 확인 국공립/민간',
   library: '내 주변 도서관 운영시간 · 주말·야간 개방 확인',
   hospital: '지금 문 연 병원 찾기 · 야간·주말 진료 실시간',
   pharmacy: '지금 문 연 약국 찾기 · 심야·공휴일 운영 약국',
