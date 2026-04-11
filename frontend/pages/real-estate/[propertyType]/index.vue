@@ -186,12 +186,37 @@ pending.value = false
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 useHead(() => {
-  const label = propertyMeta.value?.label || ''
   const tab = tabLabel.value
   const year = new Date().getFullYear()
-  const title = tab === '매매'
-    ? `${year}년 ${label} 매매 실거래가·시세 조회 - 일상킷`
-    : `${year}년 ${label} 전월세 실거래가·전세가 조회 - 일상킷`
+  const pt = propertyTypeParam.value
+  // 건물유형 × 탭별 CTR 최적화 타이틀
+  const seoTitles: Record<string, Record<string, string>> = {
+    apt: {
+      매매: `${year} 아파트 실거래가·매매 시세 단지별 조회 - 일상킷`,
+      전월세: `${year} 아파트 전세·월세 실거래가 단지별 시세 - 일상킷`,
+    },
+    villa: {
+      매매: `${year} 빌라·연립다세대 실거래가·매매 시세 조회 - 일상킷`,
+      전월세: `${year} 빌라 전월세 실거래가·보증금/월세 시세 - 일상킷`,
+    },
+    offitel: {
+      매매: `${year} 오피스텔 실거래가·매매 시세 건물별 조회 - 일상킷`,
+      전월세: `${year} 오피스텔 전월세 실거래가·월세 시세 조회 - 일상킷`,
+    },
+    store: {
+      매매: `${year} 상가 실거래가·상업용 부동산 매매 사례 - 일상킷`,
+      전월세: `${year} 상가 실거래가 - 일상킷`,
+    },
+    land: {
+      매매: `${year} 토지 실거래가·지목별 매매 시세 조회 - 일상킷`,
+      전월세: `${year} 토지 실거래가 - 일상킷`,
+    },
+  }
+  const fallbackLabel = propertyMeta.value?.label || ''
+  const title = seoTitles[pt]?.[tab] ??
+    (tab === '매매'
+      ? `${year}년 ${fallbackLabel} 매매 실거래가·시세 조회 - 일상킷`
+      : `${year}년 ${fallbackLabel} 전월세 실거래가·전세가 조회 - 일상킷`)
   const seoDescriptions: Record<string, Record<string, string>> = {
     apt: {
       매매: '전국 아파트 매매 실거래가와 시세를 단지별로 조회하세요. 국토부 공식 데이터 기반 최근 거래 내역과 매매가 추이를 한눈에 확인할 수 있습니다.',
