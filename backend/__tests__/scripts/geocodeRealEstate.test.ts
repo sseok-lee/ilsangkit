@@ -233,11 +233,16 @@ describe('getUniqueBuildings', () => {
 
     const buildings = await getUniqueBuildings(prisma, 'aptSaleTransaction');
     expect(buildings).toEqual(mockBuildings);
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { lat: null },
-      select: { buildingName: true, bjdCode: true, city: true, district: true, dongName: true, roadName: true, jibun: true },
-      distinct: ['buildingName', 'bjdCode'],
-    });
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          lat: null,
+          OR: expect.any(Array),
+        }),
+        select: { buildingName: true, bjdCode: true, city: true, district: true, dongName: true, roadName: true, jibun: true },
+        distinct: ['buildingName', 'bjdCode'],
+      }),
+    );
   });
 
   it('결과가 없으면 빈 배열 반환', async () => {
@@ -281,6 +286,7 @@ describe('updateBuildingCoordinates', () => {
       data: {
         lat: 37.498,
         lng: 127.0276,
+        geocodedAt: expect.any(Date),
       },
     });
   });

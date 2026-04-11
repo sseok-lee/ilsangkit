@@ -48,6 +48,22 @@ const REAL_ESTATE_TABLES: RealEstateTable[] = [
   'landSaleTransaction',
 ];
 
+/**
+ * 좌표 공유 가능한 쌍 테이블 (매매 ↔ 전월세)
+ * store/land는 쌍이 없으므로 매핑 없음
+ */
+const SIBLING_TABLE: Partial<Record<RealEstateTable, RealEstateTable>> = {
+  aptSaleTransaction: 'aptRentTransaction',
+  aptRentTransaction: 'aptSaleTransaction',
+  villaSaleTransaction: 'villaRentTransaction',
+  villaRentTransaction: 'villaSaleTransaction',
+  offitelSaleTransaction: 'offitelRentTransaction',
+  offitelRentTransaction: 'offitelSaleTransaction',
+};
+
+/** 실패한 지오코딩 재시도 최소 대기 기간 (일) — 카카오 coverage 개선/전략 변경 대비 */
+const GEOCODE_RETRY_DAYS = 30;
+
 function getPropertySuffix(table: RealEstateTable): string {
   if (table.startsWith('apt')) return '아파트';
   if (table.startsWith('offitel')) return '오피스텔';
@@ -186,10 +202,17 @@ export async function getUniqueBuildings(
   prisma: PrismaClient,
   table: RealEstateTable
 ): Promise<UniqueBuilding[]> {
+  const retryCutoff = new Date(Date.now() - GEOCODE_RETRY_DAYS * 24 * 60 * 60 * 1000);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const model = (prisma as any)[table];
   return model.findMany({
-    where: { lat: null },
+    where: {
+      lat: null,
+      OR: [
+        { geocodedAt: null },
+        { geocodedAt: { lt: retryCutoff } },
+      ],
+    },
     select: {
       buildingName: true,
       bjdCode: true,
@@ -213,9 +236,89 @@ export async function updateBuildingCoordinates(
   const model = (prisma as any)[table];
   const result = await model.updateMany({
     where: { buildingName: building.buildingName, bjdCode: building.bjdCode, lat: null },
-    data: { lat: coords.lat, lng: coords.lng },
+    data: { lat: coords.lat, lng: coords.lng, geocodedAt: new Date() },
   });
   return result.count;
+}
+
+/**
+ * 좌표 보강 시도 기록 — 실패 시 geocodedAt만 갱신해 일정 기간 재시도 스킵
+ */
+export async function markGeocodeAttempted(
+  prisma: PrismaClient,
+  table: RealEstateTable,
+  building: UniqueBuilding,
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const model = (prisma as any)[table];
+  await model.updateMany({
+    where: { buildingName: building.buildingName, bjdCode: building.bjdCode, lat: null },
+    data: { geocodedAt: new Date() },
+  });
+}
+
+/**
+ * 같은 테이블 내에서 이미 좌표가 있는 건물의 좌표를 복사해 null row 채우기
+ * — 카카오 API 호출 없이 '알려진 건물' 해결
+ */
+export async function copyCoordsWithinTable(
+  prisma: PrismaClient,
+  table: RealEstateTable,
+): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const model = (prisma as any)[table];
+
+  // 1) 좌표가 있는 건물의 (bjdCode, buildingName, lat, lng) 시드 수집
+  const seeds: Array<{ bjdCode: string; buildingName: string; lat: unknown; lng: unknown }> =
+    await model.findMany({
+      where: { lat: { not: null } },
+      select: { bjdCode: true, buildingName: true, lat: true, lng: true },
+      distinct: ['bjdCode', 'buildingName'],
+    });
+
+  let totalCopied = 0;
+  for (const seed of seeds) {
+    const res = await model.updateMany({
+      where: { bjdCode: seed.bjdCode, buildingName: seed.buildingName, lat: null },
+      data: { lat: seed.lat, lng: seed.lng, geocodedAt: new Date() },
+    });
+    totalCopied += res.count;
+  }
+  return totalCopied;
+}
+
+/**
+ * 쌍 테이블 (매매 ↔ 전월세) 에서 좌표 복사
+ * 예: aptSale 에서 "래미안강남" 좌표 있으면 aptRent 의 같은 건물 null row에 채움
+ */
+export async function copyCoordsFromSibling(
+  prisma: PrismaClient,
+  table: RealEstateTable,
+): Promise<number> {
+  const sibling = SIBLING_TABLE[table];
+  if (!sibling) return 0;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const siblingModel = (prisma as any)[sibling];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const model = (prisma as any)[table];
+
+  const seeds: Array<{ bjdCode: string; buildingName: string; lat: unknown; lng: unknown }> =
+    await siblingModel.findMany({
+      where: { lat: { not: null } },
+      select: { bjdCode: true, buildingName: true, lat: true, lng: true },
+      distinct: ['bjdCode', 'buildingName'],
+    });
+
+  let totalCopied = 0;
+  for (const seed of seeds) {
+    const res = await model.updateMany({
+      where: { bjdCode: seed.bjdCode, buildingName: seed.buildingName, lat: null },
+      data: { lat: seed.lat, lng: seed.lng, geocodedAt: new Date() },
+    });
+    totalCopied += res.count;
+  }
+  return totalCopied;
 }
 
 // 하위 호환
@@ -228,11 +331,22 @@ export function parseKakaoCoordinates(response: KakaoResponse): Coordinates | nu
 }
 
 export async function processTable(prisma: PrismaClient, table: RealEstateTable): Promise<void> {
-  console.info(`\n[${table}] 좌표 없는 건물 추출 중...`);
+  // 0) 사전 복사 단계 — 카카오 호출 없이 '알려진 건물' 좌표 채우기
+  console.info(`\n[${table}] 같은 테이블 좌표 복사 중...`);
+  const copiedSame = await copyCoordsWithinTable(prisma, table);
+  console.info(`[${table}] 같은 테이블에서 ${copiedSame}건 복사 완료`);
+
+  const copiedSibling = await copyCoordsFromSibling(prisma, table);
+  if (copiedSibling > 0) {
+    console.info(`[${table}] 쌍 테이블(${SIBLING_TABLE[table]})에서 ${copiedSibling}건 복사 완료`);
+  }
+
+  // 1) 남은 null row 중 지오코딩 시도 대상 추출 (최근 시도 건 제외)
+  console.info(`[${table}] 좌표 없는 건물 추출 중...`);
   const buildings = await getUniqueBuildings(prisma, table);
 
   if (buildings.length === 0) {
-    console.info(`[${table}] 좌표 보강 대상 없음`);
+    console.info(`[${table}] 지오코딩 대상 없음`);
     return;
   }
 
@@ -249,6 +363,7 @@ export async function processTable(prisma: PrismaClient, table: RealEstateTable)
       console.info(`[${table}] (${i + 1}/${buildings.length}) ✓ ${building.buildingName} → ${coords.lat},${coords.lng} (${cnt}건)`);
       successCount++;
     } else {
+      await markGeocodeAttempted(prisma, table, building);
       console.warn(`[${table}] (${i + 1}/${buildings.length}) ✗ ${building.buildingName} [${building.dongName} ${building.jibun ?? ''}]`);
       failCount++;
     }
