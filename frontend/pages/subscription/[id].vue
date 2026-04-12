@@ -229,7 +229,7 @@
             rel="noopener noreferrer"
             class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors"
           >
-            <span class="material-symbols-outlined text-[20px]">language</span>
+            <span class="material-symbols-outlined text-[20px]">explore</span>
             공식 홈페이지
           </a>
           <a
