@@ -311,8 +311,9 @@ async function loadDetail() {
   error.value = null
   try {
     const result = await getSubscriptionDetail(id)
-    subscription.value = result.subscription
-    unitTypes.value = result.unitTypes || []
+    const { unitTypes: units, ...sub } = result
+    subscription.value = sub
+    unitTypes.value = units || []
 
     // Update SEO
     const title = `${subscription.value.houseName} 청약 - ${subscription.value.regionName}`
@@ -362,7 +363,8 @@ const { data } = await useAsyncData(`subscription-${id}`, () =>
 )
 
 if (data.value) {
-  subscription.value = data.value.subscription
-  unitTypes.value = data.value.unitTypes || []
+  const { unitTypes: units, ...sub } = data.value
+  subscription.value = sub
+  unitTypes.value = units || []
 }
 </script>
