@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 부동산 실거래가 페이지
-  const propertyTypes = ['apt', 'villa', 'offitel']
+  const propertyTypes = ['apt', 'villa', 'offitel', 'store', 'land']
   urls.push({ loc: `${SITE_URL}/real-estate`, lastmod: today, changefreq: 'daily', priority: 0.8 })
   for (const pt of propertyTypes) {
     urls.push({ loc: `${SITE_URL}/real-estate/${pt}`, lastmod: today, changefreq: 'daily', priority: 0.8 })
