@@ -13,8 +13,8 @@ export type TransactionMode = 'sale' | 'rent'
 // 건물 유형 배열 (전체)
 export const PROPERTY_TYPES = ['apt', 'villa', 'offitel', 'store', 'land'] as const
 
-// 데이터 수집 중 — 출시 전까지 UI에 노출하지 않음
-export const HIDDEN_PROPERTY_TYPES: readonly RealEstatePropertyType[] = ['store', 'land'] as const
+// 출시 중단 시 UI에서 숨길 property type — 기본은 빈 배열 (전부 공개)
+export const HIDDEN_PROPERTY_TYPES: readonly RealEstatePropertyType[] = [] as const
 
 // 공개된 건물 유형 (메인 카드/메뉴 렌더링용)
 export const VISIBLE_PROPERTY_TYPES: readonly RealEstatePropertyType[] = PROPERTY_TYPES.filter(
