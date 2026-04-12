@@ -1,9 +1,9 @@
 import { prisma } from '../lib/prisma.js';
 import { TABLE_NAME_MAP, type RealEstateType } from './realEstateService.js';
 
-const SALE_TYPES = new Set(['apt-sale', 'villa-sale', 'offitel-sale', 'store-sale', 'land-sale']);
-// buildYear 컬럼이 없는 타입 (토지는 건축년도 개념 없음)
-const NO_BUILD_YEAR_TYPES = new Set(['land-sale']);
+const SALE_TYPES = new Set(['apt-sale', 'villa-sale', 'offitel-sale']);
+// buildYear 컬럼이 없는 타입
+const NO_BUILD_YEAR_TYPES = new Set<string>();
 
 /**
  * 특정 타입의 Summary 테이블을 갱신 (DELETE + INSERT)

@@ -197,7 +197,7 @@
       </section>
 
       <!-- 매매/전월세 탭 -->
-      <TransactionModeTab v-model="currentTab" :disable-rent="isSaleOnlyType" class="mb-6" />
+      <TransactionModeTab v-model="currentTab" class="mb-6" />
 
       <!-- 시세 추이 차트 -->
       <section class="mb-8">
@@ -374,7 +374,7 @@ import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount 
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup } from '~/types/realEstate'
-import { toApiSlug, PROPERTY_TYPES, isSaleOnly } from '~/types/realEstate'
+import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -403,7 +403,6 @@ const currentTab = computed<TransactionMode>({
 })
 
 const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.value))
-const isSaleOnlyType = computed(() => isSaleOnly(propertyTypeParam.value))
 const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
 const buildingInfo = ref<BuildingInfo | null>(null)
 // SEO 메타

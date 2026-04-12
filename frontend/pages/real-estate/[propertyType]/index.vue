@@ -13,7 +13,7 @@
     <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
 
       <!-- 매매/전월세 탭 -->
-      <TransactionModeTab v-model="currentTab" :disable-rent="isSaleOnlyType" class="mb-6" />
+      <TransactionModeTab v-model="currentTab" class="mb-6" />
 
       <!-- 검색 필터 -->
       <RealEstateSearchFilter
@@ -138,7 +138,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse } from '~/types/realEstate'
-import { toApiSlug, PROPERTY_TYPES, isSaleOnly } from '~/types/realEstate'
+import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
@@ -163,7 +163,6 @@ const currentTab = computed<TransactionMode>({
   },
 })
 
-const isSaleOnlyType = computed(() => isSaleOnly(propertyTypeParam.value))
 const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.value))
 const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
 const propertyDescription = computed(() => PROPERTY_TYPE_DESCRIPTIONS[propertyTypeParam.value])

@@ -386,7 +386,7 @@ async function main(): Promise<void> {
   }
 
   // 부동산 Summary 테이블 갱신
-  const realEstateCategories = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent', 'store-sale', 'land-sale'];
+  const realEstateCategories = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'];
   const syncedRealEstate = results.filter(r => r.success && realEstateCategories.includes(r.category));
   if (syncedRealEstate.length > 0) {
     console.log('\n[Summary] 부동산 요약 테이블 갱신 중...');

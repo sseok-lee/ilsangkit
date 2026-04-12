@@ -21,8 +21,6 @@ export const PROPERTY_TYPE_META: Record<RealEstatePropertyType, PropertyTypeMeta
   apt: { label: '아파트', icon: 'apartment', iconImg: 'apt', color: 'blue', description: '전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회하세요. 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.' },
   villa: { label: '빌라', icon: 'holiday_village', iconImg: 'villa', color: 'amber', description: '전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 조회하세요. 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.' },
   offitel: { label: '오피스텔', icon: 'business', iconImg: 'offitel', color: 'sky', description: '전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회하세요. 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.' },
-  store: { label: '상가', icon: 'storefront', iconImg: 'store', color: 'orange', description: '전국 상가·업무용 부동산 매매 실거래가를 지역별, 건물별로 조회하세요. 상업용 부동산 투자 시세와 거래 내역을 한눈에 확인할 수 있습니다.' },
-  land: { label: '토지', icon: 'landscape', iconImg: 'land', color: 'green', description: '전국 토지 매매 실거래가를 지역별, 지목별로 조회하세요. 토지 투자를 위한 실거래 사례와 거래 추이를 한눈에 확인할 수 있습니다.' },
 }
 
 export const REAL_ESTATE_META: Record<RealEstateCategory, RealEstateCategoryMeta> = {
@@ -32,8 +30,6 @@ export const REAL_ESTATE_META: Record<RealEstateCategory, RealEstateCategoryMeta
   villaRent: { label: '빌라전월세', shortLabel: '빌라전월세', icon: 'house', color: 'orange', description: '연립다세대 전월세 실거래가 정보' },
   offitelSale: { label: '오피스텔매매', shortLabel: '오피스텔매매', icon: 'business', color: 'sky', description: '오피스텔 매매 실거래가 정보' },
   offitelRent: { label: '오피스텔전월세', shortLabel: '오피스텔전월세', icon: 'meeting_room', color: 'teal', description: '오피스텔 전월세 실거래가 정보' },
-  storeSale: { label: '상가매매', shortLabel: '상가매매', icon: 'storefront', color: 'orange', description: '상가·업무용 부동산 매매 실거래가 정보' },
-  landSale: { label: '토지매매', shortLabel: '토지매매', icon: 'landscape', color: 'green', description: '토지 매매 실거래가 정보' },
 }
 
 export const REAL_ESTATE_FAQ: Record<RealEstateCategory, Array<{ q: string; a: string }>> = {
@@ -193,54 +189,6 @@ export const REAL_ESTATE_FAQ: Record<RealEstateCategory, Array<{ q: string; a: s
       a: '실제 주거 목적으로 오피스텔을 임차하고 전입신고를 마친 경우, 주택임대차보호법의 보호를 받을 수 있습니다. 이 경우 계약갱신청구권, 임대료 5% 인상 제한 등의 혜택이 적용됩니다.',
     },
   ],
-  storeSale: [
-    {
-      q: '상가·업무용 부동산 매매 실거래가는 어디서 확인하나요?',
-      a: '국토교통부 실거래가 공개시스템과 일상킷에서 상가·업무용 부동산 매매 실거래가를 확인할 수 있습니다. 건물면적, 대지면적, 주용도 등 상업용 부동산 특성에 맞는 데이터를 제공하여 투자 판단에 도움이 됩니다.',
-    },
-    {
-      q: '상가 투자 시 실거래가 외에 무엇을 확인해야 하나요?',
-      a: '상가는 주용도, 건물면적, 층수, 입지 등에 따라 수익률이 크게 달라집니다. 실거래가뿐 아니라 예상 임대료(시세), 상권 특성, 주변 경쟁 점포 수, 지역 발전 계획 등을 종합적으로 검토해야 합니다.',
-    },
-    {
-      q: '상가 매매 취득세는 아파트와 다른가요?',
-      a: '상가(상업용 부동산)는 취득세 4.6% + 부가세(다만, 개인 간 거래는 제외)가 적용됩니다. 아파트의 1~3% 구간세율과 달리 고정세율이며, 세무사와 사전 상담을 권장합니다.',
-    },
-    {
-      q: '상가 건물면적과 전용면적의 차이는 무엇인가요?',
-      a: '건물면적은 전체 건물의 연면적이고, 전용면적(계약면적)은 실제 사용하는 구분점포의 면적입니다. 상가 매매 시 전용면적을 기준으로 거래하며, 공용면적 기여도를 확인하여 실제 사용 가능 면적을 파악하세요.',
-    },
-    {
-      q: '상가 매매 계약 시 주의사항은 무엇인가요?',
-      a: '등기부등본으로 권리 관계와 근저당을 확인하고, 건축물대장에서 용도 변경 가능 여부를 검토하세요. 기존 세입자의 권리금 관행을 파악하고, 인수인계 사항(인테리어 상태, 비품, 계약 조건)을 상세히 명시하세요.',
-    },
-  ],
-  landSale: [
-    {
-      q: '토지 매매 실거래가를 어떻게 확인하나요?',
-      a: '국토교통부 실거래가 공개시스템과 일상킷에서 지목(대지, 전, 답 등)과 용도지역(주거, 상업, 공업 등)에 따른 토지 실거래가를 확인할 수 있습니다. 지역별, 지목별 시세 추이를 통해 투자 판단에 도움이 됩니다.',
-    },
-    {
-      q: '토지 투자 시 확인해야 할 주요 사항은 무엇인가요?',
-      a: '지목(대지, 전, 답, 임야 등), 용도지역(주거/상업/공업지), 도시계획(개발제한구역, 재정비촉진지구 등), 권리 관계(근저당, 압류), 건축 가능성을 반드시 확인하세요. 지자체 발전 계획과 재개발·재건축 추진 여부도 중요합니다.',
-    },
-    {
-      q: '토지 취득세는 얼마인가요?',
-      a: '토지 취득세는 4.6%가 적용됩니다. 다만 농지(농업진흥지역 내 전·답)의 경우 별도 세율이나 감면 혜택이 있을 수 있으니 세무사와 상담하세요.',
-    },
-    {
-      q: '지분 토지와 전체 토지 매매의 차이는 무엇인가요?',
-      a: '지분 토지는 여러 사람이 함께 소유한 토지의 일부를 거래하는 것으로, 단독 소유보다 개발 제약이 있습니다. 전체 토지 매매는 소유권 전부를 취득하므로 자유롭게 개발·이용할 수 있으나, 가격과 세금이 더 높습니다.',
-    },
-    {
-      q: '토지 매매 계약 시 주의사항은 무엇인가요?',
-      a: '등기부등본과 지적도로 지번, 면적, 경계를 반드시 확인하세요. 도시계획상 용도, 건축 가능 여부, 지상물(건물, 농작물) 현황을 파악하고, 토양오염, 지반 침하, 홍수 위험 여부도 조사하세요.',
-    },
-    {
-      q: '토지는 보유세가 높은가요?',
-      a: '토지는 아파트보다 높은 종합부동산세와 재산세가 부과될 수 있습니다. 개발 가능성이 없는 장기 보유 토지는 특히 세 부담이 크므로, 구입 전 수익 계획과 세 계산을 통해 투자 타당성을 검토하세요.',
-    },
-  ],
 }
 
 export const REAL_ESTATE_DESCRIPTIONS: Record<RealEstateCategory, string> = {
@@ -256,10 +204,6 @@ export const REAL_ESTATE_DESCRIPTIONS: Record<RealEstateCategory, string> = {
     '전국 오피스텔 매매 실거래가를 지역별, 건물별로 조회하세요. 1인 가구와 투자자에게 인기 높은 오피스텔의 최신 시세와 거래 추이를 파악하여 현명한 투자 결정을 내리세요.',
   offitelRent:
     '전국 오피스텔 전월세 실거래가를 확인하세요. 역세권, 오피스 밀집 지역 등 지역별 오피스텔 임대 시세를 비교하고, 관리비를 포함한 실제 주거 비용을 산출하여 합리적인 선택을 하세요.',
-  storeSale:
-    '전국 상가·업무용 부동산 매매 실거래가를 지역별, 건물별로 조회하세요. 국토교통부 공식 데이터를 기반으로 상업용 부동산의 실거래 사례와 시세 추이를 제공하여 성공적인 상권 투자를 도와드립니다.',
-  landSale:
-    '전국 토지 매매 실거래가를 지역별, 지목별, 용도지역별로 조회하세요. 국토교통부 공식 데이터를 기반으로 토지 투자의 최신 시세와 거래 추이를 제공하여 토지 투자의 의사결정을 도와드립니다.',
 }
 
 export const REAL_ESTATE_TIPS: Record<RealEstateCategory, string[]> = {
@@ -299,27 +243,13 @@ export const REAL_ESTATE_TIPS: Record<RealEstateCategory, string[]> = {
     '업무용 오피스텔 임차 시 임대인이 사업자이면 월세에 부가세 10%가 추가될 수 있습니다.',
     '계약 전 보일러, 냉난방 시설 등 기본 생활 시설 상태를 직접 확인하세요.',
   ],
-  storeSale: [
-    '상가 투자는 주용도, 입지, 예상 임대료 시세를 종합 검토하여 수익성을 판단하세요.',
-    '상가 취득세는 개인 간 거래가 아닌 경우 4.6% + 부가세가 부과되므로 사전 계산 필수입니다.',
-    '건물면적과 전용면적의 차이를 정확히 파악하여 실제 사용 가능 면적을 확인하세요.',
-    '기존 세입자 권리금 관행과 인수인계 조건(인테리어, 비품)을 상세히 협의하세요.',
-  ],
-  landSale: [
-    '토지 매매 전 지목, 용도지역, 도시계획(개발제한구역 등) 세 가지를 반드시 확인하세요.',
-    '토지 취득세는 4.6%이며, 농지 감면 혜택이 있을 수 있으니 세무사와 상담하세요.',
-    '지분 토지는 단독 소유 대비 개발 제약이 있으므로 수익 계획을 신중히 수립하세요.',
-    '토지는 종합부동산세와 재산세 부담이 크므로 장기 보유 시 세 계산을 통해 수익성을 검토하세요.',
-  ],
 }
 
-// 건물유형별 통합 FAQ (매매+전월세 합산, 매매만 제공하는 타입은 그대로)
+// 건물유형별 통합 FAQ (매매+전월세 합산)
 export const PROPERTY_TYPE_FAQ: Record<RealEstatePropertyType, Array<{ q: string; a: string }>> = {
   apt: [...REAL_ESTATE_FAQ.aptSale, ...REAL_ESTATE_FAQ.aptRent],
   villa: [...REAL_ESTATE_FAQ.villaSale, ...REAL_ESTATE_FAQ.villaRent],
   offitel: [...REAL_ESTATE_FAQ.offitelSale, ...REAL_ESTATE_FAQ.offitelRent],
-  store: [...REAL_ESTATE_FAQ.storeSale],
-  land: [...REAL_ESTATE_FAQ.landSale],
 }
 
 // 건물유형별 통합 설명
@@ -327,6 +257,4 @@ export const PROPERTY_TYPE_DESCRIPTIONS: Record<RealEstatePropertyType, string> 
   apt: '전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회하세요. 국토교통부 공식 데이터를 기반으로 최신 거래 정보와 시세 추이를 제공합니다.',
   villa: '전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 조회하세요. 아파트 대비 저렴한 빌라의 최근 실거래 사례를 비교해보세요.',
   offitel: '전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회하세요. 1인 가구와 투자자에게 인기 높은 오피스텔의 최신 시세를 확인하세요.',
-  store: '전국 상가·업무용 부동산 매매 실거래가를 지역별, 건물별, 용도별로 조회하세요. 국토교통부 공식 데이터를 기반으로 상업용 부동산의 최신 시세와 투자 정보를 제공합니다.',
-  land: '전국 토지 매매 실거래가를 지역별, 지목별, 용도지역별로 조회하세요. 국토교통부 공식 데이터를 기반으로 토지 투자의 최신 시세와 거래 정보를 제공합니다.',
 }

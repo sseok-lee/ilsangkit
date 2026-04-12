@@ -28,8 +28,8 @@ jobs:
             echo "=== 부동산 실거래가 동기화 시작 ==="
             echo "대상: ${PREV_YM}, ${CURRENT_YM}"
 
-            # 8개 부동산 타입 순차 실행 (API 부하 분산)
-            for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSale syncOffitelRent syncStoreSale syncLandSale; do
+            # 6개 부동산 타입 순차 실행 (API 부하 분산)
+            for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSale syncOffitelRent; do
               echo "--- ${SCRIPT} 동기화 ---"
               node "dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" || echo "[WARN] ${SCRIPT} 실패"
             done
