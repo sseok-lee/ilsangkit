@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { validate, validateMultiple } from '../middlewares/validate.js';
+import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import {
   getSubscriptionList,
