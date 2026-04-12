@@ -53,6 +53,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   'villa-rent': ['빌라 전세', '빌라 월세', '다세대 전월세', '빌라 전세 사기', '연립 전월세 시세', '빌라 임대차'],
   'offitel-sale': ['오피스텔 매매', '오피스텔 투자', '오피스텔 시세', '오피스텔 분양', '오피스텔 수익률', '오피스텔 실거래가'],
   'offitel-rent': ['오피스텔 전세', '오피스텔 월세', '오피스텔 임대', '오피스텔 전월세 시세', '오피스텔 관리비', '오피스텔 임대 수익'],
+  'subscription': ['청약 일정', '아파트 청약', '청약 가점', '특별공급 조건', '청약홈 사용법', '청약통장 가입'],
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -77,6 +78,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   'villa-rent': '빌라 전월세',
   'offitel-sale': '오피스텔 매매',
   'offitel-rent': '오피스텔 전월세',
+  'subscription': '청약',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_KEYWORDS);
@@ -108,6 +110,7 @@ const RELATED_GUIDE_CATEGORIES: Record<string, string[]> = {
   'villa-rent': ['apt-rent', 'villa-sale'],
   'offitel-sale': ['apt-sale', 'offitel-rent'],
   'offitel-rent': ['apt-rent', 'offitel-sale'],
+  'subscription': ['apt-sale', 'apt-rent'],
 };
 
 // 카테고리 → 허브 URL (부동산은 /real-estate/{propertyType}, 그 외는 /{category})
@@ -275,6 +278,11 @@ const EVERGREEN_TOPICS: Record<string, { howto: string[]; listicle: string[]; gu
     howto: ['오피스텔 관리비 항목 확인하는 법', '오피스텔 전월세 계약서 주요 확인 사항'],
     listicle: ['오피스텔 월세 계약 시 관리비 폭탄 피하는 팁 7가지', '오피스텔 임대 시 알아야 할 세금 사항'],
     guide: ['오피스텔 전월세 계약 완벽 가이드', '오피스텔 관리비 구조와 절약법 총정리'],
+  },
+  'subscription': {
+    howto: ['청약통장 가입부터 당첨까지 단계별 가이드', '청약 가점 계산하는 법과 점수 올리는 전략'],
+    listicle: ['청약 초보가 꼭 알아야 할 핵심 용어 10가지', '특별공급 자격 조건 총정리: 신혼·다자녀·생애최초'],
+    guide: ['2026년 아파트 청약 완벽 가이드: 자격부터 당첨까지', '청약홈 사용법과 청약 일정 확인 방법 총정리'],
   },
 };
 

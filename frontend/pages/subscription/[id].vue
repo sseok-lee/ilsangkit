@@ -24,70 +24,96 @@
           <div class="flex items-start justify-between gap-4 mb-3">
             <div class="flex-1">
               <h1 class="text-2xl md:text-3xl font-bold text-slate-900">{{ subscription.houseName }}</h1>
-              <p class="text-slate-500 text-sm mt-2">{{ subscription.regionName }}</p>
+              <p class="text-slate-500 text-sm mt-2">{{ subscription.supplyLocation || subscription.regionName }}</p>
             </div>
             <span :class="statusBadgeClass">
               {{ getStatusLabel(subscription.status) }}
             </span>
           </div>
+          <!-- 핵심 요약 -->
+          <div class="flex flex-wrap gap-4 mt-4 text-sm">
+            <div v-if="subscription.totalSupplyCount" class="flex items-center gap-1.5 text-slate-700">
+              <span class="material-symbols-outlined text-[18px] text-primary">apartment</span>
+              <span class="font-semibold">{{ subscription.totalSupplyCount.toLocaleString() }}호</span> 공급
+            </div>
+            <div v-if="subscription.constructorName" class="flex items-center gap-1.5 text-slate-700">
+              <span class="material-symbols-outlined text-[18px] text-primary">business</span>
+              {{ subscription.constructorName }}
+            </div>
+            <div v-if="subscription.moveInMonth" class="flex items-center gap-1.5 text-slate-700">
+              <span class="material-symbols-outlined text-[18px] text-primary">calendar_month</span>
+              {{ formatMoveInMonth(subscription.moveInMonth) }} 입주
+            </div>
+            <div v-if="subscription.houseDetailType" class="flex items-center gap-1.5 text-slate-700">
+              <span class="material-symbols-outlined text-[18px] text-primary">sell</span>
+              {{ subscription.houseDetailType }}
+            </div>
+          </div>
         </div>
       </div>
 
       <main class="mx-auto max-w-6xl px-4 md:px-6 py-8">
-        <!-- Basic Info Card -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-            <h3 class="font-semibold text-slate-800 text-sm mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">info</span>
-              기본정보
-            </h3>
-            <div class="space-y-3 text-sm">
-              <div>
-                <p class="text-slate-500">주택형</p>
-                <p class="font-medium text-slate-900">{{ subscription.houseType }}</p>
-              </div>
-              <div v-if="subscription.houseDetailType">
-                <p class="text-slate-500">주택 분류</p>
-                <p class="font-medium text-slate-900">{{ subscription.houseDetailType }}</p>
-              </div>
-              <div v-if="subscription.supplyLocation">
-                <p class="text-slate-500">공급위치</p>
-                <p class="font-medium text-slate-900">{{ subscription.supplyLocation }}</p>
-              </div>
-              <div v-if="subscription.totalSupplyCount">
-                <p class="text-slate-500">총 공급호수</p>
-                <p class="font-medium text-slate-900">{{ subscription.totalSupplyCount.toLocaleString() }}호</p>
-              </div>
-            </div>
-          </div>
 
-          <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-            <h3 class="font-semibold text-slate-800 text-sm mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">business</span>
-              시공사·분양사
-            </h3>
-            <div class="space-y-3 text-sm">
-              <div v-if="subscription.constructorName">
-                <p class="text-slate-500">시공사</p>
-                <p class="font-medium text-slate-900">{{ subscription.constructorName }}</p>
-              </div>
-              <div v-if="subscription.developerName">
-                <p class="text-slate-500">분양사</p>
-                <p class="font-medium text-slate-900">{{ subscription.developerName }}</p>
-              </div>
-              <div v-if="subscription.inquiryTel">
-                <p class="text-slate-500">문의전화</p>
-                <p class="font-medium text-slate-900">{{ subscription.inquiryTel }}</p>
-              </div>
-              <div v-if="subscription.moveInMonth">
-                <p class="text-slate-500">입주예정월</p>
-                <p class="font-medium text-slate-900">{{ formatMoveInMonth(subscription.moveInMonth) }}</p>
-              </div>
+        <!-- 1. 면적별 공급정보 테이블 (핵심) -->
+        <div v-if="unitTypes && unitTypes.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[24px]">home</span>
+            면적별 공급정보
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b-2 border-slate-200">
+                  <th class="text-left py-3 px-4 font-semibold text-slate-800">주택형</th>
+                  <th class="text-right py-3 px-4 font-semibold text-slate-800">전용면적</th>
+                  <th class="text-right py-3 px-4 font-semibold text-slate-800">공급면적</th>
+                  <th class="text-right py-3 px-4 font-semibold text-slate-800">일반공급</th>
+                  <th class="text-right py-3 px-4 font-semibold text-slate-800">특별공급</th>
+                  <th class="text-right py-3 px-4 font-semibold text-slate-800">합계</th>
+                  <th class="text-right py-3 px-4 font-semibold text-slate-800">분양최고가</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="py-3 px-4 text-slate-900 font-medium">{{ formatHouseType(unit.houseType) }}</td>
+                  <td class="py-3 px-4 text-slate-600 text-right">{{ formatExclusiveArea(unit.houseType) }}</td>
+                  <td class="py-3 px-4 text-slate-600 text-right">{{ formatSupplyArea(unit.supplyArea) }}</td>
+                  <td class="py-3 px-4 text-slate-600 text-right">{{ unit.generalCount?.toLocaleString() || '-' }}호</td>
+                  <td class="py-3 px-4 text-slate-600 text-right">{{ unit.specialCount?.toLocaleString() || '-' }}호</td>
+                  <td class="py-3 px-4 text-primary font-bold text-right">{{ ((unit.generalCount || 0) + (unit.specialCount || 0)).toLocaleString() }}호</td>
+                  <td class="py-3 px-4 text-slate-900 font-semibold text-right">
+                    {{ unit.topAmount ? formatPrice(unit.topAmount) : '-' }}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot v-if="unitTypes.length > 1">
+                <tr class="border-t-2 border-slate-300 bg-slate-50">
+                  <td class="py-3 px-4 font-bold text-slate-800" colspan="3">합계</td>
+                  <td class="py-3 px-4 font-bold text-slate-800 text-right">{{ totalGeneral.toLocaleString() }}호</td>
+                  <td class="py-3 px-4 font-bold text-slate-800 text-right">{{ totalSpecial.toLocaleString() }}호</td>
+                  <td class="py-3 px-4 font-bold text-primary text-right">{{ (totalGeneral + totalSpecial).toLocaleString() }}호</td>
+                  <td class="py-3 px-4"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. 특별공급 상세 -->
+        <div v-if="hasSpecialSupply" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[24px]">info</span>
+            특별공급 유형별 세대수
+          </h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div v-for="item in specialSupplyItems" :key="item.label" class="bg-slate-50 rounded-lg p-4 text-center border border-slate-100">
+              <p class="text-xs text-slate-500 mb-1">{{ item.label }}</p>
+              <p class="text-lg font-bold text-slate-900">{{ item.count.toLocaleString() }}<span class="text-xs font-normal text-slate-500 ml-0.5">호</span></p>
             </div>
           </div>
         </div>
 
-        <!-- Timeline Section -->
+        <!-- 3. 청약 일정 -->
         <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
           <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
             <span class="material-symbols-outlined text-primary text-[24px]">schedule</span>
@@ -130,104 +156,66 @@
               :date="`${subscription.contractStartDate} ~ ${subscription.contractEndDate}`"
               icon="description"
             />
+            <TimelineItem
+              v-if="subscription.moveInMonth"
+              title="입주 예정"
+              :date="formatMoveInMonth(subscription.moveInMonth)"
+              icon="home"
+              :is-last="true"
+            />
           </div>
         </div>
 
-        <!-- Special Supply Breakdown -->
-        <div v-if="hasSpecialSupply" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+        <!-- 4. 기본정보 -->
+        <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
           <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
             <span class="material-symbols-outlined text-primary text-[24px]">info</span>
-            특별공급 분류
+            기본정보
           </h2>
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.newlyweds > 0"
-              label="신혼부부"
-              :count="totalSpecialCount.newlyweds"
-            />
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.multiChild > 0"
-              label="다자녀"
-              :count="totalSpecialCount.multiChild"
-            />
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.firstLife > 0"
-              label="생애최초"
-              :count="totalSpecialCount.firstLife"
-            />
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.elderly > 0"
-              label="노부모부양"
-              :count="totalSpecialCount.elderly"
-            />
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.institution > 0"
-              label="기관추천"
-              :count="totalSpecialCount.institution"
-            />
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.youth > 0"
-              label="청년"
-              :count="totalSpecialCount.youth"
-            />
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.newborn > 0"
-              label="신생아"
-              :count="totalSpecialCount.newborn"
-            />
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.transfer > 0"
-              label="전환"
-              :count="totalSpecialCount.transfer"
-            />
-            <SpecialSupplyCard
-              v-if="totalSpecialCount.etc > 0"
-              label="기타"
-              :count="totalSpecialCount.etc"
-            />
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+            <div class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-500">주택유형</span>
+              <span class="font-medium text-slate-900">{{ subscription.houseType }}</span>
+            </div>
+            <div v-if="subscription.houseDetailType" class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-500">분양구분</span>
+              <span class="font-medium text-slate-900">{{ subscription.houseDetailType }}</span>
+            </div>
+            <div v-if="subscription.supplyLocation" class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-500">공급위치</span>
+              <span class="font-medium text-slate-900">{{ subscription.supplyLocation }}</span>
+            </div>
+            <div v-if="subscription.totalSupplyCount" class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-500">총 공급호수</span>
+              <span class="font-medium text-slate-900">{{ subscription.totalSupplyCount.toLocaleString() }}호</span>
+            </div>
+            <div v-if="subscription.constructorName" class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-500">시공사</span>
+              <span class="font-medium text-slate-900">{{ subscription.constructorName }}</span>
+            </div>
+            <div v-if="subscription.developerName" class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-500">시행사</span>
+              <span class="font-medium text-slate-900">{{ subscription.developerName }}</span>
+            </div>
+            <div v-if="subscription.moveInMonth" class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-500">입주예정</span>
+              <span class="font-medium text-slate-900">{{ formatMoveInMonth(subscription.moveInMonth) }}</span>
+            </div>
+            <div v-if="subscription.inquiryTel" class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-500">문의전화</span>
+              <a :href="`tel:${subscription.inquiryTel}`" class="font-medium text-primary hover:underline">{{ subscription.inquiryTel }}</a>
+            </div>
           </div>
         </div>
 
-        <!-- Unit Types Table -->
-        <div v-if="unitTypes && unitTypes.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
-          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">table_chart</span>
-            주택형별 공급내역
-          </h2>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b-2 border-slate-200">
-                  <th class="text-left py-3 px-4 font-semibold text-slate-800">주택형</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">공급면적</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">일반공급</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">특별공급</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">분양최고가</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-slate-100 hover:bg-slate-50">
-                  <td class="py-3 px-4 text-slate-900 font-medium">{{ unit.houseType || '-' }}</td>
-                  <td class="py-3 px-4 text-slate-600 text-right">{{ unit.supplyArea || '-' }}</td>
-                  <td class="py-3 px-4 text-slate-600 text-right">{{ unit.generalCount || '-' }}</td>
-                  <td class="py-3 px-4 text-slate-600 text-right">{{ unit.specialCount || '-' }}</td>
-                  <td class="py-3 px-4 text-slate-900 font-medium text-right">
-                    {{ unit.topAmount ? `${unit.topAmount.toLocaleString()}만원` : '-' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Links -->
-        <div class="flex flex-col md:flex-row gap-4">
+        <!-- 5. 링크 -->
+        <div class="flex flex-col md:flex-row gap-4 mb-8">
           <a
             v-if="subscription.homepage"
             :href="subscription.homepage"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors"
+            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
           >
             <span class="material-symbols-outlined text-[20px]">explore</span>
             공식 홈페이지
@@ -237,12 +225,15 @@
             :href="subscription.pblancUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
+            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
           >
             <span class="material-symbols-outlined text-[20px]">description</span>
-            청약홈 공고
+            청약홈 공고 보기
           </a>
         </div>
+
+        <!-- Ad -->
+        <AdBanner />
       </main>
     </template>
 
@@ -253,13 +244,13 @@
           <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
         </div>
         <p class="text-red-700 font-semibold">청약 정보를 불러올 수 없습니다</p>
-        <button
-          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-          @click="$router.back()"
+        <NuxtLink
+          to="/subscription"
+          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
         >
           <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-          돌아가기
-        </button>
+          목록으로
+        </NuxtLink>
       </div>
     </div>
   </div>
@@ -268,11 +259,10 @@
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import type { Subscription, SubscriptionUnitType } from '~/types/subscription'
+import { useSubscription } from '~/composables/useSubscription'
 
 const route = useRoute()
 const id = Number(route.params.id)
-
-import { useSubscription } from '~/composables/useSubscription'
 
 const { getSubscriptionDetail } = useSubscription()
 
@@ -287,74 +277,92 @@ const statusBadgeClass = computed(() => {
   const baseClass = 'inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold'
   if (status === 'upcoming') return `${baseClass} bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200`
   if (status === 'ongoing') return `${baseClass} bg-green-100 text-green-700 ring-1 ring-inset ring-green-200`
-  return `${baseClass} bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200`
+  return `${baseClass} bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200`
 })
 
+// 합계 계산
+const totalGeneral = computed(() => unitTypes.value.reduce((sum, u) => sum + (u.generalCount || 0), 0))
+const totalSpecial = computed(() => unitTypes.value.reduce((sum, u) => sum + (u.specialCount || 0), 0))
+
+// 특별공급 합산
 const totalSpecialCount = computed(() => ({
-  newlyweds: unitTypes.value.reduce((sum, u) => sum + (u.newlywedsCount || 0), 0),
-  multiChild: unitTypes.value.reduce((sum, u) => sum + (u.multiChildCount || 0), 0),
-  firstLife: unitTypes.value.reduce((sum, u) => sum + (u.firstLifeCount || 0), 0),
-  elderly: unitTypes.value.reduce((sum, u) => sum + (u.elderlyCount || 0), 0),
-  institution: unitTypes.value.reduce((sum, u) => sum + (u.institutionCount || 0), 0),
-  youth: unitTypes.value.reduce((sum, u) => sum + (u.youthCount || 0), 0),
-  newborn: unitTypes.value.reduce((sum, u) => sum + (u.newbornCount || 0), 0),
-  transfer: unitTypes.value.reduce((sum, u) => sum + (u.transferCount || 0), 0),
-  etc: unitTypes.value.reduce((sum, u) => sum + (u.etcCount || 0), 0),
+  newlyweds: unitTypes.value.reduce((s, u) => s + (u.newlywedsCount || 0), 0),
+  multiChild: unitTypes.value.reduce((s, u) => s + (u.multiChildCount || 0), 0),
+  firstLife: unitTypes.value.reduce((s, u) => s + (u.firstLifeCount || 0), 0),
+  elderly: unitTypes.value.reduce((s, u) => s + (u.elderlyCount || 0), 0),
+  institution: unitTypes.value.reduce((s, u) => s + (u.institutionCount || 0), 0),
+  youth: unitTypes.value.reduce((s, u) => s + (u.youthCount || 0), 0),
+  newborn: unitTypes.value.reduce((s, u) => s + (u.newbornCount || 0), 0),
+  transfer: unitTypes.value.reduce((s, u) => s + (u.transferCount || 0), 0),
+  etc: unitTypes.value.reduce((s, u) => s + (u.etcCount || 0), 0),
 }))
 
-const hasSpecialSupply = computed(() =>
-  Object.values(totalSpecialCount.value).some(count => count > 0)
-)
+const specialSupplyItems = computed(() => {
+  const t = totalSpecialCount.value
+  return [
+    { label: '신혼부부', count: t.newlyweds },
+    { label: '다자녀', count: t.multiChild },
+    { label: '생애최초', count: t.firstLife },
+    { label: '노부모부양', count: t.elderly },
+    { label: '기관추천', count: t.institution },
+    { label: '청년', count: t.youth },
+    { label: '신생아', count: t.newborn },
+    { label: '이전기관', count: t.transfer },
+    { label: '기타', count: t.etc },
+  ].filter(item => item.count > 0)
+})
 
-async function loadDetail() {
-  pending.value = true
-  error.value = null
-  try {
-    const result = await getSubscriptionDetail(id)
-    const { unitTypes: units, ...sub } = result
-    subscription.value = sub
-    unitTypes.value = units || []
+const hasSpecialSupply = computed(() => specialSupplyItems.value.length > 0)
 
-    // Update SEO
-    const title = `${subscription.value.houseName} 청약 - ${subscription.value.regionName}`
-    const description = `${subscription.value.houseName} ${subscription.value.houseType} 청약 정보와 일정을 확인하세요.`
-    useHead({
-      title,
-      meta: [
-        { name: 'description', content: description },
-        { property: 'og:title', content: title },
-        { property: 'og:description', content: description },
-        { property: 'og:image', content: DEFAULT_OG_IMAGE },
-        { property: 'og:url', content: `${SITE_URL}/subscription/${id}` },
-        { property: 'og:type', content: 'website' },
-        { property: 'og:site_name', content: SITE_NAME },
-      ],
-      link: [
-        { rel: 'canonical', href: `${SITE_URL}/subscription/${id}` },
-      ],
-    })
-  } catch (err) {
-    error.value = '청약 정보를 불러올 수 없습니다'
-    console.error('Failed to load subscription detail:', err)
-  } finally {
-    pending.value = false
-  }
-}
-
+// 포맷 함수들
 function getStatusLabel(status: string): string {
   if (status === 'upcoming') return '접수예정'
   if (status === 'ongoing') return '접수중'
-  if (status === 'closed') return '마감'
-  return ''
+  return '마감'
 }
 
 function formatMoveInMonth(month: string): string {
   if (month.length === 6) {
-    const year = month.substring(0, 4)
-    const m = month.substring(4, 6)
-    return `${year}년 ${parseInt(m)}월`
+    return `${month.substring(0, 4)}년 ${parseInt(month.substring(4, 6))}월`
   }
   return month
+}
+
+function formatHouseType(type: string | null): string {
+  if (!type) return '-'
+  // "084.9421A" → "84A"
+  const match = type.match(/^0?(\d+)\.?\d*([A-Z]?)$/)
+  if (match) return `${match[1]}${match[2]}`
+  return type
+}
+
+function formatExclusiveArea(houseType: string | null): string {
+  if (!houseType) return '-'
+  // "084.9421A" → 전용 84.94㎡ (약 25.7평)
+  const match = houseType.match(/^0?(\d+\.\d+)/)
+  if (match) {
+    const sqm = parseFloat(match[1])
+    const pyeong = (sqm / 3.3058).toFixed(0)
+    return `${sqm.toFixed(1)}㎡ (${pyeong}평)`
+  }
+  return '-'
+}
+
+function formatSupplyArea(area: string | null): string {
+  if (!area) return '-'
+  const sqm = parseFloat(area)
+  if (isNaN(sqm)) return area
+  const pyeong = (sqm / 3.3058).toFixed(0)
+  return `${sqm.toFixed(1)}㎡ (${pyeong}평)`
+}
+
+function formatPrice(amount: number): string {
+  if (amount >= 10000) {
+    const eok = Math.floor(amount / 10000)
+    const man = amount % 10000
+    return man > 0 ? `${eok}억 ${man.toLocaleString()}만원` : `${eok}억`
+  }
+  return `${amount.toLocaleString()}만원`
 }
 
 // SSR: Load initial data
@@ -367,4 +375,23 @@ if (data.value) {
   subscription.value = sub
   unitTypes.value = units || []
 }
+
+// SEO
+useSeoMeta({
+  title: subscription.value ? `${subscription.value.houseName} 청약 분양정보 - 일상킷` : '청약 정보 - 일상킷',
+  description: subscription.value
+    ? `${subscription.value.houseName} ${subscription.value.houseType} 청약 일정, 면적별 공급정보, 분양가를 확인하세요.`
+    : '청약 분양정보를 확인하세요.',
+  ogTitle: subscription.value ? `${subscription.value.houseName} 청약 - ${subscription.value.regionName}` : '청약 정보',
+  ogDescription: subscription.value
+    ? `${subscription.value.houseName} ${subscription.value.houseType} 청약 정보`
+    : '청약 분양정보',
+  ogImage: DEFAULT_OG_IMAGE,
+  ogUrl: `${SITE_URL}/subscription/${id}`,
+  ogSiteName: SITE_NAME,
+})
+
+useHead({
+  link: [{ rel: 'canonical', href: `${SITE_URL}/subscription/${id}` }],
+})
 </script>
