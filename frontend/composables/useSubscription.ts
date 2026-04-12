@@ -9,8 +9,7 @@ export interface SubscriptionListResponse {
   totalPages: number
 }
 
-export interface SubscriptionDetailResponse {
-  subscription: Subscription
+export type SubscriptionDetailResponse = Subscription & {
   unitTypes: SubscriptionUnitType[]
 }
 

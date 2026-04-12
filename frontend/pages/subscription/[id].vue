@@ -98,31 +98,31 @@
               v-if="subscription.announcementDate"
               title="모집공고"
               :date="subscription.announcementDate"
-              icon="newspaper"
+              icon="article"
             />
             <TimelineItem
               v-if="subscription.specialStartDate && subscription.specialEndDate"
               title="특별공급 접수"
               :date="`${subscription.specialStartDate} ~ ${subscription.specialEndDate}`"
-              icon="people"
+              icon="edit_note"
             />
             <TimelineItem
               v-if="subscription.rank1AreaStartDate && subscription.rank1AreaEndDate"
               title="1순위 접수"
               :date="`${subscription.rank1AreaStartDate} ~ ${subscription.rank1AreaEndDate}`"
-              icon="group"
+              icon="first_page"
             />
             <TimelineItem
               v-if="subscription.rank2AreaStartDate && subscription.rank2AreaEndDate"
               title="2순위 접수"
               :date="`${subscription.rank2AreaStartDate} ~ ${subscription.rank2AreaEndDate}`"
-              icon="groups"
+              icon="last_page"
             />
             <TimelineItem
               v-if="subscription.winnerDate"
               title="당첨자 발표"
               :date="subscription.winnerDate"
-              icon="celebration"
+              icon="check_circle"
             />
             <TimelineItem
               v-if="subscription.contractStartDate && subscription.contractEndDate"
@@ -136,7 +136,7 @@
         <!-- Special Supply Breakdown -->
         <div v-if="hasSpecialSupply" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
           <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">pie_chart</span>
+            <span class="material-symbols-outlined text-primary text-[24px]">info</span>
             특별공급 분류
           </h2>
           <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -311,8 +311,9 @@ async function loadDetail() {
   error.value = null
   try {
     const result = await getSubscriptionDetail(id)
-    subscription.value = result.subscription
-    unitTypes.value = result.unitTypes || []
+    const { unitTypes: units, ...sub } = result
+    subscription.value = sub
+    unitTypes.value = units || []
 
     // Update SEO
     const title = `${subscription.value.houseName} 청약 - ${subscription.value.regionName}`
@@ -362,7 +363,8 @@ const { data } = await useAsyncData(`subscription-${id}`, () =>
 )
 
 if (data.value) {
-  subscription.value = data.value.subscription
-  unitTypes.value = data.value.unitTypes || []
+  const { unitTypes: units, ...sub } = data.value
+  subscription.value = sub
+  unitTypes.value = units || []
 }
 </script>
