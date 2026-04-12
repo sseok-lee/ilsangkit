@@ -93,6 +93,11 @@
           </div>
         </section>
 
+        <!-- Ad: Facilities 후 -->
+        <div class="mb-10">
+          <AdBanner />
+        </div>
+
         <!-- ③ 교차 CTA -->
         <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 md:p-8 text-center">
           <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">

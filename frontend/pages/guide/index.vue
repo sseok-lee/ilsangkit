@@ -79,6 +79,11 @@
         <p class="text-slate-500 text-sm mt-1">곧 유용한 생활 가이드가 업데이트됩니다.</p>
       </div>
 
+      <!-- Ad: Pagination 전 -->
+      <div class="my-8">
+        <AdBanner />
+      </div>
+
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-8">
         <button

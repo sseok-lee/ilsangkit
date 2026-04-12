@@ -113,6 +113,9 @@
           </div>
         </div>
 
+        <!-- Ad: 특별공급 아래 -->
+        <AdBanner />
+
         <!-- 3. 청약 일정 -->
         <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
           <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -207,6 +210,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Ad: 기본정보 아래 -->
+        <AdBanner />
 
         <!-- 5. 링크 -->
         <div class="flex flex-col md:flex-row gap-4 mb-8">

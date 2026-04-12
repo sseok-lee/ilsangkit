@@ -215,6 +215,11 @@
         </div>
       </section>
 
+      <!-- Ad: Recent Guides 후 -->
+      <div class="mb-8">
+        <AdBanner />
+      </div>
+
       <!-- 지역별 생활 정보 -->
       <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">

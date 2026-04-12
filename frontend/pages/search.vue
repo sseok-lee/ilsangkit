@@ -209,6 +209,9 @@
         <span class="text-xs text-slate-500 font-medium">{{ displayTotalCount }}건</span>
       </div>
 
+      <!-- Ad: 검색결과 전 -->
+      <AdBanner />
+
       <!-- Loading Skeleton -->
       <div v-if="loading" aria-live="polite" aria-busy="true">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

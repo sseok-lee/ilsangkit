@@ -98,6 +98,11 @@
         </div>
       </div>
 
+      <!-- Ad: Region Filter 후 -->
+      <div class="mb-4">
+        <AdBanner />
+      </div>
+
       <!-- Trash category: waste schedule UI -->
       <template v-if="categoryParam === 'trash'">
         <!-- 로딩 상태 -->

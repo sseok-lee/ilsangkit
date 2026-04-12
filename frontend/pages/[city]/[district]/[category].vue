@@ -112,6 +112,11 @@
           />
         </div>
 
+        <!-- Ad: Facility List 후 -->
+        <div class="mb-8">
+          <AdBanner />
+        </div>
+
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="flex justify-center items-center space-x-4">
           <button
