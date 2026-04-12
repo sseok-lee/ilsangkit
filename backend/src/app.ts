@@ -13,6 +13,7 @@ import reviewsRouter from './routes/reviews.js';
 import guidesRouter from './routes/guides.js';
 import realEstateRouter from './routes/realEstate.js';
 import areaRouter from './routes/area.js';
+import subscriptionRouter from './routes/subscription.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
@@ -63,6 +64,7 @@ app.use('/api/reviews', reviewsRouter);
 app.use('/api/guides', guidesRouter);
 app.use('/api/real-estate', realEstateRouter);
 app.use('/api/area', areaRouter);
+app.use('/api/subscription', subscriptionRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

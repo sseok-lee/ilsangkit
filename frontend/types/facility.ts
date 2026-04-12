@@ -490,6 +490,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { to: '/real-estate/apt', label: '아파트', icon: 'apartment', iconImg: 'apt' },
       { to: '/real-estate/villa', label: '빌라', icon: 'holiday_village', iconImg: 'villa' },
       { to: '/real-estate/offitel', label: '오피스텔', icon: 'business', iconImg: 'offitel' },
+      { to: '/subscription', label: '청약', icon: 'calendar_month', iconImg: 'subscription' },
     ],
   },
   ...CATEGORY_GROUPS,

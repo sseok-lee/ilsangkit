@@ -60,6 +60,9 @@ export default defineEventHandler(async (event) => {
     urls.push({ loc: `${SITE_URL}/real-estate/${pt}`, lastmod: today, changefreq: 'daily', priority: 0.8 })
   }
 
+  // 청약 페이지
+  urls.push({ loc: `${SITE_URL}/subscription`, lastmod: today, changefreq: 'daily', priority: 0.8 })
+
   // 가이드 목록 페이지
   urls.push({ loc: `${SITE_URL}/guide`, lastmod: today, changefreq: 'daily', priority: 0.8 })
 

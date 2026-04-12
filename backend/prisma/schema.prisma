@@ -1205,3 +1205,73 @@ model RealEstateBuildingSummary {
   @@index([type, city, district, transactionCount])
   @@index([type, buildingName])
 }
+
+// 청약 분양정보
+model Subscription {
+  id                      Int       @id @default(autoincrement())
+  houseManageNo           String    @db.VarChar(20)
+  pblancNo                String    @db.VarChar(20)
+  houseName               String    @db.VarChar(200)
+  houseType               String    @db.VarChar(20)     // APT, 오피스텔
+  houseDetailType         String?   @db.VarChar(20)     // 민영, 국민
+  rentType                String?   @db.VarChar(20)     // 분양주택, 임대주택
+  regionName              String    @db.VarChar(100)
+  supplyLocation          String?   @db.VarChar(500)
+  supplyZipCode           String?   @db.VarChar(10)
+  totalSupplyCount        Int?
+  announcementDate        DateTime?
+  receptionStartDate      DateTime?
+  receptionEndDate        DateTime?
+  specialStartDate        DateTime?
+  specialEndDate          DateTime?
+  rank1AreaStartDate      DateTime?
+  rank1AreaEndDate        DateTime?
+  rank1OtherStartDate     DateTime?
+  rank1OtherEndDate       DateTime?
+  rank2AreaStartDate      DateTime?
+  rank2AreaEndDate        DateTime?
+  rank2OtherStartDate     DateTime?
+  rank2OtherEndDate       DateTime?
+  winnerDate              DateTime?
+  contractStartDate       DateTime?
+  contractEndDate         DateTime?
+  moveInMonth             String?   @db.VarChar(10)
+  constructorName         String?   @db.VarChar(200)
+  developerName           String?   @db.VarChar(200)
+  homepage                String?   @db.VarChar(500)
+  pblancUrl               String?   @db.VarChar(500)
+  inquiryTel              String?   @db.VarChar(50)
+  status                  String    @db.VarChar(20)     // upcoming, ongoing, closed
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  unitTypes               SubscriptionUnitType[]
+
+  @@unique([houseManageNo, pblancNo])
+  @@index([status])
+  @@index([announcementDate])
+  @@index([regionName])
+}
+
+model SubscriptionUnitType {
+  id                Int          @id @default(autoincrement())
+  subscriptionId    Int
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  modelNo           String       @db.VarChar(10)
+  houseType         String?      @db.VarChar(30)
+  supplyArea        String?      @db.VarChar(20)
+  generalCount      Int?
+  specialCount      Int?
+  topAmount         Int?
+  newlywedsCount    Int?
+  multiChildCount   Int?
+  firstLifeCount    Int?
+  elderlyCount      Int?
+  institutionCount  Int?
+  youthCount        Int?
+  newbornCount      Int?
+  transferCount     Int?
+  etcCount          Int?
+
+  @@index([subscriptionId])
+}
