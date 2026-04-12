@@ -9,18 +9,18 @@
     </div>
 
     <template v-else-if="subscription">
-      <!-- Breadcrumb -->
-      <nav class="hidden md:flex items-center gap-1 text-sm text-slate-500 px-4 py-4 md:px-6 mx-auto max-w-6xl">
-        <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <NuxtLink to="/subscription" class="hover:text-primary">청약</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span class="text-slate-800">{{ subscription.houseName }}</span>
-      </nav>
+      <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
+        <!-- Breadcrumb -->
+        <nav class="hidden md:flex items-center gap-1 text-sm text-slate-500 mb-4">
+          <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <NuxtLink to="/subscription" class="hover:text-primary">청약</NuxtLink>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span class="text-slate-800">{{ subscription.houseName }}</span>
+        </nav>
 
-      <!-- Header -->
-      <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100 px-4 md:px-6">
-        <div class="mx-auto max-w-6xl py-6">
+        <!-- Header -->
+        <div class="mb-8">
           <div class="flex items-start justify-between gap-4 mb-3">
             <div class="flex-1">
               <h1 class="text-2xl md:text-3xl font-bold text-slate-900">{{ subscription.houseName }}</h1>
@@ -50,9 +50,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <main class="mx-auto max-w-6xl px-4 md:px-6 py-8">
 
         <!-- 1. 면적별 공급정보 테이블 (핵심) -->
         <div v-if="unitTypes && unitTypes.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
