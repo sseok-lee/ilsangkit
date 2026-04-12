@@ -54,6 +54,11 @@
         />
       </div>
 
+      <!-- Ad: Thumbnail 후 -->
+      <div class="my-8">
+        <AdBanner />
+      </div>
+
       <!-- Markdown Content -->
       <div
         class="
@@ -81,6 +86,11 @@
             #{{ keyword }}
           </span>
         </div>
+      </div>
+
+      <!-- Ad: Keywords 후 -->
+      <div class="my-8">
+        <AdBanner />
       </div>
 
       <!-- 관련 가이드 -->

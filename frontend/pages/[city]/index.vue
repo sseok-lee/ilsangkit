@@ -86,6 +86,11 @@
           </div>
         </section>
 
+        <!-- Ad: District Grid 후 -->
+        <div class="mb-10">
+          <AdBanner />
+        </div>
+
         <!-- ③ 생활 가이드 -->
         <section class="mb-10">
           <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">

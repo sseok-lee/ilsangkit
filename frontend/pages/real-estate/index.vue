@@ -14,6 +14,11 @@
         <RealEstateCategoryCards />
       </section>
 
+      <!-- Ad: Property Type Cards 후 -->
+      <div class="mb-12">
+        <AdBanner />
+      </div>
+
       <section class="mt-12">
         <h2 class="text-lg font-bold text-slate-800 mb-4">부동산 실거래가란?</h2>
         <div class="rounded-2xl bg-white border border-slate-200 p-6 text-base text-slate-600 leading-relaxed space-y-3">
