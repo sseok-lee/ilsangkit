@@ -97,6 +97,13 @@
 
       <!-- Utility Links -->
       <NuxtLink
+        to="/subscription"
+        class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+        청약 정보
+      </NuxtLink>
+      <NuxtLink
         to="/guide"
         class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
@@ -158,6 +165,13 @@
           @click="closeMobileMenu"
         >
           홈
+        </NuxtLink>
+        <NuxtLink
+          to="/subscription"
+          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          @click="closeMobileMenu"
+        >
+          청약 정보
         </NuxtLink>
         <NuxtLink
           to="/search"
