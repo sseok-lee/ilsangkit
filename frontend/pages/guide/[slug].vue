@@ -103,6 +103,9 @@
         />
       </ClientOnly>
 
+      <!-- Ad: 관련 가이드 아래 -->
+      <AdBanner />
+
       <!-- AI 작성 안내 -->
       <div class="mt-8 border-l-4 border-slate-300 bg-slate-50 rounded-r-lg p-4">
         <p class="text-xs font-semibold text-slate-500 mb-1">AI 작성 안내</p>

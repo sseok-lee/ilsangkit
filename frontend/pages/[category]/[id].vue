@@ -1188,6 +1188,9 @@
                 <RelatedGuides :category="category" />
               </ClientOnly>
 
+              <!-- Ad: 관련 가이드 아래 (Desktop) -->
+              <AdBanner />
+
               <!-- 같은 지역 시설 링크 -->
               <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5] flex items-center gap-2">
@@ -2389,6 +2392,9 @@
           <ClientOnly>
             <RelatedGuides :category="category" />
           </ClientOnly>
+
+          <!-- Ad: 관련 가이드 아래 (Mobile) -->
+          <AdBanner />
 
           <!-- 같은 지역 시설 링크 -->
           <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">

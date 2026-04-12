@@ -279,6 +279,9 @@
         </p>
       </section>
 
+      <!-- Ad: 시세추이 아래 -->
+      <AdBanner />
+
       <!-- 거래 내역 테이블 -->
       <section>
         <h2 class="text-lg font-semibold text-slate-800 mb-4">거래 내역</h2>
