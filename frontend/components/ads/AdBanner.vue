@@ -1,7 +1,7 @@
 <template>
   <div v-if="!adError" class="ad-banner my-6">
     <ClientOnly>
-      <div ref="adContainer" class="flex justify-center min-h-[100px]">
+      <div :key="adKey" ref="adContainer" class="flex justify-center min-h-[100px]">
         <ins
           class="adsbygoogle"
           style="display: block"
@@ -30,13 +30,25 @@ withDefaults(defineProps<{
 
 const adContainer = ref<HTMLElement | null>(null)
 const adError = ref(false)
+const adKey = ref(0)
+const route = useRoute()
 
-onMounted(() => {
-  try {
-    const adsbygoogle = (window as any).adsbygoogle || []
-    adsbygoogle.push({})
-  } catch {
-    adError.value = true
-  }
+function pushAd() {
+  nextTick(() => {
+    try {
+      const adsbygoogle = (window as any).adsbygoogle || []
+      adsbygoogle.push({})
+    } catch {
+      adError.value = true
+    }
+  })
+}
+
+onMounted(pushAd)
+
+watch(() => route.fullPath, () => {
+  adError.value = false
+  adKey.value++
+  pushAd()
 })
 </script>
