@@ -1,17 +1,17 @@
 // 카테고리 (camelCase, 내부 사용)
-export type RealEstateCategory = 'aptSale' | 'aptRent' | 'villaSale' | 'villaRent' | 'offitelSale' | 'offitelRent' | 'storeSale' | 'landSale'
+export type RealEstateCategory = 'aptSale' | 'aptRent' | 'villaSale' | 'villaRent' | 'offitelSale' | 'offitelRent'
 
 // URL slug (kebab-case)
-export type RealEstateType = 'apt-sale' | 'apt-rent' | 'villa-sale' | 'villa-rent' | 'offitel-sale' | 'offitel-rent' | 'store-sale' | 'land-sale'
+export type RealEstateType = 'apt-sale' | 'apt-rent' | 'villa-sale' | 'villa-rent' | 'offitel-sale' | 'offitel-rent'
 
 // 건물 유형 (통합 페이지용)
-export type RealEstatePropertyType = 'apt' | 'villa' | 'offitel' | 'store' | 'land'
+export type RealEstatePropertyType = 'apt' | 'villa' | 'offitel'
 
 // 거래 유형
 export type TransactionMode = 'sale' | 'rent'
 
 // 건물 유형 배열 (전체)
-export const PROPERTY_TYPES = ['apt', 'villa', 'offitel', 'store', 'land'] as const
+export const PROPERTY_TYPES = ['apt', 'villa', 'offitel'] as const
 
 // 출시 중단 시 UI에서 숨길 property type — 기본은 빈 배열 (전부 공개)
 export const HIDDEN_PROPERTY_TYPES: readonly RealEstatePropertyType[] = [] as const
@@ -20,14 +20,6 @@ export const HIDDEN_PROPERTY_TYPES: readonly RealEstatePropertyType[] = [] as co
 export const VISIBLE_PROPERTY_TYPES: readonly RealEstatePropertyType[] = PROPERTY_TYPES.filter(
   (pt) => !(HIDDEN_PROPERTY_TYPES as readonly string[]).includes(pt)
 ) as readonly RealEstatePropertyType[]
-
-// sale-only 건물 유형
-export const SALE_ONLY_PROPERTY_TYPES = ['store', 'land'] as const
-
-// sale-only인지 판별하는 헬퍼
-export function isSaleOnly(pt: RealEstatePropertyType): boolean {
-  return (SALE_ONLY_PROPERTY_TYPES as readonly string[]).includes(pt)
-}
 
 // 매매 거래 (아파트, 빌라, 오피스텔)
 export interface SaleTransaction {
@@ -55,43 +47,6 @@ export interface SaleTransaction {
   // P2: 매수/매도자 유형
   buyerType: string | null
   sellerType: string | null
-  // 상가 고유 필드 (선택사항 — store-sale 전용)
-  sggNm?: string | null  // 시군구 한글명
-  buildingAr?: string | null  // 건물면적 (㎡) — Decimal 직렬화 문자열
-  plottageAr?: string | null  // 대지면적 (㎡)
-  buildingUse?: string | null  // 주용도
-  buildingType?: string | null  // 부동산 구분 (집합/일반)
-  landUse?: string | null  // 용도지역 (상가에도 있음)
-  shareDealingType?: string | null  // 지분 거래 유형
-  estateAgentSggNm?: string | null  // 중개사 소재지
-}
-
-// 토지 매매 거래
-export interface LandSaleTransaction {
-  id: number
-  city: string
-  district: string
-  bjdCode: string
-  sggNm: string | null  // 시군구 한글명
-  dongName: string
-  buildingName: string  // "{dongName} {jibun}" 합성값
-  jibun: string | null
-  roadName: string | null
-  lat: number | null
-  lng: number | null
-  dealYear: number
-  dealMonth: number
-  dealDay: number | null
-  dealAmount: number  // 만원 단위
-  dealArea: string | null  // 거래면적 (㎡) — Decimal 직렬화 문자열
-  jimok: string | null  // 지목 (대/전/답/임야 등)
-  landUse: string | null  // 용도지역
-  shareDealingType: string | null  // 지분 거래 유형
-  estateAgentSggNm: string | null  // 중개사 소재지
-  dealType: string | null
-  // 취소 거래
-  cancelDealDay: string | null
-  cancelDealType: string | null
 }
 
 // 전월세 거래
@@ -228,8 +183,6 @@ const CATEGORY_TO_SLUG_MAP: Record<RealEstateCategory, RealEstateType> = {
   villaRent: 'villa-rent',
   offitelSale: 'offitel-sale',
   offitelRent: 'offitel-rent',
-  storeSale: 'store-sale',
-  landSale: 'land-sale',
 }
 
 const SLUG_TO_CATEGORY_MAP: Record<RealEstateType, RealEstateCategory> = {
@@ -239,8 +192,6 @@ const SLUG_TO_CATEGORY_MAP: Record<RealEstateType, RealEstateCategory> = {
   'villa-rent': 'villaRent',
   'offitel-sale': 'offitelSale',
   'offitel-rent': 'offitelRent',
-  'store-sale': 'storeSale',
-  'land-sale': 'landSale',
 }
 
 // aptSale -> apt-sale
@@ -261,8 +212,6 @@ export const REAL_ESTATE_CATEGORIES: readonly RealEstateCategory[] = [
   'villaRent',
   'offitelSale',
   'offitelRent',
-  'storeSale',
-  'landSale',
 ] as const
 
 // 모든 타입(slug) 배열
@@ -273,8 +222,6 @@ export const REAL_ESTATE_TYPES: readonly RealEstateType[] = [
   'villa-rent',
   'offitel-sale',
   'offitel-rent',
-  'store-sale',
-  'land-sale',
 ] as const
 
 // 건물유형 → 매매 slug
@@ -282,21 +229,19 @@ export function propertyTypeToSaleSlug(pt: RealEstatePropertyType): RealEstateTy
   return `${pt}-sale` as RealEstateType
 }
 
-// 건물유형 → 전월세 slug (store/land는 null 반환)
-export function propertyTypeToRentSlug(pt: RealEstatePropertyType): RealEstateType | null {
-  if (isSaleOnly(pt)) return null
+// 건물유형 → 전월세 slug
+export function propertyTypeToRentSlug(pt: RealEstatePropertyType): RealEstateType {
   return `${pt}-rent` as RealEstateType
 }
 
-// 건물유형 + 거래유형 → API slug (sale-only type과 rent mode 조합 시 null)
-export function toApiSlug(pt: RealEstatePropertyType, mode: TransactionMode): RealEstateType | null {
-  if (mode === 'rent' && isSaleOnly(pt)) return null
+// 건물유형 + 거래유형 → API slug
+export function toApiSlug(pt: RealEstatePropertyType, mode: TransactionMode): RealEstateType {
   return `${pt}-${mode}` as RealEstateType
 }
 
 // slug → 건물유형 (apt-sale → apt, apt → apt)
 export function propertyTypeFromSlug(slug: string): RealEstatePropertyType | null {
   const base = slug.replace(/-(?:sale|rent)$/, '')
-  if (base === 'apt' || base === 'villa' || base === 'offitel' || base === 'store' || base === 'land') return base
+  if (base === 'apt' || base === 'villa' || base === 'offitel') return base as RealEstatePropertyType
   return null
 }

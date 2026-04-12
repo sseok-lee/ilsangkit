@@ -10,11 +10,9 @@ export type RealEstateType =
   | 'villa-sale'
   | 'villa-rent'
   | 'offitel-sale'
-  | 'offitel-rent'
-  | 'store-sale'
-  | 'land-sale';
+  | 'offitel-rent';
 
-const SALE_TYPES: RealEstateType[] = ['apt-sale', 'villa-sale', 'offitel-sale', 'store-sale', 'land-sale'];
+const SALE_TYPES: RealEstateType[] = ['apt-sale', 'villa-sale', 'offitel-sale'];
 
 export interface SearchTransactionParams {
   city?: string;
@@ -102,10 +100,6 @@ function getModel(type: string): any {
       return prisma.offitelSaleTransaction;
     case 'offitel-rent':
       return prisma.offitelRentTransaction;
-    case 'store-sale':
-      return prisma.storeSaleTransaction;
-    case 'land-sale':
-      return prisma.landSaleTransaction;
     default:
       throw new Error(`Unknown real estate type: ${type}`);
   }
@@ -115,11 +109,8 @@ function isSaleType(type: string): boolean {
   return SALE_TYPES.includes(type as RealEstateType);
 }
 
-// store-sale, land-sale은 exclusiveArea 필드가 없음
-// store는 buildingAr(건물면적), land는 dealArea(거래면적)로 대체
-const NO_EXCLUSIVE_AREA_TYPES = new Set(['store-sale', 'land-sale']);
-function hasExclusiveArea(type: string): boolean {
-  return !NO_EXCLUSIVE_AREA_TYPES.has(type);
+function hasExclusiveArea(_type: string): boolean {
+  return true;
 }
 
 export const TABLE_NAME_MAP: Record<string, string> = {
@@ -129,8 +120,6 @@ export const TABLE_NAME_MAP: Record<string, string> = {
   'villa-rent': 'VillaRentTransaction',
   'offitel-sale': 'OffitelSaleTransaction',
   'offitel-rent': 'OffitelRentTransaction',
-  'store-sale': 'StoreSaleTransaction',
-  'land-sale': 'LandSaleTransaction',
 };
 
 export function getTableName(type: string): string {
@@ -196,26 +185,7 @@ export async function searchTransactions(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let select: Record<string, any>;
-  if (type === 'store-sale') {
-    select = {
-      id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
-      floor: true, buildYear: true,
-      buildingAr: true, plottageAr: true, buildingUse: true, buildingType: true, landUse: true,
-      dealYear: true, dealMonth: true, dealDay: true,
-      dealAmount: true, dealType: true, buyerType: true, sellerType: true,
-      shareDealingType: true, estateAgentSggNm: true,
-      cancelDealDay: true,
-    };
-  } else if (type === 'land-sale') {
-    select = {
-      id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
-      dealYear: true, dealMonth: true, dealDay: true,
-      dealAmount: true, dealType: true,
-      dealArea: true, jimok: true, landUse: true,
-      shareDealingType: true, estateAgentSggNm: true,
-      cancelDealDay: true,
-    };
-  } else if (isSaleType(type)) {
+  if (isSaleType(type)) {
     select = {
       id: true, buildingName: true, bjdCode: true, city: true, district: true, dongName: true,
       floor: true, exclusiveArea: true, buildYear: true,
@@ -512,8 +482,7 @@ export async function getBuildingInfo(
   const where = { bjdCode, buildingName };
   const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
 
-  // store-sale: buildingAr로 대체, land-sale: dealArea로 대체, 나머지: exclusiveArea
-  const areaField = type === 'store-sale' ? 'buildingAr' : type === 'land-sale' ? 'dealArea' : 'exclusiveArea';
+  const areaField = 'exclusiveArea';
 
   const [latest, agg] = await Promise.all([
     model.findFirst({
@@ -567,8 +536,7 @@ export async function getAreaGroups(
 ): Promise<AreaGroup[]> {
   const model = getModel(type);
 
-  // store-sale: buildingAr, land-sale: dealArea, 나머지: exclusiveArea
-  const areaField = type === 'store-sale' ? 'buildingAr' : type === 'land-sale' ? 'dealArea' : 'exclusiveArea';
+  const areaField = 'exclusiveArea';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = { bjdCode };
@@ -619,8 +587,6 @@ const ALL_TYPES: RealEstateType[] = [
   'villa-rent',
   'offitel-sale',
   'offitel-rent',
-  'store-sale',
-  'land-sale',
 ];
 
 /**
@@ -653,14 +619,7 @@ export async function searchAll(
     ALL_TYPES.map(async (type) => {
       const model = getModel(type);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let select: Record<string, any>;
-      if (type === 'store-sale') {
-        select = { ...baseSelect, buildingAr: true, floor: true };
-      } else if (type === 'land-sale') {
-        select = { ...baseSelect, dealArea: true };
-      } else {
-        select = { ...baseSelect, exclusiveArea: true, floor: true };
-      }
+      const select: Record<string, any> = { ...baseSelect, exclusiveArea: true, floor: true };
       const [items, count] = await Promise.all([
         model.findMany({ where, take: 3, select }),
         model.count({ where }),

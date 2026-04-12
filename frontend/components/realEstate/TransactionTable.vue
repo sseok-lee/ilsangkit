@@ -356,12 +356,10 @@ function formatAmount(amount: number): string {
   return `${amount.toLocaleString()}만원`
 }
 
-// store-sale은 buildingAr, land-sale은 dealArea, 나머지는 exclusiveArea 사용
+// 모든 부동산 타입은 exclusiveArea 사용
 // Prisma Decimal은 문자열로 직렬화되므로 Number 변환
 function getArea(tx: SaleTransaction | RentTransaction): number | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const anyTx = tx as any
-  const raw = anyTx.exclusiveArea ?? anyTx.buildingAr ?? anyTx.dealArea
+  const raw = tx.exclusiveArea
   if (raw == null || raw === '') return null
   const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
   return Number.isFinite(num) && num > 0 ? num : null
