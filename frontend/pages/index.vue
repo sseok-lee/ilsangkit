@@ -383,6 +383,8 @@ const realEstateLinks = computed(() => {
     { to: '/real-estate/apt', label: '아파트', iconImg: 'apt', sub: '최근 실거래가 확인', count: formatCount(re.aptSale + re.aptRent) },
     { to: '/real-estate/villa', label: '빌라', iconImg: 'villa', sub: '최근 실거래가 확인', count: formatCount(re.villaSale + re.villaRent) },
     { to: '/real-estate/offitel', label: '오피스텔', iconImg: 'offitel', sub: '최근 실거래가 확인', count: formatCount(re.offitelSale + re.offitelRent) },
+    { to: '/real-estate/store', label: '상가', iconImg: 'store', sub: '최근 실거래가 확인', count: formatCount(re.storeSale ?? 0) },
+    { to: '/real-estate/land', label: '토지', iconImg: 'land', sub: '최근 실거래가 확인', count: formatCount(re.landSale ?? 0) },
   ]
 })
 
