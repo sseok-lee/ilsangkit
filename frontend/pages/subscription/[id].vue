@@ -96,6 +96,9 @@
           </div>
         </div>
 
+        <!-- Ad: 면적별 테이블 아래 -->
+        <AdBanner />
+
         <!-- 2. 특별공급 상세 -->
         <div v-if="hasSpecialSupply" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
           <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
