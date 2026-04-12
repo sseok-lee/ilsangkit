@@ -296,6 +296,9 @@
           거래 내역이 없습니다.
         </div>
 
+        <!-- Ad: 거래내역 아래 -->
+        <AdBanner />
+
         <!-- 페이지네이션 -->
         <Pagination
           v-if="transactions.totalPages > 1"
@@ -310,6 +313,9 @@
         <h2 class="text-lg font-semibold text-slate-800 mb-4">주변 생활시설</h2>
         <NearbyFacilities :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
       </section>
+
+      <!-- Ad: 리뷰 섹션 전 -->
+      <AdBanner />
 
       <!-- 리뷰 섹션 -->
       <section class="mt-8">

@@ -161,6 +161,11 @@
         </div>
       </section>
 
+      <!-- Ad: 카테고리 그리드 아래 -->
+      <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+        <AdBanner />
+      </div>
+
       <!-- Recent Guides Section -->
       <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex items-center justify-between mb-4">

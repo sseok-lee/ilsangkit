@@ -107,6 +107,9 @@
         <p class="text-slate-500 text-sm mt-1">시/도와 구/군을 선택하면 거래 내역을 확인할 수 있습니다</p>
       </div>
 
+      <!-- Ad: FAQ 섹션 전 -->
+      <AdBanner />
+
       <!-- FAQ -->
       <section v-if="faqs.length > 0" class="mt-12">
         <h2 class="text-lg font-bold text-slate-800 mb-4">자주 묻는 질문</h2>

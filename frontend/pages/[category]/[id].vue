@@ -441,6 +441,9 @@
                 </div>
               </div>
 
+              <!-- Ad: 로드뷰 아래 -->
+              <AdBanner />
+
               <!-- Facility Status Card -->
               <div v-if="hasFacilityStatus" class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5]">
@@ -1171,6 +1174,9 @@
                   </div>
                 </div>
               </template>
+
+              <!-- Ad: 리뷰 섹션 전 (Desktop) -->
+              <AdBanner />
 
               <!-- Review Section (Desktop Left Column) -->
               <ClientOnly>
@@ -2370,6 +2376,9 @@
               </div>
             </div>
           </template>
+
+          <!-- Ad: 리뷰 섹션 전 (Mobile) -->
+          <AdBanner />
 
           <!-- Review Section (Mobile) -->
           <ClientOnly>

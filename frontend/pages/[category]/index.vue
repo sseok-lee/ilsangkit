@@ -241,6 +241,9 @@
         </template>
       </template>
 
+      <!-- Ad: FAQ 섹션 전 -->
+      <AdBanner />
+
       <!-- FAQ Section -->
       <section v-if="faqItems && faqItems.length > 0" class="mt-12">
         <h2 class="text-lg font-semibold mb-4">자주 묻는 질문</h2>
