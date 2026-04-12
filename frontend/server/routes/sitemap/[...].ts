@@ -8,6 +8,7 @@ import {
   fetchFacilityIds,
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
+  fetchSubscriptionIds,
 } from '../../utils/sitemap'
 
 // wifi/aed는 사이트맵 인덱스에서 제외된 카테고리 — 동적 핸들러에서도 제외하여 404 반환
@@ -20,6 +21,14 @@ function parseSlug(slug: string): { category: string; page: number } | null {
   if (reMatch) {
     const page = reMatch[1] ? parseInt(reMatch[1], 10) : 1
     return page >= 1 ? { category: 'real-estate', page } : null
+  }
+
+  // "subscription" → category='subscription', page=1
+  // "subscription-2" → category='subscription', page=2
+  const subMatch = slug.match(/^subscription(?:-(\d+))?$/)
+  if (subMatch) {
+    const page = subMatch[1] ? parseInt(subMatch[1], 10) : 1
+    return page >= 1 ? { category: 'subscription', page } : null
   }
 
   // "ev-charger" → category='ev-charger', page=1
@@ -87,6 +96,31 @@ export default defineEventHandler(async (event) => {
 
     const urls = pageItems.map((item) => ({
       loc: `${SITE_URL}/real-estate/${item.propertyType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}`,
+      lastmod: today,
+      changefreq: 'weekly' as const,
+      priority: 0.6,
+    }))
+
+    return generateSitemapXml(urls)
+  }
+
+  // 청약 일정 상세 페이지
+  if (category === 'subscription') {
+    const subscriptions = await fetchSubscriptionIds(apiBase)
+    if (subscriptions.length === 0 && page > 1) {
+      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    }
+    const totalPages = Math.max(1, Math.ceil(subscriptions.length / MAX_URLS_PER_SITEMAP))
+    if (page > totalPages) {
+      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    }
+
+    const offset = (page - 1) * MAX_URLS_PER_SITEMAP
+    const pageItems = subscriptions.slice(offset, offset + MAX_URLS_PER_SITEMAP)
+    const today = new Date().toISOString().split('T')[0]
+
+    const urls = pageItems.map((item) => ({
+      loc: `${SITE_URL}/subscription/${item.id}`,
       lastmod: today,
       changefreq: 'weekly' as const,
       priority: 0.6,

@@ -216,3 +216,30 @@ export async function fetchRegionCategories(
   }
   return []
 }
+
+export async function fetchSubscriptionIds(
+  apiBase: string
+): Promise<{ id: number; updatedAt: string }[]> {
+  const cacheKey = 'subscriptions'
+  const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
+  if (cached) return cached
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`${apiBase}/api/sitemap/subscriptions`)
+      if (!res.ok) {
+        console.error(`[sitemap] fetchSubscriptionIds attempt ${attempt}: HTTP ${res.status}`)
+        continue
+      }
+      const json = await res.json()
+      const data = json.data || []
+      if (data.length > 0) {
+        setCache(cacheKey, data)
+      }
+      return data
+    } catch (err) {
+      console.error(`[sitemap] fetchSubscriptionIds attempt ${attempt} error:`, err)
+    }
+  }
+  return []
+}

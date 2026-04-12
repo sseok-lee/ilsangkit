@@ -3,9 +3,9 @@
     <!-- Hero Section -->
     <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
       <div class="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">아파트 청약</h1>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">청약 일정·분양정보</h1>
         <p class="mt-2 text-slate-500 text-sm">
-          2026년 아파트 청약 일정과 분양정보를 한눈에 확인하세요.<br />
+          2026년 아파트·오피스텔 청약 일정과 분양정보를 한눈에 확인하세요.<br />
           접수 예정, 진행 중, 마감 청약을 모두 조회할 수 있습니다.
         </p>
       </div>
@@ -130,6 +130,20 @@
         <!-- Pagination -->
         <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
       </div>
+
+      <!-- Ad Banner -->
+      <AdBanner />
+
+      <!-- FAQ Section -->
+      <section class="mt-12">
+        <h2 class="text-lg font-semibold mb-4">자주 묻는 질문</h2>
+        <div class="space-y-1">
+          <details v-for="(faq, i) in faqs" :key="i" class="border-b border-gray-200">
+            <summary class="py-3 cursor-pointer font-medium text-gray-800 hover:text-blue-600">{{ faq.question }}</summary>
+            <p class="pb-3 text-gray-600 text-sm leading-relaxed">{{ faq.answer }}</p>
+          </details>
+        </div>
+      </section>
     </main>
   </div>
 </template>
@@ -138,10 +152,40 @@
 /* eslint-disable-next-line no-undef */
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import type { Subscription } from '~/types/subscription'
+import { useStructuredData } from '~/composables/useStructuredData'
 
 const title = `2026 아파트 청약 일정·분양정보 - 일상킷`
-const description = '2026년 아파트 청약 접수 일정과 분양정보를 조회하세요. 접수 예정, 진행 중, 마감 청약을 한눈에 확인할 수 있습니다.'
+const description = '2026년 아파트·오피스텔 청약 접수 일정과 분양정보를 조회하세요. 접수 예정, 진행 중, 마감 청약을 한눈에 확인할 수 있습니다.'
 const canonicalUrl = `${SITE_URL}/subscription`
+
+const faqs = [
+  {
+    question: '청약통장은 어떻게 가입하나요?',
+    answer: '청약통장은 주택도시기금에 가입하거나 은행에서 직접 가입할 수 있습니다. 만 18세 이상 대한민국 국민이면 가능하며, 매월 일정 금액을 저축하여 청약 자격을 갖춥니다. 신청은 거주지역 은행 또는 우체국에서 하시면 됩니다.',
+  },
+  {
+    question: '청약 가점은 어떻게 계산하나요?',
+    answer: '청약 가점은 무주택 기간(30점 만점), 청약통장 가입기간(20점 만점), 부양가족 수(15점 만점), 주택소유 이력(5점 만점) 등을 합산합니다. 각 요소는 국토교통부 기준에 따라 계산되며, 분양사나 청약홈에서 가점 계산 도구를 제공합니다.',
+  },
+  {
+    question: '특별공급 자격 조건은 무엇인가요?',
+    answer: '특별공급은 신혼부부, 다자녀, 생애최초구매자, 노부모부양, 기관추천, 청년, 신생아 우선순위 등 여러 유형이 있습니다. 각 유형별로 소득, 자산, 무주택 기간 등 다양한 조건이 있으며, 모집공고에서 자세한 자격 요건을 확인하실 수 있습니다.',
+  },
+  {
+    question: '청약 당첨 후 계약 절차는 어떻게 되나요?',
+    answer: '당첨자는 공고된 계약 기간 내에 분양사 또는 지정된 장소에서 계약금(계약금 5~10%)을 납부하고 계약서에 서명합니다. 이후 기성금, 준공금 등을 단계별로 납부하게 되며, 모든 절차는 모집공고의 분양가 책정 내역에 따릅니다.',
+  },
+  {
+    question: '무주택 기간은 어떻게 산정하나요?',
+    answer: '무주택 기간은 청약자가 계속해서 주택을 소유하지 않은 기간을 의미합니다. 배우자 명의 주택도 포함되며, 혼인 전 소유 주택은 제외됩니다. 세부 산정 방식은 분양 유형(아파트, 오피스텔 등)에 따라 다르므로 청약홈에서 확인하세요.',
+  },
+  {
+    question: '청약 접수는 어디서 하나요?',
+    answer: '청약 접수는 청약홈(www.applyhome.co.kr) 또는 분양사 지정 은행에서 가능합니다. 온라인 접수는 청약통장 보유자이면 누구나 신청할 수 있으며, 오프라인 접수는 청약일에 지정된 은행 지점을 방문하여 진행하시면 됩니다.',
+  },
+]
+
+const { setFAQSchema, setBreadcrumbSchema } = useStructuredData()
 
 useHead({
   title,
@@ -242,4 +286,11 @@ if (data.value) {
   total.value = data.value.total
   totalPages.value = data.value.totalPages
 }
+
+// Set JSON-LD schemas
+setFAQSchema(faqs.map(f => ({ question: f.question, answer: f.answer })))
+setBreadcrumbSchema([
+  { name: '홈', url: SITE_URL },
+  { name: '청약 정보', url: `${SITE_URL}/subscription` },
+])
 </script>
