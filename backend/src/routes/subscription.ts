@@ -18,8 +18,8 @@ const router = Router();
 router.get(
   '/',
   validate(SubscriptionListSchema, 'query'),
-  asyncHandler(async (_req: Request, res: Response) => {
-    const params = res.locals.validated as z.infer<typeof SubscriptionListSchema>;
+  asyncHandler(async (req: Request, res: Response) => {
+    const params = req.query as unknown as z.infer<typeof SubscriptionListSchema>;
     const result = await getSubscriptionList(params);
     res.json({ success: true, data: result });
   })
@@ -37,9 +37,8 @@ router.get(
 // GET /api/subscription/:id - 상세
 router.get(
   '/:id',
-  validateMultiple({ params: SubscriptionIdSchema }),
-  asyncHandler(async (_req: Request, res: Response) => {
-    const { id } = res.locals.validated.params as z.infer<typeof SubscriptionIdSchema>;
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = SubscriptionIdSchema.parse(req.params);
     const result = await getSubscriptionDetail(id);
     res.json({ success: true, data: result });
   })
