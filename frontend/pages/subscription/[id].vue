@@ -260,6 +260,7 @@
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import type { Subscription, SubscriptionUnitType } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
+import { useStructuredData } from '~/composables/useStructuredData'
 
 const route = useRoute()
 const id = Number(route.params.id)
@@ -374,6 +375,16 @@ if (data.value) {
   const { unitTypes: units, ...sub } = data.value
   subscription.value = sub
   unitTypes.value = units || []
+}
+
+const { setBreadcrumbSchema } = useStructuredData()
+
+if (subscription.value) {
+  setBreadcrumbSchema([
+    { name: '홈', url: SITE_URL },
+    { name: '청약 정보', url: `${SITE_URL}/subscription` },
+    { name: subscription.value.houseName, url: `${SITE_URL}/subscription/${id}` },
+  ])
 }
 
 // SEO
