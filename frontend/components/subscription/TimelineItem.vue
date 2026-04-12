@@ -23,9 +23,18 @@ const props = defineProps<{
   isLast?: boolean
 }>()
 
+function formatSingleDate(s: string): string {
+  const d = new Date(s.trim())
+  if (isNaN(d.getTime())) return s.trim()
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+}
+
 const formattedDate = computed(() => {
   if (!props.date) return '-'
-  const d = new Date(props.date)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+  if (props.date.includes('~')) {
+    const [start, end] = props.date.split('~')
+    return `${formatSingleDate(start)} ~ ${formatSingleDate(end)}`
+  }
+  return formatSingleDate(props.date)
 })
 </script>
