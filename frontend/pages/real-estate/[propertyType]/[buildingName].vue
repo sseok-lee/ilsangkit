@@ -414,8 +414,8 @@ useHead(() => {
     ? `${buildingName.value} 실거래가 · ${locLabel} 매매 시세 (${year}년) - 일상킷`
     : `${buildingName.value} 전세·월세 시세 · ${locLabel} 실거래가 (${year}년) - 일상킷`
   const description = tab === '매매'
-    ? `${locLabel} ${buildingName.value}의 ${year}년 매매 실거래가와 시세 변동을 확인하세요. 국토부 공식 데이터 기반 최근 거래 내역, 평당가, 주변 생활 인프라 정보를 제공합니다.`
-    : `${locLabel} ${buildingName.value}의 ${year}년 전세·월세 실거래가를 확인하세요. 전세가와 월세 시세, 최근 거래 내역을 국토부 공식 데이터로 제공합니다.`
+    ? `${locLabel} ${buildingName.value}의 매매 실거래가와 시세 변동 추이를 확인하세요. 국토부 공식 데이터 기반 최근 거래 내역, 평당가, 주변 생활 인프라 정보를 제공합니다.`
+    : `${locLabel} ${buildingName.value}의 전세·월세 실거래가를 확인하세요. 전세가와 월세 시세, 최근 거래 내역을 국토부 공식 데이터로 제공합니다.`
   const canonicalBase = `${SITE_URL}/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}`
   const canonicalUrl = bjdCode.value ? `${canonicalBase}?bjdCode=${bjdCode.value}` : canonicalBase
   return {
