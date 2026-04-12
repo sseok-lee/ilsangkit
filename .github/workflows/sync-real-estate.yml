@@ -42,4 +42,8 @@ jobs:
             echo "--- Summary 테이블 갱신 ---"
             node dist/scripts/refreshRealEstateSummary.js
 
+            # 청약 분양정보 동기화
+            echo "--- 청약 동기화 ---"
+            node dist/scripts/syncSubscription.js || echo "[WARN] 청약 동기화 실패"
+
             echo "=== 동기화 완료 ==="
