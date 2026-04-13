@@ -407,9 +407,8 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
     });
     if (!sub) continue;
 
-    const rank = item.SUBSCRPT_RANK_CODE;
-    const regionCode = item.RESIDE_SECD?.trim();
-    if (!rank || !regionCode) continue; // unique key 구성 불가 레코드 skip
+    const rank = item.SUBSCRPT_RANK_CODE ?? 0;        // 0 = 순위 구분 없는 집계
+    const regionCode = item.RESIDE_SECD?.trim() || '00'; // '00' = 지역 구분 없는 집계
 
     await prisma.subscriptionCompetition.upsert({
       where: {
