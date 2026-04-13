@@ -1246,6 +1246,9 @@ model Subscription {
   updatedAt               DateTime  @updatedAt
 
   unitTypes               SubscriptionUnitType[]
+  competitions            SubscriptionCompetition[]
+  scores                  SubscriptionScore[]
+  specialStatuses         SubscriptionSpecialStatus[]
 
   @@unique([houseManageNo, pblancNo])
   @@index([status])
@@ -1273,5 +1276,80 @@ model SubscriptionUnitType {
   transferCount     Int?
   etcCount          Int?
 
+  @@index([subscriptionId])
+}
+
+// 청약 경쟁률 (순위별/지역별)
+model SubscriptionCompetition {
+  id                Int          @id @default(autoincrement())
+  subscriptionId    Int
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  modelNo           String       @db.VarChar(10)
+  houseType         String?      @db.VarChar(30)
+  rank              Int                              // 1순위=1, 2순위=2
+  regionCode        String       @db.VarChar(5)      // 01=해당지역, 02=기타지역
+  regionName        String?      @db.VarChar(20)
+  supplyCount       Int?                             // 공급세대수
+  applicantCount    Int?                             // 접수자수
+  competitionRate   String?      @db.VarChar(30)     // 경쟁률 (문자열)
+
+  @@unique([subscriptionId, modelNo, rank, regionCode])
+  @@index([subscriptionId])
+}
+
+// 청약 당첨 가점
+model SubscriptionScore {
+  id                Int          @id @default(autoincrement())
+  subscriptionId    Int
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  modelNo           String       @db.VarChar(10)
+  houseType         String?      @db.VarChar(30)
+  regionCode        String       @db.VarChar(5)
+  regionName        String?      @db.VarChar(20)
+  minScore          String?      @db.VarChar(10)     // 최저가점 ("-" 가능)
+  maxScore          String?      @db.VarChar(10)     // 최고가점
+  avgScore          String?      @db.VarChar(10)     // 평균가점
+
+  @@unique([subscriptionId, modelNo, regionCode])
+  @@index([subscriptionId])
+}
+
+// 특별공급 신청현황
+model SubscriptionSpecialStatus {
+  id                        Int          @id @default(autoincrement())
+  subscriptionId            Int
+  subscription              Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  houseType                 String?      @db.VarChar(30)
+  resultName                String?      @db.VarChar(50)   // 청약접수 종료 등
+  specialSupplyCount        Int?                           // 특별공급 세대수
+  // 유형별 공급세대수
+  newlywedsSupply           Int?
+  multiChildSupply          Int?
+  firstLifeSupply           Int?
+  elderlySupply             Int?
+  institutionSupply         Int?
+  youthSupply               Int?
+  newbornSupply             Int?
+  transferSupply            Int?
+  // 유형별 신청자수 (해당지역)
+  newlywedsAreaCount        Int?
+  multiChildAreaCount       Int?
+  firstLifeAreaCount        Int?
+  elderlyAreaCount          Int?
+  youthAreaCount            Int?
+  newbornAreaCount          Int?
+  // 유형별 신청자수 (기타지역)
+  newlywedsOtherCount       Int?
+  multiChildOtherCount      Int?
+  firstLifeOtherCount       Int?
+  elderlyOtherCount         Int?
+  youthOtherCount           Int?
+  newbornOtherCount         Int?
+  // 기관추천/이전기관
+  institutionDecisionCount  Int?
+  institutionPrepareCount   Int?
+  transferCount             Int?
+
+  @@unique([subscriptionId, houseType])
   @@index([subscriptionId])
 }

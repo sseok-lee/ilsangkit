@@ -52,3 +52,56 @@ export interface SubscriptionUnitType {
   transferCount: number | null
   etcCount: number | null
 }
+
+export interface SubscriptionCompetition {
+  id: number
+  modelNo: string
+  houseType: string | null
+  rank: number // 1=1순위, 2=2순위
+  regionCode: string // 01=해당지역, 02=기타지역
+  regionName: string | null
+  supplyCount: number | null
+  applicantCount: number | null
+  competitionRate: string | null
+}
+
+export interface SubscriptionScore {
+  id: number
+  modelNo: string
+  houseType: string | null
+  regionCode: string
+  regionName: string | null
+  minScore: string | null
+  maxScore: string | null
+  avgScore: string | null
+}
+
+export interface SubscriptionSpecialStatus {
+  id: number
+  houseType: string | null
+  resultName: string | null
+  specialSupplyCount: number | null
+  newlywedsSupply: number | null
+  multiChildSupply: number | null
+  firstLifeSupply: number | null
+  elderlySupply: number | null
+  institutionSupply: number | null
+  youthSupply: number | null
+  newbornSupply: number | null
+  transferSupply: number | null
+  newlywedsAreaCount: number | null
+  multiChildAreaCount: number | null
+  firstLifeAreaCount: number | null
+  elderlyAreaCount: number | null
+  youthAreaCount: number | null
+  newbornAreaCount: number | null
+  newlywedsOtherCount: number | null
+  multiChildOtherCount: number | null
+  firstLifeOtherCount: number | null
+  elderlyOtherCount: number | null
+  youthOtherCount: number | null
+  newbornOtherCount: number | null
+  institutionDecisionCount: number | null
+  institutionPrepareCount: number | null
+  transferCount: number | null
+}

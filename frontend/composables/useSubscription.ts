@@ -1,6 +1,6 @@
 // @TASK Phase8 - 청약 API composable
 
-import type { Subscription, SubscriptionUnitType } from '~/types/subscription'
+import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
 
 export interface SubscriptionListResponse {
   items: Subscription[]
@@ -11,6 +11,9 @@ export interface SubscriptionListResponse {
 
 export type SubscriptionDetailResponse = Subscription & {
   unitTypes: SubscriptionUnitType[]
+  competitions: SubscriptionCompetition[]
+  scores: SubscriptionScore[]
+  specialStatuses: SubscriptionSpecialStatus[]
 }
 
 export function useSubscription() {

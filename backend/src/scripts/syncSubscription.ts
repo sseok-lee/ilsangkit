@@ -6,6 +6,7 @@ import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 
 const API_BASE = 'https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1';
+const API_BASE_CMPET = 'https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1';
 const PER_PAGE = 100;
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,62 @@ interface UnitTypeApiItem {
   ETC_HSHLDCO: number;
 }
 
+interface CompetitionApiItem {
+  HOUSE_MANAGE_NO: string;
+  PBLANC_NO: string;
+  MODEL_NO: string;
+  HOUSE_TY: string;
+  SUBSCRPT_RANK_CODE: number;
+  RESIDE_SECD: string;
+  RESIDE_SENM: string;
+  SUPLY_HSHLDCO: number;
+  REQ_CNT: string;
+  CMPET_RATE: string;
+}
+
+interface ScoreApiItem {
+  HOUSE_MANAGE_NO: string;
+  PBLANC_NO: string;
+  MODEL_NO: string;
+  HOUSE_TY: string;
+  RESIDE_SECD: string;
+  RESIDE_SENM: string;
+  LWET_SCORE: string;
+  TOP_SCORE: string;
+  AVRG_SCORE: string;
+}
+
+interface SpecialStatusApiItem {
+  HOUSE_MANAGE_NO: string;
+  PBLANC_NO: string;
+  HOUSE_TY: string;
+  SUBSCRPT_RESULT_NM: string;
+  SPSPLY_HSHLDCO: number;
+  NWWDS_NMTW_HSHLDCO: number;
+  MNYCH_HSHLDCO: number;
+  LFE_FRST_HSHLDCO: number;
+  OLD_PARNTS_SUPORT_HSHLDCO: number;
+  INSTT_RECOMEND_HSHLDCO: number;
+  YGMN_HSHLDCO: number;
+  NWBB_NWBBSHR_HSHLDCO: number;
+  TRANSR_INSTT_ENFSN_HSHLDCO: number;
+  CRSPAREA_NWWDS_NMTW_CNT: number;
+  CRSPAREA_MNYCH_CNT: number;
+  CRSPAREA_LFE_FRST_CNT: number;
+  CRSPAREA_OPS_CNT: number;
+  CRSPAREA_YGMN_CNT: number;
+  CRSPAREA_NWBB_NWBBSHR_CNT: number;
+  ETC_AREA_NWWDS_NMTW_CNT: number;
+  ETC_AREA_MNYCH_CNT: number;
+  ETC_AREA_LFE_FRST_CNT: number;
+  ETC_AREA_OPS_CNT: number;
+  ETC_AREA_YGMN_CNT: number;
+  ETC_AREA_NWBB_NWBBSHR_CNT: number;
+  INSTT_RECOMEND_DCSN_CNT: number;
+  INSTT_RECOMEND_PREPAR_CNT: number;
+  TRANSR_INSTT_ENFSN_CNT: number;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -96,11 +153,11 @@ function parseAmount(s: string | null | undefined): number | null {
 // API fetch
 // ---------------------------------------------------------------------------
 
-async function fetchPage<T>(endpoint: string, page: number, params?: Record<string, string>): Promise<{ data: T[]; totalCount: number }> {
+async function fetchPage<T>(endpoint: string, page: number, params?: Record<string, string>, baseUrl = API_BASE): Promise<{ data: T[]; totalCount: number }> {
   const serviceKey = process.env.OPENAPI_SERVICE_KEY;
   if (!serviceKey) throw new Error('OPENAPI_SERVICE_KEY not set');
 
-  const url = new URL(`${API_BASE}/${endpoint}`);
+  const url = new URL(`${baseUrl}/${endpoint}`);
   url.searchParams.set('serviceKey', serviceKey);
   url.searchParams.set('page', String(page));
   url.searchParams.set('perPage', String(PER_PAGE));
@@ -116,14 +173,14 @@ async function fetchPage<T>(endpoint: string, page: number, params?: Record<stri
   return { data: json.data ?? [], totalCount: json.totalCount ?? 0 };
 }
 
-async function fetchAll<T>(endpoint: string, params?: Record<string, string>): Promise<T[]> {
-  const first = await fetchPage<T>(endpoint, 1, params);
+async function fetchAll<T>(endpoint: string, params?: Record<string, string>, baseUrl = API_BASE): Promise<T[]> {
+  const first = await fetchPage<T>(endpoint, 1, params, baseUrl);
   const totalPages = Math.ceil(first.totalCount / PER_PAGE);
   console.log(`  총 ${first.totalCount}건, ${totalPages}페이지`);
 
   const items = [...first.data];
   for (let page = 2; page <= totalPages; page++) {
-    const { data } = await fetchPage<T>(endpoint, page, params);
+    const { data } = await fetchPage<T>(endpoint, page, params, baseUrl);
     items.push(...data);
     if (page % 5 === 0) console.log(`  ${page}/${totalPages} 페이지 완료`);
   }
@@ -273,7 +330,183 @@ async function main() {
   }
   console.log(`주택형 동기화 완료: ${unitCount}건`);
 
-  // 4. SyncHistory 기록
+  // 4. 경쟁률 동기화
+  console.log('경쟁률 API 조회 중...');
+  const competitionItems = await fetchAll<CompetitionApiItem>('getAPTLttotPblancCmpet', undefined, API_BASE_CMPET);
+  console.log(`경쟁률 조회 완료: ${competitionItems.length}건`);
+
+  let competitionCount = 0;
+  for (let i = 0; i < competitionItems.length; i++) {
+    const item = competitionItems[i];
+    const sub = await prisma.subscription.findUnique({
+      where: { houseManageNo_pblancNo: { houseManageNo: item.HOUSE_MANAGE_NO, pblancNo: item.PBLANC_NO } },
+      select: { id: true },
+    });
+    if (!sub) continue;
+
+    await prisma.subscriptionCompetition.upsert({
+      where: {
+        subscriptionId_modelNo_rank_regionCode: {
+          subscriptionId: sub.id,
+          modelNo: item.MODEL_NO,
+          rank: item.SUBSCRPT_RANK_CODE,
+          regionCode: item.RESIDE_SECD,
+        },
+      },
+      update: {
+        houseType: item.HOUSE_TY || null,
+        regionName: item.RESIDE_SENM || null,
+        supplyCount: item.SUPLY_HSHLDCO ?? null,
+        applicantCount: parseInt(item.REQ_CNT) || null,
+        competitionRate: item.CMPET_RATE || null,
+      },
+      create: {
+        subscriptionId: sub.id,
+        modelNo: item.MODEL_NO,
+        houseType: item.HOUSE_TY || null,
+        rank: item.SUBSCRPT_RANK_CODE,
+        regionCode: item.RESIDE_SECD,
+        regionName: item.RESIDE_SENM || null,
+        supplyCount: item.SUPLY_HSHLDCO ?? null,
+        applicantCount: parseInt(item.REQ_CNT) || null,
+        competitionRate: item.CMPET_RATE || null,
+      },
+    });
+    competitionCount++;
+    if ((i + 1) % 500 === 0) console.log(`  경쟁률 ${i + 1}/${competitionItems.length} 처리`);
+  }
+  console.log(`경쟁률 동기화 완료: ${competitionCount}건`);
+
+  // 5. 당첨 가점 동기화
+  console.log('당첨 가점 API 조회 중...');
+  const scoreItems = await fetchAll<ScoreApiItem>('getAptLttotPblancScore', undefined, API_BASE_CMPET);
+  console.log(`당첨 가점 조회 완료: ${scoreItems.length}건`);
+
+  let scoreCount = 0;
+  for (let i = 0; i < scoreItems.length; i++) {
+    const item = scoreItems[i];
+    const sub = await prisma.subscription.findUnique({
+      where: { houseManageNo_pblancNo: { houseManageNo: item.HOUSE_MANAGE_NO, pblancNo: item.PBLANC_NO } },
+      select: { id: true },
+    });
+    if (!sub) continue;
+
+    await prisma.subscriptionScore.upsert({
+      where: {
+        subscriptionId_modelNo_regionCode: {
+          subscriptionId: sub.id,
+          modelNo: item.MODEL_NO,
+          regionCode: item.RESIDE_SECD,
+        },
+      },
+      update: {
+        houseType: item.HOUSE_TY || null,
+        regionName: item.RESIDE_SENM || null,
+        minScore: item.LWET_SCORE || null,
+        maxScore: item.TOP_SCORE || null,
+        avgScore: item.AVRG_SCORE || null,
+      },
+      create: {
+        subscriptionId: sub.id,
+        modelNo: item.MODEL_NO,
+        houseType: item.HOUSE_TY || null,
+        regionCode: item.RESIDE_SECD,
+        regionName: item.RESIDE_SENM || null,
+        minScore: item.LWET_SCORE || null,
+        maxScore: item.TOP_SCORE || null,
+        avgScore: item.AVRG_SCORE || null,
+      },
+    });
+    scoreCount++;
+    if ((i + 1) % 500 === 0) console.log(`  당첨 가점 ${i + 1}/${scoreItems.length} 처리`);
+  }
+  console.log(`당첨 가점 동기화 완료: ${scoreCount}건`);
+
+  // 6. 특별공급 신청현황 동기화
+  console.log('특별공급 신청현황 API 조회 중...');
+  const specialItems = await fetchAll<SpecialStatusApiItem>('getAPTSpsplyReqstStus', undefined, API_BASE_CMPET);
+  console.log(`특별공급 신청현황 조회 완료: ${specialItems.length}건`);
+
+  let specialCount = 0;
+  for (let i = 0; i < specialItems.length; i++) {
+    const item = specialItems[i];
+    const sub = await prisma.subscription.findUnique({
+      where: { houseManageNo_pblancNo: { houseManageNo: item.HOUSE_MANAGE_NO, pblancNo: item.PBLANC_NO } },
+      select: { id: true },
+    });
+    if (!sub) continue;
+
+    const houseType = item.HOUSE_TY || '';
+    await prisma.subscriptionSpecialStatus.upsert({
+      where: {
+        subscriptionId_houseType: {
+          subscriptionId: sub.id,
+          houseType,
+        },
+      },
+      update: {
+        resultName: item.SUBSCRPT_RESULT_NM || null,
+        specialSupplyCount: item.SPSPLY_HSHLDCO ?? null,
+        newlywedsSupply: item.NWWDS_NMTW_HSHLDCO ?? null,
+        multiChildSupply: item.MNYCH_HSHLDCO ?? null,
+        firstLifeSupply: item.LFE_FRST_HSHLDCO ?? null,
+        elderlySupply: item.OLD_PARNTS_SUPORT_HSHLDCO ?? null,
+        institutionSupply: item.INSTT_RECOMEND_HSHLDCO ?? null,
+        youthSupply: item.YGMN_HSHLDCO ?? null,
+        newbornSupply: item.NWBB_NWBBSHR_HSHLDCO ?? null,
+        transferSupply: item.TRANSR_INSTT_ENFSN_HSHLDCO ?? null,
+        newlywedsAreaCount: item.CRSPAREA_NWWDS_NMTW_CNT ?? null,
+        multiChildAreaCount: item.CRSPAREA_MNYCH_CNT ?? null,
+        firstLifeAreaCount: item.CRSPAREA_LFE_FRST_CNT ?? null,
+        elderlyAreaCount: item.CRSPAREA_OPS_CNT ?? null,
+        youthAreaCount: item.CRSPAREA_YGMN_CNT ?? null,
+        newbornAreaCount: item.CRSPAREA_NWBB_NWBBSHR_CNT ?? null,
+        newlywedsOtherCount: item.ETC_AREA_NWWDS_NMTW_CNT ?? null,
+        multiChildOtherCount: item.ETC_AREA_MNYCH_CNT ?? null,
+        firstLifeOtherCount: item.ETC_AREA_LFE_FRST_CNT ?? null,
+        elderlyOtherCount: item.ETC_AREA_OPS_CNT ?? null,
+        youthOtherCount: item.ETC_AREA_YGMN_CNT ?? null,
+        newbornOtherCount: item.ETC_AREA_NWBB_NWBBSHR_CNT ?? null,
+        institutionDecisionCount: item.INSTT_RECOMEND_DCSN_CNT ?? null,
+        institutionPrepareCount: item.INSTT_RECOMEND_PREPAR_CNT ?? null,
+        transferCount: item.TRANSR_INSTT_ENFSN_CNT ?? null,
+      },
+      create: {
+        subscriptionId: sub.id,
+        houseType,
+        resultName: item.SUBSCRPT_RESULT_NM || null,
+        specialSupplyCount: item.SPSPLY_HSHLDCO ?? null,
+        newlywedsSupply: item.NWWDS_NMTW_HSHLDCO ?? null,
+        multiChildSupply: item.MNYCH_HSHLDCO ?? null,
+        firstLifeSupply: item.LFE_FRST_HSHLDCO ?? null,
+        elderlySupply: item.OLD_PARNTS_SUPORT_HSHLDCO ?? null,
+        institutionSupply: item.INSTT_RECOMEND_HSHLDCO ?? null,
+        youthSupply: item.YGMN_HSHLDCO ?? null,
+        newbornSupply: item.NWBB_NWBBSHR_HSHLDCO ?? null,
+        transferSupply: item.TRANSR_INSTT_ENFSN_HSHLDCO ?? null,
+        newlywedsAreaCount: item.CRSPAREA_NWWDS_NMTW_CNT ?? null,
+        multiChildAreaCount: item.CRSPAREA_MNYCH_CNT ?? null,
+        firstLifeAreaCount: item.CRSPAREA_LFE_FRST_CNT ?? null,
+        elderlyAreaCount: item.CRSPAREA_OPS_CNT ?? null,
+        youthAreaCount: item.CRSPAREA_YGMN_CNT ?? null,
+        newbornAreaCount: item.CRSPAREA_NWBB_NWBBSHR_CNT ?? null,
+        newlywedsOtherCount: item.ETC_AREA_NWWDS_NMTW_CNT ?? null,
+        multiChildOtherCount: item.ETC_AREA_MNYCH_CNT ?? null,
+        firstLifeOtherCount: item.ETC_AREA_LFE_FRST_CNT ?? null,
+        elderlyOtherCount: item.ETC_AREA_OPS_CNT ?? null,
+        youthOtherCount: item.ETC_AREA_YGMN_CNT ?? null,
+        newbornOtherCount: item.ETC_AREA_NWBB_NWBBSHR_CNT ?? null,
+        institutionDecisionCount: item.INSTT_RECOMEND_DCSN_CNT ?? null,
+        institutionPrepareCount: item.INSTT_RECOMEND_PREPAR_CNT ?? null,
+        transferCount: item.TRANSR_INSTT_ENFSN_CNT ?? null,
+      },
+    });
+    specialCount++;
+    if ((i + 1) % 500 === 0) console.log(`  특별공급 ${i + 1}/${specialItems.length} 처리`);
+  }
+  console.log(`특별공급 신청현황 동기화 완료: ${specialCount}건`);
+
+  // 7. SyncHistory 기록
   await prisma.syncHistory.create({
     data: {
       category: 'subscription',

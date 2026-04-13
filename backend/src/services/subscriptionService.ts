@@ -33,7 +33,12 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
 export async function getSubscriptionDetail(id: number) {
   const subscription = await prisma.subscription.findUnique({
     where: { id },
-    include: { unitTypes: true },
+    include: {
+      unitTypes: true,
+      competitions: { orderBy: [{ modelNo: 'asc' }, { rank: 'asc' }, { regionCode: 'asc' }] },
+      scores: { orderBy: [{ modelNo: 'asc' }, { regionCode: 'asc' }] },
+      specialStatuses: { orderBy: { houseType: 'asc' } },
+    },
   });
 
   if (!subscription) {

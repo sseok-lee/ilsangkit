@@ -152,7 +152,103 @@
         <!-- Ad: 특별공급 아래 -->
         <AdBanner />
 
-        <!-- 3. 청약 일정 -->
+        <!-- 3. 경쟁률 -->
+        <div v-if="competitions.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[24px]">bar_chart</span>
+            면적별 경쟁률
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b-2 border-slate-200">
+                  <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
+                  <th class="text-right py-3 px-3 font-semibold text-slate-800">1순위(해당)</th>
+                  <th class="text-right py-3 px-3 font-semibold text-slate-800">1순위(기타)</th>
+                  <th class="text-right py-3 px-3 font-semibold text-slate-800">2순위(해당)</th>
+                  <th class="text-right py-3 px-3 font-semibold text-slate-800">2순위(기타)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in competitionByModel" :key="row.modelNo" class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(row.houseType) }}</td>
+                  <td class="py-3 px-3 text-right" :class="getCompetitionClass(row.rank1Area)">{{ formatCompetition(row.rank1Area) }}</td>
+                  <td class="py-3 px-3 text-right" :class="getCompetitionClass(row.rank1Other)">{{ formatCompetition(row.rank1Other) }}</td>
+                  <td class="py-3 px-3 text-right text-slate-600">{{ formatCompetition(row.rank2Area) }}</td>
+                  <td class="py-3 px-3 text-right text-slate-600">{{ formatCompetition(row.rank2Other) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">info</span>
+            접수자수/공급세대수 기준 경쟁률입니다
+          </p>
+        </div>
+
+        <!-- 4. 당첨 가점 -->
+        <div v-if="validScores.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[24px]">stars</span>
+            당첨 가점 분석
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b-2 border-slate-200">
+                  <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
+                  <th class="text-left py-3 px-3 font-semibold text-slate-800">지역</th>
+                  <th class="text-right py-3 px-3 font-semibold text-slate-800">최저 가점</th>
+                  <th class="text-right py-3 px-3 font-semibold text-slate-800">최고 가점</th>
+                  <th class="text-right py-3 px-3 font-semibold text-slate-800">평균 가점</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="score in validScores" :key="`${score.modelNo}-${score.regionCode}`" class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(score.houseType) }}</td>
+                  <td class="py-3 px-3 text-slate-600">{{ score.regionName || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-semibold text-blue-600">{{ score.minScore || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-semibold text-red-600">{{ score.maxScore || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-bold text-slate-900">{{ score.avgScore || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">info</span>
+            가점제 적용 단지의 1순위 당첨 가점입니다. 84점 만점 기준.
+          </p>
+        </div>
+
+        <!-- 5. 특별공급 신청 경쟁률 -->
+        <div v-if="specialStatuses.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[24px]">person</span>
+            특별공급 신청현황
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b-2 border-slate-200">
+                  <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
+                  <th v-for="col in activeSpecialStatusColumns" :key="col.key" class="text-right py-3 px-3 font-semibold text-slate-800">{{ col.label }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="status in specialStatuses" :key="status.houseType ?? status.id" class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(status.houseType) }}</td>
+                  <td v-for="col in activeSpecialStatusColumns" :key="col.key" class="py-3 px-3 text-right text-slate-600">
+                    <span class="block text-xs text-slate-400">{{ (status[col.applyKey] as number) || 0 }}명 / {{ (status[col.supplyKey] as number) || 0 }}세대</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <AdBanner />
+
+        <!-- 6. 청약 일정 -->
         <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
           <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
             <span class="material-symbols-outlined text-primary text-[24px]">schedule</span>
@@ -300,7 +396,7 @@
 
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import type { Subscription, SubscriptionUnitType } from '~/types/subscription'
+import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
 
@@ -311,6 +407,9 @@ const { getSubscriptionDetail } = useSubscription()
 
 const subscription = ref<Subscription | null>(null)
 const unitTypes = ref<SubscriptionUnitType[]>([])
+const competitions = ref<SubscriptionCompetition[]>([])
+const scores = ref<SubscriptionScore[]>([])
+const specialStatuses = ref<SubscriptionSpecialStatus[]>([])
 const pending = ref(false)
 const error = ref<string | null>(null)
 
@@ -368,6 +467,60 @@ function specialColumnTotal(key: string): number {
 }
 
 const hasSpecialSupply = computed(() => activeSpecialColumns.value.length > 0)
+
+// 경쟁률 모델별 그룹핑
+const competitionByModel = computed(() => {
+  const map = new Map<string, { modelNo: string; houseType: string | null; rank1Area: SubscriptionCompetition | null; rank1Other: SubscriptionCompetition | null; rank2Area: SubscriptionCompetition | null; rank2Other: SubscriptionCompetition | null }>()
+  for (const c of competitions.value) {
+    if (!map.has(c.modelNo)) {
+      map.set(c.modelNo, { modelNo: c.modelNo, houseType: c.houseType, rank1Area: null, rank1Other: null, rank2Area: null, rank2Other: null })
+    }
+    const row = map.get(c.modelNo)!
+    if (c.rank === 1 && c.regionCode === '01') row.rank1Area = c
+    else if (c.rank === 1 && c.regionCode === '02') row.rank1Other = c
+    else if (c.rank === 2 && c.regionCode === '01') row.rank2Area = c
+    else if (c.rank === 2 && c.regionCode === '02') row.rank2Other = c
+  }
+  return [...map.values()]
+})
+
+function formatCompetition(c: SubscriptionCompetition | null): string {
+  if (!c) return '-'
+  const count = c.applicantCount ?? 0
+  const supply = c.supplyCount ?? 0
+  if (supply === 0) return '-'
+  return `${count}/${supply} (${c.competitionRate || '-'})`
+}
+
+function getCompetitionClass(c: SubscriptionCompetition | null): string {
+  if (!c || !c.applicantCount || !c.supplyCount) return 'text-slate-600'
+  const rate = c.applicantCount / c.supplyCount
+  if (rate >= 10) return 'text-red-600 font-bold'
+  if (rate >= 5) return 'text-orange-600 font-semibold'
+  if (rate >= 1) return 'text-slate-900 font-medium'
+  return 'text-slate-600'
+}
+
+// 유효한 가점 (모두 "-"인 행 제외)
+const validScores = computed(() =>
+  scores.value.filter(s => s.minScore !== '-' || s.maxScore !== '-' || s.avgScore !== '-')
+)
+
+// 특별공급 신청현황 컬럼
+const allSpecialStatusColumns = [
+  { key: 'newlyweds', label: '신혼부부', supplyKey: 'newlywedsSupply' as const, applyKey: 'newlywedsAreaCount' as const },
+  { key: 'multiChild', label: '다자녀', supplyKey: 'multiChildSupply' as const, applyKey: 'multiChildAreaCount' as const },
+  { key: 'firstLife', label: '생애최초', supplyKey: 'firstLifeSupply' as const, applyKey: 'firstLifeAreaCount' as const },
+  { key: 'elderly', label: '노부모부양', supplyKey: 'elderlySupply' as const, applyKey: 'elderlyAreaCount' as const },
+  { key: 'youth', label: '청년', supplyKey: 'youthSupply' as const, applyKey: 'youthAreaCount' as const },
+  { key: 'newborn', label: '신생아', supplyKey: 'newbornSupply' as const, applyKey: 'newbornAreaCount' as const },
+]
+
+const activeSpecialStatusColumns = computed(() =>
+  allSpecialStatusColumns.filter(col =>
+    specialStatuses.value.some(s => (s[col.supplyKey] as number) > 0 || (s[col.applyKey] as number) > 0)
+  )
+)
 
 // 포맷 함수들
 function getStatusLabel(status: string): string {
@@ -435,9 +588,12 @@ const { data } = await useAsyncData(`subscription-${id}`, () =>
 )
 
 if (data.value) {
-  const { unitTypes: units, ...sub } = data.value
+  const { unitTypes: units, competitions: comps, scores: scrs, specialStatuses: specials, ...sub } = data.value
   subscription.value = sub
   unitTypes.value = units || []
+  competitions.value = comps || []
+  scores.value = scrs || []
+  specialStatuses.value = specials || []
 }
 
 const { setBreadcrumbSchema } = useStructuredData()
