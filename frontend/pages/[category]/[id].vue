@@ -431,6 +431,9 @@
               </div>
 
 
+              <!-- Ad: 로드뷰 위 (Desktop) -->
+              <AdBanner />
+
               <!-- Roadview Card (Desktop) -->
               <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#f0f2f5]">
@@ -1629,6 +1632,9 @@
               </template>
             </div>
           </div>
+
+          <!-- Ad: 로드뷰 위 (Mobile) -->
+          <AdBanner />
 
           <!-- Roadview Card (Mobile) -->
           <div class="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">

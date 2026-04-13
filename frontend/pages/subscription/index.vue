@@ -108,6 +108,9 @@
         <p class="text-slate-500 text-sm mt-1">다른 조건으로 다시 검색해보세요</p>
       </div>
 
+      <!-- Ad: 청약 목록 위 -->
+      <AdBanner />
+
       <!-- Subscription List -->
       <div v-else class="space-y-6">
         <div class="flex items-center justify-between">

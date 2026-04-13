@@ -78,6 +78,9 @@
         </button>
       </div>
 
+      <!-- Ad: 건물 목록 위 -->
+      <AdBanner />
+
       <div v-else-if="complexes.length > 0" class="mt-6">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-slate-800">건물 목록</h2>

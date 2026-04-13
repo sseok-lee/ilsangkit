@@ -127,6 +127,9 @@
         </div>
       </section>
 
+      <!-- Ad: 지도 위 -->
+      <AdBanner />
+
       <!-- 지도 + 로드뷰 (데스크톱) -->
       <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mb-6 hidden md:block">
         <div class="grid grid-cols-2 gap-4">
@@ -195,6 +198,9 @@
           </div>
         </div>
       </section>
+
+      <!-- Ad: 로드뷰 아래 -->
+      <AdBanner />
 
       <!-- 매매/전월세 탭 -->
       <TransactionModeTab v-model="currentTab" class="mb-6" />

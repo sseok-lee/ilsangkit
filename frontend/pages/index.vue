@@ -67,6 +67,11 @@
         </div>
       </section>
 
+      <!-- Ad: 히어로 아래 -->
+      <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+        <AdBanner />
+      </div>
+
       <!-- 부동산 + 시설 카테고리 통합 Section -->
       <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- 부동산 실거래가 -->

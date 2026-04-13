@@ -59,7 +59,7 @@
         <AdBanner />
       </div>
 
-      <!-- Markdown Content -->
+      <!-- Markdown Content (Part 1) -->
       <div
         class="
           prose prose-slate max-w-none
@@ -72,7 +72,27 @@
           prose-strong:text-slate-900
           prose-ul:my-4 prose-ol:my-4
         "
-        v-html="renderedContent"
+        v-html="contentParts[0]"
+      ></div>
+
+      <!-- Ad: 본문 중간 -->
+      <AdBanner v-if="contentParts[1]" />
+
+      <!-- Markdown Content (Part 2) -->
+      <div
+        v-if="contentParts[1]"
+        class="
+          prose prose-slate max-w-none
+          prose-headings:font-bold
+          prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
+          prose-h3:text-lg prose-h3:mt-6
+          prose-p:leading-relaxed prose-p:text-slate-700
+          prose-li:leading-relaxed
+          prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+          prose-strong:text-slate-900
+          prose-ul:my-4 prose-ol:my-4
+        "
+        v-html="contentParts[1]"
       ></div>
 
       <!-- Keywords -->
@@ -204,6 +224,22 @@ const renderedContent = computed(() => {
   if (!guide.value?.content) return ''
   const rawHtml = marked(guide.value.content) as string
   return DOMPurify.sanitize(rawHtml)
+})
+
+// 본문을 3번째 <h2> 기준으로 분할하여 중간 광고 삽입
+const contentParts = computed<[string, string?]>(() => {
+  const html = renderedContent.value
+  if (!html) return ['']
+  const h2Regex = /<h2[\s>]/gi
+  let match: RegExpExecArray | null
+  let count = 0
+  while ((match = h2Regex.exec(html)) !== null) {
+    count++
+    if (count === 3) {
+      return [html.slice(0, match.index), html.slice(match.index)]
+    }
+  }
+  return [html]
 })
 
 const keywordList = computed(() => {
