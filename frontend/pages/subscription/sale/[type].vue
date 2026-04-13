@@ -61,7 +61,10 @@ useHead({
     { property: 'og:url', content: canonicalUrl },
     { property: 'og:type', content: 'website' },
     { property: 'og:site_name', content: SITE_NAME },
+    { property: 'og:locale', content: 'ko_KR' },
     { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: title },
+    { name: 'twitter:description', content: description },
   ],
   link: [{ rel: 'canonical', href: canonicalUrl }],
 })

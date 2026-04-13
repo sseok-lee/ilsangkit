@@ -10,6 +10,7 @@ import {
   getWasteScheduleIds,
   getRegionCategoryCombinations,
   getRealEstateBuildings,
+  getSubscriptionIds,
 } from '../services/sitemapService.js';
 
 const SitemapFacilitiesQuerySchema = z.object({
@@ -77,6 +78,18 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const buildings = await getRealEstateBuildings();
     res.json({ success: true, data: buildings });
+  })
+);
+
+/**
+ * GET /api/sitemap/subscriptions
+ * 청약 공고 전체 ID + updatedAt 조회
+ */
+router.get(
+  '/subscriptions',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const data = await getSubscriptionIds();
+    res.json({ success: true, data });
   })
 );
 

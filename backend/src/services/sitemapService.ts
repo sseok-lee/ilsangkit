@@ -20,6 +20,13 @@ export async function getRegionCategoryCombinations() {
   return facilityService.getRegionCategoryCombinations();
 }
 
+export async function getSubscriptionIds() {
+  return prisma.subscription.findMany({
+    select: { id: true, updatedAt: true },
+    orderBy: { id: 'asc' },
+  });
+}
+
 export async function getRealEstateBuildings() {
   return prisma.$queryRaw<
     Array<{ propertyType: string; buildingName: string; bjdCode: string }>
