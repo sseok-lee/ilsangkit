@@ -1,10 +1,10 @@
 <template>
   <div v-if="!adError" class="ad-banner my-6">
     <ClientOnly>
-      <div :key="adKey" ref="adContainer" class="flex justify-center min-h-[100px]">
+      <div :key="adKey" ref="adContainer" class="w-full min-h-[100px]">
         <ins
           class="adsbygoogle"
-          style="display: block"
+          style="display: block; width: 100%"
           :data-ad-client="AD_CLIENT"
           :data-ad-slot="adSlot"
           :data-ad-format="adFormat"
