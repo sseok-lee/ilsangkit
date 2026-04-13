@@ -4,12 +4,13 @@ import type { SubscriptionListParams } from '../schemas/subscription.js';
 import type { Prisma } from '@prisma/client';
 
 export async function getSubscriptionList(params: SubscriptionListParams) {
-  const { status, region, houseType, page, limit } = params;
+  const { status, region, houseType, rentType, page, limit } = params;
 
   const where: Prisma.SubscriptionWhereInput = {};
   if (status) where.status = status;
   if (region) where.regionName = { contains: region };
   if (houseType) where.houseType = houseType;
+  if (rentType) where.rentType = rentType;
 
   const [items, total] = await Promise.all([
     prisma.subscription.findMany({

@@ -31,7 +31,7 @@
 
       <!-- Filter Section -->
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- Region Filter -->
           <div>
             <label class="block text-xs font-medium text-slate-600 mb-1.5">지역</label>
@@ -66,6 +66,22 @@
                 <option value="">전체</option>
                 <option value="APT">아파트</option>
                 <option value="오피스텔">오피스텔</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
+            </div>
+          </div>
+
+          <!-- Rent Type Filter -->
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1.5">분양/임대</label>
+            <div class="relative">
+              <select
+                v-model="selectedRentType"
+                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+              >
+                <option value="">전체</option>
+                <option value="분양주택">분양</option>
+                <option value="임대주택">임대</option>
               </select>
               <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
             </div>
@@ -108,11 +124,10 @@
         <p class="text-slate-500 text-sm mt-1">다른 조건으로 다시 검색해보세요</p>
       </div>
 
-      <!-- Ad: 청약 목록 위 -->
-      <AdBanner />
-
       <!-- Subscription List -->
       <div v-else class="space-y-6">
+        <!-- Ad: 청약 목록 위 -->
+        <AdBanner />
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-slate-800">
             {{ getStatusLabel(currentStatus) }} 청약
@@ -220,6 +235,7 @@ const { getSubscriptionList } = useSubscription()
 const currentStatus = ref<'upcoming' | 'ongoing' | 'closed'>('upcoming')
 const selectedRegion = ref('')
 const selectedHouseType = ref('')
+const selectedRentType = ref('')
 const currentPage = ref(1)
 
 const subscriptions = ref<Subscription[]>([])
@@ -228,7 +244,7 @@ const totalPages = ref(0)
 const pending = ref(false)
 const error = ref<string | null>(null)
 
-watch([currentStatus, selectedRegion, selectedHouseType], () => {
+watch([currentStatus, selectedRegion, selectedHouseType, selectedRentType], () => {
   currentPage.value = 1
   loadSubscriptions()
 })
@@ -245,6 +261,7 @@ async function loadSubscriptions() {
       status: currentStatus.value,
       region: selectedRegion.value || undefined,
       houseType: selectedHouseType.value || undefined,
+      rentType: selectedRentType.value || undefined,
       page: currentPage.value,
       limit: 20,
     })

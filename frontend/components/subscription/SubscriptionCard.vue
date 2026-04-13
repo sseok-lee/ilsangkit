@@ -27,6 +27,7 @@
         <div class="flex flex-wrap items-center gap-2 text-xs">
           <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded">{{ subscription.houseType }}</span>
           <span v-if="subscription.houseDetailType" class="bg-slate-100 text-slate-700 px-2 py-1 rounded">{{ subscription.houseDetailType }}</span>
+          <span v-if="subscription.rentType" :class="rentTypeBadgeClass">{{ rentTypeLabel }}</span>
         </div>
 
         <!-- Date range -->
@@ -51,6 +52,19 @@ import type { Subscription } from '~/types/subscription'
 const props = defineProps<{
   subscription: Subscription
 }>()
+
+const rentTypeLabel = computed(() => {
+  const rt = props.subscription.rentType
+  if (rt === '분양주택') return '#분양'
+  if (rt === '임대주택') return '#임대'
+  return rt ? `#${rt}` : ''
+})
+
+const rentTypeBadgeClass = computed(() => {
+  const rt = props.subscription.rentType
+  if (rt === '임대주택') return 'bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium'
+  return 'bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium'
+})
 
 const statusLabel = computed(() => {
   const status = props.subscription.status

@@ -6,6 +6,7 @@ export const SubscriptionListSchema = z.object({
   status: SubscriptionStatusSchema.optional(),
   region: z.string().max(100).optional(),
   houseType: z.string().max(20).optional(),
+  rentType: z.string().max(20).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

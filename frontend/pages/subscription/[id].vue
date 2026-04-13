@@ -26,9 +26,14 @@
               <h1 class="text-2xl md:text-3xl font-bold text-slate-900">{{ subscription.houseName }}</h1>
               <p class="text-slate-500 text-sm mt-2">{{ subscription.supplyLocation || subscription.regionName }}</p>
             </div>
-            <span :class="statusBadgeClass">
-              {{ getStatusLabel(subscription.status) }}
-            </span>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span v-if="subscription.rentType" :class="rentTypeBadgeClass">
+                {{ subscription.rentType === '임대주택' ? '임대' : '분양' }}
+              </span>
+              <span :class="statusBadgeClass">
+                {{ getStatusLabel(subscription.status) }}
+              </span>
+            </div>
           </div>
           <!-- 핵심 요약 -->
           <div class="flex flex-wrap gap-4 mt-4 text-sm">
@@ -47,6 +52,10 @@
             <div v-if="subscription.houseDetailType" class="flex items-center gap-1.5 text-slate-700">
               <span class="material-symbols-outlined text-[18px] text-primary">sell</span>
               {{ subscription.houseDetailType }}
+            </div>
+            <div v-if="priceRange" class="flex items-center gap-1.5 text-slate-700">
+              <span class="material-symbols-outlined text-[18px] text-primary">payments</span>
+              {{ priceRange }}
             </div>
           </div>
         </div>
@@ -68,6 +77,7 @@
                   <th class="text-right py-3 px-4 font-semibold text-slate-800">특별공급</th>
                   <th class="text-right py-3 px-4 font-semibold text-slate-800">합계</th>
                   <th class="text-right py-3 px-4 font-semibold text-slate-800">분양최고가</th>
+                  <th class="text-right py-3 px-4 font-semibold text-slate-800">평당가</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,6 +90,9 @@
                   <td class="py-3 px-4 text-primary font-bold text-right">{{ ((unit.generalCount || 0) + (unit.specialCount || 0)).toLocaleString() }}호</td>
                   <td class="py-3 px-4 text-slate-900 font-semibold text-right">
                     {{ unit.topAmount ? formatPrice(unit.topAmount) : '-' }}
+                  </td>
+                  <td class="py-3 px-4 text-slate-600 text-right">
+                    {{ calcPricePerPyeong(unit) }}
                   </td>
                 </tr>
               </tbody>
@@ -99,17 +112,40 @@
         <!-- Ad: 면적별 테이블 아래 -->
         <AdBanner />
 
-        <!-- 2. 특별공급 상세 -->
+        <!-- 2. 특별공급 상세 매트릭스 -->
         <div v-if="hasSpecialSupply" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
           <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
             <span class="material-symbols-outlined text-primary text-[24px]">info</span>
-            특별공급 유형별 세대수
+            면적별 특별공급 내역
           </h2>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div v-for="item in specialSupplyItems" :key="item.label" class="bg-slate-50 rounded-lg p-4 text-center border border-slate-100">
-              <p class="text-xs text-slate-500 mb-1">{{ item.label }}</p>
-              <p class="text-lg font-bold text-slate-900">{{ item.count.toLocaleString() }}<span class="text-xs font-normal text-slate-500 ml-0.5">호</span></p>
-            </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b-2 border-slate-200">
+                  <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
+                  <th v-for="col in activeSpecialColumns" :key="col.key" class="text-right py-3 px-3 font-semibold text-slate-800">{{ col.label }}</th>
+                  <th class="text-right py-3 px-3 font-semibold text-slate-800">합계</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(unit.houseType) }}</td>
+                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 text-slate-600 text-right">
+                    {{ (unit[col.key as keyof SubscriptionUnitType] as number) || '-' }}
+                  </td>
+                  <td class="py-3 px-3 text-primary font-bold text-right">{{ unit.specialCount || 0 }}</td>
+                </tr>
+              </tbody>
+              <tfoot v-if="unitTypes.length > 1">
+                <tr class="border-t-2 border-slate-300 bg-slate-50">
+                  <td class="py-3 px-3 font-bold text-slate-800">합계</td>
+                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 font-bold text-slate-800 text-right">
+                    {{ specialColumnTotal(col.key) }}
+                  </td>
+                  <td class="py-3 px-3 font-bold text-primary text-right">{{ totalSpecial }}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
 
@@ -278,6 +314,23 @@ const unitTypes = ref<SubscriptionUnitType[]>([])
 const pending = ref(false)
 const error = ref<string | null>(null)
 
+const rentTypeBadgeClass = computed(() => {
+  if (!subscription.value) return ''
+  const rt = subscription.value.rentType
+  const baseClass = 'inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold'
+  if (rt === '임대주택') return `${baseClass} bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200`
+  return `${baseClass} bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200`
+})
+
+const priceRange = computed(() => {
+  const amounts = unitTypes.value.map(u => u.topAmount).filter((a): a is number => a != null && a > 0)
+  if (amounts.length === 0) return null
+  const min = Math.min(...amounts)
+  const max = Math.max(...amounts)
+  if (min === max) return formatPrice(min)
+  return `${formatPrice(min)} ~ ${formatPrice(max)}`
+})
+
 const statusBadgeClass = computed(() => {
   if (!subscription.value) return ''
   const status = subscription.value.status
@@ -291,35 +344,30 @@ const statusBadgeClass = computed(() => {
 const totalGeneral = computed(() => unitTypes.value.reduce((sum, u) => sum + (u.generalCount || 0), 0))
 const totalSpecial = computed(() => unitTypes.value.reduce((sum, u) => sum + (u.specialCount || 0), 0))
 
-// 특별공급 합산
-const totalSpecialCount = computed(() => ({
-  newlyweds: unitTypes.value.reduce((s, u) => s + (u.newlywedsCount || 0), 0),
-  multiChild: unitTypes.value.reduce((s, u) => s + (u.multiChildCount || 0), 0),
-  firstLife: unitTypes.value.reduce((s, u) => s + (u.firstLifeCount || 0), 0),
-  elderly: unitTypes.value.reduce((s, u) => s + (u.elderlyCount || 0), 0),
-  institution: unitTypes.value.reduce((s, u) => s + (u.institutionCount || 0), 0),
-  youth: unitTypes.value.reduce((s, u) => s + (u.youthCount || 0), 0),
-  newborn: unitTypes.value.reduce((s, u) => s + (u.newbornCount || 0), 0),
-  transfer: unitTypes.value.reduce((s, u) => s + (u.transferCount || 0), 0),
-  etc: unitTypes.value.reduce((s, u) => s + (u.etcCount || 0), 0),
-}))
+// 특별공급 매트릭스
+const allSpecialColumns = [
+  { key: 'newlywedsCount', label: '신혼부부' },
+  { key: 'multiChildCount', label: '다자녀' },
+  { key: 'firstLifeCount', label: '생애최초' },
+  { key: 'elderlyCount', label: '노부모부양' },
+  { key: 'institutionCount', label: '기관추천' },
+  { key: 'youthCount', label: '청년' },
+  { key: 'newbornCount', label: '신생아' },
+  { key: 'transferCount', label: '이전기관' },
+  { key: 'etcCount', label: '기타' },
+]
 
-const specialSupplyItems = computed(() => {
-  const t = totalSpecialCount.value
-  return [
-    { label: '신혼부부', count: t.newlyweds },
-    { label: '다자녀', count: t.multiChild },
-    { label: '생애최초', count: t.firstLife },
-    { label: '노부모부양', count: t.elderly },
-    { label: '기관추천', count: t.institution },
-    { label: '청년', count: t.youth },
-    { label: '신생아', count: t.newborn },
-    { label: '이전기관', count: t.transfer },
-    { label: '기타', count: t.etc },
-  ].filter(item => item.count > 0)
-})
+const activeSpecialColumns = computed(() =>
+  allSpecialColumns.filter(col =>
+    unitTypes.value.some(u => (u[col.key as keyof SubscriptionUnitType] as number) > 0)
+  )
+)
 
-const hasSpecialSupply = computed(() => specialSupplyItems.value.length > 0)
+function specialColumnTotal(key: string): number {
+  return unitTypes.value.reduce((sum, u) => sum + ((u[key as keyof SubscriptionUnitType] as number) || 0), 0)
+}
+
+const hasSpecialSupply = computed(() => activeSpecialColumns.value.length > 0)
 
 // 포맷 함수들
 function getStatusLabel(status: string): string {
@@ -361,6 +409,15 @@ function formatSupplyArea(area: string | null): string {
   if (isNaN(sqm)) return area
   const pyeong = (sqm / 3.3058).toFixed(0)
   return `${sqm.toFixed(1)}㎡ (${pyeong}평)`
+}
+
+function calcPricePerPyeong(unit: SubscriptionUnitType): string {
+  if (!unit.topAmount || !unit.supplyArea) return '-'
+  const sqm = parseFloat(unit.supplyArea)
+  if (isNaN(sqm) || sqm === 0) return '-'
+  const pyeong = sqm / 3.3058
+  const pricePerPyeong = Math.round(unit.topAmount / pyeong)
+  return `${pricePerPyeong.toLocaleString()}만원`
 }
 
 function formatPrice(amount: number): string {

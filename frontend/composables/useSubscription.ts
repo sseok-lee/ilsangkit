@@ -21,6 +21,7 @@ export function useSubscription() {
     status?: 'upcoming' | 'ongoing' | 'closed'
     region?: string
     houseType?: string
+    rentType?: string
     page?: number
     limit?: number
   }): Promise<SubscriptionListResponse> {
@@ -28,6 +29,7 @@ export function useSubscription() {
     if (params.status) query.set('status', params.status)
     if (params.region) query.set('region', params.region)
     if (params.houseType) query.set('houseType', params.houseType)
+    if (params.rentType) query.set('rentType', params.rentType)
     if (params.page) query.set('page', String(params.page))
     if (params.limit) query.set('limit', String(params.limit))
 
