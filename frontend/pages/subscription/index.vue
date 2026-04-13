@@ -99,6 +99,7 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { SALE_TYPES, RENT_TYPES } from '~/utils/subscriptionMeta'
 import type { Subscription } from '~/types/subscription'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useSubscription } from '~/composables/useSubscription'
 
 const title = '2026 청약 일정·분양정보 — 분양·임대 전체 조회 | 일상킷'
 const description = '2026년 아파트·오피스텔 분양, 무순위·잔여세대, 공공·민간 임대 청약 일정과 정보를 한눈에 확인하세요.'

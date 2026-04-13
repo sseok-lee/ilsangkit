@@ -119,6 +119,7 @@
 
 <script setup lang="ts">
 import type { Subscription, SubscriptionSourceType } from '~/types/subscription'
+import { useSubscription } from '~/composables/useSubscription'
 
 const props = defineProps<{
   category?: 'sale' | 'rent'
@@ -167,6 +168,7 @@ async function loadSubscriptions() {
     totalPages.value = result.totalPages
   } catch (err) {
     error.value = '청약 정보를 불러올 수 없습니다'
+    // eslint-disable-next-line no-console
     console.error('Failed to load subscriptions:', err)
   } finally {
     pending.value = false
