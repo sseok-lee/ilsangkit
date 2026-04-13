@@ -42,8 +42,18 @@ jobs:
             echo "--- Summary 테이블 갱신 ---"
             node dist/scripts/refreshRealEstateSummary.js
 
-            # 청약 분양정보 동기화
-            echo "--- 청약 동기화 ---"
-            node dist/scripts/syncSubscription.js || echo "[WARN] 청약 동기화 실패"
+            # 청약 분양정보 동기화 (소스별 요일 분산)
+            DOW=$(date +%u)  # 1=월 ~ 7=일
+            echo "--- 청약 동기화 (요일: ${DOW}) ---"
+            node dist/scripts/syncSubscription.js --source APT || echo "[WARN] 청약 APT 실패"
+            if [ "$DOW" = "1" ] || [ "$DOW" = "4" ]; then
+              node dist/scripts/syncSubscription.js --source OFFITEL || echo "[WARN] 청약 OFFITEL 실패"
+            fi
+            if [ "$DOW" = "2" ] || [ "$DOW" = "5" ]; then
+              node dist/scripts/syncSubscription.js --source REMAINING || echo "[WARN] 청약 REMAINING 실패"
+            fi
+            if [ "$DOW" = "3" ] || [ "$DOW" = "6" ]; then
+              node dist/scripts/syncSubscription.js --source PRIVATE_RENT || echo "[WARN] 청약 PRIVATE_RENT 실패"
+            fi
 
             echo "=== 동기화 완료 ==="
