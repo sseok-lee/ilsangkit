@@ -15,7 +15,7 @@
       <!-- 분양 Section -->
       <section class="mb-10">
         <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-primary text-[24px]">sell</span>
+          <img src="/icons/category/sale.webp?v2" alt="분양" class="w-6 h-6" width="24" height="24" />
           <h2 class="text-xl font-bold text-slate-900">분양</h2>
           <NuxtLink to="/subscription/sale" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
         </div>
@@ -27,9 +27,7 @@
             class="group block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-primary/30 transition-all"
           >
             <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <span class="material-symbols-outlined text-primary text-[22px]">{{ meta.icon }}</span>
-              </div>
+              <img :src="`/icons/category/${meta.iconImg}.webp?v2`" :alt="meta.label" class="w-10 h-10" width="40" height="40" />
               <h3 class="font-bold text-slate-900 group-hover:text-primary transition-colors">{{ meta.label }}</h3>
             </div>
             <p class="text-sm text-slate-500 leading-relaxed">{{ meta.description }}</p>
@@ -40,7 +38,7 @@
       <!-- 임대 Section -->
       <section class="mb-10">
         <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-amber-600 text-[24px]">key</span>
+          <img src="/icons/category/rent.webp?v2" alt="임대" class="w-6 h-6" width="24" height="24" />
           <h2 class="text-xl font-bold text-slate-900">임대</h2>
           <NuxtLink to="/subscription/rent" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
         </div>
@@ -52,9 +50,7 @@
             class="group block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-amber-300/50 transition-all"
           >
             <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-                <span class="material-symbols-outlined text-amber-600 text-[22px]">{{ meta.icon }}</span>
-              </div>
+              <img :src="`/icons/category/${meta.iconImg}.webp?v2`" :alt="meta.label" class="w-10 h-10" width="40" height="40" />
               <h3 class="font-bold text-slate-900 group-hover:text-amber-600 transition-colors">{{ meta.label }}</h3>
             </div>
             <p class="text-sm text-slate-500 leading-relaxed">{{ meta.description }}</p>
@@ -68,7 +64,7 @@
       <!-- 접수예정 미리보기 -->
       <section v-if="upcomingItems.length > 0" class="mt-8">
         <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-blue-600 text-[24px]">event_upcoming</span>
+          <img src="/icons/category/subscription.webp?v2" alt="접수예정" class="w-6 h-6" width="24" height="24" />
           <h2 class="text-xl font-bold text-slate-900">접수예정 청약</h2>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
