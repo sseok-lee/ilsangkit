@@ -158,7 +158,7 @@ async function fetchPage<T>(endpoint: string, page: number, params?: Record<stri
   if (!serviceKey) throw new Error('OPENAPI_SERVICE_KEY not set');
 
   const url = new URL(`${baseUrl}/${endpoint}`);
-  url.searchParams.set('serviceKey', serviceKey);
+  // serviceKey는 직접 append — URLSearchParams가 +/= 등을 이중 인코딩하면 400 발생
   url.searchParams.set('page', String(page));
   url.searchParams.set('perPage', String(PER_PAGE));
   if (params) {
@@ -166,9 +166,13 @@ async function fetchPage<T>(endpoint: string, page: number, params?: Record<stri
       url.searchParams.set(k, v);
     }
   }
+  const urlStr = `${url.toString()}&serviceKey=${serviceKey}`;
 
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  const res = await fetch(urlStr);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error: ${res.status} ${res.statusText}\n${body}`);
+  }
   const json = await res.json() as { data: T[]; totalCount: number };
   return { data: json.data ?? [], totalCount: json.totalCount ?? 0 };
 }
