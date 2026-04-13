@@ -7,7 +7,7 @@ import prisma from '../lib/prisma.js';
 
 const API_BASE = 'https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1';
 const API_BASE_CMPET = 'https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1';
-const PER_PAGE = 100;
+const PER_PAGE = 1000;
 
 // ---------------------------------------------------------------------------
 // Types
