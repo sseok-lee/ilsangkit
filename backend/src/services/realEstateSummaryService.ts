@@ -13,9 +13,10 @@ export async function refreshSummary(type: string): Promise<number> {
   if (!table) throw new Error(`Unknown real estate type: ${type}`);
 
   const priceField = SALE_TYPES.has(type) ? 'dealAmount' : 'deposit';
-  const buildYearExpr = NO_BUILD_YEAR_TYPES.has(type) ? 'NULL' : 'd.buildYear';
+  const buildYearCol = NO_BUILD_YEAR_TYPES.has(type) ? 'NULL' : 'buildYear';
 
   // 트랜잭션으로 DELETE + INSERT 원자적 실행
+  // 윈도우 함수로 단일 스캔 — 상관 서브쿼리(N+1) 제거
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: any[] = await prisma.$transaction(async (tx) => {
     await tx.$queryRawUnsafe(`DELETE FROM RealEstateBuildingSummary WHERE type = ?`, type);
@@ -26,32 +27,27 @@ export async function refreshSummary(type: string): Promise<number> {
          latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng,
          transactionCount, updatedAt)
       SELECT
-        ? as type,
-        g.buildingName, g.bjdCode,
-        d.city, d.district, d.dongName,
-        d.${priceField} as latestPrice,
-        g.lastDealYear, g.lastDealMonth,
-        ${buildYearExpr} as buildYear,
-        g.lat, g.lng,
-        g.transactionCount,
+        ? AS type,
+        buildingName, bjdCode, city, district, dongName,
+        ${priceField} AS latestPrice,
+        dealYear AS latestDealYear, dealMonth AS latestDealMonth,
+        ${buildYearCol} AS buildYear,
+        MAX(lat) OVER (PARTITION BY buildingName, bjdCode) AS lat,
+        MAX(lng) OVER (PARTITION BY buildingName, bjdCode) AS lng,
+        COUNT(*) OVER (PARTITION BY buildingName, bjdCode) AS transactionCount,
         NOW()
       FROM (
-        SELECT buildingName, bjdCode,
-          COUNT(*) as transactionCount,
-          MAX(dealYear) as lastDealYear, MAX(dealMonth) as lastDealMonth,
-          MAX(lat) as lat, MAX(lng) as lng
+        SELECT *,
+          ROW_NUMBER() OVER (
+            PARTITION BY buildingName, bjdCode
+            ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
+          ) AS _rn
         FROM ${table}
-        GROUP BY buildingName, bjdCode
-      ) g
-      LEFT JOIN ${table} d ON d.id = (
-        SELECT id FROM ${table}
-        WHERE buildingName = g.buildingName AND bjdCode = g.bjdCode
-        ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
-        LIMIT 1
-      )`,
+      ) ranked
+      WHERE _rn = 1`,
       type,
     );
-  }, { timeout: 60000 });
+  }, { timeout: 300000 });
 
   const inserted = Number(result) || 0;
   return inserted;

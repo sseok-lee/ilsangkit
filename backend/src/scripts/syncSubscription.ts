@@ -407,13 +407,17 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
     });
     if (!sub) continue;
 
+    const rank = item.SUBSCRPT_RANK_CODE;
+    const regionCode = item.RESIDE_SECD?.trim();
+    if (!rank || !regionCode) continue; // unique key 구성 불가 레코드 skip
+
     await prisma.subscriptionCompetition.upsert({
       where: {
         subscriptionId_modelNo_rank_regionCode: {
           subscriptionId: sub.id,
           modelNo: item.MODEL_NO,
-          rank: item.SUBSCRPT_RANK_CODE,
-          regionCode: item.RESIDE_SECD,
+          rank,
+          regionCode,
         },
       },
       update: {
@@ -427,8 +431,8 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
         subscriptionId: sub.id,
         modelNo: item.MODEL_NO,
         houseType: item.HOUSE_TY || null,
-        rank: item.SUBSCRPT_RANK_CODE,
-        regionCode: item.RESIDE_SECD,
+        rank,
+        regionCode,
         regionName: item.RESIDE_SENM || null,
         supplyCount: item.SUPLY_HSHLDCO ?? null,
         applicantCount: parseInt(item.REQ_CNT) || null,
