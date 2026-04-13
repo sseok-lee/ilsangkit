@@ -38,8 +38,8 @@ import { useStructuredData } from '~/composables/useStructuredData'
 
 const activeType = null
 
-const title = '2026 분양 아파트·오피스텔·무순위 청약 일정 조회 | 일상킷'
-const description = '2026년 아파트, 오피스텔, 무순위·잔여세대 분양 청약 접수 일정과 분양정보를 한눈에 조회하세요. 접수예정·진행중·마감 상태별 필터와 지역별 검색을 지원합니다.'
+const title = '분양 아파트·오피스텔·무순위 청약 일정 조회 | 일상킷'
+const description = '아파트, 오피스텔, 무순위·잔여세대 분양 청약 접수 일정과 분양정보를 한눈에 조회하세요. 접수예정·진행중·마감 상태별 필터와 지역별 검색을 지원합니다.'
 const canonicalUrl = `${SITE_URL}/subscription/sale`
 
 useHead({
