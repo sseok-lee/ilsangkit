@@ -48,12 +48,28 @@ backend/data/*.zip
 nul
 *.log
 
-
 아카이브.zip
 specs/
 docs/
+lighthouse-reports/
 lighthouse-results/
 lighthouse-results-*/
+
+# Screenshots (debug/reference)
+/ilsangkit-*.png
+/ayo-*.png
+
+# Agent workspace artifacts
+_workspace/
+
+# Planning docs (one-off, already applied)
+/PRD_*.md
+/SEO_*.md
+/TASKS_*.md
+
+# Dev-only pages & docs
+frontend/pages/msw-demo.vue
+frontend/docs/
 
 # Root package files (workspaces not used)
 /package.json
