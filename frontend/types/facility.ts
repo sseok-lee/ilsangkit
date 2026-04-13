@@ -496,9 +496,9 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     title: '청약·임대',
     icon: 'calendar_month',
     links: [
-      { to: '/subscription', label: '청약 전체', icon: 'calendar_month' },
-      { to: '/subscription/sale', label: '분양', icon: 'sell' },
-      { to: '/subscription/rent', label: '임대', icon: 'key' },
+      { to: '/subscription', label: '청약 전체', icon: 'calendar_month', iconImg: 'subscription' },
+      { to: '/subscription/sale', label: '분양', icon: 'sell', iconImg: 'sale' },
+      { to: '/subscription/rent', label: '임대', icon: 'key', iconImg: 'rent' },
     ],
   },
   ...CATEGORY_GROUPS,
