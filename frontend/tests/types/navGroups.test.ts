@@ -8,8 +8,8 @@ import {
 } from '../../types/facility'
 
 describe('NAV_GROUPS', () => {
-  it('5개 그룹을 포함해야 한다', () => {
-    expect(NAV_GROUPS).toHaveLength(5)
+  it('6개 그룹을 포함해야 한다', () => {
+    expect(NAV_GROUPS).toHaveLength(6)
   })
 
   it('첫 번째 그룹이 LinkGroup이어야 한다', () => {
@@ -61,7 +61,7 @@ describe('CATEGORY_GROUPS', () => {
   })
 
   it('NAV_GROUPS의 마지막 4개 그룹이 CATEGORY_GROUPS와 동일해야 한다', () => {
-    const lastFour = NAV_GROUPS.slice(1, 5)
+    const lastFour = NAV_GROUPS.slice(2, 6)
     lastFour.forEach((group, i) => {
       expect(group.title).toBe(CATEGORY_GROUPS[i].title)
       expect(group.icon).toBe(CATEGORY_GROUPS[i].icon)

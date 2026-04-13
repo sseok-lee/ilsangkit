@@ -68,13 +68,13 @@ describe('AppHeader', () => {
 
     it('should show dropdown with category links on hover', async () => {
       const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
-      expect(groupButtons.length).toBe(5)
+      expect(groupButtons.length).toBe(6)
 
-      // Hover over 생활/편의 group (index 3: 부동산=0, 교육/육아=1, 건강/안전=2, 생활/편의=3)
-      await groupButtons[3].trigger('mouseenter')
+      // Hover over 생활/편의 group (index 4: 부동산=0, 청약·임대=1, 교육/육아=2, 건강/안전=3, 생활/편의=4)
+      await groupButtons[4].trigger('mouseenter')
 
       // Dropdown should appear with category links
-      const dropdown = groupButtons[3].find('.absolute')
+      const dropdown = groupButtons[4].find('.absolute')
       expect(dropdown.exists()).toBe(true)
       const links = dropdown.findAll('a')
       const hrefs = links.map((l) => l.attributes('href'))
