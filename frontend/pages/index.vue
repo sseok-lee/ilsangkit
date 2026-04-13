@@ -216,7 +216,7 @@
       </section>
 
       <!-- Ad: Recent Guides 후 -->
-      <div class="mb-8">
+      <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 mb-8">
         <AdBanner />
       </div>
 
