@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!adError" v-show="adLoaded" class="ad-banner my-6">
+  <div v-if="!adError && !adUnfilled" class="ad-banner my-6">
     <ClientOnly>
       <div :key="adKey" ref="adContainer" class="w-full">
         <ins
@@ -30,24 +30,17 @@ withDefaults(defineProps<{
 
 const adContainer = ref<HTMLElement | null>(null)
 const adError = ref(false)
-const adLoaded = ref(false)
+const adUnfilled = ref(false)
 const adKey = ref(0)
 const route = useRoute()
 
 function checkAdFilled() {
   if (!adContainer.value) return
   const ins = adContainer.value.querySelector('ins.adsbygoogle')
-  if (ins && ins.getAttribute('data-ad-status') === 'filled') {
-    adLoaded.value = true
-    return
-  }
-  // AdSense가 iframe을 삽입했으면 로드 성공
-  if (ins && ins.querySelector('iframe')) {
-    adLoaded.value = true
-    return
-  }
-  if (ins && ins.getAttribute('data-ad-status') === 'unfilled') {
-    adLoaded.value = false
+  if (!ins) return
+  const status = ins.getAttribute('data-ad-status')
+  if (status === 'unfilled') {
+    adUnfilled.value = true
   }
 }
 
@@ -56,7 +49,6 @@ function pushAd() {
     try {
       const adsbygoogle = (window as any).adsbygoogle || []
       adsbygoogle.push({})
-      // 광고 로드 확인을 위해 지연 체크
       setTimeout(checkAdFilled, 1500)
       setTimeout(checkAdFilled, 3500)
     } catch {
@@ -69,7 +61,7 @@ onMounted(pushAd)
 
 watch(() => route.fullPath, () => {
   adError.value = false
-  adLoaded.value = false
+  adUnfilled.value = false
   adKey.value++
   pushAd()
 })
