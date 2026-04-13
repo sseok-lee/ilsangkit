@@ -7,6 +7,7 @@ import {
   fetchFacilityIds,
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
+  fetchSubscriptionIds,
   getWeekStartDate,
 } from '../utils/sitemap'
 
@@ -72,6 +73,22 @@ export default defineEventHandler(async (event) => {
   } else {
     for (let i = 1; i <= trashPages; i++) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/trash-${i}.xml`, lastmod: trashLastmod })
+    }
+  }
+
+  // 청약 상세 페이지
+  const subscriptions = await fetchSubscriptionIds(apiBase)
+  const subLatestDate = subscriptions.reduce((max, item) => {
+    const d = item.updatedAt?.split('T')[0]
+    return d && d > max ? d : max
+  }, '')
+  const subLastmod = subLatestDate || today
+  const subPages = Math.max(1, Math.ceil(subscriptions.length / MAX_URLS_PER_SITEMAP))
+  if (subPages === 1) {
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/subscription.xml`, lastmod: subLastmod })
+  } else {
+    for (let i = 1; i <= subPages; i++) {
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/subscription-${i}.xml`, lastmod: subLastmod })
     }
   }
 
