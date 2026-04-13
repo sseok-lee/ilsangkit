@@ -89,7 +89,7 @@ describe('getSubscriptionList', () => {
 
 describe('getSubscriptionDetail', () => {
   it('존재하는 청약 상세를 반환해야 한다', async () => {
-    mockFindUnique.mockResolvedValue({ ...mockSubscription, unitTypes: [] });
+    mockFindUnique.mockResolvedValue({ ...mockSubscription, unitTypes: [], competitions: [], scores: [], specialStatuses: [] });
 
     const result = await getSubscriptionDetail(1);
 
@@ -97,7 +97,12 @@ describe('getSubscriptionDetail', () => {
     expect(result.houseName).toBe('테스트 아파트');
     expect(mockFindUnique).toHaveBeenCalledWith({
       where: { id: 1 },
-      include: { unitTypes: true },
+      include: {
+        unitTypes: true,
+        competitions: { orderBy: [{ modelNo: 'asc' }, { rank: 'asc' }, { regionCode: 'asc' }] },
+        scores: { orderBy: [{ modelNo: 'asc' }, { regionCode: 'asc' }] },
+        specialStatuses: { orderBy: { houseType: 'asc' } },
+      },
     });
   });
 
