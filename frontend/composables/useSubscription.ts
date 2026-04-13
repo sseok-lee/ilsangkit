@@ -1,6 +1,4 @@
-// @TASK Phase8 - 청약 API composable
-
-import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
+import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus, SubscriptionSourceType } from '~/types/subscription'
 
 export interface SubscriptionListResponse {
   items: Subscription[]
@@ -25,6 +23,8 @@ export function useSubscription() {
     region?: string
     houseType?: string
     rentType?: string
+    sourceType?: SubscriptionSourceType
+    category?: 'sale' | 'rent'
     page?: number
     limit?: number
   }): Promise<SubscriptionListResponse> {
@@ -33,6 +33,8 @@ export function useSubscription() {
     if (params.region) query.set('region', params.region)
     if (params.houseType) query.set('houseType', params.houseType)
     if (params.rentType) query.set('rentType', params.rentType)
+    if (params.sourceType) query.set('sourceType', params.sourceType)
+    if (params.category) query.set('category', params.category)
     if (params.page) query.set('page', String(params.page))
     if (params.limit) query.set('limit', String(params.limit))
 

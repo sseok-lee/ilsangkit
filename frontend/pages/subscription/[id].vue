@@ -599,10 +599,16 @@ if (data.value) {
 const { setBreadcrumbSchema } = useStructuredData()
 
 if (subscription.value) {
+  const sub = subscription.value
+  const isRent = sub.sourceType === 'PRIVATE_RENT' || (sub.sourceType === 'APT' && sub.rentType === '임대주택')
+  const categoryName = isRent ? '임대' : '분양'
+  const categoryPath = isRent ? '/subscription/rent' : '/subscription/sale'
+
   setBreadcrumbSchema([
     { name: '홈', url: SITE_URL },
     { name: '청약 정보', url: `${SITE_URL}/subscription` },
-    { name: subscription.value.houseName, url: `${SITE_URL}/subscription/${id}` },
+    { name: categoryName, url: `${SITE_URL}${categoryPath}` },
+    { name: sub.houseName, url: `${SITE_URL}/subscription/${id}` },
   ])
 }
 

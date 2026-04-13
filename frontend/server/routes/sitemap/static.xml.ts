@@ -62,6 +62,13 @@ export default defineEventHandler(async (event) => {
 
   // 청약 페이지
   urls.push({ loc: `${SITE_URL}/subscription`, lastmod: today, changefreq: 'daily', priority: 0.8 })
+  urls.push({ loc: `${SITE_URL}/subscription/sale`, lastmod: today, changefreq: 'daily', priority: 0.8 })
+  urls.push({ loc: `${SITE_URL}/subscription/sale/apt`, lastmod: today, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/subscription/sale/offitel`, lastmod: today, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/subscription/sale/remaining`, lastmod: today, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/subscription/rent`, lastmod: today, changefreq: 'daily', priority: 0.8 })
+  urls.push({ loc: `${SITE_URL}/subscription/rent/public`, lastmod: today, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/subscription/rent/private`, lastmod: today, changefreq: 'daily', priority: 0.7 })
 
   // 가이드 목록 페이지
   urls.push({ loc: `${SITE_URL}/guide`, lastmod: today, changefreq: 'daily', priority: 0.8 })

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   SubscriptionStatusSchema,
+  SubscriptionSourceTypeSchema,
+  SubscriptionCategorySchema,
   SubscriptionListSchema,
   SubscriptionIdSchema,
 } from '../../src/schemas/subscription';
@@ -15,6 +17,31 @@ describe('SubscriptionStatusSchema', () => {
   it('유효하지 않은 상태값은 실패해야 한다', () => {
     expect(() => SubscriptionStatusSchema.parse('invalid')).toThrow();
     expect(() => SubscriptionStatusSchema.parse('')).toThrow();
+  });
+});
+
+describe('SubscriptionSourceTypeSchema', () => {
+  it('유효한 sourceType을 파싱해야 한다', () => {
+    expect(SubscriptionSourceTypeSchema.parse('APT')).toBe('APT');
+    expect(SubscriptionSourceTypeSchema.parse('OFFITEL')).toBe('OFFITEL');
+    expect(SubscriptionSourceTypeSchema.parse('REMAINING')).toBe('REMAINING');
+    expect(SubscriptionSourceTypeSchema.parse('PRIVATE_RENT')).toBe('PRIVATE_RENT');
+  });
+
+  it('유효하지 않은 sourceType은 실패해야 한다', () => {
+    expect(() => SubscriptionSourceTypeSchema.parse('INVALID')).toThrow();
+    expect(() => SubscriptionSourceTypeSchema.parse('')).toThrow();
+  });
+});
+
+describe('SubscriptionCategorySchema', () => {
+  it('유효한 category를 파싱해야 한다', () => {
+    expect(SubscriptionCategorySchema.parse('sale')).toBe('sale');
+    expect(SubscriptionCategorySchema.parse('rent')).toBe('rent');
+  });
+
+  it('유효하지 않은 category는 실패해야 한다', () => {
+    expect(() => SubscriptionCategorySchema.parse('invalid')).toThrow();
   });
 });
 
@@ -56,6 +83,20 @@ describe('SubscriptionListSchema', () => {
 
   it('page가 0이면 실패해야 한다', () => {
     expect(() => SubscriptionListSchema.parse({ page: 0 })).toThrow();
+  });
+
+  it('sourceType 필터를 파싱해야 한다', () => {
+    const result = SubscriptionListSchema.parse({ sourceType: 'OFFITEL' });
+    expect(result.sourceType).toBe('OFFITEL');
+  });
+
+  it('category 필터를 파싱해야 한다', () => {
+    const result = SubscriptionListSchema.parse({ category: 'sale' });
+    expect(result.category).toBe('sale');
+  });
+
+  it('유효하지 않은 sourceType은 실패해야 한다', () => {
+    expect(() => SubscriptionListSchema.parse({ sourceType: 'INVALID' })).toThrow();
   });
 });
 

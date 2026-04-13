@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 // 청약 분양정보 동기화 스크립트
-// Usage: tsx src/scripts/syncSubscription.ts [--dry-run]
+// Usage: tsx src/scripts/syncSubscription.ts [--dry-run] [--source APT|OFFITEL|REMAINING|PRIVATE_RENT|ALL]
 
 import 'dotenv/config';
 import prisma from '../lib/prisma.js';
@@ -13,22 +13,32 @@ const PER_PAGE = 100;
 // Types
 // ---------------------------------------------------------------------------
 
+interface SourceConfig {
+  sourceType: string;
+  syncCategory: string;
+  detailEndpoint: string;
+  modelEndpoint: string;
+  competitionEndpoint: string;
+  scoreEndpoint?: string;     // APT only
+  specialEndpoint?: string;   // APT only
+}
+
 interface SubscriptionApiItem {
   HOUSE_MANAGE_NO: string;
   PBLANC_NO: string;
   HOUSE_NM: string;
-  HOUSE_SECD_NM: string;        // APT, 오피스텔
-  HOUSE_DTL_SECD_NM: string;    // 민영, 국민
-  RENT_SECD_NM: string;         // 분양주택, 임대주택
-  SUBSCRPT_AREA_CODE_NM: string; // 공급지역명
-  HSSPLY_ADRES: string;         // 공급위치
+  HOUSE_SECD_NM: string;
+  HOUSE_DTL_SECD_NM: string;
+  RENT_SECD_NM: string;
+  SUBSCRPT_AREA_CODE_NM: string;
+  HSSPLY_ADRES: string;
   HSSPLY_ZIP: string;
   TOT_SUPLY_HSHLDCO: number;
-  RCRIT_PBLANC_DE: string | null;  // 모집공고일
-  RCEPT_BGNDE: string | null;     // 접수시작
-  RCEPT_ENDDE: string | null;     // 접수종료
-  SPSPLY_RCEPT_BGNDE: string | null; // 특별공급시작
-  SPSPLY_RCEPT_ENDDE: string | null; // 특별공급종료
+  RCRIT_PBLANC_DE: string | null;
+  RCEPT_BGNDE: string | null;
+  RCEPT_ENDDE: string | null;
+  SPSPLY_RCEPT_BGNDE: string | null;
+  SPSPLY_RCEPT_ENDDE: string | null;
   GNRL_RNK1_CRSPAREA_RCPTDE: string | null;
   GNRL_RNK1_CRSPAREA_ENDDE: string | null;
   GNRL_RNK1_ETC_AREA_RCPTDE: string | null;
@@ -37,12 +47,12 @@ interface SubscriptionApiItem {
   GNRL_RNK2_CRSPAREA_ENDDE: string | null;
   GNRL_RNK2_ETC_AREA_RCPTDE: string | null;
   GNRL_RNK2_ETC_AREA_ENDDE: string | null;
-  PRZWNER_PRESNATN_DE: string | null; // 당첨자발표일
-  CNTRCT_CNCLS_BGNDE: string | null;  // 계약시작
-  CNTRCT_CNCLS_ENDDE: string | null;  // 계약종료
-  MVN_PREARNGE_YM: string | null;     // 입주예정월
-  CNSTRCT_ENTRPS_NM: string | null;   // 시공사
-  BSNS_MBY_NM: string | null;         // 시행사
+  PRZWNER_PRESNATN_DE: string | null;
+  CNTRCT_CNCLS_BGNDE: string | null;
+  CNTRCT_CNCLS_ENDDE: string | null;
+  MVN_PREARNGE_YM: string | null;
+  CNSTRCT_ENTRPS_NM: string | null;
+  BSNS_MBY_NM: string | null;
   HMPG_ADRES: string | null;
   PBLANC_URL: string | null;
   MDHS_TELNO: string | null;
@@ -125,6 +135,43 @@ interface SpecialStatusApiItem {
 }
 
 // ---------------------------------------------------------------------------
+// Source Registry
+// ---------------------------------------------------------------------------
+
+const SOURCE_CONFIGS: Record<string, SourceConfig> = {
+  APT: {
+    sourceType: 'APT',
+    syncCategory: 'sub-apt',
+    detailEndpoint: 'getAPTLttotPblancDetail',
+    modelEndpoint: 'getAPTLttotPblancMdl',
+    competitionEndpoint: 'getAPTLttotPblancCmpet',
+    scoreEndpoint: 'getAptLttotPblancScore',
+    specialEndpoint: 'getAPTSpsplyReqstStus',
+  },
+  OFFITEL: {
+    sourceType: 'OFFITEL',
+    syncCategory: 'sub-offitel',
+    detailEndpoint: 'getUrbtyOfctlLttotPblancDetail',
+    modelEndpoint: 'getUrbtyOfctlLttotPblancMdl',
+    competitionEndpoint: 'getUrbtyOfctlLttotPblancCmpet',
+  },
+  REMAINING: {
+    sourceType: 'REMAINING',
+    syncCategory: 'sub-remaining',
+    detailEndpoint: 'getRemndrLttotPblancDetail',
+    modelEndpoint: 'getRemndrLttotPblancMdl',
+    competitionEndpoint: 'getRemndrLttotPblancCmpet',
+  },
+  PRIVATE_RENT: {
+    sourceType: 'PRIVATE_RENT',
+    syncCategory: 'sub-pvt-rent',
+    detailEndpoint: 'getPblPvtRentLttotPblancDetail',
+    modelEndpoint: 'getPblPvtRentLttotPblancMdl',
+    competitionEndpoint: 'getPblPvtRentLttotPblancCmpet',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -195,13 +242,14 @@ async function fetchAll<T>(endpoint: string, params?: Record<string, string>, ba
 // Transform
 // ---------------------------------------------------------------------------
 
-function transformSubscription(item: SubscriptionApiItem) {
+function transformSubscription(item: SubscriptionApiItem, sourceType: string) {
   const receptionStart = parseDate(item.RCEPT_BGNDE);
   const receptionEnd = parseDate(item.RCEPT_ENDDE);
 
   return {
     houseManageNo: item.HOUSE_MANAGE_NO,
     pblancNo: item.PBLANC_NO,
+    sourceType,
     houseName: item.HOUSE_NM,
     houseType: item.HOUSE_SECD_NM || 'APT',
     houseDetailType: item.HOUSE_DTL_SECD_NM || null,
@@ -258,33 +306,39 @@ function transformUnitType(item: UnitTypeApiItem, subscriptionId: number) {
 }
 
 // ---------------------------------------------------------------------------
-// Main sync
+// Sync per source
 // ---------------------------------------------------------------------------
 
-async function main() {
-  const isDryRun = process.argv.includes('--dry-run');
-  console.log(`청약 분양정보 동기화 시작${isDryRun ? ' (dry-run)' : ''}`);
+async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ newCount: number; updateCount: number; totalCount: number }> {
+  const { sourceType, detailEndpoint, modelEndpoint, competitionEndpoint, scoreEndpoint, specialEndpoint } = config;
 
-  // 1. 분양정보 전체 조회
-  console.log('분양정보 API 조회 중...');
-  const items = await fetchAll<SubscriptionApiItem>('getAPTLttotPblancDetail');
-  console.log(`조회 완료: ${items.length}건`);
+  console.log(`\n=== [${sourceType}] 동기화 시작 ===`);
+
+  // Step 1: 분양정보 조회
+  console.log(`[${sourceType}] 분양정보 API 조회 중...`);
+  const items = await fetchAll<SubscriptionApiItem>(detailEndpoint);
+  console.log(`[${sourceType}] 조회 완료: ${items.length}건`);
 
   if (isDryRun) {
-    console.log('--- dry-run: 첫 2건 샘플 ---');
+    console.log(`--- [${sourceType}] dry-run: 첫 2건 샘플 ---`);
     console.log(JSON.stringify(items.slice(0, 2), null, 2));
-    await prisma.$disconnect();
-    return;
+    return { newCount: 0, updateCount: 0, totalCount: items.length };
   }
 
-  // 2. 분양정보 upsert
+  // Step 2: 분양정보 upsert
   let newCount = 0;
   let updateCount = 0;
 
   for (let i = 0; i < items.length; i++) {
-    const data = transformSubscription(items[i]);
+    const data = transformSubscription(items[i], sourceType);
     const existing = await prisma.subscription.findUnique({
-      where: { houseManageNo_pblancNo: { houseManageNo: data.houseManageNo, pblancNo: data.pblancNo } },
+      where: {
+        houseManageNo_pblancNo_sourceType: {
+          houseManageNo: data.houseManageNo,
+          pblancNo: data.pblancNo,
+          sourceType,
+        },
+      },
     });
 
     if (existing) {
@@ -295,30 +349,29 @@ async function main() {
       newCount++;
     }
 
-    if ((i + 1) % 100 === 0) console.log(`  분양정보 ${i + 1}/${items.length} 처리`);
+    if ((i + 1) % 100 === 0) console.log(`  [${sourceType}] 분양정보 ${i + 1}/${items.length} 처리`);
   }
-  console.log(`분양정보 완료: 신규 ${newCount}, 업데이트 ${updateCount}`);
+  console.log(`[${sourceType}] 분양정보 완료: 신규 ${newCount}, 업데이트 ${updateCount}`);
 
-  // 3. 주택형별 상세 동기화 (최근 1년 공고만)
+  // Step 3: 주택형별 상세 (최근 1년 공고만)
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
   const recentSubscriptions = await prisma.subscription.findMany({
-    where: { announcementDate: { gte: oneYearAgo } },
+    where: { sourceType, announcementDate: { gte: oneYearAgo } },
     select: { id: true, houseManageNo: true, pblancNo: true },
   });
-  console.log(`주택형 동기화 대상: ${recentSubscriptions.length}건`);
+  console.log(`[${sourceType}] 주택형 동기화 대상: ${recentSubscriptions.length}건`);
 
   let unitCount = 0;
   for (let i = 0; i < recentSubscriptions.length; i++) {
     const sub = recentSubscriptions[i];
     try {
-      const unitItems = await fetchAll<UnitTypeApiItem>('getAPTLttotPblancMdl', {
+      const unitItems = await fetchAll<UnitTypeApiItem>(modelEndpoint, {
         'cond[HOUSE_MANAGE_NO::EQ]': sub.houseManageNo,
         'cond[PBLANC_NO::EQ]': sub.pblancNo,
       });
 
-      // 기존 데이터 삭제 후 재삽입
       await prisma.subscriptionUnitType.deleteMany({ where: { subscriptionId: sub.id } });
       if (unitItems.length > 0) {
         await prisma.subscriptionUnitType.createMany({
@@ -327,23 +380,29 @@ async function main() {
         unitCount += unitItems.length;
       }
     } catch (err) {
-      console.warn(`  주택형 조회 실패 (${sub.houseManageNo}): ${err instanceof Error ? err.message : err}`);
+      console.warn(`  [${sourceType}] 주택형 조회 실패 (${sub.houseManageNo}): ${err instanceof Error ? err.message : err}`);
     }
 
-    if ((i + 1) % 50 === 0) console.log(`  주택형 ${i + 1}/${recentSubscriptions.length} 처리`);
+    if ((i + 1) % 50 === 0) console.log(`  [${sourceType}] 주택형 ${i + 1}/${recentSubscriptions.length} 처리`);
   }
-  console.log(`주택형 동기화 완료: ${unitCount}건`);
+  console.log(`[${sourceType}] 주택형 동기화 완료: ${unitCount}건`);
 
-  // 4. 경쟁률 동기화
-  console.log('경쟁률 API 조회 중...');
-  const competitionItems = await fetchAll<CompetitionApiItem>('getAPTLttotPblancCmpet', undefined, API_BASE_CMPET);
-  console.log(`경쟁률 조회 완료: ${competitionItems.length}건`);
+  // Step 4: 경쟁률
+  console.log(`[${sourceType}] 경쟁률 API 조회 중...`);
+  const competitionItems = await fetchAll<CompetitionApiItem>(competitionEndpoint, undefined, API_BASE_CMPET);
+  console.log(`[${sourceType}] 경쟁률 조회 완료: ${competitionItems.length}건`);
 
   let competitionCount = 0;
   for (let i = 0; i < competitionItems.length; i++) {
     const item = competitionItems[i];
     const sub = await prisma.subscription.findUnique({
-      where: { houseManageNo_pblancNo: { houseManageNo: item.HOUSE_MANAGE_NO, pblancNo: item.PBLANC_NO } },
+      where: {
+        houseManageNo_pblancNo_sourceType: {
+          houseManageNo: item.HOUSE_MANAGE_NO,
+          pblancNo: item.PBLANC_NO,
+          sourceType,
+        },
+      },
       select: { id: true },
     });
     if (!sub) continue;
@@ -377,165 +436,219 @@ async function main() {
       },
     });
     competitionCount++;
-    if ((i + 1) % 500 === 0) console.log(`  경쟁률 ${i + 1}/${competitionItems.length} 처리`);
+    if ((i + 1) % 500 === 0) console.log(`  [${sourceType}] 경쟁률 ${i + 1}/${competitionItems.length} 처리`);
   }
-  console.log(`경쟁률 동기화 완료: ${competitionCount}건`);
+  console.log(`[${sourceType}] 경쟁률 동기화 완료: ${competitionCount}건`);
 
-  // 5. 당첨 가점 동기화
-  console.log('당첨 가점 API 조회 중...');
-  const scoreItems = await fetchAll<ScoreApiItem>('getAptLttotPblancScore', undefined, API_BASE_CMPET);
-  console.log(`당첨 가점 조회 완료: ${scoreItems.length}건`);
+  // Step 5: 당첨 가점 (APT only)
+  if (scoreEndpoint) {
+    console.log(`[${sourceType}] 당첨 가점 API 조회 중...`);
+    const scoreItems = await fetchAll<ScoreApiItem>(scoreEndpoint, undefined, API_BASE_CMPET);
+    console.log(`[${sourceType}] 당첨 가점 조회 완료: ${scoreItems.length}건`);
 
-  let scoreCount = 0;
-  for (let i = 0; i < scoreItems.length; i++) {
-    const item = scoreItems[i];
-    const sub = await prisma.subscription.findUnique({
-      where: { houseManageNo_pblancNo: { houseManageNo: item.HOUSE_MANAGE_NO, pblancNo: item.PBLANC_NO } },
-      select: { id: true },
-    });
-    if (!sub) continue;
+    let scoreCount = 0;
+    for (let i = 0; i < scoreItems.length; i++) {
+      const item = scoreItems[i];
+      const sub = await prisma.subscription.findUnique({
+        where: {
+          houseManageNo_pblancNo_sourceType: {
+            houseManageNo: item.HOUSE_MANAGE_NO,
+            pblancNo: item.PBLANC_NO,
+            sourceType,
+          },
+        },
+        select: { id: true },
+      });
+      if (!sub) continue;
 
-    await prisma.subscriptionScore.upsert({
-      where: {
-        subscriptionId_modelNo_regionCode: {
+      await prisma.subscriptionScore.upsert({
+        where: {
+          subscriptionId_modelNo_regionCode: {
+            subscriptionId: sub.id,
+            modelNo: item.MODEL_NO,
+            regionCode: item.RESIDE_SECD,
+          },
+        },
+        update: {
+          houseType: item.HOUSE_TY || null,
+          regionName: item.RESIDE_SENM || null,
+          minScore: item.LWET_SCORE || null,
+          maxScore: item.TOP_SCORE || null,
+          avgScore: item.AVRG_SCORE || null,
+        },
+        create: {
           subscriptionId: sub.id,
           modelNo: item.MODEL_NO,
+          houseType: item.HOUSE_TY || null,
           regionCode: item.RESIDE_SECD,
+          regionName: item.RESIDE_SENM || null,
+          minScore: item.LWET_SCORE || null,
+          maxScore: item.TOP_SCORE || null,
+          avgScore: item.AVRG_SCORE || null,
         },
-      },
-      update: {
-        houseType: item.HOUSE_TY || null,
-        regionName: item.RESIDE_SENM || null,
-        minScore: item.LWET_SCORE || null,
-        maxScore: item.TOP_SCORE || null,
-        avgScore: item.AVRG_SCORE || null,
-      },
-      create: {
-        subscriptionId: sub.id,
-        modelNo: item.MODEL_NO,
-        houseType: item.HOUSE_TY || null,
-        regionCode: item.RESIDE_SECD,
-        regionName: item.RESIDE_SENM || null,
-        minScore: item.LWET_SCORE || null,
-        maxScore: item.TOP_SCORE || null,
-        avgScore: item.AVRG_SCORE || null,
-      },
-    });
-    scoreCount++;
-    if ((i + 1) % 500 === 0) console.log(`  당첨 가점 ${i + 1}/${scoreItems.length} 처리`);
+      });
+      scoreCount++;
+      if ((i + 1) % 500 === 0) console.log(`  [${sourceType}] 당첨 가점 ${i + 1}/${scoreItems.length} 처리`);
+    }
+    console.log(`[${sourceType}] 당첨 가점 동기화 완료: ${scoreCount}건`);
   }
-  console.log(`당첨 가점 동기화 완료: ${scoreCount}건`);
 
-  // 6. 특별공급 신청현황 동기화
-  console.log('특별공급 신청현황 API 조회 중...');
-  const specialItems = await fetchAll<SpecialStatusApiItem>('getAPTSpsplyReqstStus', undefined, API_BASE_CMPET);
-  console.log(`특별공급 신청현황 조회 완료: ${specialItems.length}건`);
+  // Step 6: 특별공급 신청현황 (APT only)
+  if (specialEndpoint) {
+    console.log(`[${sourceType}] 특별공급 신청현황 API 조회 중...`);
+    const specialItems = await fetchAll<SpecialStatusApiItem>(specialEndpoint, undefined, API_BASE_CMPET);
+    console.log(`[${sourceType}] 특별공급 신청현황 조회 완료: ${specialItems.length}건`);
 
-  let specialCount = 0;
-  for (let i = 0; i < specialItems.length; i++) {
-    const item = specialItems[i];
-    const sub = await prisma.subscription.findUnique({
-      where: { houseManageNo_pblancNo: { houseManageNo: item.HOUSE_MANAGE_NO, pblancNo: item.PBLANC_NO } },
-      select: { id: true },
-    });
-    if (!sub) continue;
+    let specialCount = 0;
+    for (let i = 0; i < specialItems.length; i++) {
+      const item = specialItems[i];
+      const sub = await prisma.subscription.findUnique({
+        where: {
+          houseManageNo_pblancNo_sourceType: {
+            houseManageNo: item.HOUSE_MANAGE_NO,
+            pblancNo: item.PBLANC_NO,
+            sourceType,
+          },
+        },
+        select: { id: true },
+      });
+      if (!sub) continue;
 
-    const houseType = item.HOUSE_TY || '';
-    await prisma.subscriptionSpecialStatus.upsert({
-      where: {
-        subscriptionId_houseType: {
+      const houseType = item.HOUSE_TY || '';
+      await prisma.subscriptionSpecialStatus.upsert({
+        where: {
+          subscriptionId_houseType: {
+            subscriptionId: sub.id,
+            houseType,
+          },
+        },
+        update: {
+          resultName: item.SUBSCRPT_RESULT_NM || null,
+          specialSupplyCount: item.SPSPLY_HSHLDCO ?? null,
+          newlywedsSupply: item.NWWDS_NMTW_HSHLDCO ?? null,
+          multiChildSupply: item.MNYCH_HSHLDCO ?? null,
+          firstLifeSupply: item.LFE_FRST_HSHLDCO ?? null,
+          elderlySupply: item.OLD_PARNTS_SUPORT_HSHLDCO ?? null,
+          institutionSupply: item.INSTT_RECOMEND_HSHLDCO ?? null,
+          youthSupply: item.YGMN_HSHLDCO ?? null,
+          newbornSupply: item.NWBB_NWBBSHR_HSHLDCO ?? null,
+          transferSupply: item.TRANSR_INSTT_ENFSN_HSHLDCO ?? null,
+          newlywedsAreaCount: item.CRSPAREA_NWWDS_NMTW_CNT ?? null,
+          multiChildAreaCount: item.CRSPAREA_MNYCH_CNT ?? null,
+          firstLifeAreaCount: item.CRSPAREA_LFE_FRST_CNT ?? null,
+          elderlyAreaCount: item.CRSPAREA_OPS_CNT ?? null,
+          youthAreaCount: item.CRSPAREA_YGMN_CNT ?? null,
+          newbornAreaCount: item.CRSPAREA_NWBB_NWBBSHR_CNT ?? null,
+          newlywedsOtherCount: item.ETC_AREA_NWWDS_NMTW_CNT ?? null,
+          multiChildOtherCount: item.ETC_AREA_MNYCH_CNT ?? null,
+          firstLifeOtherCount: item.ETC_AREA_LFE_FRST_CNT ?? null,
+          elderlyOtherCount: item.ETC_AREA_OPS_CNT ?? null,
+          youthOtherCount: item.ETC_AREA_YGMN_CNT ?? null,
+          newbornOtherCount: item.ETC_AREA_NWBB_NWBBSHR_CNT ?? null,
+          institutionDecisionCount: item.INSTT_RECOMEND_DCSN_CNT ?? null,
+          institutionPrepareCount: item.INSTT_RECOMEND_PREPAR_CNT ?? null,
+          transferCount: item.TRANSR_INSTT_ENFSN_CNT ?? null,
+        },
+        create: {
           subscriptionId: sub.id,
           houseType,
+          resultName: item.SUBSCRPT_RESULT_NM || null,
+          specialSupplyCount: item.SPSPLY_HSHLDCO ?? null,
+          newlywedsSupply: item.NWWDS_NMTW_HSHLDCO ?? null,
+          multiChildSupply: item.MNYCH_HSHLDCO ?? null,
+          firstLifeSupply: item.LFE_FRST_HSHLDCO ?? null,
+          elderlySupply: item.OLD_PARNTS_SUPORT_HSHLDCO ?? null,
+          institutionSupply: item.INSTT_RECOMEND_HSHLDCO ?? null,
+          youthSupply: item.YGMN_HSHLDCO ?? null,
+          newbornSupply: item.NWBB_NWBBSHR_HSHLDCO ?? null,
+          transferSupply: item.TRANSR_INSTT_ENFSN_HSHLDCO ?? null,
+          newlywedsAreaCount: item.CRSPAREA_NWWDS_NMTW_CNT ?? null,
+          multiChildAreaCount: item.CRSPAREA_MNYCH_CNT ?? null,
+          firstLifeAreaCount: item.CRSPAREA_LFE_FRST_CNT ?? null,
+          elderlyAreaCount: item.CRSPAREA_OPS_CNT ?? null,
+          youthAreaCount: item.CRSPAREA_YGMN_CNT ?? null,
+          newbornAreaCount: item.CRSPAREA_NWBB_NWBBSHR_CNT ?? null,
+          newlywedsOtherCount: item.ETC_AREA_NWWDS_NMTW_CNT ?? null,
+          multiChildOtherCount: item.ETC_AREA_MNYCH_CNT ?? null,
+          firstLifeOtherCount: item.ETC_AREA_LFE_FRST_CNT ?? null,
+          elderlyOtherCount: item.ETC_AREA_OPS_CNT ?? null,
+          youthOtherCount: item.ETC_AREA_YGMN_CNT ?? null,
+          newbornOtherCount: item.ETC_AREA_NWBB_NWBBSHR_CNT ?? null,
+          institutionDecisionCount: item.INSTT_RECOMEND_DCSN_CNT ?? null,
+          institutionPrepareCount: item.INSTT_RECOMEND_PREPAR_CNT ?? null,
+          transferCount: item.TRANSR_INSTT_ENFSN_CNT ?? null,
         },
-      },
-      update: {
-        resultName: item.SUBSCRPT_RESULT_NM || null,
-        specialSupplyCount: item.SPSPLY_HSHLDCO ?? null,
-        newlywedsSupply: item.NWWDS_NMTW_HSHLDCO ?? null,
-        multiChildSupply: item.MNYCH_HSHLDCO ?? null,
-        firstLifeSupply: item.LFE_FRST_HSHLDCO ?? null,
-        elderlySupply: item.OLD_PARNTS_SUPORT_HSHLDCO ?? null,
-        institutionSupply: item.INSTT_RECOMEND_HSHLDCO ?? null,
-        youthSupply: item.YGMN_HSHLDCO ?? null,
-        newbornSupply: item.NWBB_NWBBSHR_HSHLDCO ?? null,
-        transferSupply: item.TRANSR_INSTT_ENFSN_HSHLDCO ?? null,
-        newlywedsAreaCount: item.CRSPAREA_NWWDS_NMTW_CNT ?? null,
-        multiChildAreaCount: item.CRSPAREA_MNYCH_CNT ?? null,
-        firstLifeAreaCount: item.CRSPAREA_LFE_FRST_CNT ?? null,
-        elderlyAreaCount: item.CRSPAREA_OPS_CNT ?? null,
-        youthAreaCount: item.CRSPAREA_YGMN_CNT ?? null,
-        newbornAreaCount: item.CRSPAREA_NWBB_NWBBSHR_CNT ?? null,
-        newlywedsOtherCount: item.ETC_AREA_NWWDS_NMTW_CNT ?? null,
-        multiChildOtherCount: item.ETC_AREA_MNYCH_CNT ?? null,
-        firstLifeOtherCount: item.ETC_AREA_LFE_FRST_CNT ?? null,
-        elderlyOtherCount: item.ETC_AREA_OPS_CNT ?? null,
-        youthOtherCount: item.ETC_AREA_YGMN_CNT ?? null,
-        newbornOtherCount: item.ETC_AREA_NWBB_NWBBSHR_CNT ?? null,
-        institutionDecisionCount: item.INSTT_RECOMEND_DCSN_CNT ?? null,
-        institutionPrepareCount: item.INSTT_RECOMEND_PREPAR_CNT ?? null,
-        transferCount: item.TRANSR_INSTT_ENFSN_CNT ?? null,
-      },
-      create: {
-        subscriptionId: sub.id,
-        houseType,
-        resultName: item.SUBSCRPT_RESULT_NM || null,
-        specialSupplyCount: item.SPSPLY_HSHLDCO ?? null,
-        newlywedsSupply: item.NWWDS_NMTW_HSHLDCO ?? null,
-        multiChildSupply: item.MNYCH_HSHLDCO ?? null,
-        firstLifeSupply: item.LFE_FRST_HSHLDCO ?? null,
-        elderlySupply: item.OLD_PARNTS_SUPORT_HSHLDCO ?? null,
-        institutionSupply: item.INSTT_RECOMEND_HSHLDCO ?? null,
-        youthSupply: item.YGMN_HSHLDCO ?? null,
-        newbornSupply: item.NWBB_NWBBSHR_HSHLDCO ?? null,
-        transferSupply: item.TRANSR_INSTT_ENFSN_HSHLDCO ?? null,
-        newlywedsAreaCount: item.CRSPAREA_NWWDS_NMTW_CNT ?? null,
-        multiChildAreaCount: item.CRSPAREA_MNYCH_CNT ?? null,
-        firstLifeAreaCount: item.CRSPAREA_LFE_FRST_CNT ?? null,
-        elderlyAreaCount: item.CRSPAREA_OPS_CNT ?? null,
-        youthAreaCount: item.CRSPAREA_YGMN_CNT ?? null,
-        newbornAreaCount: item.CRSPAREA_NWBB_NWBBSHR_CNT ?? null,
-        newlywedsOtherCount: item.ETC_AREA_NWWDS_NMTW_CNT ?? null,
-        multiChildOtherCount: item.ETC_AREA_MNYCH_CNT ?? null,
-        firstLifeOtherCount: item.ETC_AREA_LFE_FRST_CNT ?? null,
-        elderlyOtherCount: item.ETC_AREA_OPS_CNT ?? null,
-        youthOtherCount: item.ETC_AREA_YGMN_CNT ?? null,
-        newbornOtherCount: item.ETC_AREA_NWBB_NWBBSHR_CNT ?? null,
-        institutionDecisionCount: item.INSTT_RECOMEND_DCSN_CNT ?? null,
-        institutionPrepareCount: item.INSTT_RECOMEND_PREPAR_CNT ?? null,
-        transferCount: item.TRANSR_INSTT_ENFSN_CNT ?? null,
-      },
-    });
-    specialCount++;
-    if ((i + 1) % 500 === 0) console.log(`  특별공급 ${i + 1}/${specialItems.length} 처리`);
+      });
+      specialCount++;
+      if ((i + 1) % 500 === 0) console.log(`  [${sourceType}] 특별공급 ${i + 1}/${specialItems.length} 처리`);
+    }
+    console.log(`[${sourceType}] 특별공급 신청현황 동기화 완료: ${specialCount}건`);
   }
-  console.log(`특별공급 신청현황 동기화 완료: ${specialCount}건`);
 
-  // 7. SyncHistory 기록
-  await prisma.syncHistory.create({
-    data: {
-      category: 'subscription',
-      status: 'success',
-      totalRecords: items.length,
-      newRecords: newCount,
-      updatedRecords: updateCount,
-      completedAt: new Date(),
-    },
-  });
+  return { newCount, updateCount, totalCount: items.length };
+}
 
-  console.log('청약 동기화 완료');
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+async function main() {
+  const isDryRun = process.argv.includes('--dry-run');
+  const sourceArg = process.argv.find(a => a.startsWith('--source='))?.split('=')[1]
+    ?? process.argv[process.argv.indexOf('--source') + 1]
+    ?? 'ALL';
+
+  const sources = sourceArg === 'ALL'
+    ? Object.keys(SOURCE_CONFIGS)
+    : [sourceArg.toUpperCase()];
+
+  for (const key of sources) {
+    const config = SOURCE_CONFIGS[key];
+    if (!config) {
+      console.error(`알 수 없는 소스: ${key}. 가능한 값: ${Object.keys(SOURCE_CONFIGS).join(', ')}, ALL`);
+      process.exit(1);
+    }
+  }
+
+  console.log(`청약 동기화 시작${isDryRun ? ' (dry-run)' : ''} — 대상: ${sources.join(', ')}`);
+
+  for (const key of sources) {
+    const config = SOURCE_CONFIGS[key];
+    try {
+      const result = await syncSource(config, isDryRun);
+
+      if (!isDryRun) {
+        await prisma.syncHistory.create({
+          data: {
+            category: config.syncCategory,
+            status: 'success',
+            totalRecords: result.totalCount,
+            newRecords: result.newCount,
+            updatedRecords: result.updateCount,
+            completedAt: new Date(),
+          },
+        });
+      }
+    } catch (err) {
+      console.error(`[${key}] 동기화 실패:`, err);
+      await prisma.syncHistory.create({
+        data: {
+          category: config.syncCategory,
+          status: 'failed',
+          errorMessage: err instanceof Error ? err.message : String(err),
+          completedAt: new Date(),
+        },
+      }).catch(() => {});
+      // 한 소스 실패해도 나머지는 계속 진행
+    }
+  }
+
+  console.log('\n청약 동기화 완료');
   await prisma.$disconnect();
 }
 
 main().catch(async (err) => {
   console.error('청약 동기화 실패:', err);
-  await prisma.syncHistory.create({
-    data: {
-      category: 'subscription',
-      status: 'failed',
-      errorMessage: err instanceof Error ? err.message : String(err),
-      completedAt: new Date(),
-    },
-  }).catch(() => {});
   await prisma.$disconnect();
   process.exit(1);
 });

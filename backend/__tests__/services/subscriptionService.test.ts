@@ -74,6 +74,42 @@ describe('getSubscriptionList', () => {
     expect(whereArg.regionName).toEqual({ contains: '서울' });
   });
 
+  it('sourceType 필터를 적용해야 한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await getSubscriptionList({ sourceType: 'OFFITEL', page: 1, limit: 20 });
+
+    const whereArg = mockFindMany.mock.calls[0][0].where;
+    expect(whereArg.sourceType).toBe('OFFITEL');
+  });
+
+  it('category=sale 필터를 적용해야 한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await getSubscriptionList({ category: 'sale', page: 1, limit: 20 });
+
+    const whereArg = mockFindMany.mock.calls[0][0].where;
+    expect(whereArg.OR).toEqual([
+      { sourceType: { in: ['OFFITEL', 'REMAINING'] } },
+      { sourceType: 'APT', rentType: { not: '임대주택' } },
+    ]);
+  });
+
+  it('category=rent 필터를 적용해야 한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await getSubscriptionList({ category: 'rent', page: 1, limit: 20 });
+
+    const whereArg = mockFindMany.mock.calls[0][0].where;
+    expect(whereArg.OR).toEqual([
+      { sourceType: 'PRIVATE_RENT' },
+      { sourceType: 'APT', rentType: '임대주택' },
+    ]);
+  });
+
   it('페이지네이션이 올바르게 적용되어야 한다', async () => {
     mockFindMany.mockResolvedValue([]);
     mockCount.mockResolvedValue(50);
