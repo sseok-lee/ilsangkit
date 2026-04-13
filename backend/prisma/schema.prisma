@@ -1211,6 +1211,7 @@ model Subscription {
   id                      Int       @id @default(autoincrement())
   houseManageNo           String    @db.VarChar(20)
   pblancNo                String    @db.VarChar(20)
+  sourceType              String    @default("APT") @db.VarChar(20)  // APT, OFFITEL, REMAINING, PRIVATE_RENT
   houseName               String    @db.VarChar(200)
   houseType               String    @db.VarChar(20)     // APT, 오피스텔
   houseDetailType         String?   @db.VarChar(20)     // 민영, 국민
@@ -1250,7 +1251,8 @@ model Subscription {
   scores                  SubscriptionScore[]
   specialStatuses         SubscriptionSpecialStatus[]
 
-  @@unique([houseManageNo, pblancNo])
+  @@unique([houseManageNo, pblancNo, sourceType])
+  @@index([sourceType, status])
   @@index([status])
   @@index([announcementDate])
   @@index([regionName])

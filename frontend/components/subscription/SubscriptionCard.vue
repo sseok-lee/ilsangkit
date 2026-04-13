@@ -25,6 +25,7 @@
 
         <!-- House type & detail -->
         <div class="flex flex-wrap items-center gap-2 text-xs">
+          <span v-if="subscription.sourceType && subscription.sourceType !== 'APT'" class="bg-purple-100 text-purple-700 px-2 py-1 rounded font-medium">{{ getSourceTypeLabel(subscription.sourceType) }}</span>
           <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded">{{ subscription.houseType }}</span>
           <span v-if="subscription.houseDetailType" class="bg-slate-100 text-slate-700 px-2 py-1 rounded">{{ subscription.houseDetailType }}</span>
           <span v-if="subscription.rentType" :class="rentTypeBadgeClass">{{ rentTypeLabel }}</span>
@@ -48,6 +49,7 @@
 
 <script setup lang="ts">
 import type { Subscription } from '~/types/subscription'
+import { getSourceTypeLabel } from '~/utils/subscriptionMeta'
 
 const props = defineProps<{
   subscription: Subscription

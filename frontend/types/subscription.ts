@@ -1,9 +1,12 @@
 // Subscription (청약) types
 
+export type SubscriptionSourceType = 'APT' | 'OFFITEL' | 'REMAINING' | 'PRIVATE_RENT'
+
 export interface Subscription {
   id: number
   houseManageNo: string
   pblancNo: string
+  sourceType: SubscriptionSourceType
   houseName: string
   houseType: string // APT, 오피스텔
   houseDetailType: string | null // 민영, 국민

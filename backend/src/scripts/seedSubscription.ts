@@ -79,7 +79,7 @@ async function main() {
 
   for (const sub of subs) {
     await prisma.subscription.upsert({
-      where: { houseManageNo_pblancNo: { houseManageNo: sub.houseManageNo, pblancNo: sub.pblancNo } },
+      where: { houseManageNo_pblancNo_sourceType: { houseManageNo: sub.houseManageNo, pblancNo: sub.pblancNo, sourceType: 'APT' } },
       update: sub,
       create: sub,
     });
@@ -87,7 +87,7 @@ async function main() {
   console.log('청약 5건 삽입 완료');
 
   const sub1 = await prisma.subscription.findUnique({
-    where: { houseManageNo_pblancNo: { houseManageNo: 'TEST001', pblancNo: 'TEST001' } },
+    where: { houseManageNo_pblancNo_sourceType: { houseManageNo: 'TEST001', pblancNo: 'TEST001', sourceType: 'APT' } },
   });
   if (sub1) {
     await prisma.subscriptionUnitType.deleteMany({ where: { subscriptionId: sub1.id } });
