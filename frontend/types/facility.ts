@@ -492,6 +492,19 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { to: '/real-estate/offitel', label: '오피스텔', icon: 'business', iconImg: 'offitel' },
     ],
   },
+  {
+    title: '청약·임대',
+    icon: 'calendar_month',
+    links: [
+      { to: '/subscription/sale', label: '분양 전체', icon: 'sell' },
+      { to: '/subscription/sale/apt', label: '아파트 분양', icon: 'apartment' },
+      { to: '/subscription/sale/offitel', label: '오피스텔·도시형', icon: 'domain' },
+      { to: '/subscription/sale/remaining', label: '무순위·잔여', icon: 'home_work' },
+      { to: '/subscription/rent', label: '임대 전체', icon: 'key' },
+      { to: '/subscription/rent/public', label: '공공임대', icon: 'home' },
+      { to: '/subscription/rent/private', label: '민간임대', icon: 'bungalow' },
+    ],
+  },
   ...CATEGORY_GROUPS,
 ] as const
 
