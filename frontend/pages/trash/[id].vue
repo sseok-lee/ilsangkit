@@ -99,6 +99,9 @@
         :info="data.details.recyclable"
       />
 
+      <!-- Ad: 중간 -->
+      <AdBanner class="my-2" />
+
       <!-- 대형폐기물 -->
       <section
         v-if="data.details?.bulkWaste"
@@ -165,6 +168,9 @@
           {{ data.details.managePhone }}
         </a>
       </section>
+
+      <!-- Ad: 하단 -->
+      <AdBanner class="my-2" />
 
       <!-- 같은 지역 링크 -->
       <nav v-if="trashRegionLink" class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
