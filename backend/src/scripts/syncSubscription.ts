@@ -4,6 +4,7 @@
 
 import 'dotenv/config';
 import prisma from '../lib/prisma.js';
+import { derivePublicRentType } from '../utils/subscriptionUtils.js';
 
 const API_BASE = 'https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1';
 const API_BASE_CMPET = 'https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1';
@@ -245,6 +246,8 @@ async function fetchAll<T>(endpoint: string, params?: Record<string, string>, ba
 function transformSubscription(item: SubscriptionApiItem, sourceType: string) {
   const receptionStart = parseDate(item.RCEPT_BGNDE);
   const receptionEnd = parseDate(item.RCEPT_ENDDE);
+  const houseDetailType = item.HOUSE_DTL_SECD_NM || null;
+  const rentType = item.RENT_SECD_NM || null;
 
   return {
     houseManageNo: item.HOUSE_MANAGE_NO,
@@ -252,8 +255,9 @@ function transformSubscription(item: SubscriptionApiItem, sourceType: string) {
     sourceType,
     houseName: item.HOUSE_NM,
     houseType: item.HOUSE_SECD_NM || 'APT',
-    houseDetailType: item.HOUSE_DTL_SECD_NM || null,
-    rentType: item.RENT_SECD_NM || null,
+    houseDetailType,
+    rentType,
+    publicRentType: derivePublicRentType(houseDetailType, rentType),
     regionName: item.SUBSCRPT_AREA_CODE_NM || '',
     supplyLocation: item.HSSPLY_ADRES || null,
     supplyZipCode: item.HSSPLY_ZIP || null,

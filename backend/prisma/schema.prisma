@@ -1216,6 +1216,7 @@ model Subscription {
   houseType               String    @db.VarChar(20)     // APT, 오피스텔
   houseDetailType         String?   @db.VarChar(20)     // 민영, 국민
   rentType                String?   @db.VarChar(20)     // 분양주택, 임대주택
+  publicRentType          String?   @db.VarChar(20)     // 영구임대|국민임대|장기전세|공공임대|행복주택|역세권청년주택|재개발임대
   regionName              String    @db.VarChar(100)
   supplyLocation          String?   @db.VarChar(500)
   supplyZipCode           String?   @db.VarChar(10)
