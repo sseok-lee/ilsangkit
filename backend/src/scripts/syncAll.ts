@@ -27,6 +27,7 @@ import { syncPharmacies } from './syncPharmacy.js';
 import { syncChildcare } from '../services/childcareSyncService.js';
 import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
+import { syncPublicRent } from './syncPublicRent.js';
 import { prisma } from '../lib/prisma.js';
 import { submitIndexNow, buildFacilityUrls } from '../services/indexNowService.js';
 
@@ -86,7 +87,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports', 'public-rental'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -248,6 +249,16 @@ async function syncCategory(category: Category): Promise<SyncResult> {
 
       case 'sports': {
         const result = await syncSports();
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'public-rental': {
+        const result = await syncPublicRent();
         return {
           category,
           success: true,

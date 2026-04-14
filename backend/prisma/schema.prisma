@@ -1356,3 +1356,30 @@ model SubscriptionSpecialStatus {
   @@unique([subscriptionId, houseType])
   @@index([subscriptionId])
 }
+
+// LH 공공임대 단지정보
+model PublicRentalComplex {
+  id                Int      @id @default(autoincrement())
+  complexCode       String   @unique @db.VarChar(50)
+  complexName       String   @db.VarChar(200)
+  regionHub         String?  @db.VarChar(100)
+  city              String   @db.VarChar(50)
+  district          String   @db.VarChar(50)
+  rentalType        String   @db.VarChar(50)
+  householdCount    Int      @default(0)
+  buildingCount     Int      @default(0)
+  completionDate    DateTime?
+  moveInStart       DateTime?
+  moveInEnd         DateTime?
+  address           String?  @db.VarChar(500)
+  zipCode           String?  @db.VarChar(10)
+  landlordAgency    String   @default("LH") @db.VarChar(50)
+  sourceId          String   @unique @db.VarChar(100)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  syncedAt          DateTime @default(now())
+
+  @@index([city, district])
+  @@index([rentalType])
+  @@index([city, rentalType])
+}
