@@ -1,275 +1,335 @@
 #!/usr/bin/env tsx
-// 공공임대주택 단지 동기화 스크립트
-// API: https://www.odcloud.kr/api/15058476 (JSON 형식)
+// LH 공공임대 매물 동기화 스크립트
+// API: data.myhome.go.kr/rentalHouseList (brtcCode + signguCode 필수)
+// signguCode = MOIS 행정기관코드 3-5번째 자리 (예: 서울 종로구=110, 중구=140)
 
 import 'dotenv/config';
 import { prisma } from '../lib/prisma.js';
-import { runSync, transformAndDedupe, batchUpsert } from '../services/baseSyncService.js';
+import { runSync } from '../services/baseSyncService.js';
 import type { SyncStats } from '../services/baseSyncService.js';
 
-const API_BASE = 'https://api.odcloud.kr/api/15058476/v1/uddi:44a87f6a-35ad-4d1e-a1ff-a1d7cae9fb04';
-const PAGE_SIZE = 1000;
+const API_BASE = 'https://data.myhome.go.kr:443/rentalHouseList';
+const PAGE_SIZE = 100;
 
-/**
- * 공공임대 API 응답 아이템 타입 (한글 필드명)
- */
-export interface PublicRentApiItem {
-  단지코드: string;
-  단지명: string;
-  지역본부명: string;
-  지역명: string;
-  단지구분명: string;
-  세대수: string;
-  동수: string;
-  준공일자: string;
-  입주지정기간시작일: string;
-  입주지정기간종료일: string;
-  주소: string;
-  우편번호: string;
+// 전국 주요 시군구 코드 (brtcCode: 시도, signguCode: MOIS 행정기관코드 3-5자리)
+const REGIONS: { brtcCode: string; signguCode: string }[] = [
+  // 서울특별시 (11)
+  { brtcCode: '11', signguCode: '110' }, // 종로구
+  { brtcCode: '11', signguCode: '140' }, // 중구
+  { brtcCode: '11', signguCode: '170' }, // 용산구
+  { brtcCode: '11', signguCode: '200' }, // 성동구
+  { brtcCode: '11', signguCode: '215' }, // 광진구
+  { brtcCode: '11', signguCode: '230' }, // 동대문구
+  { brtcCode: '11', signguCode: '260' }, // 중랑구
+  { brtcCode: '11', signguCode: '290' }, // 성북구
+  { brtcCode: '11', signguCode: '305' }, // 강북구
+  { brtcCode: '11', signguCode: '320' }, // 도봉구
+  { brtcCode: '11', signguCode: '350' }, // 노원구
+  { brtcCode: '11', signguCode: '380' }, // 은평구
+  { brtcCode: '11', signguCode: '410' }, // 서대문구
+  { brtcCode: '11', signguCode: '440' }, // 마포구
+  { brtcCode: '11', signguCode: '470' }, // 양천구
+  { brtcCode: '11', signguCode: '500' }, // 강서구
+  { brtcCode: '11', signguCode: '530' }, // 구로구
+  { brtcCode: '11', signguCode: '545' }, // 금천구
+  { brtcCode: '11', signguCode: '560' }, // 영등포구
+  { brtcCode: '11', signguCode: '590' }, // 동작구
+  { brtcCode: '11', signguCode: '620' }, // 관악구
+  { brtcCode: '11', signguCode: '650' }, // 서초구
+  { brtcCode: '11', signguCode: '680' }, // 강남구
+  { brtcCode: '11', signguCode: '710' }, // 송파구
+  { brtcCode: '11', signguCode: '740' }, // 강동구
+  // 부산광역시 (26)
+  { brtcCode: '26', signguCode: '110' }, // 중구
+  { brtcCode: '26', signguCode: '140' }, // 서구
+  { brtcCode: '26', signguCode: '170' }, // 동구
+  { brtcCode: '26', signguCode: '200' }, // 영도구
+  { brtcCode: '26', signguCode: '230' }, // 부산진구
+  { brtcCode: '26', signguCode: '260' }, // 동래구
+  { brtcCode: '26', signguCode: '290' }, // 남구
+  { brtcCode: '26', signguCode: '320' }, // 북구
+  { brtcCode: '26', signguCode: '350' }, // 해운대구
+  { brtcCode: '26', signguCode: '380' }, // 사하구
+  { brtcCode: '26', signguCode: '410' }, // 금정구
+  { brtcCode: '26', signguCode: '440' }, // 강서구
+  { brtcCode: '26', signguCode: '470' }, // 연제구
+  { brtcCode: '26', signguCode: '500' }, // 수영구
+  { brtcCode: '26', signguCode: '530' }, // 사상구
+  { brtcCode: '26', signguCode: '710' }, // 기장군
+  // 대구광역시 (27)
+  { brtcCode: '27', signguCode: '110' }, // 중구
+  { brtcCode: '27', signguCode: '140' }, // 동구
+  { brtcCode: '27', signguCode: '170' }, // 서구
+  { brtcCode: '27', signguCode: '200' }, // 남구
+  { brtcCode: '27', signguCode: '230' }, // 북구
+  { brtcCode: '27', signguCode: '260' }, // 수성구
+  { brtcCode: '27', signguCode: '290' }, // 달서구
+  { brtcCode: '27', signguCode: '710' }, // 달성군
+  // 인천광역시 (28)
+  { brtcCode: '28', signguCode: '110' }, // 중구
+  { brtcCode: '28', signguCode: '140' }, // 동구
+  { brtcCode: '28', signguCode: '177' }, // 미추홀구
+  { brtcCode: '28', signguCode: '185' }, // 연수구
+  { brtcCode: '28', signguCode: '200' }, // 남동구
+  { brtcCode: '28', signguCode: '237' }, // 부평구
+  { brtcCode: '28', signguCode: '245' }, // 계양구
+  { brtcCode: '28', signguCode: '260' }, // 서구
+  { brtcCode: '28', signguCode: '710' }, // 강화군
+  // 광주광역시 (29)
+  { brtcCode: '29', signguCode: '110' }, // 동구
+  { brtcCode: '29', signguCode: '140' }, // 서구
+  { brtcCode: '29', signguCode: '155' }, // 남구
+  { brtcCode: '29', signguCode: '170' }, // 북구
+  { brtcCode: '29', signguCode: '200' }, // 광산구
+  // 대전광역시 (30)
+  { brtcCode: '30', signguCode: '110' }, // 동구
+  { brtcCode: '30', signguCode: '140' }, // 중구
+  { brtcCode: '30', signguCode: '170' }, // 서구
+  { brtcCode: '30', signguCode: '200' }, // 유성구
+  { brtcCode: '30', signguCode: '230' }, // 대덕구
+  // 울산광역시 (31)
+  { brtcCode: '31', signguCode: '110' }, // 중구
+  { brtcCode: '31', signguCode: '140' }, // 남구
+  { brtcCode: '31', signguCode: '170' }, // 동구
+  { brtcCode: '31', signguCode: '200' }, // 북구
+  { brtcCode: '31', signguCode: '710' }, // 울주군
+  // 세종특별자치시 (36)
+  { brtcCode: '36', signguCode: '110' },
+  // 경기도 (41) - 주요 시
+  { brtcCode: '41', signguCode: '111' }, // 수원시 장안구
+  { brtcCode: '41', signguCode: '113' }, // 수원시 권선구
+  { brtcCode: '41', signguCode: '115' }, // 수원시 팔달구
+  { brtcCode: '41', signguCode: '117' }, // 수원시 영통구
+  { brtcCode: '41', signguCode: '131' }, // 성남시 수정구
+  { brtcCode: '41', signguCode: '133' }, // 성남시 중원구
+  { brtcCode: '41', signguCode: '135' }, // 성남시 분당구
+  { brtcCode: '41', signguCode: '150' }, // 의정부시
+  { brtcCode: '41', signguCode: '171' }, // 안양시 만안구
+  { brtcCode: '41', signguCode: '173' }, // 안양시 동안구
+  { brtcCode: '41', signguCode: '190' }, // 부천시
+  { brtcCode: '41', signguCode: '210' }, // 광명시
+  { brtcCode: '41', signguCode: '220' }, // 평택시
+  { brtcCode: '41', signguCode: '250' }, // 동두천시
+  { brtcCode: '41', signguCode: '271' }, // 안산시 상록구
+  { brtcCode: '41', signguCode: '273' }, // 안산시 단원구
+  { brtcCode: '41', signguCode: '281' }, // 고양시 덕양구
+  { brtcCode: '41', signguCode: '285' }, // 고양시 일산동구
+  { brtcCode: '41', signguCode: '287' }, // 고양시 일산서구
+  { brtcCode: '41', signguCode: '310' }, // 구리시
+  { brtcCode: '41', signguCode: '360' }, // 남양주시
+  { brtcCode: '41', signguCode: '390' }, // 시흥시
+  { brtcCode: '41', signguCode: '410' }, // 군포시
+  { brtcCode: '41', signguCode: '450' }, // 하남시
+  { brtcCode: '41', signguCode: '461' }, // 용인시 처인구
+  { brtcCode: '41', signguCode: '463' }, // 용인시 기흥구
+  { brtcCode: '41', signguCode: '465' }, // 용인시 수지구
+  { brtcCode: '41', signguCode: '480' }, // 파주시
+  { brtcCode: '41', signguCode: '500' }, // 이천시
+  { brtcCode: '41', signguCode: '570' }, // 김포시
+  { brtcCode: '41', signguCode: '590' }, // 화성시
+  { brtcCode: '41', signguCode: '610' }, // 광주시
+  { brtcCode: '41', signguCode: '630' }, // 양주시
+  // 강원도 (42) 주요 시
+  { brtcCode: '42', signguCode: '110' }, // 춘천시
+  { brtcCode: '42', signguCode: '130' }, // 원주시
+  { brtcCode: '42', signguCode: '150' }, // 강릉시
+  // 충청북도 (43) 주요 시
+  { brtcCode: '43', signguCode: '111' }, // 청주시 상당구
+  { brtcCode: '43', signguCode: '113' }, // 청주시 서원구
+  { brtcCode: '43', signguCode: '115' }, // 청주시 흥덕구
+  { brtcCode: '43', signguCode: '117' }, // 청주시 청원구
+  { brtcCode: '43', signguCode: '130' }, // 충주시
+  // 충청남도 (44) 주요 시
+  { brtcCode: '44', signguCode: '130' }, // 천안시 동남구
+  { brtcCode: '44', signguCode: '133' }, // 천안시 서북구
+  { brtcCode: '44', signguCode: '150' }, // 공주시
+  { brtcCode: '44', signguCode: '180' }, // 아산시
+  // 전라북도 (45) 주요 시
+  { brtcCode: '45', signguCode: '111' }, // 전주시 완산구
+  { brtcCode: '45', signguCode: '113' }, // 전주시 덕진구
+  { brtcCode: '45', signguCode: '130' }, // 군산시
+  // 전라남도 (46) 주요 시
+  { brtcCode: '46', signguCode: '110' }, // 목포시
+  { brtcCode: '46', signguCode: '130' }, // 여수시
+  { brtcCode: '46', signguCode: '150' }, // 순천시
+  // 경상북도 (47) 주요 시
+  { brtcCode: '47', signguCode: '110' }, // 포항시 남구
+  { brtcCode: '47', signguCode: '111' }, // 포항시 북구
+  { brtcCode: '47', signguCode: '130' }, // 경주시
+  { brtcCode: '47', signguCode: '150' }, // 김천시
+  { brtcCode: '47', signguCode: '170' }, // 안동시
+  // 경상남도 (48) 주요 시
+  { brtcCode: '48', signguCode: '121' }, // 창원시 의창구
+  { brtcCode: '48', signguCode: '123' }, // 창원시 성산구
+  { brtcCode: '48', signguCode: '125' }, // 창원시 마산합포구
+  { brtcCode: '48', signguCode: '127' }, // 창원시 마산회원구
+  { brtcCode: '48', signguCode: '129' }, // 창원시 진해구
+  { brtcCode: '48', signguCode: '170' }, // 진주시
+  // 제주특별자치도 (50)
+  { brtcCode: '50', signguCode: '110' }, // 제주시
+  { brtcCode: '50', signguCode: '130' }, // 서귀포시
+];
+
+export interface MyhomeRentalItem {
+  hsmpSn: number;
+  insttNm: string;
+  brtcCode: string;
+  brtcNm: string;
+  signguCode: string;
+  signguNm: string;
+  hsmpNm: string;
+  rnAdres: string;
+  hshldCo: number;
+  suplyTyNm: string;
+  styleNm?: string;
+  suplyPrvuseAr?: number;
+  houseTyNm?: string;
+  bassRentGtn?: number;
+  bassMtRntchrg?: number;
 }
 
-/**
- * 변환된 DB 아이템 타입
- */
-export interface TransformedPublicRentItem {
-  complexCode: string;
-  complexName: string;
-  regionHub: string | null;
-  city: string | null;
-  district: string | null;
-  rentalType: string;
-  householdCount: number;
-  buildingCount: number;
-  completionDate: Date | null;
-  moveInStart: Date | null;
-  moveInEnd: Date | null;
-  address: string | null;
-  zipCode: string | null;
-  landlordAgency: string;
-  sourceId: string;
-}
-
-/**
- * 날짜 문자열 변환 (YYYYMMDD → DateTime)
- */
-function parseDate(dateStr: string): Date | null {
-  if (!dateStr || dateStr.trim() === '') return null;
-  const match = dateStr.match(/^(\d{4})(\d{2})(\d{2})$/);
-  if (!match) return null;
-  const [, year, month, day] = match;
-  const date = new Date(`${year}-${month}-${day}`);
-  return isNaN(date.getTime()) ? null : date;
-}
-
-/**
- * 주소 문자열 파싱 (공백으로 구분된 지역명을 city/district로 분리)
- * 예: "서울특별시 강남구 테헤란로 100" → city: "서울특별시", district: "강남구"
- */
-function parseAddress(addressStr: string): { city: string | null; district: string | null } {
-  if (!addressStr || addressStr.trim() === '') {
-    return { city: null, district: null };
-  }
-
-  const parts = addressStr.split(' ').filter((p) => p.length > 0);
-  if (parts.length < 2) {
-    return { city: null, district: null };
-  }
-
-  // 첫 번째 부분이 시/도, 두 번째 부분이 구/군/시
-  return { city: parts[0], district: parts[1] };
-}
-
-/**
- * API 응답 아이템을 DB 필드로 변환
- */
-export function transformPublicRentItem(
-  item: PublicRentApiItem,
-  city: string | null = null,
-  district: string | null = null
-): TransformedPublicRentItem {
-  // 주소에서 city/district 파싱 (제공된 값이 없을 경우에만)
-  let parsedCity = city;
-  let parsedDistrict = district;
-
-  if (!parsedCity || !parsedDistrict) {
-    const addressParse = parseAddress(item.주소 || '');
-    if (!parsedCity) parsedCity = addressParse.city;
-    if (!parsedDistrict) parsedDistrict = addressParse.district;
-  }
-
-  // 빈 문자열은 null로 처리
-  const regionHub = item.지역본부명?.trim() ? item.지역본부명.trim() : null;
-  const address = item.주소?.trim() ? item.주소.trim() : null;
-  const zipCode = item.우편번호?.trim() ? item.우편번호.trim() : null;
-
-  // 세대수, 동수 정수 변환 (빈 문자열 또는 falsy 값은 0으로)
-  const householdCount = item.세대수?.trim() ? parseInt(item.세대수.trim(), 10) : 0;
-  const buildingCount = item.동수?.trim() ? parseInt(item.동수.trim(), 10) : 0;
-
-  // 날짜 변환
-  const completionDate = parseDate(item.준공일자);
-  const moveInStart = parseDate(item.입주지정기간시작일);
-  const moveInEnd = parseDate(item.입주지정기간종료일);
-
-  // sourceId 생성
-  const sourceId = `publicRent-${item.단지코드}`;
-
-  return {
-    complexCode: item.단지코드,
-    complexName: item.단지명,
-    regionHub,
-    city: parsedCity,
-    district: parsedDistrict,
-    rentalType: item.단지구분명,
-    householdCount: isNaN(householdCount) ? 0 : householdCount,
-    buildingCount: isNaN(buildingCount) ? 0 : buildingCount,
-    completionDate,
-    moveInStart,
-    moveInEnd,
-    address,
-    zipCode,
-    landlordAgency: 'LH',
-    sourceId,
-  };
-}
-
-/**
- * 단일 페이지 API 호출
- */
-async function fetchPage(pageNo: number): Promise<{ items: PublicRentApiItem[]; totalCount: number }> {
-  const serviceKey = process.env.OPENAPI_SERVICE_KEY;
-  if (!serviceKey) {
-    throw new Error('OPENAPI_SERVICE_KEY 환경변수가 설정되지 않았습니다.');
-  }
-
+async function fetchRegionPage(
+  brtcCode: string,
+  signguCode: string,
+  pageNo: number,
+  serviceKey: string
+): Promise<{ items: MyhomeRentalItem[]; totalCount: number }> {
   const url = new URL(API_BASE);
+  url.searchParams.set('brtcCode', brtcCode);
+  url.searchParams.set('signguCode', signguCode);
+  url.searchParams.set('numOfRows', String(PAGE_SIZE));
   url.searchParams.set('pageNo', String(pageNo));
-  url.searchParams.set('perPage', String(PAGE_SIZE));
-  // serviceKey는 직접 append — URLSearchParams가 +/= 등을 이중 인코딩하면 400 발생
-  const urlStr = `${url.toString()}&serviceKey=${serviceKey}`;
+  const urlStr = `${url.toString()}&ServiceKey=${serviceKey}`;
 
-  const response = await fetch(urlStr);
-  if (!response.ok) {
-    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
-  }
+  const res = await fetch(urlStr);
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
-  const data = await response.json() as { data?: PublicRentApiItem[]; totalCount?: number };
-  return {
-    items: data.data || [],
-    totalCount: data.totalCount || 0,
-  };
+  const data = await res.json() as { code: string; msg?: string; hsmpList?: MyhomeRentalItem[] };
+  if (data.code !== '000') return { items: [], totalCount: 0 };
+
+  const list = data.hsmpList ?? [];
+  const totalCount = list[0] ? (list[0] as unknown as Record<string, number>)['totalCount'] ?? 0 : 0;
+  return { items: list, totalCount };
 }
 
-/**
- * 모든 페이지 데이터 가져오기 (페이지네이션 처리)
- */
-async function fetchAllPages(): Promise<PublicRentApiItem[]> {
-  const allItems: PublicRentApiItem[] = [];
-  let pageNo = 1;
-  let totalCount = 0;
+async function fetchAllRegions(): Promise<MyhomeRentalItem[]> {
+  const serviceKey = process.env.OPENAPI_SERVICE_KEY;
+  if (!serviceKey) throw new Error('OPENAPI_SERVICE_KEY 환경변수가 설정되지 않았습니다.');
 
-  // 첫 페이지 요청
-  const firstPage = await fetchPage(pageNo);
-  allItems.push(...firstPage.items);
-  totalCount = firstPage.totalCount;
+  const allItems: MyhomeRentalItem[] = [];
 
-  console.info(`Total records from API: ${totalCount}`);
+  for (const region of REGIONS) {
+    try {
+      const first = await fetchRegionPage(region.brtcCode, region.signguCode, 1, serviceKey);
+      if (first.items.length === 0) continue;
 
-  // 남은 페이지 모두 가져오기
-  while (allItems.length < totalCount) {
-    pageNo++;
-    const page = await fetchPage(pageNo);
-    allItems.push(...page.items);
-    console.info(`Fetched page ${pageNo}: ${page.items.length} items (total so far: ${allItems.length}/${totalCount})`);
+      allItems.push(...first.items);
 
-    // API rate limit 고려
-    await new Promise((resolve) => setTimeout(resolve, 500));
+      let fetched = first.items.length;
+      let page = 2;
+      while (fetched < first.totalCount) {
+        const next = await fetchRegionPage(region.brtcCode, region.signguCode, page, serviceKey);
+        allItems.push(...next.items);
+        fetched += next.items.length;
+        page++;
+      }
+
+      console.info(`  ${region.brtcCode}-${region.signguCode}: ${first.totalCount}건`);
+      await new Promise((r) => setTimeout(r, 200)); // rate limit
+    } catch (e) {
+      console.warn(`  ${region.brtcCode}-${region.signguCode} skip:`, (e as Error).message);
+    }
   }
 
   return allItems;
 }
 
-/**
- * 공공임대 동기화 메인 함수
- */
+export function transformMyhomeItem(item: MyhomeRentalItem) {
+  // API가 빈 값을 {} 로 반환하는 경우가 있으므로 타입 체크 필수
+  const toNumber = (v: unknown): number | null =>
+    typeof v === 'number' && isFinite(v) ? v : null;
+
+  const deposit = toNumber(item.bassRentGtn);
+  const monthly = toNumber(item.bassMtRntchrg);
+  const area = toNumber(item.suplyPrvuseAr);
+  const household = toNumber(item.hshldCo);
+
+  return {
+    complexCode: String(item.hsmpSn),
+    complexName: (typeof item.rnAdres === 'string' && item.rnAdres) ? item.rnAdres : item.hsmpNm,
+    city: item.brtcNm,
+    district: item.signguNm,
+    rentalType: item.suplyTyNm,
+    houseType: (typeof item.houseTyNm === 'string' && item.houseTyNm) ? item.houseTyNm : null,
+    householdCount: household,
+    exclusiveArea: area,
+    depositAmount: deposit !== null ? BigInt(deposit) : null,
+    monthlyRent: monthly,
+    landlordAgency: 'LH',
+    sourceId: `lh-${item.hsmpSn}`,
+  };
+}
+
 async function syncPublicRent(): Promise<SyncStats> {
   return runSync('public-rental', async (stats) => {
-    // 모든 페이지 데이터 가져오기
-    const rawItems = await fetchAllPages();
+    console.info('LH 공공임대 매물 수집 시작...');
+    const rawItems = await fetchAllRegions();
     stats.totalRecords = rawItems.length;
+    console.info(`총 ${rawItems.length}건 수집`);
 
-    // 데이터 변환 및 중복 제거
-    const transformedItems = transformAndDedupe(
-      rawItems,
-      (item) => transformPublicRentItem(item),
-      (item) => item.sourceId,
-      stats
-    );
+    // 중복 제거 (hsmpSn 기준)
+    const seen = new Set<string>();
+    const items = rawItems
+      .map(transformMyhomeItem)
+      .filter((item) => {
+        if (seen.has(item.sourceId)) return false;
+        seen.add(item.sourceId);
+        return true;
+      });
 
-    console.info(`After deduplication: ${transformedItems.length} items (skipped: ${stats.skippedRecords})`);
+    // 배치 upsert (500건씩)
+    const BATCH = 500;
+    let newCount = 0;
+    let updateCount = 0;
 
-    // 배치 upsert
-    const { newCount, updateCount } = await batchUpsert(
-      transformedItems,
-      async (item) => {
-        const result = await prisma.publicRentalComplex.upsert({
-          where: { sourceId: item.sourceId },
-          update: {
-            complexCode: item.complexCode,
-            complexName: item.complexName,
-            regionHub: item.regionHub,
-            city: item.city || '',
-            district: item.district || '',
-            rentalType: item.rentalType,
-            householdCount: item.householdCount,
-            buildingCount: item.buildingCount,
-            completionDate: item.completionDate,
-            moveInStart: item.moveInStart,
-            moveInEnd: item.moveInEnd,
-            address: item.address,
-            zipCode: item.zipCode,
-            landlordAgency: item.landlordAgency,
-            syncedAt: new Date(),
-          },
-          create: {
-            complexCode: item.complexCode,
-            complexName: item.complexName,
-            regionHub: item.regionHub,
-            city: item.city || '',
-            district: item.district || '',
-            rentalType: item.rentalType,
-            householdCount: item.householdCount,
-            buildingCount: item.buildingCount,
-            completionDate: item.completionDate,
-            moveInStart: item.moveInStart,
-            moveInEnd: item.moveInEnd,
-            address: item.address,
-            zipCode: item.zipCode,
-            landlordAgency: item.landlordAgency,
-            sourceId: item.sourceId,
-          },
-        });
-
-        return result.id ? 'new' : 'updated';
-      }
-    );
+    for (let i = 0; i < items.length; i += BATCH) {
+      const batch = items.slice(i, i + BATCH);
+      await Promise.all(
+        batch.map(async (item) => {
+          const existing = await prisma.publicRentalComplex.findUnique({
+            where: { sourceId: item.sourceId },
+            select: { id: true },
+          });
+          await prisma.publicRentalComplex.upsert({
+            where: { sourceId: item.sourceId },
+            create: item,
+            update: {
+              complexName: item.complexName,
+              city: item.city,
+              district: item.district,
+              rentalType: item.rentalType,
+              houseType: item.houseType,
+              householdCount: item.householdCount,
+              exclusiveArea: item.exclusiveArea,
+              depositAmount: item.depositAmount,
+              monthlyRent: item.monthlyRent,
+            },
+          });
+          if (existing) updateCount++; else newCount++;
+        })
+      );
+    }
 
     stats.newRecords = newCount;
     stats.updatedRecords = updateCount;
+    console.info(`완료 — 신규: ${newCount}, 업데이트: ${updateCount}`);
   });
 }
 
-// 스크립트 직접 실행 시
 if (import.meta.url === `file://${process.argv[1]}`) {
   syncPublicRent()
-    .then(() => {
-      console.log('✅ 공공임대 동기화 완료');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('❌ 공공임대 동기화 실패:', error);
-      process.exit(1);
-    });
+    .then(() => { console.log('✅ 공공임대 동기화 완료'); process.exit(0); })
+    .catch((e) => { console.error('❌ 공공임대 동기화 실패:', e); process.exit(1); });
 }
 
 export { syncPublicRent };

@@ -1358,28 +1358,27 @@ model SubscriptionSpecialStatus {
 }
 
 // LH 공공임대 단지정보
+// LH 공공임대 매물 (data.myhome.go.kr/rentalHouseList API)
+// 세대 단위 매물 데이터 — hsmpSn이 고유 식별자
 model PublicRentalComplex {
-  id                Int      @id @default(autoincrement())
-  complexCode       String   @unique @db.VarChar(50)
-  complexName       String   @db.VarChar(200)
-  regionHub         String?  @db.VarChar(100)
-  city              String   @db.VarChar(50)
-  district          String   @db.VarChar(50)
-  rentalType        String   @db.VarChar(50)
-  householdCount    Int      @default(0)
-  buildingCount     Int      @default(0)
-  completionDate    DateTime?
-  moveInStart       DateTime?
-  moveInEnd         DateTime?
-  address           String?  @db.VarChar(500)
-  zipCode           String?  @db.VarChar(10)
-  landlordAgency    String   @default("LH") @db.VarChar(50)
-  sourceId          String   @unique @db.VarChar(100)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  syncedAt          DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  complexCode     String   @unique @db.VarChar(20)    // hsmpSn (마이홈 일련번호)
+  complexName     String   @db.VarChar(300)            // 도로명 주소 (rnAdres)
+  city            String   @db.VarChar(50)             // 시/도명 (brtcNm)
+  district        String   @db.VarChar(50)             // 시/군/구명 (signguNm)
+  rentalType      String   @db.VarChar(30)             // 공급유형 (suplyTyNm: 매입임대/전세임대 등)
+  houseType       String?  @db.VarChar(30)             // 주택유형 (houseTyNm: 아파트/오피스텔 등)
+  householdCount  Int?                                  // 세대수 (hshldCo)
+  exclusiveArea   Decimal? @db.Decimal(10, 2)          // 전용면적㎡ (suplyPrvuseAr)
+  depositAmount   BigInt?                               // 보증금원 (bassRentGtn)
+  monthlyRent     Int?                                  // 월임대료원 (bassMtRntchrg)
+  landlordAgency  String   @default("LH") @db.VarChar(10)
+  sourceId        String   @unique @db.VarChar(30)     // "lh-{hsmpSn}"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([city, district])
-  @@index([rentalType])
   @@index([city, rentalType])
+  @@index([rentalType])
+  @@index([depositAmount])
 }
