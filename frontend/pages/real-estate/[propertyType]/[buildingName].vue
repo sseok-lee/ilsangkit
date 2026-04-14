@@ -352,17 +352,17 @@
         </ClientOnly>
       </section>
 
+      <!-- 관련 가이드 -->
+      <section class="mt-8">
+        <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
+      </section>
+
       <!-- 데이터 정보 -->
       <section v-if="lastSyncDate" class="mt-8">
         <DataSourceCard
           :source="REAL_ESTATE_DATA_SOURCE"
           :last-sync-date="lastSyncDate"
         />
-      </section>
-
-      <!-- 관련 가이드 -->
-      <section class="mt-8">
-        <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
       </section>
     </main>
 

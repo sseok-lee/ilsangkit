@@ -371,6 +371,11 @@
         <!-- Ad: 기본정보 아래 -->
         <AdBanner />
 
+        <!-- 관련 가이드 -->
+        <section class="mt-8">
+          <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
+        </section>
+
         <!-- 5. 링크 -->
         <div class="flex flex-col md:flex-row gap-4 mb-8">
           <a
@@ -394,11 +399,6 @@
             청약홈 공고 보기
           </a>
         </div>
-
-      <!-- 관련 가이드 -->
-      <section class="mt-8">
-        <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
-      </section>
 
       </main>
     </template>
