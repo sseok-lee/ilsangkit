@@ -373,8 +373,6 @@
           </a>
         </div>
 
-        <!-- Ad -->
-        <AdBanner />
       </main>
     </template>
 
