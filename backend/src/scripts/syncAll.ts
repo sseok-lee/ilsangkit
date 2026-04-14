@@ -27,7 +27,6 @@ import { syncPharmacies } from './syncPharmacy.js';
 import { syncChildcare } from '../services/childcareSyncService.js';
 import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
-import { syncPublicRent } from './syncPublicRent.js';
 import { prisma } from '../lib/prisma.js';
 import { submitIndexNow, buildFacilityUrls } from '../services/indexNowService.js';
 
