@@ -395,6 +395,11 @@
           </a>
         </div>
 
+      <!-- 관련 가이드 -->
+      <section class="mt-8">
+        <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
+      </section>
+
       </main>
     </template>
 
@@ -423,6 +428,7 @@ import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, Subsc
 import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
 import RentalPriceStatsBox from '~/components/subscription/RentalPriceStatsBox.vue'
+import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 
 const route = useRoute()
 const id = Number(route.params.id)

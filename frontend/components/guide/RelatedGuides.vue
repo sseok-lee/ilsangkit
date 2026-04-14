@@ -53,7 +53,8 @@ import { useGuides } from '~/composables/useGuides'
 import type { GuideSummary } from '~/composables/useGuides'
 
 const props = withDefaults(defineProps<{
-  category: string
+  category?: string
+  categories?: string[]
   excludeSlug?: string
   limit?: number
 }>(), {
@@ -68,7 +69,7 @@ const rawItems = ref<GuideSummary[]>([])
 onMounted(async () => {
   try {
     const data = await fetchGuides({
-      category: props.category,
+      ...(props.categories?.length ? { categories: props.categories } : { category: props.category }),
       limit: props.limit + (props.excludeSlug ? 1 : 0),
     })
     rawItems.value = data.items

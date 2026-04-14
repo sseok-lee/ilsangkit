@@ -359,6 +359,11 @@
           :last-sync-date="lastSyncDate"
         />
       </section>
+
+      <!-- 관련 가이드 -->
+      <section class="mt-8">
+        <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
+      </section>
     </main>
 
     <!-- Mobile: Sticky Bottom Action Bar -->
@@ -409,11 +414,14 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
 const router = useRouter()
+
+const PROPERTY_GUIDE_CATEGORIES: string[] = ['apt-sale', 'apt-rent', 'subscription']
 
 const propertyTypeParam = computed(() => route.params.propertyType as RealEstatePropertyType)
 const buildingName = computed(() => decodeURIComponent(route.params.buildingName as string))
@@ -430,6 +438,7 @@ const currentTab = computed<TransactionMode>({
     router.replace({ query: { ...route.query, tab: val } })
   },
 })
+
 
 const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.value))
 const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])

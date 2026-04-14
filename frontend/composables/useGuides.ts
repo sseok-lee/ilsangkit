@@ -34,11 +34,13 @@ export function useGuides() {
     page?: number
     limit?: number
     category?: string
+    categories?: string[]
   } = {}): Promise<PaginatedGuides> {
     const query = new URLSearchParams()
     if (params.page) query.set('page', String(params.page))
     if (params.limit) query.set('limit', String(params.limit))
-    if (params.category) query.set('category', params.category)
+    if (params.categories?.length) query.set('categories', params.categories.join(','))
+    else if (params.category) query.set('category', params.category)
 
     const qs = query.toString()
     const url = `${apiBase}/api/guides${qs ? `?${qs}` : ''}`

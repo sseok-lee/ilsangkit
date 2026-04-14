@@ -10,6 +10,7 @@ const GuideListQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
   category: z.string().optional(),
+  categories: z.string().optional().transform(v => v ? v.split(',').filter(Boolean) : undefined),
   articleType: z.enum(['news', 'howto', 'listicle', 'guide']).optional(),
 });
 

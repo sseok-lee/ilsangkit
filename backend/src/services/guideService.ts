@@ -36,6 +36,7 @@ export interface GuideListParams {
   page: number;
   limit: number;
   category?: string;
+  categories?: string[];
   articleType?: 'news' | 'howto' | 'listicle' | 'guide';
 }
 
@@ -47,12 +48,19 @@ export interface GuideListResult {
 }
 
 export async function listGuides(params: GuideListParams) {
-  const { page, limit, category, articleType } = params;
+  const { page, limit, category, categories, articleType } = params;
   const skip = (page - 1) * limit;
+
+  const categoryFilter =
+    categories && categories.length > 0
+      ? { category: { in: categories } }
+      : category
+      ? { category }
+      : {};
 
   const where = {
     published: true,
-    ...(category ? { category } : {}),
+    ...categoryFilter,
     ...(articleType ? { articleType } : {}),
   };
 

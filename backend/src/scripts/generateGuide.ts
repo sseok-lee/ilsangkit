@@ -47,12 +47,8 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   childcare: ['어린이집 찾기', '국공립 어린이집', '어린이집 입소 대기', '보육료 지원', '어린이집 안전', '직장 어린이집'],
   'ev-charger': ['전기차 충전소', '전기차 충전 요금', '급속 충전기', '충전 인프라 확대', '전기차 보조금', '공용 충전기'],
   sports: ['체육시설', '공공 체육관', '생활체육', '국민체육센터', '스포츠 강좌 바우처', '주민 체육시설'],
-  'apt-sale': ['아파트 매매', '아파트 시세', '아파트 실거래가', '아파트 매수 전략', '부동산 매매 동향', '신축 아파트 분양'],
-  'apt-rent': ['아파트 전세', '아파트 월세', '전월세 시세', '전세 사기 예방', '임대차 보호법', '전세 보증보험'],
-  'villa-sale': ['빌라 매매', '연립다세대 매매', '빌라 투자', '빌라 실거래가', '다세대 주택 매매', '빌라 매수 주의사항'],
-  'villa-rent': ['빌라 전세', '빌라 월세', '다세대 전월세', '빌라 전세 사기', '연립 전월세 시세', '빌라 임대차'],
-  'offitel-sale': ['오피스텔 매매', '오피스텔 투자', '오피스텔 시세', '오피스텔 분양', '오피스텔 수익률', '오피스텔 실거래가'],
-  'offitel-rent': ['오피스텔 전세', '오피스텔 월세', '오피스텔 임대', '오피스텔 전월세 시세', '오피스텔 관리비', '오피스텔 임대 수익'],
+  'apt-sale': ['아파트 매매', '빌라 매매', '오피스텔 매매', '부동산 매매 절차', '실거래가 확인 방법', '부동산 매수 체크리스트', '등기부등본 보는 법', '부동산 계약서 작성', '취득세 계산', '부동산 중개수수료'],
+  'apt-rent': ['아파트 전세', '빌라 전세', '오피스텔 월세', '전세 사기 예방', '임대차 보호법', '전세 보증보험', '확정일자 받는 법', '전월세 계약 주의사항', '보증금 돌려받기', '주택 임대차 분쟁'],
   'subscription': ['청약 일정', '아파트 청약', '청약 가점', '특별공급 조건', '청약홈 사용법', '청약통장 가입'],
 };
 
@@ -72,18 +68,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   childcare: '어린이집',
   'ev-charger': '전기차 충전소',
   sports: '체육시설',
-  'apt-sale': '아파트 매매',
-  'apt-rent': '아파트 전월세',
-  'villa-sale': '빌라 매매',
-  'villa-rent': '빌라 전월세',
-  'offitel-sale': '오피스텔 매매',
-  'offitel-rent': '오피스텔 전월세',
+  'apt-sale': '부동산 매매',
+  'apt-rent': '부동산 임대차',
   'subscription': '청약',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_KEYWORDS);
 
-const REAL_ESTATE_CATEGORIES = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'];
+const REAL_ESTATE_CATEGORIES = ['apt-sale', 'apt-rent'];
 
 // 가이드 글 생성 후 본문 뒤에 삽입할 관련 카테고리 매핑 (내부 링크 자동 삽입용)
 const RELATED_GUIDE_CATEGORIES: Record<string, string[]> = {
@@ -103,13 +95,9 @@ const RELATED_GUIDE_CATEGORIES: Record<string, string[]> = {
   trash: ['clothes'],
   market: ['parking'],
   wifi: [],
-  // 부동산 (매매/전월세 쌍)
-  'apt-sale': ['apt-rent', 'villa-sale', 'offitel-sale'],
-  'apt-rent': ['apt-sale', 'villa-rent', 'offitel-rent'],
-  'villa-sale': ['apt-sale', 'villa-rent'],
-  'villa-rent': ['apt-rent', 'villa-sale'],
-  'offitel-sale': ['apt-sale', 'offitel-rent'],
-  'offitel-rent': ['apt-rent', 'offitel-sale'],
+  // 부동산
+  'apt-sale': ['apt-rent', 'subscription'],
+  'apt-rent': ['apt-sale', 'subscription'],
   'subscription': ['apt-sale', 'apt-rent'],
 };
 
