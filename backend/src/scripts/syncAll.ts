@@ -87,7 +87,8 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports', 'public-rental'] as const;
+// public-rental은 API 쿼터 제한으로 별도 수동 실행: npx tsx src/scripts/syncPublicRent.ts
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
