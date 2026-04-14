@@ -333,6 +333,9 @@
         </div>
       </section>
 
+      <!-- Ad: 인근 단지 아래 -->
+      <AdBanner />
+
       <!-- 주변 생활시설 -->
       <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mt-8">
         <h2 class="text-lg font-semibold text-slate-800 mb-4">주변 생활시설</h2>
