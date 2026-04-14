@@ -114,11 +114,12 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <SubscriptionCard
-          v-for="sub in subscriptions"
-          :key="sub.id"
-          :subscription="sub"
-        />
+        <template v-for="(sub, index) in subscriptions" :key="sub.id">
+          <SubscriptionCard :subscription="sub" />
+          <div v-if="(index + 1) % 6 === 0" class="col-span-full">
+            <AdBanner ad-slot="2345678901" ad-format="fluid" />
+          </div>
+        </template>
       </div>
 
       <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />

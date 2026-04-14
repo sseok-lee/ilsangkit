@@ -600,7 +600,7 @@ if (data.value) {
   specialStatuses.value = specials || []
 }
 
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setEventSchema } = useStructuredData()
 
 if (subscription.value) {
   const sub = subscription.value
@@ -614,6 +614,18 @@ if (subscription.value) {
     { name: categoryName, url: `${SITE_URL}${categoryPath}` },
     { name: sub.houseName, url: `${SITE_URL}/subscription/${id}` },
   ])
+
+  // Event schema for subscription reception period
+  if (sub.receptionStartDate && sub.receptionEndDate) {
+    setEventSchema({
+      name: `${sub.houseName} 청약 접수`,
+      description: `${sub.houseName} ${sub.houseType} 청약 접수 기간`,
+      startDate: sub.receptionStartDate,
+      endDate: sub.receptionEndDate,
+      location: sub.regionName,
+      url: `/subscription/${id}`,
+    })
+  }
 }
 
 // SEO

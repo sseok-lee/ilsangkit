@@ -1,7 +1,7 @@
 <template>
   <div v-if="!adError && !adUnfilled" class="ad-banner my-6">
     <ClientOnly>
-      <div :key="adKey" ref="adContainer" class="w-full">
+      <div :key="adKey" ref="adContainer" class="w-full" style="min-height: 100px">
         <ins
           class="adsbygoogle"
           style="display: block; width: 100%"

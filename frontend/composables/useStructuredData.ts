@@ -495,6 +495,38 @@ export function useStructuredData() {
     })
   }
 
+  /**
+   * Event 스키마 (청약 상세용)
+   */
+  function setEventSchema(options: {
+    name: string
+    description: string
+    startDate: string
+    endDate: string
+    location?: string
+    url: string
+  }) {
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: options.name,
+      description: options.description,
+      startDate: options.startDate,
+      endDate: options.endDate,
+      ...(options.location ? { location: { '@type': 'Place', name: options.location } } : {}),
+      url: options.url.startsWith('http') ? options.url : `${SITE_URL}${options.url}`,
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
   return {
     setWebsiteSchema,
     setBreadcrumbSchema,
@@ -506,5 +538,6 @@ export function useStructuredData() {
     setAreaReportSchema,
     setFAQSchema,
     setHowToSchema,
+    setEventSchema,
   }
 }
