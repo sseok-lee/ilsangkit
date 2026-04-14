@@ -340,6 +340,21 @@
           :last-sync-date="lastSyncDate"
         />
       </section>
+      <!-- 인근 단지 -->
+      <section v-if="nearbyComplexes.length > 0" class="mt-8">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">
+          {{ buildingInfo?.district }} 인근 {{ propertyMeta?.label }} 단지
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ComplexCard
+            v-for="complex in nearbyComplexes"
+            :key="`${complex.bjdCode}-${complex.buildingName}`"
+            :complex="complex"
+            :property-type="propertyTypeParam"
+            :tab="currentTab"
+          />
+        </div>
+      </section>
     </main>
 
     <!-- Mobile: Sticky Bottom Action Bar -->
@@ -375,32 +390,6 @@
       </div>
     </div>
 
-    <!-- 인근 단지 -->
-    <div v-if="nearbyComplexes.length > 0" class="mt-12 md:mt-16">
-      <h2 class="text-xl md:text-2xl font-bold text-slate-900 mb-6">
-        {{ buildingInfo?.district }} 인근 {{ propertyMeta?.label }} 단지
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <NuxtLink
-          v-for="complex in nearbyComplexes"
-          :key="`${complex.bjdCode}-${complex.buildingName}`"
-          :to="`/real-estate/${propertyTypeParam}/${encodeURIComponent(complex.buildingName)}?bjdCode=${complex.bjdCode}`"
-          class="block p-4 rounded-lg border border-slate-200 hover:border-primary hover:shadow-md transition-all group"
-        >
-          <div class="flex items-start gap-3 mb-2">
-            <span class="material-symbols-outlined text-primary text-xl flex-shrink-0 mt-0.5">location_city</span>
-            <div class="min-w-0 flex-1">
-              <h3 class="font-bold text-slate-900 group-hover:text-primary transition-colors truncate">
-                {{ complex.buildingName }}
-              </h3>
-              <p class="text-sm text-slate-600">
-                {{ complex.city }} {{ complex.district }}
-              </p>
-            </div>
-          </div>
-        </NuxtLink>
-      </div>
-    </div>
     </template>
   </div>
 </template>
