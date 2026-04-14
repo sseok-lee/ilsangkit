@@ -441,6 +441,7 @@ const currentTab = computed<TransactionMode>({
 const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.value))
 const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
 const buildingInfo = ref<BuildingInfo | null>(null)
+const summary = ref<StatsSummary | null>(null)
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 useHead(() => {
@@ -618,7 +619,6 @@ const latestPrice = computed(() => {
 })
 
 const monthly = ref<TransactionStats[]>([])
-const summary = ref<StatsSummary | null>(null)
 const statsLoading = ref(true)
 const areaGroups = ref<AreaGroup[]>([])
 const selectedArea = ref<number | null>(null)
