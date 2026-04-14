@@ -17,7 +17,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 2h
+          command_timeout: 3h
           script: |
             cd /home/project2/backend
 
@@ -40,7 +40,7 @@ jobs:
 
             # Summary 테이블 갱신
             echo "--- Summary 테이블 갱신 ---"
-            node dist/scripts/refreshRealEstateSummary.js
+            node dist/scripts/refreshRealEstateSummary.js || echo "[WARN] Summary 갱신 실패"
 
             # 청약 분양정보 동기화 (전체 소스)
             echo "--- 청약 동기화 ---"

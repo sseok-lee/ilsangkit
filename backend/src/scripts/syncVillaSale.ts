@@ -186,11 +186,6 @@ async function main(): Promise<void> {
     await submitIndexNow(urls);
   }
 
-  // Summary 테이블 갱신
-  console.info('\n[Summary] villa-sale 요약 갱신 중...');
-  const { refreshSummary } = await import('../services/realEstateSummaryService.js');
-  await refreshSummary('villa-sale');
-
   console.info('\n=== villaSale sync completed ===');
   await prisma.$disconnect();
 }
