@@ -258,16 +258,6 @@ async function syncCategory(category: Category): Promise<SyncResult> {
         };
       }
 
-      case 'public-rental': {
-        const result = await syncPublicRent();
-        return {
-          category,
-          success: true,
-          count: result.newRecords + result.updatedRecords,
-          duration: Date.now() - start,
-        };
-      }
-
       default:
         throw new Error(`Unknown category: ${category}`);
     }
