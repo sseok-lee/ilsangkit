@@ -14,9 +14,9 @@
           <div class="flex flex-col gap-2 pt-4">
             <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
             <div class="text-slate-900 tracking-tight text-[32px] font-bold leading-[1.25] md:text-5xl md:font-black md:leading-tight">
-              우리 동네, 얼마나 살기 좋을까?
+              내 동네 부동산·생활시설, 한번에 확인
             </div>
-            <p class="text-slate-500 text-base md:text-lg">일상 속 궁금한 동네 정보를 한곳에</p>
+            <p class="text-slate-500 text-base md:text-lg">아파트 실거래가부터 근처 약국까지</p>
           </div>
 
           <!-- 검색바 -->
@@ -30,7 +30,7 @@
                   v-model="searchKeyword"
                   aria-label="장소 또는 시설 검색"
                   class="flex-1 min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
-                  placeholder="아파트명, 지역명, 생활시설 검색..."
+                  placeholder="장소명 또는 주소로 검색하세요"
                   @keydown.enter="handleSearch"
                 />
                 <div class="hidden md:flex items-center pr-2">
@@ -51,12 +51,12 @@
           <div class="flex justify-center gap-5 md:gap-10 mt-2 md:mt-6">
             <div class="text-center">
               <div class="text-2xl md:text-3xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.buildingCount || 0) }}</div>
-              <div class="text-sm text-slate-500">부동산</div>
+              <div class="text-sm text-slate-500">실거래가 매물</div>
             </div>
             <div class="w-px bg-slate-200 self-stretch my-1 md:hidden"></div>
             <div class="text-center">
               <div class="text-2xl md:text-3xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.total || 0) }}</div>
-              <div class="text-sm text-slate-500">생활시설</div>
+              <div class="text-sm text-slate-500">전국 생활시설</div>
             </div>
             <div class="w-px bg-slate-200 self-stretch my-1 md:hidden"></div>
             <div class="text-center">
