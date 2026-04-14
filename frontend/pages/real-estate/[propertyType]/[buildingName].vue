@@ -317,6 +317,22 @@
         />
       </section>
 
+      <!-- 인근 단지 -->
+      <section v-if="nearbyComplexes.length > 0" class="mt-8">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">
+          {{ buildingInfo?.district }} 인근 {{ propertyMeta?.label }} 단지
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ComplexCard
+            v-for="complex in nearbyComplexes"
+            :key="`${complex.bjdCode}-${complex.buildingName}`"
+            :complex="complex"
+            :property-type="propertyTypeParam"
+            :tab="currentTab"
+          />
+        </div>
+      </section>
+
       <!-- 주변 생활시설 -->
       <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mt-8">
         <h2 class="text-lg font-semibold text-slate-800 mb-4">주변 생활시설</h2>
@@ -339,21 +355,6 @@
           :source="REAL_ESTATE_DATA_SOURCE"
           :last-sync-date="lastSyncDate"
         />
-      </section>
-      <!-- 인근 단지 -->
-      <section v-if="nearbyComplexes.length > 0" class="mt-8">
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">
-          {{ buildingInfo?.district }} 인근 {{ propertyMeta?.label }} 단지
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ComplexCard
-            v-for="complex in nearbyComplexes"
-            :key="`${complex.bjdCode}-${complex.buildingName}`"
-            :complex="complex"
-            :property-type="propertyTypeParam"
-            :tab="currentTab"
-          />
-        </div>
       </section>
     </main>
 
