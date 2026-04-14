@@ -57,15 +57,19 @@ const props = defineProps<{
 
 const rentTypeLabel = computed(() => {
   const rt = props.subscription.rentType
-  if (rt === '분양주택') return '#분양'
-  if (rt === '임대주택') return '#임대'
-  return rt ? `#${rt}` : ''
+  if (rt === '분양전환 가능임대') return '분양전환형'
+  if (rt === '분양전환 불가임대') return '장기형'
+  if (rt === '분양주택') return '분양'
+  if (rt === '임대주택') return '임대' // legacy
+  return rt ?? ''
 })
 
 const rentTypeBadgeClass = computed(() => {
   const rt = props.subscription.rentType
-  if (rt === '임대주택') return 'bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium'
-  return 'bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium'
+  const isRent = rt?.includes('임대')
+  return isRent
+    ? 'bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium'
+    : 'bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium'
 })
 
 const statusLabel = computed(() => {
