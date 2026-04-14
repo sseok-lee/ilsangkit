@@ -3,6 +3,17 @@
     <!-- Status Tabs -->
     <div class="mb-6 flex flex-wrap gap-2">
       <button
+        :class="[
+          'px-4 py-2 rounded-lg font-medium text-sm transition-colors',
+          currentStatus === null
+            ? 'bg-primary text-white'
+            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+        ]"
+        @click="currentStatus = null"
+      >
+        전체
+      </button>
+      <button
         v-for="tab in ['upcoming', 'ongoing', 'closed']"
         :key="tab"
         :class="[
@@ -11,7 +22,7 @@
             ? 'bg-primary text-white'
             : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
         ]"
-        @click="currentStatus = tab as typeof currentStatus"
+        @click="currentStatus = tab as 'upcoming' | 'ongoing' | 'closed'"
       >
         {{ getStatusLabel(tab) }}
       </button>
@@ -129,7 +140,7 @@ const props = defineProps<{
 
 const { getSubscriptionList } = useSubscription()
 
-const currentStatus = ref<'upcoming' | 'ongoing' | 'closed'>('upcoming')
+const currentStatus = ref<'upcoming' | 'ongoing' | 'closed' | null>(null)
 const selectedRegion = ref('')
 const regionDetail = ref('')
 const currentPage = ref(1)
@@ -155,7 +166,7 @@ async function loadSubscriptions() {
   try {
     const region = [selectedRegion.value, regionDetail.value].filter(Boolean).join(' ') || undefined
     const result = await getSubscriptionList({
-      status: currentStatus.value,
+      status: currentStatus.value ?? undefined,
       region,
       sourceType: props.sourceType,
       rentType: props.rentType,
@@ -193,7 +204,7 @@ function getStatusLabel(status: string): string {
 const { data } = await useAsyncData(
   `subscription-${props.category || props.sourceType || 'all'}`,
   () => getSubscriptionList({
-    status: 'upcoming',
+    status: undefined,
     sourceType: props.sourceType,
     rentType: props.rentType,
     category: props.sourceType ? undefined : props.category,
