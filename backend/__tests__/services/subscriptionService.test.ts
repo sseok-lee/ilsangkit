@@ -93,7 +93,7 @@ describe('getSubscriptionList', () => {
     const whereArg = mockFindMany.mock.calls[0][0].where;
     expect(whereArg.OR).toEqual([
       { sourceType: { in: ['OFFITEL', 'REMAINING'] } },
-      { sourceType: 'APT', rentType: { not: '임대주택' } },
+      { sourceType: 'APT', rentType: { notIn: ['분양전환 가능임대', '분양전환 불가임대'] } },
     ]);
   });
 
@@ -106,7 +106,7 @@ describe('getSubscriptionList', () => {
     const whereArg = mockFindMany.mock.calls[0][0].where;
     expect(whereArg.OR).toEqual([
       { sourceType: 'PRIVATE_RENT' },
-      { sourceType: 'APT', rentType: '임대주택' },
+      { sourceType: 'APT', rentType: { in: ['분양전환 가능임대', '분양전환 불가임대'] } },
     ]);
   });
 
