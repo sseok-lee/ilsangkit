@@ -612,14 +612,18 @@ export async function searchAll(
     dealYear: true,
     dealMonth: true,
     dealDay: true,
-    dealAmount: true,
   };
 
   const results = await Promise.all(
     ALL_TYPES.map(async (type) => {
       const model = getModel(type);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const select: Record<string, any> = { ...baseSelect, exclusiveArea: true, floor: true };
+      const select: Record<string, any> = {
+        ...baseSelect,
+        exclusiveArea: true,
+        floor: true,
+        ...(isSaleType(type) ? { dealAmount: true } : { deposit: true, monthlyRent: true, rentType: true }),
+      };
       const [items, count] = await Promise.all([
         model.findMany({ where, take: 3, select }),
         model.count({ where }),
