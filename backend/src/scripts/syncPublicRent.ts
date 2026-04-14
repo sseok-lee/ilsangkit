@@ -128,7 +128,9 @@ const REGIONS: { brtcCode: string; signguCode: string }[] = [
   { brtcCode: '41', signguCode: '480' }, // 파주시
   { brtcCode: '41', signguCode: '500' }, // 이천시
   { brtcCode: '41', signguCode: '570' }, // 김포시
-  { brtcCode: '41', signguCode: '590' }, // 화성시
+  // ⚠️ 2026-02-01 시행: 화성시(590) → 만세구·효행구·병점구·동탄구 4개 일반구 신설
+  // myhome API가 구 단위 signguCode를 지원하면 아래 4개로 교체 필요 (코드 확정 후 업데이트)
+  { brtcCode: '41', signguCode: '590' }, // 화성시 (일반구 신설로 세분화 예정, API 지원 여부 확인 필요)
   { brtcCode: '41', signguCode: '610' }, // 광주시
   { brtcCode: '41', signguCode: '630' }, // 양주시
   // 강원도 (42) 주요 시
