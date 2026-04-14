@@ -6,6 +6,10 @@ on:
     - cron: '0 18 * * *'
   workflow_dispatch: # 수동 실행 가능
 
+concurrency:
+  group: cafe24-db
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -39,7 +43,7 @@ jobs:
             node dist/scripts/geocodeRealEstate.js || echo "[WARN] 지오코딩 실패"
 
             # Summary 테이블 갱신
-            echo "--- Summary 테이블 갱신 ---"
+            echo "--- Summary 갱신 ---"
             node dist/scripts/refreshRealEstateSummary.js || echo "[WARN] Summary 갱신 실패"
 
             # 청약 분양정보 동기화 (전체 소스)
