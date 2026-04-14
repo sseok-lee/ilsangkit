@@ -3,6 +3,21 @@ import { NotFoundError } from '../lib/errors.js';
 import type { SubscriptionListParams } from '../schemas/subscription.js';
 import type { Prisma } from '@prisma/client';
 
+/**
+ * Decimal → Number 변환 (JSON 직렬화 호환)
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function serializeRow(row: any): any {
+  if (!row) return row;
+  const result = { ...row };
+  for (const key of Object.keys(result)) {
+    if (typeof result[key] === 'object' && result[key] !== null && result[key].constructor.name === 'Decimal') {
+      result[key] = Number(result[key]);
+    }
+  }
+  return result;
+}
+
 export async function getSubscriptionList(params: SubscriptionListParams) {
   const { status, region, houseType, rentType, sourceType, category, page, limit } = params;
 
@@ -71,7 +86,7 @@ export async function getSubscriptionDetail(id: number) {
     throw new NotFoundError('청약 공고를 찾을 수 없습니다');
   }
 
-  return subscription;
+  return serializeRow(subscription);
 }
 
 export async function getUpcomingSubscriptions(limit = 5) {

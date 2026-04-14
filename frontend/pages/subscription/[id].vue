@@ -60,6 +60,28 @@
           </div>
         </div>
 
+        <!-- 지도 + 로드뷰 -->
+        <div v-if="subscription.lat && subscription.lng" class="mb-8 space-y-4">
+          <div class="rounded-xl overflow-hidden border border-slate-200 shadow-sm h-[280px] md:h-[360px]">
+            <ClientOnly>
+              <FacilityMap
+                :center="{ lat: Number(subscription.lat), lng: Number(subscription.lng) }"
+                :facilities="[{ id: 'sub', name: subscription.houseName, lat: Number(subscription.lat), lng: Number(subscription.lng), category: 'apartment' }]"
+                :level="4"
+                class="w-full h-full !min-h-0 !rounded-none"
+              />
+            </ClientOnly>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-slate-200 shadow-sm h-[240px]">
+            <ClientOnly>
+              <FacilityRoadview
+                :lat="Number(subscription.lat)"
+                :lng="Number(subscription.lng)"
+              />
+            </ClientOnly>
+          </div>
+        </div>
+
         <!-- 1. 면적별 공급정보 테이블 (핵심) -->
         <div v-if="unitTypes && unitTypes.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
           <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">

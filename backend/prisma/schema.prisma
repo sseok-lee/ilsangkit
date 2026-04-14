@@ -1244,6 +1244,9 @@ model Subscription {
   pblancUrl               String?   @db.VarChar(500)
   inquiryTel              String?   @db.VarChar(50)
   status                  String    @db.VarChar(20)     // upcoming, ongoing, closed
+  lat                     Decimal?  @db.Decimal(10, 7)
+  lng                     Decimal?  @db.Decimal(10, 7)
+  geocodedAt              DateTime?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 

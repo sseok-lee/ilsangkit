@@ -5,6 +5,7 @@
 import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import { derivePublicRentType } from '../utils/subscriptionUtils.js';
+import { processSubscriptions } from './geocodeSubscriptions.js';
 
 const API_BASE = 'https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1';
 const API_BASE_CMPET = 'https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1';
@@ -651,6 +652,18 @@ async function main() {
   }
 
   console.log('\n청약 동기화 완료');
+
+  // Run geocoding for subscriptions if not dry-run
+  if (!isDryRun) {
+    try {
+      console.log('\n청약 주소 지오코딩 시작...');
+      await processSubscriptions(prisma);
+      console.log('청약 주소 지오코딩 완료\n');
+    } catch (err) {
+      console.error('청약 주소 지오코딩 실패:', err);
+    }
+  }
+
   await prisma.$disconnect();
 }
 

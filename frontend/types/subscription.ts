@@ -33,6 +33,8 @@ export interface Subscription {
   pblancUrl: string | null
   inquiryTel: string | null
   status: 'upcoming' | 'ongoing' | 'closed'
+  lat?: number | null
+  lng?: number | null
   createdAt?: string
   updatedAt?: string
 }
