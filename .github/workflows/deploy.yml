@@ -7,6 +7,10 @@ on:
     types:
       - completed
 
+concurrency:
+  group: cafe24-db
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -62,26 +66,42 @@ jobs:
           target: "/home/project2"
           strip_components: 0
 
+      - name: Kill long-running queries and apply schema
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          command_timeout: 5m
+          script: |
+            # 60초 이상 실행 중인 쿼리 종료 (prisma db push 전 락 해제)
+            KILL_LIST=$(mysql -e "
+              SELECT GROUP_CONCAT(CONCAT('KILL ', id) SEPARATOR '; ')
+              FROM information_schema.processlist
+              WHERE time > 60 AND command = 'Execute' AND user != 'root';
+            " 2>/dev/null | tail -n 1)
+            if [ -n "$KILL_LIST" ] && [ "$KILL_LIST" != "NULL" ]; then
+              mysql -e "$KILL_LIST;" 2>/dev/null || true
+              echo "장시간 실행 쿼리 종료: $KILL_LIST"
+            fi
+
+            cd /home/project2/backend
+            npx prisma db push --accept-data-loss
+            npx prisma generate
+
       - name: Install Dependencies and Restart Services
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
+          command_timeout: 10m
           script: |
-            # assets 디렉토리 보장
             mkdir -p /home/project2/assets/images/guides
 
             cd /home/project2/backend
             npm ci
 
-            # Prisma 스키마를 프로덕션 DB에 동기화
-            npx prisma db push --accept-data-loss
-
-            # Prisma 클라이언트 생성
-            npx prisma generate
-
-            # PM2로 백엔드 재시작 (또는 첫 실행)
             pm2 describe ilsangkit-backend > /dev/null
             if [ $? -eq 0 ]; then
               pm2 restart ilsangkit-backend
@@ -89,7 +109,6 @@ jobs:
               pm2 start dist/server.js --name ilsangkit-backend
             fi
 
-            # PM2로 프론트엔드 재시작 (또는 첫 실행)
             cd /home/project2/frontend
             pm2 describe ilsangkit-frontend > /dev/null
             if [ $? -eq 0 ]; then
@@ -98,7 +117,6 @@ jobs:
               pm2 start .output/server/index.mjs --name ilsangkit-frontend
             fi
 
-            # PM2 설정 저장 (서버 재시작 시 자동 복구)
             pm2 save
 
       - name: Deployment Status
