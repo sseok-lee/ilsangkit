@@ -66,16 +66,18 @@ const REGIONS: { brtcCode: string; signguCode: string }[] = [
   { brtcCode: '27', signguCode: '290' }, // 달서구
   { brtcCode: '27', signguCode: '710' }, // 달성군
   // 인천광역시 (28)
-  { brtcCode: '28', signguCode: '110' }, // 중구
-  { brtcCode: '28', signguCode: '140' }, // 동구
+  // ⚠️ 2026-07-01 개편 예정: 중구+동구 → 제물포구+영종구, 서구 → 서구+검단구 (신규 signguCode 미확정)
+  { brtcCode: '28', signguCode: '110' }, // 중구 (→ 제물포구·영종구로 재편 예정)
+  { brtcCode: '28', signguCode: '140' }, // 동구 (→ 제물포구로 편입 예정)
   { brtcCode: '28', signguCode: '177' }, // 미추홀구
   { brtcCode: '28', signguCode: '185' }, // 연수구
   { brtcCode: '28', signguCode: '200' }, // 남동구
   { brtcCode: '28', signguCode: '237' }, // 부평구
   { brtcCode: '28', signguCode: '245' }, // 계양구
-  { brtcCode: '28', signguCode: '260' }, // 서구
+  { brtcCode: '28', signguCode: '260' }, // 서구 (→ 서구+검단구 분리 예정)
   { brtcCode: '28', signguCode: '710' }, // 강화군
   // 광주광역시 (29)
+  // ⚠️ 2026-07-01 광주+전남 → 전남광주통합특별시 출범 예정 (신규 brtcCode 미확정)
   { brtcCode: '29', signguCode: '110' }, // 동구
   { brtcCode: '29', signguCode: '140' }, // 서구
   { brtcCode: '29', signguCode: '155' }, // 남구
@@ -149,6 +151,7 @@ const REGIONS: { brtcCode: string; signguCode: string }[] = [
   { brtcCode: '45', signguCode: '113' }, // 전주시 덕진구
   { brtcCode: '45', signguCode: '130' }, // 군산시
   // 전라남도 (46) 주요 시
+  // ⚠️ 2026-07-01 광주+전남 → 전남광주통합특별시 출범 예정 (신규 brtcCode 미확정)
   { brtcCode: '46', signguCode: '110' }, // 목포시
   { brtcCode: '46', signguCode: '130' }, // 여수시
   { brtcCode: '46', signguCode: '150' }, // 순천시
