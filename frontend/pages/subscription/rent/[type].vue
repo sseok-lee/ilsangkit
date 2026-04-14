@@ -47,7 +47,7 @@ if (!typeMeta) {
   throw createError({ statusCode: 404, statusMessage: '존재하지 않는 청약 카테고리입니다' })
 }
 
-const title = `${typeMeta.label} 청약 일정 ${new Date().getFullYear()} — 접수예정·진행중 | 일상킷`
+const title = `${typeMeta.label} 청약 일정 — 접수예정·진행중 | 일상킷`
 const description = typeMeta.description
 const canonicalUrl = `${SITE_URL}/subscription/rent/${type}`
 
