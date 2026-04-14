@@ -21,6 +21,9 @@
       <Breadcrumb :items="breadcrumbItems" />
     </div>
 
+    <!-- Ad: 상세 페이지 시작 -->
+    <AdBanner v-if="data" class="my-4" />
+
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <div class="text-center">

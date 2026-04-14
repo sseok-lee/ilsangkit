@@ -26,7 +26,9 @@
         </NuxtLink>
       </div>
 
+      <AdBanner class="my-4" />
       <SubscriptionListView category="sale" :breadcrumb-label="'분양'" :breadcrumb-path="'/subscription/sale'" />
+      <AdBanner class="my-4" />
     </main>
   </div>
 </template>

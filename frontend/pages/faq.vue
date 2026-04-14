@@ -6,6 +6,8 @@
         일상킷에서 제공하는 부동산 실거래가와 생활시설 정보에 대해 자주 묻는 질문을 모았습니다.
       </p>
 
+      <AdBanner class="my-4" />
+
       <!-- 부동산 실거래가 FAQ -->
       <div class="mb-8">
         <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">

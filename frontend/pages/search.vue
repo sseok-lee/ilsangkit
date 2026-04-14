@@ -295,23 +295,27 @@
                   <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                 </button>
               </div>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <NuxtLink
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <ComplexCard
                   v-for="item in group.items.slice(0, 3)"
                   :key="`${item.type}-${item.buildingName}-${item.bjdCode}`"
-                  :to="`/real-estate/${item.propertyType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}&tab=${item.tab}`"
-                  class="p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary/5 transition-colors"
-                >
-                  <p class="font-medium text-slate-800 text-sm truncate">{{ item.buildingName }}</p>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span :class="[
-                      'px-1.5 py-0.5 rounded-full text-[10px] font-medium',
-                      item.tab === 'sale' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500',
-                    ]">{{ item.tab === 'sale' ? '매매' : '전월세' }}</span>
-                    <span v-if="item.dealAmount" class="text-xs font-semibold text-primary ml-auto">{{ formatRealEstatePrice(item.dealAmount) }}</span>
-                  </div>
-                  <p v-if="item.city" class="text-xs text-slate-500 mt-0.5 truncate">{{ item.city }} {{ item.district }}</p>
-                </NuxtLink>
+                  :complex="{
+                    buildingName: item.buildingName,
+                    bjdCode: item.bjdCode,
+                    dongName: (item.dongName as string) || '',
+                    city: (item.city as string) || '',
+                    district: (item.district as string) || '',
+                    latestPrice: (item.dealAmount as number) || (item.deposit as number) || null,
+                    transactionCount: (item.transactionCount as number) || 0,
+                    lat: null,
+                    lng: null,
+                    lastDealYear: (item.dealYear as number) || null,
+                    lastDealMonth: (item.dealMonth as number) || null,
+                    buildYear: (item.buildYear as number) || null,
+                  }"
+                  :property-type="(item.propertyType as RealEstatePropertyType)"
+                  :tab="(item.tab as TransactionMode)"
+                />
               </div>
             </div>
           </div>
@@ -345,23 +349,12 @@
                     <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                   </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <NuxtLink
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <FacilityCard
                     v-for="facility in group.items"
                     :key="facility.id"
-                    :to="`/${facility.category}/${facility.id}`"
-                    class="p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary/5 transition-colors"
-                  >
-                    <p class="font-medium text-slate-800 text-sm truncate">{{ facility.name }}</p>
-                    <div class="flex items-center gap-2 mt-1">
-                      <span class="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">
-                        {{ CATEGORY_META[facility.category]?.shortLabel || CATEGORY_META[facility.category]?.label }}
-                      </span>
-                    </div>
-                    <p v-if="facility.roadAddress || facility.address" class="text-xs text-slate-500 mt-0.5 truncate">
-                      {{ facility.roadAddress || facility.address }}
-                    </p>
-                  </NuxtLink>
+                    :facility="facility"
+                  />
                 </div>
               </div>
             </div>
@@ -377,6 +370,9 @@
               :facility="facility"
             />
           </div>
+
+          <!-- Ad: 검색결과 후 -->
+          <AdBanner v-if="facilities.length > 0" class="my-4" />
 
           <!-- Empty State (flat view) -->
           <div v-if="facilities.length === 0" class="py-16 text-center">
@@ -467,7 +463,8 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
-import type { RealEstateType, ComplexInfo } from '~/types/realEstate'
+import type { RealEstateType, ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
+import ComplexCard from '~/components/realEstate/ComplexCard.vue'
 
 const route = useRoute()
 const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
@@ -576,8 +573,14 @@ const realEstateGrouped = computed(() => {
         tab,
         typeLabel: RE_TYPE_LABELS[cat.type] || cat.type,
         dealAmount: (item[priceKey] as number) ?? null,
+        deposit: (item.deposit as number) ?? null,
         city: (item.city as string) || '',
         district: (item.district as string) || '',
+        dongName: (item.dongName as string) || '',
+        dealYear: (item.dealYear as number) ?? null,
+        dealMonth: (item.dealMonth as number) ?? null,
+        buildYear: (item.buildYear as number) ?? null,
+        transactionCount: (item.transactionCount as number) || 0,
       })
     }
   }

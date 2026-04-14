@@ -26,10 +26,16 @@
         </NuxtLink>
       </div>
 
+      <!-- Ad: 리스트 시작 전 -->
+      <AdBanner class="my-4" />
+
       <SubscriptionListView
         :source-type="typeMeta.sourceType"
         :rent-type="typeMeta.rentType"
       />
+
+      <!-- Ad: 리스트 끝 후 -->
+      <AdBanner class="my-4" />
     </main>
   </div>
 </template>

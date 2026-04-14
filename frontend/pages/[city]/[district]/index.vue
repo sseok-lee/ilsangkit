@@ -21,6 +21,9 @@
         <p v-if="areaDescription" class="text-gray-600 text-sm leading-relaxed mt-4">{{ areaDescription }}</p>
       </div>
 
+      <!-- Ad: 헤더 직후 -->
+      <AdBanner class="mb-8" />
+
       <!-- 로딩 -->
       <div v-if="pending" class="flex justify-center py-20">
         <div class="size-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />

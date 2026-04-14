@@ -19,6 +19,11 @@
         <AdBanner />
       </div>
 
+      <!-- Ad: 추가 광고 -->
+      <div class="mb-12">
+        <AdBanner class="my-4" />
+      </div>
+
       <section class="mt-12">
         <h2 class="text-lg font-bold text-slate-800 mb-4">부동산 실거래가란?</h2>
         <div class="rounded-2xl bg-white border border-slate-200 p-6 text-base text-slate-600 leading-relaxed space-y-3">

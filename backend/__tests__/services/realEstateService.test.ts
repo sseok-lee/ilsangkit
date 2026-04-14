@@ -732,37 +732,57 @@ describe('getComplexList', () => {
 // searchAll
 // ─────────────────────────────────────────────
 describe('searchAll', () => {
+  const sampleGroupBySale = {
+    buildingName: '래미안',
+    bjdCode: '11680',
+    city: '서울특별시',
+    district: '강남구',
+    dongName: '역삼동',
+    buildYear: 2008,
+    _count: { id: 3 },
+    _max: { dealYear: 2024, dealMonth: 1, dealAmount: BigInt(82500) },
+  };
+  const sampleGroupByRent = {
+    buildingName: '래미안',
+    bjdCode: '11680',
+    city: '서울특별시',
+    district: '강남구',
+    dongName: '역삼동',
+    buildYear: 2008,
+    _count: { id: 2 },
+    _max: { dealYear: 2024, dealMonth: 3, deposit: BigInt(30000) },
+  };
+
   beforeEach(() => {
-    // Default: all return empty
-    mockAptSaleFindMany.mockResolvedValue([]);
+    mockAptSaleGroupBy.mockResolvedValue([]);
     mockAptSaleCount.mockResolvedValue(0);
-    mockAptRentFindMany.mockResolvedValue([]);
+    mockAptRentGroupBy.mockResolvedValue([]);
     mockAptRentCount.mockResolvedValue(0);
-    mockVillaSaleFindMany.mockResolvedValue([]);
+    mockVillaSaleGroupBy.mockResolvedValue([]);
     mockVillaSaleCount.mockResolvedValue(0);
-    mockVillaRentFindMany.mockResolvedValue([]);
+    mockVillaRentGroupBy.mockResolvedValue([]);
     mockVillaRentCount.mockResolvedValue(0);
-    mockOffitelSaleFindMany.mockResolvedValue([]);
+    mockOffitelSaleGroupBy.mockResolvedValue([]);
     mockOffitelSaleCount.mockResolvedValue(0);
-    mockOffitelRentFindMany.mockResolvedValue([]);
+    mockOffitelRentGroupBy.mockResolvedValue([]);
     mockOffitelRentCount.mockResolvedValue(0);
   });
 
-  it('calls findMany on all 6 models in parallel', async () => {
+  it('calls groupBy on all 6 models in parallel', async () => {
     await searchAll('래미안');
 
-    expect(mockAptSaleFindMany).toHaveBeenCalledTimes(1);
-    expect(mockAptRentFindMany).toHaveBeenCalledTimes(1);
-    expect(mockVillaSaleFindMany).toHaveBeenCalledTimes(1);
-    expect(mockVillaRentFindMany).toHaveBeenCalledTimes(1);
-    expect(mockOffitelSaleFindMany).toHaveBeenCalledTimes(1);
-    expect(mockOffitelRentFindMany).toHaveBeenCalledTimes(1);
+    expect(mockAptSaleGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockAptRentGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockVillaSaleGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockVillaRentGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockOffitelSaleGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockOffitelRentGroupBy).toHaveBeenCalledTimes(1);
   });
 
   it('searches buildingName with startsWith for each model', async () => {
     await searchAll('래미안');
 
-    expect(mockAptSaleFindMany).toHaveBeenCalledWith(
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           buildingName: expect.objectContaining({ startsWith: '래미안' }),
@@ -772,7 +792,7 @@ describe('searchAll', () => {
   });
 
   it('returns categories array with type, count, items for each model', async () => {
-    mockAptSaleFindMany.mockResolvedValue([sampleSaleRecord]);
+    mockAptSaleGroupBy.mockResolvedValue([sampleGroupBySale]);
     mockAptSaleCount.mockResolvedValue(3);
 
     const result = await searchAll('래미안');
@@ -786,14 +806,14 @@ describe('searchAll', () => {
   });
 
   it('limits preview items to 3 per category', async () => {
-    const manyRecords = [sampleSaleRecord, sampleSaleRecord, sampleSaleRecord];
-    mockAptSaleFindMany.mockResolvedValue(manyRecords);
+    const manyGroups = [sampleGroupBySale, { ...sampleGroupBySale, bjdCode: '11681' }, { ...sampleGroupBySale, bjdCode: '11682' }];
+    mockAptSaleGroupBy.mockResolvedValue(manyGroups);
     mockAptSaleCount.mockResolvedValue(10);
 
     const result = await searchAll('래미안');
 
     const aptSale = result.categories.find((c) => c.type === 'apt-sale');
-    expect(mockAptSaleFindMany).toHaveBeenCalledWith(
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
       expect.objectContaining({ take: 3 })
     );
     expect(aptSale!.items).toHaveLength(3);
@@ -815,11 +835,9 @@ describe('searchAll', () => {
   it('filters by city when provided', async () => {
     await searchAll('래미안', '서울특별시');
 
-    expect(mockAptSaleFindMany).toHaveBeenCalledWith(
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          city: '서울특별시',
-        }),
+        where: expect.objectContaining({ city: '서울특별시' }),
       })
     );
   });
@@ -827,71 +845,31 @@ describe('searchAll', () => {
   it('filters by district when provided', async () => {
     await searchAll('래미안', undefined, '강남구');
 
-    expect(mockAptSaleFindMany).toHaveBeenCalledWith(
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          district: '강남구',
-        }),
+        where: expect.objectContaining({ district: '강남구' }),
       })
     );
   });
 
-  it('runs all 8 model queries in parallel (Promise.all)', async () => {
-    // Verify that all mocks are called within same tick by tracking call order
+  it('runs all 6 model groupBy+count queries in parallel (Promise.all)', async () => {
     const callOrder: string[] = [];
-    mockAptSaleFindMany.mockImplementation(async () => {
-      callOrder.push('apt-sale-findMany');
-      return [];
-    });
-    mockAptSaleCount.mockImplementation(async () => {
-      callOrder.push('apt-sale-count');
-      return 0;
-    });
-    mockAptRentFindMany.mockImplementation(async () => {
-      callOrder.push('apt-rent-findMany');
-      return [];
-    });
-    mockAptRentCount.mockImplementation(async () => {
-      callOrder.push('apt-rent-count');
-      return 0;
-    });
-    mockVillaSaleFindMany.mockImplementation(async () => {
-      callOrder.push('villa-sale-findMany');
-      return [];
-    });
-    mockVillaSaleCount.mockImplementation(async () => {
-      callOrder.push('villa-sale-count');
-      return 0;
-    });
-    mockVillaRentFindMany.mockImplementation(async () => {
-      callOrder.push('villa-rent-findMany');
-      return [];
-    });
-    mockVillaRentCount.mockImplementation(async () => {
-      callOrder.push('villa-rent-count');
-      return 0;
-    });
-    mockOffitelSaleFindMany.mockImplementation(async () => {
-      callOrder.push('offitel-sale-findMany');
-      return [];
-    });
-    mockOffitelSaleCount.mockImplementation(async () => {
-      callOrder.push('offitel-sale-count');
-      return 0;
-    });
-    mockOffitelRentFindMany.mockImplementation(async () => {
-      callOrder.push('offitel-rent-findMany');
-      return [];
-    });
-    mockOffitelRentCount.mockImplementation(async () => {
-      callOrder.push('offitel-rent-count');
-      return 0;
-    });
+    mockAptSaleGroupBy.mockImplementation(async () => { callOrder.push('apt-sale-groupBy'); return []; });
+    mockAptSaleCount.mockImplementation(async () => { callOrder.push('apt-sale-count'); return 0; });
+    mockAptRentGroupBy.mockImplementation(async () => { callOrder.push('apt-rent-groupBy'); return []; });
+    mockAptRentCount.mockImplementation(async () => { callOrder.push('apt-rent-count'); return 0; });
+    mockVillaSaleGroupBy.mockImplementation(async () => { callOrder.push('villa-sale-groupBy'); return []; });
+    mockVillaSaleCount.mockImplementation(async () => { callOrder.push('villa-sale-count'); return 0; });
+    mockVillaRentGroupBy.mockImplementation(async () => { callOrder.push('villa-rent-groupBy'); return []; });
+    mockVillaRentCount.mockImplementation(async () => { callOrder.push('villa-rent-count'); return 0; });
+    mockOffitelSaleGroupBy.mockImplementation(async () => { callOrder.push('offitel-sale-groupBy'); return []; });
+    mockOffitelSaleCount.mockImplementation(async () => { callOrder.push('offitel-sale-count'); return 0; });
+    mockOffitelRentGroupBy.mockImplementation(async () => { callOrder.push('offitel-rent-groupBy'); return []; });
+    mockOffitelRentCount.mockImplementation(async () => { callOrder.push('offitel-rent-count'); return 0; });
 
     await searchAll('래미안');
 
-    // All 6 findMany calls should have been made
-    expect(callOrder.filter((c) => c.endsWith('-findMany'))).toHaveLength(6);
+    expect(callOrder.filter((c) => c.endsWith('-groupBy'))).toHaveLength(6);
   });
 });
 

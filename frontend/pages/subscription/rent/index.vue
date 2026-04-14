@@ -26,7 +26,9 @@
         </NuxtLink>
       </div>
 
+      <AdBanner class="my-4" />
       <SubscriptionListView category="rent" />
+      <AdBanner class="my-4" />
     </main>
   </div>
 </template>

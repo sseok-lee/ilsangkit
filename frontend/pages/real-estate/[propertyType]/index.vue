@@ -97,6 +97,9 @@
           />
         </div>
 
+        <!-- Ad: 건물 목록 중간 -->
+        <AdBanner class="my-6" />
+
         <!-- 페이지네이션 -->
         <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
       </div>

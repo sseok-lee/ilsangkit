@@ -21,6 +21,9 @@
         </p>
       </div>
 
+      <!-- Ad: 헤딩 후 -->
+      <AdBanner class="my-4 mb-10" />
+
       <!-- 유형별 링크 -->
       <section class="mb-10">
         <h2 class="text-lg font-bold text-slate-900 mb-4">유형별 실거래가 조회</h2>
@@ -74,6 +77,9 @@
           </details>
         </div>
       </section>
+
+      <!-- Ad: 페이지 끝 -->
+      <AdBanner class="my-4 mt-10" />
     </main>
   </div>
 </template>

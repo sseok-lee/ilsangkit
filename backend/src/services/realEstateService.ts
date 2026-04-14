@@ -603,32 +603,43 @@ export async function searchAll(
   if (city) where.city = city;
   if (district) where.district = district;
 
-  const baseSelect = {
-    id: true,
-    buildingName: true,
-    city: true,
-    district: true,
-    bjdCode: true,
-    dealYear: true,
-    dealMonth: true,
-    dealDay: true,
-  };
-
   const results = await Promise.all(
     ALL_TYPES.map(async (type) => {
       const model = getModel(type);
+      const isSale = isSaleType(type);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const select: Record<string, any> = {
-        ...baseSelect,
-        exclusiveArea: true,
-        floor: true,
-        ...(isSaleType(type) ? { dealAmount: true } : { deposit: true, monthlyRent: true, rentType: true }),
-      };
-      const [items, count] = await Promise.all([
-        model.findMany({ where, take: 3, select }),
+      const priceMax = isSale ? { dealAmount: true } : { deposit: true };
+
+      // 건물 단위 groupBy: 중복 제거 + 건물별 거래건수 + 최신 거래 정보
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [grouped, totalCount] = await Promise.all([
+        (model as any).groupBy({
+          by: ['buildingName', 'bjdCode', 'city', 'district', 'dongName', 'buildYear'],
+          where,
+          _count: { id: true },
+          _max: { dealYear: true, dealMonth: true, ...priceMax },
+          orderBy: [{ _max: { dealYear: 'desc' } }, { _max: { dealMonth: 'desc' } }],
+          take: 3,
+        }),
         model.count({ where }),
       ]);
-      return { type, count, items: items.map(serializeRow) };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items = grouped.map((g: any) => serializeRow({
+        buildingName: g.buildingName,
+        bjdCode: g.bjdCode,
+        city: g.city,
+        district: g.district,
+        dongName: g.dongName,
+        buildYear: g.buildYear,
+        dealYear: g._max.dealYear,
+        dealMonth: g._max.dealMonth,
+        dealAmount: isSale ? g._max.dealAmount : null,
+        deposit: !isSale ? g._max.deposit : null,
+        transactionCount: g._count.id,
+      }));
+
+      return { type, count: totalCount, items };
     })
   );
 
