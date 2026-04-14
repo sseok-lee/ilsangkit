@@ -374,15 +374,42 @@
         </div>
       </div>
     </div>
+
+    <!-- 인근 단지 -->
+    <div v-if="nearbyComplexes.length > 0" class="mt-12 md:mt-16">
+      <h2 class="text-xl md:text-2xl font-bold text-slate-900 mb-6">
+        {{ buildingInfo?.district }} 인근 {{ propertyMeta?.label }} 단지
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <NuxtLink
+          v-for="complex in nearbyComplexes"
+          :key="`${complex.bjdCode}-${complex.buildingName}`"
+          :to="`/real-estate/${propertyTypeParam}/${encodeURIComponent(complex.buildingName)}?bjdCode=${complex.bjdCode}`"
+          class="block p-4 rounded-lg border border-slate-200 hover:border-primary hover:shadow-md transition-all group"
+        >
+          <div class="flex items-start gap-3 mb-2">
+            <span class="material-symbols-outlined text-primary text-xl flex-shrink-0 mt-0.5">location_city</span>
+            <div class="min-w-0 flex-1">
+              <h3 class="font-bold text-slate-900 group-hover:text-primary transition-colors truncate">
+                {{ complex.buildingName }}
+              </h3>
+              <p class="text-sm text-slate-600">
+                {{ complex.city }} {{ complex.district }}
+              </p>
+            </div>
+          </div>
+        </NuxtLink>
+      </div>
+    </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
-import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
@@ -427,8 +454,8 @@ useHead(() => {
     ? `${buildingName.value} 실거래가 · ${locLabel} 매매 시세 - 일상킷`
     : `${buildingName.value} 전세·월세 시세 · ${locLabel} 실거래가 - 일상킷`
   const description = tab === '매매'
-    ? `${locLabel} ${buildingName.value}의 매매 실거래가와 시세 변동 추이를 확인하세요. 국토부 공식 데이터 기반 최근 거래 내역, 평당가, 주변 생활 인프라 정보를 제공합니다.`
-    : `${locLabel} ${buildingName.value}의 전세·월세 실거래가를 확인하세요. 전세가와 월세 시세, 최근 거래 내역을 국토부 공식 데이터로 제공합니다.`
+    ? `${locLabel} ${buildingName.value} 매매 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 시세 변동 추이와 평당가를 제공합니다.`
+    : `${locLabel} ${buildingName.value} 전세·월세 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 전세가·월세 시세를 제공합니다.`
   const canonicalBase = `${SITE_URL}/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}`
   const canonicalUrl = bjdCode.value ? `${canonicalBase}?bjdCode=${bjdCode.value}` : canonicalBase
   return {
@@ -462,7 +489,7 @@ useHead(() => {
 const { useRealEstate } = await import('~/composables/useRealEstate')
 const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups } = useRealEstate()
 
-const { setBuildingPlaceSchema, setBreadcrumbSchema } = useStructuredData()
+const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
 // Breadcrumb JSON-LD
 setBreadcrumbSchema([
@@ -643,6 +670,7 @@ function formatSummaryPrice(price: number): string {
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 const txLoading = ref(true)
 const currentPage = ref(1)
+const nearbyComplexes = ref<ComplexInfo[]>([])
 
 // SSR: 초기 데이터를 서버에서 로드
 // lazy: true → 클라이언트 네비게이션 시 즉시 페이지 전환 (SSR은 기존대로 서버에서 resolve)
@@ -809,6 +837,40 @@ watch(() => buildingInfo.value, (info) => {
       buildYear: info.buildYear,
       propertyType: propertyMeta.value?.label || '',
     })
+    setRealEstateListingSchema({
+      name: buildingName.value,
+      address: fullAddress.value,
+      city: info.city || '',
+      district: info.district || '',
+      propertyType: propertyMeta.value?.label || '',
+      buildYear: info.buildYear,
+      totalCount: summary.value?.totalCount,
+      lat: info.lat,
+      lng: info.lng,
+    })
+  }
+})
+
+// 인근 단지 로드
+watchEffect(async () => {
+  if (buildingInfo.value?.city && buildingInfo.value?.district) {
+    try {
+      const response = await getComplexList(
+        apiSlug.value,
+        buildingInfo.value.city,
+        buildingInfo.value.district,
+        undefined,
+        1,
+        6
+      )
+      // 현재 건물 제외 + 최대 5개로 제한
+      nearbyComplexes.value = response.items
+        .filter(c => c.buildingName !== buildingName.value)
+        .slice(0, 5)
+    } catch (err) {
+      console.error('Failed to load nearby complexes:', err)
+      nearbyComplexes.value = []
+    }
   }
 })
 

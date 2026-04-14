@@ -390,6 +390,55 @@ export function useStructuredData() {
   }
 
   /**
+   * RealEstateListing 스키마 (부동산 거래 실거래가 상세용)
+   */
+  function setRealEstateListingSchema(options: {
+    name: string
+    address: string
+    city: string
+    district: string
+    propertyType: string
+    buildYear?: number | null
+    totalCount?: number
+    lat?: number | null
+    lng?: number | null
+  }) {
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'RealEstateListing',
+            name: options.name,
+            description: `${options.city} ${options.district} ${options.name} 실거래가 정보`,
+            url: typeof window !== 'undefined' ? window.location.href : '',
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: options.address,
+              addressLocality: options.district,
+              addressRegion: options.city,
+              addressCountry: 'KR',
+            },
+            ...(options.lat && options.lng ? {
+              geo: {
+                '@type': 'GeoCoordinates',
+                latitude: options.lat,
+                longitude: options.lng,
+              }
+            } : {}),
+            additionalProperty: [
+              { '@type': 'PropertyValue', name: 'propertyType', value: options.propertyType },
+              ...(options.buildYear ? [{ '@type': 'PropertyValue', name: 'yearBuilt', value: String(options.buildYear) }] : []),
+              ...(options.totalCount ? [{ '@type': 'PropertyValue', name: 'numberOfTransactions', value: String(options.totalCount) }] : []),
+            ],
+          }),
+        },
+      ],
+    })
+  }
+
+  /**
    * Place 스키마 (지역 리포트용)
    */
   function setAreaReportSchema(options: {
@@ -535,6 +584,7 @@ export function useStructuredData() {
     setOrganizationSchema,
     setWasteScheduleSchema,
     setBuildingPlaceSchema,
+    setRealEstateListingSchema,
     setAreaReportSchema,
     setFAQSchema,
     setHowToSchema,
