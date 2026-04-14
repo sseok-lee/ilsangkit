@@ -60,7 +60,7 @@ lighthouse-results-*/
 /ayo-*.png
 
 # Agent workspace artifacts
-_workspace/
+_workspace*/
 
 # Planning docs (one-off, already applied)
 /PRD_*.md
