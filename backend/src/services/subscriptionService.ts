@@ -7,10 +7,18 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   const { status, region, houseType, rentType, sourceType, category, page, limit } = params;
 
   const where: Prisma.SubscriptionWhereInput = {};
+  // 공공임대 실제 rentType 값 (청약홈 API가 '임대주택' 대신 이 값들을 반환함)
+  const PUBLIC_RENT_TYPES = ['분양전환 가능임대', '분양전환 불가임대'];
+
   if (status) where.status = status;
   if (region) where.regionName = { contains: region };
   if (houseType) where.houseType = houseType;
-  if (rentType) where.rentType = rentType;
+  if (rentType) {
+    // '임대주택'은 실제 API 값인 '분양전환 가능임대'/'분양전환 불가임대'로 변환
+    where.rentType = rentType === '임대주택'
+      ? { in: PUBLIC_RENT_TYPES }
+      : rentType;
+  }
 
   // sourceType 직접 필터 (개별 카테고리 페이지)
   if (sourceType) {
@@ -21,12 +29,12 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   if (category === 'sale') {
     where.OR = [
       { sourceType: { in: ['OFFITEL', 'REMAINING'] } },
-      { sourceType: 'APT', rentType: { not: '임대주택' } },
+      { sourceType: 'APT', rentType: { notIn: PUBLIC_RENT_TYPES } },
     ];
   } else if (category === 'rent') {
     where.OR = [
       { sourceType: 'PRIVATE_RENT' },
-      { sourceType: 'APT', rentType: '임대주택' },
+      { sourceType: 'APT', rentType: { in: PUBLIC_RENT_TYPES } },
     ];
   }
 
