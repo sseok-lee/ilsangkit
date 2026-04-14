@@ -109,6 +109,9 @@
           </div>
         </div>
 
+        <!-- 1-1. 전월세 시세 데이터 (임대주택만 표시) -->
+        <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" :subscription-id="subscription.id" :region-name="subscription.regionName" />
+
         <!-- Ad: 면적별 테이블 아래 -->
         <AdBanner />
 
@@ -399,6 +402,7 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
+import RentalPriceStatsBox from '~/components/subscription/RentalPriceStatsBox.vue'
 
 const route = useRoute()
 const id = Number(route.params.id)

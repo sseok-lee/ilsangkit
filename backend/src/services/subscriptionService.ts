@@ -73,3 +73,98 @@ export async function getUpcomingSubscriptions(limit = 5) {
     take: limit,
   });
 }
+
+export async function getRentalPriceStats(regionName: string) {
+  // Parse regionName: "서울 강남구" → city="서울", district="강남구"
+  const parts = regionName.trim().split(/\s+/);
+  if (parts.length < 2) {
+    return {
+      jeonsae: { avgDeposit: null, count: 0 },
+      wolse: { avgDeposit: null, avgMonthlyRent: null, count: 0 },
+      period: '',
+    };
+  }
+
+  const city = parts[0];
+  const district = parts[1];
+
+  // Calculate 3 months ago from now
+  const now = new Date();
+  const threeMonthsAgo = new Date(now);
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const startYear = threeMonthsAgo.getFullYear();
+  const startMonth = threeMonthsAgo.getMonth() + 1;
+
+  // Fetch 전세 (jeonse) data: monthlyRent is null or 0
+  const jeonsaeData = await prisma.aptRentTransaction.findMany({
+    where: {
+      city,
+      district,
+      OR: [{ monthlyRent: null }, { monthlyRent: 0 }],
+      dealYear: { gte: startYear },
+    },
+  });
+
+  // Filter jeonsae by month range (after query-level year filter)
+  const jeonsaeFiltered = jeonsaeData.filter((row) => {
+    if (row.dealYear === startYear) {
+      return row.dealMonth >= startMonth;
+    }
+    return true; // dealYear > startYear
+  });
+
+  // Fetch 월세 (wolse) data: monthlyRent > 0
+  const wolseData = await prisma.aptRentTransaction.findMany({
+    where: {
+      city,
+      district,
+      monthlyRent: { gt: 0 },
+      dealYear: { gte: startYear },
+    },
+  });
+
+  // Filter wolse by month range
+  const wolseFiltered = wolseData.filter((row) => {
+    if (row.dealYear === startYear) {
+      return row.dealMonth >= startMonth;
+    }
+    return true;
+  });
+
+  // Calculate averages for jeonse
+  let jeonsaeAvg: number | null = null;
+  if (jeonsaeFiltered.length > 0) {
+    const total = jeonsaeFiltered.reduce((sum, row) => sum + row.deposit, 0n);
+    jeonsaeAvg = Number(total) / jeonsaeFiltered.length;
+  }
+
+  // Calculate averages for wolse
+  let wolseDepositAvg: number | null = null;
+  let wolseMonthlyAvg: number | null = null;
+  if (wolseFiltered.length > 0) {
+    const totalDeposit = wolseFiltered.reduce((sum, row) => sum + row.deposit, 0n);
+    wolseDepositAvg = Number(totalDeposit) / wolseFiltered.length;
+
+    const totalMonthly = wolseFiltered.reduce((sum, row) => sum + (row.monthlyRent || 0), 0);
+    wolseMonthlyAvg = totalMonthly / wolseFiltered.length;
+  }
+
+  // Format period
+  const periodStr = `${startYear}.${String(startMonth).padStart(2, '0')}~${currentYear}.${String(currentMonth).padStart(2, '0')}`;
+
+  return {
+    jeonsae: {
+      avgDeposit: jeonsaeAvg,
+      count: jeonsaeFiltered.length,
+    },
+    wolse: {
+      avgDeposit: wolseDepositAvg,
+      avgMonthlyRent: wolseMonthlyAvg,
+      count: wolseFiltered.length,
+    },
+    period: periodStr,
+  };
+}

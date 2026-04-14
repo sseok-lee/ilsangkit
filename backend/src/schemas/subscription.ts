@@ -21,4 +21,18 @@ export const SubscriptionIdSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
+export const RentalPriceStatsSchema = z.object({
+  jeonsae: z.object({
+    avgDeposit: z.number().nullable(),
+    count: z.number().int(),
+  }),
+  wolse: z.object({
+    avgDeposit: z.number().nullable(),
+    avgMonthlyRent: z.number().nullable(),
+    count: z.number().int(),
+  }),
+  period: z.string(),
+});
+
 export type SubscriptionListParams = z.infer<typeof SubscriptionListSchema>;
+export type RentalPriceStats = z.infer<typeof RentalPriceStatsSchema>;

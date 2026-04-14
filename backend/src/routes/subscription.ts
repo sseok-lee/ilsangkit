@@ -5,10 +5,12 @@ import {
   getSubscriptionList,
   getSubscriptionDetail,
   getUpcomingSubscriptions,
+  getRentalPriceStats,
 } from '../services/subscriptionService.js';
 import {
   SubscriptionListSchema,
   SubscriptionIdSchema,
+  RentalPriceStatsSchema,
 } from '../schemas/subscription.js';
 import type { z } from 'zod';
 
@@ -31,6 +33,19 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const items = await getUpcomingSubscriptions(5);
     res.json({ success: true, data: items });
+  })
+);
+
+// GET /api/subscription/:id/rental-price-stats - 임대 시세
+router.get(
+  '/:id/rental-price-stats',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = SubscriptionIdSchema.parse(req.params);
+    const subscription = await getSubscriptionDetail(id);
+
+    const stats = await getRentalPriceStats(subscription.regionName);
+    const validated = RentalPriceStatsSchema.parse(stats);
+    res.json({ success: true, data: validated });
   })
 );
 
