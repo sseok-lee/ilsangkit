@@ -55,8 +55,8 @@ describe('Index Page', () => {
     const wrapper = await mountSuspended(IndexPage)
 
     // New design hero text
-    expect(wrapper.text()).toContain('우리 동네')
-    expect(wrapper.text()).toContain('얼마나 살기 좋을까')
+    expect(wrapper.text()).toContain('내 동네 부동산')
+    expect(wrapper.text()).toContain('아파트 실거래가부터')
   })
 
   it('renders search input', async () => {
