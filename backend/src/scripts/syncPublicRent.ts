@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 // LH 공공임대 매물 동기화 스크립트
 // API: data.myhome.go.kr/rentalHouseList (brtcCode + signguCode 필수)
-// signguCode = MOIS 행정기관코드 3-5번째 자리 (예: 서울 종로구=110, 중구=140)
+// 지역 코드: Region 테이블 bjdCode에서 동적 파생 (brtcCode=앞2자리, signguCode=3-5번째 자리)
 
 import 'dotenv/config';
 import { prisma } from '../lib/prisma.js';
@@ -11,170 +11,6 @@ import type { SyncStats } from '../services/baseSyncService.js';
 const API_BASE = 'https://data.myhome.go.kr:443/rentalHouseList';
 const PAGE_SIZE = 100;
 
-// 전국 주요 시군구 코드 (brtcCode: 시도, signguCode: MOIS 행정기관코드 3-5자리)
-const REGIONS: { brtcCode: string; signguCode: string }[] = [
-  // 서울특별시 (11)
-  { brtcCode: '11', signguCode: '110' }, // 종로구
-  { brtcCode: '11', signguCode: '140' }, // 중구
-  { brtcCode: '11', signguCode: '170' }, // 용산구
-  { brtcCode: '11', signguCode: '200' }, // 성동구
-  { brtcCode: '11', signguCode: '215' }, // 광진구
-  { brtcCode: '11', signguCode: '230' }, // 동대문구
-  { brtcCode: '11', signguCode: '260' }, // 중랑구
-  { brtcCode: '11', signguCode: '290' }, // 성북구
-  { brtcCode: '11', signguCode: '305' }, // 강북구
-  { brtcCode: '11', signguCode: '320' }, // 도봉구
-  { brtcCode: '11', signguCode: '350' }, // 노원구
-  { brtcCode: '11', signguCode: '380' }, // 은평구
-  { brtcCode: '11', signguCode: '410' }, // 서대문구
-  { brtcCode: '11', signguCode: '440' }, // 마포구
-  { brtcCode: '11', signguCode: '470' }, // 양천구
-  { brtcCode: '11', signguCode: '500' }, // 강서구
-  { brtcCode: '11', signguCode: '530' }, // 구로구
-  { brtcCode: '11', signguCode: '545' }, // 금천구
-  { brtcCode: '11', signguCode: '560' }, // 영등포구
-  { brtcCode: '11', signguCode: '590' }, // 동작구
-  { brtcCode: '11', signguCode: '620' }, // 관악구
-  { brtcCode: '11', signguCode: '650' }, // 서초구
-  { brtcCode: '11', signguCode: '680' }, // 강남구
-  { brtcCode: '11', signguCode: '710' }, // 송파구
-  { brtcCode: '11', signguCode: '740' }, // 강동구
-  // 부산광역시 (26)
-  { brtcCode: '26', signguCode: '110' }, // 중구
-  { brtcCode: '26', signguCode: '140' }, // 서구
-  { brtcCode: '26', signguCode: '170' }, // 동구
-  { brtcCode: '26', signguCode: '200' }, // 영도구
-  { brtcCode: '26', signguCode: '230' }, // 부산진구
-  { brtcCode: '26', signguCode: '260' }, // 동래구
-  { brtcCode: '26', signguCode: '290' }, // 남구
-  { brtcCode: '26', signguCode: '320' }, // 북구
-  { brtcCode: '26', signguCode: '350' }, // 해운대구
-  { brtcCode: '26', signguCode: '380' }, // 사하구
-  { brtcCode: '26', signguCode: '410' }, // 금정구
-  { brtcCode: '26', signguCode: '440' }, // 강서구
-  { brtcCode: '26', signguCode: '470' }, // 연제구
-  { brtcCode: '26', signguCode: '500' }, // 수영구
-  { brtcCode: '26', signguCode: '530' }, // 사상구
-  { brtcCode: '26', signguCode: '710' }, // 기장군
-  // 대구광역시 (27)
-  { brtcCode: '27', signguCode: '110' }, // 중구
-  { brtcCode: '27', signguCode: '140' }, // 동구
-  { brtcCode: '27', signguCode: '170' }, // 서구
-  { brtcCode: '27', signguCode: '200' }, // 남구
-  { brtcCode: '27', signguCode: '230' }, // 북구
-  { brtcCode: '27', signguCode: '260' }, // 수성구
-  { brtcCode: '27', signguCode: '290' }, // 달서구
-  { brtcCode: '27', signguCode: '710' }, // 달성군
-  { brtcCode: '27', signguCode: '720' }, // 군위군 (2023-07-01 경북→대구 편입)
-  // 인천광역시 (28)
-  // ⚠️ 2026-07-01 개편 예정: 중구+동구 → 제물포구+영종구, 서구 → 서구+검단구 (신규 signguCode 미확정)
-  { brtcCode: '28', signguCode: '110' }, // 중구 (→ 제물포구·영종구로 재편 예정)
-  { brtcCode: '28', signguCode: '140' }, // 동구 (→ 제물포구로 편입 예정)
-  { brtcCode: '28', signguCode: '177' }, // 미추홀구
-  { brtcCode: '28', signguCode: '185' }, // 연수구
-  { brtcCode: '28', signguCode: '200' }, // 남동구
-  { brtcCode: '28', signguCode: '237' }, // 부평구
-  { brtcCode: '28', signguCode: '245' }, // 계양구
-  { brtcCode: '28', signguCode: '260' }, // 서구 (→ 서구+검단구 분리 예정)
-  { brtcCode: '28', signguCode: '710' }, // 강화군
-  // 광주광역시 (29)
-  // ⚠️ 2026-07-01 광주+전남 → 전남광주통합특별시 출범 예정 (신규 brtcCode 미확정)
-  { brtcCode: '29', signguCode: '110' }, // 동구
-  { brtcCode: '29', signguCode: '140' }, // 서구
-  { brtcCode: '29', signguCode: '155' }, // 남구
-  { brtcCode: '29', signguCode: '170' }, // 북구
-  { brtcCode: '29', signguCode: '200' }, // 광산구
-  // 대전광역시 (30)
-  { brtcCode: '30', signguCode: '110' }, // 동구
-  { brtcCode: '30', signguCode: '140' }, // 중구
-  { brtcCode: '30', signguCode: '170' }, // 서구
-  { brtcCode: '30', signguCode: '200' }, // 유성구
-  { brtcCode: '30', signguCode: '230' }, // 대덕구
-  // 울산광역시 (31)
-  { brtcCode: '31', signguCode: '110' }, // 중구
-  { brtcCode: '31', signguCode: '140' }, // 남구
-  { brtcCode: '31', signguCode: '170' }, // 동구
-  { brtcCode: '31', signguCode: '200' }, // 북구
-  { brtcCode: '31', signguCode: '710' }, // 울주군
-  // 세종특별자치시 (36)
-  { brtcCode: '36', signguCode: '110' },
-  // 경기도 (41) - 주요 시
-  { brtcCode: '41', signguCode: '111' }, // 수원시 장안구
-  { brtcCode: '41', signguCode: '113' }, // 수원시 권선구
-  { brtcCode: '41', signguCode: '115' }, // 수원시 팔달구
-  { brtcCode: '41', signguCode: '117' }, // 수원시 영통구
-  { brtcCode: '41', signguCode: '131' }, // 성남시 수정구
-  { brtcCode: '41', signguCode: '133' }, // 성남시 중원구
-  { brtcCode: '41', signguCode: '135' }, // 성남시 분당구
-  { brtcCode: '41', signguCode: '150' }, // 의정부시
-  { brtcCode: '41', signguCode: '171' }, // 안양시 만안구
-  { brtcCode: '41', signguCode: '173' }, // 안양시 동안구
-  { brtcCode: '41', signguCode: '190' }, // 부천시
-  { brtcCode: '41', signguCode: '210' }, // 광명시
-  { brtcCode: '41', signguCode: '220' }, // 평택시
-  { brtcCode: '41', signguCode: '250' }, // 동두천시
-  { brtcCode: '41', signguCode: '271' }, // 안산시 상록구
-  { brtcCode: '41', signguCode: '273' }, // 안산시 단원구
-  { brtcCode: '41', signguCode: '281' }, // 고양시 덕양구
-  { brtcCode: '41', signguCode: '285' }, // 고양시 일산동구
-  { brtcCode: '41', signguCode: '287' }, // 고양시 일산서구
-  { brtcCode: '41', signguCode: '310' }, // 구리시
-  { brtcCode: '41', signguCode: '360' }, // 남양주시
-  { brtcCode: '41', signguCode: '390' }, // 시흥시
-  { brtcCode: '41', signguCode: '410' }, // 군포시
-  { brtcCode: '41', signguCode: '450' }, // 하남시
-  { brtcCode: '41', signguCode: '461' }, // 용인시 처인구
-  { brtcCode: '41', signguCode: '463' }, // 용인시 기흥구
-  { brtcCode: '41', signguCode: '465' }, // 용인시 수지구
-  { brtcCode: '41', signguCode: '480' }, // 파주시
-  { brtcCode: '41', signguCode: '500' }, // 이천시
-  { brtcCode: '41', signguCode: '570' }, // 김포시
-  // ⚠️ 2026-02-01 시행: 화성시(590) → 만세구·효행구·병점구·동탄구 4개 일반구 신설
-  // myhome API가 구 단위 signguCode를 지원하면 아래 4개로 교체 필요 (코드 확정 후 업데이트)
-  { brtcCode: '41', signguCode: '590' }, // 화성시 (일반구 신설로 세분화 예정, API 지원 여부 확인 필요)
-  { brtcCode: '41', signguCode: '610' }, // 광주시
-  { brtcCode: '41', signguCode: '630' }, // 양주시
-  // 강원특별자치도 (51) — 구 강원도(42)에서 2023-06-11 brtcCode 변경
-  { brtcCode: '51', signguCode: '110' }, // 춘천시
-  { brtcCode: '51', signguCode: '130' }, // 원주시
-  { brtcCode: '51', signguCode: '150' }, // 강릉시
-  // 충청북도 (43) 주요 시
-  { brtcCode: '43', signguCode: '111' }, // 청주시 상당구
-  { brtcCode: '43', signguCode: '113' }, // 청주시 서원구
-  { brtcCode: '43', signguCode: '115' }, // 청주시 흥덕구
-  { brtcCode: '43', signguCode: '117' }, // 청주시 청원구
-  { brtcCode: '43', signguCode: '130' }, // 충주시
-  // 충청남도 (44) 주요 시
-  { brtcCode: '44', signguCode: '130' }, // 천안시 동남구
-  { brtcCode: '44', signguCode: '133' }, // 천안시 서북구
-  { brtcCode: '44', signguCode: '150' }, // 공주시
-  { brtcCode: '44', signguCode: '180' }, // 아산시
-  // 전북특별자치도 (52) — 구 전라북도(45)에서 2024-01-18 brtcCode 변경
-  { brtcCode: '52', signguCode: '111' }, // 전주시 완산구
-  { brtcCode: '52', signguCode: '113' }, // 전주시 덕진구
-  { brtcCode: '52', signguCode: '130' }, // 군산시
-  // 전라남도 (46) 주요 시
-  // ⚠️ 2026-07-01 광주+전남 → 전남광주통합특별시 출범 예정 (신규 brtcCode 미확정)
-  { brtcCode: '46', signguCode: '110' }, // 목포시
-  { brtcCode: '46', signguCode: '130' }, // 여수시
-  { brtcCode: '46', signguCode: '150' }, // 순천시
-  // 경상북도 (47) 주요 시
-  { brtcCode: '47', signguCode: '110' }, // 포항시 남구
-  { brtcCode: '47', signguCode: '111' }, // 포항시 북구
-  { brtcCode: '47', signguCode: '130' }, // 경주시
-  { brtcCode: '47', signguCode: '150' }, // 김천시
-  { brtcCode: '47', signguCode: '170' }, // 안동시
-  // 경상남도 (48) 주요 시
-  { brtcCode: '48', signguCode: '121' }, // 창원시 의창구
-  { brtcCode: '48', signguCode: '123' }, // 창원시 성산구
-  { brtcCode: '48', signguCode: '125' }, // 창원시 마산합포구
-  { brtcCode: '48', signguCode: '127' }, // 창원시 마산회원구
-  { brtcCode: '48', signguCode: '129' }, // 창원시 진해구
-  { brtcCode: '48', signguCode: '170' }, // 진주시
-  // 제주특별자치도 (50)
-  { brtcCode: '50', signguCode: '110' }, // 제주시
-  { brtcCode: '50', signguCode: '130' }, // 서귀포시
-];
 
 export interface MyhomeRentalItem {
   hsmpSn: number;
@@ -224,7 +60,18 @@ async function fetchAllRegions(): Promise<MyhomeRentalItem[]> {
 
   const allItems: MyhomeRentalItem[] = [];
 
-  for (const region of REGIONS) {
+  // Region 테이블에서 전국 시군구 코드를 동적으로 가져옴 — 행정구역 변경 시 자동 반영
+  const regionRows = await prisma.region.findMany({
+    select: { bjdCode: true },
+    distinct: ['bjdCode'],
+  });
+  const regions = regionRows.map((r) => ({
+    brtcCode: r.bjdCode.slice(0, 2),
+    signguCode: r.bjdCode.slice(2, 5),
+  }));
+  console.info(`Region 테이블에서 ${regions.length}개 시군구 로드`);
+
+  for (const region of regions) {
     try {
       const first = await fetchRegionPage(region.brtcCode, region.signguCode, 1, serviceKey);
       if (first.items.length === 0) continue;
