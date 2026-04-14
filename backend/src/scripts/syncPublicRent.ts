@@ -65,6 +65,7 @@ const REGIONS: { brtcCode: string; signguCode: string }[] = [
   { brtcCode: '27', signguCode: '260' }, // 수성구
   { brtcCode: '27', signguCode: '290' }, // 달서구
   { brtcCode: '27', signguCode: '710' }, // 달성군
+  { brtcCode: '27', signguCode: '720' }, // 군위군 (2023-07-01 경북→대구 편입)
   // 인천광역시 (28)
   // ⚠️ 2026-07-01 개편 예정: 중구+동구 → 제물포구+영종구, 서구 → 서구+검단구 (신규 signguCode 미확정)
   { brtcCode: '28', signguCode: '110' }, // 중구 (→ 제물포구·영종구로 재편 예정)
@@ -133,10 +134,10 @@ const REGIONS: { brtcCode: string; signguCode: string }[] = [
   { brtcCode: '41', signguCode: '590' }, // 화성시 (일반구 신설로 세분화 예정, API 지원 여부 확인 필요)
   { brtcCode: '41', signguCode: '610' }, // 광주시
   { brtcCode: '41', signguCode: '630' }, // 양주시
-  // 강원도 (42) 주요 시
-  { brtcCode: '42', signguCode: '110' }, // 춘천시
-  { brtcCode: '42', signguCode: '130' }, // 원주시
-  { brtcCode: '42', signguCode: '150' }, // 강릉시
+  // 강원특별자치도 (51) — 구 강원도(42)에서 2023-06-11 brtcCode 변경
+  { brtcCode: '51', signguCode: '110' }, // 춘천시
+  { brtcCode: '51', signguCode: '130' }, // 원주시
+  { brtcCode: '51', signguCode: '150' }, // 강릉시
   // 충청북도 (43) 주요 시
   { brtcCode: '43', signguCode: '111' }, // 청주시 상당구
   { brtcCode: '43', signguCode: '113' }, // 청주시 서원구
@@ -148,10 +149,10 @@ const REGIONS: { brtcCode: string; signguCode: string }[] = [
   { brtcCode: '44', signguCode: '133' }, // 천안시 서북구
   { brtcCode: '44', signguCode: '150' }, // 공주시
   { brtcCode: '44', signguCode: '180' }, // 아산시
-  // 전라북도 (45) 주요 시
-  { brtcCode: '45', signguCode: '111' }, // 전주시 완산구
-  { brtcCode: '45', signguCode: '113' }, // 전주시 덕진구
-  { brtcCode: '45', signguCode: '130' }, // 군산시
+  // 전북특별자치도 (52) — 구 전라북도(45)에서 2024-01-18 brtcCode 변경
+  { brtcCode: '52', signguCode: '111' }, // 전주시 완산구
+  { brtcCode: '52', signguCode: '113' }, // 전주시 덕진구
+  { brtcCode: '52', signguCode: '130' }, // 군산시
   // 전라남도 (46) 주요 시
   // ⚠️ 2026-07-01 광주+전남 → 전남광주통합특별시 출범 예정 (신규 brtcCode 미확정)
   { brtcCode: '46', signguCode: '110' }, // 목포시
