@@ -137,17 +137,18 @@ export function transformPublicRentItem(
  * 단일 페이지 API 호출
  */
 async function fetchPage(pageNo: number): Promise<{ items: PublicRentApiItem[]; totalCount: number }> {
-  const serviceKey = process.env.DATA_GO_KR_SERVICE_KEY;
+  const serviceKey = process.env.OPENAPI_SERVICE_KEY;
   if (!serviceKey) {
-    throw new Error('DATA_GO_KR_SERVICE_KEY 환경변수가 설정되지 않았습니다.');
+    throw new Error('OPENAPI_SERVICE_KEY 환경변수가 설정되지 않았습니다.');
   }
 
   const url = new URL(API_BASE);
-  url.searchParams.set('serviceKey', serviceKey);
   url.searchParams.set('pageNo', String(pageNo));
   url.searchParams.set('perPage', String(PAGE_SIZE));
+  // serviceKey는 직접 append — URLSearchParams가 +/= 등을 이중 인코딩하면 400 발생
+  const urlStr = `${url.toString()}&serviceKey=${serviceKey}`;
 
-  const response = await fetch(url.toString());
+  const response = await fetch(urlStr);
   if (!response.ok) {
     throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
   }
