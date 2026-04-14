@@ -488,7 +488,7 @@ useHead(() => {
 })
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
-const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups } = useRealEstate()
+const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
