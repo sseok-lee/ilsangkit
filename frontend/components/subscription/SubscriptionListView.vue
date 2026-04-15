@@ -96,7 +96,7 @@
 
     <!-- Empty State -->
     <div v-else-if="subscriptions.length === 0" class="rounded-xl bg-slate-50 p-12 text-center">
-      <span class="material-symbols-outlined text-[48px] text-slate-300 block mb-3">home_work</span>
+      <span class="material-symbols-outlined text-[48px] text-slate-300 block mb-3">apartment</span>
       <p class="text-slate-600 font-medium">조건에 맞는 청약이 없습니다</p>
       <p class="text-slate-500 text-sm mt-1">다른 조건으로 다시 검색해보세요</p>
     </div>
