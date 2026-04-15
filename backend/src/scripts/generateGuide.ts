@@ -636,8 +636,16 @@ async function generateArticle(
   const isRealEstate = REAL_ESTATE_CATEGORIES.includes(category);
 
   // 뉴스 컨텍스트 (news 유형만) 또는 evergreen 주제
+  // topic이 200자 이상이면 상세 리서치 데이터로 간주
+  const isDetailedTopic = topic && topic.length >= 200;
   let contextBlock: string;
-  if (topic) {
+  if (isDetailedTopic) {
+    contextBlock = `[리서치 데이터 — 아래 내용을 사실 근거로 활용하여 기사를 작성하세요]
+${topic}
+[/리서치 데이터]
+
+⚠️ 중요: 위 리서치 데이터에 포함된 수치, 점수, 조건, 날짜, 금액 등의 팩트를 반드시 기사 본문에 반영하세요. 데이터에 없는 수치를 임의로 생성하지 마세요.`;
+  } else if (topic) {
     contextBlock = `글 주제: ${topic}`;
   } else if (isNews && newsTitles.length > 0) {
     contextBlock = `참고 뉴스 제목:\n${newsTitles.join('\n')}`;
@@ -666,6 +674,8 @@ ${template.split('{카테고리}').join(categoryLabel)}
 - 각 섹션마다 최소 3문단 또는 리스트 항목 5개 이상 포함 (1~2문단으로 끝내지 마세요)
 - 마크다운 형식 (## 소제목, **강조**, - 리스트, 1. 번호 리스트)
 ${isNews ? '- 참고 뉴스 제목을 자연스럽게 녹여서 해설 (원문 복사 금지)' : '- 독자에게 실질적으로 도움이 되는 구체적이고 정확한 정보 위주'}
+${isDetailedTopic ? `- **리서치 데이터 활용 필수**: 위에 제공된 리서치 데이터의 점수표, 수치, 조건, 금액, 날짜를 기사 본문에 정확히 반영하세요. 데이터에 포함된 표(점수표, 비교표 등)는 마크다운 표로 변환하여 포함하세요. 시뮬레이션 예시가 있으면 반드시 본문에 포함하세요. 데이터에 없는 수치를 추가하지 마세요.
+- **글 구조 커스텀**: 리서치 데이터에 [작성 지침] 섹션이 있으면 해당 지침을 위 글 구조보다 우선하여 따르세요.` : ''}
 - 독자가 바로 실천할 수 있는 구체적 정보 위주 (구체적 수치, 사이트명, 절차 포함)
 - 친근하고 자연스러운 한국어 경어체
 - 반드시 순수 한국어로 작성 (영어 단어 사용 금지, 고유명사/약어 제외)
