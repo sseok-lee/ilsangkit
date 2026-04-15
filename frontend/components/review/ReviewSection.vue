@@ -213,6 +213,7 @@ const {
   page,
   totalPages,
   loading,
+  error,
   fetchReviews,
   createReview,
   updateReview,
