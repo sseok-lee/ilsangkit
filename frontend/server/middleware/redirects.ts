@@ -24,6 +24,7 @@ export default defineEventHandler((event) => {
   if (!SUFFIX_TEST.test(district)) return
 
   const newSlug = district.replace(SUFFIX_REPLACE, '')
-  const newPath = `/${city}/${newSlug}${rest || ''}`
+  const search = getRequestURL(event).search
+  const newPath = `/${city}/${newSlug}${rest || ''}${search}`
   return sendRedirect(event, newPath, 301)
 })

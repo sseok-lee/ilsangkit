@@ -22,6 +22,9 @@ export default defineEventHandler((event) => {
   const tab = oldSlug.endsWith('-sale') ? 'sale' : 'rent'
   const propertyType = REDIRECT_MAP[oldSlug]
 
-  const newPath = `/real-estate/${propertyType}${rest}?tab=${tab}`
+  // 기존 쿼리 파라미터 보존 (bjdCode 등)
+  const existingParams = new URLSearchParams(url.search)
+  existingParams.set('tab', tab)
+  const newPath = `/real-estate/${propertyType}${rest}?${existingParams.toString()}`
   return sendRedirect(event, newPath, 301)
 })
