@@ -63,10 +63,21 @@ export async function searchByKeyword(query: string): Promise<Coordinates | null
 
 /**
  * Clean location name: remove common problematic patterns
+ * Kakao API가 인식 못하는 부동산 주소 노이즈 제거
  */
 function cleanLocationName(name: string): string {
   let cleaned = name;
-  cleaned = cleaned.replace(/\s*\(.*\)\s*/g, '');
+  // 괄호 및 내용 제거: (봉덕동), (고산2지구 C-1블록)
+  cleaned = cleaned.replace(/\s*\(.*?\)\s*/g, ' ');
+  // "외 N필지" 제거: 22-12 외 2필지
+  cleaned = cleaned.replace(/\s*외\s*\d+필지/g, '');
+  // "일원" 제거: 380번지 일원
+  cleaned = cleaned.replace(/\s*일원\s*/g, ' ');
+  // 블록 코드 제거: BL-107-9, C-1블록, 45블록
+  cleaned = cleaned.replace(/\s*BL-[\w-]+/g, '');
+  cleaned = cleaned.replace(/\s*[A-Z]-?\d+블록/g, '');
+  cleaned = cleaned.replace(/\s*\d+블록/g, '');
+  // 지구명 뒤 블록만 남은 경우 지구명까지 포함해서 검색하도록 유지
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   return cleaned;
 }
