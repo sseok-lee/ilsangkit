@@ -53,6 +53,8 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
     ];
   }
 
+  const STATUS_ORDER: Record<string, number> = { ongoing: 0, upcoming: 1, closed: 2 };
+
   const [items, total] = await Promise.all([
     prisma.subscription.findMany({
       where,
@@ -62,6 +64,17 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
     }),
     prisma.subscription.count({ where }),
   ]);
+
+  // status 필터가 없을 때(전체): 접수중→접수예정→마감 순 정렬
+  if (!status) {
+    items.sort((a, b) => {
+      const sa = STATUS_ORDER[a.status] ?? 9;
+      const sb = STATUS_ORDER[b.status] ?? 9;
+      if (sa !== sb) return sa - sb;
+      // 같은 status 내에서는 최신 공고순 (이미 announcementDate desc로 정렬됨)
+      return 0;
+    });
+  }
 
   return {
     items,
