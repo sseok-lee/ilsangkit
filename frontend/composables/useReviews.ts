@@ -61,7 +61,20 @@ export function useReviews() {
       reviews.value = [response.data, ...reviews.value]
       total.value += 1
       return response.data
-    } catch (err) {
+    } catch (err: any) {
+      const data = err?.data || err?.response?._data
+      if (data?.error?.details?.fieldErrors) {
+        const fieldErrors = data.error.details.fieldErrors
+        const firstMsg = Object.values(fieldErrors).flat()[0]
+        if (typeof firstMsg === 'string') {
+          error.value = new Error(firstMsg)
+          return null
+        }
+      }
+      if (data?.error?.message) {
+        error.value = new Error(data.error.message)
+        return null
+      }
       error.value = err as Error
       return null
     } finally {

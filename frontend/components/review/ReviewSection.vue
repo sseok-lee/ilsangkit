@@ -94,7 +94,7 @@
               </button>
             </div>
           </div>
-          <p class="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{{ review.content }}</p>
+          <p class="text-base text-slate-600 leading-relaxed whitespace-pre-wrap">{{ review.content }}</p>
           <div v-if="review !== reviews[reviews.length - 1]" class="h-px bg-slate-100 mt-2"></div>
         </div>
       </div>
@@ -327,7 +327,7 @@ async function handleSubmit() {
     form.content = ''
     form.password = ''
   } else {
-    formError.value = '리뷰 작성에 실패했습니다. 다시 시도해주세요.'
+    formError.value = error.value?.message || '리뷰 작성에 실패했습니다. 다시 시도해주세요.'
   }
 }
 
