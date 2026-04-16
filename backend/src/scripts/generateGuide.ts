@@ -2,16 +2,14 @@
 // Usage:
 //   tsx src/scripts/generateGuide.ts [--category <slug>] [--type <news|howto|listicle|guide>] [--topic "주제"]
 //   tsx src/scripts/generateGuide.ts --from-file prisma/data/guide-topics.json
-// Pipeline: CLI args → RSS 뉴스 수집 → OpenAI 기사 생성 → 이미지 생성 → DB upsert
-// --topic: 직접 주제 지정 (RSS/EVERGREEN 스킵)
+// Pipeline: CLI args → 네이버 검색 API 리서치 → OpenAI 기사 생성 → 이미지 생성 → DB upsert
+// --topic: 직접 주제 지정 (리서치 스킵)
 // --from-file: JSON 파일에서 주제 목록 배치 생성 (완료 시 generated: true 마킹)
-// 뉴스가 없을 경우 evergreen(howto/listicle/guide) 글을 자동 생성
 
 import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
-import { XMLParser } from 'fast-xml-parser';
 import OpenAI from 'openai';
-import { writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, unlink, stat } from 'fs/promises';
 import { execFileSync } from 'child_process';
 import path from 'path';
 
@@ -24,6 +22,13 @@ import prisma from '../lib/prisma.js';
 
 type ArticleType = 'news' | 'howto' | 'listicle' | 'guide';
 
+const GUIDE_CATEGORIES = [
+  'toilet', 'aed', 'hospital', 'pharmacy', 'parking', 'wifi', 'clothes',
+  'park', 'school', 'market', 'library', 'trash', 'childcare', 'ev-charger',
+  'sports', 'apt-sale', 'apt-rent', 'subscription',
+] as const;
+type GuideCategory = typeof GUIDE_CATEGORIES[number];
+
 const ALL_ARTICLE_TYPES: ArticleType[] = ['news', 'howto', 'listicle', 'guide'];
 const EVERGREEN_TYPES: ArticleType[] = ['howto', 'listicle', 'guide'];
 
@@ -31,7 +36,7 @@ const EVERGREEN_TYPES: ArticleType[] = ['howto', 'listicle', 'guide'];
 // Category configuration
 // ---------------------------------------------------------------------------
 
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
+const CATEGORY_KEYWORDS: Record<GuideCategory, string[]> = {
   toilet: ['공공화장실', '공중화장실 위생', '화장실 찾기', '화장실 리모델링', '스마트 화장실', '화장실 청결'],
   aed: ['자동심장충격기', 'AED 사용법', '심폐소생술', '심정지 응급처치', '골든타임 구조', 'AED 설치 확대'],
   hospital: ['병원 찾기', '야간진료', '응급실', '동네 의원 진료', '비대면 진료', '의료비 절약'],
@@ -52,7 +57,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   'subscription': ['청약 일정', '아파트 청약', '청약 가점', '특별공급 조건', '청약홈 사용법', '청약통장 가입'],
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
+const CATEGORY_LABELS: Record<GuideCategory, string> = {
   toilet: '공공화장실',
   aed: '자동심장충격기',
   hospital: '병원',
@@ -73,7 +78,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   'subscription': '청약',
 };
 
-const ALL_CATEGORIES = Object.keys(CATEGORY_KEYWORDS);
+const ALL_CATEGORIES: string[] = [...GUIDE_CATEGORIES];
 
 const REAL_ESTATE_CATEGORIES = ['apt-sale', 'apt-rent'];
 
@@ -101,11 +106,12 @@ const RELATED_GUIDE_CATEGORIES: Record<string, string[]> = {
   'subscription': ['apt-sale', 'apt-rent'],
 };
 
-// 카테고리 → 허브 URL (부동산은 /real-estate/{propertyType}, 그 외는 /{category})
+// 카테고리 → 허브 URL (부동산은 /real-estate/{propertyType}?tab=, 그 외는 /{category})
 function getCategoryHubUrl(category: string): string {
   if (REAL_ESTATE_CATEGORIES.includes(category)) {
     const propertyType = category.split('-')[0]; // apt-sale → apt
-    return `/real-estate/${propertyType}`;
+    const tab = category.split('-')[1]; // apt-sale → sale
+    return `/real-estate/${propertyType}?tab=${tab}`;
   }
   return `/${category}`;
 }
@@ -326,93 +332,138 @@ function parseFromFile(): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// RSS fetch
+// 네이버 검색 API (뉴스/블로그/웹문서/백과사전/지식iN)
 // ---------------------------------------------------------------------------
 
-const xmlParser = new XMLParser({
-  ignoreAttributes: false,
-  parseTagValue: true,
-  trimValues: true,
-});
+interface NaverSearchItem {
+  title: string;
+  description: string;
+  link: string;
+}
 
-async function fetchNewsTitles(keyword: string, maxItems = 10): Promise<string[]> {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=ko&gl=KR&ceid=KR:ko`;
+type NaverSearchType = 'news' | 'blog' | 'webkr' | 'encyc' | 'kin';
+
+// 글 유형별 검색 소스 매핑
+const RESEARCH_SOURCES: Record<ArticleType, NaverSearchType[]> = {
+  news: ['news'],
+  howto: ['blog', 'kin'],
+  listicle: ['webkr', 'blog'],
+  guide: ['encyc', 'webkr'],
+};
+
+function stripHtmlTags(str: string): string {
+  return str.replace(/<[^>]*>/g, '').trim();
+}
+
+async function fetchNaverSearch(
+  searchType: NaverSearchType,
+  keyword: string,
+  maxItems = 5,
+): Promise<NaverSearchItem[]> {
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    console.warn('NAVER_CLIENT_ID/SECRET 환경변수가 없습니다. 리서치를 건너뜁니다.');
+    return [];
+  }
+
+  const url = `https://openapi.naver.com/v1/search/${searchType}.json?query=${encodeURIComponent(keyword)}&display=${maxItems}&sort=date`;
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ilsangkit-guide-bot/1.0)' },
+      headers: {
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret,
+      },
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
-      console.warn(`RSS fetch failed for "${keyword}": HTTP ${res.status}`);
+      console.warn(`네이버 검색 실패 (${searchType}, "${keyword}"): HTTP ${res.status}`);
       return [];
     }
-    const xml = await res.text();
-    const parsed = xmlParser.parse(xml);
-    const items = parsed?.rss?.channel?.item;
-    if (!items) return [];
-    const itemList = Array.isArray(items) ? items : [items];
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    return itemList
-      .filter((item: { pubDate?: string }) => {
-        if (!item.pubDate) return false;
-        const pubTime = new Date(item.pubDate).getTime();
-        return !isNaN(pubTime) && pubTime >= oneDayAgo;
-      })
-      .slice(0, maxItems)
-      .map((item: { title?: string | number }) => (item.title ? String(item.title).trim() : ''))
-      .filter(Boolean);
+    const data = await res.json() as { items?: NaverSearchItem[] };
+    return (data.items ?? []).map((item) => ({
+      title: stripHtmlTags(item.title),
+      description: stripHtmlTags(item.description),
+      link: item.link,
+    }));
   } catch (err) {
-    console.warn(`RSS fetch error for "${keyword}":`, err instanceof Error ? err.message : err);
+    console.warn(`네이버 검색 에러 (${searchType}, "${keyword}"):`, err instanceof Error ? err.message : err);
     return [];
   }
 }
 
-export async function collectNewsTitles(category: string): Promise<string[]> {
+export async function collectNewsTitles(category: string, articleType: ArticleType = 'news'): Promise<string[]> {
   const keywords = CATEGORY_KEYWORDS[category] ?? [];
-  const allTitles: string[] = [];
-  for (const kw of keywords) {
-    const titles = await fetchNewsTitles(kw, 5);
-    allTitles.push(...titles);
-    if (allTitles.length >= 10) break;
+  const searchTypes = RESEARCH_SOURCES[articleType];
+
+  // 키워드 × 검색소스 병렬 fetch
+  const fetchPromises: Promise<NaverSearchItem[]>[] = [];
+  for (const kw of keywords.slice(0, 3)) { // 상위 3개 키워드만
+    for (const st of searchTypes) {
+      fetchPromises.push(fetchNaverSearch(st, kw, 5));
+    }
   }
-  // Deduplicate
-  return [...new Set(allTitles)].slice(0, 10);
+
+  const results = await Promise.allSettled(fetchPromises);
+  const allItems: NaverSearchItem[] = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled') allItems.push(...r.value);
+  }
+
+  // 제목 기준 중복 제거 → "제목 — 요약" 형태로 반환
+  const seen = new Set<string>();
+  const formatted: string[] = [];
+  for (const item of allItems) {
+    if (seen.has(item.title) || !item.title) continue;
+    seen.add(item.title);
+    formatted.push(item.description
+      ? `${item.title}\n   요약: ${item.description}`
+      : item.title);
+    if (formatted.length >= 10) break;
+  }
+
+  return formatted;
 }
 
 // ---------------------------------------------------------------------------
 // DB stats injection (카테고리별 실제 데이터 통계)
 // ---------------------------------------------------------------------------
 
+// 시설 카테고리 → count 함수 맵 (타입 안전, prisma as any 제거)
+const FACILITY_COUNT_MAP: Record<string, () => Promise<number>> = {
+  toilet: () => prisma.toilet.count(),
+  aed: () => prisma.aed.count(),
+  hospital: () => prisma.hospital.count(),
+  pharmacy: () => prisma.pharmacy.count(),
+  parking: () => prisma.parking.count(),
+  wifi: () => prisma.wifi.count(),
+  clothes: () => prisma.clothes.count(),
+  park: () => prisma.park.count(),
+  school: () => prisma.school.count(),
+  market: () => prisma.market.count(),
+  library: () => prisma.library.count(),
+  childcare: () => prisma.childcare.count(),
+  'ev-charger': () => prisma.evCharger.count(),
+  sports: () => prisma.sports.count(),
+};
+
 async function getFacilityStats(category: string): Promise<string> {
-  // 부동산 카테고리는 별도 모델 사용
-  if (REAL_ESTATE_CATEGORIES.includes(category)) {
-    return ''; // 부동산 통계는 실거래가 데이터에서 별도 제공
+  // 부동산/청약 카테고리는 별도 모델
+  if (REAL_ESTATE_CATEGORIES.includes(category) || category === 'subscription') {
+    return '';
   }
 
-  // 시설 카테고리: Prisma 모델명 매핑
-  const MODEL_MAP: Record<string, string> = {
-    toilet: 'toilet', aed: 'aed', hospital: 'hospital', pharmacy: 'pharmacy',
-    parking: 'parking', wifi: 'wifi', clothes: 'clothes', park: 'park',
-    school: 'school', market: 'market', library: 'library', childcare: 'childcare',
-    'ev-charger': 'evCharger', sports: 'sports',
-  };
-
-  const modelName = MODEL_MAP[category];
-  if (!modelName) return '';
+  const countFn = FACILITY_COUNT_MAP[category];
+  if (!countFn) return '';
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const model = (prisma as any)[modelName] as {
-      count: () => Promise<number>;
-    } | undefined;
-    if (!model?.count) return '';
-
-    const total = await model.count();
+    const total = await countFn();
     if (total === 0) return '';
 
-    const label = CATEGORY_LABELS[category] ?? category;
+    const label = CATEGORY_LABELS[category as GuideCategory] ?? category;
     return `\n일상킷 데이터: 전국 ${label} ${total.toLocaleString('ko-KR')}개소 등록`;
-  } catch {
+  } catch (err) {
+    console.warn(`DB 통계 조회 실패 (${category}):`, err instanceof Error ? err.message : err);
     return '';
   }
 }
@@ -452,6 +503,14 @@ const NEWS_TEMPLATE = `
 ## 이것만은 꼭! 실용 꿀팁
 (대부분 모르는 유용한 팁 7개 이상. 번호 리스트(1. 2. 3.)로 작성하고, 각 항목은 **팁 제목**으로 시작 후 구체적 설명 2줄 이상)
 
+## 자주 묻는 질문
+(관련 FAQ 5개 이상. 아래 형식을 정확히 따를 것:
+
+**Q. 질문 내용?**
+A. 구체적인 답변 (2~3줄)
+
+반드시 5개 이상 작성)
+
 ## 마무리
 (핵심 3~4줄 요약 + "일상킷에서 내 주변 {카테고리}를 바로 찾아보세요!")
 `;
@@ -480,6 +539,14 @@ const NEWS_TEMPLATE_REAL_ESTATE = `
 
 ## 이것만은 꼭! 실용 꿀팁
 (대부분 모르는 유용한 팁 7개 이상. 번호 리스트(1. 2. 3.)로 작성하고, 각 항목은 **팁 제목**으로 시작 후 구체적 설명 2줄 이상)
+
+## 자주 묻는 질문
+(관련 FAQ 5개 이상. 아래 형식을 정확히 따를 것:
+
+**Q. 질문 내용?**
+A. 구체적인 답변 (2~3줄)
+
+반드시 5개 이상 작성)
 
 ## 마무리
 (핵심 3~4줄 요약 + "일상킷에서 {카테고리} 실거래가 정보를 바로 확인해보세요!")
@@ -537,6 +604,23 @@ const LISTICLE_TEMPLATE = `
 ## 활용 꿀팁
 (리스트 항목들을 더 잘 활용할 수 있는 팁 5개 이상. 번호 리스트로 작성, 각 항목 **팁 제목**으로 시작 후 구체적 설명 1~2줄)
 
+## 주의사항과 흔한 실수
+(이용 시 흔히 하는 실수 3가지 이상. 아래 형식을 반드시 따를 것:
+
+1. **실수 제목**
+**이런 실수를 해요:** 구체적 상황 설명 (2줄)
+**이렇게 해결하세요:** 올바른 방법 (2줄)
+
+반드시 3개 이상 작성)
+
+## 자주 묻는 질문
+(관련 FAQ 5개 이상. 아래 형식을 정확히 따를 것:
+
+**Q. 질문 내용?**
+A. 구체적인 답변 (2~3줄)
+
+반드시 5개 이상 작성)
+
 ## 마무리
 (핵심 3~4줄 요약 + "일상킷에서 내 주변 {카테고리} 정보를 바로 확인해보세요!")
 `;
@@ -555,8 +639,86 @@ const GUIDE_TEMPLATE = `
 ## 실전 체크리스트
 (독자가 바로 활용할 수 있는 체크리스트. 번호 리스트로 10개 이상 항목. 각 항목 1~2줄. 구체적이고 실천 가능한 내용)
 
+## 주의사항과 흔한 실수
+(이용 시 흔히 하는 실수 3가지 이상. 아래 형식을 반드시 따를 것:
+
+1. **실수 제목**
+**이런 실수를 해요:** 구체적 상황 설명 (2줄)
+**이렇게 해결하세요:** 올바른 방법 (2줄)
+
+반드시 3개 이상 작성)
+
+## 자주 묻는 질문
+(관련 FAQ 5개 이상. 아래 형식을 정확히 따를 것:
+
+**Q. 질문 내용?**
+A. 구체적인 답변 (2~3줄)
+
+반드시 5개 이상 작성)
+
 ## 마무리
 (핵심 3~4줄 요약 + "일상킷에서 내 주변 {카테고리} 정보를 바로 확인해보세요!")
+`;
+
+// 부동산 전용 How-to 템플릿 (6섹션 — 법적 절차/세금 중심)
+const HOWTO_TEMPLATE_REAL_ESTATE = `
+## 핵심 요약
+(이 글에서 다루는 내용을 3~4줄로 요약. 독자가 이 글을 왜 읽어야 하는지 명확히 설명)
+
+## 필요 서류와 사전 확인
+(거래 전 필요한 서류와 확인 사항을 번호 리스트로 정리. 등기부등본, 건축물대장, 토지이용계획확인서 등. 반드시 5개 이상 항목, 각 항목 1~2줄 설명)
+
+## 단계별 절차
+(거래의 구체적 절차를 번호 리스트(1. 2. 3.)로 설명. 매물 탐색→가계약→본계약→중도금→잔금→등기 등. 반드시 7단계 이상, 각 단계 2~3줄로 상세히)
+
+## 세금·비용 체크리스트
+(거래 시 발생하는 세금과 비용을 구체적 금액/세율과 함께 정리. 취득세, 중개수수료, 인지세, 등기비용 등. 번호 리스트로 7개 이상, 각 항목에 계산 예시 포함)
+
+## 주의사항과 흔한 실수
+(거래 시 자주 하는 실수 5가지 이상. 아래 형식을 반드시 따를 것:
+
+1. **실수 제목**
+**이런 실수를 해요:** 구체적 상황 설명 (2~3줄)
+**이렇게 해결하세요:** 올바른 방법과 근거 (2~3줄)
+
+반드시 5개 이상 작성. ### 소제목 사용 금지)
+
+## 자주 묻는 질문
+(관련 FAQ 5개 이상. 아래 형식을 정확히 따를 것:
+
+**Q. 질문 내용?**
+A. 구체적인 답변 (2~3줄)
+
+반드시 5개 이상 작성)
+`;
+
+// 부동산 전용 종합 가이드 템플릿 (7섹션 — 시장/정책/세금 중심)
+const GUIDE_TEMPLATE_REAL_ESTATE = `
+## 핵심 3줄 요약
+(이 글의 핵심 내용을 번호 리스트 3개로 간결하게 요약. 각 항목 1~2줄)
+
+## 시장 현황과 제도
+(현재 시장 흐름, 가격 추이, 거래량 변화, 관련 정부 정책을 구체적 수치와 함께 설명. 반드시 4~5문단, 각 문단 3줄 이상)
+
+## 비교표와 선택 가이드
+(매매 vs 전세, 대출 상품 비교, 지역별 시세 비교 등. 반드시 3개 이상 항목 비교. 마크다운 표 사용 권장)
+
+## 세금·대출·비용 총정리
+(취득세, 양도소득세, DTI, LTV, 중개수수료 등을 구체적 세율/한도와 함께 정리. 반드시 4~5문단 또는 번호 리스트 7개 이상. 계산 예시 포함)
+
+## 실전 체크리스트
+(독자가 바로 활용할 수 있는 체크리스트. 번호 리스트로 10개 이상 항목. 각 항목 1~2줄)
+
+## 자주 묻는 질문
+(관련 FAQ 5개 이상. 아래 형식을 정확히 따를 것:
+
+**Q. 질문 내용?**
+A. 구체적인 답변 (2~3줄)
+
+반드시 5개 이상 작성)
+
+## 마무리
+(핵심 3~4줄 요약 + "일상킷에서 {카테고리} 실거래가 정보를 바로 확인해보세요!")
 `;
 
 function getTemplate(articleType: ArticleType, category: string): { template: string; sectionCount: number } {
@@ -566,14 +728,20 @@ function getTemplate(articleType: ArticleType, category: string): { template: st
     case 'news':
       return {
         template: isRealEstate ? NEWS_TEMPLATE_REAL_ESTATE : NEWS_TEMPLATE,
-        sectionCount: 7,
+        sectionCount: 8,
       };
     case 'howto':
-      return { template: HOWTO_TEMPLATE, sectionCount: 5 };
+      return {
+        template: isRealEstate ? HOWTO_TEMPLATE_REAL_ESTATE : HOWTO_TEMPLATE,
+        sectionCount: isRealEstate ? 6 : 5,
+      };
     case 'listicle':
-      return { template: LISTICLE_TEMPLATE, sectionCount: 4 };
+      return { template: LISTICLE_TEMPLATE, sectionCount: 6 };
     case 'guide':
-      return { template: GUIDE_TEMPLATE, sectionCount: 5 };
+      return {
+        template: isRealEstate ? GUIDE_TEMPLATE_REAL_ESTATE : GUIDE_TEMPLATE,
+        sectionCount: 7,
+      };
   }
 }
 
@@ -656,41 +824,50 @@ ${topic}
 
   const role = isRealEstate ? '부동산 전문 기자' : '생활 정보 전문 기자';
   const titlePattern = TITLE_PATTERN_GUIDE[articleType].split('{카테고리}').join(categoryLabel);
+  const minChars = isRealEstate ? 3000 : 2500;
+  const maxChars = isRealEstate ? 4500 : 4000;
 
-  const prompt = `당신은 ${role}입니다.
-${isNews ? '최근 뉴스를 해설하고, 관련 실용 정보를 함께 제공하는 가이드 기사를 작성해주세요.' : `"${categoryLabel}" 관련 실용 정보를 제공하는 ${articleType === 'howto' ? '절차/방법 안내' : articleType === 'listicle' ? '추천/비교 리스트' : '종합 가이드'} 기사를 작성해주세요.`}
+  const prompt = `<role>당신은 ${role}입니다. ${isNews ? '최근 뉴스를 해설하고, 관련 실용 정보를 함께 제공하는 가이드 기사를 작성해주세요.' : `"${categoryLabel}" 관련 실용 정보를 제공하는 ${articleType === 'howto' ? '절차/방법 안내' : articleType === 'listicle' ? '추천/비교 리스트' : '종합 가이드'} 기사를 작성해주세요.`}</role>
 
+<context>
 카테고리: ${categoryLabel} (${category})
 글 유형: ${articleType}
 ${contextBlock}${dbStats}
+</context>
 
-## 글 구조 (반드시 아래 ${sectionCount}개 섹션을 순서대로 작성)
+<template>
+반드시 아래 ${sectionCount}개 섹션을 순서대로 작성하세요.
 
 ${template.split('{카테고리}').join(categoryLabel)}
+</template>
 
-## 작성 규칙 (매우 중요 — 반드시 전부 준수)
-- **전체 3000~4500자 분량** (반드시 3000자 이상. 2500자 미만 절대 금지)
-- **${sectionCount}개 섹션 전부 작성 필수** — 하나라도 빠지면 실패. 각 섹션은 반드시 "## " 마크다운 제목으로 시작
-- 각 섹션마다 최소 3문단 또는 리스트 항목 5개 이상 포함 (1~2문단으로 끝내지 마세요)
-- 마크다운 형식 (## 소제목, **강조**, - 리스트, 1. 번호 리스트)
-${isNews ? '- 참고 뉴스 제목을 자연스럽게 녹여서 해설 (원문 복사 금지)' : '- 독자에게 실질적으로 도움이 되는 구체적이고 정확한 정보 위주'}
-${isDetailedTopic ? `- **리서치 데이터 활용 필수**: 위에 제공된 리서치 데이터의 점수표, 수치, 조건, 금액, 날짜를 기사 본문에 정확히 반영하세요. 데이터에 포함된 표(점수표, 비교표 등)는 마크다운 표로 변환하여 포함하세요. 시뮬레이션 예시가 있으면 반드시 본문에 포함하세요. 데이터에 없는 수치를 추가하지 마세요.
-- **글 구조 커스텀**: 리서치 데이터에 [작성 지침] 섹션이 있으면 해당 지침을 위 글 구조보다 우선하여 따르세요.` : ''}
-- 독자가 바로 실천할 수 있는 구체적 정보 위주 (구체적 수치, 사이트명, 절차 포함)
-- 친근하고 자연스러운 한국어 경어체
-- 반드시 순수 한국어로 작성 (영어 단어 사용 금지, 고유명사/약어 제외)
-- content 필드에 위 ${sectionCount}개 섹션의 마크다운만 포함
-- **형식 엄수**: "실수와 해결법" 섹션은 반드시 "1. **제목**" 번호+볼드 형식 사용. 들여쓰기나 "실수 제목:" 콜론 형식 절대 금지. 1줄짜리 짧은 내용 금지 — 각 항목 최소 4줄 이상
-- **구체성 필수**: "정확한 정보를 확인하세요" 같은 뻔한 조언 금지. 구체적 사이트명(예: iros.go.kr), 금액(예: 700원), 기한(예: 계약일 당일) 등 실제 수치와 경로를 반드시 포함
-- 응답 전 스스로 검증: ① "##"으로 시작하는 섹션이 ${sectionCount}개인가? ② 전체 3000자 이상인가? ③ 각 섹션이 충분히 긴가? ④ 번호+볼드 형식을 따랐는가?
+<rules>
+1. 분량: 전체 ${minChars}~${maxChars}자 (${minChars}자 미만 절대 금지)
+2. 섹션: ${sectionCount}개 전부 작성 필수. 각 섹션은 "## " 마크다운 제목으로 시작
+3. 각 섹션마다 최소 3문단 또는 리스트 항목 5개 이상 포함
+4. 마크다운 형식: ## 소제목, **강조**, - 리스트, 1. 번호 리스트
+5. 코드 블록(\`\`\`) 사용 금지
+${isNews ? '6. 리서치 데이터를 자연스럽게 녹여서 해설 (원문 복사 금지)' : '6. 독자에게 실질적으로 도움이 되는 구체적이고 정확한 정보 위주'}
+${isDetailedTopic ? `7. 리서치 데이터 활용 필수: 제공된 데이터의 수치, 조건, 금액, 날짜를 정확히 반영. 표는 마크다운 표로 변환. 데이터에 없는 수치 추가 금지
+8. 리서치 데이터에 [작성 지침] 섹션이 있으면 위 템플릿보다 우선` : ''}
+- 형식 엄수: "실수" 섹션은 "1. **제목**" 번호+볼드 사용. 들여쓰기/콜론 형식 금지. 각 항목 4줄 이상
+- 구체성 필수: 사이트명(iros.go.kr), 금액(700원), 기한(계약일 당일) 등 실제 수치 포함. "정확한 정보를 확인하세요" 같은 뻔한 조언 금지
+- 언어: 친근한 한국어 경어체. 고유명사/약어 허용
+- content 필드에 ${sectionCount}개 섹션 마크다운만 포함
+</rules>
 
-다음 JSON 형식으로 응답:
+<self-check>
+응답 전 검증: ① "##" 섹션이 ${sectionCount}개인가? ② ${minChars}자 이상인가? ③ 각 섹션이 충분히 긴가? ④ 번호+볼드 형식을 따랐는가?
+</self-check>
+
+<output-format>
 {
   "title": "${titlePattern}",
   "summary": "1~2문장 요약 (검색/SNS용, 50~100자)",
-  "content": "위 ${sectionCount}개 섹션 구조의 마크다운 본문 (3000자 이상)",
+  "content": "위 ${sectionCount}개 섹션 구조의 마크다운 본문 (${minChars}자 이상)",
   "keywords": "키워드1, 키워드2, 키워드3, 키워드4, 키워드5"
-}`;
+}
+</output-format>`;
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -784,14 +961,14 @@ Style: ${style}`;
     await writeFile(tmpPath, buffer);
     try {
       execFileSync('convert', [tmpPath, '-resize', '800x', '-quality', '80', outputPath], { stdio: 'pipe' });
-      const { size: optimizedSize } = await import('fs').then(fs => fs.statSync(outputPath));
+      const { size: optimizedSize } = await stat(outputPath);
       console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(optimizedSize / 1024).toFixed(0)}KB)`);
     } catch {
       // ImageMagick 없으면 원본 그대로 저장
       await writeFile(outputPath, buffer);
       console.log(`썸네일 저장 (리사이즈 건너뜀): ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
     } finally {
-      import('fs').then(fs => { try { fs.unlinkSync(tmpPath); } catch { /* tmp 파일 이미 삭제됨 */ } });
+      await unlink(tmpPath).catch(() => {});
     }
     return true;
   } catch (err) {
@@ -831,6 +1008,14 @@ export async function generateOneGuide(
   requestedType?: ArticleType,
   topic?: string,
 ): Promise<GeneratedGuide | null> {
+  // 입력 검증
+  if (!ALL_CATEGORIES.includes(category)) {
+    throw new Error(`알 수 없는 카테고리 "${category}". 유효한 값: ${ALL_CATEGORIES.join(', ')}`);
+  }
+  if (requestedType && !ALL_ARTICLE_TYPES.includes(requestedType)) {
+    throw new Error(`알 수 없는 글 유형 "${requestedType}". 유효한 값: ${ALL_ARTICLE_TYPES.join(', ')}`);
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다.');
@@ -853,9 +1038,9 @@ export async function generateOneGuide(
     articleType = requestedType;
     console.log(`지정된 글 유형: ${articleType} (evergreen — RSS 스킵)`);
   } else {
-    // news 유형이거나 미지정 → RSS 수집
-    console.log('뉴스 RSS 수집 중...');
-    newsTitles = await collectNewsTitles(category);
+    // news 유형이거나 미지정 → 네이버 검색 API 수집
+    console.log('네이버 검색 API 수집 중...');
+    newsTitles = await collectNewsTitles(category, 'news');
     console.log(`수집된 뉴스 제목 ${newsTitles.length}건:`);
     newsTitles.forEach((t, i) => console.log(`  ${i + 1}. ${t}`));
 
@@ -950,7 +1135,6 @@ interface TopicEntry {
 }
 
 async function runFromFile(filePath: string): Promise<void> {
-  const { readFile, writeFile: writeJson } = await import('fs/promises');
   const absPath = path.resolve(filePath);
   const raw = await readFile(absPath, 'utf-8');
   const topics: TopicEntry[] = JSON.parse(raw);
@@ -979,7 +1163,7 @@ async function runFromFile(filePath: string): Promise<void> {
       if (result) {
         entry.generated = true;
         // 진행 상황을 파일에 즉시 저장
-        await writeJson(absPath, JSON.stringify(topics, null, 2) + '\n', 'utf-8');
+        await writeFile(absPath, JSON.stringify(topics, null, 2) + '\n', 'utf-8');
         console.log(`✓ 완료: ${result.title}`);
       }
     } catch (err) {
@@ -1015,13 +1199,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   main()
     .then(() => {
       console.log('완료');
-      process.exit(0);
+      process.exitCode = 0;
     })
     .catch((error) => {
       console.error('실패:', error);
-      process.exit(1);
+      process.exitCode = 1;
     })
-    .finally(() => {
-      prisma.$disconnect().catch(() => {});
+    .finally(async () => {
+      await prisma.$disconnect().catch(() => {});
     });
 }
