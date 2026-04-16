@@ -65,6 +65,10 @@ vi.mock('openai', () => {
   };
 });
 
+vi.mock('child_process', () => ({
+  execFileSync: vi.fn(),
+}));
+
 vi.stubGlobal('fetch', mockFetch);
 
 // ---------------------------------------------------------------------------

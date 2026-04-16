@@ -10,6 +10,7 @@ import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
 import OpenAI from 'openai';
 import { readFile, writeFile, mkdir } from 'fs/promises';
+import { execFileSync } from 'child_process';
 import path from 'path';
 
 import { fileURLToPath } from 'url';
@@ -924,15 +925,15 @@ ${isDetailedTopic ? `7. 리서치 데이터 활용 필수: 제공된 데이터�
 // OpenAI image generation
 // ---------------------------------------------------------------------------
 
-// 썸네일 생성. 실제 저장된 파일 경로를 반환 (실패 시 null)
 async function generateThumbnail(
   openai: OpenAI,
   title: string,
   content: string,
   outputPath: string,
   imageStyle?: string,
-): Promise<string | null> {
+): Promise<boolean> {
   try {
+    // 글 내용 요약을 포함한 이미지 프롬프트 생성
     const contentSummary = content.slice(0, 300);
     const style = imageStyle ?? 'Minimal clean illustration. No text, image only. Bright and friendly tone. Korean urban life theme.';
     const imagePrompt = `Generate a blog thumbnail image.
@@ -945,27 +946,38 @@ Style: ${style}`;
       prompt: imagePrompt,
       n: 1,
       size: '1024x1024',
-      output_format: 'webp',
-      quality: 'low',
     });
 
     const imageData = response.data?.[0]?.b64_json;
     if (!imageData) {
       console.warn('이미지 데이터를 찾을 수 없습니다.');
-      return null;
+      return false;
     }
 
     const buffer = Buffer.from(imageData, 'base64');
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, buffer);
-    console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB, WebP)`);
-    return outputPath;
+
+    // 원본 임시 저장 후 ImageMagick으로 800px WebP 리사이즈
+    const tmpPath = outputPath + '.tmp.png';
+    await writeFile(tmpPath, buffer);
+    try {
+      execFileSync('convert', [tmpPath, '-resize', '800x', '-quality', '80', outputPath], { stdio: 'pipe' });
+      const { size: optimizedSize } = await import('fs').then(fs => fs.statSync(outputPath));
+      console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(optimizedSize / 1024).toFixed(0)}KB)`);
+    } catch {
+      // ImageMagick 없으면 원본 그대로 저장
+      await writeFile(outputPath, buffer);
+      console.log(`썸네일 저장 (리사이즈 건너뜀): ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
+    } finally {
+      import('fs').then(fs => { try { fs.unlinkSync(tmpPath); } catch { /* tmp 파일 이미 삭제됨 */ } });
+    }
+    return true;
   } catch (err) {
     console.warn(
       '이미지 생성 실패 - thumbnailUrl을 null로 설정합니다:',
       err instanceof Error ? err.message : err,
     );
-    return null;
+    return false;
   }
 }
 
@@ -1076,13 +1088,11 @@ export async function generateOneGuide(
   const imageStyle = isRealEstate
     ? 'Minimal clean illustration. No text, image only. Professional and modern tone. Korean real estate and apartment theme.'
     : undefined;
-  const savedPath = await generateThumbnail(openai, article.title, article.content, imagePath, imageStyle);
-  if (!savedPath) {
+  const imageGenerated = await generateThumbnail(openai, article.title, article.content, imagePath, imageStyle);
+  if (!imageGenerated) {
     throw new Error(`썸네일 이미지 생성 실패 - 글 등록을 중단합니다. (category: ${category})`);
   }
-  // 실제 저장된 파일 확장자에 맞춰 URL 생성 (.webp 또는 .png)
-  const savedExt = path.extname(savedPath); // .webp or .png
-  const thumbnailUrl = `/api/images/guides/${slug}${savedExt}`;
+  const thumbnailUrl = `/api/images/guides/${slug}.webp`;
 
   // 7. Upsert Guide record in DB
   console.log('데이터베이스에 저장 중...');
