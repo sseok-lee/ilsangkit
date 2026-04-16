@@ -9,8 +9,7 @@
 import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
 import OpenAI from 'openai';
-import { readFile, writeFile, mkdir, unlink } from 'fs/promises';
-import { execFileSync } from 'child_process';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
 import { fileURLToPath } from 'url';
@@ -946,6 +945,8 @@ Style: ${style}`;
       prompt: imagePrompt,
       n: 1,
       size: '1024x1024',
+      output_format: 'webp',
+      quality: 'low',
     });
 
     const imageData = response.data?.[0]?.b64_json;
@@ -956,24 +957,9 @@ Style: ${style}`;
 
     const buffer = Buffer.from(imageData, 'base64');
     await mkdir(path.dirname(outputPath), { recursive: true });
-
-    // ImageMagick으로 800px WebP 리사이즈 시도
-    const tmpPath = outputPath + '.tmp.png';
-    await writeFile(tmpPath, buffer);
-    try {
-      execFileSync('convert', [tmpPath, '-resize', '800x', '-quality', '80', outputPath], { stdio: 'pipe' });
-      const stats = await import('fs').then(fs => fs.statSync(outputPath));
-      console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB → ${(stats.size / 1024).toFixed(0)}KB)`);
-      return outputPath;
-    } catch {
-      // ImageMagick 없으면 .png로 저장 (MIME 불일치 방지)
-      const pngPath = outputPath.replace(/\.webp$/, '.png');
-      await writeFile(pngPath, buffer);
-      console.log(`썸네일 저장 (PNG fallback): ${pngPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
-      return pngPath;
-    } finally {
-      await unlink(tmpPath).catch(() => {});
-    }
+    await writeFile(outputPath, buffer);
+    console.log(`썸네일 저장: ${outputPath} (${(buffer.length / 1024).toFixed(0)}KB, WebP)`);
+    return outputPath;
   } catch (err) {
     console.warn(
       '이미지 생성 실패 - thumbnailUrl을 null로 설정합니다:',
