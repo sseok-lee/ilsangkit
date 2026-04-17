@@ -31,12 +31,12 @@
           <NuxtLink
             v-for="type in propertyTypes"
             :key="type.slug"
-            :to="`/real-estate/${type.slug}`"
+            :to="type.tab === 'sale' ? `/real-estate/${type.baseType}` : `/real-estate/${type.baseType}?tab=rent`"
             class="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           >
             <div class="flex items-center gap-2 mb-2">
               <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <img :src="`/icons/category/${type.slug}.webp?v2`" :alt="type.label" class="w-7 h-7" width="28" height="28" />
+                <img :src="`/icons/category/${type.baseType}.webp?v2`" :alt="type.label" class="w-7 h-7" width="28" height="28" />
               </div>
               <h3 class="font-bold text-slate-900">{{ type.label }}</h3>
             </div>
@@ -116,14 +116,15 @@ if (validDistricts.length === 0 || !validDistricts.some(d => d.slug === district
 const cityName = computed(() => getCityName(citySlug.value))
 const districtName = computed(() => getDistrictName(citySlug.value, districtSlug.value))
 
-// 부동산 유형
+// 부동산 유형 — slug는 아이콘 경로용, to는 baseType + tab으로 생성
+// 서버 redirect middleware는 SPA 탐색 시 작동하지 않으므로 클라이언트 링크는 새 URL 직접 사용
 const propertyTypes = [
-  { slug: 'apt-sale', label: '아파트 매매', description: '아파트 실거래 매매가 조회' },
-  { slug: 'apt-rent', label: '아파트 전월세', description: '아파트 전세·월세 실거래가 조회' },
-  { slug: 'villa-sale', label: '빌라 매매', description: '연립·다세대 실거래 매매가 조회' },
-  { slug: 'villa-rent', label: '빌라 전월세', description: '연립·다세대 전세·월세 실거래가 조회' },
-  { slug: 'offitel-sale', label: '오피스텔 매매', description: '오피스텔 실거래 매매가 조회' },
-  { slug: 'offitel-rent', label: '오피스텔 전월세', description: '오피스텔 전세·월세 실거래가 조회' },
+  { slug: 'apt-sale', baseType: 'apt', tab: 'sale', label: '아파트 매매', description: '아파트 실거래 매매가 조회' },
+  { slug: 'apt-rent', baseType: 'apt', tab: 'rent', label: '아파트 전월세', description: '아파트 전세·월세 실거래가 조회' },
+  { slug: 'villa-sale', baseType: 'villa', tab: 'sale', label: '빌라 매매', description: '연립·다세대 실거래 매매가 조회' },
+  { slug: 'villa-rent', baseType: 'villa', tab: 'rent', label: '빌라 전월세', description: '연립·다세대 전세·월세 실거래가 조회' },
+  { slug: 'offitel-sale', baseType: 'offitel', tab: 'sale', label: '오피스텔 매매', description: '오피스텔 실거래 매매가 조회' },
+  { slug: 'offitel-rent', baseType: 'offitel', tab: 'rent', label: '오피스텔 전월세', description: '오피스텔 전세·월세 실거래가 조회' },
 ]
 
 // 주변 생활시설 (상위 5개)
