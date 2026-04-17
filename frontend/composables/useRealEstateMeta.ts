@@ -14,10 +14,11 @@ export function useRealEstateMeta() {
 
     const locationPrefix = city && district ? `${city} ${district}` : city || ''
     const title = locationPrefix
-      ? `${locationPrefix} ${meta.label} 실거래가 | 일상킷`
-      : `${meta.label} 실거래가 | 일상킷`
+      ? `${locationPrefix} ${meta.label} 실거래가 - 일상킷`
+      : `${meta.label} 실거래가 - 일상킷`
 
     const ogImage = `${SITE_URL}/og?category=${baseCategory}&title=${encodeURIComponent(title)}`
+    const canonicalUrl = `${SITE_URL}/real-estate/${type}`
 
     useHead({
       title,
@@ -26,11 +27,12 @@ export function useRealEstateMeta() {
         { property: 'og:title', content: title },
         { property: 'og:description', content: description },
       ],
+      link: [{ rel: 'canonical', href: canonicalUrl, key: 'canonical' }],
     })
 
     useSeoMeta({
       ogImage,
-      ogUrl: `${SITE_URL}/real-estate/${type}`,
+      ogUrl: canonicalUrl,
       ogType: 'website',
       twitterCard: 'summary_large_image',
       twitterImage: ogImage,
@@ -47,10 +49,10 @@ export function useRealEstateMeta() {
     const meta = REAL_ESTATE_META[category]
     const baseCategory = type.split('-')[0]
 
-    const title = `${buildingName} ${meta.label} 실거래가 - ${city} ${district} | 일상킷`
+    const title = `${buildingName} ${meta.label} 실거래가 - ${city} ${district} - 일상킷`
     const description = `${city} ${district} ${buildingName}의 ${meta.label} 실거래가 정보입니다. 최신 거래 내역과 시세 추이를 확인하세요.`
     const ogImage = `${SITE_URL}/og?category=${baseCategory}&title=${encodeURIComponent(buildingName)}`
-    const ogUrl = `${SITE_URL}/real-estate/${type}/${encodeURIComponent(buildingName)}`
+    const canonicalUrl = `${SITE_URL}/real-estate/${type}/${encodeURIComponent(buildingName)}`
 
     useHead({
       title,
@@ -59,11 +61,12 @@ export function useRealEstateMeta() {
         { property: 'og:title', content: title },
         { property: 'og:description', content: description },
       ],
+      link: [{ rel: 'canonical', href: canonicalUrl, key: 'canonical' }],
     })
 
     useSeoMeta({
       ogImage,
-      ogUrl,
+      ogUrl: canonicalUrl,
       ogType: 'website',
       twitterCard: 'summary_large_image',
       twitterImage: ogImage,

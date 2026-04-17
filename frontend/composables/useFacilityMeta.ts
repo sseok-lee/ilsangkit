@@ -32,6 +32,8 @@ interface MetaOptions {
   image?: string
   type?: 'website' | 'article'
   category?: string
+  /** false → canonical 태그 미삽입 (noindex 페이지용). string → 해당 URL을 canonical로 사용 */
+  canonical?: string | false
 }
 
 /**
@@ -190,7 +192,10 @@ export function useFacilityMeta() {
         ? options.title
         : `${options.title} - ${SITE_NAME}`
 
-    const canonicalUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL
+    const defaultUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL
+    const resolvedCanonical = options.canonical === false
+      ? null
+      : (typeof options.canonical === 'string' ? options.canonical : defaultUrl)
 
     const dynamicOgImage = options.image || (options.category
       ? `${SITE_URL}/og?category=${encodeURIComponent(options.category)}&title=${encodeURIComponent(options.title || '')}`
@@ -204,7 +209,7 @@ export function useFacilityMeta() {
       ogTitle: fullTitle,
       ogDescription: options.description,
       ogImage: dynamicOgImage,
-      ogUrl: canonicalUrl,
+      ogUrl: resolvedCanonical || defaultUrl,
       ogSiteName: SITE_NAME,
       ogType: options.type || 'website',
       ogLocale: 'ko_KR',
@@ -220,12 +225,14 @@ export function useFacilityMeta() {
       twitterImage: dynamicOgImage,
     })
 
-    // Canonical URL (key로 중복 방지 - 페이지에서 별도 canonical 설정 시 덮어씀)
-    useHead({
-      link: [
-        { rel: 'canonical', href: canonicalUrl, key: 'canonical' },
-      ],
-    })
+    // noindex 페이지(예: /search)에서는 canonical 신호 충돌 방지 위해 스킵
+    if (resolvedCanonical) {
+      useHead({
+        link: [
+          { rel: 'canonical', href: resolvedCanonical, key: 'canonical' },
+        ],
+      })
+    }
   }
 
   /**
@@ -294,6 +301,8 @@ export function useFacilityMeta() {
       title,
       description,
       path: '/search',
+      // /search는 noindex이므로 canonical 신호 충돌 방지
+      canonical: false,
     })
   }
 

@@ -2,27 +2,10 @@
 
 User-agent: *
 Allow: /
-
-# 사이트맵
-Sitemap: https://ilsangkit.co.kr/sitemap.xml
-
-# 크롤러 제한
 Disallow: /api/
 Disallow: /_nuxt/
 Disallow: /msw-demo
-
-# 검색엔진별 설정
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Yeti
-Allow: /
-
-User-agent: Daumoa
-Allow: /
+Disallow: /search
 
 # AI 검색 크롤러 — 허용 (AI 검색 노출)
 User-agent: GPTBot
@@ -49,3 +32,5 @@ Disallow: /
 
 User-agent: Bytespider
 Disallow: /
+
+Sitemap: https://ilsangkit.co.kr/sitemap.xml
