@@ -70,7 +70,7 @@ describe('ComplexCard', () => {
   })
 
   describe('NuxtLink', () => {
-    it('올바른 경로로 링크를 생성한다', () => {
+    it('sale 탭은 canonical 정합성을 위해 tab 파라미터를 생략한다', () => {
       const wrapper = mount(ComplexCard, {
         props: { complex: mockComplex, propertyType: 'apt', tab: 'sale' },
       })
@@ -79,11 +79,13 @@ describe('ComplexCard', () => {
       const href = link.attributes('href')!
       expect(href).toContain('/real-estate/apt/')
       expect(href).toContain(encodeURIComponent('대치아이파크'))
-      expect(href).toContain('tab=sale')
       expect(href).toContain('bjdCode=1168010100')
+      // tab=sale은 페이지 기본값이므로 제거 (canonical URL과 일치 → 크롤 예산 절감)
+      expect(href).not.toContain('tab=sale')
+      expect(href).not.toContain('tab=')
     })
 
-    it('다른 propertyType과 tab에 따라 링크 경로가 달라진다', () => {
+    it('rent 탭은 기본값이 아니므로 tab=rent를 유지한다', () => {
       const wrapper = mount(ComplexCard, {
         props: { complex: mockComplex, propertyType: 'villa', tab: 'rent' },
       })
@@ -91,6 +93,7 @@ describe('ComplexCard', () => {
       const href = link.attributes('href')!
       expect(href).toContain('/real-estate/villa/')
       expect(href).toContain('tab=rent')
+      expect(href).toContain('bjdCode=1168010100')
     })
   })
 

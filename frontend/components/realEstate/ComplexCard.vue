@@ -60,7 +60,10 @@ const props = defineProps<Props>()
 
 const linkUrl = computed(() => {
   const name = encodeURIComponent(props.complex.buildingName)
-  return `/real-estate/${props.propertyType}/${name}?tab=${props.tab}&bjdCode=${props.complex.bjdCode}`
+  // sale은 페이지 기본값이라 canonical URL과 일치시키기 위해 생략 (크롤 예산 절감 + canonical 신호 정렬)
+  // rent는 기본값이 아니므로 유지해야 rent 탭이 활성화됨
+  const tabPart = props.tab === 'rent' ? 'tab=rent&' : ''
+  return `/real-estate/${props.propertyType}/${name}?${tabPart}bjdCode=${props.complex.bjdCode}`
 })
 
 const PROPERTY_ICONS: Record<string, { img: string; bg: string }> = {

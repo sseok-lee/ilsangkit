@@ -73,6 +73,33 @@ describe('useRealEstateMeta', () => {
       expect(call.title).toBeTruthy()
       expect(Array.isArray(call.meta)).toBe(true)
     })
+
+    it('title은 "- 일상킷" 접미사를 사용한다 (구분자 통일)', () => {
+      const { setRealEstateListMeta } = useRealEstateMeta()
+      setRealEstateListMeta('apt-sale')
+      const call = mockUseHead.mock.calls[0][0]
+      expect(call.title).toMatch(/- 일상킷$/)
+      expect(call.title).not.toContain('| 일상킷')
+    })
+
+    it('canonical link를 설정한다', () => {
+      const { setRealEstateListMeta } = useRealEstateMeta()
+      setRealEstateListMeta('apt-sale')
+      const call = mockUseHead.mock.calls[0][0]
+      expect(Array.isArray(call.link)).toBe(true)
+      const canonical = call.link.find((l: { rel: string }) => l.rel === 'canonical')
+      expect(canonical).toBeTruthy()
+      expect(canonical.href).toBe('https://ilsangkit.co.kr/real-estate/apt-sale')
+    })
+
+    it('canonical URL과 ogUrl이 동일하다', () => {
+      const { setRealEstateListMeta } = useRealEstateMeta()
+      setRealEstateListMeta('villa-rent')
+      const headCall = mockUseHead.mock.calls[0][0]
+      const seoCall = mockUseSeoMeta.mock.calls[0][0]
+      const canonical = headCall.link.find((l: { rel: string }) => l.rel === 'canonical')
+      expect(canonical.href).toBe(seoCall.ogUrl)
+    })
   })
 
   // ─── Task 1.5: 부동산 상세 페이지 OG 태그 ───────────────────────────────────
@@ -126,6 +153,34 @@ describe('useRealEstateMeta', () => {
       const call = mockUseHead.mock.calls[0][0]
       expect(call.title).toContain('래미안 강남')
       expect(Array.isArray(call.meta)).toBe(true)
+    })
+
+    it('title은 "- 일상킷" 접미사를 사용한다 (구분자 통일)', () => {
+      const { setRealEstateDetailMeta } = useRealEstateMeta()
+      setRealEstateDetailMeta('apt-sale', '래미안 강남', '서울시', '강남구')
+      const call = mockUseHead.mock.calls[0][0]
+      expect(call.title).toMatch(/- 일상킷$/)
+      expect(call.title).not.toContain('| 일상킷')
+    })
+
+    it('canonical link에 buildingName이 인코딩되어 포함된다', () => {
+      const { setRealEstateDetailMeta } = useRealEstateMeta()
+      setRealEstateDetailMeta('apt-sale', '래미안 강남', '서울시', '강남구')
+      const call = mockUseHead.mock.calls[0][0]
+      const canonical = call.link.find((l: { rel: string }) => l.rel === 'canonical')
+      expect(canonical).toBeTruthy()
+      expect(canonical.href).toBe(
+        `https://ilsangkit.co.kr/real-estate/apt-sale/${encodeURIComponent('래미안 강남')}`
+      )
+    })
+
+    it('canonical URL과 ogUrl이 동일하다', () => {
+      const { setRealEstateDetailMeta } = useRealEstateMeta()
+      setRealEstateDetailMeta('apt-sale', '래미안 강남', '서울시', '강남구')
+      const headCall = mockUseHead.mock.calls[0][0]
+      const seoCall = mockUseSeoMeta.mock.calls[0][0]
+      const canonical = headCall.link.find((l: { rel: string }) => l.rel === 'canonical')
+      expect(canonical.href).toBe(seoCall.ogUrl)
     })
   })
 })

@@ -38,6 +38,57 @@ describe('useFacilityMeta', () => {
     })
   })
 
+  describe('setMeta - canonical 옵션', () => {
+    it('canonical: false 일 때 canonical link를 설정하지 않는다', () => {
+      const { setMeta } = useFacilityMeta()
+
+      setMeta({ title: '테스트', description: '설명', path: '/search', canonical: false })
+
+      // setMeta는 canonical 전용 useHead 호출을 스킵해야 함
+      // useHead가 호출되지 않거나, 호출되더라도 link: canonical이 없어야 함
+      const headCallsWithCanonical = mockUseHead.mock.calls.filter((c: unknown[]) => {
+        const arg = c[0] as { link?: Array<{ rel: string }> }
+        return arg?.link?.some((l) => l.rel === 'canonical')
+      })
+      expect(headCallsWithCanonical).toHaveLength(0)
+    })
+
+    it('canonical 옵션이 지정되면 해당 URL을 사용한다', () => {
+      const { setMeta } = useFacilityMeta()
+
+      setMeta({
+        title: '테스트',
+        description: '설명',
+        path: '/toilet',
+        canonical: 'https://ilsangkit.co.kr/custom-canonical',
+      })
+
+      const headCall = mockUseHead.mock.calls.find((c: unknown[]) => {
+        const arg = c[0] as { link?: Array<{ rel: string; href: string }> }
+        return arg?.link?.some((l) => l.rel === 'canonical')
+      })
+      expect(headCall).toBeTruthy()
+      const link = (headCall![0] as { link: Array<{ rel: string; href: string }> }).link
+      const canonical = link.find((l) => l.rel === 'canonical')
+      expect(canonical?.href).toBe('https://ilsangkit.co.kr/custom-canonical')
+    })
+
+    it('canonical 옵션이 없으면 path로 기본 canonical을 생성한다 (기존 동작)', () => {
+      const { setMeta } = useFacilityMeta()
+
+      setMeta({ title: '테스트', description: '설명', path: '/toilet' })
+
+      const headCall = mockUseHead.mock.calls.find((c: unknown[]) => {
+        const arg = c[0] as { link?: Array<{ rel: string; href: string }> }
+        return arg?.link?.some((l) => l.rel === 'canonical')
+      })
+      expect(headCall).toBeTruthy()
+      const link = (headCall![0] as { link: Array<{ rel: string; href: string }> }).link
+      const canonical = link.find((l) => l.rel === 'canonical')
+      expect(canonical?.href).toBe('https://ilsangkit.co.kr/toilet')
+    })
+  })
+
   describe('setSearchMeta', () => {
     it('sets search page meta with keyword', () => {
       const { setSearchMeta } = useFacilityMeta()
@@ -50,6 +101,18 @@ describe('useFacilityMeta', () => {
           description: expect.stringContaining('강남'),
         })
       )
+    })
+
+    it('/search는 canonical을 설정하지 않는다 (noindex 충돌 방지)', () => {
+      const { setSearchMeta } = useFacilityMeta()
+
+      setSearchMeta({ keyword: '강남' })
+
+      const headCallsWithCanonical = mockUseHead.mock.calls.filter((c: unknown[]) => {
+        const arg = c[0] as { link?: Array<{ rel: string }> }
+        return arg?.link?.some((l) => l.rel === 'canonical')
+      })
+      expect(headCallsWithCanonical).toHaveLength(0)
     })
 
     it('sets search page meta with category', () => {
