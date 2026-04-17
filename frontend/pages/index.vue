@@ -278,20 +278,19 @@ const { data: statsResponse } = await useAsyncData('home-stats', () =>
   )
 )
 
-// Below-fold: lazy로 SSR 블로킹 없이 클라이언트에서 로딩
-const { data: recentReviewsData } = useAsyncData('recent-reviews', () =>
+// SSR에서 대기 — lazy 시 섹션이 뒤늦게 삽입되며 CLS(>0.1) 유발
+// 백엔드 응답이 빠르므로 SSR 블로킹 수용
+const { data: recentReviewsData } = await useAsyncData('recent-reviews', () =>
   $fetch<{ success: boolean; data: ReviewWithFacility[] }>(
     `${config.public.apiBase}/api/reviews/recent`,
     { query: { limit: 6 } }
-  ),
-  { lazy: true }
+  )
 )
-const { data: recentGuidesData } = useAsyncData('recent-guides', () =>
+const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
   $fetch<{ success: boolean; data: GuideSummary[] }>(
     `${config.public.apiBase}/api/guides/recent`,
     { query: { limit: 4 } }
-  ),
-  { lazy: true }
+  )
 )
 const recentReviews = computed(() => recentReviewsData.value?.data ?? [])
 const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
