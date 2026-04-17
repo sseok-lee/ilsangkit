@@ -71,6 +71,9 @@ vi.mock('child_process', () => ({
 
 vi.stubGlobal('fetch', mockFetch);
 
+process.env.NAVER_CLIENT_ID = 'test-naver-client-id';
+process.env.NAVER_CLIENT_SECRET = 'test-naver-client-secret';
+
 // ---------------------------------------------------------------------------
 // Import after mocks
 // ---------------------------------------------------------------------------

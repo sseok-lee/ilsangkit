@@ -33,9 +33,7 @@ export type RealEstateTable =
   | 'villaSaleTransaction'
   | 'villaRentTransaction'
   | 'offitelSaleTransaction'
-  | 'offitelRentTransaction'
-  | 'storeSaleTransaction'
-  | 'landSaleTransaction';
+  | 'offitelRentTransaction';
 
 const REAL_ESTATE_TABLES: RealEstateTable[] = [
   'aptSaleTransaction',
@@ -44,8 +42,6 @@ const REAL_ESTATE_TABLES: RealEstateTable[] = [
   'villaRentTransaction',
   'offitelSaleTransaction',
   'offitelRentTransaction',
-  'storeSaleTransaction',
-  'landSaleTransaction',
 ];
 
 /**
