@@ -78,3 +78,6 @@ frontend/docs/
 # Impeccable skill local context (design brief cache)
 .impeccable.md
 .impeccable/
+
+# Lighthouse CI local results
+frontend/.lighthouseci/
