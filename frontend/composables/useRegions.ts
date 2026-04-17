@@ -74,14 +74,19 @@ export function useRegions() {
     }
 
     if (isLoading.value) {
-      // 이미 로딩 중이면 완료될 때까지 대기
-      await new Promise((resolve) => {
-        const check = setInterval(() => {
-          if (isLoaded.value) {
-            clearInterval(check)
-            resolve(true)
+      // 이미 로딩 중이면 완료될 때까지 대기 (최대 30초)
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          unwatch()
+          resolve()
+        }, 30_000)
+        const unwatch = watch(isLoaded, (loaded) => {
+          if (loaded) {
+            clearTimeout(timeout)
+            unwatch()
+            resolve()
           }
-        }, 100)
+        }, { immediate: true })
       })
       return cachedRegions.value
     }

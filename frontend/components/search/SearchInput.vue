@@ -17,6 +17,7 @@
     <div class="absolute inset-y-2 right-2">
       <button
         type="button"
+        aria-label="검색"
         class="h-full px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
         @click="onSearch"
       >

@@ -73,6 +73,19 @@ const tooltip = ref({
   count: 0,
 })
 
+// Chart color tokens (lightweight-charts API requires raw color strings)
+const CHART_COLORS = {
+  line: '#3b82f6',        // primary-500
+  lineLight: 'rgba(59, 130, 246, 0.15)',
+  lineFaint: 'rgba(59, 130, 246, 0.02)',
+  barBase: 'rgba(147, 197, 253, 0.6)',  // blue-300/60
+  barFn: (alpha: number) => `rgba(59, 130, 246, ${alpha.toFixed(2)})`,
+  bg: '#ffffff',          // surface-light
+  text: '#64748b',        // slate-500
+  grid: '#f1f5f9',        // slate-100
+  markerBorder: '#ffffff',
+} as const
+
 let chart: ReturnType<typeof import('lightweight-charts')['createChart']> | null = null
 let resizeObserver: ResizeObserver | null = null
 
@@ -91,11 +104,10 @@ function toTimeStr(s: TransactionStats) {
 }
 
 function getBarColor(count: number, maxCount: number): string {
-  if (maxCount === 0) return 'rgba(147, 197, 253, 0.6)'
+  if (maxCount === 0) return CHART_COLORS.barBase
   const ratio = count / maxCount
-  // 거래량에 따른 그라데이션: 적으면 연한 파랑, 많으면 진한 파랑
   const alpha = 0.3 + ratio * 0.7
-  return `rgba(59, 130, 246, ${alpha.toFixed(2)})`
+  return CHART_COLORS.barFn(alpha)
 }
 
 async function renderChart() {
@@ -113,12 +125,12 @@ async function renderChart() {
 
   chart = createChart(chartContainerRef.value, {
     layout: {
-      background: { type: ColorType.Solid, color: '#ffffff' },
-      textColor: '#64748b',
+      background: { type: ColorType.Solid, color: CHART_COLORS.bg },
+      textColor: CHART_COLORS.text,
     },
     grid: {
-      vertLines: { color: '#f1f5f9' },
-      horzLines: { color: '#f1f5f9' },
+      vertLines: { color: CHART_COLORS.grid },
+      horzLines: { color: CHART_COLORS.grid },
     },
     width: chartContainerRef.value.clientWidth,
     height: 320,
@@ -163,7 +175,7 @@ async function renderChart() {
   const hasMinMax = props.stats.some((s) => s.maxPrice != null && s.minPrice != null)
   if (hasMinMax) {
     const maxSeries = chart.addSeries(LineSeries, {
-      color: 'rgba(59, 130, 246, 0.15)',
+      color: CHART_COLORS.lineLight,
       lineWidth: 1,
       lineStyle: 2,
       crosshairMarkerVisible: false,
@@ -171,7 +183,7 @@ async function renderChart() {
       priceLineVisible: false,
     })
     const minSeries = chart.addSeries(LineSeries, {
-      color: 'rgba(59, 130, 246, 0.15)',
+      color: CHART_COLORS.lineLight,
       lineWidth: 1,
       lineStyle: 2,
       crosshairMarkerVisible: false,
@@ -198,15 +210,15 @@ async function renderChart() {
 
   // Area 시리즈 (월별 평균가) — 그라데이션 채우기
   const areaSeries = chart.addSeries(AreaSeries, {
-    topColor: 'rgba(59, 130, 246, 0.15)',
-    bottomColor: 'rgba(59, 130, 246, 0.02)',
-    lineColor: '#3b82f6',
+    topColor: CHART_COLORS.lineLight,
+    bottomColor: CHART_COLORS.lineFaint,
+    lineColor: CHART_COLORS.line,
     lineWidth: 2,
     lastValueVisible: false,
     priceLineVisible: false,
     crosshairMarkerRadius: 4,
-    crosshairMarkerBackgroundColor: '#3b82f6',
-    crosshairMarkerBorderColor: '#ffffff',
+    crosshairMarkerBackgroundColor: CHART_COLORS.line,
+    crosshairMarkerBorderColor: CHART_COLORS.markerBorder,
     crosshairMarkerBorderWidth: 2,
   })
 
@@ -260,12 +272,15 @@ onMounted(() => {
   renderChart()
 })
 
-// stats가 변경되면 차트 다시 그리기 (기간 변경 시)
+// stats가 변경되면 차트 다시 그리기 (기간 변경 시, 디바운스 적용)
+let renderTimer: ReturnType<typeof setTimeout> | null = null
 watch(() => props.stats, () => {
-  renderChart()
+  if (renderTimer) clearTimeout(renderTimer)
+  renderTimer = setTimeout(renderChart, 150)
 })
 
 onUnmounted(() => {
+  if (renderTimer) clearTimeout(renderTimer)
   resizeObserver?.disconnect()
   if (chart) {
     chart.remove()

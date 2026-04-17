@@ -123,6 +123,10 @@ watch(
 
 // 정리
 onUnmounted(() => {
+  if (map.value) {
+    window.kakao.maps.event.removeListener(map.value, 'dragend', emitBounds)
+    window.kakao.maps.event.removeListener(map.value, 'zoom_changed', emitBounds)
+  }
   clearMarkers()
 })
 </script>
@@ -142,10 +146,10 @@ onUnmounted(() => {
 :deep(.user-location-dot) {
   width: 16px;
   height: 16px;
-  background: #4285f4;
-  border: 3px solid white;
+  background: theme('colors.primary.DEFAULT');
+  border: 3px solid theme('colors.surface-light');
   border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
   position: relative;
 }
 
@@ -156,7 +160,7 @@ onUnmounted(() => {
   transform: translate(-50%, -50%);
   width: 40px;
   height: 40px;
-  background: rgba(66, 133, 244, 0.2);
+  background: theme('colors.primary.DEFAULT / 0.2');
   border-radius: 50%;
   animation: pulse 2s ease-out infinite;
 }

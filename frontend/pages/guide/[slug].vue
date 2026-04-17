@@ -127,7 +127,7 @@
       <AdBanner />
 
       <!-- AI 작성 안내 -->
-      <div class="mt-8 border-l-4 border-slate-300 bg-slate-50 rounded-r-lg p-4">
+      <div class="mt-8 bg-slate-50 rounded-lg p-4">
         <p class="text-xs font-semibold text-slate-500 mb-1">AI 작성 안내</p>
         <p class="text-xs text-slate-500 leading-relaxed">
           본 콘텐츠는 인공지능(AI) 기술을 활용하여 정보를 정리 및 요약한 글입니다.

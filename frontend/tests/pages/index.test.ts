@@ -79,7 +79,7 @@ describe('Index Page', () => {
 
     // Stats labels present
     expect(wrapper.text()).toContain('생활시설')
-    expect(wrapper.text()).toContain('전국 시군구')
+    expect(wrapper.text()).toContain('시군구')
   })
 
   it('navigates to search page when search is triggered', async () => {

@@ -291,7 +291,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
@@ -574,6 +574,10 @@ async function handleDistrictChange() {
 }
 
 let filterSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+onUnmounted(() => {
+  if (filterSearchTimer) clearTimeout(filterSearchTimer)
+})
 
 function handleFilterSearch() {
   if (filterSearchTimer) clearTimeout(filterSearchTimer)

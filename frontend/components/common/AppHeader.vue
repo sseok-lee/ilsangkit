@@ -2,17 +2,17 @@
   <header
     :class="[
       'sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 h-14 md:h-16',
-      'bg-background-light/95 backdrop-blur-sm',
+      'bg-background-light',
       'border-b border-transparent',
       'transition-colors duration-300',
-      props.transparent ? 'bg-transparent backdrop-blur-none border-transparent' : ''
+      props.transparent ? 'bg-transparent border-transparent' : ''
     ]"
   >
     <!-- Left: Back Button (if enabled) or Logo -->
     <div class="flex items-center gap-2">
       <button
         v-if="props.showBackButton"
-        class="flex size-10 items-center justify-center rounded-full hover:bg-black/5 transition-colors text-[#111418]"
+        class="flex size-11 items-center justify-center rounded-full hover:bg-black/5 transition-colors text-slate-900"
         aria-label="뒤로가기"
         @click="handleBack"
       >
@@ -123,7 +123,7 @@
     <div class="flex items-center justify-end">
       <!-- Mobile Menu Button -->
       <button
-        class="md:hidden flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-[#111418]"
+        class="md:hidden flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
         aria-label="메뉴"
         :aria-expanded="isMobileMenuOpen"
         @click="toggleMobileMenu($event)"
@@ -154,28 +154,28 @@
       <nav class="flex flex-col p-4 gap-1">
         <NuxtLink
           to="/"
-          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           홈
         </NuxtLink>
         <NuxtLink
           to="/search"
-          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           검색
         </NuxtLink>
         <NuxtLink
           to="/guide"
-          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           가이드
         </NuxtLink>
         <NuxtLink
           to="/about"
-          class="px-4 py-3 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           소개
@@ -194,7 +194,7 @@
               v-for="catId in group.categories"
               :key="catId"
               :to="`/${catId}`"
-              class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
               <img :src="`/icons/category/${catId}.webp?v2`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
@@ -207,7 +207,7 @@
               v-for="link in group.links"
               :key="link.to"
               :to="link.to"
-              class="pl-6 pr-4 py-2.5 text-[#111418] hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
               <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />

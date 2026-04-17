@@ -180,10 +180,10 @@ describe('AppHeader', () => {
       expect(menuButton.attributes('aria-label')).toBe('메뉴')
     })
 
-    it('should have minimum 40px touch target for menu button', () => {
+    it('should have minimum 44px touch target for menu button', () => {
       const menuButton = wrapper.find('button[aria-label="메뉴"]')
-      // size-10 = 40px (2.5rem)
-      expect(menuButton.classes()).toContain('size-10')
+      // size-11 = 44px (2.75rem)
+      expect(menuButton.classes()).toContain('size-11')
     })
   })
 
