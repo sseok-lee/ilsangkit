@@ -4,9 +4,10 @@
     <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Page Header -->
-    <header class="mb-8">
+    <header class="mb-6">
       <h1 class="text-3xl font-bold text-gray-900 mb-2">
-        {{ cityName }} {{ districtName }} {{ categoryName }}
+        {{ cityShortName }} {{ districtName }} {{ categoryName }}
+        <span v-if="summary && summary.count > 0" class="ml-1">{{ summary.count.toLocaleString() }}곳</span>
       </h1>
       <p class="text-gray-600">
         {{ isTrash
@@ -15,6 +16,21 @@
         }}
       </p>
     </header>
+
+    <!-- 지역 요약 섹션 (near-duplicate 방지) -->
+    <div v-if="summary && !isTrash" class="mb-6 space-y-4">
+      <DistrictSummaryCard
+        :summary="summary"
+        :district-name="districtName"
+        :category-label="categoryName"
+      />
+      <NearbyDistrictsNav
+        :city-slug="city"
+        :category="category"
+        :category-label="categoryName"
+        :districts="summary.nearbyDistricts"
+      />
+    </div>
 
     <!-- ========== Trash: 배출 일정 ========== -->
     <template v-if="isTrash">
@@ -209,11 +225,39 @@ if (regionsData.value?.length) {
 
 // Korean names (동적으로 가져옴)
 const cityName = computed(() => getCityName(city.value))
+// 축약 도시명 (서울특별시 → 서울) — H1에 사용해 title과 일관성 유지
+const cityShortName = computed(() =>
+  cityName.value.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+)
 const districtName = computed(() => getDistrictName(city.value, district.value))
 const categoryName = computed(() => {
   const meta = CATEGORY_META[category.value as keyof typeof CATEGORY_META]
   return meta?.label || category.value
 })
+
+// 지역 요약 (/api/area/:city/:district/:category/summary) SSR 주입
+interface AreaSummary {
+  count: number
+  countDiff: number
+  highlights: Array<{ key: string; label: string; count: number; percent: number }>
+  nearbyDistricts: Array<{ slug: string; district: string; count: number }>
+  lastSyncedAt: string | null
+}
+const config = useRuntimeConfig()
+const { data: summary } = await useAsyncData<AreaSummary | null>(
+  `area-summary-${city.value}-${district.value}-${category.value}`,
+  async () => {
+    if (category.value === 'trash') return null
+    try {
+      const res = await $fetch<{ success: boolean; data: AreaSummary }>(
+        `${config.public.apiBase}/api/area/${city.value}/${district.value}/${category.value}/summary`,
+      )
+      return res?.success ? res.data : null
+    } catch {
+      return null
+    }
+  },
+)
 
 // SEO - top-level에서 설정 (SSR에서 메타태그 렌더링)
 const { setRegionMeta } = useFacilityMeta()
