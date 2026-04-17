@@ -74,3 +74,7 @@ frontend/docs/
 # Root package files (workspaces not used)
 /package.json
 /package-lock.json
+
+# Impeccable skill local context (design brief cache)
+.impeccable.md
+.impeccable/

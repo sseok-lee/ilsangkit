@@ -111,8 +111,10 @@
       <!-- 데이터 의존 영역: isMounted 가드로 hydration mismatch 방지 -->
       <template v-if="isMounted">
       <!-- 시설/부동산 탭 -->
-      <div v-if="groupedResults.length > 0 || realEstateResults.length > 0" class="flex gap-2 mb-4">
+      <div v-if="groupedResults.length > 0 || realEstateResults.length > 0" class="flex gap-2 mb-4" role="tablist" aria-label="검색 결과 필터">
         <button
+          role="tab"
+          :aria-selected="searchTab === 'all'"
           :class="[
             'px-4 py-2 rounded-full text-sm font-semibold transition-colors border',
             searchTab === 'all'
@@ -124,6 +126,8 @@
           전체
         </button>
         <button
+          role="tab"
+          :aria-selected="searchTab === 'realEstate'"
           :class="[
             'px-4 py-2 rounded-full text-sm font-semibold transition-colors border',
             searchTab === 'realEstate'
@@ -137,6 +141,8 @@
           부동산
         </button>
         <button
+          role="tab"
+          :aria-selected="searchTab === 'facility'"
           :class="[
             'px-4 py-2 rounded-full text-sm font-semibold transition-colors border',
             searchTab === 'facility'

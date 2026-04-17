@@ -33,6 +33,12 @@ const adError = ref(false)
 const adUnfilled = ref(false)
 const adKey = ref(0)
 const route = useRoute()
+let timers: ReturnType<typeof setTimeout>[] = []
+
+function clearTimers() {
+  timers.forEach(clearTimeout)
+  timers = []
+}
 
 function checkAdFilled() {
   if (!adContainer.value) return
@@ -45,12 +51,13 @@ function checkAdFilled() {
 }
 
 function pushAd() {
+  clearTimers()
   nextTick(() => {
     try {
       const adsbygoogle = (window as any).adsbygoogle || []
       adsbygoogle.push({})
-      setTimeout(checkAdFilled, 1500)
-      setTimeout(checkAdFilled, 3500)
+      timers.push(setTimeout(checkAdFilled, 1500))
+      timers.push(setTimeout(checkAdFilled, 3500))
     } catch {
       adError.value = true
     }
@@ -58,6 +65,8 @@ function pushAd() {
 }
 
 onMounted(pushAd)
+
+onUnmounted(clearTimers)
 
 watch(() => route.fullPath, () => {
   adError.value = false

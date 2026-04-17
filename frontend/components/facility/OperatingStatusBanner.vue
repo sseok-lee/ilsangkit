@@ -9,7 +9,7 @@
     <span class="relative flex h-2.5 w-2.5 shrink-0">
       <span
         v-if="statusInfo.isOpen"
-        class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+        class="absolute inline-flex h-full w-full rounded-full animate-pulse"
         :class="statusInfo.isOpen ? 'bg-green-400' : 'bg-red-400'"
       ></span>
       <span

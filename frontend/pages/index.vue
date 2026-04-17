@@ -6,8 +6,8 @@
         <div class="absolute inset-0 opacity-10 md:opacity-[0.08]">
           <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="일상킷 생활 정보 서비스" sizes="100vw" />
         </div>
-        <!-- 하단 그라데이션 페이드 -->
-        <div class="absolute bottom-0 left-0 right-0 h-12 md:h-16 bg-gradient-to-t from-background-light to-transparent"></div>
+        <!-- 하단 페이드 -->
+        <div class="absolute bottom-0 left-0 right-0 h-12 md:h-16 bg-background-light/80"></div>
 
         <div class="relative z-10 flex flex-col gap-6 md:max-w-3xl md:mx-auto md:items-center md:text-center">
           <!-- 제목 -->
@@ -48,22 +48,13 @@
           </div>
 
           <!-- 통계 -->
-          <div class="flex justify-center gap-5 md:gap-10 mt-2 md:mt-6">
-            <div class="text-center">
-              <div class="text-2xl md:text-3xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.buildingCount || 0) }}</div>
-              <div class="text-sm text-slate-500">실거래가 매물</div>
-            </div>
-            <div class="w-px bg-slate-200 self-stretch my-1 md:hidden"></div>
-            <div class="text-center">
-              <div class="text-2xl md:text-3xl font-black text-primary whitespace-nowrap">{{ formatStatCount(stats.total || 0) }}</div>
-              <div class="text-sm text-slate-500">전국 생활시설</div>
-            </div>
-            <div class="w-px bg-slate-200 self-stretch my-1 md:hidden"></div>
-            <div class="text-center">
-              <div class="text-2xl md:text-3xl font-black text-primary whitespace-nowrap">{{ stats.regionCount || 0 }}개</div>
-              <div class="text-sm text-slate-500">전국 시군구</div>
-            </div>
-          </div>
+          <p class="text-sm text-slate-500 mt-2 md:mt-4">
+            실거래가 매물 <span class="font-semibold text-slate-700">{{ formatStatCount(stats.buildingCount || 0) }}</span>
+            <span class="mx-1.5 text-slate-300">·</span>
+            생활시설 <span class="font-semibold text-slate-700">{{ formatStatCount(stats.total || 0) }}</span>
+            <span class="mx-1.5 text-slate-300">·</span>
+            전국 <span class="font-semibold text-slate-700">{{ stats.regionCount || 0 }}개</span> 시군구
+          </p>
         </div>
       </section>
 

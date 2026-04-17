@@ -57,7 +57,7 @@
         >
           <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
             <button
-              class="flex size-10 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm"
+              class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm"
               @click="isMapExpanded = false"
             >
               <span class="material-symbols-outlined text-slate-700">close</span>
