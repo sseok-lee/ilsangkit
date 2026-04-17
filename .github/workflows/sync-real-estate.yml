@@ -21,9 +21,21 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 3h
+          command_timeout: 1h30m
           script: |
+            set -u
             cd /home/project2/backend
+
+            # --- 좀비 청소 (시작 전) ---------------------------------------
+            # 이전 실행에서 남은 sync/geocode/refresh/subscription 프로세스 강제 종료.
+            # 2026-04-17 사고 때 SSH 연결 끊겨도 node가 살아남아 MySQL을 7시간 잡은
+            # 사슬의 1번째 방어선.
+            pkill -9 -f 'dist/scripts/(syncApt|syncVilla|syncOffitel|geocodeRealEstate|refreshRealEstateSummary|syncSubscription)' 2>/dev/null || true
+            # ilsangkit 유저의 30분 이상 걸린 non-Sleep 커넥션 KILL.
+            # information_schema.processlist는 metadata lock 시 hang할 수 있어 SHOW PROCESSLIST 사용.
+            mysql -e "SHOW PROCESSLIST" 2>/dev/null \
+              | awk '$2=="ilsangkit" && $6+0 > 1800 && $5!="Sleep" {print "KILL "$1";"}' \
+              | mysql 2>/dev/null || true
 
             # 현재 월과 직전 월만 동기화 (YYYYMM)
             CURRENT_YM=$(date +%Y%m)
@@ -32,22 +44,35 @@ jobs:
             echo "=== 부동산 실거래가 동기화 시작 ==="
             echo "대상: ${PREV_YM}, ${CURRENT_YM}"
 
-            # 6개 부동산 타입 순차 실행 (API 부하 분산)
+            # 6개 부동산 타입 순차 실행 (API 부하 분산).
+            # `timeout --kill-after=30s 20m`는 스크립트 내부 watchdog(20분)이 뚫려도
+            # OS가 SIGTERM→SIGKILL로 반드시 종료시키는 최종 방어선.
             for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSale syncOffitelRent; do
               echo "--- ${SCRIPT} 동기화 ---"
-              node "dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" || echo "[WARN] ${SCRIPT} 실패"
+              timeout --kill-after=30s 20m node "dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" \
+                || echo "[WARN] ${SCRIPT} 실패 (exit=$?)"
             done
 
-            # 좌표 없는 건물 지오코딩
+            # 좌표 없는 건물 지오코딩 (카카오 API rate limit 감안 45분)
             echo "--- 지오코딩 ---"
-            node dist/scripts/geocodeRealEstate.js || echo "[WARN] 지오코딩 실패"
+            timeout --kill-after=30s 45m node dist/scripts/geocodeRealEstate.js \
+              || echo "[WARN] 지오코딩 실패 (exit=$?)"
 
-            # Summary 테이블 갱신
+            # Summary 테이블 갱신 (MySQL MAX_EXECUTION_TIME=60s가 내부에서 강제)
             echo "--- Summary 갱신 ---"
-            node dist/scripts/refreshRealEstateSummary.js || echo "[WARN] Summary 갱신 실패"
+            timeout --kill-after=30s 15m node dist/scripts/refreshRealEstateSummary.js \
+              || echo "[WARN] Summary 갱신 실패 (exit=$?)"
 
             # 청약 분양정보 동기화 (전체 소스)
             echo "--- 청약 동기화 ---"
-            node dist/scripts/syncSubscription.js --source ALL || echo "[WARN] 청약 동기화 실패"
+            timeout --kill-after=30s 30m node dist/scripts/syncSubscription.js --source ALL \
+              || echo "[WARN] 청약 동기화 실패 (exit=$?)"
+
+            # --- 좀비 청소 (종료 후) -------------------------------------
+            # 만에 하나 남은 프로세스/커넥션이 있으면 여기서 확실히 정리.
+            pkill -9 -f 'dist/scripts/(syncApt|syncVilla|syncOffitel|geocodeRealEstate|refreshRealEstateSummary|syncSubscription)' 2>/dev/null || true
+            mysql -e "SHOW PROCESSLIST" 2>/dev/null \
+              | awk '$2=="ilsangkit" && $6+0 > 1800 && $5!="Sleep" {print "KILL "$1";"}' \
+              | mysql 2>/dev/null || true
 
             echo "=== 동기화 완료 ==="

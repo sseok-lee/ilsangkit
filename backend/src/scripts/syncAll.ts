@@ -13,6 +13,7 @@
 
 import * as path from 'path';
 import { syncToilets } from '../services/toiletSyncService.js';
+import { installRuntimeGuard } from './_runtimeGuard.js';
 import { syncTrashData } from './syncTrash.js';
 import { syncWifiData } from './syncWifi.js';
 import { syncClothes } from '../services/clothesSyncService.js';
@@ -399,6 +400,7 @@ async function main(): Promise<void> {
 }
 
 // 스크립트 실행
+installRuntimeGuard({ maxMinutes: 120, name: 'syncAll', prisma });
 main().catch(error => {
   console.error('치명적 오류:', error);
   process.exit(1);

@@ -394,9 +394,11 @@ async function main(): Promise<void> {
 
 import { fileURLToPath } from 'url';
 import { resolve } from 'path';
+import { installRuntimeGuard } from './_runtimeGuard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
+  installRuntimeGuard({ maxMinutes: 45, name: 'geocodeRealEstate' });
   main().catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
