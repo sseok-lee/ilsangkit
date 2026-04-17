@@ -6,6 +6,7 @@ import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import { derivePublicRentType } from '../utils/subscriptionUtils.js';
 import { processSubscriptions } from './geocodeSubscriptions.js';
+import { installRuntimeGuard } from './_runtimeGuard.js';
 
 const API_BASE = 'https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1';
 const API_BASE_CMPET = 'https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1';
@@ -667,6 +668,7 @@ async function main() {
   await prisma.$disconnect();
 }
 
+installRuntimeGuard({ maxMinutes: 30, name: 'syncSubscription', prisma });
 main().catch(async (err) => {
   console.error('청약 동기화 실패:', err);
   await prisma.$disconnect();
