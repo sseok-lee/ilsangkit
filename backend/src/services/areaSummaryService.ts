@@ -197,7 +197,8 @@ export async function getAreaSummary(
  * 같은 시의 다른 구 목록 — 지리적 거리 기준 가까운 5개
  *
  * Region.lat/lng (공공데이터 지오코딩 값)과 현재 구 중심 좌표의 Haversine distance로 정렬.
- * 해당 카테고리 시설이 0건인 구는 제외 (유의미한 링크만 노출).
+ * 카테고리 시설 0건인 구도 포함 — 지리적 인접성이 UX 핵심이고,
+ * 0건 페이지는 해당 페이지 내 로직에서 이미 `noindex`로 처리되어 SEO 위험 없음.
  */
 async function getNearbyDistricts(
   currentDistrict: string,
@@ -236,7 +237,6 @@ async function getNearbyDistricts(
       count: countMap.get(r.district) ?? 0,
       distance: haversineKm(currentLat, currentLng, Number(r.lat), Number(r.lng)),
     }))
-    .filter((r) => r.count > 0)
     .sort((a, b) => a.distance - b.distance)
     .slice(0, 5)
     .map(({ slug, district, count }) => ({ slug, district, count }));

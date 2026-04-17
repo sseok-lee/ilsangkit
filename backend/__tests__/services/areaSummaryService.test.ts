@@ -167,10 +167,10 @@ describe('getAreaSummary', () => {
       expect(result!.nearbyDistricts.map(d => d.district)).toContain('서초구');
     });
 
-    it('해당 카테고리 시설이 0건인 구는 제외', async () => {
+    it('해당 카테고리 시설이 0건인 구도 포함 (지리적 인접성 우선, 0곳 표시)', async () => {
       mockGroupBy.mockResolvedValueOnce([
         { district: '서초구', _count: 52 },
-        // 송파구는 count 없음 → 0건으로 간주되어 제외되어야 함
+        // 송파구 데이터 누락 → count=0이지만 지리적으로 가까우므로 포함
       ]);
       mockFindMany.mockResolvedValueOnce([
         { district: '서초구', slug: 'seocho', lat: 37.4837, lng: 127.0324 },
@@ -178,8 +178,9 @@ describe('getAreaSummary', () => {
       ]);
 
       const result = await getAreaSummary('seoul', 'gangnam', 'toilet');
-      expect(result!.nearbyDistricts.map(d => d.district)).toContain('서초구');
-      expect(result!.nearbyDistricts.map(d => d.district)).not.toContain('송파구');
+      const map = new Map(result!.nearbyDistricts.map(d => [d.district, d.count]));
+      expect(map.get('서초구')).toBe(52);
+      expect(map.get('송파구')).toBe(0);
     });
   });
 
