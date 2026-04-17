@@ -50,7 +50,7 @@ beforeEach(() => {
   clearAreaSummaryCache();
 
   // 기본 mock 응답
-  mockFindFirst.mockResolvedValue({ district: '강남구', bjdCode: '1168000000', slug: 'gangnam' });
+  mockFindFirst.mockResolvedValue({ district: '강남구', lat: 37.5172, lng: 127.0473 });
   mockFindMany.mockResolvedValue([]);
   mockCount.mockResolvedValue(0);
   mockGroupBy.mockResolvedValue([]);
@@ -74,7 +74,7 @@ describe('getAreaSummary', () => {
 
   describe('count & highlights (toilet)', () => {
     beforeEach(() => {
-      mockFindFirst.mockResolvedValue({ district: '강남구', bjdCode: '1168000000', slug: 'gangnam' });
+      mockFindFirst.mockResolvedValue({ district: '강남구', lat: 37.5172, lng: 127.0473 });
     });
 
     it('해당 구의 총 시설 수를 반환한다', async () => {
@@ -134,31 +134,52 @@ describe('getAreaSummary', () => {
   });
 
   describe('nearbyDistricts', () => {
-    it('같은 시의 다른 구 목록을 상위 5개까지 반환', async () => {
+    it('지리적으로 가까운 구 상위 5개를 반환 (거리 기반)', async () => {
+      // 강남구 중심: 37.5172, 127.0473
+      // 아래 mock은 서울 자치구의 실제 근사 좌표
       mockGroupBy.mockResolvedValueOnce([
-        { district: '강남구', _count: 48 },
         { district: '서초구', _count: 52 },
         { district: '송파구', _count: 61 },
         { district: '강동구', _count: 38 },
         { district: '용산구', _count: 29 },
         { district: '성동구', _count: 41 },
         { district: '광진구', _count: 33 },
+        { district: '종로구', _count: 20 }, // 멀어서 5개 밖으로 밀려야 함
       ]);
       mockFindMany.mockResolvedValueOnce([
-        { district: '서초구', slug: 'seocho' },
-        { district: '송파구', slug: 'songpa' },
-        { district: '강동구', slug: 'gangdong' },
-        { district: '성동구', slug: 'seongdong' },
-        { district: '광진구', slug: 'gwangjin' },
+        { district: '서초구', slug: 'seocho', lat: 37.4837, lng: 127.0324 }, // ~4km
+        { district: '송파구', slug: 'songpa', lat: 37.5145, lng: 127.1059 }, // ~5km
+        { district: '성동구', slug: 'seongdong', lat: 37.5634, lng: 127.0371 }, // ~5km
+        { district: '광진구', slug: 'gwangjin', lat: 37.5384, lng: 127.0823 }, // ~4km
+        { district: '강동구', slug: 'gangdong', lat: 37.5301, lng: 127.1238 }, // ~7km
+        { district: '용산구', slug: 'yongsan', lat: 37.5326, lng: 126.9907 }, // ~6km
+        { district: '종로구', slug: 'jongno', lat: 37.5729, lng: 126.9794 }, // ~10km
       ]);
 
       const result = await getAreaSummary('seoul', 'gangnam', 'toilet');
       expect(result!.nearbyDistricts).toBeDefined();
       expect(result!.nearbyDistricts.length).toBeLessThanOrEqual(5);
+      // 현재 구는 제외
       expect(result!.nearbyDistricts.every(d => d.district !== '강남구')).toBe(true);
-      // count 내림차순 검증
-      const counts = result!.nearbyDistricts.map(d => d.count);
-      expect([...counts].sort((a, b) => b - a)).toEqual(counts);
+      // 가장 먼 종로구는 top 5 밖
+      expect(result!.nearbyDistricts.map(d => d.district)).not.toContain('종로구');
+      // 가장 가까운 서초구는 포함
+      expect(result!.nearbyDistricts.map(d => d.district)).toContain('서초구');
+    });
+
+    it('해당 카테고리 시설이 0건인 구는 제외', async () => {
+      mockGroupBy.mockResolvedValueOnce([
+        { district: '서초구', _count: 52 },
+        // 송파구는 count 없음 → 0건으로 간주되어 제외되어야 함
+      ]);
+      mockFindMany.mockResolvedValueOnce([
+        { district: '서초구', slug: 'seocho', lat: 37.4837, lng: 127.0324 },
+        { district: '송파구', slug: 'songpa', lat: 37.5145, lng: 127.1059 },
+      ]);
+
+      const result = await getAreaSummary('seoul', 'gangnam', 'toilet');
+      expect(result!.nearbyDistricts.map(d => d.district)).toContain('서초구');
+      expect(result!.nearbyDistricts.map(d => d.district)).not.toContain('송파구');
     });
   });
 

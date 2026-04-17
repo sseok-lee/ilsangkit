@@ -106,6 +106,20 @@ function getModel(category: SummaryCategory) {
 }
 
 /**
+ * Haversine 공식으로 두 좌표 간 거리(km) 계산
+ */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/**
  * 지역 요약 데이터 조회
  */
 export async function getAreaSummary(
@@ -126,14 +140,16 @@ export async function getAreaSummary(
   const cityVariants = [fullName, shortName].filter(Boolean) as string[];
   const cityCondition = cityVariants.length > 1 ? { in: cityVariants } : fullName;
 
-  // 3. district slug → district name
+  // 3. district slug → district name + 중심 좌표
   const region = await prisma.region.findFirst({
     where: { city: { in: cityVariants }, slug: districtSlug },
-    select: { district: true },
+    select: { district: true, lat: true, lng: true },
   });
   if (!region) return null;
 
   const baseWhere = { city: cityCondition, district: region.district };
+  const currentLat = Number(region.lat);
+  const currentLng = Number(region.lng);
   const model = getModel(category);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const countableModel = model as any;
@@ -154,7 +170,7 @@ export async function getAreaSummary(
     countableModel.count({
       where: { ...baseWhere, createdAt: { gte: thirtyDaysAgo } },
     }) as Promise<number>,
-    getNearbyDistricts(citySlug, region.district, category, cityCondition),
+    getNearbyDistricts(region.district, currentLat, currentLng, category, cityCondition),
     getCategoryLastSync(category),
   ]);
 
@@ -178,48 +194,52 @@ export async function getAreaSummary(
 }
 
 /**
- * 같은 시의 다른 구 목록 (같은 카테고리 count 포함) 상위 5개
+ * 같은 시의 다른 구 목록 — 지리적 거리 기준 가까운 5개
+ *
+ * Region.lat/lng (공공데이터 지오코딩 값)과 현재 구 중심 좌표의 Haversine distance로 정렬.
+ * 해당 카테고리 시설이 0건인 구는 제외 (유의미한 링크만 노출).
  */
 async function getNearbyDistricts(
-  citySlug: string,
   currentDistrict: string,
+  currentLat: number,
+  currentLng: number,
   category: SummaryCategory,
   cityCondition: unknown,
 ): Promise<NearbyDistrict[]> {
   const model = getModel(category);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const groups = await (model as any).groupBy({
-    by: ['district'],
-    where: { city: cityCondition },
-    _count: true,
-  }) as Array<{ district: string | null; _count: number }>;
 
-  // 현재 구 제외, count 내림차순 상위 5개
-  const nearby = groups
-    .filter((g) => g.district && g.district !== currentDistrict)
-    .sort((a, b) => (b._count as number) - (a._count as number))
-    .slice(0, 5);
+  const [groups, otherRegions] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (model as any).groupBy({
+      by: ['district'],
+      where: { city: cityCondition },
+      _count: true,
+    }) as Promise<Array<{ district: string | null; _count: number }>>,
+    prisma.region.findMany({
+      where: {
+        city: cityCondition as Record<string, unknown>,
+        district: { not: currentDistrict },
+      },
+      select: { district: true, slug: true, lat: true, lng: true },
+    }),
+  ]);
 
-  if (nearby.length === 0) return [];
+  const countMap = new Map<string, number>();
+  for (const g of groups) {
+    if (g.district) countMap.set(g.district, g._count);
+  }
 
-  // district name → slug 매핑
-  const regions = await prisma.region.findMany({
-    where: {
-      district: { in: nearby.map((n) => n.district!) },
-      city: cityCondition as Record<string, unknown>,
-    },
-    select: { district: true, slug: true },
-  });
-  const slugMap = new Map(regions.map((r) => [r.district, r.slug]));
-  void citySlug; // reserved for future per-city filtering
-
-  return nearby
-    .map((n) => ({
-      slug: slugMap.get(n.district!) ?? '',
-      district: n.district!,
-      count: n._count as number,
+  return otherRegions
+    .map((r) => ({
+      slug: r.slug,
+      district: r.district,
+      count: countMap.get(r.district) ?? 0,
+      distance: haversineKm(currentLat, currentLng, Number(r.lat), Number(r.lng)),
     }))
-    .filter((n) => n.slug);
+    .filter((r) => r.count > 0)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 5)
+    .map(({ slug, district, count }) => ({ slug, district, count }));
 }
 
 /**
