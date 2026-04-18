@@ -30,16 +30,36 @@ jobs:
             cd /home/project2/backend
             echo "[step:cwd-ok] $(pwd)"
 
+            # pkill -f 는 drone-ssh 가 bash -c '<script>' 로 넘긴 이 스크립트 본문
+            # 자체를 argv 에 담은 부모 bash 까지 매칭시켜 SIGKILL 해버린다
+            # (2026-04-17 run #24580271281, 2026-04-18 run #24596132685, #24596179994).
+            # 해법: pgrep -x node 로 실행 파일명이 정확히 'node' 인 프로세스만 후보로
+            # 뽑은 뒤 /proc/<pid>/cmdline 으로 argv 를 확인해 우리 sync 스크립트만 종료.
+            # 부모 bash 는 name=bash 이므로 절대 후보에 오르지 않음.
+            kill_sync_zombies() {
+              local pid cmd
+              for pid in $(pgrep -x node 2>/dev/null); do
+                cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+                case "$cmd" in
+                  *dist/scripts/syncApt*|\
+                  *dist/scripts/syncVilla*|\
+                  *dist/scripts/syncOffitel*|\
+                  *dist/scripts/geocodeRealEstate*|\
+                  *dist/scripts/refreshRealEstateSummary*|\
+                  *dist/scripts/syncSubscription*)
+                    kill -9 "$pid" 2>/dev/null || true
+                    ;;
+                esac
+              done
+            }
+
             # --- 좀비 청소 (시작 전) ---------------------------------------
             # 이전 실행에서 남은 sync/geocode/refresh/subscription 프로세스 강제 종료.
-            # 2026-04-17 사고 때 SSH 연결 끊겨도 node가 살아남아 MySQL을 7시간 잡은
+            # 2026-04-17 사고 때 SSH 연결 끊겨도 node 가 살아남아 MySQL 을 7시간 잡은
             # 사슬의 1번째 방어선.
-            echo "[step:pre-pkill]"
-            # node 프리픽스 필수 — 없으면 bash -c '<script>'가 이 패턴 리터럴을
-            # argv에 담은 채 실행 중이라 pkill -f 가 자기 부모 셸을 같이 죽임
-            # (2026-04-17 run #24580271281 & 2026-04-18 run #24596132685 원인).
-            pkill -9 -f 'node.*dist/scripts/(syncApt|syncVilla|syncOffitel|geocodeRealEstate|refreshRealEstateSummary|syncSubscription)\.js' 2>/dev/null || true
-            echo "[step:pre-pkill-done exit=$?]"
+            echo "[step:pre-kill]"
+            kill_sync_zombies
+            echo "[step:pre-kill-done exit=$?]"
             # ilsangkit 유저의 30분 이상 걸린 non-Sleep 커넥션 KILL.
             # information_schema.processlist는 metadata lock 시 hang할 수 있어 SHOW PROCESSLIST 사용.
             echo "[step:pre-mysql-show]"
@@ -97,11 +117,8 @@ jobs:
 
             # --- 좀비 청소 (종료 후) -------------------------------------
             # 만에 하나 남은 프로세스/커넥션이 있으면 여기서 확실히 정리.
-            echo "[step:post-pkill]"
-            # node 프리픽스 필수 — 없으면 bash -c '<script>'가 이 패턴 리터럴을
-            # argv에 담은 채 실행 중이라 pkill -f 가 자기 부모 셸을 같이 죽임
-            # (2026-04-17 run #24580271281 & 2026-04-18 run #24596132685 원인).
-            pkill -9 -f 'node.*dist/scripts/(syncApt|syncVilla|syncOffitel|geocodeRealEstate|refreshRealEstateSummary|syncSubscription)\.js' 2>/dev/null || true
+            echo "[step:post-kill]"
+            kill_sync_zombies
             echo "[step:post-mysql]"
             mysql -e "SHOW PROCESSLIST" 2>/dev/null \
               | awk '$2=="ilsangkit" && $6+0 > 1800 && $5!="Sleep" {print "KILL "$1";"}' \
