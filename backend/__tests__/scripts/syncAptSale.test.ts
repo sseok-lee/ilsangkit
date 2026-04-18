@@ -2,15 +2,18 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockUpsert, mockFindMany } = vi.hoisted(() => ({
+const { mockUpsert, mockFindUnique, mockFindMany, mockTransaction } = vi.hoisted(() => ({
   mockUpsert: vi.fn(),
+  mockFindUnique: vi.fn(),
   mockFindMany: vi.fn(),
+  mockTransaction: vi.fn((fn) => fn()),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {
-    aptSaleTransaction: { upsert: mockUpsert },
+    aptSaleTransaction: { upsert: mockUpsert, findUnique: mockFindUnique },
     region: { findMany: mockFindMany },
+    $transaction: mockTransaction,
   },
 }));
 
@@ -20,12 +23,12 @@ global.fetch = mockFetch;
 import {
   transformAptSaleItem,
   syncAptSaleByLawd,
-  type AptSaleItem,
+  type RawAptSaleItem,
 } from '../../src/scripts/syncAptSale.js';
 
 describe('transformAptSaleItem', () => {
   it('API 응답 item을 DB 필드로 변환', () => {
-    const item: AptSaleItem = {
+    const item: RawAptSaleItem = {
       dealAmount: '50,000',
       buildYear: '2010',
       dealYear: '2024',
@@ -44,9 +47,11 @@ describe('transformAptSaleItem', () => {
       buyerGbn: '개인',
       slerGbn: '개인',
       rgstDate: '20260310',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptSaleItem(item, '서울특별시', '강남구');
+    const result = transformAptSaleItem(item);
 
     expect(result.dealAmount).toBe(50000n);
     expect(result.buildYear).toBe(2010);
@@ -72,7 +77,7 @@ describe('transformAptSaleItem', () => {
   });
 
   it('거래금액 쉼표 제거 후 BigInt 변환', () => {
-    const item: AptSaleItem = {
+    const item: RawAptSaleItem = {
       dealAmount: '1,234,567',
       buildYear: '2005',
       dealYear: '2024',
@@ -91,14 +96,16 @@ describe('transformAptSaleItem', () => {
       buyerGbn: '개인',
       slerGbn: '개인',
       rgstDate: '20260310',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptSaleItem(item, '서울특별시', '강남구');
+    const result = transformAptSaleItem(item);
     expect(result.dealAmount).toBe(1234567n);
   });
 
   it('선택 필드 없을 때 null 처리', () => {
-    const item: AptSaleItem = {
+    const item: RawAptSaleItem = {
       dealAmount: '30,000',
       buildYear: '',
       dealYear: '2024',
@@ -117,9 +124,11 @@ describe('transformAptSaleItem', () => {
       buyerGbn: '',
       slerGbn: '',
       rgstDate: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptSaleItem(item, '서울특별시', '강남구');
+    const result = transformAptSaleItem(item);
     expect(result.buildYear).toBeNull();
     expect(result.dealDay).toBeNull();
     expect(result.jibun).toBeNull();
@@ -129,7 +138,7 @@ describe('transformAptSaleItem', () => {
   });
 
   it('sourceId 형식 검증', () => {
-    const item: AptSaleItem = {
+    const item: RawAptSaleItem = {
       dealAmount: '50,000',
       buildYear: '2010',
       dealYear: '2024',
@@ -148,14 +157,16 @@ describe('transformAptSaleItem', () => {
       buyerGbn: '개인',
       slerGbn: '개인',
       rgstDate: '20260310',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptSaleItem(item, '서울특별시', '강남구');
+    const result = transformAptSaleItem(item);
     expect(result.sourceId).toBe('aptSale-11680-2010-2024-3-15-10-84.99-50000');
   });
 
   it('sourceId - 선택 필드 없을 때 빈 문자열로 처리', () => {
-    const item: AptSaleItem = {
+    const item: RawAptSaleItem = {
       dealAmount: '30,000',
       buildYear: '',
       dealYear: '2024',
@@ -174,9 +185,11 @@ describe('transformAptSaleItem', () => {
       buyerGbn: '',
       slerGbn: '',
       rgstDate: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptSaleItem(item, '서울특별시', '강남구');
+    const result = transformAptSaleItem(item);
     expect(result.sourceId).toBe('aptSale-11680--2024-6---84.99-30000');
   });
 });
@@ -220,17 +233,16 @@ describe('syncAptSaleByLawd', () => {
       text: async () => xmlResponse,
     });
 
-    mockFindMany.mockResolvedValueOnce([
-      { bjdCode: '11680', city: '서울특별시', district: '강남구' },
+    const regionMap = new Map([
+      ['11680', { city: '서울특별시', district: '강남구' }],
     ]);
 
     mockUpsert.mockResolvedValue({ id: 1 });
 
-    const stats = await syncAptSaleByLawd('11680', '202403');
+    await syncAptSaleByLawd('11680', '202403', 'test-service-key', regionMap);
 
     expect(mockFetch).toHaveBeenCalledOnce();
     expect(mockUpsert).toHaveBeenCalledOnce();
-    expect(stats.totalRecords).toBe(1);
   });
 
   it('API 응답이 빈 items이면 upsert 안함', async () => {
@@ -251,13 +263,12 @@ describe('syncAptSaleByLawd', () => {
       text: async () => xmlResponse,
     });
 
-    mockFindMany.mockResolvedValueOnce([
-      { bjdCode: '11680', city: '서울특별시', district: '강남구' },
+    const regionMap = new Map([
+      ['11680', { city: '서울특별시', district: '강남구' }],
     ]);
 
-    const stats = await syncAptSaleByLawd('11680', '202403');
+    await syncAptSaleByLawd('11680', '202403', 'test-service-key', regionMap);
 
     expect(mockUpsert).not.toHaveBeenCalled();
-    expect(stats.totalRecords).toBe(0);
   });
 });

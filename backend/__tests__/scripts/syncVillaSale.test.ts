@@ -3,15 +3,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock prisma
-const { mockUpsert, mockFindMany } = vi.hoisted(() => ({
+const { mockUpsert, mockFindUnique, mockFindMany, mockTransaction } = vi.hoisted(() => ({
   mockUpsert: vi.fn(),
+  mockFindUnique: vi.fn(),
   mockFindMany: vi.fn(),
+  mockTransaction: vi.fn((fn) => fn()),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {
-    villaSaleTransaction: { upsert: mockUpsert },
+    villaSaleTransaction: { upsert: mockUpsert, findUnique: mockFindUnique },
     region: { findMany: mockFindMany },
+    $transaction: mockTransaction,
   },
 }));
 
@@ -21,12 +24,12 @@ global.fetch = mockFetch;
 import {
   transformVillaSaleItem,
   syncVillaSaleByLawd,
-  type VillaSaleItem,
+  type RawVillaSaleItem,
 } from '../../src/scripts/syncVillaSale.js';
 
 describe('transformVillaSaleItem', () => {
   it('API 응답 item을 DB 필드로 변환', () => {
-    const item: VillaSaleItem = {
+    const item: RawVillaSaleItem = {
       dealAmount: '15,000',
       buildYear: '2005',
       dealYear: '2024',
@@ -45,9 +48,11 @@ describe('transformVillaSaleItem', () => {
       buyerGbn: '개인',
       slerGbn: '개인',
       rgstDate: '20240601',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformVillaSaleItem(item, '서울특별시', '강남구');
+    const result = transformVillaSaleItem(item);
 
     expect(result.dealAmount).toBe(15000n);
     expect(result.buildYear).toBe(2005);
@@ -73,7 +78,7 @@ describe('transformVillaSaleItem', () => {
   });
 
   it('mhouseNm 필드를 buildingName으로 매핑', () => {
-    const item: VillaSaleItem = {
+    const item: RawVillaSaleItem = {
       dealAmount: '20,000',
       buildYear: '2000',
       dealYear: '2024',
@@ -92,14 +97,16 @@ describe('transformVillaSaleItem', () => {
       buyerGbn: '',
       slerGbn: '',
       rgstDate: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformVillaSaleItem(item, '서울특별시', '강남구');
+    const result = transformVillaSaleItem(item);
     expect(result.buildingName).toBe('논현빌라');
   });
 
   it('dealAmount 쉼표 제거 후 BigInt 변환', () => {
-    const item: VillaSaleItem = {
+    const item: RawVillaSaleItem = {
       dealAmount: '1,500,000',
       buildYear: '2000',
       dealYear: '2024',
@@ -118,14 +125,16 @@ describe('transformVillaSaleItem', () => {
       buyerGbn: '',
       slerGbn: '',
       rgstDate: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformVillaSaleItem(item, '서울특별시', '강남구');
+    const result = transformVillaSaleItem(item);
     expect(result.dealAmount).toBe(1500000n);
   });
 
   it('선택 필드 없을 때 null 처리', () => {
-    const item: VillaSaleItem = {
+    const item: RawVillaSaleItem = {
       dealAmount: '8,000',
       buildYear: '',
       dealYear: '2024',
@@ -144,9 +153,11 @@ describe('transformVillaSaleItem', () => {
       buyerGbn: '',
       slerGbn: '',
       rgstDate: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformVillaSaleItem(item, '서울특별시', '강남구');
+    const result = transformVillaSaleItem(item);
     expect(result.buildYear).toBeNull();
     expect(result.dealDay).toBeNull();
     expect(result.jibun).toBeNull();
@@ -156,7 +167,7 @@ describe('transformVillaSaleItem', () => {
   });
 
   it('sourceId 형식 검증 (villaSale 접두사)', () => {
-    const item: VillaSaleItem = {
+    const item: RawVillaSaleItem = {
       dealAmount: '15,000',
       buildYear: '2005',
       dealYear: '2024',
@@ -175,9 +186,11 @@ describe('transformVillaSaleItem', () => {
       buyerGbn: '',
       slerGbn: '',
       rgstDate: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformVillaSaleItem(item, '서울특별시', '강남구');
+    const result = transformVillaSaleItem(item);
     expect(result.sourceId).toBe('villaSale-11680-2005-2024-5-20-3-59.99-15000');
   });
 });
@@ -228,11 +241,14 @@ describe('syncVillaSaleByLawd', () => {
 
     mockUpsert.mockResolvedValue({ id: 1 });
 
-    const stats = await syncVillaSaleByLawd('11680', '202405');
+    const regionMap = new Map([
+      ['11680', { city: '서울특별시', district: '강남구' }],
+    ]);
+
+    await syncVillaSaleByLawd('11680', '202405', 'test-service-key', regionMap);
 
     expect(mockFetch).toHaveBeenCalledOnce();
     expect(mockUpsert).toHaveBeenCalledOnce();
-    expect(stats.totalRecords).toBe(1);
   });
 
   it('API 응답이 빈 items이면 upsert 안함', async () => {
@@ -257,9 +273,12 @@ describe('syncVillaSaleByLawd', () => {
       { bjdCode: '11680', city: '서울특별시', district: '강남구' },
     ]);
 
-    const stats = await syncVillaSaleByLawd('11680', '202405');
+    const regionMap = new Map([
+      ['11680', { city: '서울특별시', district: '강남구' }],
+    ]);
+
+    await syncVillaSaleByLawd('11680', '202405', 'test-service-key', regionMap);
 
     expect(mockUpsert).not.toHaveBeenCalled();
-    expect(stats.totalRecords).toBe(0);
   });
 });

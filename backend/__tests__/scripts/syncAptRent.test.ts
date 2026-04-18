@@ -2,15 +2,18 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockUpsert, mockFindMany } = vi.hoisted(() => ({
+const { mockUpsert, mockFindUnique, mockFindMany, mockTransaction } = vi.hoisted(() => ({
   mockUpsert: vi.fn(),
+  mockFindUnique: vi.fn(),
   mockFindMany: vi.fn(),
+  mockTransaction: vi.fn((fn) => fn()),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {
-    aptRentTransaction: { upsert: mockUpsert },
+    aptRentTransaction: { upsert: mockUpsert, findUnique: mockFindUnique },
     region: { findMany: mockFindMany },
+    $transaction: mockTransaction,
   },
 }));
 
@@ -20,12 +23,12 @@ global.fetch = mockFetch;
 import {
   transformAptRentItem,
   syncAptRentByLawd,
-  type AptRentItem,
+  type RawAptRentItem,
 } from '../../src/scripts/syncAptRent.js';
 
 describe('transformAptRentItem', () => {
   it('API 응답 item을 DB 필드로 변환 (전세)', () => {
-    const item: AptRentItem = {
+    const item: RawAptRentItem = {
       deposit: '30,000',
       monthlyRent: '0',
       buildYear: '2010',
@@ -44,9 +47,11 @@ describe('transformAptRentItem', () => {
       preDeposit: '',
       preMonthlyRent: '',
       useRRRight: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptRentItem(item, '서울특별시', '강남구');
+    const result = transformAptRentItem(item);
 
     expect(result.deposit).toBe(30000n);
     expect(result.monthlyRent).toBe(0);
@@ -72,7 +77,7 @@ describe('transformAptRentItem', () => {
   });
 
   it('월세 변환 - 보증금+월세 있는 경우', () => {
-    const item: AptRentItem = {
+    const item: RawAptRentItem = {
       deposit: '1,000',
       monthlyRent: '100',
       buildYear: '2005',
@@ -91,16 +96,18 @@ describe('transformAptRentItem', () => {
       preDeposit: '',
       preMonthlyRent: '',
       useRRRight: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptRentItem(item, '서울특별시', '강남구');
+    const result = transformAptRentItem(item);
     expect(result.deposit).toBe(1000n);
     expect(result.monthlyRent).toBe(100);
     expect(result.rentType).toBe('월세');
   });
 
   it('보증금 쉼표 제거 후 BigInt 변환', () => {
-    const item: AptRentItem = {
+    const item: RawAptRentItem = {
       deposit: '2,500,000',
       monthlyRent: '0',
       buildYear: '2015',
@@ -119,14 +126,16 @@ describe('transformAptRentItem', () => {
       preDeposit: '',
       preMonthlyRent: '',
       useRRRight: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptRentItem(item, '서울특별시', '강남구');
+    const result = transformAptRentItem(item);
     expect(result.deposit).toBe(2500000n);
   });
 
   it('선택 필드 없을 때 null 처리', () => {
-    const item: AptRentItem = {
+    const item: RawAptRentItem = {
       deposit: '10,000',
       monthlyRent: '',
       buildYear: '',
@@ -145,9 +154,11 @@ describe('transformAptRentItem', () => {
       preDeposit: '',
       preMonthlyRent: '',
       useRRRight: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptRentItem(item, '서울특별시', '강남구');
+    const result = transformAptRentItem(item);
     expect(result.monthlyRent).toBeNull();
     expect(result.buildYear).toBeNull();
     expect(result.dealDay).toBeNull();
@@ -158,7 +169,7 @@ describe('transformAptRentItem', () => {
   });
 
   it('sourceId 형식 검증', () => {
-    const item: AptRentItem = {
+    const item: RawAptRentItem = {
       deposit: '30,000',
       monthlyRent: '0',
       buildYear: '2010',
@@ -177,9 +188,11 @@ describe('transformAptRentItem', () => {
       preDeposit: '',
       preMonthlyRent: '',
       useRRRight: '',
+      city: '서울특별시',
+      district: '강남구',
     };
 
-    const result = transformAptRentItem(item, '서울특별시', '강남구');
+    const result = transformAptRentItem(item);
     expect(result.sourceId).toBe('aptRent-11680-2010-2024-3-10-10-84.99-30000-0');
   });
 });
@@ -231,11 +244,14 @@ describe('syncAptRentByLawd', () => {
 
     mockUpsert.mockResolvedValue({ id: 1 });
 
-    const stats = await syncAptRentByLawd('11680', '202403');
+    const regionMap = new Map([
+      ['11680', { city: '서울특별시', district: '강남구' }],
+    ]);
+
+    await syncAptRentByLawd('11680', '202403', 'test-service-key', regionMap);
 
     expect(mockFetch).toHaveBeenCalledOnce();
     expect(mockUpsert).toHaveBeenCalledOnce();
-    expect(stats.totalRecords).toBe(1);
   });
 
   it('API 응답이 빈 items이면 upsert 안함', async () => {
@@ -260,9 +276,12 @@ describe('syncAptRentByLawd', () => {
       { bjdCode: '11680', city: '서울특별시', district: '강남구' },
     ]);
 
-    const stats = await syncAptRentByLawd('11680', '202403');
+    const regionMap = new Map([
+      ['11680', { city: '서울특별시', district: '강남구' }],
+    ]);
+
+    await syncAptRentByLawd('11680', '202403', 'test-service-key', regionMap);
 
     expect(mockUpsert).not.toHaveBeenCalled();
-    expect(stats.totalRecords).toBe(0);
   });
 });
