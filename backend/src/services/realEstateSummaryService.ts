@@ -68,16 +68,22 @@ export async function refreshSummary(type: string): Promise<number> {
               ${priceField} AS latestPrice,
               dealYear AS latestDealYear, dealMonth AS latestDealMonth,
               ${buildYearCol} AS buildYear,
-              MAX(lat) OVER (PARTITION BY buildingName, bjdCode) AS lat,
-              MAX(lng) OVER (PARTITION BY buildingName, bjdCode) AS lng,
-              COUNT(*) OVER (PARTITION BY buildingName, bjdCode) AS transactionCount,
+              _maxLat AS lat,
+              _maxLng AS lng,
+              _txCount AS transactionCount,
               NOW()
+            -- 윈도우 함수는 inner 서브쿼리에서 평가되어야 함.
+            -- WHERE _rn = 1 이 outer에 있으므로, COUNT/MAX OVER 를 outer로 옮기면
+            -- 파티션당 1행만 남은 상태에서 집계되어 transactionCount가 항상 1이 된다.
             FROM (
               SELECT *,
                 ROW_NUMBER() OVER (
                   PARTITION BY buildingName, bjdCode
                   ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
-                ) AS _rn
+                ) AS _rn,
+                COUNT(*) OVER (PARTITION BY buildingName, bjdCode) AS _txCount,
+                MAX(lat) OVER (PARTITION BY buildingName, bjdCode) AS _maxLat,
+                MAX(lng) OVER (PARTITION BY buildingName, bjdCode) AS _maxLng
               FROM ${table}
               WHERE city = ?
             ) ranked

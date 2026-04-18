@@ -88,6 +88,31 @@ describe('refreshSummary (city-chunked)', () => {
     expect(mockExecuteRawUnsafe.mock.calls[4][2]).toBe('부산'); // DELETE 두번째 city
   });
 
+  it('윈도우 함수(COUNT/MAX)는 inner 서브쿼리에 위치 — _rn=1 필터 전에 평가되어야 함', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('apt-sale');
+
+    const insertSql = String(mockExecuteRawUnsafe.mock.calls[2][0]);
+
+    // outer SELECT는 별칭만 참조 — COUNT(*) OVER 자체가 outer에 있으면 안 됨
+    const outerMatch = insertSql.match(/SELECT([\s\S]+?)FROM\s+\(/i);
+    expect(outerMatch).not.toBeNull();
+    expect(outerMatch![1]).toContain('_txCount AS transactionCount');
+    expect(outerMatch![1]).toContain('_maxLat AS lat');
+    expect(outerMatch![1]).toContain('_maxLng AS lng');
+    expect(outerMatch![1]).not.toMatch(/COUNT\(\*\)\s+OVER/i);
+
+    // inner 서브쿼리에 ROW_NUMBER + COUNT + MAX 모두 존재
+    const innerMatch = insertSql.match(/FROM\s+\(([\s\S]+?)\)\s+ranked/i);
+    expect(innerMatch).not.toBeNull();
+    expect(innerMatch![1]).toMatch(/ROW_NUMBER\(\)\s+OVER/i);
+    expect(innerMatch![1]).toMatch(/COUNT\(\*\)\s+OVER[\s\S]+?AS\s+_txCount/i);
+    expect(innerMatch![1]).toMatch(/MAX\(lat\)\s+OVER[\s\S]+?AS\s+_maxLat/i);
+    expect(innerMatch![1]).toMatch(/MAX\(lng\)\s+OVER[\s\S]+?AS\s+_maxLng/i);
+  });
+
   it('MAX_EXECUTION_TIME은 더 이상 쓰지 않음 (MySQL에서 DML에 미적용)', async () => {
     mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
     mockExecuteRawUnsafe.mockResolvedValue(10);
