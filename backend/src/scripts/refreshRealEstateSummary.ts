@@ -2,7 +2,7 @@ import { refreshAllSummaries } from '../services/realEstateSummaryService.js';
 import { prisma } from '../lib/prisma.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 
-installRuntimeGuard({ maxMinutes: 15, name: 'refreshSummary', prisma });
+installRuntimeGuard({ maxMinutes: 30, name: 'refreshSummary', prisma });
 
 const start = Date.now();
 console.info('[Summary] Starting full refresh...');
