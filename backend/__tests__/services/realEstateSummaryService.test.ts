@@ -125,14 +125,14 @@ describe('refreshSummary (city-chunked)', () => {
     }
   });
 
-  it('각 트랜잭션에 60초 timeout 옵션이 전달됨', async () => {
+  it('각 트랜잭션에 5분(300초) timeout 옵션이 전달됨', async () => {
     mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
     mockExecuteRawUnsafe.mockResolvedValue(1);
 
     await refreshSummary('apt-rent');
 
     const options = mockTransaction.mock.calls[0][1];
-    expect(options).toMatchObject({ timeout: 60_000 });
+    expect(options).toMatchObject({ timeout: 300_000 });
   });
 
   it('INSERT 결과를 모든 city에 대해 합산하여 반환', async () => {

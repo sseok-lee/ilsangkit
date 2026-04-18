@@ -9,8 +9,10 @@ const NO_BUILD_YEAR_TYPES = new Set<string>();
 // 총 부하: 시·도 약 17 × 타입 6 × 50ms ≈ 5초. cron 15분 예산 대비 무시 가능.
 const BATCH_PAUSE_MS = 50;
 
-// 배치당 Prisma 트랜잭션 타임아웃. 서울(수십만 건) 여유 감안 60초.
-const BATCH_TX_TIMEOUT_MS = 60_000;
+// 배치당 Prisma 트랜잭션 타임아웃. inner 서브쿼리에 윈도우 함수 4개
+// (ROW_NUMBER + COUNT + MAX(lat) + MAX(lng))를 평가하므로 거래량 많은 시·도
+// (apt-rent 경기 등)는 60초를 넘겨 P2028로 실패하던 사례 → 5분으로 상향.
+const BATCH_TX_TIMEOUT_MS = 300_000;
 
 // InnoDB 락 대기 한도(초). 경합이 오래 가지 않도록 짧게 두어 실패 시 다음 city로 바로 넘어감.
 const LOCK_WAIT_TIMEOUT_SEC = 15;
