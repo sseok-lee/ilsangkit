@@ -16,30 +16,47 @@ jobs:
 
     steps:
       - name: Sync Real Estate Data on Server
-        uses: appleboy/ssh-action@master
+        # v1.2.5 (2026-01-28) — @master는 재현성/감사 불가라 SHA 핀 사용.
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           command_timeout: 1h30m
+          capture_stdout: true
           script: |
             set -u
+            set -x
+            echo "[step:start] $(date -u +%FT%TZ)"
             cd /home/project2/backend
+            echo "[step:cwd-ok] $(pwd)"
 
             # --- 좀비 청소 (시작 전) ---------------------------------------
             # 이전 실행에서 남은 sync/geocode/refresh/subscription 프로세스 강제 종료.
             # 2026-04-17 사고 때 SSH 연결 끊겨도 node가 살아남아 MySQL을 7시간 잡은
             # 사슬의 1번째 방어선.
+            echo "[step:pre-pkill]"
             pkill -9 -f 'dist/scripts/(syncApt|syncVilla|syncOffitel|geocodeRealEstate|refreshRealEstateSummary|syncSubscription)' 2>/dev/null || true
+            echo "[step:pre-pkill-done exit=$?]"
             # ilsangkit 유저의 30분 이상 걸린 non-Sleep 커넥션 KILL.
             # information_schema.processlist는 metadata lock 시 hang할 수 있어 SHOW PROCESSLIST 사용.
+            echo "[step:pre-mysql-show]"
             mysql -e "SHOW PROCESSLIST" 2>/dev/null \
               | awk '$2=="ilsangkit" && $6+0 > 1800 && $5!="Sleep" {print "KILL "$1";"}' \
               | mysql 2>/dev/null || true
+            echo "[step:pre-mysql-done exit=$?]"
 
             # 현재 월과 직전 월만 동기화 (YYYYMM)
             CURRENT_YM=$(date +%Y%m)
             PREV_YM=$(date -d "1 month ago" +%Y%m 2>/dev/null || date -v-1m +%Y%m)
+            echo "[step:ym-resolved PREV=$PREV_YM CUR=$CURRENT_YM]"
+
+            # dist 산출물 존재 선행 체크 — deploy 워크플로우가 선행되지 않은 경우 조기 실패
+            if [ ! -f dist/scripts/syncAptSale.js ]; then
+              echo "[error] dist/scripts/syncAptSale.js 미존재 — Deploy 워크플로우 선행 실행 필요"
+              exit 2
+            fi
+            echo "[step:dist-ok]"
 
             echo "=== 부동산 실거래가 동기화 시작 ==="
             echo "대상: ${PREV_YM}, ${CURRENT_YM}"
@@ -48,31 +65,42 @@ jobs:
             # `timeout --kill-after=30s 20m`는 스크립트 내부 watchdog(20분)이 뚫려도
             # OS가 SIGTERM→SIGKILL로 반드시 종료시키는 최종 방어선.
             for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSale syncOffitelRent; do
+              echo "[step:loop-${SCRIPT}-start] $(date -u +%FT%TZ)"
               echo "--- ${SCRIPT} 동기화 ---"
               timeout --kill-after=30s 20m node "dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" \
                 || echo "[WARN] ${SCRIPT} 실패 (exit=$?)"
+              echo "[step:loop-${SCRIPT}-end]"
             done
 
             # 좌표 없는 건물 지오코딩 (카카오 API rate limit 감안 45분)
+            echo "[step:geocode-start]"
             echo "--- 지오코딩 ---"
             timeout --kill-after=30s 45m node dist/scripts/geocodeRealEstate.js \
               || echo "[WARN] 지오코딩 실패 (exit=$?)"
+            echo "[step:geocode-end]"
 
             # Summary 테이블 갱신 (MySQL MAX_EXECUTION_TIME=60s가 내부에서 강제)
+            echo "[step:summary-start]"
             echo "--- Summary 갱신 ---"
             timeout --kill-after=30s 15m node dist/scripts/refreshRealEstateSummary.js \
               || echo "[WARN] Summary 갱신 실패 (exit=$?)"
+            echo "[step:summary-end]"
 
             # 청약 분양정보 동기화 (전체 소스)
+            echo "[step:subscription-start]"
             echo "--- 청약 동기화 ---"
             timeout --kill-after=30s 30m node dist/scripts/syncSubscription.js --source ALL \
               || echo "[WARN] 청약 동기화 실패 (exit=$?)"
+            echo "[step:subscription-end]"
 
             # --- 좀비 청소 (종료 후) -------------------------------------
             # 만에 하나 남은 프로세스/커넥션이 있으면 여기서 확실히 정리.
+            echo "[step:post-pkill]"
             pkill -9 -f 'dist/scripts/(syncApt|syncVilla|syncOffitel|geocodeRealEstate|refreshRealEstateSummary|syncSubscription)' 2>/dev/null || true
+            echo "[step:post-mysql]"
             mysql -e "SHOW PROCESSLIST" 2>/dev/null \
               | awk '$2=="ilsangkit" && $6+0 > 1800 && $5!="Sleep" {print "KILL "$1";"}' \
               | mysql 2>/dev/null || true
+            echo "[step:post-done]"
 
             echo "=== 동기화 완료 ==="
