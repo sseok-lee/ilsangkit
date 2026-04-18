@@ -399,8 +399,15 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
   console.log(`[${sourceType}] 경쟁률 조회 완료: ${competitionItems.length}건`);
 
   let competitionCount = 0;
+  let competitionSkipped = 0;
   for (let i = 0; i < competitionItems.length; i++) {
     const item = competitionItems[i];
+    // MODEL_NO는 composite unique key의 일부 — 누락된 집계 행은 저장 불가하므로 스킵
+    if (!item.MODEL_NO) {
+      competitionSkipped++;
+      continue;
+    }
+
     const sub = await prisma.subscription.findUnique({
       where: {
         houseManageNo_pblancNo_sourceType: {
@@ -447,7 +454,7 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
     competitionCount++;
     if ((i + 1) % 500 === 0) console.log(`  [${sourceType}] 경쟁률 ${i + 1}/${competitionItems.length} 처리`);
   }
-  console.log(`[${sourceType}] 경쟁률 동기화 완료: ${competitionCount}건`);
+  console.log(`[${sourceType}] 경쟁률 동기화 완료: ${competitionCount}건 (MODEL_NO 누락 스킵: ${competitionSkipped}건)`);
 
   // Step 5: 당첨 가점 (APT only)
   if (scoreEndpoint) {
@@ -456,8 +463,15 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
     console.log(`[${sourceType}] 당첨 가점 조회 완료: ${scoreItems.length}건`);
 
     let scoreCount = 0;
+    let scoreSkipped = 0;
     for (let i = 0; i < scoreItems.length; i++) {
       const item = scoreItems[i];
+      // MODEL_NO, RESIDE_SECD 모두 composite unique key — 누락된 집계 행은 저장 불가하므로 스킵
+      if (!item.MODEL_NO || !item.RESIDE_SECD) {
+        scoreSkipped++;
+        continue;
+      }
+
       const sub = await prisma.subscription.findUnique({
         where: {
           houseManageNo_pblancNo_sourceType: {
@@ -499,7 +513,7 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
       scoreCount++;
       if ((i + 1) % 500 === 0) console.log(`  [${sourceType}] 당첨 가점 ${i + 1}/${scoreItems.length} 처리`);
     }
-    console.log(`[${sourceType}] 당첨 가점 동기화 완료: ${scoreCount}건`);
+    console.log(`[${sourceType}] 당첨 가점 동기화 완료: ${scoreCount}건 (필드 누락 스킵: ${scoreSkipped}건)`);
   }
 
   // Step 6: 특별공급 신청현황 (APT only)
