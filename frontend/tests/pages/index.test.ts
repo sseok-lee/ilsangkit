@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted, readonly } from 'vue'
 import IndexPage from '~/pages/index.vue'
 
 // Stub Vue auto-imports that Nuxt provides but vitest doesn't
@@ -10,6 +10,7 @@ import IndexPage from '~/pages/index.vue'
 ;(globalThis as any).watchEffect = watchEffect
 ;(globalThis as any).onMounted = onMounted
 ;(globalThis as any).onUnmounted = onUnmounted
+;(globalThis as any).readonly = readonly
 
 // Mock navigateTo
 const mockNavigateTo = vi.fn()
@@ -51,10 +52,10 @@ describe('Index Page', () => {
     mockNavigateTo.mockClear()
   })
 
-  it('renders title and subtitle', async () => {
+  it('renders hero title and subtitle', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // New design hero text
+    // Wireframe 기반 새 히어로 카피
     expect(wrapper.text()).toContain('내 동네 부동산')
     expect(wrapper.text()).toContain('아파트 실거래가부터')
   })
@@ -62,7 +63,6 @@ describe('Index Page', () => {
   it('renders search input', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Search input exists with new placeholder
     const searchInput = wrapper.find('input[placeholder*="검색"]')
     expect(searchInput.exists()).toBe(true)
   })
@@ -70,16 +70,38 @@ describe('Index Page', () => {
   it('renders real estate section', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Real estate section header
     expect(wrapper.text()).toContain('부동산')
   })
 
-  it('renders stats banner with key labels', async () => {
+  it('renders stats chips with key labels', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Stats labels present
     expect(wrapper.text()).toContain('생활시설')
     expect(wrapper.text()).toContain('시군구')
+  })
+
+  it('renders new "오늘 확인할 정보" section', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+
+    expect(wrapper.text()).toContain('오늘 확인할 정보')
+    expect(wrapper.text()).toContain('청약·임대')
+  })
+
+  it('renders "빠른 생활시설 찾기" 8-icon grid', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+
+    expect(wrapper.text()).toContain('빠른 생활시설 찾기')
+    // 8개 아이콘 중 대표 4개 확인
+    expect(wrapper.text()).toContain('병원')
+    expect(wrapper.text()).toContain('약국')
+    expect(wrapper.text()).toContain('학교')
+    expect(wrapper.text()).toContain('쓰레기')
+  })
+
+  it('renders "인기 지역" chip row', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+
+    expect(wrapper.text()).toContain('인기 지역')
   })
 
   it('navigates to search page when search is triggered', async () => {
@@ -101,20 +123,11 @@ describe('Index Page', () => {
     expect(mockNavigateTo).not.toHaveBeenCalled()
   })
 
-  it('applies responsive layout classes', async () => {
+  it('applies responsive layout root class', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
     const indexRoot = wrapper.find('.flex.flex-col')
     expect(indexRoot.exists()).toBe(true)
-  })
-
-  it('renders grouped category sections', async () => {
-    const wrapper = await mountSuspended(IndexPage)
-
-    expect(wrapper.text()).toContain('생활/편의')
-    expect(wrapper.text()).toContain('교육/육아')
-    expect(wrapper.text()).toContain('건강/안전')
-    expect(wrapper.text()).toContain('환경/생활')
   })
 })
 

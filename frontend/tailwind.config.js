@@ -47,6 +47,8 @@ export default {
         warning: '#f59e0b',
         error: '#ef4444',
         info: '#3b82f6',
+        // Wireframe card border
+        line: '#d8e0ea',
       },
       fontFamily: {
         display: ['Public Sans', 'Noto Sans KR', 'sans-serif'],
@@ -78,6 +80,7 @@ export default {
       },
       boxShadow: {
         'subtle': '0 2px 10px rgba(0, 0, 0, 0.03)',
+        'card': '0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.04)',
       },
     },
   },
