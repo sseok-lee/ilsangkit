@@ -442,8 +442,14 @@
           </a>
         </div>
 
+        <!-- Ad: 외부 링크(CTA) 이후 -->
+        <AdBanner />
+
         <!-- 관련 가이드 -->
         <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
+
+        <!-- Ad: 본문 마무리 (하단) -->
+        <AdBanner />
 
         <!-- 데이터 정보 -->
         <DataSourceCard :source="SUBSCRIPTION_DATA_SOURCE" />
