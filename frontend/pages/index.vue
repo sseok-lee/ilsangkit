@@ -264,6 +264,13 @@ setHomeMeta()
 const { setWebsiteSchema } = useStructuredData()
 setWebsiteSchema()
 
+// 홈 히어로 배경 이미지 preload (홈 한정)
+useHead({
+  link: [
+    { rel: 'preload', href: '/images/hero-bg-light.webp', as: 'image', type: 'image/webp' },
+  ],
+})
+
 const searchKeyword = ref('')
 
 // Stats: SSR에서 대기 (above-fold, CLS 방지)
