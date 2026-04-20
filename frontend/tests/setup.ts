@@ -80,6 +80,7 @@ config.global.stubs = {
   },
   // 광고 컴포넌트는 window.adsbygoogle/Nuxt 라우터에 의존 → 테스트에서 무해 스터브
   AdBanner: { template: '<div class="stub-ad-banner" />' },
+  AnchorAdBanner: { template: '<div class="stub-anchor-ad" />' },
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브
   HomeSubscriptionSection: { template: '<section class="stub-home-subscription" />' },
   LazyRecentReviewCard: { template: '<div class="stub-review-card" />' },
