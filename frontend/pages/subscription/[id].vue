@@ -418,9 +418,6 @@
           </div>
         </SectionBlock>
 
-        <!-- 관련 가이드 -->
-        <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
-
         <!-- 외부 링크 버튼 -->
         <div class="flex flex-col md:flex-row gap-4">
           <a
@@ -444,6 +441,9 @@
             청약홈 공고 보기
           </a>
         </div>
+
+        <!-- 관련 가이드 -->
+        <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
 
       </main>
     </template>
