@@ -1,8 +1,8 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
+    <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
       <!-- 브레드크럼 -->
-      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-6">
+      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-4">
         <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
         <span class="material-symbols-outlined text-[14px]">chevron_right</span>
         <NuxtLink :to="`/${citySlug}`" class="hover:text-primary">{{ cityName }}</NuxtLink>
@@ -12,7 +12,7 @@
         <span class="text-slate-800">부동산 실거래가</span>
       </nav>
 
-      <div class="mb-8">
+      <div class="mb-5">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
           {{ districtName }} 부동산 실거래가
         </h1>
@@ -22,11 +22,11 @@
       </div>
 
       <!-- Ad: 헤딩 후 -->
-      <AdBanner class="my-4 mb-10" />
+      <AdBanner class="mt-3 mb-6" />
 
       <!-- 유형별 링크 -->
-      <section class="mb-10">
-        <h2 class="text-lg font-bold text-slate-900 mb-4">유형별 실거래가 조회</h2>
+      <section class="mb-6">
+        <h2 class="text-lg font-bold text-slate-900 mb-3">유형별 실거래가 조회</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <NuxtLink
             v-for="type in propertyTypes"
@@ -46,8 +46,8 @@
       </section>
 
       <!-- 주변 생활시설 -->
-      <section class="mb-10">
-        <h2 class="text-lg font-bold text-slate-900 mb-4">{{ districtName }} 주변 생활시설</h2>
+      <section class="mb-6">
+        <h2 class="text-lg font-bold text-slate-900 mb-3">{{ districtName }} 주변 생활시설</h2>
         <div class="flex flex-wrap gap-2">
           <NuxtLink
             v-for="cat in facilityCategories"
@@ -62,7 +62,7 @@
 
       <!-- FAQ -->
       <section>
-        <h2 class="text-lg font-bold text-slate-900 mb-4">자주 묻는 질문</h2>
+        <h2 class="text-lg font-bold text-slate-900 mb-3">자주 묻는 질문</h2>
         <div class="space-y-1">
           <details
             v-for="(faq, i) in faqs"
@@ -79,7 +79,7 @@
       </section>
 
       <!-- Ad: 페이지 끝 -->
-      <AdBanner class="my-4 mt-10" />
+      <AdBanner class="mt-6" />
     </main>
   </div>
 </template>

@@ -1,15 +1,15 @@
 <template>
   <div class="bg-background-light">
     <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
-      <div class="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+      <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">{{ typeMeta.label }} 분양 청약</h1>
         <p class="mt-2 text-slate-500 text-sm">{{ typeMeta.description }}</p>
       </div>
     </div>
 
-    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
+    <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
       <!-- Sub-category Tabs -->
-      <div class="mb-6 flex flex-wrap gap-2">
+      <div class="mb-4 flex flex-wrap gap-2">
         <NuxtLink
           to="/subscription/sale"
           class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
@@ -26,16 +26,10 @@
         </NuxtLink>
       </div>
 
-      <!-- Ad: 리스트 시작 전 -->
-      <AdBanner class="my-4" />
-
       <SubscriptionListView
         :source-type="typeMeta.sourceType"
         :rent-type="typeMeta.rentType"
       />
-
-      <!-- Ad: 리스트 끝 후 -->
-      <AdBanner class="my-4" />
     </main>
   </div>
 </template>

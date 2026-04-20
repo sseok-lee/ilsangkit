@@ -1,16 +1,16 @@
 <template>
   <div class="bg-background-light text-slate-900 font-display min-h-screen">
-    <div class="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10">
+    <div class="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8">
       <h1 class="text-2xl md:text-3xl font-bold mb-2">자주 묻는 질문</h1>
-      <p class="text-slate-500 text-sm mb-8">
+      <p class="text-slate-500 text-sm mb-5">
         일상킷에서 제공하는 부동산 실거래가와 생활시설 정보에 대해 자주 묻는 질문을 모았습니다.
       </p>
 
-      <AdBanner class="my-4" />
+      <AdBanner class="my-3" />
 
       <!-- 부동산 실거래가 FAQ -->
-      <div class="mb-8">
-        <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+      <div class="mb-6">
+        <h2 class="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">apartment</span>
           부동산 실거래가
         </h2>
@@ -37,13 +37,13 @@
       </div>
 
       <!-- 시설 카테고리 FAQ -->
-      <div v-for="group in groups" :key="group.title" class="mb-8">
-        <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+      <div v-for="group in groups" :key="group.title" class="mb-6">
+        <h2 class="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">{{ group.icon }}</span>
           {{ group.title }}
         </h2>
 
-        <div v-for="cat in group.categories" :key="cat" class="mb-6">
+        <div v-for="cat in group.categories" :key="cat" class="mb-4">
           <h3 class="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
             <span
               class="material-symbols-outlined text-[18px]"

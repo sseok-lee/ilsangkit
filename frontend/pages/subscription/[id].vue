@@ -84,7 +84,7 @@
         </Transition>
       </Teleport>
 
-      <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-10 flex flex-col gap-4">
+      <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
         <!-- Breadcrumb -->
         <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
@@ -441,9 +441,6 @@
             청약홈 공고 보기
           </a>
         </div>
-
-        <!-- Ad: 외부 링크(CTA) 이후 -->
-        <AdBanner />
 
         <!-- 관련 가이드 -->
         <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />

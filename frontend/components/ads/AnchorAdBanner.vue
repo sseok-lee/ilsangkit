@@ -44,6 +44,7 @@ const dismissed = ref(false)
 // 하단 sticky 액션바가 이미 있는 페이지에서는 앵커 광고를 노출하지 않음
 const HIDDEN_ROUTE_PATTERNS = [
   /^\/real-estate\/[^/]+\/[^/]+$/,  // 부동산 상세
+  /^\/(?:toilet|wifi|parking|hospital|pharmacy|library|aed|clothes|park|school|market|childcare|ev-charger|sports)\/[^/]+$/, // 시설 상세
 ]
 
 const isVisible = computed(() => {

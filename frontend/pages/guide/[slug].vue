@@ -9,7 +9,7 @@
     </div>
 
     <!-- Article -->
-    <article v-else-if="guide" class="max-w-3xl mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-10 flex flex-col gap-4">
+    <article v-else-if="guide" class="max-w-3xl mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
       <!-- Breadcrumb -->
       <Breadcrumb :items="breadcrumbItems" />
 
@@ -25,11 +25,11 @@
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 90vw, 800px"
           />
         </div>
-        <div class="p-5 md:p-6">
-          <span class="inline-flex mb-2.5 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
+        <div class="p-4 md:p-5">
+          <span class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
             {{ categoryLabel }}
           </span>
-          <h1 class="text-2xl md:text-[32px] leading-tight font-bold text-slate-900 mb-3">
+          <h1 class="text-2xl md:text-[32px] leading-tight font-bold text-slate-900 mb-2">
             {{ guide.title }}
           </h1>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
@@ -52,38 +52,38 @@
           class="
             prose prose-slate max-w-none
             prose-headings:font-bold
-            prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
-            prose-h3:text-lg prose-h3:mt-6
+            prose-h2:text-2xl prose-h2:mt-7 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
+            prose-h3:text-lg prose-h3:mt-5
             prose-p:leading-relaxed prose-p:text-slate-700
             prose-li:leading-relaxed
             prose-a:text-primary prose-a:no-underline hover:prose-a:underline
             prose-strong:text-slate-900
-            prose-ul:my-4 prose-ol:my-4
+            prose-ul:my-3 prose-ol:my-3
           "
           v-html="contentParts[0]"
         ></div>
 
         <!-- AdBanner: 본문 덩어리 사이 1회 -->
-        <AdBanner v-if="contentParts[1]" class="my-6" />
+        <AdBanner v-if="contentParts[1]" class="my-4" />
 
         <div
           v-if="contentParts[1]"
           class="
             prose prose-slate max-w-none
             prose-headings:font-bold
-            prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
-            prose-h3:text-lg prose-h3:mt-6
+            prose-h2:text-2xl prose-h2:mt-7 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
+            prose-h3:text-lg prose-h3:mt-5
             prose-p:leading-relaxed prose-p:text-slate-700
             prose-li:leading-relaxed
             prose-a:text-primary prose-a:no-underline hover:prose-a:underline
             prose-strong:text-slate-900
-            prose-ul:my-4 prose-ol:my-4
+            prose-ul:my-3 prose-ol:my-3
           "
           v-html="contentParts[1]"
         ></div>
 
         <!-- 키워드 -->
-        <div v-if="guide.keywords" class="mt-6 pt-4 border-t border-line flex flex-wrap gap-2">
+        <div v-if="guide.keywords" class="mt-4 pt-4 border-t border-line flex flex-wrap gap-2">
           <span
             v-for="keyword in keywordList"
             :key="keyword"
@@ -107,7 +107,7 @@
           />
         </ClientOnly>
 
-        <nav data-testid="guide-related-categories" class="mt-6 pt-4 border-t border-line">
+        <nav data-testid="guide-related-categories" class="mt-4 pt-4 border-t border-line">
           <p class="text-sm font-semibold text-slate-700 mb-3">바로가기</p>
           <div class="flex flex-wrap gap-2">
             <NuxtLink

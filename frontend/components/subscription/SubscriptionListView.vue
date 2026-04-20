@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-3">
     <!-- 상태와 지역 -->
     <SectionBlock heading="상태와 지역" subtext="시간성이 있는 청약이므로 상태 칩을 먼저 선택하세요.">
       <!-- Status Chips -->

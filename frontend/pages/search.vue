@@ -1,6 +1,6 @@
 <template>
   <div class="bg-background-light text-slate-900 font-display min-h-screen">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-6 pb-10 flex flex-col gap-4">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <!-- Hero -->
       <PageHero
         eyebrow="통합 검색"
@@ -193,9 +193,6 @@
           </template>
         </div>
       </SectionBlock>
-
-      <!-- Ad: 검색결과 전 -->
-      <AdBanner />
 
       <!-- Loading Skeleton -->
       <div v-if="loading" aria-live="polite" aria-busy="true">

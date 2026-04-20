@@ -1,15 +1,15 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
+    <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
       <!-- 브레드크럼 -->
-      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-6">
+      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-4">
         <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
         <span class="material-symbols-outlined text-[14px]">chevron_right</span>
         <span class="text-slate-800">{{ cityName }}</span>
       </nav>
 
       <!-- 히어로 -->
-      <div class="mb-8">
+      <div class="mb-5">
         <div class="mb-2">
           <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
             {{ cityName }} 생활 정보
@@ -29,8 +29,8 @@
       <!-- 콘텐츠 -->
       <div v-else-if="cityData">
         <!-- ① 부동산 시세 현황 -->
-        <section v-if="cityData.realEstate" id="real-estate" class="mb-10">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+        <section v-if="cityData.realEstate" id="real-estate" class="mb-6">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
             <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
             부동산 시세 현황
           </h2>
@@ -68,8 +68,8 @@
         </section>
 
         <!-- ② 구/군 선택 -->
-        <section id="districts" class="mb-10">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+        <section id="districts" class="mb-6">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
             <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
             구/군 선택
           </h2>
@@ -87,13 +87,13 @@
         </section>
 
         <!-- Ad: District Grid 후 -->
-        <div class="mb-10">
+        <div class="mb-6">
           <AdBanner />
         </div>
 
         <!-- ③ 생활 가이드 -->
-        <section class="mb-10">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+        <section class="mb-6">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
             <span class="material-symbols-outlined text-primary text-[22px]">menu_book</span>
             생활 가이드
           </h2>
@@ -103,7 +103,7 @@
         </section>
 
         <!-- ④ 교차 CTA -->
-        <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 md:p-8 text-center">
+        <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-5 md:p-6 text-center">
           <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
             {{ cityName }} 부동산 실거래가 상세 보기
           </h3>

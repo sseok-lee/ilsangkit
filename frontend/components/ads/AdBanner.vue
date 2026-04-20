@@ -1,5 +1,5 @@
 <template>
-  <div class="ad-banner my-6 w-full">
+  <div class="ad-banner my-3 w-full">
     <ClientOnly>
       <ins
         :key="adKey"

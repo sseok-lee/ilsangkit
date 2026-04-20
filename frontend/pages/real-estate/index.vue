@@ -1,32 +1,28 @@
 <template>
   <div class="bg-background-light">
-    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
-      <div class="mb-8">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">부동산 실거래가</h1>
-        <p class="mt-2 text-slate-500 text-sm">
-          전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요.<br />
-          국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.
-        </p>
-      </div>
+    <main class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+      <PageHero
+        eyebrow="부동산"
+        title="부동산 실거래가"
+        description="전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다."
+        :stats="heroStats"
+      />
 
-      <section class="mb-12">
-        <h2 class="text-lg font-bold text-slate-800 mb-4">부동산 유형별 실거래가</h2>
+      <SectionBlock subtext="조회할 주택 유형을 먼저 선택하세요.">
+        <template #heading>
+          <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">부동산 유형별 실거래가</h2>
+        </template>
         <RealEstateCategoryCards />
-      </section>
+      </SectionBlock>
 
       <!-- Ad: Property Type Cards 후 -->
-      <div class="mb-12">
-        <AdBanner />
-      </div>
+      <AdBanner />
 
-      <!-- Ad: 추가 광고 -->
-      <div class="mb-12">
-        <AdBanner class="my-4" />
-      </div>
-
-      <section class="mt-12">
-        <h2 class="text-lg font-bold text-slate-800 mb-4">부동산 실거래가란?</h2>
-        <div class="rounded-2xl bg-white border border-slate-200 p-6 text-base text-slate-600 leading-relaxed space-y-3">
+      <SectionBlock>
+        <template #heading>
+          <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">부동산 실거래가란?</h2>
+        </template>
+        <div class="text-base text-slate-600 leading-relaxed space-y-3">
           <p>
             부동산 실거래가는 실제 거래가 완료된 가격으로, 국토교통부에 신고된 공식 데이터입니다.
             매매·전월세 계약 체결 후 30일 이내에 신고된 금액이므로, 호가(희망 가격)와 다를 수 있습니다.
@@ -36,10 +32,12 @@
             오피스텔의 매매 및 전월세 실거래 내역을 제공합니다.
           </p>
         </div>
-      </section>
+      </SectionBlock>
 
-      <section class="mt-12">
-        <h2 class="text-lg font-bold text-slate-800 mb-4">자주 묻는 질문</h2>
+      <SectionBlock>
+        <template #heading>
+          <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">자주 묻는 질문</h2>
+        </template>
         <div class="space-y-3">
           <details
             v-for="(faq, index) in realEstateFAQs"
@@ -55,9 +53,9 @@
             </div>
           </details>
         </div>
-      </section>
+      </SectionBlock>
 
-      <section class="mt-12">
+      <section>
         <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
       </section>
     </main>
@@ -69,10 +67,18 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
+import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
 
 const title = `${new Date().getFullYear()} 부동산 실거래가 · 아파트·빌라·오피스텔 매매/전월세 시세 - 일상킷`
 const description = '아파트·빌라·오피스텔 실거래가와 시세를 한곳에서 조회하세요. 국토부 공식 데이터 기반 매매가, 전세가, 최근 거래 내역을 확인할 수 있습니다.'
 const canonicalUrl = `${SITE_URL}/real-estate`
+const heroStats = [
+  { label: '데이터 출처', value: '국토교통부' },
+  { label: '거래 유형', value: '매매·전월세' },
+  { label: '주택 유형', value: '아파트·빌라·오피스텔' },
+]
 
 useHead({
   title,
