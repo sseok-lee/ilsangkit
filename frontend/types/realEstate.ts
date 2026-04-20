@@ -129,6 +129,7 @@ export interface ComplexInfo {
 
 // 건물 상세 정보
 export interface BuildingInfo {
+  bjdCode: string
   buildingName: string
   city: string
   district: string

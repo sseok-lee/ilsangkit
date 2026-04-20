@@ -35,45 +35,69 @@ export async function getRealEstateBuildings() {
       SELECT buildingName, bjdCode, SUM(cnt) AS total
       FROM (
         SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM AptSaleTransaction
-        WHERE buildingName IS NOT NULL AND buildingName != ''
+        WHERE buildingName IS NOT NULL
+          AND buildingName != ''
+          AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
         GROUP BY buildingName, bjdCode
         UNION ALL
         SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM AptRentTransaction
-        WHERE buildingName IS NOT NULL AND buildingName != ''
+        WHERE buildingName IS NOT NULL
+          AND buildingName != ''
+          AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
         GROUP BY buildingName, bjdCode
       ) apt_counts
       GROUP BY buildingName, bjdCode
-      HAVING SUM(cnt) >= 50
+      HAVING SUM(cnt) >= 10
     ) apt
     UNION ALL
     SELECT 'villa' AS propertyType, buildingName, bjdCode FROM (
       SELECT buildingName, bjdCode, SUM(cnt) AS total
       FROM (
         SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM VillaSaleTransaction
-        WHERE buildingName IS NOT NULL AND buildingName != ''
+        WHERE buildingName IS NOT NULL
+          AND buildingName != ''
+          AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
         GROUP BY buildingName, bjdCode
         UNION ALL
         SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM VillaRentTransaction
-        WHERE buildingName IS NOT NULL AND buildingName != ''
+        WHERE buildingName IS NOT NULL
+          AND buildingName != ''
+          AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
         GROUP BY buildingName, bjdCode
       ) villa_counts
       GROUP BY buildingName, bjdCode
-      HAVING SUM(cnt) >= 50
+      HAVING SUM(cnt) >= 10
     ) villa
     UNION ALL
     SELECT 'offitel' AS propertyType, buildingName, bjdCode FROM (
       SELECT buildingName, bjdCode, SUM(cnt) AS total
       FROM (
         SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM OffitelSaleTransaction
-        WHERE buildingName IS NOT NULL AND buildingName != ''
+        WHERE buildingName IS NOT NULL
+          AND buildingName != ''
+          AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
         GROUP BY buildingName, bjdCode
         UNION ALL
         SELECT buildingName, bjdCode, COUNT(*) AS cnt FROM OffitelRentTransaction
-        WHERE buildingName IS NOT NULL AND buildingName != ''
+        WHERE buildingName IS NOT NULL
+          AND buildingName != ''
+          AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
         GROUP BY buildingName, bjdCode
       ) offitel_counts
       GROUP BY buildingName, bjdCode
-      HAVING SUM(cnt) >= 50
+      HAVING SUM(cnt) >= 10
     ) offitel
   `;
 }

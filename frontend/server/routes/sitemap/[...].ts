@@ -9,6 +9,7 @@ import {
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
   fetchSubscriptionIds,
+  getWeekStartDate,
 } from '../../utils/sitemap'
 
 // wifi/aed는 사이트맵 인덱스에서 제외된 카테고리 — 동적 핸들러에서도 제외하여 404 반환
@@ -92,11 +93,11 @@ export default defineEventHandler(async (event) => {
 
     const offset = (page - 1) * MAX_URLS_PER_SITEMAP
     const pageItems = buildings.slice(offset, offset + MAX_URLS_PER_SITEMAP)
-    const today = new Date().toISOString().split('T')[0]
+    const weekStart = getWeekStartDate()
 
     const urls = pageItems.map((item) => ({
       loc: `${SITE_URL}/real-estate/${item.propertyType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}`,
-      lastmod: today,
+      lastmod: weekStart,
       changefreq: 'weekly' as const,
       priority: 0.6,
     }))

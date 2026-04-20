@@ -454,6 +454,7 @@ export async function getComplexList(
 // ─────────────────────────────────────────────
 
 export interface BuildingInfo {
+  bjdCode: string;
   buildingName: string;
   city: string;
   district: string;
@@ -472,6 +473,9 @@ export interface BuildingInfo {
 
 /**
  * 건물 정보 집계 - 최신 거래 1건 + 면적 min/max
+ *
+ * bjdCode가 비어 있으면 buildingName만으로 거래가 가장 많은 bjdCode를 선택한다.
+ * 외부 유입(쿼리 파라미터 누락)에서도 canonical/색인이 가능하도록 하기 위함.
  */
 export async function getBuildingInfo(
   type: string,
@@ -479,7 +483,21 @@ export async function getBuildingInfo(
   buildingName: string
 ): Promise<BuildingInfo | null> {
   const model = getModel(type);
-  const where = { bjdCode, buildingName };
+
+  let effectiveBjdCode = bjdCode;
+  if (!effectiveBjdCode) {
+    const top = await model.groupBy({
+      by: ['bjdCode'],
+      where: { buildingName },
+      _count: { _all: true },
+      orderBy: { _count: { bjdCode: 'desc' } },
+      take: 1,
+    });
+    if (top.length === 0) return null;
+    effectiveBjdCode = top[0].bjdCode;
+  }
+
+  const where = { bjdCode: effectiveBjdCode, buildingName };
   const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
 
   const areaField = 'exclusiveArea';
@@ -499,6 +517,7 @@ export async function getBuildingInfo(
   if (!latest) return null;
 
   return {
+    bjdCode: effectiveBjdCode,
     buildingName: latest.buildingName,
     city: latest.city,
     district: latest.district,
