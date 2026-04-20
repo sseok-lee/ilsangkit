@@ -99,6 +99,9 @@
         :stats="heroStats"
       />
 
+      <!-- Ad: Hero 직후 (fold 하단) -->
+      <AdBanner />
+
       <!-- "위치·로드뷰" 데스크톱 -->
       <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다." class="hidden md:block">
         <template #right>
@@ -236,6 +239,9 @@
         </p>
       </SectionBlock>
 
+      <!-- Ad: 시세 추이 이후 (In-Article) -->
+      <AdBanner />
+
       <!-- "거래 내역" 블록 -->
       <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
         <div v-if="txLoading" class="flex justify-center py-8">
@@ -300,6 +306,9 @@
 
       <!-- 관련 가이드 -->
       <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
+
+      <!-- Ad: 본문 마무리 (하단) -->
+      <AdBanner />
 
       <!-- 데이터 정보 -->
       <DataSourceCard
