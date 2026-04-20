@@ -460,7 +460,8 @@ useHead(() => {
     ? `${locLabel} ${buildingName.value} 매매 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 시세 변동 추이와 평당가를 제공합니다.`
     : `${locLabel} ${buildingName.value} 전세·월세 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 전세가·월세 시세를 제공합니다.`
   const canonicalBase = `${SITE_URL}/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}`
-  const canonicalUrl = bjdCode.value ? `${canonicalBase}?bjdCode=${bjdCode.value}` : canonicalBase
+  const resolvedBjdCode = bjdCode.value || buildingInfo.value?.bjdCode || ''
+  const canonicalUrl = resolvedBjdCode ? `${canonicalBase}?bjdCode=${resolvedBjdCode}` : canonicalBase
   return {
     title,
     meta: [
@@ -876,11 +877,12 @@ watchEffect(async () => {
   }
 })
 
-// bjdCode 없거나 데이터 로드 실패 시 noindex
+// 데이터 로드가 끝났는데도 빌딩 정보가 전혀 없으면 noindex.
+// bjdCode가 없어도 getBuildingInfo fallback이 buildingName으로 가장 많은 거래의 bjdCode를 찾아주므로,
+// 외부 유입/백링크가 noindex로 차단되던 기존 문제를 해제한다.
 const noindex = computed(() => {
-  if (!bjdCode.value) return true
-  if (!statsLoading.value && !txLoading.value && buildingInfo.value === null) return true
-  return false
+  const loaded = !statsLoading.value && !txLoading.value
+  return loaded && buildingInfo.value === null
 })
 
 useHead(() => {
