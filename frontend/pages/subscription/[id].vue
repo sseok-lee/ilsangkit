@@ -84,63 +84,55 @@
         </Transition>
       </Teleport>
 
-      <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
+      <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-10 flex flex-col gap-4">
         <!-- Breadcrumb -->
-        <nav class="hidden md:flex items-center gap-1 text-sm text-slate-500 mb-4">
-          <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
-          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-          <NuxtLink to="/subscription" class="hover:text-primary">청약</NuxtLink>
-          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-          <span class="text-slate-800">{{ subscription.houseName }}</span>
-        </nav>
+        <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
-        <!-- Header -->
-        <div class="mb-8">
-          <div class="flex items-start justify-between gap-4 mb-3">
-            <div class="flex-1">
-              <h1 class="text-2xl md:text-3xl font-bold text-slate-900">{{ subscription.houseName }}</h1>
-              <p class="text-slate-500 text-sm mt-2">{{ subscription.supplyLocation || subscription.regionName }}</p>
-            </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <span v-if="subscription.rentType" :class="rentTypeBadgeClass">
-                {{ subscription.rentType === '임대주택' ? '임대' : '분양' }}
-              </span>
-              <span :class="statusBadgeClass">
-                {{ getStatusLabel(subscription.status) }}
-              </span>
-            </div>
-          </div>
-          <!-- 핵심 요약 -->
-          <div class="flex flex-wrap gap-4 mt-4 text-sm">
-            <div v-if="subscription.totalSupplyCount" class="flex items-center gap-1.5 text-slate-700">
-              <span class="material-symbols-outlined text-[18px] text-primary">apartment</span>
-              <span class="font-semibold">{{ subscription.totalSupplyCount.toLocaleString() }}호</span> 공급
-            </div>
-            <div v-if="subscription.constructorName" class="flex items-center gap-1.5 text-slate-700">
-              <span class="material-symbols-outlined text-[18px] text-primary">business</span>
-              {{ subscription.constructorName }}
-            </div>
-            <div v-if="subscription.moveInMonth" class="flex items-center gap-1.5 text-slate-700">
-              <span class="material-symbols-outlined text-[18px] text-primary">calendar_month</span>
-              {{ formatMoveInMonth(subscription.moveInMonth) }} 입주
-            </div>
-            <div v-if="subscription.houseDetailType" class="flex items-center gap-1.5 text-slate-700">
-              <span class="material-symbols-outlined text-[18px] text-primary">sell</span>
-              {{ subscription.houseDetailType }}
-            </div>
-            <div v-if="priceRange" class="flex items-center gap-1.5 text-slate-700">
-              <span class="material-symbols-outlined text-[18px] text-primary">payments</span>
-              {{ priceRange }}
-            </div>
-          </div>
+        <!-- Mobile: 상태 뱃지 -->
+        <div class="md:hidden flex items-center gap-2">
+          <span v-if="subscription.rentType" :class="rentTypeBadgeClass">
+            {{ subscription.rentType === '임대주택' ? '임대' : '분양' }}
+          </span>
+          <span :class="statusBadgeClass">
+            {{ getStatusLabel(subscription.status) }}
+          </span>
         </div>
 
-        <!-- 1. 청약 일정 -->
-        <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
-          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">schedule</span>
-            청약 일정
-          </h2>
+        <!-- PageHero -->
+        <PageHero
+          :eyebrow="heroEyebrow"
+          :title="subscription.houseName"
+          :description="subscription.supplyLocation || subscription.regionName"
+          :stats="heroStats"
+        >
+          <template #sidebar>
+            <div class="grid gap-2.5 content-start">
+              <div
+                v-for="stat in heroStats"
+                :key="stat.label"
+                class="p-3 bg-white border border-line rounded-xl shadow-card"
+              >
+                <span class="block text-slate-500 text-xs font-bold">{{ stat.label }}</span>
+                <strong class="block mt-1 text-lg md:text-xl font-bold text-slate-900">{{ stat.value }}</strong>
+              </div>
+              <div class="hidden md:flex items-center gap-2">
+                <span v-if="subscription.rentType" :class="rentTypeBadgeClass">
+                  {{ subscription.rentType === '임대주택' ? '임대' : '분양' }}
+                </span>
+                <span :class="statusBadgeClass">
+                  {{ getStatusLabel(subscription.status) }}
+                </span>
+              </div>
+            </div>
+          </template>
+        </PageHero>
+
+        <!-- "청약 일정" 블록 -->
+        <SectionBlock heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
+          <div class="flex items-center gap-2 mb-2 text-primary">
+            <span class="material-symbols-outlined text-[20px]">schedule</span>
+            <span class="text-sm font-semibold text-slate-800">주요 일정</span>
+          </div>
           <div class="space-y-4">
             <TimelineItem
               v-if="subscription.announcementDate"
@@ -186,17 +178,13 @@
               :is-last="true"
             />
           </div>
-        </div>
+        </SectionBlock>
 
-        <!-- Ad: 일정 아래 -->
+        <!-- Ad: 일정 이후 -->
         <AdBanner />
 
-        <!-- 2. 면적별 공급정보 테이블 -->
-        <div v-if="unitTypes && unitTypes.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
-          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">home</span>
-            면적별 공급정보
-          </h2>
+        <!-- "면적별 공급정보" 블록 -->
+        <SectionBlock v-if="unitTypes && unitTypes.length > 0" heading="면적별 공급정보" subtext="주택형별 공급 규모와 분양가를 비교합니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
@@ -238,17 +226,10 @@
               </tfoot>
             </table>
           </div>
-        </div>
+        </SectionBlock>
 
-        <!-- Ad: 공급정보 아래 -->
-        <AdBanner />
-
-        <!-- 3. 경쟁률 -->
-        <div v-if="competitions.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
-          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">bar_chart</span>
-            면적별 경쟁률
-          </h2>
+        <!-- "면적별 경쟁률" 블록 -->
+        <SectionBlock v-if="competitions.length > 0" heading="면적별 경쟁률" subtext="1·2순위 접수자수와 공급세대수 기준 경쟁률입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
@@ -275,14 +256,10 @@
             <span class="material-symbols-outlined text-[14px]">info</span>
             접수자수/공급세대수 기준 경쟁률입니다
           </p>
-        </div>
+        </SectionBlock>
 
-        <!-- 4. 당첨 가점 -->
-        <div v-if="validScores.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
-          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">stars</span>
-            당첨 가점 분석
-          </h2>
+        <!-- "당첨 가점 분석" 블록 -->
+        <SectionBlock v-if="validScores.length > 0" heading="당첨 가점 분석" subtext="가점제 적용 단지의 1순위 당첨 가점 · 84점 만점 기준입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
@@ -309,17 +286,13 @@
             <span class="material-symbols-outlined text-[14px]">info</span>
             가점제 적용 단지의 1순위 당첨 가점입니다. 84점 만점 기준.
           </p>
-        </div>
+        </SectionBlock>
 
-        <!-- Ad: 가점 아래 -->
+        <!-- Ad: 가점·경쟁률 이후 1회 -->
         <AdBanner />
 
-        <!-- 5. 특별공급 매트릭스 -->
-        <div v-if="hasSpecialSupply" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
-          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">info</span>
-            면적별 특별공급 내역
-          </h2>
+        <!-- "면적별 특별공급 내역" 블록 -->
+        <SectionBlock v-if="hasSpecialSupply" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
@@ -349,14 +322,10 @@
               </tfoot>
             </table>
           </div>
-        </div>
+        </SectionBlock>
 
-        <!-- 6. 특별공급 신청현황 -->
-        <div v-if="specialStatuses.length > 0" class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
-          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">person</span>
-            특별공급 신청현황
-          </h2>
+        <!-- "특별공급 신청현황" 블록 -->
+        <SectionBlock v-if="specialStatuses.length > 0" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
@@ -375,90 +344,65 @@
               </tbody>
             </table>
           </div>
-        </div>
+        </SectionBlock>
 
-        <!-- Ad: 신청현황 아래 -->
-        <AdBanner />
-
-        <!-- 7. 전월세 시세 (임대주택만) -->
+        <!-- 전월세 시세 (임대주택만) -->
         <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" :subscription-id="subscription.id" :region-name="subscription.regionName" />
 
-        <!-- 8. 지도 + 로드뷰 (데스크톱) -->
-        <section v-if="hasCoords" class="mb-8 hidden md:block">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="text-lg font-semibold text-slate-800">위치</h2>
-                <div class="flex items-center gap-1">
-                  <div class="relative">
-                    <button
-                      class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
-                      @click="showNavDropdown = !showNavDropdown"
-                    >
-                      <span class="material-symbols-outlined text-[18px]">directions</span>
-                      길찾기
-                      <span class="material-symbols-outlined text-[14px]">expand_more</span>
-                    </button>
-                    <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                      <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
-                        <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                      </button>
-                      <div class="h-px bg-slate-100"></div>
-                      <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
-                        <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="rounded-2xl bg-white border border-slate-100 overflow-hidden h-[300px]">
-                <ClientOnly>
-                  <FacilityMap
-                    :center="mapCenter!"
-                    :facilities="mapMarker"
-                    :level="4"
-                  />
-                </ClientOnly>
+        <!-- "위치와 로드뷰" 데스크톱 -->
+        <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block">
+          <template #right>
+            <div class="relative">
+              <button
+                class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
+                @click="showNavDropdown = !showNavDropdown"
+              >
+                <span class="material-symbols-outlined text-[18px]">directions</span>
+                길찾기
+                <span class="material-symbols-outlined text-[14px]">expand_more</span>
+              </button>
+              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
+                </button>
+                <div class="h-px bg-slate-100"></div>
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
+                </button>
               </div>
             </div>
-            <div>
-              <h2 class="text-lg font-semibold text-slate-800 mb-2">로드뷰</h2>
-              <div class="roadview-wrapper rounded-2xl bg-white border border-slate-100 overflow-hidden h-[300px]">
-                <FacilityRoadview :lat="Number(subscription.lat)" :lng="Number(subscription.lng)" />
-              </div>
+          </template>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="rounded-xl border border-line overflow-hidden h-[300px]">
+              <ClientOnly>
+                <FacilityMap
+                  :center="mapCenter!"
+                  :facilities="mapMarker"
+                  :level="4"
+                />
+              </ClientOnly>
+            </div>
+            <div class="roadview-wrapper rounded-xl border border-line overflow-hidden h-[300px]">
+              <FacilityRoadview :lat="Number(subscription.lat)" :lng="Number(subscription.lng)" />
             </div>
           </div>
-        </section>
+        </SectionBlock>
 
         <!-- 로드뷰 (모바일) -->
-        <section v-if="hasCoords" class="mb-8 md:hidden">
-          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 class="text-slate-800 text-lg font-bold">로드뷰</h2>
-            </div>
-            <div class="p-4">
-              <div class="roadview-wrapper rounded-xl overflow-hidden h-[200px]">
-                <FacilityRoadview :lat="Number(subscription.lat)" :lng="Number(subscription.lng)" />
-              </div>
-            </div>
+        <SectionBlock v-if="hasCoords" heading="로드뷰" class="md:hidden">
+          <div class="roadview-wrapper rounded-xl overflow-hidden h-[200px]">
+            <FacilityRoadview :lat="Number(subscription.lat)" :lng="Number(subscription.lng)" />
           </div>
-        </section>
+        </SectionBlock>
 
         <!-- 좌표 없음 fallback -->
-        <div v-if="!hasCoords" class="mb-8 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
+        <div v-if="!hasCoords" class="rounded-xl border border-line bg-slate-50 p-6 text-center">
           <span class="material-symbols-outlined text-[32px] text-slate-400 mb-2">location_off</span>
           <p class="text-sm text-slate-500">위치 정보가 제공되지 않아 지도를 표시할 수 없습니다.</p>
         </div>
 
-        <!-- Ad: 지도 아래 -->
-        <AdBanner />
-
-        <!-- 9. 기본정보 -->
-        <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
-          <h2 class="font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">info</span>
-            기본정보
-          </h2>
+        <!-- "기본정보" 블록 -->
+        <SectionBlock heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
             <div class="flex justify-between py-2 border-b border-slate-100">
               <span class="text-slate-500">주택유형</span>
@@ -493,18 +437,13 @@
               <a :href="`tel:${subscription.inquiryTel}`" class="font-medium text-primary hover:underline">{{ subscription.inquiryTel }}</a>
             </div>
           </div>
-        </div>
-
-        <!-- Ad: 기본정보 아래 -->
-        <AdBanner />
+        </SectionBlock>
 
         <!-- 관련 가이드 -->
-        <section class="mt-8">
-          <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
-        </section>
+        <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
 
-        <!-- 10. 링크 -->
-        <div class="flex flex-col md:flex-row gap-4 mb-8">
+        <!-- 외부 링크 버튼 -->
+        <div class="flex flex-col md:flex-row gap-4">
           <a
             v-if="subscription.homepage"
             :href="subscription.homepage"
@@ -556,6 +495,9 @@ import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
 import RentalPriceStatsBox from '~/components/subscription/RentalPriceStatsBox.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const route = useRoute()
 const id = Number(route.params.id)
@@ -624,6 +566,40 @@ const priceRange = computed(() => {
   const max = Math.max(...amounts)
   if (min === max) return formatPrice(min)
   return `${formatPrice(min)} ~ ${formatPrice(max)}`
+})
+
+const heroEyebrow = computed(() => {
+  if (!subscription.value) return '청약'
+  const rent = subscription.value.rentType === '임대주택' ? '임대' : '분양'
+  return `${rent} · ${getStatusLabel(subscription.value.status)}`
+})
+
+const heroStats = computed(() => {
+  if (!subscription.value) return []
+  const items: { label: string; value: string }[] = []
+  if (subscription.value.totalSupplyCount) {
+    items.push({ label: '총 공급', value: `${subscription.value.totalSupplyCount.toLocaleString()}호` })
+  }
+  if (subscription.value.moveInMonth) {
+    items.push({ label: '입주 예정', value: formatMoveInMonth(subscription.value.moveInMonth) })
+  }
+  if (priceRange.value) {
+    items.push({ label: '분양가', value: priceRange.value })
+  }
+  return items
+})
+
+const breadcrumbItems = computed(() => {
+  if (!subscription.value) return []
+  const isRent = subscription.value.rentType === '임대주택' || subscription.value.sourceType === 'PRIVATE_RENT'
+  const items: { label: string; href?: string; current?: boolean }[] = [
+    { label: '홈', href: '/', current: false },
+    { label: '청약·임대', href: '/subscription', current: false },
+  ]
+  if (isRent) items.push({ label: '임대', href: '/subscription/rent', current: false })
+  else items.push({ label: '분양', href: '/subscription/sale', current: false })
+  items.push({ label: subscription.value.houseName, current: true })
+  return items
 })
 
 const statusBadgeClass = computed(() => {
