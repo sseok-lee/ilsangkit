@@ -13,7 +13,7 @@
               ? 'bg-primary text-white border-primary'
               : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary'
           ]"
-          @click="currentStatus = tab.key"
+          @click="selectStatus(tab.key)"
         >
           {{ tab.label }}
         </button>
@@ -129,11 +129,11 @@ import type { Subscription, SubscriptionSourceType } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
-// Wireframe §5 순서: 청약중 → 청약예정 → 전체 → 마감
+/// 상태 칩 순서: 전체 → 청약중 → 청약예정 → 마감
 const STATUS_ORDER: { key: 'ongoing' | 'upcoming' | null | 'closed'; label: string }[] = [
+  { key: null, label: '전체' },
   { key: 'ongoing', label: '청약중' },
   { key: 'upcoming', label: '청약예정' },
-  { key: null, label: '전체' },
   { key: 'closed', label: '마감' },
 ]
 
@@ -160,6 +160,15 @@ watch([currentStatus, selectedRegion, regionDetail], () => {
   currentPage.value = 1
   loadSubscriptions()
 })
+
+function selectStatus(key: 'ongoing' | 'upcoming' | 'closed' | null) {
+  if (currentStatus.value === key) {
+    currentPage.value = 1
+    loadSubscriptions()
+    return
+  }
+  currentStatus.value = key
+}
 
 watch(currentPage, () => {
   loadSubscriptions()
