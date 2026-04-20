@@ -193,24 +193,24 @@
           class="mb-4"
         />
 
-        <!-- 시세 요약 카드 -->
-        <div v-if="monthly.length > 0 && !statsLoading" class="grid grid-cols-3 gap-3 mb-4">
-          <div class="rounded-xl bg-white border border-slate-100 p-4 text-center">
-            <p class="text-xs text-slate-500 mb-1">최근 평균가</p>
-            <p class="text-base sm:text-lg font-bold text-slate-800">{{ summaryLatestAvg }}</p>
+        <!-- 시세 요약 (인라인 summary-grid) -->
+        <div
+          v-if="monthly.length > 0 && !statsLoading"
+          class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 pt-4 border-t border-line"
+        >
+          <div>
+            <span class="block text-slate-500 text-xs font-bold">최근 평균가</span>
+            <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ summaryLatestAvg }}</strong>
           </div>
-          <div class="rounded-xl bg-white border border-slate-100 p-4 text-center">
-            <p class="text-xs text-slate-500 mb-1">전월 대비</p>
-            <p
-              class="text-base sm:text-lg font-bold"
-              :class="changeRateColor"
-            >
+          <div>
+            <span class="block text-slate-500 text-xs font-bold">전월 대비</span>
+            <strong :class="['block mt-1 text-base md:text-lg font-bold truncate', changeRateColor]">
               {{ summaryChangeRate }}
-            </p>
+            </strong>
           </div>
-          <div class="rounded-xl bg-white border border-slate-100 p-4 text-center">
-            <p class="text-xs text-slate-500 mb-1">총 거래</p>
-            <p class="text-base sm:text-lg font-bold text-slate-800">{{ summaryTotalCount }}건</p>
+          <div>
+            <span class="block text-slate-500 text-xs font-bold">총 거래</span>
+            <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ summaryTotalCount }}건</strong>
           </div>
         </div>
 
