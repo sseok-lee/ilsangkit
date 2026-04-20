@@ -9,95 +9,81 @@
     </div>
 
     <!-- Article -->
-    <article v-else-if="guide" class="max-w-3xl mx-auto px-4 md:px-6 py-8">
+    <article v-else-if="guide" class="max-w-3xl mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-10 flex flex-col gap-4">
       <!-- Breadcrumb -->
-      <nav class="flex items-center gap-2 text-sm text-slate-500 mb-6">
-        <NuxtLink to="/" class="hover:text-primary transition-colors">홈</NuxtLink>
-        <span>/</span>
-        <NuxtLink to="/guide" class="hover:text-primary transition-colors">가이드</NuxtLink>
-        <span>/</span>
-        <span class="text-slate-900 font-medium truncate">{{ guide.title }}</span>
-      </nav>
+      <Breadcrumb :items="breadcrumbItems" />
 
-      <!-- Category Tag -->
-      <span class="inline-block px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-4">
-        {{ categoryLabel }}
-      </span>
+      <!-- 히어로 카드 (썸네일 + eyebrow + title + meta) -->
+      <section class="bg-white border border-line rounded-xl shadow-card overflow-hidden">
+        <div v-if="guide.thumbnailUrl" class="w-full aspect-video bg-slate-100">
+          <img
+            :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
+            :alt="guide.title"
+            width="800"
+            height="450"
+            class="w-full h-full object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 90vw, 800px"
+          />
+        </div>
+        <div class="p-5 md:p-6">
+          <span class="inline-flex mb-2.5 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
+            {{ categoryLabel }}
+          </span>
+          <h1 class="text-2xl md:text-[32px] leading-tight font-bold text-slate-900 mb-3">
+            {{ guide.title }}
+          </h1>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+            <span class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px]">edit_note</span>
+              일상킷 편집팀
+            </span>
+            <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
+            <span class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px]">visibility</span>
+              {{ guide.viewCount.toLocaleString() }}
+            </span>
+          </div>
+        </div>
+      </section>
 
-      <!-- Title -->
-      <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-4 leading-tight">
-        {{ guide.title }}
-      </h1>
+      <!-- "본문" SectionBlock -->
+      <SectionBlock>
+        <div
+          class="
+            prose prose-slate max-w-none
+            prose-headings:font-bold
+            prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
+            prose-h3:text-lg prose-h3:mt-6
+            prose-p:leading-relaxed prose-p:text-slate-700
+            prose-li:leading-relaxed
+            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+            prose-strong:text-slate-900
+            prose-ul:my-4 prose-ol:my-4
+          "
+          v-html="contentParts[0]"
+        ></div>
 
-      <!-- Meta -->
-      <div class="flex items-center gap-4 text-sm text-slate-500 mb-6 pb-6 border-b border-slate-200">
-        <span class="flex items-center gap-1">
-          <span class="material-symbols-outlined text-[16px]">edit_note</span>
-          일상킷 편집팀
-        </span>
-        <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
-        <span class="flex items-center gap-1">
-          <span class="material-symbols-outlined text-[16px]">visibility</span>
-          {{ guide.viewCount.toLocaleString() }}
-        </span>
-      </div>
+        <!-- AdBanner: 본문 덩어리 사이 1회 -->
+        <AdBanner v-if="contentParts[1]" class="my-6" />
 
-      <!-- Thumbnail -->
-      <div v-if="guide.thumbnailUrl" class="mb-8 rounded-xl overflow-hidden">
-        <img
-          :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
-          :alt="guide.title"
-          width="800"
-          height="450"
-          class="w-full aspect-video object-cover"
-          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 90vw, 800px"
-        />
-      </div>
+        <div
+          v-if="contentParts[1]"
+          class="
+            prose prose-slate max-w-none
+            prose-headings:font-bold
+            prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
+            prose-h3:text-lg prose-h3:mt-6
+            prose-p:leading-relaxed prose-p:text-slate-700
+            prose-li:leading-relaxed
+            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+            prose-strong:text-slate-900
+            prose-ul:my-4 prose-ol:my-4
+          "
+          v-html="contentParts[1]"
+        ></div>
 
-      <!-- Ad: Thumbnail 후 -->
-      <div class="my-8">
-        <AdBanner />
-      </div>
-
-      <!-- Markdown Content (Part 1) -->
-      <div
-        class="
-          prose prose-slate max-w-none
-          prose-headings:font-bold
-          prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
-          prose-h3:text-lg prose-h3:mt-6
-          prose-p:leading-relaxed prose-p:text-slate-700
-          prose-li:leading-relaxed
-          prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-          prose-strong:text-slate-900
-          prose-ul:my-4 prose-ol:my-4
-        "
-        v-html="contentParts[0]"
-      ></div>
-
-      <!-- Ad: 본문 중간 -->
-      <AdBanner v-if="contentParts[1]" />
-
-      <!-- Markdown Content (Part 2) -->
-      <div
-        v-if="contentParts[1]"
-        class="
-          prose prose-slate max-w-none
-          prose-headings:font-bold
-          prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
-          prose-h3:text-lg prose-h3:mt-6
-          prose-p:leading-relaxed prose-p:text-slate-700
-          prose-li:leading-relaxed
-          prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-          prose-strong:text-slate-900
-          prose-ul:my-4 prose-ol:my-4
-        "
-        v-html="contentParts[1]"
-      ></div>
-
-      <!-- Keywords -->
-      <div v-if="guide.keywords" class="mt-8 pt-6 border-t border-slate-200">
-        <div class="flex flex-wrap gap-2">
+        <!-- 키워드 -->
+        <div v-if="guide.keywords" class="mt-6 pt-4 border-t border-line flex flex-wrap gap-2">
           <span
             v-for="keyword in keywordList"
             :key="keyword"
@@ -106,28 +92,38 @@
             #{{ keyword }}
           </span>
         </div>
-      </div>
+      </SectionBlock>
 
-      <!-- Ad: Keywords 후 -->
-      <div class="my-8">
-        <AdBanner />
-      </div>
-
-      <!-- 관련 가이드 -->
-      <ClientOnly>
-        <RelatedGuides
-          v-if="guide.category"
-          :category="guide.category"
-          :exclude-slug="guide.slug"
-          class="mt-8"
-        />
-      </ClientOnly>
-
-      <!-- Ad: 관련 가이드 아래 -->
+      <!-- AdBanner: 본문 이후 1회 -->
       <AdBanner />
 
+      <!-- "관련 정보" SectionBlock -->
+      <SectionBlock heading="관련 정보" subtext="같은 주제의 가이드와 바로가기 링크를 확인하세요.">
+        <ClientOnly>
+          <RelatedGuides
+            v-if="guide.category"
+            :category="guide.category"
+            :exclude-slug="guide.slug"
+          />
+        </ClientOnly>
+
+        <nav data-testid="guide-related-categories" class="mt-6 pt-4 border-t border-line">
+          <p class="text-sm font-semibold text-slate-700 mb-3">바로가기</p>
+          <div class="flex flex-wrap gap-2">
+            <NuxtLink
+              v-for="cat in relatedGuideCategories"
+              :key="cat"
+              :to="`/${cat}`"
+              class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
+            >
+              {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
+            </NuxtLink>
+          </div>
+        </nav>
+      </SectionBlock>
+
       <!-- AI 작성 안내 -->
-      <div class="mt-8 bg-slate-50 rounded-lg p-4">
+      <div class="bg-slate-50 rounded-lg p-4">
         <p class="text-xs font-semibold text-slate-500 mb-1">AI 작성 안내</p>
         <p class="text-xs text-slate-500 leading-relaxed">
           본 콘텐츠는 인공지능(AI) 기술을 활용하여 정보를 정리 및 요약한 글입니다.
@@ -137,23 +133,8 @@
         </p>
       </div>
 
-      <!-- 관련 정보 -->
-      <nav data-testid="guide-related-categories" class="mt-8 pt-6 border-t border-slate-200">
-        <h2 class="text-base font-bold text-slate-900 mb-3">관련 정보</h2>
-        <div class="flex flex-wrap gap-2">
-          <NuxtLink
-            v-for="cat in relatedGuideCategories"
-            :key="cat"
-            :to="`/${cat}`"
-            class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
-          >
-            {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
-          </NuxtLink>
-        </div>
-      </nav>
-
       <!-- Back to list -->
-      <div class="mt-8">
+      <div>
         <NuxtLink
           to="/guide"
           class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
@@ -189,6 +170,8 @@ import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
 import type { FacilityCategory } from '~/types/facility'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
@@ -246,6 +229,12 @@ const keywordList = computed(() => {
   if (!guide.value?.keywords) return []
   return guide.value.keywords.split(',').map(k => k.trim()).filter(Boolean)
 })
+
+const breadcrumbItems = computed(() => [
+  { label: '홈', href: '/', current: false },
+  { label: '생활 가이드', href: '/guide', current: false },
+  { label: guide.value?.title ?? '', current: true },
+])
 
 // 가이드 카테고리 기반 관련 카테고리 링크
 const DEFAULT_RELATED_CATEGORIES = ['hospital', 'school', 'park']
