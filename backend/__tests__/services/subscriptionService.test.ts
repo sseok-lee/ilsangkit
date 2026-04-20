@@ -84,15 +84,18 @@ describe('getSubscriptionList', () => {
     expect(whereArg.sourceType).toBe('OFFITEL');
   });
 
-  it('category=sale 필터를 적용해야 한다', async () => {
+  it('category=sale 필터를 적용해야 한다 (rentType NULL 포함)', async () => {
     mockFindMany.mockResolvedValue([]);
     mockCount.mockResolvedValue(0);
 
     await getSubscriptionList({ category: 'sale', page: 1, limit: 20 });
 
     const whereArg = mockFindMany.mock.calls[0][0].where;
+    // Prisma notIn은 NULL 행을 매칭에서 제외하므로, rentType이 NULL인 분양 건을
+    // 포함하기 위한 별도 OR 절이 필요하다.
     expect(whereArg.OR).toEqual([
       { sourceType: { in: ['OFFITEL', 'REMAINING'] } },
+      { sourceType: 'APT', rentType: null },
       { sourceType: 'APT', rentType: { notIn: ['분양전환 가능임대', '분양전환 불가임대'] } },
     ]);
   });

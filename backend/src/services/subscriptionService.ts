@@ -41,9 +41,12 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   }
 
   // category 필터 (분양/임대 그룹)
+  // 주의: Prisma `notIn`은 NULL 값을 매칭에서 제외하므로, rentType이 NULL인 분양 레코드도
+  // 포함되도록 OR + null 조건을 명시적으로 추가한다.
   if (category === 'sale') {
     where.OR = [
       { sourceType: { in: ['OFFITEL', 'REMAINING'] } },
+      { sourceType: 'APT', rentType: null },
       { sourceType: 'APT', rentType: { notIn: PUBLIC_RENT_TYPES } },
     ];
   } else if (category === 'rent') {
