@@ -113,30 +113,25 @@
           <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-6 items-start">
             <!-- Left Column: Details -->
             <div class="flex flex-col gap-4 w-full">
+              <!-- 공유 버튼 row -->
+              <div class="flex justify-end">
+                <button
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
+                  aria-label="이 시설 공유하기"
+                  @click="handleShare"
+                >
+                  <span class="material-symbols-outlined text-[16px]">share</span>
+                  공유
+                </button>
+              </div>
+
               <!-- Page Hero -->
               <PageHero
                 :eyebrow="categoryMeta.label"
                 :title="facility.name"
                 :description="facilityIntro || undefined"
                 :stats="desktopHeroStats"
-              >
-                <template #sidebar>
-                  <div class="grid gap-2.5 content-start">
-                    <div
-                      v-for="stat in desktopHeroStats"
-                      :key="stat.label"
-                      class="p-3 bg-white border border-line rounded-xl shadow-card"
-                    >
-                      <span class="block text-slate-500 text-xs font-bold">{{ stat.label }}</span>
-                      <strong class="block mt-1 text-sm md:text-base font-bold text-slate-900">{{ stat.value }}</strong>
-                    </div>
-                    <button class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm" aria-label="이 시설 공유하기" @click="handleShare">
-                      <span class="material-symbols-outlined text-[16px]">share</span>
-                      공유
-                    </button>
-                  </div>
-                </template>
-              </PageHero>
+              />
 
               <!-- 기본정보 SectionBlock -->
               <SectionBlock heading="기본정보" subtext="주소·운영시간·연락처 등 공통 정보를 먼저 확인합니다.">

@@ -28,19 +28,15 @@
       </p>
     </div>
 
-    <!-- Highlights -->
+    <!-- Highlights (인라인 summary-grid) -->
     <div
       v-if="summary.highlights.length > 0"
-      class="grid grid-cols-1 sm:grid-cols-3 gap-3"
+      class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-line"
     >
-      <div
-        v-for="h in summary.highlights"
-        :key="h.key"
-        class="bg-slate-50 rounded-lg p-3 border border-slate-100"
-      >
-        <p class="text-[11px] text-slate-500 tracking-wide font-medium truncate">{{ h.label }}</p>
+      <div v-for="h in summary.highlights" :key="h.key">
+        <span class="block text-slate-500 text-xs font-bold truncate">{{ h.label }}</span>
         <div class="flex items-baseline gap-1.5 mt-1">
-          <span class="text-xl font-bold text-slate-900">{{ h.count.toLocaleString() }}</span>
+          <strong class="text-lg md:text-xl font-bold text-slate-900">{{ h.count.toLocaleString() }}</strong>
           <span class="text-sm text-slate-500">곳</span>
           <span class="ml-auto text-xs font-semibold text-primary">{{ h.percent }}%</span>
         </div>

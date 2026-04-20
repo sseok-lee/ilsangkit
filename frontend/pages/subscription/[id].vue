@@ -88,8 +88,8 @@
         <!-- Breadcrumb -->
         <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
-        <!-- Mobile: 상태 뱃지 -->
-        <div class="md:hidden flex items-center gap-2">
+        <!-- 상태·임대구분 배지 (타이틀 위) -->
+        <div class="flex items-center gap-2">
           <span v-if="subscription.rentType" :class="rentTypeBadgeClass">
             {{ subscription.rentType === '임대주택' ? '임대' : '분양' }}
           </span>
@@ -104,28 +104,7 @@
           :title="subscription.houseName"
           :description="subscription.supplyLocation || subscription.regionName"
           :stats="heroStats"
-        >
-          <template #sidebar>
-            <div class="grid gap-2.5 content-start">
-              <div
-                v-for="stat in heroStats"
-                :key="stat.label"
-                class="p-3 bg-white border border-line rounded-xl shadow-card"
-              >
-                <span class="block text-slate-500 text-xs font-bold">{{ stat.label }}</span>
-                <strong class="block mt-1 text-lg md:text-xl font-bold text-slate-900">{{ stat.value }}</strong>
-              </div>
-              <div class="hidden md:flex items-center gap-2">
-                <span v-if="subscription.rentType" :class="rentTypeBadgeClass">
-                  {{ subscription.rentType === '임대주택' ? '임대' : '분양' }}
-                </span>
-                <span :class="statusBadgeClass">
-                  {{ getStatusLabel(subscription.status) }}
-                </span>
-              </div>
-            </div>
-          </template>
-        </PageHero>
+        />
 
         <!-- "청약 일정" 블록 -->
         <SectionBlock heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">

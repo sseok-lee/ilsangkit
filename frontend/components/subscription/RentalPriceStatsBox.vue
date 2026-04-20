@@ -21,33 +21,27 @@
       <p class="text-xs text-slate-500 mt-1">지역: {{ regionName }}</p>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-2 gap-4">
+    <!-- Stats (인라인 summary-grid) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-blue-200">
       <!-- 전세 -->
-      <div class="bg-white rounded-lg p-4 border border-blue-200">
-        <p class="text-xs font-semibold text-slate-600 mb-2">전세</p>
-        <p class="text-lg font-bold text-slate-900">
+      <div>
+        <span class="block text-slate-500 text-xs font-bold">전세</span>
+        <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">
           {{ stats?.jeonsae?.avgDeposit ? formatDeposit(stats.jeonsae.avgDeposit) : '-' }}
-        </p>
-        <p class="text-xs text-slate-500 mt-1">
-          거래 {{ stats?.jeonsae?.count ?? 0 }}건
-        </p>
+        </strong>
+        <p class="mt-1 text-xs text-slate-500">거래 {{ stats?.jeonsae?.count ?? 0 }}건</p>
       </div>
 
       <!-- 월세 -->
-      <div class="bg-white rounded-lg p-4 border border-blue-200">
-        <p class="text-xs font-semibold text-slate-600 mb-2">월세</p>
-        <div class="space-y-1">
-          <p class="text-sm font-bold text-slate-900">
-            보증금 {{ stats?.wolse?.avgDeposit ? formatDeposit(stats.wolse.avgDeposit) : '-' }}
-          </p>
-          <p class="text-sm font-bold text-slate-900">
-            월 {{ stats?.wolse?.avgMonthlyRent ? formatMonthlyRent(stats.wolse.avgMonthlyRent) : '-' }}
-          </p>
-        </div>
-        <p class="text-xs text-slate-500 mt-1">
-          거래 {{ stats?.wolse?.count ?? 0 }}건
-        </p>
+      <div>
+        <span class="block text-slate-500 text-xs font-bold">월세</span>
+        <strong class="block mt-1 text-sm md:text-base font-bold text-slate-900 truncate">
+          보증금 {{ stats?.wolse?.avgDeposit ? formatDeposit(stats.wolse.avgDeposit) : '-' }}
+        </strong>
+        <strong class="block text-sm md:text-base font-bold text-slate-900 truncate">
+          월 {{ stats?.wolse?.avgMonthlyRent ? formatMonthlyRent(stats.wolse.avgMonthlyRent) : '-' }}
+        </strong>
+        <p class="mt-1 text-xs text-slate-500">거래 {{ stats?.wolse?.count ?? 0 }}건</p>
       </div>
     </div>
   </div>

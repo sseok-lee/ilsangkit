@@ -32,7 +32,7 @@
         :description="heroDescription"
       >
         <template #sidebar>
-          <div v-if="heroTags.length" class="flex flex-wrap gap-2 self-end">
+          <div v-if="heroTags.length" class="sm:col-span-3 flex flex-wrap gap-2">
             <span
               v-for="tag in heroTags"
               :key="tag"
