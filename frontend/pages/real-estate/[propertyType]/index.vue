@@ -1,53 +1,27 @@
 <template>
-  <div class="bg-background-light">
-    <!-- 히어로 -->
-    <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
-      <div class="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
-          {{ propertyMeta?.label }} 실거래가
-        </h1>
-        <p class="mt-2 text-slate-500 text-sm">{{ propertyDescription }}</p>
-      </div>
-    </div>
+  <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-6 pb-10 flex flex-col gap-4">
+    <!-- Breadcrumb -->
+    <Breadcrumb :items="breadcrumbItems" />
 
-    <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
+    <!-- Hero -->
+    <PageHero
+      eyebrow="부동산 목록"
+      :title="`${propertyMeta?.label ?? ''} 실거래가`"
+      :description="propertyDescription"
+      :stats="heroStats"
+    />
 
-      <!-- 매매/전월세 탭 -->
-      <TransactionModeTab v-model="currentTab" class="mb-6" />
+    <!-- 거래 유형과 지역 -->
+    <SectionBlock heading="거래 유형과 지역" subtext="매매/전월세 탭과 시·도·구·군·단지명을 선택하세요.">
+      <TransactionModeTab v-model="currentTab" class="mb-3" />
+      <RealEstateSearchFilter :type="apiSlug" @search="handleSearch" />
+    </SectionBlock>
 
-      <!-- 검색 필터 -->
-      <RealEstateSearchFilter
-        :type="apiSlug"
-        @search="handleSearch"
-      />
-
-      <!-- 지역 생활 인프라 요약 -->
-      <div v-if="facilityLoading" class="mb-6 flex justify-center py-6">
-        <div class="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-      <div v-else-if="facilityStats" class="mb-6 rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
-        <h3 class="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-[20px]">location_city</span>
-          {{ lastSearch?.district || lastSearch?.city }} 생활 인프라
-        </h3>
-        <div class="flex flex-wrap gap-3">
-          <div
-            v-for="(count, cat) in topFacilityCategories"
-            :key="cat"
-            class="flex items-center gap-1.5 text-sm"
-          >
-            <span class="material-symbols-outlined text-[18px] text-primary">{{ CATEGORY_META[cat as keyof typeof CATEGORY_META]?.icon }}</span>
-            <span class="text-slate-600">{{ CATEGORY_META[cat as keyof typeof CATEGORY_META]?.label }}</span>
-            <span class="font-semibold text-slate-800">{{ count }}개</span>
-          </div>
-        </div>
-        <p class="mt-2 text-xs text-slate-500">총 {{ facilityStats.total.toLocaleString() }}개 시설</p>
-      </div>
-
-      <!-- 결과 -->
-      <div v-if="pending" class="mt-6">
+    <!-- 결과 -->
+    <template v-if="pending">
+      <SectionBlock heading="건물 목록" subtext="지역 선택 후 결과가 표시됩니다.">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-slate-200 animate-pulse">
+          <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
             <div class="flex gap-3">
               <div class="shrink-0 w-10 h-10 rounded-lg bg-slate-200"></div>
               <div class="flex-1 space-y-2">
@@ -61,32 +35,35 @@
             </div>
           </div>
         </div>
-      </div>
+      </SectionBlock>
+    </template>
 
-      <div v-else-if="error" class="rounded-xl bg-red-50 p-8 text-center">
-        <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
-          <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+    <template v-else-if="error">
+      <SectionBlock heading="건물 목록">
+        <div class="rounded-xl bg-red-50 p-8 text-center">
+          <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+          </div>
+          <p class="text-red-700 font-semibold">데이터를 불러오는 중 오류가 발생했습니다</p>
+          <p class="text-red-500 text-sm mt-1">잠시 후 다시 시도해주세요</p>
+          <button
+            class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            @click="retryLoad"
+          >
+            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            다시 시도
+          </button>
         </div>
-        <p class="text-red-700 font-semibold">데이터를 불러오는 중 오류가 발생했습니다</p>
-        <p class="text-red-500 text-sm mt-1">잠시 후 다시 시도해주세요</p>
-        <button
-          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-          @click="retryLoad"
-        >
-          <span class="material-symbols-outlined text-[16px]">refresh</span>
-          다시 시도
-        </button>
-      </div>
+      </SectionBlock>
+    </template>
 
-      <div v-else-if="complexes.length > 0" class="mt-6">
-        <!-- Ad: 건물 목록 위 -->
-        <AdBanner />
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-slate-800">건물 목록</h2>
-          <span class="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
+    <template v-else-if="complexes.length > 0">
+      <SectionBlock heading="건물 목록" subtext="최근 거래가 있는 건물부터 확인하세요.">
+        <template #right>
+          <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
             {{ totalComplexes.toLocaleString() }}건
           </span>
-        </div>
+        </template>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <ComplexCard
             v-for="complex in complexes"
@@ -96,47 +73,75 @@
             :tab="currentTab"
           />
         </div>
-
-        <!-- Ad: 건물 목록 중간 -->
-        <AdBanner class="my-6" />
-
+        <!-- Ad: 건물 목록 이후 -->
+        <AdBanner class="mt-4" />
         <!-- 페이지네이션 -->
         <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
-      </div>
+      </SectionBlock>
+    </template>
 
-      <div v-else-if="!pending" class="rounded-xl bg-slate-50 p-12 text-center">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-white flex items-center justify-center shadow-sm">
-          <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp?v2`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
+    <template v-else>
+      <SectionBlock heading="건물 목록">
+        <div class="rounded-xl bg-slate-50 p-12 text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-white flex items-center justify-center shadow-card">
+            <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp?v2`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
+          </div>
+          <p class="text-slate-700 font-semibold text-lg">지역을 선택해주세요</p>
+          <p class="text-slate-500 text-sm mt-1">시/도와 구/군을 선택하면 거래 내역을 확인할 수 있습니다</p>
         </div>
-        <p class="text-slate-700 font-semibold text-lg">지역을 선택해주세요</p>
-        <p class="text-slate-500 text-sm mt-1">시/도와 구/군을 선택하면 거래 내역을 확인할 수 있습니다</p>
+      </SectionBlock>
+    </template>
+
+    <!-- 지역 생활 인프라 (검색 후에만 노출) -->
+    <SectionBlock
+      v-if="facilityStats || facilityLoading"
+      heading="지역 생활 인프라"
+      :subtext="lastSearch?.district || lastSearch?.city ? `${lastSearch?.district || lastSearch?.city} 주변 시설 밀집도` : '부동산 판단에 필요한 주변 인프라를 확인하세요.'"
+    >
+      <div v-if="facilityLoading" class="flex justify-center py-6">
+        <div class="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
-
-      <!-- Ad: FAQ 섹션 전 -->
-      <AdBanner />
-
-      <!-- FAQ -->
-      <section v-if="faqs.length > 0" class="mt-12">
-        <h2 class="text-lg font-bold text-slate-800 mb-4">자주 묻는 질문</h2>
-        <div class="space-y-3">
-          <details
-            v-for="(faq, i) in faqs"
-            :key="i"
-            class="group rounded-xl border border-slate-200 bg-white"
+      <div v-else-if="facilityStats">
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink
+            v-for="(count, cat) in topFacilityCategories"
+            :key="cat"
+            :to="`/${cat}`"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 transition-all"
           >
-            <summary class="cursor-pointer px-5 py-4 text-base font-medium text-slate-800 flex items-center justify-between">
-              {{ faq.q }}
-              <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
-            </summary>
-            <p class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
-          </details>
+            <span class="material-symbols-outlined text-[16px] text-primary">{{ CATEGORY_META[cat as keyof typeof CATEGORY_META]?.icon }}</span>
+            <span>{{ CATEGORY_META[cat as keyof typeof CATEGORY_META]?.label }}</span>
+            <span class="font-bold">{{ count }}곳</span>
+          </NuxtLink>
         </div>
-      </section>
+        <p class="mt-3 text-xs text-slate-500">총 {{ facilityStats.total.toLocaleString() }}개 시설</p>
+      </div>
+    </SectionBlock>
 
-      <section class="mt-12">
-        <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
-      </section>
-    </main>
+    <!-- Ad: FAQ 전 -->
+    <AdBanner />
+
+    <!-- FAQ -->
+    <SectionBlock v-if="faqs.length > 0" heading="자주 묻는 질문">
+      <div class="space-y-1">
+        <details
+          v-for="(faq, i) in faqs"
+          :key="i"
+          class="group border-b border-line last:border-b-0"
+        >
+          <summary class="cursor-pointer py-3 text-base font-medium text-slate-800 flex items-center justify-between hover:text-primary">
+            {{ faq.q }}
+            <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
+          </summary>
+          <p class="pb-3 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
+        </details>
+      </div>
+    </SectionBlock>
+
+    <!-- 데이터 출처 -->
+    <section>
+      <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
+    </section>
   </div>
 </template>
 
@@ -150,6 +155,9 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -372,6 +380,23 @@ async function fetchFacilitySummary(city: string, district?: string) {
     facilityLoading.value = false
   }
 }
+
+// Breadcrumb + hero stats
+const breadcrumbItems = computed(() => [
+  { label: '홈', href: '/', current: false },
+  { label: '부동산', href: '/real-estate', current: false },
+  { label: propertyMeta.value?.label ?? propertyTypeParam.value, href: `/real-estate/${propertyTypeParam.value}`, current: true },
+])
+
+const heroStats = computed(() => {
+  const stats: { label: string; value: string }[] = []
+  if (totalComplexes.value > 0) {
+    stats.push({ label: `${propertyMeta.value?.label ?? ''} 거래`, value: `${totalComplexes.value.toLocaleString('ko-KR')}건` })
+  }
+  stats.push({ label: '보기 방식', value: '매매 / 전월세' })
+  stats.push({ label: '함께 보기', value: '지역 생활 인프라' })
+  return stats
+})
 
 const topFacilityCategories = computed(() => {
   if (!facilityStats.value) return {}
