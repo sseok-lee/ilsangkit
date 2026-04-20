@@ -1,232 +1,136 @@
 <template>
   <div class="bg-background-light text-slate-900 font-display min-h-screen">
-    <!-- 히어로 -->
-    <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
-      <div class="max-w-6xl mx-auto px-4 py-8 md:px-6 md:py-10">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
-          {{ pageTitle }}
-        </h1>
-        <p class="mt-2 text-slate-500 text-sm">
-          {{ pageDescription }}
-        </p>
-      </div>
-    </div>
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-6 pb-10 flex flex-col gap-4">
+      <!-- Breadcrumb -->
+      <Breadcrumb :items="breadcrumbItems" />
 
-    <!-- Main Content -->
-    <div class="max-w-6xl mx-auto px-4 md:px-6 pb-8">
+      <!-- Hero -->
+      <PageHero
+        :eyebrow="categoryParam === 'trash' ? '쓰레기 배출 목록' : '생활시설 목록'"
+        :title="pageTitle"
+        :description="pageDescription"
+        :stats="heroStats"
+      />
+
       <!-- Error State -->
       <div
         v-if="facilityError"
         role="alert"
-        class="p-5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm mb-4"
+        class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
       >
         {{ facilityError }}
       </div>
 
-      <!-- Category Intro -->
-      <CategoryIntro :category="categoryParam" />
-
-      <!-- Related Categories -->
-      <div v-if="relatedCategories.length > 0" class="flex flex-wrap items-center gap-2 mb-4">
-        <span class="text-sm text-gray-500">관련 카테고리</span>
-        <NuxtLink
-          v-for="cat in relatedCategories"
-          :key="cat.slug"
-          :to="`/${cat.slug}`"
-          class="px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-sm transition-colors"
-        >
-          {{ cat.label }}
-        </NuxtLink>
-      </div>
-
-      <!-- Region Filter -->
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
-        <div class="flex items-center gap-2 mb-3 md:hidden">
-          <span class="material-symbols-outlined text-amber-500 text-[20px]">location_city</span>
-          <span class="font-semibold text-slate-900 text-sm">지역 선택</span>
-        </div>
-        <div class="flex flex-col md:flex-row gap-3">
+      <!-- 지역과 키워드 필터 -->
+      <SectionBlock
+        heading="지역과 키워드"
+        :subtext="categoryParam === 'trash' ? '시·군·구와 동을 선택해 배출 정보를 확인하세요.' : '지역을 먼저 선택하면 정확한 목록을 빠르게 찾을 수 있어요.'"
+      >
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <!-- 시/도 선택 -->
-          <div class="flex-1">
+          <div class="relative">
             <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">시/도</label>
-            <div class="relative">
-              <select
-                v-model="selectedCity"
-                aria-label="시/도 선택"
-                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
-                @change="handleCityChange"
-              >
-                <option value="">시/도 선택</option>
-                <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
-              </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
-            </div>
+            <select
+              v-model="selectedCity"
+              aria-label="시/도 선택"
+              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+              @change="handleCityChange"
+            >
+              <option value="">시/도 선택</option>
+              <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-3 bottom-2.5 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
           </div>
           <!-- 구/군 선택 -->
-          <div class="flex-1">
+          <div class="relative">
             <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">구/군</label>
-            <div class="relative">
-              <select
-                v-model="selectedDistrict"
-                :disabled="!selectedCity"
-                aria-label="구/군 선택"
-                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                @change="handleDistrictChange"
-              >
-                <option value="">구/군 선택</option>
-                <option v-for="dist in districtList" :key="dist" :value="dist">{{ dist }}</option>
-              </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
-            </div>
+            <select
+              v-model="selectedDistrict"
+              :disabled="!selectedCity"
+              aria-label="구/군 선택"
+              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              @change="handleDistrictChange"
+            >
+              <option value="">구/군 선택</option>
+              <option v-for="dist in districtList" :key="dist" :value="dist">{{ dist }}</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-3 bottom-2.5 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
           </div>
           <!-- 키워드 검색 -->
-          <div class="flex-1">
+          <div class="relative">
             <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">키워드</label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <span class="material-symbols-outlined text-slate-500 text-[18px]">search</span>
-              </div>
-              <input
-                v-model="filterKeyword"
-                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pl-9 pr-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                type="text"
-                :placeholder="categoryParam === 'trash' ? '동/지역 이름 검색' : '시설명/주소 검색'"
-                @input="handleFilterSearch"
-              />
+            <div class="absolute left-3 bottom-2.5 pointer-events-none">
+              <span class="material-symbols-outlined text-slate-500 text-[18px]">search</span>
             </div>
+            <input
+              v-model="filterKeyword"
+              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 pl-9 pr-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              type="text"
+              :placeholder="categoryParam === 'trash' ? '동/지역 이름 검색' : '시설명/주소 검색'"
+              @input="handleFilterSearch"
+            />
           </div>
         </div>
-      </div>
+      </SectionBlock>
 
       <!-- Ad: Region Filter 후 -->
-      <div class="mb-4">
-        <AdBanner />
-      </div>
+      <AdBanner />
 
       <!-- Trash category: waste schedule UI -->
       <template v-if="categoryParam === 'trash'">
-        <!-- 로딩 상태 -->
-        <div v-if="wasteLoading || initialLoading" class="flex items-center justify-center py-10" role="status" aria-label="배출 일정 로딩 중" aria-live="polite" aria-busy="true">
-          <div class="text-center">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-            <p class="text-slate-500 text-sm">배출 일정 조회 중...</p>
-          </div>
-        </div>
+        <SectionBlock heading="배출 일정" :subtext="`${wasteTotal.toLocaleString('ko-KR')}건 · 지역·동별 배출 요일과 방법`">
+          <template #right>
+            <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ wasteTotal.toLocaleString('ko-KR') }}건</span>
+          </template>
 
-        <!-- 담당 부서 연락처 -->
-        <div v-if="wasteContact && !wasteLoading && !initialLoading" class="bg-blue-50 rounded-xl p-4 border border-blue-100 mb-4">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="material-symbols-outlined text-blue-500 text-[18px]">support_agent</span>
-            <span class="font-semibold text-blue-900 text-sm">{{ wasteContact.name }}</span>
+          <!-- 로딩 상태 -->
+          <div v-if="wasteLoading || initialLoading" class="flex items-center justify-center py-10" role="status" aria-label="배출 일정 로딩 중" aria-live="polite" aria-busy="true">
+            <div class="text-center">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+              <p class="text-slate-500 text-sm">배출 일정 조회 중...</p>
+            </div>
           </div>
-          <a
-            v-if="wasteContact.phone"
-            :href="`tel:${wasteContact.phone}`"
-            class="text-blue-600 text-sm hover:underline flex items-center gap-1"
-          >
-            <span class="material-symbols-outlined text-[16px]">call</span>
-            {{ wasteContact.phone }}
-          </a>
-        </div>
 
-        <!-- 배출 일정 목록 -->
-        <template v-if="wasteSchedules.length > 0 && !wasteLoading && !initialLoading">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-slate-900 text-base font-bold">배출 일정</h2>
-            <span class="text-xs text-slate-500 font-medium">{{ wasteTotal }}건</span>
+          <!-- 담당 부서 연락처 -->
+          <div v-if="wasteContact && !wasteLoading && !initialLoading" class="bg-blue-50 rounded-xl p-4 border border-blue-100 mb-4">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-blue-500 text-[18px]">support_agent</span>
+              <span class="font-semibold text-blue-900 text-sm">{{ wasteContact.name }}</span>
+            </div>
+            <a
+              v-if="wasteContact.phone"
+              :href="`tel:${wasteContact.phone}`"
+              class="text-blue-600 text-sm hover:underline flex items-center gap-1"
+            >
+              <span class="material-symbols-outlined text-[16px]">call</span>
+              {{ wasteContact.phone }}
+            </a>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+          <!-- 배출 일정 목록 -->
+          <div v-if="wasteSchedules.length > 0 && !wasteLoading && !initialLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <WasteScheduleCard
               v-for="region in wasteSchedules"
               :key="region.id"
               :region="region"
             />
           </div>
-        </template>
 
-        <!-- 쓰레기 페이지네이션 -->
-        <Pagination v-if="!wasteLoading && !initialLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" @page-change="goToWastePage" />
+          <!-- 페이지네이션 -->
+          <Pagination v-if="!wasteLoading && !initialLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" @page-change="goToWastePage" />
 
-        <!-- 결과 없음 -->
-        <div v-if="wasteSchedules.length === 0 && !wasteLoading && !initialLoading" class="py-16 text-center">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-            <span class="material-symbols-outlined text-[32px] text-slate-500">delete</span>
-          </div>
-          <p class="text-slate-700 font-semibold text-lg">등록된 배출 일정이 없습니다</p>
-          <p class="text-slate-500 text-sm mt-1 mb-6">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
-          <div class="flex items-center justify-center gap-3">
-            <button
-              v-if="selectedCity || selectedDistrict"
-              class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-              @click="selectedCity = ''; selectedDistrict = ''; filterKeyword = ''; loadWasteSchedules()"
-            >
-              <span class="material-symbols-outlined text-[16px]">refresh</span>
-              필터 초기화
-            </button>
-            <NuxtLink
-              to="/"
-              class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
-            >
-              <span class="material-symbols-outlined text-[16px]">home</span>
-              홈으로 돌아가기
-            </NuxtLink>
-          </div>
-        </div>
-      </template>
-
-      <!-- Non-trash: facility card grid -->
-      <template v-else>
-        <!-- Results bar: title + count -->
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-slate-900 text-base font-bold">
-            {{ resultTitle }}
-          </h2>
-          <span class="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
-            {{ displayTotal }}건
-          </span>
-        </div>
-
-        <!-- Loading Skeleton -->
-        <div v-if="loading || initialLoading" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-slate-200 animate-pulse">
-              <div class="flex items-start gap-4">
-                <div class="shrink-0 w-12 h-12 rounded-full bg-slate-200"></div>
-                <div class="flex-1 space-y-2.5">
-                  <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-                  <div class="h-3 bg-slate-100 rounded w-full"></div>
-                  <div class="flex gap-2 mt-1">
-                    <div class="h-5 bg-slate-100 rounded-md w-14"></div>
-                    <div class="h-5 bg-slate-100 rounded-md w-20"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <template v-else-if="!initialLoading">
-          <!-- Card Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FacilityCard
-              v-for="facility in displayFacilities"
-              :key="facility.id"
-              :facility="facility"
-            />
-          </div>
-
-          <!-- Empty State -->
-          <div v-if="displayFacilities.length === 0" class="py-16 text-center">
+          <!-- 결과 없음 -->
+          <div v-if="wasteSchedules.length === 0 && !wasteLoading && !initialLoading" class="py-12 text-center">
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-              <span class="material-symbols-outlined text-[32px] text-slate-500">{{ categoryMeta?.icon || 'search_off' }}</span>
+              <span class="material-symbols-outlined text-[32px] text-slate-500">delete</span>
             </div>
-            <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-            <p class="text-slate-500 text-sm mt-1 mb-6">다른 지역이나 검색어를 시도해보세요</p>
+            <p class="text-slate-700 font-semibold text-lg">등록된 배출 일정이 없습니다</p>
+            <p class="text-slate-500 text-sm mt-1 mb-6">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
             <div class="flex items-center justify-center gap-3">
               <button
-                v-if="selectedCity || selectedDistrict || filterKeyword"
+                v-if="selectedCity || selectedDistrict"
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-                @click="selectedCity = ''; selectedDistrict = ''; filterKeyword = ''; performSearch()"
+                @click="selectedCity = ''; selectedDistrict = ''; filterKeyword = ''; loadWasteSchedules()"
               >
                 <span class="material-symbols-outlined text-[16px]">refresh</span>
                 필터 초기화
@@ -240,50 +144,129 @@
               </NuxtLink>
             </div>
           </div>
-
-          <!-- Pagination -->
-          <Pagination :current-page="currentPage" :total-pages="displayTotalPages" @page-change="goToPage" />
-        </template>
+        </SectionBlock>
       </template>
 
-      <!-- Ad: FAQ 섹션 전 -->
+      <!-- Non-trash: facility card grid -->
+      <template v-else>
+        <SectionBlock :heading="`${resultTitle} ${catLabel} 목록`" subtext="지역 선택 후 목록·페이지를 확인하세요.">
+          <template #right>
+            <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ displayTotal.toLocaleString('ko-KR') }}건</span>
+          </template>
+
+          <!-- Loading Skeleton -->
+          <div v-if="loading || initialLoading" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
+                <div class="flex items-start gap-4">
+                  <div class="shrink-0 w-12 h-12 rounded-full bg-slate-200"></div>
+                  <div class="flex-1 space-y-2.5">
+                    <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                    <div class="h-3 bg-slate-100 rounded w-full"></div>
+                    <div class="flex gap-2 mt-1">
+                      <div class="h-5 bg-slate-100 rounded-md w-14"></div>
+                      <div class="h-5 bg-slate-100 rounded-md w-20"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <template v-else-if="!initialLoading">
+            <!-- Card Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <FacilityCard
+                v-for="facility in displayFacilities"
+                :key="facility.id"
+                :facility="facility"
+              />
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="displayFacilities.length === 0" class="py-12 text-center">
+              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[32px] text-slate-500">{{ categoryMeta?.icon || 'search_off' }}</span>
+              </div>
+              <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
+              <p class="text-slate-500 text-sm mt-1 mb-6">다른 지역이나 검색어를 시도해보세요</p>
+              <div class="flex items-center justify-center gap-3">
+                <button
+                  v-if="selectedCity || selectedDistrict || filterKeyword"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                  @click="selectedCity = ''; selectedDistrict = ''; filterKeyword = ''; performSearch()"
+                >
+                  <span class="material-symbols-outlined text-[16px]">refresh</span>
+                  필터 초기화
+                </button>
+                <NuxtLink
+                  to="/"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+                >
+                  <span class="material-symbols-outlined text-[16px]">home</span>
+                  홈으로 돌아가기
+                </NuxtLink>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            <Pagination :current-page="currentPage" :total-pages="displayTotalPages" @page-change="goToPage" />
+          </template>
+        </SectionBlock>
+      </template>
+
+      <!-- Ad: 결과 뒤 -->
       <AdBanner />
 
-      <!-- FAQ Section -->
-      <section v-if="faqItems && faqItems.length > 0" class="mt-12">
-        <h2 class="text-lg font-semibold mb-4">자주 묻는 질문</h2>
-        <div class="space-y-1">
-          <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-gray-200">
-            <summary class="py-3 cursor-pointer font-medium text-gray-800 hover:text-blue-600">
-              {{ faq.question }}
-            </summary>
-            <p class="pb-3 text-gray-600 text-sm leading-relaxed">{{ faq.answer }}</p>
-          </details>
+      <!-- 관련 탐색 -->
+      <SectionBlock
+        v-if="relatedCategories.length > 0 || popularRegionLinks.length > 0"
+        heading="관련 탐색"
+        subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요."
+      >
+        <div v-if="relatedCategories.length > 0" class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-slate-500 font-medium pr-1">관련 카테고리</span>
+          <NuxtLink
+            v-for="cat in relatedCategories"
+            :key="cat.slug"
+            :to="`/${cat.slug}`"
+            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+          >
+            {{ cat.label }}
+          </NuxtLink>
         </div>
-      </section>
-
-      <!-- 관련 가이드 -->
-      <ClientOnly>
-        <RelatedGuides :category="categoryParam" class="mt-8" />
-      </ClientOnly>
-
-      <!-- Popular Regions -->
-      <section v-if="popularRegionLinks.length > 0" class="mt-8">
-        <h2 class="text-lg font-semibold mb-4">인기 지역</h2>
-        <div class="flex flex-wrap gap-2">
+        <div v-if="popularRegionLinks.length > 0" class="flex flex-wrap items-center gap-2 mt-3">
+          <span class="text-xs text-slate-500 font-medium pr-1">인기 지역</span>
           <NuxtLink
             v-for="region in popularRegionLinks"
             :key="`${region.citySlug}-${region.districtSlug}`"
             :to="`/${region.citySlug}/${region.districtSlug}/${categoryParam}`"
-            class="px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-sm transition-colors"
+            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
           >
             {{ region.label }} {{ catLabel }}
           </NuxtLink>
         </div>
-      </section>
+      </SectionBlock>
+
+      <!-- FAQ Section -->
+      <SectionBlock v-if="faqItems && faqItems.length > 0" heading="자주 묻는 질문">
+        <div class="space-y-1">
+          <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-line last:border-b-0">
+            <summary class="py-3 cursor-pointer font-medium text-slate-800 hover:text-primary">
+              {{ faq.question }}
+            </summary>
+            <p class="pb-3 text-slate-600 text-sm leading-relaxed">{{ faq.answer }}</p>
+          </details>
+        </div>
+      </SectionBlock>
+
+      <!-- 관련 가이드 -->
+      <ClientOnly>
+        <RelatedGuides :category="categoryParam" />
+      </ClientOnly>
 
       <!-- 데이터 출처 -->
-      <section v-if="categoryDataSource" class="mt-8">
+      <section v-if="categoryDataSource">
         <DataSourceCard :source="categoryDataSource" />
       </section>
     </div>
@@ -302,6 +285,9 @@ import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { RELATED_CATEGORIES, POPULAR_REGIONS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
@@ -483,6 +469,34 @@ if (categoryFAQ && categoryFAQ.length > 0) {
 
 // Popular regions
 const popularRegionLinks = computed(() => POPULAR_REGIONS || [])
+
+// Breadcrumb
+const breadcrumbItems = computed(() => [
+  { label: '홈', href: '/', current: false },
+  {
+    label: catLabel,
+    href: `/${categoryParam.value}`,
+    current: true,
+  },
+])
+
+// PageHero sidebar stats
+const heroStats = computed(() => {
+  const totalCount = categoryParam.value === 'trash' ? wasteTotal.value : displayTotal.value
+  const stats: { label: string; value: string }[] = []
+  if (totalCount > 0) {
+    stats.push({ label: '전체', value: `${totalCount.toLocaleString('ko-KR')}${categoryParam.value === 'trash' ? '건' : '곳'}` })
+  }
+  stats.push({
+    label: '데이터 갱신',
+    value: categoryParam.value === 'trash' ? '매일 자동' : '월 1회 자동',
+  })
+  stats.push({
+    label: '목록 기준',
+    value: categoryParam.value === 'trash' ? '시·군·구 / 동' : '지역 선택 후 정렬',
+  })
+  return stats
+})
 
 // Canonical URL: city+district → region route, city only → city route, otherwise self
 const canonicalPath = computed(() => {
