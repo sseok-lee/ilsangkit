@@ -1,85 +1,63 @@
 <template>
   <div class="bg-background-light text-slate-900 font-display min-h-screen">
-    <!-- Mobile Search Bar -->
-    <header class="md:hidden sticky top-0 z-30 bg-background-light/95 backdrop-blur-md transition-colors duration-200">
-      <div class="px-4 py-3">
-        <div class="relative group">
-          <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <span class="material-symbols-outlined text-slate-500 text-[20px]">search</span>
-          </div>
-          <input
-            v-model="searchKeyword"
-            aria-label="시설 검색"
-            class="w-full bg-white border-none rounded-2xl py-3 pl-10 pr-10 text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-primary/20 shadow-sm text-base font-medium"
-            type="text"
-            placeholder="장소를 검색하세요..."
-            @keyup.enter="handleSearch"
-          />
-          <button
-            v-if="searchKeyword"
-            aria-label="검색어 지우기"
-            class="absolute inset-y-0 right-3 flex items-center cursor-pointer"
-            @click="clearSearch"
-          >
-            <span class="material-symbols-outlined text-slate-500 hover:text-slate-600 text-[20px]">cancel</span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="max-w-6xl mx-auto px-4 md:px-6 py-4">
-      <!-- Desktop Search Bar (replaces removed custom header) -->
-      <div class="hidden md:block mb-4">
-        <div class="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm border border-slate-200">
-          <div class="flex-1 relative">
-            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-6 pb-10 flex flex-col gap-4">
+      <!-- Hero -->
+      <PageHero
+        eyebrow="통합 검색"
+        :title="heroTitle"
+        :description="heroDescription"
+        :stats="heroStats"
+      >
+        <template #search>
+          <div class="flex items-center gap-2 bg-white rounded-lg p-1.5 border-2 border-slate-300 focus-within:border-primary">
+            <div class="flex items-center pl-2 pr-1 pointer-events-none">
               <span class="material-symbols-outlined text-slate-500 text-[20px]">search</span>
             </div>
             <input
               v-model="searchKeyword"
               aria-label="시설 검색"
-              class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pl-10 pr-10 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              class="flex-1 min-w-0 bg-transparent text-slate-900 text-sm font-medium focus:outline-none"
               type="text"
-              placeholder="장소를 검색하세요..."
+              placeholder="장소·단지명·시설명을 검색하세요"
               @keyup.enter="handleSearch"
             />
             <button
               v-if="searchKeyword"
               aria-label="검색어 지우기"
-              class="absolute inset-y-0 right-3 flex items-center cursor-pointer"
+              class="p-1 text-slate-500 hover:text-slate-700"
               @click="clearSearch"
             >
-              <span class="material-symbols-outlined text-slate-500 hover:text-slate-600 text-[20px]">cancel</span>
+              <span class="material-symbols-outlined text-[18px]">cancel</span>
+            </button>
+            <button
+              class="inline-flex items-center justify-center min-w-[72px] min-h-[40px] px-3 bg-primary text-white rounded-lg text-sm font-bold"
+              @click="handleSearch"
+            >
+              다시 검색
             </button>
           </div>
-        </div>
-      </div>
+        </template>
+      </PageHero>
 
       <!-- Error State -->
       <div
         v-if="error"
         role="alert"
-        class="p-5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm mb-4"
+        class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
       >
         {{ error }}
       </div>
 
-      <!-- Region Filter Card -->
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
-        <div class="flex items-center gap-2 mb-3 md:hidden">
-          <span class="material-symbols-outlined text-amber-500 text-[20px]">location_city</span>
-          <span class="font-semibold text-slate-900 text-sm">지역 선택</span>
-        </div>
-        <div class="flex flex-col md:flex-row gap-3">
-          <!-- 시/도 선택 -->
-          <div class="flex-1">
-            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">시/도</label>
+      <!-- 지역 필터 -->
+      <SectionBlock heading="지역" subtext="시·도·구·군으로 결과를 좁힐 수 있습니다.">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">시/도</label>
             <div class="relative">
               <select
                 v-model="selectedCity"
                 aria-label="시/도 선택"
-                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+                class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
                 @change="handleCityChange"
               >
                 <option value="">시/도 선택</option>
@@ -88,15 +66,14 @@
               <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
             </div>
           </div>
-          <!-- 구/군 선택 -->
-          <div class="flex-1">
-            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">구/군</label>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">구/군</label>
             <div class="relative">
               <select
                 v-model="selectedDistrict"
                 :disabled="!selectedCity"
                 aria-label="구/군 선택"
-                class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 @change="handleDistrictChange"
               >
                 <option value="">구/군 선택</option>
@@ -106,114 +83,116 @@
             </div>
           </div>
         </div>
-      </div>
+      </SectionBlock>
 
       <!-- 데이터 의존 영역: isMounted 가드로 hydration mismatch 방지 -->
       <template v-if="isMounted">
-      <!-- 시설/부동산 탭 -->
-      <div v-if="groupedResults.length > 0 || realEstateResults.length > 0" class="flex gap-2 mb-4" role="tablist" aria-label="검색 결과 필터">
-        <button
-          role="tab"
-          :aria-selected="searchTab === 'all'"
-          :class="[
-            'px-4 py-2 rounded-full text-sm font-semibold transition-colors border',
-            searchTab === 'all'
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
-          ]"
-          @click="searchTab = 'all'"
-        >
-          전체
-        </button>
-        <button
-          role="tab"
-          :aria-selected="searchTab === 'realEstate'"
-          :class="[
-            'px-4 py-2 rounded-full text-sm font-semibold transition-colors border',
-            searchTab === 'realEstate'
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
-            realEstateResults.length === 0 ? 'opacity-50 cursor-not-allowed' : '',
-          ]"
-          :disabled="realEstateResults.length === 0"
-          @click="searchTab = 'realEstate'"
-        >
-          부동산
-        </button>
-        <button
-          role="tab"
-          :aria-selected="searchTab === 'facility'"
-          :class="[
-            'px-4 py-2 rounded-full text-sm font-semibold transition-colors border',
-            searchTab === 'facility'
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
-            groupedResults.length === 0 ? 'opacity-50 cursor-not-allowed' : '',
-          ]"
-          :disabled="groupedResults.length === 0"
-          @click="searchTab = 'facility'"
-        >
-          생활시설
-        </button>
-      </div>
-
-      <!-- 통합 Category Chip Bar -->
-      <div v-if="groupedResults.length > 0 || selectedCategory || realEstateResults.length > 0" class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-4">
-        <!-- 전체 버튼 -->
-        <button
-          :class="[
-            'shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border',
-            !selectedCategory && !selectedRealEstateType
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
-          ]"
-          @click="clearChipFilter"
-        >
-          전체
-        </button>
-        <!-- 부동산 유형 chips (전체/부동산 탭) -->
-        <template v-if="searchTab !== 'facility' && realEstateResults.length > 0">
-          <button
-            v-for="group in realEstateGrouped"
-            :key="group.propertyType"
-            :class="[
-              'shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5',
-              selectedRealEstateType === group.propertyType
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
-            ]"
-            @click="selectRealEstateType(group.propertyType)"
-          >
-            <img :src="`/icons/category/${group.iconImg}.webp?v2`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
-            {{ group.label }}
-          </button>
+      <!-- 결과 타입 -->
+      <SectionBlock
+        v-if="groupedResults.length > 0 || realEstateResults.length > 0 || selectedCategory"
+        heading="결과 타입"
+        subtext="큰 타입부터 고르면 결과가 빠르게 좁혀집니다."
+      >
+        <template #right>
+          <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+            {{ displayTotalCount.toLocaleString('ko-KR') }}건
+          </span>
         </template>
-        <!-- 시설 카테고리 chips (전체/시설 탭) -->
-        <template v-if="searchTab !== 'realEstate'">
-          <button
-            v-for="group in sortedGroupedResults"
-            :key="group.category"
-            :class="[
-              'shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5',
-              selectedCategory === group.category
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40',
-            ]"
-            @click="selectCategory(group.category)"
-          >
-            <img :src="`/icons/category/${group.category}.webp?v2`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
-            {{ CATEGORY_META[group.category]?.shortLabel || group.label }}
-          </button>
-        </template>
-      </div>
 
-      <!-- Results count -->
-      <div class="flex items-center justify-between mb-4">
-        <h1 class="text-slate-900 text-base font-bold">
-          {{ searchTitle }}
-        </h1>
-        <span class="text-xs text-slate-500 font-medium">{{ displayTotalCount }}건</span>
-      </div>
+        <!-- 시설/부동산 탭 -->
+        <div v-if="groupedResults.length > 0 || realEstateResults.length > 0" class="flex gap-2 mb-3" role="tablist" aria-label="검색 결과 필터">
+          <button
+            role="tab"
+            :aria-selected="searchTab === 'all'"
+            :class="[
+              'px-3.5 py-1.5 rounded-full text-sm font-bold transition-colors border',
+              searchTab === 'all'
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary',
+            ]"
+            @click="searchTab = 'all'"
+          >
+            전체
+          </button>
+          <button
+            role="tab"
+            :aria-selected="searchTab === 'realEstate'"
+            :class="[
+              'px-3.5 py-1.5 rounded-full text-sm font-bold transition-colors border',
+              searchTab === 'realEstate'
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary',
+              realEstateResults.length === 0 ? 'opacity-50 cursor-not-allowed' : '',
+            ]"
+            :disabled="realEstateResults.length === 0"
+            @click="searchTab = 'realEstate'"
+          >
+            부동산
+          </button>
+          <button
+            role="tab"
+            :aria-selected="searchTab === 'facility'"
+            :class="[
+              'px-3.5 py-1.5 rounded-full text-sm font-bold transition-colors border',
+              searchTab === 'facility'
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary',
+              groupedResults.length === 0 ? 'opacity-50 cursor-not-allowed' : '',
+            ]"
+            :disabled="groupedResults.length === 0"
+            @click="searchTab = 'facility'"
+          >
+            생활시설
+          </button>
+        </div>
+
+        <!-- 세부 카테고리 chip bar -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button
+            :class="[
+              'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border',
+              !selectedCategory && !selectedRealEstateType
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary',
+            ]"
+            @click="clearChipFilter"
+          >
+            전체
+          </button>
+          <template v-if="searchTab !== 'facility' && realEstateResults.length > 0">
+            <button
+              v-for="group in realEstateGrouped"
+              :key="group.propertyType"
+              :class="[
+                'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5',
+                selectedRealEstateType === group.propertyType
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary',
+              ]"
+              @click="selectRealEstateType(group.propertyType)"
+            >
+              <img :src="`/icons/category/${group.iconImg}.webp?v2`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
+              {{ group.label }}
+            </button>
+          </template>
+          <template v-if="searchTab !== 'realEstate'">
+            <button
+              v-for="group in sortedGroupedResults"
+              :key="group.category"
+              :class="[
+                'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5',
+                selectedCategory === group.category
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary',
+              ]"
+              @click="selectCategory(group.category)"
+            >
+              <img :src="`/icons/category/${group.category}.webp?v2`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
+              {{ CATEGORY_META[group.category]?.shortLabel || group.label }}
+            </button>
+          </template>
+        </div>
+      </SectionBlock>
 
       <!-- Ad: 검색결과 전 -->
       <AdBanner />
@@ -471,6 +450,8 @@ import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import type { RealEstateType, ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import ComplexCard from '~/components/realEstate/ComplexCard.vue'
+import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const route = useRoute()
 const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
@@ -682,6 +663,32 @@ const displayTotalCount = computed(() => {
     return reTotal.value
   }
   return groupedTotalCount.value + realEstateTotalCount.value
+})
+
+// Hero content
+const heroTitle = computed(() => {
+  if (searchKeyword.value) return `"${searchKeyword.value}" 검색 결과`
+  return '통합 검색'
+})
+const heroDescription = computed(() => {
+  if (searchKeyword.value) {
+    return '부동산 실거래가와 생활시설 결과를 함께 확인하세요.'
+  }
+  return '장소, 단지명, 주소, 시설명으로 생활시설과 부동산을 한 번에 검색하세요.'
+})
+const heroStats = computed(() => {
+  const stats: { label: string; value: string }[] = []
+  stats.push({ label: '부동산', value: realEstateTotalCount.value > 0 ? `${realEstateTotalCount.value.toLocaleString('ko-KR')}건` : '—' })
+  stats.push({ label: '생활시설', value: groupedTotalCount.value > 0 ? `${groupedTotalCount.value.toLocaleString('ko-KR')}곳` : '—' })
+  if (selectedCity.value || selectedDistrict.value) {
+    const region = [selectedCity.value, selectedDistrict.value].filter(Boolean).join(' ')
+    stats.push({ label: '검색 지역', value: region })
+  } else if (searchKeyword.value) {
+    stats.push({ label: '검색어', value: searchKeyword.value })
+  } else {
+    stats.push({ label: '추천', value: '지역 또는 시설명' })
+  }
+  return stats
 })
 
 // Build common search params
