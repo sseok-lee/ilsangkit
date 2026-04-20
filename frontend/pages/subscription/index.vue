@@ -61,11 +61,32 @@
       <!-- Ad Banner -->
       <AdBanner />
 
+      <!-- 청약중 미리보기 -->
+      <section v-if="ongoingItems.length > 0" class="mt-8">
+        <div class="flex items-center gap-2 mb-4">
+          <img src="/icons/category/subscription.webp?v2" alt="청약중" class="w-6 h-6" width="24" height="24" />
+          <h2 class="text-xl font-bold text-slate-900">청약중</h2>
+          <span class="inline-flex px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+            {{ ongoingItems.length }}
+          </span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SubscriptionCard
+            v-for="sub in ongoingItems"
+            :key="sub.id"
+            :subscription="sub"
+          />
+        </div>
+      </section>
+
       <!-- 접수예정 미리보기 -->
       <section v-if="upcomingItems.length > 0" class="mt-8">
         <div class="flex items-center gap-2 mb-4">
           <img src="/icons/category/subscription.webp?v2" alt="접수예정" class="w-6 h-6" width="24" height="24" />
           <h2 class="text-xl font-bold text-slate-900">접수예정 청약</h2>
+          <span class="inline-flex px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+            {{ upcomingItems.length }}
+          </span>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <SubscriptionCard
@@ -131,13 +152,21 @@ const faqs = [
 
 const { setFAQSchema, setBreadcrumbSchema } = useStructuredData()
 
-const { getUpcomingSubscriptions } = useSubscription()
+const { getUpcomingSubscriptions, getSubscriptionList } = useSubscription()
 
 const upcomingItems = ref<Subscription[]>([])
+const ongoingItems = ref<Subscription[]>([])
 
-const { data } = await useAsyncData('subscription-upcoming', () => getUpcomingSubscriptions())
-if (data.value) {
-  upcomingItems.value = data.value
+const { data: upcomingData } = await useAsyncData('subscription-upcoming', () => getUpcomingSubscriptions())
+if (upcomingData.value) {
+  upcomingItems.value = upcomingData.value
+}
+
+const { data: ongoingData } = await useAsyncData('subscription-ongoing', () =>
+  getSubscriptionList({ status: 'ongoing', page: 1, limit: 6 })
+)
+if (ongoingData.value) {
+  ongoingItems.value = ongoingData.value.items
 }
 
 setFAQSchema(faqs.map(f => ({ question: f.question, answer: f.answer })))
