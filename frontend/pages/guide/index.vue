@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-6 pb-10 flex flex-col gap-4">
+  <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
@@ -47,7 +47,7 @@
       </div>
 
       <!-- Guide Cards Grid -->
-      <div v-else-if="guides.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+      <div v-else-if="guides.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <NuxtLink
           v-for="guide in guides"
           :key="guide.id"

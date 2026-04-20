@@ -1,14 +1,14 @@
 <template>
   <div class="flex flex-col">
     <!-- Hero Section -->
-    <section class="relative overflow-hidden px-4 sm:px-6 pb-8 pt-4 md:pt-16 md:pb-12">
+    <section class="relative overflow-hidden px-4 sm:px-6 pb-6 pt-4 md:pt-10 md:pb-8">
       <!-- 배경 이미지 레이어 -->
       <div class="absolute inset-0 opacity-10 md:opacity-[0.08]">
         <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="일상킷 생활 정보 서비스" sizes="100vw" />
       </div>
-      <div class="absolute bottom-0 left-0 right-0 h-12 md:h-16 bg-background-light/80"></div>
+      <div class="absolute bottom-0 left-0 right-0 h-10 md:h-12 bg-background-light/80"></div>
 
-      <div class="relative z-10 flex flex-col gap-6 md:max-w-3xl md:mx-auto md:items-center md:text-center">
+      <div class="relative z-10 flex flex-col gap-4 md:max-w-3xl md:mx-auto md:items-center md:text-center">
         <div class="flex flex-col gap-2 pt-4">
           <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
           <div class="text-slate-900 tracking-tight text-[32px] font-bold leading-[1.2] md:text-5xl md:font-black md:leading-tight">
@@ -18,7 +18,7 @@
         </div>
 
         <!-- 검색바 -->
-        <div class="w-full md:max-w-[560px] md:mt-4">
+        <div class="w-full md:max-w-[560px] md:mt-2">
           <label class="relative block">
             <div class="flex items-stretch h-14 md:h-auto rounded-xl md:rounded-2xl bg-white border border-slate-200 md:border-2 shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-slate-300 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
               <div class="flex items-center pl-4 pr-2 text-slate-400">
@@ -46,7 +46,7 @@
         </div>
 
         <!-- 통계 칩 (3개) -->
-        <div class="flex flex-wrap gap-2 mt-2 md:mt-4 md:justify-center">
+        <div class="flex flex-wrap gap-2 mt-1 md:mt-2 md:justify-center">
           <span class="px-3 py-1.5 bg-white border border-line rounded-full text-sm font-semibold text-slate-700 shadow-card">
             실거래 {{ formatStatCount(stats.buildingCount || 0) }}
           </span>
@@ -61,7 +61,7 @@
     </section>
 
     <!-- "오늘 확인할 정보" 3카드 -->
-    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="mb-4">
         <h2 class="text-lg font-bold text-slate-900">오늘 확인할 정보</h2>
         <p class="text-sm text-slate-500 mt-1">자주 찾는 세 가지 흐름을 먼저 확인하세요.</p>
@@ -127,7 +127,7 @@
     <HomeSubscriptionSection />
 
     <!-- 빠른 생활시설 찾기 (8 아이콘) -->
-    <section id="facilities" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <section id="facilities" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="mb-4">
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">location_on</span>
@@ -171,7 +171,7 @@
     </section>
 
     <!-- 생활 가이드 -->
-    <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -228,7 +228,7 @@
     </div>
 
     <!-- 최근 리뷰 (하단 보조 콘텐츠) -->
-    <section v-if="recentReviews.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <section v-if="recentReviews.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
         <span class="material-symbols-outlined text-primary text-[24px]">rate_review</span>
         최근 리뷰

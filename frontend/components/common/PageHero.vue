@@ -1,8 +1,8 @@
 <template>
-  <section class="p-5 md:p-6 bg-white border border-line rounded-xl shadow-card">
+  <section class="p-4 md:p-5 bg-white border border-line rounded-xl shadow-card">
     <!-- Main (eyebrow + title + desc + search slot) -->
     <div>
-      <span v-if="eyebrow" class="inline-flex mb-2.5 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
+      <span v-if="eyebrow" class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
         {{ eyebrow }}
       </span>
       <h1 class="text-2xl md:text-[32px] leading-tight font-bold text-slate-900 mb-2">
@@ -17,7 +17,7 @@
     <!-- Inline summary-grid (below main) -->
     <div
       v-if="stats?.length || $slots.sidebar"
-      class="mt-5 pt-5 border-t border-line grid grid-cols-1 sm:grid-cols-3 gap-4"
+      class="mt-4 pt-4 border-t border-line grid grid-cols-1 sm:grid-cols-3 gap-3"
     >
       <slot name="sidebar">
         <div v-for="stat in stats" :key="stat.label">

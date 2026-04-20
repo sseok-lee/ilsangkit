@@ -1,5 +1,5 @@
 <template>
-  <div v-if="totalPages > 1" class="flex justify-center items-center gap-1 py-8">
+  <div v-if="totalPages > 1" class="flex justify-center items-center gap-1 py-6">
     <!-- First page -->
     <button
       :disabled="currentPage === 1"

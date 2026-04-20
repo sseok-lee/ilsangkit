@@ -1,6 +1,6 @@
 <template>
-  <section class="bg-white border border-line rounded-xl shadow-card p-4 md:p-5">
-    <header v-if="heading || $slots.heading || $slots.right" class="flex justify-between items-end gap-4 mb-3.5">
+  <section class="bg-white border border-line rounded-xl shadow-card p-4">
+    <header v-if="heading || $slots.heading || $slots.right" class="flex justify-between items-end gap-4 mb-3">
       <div class="min-w-0">
         <slot name="heading">
           <h3 v-if="heading" class="text-base md:text-lg font-bold text-slate-900 leading-tight">{{ heading }}</h3>

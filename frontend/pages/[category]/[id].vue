@@ -106,13 +106,13 @@
         </Teleport>
 
         <!-- Desktop: Two Column Layout -->
-        <div class="hidden md:block max-w-[1200px] mx-auto px-6 pt-6 pb-10">
+        <div class="hidden md:block max-w-[1200px] mx-auto px-6 pt-5 pb-10">
           <!-- Breadcrumb -->
           <Breadcrumb :items="desktopBreadcrumbItems" class="mb-4" />
 
-          <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-6 items-start">
+          <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 items-start">
             <!-- Left Column: Details -->
-            <div class="flex flex-col gap-4 w-full">
+            <div class="flex flex-col gap-3 w-full">
               <!-- 공유 버튼 row -->
               <div class="flex justify-end">
                 <button
@@ -135,7 +135,7 @@
 
               <!-- 기본정보 SectionBlock -->
               <SectionBlock heading="기본정보" subtext="주소·운영시간·연락처 등 공통 정보를 먼저 확인합니다.">
-                <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-3">
                   <!-- Operating Status Banner -->
                   <ClientOnly>
                     <OperatingStatusBanner
@@ -414,7 +414,7 @@
               </SectionBlock>
 
               <!-- Ad: 기본정보·로드뷰 이후 1회 -->
-              <AdBanner />
+              <AdBanner ad-format="horizontal" full-width-responsive="false" />
 
               <!-- 시설현황 SectionBlock -->
               <SectionBlock v-if="hasFacilityStatus" heading="시설현황" subtext="카테고리별 세부 설비·현황 정보입니다.">
@@ -1226,21 +1226,10 @@
                   />
                 </ClientOnly>
 
-                <!-- Map Controls -->
-                <div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
-                  <div class="flex flex-col bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-                    <button aria-label="Zoom In" class="w-11 h-11 flex items-center justify-center text-gray-700 hover:bg-gray-50 border-b border-gray-100">
-                      <span class="material-symbols-outlined">add</span>
-                    </button>
-                    <button aria-label="Zoom Out" class="w-11 h-11 flex items-center justify-center text-gray-700 hover:bg-gray-50">
-                      <span class="material-symbols-outlined">remove</span>
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <!-- Action Buttons (Desktop Sticky Bottom) -->
-              <div class="mt-4 p-4 bg-white border-t border-slate-200 flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] rounded-xl#1a2630]">
+              <div class="mt-3 p-4 bg-white border border-slate-200 flex gap-3 shadow-card rounded-xl">
                 <button
                   class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-900 font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
                   aria-label="이 시설 공유하기"
@@ -1274,7 +1263,7 @@
         </div>
 
         <!-- Mobile: Info Section (Desktop-style cards) -->
-        <div class="md:hidden px-4 flex flex-col gap-6 pt-4">
+        <div class="md:hidden px-4 flex flex-col gap-4 pt-4">
           <!-- Mobile Breadcrumb -->
           <Breadcrumb :items="breadcrumbItems" />
 
@@ -1301,7 +1290,7 @@
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h2 class="text-slate-900 text-lg font-bold">기본정보</h2>
             </div>
-            <div class="p-5 flex flex-col gap-4">
+            <div class="p-5 flex flex-col gap-3">
               <!-- Operating Status Banner -->
               <ClientOnly>
                 <OperatingStatusBanner
@@ -1574,7 +1563,7 @@
           </div>
 
           <!-- Ad: 로드뷰 위 (Mobile) -->
-          <AdBanner />
+          <AdBanner ad-format="horizontal" full-width-responsive="false" />
 
           <!-- Roadview Card (Mobile) -->
           <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
