@@ -1,28 +1,7 @@
 <template>
-  <div class="bg-background-light text-slate-900 font-display min-h-screen">
-    <!-- Header -->
-    <header class="sticky top-0 z-30 bg-background-light/95 backdrop-blur-md border-b border-slate-200">
-      <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-        <button
-          aria-label="이전 페이지로 돌아가기"
-          class="shrink-0 flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/5 transition-colors"
-          @click="goBack"
-        >
-          <span class="material-symbols-outlined text-slate-700 text-[24px]">arrow_back</span>
-        </button>
-        <h1 class="text-base font-bold truncate">
-          {{ data ? `${data.city} ${data.district}` : '쓰레기 배출 정보' }}
-        </h1>
-      </div>
-    </header>
-
+  <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 pb-10 flex flex-col gap-4">
     <!-- Breadcrumb -->
-    <div v-if="data" class="max-w-2xl mx-auto px-4 pt-4">
-      <Breadcrumb :items="breadcrumbItems" />
-    </div>
-
-    <!-- Ad: 상세 페이지 시작 -->
-    <AdBanner v-if="data" class="my-4" />
+    <Breadcrumb v-if="data" :items="breadcrumbItems" />
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
@@ -33,7 +12,7 @@
     </div>
 
     <!-- Error -->
-    <div v-else-if="errorMsg" class="max-w-2xl mx-auto px-4 py-20 text-center">
+    <div v-else-if="errorMsg" class="py-20 text-center">
       <div class="text-4xl mb-4">😔</div>
       <p class="text-slate-600 font-medium">{{ errorMsg }}</p>
       <NuxtLink
@@ -45,191 +24,163 @@
     </div>
 
     <!-- Content -->
-    <main v-else-if="data" class="max-w-2xl mx-auto px-4 py-6 space-y-4">
-      <!-- 지역 정보 -->
-      <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-        <div class="flex items-start gap-3">
-          <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-            <span class="material-symbols-outlined text-blue-600 text-[20px]">location_on</span>
+    <template v-else-if="data">
+      <!-- Hero -->
+      <PageHero
+        eyebrow="쓰레기 배출 정보"
+        :title="`${data.city} ${data.district}`"
+        :description="heroDescription"
+      >
+        <template #sidebar>
+          <div v-if="heroTags.length" class="flex flex-wrap gap-2 self-end">
+            <span
+              v-for="tag in heroTags"
+              :key="tag"
+              class="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold"
+            >{{ tag }}</span>
           </div>
-          <div>
-            <h2 class="font-bold text-slate-900">{{ data.city }} {{ data.district }}</h2>
-            <div v-if="data.targetRegion" class="flex flex-wrap gap-1 mt-1.5">
-              <span
-                v-for="dong in data.targetRegion.split('+').map((d: string) => d.trim()).filter(Boolean)"
-                :key="dong"
-                class="inline-block px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full"
-              >{{ dong }}</span>
-              <span v-if="data.emissionPlace" class="inline-block px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full">{{ data.emissionPlace }}</span>
+        </template>
+      </PageHero>
+
+      <!-- 배출 일정 (2칼럼 waste-grid) -->
+      <SectionBlock heading="배출 일정" subtext="종류별 배출 요일·시간·방법을 한눈에 확인하세요.">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- 일반쓰레기 -->
+          <WasteTypeSection
+            v-if="data.details?.livingWaste"
+            icon="delete"
+            icon-color="amber"
+            title="일반쓰레기"
+            :info="data.details.livingWaste"
+          />
+          <!-- 음식물쓰레기 -->
+          <WasteTypeSection
+            v-if="data.details?.foodWaste"
+            icon="restaurant"
+            icon-color="green"
+            title="음식물쓰레기"
+            :info="data.details.foodWaste"
+          />
+          <!-- 재활용 -->
+          <WasteTypeSection
+            v-if="data.details?.recyclable"
+            icon="recycling"
+            icon-color="teal"
+            title="재활용"
+            :info="data.details.recyclable"
+          />
+          <!-- 대형폐기물 -->
+          <div
+            v-if="data.details?.bulkWaste"
+            class="bg-white rounded-xl p-4 border border-line shadow-card"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
+                <span class="material-symbols-outlined text-violet-600 text-[20px]">weekend</span>
+              </div>
+              <h3 class="font-bold text-slate-900">대형폐기물</h3>
             </div>
-            <p v-if="data.details?.emissionPlaceType" class="text-sm text-slate-500 mt-0.5">
-              {{ data.details.emissionPlaceType }}
-            </p>
-            <p v-if="data.details?.managementZone" class="text-xs text-slate-500 mt-0.5">
-              관리구역: {{ data.details.managementZone }}
-            </p>
+            <div class="text-sm text-slate-600 space-y-2 pl-1">
+              <div v-if="formatTimeRange(data.details.bulkWaste.beginTime, data.details.bulkWaste.endTime)" class="flex items-start gap-2">
+                <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">schedule</span>
+                <p><span class="font-medium text-slate-700">배출 시간:</span><span class="ml-1">{{ formatTimeRange(data.details.bulkWaste.beginTime, data.details.bulkWaste.endTime) }}</span></p>
+              </div>
+              <div v-if="data.details.bulkWaste.method" class="flex items-start gap-2">
+                <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">info</span>
+                <p><span class="font-medium text-slate-700">배출 방법:</span><span class="ml-1">{{ data.details.bulkWaste.method }}</span></p>
+              </div>
+              <div v-if="data.details.bulkWaste.place" class="flex items-start gap-2">
+                <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">place</span>
+                <p><span class="font-medium text-slate-700">배출 장소:</span><span class="ml-1">{{ data.details.bulkWaste.place }}</span></p>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </SectionBlock>
 
-      <!-- 일반쓰레기 -->
-      <WasteTypeSection
-        v-if="data.details?.livingWaste"
-        icon="delete"
-        icon-color="amber"
-        title="일반쓰레기"
-        :info="data.details.livingWaste"
-      />
+      <!-- Ad: 배출 일정 이후 -->
+      <AdBanner />
 
-      <!-- 음식물쓰레기 -->
-      <WasteTypeSection
-        v-if="data.details?.foodWaste"
-        icon="restaurant"
-        icon-color="green"
-        title="음식물쓰레기"
-        :info="data.details.foodWaste"
-      />
-
-      <!-- 재활용 -->
-      <WasteTypeSection
-        v-if="data.details?.recyclable"
-        icon="recycling"
-        icon-color="teal"
-        title="재활용"
-        :info="data.details.recyclable"
-      />
-
-      <!-- Ad: 중간 -->
-      <AdBanner class="my-2" />
-
-      <!-- 대형폐기물 -->
-      <section
-        v-if="data.details?.bulkWaste"
-        class="bg-white rounded-xl p-4 shadow-sm border border-slate-100"
+      <!-- 주의사항과 문의 -->
+      <SectionBlock
+        v-if="data.details?.uncollectedDay || data.details?.manageDepartment || data.details?.managePhone"
+        heading="주의사항과 문의"
+        subtext="미수거일과 관리부서 연락처를 확인하세요."
       >
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-            <span class="material-symbols-outlined text-purple-600 text-[20px]">weekend</span>
+        <div v-if="data.details?.uncollectedDay" class="flex justify-between py-2.5 border-b border-line">
+          <span class="text-slate-500 text-sm">미수거일</span>
+          <strong class="text-slate-900 text-sm font-bold text-right">{{ data.details.uncollectedDay }}</strong>
+        </div>
+        <div v-if="data.details?.manageDepartment" class="flex justify-between py-2.5 border-b border-line">
+          <span class="text-slate-500 text-sm">관리부서</span>
+          <strong class="text-slate-900 text-sm font-bold text-right">{{ data.details.manageDepartment }}</strong>
+        </div>
+        <div v-if="data.details?.managePhone" class="flex justify-between py-2.5">
+          <span class="text-slate-500 text-sm">전화</span>
+          <a :href="`tel:${data.details.managePhone}`" class="text-primary text-sm font-bold hover:underline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[16px]">call</span>
+            {{ data.details.managePhone }}
+          </a>
+        </div>
+      </SectionBlock>
+
+      <!-- 같은 지역 / 이용 팁 / FAQ -->
+      <SectionBlock heading="같은 지역·이용 팁·FAQ" subtext="하단 보조 정보를 간단히 정리했습니다.">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <!-- 같은 지역 -->
+          <nav v-if="trashRegionLink" class="p-4 bg-slate-50 border border-line rounded-xl shadow-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
+              <h4 class="font-bold text-slate-900 text-sm">같은 지역</h4>
+            </div>
+            <div class="flex flex-col gap-2">
+              <NuxtLink
+                :to="trashRegionLink.searchHref"
+                class="text-primary hover:underline text-sm font-medium"
+              >{{ trashRegionLink.searchLabel }}</NuxtLink>
+              <NuxtLink
+                :to="trashRegionLink.regionHref"
+                class="text-slate-600 hover:text-primary text-sm font-medium"
+              >{{ trashRegionLink.regionLabel }}</NuxtLink>
+            </div>
+          </nav>
+
+          <!-- 이용 팁 -->
+          <div class="p-4 bg-slate-50 border border-line rounded-xl shadow-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-slate-500 text-[20px]">lightbulb</span>
+              <h4 class="font-bold text-slate-900 text-sm">이용 팁</h4>
+            </div>
+            <ul class="space-y-1.5">
+              <li v-for="(tip, i) in trashTips" :key="i" class="flex items-start gap-1.5 text-xs text-slate-600 leading-relaxed">
+                <span class="material-symbols-outlined text-[14px] text-primary shrink-0 mt-0.5">check</span>
+                {{ tip }}
+              </li>
+            </ul>
           </div>
-          <h3 class="font-bold text-slate-900">대형폐기물</h3>
-        </div>
-        <div class="text-sm text-slate-600 space-y-2 pl-1">
-          <div v-if="formatTimeRange(data.details.bulkWaste.beginTime, data.details.bulkWaste.endTime)" class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">schedule</span>
-            <p>
-              <span class="font-medium text-slate-700">배출 시간:</span>
-              <span class="ml-1">{{ formatTimeRange(data.details.bulkWaste.beginTime, data.details.bulkWaste.endTime) }}</span>
-            </p>
-          </div>
-          <div v-if="data.details.bulkWaste.method" class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">info</span>
-            <p>
-              <span class="font-medium text-slate-700">배출 방법:</span>
-              <span class="ml-1">{{ data.details.bulkWaste.method }}</span>
-            </p>
-          </div>
-          <div v-if="data.details.bulkWaste.place" class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">place</span>
-            <p>
-              <span class="font-medium text-slate-700">배출 장소:</span>
-              <span class="ml-1">{{ data.details.bulkWaste.place }}</span>
-            </p>
-          </div>
-        </div>
-      </section>
 
-      <!-- 미수거일 -->
-      <section
-        v-if="data.details?.uncollectedDay"
-        class="bg-red-50 rounded-xl p-4 border border-red-100"
-      >
-        <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-red-500 text-[20px]">warning</span>
-          <span class="font-semibold text-red-900 text-sm">미수거일</span>
-        </div>
-        <p class="text-red-700 text-sm mt-1 pl-7">{{ data.details.uncollectedDay }}</p>
-      </section>
-
-      <!-- 관리부서 연락처 -->
-      <section
-        v-if="data.details?.manageDepartment || data.details?.managePhone"
-        class="bg-blue-50 rounded-xl p-4 border border-blue-100"
-      >
-        <div class="flex items-center gap-2 mb-1">
-          <span class="material-symbols-outlined text-blue-500 text-[18px]">support_agent</span>
-          <span class="font-semibold text-blue-900 text-sm">{{ data.details.manageDepartment || '관리부서' }}</span>
-        </div>
-        <a
-          v-if="data.details?.managePhone"
-          :href="`tel:${data.details.managePhone}`"
-          class="text-blue-600 text-sm hover:underline flex items-center gap-1 pl-7"
-        >
-          <span class="material-symbols-outlined text-[16px]">call</span>
-          {{ data.details.managePhone }}
-        </a>
-      </section>
-
-      <!-- Ad: 하단 -->
-      <AdBanner class="my-2" />
-
-      <!-- 같은 지역 링크 -->
-      <nav v-if="trashRegionLink" class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
-          <h3 class="font-bold text-slate-900">같은 지역</h3>
-        </div>
-        <div class="flex flex-col gap-2">
-          <NuxtLink
-            :to="trashRegionLink.searchHref"
-            class="flex items-center gap-2 text-primary hover:text-blue-600 text-sm font-medium transition-colors"
-          >
-            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-            {{ trashRegionLink.searchLabel }}
-          </NuxtLink>
-          <NuxtLink
-            :to="trashRegionLink.regionHref"
-            class="flex items-center gap-2 text-slate-600 hover:text-primary text-sm font-medium transition-colors"
-          >
-            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-            {{ trashRegionLink.regionLabel }}
-          </NuxtLink>
-        </div>
-      </nav>
-
-      <!-- 이용 팁 -->
-      <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="material-symbols-outlined text-slate-500 text-[20px]">lightbulb</span>
-          <h3 class="font-bold text-slate-900">쓰레기 배출 이용 팁</h3>
-        </div>
-        <ul class="space-y-2">
-          <li v-for="(tip, i) in trashTips" :key="i" class="flex items-start gap-2 text-sm text-slate-600 leading-relaxed">
-            <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">check</span>
-            {{ tip }}
-          </li>
-        </ul>
-      </section>
-
-      <!-- FAQ -->
-      <section v-if="trashFaqItems.length > 0" class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="material-symbols-outlined text-slate-500 text-[20px]">help</span>
-          <h3 class="font-bold text-slate-900">자주 묻는 질문</h3>
-        </div>
-        <div class="space-y-4">
-          <div v-for="(faq, i) in trashFaqItems" :key="i">
-            <h4 class="text-sm font-bold text-slate-900 mb-1">Q. {{ faq.question }}</h4>
-            <p class="text-sm text-slate-600 leading-relaxed">{{ faq.answer }}</p>
+          <!-- FAQ -->
+          <div v-if="trashFaqItems.length > 0" class="p-4 bg-slate-50 border border-line rounded-xl shadow-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-slate-500 text-[20px]">help</span>
+              <h4 class="font-bold text-slate-900 text-sm">자주 묻는 질문</h4>
+            </div>
+            <div class="space-y-2.5">
+              <div v-for="(faq, i) in trashFaqItems" :key="i">
+                <p class="text-xs font-bold text-slate-900 mb-0.5">Q. {{ faq.question }}</p>
+                <p class="text-xs text-slate-600 leading-relaxed">{{ faq.answer }}</p>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </SectionBlock>
 
       <!-- 데이터 정보 -->
       <DataSourceCard
         :source="FACILITY_DATA_SOURCE.trash"
         :data-date="data.details?.lastModified ? formatDataDate(data.details.lastModified) : null"
       />
-    </main>
+    </template>
   </div>
 </template>
 
@@ -241,6 +192,9 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
@@ -343,6 +297,22 @@ function goBack() {
     navigateTo('/search?category=trash')
   }
 }
+
+// Hero description & tags
+const heroDescription = computed(() =>
+  '일반쓰레기, 음식물쓰레기, 재활용, 대형폐기물 배출 정보를 확인하세요.'
+)
+const heroTags = computed(() => {
+  if (!data.value) return [] as string[]
+  const tags: string[] = []
+  if (data.value.targetRegion) {
+    data.value.targetRegion.split('+').map((d: string) => d.trim()).filter(Boolean).forEach(d => tags.push(d))
+  }
+  if (data.value.emissionPlace) tags.push(data.value.emissionPlace)
+  if (data.value.details?.emissionPlaceType) tags.push(data.value.details.emissionPlaceType)
+  if (data.value.details?.managementZone) tags.push(`관리구역: ${data.value.details.managementZone}`)
+  return tags
+})
 
 // 브레드크럼 아이템
 const breadcrumbItems = computed(() => {
