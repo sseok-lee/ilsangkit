@@ -77,143 +77,91 @@
       </Transition>
     </Teleport>
 
-    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6 pb-20 md:pb-0">
-      <div class="mb-6">
-        <nav class="hidden md:flex items-center gap-1 text-sm text-slate-500 mb-3">
-          <NuxtLink to="/real-estate" class="hover:text-primary">부동산</NuxtLink>
-          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-          <NuxtLink :to="`/real-estate/${propertyTypeParam}`" class="hover:text-primary">{{ propertyMeta?.label }}</NuxtLink>
-          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-          <span class="text-slate-800">{{ buildingName }}</span>
-        </nav>
-        <!-- Mobile: badge + share -->
-        <div class="md:hidden flex items-start justify-between mb-3">
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10">
-            <span class="material-symbols-outlined text-[14px]">place</span> {{ propertyMeta?.label }}
-          </span>
-          <button class="text-slate-500 hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 건물 공유하기" @click="handleShare">
-            <span class="material-symbols-outlined">share</span>
-          </button>
-        </div>
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
-          {{ buildingName }}
-        </h1>
-        <p class="mt-1 text-slate-500">{{ propertyMeta?.label }} 실거래가</p>
+    <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-20 md:pb-10 flex flex-col gap-4">
+      <!-- Breadcrumb -->
+      <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
+
+      <!-- Mobile: badge + share row -->
+      <div class="md:hidden flex items-center justify-between">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10">
+          <span class="material-symbols-outlined text-[14px]">place</span> {{ propertyMeta?.label }}
+        </span>
+        <button class="text-slate-500 hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 건물 공유하기" @click="handleShare">
+          <span class="material-symbols-outlined">share</span>
+        </button>
       </div>
 
-      <!-- 건물 정보 -->
-      <section v-if="buildingInfo" class="mb-6 rounded-2xl bg-white border border-slate-100 p-5">
-        <!-- 주소 + 동 -->
-        <div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 text-sm">
-          <p class="font-medium text-slate-800">{{ fullAddress }}</p>
-          <span v-if="buildingInfo.dongName" class="text-slate-500 text-xs">{{ buildingInfo.dongName }}</span>
-        </div>
-        <!-- 상세 정보 -->
-        <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <div v-if="buildingInfo.buildYear" class="flex items-center gap-1.5">
-            <span class="text-slate-500">건축</span>
-            <span class="font-medium text-slate-700">{{ buildingInfo.buildYear }}년</span>
-          </div>
-          <span v-if="buildingInfo.buildYear && areaRange !== '-'" class="text-slate-200">|</span>
-          <div v-if="areaRange !== '-'" class="flex items-center gap-1.5">
-            <span class="text-slate-500">전용</span>
-            <span class="font-medium text-slate-700">{{ areaRange }}</span>
-          </div>
-          <span v-if="latestPrice !== '-'" class="text-slate-200">|</span>
-          <div v-if="latestPrice !== '-'" class="flex items-center gap-1.5">
-            <span class="text-slate-500">최근 거래</span>
-            <span class="font-semibold text-primary">{{ latestPrice }}</span>
-          </div>
-        </div>
-      </section>
+      <!-- PageHero -->
+      <PageHero
+        :eyebrow="`${propertyMeta?.label ?? ''} 실거래가`"
+        :title="buildingName"
+        :description="fullAddress !== '-' ? fullAddress : undefined"
+        :stats="heroStats"
+      />
 
-      <!-- Ad: 지도 위 -->
-      <AdBanner />
-
-      <!-- 지도 + 로드뷰 (데스크톱) -->
-      <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mb-6 hidden md:block">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <h2 class="text-lg font-semibold text-slate-800">위치</h2>
-              <div class="flex items-center gap-1">
-                <button
-                  class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
-                  aria-label="이 건물 공유하기"
-                  @click="handleShare"
-                >
-                  <span class="material-symbols-outlined text-[18px]">share</span>
-                  공유
+      <!-- "위치·로드뷰" 데스크톱 -->
+      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다." class="hidden md:block">
+        <template #right>
+          <div class="flex items-center gap-1">
+            <button
+              class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
+              aria-label="이 건물 공유하기"
+              @click="handleShare"
+            >
+              <span class="material-symbols-outlined text-[18px]">share</span>
+              공유
+            </button>
+            <div class="relative">
+              <button
+                class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
+                @click="showNavDropdown = !showNavDropdown"
+              >
+                <span class="material-symbols-outlined text-[18px]">directions</span>
+                길찾기
+                <span class="material-symbols-outlined text-[14px]">expand_more</span>
+              </button>
+              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                 </button>
-                <div class="relative">
-                  <button
-                    class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
-                    @click="showNavDropdown = !showNavDropdown"
-                  >
-                    <span class="material-symbols-outlined text-[18px]">directions</span>
-                    길찾기
-                    <span class="material-symbols-outlined text-[14px]">expand_more</span>
-                  </button>
-                  <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
-                      <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                    </button>
-                    <div class="h-px bg-slate-100"></div>
-                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
-                      <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                    </button>
-                  </div>
-                </div>
+                <div class="h-px bg-slate-100"></div>
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
+                </button>
               </div>
             </div>
-            <div class="rounded-2xl bg-white border border-slate-100 overflow-hidden h-[300px]">
-              <ClientOnly>
-                <FacilityMap
-                  :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
-                  :facilities="buildingMarker"
-                  :level="3"
-                />
-              </ClientOnly>
-            </div>
           </div>
-          <div>
-            <h2 class="text-lg font-semibold text-slate-800 mb-2">로드뷰</h2>
-            <div class="roadview-wrapper rounded-2xl bg-white border border-slate-100 overflow-hidden h-[300px]">
-              <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
-            </div>
+        </template>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="rounded-xl border border-line overflow-hidden h-[300px]">
+            <ClientOnly>
+              <FacilityMap
+                :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
+                :facilities="buildingMarker"
+                :level="3"
+              />
+            </ClientOnly>
+          </div>
+          <div class="roadview-wrapper rounded-xl border border-line overflow-hidden h-[300px]">
+            <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
           </div>
         </div>
-      </section>
+      </SectionBlock>
 
       <!-- 로드뷰 (모바일) -->
-      <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mb-6 md:hidden">
-        <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-          <div class="px-5 py-4 border-b border-slate-100">
-            <h2 class="text-slate-800 text-lg font-bold">로드뷰</h2>
-          </div>
-          <div class="p-4">
-            <div class="roadview-wrapper rounded-xl overflow-hidden h-[200px]">
-              <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
-            </div>
-          </div>
+      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" heading="로드뷰" class="md:hidden">
+        <div class="roadview-wrapper rounded-xl overflow-hidden h-[200px]">
+          <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
         </div>
-      </section>
+      </SectionBlock>
 
-      <!-- Ad: 로드뷰 아래 -->
-      <AdBanner />
-
-      <!-- 매매/전월세 탭 -->
-      <TransactionModeTab v-model="currentTab" class="mb-6" />
-
-      <!-- 시세 추이 차트 -->
-      <section class="mb-8">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h2 class="text-lg font-semibold text-slate-800">시세 추이</h2>
-          <!-- 기간 선택 -->
+      <!-- "시세 추이" 블록 -->
+      <SectionBlock heading="시세 추이" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
+        <template #right>
           <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
             <button
               v-for="opt in periodOptions"
-              :key="opt.value"
+              :key="opt.value ?? 'all'"
               :class="[
                 'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                 selectedMonths === opt.value
@@ -225,7 +173,10 @@
               {{ opt.label }}
             </button>
           </div>
-        </div>
+        </template>
+
+        <!-- 매매/전월세 탭 -->
+        <TransactionModeTab v-model="currentTab" class="mb-4" />
 
         <!-- 전월세 구분 토글 -->
         <RentTypeToggle
@@ -283,14 +234,10 @@
         <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-400">
           ※ 월세 거래는 전환율 5% 기준 환산보증금으로 표시됩니다
         </p>
-      </section>
+      </SectionBlock>
 
-      <!-- Ad: 시세추이 아래 -->
-      <AdBanner />
-
-      <!-- 거래 내역 테이블 -->
-      <section>
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">거래 내역</h2>
+      <!-- "거래 내역" 블록 -->
+      <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
         <div v-if="txLoading" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -305,23 +252,25 @@
           거래 내역이 없습니다.
         </div>
 
-        <!-- Ad: 거래내역 아래 -->
-        <AdBanner />
-
         <!-- 페이지네이션 -->
         <Pagination
           v-if="transactions.totalPages > 1"
           :current-page="currentPage"
           :total-pages="transactions.totalPages"
           @page-change="goToPage"
+          class="mt-4"
         />
-      </section>
+      </SectionBlock>
 
-      <!-- 인근 단지 -->
-      <section v-if="nearbyComplexes.length > 0" class="mt-8">
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">
-          {{ buildingInfo?.district }} 인근 {{ propertyMeta?.label }} 단지
-        </h2>
+      <!-- Ad: 거래내역 이후 1회 -->
+      <AdBanner />
+
+      <!-- "인근 단지" 블록 -->
+      <SectionBlock
+        v-if="nearbyComplexes.length > 0"
+        :heading="`${buildingInfo?.district ?? ''} 인근 ${propertyMeta?.label ?? ''} 단지`"
+        subtext="같은 지역 내 다른 단지 시세를 빠르게 비교해 보세요."
+      >
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <ComplexCard
             v-for="complex in nearbyComplexes"
@@ -331,39 +280,33 @@
             :tab="currentTab"
           />
         </div>
-      </section>
+      </SectionBlock>
 
-      <!-- Ad: 인근 단지 아래 -->
-      <AdBanner />
-
-      <!-- 주변 생활시설 -->
-      <section v-if="buildingInfo?.lat && buildingInfo?.lng" class="mt-8">
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">주변 생활시설</h2>
+      <!-- "주변 생활시설" 블록 -->
+      <SectionBlock
+        v-if="buildingInfo?.lat && buildingInfo?.lng"
+        heading="주변 생활시설"
+        subtext="부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다."
+      >
         <NearbyFacilities :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
-      </section>
+      </SectionBlock>
 
-      <!-- Ad: 리뷰 섹션 전 -->
-      <AdBanner />
-
-      <!-- 리뷰 섹션 -->
-      <section class="mt-8">
+      <!-- 리뷰 -->
+      <SectionBlock heading="사용자 리뷰" subtext="이 건물에 거주하거나 방문한 사용자들의 후기입니다.">
         <ClientOnly>
           <ReviewSection :category="propertyTypeParam" :facility-id="buildingName" />
         </ClientOnly>
-      </section>
+      </SectionBlock>
 
       <!-- 관련 가이드 -->
-      <section class="mt-8">
-        <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
-      </section>
+      <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
       <!-- 데이터 정보 -->
-      <section v-if="lastSyncDate" class="mt-8">
-        <DataSourceCard
-          :source="REAL_ESTATE_DATA_SOURCE"
-          :last-sync-date="lastSyncDate"
-        />
-      </section>
+      <DataSourceCard
+        v-if="lastSyncDate"
+        :source="REAL_ESTATE_DATA_SOURCE"
+        :last-sync-date="lastSyncDate"
+      />
     </main>
 
     <!-- Mobile: Sticky Bottom Action Bar -->
@@ -415,6 +358,9 @@ import { useAnalytics } from '~/composables/useAnalytics'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
@@ -501,6 +447,14 @@ setBreadcrumbSchema([
   { name: '부동산 실거래가', url: '/real-estate' },
   { name: propertyMeta.value?.label || '', url: `/real-estate/${propertyTypeParam.value}` },
   { name: buildingName.value, url: `/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}` },
+])
+
+// Breadcrumb 컴포넌트용 아이템
+const breadcrumbItems = computed(() => [
+  { label: '홈', href: '/', current: false },
+  { label: '부동산', href: '/real-estate', current: false },
+  { label: propertyMeta.value?.label || '', href: `/real-estate/${propertyTypeParam.value}`, current: false },
+  { label: buildingName.value, current: true },
 ])
 
 // 길찾기 URL
@@ -619,6 +573,14 @@ const latestPrice = computed(() => {
     return remainder > 0 ? `${eok}억 ${remainder.toLocaleString()}만원` : `${eok}억`
   }
   return `${amount.toLocaleString()}만원`
+})
+
+const heroStats = computed(() => {
+  const items: { label: string; value: string }[] = []
+  if (latestPrice.value !== '-') items.push({ label: '최근 거래', value: latestPrice.value })
+  if (buildingInfo.value?.buildYear) items.push({ label: '건축년도', value: `${buildingInfo.value.buildYear}년` })
+  if (areaRange.value !== '-') items.push({ label: '전용면적', value: areaRange.value })
+  return items
 })
 
 const monthly = ref<TransactionStats[]>([])
