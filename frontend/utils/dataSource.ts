@@ -105,3 +105,9 @@ export const REAL_ESTATE_DATA_SOURCE: DataSourceInfo = {
   provider: '국토교통부',
   url: 'https://rt.molit.go.kr',
 }
+
+export const SUBSCRIPTION_DATA_SOURCE: DataSourceInfo = {
+  datasetName: '한국부동산원_청약Home 청약정보 API',
+  provider: '한국부동산원',
+  url: 'https://www.applyhome.co.kr',
+}

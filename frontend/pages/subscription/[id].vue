@@ -445,6 +445,9 @@
         <!-- 관련 가이드 -->
         <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
 
+        <!-- 데이터 정보 -->
+        <DataSourceCard :source="SUBSCRIPTION_DATA_SOURCE" />
+
       </main>
     </template>
 
@@ -477,6 +480,8 @@ import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import { SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
 
 const route = useRoute()
 const id = Number(route.params.id)
