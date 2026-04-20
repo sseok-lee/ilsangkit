@@ -1,16 +1,15 @@
 <template>
-  <div class="ad-banner my-6 w-full min-h-[250px] md:min-h-[280px]">
+  <div class="ad-banner my-6 w-full">
     <ClientOnly>
-      <div v-show="!adError && !adUnfilled" :key="adKey" ref="adContainer" class="w-full">
-        <ins
-          class="adsbygoogle"
-          style="display: block; width: 100%"
-          :data-ad-client="AD_CLIENT"
-          :data-ad-slot="adSlot"
-          :data-ad-format="adFormat"
-          :data-full-width-responsive="fullWidthResponsive"
-        />
-      </div>
+      <ins
+        :key="adKey"
+        class="adsbygoogle"
+        style="display: block; width: 100%"
+        :data-ad-client="AD_CLIENT"
+        :data-ad-slot="adSlot"
+        :data-ad-format="adFormat"
+        :data-full-width-responsive="fullWidthResponsive"
+      />
     </ClientOnly>
   </div>
 </template>
@@ -28,50 +27,32 @@ withDefaults(defineProps<{
   fullWidthResponsive: 'true',
 })
 
-const adContainer = ref<HTMLElement | null>(null)
-const adError = ref(false)
-const adUnfilled = ref(false)
 const adKey = ref(0)
 const route = useRoute()
-let timers: ReturnType<typeof setTimeout>[] = []
-
-function clearTimers() {
-  timers.forEach(clearTimeout)
-  timers = []
-}
-
-function checkAdFilled() {
-  if (!adContainer.value) return
-  const ins = adContainer.value.querySelector('ins.adsbygoogle')
-  if (!ins) return
-  const status = ins.getAttribute('data-ad-status')
-  if (status === 'unfilled') {
-    adUnfilled.value = true
-  }
-}
 
 function pushAd() {
-  clearTimers()
   nextTick(() => {
     try {
       const adsbygoogle = (window as any).adsbygoogle || []
       adsbygoogle.push({})
-      timers.push(setTimeout(checkAdFilled, 1500))
-      timers.push(setTimeout(checkAdFilled, 3500))
     } catch {
-      adError.value = true
+      // adsbygoogle push 실패는 무시 (광고 차단기/네트워크 실패 시 자연 collapse)
     }
   })
 }
 
 onMounted(pushAd)
 
-onUnmounted(clearTimers)
-
 watch(() => route.fullPath, () => {
-  adError.value = false
-  adUnfilled.value = false
   adKey.value++
   pushAd()
 })
 </script>
+
+<style>
+/* 광고가 채워지지 않으면 AdSense가 data-ad-status="unfilled"을 설정한다.
+   이 때 ins는 style로 height:280px가 강제로 걸리므로 명시적으로 숨겨 공간을 회수한다. */
+.ad-banner ins.adsbygoogle[data-ad-status='unfilled'] {
+  display: none !important;
+}
+</style>
