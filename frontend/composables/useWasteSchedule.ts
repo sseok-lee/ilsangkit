@@ -23,6 +23,8 @@ export interface WasteTypeBadge {
 
 export interface RegionSchedule {
   id: number
+  city: string
+  district: string
   targetRegion: string
   emissionPlace?: string
   emissionPlaceType?: string
@@ -77,7 +79,7 @@ function parseDayOfWeek(dayStr?: string): string[] {
   return dayStr.split(/[,\s]+/).filter(Boolean)
 }
 
-function transformToRegionSchedules(data: BackendScheduleData): RegionScheduleResponse {
+export function transformToRegionSchedules(data: BackendScheduleData): RegionScheduleResponse {
   const schedules: RegionSchedule[] = data.items.map((item) => {
     const details = item.details
     const wasteTypes: WasteTypeBadge[] = []
@@ -97,6 +99,8 @@ function transformToRegionSchedules(data: BackendScheduleData): RegionScheduleRe
 
     return {
       id: item.id,
+      city: item.city,
+      district: item.district,
       targetRegion: item.targetRegion || '지역 미상',
       emissionPlace: item.emissionPlace || undefined,
       emissionPlaceType: details?.emissionPlaceType || undefined,

@@ -277,7 +277,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
-import { useWasteSchedule } from '~/composables/useWasteSchedule'
+import { useWasteSchedule, transformToRegionSchedules } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
@@ -343,8 +343,21 @@ const initialLoading = ref(!ssrData.value?.data)
 const filterKeyword = ref('')
 // Waste schedule state — SSR 데이터로 초기화
 const ssrItems = ssrData.value?.data
-const wasteSchedules = ref<RegionSchedule[]>(isTrash && ssrItems ? ssrItems.schedules ?? ssrItems.items ?? [] : [])
-const wasteContact = ref<{ name: string; phone?: string } | null>(isTrash && ssrItems ? ssrItems.contact ?? null : null)
+// SSR 경로는 backend raw items를 반환하므로 client 페이지네이션과 동일하게 transform 적용
+// (시/도·wasteTypes·uncollectedDay·emissionPlaceType 등이 모두 채워지도록)
+const ssrTransformed = isTrash && ssrItems && !ssrItems.schedules
+  ? transformToRegionSchedules(ssrItems)
+  : null
+const wasteSchedules = ref<RegionSchedule[]>(
+  isTrash && ssrItems
+    ? (ssrTransformed?.schedules ?? ssrItems.schedules ?? [])
+    : []
+)
+const wasteContact = ref<{ name: string; phone?: string } | null>(
+  isTrash && ssrItems
+    ? (ssrTransformed?.contact ?? ssrItems.contact ?? null)
+    : null
+)
 const wasteCurrentPage = ref(1)
 const wasteTotalPages = ref(isTrash && ssrItems ? ssrItems.totalPages ?? 1 : 1)
 const wasteTotal = ref(isTrash && ssrItems ? ssrItems.total ?? 0 : 0)

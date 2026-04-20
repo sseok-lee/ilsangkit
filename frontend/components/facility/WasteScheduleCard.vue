@@ -13,6 +13,11 @@
 
       <!-- Details -->
       <div class="flex-1 min-w-0 pt-0.5">
+        <!-- City badge -->
+        <p v-if="region.city" class="text-slate-500 text-[11px] font-medium tracking-wide truncate">
+          {{ shortCity }}{{ region.district ? ` · ${region.district}` : '' }}
+        </p>
+
         <!-- Title -->
         <h3 class="text-slate-900 text-base font-bold truncate">
           {{ region.targetRegion?.replaceAll('+', ', ') }}
@@ -48,11 +53,16 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { RegionSchedule, WasteType } from '~/composables/useWasteSchedule'
 
-defineProps<{
+const props = defineProps<{
   region: RegionSchedule
 }>()
+
+const shortCity = computed(() =>
+  props.region.city?.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '') || ''
+)
 
 const badgeClass = (type: WasteType): string => {
   const map: Record<WasteType, string> = {
