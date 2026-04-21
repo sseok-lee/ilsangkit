@@ -198,11 +198,13 @@ async function main(): Promise<void> {
     select: { buildingName: true, bjdCode: true },
     distinct: ['buildingName', 'bjdCode'],
   });
-  if (buildings.length > 0) {
-    const urls = buildRealEstateUrls('apt', buildings.map(b => ({
+  const validBuildings = buildings.filter((b) => isValidBuildingName(b.buildingName));
+  if (validBuildings.length > 0) {
+    const urls = buildRealEstateUrls('apt', validBuildings.map(b => ({
       buildingName: b.buildingName,
       bjdCode: b.bjdCode,
     })));
+    console.info(`[aptRent] IndexNow: ${buildings.length} candidates → ${validBuildings.length} valid (filtered ${buildings.length - validBuildings.length})`);
     await submitIndexNow(urls);
   }
 

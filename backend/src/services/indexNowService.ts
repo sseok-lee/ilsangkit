@@ -1,6 +1,8 @@
 // IndexNow API 서비스
 // 네이버/Bing 등 IndexNow 지원 검색엔진에 URL 변경을 즉시 알림
 
+import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
+
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
 const SITE_HOST = 'ilsangkit.co.kr';
 const KEY_LOCATION = `https://${SITE_HOST}/a874a0a13ad86694a40ca8e2dd9a5698.txt`;
@@ -60,15 +62,22 @@ export function buildFacilityUrls(category: string, ids: string[]): string[] {
 }
 
 /**
- * 부동산 건물 URL 목록 생성
- * 부동산 상세 페이지: /real-estate/[propertyType]/[buildingName]?bjdCode=[bjdCode]
+ * 부동산 건물 URL 목록 생성 (레거시 single-propertyType 시그니처).
+ *
+ * - isValidBuildingName()로 지번/thin buildingName 필터
+ * - buildingName은 `.normalize('NFC')` 후 `encodeURIComponent`
+ *
+ * 현재 URL 포맷: /real-estate/{propertyType}/{buildingName}?bjdCode={bjdCode}
+ * US-008 에서 새 URL 포맷용 시그니처 추가 예정.
  */
 export function buildRealEstateUrls(
   propertyType: string,
   buildings: Array<{ buildingName: string; bjdCode: string }>
 ): string[] {
-  return buildings.map(
-    (b) =>
-      `https://${SITE_HOST}/real-estate/${propertyType}/${encodeURIComponent(b.buildingName)}?bjdCode=${b.bjdCode}`
-  );
+  return buildings
+    .filter((b) => isValidBuildingName(b.buildingName))
+    .map((b) => {
+      const nfcName = b.buildingName.normalize('NFC');
+      return `https://${SITE_HOST}/real-estate/${propertyType}/${encodeURIComponent(nfcName)}?bjdCode=${b.bjdCode}`;
+    });
 }
