@@ -108,29 +108,41 @@ describe('ComplexCard', () => {
   })
 
   describe('NuxtLink', () => {
-    it('sale 탭은 canonical 정합성을 위해 tab 파라미터를 생략한다', () => {
+    it('신규 URL: sale 탭은 /real-estate/{apt-sale}/{city}/{district}/{bldg}', () => {
       const wrapper = mount(ComplexCard, {
         props: { complex: mockComplex, propertyType: 'apt', tab: 'sale' },
       })
       const link = wrapper.find('a')
       expect(link.exists()).toBe(true)
       const href = link.attributes('href')!
-      expect(href).toContain('/real-estate/apt/')
-      expect(href).toContain(encodeURIComponent('대치아이파크'))
-      expect(href).toContain('bjdCode=1168010100')
-      // tab=sale은 페이지 기본값이므로 제거 (canonical URL과 일치 → 크롤 예산 절감)
-      expect(href).not.toContain('tab=sale')
+      expect(href).toBe(
+        `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('대치아이파크')}`,
+      )
+      // 신규 URL 에는 쿼리파라미터가 없어야 함 (canonical 일치)
+      expect(href).not.toContain('bjdCode=')
       expect(href).not.toContain('tab=')
     })
 
-    it('rent 탭은 기본값이 아니므로 tab=rent를 유지한다', () => {
+    it('신규 URL: rent 탭은 /real-estate/{villa-rent}/{city}/{district}/{bldg}', () => {
       const wrapper = mount(ComplexCard, {
         props: { complex: mockComplex, propertyType: 'villa', tab: 'rent' },
       })
       const link = wrapper.find('a')
       const href = link.attributes('href')!
-      expect(href).toContain('/real-estate/villa/')
-      expect(href).toContain('tab=rent')
+      expect(href).toBe(
+        `/real-estate/villa-rent/seoul/gangnam/${encodeURIComponent('대치아이파크')}`,
+      )
+      expect(href).not.toContain('bjdCode=')
+      expect(href).not.toContain('tab=')
+    })
+
+    it('city/district 가 비어 있으면 레거시 URL 로 폴백 (리다이렉트 미들웨어가 해결)', () => {
+      const noCity: ComplexInfo = { ...mockComplex, city: '', district: '' }
+      const wrapper = mount(ComplexCard, {
+        props: { complex: noCity, propertyType: 'apt', tab: 'sale' },
+      })
+      const href = wrapper.find('a').attributes('href')!
+      expect(href).toContain('/real-estate/apt/')
       expect(href).toContain('bjdCode=1168010100')
     })
   })

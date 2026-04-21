@@ -12,6 +12,7 @@ import {
 } from '../services/syncRealEstateBase.js';
 import { runSync, batchUpsert, transformAndDedupe } from '../services/baseSyncService.js';
 import { submitIndexNow, buildRealEstateUrls } from '../services/indexNowService.js';
+import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
 
 const API_ENDPOINT = 'RTMSDataSvcAptRent/getRTMSDataSvcAptRent';
 const CATEGORY = 'aptRent';
