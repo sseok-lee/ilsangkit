@@ -24,14 +24,14 @@
       <!-- Ad: 헤딩 후 -->
       <AdBanner class="mt-3 mb-6" />
 
-      <!-- 유형별 링크 -->
+      <!-- 유형별 링크 — 신규 URL `/real-estate/{type}/{city}/{district}` 로 직접 연결 -->
       <section class="mb-6">
         <h2 class="text-lg font-bold text-slate-900 mb-3">유형별 실거래가 조회</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <NuxtLink
             v-for="type in propertyTypes"
             :key="type.slug"
-            :to="type.tab === 'sale' ? `/real-estate/${type.baseType}` : `/real-estate/${type.baseType}?tab=rent`"
+            :to="type.regionUrl"
             class="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           >
             <div class="flex items-center gap-2 mb-2">
@@ -42,6 +42,26 @@
             </div>
             <p class="text-sm text-slate-500">{{ type.description }}</p>
           </NuxtLink>
+        </div>
+      </section>
+
+      <!-- 상위 단지 카드 (Phase 1 요구사항 AC5) -->
+      <section v-if="topComplexesByType.length > 0" class="mb-6">
+        <h2 class="text-lg font-bold text-slate-900 mb-3">{{ districtName }} 주요 단지</h2>
+        <div v-for="group in topComplexesByType" :key="group.slug" class="mb-5">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-base font-semibold text-slate-800">{{ group.label }}</h3>
+            <NuxtLink :to="group.moreUrl" class="text-sm text-primary hover:underline">더 보기 →</NuxtLink>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <ComplexCard
+              v-for="complex in group.complexes"
+              :key="`${complex.buildingName}-${complex.bjdCode}`"
+              :complex="complex"
+              :property-type="group.baseType"
+              :tab="group.tab"
+            />
+          </div>
         </div>
       </section>
 
@@ -85,9 +105,15 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useRealEstate } from '~/composables/useRealEstate'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
+import { isValidBuildingName } from '~/utils/realEstateBuildingName'
+import ComplexCard from '~/components/realEstate/ComplexCard.vue'
 
 const route = useRoute()
 const citySlug = computed(() => route.params.city as string)
@@ -116,16 +142,62 @@ if (validDistricts.length === 0 || !validDistricts.some(d => d.slug === district
 const cityName = computed(() => getCityName(citySlug.value))
 const districtName = computed(() => getDistrictName(citySlug.value, districtSlug.value))
 
-// 부동산 유형 — slug는 아이콘 경로용, to는 baseType + tab으로 생성
-// 서버 redirect middleware는 SPA 탐색 시 작동하지 않으므로 클라이언트 링크는 새 URL 직접 사용
-const propertyTypes = [
-  { slug: 'apt-sale', baseType: 'apt', tab: 'sale', label: '아파트 매매', description: '아파트 실거래 매매가 조회' },
-  { slug: 'apt-rent', baseType: 'apt', tab: 'rent', label: '아파트 전월세', description: '아파트 전세·월세 실거래가 조회' },
-  { slug: 'villa-sale', baseType: 'villa', tab: 'sale', label: '빌라 매매', description: '연립·다세대 실거래 매매가 조회' },
-  { slug: 'villa-rent', baseType: 'villa', tab: 'rent', label: '빌라 전월세', description: '연립·다세대 전세·월세 실거래가 조회' },
-  { slug: 'offitel-sale', baseType: 'offitel', tab: 'sale', label: '오피스텔 매매', description: '오피스텔 실거래 매매가 조회' },
-  { slug: 'offitel-rent', baseType: 'offitel', tab: 'rent', label: '오피스텔 전월세', description: '오피스텔 전세·월세 실거래가 조회' },
-]
+// 부동산 유형 — 신규 URL `/real-estate/{type}/{city}/{district}` 로 직접 연결 (단일 홉)
+const propertyTypes = computed(() =>
+  ([
+    { slug: 'apt-sale', baseType: 'apt', tab: 'sale', label: '아파트 매매', description: '아파트 실거래 매매가 조회' },
+    { slug: 'apt-rent', baseType: 'apt', tab: 'rent', label: '아파트 전월세', description: '아파트 전세·월세 실거래가 조회' },
+    { slug: 'villa-sale', baseType: 'villa', tab: 'sale', label: '빌라 매매', description: '연립·다세대 실거래 매매가 조회' },
+    { slug: 'villa-rent', baseType: 'villa', tab: 'rent', label: '빌라 전월세', description: '연립·다세대 전세·월세 실거래가 조회' },
+    { slug: 'offitel-sale', baseType: 'offitel', tab: 'sale', label: '오피스텔 매매', description: '오피스텔 실거래 매매가 조회' },
+    { slug: 'offitel-rent', baseType: 'offitel', tab: 'rent', label: '오피스텔 전월세', description: '오피스텔 전세·월세 실거래가 조회' },
+  ] as const).map((t) => ({
+    ...t,
+    regionUrl: toRealEstateListUrl({
+      type: t.slug as RealEstateUrlType,
+      city: cityName.value,
+      district: districtName.value,
+    }),
+  })),
+)
+
+// 상위 단지 카드 (아파트 매매/오피스텔 매매 기준) — Phase 1 AC5
+const { getComplexList } = useRealEstate()
+interface TopGroup {
+  slug: RealEstateUrlType
+  label: string
+  baseType: RealEstatePropertyType
+  tab: TransactionMode
+  complexes: ComplexInfo[]
+  moreUrl: string
+}
+const topGroups = ref<TopGroup[]>([])
+const { data: topData } = await useAsyncData(
+  `hub-top-complexes-${citySlug.value}-${districtSlug.value}`,
+  async () => {
+    const targets: { slug: RealEstateUrlType; label: string; baseType: RealEstatePropertyType; tab: TransactionMode }[] = [
+      { slug: 'apt-sale', label: '아파트 매매', baseType: 'apt', tab: 'sale' },
+      { slug: 'villa-rent', label: '빌라 전월세', baseType: 'villa', tab: 'rent' },
+      { slug: 'offitel-sale', label: '오피스텔 매매', baseType: 'offitel', tab: 'sale' },
+    ]
+    const results = await Promise.all(
+      targets.map((t) =>
+        getComplexList(t.slug, cityName.value, districtName.value, undefined, 1, 6)
+          .catch(() => ({ items: [] as ComplexInfo[], total: 0, page: 1, totalPages: 0 })),
+      ),
+    )
+    return targets.map((t, i) => ({
+      ...t,
+      complexes: results[i].items
+        .filter((c) => isValidBuildingName(c.buildingName) && c.transactionCount >= 10)
+        .slice(0, 6),
+      moreUrl: toRealEstateListUrl({ type: t.slug, city: cityName.value, district: districtName.value }),
+    }))
+  },
+)
+if (topData.value) topGroups.value = topData.value
+
+const topComplexesByType = computed(() => topGroups.value.filter((g) => g.complexes.length > 0))
 
 // 주변 생활시설 (상위 5개)
 const facilityCategories = [

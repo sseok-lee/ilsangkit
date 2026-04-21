@@ -1,5 +1,6 @@
 <template>
   <NuxtLink
+    v-if="isRenderable"
     :to="linkUrl"
     class="group bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 border border-slate-200 hover:border-primary/30 cursor-pointer block"
   >
@@ -49,21 +50,44 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
+import { isValidBuildingName } from '~/utils/realEstateBuildingName'
+import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 
 interface Props {
   complex: ComplexInfo
   propertyType: RealEstatePropertyType
   tab: TransactionMode
+  /**
+   * 링크 대상을 유효한 단지로 국한하기 위한 최소 거래 건수 (기본 10).
+   * thin content 링크로 크롤 예산이 새는 것을 방지한다.
+   */
+  minTransactionCount?: number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  minTransactionCount: 10,
+})
 
+// 지번/thin buildingName이거나 거래 건수가 모자라면 렌더링 자체를 건너뜀.
+// → 내부 링크로도 노출되지 않아 크롤 예산 회수.
+const isRenderable = computed(() => {
+  if (!isValidBuildingName(props.complex.buildingName)) return false
+  if (props.complex.transactionCount < props.minTransactionCount) return false
+  return true
+})
+
+// US-010: 신규 URL `/real-estate/{type}/{city}/{district}/{buildingName}` 로 직접 연결.
+// city/district 가 누락된 경우 — getComplexList 응답 구조상 거의 없지만 — legacy URL 로 폴백해
+// 리다이렉트 미들웨어가 bjdCode 로 최종 URL 을 해결하도록 한다.
 const linkUrl = computed(() => {
-  const name = encodeURIComponent(props.complex.buildingName)
-  // sale은 페이지 기본값이라 canonical URL과 일치시키기 위해 생략 (크롤 예산 절감 + canonical 신호 정렬)
-  // rent는 기본값이 아니므로 유지해야 rent 탭이 활성화됨
+  const { buildingName, city, district, bjdCode } = props.complex
+  if (city && district) {
+    const type = `${props.propertyType}-${props.tab}` as RealEstateUrlType
+    return toRealEstateUrl({ type, city, district, buildingName })
+  }
+  const name = encodeURIComponent(buildingName)
   const tabPart = props.tab === 'rent' ? 'tab=rent&' : ''
-  return `/real-estate/${props.propertyType}/${name}?${tabPart}bjdCode=${props.complex.bjdCode}`
+  return `/real-estate/${props.propertyType}/${name}?${tabPart}bjdCode=${bjdCode}`
 })
 
 const PROPERTY_ICONS: Record<string, { img: string; bg: string }> = {

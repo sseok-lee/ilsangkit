@@ -95,6 +95,20 @@ export async function getRegionByDistrictName(city: string, district: string) {
   });
 }
 
+/**
+ * bjdCode(5자리 lawd 또는 10자리 full) → {city, district}.
+ * 전달된 bjdCode가 5자리면 그대로, 10자리면 앞 5자리로 매칭한다.
+ * real-estate-redirect 미들웨어에서 레거시 URL → 새 URL 변환 시 사용.
+ */
+export async function getRegionByBjdCode(bjdCode: string) {
+  if (!bjdCode) return null;
+  const lawdCode = bjdCode.length >= 5 ? bjdCode.slice(0, 5) : bjdCode;
+  return prisma.region.findFirst({
+    where: { bjdCode: lawdCode },
+    select: { city: true, district: true, bjdCode: true },
+  });
+}
+
 export async function getRegions(city?: string) {
   const regions = await prisma.region.findMany({
     where: city ? { city } : undefined,

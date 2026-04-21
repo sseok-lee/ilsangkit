@@ -362,10 +362,13 @@ import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
-import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ } from '~/utils/realEstateMeta'
+import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
+import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
+import { toRealEstateUrl, toRealEstateListUrl, isRealEstateUrlType } from '~/utils/realEstateUrl'
+import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -379,62 +382,108 @@ const router = useRouter()
 
 const PROPERTY_GUIDE_CATEGORIES: string[] = ['apt-sale', 'apt-rent', 'subscription']
 
-const propertyTypeParam = computed(() => route.params.propertyType as RealEstatePropertyType)
-const buildingName = computed(() => decodeURIComponent(route.params.buildingName as string))
-const bjdCode = computed(() => (route.query.bjdCode as string) || '')
+// ── Route params ────────────────────────────────────────────────────────────
 
-// 유효하지 않은 propertyType이면 404
-if (!PROPERTY_TYPES.includes(propertyTypeParam.value as RealEstatePropertyType)) {
+const realEstateTypeParam = route.params.realEstateType as string
+const citySlugParam = route.params.city as string
+const districtSlugParam = route.params.district as string
+
+// Validate realEstateType
+if (!isRealEstateUrlType(realEstateTypeParam)) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
+// Build reverse map: slug → Korean district name
+const DISTRICT_SLUG_TO_NAME: Record<string, string> = Object.entries(DISTRICT_SLUG_MAP).reduce(
+  (acc, [name, slug]) => ({ ...acc, [slug]: name }),
+  {} as Record<string, string>,
+)
+
+// Validate city slug
+const cityName = CITY_SLUG_MAP[citySlugParam]
+if (!cityName) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
+
+// Validate district slug
+const districtName = DISTRICT_SLUG_TO_NAME[districtSlugParam]
+if (!districtName) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
+
+const buildingName = computed(() =>
+  decodeURIComponent(route.params.buildingName as string).normalize('NFC'),
+)
+
+// ── Derived values ────────────────────────────────────────────────────────────
+
+// Split realEstateType: e.g. "apt-sale" → propertyType="apt", tab="sale"
+const realEstateType = realEstateTypeParam as RealEstateUrlType
+const [propertyTypePart, tabPart] = realEstateType.split('-') as [string, string]
+const propertyTypeParam = computed<RealEstatePropertyType>(() => propertyTypePart as RealEstatePropertyType)
+
+// Tab is canonical from URL — no ?tab= query param
 const currentTab = computed<TransactionMode>({
-  get: () => (route.query.tab === 'rent' ? 'rent' : 'sale'),
+  get: () => tabPart as TransactionMode,
   set: (val) => {
-    router.replace({ query: { ...route.query, tab: val } })
+    const siblingType = `${propertyTypePart}-${val}` as RealEstateUrlType
+    router.push(
+      toRealEstateUrl({
+        type: siblingType,
+        city: cityName,
+        district: districtName,
+        buildingName: buildingName.value,
+      }),
+    )
   },
 })
 
-
 const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.value))
 const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
+
+// ── SEO / Head ────────────────────────────────────────────────────────────────
+
 const buildingInfo = ref<BuildingInfo | null>(null)
 const summary = ref<StatsSummary | null>(null)
-// SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
+
 useHead(() => {
   const tab = tabLabel.value
-  // 축약 도시명(서울특별시→서울) + district로 동명 구 혼동 방지
-  const cityShort = (buildingInfo.value?.city || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
-  const districtName = buildingInfo.value?.district || ''
-  const locLabel = cityShort && districtName ? `${cityShort} ${districtName}` : (districtName || cityShort)
-  // 건물명 최전방 배치 + 도시 축약 (상시 페이지라 연도 미포함)
+  const cityShort = (buildingInfo.value?.city || cityName).replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+  const district = buildingInfo.value?.district || districtName
+  const locLabel = cityShort && district ? `${cityShort} ${district}` : (district || cityShort)
   const title = tab === '매매'
     ? `${buildingName.value} 실거래가 · ${locLabel} 매매 시세 - 일상킷`
     : `${buildingName.value} 전세·월세 시세 · ${locLabel} 실거래가 - 일상킷`
   const description = tab === '매매'
     ? `${locLabel} ${buildingName.value} 매매 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 시세 변동 추이와 평당가를 제공합니다.`
     : `${locLabel} ${buildingName.value} 전세·월세 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 전세가·월세 시세를 제공합니다.`
-  const canonicalBase = `${SITE_URL}/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}`
-  const resolvedBjdCode = bjdCode.value || buildingInfo.value?.bjdCode || ''
-  const canonicalUrl = resolvedBjdCode ? `${canonicalBase}?bjdCode=${resolvedBjdCode}` : canonicalBase
+
+  // Canonical uses new URL structure — distinct per realEstateType (apt-sale ≠ apt-rent)
+  const canonicalUrl = `${SITE_URL}${toRealEstateUrl({
+    type: realEstateType,
+    city: cityName,
+    district: districtName,
+    buildingName: buildingName.value,
+  })}`
+
+  const ogImage = buildingInfo.value
+    ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
+    : DEFAULT_OG_IMAGE
+
   return {
     title,
     meta: [
       { name: 'description', content: description },
       { property: 'og:title', content: title },
       { property: 'og:description', content: description },
-      { property: 'og:image', content: buildingInfo.value
-        ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
-        : DEFAULT_OG_IMAGE },
+      { property: 'og:image', content: ogImage },
       { property: 'og:url', content: canonicalUrl },
       { property: 'og:type', content: 'place' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: title },
       { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: buildingInfo.value
-        ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
-        : DEFAULT_OG_IMAGE },
+      { name: 'twitter:image', content: ogImage },
       { property: 'og:site_name', content: SITE_NAME },
       { property: 'og:locale', content: 'ko_KR' },
       { property: 'og:image:width', content: '1200' },
@@ -446,34 +495,39 @@ useHead(() => {
   }
 })
 
+// ── Composables ───────────────────────────────────────────────────────────────
+
 const { useRealEstate } = await import('~/composables/useRealEstate')
 const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
 // Breadcrumb JSON-LD
+const listUrl = toRealEstateListUrl({ type: realEstateType, city: cityName, district: districtName })
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
-  { name: propertyMeta.value?.label || '', url: `/real-estate/${propertyTypeParam.value}` },
-  { name: buildingName.value, url: `/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}` },
+  { name: propertyMeta.value?.label || '', url: `/real-estate/${realEstateType}` },
+  { name: districtName, url: listUrl },
+  { name: buildingName.value, url: toRealEstateUrl({ type: realEstateType, city: cityName, district: districtName, buildingName: buildingName.value }) },
 ])
 
 // Breadcrumb 컴포넌트용 아이템
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: propertyMeta.value?.label || '', href: `/real-estate/${propertyTypeParam.value}`, current: false },
+  { label: propertyMeta.value?.label || '', href: `/real-estate/${realEstateType}`, current: false },
+  { label: districtName, href: listUrl, current: false },
   { label: buildingName.value, current: true },
 ])
 
-// 길찾기 URL
+// ── Navigation helpers ────────────────────────────────────────────────────────
+
 const kakaoMapUrl = computed(() =>
   `https://map.kakao.com/link/to/${encodeURIComponent(buildingName.value)},${buildingInfo.value?.lat},${buildingInfo.value?.lng}`)
 const naverMapUrl = computed(() =>
   `https://map.naver.com/v5/directions/-/${buildingInfo.value?.lng},${buildingInfo.value?.lat},${encodeURIComponent(buildingName.value)}/-/walk`)
 
-// 드롭다운 상태
 const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
 const showMobileNavDropdown = ref(false)
@@ -488,7 +542,6 @@ function openNavigation(url: string) {
   showMobileNavDropdown.value = false
 }
 
-// 공유
 async function handleShare() {
   const canShare = !!navigator.share
   trackShareClick({
@@ -514,7 +567,6 @@ async function handleShare() {
   }
 }
 
-// 외부 클릭 시 드롭다운 닫기
 function handleClickOutside(e: MouseEvent) {
   const target = e.target as HTMLElement
   if (!target.closest('.relative')) {
@@ -529,7 +581,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
-// 최근 동기화 날짜
+// ── Sync status ───────────────────────────────────────────────────────────────
+
 const { data: syncStatusResponse } = await useAsyncData(
   'real-estate-sync-status',
   () => $fetch<{ success: boolean; data: Record<string, string | null> }>('/api/meta/sync-status'),
@@ -537,12 +590,13 @@ const { data: syncStatusResponse } = await useAsyncData(
 )
 const lastSyncDate = computed(() => {
   if (!syncStatusResponse.value?.data) return null
-  // apiSlugは "apt-sale" 형식 → 백엔드 키는 "aptSale" (camelCase)
   const key = apiSlug.value.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
   const iso = syncStatusResponse.value.data[key]
   if (!iso) return null
   return iso.slice(0, 10)
 })
+
+// ── Computed display values ───────────────────────────────────────────────────
 
 const fullAddress = computed(() => {
   if (!buildingInfo.value) return '-'
@@ -593,13 +647,14 @@ const heroStats = computed(() => {
   return items
 })
 
+// ── Stats / Transactions ──────────────────────────────────────────────────────
+
 const monthly = ref<TransactionStats[]>([])
 const statsLoading = ref(true)
 const areaGroups = ref<AreaGroup[]>([])
 const selectedArea = ref<number | null>(null)
 const selectedRentType = ref<'all' | 'jeonse' | 'wolse'>('all')
 
-// 기간 선택
 const selectedMonths = ref<number | null>(null)
 const periodOptions: { label: string; value: number | null }[] = [
   { label: '전체', value: null },
@@ -609,7 +664,6 @@ const periodOptions: { label: string; value: number | null }[] = [
   { label: '5년', value: 60 },
 ]
 
-// 시세 요약 computed (서버 summary 사용)
 const summaryLatestAvg = computed(() => {
   if (summary.value?.recentAvg == null) return '-'
   return formatSummaryPrice(summary.value.recentAvg)
@@ -647,15 +701,31 @@ const txLoading = ref(true)
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
 
-// SSR: 초기 데이터를 서버에서 로드
-// lazy: true → 클라이언트 네비게이션 시 즉시 페이지 전환 (SSR은 기존대로 서버에서 resolve)
+// ── bjdCode resolution ────────────────────────────────────────────────────────
+// Resolve bjdCode from complex list before initial data load
+
+const resolvedBjdCode = ref('')
+
+// ── SSR initial data load ─────────────────────────────────────────────────────
+
 const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData(
-  `re-detail-${propertyTypeParam.value}-${buildingName.value}-${bjdCode.value}`,
+  `re-detail-new-${realEstateType}-${citySlugParam}-${districtSlugParam}-${route.params.buildingName}`,
   async () => {
+    // Resolve bjdCode via complex list first
+    let bjdCode = ''
+    try {
+      const listResult = await getComplexList(apiSlug.value, cityName, districtName, buildingName.value, 1, 1)
+      if (listResult.items.length > 0) {
+        bjdCode = listResult.items[0].bjdCode || ''
+      }
+    } catch {
+      // bjdCode stays empty — API calls will still work with buildingName alone
+    }
+
     const [statsResult, txResult, infoResult, areaResult] = await Promise.allSettled([
-      getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value ?? undefined),
+      getTransactionStats(apiSlug.value, bjdCode, buildingName.value, selectedMonths.value ?? undefined),
       searchTransactions(apiSlug.value, {
-        bjdCode: bjdCode.value,
+        bjdCode,
         buildingName: buildingName.value,
         exclusiveArea: selectedArea.value ?? undefined,
         rentType: getRentTypeParam(),
@@ -663,10 +733,11 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
         page: 1,
         limit: 5,
       }),
-      getBuildingInfo(apiSlug.value, bjdCode.value, buildingName.value),
-      getAreaGroups(apiSlug.value, bjdCode.value, buildingName.value),
+      getBuildingInfo(apiSlug.value, bjdCode, buildingName.value),
+      getAreaGroups(apiSlug.value, bjdCode, buildingName.value),
     ])
     return {
+      bjdCode,
       statsResponse: statsResult.status === 'fulfilled' ? statsResult.value : { monthly: [], summary: null },
       transactions: txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 },
       buildingInfo: infoResult.status === 'fulfilled' ? infoResult.value : null,
@@ -676,9 +747,10 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
   { lazy: true }
 )
 const ssrLoading = computed(() => ssrStatus.value === 'pending')
-// SSR 데이터로 refs 초기화 (immediate: true로 SSR 페이로드 즉시 반영 + lazy 로드 완료 시 반영)
+
 watch(ssrData, (data) => {
   if (!data) return
+  resolvedBjdCode.value = data.bjdCode
   monthly.value = data.statsResponse.monthly as TransactionStats[]
   summary.value = data.statsResponse.summary as StatsSummary | null
   transactions.value = data.transactions as RealEstateSearchResponse
@@ -687,11 +759,13 @@ watch(ssrData, (data) => {
   statsLoading.value = false
   txLoading.value = false
 }, { immediate: true })
-// SSR 페이로드가 없을 때 클라이언트에서 직접 로드 (lazy 모드에서 fallback)
+
 if (import.meta.client && !ssrData.value && ssrStatus.value !== 'pending') {
   loadData()
   loadAreaGroups()
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getRentTypeParam(): string | undefined {
   if (selectedRentType.value === 'jeonse') return '전세'
@@ -704,7 +778,7 @@ async function reloadStats() {
   statsLoading.value = true
   try {
     const res = await getTransactionStats(
-      apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value ?? undefined,
+      apiSlug.value, resolvedBjdCode.value, buildingName.value, selectedMonths.value ?? undefined,
       selectedArea.value ?? undefined,
       getRentTypeParam()
     )
@@ -718,9 +792,9 @@ async function reloadStats() {
 }
 
 async function loadAreaGroups() {
-  if (!bjdCode.value) return
+  if (!resolvedBjdCode.value) return
   try {
-    areaGroups.value = await getAreaGroups(apiSlug.value, bjdCode.value, buildingName.value)
+    areaGroups.value = await getAreaGroups(apiSlug.value, resolvedBjdCode.value, buildingName.value)
   } catch {
     areaGroups.value = []
   }
@@ -733,10 +807,10 @@ async function loadData() {
   txLoading.value = true
 
   const [statsResult, txResult, infoResult] = await Promise.allSettled([
-    getTransactionStats(apiSlug.value, bjdCode.value, buildingName.value, selectedMonths.value ?? undefined,
+    getTransactionStats(apiSlug.value, resolvedBjdCode.value, buildingName.value, selectedMonths.value ?? undefined,
       selectedArea.value ?? undefined, getRentTypeParam()),
     searchTransactions(apiSlug.value, {
-      bjdCode: bjdCode.value,
+      bjdCode: resolvedBjdCode.value,
       buildingName: buildingName.value,
       exclusiveArea: selectedArea.value ?? undefined,
       rentType: getRentTypeParam(),
@@ -744,7 +818,7 @@ async function loadData() {
       page: currentPage.value,
       limit: 5,
     }),
-    getBuildingInfo(apiSlug.value, bjdCode.value, buildingName.value),
+    getBuildingInfo(apiSlug.value, resolvedBjdCode.value, buildingName.value),
   ])
 
   if (statsResult.status === 'fulfilled') {
@@ -757,15 +831,6 @@ async function loadData() {
   transactions.value = txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 }
   buildingInfo.value = infoResult.status === 'fulfilled' ? infoResult.value : null
 
-  // 현재 탭에 거래 데이터가 없으면 반대 탭으로 자동 전환 (최초 로드 시)
-  if (transactions.value.total === 0 && monthly.value.length === 0 && !route.query.tab) {
-    const otherTab: TransactionMode = currentTab.value === 'sale' ? 'rent' : 'sale'
-    currentTab.value = otherTab
-    statsLoading.value = false
-    txLoading.value = false
-    return
-  }
-
   statsLoading.value = false
   txLoading.value = false
 }
@@ -775,25 +840,22 @@ function goToPage(page: number) {
   loadData()
 }
 
-// 탭 전환 또는 파라미터 변경 시 데이터 재로드 (초기 로드는 SSR이 처리)
-watch(() => [apiSlug.value, buildingName.value, bjdCode.value], () => {
+// Reload when URL changes (tab switch navigates to sibling URL)
+watch(() => [apiSlug.value, buildingName.value], () => {
   currentPage.value = 1
   selectedArea.value = null
   selectedRentType.value = 'all'
+  resolvedBjdCode.value = ''
   loadData()
   loadAreaGroups()
 })
 
-// 기간 변경 시 시세 + 거래 내역 재로드
 watch(selectedMonths, () => { currentPage.value = 1; loadData() })
-
-// 면적 선택 변경 시 시세 + 거래 내역 재로드
 watch(selectedArea, () => { currentPage.value = 1; loadData() })
-
-// 전월세 구분 변경 시 시세 + 거래 내역 재로드
 watch(selectedRentType, () => { currentPage.value = 1; loadData() })
 
-// buildingInfo 로드 후 building_viewed 이벤트 + 구조화 데이터 설정 + thin content noindex
+// ── Structured data + analytics ───────────────────────────────────────────────
+
 watch(() => buildingInfo.value, (info) => {
   if (info) {
     trackBuildingView({
@@ -826,7 +888,8 @@ watch(() => buildingInfo.value, (info) => {
   }
 })
 
-// 인근 단지 로드
+// ── Nearby complexes ──────────────────────────────────────────────────────────
+
 watchEffect(async () => {
   if (buildingInfo.value?.city && buildingInfo.value?.district) {
     try {
@@ -838,7 +901,6 @@ watchEffect(async () => {
         1,
         6
       )
-      // 현재 건물 제외 + 최대 5개로 제한
       nearbyComplexes.value = response.items
         .filter(c => c.buildingName !== buildingName.value)
         .slice(0, 5)
@@ -849,10 +911,8 @@ watchEffect(async () => {
   }
 })
 
-// thin / low-quality URL을 색인에서 제거하기 위한 noindex 조건.
-// - buildingName 자체가 지번 패턴 → 즉시 noindex (데이터 로드 불필요, SSR 첫 바이트부터 차단)
-// - 데이터 로드 완료 && buildingInfo 없음 → 존재하지 않는 건물
-// - 데이터 로드 완료 && 총 거래 < 10 → thin content
+// ── noindex ───────────────────────────────────────────────────────────────────
+
 const noindex = computed(() =>
   shouldNoindexRealEstateDetail({
     buildingName: buildingName.value,

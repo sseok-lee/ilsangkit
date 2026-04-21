@@ -11,6 +11,7 @@ import {
   fetchSubscriptionIds,
   getWeekStartDate,
 } from '../../utils/sitemap'
+import { toAbsoluteRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 
 // wifi/aed는 사이트맵 인덱스에서 제외된 카테고리 — 동적 핸들러에서도 제외하여 404 반환
 const FACILITY_CATEGORIES = new Set(['toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'])
@@ -96,7 +97,12 @@ export default defineEventHandler(async (event) => {
     const weekStart = getWeekStartDate()
 
     const urls = pageItems.map((item) => ({
-      loc: `${SITE_URL}/real-estate/${item.propertyType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}`,
+      loc: toAbsoluteRealEstateUrl(SITE_URL, {
+        type: item.realEstateType as RealEstateUrlType,
+        city: item.city,
+        district: item.district,
+        buildingName: item.buildingName,
+      }),
       lastmod: weekStart,
       changefreq: 'weekly' as const,
       priority: 0.6,
