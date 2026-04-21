@@ -7,17 +7,19 @@ import {
 } from '~/shared/regionSlugs'
 
 /**
- * Phase 2 (US-007) — 부동산 레거시 URL → 신규 URL 단일 홉 301.
+ * 부동산 레거시 URL → 신규 URL 단일 홉 301.
  *
  * 신규 URL 패턴: /real-estate/{type-mode}/{citySlug}/{districtSlug}/{buildingName}
- * 처리 대상 레거시 패턴:
- *   - LEGACY_TAB_LIST   /real-estate/apt              → /real-estate/apt-sale
- *   - LEGACY_TAB_DETAIL /real-estate/apt/{bldg}?bjd=  → /real-estate/apt-sale/{city}/{dist}/{bldg}
- *   - LEGACY_SALE_LIST  /real-estate/apt-sale         → redirect 대상 아님 (신규와 형태 동일)
- *   - LEGACY_SALE_DETAIL /real-estate/apt-sale/{bldg}?bjd= → /real-estate/apt-sale/{city}/{dist}/{bldg}
  *
- * 역조회(`bjdCode` → `{city, district}`) 실패 시 404 + helpful HTML 응답.
- * 임의 region hub로 리다이렉트하지 않음 (어떤 region인지 모르므로).
+ * 처리 대상 레거시 패턴:
+ *   - /real-estate/apt              → /real-estate/apt-sale       (LEGACY_TAB_LIST)
+ *   - /real-estate/apt/{bldg}?bjd=  → /real-estate/apt-sale/{city}/{dist}/{bldg} (LEGACY_TAB_DETAIL)
+ *   - /real-estate/apt-sale/{bldg}?bjd= → /real-estate/apt-sale/{city}/{dist}/{bldg} (LEGACY_SALE_DETAIL)
+ *
+ * bjdCode 역조회 실패 시 404 + helpful HTML — 어떤 region인지 모르는 상태로 region hub로
+ * 보내면 SEO에 나쁘고 사용자에게도 오해를 주기 때문.
+ *
+ * NEW_DETAIL/NEW_HUB 패턴은 미들웨어가 무조건 pass-through — 리다이렉트 체인 방지.
  */
 
 const LEGACY_TAB_DETAIL = /^\/real-estate\/(apt|villa|offitel)\/([^/]+)\/?$/
@@ -78,10 +80,9 @@ export interface BjdLookupResult {
 export const bjdCache = new TtlLRU<BjdLookupResult>(10_000, 60 * 60 * 1000)
 
 /**
- * bjdCode → {city, district} 역조회.
- * Nitro server context에서 /api/meta/region-by-bjd 엔드포인트를 호출하는 것이 원칙이지만,
- * 초기 구현은 regionMap 정적 import + DB fallback 없이 API 호출만 수행한다.
- * API 가용성 문제 시 graceful 404로 귀결 (region hub로 임의 리다이렉트 금지).
+ * bjdCode → {city, district} 역조회. 성공 시 TtlLRU 캐시에 저장, 실패 시 null.
+ * 호출부는 null을 404 + helpful HTML로 변환한다 — 임의 region hub로 리다이렉트 금지
+ * (어떤 region인지 모르기 때문).
  */
 export async function resolveBjdCode(
   bjdCode: string,

@@ -30,14 +30,12 @@ export async function getSubscriptionIds() {
 /**
  * 사이트맵 생성용 부동산 건물 리스트.
  *
- * US-008: 신규 URL 포맷 `/real-estate/{apt-sale|apt-rent|villa-sale|villa-rent|offitel-sale|offitel-rent}/{citySlug}/{districtSlug}/{buildingName}` 에 필요한
- * 모든 정보를 집계 쿼리로 반환한다.
- *
- * - 매매/전월세를 개별 realEstateType 으로 분리 (같은 건물이 매매·전월세 두 줄로 방출)
- * - (city, district, buildingName, bjdCode) 튜플 기준으로 그룹핑
- * - buildingName 필터: frontend `isValidBuildingName` 과 동일 규칙 — 빈값/공백/괄호 전체 지번 / 숫자 시작 괄호 접두사 제외
- * - 최소 거래 10건 이상만 포함 (thin content 회피)
- * - city/district는 DB 원본 문자열 그대로 반환 (frontend 측 toCitySlug/toDistrictSlug 로 slug 변환)
+ * - 같은 건물이 매매/전월세 두 줄로 방출되도록 6-way realEstateType UNION
+ * - (city, district, buildingName, bjdCode) 튜플 기준 GROUP BY
+ * - buildingName 품질 필터: frontend `isValidBuildingName` 과 동일 규칙
+ *   (빈값/공백/순수 숫자-하이픈 / 숫자로 시작하는 괄호 접두사 제외)
+ * - 거래 10건 미만 단지 제외 (thin content 회피)
+ * - city/district는 DB 원본 문자열 그대로 반환 → 프론트 사이트맵/IndexNow 단계에서 slug 변환
  */
 export async function getRealEstateBuildings() {
   return prisma.$queryRaw<

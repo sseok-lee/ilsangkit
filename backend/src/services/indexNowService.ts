@@ -66,13 +66,11 @@ export function buildFacilityUrls(category: string, ids: string[]): string[] {
 }
 
 /**
- * 부동산 건물 URL 목록 생성 (레거시 single-propertyType 시그니처).
+ * 레거시 URL 포맷 `/real-estate/{propertyType}/{buildingName}?bjdCode={bjdCode}` 빌더.
  *
- * - isValidBuildingName()로 지번/thin buildingName 필터
- * - buildingName은 `.normalize('NFC')` 후 `encodeURIComponent`
- *
- * 현재 URL 포맷: /real-estate/{propertyType}/{buildingName}?bjdCode={bjdCode}
- * US-008 에서 새 URL 포맷용 시그니처 추가 예정.
+ * 기존 6개 sync 스크립트가 아직 호출 중. 신규 URL로의 cutover 는 후속 PR에서 수행하며,
+ * 그때까지 레거시 요청은 redirect middleware 가 단일 홉 301 로 새 URL로 보냄.
+ * 두 빌더 모두 isValidBuildingName + NFC 정규화를 공유한다.
  */
 export function buildRealEstateUrls(
   propertyType: string,
@@ -87,13 +85,10 @@ export function buildRealEstateUrls(
 }
 
 /**
- * 신규 URL 포맷 기반 IndexNow URL 빌더 (US-008).
+ * 신규 URL 포맷 빌더: `/real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingName}`.
  *
- * 신규 URL:  `/real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingName}`
- *
- * - `isValidBuildingName` 으로 지번/thin 입력 필터.
- * - city/district는 DB 원본 한글 그대로 받아 `toRealEstateUrl` 내부에서 slug 변환 + NFC 정규화.
- * - 빈 입력은 빈 배열을 반환한다.
+ * city/district는 DB 원본 한글 그대로 받는다 — slug 변환은 `toAbsoluteRealEstateUrl` 내부에서 일어난다.
+ * 이로 인해 sitemap/IndexNow/OG 모든 경로가 같은 유틸을 거쳐 NFC-인코딩 URL 동등성을 유지한다 (AC16).
  */
 export function buildRealEstateUrlsV2(
   items: Array<{
