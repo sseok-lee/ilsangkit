@@ -169,16 +169,19 @@ export default defineEventHandler(async (event) => {
   // 신규 URL은 미들웨어가 절대 가로채지 않는다 (체인 방지)
   if (NEW_DETAIL.test(pathname) || NEW_HUB.test(pathname)) return
 
-  // 레거시 type-mode 단독 hub: /real-estate/apt-sale → /real-estate/apt?tab=sale
-  // (buildingName 없으므로 bjdCode 역조회 불가 → 지역 구분 없는 전국 유형 hub로 폴백)
-  const saleListMatch = pathname.match(LEGACY_SALE_LIST)
-  if (saleListMatch) {
-    return sendRedirect(event, '/real-estate', 301)
-  }
-
   const existingParams = new URLSearchParams(url.search)
   const bjdCode = existingParams.get('bjdCode') ?? ''
   const tabQuery = existingParams.get('tab')
+
+  // 레거시 type-mode 단독 hub: /real-estate/apt-sale → /real-estate/apt?tab=sale
+  // LEGACY_TAB_LIST(/real-estate/apt)는 pages/[propertyType]/index.vue 가 직접 처리하므로
+  // 리다이렉트 불필요 — 제거하면 apt-sale→apt?tab=sale→apt-sale 루프가 사라짐
+  const saleListMatch = pathname.match(LEGACY_SALE_LIST)
+  if (saleListMatch) {
+    const propertyType = saleListMatch[1] as PropertyType
+    const mode = saleListMatch[2] as TransactionMode
+    return sendRedirect(event, `/real-estate/${propertyType}?tab=${mode}`, 301)
+  }
 
   // 레거시 detail: /real-estate/apt/{bldg}
   let match = pathname.match(LEGACY_TAB_DETAIL)
@@ -198,13 +201,7 @@ export default defineEventHandler(async (event) => {
     return await handleLegacyDetail(event, pathname, propertyType, mode, rawName, bjdCode)
   }
 
-  // 레거시 list: /real-estate/apt → /real-estate/apt-sale (또는 tab=rent면 apt-rent)
-  match = pathname.match(LEGACY_TAB_LIST)
-  if (match) {
-    const propertyType = match[1] as PropertyType
-    const mode: TransactionMode = tabQuery === 'rent' ? 'rent' : 'sale'
-    return sendRedirect(event, `/real-estate/${propertyType}-${mode}`, 301)
-  }
+  // /real-estate/apt 는 pages/real-estate/[propertyType]/index.vue 가 직접 서빙 — pass-through
 
   // 매칭 없음 — pass-through
 })
