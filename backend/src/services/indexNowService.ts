@@ -2,6 +2,10 @@
 // 네이버/Bing 등 IndexNow 지원 검색엔진에 URL 변경을 즉시 알림
 
 import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
+import {
+  toAbsoluteRealEstateUrl,
+  type RealEstateUrlType,
+} from '../lib/realEstateUrl.js';
 
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
 const SITE_HOST = 'ilsangkit.co.kr';
@@ -80,4 +84,34 @@ export function buildRealEstateUrls(
       const nfcName = b.buildingName.normalize('NFC');
       return `https://${SITE_HOST}/real-estate/${propertyType}/${encodeURIComponent(nfcName)}?bjdCode=${b.bjdCode}`;
     });
+}
+
+/**
+ * 신규 URL 포맷 기반 IndexNow URL 빌더 (US-008).
+ *
+ * 신규 URL:  `/real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingName}`
+ *
+ * - `isValidBuildingName` 으로 지번/thin 입력 필터.
+ * - city/district는 DB 원본 한글 그대로 받아 `toRealEstateUrl` 내부에서 slug 변환 + NFC 정규화.
+ * - 빈 입력은 빈 배열을 반환한다.
+ */
+export function buildRealEstateUrlsV2(
+  items: Array<{
+    realEstateType: RealEstateUrlType;
+    city: string;
+    district: string;
+    buildingName: string;
+  }>
+): string[] {
+  const origin = `https://${SITE_HOST}`;
+  return items
+    .filter((it) => isValidBuildingName(it.buildingName))
+    .map((it) =>
+      toAbsoluteRealEstateUrl(origin, {
+        type: it.realEstateType,
+        city: it.city,
+        district: it.district,
+        buildingName: it.buildingName,
+      }),
+    );
 }
