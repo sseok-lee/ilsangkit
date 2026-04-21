@@ -173,9 +173,7 @@ export default defineEventHandler(async (event) => {
   // (buildingName 없으므로 bjdCode 역조회 불가 → 지역 구분 없는 전국 유형 hub로 폴백)
   const saleListMatch = pathname.match(LEGACY_SALE_LIST)
   if (saleListMatch) {
-    const propertyType = saleListMatch[1] as PropertyType
-    const mode = saleListMatch[2] as TransactionMode
-    return sendRedirect(event, `/real-estate/${propertyType}?tab=${mode}`, 301)
+    return sendRedirect(event, '/real-estate', 301)
   }
 
   const existingParams = new URLSearchParams(url.search)
