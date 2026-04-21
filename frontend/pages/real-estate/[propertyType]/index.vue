@@ -57,7 +57,7 @@
       </SectionBlock>
     </template>
 
-    <template v-else-if="complexes.length > 0">
+    <template v-else-if="renderableComplexes.length > 0">
       <SectionBlock heading="건물 목록" subtext="최근 거래가 있는 건물부터 확인하세요.">
         <template #right>
           <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
@@ -66,7 +66,7 @@
         </template>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <ComplexCard
-            v-for="complex in complexes"
+            v-for="complex in renderableComplexes"
             :key="`${complex.buildingName}-${complex.bjdCode}`"
             :complex="complex"
             :property-type="propertyTypeParam"
@@ -150,6 +150,7 @@ import { ref, computed, watch } from 'vue'
 import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
+import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
@@ -184,6 +185,13 @@ const faqs = computed(() => PROPERTY_TYPE_FAQ[propertyTypeParam.value] || [])
 const { getComplexList } = useRealEstate()
 
 const complexes = ref<ComplexInfo[]>([])
+// 렌더링 단계에서 invalid buildingName / thin transaction 건을 추가로 걸러낸다.
+// (API에서 이미 필터링된 결과여도 SSR 레이어에서 방어적으로 한 번 더 검증)
+const renderableComplexes = computed<ComplexInfo[]>(() =>
+  complexes.value.filter(
+    (c) => isValidBuildingName(c.buildingName) && c.transactionCount >= 10,
+  ),
+)
 const totalComplexes = ref(0)
 const currentPage = ref(1)
 const totalPages = ref(0)

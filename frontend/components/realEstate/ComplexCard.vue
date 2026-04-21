@@ -1,5 +1,6 @@
 <template>
   <NuxtLink
+    v-if="isRenderable"
     :to="linkUrl"
     class="group bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 border border-slate-200 hover:border-primary/30 cursor-pointer block"
   >
@@ -49,14 +50,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
+import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 
 interface Props {
   complex: ComplexInfo
   propertyType: RealEstatePropertyType
   tab: TransactionMode
+  /**
+   * 링크 대상을 유효한 단지로 국한하기 위한 최소 거래 건수 (기본 10).
+   * thin content 링크로 크롤 예산이 새는 것을 방지한다.
+   */
+  minTransactionCount?: number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  minTransactionCount: 10,
+})
+
+// 지번/thin buildingName이거나 거래 건수가 모자라면 렌더링 자체를 건너뜀.
+// → 내부 링크로도 노출되지 않아 크롤 예산 회수.
+const isRenderable = computed(() => {
+  if (!isValidBuildingName(props.complex.buildingName)) return false
+  if (props.complex.transactionCount < props.minTransactionCount) return false
+  return true
+})
 
 const linkUrl = computed(() => {
   const name = encodeURIComponent(props.complex.buildingName)

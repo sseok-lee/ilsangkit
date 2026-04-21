@@ -58,14 +58,52 @@ describe('ComplexCard', () => {
     })
 
     it('거래일/건축년도가 null이면 "-"으로 표시한다', () => {
+      // minTransactionCount=0 으로 thin content 필터를 우회하여 null 필드 표시 동작만 검증
       const wrapper = mount(ComplexCard, {
-        props: { complex: mockComplexNoPrice, propertyType: 'apt', tab: 'sale' },
+        props: { complex: mockComplexNoPrice, propertyType: 'apt', tab: 'sale', minTransactionCount: 0 },
       })
       const text = wrapper.text()
       expect(text).toContain('최근 거래')
       expect(text).toContain('건축년도')
       expect(text).not.toContain('2026')
       expect(text).not.toContain('2015')
+    })
+  })
+
+  describe('US-004: 렌더링 필터', () => {
+    it('invalid buildingName (지번)이면 렌더링을 건너뛴다', () => {
+      const jibun: ComplexInfo = { ...mockComplex, buildingName: '(535-3)' }
+      const wrapper = mount(ComplexCard, {
+        props: { complex: jibun, propertyType: 'villa', tab: 'sale' },
+      })
+      // v-if 로 가드되므로 NuxtLink(a 태그) 자체가 없어야 한다
+      expect(wrapper.find('a').exists()).toBe(false)
+      expect(wrapper.html()).toBe('<!--v-if-->')
+    })
+
+    it('transactionCount < 10 thin content면 렌더링을 건너뛴다', () => {
+      const thin: ComplexInfo = { ...mockComplex, transactionCount: 5 }
+      const wrapper = mount(ComplexCard, {
+        props: { complex: thin, propertyType: 'apt', tab: 'sale' },
+      })
+      expect(wrapper.find('a').exists()).toBe(false)
+    })
+
+    it('minTransactionCount 커스텀 프롭으로 필터 임계치 조정 가능', () => {
+      const thin: ComplexInfo = { ...mockComplex, transactionCount: 5 }
+      const wrapper = mount(ComplexCard, {
+        props: { complex: thin, propertyType: 'apt', tab: 'sale', minTransactionCount: 3 },
+      })
+      expect(wrapper.find('a').exists()).toBe(true)
+    })
+
+    it('company-prefix (주)빌라는 정상 렌더링', () => {
+      const legit: ComplexInfo = { ...mockComplex, buildingName: '(주)래미안타워' }
+      const wrapper = mount(ComplexCard, {
+        props: { complex: legit, propertyType: 'apt', tab: 'sale' },
+      })
+      expect(wrapper.find('a').exists()).toBe(true)
+      expect(wrapper.text()).toContain('(주)래미안타워')
     })
   })
 
