@@ -1,8 +1,8 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
+    <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
       <!-- 브레드크럼 -->
-      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-6">
+      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-4">
         <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
         <span class="material-symbols-outlined text-[14px]">chevron_right</span>
         <NuxtLink :to="`/${city}`" class="hover:text-primary">{{ cityName }}</NuxtLink>
@@ -11,18 +11,18 @@
       </nav>
 
       <!-- 히어로 -->
-      <div class="mb-8">
+      <div class="mb-5">
         <div class="mb-2">
           <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
             {{ districtName }} 생활 정보
           </h1>
         </div>
         <p class="mt-2 text-slate-500 text-sm">{{ cityName }} {{ districtName }}의 부동산 시세와 생활시설을 한눈에 확인하세요</p>
-        <p v-if="areaDescription" class="text-gray-600 text-sm leading-relaxed mt-4">{{ areaDescription }}</p>
+        <p v-if="areaDescription" class="text-gray-600 text-sm leading-relaxed mt-3">{{ areaDescription }}</p>
       </div>
 
       <!-- Ad: 헤더 직후 -->
-      <AdBanner class="mb-8" />
+      <AdBanner class="mb-5" />
 
       <!-- 로딩 -->
       <div v-if="pending" class="flex justify-center py-20">
@@ -32,8 +32,8 @@
       <!-- 콘텐츠 -->
       <div v-else-if="areaData">
         <!-- ① 부동산 시세 현황 -->
-        <section v-if="areaData.realEstate" id="real-estate" class="mb-10">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+        <section v-if="areaData.realEstate" id="real-estate" class="mb-6">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
             <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
             부동산 시세 현황
           </h2>
@@ -71,12 +71,12 @@
         </section>
 
         <!-- ② 생활시설 현황 -->
-        <section v-if="areaData.facilities" id="facilities" class="mb-10">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+        <section v-if="areaData.facilities" id="facilities" class="mb-6">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
             <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
             생활시설 현황
           </h2>
-          <p class="text-sm text-slate-500 mb-4">총 {{ areaData.facilities.total.toLocaleString() }}개 시설</p>
+          <p class="text-sm text-slate-500 mb-3">총 {{ areaData.facilities.total.toLocaleString() }}개 시설</p>
           <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             <NuxtLink
               v-for="(count, cat) in sortedFacilityCategories"
@@ -97,12 +97,12 @@
         </section>
 
         <!-- Ad: Facilities 후 -->
-        <div class="mb-10">
+        <div class="mb-6">
           <AdBanner />
         </div>
 
         <!-- ③ 교차 CTA -->
-        <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 md:p-8 text-center">
+        <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-5 md:p-6 text-center">
           <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
             {{ districtName }} 부동산 실거래가 상세 보기
           </h3>

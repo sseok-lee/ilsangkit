@@ -1,24 +1,24 @@
 <template>
   <div class="bg-background-light">
-    <!-- Hero Section -->
-    <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
-      <div class="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">청약 일정·분양정보</h1>
-        <p class="mt-2 text-slate-500 text-sm">
-          아파트·오피스텔 분양, 무순위·잔여세대, 공공·민간 임대까지<br />
-          모든 청약 일정과 정보를 한눈에 확인하세요.
-        </p>
-      </div>
-    </div>
+    <main class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+      <PageHero
+        eyebrow="청약"
+        title="청약 일정·분양정보"
+        description="아파트·오피스텔 분양, 무순위·잔여세대, 공공·민간 임대까지 모든 청약 일정과 정보를 한눈에 확인하세요."
+        :stats="heroStats"
+      />
 
-    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6">
       <!-- 분양 Section -->
-      <section class="mb-10">
-        <div class="flex items-center gap-2 mb-4">
-          <img src="/icons/category/sale.webp?v2" alt="분양" class="w-6 h-6" width="24" height="24" />
-          <h2 class="text-xl font-bold text-slate-900">분양</h2>
+      <SectionBlock>
+        <template #heading>
+          <div class="flex items-center gap-2">
+            <img src="/icons/category/sale.webp?v2" alt="분양" class="w-6 h-6" width="24" height="24" />
+            <h2 class="text-lg md:text-xl font-bold text-slate-900">분양</h2>
+          </div>
+        </template>
+        <template #right>
           <NuxtLink to="/subscription/sale" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
-        </div>
+        </template>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <NuxtLink
             v-for="(meta, slug) in SALE_TYPES"
@@ -33,15 +33,19 @@
             <p class="text-sm text-slate-500 leading-relaxed">{{ meta.description }}</p>
           </NuxtLink>
         </div>
-      </section>
+      </SectionBlock>
 
       <!-- 임대 Section -->
-      <section class="mb-10">
-        <div class="flex items-center gap-2 mb-4">
-          <img src="/icons/category/rent.webp?v2" alt="임대" class="w-6 h-6" width="24" height="24" />
-          <h2 class="text-xl font-bold text-slate-900">임대</h2>
+      <SectionBlock>
+        <template #heading>
+          <div class="flex items-center gap-2">
+            <img src="/icons/category/rent.webp?v2" alt="임대" class="w-6 h-6" width="24" height="24" />
+            <h2 class="text-lg md:text-xl font-bold text-slate-900">임대</h2>
+          </div>
+        </template>
+        <template #right>
           <NuxtLink to="/subscription/rent" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
-        </div>
+        </template>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <NuxtLink
             v-for="(meta, slug) in RENT_TYPES"
@@ -56,17 +60,46 @@
             <p class="text-sm text-slate-500 leading-relaxed">{{ meta.description }}</p>
           </NuxtLink>
         </div>
-      </section>
+      </SectionBlock>
 
       <!-- Ad Banner -->
       <AdBanner />
 
-      <!-- 접수예정 미리보기 -->
-      <section v-if="upcomingItems.length > 0" class="mt-8">
-        <div class="flex items-center gap-2 mb-4">
-          <img src="/icons/category/subscription.webp?v2" alt="접수예정" class="w-6 h-6" width="24" height="24" />
-          <h2 class="text-xl font-bold text-slate-900">접수예정 청약</h2>
+      <!-- 청약중 미리보기 -->
+      <SectionBlock v-if="ongoingItems.length > 0">
+        <template #heading>
+          <div class="flex items-center gap-2">
+            <img src="/icons/category/subscription.webp?v2" alt="청약중" class="w-6 h-6" width="24" height="24" />
+            <h2 class="text-lg md:text-xl font-bold text-slate-900">청약중</h2>
+          </div>
+        </template>
+        <template #right>
+          <span class="inline-flex px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+            {{ ongoingItems.length }}
+          </span>
+        </template>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SubscriptionCard
+            v-for="sub in ongoingItems"
+            :key="sub.id"
+            :subscription="sub"
+          />
         </div>
+      </SectionBlock>
+
+      <!-- 접수예정 미리보기 -->
+      <SectionBlock v-if="upcomingItems.length > 0">
+        <template #heading>
+          <div class="flex items-center gap-2">
+            <img src="/icons/category/subscription.webp?v2" alt="접수예정" class="w-6 h-6" width="24" height="24" />
+            <h2 class="text-lg md:text-xl font-bold text-slate-900">접수예정 청약</h2>
+          </div>
+        </template>
+        <template #right>
+          <span class="inline-flex px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+            {{ upcomingItems.length }}
+          </span>
+        </template>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <SubscriptionCard
             v-for="sub in upcomingItems"
@@ -74,18 +107,17 @@
             :subscription="sub"
           />
         </div>
-      </section>
+      </SectionBlock>
 
       <!-- FAQ Section -->
-      <section class="mt-12">
-        <h2 class="text-lg font-semibold mb-4">자주 묻는 질문</h2>
+      <SectionBlock heading="자주 묻는 질문">
         <div class="space-y-1">
           <details v-for="(faq, i) in faqs" :key="i" class="border-b border-gray-200">
             <summary class="py-3 cursor-pointer font-medium text-gray-800 hover:text-blue-600">{{ faq.question }}</summary>
             <p class="pb-3 text-gray-600 text-sm leading-relaxed">{{ faq.answer }}</p>
           </details>
         </div>
-      </section>
+      </SectionBlock>
     </main>
   </div>
 </template>
@@ -100,6 +132,11 @@ import { useSubscription } from '~/composables/useSubscription'
 const title = '청약 일정·분양정보 — 분양·임대 전체 조회 | 일상킷'
 const description = '아파트·오피스텔 분양, 무순위·잔여세대, 공공·민간 임대 청약 일정과 정보를 한눈에 확인하세요.'
 const canonicalUrl = `${SITE_URL}/subscription`
+const heroStats = [
+  { label: '분양', value: '아파트·오피스텔·무순위' },
+  { label: '임대', value: '공공·민간임대' },
+  { label: '상태', value: '청약중·접수예정' },
+]
 
 useHead({
   title,
@@ -131,13 +168,21 @@ const faqs = [
 
 const { setFAQSchema, setBreadcrumbSchema } = useStructuredData()
 
-const { getUpcomingSubscriptions } = useSubscription()
+const { getUpcomingSubscriptions, getSubscriptionList } = useSubscription()
 
 const upcomingItems = ref<Subscription[]>([])
+const ongoingItems = ref<Subscription[]>([])
 
-const { data } = await useAsyncData('subscription-upcoming', () => getUpcomingSubscriptions())
-if (data.value) {
-  upcomingItems.value = data.value
+const { data: upcomingData } = await useAsyncData('subscription-upcoming', () => getUpcomingSubscriptions())
+if (upcomingData.value) {
+  upcomingItems.value = upcomingData.value
+}
+
+const { data: ongoingData } = await useAsyncData('subscription-ongoing', () =>
+  getSubscriptionList({ status: 'ongoing', page: 1, limit: 6 })
+)
+if (ongoingData.value) {
+  ongoingItems.value = ongoingData.value.items
 }
 
 setFAQSchema(faqs.map(f => ({ question: f.question, answer: f.answer })))

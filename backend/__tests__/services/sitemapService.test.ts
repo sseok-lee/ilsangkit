@@ -9,7 +9,6 @@ vi.mock('../../src/lib/prisma.js', () => ({
   default: { $queryRaw: mockQueryRaw },
 }));
 
-// 기타 service 의존성은 호출되지 않지만 import 시 필요한 최소 스텁
 vi.mock('../../src/services/facilityService.js', () => ({
   getAllIds: vi.fn(),
   getRegionCategoryCombinations: vi.fn(),
@@ -24,7 +23,6 @@ vi.mock('../../src/services/categoryRegistry.js', () => ({
 import { getRealEstateBuildings } from '../../src/services/sitemapService.js';
 
 function flattenSql(call: unknown[]): string {
-  // tagged template literal 의 첫 인자는 TemplateStringsArray
   const strings = call[0] as unknown as readonly string[];
   return strings.join('?');
 }
@@ -33,54 +31,79 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('getRealEstateBuildings', () => {
-  it('apt/villa/offitel 세 UNION 블록 모두 HAVING SUM(cnt) >= 10 을 적용한다', async () => {
+describe('getRealEstateBuildings (US-008 new URL contract)', () => {
+  it('emits 6 realEstateType branches (apt|villa|offitel × sale|rent)', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    const tenMatches = sql.match(/HAVING\s+SUM\(cnt\)\s*>=\s*10/g);
-    expect(tenMatches).not.toBeNull();
-    expect(tenMatches).toHaveLength(3);
-    // 구 임계치가 잔존하지 않음
-    expect(sql).not.toMatch(/SUM\(cnt\)\s*>=\s*50/);
+    for (const t of [
+      'apt-sale',
+      'apt-rent',
+      'villa-sale',
+      'villa-rent',
+      'offitel-sale',
+      'offitel-rent',
+    ]) {
+      expect(sql).toContain(`'${t}'`);
+    }
+    // 6-way union produces 5 UNION ALL between them
+    const unionCount = sql.match(/UNION ALL/g)?.length ?? 0;
+    expect(unionCount).toBeGreaterThanOrEqual(5);
   });
 
-  it('3종 부동산 UNION (apt/villa/offitel)을 발행한다', async () => {
+  it('groups by (city, district, buildingName, bjdCode) — fields required by new URL', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    expect(sql).toContain("'apt' AS propertyType");
-    expect(sql).toContain("'villa' AS propertyType");
-    expect(sql).toContain("'offitel' AS propertyType");
-    expect(sql.match(/UNION ALL/g)?.length).toBeGreaterThanOrEqual(5); // 외부 3-1 + 내부 3 = 6
+    const groupByMatches = sql.match(
+      /GROUP BY\s+city,\s*district,\s*buildingName,\s*bjdCode/g,
+    );
+    expect(groupByMatches?.length).toBe(6);
   });
 
-  it('buildingName 품질 필터(길이/지번 폴백/숫자-only)를 포함한다', async () => {
+  it('HAVING COUNT(*) >= 10 in each branch (thin-content filter)', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    // 6개 raw select 블록 전부에 동일 필터가 들어있어야 함
-    const charLenMatches = sql.match(/CHAR_LENGTH\(buildingName\)\s*>=\s*2/g);
-    expect(charLenMatches?.length).toBe(6);
-
-    const parenGuardMatches = sql.match(/buildingName\s+NOT\s+REGEXP\s+'\^\[\[:space:\]\]\*\[\(\]'/g);
-    expect(parenGuardMatches?.length).toBe(6);
-
-    const numericOnlyMatches = sql.match(/buildingName\s+NOT\s+REGEXP\s+'\^\[0-9\(\)\[:space:\]-\]\+\$'/g);
-    expect(numericOnlyMatches?.length).toBe(6);
+    const havingMatches = sql.match(/HAVING\s+COUNT\(\*\)\s*>=\s*10/g);
+    expect(havingMatches?.length).toBe(6);
   });
 
-  it('기본 buildingName NOT NULL / != "" 조건도 유지된다', async () => {
+  it('keeps isValidBuildingName-equivalent regex filter in all 6 branches', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    const notNullMatches = sql.match(/buildingName\s+IS\s+NOT\s+NULL/g);
-    expect(notNullMatches?.length).toBe(6);
-    const notEmptyMatches = sql.match(/buildingName\s*!=\s*''/g);
-    expect(notEmptyMatches?.length).toBe(6);
+    // digit-opener paren prefix
+    const parenMatches = sql.match(
+      /buildingName\s+NOT\s+REGEXP\s+'\^\[\[:space:\]\]\*\[\(\]\[0-9\]'/g,
+    );
+    expect(parenMatches?.length).toBe(6);
+    // pure-digit/hyphen/paren/space-only
+    const numericMatches = sql.match(
+      /buildingName\s+NOT\s+REGEXP\s+'\^\[0-9\(\)\[:space:\]-\]\+\$'/g,
+    );
+    expect(numericMatches?.length).toBe(6);
+    // length >= 2
+    const lenMatches = sql.match(/CHAR_LENGTH\(buildingName\)\s*>=\s*2/g);
+    expect(lenMatches?.length).toBe(6);
+  });
+
+  it('selects realEstateType + city + district + buildingName + bjdCode', async () => {
+    mockQueryRaw.mockResolvedValue([]);
+    await getRealEstateBuildings();
+    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
+    expect(sql).toMatch(/SELECT\s+realEstateType,\s*city,\s*district,\s*buildingName,\s*bjdCode/);
+  });
+
+  it('keeps NOT NULL / != "" guards', async () => {
+    mockQueryRaw.mockResolvedValue([]);
+    await getRealEstateBuildings();
+    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
+    expect(sql.match(/buildingName\s+IS\s+NOT\s+NULL/g)?.length).toBe(6);
+    expect(sql.match(/buildingName\s*!=\s*''/g)?.length).toBe(6);
   });
 });

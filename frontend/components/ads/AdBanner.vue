@@ -1,5 +1,5 @@
 <template>
-  <div class="ad-banner my-6 w-full">
+  <div class="ad-banner my-3 w-full">
     <ClientOnly>
       <ins
         :key="adKey"
@@ -50,9 +50,22 @@ watch(() => route.fullPath, () => {
 </script>
 
 <style>
-/* 광고가 채워지지 않으면 AdSense가 data-ad-status="unfilled"을 설정한다.
-   이 때 ins는 style로 height:280px가 강제로 걸리므로 명시적으로 숨겨 공간을 회수한다. */
+/* AdSense가 status 판정 전에 인라인 height(예: 280~600px)을 걸어둬 빈 박스가 보이는
+   문제를 막기 위해, 초기 상태(data-ad-status 미설정)에서는 높이 0으로 강제한다.
+   width는 100% 유지 → AdSense가 컨테이너 폭을 측정해 광고 크기를 결정하는 데 지장 없음. */
+.ad-banner ins.adsbygoogle:not([data-ad-status]) {
+  height: 0 !important;
+  min-height: 0 !important;
+}
+
+/* unfilled 확정 시 ins 자체를 제거한다. */
 .ad-banner ins.adsbygoogle[data-ad-status='unfilled'] {
+  display: none !important;
+}
+
+/* unfilled 확정 시 부모 컨테이너(.ad-banner)까지 collapse해 my-6 마진을 제거한다.
+   (localhost·광고 차단기 환경에서 빈 박스가 남는 문제 해결) */
+.ad-banner:has(ins.adsbygoogle[data-ad-status='unfilled']) {
   display: none !important;
 }
 </style>

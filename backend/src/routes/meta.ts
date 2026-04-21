@@ -7,7 +7,7 @@ import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
 import { getStatsByCity, getStatsByDistrict, getSyncStatus, SHORT_TO_SLUG } from '../services/facilityService.js';
-import { getCategories, getStats, getRegionByDistrictName, getRegions } from '../services/metaService.js';
+import { getCategories, getStats, getRegionByDistrictName, getRegionByBjdCode, getRegions } from '../services/metaService.js';
 
 const SlugParamsSchema = z.object({
   citySlug: z.string().regex(/^[a-z-]+$/).max(30),
@@ -25,6 +25,10 @@ const RegionFacilitiesSummaryQuerySchema = z.object({
 
 const RegionsQuerySchema = z.object({
   city: z.string().min(1).max(20).optional(),
+});
+
+const RegionByBjdCodeQuerySchema = z.object({
+  bjdCode: z.string().regex(/^\d{5,10}$/),
 });
 
 const router = Router();
@@ -129,6 +133,16 @@ router.get('/stats/:citySlug/:districtSlug', validate(SlugDistrictParamsSchema, 
 router.get('/sync-status', asyncHandler(async (_req: Request, res: Response) => {
   const syncStatus = await getSyncStatus();
   res.json({ success: true, data: syncStatus });
+}));
+
+// GET /api/meta/region-by-bjd - bjdCode 역조회 (legacy URL redirect 용)
+router.get('/region-by-bjd', validate(RegionByBjdCodeQuerySchema, 'query'), asyncHandler(async (req: Request, res: Response) => {
+  const bjdCode = req.query.bjdCode as string;
+  const region = await getRegionByBjdCode(bjdCode);
+  if (!region) {
+    throw new NotFoundError('해당 bjdCode의 지역을 찾을 수 없습니다');
+  }
+  res.json({ success: true, data: { city: region.city, district: region.district, bjdCode: region.bjdCode } });
 }));
 
 // GET /api/meta/regions - 지역 목록

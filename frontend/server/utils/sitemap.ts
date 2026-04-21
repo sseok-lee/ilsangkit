@@ -154,11 +154,19 @@ export async function fetchWasteScheduleIds(
   return []
 }
 
+export interface SitemapRealEstateBuilding {
+  realEstateType: 'apt-sale' | 'apt-rent' | 'villa-sale' | 'villa-rent' | 'offitel-sale' | 'offitel-rent'
+  city: string
+  district: string
+  buildingName: string
+  bjdCode: string
+}
+
 export async function fetchRealEstateBuildings(
   apiBase: string
-): Promise<Array<{ propertyType: string; buildingName: string; bjdCode: string }>> {
+): Promise<SitemapRealEstateBuilding[]> {
   const cacheKey = 'real-estate-buildings'
-  const cached = getCached<{ propertyType: string; buildingName: string; bjdCode: string }>(cacheKey)
+  const cached = getCached<SitemapRealEstateBuilding>(cacheKey)
   if (cached) return cached
 
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -169,7 +177,7 @@ export async function fetchRealEstateBuildings(
         continue
       }
       const json = await res.json()
-      const data = json.data || []
+      const data = (json.data ?? []) as SitemapRealEstateBuilding[]
       if (data.length > 0) {
         setCache(cacheKey, data)
       }

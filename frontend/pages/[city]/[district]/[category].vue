@@ -1,41 +1,45 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
+  <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
-    <!-- Page Header -->
-    <header class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
-        {{ cityShortName }} {{ districtName }} {{ categoryName }}
-        <span v-if="summary && summary.count > 0" class="ml-1">{{ summary.count.toLocaleString() }}곳</span>
-      </h1>
-      <p class="text-gray-600">
-        {{ isTrash
-          ? `${cityName} ${districtName}의 쓰레기 배출 일정 정보를 확인하세요.`
-          : `${cityName} ${districtName}의 ${categoryName} 위치 정보를 확인하세요.`
-        }}
-      </p>
-    </header>
+    <!-- Hero -->
+    <PageHero
+      :eyebrow="isTrash ? '지역 쓰레기 배출' : '지역 시설 목록'"
+      :title="heroTitle"
+      :description="heroDescription"
+      :stats="heroStats"
+    />
 
-    <!-- 지역 요약 섹션 (near-duplicate 방지) -->
-    <div v-if="summary && !isTrash" class="mb-6 space-y-4">
-      <DistrictSummaryCard
-        :summary="summary"
-        :district-name="districtName"
-        :category-label="categoryName"
-      />
-      <NearbyDistrictsNav
-        :city-slug="city"
-        :category="category"
-        :category-label="categoryName"
-        :districts="summary.nearbyDistricts"
-      />
-    </div>
+    <!-- 지역 요약 (non-trash) -->
+    <SectionBlock
+      v-if="summary && !isTrash"
+      heading="지역 요약"
+      subtext="이 지역의 전체 개수·상위 동·주변 지역을 한눈에 확인하세요."
+    >
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <DistrictSummaryCard
+          :summary="summary"
+          :district-name="districtName"
+          :category-label="categoryName"
+        />
+        <NearbyDistrictsNav
+          :city-slug="city"
+          :category="category"
+          :category-label="categoryName"
+          :districts="summary.nearbyDistricts"
+        />
+      </div>
+    </SectionBlock>
 
     <!-- ========== Trash: 배출 일정 ========== -->
-    <template v-if="isTrash">
+    <SectionBlock v-if="isTrash" heading="배출 일정" :subtext="`${wasteTotal.toLocaleString('ko-KR')}건 · 지역별 배출 요일과 방법`">
+      <template #right>
+        <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ wasteTotal.toLocaleString('ko-KR') }}건</span>
+      </template>
+
       <!-- 로딩 -->
-      <div v-if="wasteLoading" class="flex items-center justify-center py-12">
+      <div v-if="wasteLoading" class="flex items-center justify-center py-10">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
           <p class="text-slate-500 text-sm">배출 일정 조회 중...</p>
@@ -60,22 +64,16 @@
         </div>
 
         <!-- 배출 일정 목록 -->
-        <template v-if="wasteSchedules.length > 0">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-slate-900 text-base font-bold">배출 일정</h2>
-            <span class="text-xs text-slate-500 font-medium">{{ wasteTotal }}건</span>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            <WasteScheduleCard
-              v-for="region in wasteSchedules"
-              :key="region.id"
-              :region="region"
-            />
-          </div>
-        </template>
+        <div v-if="wasteSchedules.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <WasteScheduleCard
+            v-for="region in wasteSchedules"
+            :key="region.id"
+            :region="region"
+          />
+        </div>
 
         <!-- 결과 없음 -->
-        <div v-else class="py-16 text-center">
+        <div v-else class="py-12 text-center">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
             <span class="material-symbols-outlined text-[32px] text-slate-500">delete</span>
           </div>
@@ -91,22 +89,26 @@
           @page-change="goToWastePage"
         />
       </div>
-    </template>
+    </SectionBlock>
 
     <!-- ========== 일반 시설 ========== -->
-    <template v-else>
+    <SectionBlock v-else :heading="`${categoryName} 목록`" :subtext="`${districtName} 지역 ${categoryName} 정보`">
+      <template #right>
+        <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ (total || 0).toLocaleString('ko-KR') }}건</span>
+      </template>
+
       <!-- Loading State -->
-      <div v-if="loading" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p class="mt-4 text-gray-600">시설 정보를 불러오는 중...</p>
+      <div v-if="loading" class="text-center py-10">
+        <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        <p class="mt-4 text-slate-500 text-sm">시설 정보를 불러오는 중...</p>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
         <p class="text-red-800">{{ error }}</p>
         <button
+          class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           @click="loadFacilities()"
-          class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
         >
           다시 시도
         </button>
@@ -114,13 +116,11 @@
 
       <!-- Facilities Grid -->
       <div v-else>
-        <!-- No Results -->
-        <div v-if="facilities.length === 0" class="text-center py-12">
-          <p class="text-gray-600">해당 지역에 등록된 시설이 없습니다.</p>
+        <div v-if="facilities.length === 0" class="py-12 text-center">
+          <p class="text-slate-600">해당 지역에 등록된 시설이 없습니다.</p>
         </div>
 
-        <!-- Grid -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <FacilityCard
             v-for="facility in facilities"
             :key="facility.id"
@@ -128,49 +128,44 @@
           />
         </div>
 
-        <!-- Ad: Facility List 후 -->
-        <div class="mb-8">
-          <AdBanner />
-        </div>
-
         <!-- Pagination -->
-        <div v-if="totalPages > 1" class="flex justify-center items-center space-x-4">
+        <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-4">
           <button
             :disabled="currentPage === 1"
+            class="px-4 py-2 border border-line rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
             @click="goToPage(currentPage - 1)"
-            class="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
           >
             이전
           </button>
-          <span class="text-gray-700">
-            {{ currentPage }} / {{ totalPages }}
-          </span>
+          <span class="text-slate-700 text-sm">{{ currentPage }} / {{ totalPages }}</span>
           <button
             :disabled="currentPage === totalPages"
+            class="px-4 py-2 border border-line rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
             @click="goToPage(currentPage + 1)"
-            class="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
           >
             다음
           </button>
         </div>
       </div>
-    </template>
+    </SectionBlock>
 
-    <!-- Other Categories -->
-    <section class="mt-12 border-t pt-8">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">다른 카테고리</h2>
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <!-- Ad: 결과 뒤 -->
+    <AdBanner />
+
+    <!-- 이 지역 다른 카테고리 -->
+    <SectionBlock heading="이 지역 다른 카테고리" subtext="같은 지역의 다른 생활 정보도 확인해보세요.">
+      <div class="flex flex-wrap gap-2">
         <NuxtLink
           v-for="cat in otherCategories"
           :key="cat.slug"
           :to="`/${city}/${district}/${cat.slug}`"
-          class="group flex flex-col items-center p-4 rounded-2xl border border-slate-200 bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
         >
-          <img :src="`/icons/category/${cat.slug}.webp?v2`" :alt="cat.name" class="w-8 h-8 mb-2" width="32" height="32" loading="lazy" />
-          <span class="text-xs text-slate-600 font-medium">{{ cat.name }}</span>
+          <img :src="`/icons/category/${cat.slug}.webp?v2`" :alt="cat.name" class="w-4 h-4" width="16" height="16" loading="lazy" />
+          {{ districtName }} {{ cat.name }}
         </NuxtLink>
       </div>
-    </section>
+    </SectionBlock>
   </div>
 </template>
 
@@ -186,6 +181,9 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 // Route params
 const route = useRoute()
@@ -289,6 +287,29 @@ const breadcrumbItems = computed(() => [
     current: true,
   },
 ])
+
+// Hero title/description/stats
+const heroTitle = computed(() => {
+  const countSuffix = summary.value?.count && summary.value.count > 0 ? ` ${summary.value.count.toLocaleString('ko-KR')}곳` : ''
+  return `${cityShortName.value} ${districtName.value} ${categoryName.value}${countSuffix}`
+})
+const heroDescription = computed(() =>
+  isTrash.value
+    ? `${cityName.value} ${districtName.value}의 쓰레기 배출 일정 정보를 확인하세요.`
+    : `${cityName.value} ${districtName.value}의 ${categoryName.value} 위치·운영시간을 확인하세요.`
+)
+const heroStats = computed(() => {
+  const s: { label: string; value: string }[] = []
+  const count = isTrash.value ? wasteTotal.value : (summary.value?.count ?? total.value ?? 0)
+  if (count > 0) {
+    s.push({ label: isTrash.value ? '배출 일정' : '시설 수', value: `${count.toLocaleString('ko-KR')}${isTrash.value ? '건' : '곳'}` })
+  }
+  if (!isTrash.value && summary.value?.nearbyDistricts?.length) {
+    s.push({ label: '주변 지역', value: summary.value.nearbyDistricts.slice(0, 2).map(n => n.district).join(' · ') })
+  }
+  s.push({ label: '업데이트', value: isTrash.value ? '매일 자동' : '월 1회 자동' })
+  return s
+})
 
 // Other categories (dynamically from CATEGORY_GROUPS, excluding current)
 const EXCLUDED_REGION_CATEGORIES = new Set<string>([])

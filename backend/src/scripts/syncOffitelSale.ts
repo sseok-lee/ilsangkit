@@ -12,6 +12,7 @@ import {
 } from '../services/syncRealEstateBase.js';
 import { runSync, batchUpsert, transformAndDedupe } from '../services/baseSyncService.js';
 import { submitIndexNow, buildRealEstateUrls } from '../services/indexNowService.js';
+import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
 
 const API_ENDPOINT = 'RTMSDataSvcOffiTrade/getRTMSDataSvcOffiTrade';
 const CATEGORY = 'offitelSale';
@@ -196,11 +197,13 @@ async function main(): Promise<void> {
     select: { buildingName: true, bjdCode: true },
     distinct: ['buildingName', 'bjdCode'],
   });
-  if (buildings.length > 0) {
-    const urls = buildRealEstateUrls('offitel', buildings.map(b => ({
+  const validBuildings = buildings.filter((b) => isValidBuildingName(b.buildingName));
+  if (validBuildings.length > 0) {
+    const urls = buildRealEstateUrls('offitel', validBuildings.map(b => ({
       buildingName: b.buildingName,
       bjdCode: b.bjdCode,
     })));
+    console.info(`[offitelSale] IndexNow: ${buildings.length} candidates → ${validBuildings.length} valid (filtered ${buildings.length - validBuildings.length})`);
     await submitIndexNow(urls);
   }
 

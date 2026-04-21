@@ -106,59 +106,36 @@
         </Teleport>
 
         <!-- Desktop: Two Column Layout -->
-        <div class="hidden md:block max-w-6xl mx-auto px-6 py-8">
-          <!-- Breadcrumbs -->
-          <nav class="flex flex-wrap gap-2 mb-6 items-center text-sm">
-            <NuxtLink to="/" class="text-slate-500 font-medium hover:text-primary transition-colors">
-              홈
-            </NuxtLink>
-            <span class="material-symbols-outlined text-slate-400 text-[16px]">chevron_right</span>
-            <NuxtLink
-              :to="`/${category}`"
-              class="text-slate-500 font-medium hover:text-primary transition-colors"
-            >
-              {{ categoryMeta.label }}
-            </NuxtLink>
-            <span class="material-symbols-outlined text-slate-400 text-[16px]">chevron_right</span>
-            <NuxtLink
-              :to="getCityHubPath(facility.city)"
-              class="text-slate-500 font-medium hover:text-primary transition-colors"
-            >
-              {{ facility.city }}
-            </NuxtLink>
-            <span class="material-symbols-outlined text-slate-400 text-[16px]">chevron_right</span>
-            <span class="text-slate-900 font-semibold truncate max-w-[300px]">{{ facility.name }}</span>
-          </nav>
+        <div class="hidden md:block max-w-[1200px] mx-auto px-6 pt-5 pb-10">
+          <!-- Breadcrumb -->
+          <Breadcrumb :items="desktopBreadcrumbItems" class="mb-4" />
 
-          <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-10 items-start">
+          <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 items-start">
             <!-- Left Column: Details -->
-            <div class="flex flex-col gap-8 w-full">
-              <!-- Page Heading & Badges -->
-              <div class="flex flex-col gap-3 pt-2">
-                <div class="flex items-start justify-between">
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10">
-                    <span class="material-symbols-outlined text-[14px]">place</span> {{ categoryMeta.label }}
-                  </span>
-                  <div class="flex gap-2">
-                    <button class="text-slate-500 hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 시설 공유하기" @click="handleShare">
-                      <span class="material-symbols-outlined">share</span>
-                    </button>
-                  </div>
-                </div>
-                <h1 class="text-slate-900 text-3xl font-bold leading-tight tracking-tight">
-                  {{ facility.name }}
-                </h1>
-                <p v-if="facilityIntro" class="text-sm text-gray-600 leading-relaxed">
-                  {{ facilityIntro }}
-                </p>
+            <div class="flex flex-col gap-3 w-full">
+              <!-- 공유 버튼 row -->
+              <div class="flex justify-end">
+                <button
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
+                  aria-label="이 시설 공유하기"
+                  @click="handleShare"
+                >
+                  <span class="material-symbols-outlined text-[16px]">share</span>
+                  공유
+                </button>
               </div>
 
-              <!-- Basic Info Card -->
-              <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                  <h2 class="text-slate-900 text-lg font-bold">기본정보</h2>
-                </div>
-                <div class="p-5 flex flex-col gap-4">
+              <!-- Page Hero -->
+              <PageHero
+                :eyebrow="categoryMeta.label"
+                :title="facility.name"
+                :description="facilityIntro || undefined"
+                :stats="desktopHeroStats"
+              />
+
+              <!-- 기본정보 SectionBlock -->
+              <SectionBlock heading="기본정보" subtext="주소·운영시간·연락처 등 공통 정보를 먼저 확인합니다.">
+                <div class="flex flex-col gap-3">
                   <!-- Operating Status Banner -->
                   <ClientOnly>
                     <OperatingStatusBanner
@@ -428,31 +405,20 @@
                     </template>
                   </template>
                 </div>
-              </div>
+              </SectionBlock>
 
 
-              <!-- Ad: 로드뷰 위 (Desktop) -->
-              <AdBanner />
+              <!-- 로드뷰 SectionBlock -->
+              <SectionBlock heading="로드뷰" subtext="시설 주변의 거리 뷰를 확인하세요.">
+                <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+              </SectionBlock>
 
-              <!-- Roadview Card (Desktop) -->
-              <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100">
-                  <h2 class="text-slate-900 text-lg font-bold">로드뷰</h2>
-                </div>
-                <div class="p-5">
-                  <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
-                </div>
-              </div>
+              <!-- Ad: 기본정보·로드뷰 이후 1회 -->
+              <AdBanner ad-format="horizontal" full-width-responsive="false" />
 
-              <!-- Ad: 로드뷰 아래 -->
-              <AdBanner />
-
-              <!-- Facility Status Card -->
-              <div v-if="hasFacilityStatus" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100">
-                  <h2 class="text-slate-900 text-lg font-bold">시설현황</h2>
-                </div>
-                <div class="p-5">
+              <!-- 시설현황 SectionBlock -->
+              <SectionBlock v-if="hasFacilityStatus" heading="시설현황" subtext="카테고리별 세부 설비·현황 정보입니다.">
+                <div>
                   <div v-if="hasGridContent" class="grid grid-cols-2 gap-4">
                     <!-- Toilet Stalls (if applicable) -->
                     <template v-if="facility.category === 'toilet'">
@@ -1129,15 +1095,11 @@
                   </template>
 
                 </div>
-              </div>
+              </SectionBlock>
 
-              <!-- Nearby Facilities -->
-              <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-[20px]">near_me</span>
-                  <h2 class="text-slate-900 text-lg font-bold">주변 {{ categoryMeta.label }}</h2>
-                </div>
-                <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <!-- "주변 시설" SectionBlock -->
+              <SectionBlock v-if="nearbyLoading || nearbyFiltered.length > 0" :heading="`주변 ${categoryMeta.label}`" subtext="같은 카테고리 인근 시설입니다.">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <template v-if="nearbyLoading">
                     <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
                   </template>
@@ -1150,24 +1112,19 @@
                     />
                   </template>
                 </div>
-              </div>
+              </SectionBlock>
 
               <!-- Cross-Category Nearby Facilities -->
               <template v-if="crossLoading">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <SectionBlock>
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
                   </div>
-                </div>
+                </SectionBlock>
               </template>
               <template v-else>
-                <div v-for="group in crossFacilitiesGrouped" :key="group.category"
-                     class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-base">{{ group.meta.icon }}</span>
-                    <h2 class="text-slate-900 text-lg font-bold">주변 {{ group.meta.label }}</h2>
-                  </div>
-                  <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <SectionBlock v-for="group in crossFacilitiesGrouped" :key="group.category" :heading="`주변 ${group.meta.label}`" subtext="관련 카테고리의 인근 시설입니다.">
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <FacilityCard
                       v-for="item in group.items"
                       :key="item.id"
@@ -1175,32 +1132,27 @@
                       highlight-distance
                     />
                   </div>
-                </div>
+                </SectionBlock>
               </template>
 
-              <!-- Ad: 리뷰 섹션 전 (Desktop) -->
+              <!-- Ad: 주변 시설 이후 1회 -->
               <AdBanner />
 
-              <!-- Review Section (Desktop Left Column) -->
-              <ClientOnly>
-                <ReviewSection v-if="id" :category="category" :facility-id="id" />
-              </ClientOnly>
+              <!-- 리뷰 SectionBlock -->
+              <SectionBlock heading="사용자 리뷰" subtext="방문자의 의견을 확인하고 남겨보세요.">
+                <ClientOnly>
+                  <ReviewSection v-if="id" :category="category" :facility-id="id" />
+                </ClientOnly>
+              </SectionBlock>
 
               <!-- 관련 가이드 (Desktop) -->
               <ClientOnly>
                 <RelatedGuides :category="category" />
               </ClientOnly>
 
-              <!-- Ad: 관련 가이드 아래 (Desktop) -->
-              <AdBanner />
-
-              <!-- 같은 지역 시설 링크 -->
-              <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
-                  <h2 class="text-slate-900 text-lg font-bold">같은 지역 시설</h2>
-                </div>
-                <div class="p-5 flex flex-col gap-3">
+              <!-- 같은 지역 시설 -->
+              <SectionBlock v-if="regionLink" heading="같은 지역 시설" subtext="이 지역의 다른 시설로 바로 이동합니다.">
+                <nav class="flex flex-col gap-3">
                   <NuxtLink
                     :to="regionLink.href"
                     class="flex items-center gap-2 text-primary hover:text-blue-600 text-sm font-medium transition-colors"
@@ -1215,16 +1167,12 @@
                     <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
                     {{ regionLink.cityLabel }}
                   </NuxtLink>
-                </div>
-              </nav>
+                </nav>
+              </SectionBlock>
 
               <!-- 이 지역 다른 시설 (Desktop) -->
-              <nav v-if="relatedCategories.length > 0" data-testid="related-categories" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-[20px]">grid_view</span>
-                  <h2 class="text-slate-900 text-lg font-bold">이 지역 다른 시설</h2>
-                </div>
-                <div class="p-5 flex flex-wrap gap-2">
+              <SectionBlock v-if="relatedCategories.length > 0" heading="이 지역 다른 시설" subtext="관련 카테고리로 바로 이동합니다.">
+                <nav data-testid="related-categories" class="flex flex-wrap gap-2">
                   <NuxtLink
                     v-for="cat in relatedCategories"
                     :key="cat"
@@ -1233,36 +1181,28 @@
                   >
                     {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
                   </NuxtLink>
-                </div>
-              </nav>
+                </nav>
+              </SectionBlock>
 
               <!-- 이용 팁 -->
-              <div v-if="categoryTips.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-slate-500 text-[20px]">lightbulb</span>
-                  <h2 class="text-slate-900 text-lg font-bold">{{ categoryMeta.label }} 이용 팁</h2>
-                </div>
-                <ul class="p-5 flex flex-col gap-2.5">
+              <SectionBlock v-if="categoryTips.length > 0" :heading="`${categoryMeta.label} 이용 팁`" subtext="이 시설을 이용할 때 참고할 만한 팁입니다.">
+                <ul class="flex flex-col gap-2.5">
                   <li v-for="(tip, i) in categoryTips" :key="i" class="flex items-start gap-2 text-sm text-gray-600 leading-relaxed">
                     <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">check</span>
                     {{ tip }}
                   </li>
                 </ul>
-              </div>
+              </SectionBlock>
 
               <!-- FAQ -->
-              <div v-if="categoryFaqItems.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-slate-500 text-[20px]">help</span>
-                  <h2 class="text-slate-900 text-lg font-bold">자주 묻는 질문</h2>
-                </div>
-                <div class="p-5 flex flex-col gap-4">
+              <SectionBlock v-if="categoryFaqItems.length > 0" heading="자주 묻는 질문">
+                <div class="flex flex-col gap-4">
                   <div v-for="(faq, i) in categoryFaqItems" :key="i">
                     <h3 class="text-sm font-bold text-slate-900 mb-1">Q. {{ faq.question }}</h3>
                     <p class="text-sm text-gray-600 leading-relaxed">{{ faq.answer }}</p>
                   </div>
                 </div>
-              </div>
+              </SectionBlock>
 
               <!-- Data Info Card -->
               <DataSourceCard
@@ -1286,21 +1226,10 @@
                   />
                 </ClientOnly>
 
-                <!-- Map Controls -->
-                <div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
-                  <div class="flex flex-col bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-                    <button aria-label="Zoom In" class="w-11 h-11 flex items-center justify-center text-gray-700 hover:bg-gray-50 border-b border-gray-100">
-                      <span class="material-symbols-outlined">add</span>
-                    </button>
-                    <button aria-label="Zoom Out" class="w-11 h-11 flex items-center justify-center text-gray-700 hover:bg-gray-50">
-                      <span class="material-symbols-outlined">remove</span>
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <!-- Action Buttons (Desktop Sticky Bottom) -->
-              <div class="mt-4 p-4 bg-white border-t border-slate-200 flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] rounded-xl#1a2630]">
+              <div class="mt-3 p-4 bg-white border border-slate-200 flex gap-3 shadow-card rounded-xl">
                 <button
                   class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-900 font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
                   aria-label="이 시설 공유하기"
@@ -1334,7 +1263,7 @@
         </div>
 
         <!-- Mobile: Info Section (Desktop-style cards) -->
-        <div class="md:hidden px-4 flex flex-col gap-6 pt-4">
+        <div class="md:hidden px-4 flex flex-col gap-4 pt-4">
           <!-- Mobile Breadcrumb -->
           <Breadcrumb :items="breadcrumbItems" />
 
@@ -1361,7 +1290,7 @@
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h2 class="text-slate-900 text-lg font-bold">기본정보</h2>
             </div>
-            <div class="p-5 flex flex-col gap-4">
+            <div class="p-5 flex flex-col gap-3">
               <!-- Operating Status Banner -->
               <ClientOnly>
                 <OperatingStatusBanner
@@ -1634,7 +1563,7 @@
           </div>
 
           <!-- Ad: 로드뷰 위 (Mobile) -->
-          <AdBanner />
+          <AdBanner ad-format="horizontal" full-width-responsive="false" />
 
           <!-- Roadview Card (Mobile) -->
           <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -2684,6 +2613,28 @@ const breadcrumbItems = computed(() => {
     { label: categoryMeta.value.label, href: `/${category.value}`, current: false },
     { label: facility.value.name, href: `/${category.value}/${facility.value.id}`, current: true },
   ]
+})
+
+// 데스크톱 브레드크럼 (city 포함)
+const desktopBreadcrumbItems = computed(() => {
+  if (!facility.value) return []
+  return [
+    { label: '홈', href: '/', current: false },
+    { label: categoryMeta.value.label, href: `/${category.value}`, current: false },
+    { label: facility.value.city, href: getCityHubPath(facility.value.city), current: false },
+    { label: facility.value.name, current: true },
+  ]
+})
+
+// 데스크톱 히어로 사이드바 통계
+const desktopHeroStats = computed(() => {
+  if (!facility.value) return []
+  const items: { label: string; value: string }[] = []
+  if (isOpen24Hours.value) items.push({ label: '운영', value: '24시간' })
+  else if (details.value?.operatingHours) items.push({ label: '운영시간', value: formatOperatingHours(details.value.operatingHours).split('\n')[0] })
+  if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
+  if (facility.value.roadAddress || facility.value.address) items.push({ label: '주소', value: (facility.value.roadAddress || facility.value.address).length > 22 ? (facility.value.roadAddress || facility.value.address).slice(0, 22) + '…' : (facility.value.roadAddress || facility.value.address) })
+  return items
 })
 
 // 같은 지역 시설 링크
