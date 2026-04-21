@@ -74,8 +74,8 @@
             <p class="text-slate-700 font-semibold text-lg">이 지역에는 아직 공개 가능한 단지가 없습니다</p>
             <p class="text-slate-500 text-sm mt-1">국토교통부 실거래 신고가 누적되면 순차적으로 노출됩니다.</p>
             <div class="mt-4 flex items-center justify-center gap-2">
-              <NuxtLink :to="`/real-estate/${realEstateType}`" class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark">
-                전국 {{ typeLabel }} 허브로
+              <NuxtLink to="/real-estate" class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark">
+                전국 부동산 허브로
               </NuxtLink>
               <NuxtLink :to="`/${citySlug}/${districtSlug}`" class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200">
                 지역 허브로
@@ -221,11 +221,6 @@ const heroStats = computed(() => {
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  {
-    label: typeLabel.value,
-    href: `/real-estate/${realEstateType.value}`,
-    current: false,
-  },
   { label: `${cityName.value} ${districtName.value}`, current: true },
 ])
 
@@ -296,7 +291,6 @@ const { setBreadcrumbSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
-  { name: typeLabel.value, url: `/real-estate/${realEstateType.value}` },
   { name: `${cityName.value} ${districtName.value}`, url: canonicalPath.value },
 ])
 </script>

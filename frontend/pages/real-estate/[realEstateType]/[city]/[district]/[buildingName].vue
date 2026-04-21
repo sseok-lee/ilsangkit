@@ -507,7 +507,6 @@ const listUrl = toRealEstateListUrl({ type: realEstateType, city: cityName, dist
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
-  { name: propertyMeta.value?.label || '', url: `/real-estate/${realEstateType}` },
   { name: districtName, url: listUrl },
   { name: buildingName.value, url: toRealEstateUrl({ type: realEstateType, city: cityName, district: districtName, buildingName: buildingName.value }) },
 ])
@@ -516,7 +515,6 @@ setBreadcrumbSchema([
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: propertyMeta.value?.label || '', href: `/real-estate/${realEstateType}`, current: false },
   { label: districtName, href: listUrl, current: false },
   { label: buildingName.value, current: true },
 ])

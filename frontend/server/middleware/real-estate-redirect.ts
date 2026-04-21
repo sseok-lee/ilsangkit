@@ -25,6 +25,7 @@ import {
 const LEGACY_TAB_DETAIL = /^\/real-estate\/(apt|villa|offitel)\/([^/]+)\/?$/
 const LEGACY_TAB_LIST = /^\/real-estate\/(apt|villa|offitel)\/?$/
 const LEGACY_SALE_DETAIL = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/([^/]+)\/?$/
+const LEGACY_SALE_LIST = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/?$/
 const NEW_DETAIL = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/[^/]+\/?$/
 const NEW_HUB = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/?$/
 
@@ -167,6 +168,15 @@ export default defineEventHandler(async (event) => {
 
   // 신규 URL은 미들웨어가 절대 가로채지 않는다 (체인 방지)
   if (NEW_DETAIL.test(pathname) || NEW_HUB.test(pathname)) return
+
+  // 레거시 type-mode 단독 hub: /real-estate/apt-sale → /real-estate/apt?tab=sale
+  // (buildingName 없으므로 bjdCode 역조회 불가 → 지역 구분 없는 전국 유형 hub로 폴백)
+  const saleListMatch = pathname.match(LEGACY_SALE_LIST)
+  if (saleListMatch) {
+    const propertyType = saleListMatch[1] as PropertyType
+    const mode = saleListMatch[2] as TransactionMode
+    return sendRedirect(event, `/real-estate/${propertyType}?tab=${mode}`, 301)
+  }
 
   const existingParams = new URLSearchParams(url.search)
   const bjdCode = existingParams.get('bjdCode') ?? ''
