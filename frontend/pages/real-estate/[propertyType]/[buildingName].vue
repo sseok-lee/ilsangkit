@@ -361,6 +361,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
+import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -848,13 +849,18 @@ watchEffect(async () => {
   }
 })
 
-// 데이터 로드가 끝났는데도 빌딩 정보가 전혀 없으면 noindex.
-// bjdCode가 없어도 getBuildingInfo fallback이 buildingName으로 가장 많은 거래의 bjdCode를 찾아주므로,
-// 외부 유입/백링크가 noindex로 차단되던 기존 문제를 해제한다.
-const noindex = computed(() => {
-  const loaded = !statsLoading.value && !txLoading.value
-  return loaded && buildingInfo.value === null
-})
+// thin / low-quality URL을 색인에서 제거하기 위한 noindex 조건.
+// - buildingName 자체가 지번 패턴 → 즉시 noindex (데이터 로드 불필요, SSR 첫 바이트부터 차단)
+// - 데이터 로드 완료 && buildingInfo 없음 → 존재하지 않는 건물
+// - 데이터 로드 완료 && 총 거래 < 10 → thin content
+const noindex = computed(() =>
+  shouldNoindexRealEstateDetail({
+    buildingName: buildingName.value,
+    loaded: !statsLoading.value && !txLoading.value,
+    hasBuildingInfo: buildingInfo.value !== null,
+    totalCount: summary.value?.totalCount,
+  }),
+)
 
 useHead(() => {
   if (!noindex.value) return {}
