@@ -1,4 +1,6 @@
-// catch-all 동적 카테고리 사이트맵 — Nitro가 [slug].xml.ts를 인식 못하는 문제 우회
+// catch-all 동적 카테고리 사이트맵 — Nitro가 [slug].xml.ts를 인식 못하는 문제 우회.
+// 카테고리 목록과 per-category limit 은 sitemapPolicy 를 단일 소스로 참조해
+// 인덱스(sitemap.xml.ts)와 완전히 동일한 청크 구성을 반환한다.
 import { defineEventHandler, setHeader, createError } from 'h3'
 import {
   SITE_URL,
@@ -11,10 +13,15 @@ import {
   fetchSubscriptionIds,
   getWeekStartDate,
 } from '../../utils/sitemap'
+import {
+  SITEMAP_FACILITY_CATEGORIES,
+  getSitemapFacilityLimit,
+  isSitemapFacilityCategory,
+} from '../../utils/sitemapPolicy'
 import { toAbsoluteRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 
 // wifi/aed는 사이트맵 인덱스에서 제외된 카테고리 — 동적 핸들러에서도 제외하여 404 반환
-const FACILITY_CATEGORIES = new Set(['toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'])
+const FACILITY_CATEGORIES = new Set<string>(SITEMAP_FACILITY_CATEGORIES)
 
 function parseSlug(slug: string): { category: string; page: number } | null {
   // "real-estate" → category='real-estate', page=1
@@ -136,11 +143,15 @@ export default defineEventHandler(async (event) => {
     return generateSitemapXml(urls)
   }
 
-  // 시설 카테고리 + trash
+  // 시설 카테고리 + trash — 인덱스와 동일한 limit을 적용해 청크 수가 어긋나지 않게 한다
   const items =
     category === 'trash'
       ? await fetchWasteScheduleIds(apiBase)
-      : await fetchFacilityIds(category, apiBase)
+      : await fetchFacilityIds(
+          category,
+          apiBase,
+          isSitemapFacilityCategory(category) ? getSitemapFacilityLimit(category) : undefined,
+        )
 
   // API 실패로 데이터 없음 — 503으로 크롤러 재시도 유도 (빈 sitemap 캐시 방지)
   if (items.length === 0 && page > 1) {
