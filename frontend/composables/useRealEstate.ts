@@ -9,10 +9,10 @@ import type {
   AreaGroup,
   StatsResponse,
 } from '~/types/realEstate'
+import { useApiBase } from '~/composables/useApiBase'
 
 export function useRealEstate() {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase as string
+  const apiBase = useApiBase()
 
   async function searchTransactions(
     type: RealEstateType,
