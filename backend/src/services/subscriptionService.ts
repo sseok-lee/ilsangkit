@@ -56,27 +56,73 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
     ];
   }
 
-  const STATUS_ORDER: Record<string, number> = { ongoing: 0, upcoming: 1, closed: 2 };
+  const skip = (page - 1) * limit;
 
-  const [items, total] = await Promise.all([
-    prisma.subscription.findMany({
-      where,
-      orderBy: { announcementDate: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
+  if (status) {
+    const filteredWhere: Prisma.SubscriptionWhereInput = { ...where, status };
+    const [items, total] = await Promise.all([
+      prisma.subscription.findMany({
+        where: filteredWhere,
+        orderBy: { announcementDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.subscription.count({ where: filteredWhere }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  const statusOrder = ['ongoing', 'upcoming', 'closed'] as const;
+  const counts = await Promise.all([
     prisma.subscription.count({ where }),
+    ...statusOrder.map((statusKey) =>
+      prisma.subscription.count({ where: { ...where, status: statusKey } })
+    ),
   ]);
 
-  // status 필터가 없을 때(전체): 접수중→접수예정→마감 순 정렬
-  if (!status) {
-    items.sort((a, b) => {
-      const sa = STATUS_ORDER[a.status] ?? 9;
-      const sb = STATUS_ORDER[b.status] ?? 9;
-      if (sa !== sb) return sa - sb;
-      // 같은 status 내에서는 최신 공고순 (이미 announcementDate desc로 정렬됨)
-      return 0;
+  const [total, ...statusCounts] = counts;
+  const countByStatus = statusOrder.reduce<Record<typeof statusOrder[number], number>>(
+    (acc, statusKey, index) => {
+      acc[statusKey] = statusCounts[index] ?? 0;
+      return acc;
+    },
+    { ongoing: 0, upcoming: 0, closed: 0 }
+  );
+
+  let remainingSkip = skip;
+  let remainingTake = limit;
+  const items = [];
+
+  for (const statusKey of statusOrder) {
+    const groupTotal = countByStatus[statusKey];
+    if (groupTotal === 0) continue;
+
+    if (remainingSkip >= groupTotal) {
+      remainingSkip -= groupTotal;
+      continue;
+    }
+
+    if (remainingTake <= 0) break;
+
+    const take = Math.min(remainingTake, groupTotal - remainingSkip);
+    if (take <= 0) break;
+
+    const batch = await prisma.subscription.findMany({
+      where: { ...where, status: statusKey },
+      orderBy: { announcementDate: 'desc' },
+      skip: remainingSkip,
+      take,
     });
+
+    items.push(...batch);
+    remainingTake -= take;
+    remainingSkip = 0;
   }
 
   return {
