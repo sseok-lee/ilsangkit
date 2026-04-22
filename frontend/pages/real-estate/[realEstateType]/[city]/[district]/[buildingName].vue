@@ -369,6 +369,10 @@ import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { toRealEstateUrl, toRealEstateListUrl, isRealEstateUrlType } from '~/utils/realEstateUrl'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
+import {
+  hasUsableRealEstateDetailData,
+  type RealEstateDetailData,
+} from '~/utils/realEstateDetailData'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -713,45 +717,84 @@ const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
 
+const EMPTY_STATS_RESPONSE: RealEstateDetailData['statsResponse'] = { monthly: [], summary: null }
+const EMPTY_TRANSACTIONS: RealEstateSearchResponse = { items: [], total: 0, page: 1, totalPages: 0 }
+
 // ── bjdCode resolution ────────────────────────────────────────────────────────
 // Resolve bjdCode from complex list before initial data load
 
 const resolvedBjdCode = ref('')
+
+function buildTransactionSearchParams(
+  bjdCode: string,
+  page: number
+): Parameters<typeof searchTransactions>[1] {
+  return {
+    city: bjdCode ? undefined : cityName,
+    district: bjdCode ? undefined : districtName,
+    bjdCode: bjdCode || undefined,
+    buildingName: buildingName.value,
+    exclusiveArea: selectedArea.value ?? undefined,
+    rentType: getRentTypeParam(),
+    months: selectedMonths.value ?? undefined,
+    page,
+    limit: 5,
+  }
+}
+
+async function resolveBuildingContext(): Promise<{ bjdCode: string; building: BuildingInfo | null }> {
+  if (resolvedBjdCode.value) {
+    return {
+      bjdCode: resolvedBjdCode.value,
+      building: buildingInfo.value,
+    }
+  }
+
+  try {
+    const listResult = await getComplexList(apiSlug.value, cityName, districtName, buildingName.value, 1, 1)
+    const candidate = listResult.items[0]
+    if (candidate?.bjdCode) {
+      return { bjdCode: candidate.bjdCode, building: null }
+    }
+  } catch {
+    // fall through to building-info based recovery
+  }
+
+  try {
+    const fallbackBuilding = await getBuildingInfo(apiSlug.value, '', buildingName.value)
+    if (fallbackBuilding?.bjdCode) {
+      return { bjdCode: fallbackBuilding.bjdCode, building: fallbackBuilding }
+    }
+  } catch {
+    // final fallback keeps empty bjdCode
+  }
+
+  return { bjdCode: '', building: null }
+}
 
 // ── SSR initial data load ─────────────────────────────────────────────────────
 
 const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData(
   `re-detail-new-${realEstateType}-${citySlugParam}-${districtSlugParam}-${route.params.buildingName}`,
   async () => {
-    // Resolve bjdCode via complex list first
-    let bjdCode = ''
-    try {
-      const listResult = await getComplexList(apiSlug.value, cityName, districtName, buildingName.value, 1, 1)
-      if (listResult.items.length > 0) {
-        bjdCode = listResult.items[0].bjdCode || ''
-      }
-    } catch {
-      // bjdCode stays empty — API calls will still work with buildingName alone
-    }
+    const { bjdCode, building: primedBuilding } = await resolveBuildingContext()
 
     const [statsResult, txResult, infoResult, areaResult] = await Promise.allSettled([
-      getTransactionStats(apiSlug.value, bjdCode, buildingName.value, selectedMonths.value ?? undefined),
-      searchTransactions(apiSlug.value, {
-        bjdCode,
-        buildingName: buildingName.value,
-        exclusiveArea: selectedArea.value ?? undefined,
-        rentType: getRentTypeParam(),
-        months: selectedMonths.value ?? undefined,
-        page: 1,
-        limit: 5,
-      }),
-      getBuildingInfo(apiSlug.value, bjdCode, buildingName.value),
-      getAreaGroups(apiSlug.value, bjdCode, buildingName.value),
+      bjdCode
+        ? getTransactionStats(apiSlug.value, bjdCode, buildingName.value, selectedMonths.value ?? undefined)
+        : Promise.resolve(EMPTY_STATS_RESPONSE),
+      searchTransactions(apiSlug.value, buildTransactionSearchParams(bjdCode, 1)),
+      primedBuilding
+        ? Promise.resolve(primedBuilding)
+        : getBuildingInfo(apiSlug.value, bjdCode, buildingName.value),
+      bjdCode
+        ? getAreaGroups(apiSlug.value, bjdCode, buildingName.value)
+        : Promise.resolve([]),
     ])
     return {
       bjdCode,
-      statsResponse: statsResult.status === 'fulfilled' ? statsResult.value : { monthly: [], summary: null },
-      transactions: txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 },
+      statsResponse: statsResult.status === 'fulfilled' ? statsResult.value : EMPTY_STATS_RESPONSE,
+      transactions: txResult.status === 'fulfilled' ? txResult.value : EMPTY_TRANSACTIONS,
       buildingInfo: infoResult.status === 'fulfilled' ? infoResult.value : null,
       areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
     }
@@ -762,7 +805,7 @@ const ssrLoading = computed(() => ssrStatus.value === 'pending')
 
 watch(ssrData, (data) => {
   if (!data) return
-  resolvedBjdCode.value = data.bjdCode
+  resolvedBjdCode.value = data.bjdCode || data.buildingInfo?.bjdCode || ''
   monthly.value = data.statsResponse.monthly as TransactionStats[]
   summary.value = data.statsResponse.summary as StatsSummary | null
   transactions.value = data.transactions as RealEstateSearchResponse
@@ -770,6 +813,11 @@ watch(ssrData, (data) => {
   areaGroups.value = (data.areaGroups ?? []) as AreaGroup[]
   statsLoading.value = false
   txLoading.value = false
+
+  if (import.meta.client && !hasUsableRealEstateDetailData(data)) {
+    loadData()
+    loadAreaGroups()
+  }
 }, { immediate: true })
 
 if (import.meta.client && !ssrData.value && ssrStatus.value !== 'pending') {
@@ -789,8 +837,20 @@ async function reloadStats() {
   if (!buildingName.value) return
   statsLoading.value = true
   try {
+    const { bjdCode, building } = await resolveBuildingContext()
+    resolvedBjdCode.value = bjdCode
+    if (building) {
+      buildingInfo.value = building
+    }
+
+    if (!bjdCode) {
+      monthly.value = []
+      summary.value = null
+      return
+    }
+
     const res = await getTransactionStats(
-      apiSlug.value, resolvedBjdCode.value, buildingName.value, selectedMonths.value ?? undefined,
+      apiSlug.value, bjdCode, buildingName.value, selectedMonths.value ?? undefined,
       selectedArea.value ?? undefined,
       getRentTypeParam()
     )
@@ -804,9 +864,14 @@ async function reloadStats() {
 }
 
 async function loadAreaGroups() {
-  if (!resolvedBjdCode.value) return
+  const { bjdCode } = await resolveBuildingContext()
+  resolvedBjdCode.value = bjdCode
+  if (!bjdCode) {
+    areaGroups.value = []
+    return
+  }
   try {
-    areaGroups.value = await getAreaGroups(apiSlug.value, resolvedBjdCode.value, buildingName.value)
+    areaGroups.value = await getAreaGroups(apiSlug.value, bjdCode, buildingName.value)
   } catch {
     areaGroups.value = []
   }
@@ -818,19 +883,21 @@ async function loadData() {
   statsLoading.value = true
   txLoading.value = true
 
+  const { bjdCode, building: primedBuilding } = await resolveBuildingContext()
+  resolvedBjdCode.value = bjdCode
+  if (primedBuilding) {
+    buildingInfo.value = primedBuilding
+  }
+
   const [statsResult, txResult, infoResult] = await Promise.allSettled([
-    getTransactionStats(apiSlug.value, resolvedBjdCode.value, buildingName.value, selectedMonths.value ?? undefined,
-      selectedArea.value ?? undefined, getRentTypeParam()),
-    searchTransactions(apiSlug.value, {
-      bjdCode: resolvedBjdCode.value,
-      buildingName: buildingName.value,
-      exclusiveArea: selectedArea.value ?? undefined,
-      rentType: getRentTypeParam(),
-      months: selectedMonths.value ?? undefined,
-      page: currentPage.value,
-      limit: 5,
-    }),
-    getBuildingInfo(apiSlug.value, resolvedBjdCode.value, buildingName.value),
+    bjdCode
+      ? getTransactionStats(apiSlug.value, bjdCode, buildingName.value, selectedMonths.value ?? undefined,
+        selectedArea.value ?? undefined, getRentTypeParam())
+      : Promise.resolve(EMPTY_STATS_RESPONSE),
+    searchTransactions(apiSlug.value, buildTransactionSearchParams(bjdCode, currentPage.value)),
+    primedBuilding
+      ? Promise.resolve(primedBuilding)
+      : getBuildingInfo(apiSlug.value, bjdCode, buildingName.value),
   ])
 
   if (statsResult.status === 'fulfilled') {
@@ -840,7 +907,7 @@ async function loadData() {
     monthly.value = []
     summary.value = null
   }
-  transactions.value = txResult.status === 'fulfilled' ? txResult.value : { items: [], total: 0, page: 1, totalPages: 0 }
+  transactions.value = txResult.status === 'fulfilled' ? txResult.value : EMPTY_TRANSACTIONS
   buildingInfo.value = infoResult.status === 'fulfilled' ? infoResult.value : null
 
   statsLoading.value = false
