@@ -1,6 +1,6 @@
 import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails, ParkDetails, SchoolDetails, MarketDetails, ChildcareDetails, EvChargerDetails, SportsDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_CTA } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT } from '~/utils/seoConstants'
 
 /** 받침 유무에 따라 조사 선택 (은/는, 이/가, 을/를 등) */
 function getJosa(word: string, josaWithBatchim: string, josaWithout: string): string {
@@ -20,6 +20,14 @@ function getJosa(word: string, josaWithBatchim: string, josaWithout: string): st
 function formatTimeStr(t: string): string {
   const s = String(t).padStart(4, '0')
   return `${s.slice(0, 2)}:${s.slice(2)}`
+}
+
+function compactCityName(city: string): string {
+  return city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+}
+
+function normalizeSeoTitle(title: string): string {
+  return title.replace(/\s*[|-]\s*일상킷$/, '').trim()
 }
 
 /**
@@ -185,12 +193,10 @@ export function useFacilityMeta() {
    * 기본 메타태그 설정
    */
   function setMeta(options: MetaOptions) {
-    // titleTemplate은 pass-through이므로 여기서 완전한 title 구성
-    const fullTitle = options.title === SITE_NAME
-      ? `${SITE_NAME} - 내 주변 생활 편의 정보`
-      : options.title.includes(SITE_NAME)
-        ? options.title
-        : `${options.title} - ${SITE_NAME}`
+    const normalizedTitle = normalizeSeoTitle(options.title)
+    const fullTitle = normalizedTitle === SITE_NAME
+      ? `${SITE_NAME} | 내 주변 생활 정보`
+      : `${normalizedTitle} | ${SITE_NAME}`
 
     const defaultUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL
     const resolvedCanonical = options.canonical === false
@@ -240,8 +246,8 @@ export function useFacilityMeta() {
    */
   function setHomeMeta() {
     setMeta({
-      title: '부동산 실거래가·내 주변 생활시설 검색 - 일상킷',
-      description: '아파트·빌라·오피스텔 실거래가 조회와 학교, 어린이집, 공원 등 생활시설을 한번에 검색. 시세 조회부터 주변 시설 정보까지 한곳에서 확인하세요.',
+      title: '부동산 실거래가·청약·생활정보',
+      description: '아파트·빌라·오피스텔 실거래가, 청약 일정, 병원·약국·주차장 등 생활 정보를 한곳에서 확인하세요.',
       path: '/',
     })
   }
@@ -251,10 +257,10 @@ export function useFacilityMeta() {
    */
   function setCategoryMeta(category: FacilityCategory) {
     const categoryName = CATEGORY_META[category]?.label || category
-    const cta = CATEGORY_CTA[category]
+    const intent = CATEGORY_SEO_INTENT[category] || '정보'
 
-    const title = `${categoryName} 위치 및 운영시간 - 일상킷`
-    const description = `${cta}. 전국 ${categoryName} 정보를 한 번에 검색하세요.`
+    const title = `${categoryName} | ${intent}`
+    const description = `전국 ${categoryName}의 ${intent} 정보를 한눈에 확인하세요.`
 
     setMeta({
       title,
@@ -311,46 +317,12 @@ export function useFacilityMeta() {
    * {name} + 의도 키워드 + {loc} + {categoryName} 구조
    */
   function buildDetailTitle(facility: FacilityDetail): string {
-    // 도시명은 축약형(서울특별시 → 서울), district와 조합해
-    // 동명 구(중구/동구/서구/남구/북구) 혼동 방지
-    const cityShort = facility.city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+    const cityShort = compactCityName(facility.city)
     const loc = facility.district ? `${cityShort} ${facility.district}` : cityShort
     const name = facility.name
-
-    switch (facility.category) {
-      case 'toilet':
-        return `${name} 위치·개방시간 · ${loc} 공공화장실`
-      case 'parking':
-        return `${name} 주차요금·운영시간 · ${loc} 공영주차장`
-      case 'ev-charger':
-        return `${name} 실시간 충전 상태 · ${loc} 전기차 충전소`
-      case 'park':
-        return `${name} 운동시설·산책로 · ${loc} 공원`
-      case 'school':
-        return `${name} 학교 정보·설립유형 · ${loc} 초·중·고`
-      case 'childcare':
-        return `${name} 정원·현원·빈자리 · ${loc} 어린이집`
-      case 'library':
-        return `${name} 운영시간·휴관일 · ${loc} 도서관`
-      case 'hospital':
-        return `${name} 진료시간·진료과 · ${loc} 병원`
-      case 'pharmacy':
-        return `${name} 영업시간·야간운영 · ${loc} 약국`
-      case 'aed':
-        return `${name} 설치 위치 · ${loc} AED 자동심장충격기`
-      case 'sports':
-        return `${name} 시설 정보·규모 · ${loc} 공공체육시설`
-      case 'market':
-        return `${name} 장날·상점 정보 · ${loc} 전통시장`
-      case 'clothes':
-        return `${name} 위치 · ${loc} 의류수거함 배출 안내`
-      case 'wifi':
-        return `${name} · ${loc} 공공 와이파이`
-      default: {
-        const categoryName = CATEGORY_META[facility.category]?.label || facility.category
-        return `${name} - ${loc} ${categoryName}`
-      }
-    }
+    const categoryName = CATEGORY_META[facility.category]?.label || facility.category
+    const intent = CATEGORY_SEO_INTENT[facility.category] || '정보'
+    return `${name} | ${loc} ${categoryName} ${intent}`
   }
 
   /**
@@ -368,7 +340,8 @@ export function useFacilityMeta() {
   }
 
   /**
-   * 지역별 페이지 메타태그
+   * 지역별 페이지 메타태그.
+   * canonical=false 로 호출하면 rel=canonical 태그가 생략된다 (noindex 페이지 정책과 일치).
    */
   function setRegionMeta(params: {
     city: string
@@ -376,16 +349,19 @@ export function useFacilityMeta() {
     district: string
     districtName: string
     category: FacilityCategory
+    canonical?: string | false
   }) {
     const categoryName = CATEGORY_META[params.category]?.label || params.category
+    const intent = CATEGORY_SEO_INTENT[params.category] || '정보'
 
-    const title = `${params.cityName} ${params.districtName} ${categoryName}`
-    const description = `${params.cityName} ${params.districtName}의 ${categoryName} 위치 정보를 확인하세요.`
+    const title = `${params.cityName} ${params.districtName} ${categoryName} | ${intent}`
+    const description = `${params.cityName} ${params.districtName}의 ${categoryName} ${intent} 정보를 확인하세요.`
 
     setMeta({
       title,
       description,
       path: `/${params.city}/${params.district}/${params.category}`,
+      canonical: params.canonical,
     })
   }
 
@@ -399,11 +375,13 @@ export function useFacilityMeta() {
     targetRegion?: string | null
   }) {
     const location = `${schedule.city} ${schedule.district}`
-    const title = `${location} 쓰레기 배출일 달력 · 재활용·음식물 요일`
     const region = schedule.targetRegion?.replaceAll('+', ', ')
+    const title = region
+      ? `${location} ${region} 쓰레기 배출일 | 재활용·음식물·대형폐기물`
+      : `${location} 쓰레기 배출일 | 재활용·음식물·대형폐기물`
     const description = region
-      ? `${location} ${region} 지역의 쓰레기 배출 요일, 시간, 방법을 확인하세요.`
-      : `${location} 지역의 쓰레기 배출 요일, 시간, 방법을 확인하세요.`
+      ? `${location} ${region}의 일반쓰레기, 음식물쓰레기, 재활용, 대형폐기물 배출 요일·시간·방법을 확인하세요.`
+      : `${location}의 일반쓰레기, 음식물쓰레기, 재활용, 대형폐기물 배출 요일·시간·방법을 확인하세요.`
 
     setMeta({
       title,

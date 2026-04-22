@@ -576,6 +576,53 @@ const heroStats = computed(() => {
   return items
 })
 
+const subscriptionTypeLabel = computed(() => {
+  if (!subscription.value) return '청약'
+  if (subscription.value.houseType) return subscription.value.houseType
+  if (subscription.value.sourceType === 'PRIVATE_RENT') return '민간임대'
+  if (subscription.value.sourceType === 'OFFITEL') return '오피스텔'
+  if (subscription.value.sourceType === 'REMAINING') return '무순위·잔여세대'
+  if (subscription.value.rentType === '임대주택') return '공공임대'
+  return '아파트'
+})
+
+const subscriptionDateRange = computed(() => {
+  if (!subscription.value?.receptionStartDate || !subscription.value?.receptionEndDate) return null
+  return `${subscription.value.receptionStartDate}~${subscription.value.receptionEndDate}`
+})
+
+const subscriptionSeoTitle = computed(() => {
+  if (!subscription.value) return '청약 일정 | 일상킷'
+  const location = subscription.value.regionName || '전국'
+  const statusLabel = getStatusLabel(subscription.value.status)
+  return `${subscription.value.houseName} 청약 일정 | ${location} ${subscriptionTypeLabel.value} ${statusLabel} | 일상킷`
+})
+
+const subscriptionSeoDescription = computed(() => {
+  if (!subscription.value) return '청약 일정과 분양·임대 정보를 확인하세요.'
+
+  const location = subscription.value.regionName || '전국'
+  const facts = [getStatusLabel(subscription.value.status)]
+
+  if (subscription.value.totalSupplyCount) {
+    facts.push(`공급 ${subscription.value.totalSupplyCount.toLocaleString()}호`)
+  }
+  if (subscriptionDateRange.value) {
+    facts.push(`접수 ${subscriptionDateRange.value}`)
+  }
+  else if (subscription.value.winnerDate) {
+    facts.push(`발표 ${subscription.value.winnerDate}`)
+  }
+  else if (subscription.value.moveInMonth) {
+    facts.push(`입주 ${formatMoveInMonth(subscription.value.moveInMonth)}`)
+  }
+  if (priceRange.value) {
+    facts.push(`분양가 ${priceRange.value}`)
+  }
+
+  return `${subscription.value.houseName} ${location} ${subscriptionTypeLabel.value} 청약 정보입니다. ${facts.join(', ')} 정보를 확인하세요.`
+})
+
 const breadcrumbItems = computed(() => {
   if (!subscription.value) return []
   const isRent = subscription.value.rentType === '임대주택' || subscription.value.sourceType === 'PRIVATE_RENT'
@@ -785,17 +832,18 @@ if (subscription.value) {
 
 // SEO
 useSeoMeta({
-  title: subscription.value ? `${subscription.value.houseName} 청약 분양정보 - 일상킷` : '청약 정보 - 일상킷',
-  description: subscription.value
-    ? `${subscription.value.houseName} ${subscription.value.houseType} 청약 일정, 면적별 공급정보, 분양가를 확인하세요.`
-    : '청약 분양정보를 확인하세요.',
-  ogTitle: subscription.value ? `${subscription.value.houseName} 청약 - ${subscription.value.regionName}` : '청약 정보',
-  ogDescription: subscription.value
-    ? `${subscription.value.houseName} ${subscription.value.houseType} 청약 정보`
-    : '청약 분양정보',
+  title: () => subscriptionSeoTitle.value,
+  description: () => subscriptionSeoDescription.value,
+  ogTitle: () => subscriptionSeoTitle.value,
+  ogDescription: () => subscriptionSeoDescription.value,
   ogImage: DEFAULT_OG_IMAGE,
   ogUrl: `${SITE_URL}/subscription/${id}`,
   ogSiteName: SITE_NAME,
+  ogLocale: 'ko_KR',
+  twitterCard: 'summary_large_image',
+  twitterTitle: () => subscriptionSeoTitle.value,
+  twitterDescription: () => subscriptionSeoDescription.value,
+  twitterImage: DEFAULT_OG_IMAGE,
 })
 
 useHead({

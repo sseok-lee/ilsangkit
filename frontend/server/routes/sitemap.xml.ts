@@ -1,4 +1,5 @@
-// 사이트맵 인덱스 — 각 카테고리의 URL 수에 따라 자동 분할
+// 사이트맵 인덱스 — 각 카테고리의 URL 수에 따라 자동 분할.
+// 카테고리 목록과 per-category limit 은 sitemapPolicy 를 단일 소스로 참조한다.
 import { defineEventHandler, setHeader } from 'h3'
 import {
   SITE_URL,
@@ -10,19 +11,10 @@ import {
   fetchSubscriptionIds,
   getWeekStartDate,
 } from '../utils/sitemap'
-
-// 검색 트렌드 기반 사이트맵 포함 카테고리 (2026-03 네이버 데이터랩 분석)
-// 제외: wifi (90K URL, 검색수요 낮음), aed (70K URL, 검색수요 최하위)
-// → 82만→약 66만 URL 감소. 내부 링크로 발견 가능하므로 색인에는 영향 없음
-const FACILITY_CATEGORIES = ['toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'] as const
-
-// 크롤 예산 절감을 위한 카테고리별 URL 수 제한
-const FACILITY_CATEGORY_LIMITS: Partial<Record<string, number>> = {
-  'ev-charger': 20000,  // ~100K → 20K
-  'childcare': 15000,   // ~60K → 15K
-  'sports': 10000,      // ~40K → 10K
-  'clothes': 10000,     // ~20K → 10K (검색 수요 최하위)
-}
+import {
+  SITEMAP_FACILITY_CATEGORIES,
+  getSitemapFacilityLimit,
+} from '../utils/sitemapPolicy'
 
 export default defineEventHandler(async (event) => {
   setHeader(event, 'Content-Type', 'application/xml')
@@ -38,8 +30,8 @@ export default defineEventHandler(async (event) => {
 
   // 시설 카테고리별 count 조회 → 페이지 수 계산 + 최신 updatedAt 추출
   const counts = await Promise.all(
-    FACILITY_CATEGORIES.map(async (cat) => {
-      const items = await fetchFacilityIds(cat, apiBase, FACILITY_CATEGORY_LIMITS[cat])
+    SITEMAP_FACILITY_CATEGORIES.map(async (cat) => {
+      const items = await fetchFacilityIds(cat, apiBase, getSitemapFacilityLimit(cat))
       const latestDate = items.reduce((max, item) => {
         const d = item.updatedAt?.split('T')[0]
         return d && d > max ? d : max

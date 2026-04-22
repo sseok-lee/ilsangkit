@@ -96,3 +96,21 @@ export const CATEGORY_CTA: Record<FacilityCategory, string> = {
   'ev-charger': '가까운 전기차 충전소 위치와 실시간 충전 상태를 확인하세요',
   sports: '주변 공공체육시설 위치와 시설 정보를 확인하세요',
 }
+
+export const CATEGORY_SEO_INTENT: Record<FacilityCategory, string> = {
+  toilet: '위치·개방시간',
+  hospital: '진료과·진료시간',
+  pharmacy: '영업시간·야간운영',
+  parking: '요금·운영시간',
+  wifi: '위치·SSID',
+  aed: '설치위치·이용가능시간',
+  library: '운영시간·휴관일',
+  clothes: '위치·배출안내',
+  trash: '배출일·분리수거 안내',
+  park: '산책로·운동시설',
+  school: '학교정보·설립유형',
+  market: '장날·상점정보',
+  childcare: '정원·현원',
+  'ev-charger': '충전기·이용시간',
+  sports: '시설규모·이용정보',
+}

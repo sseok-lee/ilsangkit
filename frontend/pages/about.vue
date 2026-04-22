@@ -296,8 +296,8 @@ const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema } = useStructuredData()
 
 setMeta({
-  title: '소개',
-  description: '일상킷은 부동산 실거래가와 내 주변 생활시설 정보를 한곳에서 제공하는 생활 정보 서비스입니다. 아파트·빌라·오피스텔 시세와 병원, 약국, 주차장 등 주요 생활시설을 검색하세요.',
+  title: '일상킷 소개',
+  description: '일상킷 서비스 소개와 제공 정보, 데이터 출처를 확인하세요.',
   path: '/about',
 })
 

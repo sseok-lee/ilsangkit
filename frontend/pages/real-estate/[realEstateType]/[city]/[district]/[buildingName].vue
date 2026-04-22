@@ -445,6 +445,19 @@ const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
 
 const buildingInfo = ref<BuildingInfo | null>(null)
 const summary = ref<StatsSummary | null>(null)
+const statsLoading = ref(true)
+const txLoading = ref(true)
+
+// noindex 판정 (canonical 정책과 함께 사용) — .omc/notes/noindex-canonical-policy.md
+const noindex = computed(() =>
+  shouldNoindexRealEstateDetail({
+    buildingName: buildingName.value,
+    loaded: !statsLoading.value && !txLoading.value,
+    hasBuildingInfo: buildingInfo.value !== null,
+    totalCount: summary.value?.totalCount,
+  }),
+)
+
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 
 useHead(() => {
@@ -452,12 +465,12 @@ useHead(() => {
   const cityShort = (buildingInfo.value?.city || cityName).replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
   const district = buildingInfo.value?.district || districtName
   const locLabel = cityShort && district ? `${cityShort} ${district}` : (district || cityShort)
-  const title = tab === '매매'
-    ? `${buildingName.value} 실거래가 · ${locLabel} 매매 시세 - 일상킷`
-    : `${buildingName.value} 전세·월세 시세 · ${locLabel} 실거래가 - 일상킷`
-  const description = tab === '매매'
-    ? `${locLabel} ${buildingName.value} 매매 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 시세 변동 추이와 평당가를 제공합니다.`
-    : `${locLabel} ${buildingName.value} 전세·월세 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 전세가·월세 시세를 제공합니다.`
+  const transactionLabel = tab === '매매' ? '매매' : '전세·월세'
+  const title = `${buildingName.value} ${transactionLabel} 실거래가 | ${locLabel} | 일상킷`
+  const subject = [locLabel, `${buildingName.value}의`].filter(Boolean).join(' ')
+  const description = summary.value?.totalCount
+    ? `${subject} ${transactionLabel} 실거래가 정보입니다. 최근 ${summary.value.totalCount.toLocaleString()}건 거래, 시세 추이와 면적별 가격을 확인하세요.`
+    : `${subject} ${transactionLabel} 실거래가 정보입니다. 시세 추이와 면적별 가격을 확인하세요.`
 
   // Canonical uses new URL structure — distinct per realEstateType (apt-sale ≠ apt-rent)
   const canonicalUrl = `${SITE_URL}${toRealEstateUrl({
@@ -471,27 +484,30 @@ useHead(() => {
     ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
     : DEFAULT_OG_IMAGE
 
+  const meta: Array<Record<string, string>> = [
+    { name: 'description', content: description },
+    { property: 'og:title', content: title },
+    { property: 'og:description', content: description },
+    { property: 'og:image', content: ogImage },
+    { property: 'og:url', content: canonicalUrl },
+    { property: 'og:type', content: 'place' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: title },
+    { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: ogImage },
+    { property: 'og:site_name', content: SITE_NAME },
+    { property: 'og:locale', content: 'ko_KR' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+  ]
+  // noindex/canonical 정책: noindex 일 때는 robots 만 보내고 canonical 은 생략한다.
+  if (noindex.value) {
+    meta.push({ name: 'robots', content: 'noindex, follow' })
+  }
   return {
     title,
-    meta: [
-      { name: 'description', content: description },
-      { property: 'og:title', content: title },
-      { property: 'og:description', content: description },
-      { property: 'og:image', content: ogImage },
-      { property: 'og:url', content: canonicalUrl },
-      { property: 'og:type', content: 'place' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: title },
-      { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: ogImage },
-      { property: 'og:site_name', content: SITE_NAME },
-      { property: 'og:locale', content: 'ko_KR' },
-      { property: 'og:image:width', content: '1200' },
-      { property: 'og:image:height', content: '630' },
-    ],
-    link: [
-      { rel: 'canonical', href: canonicalUrl },
-    ],
+    meta,
+    link: noindex.value ? [] : [{ rel: 'canonical', href: canonicalUrl }],
   }
 })
 
@@ -648,7 +664,6 @@ const heroStats = computed(() => {
 // ── Stats / Transactions ──────────────────────────────────────────────────────
 
 const monthly = ref<TransactionStats[]>([])
-const statsLoading = ref(true)
 const areaGroups = ref<AreaGroup[]>([])
 const selectedArea = ref<number | null>(null)
 const selectedRentType = ref<'all' | 'jeonse' | 'wolse'>('all')
@@ -695,7 +710,6 @@ function formatSummaryPrice(price: number): string {
 }
 
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
-const txLoading = ref(true)
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
 
@@ -854,6 +868,35 @@ watch(selectedRentType, () => { currentPage.value = 1; loadData() })
 
 // ── Structured data + analytics ───────────────────────────────────────────────
 
+// JSON-LD 스키마를 SSR-safe 경로로 등록 — buildingInfo lazy-load 전에도 route 파라미터로 유추 가능한
+// 필드는 이미 들어가 있으며, buildingInfo 가 도착하면 useHead 가 reactive 하게 새 스키마로 교체된다.
+setBuildingPlaceSchema(() => ({
+  name: buildingName.value,
+  address: fullAddress.value !== '-' ? fullAddress.value : buildingName.value,
+  lat: buildingInfo.value?.lat ?? null,
+  lng: buildingInfo.value?.lng ?? null,
+  buildYear: buildingInfo.value?.buildYear,
+  propertyType: propertyMeta.value?.label || '',
+}))
+setRealEstateListingSchema(() => ({
+  name: buildingName.value,
+  address: fullAddress.value !== '-' ? fullAddress.value : buildingName.value,
+  city: buildingInfo.value?.city || cityName,
+  district: buildingInfo.value?.district || districtName,
+  propertyType: propertyMeta.value?.label || '',
+  url: `${SITE_URL}${toRealEstateUrl({
+    type: realEstateType,
+    city: cityName,
+    district: districtName,
+    buildingName: buildingName.value,
+  })}`,
+  buildYear: buildingInfo.value?.buildYear,
+  totalCount: summary.value?.totalCount,
+  lat: buildingInfo.value?.lat ?? null,
+  lng: buildingInfo.value?.lng ?? null,
+}))
+
+// building_viewed analytics 는 클라이언트에서 buildingInfo 로드 후만 발화
 watch(() => buildingInfo.value, (info) => {
   if (info) {
     trackBuildingView({
@@ -861,27 +904,6 @@ watch(() => buildingInfo.value, (info) => {
       buildingName: buildingName.value,
       city: info.city,
       district: info.district,
-    })
-  }
-  if (info?.lat && info?.lng) {
-    setBuildingPlaceSchema({
-      name: buildingName.value,
-      address: fullAddress.value,
-      lat: info.lat,
-      lng: info.lng,
-      buildYear: info.buildYear,
-      propertyType: propertyMeta.value?.label || '',
-    })
-    setRealEstateListingSchema({
-      name: buildingName.value,
-      address: fullAddress.value,
-      city: info.city || '',
-      district: info.district || '',
-      propertyType: propertyMeta.value?.label || '',
-      buildYear: info.buildYear,
-      totalCount: summary.value?.totalCount,
-      lat: info.lat,
-      lng: info.lng,
     })
   }
 })
@@ -909,23 +931,8 @@ watchEffect(async () => {
   }
 })
 
-// ── noindex ───────────────────────────────────────────────────────────────────
-
-const noindex = computed(() =>
-  shouldNoindexRealEstateDetail({
-    buildingName: buildingName.value,
-    loaded: !statsLoading.value && !txLoading.value,
-    hasBuildingInfo: buildingInfo.value !== null,
-    totalCount: summary.value?.totalCount,
-  }),
-)
-
-useHead(() => {
-  if (!noindex.value) return {}
-  return {
-    meta: [{ name: 'robots', content: 'noindex, follow' }],
-  }
-})
+// noindex / robots 는 상단 useHead 팩토리에서 canonical 과 함께 처리한다
+// (.omc/notes/noindex-canonical-policy.md).
 </script>
 
 <style scoped>

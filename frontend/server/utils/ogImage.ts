@@ -36,6 +36,14 @@ export const REAL_ESTATE_LABELS: Record<string, string> = {
   offitel: '오피스텔 실거래가',
 }
 
+export const SPECIAL_OG_LABELS: Record<string, string> = {
+  area: '지역 생활 정보',
+}
+
+export const SPECIAL_OG_COLORS: Record<string, string> = {
+  area: '#2563eb',
+}
+
 const FALLBACK_COLOR = '#6366f1' // indigo-500
 
 export interface OgImageOptions {
@@ -67,11 +75,13 @@ export function generateOgImageSvg(options: OgImageOptions): string {
   const district = options.district ? sanitizeForSvg(options.district, 30) : undefined
   const meta = CATEGORY_META[category as FacilityCategory]
   const bgColor = CATEGORY_COLORS[category as FacilityCategory]
-    ?? REAL_ESTATE_COLORS[category] ?? FALLBACK_COLOR
+    ?? REAL_ESTATE_COLORS[category]
+    ?? SPECIAL_OG_COLORS[category]
+    ?? FALLBACK_COLOR
 
   // title fallback: empty string → use category label
-  const title = sanitizeForSvg(options.title || meta?.label || REAL_ESTATE_LABELS[category] || String(category), 80)
-  const categoryLabel = meta?.label ?? REAL_ESTATE_LABELS[category] ?? String(category)
+  const title = sanitizeForSvg(options.title || meta?.label || REAL_ESTATE_LABELS[category] || SPECIAL_OG_LABELS[category] || String(category), 80)
+  const categoryLabel = meta?.label ?? REAL_ESTATE_LABELS[category] ?? SPECIAL_OG_LABELS[category] ?? String(category)
 
   const locationParts: string[] = []
   if (city) locationParts.push(city)

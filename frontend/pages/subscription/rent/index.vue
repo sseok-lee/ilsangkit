@@ -38,8 +38,8 @@ import { useStructuredData } from '~/composables/useStructuredData'
 
 const activeType = null
 
-const title = '임대 청약 일정 — 공공임대·민간임대 접수 정보 | 일상킷'
-const description = '공공임대, 공공지원 민간임대 청약 접수 일정과 정보를 조회하세요. 접수예정·진행중·마감 상태별 필터와 지역별 검색을 지원합니다.'
+const title = '임대 청약 일정 | 일상킷'
+const description = '공공임대, 민간임대 청약 일정과 접수 상태, 유형별 정보를 확인하세요.'
 const canonicalUrl = `${SITE_URL}/subscription/rent`
 
 useHead({
@@ -56,6 +56,7 @@ useHead({
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
   ],
   link: [{ rel: 'canonical', href: canonicalUrl }],
 })

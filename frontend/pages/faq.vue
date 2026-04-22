@@ -91,7 +91,7 @@ const { setBreadcrumbSchema } = useStructuredData()
 // SEO meta
 setMeta({
   title: '자주 묻는 질문',
-  description: '부동산 실거래가와 병원, 약국, 주차장 등 일상킷 생활시설 정보에 대해 자주 묻는 질문과 답변을 확인하세요.',
+  description: '부동산 실거래가와 생활시설 정보 이용에 관한 자주 묻는 질문을 확인하세요.',
   path: '/faq',
 })
 

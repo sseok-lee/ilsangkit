@@ -254,9 +254,8 @@ function formatDate(dateStr: string): string {
 
 // SEO meta
 if (guide.value) {
-  const guideYear = new Date(guide.value.updatedAt || guide.value.createdAt).getFullYear()
   setMeta({
-    title: `${guide.value.title} [${guideYear}년]`,
+    title: `${guide.value.title} | ${categoryLabel.value} 이용 가이드`,
     description: guide.value.summary,
     path: `/guide/${guide.value.slug}`,
     type: 'article',

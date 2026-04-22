@@ -142,7 +142,7 @@
 <script setup lang="ts">
 import { CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -212,10 +212,9 @@ const realEstateCards = computed(() => {
 // SEO 메타
 const canonicalUrl = `${SITE_URL}/${city.value}`
 useHead(() => {
-  const year = new Date().getFullYear()
-  const title = `${cityName.value} 부동산 시세·생활시설 현황 (${year}) | 일상킷`
-  const description = `${cityName.value} 아파트·빌라·오피스텔 실거래가와 주요 생활시설 현황을 확인하세요. 구/군별 시세 비교와 병원, 약국, 주차장, 화장실 등 생활 인프라 정보를 제공합니다.`
-  const dynamicOgImage = `${SITE_URL}/og?city=${encodeURIComponent(cityName.value)}&title=${encodeURIComponent(title)}`
+  const title = `${cityName.value} 생활 정보·부동산 시세 | 일상킷`
+  const description = `${cityName.value} 아파트·빌라·오피스텔 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`
+  const dynamicOgImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cityName.value)}&title=${encodeURIComponent(title)}`
   return {
     title,
     meta: [
@@ -227,6 +226,12 @@ useHead(() => {
       { property: 'og:image:height', content: '630' },
       { property: 'og:url', content: canonicalUrl },
       { property: 'og:type', content: 'website' },
+      { property: 'og:site_name', content: '일상킷' },
+      { property: 'og:locale', content: 'ko_KR' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: title },
+      { name: 'twitter:description', content: description },
+      { name: 'twitter:image', content: dynamicOgImage },
     ],
     link: [
       { rel: 'canonical', href: canonicalUrl },

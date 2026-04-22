@@ -400,6 +400,19 @@ const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.val
 const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
 const buildingInfo = ref<BuildingInfo | null>(null)
 const summary = ref<StatsSummary | null>(null)
+const statsLoading = ref(true)
+const txLoading = ref(true)
+
+// noindex 판정 (canonical 정책과 함께 사용) — .omc/notes/noindex-canonical-policy.md
+const noindex = computed(() =>
+  shouldNoindexRealEstateDetail({
+    buildingName: buildingName.value,
+    loaded: !statsLoading.value && !txLoading.value,
+    hasBuildingInfo: buildingInfo.value !== null,
+    totalCount: summary.value?.totalCount,
+  }),
+)
+
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 useHead(() => {
@@ -408,41 +421,43 @@ useHead(() => {
   const cityShort = (buildingInfo.value?.city || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
   const districtName = buildingInfo.value?.district || ''
   const locLabel = cityShort && districtName ? `${cityShort} ${districtName}` : (districtName || cityShort)
-  // 건물명 최전방 배치 + 도시 축약 (상시 페이지라 연도 미포함)
-  const title = tab === '매매'
-    ? `${buildingName.value} 실거래가 · ${locLabel} 매매 시세 - 일상킷`
-    : `${buildingName.value} 전세·월세 시세 · ${locLabel} 실거래가 - 일상킷`
-  const description = tab === '매매'
-    ? `${locLabel} ${buildingName.value} 매매 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 시세 변동 추이와 평당가를 제공합니다.`
-    : `${locLabel} ${buildingName.value} 전세·월세 실거래가${summary.value?.totalCount ? ` · 총 ${summary.value.totalCount.toLocaleString()}건 거래` : ''}. 국토부 공식 데이터 기반 전세가·월세 시세를 제공합니다.`
+  const transactionLabel = tab === '매매' ? '매매' : '전세·월세'
+  const title = `${buildingName.value} ${transactionLabel} 실거래가 | ${locLabel} | 일상킷`
+  const subject = [locLabel, `${buildingName.value}의`].filter(Boolean).join(' ')
+  const description = summary.value?.totalCount
+    ? `${subject} ${transactionLabel} 실거래가 정보입니다. 최근 ${summary.value.totalCount.toLocaleString()}건 거래, 시세 추이와 면적별 가격을 확인하세요.`
+    : `${subject} ${transactionLabel} 실거래가 정보입니다. 시세 추이와 면적별 가격을 확인하세요.`
   const canonicalBase = `${SITE_URL}/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}`
   const resolvedBjdCode = bjdCode.value || buildingInfo.value?.bjdCode || ''
   const canonicalUrl = resolvedBjdCode ? `${canonicalBase}?bjdCode=${resolvedBjdCode}` : canonicalBase
+  const meta: Array<Record<string, string>> = [
+    { name: 'description', content: description },
+    { property: 'og:title', content: title },
+    { property: 'og:description', content: description },
+    { property: 'og:image', content: buildingInfo.value
+      ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
+      : DEFAULT_OG_IMAGE },
+    { property: 'og:url', content: canonicalUrl },
+    { property: 'og:type', content: 'place' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: title },
+    { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: buildingInfo.value
+      ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
+      : DEFAULT_OG_IMAGE },
+    { property: 'og:site_name', content: SITE_NAME },
+    { property: 'og:locale', content: 'ko_KR' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+  ]
+  // noindex/canonical 정책: noindex 일 때는 robots 만 보내고 canonical 은 생략한다.
+  if (noindex.value) {
+    meta.push({ name: 'robots', content: 'noindex, follow' })
+  }
   return {
     title,
-    meta: [
-      { name: 'description', content: description },
-      { property: 'og:title', content: title },
-      { property: 'og:description', content: description },
-      { property: 'og:image', content: buildingInfo.value
-        ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
-        : DEFAULT_OG_IMAGE },
-      { property: 'og:url', content: canonicalUrl },
-      { property: 'og:type', content: 'place' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: title },
-      { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: buildingInfo.value
-        ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
-        : DEFAULT_OG_IMAGE },
-      { property: 'og:site_name', content: SITE_NAME },
-      { property: 'og:locale', content: 'ko_KR' },
-      { property: 'og:image:width', content: '1200' },
-      { property: 'og:image:height', content: '630' },
-    ],
-    link: [
-      { rel: 'canonical', href: canonicalUrl },
-    ],
+    meta,
+    link: noindex.value ? [] : [{ rel: 'canonical', href: canonicalUrl }],
   }
 })
 
@@ -594,7 +609,6 @@ const heroStats = computed(() => {
 })
 
 const monthly = ref<TransactionStats[]>([])
-const statsLoading = ref(true)
 const areaGroups = ref<AreaGroup[]>([])
 const selectedArea = ref<number | null>(null)
 const selectedRentType = ref<'all' | 'jeonse' | 'wolse'>('all')
@@ -643,7 +657,6 @@ function formatSummaryPrice(price: number): string {
 }
 
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
-const txLoading = ref(true)
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
 
@@ -793,7 +806,35 @@ watch(selectedArea, () => { currentPage.value = 1; loadData() })
 // 전월세 구분 변경 시 시세 + 거래 내역 재로드
 watch(selectedRentType, () => { currentPage.value = 1; loadData() })
 
-// buildingInfo 로드 후 building_viewed 이벤트 + 구조화 데이터 설정 + thin content noindex
+// JSON-LD 스키마를 SSR-safe 경로로 등록 — useHead(() => ...) 팩토리 기반이라
+// buildingInfo 가 lazy-load 로 늦게 들어와도 reactive 하게 반영되고, SSR 첫 렌더에서도 부분적 스키마가 HTML 에 포함된다.
+setBuildingPlaceSchema(() => ({
+  name: buildingName.value,
+  address: fullAddress.value !== '-' ? fullAddress.value : buildingName.value,
+  lat: buildingInfo.value?.lat ?? null,
+  lng: buildingInfo.value?.lng ?? null,
+  buildYear: buildingInfo.value?.buildYear,
+  propertyType: propertyMeta.value?.label || '',
+}))
+setRealEstateListingSchema(() => {
+  const canonicalBase = `${SITE_URL}/real-estate/${propertyTypeParam.value}/${encodeURIComponent(buildingName.value)}`
+  const code = bjdCode.value || buildingInfo.value?.bjdCode || ''
+  const url = code ? `${canonicalBase}?bjdCode=${code}` : canonicalBase
+  return {
+    name: buildingName.value,
+    address: fullAddress.value !== '-' ? fullAddress.value : buildingName.value,
+    city: buildingInfo.value?.city || '',
+    district: buildingInfo.value?.district || '',
+    propertyType: propertyMeta.value?.label || '',
+    url,
+    buildYear: buildingInfo.value?.buildYear,
+    totalCount: summary.value?.totalCount,
+    lat: buildingInfo.value?.lat ?? null,
+    lng: buildingInfo.value?.lng ?? null,
+  }
+})
+
+// building_viewed 이벤트만 buildingInfo 로드 후 발화 (클라이언트 전용 analytics)
 watch(() => buildingInfo.value, (info) => {
   if (info) {
     trackBuildingView({
@@ -801,27 +842,6 @@ watch(() => buildingInfo.value, (info) => {
       buildingName: buildingName.value,
       city: info.city,
       district: info.district,
-    })
-  }
-  if (info?.lat && info?.lng) {
-    setBuildingPlaceSchema({
-      name: buildingName.value,
-      address: fullAddress.value,
-      lat: info.lat,
-      lng: info.lng,
-      buildYear: info.buildYear,
-      propertyType: propertyMeta.value?.label || '',
-    })
-    setRealEstateListingSchema({
-      name: buildingName.value,
-      address: fullAddress.value,
-      city: info.city || '',
-      district: info.district || '',
-      propertyType: propertyMeta.value?.label || '',
-      buildYear: info.buildYear,
-      totalCount: summary.value?.totalCount,
-      lat: info.lat,
-      lng: info.lng,
     })
   }
 })
@@ -849,25 +869,8 @@ watchEffect(async () => {
   }
 })
 
-// thin / low-quality URL을 색인에서 제거하기 위한 noindex 조건.
-// - buildingName 자체가 지번 패턴 → 즉시 noindex (데이터 로드 불필요, SSR 첫 바이트부터 차단)
-// - 데이터 로드 완료 && buildingInfo 없음 → 존재하지 않는 건물
-// - 데이터 로드 완료 && 총 거래 < 10 → thin content
-const noindex = computed(() =>
-  shouldNoindexRealEstateDetail({
-    buildingName: buildingName.value,
-    loaded: !statsLoading.value && !txLoading.value,
-    hasBuildingInfo: buildingInfo.value !== null,
-    totalCount: summary.value?.totalCount,
-  }),
-)
-
-useHead(() => {
-  if (!noindex.value) return {}
-  return {
-    meta: [{ name: 'robots', content: 'noindex, follow' }],
-  }
-})
+// noindex 는 상단 useHead 팩토리에서 robots 메타 + canonical 제거를 함께 처리한다.
+// (정책: .omc/notes/noindex-canonical-policy.md)
 </script>
 
 <style scoped>

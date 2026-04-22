@@ -79,6 +79,9 @@
           <div class="flex-1 min-w-0">
             <h3 class="text-slate-900 font-bold text-[17px]">{{ card.title }}</h3>
             <p class="text-slate-500 text-xs mt-1">{{ card.desc }}</p>
+            <span v-if="card.stat" class="inline-flex mt-2 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-bold">
+              {{ card.stat }}
+            </span>
           </div>
         </NuxtLink>
       </div>
@@ -109,10 +112,15 @@
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="text-slate-900 font-bold text-[15px] md:text-[17px]">{{ link.label }}</h3>
-            <p class="text-slate-500 text-[11px] md:text-xs mt-1 truncate hidden md:block">{{ link.sub }}</p>
-            <span class="inline-flex mt-2 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] md:text-xs font-bold">
-              {{ link.count }}
-            </span>
+            <p class="text-slate-500 text-[11px] md:text-xs mt-1 truncate">{{ link.sub }}</p>
+            <div class="flex flex-wrap gap-1 mt-2">
+              <span class="inline-flex px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] md:text-xs font-bold">
+                {{ link.count }}
+              </span>
+              <span class="hidden md:inline-flex px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] md:text-xs font-semibold">
+                거래 {{ link.txnCount }}
+              </span>
+            </div>
           </div>
         </NuxtLink>
       </div>
@@ -296,12 +304,18 @@ const recentReviews = computed(() => recentReviewsData.value?.data ?? [])
 const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
 
 const stats = computed(() => {
-  const d = (statsResponse.value?.data ?? {}) as Record<string, number> & { realEstate?: Record<string, number> }
+  const d = (statsResponse.value?.data ?? {}) as Record<string, number> & {
+    realEstate?: Record<string, number>
+    realEstateBuildings?: Record<string, number>
+    subscriptionActiveCount?: number
+  }
   return {
     total: d.total ?? 0,
     buildingCount: d.buildingCount ?? 0,
     regionCount: d.regionCount ?? 0,
     realEstate: d.realEstate ?? { aptSale: 0, aptRent: 0, villaSale: 0, villaRent: 0, offitelSale: 0, offitelRent: 0 },
+    realEstateBuildings: d.realEstateBuildings ?? { apt: 0, villa: 0, offitel: 0 },
+    subscriptionActiveCount: d.subscriptionActiveCount ?? 0,
   }
 })
 
@@ -311,26 +325,52 @@ function formatStatCount(count: number): string {
   return rounded.toLocaleString('ko-KR') + '+'
 }
 
-function formatRealEstateCount(n: number): string {
-  if (n === 0) return '0건'
-  if (n >= 10000) return `${Math.floor(n / 10000)}만+`
-  return `${n.toLocaleString('ko-KR')}건`
+function formatBuildingCount(n: number): string {
+  if (n === 0) return '-'
+  if (n >= 10000) {
+    const val = (n / 10000).toFixed(1).replace(/\.0$/, '')
+    return `${val}만+`
+  }
+  const rounded = Math.floor(n / 1000) * 1000
+  return `${rounded.toLocaleString('ko-KR')}+`
 }
 
-// "오늘 확인할 정보" 3카드
-const todayCards = [
-  { title: '실거래가', desc: '아파트·빌라·오피스텔', icon: 'apt', to: '/real-estate' },
-  { title: '청약·임대', desc: '청약중·청약예정', icon: 'subscription', to: '/subscription' },
-  { title: '생활시설', desc: '병원·약국·주차장', icon: 'hospital', to: '#facilities' },
-]
+// "오늘 확인할 정보" 3카드 — 실시간 수치 포함
+const todayCards = computed(() => {
+  const s = stats.value
+  return [
+    {
+      title: '실거래가',
+      desc: '아파트·빌라·오피스텔',
+      stat: s.buildingCount ? `전국 ${formatBuildingCount(s.buildingCount)}` : null,
+      icon: 'apt',
+      to: '/real-estate',
+    },
+    {
+      title: '청약·임대',
+      desc: '청약중·청약예정',
+      stat: s.subscriptionActiveCount > 0 ? `모집·예정 ${s.subscriptionActiveCount}건` : null,
+      icon: 'subscription',
+      to: '/subscription',
+    },
+    {
+      title: '생활시설',
+      desc: '병원·약국·주차장',
+      stat: s.total ? `전국 ${formatBuildingCount(s.total)}` : null,
+      icon: 'hospital',
+      to: '#facilities',
+    },
+  ]
+})
 
 // 부동산 실거래가 링크
 const realEstateLinks = computed(() => {
+  const reb = stats.value.realEstateBuildings
   const re = stats.value.realEstate
   return [
-    { to: '/real-estate/apt', label: '아파트', iconImg: 'apt', sub: '매매·전월세 실거래가', count: formatRealEstateCount((re.aptSale || 0) + (re.aptRent || 0)) },
-    { to: '/real-estate/villa', label: '빌라', iconImg: 'villa', sub: '연립·다세대 실거래가', count: formatRealEstateCount((re.villaSale || 0) + (re.villaRent || 0)) },
-    { to: '/real-estate/offitel', label: '오피스텔', iconImg: 'offitel', sub: '매매·전월세 실거래가', count: formatRealEstateCount((re.offitelSale || 0) + (re.offitelRent || 0)) },
+    { to: '/real-estate/apt', label: '아파트', iconImg: 'apt', sub: '매매·전월세 실거래가', count: formatBuildingCount(reb.apt || 0), txnCount: formatBuildingCount((re.aptSale || 0) + (re.aptRent || 0)) },
+    { to: '/real-estate/villa', label: '빌라', iconImg: 'villa', sub: '연립·다세대 실거래가', count: formatBuildingCount(reb.villa || 0), txnCount: formatBuildingCount((re.villaSale || 0) + (re.villaRent || 0)) },
+    { to: '/real-estate/offitel', label: '오피스텔', iconImg: 'offitel', sub: '매매·전월세 실거래가', count: formatBuildingCount(reb.offitel || 0), txnCount: formatBuildingCount((re.offitelSale || 0) + (re.offitelRent || 0)) },
   ]
 })
 
