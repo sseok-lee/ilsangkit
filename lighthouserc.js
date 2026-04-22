@@ -1,10 +1,30 @@
+// 대표 유입 페이지 셋 — 홈만 통과해도 전체 SEO 가 초록으로 보이는 false green 을 제거하기 위해
+// 카테고리 허브 / 실제 시설 상세 / 지역-카테고리 허브 / 부동산 허브 / 정적 가이드 / 검색 페이지까지 포함한다.
+// 각 URL 은 npm run preview 환경에서 300/404 없이 200 을 반환해야 한다(health_check_urls 가 강제).
+//
+// 시설 상세는 실제 DB ID 에 의존하므로 env 로 교체 가능하게 둔다.
+//   - 기본값: /toilet/toilet-00379099bd5d661e
+//   - override: SAMPLE_FACILITY_URL=/toilet/<real-id>
+// 레거시 부동산 허브(/real-estate/apt-sale)는 301 대상이라 제외한다.
+const PREVIEW_BASE = 'http://localhost:4173'
+const SAMPLE_FACILITY_URL = process.env.SAMPLE_FACILITY_URL || '/toilet/toilet-00379099bd5d661e'
+const LIGHTHOUSE_URLS = [
+  `${PREVIEW_BASE}/`,
+  `${PREVIEW_BASE}/toilet`,
+  `${PREVIEW_BASE}${SAMPLE_FACILITY_URL}`,
+  `${PREVIEW_BASE}/seoul/gangnam/toilet`,
+  `${PREVIEW_BASE}/real-estate`,
+  `${PREVIEW_BASE}/guide`,
+  `${PREVIEW_BASE}/search`,
+]
+
 module.exports = {
   ci: {
     collect: {
       startServerCommand: 'PORT=4173 npm run preview',
       startServerReadyPattern: 'Listening',
       startServerReadyTimeout: 60000,
-      url: ['http://localhost:4173/'],
+      url: LIGHTHOUSE_URLS,
       numberOfRuns: 3,
       settings: {
         preset: 'desktop',
