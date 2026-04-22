@@ -131,7 +131,7 @@ const { setBreadcrumbSchema } = useStructuredData()
 
 setMeta({
   title: '개인정보처리방침',
-  description: '일상킷 서비스의 개인정보처리방침입니다. 수집 항목, 이용 목적, 제3자 제공 등을 안내합니다.',
+  description: '일상킷 서비스의 개인정보 처리방침을 안내합니다.',
   path: '/privacy',
 })
 

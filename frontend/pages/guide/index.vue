@@ -147,8 +147,8 @@ const CATEGORY_CHIPS: { key: string | null; label: string; categories?: string[]
 // SEO
 const { setMeta } = useFacilityMeta()
 setMeta({
-  title: '생활 가이드 - 일상킷',
-  description: '부동산 가이드부터 병원, 약국, 주차장 등 생활시설 이용 팁까지. 카테고리별 생활 가이드를 확인하세요.',
+  title: '생활 가이드 | 부동산·청약·생활시설',
+  description: '부동산, 청약, 병원, 약국, 주차장 등 생활 가이드를 카테고리별로 확인하세요.',
   path: '/guide',
 })
 

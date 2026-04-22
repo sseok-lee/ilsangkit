@@ -257,7 +257,8 @@ const { data: summary } = await useAsyncData<AreaSummary | null>(
   },
 )
 
-// SEO - top-level에서 설정 (SSR에서 메타태그 렌더링)
+// SEO - top-level에서 설정 (SSR에서 메타태그 렌더링).
+// canonical 은 아래 useHead(computed...) 에서 noindex 상태와 함께 reactive 하게 관리한다 (정책: .omc/notes/noindex-canonical-policy.md).
 const { setRegionMeta } = useFacilityMeta()
 setRegionMeta({
   city: city.value,
@@ -265,6 +266,7 @@ setRegionMeta({
   district: district.value,
   districtName: districtName.value,
   category: category.value as FacilityCategory,
+  canonical: false,
 })
 
 // Breadcrumb JSON-LD
@@ -325,11 +327,14 @@ const otherCategories = computed(() => {
   return all
 })
 
+// URL `?page=N` 에서 초기 페이지를 유추 — SSR/클라이언트 진입 모두 동일한 페이지를 렌더하도록.
+const initialPage = Math.max(1, Number(route.query.page) || 1)
+
 // ========== Waste Schedule (trash) ==========
 const { getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const wasteSchedules = ref<RegionSchedule[]>([])
 const wasteContact = ref<{ name: string; phone?: string } | null>(null)
-const wasteCurrentPage = ref(1)
+const wasteCurrentPage = ref(initialPage)
 const wasteTotalPages = ref(1)
 const wasteTotal = ref(0)
 
@@ -353,8 +358,17 @@ async function loadWasteSchedules() {
   wasteTotalPages.value = result.totalPages
 }
 
-function goToWastePage(page: number) {
+// URL query 를 함께 갱신해야 reactive noindex 가 정확히 동작한다.
+function syncPageQuery(page: number) {
+  const nextQuery: Record<string, unknown> = { ...route.query }
+  if (page > 1) nextQuery.page = String(page)
+  else delete nextQuery.page
+  return nextQuery
+}
+
+async function goToWastePage(page: number) {
   wasteCurrentPage.value = page
+  await navigateTo({ query: syncPageQuery(page) })
   loadWasteSchedules()
   if (import.meta.client) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -372,14 +386,15 @@ const {
   fetchFacilities,
 } = useRegionFacilities()
 
-const currentPage = ref(1)
+const currentPage = ref(initialPage)
 
 async function loadFacilities() {
   await fetchFacilities(city.value, district.value, category.value, currentPage.value)
 }
 
-function goToPage(pageNum: number) {
+async function goToPage(pageNum: number) {
   currentPage.value = pageNum
+  await navigateTo({ query: syncPageQuery(pageNum) })
   loadFacilities()
   if (import.meta.client) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -393,16 +408,43 @@ if (isTrash.value) {
   loadFacilities()
 }
 
-// noindex 조건: 시설 0건(완전히 비어있는 경우) 또는 페이지 2 이상
-const pageQueryParam = Number(route.query.page) || 1
+// URL → 상태 동기화: 브라우저 뒤로가기/앞으로가기 혹은 query-only 네비게이션에서도
+// pageQueryParam(아래 computed)과 실제 페이지 상태가 어긋나지 않도록 한다.
+// goToPage 등 페이지 액션은 상태를 먼저 갱신하므로 같은 값일 때는 재조회를 스킵한다.
+watch(() => route.query.page, (next) => {
+  const nextPage = Math.max(1, Number(next) || 1)
+  if (isTrash.value) {
+    if (wasteCurrentPage.value === nextPage) return
+    wasteCurrentPage.value = nextPage
+    loadWasteSchedules()
+  } else {
+    if (currentPage.value === nextPage) return
+    currentPage.value = nextPage
+    loadFacilities()
+  }
+})
+
+// noindex 조건: 시설 0건(완전히 비어있는 경우) 또는 페이지 2 이상.
+// 정책: noindex 일 때는 canonical 을 함께 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md).
+// route.query.page 변경에 reactive 하게 반응해야 client-side 페이지 이동에서도 정책이 유지된다.
+const pageQueryParam = computed(() => Math.max(1, Number(route.query.page) || 1))
 useHead(computed(() => {
   const isEmpty = isTrash.value
     ? (!wasteLoading.value && wasteSchedules.value.length === 0)
     : (!loading.value && facilities.value.length === 0 && !error.value)
-  if (isEmpty || pageQueryParam > 1) {
+  const isNoindex = isEmpty || pageQueryParam.value > 1
+  if (isNoindex) {
     return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
   }
-  return { meta: [] }
+  return {
+    link: [
+      {
+        rel: 'canonical',
+        href: `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`,
+        key: 'canonical',
+      },
+    ],
+  }
 }))
 
 // ItemList 구조화 데이터 (non-trash only)

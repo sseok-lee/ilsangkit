@@ -279,7 +279,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
-import { RELATED_CATEGORIES, POPULAR_REGIONS } from '~/utils/seoConstants'
+import { RELATED_CATEGORIES, POPULAR_REGIONS, CATEGORY_SEO_INTENT } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -324,13 +324,16 @@ const selectedDistrict = ref('')
 const cities = ref<string[]>([])
 const districtList = ref<string[]>([])
 
-// SSR: 초기 데이터를 서버에서 로드
+// SSR: 초기 데이터를 서버에서 로드.
+// route.query.page 를 SSR 시점에서 읽어 동일 페이지 데이터를 반환해야
+// `/toilet?page=2` 직접 진입 시 SSR HTML이 page 1 콘텐츠로 엇나가지 않는다.
 const isTrash = categoryParam.value === 'trash'
+const initialPage = Math.max(1, Number(route.query.page) || 1)
 const { data: ssrData } = await useAsyncData(
-  `cat-list-${categoryParam.value}`,
+  `cat-list-${categoryParam.value}-p${initialPage}`,
   () => isTrash
-    ? $fetch<any>('/api/waste-schedules', { params: { page: 1, limit: 20 } })
-    : $fetch<any>('/api/facilities/search', { method: 'POST', body: { category: categoryParam.value, page: 1, limit: 20 } }),
+    ? $fetch<any>('/api/waste-schedules', { params: { page: initialPage, limit: 20 } })
+    : $fetch<any>('/api/facilities/search', { method: 'POST', body: { category: categoryParam.value, page: initialPage, limit: 20 } }),
 )
 
 // SSR 데이터가 있으면 초기 로딩 완료
@@ -355,7 +358,7 @@ const wasteContact = ref<{ name: string; phone?: string } | null>(
     ? (ssrTransformed?.contact ?? ssrItems.contact ?? null)
     : null
 )
-const wasteCurrentPage = ref(1)
+const wasteCurrentPage = ref(initialPage)
 const wasteTotalPages = ref(isTrash && ssrItems ? ssrItems.totalPages ?? 1 : 1)
 const wasteTotal = ref(isTrash && ssrItems ? ssrItems.total ?? 0 : 0)
 
@@ -364,6 +367,11 @@ const ssrFacilities = ref(!isTrash && ssrItems ? ssrItems.items ?? [] : [])
 const ssrTotal = ref(!isTrash && ssrItems ? ssrItems.total ?? 0 : 0)
 const ssrTotalPages = ref(!isTrash && ssrItems ? ssrItems.totalPages ?? 0 : 0)
 const ssrConsumed = ref(false)
+
+// URL `?page=N` 을 composable 의 currentPage 에 동기화 (client nav 진입 시 바로 2페이지가 켜져 있어야 함)
+if (!isTrash && initialPage > 1) {
+  setPage(initialPage)
+}
 
 // 템플릿용 display computed — SSR 데이터 우선, 이후 composable 데이터
 const displayFacilities = computed(() => {
@@ -415,6 +423,24 @@ const SEO_DESCRIPTIONS: Record<string, string> = {
   trash: '지역별 쓰레기 배출 요일과 분리수거 방법을 확인하세요. 일반/음식물/재활용 배출 일정을 안내합니다.',
 }
 
+function buildCategorySeoTitle(category: FacilityCategory, cityName?: string, districtName?: string): string {
+  const categoryName = CATEGORY_META[category]?.label || category
+  const intent = CATEGORY_SEO_INTENT[category] || '정보'
+  const location = [cityName, districtName].filter(Boolean).join(' ')
+  return location
+    ? `${location} ${categoryName} | ${intent}`
+    : `${categoryName} | ${intent}`
+}
+
+function buildCategorySeoDescription(category: FacilityCategory, cityName?: string, districtName?: string): string {
+  const categoryName = CATEGORY_META[category]?.label || category
+  const intent = CATEGORY_SEO_INTENT[category] || '정보'
+  const location = [cityName, districtName].filter(Boolean).join(' ')
+  return location
+    ? `${location}의 ${categoryName} ${intent} 정보를 확인하세요.`
+    : `전국 ${categoryName}의 ${intent} 정보를 한눈에 확인하세요.`
+}
+
 // Page title
 const pageTitle = computed(() => {
   const catLabel = categoryMeta.value?.label || categoryParam.value
@@ -447,15 +473,12 @@ const resultTitle = computed(() => {
 
 // SEO meta (top-level for SSR)
 const initialCityName = CITY_SLUG_MAP[route.query.city as string] || ''
+const initialDistrictName = (route.query.district as string) || ''
 const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label || (route.params.category as string)
 
 setMeta({
-  title: initialCityName
-    ? `${initialCityName} ${catLabel}`
-    : SEO_TITLES[route.params.category as string] || `전국 ${catLabel} 찾기`,
-  description: initialCityName
-    ? `${initialCityName}의 ${catLabel} 위치와 운영시간을 확인하세요. 주변 생활시설 정보를 한눈에 검색할 수 있습니다.`
-    : SEO_DESCRIPTIONS[route.params.category as string] || `전국 ${catLabel} 위치와 운영시간을 검색하세요.`,
+  title: buildCategorySeoTitle(route.params.category as FacilityCategory, initialCityName, initialDistrictName),
+  description: buildCategorySeoDescription(route.params.category as FacilityCategory, initialCityName, initialDistrictName),
   path: `/${route.params.category}`,
 })
 
@@ -520,15 +543,19 @@ const canonicalPath = computed(() => {
   }
   return `/${categoryParam.value}`
 })
-useHead(computed(() => ({
-  link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${canonicalPath.value}`, key: 'canonical' }],
-})))
+// Pagination: page 2+ 는 noindex 하고 canonical 은 함께 제거 (noindex/canonical 정책 통일)
+// pageQueryParam 은 route.query.page 에 reactive 로 연동해야 client-side 페이지 이동 시에도 정책이 켜진다.
+const pageQueryParam = computed(() => Math.max(1, Number(route.query.page) || 1))
+const isNoindex = computed(() => pageQueryParam.value >= 2)
 
-// Pagination: page 2+ noindex (검색엔진 중복 콘텐츠 방지)
-const pageQueryParam = Number(route.query.page) || 1
-if (pageQueryParam >= 2) {
-  useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
-}
+useHead(computed(() => {
+  if (isNoindex.value) {
+    return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
+  }
+  return {
+    link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${canonicalPath.value}`, key: 'canonical' }],
+  }
+}))
 
 // Methods
 async function performSearch() {
@@ -561,6 +588,23 @@ async function loadWasteSchedules() {
   wasteTotalPages.value = result.totalPages
 }
 
+// URL `?page=N` 을 갱신해 reactive noindex/canonical 이 정확히 켜지도록 한다.
+// page=1 이면 query 에서 page 키 자체를 제거해 canonical URL 과 동일하게 유지한다.
+function syncPageQuery(page: number) {
+  const nextQuery: Record<string, unknown> = { ...route.query }
+  if (page > 1) nextQuery.page = String(page)
+  else delete nextQuery.page
+  return nextQuery
+}
+
+// 필터(도시·구·키워드)가 바뀌면 결과는 항상 page 1 로 되돌아간다.
+// 내부 상태만 리셋하면 URL 의 `?page=N` 이 남아 head 의 pageQueryParam 이 여전히 noindex 를
+// 켠 채 있게 되므로, 여기서도 navigateTo 로 URL 을 page 1 상태(query 에서 page 키 삭제)로 맞춘다.
+async function resetToFirstPageUrl() {
+  if (route.query.page === undefined) return
+  await navigateTo({ query: syncPageQuery(1) })
+}
+
 async function handleCityChange() {
   selectedDistrict.value = ''
   filterKeyword.value = ''
@@ -578,9 +622,11 @@ async function handleCityChange() {
 
   if (categoryParam.value === 'trash') {
     wasteCurrentPage.value = 1
+    await resetToFirstPageUrl()
     await loadWasteSchedules()
   } else {
     resetPage()
+    await resetToFirstPageUrl()
     performSearch()
   }
 }
@@ -590,9 +636,11 @@ async function handleDistrictChange() {
 
   if (categoryParam.value === 'trash') {
     wasteCurrentPage.value = 1
+    await resetToFirstPageUrl()
     await loadWasteSchedules()
   } else {
     resetPage()
+    await resetToFirstPageUrl()
     performSearch()
   }
 }
@@ -608,22 +656,26 @@ function handleFilterSearch() {
   filterSearchTimer = setTimeout(async () => {
     if (categoryParam.value === 'trash') {
       wasteCurrentPage.value = 1
+      await resetToFirstPageUrl()
       await loadWasteSchedules()
     } else {
       resetPage()
+      await resetToFirstPageUrl()
       performSearch()
     }
   }, 300)
 }
 
-function goToWastePage(page: number) {
+async function goToWastePage(page: number) {
   wasteCurrentPage.value = page
+  await navigateTo({ query: syncPageQuery(page) })
   loadWasteSchedules()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function goToPage(page: number) {
+async function goToPage(page: number) {
   setPage(page)
+  await navigateTo({ query: syncPageQuery(page) })
   performSearch()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -663,16 +715,27 @@ onMounted(async () => {
   initialLoading.value = false
 })
 
+// URL → 상태 동기화: 브라우저 뒤로가기/앞으로가기 혹은 같은 라우트로의 query-only 네비게이션에서도
+// pageQueryParam computed 와 실제 데이터(currentPage / wasteCurrentPage) 가 어긋나지 않도록 한다.
+// goToPage/goToWastePage 등 페이지 액션은 이미 상태를 먼저 갱신하므로, 값이 같은 경우 조용히 스킵한다.
+watch(() => route.query.page, (next) => {
+  const nextPage = Math.max(1, Number(next) || 1)
+  if (categoryParam.value === 'trash') {
+    if (wasteCurrentPage.value === nextPage) return
+    wasteCurrentPage.value = nextPage
+    loadWasteSchedules()
+  } else {
+    if (currentPage.value === nextPage) return
+    setPage(nextPage)
+    performSearch()
+  }
+})
+
 // Update meta when filters change
 watch([selectedCity, selectedDistrict], () => {
   const cat = categoryParam.value
-  const catName = categoryMeta.value?.label || cat
-  const title = selectedCity.value
-    ? `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''} ${catName}`
-    : SEO_TITLES[cat] || `전국 ${catName} 찾기`
-  const description = selectedCity.value
-    ? `${selectedCity.value}${selectedDistrict.value ? ' ' + selectedDistrict.value : ''}의 ${catName} 위치와 운영시간을 확인하세요. 주변 생활시설 정보를 한눈에 검색할 수 있습니다.`
-    : SEO_DESCRIPTIONS[cat] || `전국 ${catName} 위치와 운영시간을 검색하세요.`
+  const title = buildCategorySeoTitle(cat, selectedCity.value || undefined, selectedDistrict.value || undefined)
+  const description = buildCategorySeoDescription(cat, selectedCity.value || undefined, selectedDistrict.value || undefined)
 
   setMeta({ title, description, path: `/${cat}` })
 })

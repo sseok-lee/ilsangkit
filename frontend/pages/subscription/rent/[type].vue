@@ -47,8 +47,8 @@ if (!typeMeta) {
   throw createError({ statusCode: 404, statusMessage: '존재하지 않는 청약 카테고리입니다' })
 }
 
-const title = `${typeMeta.label} 청약 일정 — 접수예정·진행중 | 일상킷`
-const description = typeMeta.description
+const title = `${typeMeta.label} 청약 일정 | 임대 | 일상킷`
+const description = `${typeMeta.label} 임대 청약 일정과 접수 상태, 지역별 공급 정보를 확인하세요.`
 const canonicalUrl = `${SITE_URL}/subscription/rent/${type}`
 
 useHead({
@@ -65,6 +65,7 @@ useHead({
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
   ],
   link: [{ rel: 'canonical', href: canonicalUrl }],
 })

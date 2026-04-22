@@ -143,7 +143,7 @@ import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL, SITE_NAME } from '~/utils/seoConstants'
 import { generateAreaDescription } from '~/utils/seoHelpers'
 
 const route = useRoute()
@@ -253,18 +253,16 @@ const areaDescription = computed(() => {
 // SEO 메타
 const canonicalUrl = `${SITE_URL}/${city.value}/${district.value}`
 useHead(() => {
-  const count = areaData.value?.facilities?.total
-  const title = count
-    ? `${districtName.value} 생활 정보 - 시설 ${count.toLocaleString()}곳 | 일상킷`
-    : `${cityName.value} ${districtName.value} 생활 정보 | 일상킷`
-  const description = `${cityName.value} ${districtName.value} 아파트·빌라·오피스텔 실거래가와 주요 생활시설 현황을 확인하세요. 병원, 약국, 주차장, 화장실 등 생활 인프라 정보를 한눈에 제공합니다.`
+  const title = `${cityName.value} ${districtName.value} 생활 정보·부동산 시세 | 일상킷`
+  const description = `${cityName.value} ${districtName.value}의 부동산 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 인프라 정보를 확인하세요.`
+  const dynamicOgImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}`
   return {
     title,
     meta: [
       { name: 'description', content: description },
       { property: 'og:title', content: title },
       { property: 'og:description', content: description },
-      { property: 'og:image', content: `${SITE_URL}/og?city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}` },
+      { property: 'og:image', content: dynamicOgImage },
       { property: 'og:image:width', content: '1200' },
       { property: 'og:image:height', content: '630' },
       { property: 'og:url', content: canonicalUrl },
@@ -274,7 +272,7 @@ useHead(() => {
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: title },
       { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: `${SITE_URL}/og?city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}` },
+      { name: 'twitter:image', content: dynamicOgImage },
     ],
     link: [
       { rel: 'canonical', href: canonicalUrl },

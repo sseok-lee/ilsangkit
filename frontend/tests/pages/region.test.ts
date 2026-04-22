@@ -103,8 +103,8 @@ describe('Region Page Logic', () => {
     const districtName = '강남구';
     const categoryName = '공공화장실';
 
-    const title = `${cityName} ${districtName} ${categoryName} - 일상킷`;
-    expect(title).toBe('서울 강남구 공공화장실 - 일상킷');
+    const title = `${cityName} ${districtName} ${categoryName} | 위치·개방시간 | 일상킷`;
+    expect(title).toBe('서울 강남구 공공화장실 | 위치·개방시간 | 일상킷');
   });
 
   it('generates meta description correctly', () => {
@@ -112,8 +112,8 @@ describe('Region Page Logic', () => {
     const districtName = '강남구';
     const categoryName = '공공화장실';
 
-    const description = `${cityName} ${districtName}의 ${categoryName} 위치 정보를 확인하세요.`;
-    expect(description).toBe('서울 강남구의 공공화장실 위치 정보를 확인하세요.');
+    const description = `${cityName} ${districtName}의 ${categoryName} 위치·개방시간 정보를 확인하세요.`;
+    expect(description).toBe('서울 강남구의 공공화장실 위치·개방시간 정보를 확인하세요.');
   });
 
   it('calculates grid columns based on screen size', () => {
