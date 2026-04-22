@@ -20,7 +20,7 @@ export async function getStats() {
     toiletCount, wifiCount, clothesCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount,
     parkCount, schoolCount, marketCount, childcareCount, evChargerCount, sportsCount,
     aptSaleCount, aptRentCount, villaSaleCount, villaRentCount, offitelSaleCount, offitelRentCount,
-    buildingCountResult, regionCount,
+    buildingCountResult, regionCount, subscriptionActiveCount,
   ] = await Promise.all([
     prisma.toilet.count(),
     prisma.wifi.count(),
@@ -43,17 +43,19 @@ export async function getStats() {
     prisma.villaRentTransaction.count(),
     prisma.offitelSaleTransaction.count(),
     prisma.offitelRentTransaction.count(),
-    prisma.$queryRaw<[{ cnt: bigint }]>`
-      SELECT COUNT(*) as cnt FROM (
-        SELECT DISTINCT buildingName, bjdCode FROM AptSaleTransaction
-        UNION SELECT DISTINCT buildingName, bjdCode FROM AptRentTransaction
-        UNION SELECT DISTINCT buildingName, bjdCode FROM VillaSaleTransaction
-        UNION SELECT DISTINCT buildingName, bjdCode FROM VillaRentTransaction
-        UNION SELECT DISTINCT buildingName, bjdCode FROM OffitelSaleTransaction
-        UNION SELECT DISTINCT buildingName, bjdCode FROM OffitelRentTransaction
-      ) t`,
+    prisma.$queryRaw<[{ apt: bigint; villa: bigint; offitel: bigint }]>`
+      SELECT
+        COUNT(DISTINCT CASE WHEN type IN ('apt-sale','apt-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS apt,
+        COUNT(DISTINCT CASE WHEN type IN ('villa-sale','villa-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS villa,
+        COUNT(DISTINCT CASE WHEN type IN ('offitel-sale','offitel-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS offitel
+      FROM RealEstateBuildingSummary`,
     prisma.region.count(),
+    prisma.subscription.count({ where: { status: { in: ['ongoing', 'upcoming'] } } }),
   ]);
+
+  const aptBuildings = Number(buildingCountResult[0]?.apt ?? 0);
+  const villaBuildings = Number(buildingCountResult[0]?.villa ?? 0);
+  const offitelBuildings = Number(buildingCountResult[0]?.offitel ?? 0);
 
   const stats = {
     toilet: toiletCount,
@@ -80,8 +82,14 @@ export async function getStats() {
       offitelSale: offitelSaleCount,
       offitelRent: offitelRentCount,
     },
-    buildingCount: Number(buildingCountResult[0]?.cnt ?? 0),
+    realEstateBuildings: {
+      apt: aptBuildings,
+      villa: villaBuildings,
+      offitel: offitelBuildings,
+    },
+    buildingCount: aptBuildings + villaBuildings + offitelBuildings,
     regionCount,
+    subscriptionActiveCount,
   };
 
   statsCache = { data: stats, expiry: Date.now() + STATS_CACHE_TTL };
