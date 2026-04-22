@@ -106,6 +106,8 @@ interface MarkerOptions {
   onClick?: (facility: FacilitySearchItem) => void
 }
 
+const ROADVIEW_SEARCH_RADII = [50, 100, 200, 400] as const
+
 // Module-level singleton — shared across all useKakaoMap() instances
 let sdkLoadPromise: Promise<void> | null = null
 
@@ -313,16 +315,34 @@ export function useKakaoMap() {
 
     const position = new window.kakao.maps.LatLng(lat, lng)
     const client = new window.kakao.maps.RoadviewClient()
+    const panoId = await new Promise<number | null>((resolve) => {
+      const tryRadius = (index: number) => {
+        const radius = ROADVIEW_SEARCH_RADII[index]
+        if (radius === undefined) {
+          resolve(null)
+          return
+        }
 
-    client.getNearestPanoId(position, 50, (panoId) => {
-      if (!panoId) {
-        onResult(false)
-        return
+        client.getNearestPanoId(position, radius, (nextPanoId) => {
+          if (nextPanoId) {
+            resolve(nextPanoId)
+            return
+          }
+          tryRadius(index + 1)
+        })
       }
-      const roadview = new window.kakao.maps.Roadview(container)
-      roadview.setPanoId(panoId, position)
-      onResult(true)
+
+      tryRadius(0)
     })
+
+    if (!panoId) {
+      onResult(false)
+      return
+    }
+
+    const roadview = new window.kakao.maps.Roadview(container)
+    roadview.setPanoId(panoId, position)
+    onResult(true)
   }
 
   return {

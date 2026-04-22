@@ -87,6 +87,11 @@ const sampleAgg = {
   _max: { exclusiveArea: 84.82 },
 };
 
+const sampleCoordsOnly = {
+  lat: 37.5001,
+  lng: 127.0001,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -159,5 +164,29 @@ describe('getBuildingInfo - bjdCode fallback', () => {
     expect(result).toHaveProperty('bjdCode', '11680');
     expect(result).toHaveProperty('buildingName', '래미안에든');
     expect(result).toHaveProperty('city', '서울특별시');
+  });
+
+  it('최신 거래에 좌표가 없으면 같은 건물의 최근 좌표 보유 거래를 fallback 으로 사용한다', async () => {
+    mockAptSaleFindFirst
+      .mockResolvedValueOnce({ ...sampleRecord, lat: null, lng: null })
+      .mockResolvedValueOnce(sampleCoordsOnly);
+    mockAptSaleAggregate.mockResolvedValue(sampleAgg);
+
+    const result = await getBuildingInfo('apt-sale', '11680', '래미안에든');
+
+    expect(mockAptSaleFindFirst).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: {
+          bjdCode: '11680',
+          buildingName: '래미안에든',
+          lat: { not: null },
+          lng: { not: null },
+        },
+        select: { lat: true, lng: true },
+      })
+    );
+    expect(result?.lat).toBe(sampleCoordsOnly.lat);
+    expect(result?.lng).toBe(sampleCoordsOnly.lng);
   });
 });

@@ -501,11 +501,12 @@ export async function getBuildingInfo(
   const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
 
   const areaField = 'exclusiveArea';
+  const orderBy = [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }];
 
   const [latest, agg] = await Promise.all([
     model.findFirst({
       where,
-      orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
+      orderBy,
     }),
     model.aggregate({
       where,
@@ -515,6 +516,27 @@ export async function getBuildingInfo(
   ]);
 
   if (!latest) return null;
+
+  let lat = latest.lat;
+  let lng = latest.lng;
+
+  if (lat === null || lng === null) {
+    const latestWithCoords = await model.findFirst({
+      where: {
+        ...where,
+        lat: { not: null },
+        lng: { not: null },
+      },
+      orderBy,
+      select: {
+        lat: true,
+        lng: true,
+      },
+    });
+
+    lat = latestWithCoords?.lat ?? null;
+    lng = latestWithCoords?.lng ?? null;
+  }
 
   return {
     bjdCode: effectiveBjdCode,
@@ -530,8 +552,8 @@ export async function getBuildingInfo(
     latestDealAmount: latest[priceField] !== null ? Number(latest[priceField]) : null,
     latestDealYear: latest.dealYear,
     latestDealMonth: latest.dealMonth,
-    lat: latest.lat !== null ? Number(latest.lat) : null,
-    lng: latest.lng !== null ? Number(latest.lng) : null,
+    lat: lat !== null ? Number(lat) : null,
+    lng: lng !== null ? Number(lng) : null,
   };
 }
 
