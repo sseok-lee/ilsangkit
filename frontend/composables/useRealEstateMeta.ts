@@ -14,8 +14,8 @@ export function useRealEstateMeta() {
 
     const locationPrefix = city && district ? `${city} ${district}` : city || ''
     const title = locationPrefix
-      ? `${locationPrefix} ${meta.label} 실거래가 - 일상킷`
-      : `${meta.label} 실거래가 - 일상킷`
+      ? `${locationPrefix} ${meta.label} 실거래가 | 일상킷`
+      : `${meta.label} 실거래가 | 일상킷`
 
     const ogImage = `${SITE_URL}/og?category=${baseCategory}&title=${encodeURIComponent(title)}`
     const canonicalUrl = `${SITE_URL}/real-estate/${type}`
@@ -49,8 +49,8 @@ export function useRealEstateMeta() {
     const meta = REAL_ESTATE_META[category]
     const baseCategory = type.split('-')[0]
 
-    const title = `${buildingName} ${meta.label} 실거래가 - ${city} ${district} - 일상킷`
-    const description = `${city} ${district} ${buildingName}의 ${meta.label} 실거래가 정보입니다. 최신 거래 내역과 시세 추이를 확인하세요.`
+    const title = `${buildingName} ${meta.label} 실거래가 | ${city} ${district} | 일상킷`
+    const description = `${city} ${district} ${buildingName}의 ${meta.label} 실거래가 정보입니다. 시세 추이와 최신 거래 내역을 확인하세요.`
     const ogImage = `${SITE_URL}/og?category=${baseCategory}&title=${encodeURIComponent(buildingName)}`
     const canonicalUrl = `${SITE_URL}/real-estate/${type}/${encodeURIComponent(buildingName)}`
 

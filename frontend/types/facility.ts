@@ -1,5 +1,27 @@
-// 시설 카테고리 (Prisma enum 대응)
-export type FacilityCategory = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market' | 'childcare' | 'ev-charger' | 'sports'
+// 시설 카테고리 (Prisma enum 대응) — 런타임 배열을 단일 소스로 두고 타입을 그로부터 파생한다.
+export const FACILITY_CATEGORIES = [
+  'toilet',
+  'trash',
+  'wifi',
+  'clothes',
+  'parking',
+  'aed',
+  'library',
+  'hospital',
+  'pharmacy',
+  'park',
+  'school',
+  'market',
+  'childcare',
+  'ev-charger',
+  'sports',
+] as const
+
+export type FacilityCategory = (typeof FACILITY_CATEGORIES)[number]
+
+export function isFacilityCategory(value: string): value is FacilityCategory {
+  return (FACILITY_CATEGORIES as readonly string[]).includes(value)
+}
 
 // 시설 기본 정보 (목록용)
 export interface Facility {

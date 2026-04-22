@@ -342,99 +342,124 @@ export function useStructuredData() {
 
 
   /**
-   * Place 스키마 (부동산 건물 상세용)
+   * Place 스키마 (부동산 건물 상세용).
+   * SSR-safe: 호출부는 `() => options` 형태의 getter 를 전달해 reactive 의존성을 유지한다.
+   * 옵션 오브젝트를 직접 전달해도 동작하지만 이 경우 값이 고정된다 (비반응형).
    */
-  function setBuildingPlaceSchema(options: {
+  type BuildingPlaceOptions = {
     name: string
     address: string
-    lat: number
-    lng: number
+    lat?: number | null
+    lng?: number | null
     buildYear?: number | null
     propertyType: string
-  }) {
-    useHead({
-      script: [
-        {
-          type: 'application/ld+json',
-          innerHTML: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Place',
-            name: options.name,
-            address: {
-              '@type': 'PostalAddress',
-              streetAddress: options.address,
-            },
-            geo: {
-              '@type': 'GeoCoordinates',
-              latitude: options.lat,
-              longitude: options.lng,
-            },
-            additionalProperty: [
-              {
-                '@type': 'PropertyValue',
-                name: 'propertyType',
-                value: options.propertyType,
-              },
-              ...(options.buildYear
-                ? [{
-                    '@type': 'PropertyValue',
-                    name: 'buildYear',
-                    value: String(options.buildYear),
-                  }]
-                : []),
-            ],
-          }),
+  }
+
+  function setBuildingPlaceSchema(
+    input: BuildingPlaceOptions | (() => BuildingPlaceOptions),
+  ) {
+    const resolve = (): BuildingPlaceOptions => (typeof input === 'function' ? input() : input)
+    useHead(() => {
+      const options = resolve()
+      const schema: Record<string, unknown> = {
+        '@context': 'https://schema.org',
+        '@type': 'Place',
+        name: options.name,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: options.address,
         },
-      ],
+        additionalProperty: [
+          {
+            '@type': 'PropertyValue',
+            name: 'propertyType',
+            value: options.propertyType,
+          },
+          ...(options.buildYear
+            ? [{
+                '@type': 'PropertyValue',
+                name: 'buildYear',
+                value: String(options.buildYear),
+              }]
+            : []),
+        ],
+      }
+      if (options.lat != null && options.lng != null) {
+        schema.geo = {
+          '@type': 'GeoCoordinates',
+          latitude: options.lat,
+          longitude: options.lng,
+        }
+      }
+      return {
+        script: [
+          {
+            type: 'application/ld+json',
+            innerHTML: JSON.stringify(schema),
+          },
+        ],
+      }
     })
   }
 
   /**
-   * RealEstateListing 스키마 (부동산 거래 실거래가 상세용)
+   * RealEstateListing 스키마 (부동산 거래 실거래가 상세용).
+   * url 은 호출부가 SSR-safe canonical URL 을 전달해야 하며, 더 이상 window.location.href 에 의존하지 않는다.
+   * 호출부는 `() => options` getter 를 전달해 reactive 의존성을 유지한다.
    */
-  function setRealEstateListingSchema(options: {
+  type RealEstateListingOptions = {
     name: string
     address: string
     city: string
     district: string
     propertyType: string
+    url: string
     buildYear?: number | null
     totalCount?: number
     lat?: number | null
     lng?: number | null
-  }) {
-    useHead({
-      script: [
-        {
-          type: 'application/ld+json',
-          innerHTML: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'RealEstateListing',
-            name: options.name,
-            description: `${options.city} ${options.district} ${options.name} 실거래가 정보`,
-            url: typeof window !== 'undefined' ? window.location.href : '',
-            address: {
-              '@type': 'PostalAddress',
-              streetAddress: options.address,
-              addressLocality: options.district,
-              addressRegion: options.city,
-              addressCountry: 'KR',
-            },
-            ...(options.lat && options.lng ? {
-              geo: {
-                '@type': 'GeoCoordinates',
-                latitude: options.lat,
-                longitude: options.lng,
-              }
-            } : {}),
-            additionalProperty: [
-              { '@type': 'PropertyValue', name: 'propertyType', value: options.propertyType },
-              ...(options.buildYear ? [{ '@type': 'PropertyValue', name: 'yearBuilt', value: String(options.buildYear) }] : []),
-              ...(options.totalCount ? [{ '@type': 'PropertyValue', name: 'numberOfTransactions', value: String(options.totalCount) }] : []),
-            ],
-          }),
+  }
+
+  function setRealEstateListingSchema(
+    input: RealEstateListingOptions | (() => RealEstateListingOptions),
+  ) {
+    const resolve = (): RealEstateListingOptions => (typeof input === 'function' ? input() : input)
+    useHead(() => {
+      const options = resolve()
+      const schema: Record<string, unknown> = {
+        '@context': 'https://schema.org',
+        '@type': 'RealEstateListing',
+        name: options.name,
+        description: `${options.city} ${options.district} ${options.name} 실거래가 정보`,
+        url: options.url,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: options.address,
+          addressLocality: options.district,
+          addressRegion: options.city,
+          addressCountry: 'KR',
         },
-      ],
+        additionalProperty: [
+          { '@type': 'PropertyValue', name: 'propertyType', value: options.propertyType },
+          ...(options.buildYear ? [{ '@type': 'PropertyValue', name: 'yearBuilt', value: String(options.buildYear) }] : []),
+          ...(options.totalCount ? [{ '@type': 'PropertyValue', name: 'numberOfTransactions', value: String(options.totalCount) }] : []),
+        ],
+      }
+      if (options.lat != null && options.lng != null) {
+        schema.geo = {
+          '@type': 'GeoCoordinates',
+          latitude: options.lat,
+          longitude: options.lng,
+        }
+      }
+      return {
+        script: [
+          {
+            type: 'application/ld+json',
+            innerHTML: JSON.stringify(schema),
+          },
+        ],
+      }
     })
   }
 

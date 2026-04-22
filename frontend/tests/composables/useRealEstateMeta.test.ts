@@ -74,12 +74,12 @@ describe('useRealEstateMeta', () => {
       expect(Array.isArray(call.meta)).toBe(true)
     })
 
-    it('title은 "- 일상킷" 접미사를 사용한다 (구분자 통일)', () => {
+    it('title은 "| 일상킷" 접미사를 사용한다 (구분자 통일)', () => {
       const { setRealEstateListMeta } = useRealEstateMeta()
       setRealEstateListMeta('apt-sale')
       const call = mockUseHead.mock.calls[0][0]
-      expect(call.title).toMatch(/- 일상킷$/)
-      expect(call.title).not.toContain('| 일상킷')
+      expect(call.title).toMatch(/\| 일상킷$/)
+      expect(call.title).not.toContain('- 일상킷')
     })
 
     it('canonical link를 설정한다', () => {
@@ -155,12 +155,12 @@ describe('useRealEstateMeta', () => {
       expect(Array.isArray(call.meta)).toBe(true)
     })
 
-    it('title은 "- 일상킷" 접미사를 사용한다 (구분자 통일)', () => {
+    it('title은 "| 일상킷" 접미사를 사용한다 (구분자 통일)', () => {
       const { setRealEstateDetailMeta } = useRealEstateMeta()
       setRealEstateDetailMeta('apt-sale', '래미안 강남', '서울시', '강남구')
       const call = mockUseHead.mock.calls[0][0]
-      expect(call.title).toMatch(/- 일상킷$/)
-      expect(call.title).not.toContain('| 일상킷')
+      expect(call.title).toMatch(/\| 일상킷$/)
+      expect(call.title).not.toContain('- 일상킷')
     })
 
     it('canonical link에 buildingName이 인코딩되어 포함된다', () => {
