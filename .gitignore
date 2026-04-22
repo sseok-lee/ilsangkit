@@ -58,6 +58,15 @@ lighthouse-results-*/
 # Screenshots (debug/reference)
 /ilsangkit-*.png
 /ayo-*.png
+/adbanner-*.png
+
+# Design proposals / wireframes (local only, use design/ for curated)
+/*-proposal.html
+/*-wireframe.html
+/*-wireframes.html
+
+# Local audit reports
+/GEO-AUDIT-REPORT.md
 
 # Agent workspace artifacts
 _workspace*/
