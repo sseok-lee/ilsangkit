@@ -6,6 +6,7 @@ import { CATEGORY_META } from '~/types/facility'
 const VALID_CATEGORIES = new Set<string>([
   ...Object.keys(CATEGORY_META),
   'apt', 'villa', 'offitel',
+  'area',
 ])
 
 export default defineEventHandler(async (event) => {

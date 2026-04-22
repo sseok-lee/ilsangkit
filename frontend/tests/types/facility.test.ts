@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import type { FacilityCategory } from '~/types/facility'
-import { CATEGORY_GROUPS, CATEGORY_META } from '~/types/facility'
+import {
+  CATEGORY_GROUPS,
+  CATEGORY_META,
+  FACILITY_CATEGORIES,
+  isFacilityCategory,
+} from '~/types/facility'
 
 describe('FacilityCategory type', () => {
   it('park, school, market 카테고리 포함', () => {
@@ -112,5 +117,46 @@ describe('CATEGORY_META', () => {
     expect(CATEGORY_META).toHaveProperty('sports')
     expect(CATEGORY_META.sports.label).toBe('체육시설')
     expect(CATEGORY_META.sports.color).toBe('cyan')
+  })
+})
+
+describe('FACILITY_CATEGORIES (runtime single source)', () => {
+  it('15개 시설 카테고리를 모두 포함한다', () => {
+    expect(FACILITY_CATEGORIES).toHaveLength(15)
+  })
+
+  it('CATEGORY_META 의 키 집합과 정확히 일치한다', () => {
+    const metaKeys = Object.keys(CATEGORY_META).sort()
+    const arrSorted = [...FACILITY_CATEGORIES].sort()
+    expect(arrSorted).toEqual(metaKeys)
+  })
+
+  it('search redirect 대상 15개 카테고리 (childcare, ev-charger, sports, aed 포함) 모두 isFacilityCategory 를 통과한다', () => {
+    const requiredForSearchRedirect = [
+      'toilet',
+      'trash',
+      'wifi',
+      'clothes',
+      'parking',
+      'aed',
+      'library',
+      'hospital',
+      'pharmacy',
+      'park',
+      'school',
+      'market',
+      'childcare',
+      'ev-charger',
+      'sports',
+    ]
+    for (const cat of requiredForSearchRedirect) {
+      expect(isFacilityCategory(cat)).toBe(true)
+    }
+  })
+
+  it('존재하지 않는 카테고리는 isFacilityCategory 에서 false', () => {
+    expect(isFacilityCategory('kiosk')).toBe(false)
+    expect(isFacilityCategory('realestate')).toBe(false)
+    expect(isFacilityCategory('')).toBe(false)
   })
 })

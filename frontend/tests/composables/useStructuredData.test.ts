@@ -112,4 +112,159 @@ describe('useStructuredData', () => {
       expect(parsed.openingHoursSpecification).toBeUndefined()
     })
   })
+
+  // ─── SEO Exec Plan US-004: setRealEstateListingSchema SSR-safe url ─────────
+
+  // 이전 구현은 `typeof window !== 'undefined' ? window.location.href : ''` 를 사용해
+  // SSR 첫 렌더에서 빈 url을 내보냈다. 새 API 는 호출부가 절대 URL 을 전달해야 하고,
+  // useHead 는 팩토리 함수를 받아 reactive 업데이트를 지원한다.
+  describe('setRealEstateListingSchema (SSR-safe url)', () => {
+    it('호출부가 전달한 url 이 schema.url 로 그대로 직렬화된다 (plain options)', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema({
+        name: '래미안테스트',
+        address: '서울시 강남구 테헤란로 1',
+        city: '서울특별시',
+        district: '강남구',
+        propertyType: '아파트',
+        url: 'https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/%EB%9E%98%EB%AF%B8%EC%95%88%ED%85%8C%EC%8A%A4%ED%8A%B8',
+        lat: 37.5,
+        lng: 127.0,
+        buildYear: 2015,
+        totalCount: 42,
+      })
+      const factory = mockUseHead.mock.calls[0][0]
+      expect(typeof factory).toBe('function')
+      const head = factory()
+      const parsed = JSON.parse(head.script[0].innerHTML)
+      expect(parsed['@type']).toBe('RealEstateListing')
+      expect(parsed.url).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/%EB%9E%98%EB%AF%B8%EC%95%88%ED%85%8C%EC%8A%A4%ED%8A%B8')
+      expect(parsed.url).not.toBe('')
+      expect(parsed.address.addressRegion).toBe('서울특별시')
+      expect(parsed.address.addressLocality).toBe('강남구')
+      expect(parsed.geo).toEqual({ '@type': 'GeoCoordinates', latitude: 37.5, longitude: 127.0 })
+    })
+
+    it('getter 형태로 전달하면 useHead 가 매 호출 시 최신 값을 읽는다 (reactivity)', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      const state = {
+        url: 'https://ilsangkit.co.kr/real-estate/apt-sale/a',
+        totalCount: 0,
+      }
+      setRealEstateListingSchema(() => ({
+        name: '테스트',
+        address: '서울시',
+        city: '서울특별시',
+        district: '강남구',
+        propertyType: '아파트',
+        url: state.url,
+        totalCount: state.totalCount,
+      }))
+      const factory = mockUseHead.mock.calls[0][0]
+      // 첫 렌더
+      const first = JSON.parse(factory().script[0].innerHTML)
+      expect(first.url).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/a')
+      expect(first.additionalProperty.find((p: { name: string }) => p.name === 'numberOfTransactions')).toBeUndefined()
+
+      // 상태 변경 후 재팩토리
+      state.url = 'https://ilsangkit.co.kr/real-estate/apt-sale/b'
+      state.totalCount = 17
+      const second = JSON.parse(factory().script[0].innerHTML)
+      expect(second.url).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/b')
+      const txProp = second.additionalProperty.find((p: { name: string }) => p.name === 'numberOfTransactions')
+      expect(txProp).toBeDefined()
+      expect(txProp.value).toBe('17')
+    })
+
+    it('lat/lng 가 null 이면 geo 필드가 누락된 채로 schema 가 생성된다 (SSR 첫 렌더)', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema({
+        name: '테스트',
+        address: '서울시',
+        city: '서울특별시',
+        district: '강남구',
+        propertyType: '아파트',
+        url: 'https://ilsangkit.co.kr/x',
+        lat: null,
+        lng: null,
+      })
+      const head = mockUseHead.mock.calls[0][0]()
+      const parsed = JSON.parse(head.script[0].innerHTML)
+      expect(parsed.geo).toBeUndefined()
+      expect(parsed.url).toBe('https://ilsangkit.co.kr/x')
+    })
+
+    it('window 가 없어도(SSR 환경 시뮬레이션) url 필드는 비지 않는다', () => {
+      // 현재 프로세스에 window 가 없는 것처럼 동작하는지 검증.
+      const originalWindow = (globalThis as unknown as { window?: unknown }).window
+      try {
+        ;(globalThis as unknown as { window?: unknown }).window = undefined
+        const { setRealEstateListingSchema } = useStructuredData()
+        setRealEstateListingSchema({
+          name: '테스트',
+          address: '서울시',
+          city: '서울특별시',
+          district: '강남구',
+          propertyType: '아파트',
+          url: 'https://ilsangkit.co.kr/ssr-safe',
+        })
+        const head = mockUseHead.mock.calls[0][0]()
+        const parsed = JSON.parse(head.script[0].innerHTML)
+        expect(parsed.url).toBe('https://ilsangkit.co.kr/ssr-safe')
+      } finally {
+        ;(globalThis as unknown as { window?: unknown }).window = originalWindow
+      }
+    })
+  })
+
+  describe('setRealEstateListingSchema (page-mirrored SSR first render)', () => {
+    it('buildingInfo=null 인 SSR 첫 렌더에서도 RealEstateListing JSON-LD 가 완성된 url 과 함께 포함된다', () => {
+      // 이 케이스는 실제 [buildingName].vue 가 setRealEstateListingSchema 를 호출하는 방식
+      // (buildingInfo 가 ref(null) 이고 route.params 만으로 url 이 구성되는 상황) 을 재현한다.
+      const buildingInfo: { value: null | { city: string; district: string; lat: number; lng: number } } = { value: null }
+      const routeBuildingName = '래미안테스트'
+      const expectedUrl = `https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent(routeBuildingName)}`
+
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema(() => ({
+        name: routeBuildingName,
+        address: routeBuildingName, // fullAddress 가 아직 '-' 인 상태의 fallback
+        city: buildingInfo.value?.city || '서울특별시',
+        district: buildingInfo.value?.district || '강남구',
+        propertyType: '아파트',
+        url: expectedUrl,
+        lat: buildingInfo.value?.lat ?? null,
+        lng: buildingInfo.value?.lng ?? null,
+      }))
+      const factory = mockUseHead.mock.calls[0][0]
+      const head = factory()
+      const parsed = JSON.parse(head.script[0].innerHTML)
+      expect(parsed['@type']).toBe('RealEstateListing')
+      expect(parsed.url).toBe(expectedUrl)
+      expect(parsed.url.length).toBeGreaterThan(0)
+      expect(parsed.address.addressRegion).toBe('서울특별시')
+      expect(parsed.address.addressLocality).toBe('강남구')
+    })
+  })
+
+  describe('setBuildingPlaceSchema (SSR-safe)', () => {
+    it('getter 형태로 전달하면 lat/lng 가 나중에 채워져도 geo 가 업데이트된다', () => {
+      const { setBuildingPlaceSchema } = useStructuredData()
+      const state: { lat: number | null; lng: number | null } = { lat: null, lng: null }
+      setBuildingPlaceSchema(() => ({
+        name: '빌라X',
+        address: '서울시 서초구',
+        lat: state.lat,
+        lng: state.lng,
+        propertyType: '빌라',
+      }))
+      const factory = mockUseHead.mock.calls[0][0]
+      const before = JSON.parse(factory().script[0].innerHTML)
+      expect(before.geo).toBeUndefined()
+      state.lat = 37.48
+      state.lng = 127.01
+      const after = JSON.parse(factory().script[0].innerHTML)
+      expect(after.geo).toEqual({ '@type': 'GeoCoordinates', latitude: 37.48, longitude: 127.01 })
+    })
+  })
 })

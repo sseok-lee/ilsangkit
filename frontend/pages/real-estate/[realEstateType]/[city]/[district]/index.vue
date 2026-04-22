@@ -265,25 +265,26 @@ const canonicalPath = computed(() =>
 const canonicalUrl = computed(() => `${SITE_URL}${canonicalPath.value}`)
 
 useHead(() => {
-  const title = `${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가 - 일상킷`
+  const title = `${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가 | 일상킷`
   const description = heroDescription.value
+  const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}`
+  const isNoindex = renderableComplexes.value.length === 0
   return {
     title,
     meta: [
       { name: 'description', content: description },
       { property: 'og:title', content: title },
       { property: 'og:description', content: description },
-      { property: 'og:image', content: DEFAULT_OG_IMAGE },
+      { property: 'og:image', content: ogImage },
       { property: 'og:url', content: canonicalUrl.value },
       { property: 'og:type', content: 'website' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: title },
       { name: 'twitter:description', content: description },
-      ...(renderableComplexes.value.length === 0
-        ? [{ name: 'robots', content: 'noindex, follow' }]
-        : []),
+      { name: 'twitter:image', content: ogImage },
+      ...(isNoindex ? [{ name: 'robots', content: 'noindex, follow' }] : []),
     ],
-    link: [{ rel: 'canonical', href: canonicalUrl.value }],
+    link: isNoindex ? [] : [{ rel: 'canonical', href: canonicalUrl.value }],
   }
 })
 

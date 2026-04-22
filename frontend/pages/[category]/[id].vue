@@ -2544,14 +2544,6 @@ const isLowValueCategory = computed(() => {
   return cat === 'wifi' || cat === 'aed'
 })
 
-watchEffect(() => {
-  if (isLowValueCategory.value) {
-    useHead({
-      meta: [{ name: 'robots', content: 'noindex, follow' }],
-    })
-  }
-})
-
 // 빈약한 데이터 페이지 noindex 처리
 const isThinContent = computed(() => {
   if (!facility.value?.details) return false
@@ -2573,18 +2565,17 @@ const isThinContent = computed(() => {
   return fieldCount < 2
 })
 
-watchEffect(() => {
-  if (isThinContent.value) {
-    useHead({
-      meta: [{ name: 'robots', content: 'noindex, follow' }],
-    })
+// noindex/canonical 정책 통일 — robots=noindex 를 내보낼 때는 canonical 을 동시에 내보내지 않는다.
+// (정책: .omc/notes/noindex-canonical-policy.md)
+const isFacilityNoindex = computed(() => isLowValueCategory.value || isThinContent.value)
+useHead(computed(() => {
+  if (isFacilityNoindex.value) {
+    return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
   }
-})
-
-// Canonical URL 설정 (중복 색인 방지)
-useHead(computed(() => ({
-  link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${route.path}`, key: 'canonical' }],
-})))
+  return {
+    link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${route.path}`, key: 'canonical' }],
+  }
+}))
 
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })

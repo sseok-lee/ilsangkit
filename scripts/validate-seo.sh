@@ -1,412 +1,209 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# validate-seo.sh — 런타임 SEO 검증 스크립트.
+#
+# 서버가 실행 중이어야 한다 (frontend dev/preview 또는 프로덕션 URL).
+#
+#   # 기본값 (http://localhost:3000)
+#   ./scripts/validate-seo.sh
+#
+#   # 다른 BASE_URL 검사 (환경변수 또는 첫 번째 인자)
+#   BASE_URL=https://ilsangkit.co.kr ./scripts/validate-seo.sh
+#   ./scripts/validate-seo.sh https://ilsangkit.co.kr
+#
+# 특징:
+#   - 실제 HTTP 응답을 검사해 "파일이 존재하는지" 가 아니라 "렌더 결과가 SEO 계약을 지키는지" 를 확인한다.
+#   - 대표 URL 6개 (홈 / 카테고리 허브 / 시설 상세 / 부동산 상세 / /search(noindex) / /sitemap.xml) 를 검사한다.
+#   - 모든 검사는 PASS/FAIL 로 카운트되어 마지막에 요약된다.
+#   - 서버가 꺼져 있으면 curl 로 최초 1회 헬스체크 후 친절한 에러 메시지로 조기 종료한다.
 
-# SEO 코드 레벨 검증 스크립트
-# Phase: P14-T3
-# 프로젝트: 일상킷
+set -u
 
-# set -e removed to allow full validation report
+BASE_URL="${1:-${BASE_URL:-http://localhost:3000}}"
+BASE_URL="${BASE_URL%/}" # trailing slash 제거
 
-echo "========================================"
-echo "🔍 일상킷 SEO 코드 레벨 검증"
-echo "========================================"
-echo ""
+# 대표 URL — 환경마다 존재하는 ID/경로가 다르므로 반드시 환경변수로 오버라이드할 것.
+#   SAMPLE_CATEGORY_HUB (default: /toilet)
+#   SAMPLE_FACILITY_PATH (default: /toilet/toilet-00379099bd5d661e — 로컬 DB에 존재하는 ID로 바꿀 것)
+#   SAMPLE_REAL_ESTATE_PATH (default: /real-estate — 허브 페이지. 리다이렉트 없는 경로를 고르는 게 안전)
+#   SAMPLE_SEARCH_PATH (default: /search)
+#   SAMPLE_PAGINATED_PATH (default: /toilet?page=2 — noindex pagination 회귀 확인용)
+SAMPLE_CATEGORY_HUB="${SAMPLE_CATEGORY_HUB:-/toilet}"
+SAMPLE_FACILITY_PATH="${SAMPLE_FACILITY_PATH:-/toilet/toilet-00379099bd5d661e}"
+SAMPLE_REAL_ESTATE_PATH="${SAMPLE_REAL_ESTATE_PATH:-/real-estate}"
+SAMPLE_SEARCH_PATH="${SAMPLE_SEARCH_PATH:-/search}"
+SAMPLE_PAGINATED_PATH="${SAMPLE_PAGINATED_PATH:-/toilet?page=2}"
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FRONTEND_DIR="$PROJECT_ROOT/frontend"
-BACKEND_DIR="$PROJECT_ROOT/backend"
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
 PASSED=0
 FAILED=0
 
-# 색상 정의
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+pass() { echo -e "${GREEN}✅ PASS${NC}: $1"; PASSED=$((PASSED + 1)); }
+fail() { echo -e "${RED}❌ FAIL${NC}: $1"; FAILED=$((FAILED + 1)); }
+note() { echo -e "${YELLOW}ℹ${NC}  $1"; }
 
-check_pass() {
-    echo -e "${GREEN}✅ PASS${NC}: $1"
-    ((PASSED++))
-}
-
-check_fail() {
-    echo -e "${RED}❌ FAIL${NC}: $1"
-    ((FAILED++))
-}
-
-check_warn() {
-    echo -e "${YELLOW}⚠️  WARN${NC}: $1"
-}
-
-echo "📁 프로젝트 루트: $PROJECT_ROOT"
-echo ""
-
-# ==========================================
-# 1. robots.txt 검증
-# ==========================================
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "1️⃣  robots.txt 검증"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-ROBOTS_FILE="$FRONTEND_DIR/public/robots.txt"
-
-if [ -f "$ROBOTS_FILE" ]; then
-    check_pass "robots.txt 파일 존재"
-
-    # 사이트맵 URL 확인
-    if grep -q "Sitemap: https://ilsangkit.co.kr/sitemap.xml" "$ROBOTS_FILE"; then
-        check_pass "사이트맵 URL 포함"
-    else
-        check_fail "사이트맵 URL 누락"
-    fi
-
-    # Allow 규칙 확인
-    if grep -q "Allow: /" "$ROBOTS_FILE"; then
-        check_pass "주요 페이지 크롤링 허용"
-    else
-        check_fail "Allow 규칙 누락"
-    fi
-
-    # Disallow 규칙 확인
-    if grep -q "Disallow: /api/" "$ROBOTS_FILE"; then
-        check_pass "API 경로 차단 설정"
-    else
-        check_warn "API 경로 차단 권장"
-    fi
-else
-    check_fail "robots.txt 파일 없음"
-fi
-
-echo ""
-
-# ==========================================
-# 2. 사이트맵 엔드포인트 검증
-# ==========================================
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "2️⃣  사이트맵 엔드포인트 검증"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-SITEMAP_FILE="$BACKEND_DIR/src/routes/sitemap.ts"
-
-if [ -f "$SITEMAP_FILE" ]; then
-    check_pass "사이트맵 라우터 파일 존재"
-
-    # 카테고리 엔드포인트 확인
-    if grep -q "/facilities/:category" "$SITEMAP_FILE"; then
-        check_pass "시설 카테고리 엔드포인트 구현"
-    else
-        check_fail "카테고리 엔드포인트 누락"
-    fi
-
-    # 쓰레기 배출 엔드포인트 확인
-    if grep -q "/waste-schedules" "$SITEMAP_FILE"; then
-        check_pass "쓰레기 배출 일정 엔드포인트 구현"
-    else
-        check_fail "쓰레기 배출 엔드포인트 누락"
-    fi
-else
-    check_fail "사이트맵 라우터 파일 없음"
-fi
-
-echo ""
-
-# ==========================================
-# 3. nuxt.config.ts 메타 태그 검증
-# ==========================================
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "3️⃣  nuxt.config.ts 메타 태그 검증"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-NUXT_CONFIG="$FRONTEND_DIR/nuxt.config.ts"
-
-if [ -f "$NUXT_CONFIG" ]; then
-    check_pass "nuxt.config.ts 파일 존재"
-
-    # HTML lang 속성
-    if grep -q "lang: 'ko'" "$NUXT_CONFIG"; then
-        check_pass "HTML lang='ko' 설정"
-    else
-        check_fail "HTML lang 속성 누락"
-    fi
-
-    # viewport 메타 태그
-    if grep -q "viewport" "$NUXT_CONFIG"; then
-        check_pass "viewport 메타 태그 설정"
-    else
-        check_fail "viewport 메타 태그 누락"
-    fi
-
-    # description 메타 태그
-    if grep -q "description" "$NUXT_CONFIG"; then
-        check_pass "description 메타 태그 설정"
-    else
-        check_fail "description 메타 태그 누락"
-    fi
-
-    # 보안 헤더 확인
-    if grep -q "X-Content-Type-Options" "$NUXT_CONFIG"; then
-        check_pass "보안 헤더 설정 (X-Content-Type-Options)"
-    else
-        check_warn "보안 헤더 추가 권장"
-    fi
-
-    # 캐싱 설정 확인
-    if grep -q "cache-control" "$NUXT_CONFIG"; then
-        check_pass "정적 리소스 캐싱 설정"
-    else
-        check_warn "캐싱 전략 추가 권장"
-    fi
-else
-    check_fail "nuxt.config.ts 파일 없음"
-fi
-
-echo ""
-
-# ==========================================
-# 4. 구조화된 데이터 Composable 검증
-# ==========================================
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "4️⃣  구조화된 데이터 (JSON-LD) 검증"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-STRUCTURED_DATA_FILE="$FRONTEND_DIR/composables/useStructuredData.ts"
-
-if [ -f "$STRUCTURED_DATA_FILE" ]; then
-    check_pass "useStructuredData.ts 파일 존재"
-
-    # WebSite 스키마
-    if grep -q "setWebsiteSchema" "$STRUCTURED_DATA_FILE"; then
-        check_pass "WebSite 스키마 구현"
-    else
-        check_fail "WebSite 스키마 누락"
-    fi
-
-    # LocalBusiness/Place 스키마
-    if grep -q "setFacilitySchema" "$STRUCTURED_DATA_FILE"; then
-        check_pass "Facility 스키마 구현"
-    else
-        check_fail "Facility 스키마 누락"
-    fi
-
-    # BreadcrumbList 스키마
-    if grep -q "setBreadcrumbSchema" "$STRUCTURED_DATA_FILE"; then
-        check_pass "BreadcrumbList 스키마 구현"
-    else
-        check_fail "BreadcrumbList 스키마 누락"
-    fi
-
-    # Organization 스키마
-    if grep -q "setOrganizationSchema" "$STRUCTURED_DATA_FILE"; then
-        check_pass "Organization 스키마 구현"
-    else
-        check_warn "Organization 스키마 추가 권장"
-    fi
-
-    # GovernmentService 스키마
-    if grep -q "setWasteScheduleSchema" "$STRUCTURED_DATA_FILE"; then
-        check_pass "GovernmentService 스키마 구현"
-    else
-        check_warn "GovernmentService 스키마 누락"
-    fi
-else
-    check_fail "useStructuredData.ts 파일 없음"
-fi
-
-echo ""
-
-# ==========================================
-# 5. 메타 태그 Composable 검증
-# ==========================================
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "5️⃣  동적 메타 태그 Composable 검증"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-META_FILE="$FRONTEND_DIR/composables/useFacilityMeta.ts"
-
-if [ -f "$META_FILE" ]; then
-    check_pass "useFacilityMeta.ts 파일 존재"
-
-    # 홈페이지 메타
-    if grep -q "setHomeMeta" "$META_FILE"; then
-        check_pass "홈페이지 메타 함수 구현"
-    else
-        check_fail "홈페이지 메타 함수 누락"
-    fi
-
-    # 시설 상세 메타
-    if grep -q "setFacilityDetailMeta" "$META_FILE"; then
-        check_pass "시설 상세 메타 함수 구현"
-    else
-        check_fail "시설 상세 메타 함수 누락"
-    fi
-
-    # Open Graph 태그
-    if grep -q "og:title" "$META_FILE"; then
-        check_pass "Open Graph 태그 포함"
-    else
-        check_warn "Open Graph 태그 추가 권장"
-    fi
-
-    # Twitter Card 태그
-    if grep -q "twitter:card" "$META_FILE"; then
-        check_pass "Twitter Card 태그 포함"
-    else
-        check_warn "Twitter Card 태그 추가 권장"
-    fi
-else
-    check_fail "useFacilityMeta.ts 파일 없음"
-fi
-
-echo ""
-
-# ==========================================
-# 6. 페이지별 SEO 구현 검증
-# ==========================================
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "6️⃣  페이지별 SEO 구현 검증"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-# 홈페이지
-INDEX_PAGE="$FRONTEND_DIR/pages/index.vue"
-if [ -f "$INDEX_PAGE" ]; then
-    check_pass "홈페이지 파일 존재"
-
-    if grep -q "setHomeMeta" "$INDEX_PAGE"; then
-        check_pass "홈페이지 메타 설정 적용"
-    else
-        check_fail "홈페이지 메타 설정 누락"
-    fi
-
-    if grep -q "setWebsiteSchema" "$INDEX_PAGE"; then
-        check_pass "홈페이지 WebSite 스키마 적용"
-    else
-        check_fail "홈페이지 WebSite 스키마 누락"
-    fi
-
-    if grep -q "<h1" "$INDEX_PAGE"; then
-        check_pass "홈페이지 h1 태그 존재"
-    else
-        check_warn "홈페이지 h1 태그 확인 필요"
-    fi
-else
-    check_fail "홈페이지 파일 없음"
-fi
-
-# 시설 상세 페이지
-DETAIL_PAGE="$FRONTEND_DIR/pages/[category]/[id].vue"
-if [ -f "$DETAIL_PAGE" ]; then
-    check_pass "시설 상세 페이지 파일 존재"
-
-    if grep -q "setFacilityDetailMeta" "$DETAIL_PAGE"; then
-        check_pass "시설 상세 메타 설정 적용"
-    else
-        check_fail "시설 상세 메타 설정 누락"
-    fi
-
-    if grep -q "setFacilitySchema" "$DETAIL_PAGE"; then
-        check_pass "시설 상세 LocalBusiness 스키마 적용"
-    else
-        check_fail "시설 상세 스키마 누락"
-    fi
-
-    if grep -q "setBreadcrumbSchema" "$DETAIL_PAGE"; then
-        check_pass "시설 상세 Breadcrumb 스키마 적용"
-    else
-        check_fail "시설 상세 Breadcrumb 누락"
-    fi
-
-    if grep -q "<h1" "$DETAIL_PAGE"; then
-        check_pass "시설 상세 h1 태그 존재"
-    else
-        check_warn "시설 상세 h1 태그 확인 필요"
-    fi
-else
-    check_fail "시설 상세 페이지 파일 없음"
-fi
-
-echo ""
-
-# ==========================================
-# 7. 이미지 최적화 검증
-# ==========================================
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "7️⃣  이미지 최적화 검증"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-ICONS_DIR="$FRONTEND_DIR/public/icons/category"
-
-if [ -d "$ICONS_DIR" ]; then
-    WEBP_COUNT=$(find "$ICONS_DIR" -name "*.webp" | wc -l)
-    PNG_COUNT=$(find "$ICONS_DIR" -name "*.png" | wc -l)
-
-    if [ "$WEBP_COUNT" -gt 0 ]; then
-        check_pass "WebP 이미지 사용 ($WEBP_COUNT개)"
-    else
-        check_warn "WebP 이미지 없음"
-    fi
-
-    if [ "$PNG_COUNT" -eq 0 ]; then
-        check_pass "PNG 파일 정리 완료"
-    else
-        check_warn "PNG 파일 $PNG_COUNT개 남아있음 (WebP 변환 권장)"
-    fi
-else
-    check_warn "아이콘 디렉토리 없음"
-fi
-
-# 로고 확인
-LOGO_WEBP="$FRONTEND_DIR/public/icons/logo.webp"
-if [ -f "$LOGO_WEBP" ]; then
-    check_pass "로고 WebP 파일 존재"
-else
-    check_warn "로고 WebP 파일 없음"
-fi
-
-echo ""
-
-# ==========================================
-# 8. 접근성 검증
-# ==========================================
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "8️⃣  접근성 (a11y) 기본 검증"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-# aria-label 사용 확인 (홈페이지)
-if grep -q "aria-label" "$INDEX_PAGE"; then
-    check_pass "홈페이지 aria-label 사용"
-else
-    check_warn "홈페이지 aria-label 추가 권장"
-fi
-
-# aria-label 사용 확인 (상세 페이지)
-if grep -q "aria-label" "$DETAIL_PAGE"; then
-    check_pass "상세 페이지 aria-label 사용"
-else
-    check_warn "상세 페이지 aria-label 추가 권장"
-fi
-
-echo ""
-
-# ==========================================
-# 결과 요약
-# ==========================================
 echo "========================================"
-echo "📊 검증 결과 요약"
+echo "🔍 일상킷 SEO 런타임 검증"
 echo "========================================"
+echo "BASE_URL: $BASE_URL"
 echo ""
-echo -e "${GREEN}✅ 통과${NC}: $PASSED"
-echo -e "${RED}❌ 실패${NC}: $FAILED"
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl 이 필요합니다." >&2
+  exit 2
+fi
+
+# 헬스체크: BASE_URL 홈에 도달 가능한지 확인. 실패 시 명확한 에러로 종료 (나머지 검사를 전부 FAIL 로 오해하지 않도록).
+if ! curl -fsS --max-time 10 -o /dev/null "$BASE_URL/"; then
+  echo -e "${RED}서버에 접근할 수 없습니다: $BASE_URL${NC}" >&2
+  echo "dev 서버(npm run dev) 또는 preview 를 먼저 실행하거나 BASE_URL 을 다른 값으로 지정하세요." >&2
+  exit 3
+fi
+
+fetch_body() {
+  # -L: redirect 따라가기 (예: apex/www canonical host, 레거시 URL). SEO 검증은 최종 렌더 결과 기준이므로 follow 가 필요하다.
+  local url="$1"
+  curl -fsSL --max-time 15 -A 'ilsangkit-validate-seo/1.0' "$url"
+}
+
+fetch_headers_and_body() {
+  # stdout 에 헤더 + 본문을 이어서 출력. redirect 는 따라가지 않음 — /sitemap.xml 등 Content-Type 검사에 사용.
+  local url="$1"
+  curl -fsS --max-time 15 -A 'ilsangkit-validate-seo/1.0' -i "$url"
+}
+
+contains() {
+  # contains "<text>" "<pattern>" → grep 패턴 포함 여부
+  local haystack="$1"
+  local needle="$2"
+  printf '%s' "$haystack" | grep -q -- "$needle"
+}
+
+not_contains() {
+  local haystack="$1"
+  local needle="$2"
+  ! printf '%s' "$haystack" | grep -q -- "$needle"
+}
+
+# ────────────────────────────────────────────────────────────
+# 1. 홈
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "1️⃣  홈 페이지 검증  ($BASE_URL/)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+home_body=$(fetch_body "$BASE_URL/") || { fail "홈 응답 실패"; home_body=""; }
+if [ -n "$home_body" ]; then
+  contains "$home_body" '<title>' && pass "<title> 포함" || fail "<title> 누락"
+  contains "$home_body" 'rel="canonical"' && pass "rel=canonical 포함" || fail "rel=canonical 누락"
+  contains "$home_body" '"@type":"WebSite"' && pass "WebSite JSON-LD 포함" || note "WebSite JSON-LD 누락 (페이지 정책에 따라 허용)"
+  not_contains "$home_body" 'content="noindex' && pass "홈은 noindex 없음" || fail "홈에서 noindex 감지 — 설정 오류 가능성"
+fi
 echo ""
+
+# ────────────────────────────────────────────────────────────
+# 2. 카테고리 허브
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "2️⃣  카테고리 허브 검증  ($BASE_URL$SAMPLE_CATEGORY_HUB)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+hub_body=$(fetch_body "$BASE_URL$SAMPLE_CATEGORY_HUB") || { fail "카테고리 허브 응답 실패"; hub_body=""; }
+if [ -n "$hub_body" ]; then
+  contains "$hub_body" 'rel="canonical"' && pass "rel=canonical 포함" || fail "rel=canonical 누락"
+  contains "$hub_body" '<h1' && pass "<h1> 포함" || fail "<h1> 누락"
+  not_contains "$hub_body" 'content="noindex' && pass "page 1 은 noindex 아님" || fail "page 1 이 noindex — 설정 오류"
+fi
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 3. 시설 상세
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "3️⃣  시설 상세 검증  ($BASE_URL$SAMPLE_FACILITY_PATH)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+detail_body=$(fetch_body "$BASE_URL$SAMPLE_FACILITY_PATH") || { fail "시설 상세 응답 실패"; detail_body=""; }
+if [ -n "$detail_body" ]; then
+  contains "$detail_body" 'application/ld+json' && pass "JSON-LD script 포함" || fail "JSON-LD script 누락"
+  contains "$detail_body" 'rel="canonical"' && pass "rel=canonical 포함 (정상 데이터 상세)" || note "canonical 없음 — thin content noindex 상태일 수 있음"
+fi
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 4. 부동산 상세(허브)
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "4️⃣  부동산 허브 검증  ($BASE_URL$SAMPLE_REAL_ESTATE_PATH)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+re_body=$(fetch_body "$BASE_URL$SAMPLE_REAL_ESTATE_PATH") || { fail "부동산 허브 응답 실패"; re_body=""; }
+if [ -n "$re_body" ]; then
+  contains "$re_body" 'rel="canonical"' && pass "rel=canonical 포함" || fail "rel=canonical 누락"
+  contains "$re_body" '<title>' && pass "<title> 포함" || fail "<title> 누락"
+fi
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 5. /search (noindex)
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "5️⃣  /search noindex 검증  ($BASE_URL$SAMPLE_SEARCH_PATH)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+search_body=$(fetch_body "$BASE_URL$SAMPLE_SEARCH_PATH") || { fail "/search 응답 실패"; search_body=""; }
+if [ -n "$search_body" ]; then
+  contains "$search_body" 'content="noindex' && pass "robots=noindex 포함" || fail "robots=noindex 누락 (/search 는 noindex 이어야 함)"
+  # 정책: noindex 페이지는 canonical 을 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md)
+  not_contains "$search_body" 'rel="canonical"' && pass "canonical 없음 (noindex 정책 준수)" || fail "noindex + canonical 동시 출력 — 정책 위반"
+fi
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 5b. Pagination noindex/canonical 회귀 — page 2+ 는 반드시 robots=noindex 이고 canonical 이 없어야 한다.
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "5️⃣ -b  Pagination noindex 검증  ($BASE_URL$SAMPLE_PAGINATED_PATH)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+pagination_body=$(fetch_body "$BASE_URL$SAMPLE_PAGINATED_PATH") || { fail "pagination 응답 실패"; pagination_body=""; }
+if [ -n "$pagination_body" ]; then
+  contains "$pagination_body" 'content="noindex' && pass "page 2+ 는 robots=noindex" || fail "page 2+ 인데 robots=noindex 누락 — policy 회귀"
+  not_contains "$pagination_body" 'rel="canonical"' && pass "page 2+ canonical 제거 (noindex 정책 준수)" || fail "page 2+ 에서 canonical 동시 출력 — 정책 위반"
+fi
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 6. /sitemap.xml
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "6️⃣  /sitemap.xml 검증  ($BASE_URL/sitemap.xml)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+sitemap_response=$(fetch_headers_and_body "$BASE_URL/sitemap.xml") || { fail "/sitemap.xml 응답 실패"; sitemap_response=""; }
+if [ -n "$sitemap_response" ]; then
+  if printf '%s' "$sitemap_response" | grep -qi 'Content-Type:[[:space:]]*application/xml'; then
+    pass "Content-Type: application/xml"
+  else
+    fail "Content-Type 이 application/xml 이 아님"
+  fi
+  contains "$sitemap_response" '<sitemapindex' && pass "<sitemapindex> 포함" || fail "<sitemapindex> 누락"
+  contains "$sitemap_response" '/sitemap/static.xml' && pass "static sub-sitemap 링크 포함" || fail "static sub-sitemap 링크 누락"
+  not_contains "$sitemap_response" '/sitemap/wifi' && pass "wifi 제외 확인" || fail "wifi 가 sitemap index 에 포함됨 (정책상 제외 대상)"
+  not_contains "$sitemap_response" '/sitemap/aed' && pass "aed 제외 확인" || fail "aed 가 sitemap index 에 포함됨 (정책상 제외 대상)"
+fi
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 결과
+# ────────────────────────────────────────────────────────────
+echo "========================================"
+echo "📊 결과 요약"
+echo "========================================"
+echo -e "${GREEN}✅ PASS${NC}: $PASSED"
+echo -e "${RED}❌ FAIL${NC}: $FAILED"
 
 if [ $FAILED -eq 0 ]; then
-    echo -e "${GREEN}🎉 모든 SEO 요소가 정상적으로 구현되었습니다!${NC}"
-    echo ""
-    echo "다음 단계:"
-    echo "  1. 프로덕션 배포 (npm run build && npm run generate)"
-    echo "  2. Google Search Console 도메인 등록"
-    echo "  3. docs/qa/search-console-checklist.md 참조"
-    exit 0
+  echo -e "${GREEN}모든 런타임 SEO 체크를 통과했습니다.${NC}"
+  exit 0
 else
-    echo -e "${RED}⚠️  $FAILED개의 항목이 실패했습니다. 위 내용을 확인하세요.${NC}"
-    exit 1
+  echo -e "${RED}$FAILED 개의 검사가 실패했습니다.${NC}"
+  exit 1
 fi

@@ -443,7 +443,7 @@ import { useRealEstate } from '~/composables/useRealEstate'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
+import { CATEGORY_META, CATEGORY_GROUPS, isFacilityCategory } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import type { RealEstateType, ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import ComplexCard from '~/components/realEstate/ComplexCard.vue'
@@ -790,8 +790,8 @@ function goToPage(page: number) {
 }
 
 // SSR redirect: /search?category=X → /X (301)
-const validCategoryList = ['toilet', 'trash', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market']
-if (route.query.category && validCategoryList.includes(route.query.category as string)) {
+// 카테고리 목록은 types/facility.FACILITY_CATEGORIES 단일 소스에서 파생한다.
+if (route.query.category && isFacilityCategory(String(route.query.category))) {
   const redirectCategory = route.query.category as string
   const redirectParams = new URLSearchParams()
   if (route.query.keyword) redirectParams.set('keyword', String(route.query.keyword))
@@ -804,7 +804,7 @@ const initialKeyword = (route.query.keyword as string) || ''
 
 // 검색 결과 페이지: 동적 메타 + 크롤링 방지
 useHead({
-  title: initialKeyword ? `${initialKeyword} 검색 결과 - 일상킷` : '검색 - 일상킷',
+  title: initialKeyword ? `${initialKeyword} 검색 결과 | 일상킷` : '검색 | 일상킷',
   meta: [
     { name: 'robots', content: 'noindex, follow' },
     { name: 'description', content: initialKeyword ? `${initialKeyword} 관련 생활시설 및 부동산 정보를 찾아보세요.` : '주변 생활시설과 부동산 정보를 검색하세요.' },
@@ -834,8 +834,8 @@ onMounted(async () => {
 
   // Redirect /search?category=X → /X (client-side fallback)
   if (route.query.category) {
-    const category = route.query.category as string
-    if (validCategoryList.includes(category)) {
+    const category = String(route.query.category)
+    if (isFacilityCategory(category)) {
       const params = new URLSearchParams()
       if (route.query.keyword) params.set('keyword', String(route.query.keyword))
       const queryStr = params.toString()
@@ -878,7 +878,7 @@ watch(searchKeyword, () => {
     keyword: searchKeyword.value || undefined,
   })
   useHead({
-    title: searchKeyword.value ? `${searchKeyword.value} 검색 결과 - 일상킷` : '검색 - 일상킷',
+    title: searchKeyword.value ? `${searchKeyword.value} 검색 결과 | 일상킷` : '검색 | 일상킷',
   })
 })
 

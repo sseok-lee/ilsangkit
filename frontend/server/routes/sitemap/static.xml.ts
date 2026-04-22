@@ -40,9 +40,10 @@ export default defineEventHandler(async (event) => {
   // 홈페이지
   urls.push({ loc: SITE_URL, lastmod: today, changefreq: 'daily', priority: 1.0 })
 
-  // 정적 페이지
+  // 정적 페이지 — indexable static pages 전부 포함 (/contact 추가)
   urls.push({ loc: `${SITE_URL}/about`, lastmod: today, changefreq: 'monthly', priority: 0.5 })
   urls.push({ loc: `${SITE_URL}/faq`, lastmod: today, changefreq: 'monthly', priority: 0.5 })
+  urls.push({ loc: `${SITE_URL}/contact`, lastmod: today, changefreq: 'monthly', priority: 0.4 })
   urls.push({ loc: `${SITE_URL}/privacy`, lastmod: today, changefreq: 'monthly', priority: 0.3 })
   urls.push({ loc: `${SITE_URL}/terms`, lastmod: today, changefreq: 'monthly', priority: 0.3 })
 
@@ -76,16 +77,24 @@ export default defineEventHandler(async (event) => {
   // API base URL
   const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
 
-  // 가이드 개별 글
+  // 가이드 개별 글 — 백엔드가 페이지당 최대 100건만 반환하므로 totalPages 까지 순차 수집.
+  // 100건 하드 캡을 제거해 가이드 수가 늘어나도 sitemap 에서 누락되지 않게 한다.
   try {
-    const guidesRes = await fetch(`${apiBase}/api/guides?limit=100`)
-    if (guidesRes.ok) {
+    const MAX_GUIDE_PAGES = 50 // 총 5000 건까지 안전 가드 — 실운영에서는 훨씬 적음
+    for (let page = 1; page <= MAX_GUIDE_PAGES; page++) {
+      const guidesRes = await fetch(`${apiBase}/api/guides?limit=100&page=${page}`)
+      if (!guidesRes.ok) {
+        console.error(`[sitemap] Failed to fetch guides page=${page}: HTTP ${guidesRes.status}`)
+        break
+      }
       const guidesJson = await guidesRes.json()
       const guides: Array<{ slug: string; createdAt: string }> = guidesJson.data?.items || []
       for (const guide of guides) {
         const lastmod = guide.createdAt ? new Date(guide.createdAt).toISOString().split('T')[0] : today
         urls.push({ loc: `${SITE_URL}/guide/${guide.slug}`, lastmod, changefreq: 'weekly', priority: 0.7 })
       }
+      const totalPages = Number(guidesJson.data?.totalPages ?? 1)
+      if (page >= totalPages || guides.length === 0) break
     }
   } catch (err) {
     console.error('[sitemap] Failed to fetch guides:', err)

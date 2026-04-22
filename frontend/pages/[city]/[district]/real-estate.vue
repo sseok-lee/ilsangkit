@@ -110,7 +110,7 @@ import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/typ
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useRealEstate } from '~/composables/useRealEstate'
-import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import ComplexCard from '~/components/realEstate/ComplexCard.vue'
@@ -235,17 +235,24 @@ const faqs = [
 // SEO 메타
 const canonicalUrl = `${SITE_URL}/${citySlug.value}/${districtSlug.value}/real-estate`
 useHead(() => {
-  const title = `${districtName.value} 부동산 실거래가 - 일상킷`
+  const title = `${cityName.value} ${districtName.value} 부동산 실거래가 | 일상킷`
   const description = `${cityName.value} ${districtName.value} 아파트·빌라·오피스텔 매매·전세·월세 실거래가를 확인하세요. 국토교통부 공식 데이터 기반으로 최신 거래 정보를 제공합니다.`
+  const dynamicOgImage = `${SITE_URL}/og?category=apt&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}`
   return {
     title,
     meta: [
       { name: 'description', content: description },
       { property: 'og:title', content: title },
       { property: 'og:description', content: description },
-      { property: 'og:image', content: DEFAULT_OG_IMAGE },
+      { property: 'og:image', content: dynamicOgImage },
       { property: 'og:url', content: canonicalUrl },
       { property: 'og:type', content: 'website' },
+      { property: 'og:site_name', content: '일상킷' },
+      { property: 'og:locale', content: 'ko_KR' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: title },
+      { name: 'twitter:description', content: description },
+      { name: 'twitter:image', content: dynamicOgImage },
     ],
     link: [
       { rel: 'canonical', href: canonicalUrl },

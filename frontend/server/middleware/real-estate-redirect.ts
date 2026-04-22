@@ -166,6 +166,20 @@ export default defineEventHandler(async (event) => {
   const url = getRequestURL(event)
   const pathname = url.pathname
 
+  // Nitro/Nuxt 내부 경로는 절대 가로채지 않는다.
+  // 특히 /real-estate/{pt}/_payload.json 은 LEGACY_TAB_DETAIL 정규식에 우연히 매치되어
+  // buildingName=_payload.json 으로 해석되던 버그 방지 (hydration payload 유실 원인).
+  if (
+    pathname.endsWith('/_payload.json') ||
+    pathname.endsWith('/_payload.js') ||
+    pathname.startsWith('/_nuxt/') ||
+    pathname.startsWith('/_ipx/') ||
+    pathname.startsWith('/__nuxt') ||
+    pathname.startsWith('/api/')
+  ) {
+    return
+  }
+
   // 신규 URL은 미들웨어가 절대 가로채지 않는다 (체인 방지)
   if (NEW_DETAIL.test(pathname) || NEW_HUB.test(pathname)) return
 

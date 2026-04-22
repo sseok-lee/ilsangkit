@@ -24,8 +24,8 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: '부동산 실거래가·내 주변 생활시설 검색 - 일상킷',
-          ogTitle: '부동산 실거래가·내 주변 생활시설 검색 - 일상킷',
+          title: '부동산 실거래가·청약·생활정보 | 일상킷',
+          ogTitle: '부동산 실거래가·청약·생활정보 | 일상킷',
           ogSiteName: '일상킷',
           ogLocale: 'ko_KR',
           twitterCard: 'summary_large_image',
@@ -190,8 +190,8 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: expect.stringContaining('서울 강남구 공공화장실'),
-          description: expect.stringContaining('서울 강남구'),
+          title: '서울 강남구 공공화장실 | 위치·개방시간 | 일상킷',
+          description: '서울 강남구의 공공화장실 위치·개방시간 정보를 확인하세요.',
         })
       )
     })

@@ -144,7 +144,7 @@ const { setBreadcrumbSchema } = useStructuredData()
 
 setMeta({
   title: '이용약관',
-  description: '일상킷 서비스 이용약관입니다. 서비스 이용 조건, 면책 조항 등을 안내합니다.',
+  description: '일상킷 서비스 이용약관을 안내합니다.',
   path: '/terms',
 })
 

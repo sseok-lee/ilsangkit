@@ -121,7 +121,7 @@ const { setBreadcrumbSchema } = useStructuredData()
 
 setMeta({
   title: '문의하기',
-  description: '일상킷 서비스 이용 관련 문의, 데이터 오류 신고, 제휴 문의 등을 접수할 수 있습니다.',
+  description: '서비스 이용 문의, 데이터 오류 신고, 제휴 문의를 접수할 수 있습니다.',
   path: '/contact',
 })
 
