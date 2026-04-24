@@ -4,8 +4,6 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /_nuxt/
-Disallow: /msw-demo
-Disallow: /search
 
 # AI 검색 크롤러 — 허용 (AI 검색 노출)
 User-agent: GPTBot
