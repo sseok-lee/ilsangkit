@@ -965,6 +965,7 @@ model AptSaleTransaction {
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
+  @@index([city, district, buildingName, bjdCode])
   @@index([syncedAt])
 }
 
@@ -1006,6 +1007,7 @@ model VillaSaleTransaction {
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
+  @@index([city, district, buildingName, bjdCode])
   @@index([syncedAt])
 }
 
@@ -1045,6 +1047,7 @@ model OffitelSaleTransaction {
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
+  @@index([city, district, buildingName, bjdCode])
   @@index([syncedAt])
 }
 
@@ -1090,6 +1093,7 @@ model AptRentTransaction {
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
+  @@index([city, district, buildingName, bjdCode])
   @@index([rentType])
   @@index([syncedAt])
 }
@@ -1133,6 +1137,7 @@ model VillaRentTransaction {
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
+  @@index([city, district, buildingName, bjdCode])
   @@index([rentType])
   @@index([syncedAt])
 }
@@ -1175,6 +1180,7 @@ model OffitelRentTransaction {
   @@index([city, district])
   @@index([dealYear, dealMonth])
   @@index([city, district, dealYear, dealMonth])
+  @@index([city, district, buildingName, bjdCode])
   @@index([rentType])
   @@index([syncedAt])
 }
