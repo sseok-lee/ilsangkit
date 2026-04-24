@@ -203,7 +203,8 @@ async function selectChip(key: string | null) {
 }
 
 function getCategoryLabel(category: string): string {
-  // 시설 카테고리 먼저 확인, 없으면 부동산 카테고리 확인 (kebab-case → camelCase 변환)
+  if (category === 'apt-sale' || category === 'apt-rent') return '부동산'
+  if (category === 'subscription') return '청약/임대'
   const facilityLabel = CATEGORY_META[category as keyof typeof CATEGORY_META]?.label
   if (facilityLabel) return facilityLabel
   const camelKey = category.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
