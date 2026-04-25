@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {
@@ -11,6 +11,7 @@ global.fetch = vi.fn();
 
 import {
   transformMyhomeItem,
+  fetchWithRetry,
   type MyhomeRentalItem,
 } from '../../src/scripts/syncPublicRent.js';
 
@@ -88,5 +89,53 @@ describe('transformMyhomeItem', () => {
     const result = transformMyhomeItem(makeItem({ hsmpSn: 99999999 }));
     expect(result.sourceId).toBe('lh-99999999');
     expect(result.complexCode).toBe('99999999');
+  });
+});
+
+describe('fetchWithRetry', () => {
+  const fetchMock = global.fetch as unknown as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it('200 응답은 즉시 반환 (retry 없음)', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: 1 }), { status: 200 }));
+    const res = await fetchWithRetry('https://example.test');
+    expect(res.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('일시적 500 → 재시도해 200 으로 복구', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response('boom', { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: 1 }), { status: 200 }));
+    const res = await fetchWithRetry('https://example.test');
+    expect(res.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('연속 5xx 가 retry 한도(2회) 넘으면 마지막 에러 throw', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response('boom1', { status: 500 }))
+      .mockResolvedValueOnce(new Response('boom2', { status: 502 }))
+      .mockResolvedValueOnce(new Response('boom3', { status: 503 }));
+    await expect(fetchWithRetry('https://example.test')).rejects.toThrow(/HTTP 503/);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('4xx 는 retry 없이 즉시 throw (영구 오류)', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('not found', { status: 404 }));
+    await expect(fetchWithRetry('https://example.test')).rejects.toThrow(/HTTP 404/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('네트워크 에러도 retry 대상', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('ECONNRESET'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: 1 }), { status: 200 }));
+    const res = await fetchWithRetry('https://example.test');
+    expect(res.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
