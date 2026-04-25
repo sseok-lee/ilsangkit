@@ -11,6 +11,35 @@ import { processSubscriptions } from './geocodeSubscriptions.js';
 
 const API_BASE = 'https://data.myhome.go.kr:443/rentalHouseList';
 const PAGE_SIZE = 100;
+const MAX_RETRIES = 2;
+const RETRY_BACKOFF_MS = 500;
+
+// myhome API 가 가끔 일시적 5xx 를 던지면 region 단위로 통째로 skip 되는 사고가 있어
+// 5xx 에 한해 짧게 backoff retry. 4xx 는 즉시 throw (서버 측 영구 오류).
+async function fetchWithRetry(url: string): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(url);
+    } catch (err) {
+      // 네트워크 에러 — retry 대상.
+      lastErr = err;
+      if (attempt === MAX_RETRIES) throw err;
+      await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS * (attempt + 1)));
+      continue;
+    }
+    if (res.ok) return res;
+    // 4xx 는 영구 오류 — 즉시 throw (retry 무의미).
+    if (res.status < 500 || attempt === MAX_RETRIES) {
+      throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    }
+    // 5xx — backoff 후 retry.
+    lastErr = new Error(`HTTP ${res.status} ${res.statusText}`);
+    await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS * (attempt + 1)));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('fetchWithRetry exhausted');
+}
 
 
 export interface MyhomeRentalItem {
@@ -44,9 +73,7 @@ async function fetchRegionPage(
   url.searchParams.set('pageNo', String(pageNo));
   const urlStr = `${url.toString()}&ServiceKey=${serviceKey}`;
 
-  const res = await fetch(urlStr);
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-
+  const res = await fetchWithRetry(urlStr);
   const data = await res.json() as { code: string; msg?: string; hsmpList?: MyhomeRentalItem[] };
   if (data.code !== '000') return { items: [], totalCount: 0 };
 
@@ -197,4 +224,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     .catch((e) => { console.error('❌ 공공임대 동기화 실패:', e); process.exit(1); });
 }
 
-export { syncPublicRent };
+export { syncPublicRent, fetchWithRetry };

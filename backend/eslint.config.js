@@ -28,6 +28,9 @@ export default [
         URLSearchParams: 'readonly',
         AbortController: 'readonly',
         AbortSignal: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        Headers: 'readonly',
       },
     },
     plugins: {
