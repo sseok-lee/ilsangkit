@@ -131,7 +131,7 @@
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
 
-const rentGroups: RentGroup[] = ['apply', 'lh-announcement']
+const rentGroups: RentGroup[] = ['apply']
 import type { Subscription } from '~/types/subscription'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useSubscription } from '~/composables/useSubscription'

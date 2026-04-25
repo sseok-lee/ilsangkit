@@ -10,7 +10,6 @@ const stubs = {
   NuxtLink: { template: '<a><slot /></a>', props: ['to'] },
   SubscriptionListView: { template: '<div data-test-pane="applyhome">applyhome pane</div>', props: ['sourceType', 'rentType'] },
   PublicRentalListView: { template: '<div data-test-pane="lh-myhome">{{ rentalTypeCode }}</div>', props: ['rentalTypeCode'] },
-  LhAnnouncementListView: { template: '<div data-test-pane="lh-announcement">lh-announcement pane</div>' },
 }
 
 function mountWith(typeSlug: string) {
@@ -26,12 +25,6 @@ describe('subscription/rent/[type].vue dataSource branching', () => {
     const wrapper = mountWith('public')
     expect(wrapper.find('[data-test-pane="applyhome"]').exists()).toBe(true)
     expect(wrapper.find('[data-test-pane="lh-myhome"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test-pane="lh-announcement"]').exists()).toBe(false)
-  })
-
-  it('renders LhAnnouncementListView for lh-announcement slug', () => {
-    const wrapper = mountWith('lh-announcement')
-    expect(wrapper.find('[data-test-pane="lh-announcement"]').exists()).toBe(true)
   })
 
   it('throws createError 404 for buy-lease (now redirected via server middleware, not handled here)', () => {

@@ -17,7 +17,6 @@ describe('LH 임대 redirect — LEGACY_PATTERN', () => {
   it('does NOT match other rent type slugs', () => {
     expect(LEGACY_PATTERN.test('/subscription/rent/public')).toBe(false)
     expect(LEGACY_PATTERN.test('/subscription/rent/private')).toBe(false)
-    expect(LEGACY_PATTERN.test('/subscription/rent/lh-announcement')).toBe(false)
   })
 
   it('does NOT match new /lh-rental URLs (loop prevention)', () => {

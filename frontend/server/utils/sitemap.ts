@@ -252,29 +252,3 @@ export async function fetchSubscriptionIds(
   return []
 }
 
-export async function fetchLhAnnouncementIds(
-  apiBase: string
-): Promise<{ id: number; updatedAt: string }[]> {
-  const cacheKey = 'lh-announcements'
-  const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
-  if (cached) return cached
-
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const res = await fetch(`${apiBase}/api/sitemap/lh-announcements`)
-      if (!res.ok) {
-        console.error(`[sitemap] fetchLhAnnouncementIds attempt ${attempt}: HTTP ${res.status}`)
-        continue
-      }
-      const json = await res.json()
-      const data = json.data || []
-      if (data.length > 0) {
-        setCache(cacheKey, data)
-      }
-      return data
-    } catch (err) {
-      console.error(`[sitemap] fetchLhAnnouncementIds attempt ${attempt} error:`, err)
-    }
-  }
-  return []
-}

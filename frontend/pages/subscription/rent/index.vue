@@ -41,7 +41,7 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
-const groups: RentGroup[] = ['apply', 'lh-announcement']
+const groups: RentGroup[] = ['apply']
 
 const title = '임대 청약 일정 | 일상킷'
 const description = '청약통장으로 접수하는 청약홈 임대청약(공공/민간)과 LH 분양·임대 공고를 한 곳에서 비교하세요.'
@@ -76,6 +76,5 @@ setBreadcrumbSchema([
 setItemListSchema([
   { name: '공공임대 청약', url: '/subscription/rent/public' },
   { name: '민간임대 청약', url: '/subscription/rent/private' },
-  { name: 'LH 분양/임대 공고', url: '/subscription/rent/lh-announcement' },
 ])
 </script>

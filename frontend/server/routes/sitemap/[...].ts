@@ -11,7 +11,6 @@ import {
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
   fetchSubscriptionIds,
-  fetchLhAnnouncementIds,
   getWeekStartDate,
 } from '../../utils/sitemap'
 import {
@@ -39,14 +38,6 @@ function parseSlug(slug: string): { category: string; page: number } | null {
   if (subMatch) {
     const page = subMatch[1] ? parseInt(subMatch[1], 10) : 1
     return page >= 1 ? { category: 'subscription', page } : null
-  }
-
-  // "lh-announcement" → category='lh-announcement', page=1
-  // "lh-announcement-2" → category='lh-announcement', page=2
-  const lhMatch = slug.match(/^lh-announcement(?:-(\d+))?$/)
-  if (lhMatch) {
-    const page = lhMatch[1] ? parseInt(lhMatch[1], 10) : 1
-    return page >= 1 ? { category: 'lh-announcement', page } : null
   }
 
   // "ev-charger" → category='ev-charger', page=1
@@ -120,30 +111,6 @@ export default defineEventHandler(async (event) => {
         buildingName: item.buildingName,
       }),
       lastmod: weekStart,
-      changefreq: 'weekly' as const,
-      priority: 0.6,
-    }))
-
-    return generateSitemapXml(urls)
-  }
-
-  // LH 공고 상세 페이지
-  if (category === 'lh-announcement') {
-    const lhItems = await fetchLhAnnouncementIds(apiBase)
-    if (lhItems.length === 0 && page > 1) {
-      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
-    }
-    const totalPages = Math.max(1, Math.ceil(lhItems.length / MAX_URLS_PER_SITEMAP))
-    if (page > totalPages) {
-      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
-    }
-
-    const offset = (page - 1) * MAX_URLS_PER_SITEMAP
-    const pageItems = lhItems.slice(offset, offset + MAX_URLS_PER_SITEMAP)
-
-    const urls = pageItems.map((item) => ({
-      loc: `${SITE_URL}/subscription/rent/lh/announcement/${item.id}`,
-      lastmod: formatDateForSitemap(item.updatedAt),
       changefreq: 'weekly' as const,
       priority: 0.6,
     }))
