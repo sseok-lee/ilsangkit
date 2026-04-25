@@ -3,7 +3,6 @@ import type {
   PublicRentalComplex,
   PublicRentalListQuery,
   PublicRentalListResponse,
-  PublicRentalStat,
 } from '~/types/publicRental'
 
 interface ApiEnvelope<T> {
@@ -17,7 +16,6 @@ export function usePublicRental() {
   const totalPages = ref(0)
   const currentPage = ref(1)
   const detail = ref<PublicRentalComplex | null>(null)
-  const stats = ref<PublicRentalStat[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -65,28 +63,15 @@ export function usePublicRental() {
     }
   }
 
-  const fetchStats = async (): Promise<void> => {
-    try {
-      const res = await $fetch<ApiEnvelope<PublicRentalStat[]>>(
-        `${apiBase()}/api/public-rental/stats`,
-      )
-      if (res.success && res.data) stats.value = res.data
-    } catch {
-      stats.value = []
-    }
-  }
-
   return {
     items: readonly(items),
     total: readonly(total),
     totalPages: readonly(totalPages),
     currentPage: readonly(currentPage),
     detail: readonly(detail),
-    stats: readonly(stats),
     loading: readonly(loading),
     error: readonly(error),
     fetchList,
     fetchDetail,
-    fetchStats,
   }
 }

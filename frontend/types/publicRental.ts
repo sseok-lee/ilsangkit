@@ -43,8 +43,3 @@ export interface PublicRentalListResponse {
   items: PublicRentalComplex[]
   pagination: PublicRentalPagination
 }
-
-export interface PublicRentalStat {
-  rentalType: string
-  count: number
-}

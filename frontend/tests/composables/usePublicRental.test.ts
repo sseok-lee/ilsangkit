@@ -86,18 +86,3 @@ describe('usePublicRental.fetchDetail', () => {
   })
 })
 
-describe('usePublicRental.fetchStats', () => {
-  it('populates stats array on success', async () => {
-    mockFetch.mockResolvedValueOnce({
-      success: true,
-      data: [
-        { rentalType: '매입임대', count: 120 },
-        { rentalType: '전세임대', count: 80 },
-      ],
-    })
-    const { stats, fetchStats } = usePublicRental()
-    await fetchStats()
-    expect(stats.value).toHaveLength(2)
-    expect(stats.value[0].rentalType).toBe('매입임대')
-  })
-})
