@@ -224,6 +224,7 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { useApiBase } from '~/composables/useApiBase'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { LhAnnouncement, LhAnnouncementSupply } from '~/types/lhAnnouncement'
 
