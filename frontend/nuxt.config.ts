@@ -194,7 +194,7 @@ export default defineNuxtConfig({
       ],
       script: [
         // GA: requestIdleCallback으로 유휴 시점에 로드 (pageview 누락 없음)
-        ...(gaId ? [{
+        ...(gaId && process.env.NODE_ENV === 'production' ? [{
           innerHTML: `(function(){var cb=function(){var s=document.createElement('script');s.src='https://www.googletagmanager.com/gtag/js?id=${gaId}';s.async=true;document.head.appendChild(s);s.onload=function(){window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments)};window.gtag('js',new Date());window.gtag('config','${gaId}');}};('requestIdleCallback' in window)?requestIdleCallback(cb):setTimeout(cb,1);})()`,
         }] : []),
         // AdSense: async 유지 (수익 영향 방지)

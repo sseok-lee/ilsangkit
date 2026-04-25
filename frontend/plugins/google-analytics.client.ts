@@ -6,6 +6,8 @@ declare global {
 }
 
 export default defineNuxtPlugin(() => {
+  if (process.env.NODE_ENV !== 'production') return
+
   const config = useRuntimeConfig()
   const gaId = config.public.gaId
 
