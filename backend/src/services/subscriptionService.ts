@@ -18,6 +18,45 @@ function serializeRow(row: any): any {
   return result;
 }
 
+/**
+ * 청약 status 를 sync 시점이 아닌 **쿼리 시점**의 시각으로 동적 판정.
+ * 저장된 `status` 컬럼은 daily sync 후 최대 24h stale — start/end 가
+ * 오늘 안에서 transition 하는 row 가 잘못된 상태로 잡히는 사고가 있어 도입.
+ *
+ * 규칙:
+ *   ongoing  = receptionStartDate <= now AND (receptionEndDate IS NULL OR receptionEndDate >= now)
+ *   upcoming = receptionStartDate > now
+ *   closed   = receptionStartDate IS NULL OR receptionEndDate < now
+ */
+export function dateBasedStatusFilter(
+  status: 'ongoing' | 'upcoming' | 'closed',
+  now: Date = new Date(),
+): Prisma.SubscriptionWhereInput {
+  switch (status) {
+    case 'ongoing':
+      return {
+        AND: [
+          { receptionStartDate: { lte: now } },
+          {
+            OR: [
+              { receptionEndDate: null },
+              { receptionEndDate: { gte: now } },
+            ],
+          },
+        ],
+      };
+    case 'upcoming':
+      return { receptionStartDate: { gt: now } };
+    case 'closed':
+      return {
+        OR: [
+          { receptionStartDate: null },
+          { receptionEndDate: { lt: now } },
+        ],
+      };
+  }
+}
+
 export async function getSubscriptionList(params: SubscriptionListParams) {
   const { status, region, houseType, rentType, sourceType, category, page, limit } = params;
 
@@ -25,7 +64,6 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   // 공공임대 실제 rentType 값 (청약홈 API가 '임대주택' 대신 이 값들을 반환함)
   const PUBLIC_RENT_TYPES = ['분양전환 가능임대', '분양전환 불가임대'];
 
-  if (status) where.status = status;
   if (region) where.regionName = { contains: region };
   if (houseType) where.houseType = houseType;
   if (rentType) {
@@ -59,7 +97,9 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   const skip = (page - 1) * limit;
 
   if (status) {
-    const filteredWhere: Prisma.SubscriptionWhereInput = { ...where, status };
+    const filteredWhere: Prisma.SubscriptionWhereInput = {
+      AND: [where, dateBasedStatusFilter(status)],
+    };
     const [items, total] = await Promise.all([
       prisma.subscription.findMany({
         where: filteredWhere,
@@ -82,7 +122,7 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   const counts = await Promise.all([
     prisma.subscription.count({ where }),
     ...statusOrder.map((statusKey) =>
-      prisma.subscription.count({ where: { ...where, status: statusKey } })
+      prisma.subscription.count({ where: { AND: [where, dateBasedStatusFilter(statusKey)] } })
     ),
   ]);
 
@@ -114,7 +154,7 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
     if (take <= 0) break;
 
     const batch = await prisma.subscription.findMany({
-      where: { ...where, status: statusKey },
+      where: { AND: [where, dateBasedStatusFilter(statusKey)] },
       orderBy: { announcementDate: 'desc' },
       skip: remainingSkip,
       take,
@@ -153,7 +193,7 @@ export async function getSubscriptionDetail(id: number) {
 
 export async function getUpcomingSubscriptions(limit = 5) {
   return prisma.subscription.findMany({
-    where: { status: 'upcoming' },
+    where: dateBasedStatusFilter('upcoming'),
     orderBy: { receptionStartDate: 'asc' },
     take: limit,
   });
