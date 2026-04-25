@@ -1,7 +1,7 @@
 import type { SubscriptionSourceType } from '~/types/subscription'
 
-export type RentGroup = 'apply' | 'lh-announcement'
-export type RentDataSource = 'applyhome' | 'lh-announcement'
+export type RentGroup = 'apply'
+export type RentDataSource = 'applyhome'
 
 export interface SubscriptionTypeMeta {
   label: string
@@ -69,14 +69,6 @@ export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
     group: 'apply',
     dataSource: 'applyhome',
   },
-  'lh-announcement': {
-    label: 'LH 분양/임대 공고',
-    icon: 'campaign',
-    iconImg: 'rent',
-    description: 'LH 가 직접 공급하는 공공분양·공공임대 공고입니다. 청약홈과 별개 공고입니다.',
-    group: 'lh-announcement',
-    dataSource: 'lh-announcement',
-  },
 }
 
 export const LH_RENTAL_TYPES: Record<LhRentalTypeKey, LhRentalTypeMeta> = {
@@ -107,11 +99,6 @@ export const RENT_GROUP_META: Record<RentGroup, RentGroupMeta> = {
     group: 'apply',
     heading: '청약홈 임대 청약',
     description: '청약홈에서 접수하는 공공·민간 임대 청약입니다. 청약통장이 필요할 수 있습니다.',
-  },
-  'lh-announcement': {
-    group: 'lh-announcement',
-    heading: 'LH 청약공고',
-    description: 'LH 가 직접 공급하는 분양·임대 공고입니다. 청약홈과 별개로 LH 청약센터에서 접수합니다.',
   },
 }
 

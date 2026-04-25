@@ -44,7 +44,6 @@
         v-else-if="dataSource === 'lh-myhome'"
         :rental-type-code="typeMeta.rentalTypeCode"
       />
-      <LhAnnouncementListView v-else-if="dataSource === 'lh-announcement'" />
     </main>
   </div>
 </template>
@@ -54,7 +53,7 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { RENT_TYPES, RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
-const groups: RentGroup[] = ['apply', 'lh-announcement']
+const groups: RentGroup[] = ['apply']
 
 const route = useRoute()
 const type = route.params.type as string

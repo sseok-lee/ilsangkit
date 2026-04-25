@@ -15,7 +15,6 @@ import realEstateRouter from './routes/realEstate.js';
 import areaRouter from './routes/area.js';
 import subscriptionRouter from './routes/subscription.js';
 import publicRentalRouter from './routes/publicRental.js';
-import lhAnnouncementRouter from './routes/lhAnnouncement.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
@@ -68,7 +67,6 @@ app.use('/api/real-estate', realEstateRouter);
 app.use('/api/area', areaRouter);
 app.use('/api/subscription', subscriptionRouter);
 app.use('/api/public-rental', publicRentalRouter);
-app.use('/api/lh-announcement', lhAnnouncementRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
