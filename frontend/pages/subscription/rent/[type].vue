@@ -2,17 +2,16 @@
   <div class="bg-background-light">
     <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
       <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">{{ typeMeta.label }} 청약</h1>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">{{ typeMeta.label }}</h1>
         <p class="mt-2 text-slate-500 text-sm">{{ typeMeta.description }}</p>
       </div>
     </div>
 
-    <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
-      <!-- Sub-category Tabs -->
-      <div class="mb-4 flex flex-wrap gap-2">
+    <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-6">
+      <div class="flex flex-wrap gap-2 overflow-x-auto md:overflow-visible">
         <NuxtLink
           to="/subscription/rent"
-          class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+          class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors whitespace-nowrap"
         >
           전체
         </NuxtLink>
@@ -20,16 +19,22 @@
           v-for="(meta, slug) in RENT_TYPES"
           :key="slug"
           :to="`/subscription/rent/${slug}`"
-          :class="['px-4 py-2 rounded-lg font-medium text-sm transition-colors', slug === type ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50']"
+          :class="['px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap', slug === type ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50']"
         >
           {{ meta.label }}
         </NuxtLink>
       </div>
 
       <SubscriptionListView
+        v-if="dataSource === 'applyhome'"
         :source-type="typeMeta.sourceType"
         :rent-type="typeMeta.rentType"
       />
+      <PublicRentalListView
+        v-else-if="dataSource === 'lh-myhome'"
+        :rental-type-code="typeMeta.rentalTypeCode"
+      />
+      <LhAnnouncementListView v-else-if="dataSource === 'lh-announcement'" />
     </main>
   </div>
 </template>
@@ -44,11 +49,13 @@ const type = route.params.type as string
 
 const typeMeta = RENT_TYPES[type]
 if (!typeMeta) {
-  throw createError({ statusCode: 404, statusMessage: '존재하지 않는 청약 카테고리입니다' })
+  throw createError({ statusCode: 404, statusMessage: '존재하지 않는 임대 카테고리입니다' })
 }
 
-const title = `${typeMeta.label} 청약 일정 | 임대 | 일상킷`
-const description = `${typeMeta.label} 임대 청약 일정과 접수 상태, 지역별 공급 정보를 확인하세요.`
+const dataSource = typeMeta.dataSource ?? 'applyhome'
+
+const title = `${typeMeta.label} | 임대 | 일상킷`
+const description = `${typeMeta.label} - ${typeMeta.description}`
 const canonicalUrl = `${SITE_URL}/subscription/rent/${type}`
 
 useHead({
