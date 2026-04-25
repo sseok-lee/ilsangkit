@@ -10,24 +10,22 @@ vi.mock('~/composables/useStructuredData', () => ({
   }),
 }))
 
-describe('subscriptionMeta — extended RENT_TYPES', () => {
-  it('contains all 5 keys (public, private, lh-announcement, buy-lease, charter)', () => {
-    const cheongyak = rentTypesByGroup('cheongyak').map(([slug]) => slug)
-    const relief = rentTypesByGroup('relief').map(([slug]) => slug)
-    expect(cheongyak).toEqual(expect.arrayContaining(['public', 'private', 'lh-announcement']))
-    expect(relief).toEqual(expect.arrayContaining(['buy-lease', 'charter']))
-    expect(cheongyak).toHaveLength(3)
-    expect(relief).toHaveLength(2)
+describe('subscriptionMeta — RENT_TYPES (청약 only)', () => {
+  it('groups 3 청약 keys into 2 sections (apply/lh-announcement)', () => {
+    const apply = rentTypesByGroup('apply').map(([slug]) => slug)
+    const announcement = rentTypesByGroup('lh-announcement').map(([slug]) => slug)
+    expect(apply).toEqual(['public', 'private'])
+    expect(announcement).toEqual(['lh-announcement'])
   })
 
-  it('cheongyak group meta has correct heading', () => {
-    expect(RENT_GROUP_META.cheongyak.heading).toBe('청약으로 신청')
-    expect(RENT_GROUP_META.relief.heading).toBe('수시 모집')
+  it('exposes 2 group headings', () => {
+    expect(RENT_GROUP_META.apply.heading).toBe('청약홈 임대 청약')
+    expect(RENT_GROUP_META['lh-announcement'].heading).toBe('LH 청약공고')
   })
 })
 
 describe('subscription/rent/index.vue', () => {
-  it('renders both group headings', () => {
+  it('renders both 청약 group headings', () => {
     const wrapper = mount(RentHub, {
       global: {
         stubs: {
@@ -36,11 +34,12 @@ describe('subscription/rent/index.vue', () => {
         },
       },
     })
-    expect(wrapper.text()).toContain('청약으로 신청')
-    expect(wrapper.text()).toContain('수시 모집')
+    const text = wrapper.text()
+    expect(text).toContain('청약홈 임대 청약')
+    expect(text).toContain('LH 청약공고')
   })
 
-  it('renders all 5 tab labels', () => {
+  it('renders 3 청약 tab labels (no LH 매물)', () => {
     const wrapper = mount(RentHub, {
       global: {
         stubs: {
@@ -53,11 +52,11 @@ describe('subscription/rent/index.vue', () => {
     expect(text).toContain('공공임대')
     expect(text).toContain('민간임대')
     expect(text).toContain('LH 분양/임대 공고')
-    expect(text).toContain('LH 매입임대')
-    expect(text).toContain('LH 전세임대')
+    expect(text).not.toContain('LH 매입임대')
+    expect(text).not.toContain('LH 전세임대')
   })
 
-  it('separates groups into distinct sections', () => {
+  it('separates 2 sections by data source and links out to /lh-rental', () => {
     const wrapper = mount(RentHub, {
       global: {
         stubs: {
@@ -66,12 +65,15 @@ describe('subscription/rent/index.vue', () => {
         },
       },
     })
-    const cheongyakSection = wrapper.find('section[data-test-group="cheongyak"]')
-    const reliefSection = wrapper.find('section[data-test-group="relief"]')
-    expect(cheongyakSection.exists()).toBe(true)
-    expect(reliefSection.exists()).toBe(true)
-    expect(cheongyakSection.text()).toContain('LH 분양/임대 공고')
-    expect(reliefSection.text()).toContain('LH 매입임대')
-    expect(reliefSection.text()).toContain('LH 전세임대')
+    const applySection = wrapper.find('section[data-test-group="apply"]')
+    const announcementSection = wrapper.find('section[data-test-group="lh-announcement"]')
+    const myhomeSection = wrapper.find('section[data-test-group="lh-myhome"]')
+    expect(applySection.exists()).toBe(true)
+    expect(announcementSection.exists()).toBe(true)
+    expect(myhomeSection.exists()).toBe(false)
+    expect(applySection.text()).toContain('공공임대')
+    expect(applySection.text()).toContain('민간임대')
+    expect(announcementSection.text()).toContain('LH 분양/임대 공고')
+    expect(wrapper.find('a[href="/lh-rental"]').exists()).toBe(true)
   })
 })

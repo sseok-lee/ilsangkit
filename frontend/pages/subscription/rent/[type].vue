@@ -8,21 +8,31 @@
     </div>
 
     <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-6">
-      <div class="flex flex-wrap gap-2 overflow-x-auto md:overflow-visible">
-        <NuxtLink
-          to="/subscription/rent"
-          class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors whitespace-nowrap"
+      <div class="space-y-2">
+        <div>
+          <NuxtLink
+            to="/subscription/rent"
+            class="inline-block px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors whitespace-nowrap"
+          >
+            전체
+          </NuxtLink>
+        </div>
+        <div
+          v-for="group in groups"
+          :key="group"
+          class="flex flex-wrap items-center gap-2 overflow-x-auto md:overflow-visible"
+          :data-test-group="group"
         >
-          전체
-        </NuxtLink>
-        <NuxtLink
-          v-for="(meta, slug) in RENT_TYPES"
-          :key="slug"
-          :to="`/subscription/rent/${slug}`"
-          :class="['px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap', slug === type ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50']"
-        >
-          {{ meta.label }}
-        </NuxtLink>
+          <span class="text-xs font-medium text-slate-500 mr-1 whitespace-nowrap shrink-0">{{ RENT_GROUP_META[group].heading }}</span>
+          <NuxtLink
+            v-for="[slug, meta] in rentTypesByGroup(group)"
+            :key="slug"
+            :to="`/subscription/rent/${slug}`"
+            :class="['px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap', slug === type ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50']"
+          >
+            {{ meta.label }}
+          </NuxtLink>
+        </div>
       </div>
 
       <SubscriptionListView
@@ -41,8 +51,10 @@
 
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import { RENT_TYPES } from '~/utils/subscriptionMeta'
+import { RENT_TYPES, RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+
+const groups: RentGroup[] = ['apply', 'lh-announcement']
 
 const route = useRoute()
 const type = route.params.type as string

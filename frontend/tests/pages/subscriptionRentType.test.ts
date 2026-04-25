@@ -29,23 +29,17 @@ describe('subscription/rent/[type].vue dataSource branching', () => {
     expect(wrapper.find('[data-test-pane="lh-announcement"]').exists()).toBe(false)
   })
 
-  it('renders PublicRentalListView for lh-myhome (buy-lease) with rentalTypeCode prop', () => {
-    const wrapper = mountWith('buy-lease')
-    const pane = wrapper.find('[data-test-pane="lh-myhome"]')
-    expect(pane.exists()).toBe(true)
-    expect(pane.text()).toContain('매입임대')
-  })
-
-  it('renders PublicRentalListView for charter slug with 전세임대 code', () => {
-    const wrapper = mountWith('charter')
-    const pane = wrapper.find('[data-test-pane="lh-myhome"]')
-    expect(pane.exists()).toBe(true)
-    expect(pane.text()).toContain('전세임대')
-  })
-
   it('renders LhAnnouncementListView for lh-announcement slug', () => {
     const wrapper = mountWith('lh-announcement')
     expect(wrapper.find('[data-test-pane="lh-announcement"]').exists()).toBe(true)
+  })
+
+  it('throws createError 404 for buy-lease (now redirected via server middleware, not handled here)', () => {
+    expect(() => mountWith('buy-lease')).toThrow()
+  })
+
+  it('throws createError 404 for charter (now redirected via server middleware, not handled here)', () => {
+    expect(() => mountWith('charter')).toThrow()
   })
 
   it('throws createError 404 for unknown slug', () => {

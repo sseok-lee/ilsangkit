@@ -419,7 +419,7 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     ).rejects.toMatchObject({ statusCode: 404 })
   })
 
-  it('static sitemap 에 LH 매물 + 공고 탭 URL 3종이 포함된다 (US-010)', async () => {
+  it('static sitemap 에 LH 청약공고 + LH 임대 hub/탭 URL 들이 포함된다', async () => {
     const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
 
     const origFetch = globalThis.fetch
@@ -433,8 +433,11 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     try {
       const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
       expect(xml).toContain('<loc>https://ilsangkit.co.kr/subscription/rent/lh-announcement</loc>')
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/subscription/rent/buy-lease</loc>')
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/subscription/rent/charter</loc>')
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/lh-rental</loc>')
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/lh-rental/buy-lease</loc>')
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/lh-rental/charter</loc>')
+      expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/subscription/rent/buy-lease</loc>')
+      expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/subscription/rent/charter</loc>')
     } finally {
       ;(globalThis as unknown as { fetch: typeof fetch }).fetch = origFetch
     }

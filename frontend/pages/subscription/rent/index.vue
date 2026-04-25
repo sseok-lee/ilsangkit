@@ -3,7 +3,7 @@
     <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
       <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">임대 청약</h1>
-        <p class="mt-2 text-slate-500 text-sm">청약통장으로 접수하는 청약과 청약통장 없이 신청하는 LH 매물을 그룹별로 안내합니다.</p>
+        <p class="mt-2 text-slate-500 text-sm">청약통장으로 접수하는 임대 청약을 청약홈 임대 청약과 LH 청약공고로 나눠 안내합니다. (LH 매입·전세임대는 <NuxtLink to="/lh-rental" class="text-amber-600 hover:underline">LH 임대</NuxtLink>에서 확인하세요.)</p>
       </div>
     </div>
 
@@ -41,10 +41,10 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
-const groups: RentGroup[] = ['cheongyak', 'relief']
+const groups: RentGroup[] = ['apply', 'lh-announcement']
 
 const title = '임대 청약 일정 | 일상킷'
-const description = '청약홈 임대청약(공공/민간), LH 분양·임대 공고, LH 매입·전세임대를 한 곳에서 비교하세요.'
+const description = '청약통장으로 접수하는 청약홈 임대청약(공공/민간)과 LH 분양·임대 공고를 한 곳에서 비교하세요.'
 const canonicalUrl = `${SITE_URL}/subscription/rent`
 
 useHead({
@@ -77,7 +77,5 @@ setItemListSchema([
   { name: '공공임대 청약', url: '/subscription/rent/public' },
   { name: '민간임대 청약', url: '/subscription/rent/private' },
   { name: 'LH 분양/임대 공고', url: '/subscription/rent/lh-announcement' },
-  { name: 'LH 매입임대', url: '/subscription/rent/buy-lease' },
-  { name: 'LH 전세임대', url: '/subscription/rent/charter' },
 ])
 </script>

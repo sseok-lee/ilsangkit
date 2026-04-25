@@ -99,19 +99,21 @@ test.describe('subscription rent: 2-group hub → LH 공고 탭 → 카드 → �
     })
   })
 
-  test('hub 페이지에 청약/수시모집 두 그룹이 보이고 LH 공고 탭→카드→상세까지 이동', async ({ page }) => {
+  test('hub 에 청약 2 그룹만 보이고 LH 매물 그룹은 분리되어 보이지 않는다', async ({ page }) => {
     await page.goto('/subscription/rent')
 
-    await expect(page.getByRole('heading', { name: '청약으로 신청' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: '수시 모집' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '청약홈 임대 청약' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'LH 청약공고' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'LH 매입·전세임대 (수시 모집)' })).toHaveCount(0)
+    await expect(page.locator('section[data-test-group="lh-myhome"]')).toHaveCount(0)
 
-    const cheongyakSection = page.locator('section[data-test-group="cheongyak"]')
-    await expect(cheongyakSection.getByRole('link', { name: 'LH 분양/임대 공고' })).toBeVisible()
-    const reliefSection = page.locator('section[data-test-group="relief"]')
-    await expect(reliefSection.getByRole('link', { name: 'LH 매입임대' })).toBeVisible()
-    await expect(reliefSection.getByRole('link', { name: 'LH 전세임대' })).toBeVisible()
+    const applySection = page.locator('section[data-test-group="apply"]')
+    await expect(applySection.getByRole('link', { name: '공공임대' })).toBeVisible()
+    await expect(applySection.getByRole('link', { name: '민간임대' })).toBeVisible()
+    const announcementSection = page.locator('section[data-test-group="lh-announcement"]')
+    await expect(announcementSection.getByRole('link', { name: 'LH 분양/임대 공고' })).toBeVisible()
 
-    await cheongyakSection.getByRole('link', { name: 'LH 분양/임대 공고' }).click()
+    await announcementSection.getByRole('link', { name: 'LH 분양/임대 공고' }).click()
     await expect(page).toHaveURL(/\/subscription\/rent\/lh-announcement/)
     await expect(page.getByText('E2E 부천 매입임대')).toBeVisible()
 

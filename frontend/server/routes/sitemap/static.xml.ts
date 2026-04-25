@@ -71,8 +71,9 @@ export default defineEventHandler(async (event) => {
   urls.push({ loc: `${SITE_URL}/subscription/rent/public`, lastmod: today, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/subscription/rent/private`, lastmod: today, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/subscription/rent/lh-announcement`, lastmod: today, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/subscription/rent/buy-lease`, lastmod: today, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/subscription/rent/charter`, lastmod: today, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/lh-rental`, lastmod: today, changefreq: 'daily', priority: 0.8 })
+  urls.push({ loc: `${SITE_URL}/lh-rental/buy-lease`, lastmod: today, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/lh-rental/charter`, lastmod: today, changefreq: 'daily', priority: 0.7 })
 
   // 가이드 목록 페이지
   urls.push({ loc: `${SITE_URL}/guide`, lastmod: today, changefreq: 'daily', priority: 0.8 })
