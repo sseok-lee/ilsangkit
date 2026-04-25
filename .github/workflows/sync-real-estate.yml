@@ -46,7 +46,8 @@ jobs:
                   *dist/scripts/syncOffitel*|\
                   *dist/scripts/geocodeRealEstate*|\
                   *dist/scripts/refreshRealEstateSummary*|\
-                  *dist/scripts/syncSubscription*)
+                  *dist/scripts/syncSubscription*|\
+                  *dist/scripts/syncPublicRent*)
                     kill -9 "$pid" 2>/dev/null || true
                     ;;
                 esac
@@ -114,6 +115,13 @@ jobs:
             timeout --kill-after=30s 30m node dist/scripts/syncSubscription.js --source ALL \
               || echo "[WARN] 청약 동기화 실패 (exit=$?)"
             echo "[step:subscription-end]"
+
+            # LH 공공임대 동기화
+            echo "[step:public-rent-start]"
+            echo "--- LH 임대 동기화 ---"
+            timeout --kill-after=30s 30m node dist/scripts/syncPublicRent.js \
+              || echo "[WARN] LH 임대 동기화 실패 (exit=$?)"
+            echo "[step:public-rent-end]"
 
             # --- 좀비 청소 (종료 후) -------------------------------------
             # 만에 하나 남은 프로세스/커넥션이 있으면 여기서 확실히 정리.
