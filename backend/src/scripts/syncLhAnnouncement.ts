@@ -11,6 +11,7 @@ import { runSync } from '../services/baseSyncService.js';
 import type { SyncStats } from '../services/baseSyncService.js';
 import {
   buildSourceId,
+  flattenLhResponse,
   isLandAnnouncement,
   transformLhAnnouncement,
   type AnnouncementBundle,
@@ -61,8 +62,9 @@ async function fetchListPage(
   const url = `${LIST_URL}?${params.toString()}&serviceKey=${serviceKey}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`list HTTP ${res.status}`);
-  const data = (await res.json()) as ListResponse;
-  const items = data.dsList ?? [];
+  // data.go.kr LH API 응답은 [{dsSch:...}, {dsList:...}] 배열 형태 — 머지 후 dsList 추출.
+  const merged = flattenLhResponse<ListResponse>(await res.json());
+  const items = merged.dsList ?? [];
   const totalCount = items[0] ? Number(items[0].ALL_CNT ?? 0) : 0;
   return { items, totalCount };
 }
@@ -81,7 +83,7 @@ async function fetchDetail(
   const url = `${DETAIL_URL}?${params.toString()}&serviceKey=${serviceKey}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`detail HTTP ${res.status}`);
-  return (await res.json()) as LhDetailResponse;
+  return flattenLhResponse<LhDetailResponse>(await res.json());
 }
 
 async function fetchSupply(
@@ -98,7 +100,7 @@ async function fetchSupply(
   const url = `${SUPPLY_URL}?${params.toString()}&serviceKey=${serviceKey}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`supply HTTP ${res.status}`);
-  return (await res.json()) as LhSupplyResponse;
+  return flattenLhResponse<LhSupplyResponse>(await res.json());
 }
 
 async function upsertBundle(bundle: AnnouncementBundle): Promise<'new' | 'updated'> {

@@ -170,6 +170,28 @@ export interface AnnouncementBundle {
   attachments: AttachmentTransformed[];
 }
 
+/**
+ * data.go.kr LH API 응답은 객체가 아닌 배열 형태로 옴:
+ *   [ { dsSch: [...] }, { dsList: [...], dsList01: [...], ... } ]
+ * 각 청크를 단일 객체로 머지해 transform 함수가 그대로 쓸 수 있게 함.
+ *
+ * 객체로 직접 오는 경우(테스트 fixture 또는 형식 변경)도 그대로 패스스루.
+ */
+export function flattenLhResponse<T = Record<string, unknown>>(
+  data: unknown,
+): T {
+  if (!Array.isArray(data)) {
+    return (data ?? {}) as T;
+  }
+  const merged: Record<string, unknown> = {};
+  for (const part of data) {
+    if (part && typeof part === 'object') {
+      Object.assign(merged, part);
+    }
+  }
+  return merged as T;
+}
+
 const DATE_YYYYMMDD = /^(\d{4})(\d{2})(\d{2})$/;
 const DATE_DOTTED = /^(\d{4})\.(\d{2})\.(\d{2})$/;
 
