@@ -3,28 +3,33 @@
     <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
       <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">임대 청약</h1>
-        <p class="mt-2 text-slate-500 text-sm">공공임대·민간임대 청약 일정과 정보를 조회하세요.</p>
+        <p class="mt-2 text-slate-500 text-sm">청약통장으로 접수하는 청약과 청약통장 없이 신청하는 LH 매물을 그룹별로 안내합니다.</p>
       </div>
     </div>
 
-    <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
-      <!-- Sub-category Tabs -->
-      <div class="mb-4 flex flex-wrap gap-2">
-        <NuxtLink
-          to="/subscription/rent"
-          :class="['px-4 py-2 rounded-lg font-medium text-sm transition-colors', !activeType ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50']"
-        >
-          전체
-        </NuxtLink>
-        <NuxtLink
-          v-for="(meta, slug) in RENT_TYPES"
-          :key="slug"
-          :to="`/subscription/rent/${slug}`"
-          class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
-        >
-          {{ meta.label }}
-        </NuxtLink>
-      </div>
+    <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-8">
+      <section
+        v-for="group in groups"
+        :key="group"
+        class="space-y-3"
+        :data-test-group="group"
+      >
+        <header>
+          <h2 class="text-xl font-bold text-slate-900">{{ RENT_GROUP_META[group].heading }}</h2>
+          <p class="mt-1 text-sm text-slate-500">{{ RENT_GROUP_META[group].description }}</p>
+        </header>
+
+        <div class="flex flex-wrap gap-2 overflow-x-auto md:overflow-visible">
+          <NuxtLink
+            v-for="[slug, meta] in rentTypesByGroup(group)"
+            :key="slug"
+            :to="`/subscription/rent/${slug}`"
+            class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-700 border border-slate-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors whitespace-nowrap"
+          >
+            {{ meta.label }}
+          </NuxtLink>
+        </div>
+      </section>
 
       <SubscriptionListView category="rent" />
     </main>
@@ -33,13 +38,13 @@
 
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import { RENT_TYPES } from '~/utils/subscriptionMeta'
+import { RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
-const activeType = null
+const groups: RentGroup[] = ['cheongyak', 'relief']
 
 const title = '임대 청약 일정 | 일상킷'
-const description = '공공임대, 민간임대 청약 일정과 접수 상태, 유형별 정보를 확인하세요.'
+const description = '청약홈 임대청약(공공/민간), LH 분양·임대 공고, LH 매입·전세임대를 한 곳에서 비교하세요.'
 const canonicalUrl = `${SITE_URL}/subscription/rent`
 
 useHead({
@@ -68,9 +73,11 @@ setBreadcrumbSchema([
   { name: '임대', url: canonicalUrl },
 ])
 
-// ItemList schema for rental subscriptions list page
 setItemListSchema([
   { name: '공공임대 청약', url: '/subscription/rent/public' },
   { name: '민간임대 청약', url: '/subscription/rent/private' },
+  { name: 'LH 분양/임대 공고', url: '/subscription/rent/lh-announcement' },
+  { name: 'LH 매입임대', url: '/subscription/rent/buy-lease' },
+  { name: 'LH 전세임대', url: '/subscription/rent/charter' },
 ])
 </script>
