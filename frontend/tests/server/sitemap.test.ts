@@ -168,6 +168,12 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     return arr
   }
 
+  const LH_ANNOUNCEMENT_FIXTURE: { id: number; updatedAt: string }[] = [
+    { id: 1, updatedAt: '2026-04-20T00:00:00Z' },
+    { id: 2, updatedAt: '2026-04-22T00:00:00Z' },
+    { id: 3, updatedAt: '2026-04-25T00:00:00Z' },
+  ]
+
   function mockFetchImpl(url: string): Promise<Response> {
     const match = url.match(/\/api\/sitemap\/facilities\/([a-z-]+)(?:\?limit=(\d+))?/)
     if (match) {
@@ -196,6 +202,12 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     if (url.includes('/api/sitemap/subscriptions')) {
       return Promise.resolve(
         new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
+      )
+    }
+    if (url.includes('/api/sitemap/lh-announcements')) {
+      const data = LH_ANNOUNCEMENT_FIXTURE
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data }), { status: 200 }),
       )
     }
     return Promise.resolve(new Response('', { status: 404 }))
@@ -380,5 +392,51 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     await expect(
       chunkHandler(createMockEvent('/sitemap/aed-2.xml') as never),
     ).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('LH 공고 인덱스에 lh-announcement 청크가 포함되고 chunk handler 가 상세 URL 을 방출한다 (US-010)', async () => {
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+
+    const indexXml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
+    expect(indexXml).toMatch(/\/sitemap\/lh-announcement\.xml/)
+
+    const xml = (await chunkHandler(createMockEvent('/sitemap/lh-announcement.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/subscription/rent/lh/announcement/1</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/subscription/rent/lh/announcement/3</loc>')
+  })
+
+  it('LH 공고 chunk page 가 advertised 보다 크면 404 (US-010)', async () => {
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+
+    const indexXml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
+    const advertised = countChunksForCategory(indexXml, 'lh-announcement')
+    expect(advertised).toBe(1)
+
+    await expect(
+      chunkHandler(createMockEvent(`/sitemap/lh-announcement-${advertised + 1}.xml`) as never),
+    ).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('static sitemap 에 LH 매물 + 공고 탭 URL 3종이 포함된다 (US-010)', async () => {
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+
+    const origFetch = globalThis.fetch
+    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ data: { items: [], pagination: { totalPages: 0 } } }), {
+          status: 200,
+        }),
+      ) as unknown as typeof fetch
+    try {
+      const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/subscription/rent/lh-announcement</loc>')
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/subscription/rent/buy-lease</loc>')
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/subscription/rent/charter</loc>')
+    } finally {
+      ;(globalThis as unknown as { fetch: typeof fetch }).fetch = origFetch
+    }
   })
 })
