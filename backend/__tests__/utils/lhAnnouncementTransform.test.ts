@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseLhDate,
+  flattenLhResponse,
   transformSupplyDataset,
   transformAllSupplies,
   transformAttachments,
@@ -287,5 +288,54 @@ describe('transformLhAnnouncement', () => {
     const item = { ...baseListItem, CNP_NM: undefined, CNP_CD_NM: '서울특별시' };
     const bundle = transformLhAnnouncement(item, undefined, undefined);
     expect(bundle.announcement.cnpNm).toBe('서울특별시');
+  });
+});
+
+describe('flattenLhResponse', () => {
+  it('데이터고포털 LH API 의 [{dsSch}, {dsList}] 배열 응답을 단일 객체로 머지', () => {
+    const apiShape = [
+      { dsSch: [{ PG_SZ: '2', PAGE: '1' }] },
+      { dsList: [{ PAN_ID: '0000061073', ALL_CNT: '2730' }] },
+    ];
+    const merged = flattenLhResponse<{ dsList?: Array<Record<string, unknown>>; dsSch?: unknown[] }>(apiShape);
+    expect(merged.dsList).toHaveLength(1);
+    expect(merged.dsList?.[0].PAN_ID).toBe('0000061073');
+    expect(merged.dsSch).toBeDefined();
+  });
+
+  it('SUPPLY 응답의 dsList01..04 배열 청크 머지', () => {
+    const apiShape = [
+      { dsSch: [{}] },
+      { dsList01: [{ HTY_NM: '74A' }], dsList01Nm: [{ HTY_NM: '주택형' }] },
+      { dsList02: [], dsList03: [{ HTY_NM: '49A' }], dsList04: [] },
+    ];
+    const merged = flattenLhResponse<{ dsList01?: unknown[]; dsList02?: unknown[]; dsList03?: unknown[]; dsList04?: unknown[] }>(apiShape);
+    expect(merged.dsList01).toHaveLength(1);
+    expect(merged.dsList02).toHaveLength(0);
+    expect(merged.dsList03).toHaveLength(1);
+    expect(merged.dsList04).toHaveLength(0);
+  });
+
+  it('객체 형태 응답 (배열 아닌 경우) 도 패스스루', () => {
+    const objShape = { dsList: [{ PAN_ID: 'x' }] };
+    const merged = flattenLhResponse<{ dsList?: unknown[] }>(objShape);
+    expect(merged.dsList).toHaveLength(1);
+  });
+
+  it('null/undefined 입력은 빈 객체 반환', () => {
+    expect(flattenLhResponse(null)).toEqual({});
+    expect(flattenLhResponse(undefined)).toEqual({});
+  });
+
+  it('배열 안에 null/원시값이 섞여도 안전하게 머지', () => {
+    const noisyShape = [
+      null,
+      { dsList: [{ a: 1 }] },
+      'noise',
+      { dsList02: [{ b: 2 }] },
+    ];
+    const merged = flattenLhResponse<{ dsList?: unknown[]; dsList02?: unknown[] }>(noisyShape);
+    expect(merged.dsList).toEqual([{ a: 1 }]);
+    expect(merged.dsList02).toEqual([{ b: 2 }]);
   });
 });

@@ -18,7 +18,41 @@ import {
   getSubscriptionList,
   getSubscriptionDetail,
   getUpcomingSubscriptions,
+  dateBasedStatusFilter,
 } from '../../src/services/subscriptionService';
+
+// 테스트 헬퍼: dateBasedStatusFilter 가 만든 prisma 절을 인식.
+// 외부 wrap: `{ AND: [base, dateFilter] }` (status 필터 적용 시).
+// 내부 형태:
+//   ongoing : { AND: [{ receptionStartDate: { lte } }, { OR: [...] }] }
+//   upcoming: { receptionStartDate: { gt } }
+//   closed  : { OR: [{ receptionStartDate: null }, { receptionEndDate: { lt } }] }
+function statusFromWhere(
+  where: Record<string, unknown>,
+): 'ongoing' | 'upcoming' | 'closed' | null {
+  const outerAnd = (where as { AND?: unknown[] }).AND;
+  const filter = (Array.isArray(outerAnd) ? outerAnd[1] : where) as Record<string, unknown>;
+  const start = filter.receptionStartDate as { gt?: Date; lte?: Date } | undefined;
+  if (start && 'gt' in start) return 'upcoming';
+  const innerAnd = filter.AND as Array<Record<string, unknown>> | undefined;
+  if (
+    Array.isArray(innerAnd) &&
+    (innerAnd[0]?.receptionStartDate as { lte?: Date } | undefined)?.lte instanceof Date
+  ) {
+    return 'ongoing';
+  }
+  const orList = filter.OR as Array<Record<string, unknown>> | undefined;
+  if (Array.isArray(orList) && orList.some((o) => o.receptionStartDate === null)) {
+    return 'closed';
+  }
+  return null;
+}
+
+function baseFromAndWhere(where: Record<string, unknown>): Record<string, unknown> {
+  const and = (where as { AND?: unknown[] }).AND;
+  if (Array.isArray(and) && and.length >= 1) return and[0] as Record<string, unknown>;
+  return where;
+}
 
 const mockSubscription = {
   id: 1,
@@ -62,7 +96,7 @@ describe('getSubscriptionList', () => {
     expect(result.total).toBe(1);
     expect(result.page).toBe(1);
     expect(mockFindMany).toHaveBeenCalledOnce();
-    expect(mockFindMany.mock.calls[0][0].where.status).toBe('ongoing');
+    expect(statusFromWhere(mockFindMany.mock.calls[0][0].where)).toBe('ongoing');
     expect(mockCount).toHaveBeenCalledTimes(4);
   });
 
@@ -73,7 +107,7 @@ describe('getSubscriptionList', () => {
     await getSubscriptionList({ status: 'upcoming', page: 1, limit: 20 });
 
     const whereArg = mockFindMany.mock.calls[0][0].where;
-    expect(whereArg.status).toBe('upcoming');
+    expect(statusFromWhere(whereArg)).toBe('upcoming');
   });
 
   it('region 필터를 적용해야 한다', async () => {
@@ -83,7 +117,7 @@ describe('getSubscriptionList', () => {
     await getSubscriptionList({ status: 'upcoming', region: '서울', page: 1, limit: 20 });
 
     const whereArg = mockFindMany.mock.calls[0][0].where;
-    expect(whereArg.regionName).toEqual({ contains: '서울' });
+    expect(baseFromAndWhere(whereArg).regionName).toEqual({ contains: '서울' });
   });
 
   it('sourceType 필터를 적용해야 한다', async () => {
@@ -93,7 +127,7 @@ describe('getSubscriptionList', () => {
     await getSubscriptionList({ status: 'upcoming', sourceType: 'OFFITEL', page: 1, limit: 20 });
 
     const whereArg = mockFindMany.mock.calls[0][0].where;
-    expect(whereArg.sourceType).toBe('OFFITEL');
+    expect(baseFromAndWhere(whereArg).sourceType).toBe('OFFITEL');
   });
 
   it('category=sale 필터를 적용해야 한다 (rentType NULL 포함)', async () => {
@@ -105,7 +139,7 @@ describe('getSubscriptionList', () => {
     const whereArg = mockFindMany.mock.calls[0][0].where;
     // Prisma notIn은 NULL 행을 매칭에서 제외하므로, rentType이 NULL인 분양 건을
     // 포함하기 위한 별도 OR 절이 필요하다.
-    expect(whereArg.OR).toEqual([
+    expect(baseFromAndWhere(whereArg).OR).toEqual([
       { sourceType: { in: ['OFFITEL', 'REMAINING'] } },
       { sourceType: 'APT', rentType: null },
       { sourceType: 'APT', rentType: { notIn: ['분양전환 가능임대', '분양전환 불가임대'] } },
@@ -119,7 +153,7 @@ describe('getSubscriptionList', () => {
     await getSubscriptionList({ status: 'upcoming', category: 'rent', page: 1, limit: 20 });
 
     const whereArg = mockFindMany.mock.calls[0][0].where;
-    expect(whereArg.OR).toEqual([
+    expect(baseFromAndWhere(whereArg).OR).toEqual([
       { sourceType: 'PRIVATE_RENT' },
       { sourceType: 'APT', rentType: { in: ['분양전환 가능임대', '분양전환 불가임대'] } },
     ]);
@@ -141,18 +175,16 @@ describe('getSubscriptionList', () => {
     const result = await getSubscriptionList({ page: 1, limit: 2 });
 
     expect(result.items.map((item) => item.status)).toEqual(['ongoing', 'upcoming']);
-    expect(mockFindMany).toHaveBeenNthCalledWith(1, {
-      where: { status: 'ongoing' },
-      orderBy: { announcementDate: 'desc' },
-      skip: 0,
-      take: 1,
-    });
-    expect(mockFindMany).toHaveBeenNthCalledWith(2, {
-      where: { status: 'upcoming' },
-      orderBy: { announcementDate: 'desc' },
-      skip: 0,
-      take: 1,
-    });
+    const firstCall = mockFindMany.mock.calls[0][0];
+    expect(statusFromWhere(firstCall.where)).toBe('ongoing');
+    expect(firstCall.orderBy).toEqual({ announcementDate: 'desc' });
+    expect(firstCall.skip).toBe(0);
+    expect(firstCall.take).toBe(1);
+    const secondCall = mockFindMany.mock.calls[1][0];
+    expect(statusFromWhere(secondCall.where)).toBe('upcoming');
+    expect(secondCall.orderBy).toEqual({ announcementDate: 'desc' });
+    expect(secondCall.skip).toBe(0);
+    expect(secondCall.take).toBe(1);
   });
 
   it('전체 목록 페이지네이션은 상태 그룹을 건너뛰어야 한다', async () => {
@@ -173,12 +205,11 @@ describe('getSubscriptionList', () => {
     expect(result.items.map((item) => item.status)).toEqual(['closed', 'closed']);
     expect(result.page).toBe(2);
     expect(result.totalPages).toBe(2);
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { status: 'closed' },
-      orderBy: { announcementDate: 'desc' },
-      skip: 0,
-      take: 2,
-    });
+    const lastCall = mockFindMany.mock.calls[mockFindMany.mock.calls.length - 1][0];
+    expect(statusFromWhere(lastCall.where)).toBe('closed');
+    expect(lastCall.orderBy).toEqual({ announcementDate: 'desc' });
+    expect(lastCall.skip).toBe(0);
+    expect(lastCall.take).toBe(2);
   });
 
   it('status 필터가 있으면 일반 페이지네이션을 적용해야 한다', async () => {
@@ -220,15 +251,49 @@ describe('getSubscriptionDetail', () => {
   });
 });
 
+describe('dateBasedStatusFilter', () => {
+  const fixedNow = new Date('2026-04-25T12:00:00Z');
+
+  it('ongoing — start <= now AND (end IS NULL OR end >= now)', () => {
+    const f = dateBasedStatusFilter('ongoing', fixedNow);
+    expect(f).toEqual({
+      AND: [
+        { receptionStartDate: { lte: fixedNow } },
+        {
+          OR: [
+            { receptionEndDate: null },
+            { receptionEndDate: { gte: fixedNow } },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('upcoming — start > now (start NULL 자동 제외)', () => {
+    const f = dateBasedStatusFilter('upcoming', fixedNow);
+    expect(f).toEqual({ receptionStartDate: { gt: fixedNow } });
+  });
+
+  it('closed — start IS NULL OR end < now', () => {
+    const f = dateBasedStatusFilter('closed', fixedNow);
+    expect(f).toEqual({
+      OR: [
+        { receptionStartDate: null },
+        { receptionEndDate: { lt: fixedNow } },
+      ],
+    });
+  });
+});
+
 describe('getUpcomingSubscriptions', () => {
-  it('다가오는 청약 목록을 반환해야 한다', async () => {
+  it('다가오는 청약 목록을 반환해야 한다 — 쿼리 시점의 receptionStartDate > now', async () => {
     mockFindMany.mockResolvedValue([mockSubscription]);
 
     const result = await getUpcomingSubscriptions(5);
 
     expect(result).toHaveLength(1);
     const args = mockFindMany.mock.calls[0][0];
-    expect(args.where.status).toBe('upcoming');
+    expect(args.where.receptionStartDate).toEqual(expect.objectContaining({ gt: expect.any(Date) }));
     expect(args.take).toBe(5);
     expect(args.orderBy.receptionStartDate).toBe('asc');
   });

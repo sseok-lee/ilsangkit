@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { dateBasedStatusFilter } from './subscriptionService.js';
 
 // Stats 인메모리 캐시 (5분 TTL) — 23개 병렬 COUNT 쿼리 부하 감소
 let statsCache: { data: Record<string, unknown>; expiry: number } | null = null;
@@ -50,7 +51,11 @@ export async function getStats() {
         COUNT(DISTINCT CASE WHEN type IN ('offitel-sale','offitel-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS offitel
       FROM RealEstateBuildingSummary`,
     prisma.region.count(),
-    prisma.subscription.count({ where: { status: { in: ['ongoing', 'upcoming'] } } }),
+    prisma.subscription.count({
+      where: {
+        OR: [dateBasedStatusFilter('ongoing'), dateBasedStatusFilter('upcoming')],
+      },
+    }),
   ]);
 
   const aptBuildings = Number(buildingCountResult[0]?.apt ?? 0);
