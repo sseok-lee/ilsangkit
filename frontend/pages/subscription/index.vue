@@ -46,19 +46,24 @@
         <template #right>
           <NuxtLink to="/subscription/rent" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
         </template>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <NuxtLink
-            v-for="(meta, slug) in RENT_TYPES"
-            :key="slug"
-            :to="`/subscription/rent/${slug}`"
-            class="group block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-amber-300/50 transition-all"
-          >
-            <div class="flex items-center gap-3 mb-3">
-              <img :src="`/icons/category/${meta.iconImg}.webp?v2`" :alt="meta.label" class="w-10 h-10" width="40" height="40" />
-              <h3 class="font-bold text-slate-900 group-hover:text-amber-600 transition-colors">{{ meta.label }}</h3>
+        <div class="space-y-5">
+          <div v-for="group in rentGroups" :key="group" class="space-y-2.5" :data-test-group="group">
+            <h3 class="text-sm font-semibold text-slate-700">{{ RENT_GROUP_META[group].heading }}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <NuxtLink
+                v-for="[slug, meta] in rentTypesByGroup(group)"
+                :key="slug"
+                :to="`/subscription/rent/${slug}`"
+                class="group block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-amber-300/50 transition-all"
+              >
+                <div class="flex items-center gap-3 mb-3">
+                  <img :src="`/icons/category/${meta.iconImg}.webp?v2`" :alt="meta.label" class="w-10 h-10" width="40" height="40" />
+                  <h3 class="font-bold text-slate-900 group-hover:text-amber-600 transition-colors">{{ meta.label }}</h3>
+                </div>
+                <p class="text-sm text-slate-500 leading-relaxed">{{ meta.description }}</p>
+              </NuxtLink>
             </div>
-            <p class="text-sm text-slate-500 leading-relaxed">{{ meta.description }}</p>
-          </NuxtLink>
+          </div>
         </div>
       </SectionBlock>
 
@@ -124,7 +129,9 @@
 
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import { SALE_TYPES, RENT_TYPES } from '~/utils/subscriptionMeta'
+import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
+
+const rentGroups: RentGroup[] = ['apply', 'lh-announcement']
 import type { Subscription } from '~/types/subscription'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useSubscription } from '~/composables/useSubscription'

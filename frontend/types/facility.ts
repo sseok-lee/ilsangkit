@@ -520,7 +520,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     links: [
       { to: '/subscription', label: '청약 전체', icon: 'calendar_month', iconImg: 'subscription' },
       { to: '/subscription/sale', label: '분양', icon: 'sell', iconImg: 'sale' },
-      { to: '/subscription/rent', label: '임대', icon: 'key', iconImg: 'rent' },
+      { to: '/subscription/rent', label: '임대 청약', icon: 'key', iconImg: 'rent' },
+      { to: '/lh-rental', label: 'LH 임대', icon: 'home', iconImg: 'rent' },
     ],
   },
   ...CATEGORY_GROUPS,

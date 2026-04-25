@@ -141,15 +141,16 @@ async function syncPublicRent(): Promise<SyncStats> {
         return true;
       });
 
-    // 배치 upsert (500건씩)
-    const BATCH = 500;
+    // upsert (concurrency 제한 — Prisma 풀 thrashing 방지).
+    // 이전엔 batch=500 동시 실행이라 connection pool 압박 + MySQL 좀비 패턴 위험.
+    const CONCURRENCY = 20;
     let newCount = 0;
     let updateCount = 0;
 
-    for (let i = 0; i < items.length; i += BATCH) {
-      const batch = items.slice(i, i + BATCH);
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      const slice = items.slice(i, i + CONCURRENCY);
       await Promise.all(
-        batch.map(async (item) => {
+        slice.map(async (item) => {
           const existing = await prisma.publicRentalComplex.findUnique({
             where: { sourceId: item.sourceId },
             select: { id: true },

@@ -11,6 +11,7 @@ import {
   getRegionCategoryCombinations,
   getRealEstateBuildings,
   getSubscriptionIds,
+  getLhAnnouncementIds,
 } from '../services/sitemapService.js';
 
 const SitemapFacilitiesQuerySchema = z.object({
@@ -89,6 +90,18 @@ router.get(
   '/subscriptions',
   asyncHandler(async (_req: Request, res: Response) => {
     const data = await getSubscriptionIds();
+    res.json({ success: true, data });
+  })
+);
+
+/**
+ * GET /api/sitemap/lh-announcements
+ * LH 공고 전체 ID + updatedAt 조회
+ */
+router.get(
+  '/lh-announcements',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const data = await getLhAnnouncementIds();
     res.json({ success: true, data });
   })
 );
