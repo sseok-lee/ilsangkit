@@ -27,6 +27,13 @@ export async function getSubscriptionIds() {
   });
 }
 
+export async function getLhAnnouncementIds() {
+  return prisma.lhAnnouncement.findMany({
+    select: { id: true, updatedAt: true },
+    orderBy: { id: 'asc' },
+  });
+}
+
 /**
  * 사이트맵 생성용 부동산 건물 리스트.
  *

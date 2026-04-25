@@ -9,6 +9,7 @@ import {
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
   fetchSubscriptionIds,
+  fetchLhAnnouncementIds,
   getWeekStartDate,
 } from '../utils/sitemap'
 import {
@@ -65,6 +66,22 @@ export default defineEventHandler(async (event) => {
   } else {
     for (let i = 1; i <= trashPages; i++) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/trash-${i}.xml`, lastmod: trashLastmod })
+    }
+  }
+
+  // LH 공고 상세 페이지
+  const lhAnnouncements = await fetchLhAnnouncementIds(apiBase)
+  const lhLatestDate = lhAnnouncements.reduce((max, item) => {
+    const d = item.updatedAt?.split('T')[0]
+    return d && d > max ? d : max
+  }, '')
+  const lhLastmod = lhLatestDate || today
+  const lhPages = Math.max(1, Math.ceil(lhAnnouncements.length / MAX_URLS_PER_SITEMAP))
+  if (lhPages === 1) {
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/lh-announcement.xml`, lastmod: lhLastmod })
+  } else {
+    for (let i = 1; i <= lhPages; i++) {
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/lh-announcement-${i}.xml`, lastmod: lhLastmod })
     }
   }
 
