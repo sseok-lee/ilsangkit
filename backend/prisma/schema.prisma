@@ -18,52 +18,52 @@ enum SyncStatus {
 
 // @TASK T0.4 - 공공화장실 테이블
 model Toilet {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 화장실 전용 필드
-  operatingHours    String?  @db.VarChar(200)
-  maleToilets       Int      @default(0)
-  maleUrinals       Int      @default(0)
-  femaleToilets     Int      @default(0)
-  hasDisabledToilet Boolean  @default(false)
-  openTime          String?  @db.VarChar(100)
-  managingOrg       String?  @db.VarChar(200)
+  operatingHours    String? @db.VarChar(200)
+  maleToilets       Int     @default(0)
+  maleUrinals       Int     @default(0)
+  femaleToilets     Int     @default(0)
+  hasDisabledToilet Boolean @default(false)
+  openTime          String? @db.VarChar(100)
+  managingOrg       String? @db.VarChar(200)
 
   // 추가 상세 필드
-  phoneNumber              String?  @db.VarChar(50)
-  installDate              String?  @db.VarChar(50)
-  ownershipType            String?  @db.VarChar(50)
-  sewageTreatment          String?  @db.VarChar(100)
-  hasEmergencyBell         Boolean  @default(false)
-  emergencyBellLocation    String?  @db.VarChar(200)
-  hasCCTV                  Boolean  @default(false)
-  hasDiaperChangingTable   Boolean  @default(false)
-  diaperChangingLocation   String?  @db.VarChar(200)
-  maleDisabledToilets      Int      @default(0)
-  maleDisabledUrinals      Int      @default(0)
-  maleChildToilets         Int      @default(0)
-  maleChildUrinals         Int      @default(0)
-  femaleDisabledToilets    Int      @default(0)
-  femaleChildToilets       Int      @default(0)
-  remodelingDate           String?  @db.VarChar(50)
-  facilityType             String?  @db.VarChar(100)
-  legalBasis               String?  @db.VarChar(200)
-  govCode                  String?  @db.VarChar(20)
-  dataDate                 String?  @db.VarChar(20)
+  phoneNumber            String? @db.VarChar(50)
+  installDate            String? @db.VarChar(50)
+  ownershipType          String? @db.VarChar(50)
+  sewageTreatment        String? @db.VarChar(100)
+  hasEmergencyBell       Boolean @default(false)
+  emergencyBellLocation  String? @db.VarChar(200)
+  hasCCTV                Boolean @default(false)
+  hasDiaperChangingTable Boolean @default(false)
+  diaperChangingLocation String? @db.VarChar(200)
+  maleDisabledToilets    Int     @default(0)
+  maleDisabledUrinals    Int     @default(0)
+  maleChildToilets       Int     @default(0)
+  maleChildUrinals       Int     @default(0)
+  femaleDisabledToilets  Int     @default(0)
+  femaleChildToilets     Int     @default(0)
+  remodelingDate         String? @db.VarChar(50)
+  facilityType           String? @db.VarChar(100)
+  legalBasis             String? @db.VarChar(200)
+  govCode                String? @db.VarChar(20)
+  dataDate               String? @db.VarChar(20)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -74,34 +74,34 @@ model Toilet {
 
 // @TASK T0.4 - 무료와이파이 테이블
 model Wifi {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 와이파이 전용 필드
-  ssid             String?  @db.VarChar(100)
-  installDate      String?  @db.VarChar(50)
-  serviceProvider  String?  @db.VarChar(100)
-  installLocation  String?  @db.VarChar(200)
-  managementAgency String?  @db.VarChar(200)
-  phoneNumber      String?  @db.VarChar(50)
+  ssid             String? @db.VarChar(100)
+  installDate      String? @db.VarChar(50)
+  serviceProvider  String? @db.VarChar(100)
+  installLocation  String? @db.VarChar(200)
+  managementAgency String? @db.VarChar(200)
+  phoneNumber      String? @db.VarChar(50)
 
   // 추가 상세 필드
-  installLocationDetail String?  @db.VarChar(500)
-  govCode              String?  @db.VarChar(20)
-  dataDate             String?  @db.VarChar(20)
+  installLocationDetail String? @db.VarChar(500)
+  govCode               String? @db.VarChar(20)
+  dataDate              String? @db.VarChar(20)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -112,31 +112,31 @@ model Wifi {
 
 // @TASK T0.4 - 의류수거함 테이블
 model Clothes {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 의류수거함 전용 필드
-  managementAgency String?  @db.VarChar(200)
-  phoneNumber      String?  @db.VarChar(50)
-  dataDate         String?  @db.VarChar(50)
-  detailLocation   String?  @db.VarChar(500)
+  managementAgency String? @db.VarChar(200)
+  phoneNumber      String? @db.VarChar(50)
+  dataDate         String? @db.VarChar(50)
+  detailLocation   String? @db.VarChar(500)
 
   // 추가 상세 필드
-  providerCode     String?  @db.VarChar(20)
-  providerName     String?  @db.VarChar(200)
+  providerCode String? @db.VarChar(20)
+  providerName String? @db.VarChar(200)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -147,36 +147,36 @@ model Clothes {
 
 // 공원 테이블
 model Park {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(200)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(200)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 공원 전용 필드
-  parkType               String?  @db.VarChar(100)
-  area                   Decimal? @db.Decimal(10, 2)
-  exerciseFacilities     String?  @db.Text
-  playFacilities         String?  @db.Text
-  convenienceFacilities  String?  @db.Text
-  cultureFacilities      String?  @db.Text
-  otherFacilities        String?  @db.Text
-  designatedDate         String?  @db.VarChar(50)
-  managingOrg            String?  @db.VarChar(200)
-  phoneNumber            String?  @db.VarChar(50)
-  dataDate               String?  @db.VarChar(20)
-  providerCode           String?  @db.VarChar(20)
-  providerName           String?  @db.VarChar(200)
+  parkType              String?  @db.VarChar(100)
+  area                  Decimal? @db.Decimal(10, 2)
+  exerciseFacilities    String?  @db.Text
+  playFacilities        String?  @db.Text
+  convenienceFacilities String?  @db.Text
+  cultureFacilities     String?  @db.Text
+  otherFacilities       String?  @db.Text
+  designatedDate        String?  @db.VarChar(50)
+  managingOrg           String?  @db.VarChar(200)
+  phoneNumber           String?  @db.VarChar(50)
+  dataDate              String?  @db.VarChar(20)
+  providerCode          String?  @db.VarChar(20)
+  providerName          String?  @db.VarChar(200)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -187,50 +187,50 @@ model Park {
 
 // 학교 테이블
 model School {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(200)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(200)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 학교 전용 필드
-  schoolLevel    String?  @db.VarChar(50)
-  foundedDate    String?  @db.VarChar(20)
-  foundationType String?  @db.VarChar(50)
-  branchType     String?  @db.VarChar(20)
+  schoolLevel     String? @db.VarChar(50)
+  foundedDate     String? @db.VarChar(20)
+  foundationType  String? @db.VarChar(50)
+  branchType      String? @db.VarChar(20)
   operationStatus String? @db.VarChar(20)
-  sidoEduCode    String?  @db.VarChar(20)
-  sidoEduName    String?  @db.VarChar(100)
-  localEduCode   String?  @db.VarChar(20)
-  localEduName   String?  @db.VarChar(100)
-  createdDate    String?  @db.VarChar(20)
-  modifiedDate   String?  @db.VarChar(20)
-  dataDate       String?  @db.VarChar(20)
-  providerCode   String?  @db.VarChar(20)
-  providerName   String?  @db.VarChar(200)
+  sidoEduCode     String? @db.VarChar(20)
+  sidoEduName     String? @db.VarChar(100)
+  localEduCode    String? @db.VarChar(20)
+  localEduName    String? @db.VarChar(100)
+  createdDate     String? @db.VarChar(20)
+  modifiedDate    String? @db.VarChar(20)
+  dataDate        String? @db.VarChar(20)
+  providerCode    String? @db.VarChar(20)
+  providerName    String? @db.VarChar(200)
 
   // NEIS API 추가 필드
-  neisSchoolCode  String?  @db.VarChar(20)   // SD_SCHUL_CODE (NEIS 표준학교코드)
-  neisEduCode     String?  @db.VarChar(10)   // ATPT_OFCDC_SC_CODE
-  phoneNumber     String?  @db.VarChar(50)
-  faxNumber       String?  @db.VarChar(50)
-  homepageUrl     String?  @db.VarChar(500)
-  coeducationType String?  @db.VarChar(20)   // 남/여/남여공학
-  highSchoolType  String?  @db.VarChar(50)   // 일반고/특목고/자율고/특성화고
-  dayNightType    String?  @db.VarChar(10)   // 주간/야간
+  neisSchoolCode  String? @db.VarChar(20) // SD_SCHUL_CODE (NEIS 표준학교코드)
+  neisEduCode     String? @db.VarChar(10) // ATPT_OFCDC_SC_CODE
+  phoneNumber     String? @db.VarChar(50)
+  faxNumber       String? @db.VarChar(50)
+  homepageUrl     String? @db.VarChar(500)
+  coeducationType String? @db.VarChar(20) // 남/여/남여공학
+  highSchoolType  String? @db.VarChar(50) // 일반고/특목고/자율고/특성화고
+  dayNightType    String? @db.VarChar(10) // 주간/야간
 
-  enrollments    SchoolEnrollment[]
-  departments    SchoolDepartment[]
+  enrollments SchoolEnrollment[]
+  departments SchoolDepartment[]
 
   @@index([city, district])
   @@index([lat, lng])
@@ -241,22 +241,22 @@ model School {
 }
 
 model SchoolEnrollment {
-  id          Int      @id @default(autoincrement())
-  schoolId    String   @db.VarChar(50)
-  year        Int
-  grade       Int
-  classCount  Int?
-  school      School   @relation(fields: [schoolId], references: [id])
+  id         Int    @id @default(autoincrement())
+  schoolId   String @db.VarChar(50)
+  year       Int
+  grade      Int
+  classCount Int?
+  school     School @relation(fields: [schoolId], references: [id])
 
   @@unique([schoolId, year, grade])
   @@index([schoolId])
 }
 
 model SchoolDepartment {
-  id             Int      @id @default(autoincrement())
-  schoolId       String   @db.VarChar(50)
-  departmentName String   @db.VarChar(100)
-  school         School   @relation(fields: [schoolId], references: [id])
+  id             Int    @id @default(autoincrement())
+  schoolId       String @db.VarChar(50)
+  departmentName String @db.VarChar(100)
+  school         School @relation(fields: [schoolId], references: [id])
 
   @@unique([schoolId, departmentName])
   @@index([schoolId])
@@ -264,99 +264,99 @@ model SchoolDepartment {
 
 // 어린이집 테이블
 model Childcare {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)          // crname
-  address       String?  @db.VarChar(500)          // craddr (지번)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)        // la
-  lng           Decimal? @db.Decimal(10, 7)        // lo
-  city          String   @db.VarChar(50)           // sidoname (정규화)
-  district      String   @db.VarChar(50)           // sigunname
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)  // stcode
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200) // crname
+  address     String?  @db.VarChar(500) // craddr (지번)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7) // la
+  lng         Decimal? @db.Decimal(10, 7) // lo
+  city        String   @db.VarChar(50) // sidoname (정규화)
+  district    String   @db.VarChar(50) // sigunname
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100) // stcode
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 기본 정보
-  crtypename    String?  @db.VarChar(100)  // 어린이집유형명
-  crstatusname  String?  @db.VarChar(50)   // 운영상태명
-  zipcode       String?  @db.VarChar(10)   // 우편번호
-  crtelno       String?  @db.VarChar(50)   // 전화번호
-  crfaxno       String?  @db.VarChar(50)   // 팩스번호
-  crhome        String?  @db.VarChar(500)  // 홈페이지
-  crrepname     String?  @db.VarChar(100)  // 대표자명 (CRREPNAME)
+  crtypename   String? @db.VarChar(100) // 어린이집유형명
+  crstatusname String? @db.VarChar(50) // 운영상태명
+  zipcode      String? @db.VarChar(10) // 우편번호
+  crtelno      String? @db.VarChar(50) // 전화번호
+  crfaxno      String? @db.VarChar(50) // 팩스번호
+  crhome       String? @db.VarChar(500) // 홈페이지
+  crrepname    String? @db.VarChar(100) // 대표자명 (CRREPNAME)
 
   // 시설 정보
-  nrtrroomcnt   Int?     // 보육실수 (nrtrroomcnt)
-  nrtrroomsize  String?  @db.VarChar(50)   // 보육실면적 (nrtrroomsize)
-  plgrdco       Int?     // 놀이터수 (plgrdco)
-  cctvinstlcnt  Int?     // CCTV설치수 (cctvinstlcnt)
-  chcrtescnt    Int?     // 차량수 (chcrtescnt)
-  crcapat       Int?     // 정원 (crcapat)
-  crchcnt       Int?     // 현원 (crchcnt)
+  nrtrroomcnt  Int? // 보육실수 (nrtrroomcnt)
+  nrtrroomsize String? @db.VarChar(50) // 보육실면적 (nrtrroomsize)
+  plgrdco      Int? // 놀이터수 (plgrdco)
+  cctvinstlcnt Int? // CCTV설치수 (cctvinstlcnt)
+  chcrtescnt   Int? // 차량수 (chcrtescnt)
+  crcapat      Int? // 정원 (crcapat)
+  crchcnt      Int? // 현원 (crchcnt)
 
   // 운영 정보
-  crcargbname   String?  @db.VarChar(100)  // 통학차량운영여부 (crcargbname)
-  crcnfmdt      String?  @db.VarChar(20)   // 인가일 (crcnfmdt)
-  crpausebegindt String? @db.VarChar(20)   // 운영중단시작일 (crpausebegindt)
-  crpauseenddt  String?  @db.VarChar(20)   // 운영중단종료일 (crpauseenddt)
-  crabldt       String?  @db.VarChar(20)   // 폐지일 (crabldt)
-  datastdrdt    String?  @db.VarChar(20)   // 데이터기준일자 (datastdrdt)
-  crspec        String?  @db.Text          // 특이사항 (crspec)
+  crcargbname    String? @db.VarChar(100) // 통학차량운영여부 (crcargbname)
+  crcnfmdt       String? @db.VarChar(20) // 인가일 (crcnfmdt)
+  crpausebegindt String? @db.VarChar(20) // 운영중단시작일 (crpausebegindt)
+  crpauseenddt   String? @db.VarChar(20) // 운영중단종료일 (crpauseenddt)
+  crabldt        String? @db.VarChar(20) // 폐지일 (crabldt)
+  datastdrdt     String? @db.VarChar(20) // 데이터기준일자 (datastdrdt)
+  crspec         String? @db.Text // 특이사항 (crspec)
 
   // 반별 정원 (CLASS_CNT_*)
-  classCnt00    Int?     // 0세반정원 (CLASS_CNT_00)
-  classCnt01    Int?     // 1세반정원 (CLASS_CNT_01)
-  classCnt02    Int?     // 2세반정원 (CLASS_CNT_02)
-  classCnt03    Int?     // 3세반정원 (CLASS_CNT_03)
-  classCnt04    Int?     // 4세반정원 (CLASS_CNT_04)
-  classCnt05    Int?     // 5세반정원 (CLASS_CNT_05)
-  classCntM2    Int?     // 만2세미만반정원 (CLASS_CNT_M2)
-  classCntM5    Int?     // 만5세이상반정원 (CLASS_CNT_M5)
-  classCntSp    Int?     // 장애아반정원 (CLASS_CNT_SP)
-  classCntTot   Int?     // 전체반정원 (CLASS_CNT_TOT)
+  classCnt00  Int? // 0세반정원 (CLASS_CNT_00)
+  classCnt01  Int? // 1세반정원 (CLASS_CNT_01)
+  classCnt02  Int? // 2세반정원 (CLASS_CNT_02)
+  classCnt03  Int? // 3세반정원 (CLASS_CNT_03)
+  classCnt04  Int? // 4세반정원 (CLASS_CNT_04)
+  classCnt05  Int? // 5세반정원 (CLASS_CNT_05)
+  classCntM2  Int? // 만2세미만반정원 (CLASS_CNT_M2)
+  classCntM5  Int? // 만5세이상반정원 (CLASS_CNT_M5)
+  classCntSp  Int? // 장애아반정원 (CLASS_CNT_SP)
+  classCntTot Int? // 전체반정원 (CLASS_CNT_TOT)
 
   // 아동별 현원 (CHILD_CNT_*)
-  childCnt00    Int?     // 0세아동수 (CHILD_CNT_00)
-  childCnt01    Int?     // 1세아동수 (CHILD_CNT_01)
-  childCnt02    Int?     // 2세아동수 (CHILD_CNT_02)
-  childCnt03    Int?     // 3세아동수 (CHILD_CNT_03)
-  childCnt04    Int?     // 4세아동수 (CHILD_CNT_04)
-  childCnt05    Int?     // 5세아동수 (CHILD_CNT_05)
-  childCntM2    Int?     // 만2세미만아동수 (CHILD_CNT_M2)
-  childCntM5    Int?     // 만5세이상아동수 (CHILD_CNT_M5)
-  childCntSp    Int?     // 장애아동수 (CHILD_CNT_SP)
-  childCntTot   Int?     // 전체아동수 (CHILD_CNT_TOT)
+  childCnt00  Int? // 0세아동수 (CHILD_CNT_00)
+  childCnt01  Int? // 1세아동수 (CHILD_CNT_01)
+  childCnt02  Int? // 2세아동수 (CHILD_CNT_02)
+  childCnt03  Int? // 3세아동수 (CHILD_CNT_03)
+  childCnt04  Int? // 4세아동수 (CHILD_CNT_04)
+  childCnt05  Int? // 5세아동수 (CHILD_CNT_05)
+  childCntM2  Int? // 만2세미만아동수 (CHILD_CNT_M2)
+  childCntM5  Int? // 만5세이상아동수 (CHILD_CNT_M5)
+  childCntSp  Int? // 장애아동수 (CHILD_CNT_SP)
+  childCntTot Int? // 전체아동수 (CHILD_CNT_TOT)
 
   // 직원 현황 (EM_CNT_*)
-  emCnt0y       Int?     // 보육교사(0년) (EM_CNT_0Y)
-  emCnt1y       Int?     // 보육교사(1년) (EM_CNT_1Y)
-  emCnt2y       Int?     // 보육교사(2년) (EM_CNT_2Y)
-  emCnt4y       Int?     // 보육교사(4년) (EM_CNT_4Y)
-  emCnt6y       Int?     // 보육교사(6년) (EM_CNT_6Y)
-  emCntA1       Int?     // 원장 (EM_CNT_A1)
-  emCntA2       Int?     // 보육교사 (EM_CNT_A2)
-  emCntA3       Int?     // 특수교사 (EM_CNT_A3)
-  emCntA4       Int?     // 치료사 (EM_CNT_A4)
-  emCntA5       Int?     // 영양사 (EM_CNT_A5)
-  emCntA6       Int?     // 간호사(조무사) (EM_CNT_A6)
-  emCntA10      Int?     // 조리원 (EM_CNT_A10)
-  emCntA7       Int?     // 사무원 (EM_CNT_A7)
-  emCntA8       Int?     // 기타직원 (EM_CNT_A8)
-  emCntTot      Int?     // 전체직원수 (EM_CNT_TOT)
+  emCnt0y  Int? // 보육교사(0년) (EM_CNT_0Y)
+  emCnt1y  Int? // 보육교사(1년) (EM_CNT_1Y)
+  emCnt2y  Int? // 보육교사(2년) (EM_CNT_2Y)
+  emCnt4y  Int? // 보육교사(4년) (EM_CNT_4Y)
+  emCnt6y  Int? // 보육교사(6년) (EM_CNT_6Y)
+  emCntA1  Int? // 원장 (EM_CNT_A1)
+  emCntA2  Int? // 보육교사 (EM_CNT_A2)
+  emCntA3  Int? // 특수교사 (EM_CNT_A3)
+  emCntA4  Int? // 치료사 (EM_CNT_A4)
+  emCntA5  Int? // 영양사 (EM_CNT_A5)
+  emCntA6  Int? // 간호사(조무사) (EM_CNT_A6)
+  emCntA10 Int? // 조리원 (EM_CNT_A10)
+  emCntA7  Int? // 사무원 (EM_CNT_A7)
+  emCntA8  Int? // 기타직원 (EM_CNT_A8)
+  emCntTot Int? // 전체직원수 (EM_CNT_TOT)
 
   // 연장보육 현황 (EW_CNT_*)
-  ewCnt00       Int?     // 0세연장보육 (EW_CNT_00)
-  ewCnt01       Int?     // 1세연장보육 (EW_CNT_01)
-  ewCnt02       Int?     // 2세연장보육 (EW_CNT_02)
-  ewCnt03       Int?     // 3세연장보육 (EW_CNT_03)
-  ewCnt04       Int?     // 4세연장보육 (EW_CNT_04)
-  ewCnt05       Int?     // 5세연장보육 (EW_CNT_05)
-  ewCntM6       Int?     // 만6세이상연장보육 (EW_CNT_M6)
-  ewCntTot      Int?     // 전체연장보육 (EW_CNT_TOT)
+  ewCnt00  Int? // 0세연장보육 (EW_CNT_00)
+  ewCnt01  Int? // 1세연장보육 (EW_CNT_01)
+  ewCnt02  Int? // 2세연장보육 (EW_CNT_02)
+  ewCnt03  Int? // 3세연장보육 (EW_CNT_03)
+  ewCnt04  Int? // 4세연장보육 (EW_CNT_04)
+  ewCnt05  Int? // 5세연장보육 (EW_CNT_05)
+  ewCntM6  Int? // 만6세이상연장보육 (EW_CNT_M6)
+  ewCntTot Int? // 전체연장보육 (EW_CNT_TOT)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -368,21 +368,21 @@ model Childcare {
 
 // 전통시장 테이블
 model Market {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 전통시장 전용 필드
   marketType       String?  @db.VarChar(50)
@@ -408,48 +408,48 @@ model Market {
 
 // @TASK T9.1.1 - 공영주차장 테이블
 model Parking {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 주차장 전용 필드
-  parkingType      String?  @db.VarChar(50)   // 주차구분 (공영/민영)
-  lotType          String?  @db.VarChar(50)   // 주차장유형 (노외/노상/부설)
-  capacity         Int      @default(0)       // 주차면수
-  baseFee          Int?                       // 기본요금 (원)
-  baseTime         Int?                       // 기본시간 (분)
-  additionalFee    Int?                       // 추가요금 (원)
-  additionalTime   Int?                       // 추가시간 (분)
-  dailyMaxFee      Int?                       // 일최대요금 (원)
-  monthlyFee       Int?                       // 월정기권요금 (원)
-  operatingHours   String?  @db.VarChar(200)  // 운영시간
-  phone            String?  @db.VarChar(50)   // 전화번호
-  paymentMethod    String?  @db.VarChar(200)  // 결제방법
-  remarks          String?  @db.Text          // 특기사항
-  hasDisabledParking Boolean @default(false)  // 장애인전용주차구역보유여부
+  parkingType        String? @db.VarChar(50) // 주차구분 (공영/민영)
+  lotType            String? @db.VarChar(50) // 주차장유형 (노외/노상/부설)
+  capacity           Int     @default(0) // 주차면수
+  baseFee            Int? // 기본요금 (원)
+  baseTime           Int? // 기본시간 (분)
+  additionalFee      Int? // 추가요금 (원)
+  additionalTime     Int? // 추가시간 (분)
+  dailyMaxFee        Int? // 일최대요금 (원)
+  monthlyFee         Int? // 월정기권요금 (원)
+  operatingHours     String? @db.VarChar(200) // 운영시간
+  phone              String? @db.VarChar(50) // 전화번호
+  paymentMethod      String? @db.VarChar(200) // 결제방법
+  remarks            String? @db.Text // 특기사항
+  hasDisabledParking Boolean @default(false) // 장애인전용주차구역보유여부
 
   // 추가 상세 필드
-  zoneClass        String?  @db.VarChar(50)
-  alternateParking String?  @db.VarChar(50)
-  operatingDays    String?  @db.VarChar(100)
-  feeType          String?  @db.VarChar(50)
-  dailyMaxFeeHours String?  @db.VarChar(50)
-  managingOrg      String?  @db.VarChar(200)
-  dataDate         String?  @db.VarChar(20)
-  providerCode     String?  @db.VarChar(20)
-  providerName     String?  @db.VarChar(200)
+  zoneClass        String? @db.VarChar(50)
+  alternateParking String? @db.VarChar(50)
+  operatingDays    String? @db.VarChar(100)
+  feeType          String? @db.VarChar(50)
+  dailyMaxFeeHours String? @db.VarChar(50)
+  managingOrg      String? @db.VarChar(200)
+  dataDate         String? @db.VarChar(20)
+  providerCode     String? @db.VarChar(20)
+  providerName     String? @db.VarChar(200)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -460,45 +460,45 @@ model Parking {
 
 // @TASK T9.2 - 자동심장충격기(AED) 테이블
 model Aed {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // AED 전용 필드
-  buildPlace    String?  @db.VarChar(500)   // 설치 상세위치
-  org           String?  @db.VarChar(200)   // 설치기관
-  clerkTel      String?  @db.VarChar(50)    // 담당자 전화
-  mfg           String?  @db.VarChar(100)   // 제조사
-  model         String?  @db.VarChar(100)   // 모델명
-  monSttTme     String?  @db.VarChar(4)     // 월요일 시작
-  monEndTme     String?  @db.VarChar(4)     // 월요일 종료
-  tueSttTme     String?  @db.VarChar(4)
-  tueEndTme     String?  @db.VarChar(4)
-  wedSttTme     String?  @db.VarChar(4)
-  wedEndTme     String?  @db.VarChar(4)
-  thuSttTme     String?  @db.VarChar(4)
-  thuEndTme     String?  @db.VarChar(4)
-  friSttTme     String?  @db.VarChar(4)
-  friEndTme     String?  @db.VarChar(4)
-  satSttTme     String?  @db.VarChar(4)
-  satEndTme     String?  @db.VarChar(4)
-  sunSttTme     String?  @db.VarChar(4)
-  sunEndTme     String?  @db.VarChar(4)
-  holSttTme     String?  @db.VarChar(4)     // 공휴일 시작
-  holEndTme     String?  @db.VarChar(4)     // 공휴일 종료
-  dataDate      String?  @db.VarChar(20)
+  buildPlace String? @db.VarChar(500) // 설치 상세위치
+  org        String? @db.VarChar(200) // 설치기관
+  clerkTel   String? @db.VarChar(50) // 담당자 전화
+  mfg        String? @db.VarChar(100) // 제조사
+  model      String? @db.VarChar(100) // 모델명
+  monSttTme  String? @db.VarChar(4) // 월요일 시작
+  monEndTme  String? @db.VarChar(4) // 월요일 종료
+  tueSttTme  String? @db.VarChar(4)
+  tueEndTme  String? @db.VarChar(4)
+  wedSttTme  String? @db.VarChar(4)
+  wedEndTme  String? @db.VarChar(4)
+  thuSttTme  String? @db.VarChar(4)
+  thuEndTme  String? @db.VarChar(4)
+  friSttTme  String? @db.VarChar(4)
+  friEndTme  String? @db.VarChar(4)
+  satSttTme  String? @db.VarChar(4)
+  satEndTme  String? @db.VarChar(4)
+  sunSttTme  String? @db.VarChar(4)
+  sunEndTme  String? @db.VarChar(4)
+  holSttTme  String? @db.VarChar(4) // 공휴일 시작
+  holEndTme  String? @db.VarChar(4) // 공휴일 종료
+  dataDate   String? @db.VarChar(20)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -509,47 +509,47 @@ model Aed {
 
 // @TASK T9.3 - 공공도서관 테이블
 model Library {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 도서관 전용 필드
-  libraryType       String?  @db.VarChar(50)
-  closedDays        String?  @db.VarChar(200)
-  weekdayOpenTime   String?  @db.VarChar(10)
-  weekdayCloseTime  String?  @db.VarChar(10)
-  saturdayOpenTime  String?  @db.VarChar(10)
-  saturdayCloseTime String?  @db.VarChar(10)
-  holidayOpenTime   String?  @db.VarChar(10)
-  holidayCloseTime  String?  @db.VarChar(10)
-  seatCount         Int      @default(0)
-  bookCount         Int      @default(0)
-  serialCount       Int      @default(0)       // 자료수(연속간행물)
-  nonBookCount      Int      @default(0)       // 자료수(비도서)
-  loanableBooks     Int      @default(0)       // 대출가능권수
-  loanableDays      Int      @default(0)       // 대출가능일수
-  phoneNumber       String?  @db.VarChar(50)
-  homepageUrl       String?  @db.VarChar(500)
-  operatingOrg      String?  @db.VarChar(200)
+  libraryType       String? @db.VarChar(50)
+  closedDays        String? @db.VarChar(200)
+  weekdayOpenTime   String? @db.VarChar(10)
+  weekdayCloseTime  String? @db.VarChar(10)
+  saturdayOpenTime  String? @db.VarChar(10)
+  saturdayCloseTime String? @db.VarChar(10)
+  holidayOpenTime   String? @db.VarChar(10)
+  holidayCloseTime  String? @db.VarChar(10)
+  seatCount         Int     @default(0)
+  bookCount         Int     @default(0)
+  serialCount       Int     @default(0) // 자료수(연속간행물)
+  nonBookCount      Int     @default(0) // 자료수(비도서)
+  loanableBooks     Int     @default(0) // 대출가능권수
+  loanableDays      Int     @default(0) // 대출가능일수
+  phoneNumber       String? @db.VarChar(50)
+  homepageUrl       String? @db.VarChar(500)
+  operatingOrg      String? @db.VarChar(200)
 
   // 추가 상세 필드
-  lotArea           String?  @db.VarChar(50)
-  buildingArea      String?  @db.VarChar(50)
-  dataDate          String?  @db.VarChar(20)
-  providerCode      String?  @db.VarChar(20)
-  providerName      String?  @db.VarChar(200)
+  lotArea      String? @db.VarChar(50)
+  buildingArea String? @db.VarChar(50)
+  dataDate     String? @db.VarChar(20)
+  providerCode String? @db.VarChar(20)
+  providerName String? @db.VarChar(200)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -560,56 +560,56 @@ model Library {
 
 // 전기차 충전소 테이블
 model EvCharger {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)          // statNm (충전소명)
-  address       String?  @db.VarChar(500)          // addr
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)        // lat
-  lng           Decimal? @db.Decimal(10, 7)        // lng
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)  // statId-chgerId
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200) // statNm (충전소명)
+  address     String?  @db.VarChar(500) // addr
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7) // lat
+  lng         Decimal? @db.Decimal(10, 7) // lng
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100) // statId-chgerId
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // EV 충전소 전용 필드
-  statId        String?  @db.VarChar(100)  // 충전소ID
-  chgerId       String?  @db.VarChar(50)   // 충전기ID
-  chgerType     String?  @db.VarChar(10)   // 충전기타입
-  addrDetail    String?  @db.VarChar(500)  // 상세주소
-  location      String?  @db.VarChar(500)  // 설치위치
-  useTime       String?  @db.VarChar(200)  // 이용가능시간
-  busiId        String?  @db.VarChar(50)   // 기관ID
-  bnm           String?  @db.VarChar(100)  // 기관명약칭
-  busiNm        String?  @db.VarChar(200)  // 운영기관명
-  busiCall      String?  @db.VarChar(50)   // 연락처
-  stat          String?  @db.VarChar(5)    // 충전기상태 (1~9)
-  statUpdDt     String?  @db.VarChar(20)   // 상태갱신일시
-  lastTsdt      String?  @db.VarChar(20)   // 최근충전시작일시
-  lastTedt      String?  @db.VarChar(20)   // 최근충전종료일시
-  nowTsdt       String?  @db.VarChar(20)   // 현재충전시작일시
-  powerType     String?  @db.VarChar(10)   // 전력유형
-  output        String?  @db.VarChar(20)   // 출력(kW)
-  method        String?  @db.VarChar(100)  // 충전방식
-  zcode         String?  @db.VarChar(10)   // 시도코드
-  zscode        String?  @db.VarChar(10)   // 시군구코드
-  kind          String?  @db.VarChar(10)   // 시설구분코드
-  kindDetail    String?  @db.VarChar(10)   // 시설구분상세코드
-  parkingFree   String?  @db.VarChar(1)    // 주차무료여부 (Y/N)
-  note          String?  @db.Text          // 안내
-  limitYn       String?  @db.VarChar(1)    // 이용제한여부 (Y/N)
-  limitDetail   String?  @db.VarChar(500)  // 이용제한상세
-  delYn         String?  @db.VarChar(1)    // 삭제여부 (Y/N)
-  delDetail     String?  @db.VarChar(500)  // 삭제상세
-  trafficYn     String?  @db.VarChar(1)    // 편의제공여부 (Y/N)
-  year          String?  @db.VarChar(4)    // 설치년도
-  floorNum      String?  @db.VarChar(50)   // 층수
-  floorType     String?  @db.VarChar(1)    // 층구분 (F=지상/B=지하)
-  maker         String?  @db.VarChar(100)  // 제조사
+  statId      String? @db.VarChar(100) // 충전소ID
+  chgerId     String? @db.VarChar(50) // 충전기ID
+  chgerType   String? @db.VarChar(10) // 충전기타입
+  addrDetail  String? @db.VarChar(500) // 상세주소
+  location    String? @db.VarChar(500) // 설치위치
+  useTime     String? @db.VarChar(200) // 이용가능시간
+  busiId      String? @db.VarChar(50) // 기관ID
+  bnm         String? @db.VarChar(100) // 기관명약칭
+  busiNm      String? @db.VarChar(200) // 운영기관명
+  busiCall    String? @db.VarChar(50) // 연락처
+  stat        String? @db.VarChar(5) // 충전기상태 (1~9)
+  statUpdDt   String? @db.VarChar(20) // 상태갱신일시
+  lastTsdt    String? @db.VarChar(20) // 최근충전시작일시
+  lastTedt    String? @db.VarChar(20) // 최근충전종료일시
+  nowTsdt     String? @db.VarChar(20) // 현재충전시작일시
+  powerType   String? @db.VarChar(10) // 전력유형
+  output      String? @db.VarChar(20) // 출력(kW)
+  method      String? @db.VarChar(100) // 충전방식
+  zcode       String? @db.VarChar(10) // 시도코드
+  zscode      String? @db.VarChar(10) // 시군구코드
+  kind        String? @db.VarChar(10) // 시설구분코드
+  kindDetail  String? @db.VarChar(10) // 시설구분상세코드
+  parkingFree String? @db.VarChar(1) // 주차무료여부 (Y/N)
+  note        String? @db.Text // 안내
+  limitYn     String? @db.VarChar(1) // 이용제한여부 (Y/N)
+  limitDetail String? @db.VarChar(500) // 이용제한상세
+  delYn       String? @db.VarChar(1) // 삭제여부 (Y/N)
+  delDetail   String? @db.VarChar(500) // 삭제상세
+  trafficYn   String? @db.VarChar(1) // 편의제공여부 (Y/N)
+  year        String? @db.VarChar(4) // 설치년도
+  floorNum    String? @db.VarChar(50) // 층수
+  floorType   String? @db.VarChar(1) // 층구분 (F=지상/B=지하)
+  maker       String? @db.VarChar(100) // 제조사
 
   @@index([city, district])
   @@index([lat, lng])
@@ -623,39 +623,39 @@ model EvCharger {
 
 // 체육시설 테이블
 model Sports {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)          // faci_nm
-  address       String?  @db.VarChar(500)          // faci_road_addr (도로명주소)
-  roadAddress   String?  @db.VarChar(500)          // faci_road_addr
-  lat           Decimal? @db.Decimal(10, 7)        // faci_lat
-  lng           Decimal? @db.Decimal(10, 7)        // faci_lot
-  city          String   @db.VarChar(50)           // addr_ctpv_nm (정규화)
-  district      String   @db.VarChar(50)           // addr_cpb_nm
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)  // MD5(faci_nm + faci_road_addr)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200) // faci_nm
+  address     String?  @db.VarChar(500) // faci_road_addr (도로명주소)
+  roadAddress String?  @db.VarChar(500) // faci_road_addr
+  lat         Decimal? @db.Decimal(10, 7) // faci_lat
+  lng         Decimal? @db.Decimal(10, 7) // faci_lot
+  city        String   @db.VarChar(50) // addr_ctpv_nm (정규화)
+  district    String   @db.VarChar(50) // addr_cpb_nm
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100) // MD5(faci_nm + faci_road_addr)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 체육시설 전용 필드
-  faciGbNm       String?  @db.VarChar(50)   // faci_gb_nm (시설구분: 공공/민간)
-  fcobNm         String?  @db.VarChar(100)  // fcob_nm (업종명: 축구장 등)
-  ftypeNm        String?  @db.VarChar(100)  // ftype_nm (시설유형명)
-  fmngCpNm       String?  @db.VarChar(100)  // fmng_cp_nm (소유주체시도명)
-  fmngCpbNm      String?  @db.VarChar(100)  // fmng_cpb_nm (소유주체시군구명)
+  faciGbNm       String?  @db.VarChar(50) // faci_gb_nm (시설구분: 공공/민간)
+  fcobNm         String?  @db.VarChar(100) // fcob_nm (업종명: 축구장 등)
+  ftypeNm        String?  @db.VarChar(100) // ftype_nm (시설유형명)
+  fmngCpNm       String?  @db.VarChar(100) // fmng_cp_nm (소유주체시도명)
+  fmngCpbNm      String?  @db.VarChar(100) // fmng_cpb_nm (소유주체시군구명)
   faciGfa        Decimal? @db.Decimal(15, 2) // faci_gfa (시설총면적)
-  standCptPsnCnt Int?                        // stand_cpt_psn_cnt (관람석수용인원수)
-  faciHomepage   String?  @db.VarChar(500)  // faci_homepage (홈페이지)
-  faciStatCd     String?  @db.VarChar(10)   // faci_stat_cd (시설상태코드: 00=정상)
-  addrCtpvNm     String?  @db.VarChar(50)   // addr_ctpv_nm (시도명)
-  addrCpbNm      String?  @db.VarChar(50)   // addr_cpb_nm (시군구명)
-  addrEmdNm      String?  @db.VarChar(100)  // addr_emd_nm (읍면동명)
-  nationYn       String?  @db.VarChar(1)    // nation_yn (국가시설Y/N)
-  fmngTypeGbNm   String?  @db.VarChar(100)  // fmng_type_gb_nm (관리유형구분)
-  delYn          String?  @db.VarChar(1)    // del_yn (삭제여부Y/N)
-  rowNum         Int?                       // row_num (행번호)
+  standCptPsnCnt Int? // stand_cpt_psn_cnt (관람석수용인원수)
+  faciHomepage   String?  @db.VarChar(500) // faci_homepage (홈페이지)
+  faciStatCd     String?  @db.VarChar(10) // faci_stat_cd (시설상태코드: 00=정상)
+  addrCtpvNm     String?  @db.VarChar(50) // addr_ctpv_nm (시도명)
+  addrCpbNm      String?  @db.VarChar(50) // addr_cpb_nm (시군구명)
+  addrEmdNm      String?  @db.VarChar(100) // addr_emd_nm (읍면동명)
+  nationYn       String?  @db.VarChar(1) // nation_yn (국가시설Y/N)
+  fmngTypeGbNm   String?  @db.VarChar(100) // fmng_type_gb_nm (관리유형구분)
+  delYn          String?  @db.VarChar(1) // del_yn (삭제여부Y/N)
+  rowNum         Int? // row_num (행번호)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -765,14 +765,14 @@ model Guide {
 // API: https://www.data.go.kr/data/15155080/openapi.do
 model WasteSchedule {
   id            Int      @id @default(autoincrement())
-  city          String   @db.VarChar(50)  // 시도명 (CTPV_NM)
-  district      String   @db.VarChar(50)  // 시군구명 (SGG_NM)
+  city          String   @db.VarChar(50) // 시도명 (CTPV_NM)
+  district      String   @db.VarChar(50) // 시군구명 (SGG_NM)
   targetRegion  String?  @db.Text // 관리구역대상지역명 (MNG_ZONE_TRGT_RGN_NM)
   emissionPlace String?  @db.VarChar(100) // 배출장소 (EMSN_PLC)
-  details       Json?                     // 기타 상세 정보 (배출요일, 시간 등)
+  details       Json? // 기타 상세 정보 (배출요일, 시간 등)
   sourceId      String   @db.VarChar(100) // 원본 데이터 ID
   sourceUrl     String?  @db.VarChar(500) // 데이터 출처
-  govCode       String?  @db.VarChar(20)  // 개방자치단체코드
+  govCode       String?  @db.VarChar(20) // 개방자치단체코드
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   syncedAt      DateTime @default(now())
@@ -783,33 +783,33 @@ model WasteSchedule {
 
 // 병원 테이블
 model Hospital {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 병원 전용 필드
-  phone          String?  @db.VarChar(50)
-  homepage       String?  @db.VarChar(500)
-  postNo         String?  @db.VarChar(20)
-  estbDd         String?  @db.VarChar(20)
-  ykiho          String?  @db.VarChar(100)
-  clCd           String?  @db.VarChar(20)
-  clCdNm         String?  @db.VarChar(100)
-  sidoCd         String?  @db.VarChar(20)
-  sgguCd         String?  @db.VarChar(20)
-  emdongNm       String?  @db.VarChar(100)
+  phone          String? @db.VarChar(50)
+  homepage       String? @db.VarChar(500)
+  postNo         String? @db.VarChar(20)
+  estbDd         String? @db.VarChar(20)
+  ykiho          String? @db.VarChar(100)
+  clCd           String? @db.VarChar(20)
+  clCdNm         String? @db.VarChar(100)
+  sidoCd         String? @db.VarChar(20)
+  sgguCd         String? @db.VarChar(20)
+  emdongNm       String? @db.VarChar(100)
   drTotCnt       Int?
   mdeptSdrCnt    Int?
   mdeptGdrCnt    Int?
@@ -824,32 +824,32 @@ model Hospital {
   cmdcIntnCnt    Int?
   cmdcResdntCnt  Int?
   pnursCnt       Int?
-  dataDate       String?  @db.VarChar(20)
+  dataDate       String? @db.VarChar(20)
 
   // 상세정보 (의료기관별상세정보서비스 15001699)
-  trmtMonStart   String?  @db.VarChar(10)
-  trmtMonEnd     String?  @db.VarChar(10)
-  trmtTueStart   String?  @db.VarChar(10)
-  trmtTueEnd     String?  @db.VarChar(10)
-  trmtWedStart   String?  @db.VarChar(10)
-  trmtWedEnd     String?  @db.VarChar(10)
-  trmtThuStart   String?  @db.VarChar(10)
-  trmtThuEnd     String?  @db.VarChar(10)
-  trmtFriStart   String?  @db.VarChar(10)
-  trmtFriEnd     String?  @db.VarChar(10)
-  trmtSatStart   String?  @db.VarChar(10)
-  trmtSatEnd     String?  @db.VarChar(10)
-  trmtSunStart   String?  @db.VarChar(10)
-  trmtSunEnd     String?  @db.VarChar(10)
-  lunchWeek      String?  @db.VarChar(200)
-  lunchSat       String?  @db.VarChar(200)
-  noTrmtSun      String?  @db.VarChar(200)
-  noTrmtHoli     String?  @db.VarChar(200)
+  trmtMonStart   String?   @db.VarChar(10)
+  trmtMonEnd     String?   @db.VarChar(10)
+  trmtTueStart   String?   @db.VarChar(10)
+  trmtTueEnd     String?   @db.VarChar(10)
+  trmtWedStart   String?   @db.VarChar(10)
+  trmtWedEnd     String?   @db.VarChar(10)
+  trmtThuStart   String?   @db.VarChar(10)
+  trmtThuEnd     String?   @db.VarChar(10)
+  trmtFriStart   String?   @db.VarChar(10)
+  trmtFriEnd     String?   @db.VarChar(10)
+  trmtSatStart   String?   @db.VarChar(10)
+  trmtSatEnd     String?   @db.VarChar(10)
+  trmtSunStart   String?   @db.VarChar(10)
+  trmtSunEnd     String?   @db.VarChar(10)
+  lunchWeek      String?   @db.VarChar(200)
+  lunchSat       String?   @db.VarChar(200)
+  noTrmtSun      String?   @db.VarChar(200)
+  noTrmtHoli     String?   @db.VarChar(200)
   parkQty        Int?
-  parkEtc        String?  @db.VarChar(500)
+  parkEtc        String?   @db.VarChar(500)
   detailSyncedAt DateTime?
 
-  departments    HospitalDepartment[]
+  departments HospitalDepartment[]
 
   @@index([city, district])
   @@index([lat, lng])
@@ -872,48 +872,48 @@ model HospitalDepartment {
 
 // 약국 테이블
 model Pharmacy {
-  id            String   @id @db.VarChar(50)
-  name          String   @db.VarChar(200)
-  address       String?  @db.VarChar(500)
-  roadAddress   String?  @db.VarChar(500)
-  lat           Decimal? @db.Decimal(10, 7)
-  lng           Decimal? @db.Decimal(10, 7)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  bjdCode       String?  @db.VarChar(5)
-  sourceId      String   @unique @db.VarChar(100)
-  sourceUrl     String?  @db.VarChar(500)
-  viewCount     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  syncedAt      DateTime @default(now())
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  address     String?  @db.VarChar(500)
+  roadAddress String?  @db.VarChar(500)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  bjdCode     String?  @db.VarChar(5)
+  sourceId    String   @unique @db.VarChar(100)
+  sourceUrl   String?  @db.VarChar(500)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now())
 
   // 약국 전용 필드
-  phone         String?  @db.VarChar(50)
-  dutyTel3      String?  @db.VarChar(50)
-  hpid          String   @db.VarChar(100)
-  postCdn1      String?  @db.VarChar(20)
-  postCdn2      String?  @db.VarChar(20)
-  dutyTime1s    String?  @db.VarChar(10)
-  dutyTime1c    String?  @db.VarChar(10)
-  dutyTime2s    String?  @db.VarChar(10)
-  dutyTime2c    String?  @db.VarChar(10)
-  dutyTime3s    String?  @db.VarChar(10)
-  dutyTime3c    String?  @db.VarChar(10)
-  dutyTime4s    String?  @db.VarChar(10)
-  dutyTime4c    String?  @db.VarChar(10)
-  dutyTime5s    String?  @db.VarChar(10)
-  dutyTime5c    String?  @db.VarChar(10)
-  dutyTime6s    String?  @db.VarChar(10)
-  dutyTime6c    String?  @db.VarChar(10)
-  dutyTime7s    String?  @db.VarChar(10)
-  dutyTime7c    String?  @db.VarChar(10)
-  dutyTime8s    String?  @db.VarChar(10)
-  dutyTime8c    String?  @db.VarChar(10)
-  dutyMapimg    String?  @db.Text
-  dutyInf       String?  @db.Text
-  dutyEtc       String?  @db.Text
-  dataDate      String?  @db.VarChar(20)
+  phone      String? @db.VarChar(50)
+  dutyTel3   String? @db.VarChar(50)
+  hpid       String  @db.VarChar(100)
+  postCdn1   String? @db.VarChar(20)
+  postCdn2   String? @db.VarChar(20)
+  dutyTime1s String? @db.VarChar(10)
+  dutyTime1c String? @db.VarChar(10)
+  dutyTime2s String? @db.VarChar(10)
+  dutyTime2c String? @db.VarChar(10)
+  dutyTime3s String? @db.VarChar(10)
+  dutyTime3c String? @db.VarChar(10)
+  dutyTime4s String? @db.VarChar(10)
+  dutyTime4c String? @db.VarChar(10)
+  dutyTime5s String? @db.VarChar(10)
+  dutyTime5c String? @db.VarChar(10)
+  dutyTime6s String? @db.VarChar(10)
+  dutyTime6c String? @db.VarChar(10)
+  dutyTime7s String? @db.VarChar(10)
+  dutyTime7c String? @db.VarChar(10)
+  dutyTime8s String? @db.VarChar(10)
+  dutyTime8c String? @db.VarChar(10)
+  dutyMapimg String? @db.Text
+  dutyInf    String? @db.Text
+  dutyEtc    String? @db.Text
+  dataDate   String? @db.VarChar(20)
 
   @@index([city, district])
   @@index([lat, lng])
@@ -928,34 +928,34 @@ model Pharmacy {
 // ============================================
 
 model AptSaleTransaction {
-  id               Int      @id @default(autoincrement())
-  city             String   @db.VarChar(50)
-  district         String   @db.VarChar(50)
-  bjdCode          String   @db.VarChar(10)
-  dongName         String   @db.VarChar(50)
-  buildingName     String   @db.VarChar(200)
-  aptDong          String?  @db.VarChar(50)
+  id               Int       @id @default(autoincrement())
+  city             String    @db.VarChar(50)
+  district         String    @db.VarChar(50)
+  bjdCode          String    @db.VarChar(10)
+  dongName         String    @db.VarChar(50)
+  buildingName     String    @db.VarChar(200)
+  aptDong          String?   @db.VarChar(50)
   buildYear        Int?
   floor            Int?
-  exclusiveArea    Decimal? @db.Decimal(10, 2)
-  jibun            String?  @db.VarChar(20)
-  roadName         String?  @db.VarChar(100)
-  lat              Decimal? @db.Decimal(10, 7)
-  lng              Decimal? @db.Decimal(10, 7)
+  exclusiveArea    Decimal?  @db.Decimal(10, 2)
+  jibun            String?   @db.VarChar(20)
+  roadName         String?   @db.VarChar(100)
+  lat              Decimal?  @db.Decimal(10, 7)
+  lng              Decimal?  @db.Decimal(10, 7)
   dealYear         Int
   dealMonth        Int
   dealDay          Int?
   dealAmount       BigInt
-  dealType         String?  @db.VarChar(20)
-  cancelDealDay    String?  @db.VarChar(10)
-  cancelDealType   String?  @db.VarChar(20)
-  buyerType        String?  @db.VarChar(10)
-  sellerType       String?  @db.VarChar(10)
-  registrationDate String?  @db.VarChar(20)
-  sourceId         String   @unique @db.VarChar(100)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  syncedAt         DateTime @default(now())
+  dealType         String?   @db.VarChar(20)
+  cancelDealDay    String?   @db.VarChar(10)
+  cancelDealType   String?   @db.VarChar(20)
+  buyerType        String?   @db.VarChar(10)
+  sellerType       String?   @db.VarChar(10)
+  registrationDate String?   @db.VarChar(20)
+  sourceId         String    @unique @db.VarChar(100)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  syncedAt         DateTime  @default(now())
   geocodedAt       DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
@@ -970,34 +970,34 @@ model AptSaleTransaction {
 }
 
 model VillaSaleTransaction {
-  id               Int      @id @default(autoincrement())
-  city             String   @db.VarChar(50)
-  district         String   @db.VarChar(50)
-  bjdCode          String   @db.VarChar(10)
-  dongName         String   @db.VarChar(50)
-  buildingName     String   @db.VarChar(200)
-  houseType        String?  @db.VarChar(20)
+  id               Int       @id @default(autoincrement())
+  city             String    @db.VarChar(50)
+  district         String    @db.VarChar(50)
+  bjdCode          String    @db.VarChar(10)
+  dongName         String    @db.VarChar(50)
+  buildingName     String    @db.VarChar(200)
+  houseType        String?   @db.VarChar(20)
   buildYear        Int?
   floor            Int?
-  exclusiveArea    Decimal? @db.Decimal(10, 2)
-  jibun            String?  @db.VarChar(20)
-  roadName         String?  @db.VarChar(100)
-  lat              Decimal? @db.Decimal(10, 7)
-  lng              Decimal? @db.Decimal(10, 7)
+  exclusiveArea    Decimal?  @db.Decimal(10, 2)
+  jibun            String?   @db.VarChar(20)
+  roadName         String?   @db.VarChar(100)
+  lat              Decimal?  @db.Decimal(10, 7)
+  lng              Decimal?  @db.Decimal(10, 7)
   dealYear         Int
   dealMonth        Int
   dealDay          Int?
   dealAmount       BigInt
-  dealType         String?  @db.VarChar(20)
-  cancelDealDay    String?  @db.VarChar(10)
-  cancelDealType   String?  @db.VarChar(20)
-  buyerType        String?  @db.VarChar(10)
-  sellerType       String?  @db.VarChar(10)
-  registrationDate String?  @db.VarChar(20)
-  sourceId         String   @unique @db.VarChar(100)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  syncedAt         DateTime @default(now())
+  dealType         String?   @db.VarChar(20)
+  cancelDealDay    String?   @db.VarChar(10)
+  cancelDealType   String?   @db.VarChar(20)
+  buyerType        String?   @db.VarChar(10)
+  sellerType       String?   @db.VarChar(10)
+  registrationDate String?   @db.VarChar(20)
+  sourceId         String    @unique @db.VarChar(100)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  syncedAt         DateTime  @default(now())
   geocodedAt       DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
@@ -1012,33 +1012,33 @@ model VillaSaleTransaction {
 }
 
 model OffitelSaleTransaction {
-  id               Int      @id @default(autoincrement())
-  city             String   @db.VarChar(50)
-  district         String   @db.VarChar(50)
-  bjdCode          String   @db.VarChar(10)
-  dongName         String   @db.VarChar(50)
-  buildingName     String   @db.VarChar(200)
-  buildYear        Int?
-  floor            Int?
-  exclusiveArea    Decimal? @db.Decimal(10, 2)
-  jibun            String?  @db.VarChar(20)
-  roadName         String?  @db.VarChar(100)
-  lat              Decimal? @db.Decimal(10, 7)
-  lng              Decimal? @db.Decimal(10, 7)
-  dealYear         Int
-  dealMonth        Int
-  dealDay          Int?
-  dealAmount       BigInt
-  dealType         String?  @db.VarChar(20)
-  cancelDealDay    String?  @db.VarChar(10)
-  cancelDealType   String?  @db.VarChar(20)
-  buyerType        String?  @db.VarChar(10)
-  sellerType       String?  @db.VarChar(10)
-  sourceId         String   @unique @db.VarChar(100)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  syncedAt         DateTime @default(now())
-  geocodedAt       DateTime?
+  id             Int       @id @default(autoincrement())
+  city           String    @db.VarChar(50)
+  district       String    @db.VarChar(50)
+  bjdCode        String    @db.VarChar(10)
+  dongName       String    @db.VarChar(50)
+  buildingName   String    @db.VarChar(200)
+  buildYear      Int?
+  floor          Int?
+  exclusiveArea  Decimal?  @db.Decimal(10, 2)
+  jibun          String?   @db.VarChar(20)
+  roadName       String?   @db.VarChar(100)
+  lat            Decimal?  @db.Decimal(10, 7)
+  lng            Decimal?  @db.Decimal(10, 7)
+  dealYear       Int
+  dealMonth      Int
+  dealDay        Int?
+  dealAmount     BigInt
+  dealType       String?   @db.VarChar(20)
+  cancelDealDay  String?   @db.VarChar(10)
+  cancelDealType String?   @db.VarChar(20)
+  buyerType      String?   @db.VarChar(10)
+  sellerType     String?   @db.VarChar(10)
+  sourceId       String    @unique @db.VarChar(100)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  syncedAt       DateTime  @default(now())
+  geocodedAt     DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, buildingName])
@@ -1056,34 +1056,34 @@ model OffitelSaleTransaction {
 // ============================================
 
 model AptRentTransaction {
-  id              Int      @id @default(autoincrement())
-  city            String   @db.VarChar(50)
-  district        String   @db.VarChar(50)
-  bjdCode         String   @db.VarChar(10)
-  dongName        String   @db.VarChar(50)
-  buildingName    String   @db.VarChar(200)
+  id              Int       @id @default(autoincrement())
+  city            String    @db.VarChar(50)
+  district        String    @db.VarChar(50)
+  bjdCode         String    @db.VarChar(10)
+  dongName        String    @db.VarChar(50)
+  buildingName    String    @db.VarChar(200)
   buildYear       Int?
   floor           Int?
-  exclusiveArea   Decimal? @db.Decimal(10, 2)
-  jibun           String?  @db.VarChar(20)
-  roadName        String?  @db.VarChar(100)
-  lat             Decimal? @db.Decimal(10, 7)
-  lng             Decimal? @db.Decimal(10, 7)
+  exclusiveArea   Decimal?  @db.Decimal(10, 2)
+  jibun           String?   @db.VarChar(20)
+  roadName        String?   @db.VarChar(100)
+  lat             Decimal?  @db.Decimal(10, 7)
+  lng             Decimal?  @db.Decimal(10, 7)
   dealYear        Int
   dealMonth       Int
   dealDay         Int?
-  rentType        String   @db.VarChar(10)
+  rentType        String    @db.VarChar(10)
   deposit         BigInt
   monthlyRent     Int?
-  contractTerm    String?  @db.VarChar(30)
-  contractType    String?  @db.VarChar(10)
+  contractTerm    String?   @db.VarChar(30)
+  contractType    String?   @db.VarChar(10)
   preDeposit      BigInt?
   preMonthlyRent  Int?
-  useRenewalRight String?  @db.VarChar(10)
-  sourceId        String   @unique @db.VarChar(100)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  syncedAt        DateTime @default(now())
+  useRenewalRight String?   @db.VarChar(10)
+  sourceId        String    @unique @db.VarChar(100)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  syncedAt        DateTime  @default(now())
   geocodedAt      DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
@@ -1099,35 +1099,35 @@ model AptRentTransaction {
 }
 
 model VillaRentTransaction {
-  id              Int      @id @default(autoincrement())
-  city            String   @db.VarChar(50)
-  district        String   @db.VarChar(50)
-  bjdCode         String   @db.VarChar(10)
-  dongName        String   @db.VarChar(50)
-  buildingName    String   @db.VarChar(200)
-  houseType       String?  @db.VarChar(20)
+  id              Int       @id @default(autoincrement())
+  city            String    @db.VarChar(50)
+  district        String    @db.VarChar(50)
+  bjdCode         String    @db.VarChar(10)
+  dongName        String    @db.VarChar(50)
+  buildingName    String    @db.VarChar(200)
+  houseType       String?   @db.VarChar(20)
   buildYear       Int?
   floor           Int?
-  exclusiveArea   Decimal? @db.Decimal(10, 2)
-  jibun           String?  @db.VarChar(20)
-  roadName        String?  @db.VarChar(100)
-  lat             Decimal? @db.Decimal(10, 7)
-  lng             Decimal? @db.Decimal(10, 7)
+  exclusiveArea   Decimal?  @db.Decimal(10, 2)
+  jibun           String?   @db.VarChar(20)
+  roadName        String?   @db.VarChar(100)
+  lat             Decimal?  @db.Decimal(10, 7)
+  lng             Decimal?  @db.Decimal(10, 7)
   dealYear        Int
   dealMonth       Int
   dealDay         Int?
-  rentType        String   @db.VarChar(10)
+  rentType        String    @db.VarChar(10)
   deposit         BigInt
   monthlyRent     Int?
-  contractTerm    String?  @db.VarChar(30)
-  contractType    String?  @db.VarChar(10)
+  contractTerm    String?   @db.VarChar(30)
+  contractType    String?   @db.VarChar(10)
   preDeposit      BigInt?
   preMonthlyRent  Int?
-  useRenewalRight String?  @db.VarChar(10)
-  sourceId        String   @unique @db.VarChar(100)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  syncedAt        DateTime @default(now())
+  useRenewalRight String?   @db.VarChar(10)
+  sourceId        String    @unique @db.VarChar(100)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  syncedAt        DateTime  @default(now())
   geocodedAt      DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
@@ -1143,34 +1143,34 @@ model VillaRentTransaction {
 }
 
 model OffitelRentTransaction {
-  id              Int      @id @default(autoincrement())
-  city            String   @db.VarChar(50)
-  district        String   @db.VarChar(50)
-  bjdCode         String   @db.VarChar(10)
-  dongName        String   @db.VarChar(50)
-  buildingName    String   @db.VarChar(200)
+  id              Int       @id @default(autoincrement())
+  city            String    @db.VarChar(50)
+  district        String    @db.VarChar(50)
+  bjdCode         String    @db.VarChar(10)
+  dongName        String    @db.VarChar(50)
+  buildingName    String    @db.VarChar(200)
   buildYear       Int?
   floor           Int?
-  exclusiveArea   Decimal? @db.Decimal(10, 2)
-  jibun           String?  @db.VarChar(20)
-  roadName        String?  @db.VarChar(100)
-  lat             Decimal? @db.Decimal(10, 7)
-  lng             Decimal? @db.Decimal(10, 7)
+  exclusiveArea   Decimal?  @db.Decimal(10, 2)
+  jibun           String?   @db.VarChar(20)
+  roadName        String?   @db.VarChar(100)
+  lat             Decimal?  @db.Decimal(10, 7)
+  lng             Decimal?  @db.Decimal(10, 7)
   dealYear        Int
   dealMonth       Int
   dealDay         Int?
-  rentType        String   @db.VarChar(10)
+  rentType        String    @db.VarChar(10)
   deposit         BigInt
   monthlyRent     Int?
-  contractTerm    String?  @db.VarChar(30)
-  contractType    String?  @db.VarChar(10)
+  contractTerm    String?   @db.VarChar(30)
+  contractType    String?   @db.VarChar(10)
   preDeposit      BigInt?
   preMonthlyRent  Int?
-  useRenewalRight String?  @db.VarChar(10)
-  sourceId        String   @unique @db.VarChar(100)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  syncedAt        DateTime @default(now())
+  useRenewalRight String?   @db.VarChar(10)
+  sourceId        String    @unique @db.VarChar(100)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  syncedAt        DateTime  @default(now())
   geocodedAt      DateTime?
 
   @@index([bjdCode, dealYear, dealMonth])
@@ -1214,52 +1214,52 @@ model RealEstateBuildingSummary {
 
 // 청약 분양정보
 model Subscription {
-  id                      Int       @id @default(autoincrement())
-  houseManageNo           String    @db.VarChar(20)
-  pblancNo                String    @db.VarChar(20)
-  sourceType              String    @default("APT") @db.VarChar(20)  // APT, OFFITEL, REMAINING, PRIVATE_RENT
-  houseName               String    @db.VarChar(200)
-  houseType               String    @db.VarChar(20)     // APT, 오피스텔
-  houseDetailType         String?   @db.VarChar(20)     // 민영, 국민
-  rentType                String?   @db.VarChar(20)     // 분양주택, 임대주택
-  publicRentType          String?   @db.VarChar(20)     // 영구임대|국민임대|장기전세|공공임대|행복주택|역세권청년주택|재개발임대
-  regionName              String    @db.VarChar(100)
-  supplyLocation          String?   @db.VarChar(500)
-  supplyZipCode           String?   @db.VarChar(10)
-  totalSupplyCount        Int?
-  announcementDate        DateTime?
-  receptionStartDate      DateTime?
-  receptionEndDate        DateTime?
-  specialStartDate        DateTime?
-  specialEndDate          DateTime?
-  rank1AreaStartDate      DateTime?
-  rank1AreaEndDate        DateTime?
-  rank1OtherStartDate     DateTime?
-  rank1OtherEndDate       DateTime?
-  rank2AreaStartDate      DateTime?
-  rank2AreaEndDate        DateTime?
-  rank2OtherStartDate     DateTime?
-  rank2OtherEndDate       DateTime?
-  winnerDate              DateTime?
-  contractStartDate       DateTime?
-  contractEndDate         DateTime?
-  moveInMonth             String?   @db.VarChar(10)
-  constructorName         String?   @db.VarChar(200)
-  developerName           String?   @db.VarChar(200)
-  homepage                String?   @db.VarChar(500)
-  pblancUrl               String?   @db.VarChar(500)
-  inquiryTel              String?   @db.VarChar(50)
-  status                  String    @db.VarChar(20)     // upcoming, ongoing, closed
-  lat                     Decimal?  @db.Decimal(10, 7)
-  lng                     Decimal?  @db.Decimal(10, 7)
-  geocodedAt              DateTime?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  id                  Int       @id @default(autoincrement())
+  houseManageNo       String    @db.VarChar(20)
+  pblancNo            String    @db.VarChar(20)
+  sourceType          String    @default("APT") @db.VarChar(20) // APT, OFFITEL, REMAINING, PRIVATE_RENT
+  houseName           String    @db.VarChar(200)
+  houseType           String    @db.VarChar(20) // APT, 오피스텔
+  houseDetailType     String?   @db.VarChar(20) // 민영, 국민
+  rentType            String?   @db.VarChar(20) // 분양주택, 임대주택
+  publicRentType      String?   @db.VarChar(20) // 영구임대|국민임대|장기전세|공공임대|행복주택|역세권청년주택|재개발임대
+  regionName          String    @db.VarChar(100)
+  supplyLocation      String?   @db.VarChar(500)
+  supplyZipCode       String?   @db.VarChar(10)
+  totalSupplyCount    Int?
+  announcementDate    DateTime?
+  receptionStartDate  DateTime?
+  receptionEndDate    DateTime?
+  specialStartDate    DateTime?
+  specialEndDate      DateTime?
+  rank1AreaStartDate  DateTime?
+  rank1AreaEndDate    DateTime?
+  rank1OtherStartDate DateTime?
+  rank1OtherEndDate   DateTime?
+  rank2AreaStartDate  DateTime?
+  rank2AreaEndDate    DateTime?
+  rank2OtherStartDate DateTime?
+  rank2OtherEndDate   DateTime?
+  winnerDate          DateTime?
+  contractStartDate   DateTime?
+  contractEndDate     DateTime?
+  moveInMonth         String?   @db.VarChar(10)
+  constructorName     String?   @db.VarChar(200)
+  developerName       String?   @db.VarChar(200)
+  homepage            String?   @db.VarChar(500)
+  pblancUrl           String?   @db.VarChar(500)
+  inquiryTel          String?   @db.VarChar(50)
+  status              String    @db.VarChar(20) // upcoming, ongoing, closed
+  lat                 Decimal?  @db.Decimal(10, 7)
+  lng                 Decimal?  @db.Decimal(10, 7)
+  geocodedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  unitTypes               SubscriptionUnitType[]
-  competitions            SubscriptionCompetition[]
-  scores                  SubscriptionScore[]
-  specialStatuses         SubscriptionSpecialStatus[]
+  unitTypes       SubscriptionUnitType[]
+  competitions    SubscriptionCompetition[]
+  scores          SubscriptionScore[]
+  specialStatuses SubscriptionSpecialStatus[]
 
   @@unique([houseManageNo, pblancNo, sourceType])
   @@index([sourceType, status])
@@ -1269,41 +1269,41 @@ model Subscription {
 }
 
 model SubscriptionUnitType {
-  id                Int          @id @default(autoincrement())
-  subscriptionId    Int
-  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  modelNo           String       @db.VarChar(10)
-  houseType         String?      @db.VarChar(30)
-  supplyArea        String?      @db.VarChar(20)
-  generalCount      Int?
-  specialCount      Int?
-  topAmount         Int?
-  newlywedsCount    Int?
-  multiChildCount   Int?
-  firstLifeCount    Int?
-  elderlyCount      Int?
-  institutionCount  Int?
-  youthCount        Int?
-  newbornCount      Int?
-  transferCount     Int?
-  etcCount          Int?
+  id               Int          @id @default(autoincrement())
+  subscriptionId   Int
+  subscription     Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  modelNo          String       @db.VarChar(10)
+  houseType        String?      @db.VarChar(30)
+  supplyArea       String?      @db.VarChar(20)
+  generalCount     Int?
+  specialCount     Int?
+  topAmount        Int?
+  newlywedsCount   Int?
+  multiChildCount  Int?
+  firstLifeCount   Int?
+  elderlyCount     Int?
+  institutionCount Int?
+  youthCount       Int?
+  newbornCount     Int?
+  transferCount    Int?
+  etcCount         Int?
 
   @@index([subscriptionId])
 }
 
 // 청약 경쟁률 (순위별/지역별)
 model SubscriptionCompetition {
-  id                Int          @id @default(autoincrement())
-  subscriptionId    Int
-  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  modelNo           String       @db.VarChar(10)
-  houseType         String?      @db.VarChar(30)
-  rank              Int                              // 1순위=1, 2순위=2
-  regionCode        String       @db.VarChar(5)      // 01=해당지역, 02=기타지역
-  regionName        String?      @db.VarChar(20)
-  supplyCount       Int?                             // 공급세대수
-  applicantCount    Int?                             // 접수자수
-  competitionRate   String?      @db.VarChar(30)     // 경쟁률 (문자열)
+  id              Int          @id @default(autoincrement())
+  subscriptionId  Int
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  modelNo         String       @db.VarChar(10)
+  houseType       String?      @db.VarChar(30)
+  rank            Int // 1순위=1, 2순위=2
+  regionCode      String       @db.VarChar(5) // 01=해당지역, 02=기타지역
+  regionName      String?      @db.VarChar(20)
+  supplyCount     Int? // 공급세대수
+  applicantCount  Int? // 접수자수
+  competitionRate String?      @db.VarChar(30) // 경쟁률 (문자열)
 
   @@unique([subscriptionId, modelNo, rank, regionCode])
   @@index([subscriptionId])
@@ -1311,16 +1311,16 @@ model SubscriptionCompetition {
 
 // 청약 당첨 가점
 model SubscriptionScore {
-  id                Int          @id @default(autoincrement())
-  subscriptionId    Int
-  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  modelNo           String       @db.VarChar(10)
-  houseType         String?      @db.VarChar(30)
-  regionCode        String       @db.VarChar(5)
-  regionName        String?      @db.VarChar(20)
-  minScore          String?      @db.VarChar(10)     // 최저가점 ("-" 가능)
-  maxScore          String?      @db.VarChar(10)     // 최고가점
-  avgScore          String?      @db.VarChar(10)     // 평균가점
+  id             Int          @id @default(autoincrement())
+  subscriptionId Int
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  modelNo        String       @db.VarChar(10)
+  houseType      String?      @db.VarChar(30)
+  regionCode     String       @db.VarChar(5)
+  regionName     String?      @db.VarChar(20)
+  minScore       String?      @db.VarChar(10) // 최저가점 ("-" 가능)
+  maxScore       String?      @db.VarChar(10) // 최고가점
+  avgScore       String?      @db.VarChar(10) // 평균가점
 
   @@unique([subscriptionId, modelNo, regionCode])
   @@index([subscriptionId])
@@ -1328,39 +1328,39 @@ model SubscriptionScore {
 
 // 특별공급 신청현황
 model SubscriptionSpecialStatus {
-  id                        Int          @id @default(autoincrement())
-  subscriptionId            Int
-  subscription              Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  houseType                 String?      @db.VarChar(30)
-  resultName                String?      @db.VarChar(50)   // 청약접수 종료 등
-  specialSupplyCount        Int?                           // 특별공급 세대수
+  id                       Int          @id @default(autoincrement())
+  subscriptionId           Int
+  subscription             Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  houseType                String?      @db.VarChar(30)
+  resultName               String?      @db.VarChar(50) // 청약접수 종료 등
+  specialSupplyCount       Int? // 특별공급 세대수
   // 유형별 공급세대수
-  newlywedsSupply           Int?
-  multiChildSupply          Int?
-  firstLifeSupply           Int?
-  elderlySupply             Int?
-  institutionSupply         Int?
-  youthSupply               Int?
-  newbornSupply             Int?
-  transferSupply            Int?
+  newlywedsSupply          Int?
+  multiChildSupply         Int?
+  firstLifeSupply          Int?
+  elderlySupply            Int?
+  institutionSupply        Int?
+  youthSupply              Int?
+  newbornSupply            Int?
+  transferSupply           Int?
   // 유형별 신청자수 (해당지역)
-  newlywedsAreaCount        Int?
-  multiChildAreaCount       Int?
-  firstLifeAreaCount        Int?
-  elderlyAreaCount          Int?
-  youthAreaCount            Int?
-  newbornAreaCount          Int?
+  newlywedsAreaCount       Int?
+  multiChildAreaCount      Int?
+  firstLifeAreaCount       Int?
+  elderlyAreaCount         Int?
+  youthAreaCount           Int?
+  newbornAreaCount         Int?
   // 유형별 신청자수 (기타지역)
-  newlywedsOtherCount       Int?
-  multiChildOtherCount      Int?
-  firstLifeOtherCount       Int?
-  elderlyOtherCount         Int?
-  youthOtherCount           Int?
-  newbornOtherCount         Int?
+  newlywedsOtherCount      Int?
+  multiChildOtherCount     Int?
+  firstLifeOtherCount      Int?
+  elderlyOtherCount        Int?
+  youthOtherCount          Int?
+  newbornOtherCount        Int?
   // 기관추천/이전기관
-  institutionDecisionCount  Int?
-  institutionPrepareCount   Int?
-  transferCount             Int?
+  institutionDecisionCount Int?
+  institutionPrepareCount  Int?
+  transferCount            Int?
 
   @@unique([subscriptionId, houseType])
   @@index([subscriptionId])
@@ -1370,24 +1370,128 @@ model SubscriptionSpecialStatus {
 // LH 공공임대 매물 (data.myhome.go.kr/rentalHouseList API)
 // 세대 단위 매물 데이터 — hsmpSn이 고유 식별자
 model PublicRentalComplex {
-  id              Int      @id @default(autoincrement())
-  complexCode     String   @unique @db.VarChar(20)    // hsmpSn (마이홈 일련번호)
-  complexName     String   @db.VarChar(300)            // 도로명 주소 (rnAdres)
-  city            String   @db.VarChar(50)             // 시/도명 (brtcNm)
-  district        String   @db.VarChar(50)             // 시/군/구명 (signguNm)
-  rentalType      String   @db.VarChar(30)             // 공급유형 (suplyTyNm: 매입임대/전세임대 등)
-  houseType       String?  @db.VarChar(30)             // 주택유형 (houseTyNm: 아파트/오피스텔 등)
-  householdCount  Int?                                  // 세대수 (hshldCo)
-  exclusiveArea   Decimal? @db.Decimal(10, 2)          // 전용면적㎡ (suplyPrvuseAr)
-  depositAmount   BigInt?                               // 보증금원 (bassRentGtn)
-  monthlyRent     Int?                                  // 월임대료원 (bassMtRntchrg)
-  landlordAgency  String   @default("LH") @db.VarChar(10)
-  sourceId        String   @unique @db.VarChar(30)     // "lh-{hsmpSn}"
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  complexCode    String   @unique @db.VarChar(20) // hsmpSn (마이홈 일련번호)
+  complexName    String   @db.VarChar(300) // 도로명 주소 (rnAdres)
+  city           String   @db.VarChar(50) // 시/도명 (brtcNm)
+  district       String   @db.VarChar(50) // 시/군/구명 (signguNm)
+  rentalType     String   @db.VarChar(30) // 공급유형 (suplyTyNm: 매입임대/전세임대 등)
+  houseType      String?  @db.VarChar(30) // 주택유형 (houseTyNm: 아파트/오피스텔 등)
+  householdCount Int? // 세대수 (hshldCo)
+  exclusiveArea  Decimal? @db.Decimal(10, 2) // 전용면적㎡ (suplyPrvuseAr)
+  depositAmount  BigInt? // 보증금원 (bassRentGtn)
+  monthlyRent    Int? // 월임대료원 (bassMtRntchrg)
+  landlordAgency String   @default("LH") @db.VarChar(10)
+  sourceId       String   @unique @db.VarChar(30) // "lh-{hsmpSn}"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([city, district])
   @@index([city, rentalType])
   @@index([rentalType])
   @@index([depositAmount])
+}
+
+// LH 공고 (분양/임대) — 청약홈과 별개로 LH 가 직접 공급하는 공고
+// 데이터 소스: B552555/lhLeaseNoticeInfo1, getLeaseNoticeDtlInfo1, getLeaseNoticeSplInfo1
+model LhAnnouncement {
+  id             Int    @id @default(autoincrement())
+  panId          String @db.VarChar(20)
+  ccrCnntSysDsCd String @db.VarChar(2)
+  uppAisTpCd     String @db.VarChar(2)
+  uppAisTpNm     String @db.VarChar(30)
+  aisTpCd        String @db.VarChar(2)
+  aisTpNm        String @db.VarChar(50)
+  splInfTpCd     String @db.VarChar(10)
+
+  panNm     String    @db.VarChar(500)
+  cnpNm     String    @db.VarChar(50)
+  panDt     DateTime?
+  clsgDt    DateTime?
+  panSs     String?   @db.VarChar(20)
+  dtlUrl    String?   @db.VarChar(500)
+  dtlUrlMob String?   @db.VarChar(500)
+
+  // dsSbd — 단지 정보
+  bzdtNm          String? @db.VarChar(200)
+  lctAraAdr       String? @db.VarChar(300)
+  lctAraDtlAdr    String? @db.VarChar(300)
+  minMaxRsdnDdoAr String? @db.VarChar(50)
+  sumTotHshCnt    Int?
+  mvinXpcYm       String? @db.VarChar(50)
+  htnFmlaDsCdNm   String? @db.VarChar(30)
+  edcFclCts       String? @db.Text
+  tffcFclCts      String? @db.Text
+  cvnFclCts       String? @db.Text
+  idtFclCts       String? @db.Text
+  splInfGudFcts   String? @db.Text
+
+  // dsSplScdl — 공급 일정
+  acpDttm          String? @db.VarChar(100)
+  pzwrAncDt        String? @db.VarChar(10)
+  pzwrPprSbmStDt   String? @db.VarChar(10)
+  pzwrPprSbmEdDt   String? @db.VarChar(10)
+  ctrtStDt         String? @db.VarChar(10)
+  ctrtEdDt         String? @db.VarChar(10)
+  hsSbscAcpTrgCdNm String? @db.VarChar(30)
+  splScdlGudFcts   String? @db.Text
+
+  // dsEtcInfo — 공고 본문/기타
+  panDtlCts String? @db.LongText
+  etcFcts   String? @db.Text
+
+  // dsCtrtPlc — 접수처
+  ctrtPlcAdr    String? @db.VarChar(300)
+  ctrtPlcDtlAdr String? @db.VarChar(300)
+  silOfcTlno    String? @db.VarChar(50)
+  silOfcGudFcts String? @db.Text
+
+  // 지오코딩
+  lat        Decimal?  @db.Decimal(10, 7)
+  lng        Decimal?  @db.Decimal(10, 7)
+  geocodedAt DateTime?
+
+  sourceId  String   @unique @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  supplies    LhAnnouncementSupply[]
+  attachments LhAnnouncementAttachment[]
+
+  @@unique([panId, ccrCnntSysDsCd])
+  @@index([uppAisTpCd, aisTpCd])
+  @@index([panSs, clsgDt])
+  @@index([cnpNm])
+  @@index([panDt])
+}
+
+// LH 공고 평형별 공급 정보 — dsList01(분양)/dsList02(일반임대)/dsList03(분납)/dsList04(기타임대)
+model LhAnnouncementSupply {
+  id             Int            @id @default(autoincrement())
+  announcementId Int
+  announcement   LhAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  listType       String         @db.VarChar(10) // "01" / "02" / "03" / "04"
+  htyNm          String?        @db.VarChar(30)
+  rsdnDdoAr      Decimal?       @db.Decimal(10, 4)
+  splAr          Decimal?       @db.Decimal(10, 4)
+  silHshCnt      Int?
+  totHshCnt      Int?
+  silAmt         BigInt? // dsList01 분양가 (원)
+  lsGmy          BigInt? // dsList02/04 임대보증금 (원)
+  mmRfe          Int? // dsList02/03/04 월임대료 (원)
+  elyDsuAmt      BigInt? // dsList03 초기분납금 (원)
+
+  @@index([announcementId])
+}
+
+// LH 공고 첨부 파일
+model LhAnnouncementAttachment {
+  id              Int            @id @default(autoincrement())
+  announcementId  Int
+  announcement    LhAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  ahflUrl         String         @db.VarChar(500)
+  slPanAhflDsCdNm String?        @db.VarChar(50)
+  cmnAhflNm       String         @db.VarChar(300)
+
+  @@index([announcementId])
 }
