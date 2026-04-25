@@ -289,6 +289,18 @@ describe('transformLhAnnouncement', () => {
     const bundle = transformLhAnnouncement(item, undefined, undefined);
     expect(bundle.announcement.cnpNm).toBe('서울특별시');
   });
+
+  it('uses AIS_TP_CD_NM when AIS_TP_NM missing (실제 LIST API 응답 형태)', () => {
+    const item = { ...baseListItem, AIS_TP_NM: undefined, AIS_TP_CD_NM: '공공임대' };
+    const bundle = transformLhAnnouncement(item, undefined, undefined);
+    expect(bundle.announcement.aisTpNm).toBe('공공임대');
+  });
+
+  it('aisTpNm 빈 문자열 fallback (양쪽 다 missing)', () => {
+    const item = { ...baseListItem, AIS_TP_NM: undefined, AIS_TP_CD_NM: undefined };
+    const bundle = transformLhAnnouncement(item, undefined, undefined);
+    expect(bundle.announcement.aisTpNm).toBe('');
+  });
 });
 
 describe('flattenLhResponse', () => {

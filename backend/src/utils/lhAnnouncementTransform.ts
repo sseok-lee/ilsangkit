@@ -7,7 +7,10 @@ export interface LhAnnouncementListItem {
   UPP_AIS_TP_CD: string;
   UPP_AIS_TP_NM: string;
   AIS_TP_CD: string;
-  AIS_TP_NM: string;
+  // 실제 LIST API 는 AIS_TP_CD_NM 키를 사용 (예: "공공임대").
+  // AIS_TP_NM 은 일부 응답에서 옴 — 양쪽 모두 fallback 으로 처리.
+  AIS_TP_NM?: string;
+  AIS_TP_CD_NM?: string;
   SPL_INF_TP_CD: string;
   PAN_NM: string;
   CNP_CD_NM?: string;
@@ -314,7 +317,7 @@ export function transformLhAnnouncement(
     uppAisTpCd: listItem.UPP_AIS_TP_CD,
     uppAisTpNm: listItem.UPP_AIS_TP_NM,
     aisTpCd: listItem.AIS_TP_CD,
-    aisTpNm: listItem.AIS_TP_NM,
+    aisTpNm: listItem.AIS_TP_NM ?? listItem.AIS_TP_CD_NM ?? '',
     splInfTpCd: listItem.SPL_INF_TP_CD,
 
     panNm: listItem.PAN_NM,
