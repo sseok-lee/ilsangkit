@@ -118,4 +118,25 @@ describe('real-estate/[realEstateType]/[city]/[district]/index.vue — district 
     await mountSuspended(m.default)
     expect(mockSetItemListSchema).toHaveBeenCalled()
   })
+
+  it('setBreadcrumbSchema가 5단계로 호출되어야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    await mountSuspended(m.default)
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs).toHaveLength(5)
+  })
+
+  it('breadcrumb item[2]이 아파트 유형 canonical URL을 가리켜야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    await mountSuspended(m.default)
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs[2].url).toBe('/real-estate/apt')
+  })
+
+  it('breadcrumb item[3]이 도시 허브 URL을 가리켜야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    await mountSuspended(m.default)
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs[3].url).toBe('/real-estate/apt-sale/seoul')
+  })
 })

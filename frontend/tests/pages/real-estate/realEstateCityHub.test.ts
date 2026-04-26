@@ -99,6 +99,12 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
     expect(crumbs[3].url).toContain('seoul')
   })
 
+  it('breadcrumb item[2] URL이 canonical /real-estate/apt를 가리켜야 한다 (redirect URL 아님)', async () => {
+    await mountPage()
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs[2].url).toBe('/real-estate/apt')
+  })
+
   it('setItemListSchema가 호출되어야 한다 (ItemList 구조화 데이터)', async () => {
     await mountPage()
     expect(mockSetItemListSchema).toHaveBeenCalled()
