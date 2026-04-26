@@ -59,9 +59,24 @@ function trackReviewSubmit(params: { facilityId: string; category: string }) {
   })
 }
 
+function trackCategoryPageView(params: { category: string }) {
+  track(ANALYTICS_EVENTS.CATEGORY_PAGE_VIEW, { category: params.category })
+}
+
+function trackRegionPageView(params: { city: string; district?: string }) {
+  track(ANALYTICS_EVENTS.REGION_PAGE_VIEW, { city: params.city, district: params.district })
+}
+
+function trackSearchNoResults(params: { keyword: string; category?: string }) {
+  track(ANALYTICS_EVENTS.SEARCH_NO_RESULTS, { search_term: params.keyword, category: params.category })
+}
+
 export function useAnalytics() {
   return {
     trackSearch,
+    trackSearchNoResults,
+    trackCategoryPageView,
+    trackRegionPageView,
     trackFacilityView,
     trackDirectionsClick,
     trackPhoneClick,
