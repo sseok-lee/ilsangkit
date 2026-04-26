@@ -17,9 +17,9 @@ describe('NAV_GROUPS', () => {
     expect(isLinkGroup(firstGroup)).toBe(true)
   })
 
-  it('부동산 그룹에 3개 링크가 있어야 한다', () => {
+  it('부동산 그룹에 4개 링크가 있어야 한다', () => {
     const firstGroup = NAV_GROUPS[0] as LinkGroup
-    expect(firstGroup.links).toHaveLength(3)
+    expect(firstGroup.links).toHaveLength(4)
   })
 
   it('부동산 그룹의 제목이 "부동산"이어야 한다', () => {
@@ -31,6 +31,7 @@ describe('NAV_GROUPS', () => {
     const firstGroup = NAV_GROUPS[0] as LinkGroup
     const links = firstGroup.links.map(({ to, label }) => ({ to, label }))
     const expectedLinks = [
+      { to: '/real-estate', label: '부동산 전체' },
       { to: '/real-estate/apt', label: '아파트' },
       { to: '/real-estate/villa', label: '빌라' },
       { to: '/real-estate/offitel', label: '오피스텔' },
@@ -48,6 +49,15 @@ describe('NAV_GROUPS', () => {
       { to: '/subscription/rent', label: '임대 청약' },
       { to: '/lh-rental', label: 'LH 임대' },
     ])
+  })
+
+  it('청약·임대 그룹 링크는 청약홈·LH 두 섹션으로 나뉜다', () => {
+    const subscriptionGroup = NAV_GROUPS[1] as LinkGroup
+    const links = subscriptionGroup.links
+    expect(links[0].section).toBe('청약홈')
+    expect(links[1].section).toBe('청약홈')
+    expect(links[2].section).toBe('청약홈')
+    expect(links[3].section).toBe('LH')
   })
 })
 

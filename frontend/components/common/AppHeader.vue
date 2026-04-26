@@ -74,19 +74,24 @@
                 {{ CATEGORY_META[catId].shortLabel }}
               </NuxtLink>
             </template>
-            <!-- 부동산 링크 그룹 -->
+            <!-- 부동산/청약 링크 그룹 -->
             <template v-else>
-              <NuxtLink
-                v-for="link in group.links"
-                :key="link.to"
-                :to="link.to"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
-                @click="closeDropdown"
-              >
-                <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-                <span v-else class="material-symbols-outlined text-[16px] text-primary">{{ link.icon }}</span>
-                {{ link.label }}
-              </NuxtLink>
+              <template v-for="(link, idx) in group.links" :key="link.to">
+                <div
+                  v-if="idx > 0 && link.section && link.section !== group.links[idx - 1].section"
+                  data-testid="nav-section-divider"
+                  class="h-px bg-slate-100 my-1 mx-2"
+                />
+                <NuxtLink
+                  :to="link.to"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
+                  @click="closeDropdown"
+                >
+                  <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
+                  <span v-else class="material-symbols-outlined text-[16px] text-primary">{{ link.icon }}</span>
+                  {{ link.label }}
+                </NuxtLink>
+              </template>
             </template>
           </div>
         </Transition>
@@ -152,36 +157,6 @@
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">
-        <NuxtLink
-          to="/"
-          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
-          @click="closeMobileMenu"
-        >
-          홈
-        </NuxtLink>
-        <NuxtLink
-          to="/search"
-          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
-          @click="closeMobileMenu"
-        >
-          검색
-        </NuxtLink>
-        <NuxtLink
-          to="/guide"
-          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
-          @click="closeMobileMenu"
-        >
-          가이드
-        </NuxtLink>
-        <NuxtLink
-          to="/about"
-          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
-          @click="closeMobileMenu"
-        >
-          소개
-        </NuxtLink>
-        <div class="h-px bg-slate-200 my-2"></div>
-
         <!-- Nav Groups (시설 카테고리 + 부동산 링크) -->
         <div v-for="group in NAV_GROUPS" :key="group.title" class="mb-1">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -217,6 +192,35 @@
           </template>
         </div>
 
+        <div class="h-px bg-slate-200 my-2"></div>
+        <NuxtLink
+          to="/"
+          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          @click="closeMobileMenu"
+        >
+          홈
+        </NuxtLink>
+        <NuxtLink
+          to="/search"
+          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          @click="closeMobileMenu"
+        >
+          검색
+        </NuxtLink>
+        <NuxtLink
+          to="/guide"
+          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          @click="closeMobileMenu"
+        >
+          가이드
+        </NuxtLink>
+        <NuxtLink
+          to="/about"
+          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          @click="closeMobileMenu"
+        >
+          소개
+        </NuxtLink>
         <div class="h-px bg-slate-200 my-2"></div>
         <div class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2">
           <NuxtLink
