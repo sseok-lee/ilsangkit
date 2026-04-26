@@ -54,7 +54,7 @@ export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
     label: '공공임대',
     icon: 'home',
     iconImg: 'rent',
-    description: '공공주택 임대 청약 일정과 정보를 확인하세요.',
+    description: '공공주택 임대 청약 일정과 정보를 확인하세요. LH·SH·GH 등 공공기관이 공급하는 임대주택으로 시세보다 저렴하게 거주할 수 있습니다.',
     sourceType: 'APT',
     rentType: '임대주택',
     group: 'apply',
@@ -64,7 +64,7 @@ export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
     label: '민간임대',
     icon: 'bungalow',
     iconImg: 'rent',
-    description: '공공지원 민간임대 청약 일정과 정보를 확인하세요.',
+    description: '공공지원 민간임대 청약 일정과 정보를 확인하세요. 민간 건설사가 공급하지만 임대 보증금 보호와 전월세 상한이 적용됩니다.',
     sourceType: 'PRIVATE_RENT',
     group: 'apply',
     dataSource: 'applyhome',
@@ -76,14 +76,14 @@ export const LH_RENTAL_TYPES: Record<LhRentalTypeKey, LhRentalTypeMeta> = {
     label: 'LH 매입임대',
     icon: 'apartment',
     iconImg: 'rent',
-    description: 'LH 가 기존 주택을 매입해 시세보다 저렴하게 재임대하는 매입임대 매물입니다.',
+    description: 'LH가 기존 주택을 매입해 시세보다 저렴하게 재임대하는 매입임대 매물입니다. 청약통장 없이 소득·자산 기준 충족 시 수시 신청 가능합니다.',
     rentalTypeCode: '매입임대',
   },
   charter: {
     label: 'LH 전세임대',
     icon: 'key',
     iconImg: 'rent',
-    description: 'LH 가 전세보증금을 대신 지원하는 전세임대 매물입니다. 월세 부담이 없습니다.',
+    description: 'LH가 전세보증금을 대신 지원하는 전세임대 매물입니다. 월세 부담 없이 기존 주택에 거주할 수 있으며 소득 기준 충족 시 신청 가능합니다.',
     rentalTypeCode: '전세임대',
   },
 }
@@ -98,9 +98,12 @@ export const RENT_GROUP_META: Record<RentGroup, RentGroupMeta> = {
   apply: {
     group: 'apply',
     heading: '청약홈 임대 청약',
-    description: '청약홈에서 접수하는 공공·민간 임대 청약입니다. 청약통장이 필요할 수 있습니다.',
+    description: '청약홈에서 접수하는 공공·민간 임대 청약입니다. 청약통장이 필요할 수 있으며 소득·자산 요건에 따라 신청 가능합니다.',
   },
 }
+
+export const SUBSCRIPTION_HUB_DESCRIPTION =
+  '아파트·오피스텔 분양, 무순위·잔여세대, 공공·민간 임대까지 모든 청약 일정과 정보를 한눈에 확인하세요. 청약 접수 상태와 공급 규모를 비교해 내 조건에 맞는 청약을 빠르게 찾아보세요.'
 
 export function rentTypesByGroup(group: RentGroup): Array<[string, SubscriptionTypeMeta]> {
   return Object.entries(RENT_TYPES).filter(([, meta]) => meta.group === group)

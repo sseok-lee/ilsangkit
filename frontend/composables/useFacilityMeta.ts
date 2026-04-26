@@ -1,6 +1,6 @@
 import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails, ParkDetails, SchoolDetails, MarketDetails, ChildcareDetails, EvChargerDetails, SportsDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION } from '~/utils/seoConstants'
 
 /** 받침 유무에 따라 조사 선택 (은/는, 이/가, 을/를 등) */
 function getJosa(word: string, josaWithBatchim: string, josaWithout: string): string {
@@ -259,8 +259,8 @@ export function useFacilityMeta() {
     const categoryName = CATEGORY_META[category]?.label || category
     const intent = CATEGORY_SEO_INTENT[category] || '정보'
 
-    const title = `${categoryName} | ${intent}`
-    const description = `전국 ${categoryName}의 ${intent} 정보를 한눈에 확인하세요.`
+    const title = CATEGORY_SEO_TITLE[category] ?? `${categoryName} | ${intent}`
+    const description = CATEGORY_SEO_DESCRIPTION[category] ?? `전국 ${categoryName}의 ${intent} 정보를 한눈에 확인하세요.`
 
     setMeta({
       title,

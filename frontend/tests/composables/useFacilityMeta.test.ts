@@ -10,6 +10,7 @@ vi.stubGlobal('useHead', mockUseHead)
 // Import after mocking
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { FacilityDetail } from '~/types/facility'
+import { CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION } from '~/utils/seoConstants'
 
 describe('useFacilityMeta', () => {
   beforeEach(() => {
@@ -274,6 +275,24 @@ describe('useFacilityMeta', () => {
 
       const call = mockUseSeoMeta.mock.calls[0][0]
       expect(call.title.length).toBeLessThanOrEqual(60)
+    })
+
+    it('hospital 타이틀이 CATEGORY_SEO_TITLE 값을 사용한다', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+
+      setCategoryMeta('hospital')
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toContain(CATEGORY_SEO_TITLE['hospital'])
+    })
+
+    it('pharmacy 디스크립션이 CATEGORY_SEO_DESCRIPTION 값을 사용한다', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+
+      setCategoryMeta('pharmacy')
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.description).toBe(CATEGORY_SEO_DESCRIPTION['pharmacy'])
     })
   })
 

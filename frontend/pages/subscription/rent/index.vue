@@ -43,7 +43,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 
 const groups: RentGroup[] = ['apply']
 
-const title = '임대 청약 일정 | 일상킷'
+const title = '임대 청약 일정 - 공공임대·LH 임대 청약 정보 | 일상킷'
 const description = '청약통장으로 접수하는 청약홈 임대청약(공공/민간)과 LH 분양·임대 공고를 한 곳에서 비교하세요.'
 const canonicalUrl = `${SITE_URL}/subscription/rent`
 

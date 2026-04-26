@@ -23,7 +23,7 @@ Allow: /
 
 # AI 훈련 크롤러 — 차단 (훈련 데이터 수집 방지)
 User-agent: Google-Extended
-Disallow: /
+Allow: /
 
 User-agent: CCBot
 Disallow: /
