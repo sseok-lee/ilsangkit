@@ -39,11 +39,12 @@ export const GUIDE_CATEGORIES = [
   'apt-sale',
   'apt-rent',
   'subscription',
+  'lh-rental',
 ] as const;
 
 export type GuideCategory = (typeof GUIDE_CATEGORIES)[number];
 
-const REAL_ESTATE_LIKE: readonly GuideCategory[] = ['apt-sale', 'apt-rent', 'subscription'];
+const REAL_ESTATE_LIKE: readonly GuideCategory[] = ['apt-sale', 'apt-rent', 'subscription', 'lh-rental'];
 
 const CATEGORY_LABELS: Record<GuideCategory, string> = {
   toilet: '공공화장실',
@@ -64,6 +65,7 @@ const CATEGORY_LABELS: Record<GuideCategory, string> = {
   'apt-sale': '아파트 매매',
   'apt-rent': '아파트 전월세',
   subscription: '아파트 청약',
+  'lh-rental': 'LH 임대주택',
 };
 
 export function isGuideCategory(v: string): v is GuideCategory {
@@ -662,18 +664,21 @@ const RELATED: Record<GuideCategory, GuideCategory[]> = {
   'apt-sale': ['apt-rent', 'subscription'],
   'apt-rent': ['apt-sale', 'subscription'],
   subscription: ['apt-sale', 'apt-rent'],
+  'lh-rental': ['subscription', 'apt-rent'],
 };
 
 function getHubUrl(c: GuideCategory): string {
   if (c === 'apt-sale') return '/real-estate/apt?tab=sale';
   if (c === 'apt-rent') return '/real-estate/apt?tab=rent';
   if (c === 'subscription') return '/real-estate/subscription';
+  if (c === 'lh-rental') return '/lh-rental';
   return `/${c}`;
 }
 
 function getCta(c: GuideCategory): string {
   const label = CATEGORY_LABELS[c];
   if (c === 'subscription') return `일상킷에서 ${label} 정보를 바로 확인해보세요!`;
+  if (c === 'lh-rental') return `일상킷에서 ${label} 매물을 바로 확인해보세요!`;
   if (isRealEstateLike(c)) return `일상킷에서 ${label} 실거래가를 바로 확인해보세요!`;
   return `일상킷에서 내 주변 ${label} 정보를 바로 확인해보세요!`;
 }
