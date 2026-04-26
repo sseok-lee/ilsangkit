@@ -221,7 +221,9 @@ const heroStats = computed(() => {
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: `${cityName.value} ${districtName.value}`, current: true },
+  { label: typeLabel.value, href: `/real-estate/${realEstateType.value}`, current: false },
+  { label: cityName.value, href: `/real-estate/${realEstateType.value}/${citySlug.value}`, current: false },
+  { label: districtName.value, current: true },
 ])
 
 const tabOptions = computed(() => [
