@@ -1379,12 +1379,21 @@ model PublicRentalComplex {
   houseType      String?  @db.VarChar(30) // 주택유형 (houseTyNm: 아파트/오피스텔 등)
   householdCount Int? // 세대수 (hshldCo)
   exclusiveArea  Decimal? @db.Decimal(10, 2) // 전용면적㎡ (suplyPrvuseAr)
-  depositAmount  BigInt? // 보증금원 (bassRentGtn)
-  monthlyRent    Int? // 월임대료원 (bassMtRntchrg)
-  landlordAgency String   @default("LH") @db.VarChar(10)
-  sourceId       String   @unique @db.VarChar(30) // "lh-{hsmpSn}"
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  depositAmount     BigInt?  // 보증금원 (bassRentGtn)
+  monthlyRent       Int?     // 월임대료원 (bassMtRntchrg)
+  conversionDeposit BigInt?  // 전환보증금원 (bassCnvrsGtnLmt)
+  landlordAgency    String   @default("LH") @db.VarChar(100) // insttNm
+  pnu               String?  @db.VarChar(20)  // 필지번호 (pnu)
+  completionDate    String?  @db.VarChar(10)  // 준공일자 (competDe, YYYYMMDD)
+  commonArea        Decimal? @db.Decimal(10, 4) // 공용면적㎡ (suplyCmnuseAr)
+  heatingMethod     String?  @db.VarChar(50)  // 난방방식 (heatMthdDetailNm)
+  buildingStyle     String?  @db.VarChar(50)  // 건물형태 (buldStleNm)
+  hasElevator       String?  @db.VarChar(50)  // 승강기설치여부 (elvtrInstlAtNm)
+  parkingCount      Int?                       // 주차수 (parkngCo)
+  complexNameKor    String?  @db.VarChar(300) // 단지명 (hsmpNm)
+  sourceId          String   @unique @db.VarChar(30) // "lh-{hsmpSn}"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([city, district])
   @@index([city, rentalType])

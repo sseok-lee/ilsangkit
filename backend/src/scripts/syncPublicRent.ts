@@ -44,20 +44,29 @@ async function fetchWithRetry(url: string): Promise<Response> {
 
 export interface MyhomeRentalItem {
   hsmpSn: number;
-  insttNm: string;
+  insttNm?: string;
   brtcCode: string;
   brtcNm: string;
   signguCode: string;
   signguNm: string;
-  hsmpNm: string;
+  hsmpNm?: string;
   rnAdres: string;
-  hshldCo: number;
+  hshldCo?: number;
   suplyTyNm: string;
   styleNm?: string;
   suplyPrvuseAr?: number;
   houseTyNm?: string;
   bassRentGtn?: number;
   bassMtRntchrg?: number;
+  // 신규 필드 (API #15058476)
+  pnu?: string;
+  competDe?: string;
+  suplyCmnuseAr?: number;
+  heatMthdDetailNm?: string;
+  buldStleNm?: string;
+  elvtrInstlAtNm?: string;
+  parkngCo?: number;
+  bassCnvrsGtnLmt?: number;
 }
 
 async function fetchRegionPage(
@@ -129,24 +138,38 @@ export function transformMyhomeItem(item: MyhomeRentalItem) {
   // API가 빈 값을 {} 로 반환하는 경우가 있으므로 타입 체크 필수
   const toNumber = (v: unknown): number | null =>
     typeof v === 'number' && isFinite(v) ? v : null;
+  const toStr = (v: unknown): string | null =>
+    typeof v === 'string' && v.length > 0 ? v : null;
 
   const deposit = toNumber(item.bassRentGtn);
   const monthly = toNumber(item.bassMtRntchrg);
   const area = toNumber(item.suplyPrvuseAr);
   const household = toNumber(item.hshldCo);
+  const convDeposit = toNumber(item.bassCnvrsGtnLmt);
+  const commonArea = toNumber(item.suplyCmnuseAr);
+  const parking = toNumber(item.parkngCo);
 
   return {
     complexCode: String(item.hsmpSn),
-    complexName: (typeof item.rnAdres === 'string' && item.rnAdres) ? item.rnAdres : item.hsmpNm,
+    complexName: (typeof item.rnAdres === 'string' && item.rnAdres) ? item.rnAdres : (item.hsmpNm ?? ''),
     city: item.brtcNm,
     district: item.signguNm,
     rentalType: item.suplyTyNm,
-    houseType: (typeof item.houseTyNm === 'string' && item.houseTyNm) ? item.houseTyNm : null,
+    houseType: toStr(item.houseTyNm),
     householdCount: household,
     exclusiveArea: area,
     depositAmount: deposit !== null ? BigInt(deposit) : null,
     monthlyRent: monthly,
-    landlordAgency: 'LH',
+    conversionDeposit: convDeposit !== null ? BigInt(convDeposit) : null,
+    landlordAgency: toStr(item.insttNm) ?? 'LH',
+    pnu: toStr(item.pnu),
+    completionDate: toStr(item.competDe),
+    commonArea,
+    heatingMethod: toStr(item.heatMthdDetailNm),
+    buildingStyle: toStr(item.buldStleNm),
+    hasElevator: toStr(item.elvtrInstlAtNm),
+    parkingCount: parking !== null ? Math.round(parking) : null,
+    complexNameKor: toStr(item.hsmpNm),
     sourceId: `lh-${item.hsmpSn}`,
   };
 }
@@ -195,6 +218,16 @@ async function syncPublicRent(): Promise<SyncStats> {
               exclusiveArea: item.exclusiveArea,
               depositAmount: item.depositAmount,
               monthlyRent: item.monthlyRent,
+              conversionDeposit: item.conversionDeposit,
+              landlordAgency: item.landlordAgency,
+              pnu: item.pnu,
+              completionDate: item.completionDate,
+              commonArea: item.commonArea,
+              heatingMethod: item.heatingMethod,
+              buildingStyle: item.buildingStyle,
+              hasElevator: item.hasElevator,
+              parkingCount: item.parkingCount,
+              complexNameKor: item.complexNameKor,
             },
           });
           if (existing) updateCount++; else newCount++;
