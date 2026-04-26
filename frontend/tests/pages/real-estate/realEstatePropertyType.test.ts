@@ -107,4 +107,24 @@ describe('real-estate/[propertyType]/index.vue — property type list page', () 
     await mountSuspended(m.default)
     expect(mockSetItemListSchema).toHaveBeenCalled()
   })
+
+  it('시/도별 허브 링크가 17개 도시 모두 렌더링되어야 한다', async () => {
+    const m = await import('~/pages/real-estate/[propertyType]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const cityHubLinks = wrapper.findAll('a').filter((a) => {
+      const href = a.attributes('href') ?? ''
+      return href.startsWith('/real-estate/apt-sale/') || href.startsWith('/real-estate/apt-rent/')
+    })
+    expect(cityHubLinks.length).toBeGreaterThanOrEqual(17)
+  })
+
+  it('서울 도시 허브 링크가 올바른 URL을 가져야 한다', async () => {
+    const m = await import('~/pages/real-estate/[propertyType]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const seoulLink = wrapper.findAll('a').find(
+      (a) => a.attributes('href') === '/real-estate/apt-sale/seoul',
+    )
+    expect(seoulLink).toBeDefined()
+    expect(seoulLink!.text()).toBe('서울')
+  })
 })

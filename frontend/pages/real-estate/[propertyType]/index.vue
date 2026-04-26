@@ -121,6 +121,21 @@
     <!-- Ad: FAQ 전 -->
     <AdBanner />
 
+    <!-- 시/도별 허브 링크 -->
+    <SectionBlock
+      :heading="`지역별 ${propertyMeta?.label ?? ''} 단지 바로가기`"
+      subtext="시/도를 선택하면 구/군 단지 목록을 바로 확인할 수 있습니다."
+    >
+      <div class="flex flex-wrap gap-2">
+        <NuxtLink
+          v-for="city in cityHubLinks"
+          :key="city.name"
+          :to="city.url"
+          class="px-4 py-2 bg-white border border-line rounded-full text-sm font-medium text-slate-700 hover:border-primary hover:bg-primary/5 transition-colors"
+        >{{ city.name }}</NuxtLink>
+      </div>
+    </SectionBlock>
+
     <!-- FAQ -->
     <SectionBlock v-if="faqs.length > 0" heading="자주 묻는 질문">
       <div class="space-y-1">
@@ -150,6 +165,7 @@ import { ref, computed, watch } from 'vue'
 import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
+import { CITY_SLUGS } from '~/shared/regionSlugs'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
@@ -389,6 +405,13 @@ const heroStats = computed(() => {
   stats.push({ label: '함께 보기', value: '지역 생활 인프라' })
   return stats
 })
+
+const cityHubLinks = computed(() =>
+  Object.entries(CITY_SLUGS).map(([cityName, citySlug]) => ({
+    name: cityName,
+    url: `/real-estate/${apiSlug.value}/${citySlug}`,
+  })),
+)
 
 const topFacilityCategories = computed(() => {
   if (!facilityStats.value) return {}
