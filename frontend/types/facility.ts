@@ -470,7 +470,7 @@ export interface CategoryGroup {
 export interface LinkGroup {
   title: string
   icon: string
-  links: Array<{ to: string; label: string; icon: string; iconImg?: string }>
+  links: Array<{ to: string; label: string; icon: string; iconImg?: string; section?: string }>
 }
 
 // 네비게이션 그룹 = 기존 카테고리 그룹 | 링크 그룹
@@ -509,6 +509,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     title: '부동산',
     icon: 'apartment',
     links: [
+      { to: '/real-estate', label: '부동산 전체', icon: 'apartment', iconImg: 'apt' },
       { to: '/real-estate/apt', label: '아파트', icon: 'apartment', iconImg: 'apt' },
       { to: '/real-estate/villa', label: '빌라', icon: 'holiday_village', iconImg: 'villa' },
       { to: '/real-estate/offitel', label: '오피스텔', icon: 'business', iconImg: 'offitel' },
@@ -518,10 +519,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     title: '청약·임대',
     icon: 'calendar_month',
     links: [
-      { to: '/subscription', label: '청약 전체', icon: 'calendar_month', iconImg: 'subscription' },
-      { to: '/subscription/sale', label: '분양', icon: 'sell', iconImg: 'sale' },
-      { to: '/subscription/rent', label: '임대 청약', icon: 'key', iconImg: 'rent' },
-      { to: '/lh-rental', label: 'LH 임대', icon: 'home', iconImg: 'rent' },
+      { to: '/subscription', label: '청약 전체', icon: 'calendar_month', iconImg: 'subscription', section: '청약홈' },
+      { to: '/subscription/sale', label: '분양', icon: 'sell', iconImg: 'sale', section: '청약홈' },
+      { to: '/subscription/rent', label: '임대 청약', icon: 'key', iconImg: 'rent', section: '청약홈' },
+      { to: '/lh-rental', label: 'LH 임대', icon: 'home', iconImg: 'rent', section: 'LH' },
     ],
   },
   ...CATEGORY_GROUPS,

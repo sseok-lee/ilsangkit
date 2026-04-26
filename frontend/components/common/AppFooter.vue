@@ -2,7 +2,25 @@
   <footer class="bg-slate-50 border-t border-slate-200 py-6 md:py-8">
     <div class="container mx-auto px-4">
       <div class="mb-4 md:mb-6 flex flex-wrap justify-center gap-2 md:gap-4" data-testid="footer-links">
-        <nav class="contents" aria-label="푸터 하단 네비게이션">
+        <nav class="contents" aria-label="푸터 콘텐츠 네비게이션">
+          <NuxtLink
+            to="/real-estate"
+            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
+          >
+            부동산
+          </NuxtLink>
+          <NuxtLink
+            to="/subscription"
+            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
+          >
+            청약
+          </NuxtLink>
+          <NuxtLink
+            to="/lh-rental"
+            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
+          >
+            LH 임대
+          </NuxtLink>
           <NuxtLink
             to="/about"
             class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"

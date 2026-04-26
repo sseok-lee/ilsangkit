@@ -84,7 +84,7 @@ describe('AppHeader', () => {
       expect(hrefs).toContain('/toilet')
     })
 
-    it('should show 3 real estate links in navigation', async () => {
+    it('should show 4 real estate links including hub in navigation', async () => {
       const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
       // 부동산 그룹 (첫 번째, index 0)
       await groupButtons[0].trigger('mouseenter')
@@ -92,11 +92,19 @@ describe('AppHeader', () => {
       expect(dropdown.exists()).toBe(true)
       const links = dropdown.findAll('a')
       const hrefs = links.map((l) => l.attributes('href'))
+      expect(hrefs).toContain('/real-estate')
       expect(hrefs).toContain('/real-estate/apt')
       expect(hrefs).toContain('/real-estate/villa')
       expect(hrefs).toContain('/real-estate/offitel')
-      expect(hrefs).not.toContain('/real-estate/apt-sale')
-      expect(hrefs).not.toContain('/real-estate/apt-rent')
+    })
+
+    it('청약·임대 드롭다운에 청약홈/LH 섹션 구분이 있어야 한다', async () => {
+      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
+      // 청약·임대 그룹 (두 번째, index 1)
+      await groupButtons[1].trigger('mouseenter')
+      const dropdown = groupButtons[1].find('.absolute')
+      expect(dropdown.exists()).toBe(true)
+      expect(dropdown.find('[data-testid="nav-section-divider"]').exists()).toBe(true)
     })
   })
 
@@ -159,6 +167,21 @@ describe('AppHeader', () => {
       const links = mobileMenu.findAll('a')
       const hrefs = links.map((link) => link.attributes('href'))
       expect(hrefs).toContain('/about')
+    })
+
+    it('모바일 메뉴에서 부동산/청약 NAV 그룹이 유틸리티 링크보다 먼저 나와야 한다', async () => {
+      const menuButton = wrapper.find('button[aria-label="메뉴"]')
+      await menuButton.trigger('click')
+
+      const mobileMenu = wrapper.find('[data-testid="mobile-menu"]')
+      const allLinks = mobileMenu.findAll('a')
+      const hrefs = allLinks.map((link) => link.attributes('href'))
+
+      const realEstateIndex = hrefs.indexOf('/real-estate/apt')
+      const aboutIndex = hrefs.indexOf('/about')
+      expect(realEstateIndex).toBeGreaterThanOrEqual(0)
+      expect(aboutIndex).toBeGreaterThanOrEqual(0)
+      expect(realEstateIndex).toBeLessThan(aboutIndex)
     })
   })
 

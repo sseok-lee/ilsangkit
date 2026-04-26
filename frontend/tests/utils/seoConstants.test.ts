@@ -4,6 +4,8 @@ import {
   getCurrentYear,
   CITY_LINKS,
   POPULAR_REGIONS,
+  CATEGORY_SEO_TITLE,
+  CATEGORY_SEO_DESCRIPTION,
 } from '~/utils/seoConstants'
 
 describe('getCurrentYearMonth', () => {
@@ -91,5 +93,49 @@ describe('POPULAR_REGIONS', () => {
     const citySlugs = POPULAR_REGIONS.map(r => r.citySlug)
     expect(citySlugs).toContain('seoul')
     expect(citySlugs).toContain('gyeonggi')
+  })
+})
+
+describe('CATEGORY_SEO_TITLE', () => {
+  it('모든 15개 카테고리에 대한 항목을 가진다', () => {
+    const expected = ['toilet','hospital','pharmacy','parking','wifi','aed',
+      'library','clothes','trash','park','school','market','childcare','ev-charger','sports']
+    expected.forEach(cat => {
+      expect(CATEGORY_SEO_TITLE).toHaveProperty(cat)
+    })
+  })
+
+  it('각 타이틀이 30자 이상 60자 이하다', () => {
+    Object.values(CATEGORY_SEO_TITLE).forEach(title => {
+      expect(title.length).toBeGreaterThanOrEqual(30)
+      expect(title.length).toBeLessThanOrEqual(60)
+    })
+  })
+
+  it('hospital 타이틀에 "병원"과 검색 의도 키워드를 포함한다', () => {
+    expect(CATEGORY_SEO_TITLE['hospital']).toContain('병원')
+    const hasIntent = ['진료과', '진료시간'].some(kw => CATEGORY_SEO_TITLE['hospital'].includes(kw))
+    expect(hasIntent).toBe(true)
+  })
+})
+
+describe('CATEGORY_SEO_DESCRIPTION', () => {
+  it('모든 15개 카테고리에 대한 항목을 가진다', () => {
+    const expected = ['toilet','hospital','pharmacy','parking','wifi','aed',
+      'library','clothes','trash','park','school','market','childcare','ev-charger','sports']
+    expected.forEach(cat => {
+      expect(CATEGORY_SEO_DESCRIPTION).toHaveProperty(cat)
+    })
+  })
+
+  it('각 디스크립션이 80자 이상 160자 이하다', () => {
+    Object.values(CATEGORY_SEO_DESCRIPTION).forEach(desc => {
+      expect(desc.length).toBeGreaterThanOrEqual(80)
+      expect(desc.length).toBeLessThanOrEqual(160)
+    })
+  })
+
+  it('hospital 디스크립션에 "병원"을 포함한다', () => {
+    expect(CATEGORY_SEO_DESCRIPTION['hospital']).toContain('병원')
   })
 })

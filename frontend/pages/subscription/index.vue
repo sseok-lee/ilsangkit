@@ -129,7 +129,7 @@
 
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
+import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, SUBSCRIPTION_HUB_DESCRIPTION, type RentGroup } from '~/utils/subscriptionMeta'
 
 const rentGroups: RentGroup[] = ['apply']
 import type { Subscription } from '~/types/subscription'
@@ -137,7 +137,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useSubscription } from '~/composables/useSubscription'
 
 const title = '청약 일정·분양정보 | 분양·임대 전체 조회 | 일상킷'
-const description = '아파트·오피스텔 분양, 무순위·잔여세대, 공공·민간 임대 청약 일정과 정보를 한눈에 확인하세요.'
+const description = SUBSCRIPTION_HUB_DESCRIPTION
 const canonicalUrl = `${SITE_URL}/subscription`
 const heroStats = [
   { label: '분양', value: '아파트·오피스텔·무순위' },
