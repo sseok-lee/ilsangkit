@@ -193,6 +193,11 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
         new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
       )
     }
+    if (url.includes('/api/sitemap/real-estate-hubs')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
+      )
+    }
     if (url.includes('/api/sitemap/subscriptions')) {
       return Promise.resolve(
         new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
@@ -403,5 +408,103 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     } finally {
       ;(globalThis as unknown as { fetch: typeof fetch }).fetch = origFetch
     }
+  })
+})
+
+describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
+  const hubData = [
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구' },
+    { realEstateType: 'villa-rent', city: '서울특별시', district: '강북구' },
+  ]
+
+  function mockFetchWithHubs(url: string): Promise<Response> {
+    if (url.includes('/api/sitemap/real-estate-hubs')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: hubData }), { status: 200 }),
+      )
+    }
+    if (
+      url.includes('/api/sitemap/real-estate-buildings') ||
+      url.includes('/api/sitemap/waste-schedules') ||
+      url.includes('/api/sitemap/subscriptions')
+    ) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
+      )
+    }
+    if (url.includes('/api/sitemap/facilities/')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
+      )
+    }
+    return Promise.resolve(new Response('', { status: 404 }))
+  }
+
+  interface MockEvent {
+    path: string
+    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+  }
+
+  function createMockEvent(path: string): MockEvent {
+    return {
+      path,
+      node: { req: { url: path }, res: { setHeader: () => {} } },
+    }
+  }
+
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch
+    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
+      .fn()
+      .mockImplementation((input: RequestInfo | URL) =>
+        mockFetchWithHubs(typeof input === 'string' ? input : String(input)),
+      ) as unknown as typeof fetch
+    vi.resetModules()
+  })
+
+  afterEach(() => {
+    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch
+  })
+
+  it('real-estate-hub.xml에 district hub URL이 포함된다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(
+      createMockEvent('/sitemap/real-estate-hub.xml') as never,
+    )) as string
+    expect(xml).toContain('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam</loc>')
+    expect(xml).toContain('https://ilsangkit.co.kr/real-estate/villa-rent/seoul/gangbuk</loc>')
+  })
+
+  it('real-estate-hub.xml에 city hub URL이 중복 없이 포함된다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(
+      createMockEvent('/sitemap/real-estate-hub.xml') as never,
+    )) as string
+    // apt-sale seoul city hub — 두 district가 같은 city이지만 apt-sale city hub는 1개
+    const aptSeoulMatches = xml.match(
+      /https:\/\/ilsangkit\.co\.kr\/real-estate\/apt-sale\/seoul<\/loc>/g,
+    )
+    expect(aptSeoulMatches).toHaveLength(1)
+    // villa-rent seoul city hub
+    expect(xml).toContain('https://ilsangkit.co.kr/real-estate/villa-rent/seoul</loc>')
+  })
+
+  it('sitemap index에 real-estate-hub.xml이 포함된다', async () => {
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const xml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
+    expect(xml).toContain('/sitemap/real-estate-hub.xml')
+  })
+
+  it('real-estate-hub.xml은 건물명 segment가 없는 URL만 포함한다 (5-segment URL 없음)', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(
+      createMockEvent('/sitemap/real-estate-hub.xml') as never,
+    )) as string
+    // building URL pattern: /real-estate/{type}/{city}/{district}/{buildingName}
+    expect(xml).not.toMatch(
+      /https:\/\/ilsangkit\.co\.kr\/real-estate\/[^/]+\/[^/]+\/[^/]+\/[^<]+<\/loc>/,
+    )
   })
 })

@@ -10,6 +10,7 @@ import {
   fetchFacilityIds,
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
+  fetchRealEstateCityDistrictHubs,
   fetchSubscriptionIds,
   getWeekStartDate,
 } from '../../utils/sitemap'
@@ -18,12 +19,17 @@ import {
   getSitemapFacilityLimit,
   isSitemapFacilityCategory,
 } from '../../utils/sitemapPolicy'
-import { toAbsoluteRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
+import { toAbsoluteRealEstateUrl, toCitySlug, toDistrictSlug, type RealEstateUrlType } from '~/utils/realEstateUrl'
 
 // wifi/aed는 사이트맵 인덱스에서 제외된 카테고리 — 동적 핸들러에서도 제외하여 404 반환
 const FACILITY_CATEGORIES = new Set<string>(SITEMAP_FACILITY_CATEGORIES)
 
 function parseSlug(slug: string): { category: string; page: number } | null {
+  // "real-estate-hub" → city/district hub sitemap (no pagination)
+  if (slug === 'real-estate-hub') {
+    return { category: 'real-estate-hub', page: 1 }
+  }
+
   // "real-estate" → category='real-estate', page=1
   // "real-estate-3" → category='real-estate', page=3
   const reMatch = slug.match(/^real-estate(?:-(\d+))?$/)
@@ -114,6 +120,31 @@ export default defineEventHandler(async (event) => {
       changefreq: 'weekly' as const,
       priority: 0.6,
     }))
+
+    return generateSitemapXml(urls)
+  }
+
+  // 부동산 city/district 허브 페이지
+  if (category === 'real-estate-hub') {
+    const hubs = await fetchRealEstateCityDistrictHubs(apiBase)
+    const weekStart = getWeekStartDate()
+
+    const seenCityUrls = new Set<string>()
+    const urls: Parameters<typeof generateSitemapXml>[0] = []
+
+    for (const hub of hubs) {
+      const citySlug = toCitySlug(hub.city)
+      const districtSlug = toDistrictSlug(hub.district)
+
+      const cityUrl = `${SITE_URL}/real-estate/${hub.realEstateType}/${citySlug}`
+      if (!seenCityUrls.has(cityUrl)) {
+        seenCityUrls.add(cityUrl)
+        urls.push({ loc: cityUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.7 })
+      }
+
+      const districtUrl = `${SITE_URL}/real-estate/${hub.realEstateType}/${citySlug}/${districtSlug}`
+      urls.push({ loc: districtUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+    }
 
     return generateSitemapXml(urls)
   }

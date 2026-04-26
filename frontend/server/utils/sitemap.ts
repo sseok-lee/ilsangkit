@@ -198,6 +198,39 @@ export function getWeekStartDate(): string {
   return monday.toISOString().split('T')[0]
 }
 
+export interface SitemapRealEstateHub {
+  realEstateType: 'apt-sale' | 'apt-rent' | 'villa-sale' | 'villa-rent' | 'offitel-sale' | 'offitel-rent'
+  city: string
+  district: string
+}
+
+export async function fetchRealEstateCityDistrictHubs(
+  apiBase: string
+): Promise<SitemapRealEstateHub[]> {
+  const cacheKey = 'real-estate-hubs'
+  const cached = getCached<SitemapRealEstateHub>(cacheKey)
+  if (cached) return cached
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`${apiBase}/api/sitemap/real-estate-hubs`)
+      if (!res.ok) {
+        console.error(`[sitemap] fetchRealEstateCityDistrictHubs attempt ${attempt}: HTTP ${res.status}`)
+        continue
+      }
+      const json = await res.json()
+      const data = (json.data ?? []) as SitemapRealEstateHub[]
+      if (data.length > 0) {
+        setCache(cacheKey, data)
+      }
+      return data
+    } catch (err) {
+      console.error(`[sitemap] fetchRealEstateCityDistrictHubs attempt ${attempt} error:`, err)
+    }
+  }
+  return []
+}
+
 export async function fetchRegionCategories(
   apiBase: string
 ): Promise<Array<{ city: string; district: string; category: string }>> {

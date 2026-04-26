@@ -10,6 +10,7 @@ import {
   getWasteScheduleIds,
   getRegionCategoryCombinations,
   getRealEstateBuildings,
+  getRealEstateCityDistrictHubs,
   getSubscriptionIds,
 } from '../services/sitemapService.js';
 
@@ -78,6 +79,18 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const buildings = await getRealEstateBuildings();
     res.json({ success: true, data: buildings });
+  })
+);
+
+/**
+ * GET /api/sitemap/real-estate-hubs
+ * 부동산 city/district 허브 목록 (사이트맵용) - realEstateType + city + district
+ */
+router.get(
+  '/real-estate-hubs',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const data = await getRealEstateCityDistrictHubs();
+    res.json({ success: true, data });
   })
 );
 
