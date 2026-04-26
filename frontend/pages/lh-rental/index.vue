@@ -55,6 +55,7 @@ useHead({
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
+  { name: '청약·임대', url: `${SITE_URL}/subscription` },
   { name: 'LH 임대', url: canonicalUrl },
 ])
 

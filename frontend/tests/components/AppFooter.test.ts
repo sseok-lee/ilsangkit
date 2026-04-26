@@ -78,6 +78,57 @@ describe('AppFooter', () => {
       const text = wrapper.text()
       expect(text).toContain('이용약관')
     })
+
+    it('should have link to real estate hub', () => {
+      const wrapper = mount(AppFooter, {
+        global: {
+          stubs: {
+            NuxtLink: {
+              template: '<a :href="to"><slot /></a>',
+              props: ['to'],
+            },
+          },
+        },
+      })
+
+      const links = wrapper.findAll('a')
+      const hrefs = links.map((l) => l.attributes('href'))
+      expect(hrefs).toContain('/real-estate')
+    })
+
+    it('should have link to subscription hub', () => {
+      const wrapper = mount(AppFooter, {
+        global: {
+          stubs: {
+            NuxtLink: {
+              template: '<a :href="to"><slot /></a>',
+              props: ['to'],
+            },
+          },
+        },
+      })
+
+      const links = wrapper.findAll('a')
+      const hrefs = links.map((l) => l.attributes('href'))
+      expect(hrefs).toContain('/subscription')
+    })
+
+    it('should have link to LH rental hub', () => {
+      const wrapper = mount(AppFooter, {
+        global: {
+          stubs: {
+            NuxtLink: {
+              template: '<a :href="to"><slot /></a>',
+              props: ['to'],
+            },
+          },
+        },
+      })
+
+      const links = wrapper.findAll('a')
+      const hrefs = links.map((l) => l.attributes('href'))
+      expect(hrefs).toContain('/lh-rental')
+    })
   })
 
   describe('Styling', () => {
