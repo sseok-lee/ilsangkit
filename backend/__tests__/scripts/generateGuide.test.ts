@@ -191,8 +191,8 @@ describe('isGuideCategory', () => {
   it('알 수 없는 카테고리는 false', () => {
     expect(isGuideCategory('foo')).toBe(false);
   });
-  it('18개 카테고리 등록', () => {
-    expect(GUIDE_CATEGORIES.length).toBe(18);
+  it('19개 카테고리 등록', () => {
+    expect(GUIDE_CATEGORIES.length).toBe(19);
   });
 });
 
