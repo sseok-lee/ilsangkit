@@ -118,6 +118,23 @@
       </div>
     </SectionBlock>
 
+    <!-- 지역별 도시 허브 링크 -->
+    <SectionBlock>
+      <template #heading>
+        <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">지역별 {{ propertyMeta?.label }} 실거래가</h2>
+      </template>
+      <div class="flex flex-wrap gap-2">
+        <NuxtLink
+          v-for="(citySlug, cityName) in CITY_SLUGS"
+          :key="citySlug"
+          :to="`/real-estate/${apiSlug}/${citySlug}`"
+          class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 transition-all"
+        >
+          {{ cityName }}
+        </NuxtLink>
+      </div>
+    </SectionBlock>
+
     <!-- Ad: FAQ 전 -->
     <AdBanner />
 
@@ -152,6 +169,7 @@ import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
+import { CITY_SLUGS } from '~/shared/regionSlugs'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
