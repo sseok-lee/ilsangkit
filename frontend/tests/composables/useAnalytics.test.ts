@@ -16,13 +16,16 @@ describe('useAnalytics', () => {
   it('useAnalytics()가 모든 트래킹 함수를 반환한다', () => {
     const analytics = useAnalytics()
     expect(typeof analytics.trackSearch).toBe('function')
+    expect(typeof analytics.trackSearchNoResults).toBe('function')
+    expect(typeof analytics.trackCategoryPageView).toBe('function')
+    expect(typeof analytics.trackRegionPageView).toBe('function')
     expect(typeof analytics.trackFacilityView).toBe('function')
     expect(typeof analytics.trackDirectionsClick).toBe('function')
     expect(typeof analytics.trackPhoneClick).toBe('function')
     expect(typeof analytics.trackShareClick).toBe('function')
     expect(typeof analytics.trackBuildingView).toBe('function')
     expect(typeof analytics.trackReviewSubmit).toBe('function')
-    expect(Object.keys(analytics)).toHaveLength(7)
+    expect(Object.keys(analytics)).toHaveLength(10)
   })
 
   it('trackSearch → gtag search_executed 이벤트 호출', () => {
@@ -90,6 +93,41 @@ describe('useAnalytics', () => {
     expect(mockGtag).toHaveBeenCalledWith('event', 'review_submitted', {
       facility_id: '123',
       category: 'hospital',
+    })
+  })
+
+  it('trackSearchNoResults → gtag search_no_results 이벤트 호출', () => {
+    const { trackSearchNoResults } = useAnalytics()
+    trackSearchNoResults({ keyword: '없는시설', category: 'hospital' })
+    expect(mockGtag).toHaveBeenCalledWith('event', 'search_no_results', {
+      search_term: '없는시설',
+      category: 'hospital',
+    })
+  })
+
+  it('trackCategoryPageView → gtag category_page_viewed 이벤트 호출', () => {
+    const { trackCategoryPageView } = useAnalytics()
+    trackCategoryPageView({ category: 'hospital' })
+    expect(mockGtag).toHaveBeenCalledWith('event', 'category_page_viewed', {
+      category: 'hospital',
+    })
+  })
+
+  it('trackRegionPageView → gtag region_page_viewed 이벤트 호출 (city+district)', () => {
+    const { trackRegionPageView } = useAnalytics()
+    trackRegionPageView({ city: 'seoul', district: 'gangnam-gu' })
+    expect(mockGtag).toHaveBeenCalledWith('event', 'region_page_viewed', {
+      city: 'seoul',
+      district: 'gangnam-gu',
+    })
+  })
+
+  it('trackRegionPageView → district 없이 city만으로 호출 가능', () => {
+    const { trackRegionPageView } = useAnalytics()
+    trackRegionPageView({ city: 'seoul' })
+    expect(mockGtag).toHaveBeenCalledWith('event', 'region_page_viewed', {
+      city: 'seoul',
+      district: undefined,
     })
   })
 

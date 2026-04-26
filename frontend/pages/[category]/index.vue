@@ -288,6 +288,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
+import { useAnalytics } from '~/composables/useAnalytics'
 
 const route = useRoute()
 
@@ -313,6 +314,7 @@ const queryCitySlug = computed(() => (route.query.city as string) || '')
 
 // Search composables
 const { loading, facilities, total, currentPage, totalPages, error: facilityError, search, resetPage, setPage } = useFacilitySearch()
+const { trackCategoryPageView, trackSearchNoResults } = useAnalytics()
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const { loadRegions, citiesWithDistricts } = useRegions()
 const { setMeta } = useFacilityMeta()
@@ -713,6 +715,7 @@ onMounted(async () => {
     }
   }
   initialLoading.value = false
+  trackCategoryPageView({ category: categoryParam.value })
 })
 
 // URL → 상태 동기화: 브라우저 뒤로가기/앞으로가기 혹은 같은 라우트로의 query-only 네비게이션에서도
@@ -728,6 +731,12 @@ watch(() => route.query.page, (next) => {
     if (currentPage.value === nextPage) return
     setPage(nextPage)
     performSearch()
+  }
+})
+
+watch(loading, (isLoading) => {
+  if (!isLoading && ssrConsumed.value && filterKeyword.value && displayTotal.value === 0) {
+    trackSearchNoResults({ keyword: filterKeyword.value, category: categoryParam.value })
   }
 })
 

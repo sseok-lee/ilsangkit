@@ -145,6 +145,7 @@ import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import { SITE_URL, SITE_NAME } from '~/utils/seoConstants'
 import { generateAreaDescription } from '~/utils/seoHelpers'
+import { useAnalytics } from '~/composables/useAnalytics'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -299,4 +300,9 @@ watch(areaData, (data) => {
     })
   }
 }, { immediate: true })
+
+const { trackRegionPageView } = useAnalytics()
+onMounted(() => {
+  trackRegionPageView({ city: city.value, district: district.value })
+})
 </script>
