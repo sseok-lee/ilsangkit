@@ -127,3 +127,94 @@ export async function getRealEstateBuildings() {
     ) unioned
   `;
 }
+
+/**
+ * 사이트맵용 부동산 city/district 허브 조합 목록.
+ *
+ * getRealEstateBuildings()와 동일한 품질 필터를 적용하되,
+ * (realEstateType, city, district) 단위로 DISTINCT하게 반환한다.
+ * city hub(/real-estate/apt-sale/seoul/)와
+ * district hub(/real-estate/apt-sale/seoul/gangnam/) 사이트맵 생성에 사용.
+ */
+export async function getRealEstateCityDistrictHubs() {
+  return prisma.$queryRaw<
+    Array<{
+      realEstateType: string;
+      city: string;
+      district: string;
+    }>
+  >`
+    SELECT realEstateType, city, district
+    FROM (
+      SELECT 'apt-sale' AS realEstateType, city, district, COUNT(*) AS cnt
+      FROM AptSaleTransaction
+      WHERE buildingName IS NOT NULL
+        AND buildingName != ''
+        AND CHAR_LENGTH(buildingName) >= 2
+        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+      GROUP BY city, district
+      HAVING COUNT(*) >= 10
+
+      UNION ALL
+
+      SELECT 'apt-rent', city, district, COUNT(*)
+      FROM AptRentTransaction
+      WHERE buildingName IS NOT NULL
+        AND buildingName != ''
+        AND CHAR_LENGTH(buildingName) >= 2
+        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+      GROUP BY city, district
+      HAVING COUNT(*) >= 10
+
+      UNION ALL
+
+      SELECT 'villa-sale', city, district, COUNT(*)
+      FROM VillaSaleTransaction
+      WHERE buildingName IS NOT NULL
+        AND buildingName != ''
+        AND CHAR_LENGTH(buildingName) >= 2
+        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+      GROUP BY city, district
+      HAVING COUNT(*) >= 10
+
+      UNION ALL
+
+      SELECT 'villa-rent', city, district, COUNT(*)
+      FROM VillaRentTransaction
+      WHERE buildingName IS NOT NULL
+        AND buildingName != ''
+        AND CHAR_LENGTH(buildingName) >= 2
+        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+      GROUP BY city, district
+      HAVING COUNT(*) >= 10
+
+      UNION ALL
+
+      SELECT 'offitel-sale', city, district, COUNT(*)
+      FROM OffitelSaleTransaction
+      WHERE buildingName IS NOT NULL
+        AND buildingName != ''
+        AND CHAR_LENGTH(buildingName) >= 2
+        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+      GROUP BY city, district
+      HAVING COUNT(*) >= 10
+
+      UNION ALL
+
+      SELECT 'offitel-rent', city, district, COUNT(*)
+      FROM OffitelRentTransaction
+      WHERE buildingName IS NOT NULL
+        AND buildingName != ''
+        AND CHAR_LENGTH(buildingName) >= 2
+        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+      GROUP BY city, district
+      HAVING COUNT(*) >= 10
+    ) unioned
+  `;
+}

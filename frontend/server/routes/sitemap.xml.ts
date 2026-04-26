@@ -8,6 +8,7 @@ import {
   fetchFacilityIds,
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
+  fetchRealEstateCityDistrictHubs,
   fetchSubscriptionIds,
   getWeekStartDate,
 } from '../utils/sitemap'
@@ -85,8 +86,8 @@ export default defineEventHandler(async (event) => {
   }
 
   // 부동산 건물 상세 페이지 — lastmod는 주 단위로 설정 (매일 변경 방지)
-  const realEstateBuildings = await fetchRealEstateBuildings(apiBase)
   const weekStart = getWeekStartDate()
+  const realEstateBuildings = await fetchRealEstateBuildings(apiBase)
   const realEstatePages = Math.max(1, Math.ceil(realEstateBuildings.length / MAX_URLS_PER_SITEMAP))
   if (realEstatePages === 1) {
     sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
@@ -95,6 +96,9 @@ export default defineEventHandler(async (event) => {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: weekStart })
     }
   }
+
+  // 부동산 city/district 허브 페이지
+  sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: weekStart })
 
   return generateSitemapIndexXml(sitemaps)
 })
