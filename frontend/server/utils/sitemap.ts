@@ -1,3 +1,5 @@
+import { isValidBuildingName } from '../../utils/realEstateBuildingName'
+
 export const SITE_URL = 'https://ilsangkit.co.kr'
 
 export const MAX_URLS_PER_SITEMAP = 10_000
@@ -177,7 +179,8 @@ export async function fetchRealEstateBuildings(
         continue
       }
       const json = await res.json()
-      const data = (json.data ?? []) as SitemapRealEstateBuilding[]
+      const raw = (json.data ?? []) as SitemapRealEstateBuilding[]
+      const data = raw.filter((item) => isValidBuildingName(item.buildingName))
       if (data.length > 0) {
         setCache(cacheKey, data)
       }
