@@ -31,6 +31,15 @@ function makeItem(overrides: Partial<MyhomeRentalItem> = {}): MyhomeRentalItem {
     suplyPrvuseAr: 45.5,
     bassRentGtn: 5000000,
     bassMtRntchrg: 150000,
+    // 신규 필드 (API #15058476)
+    pnu: '1114017400100370002',
+    competDe: '20170807',
+    suplyCmnuseAr: 21.7274,
+    heatMthdDetailNm: '개별난방',
+    buldStleNm: '복도식',
+    elvtrInstlAtNm: '전체동 설치',
+    parkngCo: 183,
+    bassCnvrsGtnLmt: 0,
     ...overrides,
   };
 }
@@ -48,7 +57,7 @@ describe('transformMyhomeItem', () => {
     expect(result.exclusiveArea).toBeCloseTo(45.5);
     expect(result.depositAmount).toBe(BigInt(5000000));
     expect(result.monthlyRent).toBe(150000);
-    expect(result.landlordAgency).toBe('LH');
+    expect(result.landlordAgency).toBe('LH서울');
   });
 
   it('도로명주소를 complexName으로 사용', () => {
@@ -89,6 +98,113 @@ describe('transformMyhomeItem', () => {
     const result = transformMyhomeItem(makeItem({ hsmpSn: 99999999 }));
     expect(result.sourceId).toBe('lh-99999999');
     expect(result.complexCode).toBe('99999999');
+  });
+
+  it('landlordAgency는 insttNm 값을 사용', () => {
+    const result = transformMyhomeItem(makeItem({ insttNm: 'SH공사' }));
+    expect(result.landlordAgency).toBe('SH공사');
+  });
+
+  it('insttNm 없으면 landlordAgency는 LH 기본값', () => {
+    const result = transformMyhomeItem(makeItem({ insttNm: undefined }));
+    expect(result.landlordAgency).toBe('LH');
+  });
+
+  describe('신규 필드 매핑', () => {
+    it('pnu 필드 매핑', () => {
+      const result = transformMyhomeItem(makeItem({ pnu: '1114017400100370002' }));
+      expect(result.pnu).toBe('1114017400100370002');
+    });
+
+    it('pnu 없으면 null', () => {
+      const result = transformMyhomeItem(makeItem({ pnu: undefined }));
+      expect(result.pnu).toBeNull();
+    });
+
+    it('competDe → completionDate 매핑', () => {
+      const result = transformMyhomeItem(makeItem({ competDe: '20170807' }));
+      expect(result.completionDate).toBe('20170807');
+    });
+
+    it('competDe 없으면 null', () => {
+      const result = transformMyhomeItem(makeItem({ competDe: undefined }));
+      expect(result.completionDate).toBeNull();
+    });
+
+    it('suplyCmnuseAr → commonArea 매핑', () => {
+      const result = transformMyhomeItem(makeItem({ suplyCmnuseAr: 21.7274 }));
+      expect(result.commonArea).toBeCloseTo(21.7274);
+    });
+
+    it('suplyCmnuseAr 빈 객체 → null', () => {
+      const result = transformMyhomeItem(makeItem({ suplyCmnuseAr: {} as unknown as number }));
+      expect(result.commonArea).toBeNull();
+    });
+
+    it('heatMthdDetailNm → heatingMethod 매핑', () => {
+      const result = transformMyhomeItem(makeItem({ heatMthdDetailNm: '개별난방' }));
+      expect(result.heatingMethod).toBe('개별난방');
+    });
+
+    it('heatMthdDetailNm 없으면 null', () => {
+      const result = transformMyhomeItem(makeItem({ heatMthdDetailNm: undefined }));
+      expect(result.heatingMethod).toBeNull();
+    });
+
+    it('buldStleNm → buildingStyle 매핑', () => {
+      const result = transformMyhomeItem(makeItem({ buldStleNm: '복도식' }));
+      expect(result.buildingStyle).toBe('복도식');
+    });
+
+    it('buldStleNm 없으면 null', () => {
+      const result = transformMyhomeItem(makeItem({ buldStleNm: undefined }));
+      expect(result.buildingStyle).toBeNull();
+    });
+
+    it('elvtrInstlAtNm → hasElevator 매핑', () => {
+      const result = transformMyhomeItem(makeItem({ elvtrInstlAtNm: '전체동 설치' }));
+      expect(result.hasElevator).toBe('전체동 설치');
+    });
+
+    it('elvtrInstlAtNm 없으면 null', () => {
+      const result = transformMyhomeItem(makeItem({ elvtrInstlAtNm: undefined }));
+      expect(result.hasElevator).toBeNull();
+    });
+
+    it('parkngCo → parkingCount 매핑', () => {
+      const result = transformMyhomeItem(makeItem({ parkngCo: 183 }));
+      expect(result.parkingCount).toBe(183);
+    });
+
+    it('parkngCo 빈 객체 → null', () => {
+      const result = transformMyhomeItem(makeItem({ parkngCo: {} as unknown as number }));
+      expect(result.parkingCount).toBeNull();
+    });
+
+    it('bassCnvrsGtnLmt → conversionDeposit 매핑 (0원도 BigInt(0))', () => {
+      const result = transformMyhomeItem(makeItem({ bassCnvrsGtnLmt: 0 }));
+      expect(result.conversionDeposit).toBe(BigInt(0));
+    });
+
+    it('bassCnvrsGtnLmt 양수 값 → BigInt 변환', () => {
+      const result = transformMyhomeItem(makeItem({ bassCnvrsGtnLmt: 5000000 }));
+      expect(result.conversionDeposit).toBe(BigInt(5000000));
+    });
+
+    it('bassCnvrsGtnLmt 빈 객체 → null', () => {
+      const result = transformMyhomeItem(makeItem({ bassCnvrsGtnLmt: {} as unknown as number }));
+      expect(result.conversionDeposit).toBeNull();
+    });
+
+    it('hsmpNm → complexNameKor 매핑', () => {
+      const result = transformMyhomeItem(makeItem({ hsmpNm: '서울역 센트럴자이(만리2구역)' }));
+      expect(result.complexNameKor).toBe('서울역 센트럴자이(만리2구역)');
+    });
+
+    it('hsmpNm 없으면 null', () => {
+      const result = transformMyhomeItem(makeItem({ hsmpNm: undefined }));
+      expect(result.complexNameKor).toBeNull();
+    });
   });
 });
 
