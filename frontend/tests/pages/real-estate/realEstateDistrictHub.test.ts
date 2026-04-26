@@ -118,4 +118,33 @@ describe('real-estate/[realEstateType]/[city]/[district]/index.vue — district 
     await mountSuspended(m.default)
     expect(mockSetItemListSchema).toHaveBeenCalled()
   })
+
+  it('setBreadcrumbSchema가 5단계로 호출되어야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    await mountSuspended(m.default)
+    expect(mockSetBreadcrumbSchema).toHaveBeenCalled()
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs).toHaveLength(5)
+  })
+
+  it('breadcrumb item[2]가 canonical property type URL을 가리켜야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    await mountSuspended(m.default)
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs[2].url).toBe('/real-estate/apt')
+  })
+
+  it('breadcrumb item[3]이 city hub URL을 가리켜야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    await mountSuspended(m.default)
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs[3].url).toContain('seoul')
+  })
+
+  it('breadcrumb 마지막 항목이 구/군 이름이어야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    await mountSuspended(m.default)
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs[4].name).toBe('강남구')
+  })
 })
