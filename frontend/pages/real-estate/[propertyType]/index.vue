@@ -154,6 +154,7 @@ import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
+import { useStructuredData } from '~/composables/useStructuredData'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -346,6 +347,31 @@ async function fetchFacilitySummary(city: string, district?: string) {
     facilityLoading.value = false
   }
 }
+
+// Breadcrumb + ItemList JSON-LD
+const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: '부동산', url: '/real-estate' },
+  { name: propertyMeta.value?.label ?? propertyTypeParam.value, url: `/real-estate/${propertyTypeParam.value}` },
+])
+
+watch(
+  complexes,
+  (list) => {
+    if (list.length > 0) {
+      setItemListSchema(
+        list.slice(0, 20).map((c) => ({
+          name: c.buildingName,
+          url: `/real-estate/${propertyTypeParam.value}/${c.buildingName}`,
+        })),
+      )
+    } else {
+      setItemListSchema([{ name: propertyMeta.value?.label ?? propertyTypeParam.value, url: `/real-estate/${propertyTypeParam.value}` }])
+    }
+  },
+  { immediate: true },
+)
 
 // Breadcrumb + hero stats
 const breadcrumbItems = computed(() => [
