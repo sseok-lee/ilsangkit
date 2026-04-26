@@ -261,7 +261,7 @@ useHead(() => {
 })
 
 // JSON-LD 구조화 데이터
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
@@ -269,4 +269,7 @@ setBreadcrumbSchema([
   { name: districtName.value, url: `/${citySlug.value}/${districtSlug.value}` },
   { name: '부동산 실거래가', url: `/${citySlug.value}/${districtSlug.value}/real-estate` },
 ])
+setItemListSchema(
+  propertyTypes.value.map((t) => ({ name: t.label, url: t.regionUrl })),
+)
 </script>

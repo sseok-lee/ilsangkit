@@ -110,11 +110,19 @@ const realEstateFAQs = [
   { question: '전세와 월세의 차이는 무엇인가요?', answer: '전세는 보증금을 맡기고 월 임대료 없이 거주하는 방식이고, 월세는 보증금과 함께 매월 임대료를 지불하는 방식입니다.' },
 ]
 
-// Breadcrumb JSON-LD
-const { setBreadcrumbSchema } = useStructuredData()
+// Breadcrumb + ItemList JSON-LD
+const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
+])
+setItemListSchema([
+  { name: '아파트 매매', url: '/real-estate/apt-sale' },
+  { name: '아파트 전월세', url: '/real-estate/apt-rent' },
+  { name: '빌라 매매', url: '/real-estate/villa-sale' },
+  { name: '빌라 전월세', url: '/real-estate/villa-rent' },
+  { name: '오피스텔 매매', url: '/real-estate/offitel-sale' },
+  { name: '오피스텔 전월세', url: '/real-estate/offitel-rent' },
 ])
 
 useHead({
