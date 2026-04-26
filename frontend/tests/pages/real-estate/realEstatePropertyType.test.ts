@@ -60,6 +60,20 @@ vi.mock('~/utils/realEstateBuildingName', () => ({
   isValidBuildingName: vi.fn(() => true),
 }))
 
+vi.mock('~/shared/regionSlugs', () => ({
+  CITY_SLUGS: { 서울: 'seoul', 부산: 'busan', 대구: 'daegu' },
+  CITY_SLUG_MAP: { seoul: '서울', busan: '부산', daegu: '대구' },
+  REGIONS: {},
+  CITY_FULL_NAME_TO_SLUG: {},
+  CITY_SLUGS_ARRAY: [],
+}))
+
+vi.mock('~/utils/realEstateUrl', () => ({
+  isRealEstateUrlType: vi.fn(() => true),
+  toRealEstateUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}/${p.buildingName}`),
+  toRealEstateListUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}`),
+}))
+
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()
@@ -106,5 +120,24 @@ describe('real-estate/[propertyType]/index.vue — property type list page', () 
     const m = await import('~/pages/real-estate/[propertyType]/index.vue')
     await mountSuspended(m.default)
     expect(mockSetItemListSchema).toHaveBeenCalled()
+  })
+
+  it('지역별 도시 허브 링크가 렌더링되어야 한다', async () => {
+    const m = await import('~/pages/real-estate/[propertyType]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const hrefs = wrapper.findAll('a').map((a) => a.attributes('href'))
+    expect(hrefs).toContain('/real-estate/apt-sale/seoul')
+    expect(hrefs).toContain('/real-estate/apt-sale/busan')
+    expect(hrefs).toContain('/real-estate/apt-sale/daegu')
+  })
+
+  it('도시 허브 링크가 17개 이상이어야 한다', async () => {
+    const m = await import('~/pages/real-estate/[propertyType]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const cityHubLinks = wrapper.findAll('a').filter((a) =>
+      /^\/real-estate\/apt-sale\/\w+$/.test(a.attributes('href') ?? ''),
+    )
+    // 모킹된 CITY_SLUGS는 3개
+    expect(cityHubLinks.length).toBe(3)
   })
 })

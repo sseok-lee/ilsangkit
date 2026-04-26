@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 
-// Stub Vue auto-imports
 ;(globalThis as any).ref = ref
 ;(globalThis as any).computed = computed
 ;(globalThis as any).watch = watch
@@ -10,20 +9,17 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
 ;(globalThis as any).onMounted = onMounted
 ;(globalThis as any).onUnmounted = onUnmounted
 
-// Mock createError (Nuxt global)
 ;(globalThis as any).createError = (opts: any) => {
   const e = new Error(opts.statusMessage)
   ;(e as any).statusCode = opts.statusCode
   return e
 }
 
-// Mock useRoute with valid params
 ;(globalThis as any).useRoute = vi.fn(() => ({
-  params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam' },
+  params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam', buildingName: '반포자이' },
   query: {},
 }))
 
-// Mock useRouter
 ;(globalThis as any).useRouter = vi.fn(() => ({
   replace: vi.fn(),
   push: vi.fn(),
@@ -31,22 +27,33 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
 
 const mockSetBreadcrumbSchema = vi.fn()
 const mockSetItemListSchema = vi.fn()
+const mockSetBuildingPlaceSchema = vi.fn()
+const mockSetRealEstateListingSchema = vi.fn()
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
     setItemListSchema: mockSetItemListSchema,
+    setBuildingPlaceSchema: mockSetBuildingPlaceSchema,
+    setRealEstateListingSchema: mockSetRealEstateListingSchema,
   }),
 }))
 
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
-    getComplexList: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      totalPages: 0,
-    }),
+    searchTransactions: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0, stats: null }),
+    getTransactionStats: vi.fn().mockResolvedValue(null),
+    getBuildingInfo: vi.fn().mockResolvedValue(null),
+    getAreaGroups: vi.fn().mockResolvedValue([]),
+    getComplexList: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0 }),
+  }),
+}))
+
+vi.mock('~/composables/useAnalytics', () => ({
+  useAnalytics: () => ({
+    trackBuildingView: vi.fn(),
+    trackDirectionsClick: vi.fn(),
+    trackShareClick: vi.fn(),
   }),
 }))
 
@@ -64,19 +71,29 @@ vi.mock('~/utils/seoConstants', () => ({
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
 }))
 
-vi.mock('~/utils/realEstateBuildingName', () => ({
-  isValidBuildingName: vi.fn(() => true),
-}))
-
 vi.mock('~/utils/realEstateUrl', () => ({
   isRealEstateUrlType: vi.fn(() => true),
   toRealEstateUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}/${p.buildingName}`),
   toRealEstateListUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}`),
 }))
 
+vi.mock('~/utils/realEstateNoindex', () => ({
+  shouldNoindexRealEstateDetail: vi.fn(() => false),
+}))
+
+vi.mock('~/utils/realEstateDetailData', () => ({
+  hasUsableRealEstateDetailData: vi.fn(() => false),
+}))
+
+vi.mock('~/utils/dataSource', () => ({
+  REAL_ESTATE_DATA_SOURCE: { name: '국토교통부', url: 'https://rtms.molit.go.kr' },
+}))
+
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()
+  mockSetBuildingPlaceSchema.mockClear()
+  mockSetRealEstateListingSchema.mockClear()
 })
 
 async function mountSuspended(component: any, options?: any) {
@@ -94,10 +111,15 @@ async function mountSuspended(component: any, options?: any) {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
           PageHero: { template: '<div data-stub="hero" />' },
-          SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
+          SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
           AdBanner: { template: '<div />' },
           ComplexCard: { template: '<div />' },
           Pagination: { template: '<div />' },
+          DataSourceCard: { template: '<div />' },
+          RelatedGuides: { template: '<div />' },
+          ReviewSection: { template: '<div />' },
+          FacilityMap: { template: '<div />' },
+          TransactionModeTab: { template: '<div />' },
         },
         ...options?.global,
       },
@@ -107,44 +129,45 @@ async function mountSuspended(component: any, options?: any) {
   return wrapper
 }
 
-describe('real-estate/[realEstateType]/[city]/[district]/index.vue — district list page', () => {
+describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — building detail', () => {
   it('컴포넌트가 존재해야 한다', async () => {
-    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     expect(m.default).toBeDefined()
   })
 
-  it('setItemListSchema가 호출되어야 한다 (ItemList 구조화 데이터)', async () => {
-    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
-    await mountSuspended(m.default)
-    expect(mockSetItemListSchema).toHaveBeenCalled()
-  })
-
-  it('setBreadcrumbSchema가 5단계로 호출되어야 한다', async () => {
-    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+  it('setBreadcrumbSchema가 6단계로 호출되어야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     await mountSuspended(m.default)
     expect(mockSetBreadcrumbSchema).toHaveBeenCalled()
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
-    expect(crumbs).toHaveLength(5)
+    expect(crumbs).toHaveLength(6)
   })
 
-  it('breadcrumb item[2]가 canonical property type URL을 가리켜야 한다', async () => {
-    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+  it('breadcrumb item[2]가 property type canonical URL을 가리켜야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     await mountSuspended(m.default)
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
     expect(crumbs[2].url).toBe('/real-estate/apt')
   })
 
   it('breadcrumb item[3]이 city hub URL을 가리켜야 한다', async () => {
-    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     await mountSuspended(m.default)
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
     expect(crumbs[3].url).toContain('seoul')
   })
 
-  it('breadcrumb 마지막 항목이 구/군 이름이어야 한다', async () => {
-    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+  it('breadcrumb item[4]가 district list URL을 가리켜야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     await mountSuspended(m.default)
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
-    expect(crumbs[4].name).toBe('강남구')
+    expect(crumbs[4].url).toContain('강남구')
+  })
+
+  it('breadcrumb 마지막 항목이 건물명이어야 한다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    await mountSuspended(m.default)
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs[5].name).toBe('반포자이')
   })
 })
