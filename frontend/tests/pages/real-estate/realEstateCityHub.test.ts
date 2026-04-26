@@ -93,6 +93,12 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
     expect(crumbs[1].url).toContain('/real-estate')
   })
 
+  it('breadcrumb item[2]가 canonical property type URL을 가리켜야 한다', async () => {
+    await mountPage()
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    expect(crumbs[2].url).toBe('/real-estate/apt')
+  })
+
   it('breadcrumb 마지막 항목 URL이 city slug를 포함해야 한다', async () => {
     await mountPage()
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]

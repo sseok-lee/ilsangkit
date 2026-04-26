@@ -76,7 +76,7 @@ const districts = computed(() =>
 const breadcrumbItems = [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: typeLabel, href: `/real-estate/${realEstateTypeParam}`, current: false },
+  { label: typeLabel, href: `/real-estate/${propertyTypePart}`, current: false },
   { label: cityName, href: `/real-estate/${realEstateTypeParam}/${citySlugParam}`, current: true },
 ]
 
@@ -105,7 +105,7 @@ const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
-  { name: typeLabel, url: `/real-estate/${realEstateTypeParam}` },
+  { name: typeLabel, url: `/real-estate/${propertyTypePart}` },
   { name: cityName, url: `/real-estate/${realEstateTypeParam}/${citySlugParam}` },
 ])
 setItemListSchema(

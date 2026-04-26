@@ -117,12 +117,9 @@ setBreadcrumbSchema([
   { name: '부동산 실거래가', url: '/real-estate' },
 ])
 setItemListSchema([
-  { name: '아파트 매매', url: '/real-estate/apt-sale' },
-  { name: '아파트 전월세', url: '/real-estate/apt-rent' },
-  { name: '빌라 매매', url: '/real-estate/villa-sale' },
-  { name: '빌라 전월세', url: '/real-estate/villa-rent' },
-  { name: '오피스텔 매매', url: '/real-estate/offitel-sale' },
-  { name: '오피스텔 전월세', url: '/real-estate/offitel-rent' },
+  { name: '아파트', url: '/real-estate/apt' },
+  { name: '빌라', url: '/real-estate/villa' },
+  { name: '오피스텔', url: '/real-estate/offitel' },
 ])
 
 useHead({

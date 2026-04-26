@@ -508,3 +508,61 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
     )
   })
 })
+
+describe('real-estate sitemap — invalid building name filtering', () => {
+  const buildingData = [
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안강남', bjdCode: '1168011700' },
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '(535-3)', bjdCode: '1168011701' },
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '123-4', bjdCode: '1168011702' },
+    { realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구', buildingName: '해운대빌라', bjdCode: '2635011700' },
+  ]
+
+  interface MockEvent {
+    path: string
+    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+  }
+
+  function createMockEvent(path: string): MockEvent {
+    return { path, node: { req: { url: path }, res: { setHeader: () => {} } } }
+  }
+
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch
+    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
+      .fn()
+      .mockImplementation((input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : String(input)
+        if (url.includes('/api/sitemap/real-estate-buildings')) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ success: true, data: buildingData }), { status: 200 }),
+          )
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
+        )
+      }) as unknown as typeof fetch
+    vi.resetModules()
+  })
+
+  afterEach(() => {
+    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch
+  })
+
+  it('유효하지 않은 건물명((숫자) 형태, 숫자-숫자 형태)은 사이트맵 URL에서 제외된다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
+    expect(xml).toContain(encodeURIComponent('래미안강남'))
+    expect(xml).toContain(encodeURIComponent('해운대빌라'))
+    expect(xml).not.toContain('535-3')
+    expect(xml).not.toContain('123-4')
+  })
+
+  it('유효한 건물만 포함되어 URL 수가 유효 건물 수와 일치한다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
+    const urlCount = (xml.match(/<url>/g) ?? []).length
+    expect(urlCount).toBe(2)
+  })
+})

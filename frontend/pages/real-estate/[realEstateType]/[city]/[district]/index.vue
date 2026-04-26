@@ -221,7 +221,7 @@ const heroStats = computed(() => {
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: typeLabel.value, href: `/real-estate/${realEstateType.value}`, current: false },
+  { label: typeLabel.value, href: `/real-estate/${propertyTypePart}`, current: false },
   { label: cityName.value, href: `/real-estate/${realEstateType.value}/${citySlug.value}`, current: false },
   { label: districtName.value, current: true },
 ])
@@ -294,7 +294,7 @@ const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
-  { name: typeLabel.value, url: `/real-estate/${realEstateType.value}` },
+  { name: typeLabel.value, url: `/real-estate/${propertyTypePart}` },
   { name: cityName.value, url: `/real-estate/${realEstateType.value}/${citySlug.value}` },
   { name: districtName.value, url: canonicalPath.value },
 ])

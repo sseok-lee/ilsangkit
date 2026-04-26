@@ -524,13 +524,11 @@ const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema 
 
 // Breadcrumb JSON-LD
 const listUrl = toRealEstateListUrl({ type: realEstateType, city: cityName, district: districtName })
-const typeLabelText = `${propertyMeta.value?.label ?? ''} ${tabLabel.value}`
-const cityHubUrl = `/real-estate/${realEstateType}/${citySlugParam}`
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
-  { name: '부동산 실거래가', url: '/real-estate' },
-  { name: typeLabelText, url: `/real-estate/${realEstateType}` },
-  { name: cityName, url: cityHubUrl },
+  { name: '부동산', url: '/real-estate' },
+  { name: `${propertyMeta.value?.label ?? ''} ${tabLabel.value}`, url: `/real-estate/${propertyTypePart}` },
+  { name: cityName, url: `/real-estate/${realEstateType}/${citySlugParam}` },
   { name: districtName, url: listUrl },
   { name: buildingName.value, url: toRealEstateUrl({ type: realEstateType, city: cityName, district: districtName, buildingName: buildingName.value }) },
 ])
@@ -539,8 +537,8 @@ setBreadcrumbSchema([
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: typeLabelText, href: `/real-estate/${realEstateType}`, current: false },
-  { label: cityName, href: cityHubUrl, current: false },
+  { label: `${propertyMeta.value?.label ?? ''} ${tabLabel.value}`, href: `/real-estate/${propertyTypePart}`, current: false },
+  { label: cityName, href: `/real-estate/${realEstateType}/${citySlugParam}`, current: false },
   { label: districtName, href: listUrl, current: false },
   { label: buildingName.value, current: true },
 ])
