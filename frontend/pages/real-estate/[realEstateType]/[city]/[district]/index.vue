@@ -288,10 +288,32 @@ useHead(() => {
   }
 })
 
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
   { name: `${cityName.value} ${districtName.value}`, url: canonicalPath.value },
 ])
+
+watch(
+  complexes,
+  (list) => {
+    if (list.length > 0) {
+      setItemListSchema(
+        list.slice(0, 20).map((c) => ({
+          name: c.buildingName,
+          url: toRealEstateUrl({
+            type: realEstateType.value as never,
+            city: cityName.value,
+            district: districtName.value,
+            buildingName: c.buildingName,
+          }),
+        })),
+      )
+    } else {
+      setItemListSchema([{ name: `${districtName.value} ${typeLabel.value}`, url: canonicalPath.value }])
+    }
+  },
+  { immediate: true },
+)
 </script>

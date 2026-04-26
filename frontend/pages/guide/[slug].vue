@@ -179,7 +179,7 @@ const slug = computed(() => route.params.slug as string)
 const config = useRuntimeConfig()
 const { fetchGuideBySlug } = useGuides()
 const { setMeta } = useFacilityMeta()
-const { setBreadcrumbSchema, setFAQSchema, setHowToSchema } = useStructuredData()
+const { setBreadcrumbSchema, setArticleSchema, setFAQSchema, setHowToSchema } = useStructuredData()
 
 // SSR 호환: useAsyncData로 가이드 데이터 가져오기 (서버에서도 실행)
 const { data: guide, status } = await useAsyncData(
@@ -276,41 +276,14 @@ if (guide.value) {
     { name: guide.value.title, url: `/guide/${guide.value.slug}` },
   ])
 
-  // Article JSON-LD (publisher.logo 포함)
-  useHead({
-    script: [
-      {
-        type: 'application/ld+json',
-        innerHTML: JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'Article',
-          headline: guide.value.title,
-          description: guide.value.summary,
-          image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
-          datePublished: guide.value.createdAt,
-          dateModified: guide.value.updatedAt,
-          url: `${SITE_URL}/guide/${guide.value.slug}`,
-          author: {
-            '@type': 'Organization',
-            name: '일상킷 편집팀',
-            url: `${SITE_URL}/about`,
-          },
-          publisher: {
-            '@type': 'Organization',
-            name: '일상킷',
-            url: SITE_URL,
-            logo: {
-              '@type': 'ImageObject',
-              url: `${SITE_URL}/icons/logo.webp`,
-            },
-          },
-          mainEntityOfPage: {
-            '@type': 'WebPage',
-            '@id': `${SITE_URL}/guide/${guide.value.slug}`,
-          },
-        }),
-      },
-    ],
+  // Article JSON-LD
+  setArticleSchema({
+    headline: guide.value.title,
+    description: guide.value.summary,
+    datePublished: guide.value.createdAt,
+    dateModified: guide.value.updatedAt || undefined,
+    url: `/guide/${guide.value.slug}`,
+    image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
   })
 
   // FAQ JSON-LD: "자주 묻는 질문" 섹션에서 Q/A 추출

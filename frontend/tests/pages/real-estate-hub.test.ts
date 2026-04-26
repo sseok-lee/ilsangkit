@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 import RealEstateHubPage from '~/pages/real-estate/index.vue'
@@ -11,13 +11,20 @@ import RealEstateHubPage from '~/pages/real-estate/index.vue'
 ;(globalThis as any).onMounted = onMounted
 ;(globalThis as any).onUnmounted = onUnmounted
 
-
+const mockSetBreadcrumbSchema = vi.fn()
+const mockSetItemListSchema = vi.fn()
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
-    setBreadcrumbSchema: vi.fn(),
+    setBreadcrumbSchema: mockSetBreadcrumbSchema,
+    setItemListSchema: mockSetItemListSchema,
   }),
 }))
+
+beforeEach(() => {
+  mockSetBreadcrumbSchema.mockClear()
+  mockSetItemListSchema.mockClear()
+})
 
 async function mountSuspended(component: any, options?: any) {
   const wrapper = mount(
@@ -70,6 +77,11 @@ describe('부동산 허브 페이지 콘텐츠 강화 (Task 3.3)', () => {
     const h2Elements = wrapper.findAll('h2')
     const texts = h2Elements.map(el => el.text())
     expect(texts.some(t => t.includes('부동산 실거래가란'))).toBe(true)
+  })
+
+  it('setItemListSchema가 호출되어야 한다 (ItemList 구조화 데이터)', async () => {
+    await mountSuspended(RealEstateHubPage)
+    expect(mockSetItemListSchema).toHaveBeenCalled()
   })
 
 })

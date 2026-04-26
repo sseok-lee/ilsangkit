@@ -269,8 +269,9 @@ const { setHomeMeta } = useFacilityMeta()
 setHomeMeta()
 
 // JSON-LD 구조화된 데이터 - 기존 유지
-const { setWebsiteSchema } = useStructuredData()
+const { setWebsiteSchema, setOrganizationSchema } = useStructuredData()
 setWebsiteSchema()
+setOrganizationSchema()
 
 // 홈 히어로 배경 이미지 preload (홈 한정)
 useHead({

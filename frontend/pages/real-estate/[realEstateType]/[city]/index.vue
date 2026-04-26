@@ -101,11 +101,14 @@ useHead({
   link: [{ rel: 'canonical', href: canonicalUrl }],
 })
 
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
   { name: typeLabel, url: `/real-estate/${realEstateTypeParam}` },
   { name: cityName, url: `/real-estate/${realEstateTypeParam}/${citySlugParam}` },
 ])
+setItemListSchema(
+  districts.value.map((d) => ({ name: d.name, url: d.url })),
+)
 </script>

@@ -20,10 +20,12 @@ import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 }))
 
 const mockSetBreadcrumbSchema = vi.fn()
+const mockSetItemListSchema = vi.fn()
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
+    setItemListSchema: mockSetItemListSchema,
   }),
 }))
 
@@ -43,6 +45,7 @@ vi.mock('~/utils/seoConstants', () => ({
 
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
+  mockSetItemListSchema.mockClear()
 })
 
 const globalStubs = {
@@ -94,5 +97,10 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
     await mountPage()
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
     expect(crumbs[3].url).toContain('seoul')
+  })
+
+  it('setItemListSchema가 호출되어야 한다 (ItemList 구조화 데이터)', async () => {
+    await mountPage()
+    expect(mockSetItemListSchema).toHaveBeenCalled()
   })
 })

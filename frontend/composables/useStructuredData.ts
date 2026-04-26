@@ -506,6 +506,34 @@ export function useStructuredData() {
 
 
   /**
+   * Article 스키마 (가이드 상세용)
+   */
+  function setArticleSchema(options: {
+    headline: string
+    description: string
+    datePublished: string
+    dateModified?: string
+    url: string
+    image?: string
+  }) {
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: options.headline,
+      description: options.description,
+      datePublished: options.datePublished,
+      ...(options.dateModified ? { dateModified: options.dateModified } : {}),
+      url: options.url.startsWith('http') ? options.url : `${SITE_URL}${options.url}`,
+      ...(options.image ? { image: options.image } : {}),
+      author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+    }
+    useHead({
+      script: [{ type: 'application/ld+json', innerHTML: JSON.stringify(schema) }],
+    })
+  }
+
+  /**
    * FAQPage 스키마 (가이드 howto/guide 유형용)
    */
   function setFAQSchema(faqs: Array<{ question: string; answer: string }>) {
@@ -611,6 +639,7 @@ export function useStructuredData() {
     setBuildingPlaceSchema,
     setRealEstateListingSchema,
     setAreaReportSchema,
+    setArticleSchema,
     setFAQSchema,
     setHowToSchema,
     setEventSchema,

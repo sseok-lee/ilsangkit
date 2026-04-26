@@ -17,10 +17,14 @@ const mockNavigateTo = vi.fn()
 ;(globalThis as any).navigateTo = mockNavigateTo
 
 // Mock composables
+const mockSetWebsiteSchema = vi.fn()
+const mockSetOrganizationSchema = vi.fn()
+
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
-    setWebsiteSchema: vi.fn(),
+    setWebsiteSchema: mockSetWebsiteSchema,
     setItemListSchema: vi.fn(),
+    setOrganizationSchema: mockSetOrganizationSchema,
   }),
 }))
 
@@ -50,6 +54,8 @@ async function mountSuspended(component: any, options?: any) {
 describe('Index Page', () => {
   beforeEach(() => {
     mockNavigateTo.mockClear()
+    mockSetWebsiteSchema.mockClear()
+    mockSetOrganizationSchema.mockClear()
   })
 
   it('renders hero title and subtitle', async () => {
@@ -121,6 +127,12 @@ describe('Index Page', () => {
     await searchInput.trigger('keydown.enter')
 
     expect(mockNavigateTo).not.toHaveBeenCalled()
+  })
+
+  it('setOrganizationSchema를 호출한다', async () => {
+    await mountSuspended(IndexPage)
+
+    expect(mockSetOrganizationSchema).toHaveBeenCalled()
   })
 
   it('applies responsive layout root class', async () => {

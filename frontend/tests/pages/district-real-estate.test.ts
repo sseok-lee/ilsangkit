@@ -30,15 +30,40 @@ vi.mock('~/composables/useRegions', () => ({
   CITY_SLUG_MAP: { seoul: '서울' },
 }))
 
+const mockSetBreadcrumbSchemaDistrict = vi.fn()
+const mockSetItemListSchemaDistrict = vi.fn()
+
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
-    setBreadcrumbSchema: vi.fn(),
+    setBreadcrumbSchema: mockSetBreadcrumbSchemaDistrict,
+    setItemListSchema: mockSetItemListSchemaDistrict,
   }),
 }))
 
 vi.mock('~/utils/seoConstants', () => ({
   SITE_URL: 'https://ilsangkit.co.kr',
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
+}))
+
+vi.mock('~/composables/useRealEstate', () => ({
+  useRealEstate: () => ({
+    getComplexList: vi.fn().mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      totalPages: 0,
+    }),
+  }),
+}))
+
+vi.mock('~/utils/realEstateBuildingName', () => ({
+  isValidBuildingName: vi.fn(() => true),
+}))
+
+vi.mock('~/utils/realEstateUrl', () => ({
+  isRealEstateUrlType: vi.fn(() => true),
+  toRealEstateListUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}`),
+  toRealEstateUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}/${p.buildingName}`),
 }))
 
 async function mountSuspended(component: any, options?: any) {
@@ -99,5 +124,11 @@ describe('지역+부동산 교차 페이지 (Task 4.1)', () => {
     const h2Elements = wrapper.findAll('h2')
     const texts = h2Elements.map(el => el.text())
     expect(texts.some(t => t.includes('유형별'))).toBe(true)
+  })
+
+  it('setItemListSchema가 호출되어야 한다 (ItemList 구조화 데이터)', async () => {
+    const module = await import('~/pages/[city]/[district]/real-estate.vue')
+    await mountSuspended(module.default)
+    expect(mockSetItemListSchemaDistrict).toHaveBeenCalled()
   })
 })
