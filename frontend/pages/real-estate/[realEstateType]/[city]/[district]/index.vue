@@ -294,7 +294,9 @@ const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
-  { name: `${cityName.value} ${districtName.value}`, url: canonicalPath.value },
+  { name: typeLabel.value, url: `/real-estate/${realEstateType.value}` },
+  { name: cityName.value, url: `/real-estate/${realEstateType.value}/${citySlug.value}` },
+  { name: districtName.value, url: canonicalPath.value },
 ])
 
 watch(
