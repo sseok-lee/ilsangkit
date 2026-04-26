@@ -143,6 +143,7 @@
 import { CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
+import { useAnalytics } from '~/composables/useAnalytics'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -258,4 +259,9 @@ watch(cityData, (data) => {
     })
   }
 }, { immediate: true })
+
+const { trackRegionPageView } = useAnalytics()
+onMounted(() => {
+  trackRegionPageView({ city: city.value })
+})
 </script>
