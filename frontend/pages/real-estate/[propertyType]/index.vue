@@ -151,6 +151,7 @@ import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListR
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
+import { toRealEstateUrl } from '~/utils/realEstateUrl'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
@@ -363,7 +364,7 @@ watch(
       setItemListSchema(
         list.slice(0, 20).map((c) => ({
           name: c.buildingName,
-          url: `/real-estate/${propertyTypeParam.value}/${c.buildingName}`,
+          url: toRealEstateUrl({ type: apiSlug.value as never, city: c.city, district: c.district, buildingName: c.buildingName }),
         })),
       )
     } else {
