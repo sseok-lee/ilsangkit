@@ -10,7 +10,7 @@ import type { SyncStats } from '../services/baseSyncService.js';
 import { processSubscriptions } from './geocodeSubscriptions.js';
 
 const API_BASE = 'https://data.myhome.go.kr:443/rentalHouseList';
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 1000;
 const MAX_RETRIES = 2;
 const RETRY_BACKOFF_MS = 500;
 
@@ -84,6 +84,7 @@ async function fetchRegionPage(
 
   const res = await fetchWithRetry(urlStr);
   const data = await res.json() as { code: string; msg?: string; hsmpList?: MyhomeRentalItem[] };
+  if (data.code === '22') throw new Error(`RATE_LIMIT: ${data.msg ?? 'API 일일 호출 한도 초과'}`);
   if (data.code !== '000') return { items: [], totalCount: 0 };
 
   const list = data.hsmpList ?? [];
@@ -119,6 +120,7 @@ async function fetchAllRegions(): Promise<MyhomeRentalItem[]> {
       let page = 2;
       while (fetched < first.totalCount) {
         const next = await fetchRegionPage(region.brtcCode, region.signguCode, page, serviceKey);
+        if (next.items.length === 0) break; // 빈 페이지 → 무한루프 방지
         allItems.push(...next.items);
         fetched += next.items.length;
         page++;
@@ -127,7 +129,12 @@ async function fetchAllRegions(): Promise<MyhomeRentalItem[]> {
       console.info(`  ${region.brtcCode}-${region.signguCode}: ${first.totalCount}건`);
       await new Promise((r) => setTimeout(r, 200)); // rate limit
     } catch (e) {
-      console.warn(`  ${region.brtcCode}-${region.signguCode} skip:`, (e as Error).message);
+      const msg = (e as Error).message;
+      if (msg.startsWith('RATE_LIMIT')) {
+        console.warn(`[RATE_LIMIT] 일일 API 호출 한도 초과 — 이후 지역 수집 중단. 수집된 건수: ${allItems.length}`);
+        break;
+      }
+      console.warn(`  ${region.brtcCode}-${region.signguCode} skip:`, msg);
     }
   }
 
