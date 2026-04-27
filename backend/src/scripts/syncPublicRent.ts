@@ -7,7 +7,7 @@ import 'dotenv/config';
 import { prisma } from '../lib/prisma.js';
 import { runSync } from '../services/baseSyncService.js';
 import type { SyncStats } from '../services/baseSyncService.js';
-import { processSubscriptions } from './geocodeSubscriptions.js';
+import { processPublicRentals } from './geocodePublicRent.js';
 
 const API_BASE = 'https://data.myhome.go.kr:443/rentalHouseList';
 const PAGE_SIZE = 1000;
@@ -254,7 +254,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log('✅ 공공임대 동기화 완료');
       try {
         console.log('\n공공임대 주소 지오코딩 시작...');
-        await processSubscriptions(prisma);
+        await processPublicRentals(prisma);
         console.log('공공임대 주소 지오코딩 완료\n');
       } catch (err) {
         console.error('공공임대 주소 지오코딩 실패:', err);

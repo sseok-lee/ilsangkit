@@ -1392,9 +1392,13 @@ model PublicRentalComplex {
   parkingCount      Int?                       // 주차수 (parkngCo)
   complexNameKor    String?  @db.VarChar(300) // 단지명 (hsmpNm)
   sourceId          String   @unique @db.VarChar(30) // "lh-{hsmpSn}"
+  lat              Decimal? @db.Decimal(10, 7)
+  lng              Decimal? @db.Decimal(10, 7)
+  geocodedAt       DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  @@index([lat, lng])
   @@index([city, district])
   @@index([city, rentalType])
   @@index([rentalType])
