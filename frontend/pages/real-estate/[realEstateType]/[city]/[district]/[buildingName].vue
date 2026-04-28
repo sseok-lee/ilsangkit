@@ -803,7 +803,6 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
       areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
     }
   },
-  { lazy: true }
 )
 const ssrLoading = computed(() => ssrStatus.value === 'pending')
 
