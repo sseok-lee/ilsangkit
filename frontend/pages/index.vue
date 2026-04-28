@@ -61,7 +61,7 @@
 
         <!-- 통계 박스 -->
         <div class="bg-white border border-line rounded-2xl shadow-card px-5 py-4 md:max-w-[580px]">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-4">
+          <div class="grid grid-cols-3 gap-y-4 gap-x-4">
             <div class="flex flex-col gap-0.5">
               <span class="text-[11px] text-slate-400">실거래 부동산</span>
               <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ buildingCountKor }}만건</strong>
@@ -73,10 +73,6 @@
             <div class="flex flex-col gap-0.5">
               <span class="text-[11px] text-slate-400">등록 시설</span>
               <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ facilityCountKor }}만개</strong>
-            </div>
-            <div class="flex flex-col gap-0.5">
-              <span class="text-[11px] text-slate-400">커버 지역</span>
-              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ stats.regionCount }} 시군구</strong>
             </div>
           </div>
         </div>

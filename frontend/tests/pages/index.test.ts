@@ -82,7 +82,7 @@ describe('Index Page', () => {
     const wrapper = await mountSuspended(IndexPage)
 
     expect(wrapper.text()).toContain('생활시설')
-    expect(wrapper.text()).toContain('시군구')
+    expect(wrapper.text()).toContain('진행중 청약')
   })
 
   it('renders new "오늘 확인할 정보" section', async () => {
