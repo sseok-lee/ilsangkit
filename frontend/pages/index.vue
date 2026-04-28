@@ -60,19 +60,19 @@
         </div>
 
         <!-- 통계 박스 -->
-        <div class="bg-white border border-line rounded-2xl shadow-card px-5 py-4 md:max-w-[580px]">
-          <div class="grid grid-cols-3 gap-y-4 gap-x-4">
-            <div class="flex flex-col gap-0.5">
+        <div class="bg-white border border-line rounded-2xl shadow-card md:max-w-[580px]">
+          <div class="flex items-stretch divide-x divide-slate-100">
+            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+              <strong class="text-slate-900 font-bold text-xl tracking-tight">{{ buildingCountKor }}만</strong>
               <span class="text-[11px] text-slate-400">실거래 부동산</span>
-              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ buildingCountKor }}만건</strong>
             </div>
-            <div class="flex flex-col gap-0.5">
+            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+              <strong class="text-primary font-bold text-xl tracking-tight">{{ stats.subscriptionActiveCount }}건</strong>
               <span class="text-[11px] text-slate-400">진행중 청약</span>
-              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ stats.subscriptionActiveCount }}건</strong>
             </div>
-            <div class="flex flex-col gap-0.5">
+            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+              <strong class="text-slate-900 font-bold text-xl tracking-tight">{{ facilityCountKor }}만</strong>
               <span class="text-[11px] text-slate-400">등록 시설</span>
-              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ facilityCountKor }}만개</strong>
             </div>
           </div>
         </div>
