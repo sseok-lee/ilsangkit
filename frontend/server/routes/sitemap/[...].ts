@@ -162,14 +162,19 @@ export default defineEventHandler(async (event) => {
 
     const offset = (page - 1) * MAX_URLS_PER_SITEMAP
     const pageItems = subscriptions.slice(offset, offset + MAX_URLS_PER_SITEMAP)
-    const today = new Date().toISOString().split('T')[0]
+    const threeMonthsAgo = new Date()
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
 
-    const urls = pageItems.map((item) => ({
-      loc: `${SITE_URL}/subscription/${item.id}`,
-      lastmod: today,
-      changefreq: 'weekly' as const,
-      priority: 0.6,
-    }))
+    const urls = pageItems.map((item) => {
+      const updatedAt = new Date(item.updatedAt)
+      const changefreq = updatedAt >= threeMonthsAgo ? 'monthly' : 'yearly'
+      return {
+        loc: `${SITE_URL}/subscription/${item.id}`,
+        lastmod: formatDateForSitemap(item.updatedAt),
+        changefreq: changefreq as 'monthly' | 'yearly',
+        priority: 0.6,
+      }
+    })
 
     return generateSitemapXml(urls)
   }
