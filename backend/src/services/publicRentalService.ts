@@ -67,15 +67,18 @@ export async function getPublicRentalList(params: PublicRentalListQuery) {
   const where = buildWhere(params);
   const skip = (params.page - 1) * params.limit;
 
-  const [rows, total] = await Promise.all([
+  const [rows, groups] = await Promise.all([
     prisma.publicRentalComplex.findMany({
       where,
+      distinct: ['complexCode'],
       orderBy: [{ city: 'asc' }, { district: 'asc' }, { complexName: 'asc' }],
       skip,
       take: params.limit,
     }),
-    prisma.publicRentalComplex.count({ where }),
+    prisma.publicRentalComplex.groupBy({ by: ['complexCode'], where }),
   ]);
+
+  const total = groups.length;
 
   return {
     items: rows.map(serializePublicRentalRow),
