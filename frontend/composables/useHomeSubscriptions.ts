@@ -31,7 +31,7 @@ export function useHomeSubscriptions() {
 
   const fetchByStatus = (status: 'ongoing' | 'upcoming') =>
     $fetch<ApiListResponse>(`${apiBase}/api/subscription`, {
-      query: { status, limit: 2, page: 1 },
+      query: { status, limit: 4, page: 1 },
     }).catch(() => ({ success: false, data: { items: [], total: 0, page: 1, totalPages: 0 } }) as ApiListResponse)
 
   const asyncState = useAsyncData('home-subscriptions', async () => {

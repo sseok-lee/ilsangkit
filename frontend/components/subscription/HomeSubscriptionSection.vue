@@ -13,42 +13,27 @@
       </NuxtLink>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- 청약중 -->
-      <div v-if="ongoing.length > 0">
-        <div class="flex items-center gap-2 mb-3 text-[15px] font-bold text-slate-900">
-          <StatusBadge variant="green">청약중</StatusBadge>
-          <span>지금 신청 가능</span>
-        </div>
-        <NuxtLink
-          v-for="item in ongoing"
-          :key="item.id"
-          :to="`/subscription/${item.id}`"
-          class="block mb-2 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md transition-shadow"
-        >
-          <StatusBadge variant="green">접수중</StatusBadge>
-          <strong class="block mt-1.5 mb-1 text-[15px] text-slate-900">{{ item.houseName }}</strong>
-          <p class="m-0 text-xs text-slate-500">{{ formatMeta(item, 'ongoing') }}</p>
-        </NuxtLink>
-      </div>
-
-      <!-- 청약예정 -->
-      <div v-if="upcoming.length > 0">
-        <div class="flex items-center gap-2 mb-3 text-[15px] font-bold text-slate-900">
-          <StatusBadge variant="blue">청약예정</StatusBadge>
-          <span>곧 시작</span>
-        </div>
-        <NuxtLink
-          v-for="item in upcoming"
-          :key="item.id"
-          :to="`/subscription/${item.id}`"
-          class="block mb-2 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md transition-shadow"
-        >
-          <StatusBadge variant="blue">접수예정</StatusBadge>
-          <strong class="block mt-1.5 mb-1 text-[15px] text-slate-900">{{ item.houseName }}</strong>
-          <p class="m-0 text-xs text-slate-500">{{ formatMeta(item, 'upcoming') }}</p>
-        </NuxtLink>
-      </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <NuxtLink
+        v-for="item in ongoing"
+        :key="`ongoing-${item.id}`"
+        :to="`/subscription/${item.id}`"
+        class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-green-300 transition-shadow"
+      >
+        <StatusBadge variant="green">접수중</StatusBadge>
+        <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">{{ item.houseName }}</strong>
+        <p class="text-[11px] text-slate-400 mt-auto">{{ formatMeta(item, 'ongoing') }}</p>
+      </NuxtLink>
+      <NuxtLink
+        v-for="item in upcoming"
+        :key="`upcoming-${item.id}`"
+        :to="`/subscription/${item.id}`"
+        class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-blue-300 transition-shadow"
+      >
+        <StatusBadge variant="blue">접수예정</StatusBadge>
+        <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">{{ item.houseName }}</strong>
+        <p class="text-[11px] text-slate-400 mt-auto">{{ formatMeta(item, 'upcoming') }}</p>
+      </NuxtLink>
     </div>
   </section>
 </template>
