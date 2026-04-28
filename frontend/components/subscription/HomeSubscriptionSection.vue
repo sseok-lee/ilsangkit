@@ -13,7 +13,7 @@
       </NuxtLink>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 gap-3">
       <NuxtLink
         v-for="item in ongoing"
         :key="`ongoing-${item.id}`"
