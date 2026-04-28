@@ -76,3 +76,20 @@ export const AreaGroupsQuerySchema = z.object({
 });
 
 export type AreaGroupsQuery = z.infer<typeof AreaGroupsQuerySchema>;
+
+// K-apt 단지정보 조회 스키마
+export const KaptQuerySchema = z.object({
+  buildingName: z.string().max(100),
+  city: z.string().max(50).optional(),
+  district: z.string().max(50).optional(),
+});
+
+export type KaptQuery = z.infer<typeof KaptQuerySchema>;
+
+// 가격 심화 분석 조회 스키마
+export const PriceAnalysisQuerySchema = z.object({
+  bjdCode: z.string().max(10),
+  buildingName: z.string().max(100),
+});
+
+export type PriceAnalysisQuery = z.infer<typeof PriceAnalysisQuerySchema>;

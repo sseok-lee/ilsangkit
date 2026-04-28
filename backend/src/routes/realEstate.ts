@@ -8,9 +8,12 @@ import {
   getBuildingInfo,
   searchAll,
   getAreaGroups,
+  getPriceAnalysis,
 } from '../services/realEstateService.js';
+import { getKaptInfo } from '../services/kaptService.js';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { searchRateLimiter } from '../middlewares/rateLimit.js';
 import { NotFoundError } from '../lib/errors.js';
 import {
   RealEstateTypeSchema,
@@ -20,6 +23,8 @@ import {
   RealEstateBuildingInfoSchema,
   RealEstateUnifiedSearchSchema,
   AreaGroupsQuerySchema,
+  KaptQuerySchema,
+  PriceAnalysisQuerySchema,
 } from '../schemas/realEstate.js';
 import { z } from 'zod';
 
@@ -29,6 +34,29 @@ const router = Router();
 const TypeParamsSchema = z.object({
   type: RealEstateTypeSchema,
 });
+
+// GET /api/real-estate/kapt - K-apt 단지정보
+router.get(
+  '/kapt',
+  searchRateLimiter,
+  validate(KaptQuerySchema, 'query'),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { buildingName, city, district } = res.locals.validated.query as z.infer<typeof KaptQuerySchema>;
+    const result = await getKaptInfo(buildingName, city, district);
+    res.json({ success: true, data: result });
+  })
+);
+
+// GET /api/real-estate/price-analysis - 가격 심화 분석
+router.get(
+  '/price-analysis',
+  validate(PriceAnalysisQuerySchema, 'query'),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { bjdCode, buildingName } = res.locals.validated.query as z.infer<typeof PriceAnalysisQuerySchema>;
+    const result = await getPriceAnalysis(bjdCode, buildingName);
+    res.json({ success: true, data: result });
+  })
+);
 
 // GET /api/real-estate/search - 통합 검색 (must be before /:type routes)
 router.get(

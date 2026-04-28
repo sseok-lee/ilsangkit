@@ -8,6 +8,8 @@ import type {
   RealEstateGroupedResponse,
   AreaGroup,
   StatsResponse,
+  KaptComplexInfo,
+  PriceAnalysis,
 } from '~/types/realEstate'
 import { useApiBase } from '~/composables/useApiBase'
 
@@ -137,6 +139,39 @@ export function useRealEstate() {
     return res.data
   }
 
+  async function getKaptInfo(
+    buildingName: string,
+    city?: string,
+    district?: string,
+  ): Promise<KaptComplexInfo | null> {
+    const query = new URLSearchParams({ buildingName })
+    if (city) query.set('city', city)
+    if (district) query.set('district', district)
+    try {
+      const res = await $fetch<{ success: boolean; data: KaptComplexInfo | null }>(
+        `${apiBase}/api/real-estate/kapt?${query.toString()}`,
+      )
+      return res.data
+    } catch {
+      return null
+    }
+  }
+
+  async function getPriceAnalysis(
+    bjdCode: string,
+    buildingName: string,
+  ): Promise<PriceAnalysis | null> {
+    const query = new URLSearchParams({ bjdCode, buildingName })
+    try {
+      const res = await $fetch<{ success: boolean; data: PriceAnalysis | null }>(
+        `${apiBase}/api/real-estate/price-analysis?${query.toString()}`,
+      )
+      return res.data
+    } catch {
+      return null
+    }
+  }
+
   return {
     searchTransactions,
     getTransactionStats,
@@ -144,5 +179,7 @@ export function useRealEstate() {
     getBuildingInfo,
     searchAll,
     getAreaGroups,
+    getKaptInfo,
+    getPriceAnalysis,
   }
 }

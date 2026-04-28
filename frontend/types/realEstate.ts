@@ -246,3 +246,24 @@ export function propertyTypeFromSlug(slug: string): RealEstatePropertyType | nul
   if (base === 'apt' || base === 'villa' || base === 'offitel') return base as RealEstatePropertyType
   return null
 }
+
+// K-apt 단지정보
+export interface KaptComplexInfo {
+  kaptCode: string
+  kaptName: string
+  totalHouseholds: number | null
+  totalBuildings: number | null
+  parkingPerHousehold: number | null
+  avgManagementFee: number | null  // 만원/월
+  elevatorCount: number | null
+  heatingType: string | null
+}
+
+// 가격 심화 분석
+export interface PriceAnalysis {
+  pricePerPyeong: number | null    // 만원/평
+  jeonseRatio: number | null       // %
+  allTimeHigh: number | null       // 만원
+  allTimeLow: number | null        // 만원
+  saleCount: number
+}

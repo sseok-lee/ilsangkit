@@ -686,3 +686,64 @@ export async function searchAll(
 
   return { categories: results };
 }
+
+// ─────────────────────────────────────────────
+// getPriceAnalysis
+// ─────────────────────────────────────────────
+
+export interface PriceAnalysisResult {
+  pricePerPyeong: number | null;
+  jeonseRatio: number | null;
+  allTimeHigh: number | null;
+  allTimeLow: number | null;
+  saleCount: number;
+}
+
+export async function getPriceAnalysis(
+  bjdCode: string,
+  buildingName: string,
+): Promise<PriceAnalysisResult | null> {
+  const [saleAgg, rentAgg] = await Promise.all([
+    prisma.aptSaleTransaction.aggregate({
+      where: {
+        bjdCode,
+        buildingName,
+        cancelDealDay: null,
+      },
+      _avg: { dealAmount: true, exclusiveArea: true },
+      _max: { dealAmount: true },
+      _min: { dealAmount: true },
+      _count: { id: true },
+    }),
+    prisma.aptRentTransaction.aggregate({
+      where: {
+        bjdCode,
+        buildingName,
+        rentType: '전세',
+      },
+      _avg: { deposit: true },
+    }),
+  ]);
+
+  if (!saleAgg._count.id || !saleAgg._avg.dealAmount) return null;
+
+  const avgDeal = Number(saleAgg._avg.dealAmount);
+  const avgArea = saleAgg._avg.exclusiveArea ? Number(saleAgg._avg.exclusiveArea) : null;
+  const maxDeal = saleAgg._max.dealAmount !== null ? Number(saleAgg._max.dealAmount) : null;
+  const minDeal = saleAgg._min.dealAmount !== null ? Number(saleAgg._min.dealAmount) : null;
+  const avgJeonse = rentAgg._avg.deposit ? Number(rentAgg._avg.deposit) : null;
+
+  const pricePerPyeong =
+    avgArea && avgArea > 0 ? Math.round(avgDeal / (avgArea / 3.3058)) : null;
+
+  const jeonseRatio =
+    avgJeonse && avgDeal > 0 ? Math.round((avgJeonse / avgDeal) * 100) : null;
+
+  return {
+    pricePerPyeong,
+    jeonseRatio,
+    allTimeHigh: maxDeal !== null ? Math.round(maxDeal) : null,
+    allTimeLow: minDeal !== null ? Math.round(minDeal) : null,
+    saleCount: saleAgg._count.id,
+  };
+}
