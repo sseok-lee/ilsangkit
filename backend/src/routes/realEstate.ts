@@ -40,8 +40,8 @@ router.get(
   '/kapt',
   searchRateLimiter,
   validate(KaptQuerySchema, 'query'),
-  asyncHandler(async (_req: Request, res: Response) => {
-    const { buildingName, city, district } = res.locals.validated.query as z.infer<typeof KaptQuerySchema>;
+  asyncHandler(async (req: Request, res: Response) => {
+    const { buildingName, city, district } = req.query as z.infer<typeof KaptQuerySchema>;
     const result = await getKaptInfo(buildingName, city, district);
     res.json({ success: true, data: result });
   })
@@ -51,8 +51,8 @@ router.get(
 router.get(
   '/price-analysis',
   validate(PriceAnalysisQuerySchema, 'query'),
-  asyncHandler(async (_req: Request, res: Response) => {
-    const { bjdCode, buildingName } = res.locals.validated.query as z.infer<typeof PriceAnalysisQuerySchema>;
+  asyncHandler(async (req: Request, res: Response) => {
+    const { bjdCode, buildingName } = req.query as z.infer<typeof PriceAnalysisQuerySchema>;
     const result = await getPriceAnalysis(bjdCode, buildingName);
     res.json({ success: true, data: result });
   })
