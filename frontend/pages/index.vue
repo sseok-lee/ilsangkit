@@ -28,7 +28,7 @@
             </div>
           </div>
           <p class="md:hidden text-slate-500 text-[15px] mt-1">생활시설 · 실거래 · 청약을 한 곳에서</p>
-          <p class="hidden md:block text-slate-500 text-lg mt-1">공공데이터 기반 생활시설 {{ facilityCountKor }}만 건 · 실거래가 · 청약 일정을 지도와 함께.</p>
+          <p class="hidden md:block text-slate-500 text-lg mt-1">생활시설 · 부동산 실거래가 · 청약 정보를 한 곳에서.</p>
         </div>
 
         <!-- 검색바 -->
