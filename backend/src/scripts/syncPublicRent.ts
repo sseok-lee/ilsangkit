@@ -193,7 +193,13 @@ async function syncPublicRent(): Promise<SyncStats> {
     stats.totalRecords = rawItems.length;
     console.info(`총 ${rawItems.length}건 수집`);
 
-    const items = rawItems.map(transformMyhomeItem);
+    const seen = new Set<string>();
+    const items = rawItems.map(transformMyhomeItem).filter((item) => {
+      if (seen.has(item.sourceId)) return false;
+      seen.add(item.sourceId);
+      return true;
+    });
+    console.info(`중복 제거 후 ${items.length}건 (원본 ${rawItems.length}건)`);
 
     // upsert (concurrency 제한 — Prisma 풀 thrashing 방지).
     // 이전엔 batch=500 동시 실행이라 connection pool 압박 + MySQL 좀비 패턴 위험.
