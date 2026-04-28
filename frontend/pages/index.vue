@@ -57,34 +57,22 @@
               </div>
             </div>
           </label>
-          <!-- 인기 검색어 (데스크톱) -->
-          <div class="hidden md:flex items-center gap-2 mt-2.5 flex-wrap">
-            <span class="text-xs text-slate-400 font-semibold shrink-0">인기 검색</span>
-            <button
-              v-for="kw in popularKeywords"
-              :key="kw"
-              class="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs text-slate-600 hover:border-primary hover:text-primary transition-colors shadow-sm"
-              @click="searchPopular(kw)"
-            >
-              {{ kw }}
-            </button>
-          </div>
         </div>
 
         <!-- 통계 박스 -->
         <div class="bg-white border border-line rounded-2xl shadow-card px-5 py-4 md:max-w-[580px]">
           <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-4">
             <div class="flex flex-col gap-0.5">
-              <span class="text-[11px] text-slate-400">등록 시설</span>
-              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ stats.total.toLocaleString('ko-KR') }}개</strong>
-            </div>
-            <div class="flex flex-col gap-0.5">
-              <span class="text-[11px] text-slate-400">실거래 데이터</span>
-              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ totalTransactions.toLocaleString('ko-KR') }}건</strong>
+              <span class="text-[11px] text-slate-400">실거래 부동산</span>
+              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ totalTransactionsKor }}만건</strong>
             </div>
             <div class="flex flex-col gap-0.5">
               <span class="text-[11px] text-slate-400">진행중 청약</span>
               <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ stats.subscriptionActiveCount }}건</strong>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[11px] text-slate-400">등록 시설</span>
+              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ facilityCountKor }}만개</strong>
             </div>
             <div class="flex flex-col gap-0.5">
               <span class="text-[11px] text-slate-400">커버 지역</span>
@@ -355,21 +343,15 @@ const stats = computed(() => {
   }
 })
 
-// 인기 검색어
-const popularKeywords = ['래미안 원펜타스', '마포 화장실', '강남 주차장', '송파 청약']
-
-// 총 실거래 건수
-const totalTransactions = computed(() => {
+// 총 실거래 건수 (만 단위, 소수점 1자리)
+const totalTransactionsKor = computed(() => {
   const re = stats.value.realEstate
-  return (re.aptSale || 0) + (re.aptRent || 0) + (re.villaSale || 0) + (re.villaRent || 0) + (re.offitelSale || 0) + (re.offitelRent || 0)
+  const total = (re.aptSale || 0) + (re.aptRent || 0) + (re.villaSale || 0) + (re.villaRent || 0) + (re.offitelSale || 0) + (re.offitelRent || 0)
+  return (total / 10000).toFixed(1)
 })
 
 // 시설 수 만 단위
 const facilityCountKor = computed(() => Math.floor(stats.value.total / 10000))
-
-function searchPopular(kw: string) {
-  navigateTo(`/search?keyword=${encodeURIComponent(kw)}`)
-}
 
 function formatBuildingCount(n: number): string {
   if (n === 0) return '-'
