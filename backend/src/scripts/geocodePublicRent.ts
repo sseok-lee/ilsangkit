@@ -94,11 +94,12 @@ async function geocodePublicRental(
 }
 
 /**
- * Get LH 공공임대 with null coordinates that need geocoding
+ * Get distinct complexCodes for LH 공공임대 needing geocoding.
+ * Returns one representative row per complexCode (same address across variants).
  */
 export async function getPublicRentalsToGeocode(
   prisma: PrismaClient
-): Promise<Array<{ id: number; complexName: string; complexNameKor: string | null; city: string; district: string }>> {
+): Promise<Array<{ complexCode: string; complexName: string; complexNameKor: string | null; city: string; district: string }>> {
   const retryCutoff = new Date(Date.now() - GEOCODE_RETRY_DAYS * 24 * 60 * 60 * 1000);
   const results = await prisma.publicRentalComplex.findMany({
     where: {
@@ -109,27 +110,28 @@ export async function getPublicRentalsToGeocode(
       ],
     },
     select: {
-      id: true,
+      complexCode: true,
       complexName: true,
       complexNameKor: true,
       city: true,
       district: true,
     },
+    distinct: ['complexCode'],
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return results as any;
 }
 
 /**
- * Update PublicRentalComplex with geocoded coordinates
+ * Update all variants of a complex (by complexCode) with geocoded coordinates
  */
 export async function updatePublicRentalCoordinates(
   prisma: PrismaClient,
-  id: number,
+  complexCode: string,
   coords: Coordinates
 ): Promise<void> {
-  await prisma.publicRentalComplex.update({
-    where: { id },
+  await prisma.publicRentalComplex.updateMany({
+    where: { complexCode },
     data: {
       lat: coords.lat,
       lng: coords.lng,
@@ -139,14 +141,14 @@ export async function updatePublicRentalCoordinates(
 }
 
 /**
- * Mark geocoding attempt as attempted (even if failed)
+ * Mark all variants of a complex (by complexCode) as geocoding attempted
  */
 export async function markGeocodeAttempted(
   prisma: PrismaClient,
-  id: number
+  complexCode: string
 ): Promise<void> {
-  await prisma.publicRentalComplex.update({
-    where: { id },
+  await prisma.publicRentalComplex.updateMany({
+    where: { complexCode },
     data: { geocodedAt: new Date() },
   });
 }
@@ -163,7 +165,7 @@ export async function processPublicRentals(prisma: PrismaClient): Promise<void> 
     return;
   }
 
-  console.info(`[PublicRent] Starting geocoding for ${rentals.length} public rentals`);
+  console.info(`[PublicRent] Starting geocoding for ${rentals.length} complexes`);
   let successCount = 0;
   let failCount = 0;
 
@@ -177,11 +179,11 @@ export async function processPublicRentals(prisma: PrismaClient): Promise<void> 
     );
 
     if (coords) {
-      await updatePublicRentalCoordinates(prisma, rental.id, coords);
+      await updatePublicRentalCoordinates(prisma, rental.complexCode, coords);
       console.info(`[PublicRent] (${i + 1}/${rentals.length}) ✓ ${rental.complexName} → ${coords.lat},${coords.lng}`);
       successCount++;
     } else {
-      await markGeocodeAttempted(prisma, rental.id);
+      await markGeocodeAttempted(prisma, rental.complexCode);
       console.warn(`[PublicRent] (${i + 1}/${rentals.length}) ✗ ${rental.complexName}`);
       failCount++;
     }

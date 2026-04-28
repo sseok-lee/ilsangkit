@@ -9,14 +9,14 @@ const { mockFetch } = vi.hoisted(() => {
 });
 
 const mockFindMany = vi.fn();
-const mockUpdate = vi.fn();
+const mockUpdateMany = vi.fn();
 
 vi.mock('@prisma/client', () => {
   function PrismaClient() {
     return {
       publicRentalComplex: {
         findMany: mockFindMany,
-        update: mockUpdate,
+        updateMany: mockUpdateMany,
       },
       $disconnect: vi.fn(),
     };
@@ -90,16 +90,17 @@ describe('searchByKeyword', () => {
 describe('getPublicRentalsToGeocode', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('lat이 null이고 geocodedAt이 null인 레코드 조회', async () => {
+  it('lat이 null이고 geocodedAt이 null인 레코드 조회 (complexCode distinct)', async () => {
     const prisma = new PrismaClient() as unknown as PrismaClient;
     mockFindMany.mockResolvedValueOnce([
-      { id: 1, complexName: '서울 구로 디지털로 100', complexNameKor: 'LH구로단지', city: '서울특별시', district: '구로구' },
+      { complexCode: '12345', complexName: '서울 구로 디지털로 100', complexNameKor: 'LH구로단지', city: '서울특별시', district: '구로구' },
     ]);
     const result = await getPublicRentalsToGeocode(prisma);
     expect(result).toHaveLength(1);
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ lat: null }),
+        distinct: ['complexCode'],
       })
     );
   });
@@ -114,12 +115,12 @@ describe('getPublicRentalsToGeocode', () => {
 describe('updatePublicRentalCoordinates', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('lat/lng/geocodedAt으로 업데이트', async () => {
+  it('complexCode 기준으로 모든 variant에 lat/lng/geocodedAt 업데이트', async () => {
     const prisma = new PrismaClient() as unknown as PrismaClient;
-    mockUpdate.mockResolvedValueOnce({});
-    await updatePublicRentalCoordinates(prisma, 42, { lat: 37.498, lng: 127.027 });
-    expect(mockUpdate).toHaveBeenCalledWith({
-      where: { id: 42 },
+    mockUpdateMany.mockResolvedValueOnce({ count: 3 });
+    await updatePublicRentalCoordinates(prisma, '12345', { lat: 37.498, lng: 127.027 });
+    expect(mockUpdateMany).toHaveBeenCalledWith({
+      where: { complexCode: '12345' },
       data: expect.objectContaining({ lat: 37.498, lng: 127.027, geocodedAt: expect.any(Date) }),
     });
   });
@@ -128,12 +129,12 @@ describe('updatePublicRentalCoordinates', () => {
 describe('markGeocodeAttempted', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('geocodedAt만 업데이트', async () => {
+  it('complexCode 기준으로 모든 variant에 geocodedAt만 업데이트', async () => {
     const prisma = new PrismaClient() as unknown as PrismaClient;
-    mockUpdate.mockResolvedValueOnce({});
-    await markGeocodeAttempted(prisma, 99);
-    expect(mockUpdate).toHaveBeenCalledWith({
-      where: { id: 99 },
+    mockUpdateMany.mockResolvedValueOnce({ count: 2 });
+    await markGeocodeAttempted(prisma, 'C99');
+    expect(mockUpdateMany).toHaveBeenCalledWith({
+      where: { complexCode: 'C99' },
       data: expect.objectContaining({ geocodedAt: expect.any(Date) }),
     });
   });
@@ -142,27 +143,27 @@ describe('markGeocodeAttempted', () => {
 describe('processPublicRentals', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('대상 없으면 update 호출 안 함', async () => {
+  it('대상 없으면 updateMany 호출 안 함', async () => {
     const prisma = new PrismaClient() as unknown as PrismaClient;
     mockFindMany.mockResolvedValueOnce([]);
     await processPublicRentals(prisma);
-    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockUpdateMany).not.toHaveBeenCalled();
   });
 
-  it('지오코딩 실패 시 geocodedAt만 기록', async () => {
+  it('지오코딩 실패 시 complexCode 기준으로 geocodedAt만 기록', async () => {
     const prisma = new PrismaClient() as unknown as PrismaClient;
     mockFindMany.mockResolvedValueOnce([
-      { id: 1, complexName: '없는주소 999', complexNameKor: null, city: '서울특별시', district: '구로구' },
+      { complexCode: '99999', complexName: '없는주소 999', complexNameKor: null, city: '서울특별시', district: '구로구' },
     ]);
     // API 키 없으므로 모든 geocoding 시도가 null 반환
-    mockUpdate.mockResolvedValueOnce({});
+    mockUpdateMany.mockResolvedValueOnce({ count: 1 });
     await processPublicRentals(prisma);
-    expect(mockUpdate).toHaveBeenCalledWith({
-      where: { id: 1 },
+    expect(mockUpdateMany).toHaveBeenCalledWith({
+      where: { complexCode: '99999' },
       data: expect.objectContaining({ geocodedAt: expect.any(Date) }),
     });
     // lat/lng는 설정되지 않아야 함
-    const callData = mockUpdate.mock.calls[0][0].data;
+    const callData = mockUpdateMany.mock.calls[0][0].data;
     expect(callData.lat).toBeUndefined();
     expect(callData.lng).toBeUndefined();
   });

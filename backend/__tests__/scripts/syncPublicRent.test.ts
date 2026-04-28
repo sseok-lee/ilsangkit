@@ -48,7 +48,7 @@ describe('transformMyhomeItem', () => {
   it('기본 변환', () => {
     const result = transformMyhomeItem(makeItem());
     expect(result.complexCode).toBe('12345678');
-    expect(result.sourceId).toBe('lh-12345678');
+    expect(result.sourceId).toBe('lh-12345678-매입임대-45.5');
     expect(result.city).toBe('서울특별시');
     expect(result.district).toBe('구로구');
     expect(result.rentalType).toBe('매입임대');
@@ -94,9 +94,10 @@ describe('transformMyhomeItem', () => {
     expect(result.houseType).toBeNull();
   });
 
-  it('sourceId 형식 검증', () => {
+  it('sourceId 형식 검증 (hsmpSn-suplyTyNm-suplyPrvuseAr)', () => {
     const result = transformMyhomeItem(makeItem({ hsmpSn: 99999999 }));
-    expect(result.sourceId).toBe('lh-99999999');
+    // makeItem 기본값: suplyTyNm='매입임대', suplyPrvuseAr=45.5
+    expect(result.sourceId).toBe('lh-99999999-매입임대-45.5');
     expect(result.complexCode).toBe('99999999');
   });
 

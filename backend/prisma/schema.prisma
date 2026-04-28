@@ -1371,7 +1371,7 @@ model SubscriptionSpecialStatus {
 // 세대 단위 매물 데이터 — hsmpSn이 고유 식별자
 model PublicRentalComplex {
   id             Int      @id @default(autoincrement())
-  complexCode    String   @unique @db.VarChar(20) // hsmpSn (마이홈 일련번호)
+  complexCode    String   @db.VarChar(20) // hsmpSn (마이홈 일련번호) — variant 분리 후 non-unique
   complexName    String   @db.VarChar(300) // 도로명 주소 (rnAdres)
   city           String   @db.VarChar(50) // 시/도명 (brtcNm)
   district       String   @db.VarChar(50) // 시/군/구명 (signguNm)
@@ -1391,13 +1391,14 @@ model PublicRentalComplex {
   hasElevator       String?  @db.VarChar(50)  // 승강기설치여부 (elvtrInstlAtNm)
   parkingCount      Int?                       // 주차수 (parkngCo)
   complexNameKor    String?  @db.VarChar(300) // 단지명 (hsmpNm)
-  sourceId          String   @unique @db.VarChar(30) // "lh-{hsmpSn}"
+  sourceId          String   @unique @db.VarChar(60) // "lh-{hsmpSn}-{suplyTyNm}-{suplyPrvuseAr}"
   lat              Decimal? @db.Decimal(10, 7)
   lng              Decimal? @db.Decimal(10, 7)
   geocodedAt       DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  @@index([complexCode])
   @@index([lat, lng])
   @@index([city, district])
   @@index([city, rentalType])
