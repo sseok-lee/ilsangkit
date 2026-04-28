@@ -13,14 +13,14 @@
       </NuxtLink>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <NuxtLink
         v-for="item in ongoing"
         :key="`ongoing-${item.id}`"
         :to="`/subscription/${item.id}`"
         class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-green-300 transition-shadow"
       >
-        <StatusBadge variant="green">접수중</StatusBadge>
+        <StatusBadge variant="green" class="self-start">접수중</StatusBadge>
         <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">{{ item.houseName }}</strong>
         <p class="text-[11px] text-slate-400 mt-auto">{{ formatMeta(item, 'ongoing') }}</p>
       </NuxtLink>
@@ -30,7 +30,7 @@
         :to="`/subscription/${item.id}`"
         class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-blue-300 transition-shadow"
       >
-        <StatusBadge variant="blue">접수예정</StatusBadge>
+        <StatusBadge variant="blue" class="self-start">접수예정</StatusBadge>
         <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">{{ item.houseName }}</strong>
         <p class="text-[11px] text-slate-400 mt-auto">{{ formatMeta(item, 'upcoming') }}</p>
       </NuxtLink>

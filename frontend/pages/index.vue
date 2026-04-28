@@ -42,7 +42,7 @@
                 v-model="searchKeyword"
                 aria-label="단지명·동네·시설 검색"
                 class="flex-1 min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
-                placeholder="단지명, 지역, 시설을 입력하세요 (예: 래미안 원펜타스)"
+                placeholder="단지명, 지역, 시설 검색"
                 @keydown.enter="handleSearch"
               />
               <div class="flex items-center pr-2">
