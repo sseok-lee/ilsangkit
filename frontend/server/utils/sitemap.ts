@@ -261,6 +261,30 @@ export async function fetchRegionCategories(
   return []
 }
 
+export interface SitemapPageCounts {
+  facilities: Array<{ category: string; count: number; maxUpdatedAt: string | null }>
+  waste: { count: number; maxUpdatedAt: string | null }
+  subscriptions: { count: number; maxUpdatedAt: string | null }
+  realEstateBuildings: { count: number }
+}
+
+export async function fetchSitemapPageCounts(
+  apiBase: string
+): Promise<SitemapPageCounts | null> {
+  try {
+    const res = await fetch(`${apiBase}/api/sitemap/page-counts`)
+    if (!res.ok) {
+      console.error(`[sitemap] fetchSitemapPageCounts: HTTP ${res.status}`)
+      return null
+    }
+    const json = await res.json()
+    return json.data ?? null
+  } catch (err) {
+    console.error('[sitemap] fetchSitemapPageCounts error:', err)
+    return null
+  }
+}
+
 export async function fetchSubscriptionIds(
   apiBase: string
 ): Promise<{ id: number; updatedAt: string }[]> {

@@ -4,6 +4,96 @@ import * as wasteScheduleService from './wasteScheduleService.js';
 import type { FacilityCategory } from './facilityService.js';
 import { ALL_CATEGORIES } from './categoryRegistry.js';
 
+const SITEMAP_FACILITY_CATS: FacilityCategory[] = [
+  'toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy',
+  'park', 'school', 'market', 'childcare', 'ev-charger', 'sports',
+];
+
+const SITEMAP_FACILITY_LIMITS: Partial<Record<FacilityCategory, number>> = {
+  'ev-charger': 20000,
+  childcare: 15000,
+  sports: 10000,
+  clothes: 10000,
+};
+
+async function getRealEstateBuildingCount(): Promise<number> {
+  const result = await prisma.$queryRaw<[{ cnt: bigint }]>`
+    SELECT COUNT(*) AS cnt FROM (
+      SELECT 1 FROM AptSaleTransaction
+        WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+      UNION ALL
+      SELECT 1 FROM AptRentTransaction
+        WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+      UNION ALL
+      SELECT 1 FROM VillaSaleTransaction
+        WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+      UNION ALL
+      SELECT 1 FROM VillaRentTransaction
+        WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+      UNION ALL
+      SELECT 1 FROM OffitelSaleTransaction
+        WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+      UNION ALL
+      SELECT 1 FROM OffitelRentTransaction
+        WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
+          AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+          AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+    ) t
+  `;
+  return Number(result[0].cnt);
+}
+
+export async function getSitemapPageCounts() {
+  const [facilities, wasteCount, wasteLatest, subCount, subLatest, realEstateCount] =
+    await Promise.all([
+      Promise.all(
+        SITEMAP_FACILITY_CATS.map((cat) =>
+          facilityService
+            .getCategoryCountAndMaxDate(cat, SITEMAP_FACILITY_LIMITS[cat])
+            .then((r) => ({
+              category: cat,
+              count: r.count,
+              maxUpdatedAt: r.maxUpdatedAt?.toISOString().split('T')[0] ?? null,
+            }))
+        )
+      ),
+      prisma.wasteSchedule.count(),
+      prisma.wasteSchedule.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
+      prisma.subscription.count(),
+      prisma.subscription.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
+      getRealEstateBuildingCount(),
+    ]);
+
+  return {
+    facilities,
+    waste: {
+      count: wasteCount,
+      maxUpdatedAt: wasteLatest?.updatedAt?.toISOString().split('T')[0] ?? null,
+    },
+    subscriptions: {
+      count: subCount,
+      maxUpdatedAt: subLatest?.updatedAt?.toISOString().split('T')[0] ?? null,
+    },
+    realEstateBuildings: { count: realEstateCount },
+  };
+}
+
 export function isValidCategory(category: string): category is FacilityCategory {
   return ALL_CATEGORIES.includes(category as FacilityCategory);
 }
