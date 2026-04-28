@@ -12,8 +12,7 @@
         <!-- 데이터 기준 배지 -->
         <div class="flex items-center gap-2 text-xs">
           <span class="w-2 h-2 rounded-full bg-primary shrink-0"></span>
-          <span class="md:hidden text-primary font-semibold">{{ todayBadge }} 실시간</span>
-          <span class="hidden md:inline text-primary font-semibold">{{ monthBadge }} 기준 · 실시간 갱신</span>
+          <span class="text-primary font-semibold">공공데이터 기반</span>
           <span class="hidden md:inline text-slate-300">·</span>
           <span class="hidden md:inline text-slate-500">공공데이터포털 · 국토교통부</span>
         </div>
@@ -355,11 +354,6 @@ const stats = computed(() => {
     subscriptionActiveCount: d.subscriptionActiveCount ?? 0,
   }
 })
-
-// 배지 날짜
-const now = new Date()
-const todayBadge = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
-const monthBadge = `${now.getFullYear()}년 ${now.getMonth() + 1}월`
 
 // 인기 검색어
 const popularKeywords = ['래미안 원펜타스', '마포 화장실', '강남 주차장', '송파 청약']
