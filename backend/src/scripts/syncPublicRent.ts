@@ -177,7 +177,7 @@ export function transformMyhomeItem(item: MyhomeRentalItem) {
     hasElevator: toStr(item.elvtrInstlAtNm),
     parkingCount: parking !== null ? Math.round(parking) : null,
     complexNameKor: toStr(item.hsmpNm),
-    sourceId: `lh-${item.hsmpSn}`,
+    sourceId: `lh-${item.hsmpSn}-${item.suplyTyNm}-${item.suplyPrvuseAr ?? 0}`,
   };
 }
 
@@ -188,15 +188,7 @@ async function syncPublicRent(): Promise<SyncStats> {
     stats.totalRecords = rawItems.length;
     console.info(`총 ${rawItems.length}건 수집`);
 
-    // 중복 제거 (hsmpSn 기준)
-    const seen = new Set<string>();
-    const items = rawItems
-      .map(transformMyhomeItem)
-      .filter((item) => {
-        if (seen.has(item.sourceId)) return false;
-        seen.add(item.sourceId);
-        return true;
-      });
+    const items = rawItems.map(transformMyhomeItem);
 
     // upsert (concurrency 제한 — Prisma 풀 thrashing 방지).
     // 이전엔 batch=500 동시 실행이라 connection pool 압박 + MySQL 좀비 패턴 위험.
