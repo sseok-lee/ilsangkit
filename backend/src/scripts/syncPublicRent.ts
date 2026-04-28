@@ -103,11 +103,16 @@ async function fetchAllRegions(): Promise<MyhomeRentalItem[]> {
     select: { bjdCode: true },
     distinct: ['bjdCode'],
   });
-  const regions = regionRows.map((r) => ({
-    brtcCode: r.bjdCode.slice(0, 2),
-    signguCode: r.bjdCode.slice(2, 5),
-  }));
-  console.info(`Region 테이블에서 ${regions.length}개 시군구 로드`);
+  const seenRegion = new Set<string>();
+  const regions = regionRows
+    .map((r) => ({ brtcCode: r.bjdCode.slice(0, 2), signguCode: r.bjdCode.slice(2, 5) }))
+    .filter(({ brtcCode, signguCode }) => {
+      const key = `${brtcCode}-${signguCode}`;
+      if (seenRegion.has(key)) return false;
+      seenRegion.add(key);
+      return true;
+    });
+  console.info(`Region 테이블에서 ${regions.length}개 시군구 로드 (동 중복 제거 후)`);
 
   for (const region of regions) {
     try {
@@ -188,13 +193,7 @@ async function syncPublicRent(): Promise<SyncStats> {
     stats.totalRecords = rawItems.length;
     console.info(`총 ${rawItems.length}건 수집`);
 
-    const seen = new Set<string>();
-    const items = rawItems.map(transformMyhomeItem).filter((item) => {
-      if (seen.has(item.sourceId)) return false;
-      seen.add(item.sourceId);
-      return true;
-    });
-    console.info(`중복 제거 후 ${items.length}건 (원본 ${rawItems.length}건)`);
+    const items = rawItems.map(transformMyhomeItem);
 
     // upsert (concurrency 제한 — Prisma 풀 thrashing 방지).
     // 이전엔 batch=500 동시 실행이라 connection pool 압박 + MySQL 좀비 패턴 위험.
