@@ -8,6 +8,7 @@ import {
   getBuildingInfo,
   searchAll,
   getAreaGroups,
+  getPriceAnalysis,
 } from '../services/realEstateService.js';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
@@ -20,6 +21,7 @@ import {
   RealEstateBuildingInfoSchema,
   RealEstateUnifiedSearchSchema,
   AreaGroupsQuerySchema,
+  PriceAnalysisQuerySchema,
 } from '../schemas/realEstate.js';
 import { z } from 'zod';
 
@@ -29,6 +31,17 @@ const router = Router();
 const TypeParamsSchema = z.object({
   type: RealEstateTypeSchema,
 });
+
+// GET /api/real-estate/price-analysis - 가격 심화 분석
+router.get(
+  '/price-analysis',
+  validate(PriceAnalysisQuerySchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { bjdCode, buildingName } = req.query as z.infer<typeof PriceAnalysisQuerySchema>;
+    const result = await getPriceAnalysis(bjdCode, buildingName);
+    res.json({ success: true, data: result });
+  })
+);
 
 // GET /api/real-estate/search - 통합 검색 (must be before /:type routes)
 router.get(

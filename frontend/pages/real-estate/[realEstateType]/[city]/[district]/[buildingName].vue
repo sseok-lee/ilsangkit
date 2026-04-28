@@ -239,7 +239,35 @@
         </p>
       </SectionBlock>
 
-      <!-- Ad: 시세 추이 이후 (In-Article) -->
+      <!-- 가격 심화 분석 (아파트만, 거래 5건 이상) -->
+      <SectionBlock
+        v-if="showPriceAnalysis"
+        heading="가격 심화 분석"
+        subtext="매매 거래 데이터 기반 시세 심층 분석입니다."
+      >
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div v-if="priceAnalysis.pricePerPyeong !== null" class="flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-500">평당가</span>
+            <strong class="text-lg font-bold text-slate-900">{{ priceAnalysis.pricePerPyeong.toLocaleString() }}만원</strong>
+            <span class="text-xs text-slate-400">거래 평균</span>
+          </div>
+          <div v-if="priceAnalysis.jeonseRatio !== null" class="flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-500">전세가율</span>
+            <strong class="text-lg font-bold text-slate-900">{{ priceAnalysis.jeonseRatio }}%</strong>
+            <span class="text-xs text-slate-400">전세 avg / 매매 avg</span>
+          </div>
+          <div v-if="priceAnalysis.allTimeHigh !== null" class="flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-500">역대 최고가</span>
+            <strong class="text-lg font-bold text-red-500">{{ formatSummaryPrice(priceAnalysis.allTimeHigh) }}</strong>
+          </div>
+          <div v-if="priceAnalysis.allTimeLow !== null" class="flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-500">역대 최저가</span>
+            <strong class="text-lg font-bold text-blue-500">{{ formatSummaryPrice(priceAnalysis.allTimeLow) }}</strong>
+          </div>
+        </div>
+      </SectionBlock>
+
+      <!-- Ad: 시세/분석 이후 (In-Article) -->
       <AdBanner />
 
       <!-- "거래 내역" 블록 -->
@@ -359,7 +387,7 @@
 import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
-import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
@@ -518,7 +546,7 @@ useHead(() => {
 // ── Composables ───────────────────────────────────────────────────────────────
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
-const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList } = useRealEstate()
+const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getPriceAnalysis } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
@@ -720,6 +748,9 @@ function formatSummaryPrice(price: number): string {
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
+const isApt = computed(() => propertyTypeParam.value === 'apt')
+const priceAnalysis = ref<PriceAnalysis | null>(null)
+const showPriceAnalysis = computed(() => isApt.value && !!priceAnalysis.value && priceAnalysis.value.saleCount >= 5)
 
 const EMPTY_STATS_RESPONSE: RealEstateDetailData['statsResponse'] = { monthly: [], summary: null }
 const EMPTY_TRANSACTIONS: RealEstateSearchResponse = { items: [], total: 0, page: 1, totalPages: 0 }
@@ -979,6 +1010,16 @@ watch(() => buildingInfo.value, (info) => {
 })
 
 // ── Nearby complexes ──────────────────────────────────────────────────────────
+
+// 가격 심화 분석 (아파트만, bjdCode 확보 후)
+watch(resolvedBjdCode, async (code) => {
+  if (!code || !isApt.value) return
+  try {
+    priceAnalysis.value = await getPriceAnalysis(code, buildingName.value)
+  } catch {
+    priceAnalysis.value = null
+  }
+}, { immediate: true })
 
 watchEffect(async () => {
   if (buildingInfo.value?.city && buildingInfo.value?.district) {

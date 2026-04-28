@@ -1,26 +1,40 @@
 <template>
   <div class="flex flex-col">
     <!-- Hero Section -->
-    <section class="relative overflow-hidden px-4 sm:px-6 pb-6 pt-4 md:pt-10 md:pb-8">
+    <section class="relative overflow-hidden px-4 sm:px-6 pb-8 pt-6 md:pt-14 md:pb-12">
       <!-- 배경 이미지 레이어 -->
       <div class="absolute inset-0 opacity-10 md:opacity-[0.08]">
         <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="일상킷 생활 정보 서비스" sizes="100vw" />
       </div>
       <div class="absolute bottom-0 left-0 right-0 h-10 md:h-12 bg-background-light/80"></div>
 
-      <div class="relative z-10 flex flex-col gap-4 md:max-w-3xl md:mx-auto md:items-center md:text-center">
-        <div class="flex flex-col gap-2 pt-4">
+      <div class="relative z-10 flex flex-col gap-5 md:max-w-[680px] md:mx-auto">
+        <!-- 데이터 기준 배지 -->
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-primary shrink-0"></span>
+          <span class="text-primary font-semibold">공공데이터 기반</span>
+          <span class="hidden md:inline text-slate-300">·</span>
+          <span class="hidden md:inline text-slate-500">공공데이터포털 · 국토교통부</span>
+        </div>
+
+        <!-- 헤드라인 + 서브텍스트 -->
+        <div class="flex flex-col gap-2">
           <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
-          <div class="text-slate-900 tracking-tight text-[32px] font-bold leading-[1.2] md:text-5xl md:font-black md:leading-tight">
-            내 동네 부동산·청약·생활정보, 한 번에
+          <div class="tracking-tight font-bold leading-[1.15]">
+            <div class="text-slate-900 text-[38px] md:text-[62px] md:font-black">우리 동네 정보,</div>
+            <div class="text-[38px] md:text-[62px] md:font-black">
+              <span class="md:hidden text-primary">한번에.</span>
+              <span class="hidden md:inline"><span class="text-primary">일상킷에서</span><span class="text-slate-900"> 한번에.</span></span>
+            </div>
           </div>
-          <p class="text-slate-500 text-base md:text-lg">아파트 실거래가부터 청약 일정·근처 약국까지</p>
+          <p class="md:hidden text-slate-500 text-[15px] mt-1">생활시설 · 실거래 · 청약을 한 곳에서</p>
+          <p class="hidden md:block text-slate-500 text-lg mt-1">생활시설 · 부동산 실거래가 · 청약 정보를 한 곳에서.</p>
         </div>
 
         <!-- 검색바 -->
-        <div class="w-full md:max-w-[560px] md:mt-2">
+        <div class="w-full md:max-w-[580px]">
           <label class="relative block">
-            <div class="flex items-stretch h-14 md:h-auto rounded-xl md:rounded-2xl bg-white border border-slate-200 md:border-2 shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-slate-300 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
+            <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-slate-200 md:border-2 shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-slate-300 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
               <div class="flex items-center pl-4 pr-2 text-slate-400">
                 <span class="material-symbols-outlined">search</span>
               </div>
@@ -28,34 +42,39 @@
                 v-model="searchKeyword"
                 aria-label="단지명·동네·시설 검색"
                 class="flex-1 min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
-                placeholder="단지명, 동네, 주소, 시설명 검색"
+                placeholder="단지명, 지역, 시설 검색"
                 @keydown.enter="handleSearch"
               />
-              <div class="hidden md:flex items-center pr-2">
+              <div class="flex items-center pr-2">
                 <button
                   aria-label="검색"
-                  class="h-10 px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
+                  class="h-10 px-4 md:px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-1.5"
                   @click="handleSearch"
                 >
-                  <span class="material-symbols-outlined text-[18px]">search</span>
-                  <span>검색</span>
+                  <span class="material-symbols-outlined text-[18px] md:hidden">search</span>
+                  <span class="hidden md:inline">검색</span>
                 </button>
               </div>
             </div>
           </label>
         </div>
 
-        <!-- 통계 칩 (3개) -->
-        <div class="flex flex-wrap gap-2 mt-1 md:mt-2 md:justify-center">
-          <span class="px-3 py-1.5 bg-white border border-line rounded-full text-sm font-semibold text-slate-700 shadow-card">
-            실거래 {{ formatStatCount(stats.buildingCount || 0) }}
-          </span>
-          <span class="px-3 py-1.5 bg-white border border-line rounded-full text-sm font-semibold text-slate-700 shadow-card">
-            생활시설 {{ formatStatCount(stats.total || 0) }}
-          </span>
-          <span class="px-3 py-1.5 bg-white border border-line rounded-full text-sm font-semibold text-slate-700 shadow-card">
-            전국 {{ stats.regionCount || 0 }}개 시군구
-          </span>
+        <!-- 통계 박스 -->
+        <div class="bg-white border border-line rounded-2xl shadow-card md:max-w-[580px]">
+          <div class="flex items-stretch divide-x divide-slate-100">
+            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+              <strong class="text-slate-900 font-bold text-xl tracking-tight">{{ buildingCountKor }}만</strong>
+              <span class="text-[11px] text-slate-400">실거래 부동산</span>
+            </div>
+            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+              <strong class="text-primary font-bold text-xl tracking-tight">{{ stats.subscriptionActiveCount }}건</strong>
+              <span class="text-[11px] text-slate-400">진행중 청약</span>
+            </div>
+            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+              <strong class="text-slate-900 font-bold text-xl tracking-tight">{{ facilityCountKor }}만</strong>
+              <span class="text-[11px] text-slate-400">등록 시설</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -320,11 +339,11 @@ const stats = computed(() => {
   }
 })
 
-function formatStatCount(count: number): string {
-  if (count === 0) return '-'
-  const rounded = Math.floor(count / 1000) * 1000
-  return rounded.toLocaleString('ko-KR') + '+'
-}
+// 등록 부동산 건물 수 (만 단위, 소수점 1자리)
+const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFixed(1))
+
+// 시설 수 만 단위
+const facilityCountKor = computed(() => Math.floor(stats.value.total / 10000))
 
 function formatBuildingCount(n: number): string {
   if (n === 0) return '-'

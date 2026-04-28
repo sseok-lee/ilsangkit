@@ -8,6 +8,7 @@ import type {
   RealEstateGroupedResponse,
   AreaGroup,
   StatsResponse,
+  PriceAnalysis,
 } from '~/types/realEstate'
 import { useApiBase } from '~/composables/useApiBase'
 
@@ -137,6 +138,21 @@ export function useRealEstate() {
     return res.data
   }
 
+  async function getPriceAnalysis(
+    bjdCode: string,
+    buildingName: string,
+  ): Promise<PriceAnalysis | null> {
+    const query = new URLSearchParams({ bjdCode, buildingName })
+    try {
+      const res = await $fetch<{ success: boolean; data: PriceAnalysis | null }>(
+        `${apiBase}/api/real-estate/price-analysis?${query.toString()}`,
+      )
+      return res.data
+    } catch {
+      return null
+    }
+  }
+
   return {
     searchTransactions,
     getTransactionStats,
@@ -144,5 +160,6 @@ export function useRealEstate() {
     getBuildingInfo,
     searchAll,
     getAreaGroups,
+    getPriceAnalysis,
   }
 }

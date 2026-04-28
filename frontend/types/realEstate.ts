@@ -246,3 +246,12 @@ export function propertyTypeFromSlug(slug: string): RealEstatePropertyType | nul
   if (base === 'apt' || base === 'villa' || base === 'offitel') return base as RealEstatePropertyType
   return null
 }
+
+// 가격 심화 분석
+export interface PriceAnalysis {
+  pricePerPyeong: number | null    // 만원/평
+  jeonseRatio: number | null       // %
+  allTimeHigh: number | null       // 만원
+  allTimeLow: number | null        // 만원
+  saleCount: number
+}

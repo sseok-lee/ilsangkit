@@ -61,15 +61,14 @@ describe('Index Page', () => {
   it('renders hero title and subtitle', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // Wireframe 기반 새 히어로 카피
-    expect(wrapper.text()).toContain('내 동네 부동산')
-    expect(wrapper.text()).toContain('아파트 실거래가부터')
+    expect(wrapper.text()).toContain('우리 동네 정보')
+    expect(wrapper.text()).toContain('한번에')
   })
 
   it('renders search input', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    const searchInput = wrapper.find('input[placeholder*="검색"]')
+    const searchInput = wrapper.find('input[placeholder*="단지명"]')
     expect(searchInput.exists()).toBe(true)
   })
 
@@ -83,7 +82,7 @@ describe('Index Page', () => {
     const wrapper = await mountSuspended(IndexPage)
 
     expect(wrapper.text()).toContain('생활시설')
-    expect(wrapper.text()).toContain('시군구')
+    expect(wrapper.text()).toContain('진행중 청약')
   })
 
   it('renders new "오늘 확인할 정보" section', async () => {
@@ -113,7 +112,7 @@ describe('Index Page', () => {
   it('navigates to search page when search is triggered', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    const searchInput = wrapper.find('input[placeholder*="검색"]')
+    const searchInput = wrapper.find('input[placeholder*="단지명"]')
     await searchInput.setValue('화장실')
     await searchInput.trigger('keydown.enter')
 
@@ -123,7 +122,7 @@ describe('Index Page', () => {
   it('does not navigate when search is empty', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    const searchInput = wrapper.find('input[placeholder*="검색"]')
+    const searchInput = wrapper.find('input[placeholder*="단지명"]')
     await searchInput.trigger('keydown.enter')
 
     expect(mockNavigateTo).not.toHaveBeenCalled()

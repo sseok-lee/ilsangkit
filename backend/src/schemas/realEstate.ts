@@ -76,3 +76,11 @@ export const AreaGroupsQuerySchema = z.object({
 });
 
 export type AreaGroupsQuery = z.infer<typeof AreaGroupsQuerySchema>;
+
+// 가격 심화 분석 조회 스키마
+export const PriceAnalysisQuerySchema = z.object({
+  bjdCode: z.string().max(10),
+  buildingName: z.string().max(100),
+});
+
+export type PriceAnalysisQuery = z.infer<typeof PriceAnalysisQuerySchema>;
