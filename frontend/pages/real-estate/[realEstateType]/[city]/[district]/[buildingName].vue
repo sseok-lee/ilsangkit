@@ -239,7 +239,35 @@
         </p>
       </SectionBlock>
 
-      <!-- Ad: 시세 추이 이후 (In-Article) -->
+      <!-- 가격 심화 분석 (아파트만, 거래 5건 이상) -->
+      <SectionBlock
+        v-if="showPriceAnalysis"
+        heading="가격 심화 분석"
+        subtext="매매 거래 데이터 기반 시세 심층 분석입니다."
+      >
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div v-if="priceAnalysis.pricePerPyeong !== null" class="flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-500">평당가</span>
+            <strong class="text-lg font-bold text-slate-900">{{ priceAnalysis.pricePerPyeong.toLocaleString() }}만원</strong>
+            <span class="text-xs text-slate-400">거래 평균</span>
+          </div>
+          <div v-if="priceAnalysis.jeonseRatio !== null" class="flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-500">전세가율</span>
+            <strong class="text-lg font-bold text-slate-900">{{ priceAnalysis.jeonseRatio }}%</strong>
+            <span class="text-xs text-slate-400">전세 avg / 매매 avg</span>
+          </div>
+          <div v-if="priceAnalysis.allTimeHigh !== null" class="flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-500">역대 최고가</span>
+            <strong class="text-lg font-bold text-red-500">{{ formatSummaryPrice(priceAnalysis.allTimeHigh) }}</strong>
+          </div>
+          <div v-if="priceAnalysis.allTimeLow !== null" class="flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-500">역대 최저가</span>
+            <strong class="text-lg font-bold text-blue-500">{{ formatSummaryPrice(priceAnalysis.allTimeLow) }}</strong>
+          </div>
+        </div>
+      </SectionBlock>
+
+      <!-- Ad: 시세/분석 이후 (In-Article) -->
       <AdBanner />
 
       <!-- "거래 내역" 블록 -->
@@ -270,37 +298,6 @@
 
       <!-- Ad: 거래내역 이후 1회 -->
       <AdBanner />
-
-      <!-- 가격 심화 분석 (아파트만, 거래 5건 이상) -->
-      <SectionBlock
-        v-if="showPriceAnalysis"
-        heading="가격 심화 분석"
-        subtext="매매 거래 데이터 기반 시세 심층 분석입니다."
-      >
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div v-if="priceAnalysis.pricePerPyeong !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">평당가</span>
-            <strong class="text-lg font-bold text-slate-900">{{ priceAnalysis.pricePerPyeong.toLocaleString() }}만원</strong>
-            <span class="text-xs text-slate-400">거래 평균</span>
-          </div>
-          <div v-if="priceAnalysis.jeonseRatio !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">전세가율</span>
-            <strong class="text-lg font-bold text-slate-900">{{ priceAnalysis.jeonseRatio }}%</strong>
-            <span class="text-xs text-slate-400">전세 avg / 매매 avg</span>
-          </div>
-          <div v-if="priceAnalysis.allTimeHigh !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">역대 최고가</span>
-            <strong class="text-lg font-bold text-red-500">{{ formatSummaryPrice(priceAnalysis.allTimeHigh) }}</strong>
-          </div>
-          <div v-if="priceAnalysis.allTimeLow !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">역대 최저가</span>
-            <strong class="text-lg font-bold text-blue-500">{{ formatSummaryPrice(priceAnalysis.allTimeLow) }}</strong>
-          </div>
-        </div>
-      </SectionBlock>
-
-      <!-- Ad: 가격 심화 분석 이후 -->
-      <AdBanner v-if="showPriceAnalysis" />
 
       <!-- "인근 단지" 블록 -->
       <SectionBlock
