@@ -12,6 +12,7 @@ import {
   getRealEstateBuildings,
   getRealEstateCityDistrictHubs,
   getSubscriptionIds,
+  getSitemapPageCounts,
 } from '../services/sitemapService.js';
 
 const SitemapFacilitiesQuerySchema = z.object({
@@ -102,6 +103,19 @@ router.get(
   '/subscriptions',
   asyncHandler(async (_req: Request, res: Response) => {
     const data = await getSubscriptionIds();
+    res.json({ success: true, data });
+  })
+);
+
+/**
+ * GET /api/sitemap/page-counts
+ * 사이트맵 인덱스 생성에 필요한 카테고리별 항목 수 + 최신 updatedAt 반환.
+ * 전체 데이터를 fetch하지 않고 COUNT/MAX 집계만 수행해 응답 속도를 최소화.
+ */
+router.get(
+  '/page-counts',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const data = await getSitemapPageCounts();
     res.json({ success: true, data });
   })
 );

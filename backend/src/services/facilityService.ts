@@ -685,6 +685,41 @@ export async function getAllIds(
   });
 }
 
+export async function getCategoryCountAndMaxDate(
+  category: FacilityCategory,
+  limit?: number
+): Promise<{ count: number; maxUpdatedAt: Date | null }> {
+  const config = CATEGORY_REGISTRY[category];
+  if (!config) return { count: 0, maxUpdatedAt: null };
+
+  if (category === 'ev-charger') {
+    const [cntResult, latest] = await Promise.all([
+      prisma.$queryRaw<[{ cnt: bigint }]>`
+        SELECT COUNT(DISTINCT statId) AS cnt FROM EvCharger WHERE statId IS NOT NULL
+      `,
+      prisma.evCharger.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
+    ]);
+    const rawCount = Number(cntResult[0].cnt);
+    return {
+      count: limit ? Math.min(rawCount, limit) : rawCount,
+      maxUpdatedAt: latest?.updatedAt ?? null,
+    };
+  }
+
+  const model = config.model() as {
+    count(): Promise<number>;
+    findFirst(args: object): Promise<{ updatedAt: Date } | null>;
+  };
+  const [rawCount, latest] = await Promise.all([
+    model.count(),
+    model.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
+  ]);
+  return {
+    count: limit ? Math.min(rawCount, limit) : rawCount,
+    maxUpdatedAt: latest?.updatedAt ?? null,
+  };
+}
+
 // @TASK T1.3 - 지역별 조회 서비스
 // @SPEC docs/planning/02-trd.md#API-설계
 
