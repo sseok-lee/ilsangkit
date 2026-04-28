@@ -271,44 +271,6 @@
       <!-- Ad: 거래내역 이후 1회 -->
       <AdBanner />
 
-      <!-- K-apt 단지정보 (아파트만, 데이터 있을 때만) -->
-      <SectionBlock
-        v-if="isApt && kaptInfo"
-        heading="단지 정보"
-        subtext="K-apt 공동주택관리정보시스템 기준 단지 현황입니다."
-      >
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div v-if="kaptInfo.totalHouseholds !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">총 세대수</span>
-            <strong class="text-lg font-bold text-slate-900">{{ kaptInfo.totalHouseholds.toLocaleString() }}세대</strong>
-          </div>
-          <div v-if="kaptInfo.totalBuildings !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">총 동수</span>
-            <strong class="text-lg font-bold text-slate-900">{{ kaptInfo.totalBuildings }}동</strong>
-          </div>
-          <div v-if="kaptInfo.parkingPerHousehold !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">세대당 주차</span>
-            <strong class="text-lg font-bold text-slate-900">{{ kaptInfo.parkingPerHousehold.toFixed(2) }}대</strong>
-          </div>
-          <div v-if="kaptInfo.avgManagementFee !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">월평균 관리비</span>
-            <strong class="text-lg font-bold text-slate-900">{{ kaptInfo.avgManagementFee.toLocaleString() }}만원</strong>
-          </div>
-          <div v-if="kaptInfo.elevatorCount !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">엘리베이터</span>
-            <strong class="text-lg font-bold text-slate-900">{{ kaptInfo.elevatorCount }}대</strong>
-          </div>
-          <div v-if="kaptInfo.heatingType" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">난방 방식</span>
-            <strong class="text-lg font-bold text-slate-900">{{ kaptInfo.heatingType }}</strong>
-          </div>
-        </div>
-        <p class="mt-3 text-xs text-slate-400">출처: K-apt 공동주택관리정보시스템</p>
-      </SectionBlock>
-
-      <!-- Ad: K-apt 이후 -->
-      <AdBanner v-if="isApt && kaptInfo" />
-
       <!-- 가격 심화 분석 (아파트만, 거래 5건 이상) -->
       <SectionBlock
         v-if="showPriceAnalysis"
@@ -428,7 +390,7 @@
 import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
-import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, KaptComplexInfo, PriceAnalysis } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis } from '~/types/realEstate'
 import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
@@ -587,7 +549,7 @@ useHead(() => {
 // ── Composables ───────────────────────────────────────────────────────────────
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
-const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getKaptInfo, getPriceAnalysis } = useRealEstate()
+const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getPriceAnalysis } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
@@ -790,7 +752,6 @@ const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
 const isApt = computed(() => propertyTypeParam.value === 'apt')
-const kaptInfo = ref<KaptComplexInfo | null>(null)
 const priceAnalysis = ref<PriceAnalysis | null>(null)
 const showPriceAnalysis = computed(() => isApt.value && !!priceAnalysis.value && priceAnalysis.value.saleCount >= 5)
 
@@ -900,17 +861,6 @@ if (import.meta.client && !ssrData.value && ssrStatus.value !== 'pending') {
   loadData()
   loadAreaGroups()
 }
-
-// K-apt 단지정보 (아파트만, 클라이언트 전용 — SSR 레이턴시 방지)
-const { data: kaptData } = useAsyncData(
-  `kapt-${buildingName.value}-${citySlugParam}-${districtSlugParam}`,
-  () =>
-    isApt.value
-      ? getKaptInfo(buildingName.value, cityName, districtName)
-      : Promise.resolve(null),
-  { lazy: true, server: false },
-)
-watch(kaptData, (data) => { kaptInfo.value = data ?? null }, { immediate: true })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
