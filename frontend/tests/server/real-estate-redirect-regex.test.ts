@@ -68,6 +68,11 @@ describe('LEGACY_SALE_DETAIL (/real-estate/apt-sale/{bldg})', () => {
     expect(LEGACY_SALE_DETAIL.test('/real-estate/apt-sale/seoul/gangnam')).toBe(false)
     expect(LEGACY_SALE_DETAIL.test('/real-estate/apt-sale/seoul/gangnam/bldg')).toBe(false)
   })
+  it('DOES match city-slug 3-segment paths at regex level (handler guards via CITY_SLUGS_SET)', () => {
+    // The regex matches these; the middleware skips them when the segment is a known city slug
+    expect(LEGACY_SALE_DETAIL.test('/real-estate/apt-sale/gangwon')).toBe(true)
+    expect(LEGACY_SALE_DETAIL.test('/real-estate/apt-sale/seoul')).toBe(true)
+  })
 })
 
 describe('NEW_HUB / NEW_DETAIL guards', () => {
