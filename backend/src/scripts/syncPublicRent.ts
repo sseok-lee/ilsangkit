@@ -103,11 +103,16 @@ async function fetchAllRegions(): Promise<MyhomeRentalItem[]> {
     select: { bjdCode: true },
     distinct: ['bjdCode'],
   });
-  const regions = regionRows.map((r) => ({
-    brtcCode: r.bjdCode.slice(0, 2),
-    signguCode: r.bjdCode.slice(2, 5),
-  }));
-  console.info(`Region 테이블에서 ${regions.length}개 시군구 로드`);
+  const seenRegion = new Set<string>();
+  const regions = regionRows
+    .map((r) => ({ brtcCode: r.bjdCode.slice(0, 2), signguCode: r.bjdCode.slice(2, 5) }))
+    .filter(({ brtcCode, signguCode }) => {
+      const key = `${brtcCode}-${signguCode}`;
+      if (seenRegion.has(key)) return false;
+      seenRegion.add(key);
+      return true;
+    });
+  console.info(`Region 테이블에서 ${regions.length}개 시군구 로드 (동 중복 제거 후)`);
 
   for (const region of regions) {
     try {
