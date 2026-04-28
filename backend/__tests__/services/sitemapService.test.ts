@@ -121,15 +121,15 @@ describe('getRealEstateCityDistrictHubs', () => {
     expect(unionCount).toBeGreaterThanOrEqual(5);
   });
 
-  it('groups by (realEstateType, city, district) only — not buildingName', async () => {
+  it('inner subqueries group by buildingName for per-building threshold; outer uses DISTINCT', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    // GROUP BY must include city and district
-    expect(sql).toMatch(/GROUP BY\s+city,\s*district/);
-    // must NOT group by buildingName
-    expect(sql).not.toMatch(/GROUP BY\s+city,\s*district,\s*buildingName/);
+    // inner GROUP BY must include buildingName so HAVING COUNT(*) >= 10 applies per building
+    expect(sql).toMatch(/GROUP BY\s+city,\s*district,\s*buildingName/);
+    // outer query deduplicates with DISTINCT, not GROUP BY
+    expect(sql).toMatch(/SELECT\s+DISTINCT\s+realEstateType,\s*city,\s*district/);
   });
 
   it('applies HAVING COUNT(*) >= 10 in each branch', async () => {
@@ -152,15 +152,13 @@ describe('getRealEstateCityDistrictHubs', () => {
     expect(numericMatches?.length).toBe(6);
   });
 
-  it('selects realEstateType, city, district — not in GROUP BY or outer SELECT', async () => {
+  it('outer SELECT uses DISTINCT on (realEstateType, city, district) without bjdCode', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    // outer SELECT must be (realEstateType, city, district)
-    expect(sql).toMatch(/SELECT\s+realEstateType,\s*city,\s*district/);
-    // GROUP BY must be city, district only — buildingName must not appear after GROUP BY
-    expect(sql).not.toMatch(/GROUP BY\s+city,\s*district,\s*buildingName/);
+    // outer SELECT must use DISTINCT on (realEstateType, city, district)
+    expect(sql).toMatch(/SELECT\s+DISTINCT\s+realEstateType,\s*city,\s*district/);
     // bjdCode must not be selected
     expect(sql).not.toMatch(/SELECT[^)]*bjdCode/);
   });
