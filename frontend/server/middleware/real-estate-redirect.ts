@@ -29,6 +29,9 @@ const LEGACY_SALE_LIST = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/?$/
 const NEW_DETAIL = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/[^/]+\/?$/
 const NEW_HUB = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/?$/
 
+// City hub slugs — 3-segment URLs ending with a city slug are new city hub pages, not legacy detail
+const CITY_SLUGS_SET = new Set(Object.values(CITY_SLUGS))
+
 type PropertyType = 'apt' | 'villa' | 'offitel'
 type TransactionMode = 'sale' | 'rent'
 
@@ -207,11 +210,13 @@ export default defineEventHandler(async (event) => {
   }
 
   // 레거시 sale/rent detail: /real-estate/apt-sale/{bldg}
+  // 단, 3번째 세그먼트가 도시 슬러그이면 새 city hub URL — pass-through
   match = pathname.match(LEGACY_SALE_DETAIL)
   if (match) {
     const propertyType = match[1] as PropertyType
     const mode = match[2] as TransactionMode
     const rawName = match[3]
+    if (CITY_SLUGS_SET.has(rawName)) return
     return await handleLegacyDetail(event, pathname, propertyType, mode, rawName, bjdCode)
   }
 
