@@ -64,7 +64,7 @@
           <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-4">
             <div class="flex flex-col gap-0.5">
               <span class="text-[11px] text-slate-400">실거래 부동산</span>
-              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ totalTransactionsKor }}만건</strong>
+              <strong class="text-slate-900 font-bold text-lg tracking-tight">{{ buildingCountKor }}만건</strong>
             </div>
             <div class="flex flex-col gap-0.5">
               <span class="text-[11px] text-slate-400">진행중 청약</span>
@@ -343,12 +343,8 @@ const stats = computed(() => {
   }
 })
 
-// 총 실거래 건수 (만 단위, 소수점 1자리)
-const totalTransactionsKor = computed(() => {
-  const re = stats.value.realEstate
-  const total = (re.aptSale || 0) + (re.aptRent || 0) + (re.villaSale || 0) + (re.villaRent || 0) + (re.offitelSale || 0) + (re.offitelRent || 0)
-  return (total / 10000).toFixed(1)
-})
+// 등록 부동산 건물 수 (만 단위, 소수점 1자리)
+const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFixed(1))
 
 // 시설 수 만 단위
 const facilityCountKor = computed(() => Math.floor(stats.value.total / 10000))
