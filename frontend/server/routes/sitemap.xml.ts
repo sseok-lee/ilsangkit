@@ -33,6 +33,33 @@ export default defineEventHandler(async (event) => {
   const pageCounts = await fetchSitemapPageCounts(apiBase)
 
   if (pageCounts) {
+    // real-estate hub (city/district listing pages)
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: weekStart })
+
+    // real estate buildings
+    const realEstatePages = Math.max(
+      1,
+      Math.ceil(pageCounts.realEstateBuildings.count / MAX_URLS_PER_SITEMAP)
+    )
+    if (realEstatePages === 1) {
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
+    } else {
+      for (let i = 1; i <= realEstatePages; i++) {
+        sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: weekStart })
+      }
+    }
+
+    // subscriptions
+    const subLastmod = pageCounts.subscriptions.maxUpdatedAt || today
+    const subPages = Math.max(1, Math.ceil(pageCounts.subscriptions.count / MAX_URLS_PER_SITEMAP))
+    if (subPages === 1) {
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/subscription.xml`, lastmod: subLastmod })
+    } else {
+      for (let i = 1; i <= subPages; i++) {
+        sitemaps.push({ loc: `${SITE_URL}/sitemap/subscription-${i}.xml`, lastmod: subLastmod })
+      }
+    }
+
     // facility categories
     for (const { category, count, maxUpdatedAt } of pageCounts.facilities) {
       const lastmod = maxUpdatedAt || today
@@ -56,10 +83,27 @@ export default defineEventHandler(async (event) => {
         sitemaps.push({ loc: `${SITE_URL}/sitemap/trash-${i}.xml`, lastmod: trashLastmod })
       }
     }
+  } else {
+    // fallback: 구 방식 (page-counts 엔드포인트 장애 시)
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: weekStart })
 
-    // subscriptions
-    const subLastmod = pageCounts.subscriptions.maxUpdatedAt || today
-    const subPages = Math.max(1, Math.ceil(pageCounts.subscriptions.count / MAX_URLS_PER_SITEMAP))
+    const realEstateBuildings = await fetchRealEstateBuildings(apiBase)
+    const realEstatePages = Math.max(1, Math.ceil(realEstateBuildings.length / MAX_URLS_PER_SITEMAP))
+    if (realEstatePages === 1) {
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
+    } else {
+      for (let i = 1; i <= realEstatePages; i++) {
+        sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: weekStart })
+      }
+    }
+
+    const subscriptions = await fetchSubscriptionIds(apiBase)
+    const subLatestDate = subscriptions.reduce((max, item) => {
+      const d = item.updatedAt?.split('T')[0]
+      return d && d > max ? d : max
+    }, '')
+    const subLastmod = subLatestDate || today
+    const subPages = Math.max(1, Math.ceil(subscriptions.length / MAX_URLS_PER_SITEMAP))
     if (subPages === 1) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/subscription.xml`, lastmod: subLastmod })
     } else {
@@ -68,20 +112,6 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // real estate buildings
-    const realEstatePages = Math.max(
-      1,
-      Math.ceil(pageCounts.realEstateBuildings.count / MAX_URLS_PER_SITEMAP)
-    )
-    if (realEstatePages === 1) {
-      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
-    } else {
-      for (let i = 1; i <= realEstatePages; i++) {
-        sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: weekStart })
-      }
-    }
-  } else {
-    // fallback: 구 방식 (page-counts 엔드포인트 장애 시)
     const counts = await Promise.all(
       SITEMAP_FACILITY_CATEGORIES.map(async (cat) => {
         const items = await fetchFacilityIds(cat, apiBase, getSitemapFacilityLimit(cat))
@@ -103,6 +133,7 @@ export default defineEventHandler(async (event) => {
         }
       }
     }
+
     const trashItems = await fetchWasteScheduleIds(apiBase)
     const trashLatestDate = trashItems.reduce((max, item) => {
       const d = item.updatedAt?.split('T')[0]
@@ -117,32 +148,7 @@ export default defineEventHandler(async (event) => {
         sitemaps.push({ loc: `${SITE_URL}/sitemap/trash-${i}.xml`, lastmod: trashLastmod })
       }
     }
-    const subscriptions = await fetchSubscriptionIds(apiBase)
-    const subLatestDate = subscriptions.reduce((max, item) => {
-      const d = item.updatedAt?.split('T')[0]
-      return d && d > max ? d : max
-    }, '')
-    const subLastmod = subLatestDate || today
-    const subPages = Math.max(1, Math.ceil(subscriptions.length / MAX_URLS_PER_SITEMAP))
-    if (subPages === 1) {
-      sitemaps.push({ loc: `${SITE_URL}/sitemap/subscription.xml`, lastmod: subLastmod })
-    } else {
-      for (let i = 1; i <= subPages; i++) {
-        sitemaps.push({ loc: `${SITE_URL}/sitemap/subscription-${i}.xml`, lastmod: subLastmod })
-      }
-    }
-    const realEstateBuildings = await fetchRealEstateBuildings(apiBase)
-    const realEstatePages = Math.max(1, Math.ceil(realEstateBuildings.length / MAX_URLS_PER_SITEMAP))
-    if (realEstatePages === 1) {
-      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
-    } else {
-      for (let i = 1; i <= realEstatePages; i++) {
-        sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: weekStart })
-      }
-    }
   }
-
-  sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: weekStart })
 
   return generateSitemapIndexXml(sitemaps)
 })
