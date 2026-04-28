@@ -81,7 +81,7 @@ describe('getPublicRentalList', () => {
     mocked.publicRentalComplex.findMany.mockResolvedValue([
       { id: 1, complexCode: 'a', complexName: 'A', city: '서울특별시', district: '강남구', rentalType: '매입임대', depositAmount: 50000000n, monthlyRent: 200000 },
     ]);
-    mocked.publicRentalComplex.count.mockResolvedValue(1);
+    mocked.publicRentalComplex.groupBy.mockResolvedValue([{ complexCode: 'a' }]);
 
     const result = await getPublicRentalList({ page: 1, limit: 20 });
     expect(result.items).toHaveLength(1);
@@ -89,9 +89,18 @@ describe('getPublicRentalList', () => {
     expect(result.pagination).toMatchObject({ page: 1, limit: 20, total: 1, totalPages: 1 });
   });
 
+  it('findMany에 distinct complexCode 포함', async () => {
+    mocked.publicRentalComplex.findMany.mockResolvedValue([]);
+    mocked.publicRentalComplex.groupBy.mockResolvedValue([]);
+
+    await getPublicRentalList({ page: 1, limit: 20 });
+    const call = mocked.publicRentalComplex.findMany.mock.calls[0][0];
+    expect(call.distinct).toEqual(['complexCode']);
+  });
+
   it('maps city slug to variant array (서울특별시 + 서울)', async () => {
     mocked.publicRentalComplex.findMany.mockResolvedValue([]);
-    mocked.publicRentalComplex.count.mockResolvedValue(0);
+    mocked.publicRentalComplex.groupBy.mockResolvedValue([]);
 
     await getPublicRentalList({ page: 1, limit: 20, city: 'seoul' });
     const call = mocked.publicRentalComplex.findMany.mock.calls[0][0];
@@ -100,7 +109,7 @@ describe('getPublicRentalList', () => {
 
   it('applies rentalType filter', async () => {
     mocked.publicRentalComplex.findMany.mockResolvedValue([]);
-    mocked.publicRentalComplex.count.mockResolvedValue(0);
+    mocked.publicRentalComplex.groupBy.mockResolvedValue([]);
 
     await getPublicRentalList({ page: 1, limit: 20, rentalType: '전세임대' });
     const call = mocked.publicRentalComplex.findMany.mock.calls[0][0];
@@ -109,7 +118,7 @@ describe('getPublicRentalList', () => {
 
   it('applies deposit range filter as BigInt', async () => {
     mocked.publicRentalComplex.findMany.mockResolvedValue([]);
-    mocked.publicRentalComplex.count.mockResolvedValue(0);
+    mocked.publicRentalComplex.groupBy.mockResolvedValue([]);
 
     await getPublicRentalList({ page: 1, limit: 20, depositMin: 10000000, depositMax: 100000000 });
     const call = mocked.publicRentalComplex.findMany.mock.calls[0][0];
@@ -119,7 +128,7 @@ describe('getPublicRentalList', () => {
 
   it('applies monthlyRent range filter', async () => {
     mocked.publicRentalComplex.findMany.mockResolvedValue([]);
-    mocked.publicRentalComplex.count.mockResolvedValue(0);
+    mocked.publicRentalComplex.groupBy.mockResolvedValue([]);
 
     await getPublicRentalList({ page: 1, limit: 20, monthlyRentMin: 100000, monthlyRentMax: 500000 });
     const call = mocked.publicRentalComplex.findMany.mock.calls[0][0];
@@ -128,7 +137,7 @@ describe('getPublicRentalList', () => {
 
   it('paginates with skip computed from (page-1)*limit', async () => {
     mocked.publicRentalComplex.findMany.mockResolvedValue([]);
-    mocked.publicRentalComplex.count.mockResolvedValue(60);
+    mocked.publicRentalComplex.groupBy.mockResolvedValue(Array.from({ length: 60 }, (_, i) => ({ complexCode: String(i) })));
 
     const result = await getPublicRentalList({ page: 3, limit: 20 });
     const call = mocked.publicRentalComplex.findMany.mock.calls[0][0];
