@@ -119,5 +119,10 @@ jobs:
 
             pm2 save
 
+            # sitemap SWR 캐시 워밍업 — PM2 재시작 후 Nitro in-memory 캐시가 비워지므로
+            # 배포 직후 한 번 요청해두면 Google 크롤러가 항상 캐시된 응답을 받는다.
+            sleep 5
+            curl -s -o /dev/null "https://ilsangkit.co.kr/sitemap.xml" || true
+
       - name: Deployment Status
         run: echo "✅ Deployment completed successfully!"
