@@ -125,17 +125,7 @@
     </nav>
 
     <!-- Right: Desktop Actions & Mobile Menu Button -->
-    <div class="flex items-center justify-end gap-2">
-      <!-- 내 동네 버튼 (데스크톱) -->
-      <button
-        class="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors"
-        :aria-label="regionStore.isSet ? `현재 동네: ${regionStore.label} (변경)` : '내 동네 설정'"
-        @click="openRegionModal"
-      >
-        <span class="material-symbols-outlined text-[16px]">location_on</span>
-        {{ regionStore.isSet ? regionStore.label : '내 동네 설정' }}
-      </button>
-
+    <div class="flex items-center justify-end">
       <!-- Mobile Menu Button -->
       <button
         class="md:hidden flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
@@ -147,8 +137,6 @@
       </button>
     </div>
   </header>
-
-  <RegionSettingsModal :open="isRegionModalOpen" @close="isRegionModalOpen = false" />
 
   <!-- Mobile Menu -->
   <Transition
@@ -169,15 +157,6 @@
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">
-        <!-- 내 동네 설정 (모바일) -->
-        <button
-          class="flex items-center gap-2 px-4 py-3 mb-1 bg-primary/5 border border-primary/20 text-primary text-sm font-bold rounded-xl"
-          @click="openRegionModalMobile"
-        >
-          <span class="material-symbols-outlined text-[20px]">location_on</span>
-          {{ regionStore.isSet ? regionStore.label : '내 동네 설정' }}
-        </button>
-
         <!-- Nav Groups (시설 카테고리 + 부동산 링크) -->
         <div v-for="group in NAV_GROUPS" :key="group.title" class="mb-1">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -268,20 +247,6 @@
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { CATEGORY_META, CATEGORY_GROUPS, NAV_GROUPS, isLinkGroup } from '~/types/facility'
 import type { NavGroup } from '~/types/facility'
-import { useRegionStore } from '~/stores/region'
-import RegionSettingsModal from '~/components/region/RegionSettingsModal.vue'
-
-const regionStore = useRegionStore()
-const isRegionModalOpen = ref(false)
-
-function openRegionModal() {
-  isRegionModalOpen.value = true
-}
-
-function openRegionModalMobile() {
-  isRegionModalOpen.value = true
-  closeMobileMenu()
-}
 
 interface Props {
   transparent?: boolean
@@ -400,7 +365,6 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
-  regionStore.hydrateFromStorage()
 })
 
 onUnmounted(() => {
