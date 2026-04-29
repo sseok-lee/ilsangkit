@@ -16,13 +16,13 @@ import { syncToilets } from '../services/toiletSyncService.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 import { syncTrashData } from './syncTrash.js';
 import { syncWifiData } from './syncWifi.js';
-import { syncClothes } from '../services/clothesSyncService.js';
-import { syncParking } from '../services/parkingSyncService.js';
-import { syncParks } from '../services/parkSyncService.js';
+import { syncClothesFromApi } from '../services/clothesSyncService.js';
+import { syncParkingFromApi } from '../services/parkingSyncService.js';
+import { syncParksFromApi } from '../services/parkSyncService.js';
 import { syncSchoolsNeis } from './syncSchoolNeis.js';
-import { syncMarkets } from '../services/marketSyncService.js';
+import { syncMarketsFromApi } from '../services/marketSyncService.js';
 import { syncAeds } from './syncAed.js';
-import { syncLibraries } from '../services/librarySyncService.js';
+import { syncLibrariesFromApi } from '../services/librarySyncService.js';
 import { syncHospitals } from './syncHospital.js';
 import { syncPharmacies } from './syncPharmacy.js';
 import { syncChildcare } from '../services/childcareSyncService.js';
@@ -30,18 +30,6 @@ import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
 import { prisma } from '../lib/prisma.js';
 import { submitIndexNow, buildFacilityUrls } from '../services/indexNowService.js';
-
-// 공영주차장 기본 CSV 파일 경로
-const PARKING_CSV_PATH = path.resolve(
-  import.meta.dirname,
-  '../../prisma/data/parking.csv'
-);
-
-// 공공도서관 기본 CSV 파일 경로
-const LIBRARY_CSV_PATH = path.resolve(
-  import.meta.dirname,
-  '../../prisma/data/library.csv'
-);
 
 // 공공화장실 기본 CSV 파일 경로
 const TOILET_CSV_PATH = path.resolve(
@@ -53,24 +41,6 @@ const TOILET_CSV_PATH = path.resolve(
 const WIFI_CSV_PATH = path.resolve(
   import.meta.dirname,
   '../../prisma/data/wifi.csv'
-);
-
-// 의류수거함 기본 CSV 파일 경로
-const CLOTHES_CSV_PATH = path.resolve(
-  import.meta.dirname,
-  '../../prisma/data/clothes.csv'
-);
-
-// 공원 기본 CSV 파일 경로
-const PARK_CSV_PATH = path.resolve(
-  import.meta.dirname,
-  '../../prisma/data/park.csv'
-);
-
-// 시장 기본 CSV 파일 경로
-const MARKET_CSV_PATH = path.resolve(
-  import.meta.dirname,
-  '../../prisma/data/market.csv'
 );
 
 /**
@@ -137,7 +107,7 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'clothes': {
-        const result = await syncClothes(CLOTHES_CSV_PATH);
+        const result = await syncClothesFromApi();
         return {
           category,
           success: true,
@@ -167,7 +137,7 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'parking': {
-        const result = await syncParking(PARKING_CSV_PATH);
+        const result = await syncParkingFromApi();
         return {
           category,
           success: true,
@@ -187,7 +157,7 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'library': {
-        const result = await syncLibraries(LIBRARY_CSV_PATH);
+        const result = await syncLibrariesFromApi();
         return {
           category,
           success: true,
@@ -197,7 +167,7 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'park': {
-        const result = await syncParks(PARK_CSV_PATH);
+        const result = await syncParksFromApi();
         return {
           category,
           success: true,
@@ -217,7 +187,7 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'market': {
-        const result = await syncMarkets(MARKET_CSV_PATH);
+        const result = await syncMarketsFromApi();
         return {
           category,
           success: true,
