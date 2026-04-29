@@ -42,7 +42,7 @@ describe('RentalPriceStatsBox', () => {
     await flushPromises()
 
     // 제목 확인
-    expect(wrapper.text()).toContain('📊 주변 아파트 전월세 시세')
+    expect(wrapper.text()).toContain('주변 아파트 전월세 시세')
     expect(wrapper.text()).toContain('2026.01~2026.04')
 
     // 전세 정보 확인
