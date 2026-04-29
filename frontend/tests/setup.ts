@@ -87,6 +87,9 @@ config.global.stubs = {
   LazyRecentReviewCard: { template: '<div class="stub-review-card" />' },
   // 동네 설정 모달은 useRegions 의존 → AppHeader 등 외부 테스트에서 스터브
   RegionSettingsModal: { template: '<div class="stub-region-modal" />', props: ['open'] },
+  // 변동률 카드는 useAsyncData fetch가 외부 페이지 테스트에 영향 → 스터브
+  RegionTrendCard: { template: '<div class="stub-region-trend" />', props: ['city', 'district', 'txType'] },
+  ClientOnly: { template: '<div><slot /></div>' },
 }
 
 // Global test setup
