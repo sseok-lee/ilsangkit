@@ -84,6 +84,9 @@ config.global.stubs = {
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브
   HomeSubscriptionSection: { template: '<section class="stub-home-subscription" />' },
   LazyRecentReviewCard: { template: '<div class="stub-review-card" />' },
+  // 변동률 카드는 useAsyncData fetch가 외부 페이지 테스트에 영향 → 스터브
+  RegionTrendCard: { template: '<div class="stub-region-trend" />', props: ['city', 'district', 'txType'] },
+  ClientOnly: { template: '<div><slot /></div>' },
 }
 
 // Global test setup
