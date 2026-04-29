@@ -1212,34 +1212,6 @@ model RealEstateBuildingSummary {
   @@index([type, buildingName])
 }
 
-// 월간 집계 변동률 (apt v1, villa/offitel은 v2)
-// 동·평형(areaBucket)·매매전월세 단위. trimmed mean 으로 이상치 제거.
-model RealEstateTrend {
-  id              Int      @id @default(autoincrement())
-  propertyType    String   @db.VarChar(20)  // 'apt' v1
-  city            String   @db.VarChar(50)
-  district        String   @db.VarChar(50)
-  dong            String   @db.VarChar(50)
-  areaBucket      String   @db.VarChar(20)  // '59㎡대' | '84㎡대' | '114㎡대' | '기타'
-  txType          String   @db.VarChar(10)  // 'sale' | 'rent'
-  yearMonth       String   @db.VarChar(7)   // 'YYYY-MM'
-
-  avgPrice        BigInt
-  txCount         Int
-  prevMonthAvg    BigInt?
-  prev3MonthAvg   BigInt?
-  prevYearAvg     BigInt?
-  monthOverMonth  Float?
-  qtrOverQtr      Float?
-  yearOverYear    Float?
-
-  computedAt      DateTime @default(now())
-
-  @@unique([propertyType, city, district, dong, areaBucket, txType, yearMonth])
-  @@index([propertyType, city, district, yearMonth])
-  @@index([propertyType, city, district, dong, yearMonth])
-}
-
 // 청약 분양정보
 model Subscription {
   id                  Int       @id @default(autoincrement())
