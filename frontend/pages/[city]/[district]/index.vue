@@ -1,25 +1,39 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
-      <!-- 브레드크럼 -->
-      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-4">
-        <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <NuxtLink :to="`/${city}`" class="hover:text-primary">{{ cityName }}</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span class="text-slate-800">{{ districtName }}</span>
-      </nav>
+    <!-- Hero (라이트 그라데이션) -->
+    <section class="bg-gradient-to-b from-blue-50/70 via-blue-50/30 to-background-light border-b border-line">
+      <div class="mx-auto max-w-6xl px-4 py-6 md:py-9 md:px-6">
+        <!-- 브레드크럼 -->
+        <nav class="flex items-center gap-1 text-sm text-slate-500 mb-3">
+          <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <NuxtLink :to="`/${city}`" class="hover:text-primary">{{ cityName }}</NuxtLink>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span class="text-slate-800 font-medium">{{ districtName }}</span>
+        </nav>
 
-      <!-- 히어로 -->
-      <div class="mb-5">
-        <div class="mb-2">
-          <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
-            {{ districtName }} 생활 정보
-          </h1>
+        <!-- 타이틀 -->
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+          {{ districtName }} <span class="text-primary">한눈에</span>
+        </h1>
+        <p class="mt-2 text-slate-500 text-sm md:text-base">실거래가 · 14종 공공시설 · 생활 가이드를 한 화면에서</p>
+
+        <!-- KPI Strip -->
+        <div v-if="heroKpis.length" class="mt-5 md:mt-7 grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
+          <div
+            v-for="kpi in heroKpis"
+            :key="kpi.label"
+            class="bg-white/70 border border-white/60 backdrop-blur-sm rounded-xl px-3 py-3 md:px-4 md:py-4 shadow-card"
+          >
+            <div class="text-base md:text-xl font-extrabold text-slate-900 tracking-tight truncate">{{ kpi.value }}</div>
+            <div class="text-[10px] md:text-xs text-slate-500 mt-0.5 truncate">{{ kpi.label }}</div>
+          </div>
         </div>
-        <p class="mt-2 text-slate-500 text-sm">{{ cityName }} {{ districtName }}의 부동산 시세와 생활시설을 한눈에 확인하세요</p>
-        <p v-if="areaDescription" class="text-gray-600 text-sm leading-relaxed mt-3">{{ areaDescription }}</p>
       </div>
+    </section>
+
+    <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
+      <p v-if="areaDescription" class="text-gray-600 text-sm leading-relaxed mb-5">{{ areaDescription }}</p>
 
       <!-- Ad: 헤더 직후 -->
       <AdBanner class="mb-5" />
@@ -204,6 +218,25 @@ function formatPrice(amount: number | null): string {
   }
   return `${amount.toLocaleString()}만원`
 }
+
+const heroKpis = computed(() => {
+  if (!areaData.value) return []
+  const re = areaData.value.realEstate
+  const facilities = areaData.value.facilities
+  const facilityTotal = facilities?.total ?? 0
+  const categoryCount = facilities?.categories
+    ? Object.values(facilities.categories as Record<string, number>).filter((v) => v > 0).length
+    : 0
+  const saleCount = (re?.apt?.sale?.count ?? 0) + (re?.villa?.sale?.count ?? 0) + (re?.offitel?.sale?.count ?? 0)
+  return [
+    { label: '등록 시설', value: facilityTotal.toLocaleString() },
+    { label: '시설 카테고리', value: `${categoryCount}종` },
+    { label: '아파트 평균', value: formatPrice(re?.apt?.sale?.avg) },
+    { label: '빌라 평균', value: formatPrice(re?.villa?.sale?.avg) },
+    { label: '오피스텔 평균', value: formatPrice(re?.offitel?.sale?.avg) },
+    { label: '매매 거래', value: `${saleCount.toLocaleString()}건` },
+  ]
+})
 
 const realEstateCards = computed(() => {
   const re = areaData.value?.realEstate
