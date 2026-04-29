@@ -52,7 +52,7 @@
           @click="$emit('select', facility)"
         >
           <div class="flex items-start gap-3">
-            <CategoryIcon :category-id="category" size="sm" class="flex-shrink-0" />
+            <span class="text-xl flex-shrink-0">{{ getCategoryIcon(category) }}</span>
             <div class="flex-1 min-w-0">
               <h4 class="font-medium text-slate-900 truncate">{{ facility.name }}</h4>
               <p class="text-sm text-slate-500 truncate mt-0.5">
@@ -78,7 +78,6 @@
 <script setup lang="ts">
 import type { FacilitySearchItem, FacilityCategory } from '~/types'
 import { getMarkerColor as getSharedCategoryColor } from '~/utils/categoryColors'
-import CategoryIcon from '~/components/common/CategoryIcon.vue'
 
 interface Props {
   facilities: FacilitySearchItem[]
@@ -98,6 +97,23 @@ defineEmits<{
 
 const sheetRef = ref<HTMLElement | null>(null)
 const isExpanded = ref(false)
+
+const categoryIcons: Record<string, string> = {
+  toilet: '🚻',
+  wifi: '📶',
+  clothes: '👕',
+  trash: '🗑️',
+  parking: '🅿️',
+  park: '🌳',
+  school: '🏫',
+  market: '🏪',
+}
+
+// Category colors — shared constant from utils/categoryColors.ts
+
+function getCategoryIcon(category: string): string {
+  return categoryIcons[category] || '📍'
+}
 
 function getCategoryColor(category: string): string {
   return getSharedCategoryColor(category)

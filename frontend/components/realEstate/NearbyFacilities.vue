@@ -19,7 +19,7 @@
       >
         <!-- 카테고리 헤더 -->
         <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-50" :class="categoryBgClass(group.category)">
-          <CategoryIcon :category-id="group.category" size="sm" />
+          <span class="text-lg">{{ group.icon }}</span>
           <h4 class="text-sm font-semibold text-slate-700">{{ group.label }}</h4>
           <span class="ml-auto text-[11px] text-slate-500 font-medium">{{ group.items.length }}곳</span>
         </div>
@@ -50,7 +50,6 @@
 import { ref, onMounted } from 'vue'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
-import CategoryIcon from '~/components/common/CategoryIcon.vue'
 
 interface FacilityItem {
   id: string
@@ -65,6 +64,7 @@ interface FacilityItem {
 interface FacilityGroup {
   category: FacilityCategory
   label: string
+  icon: string
   items: FacilityItem[]
 }
 
@@ -77,6 +77,24 @@ const props = defineProps<Props>()
 
 const loading = ref(true)
 const facilityGroups = ref<FacilityGroup[]>([])
+
+const CATEGORY_ICONS: Partial<Record<FacilityCategory, string>> = {
+  toilet: '🚻',
+  parking: '🅿️',
+  pharmacy: '💊',
+  aed: '❤️',
+  wifi: '📶',
+  hospital: '🏥',
+  library: '📚',
+  park: '🌳',
+  school: '🏫',
+  market: '🏪',
+  clothes: '👕',
+  trash: '🗑️',
+  childcare: '🧒',
+  'ev-charger': '⚡',
+  sports: '🏅',
+}
 
 const DISPLAY_CATEGORIES: FacilityCategory[] = ['school', 'childcare', 'park', 'sports', 'hospital', 'pharmacy']
 const MAX_PER_CATEGORY = 3
@@ -138,6 +156,7 @@ onMounted(async () => {
         grouped.push({
           category: cat,
           label: CATEGORY_META[cat]?.label ?? cat,
+          icon: CATEGORY_ICONS[cat] ?? '📍',
           items: catItems,
         })
       }
