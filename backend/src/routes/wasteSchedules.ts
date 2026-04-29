@@ -76,6 +76,26 @@ router.get('/districts/:city', validate(CityParamsSchema, 'params'), asyncHandle
   res.json({ success: true, data: { items: districts } });
 }));
 
+const UpcomingQuerySchema = z.object({
+  city: z.string().min(1).max(50),
+  district: z.string().min(1).max(50),
+});
+
+/**
+ * GET /api/waste-schedules/upcoming
+ * 시·구 단위 다음 수거일(D-Day) 조회
+ * Query: city, district (필수)
+ */
+router.get(
+  '/upcoming',
+  validate(UpcomingQuerySchema, 'query'),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { city, district } = res.locals.validated.query as { city: string; district: string };
+    const result = await wasteScheduleService.getUpcoming(city, district);
+    res.json({ success: true, data: result });
+  })
+);
+
 /**
  * GET /api/waste-schedules/:id
  * 단건 조회 (상세 페이지용)
