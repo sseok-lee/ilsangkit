@@ -87,6 +87,9 @@ config.global.stubs = {
   LazyRecentReviewCard: { template: '<div class="stub-review-card" />' },
   // 동네 설정 모달은 useRegions 의존 → AppHeader 등 외부 테스트에서 스터브
   RegionSettingsModal: { template: '<div class="stub-region-modal" />', props: ['open'] },
+  // WasteDDayCard도 useRegions/useRegionStore 의존 → 외부 페이지 테스트에서 스터브
+  WasteDDayCard: { template: '<div class="stub-waste-d-day" />' },
+  ClientOnly: { template: '<div><slot /></div>' },
 }
 
 // Global test setup
