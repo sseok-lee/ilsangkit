@@ -106,6 +106,13 @@
       </div>
     </section>
 
+    <!-- 내 동네 쓰레기 수거 D-Day (regionStore 설정 + 데이터 매칭 시만 노출) -->
+    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4">
+      <ClientOnly>
+        <WasteDDayCard />
+      </ClientOnly>
+    </section>
+
     <!-- 부동산 실거래가 3카드 -->
     <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="flex items-end justify-between gap-4 mb-4">
@@ -275,6 +282,7 @@
 import { computed } from 'vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
+import WasteDDayCard from '~/components/waste/WasteDDayCard.vue'
 import type { ReviewWithFacility } from '~/types/review'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
