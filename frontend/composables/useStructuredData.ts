@@ -1,4 +1,3 @@
-// @TASK T5.3 - JSON-LD 구조화된 데이터
 import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_URL } from '~/utils/seoConstants'
@@ -192,7 +191,6 @@ export function useStructuredData() {
         break
       }
       case 'aed': {
-        const specs: OpeningHoursSpec[] = []
         const aedDays: Array<[string, string, string]> = [
           ['Monday', 'monSttTme', 'monEndTme'],
           ['Tuesday', 'tueSttTme', 'tueEndTme'],
@@ -202,11 +200,7 @@ export function useStructuredData() {
           ['Saturday', 'satSttTme', 'satEndTme'],
           ['Sunday', 'sunSttTme', 'sunEndTme'],
         ]
-        for (const [day, sKey, cKey] of aedDays) {
-          if (d?.[sKey] && d?.[cKey]) {
-            specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens: formatTime(String(d[sKey])), closes: formatTime(String(d[cKey])) })
-          }
-        }
+        const specs = buildOpeningHoursSpecs(d, aedDays)
         if (specs.length) Object.assign(schema, { openingHoursSpecification: specs })
         break
       }
@@ -339,8 +333,6 @@ export function useStructuredData() {
     })
   }
 
-
-
   /**
    * Place 스키마 (부동산 건물 상세용).
    * SSR-safe: 호출부는 `() => options` 형태의 getter 를 전달해 reactive 의존성을 유지한다.
@@ -353,6 +345,13 @@ export function useStructuredData() {
     lng?: number | null
     buildYear?: number | null
     propertyType: string
+    propertySlug?: 'apt' | 'villa' | 'offitel'
+  }
+
+  function resolveBuildingSchemaType(slug?: string): string {
+    if (slug === 'apt') return 'ApartmentComplex'
+    if (slug === 'offitel') return 'Apartment'
+    return 'Residence'
   }
 
   function setBuildingPlaceSchema(
@@ -363,7 +362,7 @@ export function useStructuredData() {
       const options = resolve()
       const schema: Record<string, unknown> = {
         '@context': 'https://schema.org',
-        '@type': 'Place',
+        '@type': resolveBuildingSchemaType(options.propertySlug),
         name: options.name,
         address: {
           '@type': 'PostalAddress',
@@ -503,7 +502,6 @@ export function useStructuredData() {
       ],
     })
   }
-
 
   /**
    * Article 스키마 (가이드 상세용)

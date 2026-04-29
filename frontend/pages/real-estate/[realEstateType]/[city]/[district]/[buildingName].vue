@@ -479,6 +479,7 @@ const buildingInfo = ref<BuildingInfo | null>(null)
 const summary = ref<StatsSummary | null>(null)
 const statsLoading = ref(true)
 const txLoading = ref(true)
+const facilitySummary = ref<string | null>(null)
 
 // noindex 판정 (canonical 정책과 함께 사용) — .omc/notes/noindex-canonical-policy.md
 const noindex = computed(() =>
@@ -500,9 +501,10 @@ useHead(() => {
   const transactionLabel = tab === '매매' ? '매매' : '전세·월세'
   const title = `${buildingName.value} ${transactionLabel} 실거래가 | ${locLabel} | 일상킷`
   const subject = [locLabel, `${buildingName.value}의`].filter(Boolean).join(' ')
+  const facilitySuffix = facilitySummary.value ? ` 인근 ${facilitySummary.value} 정보도 함께 확인하세요.` : ''
   const description = summary.value?.totalCount
-    ? `${subject} ${transactionLabel} 실거래가 정보입니다. 최근 ${summary.value.totalCount.toLocaleString()}건 거래, 시세 추이와 면적별 가격을 확인하세요.`
-    : `${subject} ${transactionLabel} 실거래가 정보입니다. 시세 추이와 면적별 가격을 확인하세요.`
+    ? `${subject} ${transactionLabel} 실거래가 정보입니다. 최근 ${summary.value.totalCount.toLocaleString()}건 거래, 시세 추이와 면적별 가격을 확인하세요.${facilitySuffix}`
+    : `${subject} ${transactionLabel} 실거래가 정보입니다. 시세 추이와 면적별 가격을 확인하세요.${facilitySuffix}`
 
   // Canonical uses new URL structure — distinct per realEstateType (apt-sale ≠ apt-rent)
   const canonicalUrl = `${SITE_URL}${toRealEstateUrl({
@@ -826,12 +828,36 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
         ? getAreaGroups(apiSlug.value, bjdCode, buildingName.value)
         : Promise.resolve([]),
     ])
+    const resolvedBuildingInfo = infoResult.status === 'fulfilled' ? infoResult.value : null
+    let facilitySummarySSR: string | null = null
+    if (resolvedBuildingInfo?.lat && resolvedBuildingInfo?.lng) {
+      try {
+        const facilityRes = await $fetch('/api/facilities/search', {
+          method: 'POST',
+          body: { lat: resolvedBuildingInfo.lat, lng: resolvedBuildingInfo.lng, radius: 1000 },
+        })
+        const facilityItems: any[] = (facilityRes as any)?.data?.items ?? (facilityRes as any)?.items ?? []
+        const DISPLAY_CATS = ['school', 'childcare', 'park', 'sports', 'hospital', 'pharmacy'] as const
+        const FACILITY_LABELS: Record<string, string> = {
+          school: '학교', childcare: '어린이집', park: '공원', sports: '체육시설', hospital: '병원', pharmacy: '약국',
+        }
+        const parts = DISPLAY_CATS
+          .map(cat => ({ cat, count: facilityItems.filter((i: any) => i.category === cat).length }))
+          .filter(({ count }) => count > 0)
+          .slice(0, 3)
+          .map(({ cat, count }) => `${FACILITY_LABELS[cat]} ${count}곳`)
+        if (parts.length > 0) facilitySummarySSR = parts.join(', ') + ' 등 생활시설'
+      } catch {
+        // best-effort — facility summary is optional SEO enhancement
+      }
+    }
     return {
       bjdCode,
       statsResponse: statsResult.status === 'fulfilled' ? statsResult.value : EMPTY_STATS_RESPONSE,
       transactions: txResult.status === 'fulfilled' ? txResult.value : EMPTY_TRANSACTIONS,
-      buildingInfo: infoResult.status === 'fulfilled' ? infoResult.value : null,
+      buildingInfo: resolvedBuildingInfo,
       areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
+      facilitySummary: facilitySummarySSR,
     }
   },
 )
@@ -845,6 +871,7 @@ watch(ssrData, (data) => {
   transactions.value = data.transactions as RealEstateSearchResponse
   buildingInfo.value = data.buildingInfo as BuildingInfo | null
   areaGroups.value = (data.areaGroups ?? []) as AreaGroup[]
+  facilitySummary.value = data.facilitySummary ?? null
   statsLoading.value = false
   txLoading.value = false
 
@@ -973,15 +1000,16 @@ watch(selectedRentType, () => { currentPage.value = 1; loadData() })
 // 필드는 이미 들어가 있으며, buildingInfo 가 도착하면 useHead 가 reactive 하게 새 스키마로 교체된다.
 setBuildingPlaceSchema(() => ({
   name: buildingName.value,
-  address: fullAddress.value !== '-' ? fullAddress.value : buildingName.value,
+  address: fullAddress.value !== '-' ? fullAddress.value : `${cityName} ${districtName}`,
   lat: buildingInfo.value?.lat ?? null,
   lng: buildingInfo.value?.lng ?? null,
   buildYear: buildingInfo.value?.buildYear,
   propertyType: propertyMeta.value?.label || '',
+  propertySlug: propertyTypePart as 'apt' | 'villa' | 'offitel',
 }))
 setRealEstateListingSchema(() => ({
   name: buildingName.value,
-  address: fullAddress.value !== '-' ? fullAddress.value : buildingName.value,
+  address: fullAddress.value !== '-' ? fullAddress.value : `${cityName} ${districtName}`,
   city: buildingInfo.value?.city || cityName,
   district: buildingInfo.value?.district || districtName,
   propertyType: propertyMeta.value?.label || '',
