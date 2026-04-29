@@ -15,7 +15,8 @@
     <!-- Header -->
     <div class="mb-4">
       <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-        <span>📊 주변 아파트 전월세 시세</span>
+        <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">bar_chart</span>
+        <span>주변 아파트 전월세 시세</span>
         <span v-if="stats?.period" class="text-xs text-slate-500">({{ stats.period }})</span>
       </h3>
       <p class="text-xs text-slate-500 mt-1">지역: {{ regionName }}</p>

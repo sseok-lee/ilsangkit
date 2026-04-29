@@ -22,7 +22,7 @@
       v-else-if="!loading && facilities.length === 0"
       class="flex flex-col items-center justify-center py-16 px-4"
     >
-      <div class="text-6xl mb-4">🔍</div>
+      <span class="material-symbols-outlined text-[64px] text-slate-300 mb-4" aria-hidden="true">search_off</span>
       <h3 class="text-xl font-bold text-slate-900 mb-2">검색 결과가 없습니다</h3>
       <p class="text-slate-600 text-center">
         다른 검색어나 필터로 다시 시도해보세요
