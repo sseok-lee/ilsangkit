@@ -84,6 +84,13 @@
           </div>
         </section>
 
+        <!-- ②a 동·평형 변동률 (apt v1, 데이터 있을 때만 자체적으로 노출) -->
+        <section class="mb-6">
+          <ClientOnly>
+            <RegionTrendCard :city="cityName" :district="districtName" tx-type="sale" />
+          </ClientOnly>
+        </section>
+
         <!-- ② 생활시설 현황 -->
         <section v-if="areaData.facilities" id="facilities" class="mb-6">
           <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
@@ -155,6 +162,7 @@
 <script setup lang="ts">
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { useStructuredData } from '~/composables/useStructuredData'
+import RegionTrendCard from '~/components/realEstate/RegionTrendCard.vue'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import { SITE_URL, SITE_NAME } from '~/utils/seoConstants'
