@@ -1,94 +1,20 @@
 #!/usr/bin/env tsx
-// @TASK T9.3.2 - 공공도서관 동기화 스크립트
 
-/**
- * 공공도서관 데이터 동기화 CLI
- *
- * 사용법:
- *   npm run sync:library                          # CSV 모드 (기본)
- *   npm run sync:library -- --mode api            # API 모드
- *   npm run sync:library -- --file /path/to.csv   # CSV 파일 경로 지정
- */
-
-import * as path from 'path';
-import * as fs from 'fs';
-import { syncLibraries, syncLibrariesFromApi } from '../services/librarySyncService.js';
+import { syncLibrariesFromApi } from '../services/librarySyncService.js';
 
 async function main(): Promise<void> {
-  console.log('=== 공공도서관 데이터 동기화 시작 ===\n');
-
-  const args = process.argv.slice(2);
-  const fileIndex = args.indexOf('--file');
-  const modeIndex = args.indexOf('--mode');
-
-  // 모드 결정: --file이 있으면 CSV, --mode로 명시적 지정, 기본은 CSV
-  let mode: 'api' | 'csv' = 'csv';
-
-  if (fileIndex !== -1) {
-    mode = 'csv';
-  } else if (modeIndex !== -1 && args[modeIndex + 1]) {
-    const modeArg = args[modeIndex + 1];
-    if (modeArg === 'api' || modeArg === 'csv') {
-      mode = modeArg;
-    } else {
-      console.error(`알 수 없는 모드: ${modeArg} (api 또는 csv를 지정하세요)`);
-      process.exit(1);
-    }
-  }
-
-  if (mode === 'api') {
-    console.log('모드: API (data.go.kr Open API)');
-    const result = await syncLibrariesFromApi();
-
-    console.log('\n=== 동기화 결과 ===');
-    console.log(`전체: ${result.totalRecords}건`);
-    console.log(`신규: ${result.newRecords}건`);
-    console.log(`업데이트: ${result.updatedRecords}건`);
-    console.log(`스킵: ${result.skippedRecords}건`);
-
-    if (result.errors.length > 0) {
-      console.log(`\n오류 (${result.errors.length}건):`);
-      result.errors.slice(0, 10).forEach(err => console.log(`  - ${err}`));
-      if (result.errors.length > 10) {
-        console.log(`  ... 외 ${result.errors.length - 10}건`);
-      }
-    }
-  } else {
-    // CSV 모드
-    let csvFilePath: string;
-
-    if (fileIndex !== -1 && args[fileIndex + 1]) {
-      csvFilePath = path.resolve(args[fileIndex + 1]);
-    } else {
-      csvFilePath = path.resolve(
-        import.meta.dirname,
-        '../../prisma/data/library.csv'
-      );
-    }
-
-    if (!fs.existsSync(csvFilePath)) {
-      console.error(`CSV 파일을 찾을 수 없습니다: ${csvFilePath}`);
-      console.error('--file 옵션으로 CSV 파일 경로를 지정하세요.');
-      process.exit(1);
-    }
-
-    console.log(`모드: CSV 파일`);
-    console.log(`CSV 파일: ${csvFilePath}`);
-
-    const result = await syncLibraries(csvFilePath);
-
-    console.log('\n=== 동기화 결과 ===');
-    console.log(`전체: ${result.totalRecords}건`);
-    console.log(`신규: ${result.newRecords}건`);
-    console.log(`업데이트: ${result.updatedRecords}건`);
-    console.log(`스킵: ${result.skippedRecords}건`);
-
-    if (result.errors.length > 0) {
-      console.log(`\n오류 (${result.errors.length}건):`);
-      result.errors.slice(0, 10).forEach(err => console.log(`  - ${err}`));
-      if (result.errors.length > 10) {
-        console.log(`  ... 외 ${result.errors.length - 10}건`);
-      }
+  console.log('=== 공공도서관 데이터 동기화 시작 (API) ===\n');
+  const result = await syncLibrariesFromApi();
+  console.log('\n=== 동기화 결과 ===');
+  console.log(`전체: ${result.totalRecords}건`);
+  console.log(`신규: ${result.newRecords}건`);
+  console.log(`업데이트: ${result.updatedRecords}건`);
+  console.log(`스킵: ${result.skippedRecords}건`);
+  if (result.errors.length > 0) {
+    console.log(`\n오류 (${result.errors.length}건):`);
+    result.errors.slice(0, 10).forEach(err => console.log(`  - ${err}`));
+    if (result.errors.length > 10) {
+      console.log(`  ... 외 ${result.errors.length - 10}건`);
     }
   }
 }

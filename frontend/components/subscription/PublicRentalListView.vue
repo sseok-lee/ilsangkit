@@ -93,7 +93,7 @@ const reload = (): Promise<void> => fetchList({
   city: currentCity.value,
   rentalType: props.rentalTypeCode,
   page: page.value,
-  limit: 20,
+  limit: 18,
 })
 
 function selectCity(slug: string | undefined) {
