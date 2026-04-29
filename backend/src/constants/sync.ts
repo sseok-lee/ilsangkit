@@ -5,7 +5,7 @@ export const SYNC = {
   BATCH_SIZE: 100,
   MAX_RETRIES: 3,
   RETRY_BASE_DELAY_MS: 1000,
-  PAGE_SIZE: 100,
+  PAGE_SIZE: 1000,
 } as const;
 
 export const API_TIMEOUT = {

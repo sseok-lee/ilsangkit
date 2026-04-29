@@ -1,8 +1,5 @@
-// @TASK T2.3.1 - 의류수거함 CSV 동기화 서비스
-// @SPEC docs/planning/02-trd.md#데이터-동기화
-
 import { prisma } from '../lib/prisma.js';
-import { parseClothesCSV, transformClothesRow } from './csvParser.js';
+import { transformClothesRow } from './csvParser.js';
 import type { ClothesCSVRow } from './csvParser.js';
 import { PublicApiClient } from './publicApiClient.js';
 import {
@@ -16,13 +13,9 @@ import {
 } from './baseSyncService.js';
 import { SYNC } from '../constants/index.js';
 
-// Re-export for backward compatibility (tests import from here)
 export { createSyncHistory, updateSyncHistory };
 export type { SyncStats, SyncHistoryUpdateData };
 
-/**
- * 개별 Clothes 레코드 upsert
- */
 async function upsertOneClothes(clothes: ReturnType<typeof transformClothesRow> & object): Promise<'new' | 'updated'> {
   const existing = await prisma.clothes.findUnique({
     where: { sourceId: clothes.sourceId },
@@ -68,14 +61,10 @@ async function upsertOneClothes(clothes: ReturnType<typeof transformClothesRow> 
   return existing ? 'updated' : 'new';
 }
 
-/**
- * 공통 clothes 동기화 로직 (CSV rows 또는 API rows를 받아 처리)
- */
 async function syncClothesRows(rows: ClothesCSVRow[], stats: SyncStats, syncHistoryId: number): Promise<void> {
   stats.totalRecords = rows.length;
   console.info(`Found ${rows.length} records`);
 
-  // 데이터 변환 + 중복 제거
   console.info('Transforming data...');
   const uniqueClothes = transformAndDedupe(
     rows,
@@ -86,55 +75,12 @@ async function syncClothesRows(rows: ClothesCSVRow[], stats: SyncStats, syncHist
 
   console.info(`Transformed ${uniqueClothes.length} valid records, skipped ${stats.skippedRecords}`);
 
-  // DB Upsert (트랜잭션 래핑 + 진행 상황 추적)
   console.info('Upserting to database...');
   const { newCount, updateCount } = await batchUpsert(uniqueClothes, upsertOneClothes, 100, syncHistoryId);
   stats.newRecords = newCount;
   stats.updatedRecords = updateCount;
 }
 
-/**
- * 의류수거함 데이터 동기화 메인 함수 (CSV)
- */
-export async function syncClothes(csvFilePath: string): Promise<SyncStats> {
-  const stats = createSyncStats();
-  const syncHistory = await createSyncHistory('clothes');
-
-  try {
-    console.info(`CSV file: ${csvFilePath}`);
-
-    // CSV 파싱
-    console.info('Parsing CSV file...');
-    const rows = await parseClothesCSV(csvFilePath);
-    await syncClothesRows(rows, stats, syncHistory.id);
-
-    // 성공 시 SyncHistory 업데이트
-    await updateSyncHistory(syncHistory.id, {
-      status: 'success',
-      totalRecords: stats.totalRecords,
-      newRecords: stats.newRecords,
-      updatedRecords: stats.updatedRecords,
-    });
-
-    console.info(`clothes sync completed: Total=${stats.totalRecords}, New=${stats.newRecords}, Updated=${stats.updatedRecords}, Skipped=${stats.skippedRecords}`);
-    return stats;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    stats.errors.push(errorMessage);
-
-    await updateSyncHistory(syncHistory.id, {
-      status: 'failed',
-      errorMessage,
-    });
-
-    console.error('clothes sync failed:', errorMessage);
-    throw error;
-  }
-}
-
-/**
- * 의류수거함 데이터 API 동기화 함수
- */
 export async function syncClothesFromApi(): Promise<SyncStats> {
   const serviceKey = process.env.OPENAPI_SERVICE_KEY;
   if (!serviceKey) {
@@ -153,10 +99,9 @@ export async function syncClothesFromApi(): Promise<SyncStats> {
       { maxRetries: SYNC.MAX_RETRIES, retryDelay: SYNC.RETRY_BASE_DELAY_MS }
     );
 
-    const rows = await client.fetchAllPages<ClothesCSVRow>(100);
+    const rows = await client.fetchAllPages<ClothesCSVRow>(SYNC.PAGE_SIZE);
     await syncClothesRows(rows, stats, syncHistory.id);
 
-    // 성공 시 SyncHistory 업데이트
     await updateSyncHistory(syncHistory.id, {
       status: 'success',
       totalRecords: stats.totalRecords,
@@ -180,9 +125,4 @@ export async function syncClothesFromApi(): Promise<SyncStats> {
   }
 }
 
-export default {
-  syncClothes,
-  syncClothesFromApi,
-  createSyncHistory,
-  updateSyncHistory,
-};
+export default { syncClothesFromApi, createSyncHistory, updateSyncHistory };
