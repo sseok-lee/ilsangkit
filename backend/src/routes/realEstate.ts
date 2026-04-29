@@ -32,28 +32,6 @@ const TypeParamsSchema = z.object({
   type: RealEstateTypeSchema,
 });
 
-// GET /api/real-estate/trend - 동·평형 단위 변동률 조회 (apt v1)
-const TrendQuerySchema = z.object({
-  propertyType: z.string().default('apt'),
-  city: z.string().min(1).max(50),
-  district: z.string().min(1).max(50),
-  dong: z.string().min(1).max(50).optional(),
-  areaBucket: z.string().min(1).max(20).optional(),
-  txType: z.enum(['sale', 'rent']).optional(),
-  yearMonth: z.string().regex(/^\d{4}-\d{2}$/).optional(),
-});
-
-router.get(
-  '/trend',
-  validate(TrendQuerySchema, 'query'),
-  asyncHandler(async (req: Request, res: Response) => {
-    const query = req.query as unknown as z.infer<typeof TrendQuerySchema>;
-    const { getTrend } = await import('../services/realEstateTrendService.js');
-    const result = await getTrend(query);
-    res.json({ success: true, data: result });
-  })
-);
-
 // GET /api/real-estate/price-analysis - 가격 심화 분석
 router.get(
   '/price-analysis',

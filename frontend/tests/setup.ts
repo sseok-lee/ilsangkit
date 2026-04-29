@@ -1,7 +1,6 @@
 import { config } from '@vue/test-utils'
-import { vi, beforeEach } from 'vitest'
+import { vi } from 'vitest'
 import { ref } from 'vue'
-import { setActivePinia, createPinia } from 'pinia'
 
 // Mock useAsyncData globally - returns thenable object (same as Nuxt's pattern)
 ;(globalThis as any).useAsyncData = vi.fn((_key?: string, _fetcher?: () => unknown) => {
@@ -85,17 +84,9 @@ config.global.stubs = {
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브
   HomeSubscriptionSection: { template: '<section class="stub-home-subscription" />' },
   LazyRecentReviewCard: { template: '<div class="stub-review-card" />' },
-  // 동네 설정 모달은 useRegions 의존 → AppHeader 등 외부 테스트에서 스터브
-  RegionSettingsModal: { template: '<div class="stub-region-modal" />', props: ['open'] },
-  // WasteDDayCard도 useRegions/useRegionStore 의존 → 외부 페이지 테스트에서 스터브
-  WasteDDayCard: { template: '<div class="stub-waste-d-day" />' },
-  // 변동률 카드는 useAsyncData fetch가 외부 페이지 테스트에 영향 → 스터브
-  RegionTrendCard: { template: '<div class="stub-region-trend" />', props: ['city', 'district', 'txType'] },
-  ClientOnly: { template: '<div><slot /></div>' },
 }
 
 // Global test setup
 beforeEach(() => {
-  // 모든 테스트에 Pinia 인스턴스 보장 (개별 테스트가 store를 직접 다루는 경우 자기 setActivePinia로 덮어씀)
-  setActivePinia(createPinia())
+  // Reset any global state before each test
 })

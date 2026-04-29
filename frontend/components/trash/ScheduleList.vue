@@ -6,7 +6,7 @@
       class="schedule-item bg-white rounded-xl p-4 shadow-sm"
     >
       <div class="flex items-start gap-3">
-        <span class="material-symbols-outlined text-[28px] text-primary">{{ getWasteIcon(schedule.wasteType) }}</span>
+        <span class="text-2xl">{{ getWasteIcon(schedule.wasteType) }}</span>
         <div class="flex-1">
           <h4 class="font-medium text-slate-900">{{ schedule.wasteType }}</h4>
           <div class="mt-2 flex flex-wrap gap-1">
@@ -48,24 +48,25 @@ defineProps<{
 }>()
 
 const wasteIcons: Record<string, string> = {
-  '일반쓰레기': 'delete',
-  '음식물쓰레기': 'restaurant',
-  '재활용': 'recycling',
-  '비닐': 'shopping_bag',
-  '종이류': 'description',
-  '유리': 'liquor',
-  '플라스틱': 'local_drink',
-  '캔': 'kitchen',
-  '대형폐기물': 'chair',
+  '일반쓰레기': '🗑️',
+  '음식물쓰레기': '🥬',
+  '재활용': '♻️',
+  '비닐': '🛍️',
+  '종이류': '📦',
+  '유리': '🫙',
+  '플라스틱': '🥤',
+  '캔': '🥫',
+  '대형폐기물': '🛋️',
 }
 
 function getWasteIcon(wasteType: string): string {
+  // Find matching icon
   for (const [key, icon] of Object.entries(wasteIcons)) {
     if (wasteType.includes(key)) {
       return icon
     }
   }
-  return 'delete'
+  return '🗑️'
 }
 
 const clientToday = ref<number | null>(null)

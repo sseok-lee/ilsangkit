@@ -42,7 +42,6 @@
     "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
     "fix:region-slugs": "tsx src/scripts/fixRegionSlugs.ts",
     "sync:geocode-real-estate": "tsx src/scripts/geocodeRealEstate.ts",
-    "compute:trend": "tsx src/scripts/computeRealEstateTrend.ts",
     "sync:apt-sale": "tsx src/scripts/syncAptSale.ts",
     "sync:apt-rent": "tsx src/scripts/syncAptRent.ts",
     "sync:villa-sale": "tsx src/scripts/syncVillaSale.ts",
