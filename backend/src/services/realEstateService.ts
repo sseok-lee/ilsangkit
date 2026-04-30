@@ -696,6 +696,7 @@ export interface PriceAnalysisResult {
   jeonseRatio: number | null;
   allTimeHigh: number | null;
   allTimeLow: number | null;
+  gapPrice: number | null;
   saleCount: number;
 }
 
@@ -739,11 +740,14 @@ export async function getPriceAnalysis(
   const jeonseRatio =
     avgJeonse && avgDeal > 0 ? Math.round((avgJeonse / avgDeal) * 100) : null;
 
+  const gapPrice = avgJeonse ? Math.round(avgDeal - avgJeonse) : null;
+
   return {
     pricePerPyeong,
     jeonseRatio,
     allTimeHigh: maxDeal !== null ? Math.round(maxDeal) : null,
     allTimeLow: minDeal !== null ? Math.round(minDeal) : null,
+    gapPrice,
     saleCount: saleAgg._count.id,
   };
 }

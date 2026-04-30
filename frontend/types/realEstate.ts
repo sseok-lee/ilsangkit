@@ -253,5 +253,6 @@ export interface PriceAnalysis {
   jeonseRatio: number | null       // %
   allTimeHigh: number | null       // 만원
   allTimeLow: number | null        // 만원
+  gapPrice: number | null          // 만원 (매매평균 - 전세평균)
   saleCount: number
 }
