@@ -240,6 +240,35 @@
       </SectionBlock>
 
       <!-- 가격 심화 분석 (아파트만, 거래 5건 이상) -->
+      <!-- "거래 내역" 블록 -->
+      <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
+        <div v-if="txLoading" class="flex justify-center py-8">
+          <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+        <TransactionTable
+          v-else-if="transactions.items.length > 0"
+          :transactions="transactions.items"
+          :type="currentTab"
+          :loading="false"
+          :hide-building="true"
+        />
+        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
+          거래 내역이 없습니다.
+        </div>
+
+        <!-- 페이지네이션 -->
+        <Pagination
+          v-if="transactions.totalPages > 1"
+          :current-page="currentPage"
+          :total-pages="transactions.totalPages"
+          @page-change="goToPage"
+          class="mt-4"
+        />
+      </SectionBlock>
+
+      <!-- Ad: 거래내역 이후 (In-Article) -->
+      <AdBanner />
+
       <SectionBlock
         v-if="showPriceAnalysis"
         heading="가격 심화 분석"
@@ -267,36 +296,7 @@
         </div>
       </SectionBlock>
 
-      <!-- Ad: 시세/분석 이후 (In-Article) -->
-      <AdBanner />
-
-      <!-- "거래 내역" 블록 -->
-      <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
-        <div v-if="txLoading" class="flex justify-center py-8">
-          <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-        <TransactionTable
-          v-else-if="transactions.items.length > 0"
-          :transactions="transactions.items"
-          :type="currentTab"
-          :loading="false"
-          :hide-building="true"
-        />
-        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
-          거래 내역이 없습니다.
-        </div>
-
-        <!-- 페이지네이션 -->
-        <Pagination
-          v-if="transactions.totalPages > 1"
-          :current-page="currentPage"
-          :total-pages="transactions.totalPages"
-          @page-change="goToPage"
-          class="mt-4"
-        />
-      </SectionBlock>
-
-      <!-- Ad: 거래내역 이후 1회 -->
+      <!-- Ad: 심화분석 이후 1회 -->
       <AdBanner />
 
       <!-- "인근 단지" 블록 -->
