@@ -665,7 +665,7 @@ const heroStats = computed(() => {
   const items: { label: string; value: string }[] = []
   if (latestPrice.value !== '-') items.push({ label: '최근 거래', value: latestPrice.value })
   if (buildingInfo.value?.latestDealYear && buildingInfo.value?.latestDealMonth) {
-    items.push({ label: '거래월', value: `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월` })
+    items.push({ label: '최근 거래일', value: `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월` })
   }
   if (buildingInfo.value?.buildYear) items.push({ label: '건축년도', value: `${buildingInfo.value.buildYear}년` })
   if (areaRange.value !== '-') items.push({ label: '전용면적', value: areaRange.value })
