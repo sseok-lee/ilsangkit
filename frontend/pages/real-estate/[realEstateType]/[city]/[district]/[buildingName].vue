@@ -1063,7 +1063,7 @@ watchEffect(async () => {
       )
       nearbyComplexes.value = response.items
         .filter(c => c.buildingName !== buildingName.value)
-        .slice(0, 5)
+        .slice(0, 6)
     } catch (err) {
       console.error('Failed to load nearby complexes:', err)
       nearbyComplexes.value = []
