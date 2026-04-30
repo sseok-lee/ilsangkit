@@ -1035,7 +1035,7 @@ watchEffect(async () => {
         buildingInfo.value.district,
         undefined,
         1,
-        6
+        7
       )
       nearbyComplexes.value = response.items
         .filter(c => c.buildingName !== buildingName.value)
