@@ -673,8 +673,8 @@ const heroStats = computed(() => {
     const pa = priceAnalysis.value
     if (pa.pricePerPyeong !== null) items.push({ label: '평당가', value: `${pa.pricePerPyeong.toLocaleString()}만원` })
     if (pa.jeonseRatio !== null) items.push({ label: '전세가율', value: `${pa.jeonseRatio}%` })
-if (pa.allTimeHigh !== null) items.push({ label: '역대 최고가', value: formatSummaryPrice(pa.allTimeHigh) })
-    if (pa.allTimeLow !== null) items.push({ label: '역대 최저가', value: formatSummaryPrice(pa.allTimeLow) })
+    if (pa.allTimeHigh !== null) items.push({ label: '역대 최고가', value: formatSummaryPrice(pa.allTimeHigh), color: 'text-red-500' })
+    if (pa.allTimeLow !== null) items.push({ label: '역대 최저가', value: formatSummaryPrice(pa.allTimeLow), color: 'text-blue-500' })
   }
   return items
 })
