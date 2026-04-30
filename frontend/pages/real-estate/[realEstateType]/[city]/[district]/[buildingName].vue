@@ -776,7 +776,7 @@ function buildTransactionSearchParams(
     rentType: getRentTypeParam(),
     months: selectedMonths.value ?? undefined,
     page,
-    limit: 5,
+    limit: 10,
   }
 }
 
