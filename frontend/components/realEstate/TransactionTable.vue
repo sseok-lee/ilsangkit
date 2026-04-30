@@ -104,8 +104,19 @@
                 <td class="px-4 py-3 text-slate-600">
                   {{ pricePerPyeong(tx as SaleTransaction) }}
                 </td>
-                <td class="px-4 py-3 text-slate-600">
-                  {{ (tx as SaleTransaction).dealType || '-' }}
+                <td class="px-4 py-3">
+                  <span
+                    v-if="(tx as SaleTransaction).dealType"
+                    :class="[
+                      'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                      (tx as SaleTransaction).dealType === '직거래'
+                        ? 'bg-amber-50 text-amber-700'
+                        : 'bg-slate-100 text-slate-600',
+                    ]"
+                  >
+                    {{ (tx as SaleTransaction).dealType }}
+                  </span>
+                  <span v-else class="text-slate-600">-</span>
                 </td>
                 <td class="px-4 py-3 text-slate-500 text-xs">
                   <template v-if="(tx as SaleTransaction).buyerType || (tx as SaleTransaction).sellerType">
@@ -204,12 +215,20 @@
 
           <!-- 매매 카드 -->
           <template v-if="type === 'sale'">
-            <div class="mt-2 flex items-baseline justify-between">
+            <div class="mt-2 flex items-center justify-between">
               <span class="text-base font-semibold text-slate-900">
                 {{ formatAmount((tx as SaleTransaction).dealAmount) }}
               </span>
-              <span class="text-xs text-slate-500">
-                {{ (tx as SaleTransaction).dealType || '' }}
+              <span
+                v-if="(tx as SaleTransaction).dealType"
+                :class="[
+                  'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                  (tx as SaleTransaction).dealType === '직거래'
+                    ? 'bg-amber-50 text-amber-700'
+                    : 'bg-slate-100 text-slate-600',
+                ]"
+              >
+                {{ (tx as SaleTransaction).dealType }}
               </span>
             </div>
             <div class="mt-1.5 text-sm text-slate-500">
