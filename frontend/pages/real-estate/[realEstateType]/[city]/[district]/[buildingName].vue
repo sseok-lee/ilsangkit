@@ -240,6 +240,35 @@
       </SectionBlock>
 
       <!-- 가격 심화 분석 (아파트만, 거래 5건 이상) -->
+      <!-- "거래 내역" 블록 -->
+      <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
+        <div v-if="txLoading" class="flex justify-center py-8">
+          <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+        <TransactionTable
+          v-else-if="transactions.items.length > 0"
+          :transactions="transactions.items"
+          :type="currentTab"
+          :loading="false"
+          :hide-building="true"
+        />
+        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
+          거래 내역이 없습니다.
+        </div>
+
+        <!-- 페이지네이션 -->
+        <Pagination
+          v-if="transactions.totalPages > 1"
+          :current-page="currentPage"
+          :total-pages="transactions.totalPages"
+          @page-change="goToPage"
+          class="mt-4"
+        />
+      </SectionBlock>
+
+      <!-- Ad: 거래내역 이후 (In-Article) -->
+      <AdBanner />
+
       <SectionBlock
         v-if="showPriceAnalysis"
         heading="가격 심화 분석"
@@ -267,36 +296,7 @@
         </div>
       </SectionBlock>
 
-      <!-- Ad: 시세/분석 이후 (In-Article) -->
-      <AdBanner />
-
-      <!-- "거래 내역" 블록 -->
-      <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
-        <div v-if="txLoading" class="flex justify-center py-8">
-          <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-        <TransactionTable
-          v-else-if="transactions.items.length > 0"
-          :transactions="transactions.items"
-          :type="currentTab"
-          :loading="false"
-          :hide-building="true"
-        />
-        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
-          거래 내역이 없습니다.
-        </div>
-
-        <!-- 페이지네이션 -->
-        <Pagination
-          v-if="transactions.totalPages > 1"
-          :current-page="currentPage"
-          :total-pages="transactions.totalPages"
-          @page-change="goToPage"
-          class="mt-4"
-        />
-      </SectionBlock>
-
-      <!-- Ad: 거래내역 이후 1회 -->
+      <!-- Ad: 심화분석 이후 1회 -->
       <AdBanner />
 
       <!-- "인근 단지" 블록 -->
@@ -499,12 +499,13 @@ useHead(() => {
   const district = buildingInfo.value?.district || districtName
   const locLabel = cityShort && district ? `${cityShort} ${district}` : (district || cityShort)
   const transactionLabel = tab === '매매' ? '매매' : '전세·월세'
-  const title = `${buildingName.value} ${transactionLabel} 실거래가 | ${locLabel} | 일상킷`
-  const subject = [locLabel, `${buildingName.value}의`].filter(Boolean).join(' ')
+  const typeLabel = propertyMeta.value?.label ?? ''
+  const title = `${buildingName.value} ${typeLabel} 시세 · ${transactionLabel} 실거래가 | ${locLabel} | 일상킷`
   const facilitySuffix = facilitySummary.value ? ` 인근 ${facilitySummary.value} 정보도 함께 확인하세요.` : ''
+  const avgPricePart = summary.value?.recentAvg ? ` 최근 평균 ${formatSummaryPrice(summary.value.recentAvg)},` : ''
   const description = summary.value?.totalCount
-    ? `${subject} ${transactionLabel} 실거래가 정보입니다. 최근 ${summary.value.totalCount.toLocaleString()}건 거래, 시세 추이와 면적별 가격을 확인하세요.${facilitySuffix}`
-    : `${subject} ${transactionLabel} 실거래가 정보입니다. 시세 추이와 면적별 가격을 확인하세요.${facilitySuffix}`
+    ? `${locLabel} ${buildingName.value} ${typeLabel} ${transactionLabel} 실거래가 ${summary.value.totalCount.toLocaleString()}건.${avgPricePart} 면적별 시세와 가격 추이를 확인하세요.${facilitySuffix}`
+    : `${locLabel} ${buildingName.value} ${typeLabel} ${transactionLabel} 실거래가. 시세 추이와 가격 정보를 확인하세요.${facilitySuffix}`
 
   // Canonical uses new URL structure — distinct per realEstateType (apt-sale ≠ apt-rent)
   const canonicalUrl = `${SITE_URL}${toRealEstateUrl({
@@ -524,7 +525,7 @@ useHead(() => {
     { property: 'og:description', content: description },
     { property: 'og:image', content: ogImage },
     { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'place' },
+    { property: 'og:type', content: 'website' },
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
@@ -775,7 +776,7 @@ function buildTransactionSearchParams(
     rentType: getRentTypeParam(),
     months: selectedMonths.value ?? undefined,
     page,
-    limit: 5,
+    limit: 10,
   }
 }
 

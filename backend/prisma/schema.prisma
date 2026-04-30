@@ -1382,7 +1382,7 @@ model PublicRentalComplex {
   depositAmount     BigInt?  // 보증금원 (bassRentGtn)
   monthlyRent       Int?     // 월임대료원 (bassMtRntchrg)
   conversionDeposit BigInt?  // 전환보증금원 (bassCnvrsGtnLmt)
-  landlordAgency    String   @default("LH") @db.VarChar(100) // insttNm
+  landlordAgency    String   @default("") @db.VarChar(100) // insttNm
   pnu               String?  @db.VarChar(20)  // 필지번호 (pnu)
   completionDate    String?  @db.VarChar(10)  // 준공일자 (competDe, YYYYMMDD)
   commonArea        Decimal? @db.Decimal(10, 4) // 공용면적㎡ (suplyCmnuseAr)

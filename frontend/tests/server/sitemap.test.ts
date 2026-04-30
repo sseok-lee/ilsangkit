@@ -400,9 +400,9 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
       ) as unknown as typeof fetch
     try {
       const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/lh-rental</loc>')
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/lh-rental/buy-lease</loc>')
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/lh-rental/charter</loc>')
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental</loc>')
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental/buy-lease</loc>')
+      expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental/charter</loc>')
       expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/subscription/rent/buy-lease</loc>')
       expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/subscription/rent/charter</loc>')
     } finally {

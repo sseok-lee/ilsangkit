@@ -51,7 +51,7 @@ describe('subscription/rent/index.vue', () => {
     expect(text).not.toContain('LH 전세임대')
   })
 
-  it('shows only apply section and links out to /lh-rental', () => {
+  it('shows only apply section and links out to /public-rental', () => {
     const wrapper = mount(RentHub, {
       global: {
         stubs: {
@@ -66,6 +66,6 @@ describe('subscription/rent/index.vue', () => {
     expect(announcementSection.exists()).toBe(false)
     expect(applySection.text()).toContain('공공임대')
     expect(applySection.text()).toContain('민간임대')
-    expect(wrapper.find('a[href="/lh-rental"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/public-rental"]').exists()).toBe(true)
   })
 })
