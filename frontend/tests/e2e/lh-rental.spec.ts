@@ -26,7 +26,7 @@ const SAMPLE_LIST = {
   },
 }
 
-test.describe('lh-rental: hub → 매입임대 탭', () => {
+test.describe('public-rental: hub → 매입임대 탭', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/public-rental?**', async (route) => {
       await route.fulfill({
@@ -38,14 +38,14 @@ test.describe('lh-rental: hub → 매입임대 탭', () => {
   })
 
   test('hub 에서 매입임대 탭으로 진입해 LH 매물 카드가 보인다', async ({ page }) => {
-    await page.goto('/lh-rental')
+    await page.goto('/public-rental')
 
     await expect(page.getByRole('heading', { name: 'LH 매입·전세임대' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'LH 매입임대' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'LH 전세임대' })).toBeVisible()
 
     await page.getByRole('link', { name: 'LH 매입임대' }).click()
-    await expect(page).toHaveURL(/\/lh-rental\/buy-lease/)
+    await expect(page).toHaveURL(/\/public-rental\/buy-lease/)
     await expect(page.getByText('E2E 강남 매입임대 1단지')).toBeVisible()
   })
 })

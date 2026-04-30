@@ -127,7 +127,7 @@ describe('AppFooter', () => {
 
       const links = wrapper.findAll('a')
       const hrefs = links.map((l) => l.attributes('href'))
-      expect(hrefs).toContain('/lh-rental')
+      expect(hrefs).toContain('/public-rental')
     })
   })
 

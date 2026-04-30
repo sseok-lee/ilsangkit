@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import LhRentalType from '~/pages/lh-rental/[type].vue'
+import LhRentalType from '~/pages/public-rental/[type].vue'
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({ setBreadcrumbSchema: vi.fn() }),
@@ -19,7 +19,7 @@ function mountWith(typeSlug: string) {
   return mount(LhRentalType, { global: { stubs } })
 }
 
-describe('lh-rental/[type].vue', () => {
+describe('public-rental/[type].vue', () => {
   it('passes 매입임대 rentalTypeCode for buy-lease slug', () => {
     const wrapper = mountWith('buy-lease')
     const pane = wrapper.find('[data-test-pane="lh-myhome"]')
