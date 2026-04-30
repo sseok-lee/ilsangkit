@@ -664,12 +664,16 @@ const latestPrice = computed(() => {
 const heroStats = computed(() => {
   const items: { label: string; value: string }[] = []
   if (latestPrice.value !== '-') items.push({ label: '최근 거래', value: latestPrice.value })
+  if (buildingInfo.value?.latestDealYear && buildingInfo.value?.latestDealMonth) {
+    items.push({ label: '거래월', value: `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월` })
+  }
   if (buildingInfo.value?.buildYear) items.push({ label: '건축년도', value: `${buildingInfo.value.buildYear}년` })
   if (areaRange.value !== '-') items.push({ label: '전용면적', value: areaRange.value })
   if (showPriceAnalysis.value && priceAnalysis.value) {
     const pa = priceAnalysis.value
     if (pa.pricePerPyeong !== null) items.push({ label: '평당가', value: `${pa.pricePerPyeong.toLocaleString()}만원` })
     if (pa.jeonseRatio !== null) items.push({ label: '전세가율', value: `${pa.jeonseRatio}%` })
+    if (pa.gapPrice !== null) items.push({ label: '갭 가격', value: formatSummaryPrice(pa.gapPrice) })
     if (pa.allTimeHigh !== null) items.push({ label: '역대 최고가', value: formatSummaryPrice(pa.allTimeHigh) })
     if (pa.allTimeLow !== null) items.push({ label: '역대 최저가', value: formatSummaryPrice(pa.allTimeLow) })
   }
