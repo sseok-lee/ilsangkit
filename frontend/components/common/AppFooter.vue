@@ -16,7 +16,7 @@
             청약
           </NuxtLink>
           <NuxtLink
-            to="/lh-rental"
+            to="/public-rental"
             class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
           >
             LH 임대

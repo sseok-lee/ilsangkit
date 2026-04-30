@@ -522,7 +522,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { to: '/subscription', label: '청약 전체', icon: 'calendar_month', iconImg: 'subscription', section: '청약홈' },
       { to: '/subscription/sale', label: '분양', icon: 'sell', iconImg: 'sale', section: '청약홈' },
       { to: '/subscription/rent', label: '임대 청약', icon: 'key', iconImg: 'rent', section: '청약홈' },
-      { to: '/lh-rental', label: 'LH 임대', icon: 'home', iconImg: 'rent', section: 'LH' },
+      { to: '/public-rental', label: '공공임대', icon: 'home', iconImg: 'rent', section: '공공임대' },
     ],
   },
   ...CATEGORY_GROUPS,

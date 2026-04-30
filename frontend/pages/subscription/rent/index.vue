@@ -3,7 +3,7 @@
     <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
       <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">임대 청약</h1>
-        <p class="mt-2 text-slate-500 text-sm">청약통장으로 접수하는 임대 청약을 청약홈 임대 청약과 LH 청약공고로 나눠 안내합니다. (LH 매입·전세임대는 <NuxtLink to="/lh-rental" class="text-amber-600 hover:underline">LH 임대</NuxtLink>에서 확인하세요.)</p>
+        <p class="mt-2 text-slate-500 text-sm">청약통장으로 접수하는 임대 청약을 청약홈 임대 청약과 LH 청약공고로 나눠 안내합니다. (LH 매입·전세임대는 <NuxtLink to="/public-rental" class="text-amber-600 hover:underline">LH 임대</NuxtLink>에서 확인하세요.)</p>
       </div>
     </div>
 

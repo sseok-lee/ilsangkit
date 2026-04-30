@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import LhRentalHub from '~/pages/lh-rental/index.vue'
+import LhRentalHub from '~/pages/public-rental/index.vue'
 import { LH_RENTAL_TYPES } from '~/utils/subscriptionMeta'
 
 const mockSetBreadcrumbSchema = vi.fn()
@@ -26,7 +26,7 @@ describe('subscriptionMeta — LH_RENTAL_TYPES', () => {
   })
 })
 
-describe('lh-rental/index.vue (LH 임대 hub)', () => {
+describe('public-rental/index.vue (LH 임대 hub)', () => {
   function mountHub() {
     return mount(LhRentalHub, {
       global: {
@@ -40,15 +40,15 @@ describe('lh-rental/index.vue (LH 임대 hub)', () => {
 
   it('renders heading and 2 type chips', () => {
     const wrapper = mountHub()
-    expect(wrapper.text()).toContain('LH 매입·전세임대')
-    expect(wrapper.text()).toContain('LH 매입임대')
-    expect(wrapper.text()).toContain('LH 전세임대')
+    expect(wrapper.text()).toContain('공공임대 매물')
+    expect(wrapper.text()).toContain('매입임대')
+    expect(wrapper.text()).toContain('전세임대')
   })
 
-  it('renders chip links to /lh-rental/buy-lease and /lh-rental/charter', () => {
+  it('renders chip links to /public-rental/buy-lease and /public-rental/charter', () => {
     const wrapper = mountHub()
-    expect(wrapper.find('a[href="/lh-rental/buy-lease"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/lh-rental/charter"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/public-rental/buy-lease"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/public-rental/charter"]').exists()).toBe(true)
   })
 
   it('renders combined PublicRentalListView (no rentalTypeCode prop)', () => {
@@ -57,7 +57,7 @@ describe('lh-rental/index.vue (LH 임대 hub)', () => {
   })
 })
 
-describe('lh-rental/index.vue — breadcrumb schema', () => {
+describe('public-rental/index.vue — breadcrumb schema', () => {
   function mountHub() {
     return mount(LhRentalHub, {
       global: {

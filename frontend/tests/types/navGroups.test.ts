@@ -39,7 +39,7 @@ describe('NAV_GROUPS', () => {
     expect(links).toEqual(expectedLinks)
   })
 
-  it('청약·임대 그룹은 청약 전체/분양/임대 청약/LH 임대 4개 링크를 포함한다', () => {
+  it('청약·임대 그룹은 청약 전체/분양/임대 청약/공공임대 4개 링크를 포함한다', () => {
     const subscriptionGroup = NAV_GROUPS[1] as LinkGroup
     expect(subscriptionGroup.title).toBe('청약·임대')
     const links = subscriptionGroup.links.map(({ to, label }) => ({ to, label }))
@@ -47,17 +47,17 @@ describe('NAV_GROUPS', () => {
       { to: '/subscription', label: '청약 전체' },
       { to: '/subscription/sale', label: '분양' },
       { to: '/subscription/rent', label: '임대 청약' },
-      { to: '/lh-rental', label: 'LH 임대' },
+      { to: '/public-rental', label: '공공임대' },
     ])
   })
 
-  it('청약·임대 그룹 링크는 청약홈·LH 두 섹션으로 나뉜다', () => {
+  it('청약·임대 그룹 링크는 청약홈·공공임대 두 섹션으로 나뉜다', () => {
     const subscriptionGroup = NAV_GROUPS[1] as LinkGroup
     const links = subscriptionGroup.links
     expect(links[0].section).toBe('청약홈')
     expect(links[1].section).toBe('청약홈')
     expect(links[2].section).toBe('청약홈')
-    expect(links[3].section).toBe('LH')
+    expect(links[3].section).toBe('공공임대')
   })
 })
 

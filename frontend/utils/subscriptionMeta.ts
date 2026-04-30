@@ -73,17 +73,17 @@ export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
 
 export const LH_RENTAL_TYPES: Record<LhRentalTypeKey, LhRentalTypeMeta> = {
   'buy-lease': {
-    label: 'LH 매입임대',
+    label: '매입임대',
     icon: 'apartment',
     iconImg: 'rent',
-    description: 'LH가 기존 주택을 매입해 시세보다 저렴하게 재임대하는 매입임대 매물입니다. 청약통장 없이 소득·자산 기준 충족 시 수시 신청 가능합니다.',
+    description: '공공기관이 기존 주택을 매입해 시세보다 저렴하게 재임대하는 매입임대 매물입니다. 청약통장 없이 소득·자산 기준 충족 시 수시 신청 가능합니다.',
     rentalTypeCode: '매입임대',
   },
   charter: {
-    label: 'LH 전세임대',
+    label: '전세임대',
     icon: 'key',
     iconImg: 'rent',
-    description: 'LH가 전세보증금을 대신 지원하는 전세임대 매물입니다. 월세 부담 없이 기존 주택에 거주할 수 있으며 소득 기준 충족 시 신청 가능합니다.',
+    description: '공공기관이 전세보증금을 대신 지원하는 전세임대 매물입니다. 월세 부담 없이 기존 주택에 거주할 수 있으며 소득 기준 충족 시 신청 가능합니다.',
     rentalTypeCode: '전세임대',
   },
 }
