@@ -239,7 +239,6 @@
         </p>
       </SectionBlock>
 
-      <!-- 가격 심화 분석 (아파트만, 거래 5건 이상) -->
       <!-- "거래 내역" 블록 -->
       <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
         <div v-if="txLoading" class="flex justify-center py-8">
@@ -267,36 +266,6 @@
       </SectionBlock>
 
       <!-- Ad: 거래내역 이후 (In-Article) -->
-      <AdBanner />
-
-      <SectionBlock
-        v-if="showPriceAnalysis"
-        heading="가격 심화 분석"
-        subtext="매매 거래 데이터 기반 시세 심층 분석입니다."
-      >
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div v-if="priceAnalysis.pricePerPyeong !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">평당가</span>
-            <strong class="text-lg font-bold text-slate-900">{{ priceAnalysis.pricePerPyeong.toLocaleString() }}만원</strong>
-            <span class="text-xs text-slate-400">거래 평균</span>
-          </div>
-          <div v-if="priceAnalysis.jeonseRatio !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">전세가율</span>
-            <strong class="text-lg font-bold text-slate-900">{{ priceAnalysis.jeonseRatio }}%</strong>
-            <span class="text-xs text-slate-400">전세 avg / 매매 avg</span>
-          </div>
-          <div v-if="priceAnalysis.allTimeHigh !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">역대 최고가</span>
-            <strong class="text-lg font-bold text-red-500">{{ formatSummaryPrice(priceAnalysis.allTimeHigh) }}</strong>
-          </div>
-          <div v-if="priceAnalysis.allTimeLow !== null" class="flex flex-col gap-1">
-            <span class="text-xs font-bold text-slate-500">역대 최저가</span>
-            <strong class="text-lg font-bold text-blue-500">{{ formatSummaryPrice(priceAnalysis.allTimeLow) }}</strong>
-          </div>
-        </div>
-      </SectionBlock>
-
-      <!-- Ad: 심화분석 이후 1회 -->
       <AdBanner />
 
       <!-- "인근 단지" 블록 -->
@@ -697,6 +666,13 @@ const heroStats = computed(() => {
   if (latestPrice.value !== '-') items.push({ label: '최근 거래', value: latestPrice.value })
   if (buildingInfo.value?.buildYear) items.push({ label: '건축년도', value: `${buildingInfo.value.buildYear}년` })
   if (areaRange.value !== '-') items.push({ label: '전용면적', value: areaRange.value })
+  if (showPriceAnalysis.value && priceAnalysis.value) {
+    const pa = priceAnalysis.value
+    if (pa.pricePerPyeong !== null) items.push({ label: '평당가', value: `${pa.pricePerPyeong.toLocaleString()}만원` })
+    if (pa.jeonseRatio !== null) items.push({ label: '전세가율', value: `${pa.jeonseRatio}%` })
+    if (pa.allTimeHigh !== null) items.push({ label: '역대 최고가', value: formatSummaryPrice(pa.allTimeHigh) })
+    if (pa.allTimeLow !== null) items.push({ label: '역대 최저가', value: formatSummaryPrice(pa.allTimeLow) })
+  }
   return items
 })
 

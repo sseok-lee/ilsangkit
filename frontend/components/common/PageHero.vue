@@ -17,7 +17,7 @@
     <!-- Inline summary-grid (below main) -->
     <div
       v-if="stats?.length || $slots.sidebar"
-      class="mt-4 pt-4 border-t border-line grid grid-cols-1 sm:grid-cols-3 gap-3"
+      class="mt-4 pt-4 border-t border-line grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
     >
       <slot name="sidebar">
         <div v-for="stat in stats" :key="stat.label">
