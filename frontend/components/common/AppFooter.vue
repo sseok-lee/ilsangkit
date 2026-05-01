@@ -1,65 +1,55 @@
 <template>
-  <footer class="bg-slate-50 border-t border-slate-200 py-6 md:py-8">
+  <footer class="bg-slate-50 border-t border-slate-200 py-6 md:py-10">
     <div class="container mx-auto px-4">
-      <div class="mb-4 md:mb-6 flex flex-wrap justify-center gap-2 md:gap-4" data-testid="footer-links">
-        <nav class="contents" aria-label="푸터 콘텐츠 네비게이션">
-          <NuxtLink
-            to="/real-estate"
-            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
-          >
-            부동산
+      <!-- 4-column grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 max-w-4xl mx-auto">
+        <!-- 브랜드 -->
+        <div class="col-span-2 md:col-span-1">
+          <NuxtLink to="/" class="text-base font-semibold text-slate-800 hover:text-primary-600 transition-colors">
+            일상킷
           </NuxtLink>
-          <NuxtLink
-            to="/subscription"
-            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
-          >
-            청약
-          </NuxtLink>
-          <NuxtLink
-            to="/public-rental"
-            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
-          >
-            LH 임대
-          </NuxtLink>
-          <NuxtLink
-            to="/about"
-            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
-          >
-            소개
-          </NuxtLink>
-          <NuxtLink
-            to="/privacy"
-            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
-          >
-            개인정보처리방침
-          </NuxtLink>
-          <NuxtLink
-            to="/terms"
-            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
-          >
-            이용약관
-          </NuxtLink>
-          <NuxtLink
-            to="/faq"
-            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
-          >
-            자주 묻는 질문
-          </NuxtLink>
-          <NuxtLink
-            to="/contact"
-            class="text-slate-600 hover:text-primary-600 transition-colors text-xs md:text-sm min-h-11 flex items-center px-2"
-          >
-            문의
-          </NuxtLink>
-        </nav>
+          <p class="mt-2 text-xs text-slate-500 leading-relaxed">
+            생활 속 필요한 공공시설 정보와<br>부동산 실거래가를 한 곳에서.
+          </p>
+        </div>
+
+        <!-- 서비스 -->
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">서비스</p>
+          <nav aria-label="서비스 링크" data-testid="footer-links" class="flex flex-col gap-2">
+            <NuxtLink to="/real-estate" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">부동산</NuxtLink>
+            <NuxtLink to="/subscription" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">청약</NuxtLink>
+            <NuxtLink to="/public-rental" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">공공임대</NuxtLink>
+            <NuxtLink to="/search" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">시설 찾기</NuxtLink>
+          </nav>
+        </div>
+
+        <!-- 정보 · 지원 -->
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">정보 · 지원</p>
+          <nav aria-label="정보 및 지원 링크" class="flex flex-col gap-2">
+            <NuxtLink to="/about" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">소개</NuxtLink>
+            <NuxtLink to="/faq" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">자주 묻는 질문</NuxtLink>
+            <NuxtLink to="/contact" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">문의</NuxtLink>
+          </nav>
+        </div>
+
+        <!-- 법적 고지 -->
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">법적 고지</p>
+          <nav aria-label="법적 고지 링크" class="flex flex-col gap-2">
+            <NuxtLink to="/privacy" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">개인정보처리방침</NuxtLink>
+            <NuxtLink to="/terms" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">이용약관</NuxtLink>
+          </nav>
+        </div>
       </div>
 
-      <!-- Copyright -->
-      <div class="text-center">
-        <p class="text-xs md:text-sm text-slate-600">
+      <!-- 하단 바 -->
+      <div class="border-t border-slate-200 pt-6 space-y-1 text-center">
+        <p class="text-xs text-slate-600">
           © {{ currentYear }} 일상킷. All rights reserved.
         </p>
-        <p class="text-xs text-slate-500 mt-1">
+        <p class="text-xs text-slate-400">
           <a
             href="https://www.data.go.kr"
             target="_blank"
