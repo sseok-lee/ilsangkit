@@ -9,6 +9,13 @@ const SITEMAP_FACILITY_CATS: FacilityCategory[] = [
   'park', 'school', 'market', 'childcare', 'ev-charger', 'sports',
 ];
 
+// 부동산 사이트맵 쿼리는 6-table UNION으로 느림 — 6시간 모듈 레벨 캐시로 콜드 스타트 최소화
+const SITEMAP_CACHE_TTL = 6 * 60 * 60 * 1000;
+type RealEstateRow = { realEstateType: string; city: string; district: string; buildingName: string; bjdCode: string };
+type HubRow = { realEstateType: string; city: string; district: string };
+let buildingsCache: { data: RealEstateRow[]; expiresAt: number } | null = null;
+let hubsCache: { data: HubRow[]; expiresAt: number } | null = null;
+
 const SITEMAP_FACILITY_LIMITS: Partial<Record<FacilityCategory, number>> = {
   'ev-charger': 20000,
   childcare: 15000,
@@ -128,15 +135,8 @@ export async function getSubscriptionIds() {
  * - city/district는 DB 원본 문자열 그대로 반환 → 프론트 사이트맵/IndexNow 단계에서 slug 변환
  */
 export async function getRealEstateBuildings() {
-  return prisma.$queryRaw<
-    Array<{
-      realEstateType: string;
-      city: string;
-      district: string;
-      buildingName: string;
-      bjdCode: string;
-    }>
-  >`
+  if (buildingsCache && buildingsCache.expiresAt > Date.now()) return buildingsCache.data;
+  const result = await prisma.$queryRaw<RealEstateRow[]>`
     SELECT realEstateType, city, district, buildingName, bjdCode
     FROM (
       -- apt-sale
@@ -216,6 +216,8 @@ export async function getRealEstateBuildings() {
       HAVING COUNT(*) >= 10
     ) unioned
   `;
+  buildingsCache = { data: result, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
+  return result;
 }
 
 /**
@@ -229,13 +231,8 @@ export async function getRealEstateBuildings() {
  * district hub(/real-estate/apt-sale/seoul/gangnam/) 사이트맵 생성에 사용.
  */
 export async function getRealEstateCityDistrictHubs() {
-  return prisma.$queryRaw<
-    Array<{
-      realEstateType: string;
-      city: string;
-      district: string;
-    }>
-  >`
+  if (hubsCache && hubsCache.expiresAt > Date.now()) return hubsCache.data;
+  const result = await prisma.$queryRaw<HubRow[]>`
     SELECT DISTINCT realEstateType, city, district
     FROM (
       SELECT 'apt-sale' AS realEstateType, city, district, buildingName, COUNT(*) AS cnt
@@ -309,4 +306,6 @@ export async function getRealEstateCityDistrictHubs() {
       HAVING COUNT(*) >= 10
     ) buildings_with_enough_tx
   `;
+  hubsCache = { data: result, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
+  return result;
 }
