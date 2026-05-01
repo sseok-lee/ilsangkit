@@ -755,17 +755,12 @@ describe('searchAll', () => {
 
   beforeEach(() => {
     mockAptSaleGroupBy.mockResolvedValue([]);
-    mockAptSaleCount.mockResolvedValue(0);
     mockAptRentGroupBy.mockResolvedValue([]);
-    mockAptRentCount.mockResolvedValue(0);
     mockVillaSaleGroupBy.mockResolvedValue([]);
-    mockVillaSaleCount.mockResolvedValue(0);
     mockVillaRentGroupBy.mockResolvedValue([]);
-    mockVillaRentCount.mockResolvedValue(0);
     mockOffitelSaleGroupBy.mockResolvedValue([]);
-    mockOffitelSaleCount.mockResolvedValue(0);
     mockOffitelRentGroupBy.mockResolvedValue([]);
-    mockOffitelRentCount.mockResolvedValue(0);
+    mockSummaryCount.mockResolvedValue(0);
   });
 
   it('calls groupBy on all 6 models in parallel', async () => {
@@ -793,7 +788,7 @@ describe('searchAll', () => {
 
   it('returns categories array with type, count, items for each model', async () => {
     mockAptSaleGroupBy.mockResolvedValue([sampleGroupBySale]);
-    mockAptSaleCount.mockResolvedValue(3);
+    mockSummaryCount.mockResolvedValue(3);
 
     const result = await searchAll('래미안');
 
