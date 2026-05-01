@@ -16,6 +16,12 @@ export default defineEventHandler((event) => {
       path.startsWith('/_ipx/') || path.startsWith('/__nuxt') ||
       path.startsWith('/sitemap') || path.startsWith('/icons/')) return
 
+  // Trailing slash → canonical 중복 제거 (예: /toilet/ → /toilet)
+  if (path !== '/' && path.endsWith('/')) {
+    const search = getRequestURL(event).search
+    return sendRedirect(event, `${path.slice(0, -1)}${search}`, 301)
+  }
+
   const match = path.match(/^\/([^/]+)\/([^/]+)(\/.*)?$/)
   if (!match) return
 
