@@ -53,6 +53,132 @@
       거래 내역이 없습니다
     </div>
 
+    <!-- 매매 거래 내역 -->
+    <template v-else-if="type === 'sale'">
+      <!-- 데스크탑 테이블 -->
+      <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-slate-200">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50">
+              <th
+                v-for="col in columns"
+                :key="col.key"
+                class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+              >
+                {{ col.label }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="tx in saleTransactions"
+              :key="tx.id"
+              :class="[
+                'border-b border-slate-100 hover:bg-slate-50 transition-colors',
+                tx.cancelDealDay ? 'opacity-50' : '',
+              ]"
+            >
+              <td class="px-4 py-3 whitespace-nowrap text-slate-600">
+                <span>{{ formatDate(tx) }}</span>
+                <span
+                  v-if="tx.cancelDealDay"
+                  class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600"
+                >
+                  취소
+                </span>
+              </td>
+              <td v-if="!hideBuilding" class="px-4 py-3 font-medium text-slate-900">
+                {{ tx.buildingName }}
+              </td>
+              <td class="px-4 py-3 text-slate-600">
+                {{ tx.floor != null ? `${tx.floor}층` : '-' }}
+              </td>
+              <td class="px-4 py-3 text-slate-600">
+                {{ formatArea(tx) }}
+              </td>
+              <td class="px-4 py-3 font-semibold text-slate-900">
+                {{ formatKoreanPrice(tx.dealAmount) }}
+              </td>
+              <td class="px-4 py-3 text-slate-600">
+                {{ pricePerPyeong(tx) ?? '-' }}
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  v-if="tx.dealType"
+                  :class="[
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    tx.dealType === '직거래'
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-slate-100 text-slate-600',
+                  ]"
+                >
+                  {{ tx.dealType }}
+                </span>
+                <span v-else class="text-slate-600">-</span>
+              </td>
+              <td class="px-4 py-3 text-slate-500 text-xs">
+                <template v-if="tx.buyerType || tx.sellerType">
+                  {{ tx.buyerType || '-' }} / {{ tx.sellerType || '-' }}
+                </template>
+                <template v-else>-</template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 모바일 카드 리스트 -->
+      <div class="md:hidden space-y-3 px-1">
+        <div
+          v-for="tx in saleTransactions"
+          :key="tx.id"
+          :class="[
+            'rounded-lg border bg-white p-4',
+            tx.cancelDealDay ? 'border-red-200 opacity-60' : 'border-slate-200',
+          ]"
+        >
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-500">
+              {{ formatDate(tx) }}
+              <span
+                v-if="tx.cancelDealDay"
+                class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600"
+              >
+                취소
+              </span>
+            </span>
+            <span v-if="!hideBuilding" class="font-medium text-slate-900 truncate ml-2 max-w-[55%] text-right">
+              {{ tx.buildingName }}
+            </span>
+          </div>
+          <div class="mt-2 flex items-center justify-between">
+            <span class="text-base font-semibold text-slate-900">
+              {{ formatKoreanPrice(tx.dealAmount) }}
+            </span>
+            <span
+              v-if="tx.dealType"
+              :class="[
+                'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                tx.dealType === '직거래'
+                  ? 'bg-amber-50 text-amber-700'
+                  : 'bg-slate-100 text-slate-600',
+              ]"
+            >
+              {{ tx.dealType }}
+            </span>
+          </div>
+          <div class="mt-1.5 text-sm text-slate-500">
+            {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
+            <span v-if="pricePerPyeong(tx)" class="ml-1">· 평당 {{ pricePerPyeong(tx) }}</span>
+          </div>
+          <div v-if="tx.buyerType || tx.sellerType" class="mt-1 text-xs text-slate-500">
+            매수 {{ tx.buyerType || '-' }} / 매도 {{ tx.sellerType || '-' }}
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- 전월세 거래 내역 -->
     <template v-else>
       <!-- 데스크탑 테이블 -->
       <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-slate-200">
@@ -70,21 +196,12 @@
           </thead>
           <tbody>
             <tr
-              v-for="tx in transactions"
+              v-for="tx in rentTransactions"
               :key="tx.id"
-              :class="[
-                'border-b border-slate-100 hover:bg-slate-50 transition-colors',
-                isCancelled(tx) ? 'opacity-50' : '',
-              ]"
+              class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
             >
               <td class="px-4 py-3 whitespace-nowrap text-slate-600">
-                <span>{{ formatDate(tx) }}</span>
-                <span
-                  v-if="isCancelled(tx)"
-                  class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600"
-                >
-                  취소
-                </span>
+                {{ formatDate(tx) }}
               </td>
               <td v-if="!hideBuilding" class="px-4 py-3 font-medium text-slate-900">
                 {{ tx.buildingName }}
@@ -95,93 +212,59 @@
               <td class="px-4 py-3 text-slate-600">
                 {{ formatArea(tx) }}
               </td>
-
-              <!-- 매매 전용: 거래금액 + 평당가 + 거래유형 + 매수/매도자 -->
-              <template v-if="type === 'sale'">
-                <td class="px-4 py-3 font-semibold text-slate-900">
-                  {{ formatAmount((tx as SaleTransaction).dealAmount) }}
-                </td>
-                <td class="px-4 py-3 text-slate-600">
-                  {{ pricePerPyeong(tx as SaleTransaction) }}
-                </td>
-                <td class="px-4 py-3">
-                  <span
-                    v-if="(tx as SaleTransaction).dealType"
-                    :class="[
-                      'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                      (tx as SaleTransaction).dealType === '직거래'
-                        ? 'bg-amber-50 text-amber-700'
-                        : 'bg-slate-100 text-slate-600',
-                    ]"
-                  >
-                    {{ (tx as SaleTransaction).dealType }}
-                  </span>
-                  <span v-else class="text-slate-600">-</span>
-                </td>
-                <td class="px-4 py-3 text-slate-500 text-xs">
-                  <template v-if="(tx as SaleTransaction).buyerType || (tx as SaleTransaction).sellerType">
-                    {{ (tx as SaleTransaction).buyerType || '-' }} / {{ (tx as SaleTransaction).sellerType || '-' }}
-                  </template>
-                  <template v-else>-</template>
-                </td>
-              </template>
-
-              <!-- 전월세 전용: 보증금, 월세, 구분, 계약유형, 계약기간 -->
-              <template v-else>
-                <td class="px-4 py-3 font-semibold text-slate-900">
-                  <div>{{ formatAmount((tx as RentTransaction).deposit) }}</div>
-                  <div
-                    v-if="depositChangeRate(tx as RentTransaction) !== null"
-                    :class="[
-                      'text-xs mt-0.5',
-                      depositChangeRate(tx as RentTransaction)! > 0 ? 'text-red-500' : 'text-blue-500',
-                    ]"
-                  >
-                    {{ formatChangeRate(depositChangeRate(tx as RentTransaction)!) }}
-                  </div>
-                </td>
-                <td class="px-4 py-3 text-slate-600">
-                  <div>{{ formatMonthlyRent(tx as RentTransaction) }}</div>
-                  <div
-                    v-if="monthlyRentChangeRate(tx as RentTransaction) !== null"
-                    :class="[
-                      'text-xs mt-0.5',
-                      monthlyRentChangeRate(tx as RentTransaction)! > 0 ? 'text-red-500' : 'text-blue-500',
-                    ]"
-                  >
-                    {{ formatChangeRate(monthlyRentChangeRate(tx as RentTransaction)!) }}
-                  </div>
-                </td>
-                <td class="px-4 py-3">
-                  <span
-                    :class="[
-                      'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                      (tx as RentTransaction).rentType === '전세'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-orange-50 text-orange-700',
-                    ]"
-                  >
-                    {{ (tx as RentTransaction).rentType }}
-                  </span>
-                </td>
-                <td class="px-4 py-3">
-                  <span
-                    v-if="(tx as RentTransaction).contractType"
-                    :class="[
-                      'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                      (tx as RentTransaction).contractType === '갱신'
-                        ? 'bg-purple-50 text-purple-700'
-                        : 'bg-green-50 text-green-700',
-                    ]"
-                  >
-                    {{ (tx as RentTransaction).contractType }}
-                  </span>
-                  <span v-else class="text-slate-600">-</span>
-                </td>
-                <td class="px-4 py-3 text-slate-600">
-                  {{ (tx as RentTransaction).contractTerm || '-' }}
-                </td>
-              </template>
+              <td class="px-4 py-3 font-semibold text-slate-900">
+                <div>{{ formatKoreanPrice(tx.deposit) }}</div>
+                <div
+                  v-if="depositChangeRate(tx) !== null"
+                  :class="[
+                    'text-xs mt-0.5',
+                    depositChangeRate(tx)! > 0 ? 'text-red-500' : 'text-blue-500',
+                  ]"
+                >
+                  {{ formatChangeRate(depositChangeRate(tx)!) }}
+                </div>
+              </td>
+              <td class="px-4 py-3 text-slate-600">
+                <div>{{ formatMonthlyRent(tx) }}</div>
+                <div
+                  v-if="monthlyRentChangeRate(tx) !== null"
+                  :class="[
+                    'text-xs mt-0.5',
+                    monthlyRentChangeRate(tx)! > 0 ? 'text-red-500' : 'text-blue-500',
+                  ]"
+                >
+                  {{ formatChangeRate(monthlyRentChangeRate(tx)!) }}
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  :class="[
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    tx.rentType === '전세'
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'bg-orange-50 text-orange-700',
+                  ]"
+                >
+                  {{ tx.rentType }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  v-if="tx.contractType"
+                  :class="[
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    tx.contractType === '갱신'
+                      ? 'bg-purple-50 text-purple-700'
+                      : 'bg-green-50 text-green-700',
+                  ]"
+                >
+                  {{ tx.contractType }}
+                </span>
+                <span v-else class="text-slate-600">-</span>
+              </td>
+              <td class="px-4 py-3 text-slate-600">
+                {{ tx.contractTerm || '-' }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -190,113 +273,70 @@
       <!-- 모바일 카드 리스트 -->
       <div class="md:hidden space-y-3 px-1">
         <div
-          v-for="tx in transactions"
+          v-for="tx in rentTransactions"
           :key="tx.id"
-          :class="[
-            'rounded-lg border bg-white p-4',
-            isCancelled(tx) ? 'border-red-200 opacity-60' : 'border-slate-200',
-          ]"
+          class="rounded-lg border bg-white p-4 border-slate-200"
         >
-          <!-- 상단: 거래일 + 건물명 -->
           <div class="flex items-center justify-between text-sm">
-            <span class="text-slate-500">
-              {{ formatDate(tx) }}
-              <span
-                v-if="isCancelled(tx)"
-                class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600"
-              >
-                취소
-              </span>
-            </span>
+            <span class="text-slate-500">{{ formatDate(tx) }}</span>
             <span v-if="!hideBuilding" class="font-medium text-slate-900 truncate ml-2 max-w-[55%] text-right">
               {{ tx.buildingName }}
             </span>
           </div>
-
-          <!-- 매매 카드 -->
-          <template v-if="type === 'sale'">
-            <div class="mt-2 flex items-center justify-between">
-              <span class="text-base font-semibold text-slate-900">
-                {{ formatAmount((tx as SaleTransaction).dealAmount) }}
-              </span>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="text-base font-semibold text-slate-900">
+              {{ formatKoreanPrice(tx.deposit) }}
               <span
-                v-if="(tx as SaleTransaction).dealType"
+                v-if="depositChangeRate(tx) !== null"
                 :class="[
-                  'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                  (tx as SaleTransaction).dealType === '직거래'
-                    ? 'bg-amber-50 text-amber-700'
-                    : 'bg-slate-100 text-slate-600',
+                  'text-xs ml-1',
+                  depositChangeRate(tx)! > 0 ? 'text-red-500' : 'text-blue-500',
                 ]"
               >
-                {{ (tx as SaleTransaction).dealType }}
+                {{ formatChangeRate(depositChangeRate(tx)!) }}
               </span>
-            </div>
-            <div class="mt-1.5 text-sm text-slate-500">
-              {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
-              <span v-if="pricePerPyeong(tx as SaleTransaction) !== '-'" class="ml-1">· 평당 {{ pricePerPyeong(tx as SaleTransaction) }}</span>
-            </div>
-            <div v-if="(tx as SaleTransaction).buyerType || (tx as SaleTransaction).sellerType" class="mt-1 text-xs text-slate-500">
-              매수 {{ (tx as SaleTransaction).buyerType || '-' }} / 매도 {{ (tx as SaleTransaction).sellerType || '-' }}
-            </div>
-          </template>
-
-          <!-- 전월세 카드 -->
-          <template v-else>
-            <div class="mt-2 flex items-center gap-2">
-              <span class="text-base font-semibold text-slate-900">
-                {{ formatAmount((tx as RentTransaction).deposit) }}
-                <span
-                  v-if="depositChangeRate(tx as RentTransaction) !== null"
-                  :class="[
-                    'text-xs ml-1',
-                    depositChangeRate(tx as RentTransaction)! > 0 ? 'text-red-500' : 'text-blue-500',
-                  ]"
-                >
-                  {{ formatChangeRate(depositChangeRate(tx as RentTransaction)!) }}
-                </span>
-              </span>
+            </span>
+            <span
+              :class="[
+                'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                tx.rentType === '전세'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'bg-orange-50 text-orange-700',
+              ]"
+            >
+              {{ tx.rentType }}
+            </span>
+            <span
+              v-if="tx.contractType"
+              :class="[
+                'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                tx.contractType === '갱신'
+                  ? 'bg-purple-50 text-purple-700'
+                  : 'bg-green-50 text-green-700',
+              ]"
+            >
+              {{ tx.contractType }}
+            </span>
+          </div>
+          <div class="mt-1.5 text-sm text-slate-500">
+            <template v-if="tx.rentType !== '전세' && tx.monthlyRent">
+              월세 {{ formatKoreanPrice(tx.monthlyRent) }}
               <span
+                v-if="monthlyRentChangeRate(tx) !== null"
                 :class="[
-                  'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                  (tx as RentTransaction).rentType === '전세'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'bg-orange-50 text-orange-700',
+                  'text-xs',
+                  monthlyRentChangeRate(tx)! > 0 ? 'text-red-500' : 'text-blue-500',
                 ]"
               >
-                {{ (tx as RentTransaction).rentType }}
+                {{ formatChangeRate(monthlyRentChangeRate(tx)!) }}
               </span>
-              <span
-                v-if="(tx as RentTransaction).contractType"
-                :class="[
-                  'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                  (tx as RentTransaction).contractType === '갱신'
-                    ? 'bg-purple-50 text-purple-700'
-                    : 'bg-green-50 text-green-700',
-                ]"
-              >
-                {{ (tx as RentTransaction).contractType }}
-              </span>
-            </div>
-            <div class="mt-1.5 text-sm text-slate-500">
-              <template v-if="(tx as RentTransaction).rentType !== '전세' && (tx as RentTransaction).monthlyRent">
-                월세 {{ formatAmount((tx as RentTransaction).monthlyRent!) }}
-                <span
-                  v-if="monthlyRentChangeRate(tx as RentTransaction) !== null"
-                  :class="[
-                    'text-xs',
-                    monthlyRentChangeRate(tx as RentTransaction)! > 0 ? 'text-red-500' : 'text-blue-500',
-                  ]"
-                >
-                  {{ formatChangeRate(monthlyRentChangeRate(tx as RentTransaction)!) }}
-                </span>
-                ·
-              </template>
-              {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
-            </div>
-            <div v-if="(tx as RentTransaction).contractTerm" class="mt-1 text-xs text-slate-500">
-              계약 {{ (tx as RentTransaction).contractTerm }}
-            </div>
-          </template>
+              ·
+            </template>
+            {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
+          </div>
+          <div v-if="tx.contractTerm" class="mt-1 text-xs text-slate-500">
+            계약 {{ tx.contractTerm }}
+          </div>
         </div>
       </div>
     </template>
@@ -306,6 +346,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { SaleTransaction, RentTransaction } from '~/types/realEstate'
+import { formatKoreanPrice } from '~/utils/formatters'
 
 interface Column {
   key: string
@@ -320,6 +361,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const saleTransactions = computed(() => props.transactions as SaleTransaction[])
+const rentTransactions = computed(() => props.transactions as RentTransaction[])
 
 const saleColumnsAll: Column[] = [
   { key: 'date', label: '거래일' },
@@ -360,22 +404,9 @@ function formatDate(tx: SaleTransaction | RentTransaction): string {
 
 function formatMonthlyRent(tx: RentTransaction): string {
   if (tx.rentType === '전세' || tx.monthlyRent == null || tx.monthlyRent === 0) return '-'
-  return formatAmount(tx.monthlyRent)
+  return formatKoreanPrice(tx.monthlyRent)
 }
 
-function formatAmount(amount: number): string {
-  const uk = Math.floor(amount / 10000) // 억 단위
-  const man = amount % 10000           // 만원 단위
-  if (uk > 0 && man > 0) {
-    return `${uk}억 ${man.toLocaleString()}만원`
-  }
-  if (uk > 0) {
-    return `${uk}억`
-  }
-  return `${amount.toLocaleString()}만원`
-}
-
-// 모든 부동산 타입은 exclusiveArea 사용
 // Prisma Decimal은 문자열로 직렬화되므로 Number 변환
 function getArea(tx: SaleTransaction | RentTransaction): number | null {
   const raw = tx.exclusiveArea
@@ -389,17 +420,12 @@ function formatArea(tx: SaleTransaction | RentTransaction): string {
   return area != null ? `${area}㎡` : '-'
 }
 
-function pricePerPyeong(tx: SaleTransaction): string {
+function pricePerPyeong(tx: SaleTransaction): string | null {
   const area = getArea(tx)
-  if (area == null) return '-'
+  if (area == null) return null
   const pyeong = area / 3.305
   const price = Math.round(tx.dealAmount / pyeong)
-  return formatAmount(price)
-}
-
-function isCancelled(tx: SaleTransaction | RentTransaction): boolean {
-  if (props.type !== 'sale') return false
-  return !!(tx as SaleTransaction).cancelDealDay
+  return formatKoreanPrice(price)
 }
 
 function depositChangeRate(tx: RentTransaction): number | null {

@@ -8,7 +8,7 @@ import {
   getBuildingInfo,
   searchAll,
   getAreaGroups,
-  getPriceAnalysis,
+  getApartmentPriceAnalysis,
 } from '../services/realEstateService.js';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
@@ -38,7 +38,7 @@ router.get(
   validate(PriceAnalysisQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
     const { bjdCode, buildingName } = req.query as z.infer<typeof PriceAnalysisQuerySchema>;
-    const result = await getPriceAnalysis(bjdCode, buildingName);
+    const result = await getApartmentPriceAnalysis(bjdCode, buildingName);
     res.json({ success: true, data: result });
   })
 );

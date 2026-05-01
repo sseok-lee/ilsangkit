@@ -1,3 +1,11 @@
+export function formatKoreanPrice(amount: number): string {
+  const eok = Math.floor(amount / 10000)
+  const man = amount % 10000
+  if (eok > 0 && man > 0) return `${eok}억 ${man.toLocaleString()}만원`
+  if (eok > 0) return `${eok}억`
+  return `${amount.toLocaleString()}만원`
+}
+
 /**
  * 거리를 사람이 읽기 쉬운 문자열로 변환
  */

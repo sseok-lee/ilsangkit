@@ -109,8 +109,16 @@ function isSaleType(type: string): boolean {
   return SALE_TYPES.includes(type as RealEstateType);
 }
 
-function hasExclusiveArea(_type: string): boolean {
-  return true;
+function buildMonthCutoff(months: number): { cutoff: Date; orWhere: object[] } {
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+  return {
+    cutoff,
+    orWhere: [
+      { dealYear: { gt: cutoff.getFullYear() } },
+      { dealYear: cutoff.getFullYear(), dealMonth: { gte: cutoff.getMonth() + 1 } },
+    ],
+  };
 }
 
 export const TABLE_NAME_MAP: Record<string, string> = {
@@ -129,7 +137,7 @@ export function getTableName(type: string): string {
 }
 
 /**
- * BigInt/Decimal → Number 변환 (JSON 직렬화 호환)
+ * BigInt → Number 변환 (JSON 직렬화 호환, Decimal은 Prisma가 문자열로 직렬화)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function serializeRow(row: any): any {
@@ -164,21 +172,13 @@ export async function searchTransactions(
   if (buildingName) where.buildingName = { startsWith: buildingName };
   if (dealYear !== undefined) where.dealYear = dealYear;
   if (dealMonth !== undefined) where.dealMonth = dealMonth;
-  if (exclusiveArea && hasExclusiveArea(type)) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
+  if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
   if (rentType) where.rentType = rentType;
   if (isSaleType(type)) where.cancelDealDay = null;
 
-  // 기간 필터: months 전달 시 최근 N개월로 제한
   if (months) {
-    const now = new Date();
-    const cutoff = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
-    where.OR = [
-      { dealYear: { gt: cutoff.getFullYear() } },
-      {
-        dealYear: cutoff.getFullYear(),
-        dealMonth: { gte: cutoff.getMonth() + 1 },
-      },
-    ];
+    const { orWhere } = buildMonthCutoff(months);
+    where.OR = orWhere;
   }
 
   const skip = (page - 1) * limit;
@@ -256,22 +256,15 @@ export async function getTransactionStats(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = { bjdCode };
   if (buildingName) where.buildingName = buildingName;
-  if (exclusiveArea && hasExclusiveArea(type)) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
+  if (exclusiveArea) where.exclusiveArea = { gte: exclusiveArea - 2, lte: exclusiveArea + 2 };
   if (rentType) where.rentType = rentType;
   if (isSale) where.cancelDealDay = null;
 
-  // Limit to recent N months (months 미지정 시 전체 기간)
   let cutoff: Date | null = null;
   if (months) {
-    const now = new Date();
-    cutoff = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
-    where.OR = [
-      { dealYear: { gt: cutoff.getFullYear() } },
-      {
-        dealYear: cutoff.getFullYear(),
-        dealMonth: { gte: cutoff.getMonth() + 1 },
-      },
-    ];
+    const { cutoff: c, orWhere } = buildMonthCutoff(months);
+    cutoff = c;
+    where.OR = orWhere;
   }
 
   let monthly: MonthlyStats[];
@@ -688,7 +681,7 @@ export async function searchAll(
 }
 
 // ─────────────────────────────────────────────
-// getPriceAnalysis
+// getApartmentPriceAnalysis
 // ─────────────────────────────────────────────
 
 export interface PriceAnalysisResult {
@@ -696,11 +689,10 @@ export interface PriceAnalysisResult {
   jeonseRatio: number | null;
   allTimeHigh: number | null;
   allTimeLow: number | null;
-  gapPrice: number | null;
   saleCount: number;
 }
 
-export async function getPriceAnalysis(
+export async function getApartmentPriceAnalysis(
   bjdCode: string,
   buildingName: string,
 ): Promise<PriceAnalysisResult | null> {
@@ -740,14 +732,11 @@ export async function getPriceAnalysis(
   const jeonseRatio =
     avgJeonse && avgDeal > 0 ? Math.round((avgJeonse / avgDeal) * 100) : null;
 
-  const gapPrice = avgJeonse ? Math.round(avgDeal - avgJeonse) : null;
-
   return {
     pricePerPyeong,
     jeonseRatio,
     allTimeHigh: maxDeal !== null ? Math.round(maxDeal) : null,
     allTimeLow: minDeal !== null ? Math.round(minDeal) : null,
-    gapPrice,
     saleCount: saleAgg._count.id,
   };
 }

@@ -13,13 +13,7 @@ export type TransactionMode = 'sale' | 'rent'
 // 건물 유형 배열 (전체)
 export const PROPERTY_TYPES = ['apt', 'villa', 'offitel'] as const
 
-// 출시 중단 시 UI에서 숨길 property type — 기본은 빈 배열 (전부 공개)
-export const HIDDEN_PROPERTY_TYPES: readonly RealEstatePropertyType[] = [] as const
-
-// 공개된 건물 유형 (메인 카드/메뉴 렌더링용)
-export const VISIBLE_PROPERTY_TYPES: readonly RealEstatePropertyType[] = PROPERTY_TYPES.filter(
-  (pt) => !(HIDDEN_PROPERTY_TYPES as readonly string[]).includes(pt)
-) as readonly RealEstatePropertyType[]
+export const VISIBLE_PROPERTY_TYPES = PROPERTY_TYPES
 
 // 매매 거래 (아파트, 빌라, 오피스텔)
 export interface SaleTransaction {
@@ -253,6 +247,5 @@ export interface PriceAnalysis {
   jeonseRatio: number | null       // %
   allTimeHigh: number | null       // 만원
   allTimeLow: number | null        // 만원
-  gapPrice: number | null          // 만원 (매매평균 - 전세평균)
   saleCount: number
 }

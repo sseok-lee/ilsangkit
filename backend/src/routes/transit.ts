@@ -40,25 +40,42 @@ router.get(
     url.searchParams.set('sort', 'distance');
     url.searchParams.set('size', '10');
 
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `KakaoAK ${apiKey}` },
-    });
-
-    if (!response.ok) {
-      res.json({ success: true, data: { stations: [] } });
-      return;
+    interface KakaoLocalDocument {
+      id: string;
+      place_name: string;
+      category_name: string;
+      distance: string;
+      address_name: string;
     }
 
-    const json = (await response.json()) as { documents?: any[] };
-    const stations = (json.documents ?? []).map((doc: any) => ({
-      id: doc.id,
-      name: doc.place_name,
-      line: parseLineName(doc.category_name),
-      distance: parseInt(doc.distance, 10),
-      address: doc.address_name,
-    }));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
 
-    res.json({ success: true, data: { stations } });
+    try {
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `KakaoAK ${apiKey}` },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        res.json({ success: true, data: { stations: [] } });
+        return;
+      }
+
+      const json = (await response.json()) as { documents?: KakaoLocalDocument[] };
+      const stations = (json.documents ?? []).map((doc: KakaoLocalDocument) => ({
+        id: doc.id,
+        name: doc.place_name,
+        line: parseLineName(doc.category_name),
+        distance: parseInt(doc.distance, 10),
+      }));
+
+      res.json({ success: true, data: { stations } });
+    } catch {
+      clearTimeout(timeout);
+      res.json({ success: true, data: { stations: [] } });
+    }
   }),
 );
 

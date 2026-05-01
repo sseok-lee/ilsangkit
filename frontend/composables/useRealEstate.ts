@@ -138,7 +138,7 @@ export function useRealEstate() {
     return res.data
   }
 
-  async function getPriceAnalysis(
+  async function getApartmentPriceAnalysis(
     bjdCode: string,
     buildingName: string,
   ): Promise<PriceAnalysis | null> {
@@ -160,6 +160,6 @@ export function useRealEstate() {
     getBuildingInfo,
     searchAll,
     getAreaGroups,
-    getPriceAnalysis,
+    getApartmentPriceAnalysis,
   }
 }
