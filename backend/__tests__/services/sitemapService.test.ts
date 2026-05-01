@@ -20,7 +20,7 @@ vi.mock('../../src/services/categoryRegistry.js', () => ({
   ALL_CATEGORIES: [],
 }));
 
-import { getRealEstateBuildings, getRealEstateCityDistrictHubs } from '../../src/services/sitemapService.js';
+import { getRealEstateBuildings, getRealEstateCityDistrictHubs, _resetSitemapCacheForTests } from '../../src/services/sitemapService.js';
 
 function flattenSql(call: unknown[]): string {
   const strings = call[0] as unknown as readonly string[];
@@ -29,6 +29,7 @@ function flattenSql(call: unknown[]): string {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  _resetSitemapCacheForTests();
 });
 
 describe('getRealEstateBuildings (US-008 new URL contract)', () => {

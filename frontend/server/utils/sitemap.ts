@@ -172,8 +172,11 @@ export async function fetchRealEstateBuildings(
   if (cached) return cached
 
   for (let attempt = 1; attempt <= 2; attempt++) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 25_000)
     try {
-      const res = await fetch(`${apiBase}/api/sitemap/real-estate-buildings`)
+      const res = await fetch(`${apiBase}/api/sitemap/real-estate-buildings`, { signal: controller.signal })
+      clearTimeout(timer)
       if (!res.ok) {
         console.error(`[sitemap] fetchRealEstateBuildings attempt ${attempt}: HTTP ${res.status}`)
         continue
@@ -186,6 +189,7 @@ export async function fetchRealEstateBuildings(
       }
       return data
     } catch (err) {
+      clearTimeout(timer)
       console.error(`[sitemap] fetchRealEstateBuildings attempt ${attempt} error:`, err)
     }
   }

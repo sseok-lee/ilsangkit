@@ -4,6 +4,10 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /_nuxt/
+# wifi/aed 상세 페이지는 noindex 카테고리 — 크롤 예산 낭비 방지
+# /wifi, /aed 랜딩 페이지는 허용; /wifi/[id], /aed/[id] 상세만 차단
+Disallow: /wifi/
+Disallow: /aed/
 
 # AI 검색 크롤러 — 허용 (AI 검색 노출)
 User-agent: GPTBot
