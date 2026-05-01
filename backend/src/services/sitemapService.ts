@@ -16,6 +16,12 @@ type HubRow = { realEstateType: string; city: string; district: string };
 let buildingsCache: { data: RealEstateRow[]; expiresAt: number } | null = null;
 let hubsCache: { data: HubRow[]; expiresAt: number } | null = null;
 
+/** 테스트 전용 — 모듈 레벨 캐시 초기화 */
+export function _resetSitemapCacheForTests() {
+  buildingsCache = null;
+  hubsCache = null;
+}
+
 const SITEMAP_FACILITY_LIMITS: Partial<Record<FacilityCategory, number>> = {
   'ev-charger': 20000,
   childcare: 15000,
