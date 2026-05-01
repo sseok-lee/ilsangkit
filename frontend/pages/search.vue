@@ -258,49 +258,27 @@
 
         <!-- 부동산 그룹 뷰 (유형 미선택 시) -->
         <div v-else-if="!selectedCategory && realEstateResults.length > 0 && searchTab !== 'facility'" class="mb-6 bg-white rounded-xl p-5 shadow-sm border border-slate-200">
-          <div class="flex items-center gap-2 mb-5">
+          <div class="flex items-center gap-2 mb-4">
             <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
             <h2 class="text-slate-900 text-base font-bold">부동산 실거래가</h2>
           </div>
-          <div class="space-y-5">
-            <div v-for="group in realEstateGrouped" :key="group.propertyType">
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-2">
-                  <img :src="`/icons/category/${group.iconImg}.webp?v2`" :alt="group.label" class="w-6 h-6" width="24" height="24" />
-                  <h3 class="text-slate-800 text-sm font-bold">{{ group.label }}</h3>
-                </div>
-                <button
-                  class="text-primary text-xs font-medium hover:underline flex items-center gap-0.5"
-                  @click="selectRealEstateType(group.propertyType)"
-                >
-                  더보기
-                  <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
-                </button>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <ComplexCard
-                  v-for="item in group.items.slice(0, 3)"
-                  :key="`${item.type}-${item.buildingName}-${item.bjdCode}`"
-                  :complex="{
-                    buildingName: item.buildingName,
-                    bjdCode: item.bjdCode,
-                    dongName: (item.dongName as string) || '',
-                    city: (item.city as string) || '',
-                    district: (item.district as string) || '',
-                    latestPrice: (item.dealAmount as number) || (item.deposit as number) || null,
-                    transactionCount: (item.transactionCount as number) || 0,
-                    lat: null,
-                    lng: null,
-                    lastDealYear: (item.dealYear as number) || null,
-                    lastDealMonth: (item.dealMonth as number) || null,
-                    buildYear: (item.buildYear as number) || null,
-                  }"
-                  :property-type="(item.propertyType as RealEstatePropertyType)"
-                  :tab="(item.tab as TransactionMode)"
-                />
-              </div>
-            </div>
+
+          <!-- 타입별 요약 카드 그리드 -->
+          <div class="grid grid-cols-3 gap-3 mb-5">
+            <button
+              v-for="group in realEstateGrouped"
+              :key="group.propertyType"
+              class="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-slate-200 hover:border-primary/40 hover:bg-primary/5 transition-all text-center"
+              @click="selectRealEstateType(group.propertyType)"
+            >
+              <img :src="`/icons/category/${group.iconImg}.webp?v2`" :alt="group.label" class="w-10 h-10" width="40" height="40" />
+              <p class="text-slate-800 text-sm font-semibold">{{ group.label }}</p>
+              <p v-if="group.totalCount > 0" class="text-primary font-bold text-base leading-none">
+                {{ group.totalCount.toLocaleString('ko-KR') }}<span class="text-[11px] font-normal text-slate-500 ml-0.5">건물</span>
+              </p>
+            </button>
           </div>
+
         </div>
 
         <!-- Grouped View (섹션별 묶음) -->

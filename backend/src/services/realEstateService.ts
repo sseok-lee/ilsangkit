@@ -646,7 +646,13 @@ export async function searchAll(
 
       // 건물 단위 groupBy: 중복 제거 + 건물별 거래건수 + 최신 거래 정보
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [grouped, totalCount] = await Promise.all([
+      const summaryWhere: Record<string, any> = { type };
+      if (keyword) summaryWhere.buildingName = { startsWith: keyword };
+      if (city) summaryWhere.city = city;
+      if (district) summaryWhere.district = district;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [grouped, buildingCount] = await Promise.all([
         (model as any).groupBy({
           by: ['buildingName', 'bjdCode', 'city', 'district', 'dongName', 'buildYear'],
           where,
@@ -655,7 +661,7 @@ export async function searchAll(
           orderBy: [{ _max: { dealYear: 'desc' } }, { _max: { dealMonth: 'desc' } }],
           take: 3,
         }),
-        model.count({ where }),
+        prisma.realEstateBuildingSummary.count({ where: summaryWhere }),
       ]);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -673,7 +679,7 @@ export async function searchAll(
         transactionCount: g._count.id,
       }));
 
-      return { type, count: totalCount, items };
+      return { type, count: buildingCount, items };
     })
   );
 
