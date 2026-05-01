@@ -69,7 +69,6 @@ router.get(
         name: doc.place_name,
         line: parseLineName(doc.category_name),
         distance: parseInt(doc.distance, 10),
-        address: doc.address_name,
       }));
 
       res.json({ success: true, data: { stations } });

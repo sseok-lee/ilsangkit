@@ -4,7 +4,7 @@
       <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
     </div>
 
-    <div v-else-if="facilityGroups.length === 0" class="rounded-2xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
+    <div v-else-if="facilityGroups.length === 0 && transitStations.length === 0" class="rounded-2xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
       주변에 등록된 시설이 없습니다
     </div>
 
@@ -78,7 +78,6 @@ interface Station {
   name: string
   line: string
   distance: number
-  address: string
 }
 
 interface FacilityItem {
@@ -117,7 +116,7 @@ const CATEGORY_ICONS: Partial<Record<FacilityCategory, string>> = {
 const DISPLAY_CATEGORIES: FacilityCategory[] = ['school', 'childcare', 'park', 'sports', 'hospital', 'pharmacy']
 const MAX_PER_CATEGORY = 3
 
-const { data: transitResponse } = await useAsyncData(
+const { data: transitResponse, status: transitStatus } = await useAsyncData<{ data: { stations: Station[] } }>(
   `nearby-transit-${props.lat}-${props.lng}`,
   () => {
     if (!props.lat || !props.lng) return Promise.resolve(null)
@@ -127,9 +126,7 @@ const { data: transitResponse } = await useAsyncData(
   },
 )
 
-const transitStations = computed<Station[]>(() => {
-  return (transitResponse.value as any)?.data?.stations ?? []
-})
+const transitStations = computed<Station[]>(() => transitResponse.value?.data?.stations ?? [])
 
 function transitBadgeClass(distance: number): string {
   if (distance <= 300) return 'bg-emerald-50 text-emerald-600'
@@ -148,7 +145,7 @@ const { data: facilityResponse, status } = await useAsyncData(
   },
 )
 
-const loading = computed(() => status.value === 'pending')
+const loading = computed(() => status.value === 'pending' || transitStatus.value === 'pending')
 
 const facilityGroups = computed<FacilityGroup[]>(() => {
   if (!facilityResponse.value) return []
