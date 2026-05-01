@@ -99,7 +99,7 @@
               <!-- 매매 전용: 거래금액 + 평당가 + 거래유형 + 매수/매도자 -->
               <template v-if="type === 'sale'">
                 <td class="px-4 py-3 font-semibold text-slate-900">
-                  {{ formatAmount((tx as SaleTransaction).dealAmount) }}
+                  {{ formatKoreanPrice((tx as SaleTransaction).dealAmount) }}
                 </td>
                 <td class="px-4 py-3 text-slate-600">
                   {{ pricePerPyeong(tx as SaleTransaction) }}
@@ -129,7 +129,7 @@
               <!-- 전월세 전용: 보증금, 월세, 구분, 계약유형, 계약기간 -->
               <template v-else>
                 <td class="px-4 py-3 font-semibold text-slate-900">
-                  <div>{{ formatAmount((tx as RentTransaction).deposit) }}</div>
+                  <div>{{ formatKoreanPrice((tx as RentTransaction).deposit) }}</div>
                   <div
                     v-if="depositChangeRate(tx as RentTransaction) !== null"
                     :class="[
@@ -217,7 +217,7 @@
           <template v-if="type === 'sale'">
             <div class="mt-2 flex items-center justify-between">
               <span class="text-base font-semibold text-slate-900">
-                {{ formatAmount((tx as SaleTransaction).dealAmount) }}
+                {{ formatKoreanPrice((tx as SaleTransaction).dealAmount) }}
               </span>
               <span
                 v-if="(tx as SaleTransaction).dealType"
@@ -244,7 +244,7 @@
           <template v-else>
             <div class="mt-2 flex items-center gap-2">
               <span class="text-base font-semibold text-slate-900">
-                {{ formatAmount((tx as RentTransaction).deposit) }}
+                {{ formatKoreanPrice((tx as RentTransaction).deposit) }}
                 <span
                   v-if="depositChangeRate(tx as RentTransaction) !== null"
                   :class="[
@@ -279,7 +279,7 @@
             </div>
             <div class="mt-1.5 text-sm text-slate-500">
               <template v-if="(tx as RentTransaction).rentType !== '전세' && (tx as RentTransaction).monthlyRent">
-                월세 {{ formatAmount((tx as RentTransaction).monthlyRent!) }}
+                월세 {{ formatKoreanPrice((tx as RentTransaction).monthlyRent!) }}
                 <span
                   v-if="monthlyRentChangeRate(tx as RentTransaction) !== null"
                   :class="[
@@ -306,6 +306,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { SaleTransaction, RentTransaction } from '~/types/realEstate'
+import { formatKoreanPrice } from '~/utils/formatters'
 
 interface Column {
   key: string
@@ -360,19 +361,7 @@ function formatDate(tx: SaleTransaction | RentTransaction): string {
 
 function formatMonthlyRent(tx: RentTransaction): string {
   if (tx.rentType === '전세' || tx.monthlyRent == null || tx.monthlyRent === 0) return '-'
-  return formatAmount(tx.monthlyRent)
-}
-
-function formatAmount(amount: number): string {
-  const uk = Math.floor(amount / 10000) // 억 단위
-  const man = amount % 10000           // 만원 단위
-  if (uk > 0 && man > 0) {
-    return `${uk}억 ${man.toLocaleString()}만원`
-  }
-  if (uk > 0) {
-    return `${uk}억`
-  }
-  return `${amount.toLocaleString()}만원`
+  return formatKoreanPrice(tx.monthlyRent)
 }
 
 // 모든 부동산 타입은 exclusiveArea 사용
@@ -394,7 +383,7 @@ function pricePerPyeong(tx: SaleTransaction): string {
   if (area == null) return '-'
   const pyeong = area / 3.305
   const price = Math.round(tx.dealAmount / pyeong)
-  return formatAmount(price)
+  return formatKoreanPrice(price)
 }
 
 function isCancelled(tx: SaleTransaction | RentTransaction): boolean {

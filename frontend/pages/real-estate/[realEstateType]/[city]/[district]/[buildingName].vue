@@ -357,8 +357,9 @@ import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onB
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis } from '~/types/realEstate'
-import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
+import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
+import { formatKoreanPrice } from '~/utils/formatters'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -471,7 +472,7 @@ useHead(() => {
   const typeLabel = propertyMeta.value?.label ?? ''
   const title = `${buildingName.value} ${typeLabel} 시세 · ${transactionLabel} 실거래가 | ${locLabel} | 일상킷`
   const facilitySuffix = facilitySummary.value ? ` 인근 ${facilitySummary.value} 정보도 함께 확인하세요.` : ''
-  const avgPricePart = summary.value?.recentAvg ? ` 최근 평균 ${formatSummaryPrice(summary.value.recentAvg)},` : ''
+  const avgPricePart = summary.value?.recentAvg ? ` 최근 평균 ${formatKoreanPrice(summary.value.recentAvg)},` : ''
   const description = summary.value?.totalCount
     ? `${locLabel} ${buildingName.value} ${typeLabel} ${transactionLabel} 실거래가 ${summary.value.totalCount.toLocaleString()}건.${avgPricePart} 면적별 시세와 가격 추이를 확인하세요.${facilitySuffix}`
     : `${locLabel} ${buildingName.value} ${typeLabel} ${transactionLabel} 실거래가. 시세 추이와 가격 정보를 확인하세요.${facilitySuffix}`
@@ -518,7 +519,7 @@ useHead(() => {
 // ── Composables ───────────────────────────────────────────────────────────────
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
-const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getPriceAnalysis } = useRealEstate()
+const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getApartmentPriceAnalysis } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
@@ -652,13 +653,7 @@ const areaRange = computed(() => {
 
 const latestPrice = computed(() => {
   if (!buildingInfo.value?.latestDealAmount) return '-'
-  const amount = buildingInfo.value.latestDealAmount
-  if (amount >= 10000) {
-    const eok = Math.floor(amount / 10000)
-    const remainder = amount % 10000
-    return remainder > 0 ? `${eok}억 ${remainder.toLocaleString()}만원` : `${eok}억`
-  }
-  return `${amount.toLocaleString()}만원`
+  return formatKoreanPrice(buildingInfo.value.latestDealAmount)
 })
 
 const heroStats = computed(() => {
@@ -673,8 +668,8 @@ const heroStats = computed(() => {
     const pa = priceAnalysis.value
     if (pa.pricePerPyeong !== null) items.push({ label: '평당가', value: `${pa.pricePerPyeong.toLocaleString()}만원` })
     if (pa.jeonseRatio !== null) items.push({ label: '전세가율', value: `${pa.jeonseRatio}%` })
-    if (pa.allTimeHigh !== null) items.push({ label: '역대 최고가', value: formatSummaryPrice(pa.allTimeHigh), color: 'text-red-500' })
-    if (pa.allTimeLow !== null) items.push({ label: '역대 최저가', value: formatSummaryPrice(pa.allTimeLow), color: 'text-blue-500' })
+    if (pa.allTimeHigh !== null) items.push({ label: '역대 최고가', value: formatKoreanPrice(pa.allTimeHigh), color: 'text-red-500' })
+    if (pa.allTimeLow !== null) items.push({ label: '역대 최저가', value: formatKoreanPrice(pa.allTimeLow), color: 'text-blue-500' })
   }
   return items
 })
@@ -697,7 +692,7 @@ const periodOptions: { label: string; value: number | null }[] = [
 
 const summaryLatestAvg = computed(() => {
   if (summary.value?.recentAvg == null) return '-'
-  return formatSummaryPrice(summary.value.recentAvg)
+  return formatKoreanPrice(summary.value.recentAvg)
 })
 
 const summaryChangeRate = computed(() => {
@@ -718,14 +713,6 @@ const summaryTotalCount = computed(() => {
   return (summary.value?.totalCount ?? 0).toLocaleString()
 })
 
-function formatSummaryPrice(price: number): string {
-  const rounded = Math.round(price)
-  const eok = Math.floor(rounded / 10000)
-  const man = rounded % 10000
-  if (eok > 0 && man > 0) return `${eok}억 ${man.toLocaleString()}만`
-  if (eok > 0) return `${eok}억`
-  return `${rounded.toLocaleString()}만원`
-}
 
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 const currentPage = ref(1)
@@ -1023,7 +1010,7 @@ watch(() => buildingInfo.value, (info) => {
 watch(resolvedBjdCode, async (code) => {
   if (!code || !isApt.value) return
   try {
-    priceAnalysis.value = await getPriceAnalysis(code, buildingName.value)
+    priceAnalysis.value = await getApartmentPriceAnalysis(code, buildingName.value)
   } catch {
     priceAnalysis.value = null
   }
