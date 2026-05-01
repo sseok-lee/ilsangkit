@@ -137,7 +137,7 @@ export function getTableName(type: string): string {
 }
 
 /**
- * BigInt/Decimal → Number 변환 (JSON 직렬화 호환)
+ * BigInt → Number 변환 (JSON 직렬화 호환, Decimal은 Prisma가 문자열로 직렬화)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function serializeRow(row: any): any {

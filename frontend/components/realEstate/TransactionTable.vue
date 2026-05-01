@@ -100,7 +100,7 @@
                 {{ formatKoreanPrice(tx.dealAmount) }}
               </td>
               <td class="px-4 py-3 text-slate-600">
-                {{ pricePerPyeong(tx) }}
+                {{ pricePerPyeong(tx) ?? '-' }}
               </td>
               <td class="px-4 py-3">
                 <span
@@ -169,7 +169,7 @@
           </div>
           <div class="mt-1.5 text-sm text-slate-500">
             {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
-            <span v-if="pricePerPyeong(tx) !== '-'" class="ml-1">· 평당 {{ pricePerPyeong(tx) }}</span>
+            <span v-if="pricePerPyeong(tx)" class="ml-1">· 평당 {{ pricePerPyeong(tx) }}</span>
           </div>
           <div v-if="tx.buyerType || tx.sellerType" class="mt-1 text-xs text-slate-500">
             매수 {{ tx.buyerType || '-' }} / 매도 {{ tx.sellerType || '-' }}
@@ -420,9 +420,9 @@ function formatArea(tx: SaleTransaction | RentTransaction): string {
   return area != null ? `${area}㎡` : '-'
 }
 
-function pricePerPyeong(tx: SaleTransaction): string {
+function pricePerPyeong(tx: SaleTransaction): string | null {
   const area = getArea(tx)
-  if (area == null) return '-'
+  if (area == null) return null
   const pyeong = area / 3.305
   const price = Math.round(tx.dealAmount / pyeong)
   return formatKoreanPrice(price)

@@ -422,7 +422,7 @@ const buildingName = computed(() =>
 // Split realEstateType: e.g. "apt-sale" → propertyType="apt", tab="sale"
 const realEstateType = realEstateTypeParam as RealEstateUrlType
 const [propertyTypePart, tabPart] = realEstateType.split('-') as [string, string]
-const propertyTypeParam = computed<RealEstatePropertyType>(() => propertyTypePart as RealEstatePropertyType)
+const propertyTypeParam = propertyTypePart as RealEstatePropertyType
 
 // Tab is canonical from URL — no ?tab= query param
 const currentTab = computed<TransactionMode>({
@@ -440,8 +440,8 @@ const currentTab = computed<TransactionMode>({
   },
 })
 
-const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.value))
-const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
+const apiSlug = computed(() => toApiSlug(propertyTypeParam, currentTab.value))
+const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam])
 
 // ── SEO / Head ────────────────────────────────────────────────────────────────
 
@@ -486,7 +486,7 @@ useHead(() => {
   })}`
 
   const ogImage = buildingInfo.value
-    ? `${SITE_URL}/og?category=${propertyTypeParam.value}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
+    ? `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
     : DEFAULT_OG_IMAGE
 
   const meta: Array<Record<string, string>> = [
@@ -559,7 +559,7 @@ const { trackBuildingView, trackDirectionsClick, trackShareClick } = useAnalytic
 
 function openNavigation(url: string) {
   const provider = url.includes('kakao') ? 'kakao' : 'naver'
-  trackDirectionsClick({ facilityId: buildingName.value, category: propertyTypeParam.value, provider })
+  trackDirectionsClick({ facilityId: buildingName.value, category: propertyTypeParam, provider })
   window.open(url, '_blank')
   showNavDropdown.value = false
   showMobileNavDropdown.value = false
@@ -717,7 +717,7 @@ const summaryTotalCount = computed(() => {
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
-const isApt = computed(() => propertyTypeParam.value === 'apt')
+const isApt = computed(() => propertyTypeParam === 'apt')
 const priceAnalysis = ref<PriceAnalysis | null>(null)
 const showPriceAnalysis = computed(() => isApt.value && !!priceAnalysis.value && priceAnalysis.value.saleCount >= 5)
 
@@ -996,7 +996,7 @@ setRealEstateListingSchema(() => ({
 watch(() => buildingInfo.value, (info) => {
   if (info) {
     trackBuildingView({
-      propertyType: propertyTypeParam.value,
+      propertyType: propertyTypeParam,
       buildingName: buildingName.value,
       city: info.city,
       district: info.district,
