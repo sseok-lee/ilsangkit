@@ -1562,7 +1562,7 @@
             </div>
           </div>
 
-          <!-- Ad: 로드뷰 위 (Mobile) -->
+          <!-- Ad: 기본정보 직후 (Mobile) -->
           <AdBanner ad-format="horizontal" full-width-responsive="false" />
 
           <!-- Roadview Card (Mobile) -->
@@ -2327,9 +2327,6 @@
           <ClientOnly>
             <RelatedGuides :category="category" />
           </ClientOnly>
-
-          <!-- Ad: 관련 가이드 아래 (Mobile) -->
-          <AdBanner />
 
           <!-- 같은 지역 시설 링크 -->
           <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

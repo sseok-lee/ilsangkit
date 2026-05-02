@@ -304,9 +304,6 @@
       <!-- 관련 가이드 -->
       <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
-      <!-- Ad: 본문 마무리 (하단) -->
-      <AdBanner />
-
       <!-- 데이터 정보 -->
       <DataSourceCard
         v-if="lastSyncDate"

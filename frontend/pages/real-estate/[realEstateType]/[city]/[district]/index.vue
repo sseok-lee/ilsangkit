@@ -12,8 +12,6 @@
         :stats="heroStats"
       />
 
-      <AdBanner class="mt-2 mb-4" />
-
       <!-- 거래 유형 토글 (매매 ↔ 전월세) -->
       <SectionBlock heading="거래 유형" subtext="같은 지역에서 매매 시세와 전월세 시세를 바로 비교해 보세요.">
         <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1 w-fit">
@@ -30,6 +28,9 @@
           >{{ t.label }}</NuxtLink>
         </div>
       </SectionBlock>
+
+      <!-- Ad: 거래 유형 토글 직후 -->
+      <AdBanner />
 
       <!-- 결과 -->
       <template v-if="pending">
