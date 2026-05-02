@@ -11,7 +11,6 @@
 |------|-------------|
 | `index.vue` | 구/군 허브 — 카테고리 요약, 근접 구/군 내비 |
 | `[category].vue` | 지역×카테고리 결합 페이지 (`/강남구/toilet` 같은 URL) |
-| `real-estate.vue` | 구/군 부동산 요약 (`/[city]/[district]/real-estate`) |
 
 ## For AI Agents
 
@@ -21,7 +20,7 @@
 - 인접 지역 내비는 backend `metaService` 의존
 
 ### Testing Requirements
-- `tests/pages/region.test.ts`, `category-cross-links.test.ts`, `district-real-estate.test.ts`
+- `tests/pages/region.test.ts`, `category-cross-links.test.ts`
 
 ### Common Patterns
 - `const { city, district, category } = useRoute().params`

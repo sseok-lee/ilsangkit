@@ -45,6 +45,10 @@
       </template>
 
       <template v-else-if="renderableComplexes.length > 0">
+        <p v-if="districtSummaryText" class="rounded-xl bg-white border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed">
+          {{ districtSummaryText }}
+        </p>
+
         <SectionBlock
           :heading="`${districtName} ${typeLabel} 단지 목록`"
           :subtext="`거래 10건 이상 유효 단지만 노출. 총 ${renderableComplexes.length.toLocaleString()}곳`"
@@ -103,6 +107,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { formatKoreanPrice } from '~/utils/formatters'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import {
@@ -217,6 +222,28 @@ const heroStats = computed(() => {
   if (totalComplexes.value > 0) items.push({ label: '전체 단지', value: `${totalComplexes.value.toLocaleString()}곳` })
   items.push({ label: '거래 기준', value: '10건 이상' })
   return items
+})
+
+const districtSummaryText = computed(() => {
+  const count = totalComplexes.value || renderableComplexes.value.length
+  if (count === 0) return ''
+  const withPrice = renderableComplexes.value.filter(c => c.latestPrice !== null && c.latestPrice > 0)
+  const avgPrice = withPrice.length > 0
+    ? Math.round(withPrice.reduce((sum, c) => sum + (c.latestPrice as number), 0) / withPrice.length)
+    : null
+  const topComplex = renderableComplexes.value[0] ?? null
+  const parts: string[] = [
+    `${districtName.value} ${typeLabel.value} 실거래가를 확인할 수 있는 단지는 총 ${count.toLocaleString()}곳입니다.`,
+  ]
+  if (topComplex) {
+    parts.push(`거래가 가장 활발한 단지는 ${topComplex.buildingName}(${topComplex.transactionCount.toLocaleString()}건)입니다.`)
+  }
+  if (avgPrice) {
+    parts.push(`상위 단지 최근 평균 시세는 약 ${formatKoreanPrice(avgPrice)}이며, 국토교통부 실거래가 공개시스템 기반 데이터입니다.`)
+  } else {
+    parts.push('국토교통부 실거래가 공개시스템 기반 데이터입니다.')
+  }
+  return parts.join(' ')
 })
 
 const breadcrumbItems = computed(() => [
