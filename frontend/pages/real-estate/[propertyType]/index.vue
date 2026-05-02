@@ -17,6 +17,9 @@
       <RealEstateSearchFilter :type="apiSlug" @search="handleSearch" />
     </SectionBlock>
 
+    <!-- Ad: 거래유형·지역 필터 직후 -->
+    <AdBanner />
+
     <!-- 결과 -->
     <template v-if="pending">
       <SectionBlock heading="건물 목록" subtext="지역 선택 후 결과가 표시됩니다.">
@@ -134,9 +137,6 @@
         </NuxtLink>
       </div>
     </SectionBlock>
-
-    <!-- Ad: FAQ 전 -->
-    <AdBanner />
 
     <!-- FAQ -->
     <SectionBlock v-if="faqs.length > 0" heading="자주 묻는 질문">
