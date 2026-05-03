@@ -1211,6 +1211,7 @@
                 :data-date="dataDate"
                 :last-sync-date="lastSyncDate"
               />
+
             </div>
 
             <!-- Right Column: Map & Actions (Desktop) -->
@@ -1258,6 +1259,9 @@
                   </div>
                 </div>
               </div>
+
+              <!-- 쿠팡 배너 (Desktop Sticky) -->
+              <CoupangBanner class="mt-3" />
             </div>
           </div>
         </div>
