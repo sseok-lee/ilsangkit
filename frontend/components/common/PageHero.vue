@@ -17,13 +17,13 @@
     <!-- Inline summary-grid (below main) -->
     <div
       v-if="stats?.length || $slots.sidebar"
-      class="mt-4 pt-4 border-t border-line grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4"
+      class="mt-4 pt-4 border-t border-line flex flex-wrap gap-x-8 gap-y-4"
     >
       <slot name="sidebar">
         <div
           v-for="stat in stats"
           :key="stat.label"
-          class="pl-3 border-l-2 border-slate-200"
+          class="pl-3 border-l-2 border-slate-200 min-w-0 flex-1 sm:flex-initial sm:max-w-xs"
         >
           <span class="block text-slate-400 text-[11px] font-semibold uppercase tracking-wide">{{ stat.label }}</span>
           <strong
