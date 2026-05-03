@@ -27,7 +27,7 @@
         >
           <span class="block text-slate-400 text-[11px] font-semibold uppercase tracking-wide">{{ stat.label }}</span>
           <strong
-            class="block mt-1 text-base md:text-lg font-bold truncate"
+            class="block mt-1 text-base md:text-lg font-bold break-keep"
             :class="stat.color ?? 'text-slate-900'"
           >
             {{ stat.value }}
