@@ -351,7 +351,7 @@
                         </div>
                         <div v-if="details?.estbDd" class="flex items-center justify-between">
                           <span class="text-sm text-gray-600">개설일자</span>
-                          <span class="text-sm font-medium text-slate-900">{{ details?.estbDd }}</span>
+                          <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details?.estbDd) }}</span>
                         </div>
                       </div>
                     </template>
@@ -580,6 +580,10 @@
                           <span class="text-sm text-gray-600">특기사항</span>
                           <span class="text-sm font-medium text-slate-900">{{ details?.remarks }}</span>
                         </div>
+                        <div v-if="details?.zoneClass" class="flex items-center justify-between">
+                          <span class="text-sm text-gray-600">구역구분</span>
+                          <span class="text-sm font-medium text-slate-900">{{ details?.zoneClass }}</span>
+                        </div>
                       </div>
                     </div>
                   </template>
@@ -645,6 +649,38 @@
                         <span class="text-sm font-medium text-slate-900">{{ details?.model }}</span>
                       </div>
                     </div>
+
+                    <!-- AED Operating Hours -->
+                    <div v-if="aedWeeklyHours.length > 0" class="mt-5 border-t border-slate-100 pt-5">
+                      <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 이용시간</h3>
+                      <table class="w-full text-sm border-collapse">
+                        <thead>
+                          <tr class="bg-slate-50">
+                            <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
+                            <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">이용시간</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                          <tr v-for="row in aedWeeklyHours" :key="row.day"
+                              :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
+                            <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
+                              {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+                            </td>
+                            <td class="py-1.5 px-2 text-xs" :class="row.allDay ? 'text-green-600 font-medium' : row.closed ? 'text-gray-400' : 'text-slate-800'">
+                              {{ row.time }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- AED Manager Contact -->
+                    <div v-if="details?.clerkTel" class="mt-5 border-t border-slate-100 pt-5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">담당자 연락처</span>
+                        <a :href="`tel:${details.clerkTel}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.clerkTel }}</a>
+                      </div>
+                    </div>
                   </template>
 
                   <!-- Park Details -->
@@ -662,11 +698,15 @@
                       </div>
                       <div v-if="details?.designatedDate" class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">지정일</span>
-                        <span class="text-sm font-medium text-slate-900">{{ details.designatedDate }}</span>
+                        <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details.designatedDate) }}</span>
                       </div>
                       <div v-if="details?.managingOrg" class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">관리기관</span>
                         <span class="text-sm font-medium text-slate-900">{{ details.managingOrg }}</span>
+                      </div>
+                      <div v-if="details?.phoneNumber" class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">연락처</span>
+                        <a :href="`tel:${details.phoneNumber}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.phoneNumber }}</a>
                       </div>
                     </div>
                     <div v-if="parkHasFacilities" class="mt-5 border-t border-slate-100 pt-5">
@@ -723,7 +763,7 @@
                       </div>
                       <div v-if="details?.foundedDate" class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">설립일</span>
-                        <span class="text-sm font-medium text-slate-900">{{ details.foundedDate }}</span>
+                        <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details.foundedDate) }}</span>
                       </div>
                       <div v-if="details?.phoneNumber" class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">연락처</span>
@@ -807,6 +847,10 @@
                           <span :class="details.hasParking ? 'text-green-600' : 'text-gray-400'">{{ details.hasParking ? '✓' : '✗' }}</span>
                           <span>주차시설</span>
                         </div>
+                        <div v-if="details?.giftCertificates" class="flex items-center gap-1.5 text-sm text-gray-700">
+                          <span class="text-green-600">✓</span>
+                          <span>{{ details.giftCertificates }}</span>
+                        </div>
                       </div>
                     </div>
                     <div v-if="details?.homepageUrl" class="mt-5 border-t border-slate-100 pt-5">
@@ -841,7 +885,7 @@
                         <tbody class="divide-y divide-[#f0f2f5]">
                           <tr v-if="details?.crcnfmdt">
                             <td class="py-2.5 text-gray-600 w-28">인가일</td>
-                            <td class="py-2.5 text-slate-900 font-medium text-right">{{ details.crcnfmdt }}</td>
+                            <td class="py-2.5 text-slate-900 font-medium text-right">{{ formatKoreanDate(details.crcnfmdt) }}</td>
                           </tr>
                           <tr v-if="details?.crrepname">
                             <td class="py-2.5 text-gray-600">대표자</td>
@@ -894,6 +938,10 @@
                         <div v-if="details?.chcrtescnt != null" class="bg-slate-50 rounded-lg p-3 text-center">
                           <p class="text-xs text-gray-600 mb-1">교직원</p>
                           <p class="text-lg font-bold text-slate-900">{{ details.chcrtescnt }}<span class="text-xs font-normal text-gray-600">명</span></p>
+                        </div>
+                        <div v-if="details?.nrtrroomsize != null" class="bg-slate-50 rounded-lg p-3 text-center">
+                          <p class="text-xs text-gray-600 mb-1">보육실 면적</p>
+                          <p class="text-lg font-bold text-slate-900">{{ details.nrtrroomsize }}<span class="text-xs font-normal text-gray-600">㎡</span></p>
                         </div>
                       </div>
                       <div v-if="details?.crcapat != null && details?.crchcnt != null && details.crcapat > 0" class="mt-3">
@@ -1006,6 +1054,42 @@
 
                   <!-- Hospital Details -->
                   <template v-if="facility.category === 'hospital'">
+                    <!-- Hospital Operating Hours Table -->
+                    <div v-if="hospitalWeeklyHours.length > 0" :class="[hasGridContent ? 'mt-5 border-t border-slate-100 pt-5' : '']">
+                      <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 진료시간</h3>
+                      <table class="w-full text-sm border-collapse">
+                        <thead>
+                          <tr class="bg-slate-50">
+                            <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
+                            <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">진료시간</th>
+                            <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">점심</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                          <tr v-for="row in hospitalWeeklyHours" :key="row.day"
+                              :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
+                            <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
+                              {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+                            </td>
+                            <td class="py-1.5 px-2 text-xs" :class="row.closed ? 'text-gray-400' : 'text-slate-800'">
+                              {{ row.time }}
+                            </td>
+                            <td class="py-1.5 px-2 text-xs text-gray-500">{{ row.lunch }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Hospital Homepage -->
+                    <div v-if="details?.homepage" class="mt-5 border-t border-slate-100 pt-5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">홈페이지</span>
+                        <a :href="details.homepage.startsWith('http') ? details.homepage : `http://${details.homepage}`"
+                           target="_blank" rel="noopener noreferrer"
+                           class="text-sm text-primary font-medium hover:underline">바로가기 →</a>
+                      </div>
+                    </div>
+
                     <!-- Hospital Staff Info -->
                     <div v-if="details?.drTotCnt" class="mt-5 border-t border-slate-100 pt-5">
                       <h3 class="text-sm font-bold text-slate-900 mb-3">의료진 현황</h3>
@@ -1510,7 +1594,7 @@
                     </div>
                     <div v-if="details?.estbDd" class="flex items-center justify-between">
                       <span class="text-sm text-gray-600">개설일자</span>
-                      <span class="text-sm font-medium text-slate-900">{{ details?.estbDd }}</span>
+                      <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details?.estbDd) }}</span>
                     </div>
                   </div>
                 </template>
@@ -1749,6 +1833,10 @@
                       <span class="text-sm text-gray-600">특기사항</span>
                       <span class="text-sm font-medium text-slate-900">{{ details?.remarks }}</span>
                     </div>
+                    <div v-if="details?.zoneClass" class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">구역구분</span>
+                      <span class="text-sm font-medium text-slate-900">{{ details?.zoneClass }}</span>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -1814,6 +1902,38 @@
                     <span class="text-sm font-medium text-slate-900">{{ details?.model }}</span>
                   </div>
                 </div>
+
+                <!-- AED Operating Hours -->
+                <div v-if="aedWeeklyHours.length > 0" class="mt-5 border-t border-slate-100 pt-5">
+                  <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 이용시간</h3>
+                  <table class="w-full text-sm border-collapse">
+                    <thead>
+                      <tr class="bg-slate-50">
+                        <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
+                        <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">이용시간</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <tr v-for="row in aedWeeklyHours" :key="row.day"
+                          :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
+                        <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
+                          {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+                        </td>
+                        <td class="py-1.5 px-2 text-xs" :class="row.allDay ? 'text-green-600 font-medium' : row.closed ? 'text-gray-400' : 'text-slate-800'">
+                          {{ row.time }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- AED Manager Contact -->
+                <div v-if="details?.clerkTel" class="mt-5 border-t border-slate-100 pt-5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">담당자 연락처</span>
+                    <a :href="`tel:${details.clerkTel}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.clerkTel }}</a>
+                  </div>
+                </div>
               </template>
 
               <!-- Park Details (Mobile) -->
@@ -1831,11 +1951,15 @@
                   </div>
                   <div v-if="details?.designatedDate" class="flex items-center justify-between">
                     <span class="text-sm text-gray-600">지정일</span>
-                    <span class="text-sm font-medium text-slate-900">{{ details.designatedDate }}</span>
+                    <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details.designatedDate) }}</span>
                   </div>
                   <div v-if="details?.managingOrg" class="flex items-center justify-between">
                     <span class="text-sm text-gray-600">관리기관</span>
                     <span class="text-sm font-medium text-slate-900">{{ details.managingOrg }}</span>
+                  </div>
+                  <div v-if="details?.phoneNumber" class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">연락처</span>
+                    <a :href="`tel:${details.phoneNumber}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.phoneNumber }}</a>
                   </div>
                 </div>
                 <div v-if="parkHasFacilities" class="mt-5 border-t border-slate-100 pt-5">
@@ -1892,7 +2016,7 @@
                   </div>
                   <div v-if="details?.foundedDate" class="flex items-center justify-between">
                     <span class="text-sm text-gray-600">설립일</span>
-                    <span class="text-sm font-medium text-slate-900">{{ details.foundedDate }}</span>
+                    <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details.foundedDate) }}</span>
                   </div>
                   <div v-if="details?.phoneNumber" class="flex items-center justify-between">
                     <span class="text-sm text-gray-600">연락처</span>
@@ -1986,6 +2110,10 @@
                       <span :class="details.hasParking ? 'text-green-600' : 'text-gray-400'">{{ details.hasParking ? '✓' : '✗' }}</span>
                       <span>주차시설</span>
                     </div>
+                    <div v-if="details?.giftCertificates" class="flex items-center gap-1.5 text-sm text-gray-700">
+                      <span class="text-green-600">✓</span>
+                      <span>{{ details.giftCertificates }}</span>
+                    </div>
                   </div>
                 </div>
                 <div v-if="details?.homepageUrl" class="mt-5 border-t border-slate-100 pt-5">
@@ -2020,7 +2148,7 @@
                         <tbody class="divide-y divide-[#f0f2f5]">
                           <tr v-if="details?.crcnfmdt">
                             <td class="py-2.5 text-gray-600 w-28">인가일</td>
-                            <td class="py-2.5 text-slate-900 font-medium text-right">{{ details.crcnfmdt }}</td>
+                            <td class="py-2.5 text-slate-900 font-medium text-right">{{ formatKoreanDate(details.crcnfmdt) }}</td>
                           </tr>
                           <tr v-if="details?.crrepname">
                             <td class="py-2.5 text-gray-600">대표자</td>
@@ -2073,6 +2201,10 @@
                         <div v-if="details?.chcrtescnt != null" class="bg-slate-50 rounded-lg p-3 text-center">
                           <p class="text-xs text-gray-600 mb-1">교직원</p>
                           <p class="text-lg font-bold text-slate-900">{{ details.chcrtescnt }}<span class="text-xs font-normal text-gray-600">명</span></p>
+                        </div>
+                        <div v-if="details?.nrtrroomsize != null" class="bg-slate-50 rounded-lg p-3 text-center">
+                          <p class="text-xs text-gray-600 mb-1">보육실 면적</p>
+                          <p class="text-lg font-bold text-slate-900">{{ details.nrtrroomsize }}<span class="text-xs font-normal text-gray-600">㎡</span></p>
                         </div>
                       </div>
                       <div v-if="details?.crcapat != null && details?.crchcnt != null && details.crcapat > 0" class="mt-3">
@@ -2185,6 +2317,42 @@
 
               <!-- Hospital Details -->
               <template v-if="facility.category === 'hospital'">
+                <!-- Hospital Operating Hours Table -->
+                <div v-if="hospitalWeeklyHours.length > 0" :class="[hasGridContent ? 'mt-5 border-t border-slate-100 pt-5' : '']">
+                  <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 진료시간</h3>
+                  <table class="w-full text-sm border-collapse">
+                    <thead>
+                      <tr class="bg-slate-50">
+                        <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
+                        <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">진료시간</th>
+                        <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">점심</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <tr v-for="row in hospitalWeeklyHours" :key="row.day"
+                          :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
+                        <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
+                          {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+                        </td>
+                        <td class="py-1.5 px-2 text-xs" :class="row.closed ? 'text-gray-400' : 'text-slate-800'">
+                          {{ row.time }}
+                        </td>
+                        <td class="py-1.5 px-2 text-xs text-gray-500">{{ row.lunch }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Hospital Homepage -->
+                <div v-if="details?.homepage" class="mt-5 border-t border-slate-100 pt-5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">홈페이지</span>
+                    <a :href="details.homepage.startsWith('http') ? details.homepage : `http://${details.homepage}`"
+                       target="_blank" rel="noopener noreferrer"
+                       class="text-sm text-primary font-medium hover:underline">바로가기 →</a>
+                  </div>
+                </div>
+
                 <!-- Hospital Staff Info -->
                 <div v-if="details?.drTotCnt" class="mt-5 border-t border-slate-100 pt-5">
                   <h3 class="text-sm font-bold text-slate-900 mb-3">의료진 현황</h3>
@@ -2627,14 +2795,64 @@ const desktopBreadcrumbItems = computed(() => {
   ]
 })
 
+// YYYYMMDD 또는 YYYY-MM-DD → 'YYYY년 M월 D일'
+function formatKoreanDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const s = String(dateStr).replace(/\D/g, '')
+  if (s.length === 8) {
+    return `${s.slice(0, 4)}년 ${parseInt(s.slice(4, 6))}월 ${parseInt(s.slice(6, 8))}일`
+  }
+  return String(dateStr)
+}
+
 // 데스크톱 히어로 사이드바 통계
 const desktopHeroStats = computed(() => {
   if (!facility.value) return []
+  const cat = facility.value.category
+  const d = details.value as any
   const items: { label: string; value: string }[] = []
-  if (isOpen24Hours.value) items.push({ label: '운영', value: '24시간' })
-  else if (details.value?.operatingHours) items.push({ label: '운영시간', value: formatOperatingHours(details.value.operatingHours).split('\n')[0] })
-  if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
-  if (facility.value.roadAddress || facility.value.address) items.push({ label: '주소', value: (facility.value.roadAddress || facility.value.address).length > 22 ? (facility.value.roadAddress || facility.value.address).slice(0, 22) + '…' : (facility.value.roadAddress || facility.value.address) })
+
+  // 운영시간 (공통 - 있는 경우만, 단 hospital/pharmacy/aed/library는 별도 표 제공으로 제외)
+  if (isOpen24Hours.value) {
+    items.push({ label: '운영', value: '24시간' })
+  } else if (details.value?.operatingHours && !['hospital', 'pharmacy', 'aed', 'library'].includes(cat)) {
+    items.push({ label: '운영시간', value: formatOperatingHours(details.value.operatingHours).split('\n')[0] })
+  }
+
+  // 카테고리별 고유 지표
+  if (cat === 'hospital') {
+    if (d?.clCdNm) items.push({ label: '종별', value: d.clCdNm })
+    if (d?.drTotCnt) items.push({ label: '의사', value: `${d.drTotCnt}명` })
+    if (d?.parkQty != null) items.push({ label: '주차', value: d.parkQty > 0 ? `${d.parkQty}대` : '불가' })
+  } else if (cat === 'pharmacy') {
+    if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
+  } else if (cat === 'parking') {
+    if (d?.capacity) items.push({ label: '주차면수', value: `${d.capacity}면` })
+    if (d?.baseFee != null) items.push({ label: '기본요금', value: `${d.baseFee}원` })
+    if (d?.feeType) items.push({ label: '요금구분', value: d.feeType })
+  } else if (cat === 'library') {
+    if (d?.seatCount) items.push({ label: '좌석', value: `${d.seatCount.toLocaleString()}석` })
+    if (d?.bookCount) items.push({ label: '장서', value: `${d.bookCount.toLocaleString()}권` })
+  } else if (cat === 'aed') {
+    if (d?.buildPlace) items.push({ label: '설치위치', value: d.buildPlace.length > 14 ? d.buildPlace.slice(0, 14) + '…' : d.buildPlace })
+    if (d?.org) items.push({ label: '관리기관', value: d.org.length > 14 ? d.org.slice(0, 14) + '…' : d.org })
+  } else if (cat === 'childcare') {
+    if (d?.crcapat) items.push({ label: '정원', value: `${d.crcapat}명` })
+    if (d?.crchcnt != null) items.push({ label: '현원', value: `${d.crchcnt}명` })
+  } else if (cat === 'park') {
+    if (d?.parkType) items.push({ label: '공원유형', value: d.parkType })
+    if (d?.area != null) items.push({ label: '면적', value: `${d.area.toLocaleString()}㎡` })
+  } else if (cat === 'market') {
+    if (d?.marketType) items.push({ label: '시장유형', value: d.marketType })
+    if (d?.storeCount != null) items.push({ label: '점포수', value: `${d.storeCount}개` })
+  } else if (cat === 'school') {
+    if (d?.schoolLevel) items.push({ label: '학교급', value: d.schoolLevel })
+    if (d?.foundationType) items.push({ label: '설립형태', value: d.foundationType })
+  } else {
+    // 나머지 카테고리: 전화 표시 (toilet, wifi, clothes, ev-charger, sports)
+    if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
+  }
+
   return items
 })
 
@@ -2995,6 +3213,83 @@ const hospitalOperatingHours = computed(() => {
   return days
     .map(({ day, start, end }) => ({ day, time: formatHospitalTime(start, end) }))
     .filter((item): item is { day: string; time: string } => item.time !== null)
+})
+
+// Hospital 요일별 진료시간 표 (오늘 강조 + 점심시간)
+const hospitalWeeklyHours = computed(() => {
+  if (facility.value?.category !== 'hospital') return []
+  const d = details.value as any
+  if (!d) return []
+  const today = new Date().getDay() // 0=일, 1=월...6=토
+  const DAY_KEYS = [
+    { label: '월', start: 'trmtMonStart', end: 'trmtMonEnd', todayIdx: 1 },
+    { label: '화', start: 'trmtTueStart', end: 'trmtTueEnd', todayIdx: 2 },
+    { label: '수', start: 'trmtWedStart', end: 'trmtWedEnd', todayIdx: 3 },
+    { label: '목', start: 'trmtThuStart', end: 'trmtThuEnd', todayIdx: 4 },
+    { label: '금', start: 'trmtFriStart', end: 'trmtFriEnd', todayIdx: 5 },
+    { label: '토', start: 'trmtSatStart', end: 'trmtSatEnd', todayIdx: 6 },
+    { label: '일', start: 'trmtSunStart', end: 'trmtSunEnd', todayIdx: 0 },
+    { label: '공휴일', start: null, end: null, todayIdx: -1 },
+  ]
+  const fmt = (t: string | null | undefined) => {
+    if (!t) return null
+    const s = String(t).padStart(4, '0')
+    return `${s.slice(0, 2)}:${s.slice(2)}`
+  }
+  const rows = DAY_KEYS.map(dk => {
+    const s = dk.start ? fmt(d[dk.start]) : null
+    const e = dk.end ? fmt(d[dk.end]) : null
+    const closed = !s && !e
+    const isNoTrmt = (dk.label === '일' && d.noTrmtSun) || (dk.label === '공휴일' && d.noTrmtHoli)
+    const lunchStr = dk.label !== '공휴일' && d.lunchWeek ? d.lunchWeek : null
+    return {
+      day: dk.label,
+      time: closed || isNoTrmt ? '휴진' : (s && e ? `${s} ~ ${e}` : '정보없음'),
+      lunch: lunchStr || '—',
+      closed: closed || isNoTrmt,
+      isToday: dk.todayIdx === today,
+    }
+  })
+  const hasAnyTime = rows.some(r => !r.closed && r.time !== '정보없음')
+  return hasAnyTime ? rows : []
+})
+
+// AED 요일별 이용시간 표 (오늘 강조 + 24시간 표시)
+const aedWeeklyHours = computed(() => {
+  if (facility.value?.category !== 'aed') return []
+  const d = details.value as any
+  if (!d) return []
+  const today = new Date().getDay()
+  const fmt = (t: string | null | undefined) => {
+    if (!t) return null
+    const s = String(t).padStart(4, '0')
+    return `${s.slice(0, 2)}:${s.slice(2)}`
+  }
+  const DAYS = [
+    { label: '월', start: 'monSttTme', end: 'monEndTme', todayIdx: 1 },
+    { label: '화', start: 'tueSttTme', end: 'tueEndTme', todayIdx: 2 },
+    { label: '수', start: 'wedSttTme', end: 'wedEndTme', todayIdx: 3 },
+    { label: '목', start: 'thuSttTme', end: 'thuEndTme', todayIdx: 4 },
+    { label: '금', start: 'friSttTme', end: 'friEndTme', todayIdx: 5 },
+    { label: '토', start: 'satSttTme', end: 'satEndTme', todayIdx: 6 },
+    { label: '일', start: 'sunSttTme', end: 'sunEndTme', todayIdx: 0 },
+    { label: '공휴일', start: 'holSttTme', end: 'holEndTme', todayIdx: -1 },
+  ]
+  const rows = DAYS.map(dk => {
+    const s = fmt(d[dk.start])
+    const e = fmt(d[dk.end])
+    const allDay = s === '00:00' && e === '24:00'
+    const closed = !s && !e
+    return {
+      day: dk.label,
+      time: allDay ? '24시간' : closed ? '이용불가' : (s && e ? `${s} ~ ${e}` : '정보없음'),
+      allDay,
+      closed,
+      isToday: dk.todayIdx === today,
+    }
+  })
+  const hasAny = rows.some(r => !r.closed && r.time !== '정보없음')
+  return hasAny ? rows : []
 })
 
 // Toilet accessibility details (disabled/child toilet counts)
