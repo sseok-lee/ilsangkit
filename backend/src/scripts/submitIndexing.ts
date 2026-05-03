@@ -15,6 +15,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import prisma from '../lib/prisma.js';
+import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
+import {
+  toAbsoluteRealEstateUrl,
+  type RealEstateUrlType,
+} from '../lib/realEstateUrl.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOG_FILE = path.resolve(__dirname, '../../data/indexing-log.json');
@@ -54,28 +59,54 @@ function saveLog(log: IndexingLog): void {
 
 async function fetchBuildingUrls(): Promise<string[]> {
   const buildings = await prisma.$queryRaw<
-    Array<{ propertyType: string; buildingName: string; bjdCode: string }>
+    Array<{
+      realEstateType: RealEstateUrlType;
+      buildingName: string;
+      city: string;
+      district: string;
+    }>
   >`
-    SELECT 'apt' AS propertyType, buildingName, bjdCode FROM (
-      SELECT DISTINCT buildingName, bjdCode FROM AptSaleTransaction
-      UNION SELECT DISTINCT buildingName, bjdCode FROM AptRentTransaction
-    ) apt WHERE buildingName IS NOT NULL AND buildingName != ''
+    SELECT 'apt-sale' AS realEstateType, buildingName, city, district
+      FROM AptSaleTransaction
+      WHERE buildingName IS NOT NULL AND buildingName != ''
+      GROUP BY buildingName, city, district
     UNION ALL
-    SELECT 'villa' AS propertyType, buildingName, bjdCode FROM (
-      SELECT DISTINCT buildingName, bjdCode FROM VillaSaleTransaction
-      UNION SELECT DISTINCT buildingName, bjdCode FROM VillaRentTransaction
-    ) villa WHERE buildingName IS NOT NULL AND buildingName != ''
+    SELECT 'apt-rent' AS realEstateType, buildingName, city, district
+      FROM AptRentTransaction
+      WHERE buildingName IS NOT NULL AND buildingName != ''
+      GROUP BY buildingName, city, district
     UNION ALL
-    SELECT 'offitel' AS propertyType, buildingName, bjdCode FROM (
-      SELECT DISTINCT buildingName, bjdCode FROM OffitelSaleTransaction
-      UNION SELECT DISTINCT buildingName, bjdCode FROM OffitelRentTransaction
-    ) offitel WHERE buildingName IS NOT NULL AND buildingName != ''
+    SELECT 'villa-sale' AS realEstateType, buildingName, city, district
+      FROM VillaSaleTransaction
+      WHERE buildingName IS NOT NULL AND buildingName != ''
+      GROUP BY buildingName, city, district
+    UNION ALL
+    SELECT 'villa-rent' AS realEstateType, buildingName, city, district
+      FROM VillaRentTransaction
+      WHERE buildingName IS NOT NULL AND buildingName != ''
+      GROUP BY buildingName, city, district
+    UNION ALL
+    SELECT 'offitel-sale' AS realEstateType, buildingName, city, district
+      FROM OffitelSaleTransaction
+      WHERE buildingName IS NOT NULL AND buildingName != ''
+      GROUP BY buildingName, city, district
+    UNION ALL
+    SELECT 'offitel-rent' AS realEstateType, buildingName, city, district
+      FROM OffitelRentTransaction
+      WHERE buildingName IS NOT NULL AND buildingName != ''
+      GROUP BY buildingName, city, district
   `;
 
-  return buildings.map(
-    (b) =>
-      `${SITE_BASE}/real-estate/${b.propertyType}/${encodeURIComponent(b.buildingName)}?bjdCode=${b.bjdCode}`
-  );
+  return buildings
+    .filter((b) => isValidBuildingName(b.buildingName) && b.city && b.district)
+    .map((b) =>
+      toAbsoluteRealEstateUrl(SITE_BASE, {
+        type: b.realEstateType,
+        city: b.city,
+        district: b.district,
+        buildingName: b.buildingName,
+      })
+    );
 }
 
 async function main() {
