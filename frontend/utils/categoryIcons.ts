@@ -27,7 +27,7 @@ export const CATEGORY_ICONS: Record<CategoryId, string> = {
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = {
   toilet: '화장실',
-  trash: '쓰레기',
+  trash: '쓰레기 배출정보',
   wifi: '와이파이',
   clothes: '의류수거함',
   parking: '주차장',
@@ -37,7 +37,7 @@ export const CATEGORY_LABELS: Record<CategoryId, string> = {
   pharmacy: '약국',
   park: '공원',
   school: '학교',
-  market: '시장',
+  market: '전통시장',
   childcare: '어린이집',
   'ev-charger': '전기차 충전소',
   sports: '체육시설',
