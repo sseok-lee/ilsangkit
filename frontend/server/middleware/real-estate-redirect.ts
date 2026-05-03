@@ -12,7 +12,7 @@ import {
  * 신규 URL 패턴: /real-estate/{type-mode}/{citySlug}/{districtSlug}/{buildingName}
  *
  * 처리 대상 레거시 패턴:
- *   - /real-estate/apt              → /real-estate/apt-sale       (LEGACY_TAB_LIST)
+ *   - /real-estate/apt              → /real-estate/apt-sale       (301, LEGACY_TAB_LIST)
  *   - /real-estate/apt/{bldg}?bjd=  → /real-estate/apt-sale/{city}/{dist}/{bldg} (LEGACY_TAB_DETAIL)
  *   - /real-estate/apt-sale/{bldg}?bjd= → /real-estate/apt-sale/{city}/{dist}/{bldg} (LEGACY_SALE_DETAIL)
  *
@@ -25,7 +25,6 @@ import {
 const LEGACY_TAB_DETAIL = /^\/real-estate\/(apt|villa|offitel)\/([^/]+)\/?$/
 const LEGACY_TAB_LIST = /^\/real-estate\/(apt|villa|offitel)\/?$/
 const LEGACY_SALE_DETAIL = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/([^/]+)\/?$/
-const LEGACY_SALE_LIST = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/?$/
 const NEW_DETAIL = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/[^/]+\/?$/
 const NEW_HUB = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/?$/
 
@@ -190,14 +189,13 @@ export default defineEventHandler(async (event) => {
   const bjdCode = existingParams.get('bjdCode') ?? ''
   const tabQuery = existingParams.get('tab')
 
-  // 레거시 type-mode 단독 hub: /real-estate/apt-sale → /real-estate/apt?tab=sale
-  // LEGACY_TAB_LIST(/real-estate/apt)는 pages/[propertyType]/index.vue 가 직접 처리하므로
-  // 리다이렉트 불필요 — 제거하면 apt-sale→apt?tab=sale→apt-sale 루프가 사라짐
-  const saleListMatch = pathname.match(LEGACY_SALE_LIST)
-  if (saleListMatch) {
-    const propertyType = saleListMatch[1] as PropertyType
-    const mode = saleListMatch[2] as TransactionMode
-    return sendRedirect(event, `/real-estate/${propertyType}?tab=${mode}`, 301)
+  // LEGACY_SALE_LIST는 이제 신규 허브 URL이므로 패스스루 (NEW_HUB 패턴이 위에서 처리)
+  // /real-estate/apt, /real-estate/villa, /real-estate/offitel → 각각 -sale 버전으로 301
+  const tabListMatch = pathname.match(LEGACY_TAB_LIST)
+  if (tabListMatch) {
+    const propertyType = tabListMatch[1] as PropertyType
+    const mode = tabQuery === 'rent' ? 'rent' : 'sale'
+    return sendRedirect(event, `/real-estate/${propertyType}-${mode}`, 301)
   }
 
   // 레거시 detail: /real-estate/apt/{bldg}

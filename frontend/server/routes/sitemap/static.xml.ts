@@ -55,9 +55,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // 부동산 실거래가 페이지
-  const propertyTypes = ['apt', 'villa', 'offitel']
+  const hubTypes = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent']
   urls.push({ loc: `${SITE_URL}/real-estate`, lastmod: today, changefreq: 'daily', priority: 0.8 })
-  for (const pt of propertyTypes) {
+  for (const pt of hubTypes) {
     urls.push({ loc: `${SITE_URL}/real-estate/${pt}`, lastmod: today, changefreq: 'daily', priority: 0.8 })
   }
 

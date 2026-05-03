@@ -15,6 +15,10 @@ export const PROPERTY_TYPES = ['apt', 'villa', 'offitel'] as const
 
 export const VISIBLE_PROPERTY_TYPES = PROPERTY_TYPES
 
+// 허브 URL 타입 (건물유형-거래유형 조합)
+export const HUB_TYPES = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'] as const
+export type RealEstateHubType = (typeof HUB_TYPES)[number]
+
 // 매매 거래 (아파트, 빌라, 오피스텔)
 export interface SaleTransaction {
   id: number

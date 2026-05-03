@@ -83,9 +83,9 @@ const description = statusCode === 404
   : '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
 
 const realEstateLinks = [
-  { slug: '/real-estate/apt', label: '아파트' },
-  { slug: '/real-estate/villa', label: '빌라' },
-  { slug: '/real-estate/offitel', label: '오피스텔' },
+  { slug: '/real-estate/apt-sale', label: '아파트' },
+  { slug: '/real-estate/villa-sale', label: '빌라' },
+  { slug: '/real-estate/offitel-sale', label: '오피스텔' },
 ]
 
 const facilityLinks = [
