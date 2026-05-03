@@ -11,7 +11,7 @@ import {
   getAllLawdCodes,
 } from '../services/syncRealEstateBase.js';
 import { runSync, batchUpsert, transformAndDedupe } from '../services/baseSyncService.js';
-import { submitIndexNow, buildRealEstateUrls } from '../services/indexNowService.js';
+import { submitIndexNow, buildRealEstateUrlsV2 } from '../services/indexNowService.js';
 import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
 
 const API_ENDPOINT = 'RTMSDataSvcOffiRent/getRTMSDataSvcOffiRent';
@@ -202,14 +202,16 @@ async function main(): Promise<void> {
   // IndexNow: 동기화된 건물 URL 제출
   const buildings = await prisma.offitelRentTransaction.findMany({
     where: { syncedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) } },
-    select: { buildingName: true, bjdCode: true },
-    distinct: ['buildingName', 'bjdCode'],
+    select: { buildingName: true, city: true, district: true },
+    distinct: ['buildingName', 'city', 'district'],
   });
   const validBuildings = buildings.filter((b) => isValidBuildingName(b.buildingName));
   if (validBuildings.length > 0) {
-    const urls = buildRealEstateUrls('offitel', validBuildings.map(b => ({
+    const urls = buildRealEstateUrlsV2(validBuildings.map(b => ({
+      realEstateType: 'offitel-rent' as const,
+      city: b.city,
+      district: b.district,
       buildingName: b.buildingName,
-      bjdCode: b.bjdCode,
     })));
     console.info(`[offitelRent] IndexNow: ${buildings.length} candidates → ${validBuildings.length} valid (filtered ${buildings.length - validBuildings.length})`);
     await submitIndexNow(urls);

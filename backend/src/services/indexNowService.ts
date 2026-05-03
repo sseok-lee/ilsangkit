@@ -66,25 +66,6 @@ export function buildFacilityUrls(category: string, ids: string[]): string[] {
 }
 
 /**
- * 레거시 URL 포맷 `/real-estate/{propertyType}/{buildingName}?bjdCode={bjdCode}` 빌더.
- *
- * 기존 6개 sync 스크립트가 아직 호출 중. 신규 URL로의 cutover 는 후속 PR에서 수행하며,
- * 그때까지 레거시 요청은 redirect middleware 가 단일 홉 301 로 새 URL로 보냄.
- * 두 빌더 모두 isValidBuildingName + NFC 정규화를 공유한다.
- */
-export function buildRealEstateUrls(
-  propertyType: string,
-  buildings: Array<{ buildingName: string; bjdCode: string }>
-): string[] {
-  return buildings
-    .filter((b) => isValidBuildingName(b.buildingName))
-    .map((b) => {
-      const nfcName = b.buildingName.normalize('NFC');
-      return `https://${SITE_HOST}/real-estate/${propertyType}/${encodeURIComponent(nfcName)}?bjdCode=${b.bjdCode}`;
-    });
-}
-
-/**
  * 신규 URL 포맷 빌더: `/real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingName}`.
  *
  * city/district는 DB 원본 한글 그대로 받는다 — slug 변환은 `toAbsoluteRealEstateUrl` 내부에서 일어난다.
