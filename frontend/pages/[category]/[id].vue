@@ -2412,6 +2412,9 @@
             :last-sync-date="lastSyncDate"
           />
 
+          <!-- 쿠팡 배너 (Mobile) -->
+          <CoupangBanner />
+
           <div class="h-8"></div>
         </div>
 
