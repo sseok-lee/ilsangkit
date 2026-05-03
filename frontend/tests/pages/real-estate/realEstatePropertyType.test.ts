@@ -19,7 +19,7 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
 
 // Mock useRoute with valid propertyType param (HUB_TYPES 형태: apt-sale, apt-rent, ...)
 ;(globalThis as any).useRoute = vi.fn(() => ({
-  params: { propertyType: 'apt-sale' },
+  params: { realEstateType: 'apt-sale' },
   query: {},
 }))
 
@@ -110,20 +110,20 @@ async function mountSuspended(component: any, options?: any) {
   return wrapper
 }
 
-describe('real-estate/[propertyType]/index.vue — property type list page', () => {
+describe('real-estate/[realEstateType]/index.vue — property type list page', () => {
   it('컴포넌트가 존재해야 한다', async () => {
-    const m = await import('~/pages/real-estate/[propertyType]/index.vue')
+    const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
     expect(m.default).toBeDefined()
   })
 
   it('setItemListSchema가 호출되어야 한다 (ItemList 구조화 데이터)', async () => {
-    const m = await import('~/pages/real-estate/[propertyType]/index.vue')
+    const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
     await mountSuspended(m.default)
     expect(mockSetItemListSchema).toHaveBeenCalled()
   })
 
   it('지역별 도시 허브 링크가 렌더링되어야 한다', async () => {
-    const m = await import('~/pages/real-estate/[propertyType]/index.vue')
+    const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
     const wrapper = await mountSuspended(m.default)
     const hrefs = wrapper.findAll('a').map((a) => a.attributes('href'))
     expect(hrefs).toContain('/real-estate/apt-sale/seoul')
@@ -132,7 +132,7 @@ describe('real-estate/[propertyType]/index.vue — property type list page', () 
   })
 
   it('도시 허브 링크가 17개 이상이어야 한다', async () => {
-    const m = await import('~/pages/real-estate/[propertyType]/index.vue')
+    const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
     const wrapper = await mountSuspended(m.default)
     const cityHubLinks = wrapper.findAll('a').filter((a) =>
       /^\/real-estate\/apt-sale\/\w+$/.test(a.attributes('href') ?? ''),

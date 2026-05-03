@@ -183,7 +183,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 const route = useRoute()
 const router = useRouter()
 
-const propertyTypeParam = computed(() => route.params.propertyType as RealEstateHubType)
+const propertyTypeParam = computed(() => route.params.realEstateType as RealEstateHubType)
 
 // 유효하지 않은 propertyType이면 404
 if (!HUB_TYPES.includes(propertyTypeParam.value as RealEstateHubType)) {
