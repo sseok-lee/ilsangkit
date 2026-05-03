@@ -90,3 +90,4 @@ frontend/docs/
 
 # Lighthouse CI local results
 frontend/.lighthouseci/
+.gstack/

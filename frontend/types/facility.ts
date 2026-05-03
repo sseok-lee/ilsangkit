@@ -594,8 +594,8 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     color: 'blue',
   },
   trash: {
-    label: '쓰레기배출',
-    shortLabel: '쓰레기',
+    label: '쓰레기 배출정보',
+    shortLabel: '쓰레기 배출정보',
     icon: 'delete',
     color: 'red',
   },
@@ -655,7 +655,7 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
   },
   market: {
     label: '전통시장',
-    shortLabel: '시장',
+    shortLabel: '전통시장',
     icon: 'storefront',
     color: 'orange',
   },
@@ -667,13 +667,13 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
   },
   'ev-charger': {
     label: '전기차 충전소',
-    shortLabel: '충전소',
+    shortLabel: '전기차 충전소',
     icon: 'ev_station',
     color: 'teal',
   },
   sports: {
     label: '체육시설',
-    shortLabel: '체육',
+    shortLabel: '체육시설',
     icon: 'sports',
     color: 'cyan',
   },

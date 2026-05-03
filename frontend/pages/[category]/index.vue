@@ -73,6 +73,9 @@
         </div>
       </SectionBlock>
 
+      <!-- Ad: 필터 직후 -->
+      <AdBanner ad-format="horizontal" full-width-responsive="false" />
+
       <!-- Trash category: waste schedule UI -->
       <template v-if="categoryParam === 'trash'">
         <SectionBlock heading="배출 일정" :subtext="`${wasteTotal.toLocaleString('ko-KR')}건 · 지역·동별 배출 요일과 방법`">
@@ -261,6 +264,9 @@
       <ClientOnly>
         <RelatedGuides :category="categoryParam" />
       </ClientOnly>
+
+      <!-- 쿠팡 배너 -->
+      <CoupangBanner />
 
       <!-- 데이터 출처 -->
       <section v-if="categoryDataSource">
