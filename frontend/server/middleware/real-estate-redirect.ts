@@ -218,7 +218,7 @@ export default defineEventHandler(async (event) => {
     return await handleLegacyDetail(event, pathname, propertyType, mode, rawName, bjdCode)
   }
 
-  // /real-estate/apt 는 pages/real-estate/[propertyType]/index.vue 가 직접 서빙 — pass-through
+  // /real-estate/apt 는 pages/real-estate/[realEstateType]/index.vue 가 직접 서빙 — pass-through
 
   // 매칭 없음 — pass-through
 })
