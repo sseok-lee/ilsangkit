@@ -251,6 +251,22 @@
                       </div>
                     </div>
                   </template>
+                  <!-- Clothes: 수거 품목 가이드 -->
+                  <template v-if="facility.category === 'clothes'">
+                    <div class="h-px bg-slate-100 w-full"></div>
+                    <div>
+                      <h3 class="text-sm font-bold text-slate-900 mb-2">수거 가능 품목</h3>
+                      <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="flex items-center gap-1.5 text-gray-700"><span class="text-green-600">✓</span> 의류·내의·양말</div>
+                        <div class="flex items-center gap-1.5 text-gray-700"><span class="text-green-600">✓</span> 신발·가방·벨트</div>
+                        <div class="flex items-center gap-1.5 text-gray-700"><span class="text-green-600">✓</span> 커튼·이불커버</div>
+                        <div class="flex items-center gap-1.5 text-gray-400"><span class="text-red-500">✗</span> 솜이불·베개</div>
+                        <div class="flex items-center gap-1.5 text-gray-400"><span class="text-red-500">✗</span> 인형·장난감</div>
+                        <div class="flex items-center gap-1.5 text-gray-400"><span class="text-red-500">✗</span> 책·신문</div>
+                      </div>
+                      <p class="mt-2 text-xs text-gray-500">※ 비닐에 담아 배출, 비 오는 날 X</p>
+                    </div>
+                  </template>
 
                   <!-- Parking -->
                   <template v-if="facility.category === 'parking' && (details?.parkingType || details?.operatingDays || details?.managingOrg)">
@@ -318,6 +334,17 @@
 
                   <!-- AED -->
                   <template v-if="facility.category === 'aed'">
+                    <div class="h-px bg-slate-100 w-full"></div>
+                    <div class="flex flex-wrap gap-2">
+                      <a href="tel:119" class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white hover:bg-red-700 active:scale-[0.98] transition">
+                        <span class="material-symbols-outlined text-[18px]">emergency</span>
+                        119 신고
+                      </a>
+                      <a href="https://www.kacpr.org/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        <span class="material-symbols-outlined text-[18px]">menu_book</span>
+                        AED 사용법
+                      </a>
+                    </div>
                     <template v-if="details?.org">
                       <div class="h-px bg-slate-100 w-full"></div>
                       <div class="flex items-center justify-between">
@@ -1498,6 +1525,22 @@
                   </div>
                 </div>
               </template>
+              <!-- Clothes: 수거 품목 가이드 (Mobile) -->
+              <template v-if="facility.category === 'clothes'">
+                <div class="h-px bg-slate-100 w-full"></div>
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 mb-2">수거 가능 품목</h3>
+                  <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="flex items-center gap-1.5 text-gray-700"><span class="text-green-600">✓</span> 의류·내의·양말</div>
+                    <div class="flex items-center gap-1.5 text-gray-700"><span class="text-green-600">✓</span> 신발·가방·벨트</div>
+                    <div class="flex items-center gap-1.5 text-gray-700"><span class="text-green-600">✓</span> 커튼·이불커버</div>
+                    <div class="flex items-center gap-1.5 text-gray-400"><span class="text-red-500">✗</span> 솜이불·베개</div>
+                    <div class="flex items-center gap-1.5 text-gray-400"><span class="text-red-500">✗</span> 인형·장난감</div>
+                    <div class="flex items-center gap-1.5 text-gray-400"><span class="text-red-500">✗</span> 책·신문</div>
+                  </div>
+                  <p class="mt-2 text-xs text-gray-500">※ 비닐에 담아 배출, 비 오는 날 X</p>
+                </div>
+              </template>
 
               <!-- Parking -->
               <template v-if="facility.category === 'parking' && (details?.parkingType || details?.operatingDays || details?.managingOrg)">
@@ -1565,6 +1608,17 @@
 
               <!-- AED -->
               <template v-if="facility.category === 'aed'">
+                <div class="h-px bg-slate-100 w-full"></div>
+                <div class="flex flex-wrap gap-2">
+                  <a href="tel:119" class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white hover:bg-red-700 active:scale-[0.98] transition">
+                    <span class="material-symbols-outlined text-[18px]">emergency</span>
+                    119 신고
+                  </a>
+                  <a href="https://www.kacpr.org/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    <span class="material-symbols-outlined text-[18px]">menu_book</span>
+                    AED 사용법
+                  </a>
+                </div>
                 <template v-if="details?.org">
                   <div class="h-px bg-slate-100 w-full"></div>
                   <div class="flex items-center justify-between">
@@ -1572,7 +1626,7 @@
                     <span class="text-sm font-medium text-slate-900">{{ details?.org }}</span>
                   </div>
                 </template>
-                <template v-if="aedOperatingHours.length > 0">
+                <template v-if="aedOperatingHours.length > 0 && aedWeeklyHours.length === 0">
                   <div class="h-px bg-slate-100 w-full"></div>
                   <div class="flex flex-col gap-3">
                     <div v-for="item in aedOperatingHours" :key="item.day" class="flex items-center justify-between">
@@ -2857,8 +2911,15 @@ const desktopHeroStats = computed(() => {
     if (d?.seatCount) items.push({ label: '좌석', value: `${d.seatCount.toLocaleString()}석` })
     if (d?.bookCount) items.push({ label: '장서', value: `${d.bookCount.toLocaleString()}권` })
   } else if (cat === 'aed') {
-    if (d?.buildPlace) items.push({ label: '설치위치', value: d.buildPlace.length > 14 ? d.buildPlace.slice(0, 14) + '…' : d.buildPlace })
-    if (d?.org) items.push({ label: '관리기관', value: d.org.length > 14 ? d.org.slice(0, 14) + '…' : d.org })
+    const trim = (s: string) => s.replace(/^[-\s]+|[-\s]+$/g, '').trim()
+    if (d?.buildPlace) {
+      const v = trim(d.buildPlace)
+      if (v) items.push({ label: '설치위치', value: v.length > 14 ? v.slice(0, 14) + '…' : v })
+    }
+    if (d?.org) {
+      const v = trim(d.org)
+      if (v) items.push({ label: '관리기관', value: v.length > 14 ? v.slice(0, 14) + '…' : v })
+    }
   } else if (cat === 'childcare') {
     if (d?.crcapat) items.push({ label: '정원', value: `${d.crcapat}명` })
     if (d?.crchcnt != null) items.push({ label: '현원', value: `${d.crchcnt}명` })
