@@ -2914,11 +2914,11 @@ const desktopHeroStats = computed(() => {
     const trim = (s: string) => s.replace(/^[-\s]+|[-\s]+$/g, '').trim()
     if (d?.buildPlace) {
       const v = trim(d.buildPlace)
-      if (v) items.push({ label: '설치위치', value: v.length > 14 ? v.slice(0, 14) + '…' : v })
+      if (v) items.push({ label: '설치위치', value: v })
     }
     if (d?.org) {
       const v = trim(d.org)
-      if (v) items.push({ label: '관리기관', value: v.length > 14 ? v.slice(0, 14) + '…' : v })
+      if (v) items.push({ label: '관리기관', value: v })
     }
   } else if (cat === 'childcare') {
     if (d?.crcapat) items.push({ label: '정원', value: `${d.crcapat}명` })
@@ -2952,7 +2952,7 @@ const desktopHeroStats = computed(() => {
     if (d?.hasDiaperChangingTable) items.push({ label: '기저귀대', value: '있음' })
     if (items.length === 0 && facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
   } else if (cat === 'wifi') {
-    if (d?.ssid) items.push({ label: 'SSID', value: d.ssid.length > 16 ? d.ssid.slice(0, 16) + '…' : d.ssid })
+    if (d?.ssid) items.push({ label: 'SSID', value: d.ssid })
   } else if (cat === 'ev-charger') {
     // 완속/급속 분포: chgerType '01' 급속, '02','03','04','05','06','07' 완속/AC3상 등
     const chargers = (d?.chargers || []) as Array<{ chgerType?: string }>
