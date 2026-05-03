@@ -17,9 +17,9 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
   return e
 }
 
-// Mock useRoute with valid propertyType param
+// Mock useRoute with valid propertyType param (HUB_TYPES 형태: apt-sale, apt-rent, ...)
 ;(globalThis as any).useRoute = vi.fn(() => ({
-  params: { propertyType: 'apt' },
+  params: { propertyType: 'apt-sale' },
   query: {},
 }))
 

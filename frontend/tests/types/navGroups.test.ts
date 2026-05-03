@@ -32,9 +32,9 @@ describe('NAV_GROUPS', () => {
     const links = firstGroup.links.map(({ to, label }) => ({ to, label }))
     const expectedLinks = [
       { to: '/real-estate', label: '부동산 전체' },
-      { to: '/real-estate/apt', label: '아파트' },
-      { to: '/real-estate/villa', label: '빌라' },
-      { to: '/real-estate/offitel', label: '오피스텔' },
+      { to: '/real-estate/apt-sale', label: '아파트' },
+      { to: '/real-estate/villa-sale', label: '빌라' },
+      { to: '/real-estate/offitel-sale', label: '오피스텔' },
     ]
     expect(links).toEqual(expectedLinks)
   })

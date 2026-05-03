@@ -388,9 +388,9 @@ const realEstateLinks = computed(() => {
   const reb = stats.value.realEstateBuildings
   const re = stats.value.realEstate
   return [
-    { to: '/real-estate/apt', label: '아파트', iconImg: 'apt', sub: '매매·전월세 실거래가', count: formatBuildingCount(reb.apt || 0), txnCount: formatBuildingCount((re.aptSale || 0) + (re.aptRent || 0)) },
-    { to: '/real-estate/villa', label: '빌라', iconImg: 'villa', sub: '연립·다세대 실거래가', count: formatBuildingCount(reb.villa || 0), txnCount: formatBuildingCount((re.villaSale || 0) + (re.villaRent || 0)) },
-    { to: '/real-estate/offitel', label: '오피스텔', iconImg: 'offitel', sub: '매매·전월세 실거래가', count: formatBuildingCount(reb.offitel || 0), txnCount: formatBuildingCount((re.offitelSale || 0) + (re.offitelRent || 0)) },
+    { to: '/real-estate/apt-sale', label: '아파트', iconImg: 'apt', sub: '매매·전월세 실거래가', count: formatBuildingCount(reb.apt || 0), txnCount: formatBuildingCount((re.aptSale || 0) + (re.aptRent || 0)) },
+    { to: '/real-estate/villa-sale', label: '빌라', iconImg: 'villa', sub: '연립·다세대 실거래가', count: formatBuildingCount(reb.villa || 0), txnCount: formatBuildingCount((re.villaSale || 0) + (re.villaRent || 0)) },
+    { to: '/real-estate/offitel-sale', label: '오피스텔', iconImg: 'offitel', sub: '매매·전월세 실거래가', count: formatBuildingCount(reb.offitel || 0), txnCount: formatBuildingCount((re.offitelSale || 0) + (re.offitelRent || 0)) },
   ]
 })
 

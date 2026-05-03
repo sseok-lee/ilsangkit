@@ -72,7 +72,7 @@
             v-for="complex in renderableComplexes"
             :key="`${complex.buildingName}-${complex.bjdCode}`"
             :complex="complex"
-            :property-type="propertyTypeParam"
+            :property-type="baseType"
             :tab="currentTab"
           />
         </div>
@@ -164,8 +164,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse } from '~/types/realEstate'
-import { toApiSlug, PROPERTY_TYPES } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse, RealEstateHubType } from '~/types/realEstate'
+import { HUB_TYPES } from '~/types/realEstate'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
@@ -183,24 +183,26 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 const route = useRoute()
 const router = useRouter()
 
-const propertyTypeParam = computed(() => route.params.propertyType as RealEstatePropertyType)
+const propertyTypeParam = computed(() => route.params.propertyType as RealEstateHubType)
 
 // 유효하지 않은 propertyType이면 404
-if (!PROPERTY_TYPES.includes(propertyTypeParam.value as RealEstatePropertyType)) {
+if (!HUB_TYPES.includes(propertyTypeParam.value as RealEstateHubType)) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
+const baseType = computed(() => propertyTypeParam.value.split('-')[0] as RealEstatePropertyType)
+
 const currentTab = computed<TransactionMode>({
-  get: () => (route.query.tab === 'rent' ? 'rent' : 'sale'),
+  get: () => (propertyTypeParam.value.endsWith('-rent') ? 'rent' : 'sale'),
   set: (val) => {
-    router.replace({ query: { ...route.query, tab: val } })
+    router.push(`/real-estate/${baseType.value}-${val}`)
   },
 })
 
-const apiSlug = computed(() => toApiSlug(propertyTypeParam.value, currentTab.value))
-const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam.value])
-const propertyDescription = computed(() => PROPERTY_TYPE_DESCRIPTIONS[propertyTypeParam.value])
-const faqs = computed(() => PROPERTY_TYPE_FAQ[propertyTypeParam.value] || [])
+const apiSlug = computed(() => propertyTypeParam.value)
+const propertyMeta = computed(() => PROPERTY_TYPE_META[baseType.value])
+const propertyDescription = computed(() => PROPERTY_TYPE_DESCRIPTIONS[baseType.value])
+const faqs = computed(() => PROPERTY_TYPE_FAQ[baseType.value] || [])
 
 const { getComplexList } = useRealEstate()
 

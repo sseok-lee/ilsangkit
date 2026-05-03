@@ -59,18 +59,18 @@ describe('real-estate/index.vue — hub page', () => {
     expect(mockSetItemListSchema).toHaveBeenCalled()
     const items = mockSetItemListSchema.mock.calls[0][0]
     const urls = items.map((i: any) => i.url)
-    expect(urls).toContain('/real-estate/apt')
-    expect(urls).toContain('/real-estate/villa')
-    expect(urls).toContain('/real-estate/offitel')
+    expect(urls).toContain('/real-estate/apt-sale')
+    expect(urls).toContain('/real-estate/villa-sale')
+    expect(urls).toContain('/real-estate/offitel-sale')
   })
 
-  it('setItemListSchema가 redirect URL을 포함하지 않아야 한다', async () => {
+  it('setItemListSchema가 레거시 hub URL을 포함하지 않아야 한다', async () => {
     await mountPage()
     const items = mockSetItemListSchema.mock.calls[0][0]
     const urls = items.map((i: any) => i.url)
-    expect(urls).not.toContain('/real-estate/apt-sale')
-    expect(urls).not.toContain('/real-estate/apt-rent')
-    expect(urls).not.toContain('/real-estate/villa-sale')
+    expect(urls).not.toContain('/real-estate/apt')
+    expect(urls).not.toContain('/real-estate/villa')
+    expect(urls).not.toContain('/real-estate/offitel')
   })
 
   it('setItemListSchema 항목이 3개여야 한다 (property type별 canonical URL)', async () => {

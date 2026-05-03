@@ -93,9 +93,9 @@ describe('AppHeader', () => {
       const links = dropdown.findAll('a')
       const hrefs = links.map((l) => l.attributes('href'))
       expect(hrefs).toContain('/real-estate')
-      expect(hrefs).toContain('/real-estate/apt')
-      expect(hrefs).toContain('/real-estate/villa')
-      expect(hrefs).toContain('/real-estate/offitel')
+      expect(hrefs).toContain('/real-estate/apt-sale')
+      expect(hrefs).toContain('/real-estate/villa-sale')
+      expect(hrefs).toContain('/real-estate/offitel-sale')
     })
 
     it('청약·임대 드롭다운에 청약홈/LH 섹션 구분이 있어야 한다', async () => {
@@ -177,7 +177,7 @@ describe('AppHeader', () => {
       const allLinks = mobileMenu.findAll('a')
       const hrefs = allLinks.map((link) => link.attributes('href'))
 
-      const realEstateIndex = hrefs.indexOf('/real-estate/apt')
+      const realEstateIndex = hrefs.indexOf('/real-estate/apt-sale')
       const aboutIndex = hrefs.indexOf('/about')
       expect(realEstateIndex).toBeGreaterThanOrEqual(0)
       expect(aboutIndex).toBeGreaterThanOrEqual(0)
