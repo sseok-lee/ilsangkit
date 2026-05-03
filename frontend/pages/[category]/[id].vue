@@ -43,7 +43,7 @@
             <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="handleBack">
               <span class="material-symbols-outlined text-slate-900">arrow_back</span>
             </div>
-            <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-900 shadow-sm backdrop-blur-sm">{{ facility.name }}</span>
+            <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-900 shadow-sm backdrop-blur-sm">{{ displayName }}</span>
           </div>
 
           <!-- Gradient Overlay at bottom -->
@@ -82,9 +82,9 @@
                 >
                   <span class="material-symbols-outlined text-slate-700">close</span>
                 </button>
-                <span class="text-sm font-bold text-slate-900 bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ facility.name }}</span>
+                <span class="text-sm font-bold text-slate-900 bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ displayName }}</span>
                 <a
-                  :href="`https://map.kakao.com/link/to/${encodeURIComponent(facility.name)},${facility.lat},${facility.lng}`"
+                  :href="`https://map.kakao.com/link/to/${encodeURIComponent(displayName)},${facility.lat},${facility.lng}`"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-sm"
@@ -128,7 +128,7 @@
               <!-- Page Hero -->
               <PageHero
                 :eyebrow="categoryMeta.label"
-                :title="facility.name"
+                :title="displayName"
                 :description="facilityIntro || undefined"
                 :stats="desktopHeroStats"
               />
@@ -295,15 +295,15 @@
                       <div class="flex flex-col gap-3">
                         <div v-if="details?.weekdayOpenTime" class="flex items-center justify-between">
                           <span class="text-sm text-gray-600">평일</span>
-                          <span class="text-sm font-medium text-slate-900">{{ details?.weekdayOpenTime }} ~ {{ details?.weekdayCloseTime }}</span>
+                          <span class="text-sm font-medium text-slate-900">{{ formatLibraryHours(details?.weekdayOpenTime, details?.weekdayCloseTime) }}</span>
                         </div>
                         <div v-if="details?.saturdayOpenTime" class="flex items-center justify-between">
                           <span class="text-sm text-gray-600">토요일</span>
-                          <span class="text-sm font-medium text-slate-900">{{ details?.saturdayOpenTime }} ~ {{ details?.saturdayCloseTime }}</span>
+                          <span class="text-sm font-medium text-slate-900">{{ formatLibraryHours(details?.saturdayOpenTime, details?.saturdayCloseTime) }}</span>
                         </div>
                         <div v-if="details?.holidayOpenTime" class="flex items-center justify-between">
                           <span class="text-sm text-gray-600">공휴일</span>
-                          <span class="text-sm font-medium text-slate-900">{{ details?.holidayOpenTime }} ~ {{ details?.holidayCloseTime }}</span>
+                          <span class="text-sm font-medium text-slate-900">{{ formatLibraryHours(details?.holidayOpenTime, details?.holidayCloseTime) }}</span>
                         </div>
                       </div>
                     </template>
@@ -1366,7 +1366,7 @@
               </button>
             </div>
             <h2 class="text-slate-900 text-2xl font-bold leading-tight tracking-tight">
-              {{ facility.name }}
+              {{ displayName }}
             </h2>
             <p v-if="facilityIntro" class="text-sm text-gray-600 leading-relaxed">
               {{ facilityIntro }}
@@ -1538,15 +1538,15 @@
                   <div class="flex flex-col gap-3">
                     <div v-if="details?.weekdayOpenTime" class="flex items-center justify-between">
                       <span class="text-sm text-gray-600">평일</span>
-                      <span class="text-sm font-medium text-slate-900">{{ details?.weekdayOpenTime }} ~ {{ details?.weekdayCloseTime }}</span>
+                      <span class="text-sm font-medium text-slate-900">{{ formatLibraryHours(details?.weekdayOpenTime, details?.weekdayCloseTime) }}</span>
                     </div>
                     <div v-if="details?.saturdayOpenTime" class="flex items-center justify-between">
                       <span class="text-sm text-gray-600">토요일</span>
-                      <span class="text-sm font-medium text-slate-900">{{ details?.saturdayOpenTime }} ~ {{ details?.saturdayCloseTime }}</span>
+                      <span class="text-sm font-medium text-slate-900">{{ formatLibraryHours(details?.saturdayOpenTime, details?.saturdayCloseTime) }}</span>
                     </div>
                     <div v-if="details?.holidayOpenTime" class="flex items-center justify-between">
                       <span class="text-sm text-gray-600">공휴일</span>
-                      <span class="text-sm font-medium text-slate-900">{{ details?.holidayOpenTime }} ~ {{ details?.holidayCloseTime }}</span>
+                      <span class="text-sm font-medium text-slate-900">{{ formatLibraryHours(details?.holidayOpenTime, details?.holidayCloseTime) }}</span>
                     </div>
                   </div>
                 </template>
@@ -2653,7 +2653,7 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 const route = useRoute()
 const router = useRouter()
 const { setFacilityDetailMeta } = useFacilityMeta()
-import { buildFacilityIntro } from '~/composables/useFacilityMeta'
+import { buildFacilityIntro, getFacilityDisplayName } from '~/composables/useFacilityMeta'
 const { setFacilitySchema, setBreadcrumbSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
@@ -2708,10 +2708,11 @@ watchEffect(() => {
     setFacilityDetailMeta(facility.value)
     setFacilitySchema(facility.value)
     const categoryName = CATEGORY_META[facility.value.category]?.label || facility.value.category
+    const name = getFacilityDisplayName(facility.value)
     setBreadcrumbSchema([
       { name: '홈', url: '/' },
       { name: categoryName, url: `/${facility.value.category}` },
-      { name: facility.value.name, url: `/${facility.value.category}/${facility.value.id}` },
+      { name, url: `/${facility.value.category}/${facility.value.id}` },
     ])
   }
 })
@@ -2758,6 +2759,12 @@ useHead(computed(() => {
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })
 
+// 사용자에게 노출할 이름 (원본 name이 비어있거나 "-"일 때 fallback)
+const displayName = computed(() => {
+  if (!facility.value) return ''
+  return getFacilityDisplayName(facility.value)
+})
+
 // h1 아래 자연어 설명문
 const facilityIntro = computed(() => {
   if (!facility.value) return ''
@@ -2780,7 +2787,7 @@ const breadcrumbItems = computed(() => {
   return [
     { label: '홈', href: '/', current: false },
     { label: categoryMeta.value.label, href: `/${category.value}`, current: false },
-    { label: facility.value.name, href: `/${category.value}/${facility.value.id}`, current: true },
+    { label: displayName.value, href: `/${category.value}/${facility.value.id}`, current: true },
   ]
 })
 
@@ -2791,7 +2798,7 @@ const desktopBreadcrumbItems = computed(() => {
     { label: '홈', href: '/', current: false },
     { label: categoryMeta.value.label, href: `/${category.value}`, current: false },
     { label: facility.value.city, href: getCityHubPath(facility.value.city), current: false },
-    { label: facility.value.name, current: true },
+    { label: displayName.value, current: true },
   ]
 })
 
@@ -2805,6 +2812,14 @@ function formatKoreanDate(dateStr: string | null | undefined): string {
   return String(dateStr)
 }
 
+// 도서관 운영시간: "00:00 ~ 00:00" 또는 빈 값 → "휴관"
+function formatLibraryHours(start?: string | null, end?: string | null): string {
+  const s = (start || '').trim()
+  const e = (end || '').trim()
+  if (!s || s === '00:00' && (!e || e === '00:00')) return '휴관'
+  return `${s} ~ ${e || s}`
+}
+
 // 데스크톱 히어로 사이드바 통계
 const desktopHeroStats = computed(() => {
   if (!facility.value) return []
@@ -2812,10 +2827,10 @@ const desktopHeroStats = computed(() => {
   const d = details.value as any
   const items: { label: string; value: string }[] = []
 
-  // 운영시간 (공통 - 있는 경우만, 단 hospital/pharmacy/aed/library는 별도 표 제공으로 제외)
+  // 운영시간 (공통 - 있는 경우만, 단 hospital/pharmacy/aed/library/parking는 별도 배너/표 제공으로 제외)
   if (isOpen24Hours.value) {
     items.push({ label: '운영', value: '24시간' })
-  } else if (details.value?.operatingHours && !['hospital', 'pharmacy', 'aed', 'library'].includes(cat)) {
+  } else if (details.value?.operatingHours && !['hospital', 'pharmacy', 'aed', 'library', 'parking'].includes(cat)) {
     items.push({ label: '운영시간', value: formatOperatingHours(details.value.operatingHours).split('\n')[0] })
   }
 
@@ -2828,8 +2843,8 @@ const desktopHeroStats = computed(() => {
     if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
   } else if (cat === 'parking') {
     if (d?.capacity) items.push({ label: '주차면수', value: `${d.capacity}면` })
-    if (d?.baseFee != null) items.push({ label: '기본요금', value: `${d.baseFee}원` })
-    if (d?.feeType) items.push({ label: '요금구분', value: d.feeType })
+    if (d?.feeType) items.push({ label: '요금', value: d.feeType })
+    if (d?.lotType) items.push({ label: '구분', value: d.lotType })
   } else if (cat === 'library') {
     if (d?.seatCount) items.push({ label: '좌석', value: `${d.seatCount.toLocaleString()}석` })
     if (d?.bookCount) items.push({ label: '장서', value: `${d.bookCount.toLocaleString()}권` })
@@ -2848,8 +2863,29 @@ const desktopHeroStats = computed(() => {
   } else if (cat === 'school') {
     if (d?.schoolLevel) items.push({ label: '학교급', value: d.schoolLevel })
     if (d?.foundationType) items.push({ label: '설립형태', value: d.foundationType })
+    if (d?.coeducationType) items.push({ label: '남녀공학', value: d.coeducationType })
+  } else if (cat === 'sports') {
+    // 전화 우선, 없으면 시설구분/유형 fallback
+    if (facilityPhone.value) {
+      items.push({ label: '전화', value: facilityPhone.value })
+    } else {
+      if (d?.faciGbNm) items.push({ label: '시설구분', value: d.faciGbNm })
+      if (d?.ftypeNm) items.push({ label: '유형', value: d.ftypeNm })
+    }
+  } else if (cat === 'toilet') {
+    // 24시간/상시 개방 + 안전·접근성 배지
+    const openTimeRaw = (d?.openTime || '').toString().trim()
+    if (openTimeRaw === '상시' || isOpen24Hours.value) {
+      items.push({ label: '개방', value: '상시' })
+    }
+    if (d?.hasCCTV) items.push({ label: 'CCTV', value: '있음' })
+    if (d?.hasDisabledToilet) items.push({ label: '장애인', value: '가능' })
+    if (d?.hasDiaperChangingTable) items.push({ label: '기저귀대', value: '있음' })
+    if (items.length === 0 && facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
+  } else if (cat === 'wifi') {
+    if (d?.ssid) items.push({ label: 'SSID', value: d.ssid.length > 16 ? d.ssid.slice(0, 16) + '…' : d.ssid })
   } else {
-    // 나머지 카테고리: 전화 표시 (toilet, wifi, clothes, ev-charger, sports)
+    // 나머지 카테고리: 전화 표시 (clothes, ev-charger)
     if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
   }
 
@@ -3407,8 +3443,8 @@ const handleShare = async () => {
   })
 
   const shareData = {
-    title: facility.value.name,
-    text: `${facility.value.name} - ${facility.value.roadAddress || facility.value.address}`,
+    title: displayName.value,
+    text: `${displayName.value} - ${facility.value.roadAddress || facility.value.address}`,
     url: window.location.href,
   }
 

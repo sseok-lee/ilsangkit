@@ -30,6 +30,38 @@ function normalizeSeoTitle(title: string): string {
   return title.replace(/\s*[|-]\s*일상킷$/, '').trim()
 }
 
+/** 시설 이름에서 선후행 "-"·공백 제거 후 의미 있는 값이면 반환, 아니면 null */
+function cleanFacilityName(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const cleaned = String(raw).replace(/^[\s\-]+|[\s\-]+$/g, '').trim()
+  if (!cleaned || cleaned === '-') return null
+  return cleaned
+}
+
+/**
+ * 사용자에게 노출할 시설 이름.
+ * 원본 name이 비었거나 "-" 인 경우 카테고리·관리기관·도로명 기반 fallback 생성.
+ */
+export function getFacilityDisplayName(facility: FacilityDetail): string {
+  const cleaned = cleanFacilityName(facility.name)
+  if (cleaned) return cleaned
+
+  const categoryLabel = CATEGORY_META[facility.category]?.label || facility.category
+  const region = facility.district || facility.city || ''
+  const d = (facility.details ?? {}) as Record<string, unknown>
+  const org = (d.managingOrg || d.org || d.operatingOrg || d.providerName) as string | undefined
+  if (org) {
+    const cleanOrg = cleanFacilityName(org)
+    if (cleanOrg) return `${cleanOrg} ${categoryLabel}`
+  }
+  const addr = facility.roadAddress || facility.address
+  if (addr) {
+    const lastSegment = addr.split(/\s+/).slice(-2).join(' ')
+    return `${region} ${lastSegment} ${categoryLabel}`.trim()
+  }
+  return `${region} ${categoryLabel}`.trim()
+}
+
 /**
  * 메타태그 옵션
  */
@@ -55,8 +87,9 @@ export function buildFacilityIntro(facility: FacilityDetail): string {
   const location = facility.district
     ? `${facility.city} ${facility.district}`
     : facility.city
-  const josa = getJosa(facility.name, '은', '는')
-  return `${facility.name}${josa} ${location}에 위치한 ${categoryName}입니다.`
+  const name = getFacilityDisplayName(facility)
+  const josa = getJosa(name, '은', '는')
+  return `${name}${josa} ${location}에 위치한 ${categoryName}입니다.`
 }
 
 export function buildFacilityDescription(facility: FacilityDetail): string {
@@ -68,8 +101,9 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
   const parts: string[] = []
 
   // 시설명 + 지역 + 카테고리를 먼저 배치
-  const josa = getJosa(facility.name, '은', '는')
-  parts.push(`${facility.name}${josa} ${location}에 위치한 ${categoryName}입니다`)
+  const name = getFacilityDisplayName(facility)
+  const josa = getJosa(name, '은', '는')
+  parts.push(`${name}${josa} ${location}에 위치한 ${categoryName}입니다`)
 
   const d = facility.details as Record<string, unknown>
 
@@ -319,7 +353,7 @@ export function useFacilityMeta() {
   function buildDetailTitle(facility: FacilityDetail): string {
     const cityShort = compactCityName(facility.city)
     const loc = facility.district ? `${cityShort} ${facility.district}` : cityShort
-    const name = facility.name
+    const name = getFacilityDisplayName(facility)
     const categoryName = CATEGORY_META[facility.category]?.label || facility.category
     const intent = CATEGORY_SEO_INTENT[facility.category] || '정보'
     return `${name} | ${loc} ${categoryName} ${intent}`
