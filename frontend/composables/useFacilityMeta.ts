@@ -33,7 +33,7 @@ function normalizeSeoTitle(title: string): string {
 /** 시설 이름에서 선후행 "-"·공백 제거 후 의미 있는 값이면 반환, 아니면 null */
 function cleanFacilityName(raw: string | null | undefined): string | null {
   if (!raw) return null
-  const cleaned = String(raw).replace(/^[\s\-]+|[\s\-]+$/g, '').trim()
+  const cleaned = String(raw).replace(/^[\s-]+|[\s-]+$/g, '').trim()
   if (!cleaned || cleaned === '-') return null
   return cleaned
 }

@@ -349,7 +349,7 @@
                       <div class="h-px bg-slate-100 w-full"></div>
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">설치기관</span>
-                        <span class="text-sm font-medium text-slate-900">{{ String(details?.org || '').replace(/^[\s\-]+|[\s\-]+$/g, '') }}</span>
+                        <span class="text-sm font-medium text-slate-900">{{ String(details?.org || '').replace(/^[\s-]+|[\s-]+$/g, '') }}</span>
                       </div>
                     </template>
                     <template v-if="aedOperatingHours.length > 0 && aedWeeklyHours.length === 0">
@@ -1623,7 +1623,7 @@
                   <div class="h-px bg-slate-100 w-full"></div>
                   <div class="flex items-center justify-between">
                     <span class="text-sm text-gray-600">설치기관</span>
-                    <span class="text-sm font-medium text-slate-900">{{ details?.org }}</span>
+                    <span class="text-sm font-medium text-slate-900">{{ String(details?.org || '').replace(/^[\s-]+|[\s-]+$/g, '') }}</span>
                   </div>
                 </template>
                 <template v-if="aedOperatingHours.length > 0 && aedWeeklyHours.length === 0">
