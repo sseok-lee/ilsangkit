@@ -1575,6 +1575,9 @@
             </div>
           </div>
 
+          <!-- Ad: 로드뷰 이후 (Mobile) -->
+          <AdBanner ad-format="horizontal" full-width-responsive="false" />
+
           <!-- Facility Status Card -->
           <div v-if="hasFacilityStatus" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="px-5 py-4 border-b border-slate-100">
@@ -2268,6 +2271,9 @@
 
             </div>
           </div>
+
+          <!-- Ad: 시설현황 이후 (Mobile) -->
+          <AdBanner ad-format="horizontal" full-width-responsive="false" />
 
           <!-- Nearby Facilities -->
           <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
