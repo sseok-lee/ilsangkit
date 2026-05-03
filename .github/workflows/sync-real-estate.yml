@@ -123,6 +123,16 @@ jobs:
               || echo "[WARN] LH 임대 동기화 실패 (exit=$?)"
             echo "[step:public-rent-end]"
 
+            # Google Indexing API 제출 (일일 quota 200, 미제출 URL 우선)
+            # IndexNow는 각 sync 스크립트 내부에서 매번 호출되지만, Google은
+            # IndexNow를 받지 않으므로 별도 제출 필요. dedup은 backend/data/
+            # indexing-log.json 으로 관리되어 매일 신규 단지만 처리됨.
+            echo "[step:google-indexing-start]"
+            echo "--- Google Indexing API 제출 ---"
+            timeout --kill-after=30s 10m node dist/scripts/submitIndexing.js --limit 200 \
+              || echo "[WARN] Google Indexing 제출 실패 (exit=$?)"
+            echo "[step:google-indexing-end]"
+
             # --- 좀비 청소 (종료 후) -------------------------------------
             # 만에 하나 남은 프로세스/커넥션이 있으면 여기서 확실히 정리.
             echo "[step:post-kill]"
