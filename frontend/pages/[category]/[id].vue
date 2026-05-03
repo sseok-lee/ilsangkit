@@ -756,9 +756,13 @@
                           <span class="text-xs text-gray-600">고교유형</span>
                           <span class="text-sm font-bold text-slate-900">{{ details.highSchoolType }}</span>
                         </div>
-                        <div v-if="details?.branchType?.includes('분교')" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-                          <span class="text-xs text-gray-600">분교여부</span>
-                          <span class="text-sm font-bold text-slate-900">분교</span>
+                        <div v-if="details?.branchType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+                          <span class="text-xs text-gray-600">본/분교</span>
+                          <span class="text-sm font-bold text-slate-900">{{ details.branchType }}</span>
+                        </div>
+                        <div v-if="details?.operationStatus" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+                          <span class="text-xs text-gray-600">운영상태</span>
+                          <span class="text-sm font-bold" :class="details.operationStatus === '운영' ? 'text-green-600' : 'text-slate-900'">{{ details.operationStatus }}</span>
                         </div>
                       </div>
                       <div v-if="details?.foundedDate" class="flex items-center justify-between">
@@ -2009,9 +2013,13 @@
                       <span class="text-xs text-gray-600">고교유형</span>
                       <span class="text-sm font-bold text-slate-900">{{ details.highSchoolType }}</span>
                     </div>
-                    <div v-if="details?.branchType?.includes('분교')" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-                      <span class="text-xs text-gray-600">분교여부</span>
-                      <span class="text-sm font-bold text-slate-900">분교</span>
+                    <div v-if="details?.branchType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+                      <span class="text-xs text-gray-600">본/분교</span>
+                      <span class="text-sm font-bold text-slate-900">{{ details.branchType }}</span>
+                    </div>
+                    <div v-if="details?.operationStatus" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+                      <span class="text-xs text-gray-600">운영상태</span>
+                      <span class="text-sm font-bold" :class="details.operationStatus === '운영' ? 'text-green-600' : 'text-slate-900'">{{ details.operationStatus }}</span>
                     </div>
                   </div>
                   <div v-if="details?.foundedDate" class="flex items-center justify-between">
@@ -2884,8 +2892,17 @@ const desktopHeroStats = computed(() => {
     if (items.length === 0 && facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
   } else if (cat === 'wifi') {
     if (d?.ssid) items.push({ label: 'SSID', value: d.ssid.length > 16 ? d.ssid.slice(0, 16) + '…' : d.ssid })
+  } else if (cat === 'ev-charger') {
+    // 완속/급속 분포: chgerType '01' 급속, '02','03','04','05','06','07' 완속/AC3상 등
+    const chargers = (d?.chargers || []) as Array<{ chgerType?: string }>
+    if (chargers.length > 0) {
+      const fast = chargers.filter(c => c.chgerType === '01' || c.chgerType === '03').length
+      const slow = chargers.length - fast
+      items.push({ label: '충전기', value: `${chargers.length}대` })
+      if (fast > 0 || slow > 0) items.push({ label: '구성', value: `급속 ${fast} · 완속 ${slow}` })
+    }
   } else {
-    // 나머지 카테고리: 전화 표시 (clothes, ev-charger)
+    // 나머지 카테고리: 전화 표시 (clothes)
     if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
   }
 
