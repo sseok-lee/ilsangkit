@@ -158,10 +158,10 @@
                     <button class="ml-auto text-primary text-sm font-medium hover:underline whitespace-nowrap" @click="copyAddress">복사</button>
                   </div>
 
-                  <div v-if="details?.operatingHours || isOpen24Hours || facilityPhone" class="h-px bg-slate-100 w-full"></div>
+                  <div v-if="(details?.operatingHours || isOpen24Hours || facilityPhone) && !(facility.category === 'hospital' && hospitalWeeklyHours.length > 0) && !(facility.category === 'aed' && aedWeeklyHours.length > 0)" class="h-px bg-slate-100 w-full"></div>
 
-                  <!-- Operating Hours -->
-                  <div v-if="details?.operatingHours || isOpen24Hours" class="flex gap-4 items-start">
+                  <!-- Operating Hours (병원·AED는 시설현황 테이블이 있으면 여기서는 숨김) -->
+                  <div v-if="(details?.operatingHours || isOpen24Hours) && !(facility.category === 'hospital' && hospitalWeeklyHours.length > 0) && !(facility.category === 'aed' && aedWeeklyHours.length > 0)" class="flex gap-4 items-start">
                     <div class="mt-0.5 text-slate-500">
                       <span class="material-symbols-outlined">schedule</span>
                     </div>
@@ -325,7 +325,7 @@
                         <span class="text-sm font-medium text-slate-900">{{ details?.org }}</span>
                       </div>
                     </template>
-                    <template v-if="aedOperatingHours.length > 0">
+                    <template v-if="aedOperatingHours.length > 0 && aedWeeklyHours.length === 0">
                       <div class="h-px bg-slate-100 w-full"></div>
                       <div class="flex flex-col gap-3">
                         <div v-for="item in aedOperatingHours" :key="item.day" class="flex items-center justify-between">
@@ -355,7 +355,7 @@
                         </div>
                       </div>
                     </template>
-                    <template v-if="hospitalOperatingHours.length > 0">
+                    <template v-if="hospitalOperatingHours.length > 0 && hospitalWeeklyHours.length === 0">
                       <div class="h-px bg-slate-100 w-full"></div>
                       <div class="flex flex-col gap-3">
                         <div v-for="item in hospitalOperatingHours" :key="item.day" class="flex items-center justify-between">
@@ -1401,10 +1401,10 @@
                 <button class="ml-auto text-primary text-sm font-medium hover:underline whitespace-nowrap shrink-0" @click="copyAddress">복사</button>
               </div>
 
-              <div v-if="details?.operatingHours || isOpen24Hours || facilityPhone" class="h-px bg-slate-100 w-full"></div>
+              <div v-if="(details?.operatingHours || isOpen24Hours || facilityPhone) && !(facility.category === 'hospital' && hospitalWeeklyHours.length > 0) && !(facility.category === 'aed' && aedWeeklyHours.length > 0)" class="h-px bg-slate-100 w-full"></div>
 
-              <!-- Operating Hours -->
-              <div v-if="details?.operatingHours || isOpen24Hours" class="flex gap-4 items-start">
+              <!-- Operating Hours (병원·AED는 시설현황 테이블이 있으면 여기서는 숨김) -->
+              <div v-if="(details?.operatingHours || isOpen24Hours) && !(facility.category === 'hospital' && hospitalWeeklyHours.length > 0) && !(facility.category === 'aed' && aedWeeklyHours.length > 0)" class="flex gap-4 items-start">
                 <div class="mt-0.5 text-slate-500">
                   <span class="material-symbols-outlined">schedule</span>
                 </div>
@@ -1598,7 +1598,7 @@
                     </div>
                   </div>
                 </template>
-                <template v-if="hospitalOperatingHours.length > 0">
+                <template v-if="hospitalOperatingHours.length > 0 && hospitalWeeklyHours.length === 0">
                   <div class="h-px bg-slate-100 w-full"></div>
                   <div class="flex flex-col gap-3">
                     <div v-for="item in hospitalOperatingHours" :key="item.day" class="flex items-center justify-between">
