@@ -15,6 +15,7 @@ export const SITEMAP_FACILITY_CATEGORIES = [
   'childcare',
   'ev-charger',
   'sports',
+  'aed',
 ] as const
 
 export type SitemapFacilityCategory = (typeof SITEMAP_FACILITY_CATEGORIES)[number]
@@ -24,6 +25,7 @@ export type SitemapFacilityCategory = (typeof SITEMAP_FACILITY_CATEGORIES)[numbe
 export const SITEMAP_FACILITY_CATEGORY_LIMITS: Partial<Record<SitemapFacilityCategory, number>> = {
   'ev-charger': 20000,
   childcare: 15000,
+  aed: 15000,
   sports: 10000,
   clothes: 10000,
 }

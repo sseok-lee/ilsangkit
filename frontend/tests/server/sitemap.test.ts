@@ -115,9 +115,12 @@ describe('generateSitemapXml with images', () => {
 })
 
 describe('sitemapPolicy', () => {
-  it('wifi와 aed는 사이트맵 대상 카테고리에 포함되지 않는다', () => {
+  it('wifi는 사이트맵 대상 카테고리에 포함되지 않는다', () => {
     expect(isSitemapFacilityCategory('wifi')).toBe(false)
-    expect(isSitemapFacilityCategory('aed')).toBe(false)
+  })
+
+  it('aed는 사이트맵 대상 카테고리에 포함된다', () => {
+    expect(isSitemapFacilityCategory('aed')).toBe(true)
   })
 
   it('정책이 정의된 카테고리들이 SITEMAP_FACILITY_CATEGORIES 에 모두 등장한다', () => {
@@ -128,7 +131,6 @@ describe('sitemapPolicy', () => {
 
   it('getSitemapFacilityLimit 은 제외 카테고리에 대해 undefined 를 반환한다', () => {
     expect(getSitemapFacilityLimit('wifi')).toBeUndefined()
-    expect(getSitemapFacilityLimit('aed')).toBeUndefined()
     // 제한이 없는 포함 카테고리도 undefined
     expect(getSitemapFacilityLimit('toilet')).toBeUndefined()
   })
@@ -136,6 +138,7 @@ describe('sitemapPolicy', () => {
   it('제한이 있는 카테고리는 정확한 정수 값을 돌려준다', () => {
     expect(getSitemapFacilityLimit('ev-charger')).toBe(20000)
     expect(getSitemapFacilityLimit('childcare')).toBe(15000)
+    expect(getSitemapFacilityLimit('aed')).toBe(15000)
     expect(getSitemapFacilityLimit('sports')).toBe(10000)
     expect(getSitemapFacilityLimit('clothes')).toBe(10000)
   })
@@ -157,7 +160,7 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     sports: 25000,
     clothes: 30000,
     wifi: 1000, // index 제외
-    aed: 500, // index 제외
+    aed: 20000,
   }
 
   function makeItems(count: number): { id: string; updatedAt: string }[] {
@@ -371,19 +374,15 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     }
   })
 
-  it('wifi와 aed는 index에 노출되지 않고 handler는 404를 반환한다', async () => {
+  it('wifi는 index에 노출되지 않고 handler는 404를 반환한다', async () => {
     const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
     const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
 
     const indexXml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
     expect(indexXml).not.toMatch(/\/sitemap\/wifi(?:-\d+)?\.xml/)
-    expect(indexXml).not.toMatch(/\/sitemap\/aed(?:-\d+)?\.xml/)
 
     await expect(
       chunkHandler(createMockEvent('/sitemap/wifi.xml') as never),
-    ).rejects.toMatchObject({ statusCode: 404 })
-    await expect(
-      chunkHandler(createMockEvent('/sitemap/aed-2.xml') as never),
     ).rejects.toMatchObject({ statusCode: 404 })
   })
 
