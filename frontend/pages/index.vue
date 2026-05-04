@@ -303,6 +303,7 @@ import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CITY_LINKS } from '~/utils/seoConstants'
+import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
 
 const config = useRuntimeConfig()
 
@@ -311,9 +312,20 @@ const { setHomeMeta } = useFacilityMeta()
 setHomeMeta()
 
 // JSON-LD 구조화된 데이터 - 기존 유지
-const { setWebsiteSchema, setOrganizationSchema } = useStructuredData()
+const { setWebsiteSchema, setOrganizationSchema, setDatasetSchema } = useStructuredData()
 setWebsiteSchema()
 setOrganizationSchema()
+setDatasetSchema({
+  name: '일상킷 통합 생활 데이터',
+  description: '전국 공공데이터 기반의 생활시설(병원·약국·주차장·도서관·공원 등 15개 카테고리), 부동산 실거래가, 청약 정보 통합 데이터셋.',
+  url: '/',
+  sources: [
+    ...Object.values(FACILITY_DATA_SOURCE),
+    REAL_ESTATE_DATA_SOURCE,
+    SUBSCRIPTION_DATA_SOURCE,
+  ],
+  keywords: ['생활시설', '부동산 실거래가', '청약', '공공데이터', 'KOGL', '대한민국'],
+})
 
 // 홈 히어로 배경 이미지 preload (홈 한정)
 useHead({

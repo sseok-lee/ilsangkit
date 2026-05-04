@@ -324,7 +324,7 @@ const { trackCategoryPageView, trackSearchNoResults } = useAnalytics()
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const { loadRegions, citiesWithDistricts } = useRegions()
 const { setMeta } = useFacilityMeta()
-const { setItemListSchema, setBreadcrumbSchema, setFAQSchema } = useStructuredData()
+const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema } = useStructuredData()
 
 // Region state
 const selectedCity = ref('')
@@ -495,6 +495,17 @@ setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: catLabel, url: `/${route.params.category}` },
 ])
+
+// Dataset JSON-LD — 카테고리별 출처를 AI 검색에 노출
+if (categoryDataSource.value) {
+  setDatasetSchema({
+    name: `전국 ${catLabel} 데이터`,
+    description: `${categoryDataSource.value.provider}에서 제공하는 전국 ${catLabel} 공공데이터를 가공해 제공합니다.`,
+    url: `/${route.params.category}`,
+    sources: [categoryDataSource.value],
+    keywords: [catLabel, '공공데이터', categoryDataSource.value.provider, '대한민국'],
+  })
+}
 
 // FAQ HTML + JSON-LD (정보성 사이트는 FAQPage 리치결과 대상)
 const categoryFAQ = CATEGORY_FAQ[route.params.category as FacilityCategory]

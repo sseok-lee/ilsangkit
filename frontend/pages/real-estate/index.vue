@@ -111,7 +111,7 @@ const realEstateFAQs = [
 ]
 
 // Breadcrumb + ItemList JSON-LD
-const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
@@ -121,6 +121,13 @@ setItemListSchema([
   { name: '빌라', url: '/real-estate/villa-sale' },
   { name: '오피스텔', url: '/real-estate/offitel-sale' },
 ])
+setDatasetSchema({
+  name: '전국 부동산 실거래가 데이터',
+  description: '국토교통부 실거래가 공개시스템 기반 아파트·빌라·오피스텔 매매·전월세 거래 데이터.',
+  url: '/real-estate',
+  sources: [REAL_ESTATE_DATA_SOURCE],
+  keywords: ['부동산', '실거래가', '아파트', '빌라', '오피스텔', '국토교통부'],
+})
 
 useHead({
   script: [
