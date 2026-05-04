@@ -8,7 +8,7 @@
         </h2>
         <p class="text-sm text-slate-500 mt-1">지금 신청 가능한 공고와 예정된 일정을 확인하세요.</p>
       </div>
-      <NuxtLink to="/subscription" class="text-sm text-primary font-bold hover:underline whitespace-nowrap">
+      <NuxtLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
         전체 보기 →
       </NuxtLink>
     </div>
@@ -45,6 +45,10 @@ import { useHomeSubscriptions } from '~/composables/useHomeSubscriptions'
 
 const { ongoing, upcoming, hasAny } = useHomeSubscriptions()
 
+// SSR/CSR 양쪽에서 동일한 "오늘" 값을 보장. `new Date()` 를 매 호출마다 부르면
+// SSR/CSR 시점차로 D-day 가 다르게 계산돼 hydration mismatch 발생.
+const todayIso = useState<string>('home-today-iso', () => new Date().toISOString().split('T')[0])
+
 function formatMeta(item: HomeSubscriptionItem, mode: 'ongoing' | 'upcoming'): string {
   const parts: string[] = []
   if (item.regionName) parts.push(item.regionName)
@@ -63,8 +67,7 @@ function computeDday(isoDate: string | null, label: '마감' | '시작'): string
   if (!isoDate) return null
   const target = new Date(isoDate)
   if (Number.isNaN(target.getTime())) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = new Date(`${todayIso.value}T00:00:00`)
   target.setHours(0, 0, 0, 0)
   const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000)
   if (diffDays < 0) return null
