@@ -20,6 +20,12 @@
       </div>
 
       <PublicRentalListView />
+
+      <DataSourceCard :source="PUBLIC_RENTAL_DATA_SOURCE" />
+      <p class="-mt-3 px-1 text-xs text-slate-500 leading-relaxed">
+        공공임대 매물 정보는 각 공급기관(LH, SH 등)의 공고를 가공한 자료입니다.
+        최신 모집 일정과 자격 조건은 반드시 해당 기관 공고문을 확인하세요.
+      </p>
     </main>
   </div>
 </template>
@@ -27,6 +33,8 @@
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { LH_RENTAL_TYPES } from '~/utils/subscriptionMeta'
+import { PUBLIC_RENTAL_DATA_SOURCE } from '~/utils/dataSource'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const title = '공공임대 매물 | 일상킷'
