@@ -124,10 +124,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -157,6 +158,9 @@ setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '생활 가이드', url: '/guide' },
 ])
+
+const { trackGuideListView } = useAnalytics()
+onMounted(() => trackGuideListView())
 
 const config = useRuntimeConfig()
 const { fetchGuides } = useGuides()
