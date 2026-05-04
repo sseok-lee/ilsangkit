@@ -160,12 +160,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'isomorphic-dompurify'
 import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
@@ -191,6 +192,12 @@ const { data: guide, status } = await useAsyncData(
 if (!guide.value) {
   throw createError({ statusCode: 404, statusMessage: '가이드를 찾을 수 없습니다' })
 }
+
+const { trackGuideView } = useAnalytics()
+onMounted(() => {
+  if (!guide.value) return
+  trackGuideView({ slug: slug.value, category: guide.value.category, title: guide.value.title })
+})
 
 const loading = computed(() => status.value === 'pending')
 

@@ -1,6 +1,8 @@
 export const ANALYTICS_EVENTS = {
   SEARCH: 'search_executed',
   SEARCH_NO_RESULTS: 'search_no_results',
+  SEARCH_RESULTS_VIEW: 'search_results_viewed',
+  SEARCH_RESULT_CLICK: 'search_result_clicked',
   CATEGORY_PAGE_VIEW: 'category_page_viewed',
   REGION_PAGE_VIEW: 'region_page_viewed',
   FACILITY_VIEW: 'facility_detail_viewed',
@@ -9,4 +11,10 @@ export const ANALYTICS_EVENTS = {
   SHARE: 'share_clicked',
   BUILDING_VIEW: 'building_viewed',
   REVIEW_SUBMIT: 'review_submitted',
+  SUBSCRIPTION_LIST_VIEW: 'subscription_list_viewed',
+  SUBSCRIPTION_VIEW: 'subscription_detail_viewed',
+  SUBSCRIPTION_APPLY_CLICK: 'subscription_apply_clicked',
+  GUIDE_LIST_VIEW: 'guide_list_viewed',
+  GUIDE_VIEW: 'guide_detail_viewed',
+  OUTBOUND_CLICK: 'outbound_link_clicked',
 } as const

@@ -478,6 +478,7 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useAnalytics } from '~/composables/useAnalytics'
 import RentalPriceStatsBox from '~/components/subscription/RentalPriceStatsBox.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -803,12 +804,19 @@ if (data.value) {
 }
 
 const { setBreadcrumbSchema, setEventSchema } = useStructuredData()
+const { trackSubscriptionView } = useAnalytics()
 
 if (subscription.value) {
   const sub = subscription.value
   const isRent = sub.sourceType === 'PRIVATE_RENT' || (sub.sourceType === 'APT' && sub.rentType === '임대주택')
   const categoryName = isRent ? '임대' : '분양'
   const categoryPath = isRent ? '/subscription/rent' : '/subscription/sale'
+
+  onMounted(() => trackSubscriptionView({
+    subscriptionId: id,
+    houseName: sub.houseName,
+    subscriptionType: isRent ? 'rent' : 'sale',
+  }))
 
   setBreadcrumbSchema([
     { name: '홈', url: SITE_URL },

@@ -1,27 +1,58 @@
 # 일상킷 (ilsangkit)
-> 부동산 실거래가와 전국 생활시설 정보를 한곳에서 제공하는 생활 정보 서비스
+
+> 부동산 실거래가, 청약 일정, 전국 생활시설 정보를 한 곳에서 조회하는 한국 생활 정보 서비스. 공공데이터(국토교통부·공공데이터포털·보건복지부 등)를 KOGL(공공누리) 라이선스 조건에 따라 정제·통합 제공.
 
 ## 주요 서비스
-- 부동산 실거래가: 아파트, 빌라, 오피스텔 매매/전월세 시세 조회
-- 생활시설 검색: 병원, 약국, 학교, 어린이집, 공원, 도서관 등 15개 카테고리
-- 지역 정보: 전국 17개 시도별 생활 편의 정보
-- 생활 가이드: 부동산, 의료, 교통 등 생활 정보 콘텐츠
 
-## 주요 페이지
-- 부동산: https://ilsangkit.co.kr/real-estate
-- 아파트 실거래가: https://ilsangkit.co.kr/real-estate/apt
-- 빌라 실거래가: https://ilsangkit.co.kr/real-estate/villa
-- 오피스텔 실거래가: https://ilsangkit.co.kr/real-estate/offitel
-- 병원: https://ilsangkit.co.kr/hospital
-- 약국: https://ilsangkit.co.kr/pharmacy
-- 학교: https://ilsangkit.co.kr/school
-- 어린이집: https://ilsangkit.co.kr/childcare
-- 공원: https://ilsangkit.co.kr/park
-- 도서관: https://ilsangkit.co.kr/library
-- 주차장: https://ilsangkit.co.kr/parking
-- 전기차 충전소: https://ilsangkit.co.kr/ev-charger
-- 가이드: https://ilsangkit.co.kr/guide
+### 부동산 실거래가
+- 매매: https://ilsangkit.co.kr/real-estate/apt-sale (아파트), https://ilsangkit.co.kr/real-estate/villa-sale (빌라/연립·다세대), https://ilsangkit.co.kr/real-estate/offitel-sale (오피스텔)
+- 전월세: https://ilsangkit.co.kr/real-estate/apt-rent, https://ilsangkit.co.kr/real-estate/villa-rent, https://ilsangkit.co.kr/real-estate/offitel-rent
+- 부동산 통합 허브: https://ilsangkit.co.kr/real-estate
+- 데이터 규모: 아파트 매매 140만+ · 전월세 300만+ 거래 / 빌라 매매 26만+ · 전월세 74만+ / 오피스텔 매매 10만+ · 전월세 78만+ / 등록 건물 약 28만 동
 
-## 데이터 출처
-- 국토교통부 실거래가 공개시스템
-- 공공데이터포털 (data.go.kr)
+### 청약·임대
+- 청약 통합: https://ilsangkit.co.kr/subscription
+- 분양 매매: https://ilsangkit.co.kr/subscription/sale (아파트, 오피스텔, 줍줍/잔여세대 포함)
+- 공공·임대: https://ilsangkit.co.kr/subscription/rent (공공임대 + 민간임대)
+- LH 공공임대: https://ilsangkit.co.kr/public-rental (매입임대 / 전세임대 등)
+
+### 생활시설 (15개 카테고리, 전국 약 55만 곳)
+- 의료: https://ilsangkit.co.kr/hospital (병원 8만+), https://ilsangkit.co.kr/pharmacy (약국 2.5만+), https://ilsangkit.co.kr/aed (AED 6.5만+)
+- 교육·육아: https://ilsangkit.co.kr/school (학교 1.4만+), https://ilsangkit.co.kr/childcare (어린이집 5.7만+), https://ilsangkit.co.kr/library (도서관 3,500+)
+- 생활편의: https://ilsangkit.co.kr/parking (공영주차장 1.5만+), https://ilsangkit.co.kr/ev-charger (전기차 충전소 10만+), https://ilsangkit.co.kr/toilet (공중화장실 2.9만+), https://ilsangkit.co.kr/wifi (무료 와이파이 8.4만+)
+- 생활환경: https://ilsangkit.co.kr/park (공원 1.7만+), https://ilsangkit.co.kr/market (전통시장 1,300+), https://ilsangkit.co.kr/clothes (의류수거함 9,000+), https://ilsangkit.co.kr/sports (체육시설 3.4만+), https://ilsangkit.co.kr/trash (쓰레기 배출 일정 8,800+)
+
+### 지역 정보
+- 전국 17개 시·도별 / 시·군·구별 생활 인프라 통합 페이지
+- 예: https://ilsangkit.co.kr/seoul, https://ilsangkit.co.kr/seoul/gangnam, https://ilsangkit.co.kr/seoul/gangnam/hospital
+
+### 콘텐츠
+- 생활 가이드: https://ilsangkit.co.kr/guide (부동산·청약·생활시설 활용법)
+- 자주 묻는 질문: https://ilsangkit.co.kr/faq
+- 서비스 소개: https://ilsangkit.co.kr/about
+- 데이터 출처 상세: https://ilsangkit.co.kr/about#data-sources
+
+## 데이터 출처 (공공)
+
+- 국토교통부 실거래가 공개시스템 (rt.molit.go.kr): 부동산 매매·전월세 거래
+- 공공데이터포털 (data.go.kr): 시설 정보 통합
+- 보건복지부: 병원·약국·AED
+- 행정안전부: 공중화장실·공영주차장
+- 환경부·한국환경공단: 전기차 충전소·쓰레기 배출
+- 교육부·각 교육청: 학교
+- 국립중앙도서관: 도서관
+- 한국부동산원·LH·SH: 청약·공공임대
+- 산림청·각 지자체: 공원
+
+## 라이선스
+- 공공누리(KOGL) 1~4유형 조건에 따라 출처 표기
+- 라이선스 상세: https://www.kogl.or.kr/info/license.do
+- 일상킷은 원천 데이터를 정제·통합 제공하며 데이터 자체의 정확성·최신성은 원천 기관 책임
+
+## 주요 정보 / FAQ
+
+- "내 주변 화장실/약국/주차장 찾기" → 카테고리 페이지에서 지역 필터 또는 지도 검색
+- "아파트 실거래가 조회" → /real-estate/apt-sale 에서 시·구·단지명 검색 가능
+- "청약 일정 확인" → /subscription 에서 모집·예정 통합 조회
+- "데이터 업데이트 주기" → 시설 데이터 일/주 단위 sync, 부동산 거래 매주, 청약 일 단위
+- 사이트맵: https://ilsangkit.co.kr/sitemap.xml (URL 약 27만)

@@ -421,6 +421,7 @@ import { useRealEstate } from '~/composables/useRealEstate'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META, CATEGORY_GROUPS, isFacilityCategory } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import type { RealEstateType, ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
@@ -432,6 +433,7 @@ const route = useRoute()
 const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
 const { setSearchMeta } = useFacilityMeta()
 const { setItemListSchema } = useStructuredData()
+const { trackSearchResultsView } = useAnalytics()
 
 // Search State
 const {
@@ -858,6 +860,17 @@ watch(searchKeyword, () => {
   useHead({
     title: searchKeyword.value ? `${searchKeyword.value} 검색 결과 | 일상킷` : '검색 | 일상킷',
   })
+})
+
+// 검색 완료 시 결과 viewed 이벤트 (loading true → false 전이 + keyword 있을 때만)
+watch(loading, (now, prev) => {
+  if (prev && !now && searchKeyword.value) {
+    trackSearchResultsView({
+      keyword: searchKeyword.value,
+      resultCount: total.value || 0,
+      category: selectedCategory.value || undefined,
+    })
+  }
 })
 
 // ItemList 구조화 데이터 + 페이지네이션 link 태그 (flat view only)
