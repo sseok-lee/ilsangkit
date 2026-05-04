@@ -483,11 +483,13 @@ const resultTitle = computed(() => {
 const initialCityName = CITY_SLUG_MAP[route.query.city as string] || ''
 const initialDistrictName = (route.query.district as string) || ''
 const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label || (route.params.category as string)
+const initialPageQueryParam = Math.max(1, Number(route.query.page) || 1)
 
 setMeta({
   title: buildCategorySeoTitle(route.params.category as FacilityCategory, initialCityName, initialDistrictName),
   description: buildCategorySeoDescription(route.params.category as FacilityCategory, initialCityName, initialDistrictName),
   path: `/${route.params.category}`,
+  ...(initialPageQueryParam >= 2 ? { canonical: false as const } : {}),
 })
 
 // Breadcrumb JSON-LD

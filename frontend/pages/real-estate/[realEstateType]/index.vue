@@ -183,23 +183,23 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 const route = useRoute()
 const router = useRouter()
 
-const propertyTypeParam = computed(() => route.params.realEstateType as RealEstateHubType)
+const realEstateTypeParam = computed(() => route.params.realEstateType as RealEstateHubType)
 
-// 유효하지 않은 propertyType이면 404
-if (!HUB_TYPES.includes(propertyTypeParam.value as RealEstateHubType)) {
+// 유효하지 않은 realEstateType이면 404
+if (!HUB_TYPES.includes(realEstateTypeParam.value as RealEstateHubType)) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
-const baseType = computed(() => propertyTypeParam.value.split('-')[0] as RealEstatePropertyType)
+const baseType = computed(() => realEstateTypeParam.value.split('-')[0] as RealEstatePropertyType)
 
 const currentTab = computed<TransactionMode>({
-  get: () => (propertyTypeParam.value.endsWith('-rent') ? 'rent' : 'sale'),
+  get: () => (realEstateTypeParam.value.endsWith('-rent') ? 'rent' : 'sale'),
   set: (val) => {
     router.push(`/real-estate/${baseType.value}-${val}`)
   },
 })
 
-const apiSlug = computed(() => propertyTypeParam.value)
+const apiSlug = computed(() => realEstateTypeParam.value)
 const propertyMeta = computed(() => PROPERTY_TYPE_META[baseType.value])
 const propertyDescription = computed(() => PROPERTY_TYPE_DESCRIPTIONS[baseType.value])
 const faqs = computed(() => PROPERTY_TYPE_FAQ[baseType.value] || [])
@@ -241,7 +241,7 @@ useHead(() => {
   const propertyLabel = propertyMeta.value?.label || ''
   const title = `${propertyLabel} ${tab} 실거래가 | 일상킷`
   const description = `전국 ${propertyLabel} ${tab} 실거래가와 시세, 최근 거래 내역을 확인하세요.`
-  const canonicalUrl = `${SITE_URL}/real-estate/${propertyTypeParam.value}`
+  const canonicalUrl = `${SITE_URL}/real-estate/${realEstateTypeParam.value}`
   const meta: Array<{ name?: string; property?: string; content: string }> = [
     { name: 'description', content: description },
     { property: 'og:title', content: title },
@@ -374,14 +374,14 @@ const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema } = useStructur
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
-  { name: propertyMeta.value?.label ?? propertyTypeParam.value, url: `/real-estate/${propertyTypeParam.value}` },
+  { name: propertyMeta.value?.label ?? realEstateTypeParam.value, url: `/real-estate/${realEstateTypeParam.value}` },
 ])
 setDatasetSchema({
-  name: `전국 ${propertyMeta.value?.label ?? propertyTypeParam.value} 실거래가 데이터`,
-  description: `국토교통부 실거래가 공개시스템 기반 ${propertyMeta.value?.label ?? propertyTypeParam.value} 거래 데이터.`,
-  url: `/real-estate/${propertyTypeParam.value}`,
+  name: `전국 ${propertyMeta.value?.label ?? realEstateTypeParam.value} 실거래가 데이터`,
+  description: `국토교통부 실거래가 공개시스템 기반 ${propertyMeta.value?.label ?? realEstateTypeParam.value} 거래 데이터.`,
+  url: `/real-estate/${realEstateTypeParam.value}`,
   sources: [REAL_ESTATE_DATA_SOURCE],
-  keywords: ['부동산', '실거래가', propertyMeta.value?.label ?? propertyTypeParam.value, '국토교통부'],
+  keywords: ['부동산', '실거래가', propertyMeta.value?.label ?? realEstateTypeParam.value, '국토교통부'],
 })
 
 watch(
@@ -400,7 +400,7 @@ watch(
         })),
       )
     } else {
-      setItemListSchema([{ name: propertyMeta.value?.label ?? propertyTypeParam.value, url: `/real-estate/${propertyTypeParam.value}` }])
+      setItemListSchema([{ name: propertyMeta.value?.label ?? realEstateTypeParam.value, url: `/real-estate/${realEstateTypeParam.value}` }])
     }
   },
   { immediate: true },
@@ -410,7 +410,7 @@ watch(
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: propertyMeta.value?.label ?? propertyTypeParam.value, href: `/real-estate/${propertyTypeParam.value}`, current: true },
+  { label: propertyMeta.value?.label ?? realEstateTypeParam.value, href: `/real-estate/${realEstateTypeParam.value}`, current: true },
 ])
 
 const heroStats = computed(() => {

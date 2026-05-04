@@ -143,11 +143,11 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(crumbs).toHaveLength(6)
   })
 
-  it('breadcrumb item[2]가 property type canonical URL을 가리켜야 한다', async () => {
+  it('breadcrumb item[2]가 canonical realEstateType URL을 가리켜야 한다', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     await mountSuspended(m.default)
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
-    expect(crumbs[2].url).toBe('/real-estate/apt')
+    expect(crumbs[2].url).toBe('/real-estate/apt-sale')
   })
 
   it('breadcrumb item[3]이 city hub URL을 가리켜야 한다', async () => {

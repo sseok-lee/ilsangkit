@@ -55,7 +55,7 @@ describe('real-estate/index.vue — hub page', () => {
     expect(m.default).toBeDefined()
   })
 
-  it('setItemListSchema가 canonical property type URL로 호출되어야 한다', async () => {
+  it('setItemListSchema가 canonical realEstateType URL로 호출되어야 한다', async () => {
     await mountPage()
     expect(mockSetItemListSchema).toHaveBeenCalled()
     const items = mockSetItemListSchema.mock.calls[0][0]
