@@ -70,6 +70,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-website',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -95,6 +96,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-breadcrumb',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -154,11 +156,6 @@ export function useStructuredData() {
 
     // 카테고리별 상세 필드 추가
     const d = facility.details as Record<string, unknown>
-
-    // 운영시간
-    if (d?.operatingHours) {
-      Object.assign(schema, { openingHours: d.operatingHours })
-    }
 
     // 전화번호
     const phone = d?.phone || d?.phoneNumber || d?.clerkTel
@@ -237,6 +234,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-facility',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -262,6 +260,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-itemlist',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -286,14 +285,12 @@ export function useStructuredData() {
         email: 'contact@ilsangkit.co.kr',
         availableLanguage: 'Korean',
       },
-      sameAs: [
-        'https://ilsangkit.co.kr',
-      ],
     }
 
     useHead({
       script: [
         {
+          key: 'jsonld-organization',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -327,6 +324,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-waste',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -342,6 +340,8 @@ export function useStructuredData() {
   type BuildingPlaceOptions = {
     name: string
     address: string
+    city?: string
+    district?: string
     lat?: number | null
     lng?: number | null
     buildYear?: number | null
@@ -368,6 +368,9 @@ export function useStructuredData() {
         address: {
           '@type': 'PostalAddress',
           streetAddress: options.address,
+          ...(options.district ? { addressLocality: options.district } : {}),
+          ...(options.city ? { addressRegion: options.city } : {}),
+          addressCountry: 'KR',
         },
         additionalProperty: [
           {
@@ -394,6 +397,7 @@ export function useStructuredData() {
       return {
         script: [
           {
+            key: 'jsonld-building',
             type: 'application/ld+json',
             innerHTML: JSON.stringify(schema),
           },
@@ -455,6 +459,7 @@ export function useStructuredData() {
       return {
         script: [
           {
+            key: 'jsonld-realestate-listing',
             type: 'application/ld+json',
             innerHTML: JSON.stringify(schema),
           },
@@ -475,6 +480,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-area-report',
           type: 'application/ld+json',
           innerHTML: JSON.stringify({
             '@context': 'https://schema.org',
@@ -528,7 +534,7 @@ export function useStructuredData() {
       publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
     }
     useHead({
-      script: [{ type: 'application/ld+json', innerHTML: JSON.stringify(schema) }],
+      script: [{ key: 'jsonld-article', type: 'application/ld+json', innerHTML: JSON.stringify(schema) }],
     })
   }
 
@@ -554,6 +560,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-faq',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -589,6 +596,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-howto',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -621,6 +629,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-event',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
@@ -683,6 +692,7 @@ export function useStructuredData() {
     useHead({
       script: [
         {
+          key: 'jsonld-dataset',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },
