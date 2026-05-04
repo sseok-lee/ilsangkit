@@ -268,6 +268,29 @@
         />
       </div>
     </section>
+
+    <!-- 데이터 출처 요약 -->
+    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="bg-white border border-line rounded-2xl p-5 shadow-card flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
+        <div class="flex items-start gap-3 flex-1">
+          <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">verified</span>
+          <div>
+            <p class="text-sm font-bold text-slate-900">공공데이터 기반 서비스</p>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+              행정안전부 · 국토교통부 · 보건복지부 · 한국부동산원 등
+              공공데이터포털 및 각 부처 공개 API/CSV를 출처로 사용합니다.
+              공공누리(KOGL) 이용 조건을 준수하여 표기합니다.
+            </p>
+          </div>
+        </div>
+        <NuxtLink
+          to="/about#data-sources"
+          class="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
+        >
+          전체 출처 보기 →
+        </NuxtLink>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -280,6 +303,7 @@ import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CITY_LINKS } from '~/utils/seoConstants'
+import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
 
 const config = useRuntimeConfig()
 
@@ -288,9 +312,20 @@ const { setHomeMeta } = useFacilityMeta()
 setHomeMeta()
 
 // JSON-LD 구조화된 데이터 - 기존 유지
-const { setWebsiteSchema, setOrganizationSchema } = useStructuredData()
+const { setWebsiteSchema, setOrganizationSchema, setDatasetSchema } = useStructuredData()
 setWebsiteSchema()
 setOrganizationSchema()
+setDatasetSchema({
+  name: '일상킷 통합 생활 데이터',
+  description: '전국 공공데이터 기반의 생활시설(병원·약국·주차장·도서관·공원 등 15개 카테고리), 부동산 실거래가, 청약 정보 통합 데이터셋.',
+  url: '/',
+  sources: [
+    ...Object.values(FACILITY_DATA_SOURCE),
+    REAL_ESTATE_DATA_SOURCE,
+    SUBSCRIPTION_DATA_SOURCE,
+  ],
+  keywords: ['생활시설', '부동산 실거래가', '청약', '공공데이터', 'KOGL', '대한민국'],
+})
 
 // 홈 히어로 배경 이미지 preload (홈 한정)
 useHead({

@@ -6,7 +6,7 @@ import { ALL_CATEGORIES } from './categoryRegistry.js';
 
 const SITEMAP_FACILITY_CATS: FacilityCategory[] = [
   'toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy',
-  'park', 'school', 'market', 'childcare', 'ev-charger', 'sports',
+  'park', 'school', 'market', 'childcare', 'ev-charger', 'sports', 'aed',
 ];
 
 // 부동산 사이트맵 쿼리는 6-table UNION으로 느림 — 6시간 모듈 레벨 캐시로 콜드 스타트 최소화
@@ -25,6 +25,7 @@ export function _resetSitemapCacheForTests() {
 const SITEMAP_FACILITY_LIMITS: Partial<Record<FacilityCategory, number>> = {
   'ev-charger': 20000,
   childcare: 15000,
+  aed: 15000,
   sports: 10000,
   clothes: 10000,
 };

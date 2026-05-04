@@ -370,12 +370,19 @@ async function fetchFacilitySummary(city: string, district?: string) {
 }
 
 // Breadcrumb + ItemList JSON-LD
-const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
   { name: propertyMeta.value?.label ?? propertyTypeParam.value, url: `/real-estate/${propertyTypeParam.value}` },
 ])
+setDatasetSchema({
+  name: `전국 ${propertyMeta.value?.label ?? propertyTypeParam.value} 실거래가 데이터`,
+  description: `국토교통부 실거래가 공개시스템 기반 ${propertyMeta.value?.label ?? propertyTypeParam.value} 거래 데이터.`,
+  url: `/real-estate/${propertyTypeParam.value}`,
+  sources: [REAL_ESTATE_DATA_SOURCE],
+  keywords: ['부동산', '실거래가', propertyMeta.value?.label ?? propertyTypeParam.value, '국토교통부'],
+})
 
 watch(
   complexes,

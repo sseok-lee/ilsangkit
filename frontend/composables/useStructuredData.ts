@@ -1,6 +1,7 @@
 import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_URL } from '~/utils/seoConstants'
+import type { DataSourceInfo } from '~/utils/dataSource'
 
 /**
  * BreadcrumbList 스키마
@@ -627,6 +628,68 @@ export function useStructuredData() {
     })
   }
 
+  /**
+   * Dataset 스키마 — 공공데이터 출처를 명시해 AI 검색(GEO) 인용성 강화
+   *
+   * 일상킷은 공공데이터를 가공해서 제공하는 서비스이므로,
+   * 각 페이지가 사용하는 원천 데이터셋과 제공기관을 schema.org Dataset으로 노출.
+   * KOGL 유형이 지정된 경우 distribution.license에 KOGL 라이선스 URL을 포함.
+   */
+  function setDatasetSchema(options: {
+    name: string
+    description: string
+    url: string
+    sources: DataSourceInfo[]
+    keywords?: string[]
+    spatialCoverage?: string
+  }) {
+    const { name, description, url, sources, keywords, spatialCoverage } = options
+    const koglLicenseUrl = (kogl?: 1 | 2 | 3 | 4) =>
+      kogl ? `https://www.kogl.or.kr/info/licenseType0${kogl}.do` : 'https://www.kogl.or.kr/info/license.do'
+
+    const schema: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      name,
+      description,
+      url: url.startsWith('http') ? url : `${SITE_URL}${url}`,
+      isAccessibleForFree: true,
+      inLanguage: 'ko',
+      spatialCoverage: {
+        '@type': 'Place',
+        name: spatialCoverage ?? '대한민국',
+      },
+      creator: sources.map((s) => ({
+        '@type': 'Organization',
+        name: s.provider,
+        url: s.url,
+      })),
+      distribution: sources.map((s) => ({
+        '@type': 'DataDownload',
+        name: s.datasetName,
+        contentUrl: s.url,
+        ...(s.kogl ? { license: koglLicenseUrl(s.kogl) } : {}),
+      })),
+      publisher: {
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+      },
+    }
+    if (keywords && keywords.length > 0) {
+      schema.keywords = keywords.join(',')
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
   return {
     setWebsiteSchema,
     setBreadcrumbSchema,
@@ -641,5 +704,6 @@ export function useStructuredData() {
     setFAQSchema,
     setHowToSchema,
     setEventSchema,
+    setDatasetSchema,
   }
 }

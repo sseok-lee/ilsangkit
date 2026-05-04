@@ -101,6 +101,8 @@
           >{{ cat.label }}</NuxtLink>
         </div>
       </SectionBlock>
+
+      <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
     </main>
   </div>
 </template>
@@ -120,9 +122,11 @@ import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import DataSourceCard from '~/components/common/DataSourceCard.vue'
 
 const route = useRoute()
 const router = useRouter()

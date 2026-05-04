@@ -294,6 +294,18 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     ).rejects.toMatchObject({ statusCode: 404 })
   })
 
+  it('색인 대상인 aed는 index에 노출되고 handler도 chunk sitemap을 반환한다', async () => {
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+
+    const indexXml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
+    const advertised = countChunksForCategory(indexXml, 'aed')
+    expect(advertised).toBe(2)
+
+    const firstChunk = await chunkHandler(createMockEvent('/sitemap/aed-1.xml') as never)
+    expect(firstChunk as string).toContain('<loc>https://ilsangkit.co.kr/aed/1</loc>')
+  })
+
   it('/contact 은 static sitemap 에 포함된다 (US-006)', async () => {
     const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
     const mockEvent: MockEvent = {

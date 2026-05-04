@@ -2780,6 +2780,7 @@ watchEffect(() => {
 })
 
 // wifi 상세 페이지 noindex (사이트맵 제외 카테고리 — 크롤 예산 절감)
+// AED 상세 페이지는 색인 대상이며, 아래 thin-content 규칙에만 따른다.
 const isLowValueCategory = computed(() => {
   const cat = facility.value?.category
   return cat === 'wifi'
