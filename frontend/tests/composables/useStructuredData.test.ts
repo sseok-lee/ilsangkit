@@ -27,15 +27,17 @@ describe('useStructuredData', () => {
   // ─── FAQPage/HowTo 스키마 제거됨 (2023.08 상업사이트 제한 / 2023.09 폐기) ──
 
 
-  // ─── Task 8: Organization sameAs ──────────────────────────────────────────
+  // ─── Organization sameAs ───────────────────────────────────────────────────
+  // 자기 자신 URL 만 들어있던 sameAs 는 schema.org 의미상 noise 라 제거됨.
+  // 외부 신뢰 프로필(네이버 비즈니스, 카카오채널 등) 확보 시 다시 부착.
 
   describe('setOrganizationSchema sameAs', () => {
-    it('setOrganizationSchema 호출 시 sameAs 필드가 포함된다', () => {
+    it('setOrganizationSchema 호출 시 sameAs 필드는 포함되지 않는다 (외부 프로필 미보유)', () => {
       const { setOrganizationSchema } = useStructuredData()
       setOrganizationSchema()
       const call = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(call.script[0].innerHTML)
-      expect(parsed.sameAs).toEqual(['https://ilsangkit.co.kr'])
+      expect(parsed.sameAs).toBeUndefined()
     })
   })
 

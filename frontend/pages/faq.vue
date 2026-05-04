@@ -86,7 +86,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const { setMeta } = useFacilityMeta()
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setFAQSchema } = useStructuredData()
 
 // SEO meta
 setMeta({
@@ -109,8 +109,10 @@ const realEstateFaqItems = [
   ...REAL_ESTATE_FAQ.offitelSale.slice(0, 2),
 ].map(faq => ({ question: faq.q, answer: faq.a }))
 
-// FAQ 데이터 (HTML 렌더링용, JSON-LD 제거 — FAQPage 리치결과 상업 사이트 미지원)
+// FAQ 데이터 (HTML 렌더링용 + FAQPage JSON-LD)
+// Why: Google 리치결과는 정부/비영리 한정이지만 ChatGPT/Perplexity/AI Overviews 인용성 신호로 유효.
 const allFaqs = [...Object.values(CATEGORY_FAQ).flat(), ...realEstateFaqItems]
+setFAQSchema(allFaqs)
 
 // 그룹 데이터
 const groups = CATEGORY_GROUPS
