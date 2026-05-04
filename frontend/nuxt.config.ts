@@ -193,9 +193,11 @@ export default defineNuxtConfig({
         { name: 'robots', content: 'index, follow, max-image-preview:large, max-snippet:-1' },
       ],
       script: [
-        // GA: requestIdleCallback으로 유휴 시점에 로드 (pageview 누락 없음)
+        // GA: dataLayer + gtag bootstrap 은 즉시 (동기) 실행 — track() 호출이 GA 스크립트 로드 전에
+        // 일어나도 dataLayer 큐에 쌓이고, GA 스크립트 로드 시 자동 flush 된다.
+        // 실제 gtag.js 스크립트만 requestIdleCallback 으로 지연 로드 (LCP 영향 없음).
         ...(gaId && process.env.NODE_ENV === 'production' ? [{
-          innerHTML: `(function(){var cb=function(){var s=document.createElement('script');s.src='https://www.googletagmanager.com/gtag/js?id=${gaId}';s.async=true;document.head.appendChild(s);s.onload=function(){window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments)};window.gtag('js',new Date());window.gtag('config','${gaId}');}};('requestIdleCallback' in window)?requestIdleCallback(cb):setTimeout(cb,1);})()`,
+          innerHTML: `window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments)};window.gtag('js',new Date());window.gtag('config','${gaId}');(function(){var cb=function(){var s=document.createElement('script');s.src='https://www.googletagmanager.com/gtag/js?id=${gaId}';s.async=true;document.head.appendChild(s)};('requestIdleCallback' in window)?requestIdleCallback(cb):setTimeout(cb,1)})()`,
         }] : []),
         // AdSense: async 유지 (수익 영향 방지)
         {
