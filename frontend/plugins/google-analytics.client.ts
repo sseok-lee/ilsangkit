@@ -14,7 +14,12 @@ export default defineNuxtPlugin(() => {
   if (!gaId) return
 
   const router = useRouter()
+  let isFirstNavigation = true
   router.afterEach((to) => {
+    if (isFirstNavigation) {
+      isFirstNavigation = false
+      return
+    }
     if (window.gtag) {
       window.gtag('event', 'page_view', {
         page_path: to.fullPath,
