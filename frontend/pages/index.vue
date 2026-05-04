@@ -48,7 +48,7 @@
               <div class="flex items-center pr-2">
                 <button
                   aria-label="검색"
-                  class="h-10 px-4 md:px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-1.5"
+                  class="h-11 px-4 md:px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-1.5"
                   @click="handleSearch"
                 >
                   <span class="material-symbols-outlined text-[18px] md:hidden">search</span>
@@ -116,7 +116,7 @@
           </h2>
           <p class="text-sm text-slate-500 mt-1">매매·전월세 거래 내역을 건물 유형별로 확인하세요.</p>
         </div>
-        <NuxtLink to="/real-estate" class="text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</NuxtLink>
+        <NuxtLink to="/real-estate" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</NuxtLink>
       </div>
       <div class="grid grid-cols-3 gap-2 md:gap-4">
         <NuxtLink
@@ -190,7 +190,7 @@
           v-for="city in CITY_LINKS"
           :key="city.slug"
           :to="`/${city.slug}/`"
-          class="px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+          class="inline-flex items-center min-h-[44px] px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
         >
           {{ city.label }}
         </NuxtLink>
@@ -209,7 +209,7 @@
         </div>
         <NuxtLink
           to="/guide"
-          class="text-sm text-primary font-bold hover:underline flex items-center gap-1 whitespace-nowrap"
+          class="text-sm text-primary font-bold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
         >
           더보기
           <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
