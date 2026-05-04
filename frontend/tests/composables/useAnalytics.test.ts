@@ -17,6 +17,8 @@ describe('useAnalytics', () => {
     const analytics = useAnalytics()
     expect(typeof analytics.trackSearch).toBe('function')
     expect(typeof analytics.trackSearchNoResults).toBe('function')
+    expect(typeof analytics.trackSearchResultsView).toBe('function')
+    expect(typeof analytics.trackSearchResultClick).toBe('function')
     expect(typeof analytics.trackCategoryPageView).toBe('function')
     expect(typeof analytics.trackRegionPageView).toBe('function')
     expect(typeof analytics.trackFacilityView).toBe('function')
@@ -25,7 +27,13 @@ describe('useAnalytics', () => {
     expect(typeof analytics.trackShareClick).toBe('function')
     expect(typeof analytics.trackBuildingView).toBe('function')
     expect(typeof analytics.trackReviewSubmit).toBe('function')
-    expect(Object.keys(analytics)).toHaveLength(10)
+    expect(typeof analytics.trackSubscriptionListView).toBe('function')
+    expect(typeof analytics.trackSubscriptionView).toBe('function')
+    expect(typeof analytics.trackSubscriptionApplyClick).toBe('function')
+    expect(typeof analytics.trackGuideListView).toBe('function')
+    expect(typeof analytics.trackGuideView).toBe('function')
+    expect(typeof analytics.trackOutboundClick).toBe('function')
+    expect(Object.keys(analytics)).toHaveLength(18)
   })
 
   it('trackSearch → gtag search_executed 이벤트 호출', () => {
@@ -129,6 +137,48 @@ describe('useAnalytics', () => {
       city: 'seoul',
       district: undefined,
     })
+  })
+
+  it('trackSearchResultsView → gtag search_results_viewed 이벤트 호출', () => {
+    const { trackSearchResultsView } = useAnalytics()
+    trackSearchResultsView({ keyword: '병원', resultCount: 12, category: 'hospital' })
+    expect(mockGtag).toHaveBeenCalledWith('event', 'search_results_viewed', {
+      search_term: '병원',
+      result_count: 12,
+      category: 'hospital',
+    })
+  })
+
+  it('trackSubscriptionListView → gtag subscription_list_viewed 이벤트 호출', () => {
+    const { trackSubscriptionListView } = useAnalytics()
+    trackSubscriptionListView({ listType: 'hub' })
+    expect(mockGtag).toHaveBeenCalledWith('event', 'subscription_list_viewed', { list_type: 'hub' })
+  })
+
+  it('trackSubscriptionView → gtag subscription_detail_viewed 이벤트 호출', () => {
+    const { trackSubscriptionView } = useAnalytics()
+    trackSubscriptionView({ subscriptionId: 42, houseName: '래미안', subscriptionType: 'sale' })
+    expect(mockGtag).toHaveBeenCalledWith('event', 'subscription_detail_viewed', {
+      subscription_id: '42',
+      house_name: '래미안',
+      subscription_type: 'sale',
+    })
+  })
+
+  it('trackGuideView → gtag guide_detail_viewed 이벤트 호출', () => {
+    const { trackGuideView } = useAnalytics()
+    trackGuideView({ slug: 'apt-sale-xxx', category: 'apt-sale', title: '제목' })
+    expect(mockGtag).toHaveBeenCalledWith('event', 'guide_detail_viewed', {
+      slug: 'apt-sale-xxx',
+      category: 'apt-sale',
+      title: '제목',
+    })
+  })
+
+  it('trackGuideListView → gtag guide_list_viewed 이벤트 호출 (params 비움)', () => {
+    const { trackGuideListView } = useAnalytics()
+    trackGuideListView()
+    expect(mockGtag).toHaveBeenCalledWith('event', 'guide_list_viewed', {})
   })
 
   it('window.gtag 미정의(SSR) 시 에러 없이 no-op', () => {

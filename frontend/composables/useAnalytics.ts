@@ -71,10 +71,68 @@ function trackSearchNoResults(params: { keyword: string; category?: string }) {
   track(ANALYTICS_EVENTS.SEARCH_NO_RESULTS, { search_term: params.keyword, category: params.category })
 }
 
+function trackSearchResultsView(params: { keyword: string; resultCount: number; category?: string }) {
+  track(ANALYTICS_EVENTS.SEARCH_RESULTS_VIEW, {
+    search_term: params.keyword,
+    result_count: params.resultCount,
+    category: params.category,
+  })
+}
+
+function trackSearchResultClick(params: { keyword: string; position: number; resultType: string; resultId?: string }) {
+  track(ANALYTICS_EVENTS.SEARCH_RESULT_CLICK, {
+    search_term: params.keyword,
+    position: params.position,
+    result_type: params.resultType,
+    result_id: params.resultId,
+  })
+}
+
+function trackSubscriptionListView(params: { listType: string }) {
+  track(ANALYTICS_EVENTS.SUBSCRIPTION_LIST_VIEW, { list_type: params.listType })
+}
+
+function trackSubscriptionView(params: { subscriptionId: string | number; houseName?: string; subscriptionType?: string }) {
+  track(ANALYTICS_EVENTS.SUBSCRIPTION_VIEW, {
+    subscription_id: String(params.subscriptionId),
+    house_name: params.houseName,
+    subscription_type: params.subscriptionType,
+  })
+}
+
+function trackSubscriptionApplyClick(params: { subscriptionId: string | number; provider?: string }) {
+  track(ANALYTICS_EVENTS.SUBSCRIPTION_APPLY_CLICK, {
+    subscription_id: String(params.subscriptionId),
+    provider: params.provider,
+  })
+}
+
+function trackGuideListView() {
+  track(ANALYTICS_EVENTS.GUIDE_LIST_VIEW, {})
+}
+
+function trackGuideView(params: { slug: string; category?: string; title?: string }) {
+  track(ANALYTICS_EVENTS.GUIDE_VIEW, {
+    slug: params.slug,
+    category: params.category,
+    title: params.title,
+  })
+}
+
+function trackOutboundClick(params: { url: string; linkType: string; placement?: string }) {
+  track(ANALYTICS_EVENTS.OUTBOUND_CLICK, {
+    outbound_url: params.url,
+    link_type: params.linkType,
+    placement: params.placement,
+  })
+}
+
 export function useAnalytics() {
   return {
     trackSearch,
     trackSearchNoResults,
+    trackSearchResultsView,
+    trackSearchResultClick,
     trackCategoryPageView,
     trackRegionPageView,
     trackFacilityView,
@@ -83,5 +141,11 @@ export function useAnalytics() {
     trackShareClick,
     trackBuildingView,
     trackReviewSubmit,
+    trackSubscriptionListView,
+    trackSubscriptionView,
+    trackSubscriptionApplyClick,
+    trackGuideListView,
+    trackGuideView,
+    trackOutboundClick,
   }
 }
