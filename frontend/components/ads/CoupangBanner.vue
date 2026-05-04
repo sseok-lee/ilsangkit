@@ -1,16 +1,23 @@
 <template>
-  <ClientOnly>
-    <div ref="wrapRef" class="w-full overflow-hidden" />
-  </ClientOnly>
+  <div class="w-full">
+    <ClientOnly>
+      <div ref="wrapRef" class="w-full min-h-[140px] overflow-hidden" />
+    </ClientOnly>
+    <p class="mt-2 text-center text-[11px] leading-relaxed text-slate-400">
+      이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+    </p>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
 const wrapRef = ref<HTMLDivElement | null>(null)
 let active = true
 
-onMounted(() => {
+onMounted(async () => {
+  if (!import.meta.client) return
+  await nextTick()
   if (!wrapRef.value) return
 
   const G_JS = 'https://ads-partners.coupang.com/g.js'
