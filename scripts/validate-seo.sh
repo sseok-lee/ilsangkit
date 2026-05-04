@@ -13,7 +13,7 @@
 #
 # 특징:
 #   - 실제 HTTP 응답을 검사해 "파일이 존재하는지" 가 아니라 "렌더 결과가 SEO 계약을 지키는지" 를 확인한다.
-#   - 대표 URL 6개 (홈 / 카테고리 허브 / 시설 상세 / 부동산 상세 / /search(noindex) / /sitemap.xml) 를 검사한다.
+#   - 대표 URL과 정책 파일(홈 / 카테고리 허브 / 시설 상세 / 부동산 상세 / /search(noindex) / robots.txt / /sitemap.xml) 를 검사한다.
 #   - 모든 검사는 PASS/FAIL 로 카운트되어 마지막에 요약된다.
 #   - 서버가 꺼져 있으면 curl 로 최초 1회 헬스체크 후 친절한 에러 메시지로 조기 종료한다.
 
@@ -186,8 +186,25 @@ if [ -n "$sitemap_response" ]; then
   fi
   contains "$sitemap_response" '<sitemapindex' && pass "<sitemapindex> 포함" || fail "<sitemapindex> 누락"
   contains "$sitemap_response" '/sitemap/static.xml' && pass "static sub-sitemap 링크 포함" || fail "static sub-sitemap 링크 누락"
-  not_contains "$sitemap_response" '/sitemap/wifi' && pass "wifi 제외 확인" || fail "wifi 가 sitemap index 에 포함됨 (정책상 제외 대상)"
-  not_contains "$sitemap_response" '/sitemap/aed' && pass "aed 제외 확인" || fail "aed 가 sitemap index 에 포함됨 (정책상 제외 대상)"
+  # 초기 색인 안정화 정책: wifi는 임시 제외, AED는 응급 검색 의도가 강해 포함.
+  # 색인 제한 해제 시 이 기대값과 sitemapPolicy.ts/robots.txt를 함께 수정한다.
+  not_contains "$sitemap_response" '/sitemap/wifi' && pass "wifi 제외 확인 (초기 제한 정책)" || fail "wifi 가 sitemap index 에 포함됨 (현재 정책상 임시 제외 대상)"
+  contains "$sitemap_response" '/sitemap/aed' && pass "aed 포함 확인" || fail "aed sitemap chunk 누락 — 현재 정책상 색인 대상"
+fi
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 7. /robots.txt
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "7️⃣  /robots.txt 검증  ($BASE_URL/robots.txt)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+robots_body=$(fetch_body "$BASE_URL/robots.txt") || { fail "/robots.txt 응답 실패"; robots_body=""; }
+if [ -n "$robots_body" ]; then
+  contains "$robots_body" 'Sitemap: https://ilsangkit.co.kr/sitemap.xml' && pass "Sitemap 지시문 포함" || fail "robots.txt Sitemap 지시문 누락"
+  # 초기 색인 안정화 정책: wifi는 sitemap 제외와 함께 상세 크롤도 임시 차단한다.
+  contains "$robots_body" 'Disallow: /wifi/' && pass "wifi robots 차단 확인 (초기 제한 정책)" || fail "wifi robots 차단 누락 — 현재 임시 제한 정책과 불일치"
+  not_contains "$robots_body" 'Disallow: /aed/' && pass "AED robots 차단 없음" || fail "AED가 robots에서 차단됨 — 현재 정책상 색인 대상"
 fi
 echo ""
 

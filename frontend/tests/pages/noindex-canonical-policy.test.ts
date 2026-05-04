@@ -75,6 +75,22 @@ describe('noindex/canonical 정책 — useFacilityMeta', () => {
     expect(canonicalLinks.length).toBeGreaterThan(0)
     expect(canonicalLinks[0].href).toBe('https://ilsangkit.co.kr/seoul/gangnam/toilet')
   })
+
+  it('setMeta 에 canonical=false 를 전달하면 카테고리 page 2 초기 렌더 canonical 을 생략할 수 있다', () => {
+    mockUseHead.mockClear()
+    const { setMeta } = useFacilityMeta()
+    setMeta({
+      title: '공중화장실 찾기',
+      description: '전국 공중화장실 위치와 운영시간을 검색하세요.',
+      path: '/toilet',
+      canonical: false,
+    })
+    const headPayloads = mockUseHead.mock.calls.map((c) => c[0])
+    const canonicalLinks = headPayloads
+      .flatMap((p: { link?: Array<{ rel: string }> }) => p?.link ?? [])
+      .filter((l) => l.rel === 'canonical')
+    expect(canonicalLinks).toHaveLength(0)
+  })
 })
 
 describe('noindex/canonical 정책 — page-level useHead 패턴', () => {

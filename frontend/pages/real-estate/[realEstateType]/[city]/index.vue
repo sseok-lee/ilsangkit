@@ -67,6 +67,7 @@ const typeLabel = tabPart === 'sale'
 
 const heroTitle = `${cityName} ${typeLabel} 실거래가`
 const heroDescription = `${cityName} ${typeLabel} 단지를 구/군별로 확인하세요. 국토교통부 공식 데이터 기반.`
+const typeHubPath = `/real-estate/${realEstateTypeParam}`
 
 const districts = computed(() =>
   (REGIONS[cityName] ?? []).map((name) => ({
@@ -80,7 +81,7 @@ const districts = computed(() =>
 const breadcrumbItems = [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: typeLabel, href: `/real-estate/${propertyTypePart}`, current: false },
+  { label: typeLabel, href: typeHubPath, current: false },
   { label: cityName, href: `/real-estate/${realEstateTypeParam}/${citySlugParam}`, current: true },
 ]
 
@@ -109,7 +110,7 @@ const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
-  { name: typeLabel, url: `/real-estate/${propertyTypePart}` },
+  { name: typeLabel, url: typeHubPath },
   { name: cityName, url: `/real-estate/${realEstateTypeParam}/${citySlugParam}` },
 ])
 setItemListSchema(

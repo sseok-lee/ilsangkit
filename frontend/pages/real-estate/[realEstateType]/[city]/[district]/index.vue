@@ -167,6 +167,7 @@ const typeLabel = computed(() => {
   const base = propertyMeta.value?.label ?? ''
   return tab === 'sale' ? `${base} 매매` : `${base} 전월세`
 })
+const typeHubPath = computed(() => `/real-estate/${realEstateType.value}`)
 
 const heroTitle = computed(() => `${districtName.value} ${typeLabel.value} 실거래가`)
 const heroDescription = computed(
@@ -253,7 +254,7 @@ const districtSummaryText = computed(() => {
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산', href: '/real-estate', current: false },
-  { label: typeLabel.value, href: `/real-estate/${propertyTypePart}`, current: false },
+  { label: typeLabel.value, href: typeHubPath.value, current: false },
   { label: cityName.value, href: `/real-estate/${realEstateType.value}/${citySlug.value}`, current: false },
   { label: districtName.value, current: true },
 ])
@@ -326,7 +327,7 @@ const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
-  { name: typeLabel.value, url: `/real-estate/${propertyTypePart}` },
+  { name: typeLabel.value, url: typeHubPath.value },
   { name: cityName.value, url: `/real-estate/${realEstateType.value}/${citySlug.value}` },
   { name: districtName.value, url: canonicalPath.value },
 ])
