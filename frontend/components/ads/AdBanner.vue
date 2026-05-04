@@ -1,5 +1,5 @@
 <template>
-  <div :class="['ad-banner', `ad-banner--${adFormat}`, 'my-3 w-full']">
+  <div ref="container" :class="['ad-banner', `ad-banner--${adFormat}`, 'my-3 w-full']">
     <ClientOnly>
       <ins
         :key="adKey"
@@ -29,6 +29,7 @@ withDefaults(defineProps<{
 
 const adKey = ref(0)
 const route = useRoute()
+const container = ref<HTMLElement | null>(null)
 
 function pushAd() {
   nextTick(() => {
@@ -38,6 +39,16 @@ function pushAd() {
     } catch {
       // adsbygoogle push 실패는 무시 (광고 차단기/네트워크 실패 시 자연 collapse)
     }
+    // AdSense 가 5초 안에 status 를 안 박으면 unfilled 로 간주 → :has() 셀렉터가
+    // 부모 .ad-banner 를 collapse 하므로 reserve 한 min-height 빈 박스가 사라짐.
+    // 광고 차단기 · 네트워크 실패 · 광고 미할당 등 status 가 영영 안 찍히는 경로 보호.
+    setTimeout(() => {
+      if (!container.value) return
+      const ins = container.value.querySelector('ins.adsbygoogle')
+      if (ins && !ins.getAttribute('data-ad-status')) {
+        ins.setAttribute('data-ad-status', 'unfilled')
+      }
+    }, 5000)
   })
 }
 
