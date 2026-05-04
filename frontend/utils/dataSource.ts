@@ -111,3 +111,10 @@ export const SUBSCRIPTION_DATA_SOURCE: DataSourceInfo = {
   provider: '한국부동산원',
   url: 'https://www.applyhome.co.kr',
 }
+
+export const PUBLIC_RENTAL_DATA_SOURCE: DataSourceInfo = {
+  datasetName: 'LH 임대주택 공급정보 / SH 공공임대 공고',
+  provider: '한국토지주택공사(LH) · 서울주택도시공사(SH)',
+  url: 'https://www.lh.or.kr',
+  // kogl: TBD — LH/SH 공공누리 유형 확인 후 채워주세요
+}
