@@ -1,17 +1,50 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockQueryRaw } = vi.hoisted(() => ({
+const {
+  mockQueryRaw,
+  getCategoryCountAndMaxDateMock,
+  wasteCountMock,
+  wasteLatestMock,
+  subscriptionCountMock,
+  subscriptionLatestMock,
+} = vi.hoisted(() => ({
   mockQueryRaw: vi.fn(),
+  getCategoryCountAndMaxDateMock: vi.fn(),
+  wasteCountMock: vi.fn(),
+  wasteLatestMock: vi.fn(),
+  subscriptionCountMock: vi.fn(),
+  subscriptionLatestMock: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
-  prisma: { $queryRaw: mockQueryRaw },
-  default: { $queryRaw: mockQueryRaw },
+  prisma: {
+    $queryRaw: mockQueryRaw,
+    wasteSchedule: {
+      count: wasteCountMock,
+      findFirst: wasteLatestMock,
+    },
+    subscription: {
+      count: subscriptionCountMock,
+      findFirst: subscriptionLatestMock,
+    },
+  },
+  default: {
+    $queryRaw: mockQueryRaw,
+    wasteSchedule: {
+      count: wasteCountMock,
+      findFirst: wasteLatestMock,
+    },
+    subscription: {
+      count: subscriptionCountMock,
+      findFirst: subscriptionLatestMock,
+    },
+  },
 }));
 
 vi.mock('../../src/services/facilityService.js', () => ({
   getAllIds: vi.fn(),
   getRegionCategoryCombinations: vi.fn(),
+  getCategoryCountAndMaxDate: getCategoryCountAndMaxDateMock,
 }));
 vi.mock('../../src/services/wasteScheduleService.js', () => ({
   getAllIds: vi.fn(),
@@ -20,7 +53,12 @@ vi.mock('../../src/services/categoryRegistry.js', () => ({
   ALL_CATEGORIES: [],
 }));
 
-import { getRealEstateBuildings, getRealEstateCityDistrictHubs, _resetSitemapCacheForTests } from '../../src/services/sitemapService.js';
+import {
+  getRealEstateBuildings,
+  getRealEstateCityDistrictHubs,
+  getSitemapPageCounts,
+  _resetSitemapCacheForTests,
+} from '../../src/services/sitemapService.js';
 
 function flattenSql(call: unknown[]): string {
   const strings = call[0] as unknown as readonly string[];
@@ -30,6 +68,26 @@ function flattenSql(call: unknown[]): string {
 beforeEach(() => {
   vi.clearAllMocks();
   _resetSitemapCacheForTests();
+  getCategoryCountAndMaxDateMock.mockResolvedValue({
+    count: 10,
+    maxUpdatedAt: new Date('2026-05-01T00:00:00Z'),
+  });
+  wasteCountMock.mockResolvedValue(0);
+  wasteLatestMock.mockResolvedValue(null);
+  subscriptionCountMock.mockResolvedValue(0);
+  subscriptionLatestMock.mockResolvedValue(null);
+  mockQueryRaw.mockResolvedValue([{ cnt: 0n }]);
+});
+
+describe('getSitemapPageCounts facility policy', () => {
+  it('includes AED with the crawl-budget limit and keeps wifi out of indexed facility chunks', async () => {
+    const result = await getSitemapPageCounts();
+    const categories = result.facilities.map((item) => item.category);
+
+    expect(categories).toContain('aed');
+    expect(categories).not.toContain('wifi');
+    expect(getCategoryCountAndMaxDateMock).toHaveBeenCalledWith('aed', 15000);
+  });
 });
 
 describe('getRealEstateBuildings (US-008 new URL contract)', () => {
