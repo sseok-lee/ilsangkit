@@ -1,9 +1,10 @@
 export function formatKoreanPrice(amount: number): string {
-  const eok = Math.floor(amount / 10000)
-  const man = amount % 10000
+  const roundedAmount = Math.round(amount)
+  const eok = Math.floor(roundedAmount / 10000)
+  const man = roundedAmount % 10000
   if (eok > 0 && man > 0) return `${eok}억 ${man.toLocaleString()}만원`
   if (eok > 0) return `${eok}억`
-  return `${amount.toLocaleString()}만원`
+  return `${roundedAmount.toLocaleString()}만원`
 }
 
 /**
