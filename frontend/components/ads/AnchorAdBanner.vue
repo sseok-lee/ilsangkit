@@ -17,11 +17,10 @@
         <ins
           :key="adKey"
           class="adsbygoogle block"
-          style="display: block; width: 100%; height: 50px"
+          style="display: block; width: 100%; height: 100px"
           :data-ad-client="AD_CLIENT"
           :data-ad-slot="adSlot"
           data-ad-format="horizontal"
-          data-full-width-responsive="true"
         />
       </ClientOnly>
     </div>
@@ -96,9 +95,16 @@ watch(() => route.fullPath, () => {
 </script>
 
 <style scoped>
+/* CLS 방지: 부모 컨테이너에 ad height + close 버튼 offset 만큼 사전 예약.
+   기존: 14px → 396px 확장 (CLS 0.22). 100px 로 사전 reserve 하면 같은 ad 가
+   채워져도 layout shift 가 거의 0. */
+.anchor-ad {
+  min-height: 100px;
+}
+
 .anchor-ad ins.adsbygoogle:not([data-ad-status]) {
-  height: 50px !important;
-  min-height: 50px !important;
+  height: 100px !important;
+  min-height: 100px !important;
 }
 
 .anchor-ad ins.adsbygoogle[data-ad-status='unfilled'] {
@@ -107,5 +113,6 @@ watch(() => route.fullPath, () => {
 
 .anchor-ad:has(ins.adsbygoogle[data-ad-status='unfilled']) {
   display: none !important;
+  min-height: 0 !important;
 }
 </style>
