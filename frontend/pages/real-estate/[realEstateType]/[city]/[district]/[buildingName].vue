@@ -1037,6 +1037,8 @@ watch(selectedRentType, () => { currentPage.value = 1; loadData() })
 setBuildingPlaceSchema(() => ({
   name: buildingName.value,
   address: fullAddress.value !== '-' ? fullAddress.value : `${cityName} ${districtName}`,
+  city: buildingInfo.value?.city || cityName,
+  district: buildingInfo.value?.district || districtName,
   lat: buildingInfo.value?.lat ?? null,
   lng: buildingInfo.value?.lng ?? null,
   buildYear: buildingInfo.value?.buildYear,
