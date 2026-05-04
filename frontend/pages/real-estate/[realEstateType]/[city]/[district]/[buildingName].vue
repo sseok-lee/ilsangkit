@@ -199,24 +199,44 @@
           class="mb-4"
         />
 
-        <!-- 시세 요약 (인라인 summary-grid) -->
+        <!-- 시세 요약: 차트 위에서 선택 기간의 거래 흐름을 데이터 카드로 먼저 요약 -->
         <div
           v-if="monthly.length > 0 && !statsLoading"
-          class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 pt-4 border-t border-line"
+          class="mb-4 rounded-xl border border-blue-100 bg-blue-50/40 p-4"
         >
-          <div>
-            <span class="block text-slate-500 text-xs font-bold">최근 평균가</span>
-            <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ summaryLatestAvg }}</strong>
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div class="rounded-lg border border-blue-100 bg-white p-3">
+              <span class="block text-slate-500 text-xs font-bold">{{ periodTradeLabel }}</span>
+              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodTradeCount }}건</strong>
+            </div>
+            <div class="rounded-lg border border-blue-100 bg-white p-3">
+              <span class="block text-slate-500 text-xs font-bold">최근 평균가</span>
+              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ summaryLatestAvg }}</strong>
+            </div>
+            <div class="rounded-lg border border-blue-100 bg-white p-3">
+              <span class="block text-slate-500 text-xs font-bold">최고 거래가</span>
+              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodMaxPriceLabel }}</strong>
+            </div>
+            <div class="rounded-lg border border-blue-100 bg-white p-3">
+              <span class="block text-slate-500 text-xs font-bold">최저 거래가</span>
+              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodMinPriceLabel }}</strong>
+            </div>
+            <div class="rounded-lg border border-blue-100 bg-white p-3">
+              <span class="block text-slate-500 text-xs font-bold">전월 대비</span>
+              <strong :class="['block mt-1 text-base md:text-lg font-bold truncate', changeRateColor]">
+                {{ summaryChangeRate }}
+              </strong>
+            </div>
           </div>
-          <div>
-            <span class="block text-slate-500 text-xs font-bold">전월 대비</span>
-            <strong :class="['block mt-1 text-base md:text-lg font-bold truncate', changeRateColor]">
-              {{ summaryChangeRate }}
-            </strong>
-          </div>
-          <div>
-            <span class="block text-slate-500 text-xs font-bold">총 거래</span>
-            <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ summaryTotalCount }}건</strong>
+
+          <div v-if="tradeFlowBadges.length > 0" class="mt-3 flex flex-wrap gap-2">
+            <span
+              v-for="badge in tradeFlowBadges"
+              :key="badge.label"
+              :class="['rounded-full px-2.5 py-1 text-xs font-bold', summaryBadgeClass(badge.tone)]"
+            >
+              {{ badge.label }}
+            </span>
           </div>
         </div>
 
@@ -363,6 +383,16 @@ import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse,
 import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { formatKoreanPrice } from '~/utils/formatters'
+import {
+  getPeriodTradeLabel,
+  getPriceExtremes,
+  getPriceRangeBadge,
+  getRecencyBadge,
+  getTradeActivityBadge,
+  normalizeFacilitySummary,
+  sumTransactionCount,
+  type RealEstateSummaryBadge,
+} from '~/utils/realEstateDetailSummary'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -659,21 +689,17 @@ const latestPrice = computed(() => {
   return formatKoreanPrice(buildingInfo.value.latestDealAmount)
 })
 
+const compactFacilitySummary = computed(() => normalizeFacilitySummary(facilitySummary.value))
+
 const heroStats = computed(() => {
-  const items: { label: string; value: string }[] = []
+  const items: { label: string; value: string; color?: string }[] = []
   if (latestPrice.value !== '-') items.push({ label: '최근 거래', value: latestPrice.value })
   if (buildingInfo.value?.latestDealYear && buildingInfo.value?.latestDealMonth) {
     items.push({ label: '최근 거래일', value: `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월` })
   }
   if (buildingInfo.value?.buildYear) items.push({ label: '건축년도', value: `${buildingInfo.value.buildYear}년` })
   if (areaRange.value !== '-') items.push({ label: '전용면적', value: areaRange.value })
-  if (showPriceAnalysis.value && priceAnalysis.value) {
-    const pa = priceAnalysis.value
-    if (pa.pricePerPyeong !== null) items.push({ label: '평당가', value: `${pa.pricePerPyeong.toLocaleString()}만원` })
-    if (pa.jeonseRatio !== null) items.push({ label: '전세가율', value: `${pa.jeonseRatio}%` })
-    if (pa.allTimeHigh !== null) items.push({ label: '역대 최고가', value: formatKoreanPrice(pa.allTimeHigh), color: 'text-red-500' })
-    if (pa.allTimeLow !== null) items.push({ label: '역대 최저가', value: formatKoreanPrice(pa.allTimeLow), color: 'text-blue-500' })
-  }
+  if (compactFacilitySummary.value) items.push({ label: '생활시설', value: compactFacilitySummary.value })
   return items
 })
 
@@ -712,10 +738,49 @@ const changeRateColor = computed(() => {
   return 'text-slate-500'
 })
 
-const summaryTotalCount = computed(() => {
-  return (summary.value?.totalCount ?? 0).toLocaleString()
+const periodTradeLabel = computed(() => getPeriodTradeLabel(selectedMonths.value))
+
+const periodTradeCount = computed(() => sumTransactionCount(monthly.value).toLocaleString())
+
+const periodPriceExtremes = computed(() => getPriceExtremes(monthly.value))
+
+const periodMaxPriceLabel = computed(() => {
+  const price = periodPriceExtremes.value.maxPrice
+  return price ? formatKoreanPrice(price) : '-'
 })
 
+const periodMinPriceLabel = computed(() => {
+  const price = periodPriceExtremes.value.minPrice
+  return price ? formatKoreanPrice(price) : '-'
+})
+
+const tradeFlowBadges = computed<RealEstateSummaryBadge[]>(() => {
+  const badges: RealEstateSummaryBadge[] = [
+    getTradeActivityBadge(sumTransactionCount(monthly.value)),
+  ]
+
+  const recency = getRecencyBadge(
+    buildingInfo.value?.latestDealYear,
+    buildingInfo.value?.latestDealMonth,
+  )
+  if (recency) badges.push(recency)
+
+  const range = getPriceRangeBadge(
+    periodPriceExtremes.value.maxPrice,
+    periodPriceExtremes.value.minPrice,
+    summary.value?.recentAvg,
+  )
+  if (range) badges.push(range)
+
+  return badges
+})
+
+function summaryBadgeClass(tone: RealEstateSummaryBadge['tone']): string {
+  if (tone === 'green') return 'bg-emerald-50 text-emerald-700'
+  if (tone === 'blue') return 'bg-blue-50 text-blue-700'
+  if (tone === 'amber') return 'bg-amber-50 text-amber-700'
+  return 'bg-slate-100 text-slate-600'
+}
 
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 const currentPage = ref(1)
