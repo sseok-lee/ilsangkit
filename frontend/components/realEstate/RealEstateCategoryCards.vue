@@ -3,7 +3,7 @@
     <NuxtLink
       v-for="pt in VISIBLE_PROPERTY_TYPES"
       :key="pt"
-      :to="`/real-estate/${pt}`"
+      :to="`/real-estate/${pt}-sale`"
       class="group flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
     >
       <div
