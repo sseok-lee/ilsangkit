@@ -11,8 +11,8 @@ describe('robots.txt crawl policy', () => {
     expect(robots).toContain('Disallow: /api/')
   })
 
-  it('AED detail pages are not robots-blocked because they are indexable sitemap URLs', () => {
+  it('index policy pages are crawlable so Google can read page-level robots meta', () => {
     expect(robots).not.toMatch(/^Disallow:\s*\/aed\/$/m)
-    expect(robots).toContain('Disallow: /wifi/')
+    expect(robots).not.toMatch(/^Disallow:\s*\/wifi\/$/m)
   })
 })

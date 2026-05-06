@@ -5,13 +5,9 @@ Allow: /
 Allow: /_nuxt/
 Allow: /api/images/
 Disallow: /api/
-# 초기 색인 안정화 정책(임시):
-# - wifi 상세 페이지는 sitemap 제외 + robots 차단으로 크롤 예산을 아낀다.
-# - 이 경우 검색봇이 HTML noindex 를 직접 보지 못할 수 있으므로, 색인 제한 해제 시
-#   sitemapPolicy.ts 의 wifi 포함과 이 Disallow 제거를 같은 배포에서 처리한다.
-# - AED 상세 페이지는 응급 검색 의도가 강해 초기 제한 중에도 색인 대상이므로 차단하지 않는다.
-# /wifi 랜딩 페이지는 허용; /wifi/[id] 상세만 차단
-Disallow: /wifi/
+# wifi 상세 페이지는 중복·저가치 URL 방지를 위해 HTML noindex 로 제외한다.
+# robots.txt 에서는 차단하지 않아 Googlebot 이 noindex 를 직접 확인할 수 있게 한다.
+# sitemapPolicy.ts 에서 wifi 상세 URL은 계속 sitemap 제외 대상이다.
 
 # AI 검색 크롤러 — 허용 (AI 검색 노출)
 User-agent: GPTBot
