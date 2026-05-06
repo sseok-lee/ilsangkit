@@ -121,8 +121,9 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
       prisma.subscription.count({ where: filteredWhere }),
     ]);
 
+    // 필터가 날짜 기반 동적 분류 — 응답에 담는 row 의 status 도 그 그룹값으로 덮어써야 카드 라벨 일치.
     return {
-      items,
+      items: items.map((row) => ({ ...row, status })),
       total,
       page,
       totalPages: Math.ceil(total / limit),
