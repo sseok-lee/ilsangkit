@@ -1,5 +1,8 @@
 <template>
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition-shadow duration-200">
+  <NuxtLink
+    :to="detailLink"
+    class="block bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-primary transition-all duration-200"
+  >
     <div class="flex items-start justify-between gap-3 mb-2">
       <div class="flex-1 min-w-0">
         <h3 class="font-bold text-slate-900 text-sm md:text-base truncate">
@@ -35,16 +38,22 @@
         {{ formatRent(rental.monthlyRent) }}
       </p>
     </div>
-  </div>
+  </NuxtLink>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PublicRentalComplex } from '~/types/publicRental'
+import { rentalTypeToSlug } from '~/utils/publicRentalMeta'
 
 const props = defineProps<{
   rental: PublicRentalComplex
 }>()
+
+const detailLink = computed(() => {
+  const slug = rentalTypeToSlug(props.rental.rentalType) ?? 'buy-lease'
+  return `/public-rental/${slug}/${props.rental.id}`
+})
 
 const regionLabel = computed(() => {
   return [props.rental.city, props.rental.district].filter(Boolean).join(' ')

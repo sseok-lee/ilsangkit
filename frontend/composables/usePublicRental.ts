@@ -16,6 +16,8 @@ export function usePublicRental() {
   const totalPages = ref(0)
   const currentPage = ref(1)
   const detail = ref<PublicRentalComplex | null>(null)
+  const siblings = ref<PublicRentalComplex[]>([])
+  const nearby = ref<PublicRentalComplex[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -45,7 +47,7 @@ export function usePublicRental() {
     }
   }
 
-  const fetchDetail = async (id: number): Promise<void> => {
+  const fetchDetail = async (id: number): Promise<PublicRentalComplex | null> => {
     loading.value = true
     error.value = null
     try {
@@ -54,12 +56,50 @@ export function usePublicRental() {
       )
       if (res.success && res.data) {
         detail.value = res.data
+        return res.data
       }
+      detail.value = null
+      return null
     } catch (err) {
       error.value = err instanceof Error ? err.message : '공공임대 상세 조회에 실패했습니다.'
       detail.value = null
+      return null
     } finally {
       loading.value = false
+    }
+  }
+
+  const fetchSiblings = async (id: number): Promise<PublicRentalComplex[]> => {
+    try {
+      const res = await $fetch<ApiEnvelope<PublicRentalComplex[]>>(
+        `${apiBase()}/api/public-rental/${id}/siblings`,
+      )
+      if (res.success && res.data) {
+        siblings.value = res.data
+        return res.data
+      }
+      siblings.value = []
+      return []
+    } catch {
+      siblings.value = []
+      return []
+    }
+  }
+
+  const fetchNearby = async (id: number): Promise<PublicRentalComplex[]> => {
+    try {
+      const res = await $fetch<ApiEnvelope<PublicRentalComplex[]>>(
+        `${apiBase()}/api/public-rental/${id}/nearby`,
+      )
+      if (res.success && res.data) {
+        nearby.value = res.data
+        return res.data
+      }
+      nearby.value = []
+      return []
+    } catch {
+      nearby.value = []
+      return []
     }
   }
 
@@ -69,9 +109,13 @@ export function usePublicRental() {
     totalPages: readonly(totalPages),
     currentPage: readonly(currentPage),
     detail: readonly(detail),
+    siblings: readonly(siblings),
+    nearby: readonly(nearby),
     loading: readonly(loading),
     error: readonly(error),
     fetchList,
     fetchDetail,
+    fetchSiblings,
+    fetchNearby,
   }
 }

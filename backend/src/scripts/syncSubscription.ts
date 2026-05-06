@@ -26,7 +26,10 @@ interface SourceConfig {
   specialEndpoint?: string;   // APT only
 }
 
-interface SubscriptionApiItem {
+// 청약홈 API 응답 — APT 분양과 OFFITEL/REMAINING/PRIVATE_RENT 가 접수일자 필드명을
+// 다르게 사용한다. APT 는 RCEPT_BGNDE/ENDDE, 나머지는 SUBSCRPT_RCEPT_BGNDE/ENDDE.
+// 1순위/2순위·특별공급 필드는 APT 전용이므로 다른 source 에서는 undefined 로 들어온다.
+export interface SubscriptionApiItem {
   HOUSE_MANAGE_NO: string;
   PBLANC_NO: string;
   HOUSE_NM: string;
@@ -38,18 +41,20 @@ interface SubscriptionApiItem {
   HSSPLY_ZIP: string;
   TOT_SUPLY_HSHLDCO: number;
   RCRIT_PBLANC_DE: string | null;
-  RCEPT_BGNDE: string | null;
-  RCEPT_ENDDE: string | null;
-  SPSPLY_RCEPT_BGNDE: string | null;
-  SPSPLY_RCEPT_ENDDE: string | null;
-  GNRL_RNK1_CRSPAREA_RCPTDE: string | null;
-  GNRL_RNK1_CRSPAREA_ENDDE: string | null;
-  GNRL_RNK1_ETC_AREA_RCPTDE: string | null;
-  GNRL_RNK1_ETC_AREA_ENDDE: string | null;
-  GNRL_RNK2_CRSPAREA_RCPTDE: string | null;
-  GNRL_RNK2_CRSPAREA_ENDDE: string | null;
-  GNRL_RNK2_ETC_AREA_RCPTDE: string | null;
-  GNRL_RNK2_ETC_AREA_ENDDE: string | null;
+  RCEPT_BGNDE?: string | null;            // APT
+  RCEPT_ENDDE?: string | null;            // APT
+  SUBSCRPT_RCEPT_BGNDE?: string | null;   // OFFITEL/REMAINING/PRIVATE_RENT
+  SUBSCRPT_RCEPT_ENDDE?: string | null;   // OFFITEL/REMAINING/PRIVATE_RENT
+  SPSPLY_RCEPT_BGNDE?: string | null;
+  SPSPLY_RCEPT_ENDDE?: string | null;
+  GNRL_RNK1_CRSPAREA_RCPTDE?: string | null;
+  GNRL_RNK1_CRSPAREA_ENDDE?: string | null;
+  GNRL_RNK1_ETC_AREA_RCPTDE?: string | null;
+  GNRL_RNK1_ETC_AREA_ENDDE?: string | null;
+  GNRL_RNK2_CRSPAREA_RCPTDE?: string | null;
+  GNRL_RNK2_CRSPAREA_ENDDE?: string | null;
+  GNRL_RNK2_ETC_AREA_RCPTDE?: string | null;
+  GNRL_RNK2_ETC_AREA_ENDDE?: string | null;
   PRZWNER_PRESNATN_DE: string | null;
   CNTRCT_CNCLS_BGNDE: string | null;
   CNTRCT_CNCLS_ENDDE: string | null;
@@ -245,9 +250,11 @@ async function fetchAll<T>(endpoint: string, params?: Record<string, string>, ba
 // Transform
 // ---------------------------------------------------------------------------
 
-function transformSubscription(item: SubscriptionApiItem, sourceType: string) {
-  const receptionStart = parseDate(item.RCEPT_BGNDE);
-  const receptionEnd = parseDate(item.RCEPT_ENDDE);
+export function transformSubscription(item: SubscriptionApiItem, sourceType: string) {
+  // APT 는 RCEPT_BGNDE/ENDDE, OFFITEL/REMAINING/PRIVATE_RENT 는
+  // SUBSCRPT_RCEPT_BGNDE/ENDDE 를 사용. 양쪽 모두 지원.
+  const receptionStart = parseDate(item.RCEPT_BGNDE ?? item.SUBSCRPT_RCEPT_BGNDE);
+  const receptionEnd = parseDate(item.RCEPT_ENDDE ?? item.SUBSCRPT_RCEPT_ENDDE);
   const houseDetailType = item.HOUSE_DTL_SECD_NM || null;
   const rentType = item.RENT_SECD_NM || null;
 
@@ -682,9 +689,12 @@ async function main() {
   await prisma.$disconnect();
 }
 
-installRuntimeGuard({ maxMinutes: 30, name: 'syncSubscription', prisma });
-main().catch(async (err) => {
-  console.error('청약 동기화 실패:', err);
-  await prisma.$disconnect();
-  process.exit(1);
-});
+// 모듈 직접 실행시에만 main() 호출 (테스트에서 import 할 때 부수효과 방지).
+if (import.meta.url === `file://${process.argv[1]}`) {
+  installRuntimeGuard({ maxMinutes: 30, name: 'syncSubscription', prisma });
+  main().catch(async (err) => {
+    console.error('청약 동기화 실패:', err);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
+}

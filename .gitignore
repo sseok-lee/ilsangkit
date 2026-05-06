@@ -55,15 +55,13 @@ lighthouse-reports/
 lighthouse-results/
 lighthouse-results-*/
 
-# Screenshots (debug/reference)
-/ilsangkit-*.png
-/ayo-*.png
-/adbanner-*.png
+# Screenshots / mockups at repo root (debug/design refs, local only)
+/*.png
+/*.html
 
-# Design proposals / wireframes (local only, use design/ for curated)
-/*-proposal.html
-/*-wireframe.html
-/*-wireframes.html
+# One-off probe/debug scripts
+backend/probe_*.ts
+frontend/probe_*.ts
 
 # Local audit reports
 /GEO-AUDIT-REPORT.md

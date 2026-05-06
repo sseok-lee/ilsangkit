@@ -14,7 +14,18 @@ export interface PublicRentalComplex {
   exclusiveArea: number | null
   depositAmount: number | null   // BigInt → Number (원)
   monthlyRent: number | null      // 원
+  conversionDeposit?: number | null // 전환보증금 한도(원)
   landlordAgency: string
+  pnu?: string | null
+  completionDate?: string | null  // YYYYMMDD
+  commonArea?: number | null      // 공용면적 ㎡
+  heatingMethod?: string | null
+  buildingStyle?: string | null
+  hasElevator?: string | null
+  parkingCount?: number | null
+  complexNameKor?: string | null
+  lat?: number | null
+  lng?: number | null
   sourceId: string
   createdAt: string
   updatedAt: string

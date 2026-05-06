@@ -24,6 +24,8 @@ import {
   getPublicRentalList,
   getPublicRentalDetail,
   getPublicRentalStats,
+  getPublicRentalSiblings,
+  getPublicRentalNearby,
   serializePublicRentalRow,
 } from '../../src/services/publicRentalService.js';
 import { NotFoundError } from '../../src/lib/errors.js';
@@ -163,6 +165,56 @@ describe('getPublicRentalDetail', () => {
   it('throws NotFoundError when id missing', async () => {
     mocked.publicRentalComplex.findUnique.mockResolvedValue(null);
     await expect(getPublicRentalDetail(999)).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('getPublicRentalSiblings', () => {
+  it('returns rows sharing complexCode but excludes self id', async () => {
+    mocked.publicRentalComplex.findUnique.mockResolvedValue({ complexCode: 'abc' });
+    mocked.publicRentalComplex.findMany.mockResolvedValue([
+      { id: 2, complexCode: 'abc', exclusiveArea: new FakeDecimal(39.6), depositAmount: 50000000n },
+      { id: 3, complexCode: 'abc', exclusiveArea: new FakeDecimal(59.8), depositAmount: 80000000n },
+    ]);
+
+    const rows = await getPublicRentalSiblings(1);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].depositAmount).toBe(50000000);
+
+    const findManyCall = mocked.publicRentalComplex.findMany.mock.calls[0][0];
+    expect(findManyCall.where.complexCode).toBe('abc');
+    expect(findManyCall.where.NOT).toEqual({ id: 1 });
+  });
+
+  it('throws NotFoundError when base id missing', async () => {
+    mocked.publicRentalComplex.findUnique.mockResolvedValue(null);
+    await expect(getPublicRentalSiblings(999)).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('getPublicRentalNearby', () => {
+  it('returns same-district complexes excluding base complexCode (city variant matching)', async () => {
+    mocked.publicRentalComplex.findUnique.mockResolvedValue({
+      complexCode: 'abc',
+      city: '서울특별시',
+      district: '강남구',
+    });
+    mocked.publicRentalComplex.findMany.mockResolvedValue([
+      { id: 10, complexCode: 'xyz', complexName: '강남 매입임대 2단지', depositAmount: 80000000n },
+    ]);
+
+    const rows = await getPublicRentalNearby(1);
+    expect(rows).toHaveLength(1);
+
+    const call = mocked.publicRentalComplex.findMany.mock.calls[0][0];
+    expect(call.where.city).toEqual({ in: ['서울특별시', '서울'] });
+    expect(call.where.district).toBe('강남구');
+    expect(call.where.NOT).toEqual({ complexCode: 'abc' });
+    expect(call.distinct).toEqual(['complexCode']);
+  });
+
+  it('throws NotFoundError when base id missing', async () => {
+    mocked.publicRentalComplex.findUnique.mockResolvedValue(null);
+    await expect(getPublicRentalNearby(999)).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 
