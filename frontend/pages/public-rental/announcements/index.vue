@@ -19,7 +19,7 @@
           v-for="opt in STATUS_FILTERS"
           :key="opt.value ?? 'all'"
           type="button"
-          class="px-3 py-1.5 rounded-full text-sm font-medium border transition-colors"
+          class="px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
           :class="status === opt.value
             ? 'bg-primary text-white border-primary'
             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"

@@ -12,10 +12,10 @@
           v-for="region in REGION_FILTERS"
           :key="region.slug ?? 'all'"
           :class="[
-            'px-3 py-1.5 rounded-full text-sm font-medium transition-colors border',
+            'px-4 py-2 rounded-lg text-sm font-medium transition-colors border',
             currentCity === region.slug
               ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
           ]"
           @click="selectCity(region.slug)"
         >
