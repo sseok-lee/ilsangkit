@@ -91,25 +91,12 @@
       </ul>
 
       <!-- 페이지네이션 -->
-      <div v-if="totalPages > 1" class="flex justify-center gap-2 pt-3">
-        <button
-          type="button"
-          class="px-3 py-1.5 text-sm rounded-md border border-slate-200 disabled:opacity-40"
-          :disabled="page <= 1"
-          @click="setPage(page - 1)"
-        >
-          이전
-        </button>
-        <span class="px-3 py-1.5 text-sm text-slate-500">{{ page }} / {{ totalPages }}</span>
-        <button
-          type="button"
-          class="px-3 py-1.5 text-sm rounded-md border border-slate-200 disabled:opacity-40"
-          :disabled="page >= totalPages"
-          @click="setPage(page + 1)"
-        >
-          다음
-        </button>
-      </div>
+      <Pagination
+        v-if="totalPages > 1"
+        :current-page="page"
+        :total-pages="totalPages"
+        @page-change="setPage"
+      />
     </main>
   </div>
 </template>
