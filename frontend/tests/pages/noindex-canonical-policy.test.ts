@@ -125,6 +125,15 @@ describe('noindex/canonical 정책 — page-level useHead 패턴', () => {
     expect(head.link).toContainEqual({ rel: 'canonical', href: 'https://ilsangkit.co.kr/toilet' })
   })
 
+  it('wifi 상세는 robots.txt 차단 대신 HTML noindex 만 포함하고 canonical 은 생략한다', () => {
+    const category = 'wifi'
+    const isLowValueCategory = category === 'wifi'
+    const head = buildHead(isLowValueCategory, 'https://ilsangkit.co.kr/wifi/wifi-123')
+
+    expect(head.meta).toEqual([{ name: 'robots', content: 'noindex, follow' }])
+    expect(head.link.find((l) => l.rel === 'canonical')).toBeUndefined()
+  })
+
   it('Vue computed 기반 reactivity — isNoindex flip 시 canonical on/off 전환', () => {
     const pageParam = ref(1)
     const canonicalHref = 'https://ilsangkit.co.kr/park'
