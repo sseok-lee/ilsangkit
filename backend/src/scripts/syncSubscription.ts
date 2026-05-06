@@ -183,9 +183,17 @@ const SOURCE_CONFIGS: Record<string, SourceConfig> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseDate(s: string | null | undefined): Date | null {
+// 청약홈 API 는 source 별로 날짜 포맷이 다르다.
+// - APT/OFFITEL/REMAINING: YYYY-MM-DD (Date 생성자가 직접 파싱)
+// - PRIVATE_RENT: YYYYMMDD (Date 생성자가 Invalid Date 반환 → 정규화 필요)
+export function parseDate(s: string | null | undefined): Date | null {
   if (!s || s.trim() === '') return null;
-  const d = new Date(s.trim());
+  let str = s.trim();
+  // YYYYMMDD (8 자리 숫자) → YYYY-MM-DD
+  if (/^\d{8}$/.test(str)) {
+    str = `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
+  }
+  const d = new Date(str);
   return isNaN(d.getTime()) ? null : d;
 }
 
