@@ -518,24 +518,25 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     title: '청약·임대',
     icon: 'calendar_month',
-    // dropdown 내 시각 통일감 위해 iconImg(webp) 제거하고 Material Symbols(line icon)로 통일.
-    // 같은 섹션 안에서 아이콘이 중복되지 않게 분배.
+    // 다른 dropdown(부동산·시설)이 webp 컬러 일러스트 아이콘을 쓰므로 톤을 맞추기 위해
+    // 청약·임대 도 webp 아이콘 사용. 같은 임대 sub-type 끼리 rent.webp 가 반복되는 건
+    // 섹션 헤딩 텍스트가 충분히 구분해 줌.
     links: [
       // 분양 — 청약홈 분양 공고
-      { to: '/subscription', label: '청약 전체', icon: 'calendar_month', section: '분양' },
-      { to: '/subscription/sale', label: '분양 전체', icon: 'sell', section: '분양' },
-      { to: '/subscription/sale/apt', label: '아파트 분양', icon: 'apartment', section: '분양' },
-      { to: '/subscription/sale/offitel', label: '오피스텔·도시형', icon: 'domain', section: '분양' },
-      { to: '/subscription/sale/remaining', label: '무순위·잔여세대', icon: 'home_work', section: '분양' },
-      { to: '/subscription/sale/optional', label: '임의공급', icon: 'redeem', section: '분양' },
+      { to: '/subscription', label: '청약 전체', icon: 'calendar_month', iconImg: 'subscription', section: '분양' },
+      { to: '/subscription/sale', label: '분양 전체', icon: 'sell', iconImg: 'sale', section: '분양' },
+      { to: '/subscription/sale/apt', label: '아파트 분양', icon: 'apartment', iconImg: 'apt', section: '분양' },
+      { to: '/subscription/sale/offitel', label: '오피스텔·도시형', icon: 'domain', iconImg: 'offitel', section: '분양' },
+      { to: '/subscription/sale/remaining', label: '무순위·잔여세대', icon: 'home_work', iconImg: 'kiosk', section: '분양' },
+      { to: '/subscription/sale/optional', label: '임의공급', icon: 'redeem', iconImg: 'store', section: '분양' },
       // 임대 청약 — 청약통장 사용
-      { to: '/subscription/rent', label: '임대 청약 전체', icon: 'key', section: '임대 청약' },
-      { to: '/subscription/rent/public', label: '공공임대 청약', icon: 'home', section: '임대 청약' },
-      { to: '/subscription/rent/private', label: '공공지원 민간임대', icon: 'bungalow', section: '임대 청약' },
+      { to: '/subscription/rent', label: '임대 청약 전체', icon: 'key', iconImg: 'rent', section: '임대 청약' },
+      { to: '/subscription/rent/public', label: '공공임대 청약', icon: 'home', iconImg: 'rent', section: '임대 청약' },
+      { to: '/subscription/rent/private', label: '공공지원 민간임대', icon: 'bungalow', iconImg: 'villa', section: '임대 청약' },
       // 공공임대 입주 — 자격 기반 수시 신청 (LH/SH 등)
-      { to: '/public-rental', label: '공공임대 단지', icon: 'location_city', section: '공공임대 입주' },
-      { to: '/public-rental/buy-lease', label: '매입임대', icon: 'shopping_cart', section: '공공임대 입주' },
-      { to: '/public-rental/charter', label: '전세임대', icon: 'savings', section: '공공임대 입주' },
+      { to: '/public-rental', label: '공공임대 단지', icon: 'location_city', iconImg: 'rent', section: '공공임대 입주' },
+      { to: '/public-rental/buy-lease', label: '매입임대', icon: 'shopping_cart', iconImg: 'land', section: '공공임대 입주' },
+      { to: '/public-rental/charter', label: '전세임대', icon: 'savings', iconImg: 'rent', section: '공공임대 입주' },
     ],
   },
   ...CATEGORY_GROUPS,
