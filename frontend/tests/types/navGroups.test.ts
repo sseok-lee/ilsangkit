@@ -39,25 +39,37 @@ describe('NAV_GROUPS', () => {
     expect(links).toEqual(expectedLinks)
   })
 
-  it('청약·임대 그룹은 청약 전체/분양/임대 청약/공공임대 4개 링크를 포함한다', () => {
+  it('청약·임대 그룹은 분양·임대 청약·공공임대 입주 3개 섹션 링크를 포함한다', () => {
     const subscriptionGroup = NAV_GROUPS[1] as LinkGroup
     expect(subscriptionGroup.title).toBe('청약·임대')
     const links = subscriptionGroup.links.map(({ to, label }) => ({ to, label }))
     expect(links).toEqual([
+      // 분양
       { to: '/subscription', label: '청약 전체' },
-      { to: '/subscription/sale', label: '분양' },
-      { to: '/subscription/rent', label: '임대 청약' },
-      { to: '/public-rental', label: '공공임대' },
+      { to: '/subscription/sale', label: '분양 전체' },
+      { to: '/subscription/sale/apt', label: '아파트 분양' },
+      { to: '/subscription/sale/offitel', label: '오피스텔·도시형' },
+      { to: '/subscription/sale/remaining', label: '무순위·잔여세대' },
+      { to: '/subscription/sale/optional', label: '임의공급' },
+      // 임대 청약 (청약통장)
+      { to: '/subscription/rent', label: '임대 청약 전체' },
+      { to: '/subscription/rent/public', label: '공공임대 청약' },
+      { to: '/subscription/rent/private', label: '공공지원 민간임대' },
+      // 공공임대 입주 (자격 기반)
+      { to: '/public-rental', label: '공공임대 단지' },
+      { to: '/public-rental/buy-lease', label: '매입임대' },
+      { to: '/public-rental/charter', label: '전세임대' },
     ])
   })
 
-  it('청약·임대 그룹 링크는 청약홈·공공임대 두 섹션으로 나뉜다', () => {
+  it('청약·임대 그룹 링크는 분양·임대 청약·공공임대 입주 3개 섹션으로 나뉜다', () => {
     const subscriptionGroup = NAV_GROUPS[1] as LinkGroup
-    const links = subscriptionGroup.links
-    expect(links[0].section).toBe('청약홈')
-    expect(links[1].section).toBe('청약홈')
-    expect(links[2].section).toBe('청약홈')
-    expect(links[3].section).toBe('공공임대')
+    const sections = subscriptionGroup.links.map(l => l.section)
+    expect(sections).toEqual([
+      '분양', '분양', '분양', '분양', '분양', '분양',
+      '임대 청약', '임대 청약', '임대 청약',
+      '공공임대 입주', '공공임대 입주', '공공임대 입주',
+    ])
   })
 })
 
