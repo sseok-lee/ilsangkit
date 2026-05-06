@@ -86,7 +86,8 @@
                   />
                   <div
                     data-testid="nav-section-heading"
-                    class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                    class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider"
+                    :class="sectionColorClass(link.section)"
                   >
                     {{ link.section }}
                   </div>
@@ -97,7 +98,7 @@
                   @click="closeDropdown"
                 >
                   <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-                  <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
+                  <span v-else class="material-symbols-outlined text-[18px]" :class="sectionColorClass(link.section)">{{ link.icon }}</span>
                   {{ link.label }}
                 </NuxtLink>
               </template>
@@ -190,7 +191,8 @@
             <template v-for="(link, idx) in group.links" :key="link.to">
               <div
                 v-if="link.section && (idx === 0 || link.section !== group.links[idx - 1].section)"
-                class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider"
+                :class="sectionColorClass(link.section)"
               >
                 {{ link.section }}
               </div>
@@ -200,7 +202,7 @@
                 @click="closeMobileMenu"
               >
                 <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-                <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
+                <span v-else class="material-symbols-outlined text-[18px]" :class="sectionColorClass(link.section)">{{ link.icon }}</span>
                 {{ link.label }}
               </NuxtLink>
             </template>
@@ -343,6 +345,16 @@ const handleDropdownFocusout = (event: FocusEvent, title: string) => {
 const openDropdown = (title: string) => {
   cancelCloseDropdown()
   activeDropdown.value = title
+}
+
+// 청약·임대 드롭다운 — 섹션별 컬러 구분 (다른 그룹의 webp 컬러 아이콘과 톤 맞춤)
+function sectionColorClass(section: string | undefined): string {
+  switch (section) {
+    case '분양':           return 'text-sky-500'
+    case '임대 청약':      return 'text-amber-500'
+    case '공공임대 입주':  return 'text-emerald-500'
+    default:               return 'text-slate-400'
+  }
 }
 
 const scheduleCloseDropdown = () => {
