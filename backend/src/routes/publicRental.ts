@@ -12,6 +12,8 @@ import {
   getPublicRentalList,
   getPublicRentalDetail,
   getPublicRentalStats,
+  getPublicRentalSiblings,
+  getPublicRentalNearby,
 } from '../services/publicRentalService.js';
 
 const router = Router();
@@ -41,6 +43,26 @@ router.get(
     const { id } = res.locals.validated.params as z.infer<typeof PublicRentalIdParamsSchema>;
     const detail = await getPublicRentalDetail(id);
     res.json({ success: true, data: detail });
+  })
+);
+
+router.get(
+  '/:id/siblings',
+  validateMultiple({ params: PublicRentalIdParamsSchema }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { id } = res.locals.validated.params as z.infer<typeof PublicRentalIdParamsSchema>;
+    const siblings = await getPublicRentalSiblings(id);
+    res.json({ success: true, data: siblings });
+  })
+);
+
+router.get(
+  '/:id/nearby',
+  validateMultiple({ params: PublicRentalIdParamsSchema }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { id } = res.locals.validated.params as z.infer<typeof PublicRentalIdParamsSchema>;
+    const nearby = await getPublicRentalNearby(id);
+    res.json({ success: true, data: nearby });
   })
 );
 

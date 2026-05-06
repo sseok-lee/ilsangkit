@@ -2,7 +2,12 @@
 
 import prisma from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
-import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './cityMapping.js';
+import {
+  CITY_SLUG_TO_FULL,
+  CITY_SLUG_TO_SHORT,
+  SHORT_TO_SLUG,
+  FULL_TO_SLUG,
+} from './cityMapping.js';
 import type { PublicRentalListQuery } from '../schemas/publicRental.js';
 import type { Prisma } from '@prisma/client';
 
@@ -95,6 +100,57 @@ export async function getPublicRentalDetail(id: number) {
   const row = await prisma.publicRentalComplex.findUnique({ where: { id } });
   if (!row) throw new NotFoundError(`PublicRentalComplex ${id} not found`);
   return serializePublicRentalRow(row);
+}
+
+export async function getPublicRentalSiblings(id: number) {
+  const base = await prisma.publicRentalComplex.findUnique({
+    where: { id },
+    select: { complexCode: true },
+  });
+  if (!base) throw new NotFoundError(`PublicRentalComplex ${id} not found`);
+
+  const rows = await prisma.publicRentalComplex.findMany({
+    where: {
+      complexCode: base.complexCode,
+      NOT: { id },
+    },
+    orderBy: [{ rentalType: 'asc' }, { exclusiveArea: 'asc' }],
+    take: 12,
+  });
+
+  return rows.map(serializePublicRentalRow);
+}
+
+export async function getPublicRentalNearby(id: number, limit = 6) {
+  const base = await prisma.publicRentalComplex.findUnique({
+    where: { id },
+    select: { city: true, district: true, complexCode: true },
+  });
+  if (!base) throw new NotFoundError(`PublicRentalComplex ${id} not found`);
+
+  const slug = SHORT_TO_SLUG[base.city] ?? FULL_TO_SLUG[base.city];
+  const cityVariants = slug
+    ? Array.from(
+        new Set(
+          [base.city, CITY_SLUG_TO_FULL[slug], CITY_SLUG_TO_SHORT[slug]].filter(
+            (v): v is string => Boolean(v),
+          ),
+        ),
+      )
+    : [base.city];
+
+  const rows = await prisma.publicRentalComplex.findMany({
+    where: {
+      city: cityVariants.length > 1 ? { in: cityVariants } : cityVariants[0],
+      district: base.district,
+      NOT: { complexCode: base.complexCode },
+    },
+    distinct: ['complexCode'],
+    orderBy: [{ complexName: 'asc' }],
+    take: limit,
+  });
+
+  return rows.map(serializePublicRentalRow);
 }
 
 export async function getPublicRentalStats() {
