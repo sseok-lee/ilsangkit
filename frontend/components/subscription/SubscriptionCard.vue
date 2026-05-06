@@ -104,6 +104,6 @@ const specialDateRange = computed(() => {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr)
-  return `${date.getMonth() + 1}.${date.getDate()}`
+  return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`
 }
 </script>
