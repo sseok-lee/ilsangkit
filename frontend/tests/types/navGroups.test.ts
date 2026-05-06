@@ -47,6 +47,9 @@ describe('NAV_GROUPS', () => {
       // 분양
       { to: '/subscription', label: '청약 전체' },
       { to: '/subscription/sale', label: '분양 전체' },
+      { to: '/subscription/sale/apt', label: '아파트 분양' },
+      { to: '/subscription/sale/offitel', label: '오피스텔·도시형' },
+      { to: '/subscription/sale/remaining', label: '무순위·잔여세대' },
       { to: '/subscription/sale/optional', label: '임의공급' },
       // 임대 청약 (청약통장)
       { to: '/subscription/rent', label: '임대 청약 전체' },
@@ -63,7 +66,7 @@ describe('NAV_GROUPS', () => {
     const subscriptionGroup = NAV_GROUPS[1] as LinkGroup
     const sections = subscriptionGroup.links.map(l => l.section)
     expect(sections).toEqual([
-      '분양', '분양', '분양',
+      '분양', '분양', '분양', '분양', '분양', '분양',
       '임대 청약', '임대 청약', '임대 청약',
       '공공임대 입주', '공공임대 입주', '공공임대 입주',
     ])

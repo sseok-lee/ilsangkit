@@ -522,6 +522,9 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // 분양 — 청약홈 분양 공고
       { to: '/subscription', label: '청약 전체', icon: 'calendar_month', iconImg: 'subscription', section: '분양' },
       { to: '/subscription/sale', label: '분양 전체', icon: 'sell', iconImg: 'sale', section: '분양' },
+      { to: '/subscription/sale/apt', label: '아파트 분양', icon: 'apartment', iconImg: 'apt', section: '분양' },
+      { to: '/subscription/sale/offitel', label: '오피스텔·도시형', icon: 'domain', iconImg: 'offitel', section: '분양' },
+      { to: '/subscription/sale/remaining', label: '무순위·잔여세대', icon: 'home_work', iconImg: 'subscription', section: '분양' },
       { to: '/subscription/sale/optional', label: '임의공급', icon: 'redeem', iconImg: 'subscription', section: '분양' },
       // 임대 청약 — 청약통장 사용
       { to: '/subscription/rent', label: '임대 청약 전체', icon: 'key', iconImg: 'rent', section: '임대 청약' },
