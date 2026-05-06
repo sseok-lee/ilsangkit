@@ -21,7 +21,7 @@
           type="button"
           class="px-3 py-1.5 rounded-full text-sm font-medium border transition-colors"
           :class="status === opt.value
-            ? 'bg-slate-900 text-white border-slate-900'
+            ? 'bg-primary text-white border-primary'
             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
           @click="setStatus(opt.value)"
         >
@@ -40,7 +40,7 @@
         />
         <button
           type="button"
-          class="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800"
+          class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors"
           @click="reload"
         >
           검색

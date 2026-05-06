@@ -55,7 +55,7 @@
               :href="detail.pcUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-1 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors"
             >
               마이홈 공고 원문 <span class="text-xs">↗</span>
             </a>
