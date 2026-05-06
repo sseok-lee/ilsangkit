@@ -1,12 +1,6 @@
 <template>
   <div class="flex flex-wrap gap-2">
     <NuxtLink
-      to="/public-rental"
-      :class="['px-4 py-2 rounded-lg font-medium text-sm transition-colors', !active ? 'bg-primary text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50']"
-    >
-      전체
-    </NuxtLink>
-    <NuxtLink
       v-for="tab in TABS"
       :key="tab.match"
       :to="tab.to"
