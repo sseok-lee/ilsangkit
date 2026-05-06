@@ -28,6 +28,17 @@ function serializeRow(row: any): any {
  *   upcoming = receptionStartDate > now
  *   closed   = receptionStartDate IS NULL OR receptionEndDate < now
  */
+export function computeSubscriptionStatus(
+  receptionStartDate: Date | null | undefined,
+  receptionEndDate: Date | null | undefined,
+  now: Date = new Date(),
+): 'ongoing' | 'upcoming' | 'closed' {
+  if (!receptionStartDate) return 'closed';
+  if (receptionStartDate > now) return 'upcoming';
+  if (receptionEndDate && receptionEndDate < now) return 'closed';
+  return 'ongoing';
+}
+
 export function dateBasedStatusFilter(
   status: 'ongoing' | 'upcoming' | 'closed',
   now: Date = new Date(),
@@ -160,7 +171,10 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
       take,
     });
 
-    items.push(...batch);
+    // 저장된 status 컬럼은 sync 시점 기준 (최대 24h stale).
+    // 필터 자체가 날짜 기반으로 동적 분류했으므로, 응답에 담는 row 의 status 도
+    // 그 동적 그룹 값으로 덮어써야 카드 라벨이 일치한다.
+    items.push(...batch.map((row) => ({ ...row, status: statusKey })));
     remainingTake -= take;
     remainingSkip = 0;
   }
@@ -188,7 +202,12 @@ export async function getSubscriptionDetail(id: number) {
     throw new NotFoundError('청약 공고를 찾을 수 없습니다');
   }
 
-  return serializeRow(subscription);
+  // status 동적 재계산 (sync 시점 stale 방지 — 목록과 동일한 정책)
+  const status = computeSubscriptionStatus(
+    subscription.receptionStartDate,
+    subscription.receptionEndDate,
+  );
+  return serializeRow({ ...subscription, status });
 }
 
 export async function getUpcomingSubscriptions(limit = 5) {
