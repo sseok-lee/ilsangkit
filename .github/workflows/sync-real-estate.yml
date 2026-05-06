@@ -47,7 +47,8 @@ jobs:
                   *dist/scripts/geocodeRealEstate*|\
                   *dist/scripts/refreshRealEstateSummary*|\
                   *dist/scripts/syncSubscription*|\
-                  *dist/scripts/syncPublicRent*)
+                  *dist/scripts/syncPublicRent*|\
+                  *dist/scripts/syncRentalAnnouncement*)
                     kill -9 "$pid" 2>/dev/null || true
                     ;;
                 esac
@@ -122,6 +123,14 @@ jobs:
             timeout --kill-after=30s 30m node dist/scripts/syncPublicRent.js \
               || echo "[WARN] LH 임대 동기화 실패 (exit=$?)"
             echo "[step:public-rent-end]"
+
+            # 마이홈 공공임대 모집공고 동기화 (HWSPR02: 일반+장기 통합)
+            # API 가 활성 공고만 반환하는 구조 — 매일 누적되어야 마감 공고가 archive 됨.
+            echo "[step:rental-announcement-start]"
+            echo "--- 공공임대 모집공고 동기화 ---"
+            timeout --kill-after=30s 15m node dist/scripts/syncRentalAnnouncement.js \
+              || echo "[WARN] 모집공고 동기화 실패 (exit=$?)"
+            echo "[step:rental-announcement-end]"
 
             # Google Indexing API 제출 (일일 quota 200, 미제출 URL 우선)
             # IndexNow는 각 sync 스크립트 내부에서 매번 호출되지만, Google은
