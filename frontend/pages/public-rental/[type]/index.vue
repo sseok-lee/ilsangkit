@@ -8,22 +8,7 @@
     </div>
 
     <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-6">
-      <div class="flex flex-wrap gap-2 overflow-x-auto md:overflow-visible">
-        <NuxtLink
-          to="/public-rental"
-          class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors whitespace-nowrap"
-        >
-          전체
-        </NuxtLink>
-        <NuxtLink
-          v-for="(meta, slug) in LH_RENTAL_TYPES"
-          :key="slug"
-          :to="`/public-rental/${slug}`"
-          :class="['px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap', slug === type ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50']"
-        >
-          {{ meta.label }}
-        </NuxtLink>
-      </div>
+      <PublicRentalFilterTabs :active="type" />
 
       <PublicRentalListView :rental-type-code="typeMeta.rentalTypeCode" />
     </main>
@@ -34,6 +19,7 @@
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { LH_RENTAL_TYPES, type LhRentalTypeKey } from '~/utils/subscriptionMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilterTabs.vue'
 
 const route = useRoute()
 const type = route.params.type as string

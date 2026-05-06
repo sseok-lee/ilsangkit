@@ -55,6 +55,7 @@ describe('NAV_GROUPS', () => {
       { to: '/subscription/rent/public', label: '공공임대 청약' },
       { to: '/subscription/rent/private', label: '공공지원 민간임대' },
       // 공공임대 입주 (자격 기반)
+      { to: '/public-rental/announcements', label: '모집공고' },
       { to: '/public-rental/buy-lease', label: '매입임대' },
       { to: '/public-rental/charter', label: '전세임대' },
     ])
@@ -67,7 +68,7 @@ describe('NAV_GROUPS', () => {
       undefined,                                    // 청약홈
       '분양', '분양', '분양', '분양',
       '임대 청약', '임대 청약',
-      '공공임대 입주', '공공임대 입주',
+      '공공임대 입주', '공공임대 입주', '공공임대 입주',
     ])
   })
 })

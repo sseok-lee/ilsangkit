@@ -15,8 +15,12 @@ import {
   getPublicRentalSiblings,
   getPublicRentalNearby,
 } from '../services/publicRentalService.js';
+import announcementRouter from './publicRentalAnnouncement.js';
 
 const router = Router();
+
+// 더 구체적인 prefix 라우터를 /:id 보다 먼저 마운트.
+router.use('/announcements', announcementRouter);
 
 router.get(
   '/stats',
