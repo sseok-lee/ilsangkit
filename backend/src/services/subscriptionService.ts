@@ -83,7 +83,7 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   // 포함되도록 OR + null 조건을 명시적으로 추가한다.
   if (category === 'sale') {
     where.OR = [
-      { sourceType: { in: ['OFFITEL', 'REMAINING'] } },
+      { sourceType: { in: ['OFFITEL', 'REMAINING', 'OPTIONAL'] } },
       { sourceType: 'APT', rentType: null },
       { sourceType: 'APT', rentType: { notIn: PUBLIC_RENT_TYPES } },
     ];

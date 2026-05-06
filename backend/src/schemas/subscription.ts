@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const SubscriptionStatusSchema = z.enum(['upcoming', 'ongoing', 'closed']);
 
-export const SubscriptionSourceTypeSchema = z.enum(['APT', 'OFFITEL', 'REMAINING', 'PRIVATE_RENT']);
+export const SubscriptionSourceTypeSchema = z.enum(['APT', 'OFFITEL', 'REMAINING', 'PRIVATE_RENT', 'OPTIONAL']);
 
 export const SubscriptionCategorySchema = z.enum(['sale', 'rent']);
 

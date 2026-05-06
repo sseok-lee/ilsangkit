@@ -47,21 +47,30 @@ export const SALE_TYPES: Record<string, SubscriptionTypeMeta> = {
     description: '무순위 및 잔여세대 청약 정보를 확인하세요. 청약통장 없이도 신청 가능합니다.',
     sourceType: 'REMAINING',
   },
+  optional: {
+    label: '임의공급',
+    icon: 'redeem',
+    iconImg: 'subscription',
+    description: '청약 1·2순위 절차 없이 추첨·접수로 공급되는 임의공급 분양 정보입니다. 미분양 처리·특수목적 공급 등에서 활용됩니다.',
+    sourceType: 'OPTIONAL',
+  },
 }
 
+// "공공임대 청약" / "공공지원 민간임대" — 헤더 메뉴의 /public-rental(공공임대 입주, 자격 기반 수시 신청)와
+// 어휘 충돌을 피하려 페이지 컨텍스트에 맞게 명확히 구분.
 export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
   public: {
-    label: '공공임대',
+    label: '공공임대 청약',
     icon: 'home',
     iconImg: 'rent',
-    description: '공공주택 임대 청약 일정과 정보를 확인하세요. LH·SH·GH 등 공공기관이 공급하는 임대주택으로 시세보다 저렴하게 거주할 수 있습니다.',
+    description: '청약통장으로 신청하는 공공임대 청약 일정과 정보를 확인하세요. LH·SH·GH 등 공공기관이 공급하는 임대주택으로 시세보다 저렴하게 거주할 수 있습니다.',
     sourceType: 'APT',
     rentType: '임대주택',
     group: 'apply',
     dataSource: 'applyhome',
   },
   private: {
-    label: '민간임대',
+    label: '공공지원 민간임대',
     icon: 'bungalow',
     iconImg: 'rent',
     description: '공공지원 민간임대 청약 일정과 정보를 확인하세요. 민간 건설사가 공급하지만 임대 보증금 보호와 전월세 상한이 적용됩니다.',
@@ -113,6 +122,7 @@ export function getSourceTypeLabel(sourceType: string): string {
   if (sourceType === 'APT') return '아파트'
   if (sourceType === 'OFFITEL') return '오피스텔'
   if (sourceType === 'REMAINING') return '무순위'
-  if (sourceType === 'PRIVATE_RENT') return '민간임대'
+  if (sourceType === 'PRIVATE_RENT') return '공공지원 민간임대'
+  if (sourceType === 'OPTIONAL') return '임의공급'
   return sourceType
 }
