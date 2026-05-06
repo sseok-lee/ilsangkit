@@ -7,20 +7,30 @@
         </span>
       </template>
 
-      <div class="mb-3 flex flex-wrap gap-2">
-        <button
-          v-for="region in REGION_FILTERS"
-          :key="region.slug ?? 'all'"
-          :class="[
-            'px-4 py-2 rounded-lg text-sm font-medium transition-colors border',
-            currentCity === region.slug
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-          ]"
-          @click="selectCity(region.slug)"
-        >
-          {{ region.label }}
-        </button>
+      <!-- 지역 필터: 청약 페이지(SubscriptionListView) 와 동일 패턴 -->
+      <div class="mb-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1.5">지역</label>
+          <div class="relative">
+            <select
+              v-model="currentCity"
+              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+            >
+              <option value="">전국</option>
+              <option v-for="opt in CITY_OPTIONS" :key="opt.slug" :value="opt.slug">{{ opt.label }}</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1.5">지역 (상세)</label>
+          <input
+            v-model="districtDetail"
+            type="text"
+            placeholder="예: 강남구, 분당구"
+            class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </div>
       </div>
 
       <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -75,32 +85,40 @@ const props = defineProps<{
   rentalTypeCode?: PublicRentalType
 }>()
 
-const REGION_FILTERS: Array<{ slug?: string; label: string }> = [
-  { label: '전국' },
+// 모든 광역시·도 (slug, label) — 청약 select 와 동일한 옵션셋 + 도 단위까지 포함.
+const CITY_OPTIONS = [
   { slug: 'seoul', label: '서울' },
-  { slug: 'gyeonggi', label: '경기' },
-  { slug: 'incheon', label: '인천' },
   { slug: 'busan', label: '부산' },
   { slug: 'daegu', label: '대구' },
+  { slug: 'incheon', label: '인천' },
+  { slug: 'gwangju', label: '광주' },
+  { slug: 'daejeon', label: '대전' },
+  { slug: 'ulsan', label: '울산' },
+  { slug: 'sejong', label: '세종' },
+  { slug: 'gyeonggi', label: '경기' },
+  { slug: 'gangwon', label: '강원' },
+  { slug: 'chungbuk', label: '충북' },
+  { slug: 'chungnam', label: '충남' },
+  { slug: 'jeonbuk', label: '전북' },
+  { slug: 'jeonnam', label: '전남' },
+  { slug: 'gyeongbuk', label: '경북' },
+  { slug: 'gyeongnam', label: '경남' },
+  { slug: 'jeju', label: '제주' },
 ]
 
 const { items, total, totalPages, currentPage, loading, error, fetchList } = usePublicRental()
 
-const currentCity = ref<string | undefined>(undefined)
+const currentCity = ref<string>('')
+const districtDetail = ref<string>('')
 const page = ref(1)
 
 const reload = (): Promise<void> => fetchList({
-  city: currentCity.value,
+  city: currentCity.value || undefined,
+  district: districtDetail.value.trim() || undefined,
   rentalType: props.rentalTypeCode,
   page: page.value,
   limit: 18,
 })
-
-function selectCity(slug: string | undefined) {
-  currentCity.value = slug
-  page.value = 1
-  void reload()
-}
 
 function goToPage(p: number) {
   page.value = p
@@ -111,11 +129,18 @@ onMounted(() => {
   void reload()
 })
 
-watch(
-  () => props.rentalTypeCode,
-  () => {
+watch([currentCity, () => props.rentalTypeCode], () => {
+  page.value = 1
+  void reload()
+})
+
+// 상세 검색 입력은 디바운스 — 타이핑마다 호출 방지.
+let detailTimer: ReturnType<typeof setTimeout> | null = null
+watch(districtDetail, () => {
+  if (detailTimer) clearTimeout(detailTimer)
+  detailTimer = setTimeout(() => {
     page.value = 1
     void reload()
-  },
-)
+  }, 300)
+})
 </script>
