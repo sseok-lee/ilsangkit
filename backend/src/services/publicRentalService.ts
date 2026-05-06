@@ -8,8 +8,9 @@ import {
   SHORT_TO_SLUG,
   FULL_TO_SLUG,
 } from './cityMapping.js';
+import { computeStatus, todayInKst } from './publicRentalAnnouncementService.js';
 import type { PublicRentalListQuery } from '../schemas/publicRental.js';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, PublicRentalComplex } from '@prisma/client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function serializePublicRentalRow(row: any): any {
@@ -68,11 +69,70 @@ function buildWhere(params: PublicRentalListQuery): Prisma.PublicRentalComplexWh
   return where;
 }
 
+type ActiveStatus = 'ongoing' | 'upcoming';
+
+interface AnnouncementMatchMaps {
+  pnu: Map<string, ActiveStatus>;
+  nameKey: Map<string, ActiveStatus>;
+}
+
+/**
+ * 활성(ongoing/upcoming) 모집공고를 한 번 가져와서 PNU/이름 매칭 맵으로 빌드.
+ * 공고 데이터는 수백건 수준이라 인메모리 매칭이 합리적.
+ * 우선순위: ongoing > upcoming.
+ */
+async function buildActiveAnnouncementMaps(): Promise<AnnouncementMatchMaps> {
+  const today = todayInKst();
+  const rows = await prisma.publicRentalAnnouncement.findMany({
+    where: {
+      OR: [
+        { endDe: null },
+        { endDe: { gte: today } },
+      ],
+    },
+    select: {
+      pnu: true, hsmpNm: true, brtcNm: true, signguNm: true, beginDe: true, endDe: true,
+    },
+  });
+
+  const pnu = new Map<string, ActiveStatus>();
+  const nameKey = new Map<string, ActiveStatus>();
+  const promote = (cur: ActiveStatus | undefined, next: ActiveStatus): ActiveStatus =>
+    cur === 'ongoing' || next === 'ongoing' ? 'ongoing' : 'upcoming';
+
+  for (const r of rows) {
+    const status = computeStatus(r.beginDe, r.endDe, today);
+    if (status !== 'ongoing' && status !== 'upcoming') continue;
+    if (r.pnu) pnu.set(r.pnu, promote(pnu.get(r.pnu), status));
+    if (r.hsmpNm && r.brtcNm && r.signguNm) {
+      const key = `${r.brtcNm}|${r.signguNm}|${r.hsmpNm}`;
+      nameKey.set(key, promote(nameKey.get(key), status));
+    }
+  }
+  return { pnu, nameKey };
+}
+
+function decorateAnnouncementStatus(
+  row: PublicRentalComplex,
+  maps: AnnouncementMatchMaps,
+): ActiveStatus | null {
+  if (row.pnu) {
+    const byPnu = maps.pnu.get(row.pnu);
+    if (byPnu) return byPnu;
+  }
+  const name = row.complexNameKor;
+  if (name && row.city && row.district) {
+    const byName = maps.nameKey.get(`${row.city}|${row.district}|${name}`);
+    if (byName) return byName;
+  }
+  return null;
+}
+
 export async function getPublicRentalList(params: PublicRentalListQuery) {
   const where = buildWhere(params);
   const skip = (params.page - 1) * params.limit;
 
-  const [rows, groups] = await Promise.all([
+  const [rows, groups, maps] = await Promise.all([
     prisma.publicRentalComplex.findMany({
       where,
       distinct: ['complexCode'],
@@ -81,12 +141,16 @@ export async function getPublicRentalList(params: PublicRentalListQuery) {
       take: params.limit,
     }),
     prisma.publicRentalComplex.groupBy({ by: ['complexCode'], where }),
+    buildActiveAnnouncementMaps(),
   ]);
 
   const total = groups.length;
 
   return {
-    items: rows.map(serializePublicRentalRow),
+    items: rows.map((row) => ({
+      ...serializePublicRentalRow(row),
+      announcementStatus: decorateAnnouncementStatus(row, maps),
+    })),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -99,7 +163,11 @@ export async function getPublicRentalList(params: PublicRentalListQuery) {
 export async function getPublicRentalDetail(id: number) {
   const row = await prisma.publicRentalComplex.findUnique({ where: { id } });
   if (!row) throw new NotFoundError(`PublicRentalComplex ${id} not found`);
-  return serializePublicRentalRow(row);
+  const maps = await buildActiveAnnouncementMaps();
+  return {
+    ...serializePublicRentalRow(row),
+    announcementStatus: decorateAnnouncementStatus(row, maps),
+  };
 }
 
 export async function getPublicRentalSiblings(id: number) {
