@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import LhRentalType from '~/pages/public-rental/[type].vue'
+import LhRentalType from '~/pages/public-rental/[type]/index.vue'
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({ setBreadcrumbSchema: vi.fn() }),
