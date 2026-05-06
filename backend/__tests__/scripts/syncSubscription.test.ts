@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  parseDate,
   transformSubscription,
   type SubscriptionApiItem,
 } from '../../src/scripts/syncSubscription.js';
@@ -170,5 +171,57 @@ describe('transformSubscription — status 계산', () => {
       SUBSCRPT_RCEPT_ENDDE: '2026-08-15',
     };
     expect(transformSubscription(item, 'REMAINING').status).toBe('upcoming');
+  });
+});
+
+describe('parseDate — 날짜 포맷 정규화', () => {
+  it('YYYY-MM-DD 형식을 정상 파싱한다', () => {
+    const d = parseDate('2026-05-04');
+    expect(d).not.toBeNull();
+    expect(d!.toISOString().slice(0, 10)).toBe('2026-05-04');
+  });
+
+  it('YYYYMMDD 형식(하이픈 없음, PRIVATE_RENT API 응답 포맷)을 파싱한다', () => {
+    const d = parseDate('20260504');
+    expect(d).not.toBeNull();
+    expect(d!.toISOString().slice(0, 10)).toBe('2026-05-04');
+  });
+
+  it('null/undefined/빈 문자열은 null 반환', () => {
+    expect(parseDate(null)).toBeNull();
+    expect(parseDate(undefined)).toBeNull();
+    expect(parseDate('')).toBeNull();
+    expect(parseDate('   ')).toBeNull();
+  });
+
+  it('잘못된 포맷(7자리/9자리 숫자, 비숫자 문자열)은 null 반환', () => {
+    expect(parseDate('2026050')).toBeNull();        // 7 자리
+    expect(parseDate('202605040')).toBeNull();      // 9 자리
+    expect(parseDate('not-a-date')).toBeNull();
+  });
+
+  it('공백 패딩이 있어도 trim 후 파싱한다', () => {
+    const d = parseDate('  20260504  ');
+    expect(d).not.toBeNull();
+    expect(d!.toISOString().slice(0, 10)).toBe('2026-05-04');
+  });
+});
+
+describe('transformSubscription — PRIVATE_RENT 의 YYYYMMDD 날짜 처리 (regression)', () => {
+  it('PRIVATE_RENT: SUBSCRPT_RCEPT_BGNDE/ENDDE 가 YYYYMMDD 형식이어도 정상 파싱', () => {
+    const item: SubscriptionApiItem = {
+      ...baseItem,
+      RCRIT_PBLANC_DE: '20260429',
+      SUBSCRPT_RCEPT_BGNDE: '20260504',
+      SUBSCRPT_RCEPT_ENDDE: '20260504',
+      PRZWNER_PRESNATN_DE: '20260508',
+    };
+    const r = transformSubscription(item, 'PRIVATE_RENT');
+    expect(r.receptionStartDate).not.toBeNull();
+    expect(r.receptionEndDate).not.toBeNull();
+    expect(r.receptionStartDate!.toISOString().slice(0, 10)).toBe('2026-05-04');
+    expect(r.receptionEndDate!.toISOString().slice(0, 10)).toBe('2026-05-04');
+    expect(r.announcementDate!.toISOString().slice(0, 10)).toBe('2026-04-29');
+    expect(r.winnerDate!.toISOString().slice(0, 10)).toBe('2026-05-08');
   });
 });
