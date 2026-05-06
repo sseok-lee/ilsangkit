@@ -11,6 +11,8 @@
     </div>
 
     <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-5">
+      <PublicRentalFilterTabs active="announcements" />
+
       <!-- 상태 필터 -->
       <div class="flex flex-wrap gap-2">
         <button
@@ -117,6 +119,7 @@ import { ref, watch } from 'vue'
 import { useRentalAnnouncements } from '~/composables/useRentalAnnouncements'
 import type { AnnouncementStatus } from '~/types/publicRentalAnnouncement'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilterTabs.vue'
 
 const STATUS_FILTERS: Array<{ value: AnnouncementStatus | undefined; label: string }> = [
   { value: undefined, label: '전체' },
