@@ -2,8 +2,10 @@
 // 마이홈 공공임대 입주자 모집공고 동기화
 // API: apis.data.go.kr/1613000/HWSPR02
 //   - rsdtRcritNtcList:    일반 공공임대 모집공고  (source='general')
-//   - ltRsdtRcritNtcList:  장기임대(매입/전세) 모집공고 (source='longTerm')
-// 두 endpoint 의 응답 envelope 가 동일 — source 필드로만 구분.
+//   - ltRsdtRcritNtcList:  장기임대(매입/전세/공공분양) 모집공고 (source='longTerm')
+//
+// 한 공고(pblancId) 안에 여러 호수(houseSn) 행이 들어오므로 (pblancId, houseSn) 복합 unique.
+// 응답 envelope: response.body.item (단수형!), totalCount/numOfRows/pageNo 는 문자열로 반환.
 
 import 'dotenv/config';
 import { prisma } from '../lib/prisma.js';
@@ -25,20 +27,34 @@ const ENDPOINTS: Record<AnnouncementSource, string> = {
 };
 
 export interface AnnouncementApiItem {
-  pblancId: string;
-  pblancNo?: string | null;
+  pblancId: string | number;
+  houseSn?: string | number | null;
   pblancNm: string;
+  sttusNm?: string | null;
   suplyInsttNm?: string | null;
   suplyTyNm?: string | null;
+  houseTyNm?: string | null;
   brtcNm?: string | null;
   signguNm?: string | null;
   hsmpNm?: string | null;
+  fullAdres?: string | null;
   pnu?: string | null;
   rcritPblancDe?: string | null;
   beginDe?: string | null;
   endDe?: string | null;
-  totSplyHshldco?: number | string | null;
+  przwnerPresnatnDe?: string | null;
+  totHshldCo?: string | number | null;
+  sumSuplyCo?: string | number | null;
+  rentGtn?: string | number | null;
+  enty?: string | number | null;
+  prtpay?: string | number | null;
+  surlus?: string | number | null;
+  mtRntchrg?: string | number | null;
+  heatMthdNm?: string | null;
+  refrnc?: string | null;
   url?: string | null;
+  pcUrl?: string | null;
+  mobileUrl?: string | null;
 }
 
 export function normalizeDate(s: string | null | undefined): string | null {
@@ -55,6 +71,7 @@ function toStr(v: unknown): string | null {
     const t = v.trim();
     return t === '' ? null : t;
   }
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
   return null;
 }
 
@@ -69,22 +86,41 @@ function toIntOrNull(v: unknown): number | null {
   return null;
 }
 
+function toBigIntOrNull(v: unknown): bigint | null {
+  const n = toIntOrNull(v);
+  return n === null ? null : BigInt(n);
+}
+
 export interface TransformedAnnouncement {
   pblancId: string;
-  pblancNo: string | null;
-  pblancNm: string;
+  houseSn: number;
   source: AnnouncementSource;
+  pblancNm: string;
+  sttusNm: string | null;
   suplyInsttNm: string | null;
   suplyTyNm: string | null;
+  houseTyNm: string | null;
   brtcNm: string | null;
   signguNm: string | null;
   hsmpNm: string | null;
+  fullAdres: string | null;
   pnu: string | null;
   rcritPblancDe: string | null;
   beginDe: string | null;
   endDe: string | null;
-  totSplyHshldco: number | null;
+  przwnerDe: string | null;
+  totHshldCo: number | null;
+  sumSuplyCo: number | null;
+  rentGtn: bigint | null;
+  enty: bigint | null;
+  prtpay: bigint | null;
+  surlus: bigint | null;
+  mtRntchrg: number | null;
+  heatMthdNm: string | null;
+  refrnc: string | null;
   url: string | null;
+  pcUrl: string | null;
+  mobileUrl: string | null;
   rawJson: AnnouncementApiItem;
 }
 
@@ -92,22 +128,37 @@ export function transformAnnouncement(
   item: AnnouncementApiItem,
   source: AnnouncementSource,
 ): TransformedAnnouncement {
+  const houseSn = toIntOrNull(item.houseSn) ?? 1;
   return {
     pblancId: String(item.pblancId),
-    pblancNo: toStr(item.pblancNo),
-    pblancNm: String(item.pblancNm ?? '').trim(),
+    houseSn,
     source,
+    pblancNm: String(item.pblancNm ?? '').trim(),
+    sttusNm: toStr(item.sttusNm),
     suplyInsttNm: toStr(item.suplyInsttNm),
     suplyTyNm: toStr(item.suplyTyNm),
+    houseTyNm: toStr(item.houseTyNm),
     brtcNm: toStr(item.brtcNm),
     signguNm: toStr(item.signguNm),
     hsmpNm: toStr(item.hsmpNm),
+    fullAdres: toStr(item.fullAdres),
     pnu: toStr(item.pnu),
     rcritPblancDe: normalizeDate(item.rcritPblancDe),
     beginDe: normalizeDate(item.beginDe),
     endDe: normalizeDate(item.endDe),
-    totSplyHshldco: toIntOrNull(item.totSplyHshldco),
+    przwnerDe: normalizeDate(item.przwnerPresnatnDe),
+    totHshldCo: toIntOrNull(item.totHshldCo),
+    sumSuplyCo: toIntOrNull(item.sumSuplyCo),
+    rentGtn: toBigIntOrNull(item.rentGtn),
+    enty: toBigIntOrNull(item.enty),
+    prtpay: toBigIntOrNull(item.prtpay),
+    surlus: toBigIntOrNull(item.surlus),
+    mtRntchrg: toIntOrNull(item.mtRntchrg),
+    heatMthdNm: toStr(item.heatMthdNm),
+    refrnc: toStr(item.refrnc),
     url: toStr(item.url),
+    pcUrl: toStr(item.pcUrl),
+    mobileUrl: toStr(item.mobileUrl),
     rawJson: item,
   };
 }
@@ -138,25 +189,35 @@ interface ApiEnvelope {
   response?: {
     header?: { resultCode?: string; resultMsg?: string };
     body?: {
+      // 실제 응답: body.item (단수). 가끔 body.items.item / body.items 변형도 방어적으로 처리.
+      item?: AnnouncementApiItem[] | AnnouncementApiItem;
       items?: { item?: AnnouncementApiItem[] | AnnouncementApiItem } | AnnouncementApiItem[] | null;
-      totalCount?: number;
-      pageNo?: number;
-      numOfRows?: number;
+      totalCount?: number | string;
+      pageNo?: number | string;
+      numOfRows?: number | string;
     };
   };
 }
 
-function extractItems(envelope: ApiEnvelope): { items: AnnouncementApiItem[]; totalCount: number } {
+export function extractItems(envelope: ApiEnvelope): { items: AnnouncementApiItem[]; totalCount: number } {
   const body = envelope?.response?.body;
   if (!body) return { items: [], totalCount: 0 };
-  const totalCount = typeof body.totalCount === 'number' ? body.totalCount : 0;
-  const raw = body.items;
-  // 응답 envelope 변형: { item: [...] } / { item: {} } / [...] / null / "" 모두 가능
+
+  const totalCountRaw = body.totalCount;
+  const totalCount = typeof totalCountRaw === 'number'
+    ? totalCountRaw
+    : typeof totalCountRaw === 'string'
+      ? Number(totalCountRaw) || 0
+      : 0;
+
+  // body.item (실 응답) 우선. 없으면 body.items 변형 처리.
   let arr: AnnouncementApiItem[] = [];
-  if (Array.isArray(raw)) {
-    arr = raw;
-  } else if (raw && typeof raw === 'object' && 'item' in raw) {
-    const inner = (raw as { item?: AnnouncementApiItem[] | AnnouncementApiItem }).item;
+  if (body.item !== undefined) {
+    arr = Array.isArray(body.item) ? body.item : body.item ? [body.item] : [];
+  } else if (Array.isArray(body.items)) {
+    arr = body.items;
+  } else if (body.items && typeof body.items === 'object' && 'item' in body.items) {
+    const inner = (body.items as { item?: AnnouncementApiItem[] | AnnouncementApiItem }).item;
     arr = Array.isArray(inner) ? inner : inner ? [inner] : [];
   }
   return { items: arr, totalCount };
@@ -166,21 +227,26 @@ async function fetchPage(
   source: AnnouncementSource,
   pageNo: number,
   serviceKey: string,
-): Promise<{ items: AnnouncementApiItem[]; totalCount: number }> {
+): Promise<{ items: AnnouncementApiItem[]; totalCount: number; resultCode?: string; resultMsg?: string }> {
   const url = new URL(`${API_BASE}/${ENDPOINTS[source]}`);
   url.searchParams.set('numOfRows', String(PAGE_SIZE));
   url.searchParams.set('pageNo', String(pageNo));
   url.searchParams.set('_type', 'json');
-  // serviceKey 는 URLSearchParams 가 한 번 더 인코딩하면 깨질 수 있어 raw query 로 부착.
+  // serviceKey 는 이미 인코딩된 형태가 많아 raw 로 부착.
   const finalUrl = `${url.toString()}&serviceKey=${serviceKey}`;
   const res = await fetchWithRetry(finalUrl);
   const data = (await res.json()) as ApiEnvelope;
-  return extractItems(data);
+  const header = data?.response?.header;
+  const out = extractItems(data);
+  return { ...out, resultCode: header?.resultCode, resultMsg: header?.resultMsg };
 }
 
 async function fetchAll(source: AnnouncementSource, serviceKey: string): Promise<AnnouncementApiItem[]> {
   const all: AnnouncementApiItem[] = [];
   const first = await fetchPage(source, 1, serviceKey);
+  if (first.resultCode && first.resultCode !== '00') {
+    throw new Error(`API ${first.resultCode}: ${first.resultMsg ?? 'unknown'}`);
+  }
   all.push(...first.items);
   console.info(`  ${source}: 1페이지 ${first.items.length}건 / 총 ${first.totalCount}건`);
 
@@ -219,13 +285,14 @@ async function syncRentalAnnouncement(): Promise<SyncStats> {
     const transformed = buckets.flatMap(({ source, items }) =>
       items.map((it) => transformAnnouncement(it, source)),
     );
-    // 동일 pblancId 중복 제거 (longTerm 우선 — ltRsdtRcritNtcList 에 매입/전세 메타가 더 풍부).
+    // 동일 (pblancId, houseSn) 중복 제거 — longTerm 우선 (메타가 더 풍부).
     const dedup = new Map<string, TransformedAnnouncement>();
     for (const t of transformed) {
       if (!t.pblancId) continue;
-      const prev = dedup.get(t.pblancId);
+      const key = `${t.pblancId}#${t.houseSn}`;
+      const prev = dedup.get(key);
       if (!prev || (prev.source === 'general' && t.source === 'longTerm')) {
-        dedup.set(t.pblancId, t);
+        dedup.set(key, t);
       }
     }
     const items = [...dedup.values()];
@@ -239,29 +306,43 @@ async function syncRentalAnnouncement(): Promise<SyncStats> {
       const slice = items.slice(i, i + CONCURRENCY);
       await Promise.all(
         slice.map(async (item) => {
+          const rawJson = item.rawJson as unknown as Prisma.InputJsonValue;
+          const where = { pblancId_houseSn: { pblancId: item.pblancId, houseSn: item.houseSn } };
           const existing = await prisma.publicRentalAnnouncement.findUnique({
-            where: { pblancId: item.pblancId },
+            where,
             select: { id: true },
           });
-          const rawJson = item.rawJson as unknown as Prisma.InputJsonValue;
           await prisma.publicRentalAnnouncement.upsert({
-            where: { pblancId: item.pblancId },
+            where,
             create: { ...item, rawJson },
             update: {
-              pblancNo: item.pblancNo,
-              pblancNm: item.pblancNm,
               source: item.source,
+              pblancNm: item.pblancNm,
+              sttusNm: item.sttusNm,
               suplyInsttNm: item.suplyInsttNm,
               suplyTyNm: item.suplyTyNm,
+              houseTyNm: item.houseTyNm,
               brtcNm: item.brtcNm,
               signguNm: item.signguNm,
               hsmpNm: item.hsmpNm,
+              fullAdres: item.fullAdres,
               pnu: item.pnu,
               rcritPblancDe: item.rcritPblancDe,
               beginDe: item.beginDe,
               endDe: item.endDe,
-              totSplyHshldco: item.totSplyHshldco,
+              przwnerDe: item.przwnerDe,
+              totHshldCo: item.totHshldCo,
+              sumSuplyCo: item.sumSuplyCo,
+              rentGtn: item.rentGtn,
+              enty: item.enty,
+              prtpay: item.prtpay,
+              surlus: item.surlus,
+              mtRntchrg: item.mtRntchrg,
+              heatMthdNm: item.heatMthdNm,
+              refrnc: item.refrnc,
               url: item.url,
+              pcUrl: item.pcUrl,
+              mobileUrl: item.mobileUrl,
               rawJson,
             },
           });

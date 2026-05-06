@@ -3,29 +3,67 @@
 export type AnnouncementSource = 'general' | 'longTerm'
 export type AnnouncementStatus = 'ongoing' | 'upcoming' | 'closed' | 'unknown'
 
-export interface PublicRentalAnnouncement {
-  id: number
+// 목록 카드 — pblancId 기준 dedupe + aggregate
+export interface PublicRentalAnnouncementListItem {
   pblancId: string
-  pblancNo: string | null
   pblancNm: string
   source: AnnouncementSource
   suplyInsttNm: string | null
   suplyTyNm: string | null
+  houseTyNm: string | null
   brtcNm: string | null
   signguNm: string | null
   hsmpNm: string | null
-  pnu: string | null
   rcritPblancDe: string | null
   beginDe: string | null
   endDe: string | null
-  totSplyHshldco: number | null
-  url: string | null
+  totalSupply: number | null
+  variantCount: number
   status: AnnouncementStatus
-  createdAt?: string
-  updatedAt?: string
+  pcUrl: string | null
+  url: string | null
 }
 
-export interface PublicRentalAnnouncementDetail extends PublicRentalAnnouncement {
+export interface PublicRentalAnnouncementVariant {
+  houseSn: number
+  hsmpNm: string | null
+  pnu: string | null
+  fullAdres: string | null
+  suplyTyNm: string | null
+  houseTyNm: string | null
+  sumSuplyCo: number | null
+  totHshldCo: number | null
+  rentGtn: number | null
+  enty: number | null
+  prtpay: number | null
+  surlus: number | null
+  mtRntchrg: number | null
+  heatMthdNm: string | null
+}
+
+export interface PublicRentalAnnouncementDetail {
+  pblancId: string
+  pblancNm: string
+  source: AnnouncementSource
+  sttusNm: string | null
+  suplyInsttNm: string | null
+  suplyTyNm: string | null
+  houseTyNm: string | null
+  brtcNm: string | null
+  signguNm: string | null
+  hsmpNm: string | null
+  fullAdres: string | null
+  rcritPblancDe: string | null
+  beginDe: string | null
+  endDe: string | null
+  przwnerDe: string | null
+  refrnc: string | null
+  url: string | null
+  pcUrl: string | null
+  mobileUrl: string | null
+  status: AnnouncementStatus
+  updatedAt?: string
+  variants: PublicRentalAnnouncementVariant[]
   matchedComplexes: Array<{
     id: number
     complexCode: string
@@ -54,7 +92,7 @@ export interface PublicRentalAnnouncementListQuery {
 }
 
 export interface PublicRentalAnnouncementListResponse {
-  items: PublicRentalAnnouncement[]
+  items: PublicRentalAnnouncementListItem[]
   pagination: {
     page: number
     limit: number

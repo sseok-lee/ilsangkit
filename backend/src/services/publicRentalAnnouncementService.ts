@@ -1,10 +1,10 @@
 // 마이홈 공공임대 입주자 모집공고 서비스
 //
-// PublicRentalAnnouncement 테이블을 조회하면서:
-//   - 오늘 날짜 기준 status (ongoing / upcoming / closed / unknown) 계산
-//   - 상세 조회 시 PNU로 PublicRentalComplex 와 조인하여 단지 카드 노출
+// 한 공고(pblancId) 안에 여러 호수(houseSn) 행이 들어 있어:
+//   - 목록: pblancId 기준 dedupe 후 카드 하나로 보여줌 (대표 메타 + 합산 호수)
+//   - 상세: 해당 pblancId 의 모든 행을 가져와 PNU 합집합으로 단지 카탈로그 조인
 //
-// PNU 가 없는 공고는 hsmpNm + 시/시군구 fuzzy 매칭으로 fallback.
+// status 는 KST 기준 today 와 beginDe/endDe 비교로 계산.
 
 import prisma from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
@@ -13,9 +13,7 @@ import {
   CITY_SLUG_TO_SHORT,
 } from './cityMapping.js';
 import { serializePublicRentalRow } from './publicRentalService.js';
-import type {
-  PublicRentalAnnouncementListQuery,
-} from '../schemas/publicRentalAnnouncement.js';
+import type { PublicRentalAnnouncementListQuery } from '../schemas/publicRentalAnnouncement.js';
 import type { Prisma, PublicRentalAnnouncement } from '@prisma/client';
 
 export type AnnouncementStatus = 'ongoing' | 'upcoming' | 'closed' | 'unknown';
@@ -74,42 +72,71 @@ function buildWhere(
   return where;
 }
 
-function applyStatusFilter(
+interface AggregatedAnnouncement {
+  pblancId: string;
+  representative: PublicRentalAnnouncement;
+  status: AnnouncementStatus;
+  variantCount: number;
+  totalSupply: number | null;
+  pnus: string[];
+}
+
+function aggregateByPblancId(
   rows: PublicRentalAnnouncement[],
-  status: AnnouncementStatus | undefined,
   today: string,
-): Array<PublicRentalAnnouncement & { status: AnnouncementStatus }> {
-  const decorated = rows.map((r) => ({ ...r, status: computeStatus(r.beginDe, r.endDe, today) }));
-  if (!status) return decorated;
-  return decorated.filter((r) => r.status === status);
+): AggregatedAnnouncement[] {
+  const map = new Map<string, AggregatedAnnouncement>();
+  for (const r of rows) {
+    let agg = map.get(r.pblancId);
+    if (!agg) {
+      agg = {
+        pblancId: r.pblancId,
+        representative: r,
+        status: computeStatus(r.beginDe, r.endDe, today),
+        variantCount: 0,
+        totalSupply: null,
+        pnus: [],
+      };
+      map.set(r.pblancId, agg);
+    }
+    agg.variantCount += 1;
+    if (typeof r.sumSuplyCo === 'number') {
+      agg.totalSupply = (agg.totalSupply ?? 0) + r.sumSuplyCo;
+    }
+    if (r.pnu && !agg.pnus.includes(r.pnu)) agg.pnus.push(r.pnu);
+  }
+  return [...map.values()];
 }
 
 export async function listAnnouncements(params: PublicRentalAnnouncementListQuery) {
   const where = buildWhere(params);
   const today = todayInKst();
-  // 정렬: 진행중 → 예정 → 마감 (status 정렬은 메모리에서). DB에서는 endDe DESC 로 가져와 최신부터.
+  // dedupe 가 메모리에서 일어나므로 충분한 raw 페이지 가져온 뒤 aggregation 후 페이지네이션.
   const rawRows = await prisma.publicRentalAnnouncement.findMany({
     where,
     orderBy: [{ endDe: 'desc' }, { rcritPblancDe: 'desc' }, { id: 'desc' }],
-    take: 1000, // status 필터 후 페이지네이션이므로 합리적 상한
+    take: 4000,
   });
 
-  const decorated = applyStatusFilter(rawRows, params.status, today);
-  // status 별 정렬: ongoing(0) < upcoming(1) < closed(2) < unknown(3)
+  let aggregated = aggregateByPblancId(rawRows, today);
+  if (params.status) aggregated = aggregated.filter((a) => a.status === params.status);
+
+  // status 우선순위: ongoing → upcoming → closed → unknown
   const order: Record<AnnouncementStatus, number> = { ongoing: 0, upcoming: 1, closed: 2, unknown: 3 };
-  decorated.sort((a, b) => {
+  aggregated.sort((a, b) => {
     const diff = order[a.status] - order[b.status];
     if (diff !== 0) return diff;
-    if (a.endDe && b.endDe) return a.endDe < b.endDe ? 1 : -1;
-    return 0;
+    const ae = a.representative.endDe ?? '';
+    const be = b.representative.endDe ?? '';
+    return ae < be ? 1 : ae > be ? -1 : 0;
   });
 
-  const total = decorated.length;
+  const total = aggregated.length;
   const skip = (params.page - 1) * params.limit;
-  const items = decorated.slice(skip, skip + params.limit);
+  const items = aggregated.slice(skip, skip + params.limit).map(serializeListItem);
 
   return {
-    items: items.map(serializeAnnouncement),
+    items,
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -120,34 +147,46 @@ export async function listAnnouncements(params: PublicRentalAnnouncementListQuer
 }
 
 export async function getAnnouncement(pblancId: string) {
-  const row = await prisma.publicRentalAnnouncement.findUnique({ where: { pblancId } });
-  if (!row) throw new NotFoundError(`PublicRentalAnnouncement ${pblancId} not found`);
-  const status = computeStatus(row.beginDe, row.endDe);
+  const rows = await prisma.publicRentalAnnouncement.findMany({
+    where: { pblancId },
+    orderBy: [{ houseSn: 'asc' }],
+  });
+  if (rows.length === 0) {
+    throw new NotFoundError(`PublicRentalAnnouncement ${pblancId} not found`);
+  }
+  const today = todayInKst();
+  const rep = rows[0];
+  const status = computeStatus(rep.beginDe, rep.endDe, today);
 
-  // PNU 우선 매칭 → 빈 경우 hsmpNm + 시/시군구 fallback
-  const matchedComplexes = await findMatchingComplexes(row);
+  // 모든 호수의 PNU 합집합으로 단지 카탈로그 조인.
+  const pnus = Array.from(new Set(rows.map((r) => r.pnu).filter((p): p is string => !!p)));
+  const matchedComplexes = await findMatchingComplexes(pnus, rep);
 
   return {
-    ...serializeAnnouncement({ ...row, status }),
+    ...serializeBase(rep, status),
+    variants: rows.map((r) => serializeVariant(r)),
     matchedComplexes: matchedComplexes.map(serializePublicRentalRow),
   };
 }
 
-async function findMatchingComplexes(row: PublicRentalAnnouncement) {
-  if (row.pnu) {
+async function findMatchingComplexes(
+  pnus: string[],
+  rep: PublicRentalAnnouncement,
+) {
+  if (pnus.length > 0) {
     const byPnu = await prisma.publicRentalComplex.findMany({
-      where: { pnu: row.pnu },
+      where: { pnu: { in: pnus } },
       orderBy: [{ rentalType: 'asc' }, { exclusiveArea: 'asc' }],
-      take: 24,
+      take: 48,
     });
     if (byPnu.length > 0) return byPnu;
   }
-  if (row.hsmpNm && row.brtcNm && row.signguNm) {
+  if (rep.hsmpNm && rep.brtcNm && rep.signguNm) {
     return prisma.publicRentalComplex.findMany({
       where: {
-        complexNameKor: { contains: row.hsmpNm },
-        city: row.brtcNm,
-        district: row.signguNm,
+        complexNameKor: { contains: rep.hsmpNm },
+        city: rep.brtcNm,
+        district: rep.signguNm,
       },
       orderBy: [{ rentalType: 'asc' }, { exclusiveArea: 'asc' }],
       take: 24,
@@ -156,36 +195,76 @@ async function findMatchingComplexes(row: PublicRentalAnnouncement) {
   return [];
 }
 
-function serializeAnnouncement(
-  row: (PublicRentalAnnouncement & { status?: AnnouncementStatus }),
-): Record<string, unknown> {
-  const status = row.status ?? computeStatus(row.beginDe, row.endDe);
+function serializeBase(row: PublicRentalAnnouncement, status: AnnouncementStatus) {
   return {
-    id: row.id,
     pblancId: row.pblancId,
-    pblancNo: row.pblancNo,
     pblancNm: row.pblancNm,
     source: row.source,
+    sttusNm: row.sttusNm,
     suplyInsttNm: row.suplyInsttNm,
     suplyTyNm: row.suplyTyNm,
+    houseTyNm: row.houseTyNm,
     brtcNm: row.brtcNm,
     signguNm: row.signguNm,
     hsmpNm: row.hsmpNm,
-    pnu: row.pnu,
+    fullAdres: row.fullAdres,
     rcritPblancDe: row.rcritPblancDe,
     beginDe: row.beginDe,
     endDe: row.endDe,
-    totSplyHshldco: row.totSplyHshldco,
+    przwnerDe: row.przwnerDe,
+    refrnc: row.refrnc,
     url: row.url,
+    pcUrl: row.pcUrl,
+    mobileUrl: row.mobileUrl,
     status,
-    createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
+function serializeVariant(row: PublicRentalAnnouncement) {
+  return {
+    houseSn: row.houseSn,
+    hsmpNm: row.hsmpNm,
+    pnu: row.pnu,
+    fullAdres: row.fullAdres,
+    suplyTyNm: row.suplyTyNm,
+    houseTyNm: row.houseTyNm,
+    sumSuplyCo: row.sumSuplyCo,
+    totHshldCo: row.totHshldCo,
+    rentGtn: row.rentGtn !== null ? Number(row.rentGtn) : null,
+    enty: row.enty !== null ? Number(row.enty) : null,
+    prtpay: row.prtpay !== null ? Number(row.prtpay) : null,
+    surlus: row.surlus !== null ? Number(row.surlus) : null,
+    mtRntchrg: row.mtRntchrg,
+    heatMthdNm: row.heatMthdNm,
+  };
+}
+
+function serializeListItem(agg: AggregatedAnnouncement) {
+  const r = agg.representative;
+  return {
+    pblancId: agg.pblancId,
+    pblancNm: r.pblancNm,
+    source: r.source,
+    suplyInsttNm: r.suplyInsttNm,
+    suplyTyNm: r.suplyTyNm,
+    houseTyNm: r.houseTyNm,
+    brtcNm: r.brtcNm,
+    signguNm: r.signguNm,
+    hsmpNm: r.hsmpNm,
+    rcritPblancDe: r.rcritPblancDe,
+    beginDe: r.beginDe,
+    endDe: r.endDe,
+    totalSupply: agg.totalSupply,
+    variantCount: agg.variantCount,
+    status: agg.status,
+    pcUrl: r.pcUrl,
+    url: r.url,
+  };
+}
+
 /**
- * 사이트맵용 — 진행중 + 30일 이내 마감 공고만 노출.
- * 마감된 지 오래된 공고는 색인 대상에서 제외.
+ * 사이트맵용 — 진행중 + 30일 이내 마감 공고 (pblancId 단위 dedup).
  */
 export async function listAnnouncementsForSitemap() {
   const today = todayInKst();
@@ -201,11 +280,19 @@ export async function listAnnouncementsForSitemap() {
     },
     select: { pblancId: true, updatedAt: true, endDe: true, beginDe: true },
     orderBy: [{ endDe: 'desc' }, { id: 'desc' }],
-    take: 5000,
+    take: 10000,
   });
-  return rows.map((r) => ({
-    pblancId: r.pblancId,
-    updatedAt: r.updatedAt,
-    status: computeStatus(r.beginDe, r.endDe, today),
-  }));
+
+  const seen = new Set<string>();
+  const dedup: Array<{ pblancId: string; updatedAt: Date; status: AnnouncementStatus }> = [];
+  for (const r of rows) {
+    if (seen.has(r.pblancId)) continue;
+    seen.add(r.pblancId);
+    dedup.push({
+      pblancId: r.pblancId,
+      updatedAt: r.updatedAt,
+      status: computeStatus(r.beginDe, r.endDe, today),
+    });
+  }
+  return dedup;
 }

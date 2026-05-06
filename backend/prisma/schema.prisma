@@ -1407,30 +1407,48 @@ model PublicRentalComplex {
 }
 
 // 마이홈 공공임대 입주자 모집공고 (apis.data.go.kr/1613000/HWSPR02)
-// - rsdtRcritNtcList: 일반 공공임대 모집공고 (source='general')
-// - ltRsdtRcritNtcList: 장기임대 (매입/전세) 모집공고 (source='longTerm')
-// 단지 카탈로그(PublicRentalComplex)와 pnu/hsmpNm으로 조인하여 단지별 모집중 여부 노출.
+// - rsdtRcritNtcList:    일반 공공임대 모집공고 (source='general')
+// - ltRsdtRcritNtcList:  장기임대 (매입/전세) 모집공고 (source='longTerm')
+//
+// 한 공고(pblancId) 내 여러 단지/주택유형(houseSn) 행이 들어오므로 (pblancId, houseSn) 복합 unique.
+// 단지 카탈로그(PublicRentalComplex)와 pnu/hsmpNm 으로 조인해 단지별 모집중 여부 노출.
 model PublicRentalAnnouncement {
-  id             Int      @id @default(autoincrement())
-  pblancId       String   @unique @db.VarChar(40) // 공고 고유 ID
-  pblancNo       String?  @db.VarChar(40) // 공고 번호 (사람용)
-  pblancNm       String   @db.VarChar(500) // 공고명
-  source         String   @db.VarChar(20) // 'general' | 'longTerm'
-  suplyInsttNm   String?  @db.VarChar(200) // 공급기관명
-  suplyTyNm      String?  @db.VarChar(60) // 공급유형 (매입임대/전세임대/통합공공임대 등)
-  brtcNm         String?  @db.VarChar(50) // 시도
-  signguNm       String?  @db.VarChar(50) // 시군구
-  hsmpNm         String?  @db.VarChar(300) // 단지명
-  pnu            String?  @db.VarChar(20) // 필지번호 — PublicRentalComplex.pnu 와 조인 키
-  rcritPblancDe  String?  @db.VarChar(10) // 모집공고일 (YYYY-MM-DD)
-  beginDe        String?  @db.VarChar(10) // 청약(접수) 시작일
-  endDe          String?  @db.VarChar(10) // 청약(접수) 종료일
-  totSplyHshldco Int? // 총 공급세대수
-  url            String?  @db.VarChar(500) // 공고 상세 URL
-  rawJson        Json? // 원본 보관 (재처리/디버깅용)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  pblancId      String   @db.VarChar(40) // 공고 고유 ID
+  houseSn       Int // 공고 내 호수 일련번호 (단지/주택유형별 세분)
+  source        String   @db.VarChar(20) // 'general' | 'longTerm'
+  pblancNm      String   @db.VarChar(500) // 공고명
+  sttusNm       String?  @db.VarChar(60) // 공고 상태명
+  suplyInsttNm  String?  @db.VarChar(200) // 공급기관명
+  suplyTyNm     String?  @db.VarChar(60) // 공급유형 (국민임대/매입임대/전세임대 등)
+  houseTyNm     String?  @db.VarChar(60) // 주택유형 (아파트/오피스텔 등)
+  brtcNm        String?  @db.VarChar(50) // 시도명
+  signguNm      String?  @db.VarChar(50) // 시군구명
+  hsmpNm        String?  @db.VarChar(300) // 단지명
+  fullAdres     String?  @db.VarChar(500) // 전체 주소
+  pnu           String?  @db.VarChar(20) // 필지번호 — PublicRentalComplex.pnu 조인 키
+  rcritPblancDe String?  @db.VarChar(10) // 모집공고일 (YYYY-MM-DD)
+  beginDe       String?  @db.VarChar(10) // 청약(접수) 시작일
+  endDe         String?  @db.VarChar(10) // 청약(접수) 종료일
+  przwnerDe     String?  @db.VarChar(10) // 당첨자 발표일 (przwnerPresnatnDe)
+  totHshldCo    Int? // 단지 전체 세대수 (general 응답)
+  sumSuplyCo    Int? // 이번 공고 공급 호수
+  rentGtn       BigInt? // 보증금 (원)
+  enty          BigInt? // 계약금 (원)
+  prtpay        BigInt? // 중도금 (원)
+  surlus        BigInt? // 잔금 (원)
+  mtRntchrg     Int? // 월임대료 (원)
+  heatMthdNm    String?  @db.VarChar(50) // 난방방식
+  refrnc        String?  @db.VarChar(300) // 문의처/콜센터
+  url           String?  @db.VarChar(500) // LH 신청 URL (apply.lh.or.kr)
+  pcUrl         String?  @db.VarChar(500) // 마이홈 PC 상세 URL
+  mobileUrl     String?  @db.VarChar(500) // 마이홈 모바일 상세 URL
+  rawJson       Json? // 원본 보관 (재처리/디버깅용)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
+  @@unique([pblancId, houseSn])
+  @@index([pblancId])
   @@index([source])
   @@index([brtcNm, signguNm])
   @@index([suplyTyNm])

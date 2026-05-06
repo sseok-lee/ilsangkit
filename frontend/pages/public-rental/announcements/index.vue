@@ -81,7 +81,8 @@
                 접수 {{ formatDateRange(ann.beginDe, ann.endDe) }}
               </span>
               <span v-else class="text-slate-400">접수 일정 미정</span>
-              <span v-if="ann.totSplyHshldco" class="ml-2 text-slate-500">· {{ ann.totSplyHshldco }}세대</span>
+              <span v-if="ann.totalSupply" class="ml-2 text-slate-500">· {{ ann.totalSupply }}세대</span>
+              <span v-if="ann.variantCount > 1" class="ml-1 text-slate-400">({{ ann.variantCount }}개 단지)</span>
             </p>
           </NuxtLink>
         </li>

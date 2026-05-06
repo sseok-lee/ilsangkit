@@ -1,6 +1,6 @@
 import { ref, readonly } from 'vue'
 import type {
-  PublicRentalAnnouncement,
+  PublicRentalAnnouncementListItem,
   PublicRentalAnnouncementDetail,
   PublicRentalAnnouncementListQuery,
   PublicRentalAnnouncementListResponse,
@@ -12,7 +12,7 @@ interface ApiEnvelope<T> {
 }
 
 export function useRentalAnnouncements() {
-  const items = ref<PublicRentalAnnouncement[]>([])
+  const items = ref<PublicRentalAnnouncementListItem[]>([])
   const total = ref(0)
   const totalPages = ref(0)
   const currentPage = ref(1)
