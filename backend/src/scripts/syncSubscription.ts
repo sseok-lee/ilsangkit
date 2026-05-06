@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 // 청약 분양정보 동기화 스크립트
-// Usage: tsx src/scripts/syncSubscription.ts [--dry-run] [--source APT|OFFITEL|REMAINING|PRIVATE_RENT|ALL]
+// Usage: tsx src/scripts/syncSubscription.ts [--dry-run] [--source APT|OFFITEL|REMAINING|PRIVATE_RENT|OPTIONAL|ALL]
 
 import 'dotenv/config';
 import prisma from '../lib/prisma.js';
@@ -21,7 +21,7 @@ interface SourceConfig {
   syncCategory: string;
   detailEndpoint: string;
   modelEndpoint: string;
-  competitionEndpoint: string;
+  competitionEndpoint?: string;  // OPTIONAL(임의공급) 은 1·2순위 절차 없어 미존재
   scoreEndpoint?: string;     // APT only
   specialEndpoint?: string;   // APT only
 }
@@ -176,6 +176,13 @@ const SOURCE_CONFIGS: Record<string, SourceConfig> = {
     detailEndpoint: 'getPblPvtRentLttotPblancDetail',
     modelEndpoint: 'getPblPvtRentLttotPblancMdl',
     competitionEndpoint: 'getPblPvtRentLttotPblancCmpet',
+  },
+  OPTIONAL: {
+    sourceType: 'OPTIONAL',
+    syncCategory: 'sub-opt',
+    detailEndpoint: 'getOPTLttotPblancDetail',
+    modelEndpoint: 'getOPTLttotPblancMdl',
+    // 임의공급은 1·2순위 청약 절차가 없어 경쟁률 endpoint 부재.
   },
 };
 
@@ -408,7 +415,11 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
   }
   console.log(`[${sourceType}] 주택형 동기화 완료: ${unitCount}건`);
 
-  // Step 4: 경쟁률
+  // Step 4: 경쟁률 — 임의공급(OPTIONAL)은 1·2순위 청약 절차가 없어 endpoint 부재 → 스킵
+  if (!competitionEndpoint) {
+    console.log(`[${sourceType}] 경쟁률 endpoint 미정의 — 스킵`);
+    return { newCount, updateCount, totalCount: items.length };
+  }
   console.log(`[${sourceType}] 경쟁률 API 조회 중...`);
   const competitionItems = await fetchAll<CompetitionApiItem>(competitionEndpoint, undefined, API_BASE_CMPET);
   console.log(`[${sourceType}] 경쟁률 조회 완료: ${competitionItems.length}건`);

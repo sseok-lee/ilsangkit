@@ -27,6 +27,8 @@ export interface PublicRentalComplex {
   lat?: number | null
   lng?: number | null
   sourceId: string
+  // 활성 모집공고 매칭 결과 (PNU 또는 도/구/단지명) — 카드/상세에 "모집중"/"모집예정" 배지 표시용.
+  announcementStatus?: 'ongoing' | 'upcoming' | null
   createdAt: string
   updatedAt: string
 }

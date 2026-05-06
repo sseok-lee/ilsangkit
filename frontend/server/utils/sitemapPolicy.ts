@@ -4,9 +4,10 @@
 //
 // 2026-05 초기 색인 안정화 정책:
 // - 대형/저품질 우려 카테고리는 임시로 sitemap 노출을 제한한다.
-// - wifi는 sitemap에서 제외하고 robots.txt로 상세 크롤도 임시 차단한다.
+// - wifi는 중복·저가치 URL 방지를 위해 sitemap에서 제외하고 HTML noindex로 처리한다.
+//   robots.txt로 차단하면 Googlebot이 noindex를 볼 수 없어 Search Console 노이즈가 생긴다.
 // - AED는 응급 검색 의도가 강해 초기 제한 중에도 sitemap 색인 대상에 포함한다.
-// - Search Console에서 주요 카테고리 색인 안정화 후 wifi 포함, robots 차단 해제,
+// - Search Console에서 주요 카테고리 색인 안정화 후 wifi 포함, 상세 noindex 해제,
 //   URL 상한 완화/제거, 테스트/검증 스크립트 기대값 갱신을 같은 배포에서 처리한다.
 
 export const SITEMAP_FACILITY_CATEGORIES = [

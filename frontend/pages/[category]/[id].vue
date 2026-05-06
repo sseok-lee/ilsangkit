@@ -2779,7 +2779,8 @@ watchEffect(() => {
   }
 })
 
-// wifi 상세 페이지 noindex (사이트맵 제외 카테고리 — 크롤 예산 절감)
+// wifi 상세 페이지 noindex (같은 건물/장소 단위 중복이 많아 sitemap 제외)
+// robots.txt 로 막지 않고 크롤은 허용해야 Googlebot 이 noindex 를 직접 확인할 수 있다.
 // AED 상세 페이지는 색인 대상이며, 아래 thin-content 규칙에만 따른다.
 const isLowValueCategory = computed(() => {
   const cat = facility.value?.category

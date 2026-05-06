@@ -115,7 +115,7 @@ describe('generateSitemapXml with images', () => {
 })
 
 describe('sitemapPolicy', () => {
-  it('wifi는 사이트맵 대상 카테고리에 포함되지 않는다', () => {
+  it('wifi는 noindex-only 상세 정책에 따라 사이트맵 대상 카테고리에 포함되지 않는다', () => {
     expect(isSitemapFacilityCategory('wifi')).toBe(false)
   })
 
@@ -159,7 +159,7 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     childcare: 40000,
     sports: 25000,
     clothes: 30000,
-    wifi: 1000, // index 제외
+    wifi: 1000, // noindex-only 상세 정책으로 index 제외
     aed: 20000,
   }
 
@@ -386,7 +386,7 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     }
   })
 
-  it('wifi는 index에 노출되지 않고 handler는 404를 반환한다', async () => {
+  it('wifi는 noindex-only 상세 정책에 따라 index에 노출되지 않고 handler는 404를 반환한다', async () => {
     const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
     const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
 

@@ -1,6 +1,6 @@
 // Subscription (청약) types
 
-export type SubscriptionSourceType = 'APT' | 'OFFITEL' | 'REMAINING' | 'PRIVATE_RENT'
+export type SubscriptionSourceType = 'APT' | 'OFFITEL' | 'REMAINING' | 'PRIVATE_RENT' | 'OPTIONAL'
 
 export interface Subscription {
   id: number

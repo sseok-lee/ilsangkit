@@ -100,10 +100,12 @@ export default defineEventHandler(async (event) => {
   urls.push({ loc: `${SITE_URL}/subscription/sale/apt`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/subscription/sale/offitel`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/subscription/sale/remaining`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/subscription/sale/optional`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/subscription/rent`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
   urls.push({ loc: `${SITE_URL}/subscription/rent/public`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/subscription/rent/private`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/public-rental`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
+  urls.push({ loc: `${SITE_URL}/public-rental/announcements`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
   urls.push({ loc: `${SITE_URL}/public-rental/buy-lease`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/public-rental/charter`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
 

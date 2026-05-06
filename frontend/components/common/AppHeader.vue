@@ -77,18 +77,27 @@
             <!-- 부동산/청약 링크 그룹 -->
             <template v-else>
               <template v-for="(link, idx) in group.links" :key="link.to">
-                <div
-                  v-if="idx > 0 && link.section && link.section !== group.links[idx - 1].section"
-                  data-testid="nav-section-divider"
-                  class="h-px bg-slate-100 my-1 mx-2"
-                />
+                <!-- 섹션 시작점에 헤딩 표시 (idx===0 이거나 직전 항목과 section 가 다른 경우). -->
+                <template v-if="link.section && (idx === 0 || link.section !== group.links[idx - 1].section)">
+                  <div
+                    v-if="idx > 0"
+                    data-testid="nav-section-divider"
+                    class="h-px bg-slate-100 my-1 mx-2"
+                  />
+                  <div
+                    data-testid="nav-section-heading"
+                    class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                  >
+                    {{ link.section }}
+                  </div>
+                </template>
                 <NuxtLink
                   :to="link.to"
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
+                  class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
                   @click="closeDropdown"
                 >
                   <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-                  <span v-else class="material-symbols-outlined text-[16px] text-primary">{{ link.icon }}</span>
+                  <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
                   {{ link.label }}
                 </NuxtLink>
               </template>
@@ -178,17 +187,23 @@
           </template>
           <!-- 부동산 링크 -->
           <template v-else>
-            <NuxtLink
-              v-for="link in group.links"
-              :key="link.to"
-              :to="link.to"
-              class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-              @click="closeMobileMenu"
-            >
-              <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-              <span v-else class="material-symbols-outlined text-[16px] text-primary">{{ link.icon }}</span>
-              {{ link.label }}
-            </NuxtLink>
+            <template v-for="(link, idx) in group.links" :key="link.to">
+              <div
+                v-if="link.section && (idx === 0 || link.section !== group.links[idx - 1].section)"
+                class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+              >
+                {{ link.section }}
+              </div>
+              <NuxtLink
+                :to="link.to"
+                class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+                @click="closeMobileMenu"
+              >
+                <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
+                <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
+                {{ link.label }}
+              </NuxtLink>
+            </template>
           </template>
         </div>
 

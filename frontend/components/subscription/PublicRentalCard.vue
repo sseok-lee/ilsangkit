@@ -5,6 +5,20 @@
   >
     <div class="flex items-start justify-between gap-3 mb-2">
       <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span
+            v-if="rental.announcementStatus === 'ongoing'"
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+          >
+            모집중
+          </span>
+          <span
+            v-else-if="rental.announcementStatus === 'upcoming'"
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200"
+          >
+            모집예정
+          </span>
+        </div>
         <h3 class="font-bold text-slate-900 text-sm md:text-base truncate">
           {{ rental.complexName }}
         </h3>

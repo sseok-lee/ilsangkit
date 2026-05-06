@@ -21,7 +21,8 @@ import {
 } from '../../utils/sitemapPolicy'
 import { toAbsoluteRealEstateUrl, toCitySlug, toDistrictSlug, type RealEstateUrlType } from '~/utils/realEstateUrl'
 
-// wifi는 사이트맵 인덱스에서 제외된 카테고리 — 동적 핸들러에서도 제외하여 404 반환.
+// wifi는 noindex-only 상세 정책에 따라 사이트맵 인덱스에서 제외된 카테고리다.
+// 동적 핸들러에서도 제외하여 sitemap URL은 404를 반환한다.
 // AED는 색인 대상이므로 sitemapPolicy 에 포함해 chunk sitemap 을 제공한다.
 const FACILITY_CATEGORIES = new Set<string>(SITEMAP_FACILITY_CATEGORIES)
 

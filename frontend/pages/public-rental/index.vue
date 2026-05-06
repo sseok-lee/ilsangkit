@@ -8,16 +8,7 @@
     </div>
 
     <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-6">
-      <div class="flex flex-wrap gap-2 overflow-x-auto md:overflow-visible">
-        <NuxtLink
-          v-for="(meta, slug) in LH_RENTAL_TYPES"
-          :key="slug"
-          :to="`/public-rental/${slug}`"
-          class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-700 border border-slate-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors whitespace-nowrap"
-        >
-          {{ meta.label }}
-        </NuxtLink>
-      </div>
+      <PublicRentalFilterTabs />
 
       <PublicRentalListView />
 
@@ -32,9 +23,9 @@
 
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import { LH_RENTAL_TYPES } from '~/utils/subscriptionMeta'
 import { PUBLIC_RENTAL_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilterTabs.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const title = '공공임대 매물 | 일상킷'
@@ -68,6 +59,7 @@ setBreadcrumbSchema([
 ])
 
 setItemListSchema([
+  { name: '모집공고', url: '/public-rental/announcements' },
   { name: '매입임대', url: '/public-rental/buy-lease' },
   { name: '전세임대', url: '/public-rental/charter' },
 ])

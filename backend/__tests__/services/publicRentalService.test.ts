@@ -1,23 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../src/lib/prisma.js', () => ({
-  default: {
-    publicRentalComplex: {
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      count: vi.fn(),
-      groupBy: vi.fn(),
+vi.mock('../../src/lib/prisma.js', () => {
+  const announcementMock = { findMany: vi.fn().mockResolvedValue([]) };
+  return {
+    default: {
+      publicRentalComplex: {
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        count: vi.fn(),
+        groupBy: vi.fn(),
+      },
+      publicRentalAnnouncement: announcementMock,
     },
-  },
-  prisma: {
-    publicRentalComplex: {
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      count: vi.fn(),
-      groupBy: vi.fn(),
+    prisma: {
+      publicRentalComplex: {
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        count: vi.fn(),
+        groupBy: vi.fn(),
+      },
+      publicRentalAnnouncement: announcementMock,
     },
-  },
-}));
+  };
+});
 
 import prisma from '../../src/lib/prisma.js';
 import {
