@@ -1,10 +1,10 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-04-22 | Updated: 2026-04-22 -->
+<!-- Generated: 2026-04-22 | Updated: 2026-05-07 -->
 
 # frontend
 
 ## Purpose
-Nuxt 3 SSR + Vue 3 + Pinia + TailwindCSS 기반 웹 프론트엔드. 포트 3000. `$fetch` + `useRuntimeConfig().public.apiBase`로 backend(8000)을 호출하며, `nuxt.config.ts`에서 `/api/**` 프록시를 설정한다. Nitro 서버 사이드에서 사이트맵/OG 이미지/리다이렉트를 직접 처리한다.
+Nuxt 3 SSR + Vue 3 + Pinia + TailwindCSS 기반 웹 프론트엔드. 포트 3000. `$fetch` + `useRuntimeConfig().public.apiBase`로 backend(8000)을 호출하며, `nuxt.config.ts`에서 `/api/**` 프록시를 설정한다. Nitro 서버 사이드에서 사이트맵/OG 이미지/리다이렉트를 직접 처리한다. 시설/부동산/청약/공공임대/가이드/쓰레기 등 다양한 도메인 페이지를 서빙한다.
 
 ## Key Files
 | File | Description |
@@ -37,7 +37,7 @@ Nuxt 3 SSR + Vue 3 + Pinia + TailwindCSS 기반 웹 프론트엔드. 포트 3000
 | `public/` | 정적 자산 (robots.txt, favicon, OG 이미지 등) |
 | `scripts/` | 프론트 전용 패치 스크립트 (see `scripts/AGENTS.md`) |
 | `shared/` | frontend/backend 사이 공유 가능한 유틸 |
-| `docs/` | 프론트 한정 문서 (MSW 셋업 등) |
+| `docs/` | 프론트 한정 문서 (MSW 셋업, 가이드 등) |
 
 ## For AI Agents
 
