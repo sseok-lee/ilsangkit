@@ -1,9 +1,9 @@
-<!-- Generated: 2026-04-22 | Updated: 2026-04-22 -->
+<!-- Generated: 2026-04-22 | Updated: 2026-05-07 -->
 
 # ilsangkit
 
 ## Purpose
-일상 생활에 필요한 생활 편의시설(화장실, 주차장, 약국, AED 등 15개 카테고리)과 부동산 실거래가·청약 정보를 통합 제공하는 정보성 웹사이트. Nuxt 3 SSR 프론트엔드 + Express 5 API 백엔드 + MySQL 8 + Prisma 구조로, 공공데이터 API를 동기화하여 서비스한다. 프로덕션 도메인: `ilsangkit.co.kr`.
+일상 생활에 필요한 생활 편의시설(화장실, 주차장, 약국, AED 등 15개 카테고리), 부동산 실거래가·청약 정보, 그리고 공공임대주택 정보를 통합 제공하는 정보성 웹사이트. Nuxt 3 SSR 프론트엔드 + Express 5 API 백엔드 + MySQL 8 + Prisma 구조로, 공공데이터 API를 동기화하여 서비스한다. 프로덕션 도메인: `ilsangkit.co.kr`.
 
 ## Key Files
 | File | Description |
