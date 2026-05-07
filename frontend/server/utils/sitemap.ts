@@ -289,6 +289,37 @@ export async function fetchSitemapPageCounts(
   }
 }
 
+export async function fetchSubwaySlugs(
+  apiBase: string,
+): Promise<{ slug: string; updatedAt: string }[]> {
+  const cacheKey = 'subway-slugs'
+  const cached = getCached<{ slug: string; updatedAt: string }>(cacheKey)
+  if (cached) return cached
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`${apiBase}/api/subway/stations?limit=5000`)
+      if (!res.ok) {
+        console.error(`[sitemap] fetchSubwaySlugs attempt ${attempt}: HTTP ${res.status}`)
+        continue
+      }
+      const json = await res.json()
+      const items = json?.data?.items ?? []
+      const data = items.map((s: { nameSlug: string; updatedAt: string }) => ({
+        slug: s.nameSlug,
+        updatedAt: s.updatedAt,
+      }))
+      if (data.length > 0) {
+        setCache(cacheKey, data)
+      }
+      return data
+    } catch (err) {
+      console.error(`[sitemap] fetchSubwaySlugs attempt ${attempt} error:`, err)
+    }
+  }
+  return []
+}
+
 export async function fetchSubscriptionIds(
   apiBase: string
 ): Promise<{ id: number; updatedAt: string }[]> {

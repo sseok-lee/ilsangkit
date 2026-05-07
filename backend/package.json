@@ -51,6 +51,7 @@
     "sync:childcare": "tsx src/scripts/syncChildcare.ts",
     "sync:ev-charger": "tsx src/scripts/syncEvCharger.ts",
     "sync:sports": "tsx src/scripts/syncSports.ts",
+    "sync:subway": "tsx src/scripts/syncSubway.ts",
     "submit:indexing": "tsx src/scripts/submitIndexing.ts"
   },
   "prisma": {

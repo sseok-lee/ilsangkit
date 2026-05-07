@@ -746,6 +746,36 @@ model Guide {
   @@index([articleType, category])
 }
 
+// 지하철역 테이블 (data.go.kr 전국도시철도역사정보표준데이터 기반)
+// 시설 카테고리(15종)와 분리된 도메인. /subway/[slug] SEO 페이지 + /api/transit/nearby 데이터 소스.
+model SubwayStation {
+  id            String   @id @db.VarChar(80)
+  sourceId      String   @unique @db.VarChar(100) // 표준데이터 PK (역번호)
+  name          String   @db.VarChar(100) // 역명 (예: "강남")
+  nameSlug      String   @db.VarChar(150) // ASCII 슬러그 (예: "gangnam", "sicheong-line1")
+  line          String   @db.VarChar(50) // 주 노선 (예: "2호선")
+  transferLines String?  @db.Text // 환승 노선 JSON 배열 — Phase 2에서 정규화
+  operator      String?  @db.VarChar(100) // 운영기관 (서울교통공사, 코레일 등)
+  lat           Decimal  @db.Decimal(10, 7)
+  lng           Decimal  @db.Decimal(10, 7)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  city          String?  @db.VarChar(50)
+  district      String?  @db.VarChar(50)
+  regionSlug    String?  @db.VarChar(80) // CITY_SLUG_TO_FULL 매핑 사용
+  phoneNumber   String?  @db.VarChar(50)
+  dataDate      String?  @db.VarChar(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  @@unique([nameSlug])
+  @@index([line])
+  @@index([city, district])
+  @@index([lat])
+  @@index([lng])
+}
+
 // 쓰레기 배출 일정 테이블 (좌표 없음 - 지도 마커 X)
 // API: https://www.data.go.kr/data/15155080/openapi.do
 model WasteSchedule {

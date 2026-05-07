@@ -28,8 +28,9 @@ import { syncPharmacies } from './syncPharmacy.js';
 import { syncChildcare } from '../services/childcareSyncService.js';
 import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
+import { syncSubwayStations } from '../services/subwaySyncService.js';
 import { prisma } from '../lib/prisma.js';
-import { submitIndexNow, buildFacilityUrls } from '../services/indexNowService.js';
+import { submitIndexNow, buildFacilityUrls, buildSubwayUrls } from '../services/indexNowService.js';
 
 // 공공화장실 기본 CSV 파일 경로
 const TOILET_CSV_PATH = path.resolve(
@@ -41,6 +42,12 @@ const TOILET_CSV_PATH = path.resolve(
 const WIFI_CSV_PATH = path.resolve(
   import.meta.dirname,
   '../../prisma/data/wifi.csv'
+);
+
+// 지하철역 기본 CSV 파일 경로
+const SUBWAY_CSV_PATH = path.resolve(
+  import.meta.dirname,
+  '../../prisma/data/subway.csv'
 );
 
 /**
@@ -58,7 +65,7 @@ interface SyncResult {
  * 사용 가능한 카테고리 목록
  */
 // public-rental은 API 쿼터 제한으로 별도 수동 실행: npx tsx src/scripts/syncPublicRent.ts
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -228,6 +235,16 @@ async function syncCategory(category: Category): Promise<SyncResult> {
         };
       }
 
+      case 'subway': {
+        const result = await syncSubwayStations(SUBWAY_CSV_PATH);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
       default:
         throw new Error(`Unknown category: ${category}`);
     }
@@ -339,6 +356,9 @@ async function main(): Promise<void> {
 
     const allUrls: string[] = [];
     for (const { category } of syncedCategories) {
+      // subway는 facility 패턴(/{category}/{id})과 다른 URL — Phase 1 noindex 정책으로 별도 게이트.
+      if (category === 'subway') continue;
+
       const queryFn = modelQueries[category];
       if (!queryFn) continue;
       try {
@@ -349,6 +369,29 @@ async function main(): Promise<void> {
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         console.error(`[IndexNow] ${category} URL 조회 실패: ${msg}`);
+      }
+    }
+
+    // 지하철 URL은 SUBWAY_INDEX_NOW_ENABLED 플래그로 게이트.
+    // Phase 1: 모든 /subway/* 페이지에 noindex 메타가 적용되므로 색인 신호를 보내지 않음.
+    // Phase 2: 콘텐츠 충실화 후 플래그를 해제.
+    if (
+      process.env.SUBWAY_INDEX_NOW_ENABLED === 'true'
+      && syncedCategories.some((r) => r.category === 'subway')
+    ) {
+      try {
+        const subwaySynced = await prisma.subwayStation.findMany({
+          where: { syncedAt: { gte: syncCutoff } },
+          select: { nameSlug: true },
+        });
+        if (subwaySynced.length > 0) {
+          const subwayUrls = buildSubwayUrls(subwaySynced.map((s) => s.nameSlug));
+          allUrls.push(...subwayUrls);
+          console.log(`[IndexNow] subway: ${subwayUrls.length}개 URL`);
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`[IndexNow] subway URL 조회 실패: ${msg}`);
       }
     }
 

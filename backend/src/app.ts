@@ -15,6 +15,7 @@ import areaRouter from './routes/area.js';
 import subscriptionRouter from './routes/subscription.js';
 import publicRentalRouter from './routes/publicRental.js';
 import transitRouter from './routes/transit.js';
+import subwayRouter from './routes/subway.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
@@ -67,6 +68,7 @@ app.use('/api/area', areaRouter);
 app.use('/api/subscription', subscriptionRouter);
 app.use('/api/public-rental', publicRentalRouter);
 app.use('/api/transit', transitRouter);
+app.use('/api/subway', subwayRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

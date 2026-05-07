@@ -66,6 +66,14 @@ export function buildFacilityUrls(category: string, ids: string[]): string[] {
 }
 
 /**
+ * 지하철역 SEO URL 목록: /subway/{nameSlug}.
+ * Phase 1에서는 noindex 정책으로 IndexNow 제출 자체가 비활성화되어 있다 (SUBWAY_INDEX_NOW_ENABLED).
+ */
+export function buildSubwayUrls(slugs: string[]): string[] {
+  return slugs.map((slug) => `https://${SITE_HOST}/subway/${slug}`);
+}
+
+/**
  * 신규 URL 포맷 빌더: `/real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingName}`.
  *
  * city/district는 DB 원본 한글 그대로 받는다 — slug 변환은 `toAbsoluteRealEstateUrl` 내부에서 일어난다.
