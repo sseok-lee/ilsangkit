@@ -8,6 +8,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
 import { getStatsByCity, getStatsByDistrict, getSyncStatus, SHORT_TO_SLUG } from '../services/facilityService.js';
 import { getCategories, getStats, getRegionByDistrictName, getRegionByBjdCode, getRegions } from '../services/metaService.js';
+import { prisma } from '../lib/prisma.js';
 
 const SlugParamsSchema = z.object({
   citySlug: z.string().regex(/^[a-z-]+$/).max(30),
@@ -150,6 +151,24 @@ router.get('/regions', validate(RegionsQuerySchema, 'query'), asyncHandler(async
   const { city } = req.query;
   const regions = await getRegions(city as string | undefined);
   res.json({ success: true, data: regions });
+}));
+
+// GET /api/meta/hospital-departments — 병원 진료과목 목록 (보유 병원 수 내림차순)
+// 1시간 인메모리 캐시
+let hospitalDeptsCache: { items: { name: string; count: number }[]; expires: number } | null = null;
+router.get('/hospital-departments', asyncHandler(async (_req: Request, res: Response) => {
+  if (hospitalDeptsCache && Date.now() < hospitalDeptsCache.expires) {
+    res.json({ success: true, data: hospitalDeptsCache.items });
+    return;
+  }
+  const grouped = await prisma.hospitalDepartment.groupBy({
+    by: ['dgsbjtCdNm'],
+    _count: { dgsbjtCdNm: true },
+    orderBy: { _count: { dgsbjtCdNm: 'desc' } },
+  });
+  const items = grouped.map((g) => ({ name: g.dgsbjtCdNm, count: g._count.dgsbjtCdNm }));
+  hospitalDeptsCache = { items, expires: Date.now() + 60 * 60 * 1000 };
+  res.json({ success: true, data: items });
 }));
 
 export default router;

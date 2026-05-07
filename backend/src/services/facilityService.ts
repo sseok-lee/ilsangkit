@@ -167,6 +167,20 @@ function buildBoundsFilter(swLat: number, swLng: number, neLat: number, neLng: n
   };
 }
 
+/**
+ * 병원 진료과목 AND 매칭 필터.
+ * 선택된 모든 진료과목을 보유한 병원만 통과한다.
+ *   ["내과", "외과"] → 내과와 외과 둘 다 있는 병원
+ */
+function buildDepartmentFilter(category: string | undefined, departments?: string[]): Record<string, unknown> {
+  if (category !== 'hospital' || !departments || departments.length === 0) return {};
+  return {
+    AND: departments.map((dept) => ({
+      departments: { some: { dgsbjtCdNm: dept } },
+    })),
+  };
+}
+
 // 그룹별 검색 응답 타입
 interface GroupedCategoryResult {
   category: FacilityCategory;
@@ -363,7 +377,7 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
  * - 지역 필터
  */
 export async function search(params: FacilitySearchInput): Promise<SearchResult> {
-  const { category, keyword, lat, lng, radius = SEARCH_DEFAULTS.RADIUS_METERS, swLat, swLng, neLat, neLng, city, district, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT, sort = 'name' } = params;
+  const { category, keyword, lat, lng, radius = SEARCH_DEFAULTS.RADIUS_METERS, swLat, swLng, neLat, neLng, city, district, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT, sort = 'name', departments } = params;
 
   // ev-charger: 충전소 단위 그룹 검색 (모든 검색 유형)
   if (category === 'ev-charger') {
@@ -415,7 +429,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
           });
           return stationResult.items;
         }
-        const where = { ...keywordFilter, ...approxBounds };
+        const where = { ...keywordFilter, ...approxBounds, ...buildDepartmentFilter(cat, departments) };
         const records = await CATEGORY_REGISTRY[cat].model().findMany({
           where,
           select: buildListSelect(cat),
@@ -483,6 +497,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
   const where = {
     ...buildKeywordFilter(keyword),
     ...buildRegionFilter(city, district),
+    ...buildDepartmentFilter(category, departments),
   };
 
   // 단일 카테고리: DB skip/take + count
@@ -803,9 +818,9 @@ export async function getByRegion(
   city: string,
   district: string,
   category: string,
-  options: { page?: number; limit?: number } = {}
+  options: { page?: number; limit?: number; departments?: string[] } = {}
 ): Promise<RegionSearchResult> {
-  const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = options;
+  const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT, departments } = options;
 
   // slug -> 한글 변환
   const resolved = await resolveRegion(city, district);
@@ -823,6 +838,7 @@ export async function getByRegion(
   const where = {
     city: cityCondition,
     district: resolved.district,
+    ...buildDepartmentFilter(category, departments),
   };
 
   // trash: WasteSchedule 테이블 조회 (좌표 없는 일정 데이터)
