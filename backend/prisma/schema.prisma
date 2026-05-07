@@ -864,6 +864,28 @@ model Hospital {
   parkEtc        String?   @db.VarChar(500)
   detailSyncedAt DateTime?
 
+  // 시설정보 (xlsx 파일 3 — medicInsttDetailInfo_01)
+  foundationCd        String? @db.VarChar(20)
+  foundationCdNm      String? @db.VarChar(50) // 설립구분 (개인/법인 등)
+  generalUpperBeds    Int?
+  generalNormalBeds   Int?
+  adultIcuBeds        Int?
+  childIcuBeds        Int?
+  neonatalIcuBeds     Int?
+  deliveryBeds        Int?
+  operatingBeds       Int?
+  emergencyBeds       Int?
+  physicalTherapyBeds Int?
+  psychClosedUpper    Int?
+  psychClosedNormal   Int?
+  psychOpenUpper      Int?
+  psychOpenNormal     Int?
+  isolationBeds       Int?
+  sterileBeds         Int?
+
+  // 간호등급 (xlsx 파일 9 — medicInsttDetailInfo_07, 단일 등급)
+  nurseGrade String? @db.VarChar(10)
+
   departments HospitalDepartment[]
 
   @@index([city, district])
@@ -930,10 +952,22 @@ model Pharmacy {
   dutyEtc    String? @db.Text
   dataDate   String? @db.VarChar(20)
 
+  // HIRA xlsx 보강 (파일 2/4/12 매칭 키 + 추가 정보)
+  ykiho          String?   @db.VarChar(100) // HIRA 암호화요양기호
+  pharmacistCnt  Int? // 약사 수 (파일 12)
+  lunchWeek      String?   @db.VarChar(200) // 점심시간 (파일 4)
+  lunchSat       String?   @db.VarChar(200)
+  noTrmtSun      String?   @db.VarChar(200) // 휴진안내_일요일 (파일 4)
+  noTrmtHoli     String?   @db.VarChar(200)
+  recpWeek       String?   @db.VarChar(200) // 접수시간_평일 (파일 4)
+  recpSat        String?   @db.VarChar(200)
+  detailSyncedAt DateTime?
+
   @@index([city, district])
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([hpid])
+  @@index([ykiho])
   @@index([viewCount])
   @@index([name])
 }
