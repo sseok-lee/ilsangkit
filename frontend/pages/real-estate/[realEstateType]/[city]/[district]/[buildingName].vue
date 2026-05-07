@@ -382,7 +382,7 @@ import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
-import { formatKoreanPrice } from '~/utils/formatters'
+import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
 import {
   getPeriodTradeLabel,
   getPriceExtremes,
@@ -648,9 +648,7 @@ const { data: syncStatusResponse } = await useAsyncData(
 const lastSyncDate = computed(() => {
   if (!syncStatusResponse.value?.data) return null
   const key = apiSlug.value.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-  const iso = syncStatusResponse.value.data[key]
-  if (!iso) return null
-  return iso.slice(0, 10)
+  return formatKstDate(syncStatusResponse.value.data[key])
 })
 
 // ── Computed display values ───────────────────────────────────────────────────

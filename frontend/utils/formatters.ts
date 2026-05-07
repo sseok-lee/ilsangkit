@@ -18,6 +18,23 @@ export function formatDistance(distance: number): string {
 }
 
 /**
+ * ISO 시각을 KST(Asia/Seoul) 기준 YYYY-MM-DD 문자열로 변환.
+ * UTC 새벽 시간이 KST 전날로 잘리는 문제(예: 새벽 3시 KST sync가 5/6으로 표시되는 버그) 방지용.
+ * 잘못된 입력은 null 반환.
+ */
+export function formatKstDate(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return null
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
+/**
  * 날짜를 상대 시간 문자열로 변환 (예: "3일 전", "1시간 전")
  */
 export function formatRelativeTime(dateStr: string): string {
