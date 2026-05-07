@@ -32,6 +32,13 @@
       </div>
     </SectionBlock>
 
+    <!-- 진료과목 필터 (병원 전용) -->
+    <HospitalDepartmentFilter
+      v-if="category === 'hospital' && !isTrash"
+      v-model="selectedDepartments"
+      @apply="handleDepartmentApply"
+    />
+
     <!-- ========== Trash: 배출 일정 ========== -->
     <SectionBlock v-if="isTrash" heading="배출 일정" :subtext="`${wasteTotal.toLocaleString('ko-KR')}건 · 지역별 배출 요일과 방법`">
       <template #right>
@@ -387,9 +394,19 @@ const {
 } = useRegionFacilities()
 
 const currentPage = ref(initialPage)
+const selectedDepartments = ref<string[]>([])
 
 async function loadFacilities() {
-  await fetchFacilities(city.value, district.value, category.value, currentPage.value)
+  const departments = category.value === 'hospital' && selectedDepartments.value.length > 0
+    ? selectedDepartments.value
+    : undefined
+  await fetchFacilities(city.value, district.value, category.value, currentPage.value, 20, departments)
+}
+
+async function handleDepartmentApply() {
+  currentPage.value = 1
+  await navigateTo({ query: syncPageQuery(1) })
+  loadFacilities()
 }
 
 async function goToPage(pageNum: number) {

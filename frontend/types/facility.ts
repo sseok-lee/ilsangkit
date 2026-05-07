@@ -586,6 +586,7 @@ export interface SearchParams {
   limit?: number
   grouped?: boolean
   sort?: string
+  departments?: string[]
 }
 
 // 검색 응답

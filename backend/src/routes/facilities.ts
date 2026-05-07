@@ -65,12 +65,12 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const { params, query } = res.locals.validated as {
       params: { city: string; district: string; category: string };
-      query: { page: number; limit: number };
+      query: { page: number; limit: number; departments?: string[] };
     };
     const { city, district, category } = params;
-    const { page, limit } = query;
+    const { page, limit, departments } = query;
 
-    const result = await facilityService.getByRegion(city, district, category, { page, limit });
+    const result = await facilityService.getByRegion(city, district, category, { page, limit, departments });
     res.json({ success: true, data: result });
   })
 );

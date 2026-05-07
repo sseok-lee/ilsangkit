@@ -73,6 +73,13 @@
         </div>
       </SectionBlock>
 
+      <!-- 진료과목 필터 (병원 전용) -->
+      <HospitalDepartmentFilter
+        v-if="categoryParam === 'hospital'"
+        v-model="selectedDepartments"
+        @apply="handleDepartmentApply"
+      />
+
       <!-- Ad: 필터 직후 -->
       <AdBanner ad-format="horizontal" full-width-responsive="false" />
 
@@ -349,6 +356,7 @@ const initialLoading = ref(!ssrData.value?.data)
 
 // Filter state
 const filterKeyword = ref('')
+const selectedDepartments = ref<string[]>([])
 // Waste schedule state — SSR 데이터로 초기화
 const ssrItems = ssrData.value?.data
 // SSR 경로는 backend raw items를 반환하므로 client 페이지네이션과 동일하게 transform 적용
@@ -591,8 +599,17 @@ async function performSearch() {
   if (selectedCity.value) params.city = selectedCity.value
   if (selectedDistrict.value) params.district = selectedDistrict.value
   if (filterKeyword.value) params.keyword = filterKeyword.value
+  if (categoryParam.value === 'hospital' && selectedDepartments.value.length > 0) {
+    params.departments = selectedDepartments.value
+  }
 
   search(params)
+}
+
+function handleDepartmentApply(): void {
+  currentPage.value = 1
+  resetToFirstPageUrl()
+  performSearch()
 }
 
 async function loadWasteSchedules() {
