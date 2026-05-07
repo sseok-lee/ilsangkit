@@ -114,14 +114,15 @@ const CATEGORY_ICONS: Partial<Record<FacilityCategory, string>> = {
 }
 
 const DISPLAY_CATEGORIES: FacilityCategory[] = ['school', 'childcare', 'park', 'sports', 'hospital', 'pharmacy']
-const MAX_PER_CATEGORY = 3
+const MAX_PER_CATEGORY = 5
+const NEARBY_RADIUS_METERS = 2000
 
 const { data: transitResponse, status: transitStatus } = await useAsyncData<{ data: { stations: Station[] } }>(
   `nearby-transit-${props.lat}-${props.lng}`,
   () => {
     if (!props.lat || !props.lng) return Promise.resolve(null)
     return $fetch('/api/transit/nearby', {
-      query: { lat: props.lat, lng: props.lng, radius: 1000 },
+      query: { lat: props.lat, lng: props.lng, radius: NEARBY_RADIUS_METERS },
     })
   },
 )
@@ -140,7 +141,7 @@ const { data: facilityResponse, status } = await useAsyncData(
     if (!props.lat || !props.lng) return Promise.resolve(null)
     return $fetch('/api/facilities/search', {
       method: 'POST',
-      body: { lat: props.lat, lng: props.lng, radius: 1000 },
+      body: { lat: props.lat, lng: props.lng, radius: NEARBY_RADIUS_METERS, limit: 100 },
     })
   },
 )
