@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-04-22 | Updated: 2026-04-22 -->
+<!-- Generated: 2026-04-22 | Updated: 2026-05-07 -->
 
 # backend/src/services
 
@@ -20,10 +20,13 @@
 | `publicApiClient.ts` | 공공데이터포털 API HTTP 클라이언트 |
 | `neisApiClient.ts` | NEIS 교육부 API 클라이언트 |
 | `evChargerService.ts` | 충전소 `statId` GROUP BY raw query |
+| `publicRentalService.ts` | 공공임대 매물 CRUD |
+| `publicRentalAnnouncementService.ts` | 공공임대 공고 목록/상세 |
 | `subscriptionService.ts` | 청약 분류/필터링 |
-| `reviewService.ts` / `viewCountService.ts` | 리뷰/조회수 |
+| `viewCountService.ts` | 조회수 카운팅 |
 | `geocodingService.ts` | Kakao 지도 API 역지오코딩 |
-| `sitemapService.ts` / `metaService.ts` / `guideService.ts` / `areaService.ts` / `areaSummaryService.ts` / `wasteScheduleService.ts` / `facilityStatsService.ts` / `indexNowService.ts` / `csvParser.ts` | 각 도메인 서비스 |
+| `indexNowService.ts` | IndexNow 검색엔진 색인 제출 |
+| `sitemapService.ts` / `metaService.ts` / `guideService.ts` / `areaService.ts` / `areaSummaryService.ts` / `wasteScheduleService.ts` / `facilityStatsService.ts` | 각 도메인 서비스 |
 
 ## For AI Agents
 

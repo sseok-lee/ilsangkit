@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-04-22 | Updated: 2026-04-22 -->
+<!-- Generated: 2026-04-22 | Updated: 2026-05-07 -->
 
 # backend/src/schemas
 
@@ -12,8 +12,9 @@ Zod 검증 스키마. 라우트가 `validate` 미들웨어로 사용하며, 검�
 | `index.ts` | 배럴 export |
 | `common.ts` | 공용 스키마 (페이지네이션, 좌표, 반경 등) |
 | `facility.ts` | 시설 리스트/상세/검색 요청 스키마 |
+| `publicRental.ts` | 공공임대 매물 스키마 |
+| `publicRentalAnnouncement.ts` | 공공임대 공고 스키마 |
 | `realEstate.ts` | 부동산 스키마 + `RealEstateTypeSchema` enum (`apt-sale`, `villa-rent`, `offitel-sale` 등) |
-| `review.ts` | 리뷰 CRUD 스키마 |
 | `search.ts` | 통합 검색 스키마 |
 | `subscription.ts` | 청약 스키마 |
 | `wasteSchedule.ts` | 쓰레기 배출 일정 스키마 |

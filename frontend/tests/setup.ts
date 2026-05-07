@@ -83,7 +83,6 @@ config.global.stubs = {
   AnchorAdBanner: { template: '<div class="stub-anchor-ad" />' },
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브
   HomeSubscriptionSection: { template: '<section class="stub-home-subscription" />' },
-  LazyRecentReviewCard: { template: '<div class="stub-review-card" />' },
 }
 
 // Global test setup

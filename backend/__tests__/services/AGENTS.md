@@ -14,7 +14,7 @@
 | `syncRealEstateBase.test.ts` | 부동산 동기화 공통 유틸 |
 | `toiletSync.test.ts` / `trashSync.test.ts` / `wifiSync.test.ts` / `clothesSync.test.ts` / `parkingSync.test.ts` / `parkSyncService.test.ts` / `schoolSyncService.test.ts` / `marketSyncService.test.ts` / `sportsSyncService.test.ts` / `childcareSyncService.test.ts` / `evChargerSyncService.test.ts` / `evChargerStatus.test.ts` | 카테고리별 동기화 |
 | `regionSync.test.ts` / `areaSummaryService.test.ts` | 지역 |
-| `metaService-regionByBjd.test.ts` / `sitemapService.test.ts` / `geocodingService.test.ts` / `csvParser.test.ts` / `indexNowService.test.ts` / `reviewService.test.ts` / `subscriptionService.test.ts` | 기타 |
+| `metaService-regionByBjd.test.ts` / `sitemapService.test.ts` / `geocodingService.test.ts` / `csvParser.test.ts` / `indexNowService.test.ts` / `subscriptionService.test.ts` | 기타 |
 
 ## For AI Agents
 

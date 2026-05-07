@@ -317,13 +317,6 @@
         <NearbyFacilities :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
       </SectionBlock>
 
-      <!-- 리뷰 -->
-      <SectionBlock heading="사용자 리뷰" subtext="이 건물에 거주하거나 방문한 사용자들의 후기입니다.">
-        <ClientOnly>
-          <ReviewSection :category="propertyTypeParam" :facility-id="buildingName" />
-        </ClientOnly>
-      </SectionBlock>
-
       <!-- 관련 가이드 -->
       <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
@@ -698,7 +691,6 @@ const heroStats = computed(() => {
   }
   if (buildingInfo.value?.buildYear) items.push({ label: '건축년도', value: `${buildingInfo.value.buildYear}년` })
   if (areaRange.value !== '-') items.push({ label: '전용면적', value: areaRange.value })
-  if (compactFacilitySummary.value) items.push({ label: '생활시설', value: compactFacilitySummary.value })
   return items
 })
 

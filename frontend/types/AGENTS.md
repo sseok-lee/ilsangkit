@@ -4,7 +4,7 @@
 # frontend/types
 
 ## Purpose
-프론트엔드 공용 TypeScript 타입 정의. API 응답, 시설/부동산 도메인, 리뷰/청약 구조를 선언한다.
+프론트엔드 공용 TypeScript 타입 정의. API 응답, 시설/부동산/청약 도메인 구조를 선언한다.
 
 ## Key Files
 | File | Description |
@@ -13,7 +13,6 @@
 | `api.ts` | API 응답 공통 타입 (`ApiResponse<T>`, 에러 포맷) |
 | `facility.ts` | `FacilityCategory` 유니언, `CATEGORY_GROUPS`, `CATEGORY_META`, `CATEGORY_DATA_PORTAL_URL`, 시설 레코드 타입 |
 | `realEstate.ts` | 부동산 타입/slug 매핑, 거래/임대 enum |
-| `review.ts` | 리뷰 레코드/입력 타입 |
 | `subscription.ts` | 청약 레코드/공급 유형 타입 |
 
 ## For AI Agents
