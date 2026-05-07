@@ -2703,6 +2703,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { FACILITY_DATA_SOURCE, type DataSourceInfo } from '~/utils/dataSource'
+import { formatKstDate } from '~/utils/formatters'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
@@ -3240,9 +3241,7 @@ const { data: syncStatusResponse } = await useAsyncData(
 const lastSyncDate = computed(() => {
   if (!facility.value || !syncStatusResponse.value?.data) return null
   const cat = facility.value.category
-  const iso = syncStatusResponse.value.data[cat]
-  if (!iso) return null
-  return iso.slice(0, 10)
+  return formatKstDate(syncStatusResponse.value.data[cat])
 })
 
 // Format distance
