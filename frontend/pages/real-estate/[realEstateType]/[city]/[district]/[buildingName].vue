@@ -684,14 +684,16 @@ const latestPrice = computed(() => {
 const compactFacilitySummary = computed(() => normalizeFacilitySummary(facilitySummary.value))
 
 const heroStats = computed(() => {
-  const items: { label: string; value: string; color?: string }[] = []
-  if (latestPrice.value !== '-') items.push({ label: '최근 거래', value: latestPrice.value })
-  if (buildingInfo.value?.latestDealYear && buildingInfo.value?.latestDealMonth) {
-    items.push({ label: '최근 거래일', value: `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월` })
-  }
-  if (buildingInfo.value?.buildYear) items.push({ label: '건축년도', value: `${buildingInfo.value.buildYear}년` })
-  if (areaRange.value !== '-') items.push({ label: '전용면적', value: areaRange.value })
-  return items
+  const PLACEHOLDER = '정보 없음'
+  const dealDate = buildingInfo.value?.latestDealYear && buildingInfo.value?.latestDealMonth
+    ? `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월`
+    : PLACEHOLDER
+  return [
+    { label: '최근 거래', value: latestPrice.value !== '-' ? latestPrice.value : PLACEHOLDER },
+    { label: '최근 거래일', value: dealDate },
+    { label: '건축년도', value: buildingInfo.value?.buildYear ? `${buildingInfo.value.buildYear}년` : PLACEHOLDER },
+    { label: '전용면적', value: areaRange.value !== '-' ? areaRange.value : PLACEHOLDER },
+  ]
 })
 
 // ── Stats / Transactions ──────────────────────────────────────────────────────
