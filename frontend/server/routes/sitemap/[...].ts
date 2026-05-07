@@ -12,6 +12,7 @@ import {
   fetchRealEstateBuildings,
   fetchRealEstateCityDistrictHubs,
   fetchSubscriptionIds,
+  fetchSubwaySlugs,
   getWeekStartDate,
 } from '../../utils/sitemap'
 import {
@@ -54,6 +55,14 @@ function parseSlug(slug: string): { category: string; page: number } | null {
   if (evMatch) {
     const page = evMatch[1] ? parseInt(evMatch[1], 10) : 1
     return page >= 1 ? { category: 'ev-charger', page } : null
+  }
+
+  // "subway" → category='subway', page=1
+  // "subway-2" → category='subway', page=2
+  const subwayMatch = slug.match(/^subway(?:-(\d+))?$/)
+  if (subwayMatch) {
+    const page = subwayMatch[1] ? parseInt(subwayMatch[1], 10) : 1
+    return page >= 1 ? { category: 'subway', page } : null
   }
 
   // "wifi-2" → category='wifi', page=2
@@ -147,6 +156,30 @@ export default defineEventHandler(async (event) => {
       const districtUrl = `${SITE_URL}/real-estate/${hub.realEstateType}/${citySlug}/${districtSlug}`
       urls.push({ loc: districtUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
     }
+
+    return generateSitemapXml(urls)
+  }
+
+  // 지하철역 SEO 페이지 — Phase 1은 noindex이지만 sitemap chunk는 생성한다
+  if (category === 'subway') {
+    const stations = await fetchSubwaySlugs(apiBase)
+    if (stations.length === 0 && page > 1) {
+      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    }
+    const totalPages = Math.max(1, Math.ceil(stations.length / MAX_URLS_PER_SITEMAP))
+    if (page > totalPages) {
+      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    }
+
+    const offset = (page - 1) * MAX_URLS_PER_SITEMAP
+    const pageItems = stations.slice(offset, offset + MAX_URLS_PER_SITEMAP)
+
+    const urls = pageItems.map((item) => ({
+      loc: `${SITE_URL}/subway/${item.slug}`,
+      lastmod: formatDateForSitemap(item.updatedAt),
+      changefreq: 'monthly' as const,
+      priority: 0.5,
+    }))
 
     return generateSitemapXml(urls)
   }

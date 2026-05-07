@@ -10,6 +10,7 @@ import {
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
   fetchSubscriptionIds,
+  fetchSubwaySlugs,
   getWeekStartDate,
 } from '../utils/sitemap'
 import {
@@ -148,6 +149,28 @@ export default defineEventHandler(async (event) => {
         sitemaps.push({ loc: `${SITE_URL}/sitemap/trash-${i}.xml`, lastmod: trashLastmod })
       }
     }
+  }
+
+  // 지하철 — 약 1100개 항목으로 단일 청크. Phase 1은 noindex이지만 chunk는 생성.
+  try {
+    const subwayItems = await fetchSubwaySlugs(apiBase)
+    if (subwayItems.length > 0) {
+      const subwayLatestDate = subwayItems.reduce((max, item) => {
+        const d = item.updatedAt?.split('T')[0]
+        return d && d > max ? d : max
+      }, '')
+      const subwayLastmod = subwayLatestDate || today
+      const subwayPages = Math.max(1, Math.ceil(subwayItems.length / MAX_URLS_PER_SITEMAP))
+      if (subwayPages === 1) {
+        sitemaps.push({ loc: `${SITE_URL}/sitemap/subway.xml`, lastmod: subwayLastmod })
+      } else {
+        for (let i = 1; i <= subwayPages; i++) {
+          sitemaps.push({ loc: `${SITE_URL}/sitemap/subway-${i}.xml`, lastmod: subwayLastmod })
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[sitemap] subway index entry build failed:', err)
   }
 
   return generateSitemapIndexXml(sitemaps)

@@ -17,20 +17,26 @@
           <span class="ml-auto text-[11px] text-slate-500 font-medium">{{ transitStations.length }}곳</span>
         </div>
         <ul class="divide-y divide-slate-50">
-          <li v-for="station in transitStations" :key="station.id" class="flex items-center gap-3 px-4 py-3">
-            <span
-              class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
-              :style="{ backgroundColor: lineColor(station.line) }"
+          <li v-for="station in transitStations" :key="station.id">
+            <NuxtLink
+              :to="`/subway/${station.nameSlug}`"
+              class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
             >
-              {{ station.line }}
-            </span>
-            <span class="flex-1 text-sm text-slate-700 truncate">{{ station.name }}</span>
-            <span
-              class="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full"
-              :class="transitBadgeClass(station.distance)"
-            >
-              {{ station.distance }}m
-            </span>
+              <span
+                class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
+                :style="{ backgroundColor: lineColor(station.line) }"
+              >
+                {{ station.line }}
+              </span>
+              <span class="flex-1 text-sm text-slate-700 truncate">{{ station.name }}</span>
+              <span
+                class="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full"
+                :class="transitBadgeClass(station.distance)"
+              >
+                {{ station.distance }}m
+              </span>
+              <span class="material-symbols-outlined text-[16px] text-slate-300">chevron_right</span>
+            </NuxtLink>
           </li>
         </ul>
       </div>
@@ -76,8 +82,10 @@ import { lineColor } from '~/utils/subwayLineColors'
 interface Station {
   id: string
   name: string
+  nameSlug: string
   line: string
   distance: number
+  type?: 'subway'
 }
 
 interface FacilityItem {
@@ -113,7 +121,8 @@ const CATEGORY_ICONS: Partial<Record<FacilityCategory, string>> = {
   pharmacy: '💊',
 }
 
-const DISPLAY_CATEGORIES: FacilityCategory[] = ['school', 'childcare', 'park', 'sports', 'hospital', 'pharmacy']
+// 부동산 의사결정 우선순위 — 지하철역(별도 블록)이 항상 최상단, 그 다음 이 순서로 고정.
+const DISPLAY_CATEGORIES: FacilityCategory[] = ['school', 'childcare', 'hospital', 'pharmacy', 'park', 'sports']
 const MAX_PER_CATEGORY = 5
 const NEARBY_RADIUS_METERS = 2000
 
@@ -127,7 +136,9 @@ const { data: transitResponse, status: transitStatus } = await useAsyncData<{ da
   },
 )
 
-const transitStations = computed<Station[]>(() => transitResponse.value?.data?.stations ?? [])
+const transitStations = computed<Station[]>(() =>
+  (transitResponse.value?.data?.stations ?? []).slice(0, MAX_PER_CATEGORY)
+)
 
 function transitBadgeClass(distance: number): string {
   if (distance <= 300) return 'bg-emerald-50 text-emerald-600'
@@ -160,7 +171,6 @@ const facilityGroups = computed<FacilityGroup[]>(() => {
       icon: CATEGORY_ICONS[cat] ?? '📍',
       items: items.filter((item) => item.category === cat).slice(0, MAX_PER_CATEGORY),
     }))
-    .sort((a, b) => b.items.length - a.items.length)
 })
 
 function categoryBgClass(category: FacilityCategory): string {

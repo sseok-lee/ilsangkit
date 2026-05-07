@@ -44,6 +44,10 @@ backend/data/*.xlsx
 backend/data/*.xls
 backend/data/*.zip
 
+# Prisma 데이터 소스 — CSV만 커밋, xlsx 원본은 로컬 변환용
+backend/prisma/data/*.xlsx
+backend/prisma/data/*.xls
+
 # Misc
 nul
 *.log
