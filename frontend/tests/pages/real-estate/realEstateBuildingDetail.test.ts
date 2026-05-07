@@ -117,7 +117,6 @@ async function mountSuspended(component: any, options?: any) {
           Pagination: { template: '<div />' },
           DataSourceCard: { template: '<div />' },
           RelatedGuides: { template: '<div />' },
-          ReviewSection: { template: '<div />' },
           FacilityMap: { template: '<div />' },
           TransactionModeTab: { template: '<div />' },
         },

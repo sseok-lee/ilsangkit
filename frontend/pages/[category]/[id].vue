@@ -1253,13 +1253,6 @@
               <!-- Ad: 주변 시설 이후 1회 -->
               <AdBanner />
 
-              <!-- 리뷰 SectionBlock -->
-              <SectionBlock heading="사용자 리뷰" subtext="방문자의 의견을 확인하고 남겨보세요.">
-                <ClientOnly>
-                  <ReviewSection v-if="id" :category="category" :facility-id="id" />
-                </ClientOnly>
-              </SectionBlock>
-
               <!-- 관련 가이드 (Desktop) -->
               <ClientOnly>
                 <RelatedGuides :category="category" />
@@ -2555,13 +2548,8 @@
             </div>
           </template>
 
-          <!-- Ad: 리뷰 섹션 전 (Mobile) -->
+          <!-- Ad (Mobile) -->
           <AdBanner />
-
-          <!-- Review Section (Mobile) -->
-          <ClientOnly>
-            <ReviewSection v-if="id" :category="category" :facility-id="id" />
-          </ClientOnly>
 
           <!-- 관련 가이드 (Mobile) -->
           <ClientOnly>

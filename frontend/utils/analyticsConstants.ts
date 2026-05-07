@@ -10,7 +10,6 @@ export const ANALYTICS_EVENTS = {
   PHONE: 'phone_clicked',
   SHARE: 'share_clicked',
   BUILDING_VIEW: 'building_viewed',
-  REVIEW_SUBMIT: 'review_submitted',
   SUBSCRIPTION_LIST_VIEW: 'subscription_list_viewed',
   SUBSCRIPTION_VIEW: 'subscription_detail_viewed',
   SUBSCRIPTION_APPLY_CLICK: 'subscription_apply_clicked',

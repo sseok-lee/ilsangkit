@@ -12,7 +12,6 @@ Zod 스키마 테스트. 유효/무효 입력을 검증하여 API 입력 계약�
 | `common.test.ts` | 페이지네이션, 좌표, 반경 검증 |
 | `facility.test.ts` | 시설 스키마 |
 | `realEstate.test.ts` | `RealEstateTypeSchema` enum + 거래/임대 검증 |
-| `review.test.ts` | 리뷰 스키마 |
 | `search.test.ts` | 통합 검색 스키마 |
 | `subscription.test.ts` | 청약 스키마 |
 
