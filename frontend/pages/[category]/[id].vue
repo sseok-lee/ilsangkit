@@ -3436,12 +3436,20 @@ const hospitalWeeklyHours = computed(() => {
     const e = dk.end ? fmt(d[dk.end]) : null
     const closed = !s && !e
     const isNoTrmt = (dk.label === '일' && d.noTrmtSun) || (dk.label === '공휴일' && d.noTrmtHoli)
-    const lunchStr = dk.label !== '공휴일' && d.lunchWeek ? d.lunchWeek : null
+    const isClosed = closed || isNoTrmt
+    // 점심: 휴진일에는 표기하지 않음. 토는 lunchSat 우선, 일/공휴일은 비어 있음.
+    const lunchStr = isClosed
+      ? null
+      : dk.label === '토'
+        ? (d.lunchSat || d.lunchWeek || null)
+        : dk.label === '일' || dk.label === '공휴일'
+          ? null
+          : (d.lunchWeek || null)
     return {
       day: dk.label,
-      time: closed || isNoTrmt ? '휴진' : (s && e ? `${s} ~ ${e}` : '정보없음'),
+      time: isClosed ? '휴진' : (s && e ? `${s} ~ ${e}` : '정보없음'),
       lunch: lunchStr || '—',
-      closed: closed || isNoTrmt,
+      closed: isClosed,
       isToday: dk.todayIdx === today,
     }
   })
