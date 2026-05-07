@@ -372,6 +372,14 @@
                           <span class="text-sm text-gray-600">종별</span>
                           <span class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-700 border border-teal-200">{{ details?.clCdNm }}</span>
                         </div>
+                        <div v-if="details?.foundationCdNm" class="flex items-center justify-between">
+                          <span class="text-sm text-gray-600">설립구분</span>
+                          <span class="text-sm font-medium text-slate-900">{{ details.foundationCdNm }}</span>
+                        </div>
+                        <div v-if="details?.nurseGrade" class="flex items-center justify-between">
+                          <span class="text-sm text-gray-600">간호등급</span>
+                          <span class="text-sm font-medium text-slate-900">{{ details.nurseGrade }}등급</span>
+                        </div>
                         <div v-if="details?.homepage" class="flex items-center justify-between">
                           <span class="text-sm text-gray-600">홈페이지</span>
                           <a :href="details?.homepage" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ details?.homepage }}</a>
@@ -421,6 +429,13 @@
                         </div>
                       </div>
                     </template>
+                    <template v-if="details?.pharmacistCnt && details.pharmacistCnt > 0">
+                      <div class="h-px bg-slate-100 w-full"></div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">약사 수</span>
+                        <span class="text-sm font-bold text-slate-900">{{ details.pharmacistCnt }}명</span>
+                      </div>
+                    </template>
                     <template v-if="pharmacyOperatingHours.length > 0">
                       <div class="h-px bg-slate-100 w-full"></div>
                       <div class="flex flex-col gap-3">
@@ -428,7 +443,27 @@
                           <span class="text-sm text-gray-600">{{ item.day }}</span>
                           <span class="text-sm font-medium text-slate-900">{{ item.time }}</span>
                         </div>
+                        <div v-if="details?.lunchWeek" class="flex items-center justify-between">
+                          <span class="text-sm text-gray-600">점심(평일)</span>
+                          <span class="text-sm font-medium text-slate-900">{{ details.lunchWeek }}</span>
+                        </div>
+                        <div v-if="details?.lunchSat" class="flex items-center justify-between">
+                          <span class="text-sm text-gray-600">점심(토)</span>
+                          <span class="text-sm font-medium text-slate-900">{{ details.lunchSat }}</span>
+                        </div>
                       </div>
+                      <p v-if="details?.recpWeek" class="text-xs text-gray-500">
+                        <span class="font-medium">접수(평일):</span> {{ details.recpWeek }}
+                      </p>
+                      <p v-if="details?.recpSat" class="text-xs text-gray-500">
+                        <span class="font-medium">접수(토):</span> {{ details.recpSat }}
+                      </p>
+                      <p v-if="details?.noTrmtSun" class="text-xs text-gray-500">
+                        <span class="font-medium">일요일 안내:</span> {{ details.noTrmtSun }}
+                      </p>
+                      <p v-if="details?.noTrmtHoli" class="text-xs text-gray-500">
+                        <span class="font-medium">공휴일 안내:</span> {{ details.noTrmtHoli }}
+                      </p>
                     </template>
                   </template>
                 </div>
@@ -1196,6 +1231,17 @@
                       </div>
                     </div>
 
+                    <!-- Hospital Bed Info -->
+                    <div v-if="hospitalBedRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
+                      <h3 class="text-sm font-bold text-slate-900 mb-3">병상 정보 <span class="text-xs text-gray-500 font-normal">(총 {{ hospitalTotalBeds }}병상)</span></h3>
+                      <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div v-for="row in hospitalBedRows" :key="row.label" class="flex items-center justify-between">
+                          <span class="text-sm text-gray-600">{{ row.label }}</span>
+                          <span class="text-sm font-medium text-slate-900">{{ row.value }}</span>
+                        </div>
+                      </div>
+                    </div>
+
                     <!-- Hospital Parking Info -->
                     <div v-if="details?.parkQty != null || details?.parkEtc" class="mt-5 border-t border-slate-100 pt-5">
                       <h3 class="text-sm font-bold text-slate-900 mb-3">주차정보</h3>
@@ -1639,6 +1685,14 @@
                       <span class="text-sm text-gray-600">종별</span>
                       <span class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-700 border border-teal-200">{{ details?.clCdNm }}</span>
                     </div>
+                    <div v-if="details?.foundationCdNm" class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">설립구분</span>
+                      <span class="text-sm font-medium text-slate-900">{{ details.foundationCdNm }}</span>
+                    </div>
+                    <div v-if="details?.nurseGrade" class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">간호등급</span>
+                      <span class="text-sm font-medium text-slate-900">{{ details.nurseGrade }}등급</span>
+                    </div>
                     <div v-if="details?.homepage" class="flex items-center justify-between">
                       <span class="text-sm text-gray-600">홈페이지</span>
                       <a :href="details?.homepage" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ details?.homepage }}</a>
@@ -1688,6 +1742,13 @@
                     </div>
                   </div>
                 </template>
+                <template v-if="details?.pharmacistCnt && details.pharmacistCnt > 0">
+                  <div class="h-px bg-slate-100 w-full"></div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">약사 수</span>
+                    <span class="text-sm font-bold text-slate-900">{{ details.pharmacistCnt }}명</span>
+                  </div>
+                </template>
                 <template v-if="pharmacyOperatingHours.length > 0">
                   <div class="h-px bg-slate-100 w-full"></div>
                   <div class="flex flex-col gap-3">
@@ -1695,7 +1756,27 @@
                       <span class="text-sm text-gray-600">{{ item.day }}</span>
                       <span class="text-sm font-medium text-slate-900">{{ item.time }}</span>
                     </div>
+                    <div v-if="details?.lunchWeek" class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">점심(평일)</span>
+                      <span class="text-sm font-medium text-slate-900">{{ details.lunchWeek }}</span>
+                    </div>
+                    <div v-if="details?.lunchSat" class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">점심(토)</span>
+                      <span class="text-sm font-medium text-slate-900">{{ details.lunchSat }}</span>
+                    </div>
                   </div>
+                  <p v-if="details?.recpWeek" class="text-xs text-gray-500">
+                    <span class="font-medium">접수(평일):</span> {{ details.recpWeek }}
+                  </p>
+                  <p v-if="details?.recpSat" class="text-xs text-gray-500">
+                    <span class="font-medium">접수(토):</span> {{ details.recpSat }}
+                  </p>
+                  <p v-if="details?.noTrmtSun" class="text-xs text-gray-500">
+                    <span class="font-medium">일요일 안내:</span> {{ details.noTrmtSun }}
+                  </p>
+                  <p v-if="details?.noTrmtHoli" class="text-xs text-gray-500">
+                    <span class="font-medium">공휴일 안내:</span> {{ details.noTrmtHoli }}
+                  </p>
                 </template>
               </template>
             </div>
@@ -2480,6 +2561,17 @@
                       {{ dept.dgsbjtCdNm }}
                       <span v-if="dept.dgsbjtPrSdrCnt" class="ml-1 text-teal-500">({{ dept.dgsbjtPrSdrCnt }}명)</span>
                     </span>
+                  </div>
+                </div>
+
+                <!-- Hospital Bed Info -->
+                <div v-if="hospitalBedRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
+                  <h3 class="text-sm font-bold text-slate-900 mb-3">병상 정보 <span class="text-xs text-gray-500 font-normal">(총 {{ hospitalTotalBeds }}병상)</span></h3>
+                  <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div v-for="row in hospitalBedRows" :key="row.label" class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">{{ row.label }}</span>
+                      <span class="text-sm font-medium text-slate-900">{{ row.value }}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -3355,6 +3447,48 @@ const hospitalWeeklyHours = computed(() => {
   })
   const hasAnyTime = rows.some(r => !r.closed && r.time !== '정보없음')
   return hasAnyTime ? rows : []
+})
+
+// 병원 병상 정보 (xlsx 파일 3 보강)
+const HOSPITAL_BED_DEFS: { key: string; label: string }[] = [
+  { key: 'generalUpperBeds', label: '일반(상급)' },
+  { key: 'generalNormalBeds', label: '일반(일반)' },
+  { key: 'adultIcuBeds', label: '성인 중환자' },
+  { key: 'childIcuBeds', label: '소아 중환자' },
+  { key: 'neonatalIcuBeds', label: '신생아 중환자' },
+  { key: 'deliveryBeds', label: '분만실' },
+  { key: 'operatingBeds', label: '수술실' },
+  { key: 'emergencyBeds', label: '응급실' },
+  { key: 'physicalTherapyBeds', label: '물리치료실' },
+  { key: 'psychClosedUpper', label: '정신과 폐쇄(상급)' },
+  { key: 'psychClosedNormal', label: '정신과 폐쇄(일반)' },
+  { key: 'psychOpenUpper', label: '정신과 개방(상급)' },
+  { key: 'psychOpenNormal', label: '정신과 개방(일반)' },
+  { key: 'isolationBeds', label: '격리병실' },
+  { key: 'sterileBeds', label: '무균치료실' },
+]
+
+const hospitalBedRows = computed(() => {
+  if (facility.value?.category !== 'hospital') return []
+  const d = details.value as Record<string, unknown> | undefined
+  if (!d) return []
+  return HOSPITAL_BED_DEFS
+    .map(({ key, label }) => {
+      const v = d[key]
+      const num = typeof v === 'number' ? v : null
+      return num && num > 0 ? { label, value: `${num}병상` } : null
+    })
+    .filter((r): r is { label: string; value: string } => r !== null)
+})
+
+const hospitalTotalBeds = computed(() => {
+  if (facility.value?.category !== 'hospital') return 0
+  const d = details.value as Record<string, unknown> | undefined
+  if (!d) return 0
+  return HOSPITAL_BED_DEFS.reduce((sum, { key }) => {
+    const v = d[key]
+    return sum + (typeof v === 'number' && v > 0 ? v : 0)
+  }, 0)
 })
 
 // AED 요일별 이용시간 표 (오늘 강조 + 24시간 표시)
