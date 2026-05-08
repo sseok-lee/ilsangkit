@@ -128,18 +128,4 @@ setDatasetSchema({
   sources: [REAL_ESTATE_DATA_SOURCE],
   keywords: ['부동산', '실거래가', '아파트', '빌라', '오피스텔', '국토교통부'],
 })
-
-useHead({
-  script: [
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'WebPage',
-        name: '부동산 실거래가',
-        description: '전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.',
-      }),
-    },
-  ],
-})
 </script>
