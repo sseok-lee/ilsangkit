@@ -3,7 +3,7 @@
     data-testid="category-cards"
     class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5"
   >
-    <NuxtLink
+    <HardLink
       v-for="category in categories"
       :key="category.id"
       :to="`/${category.id}`"
@@ -28,11 +28,12 @@
       >
         {{ category.label }}
       </span>
-    </NuxtLink>
+    </HardLink>
   </div>
 </template>
 
 <script setup lang="ts">
+import HardLink from '~/components/common/HardLink.vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 
 defineOptions({

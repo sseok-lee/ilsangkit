@@ -1,5 +1,5 @@
 <template>
-  <NuxtLink
+  <HardLink
     v-if="isRenderable"
     :to="linkUrl"
     class="group bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 border border-slate-200 hover:border-primary/30 cursor-pointer block"
@@ -44,11 +44,12 @@
         <p class="text-sm font-semibold text-slate-700 mt-0.5">{{ complex.transactionCount }}건</p>
       </div>
     </div>
-  </NuxtLink>
+  </HardLink>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import HardLink from '~/components/common/HardLink.vue'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
