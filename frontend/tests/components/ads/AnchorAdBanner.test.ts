@@ -40,14 +40,14 @@ describe('AnchorAdBanner', () => {
     expect(requestSource()).toContain('win.adsbygoogle.push({})')
   })
 
-  it('waits for layout stability and near-viewport visibility before requesting an ad', () => {
+  it('pushes the ad request immediately on mount without lazy/IntersectionObserver gating', () => {
     expect(source()).toContain('useDeferredAdSenseRequest(')
-    expect(requestSource()).toContain('export const AD_REQUEST_DELAY_MS = 500')
-    expect(requestSource()).toContain('IntersectionObserver')
-    expect(requestSource()).toContain('rootMargin: AD_REQUEST_ROOT_MARGIN')
-    expect(requestSource()).toContain('requestAnimationFrame')
     expect(requestSource()).toContain('hasRequestedAd.value = true')
     expect(requestSource()).toContain('onBeforeUnmount(clearPendingAdRequest)')
+    expect(requestSource()).not.toContain('IntersectionObserver')
+    expect(requestSource()).not.toContain('AD_REQUEST_DELAY_MS')
+    expect(requestSource()).not.toContain('AD_REQUEST_ROOT_MARGIN')
+    expect(requestSource()).not.toContain('requestAnimationFrame')
   })
 
   it('does not fabricate data-ad-status=unfilled when AdSense has not responded yet', async () => {
