@@ -1,7 +1,6 @@
 <template>
   <div
     v-if="isVisible"
-    ref="container"
     class="anchor-ad fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-line shadow-[0_-2px_8px_-1px_rgba(0,0,0,0.06)]"
     :style="{ paddingBottom: 'env(safe-area-inset-bottom)' }"
   >
@@ -29,6 +28,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+
 const AD_CLIENT = 'ca-pub-2088264360250020'
 
 withDefaults(defineProps<{
@@ -40,7 +41,6 @@ withDefaults(defineProps<{
 const route = useRoute()
 const adKey = ref(0)
 const dismissed = ref(false)
-const container = ref<HTMLElement | null>(null)
 
 // 하단 sticky 액션바가 이미 있는 페이지에서는 앵커 광고를 노출하지 않음
 const HIDDEN_ROUTE_PATTERNS = [
@@ -54,23 +54,15 @@ const isVisible = computed(() => {
 })
 
 function pushAd() {
+  if (!import.meta.client) return
   nextTick(() => {
     try {
-      const adsbygoogle = (window as any).adsbygoogle || []
-      adsbygoogle.push({})
+      const win = window as Window & { adsbygoogle?: Array<Record<string, never>> }
+      win.adsbygoogle = win.adsbygoogle || []
+      win.adsbygoogle.push({})
     } catch {
       // 광고 차단기/네트워크 실패 시 자연 collapse
     }
-    // 5초 안에 status 가 안 박히면 unfilled 처리 → :has() 셀렉터가 부모를 collapse.
-    // localhost · 광고 차단기 · 네트워크 실패 시 100px reserve 가 빈 박스로
-    // 영구 잔존하는 문제를 막는다.
-    setTimeout(() => {
-      if (!container.value) return
-      const ins = container.value.querySelector('ins.adsbygoogle')
-      if (ins && !ins.getAttribute('data-ad-status')) {
-        ins.setAttribute('data-ad-status', 'unfilled')
-      }
-    }, 5000)
   })
 }
 
