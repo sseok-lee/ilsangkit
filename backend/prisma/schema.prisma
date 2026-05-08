@@ -665,21 +665,6 @@ model Sports {
   @@index([name])
 }
 
-// 리뷰 테이블
-model Review {
-  id               Int      @id @default(autoincrement())
-  facilityCategory String   @db.VarChar(20)
-  facilityId       String   @db.VarChar(50)
-  nickname         String   @db.VarChar(30)
-  passwordHash     String   @db.VarChar(60)
-  content          String   @db.Text
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@index([facilityCategory, facilityId, createdAt(sort: Desc)])
-  @@index([createdAt(sort: Desc)])
-}
-
 // @TASK T0.4 - 카테고리 마스터 테이블
 // @SPEC docs/planning/04-database-design.md#category-table
 model Category {
@@ -759,6 +744,36 @@ model Guide {
   @@index([published, createdAt])
   @@index([slug])
   @@index([articleType, category])
+}
+
+// 지하철역 테이블 (data.go.kr 전국도시철도역사정보표준데이터 기반)
+// 시설 카테고리(15종)와 분리된 도메인. /subway/[slug] SEO 페이지 + /api/transit/nearby 데이터 소스.
+model SubwayStation {
+  id            String   @id @db.VarChar(80)
+  sourceId      String   @unique @db.VarChar(100) // 표준데이터 PK (역번호)
+  name          String   @db.VarChar(100) // 역명 (예: "강남")
+  nameSlug      String   @db.VarChar(150) // ASCII 슬러그 (예: "gangnam", "sicheong-line1")
+  line          String   @db.VarChar(50) // 주 노선 (예: "2호선")
+  transferLines String?  @db.Text // 환승 노선 JSON 배열 — Phase 2에서 정규화
+  operator      String?  @db.VarChar(100) // 운영기관 (서울교통공사, 코레일 등)
+  lat           Decimal  @db.Decimal(10, 7)
+  lng           Decimal  @db.Decimal(10, 7)
+  address       String?  @db.VarChar(500)
+  roadAddress   String?  @db.VarChar(500)
+  city          String?  @db.VarChar(50)
+  district      String?  @db.VarChar(50)
+  regionSlug    String?  @db.VarChar(80) // CITY_SLUG_TO_FULL 매핑 사용
+  phoneNumber   String?  @db.VarChar(50)
+  dataDate      String?  @db.VarChar(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  @@unique([nameSlug])
+  @@index([line])
+  @@index([city, district])
+  @@index([lat])
+  @@index([lng])
 }
 
 // 쓰레기 배출 일정 테이블 (좌표 없음 - 지도 마커 X)
@@ -849,6 +864,28 @@ model Hospital {
   parkEtc        String?   @db.VarChar(500)
   detailSyncedAt DateTime?
 
+  // 시설정보 (xlsx 파일 3 — medicInsttDetailInfo_01)
+  foundationCd        String? @db.VarChar(20)
+  foundationCdNm      String? @db.VarChar(50) // 설립구분 (개인/법인 등)
+  generalUpperBeds    Int?
+  generalNormalBeds   Int?
+  adultIcuBeds        Int?
+  childIcuBeds        Int?
+  neonatalIcuBeds     Int?
+  deliveryBeds        Int?
+  operatingBeds       Int?
+  emergencyBeds       Int?
+  physicalTherapyBeds Int?
+  psychClosedUpper    Int?
+  psychClosedNormal   Int?
+  psychOpenUpper      Int?
+  psychOpenNormal     Int?
+  isolationBeds       Int?
+  sterileBeds         Int?
+
+  // 간호등급 (xlsx 파일 9 — medicInsttDetailInfo_07, 단일 등급)
+  nurseGrade String? @db.VarChar(10)
+
   departments HospitalDepartment[]
 
   @@index([city, district])
@@ -915,10 +952,22 @@ model Pharmacy {
   dutyEtc    String? @db.Text
   dataDate   String? @db.VarChar(20)
 
+  // HIRA xlsx 보강 (파일 2/4/12 매칭 키 + 추가 정보)
+  ykiho          String?   @db.VarChar(100) // HIRA 암호화요양기호
+  pharmacistCnt  Int? // 약사 수 (파일 12)
+  lunchWeek      String?   @db.VarChar(200) // 점심시간 (파일 4)
+  lunchSat       String?   @db.VarChar(200)
+  noTrmtSun      String?   @db.VarChar(200) // 휴진안내_일요일 (파일 4)
+  noTrmtHoli     String?   @db.VarChar(200)
+  recpWeek       String?   @db.VarChar(200) // 접수시간_평일 (파일 4)
+  recpSat        String?   @db.VarChar(200)
+  detailSyncedAt DateTime?
+
   @@index([city, district])
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([hpid])
+  @@index([ykiho])
   @@index([viewCount])
   @@index([name])
 }

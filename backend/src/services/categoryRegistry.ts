@@ -56,12 +56,20 @@ export const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
       'trmtWedStart', 'trmtWedEnd', 'trmtThuStart', 'trmtThuEnd',
       'trmtFriStart', 'trmtFriEnd', 'trmtSatStart', 'trmtSatEnd',
       'trmtSunStart', 'trmtSunEnd', 'lunchWeek', 'noTrmtSun', 'noTrmtHoli'],
-    detailFields: ['phone', 'homepage', 'postNo', 'estbDd', 'ykiho', 'clCd', 'clCdNm', 'sidoCd', 'sgguCd', 'emdongNm', 'drTotCnt', 'mdeptSdrCnt', 'mdeptGdrCnt', 'mdeptIntnCnt', 'mdeptResdntCnt', 'detySdrCnt', 'detyGdrCnt', 'detyIntnCnt', 'detyResdntCnt', 'cmdcSdrCnt', 'cmdcGdrCnt', 'cmdcIntnCnt', 'cmdcResdntCnt', 'pnursCnt', 'dataDate', 'trmtMonStart', 'trmtMonEnd', 'trmtTueStart', 'trmtTueEnd', 'trmtWedStart', 'trmtWedEnd', 'trmtThuStart', 'trmtThuEnd', 'trmtFriStart', 'trmtFriEnd', 'trmtSatStart', 'trmtSatEnd', 'trmtSunStart', 'trmtSunEnd', 'lunchWeek', 'lunchSat', 'noTrmtSun', 'noTrmtHoli', 'parkQty', 'parkEtc', 'detailSyncedAt'],
+    detailFields: ['phone', 'homepage', 'postNo', 'estbDd', 'ykiho', 'clCd', 'clCdNm', 'sidoCd', 'sgguCd', 'emdongNm', 'drTotCnt', 'mdeptSdrCnt', 'mdeptGdrCnt', 'mdeptIntnCnt', 'mdeptResdntCnt', 'detySdrCnt', 'detyGdrCnt', 'detyIntnCnt', 'detyResdntCnt', 'cmdcSdrCnt', 'cmdcGdrCnt', 'cmdcIntnCnt', 'cmdcResdntCnt', 'pnursCnt', 'dataDate', 'trmtMonStart', 'trmtMonEnd', 'trmtTueStart', 'trmtTueEnd', 'trmtWedStart', 'trmtWedEnd', 'trmtThuStart', 'trmtThuEnd', 'trmtFriStart', 'trmtFriEnd', 'trmtSatStart', 'trmtSatEnd', 'trmtSunStart', 'trmtSunEnd', 'lunchWeek', 'lunchSat', 'noTrmtSun', 'noTrmtHoli', 'parkQty', 'parkEtc', 'detailSyncedAt',
+      // 시설정보 (xlsx 파일 3) + 간호등급 (xlsx 파일 9)
+      'foundationCd', 'foundationCdNm', 'nurseGrade',
+      'generalUpperBeds', 'generalNormalBeds', 'adultIcuBeds', 'childIcuBeds', 'neonatalIcuBeds',
+      'deliveryBeds', 'operatingBeds', 'emergencyBeds', 'physicalTherapyBeds',
+      'psychClosedUpper', 'psychClosedNormal', 'psychOpenUpper', 'psychOpenNormal',
+      'isolationBeds', 'sterileBeds'],
   },
   pharmacy: {
     model: () => prisma.pharmacy,
     listFields: ['phone', 'dutyTime1s', 'dutyTime1c'],
-    detailFields: ['phone', 'dutyTel3', 'hpid', 'postCdn1', 'postCdn2', 'dutyTime1s', 'dutyTime1c', 'dutyTime2s', 'dutyTime2c', 'dutyTime3s', 'dutyTime3c', 'dutyTime4s', 'dutyTime4c', 'dutyTime5s', 'dutyTime5c', 'dutyTime6s', 'dutyTime6c', 'dutyTime7s', 'dutyTime7c', 'dutyTime8s', 'dutyTime8c', 'dutyMapimg', 'dutyInf', 'dutyEtc', 'dataDate'],
+    detailFields: ['phone', 'dutyTel3', 'hpid', 'postCdn1', 'postCdn2', 'dutyTime1s', 'dutyTime1c', 'dutyTime2s', 'dutyTime2c', 'dutyTime3s', 'dutyTime3c', 'dutyTime4s', 'dutyTime4c', 'dutyTime5s', 'dutyTime5c', 'dutyTime6s', 'dutyTime6c', 'dutyTime7s', 'dutyTime7c', 'dutyTime8s', 'dutyTime8c', 'dutyMapimg', 'dutyInf', 'dutyEtc', 'dataDate',
+      // HIRA xlsx 보강 (파일 4 + 12)
+      'ykiho', 'pharmacistCnt', 'lunchWeek', 'lunchSat', 'noTrmtSun', 'noTrmtHoli', 'recpWeek', 'recpSat'],
   },
   park: {
     model: () => prisma.park,

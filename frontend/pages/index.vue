@@ -254,21 +254,6 @@
       <AdBanner />
     </div>
 
-    <!-- 최근 리뷰 (하단 보조 콘텐츠) -->
-    <section v-if="recentReviews.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
-        <span class="material-symbols-outlined text-primary text-[24px]">rate_review</span>
-        최근 리뷰
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        <LazyRecentReviewCard
-          v-for="review in recentReviews"
-          :key="review.id"
-          :review="review"
-        />
-      </div>
-    </section>
-
     <!-- 데이터 출처 요약 -->
     <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="bg-white border border-line rounded-2xl p-5 shadow-card flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
@@ -299,7 +284,6 @@ import { computed } from 'vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import HardLink from '~/components/common/HardLink.vue'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
-import type { ReviewWithFacility } from '~/types/review'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -344,19 +328,12 @@ const { data: statsResponse } = await useAsyncData('home-stats', () =>
   )
 )
 
-const { data: recentReviewsData } = await useAsyncData('recent-reviews', () =>
-  $fetch<{ success: boolean; data: ReviewWithFacility[] }>(
-    `${config.public.apiBase}/api/reviews/recent`,
-    { query: { limit: 6 } }
-  )
-)
 const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
   $fetch<{ success: boolean; data: GuideSummary[] }>(
     `${config.public.apiBase}/api/guides/recent`,
     { query: { limit: 4 } }
   )
 )
-const recentReviews = computed(() => recentReviewsData.value?.data ?? [])
 const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
 
 const stats = computed(() => {

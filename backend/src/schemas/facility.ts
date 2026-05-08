@@ -49,6 +49,16 @@ export const FacilitySearchSchema = z
     limit: z.coerce.number().int().min(PAGINATION.DEFAULT_PAGE).max(PAGINATION.MAX_LIMIT).default(PAGINATION.DEFAULT_LIMIT),
     grouped: z.boolean().optional().default(false),
     sort: z.enum(['name', 'latest', 'popular']).optional().default('name'),
+    // 병원 진료과목 필터. category=hospital일 때만 의미 있음. AND 매칭(모두 보유한 병원만).
+    // 콤마 구분 문자열("내과,외과") 또는 배열(["내과","외과"]) 둘 다 허용.
+    departments: z
+      .union([z.string().max(500), z.array(z.string().max(50)).max(50)])
+      .optional()
+      .transform((v) => {
+        if (!v) return undefined;
+        if (Array.isArray(v)) return v.map((d) => d.trim()).filter(Boolean);
+        return v.split(',').map((d) => d.trim()).filter(Boolean);
+      }),
   })
   .refine(
     (data) => {
@@ -85,8 +95,14 @@ export const RegionAllFacilitiesParamsSchema = z.object({
   district: z.string().min(1).max(50),
 });
 
-// 지역별 시설 조회 쿼리 스키마
-export const RegionFacilitiesQuerySchema = PaginationSchema;
+// 지역별 시설 조회 쿼리 스키마 (페이지네이션 + 병원 진료과목 필터)
+export const RegionFacilitiesQuerySchema = PaginationSchema.extend({
+  departments: z
+    .string()
+    .max(500)
+    .optional()
+    .transform((s) => (s ? s.split(',').map((d) => d.trim()).filter(Boolean) : undefined)),
+});
 
 // 타입 추출
 export type FacilitySearchInput = z.infer<typeof FacilitySearchSchema>;

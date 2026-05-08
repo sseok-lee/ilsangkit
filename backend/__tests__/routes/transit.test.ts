@@ -1,130 +1,106 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
+
+const { mockFindMany } = vi.hoisted(() => ({
+  mockFindMany: vi.fn(),
+}));
+
+vi.mock('../../src/lib/prisma.js', () => {
+  const prismaClient = {
+    subwayStation: {
+      findMany: mockFindMany,
+    },
+  };
+  return {
+    default: prismaClient,
+    prisma: prismaClient,
+  };
+});
+
 import app from '../../src/app';
 
-const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
+const SEED_STATIONS = [
+  // 강남 (37.4979, 127.0276) — 좌표가 (37.4979, 127.0276)에서 0m
+  { id: 'subway-1', name: '강남', nameSlug: 'gangnam', line: '2호선', lat: 37.4979, lng: 127.0276 },
+  // 신논현 — 강남에서 약 800m
+  { id: 'subway-2', name: '신논현', nameSlug: 'sinnonhyeon', line: '신분당선', lat: 37.5048, lng: 127.0246 },
+  // 사당 — 강남에서 약 4.7km (1km 반경 밖)
+  { id: 'subway-3', name: '사당', nameSlug: 'sadang', line: '2호선', lat: 37.4767, lng: 126.9818 },
+];
 
-const KAKAO_RESPONSE = {
-  meta: { total_count: 2 },
-  documents: [
-    {
-      id: '1234567',
-      place_name: '강남역',
-      category_name: '교통,수송 > 지하철,전철 > 수도권2호선',
-      category_group_code: 'SW8',
-      category_group_name: '지하철역',
-      address_name: '서울 강남구 역삼동 858',
-      road_address_name: '서울 강남구 테헤란로 212',
-      x: '127.0276368',
-      y: '37.4979502',
-      distance: '234',
-    },
-    {
-      id: '7654321',
-      place_name: '신논현역',
-      category_name: '교통,수송 > 지하철,전철 > 서울9호선',
-      category_group_code: 'SW8',
-      category_group_name: '지하철역',
-      address_name: '서울 강남구 논현동',
-      road_address_name: '서울 강남구 강남대로 지하 526',
-      x: '127.0246',
-      y: '37.5048',
-      distance: '850',
-    },
-  ],
-};
-
-describe('GET /api/transit/nearby', () => {
-  const originalKey = process.env.KAKAO_REST_API_KEY;
-
+describe('GET /api/transit/nearby (DB-backed)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.KAKAO_REST_API_KEY = 'test-kakao-key';
+    // findMany는 BBox 안 후보를 반환 — Haversine 필터는 서비스에서 적용
+    mockFindMany.mockResolvedValue(SEED_STATIONS);
   });
 
-  afterEach(() => {
-    process.env.KAKAO_REST_API_KEY = originalKey;
-  });
-
-  it('지하철역 목록을 반환한다', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => KAKAO_RESPONSE,
-    });
-
+  it('1km 반경 검색이 강남·신논현을 반환하고 사당을 제외한다', async () => {
     const res = await request(app)
       .get('/api/transit/nearby')
-      .query({ lat: 37.4979, lng: 127.0276 });
+      .query({ lat: 37.4979, lng: 127.0276, radius: 1000 });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.stations).toHaveLength(2);
-    expect(res.body.data.stations[0].name).toBe('강남역');
-    expect(res.body.data.stations[0].line).toBe('2호선');
-    expect(res.body.data.stations[0].distance).toBe(234);
-    expect(res.body.data.stations[1].name).toBe('신논현역');
-    expect(res.body.data.stations[1].line).toBe('9호선');
+    const names = res.body.data.stations.map((s: { name: string }) => s.name);
+    expect(names).toContain('강남');
+    expect(names).toContain('신논현');
+    expect(names).not.toContain('사당');
+  });
+
+  it('응답에 type: subway 디스크리미네이터를 포함한다', async () => {
+    const res = await request(app)
+      .get('/api/transit/nearby')
+      .query({ lat: 37.4979, lng: 127.0276, radius: 1000 });
+
+    expect(res.body.data.stations[0].type).toBe('subway');
+  });
+
+  it('가장 가까운 역이 첫 번째에 정렬된다', async () => {
+    const res = await request(app)
+      .get('/api/transit/nearby')
+      .query({ lat: 37.4979, lng: 127.0276, radius: 1000 });
+
+    expect(res.body.data.stations[0].name).toBe('강남');
+    expect(res.body.data.stations[0].distance).toBeLessThanOrEqual(50);
   });
 
   it('lat 누락 시 422를 반환한다', async () => {
-    const res = await request(app)
-      .get('/api/transit/nearby')
-      .query({ lng: 127.0276 });
-
+    const res = await request(app).get('/api/transit/nearby').query({ lng: 127.0276 });
     expect(res.status).toBe(422);
   });
 
   it('lng 누락 시 422를 반환한다', async () => {
-    const res = await request(app)
-      .get('/api/transit/nearby')
-      .query({ lat: 37.4979 });
-
+    const res = await request(app).get('/api/transit/nearby').query({ lat: 37.4979 });
     expect(res.status).toBe(422);
   });
 
-  it('한국 좌표 범위 벗어난 경우 422를 반환한다', async () => {
+  it('한국 좌표 범위 밖이면 422를 반환한다', async () => {
     const res = await request(app)
       .get('/api/transit/nearby')
       .query({ lat: 0, lng: 127.0 });
-
     expect(res.status).toBe(422);
   });
 
-  it('KAKAO_REST_API_KEY 없으면 빈 배열을 반환한다', async () => {
-    delete process.env.KAKAO_REST_API_KEY;
-
-    const res = await request(app)
-      .get('/api/transit/nearby')
-      .query({ lat: 37.4979, lng: 127.0276 });
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.stations).toEqual([]);
-  });
-
-  it('카카오 API 실패 시 빈 배열을 반환한다', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
-
-    const res = await request(app)
-      .get('/api/transit/nearby')
-      .query({ lat: 37.4979, lng: 127.0276 });
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.stations).toEqual([]);
-  });
-
-  it('radius 파라미터를 카카오 API에 전달한다', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ meta: { total_count: 0 }, documents: [] }),
-    });
-
+  it('Kakao API 의존성을 호출하지 않는다 (외부 fetch 없음)', async () => {
+    // findMany가 호출되었는지 확인 — DB 기반임을 검증
     await request(app)
       .get('/api/transit/nearby')
-      .query({ lat: 37.4979, lng: 127.0276, radius: 500 });
+      .query({ lat: 37.4979, lng: 127.0276, radius: 1000 });
 
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
-    expect(calledUrl).toContain('radius=500');
-    expect(calledUrl).toContain('category_group_code=SW8');
+    expect(mockFindMany).toHaveBeenCalledTimes(1);
+    const args = mockFindMany.mock.calls[0][0];
+    expect(args.where).toHaveProperty('lat');
+    expect(args.where).toHaveProperty('lng');
+  });
+
+  it('빈 결과는 빈 배열을 반환한다', async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+    const res = await request(app)
+      .get('/api/transit/nearby')
+      .query({ lat: 37.4979, lng: 127.0276, radius: 1000 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.stations).toEqual([]);
   });
 });

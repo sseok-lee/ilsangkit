@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-04-22 | Updated: 2026-04-22 -->
+<!-- Generated: 2026-04-22 | Updated: 2026-05-07 -->
 
 # backend/src/scripts
 
@@ -13,10 +13,12 @@ CLI 스크립트 모음. 공공데이터 동기화 (`sync*.ts`), 지오코딩 (`
 | `syncAll.ts` | 15개 시설 + 부동산 전체 동기화 orchestrator |
 | `syncToilet.ts`/`syncPark.ts`/`syncSchool.ts`/... | 카테고리별 동기화 (총 20+개 스크립트) |
 | `syncAptSale.ts`/`syncAptRent.ts`/`syncVillaSale.ts`/`syncVillaRent.ts`/`syncOffitelSale.ts`/`syncOffitelRent.ts` | 부동산 실거래가 동기화 (6종) |
-| `syncPublicRent.ts`/`syncSubscription.ts` | 공공임대/청약 동기화 |
+| `syncPublicRent.ts` | 공공임대 매물 동기화 |
+| `syncRentalAnnouncement.ts` | 공공임대 공고 동기화 |
+| `syncSubscription.ts` | 청약 동기화 |
 | `syncSchoolNeis.ts`/`syncSchoolDepartment.ts`/`syncSchoolEnrollment.ts`/`mergeSchoolNeis.ts` | 학교 NEIS 다단계 동기화 |
-| `syncRegion.ts`/`fixRegionSlugs.ts` | 지역 마스터 데이터 |
-| `geocodeRealEstate.ts`/`geocodeSchool.ts`/`geocodeSubscriptions.ts` | 주소 → 좌표 지오코딩 |
+| `syncRegion.ts` | 지역 마스터 데이터 |
+| `geocodeRealEstate.ts`/`geocodeSchool.ts`/`geocodeSubscriptions.ts`/`geocodePublicRent.ts` | 주소 → 좌표 지오코딩 |
 | `seedHospitalDetail.ts`/`seedSubscription.ts` | 상세 정보 시드 |
 | `copyCoords.ts`/`refreshRealEstateSummary.ts` | 좌표 복제/요약 갱신 |
 | `submitIndexing.ts` | Google IndexNow/Search Console 색인 요청 |

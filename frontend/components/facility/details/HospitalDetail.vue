@@ -6,6 +6,16 @@
       :value="details.clCdNm"
     />
     <DetailRow
+      v-if="details.foundationCdNm"
+      label="설립구분"
+      :value="details.foundationCdNm"
+    />
+    <DetailRow
+      v-if="details.nurseGrade"
+      label="간호등급"
+      :value="`${details.nurseGrade}등급`"
+    />
+    <DetailRow
       v-if="details.phone"
       label="전화번호"
       :value="details.phone"
@@ -88,6 +98,21 @@
           <span class="text-slate-700 font-medium">{{ details.parkQty }}대</span>
         </div>
         <p v-if="details.parkEtc" class="text-sm text-slate-600">{{ details.parkEtc }}</p>
+      </div>
+    </div>
+
+    <!-- 병상 정보 -->
+    <div v-if="bedRows.length > 0" class="pt-3 border-t border-slate-200">
+      <p class="text-xs font-medium text-slate-500 mb-2">병상 정보 <span class="text-slate-400 font-normal">(총 {{ totalBeds }}병상)</span></p>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+        <div
+          v-for="row in bedRows"
+          :key="row.label"
+          class="flex items-center justify-between text-sm"
+        >
+          <span class="text-slate-600">{{ row.label }}</span>
+          <span class="text-slate-700 font-medium">{{ row.value }}</span>
+        </div>
       </div>
     </div>
 
@@ -205,4 +230,39 @@ const hasSchedule = computed(() => {
   return d.trmtMonStart || d.trmtTueStart || d.trmtWedStart ||
     d.trmtThuStart || d.trmtFriStart || d.trmtSatStart || d.trmtSunStart
 })
+
+const BED_DEFS: { key: keyof typeof props.details; label: string }[] = [
+  { key: 'generalUpperBeds', label: '일반(상급)' },
+  { key: 'generalNormalBeds', label: '일반(일반)' },
+  { key: 'adultIcuBeds', label: '성인 중환자' },
+  { key: 'childIcuBeds', label: '소아 중환자' },
+  { key: 'neonatalIcuBeds', label: '신생아 중환자' },
+  { key: 'deliveryBeds', label: '분만실' },
+  { key: 'operatingBeds', label: '수술실' },
+  { key: 'emergencyBeds', label: '응급실' },
+  { key: 'physicalTherapyBeds', label: '물리치료실' },
+  { key: 'psychClosedUpper', label: '정신과 폐쇄(상급)' },
+  { key: 'psychClosedNormal', label: '정신과 폐쇄(일반)' },
+  { key: 'psychOpenUpper', label: '정신과 개방(상급)' },
+  { key: 'psychOpenNormal', label: '정신과 개방(일반)' },
+  { key: 'isolationBeds', label: '격리병실' },
+  { key: 'sterileBeds', label: '무균치료실' },
+]
+
+const bedRows = computed(() => {
+  return BED_DEFS
+    .map(({ key, label }) => {
+      const v = props.details[key]
+      const num = typeof v === 'number' ? v : null
+      return num && num > 0 ? { label, value: `${num}병상` } : null
+    })
+    .filter((r): r is { label: string; value: string } => r !== null)
+})
+
+const totalBeds = computed(() =>
+  BED_DEFS.reduce((sum, { key }) => {
+    const v = props.details[key]
+    return sum + (typeof v === 'number' && v > 0 ? v : 0)
+  }, 0),
+)
 </script>

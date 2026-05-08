@@ -38,6 +38,7 @@
     "sync:market": "tsx src/scripts/syncMarket.ts",
     "sync:facilities": "tsx src/scripts/syncAll.ts",
     "seed:hospital-detail": "tsx src/scripts/seedHospitalDetail.ts",
+    "seed:medical-enrich": "tsx src/scripts/seedMedicalEnrich.ts",
     "generate:guide": "tsx src/scripts/generateGuide.ts",
     "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
     "fix:region-slugs": "tsx src/scripts/fixRegionSlugs.ts",
@@ -51,6 +52,7 @@
     "sync:childcare": "tsx src/scripts/syncChildcare.ts",
     "sync:ev-charger": "tsx src/scripts/syncEvCharger.ts",
     "sync:sports": "tsx src/scripts/syncSports.ts",
+    "sync:subway": "tsx src/scripts/syncSubway.ts",
     "submit:indexing": "tsx src/scripts/submitIndexing.ts"
   },
   "prisma": {

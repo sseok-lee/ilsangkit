@@ -26,14 +26,13 @@ describe('useAnalytics', () => {
     expect(typeof analytics.trackPhoneClick).toBe('function')
     expect(typeof analytics.trackShareClick).toBe('function')
     expect(typeof analytics.trackBuildingView).toBe('function')
-    expect(typeof analytics.trackReviewSubmit).toBe('function')
     expect(typeof analytics.trackSubscriptionListView).toBe('function')
     expect(typeof analytics.trackSubscriptionView).toBe('function')
     expect(typeof analytics.trackSubscriptionApplyClick).toBe('function')
     expect(typeof analytics.trackGuideListView).toBe('function')
     expect(typeof analytics.trackGuideView).toBe('function')
     expect(typeof analytics.trackOutboundClick).toBe('function')
-    expect(Object.keys(analytics)).toHaveLength(18)
+    expect(Object.keys(analytics)).toHaveLength(17)
   })
 
   it('trackSearch → gtag search_executed 이벤트 호출', () => {
@@ -92,15 +91,6 @@ describe('useAnalytics', () => {
       building_name: '래미안',
       city: '서울특별시',
       district: '강남구',
-    })
-  })
-
-  it('trackReviewSubmit → gtag review_submitted 이벤트 호출', () => {
-    const { trackReviewSubmit } = useAnalytics()
-    trackReviewSubmit({ facilityId: '123', category: 'hospital' })
-    expect(mockGtag).toHaveBeenCalledWith('event', 'review_submitted', {
-      facility_id: '123',
-      category: 'hospital',
     })
   })
 

@@ -1,10 +1,10 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-04-22 | Updated: 2026-04-22 -->
+<!-- Generated: 2026-04-22 | Updated: 2026-05-07 -->
 
 # frontend/components
 
 ## Purpose
-Nuxt auto-import되는 Vue 컴포넌트. 도메인(시설/부동산/청약/가이드/쓰레기/지역)과 범용(common/navigation/search/ads/map) 기준으로 서브디렉터리에 배치된다.
+Nuxt auto-import되는 Vue 컴포넌트. 도메인(시설/부동산/청약/공공임대/가이드/쓰레기/지역)과 범용(common/navigation/search/ads/map) 기준으로 서브디렉터리에 배치된다.
 
 ## Key Files
 (루트에는 컴포넌트가 없으며 모두 서브디렉터리에 존재)
@@ -20,9 +20,9 @@ Nuxt auto-import되는 Vue 컴포넌트. 도메인(시설/부동산/청약/가�
 | `guide/` | 가이드 페이지 관련 (see `guide/AGENTS.md`) |
 | `map/` | 지도 컴포넌트 (Kakao Map) (see `map/AGENTS.md`) |
 | `navigation/` | 네비게이션/Breadcrumb (see `navigation/AGENTS.md`) |
+| `publicRental/` | 공공임대주택 필터/카드 (see `publicRental/AGENTS.md`) |
 | `realEstate/` | 부동산 카드/차트/필터/테이블 (see `realEstate/AGENTS.md`) |
 | `region/` | 지역 요약/근접 네비 (see `region/AGENTS.md`) |
-| `review/` | 사용자 리뷰 섹션 (see `review/AGENTS.md`) |
 | `search/` | 전역 검색 입력/필터 (see `search/AGENTS.md`) |
 | `subscription/` | 청약 카드/타임라인 (see `subscription/AGENTS.md`) |
 | `trash/` | 쓰레기 배출 스케줄 뷰 (see `trash/AGENTS.md`) |

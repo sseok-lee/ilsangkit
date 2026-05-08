@@ -52,13 +52,6 @@ function trackBuildingView(params: { propertyType: string; buildingName: string;
   })
 }
 
-function trackReviewSubmit(params: { facilityId: string; category: string }) {
-  track(ANALYTICS_EVENTS.REVIEW_SUBMIT, {
-    facility_id: params.facilityId,
-    category: params.category,
-  })
-}
-
 function trackCategoryPageView(params: { category: string }) {
   track(ANALYTICS_EVENTS.CATEGORY_PAGE_VIEW, { category: params.category })
 }
@@ -140,7 +133,6 @@ export function useAnalytics() {
     trackPhoneClick,
     trackShareClick,
     trackBuildingView,
-    trackReviewSubmit,
     trackSubscriptionListView,
     trackSubscriptionView,
     trackSubscriptionApplyClick,

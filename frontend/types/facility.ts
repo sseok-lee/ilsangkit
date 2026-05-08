@@ -239,6 +239,25 @@ export interface HospitalDetails {
   parkQty?: number | null
   parkEtc?: string | null
   detailSyncedAt?: string | null
+  // 시설정보 + 간호등급 (xlsx 파일 3, 9)
+  foundationCd?: string | null
+  foundationCdNm?: string | null
+  nurseGrade?: string | null
+  generalUpperBeds?: number | null
+  generalNormalBeds?: number | null
+  adultIcuBeds?: number | null
+  childIcuBeds?: number | null
+  neonatalIcuBeds?: number | null
+  deliveryBeds?: number | null
+  operatingBeds?: number | null
+  emergencyBeds?: number | null
+  physicalTherapyBeds?: number | null
+  psychClosedUpper?: number | null
+  psychClosedNormal?: number | null
+  psychOpenUpper?: number | null
+  psychOpenNormal?: number | null
+  isolationBeds?: number | null
+  sterileBeds?: number | null
   departments?: HospitalDepartment[]
 }
 
@@ -268,6 +287,15 @@ export interface PharmacyDetails {
   dutyInf?: string | null
   dutyEtc?: string | null
   dataDate?: string | null
+  // HIRA xlsx 보강 (파일 4, 12)
+  ykiho?: string | null
+  pharmacistCnt?: number | null
+  lunchWeek?: string | null
+  lunchSat?: string | null
+  noTrmtSun?: string | null
+  noTrmtHoli?: string | null
+  recpWeek?: string | null
+  recpSat?: string | null
 }
 
 export interface ParkDetails {
@@ -558,6 +586,7 @@ export interface SearchParams {
   limit?: number
   grouped?: boolean
   sort?: string
+  departments?: string[]
 }
 
 // 검색 응답

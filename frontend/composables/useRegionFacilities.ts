@@ -31,7 +31,8 @@ export function useRegionFacilities() {
     district: string,
     category: string,
     currentPage: number = 1,
-    pageSize: number = 20
+    pageSize: number = 20,
+    departments?: string[]
   ): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -39,14 +40,17 @@ export function useRegionFacilities() {
     try {
       const apiBase = getApiBase();
 
+      const query: Record<string, unknown> = {
+        page: currentPage,
+        limit: pageSize,
+      };
+      if (departments && departments.length > 0) {
+        query.departments = departments.join(',');
+      }
+
       const response = await $fetch<ApiResponse<RegionFacilitiesResponse>>(
         `${apiBase}/api/facilities/region/${city}/${district}/${category}`,
-        {
-          query: {
-            page: currentPage,
-            limit: pageSize,
-          },
-        }
+        { query },
       );
 
       if (response.success && response.data) {

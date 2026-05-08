@@ -9,13 +9,13 @@ import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
 import wasteSchedulesRouter from './routes/wasteSchedules.js';
 import sitemapRouter from './routes/sitemap.js';
-import reviewsRouter from './routes/reviews.js';
 import guidesRouter from './routes/guides.js';
 import realEstateRouter from './routes/realEstate.js';
 import areaRouter from './routes/area.js';
 import subscriptionRouter from './routes/subscription.js';
 import publicRentalRouter from './routes/publicRental.js';
 import transitRouter from './routes/transit.js';
+import subwayRouter from './routes/subway.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
@@ -62,13 +62,13 @@ app.use('/api/facilities', facilitiesRouter);
 app.use('/api/meta', metaRouter);
 app.use('/api/waste-schedules', wasteSchedulesRouter);
 app.use('/api/sitemap', sitemapRouter);
-app.use('/api/reviews', reviewsRouter);
 app.use('/api/guides', guidesRouter);
 app.use('/api/real-estate', realEstateRouter);
 app.use('/api/area', areaRouter);
 app.use('/api/subscription', subscriptionRouter);
 app.use('/api/public-rental', publicRentalRouter);
 app.use('/api/transit', transitRouter);
+app.use('/api/subway', subwayRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

@@ -21,7 +21,7 @@
 ### Working In This Directory
 - Nuxt auto-import 함수는 `tests/setup.ts`에서 mock
 - `$fetch`, `useRuntimeConfig` 글로벌 mock 활용
-- 누락된 composable 테스트: `useGuides`, `useHomeSubscriptions`, `useKakaoMap`, `useRealEstate`, `useReviews`, `useSubscription`, `useWasteSchedule`
+- 누락된 composable 테스트: `useGuides`, `useHomeSubscriptions`, `useKakaoMap`, `useRealEstate`, `useSubscription`, `useWasteSchedule`
 
 ### Testing Requirements
 - DB 불필요, 빠른 실행

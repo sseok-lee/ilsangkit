@@ -12,6 +12,11 @@
       :value="details.dutyTel3"
       type="phone"
     />
+    <DetailRow
+      v-if="details.pharmacistCnt != null && details.pharmacistCnt > 0"
+      label="약사 수"
+      :value="`${details.pharmacistCnt}명`"
+    />
 
     <div v-if="details.dutyInf" class="pt-3 border-t border-slate-200">
       <p class="text-xs font-medium text-slate-500 mb-1">비고</p>
@@ -29,6 +34,26 @@
           <span class="text-slate-600 w-16">{{ item.day }}</span>
           <span class="text-slate-700">{{ item.time }}</span>
         </div>
+        <div v-if="details.lunchWeek" class="flex items-center justify-between text-sm">
+          <span class="text-slate-600 w-16">점심(평일)</span>
+          <span class="text-slate-700">{{ details.lunchWeek }}</span>
+        </div>
+        <div v-if="details.lunchSat" class="flex items-center justify-between text-sm">
+          <span class="text-slate-600 w-16">점심(토)</span>
+          <span class="text-slate-700">{{ details.lunchSat }}</span>
+        </div>
+      </div>
+      <div v-if="details.recpWeek" class="mt-2 text-xs text-slate-500">
+        <span class="font-medium">접수(평일):</span> {{ details.recpWeek }}
+      </div>
+      <div v-if="details.recpSat" class="mt-1 text-xs text-slate-500">
+        <span class="font-medium">접수(토):</span> {{ details.recpSat }}
+      </div>
+      <div v-if="details.noTrmtSun" class="mt-2 text-xs text-slate-500">
+        <span class="font-medium">일요일 안내:</span> {{ details.noTrmtSun }}
+      </div>
+      <div v-if="details.noTrmtHoli" class="mt-1 text-xs text-slate-500">
+        <span class="font-medium">공휴일 안내:</span> {{ details.noTrmtHoli }}
       </div>
     </div>
   </div>
