@@ -31,11 +31,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
-import { useAdDiagnostics } from './useAdDiagnostics'
 
 const AD_CLIENT = 'ca-pub-2088264360250020'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   adSlot?: string
 }>(), {
   adSlot: '1878068382',
@@ -57,17 +56,9 @@ const isVisible = computed(() => {
   return !HIDDEN_ROUTE_PATTERNS.some((re) => re.test(route.path))
 })
 
-const diagnostics = useAdDiagnostics(container, {
-  slot: props.adSlot,
-  format: 'horizontal',
-  routePath: route.path,
-  surface: 'anchor',
-})
-
 const { clearPendingAdRequest, scheduleAdRequest } = useDeferredAdSenseRequest(
   container,
   () => isVisible.value,
-  diagnostics,
 )
 
 function dismiss() {
