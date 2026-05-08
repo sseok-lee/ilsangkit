@@ -1,8 +1,7 @@
 <template>
-  <NuxtLink
+  <HardLink
     :to="'/trash/' + region.id"
     :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세보기`"
-    :prefetch="false"
     class="group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer border-transparent hover:border-primary/20"
   >
     <div class="flex items-start gap-4">
@@ -49,11 +48,12 @@
         </div>
       </div>
     </div>
-  </NuxtLink>
+  </HardLink>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import HardLink from '~/components/common/HardLink.vue'
 import type { RegionSchedule, WasteType } from '~/composables/useWasteSchedule'
 
 const props = defineProps<{

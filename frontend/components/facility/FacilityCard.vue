@@ -1,5 +1,5 @@
 <template>
-  <NuxtLink
+  <HardLink
     :to="`/${facility.category}/${facility.id}`"
     :aria-label="`${facility.name} 상세보기`"
     :aria-current="isActive ? 'location' : undefined"
@@ -122,12 +122,12 @@
         </div>
       </div>
     </div>
-  </NuxtLink>
+  </HardLink>
 </template>
 
 <script setup lang="ts">
+import HardLink from '~/components/common/HardLink.vue'
 import type { Facility } from '~/types/facility'
-import { CATEGORY_META } from '~/types/facility'
 import { formatDistance } from '~/utils/formatters'
 import { getOperatingStatus } from '~/utils/facilityStatus'
 import OperatingStatusBadge from './OperatingStatusBadge.vue'

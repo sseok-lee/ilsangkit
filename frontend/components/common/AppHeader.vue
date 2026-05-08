@@ -19,9 +19,9 @@
         <span class="material-symbols-outlined text-[24px]">arrow_back</span>
       </button>
 
-      <NuxtLink v-if="!props.showBackButton" to="/" class="flex items-center">
+      <HardLink v-if="!props.showBackButton" to="/" class="flex items-center">
         <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 w-auto shrink-0" width="91" height="36" />
-      </NuxtLink>
+      </HardLink>
     </div>
 
     <!-- Center: Desktop Navigation (Group Dropdowns) -->
@@ -63,7 +63,7 @@
           >
             <!-- 시설 카테고리 그룹 -->
             <template v-if="!isLinkGroup(group)">
-              <NuxtLink
+              <HardLink
                 v-for="catId in group.categories"
                 :key="catId"
                 :to="`/${catId}`"
@@ -72,7 +72,7 @@
               >
                 <img :src="`/icons/category/${catId}.webp?v2`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
                 {{ CATEGORY_META[catId].shortLabel }}
-              </NuxtLink>
+              </HardLink>
             </template>
             <!-- 부동산/청약 링크 그룹 -->
             <template v-else>
@@ -91,7 +91,7 @@
                     {{ link.section }}
                   </div>
                 </template>
-                <NuxtLink
+                <HardLink
                   :to="link.to"
                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
                   @click="closeDropdown"
@@ -99,7 +99,7 @@
                   <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
                   <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
                   {{ link.label }}
-                </NuxtLink>
+                </HardLink>
               </template>
             </template>
           </div>
@@ -110,27 +110,27 @@
       <div class="h-5 w-px bg-slate-200 mx-1"></div>
 
       <!-- Utility Links -->
-      <NuxtLink
+      <HardLink
         to="/guide"
         class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">menu_book</span>
         가이드
-      </NuxtLink>
-      <NuxtLink
+      </HardLink>
+      <HardLink
         to="/search"
         class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">search</span>
         검색
-      </NuxtLink>
-      <NuxtLink
+      </HardLink>
+      <HardLink
         to="/about"
         class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
       >
         <span class="material-symbols-outlined text-[18px]">info</span>
         소개
-      </NuxtLink>
+      </HardLink>
     </nav>
 
     <!-- Right: Desktop Actions & Mobile Menu Button -->
@@ -174,7 +174,7 @@
           </div>
           <!-- 시설 카테고리 -->
           <template v-if="!isLinkGroup(group)">
-            <NuxtLink
+            <HardLink
               v-for="catId in group.categories"
               :key="catId"
               :to="`/${catId}`"
@@ -183,7 +183,7 @@
             >
               <img :src="`/icons/category/${catId}.webp?v2`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
               {{ CATEGORY_META[catId].shortLabel }}
-            </NuxtLink>
+            </HardLink>
           </template>
           <!-- 부동산 링크 -->
           <template v-else>
@@ -194,7 +194,7 @@
               >
                 {{ link.section }}
               </div>
-              <NuxtLink
+              <HardLink
                 :to="link.to"
                 class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
                 @click="closeMobileMenu"
@@ -202,56 +202,56 @@
                 <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
                 <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
                 {{ link.label }}
-              </NuxtLink>
+              </HardLink>
             </template>
           </template>
         </div>
 
         <div class="h-px bg-slate-200 my-2"></div>
-        <NuxtLink
+        <HardLink
           to="/"
           class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           홈
-        </NuxtLink>
-        <NuxtLink
+        </HardLink>
+        <HardLink
           to="/search"
           class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           검색
-        </NuxtLink>
-        <NuxtLink
+        </HardLink>
+        <HardLink
           to="/guide"
           class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           가이드
-        </NuxtLink>
-        <NuxtLink
+        </HardLink>
+        <HardLink
           to="/about"
           class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           소개
-        </NuxtLink>
+        </HardLink>
         <div class="h-px bg-slate-200 my-2"></div>
         <div class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2">
-          <NuxtLink
+          <HardLink
             to="/privacy"
             class="text-xs text-slate-500 hover:text-primary transition-colors"
             @click="closeMobileMenu"
           >
             개인정보처리방침
-          </NuxtLink>
-          <NuxtLink
+          </HardLink>
+          <HardLink
             to="/terms"
             class="text-xs text-slate-500 hover:text-primary transition-colors"
             @click="closeMobileMenu"
           >
             이용약관
-          </NuxtLink>
+          </HardLink>
         </div>
       </nav>
     </div>
@@ -260,8 +260,8 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { CATEGORY_META, CATEGORY_GROUPS, NAV_GROUPS, isLinkGroup } from '~/types/facility'
-import type { NavGroup } from '~/types/facility'
+import HardLink from '~/components/common/HardLink.vue'
+import { CATEGORY_META, NAV_GROUPS, isLinkGroup } from '~/types/facility'
 
 interface Props {
   transparent?: boolean

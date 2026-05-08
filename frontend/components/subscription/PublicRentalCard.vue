@@ -1,5 +1,5 @@
 <template>
-  <NuxtLink
+  <HardLink
     :to="detailLink"
     class="block bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-primary transition-all duration-200"
   >
@@ -52,11 +52,12 @@
         {{ formatRent(rental.monthlyRent) }}
       </p>
     </div>
-  </NuxtLink>
+  </HardLink>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import HardLink from '~/components/common/HardLink.vue'
 import type { PublicRentalComplex } from '~/types/publicRental'
 import { rentalTypeToSlug } from '~/utils/publicRentalMeta'
 
