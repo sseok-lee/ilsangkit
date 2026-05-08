@@ -1,5 +1,5 @@
 <template>
-  <div :class="['ad-banner', `ad-banner--${adFormat}`, 'my-3 w-full']">
+  <div ref="container" :class="['ad-banner', `ad-banner--${adFormat}`, 'my-3 w-full']">
     <ClientOnly>
       <ins
         :key="adKey"
@@ -15,7 +15,8 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
 
 const AD_CLIENT = 'ca-pub-2088264360250020'
 
@@ -31,25 +32,14 @@ withDefaults(defineProps<{
 
 const adKey = ref(0)
 const route = useRoute()
+const container = ref<HTMLElement | null>(null)
+const { scheduleAdRequest } = useDeferredAdSenseRequest(container)
 
-function pushAd() {
-  if (!import.meta.client) return
-  nextTick(() => {
-    try {
-      const win = window as Window & { adsbygoogle?: Array<Record<string, never>> }
-      win.adsbygoogle = win.adsbygoogle || []
-      win.adsbygoogle.push({})
-    } catch {
-      // adsbygoogle push 실패는 무시 (광고 차단기/네트워크 실패 시 자연 collapse)
-    }
-  })
-}
-
-onMounted(pushAd)
+onMounted(scheduleAdRequest)
 
 watch(() => route.fullPath, () => {
   adKey.value++
-  pushAd()
+  scheduleAdRequest()
 })
 </script>
 
