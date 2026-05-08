@@ -13,7 +13,12 @@ export function useDeferredAdSenseRequest(
 
   function pushAd(generation: number) {
     if (!import.meta.client || generation !== requestGeneration || !canRequest() || hasRequestedAd.value) return
-    if (!container.value?.querySelector('ins.adsbygoogle')) return
+    const containerEl = container.value
+    if (!containerEl?.querySelector('ins.adsbygoogle')) return
+    // 부모가 display:none (예: cross-viewport hidden md:block) 이면 push skip — wasted impression 방지.
+    // happy-dom 테스트 환경에서는 offsetWidth 가 layout 계산 후에야 0/non-0 으로 의미를 가지므로
+    // 0 을 명시적으로만 차단 (undefined/NaN 은 통과).
+    if (containerEl.offsetWidth === 0) return
     hasRequestedAd.value = true
     try {
       const win = window as Window & { adsbygoogle?: Array<Record<string, never>> }
