@@ -37,7 +37,7 @@ describe('AdBanner', () => {
   })
 
   it('pushes the ad request immediately on mount without lazy/IntersectionObserver gating', () => {
-    expect(source()).toContain('useDeferredAdSenseRequest(container)')
+    expect(source()).toContain('useDeferredAdSenseRequest(container,')
     expect(requestSource()).toContain('hasRequestedAd.value = true')
     expect(requestSource()).toContain('onBeforeUnmount(clearPendingAdRequest)')
     expect(requestSource()).not.toContain('IntersectionObserver')
