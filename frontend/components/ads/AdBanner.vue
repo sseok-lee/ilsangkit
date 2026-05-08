@@ -1,5 +1,5 @@
 <template>
-  <div ref="container" :class="['ad-banner', `ad-banner--${adFormat}`, 'my-3 w-full']">
+  <div :class="['ad-banner', `ad-banner--${adFormat}`, 'my-3 w-full']">
     <ClientOnly>
       <ins
         :key="adKey"
@@ -15,6 +15,8 @@
 </template>
 
 <script setup lang="ts">
+import { nextTick, onMounted, ref, watch } from 'vue'
+
 const AD_CLIENT = 'ca-pub-2088264360250020'
 
 withDefaults(defineProps<{
@@ -29,26 +31,17 @@ withDefaults(defineProps<{
 
 const adKey = ref(0)
 const route = useRoute()
-const container = ref<HTMLElement | null>(null)
 
 function pushAd() {
+  if (!import.meta.client) return
   nextTick(() => {
     try {
-      const adsbygoogle = (window as any).adsbygoogle || []
-      adsbygoogle.push({})
+      const win = window as Window & { adsbygoogle?: Array<Record<string, never>> }
+      win.adsbygoogle = win.adsbygoogle || []
+      win.adsbygoogle.push({})
     } catch {
       // adsbygoogle push 실패는 무시 (광고 차단기/네트워크 실패 시 자연 collapse)
     }
-    // AdSense 가 5초 안에 status 를 안 박으면 unfilled 로 간주 → :has() 셀렉터가
-    // 부모 .ad-banner 를 collapse 하므로 reserve 한 min-height 빈 박스가 사라짐.
-    // 광고 차단기 · 네트워크 실패 · 광고 미할당 등 status 가 영영 안 찍히는 경로 보호.
-    setTimeout(() => {
-      if (!container.value) return
-      const ins = container.value.querySelector('ins.adsbygoogle')
-      if (ins && !ins.getAttribute('data-ad-status')) {
-        ins.setAttribute('data-ad-status', 'unfilled')
-      }
-    }, 5000)
   })
 }
 
@@ -62,10 +55,8 @@ watch(() => route.fullPath, () => {
 
 <style>
 /* CLS 방지: 광고 슬롯 형식별로 예약 공간(min-height) 확보.
-   AdSense 가 status 판정 전에는 ins 를 height:0 으로 두지만 부모 .ad-banner 에
-   min-height 를 걸어 레이아웃을 잡아둔다. 채워지면 ins 의 iframe 이 그 공간을
-   채우고, unfilled 면 부모 자체를 display:none 으로 collapse 하므로 빈 박스도
-   남지 않는다. */
+   AdSense 가 status 판정 전에 슬롯 크기를 측정할 수 있도록 ins 높이는 앱에서
+   0으로 강제하지 않는다. unfilled 가 확정된 경우에만 부모까지 collapse 한다. */
 .ad-banner--auto {
   min-height: 100px;
 }
@@ -79,13 +70,6 @@ watch(() => route.fullPath, () => {
 }
 .ad-banner--rectangle {
   min-height: 250px;
-}
-
-/* status 판정 전에는 ins 를 0 으로 — 부모 min-height 가 공간을 잡고 있으므로
-   여기서는 빈 박스를 보이지 않게만 하면 된다. */
-.ad-banner ins.adsbygoogle:not([data-ad-status]) {
-  height: 0 !important;
-  min-height: 0 !important;
 }
 
 /* unfilled 확정 시 ins 와 부모 컨테이너 모두 제거해 예약 공간을 회수한다.
