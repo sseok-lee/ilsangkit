@@ -17,11 +17,10 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
-import { useAdDiagnostics } from './useAdDiagnostics'
 
 const AD_CLIENT = 'ca-pub-2088264360250020'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   adSlot?: string
   adFormat?: string
   fullWidthResponsive?: string
@@ -34,13 +33,7 @@ const props = withDefaults(defineProps<{
 const adKey = ref(0)
 const route = useRoute()
 const container = ref<HTMLElement | null>(null)
-const diagnostics = useAdDiagnostics(container, {
-  slot: props.adSlot,
-  format: props.adFormat,
-  routePath: route.path,
-  surface: 'inline',
-})
-const { scheduleAdRequest } = useDeferredAdSenseRequest(container, () => true, diagnostics)
+const { scheduleAdRequest } = useDeferredAdSenseRequest(container)
 
 onMounted(scheduleAdRequest)
 
