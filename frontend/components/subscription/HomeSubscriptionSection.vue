@@ -8,13 +8,13 @@
         </h2>
         <p class="text-sm text-slate-500 mt-1">지금 신청 가능한 공고와 예정된 일정을 확인하세요.</p>
       </div>
-      <NuxtLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
+      <HardLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
         전체 보기 →
-      </NuxtLink>
+      </HardLink>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <NuxtLink
+      <HardLink
         v-for="item in ongoing"
         :key="`ongoing-${item.id}`"
         :to="`/subscription/${item.id}`"
@@ -23,8 +23,8 @@
         <StatusBadge variant="green" class="self-start">접수중</StatusBadge>
         <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">{{ item.houseName }}</strong>
         <p class="text-[11px] text-slate-400 mt-auto">{{ formatMeta(item, 'ongoing') }}</p>
-      </NuxtLink>
-      <NuxtLink
+      </HardLink>
+      <HardLink
         v-for="item in upcoming"
         :key="`upcoming-${item.id}`"
         :to="`/subscription/${item.id}`"
@@ -33,12 +33,13 @@
         <StatusBadge variant="blue" class="self-start">접수예정</StatusBadge>
         <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">{{ item.houseName }}</strong>
         <p class="text-[11px] text-slate-400 mt-auto">{{ formatMeta(item, 'upcoming') }}</p>
-      </NuxtLink>
+      </HardLink>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import HardLink from '~/components/common/HardLink.vue'
 import StatusBadge from '~/components/common/StatusBadge.vue'
 import type { HomeSubscriptionItem } from '~/composables/useHomeSubscriptions'
 import { useHomeSubscriptions } from '~/composables/useHomeSubscriptions'

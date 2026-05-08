@@ -86,7 +86,7 @@
         <p class="text-sm text-slate-500 mt-1">자주 찾는 세 가지 흐름을 먼저 확인하세요.</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-        <NuxtLink
+        <HardLink
           v-for="card in todayCards"
           :key="card.title"
           :to="card.to"
@@ -102,7 +102,7 @@
               {{ card.stat }}
             </span>
           </div>
-        </NuxtLink>
+        </HardLink>
       </div>
     </section>
 
@@ -116,10 +116,10 @@
           </h2>
           <p class="text-sm text-slate-500 mt-1">매매·전월세 거래 내역을 건물 유형별로 확인하세요.</p>
         </div>
-        <NuxtLink to="/real-estate" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</NuxtLink>
+        <HardLink to="/real-estate" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</HardLink>
       </div>
       <div class="grid grid-cols-3 gap-2 md:gap-4">
-        <NuxtLink
+        <HardLink
           v-for="link in realEstateLinks"
           :key="link.to"
           :to="link.to"
@@ -141,7 +141,7 @@
               </span>
             </div>
           </div>
-        </NuxtLink>
+        </HardLink>
       </div>
     </section>
 
@@ -163,7 +163,7 @@
         <p class="text-sm text-slate-500 mt-1">자주 찾는 시설을 바로 확인하세요.</p>
       </div>
       <div class="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-2.5">
-        <NuxtLink
+        <HardLink
           v-for="q in quickFacilities"
           :key="q.id"
           :to="`/${q.id}`"
@@ -172,7 +172,7 @@
         >
           <img :src="`/icons/category/${q.id}.webp?v2`" :alt="q.label" class="w-8 h-8 mb-1.5" width="32" height="32" loading="lazy" />
           <span class="text-[13px] font-bold text-slate-700">{{ q.label }}</span>
-        </NuxtLink>
+        </HardLink>
       </div>
     </section>
 
@@ -186,14 +186,14 @@
         <p class="text-sm text-slate-500 mt-1">많이 찾는 지역부터 둘러보세요.</p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <NuxtLink
+        <HardLink
           v-for="city in CITY_LINKS"
           :key="city.slug"
           :to="`/${city.slug}/`"
           class="inline-flex items-center min-h-[44px] px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
         >
           {{ city.label }}
-        </NuxtLink>
+        </HardLink>
       </div>
     </section>
 
@@ -207,16 +207,16 @@
           </h2>
           <p class="text-sm text-slate-500 mt-1">최근 가이드를 확인하세요.</p>
         </div>
-        <NuxtLink
+        <HardLink
           to="/guide"
           class="text-sm text-primary font-bold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
         >
           더보기
           <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-        </NuxtLink>
+        </HardLink>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <NuxtLink
+        <HardLink
           v-for="guide in recentGuides"
           :key="guide.id"
           :to="`/guide/${guide.slug}`"
@@ -245,7 +245,7 @@
               {{ guide.summary }}
             </p>
           </div>
-        </NuxtLink>
+        </HardLink>
       </div>
     </section>
 
@@ -268,12 +268,12 @@
             </p>
           </div>
         </div>
-        <NuxtLink
+        <HardLink
           to="/about#data-sources"
           class="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
         >
           전체 출처 보기 →
-        </NuxtLink>
+        </HardLink>
       </div>
     </section>
   </div>
@@ -282,6 +282,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
+import HardLink from '~/components/common/HardLink.vue'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'

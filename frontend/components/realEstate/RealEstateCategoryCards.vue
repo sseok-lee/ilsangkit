@@ -1,6 +1,6 @@
 <template>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <NuxtLink
+    <HardLink
       v-for="pt in VISIBLE_PROPERTY_TYPES"
       :key="pt"
       :to="`/real-estate/${pt}-sale`"
@@ -20,11 +20,12 @@
           {{ PROPERTY_TYPE_META[pt].description }}
         </p>
       </div>
-    </NuxtLink>
+    </HardLink>
   </div>
 </template>
 
 <script setup lang="ts">
+import HardLink from '~/components/common/HardLink.vue'
 import { VISIBLE_PROPERTY_TYPES } from '~/types/realEstate'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <NuxtLink :to="`/subscription/${subscription.id}`" class="block">
+  <HardLink :to="`/subscription/${subscription.id}`" class="block">
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
       <!-- Header with status badge -->
       <div class="p-4 pb-3 flex items-start justify-between gap-3">
@@ -44,10 +44,11 @@
         </div>
       </div>
     </div>
-  </NuxtLink>
+  </HardLink>
 </template>
 
 <script setup lang="ts">
+import HardLink from '~/components/common/HardLink.vue'
 import type { Subscription } from '~/types/subscription'
 import { getSourceTypeLabel } from '~/utils/subscriptionMeta'
 
