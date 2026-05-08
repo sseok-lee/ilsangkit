@@ -159,7 +159,7 @@
       </SectionBlock>
 
       <!-- Ad: 로드뷰 이후 (Mobile) -->
-      <AdBanner class="md:hidden" />
+      <AdBanner only="mobile" />
 
       <!-- "시세 추이" 블록 -->
       <SectionBlock heading="시세 추이" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">

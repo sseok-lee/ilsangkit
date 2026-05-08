@@ -25,6 +25,7 @@ import { syncAeds } from './syncAed.js';
 import { syncLibrariesFromApi } from '../services/librarySyncService.js';
 import { syncHospitals } from './syncHospital.js';
 import { syncPharmacies } from './syncPharmacy.js';
+import { runMedicalEnrich } from './seedMedicalEnrich.js';
 import { syncChildcare } from '../services/childcareSyncService.js';
 import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
@@ -65,7 +66,7 @@ interface SyncResult {
  * 사용 가능한 카테고리 목록
  */
 // public-rental은 API 쿼터 제한으로 별도 수동 실행: npx tsx src/scripts/syncPublicRent.ts
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -139,6 +140,15 @@ async function syncCategory(category: Category): Promise<SyncResult> {
           category,
           success: true,
           count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'medical-enrich': {
+        await runMedicalEnrich();
+        return {
+          category,
+          success: true,
           duration: Date.now() - start,
         };
       }

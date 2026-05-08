@@ -378,7 +378,7 @@ setBreadcrumbSchema([
 ])
 setDatasetSchema({
   name: `전국 ${propertyMeta.value?.label ?? realEstateTypeParam.value} 실거래가 데이터`,
-  description: `국토교통부 실거래가 공개시스템 기반 ${propertyMeta.value?.label ?? realEstateTypeParam.value} 거래 데이터.`,
+  description: `국토교통부 실거래가 공개시스템 기반 전국 ${propertyMeta.value?.label ?? realEstateTypeParam.value} 거래 데이터입니다. 지역별·단지별 거래 금액, 전용면적, 층수, 거래일 등 상세 정보를 통합 제공합니다.`,
   url: `/real-estate/${realEstateTypeParam.value}`,
   sources: [REAL_ESTATE_DATA_SOURCE],
   keywords: ['부동산', '실거래가', propertyMeta.value?.label ?? realEstateTypeParam.value, '국토교통부'],

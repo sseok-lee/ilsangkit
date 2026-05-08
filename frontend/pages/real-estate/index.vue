@@ -123,23 +123,9 @@ setItemListSchema([
 ])
 setDatasetSchema({
   name: '전국 부동산 실거래가 데이터',
-  description: '국토교통부 실거래가 공개시스템 기반 아파트·빌라·오피스텔 매매·전월세 거래 데이터.',
+  description: '국토교통부 실거래가 공개시스템 기반 전국 아파트·빌라·오피스텔의 매매 및 전월세 거래 데이터입니다. 지역별·단지별 시세 추이, 거래 금액, 전용면적, 층수 정보를 통합 제공합니다.',
   url: '/real-estate',
   sources: [REAL_ESTATE_DATA_SOURCE],
   keywords: ['부동산', '실거래가', '아파트', '빌라', '오피스텔', '국토교통부'],
-})
-
-useHead({
-  script: [
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'WebPage',
-        name: '부동산 실거래가',
-        description: '전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반, 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.',
-      }),
-    },
-  ],
 })
 </script>
