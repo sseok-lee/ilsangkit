@@ -1,5 +1,6 @@
 <template>
   <div
+    v-if="shouldShow"
     ref="container"
     :class="[
       'ad-banner',
@@ -24,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
 
 const AD_CLIENT = 'ca-pub-2088264360250020'
@@ -34,10 +35,18 @@ const adTest = import.meta.dev ? 'on' : undefined
 // 이 시간 안에 status 가 안 잡히면 부모를 collapse 한다.
 const STATUS_TIMEOUT_MS = 4000
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   adSlot?: string
   adFormat?: string
   fullWidthResponsive?: string
+  /**
+   * Viewport-aware mounting. 부모 컨테이너의 `md:hidden` / `hidden md:block` 만
+   * 의존하면 AdBanner 가 다른 viewport 에서도 DOM 에 그대로 남아 AdSense push 한도를
+   * 차지한다 (display:none 상태로 `filled` 응답을 받아 페이지 광고 한도를 깎고,
+   * 정작 보여야 할 슬롯은 timeout 으로 collapse). `only="mobile"` /
+   * `only="desktop"` 을 명시하면 viewport 가 일치할 때만 ad request 를 발생시킨다.
+   */
+  only?: 'mobile' | 'desktop'
 }>(), {
   adSlot: '1878068382',
   adFormat: 'auto',
@@ -49,6 +58,20 @@ const route = useRoute()
 const container = ref<HTMLElement | null>(null)
 const isTimedOut = ref(false)
 let statusTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+// viewport gate: only prop 가 없으면 항상 노출, 있으면 매칭될 때만 노출.
+const matches = ref(false)
+let mq: MediaQueryList | null = null
+
+const shouldShow = computed(() => !props.only || matches.value)
+
+function applyMatches() {
+  if (!props.only || !mq) {
+    matches.value = true
+    return
+  }
+  matches.value = props.only === 'desktop' ? mq.matches : !mq.matches
+}
 
 const { scheduleAdRequest } = useDeferredAdSenseRequest(container)
 
@@ -78,14 +101,36 @@ function refresh() {
   watchStatusTimeout()
 }
 
-onMounted(refresh)
+onMounted(() => {
+  if (props.only) {
+    mq = window.matchMedia('(min-width: 768px)')
+    applyMatches()
+    mq.addEventListener('change', applyMatches)
+    // matches 가 false→true 로 바뀌는 순간은 아래 watch 에서 refresh.
+  } else {
+    matches.value = true
+    refresh()
+  }
+})
 
-watch(() => route.fullPath, () => {
-  adKey.value++
+// viewport 가 매칭으로 바뀌면 ref 가 새로 바인딩되므로 nextTick 후 refresh.
+watch(matches, async (next) => {
+  if (!props.only || !next) return
+  await nextTick()
   refresh()
 })
 
-onBeforeUnmount(clearStatusTimeout)
+watch(() => route.fullPath, async () => {
+  if (!shouldShow.value) return
+  adKey.value++
+  await nextTick()
+  refresh()
+})
+
+onBeforeUnmount(() => {
+  mq?.removeEventListener('change', applyMatches)
+  clearStatusTimeout()
+})
 </script>
 
 <style>

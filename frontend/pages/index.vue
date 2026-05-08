@@ -153,6 +153,11 @@
     <!-- 청약·임대 일정 섹션 -->
     <HomeSubscriptionSection />
 
+    <!-- Ad: 청약·임대 이후 -->
+    <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+      <AdBanner />
+    </div>
+
     <!-- 빠른 생활시설 찾기 (8 아이콘) -->
     <section id="facilities" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="mb-4">
