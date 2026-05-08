@@ -19,6 +19,8 @@ const frontendRoot = process.cwd().endsWith('/frontend')
   : join(process.cwd(), 'frontend')
 const sourcePath = resolve(frontendRoot, 'components/ads/AdBanner.vue')
 const source = () => readFileSync(sourcePath, 'utf8')
+const requestSourcePath = resolve(frontendRoot, 'components/ads/useDeferredAdSenseRequest.ts')
+const requestSource = () => readFileSync(requestSourcePath, 'utf8')
 
 describe('AdBanner', () => {
   beforeEach(() => {
@@ -30,8 +32,18 @@ describe('AdBanner', () => {
   })
 
   it('persists the AdSense queue on window before pushing the manual slot request', () => {
-    expect(source()).toContain('win.adsbygoogle = win.adsbygoogle || []')
-    expect(source()).toContain('win.adsbygoogle.push({})')
+    expect(requestSource()).toContain('win.adsbygoogle = win.adsbygoogle || []')
+    expect(requestSource()).toContain('win.adsbygoogle.push({})')
+  })
+
+  it('waits for layout stability and near-viewport visibility before requesting an ad', () => {
+    expect(source()).toContain('useDeferredAdSenseRequest(container)')
+    expect(requestSource()).toContain('export const AD_REQUEST_DELAY_MS = 500')
+    expect(requestSource()).toContain('IntersectionObserver')
+    expect(requestSource()).toContain('rootMargin: AD_REQUEST_ROOT_MARGIN')
+    expect(requestSource()).toContain('requestAnimationFrame')
+    expect(requestSource()).toContain('hasRequestedAd.value = true')
+    expect(requestSource()).toContain('onBeforeUnmount(clearPendingAdRequest)')
   })
 
   it('does not fabricate data-ad-status=unfilled when AdSense has not responded yet', async () => {
