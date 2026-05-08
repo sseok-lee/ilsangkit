@@ -465,6 +465,33 @@ export function useStructuredData() {
     facilityTotal: number
     topCategories: string[]
   }) {
+    // 시 단위 페이지(/[city])는 district 가 빈 문자열로 들어와 trailing space 와
+    // 빈 addressLocality 를 출력하던 문제가 있었다. 빈 값은 필드 자체에서 제외한다.
+    const hasDistrict = !!options.district
+    const placeName = hasDistrict ? `${options.city} ${options.district}` : options.city
+    const address: Record<string, unknown> = {
+      '@type': 'PostalAddress',
+      addressRegion: options.city,
+      addressCountry: 'KR',
+    }
+    if (hasDistrict) {
+      address.addressLocality = options.district
+    }
+    const additionalProperty: Array<Record<string, unknown>> = [
+      {
+        '@type': 'PropertyValue',
+        name: 'publicFacilityCount',
+        value: String(options.facilityTotal),
+      },
+    ]
+    if (options.topCategories.length > 0) {
+      additionalProperty.push({
+        '@type': 'PropertyValue',
+        name: 'topFacilityCategories',
+        value: options.topCategories.join(', '),
+      })
+    }
+
     useHead({
       script: [
         {
@@ -473,25 +500,9 @@ export function useStructuredData() {
           innerHTML: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Place',
-            name: `${options.city} ${options.district}`,
-            address: {
-              '@type': 'PostalAddress',
-              addressLocality: options.district,
-              addressRegion: options.city,
-              addressCountry: 'KR',
-            },
-            additionalProperty: [
-              {
-                '@type': 'PropertyValue',
-                name: 'publicFacilityCount',
-                value: String(options.facilityTotal),
-              },
-              {
-                '@type': 'PropertyValue',
-                name: 'topFacilityCategories',
-                value: options.topCategories.join(', '),
-              },
-            ],
+            name: placeName,
+            address,
+            additionalProperty,
           }),
         },
       ],
