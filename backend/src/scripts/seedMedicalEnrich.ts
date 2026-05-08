@@ -492,34 +492,31 @@ async function seedPharmacyStaff(ykihoMap: Map<string, string>): Promise<number>
 // 메인
 // ============================================
 
-async function main(): Promise<void> {
+export async function runMedicalEnrich(): Promise<void> {
   if (!fs.existsSync(DATA_DIR)) {
-    console.error(`데이터 디렉토리 없음: ${DATA_DIR}`);
-    console.error('https://opendata.hira.or.kr/op/opc/selectOpenData.do?sno=11925 에서 zip 다운로드 후 해제');
-    process.exit(1);
+    throw new Error(
+      `데이터 디렉토리 없음: ${DATA_DIR}\n` +
+        'https://opendata.hira.or.kr/op/opc/selectOpenData.do?sno=11925 에서 zip 다운로드 후 해제',
+    );
   }
 
   console.log('=== 의료기관 xlsx 보강 시딩 시작 ===');
 
-  // 1) 병원 ykiho 맵 (이미 API sync로 채워짐)
   const hospitalYkiho = await buildHospitalYkihoMap();
   console.log(`병원 ykiho 인덱스: ${hospitalYkiho.size}개`);
   if (hospitalYkiho.size === 0) {
     console.error('Hospital 테이블에 ykiho가 없습니다. npx tsx src/scripts/syncHospital.ts 먼저 실행하세요.');
   }
 
-  // 2) 약국 ykiho 매칭 (파일 2 사용)
   await buildPharmacyYkihoFromFile2();
   const pharmacyYkiho = await buildPharmacyYkihoMap();
   console.log(`약국 ykiho 인덱스: ${pharmacyYkiho.size}개`);
 
-  // 3) Hospital 보강
   if (hospitalYkiho.size > 0) {
     await seedHospitalFacility(hospitalYkiho);
     await seedHospitalNurseGrade(hospitalYkiho);
   }
 
-  // 4) Pharmacy 보강
   if (pharmacyYkiho.size > 0) {
     await seedPharmacyDetail(pharmacyYkiho);
     await seedPharmacyStaff(pharmacyYkiho);
@@ -528,9 +525,11 @@ async function main(): Promise<void> {
   console.log('=== 완료 ===');
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error('시딩 실패:', err);
-    process.exit(1);
-  });
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runMedicalEnrich()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('시딩 실패:', err);
+      process.exit(1);
+    });
+}
