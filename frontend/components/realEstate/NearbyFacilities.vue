@@ -47,7 +47,7 @@
         </div>
         <ul class="divide-y divide-slate-50">
           <li v-for="facility in group.items" :key="facility.id">
-            <NuxtLink
+            <HardLink
               :to="`/${facility.category}/${facility.id}`"
               class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
             >
@@ -59,7 +59,7 @@
                 {{ facility.distance }}m
               </span>
               <span class="material-symbols-outlined text-[16px] text-slate-300">chevron_right</span>
-            </NuxtLink>
+            </HardLink>
           </li>
         </ul>
       </div>
@@ -69,6 +69,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import HardLink from '~/components/common/HardLink.vue'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import { lineColor } from '~/utils/subwayLineColors'
