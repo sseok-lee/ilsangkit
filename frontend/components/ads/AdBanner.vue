@@ -62,14 +62,17 @@ watch(() => route.fullPath, () => {
   min-height: 250px;
 }
 
-/* unfilled 확정 시 ins 와 부모 컨테이너 모두 제거해 예약 공간을 회수한다.
-   (localhost · 광고 차단기 환경에서 빈 박스 잔존 방지 + CLS 의도적 허용:
-   광고 채움 여부가 결정된 후의 collapse 는 사용자 경험상 자연스러움) */
-.ad-banner ins.adsbygoogle[data-ad-status='unfilled'] {
+/* AdSense 가 채우지 않기로 결정한 슬롯(unfilled / unfill-optimized) 은 ins 와 부모
+   컨테이너 모두 제거해 예약 공간을 회수한다. unfill-optimized 는 SPA 네비게이션 시
+   AdSense 가 페이지당 최대 광고수를 넘어섰다고 판단해 일부 슬롯을 의도적으로 비울 때
+   설정되며, unfilled 와 마찬가지로 사용자에게 빈 박스로 보이지 않도록 collapse 한다. */
+.ad-banner ins.adsbygoogle[data-ad-status='unfilled'],
+.ad-banner ins.adsbygoogle[data-ad-status='unfill-optimized'] {
   display: none !important;
 }
 
-.ad-banner:has(ins.adsbygoogle[data-ad-status='unfilled']) {
+.ad-banner:has(ins.adsbygoogle[data-ad-status='unfilled']),
+.ad-banner:has(ins.adsbygoogle[data-ad-status='unfill-optimized']) {
   display: none !important;
   min-height: 0 !important;
 }
