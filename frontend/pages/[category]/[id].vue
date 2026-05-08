@@ -504,7 +504,7 @@
               </SectionBlock>
 
               <!-- Ad: 기본정보·로드뷰 이후 1회 -->
-              <AdBanner ad-format="horizontal" full-width-responsive="false" />
+              <AdBanner />
 
               <!-- 시설현황 SectionBlock -->
               <SectionBlock v-if="hasFacilityStatus" heading="시설현황" subtext="카테고리별 세부 설비·현황 정보입니다.">
@@ -1888,7 +1888,7 @@
           </div>
 
           <!-- Ad: 기본정보 직후 (Mobile) -->
-          <AdBanner ad-format="horizontal" full-width-responsive="false" />
+          <AdBanner />
 
           <!-- Roadview Card (Mobile) -->
           <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1901,7 +1901,7 @@
           </div>
 
           <!-- Ad: 로드뷰 이후 (Mobile) -->
-          <AdBanner ad-format="horizontal" full-width-responsive="false" />
+          <AdBanner />
 
           <!-- Facility Status Card -->
           <div v-if="hasFacilityStatus" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -2746,7 +2746,7 @@
           </div>
 
           <!-- Ad: 시설현황 이후 (Mobile) -->
-          <AdBanner ad-format="horizontal" full-width-responsive="false" />
+          <AdBanner />
 
           <!-- Nearby Facilities -->
           <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
