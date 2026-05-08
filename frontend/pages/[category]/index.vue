@@ -510,7 +510,7 @@ setBreadcrumbSchema([
 if (categoryDataSource.value) {
   setDatasetSchema({
     name: `전국 ${catLabel} 데이터`,
-    description: `${categoryDataSource.value.provider}에서 제공하는 전국 ${catLabel} 공공데이터를 가공해 제공합니다.`,
+    description: `${categoryDataSource.value.provider}에서 제공하는 전국 ${catLabel} 공공데이터를 시·군·구 단위로 가공·정제해 위치, 운영 정보, 연락처 등을 통합 조회할 수 있도록 구성한 데이터셋입니다.`,
     url: `/${route.params.category}`,
     sources: [categoryDataSource.value],
     keywords: [catLabel, '공공데이터', categoryDataSource.value.provider, '대한민국'],
