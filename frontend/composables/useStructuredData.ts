@@ -594,6 +594,10 @@ export function useStructuredData() {
 
   /**
    * Event 스키마 (청약 상세용)
+   *
+   * Google Event 가이드: eventStatus 와 eventAttendanceMode 는 2021 년부터 필수.
+   * 누락 시 리치결과 자격 박탈. 청약 접수는 온라인 신청(청약홈) 이 표준이라
+   * OnlineEventAttendanceMode 를 기본값으로 사용한다.
    */
   function setEventSchema(options: {
     name: string
@@ -602,7 +606,29 @@ export function useStructuredData() {
     endDate: string
     location?: string
     url: string
+    eventStatus?: 'EventScheduled' | 'EventCancelled' | 'EventPostponed' | 'EventRescheduled' | 'EventMovedOnline'
+    eventAttendanceMode?: 'OnlineEventAttendanceMode' | 'OfflineEventAttendanceMode' | 'MixedEventAttendanceMode'
   }) {
+    const eventStatus = options.eventStatus ?? 'EventScheduled'
+    const eventAttendanceMode = options.eventAttendanceMode ?? 'OnlineEventAttendanceMode'
+    const fullUrl = options.url.startsWith('http') ? options.url : `${SITE_URL}${options.url}`
+
+    // Google 가이드: OnlineEventAttendanceMode 면 VirtualLocation + url 이 필수,
+    // OfflineEventAttendanceMode 면 Place + 주소/이름이 필수.
+    // 청약처럼 온라인 접수가 표준인 이벤트는 옵션의 location 을 부동산 소재지 라벨로 보고,
+    // VirtualLocation 의 url 은 이벤트 페이지 자체로 안내한다.
+    let location: Record<string, unknown> | Array<Record<string, unknown>> | undefined
+    if (eventAttendanceMode === 'OnlineEventAttendanceMode') {
+      location = { '@type': 'VirtualLocation', url: fullUrl }
+    } else if (eventAttendanceMode === 'MixedEventAttendanceMode') {
+      location = [
+        { '@type': 'VirtualLocation', url: fullUrl },
+        ...(options.location ? [{ '@type': 'Place', name: options.location }] : []),
+      ]
+    } else if (options.location) {
+      location = { '@type': 'Place', name: options.location }
+    }
+
     const schema = {
       '@context': 'https://schema.org',
       '@type': 'Event',
@@ -610,8 +636,10 @@ export function useStructuredData() {
       description: options.description,
       startDate: options.startDate,
       endDate: options.endDate,
-      ...(options.location ? { location: { '@type': 'Place', name: options.location } } : {}),
-      url: options.url.startsWith('http') ? options.url : `${SITE_URL}${options.url}`,
+      eventStatus: `https://schema.org/${eventStatus}`,
+      eventAttendanceMode: `https://schema.org/${eventAttendanceMode}`,
+      ...(location ? { location } : {}),
+      url: fullUrl,
     }
 
     useHead({
