@@ -1,8 +1,10 @@
 import { nextTick, onBeforeUnmount, ref, type Ref } from 'vue'
+import type { AdDiagnosticsApi } from './useAdDiagnostics'
 
 export function useDeferredAdSenseRequest(
   container: Ref<HTMLElement | null>,
   canRequest: () => boolean = () => true,
+  diagnostics?: AdDiagnosticsApi,
 ) {
   const hasRequestedAd = ref(false)
   let requestGeneration = 0
@@ -13,12 +15,17 @@ export function useDeferredAdSenseRequest(
 
   function pushAd(generation: number) {
     if (!import.meta.client || generation !== requestGeneration || !canRequest() || hasRequestedAd.value) return
-    if (!container.value?.querySelector('ins.adsbygoogle')) return
+    const win = window as Window & { adsbygoogle?: Array<Record<string, never>> }
+    const scriptReady = Array.isArray(win.adsbygoogle) || typeof win.adsbygoogle !== 'undefined'
+    diagnostics?.recordScriptCheck(scriptReady)
+    const containerReady = !!container.value?.querySelector('ins.adsbygoogle')
+    diagnostics?.recordContainerCheck(containerReady)
+    if (!containerReady) return
     hasRequestedAd.value = true
     try {
-      const win = window as Window & { adsbygoogle?: Array<Record<string, never>> }
       win.adsbygoogle = win.adsbygoogle || []
       win.adsbygoogle.push({})
+      diagnostics?.recordPushCalled()
     } catch {
       // adsbygoogle push 실패는 무시 (광고 차단기/네트워크 실패 시 자연 collapse)
     }
