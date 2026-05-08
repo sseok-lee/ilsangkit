@@ -74,7 +74,7 @@
       </SectionBlock>
 
       <!-- Ad: 필터 직후 -->
-      <AdBanner ad-format="horizontal" full-width-responsive="false" />
+      <AdBanner />
 
       <!-- Trash category: waste schedule UI -->
       <template v-if="categoryParam === 'trash'">
