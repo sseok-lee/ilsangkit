@@ -2,7 +2,10 @@
   <div
     v-if="isVisible"
     ref="container"
-    class="anchor-ad fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-line shadow-[0_-2px_8px_-1px_rgba(0,0,0,0.06)]"
+    :class="[
+      'anchor-ad fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-line shadow-[0_-2px_8px_-1px_rgba(0,0,0,0.06)]',
+      { 'anchor-ad--timed-out': isTimedOut },
+    ]"
     :style="{ paddingBottom: 'env(safe-area-inset-bottom)' }"
   >
     <div class="relative w-full">
@@ -22,6 +25,7 @@
           :data-ad-client="AD_CLIENT"
           :data-ad-slot="adSlot"
           data-ad-format="horizontal"
+          :data-adtest="adTest"
         />
       </ClientOnly>
     </div>
@@ -29,10 +33,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
 
 const AD_CLIENT = 'ca-pub-2088264360250020'
+const adTest = import.meta.dev ? 'on' : undefined
+const STATUS_TIMEOUT_MS = 4000
 
 withDefaults(defineProps<{
   adSlot?: string
@@ -44,6 +50,28 @@ const route = useRoute()
 const adKey = ref(0)
 const dismissed = ref(false)
 const container = ref<HTMLElement | null>(null)
+const isTimedOut = ref(false)
+let statusTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+function clearStatusTimeout() {
+  if (statusTimeoutId !== null) {
+    clearTimeout(statusTimeoutId)
+    statusTimeoutId = null
+  }
+}
+
+function watchStatusTimeout() {
+  clearStatusTimeout()
+  isTimedOut.value = false
+  statusTimeoutId = setTimeout(() => {
+    statusTimeoutId = null
+    const ins = container.value?.querySelector<HTMLElement>('ins.adsbygoogle')
+    if (!ins) return
+    if (!ins.dataset.adStatus) {
+      isTimedOut.value = true
+    }
+  }, STATUS_TIMEOUT_MS)
+}
 
 // 하단 sticky 액션바가 이미 있는 페이지에서는 앵커 광고를 노출하지 않음
 const HIDDEN_ROUTE_PATTERNS = [
@@ -85,16 +113,22 @@ onMounted(() => {
     }
   }
   scheduleAdRequest()
+  watchStatusTimeout()
 })
 
 watch(() => route.fullPath, () => {
   if (!isVisible.value) {
     clearPendingAdRequest()
+    clearStatusTimeout()
+    isTimedOut.value = false
     return
   }
   adKey.value++
   scheduleAdRequest()
+  watchStatusTimeout()
 })
+
+onBeforeUnmount(clearStatusTimeout)
 </script>
 
 <style scoped>
@@ -110,11 +144,19 @@ watch(() => route.fullPath, () => {
   min-height: 100px !important;
 }
 
-.anchor-ad ins.adsbygoogle[data-ad-status='unfilled'] {
+.anchor-ad ins.adsbygoogle[data-ad-status='unfilled'],
+.anchor-ad ins.adsbygoogle[data-ad-status='unfill-optimized'] {
   display: none !important;
 }
 
-.anchor-ad:has(ins.adsbygoogle[data-ad-status='unfilled']) {
+.anchor-ad:has(ins.adsbygoogle[data-ad-status='unfilled']),
+.anchor-ad:has(ins.adsbygoogle[data-ad-status='unfill-optimized']) {
+  display: none !important;
+  min-height: 0 !important;
+}
+
+/* status 자체가 설정되지 않은 채로 timeout 된 슬롯도 빈 박스로 남지 않도록 collapse */
+.anchor-ad--timed-out {
   display: none !important;
   min-height: 0 !important;
 }
