@@ -349,7 +349,7 @@ describe('EvChargerDetail 실시간 폴링', () => {
     expect(wrapper.text()).toContain('충전중')   // stat=3
   })
 
-  it('마지막 갱신 시각을 표시한다', async () => {
+  it('성공 직후 freshness 라벨로 "방금 갱신"을 표시한다', async () => {
     ;(globalThis as any).$fetch = vi.fn().mockResolvedValue({
       success: true,
       data: [
@@ -366,6 +366,38 @@ describe('EvChargerDetail 실시간 폴링', () => {
     await nextTick()
     await nextTick()
 
-    expect(wrapper.text()).toContain('실시간')
+    expect(wrapper.text()).toContain('방금 갱신')
+  })
+
+  it('마운트 직후 첫 응답 전엔 "갱신 중…"을 표시한다', async () => {
+    let resolveFetch: (v: unknown) => void = () => {}
+    ;(globalThis as any).$fetch = vi.fn().mockImplementation(
+      () => new Promise(resolve => { resolveFetch = resolve })
+    )
+
+    const wrapper = mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    await nextTick()
+    expect(wrapper.text()).toContain('갱신 중')
+
+    resolveFetch({ success: true, data: [] })
+  })
+
+  it('첫 폴링이 실패하면 "갱신 실패 · 재시도 중"을 표시한다', async () => {
+    ;(globalThis as any).$fetch = vi.fn().mockRejectedValue(new Error('Network error'))
+
+    const wrapper = mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+    await nextTick()
+
+    expect(wrapper.text()).toContain('갱신 실패')
   })
 })

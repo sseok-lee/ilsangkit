@@ -74,8 +74,8 @@
     <div v-if="displayChargers?.length" class="pt-3 border-t border-slate-200">
       <div class="flex items-center justify-between mb-3">
         <p class="text-xs font-medium text-slate-500">충전기 현황</p>
-        <span v-if="lastUpdated" class="text-xs text-emerald-600 font-medium">
-          실시간 갱신중
+        <span v-if="freshnessLabel" class="text-xs font-medium" :class="freshnessClass">
+          {{ freshnessLabel }}
         </span>
       </div>
       <div class="space-y-2">
@@ -113,6 +113,7 @@ import type { EvChargerDetails, EvChargerItem } from '~/types/facility'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
 
 const POLL_INTERVAL = 30_000
+const TICK_INTERVAL = 15_000
 
 const props = defineProps<{
   details: EvChargerDetails
@@ -120,7 +121,26 @@ const props = defineProps<{
 
 const liveStatuses = ref<Map<string, { stat: string; statUpdDt: string }>>(new Map())
 const lastUpdated = ref<Date | null>(null)
+const hasFailed = ref(false)
+const now = ref(new Date())
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let tickTimer: ReturnType<typeof setInterval> | null = null
+
+const freshnessLabel = computed(() => {
+  if (!props.details.statId) return ''
+  if (!lastUpdated.value) {
+    return hasFailed.value ? '갱신 실패 · 재시도 중' : '갱신 중…'
+  }
+  const diffMin = Math.floor((now.value.getTime() - lastUpdated.value.getTime()) / 60_000)
+  const baseLabel = diffMin < 1 ? '방금 갱신' : `${diffMin}분 전 갱신`
+  return hasFailed.value ? `${baseLabel} · 재시도 중` : baseLabel
+})
+
+const freshnessClass = computed(() => {
+  if (!lastUpdated.value && hasFailed.value) return 'text-rose-600'
+  if (hasFailed.value) return 'text-amber-600'
+  return 'text-emerald-600'
+})
 
 const displayChargers = computed(() => {
   if (!props.details.chargers) return []
@@ -154,9 +174,13 @@ async function pollStatus() {
       }
       liveStatuses.value = newMap
       lastUpdated.value = new Date()
+      now.value = lastUpdated.value
+      hasFailed.value = false
+    } else {
+      hasFailed.value = true
     }
   } catch {
-    // 실패 시 기존 상태 유지
+    hasFailed.value = true
   }
 }
 
@@ -165,12 +189,17 @@ onMounted(() => {
   if (!props.details.statId) return
   pollStatus()
   pollTimer = setInterval(pollStatus, POLL_INTERVAL)
+  tickTimer = setInterval(() => { now.value = new Date() }, TICK_INTERVAL)
 })
 
 onUnmounted(() => {
   if (pollTimer) {
     clearInterval(pollTimer)
     pollTimer = null
+  }
+  if (tickTimer) {
+    clearInterval(tickTimer)
+    tickTimer = null
   }
 })
 
