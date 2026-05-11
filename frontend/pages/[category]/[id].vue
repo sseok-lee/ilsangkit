@@ -150,14 +150,12 @@
           </SectionBlock>
         </div>
 
-        <!-- Desktop: Two Column Layout (body, BasicInfo/FacilityStatus/Roadview above) -->
-        <div class="hidden md:block max-w-[1200px] mx-auto px-6 pt-4 pb-10">
-          <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 items-start">
-            <!-- Left Column: Details -->
-            <div class="flex flex-col gap-3 w-full">
-              <!-- Ad: 기본정보·로드뷰 이후 1회 -->
-              <AdBanner only="desktop" />
-
+        <!-- Unified body (responsive, single tree, 2-column grid on desktop) -->
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-4 pb-10">
+          <div class="lg:grid lg:grid-cols-[1fr_480px] lg:gap-4 lg:items-start">
+            <article class="flex flex-col gap-3 md:gap-4 w-full">
+              <!-- Ad: DETAILS↔MAP/Nearby 사이 -->
+              <AdBanner />
 
               <!-- 주변 시설 (same + cross category) -->
               <DetailNearby
@@ -168,8 +166,8 @@
                 :category-meta="categoryMeta"
               />
 
-              <!-- Ad: 주변 시설 이후 1회 -->
-              <AdBanner only="desktop" />
+              <!-- Ad: NEARBY 이후 -->
+              <AdBanner />
 
               <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
               <DetailContextLinks
@@ -184,10 +182,12 @@
                 :last-sync-date="lastSyncDate"
               />
 
-            </div>
+              <!-- Mobile-only inline CoupangBanner (md+에서는 사이드바 Coupang 사용) -->
+              <CoupangBanner class="md:hidden" />
+            </article>
 
-            <!-- Right Column: Map & Actions (Desktop) -->
-            <div class="lg:sticky lg:top-24 w-full flex flex-col">
+            <!-- Desktop/tablet sidebar: Map + Actions + Coupang (md+에서 노출) -->
+            <aside class="hidden md:flex lg:sticky lg:top-24 w-full flex-col">
               <!-- Map Container -->
               <div class="relative w-full aspect-square bg-[#e5e7eb] h-full rounded-xl overflow-hidden shadow-md min-h-[300px]" role="img" aria-label="시설 위치 지도">
                 <ClientOnly>
@@ -198,7 +198,6 @@
                     class="w-full h-full opacity-80"
                   />
                 </ClientOnly>
-
               </div>
 
               <!-- Action Buttons (Desktop Sticky Bottom) -->
@@ -234,45 +233,8 @@
 
               <!-- 쿠팡 배너 (Desktop Sticky) -->
               <CoupangBanner class="mt-3" />
-            </div>
+            </aside>
           </div>
-        </div>
-
-        <!-- Mobile: Info Section (Desktop-style cards) -->
-        <div class="md:hidden px-4 flex flex-col gap-4 pt-3">
-
-          <!-- Ad: 기본정보·로드뷰 이후 (Mobile) -->
-          <AdBanner only="mobile" />
-
-          <!-- 주변 시설 (same + cross category) -->
-          <DetailNearby
-            :nearby-facilities="nearbyFiltered"
-            :nearby-loading="nearbyLoading"
-            :cross-facilities-grouped="crossFacilitiesGrouped"
-            :cross-loading="crossLoading"
-            :category-meta="categoryMeta"
-          />
-
-          <!-- Ad (Mobile) -->
-          <AdBanner only="mobile" />
-
-          <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
-          <DetailContextLinks
-            :category="category"
-            :region-link="regionLink"
-            :related-categories="relatedCategories"
-            :category-meta="categoryMeta"
-            :category-tips="categoryTips"
-            :category-faq-items="categoryFaqItems"
-            :data-source="dataSource"
-            :data-date="dataDate"
-            :last-sync-date="lastSyncDate"
-          />
-
-          <!-- 쿠팡 배너 (Mobile) -->
-          <CoupangBanner />
-
-          <div class="h-8"></div>
         </div>
 
         <!-- Mobile: Sticky Bottom CTA -->
