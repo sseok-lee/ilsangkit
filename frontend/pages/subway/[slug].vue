@@ -88,6 +88,7 @@ import { lineColor } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
 import { useKakaoMap } from '~/composables/useKakaoMap'
+import { SITE_URL } from '~/utils/seoConstants'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug ?? ''))
@@ -104,13 +105,25 @@ if (error.value || !data.value?.data) {
 
 const station = computed(() => data.value!.data)
 
+const subwayOgImage = computed(() => {
+  const s = station.value
+  if (!s?.lat || !s?.lng) return undefined
+  const stationLabel = s.name.endsWith('역') ? s.name : `${s.name}역`
+  return `${SITE_URL}/og-map?lat=${s.lat}&lng=${s.lng}&label=${encodeURIComponent(stationLabel)}&category=area&title=${encodeURIComponent(s.name)}`
+})
+
 useSeoMeta({
   title: () => buildSubwayTitle(station.value),
   description: () => buildSubwayDescription(station.value),
   robots: 'noindex, nofollow',
   ogTitle: () => buildSubwayTitle(station.value),
   ogDescription: () => buildSubwayDescription(station.value),
+  ogImage: () => subwayOgImage.value,
+  ogImageWidth: 1024,
+  ogImageHeight: 536,
   ogType: 'website',
+  twitterCard: 'summary_large_image',
+  twitterImage: () => subwayOgImage.value,
 })
 
 useHead({
