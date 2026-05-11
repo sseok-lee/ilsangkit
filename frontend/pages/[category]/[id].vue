@@ -342,7 +342,6 @@ import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { FACILITY_DATA_SOURCE, type DataSourceInfo } from '~/utils/dataSource'
 import { formatKstDate } from '~/utils/formatters'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
@@ -488,16 +487,6 @@ const categoryFaqItems = computed(() => {
   return generateDynamicFAQ(facility.value)
 })
 
-// 모바일 브레드크럼 아이템
-const breadcrumbItems = computed(() => {
-  if (!facility.value) return []
-  return [
-    { label: '홈', href: '/', current: false },
-    { label: categoryMeta.value.label, href: `/${category.value}`, current: false },
-    { label: displayName.value, href: `/${category.value}/${facility.value.id}`, current: true },
-  ]
-})
-
 // 데스크톱 브레드크럼 (city 포함)
 const desktopBreadcrumbItems = computed(() => {
   if (!facility.value) return []
@@ -508,16 +497,6 @@ const desktopBreadcrumbItems = computed(() => {
     { label: displayName.value, current: true },
   ]
 })
-
-// YYYYMMDD 또는 YYYY-MM-DD → 'YYYY년 M월 D일'
-function formatKoreanDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return ''
-  const s = String(dateStr).replace(/\D/g, '')
-  if (s.length === 8) {
-    return `${s.slice(0, 4)}년 ${parseInt(s.slice(4, 6))}월 ${parseInt(s.slice(6, 8))}일`
-  }
-  return String(dateStr)
-}
 
 // 데스크톱 히어로 사이드바 통계
 const desktopHeroStats = computed(() => {
@@ -651,151 +630,6 @@ const facilityPhone = computed(() => {
   return d.phoneNumber || d.phone || d.clerkTel || null
 })
 
-// 시설현황 카드 표시 여부
-const hasFacilityStatus = computed(() => {
-  if (!facility.value?.details) return false
-  const cat = facility.value.category
-  if (['pharmacy', 'clothes', 'trash'].includes(cat)) return false
-  return true
-})
-
-const parkHasFacilities = computed(() => {
-  const d = details.value as any
-  return !!(d?.exerciseFacilities || d?.playFacilities || d?.convenienceFacilities || d?.cultureFacilities || d?.otherFacilities)
-})
-
-// School computed
-const schoolHomepageUrl = computed(() => {
-  const url = (details.value as any)?.homepageUrl || ''
-  if (!url) return ''
-  if (url.startsWith('http://') || url.startsWith('https://')) return url
-  return `http://${url}`
-})
-
-const schoolEnrollmentRows = computed(() => {
-  const enrollments = (details.value as any)?.enrollments || []
-  if (enrollments.length === 0) return []
-  const sorted = [...enrollments].sort((a: any, b: any) => a.grade - b.grade)
-  const rows = sorted.map((e: any) => ({
-    label: `${e.grade}학년`,
-    classCount: e.classCount,
-    isTotal: false,
-  }))
-  if (rows.length > 1) {
-    let totalClasses = 0
-    for (const e of enrollments) {
-      totalClasses += e.classCount || 0
-    }
-    rows.push({ label: '합계', classCount: totalClasses, isTotal: true })
-  }
-  return rows
-})
-
-const schoolDepartments = computed(() => {
-  const depts = (details.value as any)?.departments || []
-  return depts.map((d: any) => d.departmentName)
-})
-
-// Market computed
-const marketOpeningCycleLabel = computed(() => {
-  const cycle = (details.value as any)?.openingCycle || ''
-  if (cycle === '매일') return '매일'
-  if (/\d/.test(cycle)) {
-    const days = cycle.split('+').map((s: string) => s.trim()).filter(Boolean)
-    return `매월 ${days.join(', ')}`
-  }
-  return cycle
-})
-
-const marketProductTags = computed(() =>
-  (details.value as any)?.products?.split('+').map((s: string) => s.trim()).filter(Boolean) ?? []
-)
-
-const childcareAvailabilityRate = computed(() => {
-  const cap = (details.value as any)?.crcapat
-  const cur = (details.value as any)?.crchcnt
-  if (cap == null || cur == null || cap === 0) return '-'
-  return `${((cap - cur) / cap * 100).toFixed(0)}%`
-})
-
-const childcareOccupancyPct = computed(() => {
-  const cap = (details.value as any)?.crcapat
-  const cur = (details.value as any)?.crchcnt
-  if (cap == null || cur == null || cap === 0) return 0
-  return Math.min(Math.round((cur / cap) * 100), 100)
-})
-
-// 반별 정원·현원
-const CLASS_DEFS = [
-  { label: '0세', classKey: 'classCnt00', childKey: 'childCnt00' },
-  { label: '1세', classKey: 'classCnt01', childKey: 'childCnt01' },
-  { label: '2세', classKey: 'classCnt02', childKey: 'childCnt02' },
-  { label: '3세', classKey: 'classCnt03', childKey: 'childCnt03' },
-  { label: '4세', classKey: 'classCnt04', childKey: 'childCnt04' },
-  { label: '5세', classKey: 'classCnt05', childKey: 'childCnt05' },
-  { label: '만2세미만', classKey: 'classCntM2', childKey: 'childCntM2' },
-  { label: '만5세이상', classKey: 'classCntM5', childKey: 'childCntM5' },
-  { label: '장애아', classKey: 'classCntSp', childKey: 'childCntSp' },
-  { label: '합계', classKey: 'classCntTot', childKey: 'childCntTot' },
-] as const
-
-const childcareClassRows = computed(() => {
-  const d = details.value as any
-  if (!d) return []
-  return CLASS_DEFS
-    .map(({ label, classKey, childKey }) => {
-      const classes = d[classKey] as number | undefined
-      const children = d[childKey] as number | undefined
-      const avg = (classes != null && classes > 0 && children != null) ? Math.round(children / classes * 10) / 10 : null
-      return { label, classes, children, avg }
-    })
-    .filter(row => (row.classes != null && row.classes > 0) || (row.children != null && row.children > 0))
-})
-
-const STAFF_ROLE_DEFS = [
-  { label: '원장', key: 'emCntA1' },
-  { label: '보육교사', key: 'emCntA2' },
-  { label: '특수교사', key: 'emCntA3' },
-  { label: '치료사', key: 'emCntA4' },
-  { label: '영양사', key: 'emCntA5' },
-  { label: '간호사(조무사)', key: 'emCntA6' },
-  { label: '조리원', key: 'emCntA10' },
-  { label: '사무원', key: 'emCntA7' },
-  { label: '기타', key: 'emCntA8' },
-] as const
-
-const childcareStaffRoles = computed(() => {
-  const d = details.value as any
-  if (!d) return []
-  return STAFF_ROLE_DEFS
-    .map(({ label, key }) => ({ label, cnt: d[key] as number | undefined }))
-    .filter(r => r.cnt != null && r.cnt > 0)
-})
-
-const CAREER_COLORS = [
-  'bg-sky-100 text-sky-800',
-  'bg-blue-100 text-blue-800',
-  'bg-indigo-100 text-indigo-800',
-  'bg-violet-100 text-violet-800',
-  'bg-purple-100 text-purple-800',
-]
-
-const childcareCareerItems = computed(() => {
-  const d = details.value as any
-  if (!d) return []
-  const defs = [
-    { label: '1년 미만', key: 'emCnt0y' },
-    { label: '1년 이상', key: 'emCnt1y' },
-    { label: '2년 이상', key: 'emCnt2y' },
-    { label: '4년 이상', key: 'emCnt4y' },
-    { label: '6년 이상', key: 'emCnt6y' },
-  ] as const
-  return defs
-    .map(({ label, key }, i) => ({ label, cnt: d[key] as number | undefined, colorClass: CAREER_COLORS[i] }))
-    .filter(item => item.cnt != null && item.cnt > 0)
-})
-
-
 // Generate map URLs (길찾기)
 const kakaoMapUrl = computed(() => {
   if (!facility.value) return '#'
@@ -822,7 +656,7 @@ const openNavigation = (url: string) => {
 
 const isMapExpanded = ref(false)
 
-const { trackFacilityView, trackDirectionsClick, trackPhoneClick, trackShareClick } = useAnalytics()
+const { trackFacilityView, trackDirectionsClick, trackShareClick } = useAnalytics()
 onMounted(() => {
   if (facility.value) {
     trackFacilityView({
@@ -878,13 +712,6 @@ const lastSyncDate = computed(() => {
   return formatKstDate(syncStatusResponse.value.data[cat])
 })
 
-// Format distance
-const formatDistance = (distance: number): string => {
-  if (distance >= 1000) {
-    return `${(distance / 1000).toFixed(1)}km`
-  }
-  return `${Math.round(distance)}m`
-}
 
 // AED operating hours
 const formatAedTime = (start?: string | null, end?: string | null): string | null => {
@@ -1011,47 +838,6 @@ const hospitalWeeklyHours = computed(() => {
   return hasAnyTime ? rows : []
 })
 
-// 병원 병상 정보 (xlsx 파일 3 보강)
-const HOSPITAL_BED_DEFS: { key: string; label: string }[] = [
-  { key: 'generalUpperBeds', label: '일반(상급)' },
-  { key: 'generalNormalBeds', label: '일반(일반)' },
-  { key: 'adultIcuBeds', label: '성인 중환자' },
-  { key: 'childIcuBeds', label: '소아 중환자' },
-  { key: 'neonatalIcuBeds', label: '신생아 중환자' },
-  { key: 'deliveryBeds', label: '분만실' },
-  { key: 'operatingBeds', label: '수술실' },
-  { key: 'emergencyBeds', label: '응급실' },
-  { key: 'physicalTherapyBeds', label: '물리치료실' },
-  { key: 'psychClosedUpper', label: '정신과 폐쇄(상급)' },
-  { key: 'psychClosedNormal', label: '정신과 폐쇄(일반)' },
-  { key: 'psychOpenUpper', label: '정신과 개방(상급)' },
-  { key: 'psychOpenNormal', label: '정신과 개방(일반)' },
-  { key: 'isolationBeds', label: '격리병실' },
-  { key: 'sterileBeds', label: '무균치료실' },
-]
-
-const hospitalBedRows = computed(() => {
-  if (facility.value?.category !== 'hospital') return []
-  const d = details.value as Record<string, unknown> | undefined
-  if (!d) return []
-  return HOSPITAL_BED_DEFS
-    .map(({ key, label }) => {
-      const v = d[key]
-      const num = typeof v === 'number' ? v : null
-      return num && num > 0 ? { label, value: `${num}병상` } : null
-    })
-    .filter((r): r is { label: string; value: string } => r !== null)
-})
-
-const hospitalTotalBeds = computed(() => {
-  if (facility.value?.category !== 'hospital') return 0
-  const d = details.value as Record<string, unknown> | undefined
-  if (!d) return 0
-  return HOSPITAL_BED_DEFS.reduce((sum, { key }) => {
-    const v = d[key]
-    return sum + (typeof v === 'number' && v > 0 ? v : 0)
-  }, 0)
-})
 
 // AED 요일별 이용시간 표 (오늘 강조 + 24시간 표시)
 const aedWeeklyHours = computed(() => {
@@ -1091,89 +877,8 @@ const aedWeeklyHours = computed(() => {
   return hasAny ? rows : []
 })
 
-// Toilet accessibility details (disabled/child toilet counts)
-const toiletAccessibilityDetails = computed(() => {
-  if (facility.value?.category !== 'toilet' || !facility.value?.details) return []
-  const d = facility.value.details as import('~/types/facility').ToiletDetails
-  const items: Array<{ label: string; value: string }> = []
-  if (d.maleDisabledToilets) items.push({ label: '남성 장애인 대변기', value: `${d.maleDisabledToilets}개` })
-  if (d.maleDisabledUrinals) items.push({ label: '남성 장애인 소변기', value: `${d.maleDisabledUrinals}개` })
-  if (d.femaleDisabledToilets) items.push({ label: '여성 장애인 대변기', value: `${d.femaleDisabledToilets}개` })
-  if (d.maleChildToilets) items.push({ label: '남성 어린이 대변기', value: `${d.maleChildToilets}개` })
-  if (d.maleChildUrinals) items.push({ label: '남성 어린이 소변기', value: `${d.maleChildUrinals}개` })
-  if (d.femaleChildToilets) items.push({ label: '여성 어린이 대변기', value: `${d.femaleChildToilets}개` })
-  return items
-})
 
-// Facility features for cards (using Material Icons)
-const facilityFeatures = computed(() => {
-  if (!facility.value?.details) return []
 
-  const features: Array<{ icon: string; label: string; value: string; color: string; materialIcon?: string }> = []
-  const d = facility.value.details as FacilityDetailsAll
-
-  // Toilet specific
-  if (facility.value.category === 'toilet') {
-    if (d.femaleToilets !== undefined) {
-      features.push({ icon: '♀', label: '여성용', value: `${d.femaleToilets}개`, color: 'pink', materialIcon: 'woman' })
-    }
-    if (d.maleToilets !== undefined) {
-      features.push({ icon: '♂', label: '남성용', value: `${d.maleToilets}개`, color: 'blue', materialIcon: 'man' })
-    }
-    if (d.hasDisabledToilet) {
-      features.push({ icon: '♿', label: '장애인 화장실', value: '있음', color: 'purple', materialIcon: 'accessible' })
-    }
-  }
-
-  // Wifi specific
-  if (facility.value.category === 'wifi') {
-    if (d.ssid) {
-      features.push({ icon: '📶', label: 'SSID', value: d.ssid, color: 'green', materialIcon: 'wifi' })
-    }
-  }
-
-  return features
-})
-
-// Check if the grid area has visible content (toilet stalls or amenity cards)
-const hasGridContent = computed(() => {
-  if (!facility.value?.details) return false
-  if (facility.value.category === 'toilet') return true
-  if (facility.value.category === 'hospital' || facility.value.category === 'pharmacy') return false
-  return facilityAmenities.value.length > 0
-})
-
-// Facility amenities checklist
-const facilityAmenities = computed(() => {
-  if (!facility.value?.details) return []
-
-  const amenities: string[] = []
-  const d = facility.value.details as FacilityDetailsAll
-
-  // Toilet amenities
-  if (d.hasDisabledToilet) amenities.push('장애인 화장실')
-  if (d.hasDiaperChangingTable) amenities.push('기저귀 교환대')
-  if (d.hasEmergencyBell) amenities.push('비상벨')
-  if (d.hasCCTV) amenities.push('CCTV')
-  if ((d as any).hasChildToilet) amenities.push('어린이 화장실')
-
-  if ((d as any).hasDisabledAccess) amenities.push('장애인 편의시설')
-
-  return amenities
-})
-
-// Get amenity icon
-const getAmenityIcon = (amenity: string): string => {
-  const iconMap: Record<string, string> = {
-    '장애인 화장실': 'accessible',
-    '장애인 편의시설': 'accessible',
-    '기저귀 교환대': 'baby_changing_station',
-    '비상벨': 'emergency',
-    'CCTV': 'videocam',
-    '어린이 화장실': 'child_care',
-  }
-  return iconMap[amenity] || 'check_circle'
-}
 
 // Actions
 const handleBack = () => {
