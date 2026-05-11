@@ -143,16 +143,18 @@
           <DetailFacilityStatus :facility="facility" />
         </div>
 
-        <!-- Desktop: Two Column Layout (body, BasicInfo/FacilityStatus above) -->
+        <!-- Unified Roadview (single render across viewports) -->
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6 mt-3 md:mt-4">
+          <SectionBlock heading="로드뷰" subtext="시설 주변의 거리 뷰를 확인하세요.">
+            <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+          </SectionBlock>
+        </div>
+
+        <!-- Desktop: Two Column Layout (body, BasicInfo/FacilityStatus/Roadview above) -->
         <div class="hidden md:block max-w-[1200px] mx-auto px-6 pt-4 pb-10">
           <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 items-start">
             <!-- Left Column: Details -->
             <div class="flex flex-col gap-3 w-full">
-              <!-- 로드뷰 SectionBlock -->
-              <SectionBlock heading="로드뷰" subtext="시설 주변의 거리 뷰를 확인하세요.">
-                <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
-              </SectionBlock>
-
               <!-- Ad: 기본정보·로드뷰 이후 1회 -->
               <AdBanner only="desktop" />
 
@@ -239,24 +241,7 @@
         <!-- Mobile: Info Section (Desktop-style cards) -->
         <div class="md:hidden px-4 flex flex-col gap-4 pt-3">
 
-          <!-- Ad: 기본정보 직후 (Mobile) -->
-          <AdBanner only="mobile" />
-
-          <!-- Roadview Card (Mobile) -->
-          <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 class="text-slate-900 text-lg font-bold">로드뷰</h2>
-            </div>
-            <div class="p-5">
-              <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
-            </div>
-          </div>
-
-          <!-- Ad: 로드뷰 이후 (Mobile) -->
-          <AdBanner only="mobile" />
-
-
-          <!-- Ad: 시설현황 이후 (Mobile) -->
+          <!-- Ad: 기본정보·로드뷰 이후 (Mobile) -->
           <AdBanner only="mobile" />
 
           <!-- 주변 시설 (same + cross category) -->
