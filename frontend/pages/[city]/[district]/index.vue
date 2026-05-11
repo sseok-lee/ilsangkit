@@ -1,25 +1,16 @@
 <template>
   <div class="bg-background-light min-h-screen">
     <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
-      <!-- 브레드크럼 -->
-      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-4">
-        <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <NuxtLink :to="`/${city}`" class="hover:text-primary">{{ cityName }}</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span class="text-slate-800">{{ districtName }}</span>
-      </nav>
+      <!-- Breadcrumb -->
+      <Breadcrumb :items="breadcrumbItems" class="mb-4" />
 
-      <!-- 히어로 -->
-      <div class="mb-5">
-        <div class="mb-2">
-          <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
-            {{ districtName }} 생활 정보
-          </h1>
-        </div>
-        <p class="mt-2 text-slate-500 text-sm">{{ cityName }} {{ districtName }}의 부동산 시세와 생활시설을 한눈에 확인하세요</p>
-        <p v-if="areaDescription" class="text-gray-600 text-sm leading-relaxed mt-3">{{ areaDescription }}</p>
-      </div>
+      <!-- Hero -->
+      <PageHero
+        eyebrow="지역 허브"
+        :title="`${districtName} 생활 정보`"
+        :description="heroDescription"
+        class="mb-5"
+      />
 
       <!-- Ad: 헤더 직후 -->
       <AdBanner class="mb-5" />
@@ -174,6 +165,13 @@ if (validDistricts.length === 0 || !validDistricts.some(d => d.slug === district
 const cityName = computed(() => getCityName(city.value))
 const districtName = computed(() => getDistrictName(city.value, district.value))
 
+// Breadcrumb (시설/부동산 PR과 동일 패턴)
+const breadcrumbItems = computed(() => [
+  { label: '홈', href: '/', current: false },
+  { label: cityName.value, href: `/${city.value}`, current: false },
+  { label: districtName.value, href: `/${city.value}/${district.value}`, current: true },
+])
+
 // Area API 단일 호출
 const { data: response, pending } = await useAsyncData(
   `area-${city.value}-${district.value}`,
@@ -239,16 +237,18 @@ const realEstateCards = computed(() => {
   ]
 })
 
-// 서술형 설명
-const areaDescription = computed(() => {
-  if (!areaData.value?.facilities) return ''
+// 서술형 설명 (PageHero description으로 통합)
+const heroDescription = computed(() => {
+  const primary = `${cityName.value} ${districtName.value}의 부동산 시세와 생활시설을 한눈에 확인하세요`
+  if (!areaData.value?.facilities) return primary
   const cats = areaData.value.facilities.categories as Record<string, number> | undefined
-  return generateAreaDescription({
+  const areaInfo = generateAreaDescription({
     city: cityName.value,
     district: districtName.value,
     facilityStats: cats,
     totalFacilities: areaData.value.facilities.total,
   })
+  return areaInfo ? `${primary}. ${areaInfo}` : primary
 })
 
 // SEO 메타

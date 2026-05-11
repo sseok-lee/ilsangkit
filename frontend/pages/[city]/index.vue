@@ -1,25 +1,16 @@
 <template>
   <div class="bg-background-light min-h-screen">
     <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
-      <!-- 브레드크럼 -->
-      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-4">
-        <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span class="text-slate-800">{{ cityName }}</span>
-      </nav>
+      <!-- Breadcrumb -->
+      <Breadcrumb :items="breadcrumbItems" class="mb-4" />
 
-      <!-- 히어로 -->
-      <div class="mb-5">
-        <div class="mb-2">
-          <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
-            {{ cityName }} 생활 정보
-          </h1>
-        </div>
-        <p class="mt-2 text-slate-500 text-sm">{{ cityName }}의 부동산 시세와 생활시설을 한눈에 확인하세요</p>
-        <p v-if="cityData?.districts?.length" class="text-gray-600 text-sm leading-relaxed mt-2">
-          {{ cityName }}에는 {{ cityData.districts.length }}개 시군구에 걸쳐 생활시설 정보를 제공하고 있습니다.
-        </p>
-      </div>
+      <!-- Hero -->
+      <PageHero
+        eyebrow="지역 허브"
+        :title="`${cityName} 생활 정보`"
+        :description="heroDescription"
+        class="mb-5"
+      />
 
       <!-- 로딩 -->
       <div v-if="pending" class="flex justify-center py-20">
@@ -156,6 +147,12 @@ if (!CITY_SLUG_MAP[city.value]) {
 // CITY_SLUG_MAP에서 한글 이름
 const cityName = computed(() => CITY_SLUG_MAP[city.value] || city.value)
 
+// Breadcrumb (시설/부동산 PR과 동일 패턴)
+const breadcrumbItems = computed(() => [
+  { label: '홈', href: '/', current: false },
+  { label: cityName.value, href: `/${city.value}`, current: true },
+])
+
 // Area API 단일 호출 (시 단위)
 const { data: response, pending } = await useAsyncData(
   `city-area-${city.value}`,
@@ -164,6 +161,15 @@ const { data: response, pending } = await useAsyncData(
 )
 
 const cityData = computed(() => response.value?.data ?? null)
+
+// Hero description (조건부 디스트릭트 수 안내 흡수)
+const heroDescription = computed(() => {
+  const primary = `${cityName.value}의 부동산 시세와 생활시설을 한눈에 확인하세요`
+  const count = cityData.value?.districts?.length
+  return count
+    ? `${primary}. ${cityName.value}에는 ${count}개 시군구에 걸쳐 생활시설 정보를 제공하고 있습니다.`
+    : primary
+})
 
 // 금액 포맷
 function formatPrice(amount: number | null): string {
