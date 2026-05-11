@@ -256,14 +256,38 @@ export interface ChargerStatusResult {
   statUpdDt: string;
 }
 
+const STATUS_CACHE_TTL_MS = 60_000;
+const statusCache = new Map<string, { data: ChargerStatusResult[]; expiresAt: number }>();
+const inFlightStatus = new Map<string, Promise<ChargerStatusResult[]>>();
+
+export function __resetChargerStatusCache(): void {
+  statusCache.clear();
+  inFlightStatus.clear();
+}
+
 export async function fetchChargerStatus(statId: string): Promise<ChargerStatusResult[]> {
-  const serviceKey = process.env.OPENAPI_SERVICE_KEY;
-  if (!serviceKey) {
+  if (!process.env.OPENAPI_SERVICE_KEY) {
     throw new Error('OPENAPI_SERVICE_KEY 환경변수가 설정되지 않았습니다.');
   }
 
+  const cached = statusCache.get(statId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  const existing = inFlightStatus.get(statId);
+  if (existing) return existing;
+
+  const promise = doFetchChargerStatus(statId).finally(() => {
+    inFlightStatus.delete(statId);
+  });
+  inFlightStatus.set(statId, promise);
+  return promise;
+}
+
+async function doFetchChargerStatus(statId: string): Promise<ChargerStatusResult[]> {
   const params = new URLSearchParams({
-    serviceKey,
+    serviceKey: process.env.OPENAPI_SERVICE_KEY as string,
     statId,
     numOfRows: '100',
     pageNo: '1',
@@ -287,10 +311,13 @@ export async function fetchChargerStatus(statId: string): Promise<ChargerStatusR
   };
 
   let rawItems = json?.items?.item;
-  if (!rawItems) return [];
+  if (!rawItems) {
+    statusCache.set(statId, { data: [], expiresAt: Date.now() + STATUS_CACHE_TTL_MS });
+    return [];
+  }
   if (!Array.isArray(rawItems)) rawItems = [rawItems];
 
-  return rawItems
+  const results = rawItems
     .filter((item): item is Required<Pick<ChargerStatusItem, 'chgerId' | 'stat' | 'statUpdDt'>> & ChargerStatusItem =>
       item.chgerId != null && item.stat != null && item.statUpdDt != null
     )
@@ -299,4 +326,7 @@ export async function fetchChargerStatus(statId: string): Promise<ChargerStatusR
       stat: String(item.stat),
       statUpdDt: String(item.statUpdDt),
     }));
+
+  statusCache.set(statId, { data: results, expiresAt: Date.now() + STATUS_CACHE_TTL_MS });
+  return results;
 }

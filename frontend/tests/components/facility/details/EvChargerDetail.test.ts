@@ -400,4 +400,41 @@ describe('EvChargerDetail 실시간 폴링', () => {
 
     expect(wrapper.text()).toContain('갱신 실패')
   })
+
+  it('탭이 hidden 상태가 되면 폴링을 중단한다', async () => {
+    mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    const callsBeforeHide = (globalThis as any).$fetch.mock.calls.length
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect((globalThis as any).$fetch.mock.calls.length).toBe(callsBeforeHide)
+  })
+
+  it('탭이 visible로 복귀하면 즉시 1회 폴링하고 재개한다', async () => {
+    mount(EvChargerDetail, {
+      props: { details: detailsWithChargers },
+      ...globalConfig,
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    const callsWhileHidden = (globalThis as any).$fetch.mock.calls.length
+
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect((globalThis as any).$fetch.mock.calls.length).toBeGreaterThan(callsWhileHidden)
+  })
 })
