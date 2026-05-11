@@ -39,122 +39,32 @@
       @apply="handleDepartmentApply"
     />
 
-    <!-- ========== Trash: 배출 일정 ========== -->
-    <SectionBlock v-if="isTrash" heading="배출 일정" :subtext="`${wasteTotal.toLocaleString('ko-KR')}건 · 지역별 배출 요일과 방법`">
-      <template #right>
-        <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ wasteTotal.toLocaleString('ko-KR') }}건</span>
-      </template>
+    <!-- Trash: 배출 일정 -->
+    <RegionTrashSchedule
+      v-if="isTrash"
+      :total="wasteTotal"
+      :loading="wasteLoading"
+      :contact="wasteContact"
+      :schedules="wasteSchedules"
+      :current-page="wasteCurrentPage"
+      :total-pages="wasteTotalPages"
+      @page-change="goToWastePage"
+    />
 
-      <!-- 로딩 -->
-      <div v-if="wasteLoading" class="flex items-center justify-center py-10">
-        <div class="text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-          <p class="text-slate-500 text-sm">배출 일정 조회 중...</p>
-        </div>
-      </div>
-
-      <div v-else>
-        <!-- 담당 부서 연락처 -->
-        <div v-if="wasteContact" class="bg-blue-50 rounded-xl p-4 border border-blue-100 mb-4">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="material-symbols-outlined text-blue-500 text-[18px]">support_agent</span>
-            <span class="font-semibold text-blue-900 text-sm">{{ wasteContact.name }}</span>
-          </div>
-          <a
-            v-if="wasteContact.phone"
-            :href="`tel:${wasteContact.phone}`"
-            class="text-blue-600 text-sm hover:underline flex items-center gap-1"
-          >
-            <span class="material-symbols-outlined text-[16px]">call</span>
-            {{ wasteContact.phone }}
-          </a>
-        </div>
-
-        <!-- 배출 일정 목록 -->
-        <div v-if="wasteSchedules.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <WasteScheduleCard
-            v-for="region in wasteSchedules"
-            :key="region.id"
-            :region="region"
-          />
-        </div>
-
-        <!-- 결과 없음 -->
-        <div v-else class="py-12 text-center">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-            <span class="material-symbols-outlined text-[32px] text-slate-500">delete</span>
-          </div>
-          <p class="text-slate-700 font-semibold text-lg">등록된 배출 일정이 없습니다</p>
-          <p class="text-slate-500 text-sm mt-1">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
-        </div>
-
-        <!-- 페이지네이션 -->
-        <Pagination
-          v-if="wasteTotalPages > 1"
-          :current-page="wasteCurrentPage"
-          :total-pages="wasteTotalPages"
-          @page-change="goToWastePage"
-        />
-      </div>
-    </SectionBlock>
-
-    <!-- ========== 일반 시설 ========== -->
-    <SectionBlock v-else :heading="`${categoryName} 목록`" :subtext="`${districtName} 지역 ${categoryName} 정보`">
-      <template #right>
-        <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ (total || 0).toLocaleString('ko-KR') }}건</span>
-      </template>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="text-center py-10">
-        <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-        <p class="mt-4 text-slate-500 text-sm">시설 정보를 불러오는 중...</p>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-        <p class="text-red-800">{{ error }}</p>
-        <button
-          class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          @click="loadFacilities()"
-        >
-          다시 시도
-        </button>
-      </div>
-
-      <!-- Facilities Grid -->
-      <div v-else>
-        <div v-if="facilities.length === 0" class="py-12 text-center">
-          <p class="text-slate-600">해당 지역에 등록된 시설이 없습니다.</p>
-        </div>
-
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <FacilityCard
-            v-for="facility in facilities"
-            :key="facility.id"
-            :facility="facility"
-          />
-        </div>
-
-        <!-- Pagination -->
-        <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-4">
-          <button
-            :disabled="currentPage === 1"
-            class="px-4 py-2 border border-line rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-            @click="goToPage(currentPage - 1)"
-          >
-            이전
-          </button>
-          <span class="text-slate-700 text-sm">{{ currentPage }} / {{ totalPages }}</span>
-          <button
-            :disabled="currentPage === totalPages"
-            class="px-4 py-2 border border-line rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-            @click="goToPage(currentPage + 1)"
-          >
-            다음
-          </button>
-        </div>
-      </div>
-    </SectionBlock>
+    <!-- 일반 시설 그리드 -->
+    <RegionFacilitiesGrid
+      v-else
+      :category-name="categoryName"
+      :district-name="districtName"
+      :total="total || 0"
+      :loading="loading"
+      :error="error"
+      :facilities="facilities"
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      @page-change="goToPage"
+      @retry="loadFacilities"
+    />
 
     <!-- Ad: 결과 뒤 -->
     <AdBanner />
@@ -185,6 +95,8 @@ import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import RegionRelatedCategories from '~/components/region/RegionRelatedCategories.vue'
+import RegionTrashSchedule from '~/components/region/RegionTrashSchedule.vue'
+import RegionFacilitiesGrid from '~/components/region/RegionFacilitiesGrid.vue'
 
 // Route params
 const route = useRoute()
