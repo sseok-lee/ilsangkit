@@ -21,6 +21,63 @@
 }
 
 @layer components {
+  /* Typography Tokens — 1.33 ratio 일관 + weight 의미별 (shape 브리프 ≥1.25 권장).
+     - display-1: H1 hero (32px / 800)
+     - display-2: H2 section (24px / 700)
+     - display-3: H3 sub (18px / 700)
+     - eyebrow:   카테고리·라벨 (12px / uppercase / wide tracking)
+     - body:      본문 (15px / 1.6 line-height)
+     - caption:   보조 텍스트 (13px / weight 500) */
+  .text-display-1 {
+    font-size: 1.625rem; /* 26px mobile */
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  @media (min-width: 768px) {
+    .text-display-1 { font-size: 2rem; /* 32px desktop */ }
+  }
+
+  .text-display-2 {
+    font-size: 1.25rem; /* 20px mobile */
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  @media (min-width: 768px) {
+    .text-display-2 { font-size: 1.5rem; /* 24px desktop */ }
+  }
+
+  .text-display-3 {
+    font-size: 1rem; /* 16px mobile */
+    line-height: 1.4;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  @media (min-width: 768px) {
+    .text-display-3 { font-size: 1.125rem; /* 18px desktop */ }
+  }
+
+  .text-eyebrow {
+    font-size: 0.6875rem; /* 11px */
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .text-body {
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .text-caption {
+    font-size: 0.8125rem; /* 13px */
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
   /* Button Components — active:scale로 누름 피드백 표준 */
   .btn-primary {
     @apply px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors active:scale-[0.98];
