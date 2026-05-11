@@ -108,7 +108,7 @@
         <!-- Unified body: Hero + 본문 + 사이드바를 하나의 grid로 통합 -->
         <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-5 pb-10">
           <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 lg:gap-6 lg:items-start">
-            <article class="flex flex-col gap-3 md:gap-4 w-full min-w-0">
+            <article class="flex flex-col gap-4 md:gap-5 w-full min-w-0">
               <!-- Breadcrumb + Share -->
               <div class="flex items-center justify-between gap-2">
                 <Breadcrumb :items="desktopBreadcrumbItems" />

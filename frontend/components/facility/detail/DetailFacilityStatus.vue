@@ -4,7 +4,7 @@
       <div v-if="hasGridContent" class="grid grid-cols-2 gap-4">
         <!-- Toilet Stalls (if applicable) -->
         <template v-if="facility.category === 'toilet'">
-          <div v-if="details?.maleToilets" class="col-span-1 bg-slate-50 rounded-lg p-3 flex items-center justify-between border border-slate-100">
+          <div v-if="details?.maleToilets" class="col-span-1 py-2 flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-blue-50 text-blue-600 rounded-full">
                 <span class="material-symbols-outlined">man</span>
@@ -13,7 +13,7 @@
             </div>
             <span class="text-base font-bold text-slate-900">{{ details?.maleToilets }}칸</span>
           </div>
-          <div v-if="details?.femaleToilets" class="col-span-1 bg-slate-50 rounded-lg p-3 flex items-center justify-between border border-slate-100">
+          <div v-if="details?.femaleToilets" class="col-span-1 py-2 flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-pink-50 text-pink-600 rounded-full">
                 <span class="material-symbols-outlined">woman</span>
@@ -22,7 +22,7 @@
             </div>
             <span class="text-base font-bold text-slate-900">{{ details?.femaleToilets }}칸</span>
           </div>
-          <div v-if="details?.maleUrinals" class="col-span-1 bg-slate-50 rounded-lg p-3 flex items-center justify-between border border-slate-100">
+          <div v-if="details?.maleUrinals" class="col-span-1 py-2 flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-blue-50 text-blue-600 rounded-full">
                 <span class="material-symbols-outlined">man</span>
@@ -61,7 +61,7 @@
             <div
               v-for="item in toiletAccessibilityDetails"
               :key="item.label"
-              class="bg-slate-50 rounded-lg p-3 flex items-center justify-between border border-slate-100"
+              class="py-2 flex items-center justify-between"
             >
               <span class="text-sm text-gray-600">{{ item.label }}</span>
               <span class="text-sm font-bold text-slate-900">{{ item.value }}</span>
