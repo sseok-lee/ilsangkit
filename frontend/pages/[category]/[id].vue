@@ -980,43 +980,14 @@
                 </div>
               </SectionBlock>
 
-              <!-- "주변 시설" SectionBlock -->
-              <SectionBlock v-if="nearbyLoading || nearbyFiltered.length > 0" :heading="`주변 ${categoryMeta.label}`" subtext="같은 카테고리 인근 시설입니다.">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <template v-if="nearbyLoading">
-                    <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
-                  </template>
-                  <template v-else>
-                    <FacilityCard
-                      v-for="item in nearbyFiltered"
-                      :key="item.id"
-                      :facility="item"
-                      highlight-distance
-                    />
-                  </template>
-                </div>
-              </SectionBlock>
-
-              <!-- Cross-Category Nearby Facilities -->
-              <template v-if="crossLoading">
-                <SectionBlock>
-                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
-                  </div>
-                </SectionBlock>
-              </template>
-              <template v-else>
-                <SectionBlock v-for="group in crossFacilitiesGrouped" :key="group.category" :heading="`주변 ${group.meta.label}`" subtext="관련 카테고리의 인근 시설입니다.">
-                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    <FacilityCard
-                      v-for="item in group.items"
-                      :key="item.id"
-                      :facility="item"
-                      highlight-distance
-                    />
-                  </div>
-                </SectionBlock>
-              </template>
+              <!-- 주변 시설 (same + cross category) -->
+              <DetailNearby
+                :nearby-facilities="nearbyFiltered"
+                :nearby-loading="nearbyLoading"
+                :cross-facilities-grouped="crossFacilitiesGrouped"
+                :cross-loading="crossLoading"
+                :category-meta="categoryMeta"
+              />
 
               <!-- Ad: 주변 시설 이후 1회 -->
               <AdBanner only="desktop" />
@@ -2006,51 +1977,14 @@
           <!-- Ad: 시설현황 이후 (Mobile) -->
           <AdBanner only="mobile" />
 
-          <!-- Nearby Facilities -->
-          <div v-if="nearbyLoading || nearbyFiltered.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">near_me</span>
-              <h2 class="text-slate-900 text-lg font-bold">주변 {{ categoryMeta.label }}</h2>
-            </div>
-            <div class="p-4 flex flex-col gap-3">
-              <template v-if="nearbyLoading">
-                <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
-              </template>
-              <template v-else>
-                <FacilityCard
-                  v-for="item in nearbyFiltered"
-                  :key="item.id"
-                  :facility="item"
-                />
-              </template>
-            </div>
-          </div>
-
-          <!-- Cross-Category Nearby Facilities (Mobile) -->
-          <template v-if="crossLoading">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div class="p-4 flex flex-col gap-3">
-                <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
-              </div>
-            </div>
-          </template>
-          <template v-else>
-            <div v-for="group in crossFacilitiesGrouped" :key="group.category"
-                 class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-                <span class="material-symbols-outlined text-base">{{ group.meta.icon }}</span>
-                <h2 class="text-slate-900 text-lg font-bold">주변 {{ group.meta.label }}</h2>
-              </div>
-              <div class="p-4 flex flex-col gap-3">
-                <FacilityCard
-                  v-for="item in group.items"
-                  :key="item.id"
-                  :facility="item"
-                  highlight-distance
-                />
-              </div>
-            </div>
-          </template>
+          <!-- 주변 시설 (same + cross category) -->
+          <DetailNearby
+            :nearby-facilities="nearbyFiltered"
+            :nearby-loading="nearbyLoading"
+            :cross-facilities-grouped="crossFacilitiesGrouped"
+            :cross-loading="crossLoading"
+            :category-meta="categoryMeta"
+          />
 
           <!-- Ad (Mobile) -->
           <AdBanner only="mobile" />
@@ -2198,6 +2132,7 @@ import { FACILITY_DATA_SOURCE, type DataSourceInfo } from '~/utils/dataSource'
 import { formatKstDate } from '~/utils/formatters'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
+import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
