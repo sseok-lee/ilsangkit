@@ -105,62 +105,54 @@
           </Transition>
         </Teleport>
 
-        <!-- Unified Hero (responsive, single source of H1 for both mobile & desktop) -->
-        <header class="max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-5">
-          <div class="flex items-center justify-between gap-2 mb-3 md:mb-4">
-            <Breadcrumb :items="desktopBreadcrumbItems" />
-            <button
-              class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
-              aria-label="이 시설 공유하기"
-              @click="handleShare"
-            >
-              <span class="material-symbols-outlined text-[16px]">share</span>
-              <span class="hidden sm:inline">공유</span>
-            </button>
-          </div>
-          <PageHero
-            :eyebrow="categoryMeta.label"
-            :title="displayName"
-            :description="facilityIntro || undefined"
-            :stats="desktopHeroStats"
-          />
-        </header>
+        <!-- Unified body: Hero + 본문 + 사이드바를 하나의 grid로 통합 -->
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-5 pb-10">
+          <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 lg:gap-6 lg:items-start">
+            <article class="flex flex-col gap-3 md:gap-4 w-full min-w-0">
+              <!-- Breadcrumb + Share -->
+              <div class="flex items-center justify-between gap-2">
+                <Breadcrumb :items="desktopBreadcrumbItems" />
+                <button
+                  class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
+                  aria-label="이 시설 공유하기"
+                  @click="handleShare"
+                >
+                  <span class="material-symbols-outlined text-[16px]">share</span>
+                  <span class="hidden sm:inline">공유</span>
+                </button>
+              </div>
 
-        <!-- Ad: HERO 아래 (in-article-top) -->
-        <div class="max-w-[1200px] mx-auto px-4 md:px-6 mt-3">
-          <AdBanner />
-        </div>
+              <!-- Hero (H1) -->
+              <PageHero
+                :eyebrow="categoryMeta.label"
+                :title="displayName"
+                :description="facilityIntro || undefined"
+                :stats="desktopHeroStats"
+              />
 
-        <!-- Unified BasicInfo (single render across viewports) -->
-        <div class="max-w-[1200px] mx-auto px-4 md:px-6 mt-3 md:mt-4">
-          <DetailBasicInfo
-            :facility="facility"
-            :hospital-operating-hours="hospitalOperatingHours"
-            :hospital-weekly-hours-count="hospitalWeeklyHours.length"
-            :aed-operating-hours="aedOperatingHours"
-            :aed-weekly-hours-count="aedWeeklyHours.length"
-            :pharmacy-operating-hours="pharmacyOperatingHours"
-          />
-        </div>
-
-        <!-- Unified FacilityStatus (single render across viewports) -->
-        <div class="max-w-[1200px] mx-auto px-4 md:px-6 mt-3 md:mt-4">
-          <DetailFacilityStatus :facility="facility" />
-        </div>
-
-        <!-- Unified Roadview (single render across viewports) -->
-        <div class="max-w-[1200px] mx-auto px-4 md:px-6 mt-3 md:mt-4">
-          <SectionBlock heading="로드뷰" subtext="시설 주변의 거리 뷰를 확인하세요.">
-            <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
-          </SectionBlock>
-        </div>
-
-        <!-- Unified body (responsive, single tree, 2-column grid on desktop) -->
-        <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-4 pb-10">
-          <div class="lg:grid lg:grid-cols-[1fr_480px] lg:gap-4 lg:items-start">
-            <article class="flex flex-col gap-3 md:gap-4 w-full">
-              <!-- Ad: DETAILS↔MAP/Nearby 사이 -->
+              <!-- Ad: HERO 아래 -->
               <AdBanner />
+
+              <!-- BasicInfo -->
+              <DetailBasicInfo
+                :facility="facility"
+                :hospital-operating-hours="hospitalOperatingHours"
+                :hospital-weekly-hours-count="hospitalWeeklyHours.length"
+                :aed-operating-hours="aedOperatingHours"
+                :aed-weekly-hours-count="aedWeeklyHours.length"
+                :pharmacy-operating-hours="pharmacyOperatingHours"
+              />
+
+              <!-- FacilityStatus -->
+              <DetailFacilityStatus :facility="facility" />
+
+              <!-- Ad: DETAILS ↔ MAP 사이 -->
+              <AdBanner />
+
+              <!-- Roadview -->
+              <SectionBlock heading="로드뷰" subtext="시설 주변의 거리 뷰를 확인하세요.">
+                <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+              </SectionBlock>
 
               <!-- 주변 시설 (same + cross category) -->
               <DetailNearby
