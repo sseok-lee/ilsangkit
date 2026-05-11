@@ -70,6 +70,8 @@ interface MetaOptions {
   description: string
   path?: string
   image?: string
+  imageWidth?: number
+  imageHeight?: number
   type?: 'website' | 'article'
   category?: string
   /** false → canonical 태그 미삽입 (noindex 페이지용). string → 해당 URL을 canonical로 사용 */
@@ -255,8 +257,8 @@ export function useFacilityMeta() {
       ogLocale: 'ko_KR',
 
       // OG Image dimensions
-      ogImageWidth: 1200,
-      ogImageHeight: 630,
+      ogImageWidth: options.imageWidth ?? 1200,
+      ogImageHeight: options.imageHeight ?? 630,
 
       // Twitter Card
       twitterCard: 'summary_large_image',
@@ -365,11 +367,22 @@ export function useFacilityMeta() {
   function setFacilityDetailMeta(facility: FacilityDetail) {
     const title = buildDetailTitle(facility)
     const description = buildFacilityDescription(facility)
+    const name = getFacilityDisplayName(facility)
+
+    // 좌표가 있으면 네이버 Static Map 썸네일(/og-map) 사용, 없으면 setMeta 기본값(/og SVG 카드)
+    const mapImage = (facility.lat && facility.lng)
+      ? `${SITE_URL}/og-map?lat=${facility.lat}&lng=${facility.lng}&label=${encodeURIComponent(name)}&category=${facility.category}&title=${encodeURIComponent(name)}`
+      : undefined
 
     setMeta({
       title,
       description,
       path: `/${facility.category}/${facility.id}`,
+      category: facility.category,
+      image: mapImage,
+      // /og-map 은 Naver Static Map 한계로 1024x536 으로 생성됨
+      imageWidth: mapImage ? 1024 : undefined,
+      imageHeight: mapImage ? 536 : undefined,
     })
   }
 
