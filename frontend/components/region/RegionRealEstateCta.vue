@@ -1,5 +1,5 @@
 <template>
-  <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-5 md:p-6 text-center">
+  <section class="bg-primary/5 rounded-2xl p-5 md:p-6 text-center">
     <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
       {{ areaName }} 부동산 실거래가 상세 보기
     </h3>
