@@ -167,6 +167,9 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // server-only (not exposed to client)
+    ncpMapClientId: process.env.NCP_MAP_CLIENT_ID || '',
+    ncpMapClientSecret: process.env.NCP_MAP_CLIENT_SECRET || '',
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000',
       kakaoMapKey: process.env.NUXT_PUBLIC_KAKAO_MAP_KEY || '',

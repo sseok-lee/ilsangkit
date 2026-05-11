@@ -37,8 +37,9 @@ export default defineEventHandler(async (event) => {
     && lat >= KOREA_LAT_MIN && lat <= KOREA_LAT_MAX
     && lng >= KOREA_LNG_MIN && lng <= KOREA_LNG_MAX
 
-  const clientId = process.env.NCP_MAP_CLIENT_ID
-  const clientSecret = process.env.NCP_MAP_CLIENT_SECRET
+  const config = useRuntimeConfig(event)
+  const clientId = config.ncpMapClientId
+  const clientSecret = config.ncpMapClientSecret
 
   // 좌표 무효하거나 NCP 인증 정보 없으면 기존 SVG 카드로 fallback
   if (!validCoords || !clientId || !clientSecret) {
