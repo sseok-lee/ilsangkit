@@ -2,13 +2,13 @@
   <section class="p-4 md:p-5 bg-white border border-line rounded-xl shadow-card">
     <!-- Main (eyebrow + title + desc + search slot) -->
     <div>
-      <span v-if="eyebrow" class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
+      <span v-if="eyebrow" class="inline-flex mb-3 px-2 py-1 bg-primary/10 text-primary rounded text-eyebrow">
         {{ eyebrow }}
       </span>
-      <h1 class="text-2xl md:text-[32px] leading-tight font-bold text-slate-900 mb-2">
+      <h1 class="text-display-1 text-slate-900 mb-2">
         <slot name="title">{{ title }}</slot>
       </h1>
-      <p v-if="description || $slots.description" class="text-slate-500 text-sm md:text-base">
+      <p v-if="description || $slots.description" class="text-body text-slate-500">
         <slot name="description">{{ description }}</slot>
       </p>
       <slot name="search" />
