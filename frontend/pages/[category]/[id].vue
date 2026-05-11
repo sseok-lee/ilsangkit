@@ -992,69 +992,15 @@
               <!-- Ad: 주변 시설 이후 1회 -->
               <AdBanner only="desktop" />
 
-              <!-- 관련 가이드 (Desktop) -->
-              <ClientOnly>
-                <RelatedGuides :category="category" />
-              </ClientOnly>
-
-              <!-- 같은 지역 시설 -->
-              <SectionBlock v-if="regionLink" heading="같은 지역 시설" subtext="이 지역의 다른 시설로 바로 이동합니다.">
-                <nav class="flex flex-col gap-3">
-                  <NuxtLink
-                    :to="regionLink.href"
-                    class="flex items-center gap-2 text-primary hover:text-blue-600 text-sm font-medium transition-colors"
-                  >
-                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                    {{ regionLink.label }}
-                  </NuxtLink>
-                  <NuxtLink
-                    :to="regionLink.cityHref"
-                    class="flex items-center gap-2 text-slate-500 hover:text-primary text-sm font-medium transition-colors"
-                  >
-                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                    {{ regionLink.cityLabel }}
-                  </NuxtLink>
-                </nav>
-              </SectionBlock>
-
-              <!-- 이 지역 다른 시설 (Desktop) -->
-              <SectionBlock v-if="relatedCategories.length > 0" heading="이 지역 다른 시설" subtext="관련 카테고리로 바로 이동합니다.">
-                <nav data-testid="related-categories" class="flex flex-wrap gap-2">
-                  <NuxtLink
-                    v-for="cat in relatedCategories"
-                    :key="cat"
-                    :to="regionLink && regionLink.href.endsWith(category) ? regionLink.href.replace(category, cat) : `/${cat}`"
-                    class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
-                  >
-                    {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
-                  </NuxtLink>
-                </nav>
-              </SectionBlock>
-
-              <!-- 이용 팁 -->
-              <SectionBlock v-if="categoryTips.length > 0" :heading="`${categoryMeta.label} 이용 팁`" subtext="이 시설을 이용할 때 참고할 만한 팁입니다.">
-                <ul class="flex flex-col gap-2.5">
-                  <li v-for="(tip, i) in categoryTips" :key="i" class="flex items-start gap-2 text-sm text-gray-600 leading-relaxed">
-                    <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">check</span>
-                    {{ tip }}
-                  </li>
-                </ul>
-              </SectionBlock>
-
-              <!-- FAQ -->
-              <SectionBlock v-if="categoryFaqItems.length > 0" heading="자주 묻는 질문">
-                <div class="flex flex-col gap-4">
-                  <div v-for="(faq, i) in categoryFaqItems" :key="i">
-                    <h3 class="text-sm font-bold text-slate-900 mb-1">Q. {{ faq.question }}</h3>
-                    <p class="text-sm text-gray-600 leading-relaxed">{{ faq.answer }}</p>
-                  </div>
-                </div>
-              </SectionBlock>
-
-              <!-- Data Info Card -->
-              <DataSourceCard
-                v-if="dataSource"
-                :source="dataSource"
+              <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
+              <DetailContextLinks
+                :category="category"
+                :region-link="regionLink"
+                :related-categories="relatedCategories"
+                :category-meta="categoryMeta"
+                :category-tips="categoryTips"
+                :category-faq-items="categoryFaqItems"
+                :data-source="dataSource"
                 :data-date="dataDate"
                 :last-sync-date="lastSyncDate"
               />
@@ -1989,85 +1935,15 @@
           <!-- Ad (Mobile) -->
           <AdBanner only="mobile" />
 
-          <!-- 관련 가이드 (Mobile) -->
-          <ClientOnly>
-            <RelatedGuides :category="category" />
-          </ClientOnly>
-
-          <!-- 같은 지역 시설 링크 -->
-          <nav v-if="regionLink" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">explore</span>
-              <h2 class="text-slate-900 text-lg font-bold">같은 지역 시설</h2>
-            </div>
-            <div class="p-5 flex flex-col gap-3">
-              <NuxtLink
-                :to="regionLink.href"
-                class="flex items-center gap-2 text-primary hover:text-blue-600 text-sm font-medium transition-colors"
-              >
-                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                {{ regionLink.label }}
-              </NuxtLink>
-              <NuxtLink
-                :to="regionLink.cityHref"
-                class="flex items-center gap-2 text-slate-500 hover:text-primary text-sm font-medium transition-colors"
-              >
-                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                {{ regionLink.cityLabel }}
-              </NuxtLink>
-            </div>
-          </nav>
-
-          <!-- 이 지역 다른 시설 (Mobile) -->
-          <nav v-if="relatedCategories.length > 0" data-testid="related-categories-mobile" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">grid_view</span>
-              <h2 class="text-slate-900 text-lg font-bold">이 지역 다른 시설</h2>
-            </div>
-            <div class="p-5 flex flex-wrap gap-2">
-              <NuxtLink
-                v-for="cat in relatedCategories"
-                :key="cat"
-                :to="regionLink && regionLink.href.endsWith(category) ? regionLink.href.replace(category, cat) : `/${cat}`"
-                class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
-              >
-                {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
-              </NuxtLink>
-            </div>
-          </nav>
-
-          <!-- 이용 팁 (Mobile) -->
-          <div v-if="categoryTips.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-slate-500 text-[20px]">lightbulb</span>
-              <h2 class="text-slate-900 text-lg font-bold">{{ categoryMeta.label }} 이용 팁</h2>
-            </div>
-            <ul class="p-5 flex flex-col gap-2.5">
-              <li v-for="(tip, i) in categoryTips" :key="i" class="flex items-start gap-2 text-sm text-gray-600 leading-relaxed">
-                <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">check</span>
-                {{ tip }}
-              </li>
-            </ul>
-          </div>
-
-          <!-- FAQ (Mobile) -->
-          <div v-if="categoryFaqItems.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-slate-500 text-[20px]">help</span>
-              <h2 class="text-slate-900 text-lg font-bold">자주 묻는 질문</h2>
-            </div>
-            <div class="p-5 flex flex-col gap-4">
-              <div v-for="(faq, i) in categoryFaqItems" :key="i">
-                <h3 class="text-sm font-bold text-slate-900 mb-1">Q. {{ faq.question }}</h3>
-                <p class="text-sm text-gray-600 leading-relaxed">{{ faq.answer }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Data Info Card -->
-          <DataSourceCard
-            v-if="dataSource"
-            :source="dataSource"
+          <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
+          <DetailContextLinks
+            :category="category"
+            :region-link="regionLink"
+            :related-categories="relatedCategories"
+            :category-meta="categoryMeta"
+            :category-tips="categoryTips"
+            :category-faq-items="categoryFaqItems"
+            :data-source="dataSource"
             :data-date="dataDate"
             :last-sync-date="lastSyncDate"
           />
@@ -2133,6 +2009,7 @@ import { formatKstDate } from '~/utils/formatters'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
+import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
