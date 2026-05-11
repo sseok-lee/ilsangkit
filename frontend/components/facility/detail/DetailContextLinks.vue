@@ -8,6 +8,7 @@
     <!-- 같은 지역 시설 -->
     <SectionBlock
       v-if="regionLink"
+      size="compact"
       heading="같은 지역 시설"
       subtext="이 지역의 다른 시설로 바로 이동합니다."
     >
@@ -32,6 +33,7 @@
     <!-- 이 지역 다른 시설 -->
     <SectionBlock
       v-if="relatedCategories.length > 0"
+      size="compact"
       heading="이 지역 다른 시설"
       subtext="관련 카테고리로 바로 이동합니다."
     >
@@ -50,6 +52,7 @@
     <!-- 이용 팁 -->
     <SectionBlock
       v-if="categoryTips.length > 0"
+      size="compact"
       :heading="`${categoryMeta.label} 이용 팁`"
       subtext="이 시설을 이용할 때 참고할 만한 팁입니다."
     >
@@ -64,6 +67,7 @@
     <!-- FAQ -->
     <SectionBlock
       v-if="categoryFaqItems.length > 0"
+      size="compact"
       heading="자주 묻는 질문"
     >
       <div class="flex flex-col gap-4">
