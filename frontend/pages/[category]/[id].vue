@@ -105,34 +105,32 @@
           </Transition>
         </Teleport>
 
-        <!-- Desktop: Two Column Layout -->
-        <div class="hidden md:block max-w-[1200px] mx-auto px-6 pt-5 pb-10">
-          <!-- Breadcrumb -->
-          <Breadcrumb :items="desktopBreadcrumbItems" class="mb-4" />
+        <!-- Unified Hero (responsive, single source of H1 for both mobile & desktop) -->
+        <header class="max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-5">
+          <div class="flex items-center justify-between gap-2 mb-3 md:mb-4">
+            <Breadcrumb :items="desktopBreadcrumbItems" />
+            <button
+              class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
+              aria-label="이 시설 공유하기"
+              @click="handleShare"
+            >
+              <span class="material-symbols-outlined text-[16px]">share</span>
+              <span class="hidden sm:inline">공유</span>
+            </button>
+          </div>
+          <PageHero
+            :eyebrow="categoryMeta.label"
+            :title="displayName"
+            :description="facilityIntro || undefined"
+            :stats="desktopHeroStats"
+          />
+        </header>
 
+        <!-- Desktop: Two Column Layout (body) -->
+        <div class="hidden md:block max-w-[1200px] mx-auto px-6 pt-4 pb-10">
           <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 items-start">
             <!-- Left Column: Details -->
             <div class="flex flex-col gap-3 w-full">
-              <!-- 공유 버튼 row -->
-              <div class="flex justify-end">
-                <button
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
-                  aria-label="이 시설 공유하기"
-                  @click="handleShare"
-                >
-                  <span class="material-symbols-outlined text-[16px]">share</span>
-                  공유
-                </button>
-              </div>
-
-              <!-- Page Hero -->
-              <PageHero
-                :eyebrow="categoryMeta.label"
-                :title="displayName"
-                :description="facilityIntro || undefined"
-                :stats="desktopHeroStats"
-              />
-
               <!-- 기본정보 SectionBlock -->
               <SectionBlock heading="기본정보" subtext="주소·운영시간·연락처 등 공통 정보를 먼저 확인합니다.">
                 <div class="flex flex-col gap-3">
@@ -1498,28 +1496,7 @@
         </div>
 
         <!-- Mobile: Info Section (Desktop-style cards) -->
-        <div class="md:hidden px-4 flex flex-col gap-4 pt-4">
-          <!-- Mobile Breadcrumb -->
-          <Breadcrumb :items="breadcrumbItems" />
-
-          <!-- Page Heading & Badges -->
-          <div class="flex flex-col gap-3">
-            <div class="flex items-start justify-between">
-              <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10">
-                <span class="material-symbols-outlined text-[14px]">place</span> {{ categoryMeta.label }}
-              </span>
-              <button class="text-slate-500 hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 시설 공유하기" @click="handleShare">
-                <span class="material-symbols-outlined">share</span>
-              </button>
-            </div>
-            <h2 class="text-slate-900 text-2xl font-bold leading-tight tracking-tight">
-              {{ displayName }}
-            </h2>
-            <p v-if="facilityIntro" class="text-sm text-gray-600 leading-relaxed">
-              {{ facilityIntro }}
-            </p>
-          </div>
-
+        <div class="md:hidden px-4 flex flex-col gap-4 pt-3">
           <!-- Basic Info Card -->
           <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
