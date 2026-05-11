@@ -511,9 +511,14 @@ useHead(() => {
     buildingName: buildingName.value,
   })}`
 
+  const hasCoords = !!(buildingInfo.value?.lat && buildingInfo.value?.lng)
   const ogImage = buildingInfo.value
-    ? `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
+    ? (hasCoords
+        ? `${SITE_URL}/og-map?lat=${buildingInfo.value.lat}&lng=${buildingInfo.value.lng}&label=${encodeURIComponent(buildingName.value)}&category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
+        : `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`)
     : DEFAULT_OG_IMAGE
+  const ogImageWidth = hasCoords ? '1024' : '1200'
+  const ogImageHeight = hasCoords ? '536' : '630'
 
   const meta: Array<Record<string, string>> = [
     { name: 'description', content: description },
@@ -528,8 +533,8 @@ useHead(() => {
     { name: 'twitter:image', content: ogImage },
     { property: 'og:site_name', content: SITE_NAME },
     { property: 'og:locale', content: 'ko_KR' },
-    { property: 'og:image:width', content: '1200' },
-    { property: 'og:image:height', content: '630' },
+    { property: 'og:image:width', content: ogImageWidth },
+    { property: 'og:image:height', content: ogImageHeight },
   ]
   // noindex/canonical 정책: noindex 일 때는 robots 만 보내고 canonical 은 생략한다.
   if (noindex.value) {

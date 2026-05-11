@@ -839,19 +839,27 @@ if (subscription.value) {
 }
 
 // SEO
+const subscriptionOgImage = computed(() => {
+  if (!subscription.value || !hasCoords.value) return DEFAULT_OG_IMAGE
+  const name = subscription.value.houseName
+  return `${SITE_URL}/og-map?lat=${mapCenter.value.lat}&lng=${mapCenter.value.lng}&label=${encodeURIComponent(name)}&category=subscription&title=${encodeURIComponent(name)}`
+})
+
 useSeoMeta({
   title: () => subscriptionSeoTitle.value,
   description: () => subscriptionSeoDescription.value,
   ogTitle: () => subscriptionSeoTitle.value,
   ogDescription: () => subscriptionSeoDescription.value,
-  ogImage: DEFAULT_OG_IMAGE,
+  ogImage: () => subscriptionOgImage.value,
+  ogImageWidth: () => (hasCoords.value ? 1024 : 1200),
+  ogImageHeight: () => (hasCoords.value ? 536 : 630),
   ogUrl: `${SITE_URL}/subscription/${id}`,
   ogSiteName: SITE_NAME,
   ogLocale: 'ko_KR',
   twitterCard: 'summary_large_image',
   twitterTitle: () => subscriptionSeoTitle.value,
   twitterDescription: () => subscriptionSeoDescription.value,
-  twitterImage: DEFAULT_OG_IMAGE,
+  twitterImage: () => subscriptionOgImage.value,
 })
 
 useHead({

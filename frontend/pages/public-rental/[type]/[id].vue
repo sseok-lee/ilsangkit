@@ -131,13 +131,22 @@ const seoDescription = computed(() => {
   return `${region} ${displayName.value} ${r.rentalType}${houseTypePart}${areaPart} 매물. 보증금 ${depositText}, 월 임대료 ${rentText}. 청약통장 없이 자격만 맞으면 신청할 수 있는 LH·SH 공공임대입니다.`
 })
 
+const ogImageUrl = computed(() => {
+  const r = rental.value
+  if (!r?.lat || !r?.lng) return DEFAULT_OG_IMAGE
+  return `${SITE_URL}/og-map?lat=${r.lat}&lng=${r.lng}&label=${encodeURIComponent(displayName.value)}&category=public-rental&title=${encodeURIComponent(displayName.value)}`
+})
+const hasMapImage = computed(() => ogImageUrl.value !== DEFAULT_OG_IMAGE)
+
 useHead(() => ({
   title: seoTitle.value,
   meta: [
     { name: 'description', content: seoDescription.value },
     { property: 'og:title', content: seoTitle.value },
     { property: 'og:description', content: seoDescription.value },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
+    { property: 'og:image', content: ogImageUrl.value },
+    { property: 'og:image:width', content: hasMapImage.value ? '1024' : '1200' },
+    { property: 'og:image:height', content: hasMapImage.value ? '536' : '630' },
     { property: 'og:url', content: canonicalUrl.value },
     { property: 'og:type', content: 'website' },
     { property: 'og:site_name', content: SITE_NAME },
@@ -145,7 +154,7 @@ useHead(() => ({
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: seoTitle.value },
     { name: 'twitter:description', content: seoDescription.value },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
+    { name: 'twitter:image', content: ogImageUrl.value },
   ],
   link: [{ rel: 'canonical', href: canonicalUrl.value }],
 }))
