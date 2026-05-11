@@ -184,22 +184,44 @@ async function pollStatus() {
   }
 }
 
-onMounted(() => {
-  if (typeof window === 'undefined') return
-  if (!props.details.statId) return
+function startPolling() {
+  if (pollTimer || !props.details.statId) return
   pollStatus()
   pollTimer = setInterval(pollStatus, POLL_INTERVAL)
-  tickTimer = setInterval(() => { now.value = new Date() }, TICK_INTERVAL)
-})
+}
 
-onUnmounted(() => {
+function stopPolling() {
   if (pollTimer) {
     clearInterval(pollTimer)
     pollTimer = null
   }
+}
+
+function handleVisibility() {
+  if (typeof document === 'undefined') return
+  if (document.visibilityState === 'visible') {
+    startPolling()
+  } else {
+    stopPolling()
+  }
+}
+
+onMounted(() => {
+  if (typeof window === 'undefined') return
+  if (!props.details.statId) return
+  startPolling()
+  tickTimer = setInterval(() => { now.value = new Date() }, TICK_INTERVAL)
+  document.addEventListener('visibilitychange', handleVisibility)
+})
+
+onUnmounted(() => {
+  stopPolling()
   if (tickTimer) {
     clearInterval(tickTimer)
     tickTimer = null
+  }
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleVisibility)
   }
 })
 
