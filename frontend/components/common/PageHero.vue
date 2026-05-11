@@ -23,7 +23,7 @@
         <div
           v-for="stat in stats"
           :key="stat.label"
-          class="pl-3 border-l-2 border-slate-200 min-w-0 sm:flex-initial sm:max-w-xs"
+          class="min-w-0 sm:flex-initial sm:max-w-xs"
         >
           <span class="block text-slate-400 text-[11px] font-semibold uppercase tracking-wide">{{ stat.label }}</span>
           <strong
