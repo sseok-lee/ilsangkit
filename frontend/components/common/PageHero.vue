@@ -25,9 +25,9 @@
           :key="stat.label"
           class="min-w-0 sm:flex-initial sm:max-w-xs"
         >
-          <span class="block text-slate-400 text-[11px] font-semibold uppercase tracking-wide">{{ stat.label }}</span>
+          <span class="block text-caption text-slate-400">{{ stat.label }}</span>
           <strong
-            class="block mt-1 text-base md:text-lg font-bold break-keep"
+            class="block mt-1 text-display-3 break-keep"
             :class="stat.color ?? 'text-slate-900'"
           >
             {{ stat.value }}
