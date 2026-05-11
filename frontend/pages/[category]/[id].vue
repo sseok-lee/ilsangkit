@@ -126,6 +126,11 @@
           />
         </header>
 
+        <!-- Ad: HERO 아래 (in-article-top) -->
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6 mt-3">
+          <AdBanner />
+        </div>
+
         <!-- Unified BasicInfo (single render across viewports) -->
         <div class="max-w-[1200px] mx-auto px-4 md:px-6 mt-3 md:mt-4">
           <DetailBasicInfo
@@ -233,6 +238,11 @@
 
               <!-- 쿠팡 배너 (Desktop Sticky) -->
               <CoupangBanner class="mt-3" />
+
+              <!-- Ad: 사이드바 (sidebar-sticky, desktop only) -->
+              <div class="mt-3">
+                <AdBanner />
+              </div>
             </aside>
           </div>
         </div>
