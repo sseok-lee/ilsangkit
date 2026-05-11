@@ -4,7 +4,7 @@
     :aria-label="`${facility.name} 상세보기`"
     :aria-current="isActive ? 'location' : undefined"
     :class="[
-      'group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer',
+      'group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-[box-shadow,border-color] duration-200 ease-out border cursor-pointer',
       isActive
         ? 'border-primary/20'
         : 'border-transparent hover:border-primary/20',

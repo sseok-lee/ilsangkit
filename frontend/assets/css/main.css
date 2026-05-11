@@ -21,13 +21,13 @@
 }
 
 @layer components {
-  /* Button Components */
+  /* Button Components — active:scale로 누름 피드백 표준 */
   .btn-primary {
-    @apply px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors;
+    @apply px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors active:scale-[0.98];
   }
 
   .btn-secondary {
-    @apply px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors;
+    @apply px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors active:scale-[0.98];
   }
 
   /* Input Components */
@@ -38,6 +38,32 @@
   /* Card Components */
   .card-base {
     @apply p-4 bg-white border border-slate-200 rounded-lg hover:shadow-md transition-shadow;
+  }
+
+  /* Interactive Card — hover lift + 표준 timing. transition은 box-shadow·transform만
+     (layout 속성 X) — CSS animation 성능 + 부드러운 느낌. */
+  .interactive-card {
+    transition-property: box-shadow, transform;
+    transition-duration: 240ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1); /* ease-out-quint */
+  }
+  .interactive-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+}
+
+@layer base {
+  /* prefers-reduced-motion: 모션을 거의 끄기 (a11y) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 

@@ -2,7 +2,7 @@
   <HardLink
     v-if="isRenderable"
     :to="linkUrl"
-    class="group bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 border border-slate-200 hover:border-primary/30 cursor-pointer block"
+    class="group bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 ease-out border border-slate-200 hover:border-primary/30 cursor-pointer block"
   >
     <!-- 상단: 아이콘 + 건물명/주소 -->
     <div class="flex items-start gap-3">
