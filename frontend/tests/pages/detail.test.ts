@@ -70,10 +70,6 @@ vi.mock('~/composables/useKakaoMap', () => ({
 const globalStubs = {
   ClientOnly: { template: '<div><slot /></div>' },
   FacilityMap: { template: '<div data-testid="facility-map">Map</div>' },
-  FacilityDetail: {
-    template: '<div>{{ facility?.name }} {{ facility?.roadAddress }}</div>',
-    props: ['facility'],
-  },
   FacilityFeatureCard: { template: '<div>FeatureCard</div>' },
   Breadcrumb: { template: '<nav>Breadcrumb</nav>' },
   // PageHero는 Nuxt auto-import 컴포넌트라 테스트 env에 별도 stub 필요.
