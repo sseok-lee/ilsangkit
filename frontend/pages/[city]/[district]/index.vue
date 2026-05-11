@@ -23,69 +23,20 @@
       <!-- 콘텐츠 -->
       <div v-else-if="areaData">
         <!-- ① 부동산 시세 현황 -->
-        <section v-if="areaData.realEstate" id="real-estate" class="mb-6">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
-            <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
-            부동산 시세 현황
-          </h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <NuxtLink
-              v-for="item in realEstateCards"
-              :key="item.type"
-              :to="`/real-estate/${item.type}`"
-              class="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div class="flex items-center gap-2 mb-4">
-                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <img :src="`/icons/category/${item.type}.webp?v2`" :alt="item.label" class="w-7 h-7" width="28" height="28" />
-                </div>
-                <h3 class="font-bold text-slate-900">{{ item.label }}</h3>
-              </div>
-              <div class="flex items-center justify-between py-2 border-b border-slate-100">
-                <span class="text-sm text-slate-500">매매 평균</span>
-                <span class="text-sm font-semibold text-slate-800">{{ item.saleAvg }}</span>
-              </div>
-              <div class="flex items-center justify-between py-2 border-b border-slate-100">
-                <span class="text-sm text-slate-500">매매 거래</span>
-                <span class="text-sm text-slate-600">{{ item.saleCount }}건</span>
-              </div>
-              <div class="flex items-center justify-between py-2 border-b border-slate-100">
-                <span class="text-sm text-slate-500">전월세 평균 보증금</span>
-                <span class="text-sm font-semibold text-slate-800">{{ item.rentAvg }}</span>
-              </div>
-              <div class="flex items-center justify-between py-2">
-                <span class="text-sm text-slate-500">전월세 거래</span>
-                <span class="text-sm text-slate-600">{{ item.rentCount }}건</span>
-              </div>
-            </NuxtLink>
-          </div>
-        </section>
+        <RegionRealEstatePrices
+          v-if="areaData.realEstate"
+          :cards="realEstateCards"
+        />
 
         <!-- ② 생활시설 현황 -->
-        <section v-if="areaData.facilities" id="facilities" class="mb-6">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
-            <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
-            생활시설 현황
-          </h2>
-          <p class="text-sm text-slate-500 mb-3">총 {{ areaData.facilities.total.toLocaleString() }}개 시설</p>
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <NuxtLink
-              v-for="(count, cat) in sortedFacilityCategories"
-              :key="cat"
-              :to="`/${city}/${district}/${cat}`"
-              :class="[
-                'group flex flex-col items-center p-4 rounded-2xl border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
-                areaData.facilities.topCategories?.includes(String(cat))
-                  ? 'border-primary/30 bg-primary/5'
-                  : 'border-slate-200 bg-white hover:bg-slate-50',
-              ]"
-            >
-              <img :src="`/icons/category/${cat}.webp?v2`" :alt="CATEGORY_META[cat as FacilityCategory]?.label" class="w-8 h-8 mb-2" width="32" height="32" loading="lazy" />
-              <span class="text-xs text-slate-600 mb-1">{{ CATEGORY_META[cat as FacilityCategory]?.label }}</span>
-              <span class="text-sm font-bold text-slate-800">{{ count }}개</span>
-            </NuxtLink>
-          </div>
-        </section>
+        <RegionFacilityCategoryGrid
+          v-if="areaData.facilities"
+          :city="city"
+          :district="district"
+          :total="areaData.facilities.total"
+          :categories="sortedFacilityCategories"
+          :top-categories="areaData.facilities.topCategories ?? []"
+        />
 
         <!-- Ad: Facilities 후 -->
         <div class="mb-6">
@@ -93,32 +44,7 @@
         </div>
 
         <!-- ③ 교차 CTA -->
-        <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-5 md:p-6 text-center">
-          <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
-            {{ districtName }} 부동산 실거래가 상세 보기
-          </h3>
-          <p class="text-sm text-slate-600 mb-4">아파트, 빌라, 오피스텔 실거래가를 확인해보세요</p>
-          <div class="flex justify-center gap-3">
-            <NuxtLink
-              to="/real-estate/apt-sale"
-              class="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors"
-            >
-              아파트
-            </NuxtLink>
-            <NuxtLink
-              to="/real-estate/villa-sale"
-              class="px-4 py-2 bg-white text-primary text-sm font-semibold rounded-xl border border-primary hover:bg-primary/5 transition-colors"
-            >
-              빌라
-            </NuxtLink>
-            <NuxtLink
-              to="/real-estate/offitel-sale"
-              class="px-4 py-2 bg-white text-primary text-sm font-semibold rounded-xl border border-primary hover:bg-primary/5 transition-colors"
-            >
-              오피스텔
-            </NuxtLink>
-          </div>
-        </section>
+        <RegionRealEstateCta :area-name="districtName" />
       </div>
 
       <!-- 에러 -->
@@ -131,6 +57,9 @@
 
 <script setup lang="ts">
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
+import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
+import RegionFacilityCategoryGrid from '~/components/region/RegionFacilityCategoryGrid.vue'
+import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
