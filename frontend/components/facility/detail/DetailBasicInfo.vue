@@ -469,6 +469,37 @@
         </template>
       </template>
 
+      <!-- Market -->
+      <template v-if="facility.category === 'market'">
+        <template v-if="(details as any)?.marketType || (details as any)?.openingCycle">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-if="(details as any)?.marketType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">시장유형</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).marketType }}</span>
+            </div>
+            <div v-if="(details as any)?.openingCycle" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">개설주기</span>
+              <span class="text-sm font-bold text-slate-900">{{ marketOpeningCycleLabel }}</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.foundedYear != null">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">개설연도</span>
+            <span class="text-sm font-medium text-slate-900">{{ (details as any).foundedYear }}년</span>
+          </div>
+        </template>
+        <template v-if="(details as any)?.homepageUrl">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">홈페이지</span>
+            <a :href="(details as any).homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).homepageUrl }}</a>
+          </div>
+        </template>
+      </template>
+
       <!-- Pharmacy -->
       <template v-if="facility.category === 'pharmacy'">
         <template v-if="details?.dutyTel3">
@@ -573,6 +604,16 @@ const schoolHomepageUrl = computed(() => {
   if (!url) return ''
   if (url.startsWith('http://') || url.startsWith('https://')) return url
   return `http://${url}`
+})
+
+const marketOpeningCycleLabel = computed(() => {
+  const cycle = (details.value as any)?.openingCycle || ''
+  if (cycle === '매일') return '매일'
+  if (/\d/.test(cycle)) {
+    const days = cycle.split('+').map((s: string) => s.trim()).filter(Boolean)
+    return `매월 ${days.join(', ')}`
+  }
+  return cycle
 })
 
 function formatLibraryHours(start?: string | null, end?: string | null): string {

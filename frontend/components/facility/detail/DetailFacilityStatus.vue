@@ -329,24 +329,9 @@
       <!-- Market Details -->
       <template v-if="facility.category === 'market'">
         <div class="flex flex-col gap-3">
-          <div class="grid grid-cols-2 gap-2">
-            <div v-if="details?.marketType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">시장유형</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.marketType }}</span>
-            </div>
-            <div v-if="details?.openingCycle" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">개설주기</span>
-              <span class="text-sm font-bold text-slate-900">{{ marketOpeningCycleLabel }}</span>
-            </div>
-          </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">점포 수</span>
             <span v-if="details?.storeCount != null" class="text-sm font-medium text-slate-900">{{ details.storeCount.toLocaleString() }}개</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">개설연도</span>
-            <span v-if="details?.foundedYear != null" class="text-sm font-medium text-slate-900">{{ details.foundedYear }}년</span>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
         </div>
@@ -371,12 +356,6 @@
               <span class="text-green-600">✓</span>
               <span>{{ details.giftCertificates }}</span>
             </div>
-          </div>
-        </div>
-        <div v-if="details?.homepageUrl" class="mt-5 border-t border-slate-100 pt-5">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">홈페이지</span>
-            <a :href="details.homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm text-primary font-medium underline">{{ details.homepageUrl }}</a>
           </div>
         </div>
       </template>
