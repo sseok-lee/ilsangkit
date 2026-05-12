@@ -175,7 +175,7 @@
           :aria-label="q.label"
           class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary hover:bg-primary/5 transition-all"
         >
-          <img :src="`/icons/category/${q.id}.webp?v2`" :alt="q.label" class="w-8 h-8 mb-1.5" width="32" height="32" loading="lazy" />
+          <CategoryIcon :category-id="(q.id as CategoryId)" size="md" class="mb-1.5" />
           <span class="text-[13px] font-bold text-slate-700">{{ q.label }}</span>
         </HardLink>
       </div>
@@ -288,6 +288,8 @@
 import { computed } from 'vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import HardLink from '~/components/common/HardLink.vue'
+import CategoryIcon from '~/components/common/CategoryIcon.vue'
+import type { CategoryId } from '~/utils/categoryIcons'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -418,6 +420,7 @@ const quickFacilities: { id: string; label: string }[] = [
   { id: 'pharmacy', label: '약국' },
   { id: 'parking', label: '주차' },
   { id: 'ev-charger', label: '충전' },
+  { id: 'subway', label: '지하철' },
   { id: 'school', label: '학교' },
   { id: 'childcare', label: '어린이집' },
   { id: 'toilet', label: '화장실' },

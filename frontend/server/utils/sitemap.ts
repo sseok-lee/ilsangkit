@@ -298,7 +298,8 @@ export async function fetchSubwaySlugs(
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const res = await fetch(`${apiBase}/api/subway/stations?limit=5000`)
+      // grouped=true → nameSlug 단위 distinct 응답. 환승역 중복 방지.
+      const res = await fetch(`${apiBase}/api/subway/stations?limit=5000&grouped=true`)
       if (!res.ok) {
         console.error(`[sitemap] fetchSubwaySlugs attempt ${attempt}: HTTP ${res.status}`)
         continue

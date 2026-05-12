@@ -209,6 +209,7 @@ const CATEGORY_LABELS: Record<FacilityCategory, string> = {
   childcare: '어린이집',
   'ev-charger': '전기차충전소',
   sports: '체육시설',
+  subway: '지하철역',
 };
 
 // 크로스 카테고리 추천 맵
@@ -227,6 +228,7 @@ export const CROSS_CATEGORY_MAP: Record<FacilityCategory, FacilityCategory[]> = 
   childcare: ['school', 'hospital', 'pharmacy', 'park'],
   'ev-charger': ['parking', 'park', 'market', 'library'],
   sports: ['parking', 'park', 'toilet'],
+  subway: ['parking', 'ev-charger', 'toilet', 'market'],
 };
 
 /**
