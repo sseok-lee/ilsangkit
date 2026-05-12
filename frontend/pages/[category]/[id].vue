@@ -137,11 +137,16 @@
               <DetailBasicInfo
                 :facility="facility"
                 :hospital-operating-hours="hospitalOperatingHours"
+                :hospital-weekly-hours="hospitalWeeklyHours"
                 :hospital-weekly-hours-count="hospitalWeeklyHours.length"
                 :aed-operating-hours="aedOperatingHours"
+                :aed-weekly-hours="aedWeeklyHours"
                 :aed-weekly-hours-count="aedWeeklyHours.length"
                 :pharmacy-operating-hours="pharmacyOperatingHours"
               />
+
+              <!-- Ad: BASIC INFO ↔ FACILITY STATUS 사이 -->
+              <AdBanner />
 
               <!-- FacilityStatus -->
               <DetailFacilityStatus :facility="facility" />
@@ -578,8 +583,8 @@ const isOpen24Hours = computed(() => {
 // 전 카테고리 통합 전화번호
 const facilityPhone = computed(() => {
   if (!details.value) return null
-  const d = details.value as FacilityDetailsAll
-  return d.phoneNumber || d.phone || d.clerkTel || null
+  const d = details.value as FacilityDetailsAll & { crtelno?: string }
+  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || null
 })
 
 // Generate map URLs (길찾기)

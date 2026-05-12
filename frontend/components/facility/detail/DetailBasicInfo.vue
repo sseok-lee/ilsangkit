@@ -55,7 +55,7 @@
       </div>
 
       <!-- Toilet -->
-      <template v-if="facility.category === 'toilet' && (details?.facilityType || details?.openTime || details?.managingOrg || details?.installDate)">
+      <template v-if="facility.category === 'toilet' && (details?.facilityType || details?.openTime || details?.managingOrg || details?.installDate || details?.ownershipType)">
         <div class="h-px bg-slate-100 w-full"></div>
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between">
@@ -76,6 +76,11 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">설치일</span>
             <span v-if="details?.installDate" class="text-sm font-medium text-slate-900">{{ details?.installDate }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">소유구분</span>
+            <span v-if="details?.ownershipType" class="text-sm font-medium text-slate-900">{{ details?.ownershipType }}</span>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
         </div>
@@ -138,6 +143,28 @@
             <div class="flex items-center gap-1.5 text-gray-400"><span class="text-red-500">✗</span> 책·신문</div>
           </div>
           <p class="mt-2 text-xs text-gray-500">※ 비닐에 담아 배출, 비 오는 날 X</p>
+        </div>
+      </template>
+
+      <!-- Park -->
+      <template v-if="facility.category === 'park' && ((details as any)?.parkType || (details as any)?.designatedDate || (details as any)?.managingOrg)">
+        <div class="h-px bg-slate-100 w-full"></div>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">공원유형</span>
+            <span v-if="(details as any)?.parkType" class="text-sm font-medium text-slate-900">{{ (details as any).parkType }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">지정일</span>
+            <span v-if="(details as any)?.designatedDate" class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).designatedDate) }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">관리기관</span>
+            <span v-if="(details as any)?.managingOrg" class="text-sm font-medium text-slate-900">{{ (details as any).managingOrg }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
         </div>
       </template>
 
@@ -234,6 +261,34 @@
             <span class="text-sm font-medium text-slate-900">{{ String(details?.org || '').replace(/^[\s-]+|[\s-]+$/g, '') }}</span>
           </div>
         </template>
+        <!-- AED 요일별 이용시간 표 -->
+        <template v-if="aedWeeklyHours.length > 0">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 이용시간</h3>
+            <table class="w-full text-sm border-collapse">
+              <thead>
+                <tr class="bg-slate-50">
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">이용시간</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr
+v-for="row in aedWeeklyHours" :key="row.day"
+                    :class="row.isToday ? 'bg-blue-50 font-semibold' : ''"
+>
+                  <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
+                    {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+                  </td>
+                  <td class="py-1.5 px-2 text-xs" :class="row.allDay ? 'text-green-600 font-medium' : row.closed ? 'text-gray-400' : 'text-slate-800'">
+                    {{ row.time }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
         <template v-if="aedOperatingHours.length > 0 && aedWeeklyHoursCount === 0">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">
@@ -241,6 +296,14 @@
               <span class="text-sm text-gray-600">{{ item.day }}</span>
               <span class="text-sm font-medium text-slate-900">{{ item.time }}</span>
             </div>
+          </div>
+        </template>
+        <!-- AED 담당자 연락처 -->
+        <template v-if="(details as any)?.clerkTel">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">담당자 연락처</span>
+            <a :href="`tel:${(details as any).clerkTel}`" class="text-sm font-medium text-primary hover:underline">{{ (details as any).clerkTel }}</a>
           </div>
         </template>
       </template>
@@ -277,6 +340,42 @@
             </div>
           </div>
         </template>
+        <!-- Hospital 요일별 진료시간 표 -->
+        <template v-if="hospitalWeeklyHours.length > 0">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 진료시간</h3>
+            <table class="w-full text-sm border-collapse">
+              <thead>
+                <tr class="bg-slate-50">
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">진료시간</th>
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">점심</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr
+v-for="row in hospitalWeeklyHours" :key="row.day"
+                    :class="row.isToday ? 'bg-blue-50 font-semibold' : ''"
+>
+                  <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
+                    {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+                  </td>
+                  <td class="py-1.5 px-2 text-xs" :class="row.closed ? 'text-gray-400' : 'text-slate-800'">
+                    {{ row.time }}
+                  </td>
+                  <td class="py-1.5 px-2 text-xs text-gray-500">{{ row.lunch }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="(details as any)?.noTrmtSun" class="mt-2 text-xs text-gray-500">
+              <span class="font-medium">일요일 안내:</span> {{ (details as any).noTrmtSun }}
+            </p>
+            <p v-if="(details as any)?.noTrmtHoli" class="text-xs text-gray-500">
+              <span class="font-medium">공휴일 안내:</span> {{ (details as any).noTrmtHoli }}
+            </p>
+          </div>
+        </template>
         <template v-if="hospitalOperatingHours.length > 0 && hospitalWeeklyHoursCount === 0">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">
@@ -304,6 +403,193 @@
         </template>
       </template>
 
+      <!-- School -->
+      <template v-if="facility.category === 'school'">
+        <template v-if="(details as any)?.schoolLevel || (details as any)?.foundationType || (details as any)?.coeducationType || (details as any)?.highSchoolType || (details as any)?.branchType || (details as any)?.operationStatus">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-if="(details as any)?.schoolLevel" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">학교급</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).schoolLevel }}</span>
+            </div>
+            <div v-if="(details as any)?.foundationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">설립형태</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).foundationType }}</span>
+            </div>
+            <div v-if="(details as any)?.coeducationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">남녀공학</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).coeducationType }}</span>
+            </div>
+            <div v-if="(details as any)?.highSchoolType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">고교유형</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).highSchoolType }}</span>
+            </div>
+            <div v-if="(details as any)?.branchType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">본/분교</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).branchType }}</span>
+            </div>
+            <div v-if="(details as any)?.operationStatus" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">운영상태</span>
+              <span class="text-sm font-bold" :class="(details as any).operationStatus === '운영' ? 'text-green-600' : 'text-slate-900'">{{ (details as any).operationStatus }}</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.foundedDate || (details as any)?.faxNumber">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">설립일</span>
+              <span v-if="(details as any)?.foundedDate" class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).foundedDate) }}</span>
+              <span v-else class="text-sm text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">팩스</span>
+              <span v-if="(details as any)?.faxNumber" class="text-sm font-medium text-slate-900">{{ (details as any).faxNumber }}</span>
+              <span v-else class="text-sm text-slate-400">정보 없음</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.homepageUrl">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">홈페이지</span>
+            <a :href="schoolHomepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).homepageUrl }}</a>
+          </div>
+        </template>
+        <template v-if="(details as any)?.sidoEduName || (details as any)?.localEduName">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">시도교육청</span>
+              <span v-if="(details as any)?.sidoEduName" class="text-sm font-medium text-slate-900">{{ (details as any).sidoEduName }}</span>
+              <span v-else class="text-sm text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">교육지원청</span>
+              <span v-if="(details as any)?.localEduName" class="text-sm font-medium text-slate-900">{{ (details as any).localEduName }}</span>
+              <span v-else class="text-sm text-slate-400">정보 없음</span>
+            </div>
+          </div>
+        </template>
+      </template>
+
+      <!-- Market -->
+      <template v-if="facility.category === 'market'">
+        <template v-if="(details as any)?.marketType || (details as any)?.openingCycle">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-if="(details as any)?.marketType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">시장유형</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).marketType }}</span>
+            </div>
+            <div v-if="(details as any)?.openingCycle" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">개설주기</span>
+              <span class="text-sm font-bold text-slate-900">{{ marketOpeningCycleLabel }}</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.foundedYear != null">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">개설연도</span>
+            <span class="text-sm font-medium text-slate-900">{{ (details as any).foundedYear }}년</span>
+          </div>
+        </template>
+        <template v-if="(details as any)?.homepageUrl">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">홈페이지</span>
+            <a :href="(details as any).homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).homepageUrl }}</a>
+          </div>
+        </template>
+      </template>
+
+      <!-- Childcare -->
+      <template v-if="facility.category === 'childcare'">
+        <template v-if="(details as any)?.crtypename || (details as any)?.crstatusname">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-if="(details as any)?.crtypename" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">어린이집 유형</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).crtypename }}</span>
+            </div>
+            <div v-if="(details as any)?.crstatusname" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">운영 상태</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).crstatusname }}</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.crpausebegindt && (details as any)?.crpauseenddt">
+          <div class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+            휴지 기간: {{ (details as any).crpausebegindt }} ~ {{ (details as any).crpauseenddt }}
+          </div>
+        </template>
+        <template v-if="(details as any)?.crcnfmdt || (details as any)?.crrepname || (details as any)?.crfaxno || (details as any)?.crcargbname || (details as any)?.crhome">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex flex-col gap-3">
+            <div v-if="(details as any)?.crcnfmdt" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">인가일</span>
+              <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).crcnfmdt) }}</span>
+            </div>
+            <div v-if="(details as any)?.crrepname" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">대표자</span>
+              <span class="text-sm font-medium text-slate-900">{{ (details as any).crrepname }}</span>
+            </div>
+            <div v-if="(details as any)?.crfaxno" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">팩스</span>
+              <span class="text-sm font-medium text-slate-900">{{ (details as any).crfaxno }}</span>
+            </div>
+            <div v-if="(details as any)?.crcargbname" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">통학차량</span>
+              <span class="text-sm font-medium text-slate-900">{{ (details as any).crcargbname }}</span>
+            </div>
+            <div v-if="(details as any)?.crhome" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">홈페이지</span>
+              <a :href="(details as any).crhome" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).crhome }}</a>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.crspec">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 mb-2">특이사항</h3>
+            <p class="text-sm text-gray-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{{ (details as any).crspec }}</p>
+          </div>
+        </template>
+        <template v-if="(details as any)?.datastdrdt">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <p class="text-xs text-[#9ca3af]">데이터 기준일: {{ (details as any).datastdrdt }}</p>
+        </template>
+      </template>
+
+      <!-- Sports -->
+      <template v-if="facility.category === 'sports'">
+        <template v-if="(details as any)?.ftypeNm || (details as any)?.faciGbNm || (details as any)?.nationYn === 'Y'">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-if="(details as any)?.ftypeNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">시설유형</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).ftypeNm }}</span>
+            </div>
+            <div v-if="(details as any)?.faciGbNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">시설구분</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).faciGbNm }}</span>
+            </div>
+            <div v-if="(details as any)?.nationYn === 'Y'" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">국가대표시설</span>
+              <span class="text-sm font-bold text-slate-900">Y</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.fcobNm">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">업종명</span>
+            <span class="text-sm font-medium text-slate-900">{{ (details as any).fcobNm }}</span>
+          </div>
+        </template>
+      </template>
+
       <!-- Pharmacy -->
       <template v-if="facility.category === 'pharmacy'">
         <template v-if="details?.dutyTel3">
@@ -316,13 +602,6 @@
               <span class="text-xs text-gray-600">응급전화</span>
               <a :href="`tel:${details?.dutyTel3}`" class="text-primary text-base font-medium hover:underline">{{ details?.dutyTel3 }}</a>
             </div>
-          </div>
-        </template>
-        <template v-if="details?.pharmacistCnt && details.pharmacistCnt > 0">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">약사 수</span>
-            <span class="text-sm font-bold text-slate-900">{{ details.pharmacistCnt }}명</span>
           </div>
         </template>
         <template v-if="pharmacyOperatingHours.length > 0">
@@ -372,8 +651,10 @@ import type { FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 const props = defineProps<{
   facility: FacilityDetail
   hospitalOperatingHours: Array<{ day: string; time: string }>
+  hospitalWeeklyHours: Array<{ day: string; time: string; lunch: string; closed: boolean; isToday: boolean }>
   hospitalWeeklyHoursCount: number
   aedOperatingHours: Array<{ day: string; time: string }>
+  aedWeeklyHours: Array<{ day: string; time: string; allDay: boolean; closed: boolean; isToday: boolean }>
   aedWeeklyHoursCount: number
   pharmacyOperatingHours: Array<{ day: string; time: string }>
 }>()
@@ -388,8 +669,8 @@ const isOpen24Hours = computed(() => {
 
 const facilityPhone = computed(() => {
   if (!details.value) return null
-  const d = details.value as FacilityDetailsAll & { phone?: string; clerkTel?: string }
-  return d.phoneNumber || d.phone || d.clerkTel || null
+  const d = details.value as FacilityDetailsAll & { phone?: string; clerkTel?: string; crtelno?: string }
+  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || null
 })
 
 const hideOperatingHours = computed(() => {
@@ -407,6 +688,23 @@ function formatKoreanDate(dateStr: string | null | undefined): string {
   }
   return String(dateStr)
 }
+
+const schoolHomepageUrl = computed(() => {
+  const url = (details.value as any)?.homepageUrl || ''
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `http://${url}`
+})
+
+const marketOpeningCycleLabel = computed(() => {
+  const cycle = (details.value as any)?.openingCycle || ''
+  if (cycle === '매일') return '매일'
+  if (/\d/.test(cycle)) {
+    const days = cycle.split('+').map((s: string) => s.trim()).filter(Boolean)
+    return `매월 ${days.join(', ')}`
+  }
+  return cycle
+})
 
 function formatLibraryHours(start?: string | null, end?: string | null): string {
   const s = (start || '').trim()
