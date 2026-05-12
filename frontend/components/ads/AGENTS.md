@@ -10,7 +10,10 @@ AdSense/디스플레이 광고 배너 래퍼. 뷰어빌리티/CLS 방지/RPM 최
 | File | Description |
 |------|-------------|
 | `AdBanner.vue` | 인라인 디스플레이 광고 슬롯 |
-| `AnchorAdBanner.vue` | 하단 고정 앵커 광고 |
+| `CoupangBanner.vue` | 쿠팡파트너스 carousel iframe 배너 |
+| `useDeferredAdSenseRequest.ts` | IntersectionObserver 기반 지연 광고 요청 composable |
+
+> AnchorAdBanner(모바일 하단 고정 앵커)는 AdSense 자동광고 overlay와 중복돼 제거됨. 재도입 금지.
 
 ## For AI Agents
 

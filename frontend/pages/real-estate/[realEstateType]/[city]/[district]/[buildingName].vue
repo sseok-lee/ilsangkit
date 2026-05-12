@@ -256,6 +256,9 @@
         </p>
       </SectionBlock>
 
+      <!-- Ad: 시세 추이 ↔ 거래 내역 사이 -->
+      <AdBanner />
+
       <!-- "거래 내역" 블록 -->
       <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
         <div v-if="txLoading" class="flex justify-center py-8">
