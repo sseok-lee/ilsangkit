@@ -21,6 +21,7 @@ export const CATEGORY_COLORS: Record<FacilityCategory, string> = {
   childcare: '#ec4899', // pink-500
   'ev-charger': '#14b8a6', // teal-500
   sports: '#06b6d4',    // cyan-500
+  subway: '#64748b',    // slate-500
 }
 
 // 부동산 카테고리 색상/라벨

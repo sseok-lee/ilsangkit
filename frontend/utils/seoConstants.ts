@@ -74,6 +74,7 @@ export const RELATED_CATEGORIES: Record<string, string[]> = {
   aed: ['hospital'],
   sports: ['park'],
   wifi: [],
+  subway: ['parking', 'ev-charger', 'toilet'],
 }
 
 /**
@@ -95,6 +96,7 @@ export const CATEGORY_CTA: Record<FacilityCategory, string> = {
   childcare: '주변 어린이집 위치와 유형, 정원 정보를 확인하세요',
   'ev-charger': '가까운 전기차 충전소 위치와 실시간 충전 상태를 확인하세요',
   sports: '주변 공공체육시설 위치와 시설 정보를 확인하세요',
+  subway: '지하철역 위치와 노선·환승 정보를 확인하세요',
 }
 
 export const CATEGORY_SEO_TITLE: Record<FacilityCategory, string> = {
@@ -113,6 +115,7 @@ export const CATEGORY_SEO_TITLE: Record<FacilityCategory, string> = {
   'ev-charger': '전기차 충전소 찾기 - 근처 충전기 종류·이용시간을 지도에서 확인',
   sports:       '공공체육시설 찾기 - 근처 체육관·수영장 위치를 지도에서 확인',
   wifi:         '공공 와이파이 찾기 - 근처 무료 와이파이 위치를 지도에서 확인',
+  subway:       '지하철역 찾기 - 근처 지하철역 위치·노선·환승 정보를 지도에서 확인',
 }
 
 export const CATEGORY_SEO_DESCRIPTION: Record<FacilityCategory, string> = {
@@ -131,6 +134,7 @@ export const CATEGORY_SEO_DESCRIPTION: Record<FacilityCategory, string> = {
   'ev-charger': '전국 전기차 충전소의 충전기 종류·이용시간·위치를 지도에서 확인하세요. 급속·완속 충전기 필터와 운영 상태로 가까운 충전소를 빠르게 찾아보세요.',
   sports:       '전국 공공체육시설의 시설 규모·이용 정보·위치를 지도에서 확인하세요. 가까운 공공 스포츠 시설(체육관·수영장·테니스장 등)을 손쉽게 찾아보세요.',
   wifi:         '전국 공공 와이파이의 위치·SSID·이용 가능 장소를 지도에서 확인하세요. 도서관·공원·버스정류장 등 무료 인터넷 사용 가능 구역을 미리 파악해 보세요.',
+  subway:       '전국 지하철역의 위치·노선·환승 정보를 지도에서 확인하세요. 1~9호선·수도권 광역철도·코레일 노선까지 역명과 좌표를 한눈에 검색할 수 있습니다.',
 }
 
 export const CATEGORY_SEO_INTENT: Record<FacilityCategory, string> = {
@@ -149,4 +153,5 @@ export const CATEGORY_SEO_INTENT: Record<FacilityCategory, string> = {
   childcare: '정원·현원',
   'ev-charger': '충전기·이용시간',
   sports: '시설규모·이용정보',
+  subway: '위치·노선·환승',
 }

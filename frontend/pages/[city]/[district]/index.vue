@@ -1,25 +1,16 @@
 <template>
   <div class="bg-background-light min-h-screen">
     <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
-      <!-- 브레드크럼 -->
-      <nav class="flex items-center gap-1 text-sm text-slate-500 mb-4">
-        <NuxtLink to="/" class="hover:text-primary">홈</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <NuxtLink :to="`/${city}`" class="hover:text-primary">{{ cityName }}</NuxtLink>
-        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span class="text-slate-800">{{ districtName }}</span>
-      </nav>
+      <!-- Breadcrumb -->
+      <Breadcrumb :items="breadcrumbItems" class="mb-4" />
 
-      <!-- 히어로 -->
-      <div class="mb-5">
-        <div class="mb-2">
-          <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
-            {{ districtName }} 생활 정보
-          </h1>
-        </div>
-        <p class="mt-2 text-slate-500 text-sm">{{ cityName }} {{ districtName }}의 부동산 시세와 생활시설을 한눈에 확인하세요</p>
-        <p v-if="areaDescription" class="text-gray-600 text-sm leading-relaxed mt-3">{{ areaDescription }}</p>
-      </div>
+      <!-- Hero -->
+      <PageHero
+        eyebrow="지역 허브"
+        :title="`${districtName} 생활 정보`"
+        :description="heroDescription"
+        class="mb-5"
+      />
 
       <!-- Ad: 헤더 직후 -->
       <AdBanner class="mb-5" />
@@ -32,69 +23,20 @@
       <!-- 콘텐츠 -->
       <div v-else-if="areaData">
         <!-- ① 부동산 시세 현황 -->
-        <section v-if="areaData.realEstate" id="real-estate" class="mb-6">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
-            <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
-            부동산 시세 현황
-          </h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <NuxtLink
-              v-for="item in realEstateCards"
-              :key="item.type"
-              :to="`/real-estate/${item.type}`"
-              class="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div class="flex items-center gap-2 mb-4">
-                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <img :src="`/icons/category/${item.type}.webp?v2`" :alt="item.label" class="w-7 h-7" width="28" height="28" />
-                </div>
-                <h3 class="font-bold text-slate-900">{{ item.label }}</h3>
-              </div>
-              <div class="flex items-center justify-between py-2 border-b border-slate-100">
-                <span class="text-sm text-slate-500">매매 평균</span>
-                <span class="text-sm font-semibold text-slate-800">{{ item.saleAvg }}</span>
-              </div>
-              <div class="flex items-center justify-between py-2 border-b border-slate-100">
-                <span class="text-sm text-slate-500">매매 거래</span>
-                <span class="text-sm text-slate-600">{{ item.saleCount }}건</span>
-              </div>
-              <div class="flex items-center justify-between py-2 border-b border-slate-100">
-                <span class="text-sm text-slate-500">전월세 평균 보증금</span>
-                <span class="text-sm font-semibold text-slate-800">{{ item.rentAvg }}</span>
-              </div>
-              <div class="flex items-center justify-between py-2">
-                <span class="text-sm text-slate-500">전월세 거래</span>
-                <span class="text-sm text-slate-600">{{ item.rentCount }}건</span>
-              </div>
-            </NuxtLink>
-          </div>
-        </section>
+        <RegionRealEstatePrices
+          v-if="areaData.realEstate"
+          :cards="realEstateCards"
+        />
 
         <!-- ② 생활시설 현황 -->
-        <section v-if="areaData.facilities" id="facilities" class="mb-6">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
-            <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
-            생활시설 현황
-          </h2>
-          <p class="text-sm text-slate-500 mb-3">총 {{ areaData.facilities.total.toLocaleString() }}개 시설</p>
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <NuxtLink
-              v-for="(count, cat) in sortedFacilityCategories"
-              :key="cat"
-              :to="`/${city}/${district}/${cat}`"
-              :class="[
-                'group flex flex-col items-center p-4 rounded-2xl border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
-                areaData.facilities.topCategories?.includes(String(cat))
-                  ? 'border-primary/30 bg-primary/5'
-                  : 'border-slate-200 bg-white hover:bg-slate-50',
-              ]"
-            >
-              <img :src="`/icons/category/${cat}.webp?v2`" :alt="CATEGORY_META[cat as FacilityCategory]?.label" class="w-8 h-8 mb-2" width="32" height="32" loading="lazy" />
-              <span class="text-xs text-slate-600 mb-1">{{ CATEGORY_META[cat as FacilityCategory]?.label }}</span>
-              <span class="text-sm font-bold text-slate-800">{{ count }}개</span>
-            </NuxtLink>
-          </div>
-        </section>
+        <RegionFacilityCategoryGrid
+          v-if="areaData.facilities"
+          :city="city"
+          :district="district"
+          :total="areaData.facilities.total"
+          :categories="sortedFacilityCategories"
+          :top-categories="areaData.facilities.topCategories ?? []"
+        />
 
         <!-- Ad: Facilities 후 -->
         <div class="mb-6">
@@ -102,32 +44,7 @@
         </div>
 
         <!-- ③ 교차 CTA -->
-        <section class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-5 md:p-6 text-center">
-          <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
-            {{ districtName }} 부동산 실거래가 상세 보기
-          </h3>
-          <p class="text-sm text-slate-600 mb-4">아파트, 빌라, 오피스텔 실거래가를 확인해보세요</p>
-          <div class="flex justify-center gap-3">
-            <NuxtLink
-              to="/real-estate/apt-sale"
-              class="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors"
-            >
-              아파트
-            </NuxtLink>
-            <NuxtLink
-              to="/real-estate/villa-sale"
-              class="px-4 py-2 bg-white text-primary text-sm font-semibold rounded-xl border border-primary hover:bg-primary/5 transition-colors"
-            >
-              빌라
-            </NuxtLink>
-            <NuxtLink
-              to="/real-estate/offitel-sale"
-              class="px-4 py-2 bg-white text-primary text-sm font-semibold rounded-xl border border-primary hover:bg-primary/5 transition-colors"
-            >
-              오피스텔
-            </NuxtLink>
-          </div>
-        </section>
+        <RegionRealEstateCta :area-name="districtName" />
       </div>
 
       <!-- 에러 -->
@@ -140,6 +57,9 @@
 
 <script setup lang="ts">
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
+import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
+import RegionFacilityCategoryGrid from '~/components/region/RegionFacilityCategoryGrid.vue'
+import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
@@ -173,6 +93,13 @@ if (validDistricts.length === 0 || !validDistricts.some(d => d.slug === district
 
 const cityName = computed(() => getCityName(city.value))
 const districtName = computed(() => getDistrictName(city.value, district.value))
+
+// Breadcrumb (시설/부동산 PR과 동일 패턴)
+const breadcrumbItems = computed(() => [
+  { label: '홈', href: '/', current: false },
+  { label: cityName.value, href: `/${city.value}`, current: false },
+  { label: districtName.value, href: `/${city.value}/${district.value}`, current: true },
+])
 
 // Area API 단일 호출
 const { data: response, pending } = await useAsyncData(
@@ -239,16 +166,18 @@ const realEstateCards = computed(() => {
   ]
 })
 
-// 서술형 설명
-const areaDescription = computed(() => {
-  if (!areaData.value?.facilities) return ''
+// 서술형 설명 (PageHero description으로 통합)
+const heroDescription = computed(() => {
+  const primary = `${cityName.value} ${districtName.value}의 부동산 시세와 생활시설을 한눈에 확인하세요`
+  if (!areaData.value?.facilities) return primary
   const cats = areaData.value.facilities.categories as Record<string, number> | undefined
-  return generateAreaDescription({
+  const areaInfo = generateAreaDescription({
     city: cityName.value,
     district: districtName.value,
     facilityStats: cats,
     totalFacilities: areaData.value.facilities.total,
   })
+  return areaInfo ? `${primary}. ${areaInfo}` : primary
 })
 
 // SEO 메타

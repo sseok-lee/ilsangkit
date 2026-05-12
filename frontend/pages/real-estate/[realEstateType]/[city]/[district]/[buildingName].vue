@@ -78,16 +78,16 @@
     </Teleport>
 
     <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-20 md:pb-10 flex flex-col gap-3">
-      <!-- Breadcrumb -->
-      <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
-
-      <!-- Mobile: badge + share row -->
-      <div class="md:hidden flex items-center justify-between">
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-700/10">
-          <span class="material-symbols-outlined text-[14px]">place</span> {{ propertyMeta?.label }}
-        </span>
-        <button class="text-slate-500 hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="이 건물 공유하기" @click="handleShare">
-          <span class="material-symbols-outlined">share</span>
+      <!-- Unified Breadcrumb + Share (모바일 badge는 PageHero eyebrow가 흡수) -->
+      <div class="flex items-center justify-between gap-2">
+        <Breadcrumb :items="breadcrumbItems" />
+        <button
+          class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
+          aria-label="이 건물 공유하기"
+          @click="handleShare"
+        >
+          <span class="material-symbols-outlined text-[16px]">share</span>
+          <span class="hidden sm:inline">공유</span>
         </button>
       </div>
 
@@ -102,10 +102,10 @@
       <!-- Ad: Hero 직후 (fold 하단) -->
       <AdBanner />
 
-      <!-- "위치·로드뷰" 데스크톱 -->
-      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다." class="hidden md:block">
+      <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
+      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
         <template #right>
-          <div class="flex items-center gap-1">
+          <div class="hidden md:flex items-center gap-1">
             <button
               class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
               aria-label="이 건물 공유하기"
@@ -135,8 +135,9 @@
             </div>
           </div>
         </template>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="rounded-xl border border-line overflow-hidden h-[300px]">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- 지도: md+에서만 (모바일은 상단 240px 지도가 별도로 노출됨) -->
+          <div class="hidden md:block rounded-xl border border-line overflow-hidden h-[300px]">
             <ClientOnly>
               <FacilityMap
                 :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
@@ -145,21 +146,14 @@
               />
             </ClientOnly>
           </div>
-          <div class="roadview-wrapper rounded-xl border border-line overflow-hidden h-[300px]">
+          <div class="roadview-wrapper rounded-xl border border-line overflow-hidden h-[200px] md:h-[300px]">
             <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
           </div>
         </div>
       </SectionBlock>
 
-      <!-- 로드뷰 (모바일) -->
-      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" heading="로드뷰" class="md:hidden">
-        <div class="roadview-wrapper rounded-xl overflow-hidden h-[200px]">
-          <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
-        </div>
-      </SectionBlock>
-
-      <!-- Ad: 로드뷰 이후 (Mobile) -->
-      <AdBanner only="mobile" />
+      <!-- Ad: 로드뷰 이후 -->
+      <AdBanner />
 
       <!-- "시세 추이" 블록 -->
       <SectionBlock heading="시세 추이" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
@@ -261,6 +255,9 @@
           ※ 월세 거래는 전환율 5% 기준 환산보증금으로 표시됩니다
         </p>
       </SectionBlock>
+
+      <!-- Ad: 시세 추이 ↔ 거래 내역 사이 -->
+      <AdBanner />
 
       <!-- "거래 내역" 블록 -->
       <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">

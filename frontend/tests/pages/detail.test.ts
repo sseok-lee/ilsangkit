@@ -70,12 +70,14 @@ vi.mock('~/composables/useKakaoMap', () => ({
 const globalStubs = {
   ClientOnly: { template: '<div><slot /></div>' },
   FacilityMap: { template: '<div data-testid="facility-map">Map</div>' },
-  FacilityDetail: {
-    template: '<div>{{ facility?.name }} {{ facility?.roadAddress }}</div>',
-    props: ['facility'],
-  },
   FacilityFeatureCard: { template: '<div>FeatureCard</div>' },
   Breadcrumb: { template: '<nav>Breadcrumb</nav>' },
+  // PageHero는 Nuxt auto-import 컴포넌트라 테스트 env에 별도 stub 필요.
+  // 시설명을 h1으로 렌더하여 SEO 회귀 가드 테스트가 H1 단일성을 검증할 수 있게 함.
+  PageHero: {
+    template: '<section><h1>{{ title }}</h1><p>{{ description }}</p></section>',
+    props: ['eyebrow', 'title', 'description', 'stats'],
+  },
 }
 
 // Helper to mount async components with Suspense
@@ -193,6 +195,31 @@ describe('DetailPage', () => {
     )
 
     wrapper.unmount()
+  })
+
+  // ---------------- SEO 회귀 가드 (Step 6) ----------------
+  // 모바일 h2(시설명) → unified PageHero h1으로 승격된 이후, 단일 H1 보장.
+  // (이전: 데스크톱 PageHero h1 + 모바일 manual h2 → SSR HTML에 h1·h2 중복)
+  it('시설명 H1이 단 1개만 존재 (모바일/데스크톱 통합)', async () => {
+    const wrapper = await mountSuspended(DetailPage, {
+      global: { stubs: globalStubs },
+    })
+
+    const h1s = wrapper.findAll('h1')
+    expect(h1s.length).toBe(1)
+    expect(h1s[0].text()).toBe('강남역 공중화장실')
+  })
+
+  // BasicInfo + FacilityStatus + Nearby + ContextLinks 각각 1번씩만 렌더 (중복 제거 회귀 가드)
+  it('상세 컴포넌트가 단일 트리에 한 번씩만 렌더 (DOM 중복 없음)', async () => {
+    const wrapper = await mountSuspended(DetailPage, {
+      global: { stubs: globalStubs },
+    })
+
+    // 단일 트리 통합 후 각 섹션은 SSR HTML에 한 번만 등장해야 함
+    const html = wrapper.html()
+    expect(html.split('"같은 지역 시설"').length - 1).toBeLessThanOrEqual(1)
+    expect(html.split('"자주 묻는 질문"').length - 1).toBeLessThanOrEqual(1)
   })
 
   it('네트워크/서버 에러 시 404를 반환하지 않음 (SEO 보호)', async () => {

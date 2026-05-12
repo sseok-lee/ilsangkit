@@ -3,7 +3,7 @@
  * 3D 아이소메트릭 카테고리 아이콘 경로 관리
  */
 
-export type CategoryId = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market' | 'childcare' | 'ev-charger' | 'sports'
+export type CategoryId = 'toilet' | 'trash' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market' | 'childcare' | 'ev-charger' | 'sports' | 'subway'
 
 export const ICON_VERSION = 'v2'
 
@@ -23,6 +23,7 @@ export const CATEGORY_ICONS: Record<CategoryId, string> = {
   childcare: `/icons/category/childcare.webp?${ICON_VERSION}`,
   'ev-charger': `/icons/category/ev-charger.webp?${ICON_VERSION}`,
   sports: `/icons/category/sports.webp?${ICON_VERSION}`,
+  subway: `/icons/category/subway.webp?${ICON_VERSION}`,
 } as const
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = {
@@ -41,6 +42,7 @@ export const CATEGORY_LABELS: Record<CategoryId, string> = {
   childcare: '어린이집',
   'ev-charger': '전기차 충전소',
   sports: '체육시설',
+  subway: '지하철역',
 } as const
 
 export const CATEGORY_COLORS: Record<CategoryId, { primary: string; bg: string; bgDark: string }> = {
@@ -118,6 +120,11 @@ export const CATEGORY_COLORS: Record<CategoryId, { primary: string; bg: string; 
     primary: '#06b6d4',
     bg: 'bg-cyan-50',
     bgDark: 'dark:bg-cyan-900/20',
+  },
+  subway: {
+    primary: '#64748b',
+    bg: 'bg-slate-50',
+    bgDark: 'dark:bg-slate-900/20',
   },
 } as const
 

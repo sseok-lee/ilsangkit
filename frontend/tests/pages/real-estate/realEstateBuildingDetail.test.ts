@@ -110,7 +110,7 @@ async function mountSuspended(component: any, options?: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-          PageHero: { template: '<div data-stub="hero" />' },
+          PageHero: { template: '<section><h1>{{ title }}</h1></section>', props: ['eyebrow', 'title', 'description', 'stats'] },
           SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
           AdBanner: { template: '<div />' },
           ComplexCard: { template: '<div />' },
@@ -168,5 +168,21 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     await mountSuspended(m.default)
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
     expect(crumbs[5].name).toBe('반포자이')
+  })
+
+  // ---------------- SEO 회귀 가드 (PR #2 Step 1: 듀얼 분기 통합 후) ----------------
+  it('건물명 H1이 단 1개만 존재 (PageHero 단일 진입점)', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    const h1s = wrapper.findAll('h1')
+    expect(h1s.length).toBe(1)
+    expect(h1s[0].text()).toBe('반포자이')
+  })
+
+  it('Breadcrumb이 viewport에 무관하게 단일 렌더 (hidden md:block 제거됨)', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    const breadcrumbs = wrapper.findAll('[data-stub="breadcrumb"]')
+    expect(breadcrumbs.length).toBe(1)
   })
 })
