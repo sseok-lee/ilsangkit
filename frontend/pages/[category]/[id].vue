@@ -130,6 +130,7 @@
                 :stats="heroStats"
                 :actions="heroActions"
                 @action="handleHeroAction"
+                @action-menu-select="handleHeroMenuSelect"
               >
                 <template v-if="heroBadge" #badge>
                   <OperatingStatusBadge :status="heroBadge" />
@@ -450,7 +451,18 @@ function handleHeroAction(payload: { type: 'directions' | 'phone' | 'share' }) {
   }
 }
 
-const { trackFacilityView, trackShareClick } = useAnalytics()
+function handleHeroMenuSelect(payload: { type: 'directions' | 'phone' | 'share'; item: { label: string; href: string } }) {
+  if (payload.type === 'directions' && facility.value) {
+    const provider = payload.item.href.includes('map.kakao.com') ? 'kakao' : 'naver'
+    trackDirectionsClick({
+      facilityId: facility.value.id,
+      category: facility.value.category,
+      provider,
+    })
+  }
+}
+
+const { trackFacilityView, trackShareClick, trackDirectionsClick } = useAnalytics()
 onMounted(() => {
   if (facility.value) {
     trackFacilityView({

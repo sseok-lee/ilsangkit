@@ -80,7 +80,7 @@
             rel="noopener noreferrer"
             role="menuitem"
             class="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-gray-50"
-            @click="closeMenu"
+            @click="onMenuItemClick(action, item)"
           >
             <img v-if="item.iconSrc" :src="item.iconSrc" alt="" class="w-5 h-5 rounded" />
             {{ item.label }}
@@ -130,6 +130,7 @@ withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'action', payload: { type: HeroAction['type'] }): void
+  (e: 'action-menu-select', payload: { type: HeroAction['type']; item: HeroActionMenuItem }): void
 }>()
 
 const openMenu = ref<HeroAction['type'] | null>(null)
@@ -148,6 +149,11 @@ function onActionClick(action: HeroAction, event: Event) {
 
 function closeMenu() {
   openMenu.value = null
+}
+
+function onMenuItemClick(action: HeroAction, item: HeroActionMenuItem) {
+  emit('action-menu-select', { type: action.type, item })
+  closeMenu()
 }
 
 function handleDocumentClick(event: MouseEvent) {

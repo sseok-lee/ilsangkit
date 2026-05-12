@@ -99,4 +99,27 @@ describe('PageHero', () => {
     const wrapper = mount(PageHero, { props: { title: 'X' } })
     expect(wrapper.find('[data-test="hero-actions"]').exists()).toBe(false)
   })
+
+  it('emits action-menu-select when a menu item is clicked', async () => {
+    const wrapper = mount(PageHero, {
+      props: {
+        title: 'X',
+        actions: [
+          { type: 'directions', label: '길찾기', primary: true, menu: [
+            { label: '카카오맵', href: 'https://k.example' },
+            { label: '네이버맵', href: 'https://n.example' },
+          ] },
+        ],
+      },
+    })
+    await wrapper.find('[data-test="hero-action"]').trigger('click')
+    const items = wrapper.find('[data-test="hero-action-menu"]').findAll('a')
+    await items[0].trigger('click')
+    const events = wrapper.emitted('action-menu-select')
+    expect(events).toBeTruthy()
+    expect(events![0][0]).toMatchObject({
+      type: 'directions',
+      item: { label: '카카오맵', href: 'https://k.example' },
+    })
+  })
 })

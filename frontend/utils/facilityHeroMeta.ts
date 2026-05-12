@@ -90,7 +90,7 @@ export function buildHeroActions(
   ]
   const phone = pickPhone(facility)
   if (phone) {
-    const sanitized = phone.replace(/[^0-9+\-]/g, '')
+    const sanitized = phone.replace(/[^0-9+-]/g, '')
     if (sanitized) {
       actions.push({ type: 'phone', label: '전화', href: `tel:${sanitized}` })
     }
