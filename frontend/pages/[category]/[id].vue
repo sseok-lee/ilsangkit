@@ -154,6 +154,9 @@
                 <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
               </SectionBlock>
 
+              <!-- Ad: ROADVIEW ↔ NEARBY 사이 -->
+              <AdBanner />
+
               <!-- 주변 시설 (same + cross category) -->
               <DetailNearby
                 :nearby-facilities="nearbyFiltered"
