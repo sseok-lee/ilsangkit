@@ -135,8 +135,8 @@ export function buildHeroStats(facility: FacilityDetail): HeroStat[] {
     if (d.feeType) items.push({ label: '요금', value: d.feeType })
     if (d.lotType) items.push({ label: '구분', value: d.lotType })
   } else if (cat === 'library') {
-    if (d.seatCount) items.push({ label: '좌석', value: `${Number(d.seatCount).toLocaleString()}석` })
-    if (d.bookCount) items.push({ label: '장서', value: `${Number(d.bookCount).toLocaleString()}권` })
+    if (d.seatCount) items.push({ label: '좌석', value: `${Number(d.seatCount).toLocaleString('ko-KR')}석` })
+    if (d.bookCount) items.push({ label: '장서', value: `${Number(d.bookCount).toLocaleString('ko-KR')}권` })
   } else if (cat === 'aed') {
     const trim = (s: string) => s.replace(/^[-\s]+|[-\s]+$/g, '').trim()
     if (d.buildPlace) {
@@ -152,7 +152,7 @@ export function buildHeroStats(facility: FacilityDetail): HeroStat[] {
     if (d.crchcnt != null) items.push({ label: '현원', value: `${d.crchcnt}명` })
   } else if (cat === 'park') {
     if (d.parkType) items.push({ label: '공원유형', value: d.parkType })
-    if (d.area != null) items.push({ label: '면적', value: `${Number(d.area).toLocaleString()}㎡` })
+    if (d.area != null) items.push({ label: '면적', value: `${Number(d.area).toLocaleString('ko-KR')}㎡` })
   } else if (cat === 'market') {
     if (d.marketType) items.push({ label: '시장유형', value: d.marketType })
     if (d.storeCount != null) items.push({ label: '점포수', value: `${d.storeCount}개` })

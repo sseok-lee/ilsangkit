@@ -248,4 +248,40 @@ describe('buildHeroStats', () => {
     expect(stats.find(s => s.label === '시설구분')).toEqual({ label: '시설구분', value: '체육시설' })
     expect(stats.find(s => s.label === '유형')).toEqual({ label: '유형', value: '구기' })
   })
+
+  it('produces library stats with localized numbers', () => {
+    const stats = buildHeroStats({
+      category: 'library',
+      details: { seatCount: 1234, bookCount: 56789 },
+    } as any)
+    expect(stats).toContainEqual({ label: '좌석', value: '1,234석' })
+    expect(stats).toContainEqual({ label: '장서', value: '56,789권' })
+  })
+
+  it('produces childcare stats: 정원, 현원', () => {
+    const stats = buildHeroStats({
+      category: 'childcare',
+      details: { crcapat: 90, crchcnt: 87 },
+    } as any)
+    expect(stats).toContainEqual({ label: '정원', value: '90명' })
+    expect(stats).toContainEqual({ label: '현원', value: '87명' })
+  })
+
+  it('produces park stats with localized area', () => {
+    const stats = buildHeroStats({
+      category: 'park',
+      details: { parkType: '근린공원', area: 12345 },
+    } as any)
+    expect(stats).toContainEqual({ label: '공원유형', value: '근린공원' })
+    expect(stats).toContainEqual({ label: '면적', value: '12,345㎡' })
+  })
+
+  it('produces market stats: 시장유형, 점포수', () => {
+    const stats = buildHeroStats({
+      category: 'market',
+      details: { marketType: '전통시장', storeCount: 87 },
+    } as any)
+    expect(stats).toContainEqual({ label: '시장유형', value: '전통시장' })
+    expect(stats).toContainEqual({ label: '점포수', value: '87개' })
+  })
 })
