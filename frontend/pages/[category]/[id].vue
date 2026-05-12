@@ -145,6 +145,9 @@
                 :pharmacy-operating-hours="pharmacyOperatingHours"
               />
 
+              <!-- Ad: BASIC INFO ↔ FACILITY STATUS 사이 -->
+              <AdBanner />
+
               <!-- FacilityStatus -->
               <DetailFacilityStatus :facility="facility" />
 
