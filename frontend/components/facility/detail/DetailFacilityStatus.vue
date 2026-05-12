@@ -269,30 +269,9 @@
       <!-- Park Details -->
       <template v-if="facility.category === 'park'">
         <div class="flex flex-col gap-3">
-          <div v-if="details?.parkType" class="grid grid-cols-2 gap-2">
-            <div class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">공원유형</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.parkType }}</span>
-            </div>
-          </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">면적</span>
             <span v-if="details?.area != null" class="text-sm font-medium text-slate-900">{{ details.area.toLocaleString() }}㎡ (약 {{ Math.round(details.area * 0.3025).toLocaleString() }}평)</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">지정일</span>
-            <span v-if="details?.designatedDate" class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details.designatedDate) }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">관리기관</span>
-            <span v-if="details?.managingOrg" class="text-sm font-medium text-slate-900">{{ details.managingOrg }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">연락처</span>
-            <a v-if="details?.phoneNumber" :href="`tel:${details.phoneNumber}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.phoneNumber }}</a>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
         </div>

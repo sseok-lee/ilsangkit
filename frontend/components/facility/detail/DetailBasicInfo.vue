@@ -146,6 +146,28 @@
         </div>
       </template>
 
+      <!-- Park -->
+      <template v-if="facility.category === 'park' && ((details as any)?.parkType || (details as any)?.designatedDate || (details as any)?.managingOrg)">
+        <div class="h-px bg-slate-100 w-full"></div>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">공원유형</span>
+            <span v-if="(details as any)?.parkType" class="text-sm font-medium text-slate-900">{{ (details as any).parkType }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">지정일</span>
+            <span v-if="(details as any)?.designatedDate" class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).designatedDate) }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">관리기관</span>
+            <span v-if="(details as any)?.managingOrg" class="text-sm font-medium text-slate-900">{{ (details as any).managingOrg }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+        </div>
+      </template>
+
       <!-- Parking -->
       <template v-if="facility.category === 'parking' && (details?.parkingType || details?.operatingDays || details?.managingOrg)">
         <div class="h-px bg-slate-100 w-full"></div>
