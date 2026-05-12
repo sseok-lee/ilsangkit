@@ -453,8 +453,7 @@
             </span>
           </div>
         </div>
-    
-      </template>
+</template>
     
       <!-- EvCharger Details -->
       <template v-if="facility.category === 'ev-charger'">
@@ -546,8 +545,10 @@
         <div v-if="details?.departments?.length" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">진료과목</h3>
           <div class="flex flex-wrap gap-1.5">
-            <span v-for="dept in details.departments" :key="dept.dgsbjtCdNm"
-              class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700 border border-teal-200">
+            <span
+v-for="dept in details.departments" :key="dept.dgsbjtCdNm"
+              class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700 border border-teal-200"
+>
               {{ dept.dgsbjtCdNm }}
               <span v-if="dept.dgsbjtPrSdrCnt" class="ml-1 text-teal-500">({{ dept.dgsbjtPrSdrCnt }}명)</span>
             </span>
@@ -650,90 +651,6 @@ const toiletAccessibilityDetails = computed(() => {
   return items
 })
 
-// AED 시간표
-const aedWeeklyHours = computed(() => {
-  if (props.facility.category !== 'aed') return [] as Array<{ day: string; time: string; allDay: boolean; closed: boolean; isToday: boolean }>
-  const d = details.value as Record<string, unknown> | undefined
-  if (!d) return []
-  const today = new Date().getDay()
-  const fmt = (t: unknown) => {
-    if (!t) return null
-    const s = String(t).padStart(4, '0')
-    return `${s.slice(0, 2)}:${s.slice(2)}`
-  }
-  const DAYS = [
-    { label: '월', start: 'monSttTme', end: 'monEndTme', todayIdx: 1 },
-    { label: '화', start: 'tueSttTme', end: 'tueEndTme', todayIdx: 2 },
-    { label: '수', start: 'wedSttTme', end: 'wedEndTme', todayIdx: 3 },
-    { label: '목', start: 'thuSttTme', end: 'thuEndTme', todayIdx: 4 },
-    { label: '금', start: 'friSttTme', end: 'friEndTme', todayIdx: 5 },
-    { label: '토', start: 'satSttTme', end: 'satEndTme', todayIdx: 6 },
-    { label: '일', start: 'sunSttTme', end: 'sunEndTme', todayIdx: 0 },
-    { label: '공휴일', start: 'holSttTme', end: 'holEndTme', todayIdx: -1 },
-  ]
-  const rows = DAYS.map(dk => {
-    const s = fmt(d[dk.start])
-    const e = fmt(d[dk.end])
-    const allDay = s === '00:00' && e === '24:00'
-    const closed = !s && !e
-    return {
-      day: dk.label,
-      time: allDay ? '24시간' : closed ? '이용불가' : (s && e ? `${s} ~ ${e}` : '정보없음'),
-      allDay,
-      closed,
-      isToday: dk.todayIdx === today,
-    }
-  })
-  const hasAny = rows.some(r => !r.closed && r.time !== '정보없음')
-  return hasAny ? rows : []
-})
-
-// Hospital 시간표
-const hospitalWeeklyHours = computed(() => {
-  if (props.facility.category !== 'hospital') return [] as Array<{ day: string; time: string; lunch: string; closed: boolean; isToday: boolean }>
-  const d = details.value as Record<string, unknown> | undefined
-  if (!d) return []
-  const today = new Date().getDay()
-  const DAY_KEYS = [
-    { label: '월', start: 'trmtMonStart', end: 'trmtMonEnd', todayIdx: 1 },
-    { label: '화', start: 'trmtTueStart', end: 'trmtTueEnd', todayIdx: 2 },
-    { label: '수', start: 'trmtWedStart', end: 'trmtWedEnd', todayIdx: 3 },
-    { label: '목', start: 'trmtThuStart', end: 'trmtThuEnd', todayIdx: 4 },
-    { label: '금', start: 'trmtFriStart', end: 'trmtFriEnd', todayIdx: 5 },
-    { label: '토', start: 'trmtSatStart', end: 'trmtSatEnd', todayIdx: 6 },
-    { label: '일', start: 'trmtSunStart', end: 'trmtSunEnd', todayIdx: 0 },
-    { label: '공휴일', start: null, end: null, todayIdx: -1 },
-  ] as const
-  const fmt = (t: unknown) => {
-    if (!t) return null
-    const s = String(t).padStart(4, '0')
-    return `${s.slice(0, 2)}:${s.slice(2)}`
-  }
-  const rows = DAY_KEYS.map(dk => {
-    const s = dk.start ? fmt(d[dk.start]) : null
-    const e = dk.end ? fmt(d[dk.end]) : null
-    const closed = !s && !e
-    const isNoTrmt = (dk.label === '일' && d.noTrmtSun) || (dk.label === '공휴일' && d.noTrmtHoli)
-    const isClosed = closed || isNoTrmt
-    const lunchStr = isClosed
-      ? null
-      : dk.label === '토'
-        ? (d.lunchSat || d.lunchWeek || null)
-        : dk.label === '일' || dk.label === '공휴일'
-          ? null
-          : (d.lunchWeek || null)
-    return {
-      day: dk.label,
-      time: isClosed ? '휴진' : (s && e ? `${s} ~ ${e}` : '정보없음'),
-      lunch: (lunchStr as string) || '—',
-      closed: !!isClosed,
-      isToday: dk.todayIdx === today,
-    }
-  })
-  const hasAnyTime = rows.some(r => !r.closed && r.time !== '정보없음')
-  return hasAnyTime ? rows : []
-})
-
 const HOSPITAL_BED_DEFS: { key: string; label: string }[] = [
   { key: 'generalUpperBeds', label: '일반(상급)' },
   { key: 'generalNormalBeds', label: '일반(일반)' },
@@ -775,13 +692,6 @@ const hospitalTotalBeds = computed(() => {
   }, 0)
 })
 
-const schoolHomepageUrl = computed(() => {
-  const url = (details.value as Record<string, string> | undefined)?.homepageUrl || ''
-  if (!url) return ''
-  if (url.startsWith('http://') || url.startsWith('https://')) return url
-  return `http://${url}`
-})
-
 const schoolEnrollmentRows = computed(() => {
   const d = details.value as Record<string, unknown> | undefined
   const enrollments = (d?.enrollments as Array<{ grade: number; classCount: number }> | undefined) || []
@@ -803,16 +713,6 @@ const schoolEnrollmentRows = computed(() => {
 const schoolDepartments = computed(() => {
   const depts = (details.value as Record<string, unknown> | undefined)?.departments as Array<{ departmentName: string }> | undefined
   return (depts || []).map(d => d.departmentName)
-})
-
-const marketOpeningCycleLabel = computed(() => {
-  const cycle = (details.value as Record<string, string> | undefined)?.openingCycle || ''
-  if (cycle === '매일') return '매일'
-  if (/\d/.test(cycle)) {
-    const days = cycle.split('+').map(s => s.trim()).filter(Boolean)
-    return `매월 ${days.join(', ')}`
-  }
-  return cycle
 })
 
 const marketProductTags = computed(() => {
@@ -910,12 +810,4 @@ const parkHasFacilities = computed(() => {
   return !!(d?.exerciseFacilities || d?.playFacilities || d?.convenienceFacilities || d?.cultureFacilities || d?.otherFacilities)
 })
 
-function formatKoreanDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return ''
-  const s = String(dateStr).replace(/\D/g, '')
-  if (s.length === 8) {
-    return `${s.slice(0, 4)}년 ${parseInt(s.slice(4, 6))}월 ${parseInt(s.slice(6, 8))}일`
-  }
-  return String(dateStr)
-}
 </script>

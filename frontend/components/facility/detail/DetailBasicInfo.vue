@@ -274,8 +274,10 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="row in aedWeeklyHours" :key="row.day"
-                    :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
+                <tr
+v-for="row in aedWeeklyHours" :key="row.day"
+                    :class="row.isToday ? 'bg-blue-50 font-semibold' : ''"
+>
                   <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
                     {{ row.day }}{{ row.isToday ? ' ★' : '' }}
                   </td>
@@ -352,8 +354,10 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="row in hospitalWeeklyHours" :key="row.day"
-                    :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
+                <tr
+v-for="row in hospitalWeeklyHours" :key="row.day"
+                    :class="row.isToday ? 'bg-blue-50 font-semibold' : ''"
+>
                   <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
                     {{ row.day }}{{ row.isToday ? ' ★' : '' }}
                   </td>
