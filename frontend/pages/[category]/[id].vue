@@ -580,8 +580,8 @@ const isOpen24Hours = computed(() => {
 // 전 카테고리 통합 전화번호
 const facilityPhone = computed(() => {
   if (!details.value) return null
-  const d = details.value as FacilityDetailsAll
-  return d.phoneNumber || d.phone || d.clerkTel || null
+  const d = details.value as FacilityDetailsAll & { crtelno?: string }
+  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || null
 })
 
 // Generate map URLs (길찾기)

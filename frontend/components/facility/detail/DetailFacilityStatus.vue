@@ -362,56 +362,8 @@
     
       <!-- Childcare Details -->
       <template v-if="facility.category === 'childcare'">
-        <!-- 카드형 속성 + 휴지 알림 -->
-        <div class="grid grid-cols-2 gap-2">
-          <div v-if="details?.crtypename" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-            <span class="text-xs text-gray-600">어린이집 유형</span>
-            <span class="text-sm font-bold text-slate-900">{{ details.crtypename }}</span>
-          </div>
-          <div v-if="details?.crstatusname" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-            <span class="text-xs text-gray-600">운영 상태</span>
-            <span class="text-sm font-bold text-slate-900">{{ details.crstatusname }}</span>
-          </div>
-        </div>
-        <div v-if="details?.crpausebegindt && details?.crpauseenddt" class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-          휴지 기간: {{ details.crpausebegindt }} ~ {{ details.crpauseenddt }}
-        </div>
-    
-        <!-- 기본 정보 테이블 -->
-        <div class="mt-4">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">기본 정보</h3>
-          <table class="w-full text-sm">
-            <tbody class="divide-y divide-[#f0f2f5]">
-              <tr v-if="details?.crcnfmdt">
-                <td class="py-2.5 text-gray-600 w-28">인가일</td>
-                <td class="py-2.5 text-slate-900 font-medium text-right">{{ formatKoreanDate(details.crcnfmdt) }}</td>
-              </tr>
-              <tr v-if="details?.crrepname">
-                <td class="py-2.5 text-gray-600">대표자</td>
-                <td class="py-2.5 text-slate-900 font-medium text-right">{{ details.crrepname }}</td>
-              </tr>
-              <tr v-if="details?.crtelno">
-                <td class="py-2.5 text-gray-600">연락처</td>
-                <td class="py-2.5 text-right"><a :href="'tel:' + details.crtelno" class="font-medium text-blue-600 hover:underline">{{ details.crtelno }}</a></td>
-              </tr>
-              <tr v-if="details?.crfaxno">
-                <td class="py-2.5 text-gray-600">팩스</td>
-                <td class="py-2.5 text-slate-900 font-medium text-right">{{ details.crfaxno }}</td>
-              </tr>
-              <tr v-if="details?.crcargbname">
-                <td class="py-2.5 text-gray-600">통학차량</td>
-                <td class="py-2.5 text-slate-900 font-medium text-right">{{ details.crcargbname }}</td>
-              </tr>
-              <tr v-if="details?.crhome">
-                <td class="py-2.5 text-gray-600">홈페이지</td>
-                <td class="py-2.5 text-right"><a :href="details.crhome" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-600 hover:underline truncate inline-block max-w-[200px]">{{ details.crhome }}</a></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-    
         <!-- 정원·현원 + 시설 정보 (2열 그리드) -->
-        <div class="mt-5 border-t border-slate-100 pt-5">
+        <div>
           <h3 class="text-sm font-bold text-slate-900 mb-3">정원·시설 현황</h3>
           <div class="grid grid-cols-2 gap-3">
             <div v-if="details?.crcapat != null" class="bg-slate-50 rounded-lg p-3 text-center">
@@ -502,16 +454,6 @@
           </div>
         </div>
     
-        <!-- 특이사항 -->
-        <div v-if="details?.crspec" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-2">특이사항</h3>
-          <p class="text-sm text-gray-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{{ details.crspec }}</p>
-        </div>
-    
-        <!-- 데이터 기준일 -->
-        <div v-if="details?.datastdrdt" class="mt-4 pt-3 border-t border-slate-100">
-          <p class="text-xs text-[#9ca3af]">데이터 기준일: {{ details.datastdrdt }}</p>
-        </div>
       </template>
     
       <!-- EvCharger Details -->

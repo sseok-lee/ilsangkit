@@ -500,6 +500,64 @@
         </template>
       </template>
 
+      <!-- Childcare -->
+      <template v-if="facility.category === 'childcare'">
+        <template v-if="(details as any)?.crtypename || (details as any)?.crstatusname">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-if="(details as any)?.crtypename" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">어린이집 유형</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).crtypename }}</span>
+            </div>
+            <div v-if="(details as any)?.crstatusname" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">운영 상태</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).crstatusname }}</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.crpausebegindt && (details as any)?.crpauseenddt">
+          <div class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+            휴지 기간: {{ (details as any).crpausebegindt }} ~ {{ (details as any).crpauseenddt }}
+          </div>
+        </template>
+        <template v-if="(details as any)?.crcnfmdt || (details as any)?.crrepname || (details as any)?.crfaxno || (details as any)?.crcargbname || (details as any)?.crhome">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex flex-col gap-3">
+            <div v-if="(details as any)?.crcnfmdt" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">인가일</span>
+              <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).crcnfmdt) }}</span>
+            </div>
+            <div v-if="(details as any)?.crrepname" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">대표자</span>
+              <span class="text-sm font-medium text-slate-900">{{ (details as any).crrepname }}</span>
+            </div>
+            <div v-if="(details as any)?.crfaxno" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">팩스</span>
+              <span class="text-sm font-medium text-slate-900">{{ (details as any).crfaxno }}</span>
+            </div>
+            <div v-if="(details as any)?.crcargbname" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">통학차량</span>
+              <span class="text-sm font-medium text-slate-900">{{ (details as any).crcargbname }}</span>
+            </div>
+            <div v-if="(details as any)?.crhome" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">홈페이지</span>
+              <a :href="(details as any).crhome" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).crhome }}</a>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.crspec">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 mb-2">특이사항</h3>
+            <p class="text-sm text-gray-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{{ (details as any).crspec }}</p>
+          </div>
+        </template>
+        <template v-if="(details as any)?.datastdrdt">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <p class="text-xs text-[#9ca3af]">데이터 기준일: {{ (details as any).datastdrdt }}</p>
+        </template>
+      </template>
+
       <!-- Pharmacy -->
       <template v-if="facility.category === 'pharmacy'">
         <template v-if="details?.dutyTel3">
@@ -579,8 +637,8 @@ const isOpen24Hours = computed(() => {
 
 const facilityPhone = computed(() => {
   if (!details.value) return null
-  const d = details.value as FacilityDetailsAll & { phone?: string; clerkTel?: string }
-  return d.phoneNumber || d.phone || d.clerkTel || null
+  const d = details.value as FacilityDetailsAll & { phone?: string; clerkTel?: string; crtelno?: string }
+  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || null
 })
 
 const hideOperatingHours = computed(() => {
