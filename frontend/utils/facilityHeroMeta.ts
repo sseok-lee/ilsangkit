@@ -26,3 +26,59 @@ export function buildHeroBadge(facility: FacilityDetail): OperatingStatus {
 
   return getOperatingStatus(normalized as unknown as Record<string, unknown>)
 }
+
+// PageHero가 export하는 타입과 동일한 형태를 로컬에 재선언.
+// Vitest+Nuxt에서 SFC 타입 import 회피용. 컴파일 시 호환성은 page.vue에서 동시 import로 검증됨.
+export interface HeroActionMenuItem {
+  label: string
+  href: string
+  iconSrc?: string
+}
+
+export interface HeroAction {
+  type: 'directions' | 'phone' | 'share'
+  label: string
+  href?: string
+  primary?: boolean
+  menu?: HeroActionMenuItem[]
+}
+
+export interface HeroActionContext {
+  kakaoMapUrl: string
+  naverMapUrl: string
+}
+
+function pickPhone(facility: FacilityDetail): string | null {
+  const phone = (facility as unknown as { phone?: string | null }).phone
+  if (!phone || !phone.trim()) return null
+  return phone.trim()
+}
+
+/**
+ * Builds the action button list for the hero CTA row.
+ * - Directions is always present (primary) with a kakao+naver dropdown menu.
+ * - Phone is inserted between directions and share only when facility.phone is non-empty.
+ * - Share is always present and emits a click event (no href/menu).
+ */
+export function buildHeroActions(
+  facility: FacilityDetail,
+  ctx: HeroActionContext,
+): HeroAction[] {
+  const actions: HeroAction[] = [
+    {
+      type: 'directions',
+      label: '길찾기',
+      primary: true,
+      menu: [
+        { label: '카카오맵으로 길찾기', href: ctx.kakaoMapUrl, iconSrc: '/images/icons/kakaomap.svg' },
+        { label: '네이버맵으로 길찾기', href: ctx.naverMapUrl, iconSrc: '/images/icons/navermap.svg' },
+      ],
+    },
+  ]
+  const phone = pickPhone(facility)
+  if (phone) {
+    actions.push({ type: 'phone', label: '전화', href: `tel:${phone}` })
+  }
+  actions.push({ type: 'share', label: '공유' })
+  return actions
+}

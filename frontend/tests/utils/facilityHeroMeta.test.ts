@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildHeroBadge } from '~/utils/facilityHeroMeta'
+import { buildHeroBadge, buildHeroActions } from '~/utils/facilityHeroMeta'
 
 describe('buildHeroBadge', () => {
   it('returns null for categories without meaningful operating status', () => {
@@ -64,5 +64,45 @@ describe('buildHeroBadge', () => {
       category: 'library',
       details: { operationStatus: '운영' },
     } as any)).toBe('openNow')
+  })
+})
+
+describe('buildHeroActions', () => {
+  const ctx = {
+    kakaoMapUrl: 'https://map.kakao.com/x',
+    naverMapUrl: 'https://map.naver.com/x',
+  }
+
+  it('returns directions with menu (kakao + naver) and share by default', () => {
+    const actions = buildHeroActions({ category: 'toilet', phone: null } as any, ctx)
+    expect(actions.map(a => a.type)).toEqual(['directions', 'share'])
+    expect(actions[0].primary).toBe(true)
+    expect(actions[0].href).toBeUndefined()
+    expect(actions[0].menu).toHaveLength(2)
+    expect(actions[0].menu![0].href).toBe('https://map.kakao.com/x')
+    expect(actions[0].menu![1].href).toBe('https://map.naver.com/x')
+  })
+
+  it('inserts phone action between directions and share when phone exists', () => {
+    const actions = buildHeroActions(
+      { category: 'pharmacy', phone: '02-1234-5678' } as any,
+      ctx,
+    )
+    expect(actions.map(a => a.type)).toEqual(['directions', 'phone', 'share'])
+    expect(actions[1].href).toBe('tel:02-1234-5678')
+  })
+
+  it('skips phone action when phone is empty string or null', () => {
+    const noPhone = buildHeroActions({ category: 'toilet', phone: '' } as any, ctx)
+    expect(noPhone.find(a => a.type === 'phone')).toBeUndefined()
+    const nullPhone = buildHeroActions({ category: 'toilet', phone: null } as any, ctx)
+    expect(nullPhone.find(a => a.type === 'phone')).toBeUndefined()
+  })
+
+  it('share action has no href and no menu (handled by emit)', () => {
+    const actions = buildHeroActions({ category: 'toilet' } as any, ctx)
+    const share = actions.find(a => a.type === 'share')
+    expect(share?.href).toBeUndefined()
+    expect(share?.menu).toBeUndefined()
   })
 })
