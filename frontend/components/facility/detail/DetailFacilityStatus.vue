@@ -464,25 +464,6 @@
       <!-- Sports Details -->
       <template v-if="facility.category === 'sports'">
         <div class="flex flex-col gap-3">
-          <div class="grid grid-cols-2 gap-2">
-            <div v-if="details?.ftypeNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">시설유형</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.ftypeNm }}</span>
-            </div>
-            <div v-if="details?.faciGbNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">시설구분</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.faciGbNm }}</span>
-            </div>
-            <div v-if="details?.nationYn === 'Y'" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">국가대표시설</span>
-              <span class="text-sm font-bold text-slate-900">Y</span>
-            </div>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">업종명</span>
-            <span v-if="details?.fcobNm" class="text-sm font-medium text-slate-900">{{ details.fcobNm }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">시설면적</span>
             <span v-if="details?.faciGfa" class="text-sm font-medium text-slate-900">{{ details.faciGfa }}㎡</span>

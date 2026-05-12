@@ -558,6 +558,34 @@
         </template>
       </template>
 
+      <!-- Sports -->
+      <template v-if="facility.category === 'sports'">
+        <template v-if="(details as any)?.ftypeNm || (details as any)?.faciGbNm || (details as any)?.nationYn === 'Y'">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-if="(details as any)?.ftypeNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">시설유형</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).ftypeNm }}</span>
+            </div>
+            <div v-if="(details as any)?.faciGbNm" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">시설구분</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).faciGbNm }}</span>
+            </div>
+            <div v-if="(details as any)?.nationYn === 'Y'" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">국가대표시설</span>
+              <span class="text-sm font-bold text-slate-900">Y</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.fcobNm">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">업종명</span>
+            <span class="text-sm font-medium text-slate-900">{{ (details as any).fcobNm }}</span>
+          </div>
+        </template>
+      </template>
+
       <!-- Pharmacy -->
       <template v-if="facility.category === 'pharmacy'">
         <template v-if="details?.dutyTel3">
