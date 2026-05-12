@@ -44,8 +44,10 @@ const globalConfig = {
 
 const baseProps = {
   hospitalOperatingHours: [],
+  hospitalWeeklyHours: [],
   hospitalWeeklyHoursCount: 0,
   aedOperatingHours: [],
+  aedWeeklyHours: [],
   aedWeeklyHoursCount: 0,
   pharmacyOperatingHours: [],
 }

@@ -316,6 +316,40 @@
             </div>
           </div>
         </template>
+        <!-- Hospital 요일별 진료시간 표 -->
+        <template v-if="hospitalWeeklyHours.length > 0">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 진료시간</h3>
+            <table class="w-full text-sm border-collapse">
+              <thead>
+                <tr class="bg-slate-50">
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">진료시간</th>
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">점심</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="row in hospitalWeeklyHours" :key="row.day"
+                    :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
+                  <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
+                    {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+                  </td>
+                  <td class="py-1.5 px-2 text-xs" :class="row.closed ? 'text-gray-400' : 'text-slate-800'">
+                    {{ row.time }}
+                  </td>
+                  <td class="py-1.5 px-2 text-xs text-gray-500">{{ row.lunch }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="(details as any)?.noTrmtSun" class="mt-2 text-xs text-gray-500">
+              <span class="font-medium">일요일 안내:</span> {{ (details as any).noTrmtSun }}
+            </p>
+            <p v-if="(details as any)?.noTrmtHoli" class="text-xs text-gray-500">
+              <span class="font-medium">공휴일 안내:</span> {{ (details as any).noTrmtHoli }}
+            </p>
+          </div>
+        </template>
         <template v-if="hospitalOperatingHours.length > 0 && hospitalWeeklyHoursCount === 0">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">
