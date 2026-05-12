@@ -239,6 +239,32 @@
             <span class="text-sm font-medium text-slate-900">{{ String(details?.org || '').replace(/^[\s-]+|[\s-]+$/g, '') }}</span>
           </div>
         </template>
+        <!-- AED 요일별 이용시간 표 -->
+        <template v-if="aedWeeklyHours.length > 0">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 이용시간</h3>
+            <table class="w-full text-sm border-collapse">
+              <thead>
+                <tr class="bg-slate-50">
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
+                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">이용시간</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="row in aedWeeklyHours" :key="row.day"
+                    :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
+                  <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
+                    {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+                  </td>
+                  <td class="py-1.5 px-2 text-xs" :class="row.allDay ? 'text-green-600 font-medium' : row.closed ? 'text-gray-400' : 'text-slate-800'">
+                    {{ row.time }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
         <template v-if="aedOperatingHours.length > 0 && aedWeeklyHoursCount === 0">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">
@@ -246,6 +272,14 @@
               <span class="text-sm text-gray-600">{{ item.day }}</span>
               <span class="text-sm font-medium text-slate-900">{{ item.time }}</span>
             </div>
+          </div>
+        </template>
+        <!-- AED 담당자 연락처 -->
+        <template v-if="(details as any)?.clerkTel">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">담당자 연락처</span>
+            <a :href="`tel:${(details as any).clerkTel}`" class="text-sm font-medium text-primary hover:underline">{{ (details as any).clerkTel }}</a>
           </div>
         </template>
       </template>
@@ -377,8 +411,10 @@ import type { FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 const props = defineProps<{
   facility: FacilityDetail
   hospitalOperatingHours: Array<{ day: string; time: string }>
+  hospitalWeeklyHours: Array<{ day: string; time: string; lunch: string; closed: boolean; isToday: boolean }>
   hospitalWeeklyHoursCount: number
   aedOperatingHours: Array<{ day: string; time: string }>
+  aedWeeklyHours: Array<{ day: string; time: string; allDay: boolean; closed: boolean; isToday: boolean }>
   aedWeeklyHoursCount: number
   pharmacyOperatingHours: Array<{ day: string; time: string }>
 }>()

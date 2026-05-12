@@ -137,8 +137,10 @@
               <DetailBasicInfo
                 :facility="facility"
                 :hospital-operating-hours="hospitalOperatingHours"
+                :hospital-weekly-hours="hospitalWeeklyHours"
                 :hospital-weekly-hours-count="hospitalWeeklyHours.length"
                 :aed-operating-hours="aedOperatingHours"
+                :aed-weekly-hours="aedWeeklyHours"
                 :aed-weekly-hours-count="aedWeeklyHours.length"
                 :pharmacy-operating-hours="pharmacyOperatingHours"
               />

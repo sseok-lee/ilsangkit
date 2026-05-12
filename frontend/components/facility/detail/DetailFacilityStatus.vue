@@ -253,38 +253,6 @@
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
         </div>
-    
-        <!-- AED Operating Hours -->
-        <div v-if="aedWeeklyHours.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 이용시간</h3>
-          <table class="w-full text-sm border-collapse">
-            <thead>
-              <tr class="bg-slate-50">
-                <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
-                <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">이용시간</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="row in aedWeeklyHours" :key="row.day"
-                  :class="row.isToday ? 'bg-blue-50 font-semibold' : ''">
-                <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-blue-700' : 'text-slate-600'">
-                  {{ row.day }}{{ row.isToday ? ' ★' : '' }}
-                </td>
-                <td class="py-1.5 px-2 text-xs" :class="row.allDay ? 'text-green-600 font-medium' : row.closed ? 'text-gray-400' : 'text-slate-800'">
-                  {{ row.time }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-    
-        <!-- AED Manager Contact -->
-        <div v-if="details?.clerkTel" class="mt-5 border-t border-slate-100 pt-5">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">담당자 연락처</span>
-            <a :href="`tel:${details.clerkTel}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.clerkTel }}</a>
-          </div>
-        </div>
       </template>
     
       <!-- Park Details -->
