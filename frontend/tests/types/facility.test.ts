@@ -44,10 +44,10 @@ describe('CATEGORY_GROUPS', () => {
     expect(CATEGORY_GROUPS).toHaveLength(4)
   })
 
-  it("'생활/편의' 그룹은 ['park', 'parking', 'ev-charger', 'toilet'] 순서로 포함", () => {
+  it("'생활/편의' 그룹은 ['park', 'market', 'parking', 'ev-charger', 'subway', 'toilet'] 순서로 포함", () => {
     const group = CATEGORY_GROUPS.find(g => g.title === '생활/편의')
     expect(group).toBeDefined()
-    expect(group!.categories).toEqual(['park', 'market', 'parking', 'ev-charger', 'toilet'])
+    expect(group!.categories).toEqual(['park', 'market', 'parking', 'ev-charger', 'subway', 'toilet'])
   })
 
   it("'교육/육아' 그룹은 ['school', 'library', 'childcare'] 순서로 포함", () => {
@@ -118,11 +118,17 @@ describe('CATEGORY_META', () => {
     expect(CATEGORY_META.sports.label).toBe('체육시설')
     expect(CATEGORY_META.sports.color).toBe('cyan')
   })
+
+  it('subway 키 존재, label=지하철역, color=slate', () => {
+    expect(CATEGORY_META).toHaveProperty('subway')
+    expect(CATEGORY_META.subway.label).toBe('지하철역')
+    expect(CATEGORY_META.subway.color).toBe('slate')
+  })
 })
 
 describe('FACILITY_CATEGORIES (runtime single source)', () => {
-  it('15개 시설 카테고리를 모두 포함한다', () => {
-    expect(FACILITY_CATEGORIES).toHaveLength(15)
+  it('16개 시설 카테고리를 모두 포함한다 (subway 추가)', () => {
+    expect(FACILITY_CATEGORIES).toHaveLength(16)
   })
 
   it('CATEGORY_META 의 키 집합과 정확히 일치한다', () => {
@@ -131,7 +137,7 @@ describe('FACILITY_CATEGORIES (runtime single source)', () => {
     expect(arrSorted).toEqual(metaKeys)
   })
 
-  it('search redirect 대상 15개 카테고리 (childcare, ev-charger, sports, aed 포함) 모두 isFacilityCategory 를 통과한다', () => {
+  it('search redirect 대상 16개 카테고리 (subway 포함) 모두 isFacilityCategory 를 통과한다', () => {
     const requiredForSearchRedirect = [
       'toilet',
       'trash',
@@ -148,6 +154,7 @@ describe('FACILITY_CATEGORIES (runtime single source)', () => {
       'childcare',
       'ev-charger',
       'sports',
+      'subway',
     ]
     for (const cat of requiredForSearchRedirect) {
       expect(isFacilityCategory(cat)).toBe(true)

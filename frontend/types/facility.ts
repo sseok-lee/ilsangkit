@@ -15,6 +15,7 @@ export const FACILITY_CATEGORIES = [
   'childcare',
   'ev-charger',
   'sports',
+  'subway',
 ] as const
 
 export type FacilityCategory = (typeof FACILITY_CATEGORIES)[number]
@@ -523,7 +524,7 @@ export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
   {
     title: '생활/편의',
     icon: 'home',
-    categories: ['park', 'market', 'parking', 'ev-charger', 'toilet'],
+    categories: ['park', 'market', 'parking', 'ev-charger', 'subway', 'toilet'],
   },
   {
     title: '환경/생활',
@@ -719,6 +720,12 @@ export const CATEGORY_META: Record<FacilityCategory, CategoryMeta> = {
     icon: 'sports',
     color: 'cyan',
   },
+  subway: {
+    label: '지하철역',
+    shortLabel: '지하철',
+    icon: 'subway',
+    color: 'slate',
+  },
 }
 
 // 카테고리별 공공데이터포털 URL 매핑
@@ -737,6 +744,7 @@ export const CATEGORY_DATA_PORTAL_URL: Record<FacilityCategory, string> = {
   market: 'https://www.data.go.kr/data/15012874/standard.do',
   childcare: 'https://info.childcare.go.kr/',
   'ev-charger': 'https://www.data.go.kr/data/15076352/openapi.do',
+  subway: 'https://www.data.go.kr/data/15013205/standard.do',
   sports: 'https://www.data.go.kr/data/15107764/openapi.do',
 }
 

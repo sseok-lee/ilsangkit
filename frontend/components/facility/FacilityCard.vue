@@ -119,6 +119,18 @@
           <!-- ev-charger (충전소 단위) -->
           <span v-if="facility.extras.rapidCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">급속 {{ facility.extras.rapidCount }}대</span>
           <span v-if="facility.extras.slowCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-50 text-green-700">완속 {{ facility.extras.slowCount }}대</span>
+
+          <!-- subway 노선 배지 (환승역은 다중 표시) -->
+          <template v-if="facility.category === 'subway' && Array.isArray(facility.extras.lines)">
+            <span
+              v-for="ln in dedupeLines(facility.extras.lines as string[])"
+              :key="ln"
+              class="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full text-white"
+              :style="{ backgroundColor: lineColor(ln) }"
+            >
+              {{ lineLabel(ln) }}
+            </span>
+          </template>
         </div>
       </div>
     </div>
@@ -130,6 +142,7 @@ import HardLink from '~/components/common/HardLink.vue'
 import type { Facility } from '~/types/facility'
 import { formatDistance } from '~/utils/formatters'
 import { getOperatingStatus } from '~/utils/facilityStatus'
+import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import OperatingStatusBadge from './OperatingStatusBadge.vue'
 
 interface Props {

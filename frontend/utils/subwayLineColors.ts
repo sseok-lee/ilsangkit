@@ -96,4 +96,75 @@ export function lineColor(line: string | null | undefined): string {
   return DEFAULT_COLOR
 }
 
+/**
+ * 표시용 정규화 라벨.
+ *
+ * 표준데이터 "노선명" 컬럼은 verbose함:
+ *   "수도권 광역철도 8호선" → "8호선"
+ *   "부산 도시철도 3호선"   → "부산3호선"
+ *   "수도권 경량도시철도 신림선" → "신림선"
+ *   "수도권  도시철도 9호선" → "9호선" (이중 공백)
+ *   "대구도시철도3호선+대구도시철도1호선" → "대구3호선" (환승 row는 첫 토큰만)
+ *   "서울특별시 서울시메트로9호선㈜" → "9호선"
+ *
+ * lineColor()와 동일한 우선순위로 LINE_COLORS 키에 매핑되는 형태로 normalize.
+ * 매핑 실패 시 마지막 토큰 또는 원본 trim 반환.
+ */
+export function lineLabel(line: string | null | undefined): string {
+  if (!line) return ''
+  let trimmed = line.trim()
+  // CSV placeholder("-", "—", "N/A" 등)는 빈값으로 취급
+  if (!trimmed || /^[-—\s]+$/.test(trimmed) || trimmed.toLowerCase() === 'n/a') return ''
+  // 환승 row 표기 "+로 결합된 경우" 첫 노선만 사용
+  if (trimmed.includes('+')) {
+    trimmed = trimmed.split('+')[0].trim()
+  }
+
+  // 1. 정확 매칭 — 이미 정규형
+  if (LINE_COLORS[trimmed]) return trimmed
+
+  // 2. 공백 제거 매칭
+  const compact = trimmed.replace(/\s+/g, '')
+  if (LINE_COLORS[compact]) return compact
+
+  // 3. N호선 — 도시 prefix 보존
+  const numMatch = trimmed.match(/(\d+)호선/)
+  if (numMatch) {
+    const num = numMatch[1]
+    const city = findCityWithOwnColor(trimmed)
+    if (city && LINE_COLORS[`${city}${num}호선`]) return `${city}${num}호선`
+    if (LINE_COLORS[`${num}호선`]) return `${num}호선`
+  }
+
+  // 4. 마지막 토큰 ("수도권 광역철도 신분당선" → "신분당선")
+  const tokens = trimmed.split(/\s+/).filter(Boolean)
+  const last = tokens[tokens.length - 1]
+  if (last && LINE_COLORS[last]) return last
+
+  // 5. 매핑 실패 — 마지막 토큰 또는 원본
+  return last || trimmed
+}
+
+/**
+ * 정규화 라벨 기준으로 중복 제거한 노선 배열을 반환한다.
+ *
+ * 백엔드 그룹핑이 raw 노선 문자열을 Set으로 dedupe하므로
+ * "신분당선"과 "수도권 광역철도 신분당선"이 둘 다 lines 배열에 남아 있을 수 있다.
+ * `lineLabel()`이 양쪽을 동일하게 normalize하므로 표시 단계에서 한 번 더 dedupe 필요.
+ *
+ * 라벨 우선순위 유지 — 처음 등장 순서.
+ */
+export function dedupeLines(lines: readonly string[] | null | undefined): string[] {
+  if (!lines || lines.length === 0) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of lines) {
+    const label = lineLabel(raw)
+    if (!label || seen.has(label)) continue
+    seen.add(label)
+    out.push(raw) // 색상 매핑은 raw로도 동작하므로 raw 보존 (lineColor도 verbose 처리)
+  }
+  return out
+}
+
 // 단일 진실원 — LINE_COLORS는 직접 export 하지 않는다. 색상은 lineColor()로만 조회.

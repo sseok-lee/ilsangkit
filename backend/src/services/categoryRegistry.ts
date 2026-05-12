@@ -6,8 +6,11 @@
 import { prisma } from '../lib/prisma.js';
 
 // 카테고리 타입
-export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market' | 'childcare' | 'ev-charger' | 'sports';
+export type FacilityCategory = 'toilet' | 'wifi' | 'clothes' | 'parking' | 'aed' | 'library' | 'hospital' | 'pharmacy' | 'park' | 'school' | 'market' | 'childcare' | 'ev-charger' | 'sports' | 'subway';
 
+// 주의: subway는 의도적으로 ALL_CATEGORIES에서 제외.
+// CATEGORY_REGISTRY에는 등록되어 메타데이터/타입 조회는 가능하나
+// stats/area summary/facility search 흐름은 subway를 건너뜀 — list/detail은 /api/subway/* 라우트 사용.
 export const ALL_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'];
 
 interface CategoryConfig {
@@ -100,5 +103,12 @@ export const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
     model: () => prisma.sports,
     listFields: ['ftypeNm', 'fcobNm', 'faciGbNm'],
     detailFields: ['faciGbNm', 'fcobNm', 'ftypeNm', 'fmngCpNm', 'fmngCpbNm', 'faciGfa', 'standCptPsnCnt', 'faciHomepage', 'faciStatCd', 'addrCtpvNm', 'addrCpbNm', 'addrEmdNm', 'nationYn', 'fmngTypeGbNm', 'delYn', 'rowNum'],
+  },
+  // 지하철역: 메타데이터 등록만. 실제 list/detail은 /api/subway/* 라우트 사용.
+  // /api/facilities Zod enum(schemas/facility.ts)에는 'subway'를 추가하지 않아 자연 422 차단.
+  subway: {
+    model: () => prisma.subwayStation,
+    listFields: ['line', 'transferLines', 'operator', 'nameSlug'],
+    detailFields: ['line', 'transferLines', 'operator', 'phoneNumber', 'dataDate', 'nameSlug'],
   },
 };

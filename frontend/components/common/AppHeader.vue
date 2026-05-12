@@ -70,7 +70,7 @@
                 class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
                 @click="closeDropdown"
               >
-                <img :src="`/icons/category/${catId}.webp?v2`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
+                <CategoryIcon :category-id="catId" size="sm" />
                 {{ CATEGORY_META[catId].shortLabel }}
               </HardLink>
             </template>
@@ -181,7 +181,7 @@
               class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
-              <img :src="`/icons/category/${catId}.webp?v2`" :alt="CATEGORY_META[catId].shortLabel" class="w-5 h-5" width="20" height="20" />
+              <CategoryIcon :category-id="catId" size="sm" />
               {{ CATEGORY_META[catId].shortLabel }}
             </HardLink>
           </template>
@@ -262,6 +262,7 @@
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { CATEGORY_META, NAV_GROUPS, isLinkGroup } from '~/types/facility'
+import CategoryIcon from '~/components/common/CategoryIcon.vue'
 
 interface Props {
   transparent?: boolean

@@ -98,6 +98,11 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
     provider: '문화체육관광부',
     url: 'https://www.data.go.kr/data/15107764/openapi.do',
   },
+  subway: {
+    datasetName: '전국도시철도역사정보표준데이터',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15013205/standard.do',
+  },
 }
 
 export const REAL_ESTATE_DATA_SOURCE: DataSourceInfo = {

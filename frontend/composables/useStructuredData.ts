@@ -127,6 +127,7 @@ export function useStructuredData() {
       childcare: 'ChildCare',
       'ev-charger': 'LocalBusiness',
       sports: 'SportsActivityLocation',
+      subway: 'TrainStation',
     }
 
     const schema = {

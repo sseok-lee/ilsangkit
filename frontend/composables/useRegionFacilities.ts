@@ -26,6 +26,67 @@ export function useRegionFacilities() {
     }
   }
 
+  // subway는 facility API와 응답 shape가 다르므로 별도 endpoint 호출 후 Facility 형식으로 정규화한다.
+  // /api/facilities는 Zod enum에 subway가 없어 422를 반환하므로 분기 필수.
+  interface SubwayStationGroup {
+    id: string;
+    name: string;
+    nameSlug: string;
+    primaryLine: string;
+    lines: string[];
+    operator: string | null;
+    lat: number;
+    lng: number;
+    address: string | null;
+    roadAddress: string | null;
+    city: string | null;
+    district: string | null;
+  }
+
+  async function fetchSubwayRegion(
+    citySlug: string,
+    districtName: string,
+    currentPage: number,
+    pageSize: number,
+  ): Promise<RegionFacilitiesResponse | null> {
+    const apiBase = getApiBase();
+    const response = await $fetch<ApiResponse<{ items: SubwayStationGroup[]; total: number; page: number; limit: number }>>(
+      `${apiBase}/api/subway/stations`,
+      {
+        query: {
+          grouped: true,
+          page: currentPage,
+          limit: pageSize,
+          city: citySlug,
+          district: districtName,
+        },
+      },
+    );
+    if (!response.success || !response.data) return null;
+    const totalPagesCalc = Math.max(1, Math.ceil(response.data.total / pageSize));
+    return {
+      items: response.data.items.map<Facility>((g) => ({
+        id: g.nameSlug,
+        name: g.name,
+        category: 'subway',
+        address: g.address,
+        roadAddress: g.roadAddress,
+        lat: g.lat,
+        lng: g.lng,
+        city: g.city ?? '',
+        district: g.district ?? '',
+        extras: {
+          primaryLine: g.primaryLine,
+          lines: g.lines,
+          operator: g.operator,
+        },
+      })),
+      total: response.data.total,
+      page: response.data.page,
+      totalPages: totalPagesCalc,
+    };
+  }
+
   async function fetchFacilities(
     city: string,
     district: string,
@@ -38,6 +99,17 @@ export function useRegionFacilities() {
     error.value = null;
 
     try {
+      if (category === 'subway') {
+        const normalized = await fetchSubwayRegion(city, district, currentPage, pageSize);
+        if (normalized) {
+          facilities.value = normalized.items;
+          total.value = normalized.total;
+          page.value = normalized.page;
+          totalPages.value = normalized.totalPages;
+        }
+        return;
+      }
+
       const apiBase = getApiBase();
 
       const query: Record<string, unknown> = {
