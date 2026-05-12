@@ -5,8 +5,11 @@
       <span v-if="eyebrow" class="inline-flex mb-3 px-2 py-1 bg-primary/10 text-primary rounded text-eyebrow">
         {{ eyebrow }}
       </span>
-      <h1 class="text-display-1 text-slate-900 mb-2">
+      <h1 class="text-display-1 text-slate-900 mb-2 flex items-center gap-2 flex-wrap">
         <slot name="title">{{ title }}</slot>
+        <span v-if="$slots.badge" data-test="badge-wrap" class="inline-flex">
+          <slot name="badge" />
+        </span>
       </h1>
       <p v-if="description || $slots.description" class="text-body text-slate-500">
         <slot name="description">{{ description }}</slot>
