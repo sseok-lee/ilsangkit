@@ -126,9 +126,15 @@
               <PageHero
                 :eyebrow="categoryMeta.label"
                 :title="displayName"
-                :description="facilityIntro || undefined"
-                :stats="desktopHeroStats"
-              />
+                :description="heroDescription || undefined"
+                :stats="heroStats"
+                :actions="heroActions"
+                @action="handleHeroAction"
+              >
+                <template v-if="heroBadge" #badge>
+                  <OperatingStatusBadge :status="heroBadge" />
+                </template>
+              </PageHero>
 
               <!-- Ad: HERO 아래 -->
               <AdBanner />
@@ -200,37 +206,6 @@
                 </ClientOnly>
               </div>
 
-              <!-- Action Buttons (Desktop Sticky Bottom) -->
-              <div class="mt-3 p-4 bg-white border border-slate-200 flex gap-3 shadow-card rounded-xl">
-                <button
-                  class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-900 font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
-                  aria-label="이 시설 공유하기"
-                  @click="handleShare"
-                >
-                  <span class="material-symbols-outlined">share</span>
-                  공유하기
-                </button>
-                <div class="relative flex-[2]">
-                  <button
-                    class="w-full h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
-                    @click="showNavDropdown = !showNavDropdown"
-                  >
-                    <span class="material-symbols-outlined">directions</span>
-                    길찾기
-                    <span class="material-symbols-outlined text-[18px]">expand_more</span>
-                  </button>
-                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
-                      <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                    </button>
-                    <div class="h-px bg-slate-100"></div>
-                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
-                      <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               <!-- 쿠팡 배너 (Desktop Sticky) -->
               <CoupangBanner class="mt-3" />
 
@@ -242,41 +217,6 @@
           </div>
         </div>
 
-        <!-- Mobile: Sticky Bottom CTA -->
-        <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
-          <div class="flex gap-3">
-            <button
-              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-3.5 text-base font-bold text-slate-900 border border-gray-200 transition hover:bg-gray-200 active:scale-[0.98]"
-              aria-label="이 시설 공유하기"
-              @click="handleShare"
-            >
-              <span class="material-symbols-outlined text-[20px]">share</span>
-              공유하기
-            </button>
-            <div class="relative flex-[2]">
-              <button
-                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-[0.98]"
-                @click="showMobileNavDropdown = !showMobileNavDropdown"
-              >
-                <span class="material-symbols-outlined text-[20px]">directions</span>
-                길찾기
-                <span class="material-symbols-outlined text-[16px]">expand_more</span>
-              </button>
-              <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl); showMobileNavDropdown = false">
-                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                </button>
-                <div class="h-px bg-slate-100"></div>
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl); showMobileNavDropdown = false">
-                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom padding for mobile CTA -->
-        <div class="md:hidden h-24"></div>
       </template>
     </main>
   </div>
@@ -298,18 +238,19 @@ import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
+import OperatingStatusBadge from '~/components/facility/OperatingStatusBadge.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
-import { formatOperatingHours } from '~/utils/formatOperatingHours'
+import { buildHeroActions, buildHeroBadge, buildHeroStats } from '~/utils/facilityHeroMeta'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
 const router = useRouter()
 const { setFacilityDetailMeta } = useFacilityMeta()
-import { buildFacilityIntro, getFacilityDisplayName } from '~/composables/useFacilityMeta'
+import { getFacilityDisplayName } from '~/composables/useFacilityMeta'
 const { setFacilitySchema, setBreadcrumbSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
@@ -423,11 +364,8 @@ const displayName = computed(() => {
   return getFacilityDisplayName(facility.value)
 })
 
-// h1 아래 자연어 설명문
-const facilityIntro = computed(() => {
-  if (!facility.value) return ''
-  return buildFacilityIntro(facility.value)
-})
+// h1 아래 표시할 주소 한 줄 (스펙: 자동생성 인트로 폐기, 주소만)
+const heroDescription = computed(() => facility.value?.address ?? '')
 
 // 카테고리별 이용 팁 & FAQ (상세 페이지 하단 콘텐츠 보강)
 const categoryTips = computed(() => {
@@ -450,93 +388,16 @@ const desktopBreadcrumbItems = computed(() => {
   ]
 })
 
-// 데스크톱 히어로 사이드바 통계
-const desktopHeroStats = computed(() => {
-  if (!facility.value) return []
-  const cat = facility.value.category
-  const d = details.value as any
-  const items: { label: string; value: string }[] = []
-
-  // 운영시간 (공통 - 있는 경우만, 단 hospital/pharmacy/aed/library/parking는 별도 배너/표 제공으로 제외)
-  if (isOpen24Hours.value) {
-    items.push({ label: '운영', value: '24시간' })
-  } else if (details.value?.operatingHours && !['hospital', 'pharmacy', 'aed', 'library', 'parking'].includes(cat)) {
-    items.push({ label: '운영시간', value: formatOperatingHours(details.value.operatingHours).split('\n')[0] })
-  }
-
-  // 카테고리별 고유 지표
-  if (cat === 'hospital') {
-    if (d?.clCdNm) items.push({ label: '종별', value: d.clCdNm })
-    if (d?.drTotCnt) items.push({ label: '의사', value: `${d.drTotCnt}명` })
-    if (d?.parkQty != null) items.push({ label: '주차', value: d.parkQty > 0 ? `${d.parkQty}대` : '불가' })
-  } else if (cat === 'pharmacy') {
-    if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
-  } else if (cat === 'parking') {
-    if (d?.capacity) items.push({ label: '주차면수', value: `${d.capacity}면` })
-    if (d?.feeType) items.push({ label: '요금', value: d.feeType })
-    if (d?.lotType) items.push({ label: '구분', value: d.lotType })
-  } else if (cat === 'library') {
-    if (d?.seatCount) items.push({ label: '좌석', value: `${d.seatCount.toLocaleString()}석` })
-    if (d?.bookCount) items.push({ label: '장서', value: `${d.bookCount.toLocaleString()}권` })
-  } else if (cat === 'aed') {
-    const trim = (s: string) => s.replace(/^[-\s]+|[-\s]+$/g, '').trim()
-    if (d?.buildPlace) {
-      const v = trim(d.buildPlace)
-      if (v) items.push({ label: '설치위치', value: v })
-    }
-    if (d?.org) {
-      const v = trim(d.org)
-      if (v) items.push({ label: '관리기관', value: v })
-    }
-  } else if (cat === 'childcare') {
-    if (d?.crcapat) items.push({ label: '정원', value: `${d.crcapat}명` })
-    if (d?.crchcnt != null) items.push({ label: '현원', value: `${d.crchcnt}명` })
-  } else if (cat === 'park') {
-    if (d?.parkType) items.push({ label: '공원유형', value: d.parkType })
-    if (d?.area != null) items.push({ label: '면적', value: `${d.area.toLocaleString()}㎡` })
-  } else if (cat === 'market') {
-    if (d?.marketType) items.push({ label: '시장유형', value: d.marketType })
-    if (d?.storeCount != null) items.push({ label: '점포수', value: `${d.storeCount}개` })
-  } else if (cat === 'school') {
-    if (d?.schoolLevel) items.push({ label: '학교급', value: d.schoolLevel })
-    if (d?.foundationType) items.push({ label: '설립형태', value: d.foundationType })
-    if (d?.coeducationType) items.push({ label: '남녀공학', value: d.coeducationType })
-  } else if (cat === 'sports') {
-    // 전화 우선, 없으면 시설구분/유형 fallback
-    if (facilityPhone.value) {
-      items.push({ label: '전화', value: facilityPhone.value })
-    } else {
-      if (d?.faciGbNm) items.push({ label: '시설구분', value: d.faciGbNm })
-      if (d?.ftypeNm) items.push({ label: '유형', value: d.ftypeNm })
-    }
-  } else if (cat === 'toilet') {
-    // 24시간/상시 개방 + 안전·접근성 배지
-    const openTimeRaw = (d?.openTime || '').toString().trim()
-    if (openTimeRaw === '상시' || isOpen24Hours.value) {
-      items.push({ label: '개방', value: '상시' })
-    }
-    if (d?.hasCCTV) items.push({ label: 'CCTV', value: '있음' })
-    if (d?.hasDisabledToilet) items.push({ label: '장애인', value: '가능' })
-    if (d?.hasDiaperChangingTable) items.push({ label: '기저귀대', value: '있음' })
-    if (items.length === 0 && facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
-  } else if (cat === 'wifi') {
-    if (d?.ssid) items.push({ label: 'SSID', value: d.ssid })
-  } else if (cat === 'ev-charger') {
-    // 완속/급속 분포: chgerType '01' 급속, '02','03','04','05','06','07' 완속/AC3상 등
-    const chargers = (d?.chargers || []) as Array<{ chgerType?: string }>
-    if (chargers.length > 0) {
-      const fast = chargers.filter(c => c.chgerType === '01' || c.chgerType === '03').length
-      const slow = chargers.length - fast
-      items.push({ label: '충전기', value: `${chargers.length}대` })
-      if (fast > 0 || slow > 0) items.push({ label: '구성', value: `급속 ${fast} · 완속 ${slow}` })
-    }
-  } else {
-    // 나머지 카테고리: 전화 표시 (clothes)
-    if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
-  }
-
-  return items
-})
+const heroBadge = computed(() => (facility.value ? buildHeroBadge(facility.value) : null))
+const heroStats = computed(() => (facility.value ? buildHeroStats(facility.value) : []))
+const heroActions = computed(() =>
+  facility.value
+    ? buildHeroActions(facility.value, {
+        kakaoMapUrl: kakaoMapUrl.value,
+        naverMapUrl: naverMapUrl.value,
+      })
+    : [],
+)
 
 // 같은 지역 시설 링크
 const regionLink = computed(() => {
@@ -568,20 +429,6 @@ const relatedCategories = computed(() => {
   return (RELATED_CATEGORIES[cat] || []).filter(c => c !== cat)
 })
 
-// Check if 24 hours
-const isOpen24Hours = computed(() => {
-  if (!facility.value?.details) return false
-  const det = facility.value.details as FacilityDetailsAll & Record<string, unknown>
-  return det.operatingHours === '24시간' || det.is24Hour
-})
-
-// 전 카테고리 통합 전화번호
-const facilityPhone = computed(() => {
-  if (!details.value) return null
-  const d = details.value as FacilityDetailsAll
-  return d.phoneNumber || d.phone || d.clerkTel || null
-})
-
 // Generate map URLs (길찾기)
 const kakaoMapUrl = computed(() => {
   if (!facility.value) return '#'
@@ -595,20 +442,15 @@ const naverMapUrl = computed(() => {
   return `https://map.naver.com/v5/directions/-/${lng},${lat},${encodeURIComponent(name)}/-/walk`
 })
 
-const showNavDropdown = ref(false)
-const showMobileNavDropdown = ref(false)
-const openNavigation = (url: string) => {
-  if (facility.value) {
-    const provider = url.includes('kakao') ? 'kakao' : 'naver'
-    trackDirectionsClick({ facilityId: facility.value.id, category: facility.value.category, provider })
-  }
-  window.open(url, '_blank')
-  showNavDropdown.value = false
-}
-
 const isMapExpanded = ref(false)
 
-const { trackFacilityView, trackDirectionsClick, trackShareClick } = useAnalytics()
+function handleHeroAction(payload: { type: 'directions' | 'phone' | 'share' }) {
+  if (payload.type === 'share') {
+    handleShare()
+  }
+}
+
+const { trackFacilityView, trackShareClick } = useAnalytics()
 onMounted(() => {
   if (facility.value) {
     trackFacilityView({
