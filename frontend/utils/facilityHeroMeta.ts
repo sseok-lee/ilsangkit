@@ -162,7 +162,25 @@ export function buildHeroStats(facility: FacilityDetail): HeroStat[] {
     if (d.coeducationType) items.push({ label: '남녀공학', value: d.coeducationType })
   } else if (cat === 'sports') {
     if (d.faciGbNm) items.push({ label: '시설구분', value: d.faciGbNm })
-    if (d.faciTyNm) items.push({ label: '유형', value: d.faciTyNm })
+    if (d.ftypeNm) items.push({ label: '유형', value: d.ftypeNm })
+  } else if (cat === 'toilet') {
+    const openTimeRaw = (d.openTime || '').toString().trim()
+    if (openTimeRaw === '상시' && !is24h) {
+      items.push({ label: '개방', value: '상시' })
+    }
+    if (d.hasCCTV) items.push({ label: 'CCTV', value: '있음' })
+    if (d.hasDisabledToilet) items.push({ label: '장애인', value: '가능' })
+    if (d.hasDiaperChangingTable) items.push({ label: '기저귀대', value: '있음' })
+  } else if (cat === 'wifi') {
+    if (d.ssid) items.push({ label: 'SSID', value: d.ssid })
+  } else if (cat === 'ev-charger') {
+    const chargers = (d.chargers || []) as Array<{ chgerType?: string }>
+    if (chargers.length > 0) {
+      const fast = chargers.filter(c => c.chgerType === '01' || c.chgerType === '03').length
+      const slow = chargers.length - fast
+      items.push({ label: '충전기', value: `${chargers.length}대` })
+      if (fast > 0 || slow > 0) items.push({ label: '구성', value: `급속 ${fast} · 완속 ${slow}` })
+    }
   }
 
   return items.slice(0, MAX_STATS)

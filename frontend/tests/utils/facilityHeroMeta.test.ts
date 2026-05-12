@@ -190,4 +190,62 @@ describe('buildHeroStats', () => {
     } as any)
     expect(stats.find(s => s.label === '운영')).toEqual({ label: '운영', value: '24시간' })
   })
+
+  it('produces toilet stats: 24h flag, accessibility features', () => {
+    const stats = buildHeroStats({
+      category: 'toilet',
+      details: {
+        is24Hour: true,
+        hasDisabledToilet: true,
+        hasDiaperChangingTable: true,
+      },
+    } as any)
+    expect(stats.find(s => s.label === '운영')).toEqual({ label: '운영', value: '24시간' })
+    expect(stats.find(s => s.label === '장애인')).toEqual({ label: '장애인', value: '가능' })
+  })
+
+  it('produces toilet CCTV stat and 상시 opening when not 24h', () => {
+    const stats = buildHeroStats({
+      category: 'toilet',
+      details: {
+        openTime: '상시',
+        hasCCTV: true,
+      },
+    } as any)
+    expect(stats.find(s => s.label === '개방')).toEqual({ label: '개방', value: '상시' })
+    expect(stats.find(s => s.label === 'CCTV')).toEqual({ label: 'CCTV', value: '있음' })
+  })
+
+  it('produces wifi SSID stat', () => {
+    const stats = buildHeroStats({
+      category: 'wifi',
+      details: { ssid: 'PublicWiFi_Free' },
+    } as any)
+    expect(stats.find(s => s.label === 'SSID')).toEqual({ label: 'SSID', value: 'PublicWiFi_Free' })
+  })
+
+  it('produces ev-charger composition stats', () => {
+    const stats = buildHeroStats({
+      category: 'ev-charger',
+      details: {
+        chargers: [
+          { chgerType: '01' }, // fast
+          { chgerType: '03' }, // fast
+          { chgerType: '02' }, // slow
+          { chgerType: '02' }, // slow
+        ],
+      },
+    } as any)
+    expect(stats.find(s => s.label === '충전기')).toEqual({ label: '충전기', value: '4대' })
+    expect(stats.find(s => s.label === '구성')).toEqual({ label: '구성', value: '급속 2 · 완속 2' })
+  })
+
+  it('produces sports stats using ftypeNm (not faciTyNm)', () => {
+    const stats = buildHeroStats({
+      category: 'sports',
+      details: { faciGbNm: '체육시설', ftypeNm: '구기' },
+    } as any)
+    expect(stats.find(s => s.label === '시설구분')).toEqual({ label: '시설구분', value: '체육시설' })
+    expect(stats.find(s => s.label === '유형')).toEqual({ label: '유형', value: '구기' })
+  })
 })
