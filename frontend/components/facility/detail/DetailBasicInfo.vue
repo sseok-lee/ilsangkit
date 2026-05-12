@@ -391,13 +391,6 @@
             </div>
           </div>
         </template>
-        <template v-if="details?.pharmacistCnt && details.pharmacistCnt > 0">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">약사 수</span>
-            <span class="text-sm font-bold text-slate-900">{{ details.pharmacistCnt }}명</span>
-          </div>
-        </template>
         <template v-if="pharmacyOperatingHours.length > 0">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">

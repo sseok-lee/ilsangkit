@@ -254,7 +254,18 @@
           </div>
         </div>
       </template>
-    
+
+      <!-- Pharmacy Details -->
+      <template v-if="facility.category === 'pharmacy'">
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">약사 수</span>
+            <span v-if="(details as any)?.pharmacistCnt" class="text-sm font-bold text-slate-900">{{ (details as any).pharmacistCnt }}명</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+        </div>
+      </template>
+
       <!-- Park Details -->
       <template v-if="facility.category === 'park'">
         <div class="flex flex-col gap-3">
@@ -767,7 +778,11 @@ const details = computed(() => props.facility?.details as FacilityDetailsAll | u
 const hasFacilityStatus = computed(() => {
   if (!props.facility?.details) return false
   const cat = props.facility.category
-  if (['pharmacy', 'clothes', 'trash'].includes(cat)) return false
+  if (['clothes', 'trash'].includes(cat)) return false
+  if (cat === 'pharmacy') {
+    const d = props.facility.details as Record<string, unknown>
+    return typeof d.pharmacistCnt === 'number' && d.pharmacistCnt > 0
+  }
   return true
 })
 
