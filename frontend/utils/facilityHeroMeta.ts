@@ -1,4 +1,5 @@
 import { getOperatingStatus, type OperatingStatus } from '~/utils/facilityStatus'
+import { formatOperatingHours } from '~/utils/formatOperatingHours'
 import type { FacilityCategory, FacilityDetail } from '~/types/facility'
 
 const CATEGORIES_WITHOUT_STATUS_BADGE = new Set<FacilityCategory>([
@@ -96,4 +97,73 @@ export function buildHeroActions(
   }
   actions.push({ type: 'share', label: '공유' })
   return actions
+}
+
+export interface HeroStat {
+  label: string
+  value: string
+  color?: string
+}
+
+const MAX_STATS = 3
+
+/**
+ * Builds the hero stats grid (max 3 entries) for a facility.
+ * Per-category labels mirror the current page logic. Phone fields are
+ * intentionally omitted — phone now lives in the CTA row via buildHeroActions.
+ */
+export function buildHeroStats(facility: FacilityDetail): HeroStat[] {
+  const cat = facility.category
+  const d = (facility as unknown as { details?: Record<string, any> }).details ?? {}
+  const items: HeroStat[] = []
+
+  const is24h = d.operatingHours === '24시간' || d.is24Hour === true
+  const showOperatingTopline = !['hospital', 'pharmacy', 'aed', 'library', 'parking'].includes(cat)
+
+  if (is24h) {
+    items.push({ label: '운영', value: '24시간' })
+  } else if (d.operatingHours && showOperatingTopline) {
+    items.push({ label: '운영시간', value: formatOperatingHours(d.operatingHours).split('\n')[0] })
+  }
+
+  if (cat === 'hospital') {
+    if (d.clCdNm) items.push({ label: '종별', value: d.clCdNm })
+    if (d.drTotCnt) items.push({ label: '의사', value: `${d.drTotCnt}명` })
+    if (d.parkQty != null) items.push({ label: '주차', value: d.parkQty > 0 ? `${d.parkQty}대` : '불가' })
+  } else if (cat === 'parking') {
+    if (d.capacity) items.push({ label: '주차면수', value: `${d.capacity}면` })
+    if (d.feeType) items.push({ label: '요금', value: d.feeType })
+    if (d.lotType) items.push({ label: '구분', value: d.lotType })
+  } else if (cat === 'library') {
+    if (d.seatCount) items.push({ label: '좌석', value: `${Number(d.seatCount).toLocaleString()}석` })
+    if (d.bookCount) items.push({ label: '장서', value: `${Number(d.bookCount).toLocaleString()}권` })
+  } else if (cat === 'aed') {
+    const trim = (s: string) => s.replace(/^[-\s]+|[-\s]+$/g, '').trim()
+    if (d.buildPlace) {
+      const v = trim(d.buildPlace)
+      if (v) items.push({ label: '설치위치', value: v })
+    }
+    if (d.org) {
+      const v = trim(d.org)
+      if (v) items.push({ label: '관리기관', value: v })
+    }
+  } else if (cat === 'childcare') {
+    if (d.crcapat) items.push({ label: '정원', value: `${d.crcapat}명` })
+    if (d.crchcnt != null) items.push({ label: '현원', value: `${d.crchcnt}명` })
+  } else if (cat === 'park') {
+    if (d.parkType) items.push({ label: '공원유형', value: d.parkType })
+    if (d.area != null) items.push({ label: '면적', value: `${Number(d.area).toLocaleString()}㎡` })
+  } else if (cat === 'market') {
+    if (d.marketType) items.push({ label: '시장유형', value: d.marketType })
+    if (d.storeCount != null) items.push({ label: '점포수', value: `${d.storeCount}개` })
+  } else if (cat === 'school') {
+    if (d.schoolLevel) items.push({ label: '학교급', value: d.schoolLevel })
+    if (d.foundationType) items.push({ label: '설립형태', value: d.foundationType })
+    if (d.coeducationType) items.push({ label: '남녀공학', value: d.coeducationType })
+  } else if (cat === 'sports') {
+    if (d.faciGbNm) items.push({ label: '시설구분', value: d.faciGbNm })
+    if (d.faciTyNm) items.push({ label: '유형', value: d.faciTyNm })
+  }
+
+  return items.slice(0, MAX_STATS)
 }

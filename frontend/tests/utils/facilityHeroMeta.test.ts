@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildHeroBadge, buildHeroActions } from '~/utils/facilityHeroMeta'
+import { buildHeroBadge, buildHeroActions, buildHeroStats } from '~/utils/facilityHeroMeta'
 
 describe('buildHeroBadge', () => {
   it('returns null for categories without meaningful operating status', () => {
@@ -134,5 +134,60 @@ describe('buildHeroActions', () => {
     const share = actions.find(a => a.type === 'share')
     expect(share?.href).toBeUndefined()
     expect(share?.menu).toBeUndefined()
+  })
+})
+
+describe('buildHeroStats', () => {
+  it('caps at 3 entries', () => {
+    const stats = buildHeroStats({
+      category: 'school',
+      details: {
+        operatingHours: '09-15',
+        schoolLevel: '초등',
+        foundationType: '공립',
+        coeducationType: '남녀공학',
+      },
+    } as any)
+    expect(stats.length).toBeLessThanOrEqual(3)
+  })
+
+  it('omits empty values', () => {
+    const stats = buildHeroStats({ category: 'aed', details: {} } as any)
+    expect(stats).toEqual([])
+  })
+
+  it('produces parking stats: capacity, fee, lot type', () => {
+    const stats = buildHeroStats({
+      category: 'parking',
+      details: { capacity: 142, feeType: '5분 400원', lotType: '공영' },
+    } as any)
+    const labels = stats.map(s => s.label)
+    expect(labels).toContain('주차면수')
+    expect(labels).toContain('요금')
+  })
+
+  it('produces pharmacy stats without phone (phone moves to CTA)', () => {
+    const stats = buildHeroStats({
+      category: 'pharmacy',
+      details: { operatingHours: '09-22', phone: '02-1234-5678' },
+    } as any)
+    expect(stats.find(s => s.label === '전화')).toBeUndefined()
+  })
+
+  it('produces hospital stats: clCdNm, drTotCnt, parkQty', () => {
+    const stats = buildHeroStats({
+      category: 'hospital',
+      details: { clCdNm: '종합병원', drTotCnt: 12, parkQty: 50 },
+    } as any)
+    expect(stats[0]).toEqual({ label: '종별', value: '종합병원' })
+    expect(stats[1]).toEqual({ label: '의사', value: '12명' })
+  })
+
+  it('produces 24h stat for facilities marked open24h', () => {
+    const stats = buildHeroStats({
+      category: 'toilet',
+      details: { is24Hour: true },
+    } as any)
+    expect(stats.find(s => s.label === '운영')).toEqual({ label: '운영', value: '24시간' })
   })
 })
