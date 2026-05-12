@@ -1,14 +1,13 @@
 <template>
   <header
     :class="[
-      'sticky top-0 z-50 h-14 md:h-16',
+      'sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 h-14 md:h-16',
       'bg-background-light',
       'border-b border-transparent',
       'transition-colors duration-300',
       props.transparent ? 'bg-transparent border-transparent' : ''
     ]"
   >
-    <div class="max-w-[1200px] mx-auto flex items-center justify-between px-4 md:px-6 h-full">
     <!-- Left: Back Button (if enabled) or Logo -->
     <div class="flex items-center gap-2">
       <button
@@ -145,7 +144,6 @@
       >
         <span class="material-symbols-outlined text-[28px]">menu</span>
       </button>
-    </div>
     </div>
   </header>
 
