@@ -65,6 +65,24 @@ describe('PageHero', () => {
     expect(items[0].text()).toContain('카카오맵')
   })
 
+  it('closes menu dropdown when trigger is clicked again', async () => {
+    const wrapper = mount(PageHero, {
+      props: {
+        title: 'X',
+        actions: [
+          { type: 'directions', label: '길찾기', primary: true, menu: [
+            { label: '카카오맵', href: 'https://k.example' },
+            { label: '네이버맵', href: 'https://n.example' },
+          ] },
+        ],
+      },
+    })
+    await wrapper.find('[data-test="hero-action"]').trigger('click')
+    expect(wrapper.find('[data-test="hero-action-menu"]').exists()).toBe(true)
+    await wrapper.find('[data-test="hero-action"]').trigger('click')
+    expect(wrapper.find('[data-test="hero-action-menu"]').exists()).toBe(false)
+  })
+
   it('emits share event when share action without href or menu is clicked', async () => {
     const wrapper = mount(PageHero, {
       props: {

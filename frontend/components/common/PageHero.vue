@@ -55,12 +55,12 @@
         <component
           :is="action.href ? 'a' : 'button'"
           :href="action.href"
-          :target="action.href && action.type === 'directions' ? '_blank' : undefined"
-          :rel="action.href && action.type === 'directions' ? 'noopener noreferrer' : undefined"
+          :aria-haspopup="action.menu ? 'menu' : undefined"
+          :aria-expanded="action.menu ? (openMenu === action.type) : undefined"
           data-test="hero-action"
           class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
           :class="action.primary
-            ? 'bg-primary text-white hover:bg-blue-600'
+            ? 'bg-primary text-white hover:bg-primary-dark'
             : 'bg-white border border-line text-slate-700 hover:border-primary hover:text-primary'"
           @click="(e) => onActionClick(action, e)"
         >
@@ -69,6 +69,7 @@
         <div
           v-if="action.menu && openMenu === action.type"
           data-test="hero-action-menu"
+          role="menu"
           class="absolute left-0 right-0 top-full mt-2 z-20 rounded-xl border border-line bg-white shadow-lg overflow-hidden"
         >
           <a
@@ -77,6 +78,7 @@
             :href="item.href"
             target="_blank"
             rel="noopener noreferrer"
+            role="menuitem"
             class="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-gray-50"
             @click="closeMenu"
           >
@@ -90,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onBeforeUnmount, watch } from 'vue'
 
 interface Stat {
   label: string
@@ -147,4 +149,34 @@ function onActionClick(action: HeroAction, event: Event) {
 function closeMenu() {
   openMenu.value = null
 }
+
+function handleDocumentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  if (!target) return
+  // Don't close if the click is inside any hero action wrapper.
+  if (target.closest('[data-test="hero-actions"]')) return
+  closeMenu()
+}
+
+function handleEscape(event: KeyboardEvent) {
+  if (event.key === 'Escape') closeMenu()
+}
+
+watch(openMenu, (next) => {
+  if (typeof document === 'undefined') return
+  if (next) {
+    document.addEventListener('mousedown', handleDocumentClick)
+    document.addEventListener('keydown', handleEscape)
+  } else {
+    document.removeEventListener('mousedown', handleDocumentClick)
+    document.removeEventListener('keydown', handleEscape)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('mousedown', handleDocumentClick)
+    document.removeEventListener('keydown', handleEscape)
+  }
+})
 </script>
