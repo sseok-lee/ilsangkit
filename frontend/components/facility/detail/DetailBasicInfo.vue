@@ -55,7 +55,7 @@
       </div>
 
       <!-- Toilet -->
-      <template v-if="facility.category === 'toilet' && (details?.facilityType || details?.openTime || details?.managingOrg || details?.installDate)">
+      <template v-if="facility.category === 'toilet' && (details?.facilityType || details?.openTime || details?.managingOrg || details?.installDate || details?.ownershipType)">
         <div class="h-px bg-slate-100 w-full"></div>
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between">
@@ -76,6 +76,11 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">설치일</span>
             <span v-if="details?.installDate" class="text-sm font-medium text-slate-900">{{ details?.installDate }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">소유구분</span>
+            <span v-if="details?.ownershipType" class="text-sm font-medium text-slate-900">{{ details?.ownershipType }}</span>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
         </div>

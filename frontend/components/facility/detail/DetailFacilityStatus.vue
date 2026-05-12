@@ -47,13 +47,6 @@
     
       <!-- Toilet Extra Details -->
       <template v-if="facility.category === 'toilet'">
-        <div v-if="details?.ownershipType" :class="[hasGridContent ? 'mt-5 border-t border-slate-100 pt-5' : '', 'flex flex-col gap-3']">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">소유구분</span>
-            <span class="text-sm font-medium text-slate-900">{{ details?.ownershipType }}</span>
-          </div>
-        </div>
-    
         <!-- Toilet Accessibility Details -->
         <div v-if="toiletAccessibilityDetails.length > 0" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">접근성 상세</h3>
