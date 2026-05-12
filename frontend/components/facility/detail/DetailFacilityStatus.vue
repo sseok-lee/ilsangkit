@@ -309,69 +309,7 @@
     
       <!-- School Details -->
       <template v-if="facility.category === 'school'">
-        <div class="flex flex-col gap-3">
-          <div class="grid grid-cols-2 gap-2">
-            <div v-if="details?.schoolLevel" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">학교급</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.schoolLevel }}</span>
-            </div>
-            <div v-if="details?.foundationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">설립형태</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.foundationType }}</span>
-            </div>
-            <div v-if="details?.coeducationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">남녀공학</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.coeducationType }}</span>
-            </div>
-            <div v-if="details?.highSchoolType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">고교유형</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.highSchoolType }}</span>
-            </div>
-            <div v-if="details?.branchType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">본/분교</span>
-              <span class="text-sm font-bold text-slate-900">{{ details.branchType }}</span>
-            </div>
-            <div v-if="details?.operationStatus" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
-              <span class="text-xs text-gray-600">운영상태</span>
-              <span class="text-sm font-bold" :class="details.operationStatus === '운영' ? 'text-green-600' : 'text-slate-900'">{{ details.operationStatus }}</span>
-            </div>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">설립일</span>
-            <span v-if="details?.foundedDate" class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details.foundedDate) }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">연락처</span>
-            <a v-if="details?.phoneNumber" :href="`tel:${details.phoneNumber}`" class="text-sm font-medium text-blue-600 hover:underline">{{ details.phoneNumber }}</a>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">팩스</span>
-            <span v-if="details?.faxNumber" class="text-sm font-medium text-slate-900">{{ details.faxNumber }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-        </div>
-        <div v-if="details?.homepageUrl" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-2">홈페이지</h3>
-          <a :href="schoolHomepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:underline break-all">{{ details.homepageUrl }}</a>
-        </div>
-        <div v-if="details?.sidoEduName || details?.localEduName" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">관할 교육청</h3>
-          <div class="flex flex-col gap-3">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">시도교육청</span>
-              <span v-if="details?.sidoEduName" class="text-sm font-medium text-slate-900">{{ details.sidoEduName }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">교육지원청</span>
-              <span v-if="details?.localEduName" class="text-sm font-medium text-slate-900">{{ details.localEduName }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-          </div>
-        </div>
-        <div v-if="schoolEnrollmentRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
+        <div v-if="schoolEnrollmentRows.length > 0">
           <h3 class="text-sm font-bold text-slate-900 mb-3">학급 현황</h3>
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
             <div v-for="row in schoolEnrollmentRows" :key="row.label" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2" :class="row.isTotal ? 'bg-indigo-50 col-span-full' : 'bg-slate-50'">
@@ -380,7 +318,7 @@
             </div>
           </div>
         </div>
-        <div v-if="schoolDepartments.length > 0" class="mt-5 border-t border-slate-100 pt-5">
+        <div v-if="schoolDepartments.length > 0" :class="schoolEnrollmentRows.length > 0 ? 'mt-5 border-t border-slate-100 pt-5' : ''">
           <h3 class="text-sm font-bold text-slate-900 mb-3">계열 정보</h3>
           <div class="flex flex-wrap gap-2">
             <span v-for="dept in schoolDepartments" :key="dept" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-sky-100 text-sky-800">{{ dept }}</span>

@@ -399,6 +399,76 @@
         </template>
       </template>
 
+      <!-- School -->
+      <template v-if="facility.category === 'school'">
+        <template v-if="(details as any)?.schoolLevel || (details as any)?.foundationType || (details as any)?.coeducationType || (details as any)?.highSchoolType || (details as any)?.branchType || (details as any)?.operationStatus">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-if="(details as any)?.schoolLevel" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">학교급</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).schoolLevel }}</span>
+            </div>
+            <div v-if="(details as any)?.foundationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">설립형태</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).foundationType }}</span>
+            </div>
+            <div v-if="(details as any)?.coeducationType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">남녀공학</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).coeducationType }}</span>
+            </div>
+            <div v-if="(details as any)?.highSchoolType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">고교유형</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).highSchoolType }}</span>
+            </div>
+            <div v-if="(details as any)?.branchType" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">본/분교</span>
+              <span class="text-sm font-bold text-slate-900">{{ (details as any).branchType }}</span>
+            </div>
+            <div v-if="(details as any)?.operationStatus" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2 bg-slate-50">
+              <span class="text-xs text-gray-600">운영상태</span>
+              <span class="text-sm font-bold" :class="(details as any).operationStatus === '운영' ? 'text-green-600' : 'text-slate-900'">{{ (details as any).operationStatus }}</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.foundedDate || (details as any)?.faxNumber">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">설립일</span>
+              <span v-if="(details as any)?.foundedDate" class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).foundedDate) }}</span>
+              <span v-else class="text-sm text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">팩스</span>
+              <span v-if="(details as any)?.faxNumber" class="text-sm font-medium text-slate-900">{{ (details as any).faxNumber }}</span>
+              <span v-else class="text-sm text-slate-400">정보 없음</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="(details as any)?.homepageUrl">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">홈페이지</span>
+            <a :href="schoolHomepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).homepageUrl }}</a>
+          </div>
+        </template>
+        <template v-if="(details as any)?.sidoEduName || (details as any)?.localEduName">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">시도교육청</span>
+              <span v-if="(details as any)?.sidoEduName" class="text-sm font-medium text-slate-900">{{ (details as any).sidoEduName }}</span>
+              <span v-else class="text-sm text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">교육지원청</span>
+              <span v-if="(details as any)?.localEduName" class="text-sm font-medium text-slate-900">{{ (details as any).localEduName }}</span>
+              <span v-else class="text-sm text-slate-400">정보 없음</span>
+            </div>
+          </div>
+        </template>
+      </template>
+
       <!-- Pharmacy -->
       <template v-if="facility.category === 'pharmacy'">
         <template v-if="details?.dutyTel3">
@@ -497,6 +567,13 @@ function formatKoreanDate(dateStr: string | null | undefined): string {
   }
   return String(dateStr)
 }
+
+const schoolHomepageUrl = computed(() => {
+  const url = (details.value as any)?.homepageUrl || ''
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `http://${url}`
+})
 
 function formatLibraryHours(start?: string | null, end?: string | null): string {
   const s = (start || '').trim()
