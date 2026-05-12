@@ -74,7 +74,7 @@ describe('buildHeroActions', () => {
   }
 
   it('returns directions with menu (kakao + naver) and share by default', () => {
-    const actions = buildHeroActions({ category: 'toilet', phone: null } as any, ctx)
+    const actions = buildHeroActions({ category: 'toilet', details: {} } as any, ctx)
     expect(actions.map(a => a.type)).toEqual(['directions', 'share'])
     expect(actions[0].primary).toBe(true)
     expect(actions[0].href).toBeUndefined()
@@ -83,20 +83,50 @@ describe('buildHeroActions', () => {
     expect(actions[0].menu![1].href).toBe('https://map.naver.com/x')
   })
 
-  it('inserts phone action between directions and share when phone exists', () => {
+  it('inserts phone action using details.phoneNumber when present', () => {
     const actions = buildHeroActions(
-      { category: 'pharmacy', phone: '02-1234-5678' } as any,
+      { category: 'pharmacy', details: { phoneNumber: '02-1234-5678' } } as any,
       ctx,
     )
     expect(actions.map(a => a.type)).toEqual(['directions', 'phone', 'share'])
     expect(actions[1].href).toBe('tel:02-1234-5678')
   })
 
-  it('skips phone action when phone is empty string or null', () => {
-    const noPhone = buildHeroActions({ category: 'toilet', phone: '' } as any, ctx)
-    expect(noPhone.find(a => a.type === 'phone')).toBeUndefined()
-    const nullPhone = buildHeroActions({ category: 'toilet', phone: null } as any, ctx)
-    expect(nullPhone.find(a => a.type === 'phone')).toBeUndefined()
+  it('falls back to details.phone for parking', () => {
+    const actions = buildHeroActions(
+      { category: 'parking', details: { phone: '02-9999-0000' } } as any,
+      ctx,
+    )
+    expect(actions[1]?.type).toBe('phone')
+    expect(actions[1]?.href).toBe('tel:02-9999-0000')
+  })
+
+  it('uses extras.phoneNumber for school', () => {
+    const actions = buildHeroActions(
+      { category: 'school', details: {}, extras: { phoneNumber: '031-111-2222' } } as any,
+      ctx,
+    )
+    expect(actions[1]?.type).toBe('phone')
+    expect(actions[1]?.href).toBe('tel:031-111-2222')
+  })
+
+  it('sanitizes phone numbers with parentheses and spaces for tel: href', () => {
+    const actions = buildHeroActions(
+      { category: 'toilet', details: { phoneNumber: '(02) 1234-5678' } } as any,
+      ctx,
+    )
+    expect(actions[1]?.href).toBe('tel:021234-5678')
+  })
+
+  it('skips phone action when phone is empty/null/whitespace-only', () => {
+    expect(buildHeroActions({ category: 'toilet', details: { phoneNumber: '' } } as any, ctx)
+      .find(a => a.type === 'phone')).toBeUndefined()
+    expect(buildHeroActions({ category: 'toilet', details: { phoneNumber: null } } as any, ctx)
+      .find(a => a.type === 'phone')).toBeUndefined()
+    expect(buildHeroActions({ category: 'toilet', details: { phoneNumber: '   ' } } as any, ctx)
+      .find(a => a.type === 'phone')).toBeUndefined()
+    expect(buildHeroActions({ category: 'toilet', details: {} } as any, ctx)
+      .find(a => a.type === 'phone')).toBeUndefined()
   })
 
   it('share action has no href and no menu (handled by emit)', () => {

@@ -49,9 +49,21 @@ export interface HeroActionContext {
 }
 
 function pickPhone(facility: FacilityDetail): string | null {
-  const phone = (facility as unknown as { phone?: string | null }).phone
-  if (!phone || !phone.trim()) return null
-  return phone.trim()
+  const d = facility.details as Record<string, unknown> | undefined
+  const extras = (facility as unknown as { extras?: Record<string, unknown> }).extras
+  const candidates: unknown[] = [
+    d?.phoneNumber,   // toilet, wifi, clothes, library, park, school, market
+    d?.phone,         // parking, hospital, pharmacy
+    d?.telno,         // hospital (legacy alias)
+    d?.crtelno,       // childcare
+    d?.clerkTel,      // AED
+    d?.busiCall,      // ev-charger
+    extras?.phoneNumber, // school (when surfaced via extras)
+  ]
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim()) return c.trim()
+  }
+  return null
 }
 
 /**
@@ -77,7 +89,10 @@ export function buildHeroActions(
   ]
   const phone = pickPhone(facility)
   if (phone) {
-    actions.push({ type: 'phone', label: '전화', href: `tel:${phone}` })
+    const sanitized = phone.replace(/[^0-9+\-]/g, '')
+    if (sanitized) {
+      actions.push({ type: 'phone', label: '전화', href: `tel:${sanitized}` })
+    }
   }
   actions.push({ type: 'share', label: '공유' })
   return actions
