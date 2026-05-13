@@ -182,15 +182,8 @@ export default defineEventHandler(async (event) => {
         })
       })
 
-      // 구/군 × 부동산 교차 페이지 (예: /seoul/gangnam/real-estate)
-      Array.from(districtSet).forEach((path) => {
-        urls.push({
-          loc: `${SITE_URL}/${path}/real-estate`,
-          lastmod: weekStart,
-          changefreq: 'weekly',
-          priority: 0.7,
-        })
-      })
+      // /{city}/{district}/real-estate 는 [category].vue 화이트리스트 밖이라 404.
+      // 부동산 hub URL 은 /sitemap/real-estate-hub.xml 에서 별도 발행.
     } else {
       console.error(`[sitemap] Failed to fetch region-categories: HTTP ${res.status}`)
       addFallbackHubPages(urls, weekStart)
