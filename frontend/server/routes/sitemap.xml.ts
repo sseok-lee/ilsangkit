@@ -34,8 +34,10 @@ export default defineEventHandler(async (event) => {
   const pageCounts = await fetchSitemapPageCounts(apiBase)
 
   if (pageCounts) {
+    const realEstateLastmod = pageCounts.realEstateBuildings.maxUpdatedAt || today
+
     // real-estate hub (city/district listing pages)
-    sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: weekStart })
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: realEstateLastmod })
 
     // real estate buildings
     const realEstatePages = Math.max(
@@ -43,10 +45,10 @@ export default defineEventHandler(async (event) => {
       Math.ceil(pageCounts.realEstateBuildings.count / MAX_URLS_PER_SITEMAP)
     )
     if (realEstatePages === 1) {
-      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: realEstateLastmod })
     } else {
       for (let i = 1; i <= realEstatePages; i++) {
-        sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: weekStart })
+        sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-${i}.xml`, lastmod: realEstateLastmod })
       }
     }
 
