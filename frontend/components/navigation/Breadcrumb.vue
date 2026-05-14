@@ -1,10 +1,10 @@
 <template>
-  <nav aria-label="Breadcrumb" class="mb-6">
-    <ol class="flex items-center space-x-2 text-sm">
+  <nav aria-label="Breadcrumb" class="mb-6 overflow-x-auto">
+    <ol class="flex flex-nowrap items-center space-x-2 text-sm whitespace-nowrap">
       <li
         v-for="(item, index) in items"
         :key="index"
-        class="flex items-center"
+        class="flex items-center shrink-0"
       >
         <!-- Separator -->
         <span
