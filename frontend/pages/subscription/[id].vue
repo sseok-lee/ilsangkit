@@ -553,7 +553,8 @@ const priceRange = computed(() => {
   const min = Math.min(...amounts)
   const max = Math.max(...amounts)
   if (min === max) return formatPrice(min)
-  return `${formatPrice(min)} ~ ${formatPrice(max)}`
+  // ~ 양쪽도 non-breaking space — 분양가 전체를 한 줄에 유지.
+  return `${formatPrice(min)}\u00A0~\u00A0${formatPrice(max)}`
 })
 
 const heroEyebrow = computed(() => {
