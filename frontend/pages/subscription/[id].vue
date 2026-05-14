@@ -391,9 +391,9 @@
               <span class="text-slate-500">분양구분</span>
               <span class="font-medium text-slate-900">{{ subscription.houseDetailType }}</span>
             </div>
-            <div v-if="subscription.supplyLocation" class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">공급위치</span>
-              <span class="font-medium text-slate-900">{{ subscription.supplyLocation }}</span>
+            <div v-if="subscription.supplyLocation" class="flex flex-col gap-1 py-2 border-b border-slate-100 md:flex-row md:justify-between md:items-baseline md:gap-4">
+              <span class="text-slate-500 shrink-0">공급위치</span>
+              <span class="font-medium text-slate-900 md:text-right">{{ subscription.supplyLocation }}</span>
             </div>
             <div v-if="subscription.totalSupplyCount" class="flex justify-between py-2 border-b border-slate-100">
               <span class="text-slate-500">총 공급호수</span>
@@ -553,7 +553,8 @@ const priceRange = computed(() => {
   const min = Math.min(...amounts)
   const max = Math.max(...amounts)
   if (min === max) return formatPrice(min)
-  return `${formatPrice(min)} ~ ${formatPrice(max)}`
+  // ~ 양쪽도 non-breaking space — 분양가 전체를 한 줄에 유지.
+  return `${formatPrice(min)}\u00A0~\u00A0${formatPrice(max)}`
 })
 
 const heroEyebrow = computed(() => {
@@ -784,7 +785,9 @@ function formatPrice(amount: number): string {
   if (amount >= 10000) {
     const eok = Math.floor(amount / 10000)
     const man = amount % 10000
-    return man > 0 ? `${eok}억 ${man.toLocaleString()}만원` : `${eok}억`
+    // '억' 과 '만원' 사이는 non-breaking space (U+00A0) — 한 가격 안에서 줄바꿈 방지.
+    // 범위 표시 "min ~ max" 의 ~ 양쪽 공백만 자연스러운 줄바꿈 지점이 되도록 한다.
+    return man > 0 ? `${eok}억\u00A0${man.toLocaleString()}만원` : `${eok}억`
   }
   return `${amount.toLocaleString()}만원`
 }
