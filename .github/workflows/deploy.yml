@@ -137,11 +137,18 @@ jobs:
             done
 
             echo "[warmup] frontend SSR 라우트 사전 GET"
+            # 부동산 허브 6개를 반드시 포함한다. 한 번의 fetch 실패가 5분 SWR 캐시
+            # (s-maxage=300) 에 빈 본문으로 박히면 그 동안 모든 사용자/Googlebot 에게
+            # 빈 페이지가 반환되어 색인이 막힌다 (2026-05 villa-sale 사고).
+            # warmup 으로 캐시를 정상 본문으로 선점한다.
             for path in \
               / \
               /sitemap.xml \
               /sitemap/static.xml \
               /real-estate \
+              /real-estate/apt-sale /real-estate/apt-rent \
+              /real-estate/villa-sale /real-estate/villa-rent \
+              /real-estate/offitel-sale /real-estate/offitel-rent \
               /toilet /wifi /ev-charger /hospital /parking /aed /trash /park; do
               curl -s -o /dev/null -m 30 "https://ilsangkit.co.kr${path}" || true
             done
