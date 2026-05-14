@@ -165,7 +165,7 @@
         <!-- "면적별 공급정보" 블록 -->
         <SectionBlock v-if="unitTypes && unitTypes.length > 0" heading="면적별 공급정보" subtext="주택형별 공급 규모와 분양가를 비교합니다.">
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr class="border-b-2 border-slate-200">
                   <th class="text-left py-3 px-4 font-semibold text-slate-800">주택형</th>
@@ -210,7 +210,7 @@
         <!-- "면적별 경쟁률" 블록 -->
         <SectionBlock v-if="competitions.length > 0" heading="면적별 경쟁률" subtext="1·2순위 접수자수와 공급세대수 기준 경쟁률입니다.">
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr class="border-b-2 border-slate-200">
                   <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
@@ -240,7 +240,7 @@
         <!-- "당첨 가점 분석" 블록 -->
         <SectionBlock v-if="validScores.length > 0" heading="당첨 가점 분석" subtext="가점제 적용 단지의 1순위 당첨 가점 · 84점 만점 기준입니다.">
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr class="border-b-2 border-slate-200">
                   <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
@@ -273,7 +273,7 @@
         <!-- "면적별 특별공급 내역" 블록 -->
         <SectionBlock v-if="hasSpecialSupply" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr class="border-b-2 border-slate-200">
                   <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
@@ -306,7 +306,7 @@
         <!-- "특별공급 신청현황" 블록 -->
         <SectionBlock v-if="specialStatuses.length > 0" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr class="border-b-2 border-slate-200">
                   <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
