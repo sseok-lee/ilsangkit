@@ -71,6 +71,9 @@
           </div>
         </header>
 
+        <!-- Ad: 헤더 카드 직후 (청약 패턴 1번) -->
+        <AdBanner />
+
         <section v-if="detail.variants && detail.variants.length > 0" class="space-y-3">
           <h2 class="text-base font-semibold text-slate-900">
             공고 내 단지 {{ detail.variants.length > 1 ? `(${detail.variants.length})` : '' }}
@@ -110,6 +113,9 @@
           </ul>
         </section>
 
+        <!-- Ad: 공고 내 단지(variants) 이후 (청약 패턴 2번) -->
+        <AdBanner />
+
         <section v-if="detail.matchedComplexes && detail.matchedComplexes.length > 0" class="space-y-3">
           <h2 class="text-base font-semibold text-slate-900">관련 공공임대 단지 <span class="text-xs text-slate-500 font-normal">({{ detail.matchedComplexes.length }})</span></h2>
           <ul class="grid gap-3 md:grid-cols-2">
@@ -137,6 +143,9 @@
         <p v-else class="text-xs text-slate-500">
           공고에 매칭된 단지 카탈로그 정보가 없습니다. 모집공고 원문을 직접 확인해주세요.
         </p>
+
+        <!-- Ad: 본문 마무리 (청약 패턴 3번) -->
+        <AdBanner />
       </template>
     </main>
   </div>

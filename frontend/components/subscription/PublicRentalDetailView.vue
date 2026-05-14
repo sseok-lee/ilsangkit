@@ -8,6 +8,9 @@
 
     <PublicRentalSiblings :siblings="siblings" />
 
+    <!-- Ad: 기본정보/형제단지 이후 (청약 패턴 1번) -->
+    <AdBanner />
+
     <SectionBlock heading="위치" :subtext="locationSubtext">
       <div v-if="hasCoords" class="rounded-xl border border-line overflow-hidden h-[300px] md:h-[360px]">
         <ClientOnly>
@@ -31,6 +34,9 @@
       </div>
     </SectionBlock>
 
+    <!-- Ad: 위치/주변 시설 이후 (청약 패턴 2번) -->
+    <AdBanner />
+
     <PublicRentalRentalTypeGuide :rental-type="rental.rentalType" />
 
     <PublicRentalEligibility />
@@ -44,6 +50,9 @@
       :city="rental.city"
       :district="rental.district"
     />
+
+    <!-- Ad: 본문 마무리 (청약 패턴 3번) -->
+    <AdBanner />
 
     <DataSourceCard :source="PUBLIC_RENTAL_DATA_SOURCE" :last-sync-date="lastSyncDate" />
   </div>
