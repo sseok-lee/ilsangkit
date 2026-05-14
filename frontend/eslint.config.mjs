@@ -49,6 +49,9 @@ export default [
         addRouteMiddleware: 'readonly',
         setPageLayout: 'readonly',
         defineNuxtRouteMiddleware: 'readonly',
+        // Nitro / h3 (server-side helpers, auto-imported by Nuxt in pages)
+        useRequestEvent: 'readonly',
+        setResponseHeader: 'readonly',
         // Vue
         ref: 'readonly',
         reactive: 'readonly',

@@ -221,7 +221,11 @@ const pending = ref(true)
 const error = ref(false)
 const lastSearch = ref<{ city: string; district: string; buildingName: string } | null>(null)
 
-// SSR: 초기 건물 목록을 서버에서 로드
+// SSR: 초기 건물 목록을 서버에서 로드.
+// 2026-05 villa-sale 허브가 한 번의 fetch 실패로 빈 본문이 stale-while-revalidate
+// 캐시(s-maxage=300)에 박혀 5분간 모든 사용자/Googlebot 에게 "지역을 선택해주세요"
+// 만 반환되던 사고가 있었다. SSR 단계에서 complexes 가 비어있으면 응답에
+// `Cache-Control: no-store` 를 강제해 같은 사고 재발을 막는다.
 const { data: initialData } = await useAsyncData(
   `re-complexes-${apiSlug.value}`,
   () => getComplexList(apiSlug.value),
@@ -233,6 +237,13 @@ if (initialData.value) {
   currentPage.value = initialData.value.page
 }
 pending.value = false
+
+if (import.meta.server && complexes.value.length === 0) {
+  const event = useRequestEvent()
+  if (event) {
+    setResponseHeader(event, 'Cache-Control', 'no-store')
+  }
+}
 
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
