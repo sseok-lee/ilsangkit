@@ -106,6 +106,9 @@
           :stats="heroStats"
         />
 
+        <!-- Ad: PageHero 직후 -->
+        <AdBanner />
+
         <!-- "청약 일정" 블록 -->
         <SectionBlock heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
           <div class="flex items-center gap-2 mb-2 text-primary">
