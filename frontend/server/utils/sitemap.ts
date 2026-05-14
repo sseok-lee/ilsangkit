@@ -269,7 +269,7 @@ export interface SitemapPageCounts {
   facilities: Array<{ category: string; count: number; maxUpdatedAt: string | null }>
   waste: { count: number; maxUpdatedAt: string | null }
   subscriptions: { count: number; maxUpdatedAt: string | null }
-  realEstateBuildings: { count: number }
+  realEstateBuildings: { count: number; maxUpdatedAt: string | null }
 }
 
 export async function fetchSitemapPageCounts(
