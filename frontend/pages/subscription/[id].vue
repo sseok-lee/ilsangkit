@@ -391,9 +391,9 @@
               <span class="text-slate-500">분양구분</span>
               <span class="font-medium text-slate-900">{{ subscription.houseDetailType }}</span>
             </div>
-            <div v-if="subscription.supplyLocation" class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">공급위치</span>
-              <span class="font-medium text-slate-900">{{ subscription.supplyLocation }}</span>
+            <div v-if="subscription.supplyLocation" class="flex flex-col gap-1 py-2 border-b border-slate-100 md:flex-row md:justify-between md:items-baseline md:gap-4">
+              <span class="text-slate-500 shrink-0">공급위치</span>
+              <span class="font-medium text-slate-900 md:text-right">{{ subscription.supplyLocation }}</span>
             </div>
             <div v-if="subscription.totalSupplyCount" class="flex justify-between py-2 border-b border-slate-100">
               <span class="text-slate-500">총 공급호수</span>
