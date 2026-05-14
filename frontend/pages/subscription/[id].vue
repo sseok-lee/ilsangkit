@@ -784,7 +784,9 @@ function formatPrice(amount: number): string {
   if (amount >= 10000) {
     const eok = Math.floor(amount / 10000)
     const man = amount % 10000
-    return man > 0 ? `${eok}억 ${man.toLocaleString()}만원` : `${eok}억`
+    // '억' 과 '만원' 사이는 non-breaking space (U+00A0) — 한 가격 안에서 줄바꿈 방지.
+    // 범위 표시 "min ~ max" 의 ~ 양쪽 공백만 자연스러운 줄바꿈 지점이 되도록 한다.
+    return man > 0 ? `${eok}억\u00A0${man.toLocaleString()}만원` : `${eok}억`
   }
   return `${amount.toLocaleString()}만원`
 }
