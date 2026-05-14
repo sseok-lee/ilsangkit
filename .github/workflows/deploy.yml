@@ -104,9 +104,11 @@ jobs:
             cd /home/project2/backend
             npm ci
 
+            # pm2 reload 는 fork mode 단일 프로세스에서는 restart 와 동일 동작이라 무해하고,
+            # 향후 cluster mode 전환 시 자동으로 zero-downtime rolling restart 로 동작한다.
             pm2 describe ilsangkit-backend > /dev/null
             if [ $? -eq 0 ]; then
-              pm2 restart ilsangkit-backend
+              pm2 reload ilsangkit-backend
             else
               pm2 start dist/server.js --name ilsangkit-backend
             fi
@@ -114,17 +116,42 @@ jobs:
             cd /home/project2/frontend
             pm2 describe ilsangkit-frontend > /dev/null
             if [ $? -eq 0 ]; then
-              pm2 restart ilsangkit-frontend
+              pm2 reload ilsangkit-frontend
             else
               pm2 start .output/server/index.mjs --name ilsangkit-frontend
             fi
 
             pm2 save
 
-            # sitemap SWR 캐시 워밍업 — PM2 재시작 후 Nitro in-memory 캐시가 비워지므로
-            # 배포 직후 한 번 요청해두면 Google 크롤러가 항상 캐시된 응답을 받는다.
-            sleep 5
-            curl -s -o /dev/null "https://ilsangkit.co.kr/sitemap.xml" || true
+            # 배포 직후 콜드 부트 5xx 차단 워밍업.
+            # 1) backend /api/health 폴링으로 ready 시점 정확히 감지 (최대 30초)
+            # 2) frontend SSR 주요 라우트 사전 GET 으로 Nitro in-memory 캐시 + 모듈 그래프 워밍
+            #    (네이버 서치어드바이저 "서버 접근 불가" 리포트의 콜드 5xx 원인 해소)
+            echo "[warmup] backend /api/health 폴링"
+            for i in $(seq 1 30); do
+              if curl -sf -o /dev/null http://localhost:8000/api/health; then
+                echo "[warmup] backend ready (${i}s)"
+                break
+              fi
+              sleep 1
+            done
+
+            echo "[warmup] frontend SSR 라우트 사전 GET"
+            # 부동산 허브 6개를 반드시 포함한다. 한 번의 fetch 실패가 5분 SWR 캐시
+            # (s-maxage=300) 에 빈 본문으로 박히면 그 동안 모든 사용자/Googlebot 에게
+            # 빈 페이지가 반환되어 색인이 막힌다 (2026-05 villa-sale 사고).
+            # warmup 으로 캐시를 정상 본문으로 선점한다.
+            for path in \
+              / \
+              /sitemap.xml \
+              /sitemap/static.xml \
+              /real-estate \
+              /real-estate/apt-sale /real-estate/apt-rent \
+              /real-estate/villa-sale /real-estate/villa-rent \
+              /real-estate/offitel-sale /real-estate/offitel-rent \
+              /toilet /wifi /ev-charger /hospital /parking /aed /trash /park; do
+              curl -s -o /dev/null -m 30 "https://ilsangkit.co.kr${path}" || true
+            done
 
       - name: Deployment Status
         run: echo "✅ Deployment completed successfully!"
