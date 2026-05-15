@@ -4,5 +4,7 @@
 import { setupWorker } from 'msw/browser';
 import { facilityHandlers } from './handlers/facilities';
 import { wasteScheduleHandlers } from './handlers/waste-schedules';
+import { facilityYoutubeHandlers } from './handlers/facilityYoutube';
+import { naverBlogHandlers } from './handlers/naverBlog';
 
-export const worker = setupWorker(...facilityHandlers, ...wasteScheduleHandlers);
+export const worker = setupWorker(...facilityHandlers, ...wasteScheduleHandlers, ...facilityYoutubeHandlers, ...naverBlogHandlers);

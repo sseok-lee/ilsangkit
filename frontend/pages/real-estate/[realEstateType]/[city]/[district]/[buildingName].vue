@@ -314,6 +314,14 @@
         <NearbyFacilities :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
       </SectionBlock>
 
+      <!-- 네이버 블로그 후기 -->
+      <BlogReviewSection
+        v-if="buildingName"
+        kind="real-estate"
+        :primary-key="(realEstateTypeParam as string)"
+        :secondary-key="`${cityName}|${districtName}|${buildingName}`"
+      />
+
       <!-- 관련 가이드 -->
       <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
@@ -399,6 +407,7 @@ import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 

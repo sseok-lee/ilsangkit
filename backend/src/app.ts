@@ -16,6 +16,9 @@ import subscriptionRouter from './routes/subscription.js';
 import publicRentalRouter from './routes/publicRental.js';
 import transitRouter from './routes/transit.js';
 import subwayRouter from './routes/subway.js';
+import facilityYoutubeRouter from './routes/facilityYoutube.js';
+import facilityNaverBlogRouter from './routes/facilityNaverBlog.js';
+import realEstateNaverBlogRouter from './routes/realEstateNaverBlog.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
@@ -59,11 +62,14 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 // API routes
 app.use('/api/facilities', facilitiesRouter);
+app.use('/api/facilities', facilityYoutubeRouter);
+app.use('/api/facilities', facilityNaverBlogRouter);
 app.use('/api/meta', metaRouter);
 app.use('/api/waste-schedules', wasteSchedulesRouter);
 app.use('/api/sitemap', sitemapRouter);
 app.use('/api/guides', guidesRouter);
 app.use('/api/real-estate', realEstateRouter);
+app.use('/api/real-estate', realEstateNaverBlogRouter);
 app.use('/api/area', areaRouter);
 app.use('/api/subscription', subscriptionRouter);
 app.use('/api/public-rental', publicRentalRouter);

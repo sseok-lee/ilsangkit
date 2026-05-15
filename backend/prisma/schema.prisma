@@ -1505,3 +1505,48 @@ model PublicRentalAnnouncement {
   @@index([pnu])
   @@index([hsmpNm])
 }
+
+// 시설 상세 페이지 YouTube 검색 결과 캐시 (30일 TTL, negative caching 포함)
+model FacilityYoutubeCache {
+  id         Int      @id @default(autoincrement())
+  category   String   @db.VarChar(20)
+  facilityId String   @db.VarChar(100)
+  query      String   @db.VarChar(300)
+  videos     Json
+  itemCount  Int      @default(0)
+  fetchedAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@unique([category, facilityId])
+  @@index([expiresAt])
+}
+
+// 시설 상세 페이지 네이버 블로그 후기 캐시 (14일 TTL, negative caching)
+model FacilityNaverBlogCache {
+  id         Int      @id @default(autoincrement())
+  category   String   @db.VarChar(20)
+  facilityId String   @db.VarChar(100)
+  query      String   @db.VarChar(300)
+  posts      Json
+  itemCount  Int      @default(0)
+  fetchedAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@unique([category, facilityId])
+  @@index([expiresAt])
+}
+
+// 부동산 단지 상세 페이지 네이버 블로그 후기 캐시 (14일 TTL, negative caching)
+model RealEstateNaverBlogCache {
+  id              Int      @id @default(autoincrement())
+  realEstateType  String   @db.VarChar(20)
+  buildingKey     String   @db.VarChar(200)
+  query           String   @db.VarChar(300)
+  posts           Json
+  itemCount       Int      @default(0)
+  fetchedAt       DateTime @default(now())
+  expiresAt       DateTime
+
+  @@unique([realEstateType, buildingKey])
+  @@index([expiresAt])
+}

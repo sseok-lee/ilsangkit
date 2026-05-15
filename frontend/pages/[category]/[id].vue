@@ -171,6 +171,21 @@
                 :category-meta="categoryMeta"
               />
 
+              <!-- 관련 YouTube 영상 -->
+              <FacilityYoutubeSection
+                v-if="facility"
+                :category="facility.category"
+                :facility-id="facility.id"
+              />
+
+              <!-- 네이버 블로그 후기 -->
+              <BlogReviewSection
+                v-if="facility"
+                kind="facility"
+                :primary-key="facility.category"
+                :secondary-key="facility.id"
+              />
+
               <!-- Ad: NEARBY 이후 -->
               <AdBanner />
 
@@ -302,9 +317,12 @@ import { formatKstDate } from '~/utils/formatters'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
+import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
+import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
+import type { YoutubeVideo } from '~/types/youtube'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
@@ -315,7 +333,7 @@ const route = useRoute()
 const router = useRouter()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro, getFacilityDisplayName } from '~/composables/useFacilityMeta'
-const { setFacilitySchema, setBreadcrumbSchema } = useStructuredData()
+const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
@@ -355,6 +373,14 @@ watch(fetchError, (err) => {
   }
 }, { immediate: true })
 
+const { data: youtubeSsrResponse } = await useAsyncData(
+  `facility-youtube-${category.value}-${id.value}`,
+  () => $fetch<{ success: boolean; data: { videos: YoutubeVideo[] } }>(
+    `/api/facilities/${category.value}/${id.value}/youtube?ssr=1`
+  ),
+  { lazy: true, default: () => ({ success: true, data: { videos: [] as YoutubeVideo[] } }) }
+)
+
 const facility = computed(() => facilityResponse.value?.data ?? null)
 const loading = computed(() => status.value === 'pending')
 // SSR에서는 createError로 에러 페이지 전환, 클라이언트 fallback용
@@ -375,6 +401,10 @@ watchEffect(() => {
       { name: categoryName, url: `/${facility.value.category}` },
       { name, url: `/${facility.value.category}/${facility.value.id}` },
     ])
+    const ssrVideos = youtubeSsrResponse.value?.data?.videos ?? []
+    if (ssrVideos.length >= 2) {
+      setVideoListSchema(ssrVideos)
+    }
   }
 })
 
