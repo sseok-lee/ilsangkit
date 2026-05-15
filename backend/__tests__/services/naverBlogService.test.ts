@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildNaverBlogQuery, stripHtml } from '../../src/services/naverBlogService.js';
+import { buildNaverBlogQuery, stripHtml, buildNaverBlogQueryForRealEstate } from '../../src/services/naverBlogService.js';
 
 describe('buildNaverBlogQuery', () => {
   const base = { name: '종로주차장', city: '서울특별시', district: '종로구' };
@@ -52,5 +52,38 @@ describe('stripHtml', () => {
   });
   it('&#39; &nbsp; &lt; &gt; 처리', () => {
     expect(stripHtml('it&#39;s&nbsp;great&lt;3&gt;')).toBe('it\'s great<3>');
+  });
+});
+
+describe('buildNaverBlogQueryForRealEstate', () => {
+  const base = { buildingName: '롯데캐슬 골드', city: '서울특별시', district: '종로구' };
+
+  it('apt-sale → 아파트 매매', () => {
+    expect(buildNaverBlogQueryForRealEstate(base, 'apt-sale'))
+      .toBe('롯데캐슬 골드 종로구 아파트 매매');
+  });
+  it('apt-rent → 아파트 전세', () => {
+    expect(buildNaverBlogQueryForRealEstate(base, 'apt-rent'))
+      .toBe('롯데캐슬 골드 종로구 아파트 전세');
+  });
+  it('villa-sale → 빌라 매매', () => {
+    expect(buildNaverBlogQueryForRealEstate(base, 'villa-sale'))
+      .toBe('롯데캐슬 골드 종로구 빌라 매매');
+  });
+  it('villa-rent → 빌라 전세', () => {
+    expect(buildNaverBlogQueryForRealEstate(base, 'villa-rent'))
+      .toBe('롯데캐슬 골드 종로구 빌라 전세');
+  });
+  it('offitel-sale → 오피스텔 매매', () => {
+    expect(buildNaverBlogQueryForRealEstate(base, 'offitel-sale'))
+      .toBe('롯데캐슬 골드 종로구 오피스텔 매매');
+  });
+  it('offitel-rent → 오피스텔 전세', () => {
+    expect(buildNaverBlogQueryForRealEstate(base, 'offitel-rent'))
+      .toBe('롯데캐슬 골드 종로구 오피스텔 전세');
+  });
+  it('district 누락 시 city short 폴백', () => {
+    expect(buildNaverBlogQueryForRealEstate({ buildingName: '롯데캐슬', city: '서울특별시', district: '' }, 'apt-sale'))
+      .toBe('롯데캐슬 서울 아파트 매매');
   });
 });

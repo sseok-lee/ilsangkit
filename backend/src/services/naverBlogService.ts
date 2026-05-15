@@ -48,6 +48,28 @@ export function buildNaverBlogQuery(input: FacilityQueryInput, category: Facilit
   }
 }
 
+export type RealEstateType =
+  | 'apt-sale' | 'apt-rent'
+  | 'villa-sale' | 'villa-rent'
+  | 'offitel-sale' | 'offitel-rent';
+
+const REAL_ESTATE_TYPE_LABEL: Record<RealEstateType, string> = {
+  'apt-sale':     '아파트 매매',
+  'apt-rent':     '아파트 전세',
+  'villa-sale':   '빌라 매매',
+  'villa-rent':   '빌라 전세',
+  'offitel-sale': '오피스텔 매매',
+  'offitel-rent': '오피스텔 전세',
+};
+
+export function buildNaverBlogQueryForRealEstate(
+  input: RealEstateQueryInput,
+  type: RealEstateType,
+): string {
+  const region = regionToken(input.district, input.city);
+  return `${input.buildingName.trim()} ${region} ${REAL_ESTATE_TYPE_LABEL[type]}`;
+}
+
 const HTML_ENTITY_MAP: Record<string, string> = {
   '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'",
   '&#39;': "'", '&#x27;': "'", '&nbsp;': ' ',
