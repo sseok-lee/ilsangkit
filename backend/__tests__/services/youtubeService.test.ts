@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { buildYoutubeQuery, filterVideos, type RawYoutubeVideo } from '../../src/services/youtubeService.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { buildYoutubeQuery, filterVideos, fetchFromYoutube, type RawYoutubeVideo } from '../../src/services/youtubeService.js';
 
 describe('buildYoutubeQuery', () => {
   const base = { name: '종로주차장', city: '서울특별시', district: '종로구' };
@@ -95,5 +95,51 @@ describe('filterVideos', () => {
   it('상위 6개로 잘라낸다', () => {
     const inputs = Array.from({ length: 10 }, (_, i) => mkVideo({ videoId: `v${i}` }));
     expect(filterVideos(inputs)).toHaveLength(6);
+  });
+});
+
+describe('fetchFromYoutube', () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = originalFetch; });
+
+  it('정상 응답을 RawYoutubeVideo 배열로 매핑한다', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({
+      items: [{
+        id: { kind: 'youtube#video', videoId: 'abc' },
+        snippet: {
+          title: '제목',
+          channelTitle: '채널',
+          publishedAt: '2026-05-01T00:00:00Z',
+          thumbnails: { medium: { url: 'https://i.ytimg.com/vi/abc/mqdefault.jpg' } },
+        },
+      }],
+    }), { status: 200 })) as unknown as typeof fetch;
+
+    const out = await fetchFromYoutube('test query', 'KEY');
+    expect(out).toEqual([{
+      videoId: 'abc',
+      title: '제목',
+      channelTitle: '채널',
+      thumbnail: 'https://i.ytimg.com/vi/abc/mqdefault.jpg',
+      publishedAt: '2026-05-01T00:00:00Z',
+      duration: '',
+    }]);
+  });
+
+  it('4xx 응답이면 빈 배열을 반환한다', async () => {
+    globalThis.fetch = vi.fn(async () => new Response('{}', { status: 403 })) as unknown as typeof fetch;
+    expect(await fetchFromYoutube('q', 'KEY')).toEqual([]);
+  });
+
+  it('네트워크 에러면 빈 배열을 반환한다', async () => {
+    globalThis.fetch = vi.fn(async () => { throw new Error('boom'); }) as unknown as typeof fetch;
+    expect(await fetchFromYoutube('q', 'KEY')).toEqual([]);
+  });
+
+  it('API key 미설정이면 호출을 건너뛰고 빈 배열을 반환한다', async () => {
+    const fetchSpy = vi.fn();
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+    expect(await fetchFromYoutube('q', '')).toEqual([]);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

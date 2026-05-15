@@ -85,3 +85,56 @@ export function filterVideos(videos: RawYoutubeVideo[], opts: FilterOptions = {}
 }
 
 export const YOUTUBE_MIN_RESULTS = 2;
+
+interface YoutubeApiSnippet {
+  title: string;
+  channelTitle: string;
+  publishedAt: string;
+  thumbnails?: { medium?: { url?: string }; default?: { url?: string } };
+}
+
+interface YoutubeApiItem {
+  id: { kind?: string; videoId?: string };
+  snippet: YoutubeApiSnippet;
+}
+
+interface YoutubeApiResponse {
+  items?: YoutubeApiItem[];
+}
+
+const YOUTUBE_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
+
+export async function fetchFromYoutube(query: string, apiKey: string): Promise<RawYoutubeVideo[]> {
+  if (!apiKey) return [];
+
+  const params = new URLSearchParams({
+    key: apiKey,
+    q: query,
+    part: 'snippet',
+    type: 'video',
+    maxResults: '10',
+    relevanceLanguage: 'ko',
+    regionCode: 'KR',
+    safeSearch: 'moderate',
+    videoEmbeddable: 'true',
+    order: 'relevance',
+  });
+
+  try {
+    const res = await fetch(`${YOUTUBE_SEARCH_URL}?${params.toString()}`);
+    if (!res.ok) return [];
+    const json = (await res.json()) as YoutubeApiResponse;
+    return (json.items ?? [])
+      .filter((it) => it.id?.videoId)
+      .map<RawYoutubeVideo>((it) => ({
+        videoId: it.id.videoId!,
+        title: it.snippet.title,
+        channelTitle: it.snippet.channelTitle,
+        thumbnail: it.snippet.thumbnails?.medium?.url ?? it.snippet.thumbnails?.default?.url ?? '',
+        publishedAt: it.snippet.publishedAt,
+        duration: '',
+      }));
+  } catch {
+    return [];
+  }
+}
