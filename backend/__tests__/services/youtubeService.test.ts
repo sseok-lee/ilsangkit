@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildYoutubeQuery } from '../../src/services/youtubeService.js';
+import { buildYoutubeQuery, filterVideos, type RawYoutubeVideo } from '../../src/services/youtubeService.js';
 
 describe('buildYoutubeQuery', () => {
   const base = { name: '종로주차장', city: '서울특별시', district: '종로구' };
@@ -60,5 +60,40 @@ describe('buildYoutubeQuery', () => {
   it('district 누락 시 city short로 폴백', () => {
     expect(buildYoutubeQuery({ name: '광장시장', city: '서울특별시', district: '' }, 'market'))
       .toBe('광장시장 서울');
+  });
+});
+
+function mkVideo(overrides: Partial<RawYoutubeVideo> = {}): RawYoutubeVideo {
+  return {
+    videoId: 'v1',
+    title: '제목',
+    channelTitle: '채널',
+    thumbnail: 'https://i.ytimg.com/vi/v1/mqdefault.jpg',
+    publishedAt: '2026-05-01T00:00:00Z',
+    duration: 'PT5M',
+    ...overrides,
+  };
+}
+
+describe('filterVideos', () => {
+  it('제목에 광고 키워드가 포함되면 제외한다', () => {
+    const out = filterVideos([
+      mkVideo({ videoId: 'a', title: '[광고] 종로주차장' }),
+      mkVideo({ videoId: 'b', title: '종로주차장 솔직 후기' }),
+    ]);
+    expect(out.map((v) => v.videoId)).toEqual(['b']);
+  });
+
+  it('채널이 차단 리스트에 있으면 제외한다', () => {
+    const out = filterVideos([
+      mkVideo({ videoId: 'a', channelTitle: 'BLOCKED_CHANNEL_FIXTURE' }),
+      mkVideo({ videoId: 'b' }),
+    ], { blockedChannels: ['BLOCKED_CHANNEL_FIXTURE'] });
+    expect(out.map((v) => v.videoId)).toEqual(['b']);
+  });
+
+  it('상위 6개로 잘라낸다', () => {
+    const inputs = Array.from({ length: 10 }, (_, i) => mkVideo({ videoId: `v${i}` }));
+    expect(filterVideos(inputs)).toHaveLength(6);
   });
 });

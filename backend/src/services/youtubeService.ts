@@ -56,3 +56,32 @@ export function buildYoutubeQuery(input: FacilityQueryInput, category: FacilityC
       return `${name} ${region}`;
   }
 }
+
+export interface RawYoutubeVideo {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnail: string;
+  publishedAt: string;
+  duration: string;
+}
+
+const AD_KEYWORDS = ['[광고]', '광고', '협찬', 'AD', '#광고', '#협찬'];
+const DEFAULT_BLOCKED_CHANNELS: string[] = [];
+const MAX_VIDEOS = 6;
+
+interface FilterOptions {
+  blockedChannels?: string[];
+  adKeywords?: string[];
+}
+
+export function filterVideos(videos: RawYoutubeVideo[], opts: FilterOptions = {}): RawYoutubeVideo[] {
+  const blocked = opts.blockedChannels ?? DEFAULT_BLOCKED_CHANNELS;
+  const ad = opts.adKeywords ?? AD_KEYWORDS;
+  return videos
+    .filter((v) => !ad.some((kw) => v.title.includes(kw)))
+    .filter((v) => !blocked.includes(v.channelTitle))
+    .slice(0, MAX_VIDEOS);
+}
+
+export const YOUTUBE_MIN_RESULTS = 2;
