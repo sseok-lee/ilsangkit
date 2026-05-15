@@ -32,13 +32,13 @@ export function createYoutubeQuotaCounter({ dailyLimit }: Options): YoutubeQuota
   }
 
   return {
-    tryConsume() {
+    tryConsume(): boolean {
       rollOverIfNeeded();
       if (usedCount >= dailyLimit) return false;
       usedCount += 1;
       return true;
     },
-    used() {
+    used(): number {
       rollOverIfNeeded();
       return usedCount;
     },
