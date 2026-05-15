@@ -4,12 +4,10 @@
     data-testid="blog-section"
     :class="['min-h-[1px]', hasResults || loading ? 'mt-8' : '']"
   >
-    <template v-if="hasResults || loading">
-      <header class="mb-4 flex items-baseline justify-between">
-        <h2 class="text-lg font-bold text-slate-900">관련 블로그</h2>
-        <p class="text-xs text-slate-500">네이버 블로그 검색 · 자동 수집</p>
-      </header>
-
+    <SectionBlock
+      v-if="hasResults || loading"
+      heading="관련 블로그"
+    >
       <div v-if="loading" class="flex flex-col gap-3">
         <div v-for="i in 5" :key="i" class="h-24 rounded-xl bg-slate-100 animate-pulse" />
       </div>
@@ -22,7 +20,7 @@
           data-testid="blog-card"
         />
       </div>
-    </template>
+    </SectionBlock>
   </section>
 </template>
 
@@ -30,6 +28,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useBlogReviews, type BlogReviewKind } from '~/composables/useBlogReviews'
 import BlogReviewCard from './BlogReviewCard.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const props = defineProps<{ kind: BlogReviewKind; primaryKey: string; secondaryKey: string }>()
 
