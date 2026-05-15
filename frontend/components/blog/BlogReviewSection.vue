@@ -6,7 +6,7 @@
   >
     <template v-if="hasResults || loading">
       <header class="mb-4 flex items-baseline justify-between">
-        <h2 class="text-lg font-bold text-slate-900">방문자 후기</h2>
+        <h2 class="text-lg font-bold text-slate-900">관련 블로그</h2>
         <p class="text-xs text-slate-500">네이버 블로그 검색 · 자동 수집</p>
       </header>
 
