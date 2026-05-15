@@ -28,7 +28,7 @@ vi.mock('../../src/services/naverBlogService.js', async () => {
   return { ...actual, fetchFromNaver: mockFetchNaver };
 });
 
-import { getOrFetchNaverBlogForFacility, facilityInFlight } from '../../src/services/naverBlogCacheService.js';
+import { getOrFetchNaverBlogForFacility, facilityInFlight, getOrFetchNaverBlogForRealEstate, realEstateInFlight } from '../../src/services/naverBlogCacheService.js';
 
 function makePosts(n: number) {
   return Array.from({ length: n }, (_, i) => ({
@@ -115,5 +115,40 @@ describe('getOrFetchNaverBlogForFacility', () => {
     const [r1, r2] = await Promise.all([p1, p2]);
     expect(r1).toEqual(r2);
     expect(mockFetchNaver).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('getOrFetchNaverBlogForRealEstate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    realEstateInFlight.clear();
+    process.env.NAVER_CLIENT_ID = 'CID';
+    process.env.NAVER_CLIENT_SECRET = 'CSEC';
+  });
+  const building = { buildingName: '롯데캐슬 골드', city: '서울특별시', district: '종로구' };
+
+  it('캐시 히트', async () => {
+    mockFindUniqueR.mockResolvedValueOnce({
+      posts: makePosts(3), itemCount: 3, expiresAt: new Date(Date.now() + 86_400_000),
+    });
+    const out = await getOrFetchNaverBlogForRealEstate('apt-sale', 'seoul|jongro|lotte', building);
+    expect(out).toHaveLength(3);
+    expect(mockFetchNaver).not.toHaveBeenCalled();
+  });
+
+  it('미스 + quota 여유 → fetch + upsert', async () => {
+    mockFindUniqueR.mockResolvedValueOnce(null);
+    mockQuotaTry.mockReturnValueOnce(true);
+    mockFetchNaver.mockResolvedValueOnce(makePosts(5));
+    const out = await getOrFetchNaverBlogForRealEstate('apt-sale', 'seoul|jongro|lotte', building);
+    expect(out).toHaveLength(5);
+    expect(mockUpsertR).toHaveBeenCalledTimes(1);
+  });
+
+  it('cacheOnly + 미스 → 빈 배열', async () => {
+    mockFindUniqueR.mockResolvedValueOnce(null);
+    const out = await getOrFetchNaverBlogForRealEstate('apt-sale', 'seoul|jongro|lotte', building, { cacheOnly: true });
+    expect(out).toEqual([]);
+    expect(mockFetchNaver).not.toHaveBeenCalled();
   });
 });
