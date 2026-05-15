@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildNaverBlogQuery, stripHtml, buildNaverBlogQueryForRealEstate } from '../../src/services/naverBlogService.js';
+import { buildNaverBlogQuery, stripHtml, buildNaverBlogQueryForRealEstate, filterNaverBlogPosts, type RawNaverBlogPost, NAVER_BLOG_MIN_RESULTS } from '../../src/services/naverBlogService.js';
 
 describe('buildNaverBlogQuery', () => {
   const base = { name: '종로주차장', city: '서울특별시', district: '종로구' };
@@ -85,5 +85,70 @@ describe('buildNaverBlogQueryForRealEstate', () => {
   it('district 누락 시 city short 폴백', () => {
     expect(buildNaverBlogQueryForRealEstate({ buildingName: '롯데캐슬', city: '서울특별시', district: '' }, 'apt-sale'))
       .toBe('롯데캐슬 서울 아파트 매매');
+  });
+});
+
+function mkPost(overrides: Partial<RawNaverBlogPost> = {}): RawNaverBlogPost {
+  return {
+    url: 'https://blog.naver.com/x/1',
+    title: '종로주차장 후기',
+    description: '여기는 종로 한가운데에 있어서 가기 편하고 요금도 합리적이었어요. 추천합니다',
+    bloggerName: '여행객A',
+    bloggerLink: 'https://blog.naver.com/x',
+    postDate: '20250901',
+    ...overrides,
+  };
+}
+
+describe('filterNaverBlogPosts', () => {
+  const FIXED_NOW = new Date('2026-05-15T00:00:00+09:00');
+
+  it('광고 키워드 포함 시 제외', () => {
+    const out = filterNaverBlogPosts([
+      mkPost({ url: 'a', title: '[광고] 종로주차장 추천' }),
+      mkPost({ url: 'b' }),
+    ], { now: FIXED_NOW });
+    expect(out.map((p) => p.url)).toEqual(['b']);
+  });
+
+  it('description에 협찬 포함 시 제외', () => {
+    const out = filterNaverBlogPosts([
+      mkPost({ url: 'a', description: '소개해드릴게요. 본 후기는 협찬 받아 작성되었습니다 (충분한 내용입니다 진짜로)' }),
+      mkPost({ url: 'b' }),
+    ], { now: FIXED_NOW });
+    expect(out.map((p) => p.url)).toEqual(['b']);
+  });
+
+  it('도메인 블랙리스트', () => {
+    const out = filterNaverBlogPosts([
+      mkPost({ url: 'a', bloggerLink: 'https://blog.naver.com/blocked-fixture' }),
+      mkPost({ url: 'b' }),
+    ], { now: FIXED_NOW, blockedBloggerLinks: ['https://blog.naver.com/blocked-fixture'] });
+    expect(out.map((p) => p.url)).toEqual(['b']);
+  });
+
+  it('3년 초과 글 제외', () => {
+    const out = filterNaverBlogPosts([
+      mkPost({ url: 'a', postDate: '20220101' }),
+      mkPost({ url: 'b' }),
+    ], { now: FIXED_NOW });
+    expect(out.map((p) => p.url)).toEqual(['b']);
+  });
+
+  it('description 30자 미만 제외', () => {
+    const out = filterNaverBlogPosts([
+      mkPost({ url: 'a', description: '짧음' }),
+      mkPost({ url: 'b' }),
+    ], { now: FIXED_NOW });
+    expect(out.map((p) => p.url)).toEqual(['b']);
+  });
+
+  it('상위 5건만 반환', () => {
+    const inputs = Array.from({ length: 10 }, (_, i) => mkPost({ url: `u${i}` }));
+    expect(filterNaverBlogPosts(inputs, { now: FIXED_NOW })).toHaveLength(5);
+  });
+
+  it('NAVER_BLOG_MIN_RESULTS = 3', () => {
+    expect(NAVER_BLOG_MIN_RESULTS).toBe(3);
   });
 });

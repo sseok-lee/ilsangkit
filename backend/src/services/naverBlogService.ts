@@ -81,3 +81,58 @@ export function stripHtml(input: string): string {
     .replace(/<[^>]+>/g, '')
     .replace(/&[#a-zA-Z0-9]+;/g, (m) => HTML_ENTITY_MAP[m] ?? m);
 }
+
+export interface RawNaverBlogPost {
+  url: string;
+  title: string;
+  description: string;
+  bloggerName: string;
+  bloggerLink: string;
+  postDate: string;
+}
+
+export const NAVER_BLOG_MIN_RESULTS = 3;
+const MAX_POSTS = 5;
+const MIN_DESCRIPTION_LENGTH = 30;
+const MAX_AGE_YEARS = 3;
+
+const AD_KEYWORDS = [
+  '체험단', '협찬', '광고', '#광고', '#협찬', '[광고]', '[Ad]', '[AD]',
+  '원고료', '무료초대', '소정의 대가', '제공받아',
+];
+
+const DEFAULT_BLOCKED_BLOGGER_LINKS: string[] = [];
+
+interface FilterOptions {
+  now?: Date;
+  adKeywords?: string[];
+  blockedBloggerLinks?: string[];
+}
+
+function parsePostDate(s: string): Date | null {
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
+  if (!m) return null;
+  const d = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export function filterNaverBlogPosts(
+  posts: RawNaverBlogPost[],
+  opts: FilterOptions = {},
+): RawNaverBlogPost[] {
+  const now = opts.now ?? new Date();
+  const ads = opts.adKeywords ?? AD_KEYWORDS;
+  const blocked = opts.blockedBloggerLinks ?? DEFAULT_BLOCKED_BLOGGER_LINKS;
+  const cutoff = new Date(now.getTime());
+  cutoff.setFullYear(cutoff.getFullYear() - MAX_AGE_YEARS);
+
+  return posts
+    .filter((p) => p.description.length >= MIN_DESCRIPTION_LENGTH)
+    .filter((p) => !ads.some((kw) => p.title.includes(kw) || p.description.includes(kw)))
+    .filter((p) => !blocked.includes(p.bloggerLink))
+    .filter((p) => {
+      const d = parsePostDate(p.postDate);
+      return d ? d >= cutoff : true;
+    })
+    .slice(0, MAX_POSTS);
+}
