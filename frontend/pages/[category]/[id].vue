@@ -171,6 +171,13 @@
                 :category-meta="categoryMeta"
               />
 
+              <!-- 관련 YouTube 영상 -->
+              <FacilityYoutubeSection
+                v-if="facility"
+                :category="facility.category"
+                :facility-id="facility.id"
+              />
+
               <!-- Ad: NEARBY 이후 -->
               <AdBanner />
 
@@ -302,6 +309,7 @@ import { formatKstDate } from '~/utils/formatters'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
+import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
