@@ -23,11 +23,12 @@ router.get(
       throw new NotFoundError('Facility not found');
     }
 
+    const ssrOnly = req.query.ssr === '1';
     const videos = await getOrFetchYoutubeVideos(category, id, {
       name: facility.name,
       city: facility.city,
       district: facility.district,
-    });
+    }, { cacheOnly: ssrOnly });
 
     res.json({ success: true, data: { videos } });
   }),

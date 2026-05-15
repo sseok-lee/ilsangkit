@@ -53,4 +53,13 @@ describe('GET /api/facilities/:category/:id/youtube', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.videos).toEqual([]);
   });
+
+  it('ssr=1: 캐시 없으면 fetch하지 않고 빈 배열만 반환', async () => {
+    mockFindParking.mockResolvedValueOnce({ id: '123', name: '종로주차장', city: '서울특별시', district: '종로구' });
+    mockGetOrFetch.mockResolvedValueOnce([]);
+    const res = await request(app).get('/api/facilities/parking/123/youtube?ssr=1');
+    expect(res.status).toBe(200);
+    expect(res.body.data.videos).toEqual([]);
+    expect(mockGetOrFetch).toHaveBeenCalledWith('parking', '123', expect.any(Object), { cacheOnly: true });
+  });
 });

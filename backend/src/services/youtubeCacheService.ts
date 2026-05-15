@@ -14,6 +14,8 @@ const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const inFlight = new Map<string, Promise<RawYoutubeVideo[]>>();
 
+interface GetOptions { cacheOnly?: boolean }
+
 function cacheKey(category: string, facilityId: string): string {
   return `${category}:${facilityId}`;
 }
@@ -22,6 +24,7 @@ export async function getOrFetchYoutubeVideos(
   category: FacilityCategory,
   facilityId: string,
   facility: FacilityQueryInput,
+  options: GetOptions = {},
 ): Promise<RawYoutubeVideo[]> {
   const hit = await prisma.facilityYoutubeCache.findUnique({
     where: { category_facilityId: { category, facilityId } },
@@ -29,6 +32,7 @@ export async function getOrFetchYoutubeVideos(
   if (hit && hit.expiresAt > new Date()) {
     return (hit.videos as unknown as RawYoutubeVideo[]) ?? [];
   }
+  if (options.cacheOnly) return [];
 
   const key = cacheKey(category, facilityId);
   const existing = inFlight.get(key);
