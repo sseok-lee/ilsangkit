@@ -666,6 +666,33 @@ export function useStructuredData() {
   }
 
   /**
+   * VideoObject ItemList 스키마 (시설 YouTube 영상 캐시 히트용)
+   */
+  function setVideoListSchema(videos: { videoId: string; title: string; channelTitle: string; thumbnail: string; publishedAt: string }[]) {
+    if (!videos.length) return
+    const itemListElement = videos.slice(0, 6).map((v, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'VideoObject',
+        name: v.title,
+        description: v.title,
+        thumbnailUrl: v.thumbnail,
+        uploadDate: v.publishedAt,
+        embedUrl: `https://www.youtube-nocookie.com/embed/${v.videoId}`,
+        contentUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
+      },
+    }))
+    useHead({
+      script: [{
+        key: 'jsonld-videolist',
+        type: 'application/ld+json',
+        innerHTML: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement }),
+      }],
+    })
+  }
+
+  /**
    * Dataset 스키마 — 공공데이터 출처를 명시해 AI 검색(GEO) 인용성 강화
    *
    * 일상킷은 공공데이터를 가공해서 제공하는 서비스이므로,
@@ -743,5 +770,6 @@ export function useStructuredData() {
     setHowToSchema,
     setEventSchema,
     setDatasetSchema,
+    setVideoListSchema,
   }
 }
