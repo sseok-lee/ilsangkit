@@ -136,3 +136,51 @@ export function filterNaverBlogPosts(
     })
     .slice(0, MAX_POSTS);
 }
+
+interface NaverApiItem {
+  title: string;
+  link: string;
+  description: string;
+  bloggername: string;
+  bloggerlink: string;
+  postdate: string;
+}
+
+interface NaverApiResponse {
+  items?: NaverApiItem[];
+}
+
+const NAVER_BLOG_SEARCH_URL = 'https://openapi.naver.com/v1/search/blog.json';
+
+export async function fetchFromNaver(
+  query: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<RawNaverBlogPost[]> {
+  if (!clientId || !clientSecret) return [];
+
+  const params = new URLSearchParams({
+    query, display: '15', start: '1', sort: 'sim',
+  });
+
+  try {
+    const res = await fetch(`${NAVER_BLOG_SEARCH_URL}?${params.toString()}`, {
+      headers: {
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret,
+      },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as NaverApiResponse;
+    return (json.items ?? []).map<RawNaverBlogPost>((it) => ({
+      url: it.link,
+      title: stripHtml(it.title),
+      description: stripHtml(it.description),
+      bloggerName: it.bloggername,
+      bloggerLink: it.bloggerlink,
+      postDate: it.postdate,
+    }));
+  } catch {
+    return [];
+  }
+}

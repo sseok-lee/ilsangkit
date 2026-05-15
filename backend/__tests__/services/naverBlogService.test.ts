@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { buildNaverBlogQuery, stripHtml, buildNaverBlogQueryForRealEstate, filterNaverBlogPosts, type RawNaverBlogPost, NAVER_BLOG_MIN_RESULTS } from '../../src/services/naverBlogService.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { buildNaverBlogQuery, stripHtml, buildNaverBlogQueryForRealEstate, filterNaverBlogPosts, fetchFromNaver, type RawNaverBlogPost, NAVER_BLOG_MIN_RESULTS } from '../../src/services/naverBlogService.js';
 
 describe('buildNaverBlogQuery', () => {
   const base = { name: '종로주차장', city: '서울특별시', district: '종로구' };
@@ -150,5 +150,51 @@ describe('filterNaverBlogPosts', () => {
 
   it('NAVER_BLOG_MIN_RESULTS = 3', () => {
     expect(NAVER_BLOG_MIN_RESULTS).toBe(3);
+  });
+});
+
+describe('fetchFromNaver', () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = originalFetch; });
+
+  it('정상 응답을 RawNaverBlogPost 배열로 매핑 (HTML strip 적용)', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({
+      items: [{
+        title: '<b>종로주차장</b> 후기',
+        link: 'https://blog.naver.com/x/1',
+        description: '여기는 <b>종로</b> 한가운데에 있어서 가기 편함',
+        bloggername: '여행객A',
+        bloggerlink: 'https://blog.naver.com/x',
+        postdate: '20260301',
+      }],
+    }), { status: 200 })) as unknown as typeof fetch;
+
+    const out = await fetchFromNaver('test query', 'CID', 'CSEC');
+    expect(out).toEqual([{
+      url: 'https://blog.naver.com/x/1',
+      title: '종로주차장 후기',
+      description: '여기는 종로 한가운데에 있어서 가기 편함',
+      bloggerName: '여행객A',
+      bloggerLink: 'https://blog.naver.com/x',
+      postDate: '20260301',
+    }]);
+  });
+
+  it('4xx 응답이면 빈 배열', async () => {
+    globalThis.fetch = vi.fn(async () => new Response('{}', { status: 403 })) as unknown as typeof fetch;
+    expect(await fetchFromNaver('q', 'CID', 'CSEC')).toEqual([]);
+  });
+
+  it('네트워크 에러면 빈 배열', async () => {
+    globalThis.fetch = vi.fn(async () => { throw new Error('boom'); }) as unknown as typeof fetch;
+    expect(await fetchFromNaver('q', 'CID', 'CSEC')).toEqual([]);
+  });
+
+  it('clientId 또는 secret 미설정이면 호출 스킵', async () => {
+    const spy = vi.fn();
+    globalThis.fetch = spy as unknown as typeof fetch;
+    expect(await fetchFromNaver('q', '', 'CSEC')).toEqual([]);
+    expect(await fetchFromNaver('q', 'CID', '')).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
   });
 });
