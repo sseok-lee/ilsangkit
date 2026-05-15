@@ -178,6 +178,14 @@
                 :facility-id="facility.id"
               />
 
+              <!-- 네이버 블로그 후기 -->
+              <BlogReviewSection
+                v-if="facility"
+                kind="facility"
+                :primary-key="facility.category"
+                :secondary-key="facility.id"
+              />
+
               <!-- Ad: NEARBY 이후 -->
               <AdBanner />
 
@@ -310,6 +318,7 @@ import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
 import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
+import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
