@@ -34,7 +34,7 @@ describe('FacilityYoutubeSection', () => {
     // sentinel section은 IntersectionObserver를 위해 항상 존재
     expect(w.find('[data-testid="yt-section"]').exists()).toBe(true)
     // 단, 결과 부족 시 내용은 렌더링 안 됨
-    expect(w.find('h2').exists()).toBe(false)
+    expect(w.find('h3').exists()).toBe(false)
     expect(w.findAll('[data-testid="yt-card"]')).toHaveLength(0)
   })
 

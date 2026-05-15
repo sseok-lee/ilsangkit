@@ -4,12 +4,10 @@
     data-testid="yt-section"
     :class="['min-h-[1px]', hasResults || loading ? 'mt-8' : '']"
   >
-    <template v-if="hasResults || loading">
-      <header class="mb-4 flex items-baseline justify-between">
-        <h2 class="text-lg font-bold text-slate-900">관련 영상</h2>
-        <p class="text-xs text-slate-500">YouTube 검색 결과 · 자동 수집</p>
-      </header>
-
+    <SectionBlock
+      v-if="hasResults || loading"
+      heading="관련 영상"
+    >
       <div v-if="loading" class="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div v-for="i in 6" :key="i" class="aspect-video rounded-xl bg-slate-100 animate-pulse" />
       </div>
@@ -29,7 +27,7 @@
         :video-id="activeVideoId"
         @close="closeModal"
       />
-    </template>
+    </SectionBlock>
   </section>
 </template>
 
@@ -39,6 +37,7 @@ import { useFacilityYoutube } from '~/composables/useFacilityYoutube'
 import type { FacilityCategory } from '~/types/facility'
 import YoutubeVideoCard from './YoutubeVideoCard.vue'
 import YoutubeEmbedModal from './YoutubeEmbedModal.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const props = defineProps<{ category: FacilityCategory; facilityId: string }>()
 
