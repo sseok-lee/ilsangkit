@@ -27,11 +27,15 @@ beforeEach(() => {
 const props = { category: 'parking' as const, facilityId: '123' }
 
 describe('FacilityYoutubeSection', () => {
-  it('영상이 0~1건이면 섹션 자체를 렌더링하지 않는다', async () => {
+  it('영상이 0~1건이면 헤더/카드를 렌더링하지 않는다 (sentinel만 남음)', async () => {
     fetchMock.mockResolvedValueOnce({ success: true, data: { videos: [{ videoId: 'a', title: 't', channelTitle: 'c', thumbnail: '', publishedAt: '', duration: '' }] } })
     const w = mount(FacilityYoutubeSection, { props })
     await flushPromises(); await nextTick()
-    expect(w.find('[data-testid="yt-section"]').exists()).toBe(false)
+    // sentinel section은 IntersectionObserver를 위해 항상 존재
+    expect(w.find('[data-testid="yt-section"]').exists()).toBe(true)
+    // 단, 결과 부족 시 내용은 렌더링 안 됨
+    expect(w.find('h2').exists()).toBe(false)
+    expect(w.findAll('[data-testid="yt-card"]')).toHaveLength(0)
   })
 
   it('영상이 2건 이상이면 카드 N개를 렌더링한다 (최대 6)', async () => {

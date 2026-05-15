@@ -1,36 +1,36 @@
 <template>
   <section
-    v-if="hasResults || loading"
     ref="rootEl"
     data-testid="yt-section"
-    class="mt-8"
+    :class="['min-h-[1px]', hasResults || loading ? 'mt-8' : '']"
   >
-    <header class="mb-4 flex items-baseline justify-between">
-      <h2 class="text-lg font-bold text-slate-900">관련 영상</h2>
-      <p class="text-xs text-slate-500">YouTube 검색 결과 · 자동 수집</p>
-    </header>
+    <template v-if="hasResults || loading">
+      <header class="mb-4 flex items-baseline justify-between">
+        <h2 class="text-lg font-bold text-slate-900">관련 영상</h2>
+        <p class="text-xs text-slate-500">YouTube 검색 결과 · 자동 수집</p>
+      </header>
 
-    <div v-if="loading" class="grid grid-cols-2 md:grid-cols-3 gap-3">
-      <div v-for="i in 6" :key="i" class="aspect-video rounded-xl bg-slate-100 animate-pulse" />
-    </div>
+      <div v-if="loading" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div v-for="i in 6" :key="i" class="aspect-video rounded-xl bg-slate-100 animate-pulse" />
+      </div>
 
-    <div v-else class="grid grid-cols-2 md:grid-cols-3 gap-3">
-      <YoutubeVideoCard
-        v-for="v in displayed"
-        :key="v.videoId"
-        :video="v"
-        data-testid="yt-card"
-        @select="onSelect"
+      <div v-else class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <YoutubeVideoCard
+          v-for="v in displayed"
+          :key="v.videoId"
+          :video="v"
+          data-testid="yt-card"
+          @select="onSelect"
+        />
+      </div>
+
+      <YoutubeEmbedModal
+        :open="modalOpen"
+        :video-id="activeVideoId"
+        @close="closeModal"
       />
-    </div>
-
-    <YoutubeEmbedModal
-      :open="modalOpen"
-      :video-id="activeVideoId"
-      @close="closeModal"
-    />
+    </template>
   </section>
-  <section v-else ref="rootEl" data-testid="yt-section-placeholder" class="hidden" />
 </template>
 
 <script setup lang="ts">
@@ -53,11 +53,11 @@ const displayed = computed(() => videos.value.slice(0, 6))
 const modalOpen = ref(false)
 const activeVideoId = ref('')
 
-function onSelect(id: string) {
+function onSelect(id: string): void {
   activeVideoId.value = id
   modalOpen.value = true
 }
-function closeModal() {
+function closeModal(): void {
   modalOpen.value = false
   activeVideoId.value = ''
 }
