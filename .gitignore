@@ -67,6 +67,9 @@ lighthouse-results-*/
 backend/probe_*.ts
 frontend/probe_*.ts
 
+# superpowers local working dir (per-developer, not committed)
+.superpowers/
+
 # Local audit reports
 /GEO-AUDIT-REPORT.md
 
