@@ -134,7 +134,8 @@ export function filterNaverBlogPosts(
       const d = parsePostDate(p.postDate);
       return d ? d >= cutoff : true;
     })
-    .slice(0, MAX_POSTS);
+    .slice(0, MAX_POSTS)
+    .sort((a, b) => b.postDate.localeCompare(a.postDate));
 }
 
 interface NaverApiItem {

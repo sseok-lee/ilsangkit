@@ -151,6 +151,18 @@ describe('filterNaverBlogPosts', () => {
   it('NAVER_BLOG_MIN_RESULTS = 3', () => {
     expect(NAVER_BLOG_MIN_RESULTS).toBe(3);
   });
+
+  it('최종 5건을 날짜 내림차순(최신순)으로 정렬한다', () => {
+    const inputs = [
+      mkPost({ url: 'old1',  postDate: '20240301' }),
+      mkPost({ url: 'new2',  postDate: '20260215' }),
+      mkPost({ url: 'mid1',  postDate: '20250303' }),
+      mkPost({ url: 'new1',  postDate: '20260512' }),
+      mkPost({ url: 'old2',  postDate: '20240709' }),
+    ];
+    const out = filterNaverBlogPosts(inputs, { now: FIXED_NOW });
+    expect(out.map((p) => p.url)).toEqual(['new1', 'new2', 'mid1', 'old2', 'old1']);
+  });
 });
 
 describe('fetchFromNaver', () => {
