@@ -20,11 +20,14 @@ interface NeisDepartmentRow {
   DGHT_CRSE_SC_NM?: string;     // 주야구분
 }
 
-async function main(): Promise<void> {
+export async function syncSchoolDepartments(): Promise<{
+  totalRecords: number;
+  newRecords: number;
+  updatedRecords: number;
+}> {
   const apiKey = process.env.NEIS_API_KEY;
   if (!apiKey) {
-    console.error('NEIS_API_KEY 환경 변수가 설정되지 않았습니다.');
-    process.exit(1);
+    throw new Error('NEIS_API_KEY 환경 변수가 설정되지 않았습니다.');
   }
 
   console.info('=== 계열정보 동기화 시작 (고등학교) ===');
@@ -130,17 +133,26 @@ async function main(): Promise<void> {
 
     console.info(`\n=== 학과정보 동기화 완료 ===`);
     console.info(`학교: ${processedCount}/${schools.length}, 학과: ${deptCount}건, 에러: ${errorCount}건`);
+
+    return {
+      totalRecords: stats.totalRecords,
+      newRecords: deptCount,
+      updatedRecords: stats.updatedRecords,
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     await updateSyncHistory(syncHistory.id, { status: 'failed', errorMessage });
     console.error('학과정보 동기화 실패:', errorMessage);
     throw error;
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  syncSchoolDepartments()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('Fatal error:', error);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}
