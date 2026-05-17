@@ -20,14 +20,17 @@ interface NeisClassInfoRow {
   CLASS_NM?: string;           // 반명
 }
 
-async function main(): Promise<void> {
+export async function syncSchoolEnrollments(yearArg?: string): Promise<{
+  totalRecords: number;
+  newRecords: number;
+  updatedRecords: number;
+}> {
   const apiKey = process.env.NEIS_API_KEY;
   if (!apiKey) {
-    console.error('NEIS_API_KEY 환경 변수가 설정되지 않았습니다.');
-    process.exit(1);
+    throw new Error('NEIS_API_KEY 환경 변수가 설정되지 않았습니다.');
   }
 
-  const year = process.argv[2] || new Date().getFullYear().toString();
+  const year = yearArg || new Date().getFullYear().toString();
   console.info(`=== 학생수 동기화 시작 (${year}년) ===`);
 
   const client = new NeisApiClient(apiKey, { timeout: 60000 });
@@ -137,17 +140,26 @@ async function main(): Promise<void> {
 
     console.info(`\n=== 학생수 동기화 완료 ===`);
     console.info(`학교: ${processedCount}/${schools.length}, 학년 레코드: ${enrollmentCount}건, 에러: ${errorCount}건`);
+
+    return {
+      totalRecords: stats.totalRecords,
+      newRecords: enrollmentCount,
+      updatedRecords: stats.updatedRecords,
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     await updateSyncHistory(syncHistory.id, { status: 'failed', errorMessage });
     console.error('학생수 동기화 실패:', errorMessage);
     throw error;
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  syncSchoolEnrollments(process.argv[2])
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('Fatal error:', error);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}
