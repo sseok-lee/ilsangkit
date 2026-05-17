@@ -47,11 +47,14 @@ async function searchByKeyword(query: string, apiKey: string): Promise<{ lat: nu
   } catch { return null; }
 }
 
-async function main(): Promise<void> {
+export async function geocodeSchools(): Promise<{
+  totalRecords: number;
+  newRecords: number;
+  updatedRecords: number;
+}> {
   const apiKey = process.env.KAKAO_REST_API_KEY;
   if (!apiKey) {
-    console.error('KAKAO_REST_API_KEY 환경 변수가 설정되지 않았습니다.');
-    process.exit(1);
+    throw new Error('KAKAO_REST_API_KEY 환경 변수가 설정되지 않았습니다.');
   }
 
   // 좌표 없는 학교 조회
@@ -117,10 +120,19 @@ async function main(): Promise<void> {
   console.info(`\n=== geocoding 완료 ===`);
   console.info(`성공: ${successCount}, 실패: ${failCount}, 총: ${schools.length}`);
 
-  await prisma.$disconnect();
+  return {
+    totalRecords: schools.length,
+    newRecords: 0,
+    updatedRecords: successCount,
+  };
 }
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  geocodeSchools()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('Fatal error:', error);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

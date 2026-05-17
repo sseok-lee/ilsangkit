@@ -20,6 +20,9 @@ import { syncClothesFromApi } from '../services/clothesSyncService.js';
 import { syncParkingFromApi } from '../services/parkingSyncService.js';
 import { syncParksFromApi } from '../services/parkSyncService.js';
 import { syncSchoolsNeis } from './syncSchoolNeis.js';
+import { geocodeSchools } from './geocodeSchool.js';
+import { syncSchoolDepartments } from './syncSchoolDepartment.js';
+import { syncSchoolEnrollments } from './syncSchoolEnrollment.js';
 import { syncMarketsFromApi } from '../services/marketSyncService.js';
 import { syncAeds } from './syncAed.js';
 import { syncLibrariesFromApi } from '../services/librarySyncService.js';
@@ -66,7 +69,7 @@ interface SyncResult {
  * 사용 가능한 카테고리 목록
  */
 // public-rental은 API 쿼터 제한으로 별도 수동 실행: npx tsx src/scripts/syncPublicRent.ts
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -195,6 +198,36 @@ async function syncCategory(category: Category): Promise<SyncResult> {
 
       case 'school': {
         const result = await syncSchoolsNeis();
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'school-geocode': {
+        const result = await geocodeSchools();
+        return {
+          category,
+          success: true,
+          count: result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'school-department': {
+        const result = await syncSchoolDepartments();
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'school-enrollment': {
+        const result = await syncSchoolEnrollments();
         return {
           category,
           success: true,
