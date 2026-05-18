@@ -184,9 +184,7 @@ const totalPages = ref(0)
 const pending = ref(true)
 
 const renderableComplexes = computed<ComplexInfo[]>(() =>
-  complexes.value.filter(
-    (c) => isValidBuildingName(c.buildingName) && c.transactionCount >= 10,
-  ),
+  complexes.value.filter((c) => isValidBuildingName(c.buildingName)),
 )
 
 const { data: ssrData } = await useAsyncData(

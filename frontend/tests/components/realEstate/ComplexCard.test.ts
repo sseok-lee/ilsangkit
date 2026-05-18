@@ -81,15 +81,23 @@ describe('ComplexCard', () => {
       expect(wrapper.html()).toBe('<!--v-if-->')
     })
 
-    it('transactionCount < 10 thin content면 렌더링을 건너뛴다', () => {
+    it('기본값(minTransactionCount=0)에서는 거래 수와 무관하게 렌더링', () => {
       const thin: ComplexInfo = { ...mockComplex, transactionCount: 5 }
       const wrapper = mount(ComplexCard, {
         props: { complex: thin, propertyType: 'apt', tab: 'sale' },
       })
+      expect(wrapper.find('a').exists()).toBe(true)
+    })
+
+    it('minTransactionCount 명시 override 시 미달이면 렌더링 건너뜀', () => {
+      const thin: ComplexInfo = { ...mockComplex, transactionCount: 5 }
+      const wrapper = mount(ComplexCard, {
+        props: { complex: thin, propertyType: 'apt', tab: 'sale', minTransactionCount: 10 },
+      })
       expect(wrapper.find('a').exists()).toBe(false)
     })
 
-    it('minTransactionCount 커스텀 프롭으로 필터 임계치 조정 가능', () => {
+    it('minTransactionCount 명시 override 시 충족이면 렌더링', () => {
       const thin: ComplexInfo = { ...mockComplex, transactionCount: 5 }
       const wrapper = mount(ComplexCard, {
         props: { complex: thin, propertyType: 'apt', tab: 'sale', minTransactionCount: 3 },
