@@ -159,12 +159,14 @@ export function useRealEstate() {
     mode: 'sale' | 'rent',
     opts: {
       rentType?: 'all' | 'jeonse' | 'wolse'
+      dongName?: string
       excludeBuildingName?: string
       limitPerType?: number
     } = {}
   ): Promise<NearbyResponse> {
     const query = new URLSearchParams({ bjdCode, mode })
     if (mode === 'rent' && opts.rentType) query.set('rentType', opts.rentType)
+    if (opts.dongName) query.set('dongName', opts.dongName)
     if (opts.excludeBuildingName) query.set('excludeBuildingName', opts.excludeBuildingName)
     if (opts.limitPerType) query.set('limitPerType', String(opts.limitPerType))
 

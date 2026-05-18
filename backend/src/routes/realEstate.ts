@@ -45,15 +45,15 @@ router.get(
   })
 );
 
-// GET /api/real-estate/nearby - 같은 행정동 내 인근 단지 (cross-property)
+// GET /api/real-estate/nearby - 같은 (구 + 동) 내 인근 단지 (cross-property)
 router.get(
   '/nearby',
   validate(NearbyQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { bjdCode, mode, rentType, excludeBuildingName, limitPerType } =
+    const { bjdCode, mode, rentType, dongName, excludeBuildingName, limitPerType } =
       req.query as unknown as z.infer<typeof NearbyQuerySchema>;
     const data = await getNearbyByBjd(bjdCode, mode, {
-      rentType, excludeBuildingName, limitPerType,
+      rentType, dongName, excludeBuildingName, limitPerType,
     });
     res.json({ success: true, data });
   })

@@ -86,10 +86,13 @@ export const PriceAnalysisQuerySchema = z.object({
 export type PriceAnalysisQuery = z.infer<typeof PriceAnalysisQuerySchema>;
 
 // 인근 단지 조회 스키마 — /api/real-estate/nearby
+// bjdCode는 실제 DB에서 5자리(구 단위) — 다른 schema와 일관성 위해 max(10) 사용.
+// dongName을 추가 필터로 받아 "같은 동" 범위로 좁힌다.
 export const NearbyQuerySchema = z.object({
-  bjdCode: z.string().length(10),
+  bjdCode: z.string().min(1).max(10),
   mode: z.enum(['sale', 'rent']),
   rentType: z.enum(['all', 'jeonse', 'wolse']).default('all'),
+  dongName: z.string().max(50).optional(),
   excludeBuildingName: z.string().max(100).optional(),
   limitPerType: z.coerce.number().int().positive().max(20).default(4),
 });

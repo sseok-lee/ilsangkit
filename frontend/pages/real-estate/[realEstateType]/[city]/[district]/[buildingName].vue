@@ -1158,6 +1158,7 @@ async function loadNearby() {
   try {
     nearbyByType.value = await getNearby(bjd, mode, {
       rentType: rentTypeKey,
+      dongName: buildingInfo.value?.dongName,
       excludeBuildingName: buildingName.value,
       limitPerType: 4,
     })
@@ -1168,7 +1169,7 @@ async function loadNearby() {
 }
 
 watch(
-  () => [resolvedBjdCode.value, currentTab.value, selectedRentType.value] as const,
+  () => [resolvedBjdCode.value, currentTab.value, selectedRentType.value, buildingInfo.value?.dongName] as const,
   () => { loadNearby() },
   { immediate: true }
 )

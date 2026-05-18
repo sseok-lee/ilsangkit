@@ -723,9 +723,10 @@ const RENT_TRANSACTION_TABLE: Record<NearbyPropertyKey, string> = {
 export async function getNearbyByBjd(
   bjdCode: string,
   mode: NearbyMode,
-  opts: { rentType?: NearbyRentType; excludeBuildingName?: string; limitPerType?: number }
+  opts: { rentType?: NearbyRentType; dongName?: string; excludeBuildingName?: string; limitPerType?: number }
 ): Promise<NearbyResult> {
   const rentType: NearbyRentType = opts.rentType ?? 'all';
+  const dongName = opts.dongName ?? null;
   const excludeBuildingName = opts.excludeBuildingName ?? null;
   const limitPerType = opts.limitPerType ?? 4;
   const result: NearbyResult = { apt: [], villa: [], offitel: [] };
@@ -739,6 +740,7 @@ export async function getNearbyByBjd(
       const type = `${key}-${suffix}`;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const where: Record<string, any> = { type, bjdCode };
+      if (dongName) where.dongName = dongName;
       if (excludeBuildingName) where.buildingName = { not: excludeBuildingName };
       const rows = await prisma.realEstateBuildingSummary.findMany({
         where,
@@ -772,6 +774,9 @@ export async function getNearbyByBjd(
 
   for (const key of NEARBY_PROPERTY_KEYS) {
     const tableName = RENT_TRANSACTION_TABLE[key];
+    const dongFilter = dongName
+      ? Prisma.sql`AND t.dongName = ${dongName}`
+      : Prisma.empty;
     const excludeFilter = excludeBuildingName
       ? Prisma.sql`AND t.buildingName != ${excludeBuildingName}`
       : Prisma.empty;
@@ -802,6 +807,7 @@ export async function getNearbyByBjd(
       FROM \`${Prisma.raw(tableName)}\` t
       WHERE t.bjdCode = ${bjdCode}
         AND t.rentType = ${rentTypeKor}
+        ${dongFilter}
         ${excludeFilter}
       GROUP BY t.buildingName, t.bjdCode
       ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC
