@@ -39,37 +39,37 @@ async function getRealEstateBuildingCount(): Promise<number> {
         WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
           AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
           AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+        GROUP BY city, district, buildingName, bjdCode
       UNION ALL
       SELECT 1 FROM AptRentTransaction
         WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
           AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
           AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+        GROUP BY city, district, buildingName, bjdCode
       UNION ALL
       SELECT 1 FROM VillaSaleTransaction
         WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
           AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
           AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+        GROUP BY city, district, buildingName, bjdCode
       UNION ALL
       SELECT 1 FROM VillaRentTransaction
         WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
           AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
           AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+        GROUP BY city, district, buildingName, bjdCode
       UNION ALL
       SELECT 1 FROM OffitelSaleTransaction
         WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
           AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
           AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+        GROUP BY city, district, buildingName, bjdCode
       UNION ALL
       SELECT 1 FROM OffitelRentTransaction
         WHERE buildingName IS NOT NULL AND buildingName != '' AND CHAR_LENGTH(buildingName) >= 2
           AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
           AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-        GROUP BY city, district, buildingName, bjdCode HAVING COUNT(*) >= 10
+        GROUP BY city, district, buildingName, bjdCode
     ) t
   `;
   return Number(result[0].cnt);
@@ -173,7 +173,8 @@ export async function getSubscriptionIds() {
  * - (city, district, buildingName, bjdCode) 튜플 기준 GROUP BY
  * - buildingName 품질 필터: frontend `isValidBuildingName` 과 동일 규칙
  *   (빈값/공백/순수 숫자-하이픈 / 숫자로 시작하는 괄호 접두사 제외)
- * - 거래 10건 미만 단지 제외 (thin content 회피)
+ * - 거래 건수 임계값 없음 — `shouldNoindexRealEstateDetail`이 buildingName 품질만 검사하므로
+ *   같은 기준으로 sitemap에 포함. thin content 위험은 인근 단지 cross-property 섹션이 완화.
  * - city/district는 DB 원본 문자열 그대로 반환 → 프론트 사이트맵/IndexNow 단계에서 slug 변환
  */
 export async function getRealEstateBuildings() {
@@ -190,7 +191,6 @@ export async function getRealEstateBuildings() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName, bjdCode
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -203,7 +203,6 @@ export async function getRealEstateBuildings() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName, bjdCode
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -216,7 +215,6 @@ export async function getRealEstateBuildings() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName, bjdCode
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -229,7 +227,6 @@ export async function getRealEstateBuildings() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName, bjdCode
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -242,7 +239,6 @@ export async function getRealEstateBuildings() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName, bjdCode
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -255,7 +251,6 @@ export async function getRealEstateBuildings() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName, bjdCode
-      HAVING COUNT(*) >= 10
     ) unioned
   `;
   buildingsCache = { data: result, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
@@ -265,9 +260,8 @@ export async function getRealEstateBuildings() {
 /**
  * 사이트맵용 부동산 city/district 허브 조합 목록.
  *
- * 프론트엔드 district 허브 페이지의 noindex 조건과 동일한 기준 적용:
- *   건물 단위로 거래 10건 이상인 단지가 1개 이상 있는 district만 포함.
- * (지역 전체 합산 10건 기준이 아님 — 그러면 개별 건물이 모두 thin해도 허브가 포함됨)
+ * 거래 건수 임계값 없음 — `shouldNoindexRealEstateDetail` 정책과 동일하게
+ * 유효 buildingName 단지가 1개라도 있는 district는 모두 포함.
  *
  * city hub(/real-estate/apt-sale/seoul/)와
  * district hub(/real-estate/apt-sale/seoul/gangnam/) 사이트맵 생성에 사용.
@@ -285,7 +279,6 @@ export async function getRealEstateCityDistrictHubs() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -297,7 +290,6 @@ export async function getRealEstateCityDistrictHubs() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -309,7 +301,6 @@ export async function getRealEstateCityDistrictHubs() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -321,7 +312,6 @@ export async function getRealEstateCityDistrictHubs() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -333,7 +323,6 @@ export async function getRealEstateCityDistrictHubs() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName
-      HAVING COUNT(*) >= 10
 
       UNION ALL
 
@@ -345,7 +334,6 @@ export async function getRealEstateCityDistrictHubs() {
         AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
         AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
       GROUP BY city, district, buildingName
-      HAVING COUNT(*) >= 10
     ) buildings_with_enough_tx
   `;
   hubsCache = { data: result, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
