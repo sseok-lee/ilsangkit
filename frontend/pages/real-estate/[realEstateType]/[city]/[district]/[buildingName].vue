@@ -489,7 +489,6 @@ const noindex = computed(() =>
     buildingName: buildingName.value,
     loaded: !statsLoading.value && !txLoading.value,
     hasBuildingInfo: buildingInfo.value !== null,
-    totalCount: summary.value?.totalCount,
   }),
 )
 
