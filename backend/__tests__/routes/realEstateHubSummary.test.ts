@@ -1,20 +1,29 @@
 // backend/__tests__/routes/realEstateHubSummary.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
+
+const { mockQueryRawUnsafe } = vi.hoisted(() => ({
+  mockQueryRawUnsafe: vi.fn().mockResolvedValue([{ cnt: BigInt(11) }]),
+}));
+
+vi.mock('../../src/lib/prisma.js', () => {
+  const prisma = { $queryRawUnsafe: mockQueryRawUnsafe };
+  return { prisma, default: prisma };
+});
+
 import app from '../../src/app.js';
 import {
   __resetHubSummaryCacheForTest,
   HUB_TYPES,
 } from '../../src/services/realEstateHubSummaryService.js';
 
-vi.mock('../../src/lib/prisma.js', () => ({
-  prisma: {
-    $queryRawUnsafe: vi.fn().mockResolvedValue([{ cnt: BigInt(11) }]),
-  },
-}));
-
 describe('GET /api/real-estate/hub-summary', () => {
   beforeEach(() => {
+    __resetHubSummaryCacheForTest();
+    mockQueryRawUnsafe.mockClear();
+  });
+
+  afterEach(() => {
     __resetHubSummaryCacheForTest();
   });
 
@@ -28,9 +37,10 @@ describe('GET /api/real-estate/hub-summary', () => {
     expect(typeof res.body.generatedAt).toBe('string');
   });
 
-  it('두 번째 호출은 캐시 hit — generatedAt 동일', async () => {
+  it('두 번째 호출은 캐시 hit — generatedAt 동일 + 쿼리는 6회만', async () => {
     const a = await request(app).get('/api/real-estate/hub-summary');
     const b = await request(app).get('/api/real-estate/hub-summary');
     expect(a.body.generatedAt).toBe(b.body.generatedAt);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(6);
   });
 });

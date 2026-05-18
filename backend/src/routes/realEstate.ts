@@ -60,7 +60,7 @@ router.get(
   })
 );
 
-// GET /api/real-estate/hub-summary - hub 페이지용 6개 타입 30일 거래 건수
+// GET /api/real-estate/hub-summary - hub 페이지용 6개 타입 30일 거래 건수 (must be before /:type routes)
 router.get(
   '/hub-summary',
   asyncHandler(async (_req: Request, res: Response) => {
