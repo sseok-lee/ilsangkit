@@ -494,6 +494,15 @@ const noindex = computed(() =>
 
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 
+function buildOgImage(info: BuildingInfo | null | undefined): string {
+  if (!info) return DEFAULT_OG_IMAGE
+  const hasCoords = !!(info.lat && info.lng)
+  if (hasCoords) {
+    return `${SITE_URL}/og-map?lat=${info.lat}&lng=${info.lng}&label=${encodeURIComponent(buildingName.value)}&category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
+  }
+  return `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
+}
+
 useHead(() => {
   const tab = tabLabel.value
   const cityShort = (buildingInfo.value?.city || cityName).replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
@@ -517,11 +526,7 @@ useHead(() => {
   })}`
 
   const hasCoords = !!(buildingInfo.value?.lat && buildingInfo.value?.lng)
-  const ogImage = buildingInfo.value
-    ? (hasCoords
-        ? `${SITE_URL}/og-map?lat=${buildingInfo.value.lat}&lng=${buildingInfo.value.lng}&label=${encodeURIComponent(buildingName.value)}&category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
-        : `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`)
-    : DEFAULT_OG_IMAGE
+  const ogImage = buildOgImage(buildingInfo.value)
   const ogImageWidth = hasCoords ? '1024' : '1200'
   const ogImageHeight = hasCoords ? '536' : '630'
 
@@ -1047,24 +1052,34 @@ setBuildingPlaceSchema(() => ({
   buildYear: buildingInfo.value?.buildYear,
   propertyType: propertyMeta.value?.label || '',
   propertySlug: propertyTypePart as 'apt' | 'villa' | 'offitel',
+  image: buildOgImage(buildingInfo.value),
 }))
-setRealEstateListingSchema(() => ({
-  name: buildingName.value,
-  address: fullAddress.value !== '-' ? fullAddress.value : `${cityName} ${districtName}`,
-  city: buildingInfo.value?.city || cityName,
-  district: buildingInfo.value?.district || districtName,
-  propertyType: propertyMeta.value?.label || '',
-  url: `${SITE_URL}${toRealEstateUrl({
-    type: realEstateType,
-    city: cityName,
-    district: districtName,
-    buildingName: buildingName.value,
-  })}`,
-  buildYear: buildingInfo.value?.buildYear,
-  totalCount: summary.value?.totalCount,
-  lat: buildingInfo.value?.lat ?? null,
-  lng: buildingInfo.value?.lng ?? null,
-}))
+setRealEstateListingSchema(() => {
+  const info = buildingInfo.value
+  const latestDealDate = info?.latestDealYear && info?.latestDealMonth
+    ? `${info.latestDealYear}-${String(info.latestDealMonth).padStart(2, '0')}-01`
+    : undefined
+  return {
+    name: buildingName.value,
+    address: fullAddress.value !== '-' ? fullAddress.value : `${cityName} ${districtName}`,
+    city: info?.city || cityName,
+    district: info?.district || districtName,
+    propertyType: propertyMeta.value?.label || '',
+    url: `${SITE_URL}${toRealEstateUrl({
+      type: realEstateType,
+      city: cityName,
+      district: districtName,
+      buildingName: buildingName.value,
+    })}`,
+    buildYear: info?.buildYear,
+    totalCount: summary.value?.totalCount,
+    lat: info?.lat ?? null,
+    lng: info?.lng ?? null,
+    image: buildOgImage(info),
+    recentAvg: summary.value?.recentAvg ?? undefined,
+    latestDealDate,
+  }
+})
 
 // building_viewed analytics 는 클라이언트에서 buildingInfo 로드 후만 발화
 watch(() => buildingInfo.value, (info) => {
