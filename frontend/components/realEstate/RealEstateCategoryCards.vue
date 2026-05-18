@@ -1,9 +1,9 @@
 <template>
   <div class="grid grid-cols-2 gap-3 md:gap-4">
     <HardLink
-      v-for="entry in CARD_ORDER"
-      :key="entry.type"
-      :to="`/real-estate/${entry.type}`"
+      v-for="card in cards"
+      :key="card.type"
+      :to="`/real-estate/${card.type}`"
       data-test="hub-card"
       class="group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
     >
@@ -12,8 +12,8 @@
           class="flex size-9 md:size-10 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors"
         >
           <img
-            :src="`/icons/category/${entry.iconImg}.webp?v2`"
-            :alt="entry.label"
+            :src="`/icons/category/${card.iconImg}.webp?v2`"
+            :alt="card.label"
             class="w-6 h-6 md:w-7 md:h-7"
             width="28"
             height="28"
@@ -23,19 +23,22 @@
           data-test="hub-card-badge"
           :class="[
             'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold',
-            entry.deal === 'sale'
+            card.deal === 'sale'
               ? 'bg-blue-100 text-blue-700'
               : 'bg-amber-100 text-amber-700',
           ]"
         >
-          {{ entry.deal === 'sale' ? '매매' : '전월세' }}
+          {{ card.deal === 'sale' ? '매매' : '전월세' }}
         </span>
       </div>
       <p class="text-sm md:text-base font-semibold text-slate-800 group-hover:text-primary transition-colors leading-tight">
-        {{ entry.label }}
+        {{ card.label }}
       </p>
-      <p v-if="countOf(entry.type) !== null" class="text-xs md:text-sm text-slate-700 tabular-nums">
-        최근 30일 <span class="font-bold text-slate-900">{{ formatCount(countOf(entry.type)!) }}</span>건
+      <p
+        v-if="card.count !== null"
+        class="text-xs md:text-sm text-slate-700 tabular-nums"
+      >
+        최근 30일 <span class="font-bold text-slate-900">{{ card.countText }}</span>건
       </p>
       <p
         v-else
@@ -49,12 +52,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
+import type { RealEstateHubType } from '~/types/realEstate'
 
-type HubType =
-  | 'apt-sale' | 'apt-rent'
-  | 'offitel-sale' | 'offitel-rent'
-  | 'villa-sale' | 'villa-rent'
+type HubType = RealEstateHubType
 
 interface HubTypeEntry { last30dCount: number | null }
 
@@ -78,14 +80,17 @@ const CARD_ORDER: CardDef[] = [
   { type: 'villa-rent',   label: '빌라 전월세',     iconImg: 'villa',   deal: 'rent' },
 ]
 
-function countOf(t: HubType): number | null {
-  const entry = props.summaries?.[t]
-  if (!entry) return null
-  return entry.last30dCount
-}
-
 const formatter = new Intl.NumberFormat('ko-KR')
-function formatCount(n: number): string {
-  return formatter.format(n)
-}
+
+const cards = computed(() =>
+  CARD_ORDER.map((entry) => {
+    const e = props.summaries?.[entry.type]
+    const count = e ? e.last30dCount : null
+    return {
+      ...entry,
+      count,
+      countText: count !== null ? formatter.format(count) : null,
+    }
+  }),
+)
 </script>

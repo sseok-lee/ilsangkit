@@ -61,4 +61,14 @@ describe('RealEstateCategoryCards', () => {
     const badges = wrapper.findAll('[data-test="hub-card-badge"]').map((b) => b.text())
     expect(badges).toEqual(['매매', '전월세', '매매', '전월세', '매매', '전월세'])
   })
+
+  it('last30dCount=0 은 "0건"으로 표시되고 placeholder 가 아니다', () => {
+    const wrapper = mount(RealEstateCategoryCards, {
+      props: { summaries: { 'apt-sale': { last30dCount: 0 } } },
+    })
+    // apt-sale 카드는 0건 표시
+    expect(wrapper.text()).toContain('0건')
+    // 나머지 5개만 placeholder
+    expect(wrapper.findAll('[data-test="hub-card-count-placeholder"]')).toHaveLength(5)
+  })
 })
