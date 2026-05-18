@@ -207,12 +207,10 @@ const faqs = computed(() => PROPERTY_TYPE_FAQ[baseType.value] || [])
 const { getComplexList } = useRealEstate()
 
 const complexes = ref<ComplexInfo[]>([])
-// 렌더링 단계에서 invalid buildingName / thin transaction 건을 추가로 걸러낸다.
-// (API에서 이미 필터링된 결과여도 SSR 레이어에서 방어적으로 한 번 더 검증)
+// 렌더링 단계에서 invalid buildingName 만 한 번 더 검증.
+// 거래 건수 임계값은 noindex/sitemap 정책에 맞춰 제거.
 const renderableComplexes = computed<ComplexInfo[]>(() =>
-  complexes.value.filter(
-    (c) => isValidBuildingName(c.buildingName) && c.transactionCount >= 10,
-  ),
+  complexes.value.filter((c) => isValidBuildingName(c.buildingName)),
 )
 const totalComplexes = ref(0)
 const currentPage = ref(1)

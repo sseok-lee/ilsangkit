@@ -59,14 +59,15 @@ interface Props {
   propertyType: RealEstatePropertyType
   tab: TransactionMode
   /**
-   * 링크 대상을 유효한 단지로 국한하기 위한 최소 거래 건수 (기본 10).
-   * thin content 링크로 크롤 예산이 새는 것을 방지한다.
+   * 링크 대상을 거를 최소 거래 건수 (기본 0 — 모든 단지 허용).
+   * noindex/sitemap 정책에서 거래수 임계값을 폐지(2026-05)하여 기본값도 0으로 맞춤.
+   * 특정 목록에서 thin link를 제외하고 싶을 때만 호출부에서 override.
    */
   minTransactionCount?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  minTransactionCount: 10,
+  minTransactionCount: 0,
 })
 
 // 지번/thin buildingName이거나 거래 건수가 모자라면 렌더링 자체를 건너뜀.
