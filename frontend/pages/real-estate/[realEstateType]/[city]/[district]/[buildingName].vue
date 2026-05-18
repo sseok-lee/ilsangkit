@@ -1134,7 +1134,8 @@ setRealEstateListingSchema(() => {
     lat: info?.lat ?? null,
     lng: info?.lng ?? null,
     image: buildOgImage(info),
-    recentAvg: summary.value?.recentAvg ?? undefined,
+    // summary.recentAvg는 만원 단위 — schema.org offers.price는 KRW(원) 이므로 10_000 곱해 전달
+    recentAvg: summary.value?.recentAvg != null ? summary.value.recentAvg * 10_000 : undefined,
     latestDealDate,
   }
 })
