@@ -3,6 +3,7 @@ import * as facilityService from './facilityService.js';
 import * as wasteScheduleService from './wasteScheduleService.js';
 import type { FacilityCategory } from './facilityService.js';
 import { ALL_CATEGORIES } from './categoryRegistry.js';
+import { toKstDateString } from '../lib/dateUtils.js';
 
 const SITEMAP_FACILITY_CATS: FacilityCategory[] = [
   'toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy',
@@ -114,7 +115,7 @@ export async function getSitemapPageCounts() {
             .then((r) => ({
               category: cat,
               count: r.count,
-              maxUpdatedAt: r.maxUpdatedAt?.toISOString().split('T')[0] ?? null,
+              maxUpdatedAt: toKstDateString(r.maxUpdatedAt),
             }))
         )
       ),
@@ -130,15 +131,15 @@ export async function getSitemapPageCounts() {
     facilities,
     waste: {
       count: wasteCount,
-      maxUpdatedAt: wasteLatest?.updatedAt?.toISOString().split('T')[0] ?? null,
+      maxUpdatedAt: toKstDateString(wasteLatest?.updatedAt),
     },
     subscriptions: {
       count: subCount,
-      maxUpdatedAt: subLatest?.updatedAt?.toISOString().split('T')[0] ?? null,
+      maxUpdatedAt: toKstDateString(subLatest?.updatedAt),
     },
     realEstateBuildings: {
       count: realEstateCount,
-      maxUpdatedAt: realEstateMaxUpdatedAt?.toISOString().split('T')[0] ?? null,
+      maxUpdatedAt: toKstDateString(realEstateMaxUpdatedAt),
     },
   };
 }
