@@ -47,7 +47,7 @@ async function countForType(type: HubType, cutoff: number): Promise<number | nul
       cutoff,
     );
     const raw = rows[0]?.cnt ?? 0;
-    return typeof raw === 'bigint' ? Number(raw) : Number(raw);
+    return Number(raw);
   } catch {
     return null;
   }
@@ -73,7 +73,12 @@ export async function getHubSummary(): Promise<HubSummary> {
 
   inFlight = build()
     .then((value) => {
-      cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+      const allNull = Object.values(value.data).every((e) => e.last30dCount === null);
+      const ttl = allNull ? 60_000 : CACHE_TTL_MS;
+      if (allNull) {
+        console.warn('[realEstateHubSummary] all types failed — caching null result for 60s');
+      }
+      cache = { value, expiresAt: Date.now() + ttl };
       return value;
     })
     .finally(() => {

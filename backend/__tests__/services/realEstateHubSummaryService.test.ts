@@ -77,4 +77,20 @@ describe('getHubSummary', () => {
     expect(nulls).toBe(1);
     expect(valid).toBe(5);
   });
+
+  it('전 타입 실패 시 짧은 TTL(60s)로 캐싱한다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockQueryRawUnsafe.mockRejectedValue(new Error('db down'));
+
+    const first = await getHubSummary();
+    // 60s TTL 내 재호출 → 캐시 hit (쿼리 추가 안 됨)
+    const before = mockQueryRawUnsafe.mock.calls.length;
+    const second = await getHubSummary();
+    expect(mockQueryRawUnsafe.mock.calls.length).toBe(before);
+    expect(second.generatedAt).toBe(first.generatedAt);
+
+    // 모든 값 null 확인
+    expect(Object.values(first.data).every((e) => e.last30dCount === null)).toBe(true);
+    expect(warn).toHaveBeenCalled();
+  });
 });
