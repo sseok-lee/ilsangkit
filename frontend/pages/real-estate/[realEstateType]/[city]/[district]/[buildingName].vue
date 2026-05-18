@@ -730,8 +730,13 @@ const areaRange = computed(() => {
 })
 
 const latestPrice = computed(() => {
-  if (!buildingInfo.value?.latestDealAmount) return '-'
-  return formatKoreanPrice(buildingInfo.value.latestDealAmount)
+  const info = buildingInfo.value
+  if (!info?.latestDealAmount) return '-'
+  const deposit = formatKoreanPrice(info.latestDealAmount)
+  if (info.latestMonthlyRent && info.latestMonthlyRent > 0) {
+    return `${deposit} / ${formatKoreanPrice(info.latestMonthlyRent)}`
+  }
+  return deposit
 })
 
 const compactFacilitySummary = computed(() => normalizeFacilitySummary(facilitySummary.value))

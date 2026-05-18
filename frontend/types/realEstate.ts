@@ -137,7 +137,10 @@ export interface BuildingInfo {
   buildYear: number | null
   minArea: number | null
   maxArea: number | null
+  /** sale: 매매가(만원). rent: 보증금(만원). */
   latestDealAmount: number | null
+  /** rent에서만 의미. 월세 금액(만원). 전세 거래는 0. */
+  latestMonthlyRent: number | null
   latestDealYear: number | null
   latestDealMonth: number | null
   lat: number | null

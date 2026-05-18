@@ -458,7 +458,10 @@ export interface BuildingInfo {
   buildYear: number | null;
   minArea: number | null;
   maxArea: number | null;
+  /** sale: 매매가(만원). rent: 보증금(만원). */
   latestDealAmount: number | null;
+  /** rent에서만 의미. 월세 금액(만원). 전세 거래는 0. */
+  latestMonthlyRent: number | null;
   latestDealYear: number | null;
   latestDealMonth: number | null;
   lat: number | null;
@@ -544,6 +547,9 @@ export async function getBuildingInfo(
     minArea: agg._min[areaField] !== null && agg._min[areaField] !== undefined ? Number(agg._min[areaField]) : null,
     maxArea: agg._max[areaField] !== null && agg._max[areaField] !== undefined ? Number(agg._max[areaField]) : null,
     latestDealAmount: latest[priceField] !== null ? Number(latest[priceField]) : null,
+    latestMonthlyRent: isSaleType(type)
+      ? null
+      : (latest.monthlyRent !== null && latest.monthlyRent !== undefined ? Number(latest.monthlyRent) : null),
     latestDealYear: latest.dealYear,
     latestDealMonth: latest.dealMonth,
     lat: lat !== null ? Number(lat) : null,
