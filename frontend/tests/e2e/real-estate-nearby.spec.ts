@@ -134,7 +134,7 @@ test.describe('부동산 상세 — 인근 단지 cross-property', () => {
     })
 
     await page.goto(SALE_PATH)
-    await expect(page.locator('text=같은 동 아파트 실거래').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=주변 아파트 매매가').first()).toBeVisible({ timeout: 15000 })
     await expect(page.locator('text=인근아파트단지').first()).toBeVisible()
     await expect(page.locator('p:has-text("최근 거래가")').first()).toBeVisible()
   })
@@ -150,7 +150,7 @@ test.describe('부동산 상세 — 인근 단지 cross-property', () => {
     })
 
     await page.goto(RENT_PATH)
-    await expect(page.locator('text=같은 동 아파트 실거래').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=주변 아파트 전월세').first()).toBeVisible({ timeout: 15000 })
     await expect(page.locator('p:has-text("최근 거래가")').first()).toBeVisible()
   })
 
@@ -170,7 +170,7 @@ test.describe('부동산 상세 — 인근 단지 cross-property', () => {
     })
 
     await page.goto(RENT_PATH)
-    await expect(page.locator('text=같은 동 아파트 실거래').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=주변 아파트 전월세').first()).toBeVisible({ timeout: 15000 })
 
     await page.getByRole('button', { name: '전세', exact: true }).click()
     await expect.poll(() => requestedRentTypes).toContain('jeonse')
@@ -192,7 +192,7 @@ test.describe('부동산 상세 — 인근 단지 cross-property', () => {
     })
 
     await page.goto(RENT_PATH)
-    await expect(page.locator('text=같은 동 아파트 실거래').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=주변 아파트 전월세').first()).toBeVisible({ timeout: 15000 })
 
     await page.getByRole('button', { name: '월세', exact: true }).click()
     await expect.poll(() => requestedRentTypes).toContain('wolse')

@@ -292,8 +292,8 @@
       <template v-if="nearbyByType.apt.length > 0 || nearbyByType.villa.length > 0 || nearbyByType.offitel.length > 0">
         <SectionBlock
           v-if="nearbyByType.apt.length > 0"
-          heading="🏢 같은 동 아파트 실거래"
-          subtext="같은 행정동 내 다른 아파트 단지를 함께 확인하세요."
+          :heading="nearbyHeading('apt')"
+          subtext="같은 동 내 다른 아파트 단지를 함께 확인하세요."
         >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <NearbyComplexCard
@@ -309,8 +309,8 @@
 
         <SectionBlock
           v-if="nearbyByType.villa.length > 0"
-          heading="🏠 같은 동 빌라 실거래"
-          subtext="같은 행정동 내 빌라 단지의 실거래를 비교해 보세요."
+          :heading="nearbyHeading('villa')"
+          subtext="같은 동 내 빌라 단지의 실거래를 비교해 보세요."
         >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <NearbyComplexCard
@@ -326,8 +326,8 @@
 
         <SectionBlock
           v-if="nearbyByType.offitel.length > 0"
-          heading="🏬 같은 동 오피스텔 실거래"
-          subtext="같은 행정동 내 오피스텔 단지의 실거래를 함께 확인하세요."
+          :heading="nearbyHeading('offitel')"
+          subtext="같은 동 내 오피스텔 단지의 실거래를 함께 확인하세요."
         >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <NearbyComplexCard
@@ -1147,6 +1147,14 @@ watch(resolvedBjdCode, async (code) => {
     priceAnalysis.value = null
   }
 }, { immediate: true })
+
+function nearbyHeading(propertyType: 'apt' | 'villa' | 'offitel'): string {
+  const label = propertyType === 'apt' ? '아파트' : propertyType === 'villa' ? '빌라' : '오피스텔'
+  if (currentTab.value === 'sale') return `주변 ${label} 매매가`
+  if (selectedRentType.value === 'jeonse') return `주변 ${label} 전세가`
+  if (selectedRentType.value === 'wolse') return `주변 ${label} 월세가`
+  return `주변 ${label} 전월세`
+}
 
 async function loadNearby() {
   const bjd = resolvedBjdCode.value
