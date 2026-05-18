@@ -73,9 +73,12 @@ ${entries}
 </sitemapindex>`
 }
 
+// KST(Asia/Seoul) 기준 YYYY-MM-DD 변환.
+// DB는 UTC 저장이라 toISOString()을 그대로 split 하면 KST 새벽 시간대(00:00~08:59)는
+// 어제 날짜로 표시되는 문제가 있어 KST로 변환 후 추출한다.
 export function formatDateForSitemap(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date
-  return d.toISOString().split('T')[0]
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 }
 
 // 캐시: 카테고리별 ID 목록을 10분간 메모리에 보관
@@ -197,12 +200,14 @@ export async function fetchRealEstateBuildings(
 }
 
 export function getWeekStartDate(): string {
+  // KST 기준 이번 주 월요일을 YYYY-MM-DD로 반환.
   const now = new Date()
-  const day = now.getDay()
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(now)
+  const kstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }))
+  const day = kstNow.getDay()
+  const diff = kstNow.getDate() - day + (day === 0 ? -6 : 1)
+  const monday = new Date(kstNow)
   monday.setDate(diff)
-  return monday.toISOString().split('T')[0]
+  return monday.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 }
 
 export interface SitemapRealEstateHub {

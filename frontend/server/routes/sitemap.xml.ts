@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase as string
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
   const weekStart = getWeekStartDate()
 
   const sitemaps: { loc: string; lastmod: string }[] = [
