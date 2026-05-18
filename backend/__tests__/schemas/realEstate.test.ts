@@ -7,7 +7,8 @@ import {
   RealEstateStatsSchema,
   RealEstateComplexSchema,
   RealEstateUnifiedSearchSchema,
-} from '../../src/schemas/realEstate';
+  NearbyQuerySchema,
+} from '../../src/schemas/realEstate.js';
 
 describe('RealEstateTypeSchema', () => {
   it('유효한 부동산 타입을 파싱해야 한다', () => {
@@ -182,5 +183,39 @@ describe('RealEstateUnifiedSearchSchema', () => {
   it('빈 keyword도 파싱 성공해야 한다 (optional)', () => {
     const result = RealEstateUnifiedSearchSchema.parse({ keyword: '' });
     expect(result.keyword).toBe('');
+  });
+});
+
+describe('NearbyQuerySchema', () => {
+  it('필수 필드(bjdCode, mode)가 빠지면 실패한다', () => {
+    expect(NearbyQuerySchema.safeParse({}).success).toBe(false);
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900' }).success).toBe(false);
+    expect(NearbyQuerySchema.safeParse({ mode: 'sale' }).success).toBe(false);
+  });
+
+  it('mode는 sale 또는 rent여야 한다', () => {
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900', mode: 'invalid' }).success).toBe(false);
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900', mode: 'sale' }).success).toBe(true);
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900', mode: 'rent' }).success).toBe(true);
+  });
+
+  it('rentType은 all|jeonse|wolse만 허용하고 기본은 all', () => {
+    const parsed = NearbyQuerySchema.parse({ bjdCode: '1111017900', mode: 'rent' });
+    expect(parsed.rentType).toBe('all');
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900', mode: 'rent', rentType: 'jeonse' }).success).toBe(true);
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900', mode: 'rent', rentType: 'wolse' }).success).toBe(true);
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900', mode: 'rent', rentType: 'foo' }).success).toBe(false);
+  });
+
+  it('limitPerType은 양수, 기본 4', () => {
+    const parsed = NearbyQuerySchema.parse({ bjdCode: '1111017900', mode: 'sale' });
+    expect(parsed.limitPerType).toBe(4);
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900', mode: 'sale', limitPerType: 10 }).success).toBe(true);
+    expect(NearbyQuerySchema.safeParse({ bjdCode: '1111017900', mode: 'sale', limitPerType: 0 }).success).toBe(false);
+  });
+
+  it('excludeBuildingName은 선택', () => {
+    const parsed = NearbyQuerySchema.parse({ bjdCode: '1111017900', mode: 'sale', excludeBuildingName: '래미안' });
+    expect(parsed.excludeBuildingName).toBe('래미안');
   });
 });

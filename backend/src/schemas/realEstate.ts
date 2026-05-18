@@ -84,3 +84,14 @@ export const PriceAnalysisQuerySchema = z.object({
 });
 
 export type PriceAnalysisQuery = z.infer<typeof PriceAnalysisQuerySchema>;
+
+// 인근 단지 조회 스키마 — /api/real-estate/nearby
+export const NearbyQuerySchema = z.object({
+  bjdCode: z.string().length(10),
+  mode: z.enum(['sale', 'rent']),
+  rentType: z.enum(['all', 'jeonse', 'wolse']).default('all'),
+  excludeBuildingName: z.string().max(100).optional(),
+  limitPerType: z.coerce.number().int().positive().max(20).default(4),
+});
+
+export type NearbyQuery = z.infer<typeof NearbyQuerySchema>;
