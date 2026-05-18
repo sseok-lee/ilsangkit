@@ -90,6 +90,29 @@ describe('NearbyComplexCard', () => {
     expect(wrapper.text()).not.toContain('/')
   })
 
+  it('메타 행에 건축년도/최근 거래일/거래 건수 표시', () => {
+    const wrapper = mount(NearbyComplexCard, {
+      props: {
+        item: { ...baseItem, buildYear: 2018, latestDealYear: 2026, latestDealMonth: 4, transactionCount: 12 },
+        propertyType: 'apt', mode: 'sale', rentType: 'all',
+      },
+    })
+    const text = wrapper.text()
+    expect(text).toContain('2018년')
+    expect(text).toContain('2026.04')
+    expect(text).toContain('12건')
+  })
+
+  it('메타 정보가 모두 null/0이면 메타 행 자체가 안 그려짐', () => {
+    const wrapper = mount(NearbyComplexCard, {
+      props: {
+        item: { ...baseItem, buildYear: null, latestDealYear: null, latestDealMonth: null, transactionCount: 0 },
+        propertyType: 'apt', mode: 'sale', rentType: 'all',
+      },
+    })
+    expect(wrapper.find('dl').exists()).toBe(false)
+  })
+
   it('rent + monthlyRent null — 보증금만 표시', () => {
     const wrapper = mount(NearbyComplexCard, {
       props: {

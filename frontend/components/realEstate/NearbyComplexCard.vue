@@ -12,6 +12,12 @@
       <span>{{ priceLabel }}</span>
       <span>{{ priceText }}</span>
     </p>
+    <dl v-if="metaItems.length > 0" class="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-slate-100">
+      <div v-for="meta in metaItems" :key="meta.label" class="text-center">
+        <dt class="text-[10px] text-slate-500 tracking-wide">{{ meta.label }}</dt>
+        <dd class="mt-0.5 text-[13px] font-semibold text-slate-700">{{ meta.value }}</dd>
+      </div>
+    </dl>
   </HardLink>
 </template>
 
@@ -68,6 +74,21 @@ const priceText = computed(() => {
     return `${formatPrice(v)}/${formatPrice(props.item.monthlyRent)}`
   }
   return formatPrice(v)
+})
+
+const metaItems = computed(() => {
+  const out: Array<{ label: string; value: string }> = []
+  if (props.item.buildYear) {
+    out.push({ label: '건축년도', value: `${props.item.buildYear}년` })
+  }
+  if (props.item.latestDealYear && props.item.latestDealMonth) {
+    const mm = String(props.item.latestDealMonth).padStart(2, '0')
+    out.push({ label: '최근 거래일', value: `${props.item.latestDealYear}.${mm}` })
+  }
+  if (props.item.transactionCount > 0) {
+    out.push({ label: '거래', value: `${props.item.transactionCount.toLocaleString()}건` })
+  }
+  return out
 })
 
 const linkUrl = computed(() => {
