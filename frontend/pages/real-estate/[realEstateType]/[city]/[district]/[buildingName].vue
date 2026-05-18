@@ -288,22 +288,59 @@
       <!-- Ad: 거래내역 이후 (In-Article) -->
       <AdBanner />
 
-      <!-- "인근 단지" 블록 -->
-      <SectionBlock
-        v-if="nearbyComplexes.length > 0"
-        :heading="`${buildingInfo?.district ?? ''} 인근 ${propertyMeta?.label ?? ''} 단지`"
-        subtext="같은 지역 내 다른 단지 시세를 빠르게 비교해 보세요."
-      >
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ComplexCard
-            v-for="complex in nearbyComplexes"
-            :key="`${complex.bjdCode}-${complex.buildingName}`"
-            :complex="complex"
-            :property-type="propertyTypeParam"
-            :tab="currentTab"
-          />
-        </div>
-      </SectionBlock>
+      <!-- "인근 단지" 블록 — cross-property 3섹션 -->
+      <template v-if="nearbyByType.apt.length > 0 || nearbyByType.villa.length > 0 || nearbyByType.offitel.length > 0">
+        <SectionBlock
+          v-if="nearbyByType.apt.length > 0"
+          heading="🏢 같은 동 아파트 실거래"
+          subtext="같은 행정동 내 다른 아파트 단지를 함께 확인하세요."
+        >
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <NearbyComplexCard
+              v-for="item in nearbyByType.apt"
+              :key="`apt-${item.buildingName}-${item.bjdCode}`"
+              :item="item"
+              property-type="apt"
+              :mode="currentTab"
+              :rent-type="selectedRentType"
+            />
+          </div>
+        </SectionBlock>
+
+        <SectionBlock
+          v-if="nearbyByType.villa.length > 0"
+          heading="🏠 같은 동 빌라 실거래"
+          subtext="같은 행정동 내 빌라 단지의 실거래를 비교해 보세요."
+        >
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <NearbyComplexCard
+              v-for="item in nearbyByType.villa"
+              :key="`villa-${item.buildingName}-${item.bjdCode}`"
+              :item="item"
+              property-type="villa"
+              :mode="currentTab"
+              :rent-type="selectedRentType"
+            />
+          </div>
+        </SectionBlock>
+
+        <SectionBlock
+          v-if="nearbyByType.offitel.length > 0"
+          heading="🏬 같은 동 오피스텔 실거래"
+          subtext="같은 행정동 내 오피스텔 단지의 실거래를 함께 확인하세요."
+        >
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <NearbyComplexCard
+              v-for="item in nearbyByType.offitel"
+              :key="`offitel-${item.buildingName}-${item.bjdCode}`"
+              :item="item"
+              property-type="offitel"
+              :mode="currentTab"
+              :rent-type="selectedRentType"
+            />
+          </div>
+        </SectionBlock>
+      </template>
 
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
@@ -368,16 +405,15 @@
         </div>
       </div>
     </div>
-
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
-import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
@@ -403,6 +439,7 @@ import {
   type RealEstateDetailData,
 } from '~/utils/realEstateDetailData'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -561,7 +598,7 @@ useHead(() => {
 // ── Composables ───────────────────────────────────────────────────────────────
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
-const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getApartmentPriceAnalysis } = useRealEstate()
+const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getApartmentPriceAnalysis, getNearby } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
@@ -794,6 +831,7 @@ function summaryBadgeClass(tone: RealEstateSummaryBadge['tone']): string {
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
+const nearbyByType = ref<NearbyResponse>({ apt: [], villa: [], offitel: [] })
 const isApt = computed(() => propertyTypeParam === 'apt')
 const priceAnalysis = ref<PriceAnalysis | null>(null)
 const showPriceAnalysis = computed(() => isApt.value && !!priceAnalysis.value && priceAnalysis.value.saleCount >= 5)
@@ -1105,26 +1143,35 @@ watch(resolvedBjdCode, async (code) => {
   }
 }, { immediate: true })
 
-watchEffect(async () => {
-  if (buildingInfo.value?.city && buildingInfo.value?.district) {
-    try {
-      const response = await getComplexList(
-        apiSlug.value,
-        buildingInfo.value.city,
-        buildingInfo.value.district,
-        undefined,
-        1,
-        7
-      )
-      nearbyComplexes.value = response.items
-        .filter(c => c.buildingName !== buildingName.value)
-        .slice(0, 6)
-    } catch (err) {
-      console.error('Failed to load nearby complexes:', err)
-      nearbyComplexes.value = []
-    }
+async function loadNearby() {
+  const bjd = resolvedBjdCode.value
+  if (!bjd) {
+    nearbyByType.value = { apt: [], villa: [], offitel: [] }
+    return
   }
-})
+  const mode = currentTab.value
+  const rentTypeKey = mode === 'rent'
+    ? (selectedRentType.value === 'jeonse' ? 'jeonse'
+       : selectedRentType.value === 'wolse' ? 'wolse'
+       : 'all') as 'all' | 'jeonse' | 'wolse'
+    : undefined
+  try {
+    nearbyByType.value = await getNearby(bjd, mode, {
+      rentType: rentTypeKey,
+      excludeBuildingName: buildingName.value,
+      limitPerType: 4,
+    })
+  } catch (err) {
+    console.error('Failed to load nearby:', err)
+    nearbyByType.value = { apt: [], villa: [], offitel: [] }
+  }
+}
+
+watch(
+  () => [resolvedBjdCode.value, currentTab.value, selectedRentType.value] as const,
+  () => { loadNearby() },
+  { immediate: true }
+)
 
 // noindex / robots 는 상단 useHead 팩토리에서 canonical 과 함께 처리한다
 // (.omc/notes/noindex-canonical-policy.md).
