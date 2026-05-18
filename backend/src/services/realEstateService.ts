@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 
 // ─────────────────────────────────────────────
@@ -684,6 +685,146 @@ export async function searchAll(
   );
 
   return { categories: results };
+}
+
+// ─────────────────────────────────────────────
+// getNearbyByBjd
+// ─────────────────────────────────────────────
+
+export type NearbyMode = 'sale' | 'rent';
+export type NearbyRentType = 'all' | 'jeonse' | 'wolse';
+export type NearbyPropertyKey = 'apt' | 'villa' | 'offitel';
+
+export interface NearbyComplex {
+  buildingName: string;
+  bjdCode: string;
+  city: string;
+  district: string;
+  dongName: string;
+  buildYear: number | null;
+  transactionCount: number;
+  latestPrice: number | null;
+  latestDealYear: number | null;
+  latestDealMonth: number | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+export type NearbyResult = Record<NearbyPropertyKey, NearbyComplex[]>;
+
+const NEARBY_PROPERTY_KEYS: NearbyPropertyKey[] = ['apt', 'villa', 'offitel'];
+
+const RENT_TRANSACTION_TABLE: Record<NearbyPropertyKey, string> = {
+  apt: 'AptRentTransaction',
+  villa: 'VillaRentTransaction',
+  offitel: 'OffitelRentTransaction',
+};
+
+export async function getNearbyByBjd(
+  bjdCode: string,
+  mode: NearbyMode,
+  opts: { rentType?: NearbyRentType; excludeBuildingName?: string; limitPerType?: number }
+): Promise<NearbyResult> {
+  const rentType: NearbyRentType = opts.rentType ?? 'all';
+  const excludeBuildingName = opts.excludeBuildingName ?? null;
+  const limitPerType = opts.limitPerType ?? 4;
+  const result: NearbyResult = { apt: [], villa: [], offitel: [] };
+
+  const useFilteredRent = mode === 'rent' && rentType !== 'all';
+
+  if (!useFilteredRent) {
+    // Summary path: mode=sale OR (mode=rent + rentType=all)
+    const suffix = mode === 'sale' ? 'sale' : 'rent';
+    for (const key of NEARBY_PROPERTY_KEYS) {
+      const type = `${key}-${suffix}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const where: Record<string, any> = { type, bjdCode };
+      if (excludeBuildingName) where.buildingName = { not: excludeBuildingName };
+      const rows = await prisma.realEstateBuildingSummary.findMany({
+        where,
+        orderBy: [
+          { latestDealYear: 'desc' },
+          { latestDealMonth: 'desc' },
+          { transactionCount: 'desc' },
+        ],
+        take: limitPerType,
+      });
+      result[key] = rows.map((r) => ({
+        buildingName: r.buildingName,
+        bjdCode: r.bjdCode,
+        city: r.city,
+        district: r.district,
+        dongName: r.dongName,
+        buildYear: r.buildYear ?? null,
+        transactionCount: r.transactionCount,
+        latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+        latestDealYear: r.latestDealYear ?? null,
+        latestDealMonth: r.latestDealMonth ?? null,
+        lat: r.lat != null ? Number(r.lat) : null,
+        lng: r.lng != null ? Number(r.lng) : null,
+      }));
+    }
+    return result;
+  }
+
+  // Filtered rent path: raw SQL on transaction tables
+  const rentTypeKor = rentType === 'jeonse' ? '전세' : '월세';
+
+  for (const key of NEARBY_PROPERTY_KEYS) {
+    const tableName = RENT_TRANSACTION_TABLE[key];
+    const excludeFilter = excludeBuildingName
+      ? Prisma.sql`AND t.buildingName != ${excludeBuildingName}`
+      : Prisma.empty;
+
+    const rows = await prisma.$queryRaw<Array<{
+      buildingName: string;
+      bjdCode: string;
+      city: string;
+      district: string;
+      dongName: string;
+      buildYear: number | null;
+      transactionCount: bigint;
+      latestPrice: bigint | null;
+      latestDealYear: number | null;
+      latestDealMonth: number | null;
+    }>>`
+      SELECT
+        t.buildingName,
+        t.bjdCode,
+        ANY_VALUE(t.city) AS city,
+        ANY_VALUE(t.district) AS district,
+        ANY_VALUE(t.dongName) AS dongName,
+        ANY_VALUE(t.buildYear) AS buildYear,
+        COUNT(*) AS transactionCount,
+        ANY_VALUE(t.deposit) AS latestPrice,
+        MAX(t.dealYear) AS latestDealYear,
+        MAX(t.dealMonth) AS latestDealMonth
+      FROM \`${Prisma.raw(tableName)}\` t
+      WHERE t.bjdCode = ${bjdCode}
+        AND t.rentType = ${rentTypeKor}
+        ${excludeFilter}
+      GROUP BY t.buildingName, t.bjdCode
+      ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC
+      LIMIT ${limitPerType}
+    `;
+
+    result[key] = rows.map((r) => ({
+      buildingName: r.buildingName,
+      bjdCode: r.bjdCode,
+      city: r.city,
+      district: r.district,
+      dongName: r.dongName,
+      buildYear: r.buildYear ?? null,
+      transactionCount: Number(r.transactionCount),
+      latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+      latestDealYear: r.latestDealYear ?? null,
+      latestDealMonth: r.latestDealMonth ?? null,
+      lat: null,
+      lng: null,
+    }));
+  }
+
+  return result;
 }
 
 // ─────────────────────────────────────────────
