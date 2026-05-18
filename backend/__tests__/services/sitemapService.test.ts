@@ -122,13 +122,12 @@ describe('getRealEstateBuildings (US-008 new URL contract)', () => {
     expect(groupByMatches?.length).toBe(6);
   });
 
-  it('HAVING COUNT(*) >= 10 in each branch (thin-content filter)', async () => {
+  it('거래 건수 임계값 없음 — HAVING COUNT 필터 제거됨 (noindex 정책과 일치)', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    const havingMatches = sql.match(/HAVING\s+COUNT\(\*\)\s*>=\s*10/g);
-    expect(havingMatches?.length).toBe(6);
+    expect(sql).not.toMatch(/HAVING\s+COUNT\(\*\)\s*>=\s*10/);
   });
 
   it('keeps isValidBuildingName-equivalent regex filter in all 6 branches', async () => {
@@ -180,24 +179,23 @@ describe('getRealEstateCityDistrictHubs', () => {
     expect(unionCount).toBeGreaterThanOrEqual(5);
   });
 
-  it('inner subqueries group by buildingName for per-building threshold; outer uses DISTINCT', async () => {
+  it('inner subqueries group by buildingName; outer uses DISTINCT', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    // inner GROUP BY must include buildingName so HAVING COUNT(*) >= 10 applies per building
+    // inner GROUP BY must include buildingName so each unique building shows up once per district
     expect(sql).toMatch(/GROUP BY\s+city,\s*district,\s*buildingName/);
     // outer query deduplicates with DISTINCT, not GROUP BY
     expect(sql).toMatch(/SELECT\s+DISTINCT\s+realEstateType,\s*city,\s*district/);
   });
 
-  it('applies HAVING COUNT(*) >= 10 in each branch', async () => {
+  it('거래 건수 임계값 없음 — HAVING COUNT 필터 제거됨', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    const havingMatches = sql.match(/HAVING\s+COUNT\(\*\)\s*>=\s*10/g);
-    expect(havingMatches?.length).toBe(6);
+    expect(sql).not.toMatch(/HAVING\s+COUNT\(\*\)\s*>=\s*10/);
   });
 
   it('applies isValidBuildingName-equivalent regex filter in all 6 branches', async () => {
