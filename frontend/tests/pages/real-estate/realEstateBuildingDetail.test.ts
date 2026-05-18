@@ -185,4 +185,26 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     const breadcrumbs = wrapper.findAll('[data-stub="breadcrumb"]')
     expect(breadcrumbs.length).toBe(1)
   })
+
+  it('noindex 조건(buildingInfo=null)에서도 canonical link가 출력되어야 한다', async () => {
+    // shouldNoindexRealEstateDetail이 true를 반환하도록 재모킹
+    const { shouldNoindexRealEstateDetail } = await import('~/utils/realEstateNoindex')
+    vi.mocked(shouldNoindexRealEstateDetail).mockReturnValue(true)
+
+    ;(globalThis as any).useHead = vi.fn()
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    await mountSuspended(m.default)
+
+    const useHeadSpy = (globalThis as any).useHead as ReturnType<typeof vi.fn>
+    expect(useHeadSpy).toHaveBeenCalled()
+    const headArg = useHeadSpy.mock.calls[useHeadSpy.mock.calls.length - 1][0]
+    const resolved = typeof headArg === 'function' ? headArg() : headArg
+    expect(resolved.link).toEqual(
+      expect.arrayContaining([expect.objectContaining({ rel: 'canonical' })]),
+    )
+
+    // 복원
+    vi.mocked(shouldNoindexRealEstateDetail).mockReturnValue(false)
+  })
 })
