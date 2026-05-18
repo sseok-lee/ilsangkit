@@ -9,6 +9,7 @@ import {
   searchAll,
   getAreaGroups,
   getApartmentPriceAnalysis,
+  getNearbyByBjd,
 } from '../services/realEstateService.js';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
@@ -22,6 +23,7 @@ import {
   RealEstateUnifiedSearchSchema,
   AreaGroupsQuerySchema,
   PriceAnalysisQuerySchema,
+  NearbyQuerySchema,
 } from '../schemas/realEstate.js';
 import { z } from 'zod';
 
@@ -40,6 +42,20 @@ router.get(
     const { bjdCode, buildingName } = req.query as z.infer<typeof PriceAnalysisQuerySchema>;
     const result = await getApartmentPriceAnalysis(bjdCode, buildingName);
     res.json({ success: true, data: result });
+  })
+);
+
+// GET /api/real-estate/nearby - 같은 행정동 내 인근 단지 (cross-property)
+router.get(
+  '/nearby',
+  validate(NearbyQuerySchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { bjdCode, mode, rentType, excludeBuildingName, limitPerType } =
+      req.query as unknown as z.infer<typeof NearbyQuerySchema>;
+    const data = await getNearbyByBjd(bjdCode, mode, {
+      rentType, excludeBuildingName, limitPerType,
+    });
+    res.json({ success: true, data });
   })
 );
 
