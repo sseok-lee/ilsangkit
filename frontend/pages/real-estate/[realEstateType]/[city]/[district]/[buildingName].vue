@@ -541,14 +541,15 @@ useHead(() => {
     { property: 'og:image:width', content: ogImageWidth },
     { property: 'og:image:height', content: ogImageHeight },
   ]
-  // noindex/canonical 정책: noindex 일 때는 robots 만 보내고 canonical 은 생략한다.
+  // noindex/canonical 정책: noindex 여부와 무관하게 canonical 을 항상 출력한다.
+  // 구글/네이버 모두 noindex+canonical 조합을 허용하며, canonical 을 유지해야 백링크 가치가 회수된다.
   if (noindex.value) {
     meta.push({ name: 'robots', content: 'noindex, follow' })
   }
   return {
     title,
     meta,
-    link: noindex.value ? [] : [{ rel: 'canonical', href: canonicalUrl }],
+    link: [{ rel: 'canonical', href: canonicalUrl }],
   }
 })
 
