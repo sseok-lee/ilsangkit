@@ -1,0 +1,89 @@
+import { prisma } from '../lib/prisma.js';
+import { TABLE_NAME_MAP } from './realEstateService.js';
+
+export const HUB_TYPES = [
+  'apt-sale',
+  'apt-rent',
+  'offitel-sale',
+  'offitel-rent',
+  'villa-sale',
+  'villa-rent',
+] as const;
+export type HubType = (typeof HUB_TYPES)[number];
+
+export interface HubTypeEntry {
+  last30dCount: number | null;
+}
+
+export interface HubSummary {
+  data: Record<HubType, HubTypeEntry>;
+  generatedAt: string;
+}
+
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1h
+let cache: { value: HubSummary; expiresAt: number } | null = null;
+let inFlight: Promise<HubSummary> | null = null;
+
+export function __resetHubSummaryCacheForTest(): void {
+  cache = null;
+  inFlight = null;
+}
+
+// "최근 거래" 윈도우 = 현재 월 + 직전 월 (월 단위 인덱스 활용). 라이브 카운트 라벨은 FE에서 "이번달·지난달"로 표기.
+function computeCutoffYYYYMM(now: Date): number {
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1; // 1-12
+  const prevY = m === 1 ? y - 1 : y;
+  const prevM = m === 1 ? 12 : m - 1;
+  return prevY * 100 + prevM;
+}
+
+async function countForType(type: HubType, cutoff: number): Promise<number | null> {
+  const table = TABLE_NAME_MAP[type];
+  if (!table) return null;
+  try {
+    const rows = await prisma.$queryRawUnsafe<Array<{ cnt: bigint | number }>>(
+      `SELECT COUNT(*) AS cnt FROM ${table}
+       WHERE dealYear * 100 + dealMonth >= ?`,
+      cutoff,
+    );
+    const raw = rows[0]?.cnt ?? 0;
+    return Number(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function build(): Promise<HubSummary> {
+  const cutoff = computeCutoffYYYYMM(new Date());
+  const counts = await Promise.all(HUB_TYPES.map((t) => countForType(t, cutoff)));
+  const data = HUB_TYPES.reduce(
+    (acc, t, i) => {
+      acc[t] = { last30dCount: counts[i] };
+      return acc;
+    },
+    {} as Record<HubType, HubTypeEntry>,
+  );
+  return { data, generatedAt: new Date().toISOString() };
+}
+
+export async function getHubSummary(): Promise<HubSummary> {
+  const now = Date.now();
+  if (cache && cache.expiresAt > now) return cache.value;
+  if (inFlight) return inFlight;
+
+  inFlight = build()
+    .then((value) => {
+      const allNull = Object.values(value.data).every((e) => e.last30dCount === null);
+      const ttl = allNull ? 60_000 : CACHE_TTL_MS;
+      if (allNull) {
+        console.warn('[realEstateHubSummary] all types failed — caching null result for 60s');
+      }
+      cache = { value, expiresAt: Date.now() + ttl };
+      return value;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
+}
