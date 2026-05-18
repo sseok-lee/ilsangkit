@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
-import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { mount, flushPromises } from '@vue/test-utils'
+import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 
 ;(globalThis as any).ref = ref
 ;(globalThis as any).computed = computed
@@ -44,29 +44,44 @@ const globalStubs = {
   DataSourceCard: { template: '<div />' },
 }
 
-describe('real-estate/index.vue — hub page', () => {
-  async function mountPage() {
-    const m = await import('~/pages/real-estate/index.vue')
-    return mount(m.default, { global: { stubs: globalStubs } })
-  }
+async function mountSuspended(component: any, options?: any) {
+  const wrapper = mount(
+    defineComponent({
+      render() {
+        return h(Suspense, null, {
+          default: () => h(component, options?.props),
+        })
+      },
+    }),
+    { global: { stubs: globalStubs } },
+  )
+  await flushPromises()
+  return wrapper
+}
 
+describe('real-estate/index.vue — hub page', () => {
   it('컴포넌트가 존재해야 한다', async () => {
     const m = await import('~/pages/real-estate/index.vue')
     expect(m.default).toBeDefined()
   })
 
   it('setItemListSchema가 canonical realEstateType URL로 호출되어야 한다', async () => {
-    await mountPage()
+    const m = await import('~/pages/real-estate/index.vue')
+    await mountSuspended(m.default)
     expect(mockSetItemListSchema).toHaveBeenCalled()
     const items = mockSetItemListSchema.mock.calls[0][0]
     const urls = items.map((i: any) => i.url)
     expect(urls).toContain('/real-estate/apt-sale')
+    expect(urls).toContain('/real-estate/apt-rent')
     expect(urls).toContain('/real-estate/villa-sale')
+    expect(urls).toContain('/real-estate/villa-rent')
     expect(urls).toContain('/real-estate/offitel-sale')
+    expect(urls).toContain('/real-estate/offitel-rent')
   })
 
   it('setItemListSchema가 레거시 hub URL을 포함하지 않아야 한다', async () => {
-    await mountPage()
+    const m = await import('~/pages/real-estate/index.vue')
+    await mountSuspended(m.default)
     const items = mockSetItemListSchema.mock.calls[0][0]
     const urls = items.map((i: any) => i.url)
     expect(urls).not.toContain('/real-estate/apt')
@@ -74,9 +89,10 @@ describe('real-estate/index.vue — hub page', () => {
     expect(urls).not.toContain('/real-estate/offitel')
   })
 
-  it('setItemListSchema 항목이 3개여야 한다 (property type별 canonical URL)', async () => {
-    await mountPage()
+  it('setItemListSchema 항목이 6개여야 한다 (매매+전월세 × 3 주택유형)', async () => {
+    const m = await import('~/pages/real-estate/index.vue')
+    await mountSuspended(m.default)
     const items = mockSetItemListSchema.mock.calls[0][0]
-    expect(items).toHaveLength(3)
+    expect(items).toHaveLength(6)
   })
 })

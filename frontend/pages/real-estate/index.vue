@@ -12,7 +12,7 @@
         <template #heading>
           <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">부동산 유형별 실거래가</h2>
         </template>
-        <RealEstateCategoryCards />
+        <RealEstateCategoryCards :summaries="hubSummaries ?? undefined" />
       </SectionBlock>
 
       <!-- Ad: Property Type Cards 후 -->
@@ -70,6 +70,28 @@ import DataSourceCard from '~/components/common/DataSourceCard.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
+import type { RealEstateHubType } from '~/types/realEstate'
+
+const apiBase = useRuntimeConfig().public.apiBase
+
+interface HubSummaryResponse {
+  success: boolean
+  data: Record<RealEstateHubType, { last30dCount: number | null }>
+  generatedAt: string
+}
+
+const { data: hubSummaries } = await useAsyncData(
+  'real-estate-hub-summary',
+  async () => {
+    try {
+      const res = await $fetch<HubSummaryResponse>(`${apiBase}/api/real-estate/hub-summary`)
+      return res.data
+    } catch {
+      return null
+    }
+  },
+  { default: () => null },
+)
 
 const title = '부동산 실거래가 | 아파트·빌라·오피스텔 | 일상킷'
 const description = '전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요.'
@@ -117,9 +139,12 @@ setBreadcrumbSchema([
   { name: '부동산 실거래가', url: '/real-estate' },
 ])
 setItemListSchema([
-  { name: '아파트', url: '/real-estate/apt-sale' },
-  { name: '빌라', url: '/real-estate/villa-sale' },
-  { name: '오피스텔', url: '/real-estate/offitel-sale' },
+  { name: '아파트 매매',     url: '/real-estate/apt-sale' },
+  { name: '아파트 전월세',   url: '/real-estate/apt-rent' },
+  { name: '오피스텔 매매',   url: '/real-estate/offitel-sale' },
+  { name: '오피스텔 전월세', url: '/real-estate/offitel-rent' },
+  { name: '빌라 매매',       url: '/real-estate/villa-sale' },
+  { name: '빌라 전월세',     url: '/real-estate/villa-rent' },
 ])
 setDatasetSchema({
   name: '전국 부동산 실거래가 데이터',
