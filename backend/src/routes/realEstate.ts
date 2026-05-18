@@ -11,6 +11,7 @@ import {
   getApartmentPriceAnalysis,
   getNearbyByBjd,
 } from '../services/realEstateService.js';
+import { getHubSummary } from '../services/realEstateHubSummaryService.js';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
@@ -57,6 +58,15 @@ router.get(
     });
     res.json({ success: true, data });
   })
+);
+
+// GET /api/real-estate/hub-summary - hub 페이지용 6개 타입 30일 거래 건수
+router.get(
+  '/hub-summary',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const summary = await getHubSummary();
+    res.json({ success: true, data: summary.data, generatedAt: summary.generatedAt });
+  }),
 );
 
 // GET /api/real-estate/search - 통합 검색 (must be before /:type routes)
