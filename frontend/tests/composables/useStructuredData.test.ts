@@ -268,5 +268,89 @@ describe('useStructuredData', () => {
       const after = JSON.parse(factory().script[0].innerHTML)
       expect(after.geo).toEqual({ '@type': 'GeoCoordinates', latitude: 37.48, longitude: 127.01 })
     })
+
+    it('image 옵션 → schema.image', () => {
+      const { setBuildingPlaceSchema } = useStructuredData()
+      setBuildingPlaceSchema({
+        name: '래미안',
+        address: '서울 마포구',
+        propertyType: '아파트',
+        propertySlug: 'apt',
+        image: 'https://ilsangkit.co.kr/og?title=래미안',
+      })
+      const factory = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(factory().script[0].innerHTML)
+      expect(parsed.image).toBe('https://ilsangkit.co.kr/og?title=래미안')
+    })
+  })
+
+  describe('setRealEstateListingSchema (Task 6 확장 필드)', () => {
+    it('image 옵션 → schema.image', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema({
+        name: '래미안',
+        address: '서울 마포구',
+        city: '서울특별시',
+        district: '마포구',
+        propertyType: '아파트',
+        url: 'https://ilsangkit.co.kr/x',
+        image: 'https://ilsangkit.co.kr/og?title=래미안',
+      })
+      const factory = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(factory().script[0].innerHTML)
+      expect(parsed.image).toBe('https://ilsangkit.co.kr/og?title=래미안')
+    })
+
+    it('mainEntityOfPage는 항상 url과 동일', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema({
+        name: '래미안',
+        address: '서울 마포구',
+        city: '서울특별시',
+        district: '마포구',
+        propertyType: '아파트',
+        url: 'https://ilsangkit.co.kr/x',
+      })
+      const factory = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(factory().script[0].innerHTML)
+      expect(parsed.mainEntityOfPage).toBe('https://ilsangkit.co.kr/x')
+    })
+
+    it('recentAvg → offers (Offer/KRW/InStock)', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema({
+        name: '래미안',
+        address: '서울 마포구',
+        city: '서울특별시',
+        district: '마포구',
+        propertyType: '아파트',
+        url: 'https://ilsangkit.co.kr/x',
+        recentAvg: 1_500_000_000,
+      })
+      const factory = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(factory().script[0].innerHTML)
+      expect(parsed.offers).toEqual({
+        '@type': 'Offer',
+        price: 1_500_000_000,
+        priceCurrency: 'KRW',
+        availability: 'https://schema.org/InStock',
+      })
+    })
+
+    it('latestDealDate → datePosted', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema({
+        name: '래미안',
+        address: '서울 마포구',
+        city: '서울특별시',
+        district: '마포구',
+        propertyType: '아파트',
+        url: 'https://ilsangkit.co.kr/x',
+        latestDealDate: '2026-04-01',
+      })
+      const factory = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(factory().script[0].innerHTML)
+      expect(parsed.datePosted).toBe('2026-04-01')
+    })
   })
 })

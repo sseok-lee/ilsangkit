@@ -288,22 +288,74 @@
       <!-- Ad: 거래내역 이후 (In-Article) -->
       <AdBanner />
 
-      <!-- "인근 단지" 블록 -->
-      <SectionBlock
-        v-if="nearbyComplexes.length > 0"
-        :heading="`${buildingInfo?.district ?? ''} 인근 ${propertyMeta?.label ?? ''} 단지`"
-        subtext="같은 지역 내 다른 단지 시세를 빠르게 비교해 보세요."
-      >
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ComplexCard
-            v-for="complex in nearbyComplexes"
-            :key="`${complex.bjdCode}-${complex.buildingName}`"
-            :complex="complex"
-            :property-type="propertyTypeParam"
-            :tab="currentTab"
-          />
-        </div>
-      </SectionBlock>
+      <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
+      <template v-if="nearbyByType.apt.length > 0 || nearbyByType.offitel.length > 0 || nearbyByType.villa.length > 0">
+        <SectionBlock
+          v-if="nearbyByType.apt.length > 0"
+          subtext="같은 동 내 다른 아파트 단지를 함께 확인하세요."
+        >
+          <template #heading>
+            <h3 class="text-display-3 text-slate-900 flex items-center gap-2">
+              <img src="/icons/category/apt.webp?v2" alt="아파트" class="w-6 h-6" width="24" height="24" />
+              {{ nearbyHeading('apt') }}
+            </h3>
+          </template>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <NearbyComplexCard
+              v-for="item in nearbyByType.apt"
+              :key="`apt-${item.buildingName}-${item.bjdCode}`"
+              :item="item"
+              property-type="apt"
+              :mode="currentTab"
+              :rent-type="selectedRentType"
+            />
+          </div>
+        </SectionBlock>
+
+        <SectionBlock
+          v-if="nearbyByType.offitel.length > 0"
+          subtext="같은 동 내 오피스텔 단지의 실거래를 함께 확인하세요."
+        >
+          <template #heading>
+            <h3 class="text-display-3 text-slate-900 flex items-center gap-2">
+              <img src="/icons/category/offitel.webp?v2" alt="오피스텔" class="w-6 h-6" width="24" height="24" />
+              {{ nearbyHeading('offitel') }}
+            </h3>
+          </template>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <NearbyComplexCard
+              v-for="item in nearbyByType.offitel"
+              :key="`offitel-${item.buildingName}-${item.bjdCode}`"
+              :item="item"
+              property-type="offitel"
+              :mode="currentTab"
+              :rent-type="selectedRentType"
+            />
+          </div>
+        </SectionBlock>
+
+        <SectionBlock
+          v-if="nearbyByType.villa.length > 0"
+          subtext="같은 동 내 빌라 단지의 실거래를 비교해 보세요."
+        >
+          <template #heading>
+            <h3 class="text-display-3 text-slate-900 flex items-center gap-2">
+              <img src="/icons/category/villa.webp?v2" alt="빌라" class="w-6 h-6" width="24" height="24" />
+              {{ nearbyHeading('villa') }}
+            </h3>
+          </template>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <NearbyComplexCard
+              v-for="item in nearbyByType.villa"
+              :key="`villa-${item.buildingName}-${item.bjdCode}`"
+              :item="item"
+              property-type="villa"
+              :mode="currentTab"
+              :rent-type="selectedRentType"
+            />
+          </div>
+        </SectionBlock>
+      </template>
 
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
@@ -368,16 +420,15 @@
         </div>
       </div>
     </div>
-
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { FacilitySearchItem } from '~/types'
-import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
@@ -403,6 +454,7 @@ import {
   type RealEstateDetailData,
 } from '~/utils/realEstateDetailData'
 import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -489,11 +541,19 @@ const noindex = computed(() =>
     buildingName: buildingName.value,
     loaded: !statsLoading.value && !txLoading.value,
     hasBuildingInfo: buildingInfo.value !== null,
-    totalCount: summary.value?.totalCount,
   }),
 )
 
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
+
+function buildOgImage(info: BuildingInfo | null | undefined): string {
+  if (!info) return DEFAULT_OG_IMAGE
+  const hasCoords = !!(info.lat && info.lng)
+  if (hasCoords) {
+    return `${SITE_URL}/og-map?lat=${info.lat}&lng=${info.lng}&label=${encodeURIComponent(buildingName.value)}&category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
+  }
+  return `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
+}
 
 useHead(() => {
   const tab = tabLabel.value
@@ -518,11 +578,7 @@ useHead(() => {
   })}`
 
   const hasCoords = !!(buildingInfo.value?.lat && buildingInfo.value?.lng)
-  const ogImage = buildingInfo.value
-    ? (hasCoords
-        ? `${SITE_URL}/og-map?lat=${buildingInfo.value.lat}&lng=${buildingInfo.value.lng}&label=${encodeURIComponent(buildingName.value)}&category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`
-        : `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(buildingInfo.value.city || '')}&district=${encodeURIComponent(buildingInfo.value.district || '')}`)
-    : DEFAULT_OG_IMAGE
+  const ogImage = buildOgImage(buildingInfo.value)
   const ogImageWidth = hasCoords ? '1024' : '1200'
   const ogImageHeight = hasCoords ? '536' : '630'
 
@@ -542,21 +598,22 @@ useHead(() => {
     { property: 'og:image:width', content: ogImageWidth },
     { property: 'og:image:height', content: ogImageHeight },
   ]
-  // noindex/canonical 정책: noindex 일 때는 robots 만 보내고 canonical 은 생략한다.
+  // noindex/canonical 정책: noindex 여부와 무관하게 canonical 을 항상 출력한다.
+  // 구글/네이버 모두 noindex+canonical 조합을 허용하며, canonical 을 유지해야 백링크 가치가 회수된다.
   if (noindex.value) {
     meta.push({ name: 'robots', content: 'noindex, follow' })
   }
   return {
     title,
     meta,
-    link: noindex.value ? [] : [{ rel: 'canonical', href: canonicalUrl }],
+    link: [{ rel: 'canonical', href: canonicalUrl }],
   }
 })
 
 // ── Composables ───────────────────────────────────────────────────────────────
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
-const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getApartmentPriceAnalysis } = useRealEstate()
+const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getApartmentPriceAnalysis, getNearby } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
@@ -688,8 +745,13 @@ const areaRange = computed(() => {
 })
 
 const latestPrice = computed(() => {
-  if (!buildingInfo.value?.latestDealAmount) return '-'
-  return formatKoreanPrice(buildingInfo.value.latestDealAmount)
+  const info = buildingInfo.value
+  if (!info?.latestDealAmount) return '-'
+  const deposit = formatKoreanPrice(info.latestDealAmount)
+  if (info.latestMonthlyRent && info.latestMonthlyRent > 0) {
+    return `${deposit} / ${formatKoreanPrice(info.latestMonthlyRent)}`
+  }
+  return deposit
 })
 
 const compactFacilitySummary = computed(() => normalizeFacilitySummary(facilitySummary.value))
@@ -789,6 +851,7 @@ function summaryBadgeClass(tone: RealEstateSummaryBadge['tone']): string {
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
+const nearbyByType = ref<NearbyResponse>({ apt: [], villa: [], offitel: [] })
 const isApt = computed(() => propertyTypeParam === 'apt')
 const priceAnalysis = ref<PriceAnalysis | null>(null)
 const showPriceAnalysis = computed(() => isApt.value && !!priceAnalysis.value && priceAnalysis.value.saleCount >= 5)
@@ -1047,24 +1110,35 @@ setBuildingPlaceSchema(() => ({
   buildYear: buildingInfo.value?.buildYear,
   propertyType: propertyMeta.value?.label || '',
   propertySlug: propertyTypePart as 'apt' | 'villa' | 'offitel',
+  image: buildOgImage(buildingInfo.value),
 }))
-setRealEstateListingSchema(() => ({
-  name: buildingName.value,
-  address: fullAddress.value !== '-' ? fullAddress.value : `${cityName} ${districtName}`,
-  city: buildingInfo.value?.city || cityName,
-  district: buildingInfo.value?.district || districtName,
-  propertyType: propertyMeta.value?.label || '',
-  url: `${SITE_URL}${toRealEstateUrl({
-    type: realEstateType,
-    city: cityName,
-    district: districtName,
-    buildingName: buildingName.value,
-  })}`,
-  buildYear: buildingInfo.value?.buildYear,
-  totalCount: summary.value?.totalCount,
-  lat: buildingInfo.value?.lat ?? null,
-  lng: buildingInfo.value?.lng ?? null,
-}))
+setRealEstateListingSchema(() => {
+  const info = buildingInfo.value
+  const latestDealDate = info?.latestDealYear && info?.latestDealMonth
+    ? `${info.latestDealYear}-${String(info.latestDealMonth).padStart(2, '0')}-01`
+    : undefined
+  return {
+    name: buildingName.value,
+    address: fullAddress.value !== '-' ? fullAddress.value : `${cityName} ${districtName}`,
+    city: info?.city || cityName,
+    district: info?.district || districtName,
+    propertyType: propertyMeta.value?.label || '',
+    url: `${SITE_URL}${toRealEstateUrl({
+      type: realEstateType,
+      city: cityName,
+      district: districtName,
+      buildingName: buildingName.value,
+    })}`,
+    buildYear: info?.buildYear,
+    totalCount: summary.value?.totalCount,
+    lat: info?.lat ?? null,
+    lng: info?.lng ?? null,
+    image: buildOgImage(info),
+    // summary.recentAvg는 만원 단위 — schema.org offers.price는 KRW(원) 이므로 10_000 곱해 전달
+    recentAvg: summary.value?.recentAvg != null ? summary.value.recentAvg * 10_000 : undefined,
+    latestDealDate,
+  }
+})
 
 // building_viewed analytics 는 클라이언트에서 buildingInfo 로드 후만 발화
 watch(() => buildingInfo.value, (info) => {
@@ -1090,26 +1164,44 @@ watch(resolvedBjdCode, async (code) => {
   }
 }, { immediate: true })
 
-watchEffect(async () => {
-  if (buildingInfo.value?.city && buildingInfo.value?.district) {
-    try {
-      const response = await getComplexList(
-        apiSlug.value,
-        buildingInfo.value.city,
-        buildingInfo.value.district,
-        undefined,
-        1,
-        7
-      )
-      nearbyComplexes.value = response.items
-        .filter(c => c.buildingName !== buildingName.value)
-        .slice(0, 6)
-    } catch (err) {
-      console.error('Failed to load nearby complexes:', err)
-      nearbyComplexes.value = []
-    }
+function nearbyHeading(propertyType: 'apt' | 'villa' | 'offitel'): string {
+  const label = propertyType === 'apt' ? '아파트' : propertyType === 'villa' ? '빌라' : '오피스텔'
+  if (currentTab.value === 'sale') return `주변 ${label} 매매가`
+  if (selectedRentType.value === 'jeonse') return `주변 ${label} 전세가`
+  if (selectedRentType.value === 'wolse') return `주변 ${label} 월세가`
+  return `주변 ${label} 전월세`
+}
+
+async function loadNearby() {
+  const bjd = resolvedBjdCode.value
+  if (!bjd) {
+    nearbyByType.value = { apt: [], villa: [], offitel: [] }
+    return
   }
-})
+  const mode = currentTab.value
+  const rentTypeKey = mode === 'rent'
+    ? (selectedRentType.value === 'jeonse' ? 'jeonse'
+       : selectedRentType.value === 'wolse' ? 'wolse'
+       : 'all') as 'all' | 'jeonse' | 'wolse'
+    : undefined
+  try {
+    nearbyByType.value = await getNearby(bjd, mode, {
+      rentType: rentTypeKey,
+      dongName: buildingInfo.value?.dongName,
+      excludeBuildingName: buildingName.value,
+      limitPerType: 4,
+    })
+  } catch (err) {
+    console.error('Failed to load nearby:', err)
+    nearbyByType.value = { apt: [], villa: [], offitel: [] }
+  }
+}
+
+watch(
+  () => [resolvedBjdCode.value, currentTab.value, selectedRentType.value, buildingInfo.value?.dongName] as const,
+  () => { loadNearby() },
+  { immediate: true }
+)
 
 // noindex / robots 는 상단 useHead 팩토리에서 canonical 과 함께 처리한다
 // (.omc/notes/noindex-canonical-policy.md).

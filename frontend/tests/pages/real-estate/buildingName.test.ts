@@ -4,15 +4,16 @@ import { shouldNoindexRealEstateDetail } from '../../../utils/realEstateNoindex'
 /**
  * US-003 / AC3 — 상세 페이지 noindex 조건별 스냅샷.
  *
- * 지번 패턴 / buildingInfo 없음 / 총 거래 < 10 세 조건 중 하나라도 true면
+ * 지번 패턴 / buildingInfo 없음 두 조건 중 하나라도 true면
  * noindex여야 한다. 모두 false일 때만 index 가능.
+ *
+ * 참고: totalCount < 10 조건은 색인률 회복을 위해 2026-05 폐지.
  */
 describe('shouldNoindexRealEstateDetail — AC3 gating', () => {
   const baseValid = {
     buildingName: '래미안강남',
     loaded: true,
     hasBuildingInfo: true,
-    totalCount: 42,
   }
 
   it('indexes a valid building with sufficient transactions', () => {
@@ -25,7 +26,6 @@ describe('shouldNoindexRealEstateDetail — AC3 gating', () => {
         buildingName: '(535-3)',
         loaded: false,
         hasBuildingInfo: false,
-        totalCount: 0,
       }),
     ).toBe(true)
   })
@@ -48,22 +48,21 @@ describe('shouldNoindexRealEstateDetail — AC3 gating', () => {
     ).toBe(true)
   })
 
-  it('noindexes when data loaded and totalCount < 10', () => {
+  it('indexes when data loaded and totalCount is low (totalCount condition removed 2026-05)', () => {
+    // totalCount < 10 은 더 이상 noindex 조건이 아님
     expect(
       shouldNoindexRealEstateDetail({
         ...baseValid,
-        totalCount: 9,
       }),
-    ).toBe(true)
+    ).toBe(false)
   })
 
-  it('noindexes when totalCount is null and data is loaded', () => {
+  it('indexes when totalCount is absent — only jibun pattern and buildingInfo gate noindex', () => {
     expect(
       shouldNoindexRealEstateDetail({
         ...baseValid,
-        totalCount: null,
       }),
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it('does NOT noindex while data is still loading (avoid false positives during SSR)', () => {
@@ -72,7 +71,6 @@ describe('shouldNoindexRealEstateDetail — AC3 gating', () => {
         buildingName: '래미안강남',
         loaded: false,
         hasBuildingInfo: false,
-        totalCount: 0,
       }),
     ).toBe(false)
   })
@@ -86,12 +84,10 @@ describe('shouldNoindexRealEstateDetail — AC3 gating', () => {
     ).toBe(false)
   })
 
-  it('noindexes at the totalCount < 10 boundary', () => {
+  it('indexes regardless of totalCount (condition removed 2026-05)', () => {
+    // totalCount는 더 이상 noindex 판단에 영향을 주지 않음
     expect(
-      shouldNoindexRealEstateDetail({ ...baseValid, totalCount: 10 }),
+      shouldNoindexRealEstateDetail({ ...baseValid }),
     ).toBe(false)
-    expect(
-      shouldNoindexRealEstateDetail({ ...baseValid, totalCount: 9 }),
-    ).toBe(true)
   })
 })

@@ -137,7 +137,10 @@ export interface BuildingInfo {
   buildYear: number | null
   minArea: number | null
   maxArea: number | null
+  /** sale: 매매가(만원). rent: 보증금(만원). */
   latestDealAmount: number | null
+  /** rent에서만 의미. 월세 금액(만원). 전세 거래는 0. */
+  latestMonthlyRent: number | null
   latestDealYear: number | null
   latestDealMonth: number | null
   lat: number | null
@@ -252,4 +255,30 @@ export interface PriceAnalysis {
   allTimeHigh: number | null       // 만원
   allTimeLow: number | null        // 만원
   saleCount: number
+}
+
+// 인근 단지 아이템
+export interface NearbyComplexItem {
+  buildingName: string
+  bjdCode: string
+  city: string
+  district: string
+  dongName: string
+  buildYear: number | null
+  transactionCount: number
+  /** sale: 매매가(만원). rent: 보증금(만원). */
+  latestPrice: number | null
+  /** rent에서만 의미. 월세 금액(만원). 전세는 0 또는 null. */
+  monthlyRent: number | null
+  latestDealYear: number | null
+  latestDealMonth: number | null
+  lat: number | null
+  lng: number | null
+}
+
+// 인근 단지 응답
+export interface NearbyResponse {
+  apt: NearbyComplexItem[]
+  villa: NearbyComplexItem[]
+  offitel: NearbyComplexItem[]
 }

@@ -336,6 +336,7 @@ export function useStructuredData() {
     buildYear?: number | null
     propertyType: string
     propertySlug?: 'apt' | 'villa' | 'offitel'
+    image?: string
   }
 
   function resolveBuildingSchemaType(slug?: string): string {
@@ -383,6 +384,7 @@ export function useStructuredData() {
           longitude: options.lng,
         }
       }
+      if (options.image) schema.image = options.image
       return {
         script: [
           {
@@ -411,6 +413,9 @@ export function useStructuredData() {
     totalCount?: number
     lat?: number | null
     lng?: number | null
+    image?: string
+    recentAvg?: number
+    latestDealDate?: string
   }
 
   function setRealEstateListingSchema(
@@ -445,6 +450,10 @@ export function useStructuredData() {
           longitude: options.lng,
         }
       }
+      schema.mainEntityOfPage = options.url
+      if (options.image) schema.image = options.image
+      if (options.recentAvg != null) schema.offers = { '@type': 'Offer', price: options.recentAvg, priceCurrency: 'KRW', availability: 'https://schema.org/InStock' }
+      if (options.latestDealDate) schema.datePosted = options.latestDealDate
       return {
         script: [
           {

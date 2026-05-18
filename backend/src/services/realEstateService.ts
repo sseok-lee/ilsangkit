@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 
 // ─────────────────────────────────────────────
@@ -457,7 +458,10 @@ export interface BuildingInfo {
   buildYear: number | null;
   minArea: number | null;
   maxArea: number | null;
+  /** sale: 매매가(만원). rent: 보증금(만원). */
   latestDealAmount: number | null;
+  /** rent에서만 의미. 월세 금액(만원). 전세 거래는 0. */
+  latestMonthlyRent: number | null;
   latestDealYear: number | null;
   latestDealMonth: number | null;
   lat: number | null;
@@ -543,6 +547,9 @@ export async function getBuildingInfo(
     minArea: agg._min[areaField] !== null && agg._min[areaField] !== undefined ? Number(agg._min[areaField]) : null,
     maxArea: agg._max[areaField] !== null && agg._max[areaField] !== undefined ? Number(agg._max[areaField]) : null,
     latestDealAmount: latest[priceField] !== null ? Number(latest[priceField]) : null,
+    latestMonthlyRent: isSaleType(type)
+      ? null
+      : (latest.monthlyRent !== null && latest.monthlyRent !== undefined ? Number(latest.monthlyRent) : null),
     latestDealYear: latest.dealYear,
     latestDealMonth: latest.dealMonth,
     lat: lat !== null ? Number(lat) : null,
@@ -684,6 +691,161 @@ export async function searchAll(
   );
 
   return { categories: results };
+}
+
+// ─────────────────────────────────────────────
+// getNearbyByBjd
+// ─────────────────────────────────────────────
+
+export type NearbyMode = 'sale' | 'rent';
+export type NearbyRentType = 'all' | 'jeonse' | 'wolse';
+export type NearbyPropertyKey = 'apt' | 'villa' | 'offitel';
+
+export interface NearbyComplex {
+  buildingName: string;
+  bjdCode: string;
+  city: string;
+  district: string;
+  dongName: string;
+  buildYear: number | null;
+  transactionCount: number;
+  /** sale: 매매가(만원). rent: 보증금(만원). */
+  latestPrice: number | null;
+  /** rent에서만 의미. 월세 금액(만원). 전세는 0. */
+  monthlyRent: number | null;
+  latestDealYear: number | null;
+  latestDealMonth: number | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+export type NearbyResult = Record<NearbyPropertyKey, NearbyComplex[]>;
+
+const NEARBY_PROPERTY_KEYS: NearbyPropertyKey[] = ['apt', 'villa', 'offitel'];
+
+const RENT_TRANSACTION_TABLE: Record<NearbyPropertyKey, string> = {
+  apt: 'AptRentTransaction',
+  villa: 'VillaRentTransaction',
+  offitel: 'OffitelRentTransaction',
+};
+
+export async function getNearbyByBjd(
+  bjdCode: string,
+  mode: NearbyMode,
+  opts: { rentType?: NearbyRentType; dongName?: string; excludeBuildingName?: string; limitPerType?: number }
+): Promise<NearbyResult> {
+  const rentType: NearbyRentType = opts.rentType ?? 'all';
+  const dongName = opts.dongName ?? null;
+  const excludeBuildingName = opts.excludeBuildingName ?? null;
+  const limitPerType = opts.limitPerType ?? 4;
+  const result: NearbyResult = { apt: [], villa: [], offitel: [] };
+
+  if (mode === 'sale') {
+    // Sale path: summary 테이블 — 매매가만 필요
+    for (const key of NEARBY_PROPERTY_KEYS) {
+      const type = `${key}-sale`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const where: Record<string, any> = { type, bjdCode };
+      if (dongName) where.dongName = dongName;
+      if (excludeBuildingName) where.buildingName = { not: excludeBuildingName };
+      const rows = await prisma.realEstateBuildingSummary.findMany({
+        where,
+        orderBy: [
+          { latestDealYear: 'desc' },
+          { latestDealMonth: 'desc' },
+          { transactionCount: 'desc' },
+        ],
+        take: limitPerType,
+      });
+      result[key] = rows.map((r) => ({
+        buildingName: r.buildingName,
+        bjdCode: r.bjdCode,
+        city: r.city,
+        district: r.district,
+        dongName: r.dongName,
+        buildYear: r.buildYear ?? null,
+        transactionCount: r.transactionCount,
+        latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+        monthlyRent: null,
+        latestDealYear: r.latestDealYear ?? null,
+        latestDealMonth: r.latestDealMonth ?? null,
+        lat: r.lat != null ? Number(r.lat) : null,
+        lng: r.lng != null ? Number(r.lng) : null,
+      }));
+    }
+    return result;
+  }
+
+  // Rent path (모든 rentType): transaction 테이블 raw SQL로 deposit + monthlyRent 함께 조회.
+  // ANY_VALUE는 group 내 임의 row의 값이라 latestPrice/monthlyRent가 같은 row가 아닐 수 있음 —
+  // 단지의 거래가 동일 임대 유형이면 값이 유사하므로 카드 표시 목적에 충분한 근사.
+  for (const key of NEARBY_PROPERTY_KEYS) {
+    const tableName = RENT_TRANSACTION_TABLE[key];
+    const dongFilter = dongName
+      ? Prisma.sql`AND t.dongName = ${dongName}`
+      : Prisma.empty;
+    const excludeFilter = excludeBuildingName
+      ? Prisma.sql`AND t.buildingName != ${excludeBuildingName}`
+      : Prisma.empty;
+    const rentTypeFilter = rentType === 'jeonse'
+      ? Prisma.sql`AND t.rentType = '전세'`
+      : rentType === 'wolse'
+        ? Prisma.sql`AND t.rentType = '월세'`
+        : Prisma.empty;
+
+    const rows = await prisma.$queryRaw<Array<{
+      buildingName: string;
+      bjdCode: string;
+      city: string;
+      district: string;
+      dongName: string;
+      buildYear: number | null;
+      transactionCount: bigint;
+      latestPrice: bigint | null;
+      monthlyRent: bigint | null;
+      latestDealYear: number | null;
+      latestDealMonth: number | null;
+    }>>`
+      SELECT
+        t.buildingName,
+        t.bjdCode,
+        ANY_VALUE(t.city) AS city,
+        ANY_VALUE(t.district) AS district,
+        ANY_VALUE(t.dongName) AS dongName,
+        ANY_VALUE(t.buildYear) AS buildYear,
+        COUNT(*) AS transactionCount,
+        ANY_VALUE(t.deposit) AS latestPrice,
+        ANY_VALUE(t.monthlyRent) AS monthlyRent,
+        MAX(t.dealYear) AS latestDealYear,
+        MAX(t.dealMonth) AS latestDealMonth
+      FROM \`${Prisma.raw(tableName)}\` t
+      WHERE t.bjdCode = ${bjdCode}
+        ${rentTypeFilter}
+        ${dongFilter}
+        ${excludeFilter}
+      GROUP BY t.buildingName, t.bjdCode
+      ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC
+      LIMIT ${limitPerType}
+    `;
+
+    result[key] = rows.map((r) => ({
+      buildingName: r.buildingName,
+      bjdCode: r.bjdCode,
+      city: r.city,
+      district: r.district,
+      dongName: r.dongName,
+      buildYear: r.buildYear ?? null,
+      transactionCount: Number(r.transactionCount),
+      latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+      monthlyRent: r.monthlyRent != null ? Number(r.monthlyRent) : null,
+      latestDealYear: r.latestDealYear ?? null,
+      latestDealMonth: r.latestDealMonth ?? null,
+      lat: null,
+      lng: null,
+    }));
+  }
+
+  return result;
 }
 
 // ─────────────────────────────────────────────
