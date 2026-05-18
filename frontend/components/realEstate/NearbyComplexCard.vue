@@ -47,9 +47,8 @@ const priceBadgeClass = computed(() =>
   props.mode === 'sale' ? 'bg-blue-50 text-blue-700' : 'bg-rose-50 text-rose-700'
 )
 
-// latestPrice는 만원 단위(예: 70000 = 7억). 1억 = 10000만원 기준 변환.
-const priceText = computed(() => {
-  const v = props.item.latestPrice
+// 만원 단위 가격을 "${억}억 ${만}" 또는 "${만}만"으로 포맷
+function formatPrice(v: number | null | undefined): string {
   if (v == null) return '-'
   if (v >= 10_000) {
     const eok = Math.floor(v / 10_000)
@@ -57,6 +56,18 @@ const priceText = computed(() => {
     return man > 0 ? `${eok}억 ${man.toLocaleString()}만` : `${eok}억`
   }
   return `${v.toLocaleString()}만`
+}
+
+// sale: 매매가
+// rent + monthlyRent > 0 (월세 거래): "보증금/월세" 예: "1,000만/54만"
+// rent + monthlyRent == 0 또는 null (전세 거래): 보증금만
+const priceText = computed(() => {
+  const v = props.item.latestPrice
+  if (v == null) return '-'
+  if (props.mode === 'rent' && props.item.monthlyRent && props.item.monthlyRent > 0) {
+    return `${formatPrice(v)}/${formatPrice(props.item.monthlyRent)}`
+  }
+  return formatPrice(v)
 })
 
 const linkUrl = computed(() => {

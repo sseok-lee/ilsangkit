@@ -263,7 +263,10 @@ export interface NearbyComplexItem {
   dongName: string
   buildYear: number | null
   transactionCount: number
+  /** sale: 매매가(만원). rent: 보증금(만원). */
   latestPrice: number | null
+  /** rent에서만 의미. 월세 금액(만원). 전세는 0 또는 null. */
+  monthlyRent: number | null
   latestDealYear: number | null
   latestDealMonth: number | null
   lat: number | null

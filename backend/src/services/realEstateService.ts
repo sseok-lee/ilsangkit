@@ -703,7 +703,10 @@ export interface NearbyComplex {
   dongName: string;
   buildYear: number | null;
   transactionCount: number;
+  /** sale: 매매가(만원). rent: 보증금(만원). */
   latestPrice: number | null;
+  /** rent에서만 의미. 월세 금액(만원). 전세는 0. */
+  monthlyRent: number | null;
   latestDealYear: number | null;
   latestDealMonth: number | null;
   lat: number | null;
@@ -731,13 +734,10 @@ export async function getNearbyByBjd(
   const limitPerType = opts.limitPerType ?? 4;
   const result: NearbyResult = { apt: [], villa: [], offitel: [] };
 
-  const useFilteredRent = mode === 'rent' && rentType !== 'all';
-
-  if (!useFilteredRent) {
-    // Summary path: mode=sale OR (mode=rent + rentType=all)
-    const suffix = mode === 'sale' ? 'sale' : 'rent';
+  if (mode === 'sale') {
+    // Sale path: summary 테이블 — 매매가만 필요
     for (const key of NEARBY_PROPERTY_KEYS) {
-      const type = `${key}-${suffix}`;
+      const type = `${key}-sale`;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const where: Record<string, any> = { type, bjdCode };
       if (dongName) where.dongName = dongName;
@@ -760,6 +760,7 @@ export async function getNearbyByBjd(
         buildYear: r.buildYear ?? null,
         transactionCount: r.transactionCount,
         latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+        monthlyRent: null,
         latestDealYear: r.latestDealYear ?? null,
         latestDealMonth: r.latestDealMonth ?? null,
         lat: r.lat != null ? Number(r.lat) : null,
@@ -769,9 +770,9 @@ export async function getNearbyByBjd(
     return result;
   }
 
-  // Filtered rent path: raw SQL on transaction tables
-  const rentTypeKor = rentType === 'jeonse' ? '전세' : '월세';
-
+  // Rent path (모든 rentType): transaction 테이블 raw SQL로 deposit + monthlyRent 함께 조회.
+  // ANY_VALUE는 group 내 임의 row의 값이라 latestPrice/monthlyRent가 같은 row가 아닐 수 있음 —
+  // 단지의 거래가 동일 임대 유형이면 값이 유사하므로 카드 표시 목적에 충분한 근사.
   for (const key of NEARBY_PROPERTY_KEYS) {
     const tableName = RENT_TRANSACTION_TABLE[key];
     const dongFilter = dongName
@@ -780,6 +781,11 @@ export async function getNearbyByBjd(
     const excludeFilter = excludeBuildingName
       ? Prisma.sql`AND t.buildingName != ${excludeBuildingName}`
       : Prisma.empty;
+    const rentTypeFilter = rentType === 'jeonse'
+      ? Prisma.sql`AND t.rentType = '전세'`
+      : rentType === 'wolse'
+        ? Prisma.sql`AND t.rentType = '월세'`
+        : Prisma.empty;
 
     const rows = await prisma.$queryRaw<Array<{
       buildingName: string;
@@ -790,6 +796,7 @@ export async function getNearbyByBjd(
       buildYear: number | null;
       transactionCount: bigint;
       latestPrice: bigint | null;
+      monthlyRent: bigint | null;
       latestDealYear: number | null;
       latestDealMonth: number | null;
     }>>`
@@ -802,11 +809,12 @@ export async function getNearbyByBjd(
         ANY_VALUE(t.buildYear) AS buildYear,
         COUNT(*) AS transactionCount,
         ANY_VALUE(t.deposit) AS latestPrice,
+        ANY_VALUE(t.monthlyRent) AS monthlyRent,
         MAX(t.dealYear) AS latestDealYear,
         MAX(t.dealMonth) AS latestDealMonth
       FROM \`${Prisma.raw(tableName)}\` t
       WHERE t.bjdCode = ${bjdCode}
-        AND t.rentType = ${rentTypeKor}
+        ${rentTypeFilter}
         ${dongFilter}
         ${excludeFilter}
       GROUP BY t.buildingName, t.bjdCode
@@ -823,6 +831,7 @@ export async function getNearbyByBjd(
       buildYear: r.buildYear ?? null,
       transactionCount: Number(r.transactionCount),
       latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+      monthlyRent: r.monthlyRent != null ? Number(r.monthlyRent) : null,
       latestDealYear: r.latestDealYear ?? null,
       latestDealMonth: r.latestDealMonth ?? null,
       lat: null,

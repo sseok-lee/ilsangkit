@@ -8,7 +8,7 @@ const baseItem: NearbyComplexItem = {
   buildingName: '래미안', bjdCode: '1144012700',
   city: '서울특별시', district: '마포구', dongName: '한강로동',
   buildYear: 2018, transactionCount: 3,
-  latestPrice: 150_000, latestDealYear: 2026, latestDealMonth: 4,
+  latestPrice: 150_000, monthlyRent: null, latestDealYear: 2026, latestDealMonth: 4,
   lat: 37.55, lng: 126.96,
 }
 
@@ -67,5 +67,37 @@ describe('NearbyComplexCard', () => {
   it('가격이 null이면 "-" 표시', () => {
     const wrapper = mount(NearbyComplexCard, { props: { item: { ...baseItem, latestPrice: null }, propertyType: 'apt', mode: 'sale', rentType: 'all' } })
     expect(wrapper.text()).toContain('-')
+  })
+
+  it('월세 거래 — 보증금/월세 형식 (예: 1000만/54만)', () => {
+    const wrapper = mount(NearbyComplexCard, {
+      props: {
+        item: { ...baseItem, latestPrice: 1_000, monthlyRent: 54 },
+        propertyType: 'apt', mode: 'rent', rentType: 'wolse',
+      },
+    })
+    expect(wrapper.text()).toContain('1,000만/54만')
+  })
+
+  it('전세 거래 (monthlyRent=0) — 보증금만 표시', () => {
+    const wrapper = mount(NearbyComplexCard, {
+      props: {
+        item: { ...baseItem, latestPrice: 50_000, monthlyRent: 0 },
+        propertyType: 'apt', mode: 'rent', rentType: 'jeonse',
+      },
+    })
+    expect(wrapper.text()).toContain('5억')
+    expect(wrapper.text()).not.toContain('/')
+  })
+
+  it('rent + monthlyRent null — 보증금만 표시', () => {
+    const wrapper = mount(NearbyComplexCard, {
+      props: {
+        item: { ...baseItem, latestPrice: 30_000, monthlyRent: null },
+        propertyType: 'apt', mode: 'rent', rentType: 'all',
+      },
+    })
+    expect(wrapper.text()).toContain('3억')
+    expect(wrapper.text()).not.toContain('/')
   })
 })
