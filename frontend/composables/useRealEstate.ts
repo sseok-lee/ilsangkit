@@ -9,6 +9,7 @@ import type {
   AreaGroup,
   StatsResponse,
   PriceAnalysis,
+  NearbyResponse,
 } from '~/types/realEstate'
 import { useApiBase } from '~/composables/useApiBase'
 
@@ -153,6 +154,26 @@ export function useRealEstate() {
     }
   }
 
+  async function getNearby(
+    bjdCode: string,
+    mode: 'sale' | 'rent',
+    opts: {
+      rentType?: 'all' | 'jeonse' | 'wolse'
+      excludeBuildingName?: string
+      limitPerType?: number
+    } = {}
+  ): Promise<NearbyResponse> {
+    const query = new URLSearchParams({ bjdCode, mode })
+    if (mode === 'rent' && opts.rentType) query.set('rentType', opts.rentType)
+    if (opts.excludeBuildingName) query.set('excludeBuildingName', opts.excludeBuildingName)
+    if (opts.limitPerType) query.set('limitPerType', String(opts.limitPerType))
+
+    const res = await $fetch<{ success: boolean; data: NearbyResponse }>(
+      `${apiBase}/api/real-estate/nearby?${query.toString()}`
+    )
+    return res.data
+  }
+
   return {
     searchTransactions,
     getTransactionStats,
@@ -161,5 +182,6 @@ export function useRealEstate() {
     searchAll,
     getAreaGroups,
     getApartmentPriceAnalysis,
+    getNearby,
   }
 }

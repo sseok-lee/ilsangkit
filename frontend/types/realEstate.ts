@@ -253,3 +253,26 @@ export interface PriceAnalysis {
   allTimeLow: number | null        // 만원
   saleCount: number
 }
+
+// 인근 단지 아이템
+export interface NearbyComplexItem {
+  buildingName: string
+  bjdCode: string
+  city: string
+  district: string
+  dongName: string
+  buildYear: number | null
+  transactionCount: number
+  latestPrice: number | null
+  latestDealYear: number | null
+  latestDealMonth: number | null
+  lat: number | null
+  lng: number | null
+}
+
+// 인근 단지 응답
+export interface NearbyResponse {
+  apt: NearbyComplexItem[]
+  villa: NearbyComplexItem[]
+  offitel: NearbyComplexItem[]
+}
