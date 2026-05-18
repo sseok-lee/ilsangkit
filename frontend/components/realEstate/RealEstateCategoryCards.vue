@@ -38,7 +38,7 @@
         v-if="card.count !== null"
         class="text-xs md:text-sm text-slate-700 tabular-nums"
       >
-        이번달 · 지난달 <span class="font-bold text-slate-900">{{ card.countText }}</span>건
+        최근 30일 <span class="font-bold text-slate-900">{{ card.countText }}</span>건
       </p>
       <p
         v-else

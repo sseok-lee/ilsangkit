@@ -29,7 +29,7 @@ export function __resetHubSummaryCacheForTest(): void {
   inFlight = null;
 }
 
-// "최근 거래" 윈도우 = 현재 월 + 직전 월 (월 단위 인덱스 활용). 라이브 카운트 라벨은 FE에서 "이번달·지난달"로 표기.
+// 윈도우 = 현재 월 + 직전 월 (월 단위 인덱스 활용 — 정확한 30일 roll보다 빠름). FE 라벨 "최근 30일"의 근사치.
 function computeCutoffYYYYMM(now: Date): number {
   const y = now.getFullYear();
   const m = now.getMonth() + 1; // 1-12
