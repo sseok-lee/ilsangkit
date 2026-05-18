@@ -123,7 +123,7 @@ async function setupBaseMocks(page: import('@playwright/test').Page) {
 }
 
 test.describe('부동산 상세 — 인근 단지 cross-property', () => {
-  test('매매 페이지 → 인근 카드에 "매매" 라벨', async ({ page }) => {
+  test('매매 페이지 → 인근 카드에 "최근 거래가" 라벨', async ({ page }) => {
     await setupBaseMocks(page)
     await page.route('**/api/real-estate/nearby**', async (route) => {
       await route.fulfill({
@@ -134,17 +134,12 @@ test.describe('부동산 상세 — 인근 단지 cross-property', () => {
     })
 
     await page.goto(SALE_PATH)
-
-    // Wait for nearby section heading
     await expect(page.locator('text=같은 동 아파트 실거래').first()).toBeVisible({ timeout: 15000 })
-
-    // NearbyComplexCard renders priceLabel "매매" when mode=sale
-    // The label is inside: <p class="..."><span>{{ priceLabel }}</span><span>{{ priceText }}</span></p>
     await expect(page.locator('text=인근아파트단지').first()).toBeVisible()
-    await expect(page.locator('p:has-text("매매")').first()).toBeVisible()
+    await expect(page.locator('p:has-text("최근 거래가")').first()).toBeVisible()
   })
 
-  test('전월세 페이지 → 인근 카드에 "전월세" 라벨 (기본값 all)', async ({ page }) => {
+  test('전월세 페이지 → 인근 카드에 "최근 거래가" 라벨', async ({ page }) => {
     await setupBaseMocks(page)
     await page.route('**/api/real-estate/nearby**', async (route) => {
       await route.fulfill({
@@ -155,22 +150,18 @@ test.describe('부동산 상세 — 인근 단지 cross-property', () => {
     })
 
     await page.goto(RENT_PATH)
-
     await expect(page.locator('text=같은 동 아파트 실거래').first()).toBeVisible({ timeout: 15000 })
-    await expect(page.locator('text=인근아파트단지').first()).toBeVisible()
-    // Default rentType=all → priceLabel "전월세"
-    await expect(page.locator('p:has-text("전월세")').first()).toBeVisible()
+    await expect(page.locator('p:has-text("최근 거래가")').first()).toBeVisible()
   })
 
-  test('전월세 페이지 → 전세 토글 클릭 → 인근 카드에 "전세" 라벨', async ({ page }) => {
-    const responses: string[] = []
+  test('전월세 페이지 → 전세 토글 클릭 → nearby API에 rentType=jeonse 전달', async ({ page }) => {
+    const requestedRentTypes: string[] = []
 
     await setupBaseMocks(page)
     await page.route('**/api/real-estate/nearby**', async (route) => {
       const url = route.request().url()
-      // Capture which rentType was requested
-      const rentType = new URL(url).searchParams.get('rentType') ?? 'all'
-      responses.push(rentType)
+      const rentType = new URL(url).searchParams.get('rentType') ?? '(missing)'
+      requestedRentTypes.push(rentType)
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -181,16 +172,18 @@ test.describe('부동산 상세 — 인근 단지 cross-property', () => {
     await page.goto(RENT_PATH)
     await expect(page.locator('text=같은 동 아파트 실거래').first()).toBeVisible({ timeout: 15000 })
 
-    // Click 전세 toggle button (exact to avoid matching "전월세")
     await page.getByRole('button', { name: '전세', exact: true }).click()
-
-    // Card should now show "전세" label
-    await expect(page.locator('p:has-text("전세")').first()).toBeVisible({ timeout: 5000 })
+    await expect.poll(() => requestedRentTypes).toContain('jeonse')
   })
 
-  test('전월세 페이지 → 월세 토글 클릭 → 인근 카드에 "월세" 라벨', async ({ page }) => {
+  test('전월세 페이지 → 월세 토글 클릭 → nearby API에 rentType=wolse 전달', async ({ page }) => {
+    const requestedRentTypes: string[] = []
+
     await setupBaseMocks(page)
     await page.route('**/api/real-estate/nearby**', async (route) => {
+      const url = route.request().url()
+      const rentType = new URL(url).searchParams.get('rentType') ?? '(missing)'
+      requestedRentTypes.push(rentType)
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -201,10 +194,7 @@ test.describe('부동산 상세 — 인근 단지 cross-property', () => {
     await page.goto(RENT_PATH)
     await expect(page.locator('text=같은 동 아파트 실거래').first()).toBeVisible({ timeout: 15000 })
 
-    // Click 월세 toggle button (exact to avoid matching "전월세")
     await page.getByRole('button', { name: '월세', exact: true }).click()
-
-    // Card should now show "월세" label
-    await expect(page.locator('p:has-text("월세")').first()).toBeVisible({ timeout: 5000 })
+    await expect.poll(() => requestedRentTypes).toContain('wolse')
   })
 })

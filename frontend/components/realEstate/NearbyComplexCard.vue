@@ -41,26 +41,22 @@ const badgeClass = computed(() => {
   return 'bg-amber-50 text-amber-700'
 })
 
-const priceLabel = computed(() => {
-  if (props.mode === 'sale') return '매매'
-  if (props.rentType === 'jeonse') return '전세'
-  if (props.rentType === 'wolse') return '월세'
-  return '전월세'
-})
+const priceLabel = computed(() => '최근 거래가')
 
 const priceBadgeClass = computed(() =>
   props.mode === 'sale' ? 'bg-blue-50 text-blue-700' : 'bg-rose-50 text-rose-700'
 )
 
+// latestPrice는 만원 단위(예: 70000 = 7억). 1억 = 10000만원 기준 변환.
 const priceText = computed(() => {
   const v = props.item.latestPrice
   if (v == null) return '-'
-  if (v >= 100_000_000) {
-    const eok = Math.floor(v / 100_000_000)
-    const man = Math.floor((v % 100_000_000) / 10_000)
+  if (v >= 10_000) {
+    const eok = Math.floor(v / 10_000)
+    const man = v % 10_000
     return man > 0 ? `${eok}억 ${man.toLocaleString()}만` : `${eok}억`
   }
-  return `${Math.floor(v / 10_000).toLocaleString()}만`
+  return `${v.toLocaleString()}만`
 })
 
 const linkUrl = computed(() => {
