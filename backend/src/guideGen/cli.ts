@@ -114,8 +114,9 @@ program
 program
   .command('reject <id>')
   .requiredOption('--reason <text>')
+  .option('--yes', 'confirm destructive operation')
   .action(async (id, opts) => {
-    const row = await rejectCandidate({ id, reason: opts.reason });
+    const row = await rejectCandidate({ id, reason: opts.reason, yes: !!opts.yes });
     console.log(`rejected ${row.id}`);
   });
 
