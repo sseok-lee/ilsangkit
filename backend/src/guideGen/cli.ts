@@ -112,13 +112,23 @@ program
 program
   .command('status')
   .action(async () => {
-    const rows = await listCandidates({ limit: 1000 });
+    const prisma = (await import('../lib/prisma.js')).default;
+    const grouped = await prisma.guideCandidate.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    });
     const counts = new Map<string, number>();
-    for (const r of rows) {
-      counts.set(r.status, (counts.get(r.status) ?? 0) + 1);
+    for (const row of grouped) {
+      counts.set(row.status, row._count._all);
     }
+    const known = new Set<string>(Object.values(CANDIDATE_STATUS));
     for (const status of Object.values(CANDIDATE_STATUS)) {
       console.log(`${status.padEnd(10)} ${counts.get(status) ?? 0}`);
+    }
+    for (const [status, count] of counts) {
+      if (!known.has(status)) {
+        console.log(`${status.padEnd(10)} ${count}  (unknown status)`);
+      }
     }
   });
 

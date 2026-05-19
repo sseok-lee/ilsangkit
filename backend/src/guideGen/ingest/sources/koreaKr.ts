@@ -61,6 +61,7 @@ export async function fetchKoreaKrRss(
 ): Promise<RawSourceItem[]> {
   const res = await fetch(feedUrl, {
     headers: { 'user-agent': 'ilsangkit-guide-bot/1.0' },
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) {
     throw new Error(`korea.kr fetch failed: ${res.status}`);

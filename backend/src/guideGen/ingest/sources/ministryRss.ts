@@ -78,6 +78,7 @@ export async function fetchMinistryRss(
 ): Promise<RawSourceItem[]> {
   const res = await fetch(feed.url, {
     headers: { 'user-agent': 'ilsangkit-guide-bot/1.0' },
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) {
     throw new Error(`${feed.provider} fetch failed: ${res.status}`);

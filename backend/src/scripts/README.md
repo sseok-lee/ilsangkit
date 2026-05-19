@@ -121,4 +121,4 @@ npm run guide:reject  <candidateId> -- --reason="..."
 npm run guide:status                     # 큐 전체 요약
 ```
 
-후속 단계(생성·발행)는 Phase 2, Phase 3 plan에서 구현된다. 전체 설계는 `docs/superpowers/specs/2026-05-19-guide-generation-pipeline-design.md` 참조.
+후속 단계(생성·발행)는 Phase 2, Phase 3 plan에서 구현된다. 전체 설계 문서는 `docs/superpowers/specs/` 디렉터리(로컬 전용, `.gitignore` 처리)에 있다.
