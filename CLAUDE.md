@@ -57,6 +57,7 @@ npm run guide:show <id>                   # 후보 상세
 npm run guide:approve <id>                # 후보 승인
 npm run guide:reject  <id> -- --reason="..."
 npm run guide:status                      # 큐 요약
+npm run guide:generate <id>               # Extract→Plan→Draft→Check 생성 체인
 ```
 상세 설계 문서는 `docs/superpowers/specs/` (로컬 전용, `.gitignore` 처리)에 있다.
 

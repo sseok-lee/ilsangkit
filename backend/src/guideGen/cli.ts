@@ -13,6 +13,7 @@ import {
   showCandidate,
 } from './curate/candidateCli.js';
 import { CANDIDATE_STATUS, type CandidateStatus } from './shared/config.js';
+import { runPipeline } from './generate/pipeline.js';
 
 const program = new Command();
 program.name('guide').description('Guide generation pipeline CLI');
@@ -129,6 +130,27 @@ program
       if (!known.has(status)) {
         console.log(`${status.padEnd(10)} ${count}  (unknown status)`);
       }
+    }
+  });
+
+program
+  .command('generate <id>')
+  .description('Run Extract → Plan → Draft → Check on an approved candidate')
+  .action(async (id) => {
+    try {
+      const report = await runPipeline({ candidateId: id });
+      console.log(`[generate] candidate=${id} passed=${report.passed} attempt=${report.attempt}`);
+      if (!report.passed) {
+        for (const [name, entry] of Object.entries(report.checks)) {
+          if (!entry.passed) {
+            console.log(`  - ${name}: ${JSON.stringify(entry)}`);
+          }
+        }
+        process.exitCode = 1;
+      }
+    } catch (err) {
+      console.error(`[generate] failed: ${(err as Error).message}`);
+      process.exitCode = 1;
     }
   });
 

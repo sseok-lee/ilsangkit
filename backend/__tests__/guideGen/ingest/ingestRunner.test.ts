@@ -4,7 +4,7 @@ import { runIngest } from '../../../src/guideGen/ingest/ingestRunner.js';
 import type { RawSourceItem } from '../../../src/guideGen/ingest/sources/koreaKr.js';
 
 const sampleItem: RawSourceItem = {
-  sourceUrl: 'https://test.example.com/policy-001',
+  sourceUrl: 'https://test.example.com/ingest/policy-001',
   sourceProvider: 'korea.kr',
   sourceTitle: '전기차 충전소 보조금 발표',
   sourcePublishedAt: new Date('2026-05-12T10:00:00+09:00'),
@@ -14,7 +14,7 @@ const sampleItem: RawSourceItem = {
 describe('runIngest', () => {
   beforeEach(async () => {
     await prisma.guideCandidate.deleteMany({
-      where: { sourceUrl: { startsWith: 'https://test.example.com/' } },
+      where: { sourceUrl: { startsWith: 'https://test.example.com/ingest/' } },
     });
   });
 

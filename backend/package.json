@@ -25,6 +25,7 @@
     "guide:show": "tsx src/guideGen/cli.ts show",
     "guide:approve": "tsx src/guideGen/cli.ts approve",
     "guide:reject": "tsx src/guideGen/cli.ts reject",
+    "guide:generate": "tsx src/guideGen/cli.ts generate",
     "guide:status": "tsx src/guideGen/cli.ts status",
     "sync:toilet": "tsx src/scripts/syncToilet.ts",
     "sync:trash": "tsx src/scripts/syncTrash.ts",
