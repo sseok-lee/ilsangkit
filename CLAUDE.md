@@ -49,21 +49,6 @@ npx tsx src/scripts/syncToilet.ts    # 개별 카테고리 동기화
 ```
 상세 가이드: [SYNC.md](./backend/SYNC.md)
 
-### Guide Pipeline (`cd backend`)
-```bash
-npm run guide:ingest                      # 정책브리핑/부처 RSS 후보 수집
-npm run guide:list -- --status=pending    # 후보 목록
-npm run guide:show <id>                   # 후보 상세
-npm run guide:approve <id>                # 후보 승인
-npm run guide:reject  <id> -- --reason="..."
-npm run guide:status                      # 큐 요약
-npm run guide:generate <id>               # Extract→Plan→Draft→Check 생성 체인
-npm run guide:check     <id>                    # Check 단계 재실행
-npm run guide:publish   <id> [--force --yes]    # 발행 (썸네일 포함)
-npm run guide:unpublish <id> --yes              # 발행 취소
-```
-상세 설계 문서는 `docs/superpowers/specs/` (로컬 전용, `.gitignore` 처리)에 있다.
-
 ## Architecture Overview
 
 ### Tech Stack
