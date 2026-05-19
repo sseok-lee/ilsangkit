@@ -27,6 +27,9 @@ export async function runPipeline(input: PipelineInput): Promise<CheckReport> {
     throw new Error(`candidate ${input.candidateId} has no matchedCategory`);
   }
 
+  if (!cand.sourceExcerpt) {
+    console.warn(`[pipeline] sourceExcerpt is null for ${cand.id} — Check model review will use title only`);
+  }
   const sourceContent = [cand.sourceTitle, cand.sourceExcerpt ?? ''].join('\n');
 
   const facts = await runExtract({
@@ -73,6 +76,11 @@ export async function runPipeline(input: PipelineInput): Promise<CheckReport> {
       attempt,
     });
     if (report.passed) break;
+    // Slug collision is set by Plan, not Draft — retry cannot fix it
+    if (!report.checks.slugUnique.passed) {
+      console.warn(`[pipeline] slug "${plan.slug}" collides with existing Guide; skipping Draft retry`);
+      break;
+    }
     retryFeedback = summarizeFailures(report);
   }
 

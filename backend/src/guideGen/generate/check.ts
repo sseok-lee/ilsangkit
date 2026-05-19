@@ -59,8 +59,10 @@ function checkFactsCoverage(draft: string, facts: FactsJson): CheckResultEntry {
   for (const m of draft.matchAll(NUMBER_PATTERN)) {
     const value = m[1];
     const unit = m[2];
+    const num = Number(value);
     if (unit === '년' || unit === undefined) continue;  // 연도 단독·단위 없는 토큰은 무시
-    if (Number(value) < 100) continue;
+    if (num >= 1900 && num <= 2100) continue;            // 띄어쓰기된 연도(예: "2026 년")도 무시
+    if (num < 100) continue;
     if (!allowedNumbers.has(value)) {
       extra.push(`${m[0]} (수치 ${value} 가 facts에 없음)`);
     }
