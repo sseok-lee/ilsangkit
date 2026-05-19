@@ -740,11 +740,6 @@ model Guide {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  candidateId       String?   @db.VarChar(50)
-  sourceUrl         String?   @db.VarChar(500)
-  sourcePublishedAt DateTime?
-
-  @@index([candidateId])
   @@index([category])
   @@index([published, createdAt])
   @@index([slug])
@@ -1554,36 +1549,4 @@ model RealEstateNaverBlogCache {
 
   @@unique([realEstateType, buildingKey])
   @@index([expiresAt])
-}
-
-model GuideCandidate {
-  id String @id @default(cuid())
-
-  sourceUrl         String   @unique @db.VarChar(500)
-  sourceProvider    String   @db.VarChar(50)
-  sourceTitle       String   @db.VarChar(300)
-  sourcePublishedAt DateTime
-  sourceExcerpt     String?  @db.Text
-
-  matchedCategory String? @db.VarChar(50)
-  matchKeywords   String? @db.VarChar(500)
-
-  status String @default("pending") @db.VarChar(20)
-
-  draftPath   String? @db.VarChar(500)
-  factsPath   String? @db.VarChar(500)
-  planPath    String? @db.VarChar(500)
-  checkReport String? @db.Text
-
-  publishedGuideId String? @db.VarChar(50)
-
-  notes       String?   @db.Text
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  approvedAt  DateTime?
-  publishedAt DateTime?
-
-  @@index([status, createdAt])
-  @@index([matchedCategory, status])
-  @@index([sourceProvider, sourcePublishedAt])
 }
