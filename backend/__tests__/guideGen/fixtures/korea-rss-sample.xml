@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>정책브리핑</title>
+    <link>https://www.korea.kr</link>
+    <item>
+      <title><![CDATA[서울시 2026년 전기차 충전소 보조금 발표]]></title>
+      <link>https://www.korea.kr/news/policy-001.do</link>
+      <pubDate>Tue, 12 May 2026 10:00:00 +0900</pubDate>
+      <description><![CDATA[서울특별시는 2026년 전기차 충전 인프라 확충을 위한 보조금 200만원을 발표했다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[공공임대 입주자격 개정]]></title>
+      <link>https://www.korea.kr/news/policy-002.do</link>
+      <pubDate>Mon, 11 May 2026 09:30:00 +0900</pubDate>
+      <description><![CDATA[국토교통부는 LH 임대 입주자격을 개정한다고 밝혔다.]]></description>
+    </item>
+  </channel>
+</rss>
