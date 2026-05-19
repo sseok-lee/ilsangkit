@@ -96,3 +96,11 @@ frontend/docs/
 # Lighthouse CI local results
 frontend/.lighthouseci/
 .gstack/
+
+# Guide pipeline test artifacts (in case vitest.setup.ts is bypassed)
+# Ignore all draft markdowns and meta directories EXCEPT the .gitkeep markers.
+content/guides/drafts/*
+!content/guides/drafts/.gitkeep
+content/guides/meta/*/
+!content/guides/meta/.gitkeep
+backend/content/
