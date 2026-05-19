@@ -49,8 +49,6 @@
     "sync:facilities": "tsx src/scripts/syncAll.ts",
     "seed:hospital-detail": "tsx src/scripts/seedHospitalDetail.ts",
     "seed:medical-enrich": "tsx src/scripts/seedMedicalEnrich.ts",
-    "generate:guide": "tsx src/scripts/generateGuide.ts",
-    "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
     "fix:region-slugs": "tsx src/scripts/fixRegionSlugs.ts",
     "sync:geocode-real-estate": "tsx src/scripts/geocodeRealEstate.ts",
     "sync:apt-sale": "tsx src/scripts/syncAptSale.ts",
