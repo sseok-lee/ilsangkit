@@ -14,6 +14,15 @@ import {
 } from './curate/candidateCli.js';
 import { CANDIDATE_STATUS, type CandidateStatus } from './shared/config.js';
 import { runPipeline } from './generate/pipeline.js';
+import { readFile } from 'node:fs/promises';
+import {
+  publishCandidate,
+  unpublishCandidate,
+} from './publish/publishCli.js';
+import { runCheck } from './generate/check.js';
+import type {
+  FactsJson, PlanJson,
+} from './generate/types.js';
 
 const program = new Command();
 program.name('guide').description('Guide generation pipeline CLI');
@@ -150,6 +159,77 @@ program
       }
     } catch (err) {
       console.error(`[generate] failed: ${(err as Error).message}`);
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('publish <id>')
+  .description('Publish a drafted candidate as a Guide row')
+  .option('--force', 'allow publish even if last check did not pass')
+  .option('--yes', 'confirm destructive operation')
+  .action(async (id, opts) => {
+    try {
+      const guide = await publishCandidate({
+        id,
+        force: !!opts.force,
+        yes: !!opts.yes,
+      });
+      console.log(`[publish] guide=${guide.id} slug=${guide.slug}`);
+    } catch (err) {
+      console.error(`[publish] failed: ${(err as Error).message}`);
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('unpublish <id>')
+  .description('Set published=false on the Guide row for this candidate')
+  .option('--yes', 'confirm destructive operation')
+  .action(async (id, opts) => {
+    try {
+      const row = await unpublishCandidate({ id, yes: !!opts.yes });
+      console.log(`[unpublish] guide=${row.id} published=false`);
+    } catch (err) {
+      console.error(`[unpublish] failed: ${(err as Error).message}`);
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('check <id>')
+  .description('Re-run Check stage on existing facts/plan/draft from disk')
+  .action(async (id) => {
+    const prismaModule = await import('../lib/prisma.js');
+    const cand = await prismaModule.default.guideCandidate.findUnique({
+      where: { id },
+    });
+    if (!cand) {
+      console.error(`not found: ${id}`);
+      process.exitCode = 1;
+      return;
+    }
+    if (!cand.factsPath || !cand.planPath || !cand.draftPath || !cand.matchedCategory) {
+      console.error(`candidate ${id} is missing facts/plan/draft paths or category`);
+      process.exitCode = 1;
+      return;
+    }
+    const facts = JSON.parse(await readFile(cand.factsPath, 'utf-8')) as FactsJson;
+    const plan = JSON.parse(await readFile(cand.planPath, 'utf-8')) as PlanJson;
+    const draft = await readFile(cand.draftPath, 'utf-8');
+    const sourceContent = [cand.sourceTitle, cand.sourceExcerpt ?? ''].join('\n');
+    const report = await runCheck({
+      candidateId: cand.id,
+      draft, facts, plan,
+      category: cand.matchedCategory,
+      sourceContent,
+      attempt: 1,
+    });
+    console.log(`[check] passed=${report.passed}`);
+    if (!report.passed) {
+      for (const [name, entry] of Object.entries(report.checks)) {
+        if (!entry.passed) console.log(`  - ${name}: ${JSON.stringify(entry)}`);
+      }
       process.exitCode = 1;
     }
   });
