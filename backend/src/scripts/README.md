@@ -102,3 +102,23 @@ docker compose up -d
 # 또는 로컬 MySQL 서비스 시작
 brew services start mysql
 ```
+
+## 가이드 생성 파이프라인
+
+가이드 글 생성은 `backend/src/scripts/generateGuide.ts`가 아니라 `backend/src/guideGen/`의 다단계 파이프라인을 사용한다.
+
+### 사용 흐름 (Phase 1 — 수집·승인까지)
+
+```bash
+cd backend
+
+npm run guide:ingest                     # 정책브리핑/부처 RSS에서 후보 수집
+npm run guide:list -- --status=pending   # 후보 목록 확인
+npm run guide:show <candidateId>         # 후보 상세
+npm run guide:approve <candidateId>      # 승인 (status=approved)
+npm run guide:reject  <candidateId> -- --reason="..."
+
+npm run guide:status                     # 큐 전체 요약
+```
+
+후속 단계(생성·발행)는 Phase 2, Phase 3 plan에서 구현된다. 전체 설계는 `docs/superpowers/specs/2026-05-19-guide-generation-pipeline-design.md` 참조.
