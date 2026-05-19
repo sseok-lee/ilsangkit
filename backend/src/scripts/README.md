@@ -119,6 +119,8 @@ npm run guide:approve <candidateId>      # 승인 (status=approved)
 npm run guide:reject  <candidateId> -- --reason="..."
 
 npm run guide:status                     # 큐 전체 요약
+
+npm run guide:generate <candidateId>     # Extract → Plan → Draft → Check (승인된 후보만)
 ```
 
-후속 단계(생성·발행)는 Phase 2, Phase 3 plan에서 구현된다. 전체 설계 문서는 `docs/superpowers/specs/` 디렉터리(로컬 전용, `.gitignore` 처리)에 있다.
+Phase 2까지 구현되었다. 발행(`guide:publish`)은 Phase 3 plan에서 구현된다. 전체 설계 문서는 `docs/superpowers/specs/` 디렉터리(로컬 전용, `.gitignore` 처리)에 있다.
