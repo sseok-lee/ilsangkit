@@ -14,7 +14,7 @@ async function seedCandidate(overrides: Partial<{
 }> = {}) {
   return prisma.guideCandidate.create({
     data: {
-      sourceUrl: overrides.sourceUrl ?? 'https://test.example.com/curate/cli-001',
+      sourceUrl: overrides.sourceUrl ?? 'https://test.example.com/cli-001',
       sourceProvider: 'korea.kr',
       sourceTitle: '테스트 후보',
       sourcePublishedAt: new Date('2026-05-12'),
@@ -27,7 +27,7 @@ async function seedCandidate(overrides: Partial<{
 describe('candidate CLI handlers', () => {
   beforeEach(async () => {
     await prisma.guideCandidate.deleteMany({
-      where: { sourceUrl: { startsWith: 'https://test.example.com/curate/' } },
+      where: { sourceUrl: { startsWith: 'https://test.example.com/' } },
     });
   });
 
@@ -63,9 +63,9 @@ describe('candidate CLI handlers', () => {
   });
 
   it('listCandidates filters by status', async () => {
-    await seedCandidate({ sourceUrl: 'https://test.example.com/curate/cli-list-1' });
+    await seedCandidate({ sourceUrl: 'https://test.example.com/cli-list-1' });
     await seedCandidate({
-      sourceUrl: 'https://test.example.com/curate/cli-list-2',
+      sourceUrl: 'https://test.example.com/cli-list-2',
       status: 'approved',
     });
     const pending = await listCandidates({ status: 'pending' });
