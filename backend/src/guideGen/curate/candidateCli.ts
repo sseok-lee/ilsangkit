@@ -1,6 +1,5 @@
 import prisma from '../../lib/prisma.js';
 import { CANDIDATE_STATUS, type CandidateStatus } from '../shared/config.js';
-import { confirmDestructive } from '../shared/confirm.js';
 
 export interface ApproveOpts {
   id: string;
@@ -37,7 +36,6 @@ export async function approveCandidate(opts: ApproveOpts) {
 export interface RejectOpts {
   id: string;
   reason: string;
-  yes: boolean;
 }
 
 export async function rejectCandidate(opts: RejectOpts) {
@@ -45,8 +43,6 @@ export async function rejectCandidate(opts: RejectOpts) {
     where: { id: opts.id },
   });
   if (!cand) throw new Error(`candidate not found: ${opts.id}`);
-  const confirmed = await confirmDestructive({ yes: opts.yes, action: 'reject' });
-  if (!confirmed) throw new Error('reject requires --yes confirmation');
 
   return prisma.guideCandidate.update({
     where: { id: opts.id },

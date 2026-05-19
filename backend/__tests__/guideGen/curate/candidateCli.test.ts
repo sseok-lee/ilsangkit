@@ -56,17 +56,10 @@ describe('candidate CLI handlers', () => {
 
   it('rejectCandidate stores reason in notes', async () => {
     const cand = await seedCandidate();
-    await rejectCandidate({ id: cand.id, reason: '주제 부적합', yes: true });
+    await rejectCandidate({ id: cand.id, reason: '주제 부적합' });
     const row = await prisma.guideCandidate.findUnique({ where: { id: cand.id } });
     expect(row?.status).toBe('rejected');
     expect(row?.notes).toContain('주제 부적합');
-  });
-
-  it('rejectCandidate refuses without yes (destructive confirmation)', async () => {
-    const cand = await seedCandidate();
-    await expect(
-      rejectCandidate({ id: cand.id, reason: '...', yes: false })
-    ).rejects.toThrow(/confirm|--yes/i);
   });
 
   it('listCandidates filters by status', async () => {

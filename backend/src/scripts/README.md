@@ -121,12 +121,6 @@ npm run guide:reject  <candidateId> -- --reason="..."
 npm run guide:status                     # 큐 전체 요약
 
 npm run guide:generate <candidateId>     # Extract → Plan → Draft → Check (승인된 후보만)
-
-npm run guide:check     <candidateId>            # Check 단계만 재실행
-npm run guide:publish   <candidateId>            # 발행 (Guide row insert + 썸네일)
-npm run guide:publish   <candidateId> --force --yes  # check 실패 후보도 강제 발행
-npm run guide:unpublish <candidateId> --yes      # 발행 취소 (Guide.published=false)
 ```
 
-Phase 1~3 모두 구현되었다. 전체 설계 문서는 `docs/superpowers/specs/` (로컬 전용, `.gitignore` 처리)에 있다.
-구 `generateGuide.ts` 단일 스크립트는 제거되었다.
+Phase 2까지 구현되었다. 발행(`guide:publish`)은 Phase 3 plan에서 구현된다. 전체 설계 문서는 `docs/superpowers/specs/` 디렉터리(로컬 전용, `.gitignore` 처리)에 있다.
