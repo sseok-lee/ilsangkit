@@ -65,23 +65,25 @@ export async function generateThumbnail(
     await writeFile(tmpPath, buffer);
 
     try {
-      execFileSync(
-        'convert',
-        [tmpPath, '-resize', '800x', '-quality', '80', outputPath],
-        { stdio: 'pipe' }
-      );
-      const optimized = await stat(outputPath);
-      console.info(
-        `[thumbnail] ${(buffer.length / 1024).toFixed(0)}KB → ${(optimized.size / 1024).toFixed(0)}KB`
-      );
-    } catch {
-      await writeFile(outputPath, buffer);
-      console.info(
-        `[thumbnail] (resize skipped) ${(buffer.length / 1024).toFixed(0)}KB`
-      );
+      try {
+        execFileSync(
+          'convert',
+          [tmpPath, '-resize', '800x', '-quality', '80', outputPath],
+          { stdio: 'pipe' }
+        );
+        const optimized = await stat(outputPath);
+        console.info(
+          `[thumbnail] ${(buffer.length / 1024).toFixed(0)}KB → ${(optimized.size / 1024).toFixed(0)}KB`
+        );
+      } catch {
+        await writeFile(outputPath, buffer);
+        console.info(
+          `[thumbnail] (resize skipped) ${(buffer.length / 1024).toFixed(0)}KB`
+        );
+      }
+    } finally {
+      await unlink(tmpPath).catch(() => {});
     }
-
-    await unlink(tmpPath).catch(() => {});
     return { ok: true, thumbnailUrl: `/api/images/guides/${input.slug}.webp` };
   } catch (err) {
     console.warn('[thumbnail] failed:', err instanceof Error ? err.message : err);

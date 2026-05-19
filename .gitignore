@@ -98,6 +98,9 @@ frontend/.lighthouseci/
 .gstack/
 
 # Guide pipeline test artifacts (in case vitest.setup.ts is bypassed)
-content/guides/drafts/2026-*-seoul-ev-charger-subsidy-2026.md
-content/guides/meta/cand_test_*/
+# Ignore all draft markdowns and meta directories EXCEPT the .gitkeep markers.
+content/guides/drafts/*
+!content/guides/drafts/.gitkeep
+content/guides/meta/*/
+!content/guides/meta/.gitkeep
 backend/content/

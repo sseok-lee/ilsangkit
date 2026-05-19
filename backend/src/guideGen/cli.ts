@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import Table from 'cli-table3';
+import prisma from '../lib/prisma.js';
 import { fetchKoreaKrRss } from './ingest/sources/koreaKr.js';
 import {
   fetchMinistryRss,
@@ -123,7 +124,6 @@ program
 program
   .command('status')
   .action(async () => {
-    const prisma = (await import('../lib/prisma.js')).default;
     const grouped = await prisma.guideCandidate.groupBy({
       by: ['status'],
       _count: { _all: true },
@@ -201,10 +201,7 @@ program
   .command('check <id>')
   .description('Re-run Check stage on existing facts/plan/draft from disk')
   .action(async (id) => {
-    const prismaModule = await import('../lib/prisma.js');
-    const cand = await prismaModule.default.guideCandidate.findUnique({
-      where: { id },
-    });
+    const cand = await prisma.guideCandidate.findUnique({ where: { id } });
     if (!cand) {
       console.error(`not found: ${id}`);
       process.exitCode = 1;
@@ -225,6 +222,13 @@ program
       category: cand.matchedCategory,
       sourceContent,
       attempt: 1,
+    });
+    await prisma.guideCandidate.update({
+      where: { id },
+      data: {
+        checkReport: JSON.stringify(report, null, 2),
+        status: report.passed ? CANDIDATE_STATUS.DRAFTED : CANDIDATE_STATUS.FAILED,
+      },
     });
     console.log(`[check] passed=${report.passed}`);
     if (!report.passed) {
