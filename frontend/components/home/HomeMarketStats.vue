@@ -10,7 +10,7 @@
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</HardLink>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
       <div
         v-for="t in trends"
         :key="t.key"
@@ -26,7 +26,7 @@
         </div>
         <div class="flex items-baseline gap-2">
           <strong class="text-2xl font-black tracking-tight text-slate-900">{{ formatPriceManwon(t.avgPrice) }}</strong>
-          <span class="text-xs text-slate-400">평균</span>
+          <span class="text-xs text-slate-400">{{ t.key === 'apt-rent-wolse' ? '월 평균' : '평균' }}</span>
         </div>
         <div class="flex items-center justify-between border-t border-slate-100 pt-3">
           <div>
@@ -60,7 +60,10 @@ defineProps<{ trends: RealEstateTrend[] }>();
 function iconFor(key: RealEstateTrend['key']): string {
   if (key === 'apt-sale') return 'apartment';
   if (key === 'apt-rent-jeonse') return 'domain';
+  if (key === 'apt-rent-wolse') return 'payments';
+  if (key === 'villa-sale') return 'house';
   if (key === 'offitel-sale') return 'corporate_fare';
+  if (key === 'offitel-rent-jeonse') return 'business';
   const _exhaustive: never = key;
   return _exhaustive;
 }

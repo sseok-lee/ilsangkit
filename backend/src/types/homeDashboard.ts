@@ -11,7 +11,7 @@ export type TrendingBuildingItem = {
 };
 
 export type RealEstateTrend = {
-  key: 'apt-sale' | 'apt-rent-jeonse' | 'offitel-sale';
+  key: 'apt-sale' | 'apt-rent-jeonse' | 'apt-rent-wolse' | 'villa-sale' | 'offitel-sale' | 'offitel-rent-jeonse';
   label: string;
   avgPrice: number | null;
   txnCount: number;

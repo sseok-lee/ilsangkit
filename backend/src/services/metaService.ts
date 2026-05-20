@@ -255,18 +255,69 @@ async function aggregateOffitelSaleRange(daysFrom: number, daysTo: number): Prom
   return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
 }
 
+async function aggregateRentWolseRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+  const from = ymdNDaysAgo(daysFrom);
+  const to = ymdNDaysAgo(daysTo);
+  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
+    SELECT AVG(monthlyRent) AS avg, COUNT(*) AS cnt
+    FROM AptRentTransaction
+    WHERE rentType = '월세'
+      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
+          BETWEEN ${from} AND ${to}`;
+  const row = rows[0];
+  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+}
+
+async function aggregateVillaSaleRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+  const from = ymdNDaysAgo(daysFrom);
+  const to = ymdNDaysAgo(daysTo);
+  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
+    SELECT AVG(dealAmount) AS avg, COUNT(*) AS cnt
+    FROM VillaSaleTransaction
+    WHERE STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
+          BETWEEN ${from} AND ${to}`;
+  const row = rows[0];
+  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+}
+
+async function aggregateOffitelRentJeonseRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+  const from = ymdNDaysAgo(daysFrom);
+  const to = ymdNDaysAgo(daysTo);
+  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
+    SELECT AVG(deposit) AS avg, COUNT(*) AS cnt
+    FROM OffitelRentTransaction
+    WHERE rentType = '전세'
+      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
+          BETWEEN ${from} AND ${to}`;
+  const row = rows[0];
+  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+}
+
 /**
- * 부동산 3슬롯 통계 — 최근 7일 vs 직전 7일(8~14일 전) 평균가 + 변동률.
+ * 부동산 6슬롯 통계 — 최근 7일 vs 직전 7일(8~14일 전) 평균가 + 변동률.
  * dealYear/dealMonth/dealDay 복합 비교 때문에 raw SQL 사용.
  */
 export async function getRealEstateTrends(): Promise<RealEstateTrend[]> {
-  const [aptCurr, aptPrev, jeonseCurr, jeonsePrev, offCurr, offPrev] = await Promise.all([
+  const [
+    aptCurr, aptPrev,
+    jeonseCurr, jeonsePrev,
+    wolseCurr, wolsePrev,
+    villaCurr, villaPrev,
+    offCurr, offPrev,
+    offJeonseCurr, offJeonsePrev,
+  ] = await Promise.all([
     aggregateSaleRange(7, 0),
     aggregateSaleRange(14, 8),
     aggregateRentJeonseRange(7, 0),
     aggregateRentJeonseRange(14, 8),
+    aggregateRentWolseRange(7, 0),
+    aggregateRentWolseRange(14, 8),
+    aggregateVillaSaleRange(7, 0),
+    aggregateVillaSaleRange(14, 8),
     aggregateOffitelSaleRange(7, 0),
     aggregateOffitelSaleRange(14, 8),
+    aggregateOffitelRentJeonseRange(7, 0),
+    aggregateOffitelRentJeonseRange(14, 8),
   ]);
 
   return [
@@ -287,12 +338,36 @@ export async function getRealEstateTrends(): Promise<RealEstateTrend[]> {
       changePct: calcChangePct(jeonseCurr.avg, jeonsePrev.avg),
     },
     {
+      key: 'apt-rent-wolse',
+      label: '아파트 월세',
+      avgPrice: wolseCurr.avg,
+      txnCount: wolseCurr.count,
+      prevAvgPrice: wolsePrev.avg,
+      changePct: calcChangePct(wolseCurr.avg, wolsePrev.avg),
+    },
+    {
+      key: 'villa-sale',
+      label: '빌라 매매',
+      avgPrice: villaCurr.avg,
+      txnCount: villaCurr.count,
+      prevAvgPrice: villaPrev.avg,
+      changePct: calcChangePct(villaCurr.avg, villaPrev.avg),
+    },
+    {
       key: 'offitel-sale',
       label: '오피스텔 매매',
       avgPrice: offCurr.avg,
       txnCount: offCurr.count,
       prevAvgPrice: offPrev.avg,
       changePct: calcChangePct(offCurr.avg, offPrev.avg),
+    },
+    {
+      key: 'offitel-rent-jeonse',
+      label: '오피스텔 전세',
+      avgPrice: offJeonseCurr.avg,
+      txnCount: offJeonseCurr.count,
+      prevAvgPrice: offJeonsePrev.avg,
+      changePct: calcChangePct(offJeonseCurr.avg, offJeonsePrev.avg),
     },
   ];
 }
