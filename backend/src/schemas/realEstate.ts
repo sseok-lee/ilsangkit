@@ -14,6 +14,15 @@ export const RealEstateTypeSchema = z.enum([
 
 export type RealEstateType = z.infer<typeof RealEstateTypeSchema>;
 
+// 건물 유형 (sale/rent 거래 차원 제외)
+export const RealEstatePropertyTypeSchema = z.enum([
+  'apt',
+  'villa',
+  'offitel',
+]);
+
+export type RealEstatePropertyType = z.infer<typeof RealEstatePropertyTypeSchema>;
+
 // 부동산 검색 요청 스키마
 export const RealEstateSearchSchema = z.object({
   city: z.string().max(50).optional(),
