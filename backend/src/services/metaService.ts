@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { dateBasedStatusFilter } from './subscriptionService.js';
+import { getPropertyHotspots } from './realEstateHotspotService.js';
 import type { HomeDashboardResponse, RealEstateTrend, TrendingBuildingItem } from '../types/homeDashboard.js';
 
 export interface StatsData {
@@ -686,12 +687,13 @@ export async function getHomeDashboard(): Promise<HomeDashboardResponse> {
     return homeDashboardCache.data;
   }
 
-  const [statsResult, newlyListedToday, realEstateTrends, trendingBuildings, subscriptionSummary] = await Promise.all([
+  const [statsResult, newlyListedToday, realEstateTrends, trendingBuildings, subscriptionSummary, aptHotspots] = await Promise.all([
     getStats(),
     getNewlyListedToday(),
     getRealEstateTrends(),
     getTrendingBuildings(),
     getSubscriptionSummary(),
+    getPropertyHotspots('apt'),
   ]);
 
   const stats = statsResult.data;
@@ -705,6 +707,7 @@ export async function getHomeDashboard(): Promise<HomeDashboardResponse> {
     realEstateTrends,
     trendingBuildings,
     subscriptionSummary,
+    realEstateHotspots: { apt: aptHotspots },
   };
 
   homeDashboardCache = { data: payload, expiry: Date.now() + HOME_DASHBOARD_CACHE_TTL };

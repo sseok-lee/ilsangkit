@@ -12,6 +12,7 @@ const {
   mockSubscriptionUnitTypeAggregate,
   mockSubscriptionFindMany,
   mockGenericCount,
+  mockGetPropertyHotspots,
 } = vi.hoisted(() => ({
   mockAptSaleCount: vi.fn(),
   mockAptRentCount: vi.fn(),
@@ -24,6 +25,11 @@ const {
   mockSubscriptionUnitTypeAggregate: vi.fn(),
   mockSubscriptionFindMany: vi.fn(),
   mockGenericCount: vi.fn().mockResolvedValue(0),
+  mockGetPropertyHotspots: vi.fn(),
+}));
+
+vi.mock('../../src/services/realEstateHotspotService.js', () => ({
+  getPropertyHotspots: mockGetPropertyHotspots,
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
@@ -430,6 +436,12 @@ describe('getHomeDashboard', () => {
     mockSubscriptionFindMany.mockReset();
     mockGenericCount.mockReset();
     mockGenericCount.mockResolvedValue(0);
+    mockGetPropertyHotspots.mockReset();
+    mockGetPropertyHotspots.mockResolvedValue({
+      sale:   { rising: [], falling: [], active: [] },
+      jeonse: { rising: [], falling: [], active: [] },
+      wolse:  { active: [] },
+    });
   });
 
   it('returns composite payload from all helpers', async () => {
@@ -462,5 +474,23 @@ describe('getHomeDashboard', () => {
     setupFullMocks();
     await getHomeDashboard();
     expect(mockQueryRaw.mock.calls.length).toBeGreaterThan(before);
+  });
+
+  it('includes realEstateHotspots.apt populated by getPropertyHotspots', async () => {
+    mockGetPropertyHotspots.mockResolvedValue({
+      sale:   { rising: [{ citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+                           pricePerPyeong: 5000, txnCount: 100, changePct: 5, volumeChangePct: 10 }],
+                falling: [], active: [] },
+      jeonse: { rising: [], falling: [], active: [] },
+      wolse:  { active: [] },
+    });
+
+    setupFullMocks();
+
+    const result = await getHomeDashboard();
+    expect(result.realEstateHotspots).toBeDefined();
+    expect(result.realEstateHotspots!.apt).toBeDefined();
+    expect(result.realEstateHotspots!.apt!.sale.rising).toHaveLength(1);
+    expect(result.realEstateHotspots!.apt!.sale.rising[0].district).toBe('강남구');
   });
 });

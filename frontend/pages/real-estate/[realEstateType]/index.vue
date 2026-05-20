@@ -117,7 +117,7 @@
             <span class="font-bold">{{ count }}곳</span>
           </NuxtLink>
         </div>
-        <p class="mt-3 text-xs text-slate-500">총 {{ facilityStats.total.toLocaleString() }}개 시설</p>
+        <p class="mt-3 text-xs text-slate-500">총 {{ facilityStats.total?.toLocaleString() }}개 시설</p>
       </div>
     </SectionBlock>
 
@@ -435,6 +435,7 @@ const heroStats = computed(() => {
 const topFacilityCategories = computed(() => {
   if (!facilityStats.value) return {}
   const cats = facilityStats.value.categories
+  if (!cats) return {}
   return Object.fromEntries(
     Object.entries(cats)
       .filter(([, v]) => v > 0)

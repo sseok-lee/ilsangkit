@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   RealEstateTypeSchema,
+  RealEstatePropertyTypeSchema,
   RealEstateSearchSchema,
   RealEstateStatsSchema,
   RealEstateComplexSchema,
@@ -183,6 +184,20 @@ describe('RealEstateUnifiedSearchSchema', () => {
   it('빈 keyword도 파싱 성공해야 한다 (optional)', () => {
     const result = RealEstateUnifiedSearchSchema.parse({ keyword: '' });
     expect(result.keyword).toBe('');
+  });
+});
+
+describe('RealEstatePropertyTypeSchema', () => {
+  it('accepts apt, villa, offitel', () => {
+    expect(RealEstatePropertyTypeSchema.parse('apt')).toBe('apt');
+    expect(RealEstatePropertyTypeSchema.parse('villa')).toBe('villa');
+    expect(RealEstatePropertyTypeSchema.parse('offitel')).toBe('offitel');
+  });
+
+  it('rejects invalid values', () => {
+    expect(() => RealEstatePropertyTypeSchema.parse('house')).toThrow();
+    expect(() => RealEstatePropertyTypeSchema.parse('apt-sale')).toThrow();
+    expect(() => RealEstatePropertyTypeSchema.parse('')).toThrow();
   });
 });
 

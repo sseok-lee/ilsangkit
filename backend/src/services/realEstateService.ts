@@ -777,8 +777,7 @@ export async function getNearbyByBjd(
   }
 
   // Rent path (모든 rentType): transaction 테이블 raw SQL로 deposit + monthlyRent 함께 조회.
-  // ANY_VALUE는 group 내 임의 row의 값이라 latestPrice/monthlyRent가 같은 row가 아닐 수 있음 —
-  // 단지의 거래가 동일 임대 유형이면 값이 유사하므로 카드 표시 목적에 충분한 근사.
+  // ROW_NUMBER() 윈도우 함수로 단지별 실제 최신 행을 추출하여 정확한 거래일/가격 반환.
   for (const key of NEARBY_PROPERTY_KEYS) {
     const tableName = RENT_TRANSACTION_TABLE[key];
     const dongFilter = dongName
@@ -793,38 +792,75 @@ export async function getNearbyByBjd(
         ? Prisma.sql`AND t.rentType = '월세'`
         : Prisma.empty;
 
+    // Prisma raw query에서 ANY_VALUE/COUNT/INT 컬럼은 BigInt로 직렬화될 수 있어
+    // 모든 숫자 컬럼을 bigint | number 로 받고 Number()로 명시적 변환한다.
     const rows = await prisma.$queryRaw<Array<{
       buildingName: string;
       bjdCode: string;
       city: string;
       district: string;
       dongName: string;
-      buildYear: number | null;
-      transactionCount: bigint;
-      latestPrice: bigint | null;
-      monthlyRent: bigint | null;
-      latestDealYear: number | null;
-      latestDealMonth: number | null;
+      buildYear: bigint | number | null;
+      transactionCount: bigint | number;
+      latestPrice: bigint | number | null;
+      monthlyRent: bigint | number | null;
+      latestDealYear: bigint | number | null;
+      latestDealMonth: bigint | number | null;
     }>>`
+      WITH ranked AS (
+        SELECT
+          t.id,
+          t.buildingName,
+          t.bjdCode,
+          t.city,
+          t.district,
+          t.dongName,
+          t.buildYear,
+          t.deposit,
+          t.monthlyRent,
+          t.dealYear,
+          t.dealMonth,
+          t.dealDay,
+          ROW_NUMBER() OVER (
+            PARTITION BY t.buildingName, t.bjdCode
+            ORDER BY t.dealYear DESC, t.dealMonth DESC, COALESCE(t.dealDay, 0) DESC, t.id DESC
+          ) AS rn
+        FROM \`${Prisma.raw(tableName)}\` t
+        WHERE t.bjdCode = ${bjdCode}
+          ${rentTypeFilter}
+          ${dongFilter}
+          ${excludeFilter}
+      ),
+      counts AS (
+        SELECT
+          buildingName,
+          bjdCode,
+          COUNT(*) AS transactionCount,
+          ANY_VALUE(city) AS city,
+          ANY_VALUE(district) AS district,
+          ANY_VALUE(dongName) AS dongName,
+          ANY_VALUE(buildYear) AS buildYear
+        FROM ranked
+        GROUP BY buildingName, bjdCode
+      )
       SELECT
-        t.buildingName,
-        t.bjdCode,
-        ANY_VALUE(t.city) AS city,
-        ANY_VALUE(t.district) AS district,
-        ANY_VALUE(t.dongName) AS dongName,
-        ANY_VALUE(t.buildYear) AS buildYear,
-        COUNT(*) AS transactionCount,
-        ANY_VALUE(t.deposit) AS latestPrice,
-        ANY_VALUE(t.monthlyRent) AS monthlyRent,
-        MAX(t.dealYear) AS latestDealYear,
-        MAX(t.dealMonth) AS latestDealMonth
-      FROM \`${Prisma.raw(tableName)}\` t
-      WHERE t.bjdCode = ${bjdCode}
-        ${rentTypeFilter}
-        ${dongFilter}
-        ${excludeFilter}
-      GROUP BY t.buildingName, t.bjdCode
-      ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC
+        c.buildingName,
+        c.bjdCode,
+        c.city,
+        c.district,
+        c.dongName,
+        c.buildYear,
+        c.transactionCount,
+        r.deposit AS latestPrice,
+        r.monthlyRent,
+        r.dealYear AS latestDealYear,
+        r.dealMonth AS latestDealMonth
+      FROM counts c
+      INNER JOIN ranked r
+        ON r.buildingName = c.buildingName
+        AND r.bjdCode = c.bjdCode
+        AND r.rn = 1
+      ORDER BY r.dealYear DESC, r.dealMonth DESC, c.transactionCount DESC
       LIMIT ${limitPerType}
     `;
 
@@ -834,12 +870,12 @@ export async function getNearbyByBjd(
       city: r.city,
       district: r.district,
       dongName: r.dongName,
-      buildYear: r.buildYear ?? null,
+      buildYear: r.buildYear != null ? Number(r.buildYear) : null,
       transactionCount: Number(r.transactionCount),
       latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
       monthlyRent: r.monthlyRent != null ? Number(r.monthlyRent) : null,
-      latestDealYear: r.latestDealYear ?? null,
-      latestDealMonth: r.latestDealMonth ?? null,
+      latestDealYear: r.latestDealYear != null ? Number(r.latestDealYear) : null,
+      latestDealMonth: r.latestDealMonth != null ? Number(r.latestDealMonth) : null,
       lat: null,
       lng: null,
     }));
