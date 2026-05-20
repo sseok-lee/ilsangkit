@@ -3,7 +3,7 @@
     <div class="flex items-end justify-between gap-4 mb-4">
       <div>
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-          <span class="material-symbols-outlined text-orange-500 text-[24px]">local_fire_department</span>
+          <span class="material-symbols-outlined text-primary text-[24px]">local_fire_department</span>
           이번 주 인기 단지
         </h2>
         <p class="text-sm text-slate-500 mt-1">최근 7일 매매·전세·월세 거래가 가장 많은 단지입니다.</p>
