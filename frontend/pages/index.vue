@@ -278,12 +278,23 @@ useHead({
 
 const searchKeyword = ref('')
 
-// Stats: SSR에서 대기 (above-fold, CLS 방지)
-const { data: statsResponse } = await useAsyncData('home-stats', () =>
-  $fetch<{ success: boolean; data: Record<string, unknown> }>(
-    `${config.public.apiBase}/api/meta/stats`
-  )
-)
+// 홈 대시보드 SSR (above-fold, CLS 방지).
+// /api/meta/home-dashboard 응답이 /api/meta/stats 의 superset(total, buildingCount,
+// subscriptionActiveCount 포함) + 시장 트렌드 / 인기 단지 / 청약 요약을 같이 제공하므로
+// 별도 home-stats fetch는 제거함.
+const { data: dashboardResponse } = await useHomeDashboard()
+const dashboard = computed(() => dashboardResponse.value?.data ?? null)
+const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
+const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })
+const subscriptionSummary = computed(() => dashboard.value?.subscriptionSummary ?? null)
+const newlyListedToday = computed(() => dashboard.value?.newlyListedToday ?? 0)
+
+// Hero 통계박스에서 사용하는 3개 필드만 추림.
+const stats = computed(() => ({
+  total: dashboard.value?.total ?? 0,
+  buildingCount: dashboard.value?.buildingCount ?? 0,
+  subscriptionActiveCount: dashboard.value?.subscriptionActiveCount ?? 0,
+}))
 
 const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
   $fetch<{ success: boolean; data: GuideSummary[] }>(
@@ -292,30 +303,6 @@ const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
   )
 )
 const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
-
-// 홈 대시보드 (시장 트렌드, 인기 단지, 청약 요약)
-const { data: dashboardResponse } = await useHomeDashboard()
-const dashboard = computed(() => dashboardResponse.value?.data ?? null)
-const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
-const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })
-const subscriptionSummary = computed(() => dashboard.value?.subscriptionSummary ?? null)
-const newlyListedToday = computed(() => dashboard.value?.newlyListedToday ?? 0)
-
-const stats = computed(() => {
-  const d = (statsResponse.value?.data ?? {}) as Record<string, number> & {
-    realEstate?: Record<string, number>
-    realEstateBuildings?: Record<string, number>
-    subscriptionActiveCount?: number
-  }
-  return {
-    total: d.total ?? 0,
-    buildingCount: d.buildingCount ?? 0,
-    regionCount: d.regionCount ?? 0,
-    realEstate: d.realEstate ?? { aptSale: 0, aptRent: 0, villaSale: 0, villaRent: 0, offitelSale: 0, offitelRent: 0 },
-    realEstateBuildings: d.realEstateBuildings ?? { apt: 0, villa: 0, offitel: 0 },
-    subscriptionActiveCount: d.subscriptionActiveCount ?? 0,
-  }
-})
 
 // 등록 부동산 건물 수 (만 단위, 소수점 1자리)
 const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFixed(1))
