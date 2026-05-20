@@ -39,8 +39,8 @@
               class="text-sm font-bold flex items-center justify-end gap-0.5"
               :class="changeColor(t.changePct)"
             >
-              <span v-if="t.changePct !== null && t.changePct > 0" class="material-symbols-outlined text-[14px]">arrow_drop_up</span>
-              <span v-else-if="t.changePct !== null && t.changePct < 0" class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+              <span v-if="t.changePct !== null && Math.abs(t.changePct) >= 0.05 && t.changePct > 0" class="material-symbols-outlined text-[14px]">arrow_drop_up</span>
+              <span v-else-if="t.changePct !== null && Math.abs(t.changePct) >= 0.05 && t.changePct < 0" class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
               {{ formatChange(t.changePct) }}
             </div>
           </div>
@@ -60,11 +60,14 @@ defineProps<{ trends: RealEstateTrend[] }>();
 function iconFor(key: RealEstateTrend['key']): string {
   if (key === 'apt-sale') return 'apartment';
   if (key === 'apt-rent-jeonse') return 'domain';
-  return 'corporate_fare';
+  if (key === 'offitel-sale') return 'corporate_fare';
+  const _exhaustive: never = key;
+  return _exhaustive;
 }
 
 function changeColor(pct: number | null): string {
   if (pct === null) return 'text-slate-400';
+  if (Math.abs(pct) < 0.05) return 'text-slate-400';
   if (pct > 0) return 'text-red-500';
   if (pct < 0) return 'text-blue-500';
   return 'text-slate-400';

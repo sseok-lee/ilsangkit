@@ -28,4 +28,11 @@ describe('formatChange', () => {
   it('null returns "—"', () => {
     expect(formatChange(null)).toBe('—');
   });
+  it('zero returns 0.0% with no sign', () => {
+    expect(formatChange(0)).toBe('0.0%');
+  });
+  it('|pct|<0.05 rounds to 0.0% without sign', () => {
+    expect(formatChange(0.04)).toBe('0.0%');
+    expect(formatChange(-0.04)).toBe('0.0%');
+  });
 });
