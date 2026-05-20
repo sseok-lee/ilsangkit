@@ -54,14 +54,14 @@ const iconColor = computed(() => SIGNAL_META[props.signal].iconColor);
 const caption = computed(() => SIGNAL_META[props.signal].caption);
 const isWolse = computed(() => props.txnType === 'wolse');
 
+// 부동산 지역 허브 페이지(/real-estate/{slug}/{city}/{district})로 직접 이동.
+// 전세/월세 구분은 페이지 내부 토글에서 처리하되 query param으로 힌트 전달.
 function buildHref(region: HotspotRegion): string {
   const mode: 'sale' | 'rent' = props.txnType === 'sale' ? 'sale' : 'rent';
   const slug = toApiSlug(props.propertyType, mode);
-  const params = new URLSearchParams();
-  params.set('city', region.citySlug);
-  params.set('district', region.districtSlug);
-  if (props.txnType === 'jeonse') params.set('rentType', '전세');
-  if (props.txnType === 'wolse') params.set('rentType', '월세');
-  return `/real-estate/${slug}?${params.toString()}`;
+  const base = `/real-estate/${slug}/${region.citySlug}/${region.districtSlug}`;
+  if (props.txnType === 'jeonse') return `${base}?rentType=${encodeURIComponent('전세')}`;
+  if (props.txnType === 'wolse') return `${base}?rentType=${encodeURIComponent('월세')}`;
+  return base;
 }
 </script>

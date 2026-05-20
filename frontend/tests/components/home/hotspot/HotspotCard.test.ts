@@ -61,7 +61,7 @@ describe('HotspotCard', () => {
       global: { stubs },
     });
     const row = wrapper.findComponent({ name: 'HotspotRow' });
-    expect(row.props('href')).toBe('/real-estate/apt-sale?city=seoul&district=gangnam-gu');
+    expect(row.props('href')).toBe('/real-estate/apt-sale/seoul/gangnam-gu');
   });
 
   it('jeonse appends rentType=전세 to href (URL-encoded)', () => {
@@ -80,6 +80,6 @@ describe('HotspotCard', () => {
       global: { stubs },
     });
     const row = wrapper.findComponent({ name: 'HotspotRow' });
-    expect(row.props('href')).toBe('/real-estate/offitel-rent?city=seoul&district=gangnam-gu&rentType=%EC%A0%84%EC%84%B8');
+    expect(row.props('href')).toBe('/real-estate/offitel-rent/seoul/gangnam-gu?rentType=%EC%A0%84%EC%84%B8');
   });
 });
