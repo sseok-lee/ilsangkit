@@ -28,6 +28,39 @@ export interface SubscriptionImminent {
   endDate: string;
 }
 
+export interface HotspotRegion {
+  citySlug: string;
+  city: string;
+  districtSlug: string;
+  district: string;
+  pricePerPyeong: number | null;
+  txnCount: number;
+  changePct: number | null;
+  volumeChangePct: number | null;
+}
+
+export interface HotspotBundle {
+  rising: HotspotRegion[];
+  falling: HotspotRegion[];
+  active: HotspotRegion[];
+}
+
+export interface WolseHotspotBundle {
+  active: HotspotRegion[];
+}
+
+export interface PropertyHotspots {
+  sale: HotspotBundle;
+  jeonse: HotspotBundle;
+  wolse: WolseHotspotBundle;
+}
+
+export type RealEstateHotspots = Partial<{
+  apt: PropertyHotspots;
+  villa: PropertyHotspots;
+  offitel: PropertyHotspots;
+}>;
+
 export interface HomeDashboard {
   total: number;
   buildingCount: number;
@@ -42,6 +75,7 @@ export interface HomeDashboard {
     avgSupplyPrice: number | null;
     imminent: SubscriptionImminent[];
   };
+  realEstateHotspots?: RealEstateHotspots;
 }
 
 interface ApiEnvelope {
