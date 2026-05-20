@@ -25,7 +25,7 @@
           <span class="text-[11px] text-slate-400">최근 7일</span>
         </div>
         <div class="flex items-baseline gap-2">
-          <strong class="text-2xl font-black tracking-tight text-slate-900">{{ formatPrice(t.avgPrice) }}</strong>
+          <strong class="text-2xl font-black tracking-tight text-slate-900">{{ formatPriceManwon(t.avgPrice) }}</strong>
           <span class="text-xs text-slate-400">평균</span>
         </div>
         <div class="flex items-center justify-between border-t border-slate-100 pt-3">
@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import HardLink from '~/components/common/HardLink.vue';
-import { formatPrice, formatChange } from '~/utils/priceFormat';
+import { formatPriceManwon, formatChange } from '~/utils/priceFormat';
 import type { RealEstateTrend } from '~/composables/useHomeDashboard';
 
 defineProps<{ trends: RealEstateTrend[] }>();

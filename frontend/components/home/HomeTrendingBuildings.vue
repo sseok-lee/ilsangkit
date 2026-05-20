@@ -60,7 +60,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import HardLink from '~/components/common/HardLink.vue';
-import { formatPrice } from '~/utils/priceFormat';
+import { formatPriceManwon } from '~/utils/priceFormat';
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl';
 import type { TrendingBuildingItem } from '~/composables/useHomeDashboard';
 
@@ -110,11 +110,11 @@ function buildUrl(type: ColType, b: TrendingBuildingItem): string {
 
 function formatBuildingPrice(type: ColType, b: TrendingBuildingItem): string {
   if (type === 'wolse') {
-    const deposit = formatPrice(b.avgPrice);
+    const deposit = formatPriceManwon(b.avgPrice);
     const monthly = b.avgMonthlyRent !== null ? Math.round(b.avgMonthlyRent).toLocaleString('ko-KR') : '—';
     return `${deposit}/${monthly}`;
   }
-  return formatPrice(b.avgPrice);
+  return formatPriceManwon(b.avgPrice);
 }
 
 interface Column {
