@@ -1,5 +1,5 @@
 <template>
-  <section v-if="hasAny" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <section v-if="hasAnyContent" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="flex items-end justify-between gap-4 mb-4">
       <div>
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -50,8 +50,8 @@
       </span>
     </div>
 
-    <!-- 카드 그리드 (기존 유지) -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <!-- 카드 그리드 (접수중/예정 중 하나라도 있을 때만) -->
+    <div v-if="hasAny" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <HardLink
         v-for="item in ongoing"
         :key="`ongoing-${item.id}`"
@@ -74,8 +74,8 @@
       </HardLink>
     </div>
 
-    <!-- 누락 메타 라인 -->
-    <p v-if="summary" class="text-[11px] text-slate-400 mt-3 text-right">
+    <!-- 누락 메타 라인 (카드 그리드 있을 때만 의미 있음) -->
+    <p v-if="summary && hasAny" class="text-[11px] text-slate-400 mt-3 text-right">
       접수중 {{ summary.closingThisWeek }}건 중 {{ ongoing.length }}건 · 예정 {{ summary.upcomingNextWeek }}건 중 {{ upcoming.length }}건 표시
       <HardLink to="/subscription" class="ml-2 hover:underline">전체 보기 →</HardLink>
     </p>
@@ -83,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed, toRefs } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import StatusBadge from '~/components/common/StatusBadge.vue'
 import type { HomeSubscriptionItem } from '~/composables/useHomeSubscriptions'
@@ -96,9 +97,19 @@ interface SubscriptionSummary {
   imminent: Array<{ id: number; houseName: string; regionName: string; endDate: string }>
 }
 
-const { summary } = defineProps<{ summary?: SubscriptionSummary | null }>()
+const props = defineProps<{ summary?: SubscriptionSummary | null }>()
+const { summary } = toRefs(props)
 
 const { ongoing, upcoming, hasAny } = useHomeSubscriptions()
+
+// 카드 / 요약 카운트 / 임박 리스트 중 하나라도 있으면 섹션 표시.
+// 셋 다 없으면 메인에서 청약 섹션 자체를 숨김.
+const hasAnyContent = computed(() => {
+  if (hasAny.value) return true
+  const s = summary.value
+  if (!s) return false
+  return s.closingThisWeek > 0 || s.upcomingNextWeek > 0 || s.imminent.length > 0
+})
 
 // SSR/CSR 양쪽에서 동일한 "오늘" 값을 보장. `new Date()` 를 매 호출마다 부르면
 // SSR/CSR 시점차로 D-day 가 다르게 계산돼 hydration mismatch 발생.
