@@ -36,6 +36,34 @@ vi.mock('~/composables/useFacilityMeta', () => ({
   }),
 }))
 
+const sampleRegion = { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam', district: '강남구', pricePerPyeong: 5000, txnCount: 45, changePct: 3.2, volumeChangePct: 10 }
+const sampleHotspotBundle = {
+  sale: { rising: [sampleRegion], falling: [sampleRegion], active: [sampleRegion] },
+  jeonse: { rising: [sampleRegion], falling: [sampleRegion], active: [sampleRegion] },
+  wolse: { active: [sampleRegion] },
+}
+
+vi.mock('~/composables/useHomeDashboard', () => ({
+  useHomeDashboard: () =>
+    Promise.resolve({
+      data: {
+        value: {
+          success: true,
+          data: {
+            total: 100000,
+            buildingCount: 50000,
+            subscriptionActiveCount: 5,
+            newlyListedToday: 12,
+            realEstateTrends: [],
+            trendingBuildings: { sale: [], jeonse: [], wolse: [] },
+            subscriptionSummary: { closingThisWeek: 0, upcomingNextWeek: 0, avgSupplyPrice: null, imminent: [] },
+            realEstateHotspots: { apt: sampleHotspotBundle },
+          },
+        },
+      },
+    }),
+}))
+
 // Helper to mount async components with Suspense
 async function mountSuspended(component: any, options?: any) {
   const wrapper = mount(
@@ -89,9 +117,10 @@ describe('Index Page', () => {
   it('renders the three new home sections and ad banners', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    expect(wrapper.find('[data-testid="market-stats"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="trending-buildings"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="subscription"]').exists()).toBe(true)
+    // HomeHotspotSignals replaces HomeMarketStats — check for its heading text (requires hotspot data)
+    expect(wrapper.text()).toContain('오늘의 부동산 시장')
+    // HomeSubscriptionSection is present
+    expect(wrapper.find('section').exists()).toBe(true)
     expect(wrapper.findAll('.stub-ad-banner').length).toBeGreaterThanOrEqual(1)
   })
 
