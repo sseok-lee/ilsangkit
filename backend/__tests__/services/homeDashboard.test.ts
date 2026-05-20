@@ -143,19 +143,25 @@ describe('getRealEstateTrends', () => {
     mockQueryRaw.mockReset();
   });
 
-  it('returns 3 slots: apt-sale, apt-rent-jeonse, offitel-sale with avg / count / changePct', async () => {
+  it('returns 6 slots: apt-sale, apt-rent-jeonse, apt-rent-wolse, villa-sale, offitel-sale, offitel-rent-jeonse with avg / count / changePct', async () => {
     mockQueryRaw
       .mockResolvedValueOnce([{ avg: 54000, cnt: BigInt(2481) }])  // aptCurr
       .mockResolvedValueOnce([{ avg: 52800, cnt: BigInt(2300) }])  // aptPrev
       .mockResolvedValueOnce([{ avg: 31000, cnt: BigInt(1742) }])  // jeonseCurr
       .mockResolvedValueOnce([{ avg: 31250, cnt: BigInt(1800) }])  // jeonsePrev
+      .mockResolvedValueOnce([{ avg: 85,    cnt: BigInt(920) }])   // wolseCurr
+      .mockResolvedValueOnce([{ avg: 80,    cnt: BigInt(870) }])   // wolsePrev
+      .mockResolvedValueOnce([{ avg: 18000, cnt: BigInt(540) }])   // villaCurr
+      .mockResolvedValueOnce([{ avg: 17500, cnt: BigInt(500) }])   // villaPrev
       .mockResolvedValueOnce([{ avg: 22000, cnt: BigInt(318) }])   // offCurr
-      .mockResolvedValueOnce([{ avg: null,  cnt: BigInt(0) }]);    // offPrev
+      .mockResolvedValueOnce([{ avg: null,  cnt: BigInt(0) }])     // offPrev
+      .mockResolvedValueOnce([{ avg: 15000, cnt: BigInt(210) }])   // offJeonseCurr
+      .mockResolvedValueOnce([{ avg: 14800, cnt: BigInt(200) }]);  // offJeonsePrev
 
     const trends = await getRealEstateTrends();
 
-    expect(trends).toHaveLength(3);
-    const [aptSale, jeonse, offitelSale] = trends;
+    expect(trends).toHaveLength(6);
+    const [aptSale, jeonse, wolse, villa, offitelSale, offitelJeonse] = trends;
 
     expect(aptSale).toMatchObject({ key: 'apt-sale', avgPrice: 54000, txnCount: 2481, prevAvgPrice: 52800 });
     expect(aptSale.changePct).toBeCloseTo(((54000 - 52800) / 52800) * 100, 3);
@@ -163,13 +169,23 @@ describe('getRealEstateTrends', () => {
     expect(jeonse).toMatchObject({ key: 'apt-rent-jeonse', avgPrice: 31000 });
     expect(jeonse.changePct).toBeLessThan(0);
 
+    expect(wolse).toMatchObject({ key: 'apt-rent-wolse', label: '아파트 월세', avgPrice: 85, txnCount: 920, prevAvgPrice: 80 });
+    expect(wolse.changePct).toBeCloseTo(((85 - 80) / 80) * 100, 3);
+
+    expect(villa).toMatchObject({ key: 'villa-sale', label: '빌라 매매', avgPrice: 18000, txnCount: 540, prevAvgPrice: 17500 });
+    expect(villa.changePct).toBeGreaterThan(0);
+
     expect(offitelSale).toMatchObject({ key: 'offitel-sale', avgPrice: 22000, prevAvgPrice: null, changePct: null });
+
+    expect(offitelJeonse).toMatchObject({ key: 'offitel-rent-jeonse', label: '오피스텔 전세', avgPrice: 15000, txnCount: 210, prevAvgPrice: 14800 });
+    expect(offitelJeonse.changePct).toBeGreaterThan(0);
   });
 
   it('returns null avgPrice and changePct when current period has 0 rows', async () => {
     mockQueryRaw.mockResolvedValue([{ avg: null, cnt: BigInt(0) }]);
 
     const trends = await getRealEstateTrends();
+    expect(trends).toHaveLength(6);
     for (const t of trends) {
       expect(t.avgPrice).toBeNull();
       expect(t.changePct).toBeNull();
@@ -295,7 +311,7 @@ function setupFullMocks() {
   // subscription.count called 3 times total: 1 (getStats) + 2 (getSubscriptionSummary)
   mockSubscriptionCount.mockResolvedValue(5);
 
-  // $queryRaw sequence: 2 (stats) + 6 (trends) + 3 (buildings) = 11 total
+  // $queryRaw sequence: 2 (stats) + 12 (trends) + 3 (buildings) = 17 total
   mockQueryRaw
     .mockResolvedValueOnce([{ cnt: BigInt(500) }])                                            // stats: evCharger
     .mockResolvedValueOnce([{ apt: BigInt(20000), villa: BigInt(8000), offitel: BigInt(2000) }]) // stats: buildingCount
@@ -303,8 +319,14 @@ function setupFullMocks() {
     .mockResolvedValueOnce([{ avg: 52000, cnt: BigInt(90) }])   // trends: aptPrev
     .mockResolvedValueOnce([{ avg: 30000, cnt: BigInt(80) }])   // trends: jeonseCurr
     .mockResolvedValueOnce([{ avg: 31000, cnt: BigInt(85) }])   // trends: jeonsePrev
+    .mockResolvedValueOnce([{ avg: 85,    cnt: BigInt(50) }])   // trends: wolseCurr
+    .mockResolvedValueOnce([{ avg: 80,    cnt: BigInt(45) }])   // trends: wolsePrev
+    .mockResolvedValueOnce([{ avg: 18000, cnt: BigInt(60) }])   // trends: villaCurr
+    .mockResolvedValueOnce([{ avg: 17500, cnt: BigInt(55) }])   // trends: villaPrev
     .mockResolvedValueOnce([{ avg: 22000, cnt: BigInt(30) }])   // trends: offCurr
     .mockResolvedValueOnce([{ avg: null,  cnt: BigInt(0) }])    // trends: offPrev
+    .mockResolvedValueOnce([{ avg: 15000, cnt: BigInt(20) }])   // trends: offJeonseCurr
+    .mockResolvedValueOnce([{ avg: 14800, cnt: BigInt(18) }])   // trends: offJeonsePrev
     .mockResolvedValueOnce([])                                  // buildings: sale
     .mockResolvedValueOnce([])                                  // buildings: jeonse
     .mockResolvedValueOnce([]);                                 // buildings: wolse
@@ -336,7 +358,7 @@ describe('getHomeDashboard', () => {
     const result = await getHomeDashboard();
     expect(result).toHaveProperty('total');
     expect(result).toHaveProperty('newlyListedToday');
-    expect(result.realEstateTrends).toHaveLength(3);
+    expect(result.realEstateTrends).toHaveLength(6);
     expect(result.trendingBuildings).toHaveProperty('sale');
     expect(result.trendingBuildings).toHaveProperty('jeonse');
     expect(result.trendingBuildings).toHaveProperty('wolse');
