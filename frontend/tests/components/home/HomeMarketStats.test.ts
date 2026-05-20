@@ -4,15 +4,15 @@ import { mount } from '@vue/test-utils';
 import HomeMarketStats from '~/components/home/HomeMarketStats.vue';
 
 const fullTrends = [
-  { key: 'apt-sale',           label: '아파트 매매',   avgPrice: 54000, txnCount: 2481, prevAvgPrice: 52800, changePct: 2.27 },
-  { key: 'apt-rent-jeonse',    label: '아파트 전세',   avgPrice: 31000, txnCount: 1742, prevAvgPrice: 31250, changePct: -0.8 },
-  { key: 'apt-rent-wolse',     label: '아파트 월세',   avgPrice: 85,    txnCount: 920,  prevAvgPrice: 80,    changePct: 6.25 },
-  { key: 'villa-sale',         label: '빌라 매매',     avgPrice: 18000, txnCount: 540,  prevAvgPrice: 17500, changePct: 2.86 },
-  { key: 'villa-rent-jeonse',  label: '빌라 전세',     avgPrice: 12000, txnCount: 320,  prevAvgPrice: 11800, changePct: 1.69 },
-  { key: 'villa-rent-wolse',   label: '빌라 월세',     avgPrice: 55,    txnCount: 180,  prevAvgPrice: 52,    changePct: 5.77 },
-  { key: 'offitel-sale',       label: '오피스텔 매매', avgPrice: 22000, txnCount: 318,  prevAvgPrice: null,  changePct: null },
-  { key: 'offitel-rent-jeonse',label: '오피스텔 전세', avgPrice: 15000, txnCount: 210,  prevAvgPrice: 14800, changePct: 1.35 },
-  { key: 'offitel-rent-wolse', label: '오피스텔 월세', avgPrice: 72,    txnCount: 95,   prevAvgPrice: 68,    changePct: 5.88 },
+  { key: 'apt-sale',           label: '아파트 매매',   pricePerPyeong: 6500, txnCount: 2481, prevPricePerPyeong: 6450, changePct: 0.78 },
+  { key: 'apt-rent-jeonse',    label: '아파트 전세',   pricePerPyeong: 3700, txnCount: 1742, prevPricePerPyeong: 3730, changePct: -0.8 },
+  { key: 'apt-rent-wolse',     label: '아파트 월세',   pricePerPyeong: 10,   txnCount: 920,  prevPricePerPyeong: 9.5,  changePct: 5.26 },
+  { key: 'villa-sale',         label: '빌라 매매',     pricePerPyeong: 2100, txnCount: 540,  prevPricePerPyeong: 2080, changePct: 0.96 },
+  { key: 'villa-rent-jeonse',  label: '빌라 전세',     pricePerPyeong: 1400, txnCount: 320,  prevPricePerPyeong: 1380, changePct: 1.45 },
+  { key: 'villa-rent-wolse',   label: '빌라 월세',     pricePerPyeong: 6.4,  txnCount: 180,  prevPricePerPyeong: 6.1,  changePct: 4.92 },
+  { key: 'offitel-sale',       label: '오피스텔 매매', pricePerPyeong: 2600, txnCount: 318,  prevPricePerPyeong: null, changePct: null },
+  { key: 'offitel-rent-jeonse',label: '오피스텔 전세', pricePerPyeong: 1700, txnCount: 210,  prevPricePerPyeong: 1680, changePct: 1.19 },
+  { key: 'offitel-rent-wolse', label: '오피스텔 월세', pricePerPyeong: 8.4,  txnCount: 95,   prevPricePerPyeong: 7.9,  changePct: 6.33 },
 ];
 
 describe('HomeMarketStats', () => {
@@ -55,7 +55,7 @@ describe('HomeMarketStats', () => {
   it('missing slot renders dashes', () => {
     // Only provide apt-sale, leave all others missing
     const partial = [
-      { key: 'apt-sale', label: '아파트 매매', avgPrice: 54000, txnCount: 2481, prevAvgPrice: 52800, changePct: 2.27 },
+      { key: 'apt-sale', label: '아파트 매매', pricePerPyeong: 6500, txnCount: 2481, prevPricePerPyeong: 6450, changePct: 0.78 },
     ];
     const wrapper = mount(HomeMarketStats, { props: { trends: partial } });
     // Still renders 3 cards
