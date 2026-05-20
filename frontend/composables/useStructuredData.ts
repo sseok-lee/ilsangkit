@@ -233,23 +233,67 @@ export function useStructuredData() {
 
   /**
    * ItemList 스키마 (검색 결과/목록용)
+   *
+   * 확장된 ItemListItem 타입:
+   *  - type/address 를 전달하면 nested item 객체(Apartment, Place 등)로 풍부하게 생성
+   *  - 미전달 시 기존 방식(ListItem with name/url at top level) 유지 — backward compat
    */
-  function setItemListSchema(items: Array<{ name: string; url: string; position?: number }>) {
-    const schema = {
+  type ItemListItem = {
+    name: string
+    url: string
+    position?: number
+    type?: 'Apartment' | 'Place'
+    address?: {
+      addressLocality?: string
+      addressRegion?: string
+      addressCountry?: string
+    }
+  }
+
+  function setItemListSchema(
+    items: ItemListItem[],
+    options?: { name?: string; description?: string; key?: string },
+  ) {
+    const resolveUrl = (url: string) =>
+      url.startsWith('http') ? url : `${SITE_URL}${url}`
+
+    const schema: Record<string, unknown> = {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      itemListElement: items.map((item, index) => ({
-        '@type': 'ListItem',
-        position: item.position || index + 1,
-        name: item.name,
-        url: item.url.startsWith('http') ? item.url : `${SITE_URL}${item.url}`,
-      })),
+      ...(options?.name ? { name: options.name } : {}),
+      ...(options?.description ? { description: options.description } : {}),
+      itemListElement: items.map((item, index) => {
+        const base = {
+          '@type': 'ListItem',
+          position: item.position ?? index + 1,
+        }
+        if (item.type || item.address) {
+          return {
+            ...base,
+            item: {
+              '@type': item.type ?? 'Place',
+              name: item.name,
+              url: resolveUrl(item.url),
+              ...(item.address
+                ? {
+                    address: {
+                      '@type': 'PostalAddress',
+                      addressCountry: 'KR',
+                      ...item.address,
+                    },
+                  }
+                : {}),
+            },
+          }
+        }
+        return { ...base, name: item.name, url: resolveUrl(item.url) }
+      }),
     }
 
     useHead({
       script: [
         {
-          key: 'jsonld-itemlist',
+          key: options?.key ?? 'jsonld-itemlist',
           type: 'application/ld+json',
           innerHTML: JSON.stringify(schema),
         },

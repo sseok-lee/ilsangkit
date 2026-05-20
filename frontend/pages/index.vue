@@ -9,12 +9,19 @@
       <div class="absolute bottom-0 left-0 right-0 h-10 md:h-12 bg-background-light/80"></div>
 
       <div class="relative z-10 flex flex-col gap-5 md:max-w-[680px] md:mx-auto">
-        <!-- 데이터 기준 배지 -->
-        <div class="flex items-center gap-2 text-xs">
+        <!-- 라이브 뱃지 -->
+        <div class="flex items-center gap-2 text-xs flex-wrap">
           <span class="w-2 h-2 rounded-full bg-primary shrink-0"></span>
           <span class="text-primary font-semibold">공공데이터 기반</span>
           <span class="hidden md:inline text-slate-300">·</span>
           <span class="hidden md:inline text-slate-500">공공데이터포털 · 국토교통부</span>
+          <span v-if="newlyListedToday > 0" class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold">
+            <span class="relative flex w-2 h-2">
+              <span class="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-75 animate-ping"></span>
+              <span class="relative inline-flex w-2 h-2 rounded-full bg-red-500"></span>
+            </span>
+            오늘 신규 등록 {{ newlyListedToday.toLocaleString('ko-KR') }}건
+          </span>
         </div>
 
         <!-- 헤드라인 + 서브텍스트 -->
@@ -79,79 +86,19 @@
       </div>
     </section>
 
-    <!-- "오늘 확인할 정보" 3카드 -->
-    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div class="mb-4">
-        <h2 class="text-lg font-bold text-slate-900">오늘 확인할 정보</h2>
-        <p class="text-sm text-slate-500 mt-1">자주 찾는 세 가지 흐름을 먼저 확인하세요.</p>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-        <HardLink
-          v-for="card in todayCards"
-          :key="card.title"
-          :to="card.to"
-          class="group flex items-start gap-4 p-5 border border-line rounded-2xl shadow-card hover:shadow-md hover:bg-primary/5 transition-all duration-300 bg-white"
-        >
-          <div class="w-11 h-11 rounded-lg bg-primary/10 shrink-0 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <img :src="`/icons/category/${card.icon}.webp?v2`" :alt="card.title" class="w-8 h-8" width="32" height="32" loading="lazy" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-slate-900 font-bold text-[17px]">{{ card.title }}</h3>
-            <p class="text-slate-500 text-xs mt-1">{{ card.desc }}</p>
-            <span v-if="card.stat" class="inline-flex mt-2 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-bold">
-              {{ card.stat }}
-            </span>
-          </div>
-        </HardLink>
-      </div>
-    </section>
+    <!-- 오늘의 부동산 시장 통계 -->
+    <HomeMarketStats :trends="trends" />
 
-    <!-- 부동산 실거래가 3카드 -->
-    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div class="flex items-end justify-between gap-4 mb-4">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">apartment</span>
-            부동산 실거래가
-          </h2>
-          <p class="text-sm text-slate-500 mt-1">매매·전월세 거래 내역을 건물 유형별로 확인하세요.</p>
-        </div>
-        <HardLink to="/real-estate" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</HardLink>
-      </div>
-      <div class="grid grid-cols-3 gap-2 md:gap-4">
-        <HardLink
-          v-for="link in realEstateLinks"
-          :key="link.to"
-          :to="link.to"
-          :aria-label="`${link.label} 실거래가`"
-          class="group flex flex-col md:flex-row md:items-start gap-2 md:gap-4 p-4 md:p-5 border border-line rounded-2xl shadow-card hover:shadow-md hover:bg-primary/5 transition-all duration-300 bg-white"
-        >
-          <div class="w-12 h-12 rounded-xl bg-primary/10 shrink-0 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <img :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-9 h-9" width="36" height="36" loading="lazy" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-slate-900 font-bold text-[15px] md:text-[17px]">{{ link.label }}</h3>
-            <p class="text-slate-500 text-[11px] md:text-xs mt-1 truncate">{{ link.sub }}</p>
-            <div class="flex flex-wrap gap-1 mt-2">
-              <span class="inline-flex px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] md:text-xs font-bold">
-                {{ link.count }}
-              </span>
-              <span class="hidden md:inline-flex px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] md:text-xs font-semibold">
-                거래 {{ link.txnCount }}
-              </span>
-            </div>
-          </div>
-        </HardLink>
-      </div>
-    </section>
+    <!-- 이번 주 인기 단지 -->
+    <HomeTrendingBuildings :buildings="trendingBuildings" />
 
-    <!-- Ad: 부동산 실거래가 이후 -->
+    <!-- Ad: 인기 단지 이후 -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
       <AdBanner />
     </div>
 
     <!-- 청약·임대 일정 섹션 -->
-    <HomeSubscriptionSection />
+    <HomeSubscriptionSection :summary="subscriptionSummary" />
 
     <!-- Ad: 청약·임대 이후 -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -291,11 +238,15 @@ import HardLink from '~/components/common/HardLink.vue'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
+import HomeMarketStats from '~/components/home/HomeMarketStats.vue'
+import HomeTrendingBuildings from '~/components/home/HomeTrendingBuildings.vue'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useHomeDashboard } from '~/composables/useHomeDashboard'
 import { CITY_LINKS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
+import { toRealEstateUrl } from '~/utils/realEstateUrl'
 
 const config = useRuntimeConfig()
 
@@ -304,7 +255,7 @@ const { setHomeMeta } = useFacilityMeta()
 setHomeMeta()
 
 // JSON-LD 구조화된 데이터 - 기존 유지
-const { setWebsiteSchema, setOrganizationSchema, setDatasetSchema } = useStructuredData()
+const { setWebsiteSchema, setOrganizationSchema, setDatasetSchema, setItemListSchema } = useStructuredData()
 setWebsiteSchema()
 setOrganizationSchema()
 setDatasetSchema({
@@ -328,12 +279,57 @@ useHead({
 
 const searchKeyword = ref('')
 
-// Stats: SSR에서 대기 (above-fold, CLS 방지)
-const { data: statsResponse } = await useAsyncData('home-stats', () =>
-  $fetch<{ success: boolean; data: Record<string, unknown> }>(
-    `${config.public.apiBase}/api/meta/stats`
-  )
-)
+// 홈 대시보드 SSR (above-fold, CLS 방지).
+// /api/meta/home-dashboard 응답이 /api/meta/stats 의 superset(total, buildingCount,
+// subscriptionActiveCount 포함) + 시장 트렌드 / 인기 단지 / 청약 요약을 같이 제공하므로
+// 별도 home-stats fetch는 제거함.
+const { data: dashboardResponse } = await useHomeDashboard()
+const dashboard = computed(() => dashboardResponse.value?.data ?? null)
+const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
+const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })
+const subscriptionSummary = computed(() => dashboard.value?.subscriptionSummary ?? null)
+const newlyListedToday = computed(() => dashboard.value?.newlyListedToday ?? 0)
+
+// Hero 통계박스에서 사용하는 3개 필드만 추림.
+const stats = computed(() => ({
+  total: dashboard.value?.total ?? 0,
+  buildingCount: dashboard.value?.buildingCount ?? 0,
+  subscriptionActiveCount: dashboard.value?.subscriptionActiveCount ?? 0,
+}))
+
+// ItemList JSON-LD — 트렌딩 단지 TOP 15 (매매 5 + 전세 5 + 월세 5)
+if (dashboard.value) {
+  const buildings = dashboard.value.trendingBuildings
+  const buildItems = (
+    list: typeof buildings.sale,
+    txnLabel: string,
+    type: 'apt-sale' | 'apt-rent',
+    posOffset: number,
+  ) => list.map((b, i) => ({
+    name: `${b.buildingName} (${txnLabel})`,
+    url: toRealEstateUrl({ type, city: b.city, district: b.district, buildingName: b.buildingName }),
+    position: posOffset + i + 1,
+    type: 'Apartment' as const,
+    address: {
+      addressLocality: b.district,
+      addressRegion: b.city,
+    },
+  }))
+
+  const allItems = [
+    ...buildItems(buildings.sale, '매매', 'apt-sale', 0),
+    ...buildItems(buildings.jeonse, '전세', 'apt-rent', 5),
+    ...buildItems(buildings.wolse, '월세', 'apt-rent', 10),
+  ]
+
+  if (allItems.length > 0) {
+    setItemListSchema(allItems, {
+      name: '이번 주 인기 아파트 단지',
+      description: '최근 7일 매매·전세·월세 거래가 가장 많은 아파트 단지',
+      key: 'jsonld-trending-buildings',
+    })
+  }
+}
 
 const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
   $fetch<{ success: boolean; data: GuideSummary[] }>(
@@ -343,76 +339,11 @@ const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
 )
 const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
 
-const stats = computed(() => {
-  const d = (statsResponse.value?.data ?? {}) as Record<string, number> & {
-    realEstate?: Record<string, number>
-    realEstateBuildings?: Record<string, number>
-    subscriptionActiveCount?: number
-  }
-  return {
-    total: d.total ?? 0,
-    buildingCount: d.buildingCount ?? 0,
-    regionCount: d.regionCount ?? 0,
-    realEstate: d.realEstate ?? { aptSale: 0, aptRent: 0, villaSale: 0, villaRent: 0, offitelSale: 0, offitelRent: 0 },
-    realEstateBuildings: d.realEstateBuildings ?? { apt: 0, villa: 0, offitel: 0 },
-    subscriptionActiveCount: d.subscriptionActiveCount ?? 0,
-  }
-})
-
 // 등록 부동산 건물 수 (만 단위, 소수점 1자리)
 const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFixed(1))
 
 // 시설 수 만 단위
 const facilityCountKor = computed(() => Math.floor(stats.value.total / 10000))
-
-function formatBuildingCount(n: number): string {
-  if (n === 0) return '-'
-  if (n >= 10000) {
-    const val = (n / 10000).toFixed(1).replace(/\.0$/, '')
-    return `${val}만+`
-  }
-  const rounded = Math.floor(n / 1000) * 1000
-  return `${rounded.toLocaleString('ko-KR')}+`
-}
-
-// "오늘 확인할 정보" 3카드 — 실시간 수치 포함
-const todayCards = computed(() => {
-  const s = stats.value
-  return [
-    {
-      title: '실거래가',
-      desc: '아파트·빌라·오피스텔',
-      stat: s.buildingCount ? `전국 ${formatBuildingCount(s.buildingCount)}` : null,
-      icon: 'apt',
-      to: '/real-estate',
-    },
-    {
-      title: '청약·임대',
-      desc: '청약중·청약예정',
-      stat: s.subscriptionActiveCount > 0 ? `모집·예정 ${s.subscriptionActiveCount}건` : null,
-      icon: 'subscription',
-      to: '/subscription',
-    },
-    {
-      title: '생활시설',
-      desc: '병원·약국·주차장',
-      stat: s.total ? `전국 ${formatBuildingCount(s.total)}` : null,
-      icon: 'hospital',
-      to: '#facilities',
-    },
-  ]
-})
-
-// 부동산 실거래가 링크
-const realEstateLinks = computed(() => {
-  const reb = stats.value.realEstateBuildings
-  const re = stats.value.realEstate
-  return [
-    { to: '/real-estate/apt-sale', label: '아파트', iconImg: 'apt', sub: '매매·전월세 실거래가', count: formatBuildingCount(reb.apt || 0), txnCount: formatBuildingCount((re.aptSale || 0) + (re.aptRent || 0)) },
-    { to: '/real-estate/villa-sale', label: '빌라', iconImg: 'villa', sub: '연립·다세대 실거래가', count: formatBuildingCount(reb.villa || 0), txnCount: formatBuildingCount((re.villaSale || 0) + (re.villaRent || 0)) },
-    { to: '/real-estate/offitel-sale', label: '오피스텔', iconImg: 'offitel', sub: '매매·전월세 실거래가', count: formatBuildingCount(reb.offitel || 0), txnCount: formatBuildingCount((re.offitelSale || 0) + (re.offitelRent || 0)) },
-  ]
-})
 
 // 빠른 생활시설 찾기 (와이어프레임 8개)
 const quickFacilities: { id: string; label: string }[] = [

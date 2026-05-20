@@ -86,11 +86,13 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('진행중 청약')
   })
 
-  it('renders new "오늘 확인할 정보" section', async () => {
+  it('renders the three new home sections and ad banners', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    expect(wrapper.text()).toContain('오늘 확인할 정보')
-    expect(wrapper.text()).toContain('청약·임대')
+    expect(wrapper.find('[data-testid="market-stats"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="trending-buildings"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="subscription"]').exists()).toBe(true)
+    expect(wrapper.findAll('.stub-ad-banner').length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders "빠른 생활시설 찾기" 8-icon grid', async () => {

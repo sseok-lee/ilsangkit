@@ -219,6 +219,89 @@ describe('useStructuredData', () => {
     })
   })
 
+  // ─── setItemListSchema 확장 (rich entity + options) ──────────────────────────
+
+  describe('setItemListSchema', () => {
+    it('Backward compat: name/url 만 전달 시 ListItem with name/url at top level', () => {
+      const { setItemListSchema } = useStructuredData()
+      setItemListSchema([
+        { name: '테스트A', url: '/real-estate/apt-sale/seoul/gangnam/A' },
+        { name: '테스트B', url: 'https://ilsangkit.co.kr/real-estate/apt-sale/seoul/mapo/B' },
+      ])
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed['@type']).toBe('ItemList')
+      const el0 = parsed.itemListElement[0]
+      expect(el0['@type']).toBe('ListItem')
+      expect(el0.position).toBe(1)
+      expect(el0.name).toBe('테스트A')
+      expect(el0.url).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/A')
+      // nested item 없어야 함
+      expect(el0.item).toBeUndefined()
+      // 절대 URL 그대로 유지
+      const el1 = parsed.itemListElement[1]
+      expect(el1.url).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/mapo/B')
+    })
+
+    it('Rich item: type/address 전달 시 nested item 에 Apartment + PostalAddress 포함', () => {
+      const { setItemListSchema } = useStructuredData()
+      setItemListSchema([
+        {
+          name: '래미안 (매매)',
+          url: '/real-estate/apt-sale/seoul/gangnam/%EB%9E%98%EB%AF%B8%EC%95%88',
+          position: 1,
+          type: 'Apartment',
+          address: { addressLocality: '강남구', addressRegion: '서울특별시' },
+        },
+      ])
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      const el = parsed.itemListElement[0]
+      expect(el['@type']).toBe('ListItem')
+      expect(el.position).toBe(1)
+      expect(el.item).toBeDefined()
+      expect(el.item['@type']).toBe('Apartment')
+      expect(el.item.name).toBe('래미안 (매매)')
+      expect(el.item.url).toContain('https://ilsangkit.co.kr')
+      expect(el.item.address['@type']).toBe('PostalAddress')
+      expect(el.item.address.addressCountry).toBe('KR')
+      expect(el.item.address.addressLocality).toBe('강남구')
+      expect(el.item.address.addressRegion).toBe('서울특별시')
+      // top-level name/url 없어야 함 (nested item 방식)
+      expect(el.name).toBeUndefined()
+      expect(el.url).toBeUndefined()
+    })
+
+    it('Options: name/description 추가 시 schema 최상위에 포함', () => {
+      const { setItemListSchema } = useStructuredData()
+      setItemListSchema(
+        [{ name: '단지A', url: '/real-estate/apt-sale/seoul/gangnam/A' }],
+        { name: '이번 주 인기 아파트 단지', description: '최근 7일 거래가 많은 단지' },
+      )
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.name).toBe('이번 주 인기 아파트 단지')
+      expect(parsed.description).toBe('최근 7일 거래가 많은 단지')
+    })
+
+    it('Key 분리: options.key 전달 시 script key 가 해당 값으로 설정된다', () => {
+      const { setItemListSchema } = useStructuredData()
+      setItemListSchema(
+        [{ name: '단지A', url: '/real-estate/apt-sale/seoul/gangnam/A' }],
+        { key: 'jsonld-trending-buildings' },
+      )
+      const call = mockUseHead.mock.calls[0][0]
+      expect(call.script[0].key).toBe('jsonld-trending-buildings')
+    })
+
+    it('key 미전달 시 기본 key jsonld-itemlist 사용', () => {
+      const { setItemListSchema } = useStructuredData()
+      setItemListSchema([{ name: '단지A', url: '/real-estate/apt-sale/seoul/gangnam/A' }])
+      const call = mockUseHead.mock.calls[0][0]
+      expect(call.script[0].key).toBe('jsonld-itemlist')
+    })
+  })
+
   describe('setRealEstateListingSchema (page-mirrored SSR first render)', () => {
     it('buildingInfo=null 인 SSR 첫 렌더에서도 RealEstateListing JSON-LD 가 완성된 url 과 함께 포함된다', () => {
       // 이 케이스는 실제 [buildingName].vue 가 setRealEstateListingSchema 를 호출하는 방식
