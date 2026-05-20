@@ -81,7 +81,10 @@ config.global.stubs = {
   // 광고 컴포넌트는 window.adsbygoogle/Nuxt 라우터에 의존 → 테스트에서 무해 스터브
   AdBanner: { template: '<div class="stub-ad-banner" />' },
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브
-  HomeSubscriptionSection: { template: '<section class="stub-home-subscription" />' },
+  HomeSubscriptionSection: { template: '<section data-testid="subscription" class="stub-home-subscription" />' },
+  // 홈 마켓 통계/인기단지 섹션
+  HomeMarketStats: { template: '<section data-testid="market-stats" />' },
+  HomeTrendingBuildings: { template: '<section data-testid="trending-buildings" />' },
 }
 
 // Global test setup
