@@ -204,8 +204,11 @@ describe('getTrendingBuildings', () => {
     const result = await getTrendingBuildings();
 
     expect(result.sale[0]).toMatchObject({ buildingName: '헬리오시티', txnCount: 17, avgPrice: 184000, avgMonthlyRent: null });
+    expect(result.sale[0].slug).toBe(encodeURIComponent('헬리오시티'));
     expect(result.jeonse[0]).toMatchObject({ buildingName: '파크리오', txnCount: 22, avgPrice: 84000, avgMonthlyRent: null });
+    expect(result.jeonse[0].slug).toBe(encodeURIComponent('파크리오'));
     expect(result.wolse[0]).toMatchObject({ buildingName: '아크로리버파크', avgPrice: 20000, avgMonthlyRent: 120 });
+    expect(result.wolse[0].slug).toBe(encodeURIComponent('아크로리버파크'));
   });
 
   it('returns empty arrays when no data', async () => {

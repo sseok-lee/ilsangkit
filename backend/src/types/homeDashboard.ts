@@ -2,6 +2,7 @@
 
 export type TrendingBuildingItem = {
   buildingName: string;
+  slug: string;
   city: string;       // 정식명 ('서울특별시')
   district: string;
   txnCount: number;

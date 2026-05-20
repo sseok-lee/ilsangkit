@@ -302,6 +302,7 @@ export async function getTrendingBuildings(): Promise<{ sale: TrendingBuildingIt
 
   const toItem = (r: { buildingName: string; city: string; district: string; txnCount: bigint; avgPrice: number | null; avgMonthlyRent: number | null }): TrendingBuildingItem => ({
     buildingName: r.buildingName,
+    slug: encodeURIComponent(r.buildingName),
     city: r.city,
     district: r.district,
     txnCount: Number(r.txnCount),
