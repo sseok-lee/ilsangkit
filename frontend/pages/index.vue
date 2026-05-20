@@ -34,8 +34,8 @@
               <span class="hidden md:inline"><span class="text-primary">일상킷에서</span><span class="text-slate-900"> 한번에.</span></span>
             </div>
           </div>
-          <p class="md:hidden text-slate-500 text-[15px] mt-1">생활시설 · 실거래 · 청약을 한 곳에서</p>
-          <p class="hidden md:block text-slate-500 text-lg mt-1">생활시설 · 부동산 실거래가 · 청약 정보를 한 곳에서.</p>
+          <p class="md:hidden text-slate-500 text-[15px] mt-1">부동산 · 청약 · 생활시설을 한 곳에서</p>
+          <p class="hidden md:block text-slate-500 text-lg mt-1">부동산 실거래가, 청약 정보, 생활시설을 한 곳에서.</p>
         </div>
 
         <!-- 검색바 -->
@@ -261,14 +261,14 @@ setWebsiteSchema()
 setOrganizationSchema()
 setDatasetSchema({
   name: '일상킷 통합 생활 데이터',
-  description: '전국 공공데이터 기반의 생활시설(병원·약국·주차장·도서관·공원 등 15개 카테고리), 부동산 실거래가, 청약 정보 통합 데이터셋.',
+  description: '전국 공공데이터 기반의 부동산 실거래가, 청약 정보, 생활시설(병원·약국·주차장·도서관·공원 등 15개 카테고리) 통합 데이터셋.',
   url: '/',
   sources: [
     ...Object.values(FACILITY_DATA_SOURCE),
     REAL_ESTATE_DATA_SOURCE,
     SUBSCRIPTION_DATA_SOURCE,
   ],
-  keywords: ['생활시설', '부동산 실거래가', '청약', '공공데이터', 'KOGL', '대한민국'],
+  keywords: ['부동산 실거래가', '청약', '생활시설', '공공데이터', 'KOGL', '대한민국'],
 })
 
 // 홈 히어로 배경 이미지 preload (홈 한정)
