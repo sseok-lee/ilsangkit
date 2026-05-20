@@ -143,66 +143,87 @@ describe('getRealEstateTrends', () => {
     mockQueryRaw.mockReset();
   });
 
-  it('returns 9 slots: apt/villa/offitel × sale/jeonse/wolse with avg / count / changePct', async () => {
+  // 평당가 = (sumPrice/sumArea) × 3.3058. 테스트 값은 sumArea=1로 두어 sumPrice 자체가 곧 (만원/㎡)이 되도록 단순화.
+  const M2_PER_PYEONG = 3.3058;
+  const expectedPpp = (sumPrice: number, sumArea: number) => (sumPrice / sumArea) * M2_PER_PYEONG;
+
+  it('returns 9 slots: apt/villa/offitel × sale/jeonse/wolse with pricePerPyeong / count / changePct', async () => {
     mockQueryRaw
-      .mockResolvedValueOnce([{ avg: 54000, cnt: BigInt(2481) }])  // aptCurr
-      .mockResolvedValueOnce([{ avg: 52800, cnt: BigInt(2300) }])  // aptPrev
-      .mockResolvedValueOnce([{ avg: 31000, cnt: BigInt(1742) }])  // aptJeonseCurr
-      .mockResolvedValueOnce([{ avg: 31250, cnt: BigInt(1800) }])  // aptJeonsePrev
-      .mockResolvedValueOnce([{ avg: 85,    cnt: BigInt(920) }])   // aptWolseCurr
-      .mockResolvedValueOnce([{ avg: 80,    cnt: BigInt(870) }])   // aptWolsePrev
-      .mockResolvedValueOnce([{ avg: 18000, cnt: BigInt(540) }])   // villaCurr
-      .mockResolvedValueOnce([{ avg: 17500, cnt: BigInt(500) }])   // villaPrev
-      .mockResolvedValueOnce([{ avg: 12000, cnt: BigInt(320) }])   // villaJeonseCurr
-      .mockResolvedValueOnce([{ avg: 11800, cnt: BigInt(300) }])   // villaJeonsePrev
-      .mockResolvedValueOnce([{ avg: 55,    cnt: BigInt(180) }])   // villaWolseCurr
-      .mockResolvedValueOnce([{ avg: 52,    cnt: BigInt(160) }])   // villaWolsePrev
-      .mockResolvedValueOnce([{ avg: 22000, cnt: BigInt(318) }])   // offCurr
-      .mockResolvedValueOnce([{ avg: null,  cnt: BigInt(0) }])     // offPrev
-      .mockResolvedValueOnce([{ avg: 15000, cnt: BigInt(210) }])   // offJeonseCurr
-      .mockResolvedValueOnce([{ avg: 14800, cnt: BigInt(200) }])   // offJeonsePrev
-      .mockResolvedValueOnce([{ avg: 72,    cnt: BigInt(95) }])    // offWolseCurr
-      .mockResolvedValueOnce([{ avg: 68,    cnt: BigInt(88) }]);   // offWolsePrev
+      .mockResolvedValueOnce([{ sumPrice: 54000, sumArea: 1, cnt: BigInt(2481) }])  // aptCurr
+      .mockResolvedValueOnce([{ sumPrice: 52800, sumArea: 1, cnt: BigInt(2300) }])  // aptPrev
+      .mockResolvedValueOnce([{ sumPrice: 31000, sumArea: 1, cnt: BigInt(1742) }])  // aptJeonseCurr
+      .mockResolvedValueOnce([{ sumPrice: 31250, sumArea: 1, cnt: BigInt(1800) }])  // aptJeonsePrev
+      .mockResolvedValueOnce([{ sumPrice: 85,    sumArea: 1, cnt: BigInt(920) }])   // aptWolseCurr
+      .mockResolvedValueOnce([{ sumPrice: 80,    sumArea: 1, cnt: BigInt(870) }])   // aptWolsePrev
+      .mockResolvedValueOnce([{ sumPrice: 18000, sumArea: 1, cnt: BigInt(540) }])   // villaCurr
+      .mockResolvedValueOnce([{ sumPrice: 17500, sumArea: 1, cnt: BigInt(500) }])   // villaPrev
+      .mockResolvedValueOnce([{ sumPrice: 12000, sumArea: 1, cnt: BigInt(320) }])   // villaJeonseCurr
+      .mockResolvedValueOnce([{ sumPrice: 11800, sumArea: 1, cnt: BigInt(300) }])   // villaJeonsePrev
+      .mockResolvedValueOnce([{ sumPrice: 55,    sumArea: 1, cnt: BigInt(180) }])   // villaWolseCurr
+      .mockResolvedValueOnce([{ sumPrice: 52,    sumArea: 1, cnt: BigInt(160) }])   // villaWolsePrev
+      .mockResolvedValueOnce([{ sumPrice: 22000, sumArea: 1, cnt: BigInt(318) }])   // offCurr
+      .mockResolvedValueOnce([{ sumPrice: null,  sumArea: null, cnt: BigInt(0) }])  // offPrev
+      .mockResolvedValueOnce([{ sumPrice: 15000, sumArea: 1, cnt: BigInt(210) }])   // offJeonseCurr
+      .mockResolvedValueOnce([{ sumPrice: 14800, sumArea: 1, cnt: BigInt(200) }])   // offJeonsePrev
+      .mockResolvedValueOnce([{ sumPrice: 72,    sumArea: 1, cnt: BigInt(95) }])    // offWolseCurr
+      .mockResolvedValueOnce([{ sumPrice: 68,    sumArea: 1, cnt: BigInt(88) }]);   // offWolsePrev
 
     const trends = await getRealEstateTrends();
 
     expect(trends).toHaveLength(9);
     const [aptSale, aptJeonse, aptWolse, villaSale, villaJeonse, villaWolse, offitelSale, offitelJeonse, offitelWolse] = trends;
 
-    expect(aptSale).toMatchObject({ key: 'apt-sale', avgPrice: 54000, txnCount: 2481, prevAvgPrice: 52800 });
+    expect(aptSale).toMatchObject({ key: 'apt-sale', txnCount: 2481 });
+    expect(aptSale.pricePerPyeong).toBeCloseTo(expectedPpp(54000, 1), 3);
+    expect(aptSale.prevPricePerPyeong).toBeCloseTo(expectedPpp(52800, 1), 3);
     expect(aptSale.changePct).toBeCloseTo(((54000 - 52800) / 52800) * 100, 3);
 
-    expect(aptJeonse).toMatchObject({ key: 'apt-rent-jeonse', avgPrice: 31000 });
+    expect(aptJeonse).toMatchObject({ key: 'apt-rent-jeonse' });
+    expect(aptJeonse.pricePerPyeong).toBeCloseTo(expectedPpp(31000, 1), 3);
     expect(aptJeonse.changePct).toBeLessThan(0);
 
-    expect(aptWolse).toMatchObject({ key: 'apt-rent-wolse', label: '아파트 월세', avgPrice: 85, txnCount: 920, prevAvgPrice: 80 });
+    expect(aptWolse).toMatchObject({ key: 'apt-rent-wolse', label: '아파트 월세', txnCount: 920 });
+    expect(aptWolse.pricePerPyeong).toBeCloseTo(expectedPpp(85, 1), 3);
     expect(aptWolse.changePct).toBeCloseTo(((85 - 80) / 80) * 100, 3);
 
-    expect(villaSale).toMatchObject({ key: 'villa-sale', label: '빌라 매매', avgPrice: 18000, txnCount: 540, prevAvgPrice: 17500 });
+    expect(villaSale).toMatchObject({ key: 'villa-sale', label: '빌라 매매', txnCount: 540 });
     expect(villaSale.changePct).toBeGreaterThan(0);
 
-    expect(villaJeonse).toMatchObject({ key: 'villa-rent-jeonse', label: '빌라 전세', avgPrice: 12000, txnCount: 320, prevAvgPrice: 11800 });
+    expect(villaJeonse).toMatchObject({ key: 'villa-rent-jeonse', label: '빌라 전세', txnCount: 320 });
     expect(villaJeonse.changePct).toBeGreaterThan(0);
 
-    expect(villaWolse).toMatchObject({ key: 'villa-rent-wolse', label: '빌라 월세', avgPrice: 55, txnCount: 180, prevAvgPrice: 52 });
+    expect(villaWolse).toMatchObject({ key: 'villa-rent-wolse', label: '빌라 월세', txnCount: 180 });
     expect(villaWolse.changePct).toBeGreaterThan(0);
 
-    expect(offitelSale).toMatchObject({ key: 'offitel-sale', avgPrice: 22000, prevAvgPrice: null, changePct: null });
+    expect(offitelSale).toMatchObject({ key: 'offitel-sale', prevPricePerPyeong: null, changePct: null });
+    expect(offitelSale.pricePerPyeong).toBeCloseTo(expectedPpp(22000, 1), 3);
 
-    expect(offitelJeonse).toMatchObject({ key: 'offitel-rent-jeonse', label: '오피스텔 전세', avgPrice: 15000, txnCount: 210, prevAvgPrice: 14800 });
+    expect(offitelJeonse).toMatchObject({ key: 'offitel-rent-jeonse', label: '오피스텔 전세', txnCount: 210 });
     expect(offitelJeonse.changePct).toBeGreaterThan(0);
 
-    expect(offitelWolse).toMatchObject({ key: 'offitel-rent-wolse', label: '오피스텔 월세', avgPrice: 72, txnCount: 95, prevAvgPrice: 68 });
+    expect(offitelWolse).toMatchObject({ key: 'offitel-rent-wolse', label: '오피스텔 월세', txnCount: 95 });
     expect(offitelWolse.changePct).toBeGreaterThan(0);
   });
 
-  it('returns null avgPrice and changePct when current period has 0 rows', async () => {
-    mockQueryRaw.mockResolvedValue([{ avg: null, cnt: BigInt(0) }]);
+  it('computes pricePerPyeong with face-weighted average (SUM/SUM × 3.3058)', async () => {
+    // 84㎡ 10억 + 114㎡ 17억 두 거래 → 평당가 = (100000+170000)/(84+114) × 3.3058
+    mockQueryRaw.mockResolvedValueOnce([{ sumPrice: 100000 + 170000, sumArea: 84 + 114, cnt: BigInt(2) }]);
+    // 나머지 17개는 0건
+    for (let i = 0; i < 17; i++) {
+      mockQueryRaw.mockResolvedValueOnce([{ sumPrice: null, sumArea: null, cnt: BigInt(0) }]);
+    }
+    const trends = await getRealEstateTrends();
+    expect(trends[0].pricePerPyeong).toBeCloseTo(expectedPpp(270000, 198), 3);
+    expect(trends[0].txnCount).toBe(2);
+  });
+
+  it('returns null pricePerPyeong and changePct when current period has 0 rows', async () => {
+    mockQueryRaw.mockResolvedValue([{ sumPrice: null, sumArea: null, cnt: BigInt(0) }]);
 
     const trends = await getRealEstateTrends();
     expect(trends).toHaveLength(9);
     for (const t of trends) {
-      expect(t.avgPrice).toBeNull();
+      expect(t.pricePerPyeong).toBeNull();
       expect(t.changePct).toBeNull();
     }
   });
@@ -216,30 +237,66 @@ describe('getTrendingBuildings', () => {
     mockQueryRaw.mockReset();
   });
 
-  it('returns 3 lists (sale/jeonse/wolse) sorted by txnCount desc, capped at 5', async () => {
+  // helper: 한 단지의 주력 평형 거래 raw rows 생성
+  function mkRows(
+    buildingName: string,
+    city: string,
+    district: string,
+    txnCount: number,
+    representativeArea: number,
+    prices: number[],
+    monthlies?: number[],
+  ) {
+    return prices.map((p, i) => ({
+      buildingName, city, district,
+      txnCount: BigInt(txnCount),
+      representativeArea,
+      price: p,
+      monthlyRent: monthlies ? monthlies[i] : null,
+    }));
+  }
+
+  it('returns 3 lists (sale/jeonse/wolse) with median price of representative area', async () => {
     mockQueryRaw
-      // sale
+      // sale — 헬리오시티 84㎡ 3건(180000, 184000, 188000) + 은마 76㎡ 3건(260000, 267000, 270000)
       .mockResolvedValueOnce([
-        { buildingName: '헬리오시티', city: '서울특별시', district: '송파구', txnCount: BigInt(17), avgPrice: 184000, avgMonthlyRent: null },
-        { buildingName: '은마아파트',  city: '서울특별시', district: '강남구', txnCount: BigInt(14), avgPrice: 267000, avgMonthlyRent: null },
+        ...mkRows('헬리오시티', '서울특별시', '송파구', 17, 85, [180000, 184000, 188000]),
+        ...mkRows('은마아파트', '서울특별시', '강남구', 14, 75, [260000, 267000, 270000]),
       ])
-      // jeonse
-      .mockResolvedValueOnce([
-        { buildingName: '파크리오', city: '서울특별시', district: '송파구', txnCount: BigInt(22), avgPrice: 84000, avgMonthlyRent: null },
-      ])
-      // wolse
-      .mockResolvedValueOnce([
-        { buildingName: '아크로리버파크', city: '서울특별시', district: '서초구', txnCount: BigInt(9), avgPrice: 20000, avgMonthlyRent: 120 },
-      ]);
+      // jeonse — 파크리오 85㎡ 4건 짝수 → 중앙값=두 가운데 평균
+      .mockResolvedValueOnce(
+        mkRows('파크리오', '서울특별시', '송파구', 22, 85, [80000, 84000, 86000, 90000]),
+      )
+      // wolse — 아크로리버파크 85㎡ 3건 (deposit, monthlyRent)
+      .mockResolvedValueOnce(
+        mkRows('아크로리버파크', '서울특별시', '서초구', 9, 85, [18000, 20000, 22000], [110, 120, 130]),
+      );
 
     const result = await getTrendingBuildings();
 
-    expect(result.sale[0]).toMatchObject({ buildingName: '헬리오시티', txnCount: 17, avgPrice: 184000, avgMonthlyRent: null });
+    expect(result.sale[0]).toMatchObject({
+      buildingName: '헬리오시티',
+      txnCount: 17,
+      representativeArea: 85,
+      medianPrice: 184000, // 3건 중앙값
+      medianMonthlyRent: null,
+    });
     expect(result.sale[0].slug).toBe(encodeURIComponent('헬리오시티'));
-    expect(result.jeonse[0]).toMatchObject({ buildingName: '파크리오', txnCount: 22, avgPrice: 84000, avgMonthlyRent: null });
-    expect(result.jeonse[0].slug).toBe(encodeURIComponent('파크리오'));
-    expect(result.wolse[0]).toMatchObject({ buildingName: '아크로리버파크', avgPrice: 20000, avgMonthlyRent: 120 });
-    expect(result.wolse[0].slug).toBe(encodeURIComponent('아크로리버파크'));
+    expect(result.sale[1]).toMatchObject({ buildingName: '은마아파트', medianPrice: 267000, representativeArea: 75 });
+
+    expect(result.jeonse[0]).toMatchObject({
+      buildingName: '파크리오',
+      txnCount: 22,
+      representativeArea: 85,
+      medianPrice: (84000 + 86000) / 2, // 짝수 — 두 가운데 평균
+    });
+
+    expect(result.wolse[0]).toMatchObject({
+      buildingName: '아크로리버파크',
+      representativeArea: 85,
+      medianPrice: 20000,
+      medianMonthlyRent: 120,
+    });
   });
 
   it('returns empty arrays when no data', async () => {
@@ -327,30 +384,32 @@ function setupFullMocks() {
   mockSubscriptionCount.mockResolvedValue(5);
 
   // $queryRaw sequence: 2 (stats) + 18 (trends) + 3 (buildings) = 23 total
+  const sumRow = (sumPrice: number | null, cnt: number) =>
+    ({ sumPrice, sumArea: sumPrice === null ? null : 1, cnt: BigInt(cnt) });
   mockQueryRaw
     .mockResolvedValueOnce([{ cnt: BigInt(500) }])                                            // stats: evCharger
     .mockResolvedValueOnce([{ apt: BigInt(20000), villa: BigInt(8000), offitel: BigInt(2000) }]) // stats: buildingCount
-    .mockResolvedValueOnce([{ avg: 54000, cnt: BigInt(100) }])  // trends: aptCurr
-    .mockResolvedValueOnce([{ avg: 52000, cnt: BigInt(90) }])   // trends: aptPrev
-    .mockResolvedValueOnce([{ avg: 30000, cnt: BigInt(80) }])   // trends: aptJeonseCurr
-    .mockResolvedValueOnce([{ avg: 31000, cnt: BigInt(85) }])   // trends: aptJeonsePrev
-    .mockResolvedValueOnce([{ avg: 85,    cnt: BigInt(50) }])   // trends: aptWolseCurr
-    .mockResolvedValueOnce([{ avg: 80,    cnt: BigInt(45) }])   // trends: aptWolsePrev
-    .mockResolvedValueOnce([{ avg: 18000, cnt: BigInt(60) }])   // trends: villaCurr
-    .mockResolvedValueOnce([{ avg: 17500, cnt: BigInt(55) }])   // trends: villaPrev
-    .mockResolvedValueOnce([{ avg: 12000, cnt: BigInt(40) }])   // trends: villaJeonseCurr
-    .mockResolvedValueOnce([{ avg: 11800, cnt: BigInt(38) }])   // trends: villaJeonsePrev
-    .mockResolvedValueOnce([{ avg: 55,    cnt: BigInt(25) }])   // trends: villaWolseCurr
-    .mockResolvedValueOnce([{ avg: 52,    cnt: BigInt(22) }])   // trends: villaWolsePrev
-    .mockResolvedValueOnce([{ avg: 22000, cnt: BigInt(30) }])   // trends: offCurr
-    .mockResolvedValueOnce([{ avg: null,  cnt: BigInt(0) }])    // trends: offPrev
-    .mockResolvedValueOnce([{ avg: 15000, cnt: BigInt(20) }])   // trends: offJeonseCurr
-    .mockResolvedValueOnce([{ avg: 14800, cnt: BigInt(18) }])   // trends: offJeonsePrev
-    .mockResolvedValueOnce([{ avg: 72,    cnt: BigInt(12) }])   // trends: offWolseCurr
-    .mockResolvedValueOnce([{ avg: 68,    cnt: BigInt(10) }])   // trends: offWolsePrev
-    .mockResolvedValueOnce([])                                  // buildings: sale
-    .mockResolvedValueOnce([])                                  // buildings: jeonse
-    .mockResolvedValueOnce([]);                                 // buildings: wolse
+    .mockResolvedValueOnce([sumRow(54000, 100)])  // trends: aptCurr
+    .mockResolvedValueOnce([sumRow(52000, 90)])   // trends: aptPrev
+    .mockResolvedValueOnce([sumRow(30000, 80)])   // trends: aptJeonseCurr
+    .mockResolvedValueOnce([sumRow(31000, 85)])   // trends: aptJeonsePrev
+    .mockResolvedValueOnce([sumRow(85, 50)])      // trends: aptWolseCurr
+    .mockResolvedValueOnce([sumRow(80, 45)])      // trends: aptWolsePrev
+    .mockResolvedValueOnce([sumRow(18000, 60)])   // trends: villaCurr
+    .mockResolvedValueOnce([sumRow(17500, 55)])   // trends: villaPrev
+    .mockResolvedValueOnce([sumRow(12000, 40)])   // trends: villaJeonseCurr
+    .mockResolvedValueOnce([sumRow(11800, 38)])   // trends: villaJeonsePrev
+    .mockResolvedValueOnce([sumRow(55, 25)])      // trends: villaWolseCurr
+    .mockResolvedValueOnce([sumRow(52, 22)])      // trends: villaWolsePrev
+    .mockResolvedValueOnce([sumRow(22000, 30)])   // trends: offCurr
+    .mockResolvedValueOnce([sumRow(null, 0)])     // trends: offPrev
+    .mockResolvedValueOnce([sumRow(15000, 20)])   // trends: offJeonseCurr
+    .mockResolvedValueOnce([sumRow(14800, 18)])   // trends: offJeonsePrev
+    .mockResolvedValueOnce([sumRow(72, 12)])      // trends: offWolseCurr
+    .mockResolvedValueOnce([sumRow(68, 10)])      // trends: offWolsePrev
+    .mockResolvedValueOnce([])                    // buildings: sale
+    .mockResolvedValueOnce([])                    // buildings: jeonse
+    .mockResolvedValueOnce([]);                   // buildings: wolse
 
   mockSubscriptionUnitTypeAggregate.mockResolvedValue({ _avg: { topAmount: null } });
   mockSubscriptionFindMany.mockResolvedValue([]);

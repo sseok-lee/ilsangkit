@@ -217,119 +217,135 @@ function calcChangePct(cur: number | null, prev: number | null): number | null {
   return ((cur - prev) / prev) * 100;
 }
 
-/** dealYear/dealMonth/dealDay 복합 비교가 필요해 raw SQL 사용. */
-async function aggregateSaleRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+// 1평 = 3.3058㎡. (sum(price)/sum(area))[만원/㎡] × 3.3058 = 평당가[만원/평].
+const M2_PER_PYEONG = 3.3058;
+
+type RawSumRow = { sumPrice: number | null; sumArea: number | null; cnt: bigint };
+
+function rowToPricePerPyeong(row: RawSumRow | undefined): { pricePerPyeong: number | null; count: number } {
+  const count = Number(row?.cnt ?? 0);
+  if (!row || row.sumPrice === null || row.sumArea === null || Number(row.sumArea) <= 0) {
+    return { pricePerPyeong: null, count };
+  }
+  return { pricePerPyeong: (Number(row.sumPrice) / Number(row.sumArea)) * M2_PER_PYEONG, count };
+}
+
+/**
+ * dealYear/dealMonth/dealDay 복합 비교가 필요해 raw SQL 사용.
+ * 평당가 = SUM(가격) / SUM(전용면적) × 3.3058 (면적 가중). exclusiveArea NULL/0 거래 제외.
+ */
+async function aggregateSaleRange(daysFrom: number, daysTo: number) {
   const from = ymdNDaysAgo(daysFrom);
   const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(dealAmount) AS avg, COUNT(*) AS cnt
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(dealAmount) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM AptSaleTransaction
     WHERE STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
 }
 
-async function aggregateRentJeonseRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+async function aggregateRentJeonseRange(daysFrom: number, daysTo: number) {
   const from = ymdNDaysAgo(daysFrom);
   const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(deposit) AS avg, COUNT(*) AS cnt
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(deposit) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM AptRentTransaction
     WHERE rentType = '전세'
       AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
 }
 
-async function aggregateOffitelSaleRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+async function aggregateRentWolseRange(daysFrom: number, daysTo: number) {
   const from = ymdNDaysAgo(daysFrom);
   const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(dealAmount) AS avg, COUNT(*) AS cnt
-    FROM OffitelSaleTransaction
-    WHERE STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
-}
-
-async function aggregateRentWolseRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
-  const from = ymdNDaysAgo(daysFrom);
-  const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(monthlyRent) AS avg, COUNT(*) AS cnt
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(monthlyRent) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM AptRentTransaction
     WHERE rentType = '월세'
       AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
 }
 
-async function aggregateVillaSaleRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+async function aggregateVillaSaleRange(daysFrom: number, daysTo: number) {
   const from = ymdNDaysAgo(daysFrom);
   const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(dealAmount) AS avg, COUNT(*) AS cnt
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(dealAmount) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM VillaSaleTransaction
     WHERE STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
 }
 
-async function aggregateOffitelRentJeonseRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+async function aggregateVillaRentJeonseRange(daysFrom: number, daysTo: number) {
   const from = ymdNDaysAgo(daysFrom);
   const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(deposit) AS avg, COUNT(*) AS cnt
-    FROM OffitelRentTransaction
-    WHERE rentType = '전세'
-      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
-}
-
-async function aggregateVillaRentJeonseRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
-  const from = ymdNDaysAgo(daysFrom);
-  const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(deposit) AS avg, COUNT(*) AS cnt
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(deposit) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM VillaRentTransaction
     WHERE rentType = '전세'
       AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
 }
 
-async function aggregateVillaRentWolseRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+async function aggregateVillaRentWolseRange(daysFrom: number, daysTo: number) {
   const from = ymdNDaysAgo(daysFrom);
   const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(monthlyRent) AS avg, COUNT(*) AS cnt
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(monthlyRent) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM VillaRentTransaction
     WHERE rentType = '월세'
       AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
 }
 
-async function aggregateOffitelRentWolseRange(daysFrom: number, daysTo: number): Promise<{ avg: number | null; count: number }> {
+async function aggregateOffitelSaleRange(daysFrom: number, daysTo: number) {
   const from = ymdNDaysAgo(daysFrom);
   const to = ymdNDaysAgo(daysTo);
-  const rows = await prisma.$queryRaw<[{ avg: number | null; cnt: bigint }]>`
-    SELECT AVG(monthlyRent) AS avg, COUNT(*) AS cnt
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(dealAmount) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
+    FROM OffitelSaleTransaction
+    WHERE STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
+}
+
+async function aggregateOffitelRentJeonseRange(daysFrom: number, daysTo: number) {
+  const from = ymdNDaysAgo(daysFrom);
+  const to = ymdNDaysAgo(daysTo);
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(deposit) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
+    FROM OffitelRentTransaction
+    WHERE rentType = '전세'
+      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
+}
+
+async function aggregateOffitelRentWolseRange(daysFrom: number, daysTo: number) {
+  const from = ymdNDaysAgo(daysFrom);
+  const to = ymdNDaysAgo(daysTo);
+  const rows = await prisma.$queryRaw<[RawSumRow]>`
+    SELECT SUM(monthlyRent) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM OffitelRentTransaction
     WHERE rentType = '월세'
       AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}`;
-  const row = rows[0];
-  return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: Number(row?.cnt ?? 0) };
+          BETWEEN ${from} AND ${to}
+      AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
+  return rowToPricePerPyeong(rows[0]);
 }
 
 /**
@@ -369,130 +385,228 @@ export async function getRealEstateTrends(): Promise<RealEstateTrend[]> {
     aggregateOffitelRentWolseRange(14, 8),
   ]);
 
+  const toTrend = (
+    key: RealEstateTrend['key'],
+    label: string,
+    curr: { pricePerPyeong: number | null; count: number },
+    prev: { pricePerPyeong: number | null; count: number },
+  ): RealEstateTrend => ({
+    key,
+    label,
+    pricePerPyeong: curr.pricePerPyeong,
+    txnCount: curr.count,
+    prevPricePerPyeong: prev.pricePerPyeong,
+    changePct: calcChangePct(curr.pricePerPyeong, prev.pricePerPyeong),
+  });
+
   return [
-    {
-      key: 'apt-sale',
-      label: '아파트 매매',
-      avgPrice: aptCurr.avg,
-      txnCount: aptCurr.count,
-      prevAvgPrice: aptPrev.avg,
-      changePct: calcChangePct(aptCurr.avg, aptPrev.avg),
-    },
-    {
-      key: 'apt-rent-jeonse',
-      label: '아파트 전세',
-      avgPrice: aptJeonseCurr.avg,
-      txnCount: aptJeonseCurr.count,
-      prevAvgPrice: aptJeonsePrev.avg,
-      changePct: calcChangePct(aptJeonseCurr.avg, aptJeonsePrev.avg),
-    },
-    {
-      key: 'apt-rent-wolse',
-      label: '아파트 월세',
-      avgPrice: aptWolseCurr.avg,
-      txnCount: aptWolseCurr.count,
-      prevAvgPrice: aptWolsePrev.avg,
-      changePct: calcChangePct(aptWolseCurr.avg, aptWolsePrev.avg),
-    },
-    {
-      key: 'villa-sale',
-      label: '빌라 매매',
-      avgPrice: villaCurr.avg,
-      txnCount: villaCurr.count,
-      prevAvgPrice: villaPrev.avg,
-      changePct: calcChangePct(villaCurr.avg, villaPrev.avg),
-    },
-    {
-      key: 'villa-rent-jeonse',
-      label: '빌라 전세',
-      avgPrice: villaJeonseCurr.avg,
-      txnCount: villaJeonseCurr.count,
-      prevAvgPrice: villaJeonsePrev.avg,
-      changePct: calcChangePct(villaJeonseCurr.avg, villaJeonsePrev.avg),
-    },
-    {
-      key: 'villa-rent-wolse',
-      label: '빌라 월세',
-      avgPrice: villaWolseCurr.avg,
-      txnCount: villaWolseCurr.count,
-      prevAvgPrice: villaWolsePrev.avg,
-      changePct: calcChangePct(villaWolseCurr.avg, villaWolsePrev.avg),
-    },
-    {
-      key: 'offitel-sale',
-      label: '오피스텔 매매',
-      avgPrice: offCurr.avg,
-      txnCount: offCurr.count,
-      prevAvgPrice: offPrev.avg,
-      changePct: calcChangePct(offCurr.avg, offPrev.avg),
-    },
-    {
-      key: 'offitel-rent-jeonse',
-      label: '오피스텔 전세',
-      avgPrice: offJeonseCurr.avg,
-      txnCount: offJeonseCurr.count,
-      prevAvgPrice: offJeonsePrev.avg,
-      changePct: calcChangePct(offJeonseCurr.avg, offJeonsePrev.avg),
-    },
-    {
-      key: 'offitel-rent-wolse',
-      label: '오피스텔 월세',
-      avgPrice: offWolseCurr.avg,
-      txnCount: offWolseCurr.count,
-      prevAvgPrice: offWolsePrev.avg,
-      changePct: calcChangePct(offWolseCurr.avg, offWolsePrev.avg),
-    },
+    toTrend('apt-sale', '아파트 매매', aptCurr, aptPrev),
+    toTrend('apt-rent-jeonse', '아파트 전세', aptJeonseCurr, aptJeonsePrev),
+    toTrend('apt-rent-wolse', '아파트 월세', aptWolseCurr, aptWolsePrev),
+    toTrend('villa-sale', '빌라 매매', villaCurr, villaPrev),
+    toTrend('villa-rent-jeonse', '빌라 전세', villaJeonseCurr, villaJeonsePrev),
+    toTrend('villa-rent-wolse', '빌라 월세', villaWolseCurr, villaWolsePrev),
+    toTrend('offitel-sale', '오피스텔 매매', offCurr, offPrev),
+    toTrend('offitel-rent-jeonse', '오피스텔 전세', offJeonseCurr, offJeonsePrev),
+    toTrend('offitel-rent-wolse', '오피스텔 월세', offWolseCurr, offWolsePrev),
   ];
 }
 
 /**
  * 인기 단지 TOP 5 — 매매·전세·월세 3분할 (아파트 한정).
- * 최근 7일 거래 기준, GROUP BY buildingName/city/district.
+ * 최근 7일 거래 기준, 단지별 거래수 TOP 5.
+ *
+ * 가격 표시 정책:
+ *   - 단지 내 5㎡ 버킷(ROUND(area/5)*5)으로 평형 그룹화
+ *   - 거래수 최다 버킷을 "주력 평형"으로 채택 (동률 시 면적 작은 쪽)
+ *   - 그 평형의 거래 가격 중앙값을 노출
+ *   - exclusiveArea NULL/0 거래는 버킷팅 + 중앙값에서 제외
+ * 단지 전체 거래수(txnCount)는 NULL 면적 포함한 raw count.
  */
+type TrendingTxnRow = {
+  buildingName: string;
+  city: string;
+  district: string;
+  txnCount: bigint;
+  representativeArea: number | null;
+  price: number | null;
+  monthlyRent: number | null;
+};
+
+function median(values: number[]): number | null {
+  const cleaned = values.filter((v) => v !== null && v !== undefined && !Number.isNaN(v));
+  if (cleaned.length === 0) return null;
+  const sorted = [...cleaned].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function rowsToTrendingItems(rows: TrendingTxnRow[]): TrendingBuildingItem[] {
+  // Preserve building order (DB returns sorted by txnCount DESC, buildingName ASC)
+  const groups = new Map<string, TrendingTxnRow[]>();
+  const order: string[] = [];
+  for (const r of rows) {
+    const key = `${r.buildingName}|${r.city}|${r.district}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+      order.push(key);
+    }
+    groups.get(key)!.push(r);
+  }
+  return order.map((key) => {
+    const group = groups.get(key)!;
+    const first = group[0];
+    const prices = group.map((r) => (r.price === null ? null : Number(r.price))).filter((v): v is number => v !== null);
+    const monthlies = group.map((r) => (r.monthlyRent === null ? null : Number(r.monthlyRent))).filter((v): v is number => v !== null);
+    return {
+      buildingName: first.buildingName,
+      slug: encodeURIComponent(first.buildingName),
+      city: first.city,
+      district: first.district,
+      txnCount: Number(first.txnCount),
+      representativeArea: first.representativeArea === null ? null : Number(first.representativeArea),
+      medianPrice: median(prices),
+      medianMonthlyRent: monthlies.length > 0 ? median(monthlies) : null,
+    };
+  });
+}
+
 export async function getTrendingBuildings(): Promise<{ sale: TrendingBuildingItem[]; jeonse: TrendingBuildingItem[]; wolse: TrendingBuildingItem[] }> {
   const from = ymdNDaysAgo(7);
   const to = ymdNDaysAgo(0);
 
-  const [sale, jeonse, wolse] = await Promise.all([
-    prisma.$queryRaw<Array<{ buildingName: string; city: string; district: string; txnCount: bigint; avgPrice: number | null; avgMonthlyRent: number | null }>>`
-      SELECT buildingName, city, district, COUNT(*) AS txnCount, AVG(dealAmount) AS avgPrice, NULL AS avgMonthlyRent
-      FROM AptSaleTransaction
-      WHERE STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
-      GROUP BY buildingName, city, district
-      ORDER BY txnCount DESC
-      LIMIT 5`,
-    prisma.$queryRaw<Array<{ buildingName: string; city: string; district: string; txnCount: bigint; avgPrice: number | null; avgMonthlyRent: number | null }>>`
-      SELECT buildingName, city, district, COUNT(*) AS txnCount, AVG(deposit) AS avgPrice, NULL AS avgMonthlyRent
-      FROM AptRentTransaction
-      WHERE rentType = '전세'
-        AND STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
-      GROUP BY buildingName, city, district
-      ORDER BY txnCount DESC
-      LIMIT 5`,
-    prisma.$queryRaw<Array<{ buildingName: string; city: string; district: string; txnCount: bigint; avgPrice: number | null; avgMonthlyRent: number | null }>>`
-      SELECT buildingName, city, district, COUNT(*) AS txnCount, AVG(deposit) AS avgPrice, AVG(monthlyRent) AS avgMonthlyRent
-      FROM AptRentTransaction
-      WHERE rentType = '월세'
-        AND STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
-      GROUP BY buildingName, city, district
-      ORDER BY txnCount DESC
-      LIMIT 5`,
+  // 공통 패턴: bucketed → top_buildings(거래수 TOP 5) → primary_buckets(주력 평형) → 주력 평형 거래 raw rows.
+  // ORDER BY tb.txnCount DESC, b.buildingName ASC 로 결정성 부여.
+  const [saleRows, jeonseRows, wolseRows] = await Promise.all([
+    prisma.$queryRaw<TrendingTxnRow[]>`
+      WITH bucketed AS (
+        SELECT buildingName, city, district,
+               ROUND(exclusiveArea / 5) * 5 AS areaBucket,
+               dealAmount AS price
+        FROM AptSaleTransaction
+        WHERE STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
+          AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
+      ),
+      top_buildings AS (
+        SELECT buildingName, city, district, COUNT(*) AS txnCount
+        FROM bucketed
+        GROUP BY buildingName, city, district
+        ORDER BY txnCount DESC, buildingName ASC
+        LIMIT 5
+      ),
+      primary_buckets AS (
+        SELECT b.buildingName, b.city, b.district, b.areaBucket,
+               ROW_NUMBER() OVER (
+                 PARTITION BY b.buildingName, b.city, b.district
+                 ORDER BY COUNT(*) DESC, b.areaBucket ASC
+               ) AS rn
+        FROM bucketed b
+        JOIN top_buildings tb USING (buildingName, city, district)
+        GROUP BY b.buildingName, b.city, b.district, b.areaBucket
+      )
+      SELECT b.buildingName, b.city, b.district,
+             tb.txnCount AS txnCount,
+             b.areaBucket AS representativeArea,
+             b.price AS price,
+             NULL AS monthlyRent
+      FROM bucketed b
+      JOIN top_buildings tb USING (buildingName, city, district)
+      JOIN primary_buckets pb
+        ON pb.buildingName = b.buildingName
+       AND pb.city = b.city
+       AND pb.district = b.district
+       AND pb.areaBucket = b.areaBucket
+       AND pb.rn = 1
+      ORDER BY tb.txnCount DESC, b.buildingName ASC`,
+    prisma.$queryRaw<TrendingTxnRow[]>`
+      WITH bucketed AS (
+        SELECT buildingName, city, district,
+               ROUND(exclusiveArea / 5) * 5 AS areaBucket,
+               deposit AS price
+        FROM AptRentTransaction
+        WHERE rentType = '전세'
+          AND STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
+          AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
+      ),
+      top_buildings AS (
+        SELECT buildingName, city, district, COUNT(*) AS txnCount
+        FROM bucketed
+        GROUP BY buildingName, city, district
+        ORDER BY txnCount DESC, buildingName ASC
+        LIMIT 5
+      ),
+      primary_buckets AS (
+        SELECT b.buildingName, b.city, b.district, b.areaBucket,
+               ROW_NUMBER() OVER (
+                 PARTITION BY b.buildingName, b.city, b.district
+                 ORDER BY COUNT(*) DESC, b.areaBucket ASC
+               ) AS rn
+        FROM bucketed b
+        JOIN top_buildings tb USING (buildingName, city, district)
+        GROUP BY b.buildingName, b.city, b.district, b.areaBucket
+      )
+      SELECT b.buildingName, b.city, b.district,
+             tb.txnCount AS txnCount,
+             b.areaBucket AS representativeArea,
+             b.price AS price,
+             NULL AS monthlyRent
+      FROM bucketed b
+      JOIN top_buildings tb USING (buildingName, city, district)
+      JOIN primary_buckets pb
+        ON pb.buildingName = b.buildingName
+       AND pb.city = b.city
+       AND pb.district = b.district
+       AND pb.areaBucket = b.areaBucket
+       AND pb.rn = 1
+      ORDER BY tb.txnCount DESC, b.buildingName ASC`,
+    prisma.$queryRaw<TrendingTxnRow[]>`
+      WITH bucketed AS (
+        SELECT buildingName, city, district,
+               ROUND(exclusiveArea / 5) * 5 AS areaBucket,
+               deposit AS price,
+               monthlyRent AS monthlyRent
+        FROM AptRentTransaction
+        WHERE rentType = '월세'
+          AND STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
+          AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
+      ),
+      top_buildings AS (
+        SELECT buildingName, city, district, COUNT(*) AS txnCount
+        FROM bucketed
+        GROUP BY buildingName, city, district
+        ORDER BY txnCount DESC, buildingName ASC
+        LIMIT 5
+      ),
+      primary_buckets AS (
+        SELECT b.buildingName, b.city, b.district, b.areaBucket,
+               ROW_NUMBER() OVER (
+                 PARTITION BY b.buildingName, b.city, b.district
+                 ORDER BY COUNT(*) DESC, b.areaBucket ASC
+               ) AS rn
+        FROM bucketed b
+        JOIN top_buildings tb USING (buildingName, city, district)
+        GROUP BY b.buildingName, b.city, b.district, b.areaBucket
+      )
+      SELECT b.buildingName, b.city, b.district,
+             tb.txnCount AS txnCount,
+             b.areaBucket AS representativeArea,
+             b.price AS price,
+             b.monthlyRent AS monthlyRent
+      FROM bucketed b
+      JOIN top_buildings tb USING (buildingName, city, district)
+      JOIN primary_buckets pb
+        ON pb.buildingName = b.buildingName
+       AND pb.city = b.city
+       AND pb.district = b.district
+       AND pb.areaBucket = b.areaBucket
+       AND pb.rn = 1
+      ORDER BY tb.txnCount DESC, b.buildingName ASC`,
   ]);
 
-  const toItem = (r: { buildingName: string; city: string; district: string; txnCount: bigint; avgPrice: number | null; avgMonthlyRent: number | null }): TrendingBuildingItem => ({
-    buildingName: r.buildingName,
-    slug: encodeURIComponent(r.buildingName),
-    city: r.city,
-    district: r.district,
-    txnCount: Number(r.txnCount),
-    avgPrice: r.avgPrice === null || r.avgPrice === undefined ? null : Number(r.avgPrice),
-    avgMonthlyRent: r.avgMonthlyRent === null || r.avgMonthlyRent === undefined ? null : Number(r.avgMonthlyRent),
-  });
-
   return {
-    sale: sale.map((r) => ({ ...toItem(r), avgMonthlyRent: null })),
-    jeonse: jeonse.map((r) => ({ ...toItem(r), avgMonthlyRent: null })),
-    wolse: wolse.map(toItem),
+    sale: rowsToTrendingItems(saleRows).map((it) => ({ ...it, medianMonthlyRent: null })),
+    jeonse: rowsToTrendingItems(jeonseRows).map((it) => ({ ...it, medianMonthlyRent: null })),
+    wolse: rowsToTrendingItems(wolseRows),
   };
 }
 

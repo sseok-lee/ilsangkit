@@ -17,6 +17,20 @@ export function formatPriceManwon(manwon: number | null): string {
   return `${Math.round(manwon).toLocaleString('ko-KR')}만`;
 }
 
+/**
+ * 평당가(만원/평) → '평당 2,150만' / '평당 1.2억' / '—'.
+ * "오늘의 부동산 시장" 9슬롯 카드에서 사용. 면적 가중 평당가의 사람용 표기.
+ */
+export function formatPricePerPyeong(manwonPerPyeong: number | null): string {
+  if (manwonPerPyeong === null || manwonPerPyeong <= 0) return '—';
+  if (manwonPerPyeong >= 10000) {
+    const eok = manwonPerPyeong / 10000;
+    const rounded = Math.round(eok * 10) / 10;
+    return `평당 ${rounded % 1 === 0 ? rounded : rounded.toFixed(1)}억`;
+  }
+  return `평당 ${Math.round(manwonPerPyeong).toLocaleString('ko-KR')}만`;
+}
+
 /** 변동률(%) → '+2.3%' / '-0.8%' / '0.0%' / '—'. */
 export function formatChange(pct: number | null): string {
   if (pct === null) return '—';
