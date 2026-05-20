@@ -31,6 +31,8 @@
     <!-- D-3 임박 하이라이트 -->
     <div
       v-if="summary && summary.imminent.length > 0"
+      role="region"
+      aria-label="마감 임박 공고"
       class="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1"
     >
       <span class="material-symbols-outlined text-red-500 text-[20px] shrink-0" aria-hidden="true">notifications_active</span>
@@ -116,23 +118,27 @@ function formatMeta(item: HomeSubscriptionItem, mode: 'ongoing' | 'upcoming'): s
   return parts.join(' · ')
 }
 
-function computeDday(isoDate: string | null, label: '마감' | '시작'): string | null {
+const MS_PER_DAY = 86_400_000
+
+function diffDaysFromToday(isoDate: string | null): number | null {
   if (!isoDate) return null
   const target = new Date(isoDate)
   if (Number.isNaN(target.getTime())) return null
   const today = new Date(`${todayIso.value}T00:00:00`)
   target.setHours(0, 0, 0, 0)
-  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000)
-  if (diffDays < 0) return null
+  return Math.round((target.getTime() - today.getTime()) / MS_PER_DAY)
+}
+
+function computeDday(isoDate: string | null, label: '마감' | '시작'): string | null {
+  const diffDays = diffDaysFromToday(isoDate)
+  if (diffDays === null || diffDays < 0) return null
   if (diffDays === 0) return `${label} 오늘`
   return `${label} D-${diffDays}`
 }
 
 function ddayLabel(endDate: string): string {
-  const target = new Date(endDate)
-  const today = new Date(`${todayIso.value}T00:00:00`)
-  target.setHours(0, 0, 0, 0)
-  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000)
+  const diffDays = diffDaysFromToday(endDate)
+  if (diffDays === null) return ''
   if (diffDays === 0) return 'D-Day'
   if (diffDays < 0) return '마감'
   return `D-${diffDays}`

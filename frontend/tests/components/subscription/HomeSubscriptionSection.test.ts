@@ -31,12 +31,6 @@ vi.mock('~/composables/useHomeSubscriptions', () => ({
   }),
 }))
 
-// useState mock: home-today-iso → fixed date for stable D-day calculation
-;(globalThis as any).useState = vi.fn((key: string, init?: () => string) => {
-  if (key === 'home-today-iso') return { value: '2026-05-20' }
-  return { value: init ? init() : null }
-})
-
 const summary = {
   closingThisWeek: 12,
   upcomingNextWeek: 18,
