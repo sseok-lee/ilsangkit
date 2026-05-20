@@ -2,8 +2,39 @@ import { prisma } from '../lib/prisma.js';
 import { dateBasedStatusFilter } from './subscriptionService.js';
 import type { HomeDashboardResponse, RealEstateTrend, TrendingBuildingItem } from '../types/homeDashboard.js';
 
+export interface StatsData {
+  toilet: number;
+  wifi: number;
+  clothes: number;
+  trash: number;
+  parking: number;
+  aed: number;
+  library: number;
+  hospital: number;
+  pharmacy: number;
+  park: number;
+  school: number;
+  market: number;
+  childcare: number;
+  'ev-charger': number;
+  sports: number;
+  total: number;
+  realEstate: {
+    aptSale: number;
+    aptRent: number;
+    villaSale: number;
+    villaRent: number;
+    offitelSale: number;
+    offitelRent: number;
+  };
+  realEstateBuildings: { apt: number; villa: number; offitel: number };
+  buildingCount: number;
+  regionCount: number;
+  subscriptionActiveCount: number;
+}
+
 // Stats 인메모리 캐시 (5분 TTL) — 23개 병렬 COUNT 쿼리 부하 감소
-let statsCache: { data: Record<string, unknown>; expiry: number } | null = null;
+let statsCache: { data: StatsData; expiry: number } | null = null;
 const STATS_CACHE_TTL = 5 * 60 * 1000;
 
 export async function getCategories() {
@@ -13,7 +44,7 @@ export async function getCategories() {
   });
 }
 
-export async function getStats() {
+export async function getStats(): Promise<{ cached: boolean; data: StatsData }> {
   if (statsCache && Date.now() < statsCache.expiry) {
     return { cached: true as const, data: statsCache.data };
   }
@@ -174,11 +205,11 @@ export async function getNewlyListedToday(): Promise<number> {
   return a + b + c + d + e + f;
 }
 
-/** N일 전 날짜를 'YYYY-MM-DD' 문자열로 반환. */
+/** N일 전 날짜를 'YYYY-MM-DD' 문자열로 반환. dealYear/dealMonth/dealDay 컬럼이 KST 기준이므로 KST wall-clock 사용. */
 function ymdNDaysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  kstNow.setUTCDate(kstNow.getUTCDate() - n);
+  return kstNow.toISOString().slice(0, 10);
 }
 
 function calcChangePct(cur: number | null, prev: number | null): number | null {
@@ -374,8 +405,13 @@ export async function getSubscriptionSummary() {
 let homeDashboardCache: { data: HomeDashboardResponse; expiry: number } | null = null;
 const HOME_DASHBOARD_CACHE_TTL = 60 * 60 * 1000; // 1시간
 
+export function clearStatsCache(): void {
+  statsCache = null;
+}
+
 export function clearHomeDashboardCache(): void {
   homeDashboardCache = null;
+  clearStatsCache(); // home-dashboard가 getStats()에 의존하므로 같이 flush
 }
 
 /**
@@ -396,12 +432,7 @@ export async function getHomeDashboard(): Promise<HomeDashboardResponse> {
     getSubscriptionSummary(),
   ]);
 
-  const stats = statsResult.data as {
-    total: number;
-    buildingCount: number;
-    realEstateBuildings: { apt: number; villa: number; offitel: number };
-    subscriptionActiveCount: number;
-  };
+  const stats = statsResult.data;
 
   const payload: HomeDashboardResponse = {
     total: stats.total,

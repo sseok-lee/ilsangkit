@@ -35,6 +35,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
 }));
 
 import app from '../../src/app.js';
+import { getHomeDashboard } from '../../src/services/metaService.js';
 
 describe('GET /api/meta/home-dashboard', () => {
   it('returns 200 with success envelope and dashboard payload', async () => {
@@ -45,5 +46,12 @@ describe('GET /api/meta/home-dashboard', () => {
     expect(res.body.data).toHaveProperty('realEstateTrends');
     expect(res.body.data).toHaveProperty('trendingBuildings');
     expect(res.body.data.trendingBuildings).toHaveProperty('sale');
+  });
+
+  it('returns 500 when getHomeDashboard throws', async () => {
+    (getHomeDashboard as any).mockRejectedValueOnce(new Error('boom'));
+    const res = await request(app).get('/api/meta/home-dashboard');
+    expect(res.status).toBe(500);
+    expect(res.body.success).toBe(false);
   });
 });
