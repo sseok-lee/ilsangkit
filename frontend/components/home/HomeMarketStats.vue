@@ -6,7 +6,7 @@
           <span class="material-symbols-outlined text-primary text-[24px]">trending_up</span>
           오늘의 부동산 시장
         </h2>
-        <p class="text-sm text-slate-500 mt-1">최근 7일 거래일 기준 평균과 전주 대비 변동입니다.</p>
+        <p class="text-sm text-slate-500 mt-1">최근 7일 거래 평당가(전국) · 전주 대비 변동입니다.</p>
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</HardLink>
     </div>
@@ -29,7 +29,7 @@
             >
               <span class="w-10 text-[13px] font-bold text-slate-600">{{ row.label }}</span>
               <span class="flex-1 text-sm font-bold text-slate-900">
-                {{ formatPriceManwon(findTrend(trends, prop.id, row.id)?.avgPrice ?? null) }}
+                {{ formatPricePerPyeong(findTrend(trends, prop.id, row.id)?.pricePerPyeong ?? null) }}
               </span>
               <span class="text-[11px] text-slate-500 w-16 text-right">
                 {{ findTrend(trends, prop.id, row.id)?.txnCount?.toLocaleString('ko-KR') ?? '0' }}건
@@ -50,7 +50,7 @@
 
 <script setup lang="ts">
 import HardLink from '~/components/common/HardLink.vue';
-import { formatPriceManwon, formatChange } from '~/utils/priceFormat';
+import { formatPricePerPyeong, formatChange } from '~/utils/priceFormat';
 import type { RealEstateTrend } from '~/composables/useHomeDashboard';
 
 defineProps<{ trends: RealEstateTrend[] }>();

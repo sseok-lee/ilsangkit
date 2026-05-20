@@ -3,8 +3,9 @@ export interface TrendingBuildingItem {
   city: string;
   district: string;
   txnCount: number;
-  avgPrice: number | null;
-  avgMonthlyRent: number | null;
+  representativeArea: number | null;
+  medianPrice: number | null;
+  medianMonthlyRent: number | null;
   slug: string;
 }
 
@@ -14,9 +15,9 @@ export interface RealEstateTrend {
     | 'villa-sale' | 'villa-rent-jeonse' | 'villa-rent-wolse'
     | 'offitel-sale' | 'offitel-rent-jeonse' | 'offitel-rent-wolse';
   label: string;
-  avgPrice: number | null;
+  pricePerPyeong: number | null;
   txnCount: number;
-  prevAvgPrice: number | null;
+  prevPricePerPyeong: number | null;
   changePct: number | null;
 }
 

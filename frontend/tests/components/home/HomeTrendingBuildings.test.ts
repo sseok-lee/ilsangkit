@@ -5,15 +5,15 @@ import HomeTrendingBuildings from '~/components/home/HomeTrendingBuildings.vue';
 
 const buildings = {
   sale: [
-    { buildingName: '헬리오시티', city: '서울특별시', district: '송파구', txnCount: 42, avgPrice: 184000, avgMonthlyRent: null, slug: encodeURIComponent('헬리오시티') },
-    { buildingName: '파크리오', city: '서울특별시', district: '송파구', txnCount: 30, avgPrice: 160000, avgMonthlyRent: null, slug: encodeURIComponent('파크리오') },
-    { buildingName: '아크로리버파크', city: '서울특별시', district: '반포구', txnCount: 20, avgPrice: 320000, avgMonthlyRent: null, slug: encodeURIComponent('아크로리버파크') },
+    { buildingName: '헬리오시티', city: '서울특별시', district: '송파구', txnCount: 42, representativeArea: 85, medianPrice: 184000, medianMonthlyRent: null, slug: encodeURIComponent('헬리오시티') },
+    { buildingName: '파크리오', city: '서울특별시', district: '송파구', txnCount: 30, representativeArea: 85, medianPrice: 160000, medianMonthlyRent: null, slug: encodeURIComponent('파크리오') },
+    { buildingName: '아크로리버파크', city: '서울특별시', district: '반포구', txnCount: 20, representativeArea: 115, medianPrice: 320000, medianMonthlyRent: null, slug: encodeURIComponent('아크로리버파크') },
   ],
   jeonse: [
-    { buildingName: '파크리오', city: '서울특별시', district: '송파구', txnCount: 18, avgPrice: 90000, avgMonthlyRent: null, slug: encodeURIComponent('파크리오') },
+    { buildingName: '파크리오', city: '서울특별시', district: '송파구', txnCount: 18, representativeArea: 85, medianPrice: 90000, medianMonthlyRent: null, slug: encodeURIComponent('파크리오') },
   ],
   wolse: [
-    { buildingName: '아크로리버파크', city: '서울특별시', district: '반포구', txnCount: 5, avgPrice: 20000, avgMonthlyRent: 120, slug: encodeURIComponent('아크로리버파크') },
+    { buildingName: '아크로리버파크', city: '서울특별시', district: '반포구', txnCount: 5, representativeArea: 85, medianPrice: 20000, medianMonthlyRent: 120, slug: encodeURIComponent('아크로리버파크') },
   ],
 };
 

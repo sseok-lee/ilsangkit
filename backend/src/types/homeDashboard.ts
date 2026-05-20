@@ -6,8 +6,12 @@ export type TrendingBuildingItem = {
   city: string;       // 정식명 ('서울특별시')
   district: string;
   txnCount: number;
-  avgPrice: number | null;       // sale: dealAmount 평균(만원). jeonse: deposit 평균(만원). wolse: deposit 평균(만원)
-  avgMonthlyRent: number | null; // wolse에만 채워짐 (monthlyRent 평균, 만원)
+  // 주력 평형 (㎡, 5㎡ 버킷 round) — 단지 내 거래수 최다 평형
+  representativeArea: number | null;
+  // 주력 평형의 가격 중앙값(만원). sale: dealAmount, jeonse/wolse: deposit
+  medianPrice: number | null;
+  // wolse 슬롯에만 채워짐 — 주력 평형의 monthlyRent 중앙값(만원)
+  medianMonthlyRent: number | null;
 };
 
 export type RealEstateTrend = {
@@ -16,9 +20,11 @@ export type RealEstateTrend = {
     | 'villa-sale' | 'villa-rent-jeonse' | 'villa-rent-wolse'
     | 'offitel-sale' | 'offitel-rent-jeonse' | 'offitel-rent-wolse';
   label: string;
-  avgPrice: number | null;
+  // 평당가(만원/평). 매매=dealAmount/면적, 전세=deposit/면적, 월세=monthlyRent/면적.
+  // 면적이 NULL/0 인 거래는 제외하고 면적 가중 산출.
+  pricePerPyeong: number | null;
   txnCount: number;
-  prevAvgPrice: number | null;
+  prevPricePerPyeong: number | null;
   changePct: number | null;
 };
 

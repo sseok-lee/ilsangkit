@@ -6,7 +6,7 @@
           <span class="material-symbols-outlined text-primary text-[24px]">local_fire_department</span>
           이번 주 인기 단지
         </h2>
-        <p class="text-sm text-slate-500 mt-1">최근 7일 매매·전세·월세 거래가 가장 많은 단지입니다.</p>
+        <p class="text-sm text-slate-500 mt-1">최근 7일 거래가 많은 단지의 주력 평형 실거래가 중앙값입니다.</p>
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</HardLink>
     </div>
@@ -45,7 +45,9 @@
             </div>
             <!-- Txn count + price -->
             <div class="text-right shrink-0">
-              <div class="text-[11px] text-slate-400">{{ b.txnCount }}건</div>
+              <div class="text-[11px] text-slate-400">
+                {{ b.txnCount }}건<template v-if="b.representativeArea"> · {{ b.representativeArea }}㎡</template>
+              </div>
               <div :class="['text-sm font-bold', col.accentText]">{{ formatBuildingPrice(col.type, b) }}</div>
             </div>
           </a>
@@ -53,7 +55,7 @@
       </div>
     </div>
     <!-- Caption -->
-    <p class="text-[11px] text-slate-400 mt-2">월세는 보증금/월세(만원) 평균으로 표기합니다.</p>
+    <p class="text-[11px] text-slate-400 mt-2">단지 내 거래 최다 평형의 실거래가 중앙값입니다. 월세는 보증금/월세(만원).</p>
   </section>
 </template>
 
@@ -110,11 +112,11 @@ function buildUrl(type: ColType, b: TrendingBuildingItem): string {
 
 function formatBuildingPrice(type: ColType, b: TrendingBuildingItem): string {
   if (type === 'wolse') {
-    const deposit = formatPriceManwon(b.avgPrice);
-    const monthly = b.avgMonthlyRent !== null ? Math.round(b.avgMonthlyRent).toLocaleString('ko-KR') : '—';
+    const deposit = formatPriceManwon(b.medianPrice);
+    const monthly = b.medianMonthlyRent !== null ? Math.round(b.medianMonthlyRent).toLocaleString('ko-KR') : '—';
     return `${deposit}/${monthly}`;
   }
-  return formatPriceManwon(b.avgPrice);
+  return formatPriceManwon(b.medianPrice);
 }
 
 interface Column {
