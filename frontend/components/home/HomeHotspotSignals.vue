@@ -1,6 +1,6 @@
 <template>
   <section
-    v-if="currentBundle"
+    v-if="hasSeedData"
     class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6"
   >
     <div class="bg-white rounded-3xl border border-line shadow-card overflow-hidden">
@@ -23,11 +23,18 @@
             v-for="opt in PROPERTY_OPTIONS"
             :key="opt.value"
             :class="[
-              'px-4 py-1.5 rounded-full transition',
+              'px-4 py-1.5 rounded-full transition inline-flex items-center gap-1.5',
               propertyType === opt.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
             ]"
             @click="onPropertyChange(opt.value)"
-          >{{ opt.label }}</button>
+          >
+            <span
+              v-if="isLoadingProperty && propertyType === opt.value"
+              class="inline-block w-3 h-3 border-2 border-slate-300 border-t-primary rounded-full animate-spin"
+              aria-label="불러오는 중"
+            />
+            {{ opt.label }}
+          </button>
         </div>
         <TxnTypeMiniTabs v-model="txnType" />
         <span class="ml-auto text-[11px] text-slate-400">자치구 단위 · 표본 30건 이상</span>
@@ -117,21 +124,31 @@ const SIGNAL_OPTIONS: { value: Signal; label: string; borderClass: string }[] = 
 const propertyType = ref<RealEstatePropertyType>('apt');
 const txnType = ref<TxnKey>('sale');
 const mobileSignal = ref<Signal>('active');
+const isLoadingProperty = ref(false);
 
 const { data, loadProperty } = useRealEstateHotspots(props.hotspots);
 
+// SSR로 최소 1개 건물유형이 들어있으면 섹션 유지. 토글 중 데이터가 비어도 unmount 안 함.
+const hasSeedData = computed(() => Object.keys(data.value).length > 0);
+
 async function onPropertyChange(next: RealEstatePropertyType): Promise<void> {
   propertyType.value = next;
+  if (data.value[next]) return; // 이미 캐시된 건물유형
+  isLoadingProperty.value = true;
   try {
     await loadProperty(next);
   } catch {
     // silent fail — previous data retained
+  } finally {
+    isLoadingProperty.value = false;
   }
 }
 
+// 현재 선택된 건물유형 데이터가 없으면 빈 bundle 반환 — 섹션은 유지하되 카드는 비움.
+const EMPTY_BUNDLE = { rising: [], falling: [], active: [] };
 const currentBundle = computed(() => {
   const property = data.value[propertyType.value];
-  if (!property) return null;
+  if (!property) return EMPTY_BUNDLE;
   return txnType.value === 'wolse'
     ? { rising: [], falling: [], active: property.wolse.active }
     : property[txnType.value];
