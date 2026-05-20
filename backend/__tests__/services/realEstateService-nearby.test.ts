@@ -97,4 +97,35 @@ describe('getNearbyComplexes (rent path)', () => {
     expect(item.latestPrice).toBe(30000);
     expect(item.monthlyRent).toBe(50);
   });
+
+  it('converts BigInt buildYear/latestDealYear/latestDealMonth to Number (JSON serialize 가능)', async () => {
+    // ANY_VALUE / window function 결과가 Prisma raw에서 BigInt로 들어올 수 있음
+    mockQueryRaw.mockResolvedValue([
+      {
+        buildingName: '반포미도',
+        bjdCode: '1165010600',
+        city: '서울특별시',
+        district: '서초구',
+        dongName: '반포동',
+        buildYear: 1988n,             // BigInt
+        transactionCount: 7n,
+        latestPrice: 80000n,
+        monthlyRent: 0n,
+        latestDealYear: 2026n,        // BigInt
+        latestDealMonth: 3n,          // BigInt
+      },
+    ]);
+
+    const result = await getNearbyByBjd('1165010600', 'rent', { rentType: 'all' });
+
+    const item = result.apt[0];
+    expect(typeof item.buildYear).toBe('number');
+    expect(typeof item.latestDealYear).toBe('number');
+    expect(typeof item.latestDealMonth).toBe('number');
+    expect(item.buildYear).toBe(1988);
+    expect(item.latestDealYear).toBe(2026);
+    expect(item.latestDealMonth).toBe(3);
+    // JSON serialize 가능 여부도 확인 (BigInt 남아있으면 throw)
+    expect(() => JSON.stringify(result)).not.toThrow();
+  });
 });
