@@ -7,7 +7,7 @@ import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
 import { getStatsByCity, getStatsByDistrict, getSyncStatus, SHORT_TO_SLUG } from '../services/facilityService.js';
-import { getCategories, getStats, getRegionByDistrictName, getRegionByBjdCode, getRegions } from '../services/metaService.js';
+import { getCategories, getStats, getRegionByDistrictName, getRegionByBjdCode, getRegions, getHomeDashboard } from '../services/metaService.js';
 import { prisma } from '../lib/prisma.js';
 
 const SlugParamsSchema = z.object({
@@ -44,6 +44,12 @@ router.get('/categories', asyncHandler(async (_req: Request, res: Response) => {
 router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
   const result = await getStats();
   res.json({ success: true, data: result.data });
+}));
+
+// GET /api/meta/home-dashboard - 홈 페이지 통합 대시보드 (1시간 캐시)
+router.get('/home-dashboard', asyncHandler(async (_req: Request, res: Response) => {
+  const data = await getHomeDashboard();
+  res.json({ success: true, data });
 }));
 
 // GET /api/meta/region-facilities-summary - 한글 지역명으로 카테고리별 시설 인프라 요약 조회
