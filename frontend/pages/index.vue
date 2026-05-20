@@ -246,6 +246,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useHomeDashboard } from '~/composables/useHomeDashboard'
 import { CITY_LINKS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
+import { toRealEstateUrl } from '~/utils/realEstateUrl'
 
 const config = useRuntimeConfig()
 
@@ -254,7 +255,7 @@ const { setHomeMeta } = useFacilityMeta()
 setHomeMeta()
 
 // JSON-LD 구조화된 데이터 - 기존 유지
-const { setWebsiteSchema, setOrganizationSchema, setDatasetSchema } = useStructuredData()
+const { setWebsiteSchema, setOrganizationSchema, setDatasetSchema, setItemListSchema } = useStructuredData()
 setWebsiteSchema()
 setOrganizationSchema()
 setDatasetSchema({
@@ -295,6 +296,40 @@ const stats = computed(() => ({
   buildingCount: dashboard.value?.buildingCount ?? 0,
   subscriptionActiveCount: dashboard.value?.subscriptionActiveCount ?? 0,
 }))
+
+// ItemList JSON-LD — 트렌딩 단지 TOP 15 (매매 5 + 전세 5 + 월세 5)
+if (dashboard.value) {
+  const buildings = dashboard.value.trendingBuildings
+  const buildItems = (
+    list: typeof buildings.sale,
+    txnLabel: string,
+    type: 'apt-sale' | 'apt-rent',
+    posOffset: number,
+  ) => list.map((b, i) => ({
+    name: `${b.buildingName} (${txnLabel})`,
+    url: toRealEstateUrl({ type, city: b.city, district: b.district, buildingName: b.buildingName }),
+    position: posOffset + i + 1,
+    type: 'Apartment' as const,
+    address: {
+      addressLocality: b.district,
+      addressRegion: b.city,
+    },
+  }))
+
+  const allItems = [
+    ...buildItems(buildings.sale, '매매', 'apt-sale', 0),
+    ...buildItems(buildings.jeonse, '전세', 'apt-rent', 5),
+    ...buildItems(buildings.wolse, '월세', 'apt-rent', 10),
+  ]
+
+  if (allItems.length > 0) {
+    setItemListSchema(allItems, {
+      name: '이번 주 인기 아파트 단지',
+      description: '최근 7일 매매·전세·월세 거래가 가장 많은 아파트 단지',
+      key: 'jsonld-trending-buildings',
+    })
+  }
+}
 
 const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
   $fetch<{ success: boolean; data: GuideSummary[] }>(
