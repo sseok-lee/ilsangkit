@@ -24,7 +24,7 @@
         다음 주 예정 <strong>{{ summary.upcomingNextWeek }}건</strong>
       </span>
       <span v-if="summary.avgSupplyPrice !== null" class="flex items-center gap-1">
-        평균 분양가 <strong>{{ formatPrice(summary.avgSupplyPrice) }}</strong>
+        평균 분양가 <strong>{{ formatPriceManwon(summary.avgSupplyPrice) }}</strong>
       </span>
     </div>
 
@@ -87,7 +87,7 @@ import HardLink from '~/components/common/HardLink.vue'
 import StatusBadge from '~/components/common/StatusBadge.vue'
 import type { HomeSubscriptionItem } from '~/composables/useHomeSubscriptions'
 import { useHomeSubscriptions } from '~/composables/useHomeSubscriptions'
-import { formatPrice } from '~/utils/priceFormat'
+import { formatPriceManwon } from '~/utils/priceFormat'
 
 interface SubscriptionSummary {
   closingThisWeek: number

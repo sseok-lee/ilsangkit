@@ -1,5 +1,13 @@
-/** manwon 단위 금액 → '5.4억' / '8,500만' / '—'. */
-export function formatPrice(manwon: number | null): string {
+/**
+ * 만원 단위 금액 → '5.4억' / '8,500만' / '—'.
+ *
+ * 이름이 `formatPrice` 가 아닌 `formatPriceManwon` 인 이유:
+ * `~/utils/seoHelpers.ts` 의 기존 `formatPrice(price: number)` 는 원(₩) 단위 입력에
+ * `12.3억원` 처럼 단위 접미사가 붙은 문자열을 돌려준다. Nuxt auto-import 가 같은
+ * 이름을 만나면 한 쪽을 무시한다고 경고하므로(둘 다 살려둬야 함) 만원 입력 버전은
+ * 다른 이름으로 노출한다.
+ */
+export function formatPriceManwon(manwon: number | null): string {
   if (manwon === null || manwon === 0) return '—';
   if (manwon >= 10000) {
     const eok = manwon / 10000;
