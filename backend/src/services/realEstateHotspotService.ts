@@ -7,8 +7,6 @@ import type { RealEstatePropertyType } from '../schemas/realEstate.js';
 
 const MAX_PER_SIGNAL = 5;
 
-// Will be used by Tasks 4-5
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SAMPLE_THRESHOLD: Record<RealEstatePropertyType, number> = {
   apt: 30,
   villa: 15,
@@ -208,3 +206,33 @@ export async function getWolseHotspots(
 
 // Re-exported types for Tasks 4-5 to import from this module
 export type { WolseHotspotBundle, PropertyHotspots };
+
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+const PRICED_TABLES: Record<RealEstatePropertyType, { sale: PricedSliceTable; rent: PricedSliceTable }> = {
+  apt:     { sale: 'AptSaleTransaction',     rent: 'AptRentTransaction' },
+  villa:   { sale: 'VillaSaleTransaction',   rent: 'VillaRentTransaction' },
+  offitel: { sale: 'OffitelSaleTransaction', rent: 'OffitelRentTransaction' },
+};
+
+export const _hotspotCache = new Map<RealEstatePropertyType, { data: PropertyHotspots; expiry: number }>();
+
+export async function getPropertyHotspots(propertyType: RealEstatePropertyType): Promise<PropertyHotspots> {
+  const cached = _hotspotCache.get(propertyType);
+  if (cached && Date.now() < cached.expiry) {
+    return cached.data;
+  }
+
+  const threshold = SAMPLE_THRESHOLD[propertyType];
+  const { sale, rent } = PRICED_TABLES[propertyType];
+
+  const [saleBundle, jeonseBundle, wolseBundle] = await Promise.all([
+    getPricedSliceHotspots(sale, { sampleThreshold: threshold }),
+    getPricedSliceHotspots(rent, { sampleThreshold: threshold, rentTypeFilter: '전세' }),
+    getWolseHotspots(rent as WolseTable, { sampleThreshold: threshold }),
+  ]);
+
+  const data: PropertyHotspots = { sale: saleBundle, jeonse: jeonseBundle, wolse: wolseBundle };
+  _hotspotCache.set(propertyType, { data, expiry: Date.now() + CACHE_TTL_MS });
+  return data;
+}

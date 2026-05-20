@@ -9,7 +9,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   default: { $queryRaw: mockQueryRaw },
 }));
 
-import { getPricedSliceHotspots, getWolseHotspots } from '../../src/services/realEstateHotspotService.js';
+import { getPricedSliceHotspots, getWolseHotspots, getPropertyHotspots, _hotspotCache } from '../../src/services/realEstateHotspotService.js';
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
@@ -103,5 +103,37 @@ describe('getWolseHotspots', () => {
 
     expect(bundle.active).toHaveLength(5);
     expect(bundle.active.map((r) => r.volumeChangePct)).toEqual([10, 9, 8, 7, 6]);
+  });
+});
+
+describe('getPropertyHotspots (aggregator)', () => {
+  beforeEach(() => {
+    _hotspotCache.clear();
+  });
+
+  it('apt 호출 시 3개 슬라이스(sale/jeonse/wolse) 모두 채워짐', async () => {
+    mockQueryRaw.mockResolvedValue([]);
+    const result = await getPropertyHotspots('apt');
+    expect(result.sale).toBeDefined();
+    expect(result.sale.rising).toEqual([]);
+    expect(result.jeonse).toBeDefined();
+    expect(result.wolse).toBeDefined();
+    expect(result.wolse.active).toEqual([]);
+    expect(mockQueryRaw).toHaveBeenCalledTimes(3);
+  });
+
+  it('동일 propertyType 두 번째 호출은 캐시 사용 (DB 호출 X)', async () => {
+    mockQueryRaw.mockResolvedValue([]);
+    await getPropertyHotspots('apt');
+    expect(mockQueryRaw).toHaveBeenCalledTimes(3);
+    await getPropertyHotspots('apt');
+    expect(mockQueryRaw).toHaveBeenCalledTimes(3);
+  });
+
+  it('다른 propertyType은 별도 캐시 키', async () => {
+    mockQueryRaw.mockResolvedValue([]);
+    await getPropertyHotspots('apt');
+    await getPropertyHotspots('villa');
+    expect(mockQueryRaw).toHaveBeenCalledTimes(6);
   });
 });
