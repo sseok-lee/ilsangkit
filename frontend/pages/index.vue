@@ -294,7 +294,7 @@ const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
 const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
 
 // 홈 대시보드 (시장 트렌드, 인기 단지, 청약 요약)
-const { data: dashboardResponse } = useHomeDashboard()
+const { data: dashboardResponse } = await useHomeDashboard()
 const dashboard = computed(() => dashboardResponse.value?.data ?? null)
 const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
 const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })

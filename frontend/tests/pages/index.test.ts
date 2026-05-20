@@ -86,12 +86,13 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('진행중 청약')
   })
 
-  it('renders market stats and trending buildings sections', async () => {
+  it('renders the three new home sections and ad banners', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // HomeMarketStats and HomeTrendingBuildings are rendered (may be hidden if no data)
-    // Verify the page contains real estate related content
-    expect(wrapper.text()).toContain('부동산')
+    expect(wrapper.find('[data-testid="market-stats"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="trending-buildings"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="subscription"]').exists()).toBe(true)
+    expect(wrapper.findAll('.stub-ad-banner').length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders "빠른 생활시설 찾기" 8-icon grid', async () => {
