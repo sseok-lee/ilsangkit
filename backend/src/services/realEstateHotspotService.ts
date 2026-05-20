@@ -93,6 +93,7 @@ export async function getPricedSliceHotspots(
             <  DATE_SUB(CURDATE(), INTERVAL 7 DAY)
         ${rentTypeClause}
       GROUP BY t.city, t.district
+      HAVING COUNT(*) >= ${sampleThreshold}
     )
     SELECT
       reg.citySlug AS citySlug,
