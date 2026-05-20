@@ -1,3 +1,5 @@
+import type { RealEstatePropertyType } from '~/types/realEstate'
+
 export interface TrendingBuildingItem {
   buildingName: string;
   city: string;
@@ -55,11 +57,7 @@ export interface PropertyHotspots {
   wolse: WolseHotspotBundle;
 }
 
-export type RealEstateHotspots = Partial<{
-  apt: PropertyHotspots;
-  villa: PropertyHotspots;
-  offitel: PropertyHotspots;
-}>;
+export type RealEstateHotspots = Partial<Record<RealEstatePropertyType, PropertyHotspots>>;
 
 export interface HomeDashboard {
   total: number;
