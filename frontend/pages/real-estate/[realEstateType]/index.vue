@@ -163,13 +163,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse, RealEstateHubType } from '~/types/realEstate'
 import { HUB_TYPES } from '~/types/realEstate'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
-import { CITY_SLUGS, CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
+import { CITY_SLUGS } from '~/shared/regionSlugs'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
@@ -197,23 +197,6 @@ const currentTab = computed<TransactionMode>({
   set: (val) => {
     router.push(`/real-estate/${baseType.value}-${val}`)
   },
-})
-
-// slug → 한글 구/군/시 역매핑 (DISTRICT_SLUG_MAP의 반전)
-const DISTRICT_SLUG_TO_NAME: Record<string, string> = Object.entries(DISTRICT_SLUG_MAP).reduce(
-  (acc, [name, slug]) => ({ ...acc, [slug]: name }),
-  {} as Record<string, string>,
-)
-
-// 쿼리 파라미터로 전달된 city/district slug를 한글 표시명으로 변환하여 자동 검색
-onMounted(() => {
-  const citySlug = typeof route.query.city === 'string' ? route.query.city : undefined
-  const districtSlug = typeof route.query.district === 'string' ? route.query.district : undefined
-  if (citySlug || districtSlug) {
-    const city = citySlug ? (CITY_SLUG_MAP[citySlug] ?? citySlug) : ''
-    const district = districtSlug ? (DISTRICT_SLUG_TO_NAME[districtSlug] ?? districtSlug) : ''
-    handleSearch({ city, district, buildingName: '' })
-  }
 })
 
 const apiSlug = computed(() => realEstateTypeParam.value)
