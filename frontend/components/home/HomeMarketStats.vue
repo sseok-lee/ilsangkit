@@ -10,41 +10,39 @@
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</HardLink>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
       <div
-        v-for="t in trends"
-        :key="t.key"
-        :data-key="t.key"
-        class="flex flex-col gap-3 p-5 border border-line rounded-2xl shadow-card bg-white"
+        v-for="prop in PROPERTY_TYPES"
+        :key="prop.id"
+        class="bg-white border border-line rounded-2xl shadow-card overflow-hidden"
       >
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[22px]">{{ iconFor(t.key) }}</span>
-            <span class="font-bold text-slate-900">{{ t.label }}</span>
-          </div>
-          <span class="text-[11px] text-slate-400">최근 7일</span>
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[22px]">{{ prop.icon }}</span>
+          <strong class="font-bold text-slate-900">{{ prop.label }}</strong>
+          <span class="ml-auto text-[11px] text-slate-400">최근 7일</span>
         </div>
-        <div class="flex items-baseline gap-2">
-          <strong class="text-2xl font-black tracking-tight text-slate-900">{{ formatPriceManwon(t.avgPrice) }}</strong>
-          <span class="text-xs text-slate-400">{{ t.key === 'apt-rent-wolse' ? '월 평균' : '평균' }}</span>
-        </div>
-        <div class="flex items-center justify-between border-t border-slate-100 pt-3">
-          <div>
-            <div class="text-[11px] text-slate-400">거래량</div>
-            <div class="text-sm font-bold text-slate-900">{{ t.txnCount.toLocaleString('ko-KR') }}건</div>
-          </div>
-          <div class="text-right">
-            <div class="text-[11px] text-slate-400">전주 대비</div>
-            <div
-              class="text-sm font-bold flex items-center justify-end gap-0.5"
-              :class="changeColor(t.changePct)"
+        <ol class="divide-y divide-slate-100">
+          <li v-for="row in TXN_ROWS" :key="row.id">
+            <HardLink
+              :to="`/real-estate/${prop.id}-${row.urlSuffix}`"
+              class="flex items-center gap-3 px-5 py-3 hover:bg-primary/5 transition-colors"
             >
-              <span v-if="t.changePct !== null && Math.abs(t.changePct) >= 0.05 && t.changePct > 0" class="material-symbols-outlined text-[14px]">arrow_drop_up</span>
-              <span v-else-if="t.changePct !== null && Math.abs(t.changePct) >= 0.05 && t.changePct < 0" class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
-              {{ formatChange(t.changePct) }}
-            </div>
-          </div>
-        </div>
+              <span class="w-10 text-[13px] font-bold text-slate-600">{{ row.label }}</span>
+              <span class="flex-1 text-sm font-bold text-slate-900">
+                {{ formatPriceManwon(findTrend(trends, prop.id, row.id)?.avgPrice ?? null) }}
+              </span>
+              <span class="text-[11px] text-slate-500 w-16 text-right">
+                {{ findTrend(trends, prop.id, row.id)?.txnCount?.toLocaleString('ko-KR') ?? '0' }}건
+              </span>
+              <span
+                class="text-[11px] font-bold w-12 text-right"
+                :class="changeColor(findTrend(trends, prop.id, row.id)?.changePct ?? null)"
+              >
+                {{ formatChange(findTrend(trends, prop.id, row.id)?.changePct ?? null) }}
+              </span>
+            </HardLink>
+          </li>
+        </ol>
       </div>
     </div>
   </section>
@@ -57,15 +55,27 @@ import type { RealEstateTrend } from '~/composables/useHomeDashboard';
 
 defineProps<{ trends: RealEstateTrend[] }>();
 
-function iconFor(key: RealEstateTrend['key']): string {
-  if (key === 'apt-sale') return 'apartment';
-  if (key === 'apt-rent-jeonse') return 'domain';
-  if (key === 'apt-rent-wolse') return 'payments';
-  if (key === 'villa-sale') return 'house';
-  if (key === 'offitel-sale') return 'corporate_fare';
-  if (key === 'offitel-rent-jeonse') return 'business';
-  const _exhaustive: never = key;
-  return _exhaustive;
+const PROPERTY_TYPES = [
+  { id: 'apt', label: '아파트', icon: 'apartment' },
+  { id: 'offitel', label: '오피스텔', icon: 'corporate_fare' },
+  { id: 'villa', label: '빌라', icon: 'house' },
+] as const;
+
+const TXN_ROWS = [
+  { id: 'sale', label: '매매', urlSuffix: 'sale' },
+  { id: 'jeonse', label: '전세', urlSuffix: 'rent' },
+  { id: 'wolse', label: '월세', urlSuffix: 'rent' },
+] as const;
+
+function findTrend(
+  trends: RealEstateTrend[],
+  propertyType: 'apt' | 'offitel' | 'villa',
+  txnType: 'sale' | 'jeonse' | 'wolse',
+): RealEstateTrend | null {
+  const key = txnType === 'sale'
+    ? `${propertyType}-sale`
+    : `${propertyType}-rent-${txnType}`;
+  return trends.find((t) => t.key === key) ?? null;
 }
 
 function changeColor(pct: number | null): string {
