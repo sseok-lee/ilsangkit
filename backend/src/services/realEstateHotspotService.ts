@@ -131,5 +131,80 @@ export async function getPricedSliceHotspots(
   };
 }
 
+type WolseTable = 'AptRentTransaction' | 'VillaRentTransaction' | 'OffitelRentTransaction';
+
+type RawWolseRow = {
+  citySlug: string;
+  city: string;
+  districtSlug: string;
+  district: string;
+  txnCount: bigint | number;
+  volumeChangePct: number | null;
+};
+
+/**
+ * 월세 슬라이스: 평당가 산정 안 함 — 거래 급증(volumeChangePct DESC)만 반환.
+ * pricePerPyeong / changePct 는 모든 행에서 null.
+ */
+export async function getWolseHotspots(
+  table: WolseTable,
+  opts: { sampleThreshold: number },
+): Promise<WolseHotspotBundle> {
+  const { sampleThreshold } = opts;
+  const tableRaw = Prisma.raw(table);
+
+  const rows = await prisma.$queryRaw<RawWolseRow[]>`
+    WITH recent AS (
+      SELECT t.city, t.district, COUNT(*) AS txnCount
+      FROM ${tableRaw} t
+      WHERE t.rentType = '월세'
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      GROUP BY t.city, t.district
+      HAVING COUNT(*) >= ${sampleThreshold}
+    ),
+    prior AS (
+      SELECT t.city, t.district, COUNT(*) AS prevTxnCount
+      FROM ${tableRaw} t
+      WHERE t.rentType = '월세'
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            <  DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      GROUP BY t.city, t.district
+      HAVING COUNT(*) >= ${sampleThreshold}
+    )
+    SELECT
+      reg.citySlug AS citySlug,
+      r.city AS city,
+      reg.districtSlug AS districtSlug,
+      r.district AS district,
+      r.txnCount AS txnCount,
+      CASE WHEN p.prevTxnCount > 0
+           THEN (CAST(r.txnCount AS DECIMAL) - p.prevTxnCount) / p.prevTxnCount * 100
+           ELSE NULL END AS volumeChangePct
+    FROM recent r
+    LEFT JOIN prior p ON p.city = r.city AND p.district = r.district
+    INNER JOIN Region reg ON reg.city = r.city AND reg.district = r.district
+  `;
+
+  const active: HotspotRegion[] = rows
+    .filter((r) => r.volumeChangePct !== null && r.volumeChangePct > 0)
+    .map((r) => ({
+      citySlug: r.citySlug,
+      city: r.city,
+      districtSlug: r.districtSlug,
+      district: r.district,
+      pricePerPyeong: null,
+      txnCount: Number(r.txnCount),
+      changePct: null,
+      volumeChangePct: r.volumeChangePct,
+    }))
+    .sort((a, b) => (b.volumeChangePct as number) - (a.volumeChangePct as number))
+    .slice(0, MAX_PER_SIGNAL);
+
+  return { active };
+}
+
 // Re-exported types for Tasks 4-5 to import from this module
 export type { WolseHotspotBundle, PropertyHotspots };

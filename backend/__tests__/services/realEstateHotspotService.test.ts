@@ -9,7 +9,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   default: { $queryRaw: mockQueryRaw },
 }));
 
-import { getPricedSliceHotspots } from '../../src/services/realEstateHotspotService.js';
+import { getPricedSliceHotspots, getWolseHotspots } from '../../src/services/realEstateHotspotService.js';
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
@@ -73,5 +73,35 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
     expect(bundle.rising[0].txnCount).toBe(12345);
     expect(typeof bundle.rising[0].txnCount).toBe('number');
+  });
+});
+
+describe('getWolseHotspots', () => {
+  it('pricePerPyeong과 changePct는 null로 채워짐', async () => {
+    mockQueryRaw.mockResolvedValue([
+      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+        txnCount: 150n, volumeChangePct: 40 },
+    ]);
+
+    const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
+
+    expect(bundle.active).toHaveLength(1);
+    expect(bundle.active[0].pricePerPyeong).toBeNull();
+    expect(bundle.active[0].changePct).toBeNull();
+    expect(bundle.active[0].volumeChangePct).toBe(40);
+    expect(bundle.active[0].txnCount).toBe(150);
+  });
+
+  it('volumeChangePct DESC 정렬 + 최대 5개', async () => {
+    const rows = Array.from({ length: 8 }, (_, i) => ({
+      citySlug: `c-${i}`, city: `시-${i}`, districtSlug: `d-${i}`, district: `구-${i}`,
+      txnCount: 100n, volumeChangePct: 10 - i,
+    }));
+    mockQueryRaw.mockResolvedValue(rows);
+
+    const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
+
+    expect(bundle.active).toHaveLength(5);
+    expect(bundle.active.map((r) => r.volumeChangePct)).toEqual([10, 9, 8, 7, 6]);
   });
 });
