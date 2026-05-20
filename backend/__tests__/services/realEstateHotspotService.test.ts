@@ -74,6 +74,35 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
     expect(bundle.rising[0].txnCount).toBe(12345);
     expect(typeof bundle.rising[0].txnCount).toBe('number');
   });
+
+  it('Decimal string(Prisma raw 반환) 도 number로 정규화', async () => {
+    // Prisma raw query는 DECIMAL 컬럼을 문자열로 반환할 수 있음
+    mockQueryRaw.mockResolvedValue([
+      { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+        pricePerPyeong: '1034.265', txnCount: 61n, changePct: '52.32', volumeChangePct: '15.09' },
+    ]);
+    const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
+    const row = bundle.rising[0];
+    expect(typeof row.pricePerPyeong).toBe('number');
+    expect(typeof row.changePct).toBe('number');
+    expect(typeof row.volumeChangePct).toBe('number');
+    expect(row.pricePerPyeong).toBeCloseTo(1034.265, 3);
+    expect(row.changePct).toBeCloseTo(52.32, 2);
+  });
+
+  it('citySlug는 city 한글명에서 자동 계산 (short/full 모두)', async () => {
+    mockQueryRaw.mockResolvedValue([
+      { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+        pricePerPyeong: 8000, txnCount: 50n, changePct: 5, volumeChangePct: 10 },
+      { city: '전북', districtSlug: 'iksan', district: '익산시',
+        pricePerPyeong: 1000, txnCount: 60n, changePct: 3, volumeChangePct: 8 },
+    ]);
+    const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
+    const seoul = bundle.rising.find((r) => r.district === '강남구');
+    const jeonbuk = bundle.rising.find((r) => r.district === '익산시');
+    expect(seoul?.citySlug).toBe('seoul');
+    expect(jeonbuk?.citySlug).toBe('jeonbuk');
+  });
 });
 
 describe('getWolseHotspots', () => {

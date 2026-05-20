@@ -4,6 +4,7 @@ import type {
   HotspotRegion, HotspotBundle, WolseHotspotBundle, PropertyHotspots,
 } from '../types/homeDashboard.js';
 import type { RealEstatePropertyType } from '../schemas/realEstate.js';
+import { FULL_TO_SLUG, SHORT_TO_SLUG } from './cityMapping.js';
 
 const MAX_PER_SIGNAL = 5;
 
@@ -13,27 +14,37 @@ const SAMPLE_THRESHOLD: Record<RealEstatePropertyType, number> = {
   offitel: 15,
 };
 
+// Prisma raw query에서 Decimal 컬럼은 string으로 직렬화될 수 있어 명시적 변환 필요
 type RawPricedRow = {
-  citySlug: string;
   city: string;
   districtSlug: string;
   district: string;
-  pricePerPyeong: number | null;
-  txnCount: bigint | number;
-  changePct: number | null;
-  volumeChangePct: number | null;
+  pricePerPyeong: number | string | null;
+  txnCount: bigint | number | string;
+  changePct: number | string | null;
+  volumeChangePct: number | string | null;
 };
+
+function cityToSlug(city: string): string {
+  return FULL_TO_SLUG[city] ?? SHORT_TO_SLUG[city] ?? '';
+}
+
+function toNumberOrNull(v: number | string | null | undefined): number | null {
+  if (v === null || v === undefined) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 function normalizeRow(r: RawPricedRow): HotspotRegion {
   return {
-    citySlug: r.citySlug,
+    citySlug: cityToSlug(r.city),
     city: r.city,
     districtSlug: r.districtSlug,
     district: r.district,
-    pricePerPyeong: r.pricePerPyeong,
+    pricePerPyeong: toNumberOrNull(r.pricePerPyeong),
     txnCount: Number(r.txnCount),
-    changePct: r.changePct,
-    volumeChangePct: r.volumeChangePct,
+    changePct: toNumberOrNull(r.changePct),
+    volumeChangePct: toNumberOrNull(r.volumeChangePct),
   };
 }
 
@@ -66,15 +77,22 @@ export async function getPricedSliceHotspots(
 
   const tableRaw = Prisma.raw(table);
 
+  // 국토부 실거래가는 30일 reporting lag이 있어 NOW() 기준 윈도우는 거의 비어있음.
+  // 윈도우는 데이터의 MAX(dealDate)를 anchor로 잡아 "최근 7일 vs 직전 7일" 의미를 보존한다.
   const rows = await prisma.$queryRaw<RawPricedRow[]>`
-    WITH recent AS (
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+      FROM ${tableRaw} t
+      WHERE 1=1 ${rentTypeClause}
+    ),
+    recent AS (
       SELECT t.city, t.district,
              AVG(${priceExpr} / (t.exclusiveArea / 3.3058)) AS pricePerPyeong,
              COUNT(*) AS txnCount
-      FROM ${tableRaw} t
+      FROM ${tableRaw} t, anchor a
       WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            >= DATE_SUB(a.latest, INTERVAL 7 DAY)
         ${rentTypeClause}
       GROUP BY t.city, t.district
       HAVING COUNT(*) >= ${sampleThreshold}
@@ -83,20 +101,19 @@ export async function getPricedSliceHotspots(
       SELECT t.city, t.district,
              AVG(${priceExpr} / (t.exclusiveArea / 3.3058)) AS prevPrice,
              COUNT(*) AS prevTxnCount
-      FROM ${tableRaw} t
+      FROM ${tableRaw} t, anchor a
       WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+            >= DATE_SUB(a.latest, INTERVAL 14 DAY)
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            <  DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            <  DATE_SUB(a.latest, INTERVAL 7 DAY)
         ${rentTypeClause}
       GROUP BY t.city, t.district
       HAVING COUNT(*) >= ${sampleThreshold}
     )
     SELECT
-      reg.citySlug AS citySlug,
       r.city AS city,
-      reg.districtSlug AS districtSlug,
+      reg.slug AS districtSlug,
       r.district AS district,
       r.pricePerPyeong AS pricePerPyeong,
       r.txnCount AS txnCount,
@@ -132,12 +149,11 @@ export async function getPricedSliceHotspots(
 type WolseTable = 'AptRentTransaction' | 'VillaRentTransaction' | 'OffitelRentTransaction';
 
 type RawWolseRow = {
-  citySlug: string;
   city: string;
   districtSlug: string;
   district: string;
-  txnCount: bigint | number;
-  volumeChangePct: number | null;
+  txnCount: bigint | number | string;
+  volumeChangePct: number | string | null;
 };
 
 /**
@@ -151,31 +167,36 @@ export async function getWolseHotspots(
   const { sampleThreshold } = opts;
   const tableRaw = Prisma.raw(table);
 
+  // 윈도우는 MAX(dealDate) anchor 기준 (NOW() 기준은 reporting lag으로 데이터가 거의 없음)
   const rows = await prisma.$queryRaw<RawWolseRow[]>`
-    WITH recent AS (
-      SELECT t.city, t.district, COUNT(*) AS txnCount
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
       FROM ${tableRaw} t
       WHERE t.rentType = '월세'
+    ),
+    recent AS (
+      SELECT t.city, t.district, COUNT(*) AS txnCount
+      FROM ${tableRaw} t, anchor a
+      WHERE t.rentType = '월세'
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            >= DATE_SUB(a.latest, INTERVAL 7 DAY)
       GROUP BY t.city, t.district
       HAVING COUNT(*) >= ${sampleThreshold}
     ),
     prior AS (
       SELECT t.city, t.district, COUNT(*) AS prevTxnCount
-      FROM ${tableRaw} t
+      FROM ${tableRaw} t, anchor a
       WHERE t.rentType = '월세'
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+            >= DATE_SUB(a.latest, INTERVAL 14 DAY)
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            <  DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            <  DATE_SUB(a.latest, INTERVAL 7 DAY)
       GROUP BY t.city, t.district
       HAVING COUNT(*) >= ${sampleThreshold}
     )
     SELECT
-      reg.citySlug AS citySlug,
       r.city AS city,
-      reg.districtSlug AS districtSlug,
+      reg.slug AS districtSlug,
       r.district AS district,
       r.txnCount AS txnCount,
       CASE WHEN p.prevTxnCount > 0
@@ -187,17 +208,17 @@ export async function getWolseHotspots(
   `;
 
   const active: HotspotRegion[] = rows
-    .filter((r) => r.volumeChangePct !== null && r.volumeChangePct > 0)
     .map((r) => ({
-      citySlug: r.citySlug,
+      citySlug: cityToSlug(r.city),
       city: r.city,
       districtSlug: r.districtSlug,
       district: r.district,
       pricePerPyeong: null,
       txnCount: Number(r.txnCount),
       changePct: null,
-      volumeChangePct: r.volumeChangePct,
+      volumeChangePct: toNumberOrNull(r.volumeChangePct),
     }))
+    .filter((r) => r.volumeChangePct !== null && r.volumeChangePct > 0)
     .sort((a, b) => (b.volumeChangePct as number) - (a.volumeChangePct as number))
     .slice(0, MAX_PER_SIGNAL);
 

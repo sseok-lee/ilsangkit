@@ -108,7 +108,7 @@ describe('HomeSubscriptionSection', () => {
     expect(wrapper.text()).not.toContain('표시')
   })
 
-  it('hides section entirely when summary and cards all empty', () => {
+  it('renders section with empty state when summary and cards all empty', () => {
     ongoingRef.value = []
     upcomingRef.value = []
     const emptySummary = {
@@ -118,13 +118,16 @@ describe('HomeSubscriptionSection', () => {
       imminent: [],
     }
     const wrapper = mount(HomeSubscriptionSection, { props: { summary: emptySummary } })
-    expect(wrapper.find('section').exists()).toBe(false)
+    expect(wrapper.find('section').exists()).toBe(true)
+    expect(wrapper.text()).toContain('청약 한눈에')
+    expect(wrapper.text()).toContain('현재 접수 중이거나 예정된 청약 공고가 없어요')
   })
 
-  it('hides section when summary prop is null and no cards', () => {
+  it('renders section with empty state when summary prop is null and no cards', () => {
     ongoingRef.value = []
     upcomingRef.value = []
     const wrapper = mount(HomeSubscriptionSection, { props: { summary: null } })
-    expect(wrapper.find('section').exists()).toBe(false)
+    expect(wrapper.find('section').exists()).toBe(true)
+    expect(wrapper.text()).toContain('현재 접수 중이거나 예정된 청약 공고가 없어요')
   })
 })
