@@ -792,18 +792,20 @@ export async function getNearbyByBjd(
         ? Prisma.sql`AND t.rentType = '월세'`
         : Prisma.empty;
 
+    // Prisma raw query에서 ANY_VALUE/COUNT/INT 컬럼은 BigInt로 직렬화될 수 있어
+    // 모든 숫자 컬럼을 bigint | number 로 받고 Number()로 명시적 변환한다.
     const rows = await prisma.$queryRaw<Array<{
       buildingName: string;
       bjdCode: string;
       city: string;
       district: string;
       dongName: string;
-      buildYear: number | null;
-      transactionCount: bigint;
-      latestPrice: bigint | null;
-      monthlyRent: bigint | null;
-      latestDealYear: number | null;
-      latestDealMonth: number | null;
+      buildYear: bigint | number | null;
+      transactionCount: bigint | number;
+      latestPrice: bigint | number | null;
+      monthlyRent: bigint | number | null;
+      latestDealYear: bigint | number | null;
+      latestDealMonth: bigint | number | null;
     }>>`
       WITH ranked AS (
         SELECT
@@ -868,12 +870,12 @@ export async function getNearbyByBjd(
       city: r.city,
       district: r.district,
       dongName: r.dongName,
-      buildYear: r.buildYear ?? null,
+      buildYear: r.buildYear != null ? Number(r.buildYear) : null,
       transactionCount: Number(r.transactionCount),
       latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
       monthlyRent: r.monthlyRent != null ? Number(r.monthlyRent) : null,
-      latestDealYear: r.latestDealYear ?? null,
-      latestDealMonth: r.latestDealMonth ?? null,
+      latestDealYear: r.latestDealYear != null ? Number(r.latestDealYear) : null,
+      latestDealMonth: r.latestDealMonth != null ? Number(r.latestDealMonth) : null,
       lat: null,
       lng: null,
     }));
