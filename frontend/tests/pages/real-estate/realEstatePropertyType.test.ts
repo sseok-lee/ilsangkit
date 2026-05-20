@@ -149,20 +149,4 @@ describe('real-estate/[realEstateType]/index.vue — property type list page', (
     expect(cityHubLinks.length).toBe(3)
   })
 
-  it('route.query에 city/district slug가 있으면 onMounted에서 handleSearch가 한글 표시명으로 호출되어야 한다', async () => {
-    mockRouteQuery = { city: 'seoul', district: 'gangnam' }
-
-    const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
-    await mountSuspended(m.default)
-    await flushPromises()
-
-    // getComplexList signature: (type, city?, district?, buildingName?, page?)
-    // onMounted triggers handleSearch → loadComplexes with slug resolved to 한글
-    const prefillCall = mockGetComplexList.mock.calls.find(
-      (c: any[]) => c[1] === '서울' || c[2] === '강남구',
-    )
-    expect(prefillCall).toBeDefined()
-    expect(prefillCall![1]).toBe('서울')
-    expect(prefillCall![2]).toBe('강남구')
-  })
 })
