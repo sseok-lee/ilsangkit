@@ -1,5 +1,5 @@
 <template>
-  <section v-if="hasAnyContent" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="flex items-end justify-between gap-4 mb-4">
       <div>
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -79,6 +79,15 @@
       접수중 {{ summary.closingThisWeek }}건 중 {{ ongoing.length }}건 · 예정 {{ summary.upcomingNextWeek }}건 중 {{ upcoming.length }}건 표시
       <HardLink to="/subscription" class="ml-2 hover:underline">전체 보기 →</HardLink>
     </p>
+
+    <!-- 빈 상태: 카드도 없고 요약도 없는 경우 -->
+    <div v-if="!hasAnyContent" class="bg-white border border-line rounded-2xl px-6 py-8 text-center">
+      <span class="material-symbols-outlined text-slate-300 text-[32px]" aria-hidden="true">event_upcoming</span>
+      <p class="text-sm text-slate-500 mt-2">현재 접수 중이거나 예정된 청약 공고가 없어요.</p>
+      <HardLink to="/subscription" class="inline-flex items-center mt-3 text-sm text-primary font-bold hover:underline">
+        지난 공고 보기 →
+      </HardLink>
+    </div>
   </section>
 </template>
 
