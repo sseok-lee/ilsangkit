@@ -30,8 +30,8 @@
         <template v-else>
           <a
             v-for="(b, i) in col.items"
-            :key="b.buildingName + i"
-            :href="buildUrl(col.type, b.slug)"
+            :key="b.slug"
+            :href="buildUrl(col.type, b)"
             :class="['flex items-center gap-3 px-4 py-3 border-b border-slate-50 last:border-b-0 transition-colors', col.hoverBg]"
           >
             <!-- Rank -->
@@ -61,6 +61,7 @@
 import { computed } from 'vue';
 import HardLink from '~/components/common/HardLink.vue';
 import { formatPrice } from '~/utils/priceFormat';
+import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl';
 import type { TrendingBuildingItem } from '~/composables/useHomeDashboard';
 
 type ColType = 'sale' | 'jeonse' | 'wolse';
@@ -97,9 +98,14 @@ function shortRegion(city: string, district: string): string {
   return `${CITY_SHORT[city] ?? city} ${district}`;
 }
 
-function buildUrl(type: ColType, slug: string): string {
-  if (type === 'sale') return `/real-estate/apt-sale/${slug}`;
-  return `/real-estate/apt-rent/${slug}`;
+function buildUrl(type: ColType, b: TrendingBuildingItem): string {
+  const realEstateType: RealEstateUrlType = type === 'sale' ? 'apt-sale' : 'apt-rent';
+  return toRealEstateUrl({
+    type: realEstateType,
+    city: b.city,
+    district: b.district,
+    buildingName: b.buildingName,
+  });
 }
 
 function formatBuildingPrice(type: ColType, b: TrendingBuildingItem): string {

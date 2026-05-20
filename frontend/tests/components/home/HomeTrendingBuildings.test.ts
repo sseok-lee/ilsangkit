@@ -47,4 +47,10 @@ describe('HomeTrendingBuildings', () => {
     });
     expect(wrapper.text()).toContain('이번 주 거래 없음');
   });
+
+  it('builds full 4-segment URL via toRealEstateUrl', () => {
+    const wrapper = mount(HomeTrendingBuildings, { props: { buildings } });
+    const saleLink = wrapper.find(`a[href*="/real-estate/apt-sale/seoul/songpa/"]`);
+    expect(saleLink.exists()).toBe(true);
+  });
 });
