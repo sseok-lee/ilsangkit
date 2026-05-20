@@ -1,4 +1,5 @@
 // backend/src/types/homeDashboard.ts
+import type { RealEstatePropertyType } from '../schemas/realEstate.js';
 
 export type TrendingBuildingItem = {
   buildingName: string;
@@ -56,4 +57,39 @@ export type HomeDashboardResponse = {
     avgSupplyPrice: number | null;
     imminent: SubscriptionImminent[];
   };
+  realEstateHotspots?: RealEstateHotspots;  // apt만 채워짐
 };
+
+/** 한 지역(시·군·구) 핫스팟 정보 */
+export interface HotspotRegion {
+  citySlug: string;        // 'seoul'
+  city: string;            // '서울특별시'
+  districtSlug: string;    // 'gangnam-gu'
+  district: string;        // '강남구'
+  pricePerPyeong: number | null;   // 평당가(만원). 월세는 null
+  txnCount: number;                // 최근 7일 거래건수
+  changePct: number | null;        // 전주 대비 평당가 변동률(%). 월세는 null
+  volumeChangePct: number | null;  // 거래량 변동률(%)
+}
+
+/** 매매/전세 슬라이스의 3시그널 묶음 */
+export interface HotspotBundle {
+  rising: HotspotRegion[];   // 평당가 상승 TOP. changePct desc, max 5
+  falling: HotspotRegion[];  // 평당가 하락 TOP. changePct asc, max 5
+  active: HotspotRegion[];   // 거래 급증 TOP. volumeChangePct desc, max 5
+}
+
+/** 월세 슬라이스 — 거래 급증만 */
+export interface WolseHotspotBundle {
+  active: HotspotRegion[];   // pricePerPyeong/changePct는 null로 채워짐
+}
+
+/** 건물 유형별 핫스팟: 매매/전세/월세 */
+export interface PropertyHotspots {
+  sale: HotspotBundle;
+  jeonse: HotspotBundle;
+  wolse: WolseHotspotBundle;
+}
+
+/** 메인 SSR은 apt만 채움. 나머지 건물유형은 클라이언트 lazy fetch */
+export type RealEstateHotspots = Partial<Record<RealEstatePropertyType, PropertyHotspots>>;

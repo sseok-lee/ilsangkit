@@ -17,10 +17,11 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
   return e
 }
 
-// Mock useRoute with valid propertyType param (HUB_TYPES 형태: apt-sale, apt-rent, ...)
+// Mock useRoute — overridden per-test when needed
+let mockRouteQuery: Record<string, string> = {}
 ;(globalThis as any).useRoute = vi.fn(() => ({
   params: { realEstateType: 'apt-sale' },
-  query: {},
+  query: mockRouteQuery,
 }))
 
 // Mock useRouter
@@ -40,14 +41,17 @@ vi.mock('~/composables/useStructuredData', () => ({
   }),
 }))
 
+// Shared mock so all calls to useRealEstate() share the same getComplexList spy
+const mockGetComplexList = vi.fn().mockResolvedValue({
+  items: [],
+  total: 0,
+  page: 1,
+  totalPages: 0,
+})
+
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
-    getComplexList: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      totalPages: 0,
-    }),
+    getComplexList: mockGetComplexList,
   }),
 }))
 
@@ -64,6 +68,7 @@ vi.mock('~/utils/realEstateBuildingName', () => ({
 vi.mock('~/shared/regionSlugs', () => ({
   CITY_SLUGS: { 서울: 'seoul', 부산: 'busan', 대구: 'daegu' },
   CITY_SLUG_MAP: { seoul: '서울', busan: '부산', daegu: '대구' },
+  DISTRICT_SLUG_MAP: { 강남구: 'gangnam', 서초구: 'seocho' },
   REGIONS: {},
   CITY_FULL_NAME_TO_SLUG: {},
   CITY_SLUGS_ARRAY: [],
@@ -78,6 +83,8 @@ vi.mock('~/utils/realEstateUrl', () => ({
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()
+  mockGetComplexList.mockClear()
+  mockRouteQuery = {}
 })
 
 async function mountSuspended(component: any, options?: any) {
@@ -140,5 +147,22 @@ describe('real-estate/[realEstateType]/index.vue — property type list page', (
     )
     // 모킹된 CITY_SLUGS는 3개
     expect(cityHubLinks.length).toBe(3)
+  })
+
+  it('route.query에 city/district slug가 있으면 onMounted에서 handleSearch가 한글 표시명으로 호출되어야 한다', async () => {
+    mockRouteQuery = { city: 'seoul', district: 'gangnam' }
+
+    const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
+    await mountSuspended(m.default)
+    await flushPromises()
+
+    // getComplexList signature: (type, city?, district?, buildingName?, page?)
+    // onMounted triggers handleSearch → loadComplexes with slug resolved to 한글
+    const prefillCall = mockGetComplexList.mock.calls.find(
+      (c: any[]) => c[1] === '서울' || c[2] === '강남구',
+    )
+    expect(prefillCall).toBeDefined()
+    expect(prefillCall![1]).toBe('서울')
+    expect(prefillCall![2]).toBe('강남구')
   })
 })

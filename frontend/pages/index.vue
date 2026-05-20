@@ -87,7 +87,7 @@
     </section>
 
     <!-- 오늘의 부동산 시장 통계 -->
-    <HomeMarketStats :trends="trends" />
+    <HomeHotspotSignals :hotspots="hotspots" />
 
     <!-- 이번 주 인기 단지 -->
     <HomeTrendingBuildings :buildings="trendingBuildings" />
@@ -239,6 +239,7 @@ import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
 import HomeMarketStats from '~/components/home/HomeMarketStats.vue'
+import HomeHotspotSignals from '~/components/home/HomeHotspotSignals.vue'
 import HomeTrendingBuildings from '~/components/home/HomeTrendingBuildings.vue'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -286,6 +287,7 @@ const searchKeyword = ref('')
 const { data: dashboardResponse } = await useHomeDashboard()
 const dashboard = computed(() => dashboardResponse.value?.data ?? null)
 const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
+const hotspots = computed(() => dashboard.value?.realEstateHotspots ?? {})
 const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })
 const subscriptionSummary = computed(() => dashboard.value?.subscriptionSummary ?? null)
 const newlyListedToday = computed(() => dashboard.value?.newlyListedToday ?? 0)

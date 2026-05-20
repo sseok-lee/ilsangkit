@@ -9,6 +9,12 @@ import { NotFoundError } from '../lib/errors.js';
 import { getStatsByCity, getStatsByDistrict, getSyncStatus, SHORT_TO_SLUG } from '../services/facilityService.js';
 import { getCategories, getStats, getRegionByDistrictName, getRegionByBjdCode, getRegions, getHomeDashboard } from '../services/metaService.js';
 import { prisma } from '../lib/prisma.js';
+import { RealEstatePropertyTypeSchema } from '../schemas/realEstate.js';
+import { getPropertyHotspots } from '../services/realEstateHotspotService.js';
+
+const HotspotQuerySchema = z.object({
+  propertyType: RealEstatePropertyTypeSchema,
+});
 
 const SlugParamsSchema = z.object({
   citySlug: z.string().regex(/^[a-z-]+$/).max(30),
@@ -49,6 +55,14 @@ router.get('/stats', asyncHandler(async (_req: Request, res: Response) => {
 // GET /api/meta/home-dashboard - 홈 페이지 통합 대시보드 (1시간 캐시)
 router.get('/home-dashboard', asyncHandler(async (_req: Request, res: Response) => {
   const data = await getHomeDashboard();
+  res.json({ success: true, data });
+}));
+
+// GET /api/meta/hotspots?propertyType=apt|villa|offitel
+router.get('/hotspots', validate(HotspotQuerySchema, 'query'), asyncHandler(async (req: Request, res: Response) => {
+  const { propertyType } = req.query as unknown as { propertyType: 'apt' | 'villa' | 'offitel' };
+  const data = await getPropertyHotspots(propertyType);
+  res.set('Cache-Control', 'public, max-age=3600');
   res.json({ success: true, data });
 }));
 
