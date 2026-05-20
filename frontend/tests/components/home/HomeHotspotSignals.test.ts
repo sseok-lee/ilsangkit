@@ -54,6 +54,32 @@ describe('HomeHotspotSignals', () => {
     );
   });
 
+  it('section remains mounted during fetch when switching property type', async () => {
+    // Promise that never resolves during the test — simulates in-flight fetch
+    let resolveFetch: (v: { success: boolean; data: PropertyHotspots }) => void = () => {};
+    const pending = new Promise<{ success: boolean; data: PropertyHotspots }>((res) => {
+      resolveFetch = res;
+    });
+    fetchMock.mockReturnValue(pending);
+
+    const wrapper = mount(HomeHotspotSignals, {
+      props: { hotspots: { apt: fullBundle() } },
+    });
+    expect(wrapper.find('section').exists()).toBe(true);
+
+    const villaBtn = wrapper.findAll('button').find((b) => b.text().includes('빌라'))!;
+    await villaBtn.trigger('click');
+    // While fetch is in-flight, section must NOT unmount (regression — was unmounting before fix)
+    expect(wrapper.find('section').exists()).toBe(true);
+    // Loading spinner should be visible on the active toggle
+    expect(wrapper.find('.animate-spin').exists()).toBe(true);
+
+    resolveFetch({ success: true, data: fullBundle() });
+    await flushPromises();
+    expect(wrapper.find('section').exists()).toBe(true);
+    expect(wrapper.find('.animate-spin').exists()).toBe(false);
+  });
+
   it('wolse tab hides rising/falling cards, shows only active', async () => {
     const wrapper = mount(HomeHotspotSignals, {
       props: { hotspots: { apt: fullBundle() } },
