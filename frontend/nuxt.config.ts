@@ -121,7 +121,9 @@ export default defineNuxtConfig({
       '/guide/**': { swr: 3600 },
       '/sitemap.xml': { swr: 86400 },
       '/sitemap/**': { swr: 86400 },
-      '/': { swr: 3600 },
+      // 메인 페이지는 1분만 캐시 — deploy cold-start 윈도우에 SSR이 일부 fetch 실패로
+      // 빈 데이터로 페인트하더라도 stale HTML 노출 시간이 1시간 → 1분으로 단축
+      '/': { swr: 60 },
       '/about': { prerender: true },
       '/faq': { prerender: true },
       '/privacy': { prerender: true },
