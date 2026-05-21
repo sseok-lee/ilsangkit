@@ -100,14 +100,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const { category, page } = parsed
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase as string
 
   setHeader(event, 'Content-Type', 'application/xml')
 
   // 부동산 건물 상세 페이지
   if (category === 'real-estate') {
-    const buildings = await fetchRealEstateBuildings(apiBase)
+    const buildings = await fetchRealEstateBuildings()
     if (buildings.length === 0 && page > 1) {
       throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
     }
@@ -137,7 +135,7 @@ export default defineEventHandler(async (event) => {
 
   // 부동산 city/district 허브 페이지
   if (category === 'real-estate-hub') {
-    const hubs = await fetchRealEstateCityDistrictHubs(apiBase)
+    const hubs = await fetchRealEstateCityDistrictHubs()
     const weekStart = getWeekStartDate()
 
     const seenCityUrls = new Set<string>()
@@ -162,7 +160,7 @@ export default defineEventHandler(async (event) => {
 
   // 지하철역 SEO 페이지 — Phase 1은 noindex이지만 sitemap chunk는 생성한다
   if (category === 'subway') {
-    const stations = await fetchSubwaySlugs(apiBase)
+    const stations = await fetchSubwaySlugs()
     if (stations.length === 0 && page > 1) {
       throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
     }
@@ -186,7 +184,7 @@ export default defineEventHandler(async (event) => {
 
   // 청약 일정 상세 페이지
   if (category === 'subscription') {
-    const subscriptions = await fetchSubscriptionIds(apiBase)
+    const subscriptions = await fetchSubscriptionIds()
     if (subscriptions.length === 0 && page > 1) {
       throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
     }
@@ -217,10 +215,9 @@ export default defineEventHandler(async (event) => {
   // 시설 카테고리 + trash — 인덱스와 동일한 limit을 적용해 청크 수가 어긋나지 않게 한다
   const items =
     category === 'trash'
-      ? await fetchWasteScheduleIds(apiBase)
+      ? await fetchWasteScheduleIds()
       : await fetchFacilityIds(
           category,
-          apiBase,
           isSitemapFacilityCategory(category) ? getSitemapFacilityLimit(category) : undefined,
         )
 

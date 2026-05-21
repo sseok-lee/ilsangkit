@@ -1,4 +1,5 @@
 import { isValidBuildingName } from '../../utils/realEstateBuildingName'
+import { ssrFetch } from './ssrFetch'
 
 export const SITE_URL = 'https://ilsangkit.co.kr'
 
@@ -101,62 +102,43 @@ function setCache(key: string, data: unknown[]): void {
 
 export async function fetchFacilityIds(
   category: string,
-  apiBase: string,
   limit?: number
 ): Promise<{ id: string; updatedAt: string }[]> {
   const cacheKey = `facility:${category}${limit !== undefined ? `:limit${limit}` : ''}`
   const cached = getCached<{ id: string; updatedAt: string }>(cacheKey)
   if (cached) return cached
 
-  const url = limit !== undefined
-    ? `${apiBase}/api/sitemap/facilities/${category}?limit=${limit}`
-    : `${apiBase}/api/sitemap/facilities/${category}`
+  const path = limit !== undefined
+    ? `/api/sitemap/facilities/${category}?limit=${limit}`
+    : `/api/sitemap/facilities/${category}`
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const res = await fetch(url)
-      if (!res.ok) {
-        console.error(`[sitemap] fetchFacilityIds(${category}) attempt ${attempt}: HTTP ${res.status}`)
-        continue
-      }
-      const json = await res.json()
-      const data = json.data || []
-      if (data.length > 0) {
-        setCache(cacheKey, data)
-      }
-      return data
-    } catch (err) {
-      console.error(`[sitemap] fetchFacilityIds(${category}) attempt ${attempt} error:`, err)
-    }
+  try {
+    const json = await ssrFetch<{ data?: { id: string; updatedAt: string }[] }>(path)
+    const data = json.data ?? []
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error(`[sitemap] fetchFacilityIds(${category}) failed`, err)
+    return []
   }
-  return []
 }
 
-export async function fetchWasteScheduleIds(
-  apiBase: string
-): Promise<{ id: number; updatedAt: string }[]> {
+export async function fetchWasteScheduleIds(): Promise<{ id: number; updatedAt: string }[]> {
   const cacheKey = 'waste-schedules'
   const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
   if (cached) return cached
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const res = await fetch(`${apiBase}/api/sitemap/waste-schedules`)
-      if (!res.ok) {
-        console.error(`[sitemap] fetchWasteScheduleIds attempt ${attempt}: HTTP ${res.status}`)
-        continue
-      }
-      const json = await res.json()
-      const data = json.data || []
-      if (data.length > 0) {
-        setCache(cacheKey, data)
-      }
-      return data
-    } catch (err) {
-      console.error(`[sitemap] fetchWasteScheduleIds attempt ${attempt} error:`, err)
-    }
+  try {
+    const json = await ssrFetch<{ data?: { id: number; updatedAt: string }[] }>(
+      '/api/sitemap/waste-schedules',
+    )
+    const data = json.data ?? []
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error('[sitemap] fetchWasteScheduleIds failed', err)
+    return []
   }
-  return []
 }
 
 export interface SitemapRealEstateBuilding {
@@ -167,36 +149,24 @@ export interface SitemapRealEstateBuilding {
   bjdCode: string
 }
 
-export async function fetchRealEstateBuildings(
-  apiBase: string
-): Promise<SitemapRealEstateBuilding[]> {
+export async function fetchRealEstateBuildings(): Promise<SitemapRealEstateBuilding[]> {
   const cacheKey = 'real-estate-buildings'
   const cached = getCached<SitemapRealEstateBuilding>(cacheKey)
   if (cached) return cached
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 25_000)
-    try {
-      const res = await fetch(`${apiBase}/api/sitemap/real-estate-buildings`, { signal: controller.signal })
-      clearTimeout(timer)
-      if (!res.ok) {
-        console.error(`[sitemap] fetchRealEstateBuildings attempt ${attempt}: HTTP ${res.status}`)
-        continue
-      }
-      const json = await res.json()
-      const raw = (json.data ?? []) as SitemapRealEstateBuilding[]
-      const data = raw.filter((item) => isValidBuildingName(item.buildingName))
-      if (data.length > 0) {
-        setCache(cacheKey, data)
-      }
-      return data
-    } catch (err) {
-      clearTimeout(timer)
-      console.error(`[sitemap] fetchRealEstateBuildings attempt ${attempt} error:`, err)
-    }
+  try {
+    const json = await ssrFetch<{ data?: SitemapRealEstateBuilding[] }>(
+      '/api/sitemap/real-estate-buildings',
+      { timeoutMs: 25_000 },
+    )
+    const raw = json.data ?? []
+    const data = raw.filter((item) => isValidBuildingName(item.buildingName))
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error('[sitemap] fetchRealEstateBuildings failed', err)
+    return []
   }
-  return []
 }
 
 export function getWeekStartDate(): string {
@@ -216,58 +186,42 @@ export interface SitemapRealEstateHub {
   district: string
 }
 
-export async function fetchRealEstateCityDistrictHubs(
-  apiBase: string
-): Promise<SitemapRealEstateHub[]> {
+export async function fetchRealEstateCityDistrictHubs(): Promise<SitemapRealEstateHub[]> {
   const cacheKey = 'real-estate-hubs'
   const cached = getCached<SitemapRealEstateHub>(cacheKey)
   if (cached) return cached
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const res = await fetch(`${apiBase}/api/sitemap/real-estate-hubs`)
-      if (!res.ok) {
-        console.error(`[sitemap] fetchRealEstateCityDistrictHubs attempt ${attempt}: HTTP ${res.status}`)
-        continue
-      }
-      const json = await res.json()
-      const data = (json.data ?? []) as SitemapRealEstateHub[]
-      if (data.length > 0) {
-        setCache(cacheKey, data)
-      }
-      return data
-    } catch (err) {
-      console.error(`[sitemap] fetchRealEstateCityDistrictHubs attempt ${attempt} error:`, err)
-    }
+  try {
+    const json = await ssrFetch<{ data?: SitemapRealEstateHub[] }>(
+      '/api/sitemap/real-estate-hubs',
+    )
+    const data = json.data ?? []
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error('[sitemap] fetchRealEstateCityDistrictHubs failed', err)
+    return []
   }
-  return []
 }
 
-export async function fetchRegionCategories(
-  apiBase: string
-): Promise<Array<{ city: string; district: string; category: string }>> {
+export async function fetchRegionCategories(): Promise<
+  Array<{ city: string; district: string; category: string }>
+> {
   const cacheKey = 'region-categories'
   const cached = getCached<{ city: string; district: string; category: string }>(cacheKey)
   if (cached) return cached
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const res = await fetch(`${apiBase}/api/sitemap/region-categories`)
-      if (!res.ok) {
-        console.error(`[sitemap] fetchRegionCategories attempt ${attempt}: HTTP ${res.status}`)
-        continue
-      }
-      const json = await res.json()
-      const data = json.data || []
-      if (data.length > 0) {
-        setCache(cacheKey, data)
-      }
-      return data
-    } catch (err) {
-      console.error(`[sitemap] fetchRegionCategories attempt ${attempt} error:`, err)
-    }
+  try {
+    const json = await ssrFetch<{
+      data?: Array<{ city: string; district: string; category: string }>
+    }>('/api/sitemap/region-categories')
+    const data = json.data ?? []
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error('[sitemap] fetchRegionCategories failed', err)
+    return []
   }
-  return []
 }
 
 export interface SitemapPageCounts {
@@ -277,79 +231,53 @@ export interface SitemapPageCounts {
   realEstateBuildings: { count: number; maxUpdatedAt: string | null }
 }
 
-export async function fetchSitemapPageCounts(
-  apiBase: string
-): Promise<SitemapPageCounts | null> {
+export async function fetchSitemapPageCounts(): Promise<SitemapPageCounts | null> {
   try {
-    const res = await fetch(`${apiBase}/api/sitemap/page-counts`)
-    if (!res.ok) {
-      console.error(`[sitemap] fetchSitemapPageCounts: HTTP ${res.status}`)
-      return null
-    }
-    const json = await res.json()
+    const json = await ssrFetch<{ data?: SitemapPageCounts }>('/api/sitemap/page-counts')
     return json.data ?? null
   } catch (err) {
-    console.error('[sitemap] fetchSitemapPageCounts error:', err)
+    console.error('[sitemap] fetchSitemapPageCounts failed', err)
     return null
   }
 }
 
-export async function fetchSubwaySlugs(
-  apiBase: string,
-): Promise<{ slug: string; updatedAt: string }[]> {
+export async function fetchSubwaySlugs(): Promise<{ slug: string; updatedAt: string }[]> {
   const cacheKey = 'subway-slugs'
   const cached = getCached<{ slug: string; updatedAt: string }>(cacheKey)
   if (cached) return cached
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      // grouped=true → nameSlug 단위 distinct 응답. 환승역 중복 방지.
-      const res = await fetch(`${apiBase}/api/subway/stations?limit=5000&grouped=true`)
-      if (!res.ok) {
-        console.error(`[sitemap] fetchSubwaySlugs attempt ${attempt}: HTTP ${res.status}`)
-        continue
-      }
-      const json = await res.json()
-      const items = json?.data?.items ?? []
-      const data = items.map((s: { nameSlug: string; updatedAt: string }) => ({
-        slug: s.nameSlug,
-        updatedAt: s.updatedAt,
-      }))
-      if (data.length > 0) {
-        setCache(cacheKey, data)
-      }
-      return data
-    } catch (err) {
-      console.error(`[sitemap] fetchSubwaySlugs attempt ${attempt} error:`, err)
-    }
+  try {
+    // grouped=true → nameSlug 단위 distinct 응답. 환승역 중복 방지.
+    const json = await ssrFetch<{
+      data?: { items?: Array<{ nameSlug: string; updatedAt: string }> }
+    }>('/api/subway/stations?limit=5000&grouped=true')
+    const items = json?.data?.items ?? []
+    const data = items.map((s) => ({
+      slug: s.nameSlug,
+      updatedAt: s.updatedAt,
+    }))
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error('[sitemap] fetchSubwaySlugs failed', err)
+    return []
   }
-  return []
 }
 
-export async function fetchSubscriptionIds(
-  apiBase: string
-): Promise<{ id: number; updatedAt: string }[]> {
+export async function fetchSubscriptionIds(): Promise<{ id: number; updatedAt: string }[]> {
   const cacheKey = 'subscriptions'
   const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
   if (cached) return cached
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const res = await fetch(`${apiBase}/api/sitemap/subscriptions`)
-      if (!res.ok) {
-        console.error(`[sitemap] fetchSubscriptionIds attempt ${attempt}: HTTP ${res.status}`)
-        continue
-      }
-      const json = await res.json()
-      const data = json.data || []
-      if (data.length > 0) {
-        setCache(cacheKey, data)
-      }
-      return data
-    } catch (err) {
-      console.error(`[sitemap] fetchSubscriptionIds attempt ${attempt} error:`, err)
-    }
+  try {
+    const json = await ssrFetch<{ data?: { id: number; updatedAt: string }[] }>(
+      '/api/sitemap/subscriptions',
+    )
+    const data = json.data ?? []
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error('[sitemap] fetchSubscriptionIds failed', err)
+    return []
   }
-  return []
 }
-

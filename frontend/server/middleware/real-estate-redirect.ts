@@ -5,6 +5,7 @@ import {
   DISTRICT_SLUG_MAP,
   CITY_SLUGS,
 } from '~/shared/regionSlugs'
+import { ssrFetch } from '~/server/utils/ssrFetch'
 
 /**
  * 부동산 레거시 URL → 신규 URL 단일 홉 301.
@@ -89,14 +90,13 @@ export const bjdCache = new TtlLRU<BjdLookupResult>(10_000, 60 * 60 * 1000)
  */
 export async function resolveBjdCode(
   bjdCode: string,
-  fetcher: (url: string) => Promise<unknown>,
-  apiBase: string,
+  fetcher: (path: string) => Promise<unknown>,
 ): Promise<BjdLookupResult | null> {
   if (!bjdCode) return null
   const cached = bjdCache.get(bjdCode)
   if (cached) return cached
   try {
-    const res = (await fetcher(`${apiBase}/api/meta/region-by-bjd?bjdCode=${encodeURIComponent(bjdCode)}`)) as
+    const res = (await fetcher(`/api/meta/region-by-bjd?bjdCode=${encodeURIComponent(bjdCode)}`)) as
       | { success: boolean; data?: { city: string; district: string } }
       | null
     if (res && res.success && res.data?.city && res.data?.district) {
@@ -239,8 +239,7 @@ async function handleLegacyDetail(
     return event.respondWith(new Response(renderMissingBjdHtml(pathname), { status: 404 }))
   }
 
-  const apiBase = (process.env.NUXT_PUBLIC_API_BASE ?? 'http://localhost:8000')
-  const lookup = await resolveBjdCode(bjdCode, (u) => $fetch(u), apiBase)
+  const lookup = await resolveBjdCode(bjdCode, (path) => ssrFetch(path))
   if (!lookup) {
     setResponseStatus(event, 404)
     setHeader(event, 'content-type', 'text/html; charset=utf-8')

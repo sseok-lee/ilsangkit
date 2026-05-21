@@ -38,32 +38,32 @@ describe('resolveBjdCode', () => {
       success: true,
       data: { city: '서울특별시', district: '강남구' },
     })
-    const result = (await resolveBjdCode('11680', fetcher, 'http://api')) as BjdLookupResult
+    const result = (await resolveBjdCode('11680', fetcher)) as BjdLookupResult
     expect(result.cityFullName).toBe('서울특별시')
     expect(result.districtName).toBe('강남구')
     expect(fetcher).toHaveBeenCalledTimes(1)
 
     // 두 번째 호출은 캐시에서 반환
-    const cached = await resolveBjdCode('11680', fetcher, 'http://api')
+    const cached = await resolveBjdCode('11680', fetcher)
     expect(cached).toEqual(result)
     expect(fetcher).toHaveBeenCalledTimes(1)
   })
 
   it('returns null when fetcher rejects', async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('network'))
-    const result = await resolveBjdCode('11680', fetcher, 'http://api')
+    const result = await resolveBjdCode('11680', fetcher)
     expect(result).toBeNull()
   })
 
   it('returns null when response lacks city/district', async () => {
     const fetcher = vi.fn().mockResolvedValue({ success: false })
-    const result = await resolveBjdCode('11680', fetcher, 'http://api')
+    const result = await resolveBjdCode('11680', fetcher)
     expect(result).toBeNull()
   })
 
   it('returns null when bjdCode is empty', async () => {
     const fetcher = vi.fn()
-    const result = await resolveBjdCode('', fetcher, 'http://api')
+    const result = await resolveBjdCode('', fetcher)
     expect(result).toBeNull()
     expect(fetcher).not.toHaveBeenCalled()
   })
@@ -73,7 +73,7 @@ describe('resolveBjdCode', () => {
       success: true,
       data: { city: '서울특별시', district: '강남구' },
     })
-    await resolveBjdCode('11680  ', fetcher, 'http://api')
+    await resolveBjdCode('11680  ', fetcher)
     const calledWith = fetcher.mock.calls[0][0] as string
     expect(calledWith).toContain('bjdCode=11680%20%20')
   })
