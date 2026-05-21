@@ -17,7 +17,7 @@
       <section class="bg-white border border-line rounded-xl shadow-card overflow-hidden">
         <div v-if="guide.thumbnailUrl" class="w-full aspect-video bg-slate-100">
           <img
-            :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
+            :src="`${publicApiBase}${guide.thumbnailUrl}`"
             :alt="guide.title"
             width="800"
             height="450"
@@ -178,6 +178,9 @@ const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 
 const config = useRuntimeConfig()
+// Image/OG URLs must use the public base (not loopback) so browsers and crawlers can access them.
+// eslint-disable-next-line no-restricted-syntax
+const publicApiBase = config.public.apiBase
 const { fetchGuideBySlug } = useGuides()
 const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema, setArticleSchema, setFAQSchema, setHowToSchema } = useStructuredData()
@@ -266,7 +269,7 @@ if (guide.value) {
     description: guide.value.summary,
     path: `/guide/${guide.value.slug}`,
     type: 'article',
-    image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
+    image: guide.value.thumbnailUrl ? `${publicApiBase}${guide.value.thumbnailUrl}` : undefined,
   })
 
   useHead({
@@ -290,7 +293,7 @@ if (guide.value) {
     datePublished: guide.value.createdAt,
     dateModified: guide.value.updatedAt || undefined,
     url: `/guide/${guide.value.slug}`,
-    image: guide.value.thumbnailUrl ? `${config.public.apiBase}${guide.value.thumbnailUrl}` : undefined,
+    image: guide.value.thumbnailUrl ? `${publicApiBase}${guide.value.thumbnailUrl}` : undefined,
   })
 
   // FAQ JSON-LD: "자주 묻는 질문" 섹션에서 Q/A 추출

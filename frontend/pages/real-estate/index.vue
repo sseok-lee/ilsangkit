@@ -72,7 +72,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
 import type { RealEstateHubType } from '~/types/realEstate'
 
-const apiBase = useRuntimeConfig().public.apiBase
+const apiBase = useApiBase()
 
 interface HubSummaryResponse {
   success: boolean
