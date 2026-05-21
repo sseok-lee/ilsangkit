@@ -21,8 +21,6 @@ import {
 export default defineEventHandler(async (event) => {
   setHeader(event, 'Content-Type', 'application/xml')
 
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase as string
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
   const weekStart = getWeekStartDate()
 
@@ -31,7 +29,7 @@ export default defineEventHandler(async (event) => {
   ]
 
   // 단일 API 호출로 모든 카테고리 페이지 수 + lastmod 취득 (cold start ~1s)
-  const pageCounts = await fetchSitemapPageCounts(apiBase)
+  const pageCounts = await fetchSitemapPageCounts()
 
   if (pageCounts) {
     const realEstateLastmod = pageCounts.realEstateBuildings.maxUpdatedAt || today
@@ -90,7 +88,7 @@ export default defineEventHandler(async (event) => {
     // fallback: 구 방식 (page-counts 엔드포인트 장애 시)
     sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: weekStart })
 
-    const realEstateBuildings = await fetchRealEstateBuildings(apiBase)
+    const realEstateBuildings = await fetchRealEstateBuildings()
     const realEstatePages = Math.max(1, Math.ceil(realEstateBuildings.length / MAX_URLS_PER_SITEMAP))
     if (realEstatePages === 1) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
@@ -100,7 +98,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const subscriptions = await fetchSubscriptionIds(apiBase)
+    const subscriptions = await fetchSubscriptionIds()
     const subLatestDate = subscriptions.reduce((max, item) => {
       const d = item.updatedAt?.split('T')[0]
       return d && d > max ? d : max
@@ -117,7 +115,7 @@ export default defineEventHandler(async (event) => {
 
     const counts = await Promise.all(
       SITEMAP_FACILITY_CATEGORIES.map(async (cat) => {
-        const items = await fetchFacilityIds(cat, apiBase, getSitemapFacilityLimit(cat))
+        const items = await fetchFacilityIds(cat, getSitemapFacilityLimit(cat))
         const latestDate = items.reduce((max, item) => {
           const d = item.updatedAt?.split('T')[0]
           return d && d > max ? d : max
@@ -137,7 +135,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const trashItems = await fetchWasteScheduleIds(apiBase)
+    const trashItems = await fetchWasteScheduleIds()
     const trashLatestDate = trashItems.reduce((max, item) => {
       const d = item.updatedAt?.split('T')[0]
       return d && d > max ? d : max
@@ -155,7 +153,7 @@ export default defineEventHandler(async (event) => {
 
   // 지하철 — 약 1100개 항목으로 단일 청크. Phase 1은 noindex이지만 chunk는 생성.
   try {
-    const subwayItems = await fetchSubwaySlugs(apiBase)
+    const subwayItems = await fetchSubwaySlugs()
     if (subwayItems.length > 0) {
       const subwayLatestDate = subwayItems.reduce((max, item) => {
         const d = item.updatedAt?.split('T')[0]

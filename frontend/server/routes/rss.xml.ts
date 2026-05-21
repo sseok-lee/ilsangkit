@@ -1,12 +1,10 @@
 import { defineEventHandler, setResponseHeader } from 'h3'
 import { generateRssXml } from '../utils/rss'
+import { ssrFetch } from '../utils/ssrFetch'
 
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
-  const apiBase = (config.public.apiBase as string) || 'http://localhost:8000'
-
   try {
-    const guides = await $fetch<{ data?: { items: Array<{ title: string; slug: string; summary?: string | null; createdAt?: string | null }> } }>(`${apiBase}/api/guides?limit=50`)
+    const guides = await ssrFetch<{ data?: { items: Array<{ title: string; slug: string; summary?: string | null; createdAt?: string | null }> } }>('/api/guides?limit=50')
     const items = (guides.data?.items || []).map(guide => ({
       title: guide.title,
       link: `https://ilsangkit.co.kr/guide/${guide.slug}`,
