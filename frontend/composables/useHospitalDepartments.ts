@@ -9,8 +9,7 @@ export interface HospitalDepartmentItem {
  * 병원 진료과목 목록 (보유 병원 수 내림차순). 1시간 백엔드 캐시.
  */
 export function useHospitalDepartments() {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase
+  const apiBase = useApiBase()
   return useAsyncData(
     'hospital-departments',
     async () => {

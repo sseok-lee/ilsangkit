@@ -118,8 +118,7 @@ export function transformToRegionSchedules(data: BackendScheduleData): RegionSch
 }
 
 export function useWasteSchedule() {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase || 'http://localhost:8000'
+  const apiBase = useApiBase()
 
   const isLoading = ref(false)
   const error = ref<Error | null>(null)

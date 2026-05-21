@@ -22,8 +22,7 @@ export function useBlogReviews() {
     if (key === lastKey && inFlight) return inFlight
     lastKey = key
 
-    const config = useRuntimeConfig()
-    const apiBase = config.public.apiBase
+    const apiBase = useApiBase()
     loading.value = true
 
     inFlight = (async () => {

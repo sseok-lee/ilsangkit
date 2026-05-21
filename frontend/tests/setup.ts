@@ -29,6 +29,9 @@ const mockRuntimeConfig = {
 // Make useRuntimeConfig globally available
 ;(globalThis as any).useRuntimeConfig = () => mockRuntimeConfig
 
+// Mock useApiBase composable globally — returns same default as backend localhost dev
+;(globalThis as any).useApiBase = () => 'http://localhost:8000'
+
 // Mock Nuxt SEO/Head composables
 ;(globalThis as any).useSeoMeta = vi.fn()
 ;(globalThis as any).useHead = vi.fn()

@@ -9,7 +9,7 @@
       <div class="aspect-video bg-slate-100 overflow-hidden">
         <img
           v-if="guide.thumbnailUrl"
-          :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
+          :src="`${publicApiBase}${guide.thumbnailUrl}`"
           :alt="guide.title"
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
@@ -38,6 +38,9 @@ import { useGuides } from '~/composables/useGuides'
 import type { GuideSummary } from '~/composables/useGuides'
 
 const config = useRuntimeConfig()
+// Image src URLs must use the public base (not loopback) so browsers can load them.
+// eslint-disable-next-line no-restricted-syntax
+const publicApiBase = config.public.apiBase
 const { fetchRecentGuides } = useGuides()
 
 const guides = ref<GuideSummary[]>([])

@@ -52,6 +52,7 @@ export default [
         // Nitro / h3 (server-side helpers, auto-imported by Nuxt in pages)
         useRequestEvent: 'readonly',
         setResponseHeader: 'readonly',
+        useApiBase: 'readonly',
         // Vue
         ref: 'readonly',
         reactive: 'readonly',
@@ -99,6 +100,21 @@ export default [
     files: ['plugins/msw.client.ts'],
     rules: {
       'no-console': 'off',
+    },
+  },
+  {
+    // Regression guard: all composables, pages, and components must use useApiBase()
+    // instead of accessing config.public.apiBase directly.
+    // Exceptions (image URLs, useApiBase itself) use eslint-disable-next-line comments.
+    files: ['composables/**/*.ts', 'pages/**/*.vue', 'components/**/*.vue'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[object.property.name='public'][property.name='apiBase']",
+          message: "Use useApiBase() instead of config.public.apiBase. Add eslint-disable-next-line only for image/OG URL construction that must remain public.",
+        },
+      ],
     },
   },
 ]

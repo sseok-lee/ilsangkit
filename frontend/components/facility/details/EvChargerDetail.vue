@@ -162,9 +162,9 @@ const slowCount = computed(() =>
 async function pollStatus() {
   if (!props.details.statId) return
   try {
-    const config = useRuntimeConfig()
+    const apiBase = useApiBase()
     const res = await $fetch<{ success: boolean; data: Array<{ chgerId: string; stat: string; statUpdDt: string }> }>(
-      `${config.public.apiBase}/api/facilities/ev-charger/${props.details.statId}/status`,
+      `${apiBase}/api/facilities/ev-charger/${props.details.statId}/status`,
       { timeout: 10_000 }
     )
     if (res.success && res.data) {

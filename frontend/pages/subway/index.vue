@@ -225,8 +225,7 @@ interface ListResponse {
   limit: number
 }
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
+const apiBase = useApiBase()
 
 const route = useRoute()
 const router = useRouter()

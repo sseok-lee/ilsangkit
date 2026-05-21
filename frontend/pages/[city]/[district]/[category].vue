@@ -154,14 +154,14 @@ interface AreaSummary {
   nearbyDistricts: Array<{ slug: string; district: string; count: number }>
   lastSyncedAt: string | null
 }
-const config = useRuntimeConfig()
+const apiBase = useApiBase()
 const { data: summary } = await useAsyncData<AreaSummary | null>(
   `area-summary-${city.value}-${district.value}-${category.value}`,
   async () => {
     if (category.value === 'trash') return null
     try {
       const res = await $fetch<{ success: boolean; data: AreaSummary }>(
-        `${config.public.apiBase}/api/area/${city.value}/${district.value}/${category.value}/summary`,
+        `${apiBase}/api/area/${city.value}/${district.value}/${category.value}/summary`,
       )
       return res?.success ? res.data : null
     } catch {

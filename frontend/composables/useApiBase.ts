@@ -16,9 +16,11 @@ export function useApiBase(): string {
   if (typeof window === 'undefined') {
     const internal = trimTrailingSlash(String((config as { internalApiBase?: string }).internalApiBase || ''))
     if (internal) return internal
+    // eslint-disable-next-line no-restricted-syntax
     return trimTrailingSlash(String(config.public.apiBase || ''))
   }
 
+  // eslint-disable-next-line no-restricted-syntax
   const rawBase = trimTrailingSlash(String(config.public.apiBase || ''))
   if (!rawBase) return ''
   if (rawBase.startsWith('/')) return rawBase
