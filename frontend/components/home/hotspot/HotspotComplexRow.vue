@@ -2,7 +2,7 @@
   <NuxtLink :to="href" class="flex items-center justify-between gap-3 py-2 px-3 hover:bg-slate-50 rounded-lg transition">
     <div class="min-w-0">
       <div class="text-sm font-bold text-slate-900 truncate">{{ row.buildingName }}</div>
-      <div class="text-[11px] text-slate-500 truncate">{{ row.district }}</div>
+      <div class="text-[11px] text-slate-500 truncate">{{ row.city }} {{ row.district }}</div>
     </div>
     <div class="text-right whitespace-nowrap">
       <div class="text-sm font-bold text-slate-900">{{ metric1Value }}</div>
