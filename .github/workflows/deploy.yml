@@ -170,8 +170,6 @@ jobs:
             # warmup 으로 캐시를 정상 본문으로 선점한다.
             for path in \
               / \
-              /sitemap.xml \
-              /sitemap/static.xml \
               /real-estate \
               /real-estate/apt-sale /real-estate/apt-rent \
               /real-estate/villa-sale /real-estate/villa-rent \
@@ -179,6 +177,20 @@ jobs:
               /toilet /wifi /ev-charger /hospital /parking /aed /trash /park; do
               curl -s -o /dev/null -m 30 "https://ilsangkit.co.kr${path}" || true
             done
+
+            # sitemap.xml + 모든 sub-sitemap chunk 동적 워밍.
+            # sitemap.xml 을 먼저 fetch → 안의 모든 <loc> 추출 → 각각 워밍.
+            # 새 sub-sitemap 카테고리/chunk 추가 시 deploy.yml 수정 불필요 (자동 적응).
+            # 2026-05-21 사고: real-estate-hub.xml 이 warmup 목록에서 빠져 빈 캐시 24h
+            # 박혀서 검색엔진이 시/군/구 허브 URL 발견 못 함.
+            echo "[warmup] sitemap 인덱스 + 모든 sub-sitemap chunk 동적 워밍"
+            curl -s -m 30 "https://ilsangkit.co.kr/sitemap.xml" \
+              | grep -oE '<loc>[^<]+</loc>' \
+              | sed -e 's|<loc>||' -e 's|</loc>||' \
+              | while read -r sitemap_url; do
+                  curl -s -o /dev/null -m 30 "$sitemap_url" || true
+                done
+            echo "[warmup] sitemap 워밍 완료"
 
       - name: Deployment Status
         run: echo "✅ Deployment completed successfully!"
