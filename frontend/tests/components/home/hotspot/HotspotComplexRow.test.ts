@@ -35,7 +35,7 @@ describe('HotspotComplexRow', () => {
     });
     const link = wrapper.find('a');
     expect(link.attributes('href')).toBe(
-      '/real-estate/apt/seoul/gangnam-gu/' + encodeURIComponent('래미안 대치 팰리스'),
+      '/real-estate/apt-sale/seoul/gangnam-gu/' + encodeURIComponent('래미안 대치 팰리스'),
     );
   });
 

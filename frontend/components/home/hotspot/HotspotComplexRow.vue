@@ -25,6 +25,6 @@ const props = defineProps<{
 }>();
 
 const href = computed(() => {
-  return `/real-estate/${props.propertyType}/${props.row.citySlug}/${props.row.districtSlug}/${encodeURIComponent(props.row.buildingName)}`;
+  return `/real-estate/${props.propertyType}-sale/${props.row.citySlug}/${props.row.districtSlug}/${encodeURIComponent(props.row.buildingName)}`;
 });
 </script>
