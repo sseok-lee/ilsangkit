@@ -6,6 +6,11 @@ import {
   getSitemapFacilityLimit,
   isSitemapFacilityCategory,
 } from '../../server/utils/sitemapPolicy'
+import { ssrFetch } from '../../server/utils/ssrFetch'
+
+vi.mock('../../server/utils/ssrFetch', () => ({
+  ssrFetch: vi.fn(),
+}))
 
 describe('generateSitemapXml with images', () => {
   it('image 필드 없을 때 기존 동작과 동일 (하위 호환)', () => {
@@ -146,12 +151,10 @@ describe('sitemapPolicy', () => {
 
 /**
  * Index ↔ dynamic chunk handler coverage 일치 통합 테스트.
- * fetch를 모킹해 카테고리별 반환 개수를 제어한 뒤, 두 라우트가 동일한 청크 수를
+ * ssrFetch를 모킹해 카테고리별 반환 개수를 제어한 뒤, 두 라우트가 동일한 청크 수를
  * 참조하는지 검증한다. "index에 2개 있으면 handler 는 page 1~2 만 200"을 회귀한다.
  */
 describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
-  const API_BASE = 'http://localhost:8000'
-
   // 카테고리별 전체 DB 행 수(limit 적용 전). ev-charger는 limit(20000)보다 훨씬 큼.
   const TOTAL_COUNTS: Record<string, number> = {
     toilet: 5,
@@ -171,42 +174,36 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     return arr
   }
 
-  function mockFetchImpl(url: string): Promise<Response> {
-    const match = url.match(/\/api\/sitemap\/facilities\/([a-z-]+)(?:\?limit=(\d+))?/)
+  function mockSsrFetchImpl(path: string): Promise<unknown> {
+    const match = path.match(/\/api\/sitemap\/facilities\/([a-z-]+)(?:\?limit=(\d+))?/)
     if (match) {
       const category = match[1]
       const requestedLimit = match[2] ? parseInt(match[2], 10) : undefined
       const total = TOTAL_COUNTS[category] ?? 0
       const serveCount = requestedLimit !== undefined ? Math.min(total, requestedLimit) : total
       const data = makeItems(serveCount)
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true, data }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      )
+      return Promise.resolve({ success: true, data })
     }
-    if (url.includes('/api/sitemap/waste-schedules')) {
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-      )
+    if (path.includes('/api/sitemap/waste-schedules')) {
+      return Promise.resolve({ success: true, data: [] })
     }
-    if (url.includes('/api/sitemap/real-estate-buildings')) {
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-      )
+    if (path.includes('/api/sitemap/real-estate-buildings')) {
+      return Promise.resolve({ success: true, data: [] })
     }
-    if (url.includes('/api/sitemap/real-estate-hubs')) {
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-      )
+    if (path.includes('/api/sitemap/real-estate-hubs')) {
+      return Promise.resolve({ success: true, data: [] })
     }
-    if (url.includes('/api/sitemap/subscriptions')) {
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-      )
+    if (path.includes('/api/sitemap/subscriptions')) {
+      return Promise.resolve({ success: true, data: [] })
     }
-    return Promise.resolve(new Response('', { status: 404 }))
+    if (path.includes('/api/sitemap/page-counts')) {
+      // Throw to trigger fallback path in sitemap.xml index handler
+      return Promise.reject(new Error('mock: page-counts unavailable'))
+    }
+    if (path.includes('/api/subway/stations')) {
+      return Promise.resolve({ success: true, data: { items: [] } })
+    }
+    return Promise.reject(new Error(`mock: unhandled path ${path}`))
   }
 
   interface MockEvent {
@@ -224,26 +221,17 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     }
   }
 
-  let originalFetch: typeof globalThis.fetch
-
   beforeEach(() => {
-    originalFetch = globalThis.fetch
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
-      .fn()
-      .mockImplementation((input: RequestInfo | URL) =>
-        mockFetchImpl(typeof input === 'string' ? input : String(input)),
-      ) as unknown as typeof fetch
-    // index route uses useRuntimeConfig(); setup.ts already mocks apiBase=http://localhost:8000
-    // fetchFacilityIds caches by "facility:{category}:limit{n}"; ensure clean cache between tests.
+    vi.mocked(ssrFetch).mockImplementation(mockSsrFetchImpl as typeof ssrFetch)
     vi.resetModules()
   })
 
   afterEach(() => {
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch
+    vi.mocked(ssrFetch).mockReset()
   })
 
   function countChunksForCategory(indexXml: string, category: string): number {
-    // index entry forms: /sitemap/{cat}.xml  또는 /sitemap/{cat}-{n}.xml
+    // index entry forms: /sitemap/{cat}.xml  または /sitemap/{cat}-{n}.xml
     const singlePattern = new RegExp(`<loc>[^<]*?/sitemap/${category}\\.xml</loc>`, 'g')
     const pagedPattern = new RegExp(`<loc>[^<]*?/sitemap/${category}-(\\d+)\\.xml</loc>`, 'g')
     const singleMatches = indexXml.match(singlePattern) || []
@@ -307,6 +295,20 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
   })
 
   it('/contact 은 static sitemap 에 포함된다 (US-006)', async () => {
+    // static.xml uses ssrFetch directly; set up a simple mock that returns empty data
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+
     const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
     const mockEvent: MockEvent = {
       path: '/sitemap/static.xml',
@@ -320,9 +322,6 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
   })
 
   it('가이드 100건 초과 시 모든 페이지가 static sitemap 에 포함된다 (pagination)', async () => {
-    // fetch 를 가이드 page=1 에 101건(totalPages=2, page1=100, page2=1) 로 응답하게 설정.
-    // 페이지네이션이 빠져 있다면 첫 요청만 100건 반환하고 101번째 slug 가 누락된다.
-    const origFetch = globalThis.fetch
     const guideCounts: { page: number; slugs: string[] }[] = [
       {
         page: 1,
@@ -334,56 +333,45 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
       },
     ]
     const totalPages = guideCounts.length
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
-      .fn()
-      .mockImplementation((input: RequestInfo | URL) => {
-        const url = typeof input === 'string' ? input : String(input)
-        if (url.includes('/api/guides')) {
-          const pageMatch = url.match(/page=(\d+)/)
-          const page = pageMatch ? parseInt(pageMatch[1], 10) : 1
-          const bucket = guideCounts.find((b) => b.page === page)
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                success: true,
-                data: {
-                  items: bucket
-                    ? bucket.slugs.map((slug) => ({ slug, createdAt: '2026-04-01T00:00:00Z' }))
-                    : [],
-                  total: 101,
-                  totalPages,
-                  page,
-                },
-              }),
-              { status: 200 },
-            ),
-          )
-        }
-        if (url.includes('/api/sitemap/region-categories')) {
-          return Promise.resolve(
-            new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-          )
-        }
-        return Promise.resolve(new Response('', { status: 404 }))
-      }) as unknown as typeof fetch
 
-    try {
-      vi.resetModules()
-      const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
-      const mockEvent: MockEvent = {
-        path: '/sitemap/static.xml',
-        node: {
-          req: { url: '/sitemap/static.xml' },
-          res: { setHeader: () => {} },
-        },
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
       }
-      const xml = (await staticHandler(mockEvent as never)) as string
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-1</loc>')
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-100</loc>')
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-101</loc>')
-    } finally {
-      ;(globalThis as unknown as { fetch: typeof fetch }).fetch = origFetch
+      if (path.includes('/api/guides')) {
+        const pageMatch = path.match(/page=(\d+)/)
+        const page = pageMatch ? parseInt(pageMatch[1], 10) : 1
+        const bucket = guideCounts.find((b) => b.page === page)
+        return Promise.resolve({
+          data: {
+            items: bucket
+              ? bucket.slugs.map((slug) => ({ slug, createdAt: '2026-04-01T00:00:00Z' }))
+              : [],
+            total: 101,
+            totalPages,
+            page,
+          },
+        })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+
+    vi.resetModules()
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const mockEvent: MockEvent = {
+      path: '/sitemap/static.xml',
+      node: {
+        req: { url: '/sitemap/static.xml' },
+        res: { setHeader: () => {} },
+      },
     }
+    const xml = (await staticHandler(mockEvent as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-1</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-100</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-101</loc>')
   })
 
   it('wifi는 noindex-only 상세 정책에 따라 index에 노출되지 않고 handler는 404를 반환한다', async () => {
@@ -399,26 +387,26 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
   })
 
   it('static sitemap 에 LH 임대 hub/탭 URL 들이 포함된다', async () => {
-    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
 
-    const origFetch = globalThis.fetch
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ data: { items: [], pagination: { totalPages: 0 } } }), {
-          status: 200,
-        }),
-      ) as unknown as typeof fetch
-    try {
-      const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental</loc>')
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental/buy-lease</loc>')
-      expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental/charter</loc>')
-      expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/subscription/rent/buy-lease</loc>')
-      expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/subscription/rent/charter</loc>')
-    } finally {
-      ;(globalThis as unknown as { fetch: typeof fetch }).fetch = origFetch
-    }
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental/buy-lease</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/public-rental/charter</loc>')
+    expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/subscription/rent/buy-lease</loc>')
+    expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/subscription/rent/charter</loc>')
   })
 })
 
@@ -428,27 +416,27 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
     { realEstateType: 'villa-rent', city: '서울특별시', district: '강북구' },
   ]
 
-  function mockFetchWithHubs(url: string): Promise<Response> {
-    if (url.includes('/api/sitemap/real-estate-hubs')) {
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true, data: hubData }), { status: 200 }),
-      )
+  function mockSsrFetchWithHubs(path: string): Promise<unknown> {
+    if (path.includes('/api/sitemap/real-estate-hubs')) {
+      return Promise.resolve({ success: true, data: hubData })
     }
     if (
-      url.includes('/api/sitemap/real-estate-buildings') ||
-      url.includes('/api/sitemap/waste-schedules') ||
-      url.includes('/api/sitemap/subscriptions')
+      path.includes('/api/sitemap/real-estate-buildings') ||
+      path.includes('/api/sitemap/waste-schedules') ||
+      path.includes('/api/sitemap/subscriptions')
     ) {
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-      )
+      return Promise.resolve({ success: true, data: [] })
     }
-    if (url.includes('/api/sitemap/facilities/')) {
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-      )
+    if (path.includes('/api/sitemap/facilities/')) {
+      return Promise.resolve({ success: true, data: [] })
     }
-    return Promise.resolve(new Response('', { status: 404 }))
+    if (path.includes('/api/sitemap/page-counts')) {
+      return Promise.reject(new Error('mock: page-counts unavailable'))
+    }
+    if (path.includes('/api/subway/stations')) {
+      return Promise.resolve({ success: true, data: { items: [] } })
+    }
+    return Promise.reject(new Error(`mock: unhandled path ${path}`))
   }
 
   interface MockEvent {
@@ -463,20 +451,13 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
     }
   }
 
-  let originalFetch: typeof globalThis.fetch
-
   beforeEach(() => {
-    originalFetch = globalThis.fetch
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
-      .fn()
-      .mockImplementation((input: RequestInfo | URL) =>
-        mockFetchWithHubs(typeof input === 'string' ? input : String(input)),
-      ) as unknown as typeof fetch
+    vi.mocked(ssrFetch).mockImplementation(mockSsrFetchWithHubs as typeof ssrFetch)
     vi.resetModules()
   })
 
   afterEach(() => {
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch
+    vi.mocked(ssrFetch).mockReset()
   })
 
   it('real-estate-hub.xml에 district hub URL이 포함된다', async () => {
@@ -537,28 +518,18 @@ describe('real-estate sitemap — invalid building name filtering', () => {
     return { path, node: { req: { url: path }, res: { setHeader: () => {} } } }
   }
 
-  let originalFetch: typeof globalThis.fetch
-
   beforeEach(() => {
-    originalFetch = globalThis.fetch
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
-      .fn()
-      .mockImplementation((input: RequestInfo | URL) => {
-        const url = typeof input === 'string' ? input : String(input)
-        if (url.includes('/api/sitemap/real-estate-buildings')) {
-          return Promise.resolve(
-            new Response(JSON.stringify({ success: true, data: buildingData }), { status: 200 }),
-          )
-        }
-        return Promise.resolve(
-          new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-        )
-      }) as unknown as typeof fetch
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/real-estate-buildings')) {
+        return Promise.resolve({ success: true, data: buildingData })
+      }
+      return Promise.resolve({ success: true, data: [] })
+    }) as typeof ssrFetch)
     vi.resetModules()
   })
 
   afterEach(() => {
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch
+    vi.mocked(ssrFetch).mockReset()
   })
 
   it('유효하지 않은 건물명((숫자) 형태, 숫자-숫자 형태)은 사이트맵 URL에서 제외된다', async () => {
