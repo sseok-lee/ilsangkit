@@ -11,6 +11,10 @@ const NEW_HIGH_PRIOR_MIN_TXN = 3;       // 직전 12개월 ≥ 3건
 const ACTIVE_MIN_TXN = 2;                // 30일 ≥ 2건
 const TOP_PYEONG_MIN_TXN = 2;            // 30일 ≥ 2건
 const CITY_CAP = 2;                      // active/topPyeong 시별 캡
+// 데이터 품질 가드: 차고/지분/공용 등 비정상 소면적 거래로 평당가가 폭주하는 케이스 제거
+const MIN_EXCLUSIVE_AREA_M2 = 30;
+// 'A동' 같은 단지명 누락 케이스 (실제 단지명 대신 동/호수만 들어옴) 제외
+const MIN_BUILDING_NAME_LEN = 3;
 
 type SaleTable = 'AptSaleTransaction' | 'VillaSaleTransaction' | 'OffitelSaleTransaction';
 
@@ -53,7 +57,8 @@ export async function getNewHigh(table: SaleTable): Promise<NewHighRow[]> {
              STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d') AS dealDate,
              t.dealAmount / (t.exclusiveArea / 3.3058) AS pyeongPrice
       FROM ${tbl} t, anchor a
-      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea >= ${MIN_EXCLUSIVE_AREA_M2}
+        AND CHAR_LENGTH(t.buildingName) >= ${MIN_BUILDING_NAME_LEN}
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
             >= DATE_SUB(a.latest, INTERVAL 7 DAY)
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
@@ -71,7 +76,8 @@ export async function getNewHigh(table: SaleTable): Promise<NewHighRow[]> {
              MAX(t.dealAmount / (t.exclusiveArea / 3.3058)) AS prevMaxPyeong,
              COUNT(*) AS prevCount
       FROM ${tbl} t, anchor a
-      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea >= ${MIN_EXCLUSIVE_AREA_M2}
+        AND CHAR_LENGTH(t.buildingName) >= ${MIN_BUILDING_NAME_LEN}
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
             >= DATE_SUB(a.latest, INTERVAL 365 DAY)
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
@@ -144,7 +150,8 @@ export async function getActive(table: SaleTable): Promise<ActiveRow[]> {
              MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latestDealDate,
              AVG(t.dealAmount / (t.exclusiveArea / 3.3058)) AS avgPyeongPrice
       FROM ${tbl} t, anchor a
-      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea >= ${MIN_EXCLUSIVE_AREA_M2}
+        AND CHAR_LENGTH(t.buildingName) >= ${MIN_BUILDING_NAME_LEN}
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
             >= DATE_SUB(a.latest, INTERVAL 30 DAY)
       GROUP BY t.buildingName, t.bjdCode, t.city, t.district
@@ -198,7 +205,8 @@ export async function getTopPyeong(table: SaleTable): Promise<TopPyeongRow[]> {
              AVG(t.dealAmount / (t.exclusiveArea / 3.3058)) AS avgPyeongPrice,
              COUNT(*) AS txnCount
       FROM ${tbl} t, anchor a
-      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea >= ${MIN_EXCLUSIVE_AREA_M2}
+        AND CHAR_LENGTH(t.buildingName) >= ${MIN_BUILDING_NAME_LEN}
         AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
             >= DATE_SUB(a.latest, INTERVAL 30 DAY)
       GROUP BY t.buildingName, t.bjdCode, t.city, t.district
