@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { dateBasedStatusFilter } from './subscriptionService.js';
-import { getPropertyHotspots } from './realEstateHotspotService.js';
+import { getComplexHotspots } from './realEstateComplexHotspotService.js';
 import type { HomeDashboardResponse, RealEstateTrend, TrendingBuildingItem } from '../types/homeDashboard.js';
 
 export interface StatsData {
@@ -693,7 +693,7 @@ export async function getHomeDashboard(): Promise<HomeDashboardResponse> {
     getRealEstateTrends(),
     getTrendingBuildings(),
     getSubscriptionSummary(),
-    getPropertyHotspots('apt'),
+    getComplexHotspots('apt'),
   ]);
 
   const stats = statsResult.data;

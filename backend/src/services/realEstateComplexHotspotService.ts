@@ -1,0 +1,262 @@
+import { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
+import { FULL_TO_SLUG, SHORT_TO_SLUG } from './cityMapping.js';
+import type {
+  NewHighRow, ActiveRow, TopPyeongRow, ComplexHotspots,
+} from '../types/homeDashboard.js';
+import type { RealEstatePropertyType } from '../schemas/realEstate.js';
+
+const MAX_PER_CARD = 5;
+const NEW_HIGH_PRIOR_MIN_TXN = 3;       // 직전 12개월 ≥ 3건
+const ACTIVE_MIN_TXN = 2;                // 30일 ≥ 2건
+const TOP_PYEONG_MIN_TXN = 2;            // 30일 ≥ 2건
+const CITY_CAP = 2;                      // active/topPyeong 시별 캡
+// 데이터 품질 가드: 차고/지분/공용 등 비정상 소면적 거래로 평당가가 폭주하는 케이스 제거
+const MIN_EXCLUSIVE_AREA_M2 = 30;
+// 'A동' 같은 단지명 누락 케이스 (실제 단지명 대신 동/호수만 들어옴) 제외
+const MIN_BUILDING_NAME_LEN = 3;
+
+type SaleTable = 'AptSaleTransaction' | 'VillaSaleTransaction' | 'OffitelSaleTransaction';
+
+function cityToSlug(city: string): string {
+  return FULL_TO_SLUG[city] ?? SHORT_TO_SLUG[city] ?? '';
+}
+
+function toNumber(v: number | string | null | undefined): number {
+  if (v === null || v === undefined) return 0;
+  return typeof v === 'number' ? v : Number(v);
+}
+
+type RawNewHighRow = {
+  buildingName: string;
+  bjdCode: string;
+  city: string;
+  district: string;
+  districtSlug: string;
+  dealDate: string | Date;
+  newPyeong: number | string;
+  prevMaxPyeong: number | string;
+  changePct: number | string;
+};
+
+function toIsoDate(v: string | Date): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return String(v).slice(0, 10);
+}
+
+/** 카드 1: 신고가 갱신 */
+export async function getNewHigh(table: SaleTable): Promise<NewHighRow[]> {
+  const tbl = Prisma.raw(table);
+  const rows = await prisma.$queryRaw<RawNewHighRow[]>`
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+      FROM ${tbl} t
+    ),
+    recent AS (
+      SELECT t.buildingName, t.bjdCode, t.city, t.district,
+             STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d') AS dealDate,
+             t.dealAmount / (t.exclusiveArea / 3.3058) AS pyeongPrice
+      FROM ${tbl} t, anchor a
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea >= ${MIN_EXCLUSIVE_AREA_M2}
+        AND CHAR_LENGTH(t.buildingName) >= ${MIN_BUILDING_NAME_LEN}
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 7 DAY)
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            <= a.latest
+    ),
+    recent_top AS (
+      SELECT buildingName, bjdCode, city, district,
+             MAX(dealDate) AS dealDate,
+             MAX(pyeongPrice) AS newPyeong
+      FROM recent
+      GROUP BY buildingName, bjdCode, city, district
+    ),
+    prior AS (
+      SELECT t.buildingName, t.bjdCode,
+             MAX(t.dealAmount / (t.exclusiveArea / 3.3058)) AS prevMaxPyeong,
+             COUNT(*) AS prevCount
+      FROM ${tbl} t, anchor a
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea >= ${MIN_EXCLUSIVE_AREA_M2}
+        AND CHAR_LENGTH(t.buildingName) >= ${MIN_BUILDING_NAME_LEN}
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 365 DAY)
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            <  DATE_SUB(a.latest, INTERVAL 7 DAY)
+      GROUP BY t.buildingName, t.bjdCode
+      HAVING COUNT(*) >= ${NEW_HIGH_PRIOR_MIN_TXN}
+    )
+    SELECT r.buildingName, r.bjdCode, r.city, r.district,
+           reg.slug AS districtSlug,
+           r.dealDate AS dealDate,
+           r.newPyeong AS newPyeong,
+           p.prevMaxPyeong AS prevMaxPyeong,
+           (r.newPyeong / p.prevMaxPyeong - 1) * 100 AS changePct
+    FROM recent_top r
+    INNER JOIN prior p ON p.buildingName = r.buildingName AND p.bjdCode = r.bjdCode
+    INNER JOIN Region reg ON reg.city = r.city AND reg.district = r.district
+    WHERE r.newPyeong > p.prevMaxPyeong
+    ORDER BY changePct DESC
+    LIMIT ${MAX_PER_CARD}
+  `;
+
+  return rows.map((r) => ({
+    buildingName: r.buildingName,
+    citySlug: cityToSlug(r.city),
+    city: r.city,
+    district: r.district,
+    districtSlug: r.districtSlug,
+    dealDate: toIsoDate(r.dealDate),
+    newPyeong: toNumber(r.newPyeong),
+    prevMaxPyeong: toNumber(r.prevMaxPyeong),
+    changePct: toNumber(r.changePct),
+  }));
+}
+
+type RawActiveRow = {
+  buildingName: string;
+  bjdCode: string;
+  city: string;
+  district: string;
+  districtSlug: string;
+  txnCount: bigint | number | string;
+  latestDealDate: string | Date;
+  avgPyeongPrice: number | string;
+};
+
+function applyCityCap<T extends { city: string }>(rows: T[], cap: number, limit: number): T[] {
+  const counts = new Map<string, number>();
+  const out: T[] = [];
+  for (const r of rows) {
+    const c = counts.get(r.city) ?? 0;
+    if (c >= cap) continue;
+    counts.set(r.city, c + 1);
+    out.push(r);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/** 카드 2: 거래 활발 단지 */
+export async function getActive(table: SaleTable): Promise<ActiveRow[]> {
+  const tbl = Prisma.raw(table);
+  const rows = await prisma.$queryRaw<RawActiveRow[]>`
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+      FROM ${tbl} t
+    ),
+    g AS (
+      SELECT t.buildingName, t.bjdCode, t.city, t.district,
+             COUNT(*) AS txnCount,
+             MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latestDealDate,
+             AVG(t.dealAmount / (t.exclusiveArea / 3.3058)) AS avgPyeongPrice
+      FROM ${tbl} t, anchor a
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea >= ${MIN_EXCLUSIVE_AREA_M2}
+        AND CHAR_LENGTH(t.buildingName) >= ${MIN_BUILDING_NAME_LEN}
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 30 DAY)
+      GROUP BY t.buildingName, t.bjdCode, t.city, t.district
+      HAVING COUNT(*) >= ${ACTIVE_MIN_TXN}
+    )
+    SELECT g.buildingName, g.bjdCode, g.city, g.district,
+           reg.slug AS districtSlug,
+           g.txnCount AS txnCount,
+           g.latestDealDate AS latestDealDate,
+           g.avgPyeongPrice AS avgPyeongPrice
+    FROM g
+    INNER JOIN Region reg ON reg.city = g.city AND reg.district = g.district
+    ORDER BY g.txnCount DESC, g.latestDealDate DESC
+    LIMIT 30
+  `;
+
+  const normalized: ActiveRow[] = rows.map((r) => ({
+    buildingName: r.buildingName,
+    citySlug: cityToSlug(r.city),
+    city: r.city,
+    district: r.district,
+    districtSlug: r.districtSlug,
+    txnCount: Number(r.txnCount),
+    latestDealDate: toIsoDate(r.latestDealDate),
+    avgPyeongPrice: toNumber(r.avgPyeongPrice),
+  }));
+
+  return applyCityCap(normalized, CITY_CAP, MAX_PER_CARD);
+}
+
+type RawTopPyeongRow = {
+  buildingName: string;
+  bjdCode: string;
+  city: string;
+  district: string;
+  districtSlug: string;
+  avgPyeongPrice: number | string;
+  txnCount: bigint | number | string;
+};
+
+/** 카드 3: 평당가 TOP */
+export async function getTopPyeong(table: SaleTable): Promise<TopPyeongRow[]> {
+  const tbl = Prisma.raw(table);
+  const rows = await prisma.$queryRaw<RawTopPyeongRow[]>`
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+      FROM ${tbl} t
+    ),
+    g AS (
+      SELECT t.buildingName, t.bjdCode, t.city, t.district,
+             AVG(t.dealAmount / (t.exclusiveArea / 3.3058)) AS avgPyeongPrice,
+             COUNT(*) AS txnCount
+      FROM ${tbl} t, anchor a
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea >= ${MIN_EXCLUSIVE_AREA_M2}
+        AND CHAR_LENGTH(t.buildingName) >= ${MIN_BUILDING_NAME_LEN}
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 30 DAY)
+      GROUP BY t.buildingName, t.bjdCode, t.city, t.district
+      HAVING COUNT(*) >= ${TOP_PYEONG_MIN_TXN}
+    )
+    SELECT g.buildingName, g.bjdCode, g.city, g.district,
+           reg.slug AS districtSlug,
+           g.avgPyeongPrice AS avgPyeongPrice,
+           g.txnCount AS txnCount
+    FROM g
+    INNER JOIN Region reg ON reg.city = g.city AND reg.district = g.district
+    ORDER BY g.avgPyeongPrice DESC
+    LIMIT 30
+  `;
+
+  const normalized: TopPyeongRow[] = rows.map((r) => ({
+    buildingName: r.buildingName,
+    citySlug: cityToSlug(r.city),
+    city: r.city,
+    district: r.district,
+    districtSlug: r.districtSlug,
+    avgPyeongPrice: toNumber(r.avgPyeongPrice),
+    txnCount: Number(r.txnCount),
+  }));
+
+  return applyCityCap(normalized, CITY_CAP, MAX_PER_CARD);
+}
+
+const SALE_TABLES: Record<RealEstatePropertyType, SaleTable> = {
+  apt: 'AptSaleTransaction',
+  villa: 'VillaSaleTransaction',
+  offitel: 'OffitelSaleTransaction',
+};
+
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+export const _complexHotspotCache = new Map<RealEstatePropertyType, { data: ComplexHotspots; expiry: number }>();
+
+export async function getComplexHotspots(propertyType: RealEstatePropertyType): Promise<ComplexHotspots> {
+  const cached = _complexHotspotCache.get(propertyType);
+  if (cached && Date.now() < cached.expiry) return cached.data;
+
+  const table = SALE_TABLES[propertyType];
+  const [newHigh, active, topPyeong] = await Promise.all([
+    getNewHigh(table),
+    getActive(table),
+    getTopPyeong(table),
+  ]);
+
+  const data: ComplexHotspots = { newHigh, active, topPyeong };
+  _complexHotspotCache.set(propertyType, { data, expiry: Date.now() + CACHE_TTL_MS });
+  return data;
+}
