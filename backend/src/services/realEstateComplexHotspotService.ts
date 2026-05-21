@@ -105,3 +105,72 @@ export async function getNewHigh(table: SaleTable): Promise<NewHighRow[]> {
     changePct: toNumber(r.changePct),
   }));
 }
+
+type RawActiveRow = {
+  buildingName: string;
+  bjdCode: string;
+  city: string;
+  district: string;
+  districtSlug: string;
+  txnCount: bigint | number | string;
+  latestDealDate: string | Date;
+  avgPyeongPrice: number | string;
+};
+
+function applyCityCap<T extends { city: string }>(rows: T[], cap: number, limit: number): T[] {
+  const counts = new Map<string, number>();
+  const out: T[] = [];
+  for (const r of rows) {
+    const c = counts.get(r.city) ?? 0;
+    if (c >= cap) continue;
+    counts.set(r.city, c + 1);
+    out.push(r);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/** 카드 2: 거래 활발 단지 */
+export async function getActive(table: SaleTable): Promise<ActiveRow[]> {
+  const tbl = Prisma.raw(table);
+  const rows = await prisma.$queryRaw<RawActiveRow[]>`
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+      FROM ${tbl} t
+    ),
+    g AS (
+      SELECT t.buildingName, t.bjdCode, t.city, t.district,
+             COUNT(*) AS txnCount,
+             MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latestDealDate,
+             AVG(t.dealAmount / (t.exclusiveArea / 3.3058)) AS avgPyeongPrice
+      FROM ${tbl} t, anchor a
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 30 DAY)
+      GROUP BY t.buildingName, t.bjdCode, t.city, t.district
+      HAVING COUNT(*) >= ${ACTIVE_MIN_TXN}
+    )
+    SELECT g.buildingName, g.bjdCode, g.city, g.district,
+           reg.slug AS districtSlug,
+           g.txnCount AS txnCount,
+           g.latestDealDate AS latestDealDate,
+           g.avgPyeongPrice AS avgPyeongPrice
+    FROM g
+    INNER JOIN Region reg ON reg.city = g.city AND reg.district = g.district
+    ORDER BY g.txnCount DESC, g.latestDealDate DESC
+    LIMIT 30
+  `;
+
+  const normalized: ActiveRow[] = rows.map((r) => ({
+    buildingName: r.buildingName,
+    citySlug: cityToSlug(r.city),
+    city: r.city,
+    district: r.district,
+    districtSlug: r.districtSlug,
+    txnCount: Number(r.txnCount),
+    latestDealDate: toIsoDate(r.latestDealDate),
+    avgPyeongPrice: toNumber(r.avgPyeongPrice),
+  }));
+
+  return applyCityCap(normalized, CITY_CAP, MAX_PER_CARD);
+}
