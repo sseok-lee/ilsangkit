@@ -12,7 +12,7 @@ const {
   mockSubscriptionUnitTypeAggregate,
   mockSubscriptionFindMany,
   mockGenericCount,
-  mockGetPropertyHotspots,
+  mockGetComplexHotspots,
 } = vi.hoisted(() => ({
   mockAptSaleCount: vi.fn(),
   mockAptRentCount: vi.fn(),
@@ -25,11 +25,11 @@ const {
   mockSubscriptionUnitTypeAggregate: vi.fn(),
   mockSubscriptionFindMany: vi.fn(),
   mockGenericCount: vi.fn().mockResolvedValue(0),
-  mockGetPropertyHotspots: vi.fn(),
+  mockGetComplexHotspots: vi.fn(),
 }));
 
-vi.mock('../../src/services/realEstateHotspotService.js', () => ({
-  getPropertyHotspots: mockGetPropertyHotspots,
+vi.mock('../../src/services/realEstateComplexHotspotService.js', () => ({
+  getComplexHotspots: mockGetComplexHotspots,
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
@@ -436,11 +436,11 @@ describe('getHomeDashboard', () => {
     mockSubscriptionFindMany.mockReset();
     mockGenericCount.mockReset();
     mockGenericCount.mockResolvedValue(0);
-    mockGetPropertyHotspots.mockReset();
-    mockGetPropertyHotspots.mockResolvedValue({
-      sale:   { rising: [], falling: [], active: [] },
-      jeonse: { rising: [], falling: [], active: [] },
-      wolse:  { active: [] },
+    mockGetComplexHotspots.mockReset();
+    mockGetComplexHotspots.mockResolvedValue({
+      newHigh: [],
+      active:  [],
+      topPyeong: [],
     });
   });
 
@@ -476,13 +476,12 @@ describe('getHomeDashboard', () => {
     expect(mockQueryRaw.mock.calls.length).toBeGreaterThan(before);
   });
 
-  it('includes realEstateHotspots.apt populated by getPropertyHotspots', async () => {
-    mockGetPropertyHotspots.mockResolvedValue({
-      sale:   { rising: [{ citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-                           pricePerPyeong: 5000, txnCount: 100, changePct: 5, volumeChangePct: 10 }],
-                falling: [], active: [] },
-      jeonse: { rising: [], falling: [], active: [] },
-      wolse:  { active: [] },
+  it('includes realEstateHotspots.apt populated by getComplexHotspots', async () => {
+    mockGetComplexHotspots.mockResolvedValue({
+      newHigh: [{ buildingName: '래미안', city: '서울특별시', district: '강남구',
+                  pricePerPyeong: 5000, txnCount: 100, changePct: 5 }],
+      active:  [],
+      topPyeong: [],
     });
 
     setupFullMocks();
@@ -490,7 +489,7 @@ describe('getHomeDashboard', () => {
     const result = await getHomeDashboard();
     expect(result.realEstateHotspots).toBeDefined();
     expect(result.realEstateHotspots!.apt).toBeDefined();
-    expect(result.realEstateHotspots!.apt!.sale.rising).toHaveLength(1);
-    expect(result.realEstateHotspots!.apt!.sale.rising[0].district).toBe('강남구');
+    expect(result.realEstateHotspots!.apt!.newHigh).toHaveLength(1);
+    expect(result.realEstateHotspots!.apt!.newHigh[0].district).toBe('강남구');
   });
 });

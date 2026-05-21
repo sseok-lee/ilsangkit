@@ -30,34 +30,39 @@ export interface SubscriptionImminent {
   endDate: string;
 }
 
-export interface HotspotRegion {
+export interface ComplexRef {
+  buildingName: string;
   citySlug: string;
   city: string;
-  districtSlug: string;
   district: string;
-  pricePerPyeong: number | null;
+  districtSlug: string;
+}
+
+export interface NewHighRow extends ComplexRef {
+  dealDate: string;
+  newPyeong: number;
+  prevMaxPyeong: number;
+  changePct: number;
+}
+
+export interface ActiveRow extends ComplexRef {
   txnCount: number;
-  changePct: number | null;
-  volumeChangePct: number | null;
+  latestDealDate: string;
+  avgPyeongPrice: number;
 }
 
-export interface HotspotBundle {
-  rising: HotspotRegion[];
-  falling: HotspotRegion[];
-  active: HotspotRegion[];
+export interface TopPyeongRow extends ComplexRef {
+  avgPyeongPrice: number;
+  txnCount: number;
 }
 
-export interface WolseHotspotBundle {
-  active: HotspotRegion[];
+export interface ComplexHotspots {
+  newHigh: NewHighRow[];
+  active: ActiveRow[];
+  topPyeong: TopPyeongRow[];
 }
 
-export interface PropertyHotspots {
-  sale: HotspotBundle;
-  jeonse: HotspotBundle;
-  wolse: WolseHotspotBundle;
-}
-
-export type RealEstateHotspots = Partial<Record<RealEstatePropertyType, PropertyHotspots>>;
+export type ComplexHotspotsByProperty = Partial<Record<RealEstatePropertyType, ComplexHotspots>>;
 
 export interface HomeDashboard {
   total: number;
@@ -73,7 +78,7 @@ export interface HomeDashboard {
     avgSupplyPrice: number | null;
     imminent: SubscriptionImminent[];
   };
-  realEstateHotspots?: RealEstateHotspots;
+  realEstateHotspots?: ComplexHotspotsByProperty;
 }
 
 interface ApiEnvelope {
