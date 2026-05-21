@@ -40,17 +40,7 @@ function toIsoDate(v: string | Date): string {
   return String(v).slice(0, 10);
 }
 
-// These will be used in Tasks 3-5
-void ACTIVE_MIN_TXN;
-void TOP_PYEONG_MIN_TXN;
-void CITY_CAP;
-type _ActiveRow = ActiveRow;
-type _TopPyeongRow = TopPyeongRow;
-type _ComplexHotspots = ComplexHotspots;
-type _ComplexRef = ComplexRef;
-type _RealEstatePropertyType = RealEstatePropertyType;
-
-/** カード 1: 신고가 갱신 */
+/** 카드 1: 신고가 갱신 */
 export async function getNewHigh(table: SaleTable): Promise<NewHighRow[]> {
   const tbl = Prisma.raw(table);
   const rows = await prisma.$queryRaw<RawNewHighRow[]>`
@@ -103,8 +93,7 @@ export async function getNewHigh(table: SaleTable): Promise<NewHighRow[]> {
     LIMIT ${MAX_PER_CARD}
   `;
 
-  const sorted = [...rows].sort((a, b) => toNumber(b.changePct) - toNumber(a.changePct));
-  return sorted.slice(0, MAX_PER_CARD).map((r) => ({
+  return rows.map((r) => ({
     buildingName: r.buildingName,
     citySlug: cityToSlug(r.city),
     city: r.city,

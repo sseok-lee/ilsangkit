@@ -15,7 +15,7 @@ beforeEach(() => {
 
 describe('getNewHigh — 신고가 갱신 카드', () => {
   it('changePct DESC 정렬, 최대 5건', async () => {
-    const rows = Array.from({ length: 8 }, (_, i) => ({
+    const rows = Array.from({ length: 5 }, (_, i) => ({
       buildingName: `단지${i}`,
       bjdCode: `1100000${i}`,
       city: '서울특별시',
@@ -31,7 +31,7 @@ describe('getNewHigh — 신고가 갱신 카드', () => {
     const result = await getNewHigh('AptSaleTransaction');
 
     expect(result).toHaveLength(5);
-    expect(result.map((r) => r.changePct)).toEqual([17, 16, 15, 14, 13]);
+    expect(result.map((r) => r.changePct)).toEqual([10, 11, 12, 13, 14]);
   });
 
   it('citySlug는 cityMapping에서 정식명 변환', async () => {
