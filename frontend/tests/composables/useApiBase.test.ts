@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockUseRuntimeConfig = vi.fn()
 
@@ -40,5 +40,42 @@ describe('useApiBase', () => {
     })
 
     expect(useApiBase()).toBe('https://api.example.com')
+  })
+
+  describe('SSR (no window)', () => {
+    let originalWindow: typeof window
+
+    beforeEach(() => {
+      originalWindow = globalThis.window
+      vi.stubGlobal('window', undefined)
+    })
+
+    afterEach(() => {
+      vi.stubGlobal('window', originalWindow)
+    })
+
+    it('SSR에선 internalApiBase 를 반환한다', () => {
+      mockUseRuntimeConfig.mockReturnValue({
+        internalApiBase: 'http://127.0.0.1:8000',
+        public: { apiBase: 'https://ilsangkit.co.kr' },
+      })
+      expect(useApiBase()).toBe('http://127.0.0.1:8000')
+    })
+
+    it('SSR에서 internalApiBase 미설정 시 public.apiBase 로 fallback', () => {
+      mockUseRuntimeConfig.mockReturnValue({
+        internalApiBase: '',
+        public: { apiBase: 'https://ilsangkit.co.kr' },
+      })
+      expect(useApiBase()).toBe('https://ilsangkit.co.kr')
+    })
+
+    it('SSR에서 internalApiBase trailing slash 정규화', () => {
+      mockUseRuntimeConfig.mockReturnValue({
+        internalApiBase: 'http://127.0.0.1:8000/',
+        public: { apiBase: '' },
+      })
+      expect(useApiBase()).toBe('http://127.0.0.1:8000')
+    })
   })
 })
