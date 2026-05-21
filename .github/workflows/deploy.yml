@@ -49,14 +49,21 @@ jobs:
           NCP_MAP_CLIENT_ID: ${{ secrets.NCP_MAP_CLIENT_ID }}
           NCP_MAP_CLIENT_SECRET: ${{ secrets.NCP_MAP_CLIENT_SECRET }}
 
-      - name: Clean old build artifacts on server
+      - name: Clean old server-side build artifacts on server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
-            rm -rf /home/project2/frontend/.output
+            # frontend .output/server (Nitro 서버 코드) 는 SCP 가 통째로 덮어쓰기 전에
+            # 비워서 stale chunks 가 남지 않게 한다.
+            # frontend .output/public/_nuxt/* (content-hashed immutable 클라이언트 chunks)
+            # 는 절대 삭제하지 않는다 — 이미 사용자/Googlebot 브라우저에 캐시된 옛 HTML
+            # 이 참조하는 chunk 가 사라지면 dynamic import 500/404 발생 (2026-05-21).
+            # SCP 가 새 hash chunks 를 _nuxt 에 추가하기만 하므로 옛 chunks 는 자연 누적.
+            # 디스크 누적은 별도 cron 으로 30일 이상 chunk 청소 (TODO 별도 PR).
+            rm -rf /home/project2/frontend/.output/server
             rm -rf /home/project2/backend/dist
 
       - name: Deploy to Cafe24 Server
