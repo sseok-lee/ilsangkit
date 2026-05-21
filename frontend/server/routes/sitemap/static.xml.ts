@@ -3,6 +3,7 @@ import { defineEventHandler, setHeader } from 'h3'
 import { SITE_URL, generateSitemapXml } from '../../utils/sitemap'
 import type { SitemapUrl } from '../../utils/sitemap'
 import { CITY_SLUGS, DISTRICT_SLUG_MAP, REGIONS, getDistrictSlug } from '../../../shared/regionSlugs'
+import { ssrFetch } from '../../utils/ssrFetch'
 
 const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports']
 
@@ -50,21 +51,22 @@ export default defineEventHandler(async (event) => {
   })()
   const urls: SitemapUrl[] = []
 
-  // API base URL — 카테고리·청약 lastmod 조회용 (먼저 호출해 매핑 준비)
-  const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
   const categoryLastmodMap = new Map<string, string>()
   let subscriptionLastmod = weekStart
   try {
-    const countsRes = await fetch(`${apiBase}/api/sitemap/page-counts`)
-    if (countsRes.ok) {
-      const json = await countsRes.json()
-      const facilities: Array<{ category: string; maxUpdatedAt: string | null }> = json.data?.facilities ?? []
-      for (const f of facilities) {
-        if (f.maxUpdatedAt) categoryLastmodMap.set(f.category, f.maxUpdatedAt)
+    const json = await ssrFetch<{
+      data?: {
+        facilities?: Array<{ category: string; maxUpdatedAt: string | null }>
+        subscriptions?: { maxUpdatedAt: string | null }
       }
-      const subMax = json.data?.subscriptions?.maxUpdatedAt
-      if (subMax) subscriptionLastmod = subMax
+    }>('/api/sitemap/page-counts')
+    const facilities: Array<{ category: string; maxUpdatedAt: string | null }> =
+      json.data?.facilities ?? []
+    for (const f of facilities) {
+      if (f.maxUpdatedAt) categoryLastmodMap.set(f.category, f.maxUpdatedAt)
     }
+    const subMax = json.data?.subscriptions?.maxUpdatedAt
+    if (subMax) subscriptionLastmod = subMax
   } catch (err) {
     console.error('[sitemap/static] Failed to fetch page-counts:', err)
   }
@@ -117,18 +119,24 @@ export default defineEventHandler(async (event) => {
   try {
     const MAX_GUIDE_PAGES = 50 // 총 5000 건까지 안전 가드 — 실운영에서는 훨씬 적음
     for (let page = 1; page <= MAX_GUIDE_PAGES; page++) {
-      const guidesRes = await fetch(`${apiBase}/api/guides?limit=100&page=${page}`)
-      if (!guidesRes.ok) {
-        console.error(`[sitemap] Failed to fetch guides page=${page}: HTTP ${guidesRes.status}`)
+      let guidesJson: {
+        data?: {
+          items?: Array<{ slug: string; createdAt: string }>
+          totalPages?: number
+        }
+      } | null = null
+      try {
+        guidesJson = await ssrFetch(`/api/guides?limit=100&page=${page}`)
+      } catch (err) {
+        console.error(`[sitemap] Failed to fetch guides page=${page}:`, err)
         break
       }
-      const guidesJson = await guidesRes.json()
-      const guides: Array<{ slug: string; createdAt: string }> = guidesJson.data?.items || []
+      const guides: Array<{ slug: string; createdAt: string }> = guidesJson?.data?.items ?? []
       for (const guide of guides) {
         const lastmod = guide.createdAt ? new Date(guide.createdAt).toISOString().split('T')[0] : today
         urls.push({ loc: `${SITE_URL}/guide/${guide.slug}`, lastmod, changefreq: 'weekly', priority: 0.7 })
       }
-      const totalPages = Number(guidesJson.data?.totalPages ?? 1)
+      const totalPages = Number(guidesJson?.data?.totalPages ?? 1)
       if (page >= totalPages || guides.length === 0) break
     }
   } catch (err) {
@@ -137,57 +145,60 @@ export default defineEventHandler(async (event) => {
 
   // API에서 실제 데이터가 있는 지역-카테고리 조합만 가져오기
   try {
-    const res = await fetch(`${apiBase}/api/sitemap/region-categories`)
-    if (res.ok) {
-      const json = await res.json()
-      const combinations: Array<{ city: string; district: string; citySlug: string; districtSlug: string; category: string }> = json.data || []
+    const json = await ssrFetch<{
+      data?: Array<{
+        city: string
+        district: string
+        citySlug: string
+        districtSlug: string
+        category: string
+      }>
+    }>('/api/sitemap/region-categories')
 
-      // 고유 도시, 도시+구군 조합 추출
-      const citySet = new Set<string>()
-      const districtSet = new Set<string>()
-      const urlSet = new Set<string>()
+    const combinations = json.data ?? []
 
-      for (const combo of combinations) {
-        if (!combo.citySlug || !combo.districtSlug) continue
+    // 고유 도시, 도시+구군 조합 추출
+    const citySet = new Set<string>()
+    const districtSet = new Set<string>()
+    const urlSet = new Set<string>()
 
-        citySet.add(combo.citySlug)
-        districtSet.add(`${combo.citySlug}/${combo.districtSlug}`)
+    for (const combo of combinations) {
+      if (!combo.citySlug || !combo.districtSlug) continue
 
-        const loc = `${SITE_URL}/${combo.citySlug}/${combo.districtSlug}/${combo.category}`
-        if (!urlSet.has(loc)) {
-          urlSet.add(loc)
-          // 카테고리별 sync 시점이 있으면 사용, 없으면 weekly bucket
-          const lastmod = categoryLastmodMap.get(combo.category) ?? weekStart
-          urls.push({ loc, lastmod, changefreq: 'weekly', priority: 0.8 })
-        }
+      citySet.add(combo.citySlug)
+      districtSet.add(`${combo.citySlug}/${combo.districtSlug}`)
+
+      const loc = `${SITE_URL}/${combo.citySlug}/${combo.districtSlug}/${combo.category}`
+      if (!urlSet.has(loc)) {
+        urlSet.add(loc)
+        // 카테고리별 sync 시점이 있으면 사용, 없으면 weekly bucket
+        const lastmod = categoryLastmodMap.get(combo.category) ?? weekStart
+        urls.push({ loc, lastmod, changefreq: 'weekly', priority: 0.8 })
       }
-
-      // 도시 허브 페이지 (예: /seoul) — 주 단위 집계
-      Array.from(citySet).forEach((citySlug) => {
-        urls.push({
-          loc: `${SITE_URL}/${citySlug}`,
-          lastmod: weekStart,
-          changefreq: 'weekly',
-          priority: 0.8,
-        })
-      })
-
-      // 구/군 허브 페이지 (예: /seoul/gangnam)
-      Array.from(districtSet).forEach((path) => {
-        urls.push({
-          loc: `${SITE_URL}/${path}`,
-          lastmod: weekStart,
-          changefreq: 'weekly',
-          priority: 0.7,
-        })
-      })
-
-      // /{city}/{district}/real-estate 는 [category].vue 화이트리스트 밖이라 404.
-      // 부동산 hub URL 은 /sitemap/real-estate-hub.xml 에서 별도 발행.
-    } else {
-      console.error(`[sitemap] Failed to fetch region-categories: HTTP ${res.status}`)
-      addFallbackHubPages(urls, weekStart)
     }
+
+    // 도시 허브 페이지 (예: /seoul) — 주 단위 집계
+    Array.from(citySet).forEach((citySlug) => {
+      urls.push({
+        loc: `${SITE_URL}/${citySlug}`,
+        lastmod: weekStart,
+        changefreq: 'weekly',
+        priority: 0.8,
+      })
+    })
+
+    // 구/군 허브 페이지 (예: /seoul/gangnam)
+    Array.from(districtSet).forEach((path) => {
+      urls.push({
+        loc: `${SITE_URL}/${path}`,
+        lastmod: weekStart,
+        changefreq: 'weekly',
+        priority: 0.7,
+      })
+    })
+
+    // /{city}/{district}/real-estate 는 [category].vue 화이트리스트 밖이라 404.
+    // 부동산 hub URL 은 /sitemap/real-estate-hub.xml 에서 별도 발행.
   } catch (err) {
     console.error('[sitemap] Failed to fetch region-categories:', err)
     addFallbackHubPages(urls, weekStart)
