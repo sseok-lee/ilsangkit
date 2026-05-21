@@ -95,8 +95,7 @@ export function useRegions() {
     error.value = null
 
     try {
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase
+      const apiBase = useApiBase()
 
       const response = await $fetch<{ success: boolean; data: RegionInfo[] }>(
         `${apiBase}/api/meta/regions`

@@ -26,8 +26,7 @@ interface ApiListResponse {
  * SSR 블로킹 (above-the-fold CLS 방지).
  */
 export function useHomeSubscriptions() {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase
+  const apiBase = useApiBase()
 
   const fetchByStatus = (status: 'ongoing' | 'upcoming') =>
     $fetch<ApiListResponse>(`${apiBase}/api/subscription`, {

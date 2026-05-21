@@ -6,8 +6,7 @@ interface ApiResponse<T> {
 }
 
 export function useSubwayStation(slug: string) {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase
+  const apiBase = useApiBase()
 
   return useAsyncData(
     `subway-station-${slug}`,

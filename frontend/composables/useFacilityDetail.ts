@@ -15,8 +15,7 @@ export function useFacilityDetail() {
     facility.value = null
 
     try {
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase
+      const apiBase = useApiBase()
 
       const response = await $fetch<{ success: boolean; data: FacilityDetail }>(
         `${apiBase}/api/facilities/${category}/${id}`

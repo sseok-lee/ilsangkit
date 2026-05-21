@@ -27,8 +27,7 @@ interface PaginatedGuides {
 }
 
 export function useGuides() {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase as string
+  const apiBase = useApiBase()
 
   async function fetchGuides(params: {
     page?: number
