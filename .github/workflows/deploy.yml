@@ -131,13 +131,26 @@ jobs:
             pm2 save
 
             # 배포 직후 콜드 부트 5xx 차단 워밍업.
-            # 1) backend /api/health 폴링으로 ready 시점 정확히 감지 (최대 30초)
-            # 2) frontend SSR 주요 라우트 사전 GET 으로 Nitro in-memory 캐시 + 모듈 그래프 워밍
+            # 1) backend /api/health 폴링으로 light ready 시점 감지 (최대 30초)
+            # 2) backend /api/sitemap/page-counts 폴링으로 heavy ready 감지 (최대 60초)
+            #    sitemap.xml 이 의존하는 무거운 집계 쿼리 - DB 풀/Prisma 모듈 cold start
+            #    완료 전에 frontend warmup 이 timeout abort → 빈/축소 sitemap 이 메모리
+            #    캐시(s-maxage=86400)에 박혀 24h stale 노출되는 사고 방지 (2026-05-21 PR-B).
+            # 3) frontend SSR 주요 라우트 사전 GET 으로 Nitro in-memory 캐시 + 모듈 그래프 워밍
             #    (네이버 서치어드바이저 "서버 접근 불가" 리포트의 콜드 5xx 원인 해소)
             echo "[warmup] backend /api/health 폴링"
             for i in $(seq 1 30); do
               if curl -sf -o /dev/null http://localhost:8000/api/health; then
                 echo "[warmup] backend ready (${i}s)"
+                break
+              fi
+              sleep 1
+            done
+
+            echo "[warmup] backend /api/sitemap/page-counts 폴링 (heavy endpoint ready 확인)"
+            for i in $(seq 1 60); do
+              if curl -sf -m 10 -o /dev/null http://localhost:8000/api/sitemap/page-counts; then
+                echo "[warmup] backend heavy endpoint ready (${i}s)"
                 break
               fi
               sleep 1
