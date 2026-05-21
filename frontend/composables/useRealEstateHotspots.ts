@@ -9,9 +9,9 @@ export function useRealEstateHotspots(initial: RealEstateHotspots) {
 
   async function loadProperty(propertyType: RealEstatePropertyType): Promise<void> {
     if (data.value[propertyType]) return;
-    const config = useRuntimeConfig();
+    const apiBase = useApiBase();
     const res = await $fetch<ApiEnvelope>(
-      `${config.public.apiBase}/api/meta/hotspots`,
+      `${apiBase}/api/meta/hotspots`,
       { query: { propertyType } },
     );
     if (res.success) {

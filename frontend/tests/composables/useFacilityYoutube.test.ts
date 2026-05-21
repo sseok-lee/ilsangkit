@@ -6,7 +6,6 @@ const fetchMock = vi.fn()
 beforeEach(() => {
   fetchMock.mockReset()
   vi.stubGlobal('$fetch', fetchMock)
-  vi.stubGlobal('useRuntimeConfig', () => ({ public: { apiBase: 'http://api' } }))
 })
 
 describe('useFacilityYoutube', () => {
@@ -24,7 +23,7 @@ describe('useFacilityYoutube', () => {
     const { videos, fetchVideos } = useFacilityYoutube()
     await fetchVideos('parking', '123')
     expect(videos.value).toHaveLength(1)
-    expect(fetchMock).toHaveBeenCalledWith('http://api/api/facilities/parking/123/youtube')
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:8000/api/facilities/parking/123/youtube')
   });
 
   it('네트워크 에러 시 빈 배열 유지, 에러 throw 안 함', async () => {

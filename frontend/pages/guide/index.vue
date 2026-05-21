@@ -58,7 +58,7 @@
           <div class="aspect-video bg-slate-100 overflow-hidden">
             <img
               v-if="guide.thumbnailUrl"
-              :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
+              :src="`${publicApiBase}${guide.thumbnailUrl}`"
               :alt="guide.title"
               width="400"
               height="225"
@@ -163,6 +163,9 @@ const { trackGuideListView } = useAnalytics()
 onMounted(() => trackGuideListView())
 
 const config = useRuntimeConfig()
+// Image src URLs must use the public base (not loopback) so browsers can load them.
+// eslint-disable-next-line no-restricted-syntax
+const publicApiBase = config.public.apiBase
 const { fetchGuides } = useGuides()
 
 const currentPage = ref(1)

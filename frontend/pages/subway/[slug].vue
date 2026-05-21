@@ -415,8 +415,7 @@ const nearbyStations = ref<Facility[]>([])
 const nearbyLoading = ref(false)
 const crossFacilitiesGrouped = ref<Array<{ category: FacilityCategory; meta: { label: string; icon?: string }; items: Facility[] }>>([])
 const crossLoading = ref(false)
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
+const apiBase = useApiBase()
 
 async function fetchNearbyStations() {
   if (!station.value) return

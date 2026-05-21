@@ -6,7 +6,6 @@ const fetchMock = vi.fn()
 beforeEach(() => {
   fetchMock.mockReset()
   vi.stubGlobal('$fetch', fetchMock)
-  vi.stubGlobal('useRuntimeConfig', () => ({ public: { apiBase: 'http://api' } }))
 })
 
 describe('useBlogReviews', () => {
@@ -21,7 +20,7 @@ describe('useBlogReviews', () => {
     const { posts, fetchPosts } = useBlogReviews()
     await fetchPosts('facility', 'parking', '123')
     expect(posts.value).toHaveLength(1)
-    expect(fetchMock).toHaveBeenCalledWith('http://api/api/facilities/parking/123/naver-blog')
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:8000/api/facilities/parking/123/naver-blog')
   })
 
   it('kind=real-estate URL (segments are encoded)', async () => {
@@ -29,7 +28,7 @@ describe('useBlogReviews', () => {
     const { fetchPosts } = useBlogReviews()
     await fetchPosts('real-estate', 'apt-sale', '서울특별시|종로구|롯데캐슬 골드')
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringMatching(/^http:\/\/api\/api\/real-estate\/apt-sale\/.+\/.+\/.+\/naver-blog$/),
+      expect.stringMatching(/^http:\/\/localhost:8000\/api\/real-estate\/apt-sale\/.+\/.+\/.+\/naver-blog$/),
     )
   })
 

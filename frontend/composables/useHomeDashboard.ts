@@ -82,8 +82,8 @@ interface ApiEnvelope {
 }
 
 export function useHomeDashboard() {
-  const config = useRuntimeConfig();
+  const apiBase = useApiBase();
   return useAsyncData('home-dashboard', () =>
-    $fetch<ApiEnvelope>(`${config.public.apiBase}/api/meta/home-dashboard`).catch(() => null),
+    $fetch<ApiEnvelope>(`${apiBase}/api/meta/home-dashboard`).catch(() => null),
   );
 }

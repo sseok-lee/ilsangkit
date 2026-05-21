@@ -15,8 +15,7 @@ export type SubscriptionDetailResponse = Subscription & {
 }
 
 export function useSubscription() {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase as string
+  const apiBase = useApiBase()
 
   async function getSubscriptionList(params: {
     status?: 'upcoming' | 'ongoing' | 'closed'

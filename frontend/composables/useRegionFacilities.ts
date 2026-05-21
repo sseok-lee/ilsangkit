@@ -16,15 +16,7 @@ export function useRegionFacilities() {
   const page = ref(1);
   const totalPages = ref(0);
 
-  function getApiBase(): string {
-    try {
-      const config = useRuntimeConfig();
-      return config.public.apiBase;
-    } catch (e) {
-      // In test environment, useRuntimeConfig might not be available
-      return 'http://localhost:8000';
-    }
-  }
+  const apiBase = useApiBase();
 
   // subway는 facility API와 응답 shape가 다르므로 별도 endpoint 호출 후 Facility 형식으로 정규화한다.
   // /api/facilities는 Zod enum에 subway가 없어 422를 반환하므로 분기 필수.
@@ -49,7 +41,6 @@ export function useRegionFacilities() {
     currentPage: number,
     pageSize: number,
   ): Promise<RegionFacilitiesResponse | null> {
-    const apiBase = getApiBase();
     const response = await $fetch<ApiResponse<{ items: SubwayStationGroup[]; total: number; page: number; limit: number }>>(
       `${apiBase}/api/subway/stations`,
       {
@@ -110,8 +101,7 @@ export function useRegionFacilities() {
         return;
       }
 
-      const apiBase = getApiBase();
-
+  
       const query: Record<string, unknown> = {
         page: currentPage,
         limit: pageSize,
@@ -152,8 +142,7 @@ export function useRegionFacilities() {
     error.value = null;
 
     try {
-      const apiBase = getApiBase();
-
+  
       const response = await $fetch<ApiResponse<RegionFacilitiesResponse>>(
         `${apiBase}/api/facilities/region/${city}/${district}`,
         {

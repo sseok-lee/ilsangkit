@@ -177,7 +177,7 @@
           <div class="aspect-video bg-slate-100 overflow-hidden">
             <img
               v-if="guide.thumbnailUrl"
-              :src="`${config.public.apiBase}${guide.thumbnailUrl}`"
+              :src="`${publicApiBase}${guide.thumbnailUrl}`"
               :alt="guide.title"
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
@@ -250,6 +250,10 @@ import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
 
 const config = useRuntimeConfig()
+const apiBase = useApiBase()
+// Image src URLs must use the public base (not loopback) so browsers can load them.
+// eslint-disable-next-line no-restricted-syntax
+const publicApiBase = config.public.apiBase
 
 // SEO 메타태그 - 기존 유지
 const { setHomeMeta } = useFacilityMeta()
@@ -335,7 +339,7 @@ if (dashboard.value) {
 
 const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
   $fetch<{ success: boolean; data: GuideSummary[] }>(
-    `${config.public.apiBase}/api/guides/recent`,
+    `${apiBase}/api/guides/recent`,
     { query: { limit: 4 } }
   )
 )
