@@ -113,7 +113,9 @@ export async function fetchFacilityIds(
     : `/api/sitemap/facilities/${category}`
 
   try {
-    const json = await ssrFetch<{ data?: { id: string; updatedAt: string }[] }>(path)
+    const json = await ssrFetch<{ data?: { id: string; updatedAt: string }[] }>(path, {
+      timeoutMs: 25_000,
+    })
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)
     return data
@@ -131,6 +133,7 @@ export async function fetchWasteScheduleIds(): Promise<{ id: number; updatedAt: 
   try {
     const json = await ssrFetch<{ data?: { id: number; updatedAt: string }[] }>(
       '/api/sitemap/waste-schedules',
+      { timeoutMs: 25_000 },
     )
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)
@@ -194,6 +197,7 @@ export async function fetchRealEstateCityDistrictHubs(): Promise<SitemapRealEsta
   try {
     const json = await ssrFetch<{ data?: SitemapRealEstateHub[] }>(
       '/api/sitemap/real-estate-hubs',
+      { timeoutMs: 25_000 },
     )
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)
@@ -214,7 +218,7 @@ export async function fetchRegionCategories(): Promise<
   try {
     const json = await ssrFetch<{
       data?: Array<{ city: string; district: string; category: string }>
-    }>('/api/sitemap/region-categories')
+    }>('/api/sitemap/region-categories', { timeoutMs: 25_000 })
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)
     return data
@@ -233,7 +237,9 @@ export interface SitemapPageCounts {
 
 export async function fetchSitemapPageCounts(): Promise<SitemapPageCounts | null> {
   try {
-    const json = await ssrFetch<{ data?: SitemapPageCounts }>('/api/sitemap/page-counts')
+    const json = await ssrFetch<{ data?: SitemapPageCounts }>('/api/sitemap/page-counts', {
+      timeoutMs: 25_000,
+    })
     return json.data ?? null
   } catch (err) {
     console.error('[sitemap] fetchSitemapPageCounts failed', err)
@@ -250,7 +256,7 @@ export async function fetchSubwaySlugs(): Promise<{ slug: string; updatedAt: str
     // grouped=true → nameSlug 단위 distinct 응답. 환승역 중복 방지.
     const json = await ssrFetch<{
       data?: { items?: Array<{ nameSlug: string; updatedAt: string }> }
-    }>('/api/subway/stations?limit=5000&grouped=true')
+    }>('/api/subway/stations?limit=5000&grouped=true', { timeoutMs: 25_000 })
     const items = json?.data?.items ?? []
     const data = items.map((s) => ({
       slug: s.nameSlug,
@@ -272,6 +278,7 @@ export async function fetchSubscriptionIds(): Promise<{ id: number; updatedAt: s
   try {
     const json = await ssrFetch<{ data?: { id: number; updatedAt: string }[] }>(
       '/api/sitemap/subscriptions',
+      { timeoutMs: 25_000 },
     )
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)
