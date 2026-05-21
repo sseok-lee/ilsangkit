@@ -7,7 +7,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   default: { $queryRaw: mockQueryRaw },
 }));
 
-import { getNewHigh, getActive, getTopPyeong } from '../../src/services/realEstateComplexHotspotService.js';
+import { getNewHigh, getActive, getTopPyeong, getComplexHotspots, _complexHotspotCache } from '../../src/services/realEstateComplexHotspotService.js';
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
@@ -133,5 +133,46 @@ describe('getTopPyeong — 평당가 TOP 카드', () => {
     mockQueryRaw.mockResolvedValueOnce(rows);
     const result = await getTopPyeong('AptSaleTransaction');
     expect(result.length).toBeLessThanOrEqual(5);
+  });
+});
+
+describe('getComplexHotspots — 자산별 3카드 조립', () => {
+  beforeEach(() => {
+    _complexHotspotCache.clear();
+  });
+
+  it('apt 호출 시 AptSaleTransaction에 대해 3개 쿼리 실행 후 합쳐 반환', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([])   // newHigh
+      .mockResolvedValueOnce([])   // active
+      .mockResolvedValueOnce([]);  // topPyeong
+
+    const result = await getComplexHotspots('apt');
+
+    expect(result).toEqual({ newHigh: [], active: [], topPyeong: [] });
+    expect(mockQueryRaw).toHaveBeenCalledTimes(3);
+  });
+
+  it('자산별 캐시: 같은 propertyType 재호출 시 쿼리 실행 안 됨', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    await getComplexHotspots('offitel');
+    await getComplexHotspots('offitel');
+
+    expect(mockQueryRaw).toHaveBeenCalledTimes(3);
+  });
+
+  it('자산별 캐시는 독립: villa 호출은 apt 캐시와 무관', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    await getComplexHotspots('apt');
+    await getComplexHotspots('villa');
+
+    expect(mockQueryRaw).toHaveBeenCalledTimes(6);
   });
 });

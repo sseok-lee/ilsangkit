@@ -226,3 +226,29 @@ export async function getTopPyeong(table: SaleTable): Promise<TopPyeongRow[]> {
 
   return applyCityCap(normalized, CITY_CAP, MAX_PER_CARD);
 }
+
+const SALE_TABLES: Record<RealEstatePropertyType, SaleTable> = {
+  apt: 'AptSaleTransaction',
+  villa: 'VillaSaleTransaction',
+  offitel: 'OffitelSaleTransaction',
+};
+
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+export const _complexHotspotCache = new Map<RealEstatePropertyType, { data: ComplexHotspots; expiry: number }>();
+
+export async function getComplexHotspots(propertyType: RealEstatePropertyType): Promise<ComplexHotspots> {
+  const cached = _complexHotspotCache.get(propertyType);
+  if (cached && Date.now() < cached.expiry) return cached.data;
+
+  const table = SALE_TABLES[propertyType];
+  const [newHigh, active, topPyeong] = await Promise.all([
+    getNewHigh(table),
+    getActive(table),
+    getTopPyeong(table),
+  ]);
+
+  const data: ComplexHotspots = { newHigh, active, topPyeong };
+  _complexHotspotCache.set(propertyType, { data, expiry: Date.now() + CACHE_TTL_MS });
+  return data;
+}
