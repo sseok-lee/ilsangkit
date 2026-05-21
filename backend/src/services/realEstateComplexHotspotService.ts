@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { FULL_TO_SLUG, SHORT_TO_SLUG } from './cityMapping.js';
 import type {
-  ComplexRef, NewHighRow, ActiveRow, TopPyeongRow, ComplexHotspots,
+  NewHighRow, ActiveRow, TopPyeongRow, ComplexHotspots,
 } from '../types/homeDashboard.js';
 import type { RealEstatePropertyType } from '../schemas/realEstate.js';
 
