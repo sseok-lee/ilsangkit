@@ -10,9 +10,9 @@ import { getStatsByCity, getStatsByDistrict, getSyncStatus, SHORT_TO_SLUG } from
 import { getCategories, getStats, getRegionByDistrictName, getRegionByBjdCode, getRegions, getHomeDashboard } from '../services/metaService.js';
 import { prisma } from '../lib/prisma.js';
 import { RealEstatePropertyTypeSchema } from '../schemas/realEstate.js';
-import { getComplexHotspots } from '../services/realEstateComplexHotspotService.js';
+import { getPropertyHotspots } from '../services/realEstateHotspotService.js';
 
-const ComplexHotspotQuerySchema = z.object({
+const HotspotQuerySchema = z.object({
   propertyType: RealEstatePropertyTypeSchema,
 });
 
@@ -58,10 +58,10 @@ router.get('/home-dashboard', asyncHandler(async (_req: Request, res: Response) 
   res.json({ success: true, data });
 }));
 
-// GET /api/meta/complex-hotspots?propertyType=apt|villa|offitel
-router.get('/complex-hotspots', validate(ComplexHotspotQuerySchema, 'query'), asyncHandler(async (req: Request, res: Response) => {
+// GET /api/meta/hotspots?propertyType=apt|villa|offitel
+router.get('/hotspots', validate(HotspotQuerySchema, 'query'), asyncHandler(async (req: Request, res: Response) => {
   const { propertyType } = req.query as unknown as { propertyType: 'apt' | 'villa' | 'offitel' };
-  const data = await getComplexHotspots(propertyType);
+  const data = await getPropertyHotspots(propertyType);
   res.set('Cache-Control', 'public, max-age=3600');
   res.json({ success: true, data });
 }));

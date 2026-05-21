@@ -1,0 +1,259 @@
+import { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
+import type {
+  HotspotRegion, HotspotBundle, WolseHotspotBundle, PropertyHotspots,
+} from '../types/homeDashboard.js';
+import type { RealEstatePropertyType } from '../schemas/realEstate.js';
+import { FULL_TO_SLUG, SHORT_TO_SLUG } from './cityMapping.js';
+
+const MAX_PER_SIGNAL = 5;
+
+const SAMPLE_THRESHOLD: Record<RealEstatePropertyType, number> = {
+  apt: 30,
+  villa: 15,
+  offitel: 15,
+};
+
+// Prisma raw query에서 Decimal 컬럼은 string으로 직렬화될 수 있어 명시적 변환 필요
+type RawPricedRow = {
+  city: string;
+  districtSlug: string;
+  district: string;
+  pricePerPyeong: number | string | null;
+  txnCount: bigint | number | string;
+  changePct: number | string | null;
+  volumeChangePct: number | string | null;
+};
+
+function cityToSlug(city: string): string {
+  return FULL_TO_SLUG[city] ?? SHORT_TO_SLUG[city] ?? '';
+}
+
+function toNumberOrNull(v: number | string | null | undefined): number | null {
+  if (v === null || v === undefined) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeRow(r: RawPricedRow): HotspotRegion {
+  return {
+    citySlug: cityToSlug(r.city),
+    city: r.city,
+    districtSlug: r.districtSlug,
+    district: r.district,
+    pricePerPyeong: toNumberOrNull(r.pricePerPyeong),
+    txnCount: Number(r.txnCount),
+    changePct: toNumberOrNull(r.changePct),
+    volumeChangePct: toNumberOrNull(r.volumeChangePct),
+  };
+}
+
+type PricedSliceTable =
+  | 'AptSaleTransaction' | 'VillaSaleTransaction' | 'OffitelSaleTransaction'
+  | 'AptRentTransaction' | 'VillaRentTransaction' | 'OffitelRentTransaction';
+
+interface PricedSliceOptions {
+  sampleThreshold: number;
+  rentTypeFilter?: '전세' | '월세';
+}
+
+/**
+ * 매매/전세 슬라이스: 시·군·구 단위 평당가 + 변동률 + 거래량 변동률 산출 후 3시그널 묶음 반환.
+ * 월세는 별도 getWolseHotspots 함수를 사용한다.
+ */
+export async function getPricedSliceHotspots(
+  table: PricedSliceTable,
+  opts: PricedSliceOptions,
+): Promise<HotspotBundle> {
+  const { sampleThreshold, rentTypeFilter } = opts;
+
+  const rentTypeClause = rentTypeFilter
+    ? Prisma.sql`AND t.rentType = ${rentTypeFilter}`
+    : Prisma.empty;
+
+  const priceExpr = table.includes('Sale')
+    ? Prisma.sql`t.dealAmount`
+    : Prisma.sql`t.deposit`;
+
+  const tableRaw = Prisma.raw(table);
+
+  // 국토부 실거래가는 30일 reporting lag이 있어 NOW() 기준 윈도우는 거의 비어있음.
+  // 윈도우는 데이터의 MAX(dealDate)를 anchor로 잡아 "최근 7일 vs 직전 7일" 의미를 보존한다.
+  const rows = await prisma.$queryRaw<RawPricedRow[]>`
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+      FROM ${tableRaw} t
+      WHERE 1=1 ${rentTypeClause}
+    ),
+    recent AS (
+      SELECT t.city, t.district,
+             AVG(${priceExpr} / (t.exclusiveArea / 3.3058)) AS pricePerPyeong,
+             COUNT(*) AS txnCount
+      FROM ${tableRaw} t, anchor a
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 7 DAY)
+        ${rentTypeClause}
+      GROUP BY t.city, t.district
+      HAVING COUNT(*) >= ${sampleThreshold}
+    ),
+    prior AS (
+      SELECT t.city, t.district,
+             AVG(${priceExpr} / (t.exclusiveArea / 3.3058)) AS prevPrice,
+             COUNT(*) AS prevTxnCount
+      FROM ${tableRaw} t, anchor a
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 14 DAY)
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            <  DATE_SUB(a.latest, INTERVAL 7 DAY)
+        ${rentTypeClause}
+      GROUP BY t.city, t.district
+      HAVING COUNT(*) >= ${sampleThreshold}
+    )
+    SELECT
+      r.city AS city,
+      reg.slug AS districtSlug,
+      r.district AS district,
+      r.pricePerPyeong AS pricePerPyeong,
+      r.txnCount AS txnCount,
+      CASE WHEN p.prevPrice IS NOT NULL AND p.prevTxnCount >= ${sampleThreshold}
+           THEN (r.pricePerPyeong - p.prevPrice) / p.prevPrice * 100
+           ELSE NULL END AS changePct,
+      CASE WHEN p.prevTxnCount > 0
+           THEN (CAST(r.txnCount AS DECIMAL) - p.prevTxnCount) / p.prevTxnCount * 100
+           ELSE NULL END AS volumeChangePct
+    FROM recent r
+    LEFT JOIN prior p ON p.city = r.city AND p.district = r.district
+    INNER JOIN Region reg ON reg.city = r.city AND reg.district = r.district
+  `;
+
+  const all = rows.map(normalizeRow);
+
+  return {
+    rising: all
+      .filter((r) => r.changePct !== null && r.changePct > 0)
+      .sort((a, b) => (b.changePct as number) - (a.changePct as number))
+      .slice(0, MAX_PER_SIGNAL),
+    falling: all
+      .filter((r) => r.changePct !== null && r.changePct < 0)
+      .sort((a, b) => (a.changePct as number) - (b.changePct as number))
+      .slice(0, MAX_PER_SIGNAL),
+    active: all
+      .filter((r) => r.volumeChangePct !== null && r.volumeChangePct > 0)
+      .sort((a, b) => (b.volumeChangePct as number) - (a.volumeChangePct as number))
+      .slice(0, MAX_PER_SIGNAL),
+  };
+}
+
+type WolseTable = 'AptRentTransaction' | 'VillaRentTransaction' | 'OffitelRentTransaction';
+
+type RawWolseRow = {
+  city: string;
+  districtSlug: string;
+  district: string;
+  txnCount: bigint | number | string;
+  volumeChangePct: number | string | null;
+};
+
+/**
+ * 월세 슬라이스: 평당가 산정 안 함 — 거래 급증(volumeChangePct DESC)만 반환.
+ * pricePerPyeong / changePct 는 모든 행에서 null.
+ */
+export async function getWolseHotspots(
+  table: WolseTable,
+  opts: { sampleThreshold: number },
+): Promise<WolseHotspotBundle> {
+  const { sampleThreshold } = opts;
+  const tableRaw = Prisma.raw(table);
+
+  // 윈도우는 MAX(dealDate) anchor 기준 (NOW() 기준은 reporting lag으로 데이터가 거의 없음)
+  const rows = await prisma.$queryRaw<RawWolseRow[]>`
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+      FROM ${tableRaw} t
+      WHERE t.rentType = '월세'
+    ),
+    recent AS (
+      SELECT t.city, t.district, COUNT(*) AS txnCount
+      FROM ${tableRaw} t, anchor a
+      WHERE t.rentType = '월세'
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 7 DAY)
+      GROUP BY t.city, t.district
+      HAVING COUNT(*) >= ${sampleThreshold}
+    ),
+    prior AS (
+      SELECT t.city, t.district, COUNT(*) AS prevTxnCount
+      FROM ${tableRaw} t, anchor a
+      WHERE t.rentType = '월세'
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 14 DAY)
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            <  DATE_SUB(a.latest, INTERVAL 7 DAY)
+      GROUP BY t.city, t.district
+      HAVING COUNT(*) >= ${sampleThreshold}
+    )
+    SELECT
+      r.city AS city,
+      reg.slug AS districtSlug,
+      r.district AS district,
+      r.txnCount AS txnCount,
+      CASE WHEN p.prevTxnCount > 0
+           THEN (CAST(r.txnCount AS DECIMAL) - p.prevTxnCount) / p.prevTxnCount * 100
+           ELSE NULL END AS volumeChangePct
+    FROM recent r
+    LEFT JOIN prior p ON p.city = r.city AND p.district = r.district
+    INNER JOIN Region reg ON reg.city = r.city AND reg.district = r.district
+  `;
+
+  const active: HotspotRegion[] = rows
+    .map((r) => ({
+      citySlug: cityToSlug(r.city),
+      city: r.city,
+      districtSlug: r.districtSlug,
+      district: r.district,
+      pricePerPyeong: null,
+      txnCount: Number(r.txnCount),
+      changePct: null,
+      volumeChangePct: toNumberOrNull(r.volumeChangePct),
+    }))
+    .filter((r) => r.volumeChangePct !== null && r.volumeChangePct > 0)
+    .sort((a, b) => (b.volumeChangePct as number) - (a.volumeChangePct as number))
+    .slice(0, MAX_PER_SIGNAL);
+
+  return { active };
+}
+
+// Re-exported types for Tasks 4-5 to import from this module
+export type { WolseHotspotBundle, PropertyHotspots };
+
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+const PRICED_TABLES: Record<RealEstatePropertyType, { sale: PricedSliceTable; rent: PricedSliceTable }> = {
+  apt:     { sale: 'AptSaleTransaction',     rent: 'AptRentTransaction' },
+  villa:   { sale: 'VillaSaleTransaction',   rent: 'VillaRentTransaction' },
+  offitel: { sale: 'OffitelSaleTransaction', rent: 'OffitelRentTransaction' },
+};
+
+export const _hotspotCache = new Map<RealEstatePropertyType, { data: PropertyHotspots; expiry: number }>();
+
+export async function getPropertyHotspots(propertyType: RealEstatePropertyType): Promise<PropertyHotspots> {
+  const cached = _hotspotCache.get(propertyType);
+  if (cached && Date.now() < cached.expiry) {
+    return cached.data;
+  }
+
+  const threshold = SAMPLE_THRESHOLD[propertyType];
+  const { sale, rent } = PRICED_TABLES[propertyType];
+
+  const [saleBundle, jeonseBundle, wolseBundle] = await Promise.all([
+    getPricedSliceHotspots(sale, { sampleThreshold: threshold }),
+    getPricedSliceHotspots(rent, { sampleThreshold: threshold, rentTypeFilter: '전세' }),
+    getWolseHotspots(rent as WolseTable, { sampleThreshold: threshold }),
+  ]);
+
+  const data: PropertyHotspots = { sale: saleBundle, jeonse: jeonseBundle, wolse: wolseBundle };
+  _hotspotCache.set(propertyType, { data, expiry: Date.now() + CACHE_TTL_MS });
+  return data;
+}

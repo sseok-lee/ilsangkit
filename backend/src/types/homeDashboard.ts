@@ -1,4 +1,5 @@
 // backend/src/types/homeDashboard.ts
+import type { RealEstatePropertyType } from '../schemas/realEstate.js';
 
 export type TrendingBuildingItem = {
   buildingName: string;
@@ -56,45 +57,39 @@ export type HomeDashboardResponse = {
     avgSupplyPrice: number | null;
     imminent: SubscriptionImminent[];
   };
-  realEstateHotspots?: ComplexHotspotsByProperty;  // apt만 채워짐
+  realEstateHotspots?: RealEstateHotspots;  // apt만 채워짐
 };
 
-/** 한 단지 식별 + URL 생성용 공통 필드 */
-export interface ComplexRef {
-  buildingName: string;
+/** 한 지역(시·군·구) 핫스팟 정보 */
+export interface HotspotRegion {
   citySlug: string;        // 'seoul'
   city: string;            // '서울특별시'
+  districtSlug: string;    // 'gangnam-gu'
   district: string;        // '강남구'
-  districtSlug: string;    // 'gangnam-gu' or 'gangnam'
+  pricePerPyeong: number | null;   // 평당가(만원). 월세는 null
+  txnCount: number;                // 최근 7일 거래건수
+  changePct: number | null;        // 전주 대비 평당가 변동률(%). 월세는 null
+  volumeChangePct: number | null;  // 거래량 변동률(%)
 }
 
-/** 카드 1: 신고가 갱신 (직전 12개월 최고 평당가 갱신) */
-export interface NewHighRow extends ComplexRef {
-  dealDate: string;        // ISO yyyy-mm-dd
-  newPyeong: number;       // 만원/평
-  prevMaxPyeong: number;   // 만원/평
-  changePct: number;       // % (e.g., 12.5 = +12.5%)
+/** 매매/전세 슬라이스의 3시그널 묶음 */
+export interface HotspotBundle {
+  rising: HotspotRegion[];   // 평당가 상승 TOP. changePct desc, max 5
+  falling: HotspotRegion[];  // 평당가 하락 TOP. changePct asc, max 5
+  active: HotspotRegion[];   // 거래 급증 TOP. volumeChangePct desc, max 5
 }
 
-/** 카드 2: 거래 활발 (30일 내 단지 거래 ≥ 2건 TOP) */
-export interface ActiveRow extends ComplexRef {
-  txnCount: number;        // 30일 거래수
-  latestDealDate: string;  // ISO yyyy-mm-dd
-  avgPyeongPrice: number;  // 만원/평
+/** 월세 슬라이스 — 거래 급증만 */
+export interface WolseHotspotBundle {
+  active: HotspotRegion[];   // pricePerPyeong/changePct는 null로 채워짐
 }
 
-/** 카드 3: 평당가 TOP (30일 평균 평당가 상위, 시별 캡 2) */
-export interface TopPyeongRow extends ComplexRef {
-  avgPyeongPrice: number;  // 만원/평
-  txnCount: number;        // 30일 거래수
+/** 건물 유형별 핫스팟: 매매/전세/월세 */
+export interface PropertyHotspots {
+  sale: HotspotBundle;
+  jeonse: HotspotBundle;
+  wolse: WolseHotspotBundle;
 }
 
-/** 자산 1개분 3카드 묶음 */
-export interface ComplexHotspots {
-  newHigh: NewHighRow[];   // 0~5
-  active: ActiveRow[];     // 0~5
-  topPyeong: TopPyeongRow[]; // 0~5
-}
-
-/** SSR seed: apt만 채워짐 (오피스텔/빌라는 클라이언트 토글 시 lazy) */
-export type ComplexHotspotsByProperty = Partial<Record<import('../schemas/realEstate.js').RealEstatePropertyType, ComplexHotspots>>;
+/** 메인 SSR은 apt만 채움. 나머지 건물유형은 클라이언트 lazy fetch */
+export type RealEstateHotspots = Partial<Record<RealEstatePropertyType, PropertyHotspots>>;

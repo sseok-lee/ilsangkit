@@ -36,13 +36,11 @@ vi.mock('~/composables/useFacilityMeta', () => ({
   }),
 }))
 
-const sampleNewHigh = { buildingName: '래미안대치팰리스', citySlug: 'seoul', city: '서울특별시', district: '강남구', districtSlug: 'gangnam', dealDate: '2026-05-01', newPyeong: 9500, prevMaxPyeong: 9000, changePct: 5.6 }
-const sampleActive = { buildingName: '아크로리버파크', citySlug: 'seoul', city: '서울특별시', district: '서초구', districtSlug: 'seocho', txnCount: 12, latestDealDate: '2026-05-01', avgPyeongPrice: 8800 }
-const sampleTopPyeong = { buildingName: '반포자이', citySlug: 'seoul', city: '서울특별시', district: '서초구', districtSlug: 'seocho', avgPyeongPrice: 9200, txnCount: 8 }
-const sampleComplexHotspots = {
-  newHigh: [sampleNewHigh],
-  active: [sampleActive],
-  topPyeong: [sampleTopPyeong],
+const sampleRegion = { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam', district: '강남구', pricePerPyeong: 5000, txnCount: 45, changePct: 3.2, volumeChangePct: 10 }
+const sampleHotspotBundle = {
+  sale: { rising: [sampleRegion], falling: [sampleRegion], active: [sampleRegion] },
+  jeonse: { rising: [sampleRegion], falling: [sampleRegion], active: [sampleRegion] },
+  wolse: { active: [sampleRegion] },
 }
 
 vi.mock('~/composables/useHomeDashboard', () => ({
@@ -59,7 +57,7 @@ vi.mock('~/composables/useHomeDashboard', () => ({
             realEstateTrends: [],
             trendingBuildings: { sale: [], jeonse: [], wolse: [] },
             subscriptionSummary: { closingThisWeek: 0, upcomingNextWeek: 0, avgSupplyPrice: null, imminent: [] },
-            realEstateHotspots: { apt: sampleComplexHotspots },
+            realEstateHotspots: { apt: sampleHotspotBundle },
           },
         },
       },

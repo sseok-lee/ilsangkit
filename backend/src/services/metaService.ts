@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { dateBasedStatusFilter } from './subscriptionService.js';
-import { getComplexHotspots } from './realEstateComplexHotspotService.js';
+import { getPropertyHotspots } from './realEstateHotspotService.js';
 import type { HomeDashboardResponse, RealEstateTrend, TrendingBuildingItem } from '../types/homeDashboard.js';
 
 export interface StatsData {
@@ -679,41 +679,24 @@ export function clearHomeDashboardCache(): void {
 
 /**
  * 홈 페이지 대시보드 통합 endpoint용 데이터.
- *
- * getStats()는 필수 — 실패 시 전체 throw.
- * 나머지 5개 helper는 부분 실패 허용 — Promise.allSettled로 개별 실패를 안전한 기본값으로 흡수.
- * 부분 실패 발생 시 SSR이 빈 섹션 HTML을 1시간 SWR 캐싱하는 회귀를 막기 위해
- * 캐시 TTL을 짧게(1분) 잡아 다음 revalidate에서 회복.
+ * getStats() + 4개 헬퍼를 Promise.all 병렬 호출 후 합성.
+ * 결과는 1시간 in-memory 캐시.
  */
 export async function getHomeDashboard(): Promise<HomeDashboardResponse> {
   if (homeDashboardCache && Date.now() < homeDashboardCache.expiry) {
     return homeDashboardCache.data;
   }
 
-  const [statsResult, newlyListedResult, trendsResult, trendingResult, subscriptionResult, hotspotsResult] = await Promise.allSettled([
+  const [statsResult, newlyListedToday, realEstateTrends, trendingBuildings, subscriptionSummary, aptHotspots] = await Promise.all([
     getStats(),
     getNewlyListedToday(),
     getRealEstateTrends(),
     getTrendingBuildings(),
     getSubscriptionSummary(),
-    getComplexHotspots('apt'),
+    getPropertyHotspots('apt'),
   ]);
 
-  // getStats는 필수
-  if (statsResult.status === 'rejected') throw statsResult.reason;
-  const stats = statsResult.value.data;
-
-  const newlyListedToday = newlyListedResult.status === 'fulfilled' ? newlyListedResult.value : 0;
-  const realEstateTrends = trendsResult.status === 'fulfilled' ? trendsResult.value : [];
-  const trendingBuildings = trendingResult.status === 'fulfilled'
-    ? trendingResult.value
-    : { sale: [], jeonse: [], wolse: [] };
-  const subscriptionSummary = subscriptionResult.status === 'fulfilled'
-    ? subscriptionResult.value
-    : { closingThisWeek: 0, upcomingNextWeek: 0, avgSupplyPrice: null, imminent: [] };
-
-  const partialFailures = [newlyListedResult, trendsResult, trendingResult, subscriptionResult, hotspotsResult]
-    .filter((r) => r.status === 'rejected');
+  const stats = statsResult.data;
 
   const payload: HomeDashboardResponse = {
     total: stats.total,
@@ -724,15 +707,9 @@ export async function getHomeDashboard(): Promise<HomeDashboardResponse> {
     realEstateTrends,
     trendingBuildings,
     subscriptionSummary,
-    ...(hotspotsResult.status === 'fulfilled' ? { realEstateHotspots: { apt: hotspotsResult.value } } : {}),
+    realEstateHotspots: { apt: aptHotspots },
   };
 
-  if (partialFailures.length > 0) {
-    console.warn(`[home-dashboard] ${partialFailures.length}/5 partial failures — caching for 60s to allow quick recovery`);
-    for (const f of partialFailures) console.warn('  reason:', f.reason);
-  }
-
-  const ttl = partialFailures.length > 0 ? 60_000 : HOME_DASHBOARD_CACHE_TTL;
-  homeDashboardCache = { data: payload, expiry: Date.now() + ttl };
+  homeDashboardCache = { data: payload, expiry: Date.now() + HOME_DASHBOARD_CACHE_TTL };
   return payload;
 }
