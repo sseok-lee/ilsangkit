@@ -174,3 +174,55 @@ export async function getActive(table: SaleTable): Promise<ActiveRow[]> {
 
   return applyCityCap(normalized, CITY_CAP, MAX_PER_CARD);
 }
+
+type RawTopPyeongRow = {
+  buildingName: string;
+  bjdCode: string;
+  city: string;
+  district: string;
+  districtSlug: string;
+  avgPyeongPrice: number | string;
+  txnCount: bigint | number | string;
+};
+
+/** 카드 3: 평당가 TOP */
+export async function getTopPyeong(table: SaleTable): Promise<TopPyeongRow[]> {
+  const tbl = Prisma.raw(table);
+  const rows = await prisma.$queryRaw<RawTopPyeongRow[]>`
+    WITH anchor AS (
+      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+      FROM ${tbl} t
+    ),
+    g AS (
+      SELECT t.buildingName, t.bjdCode, t.city, t.district,
+             AVG(t.dealAmount / (t.exclusiveArea / 3.3058)) AS avgPyeongPrice,
+             COUNT(*) AS txnCount
+      FROM ${tbl} t, anchor a
+      WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
+        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
+            >= DATE_SUB(a.latest, INTERVAL 30 DAY)
+      GROUP BY t.buildingName, t.bjdCode, t.city, t.district
+      HAVING COUNT(*) >= ${TOP_PYEONG_MIN_TXN}
+    )
+    SELECT g.buildingName, g.bjdCode, g.city, g.district,
+           reg.slug AS districtSlug,
+           g.avgPyeongPrice AS avgPyeongPrice,
+           g.txnCount AS txnCount
+    FROM g
+    INNER JOIN Region reg ON reg.city = g.city AND reg.district = g.district
+    ORDER BY g.avgPyeongPrice DESC
+    LIMIT 30
+  `;
+
+  const normalized: TopPyeongRow[] = rows.map((r) => ({
+    buildingName: r.buildingName,
+    citySlug: cityToSlug(r.city),
+    city: r.city,
+    district: r.district,
+    districtSlug: r.districtSlug,
+    avgPyeongPrice: toNumber(r.avgPyeongPrice),
+    txnCount: Number(r.txnCount),
+  }));
+
+  return applyCityCap(normalized, CITY_CAP, MAX_PER_CARD);
+}

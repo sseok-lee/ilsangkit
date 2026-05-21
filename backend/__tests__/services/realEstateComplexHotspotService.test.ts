@@ -7,7 +7,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   default: { $queryRaw: mockQueryRaw },
 }));
 
-import { getNewHigh, getActive } from '../../src/services/realEstateComplexHotspotService.js';
+import { getNewHigh, getActive, getTopPyeong } from '../../src/services/realEstateComplexHotspotService.js';
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
@@ -101,5 +101,37 @@ describe('getActive — 거래 활발 카드', () => {
     mockQueryRaw.mockResolvedValueOnce(rows);
     const result = await getActive('AptSaleTransaction');
     expect(result).toHaveLength(5);
+  });
+});
+
+describe('getTopPyeong — 평당가 TOP 카드', () => {
+  it('avgPyeongPrice DESC + 시별 캡 2 (서울 3건 중 2건만 선택)', async () => {
+    mockQueryRaw.mockResolvedValueOnce([
+      { buildingName: 'A', bjdCode: '1', city: '서울특별시', district: '강남구', districtSlug: 'gangnam-gu',
+        avgPyeongPrice: 12000, txnCount: 5n },
+      { buildingName: 'B', bjdCode: '2', city: '서울특별시', district: '서초구', districtSlug: 'seocho-gu',
+        avgPyeongPrice: 11000, txnCount: 4n },
+      { buildingName: 'C', bjdCode: '3', city: '서울특별시', district: '용산구', districtSlug: 'yongsan-gu',
+        avgPyeongPrice: 10500, txnCount: 3n },
+      { buildingName: 'D', bjdCode: '4', city: '경기도', district: '성남시 분당구', districtSlug: 'seongnam-bundang',
+        avgPyeongPrice: 9000, txnCount: 6n },
+      { buildingName: 'E', bjdCode: '5', city: '부산광역시', district: '해운대구', districtSlug: 'haeundae-gu',
+        avgPyeongPrice: 8500, txnCount: 7n },
+    ]);
+
+    const result = await getTopPyeong('AptSaleTransaction');
+
+    expect(result.map((r) => r.buildingName)).toEqual(['A', 'B', 'D', 'E']);
+  });
+
+  it('최대 5건', async () => {
+    const rows = Array.from({ length: 30 }, (_, i) => ({
+      buildingName: `B${i}`, bjdCode: String(i),
+      city: `시${i % 10}`, district: `구${i}`, districtSlug: `d-${i}`,
+      avgPyeongPrice: 12000 - i, txnCount: 5n,
+    }));
+    mockQueryRaw.mockResolvedValueOnce(rows);
+    const result = await getTopPyeong('AptSaleTransaction');
+    expect(result.length).toBeLessThanOrEqual(5);
   });
 });
