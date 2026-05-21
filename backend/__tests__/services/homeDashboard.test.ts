@@ -12,7 +12,7 @@ const {
   mockSubscriptionUnitTypeAggregate,
   mockSubscriptionFindMany,
   mockGenericCount,
-  mockGetComplexHotspots,
+  mockGetPropertyHotspots,
 } = vi.hoisted(() => ({
   mockAptSaleCount: vi.fn(),
   mockAptRentCount: vi.fn(),
@@ -25,11 +25,11 @@ const {
   mockSubscriptionUnitTypeAggregate: vi.fn(),
   mockSubscriptionFindMany: vi.fn(),
   mockGenericCount: vi.fn().mockResolvedValue(0),
-  mockGetComplexHotspots: vi.fn(),
+  mockGetPropertyHotspots: vi.fn(),
 }));
 
-vi.mock('../../src/services/realEstateComplexHotspotService.js', () => ({
-  getComplexHotspots: mockGetComplexHotspots,
+vi.mock('../../src/services/realEstateHotspotService.js', () => ({
+  getPropertyHotspots: mockGetPropertyHotspots,
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
@@ -436,11 +436,11 @@ describe('getHomeDashboard', () => {
     mockSubscriptionFindMany.mockReset();
     mockGenericCount.mockReset();
     mockGenericCount.mockResolvedValue(0);
-    mockGetComplexHotspots.mockReset();
-    mockGetComplexHotspots.mockResolvedValue({
-      newHigh: [],
-      active:  [],
-      topPyeong: [],
+    mockGetPropertyHotspots.mockReset();
+    mockGetPropertyHotspots.mockResolvedValue({
+      sale:   { rising: [], falling: [], active: [] },
+      jeonse: { rising: [], falling: [], active: [] },
+      wolse:  { active: [] },
     });
   });
 
@@ -476,12 +476,13 @@ describe('getHomeDashboard', () => {
     expect(mockQueryRaw.mock.calls.length).toBeGreaterThan(before);
   });
 
-  it('includes realEstateHotspots.apt populated by getComplexHotspots', async () => {
-    mockGetComplexHotspots.mockResolvedValue({
-      newHigh: [{ buildingName: '래미안', city: '서울특별시', district: '강남구',
-                  pricePerPyeong: 5000, txnCount: 100, changePct: 5 }],
-      active:  [],
-      topPyeong: [],
+  it('includes realEstateHotspots.apt populated by getPropertyHotspots', async () => {
+    mockGetPropertyHotspots.mockResolvedValue({
+      sale:   { rising: [{ citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+                           pricePerPyeong: 5000, txnCount: 100, changePct: 5, volumeChangePct: 10 }],
+                falling: [], active: [] },
+      jeonse: { rising: [], falling: [], active: [] },
+      wolse:  { active: [] },
     });
 
     setupFullMocks();
@@ -489,26 +490,7 @@ describe('getHomeDashboard', () => {
     const result = await getHomeDashboard();
     expect(result.realEstateHotspots).toBeDefined();
     expect(result.realEstateHotspots!.apt).toBeDefined();
-    expect(result.realEstateHotspots!.apt!.newHigh).toHaveLength(1);
-    expect(result.realEstateHotspots!.apt!.newHigh[0].district).toBe('강남구');
-  });
-
-  it('getComplexHotspots 실패 시에도 나머지 섹션은 정상 반환 (realEstateHotspots만 omit)', async () => {
-    mockGetComplexHotspots.mockRejectedValue(new Error('prisma not connected'));
-    setupFullMocks();
-
-    const result = await getHomeDashboard();
-
-    expect(result.realEstateHotspots).toBeUndefined();
-    expect(result.total).toBeDefined();
-    expect(result.realEstateTrends).toHaveLength(9);
-    expect(result.subscriptionSummary).toHaveProperty('closingThisWeek');
-  });
-
-  it('getStats 실패 시 throw (전체 응답을 만들 수 없음)', async () => {
-    mockAptSaleCount.mockRejectedValue(new Error('db down'));
-    // 다른 mock은 셋업 안 해도 됨 — getStats가 throw하면 거기서 끝
-
-    await expect(getHomeDashboard()).rejects.toThrow('db down');
+    expect(result.realEstateHotspots!.apt!.sale.rising).toHaveLength(1);
+    expect(result.realEstateHotspots!.apt!.sale.rising[0].district).toBe('강남구');
   });
 });

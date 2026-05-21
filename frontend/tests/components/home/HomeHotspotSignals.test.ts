@@ -1,84 +1,96 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { flushPromises, mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import HomeHotspotSignals from '~/components/home/HomeHotspotSignals.vue';
-import type { ComplexHotspots, ComplexHotspotsByProperty } from '~/composables/useHomeDashboard';
+import type { RealEstateHotspots, PropertyHotspots, HotspotRegion } from '~/composables/useHomeDashboard';
 
 const fetchMock = vi.fn();
+vi.stubGlobal('$fetch', fetchMock);
+vi.stubGlobal('useRuntimeConfig', () => ({ public: { apiBase: 'http://localhost:8000' } }));
+
+const sampleRegion = (district: string): HotspotRegion => ({
+  citySlug: 'seoul', city: '서울특별시',
+  districtSlug: `${district}-slug`, district,
+  pricePerPyeong: 5000, txnCount: 100,
+  changePct: 3, volumeChangePct: 20,
+});
+
+const fullBundle = (): PropertyHotspots => ({
+  sale:   { rising: [sampleRegion('강남구'), sampleRegion('성동구')], falling: [sampleRegion('도봉구')], active: [sampleRegion('송파구')] },
+  jeonse: { rising: [], falling: [], active: [] },
+  wolse:  { active: [sampleRegion('영등포구')] },
+});
 
 beforeEach(() => {
   fetchMock.mockReset();
-  vi.stubGlobal('$fetch', fetchMock);
-  vi.stubGlobal('useRuntimeConfig', () => ({ public: { apiBase: 'http://localhost:8000' } }));
 });
 
-function sample(): ComplexHotspots {
-  return {
-    newHigh: [{
-      buildingName: '래미안', citySlug: 'seoul', city: '서울특별시', district: '강남구', districtSlug: 'gangnam-gu',
-      dealDate: '2026-05-18', newPyeong: 8000, prevMaxPyeong: 7000, changePct: 14.28,
-    }],
-    active: [{
-      buildingName: '자이', citySlug: 'seoul', city: '서울특별시', district: '서초구', districtSlug: 'seocho-gu',
-      txnCount: 12, latestDealDate: '2026-05-19', avgPyeongPrice: 9000,
-    }],
-    topPyeong: [{
-      buildingName: '한남', citySlug: 'seoul', city: '서울특별시', district: '용산구', districtSlug: 'yongsan-gu',
-      avgPyeongPrice: 12000, txnCount: 5,
-    }],
-  };
-}
-
-describe('HomeHotspotSignals (complex hotspots)', () => {
-  it('seed 데이터 없으면 섹션 자체 hide', () => {
-    const wrapper = mount(HomeHotspotSignals, {
-      props: { hotspots: {} as ComplexHotspotsByProperty },
-    });
-    expect(wrapper.text()).not.toContain('오늘의 부동산 시장');
+describe('HomeHotspotSignals', () => {
+  it('renders nothing if hotspots is empty (apt undefined)', () => {
+    const wrapper = mount(HomeHotspotSignals, { props: { hotspots: {} as RealEstateHotspots } });
+    expect(wrapper.html()).toBe('<!--v-if-->');
   });
 
-  it('apt seed로 3카드 모두 렌더', () => {
+  it('default state: apt + sale → renders 3 signal cards', () => {
     const wrapper = mount(HomeHotspotSignals, {
-      props: { hotspots: { apt: sample() } },
+      props: { hotspots: { apt: fullBundle() } },
     });
-    expect(wrapper.text()).toContain('신고가 갱신');
-    expect(wrapper.text()).toContain('거래 활발');
-    expect(wrapper.text()).toContain('평당가 TOP');
-    expect(wrapper.text()).toContain('래미안');
-    expect(wrapper.text()).toContain('자이');
-    expect(wrapper.text()).toContain('한남');
+    expect(wrapper.text()).toContain('평당가 상승');
+    expect(wrapper.text()).toContain('평당가 하락');
+    expect(wrapper.text()).toContain('거래 급증');
+    expect(wrapper.text()).toContain('강남구');
   });
 
-  it('자산 토글 클릭 시 미캐시 propertyType에 대해 /api/meta/complex-hotspots 호출', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: sample() });
+  it('property toggle to villa triggers fetch', async () => {
+    fetchMock.mockResolvedValue({ success: true, data: fullBundle() });
     const wrapper = mount(HomeHotspotSignals, {
-      props: { hotspots: { apt: sample() } },
+      props: { hotspots: { apt: fullBundle() } },
     });
-    const offitelBtn = wrapper.findAll('button').find((b) => b.text().includes('오피스텔'))!;
-    await offitelBtn.trigger('click');
+    const villaBtn = wrapper.findAll('button').find((b) => b.text().includes('빌라'))!;
+    await villaBtn.trigger('click');
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:8000/api/meta/complex-hotspots',
-      { query: { propertyType: 'offitel' } },
+      'http://localhost:8000/api/meta/hotspots',
+      { query: { propertyType: 'villa' } },
     );
   });
 
-  it('자산 토글 전환 시 섹션 unmount 안 됨 (loading 중에도 헤딩 유지)', async () => {
-    let resolveFetch!: (v: unknown) => void;
-    fetchMock.mockReturnValueOnce(new Promise((r) => { resolveFetch = r; }));
-    const wrapper = mount(HomeHotspotSignals, {
-      props: { hotspots: { apt: sample() } },
+  it('section remains mounted during fetch when switching property type', async () => {
+    // Promise that never resolves during the test — simulates in-flight fetch
+    let resolveFetch: (v: { success: boolean; data: PropertyHotspots }) => void = () => {};
+    const pending = new Promise<{ success: boolean; data: PropertyHotspots }>((res) => {
+      resolveFetch = res;
     });
-    const offitelBtn = wrapper.findAll('button').find((b) => b.text().includes('오피스텔'))!;
-    await offitelBtn.trigger('click');
-    expect(wrapper.text()).toContain('오늘의 부동산 시장');
-    resolveFetch({ success: true, data: sample() });
+    fetchMock.mockReturnValue(pending);
+
+    const wrapper = mount(HomeHotspotSignals, {
+      props: { hotspots: { apt: fullBundle() } },
+    });
+    expect(wrapper.find('section').exists()).toBe(true);
+
+    const villaBtn = wrapper.findAll('button').find((b) => b.text().includes('빌라'))!;
+    await villaBtn.trigger('click');
+    // While fetch is in-flight, section must NOT unmount (regression — was unmounting before fix)
+    expect(wrapper.find('section').exists()).toBe(true);
+    // Loading spinner should be visible on the active toggle
+    expect(wrapper.find('.animate-spin').exists()).toBe(true);
+
+    resolveFetch({ success: true, data: fullBundle() });
+    await flushPromises();
+    expect(wrapper.find('section').exists()).toBe(true);
+    expect(wrapper.find('.animate-spin').exists()).toBe(false);
   });
 
-  it('거래 토글(전세/월세) UI 없음', () => {
+  it('wolse tab hides rising/falling cards, shows only active', async () => {
     const wrapper = mount(HomeHotspotSignals, {
-      props: { hotspots: { apt: sample() } },
+      props: { hotspots: { apt: fullBundle() } },
     });
-    expect(wrapper.text()).not.toContain('전세');
-    expect(wrapper.text()).not.toContain('월세');
+    const wolseBtns = wrapper.findAll('button').filter((b) => b.text().trim() === '월세');
+    expect(wolseBtns.length).toBeGreaterThan(0);
+    await wolseBtns[0].trigger('click');
+
+    expect(wrapper.text()).not.toContain('평당가 상승');
+    expect(wrapper.text()).not.toContain('평당가 하락');
+    expect(wrapper.text()).toContain('거래 급증');
+    expect(wrapper.text()).toContain('영등포구');
   });
 });
