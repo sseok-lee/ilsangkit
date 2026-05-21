@@ -492,4 +492,23 @@ describe('getHomeDashboard', () => {
     expect(result.realEstateHotspots!.apt!.newHigh).toHaveLength(1);
     expect(result.realEstateHotspots!.apt!.newHigh[0].district).toBe('강남구');
   });
+
+  it('getComplexHotspots 실패 시에도 나머지 섹션은 정상 반환 (realEstateHotspots만 omit)', async () => {
+    mockGetComplexHotspots.mockRejectedValue(new Error('prisma not connected'));
+    setupFullMocks();
+
+    const result = await getHomeDashboard();
+
+    expect(result.realEstateHotspots).toBeUndefined();
+    expect(result.total).toBeDefined();
+    expect(result.realEstateTrends).toHaveLength(9);
+    expect(result.subscriptionSummary).toHaveProperty('closingThisWeek');
+  });
+
+  it('getStats 실패 시 throw (전체 응답을 만들 수 없음)', async () => {
+    mockAptSaleCount.mockRejectedValue(new Error('db down'));
+    // 다른 mock은 셋업 안 해도 됨 — getStats가 throw하면 거기서 끝
+
+    await expect(getHomeDashboard()).rejects.toThrow('db down');
+  });
 });
