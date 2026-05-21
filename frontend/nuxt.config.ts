@@ -167,6 +167,11 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // server-only: SSR이 backend를 호출할 때 쓰는 base. 운영에선 loopback 권장.
+    internalApiBase:
+      process.env.NUXT_INTERNAL_API_BASE
+      || process.env.NUXT_PUBLIC_API_BASE
+      || 'http://localhost:8000',
     // server-only (not exposed to client)
     ncpMapClientId: process.env.NCP_MAP_CLIENT_ID || '',
     ncpMapClientSecret: process.env.NCP_MAP_CLIENT_SECRET || '',
