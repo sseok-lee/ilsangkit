@@ -34,7 +34,8 @@ module.exports = {
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3000,
+        NUXT_INTERNAL_API_BASE: 'http://127.0.0.1:8000'
       },
       error_file: './logs/web-error.log',
       out_file: './logs/web-out.log',
