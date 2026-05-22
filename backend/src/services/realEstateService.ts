@@ -513,7 +513,7 @@ export async function getBuildingInfo(
     model.groupBy({
       by: ['dongName'],
       where: { ...where, dongName: { not: '' } },
-      _count: { _all: true },
+      _count: { dongName: true },
       orderBy: { _count: { dongName: 'desc' } },
       take: 1,
     }),
