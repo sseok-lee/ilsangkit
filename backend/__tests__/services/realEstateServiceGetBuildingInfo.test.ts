@@ -98,17 +98,27 @@ beforeEach(() => {
 
 describe('getBuildingInfo - bjdCode fallback', () => {
   it('bjdCode 가 빈 문자열이면 groupBy 로 거래 최다 bjdCode 를 찾아 사용한다', async () => {
-    mockAptSaleGroupBy.mockResolvedValue([{ bjdCode: '11680', _count: { _all: 42 } }]);
+    mockAptSaleGroupBy
+      .mockResolvedValueOnce([{ bjdCode: '11680', _count: { _all: 42 } }])
+      .mockResolvedValueOnce([{ dongName: '역삼동', _count: { _all: 42 } }]);
     mockAptSaleFindFirst.mockResolvedValue(sampleRecord);
     mockAptSaleAggregate.mockResolvedValue(sampleAgg);
 
     const result = await getBuildingInfo('apt-sale', '', '래미안에든');
 
-    expect(mockAptSaleGroupBy).toHaveBeenCalledTimes(1);
-    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+    expect(mockAptSaleGroupBy).toHaveBeenCalledTimes(2);
+    expect(mockAptSaleGroupBy).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         by: ['bjdCode'],
         where: { buildingName: '래미안에든' },
+        take: 1,
+      })
+    );
+    expect(mockAptSaleGroupBy).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        by: ['dongName'],
         take: 1,
       })
     );
@@ -121,13 +131,20 @@ describe('getBuildingInfo - bjdCode fallback', () => {
     expect(result?.bjdCode).toBe('11680');
   });
 
-  it('bjdCode 가 제공되면 groupBy 를 호출하지 않고 바로 조회한다', async () => {
+  it('bjdCode 가 제공되면 bjdCode fallback groupBy 는 호출하지 않고 dongName groupBy 만 호출한다', async () => {
+    mockAptSaleGroupBy.mockResolvedValue([{ dongName: '역삼동', _count: { _all: 10 } }]);
     mockAptSaleFindFirst.mockResolvedValue(sampleRecord);
     mockAptSaleAggregate.mockResolvedValue(sampleAgg);
 
     const result = await getBuildingInfo('apt-sale', '11680', '래미안에든');
 
-    expect(mockAptSaleGroupBy).not.toHaveBeenCalled();
+    expect(mockAptSaleGroupBy).toHaveBeenCalledTimes(1);
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        by: ['dongName'],
+        take: 1,
+      })
+    );
     expect(mockAptSaleFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { bjdCode: '11680', buildingName: '래미안에든' },
