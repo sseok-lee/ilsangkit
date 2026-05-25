@@ -19,8 +19,8 @@ URLS=(
 
 fail=0
 for url in "${URLS[@]}"; do
-  http=$(curl -s -o /dev/null -w "%{http_code}" "$url")
-  ct=$(curl -sI "$url" | awk -F': ' 'tolower($1) == "content-type" {print $2}' | tr -d '\r')
+  # HEAD 요청은 Nuxt 라우트가 일관되지 않게 처리 — GET으로 한 번에 status + content-type 추출
+  read -r http ct < <(curl -s -o /dev/null -w "%{http_code} %{content_type}\n" "$url")
   printf "%-3s  %-20s  %s\n" "$http" "${ct:-?}" "$url"
   if [ "$http" != "200" ]; then
     fail=1
