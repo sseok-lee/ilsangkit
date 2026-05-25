@@ -1,27 +1,58 @@
-import { defineEventHandler, getQuery, setHeader, sendRedirect } from 'h3'
+import { defineEventHandler, getQuery, setHeader } from 'h3'
+import type { H3Event } from 'h3'
+import { generateOgImageSvg } from '../utils/ogImage'
+import { CATEGORY_META, type FacilityCategory } from '~/types/facility'
 
-// Naver Static Map API (NCP)
-// https://api.ncloud-docs.com/docs/ai-naver-mapsstaticmap
 const NAVER_API_BASE = 'https://maps.apigw.ntruss.com/map-static/v2/raster'
-
-// 네이버 Static Map 최대 1024px 제한 → OG 권장 비율 1.91:1 에 맞춰 1024x536
 const MAP_WIDTH = 1024
 const MAP_HEIGHT = 536
 const DEFAULT_LEVEL = 16
-
-// 한국 좌표 경계 (backend/src/constants 와 동일 기준)
 const KOREA_LAT_MIN = 33
 const KOREA_LAT_MAX = 39
 const KOREA_LNG_MIN = 124
 const KOREA_LNG_MAX = 131
 
-function fallbackRedirect(event: Parameters<typeof sendRedirect>[0], query: Record<string, unknown>) {
-  const forwardParams = new URLSearchParams()
-  if (query.category) forwardParams.set('category', String(query.category))
-  if (query.title) forwardParams.set('title', String(query.title))
-  if (query.city) forwardParams.set('city', String(query.city))
-  if (query.district) forwardParams.set('district', String(query.district))
-  return sendRedirect(event, `/og?${forwardParams.toString()}`, 302)
+// NCP Static Map markers spec uses | : SPACE as delimiters.
+// Label must not contain those, and is capped at 20 chars by NCP recommendation.
+export function sanitizeLabel(raw: string | undefined): string | undefined {
+  if (!raw) return undefined
+  const cleaned = raw.replace(/[|:]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20)
+  return cleaned || undefined
+}
+
+const REAL_ESTATE_TO_OG: Record<string, string> = {
+  'apt-sale': 'apt', 'apt-rent': 'apt',
+  'villa-sale': 'villa', 'villa-rent': 'villa',
+  'offitel-sale': 'offitel', 'offitel-rent': 'offitel',
+}
+function normalizeOgCategory(raw: string): string {
+  if (REAL_ESTATE_TO_OG[raw]) return REAL_ESTATE_TO_OG[raw]
+  if (raw in CATEGORY_META) return raw
+  if (raw === 'apt' || raw === 'villa' || raw === 'offitel') return raw
+  return 'apt'
+}
+
+async function inlineFallback(
+  event: H3Event,
+  query: Record<string, unknown>,
+): Promise<Buffer | string> {
+  const category = normalizeOgCategory(String(query.category ?? 'apt')) as FacilityCategory
+  const title = String(query.title ?? '')
+  const city = query.city ? String(query.city) : undefined
+  const district = query.district ? String(query.district) : undefined
+  const svg = generateOgImageSvg({ category, title, city, district })
+  try {
+    const sharp = await import('sharp').then((m) => m.default)
+    const png = await sharp(Buffer.from(svg)).png().toBuffer()
+    setHeader(event, 'Content-Type', 'image/png')
+    setHeader(event, 'Cache-Control', 'public, max-age=86400, s-maxage=86400')
+    return png
+  }
+  catch {
+    setHeader(event, 'Content-Type', 'image/svg+xml')
+    setHeader(event, 'Cache-Control', 'public, max-age=86400, s-maxage=86400')
+    return svg
+  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -30,7 +61,7 @@ export default defineEventHandler(async (event) => {
   const lat = Number.parseFloat(String(query.lat ?? ''))
   const lng = Number.parseFloat(String(query.lng ?? ''))
   const level = Number.parseInt(String(query.level ?? DEFAULT_LEVEL), 10)
-  const label = query.label ? String(query.label).slice(0, 30) : undefined
+  const label = sanitizeLabel(query.label ? String(query.label) : undefined)
 
   const validCoords
     = Number.isFinite(lat) && Number.isFinite(lng)
@@ -38,12 +69,11 @@ export default defineEventHandler(async (event) => {
     && lng >= KOREA_LNG_MIN && lng <= KOREA_LNG_MAX
 
   const config = useRuntimeConfig(event)
-  const clientId = config.ncpMapClientId
-  const clientSecret = config.ncpMapClientSecret
+  const clientId = (config as { ncpMapClientId?: string }).ncpMapClientId
+  const clientSecret = (config as { ncpMapClientSecret?: string }).ncpMapClientSecret
 
-  // 좌표 무효하거나 NCP 인증 정보 없으면 기존 SVG 카드로 fallback
   if (!validCoords || !clientId || !clientSecret) {
-    return fallbackRedirect(event, query)
+    return inlineFallback(event, query)
   }
 
   const markerSpec = label
@@ -67,17 +97,17 @@ export default defineEventHandler(async (event) => {
         'X-NCP-APIGW-API-KEY': clientSecret,
       },
     })
-
     if (!response.ok) {
-      throw new Error(`Naver Static Map ${response.status}`)
+      console.warn('[og-map] NCP non-2xx', { status: response.status, lat, lng })
+      return inlineFallback(event, query)
     }
-
     const buffer = Buffer.from(await response.arrayBuffer())
     setHeader(event, 'Content-Type', 'image/png')
     setHeader(event, 'Cache-Control', 'public, max-age=86400, s-maxage=86400')
     return buffer
   }
-  catch {
-    return fallbackRedirect(event, query)
+  catch (err) {
+    console.warn('[og-map] NCP exception', { lat, lng, error: String(err) })
+    return inlineFallback(event, query)
   }
 })

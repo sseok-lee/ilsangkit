@@ -444,6 +444,7 @@ import {
 } from '~/utils/realEstateDetailSummary'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { buildRealEstateDetailMeta } from '~/composables/useRealEstateDetailMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
@@ -556,18 +557,49 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
 }
 
 useHead(() => {
-  const tab = tabLabel.value
-  const cityShort = (buildingInfo.value?.city || cityName).replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
-  const district = buildingInfo.value?.district || districtName
-  const locLabel = cityShort && district ? `${cityShort} ${district}` : (district || cityShort)
-  const transactionLabel = tab === '매매' ? '매매' : '전세·월세'
-  const typeLabel = propertyMeta.value?.label ?? ''
-  const title = `${buildingName.value} ${typeLabel} 시세 · ${transactionLabel} 실거래가 | ${locLabel} | 일상킷`
-  const facilitySuffix = facilitySummary.value ? ` 인근 ${facilitySummary.value} 정보도 함께 확인하세요.` : ''
-  const avgPricePart = summary.value?.recentAvg ? ` 최근 평균 ${formatKoreanPrice(summary.value.recentAvg)},` : ''
-  const description = summary.value?.totalCount
-    ? `${locLabel} ${buildingName.value} ${typeLabel} ${transactionLabel} 실거래가 ${summary.value.totalCount.toLocaleString()}건.${avgPricePart} 면적별 시세와 가격 추이를 확인하세요.${facilitySuffix}`
-    : `${locLabel} ${buildingName.value} ${typeLabel} ${transactionLabel} 실거래가. 시세 추이와 가격 정보를 확인하세요.${facilitySuffix}`
+  const mode = currentTab.value
+
+  // Area range from areaGroups (AreaGroup.area is the exclusive area in ㎡)
+  let areaRange: { min: number; max?: number } | null = null
+  const areaValues = areaGroups.value
+    .map((g: AreaGroup) => Number(g.area))
+    .filter((n: number) => Number.isFinite(n) && n > 0)
+  if (areaValues.length > 0) {
+    const minA = Math.min(...areaValues)
+    const maxA = Math.max(...areaValues)
+    areaRange = maxA > minA ? { min: minA, max: maxA } : { min: minA }
+  }
+
+  // Recent deal from first transaction item
+  let recentDeal: { amount: number; dealDate: string } | undefined
+  const firstTx = transactions.value.items[0]
+  if (firstTx) {
+    const amount = 'dealAmount' in firstTx ? firstTx.dealAmount : firstTx.deposit
+    if (amount) {
+      recentDeal = {
+        amount: Number(amount),
+        dealDate: `${firstTx.dealYear}년 ${firstTx.dealMonth}월`,
+      }
+    }
+  }
+
+  const totalCount = summary.value?.totalCount ?? 0
+  const buildYearVal = firstTx?.buildYear ?? buildingInfo.value?.buildYear ?? null
+
+  const { title, description } = buildRealEstateDetailMeta({
+    buildingName: buildingName.value,
+    region: {
+      city: buildingInfo.value?.city || cityName,
+      district: buildingInfo.value?.district || districtName,
+      dong: buildingInfo.value?.dongName ?? null,
+    },
+    propertyType: propertyTypeParam,
+    transactionMode: mode,
+    summary: summary.value ? { totalCount, recentDeal } : null,
+    buildYear: buildYearVal,
+    areaRange,
+    facilitySummary: facilitySummary.value,
+  })
 
   // Canonical uses new URL structure — distinct per realEstateType (apt-sale ≠ apt-rent)
   const canonicalUrl = `${SITE_URL}${toRealEstateUrl({
