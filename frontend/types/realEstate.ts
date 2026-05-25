@@ -131,7 +131,7 @@ export interface BuildingInfo {
   buildingName: string
   city: string
   district: string
-  dongName: string
+  dongName: string | null
   roadName: string | null
   jibun: string | null
   buildYear: number | null

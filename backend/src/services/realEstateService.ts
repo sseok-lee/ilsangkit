@@ -452,7 +452,7 @@ export interface BuildingInfo {
   buildingName: string;
   city: string;
   district: string;
-  dongName: string;
+  dongName: string | null;
   roadName: string | null;
   jibun: string | null;
   buildYear: number | null;
@@ -500,7 +500,7 @@ export async function getBuildingInfo(
   const areaField = 'exclusiveArea';
   const orderBy = [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }];
 
-  const [latest, agg] = await Promise.all([
+  const [latest, agg, dongGroups] = await Promise.all([
     model.findFirst({
       where,
       orderBy,
@@ -510,9 +510,18 @@ export async function getBuildingInfo(
       _min: { [areaField]: true },
       _max: { [areaField]: true },
     }),
+    model.groupBy({
+      by: ['dongName'],
+      where: { ...where, dongName: { not: '' } },
+      _count: { dongName: true },
+      orderBy: { _count: { dongName: 'desc' } },
+      take: 1,
+    }),
   ]);
 
   if (!latest) return null;
+
+  const representativeDongName: string | null = dongGroups[0]?.dongName ?? null;
 
   let lat = latest.lat;
   let lng = latest.lng;
@@ -540,7 +549,7 @@ export async function getBuildingInfo(
     buildingName: latest.buildingName,
     city: latest.city,
     district: latest.district,
-    dongName: latest.dongName,
+    dongName: representativeDongName,
     roadName: latest.roadName ?? null,
     jibun: latest.jibun ?? null,
     buildYear: latest.buildYear ?? null,
