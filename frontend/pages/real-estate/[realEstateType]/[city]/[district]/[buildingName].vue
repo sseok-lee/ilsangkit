@@ -535,6 +535,11 @@ const summary = ref<StatsSummary | null>(null)
 const statsLoading = ref(true)
 const txLoading = ref(true)
 const facilitySummary = ref<string | null>(null)
+// useHead가 SSR/hydration 시점에 callback을 평가하므로 그 안에서 참조하는 ref는
+// useHead보다 위에 선언해야 한다. 아래로 옮기면 const TDZ ReferenceError가 발생해
+// page가 unmount → @unhead beforeUnmount의 dispose() throw → error.vue로 fallback.
+const areaGroups = ref<AreaGroup[]>([])
+const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 
 // noindex 판정 (canonical 정책과 함께 사용) — .omc/notes/noindex-canonical-policy.md
 const noindex = computed(() =>
@@ -806,7 +811,7 @@ const heroStats = computed(() => {
 // ── Stats / Transactions ──────────────────────────────────────────────────────
 
 const monthly = ref<TransactionStats[]>([])
-const areaGroups = ref<AreaGroup[]>([])
+// `areaGroups`는 useHead TDZ 회피를 위해 파일 상단(useHead 위)에서 이미 선언됨.
 const selectedArea = ref<number | null>(null)
 const selectedRentType = ref<'all' | 'jeonse' | 'wolse'>('all')
 
@@ -882,7 +887,7 @@ function summaryBadgeClass(tone: RealEstateSummaryBadge['tone']): string {
   return 'bg-slate-100 text-slate-600'
 }
 
-const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
+// `transactions`는 useHead TDZ 회피를 위해 파일 상단(useHead 위)에서 이미 선언됨.
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
 const nearbyByType = ref<NearbyResponse>({ apt: [], villa: [], offitel: [] })
