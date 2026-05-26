@@ -49,6 +49,10 @@ vi.mock('~/composables/useRealEstate', () => ({
   }),
 }))
 
+vi.mock('~/composables/useApiBase', () => ({
+  useApiBase: () => '',
+}))
+
 vi.mock('~/composables/useAnalytics', () => ({
   useAnalytics: () => ({
     trackBuildingView: vi.fn(),
