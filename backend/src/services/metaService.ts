@@ -38,6 +38,9 @@ export interface StatsData {
 let statsCache: { data: StatsData; expiry: number } | null = null;
 const STATS_CACHE_TTL = 5 * 60 * 1000;
 
+// Stats request coalescing — 캐시 만료 시점 동시 호출 시 fetch는 1번만 실행하고 결과 공유 (thundering herd 방지)
+let inflightStats: Promise<{ cached: boolean; data: StatsData }> | null = null;
+
 export async function getCategories() {
   return prisma.category.findMany({
     where: { isActive: true },
@@ -49,7 +52,27 @@ export async function getStats(): Promise<{ cached: boolean; data: StatsData }> 
   if (statsCache && Date.now() < statsCache.expiry) {
     return { cached: true as const, data: statsCache.data };
   }
+  // 동시 호출이 들어오면 fetch 1번만 실행하고 결과 공유 (thundering herd 방지)
+  if (inflightStats) return inflightStats;
 
+  inflightStats = (async () => {
+    try {
+      return await fetchFreshStats();
+    } catch (e) {
+      // 풀 timeout 등 전체 실패 시 만료된 stale 캐시라도 반환 (사이트 500 방지)
+      if (statsCache) {
+        return { cached: true as const, data: statsCache.data };
+      }
+      throw e;
+    } finally {
+      inflightStats = null;
+    }
+  })();
+
+  return inflightStats;
+}
+
+async function fetchFreshStats(): Promise<{ cached: boolean; data: StatsData }> {
   const [
     toiletCount, wifiCount, clothesCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount,
     parkCount, schoolCount, marketCount, childcareCount, evChargerCount, sportsCount,
@@ -668,6 +691,22 @@ export async function getSubscriptionSummary() {
 let homeDashboardCache: { data: HomeDashboardResponse; expiry: number } | null = null;
 const HOME_DASHBOARD_CACHE_TTL = 60 * 60 * 1000; // 1시간
 
+// Home Dashboard request coalescing — 동시 호출이 같은 fetch를 공유 (thundering herd 방지)
+let inflightHomeDashboard: Promise<HomeDashboardResponse> | null = null;
+
+const emptyTrending = (): HomeDashboardResponse['trendingBuildings'] => ({ sale: [], jeonse: [], wolse: [] });
+const emptySubscriptionSummary = (): HomeDashboardResponse['subscriptionSummary'] => ({
+  closingThisWeek: 0,
+  upcomingNextWeek: 0,
+  avgSupplyPrice: null,
+  imminent: [],
+});
+const emptyAptHotspots = (): NonNullable<HomeDashboardResponse['realEstateHotspots']>['apt'] => ({
+  sale: { rising: [], falling: [], active: [] },
+  jeonse: { rising: [], falling: [], active: [] },
+  wolse: { active: [] },
+});
+
 export function clearStatsCache(): void {
   statsCache = null;
 }
@@ -679,15 +718,32 @@ export function clearHomeDashboardCache(): void {
 
 /**
  * 홈 페이지 대시보드 통합 endpoint용 데이터.
- * getStats() + 4개 헬퍼를 Promise.all 병렬 호출 후 합성.
- * 결과는 1시간 in-memory 캐시.
+ *
+ * 안전 가드:
+ *  - Promise.allSettled — 6개 helper 중 일부 실패해도 부분 응답 (Promise.all fail-fast 회피)
+ *  - 실패한 필드는 last cache → empty default 순으로 fallback
+ *  - request coalescing — 동시 호출이 들어와도 fetch 1번만 실행, thundering herd 방지
+ *  - 적어도 1개 helper 성공 시 캐시 갱신; 전부 실패 + 캐시 없음일 때만 throw
  */
 export async function getHomeDashboard(): Promise<HomeDashboardResponse> {
   if (homeDashboardCache && Date.now() < homeDashboardCache.expiry) {
     return homeDashboardCache.data;
   }
+  if (inflightHomeDashboard) return inflightHomeDashboard;
 
-  const [statsResult, newlyListedToday, realEstateTrends, trendingBuildings, subscriptionSummary, aptHotspots] = await Promise.all([
+  inflightHomeDashboard = (async () => {
+    try {
+      return await fetchFreshHomeDashboard();
+    } finally {
+      inflightHomeDashboard = null;
+    }
+  })();
+
+  return inflightHomeDashboard;
+}
+
+async function fetchFreshHomeDashboard(): Promise<HomeDashboardResponse> {
+  const settled = await Promise.allSettled([
     getStats(),
     getNewlyListedToday(),
     getRealEstateTrends(),
@@ -695,19 +751,44 @@ export async function getHomeDashboard(): Promise<HomeDashboardResponse> {
     getSubscriptionSummary(),
     getPropertyHotspots('apt'),
   ]);
+  const [statsR, newlyR, trendsR, trendingR, subR, hotspotR] = settled;
 
-  const stats = statsResult.data;
+  const lastCache = homeDashboardCache?.data;
+  const successCount = settled.filter((r) => r.status === 'fulfilled').length;
+
+  // 모두 실패 + 캐시도 없음 → 진짜 fail (500). 한 번이라도 성공한 적 있으면 stale 반환.
+  if (successCount === 0) {
+    if (lastCache) return lastCache;
+    // Re-throw the first error to preserve diagnostics
+    throw (statsR as PromiseRejectedResult).reason;
+  }
+
+  const statsValue = statsR.status === 'fulfilled' ? statsR.value.data : null;
 
   const payload: HomeDashboardResponse = {
-    total: stats.total,
-    buildingCount: stats.buildingCount,
-    realEstateBuildings: stats.realEstateBuildings,
-    subscriptionActiveCount: stats.subscriptionActiveCount,
-    newlyListedToday,
-    realEstateTrends,
-    trendingBuildings,
-    subscriptionSummary,
-    realEstateHotspots: { apt: aptHotspots },
+    total: statsValue?.total ?? lastCache?.total ?? 0,
+    buildingCount: statsValue?.buildingCount ?? lastCache?.buildingCount ?? 0,
+    realEstateBuildings: statsValue?.realEstateBuildings
+      ?? lastCache?.realEstateBuildings
+      ?? { apt: 0, villa: 0, offitel: 0 },
+    subscriptionActiveCount: statsValue?.subscriptionActiveCount ?? lastCache?.subscriptionActiveCount ?? 0,
+    newlyListedToday: newlyR.status === 'fulfilled'
+      ? newlyR.value
+      : (lastCache?.newlyListedToday ?? 0),
+    realEstateTrends: trendsR.status === 'fulfilled'
+      ? trendsR.value
+      : (lastCache?.realEstateTrends ?? []),
+    trendingBuildings: trendingR.status === 'fulfilled'
+      ? trendingR.value
+      : (lastCache?.trendingBuildings ?? emptyTrending()),
+    subscriptionSummary: subR.status === 'fulfilled'
+      ? subR.value
+      : (lastCache?.subscriptionSummary ?? emptySubscriptionSummary()),
+    realEstateHotspots: {
+      apt: hotspotR.status === 'fulfilled'
+        ? hotspotR.value
+        : (lastCache?.realEstateHotspots?.apt ?? emptyAptHotspots()),
+    },
   };
 
   homeDashboardCache = { data: payload, expiry: Date.now() + HOME_DASHBOARD_CACHE_TTL };

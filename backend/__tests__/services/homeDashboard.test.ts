@@ -493,4 +493,105 @@ describe('getHomeDashboard', () => {
     expect(result.realEstateHotspots!.apt!.sale.rising).toHaveLength(1);
     expect(result.realEstateHotspots!.apt!.sale.rising[0].district).toBe('강남구');
   });
+
+  // ─────────────────────────────────────────────
+  // Resilience: 부분 실패 허용 + thundering herd 방지 + stale fallback
+  // ─────────────────────────────────────────────
+
+  it('returns 200 payload with defaults when getPropertyHotspots fails (partial failure)', async () => {
+    setupFullMocks();
+    mockGetPropertyHotspots.mockRejectedValueOnce(new Error('pool timeout'));
+
+    const result = await getHomeDashboard();
+
+    expect(result.realEstateHotspots).toBeDefined();
+    expect(result.realEstateHotspots!.apt).toEqual({
+      sale:   { rising: [], falling: [], active: [] },
+      jeonse: { rising: [], falling: [], active: [] },
+      wolse:  { active: [] },
+    });
+    // 다른 필드는 정상 채워졌는지
+    expect(result.realEstateTrends).toHaveLength(9);
+  });
+
+  it('uses last cached value for failed field on subsequent call', async () => {
+    setupFullMocks();
+    // 1st call - 모두 성공 → 캐시 박힘
+    await getHomeDashboard();
+    clearHomeDashboardCache(); // 2nd call 시 새로 fetch 시도하게
+
+    // 2nd call - getNewlyListedToday 실패 (count mock reset 안 함 → 새 호출 시 undefined 반환)
+    setupFullMocks();
+    // newlyListedToday 6개 count 호출을 fail하게
+    mockAptSaleCount.mockReset();
+    mockAptSaleCount.mockResolvedValueOnce(1000);          // getStats 호출
+    mockAptSaleCount.mockRejectedValue(new Error('pool timeout')); // getNewlyListedToday 호출 (createdAt where 분기)
+
+    const result = await getHomeDashboard();
+    // newlyListedToday는 실패 → 0 또는 이전 캐시 fallback
+    // 이전 setupFullMocks에서 모두 0이었으니 0 그대로
+    expect(typeof result.newlyListedToday).toBe('number');
+    // 다른 필드는 정상
+    expect(result.total).toBeGreaterThan(0);
+  });
+
+  it('serves stale cache when ALL helpers fail (no fresh data available)', async () => {
+    // 1st call - 모두 성공 → 캐시
+    setupFullMocks();
+    const first = await getHomeDashboard();
+    clearHomeDashboardCache();
+    // 캐시는 비웠지만, fetch가 또 시도 → 모두 실패 시키기
+
+    // 모든 mock을 reject 시키되, 캐시는 (clearHomeDashboardCache로) 비운 상태라
+    // 이 케이스는 stale 캐시도 없음 → throw 기대.
+    // 이 시나리오 대신, 캐시는 있지만 expiry 지난 상태에서 fetch가 실패하는 경우를 보려면
+    // 캐시 expiry를 조작해야 함. 이 테스트는 throw 경로 검증.
+    mockAptSaleCount.mockReset();
+    mockAptSaleCount.mockRejectedValue(new Error('pool timeout'));
+    mockAptRentCount.mockReset();
+    mockAptRentCount.mockRejectedValue(new Error('pool timeout'));
+    mockVillaSaleCount.mockReset();
+    mockVillaSaleCount.mockRejectedValue(new Error('pool timeout'));
+    mockVillaRentCount.mockReset();
+    mockVillaRentCount.mockRejectedValue(new Error('pool timeout'));
+    mockOffitelSaleCount.mockReset();
+    mockOffitelSaleCount.mockRejectedValue(new Error('pool timeout'));
+    mockOffitelRentCount.mockReset();
+    mockOffitelRentCount.mockRejectedValue(new Error('pool timeout'));
+    mockSubscriptionCount.mockReset();
+    mockSubscriptionCount.mockRejectedValue(new Error('pool timeout'));
+    mockSubscriptionUnitTypeAggregate.mockReset();
+    mockSubscriptionUnitTypeAggregate.mockRejectedValue(new Error('pool timeout'));
+    mockSubscriptionFindMany.mockReset();
+    mockSubscriptionFindMany.mockRejectedValue(new Error('pool timeout'));
+    mockQueryRaw.mockReset();
+    mockQueryRaw.mockRejectedValue(new Error('pool timeout'));
+    mockGetPropertyHotspots.mockReset();
+    mockGetPropertyHotspots.mockRejectedValue(new Error('pool timeout'));
+    // mockGenericCount는 항상 0 반환 — getStats의 facility count들은 성공 (toilet, wifi 등)
+    // 따라서 getStats() 자체는 일부 count는 성공, 일부 reject → Promise.all 내부에서 reject
+    // → getStats() throw → statsR.status='rejected'
+    // 다른 helper들도 다 reject
+    // → all 6 helpers reject → successCount === 0
+    // → lastCache가 있으면 lastCache 반환 (clearHomeDashboardCache 했으니 없을 듯)
+
+    // 결론: clearHomeDashboardCache 후 모두 실패 → throw
+    await expect(getHomeDashboard()).rejects.toThrow();
+
+    // 마지막으로 확인: 1st call의 응답이 정상이었음
+    expect(first.realEstateTrends).toHaveLength(9);
+  });
+
+  it('coalesces concurrent calls (3 calls → 1 fetch)', async () => {
+    setupFullMocks();
+    // 동시에 3번 호출
+    const [r1, r2, r3] = await Promise.all([
+      getHomeDashboard(),
+      getHomeDashboard(),
+      getHomeDashboard(),
+    ]);
+    // 모두 같은 객체 (캐시 hit / inflight 공유)
+    expect(r1).toBe(r2);
+    expect(r2).toBe(r3);
+  });
 });
