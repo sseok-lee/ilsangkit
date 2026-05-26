@@ -646,6 +646,8 @@ useHead(() => {
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
 const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getApartmentPriceAnalysis, getNearby } = useRealEstate()
+const { useApiBase } = await import('~/composables/useApiBase')
+const apiBase = useApiBase()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
 
@@ -966,7 +968,7 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
     let facilitySummarySSR: string | null = null
     if (resolvedBuildingInfo?.lat && resolvedBuildingInfo?.lng) {
       try {
-        const facilityRes = await $fetch('/api/facilities/search', {
+        const facilityRes = await $fetch(`${apiBase}/api/facilities/search`, {
           method: 'POST',
           body: { lat: resolvedBuildingInfo.lat, lng: resolvedBuildingInfo.lng, radius: 1000 },
         })
