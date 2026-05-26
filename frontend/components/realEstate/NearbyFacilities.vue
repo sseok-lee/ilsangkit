@@ -79,6 +79,9 @@ import HardLink from '~/components/common/HardLink.vue'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import { lineColor } from '~/utils/subwayLineColors'
+import { useApiBase } from '~/composables/useApiBase'
+
+const apiBase = useApiBase()
 
 interface Station {
   id: string
@@ -131,7 +134,7 @@ const { data: transitResponse, status: transitStatus } = await useAsyncData<{ da
   `nearby-transit-${props.lat}-${props.lng}`,
   () => {
     if (!props.lat || !props.lng) return Promise.resolve(null)
-    return $fetch('/api/transit/nearby', {
+    return $fetch<{ data: { stations: Station[] } }>(`${apiBase}/api/transit/nearby`, {
       query: { lat: props.lat, lng: props.lng, radius: NEARBY_RADIUS_METERS },
     })
   },
@@ -151,7 +154,7 @@ const { data: facilityResponse, status } = await useAsyncData(
   `nearby-facilities-${props.lat}-${props.lng}`,
   () => {
     if (!props.lat || !props.lng) return Promise.resolve(null)
-    return $fetch('/api/facilities/search', {
+    return $fetch(`${apiBase}/api/facilities/search`, {
       method: 'POST',
       body: { lat: props.lat, lng: props.lng, radius: NEARBY_RADIUS_METERS, limit: 100 },
     })
