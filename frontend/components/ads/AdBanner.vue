@@ -157,7 +157,7 @@ onBeforeUnmount(() => {
 }
 @media (max-width: 767px) {
   .ad-banner--auto {
-    min-height: 250px;
+    min-height: 280px;
   }
 }
 .ad-banner--horizontal {
