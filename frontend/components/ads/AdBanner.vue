@@ -13,11 +13,11 @@
       <ins
         :key="adKey"
         class="adsbygoogle"
-        style="display: block; width: 100%"
+        :style="insStyle"
         :data-ad-client="AD_CLIENT"
         :data-ad-slot="adSlot"
         :data-ad-format="adFormat"
-        :data-full-width-responsive="fullWidthResponsive"
+        :data-full-width-responsive="insFullWidthResponsive"
         :data-adtest="adTest"
       />
     </ClientOnly>
@@ -37,21 +37,36 @@ const STATUS_TIMEOUT_MS = 4000
 
 const props = withDefaults(defineProps<{
   adSlot?: string
-  adFormat?: string
-  fullWidthResponsive?: string
-  /**
-   * Viewport-aware mounting. 부모 컨테이너의 `md:hidden` / `hidden md:block` 만
-   * 의존하면 AdBanner 가 다른 viewport 에서도 DOM 에 그대로 남아 AdSense push 한도를
-   * 차지한다 (display:none 상태로 `filled` 응답을 받아 페이지 광고 한도를 깎고,
-   * 정작 보여야 할 슬롯은 timeout 으로 collapse). `only="mobile"` /
-   * `only="desktop"` 을 명시하면 viewport 가 일치할 때만 ad request 를 발생시킨다.
-   */
+  adFormat?: 'auto' | 'rectangle' | 'horizontal' | 'vertical'
+  fullWidthResponsive?: 'true' | 'false'
   only?: 'mobile' | 'desktop'
+  sizing?: 'fixed' | 'min'
+  fixedHeight?: number
 }>(), {
   adSlot: '1878068382',
   adFormat: 'auto',
   fullWidthResponsive: 'true',
+  sizing: 'min',
 })
+
+// dev-only warn — sizing="fixed"에 명시 포맷/높이 필수
+if (import.meta.dev && props.sizing === 'fixed') {
+  if (props.adFormat === 'auto') {
+    console.warn('[AdBanner] sizing="fixed"에는 명시 adFormat 필수 (auto 금지)')
+  }
+  if (!props.fixedHeight) {
+    console.warn('[AdBanner] sizing="fixed"에는 fixedHeight 필수')
+  }
+}
+
+const insStyle = computed(() =>
+  props.sizing === 'fixed' && props.fixedHeight
+    ? `display:inline-block; width:100%; height:${props.fixedHeight}px`
+    : 'display: block; width: 100%'
+)
+const insFullWidthResponsive = computed(() =>
+  props.sizing === 'fixed' ? 'false' : props.fullWidthResponsive
+)
 
 const adKey = ref(0)
 const route = useRoute()
@@ -142,7 +157,7 @@ onBeforeUnmount(() => {
 }
 @media (max-width: 767px) {
   .ad-banner--auto {
-    min-height: 250px;
+    min-height: 280px;
   }
 }
 .ad-banner--horizontal {
