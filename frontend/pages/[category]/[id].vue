@@ -131,7 +131,7 @@
               />
 
               <!-- Ad: HERO 아래 -->
-              <AdBanner />
+              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
               <!-- BasicInfo -->
               <DetailBasicInfo
@@ -146,13 +146,13 @@
               />
 
               <!-- Ad: BASIC INFO ↔ FACILITY STATUS 사이 -->
-              <AdBanner />
+              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
               <!-- FacilityStatus -->
               <DetailFacilityStatus :facility="facility" />
 
               <!-- Ad: DETAILS ↔ MAP 사이 -->
-              <AdBanner />
+              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
               <!-- Roadview -->
               <SectionBlock heading="로드뷰" subtext="시설 주변의 거리 뷰를 확인하세요.">
@@ -160,7 +160,7 @@
               </SectionBlock>
 
               <!-- Ad: ROADVIEW ↔ NEARBY 사이 -->
-              <AdBanner />
+              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
               <!-- 주변 시설 (same + cross category) -->
               <DetailNearby
