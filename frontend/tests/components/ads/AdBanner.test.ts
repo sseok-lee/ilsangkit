@@ -119,4 +119,27 @@ describe('AdBanner', () => {
     expect(ins.attributes('data-ad-format')).toBe('horizontal')
     expect(ins.attributes('data-full-width-responsive')).toBe('false')
   })
+
+  it('sizing="fixed"일 때 ins에 명시 높이와 data-full-width-responsive=false가 적용된다', async () => {
+    const wrapper = mount(AdBanner, {
+      props: { sizing: 'fixed', adFormat: 'rectangle', fixedHeight: 280 },
+      global: { stubs: { ClientOnly: clientOnlyStub } },
+    })
+    await flushAdMount()
+    const ins = wrapper.get('ins.adsbygoogle')
+    expect(ins.attributes('style')).toMatch(/height:\s*280px/)
+    expect(ins.attributes('data-full-width-responsive')).toBe('false')
+    expect(ins.attributes('data-ad-format')).toBe('rectangle')
+  })
+
+  it('sizing 미지정 시 기존 동작(auto + full-width-responsive=true)을 유지한다', async () => {
+    const wrapper = mount(AdBanner, {
+      global: { stubs: { ClientOnly: clientOnlyStub } },
+    })
+    await flushAdMount()
+    const ins = wrapper.get('ins.adsbygoogle')
+    expect(ins.attributes('data-ad-format')).toBe('auto')
+    expect(ins.attributes('data-full-width-responsive')).toBe('true')
+    expect(ins.attributes('style') || '').not.toMatch(/height:\s*\d/)
+  })
 })
