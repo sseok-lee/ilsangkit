@@ -1,4 +1,3 @@
-import { prisma } from '../lib/prisma.js';
 import { transformClothesRow } from './csvParser.js';
 import type { ClothesCSVRow } from './csvParser.js';
 import { PublicApiClient } from './publicApiClient.js';
@@ -9,57 +8,12 @@ import {
   updateSyncHistory,
   createSyncStats,
   transformAndDedupe,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 import { SYNC } from '../constants/index.js';
 
 export { createSyncHistory, updateSyncHistory };
 export type { SyncStats, SyncHistoryUpdateData };
-
-async function upsertOneClothes(clothes: ReturnType<typeof transformClothesRow> & object): Promise<'new' | 'updated'> {
-  const existing = await prisma.clothes.findUnique({
-    where: { sourceId: clothes.sourceId },
-  });
-
-  await prisma.clothes.upsert({
-    where: { sourceId: clothes.sourceId },
-    update: {
-      name: clothes.name,
-      address: clothes.address,
-      roadAddress: clothes.roadAddress,
-      lat: clothes.lat,
-      lng: clothes.lng,
-      city: clothes.city,
-      district: clothes.district,
-      syncedAt: new Date(),
-      managementAgency: clothes.managementAgency,
-      phoneNumber: clothes.phoneNumber,
-      dataDate: clothes.dataDate,
-      detailLocation: clothes.detailLocation,
-      providerCode: clothes.providerCode,
-      providerName: clothes.providerName,
-    },
-    create: {
-      id: clothes.id,
-      name: clothes.name,
-      address: clothes.address,
-      roadAddress: clothes.roadAddress,
-      lat: clothes.lat,
-      lng: clothes.lng,
-      city: clothes.city,
-      district: clothes.district,
-      sourceId: clothes.sourceId,
-      managementAgency: clothes.managementAgency,
-      phoneNumber: clothes.phoneNumber,
-      dataDate: clothes.dataDate,
-      detailLocation: clothes.detailLocation,
-      providerCode: clothes.providerCode,
-      providerName: clothes.providerName,
-    },
-  });
-
-  return existing ? 'updated' : 'new';
-}
 
 async function syncClothesRows(rows: ClothesCSVRow[], stats: SyncStats, syncHistoryId: number): Promise<void> {
   stats.totalRecords = rows.length;
@@ -76,7 +30,35 @@ async function syncClothesRows(rows: ClothesCSVRow[], stats: SyncStats, syncHist
   console.info(`Transformed ${uniqueClothes.length} valid records, skipped ${stats.skippedRecords}`);
 
   console.info('Upserting to database...');
-  const { newCount, updateCount } = await batchUpsert(uniqueClothes, upsertOneClothes, 100, syncHistoryId);
+  const now = new Date();
+  const rowsForUpsert = uniqueClothes.map((c) => ({
+    id: c.id,
+    name: c.name,
+    address: c.address,
+    roadAddress: c.roadAddress,
+    lat: c.lat,
+    lng: c.lng,
+    city: c.city,
+    district: c.district,
+    sourceId: c.sourceId,
+    managementAgency: c.managementAgency,
+    phoneNumber: c.phoneNumber,
+    dataDate: c.dataDate,
+    detailLocation: c.detailLocation,
+    providerCode: c.providerCode,
+    providerName: c.providerName,
+    // createdAt 생략 — schema @default(now())가 처리
+    updatedAt: now,
+    syncedAt: now,
+  }));
+
+  const { newCount, updateCount } = await batchUpsertRaw(
+    'Clothes',
+    rowsForUpsert,
+    100,
+    syncHistoryId,
+    { exactStats: true, uniqueKey: 'sourceId' }
+  );
   stats.newRecords = newCount;
   stats.updatedRecords = updateCount;
 }

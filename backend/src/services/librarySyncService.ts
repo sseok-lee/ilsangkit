@@ -1,6 +1,5 @@
-import { prisma } from '../lib/prisma.js';
 import { transformLibraryRow } from './csvParser.js';
-import type { LibraryCSVRow, TransformedLibrary } from './csvParser.js';
+import type { LibraryCSVRow } from './csvParser.js';
 import { PublicApiClient } from './publicApiClient.js';
 import {
   type SyncStats,
@@ -8,86 +7,9 @@ import {
   updateSyncHistory,
   createSyncStats,
   transformAndDedupe,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 import { SYNC } from '../constants/index.js';
-
-async function upsertOneLibrary(library: TransformedLibrary): Promise<'new' | 'updated'> {
-  const existing = await prisma.library.findUnique({
-    where: { sourceId: library.sourceId },
-  });
-
-  await prisma.library.upsert({
-    where: { sourceId: library.sourceId },
-    update: {
-      name: library.name,
-      address: library.address,
-      roadAddress: library.roadAddress,
-      lat: library.lat,
-      lng: library.lng,
-      city: library.city,
-      district: library.district,
-      syncedAt: new Date(),
-      libraryType: library.libraryType,
-      closedDays: library.closedDays,
-      weekdayOpenTime: library.weekdayOpenTime,
-      weekdayCloseTime: library.weekdayCloseTime,
-      saturdayOpenTime: library.saturdayOpenTime,
-      saturdayCloseTime: library.saturdayCloseTime,
-      holidayOpenTime: library.holidayOpenTime,
-      holidayCloseTime: library.holidayCloseTime,
-      seatCount: library.seatCount,
-      bookCount: library.bookCount,
-      serialCount: library.serialCount,
-      nonBookCount: library.nonBookCount,
-      loanableBooks: library.loanableBooks,
-      loanableDays: library.loanableDays,
-      phoneNumber: library.phoneNumber,
-      homepageUrl: library.homepageUrl,
-      operatingOrg: library.operatingOrg,
-      lotArea: library.lotArea,
-      buildingArea: library.buildingArea,
-      dataDate: library.dataDate,
-      providerCode: library.providerCode,
-      providerName: library.providerName,
-    },
-    create: {
-      id: library.id,
-      name: library.name,
-      address: library.address,
-      roadAddress: library.roadAddress,
-      lat: library.lat,
-      lng: library.lng,
-      city: library.city,
-      district: library.district,
-      sourceId: library.sourceId,
-      libraryType: library.libraryType,
-      closedDays: library.closedDays,
-      weekdayOpenTime: library.weekdayOpenTime,
-      weekdayCloseTime: library.weekdayCloseTime,
-      saturdayOpenTime: library.saturdayOpenTime,
-      saturdayCloseTime: library.saturdayCloseTime,
-      holidayOpenTime: library.holidayOpenTime,
-      holidayCloseTime: library.holidayCloseTime,
-      seatCount: library.seatCount,
-      bookCount: library.bookCount,
-      serialCount: library.serialCount,
-      nonBookCount: library.nonBookCount,
-      loanableBooks: library.loanableBooks,
-      loanableDays: library.loanableDays,
-      phoneNumber: library.phoneNumber,
-      homepageUrl: library.homepageUrl,
-      operatingOrg: library.operatingOrg,
-      lotArea: library.lotArea,
-      buildingArea: library.buildingArea,
-      dataDate: library.dataDate,
-      providerCode: library.providerCode,
-      providerName: library.providerName,
-    },
-  });
-
-  return existing ? 'updated' : 'new';
-}
 
 async function syncLibraryRows(rows: LibraryCSVRow[], stats: SyncStats, syncHistoryId: number): Promise<void> {
   stats.totalRecords = rows.length;
@@ -104,7 +26,51 @@ async function syncLibraryRows(rows: LibraryCSVRow[], stats: SyncStats, syncHist
   console.info(`Transformed ${uniqueLibraries.length} unique records, skipped ${stats.skippedRecords}`);
 
   console.info('Upserting to database...');
-  const { newCount, updateCount } = await batchUpsert(uniqueLibraries, upsertOneLibrary, 100, syncHistoryId);
+  const now = new Date();
+  const rowsForUpsert = uniqueLibraries.map((l) => ({
+    id: l.id,
+    name: l.name,
+    address: l.address,
+    roadAddress: l.roadAddress,
+    lat: l.lat,
+    lng: l.lng,
+    city: l.city,
+    district: l.district,
+    sourceId: l.sourceId,
+    libraryType: l.libraryType,
+    closedDays: l.closedDays,
+    weekdayOpenTime: l.weekdayOpenTime,
+    weekdayCloseTime: l.weekdayCloseTime,
+    saturdayOpenTime: l.saturdayOpenTime,
+    saturdayCloseTime: l.saturdayCloseTime,
+    holidayOpenTime: l.holidayOpenTime,
+    holidayCloseTime: l.holidayCloseTime,
+    seatCount: l.seatCount,
+    bookCount: l.bookCount,
+    serialCount: l.serialCount,
+    nonBookCount: l.nonBookCount,
+    loanableBooks: l.loanableBooks,
+    loanableDays: l.loanableDays,
+    phoneNumber: l.phoneNumber,
+    homepageUrl: l.homepageUrl,
+    operatingOrg: l.operatingOrg,
+    lotArea: l.lotArea,
+    buildingArea: l.buildingArea,
+    dataDate: l.dataDate,
+    providerCode: l.providerCode,
+    providerName: l.providerName,
+    // createdAt 생략 — schema @default(now())가 처리
+    updatedAt: now,
+    syncedAt: now,
+  }));
+
+  const { newCount, updateCount } = await batchUpsertRaw(
+    'Library',
+    rowsForUpsert,
+    100,
+    syncHistoryId,
+    { exactStats: true, uniqueKey: 'sourceId' }
+  );
   stats.newRecords = newCount;
   stats.updatedRecords = updateCount;
 }
