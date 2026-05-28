@@ -184,20 +184,43 @@ export async function batchUpsert<T>(
  *  - `updatedAt`, `syncedAt`은 UPDATE 시 NOW()로 자동 갱신
  *  - 나머지 컬럼은 VALUES(col) 패턴으로 갱신
  *  - 모든 값은 파라미터 바인딩으로 처리 (SQL 인젝션 방지)
- *  - 신규/업데이트 구분: INSERT 후 ROW_COUNT()가 1이면 신규(insert), 2면 업데이트(duplicate)
+ *  - 신규/업데이트 구분 (기본): INSERT 후 ROW_COUNT()가 1이면 신규(insert), 2면 업데이트(duplicate)
  *    → bulk 실행이므로 전체 affected rows로 추정 (affectedRows / 2 = updated, 나머지 = new)
+ *  - 정확 통계 모드(`options.exactStats: true`): 배치마다 사전 SELECT로 기존 키 집합을 확보하여
+ *    new/updated를 정확 집계. 휴리스틱이 부정확한 케이스(no-op upsert, 부분 키 변경 등)에 사용.
+ *    제약:
+ *      - `uniqueKey`는 반드시 UNIQUE INDEX가 있어야 하며 (미인덱스 사용 시 배치당 full scan으로 성능 급락)
+ *      - String 타입 컬럼 권장 (number/BIGINT는 JS Set 비교 시 형 변환 주의)
+ *      - **단일 writer 가정**: 사전 SELECT는 트랜잭션 밖에서 실행되므로, 같은 카테고리에 대해
+ *        동시에 두 sync가 돌면 new/updated 카운트가 race condition으로 부정확해질 수 있다.
+ *        현재 운영은 카테고리당 single-writer cron이라 안전. 동시 sync 도입 시 이 함수 재설계 필요.
  */
+export interface BatchUpsertRawOptions {
+  /** 통계를 정확히 집계 (배치당 1 SELECT 추가). 기본 false — 휴리스틱 사용 */
+  exactStats?: boolean;
+  /** 정확 통계 시 unique key 컬럼명. 기본 'sourceId'. UNIQUE INDEX 필수, String 타입 권장 */
+  uniqueKey?: string;
+}
+
 export async function batchUpsertRaw<T extends Record<string, unknown>>(
   tableName: string,
   items: T[],
   batchSize: number = SYNC.BATCH_SIZE,
-  syncHistoryId?: number
+  syncHistoryId?: number,
+  options: BatchUpsertRawOptions = {}
 ): Promise<{ newCount: number; updateCount: number }> {
+  const { exactStats = false, uniqueKey = 'sourceId' } = options;
   if (items.length === 0) return { newCount: 0, updateCount: 0 };
 
   // 테이블명 안전성 검증 (영문자, 숫자, 하이픈, 언더스코어만 허용)
   if (!/^[A-Za-z0-9_-]+$/.test(tableName)) {
     throw new Error(`Invalid table name: ${tableName}`);
+  }
+  // uniqueKey 안전성 검증 — exactStats 분기에서 raw SQL identifier로 interpolation되므로
+  // 호출자가 신뢰 불가 입력을 넘기면 SQLi 가능. 현재 모든 호출자가 'sourceId' 리터럴이지만
+  // 미래 확장 대비 동일한 whitelist 적용 (영문자/숫자/언더스코어만).
+  if (!/^[A-Za-z0-9_]+$/.test(uniqueKey)) {
+    throw new Error(`Invalid uniqueKey: ${uniqueKey}`);
   }
 
   let newCount = 0;
@@ -213,6 +236,29 @@ export async function batchUpsertRaw<T extends Record<string, unknown>>(
     const totalBatches = Math.ceil(items.length / batchSize);
 
     try {
+      // exactStats=true일 때 사전 SELECT로 기존 row 키 집합 확보 (배치당 1 쿼리)
+      let preExistingKeys: Set<string | number | bigint> | null = null;
+      if (exactStats) {
+        // undefined/null 키는 SELECT IN 절에 포함하지 않음 (NULL IN clause는 모든 비교를 NULL로 만들어
+        // silently miss). 누락 항목은 upstream 데이터 품질 이슈를 시사하므로 warn.
+        const keys = batch
+          .map((item) => item[uniqueKey])
+          .filter((k): k is string | number | bigint => k != null);
+        if (keys.length !== batch.length) {
+          console.warn(`[batchUpsertRaw] ${batch.length - keys.length} item(s) missing uniqueKey '${uniqueKey}' — they will be classified as new`);
+        }
+        if (keys.length === 0) {
+          preExistingKeys = new Set();
+        } else {
+          const placeholders = keys.map(() => '?').join(', ');
+          const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+            `SELECT \`${uniqueKey}\` FROM \`${tableName}\` WHERE \`${uniqueKey}\` IN (${placeholders})`,
+            ...keys
+          );
+          preExistingKeys = new Set(rows.map((r) => r[uniqueKey] as string | number | bigint));
+        }
+      }
+
       // 컬럼 목록은 배치 첫 항목 기준으로 결정
       const columns = Object.keys(batch[0]);
 
@@ -259,13 +305,24 @@ export async function batchUpsertRaw<T extends Record<string, unknown>>(
         return tx.$executeRawUnsafe(sql, ...params);
       }, { timeout: 30000 });
 
-      // MySQL INSERT ... ON DUPLICATE KEY UPDATE 규칙:
-      //   신규 삽입: affected rows += 1
-      //   업데이트: affected rows += 2
-      //   변경 없음: affected rows += 0
-      // 따라서: updated = affectedRows - batchLength, new = batchLength - updated
-      const updatedInBatch = Math.max(0, affectedRows - batch.length);
-      const newInBatch = batch.length - updatedInBatch;
+      // 통계 집계: exactStats면 사전 SELECT 결과로 정확 집계, 아니면 ROW_COUNT 휴리스틱
+      let newInBatch: number;
+      let updatedInBatch: number;
+      if (preExistingKeys) {
+        updatedInBatch = batch.filter((item) => {
+          const k = item[uniqueKey];
+          return k != null && preExistingKeys.has(k as string | number | bigint);
+        }).length;
+        newInBatch = batch.length - updatedInBatch;
+      } else {
+        // 휴리스틱:
+        //   신규 삽입: affected rows += 1
+        //   업데이트: affected rows += 2
+        //   변경 없음: affected rows += 0
+        //   → updated = affectedRows - batchLength, new = batchLength - updated
+        updatedInBatch = Math.max(0, affectedRows - batch.length);
+        newInBatch = batch.length - updatedInBatch;
+      }
       newCount += newInBatch;
       updateCount += updatedInBatch;
 

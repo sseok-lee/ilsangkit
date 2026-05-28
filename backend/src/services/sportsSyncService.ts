@@ -1,4 +1,3 @@
-import { prisma } from '../lib/prisma.js';
 import { createHash } from 'crypto';
 import { KOREA_BOUNDS } from '../constants/index.js';
 import { CITY_NAME_MAP } from './csvParser.js';
@@ -8,7 +7,7 @@ import {
   createSyncHistory,
   updateSyncHistory,
   createSyncStats,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 
 export { createSyncHistory, updateSyncHistory };
@@ -295,74 +294,44 @@ export async function syncSports(): Promise<SyncStats> {
     console.info(`Transformed ${uniqueItems.length} unique records, skipped ${stats.skippedRecords}`);
     console.info('Upserting to database...');
 
-    const { newCount, updateCount } = await batchUpsert(
-      uniqueItems,
-      async (sports) => {
-        const existing = await prisma.sports.findUnique({
-          where: { sourceId: sports.sourceId },
-        });
+    const now = new Date();
+    const rowsForUpsert = uniqueItems.map((s) => ({
+      id: s.id,
+      name: s.name,
+      address: s.address,
+      roadAddress: s.roadAddress,
+      lat: s.lat,
+      lng: s.lng,
+      city: s.city,
+      district: s.district,
+      sourceId: s.sourceId,
+      faciGbNm: s.faciGbNm,
+      fcobNm: s.fcobNm,
+      ftypeNm: s.ftypeNm,
+      fmngCpNm: s.fmngCpNm,
+      fmngCpbNm: s.fmngCpbNm,
+      faciGfa: s.faciGfa,
+      standCptPsnCnt: s.standCptPsnCnt,
+      faciHomepage: s.faciHomepage,
+      faciStatCd: s.faciStatCd,
+      addrCtpvNm: s.addrCtpvNm,
+      addrCpbNm: s.addrCpbNm,
+      addrEmdNm: s.addrEmdNm,
+      nationYn: s.nationYn,
+      fmngTypeGbNm: s.fmngTypeGbNm,
+      delYn: s.delYn,
+      rowNum: s.rowNum,
+      // createdAt 생략 — schema @default(now())가 처리. SKIP_UPDATE_COLS 의존 감소.
+      updatedAt: now,   // raw INSERT 필수 (NULL 위반 방지). UPDATE는 batchUpsertRaw가 NOW()로 강제.
+      syncedAt: now,    // DB default 있지만 ON DUPLICATE NOW() 갱신 위해 payload 포함.
+    }));
 
-        await prisma.sports.upsert({
-          where: { sourceId: sports.sourceId },
-          update: {
-            name: sports.name,
-            address: sports.address,
-            roadAddress: sports.roadAddress,
-            lat: sports.lat,
-            lng: sports.lng,
-            city: sports.city,
-            district: sports.district,
-            faciGbNm: sports.faciGbNm,
-            fcobNm: sports.fcobNm,
-            ftypeNm: sports.ftypeNm,
-            fmngCpNm: sports.fmngCpNm,
-            fmngCpbNm: sports.fmngCpbNm,
-            faciGfa: sports.faciGfa,
-            standCptPsnCnt: sports.standCptPsnCnt,
-            faciHomepage: sports.faciHomepage,
-            faciStatCd: sports.faciStatCd,
-            addrCtpvNm: sports.addrCtpvNm,
-            addrCpbNm: sports.addrCpbNm,
-            addrEmdNm: sports.addrEmdNm,
-            nationYn: sports.nationYn,
-            fmngTypeGbNm: sports.fmngTypeGbNm,
-            delYn: sports.delYn,
-            rowNum: sports.rowNum,
-            syncedAt: new Date(),
-          },
-          create: {
-            id: sports.id,
-            name: sports.name,
-            address: sports.address,
-            roadAddress: sports.roadAddress,
-            lat: sports.lat,
-            lng: sports.lng,
-            city: sports.city,
-            district: sports.district,
-            sourceId: sports.sourceId,
-            faciGbNm: sports.faciGbNm,
-            fcobNm: sports.fcobNm,
-            ftypeNm: sports.ftypeNm,
-            fmngCpNm: sports.fmngCpNm,
-            fmngCpbNm: sports.fmngCpbNm,
-            faciGfa: sports.faciGfa,
-            standCptPsnCnt: sports.standCptPsnCnt,
-            faciHomepage: sports.faciHomepage,
-            faciStatCd: sports.faciStatCd,
-            addrCtpvNm: sports.addrCtpvNm,
-            addrCpbNm: sports.addrCpbNm,
-            addrEmdNm: sports.addrEmdNm,
-            nationYn: sports.nationYn,
-            fmngTypeGbNm: sports.fmngTypeGbNm,
-            delYn: sports.delYn,
-            rowNum: sports.rowNum,
-          },
-        });
-
-        return existing ? 'updated' : 'new';
-      },
+    const { newCount, updateCount } = await batchUpsertRaw(
+      'Sports',
+      rowsForUpsert,
       100,
-      syncHistory.id
+      syncHistory.id,
+      { exactStats: true, uniqueKey: 'sourceId' }
     );
 
     stats.newRecords = newCount;

@@ -1,5 +1,4 @@
-import { prisma } from '../lib/prisma.js';
-import { transformMarketRow, TransformedMarket } from './csvParser.js';
+import { transformMarketRow } from './csvParser.js';
 import type { MarketCSVRow } from './csvParser.js';
 import { PublicApiClient } from './publicApiClient.js';
 import {
@@ -9,71 +8,12 @@ import {
   updateSyncHistory,
   createSyncStats,
   transformAndDedupe,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 import { SYNC } from '../constants/index.js';
 
 export { createSyncHistory, updateSyncHistory };
 export type { SyncStats, SyncHistoryUpdateData };
-
-async function upsertOneMarket(market: TransformedMarket): Promise<'new' | 'updated'> {
-  const existing = await prisma.market.findUnique({
-    where: { sourceId: market.sourceId },
-  });
-
-  await prisma.market.upsert({
-    where: { sourceId: market.sourceId },
-    update: {
-      name: market.name,
-      address: market.address,
-      roadAddress: market.roadAddress,
-      lat: market.lat,
-      lng: market.lng,
-      city: market.city,
-      district: market.district,
-      marketType: market.marketType,
-      openingCycle: market.openingCycle,
-      storeCount: market.storeCount,
-      products: market.products,
-      giftCertificates: market.giftCertificates,
-      homepageUrl: market.homepageUrl,
-      hasPublicToilet: market.hasPublicToilet,
-      hasParking: market.hasParking,
-      foundedYear: market.foundedYear,
-      phoneNumber: market.phoneNumber,
-      dataDate: market.dataDate,
-      providerCode: market.providerCode,
-      providerName: market.providerName,
-      syncedAt: new Date(),
-    },
-    create: {
-      id: market.id,
-      name: market.name,
-      address: market.address,
-      roadAddress: market.roadAddress,
-      lat: market.lat,
-      lng: market.lng,
-      city: market.city,
-      district: market.district,
-      sourceId: market.sourceId,
-      marketType: market.marketType,
-      openingCycle: market.openingCycle,
-      storeCount: market.storeCount,
-      products: market.products,
-      giftCertificates: market.giftCertificates,
-      homepageUrl: market.homepageUrl,
-      hasPublicToilet: market.hasPublicToilet,
-      hasParking: market.hasParking,
-      foundedYear: market.foundedYear,
-      phoneNumber: market.phoneNumber,
-      dataDate: market.dataDate,
-      providerCode: market.providerCode,
-      providerName: market.providerName,
-    },
-  });
-
-  return existing ? 'updated' : 'new';
-}
 
 async function syncMarketRows(rows: MarketCSVRow[], stats: SyncStats, syncHistoryId: number): Promise<void> {
   stats.totalRecords = rows.length;
@@ -89,8 +29,46 @@ async function syncMarketRows(rows: MarketCSVRow[], stats: SyncStats, syncHistor
 
   console.info(`Transformed ${uniqueMarkets.length} unique records, skipped ${stats.skippedRecords}`);
 
+  // DB Upsert — batchUpsertRaw로 N+1 제거. exactStats=true로 통계 정확성 유지.
   console.info('Upserting to database...');
-  const { newCount, updateCount } = await batchUpsert(uniqueMarkets, upsertOneMarket, 100, syncHistoryId);
+  const now = new Date();
+  const rowsForUpsert = uniqueMarkets.map((m) => ({
+    id: `market-${m.sourceId}`,
+    name: m.name,
+    address: m.address,
+    roadAddress: m.roadAddress,
+    lat: m.lat,
+    lng: m.lng,
+    city: m.city,
+    district: m.district,
+    sourceId: m.sourceId,
+    marketType: m.marketType,
+    openingCycle: m.openingCycle,
+    storeCount: m.storeCount,
+    products: m.products,
+    giftCertificates: m.giftCertificates,
+    homepageUrl: m.homepageUrl,
+    hasPublicToilet: m.hasPublicToilet,
+    hasParking: m.hasParking,
+    foundedYear: m.foundedYear,
+    phoneNumber: m.phoneNumber,
+    dataDate: m.dataDate,
+    providerCode: m.providerCode,
+    providerName: m.providerName,
+    // createdAt 생략 — schema @default(now())가 처리. SKIP_UPDATE_COLS 의존을 줄이고
+    // viewCount/bjdCode/sourceUrl 등 다른 default 컬럼들과 일관.
+    updatedAt: now,   // raw INSERT 필수 (schema @updatedAt은 Prisma application-level, raw 우회 시 NULL 위반). UPDATE는 batchUpsertRaw가 NOW()로 강제.
+    syncedAt: now,    // 동일 — DB default 있지만 batchUpsertRaw가 ON DUPLICATE 시 NOW()로 갱신하도록 payload 포함.
+  }));
+
+  const { newCount, updateCount } = await batchUpsertRaw(
+    'Market',
+    rowsForUpsert,
+    100,
+    syncHistoryId,
+    { exactStats: true, uniqueKey: 'sourceId' }
+  );
+
   stats.newRecords = newCount;
   stats.updatedRecords = updateCount;
 }

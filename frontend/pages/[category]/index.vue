@@ -302,6 +302,7 @@ import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
 import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
 import { useAnalytics } from '~/composables/useAnalytics'
+import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 
 const route = useRoute()
 
@@ -343,7 +344,7 @@ const districtList = ref<string[]>([])
 // route.query.page 를 SSR 시점에서 읽어 동일 페이지 데이터를 반환해야
 // `/toilet?page=2` 직접 진입 시 SSR HTML이 page 1 콘텐츠로 엇나가지 않는다.
 const isTrash = categoryParam.value === 'trash'
-const initialPage = Math.max(1, Number(route.query.page) || 1)
+const initialPage = parsePositivePageQuery(route.query.page)
 const { data: ssrData } = await useAsyncData(
   `cat-list-${categoryParam.value}-p${initialPage}`,
   () => isTrash
@@ -491,7 +492,7 @@ const resultTitle = computed(() => {
 const initialCityName = CITY_SLUG_MAP[route.query.city as string] || ''
 const initialDistrictName = (route.query.district as string) || ''
 const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label || (route.params.category as string)
-const initialPageQueryParam = Math.max(1, Number(route.query.page) || 1)
+const initialPageQueryParam = parsePositivePageQuery(route.query.page)
 
 setMeta({
   title: buildCategorySeoTitle(route.params.category as FacilityCategory, initialCityName, initialDistrictName),
@@ -574,12 +575,12 @@ const canonicalPath = computed(() => {
 })
 // Pagination: page 2+ 는 noindex 하고 canonical 은 함께 제거 (noindex/canonical 정책 통일)
 // pageQueryParam 은 route.query.page 에 reactive 로 연동해야 client-side 페이지 이동 시에도 정책이 켜진다.
-const pageQueryParam = computed(() => Math.max(1, Number(route.query.page) || 1))
+const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
 const isNoindex = computed(() => pageQueryParam.value >= 2)
 
 useHead(computed(() => {
   if (isNoindex.value) {
-    return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
+    return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
   }
   return {
     link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${canonicalPath.value}`, key: 'canonical' }],
@@ -758,7 +759,7 @@ onMounted(async () => {
 // pageQueryParam computed 와 실제 데이터(currentPage / wasteCurrentPage) 가 어긋나지 않도록 한다.
 // goToPage/goToWastePage 등 페이지 액션은 이미 상태를 먼저 갱신하므로, 값이 같은 경우 조용히 스킵한다.
 watch(() => route.query.page, (next) => {
-  const nextPage = Math.max(1, Number(next) || 1)
+  const nextPage = parsePositivePageQuery(next)
   if (categoryParam.value === 'trash') {
     if (wasteCurrentPage.value === nextPage) return
     wasteCurrentPage.value = nextPage
