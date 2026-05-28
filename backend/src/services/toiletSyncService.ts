@@ -1,7 +1,6 @@
 // @TASK T2.1 - 공공화장실 동기화 서비스
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 
-import { prisma } from '../lib/prisma.js';
 import { parseToiletCSV, transformToiletRow } from './csvParser.js';
 import {
   type SyncStats,
@@ -10,7 +9,7 @@ import {
   updateSyncHistory,
   createSyncStats,
   transformAndDedupe,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 
 // Re-export for backward compatibility (tests import from here)
@@ -44,98 +43,58 @@ export async function syncToilets(csvFilePath: string): Promise<SyncStats> {
 
     console.info(`Transformed ${uniqueToilets.length} unique records, skipped ${stats.skippedRecords}`);
 
-    // DB Upsert (트랜잭션 래핑 + 진행 상황 추적)
+    // DB Upsert — batchUpsertRaw로 N+1 제거. exactStats=true로 통계 정확성 유지.
     console.info('Upserting to database...');
-    const { newCount, updateCount } = await batchUpsert(
-      uniqueToilets,
-      async (toilet) => {
-        const existing = await prisma.toilet.findUnique({
-          where: { sourceId: toilet.sourceId },
-        });
+    const now = new Date();
+    const rowsForUpsert = uniqueToilets.map((t) => ({
+      id: `toilet-${t.sourceId}`,
+      name: t.name,
+      address: t.address,
+      roadAddress: t.roadAddress,
+      lat: t.lat,
+      lng: t.lng,
+      city: t.city,
+      district: t.district,
+      sourceId: t.sourceId,
+      operatingHours: t.operatingHours,
+      maleToilets: t.maleToilets,
+      maleUrinals: t.maleUrinals,
+      femaleToilets: t.femaleToilets,
+      hasDisabledToilet: t.hasDisabledToilet,
+      openTime: t.openTime,
+      managingOrg: t.managingOrg,
+      phoneNumber: t.phoneNumber,
+      installDate: t.installDate,
+      ownershipType: t.ownershipType,
+      sewageTreatment: t.sewageTreatment,
+      hasEmergencyBell: t.hasEmergencyBell,
+      emergencyBellLocation: t.emergencyBellLocation,
+      hasCCTV: t.hasCCTV,
+      hasDiaperChangingTable: t.hasDiaperChangingTable,
+      diaperChangingLocation: t.diaperChangingLocation,
+      maleDisabledToilets: t.maleDisabledToilets,
+      maleDisabledUrinals: t.maleDisabledUrinals,
+      maleChildToilets: t.maleChildToilets,
+      maleChildUrinals: t.maleChildUrinals,
+      femaleDisabledToilets: t.femaleDisabledToilets,
+      femaleChildToilets: t.femaleChildToilets,
+      remodelingDate: t.remodelingDate,
+      facilityType: t.facilityType,
+      legalBasis: t.legalBasis,
+      govCode: t.govCode,
+      dataDate: t.dataDate,
+      // createdAt 생략 — schema @default(now())가 처리. SKIP_UPDATE_COLS 의존을 줄이고
+      // viewCount/bjdCode/sourceUrl 등 다른 default 컬럼들과 일관.
+      updatedAt: now,   // raw INSERT 필수 (schema @updatedAt은 Prisma application-level, raw 우회 시 NULL 위반). UPDATE는 batchUpsertRaw가 NOW()로 강제.
+      syncedAt: now,    // 동일 — DB default 있지만 batchUpsertRaw가 ON DUPLICATE 시 NOW()로 갱신하도록 payload 포함.
+    }));
 
-        await prisma.toilet.upsert({
-          where: { sourceId: toilet.sourceId },
-          update: {
-            name: toilet.name,
-            address: toilet.address,
-            roadAddress: toilet.roadAddress,
-            lat: toilet.lat,
-            lng: toilet.lng,
-            city: toilet.city,
-            district: toilet.district,
-            operatingHours: toilet.operatingHours,
-            maleToilets: toilet.maleToilets,
-            maleUrinals: toilet.maleUrinals,
-            femaleToilets: toilet.femaleToilets,
-            hasDisabledToilet: toilet.hasDisabledToilet,
-            openTime: toilet.openTime,
-            managingOrg: toilet.managingOrg,
-            phoneNumber: toilet.phoneNumber,
-            installDate: toilet.installDate,
-            ownershipType: toilet.ownershipType,
-            sewageTreatment: toilet.sewageTreatment,
-            hasEmergencyBell: toilet.hasEmergencyBell,
-            emergencyBellLocation: toilet.emergencyBellLocation,
-            hasCCTV: toilet.hasCCTV,
-            hasDiaperChangingTable: toilet.hasDiaperChangingTable,
-            diaperChangingLocation: toilet.diaperChangingLocation,
-            maleDisabledToilets: toilet.maleDisabledToilets,
-            maleDisabledUrinals: toilet.maleDisabledUrinals,
-            maleChildToilets: toilet.maleChildToilets,
-            maleChildUrinals: toilet.maleChildUrinals,
-            femaleDisabledToilets: toilet.femaleDisabledToilets,
-            femaleChildToilets: toilet.femaleChildToilets,
-            remodelingDate: toilet.remodelingDate,
-            facilityType: toilet.facilityType,
-            legalBasis: toilet.legalBasis,
-            govCode: toilet.govCode,
-            dataDate: toilet.dataDate,
-            syncedAt: new Date(),
-          },
-          create: {
-            id: `toilet-${toilet.sourceId}`,
-            name: toilet.name,
-            address: toilet.address,
-            roadAddress: toilet.roadAddress,
-            lat: toilet.lat,
-            lng: toilet.lng,
-            city: toilet.city,
-            district: toilet.district,
-            sourceId: toilet.sourceId,
-            operatingHours: toilet.operatingHours,
-            maleToilets: toilet.maleToilets,
-            maleUrinals: toilet.maleUrinals,
-            femaleToilets: toilet.femaleToilets,
-            hasDisabledToilet: toilet.hasDisabledToilet,
-            openTime: toilet.openTime,
-            managingOrg: toilet.managingOrg,
-            phoneNumber: toilet.phoneNumber,
-            installDate: toilet.installDate,
-            ownershipType: toilet.ownershipType,
-            sewageTreatment: toilet.sewageTreatment,
-            hasEmergencyBell: toilet.hasEmergencyBell,
-            emergencyBellLocation: toilet.emergencyBellLocation,
-            hasCCTV: toilet.hasCCTV,
-            hasDiaperChangingTable: toilet.hasDiaperChangingTable,
-            diaperChangingLocation: toilet.diaperChangingLocation,
-            maleDisabledToilets: toilet.maleDisabledToilets,
-            maleDisabledUrinals: toilet.maleDisabledUrinals,
-            maleChildToilets: toilet.maleChildToilets,
-            maleChildUrinals: toilet.maleChildUrinals,
-            femaleDisabledToilets: toilet.femaleDisabledToilets,
-            femaleChildToilets: toilet.femaleChildToilets,
-            remodelingDate: toilet.remodelingDate,
-            facilityType: toilet.facilityType,
-            legalBasis: toilet.legalBasis,
-            govCode: toilet.govCode,
-            dataDate: toilet.dataDate,
-          },
-        });
-
-        return existing ? 'updated' : 'new';
-      },
+    const { newCount, updateCount } = await batchUpsertRaw(
+      'Toilet',
+      rowsForUpsert,
       100,
-      syncHistory.id
+      syncHistory.id,
+      { exactStats: true, uniqueKey: 'sourceId' }
     );
 
     stats.newRecords = newCount;
