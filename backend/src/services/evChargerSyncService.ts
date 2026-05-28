@@ -1,4 +1,3 @@
-import { prisma } from '../lib/prisma.js';
 import { KOREA_BOUNDS } from '../constants/index.js';
 import { CITY_NAME_MAP } from './csvParser.js';
 import {
@@ -7,7 +6,7 @@ import {
   createSyncHistory,
   updateSyncHistory,
   createSyncStats,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 
 export { createSyncHistory, updateSyncHistory };
@@ -328,108 +327,61 @@ export async function syncEvChargers(): Promise<SyncStats> {
     console.info(`Transformed ${uniqueItems.length} unique records, skipped ${stats.skippedRecords}`);
     console.info('Upserting to database...');
 
-    const { newCount, updateCount } = await batchUpsert(
-      uniqueItems,
-      async (charger) => {
-        const existing = await prisma.evCharger.findUnique({
-          where: { sourceId: charger.sourceId },
-        });
+    const now = new Date();
+    const rowsForUpsert = uniqueItems.map((c) => ({
+      id: c.id,
+      name: c.name,
+      address: c.address,
+      roadAddress: c.roadAddress,
+      lat: c.lat,
+      lng: c.lng,
+      city: c.city,
+      district: c.district,
+      sourceId: c.sourceId,
+      statId: c.statId,
+      chgerId: c.chgerId,
+      chgerType: c.chgerType,
+      addrDetail: c.addrDetail,
+      location: c.location,
+      useTime: c.useTime,
+      busiId: c.busiId,
+      bnm: c.bnm,
+      busiNm: c.busiNm,
+      busiCall: c.busiCall,
+      stat: c.stat,
+      statUpdDt: c.statUpdDt,
+      lastTsdt: c.lastTsdt,
+      lastTedt: c.lastTedt,
+      nowTsdt: c.nowTsdt,
+      powerType: c.powerType,
+      output: c.output,
+      method: c.method,
+      zcode: c.zcode,
+      zscode: c.zscode,
+      kind: c.kind,
+      kindDetail: c.kindDetail,
+      parkingFree: c.parkingFree,
+      note: c.note,
+      limitYn: c.limitYn,
+      limitDetail: c.limitDetail,
+      delYn: c.delYn,
+      delDetail: c.delDetail,
+      trafficYn: c.trafficYn,
+      year: c.year,
+      floorNum: c.floorNum,
+      floorType: c.floorType,
+      maker: c.maker,
+      // createdAt 생략 — schema @default(now())가 처리. SKIP_UPDATE_COLS 의존 감소.
+      updatedAt: now,   // raw INSERT 필수 (NULL 위반 방지). UPDATE는 batchUpsertRaw가 NOW()로 강제.
+      syncedAt: now,    // DB default 있지만 ON DUPLICATE NOW() 갱신 위해 payload 포함.
+    }));
 
-        await prisma.evCharger.upsert({
-          where: { sourceId: charger.sourceId },
-          update: {
-            name: charger.name,
-            address: charger.address,
-            roadAddress: charger.roadAddress,
-            lat: charger.lat,
-            lng: charger.lng,
-            city: charger.city,
-            district: charger.district,
-            statId: charger.statId,
-            chgerId: charger.chgerId,
-            chgerType: charger.chgerType,
-            addrDetail: charger.addrDetail,
-            location: charger.location,
-            useTime: charger.useTime,
-            busiId: charger.busiId,
-            bnm: charger.bnm,
-            busiNm: charger.busiNm,
-            busiCall: charger.busiCall,
-            stat: charger.stat,
-            statUpdDt: charger.statUpdDt,
-            lastTsdt: charger.lastTsdt,
-            lastTedt: charger.lastTedt,
-            nowTsdt: charger.nowTsdt,
-            powerType: charger.powerType,
-            output: charger.output,
-            method: charger.method,
-            zcode: charger.zcode,
-            zscode: charger.zscode,
-            kind: charger.kind,
-            kindDetail: charger.kindDetail,
-            parkingFree: charger.parkingFree,
-            note: charger.note,
-            limitYn: charger.limitYn,
-            limitDetail: charger.limitDetail,
-            delYn: charger.delYn,
-            delDetail: charger.delDetail,
-            trafficYn: charger.trafficYn,
-            year: charger.year,
-            floorNum: charger.floorNum,
-            floorType: charger.floorType,
-            maker: charger.maker,
-            syncedAt: new Date(),
-          },
-          create: {
-            id: charger.id,
-            name: charger.name,
-            address: charger.address,
-            roadAddress: charger.roadAddress,
-            lat: charger.lat,
-            lng: charger.lng,
-            city: charger.city,
-            district: charger.district,
-            sourceId: charger.sourceId,
-            statId: charger.statId,
-            chgerId: charger.chgerId,
-            chgerType: charger.chgerType,
-            addrDetail: charger.addrDetail,
-            location: charger.location,
-            useTime: charger.useTime,
-            busiId: charger.busiId,
-            bnm: charger.bnm,
-            busiNm: charger.busiNm,
-            busiCall: charger.busiCall,
-            stat: charger.stat,
-            statUpdDt: charger.statUpdDt,
-            lastTsdt: charger.lastTsdt,
-            lastTedt: charger.lastTedt,
-            nowTsdt: charger.nowTsdt,
-            powerType: charger.powerType,
-            output: charger.output,
-            method: charger.method,
-            zcode: charger.zcode,
-            zscode: charger.zscode,
-            kind: charger.kind,
-            kindDetail: charger.kindDetail,
-            parkingFree: charger.parkingFree,
-            note: charger.note,
-            limitYn: charger.limitYn,
-            limitDetail: charger.limitDetail,
-            delYn: charger.delYn,
-            delDetail: charger.delDetail,
-            trafficYn: charger.trafficYn,
-            year: charger.year,
-            floorNum: charger.floorNum,
-            floorType: charger.floorType,
-            maker: charger.maker,
-          },
-        });
-
-        return existing ? 'updated' : 'new';
-      },
+    const { newCount, updateCount } = await batchUpsertRaw(
+      'EvCharger',
+      rowsForUpsert,
       100,
-      syncHistory.id
+      syncHistory.id,
+      { exactStats: true, uniqueKey: 'sourceId' }
     );
 
     stats.newRecords = newCount;
