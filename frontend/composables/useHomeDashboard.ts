@@ -76,14 +76,6 @@ export interface HomeDashboard {
   realEstateHotspots?: RealEstateHotspots;
 }
 
-interface ApiEnvelope {
-  success: boolean;
-  data: HomeDashboard;
-}
-
-export function useHomeDashboard() {
-  const apiBase = useApiBase();
-  return useAsyncData('home-dashboard', () =>
-    $fetch<ApiEnvelope>(`${apiBase}/api/meta/home-dashboard`).catch(() => null),
-  );
-}
+// 본 composable은 type-only file로 축소됨. 옛 `useHomeDashboard()` 함수는
+// Phase 2 (PR #343)에서 pages/index.vue 인라인 Promise.allSettled로 대체되어 제거.
+// type 정의는 hotspot 컴포넌트들이 의존하므로 보존.
