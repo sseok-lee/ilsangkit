@@ -76,6 +76,32 @@ jobs:
           NUXT_PUBLIC_KAKAO_MAP_KEY: dummy_key_for_ci
           NUXT_PUBLIC_GA_ID: G-XXXXXXXXXX
 
+      # lighthouserc.js의 SAMPLE_FACILITY_URL은 prod의 hardcoded ID 기본값을 갖는데
+      # CI seed DB에는 그 ID가 없어 lighthouse가 404 받음. 시드 후 실제 toilet ID 하나를
+      # 백엔드에서 조회해 env로 override.
+      - name: Resolve sample facility URL from seeded DB
+        run: |
+          ID=$(curl -fsS -X POST http://localhost:8000/api/facilities/search \
+            -H 'content-type: application/json' \
+            -d '{"category":"toilet","limit":1}' \
+            | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));process.stdout.write(d?.data?.items?.[0]?.id||'')")
+          if [ -z "$ID" ]; then
+            echo "No toilet seeded — using parking fallback"
+            ID=$(curl -fsS -X POST http://localhost:8000/api/facilities/search \
+              -H 'content-type: application/json' \
+              -d '{"category":"parking","limit":1}' \
+              | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));process.stdout.write(d?.data?.items?.[0]?.id||'')")
+            CATEGORY=parking
+          else
+            CATEGORY=toilet
+          fi
+          if [ -z "$ID" ]; then
+            echo "Backend seed has no facilities — cannot run lighthouse"
+            exit 1
+          fi
+          echo "SAMPLE_FACILITY_URL=/$CATEGORY/$ID" >> $GITHUB_ENV
+          echo "Resolved SAMPLE_FACILITY_URL=/$CATEGORY/$ID"
+
       - name: Run Lighthouse CI
         run: |
           npm install -g @lhci/cli@0.14.x
@@ -83,6 +109,7 @@ jobs:
           lhci autorun --config=../lighthouserc.js
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          SAMPLE_FACILITY_URL: ${{ env.SAMPLE_FACILITY_URL }}
 
       - name: Upload Lighthouse results
         uses: actions/upload-artifact@v4
