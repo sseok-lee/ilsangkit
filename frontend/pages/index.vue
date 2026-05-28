@@ -244,7 +244,7 @@ import HomeTrendingBuildings from '~/components/home/HomeTrendingBuildings.vue'
 import type { GuideSummary } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { useHomeDashboard } from '~/composables/useHomeDashboard'
+import type { HomeDashboard } from '~/composables/useHomeDashboard'
 import { CITY_LINKS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
@@ -288,8 +288,48 @@ const searchKeyword = ref('')
 // /api/meta/home-dashboard 응답이 /api/meta/stats 의 superset(total, buildingCount,
 // subscriptionActiveCount 포함) + 시장 트렌드 / 인기 단지 / 청약 요약을 같이 제공하므로
 // 별도 home-stats fetch는 제거함.
-const { data: dashboardResponse } = await useHomeDashboard()
-const dashboard = computed(() => dashboardResponse.value?.data ?? null)
+// Home dashboard + recent guides를 단일 useAsyncData 안에서 Promise.allSettled로 병렬화.
+// dashboard는 critical (hero·JSON-LD에 필수) — null이면 503 throw로 빈 hero 색인 차단.
+// recentGuides는 fold-below decorative — null이어도 페이지 정상.
+const { data: pageData } = await useAsyncData(
+  'home-page',
+  async () => {
+    const signal = AbortSignal.timeout(8000)
+    const [dashR, guidesR] = await Promise.allSettled([
+      $fetch<{ success: boolean; data: HomeDashboard }>(
+        `${apiBase}/api/meta/home-dashboard`,
+        { signal }
+      ),
+      $fetch<{ success: boolean; data: GuideSummary[] }>(
+        `${apiBase}/api/guides/recent`,
+        { query: { limit: 4 }, signal }
+      ),
+    ])
+    if (dashR.status === 'rejected') {
+      console.warn('[home-page] dashboard failed:', dashR.reason)
+    }
+    if (guidesR.status === 'rejected') {
+      console.warn('[home-page] recent-guides failed:', guidesR.reason)
+    }
+    return {
+      dashboard: dashR.status === 'fulfilled' ? dashR.value.data : null,
+      recentGuides: guidesR.status === 'fulfilled' ? guidesR.value.data : ([] as GuideSummary[]),
+    }
+  },
+  {
+    default: () => ({
+      dashboard: null as HomeDashboard | null,
+      recentGuides: [] as GuideSummary[],
+    }),
+  }
+)
+
+// 빈 hero 색인 차단 — dashboard 없으면 503 (봇 retry 유도)
+if (import.meta.server && !pageData.value?.dashboard) {
+  throw createError({ statusCode: 503, statusMessage: 'Home data temporarily unavailable' })
+}
+
+const dashboard = computed(() => pageData.value?.dashboard ?? null)
 const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
 const hotspots = computed(() => dashboard.value?.realEstateHotspots ?? {})
 const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })
@@ -337,13 +377,7 @@ if (dashboard.value) {
   }
 }
 
-const { data: recentGuidesData } = await useAsyncData('recent-guides', () =>
-  $fetch<{ success: boolean; data: GuideSummary[] }>(
-    `${apiBase}/api/guides/recent`,
-    { query: { limit: 4 } }
-  )
-)
-const recentGuides = computed(() => recentGuidesData.value?.data ?? [])
+const recentGuides = computed(() => pageData.value?.recentGuides ?? [])
 
 // 등록 부동산 건물 수 (만 단위, 소수점 1자리)
 const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFixed(1))
