@@ -740,15 +740,35 @@ onBeforeUnmount(() => {
 
 // ── Sync status ───────────────────────────────────────────────────────────────
 
-const { data: syncStatusResponse } = await useAsyncData(
-  'real-estate-sync-status',
-  () => $fetch<{ success: boolean; data: Record<string, string | null> }>('/api/meta/sync-status'),
-  { lazy: true }
+// Secondary fetches — sync-status를 secondary 패턴으로 통일 (Phase 2 spec 5.5).
+// 현재는 단일 항목이지만 향후 확장성·시설 상세/홈과 일관성을 위해 동일 구조 채택.
+const { data: secondaryResponse } = await useAsyncData(
+  'real-estate-secondary',
+  async () => {
+    const signal = AbortSignal.timeout(8000)
+    const [syncR] = await Promise.allSettled([
+      $fetch<{ success: boolean; data: Record<string, string | null> }>(
+        `${apiBase}/api/meta/sync-status`,
+        { signal }
+      ),
+    ])
+    if (syncR.status === 'rejected') {
+      console.warn('[real-estate-secondary] sync-status failed:', syncR.reason)
+    }
+    return {
+      syncStatus: syncR.status === 'fulfilled' ? syncR.value.data : null,
+    }
+  },
+  {
+    lazy: true,
+    default: () => ({ syncStatus: null as Record<string, string | null> | null }),
+  }
 )
 const lastSyncDate = computed(() => {
-  if (!syncStatusResponse.value?.data) return null
+  const syncStatus = secondaryResponse.value?.syncStatus
+  if (!syncStatus) return null
   const key = apiSlug.value.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-  return formatKstDate(syncStatusResponse.value.data[key])
+  return formatKstDate(syncStatus[key])
 })
 
 // ── Computed display values ───────────────────────────────────────────────────
