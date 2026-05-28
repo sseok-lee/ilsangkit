@@ -1,5 +1,4 @@
-import { prisma } from '../lib/prisma.js';
-import { transformParkingRow, TransformedParking } from './csvParser.js';
+import { transformParkingRow } from './csvParser.js';
 import type { ParkingCSVRow } from './csvParser.js';
 import { PublicApiClient } from './publicApiClient.js';
 import {
@@ -9,91 +8,12 @@ import {
   updateSyncHistory,
   createSyncStats,
   transformAndDedupe,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 import { SYNC } from '../constants/index.js';
 
 export { createSyncHistory, updateSyncHistory };
 export type { SyncStats, SyncHistoryUpdateData };
-
-async function upsertOneParking(parking: TransformedParking): Promise<'new' | 'updated'> {
-  const existing = await prisma.parking.findUnique({
-    where: { sourceId: parking.sourceId },
-  });
-
-  await prisma.parking.upsert({
-    where: { sourceId: parking.sourceId },
-    update: {
-      name: parking.name,
-      address: parking.address,
-      roadAddress: parking.roadAddress,
-      lat: parking.lat,
-      lng: parking.lng,
-      city: parking.city,
-      district: parking.district,
-      syncedAt: new Date(),
-      parkingType: parking.parkingType,
-      lotType: parking.lotType,
-      capacity: parking.capacity,
-      baseFee: parking.baseFee,
-      baseTime: parking.baseTime,
-      additionalFee: parking.additionalFee,
-      additionalTime: parking.additionalTime,
-      dailyMaxFee: parking.dailyMaxFee,
-      monthlyFee: parking.monthlyFee,
-      operatingHours: parking.operatingHours,
-      phone: parking.phone,
-      paymentMethod: parking.paymentMethod,
-      remarks: parking.remarks,
-      hasDisabledParking: parking.hasDisabledParking,
-      zoneClass: parking.zoneClass,
-      alternateParking: parking.alternateParking,
-      operatingDays: parking.operatingDays,
-      feeType: parking.feeType,
-      dailyMaxFeeHours: parking.dailyMaxFeeHours,
-      managingOrg: parking.managingOrg,
-      dataDate: parking.dataDate,
-      providerCode: parking.providerCode,
-      providerName: parking.providerName,
-    },
-    create: {
-      id: parking.id,
-      name: parking.name,
-      address: parking.address,
-      roadAddress: parking.roadAddress,
-      lat: parking.lat,
-      lng: parking.lng,
-      city: parking.city,
-      district: parking.district,
-      sourceId: parking.sourceId,
-      parkingType: parking.parkingType,
-      lotType: parking.lotType,
-      capacity: parking.capacity,
-      baseFee: parking.baseFee,
-      baseTime: parking.baseTime,
-      additionalFee: parking.additionalFee,
-      additionalTime: parking.additionalTime,
-      dailyMaxFee: parking.dailyMaxFee,
-      monthlyFee: parking.monthlyFee,
-      operatingHours: parking.operatingHours,
-      phone: parking.phone,
-      paymentMethod: parking.paymentMethod,
-      remarks: parking.remarks,
-      hasDisabledParking: parking.hasDisabledParking,
-      zoneClass: parking.zoneClass,
-      alternateParking: parking.alternateParking,
-      operatingDays: parking.operatingDays,
-      feeType: parking.feeType,
-      dailyMaxFeeHours: parking.dailyMaxFeeHours,
-      managingOrg: parking.managingOrg,
-      dataDate: parking.dataDate,
-      providerCode: parking.providerCode,
-      providerName: parking.providerName,
-    },
-  });
-
-  return existing ? 'updated' : 'new';
-}
 
 async function syncParkingRows(rows: ParkingCSVRow[], stats: SyncStats, syncHistoryId: number): Promise<void> {
   stats.totalRecords = rows.length;
@@ -110,7 +30,52 @@ async function syncParkingRows(rows: ParkingCSVRow[], stats: SyncStats, syncHist
   console.info(`Transformed ${uniqueParkings.length} valid records, skipped ${stats.skippedRecords}`);
 
   console.info('Upserting to database...');
-  const { newCount, updateCount } = await batchUpsert(uniqueParkings, upsertOneParking, 100, syncHistoryId);
+  const now = new Date();
+  const rowsForUpsert = uniqueParkings.map((p) => ({
+    id: p.id,
+    name: p.name,
+    address: p.address,
+    roadAddress: p.roadAddress,
+    lat: p.lat,
+    lng: p.lng,
+    city: p.city,
+    district: p.district,
+    sourceId: p.sourceId,
+    parkingType: p.parkingType,
+    lotType: p.lotType,
+    capacity: p.capacity,
+    baseFee: p.baseFee,
+    baseTime: p.baseTime,
+    additionalFee: p.additionalFee,
+    additionalTime: p.additionalTime,
+    dailyMaxFee: p.dailyMaxFee,
+    monthlyFee: p.monthlyFee,
+    operatingHours: p.operatingHours,
+    phone: p.phone,
+    paymentMethod: p.paymentMethod,
+    remarks: p.remarks,
+    hasDisabledParking: p.hasDisabledParking,
+    zoneClass: p.zoneClass,
+    alternateParking: p.alternateParking,
+    operatingDays: p.operatingDays,
+    feeType: p.feeType,
+    dailyMaxFeeHours: p.dailyMaxFeeHours,
+    managingOrg: p.managingOrg,
+    dataDate: p.dataDate,
+    providerCode: p.providerCode,
+    providerName: p.providerName,
+    // createdAt 생략 — schema @default(now())가 처리
+    updatedAt: now,
+    syncedAt: now,
+  }));
+
+  const { newCount, updateCount } = await batchUpsertRaw(
+    'Parking',
+    rowsForUpsert,
+    100,
+    syncHistoryId,
+    { exactStats: true, uniqueKey: 'sourceId' }
+  );
   stats.newRecords = newCount;
   stats.updatedRecords = updateCount;
 }
