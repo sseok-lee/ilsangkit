@@ -1,5 +1,4 @@
-import { prisma } from '../lib/prisma.js';
-import { transformParkRow, TransformedPark } from './csvParser.js';
+import { transformParkRow } from './csvParser.js';
 import type { ParkCSVRow } from './csvParser.js';
 import { PublicApiClient } from './publicApiClient.js';
 import {
@@ -9,71 +8,12 @@ import {
   updateSyncHistory,
   createSyncStats,
   transformAndDedupe,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 import { SYNC } from '../constants/index.js';
 
 export { createSyncHistory, updateSyncHistory };
 export type { SyncStats, SyncHistoryUpdateData };
-
-async function upsertOnePark(park: TransformedPark): Promise<'new' | 'updated'> {
-  const existing = await prisma.park.findUnique({
-    where: { sourceId: park.sourceId },
-  });
-
-  await prisma.park.upsert({
-    where: { sourceId: park.sourceId },
-    update: {
-      name: park.name,
-      address: park.address,
-      roadAddress: park.roadAddress,
-      lat: park.lat,
-      lng: park.lng,
-      city: park.city,
-      district: park.district,
-      parkType: park.parkType,
-      area: park.area,
-      exerciseFacilities: park.exerciseFacilities,
-      playFacilities: park.playFacilities,
-      convenienceFacilities: park.convenienceFacilities,
-      cultureFacilities: park.cultureFacilities,
-      otherFacilities: park.otherFacilities,
-      designatedDate: park.designatedDate,
-      managingOrg: park.managingOrg,
-      phoneNumber: park.phoneNumber,
-      dataDate: park.dataDate,
-      providerCode: park.providerCode,
-      providerName: park.providerName,
-      syncedAt: new Date(),
-    },
-    create: {
-      id: park.id,
-      name: park.name,
-      address: park.address,
-      roadAddress: park.roadAddress,
-      lat: park.lat,
-      lng: park.lng,
-      city: park.city,
-      district: park.district,
-      sourceId: park.sourceId,
-      parkType: park.parkType,
-      area: park.area,
-      exerciseFacilities: park.exerciseFacilities,
-      playFacilities: park.playFacilities,
-      convenienceFacilities: park.convenienceFacilities,
-      cultureFacilities: park.cultureFacilities,
-      otherFacilities: park.otherFacilities,
-      designatedDate: park.designatedDate,
-      managingOrg: park.managingOrg,
-      phoneNumber: park.phoneNumber,
-      dataDate: park.dataDate,
-      providerCode: park.providerCode,
-      providerName: park.providerName,
-    },
-  });
-
-  return existing ? 'updated' : 'new';
-}
 
 async function syncParkRows(rows: ParkCSVRow[], stats: SyncStats, syncHistoryId: number): Promise<void> {
   stats.totalRecords = rows.length;
@@ -90,7 +30,42 @@ async function syncParkRows(rows: ParkCSVRow[], stats: SyncStats, syncHistoryId:
   console.info(`Transformed ${uniqueParks.length} unique records, skipped ${stats.skippedRecords}`);
 
   console.info('Upserting to database...');
-  const { newCount, updateCount } = await batchUpsert(uniqueParks, upsertOnePark, 100, syncHistoryId);
+  const now = new Date();
+  const rowsForUpsert = uniqueParks.map((p) => ({
+    id: p.id,
+    name: p.name,
+    address: p.address,
+    roadAddress: p.roadAddress,
+    lat: p.lat,
+    lng: p.lng,
+    city: p.city,
+    district: p.district,
+    sourceId: p.sourceId,
+    parkType: p.parkType,
+    area: p.area,
+    exerciseFacilities: p.exerciseFacilities,
+    playFacilities: p.playFacilities,
+    convenienceFacilities: p.convenienceFacilities,
+    cultureFacilities: p.cultureFacilities,
+    otherFacilities: p.otherFacilities,
+    designatedDate: p.designatedDate,
+    managingOrg: p.managingOrg,
+    phoneNumber: p.phoneNumber,
+    dataDate: p.dataDate,
+    providerCode: p.providerCode,
+    providerName: p.providerName,
+    // createdAt 생략 — schema @default(now())가 처리
+    updatedAt: now,
+    syncedAt: now,
+  }));
+
+  const { newCount, updateCount } = await batchUpsertRaw(
+    'Park',
+    rowsForUpsert,
+    100,
+    syncHistoryId,
+    { exactStats: true, uniqueKey: 'sourceId' }
+  );
   stats.newRecords = newCount;
   stats.updatedRecords = updateCount;
 }
