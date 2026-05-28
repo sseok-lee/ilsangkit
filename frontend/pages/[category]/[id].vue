@@ -345,6 +345,10 @@ function getCityHubPath(cityName: string): string {
   return slug ? `/${slug}` : `/search?keyword=${encodeURIComponent(cityName)}`
 }
 
+// SSR/CSR 양쪽에서 SSR은 internalApiBase(loopback), CSR은 same-origin proxy 사용.
+// Phase 2 cross-page 일관성: index.vue·real-estate detail과 동일하게 script-top에서 캡처.
+const apiBase = useApiBase()
+
 // SSR: useAsyncData로 서버에서 데이터 fetch
 // lazy: true → 클라이언트 네비게이션 시 즉시 페이지 전환 (SSR은 기존대로 서버에서 resolve)
 const { data: facilityResponse, status, error: fetchError } = await useAsyncData(
@@ -373,12 +377,40 @@ watch(fetchError, (err) => {
   }
 }, { immediate: true })
 
-const { data: youtubeSsrResponse } = await useAsyncData(
-  `facility-youtube-${category.value}-${id.value}`,
-  () => $fetch<{ success: boolean; data: { videos: YoutubeVideo[] } }>(
-    `/api/facilities/${category.value}/${id.value}/youtube?ssr=1`
-  ),
-  { lazy: true, default: () => ({ success: true, data: { videos: [] as YoutubeVideo[] } }) }
+// Secondary fetches — youtube + sync-status를 Promise.allSettled로 병렬화.
+// 각 실패 시 null fallback, 페이지는 critical(facility) 기준으로 정상 렌더된다.
+const { data: secondaryResponse } = await useAsyncData(
+  `facility-secondary-${category.value}-${id.value}`,
+  async () => {
+    const signal = AbortSignal.timeout(8000)
+    const [youtubeR, syncR] = await Promise.allSettled([
+      $fetch<{ success: boolean; data: { videos: YoutubeVideo[] } }>(
+        `${apiBase}/api/facilities/${category.value}/${id.value}/youtube?ssr=1`,
+        { signal }
+      ),
+      $fetch<{ success: boolean; data: Record<string, string | null> }>(
+        `${apiBase}/api/meta/sync-status`,
+        { signal }
+      ),
+    ])
+    if (youtubeR.status === 'rejected') {
+      console.warn('[facility-secondary] youtube failed:', youtubeR.reason)
+    }
+    if (syncR.status === 'rejected') {
+      console.warn('[facility-secondary] sync-status failed:', syncR.reason)
+    }
+    return {
+      youtube: youtubeR.status === 'fulfilled' ? youtubeR.value.data : null,
+      syncStatus: syncR.status === 'fulfilled' ? syncR.value.data : null,
+    }
+  },
+  {
+    lazy: true,
+    default: () => ({
+      youtube: null as { videos: YoutubeVideo[] } | null,
+      syncStatus: null as Record<string, string | null> | null,
+    }),
+  }
 )
 
 const facility = computed(() => facilityResponse.value?.data ?? null)
@@ -401,7 +433,7 @@ watchEffect(() => {
       { name: categoryName, url: `/${facility.value.category}` },
       { name, url: `/${facility.value.category}/${facility.value.id}` },
     ])
-    const ssrVideos = youtubeSsrResponse.value?.data?.videos ?? []
+    const ssrVideos = secondaryResponse.value?.youtube?.videos ?? []
     if (ssrVideos.length >= 2) {
       setVideoListSchema(ssrVideos)
     }
@@ -687,16 +719,13 @@ const dataSource = computed<DataSourceInfo | null>(() => {
   return FACILITY_DATA_SOURCE[facility.value.category] ?? null
 })
 
-// 카테고리별 최근 동기화 날짜
-const { data: syncStatusResponse } = await useAsyncData(
-  'sync-status',
-  () => $fetch<{ success: boolean; data: Record<string, string | null> }>('/api/meta/sync-status'),
-  { lazy: true }
-)
+// 카테고리별 최근 동기화 날짜 — secondary fetch에서 sync-status 데이터 사용
 const lastSyncDate = computed(() => {
-  if (!facility.value || !syncStatusResponse.value?.data) return null
+  if (!facility.value) return null
+  const data = secondaryResponse.value?.syncStatus
+  if (!data) return null
   const cat = facility.value.category
-  return formatKstDate(syncStatusResponse.value.data[cat])
+  return formatKstDate(data[cat])
 })
 
 
