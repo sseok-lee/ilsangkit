@@ -345,6 +345,10 @@ function getCityHubPath(cityName: string): string {
   return slug ? `/${slug}` : `/search?keyword=${encodeURIComponent(cityName)}`
 }
 
+// SSR/CSR 양쪽에서 SSR은 internalApiBase(loopback), CSR은 same-origin proxy 사용.
+// Phase 2 cross-page 일관성: index.vue·real-estate detail과 동일하게 script-top에서 캡처.
+const apiBase = useApiBase()
+
 // SSR: useAsyncData로 서버에서 데이터 fetch
 // lazy: true → 클라이언트 네비게이션 시 즉시 페이지 전환 (SSR은 기존대로 서버에서 resolve)
 const { data: facilityResponse, status, error: fetchError } = await useAsyncData(
@@ -378,7 +382,6 @@ watch(fetchError, (err) => {
 const { data: secondaryResponse } = await useAsyncData(
   `facility-secondary-${category.value}-${id.value}`,
   async () => {
-    const apiBase = useApiBase()
     const signal = AbortSignal.timeout(8000)
     const [youtubeR, syncR] = await Promise.allSettled([
       $fetch<{ success: boolean; data: { videos: YoutubeVideo[] } }>(
