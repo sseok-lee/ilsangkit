@@ -1,4 +1,3 @@
-import { prisma } from '../lib/prisma.js';
 import { parseSchoolCSV, transformSchoolRow } from './csvParser.js';
 import {
   type SyncStats,
@@ -7,7 +6,7 @@ import {
   updateSyncHistory,
   createSyncStats,
   transformAndDedupe,
-  batchUpsert,
+  batchUpsertRaw,
 } from './baseSyncService.js';
 
 export { createSyncHistory, updateSyncHistory };
@@ -39,70 +38,42 @@ export async function syncSchools(csvFilePath: string): Promise<SyncStats> {
     console.info(`Transformed ${uniqueSchools.length} unique records, skipped ${stats.skippedRecords}`);
 
     console.info('Upserting to database...');
-    const { newCount, updateCount } = await batchUpsert(
-      uniqueSchools,
-      async (school) => {
-        const existing = await prisma.school.findUnique({
-          where: { sourceId: school.sourceId },
-        });
+    const now = new Date();
+    const rowsForUpsert = uniqueSchools.map((s) => ({
+      id: s.id,
+      name: s.name,
+      address: s.address,
+      roadAddress: s.roadAddress,
+      lat: s.lat,
+      lng: s.lng,
+      city: s.city,
+      district: s.district,
+      sourceId: s.sourceId,
+      schoolLevel: s.schoolLevel,
+      foundedDate: s.foundedDate,
+      foundationType: s.foundationType,
+      branchType: s.branchType,
+      operationStatus: s.operationStatus,
+      sidoEduCode: s.sidoEduCode,
+      sidoEduName: s.sidoEduName,
+      localEduCode: s.localEduCode,
+      localEduName: s.localEduName,
+      createdDate: s.createdDate,
+      modifiedDate: s.modifiedDate,
+      dataDate: s.dataDate,
+      providerCode: s.providerCode,
+      providerName: s.providerName,
+      // createdAt 생략 — schema @default(now())가 처리
+      updatedAt: now,
+      syncedAt: now,
+    }));
 
-        await prisma.school.upsert({
-          where: { sourceId: school.sourceId },
-          update: {
-            name: school.name,
-            address: school.address,
-            roadAddress: school.roadAddress,
-            lat: school.lat,
-            lng: school.lng,
-            city: school.city,
-            district: school.district,
-            schoolLevel: school.schoolLevel,
-            foundedDate: school.foundedDate,
-            foundationType: school.foundationType,
-            branchType: school.branchType,
-            operationStatus: school.operationStatus,
-            sidoEduCode: school.sidoEduCode,
-            sidoEduName: school.sidoEduName,
-            localEduCode: school.localEduCode,
-            localEduName: school.localEduName,
-            createdDate: school.createdDate,
-            modifiedDate: school.modifiedDate,
-            dataDate: school.dataDate,
-            providerCode: school.providerCode,
-            providerName: school.providerName,
-            syncedAt: new Date(),
-          },
-          create: {
-            id: school.id,
-            name: school.name,
-            address: school.address,
-            roadAddress: school.roadAddress,
-            lat: school.lat,
-            lng: school.lng,
-            city: school.city,
-            district: school.district,
-            sourceId: school.sourceId,
-            schoolLevel: school.schoolLevel,
-            foundedDate: school.foundedDate,
-            foundationType: school.foundationType,
-            branchType: school.branchType,
-            operationStatus: school.operationStatus,
-            sidoEduCode: school.sidoEduCode,
-            sidoEduName: school.sidoEduName,
-            localEduCode: school.localEduCode,
-            localEduName: school.localEduName,
-            createdDate: school.createdDate,
-            modifiedDate: school.modifiedDate,
-            dataDate: school.dataDate,
-            providerCode: school.providerCode,
-            providerName: school.providerName,
-          },
-        });
-
-        return existing ? 'updated' : 'new';
-      },
+    const { newCount, updateCount } = await batchUpsertRaw(
+      'School',
+      rowsForUpsert,
       100,
-      syncHistory.id
+      syncHistory.id,
+      { exactStats: true, uniqueKey: 'sourceId' }
     );
 
     stats.newRecords = newCount;
