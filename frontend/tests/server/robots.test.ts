@@ -15,4 +15,9 @@ describe('robots.txt crawl policy', () => {
     expect(robots).not.toMatch(/^Disallow:\s*\/aed\/$/m)
     expect(robots).not.toMatch(/^Disallow:\s*\/wifi\/$/m)
   })
+
+  it('blocks Naver Yeti from crawling query pagination URLs', () => {
+    expect(robots).toMatch(/User-agent:\s*Yeti[\s\S]*Disallow:\s*\/\*\?page=/)
+    expect(robots).toMatch(/User-agent:\s*Yeti[\s\S]*Disallow:\s*\/\*&page=/)
+  })
 })

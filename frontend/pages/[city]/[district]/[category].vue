@@ -90,6 +90,7 @@ import { CITY_FULL_NAME_TO_SLUG } from '~/shared/regionSlugs'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
+import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 import type { FacilityCategory } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -241,7 +242,7 @@ const otherCategories = computed(() => {
 })
 
 // URL `?page=N` 에서 초기 페이지를 유추 — SSR/클라이언트 진입 모두 동일한 페이지를 렌더하도록.
-const initialPage = Math.max(1, Number(route.query.page) || 1)
+const initialPage = parsePositivePageQuery(route.query.page)
 
 // ========== Waste Schedule (trash) ==========
 const { getSchedules, isLoading: wasteLoading } = useWasteSchedule()
@@ -335,7 +336,7 @@ if (isTrash.value) {
 // pageQueryParam(아래 computed)과 실제 페이지 상태가 어긋나지 않도록 한다.
 // goToPage 등 페이지 액션은 상태를 먼저 갱신하므로 같은 값일 때는 재조회를 스킵한다.
 watch(() => route.query.page, (next) => {
-  const nextPage = Math.max(1, Number(next) || 1)
+  const nextPage = parsePositivePageQuery(next)
   if (isTrash.value) {
     if (wasteCurrentPage.value === nextPage) return
     wasteCurrentPage.value = nextPage
@@ -350,14 +351,14 @@ watch(() => route.query.page, (next) => {
 // noindex 조건: 시설 0건(완전히 비어있는 경우) 또는 페이지 2 이상.
 // 정책: noindex 일 때는 canonical 을 함께 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md).
 // route.query.page 변경에 reactive 하게 반응해야 client-side 페이지 이동에서도 정책이 유지된다.
-const pageQueryParam = computed(() => Math.max(1, Number(route.query.page) || 1))
+const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
 useHead(computed(() => {
   const isEmpty = isTrash.value
     ? (!wasteLoading.value && wasteSchedules.value.length === 0)
     : (!loading.value && facilities.value.length === 0 && !error.value)
   const isNoindex = isEmpty || pageQueryParam.value > 1
   if (isNoindex) {
-    return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
+    return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
   }
   return {
     link: [
