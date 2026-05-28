@@ -1,5 +1,15 @@
 # 일상킷 - 내 주변 생활 편의 정보, 한 번에 찾기
 
+
+# 네이버 검색로봇 — 대형 리스트 페이지네이션은 sitemap/detail URL로 대체하고 크롤 예산을 절약한다.
+User-agent: Yeti
+Allow: /
+Allow: /_nuxt/
+Allow: /api/images/
+Disallow: /api/
+Disallow: /*?page=
+Disallow: /*&page=
+
 User-agent: *
 Allow: /
 Allow: /_nuxt/

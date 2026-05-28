@@ -1,4 +1,5 @@
 import { defineEventHandler, sendRedirect, getRequestURL } from 'h3'
+import { normalizePageQueryForUrl } from '../../utils/pageQuery'
 
 const VALID_CITIES = new Set([
   'seoul', 'busan', 'daegu', 'incheon', 'gwangju', 'daejeon',
@@ -15,6 +16,13 @@ export default defineEventHandler((event) => {
   if (path.startsWith('/api/') || path.startsWith('/_nuxt/') ||
       path.startsWith('/_ipx/') || path.startsWith('/__nuxt') ||
       path.startsWith('/sitemap') || path.startsWith('/icons/')) return
+
+  // 리스트 페이지네이션 query 정규화 — malformed URL이 index/follow 1페이지처럼 렌더링되는 것을 방지한다.
+  const url = getRequestURL(event)
+  const normalizedPageUrl = normalizePageQueryForUrl(path, url.search)
+  if (normalizedPageUrl) {
+    return sendRedirect(event, normalizedPageUrl, 301)
+  }
 
   // Trailing slash → canonical 중복 제거 (예: /toilet/ → /toilet)
   if (path !== '/' && path.endsWith('/')) {
