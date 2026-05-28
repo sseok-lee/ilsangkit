@@ -43,26 +43,33 @@ const sampleHotspotBundle = {
   wolse: { active: [sampleRegion] },
 }
 
-vi.mock('~/composables/useHomeDashboard', () => ({
-  useHomeDashboard: () =>
-    Promise.resolve({
-      data: {
-        value: {
-          success: true,
-          data: {
-            total: 100000,
-            buildingCount: 50000,
-            subscriptionActiveCount: 5,
-            newlyListedToday: 12,
-            realEstateTrends: [],
-            trendingBuildings: { sale: [], jeonse: [], wolse: [] },
-            subscriptionSummary: { closingThisWeek: 0, upcomingNextWeek: 0, avgSupplyPrice: null, imminent: [] },
-            realEstateHotspots: { apt: sampleHotspotBundle },
-          },
-        },
-      },
-    }),
-}))
+// home-page useAsyncData를 dashboard·recentGuides 페이로드로 가짜 응답.
+// (index.vue 의 pageData useAsyncData 와 동일한 key 매칭)
+const homePagePayload = {
+  dashboard: {
+    total: 100000,
+    buildingCount: 50000,
+    subscriptionActiveCount: 5,
+    newlyListedToday: 12,
+    realEstateTrends: [],
+    trendingBuildings: { sale: [], jeonse: [], wolse: [] },
+    subscriptionSummary: { closingThisWeek: 0, upcomingNextWeek: 0, avgSupplyPrice: null, imminent: [] },
+    realEstateHotspots: { apt: sampleHotspotBundle },
+  },
+  recentGuides: [],
+}
+
+;(globalThis as any).useAsyncData = vi.fn((key?: string, _fetcher?: () => unknown) => {
+  const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
+  const result = {
+    data,
+    status: ref('idle'),
+    error: ref(null),
+    refresh: vi.fn(),
+    pending: ref(false),
+  }
+  return Object.assign(Promise.resolve(result), result)
+})
 
 // Helper to mount async components with Suspense
 async function mountSuspended(component: any, options?: any) {
