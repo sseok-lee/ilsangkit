@@ -188,8 +188,12 @@ export async function batchUpsert<T>(
  *    → bulk 실행이므로 전체 affected rows로 추정 (affectedRows / 2 = updated, 나머지 = new)
  *  - 정확 통계 모드(`options.exactStats: true`): 배치마다 사전 SELECT로 기존 키 집합을 확보하여
  *    new/updated를 정확 집계. 휴리스틱이 부정확한 케이스(no-op upsert, 부분 키 변경 등)에 사용.
- *    제약: `uniqueKey`는 반드시 UNIQUE INDEX가 있어야 하며 (미인덱스 사용 시 배치당 full scan으로
- *    성능 급락) String 타입 컬럼 권장 (number/BIGINT는 JS Set 비교 시 형 변환 주의).
+ *    제약:
+ *      - `uniqueKey`는 반드시 UNIQUE INDEX가 있어야 하며 (미인덱스 사용 시 배치당 full scan으로 성능 급락)
+ *      - String 타입 컬럼 권장 (number/BIGINT는 JS Set 비교 시 형 변환 주의)
+ *      - **단일 writer 가정**: 사전 SELECT는 트랜잭션 밖에서 실행되므로, 같은 카테고리에 대해
+ *        동시에 두 sync가 돌면 new/updated 카운트가 race condition으로 부정확해질 수 있다.
+ *        현재 운영은 카테고리당 single-writer cron이라 안전. 동시 sync 도입 시 이 함수 재설계 필요.
  */
 export interface BatchUpsertRawOptions {
   /** 통계를 정확히 집계 (배치당 1 SELECT 추가). 기본 false — 휴리스틱 사용 */
@@ -211,6 +215,12 @@ export async function batchUpsertRaw<T extends Record<string, unknown>>(
   // 테이블명 안전성 검증 (영문자, 숫자, 하이픈, 언더스코어만 허용)
   if (!/^[A-Za-z0-9_-]+$/.test(tableName)) {
     throw new Error(`Invalid table name: ${tableName}`);
+  }
+  // uniqueKey 안전성 검증 — exactStats 분기에서 raw SQL identifier로 interpolation되므로
+  // 호출자가 신뢰 불가 입력을 넘기면 SQLi 가능. 현재 모든 호출자가 'sourceId' 리터럴이지만
+  // 미래 확장 대비 동일한 whitelist 적용 (영문자/숫자/언더스코어만).
+  if (!/^[A-Za-z0-9_]+$/.test(uniqueKey)) {
+    throw new Error(`Invalid uniqueKey: ${uniqueKey}`);
   }
 
   let newCount = 0;
