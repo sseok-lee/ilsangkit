@@ -8,12 +8,19 @@
 // 레거시 부동산 허브(/real-estate/apt-sale)는 301 대상이라 제외한다.
 // /search 는 의도적 noindex 페이지라 Lighthouse SEO 평가 대상에서 제외한다.
 const PREVIEW_BASE = 'http://localhost:4173'
+// 시설 상세는 실제 DB ID 의존. CI seed에는 prod hardcoded ID 부재 → env로 override.
+//   - prod 기본값: /toilet/toilet-00379099bd5d661e
+//   - CI override: SAMPLE_FACILITY_URL=/toilet/toilet-seed-N
 const SAMPLE_FACILITY_URL = process.env.SAMPLE_FACILITY_URL || '/toilet/toilet-00379099bd5d661e'
+// 지역×카테고리 페이지도 seed 데이터에 따라 달라짐.
+//   - prod 기본값: /seoul/gangnam/toilet (강남구 시설 풍부)
+//   - CI override: SAMPLE_REGION_URL=/seoul/jongno/toilet (seed에 종로구 데이터)
+const SAMPLE_REGION_URL = process.env.SAMPLE_REGION_URL || '/seoul/gangnam/toilet'
 const LIGHTHOUSE_URLS = [
   `${PREVIEW_BASE}/`,
   `${PREVIEW_BASE}/toilet`,
   `${PREVIEW_BASE}${SAMPLE_FACILITY_URL}`,
-  `${PREVIEW_BASE}/seoul/gangnam/toilet`,
+  `${PREVIEW_BASE}${SAMPLE_REGION_URL}`,
   `${PREVIEW_BASE}/real-estate`,
   `${PREVIEW_BASE}/guide`,
 ]
