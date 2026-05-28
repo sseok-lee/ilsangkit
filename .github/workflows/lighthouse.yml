@@ -2,7 +2,7 @@ name: Lighthouse CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'frontend/**'
       - '.github/workflows/lighthouse.yml'
@@ -11,6 +11,17 @@ on:
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: ilsangkit_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    env:
+      DATABASE_URL: mysql://root:testpassword@localhost:3306/ilsangkit_test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,8 +31,38 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
+      # Backend 기동 — Phase 2 503 throw가 SSR home-dashboard fetch 성공을 요구.
+      # backend 없이 lighthouse 측정하면 503 응답으로 ERRORED_DOCUMENT_REQUEST 발생.
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+
+      - name: Apply Prisma schema
+        run: cd backend && npx prisma db push --skip-generate
+
+      - name: Seed minimal DB data
+        run: cd backend && npm run db:seed
+
+      - name: Start backend in background
+        run: cd backend && (npm run dev &) && sleep 8
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..15}; do
+            if curl -fsS http://localhost:8000/api/health > /dev/null; then
+              echo "Backend ready"
+              exit 0
+            fi
+            echo "Waiting for backend (attempt $i)..."
+            sleep 2
+          done
+          echo "Backend failed to start within 30s"
+          exit 1
+
+      # Frontend build + Lighthouse
       - name: Install frontend dependencies
         run: cd frontend && npm ci
 
@@ -31,7 +72,6 @@ jobs:
       - name: Build frontend for production
         run: cd frontend && npm run build
         env:
-          # Use dummy values for build (no external API calls during Lighthouse)
           NUXT_PUBLIC_API_BASE: http://localhost:8000
           NUXT_PUBLIC_KAKAO_MAP_KEY: dummy_key_for_ci
           NUXT_PUBLIC_GA_ID: G-XXXXXXXXXX
