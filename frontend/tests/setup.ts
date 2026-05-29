@@ -85,6 +85,8 @@ config.global.stubs = {
   AdBanner: { template: '<div class="stub-ad-banner" />' },
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브
   HomeSubscriptionSection: { template: '<section data-testid="subscription" class="stub-home-subscription" />' },
+  // 홈의 공공임대 섹션 → 테스트에서 스터브
+  HomePublicRentalSection: { template: '<section data-testid="public-rental" class="stub-home-public-rental" />', props: ['items'] },
   // 홈 마켓 통계/인기단지 섹션
   HomeMarketStats: { template: '<section data-testid="market-stats" />' },
   HomeTrendingBuildings: { template: '<section data-testid="trending-buildings" />' },

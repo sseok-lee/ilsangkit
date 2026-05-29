@@ -57,6 +57,7 @@ const homePagePayload = {
     realEstateHotspots: { apt: sampleHotspotBundle },
   },
   recentGuides: [],
+  publicRentalOngoing: [],
 }
 
 ;(globalThis as any).useAsyncData = vi.fn((key?: string, _fetcher?: () => unknown) => {

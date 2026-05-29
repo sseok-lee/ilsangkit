@@ -99,6 +99,8 @@
 
     <!-- 청약·임대 일정 섹션 -->
     <HomeSubscriptionSection :summary="subscriptionSummary" />
+    <!-- 진행중 공공임대 -->
+    <HomePublicRentalSection :items="publicRentalOngoing" />
 
     <!-- Ad: 청약·임대 이후 -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -238,6 +240,7 @@ import HardLink from '~/components/common/HardLink.vue'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
+import HomePublicRentalSection from '~/components/publicRental/HomePublicRentalSection.vue'
 import HomeMarketStats from '~/components/home/HomeMarketStats.vue'
 import HomeHotspotSignals from '~/components/home/HomeHotspotSignals.vue'
 import HomeTrendingBuildings from '~/components/home/HomeTrendingBuildings.vue'
@@ -295,7 +298,7 @@ const { data: pageData } = await useAsyncData(
   'home-page',
   async () => {
     const signal = AbortSignal.timeout(8000)
-    const [dashR, guidesR] = await Promise.allSettled([
+    const [dashR, guidesR, rentalR] = await Promise.allSettled([
       $fetch<{ success: boolean; data: HomeDashboard }>(
         `${apiBase}/api/meta/home-dashboard`,
         { signal }
@@ -304,6 +307,10 @@ const { data: pageData } = await useAsyncData(
         `${apiBase}/api/guides/recent`,
         { query: { limit: 4 }, signal }
       ),
+      $fetch<{ success: boolean; data: { items: Array<{ pblancId: string; pblancNm: string; suplyTyNm: string | null; brtcNm: string | null; signguNm: string | null; endDe: string | null; totalSupply: number | null }> } }>(
+        `${apiBase}/api/public-rental/announcements`,
+        { query: { status: 'ongoing', page: 1, limit: 4 }, signal }
+      ),
     ])
     if (dashR.status === 'rejected') {
       console.warn('[home-page] dashboard failed:', dashR.reason)
@@ -311,15 +318,20 @@ const { data: pageData } = await useAsyncData(
     if (guidesR.status === 'rejected') {
       console.warn('[home-page] recent-guides failed:', guidesR.reason)
     }
+    if (rentalR.status === 'rejected') {
+      console.warn('[home-page] public-rental-ongoing failed:', rentalR.reason)
+    }
     return {
       dashboard: dashR.status === 'fulfilled' ? dashR.value.data : null,
       recentGuides: guidesR.status === 'fulfilled' ? guidesR.value.data : ([] as GuideSummary[]),
+      publicRentalOngoing: rentalR.status === 'fulfilled' ? rentalR.value.data.items : [],
     }
   },
   {
     default: () => ({
       dashboard: null as HomeDashboard | null,
       recentGuides: [] as GuideSummary[],
+      publicRentalOngoing: [] as Array<{ pblancId: string; pblancNm: string; suplyTyNm: string | null; brtcNm: string | null; signguNm: string | null; endDe: string | null; totalSupply: number | null }>,
     }),
   }
 )
@@ -378,6 +390,7 @@ if (dashboard.value) {
 }
 
 const recentGuides = computed(() => pageData.value?.recentGuides ?? [])
+const publicRentalOngoing = computed(() => pageData.value?.publicRentalOngoing ?? [])
 
 // 등록 부동산 건물 수 (만 단위, 소수점 1자리)
 const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFixed(1))
