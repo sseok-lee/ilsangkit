@@ -1,7 +1,7 @@
 import prisma from '../lib/prisma.js';
+import { Prisma } from '@prisma/client';
 import { NotFoundError } from '../lib/errors.js';
-import type { SubscriptionListParams } from '../schemas/subscription.js';
-import type { Prisma } from '@prisma/client';
+import type { SubscriptionListParams, SubscriptionCompetitionRankParams } from '../schemas/subscription.js';
 
 /**
  * Decimal → Number 변환 (JSON 직렬화 호환)
@@ -217,6 +217,124 @@ export async function getUpcomingSubscriptions(limit = 5) {
     orderBy: { receptionStartDate: 'asc' },
     take: limit,
   });
+}
+
+// ── 경쟁률·가점 랜딩 집계 ─────────────────────────────────────────
+let competitionCache: { dateKey: string; entries: Map<string, unknown> } | null = null;
+
+function kstDateKey(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+}
+
+/** 테스트 전용 — 캐시 초기화 */
+export function _resetCompetitionCacheForTests() {
+  competitionCache = null;
+}
+
+export interface CompetitionRankItem {
+  subscriptionId: number;
+  houseName: string;
+  regionName: string;
+  sourceType: string;
+  winnerDate: Date | null;
+  maxRate?: number | null;
+  totalApplicants?: number | null;
+  totalSupply?: number | null;
+  minCut?: number | null;
+  maxCut?: number | null;
+  avgCut?: number | null;
+}
+
+export async function getCompetitionRanking(params: SubscriptionCompetitionRankParams) {
+  const { metric, region, sourceType, page, limit } = params;
+  const dateKey = kstDateKey();
+  if (!competitionCache || competitionCache.dateKey !== dateKey) {
+    competitionCache = { dateKey, entries: new Map() };
+  }
+  const cacheKey = JSON.stringify({ metric, region: region ?? '', sourceType: sourceType ?? '', page, limit });
+  const cached = competitionCache.entries.get(cacheKey);
+  if (cached) return cached as { items: CompetitionRankItem[]; total: number; page: number; totalPages: number };
+
+  const offset = (page - 1) * limit;
+  const sourceFilter = sourceType ? Prisma.sql`AND s.sourceType = ${sourceType}` : Prisma.empty;
+  const regionFilter = region ? Prisma.sql`AND s.regionName LIKE ${'%' + region + '%'}` : Prisma.empty;
+
+  let items: CompetitionRankItem[];
+  let total: number;
+
+  if (metric === 'score') {
+    const totalRows = await prisma.$queryRaw<[{ cnt: bigint }]>(Prisma.sql`
+      SELECT COUNT(*) AS cnt FROM (
+        SELECT s.id FROM SubscriptionScore sc
+        JOIN Subscription s ON s.id = sc.subscriptionId
+        WHERE sc.avgScore REGEXP '^[0-9,]+(\\.[0-9]+)?$' ${sourceFilter} ${regionFilter}
+        GROUP BY s.id
+      ) t
+    `);
+    total = Number(totalRows[0]?.cnt ?? 0n);
+
+    const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>(Prisma.sql`
+      SELECT s.id AS subscriptionId, s.houseName, s.regionName, s.sourceType, s.winnerDate,
+             MIN(CAST(REPLACE(sc.minScore, ',', '') AS DECIMAL(6,1))) AS minCut,
+             MAX(CAST(REPLACE(sc.maxScore, ',', '') AS DECIMAL(6,1))) AS maxCut,
+             AVG(CAST(REPLACE(sc.avgScore, ',', '') AS DECIMAL(6,1))) AS avgCut
+      FROM SubscriptionScore sc
+      JOIN Subscription s ON s.id = sc.subscriptionId
+      WHERE sc.avgScore REGEXP '^[0-9,]+(\\.[0-9]+)?$' ${sourceFilter} ${regionFilter}
+      GROUP BY s.id, s.houseName, s.regionName, s.sourceType, s.winnerDate
+      ORDER BY avgCut DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+    items = rows.map((r) => ({
+      subscriptionId: Number(r.subscriptionId),
+      houseName: String(r.houseName ?? ''),
+      regionName: String(r.regionName ?? ''),
+      sourceType: String(r.sourceType ?? ''),
+      winnerDate: (r.winnerDate as Date | null) ?? null,
+      minCut: r.minCut == null ? null : Number(r.minCut),
+      maxCut: r.maxCut == null ? null : Number(r.maxCut),
+      avgCut: r.avgCut == null ? null : Number(r.avgCut),
+    }));
+  } else {
+    const totalRows = await prisma.$queryRaw<[{ cnt: bigint }]>(Prisma.sql`
+      SELECT COUNT(*) AS cnt FROM (
+        SELECT s.id FROM SubscriptionCompetition c
+        JOIN Subscription s ON s.id = c.subscriptionId
+        WHERE c.competitionRate REGEXP '^[0-9,]+(\\.[0-9]+)?$' AND c.rank = 1 AND c.regionCode = '01'
+          ${sourceFilter} ${regionFilter}
+        GROUP BY s.id
+      ) t
+    `);
+    total = Number(totalRows[0]?.cnt ?? 0n);
+
+    const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>(Prisma.sql`
+      SELECT s.id AS subscriptionId, s.houseName, s.regionName, s.sourceType, s.winnerDate,
+             MAX(CAST(REPLACE(c.competitionRate, ',', '') AS DECIMAL(12,2))) AS maxRate,
+             SUM(c.applicantCount) AS totalApplicants,
+             SUM(c.supplyCount) AS totalSupply
+      FROM SubscriptionCompetition c
+      JOIN Subscription s ON s.id = c.subscriptionId
+      WHERE c.competitionRate REGEXP '^[0-9,]+(\\.[0-9]+)?$' AND c.rank = 1 AND c.regionCode = '01'
+        ${sourceFilter} ${regionFilter}
+      GROUP BY s.id, s.houseName, s.regionName, s.sourceType, s.winnerDate
+      ORDER BY maxRate DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+    items = rows.map((r) => ({
+      subscriptionId: Number(r.subscriptionId),
+      houseName: String(r.houseName ?? ''),
+      regionName: String(r.regionName ?? ''),
+      sourceType: String(r.sourceType ?? ''),
+      winnerDate: (r.winnerDate as Date | null) ?? null,
+      maxRate: r.maxRate == null ? null : Number(r.maxRate),
+      totalApplicants: r.totalApplicants == null ? null : Number(r.totalApplicants),
+      totalSupply: r.totalSupply == null ? null : Number(r.totalSupply),
+    }));
+  }
+
+  const result = { items, total, page, totalPages: Math.ceil(total / limit) };
+  competitionCache.entries.set(cacheKey, result);
+  return result;
 }
 
 export async function getRentalPriceStats(regionName: string) {

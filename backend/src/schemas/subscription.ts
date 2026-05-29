@@ -34,5 +34,14 @@ export const RentalPriceStatsSchema = z.object({
   period: z.string(),
 });
 
+export const SubscriptionCompetitionRankSchema = z.object({
+  metric: z.enum(['rate', 'score']).default('rate'),
+  region: z.string().max(100).optional(),
+  sourceType: SubscriptionSourceTypeSchema.optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+export type SubscriptionCompetitionRankParams = z.infer<typeof SubscriptionCompetitionRankSchema>;
+
 export type SubscriptionListParams = z.infer<typeof SubscriptionListSchema>;
 export type RentalPriceStats = z.infer<typeof RentalPriceStatsSchema>;
