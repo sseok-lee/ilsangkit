@@ -93,7 +93,7 @@ const linkUrl = computed(() => {
 })
 
 const PROPERTY_ICONS: Record<string, { img: string; bg: string }> = {
-  apt: { img: 'apt', bg: 'bg-blue-50' },
+  apt: { img: 'apt', bg: 'bg-primary-50' },
   villa: { img: 'villa', bg: 'bg-emerald-50' },
   offitel: { img: 'offitel', bg: 'bg-violet-50' },
 }

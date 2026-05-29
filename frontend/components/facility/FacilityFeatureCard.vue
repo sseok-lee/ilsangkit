@@ -42,7 +42,7 @@ const props = withDefaults(defineProps<Props>(), {
 const colorClasses = computed(() => {
   const colorMap: Record<string, { bg: string; text: string }> = {
     pink: { bg: 'bg-pink-50', text: 'text-pink-500' },
-    blue: { bg: 'bg-blue-50', text: 'text-blue-500' },
+    blue: { bg: 'bg-primary-50', text: 'text-primary-500' },
     purple: { bg: 'bg-purple-50', text: 'text-purple-500' },
     orange: { bg: 'bg-orange-50', text: 'text-orange-500' },
     green: { bg: 'bg-green-50', text: 'text-green-500' },

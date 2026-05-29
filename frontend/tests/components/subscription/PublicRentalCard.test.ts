@@ -57,6 +57,6 @@ describe('PublicRentalCard', () => {
     expect(charter.html()).toContain('emerald')
 
     const buyLease = mount(PublicRentalCard, { props: { rental: baseRental } })
-    expect(buyLease.html()).toContain('blue')
+    expect(buyLease.html()).toContain('primary')
   })
 })

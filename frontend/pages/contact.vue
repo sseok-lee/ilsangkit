@@ -58,7 +58,7 @@
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           답변 안내
         </h2>
-        <div class="bg-blue-50 rounded-lg p-5">
+        <div class="bg-primary-50 rounded-lg p-5">
           <ul class="space-y-3 text-sm">
             <li class="flex items-start gap-2">
               <span class="text-primary font-bold mt-0.5">&#8226;</span>

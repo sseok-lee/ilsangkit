@@ -99,15 +99,15 @@
           </div>
 
           <!-- 담당 부서 연락처 -->
-          <div v-if="wasteContact && !wasteLoading && !initialLoading" class="bg-blue-50 rounded-xl p-4 border border-blue-100 mb-4">
+          <div v-if="wasteContact && !wasteLoading && !initialLoading" class="bg-primary-50 rounded-xl p-4 border border-primary-100 mb-4">
             <div class="flex items-center gap-2 mb-1">
-              <span class="material-symbols-outlined text-blue-500 text-[18px]">support_agent</span>
-              <span class="font-semibold text-blue-900 text-sm">{{ wasteContact.name }}</span>
+              <span class="material-symbols-outlined text-primary-500 text-[18px]">support_agent</span>
+              <span class="font-semibold text-primary-900 text-sm">{{ wasteContact.name }}</span>
             </div>
             <a
               v-if="wasteContact.phone"
               :href="`tel:${wasteContact.phone}`"
-              class="text-blue-600 text-sm hover:underline flex items-center gap-1"
+              class="text-primary text-sm hover:underline flex items-center gap-1"
             >
               <span class="material-symbols-outlined text-[16px]">call</span>
               {{ wasteContact.phone }}

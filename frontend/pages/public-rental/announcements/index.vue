@@ -124,7 +124,7 @@ const STATUS_LABEL: Record<AnnouncementStatus, string> = {
 
 const STATUS_BADGE: Record<AnnouncementStatus, string> = {
   ongoing: 'bg-emerald-50 text-emerald-700',
-  upcoming: 'bg-blue-50 text-blue-700',
+  upcoming: 'bg-primary-50 text-primary-700',
   closed: 'bg-slate-100 text-slate-500',
   unknown: 'bg-slate-50 text-slate-500',
 }

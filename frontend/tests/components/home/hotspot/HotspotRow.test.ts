@@ -38,7 +38,7 @@ describe('HotspotRow', () => {
       props: { region, rank: 1, signal: 'falling', href: '/x' },
       global: { stubs: { HardLink: linkStub } },
     });
-    expect(wrapper.html()).toMatch(/text-blue-500/);
+    expect(wrapper.html()).toMatch(/text-primary-500/);
     expect(wrapper.text()).toContain('−2.4%');
   });
 

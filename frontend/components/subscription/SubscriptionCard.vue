@@ -70,7 +70,7 @@ const rentTypeBadgeClass = computed(() => {
   const isRent = rt?.includes('임대')
   return isRent
     ? 'bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium'
-    : 'bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium'
+    : 'bg-primary-100 text-primary-700 px-2 py-1 rounded font-medium'
 })
 
 const statusLabel = computed(() => {
@@ -84,7 +84,7 @@ const statusLabel = computed(() => {
 const statusBadgeClass = computed(() => {
   const status = props.subscription.status
   const baseClass = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0'
-  if (status === 'upcoming') return `${baseClass} bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200`
+  if (status === 'upcoming') return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
   if (status === 'ongoing') return `${baseClass} bg-green-100 text-green-700 ring-1 ring-inset ring-green-200`
   return `${baseClass} bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200`
 })

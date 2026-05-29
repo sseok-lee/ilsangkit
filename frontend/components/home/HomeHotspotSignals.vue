@@ -118,7 +118,7 @@ const PROPERTY_OPTIONS: { value: RealEstatePropertyType; label: string }[] = [
 const SIGNAL_OPTIONS: { value: Signal; label: string; borderClass: string }[] = [
   { value: 'active',  label: '거래 급증', borderClass: 'border-violet-500' },
   { value: 'rising',  label: '상승',      borderClass: 'border-red-500' },
-  { value: 'falling', label: '하락',      borderClass: 'border-blue-500' },
+  { value: 'falling', label: '하락',      borderClass: 'border-primary-500' },
 ];
 
 const propertyType = ref<RealEstatePropertyType>('apt');

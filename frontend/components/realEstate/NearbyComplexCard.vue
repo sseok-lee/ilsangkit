@@ -42,7 +42,7 @@ const propertyLabel = computed(() =>
 )
 
 const badgeClass = computed(() => {
-  if (props.propertyType === 'apt') return 'bg-blue-50 text-blue-700'
+  if (props.propertyType === 'apt') return 'bg-primary-50 text-primary-700'
   if (props.propertyType === 'villa') return 'bg-emerald-50 text-emerald-700'
   return 'bg-amber-50 text-amber-700'
 })
@@ -50,7 +50,7 @@ const badgeClass = computed(() => {
 const priceLabel = computed(() => '최근 거래가')
 
 const priceBadgeClass = computed(() =>
-  props.mode === 'sale' ? 'bg-blue-50 text-blue-700' : 'bg-rose-50 text-rose-700'
+  props.mode === 'sale' ? 'bg-primary-50 text-primary-700' : 'bg-rose-50 text-rose-700'
 )
 
 // 만원 단위 가격을 "${억}억 ${만}" 또는 "${만}만"으로 포맷

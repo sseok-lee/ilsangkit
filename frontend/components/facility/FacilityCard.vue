@@ -59,7 +59,7 @@
         <!-- 카테고리별 추가 정보 뱃지 -->
         <div v-if="facility.extras && Object.keys(facility.extras).length > 0" class="flex flex-wrap gap-1.5 mt-2">
           <!-- toilet -->
-          <span v-if="facility.extras.operatingHours === '24시간'" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">24시간</span>
+          <span v-if="facility.extras.operatingHours === '24시간'" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">24시간</span>
           <span v-if="facility.extras.hasDisabledToilet" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-50 text-violet-700">장애인화장실</span>
 
           <!-- wifi -->
@@ -89,10 +89,10 @@
           <!-- hospital -->
           <span v-if="facility.extras.clCdNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-700">{{ facility.extras.clCdNm }}</span>
           <span v-if="facility.extras.phone" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ facility.extras.phone }}</span>
-          <span v-if="facility.extras.drTotCnt" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">의사 {{ facility.extras.drTotCnt }}명</span>
+          <span v-if="facility.extras.drTotCnt" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">의사 {{ facility.extras.drTotCnt }}명</span>
 
           <!-- sports -->
-          <span v-if="facility.extras.ftypeNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">{{ facility.extras.ftypeNm }}</span>
+          <span v-if="facility.extras.ftypeNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">{{ facility.extras.ftypeNm }}</span>
           <span v-if="facility.extras.faciGbNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium" :class="facility.extras.faciGbNm === '공공' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ facility.extras.faciGbNm }}</span>
 
           <!-- childcare -->
@@ -117,7 +117,7 @@
           <span v-if="facility.extras.highSchoolType" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-50 text-violet-700">{{ facility.extras.highSchoolType }}</span>
 
           <!-- ev-charger (충전소 단위) -->
-          <span v-if="facility.extras.rapidCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">급속 {{ facility.extras.rapidCount }}대</span>
+          <span v-if="facility.extras.rapidCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">급속 {{ facility.extras.rapidCount }}대</span>
           <span v-if="facility.extras.slowCount" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-50 text-green-700">완속 {{ facility.extras.slowCount }}대</span>
 
           <!-- subway 노선 배지 (환승역은 다중 표시) -->

@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<{
 
 const VARIANT_CLASS: Record<Variant, string> = {
   green: 'bg-emerald-50 text-emerald-700',
-  blue: 'bg-blue-50 text-blue-700',
+  blue: 'bg-primary-50 text-primary-700',
   amber: 'bg-amber-50 text-amber-700',
   rose: 'bg-rose-50 text-rose-700',
   purple: 'bg-violet-50 text-violet-700',
