@@ -125,7 +125,7 @@
               data-testid="nav-mega-menu"
               role="region"
               aria-label="생활정보 메뉴"
-              class="absolute top-full left-0 mt-1 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50"
+              class="absolute top-full right-0 mt-1 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
             >
