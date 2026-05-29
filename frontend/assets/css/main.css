@@ -21,11 +21,11 @@
 }
 
 @layer components {
-  /* Typography Tokens — 1.33 ratio 일관 + weight 의미별 (shape 브리프 ≥1.25 권장).
-     - display-1: H1 hero (32px / 800)
-     - display-2: H2 section (24px / 700)
-     - display-3: H3 sub (18px / 700)
-     - eyebrow:   카테고리·라벨 (12px / uppercase / wide tracking)
+  /* Typography Tokens — weight 의미별. 코드베이스 실제 스케일에 맞춰 정의(2026-05 display-2 재정의).
+     - display-1: H1 hero (26→32px / 800)
+     - display-2: H2 section (18px flat / 700)
+     - display-3: H3 sub (16→18px / 700)
+     - eyebrow:   카테고리·라벨 (11px / uppercase / wide tracking)
      - body:      본문 (15px / 1.6 line-height)
      - caption:   보조 텍스트 (13px / weight 500) */
   .text-display-1 {
