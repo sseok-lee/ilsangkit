@@ -11,6 +11,7 @@ import {
   fetchRealEstateBuildings,
   fetchSubscriptionIds,
   fetchSubwaySlugs,
+  fetchPublicRentalAnnouncementIds,
   getWeekStartDate,
 } from '../utils/sitemap'
 import {
@@ -171,6 +172,28 @@ export default defineEventHandler(async (event) => {
     }
   } catch (err) {
     console.error('[sitemap] subway index entry build failed:', err)
+  }
+
+  // 공공임대 모집공고 — distinct pblancId 약 220개로 단일 청크. subway와 동일하게 직접 fetch.
+  try {
+    const praItems = await fetchPublicRentalAnnouncementIds()
+    if (praItems.length > 0) {
+      const praLatestDate = praItems.reduce((max, item) => {
+        const d = item.updatedAt?.split('T')[0]
+        return d && d > max ? d : max
+      }, '')
+      const praLastmod = praLatestDate || today
+      const praPages = Math.max(1, Math.ceil(praItems.length / MAX_URLS_PER_SITEMAP))
+      if (praPages === 1) {
+        sitemaps.push({ loc: `${SITE_URL}/sitemap/public-rental-announcements.xml`, lastmod: praLastmod })
+      } else {
+        for (let i = 1; i <= praPages; i++) {
+          sitemaps.push({ loc: `${SITE_URL}/sitemap/public-rental-announcements-${i}.xml`, lastmod: praLastmod })
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[sitemap] public-rental-announcements index entry build failed:', err)
   }
 
   return generateSitemapIndexXml(sitemaps)

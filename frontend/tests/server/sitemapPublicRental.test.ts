@@ -43,4 +43,25 @@ describe('sitemap chunk: public-rental-announcements', () => {
       chunkHandler(createMockEvent('/sitemap/public-rental-bogus.xml') as never),
     ).rejects.toMatchObject({ statusCode: 404 })
   })
+
+  it('index가 public-rental-announcements 청크를 광고한다', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: {
+          facilities: [], waste: { count: 0, maxUpdatedAt: null },
+          subscriptions: { count: 0, maxUpdatedAt: null },
+          realEstateBuildings: { count: 0, maxUpdatedAt: null },
+        } })
+      }
+      if (path.includes('/api/sitemap/public-rental-announcements')) {
+        return Promise.resolve({ data: [{ pblancId: 'PBL-1', updatedAt: '2026-05-29T01:00:00Z' }] })
+      }
+      if (path.includes('/api/subway/stations')) return Promise.resolve({ data: { items: [] } })
+      return Promise.resolve({ data: [] })
+    }) as typeof ssrFetch)
+
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const xml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
+    expect(xml).toContain('/sitemap/public-rental-announcements.xml')
+  })
 })
