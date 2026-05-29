@@ -49,12 +49,12 @@ describe('AppHeader', () => {
       expect(nav.exists()).toBe(true)
     })
 
-    it('should display top-level nav buttons (부동산/청약·임대/생활정보)', () => {
+    it('should display top-level nav buttons (부동산/청약·임대/생활시설)', () => {
       const nav = wrapper.find('nav.hidden.md\\:flex')
       const text = nav.text()
       expect(text).toContain('부동산')
       expect(text).toContain('청약·임대')
-      expect(text).toContain('생활정보')
+      expect(text).toContain('생활시설')
     })
 
     it('should have utility links for search and about', () => {
@@ -65,9 +65,9 @@ describe('AppHeader', () => {
       expect(hrefs).toContain('/about')
     })
 
-    it('생활정보 메가메뉴는 4개 그룹 열과 시설 카테고리 링크를 보여준다', async () => {
+    it('생활시설 메가메뉴는 4개 그룹 열과 시설 카테고리 링크를 보여준다', async () => {
       const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
-      // 부동산=0, 청약·임대=1, 생활정보=2 (총 3개)
+      // 부동산=0, 청약·임대=1, 생활시설=2 (총 3개)
       expect(groupButtons.length).toBe(3)
 
       await groupButtons[2].trigger('mouseenter')
@@ -163,12 +163,12 @@ describe('AppHeader', () => {
       expect(text).toContain('환경/생활')
     })
 
-    it('모바일 메뉴에 생활정보 통합 섹션 헤더가 있어야 한다', async () => {
+    it('모바일 메뉴에 생활시설 통합 섹션 헤더가 있어야 한다', async () => {
       const menuButton = wrapper.find('button[aria-label="메뉴"]')
       await menuButton.trigger('click')
 
       const mobileMenu = wrapper.find('[data-testid="mobile-menu"]')
-      expect(mobileMenu.text()).toContain('생활정보')
+      expect(mobileMenu.text()).toContain('생활시설')
     })
 
     it('should have about link in mobile menu', async () => {
