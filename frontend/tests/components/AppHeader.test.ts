@@ -49,13 +49,12 @@ describe('AppHeader', () => {
       expect(nav.exists()).toBe(true)
     })
 
-    it('should display group titles', () => {
+    it('should display top-level nav buttons (부동산/청약·임대/생활정보)', () => {
       const nav = wrapper.find('nav.hidden.md\\:flex')
       const text = nav.text()
-      expect(text).toContain('생활/편의')
-      expect(text).toContain('교육/육아')
-      expect(text).toContain('건강/안전')
-      expect(text).toContain('환경/생활')
+      expect(text).toContain('부동산')
+      expect(text).toContain('청약·임대')
+      expect(text).toContain('생활정보')
     })
 
     it('should have utility links for search and about', () => {
@@ -66,22 +65,27 @@ describe('AppHeader', () => {
       expect(hrefs).toContain('/about')
     })
 
-    it('should show dropdown with category links on hover', async () => {
+    it('생활정보 메가메뉴는 4개 그룹 열과 시설 카테고리 링크를 보여준다', async () => {
       const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
-      expect(groupButtons.length).toBe(6)
+      // 부동산=0, 청약·임대=1, 생활정보=2 (총 3개)
+      expect(groupButtons.length).toBe(3)
 
-      // Hover over 생활/편의 group (index 4: 부동산=0, 청약·임대=1, 교육/육아=2, 건강/안전=3, 생활/편의=4)
-      await groupButtons[4].trigger('mouseenter')
+      await groupButtons[2].trigger('mouseenter')
 
-      // Dropdown should appear with category links
-      const dropdown = groupButtons[4].find('.absolute')
-      expect(dropdown.exists()).toBe(true)
-      const links = dropdown.findAll('a')
-      const hrefs = links.map((l) => l.attributes('href'))
-      expect(hrefs).toContain('/park')
-      expect(hrefs).toContain('/market')
-      expect(hrefs).toContain('/parking')
-      expect(hrefs).toContain('/toilet')
+      const mega = wrapper.find('[data-testid="nav-mega-menu"]')
+      expect(mega.exists()).toBe(true)
+
+      const text = mega.text()
+      expect(text).toContain('교육/육아')
+      expect(text).toContain('건강/안전')
+      expect(text).toContain('생활/편의')
+      expect(text).toContain('환경/생활')
+
+      const hrefs = mega.findAll('a').map((l) => l.attributes('href'))
+      expect(hrefs).toContain('/school')    // 교육/육아
+      expect(hrefs).toContain('/hospital')  // 건강/안전
+      expect(hrefs).toContain('/park')      // 생활/편의
+      expect(hrefs).toContain('/clothes')   // 환경/생활
     })
 
     it('should show 4 real estate links including hub in navigation', async () => {
@@ -157,6 +161,14 @@ describe('AppHeader', () => {
       expect(text).toContain('교육/육아')
       expect(text).toContain('건강/안전')
       expect(text).toContain('환경/생활')
+    })
+
+    it('모바일 메뉴에 생활정보 통합 섹션 헤더가 있어야 한다', async () => {
+      const menuButton = wrapper.find('button[aria-label="메뉴"]')
+      await menuButton.trigger('click')
+
+      const mobileMenu = wrapper.find('[data-testid="mobile-menu"]')
+      expect(mobileMenu.text()).toContain('생활정보')
     })
 
     it('should have about link in mobile menu', async () => {

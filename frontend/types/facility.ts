@@ -533,7 +533,8 @@ export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
   },
 ] as const
 
-export const NAV_GROUPS: readonly NavGroup[] = [
+// 개별 드롭다운으로 남는 링크 그룹 (부동산, 청약·임대)
+export const NAV_LINK_GROUPS: readonly LinkGroup[] = [
   {
     title: '부동산',
     icon: 'apartment',
@@ -567,6 +568,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { to: '/public-rental/charter', label: '전세임대', icon: 'savings', iconImg: 'land', section: '공공임대 입주' },
     ],
   },
+] as const
+
+export const NAV_GROUPS: readonly NavGroup[] = [
+  ...NAV_LINK_GROUPS,
   ...CATEGORY_GROUPS,
 ] as const
 
