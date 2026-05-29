@@ -288,3 +288,22 @@ export async function fetchSubscriptionIds(): Promise<{ id: number; updatedAt: s
     return []
   }
 }
+
+export async function fetchPublicRentalAnnouncementIds(): Promise<{ pblancId: string; updatedAt: string }[]> {
+  const cacheKey = 'public-rental-announcements'
+  const cached = getCached<{ pblancId: string; updatedAt: string }>(cacheKey)
+  if (cached) return cached
+
+  try {
+    const json = await ssrFetch<{ data?: { pblancId: string; updatedAt: string }[] }>(
+      '/api/sitemap/public-rental-announcements',
+      { timeoutMs: 25_000 },
+    )
+    const data = json.data ?? []
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error('[sitemap] fetchPublicRentalAnnouncementIds failed', err)
+    return []
+  }
+}
