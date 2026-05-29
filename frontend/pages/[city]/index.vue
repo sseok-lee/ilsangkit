@@ -27,7 +27,7 @@
 
         <!-- ② 구/군 선택 -->
         <section id="districts" class="mb-6">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
+          <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
             <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
             구/군 선택
           </h2>
@@ -51,7 +51,7 @@
 
         <!-- ③ 생활 가이드 -->
         <section class="mb-6">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
+          <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
             <span class="material-symbols-outlined text-primary text-[22px]">menu_book</span>
             생활 가이드
           </h2>

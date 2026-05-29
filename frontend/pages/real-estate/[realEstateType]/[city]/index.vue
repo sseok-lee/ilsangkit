@@ -11,7 +11,7 @@
 
       <SectionBlock :subtext="`${cityName} 내 구/군을 선택하면 단지 목록을 확인할 수 있습니다.`">
         <template #heading>
-          <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">{{ cityName }} 구/군 목록</h2>
+          <h2 class="text-display-3 text-slate-900">{{ cityName }} 구/군 목록</h2>
         </template>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <NuxtLink

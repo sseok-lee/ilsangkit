@@ -20,7 +20,7 @@
               <dd class="mt-1">
                 <a
                   href="mailto:contact@ilsangkit.co.kr"
-                  class="text-primary hover:text-primary-600 font-medium"
+                  class="text-primary hover:text-primary font-medium"
                 >
                   contact@ilsangkit.co.kr
                 </a>
@@ -81,7 +81,7 @@
           자주 묻는 질문
         </h2>
         <p class="mb-3">
-          문의 전에 <NuxtLink to="/faq" class="text-primary hover:text-primary-600 font-medium">자주 묻는 질문(FAQ)</NuxtLink> 페이지를 먼저 확인해 보시면 빠르게 답을 찾으실 수 있습니다.
+          문의 전에 <NuxtLink to="/faq" class="text-primary hover:text-primary font-medium">자주 묻는 질문(FAQ)</NuxtLink> 페이지를 먼저 확인해 보시면 빠르게 답을 찾으실 수 있습니다.
         </p>
       </section>
 
@@ -91,19 +91,19 @@
         </h2>
         <ul class="list-disc pl-5 space-y-2">
           <li>
-            <NuxtLink to="/about" class="text-primary hover:text-primary-600">소개</NuxtLink>
+            <NuxtLink to="/about" class="text-primary hover:text-primary">소개</NuxtLink>
             — 일상킷 서비스에 대해 알아보기
           </li>
           <li>
-            <NuxtLink to="/faq" class="text-primary hover:text-primary-600">자주 묻는 질문</NuxtLink>
+            <NuxtLink to="/faq" class="text-primary hover:text-primary">자주 묻는 질문</NuxtLink>
             — 서비스 이용 관련 FAQ
           </li>
           <li>
-            <NuxtLink to="/privacy" class="text-primary hover:text-primary-600">개인정보처리방침</NuxtLink>
+            <NuxtLink to="/privacy" class="text-primary hover:text-primary">개인정보처리방침</NuxtLink>
             — 개인정보 처리에 관한 안내
           </li>
           <li>
-            <NuxtLink to="/terms" class="text-primary hover:text-primary-600">이용약관</NuxtLink>
+            <NuxtLink to="/terms" class="text-primary hover:text-primary">이용약관</NuxtLink>
             — 서비스 이용에 관한 약관
           </li>
         </ul>

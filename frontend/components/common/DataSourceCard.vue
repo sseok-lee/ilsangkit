@@ -2,7 +2,7 @@
   <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
       <span class="material-symbols-outlined text-slate-500 text-[20px]">description</span>
-      <h2 class="text-slate-800 text-lg font-bold">데이터 정보</h2>
+      <h2 class="text-slate-800 text-display-2">데이터 정보</h2>
     </div>
     <div class="p-5 flex flex-col gap-3">
       <div v-if="dataDate" class="flex items-center justify-between">
