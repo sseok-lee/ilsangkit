@@ -12,9 +12,14 @@
           </h2>
           <p class="text-sm text-slate-500 mt-1">최근 7일 실거래 · 전주 대비 변동이 가장 큰 지역</p>
         </div>
-        <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">
-          전체 보기 →
-        </HardLink>
+        <div class="flex items-center gap-3">
+          <HardLink :to="`/real-estate/ranking/${rankingSlug}`" class="inline-flex items-center text-sm text-slate-600 font-bold hover:text-primary hover:underline whitespace-nowrap">
+            시세 순위 →
+          </HardLink>
+          <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">
+            전체 보기 →
+          </HardLink>
+        </div>
       </div>
 
       <div class="px-6 pb-4 flex items-center gap-3 flex-wrap">
@@ -103,6 +108,7 @@ import TxnTypeMiniTabs from './hotspot/TxnTypeMiniTabs.vue';
 import type { RealEstateHotspots } from '~/composables/useHomeDashboard';
 import { useRealEstateHotspots } from '~/composables/useRealEstateHotspots';
 import type { RealEstatePropertyType } from '~/types/realEstate';
+import { toApiSlug } from '~/types/realEstate';
 
 type TxnKey = 'sale' | 'jeonse' | 'wolse';
 type Signal = 'rising' | 'falling' | 'active';
@@ -155,4 +161,6 @@ const currentBundle = computed(() => {
 });
 
 const cardGridCols = computed(() => (txnType.value === 'wolse' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'));
+
+const rankingSlug = computed(() => toApiSlug(propertyType.value, txnType.value === 'sale' ? 'sale' : 'rent'));
 </script>

@@ -80,6 +80,13 @@ describe('HomeHotspotSignals', () => {
     expect(wrapper.find('.animate-spin').exists()).toBe(false);
   });
 
+  it('헤더에 /real-estate/ranking/ 로 시작하는 시세 순위 링크가 있다', () => {
+    const wrapper = mount(HomeHotspotSignals, {
+      props: { hotspots: { apt: fullBundle() } },
+    });
+    expect(wrapper.html()).toContain('/real-estate/ranking/');
+  });
+
   it('wolse tab hides rising/falling cards, shows only active', async () => {
     const wrapper = mount(HomeHotspotSignals, {
       props: { hotspots: { apt: fullBundle() } },
