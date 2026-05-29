@@ -12,6 +12,7 @@ import {
   getNearbyByBjd,
 } from '../services/realEstateService.js';
 import { getHubSummary } from '../services/realEstateHubSummaryService.js';
+import { getNewHighBuildings } from '../services/realEstateNewHighService.js';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
@@ -25,6 +26,7 @@ import {
   AreaGroupsQuerySchema,
   PriceAnalysisQuerySchema,
   NearbyQuerySchema,
+  NewHighQuerySchema,
 } from '../schemas/realEstate.js';
 import { z } from 'zod';
 
@@ -67,6 +69,17 @@ router.get(
     const summary = await getHubSummary();
     res.json({ success: true, data: summary.data, generatedAt: summary.generatedAt });
   }),
+);
+
+// GET /api/real-estate/new-high - 신고가 건물 목록 (must be before /:type routes)
+router.get(
+  '/new-high',
+  validate(NewHighQuerySchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { propertyType, limit } = req.query as unknown as z.infer<typeof NewHighQuerySchema>;
+    const data = await getNewHighBuildings(propertyType, limit);
+    res.json({ success: true, data });
+  })
 );
 
 // GET /api/real-estate/search - 통합 검색 (must be before /:type routes)

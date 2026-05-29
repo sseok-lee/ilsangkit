@@ -107,3 +107,11 @@ export const NearbyQuerySchema = z.object({
 });
 
 export type NearbyQuery = z.infer<typeof NearbyQuerySchema>;
+
+// 신고가 조회 스키마 — 매매 3타입만 허용
+export const NewHighQuerySchema = z.object({
+  propertyType: z.enum(['apt-sale', 'villa-sale', 'offitel-sale']),
+  limit: z.coerce.number().int().min(1).max(50).default(30),
+});
+
+export type NewHighQuery = z.infer<typeof NewHighQuerySchema>;
