@@ -14,6 +14,27 @@ export type SubscriptionDetailResponse = Subscription & {
   specialStatuses: SubscriptionSpecialStatus[]
 }
 
+export interface CompetitionRankItem {
+  subscriptionId: number
+  houseName: string
+  regionName: string
+  sourceType: SubscriptionSourceType
+  winnerDate: string | null
+  maxRate?: number | null
+  totalApplicants?: number | null
+  totalSupply?: number | null
+  minCut?: number | null
+  maxCut?: number | null
+  avgCut?: number | null
+}
+
+export interface CompetitionRankResponse {
+  items: CompetitionRankItem[]
+  total: number
+  page: number
+  totalPages: number
+}
+
 export function useSubscription() {
   const apiBase = useApiBase()
 
@@ -57,9 +78,30 @@ export function useSubscription() {
     return res.data
   }
 
+  async function getCompetitionRanking(params: {
+    metric?: 'rate' | 'score'
+    region?: string
+    sourceType?: SubscriptionSourceType
+    page?: number
+    limit?: number
+  }): Promise<CompetitionRankResponse> {
+    const query = new URLSearchParams()
+    if (params.metric) query.set('metric', params.metric)
+    if (params.region) query.set('region', params.region)
+    if (params.sourceType) query.set('sourceType', params.sourceType)
+    if (params.page) query.set('page', String(params.page))
+    if (params.limit) query.set('limit', String(params.limit))
+
+    const res = await $fetch<{ success: boolean; data: CompetitionRankResponse }>(
+      `${apiBase}/api/subscription/competition?${query.toString()}`
+    )
+    return res.data
+  }
+
   return {
     getSubscriptionList,
     getSubscriptionDetail,
     getUpcomingSubscriptions,
+    getCompetitionRanking,
   }
 }
