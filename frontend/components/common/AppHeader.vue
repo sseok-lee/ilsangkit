@@ -27,6 +27,8 @@
 
       <!-- Center/Right: Desktop Navigation (single nav, fills remaining width) -->
       <nav class="hidden md:flex items-center flex-1 gap-1 ml-4">
+        <!-- 좌측 로고와 우측 정렬 네비 클러스터 사이 여백 -->
+        <div class="flex-1" aria-hidden="true"></div>
         <!-- 개별 드롭다운: NAV_LINK_GROUPS (부동산, 청약·임대) -->
         <div
           v-for="group in NAV_LINK_GROUPS"
@@ -91,24 +93,24 @@
           </Transition>
         </div>
 
-        <!-- 생활정보: 시설 4개 그룹 통합 메가메뉴 -->
+        <!-- 생활시설: 시설 4개 그룹 통합 메가메뉴 -->
         <div
           class="relative"
-          @mouseenter="openDropdown('생활정보')"
+          @mouseenter="openDropdown('생활시설')"
           @mouseleave="scheduleCloseDropdown"
-          @focusout="handleDropdownFocusout($event, '생활정보')"
+          @focusout="handleDropdownFocusout($event, '생활시설')"
         >
           <button
             class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
             aria-haspopup="true"
-            :aria-expanded="activeDropdown === '생활정보'"
-            @click="toggleDropdown('생활정보')"
-            @keydown.enter.prevent="openDropdown('생활정보')"
-            @keydown.space.prevent="openDropdown('생활정보')"
+            :aria-expanded="activeDropdown === '생활시설'"
+            @click="toggleDropdown('생활시설')"
+            @keydown.enter.prevent="openDropdown('생활시설')"
+            @keydown.space.prevent="openDropdown('생활시설')"
           >
             <span class="material-symbols-outlined text-[18px]">grid_view</span>
-            생활정보
-            <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === '생활정보' }">expand_more</span>
+            생활시설
+            <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === '생활시설' }">expand_more</span>
           </button>
           <Transition
             enter-active-class="transition duration-150 ease-out"
@@ -119,11 +121,11 @@
             leave-to-class="opacity-0 scale-95 -translate-y-1"
           >
             <div
-              v-if="activeDropdown === '생활정보'"
+              v-if="activeDropdown === '생활시설'"
               data-testid="nav-mega-menu"
               role="region"
-              aria-label="생활정보 메뉴"
-              class="absolute top-full left-0 mt-1 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50"
+              aria-label="생활시설 메뉴"
+              class="absolute top-full right-0 mt-1 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
             >
@@ -147,8 +149,8 @@
           </Transition>
         </div>
 
-        <!-- Utility Links (오른쪽으로 밀기) -->
-        <div class="ml-auto flex items-center gap-1">
+        <!-- Utility Links (우측 정렬 클러스터 내부) -->
+        <div class="flex items-center gap-1">
           <div class="h-5 w-px bg-slate-200 mx-1"></div>
           <HardLink
             to="/guide"
@@ -230,11 +232,11 @@
           </template>
         </div>
 
-        <!-- 생활정보 통합 섹션 (시설 4개 그룹) -->
+        <!-- 생활시설 통합 섹션 (시설 4개 그룹) -->
         <div class="mb-1">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <span class="material-symbols-outlined text-[16px] text-primary">grid_view</span>
-            생활정보
+            생활시설
           </div>
           <div v-for="group in CATEGORY_GROUPS" :key="group.title">
             <div class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
