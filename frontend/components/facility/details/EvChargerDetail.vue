@@ -5,7 +5,7 @@
       <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-slate-100 text-slate-800">
         총 {{ displayChargers.length }}대
       </span>
-      <span v-if="rapidCount > 0" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800">
+      <span v-if="rapidCount > 0" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-primary-100 text-primary-800">
         급속 {{ rapidCount }}대
       </span>
       <span v-if="slowCount > 0" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-green-100 text-green-800">
@@ -230,7 +230,7 @@ function getTypeLabel(charger: EvChargerItem): string {
 }
 
 function getTypeBadgeClass(charger: EvChargerItem): string {
-  return parseFloat(charger.output || '0') >= 50 ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+  return parseFloat(charger.output || '0') >= 50 ? 'bg-primary-100 text-primary-800' : 'bg-green-100 text-green-800'
 }
 
 function getStatLabel(charger: EvChargerItem): string {

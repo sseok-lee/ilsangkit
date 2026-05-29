@@ -126,7 +126,7 @@
           </div>
         </template>
         <template #right>
-          <span class="inline-flex px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+          <span class="inline-flex px-2.5 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs font-bold">
             {{ upcomingItems.length }}
           </span>
         </template>
@@ -153,7 +153,7 @@
       <SectionBlock heading="자주 묻는 질문">
         <div class="space-y-1">
           <details v-for="(faq, i) in faqs" :key="i" class="border-b border-gray-200">
-            <summary class="py-3 cursor-pointer font-medium text-gray-800 hover:text-blue-600">{{ faq.question }}</summary>
+            <summary class="py-3 cursor-pointer font-medium text-gray-800 hover:text-primary">{{ faq.question }}</summary>
             <p class="pb-3 text-gray-600 text-sm leading-relaxed">{{ faq.answer }}</p>
           </details>
         </div>

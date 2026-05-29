@@ -86,7 +86,7 @@ function parseDays(raw: string): string[] {
 }
 
 function dayChipClass(day: string): string {
-  if (day === '토') return 'bg-blue-100 text-blue-700'
+  if (day === '토') return 'bg-primary-100 text-primary-700'
   if (day === '일') return 'bg-red-100 text-red-700'
   return 'bg-slate-100 text-slate-700'
 }

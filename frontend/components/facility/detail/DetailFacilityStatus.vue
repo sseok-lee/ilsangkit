@@ -6,7 +6,7 @@
         <template v-if="facility.category === 'toilet'">
           <div v-if="details?.maleToilets" class="col-span-1 py-2 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="p-2 bg-blue-50 text-blue-600 rounded-full">
+              <div class="p-2 bg-primary-50 text-primary rounded-full">
                 <span class="material-symbols-outlined">man</span>
               </div>
               <span class="text-sm font-medium text-gray-600">남자 화장실</span>
@@ -24,7 +24,7 @@
           </div>
           <div v-if="details?.maleUrinals" class="col-span-1 py-2 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="p-2 bg-blue-50 text-blue-600 rounded-full">
+              <div class="p-2 bg-primary-50 text-primary rounded-full">
                 <span class="material-symbols-outlined">man</span>
               </div>
               <span class="text-sm font-medium text-gray-600">남성용 소변기</span>
@@ -784,7 +784,7 @@ const childcareStaffRoles = computed(() => {
 
 const CAREER_COLORS = [
   'bg-sky-100 text-sky-800',
-  'bg-blue-100 text-blue-800',
+  'bg-primary-100 text-primary-800',
   'bg-indigo-100 text-indigo-800',
   'bg-violet-100 text-violet-800',
   'bg-purple-100 text-purple-800',

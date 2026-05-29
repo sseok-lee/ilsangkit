@@ -20,7 +20,7 @@
         이번 주 마감 <strong>{{ summary.closingThisWeek }}건</strong>
       </span>
       <span class="flex items-center gap-1.5">
-        <span class="inline-block w-2 h-2 rounded-full bg-blue-500" aria-hidden="true"></span>
+        <span class="inline-block w-2 h-2 rounded-full bg-primary-500" aria-hidden="true"></span>
         다음 주 예정 <strong>{{ summary.upcomingNextWeek }}건</strong>
       </span>
       <span v-if="summary.avgSupplyPrice !== null" class="flex items-center gap-1">
@@ -66,7 +66,7 @@
         v-for="item in upcoming"
         :key="`upcoming-${item.id}`"
         :to="`/subscription/${item.id}`"
-        class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-blue-300 transition-shadow"
+        class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-primary-300 transition-shadow"
       >
         <StatusBadge variant="blue" class="self-start">접수예정</StatusBadge>
         <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">{{ item.houseName }}</strong>

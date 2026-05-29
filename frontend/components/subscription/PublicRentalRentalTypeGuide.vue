@@ -5,14 +5,14 @@
     </p>
 
     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div class="rounded-lg border border-blue-100 bg-blue-50/40 p-4">
-        <h4 class="text-sm font-bold text-blue-900 mb-2 flex items-center gap-1.5">
+      <div class="rounded-lg border border-primary-100 bg-primary-50/40 p-4">
+        <h4 class="text-sm font-bold text-primary-900 mb-2 flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px]">check_circle</span>
           주요 특징
         </h4>
         <ul class="space-y-1.5 text-sm text-slate-700">
           <li v-for="feature in guide.features" :key="feature" class="flex items-start gap-2">
-            <span class="text-blue-500 mt-1">•</span>
+            <span class="text-primary-500 mt-1">•</span>
             <span class="break-keep">{{ feature }}</span>
           </li>
         </ul>

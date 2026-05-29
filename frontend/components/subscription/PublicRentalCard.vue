@@ -14,7 +14,7 @@
           </span>
           <span
             v-else-if="rental.announcementStatus === 'upcoming'"
-            class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200"
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-200"
           >
             모집예정
           </span>
@@ -84,7 +84,7 @@ const rentalTypeBadgeClass = computed(() => {
     return `${baseClass} bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200`
   }
   if (props.rental.rentalType === '매입임대') {
-    return `${baseClass} bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200`
+    return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
   }
   return `${baseClass} bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200`
 })

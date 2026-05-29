@@ -24,7 +24,7 @@
           :class="[
             'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold',
             card.deal === 'sale'
-              ? 'bg-blue-100 text-blue-700'
+              ? 'bg-primary-100 text-primary-700'
               : 'bg-amber-100 text-amber-700',
           ]"
         >

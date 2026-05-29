@@ -218,7 +218,7 @@
                   v-if="depositChangeRate(tx) !== null"
                   :class="[
                     'text-xs mt-0.5',
-                    depositChangeRate(tx)! > 0 ? 'text-red-500' : 'text-blue-500',
+                    depositChangeRate(tx)! > 0 ? 'text-red-500' : 'text-primary-500',
                   ]"
                 >
                   {{ formatChangeRate(depositChangeRate(tx)!) }}
@@ -230,7 +230,7 @@
                   v-if="monthlyRentChangeRate(tx) !== null"
                   :class="[
                     'text-xs mt-0.5',
-                    monthlyRentChangeRate(tx)! > 0 ? 'text-red-500' : 'text-blue-500',
+                    monthlyRentChangeRate(tx)! > 0 ? 'text-red-500' : 'text-primary-500',
                   ]"
                 >
                   {{ formatChangeRate(monthlyRentChangeRate(tx)!) }}
@@ -241,7 +241,7 @@
                   :class="[
                     'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
                     tx.rentType === '전세'
-                      ? 'bg-blue-50 text-blue-700'
+                      ? 'bg-primary-50 text-primary-700'
                       : 'bg-orange-50 text-orange-700',
                   ]"
                 >
@@ -290,7 +290,7 @@
                 v-if="depositChangeRate(tx) !== null"
                 :class="[
                   'text-xs ml-1',
-                  depositChangeRate(tx)! > 0 ? 'text-red-500' : 'text-blue-500',
+                  depositChangeRate(tx)! > 0 ? 'text-red-500' : 'text-primary-500',
                 ]"
               >
                 {{ formatChangeRate(depositChangeRate(tx)!) }}
@@ -300,7 +300,7 @@
               :class="[
                 'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
                 tx.rentType === '전세'
-                  ? 'bg-blue-50 text-blue-700'
+                  ? 'bg-primary-50 text-primary-700'
                   : 'bg-orange-50 text-orange-700',
               ]"
             >
@@ -325,7 +325,7 @@
                 v-if="monthlyRentChangeRate(tx) !== null"
                 :class="[
                   'text-xs',
-                  monthlyRentChangeRate(tx)! > 0 ? 'text-red-500' : 'text-blue-500',
+                  monthlyRentChangeRate(tx)! > 0 ? 'text-red-500' : 'text-primary-500',
                 ]"
               >
                 {{ formatChangeRate(monthlyRentChangeRate(tx)!) }}

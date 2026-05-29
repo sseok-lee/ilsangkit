@@ -43,7 +43,7 @@ const props = defineProps<{
 
 const SIGNAL_META: Record<Signal, { title: string; icon: string; iconBg: string; iconColor: string; caption: string }> = {
   rising:  { title: '평당가 상승 TOP', icon: 'local_fire_department', iconBg: 'bg-red-50', iconColor: 'text-red-500', caption: 'vs 전주' },
-  falling: { title: '평당가 하락 TOP', icon: 'trending_down', iconBg: 'bg-blue-50', iconColor: 'text-blue-500', caption: 'vs 전주' },
+  falling: { title: '평당가 하락 TOP', icon: 'trending_down', iconBg: 'bg-primary-50', iconColor: 'text-primary-500', caption: 'vs 전주' },
   active:  { title: '거래 급증 지역', icon: 'bolt', iconBg: 'bg-violet-50', iconColor: 'text-violet-600', caption: '거래량 변동' },
 };
 

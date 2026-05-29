@@ -257,7 +257,7 @@
                 <tr v-for="score in validScores" :key="`${score.modelNo}-${score.regionCode}`" class="border-b border-slate-100 hover:bg-slate-50">
                   <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(score.houseType) }}</td>
                   <td class="py-3 px-3 text-slate-600">{{ score.regionName || '-' }}</td>
-                  <td class="py-3 px-3 text-right font-semibold text-blue-600">{{ score.minScore || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-semibold text-primary">{{ score.minScore || '-' }}</td>
                   <td class="py-3 px-3 text-right font-semibold text-red-600">{{ score.maxScore || '-' }}</td>
                   <td class="py-3 px-3 text-right font-bold text-slate-900">{{ score.avgScore || '-' }}</td>
                 </tr>
@@ -336,7 +336,7 @@
           <template #right>
             <div class="relative">
               <button
-                class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
+                class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-primary-50"
                 @click="showNavDropdown = !showNavDropdown"
               >
                 <span class="material-symbols-outlined text-[18px]">directions</span>
@@ -547,7 +547,7 @@ const rentTypeBadgeClass = computed(() => {
   const rt = subscription.value.rentType
   const baseClass = 'inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold'
   if (rt === '임대주택') return `${baseClass} bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200`
-  return `${baseClass} bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200`
+  return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
 })
 
 const priceRange = computed(() => {
@@ -645,7 +645,7 @@ const statusBadgeClass = computed(() => {
   if (!subscription.value) return ''
   const status = subscription.value.status
   const baseClass = 'inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold'
-  if (status === 'upcoming') return `${baseClass} bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200`
+  if (status === 'upcoming') return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
   if (status === 'ongoing') return `${baseClass} bg-green-100 text-green-700 ring-1 ring-inset ring-green-200`
   return `${baseClass} bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200`
 })

@@ -146,7 +146,7 @@ const transitStations = computed<Station[]>(() =>
 
 function transitBadgeClass(distance: number): string {
   if (distance <= 300) return 'bg-emerald-50 text-emerald-600'
-  if (distance <= 700) return 'bg-blue-50 text-blue-500'
+  if (distance <= 700) return 'bg-primary-50 text-primary-500'
   return 'bg-slate-100 text-slate-500'
 }
 
@@ -191,7 +191,7 @@ function categoryBgClass(category: FacilityCategory): string {
 
 function distanceBadgeClass(distance?: number): string {
   if (!distance || distance <= 100) return 'bg-emerald-50 text-emerald-600'
-  if (distance <= 300) return 'bg-blue-50 text-blue-500'
+  if (distance <= 300) return 'bg-primary-50 text-primary-500'
   return 'bg-slate-100 text-slate-500'
 }
 </script>

@@ -3,7 +3,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-1.5">
-          <span class="material-symbols-outlined text-[18px] text-blue-600">verified_user</span>
+          <span class="material-symbols-outlined text-[18px] text-primary">verified_user</span>
           기본 자격 요건
         </h4>
         <dl class="space-y-2.5">
