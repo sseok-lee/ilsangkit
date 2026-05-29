@@ -1,6 +1,6 @@
 <template>
   <section class="mb-6">
-    <h2 class="text-lg font-bold text-slate-900 mb-2">
+    <h2 class="text-display-2 text-slate-900 mb-2">
       {{ categoryLabel }} 안내
     </h2>
     <p class="text-sm text-slate-600 leading-relaxed mb-3">

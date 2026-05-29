@@ -10,7 +10,7 @@
 
       <!-- 페이지 인트로 (AI 검색·SEO 답변형 콘텐츠) -->
       <section class="bg-white rounded-xl border border-slate-200 p-5 md:p-6 leading-relaxed text-slate-700 text-[15px]">
-        <h2 class="text-base md:text-lg font-bold text-slate-900 mb-2">청약이란?</h2>
+        <h2 class="text-display-3 text-slate-900 mb-2">청약이란?</h2>
         <p class="mb-3">
           <strong>청약</strong>은 새로 짓는 아파트·오피스텔을 분양받기 위해 사전에 신청하는 절차입니다. 일상킷에서는
           한국부동산원 청약홈, LH·SH, 민간 분양사가 공고하는 모든 청약·임대 일정을

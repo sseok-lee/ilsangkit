@@ -10,7 +10,7 @@
 
       <!-- 부동산 실거래가 FAQ -->
       <div class="mb-6">
-        <h2 class="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2">
+        <h2 class="text-display-2 text-slate-700 mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">apartment</span>
           부동산 실거래가
         </h2>
@@ -38,7 +38,7 @@
 
       <!-- 시설 카테고리 FAQ -->
       <div v-for="group in groups" :key="group.title" class="mb-6">
-        <h2 class="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2">
+        <h2 class="text-display-2 text-slate-700 mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">{{ group.icon }}</span>
           {{ group.title }}
         </h2>

@@ -6,7 +6,7 @@
     <!-- 헤더 -->
     <div class="flex items-start justify-between flex-wrap gap-2 mb-4">
       <div>
-        <h2 class="text-slate-900 text-lg font-bold">
+        <h2 class="text-slate-900 text-display-2">
           {{ districtName }} {{ categoryLabel }} 요약
         </h2>
         <p v-if="relativeUpdated" class="text-xs text-slate-500 mt-0.5">

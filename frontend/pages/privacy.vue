@@ -105,7 +105,7 @@
         </p>
         <ul class="list-disc pl-5 mt-2 space-y-1">
           <li>서비스명: 일상킷</li>
-          <li>이메일: <a href="mailto:contact@ilsangkit.co.kr" class="text-primary hover:text-primary-600">contact@ilsangkit.co.kr</a></li>
+          <li>이메일: <a href="mailto:contact@ilsangkit.co.kr" class="text-primary hover:text-primary">contact@ilsangkit.co.kr</a></li>
         </ul>
       </section>
 

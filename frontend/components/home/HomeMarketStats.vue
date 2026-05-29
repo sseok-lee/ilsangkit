@@ -2,7 +2,7 @@
   <section v-if="trends.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="flex items-end justify-between gap-4 mb-4">
       <div>
-        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]">trending_up</span>
           오늘의 부동산 시장
         </h2>
