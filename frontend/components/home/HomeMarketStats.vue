@@ -82,7 +82,7 @@ function changeColor(pct: number | null): string {
   if (pct === null) return 'text-slate-400';
   if (Math.abs(pct) < 0.05) return 'text-slate-400';
   if (pct > 0) return 'text-red-500';
-  if (pct < 0) return 'text-blue-500';
+  if (pct < 0) return 'text-primary-500';
   return 'text-slate-400';
 }
 </script>

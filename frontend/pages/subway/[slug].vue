@@ -13,7 +13,7 @@
       <div v-else-if="error || !station" class="max-w-lg mx-auto px-4 py-20 text-center">
         <span class="material-symbols-outlined text-[64px] text-red-500 mb-4">error</span>
         <h2 class="text-xl font-semibold text-gray-900 mb-2">지하철역 정보를 불러올 수 없습니다</h2>
-        <NuxtLink to="/subway" class="inline-block mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors">
+        <NuxtLink to="/subway" class="inline-block mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
           지하철역 목록으로
         </NuxtLink>
       </div>
@@ -238,7 +238,7 @@
                 </button>
                 <div class="relative flex-[2]">
                   <button
-                    class="w-full h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
+                    class="w-full h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-primary-dark transition-colors shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2"
                     @click="showNavDropdown = !showNavDropdown"
                   >
                     <span class="material-symbols-outlined">directions</span>
@@ -279,7 +279,7 @@
             </button>
             <div class="relative flex-[2]">
               <button
-                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-[0.98]"
+                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
                 @click="showMobileNavDropdown = !showMobileNavDropdown"
               >
                 <span class="material-symbols-outlined text-[20px]">directions</span>

@@ -19,15 +19,15 @@
     <template v-else>
       <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-xs text-slate-500">
         <span class="flex items-center gap-1.5">
-          <span class="inline-block w-4 h-0.5 bg-blue-500 rounded" />
+          <span class="inline-block w-4 h-0.5 bg-primary-500 rounded" />
           평균가
         </span>
         <span class="flex items-center gap-1.5">
-          <span class="inline-block w-4 h-0.5 border-t border-dashed border-blue-300" />
+          <span class="inline-block w-4 h-0.5 border-t border-dashed border-primary-300" />
           최고/최저가
         </span>
         <span class="flex items-center gap-1.5">
-          <span class="inline-block w-3 h-3 bg-blue-300 rounded-sm" />
+          <span class="inline-block w-3 h-3 bg-primary-300 rounded-sm" />
           거래건수
         </span>
       </div>
@@ -43,7 +43,7 @@
         :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
       >
         <p class="font-medium">{{ tooltip.date }}</p>
-        <p class="mt-0.5 text-blue-300">평균 {{ tooltip.avgPrice }}</p>
+        <p class="mt-0.5 text-primary-300">평균 {{ tooltip.avgPrice }}</p>
         <p class="mt-0.5 text-slate-300">{{ tooltip.count }}건 거래</p>
       </div>
     </template>
@@ -78,7 +78,7 @@ const CHART_COLORS = {
   line: '#3b82f6',        // primary-500
   lineLight: 'rgba(59, 130, 246, 0.15)',
   lineFaint: 'rgba(59, 130, 246, 0.02)',
-  barBase: 'rgba(147, 197, 253, 0.6)',  // blue-300/60
+  barBase: 'rgba(147, 197, 253, 0.6)',  // primary-300/60
   barFn: (alpha: number) => `rgba(59, 130, 246, ${alpha.toFixed(2)})`,
   bg: '#ffffff',          // surface-light
   text: '#64748b',        // slate-500

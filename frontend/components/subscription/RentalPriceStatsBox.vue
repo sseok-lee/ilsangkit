@@ -1,9 +1,9 @@
 <template>
-  <div v-if="pending" class="bg-blue-50 rounded-xl border border-blue-100 p-5 mb-6 animate-pulse">
-    <div class="h-6 bg-blue-200 rounded w-1/3 mb-4"></div>
+  <div v-if="pending" class="bg-primary-50 rounded-xl border border-primary-100 p-5 mb-6 animate-pulse">
+    <div class="h-6 bg-primary-200 rounded w-1/3 mb-4"></div>
     <div class="grid grid-cols-2 gap-4">
-      <div class="h-20 bg-blue-200 rounded"></div>
-      <div class="h-20 bg-blue-200 rounded"></div>
+      <div class="h-20 bg-primary-200 rounded"></div>
+      <div class="h-20 bg-primary-200 rounded"></div>
     </div>
   </div>
 
@@ -11,7 +11,7 @@
     <p class="text-slate-400 text-sm text-center">해당 지역 시세 데이터가 없습니다</p>
   </div>
 
-  <div v-else class="bg-blue-50 rounded-xl border border-blue-100 p-5 mb-6">
+  <div v-else class="bg-primary-50 rounded-xl border border-primary-100 p-5 mb-6">
     <!-- Header -->
     <div class="mb-4">
       <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -22,7 +22,7 @@
     </div>
 
     <!-- Stats (인라인 summary-grid) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-blue-200">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-primary-200">
       <!-- 전세 -->
       <div>
         <span class="block text-slate-500 text-xs font-bold">전세</span>

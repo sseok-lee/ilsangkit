@@ -1,7 +1,7 @@
 <template>
   <SectionBlock heading="가격 정보" subtext="공공기관 직접 임대 매물의 보증금과 월 임대료입니다.">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <div class="rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+      <div class="rounded-lg border border-primary-100 bg-primary-50/40 p-4">
         <span class="block text-slate-500 text-xs font-bold uppercase tracking-wide">{{ depositLabel }}</span>
         <strong :class="['block mt-1 text-xl md:text-2xl font-bold break-keep', depositColor]">
           {{ depositText }}

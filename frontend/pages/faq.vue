@@ -120,7 +120,7 @@ const groups = CATEGORY_GROUPS
 // 카테고리별 색상 클래스
 function categoryColorClass(cat: FacilityCategory): string {
   const colorMap: Record<string, string> = {
-    blue: 'text-blue-500',
+    blue: 'text-primary-500',
     red: 'text-red-500',
     green: 'text-green-500',
     purple: 'text-purple-500',

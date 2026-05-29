@@ -112,7 +112,7 @@
                 <span class="material-symbols-outlined text-[16px]">refresh</span>
                 필터 초기화
               </button>
-              <NuxtLink to="/" class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">
+              <NuxtLink to="/" class="btn-primary inline-flex items-center gap-1.5 text-sm">
                 <span class="material-symbols-outlined text-[16px]">home</span>
                 홈으로 돌아가기
               </NuxtLink>

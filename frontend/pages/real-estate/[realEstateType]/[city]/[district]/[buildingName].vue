@@ -116,7 +116,7 @@
             </button>
             <div class="relative">
               <button
-                class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
+                class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-primary-50"
                 @click="showNavDropdown = !showNavDropdown"
               >
                 <span class="material-symbols-outlined text-[18px]">directions</span>
@@ -196,26 +196,26 @@
         <!-- 시세 요약: 차트 위에서 선택 기간의 거래 흐름을 데이터 카드로 먼저 요약 -->
         <div
           v-if="monthly.length > 0 && !statsLoading"
-          class="mb-4 rounded-xl border border-blue-100 bg-blue-50/40 p-4"
+          class="mb-4 rounded-xl border border-primary-100 bg-primary-50/40 p-4"
         >
           <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
-            <div class="rounded-lg border border-blue-100 bg-white p-3">
+            <div class="rounded-lg border border-primary-100 bg-white p-3">
               <span class="block text-slate-500 text-xs font-bold">{{ periodTradeLabel }}</span>
               <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodTradeCount }}건</strong>
             </div>
-            <div class="rounded-lg border border-blue-100 bg-white p-3">
+            <div class="rounded-lg border border-primary-100 bg-white p-3">
               <span class="block text-slate-500 text-xs font-bold">최근 평균가</span>
               <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ summaryLatestAvg }}</strong>
             </div>
-            <div class="rounded-lg border border-blue-100 bg-white p-3">
+            <div class="rounded-lg border border-primary-100 bg-white p-3">
               <span class="block text-slate-500 text-xs font-bold">최고 거래가</span>
               <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodMaxPriceLabel }}</strong>
             </div>
-            <div class="rounded-lg border border-blue-100 bg-white p-3">
+            <div class="rounded-lg border border-primary-100 bg-white p-3">
               <span class="block text-slate-500 text-xs font-bold">최저 거래가</span>
               <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodMinPriceLabel }}</strong>
             </div>
-            <div class="rounded-lg border border-blue-100 bg-white p-3">
+            <div class="rounded-lg border border-primary-100 bg-white p-3">
               <span class="block text-slate-500 text-xs font-bold">전월 대비</span>
               <strong :class="['block mt-1 text-base md:text-lg font-bold truncate', changeRateColor]">
                 {{ summaryChangeRate }}
@@ -401,7 +401,7 @@
         </button>
         <div class="relative flex-[2]">
           <button
-            class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-[0.98]"
+            class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
             @click="showMobileNavDropdown = !showMobileNavDropdown"
           >
             <span class="material-symbols-outlined text-[20px]">directions</span>
@@ -859,7 +859,7 @@ const summaryChangeRate = computed(() => {
 const changeRateColor = computed(() => {
   if (summary.value?.changeRate == null) return 'text-slate-500'
   if (summary.value.changeRate > 0) return 'text-red-500'
-  if (summary.value.changeRate < 0) return 'text-blue-500'
+  if (summary.value.changeRate < 0) return 'text-primary-500'
   return 'text-slate-500'
 })
 
@@ -902,7 +902,7 @@ const tradeFlowBadges = computed<RealEstateSummaryBadge[]>(() => {
 
 function summaryBadgeClass(tone: RealEstateSummaryBadge['tone']): string {
   if (tone === 'green') return 'bg-emerald-50 text-emerald-700'
-  if (tone === 'blue') return 'bg-blue-50 text-blue-700'
+  if (tone === 'blue') return 'bg-primary-50 text-primary-700'
   if (tone === 'amber') return 'bg-amber-50 text-amber-700'
   return 'bg-slate-100 text-slate-600'
 }

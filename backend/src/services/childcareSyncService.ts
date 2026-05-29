@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import { KOREA_BOUNDS } from '../constants/index.js';
+import { KOREA_BOUNDS, SYNC } from '../constants/index.js';
 import { CITY_NAME_MAP } from './csvParser.js';
 import {
   type SyncStats,
@@ -14,6 +14,14 @@ export { createSyncHistory, updateSyncHistory };
 export type { SyncStats, SyncHistoryUpdateData };
 
 const CHILDCARE_API_URL = 'https://api.childcare.go.kr/mediate/rest/cpmsapi030/cpmsapi030/request';
+const CHILDCARE_FETCH_TIMEOUT_MS = 30000;
+const CHILDCARE_LAST_PAGE_ITEM_THRESHOLD = 10;
+
+interface ChildcarePageFetchOptions {
+  maxRetries?: number;
+  retryDelayMs?: number;
+  timeoutMs?: number;
+}
 
 // 서울 특별/광역시 아르코드 목록 (행정구역코드 앞 5자리 기준)
 // 실제 운영 시 전국 아르코드 목록으로 확장 필요
@@ -237,6 +245,100 @@ function parseAddress(address: string): { city: string; district: string } {
   return { city, district };
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status < 600);
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object' || !('cause' in error)) {
+    return undefined;
+  }
+
+  const cause = (error as { cause?: unknown }).cause;
+  if (!cause || typeof cause !== 'object' || !('code' in cause)) {
+    return undefined;
+  }
+
+  const code = (cause as { code?: unknown }).code;
+  return typeof code === 'string' ? code : undefined;
+}
+
+function describeFetchError(error: unknown): string {
+  if (error instanceof Error) {
+    const code = getErrorCode(error);
+    return code ? `${error.message} (cause: ${code})` : error.message;
+  }
+
+  return String(error);
+}
+
+async function fetchWithRetry(
+  url: string,
+  arcode: string,
+  pageNo: number,
+  options: ChildcarePageFetchOptions = {}
+): Promise<Response> {
+  const maxAttempts = Math.max(1, options.maxRetries ?? SYNC.MAX_RETRIES);
+  const retryDelayMs = Math.max(0, options.retryDelayMs ?? SYNC.RETRY_BASE_DELAY_MS);
+  const timeoutMs = Math.max(1, options.timeoutMs ?? CHILDCARE_FETCH_TIMEOUT_MS);
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let response: Response;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/xml, text/xml' },
+        signal: controller.signal,
+      });
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= maxAttempts) {
+        throw new Error(
+          `Childcare API request failed after ${maxAttempts} attempts (arcode=${arcode}, page=${pageNo}): ${describeFetchError(error)}`
+        );
+      }
+
+      console.warn(
+        `Childcare API fetch failed (arcode=${arcode}, page=${pageNo}) — retrying ${attempt}/${maxAttempts}: ${describeFetchError(error)}`
+      );
+      clearTimeout(timeoutId);
+      await sleep(retryDelayMs * attempt);
+      continue;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (response.ok) {
+      return response;
+    }
+
+    const error = new Error(`API request failed: ${response.status} ${response.statusText}`);
+    lastError = error;
+
+    if (!isRetryableStatus(response.status) || attempt >= maxAttempts) {
+      throw error;
+    }
+
+    console.warn(
+      `Childcare API returned ${response.status} (arcode=${arcode}, page=${pageNo}) — retrying ${attempt}/${maxAttempts}`
+    );
+    await sleep(retryDelayMs * attempt);
+  }
+
+  throw new Error(
+    `Childcare API request failed after ${maxAttempts} attempts (arcode=${arcode}, page=${pageNo}): ${describeFetchError(lastError)}`
+  );
+}
+
 /**
  * API item → TransformedChildcare 변환
  */
@@ -337,7 +439,8 @@ export function transformChildcareItem(item: ChildcareAPIItem): TransformedChild
 export async function fetchChildcarePage(
   apiKey: string,
   arcode: string,
-  pageNo: number
+  pageNo: number,
+  options: ChildcarePageFetchOptions = {}
 ): Promise<{ items: ChildcareAPIItem[]; totalCount: number }> {
   const params = new URLSearchParams({
     key: apiKey,
@@ -347,11 +450,7 @@ export async function fetchChildcarePage(
   });
 
   const url = `${CHILDCARE_API_URL}?${params.toString()}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-  }
+  const response = await fetchWithRetry(url, arcode, pageNo, options);
 
   const xmlText = await response.text();
 
@@ -401,6 +500,7 @@ export async function syncChildcare(
     for (const arcode of arcodes) {
       console.info(`Fetching arcode: ${arcode}`);
       let pageNo = 1;
+      let fetchedForArcode = 0;
 
       for (;;) {
         const { items, totalCount } = await fetchChildcarePage(apiKey, arcode, pageNo);
@@ -417,10 +517,17 @@ export async function syncChildcare(
         }
 
         stats.totalRecords += items.length;
+        fetchedForArcode += items.length;
         console.info(`  page ${pageNo}: ${items.length} items (total: ${totalCount})`);
 
         // 마지막 페이지 판단
-        if (items.length < 10 || stats.totalRecords >= totalCount) break;
+        if (
+          items.length < CHILDCARE_LAST_PAGE_ITEM_THRESHOLD ||
+          totalCount <= 0 ||
+          fetchedForArcode >= totalCount
+        ) {
+          break;
+        }
         pageNo++;
       }
     }
