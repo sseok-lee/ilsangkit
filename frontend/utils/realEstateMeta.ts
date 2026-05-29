@@ -261,7 +261,7 @@ export const PROPERTY_TYPE_DESCRIPTIONS: Record<RealEstatePropertyType, string> 
 }
 
 // 랭킹 랜딩 타입별 메타·FAQ
-const RANKING_TYPE_LABEL: Record<RealEstateUrlType, string> = {
+export const RANKING_TYPE_LABEL: Record<RealEstateUrlType, string> = {
   'apt-sale': '아파트 매매',
   'apt-rent': '아파트 전월세',
   'villa-sale': '빌라 매매',

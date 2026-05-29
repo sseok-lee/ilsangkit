@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { defineComponent, h, Suspense, ref } from 'vue'
+import { defineComponent, h, Suspense, ref, onErrorCaptured } from 'vue'
 
-// Mock Nuxt globals
+// Mock Nuxt globals — createError throws synchronously so the page's
+// `throw createError(...)` short-circuits at the call site, guaranteeing the
+// statusCode-bearing error surfaces before any render (and is then captured by
+// the error boundary in mountSuspended). Real Nuxt returns and the caller
+// throws; throwing here yields equivalent control flow for the test.
 ;(globalThis as any).createError = (opts: any) => {
   const e = new Error(opts.statusMessage ?? 'Error')
   ;(e as any).statusCode = opts.statusCode
-  return e
+  throw e
 }
 
 vi.mock('~/composables/useStructuredData', () => ({
@@ -91,12 +95,29 @@ const stubs = {
   DataSourceCard: { template: '<div />' },
 }
 
+// Mount the page inside a Suspense + error boundary. If the page's async setup
+// throws (e.g. createError 404), we capture it via onErrorCaptured and reject so
+// callers can consume the rejection with expect(...).rejects — leaving no
+// unhandled rejection that would make vitest exit non-zero.
 async function mountSuspended(c: any) {
-  const w = mount(
-    defineComponent({ render: () => h(Suspense, null, { default: () => h(c) }) }),
-    { global: { stubs } },
-  )
+  let captured: unknown = null
+  const boundary = defineComponent({
+    setup(_props, { slots }) {
+      onErrorCaptured((err) => {
+        // Keep only the first error (the setup throw). Subsequent render errors
+        // from the half-mounted component must not overwrite it.
+        if (captured === null) captured = err
+        return false // stop propagation so it doesn't bubble as unhandled
+      })
+      return () => h(Suspense, null, { default: () => slots.default?.() })
+    },
+  })
+  const w = mount(boundary, {
+    slots: { default: () => h(c) },
+    global: { stubs },
+  })
   await flushPromises()
+  if (captured) throw captured
   return w
 }
 
@@ -122,37 +143,11 @@ describe('real-estate/ranking/[realEstateType]', () => {
 
   it('유효하지 않은 타입은 404 에러를 throw한다', async () => {
     ;(globalThis as any).useRoute = () => ({ params: { realEstateType: 'bogus' } })
-    let caughtError: unknown = null
-    const origWarn = console.warn
-    const origError = console.error
-    // Vue catches setup errors via callWithErrorHandling → emits as console.warn
-    console.warn = (...args: any[]) => {
-      const msg = args.join(' ')
-      if (msg.includes('Unhandled error') || msg.includes('setup')) caughtError = args
-    }
-    console.error = (...args: any[]) => {
-      caughtError = args
-    }
-    // createError throws synchronously in setup — Vue catches it but the error IS created
-    let thrownError: unknown = null
-    const origCreateError = (globalThis as any).createError
-    ;(globalThis as any).createError = (opts: any) => {
-      const e = new Error(opts.statusMessage ?? 'Error')
-      ;(e as any).statusCode = opts.statusCode
-      thrownError = e
-      return e
-    }
     try {
-      await mountSuspended(RankingPage)
-    } catch {
-      // mount may or may not throw
+      // mountSuspended rethrows the captured setup error → expect.rejects consumes it
+      await expect(mountSuspended(RankingPage)).rejects.toMatchObject({ statusCode: 404 })
+    } finally {
+      ;(globalThis as any).useRoute = () => ({ params: { realEstateType: 'apt-sale' } })
     }
-    console.warn = origWarn
-    console.error = origError
-    ;(globalThis as any).createError = origCreateError
-    ;(globalThis as any).useRoute = () => ({ params: { realEstateType: 'apt-sale' } })
-    // Verify createError was called with statusCode 404
-    expect(thrownError).toBeTruthy()
-    expect((thrownError as any).statusCode).toBe(404)
   })
 })

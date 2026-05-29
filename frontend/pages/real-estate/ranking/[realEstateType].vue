@@ -56,7 +56,9 @@
         :key="region.citySlug + region.districtSlug"
         :to="districtUrl(region)"
         class="text-xs text-primary hover:underline"
-      >{{ region.district }}</HardLink>
+      >
+        {{ region.district }}
+      </HardLink>
     </nav>
 
     <!-- 거래량 TOP 단지 -->
@@ -83,7 +85,7 @@
           </span>
         </li>
       </ol>
-      <p v-else class="text-sm text-slate-500 py-4">거래 데이터를 불러오는 중입니다.</p>
+      <p v-else class="text-sm text-slate-500 py-4">아직 집계된 거래가 없습니다.</p>
     </section>
 
     <!-- FAQ -->
@@ -114,13 +116,17 @@ import {
   toRealEstateListUrl,
   type RealEstateUrlType,
 } from '~/utils/realEstateUrl'
-import { RANKING_META, RANKING_FAQ } from '~/utils/realEstateMeta'
+import { RANKING_META, RANKING_FAQ, RANKING_TYPE_LABEL } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { RealEstatePropertyType } from '~/types/realEstate'
-import type { HotspotRegion, HotspotBundle, WolseHotspotBundle } from '~/composables/useHomeDashboard'
+import type {
+  HotspotRegion,
+  HotspotBundle,
+  PropertyHotspots,
+} from '~/composables/useHomeDashboard'
 
 const route = useRoute()
 const realEstateType = computed(() => String(route.params.realEstateType))
@@ -131,11 +137,9 @@ if (!isRealEstateUrlType(realEstateType.value)) {
 }
 
 const reType = realEstateType.value as RealEstateUrlType
-const segments = reType.split('-') as [string, string]
-const property = segments[0] as RealEstatePropertyType
-const mode = segments[1] as 'sale' | 'rent'
+const mode: 'sale' | 'rent' = reType.endsWith('-sale') ? 'sale' : 'rent'
+const propertyType = reType.split('-')[0] as RealEstatePropertyType
 
-const propertyType = property
 const isRentMode = mode === 'rent'
 // rent 랜딩은 전세 카드 기준 (6슬러그에 wolse 전용 없음 → jeonse 우선)
 const txnType = computed<'sale' | 'jeonse' | 'wolse'>(() =>
@@ -144,14 +148,14 @@ const txnType = computed<'sale' | 'jeonse' | 'wolse'>(() =>
 
 const meta = RANKING_META[reType]
 const faqs = RANKING_FAQ[reType]
-const typeLabel = computed(() => meta.title.split(' 시세')[0])
+const typeLabel = RANKING_TYPE_LABEL[reType]
 
 const apiBase = useApiBase()
 const { getComplexList } = useRealEstate()
 
 const { data } = await useAsyncData(`re-ranking-${reType}`, async () => {
   const [hotspotRes, complexRes] = await Promise.all([
-    $fetch<{ success: boolean; data: any }>(`${apiBase}/api/meta/hotspots`, {
+    $fetch<{ success: boolean; data: PropertyHotspots }>(`${apiBase}/api/meta/hotspots`, {
       query: { propertyType },
     }),
     getComplexList(reType, undefined, undefined, undefined, 1, 10),
@@ -179,7 +183,7 @@ const activeRegions = computed<HotspotRegion[]>(() => {
   if (mode === 'sale') return h.sale?.active ?? []
   // rent 랜딩: jeonse active + wolse active 합산 (중복 제거 없이 순서대로)
   const jeonseActive = h.jeonse?.active ?? []
-  const wolseActive: HotspotRegion[] = (h.wolse as WolseHotspotBundle)?.active ?? []
+  const wolseActive: HotspotRegion[] = h.wolse?.active ?? []
   return [...jeonseActive, ...wolseActive]
 })
 
@@ -259,17 +263,17 @@ const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema, setFAQSchema }
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
   { name: '부동산', url: `${SITE_URL}/real-estate` },
-  { name: `${typeLabel.value} 시세 순위`, url: canonicalUrl },
+  { name: `${typeLabel} 시세 순위`, url: canonicalUrl },
 ])
 
 setFAQSchema(faqs.map((f) => ({ question: f.q, answer: f.a })))
 
 setDatasetSchema({
-  name: `${typeLabel.value} 시세 순위`,
+  name: `${typeLabel} 시세 순위`,
   description: meta.description,
   url: canonicalUrl,
   sources: [REAL_ESTATE_DATA_SOURCE],
-  keywords: [typeLabel.value, '시세 순위', '평당가', '실거래가'],
+  keywords: [typeLabel, '시세 순위', '평당가', '실거래가'],
 })
 
 if (topComplexes.value.length) {
@@ -284,7 +288,7 @@ if (topComplexes.value.length) {
         addressRegion: b.city,
       },
     })),
-    { name: `${typeLabel.value} 거래량 TOP 단지`, key: 'jsonld-ranking-complexes' },
+    { name: `${typeLabel} 거래량 TOP 단지`, key: 'jsonld-ranking-complexes' },
   )
 }
 </script>
