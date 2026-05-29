@@ -1,4 +1,5 @@
 import type { RealEstateCategory, RealEstatePropertyType } from '~/types/realEstate'
+import type { RealEstateUrlType } from './realEstateUrl'
 
 export interface RealEstateCategoryMeta {
   label: string
@@ -258,3 +259,49 @@ export const PROPERTY_TYPE_DESCRIPTIONS: Record<RealEstatePropertyType, string> 
   villa: '전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 조회하세요. 아파트 대비 저렴한 빌라의 최근 실거래 사례를 비교해보세요.',
   offitel: '전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회하세요. 1인 가구와 투자자에게 인기 높은 오피스텔의 최신 시세를 확인하세요.',
 }
+
+// 랭킹 랜딩 타입별 메타·FAQ
+const RANKING_TYPE_LABEL: Record<RealEstateUrlType, string> = {
+  'apt-sale': '아파트 매매',
+  'apt-rent': '아파트 전월세',
+  'villa-sale': '빌라 매매',
+  'villa-rent': '빌라 전월세',
+  'offitel-sale': '오피스텔 매매',
+  'offitel-rent': '오피스텔 전월세',
+}
+
+export const RANKING_META: Record<RealEstateUrlType, { title: string; description: string }> =
+  Object.fromEntries(
+    (Object.keys(RANKING_TYPE_LABEL) as RealEstateUrlType[]).map((t) => [
+      t,
+      {
+        title: `${RANKING_TYPE_LABEL[t]} 시세 순위 — 자치구 평당가·거래량 TOP | 일상킷`,
+        description: `${RANKING_TYPE_LABEL[t]} 평당가가 가장 많이 오른/내린 자치구, 거래가 급증한 지역, 거래량 상위 단지를 매주 갱신된 국토교통부 실거래가로 보여드립니다.`,
+      },
+    ]),
+  ) as Record<RealEstateUrlType, { title: string; description: string }>
+
+export const RANKING_FAQ: Record<RealEstateUrlType, Array<{ q: string; a: string }>> =
+  Object.fromEntries(
+    (Object.keys(RANKING_TYPE_LABEL) as RealEstateUrlType[]).map((t) => [
+      t,
+      [
+        {
+          q: `${RANKING_TYPE_LABEL[t]} 평당가 상승 1위 자치구는 어떻게 산출하나요?`,
+          a: '최근 7일 실거래 평당가를 직전 7일과 비교해 변동률이 가장 큰 자치구 순으로 산출합니다. 표본이 부족한 자치구(아파트 30·빌라/오피스텔 15건 미만)는 제외합니다.',
+        },
+        {
+          q: '평당가 상승 상위 자치구는 지금 매수 적기인가요?',
+          a: '단기 변동률은 참고 지표일 뿐 매수 시점을 보장하지 않습니다. 거래량·전세가율·금리 등과 함께 종합 판단하세요.',
+        },
+        {
+          q: '거래 급증 지역은 무엇을 의미하나요?',
+          a: '직전 기간 대비 거래 건수가 크게 늘어난 자치구로, 수요가 몰리는 신호일 수 있습니다.',
+        },
+        {
+          q: '데이터는 얼마나 자주 갱신되나요?',
+          a: '국토교통부 실거래가를 주기적으로 수집해 매주 갱신합니다. 실거래 신고는 계약 후 최대 30일이 소요됩니다.',
+        },
+      ],
+    ]),
+  ) as Record<RealEstateUrlType, Array<{ q: string; a: string }>>
