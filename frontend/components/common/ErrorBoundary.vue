@@ -35,7 +35,7 @@
         <!-- Actions -->
         <div class="flex gap-3">
           <button
-            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
+            class="btn-primary text-sm"
             data-testid="error-retry-button"
             @click="handleRetry(clearError)"
           >

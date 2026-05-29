@@ -80,7 +80,7 @@
 
   /* Button Components — active:scale로 누름 피드백 표준 */
   .btn-primary {
-    @apply px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors active:scale-[0.98];
+    @apply px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors active:scale-[0.98];
   }
 
   .btn-secondary {

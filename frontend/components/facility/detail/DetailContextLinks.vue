@@ -15,7 +15,7 @@
       <nav class="flex flex-col gap-3">
         <NuxtLink
           :to="regionLink.href"
-          class="flex items-center gap-2 text-primary hover:text-primary text-sm font-medium transition-colors"
+          class="flex items-center gap-2 text-primary hover:text-primary-dark text-sm font-medium transition-colors"
         >
           <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
           {{ regionLink.label }}

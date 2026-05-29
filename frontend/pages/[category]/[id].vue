@@ -18,7 +18,7 @@
         <div class="flex items-center justify-center gap-4">
           <NuxtLink
             :to="`/${category}`"
-            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary transition-colors"
+            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
           >
             {{ categoryMeta.label }} 목록으로
           </NuxtLink>
@@ -232,7 +232,7 @@
                 </button>
                 <div class="relative flex-[2]">
                   <button
-                    class="w-full h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-primary transition-colors shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2"
+                    class="w-full h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-primary-dark transition-colors shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2"
                     @click="showNavDropdown = !showNavDropdown"
                   >
                     <span class="material-symbols-outlined">directions</span>
@@ -275,7 +275,7 @@
             </button>
             <div class="relative flex-[2]">
               <button
-                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary active:scale-[0.98]"
+                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
                 @click="showMobileNavDropdown = !showMobileNavDropdown"
               >
                 <span class="material-symbols-outlined text-[20px]">directions</span>
