@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useSubscription, type CompetitionRankItem } from '~/composables/useSubscription'
@@ -107,30 +107,18 @@ useHead({
 const { getCompetitionRanking } = useSubscription()
 
 const metric = ref<'rate' | 'score'>('rate')
-const items = ref<CompetitionRankItem[]>([])
 
-async function fetchItems(m: 'rate' | 'score') {
-  const result = await getCompetitionRanking({ metric: m, page: 1, limit: 30 })
-  items.value = result?.items ?? []
-}
-
-// SSR: register with useAsyncData for Nuxt hydration
-useAsyncData(
+// SSR-blocking: 초기 데이터를 서버에서 로드해 크롤러가 채워진 테이블을 보게 함 (색인 목적)
+const { data } = await useAsyncData(
   'subscription-competition',
-  async () => {
-    const result = await getCompetitionRanking({ metric: metric.value, page: 1, limit: 30 })
-    items.value = result?.items ?? []
-    return result
-  }
+  () => getCompetitionRanking({ metric: metric.value, page: 1, limit: 30 }),
+  { watch: [metric] },
 )
+const items = computed<CompetitionRankItem[]>(() => data.value?.items ?? [])
 
-// Client-side initial load (also intercepted in tests)
-fetchItems(metric.value)
-
-async function onMetricChange(next: 'rate' | 'score') {
+function onMetricChange(next: 'rate' | 'score') {
   if (metric.value === next) return
-  metric.value = next
-  await fetchItems(next)
+  metric.value = next // watch:[metric] 이 자동 재조회
 }
 
 function fmt(v?: number | null): string {
