@@ -144,7 +144,7 @@
             href="https://www.data.go.kr"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-primary hover:text-primary-600"
+            class="text-primary hover:text-primary"
           >공공데이터포털(data.go.kr)</a>에서
           제공하는 공공데이터를 기반으로 하며, 부동산 실거래가 데이터는
           국토교통부 실거래가 공개시스템에서 제공하는 공식 데이터를 활용합니다.
@@ -171,84 +171,84 @@
                   <td class="py-2 pr-4">전국공중화장실표준데이터</td>
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15012892/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15012892/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">행정안전부_생활쓰레기배출정보 조회서비스</td>
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15155080/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15155080/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">전국무료와이파이표준데이터</td>
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15013116/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15013116/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">전국의류수거함표준데이터</td>
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15139214/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15139214/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">행정안전부_무인민원발급기정보 조회서비스</td>
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15154774/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15154774/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">전국공영주차장표준데이터</td>
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">자동심장충격기(AED) 설치장소</td>
                   <td class="py-2 pr-4">보건복지부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15000652/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15000652/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">전국공공도서관표준데이터</td>
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15013109/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15013109/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">아파트매매 실거래 자료</td>
                   <td class="py-2 pr-4">국토교통부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15057511/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15057511/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">아파트 전월세 실거래 자료</td>
                   <td class="py-2 pr-4">국토교통부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058017/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15058017/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">연립다세대 매매/전월세 실거래 자료</td>
                   <td class="py-2 pr-4">국토교통부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058038/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15058038/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4">오피스텔 매매/전월세 실거래 자료</td>
                   <td class="py-2 pr-4">국토교통부</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058452/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600">공공데이터포털</a>
+                    <a href="https://www.data.go.kr/data/15058452/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
               </tbody>
@@ -281,7 +281,7 @@
           아래로 연락해 주시기 바랍니다.
         </p>
         <ul class="list-disc pl-5 mt-2 space-y-1">
-          <li>이메일: <a href="mailto:contact@ilsangkit.co.kr" class="text-primary hover:text-primary-600">contact@ilsangkit.co.kr</a></li>
+          <li>이메일: <a href="mailto:contact@ilsangkit.co.kr" class="text-primary hover:text-primary">contact@ilsangkit.co.kr</a></li>
         </ul>
       </section>
     </div>

@@ -5,7 +5,7 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 max-w-4xl mx-auto">
         <!-- 브랜드 -->
         <div class="col-span-2 md:col-span-1">
-          <HardLink to="/" class="text-base font-semibold text-slate-800 hover:text-primary-600 transition-colors">
+          <HardLink to="/" class="text-base font-semibold text-slate-800 hover:text-primary transition-colors">
             일상킷
           </HardLink>
           <p class="mt-2 text-xs text-slate-500 leading-relaxed">
@@ -17,10 +17,10 @@
         <div>
           <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">서비스</p>
           <nav aria-label="서비스 링크" data-testid="footer-links" class="flex flex-col gap-2">
-            <HardLink to="/real-estate" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">부동산</HardLink>
-            <HardLink to="/subscription" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">청약</HardLink>
-            <HardLink to="/public-rental" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">공공임대</HardLink>
-            <HardLink to="/search" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">시설 찾기</HardLink>
+            <HardLink to="/real-estate" class="text-sm text-slate-600 hover:text-primary transition-colors">부동산</HardLink>
+            <HardLink to="/subscription" class="text-sm text-slate-600 hover:text-primary transition-colors">청약</HardLink>
+            <HardLink to="/public-rental" class="text-sm text-slate-600 hover:text-primary transition-colors">공공임대</HardLink>
+            <HardLink to="/search" class="text-sm text-slate-600 hover:text-primary transition-colors">시설 찾기</HardLink>
           </nav>
         </div>
 
@@ -28,9 +28,9 @@
         <div>
           <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">정보 · 지원</p>
           <nav aria-label="정보 및 지원 링크" class="flex flex-col gap-2">
-            <HardLink to="/about" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">소개</HardLink>
-            <HardLink to="/faq" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">자주 묻는 질문</HardLink>
-            <HardLink to="/contact" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">문의</HardLink>
+            <HardLink to="/about" class="text-sm text-slate-600 hover:text-primary transition-colors">소개</HardLink>
+            <HardLink to="/faq" class="text-sm text-slate-600 hover:text-primary transition-colors">자주 묻는 질문</HardLink>
+            <HardLink to="/contact" class="text-sm text-slate-600 hover:text-primary transition-colors">문의</HardLink>
           </nav>
         </div>
 
@@ -38,8 +38,8 @@
         <div>
           <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">법적 고지</p>
           <nav aria-label="법적 고지 링크" class="flex flex-col gap-2">
-            <HardLink to="/privacy" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">개인정보처리방침</HardLink>
-            <HardLink to="/terms" class="text-sm text-slate-600 hover:text-primary-600 transition-colors">이용약관</HardLink>
+            <HardLink to="/privacy" class="text-sm text-slate-600 hover:text-primary transition-colors">개인정보처리방침</HardLink>
+            <HardLink to="/terms" class="text-sm text-slate-600 hover:text-primary transition-colors">이용약관</HardLink>
           </nav>
         </div>
       </div>
