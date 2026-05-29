@@ -638,18 +638,31 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
 }
 
 // ---------------------------------------------------------------------------
+// Arg parsing
+// ---------------------------------------------------------------------------
+
+/**
+ * `--source` 인자를 소스 키 배열로 해석.
+ * - `--source=APT` / `--source APT` / 미지정(→ ALL) / `ALL` 지원.
+ * - 미지정 시 indexOf=-1 → argv[0] 오인 버그를 방지(플래그 존재할 때만 위치 인자 사용).
+ */
+export function resolveSources(argv: string[]): string[] {
+  const flagIdx = argv.indexOf('--source');
+  const raw =
+    argv.find((a) => a.startsWith('--source='))?.split('=')[1]
+    ?? (flagIdx >= 0 ? argv[flagIdx + 1] : undefined)
+    ?? 'ALL';
+  const key = raw.toUpperCase();
+  return key === 'ALL' ? Object.keys(SOURCE_CONFIGS) : [key];
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 async function main() {
   const isDryRun = process.argv.includes('--dry-run');
-  const sourceArg = process.argv.find(a => a.startsWith('--source='))?.split('=')[1]
-    ?? process.argv[process.argv.indexOf('--source') + 1]
-    ?? 'ALL';
-
-  const sources = sourceArg === 'ALL'
-    ? Object.keys(SOURCE_CONFIGS)
-    : [sourceArg.toUpperCase()];
+  const sources = resolveSources(process.argv);
 
   for (const key of sources) {
     const config = SOURCE_CONFIGS[key];
