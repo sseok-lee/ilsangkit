@@ -6,7 +6,7 @@
     <div class="bg-white rounded-3xl border border-line shadow-card overflow-hidden">
       <div class="px-6 pt-6 pb-4 flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
             <span class="material-symbols-outlined text-primary text-[24px]">trending_up</span>
             오늘의 부동산 시장
           </h2>

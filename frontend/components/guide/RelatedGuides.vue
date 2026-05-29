@@ -1,7 +1,7 @@
 <template>
   <section v-if="guides.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-      <h2 class="text-slate-900 text-lg font-bold flex items-center gap-2">
+      <h2 class="text-slate-900 text-display-2 flex items-center gap-2">
         <span class="material-symbols-outlined text-primary text-[20px]">menu_book</span>
         관련 가이드
       </h2>

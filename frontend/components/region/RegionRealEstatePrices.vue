@@ -1,6 +1,6 @@
 <template>
   <section id="real-estate" class="mb-6">
-    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
+    <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
       <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
       부동산 시세 현황
     </h2>

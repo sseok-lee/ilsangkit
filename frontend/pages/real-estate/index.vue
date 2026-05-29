@@ -10,7 +10,7 @@
 
       <SectionBlock subtext="조회할 주택 유형을 먼저 선택하세요.">
         <template #heading>
-          <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">부동산 유형별 실거래가</h2>
+          <h2 class="text-display-3 text-slate-900">부동산 유형별 실거래가</h2>
         </template>
         <RealEstateCategoryCards :summaries="hubSummaries ?? undefined" />
       </SectionBlock>
@@ -20,7 +20,7 @@
 
       <SectionBlock>
         <template #heading>
-          <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">부동산 실거래가란?</h2>
+          <h2 class="text-display-3 text-slate-900">부동산 실거래가란?</h2>
         </template>
         <div class="text-base text-slate-600 leading-relaxed space-y-3">
           <p>
@@ -36,7 +36,7 @@
 
       <SectionBlock>
         <template #heading>
-          <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">자주 묻는 질문</h2>
+          <h2 class="text-display-3 text-slate-900">자주 묻는 질문</h2>
         </template>
         <div class="space-y-3">
           <details

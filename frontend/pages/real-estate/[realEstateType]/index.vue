@@ -124,7 +124,7 @@
     <!-- 지역별 도시 허브 링크 -->
     <SectionBlock>
       <template #heading>
-        <h2 class="text-base md:text-lg font-bold text-slate-900 leading-tight">지역별 {{ propertyMeta?.label }} 실거래가</h2>
+        <h2 class="text-display-3 text-slate-900">지역별 {{ propertyMeta?.label }} 실거래가</h2>
       </template>
       <div class="flex flex-wrap gap-2">
         <NuxtLink

@@ -108,7 +108,7 @@
     <!-- 빠른 생활시설 찾기 (8 아이콘) -->
     <section id="facilities" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="mb-4">
-        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">location_on</span>
           빠른 생활시설 찾기
         </h2>
@@ -131,7 +131,7 @@
     <!-- 인기 지역 -->
     <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="mb-4">
-        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">place</span>
           인기 지역
         </h2>
@@ -153,7 +153,7 @@
     <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
             <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">menu_book</span>
             생활 가이드
           </h2>

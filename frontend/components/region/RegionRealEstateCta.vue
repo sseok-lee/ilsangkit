@@ -1,6 +1,6 @@
 <template>
   <section class="bg-primary/5 rounded-2xl p-5 md:p-6 text-center">
-    <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2">
+    <h3 class="text-display-3 text-slate-800 mb-2">
       {{ areaName }} 부동산 실거래가 상세 보기
     </h3>
     <p class="text-sm text-slate-600 mb-4">아파트, 빌라, 오피스텔 실거래가를 확인해보세요</p>
