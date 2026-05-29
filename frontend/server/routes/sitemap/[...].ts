@@ -13,6 +13,7 @@ import {
   fetchRealEstateCityDistrictHubs,
   fetchSubscriptionIds,
   fetchSubwaySlugs,
+  fetchPublicRentalAnnouncementIds,
   getWeekStartDate,
 } from '../../utils/sitemap'
 import {
@@ -47,6 +48,13 @@ function parseSlug(slug: string): { category: string; page: number } | null {
   if (subMatch) {
     const page = subMatch[1] ? parseInt(subMatch[1], 10) : 1
     return page >= 1 ? { category: 'subscription', page } : null
+  }
+
+  // "public-rental-announcements" → page=1, "public-rental-announcements-2" → page=2
+  const praMatch = slug.match(/^public-rental-announcements(?:-(\d+))?$/)
+  if (praMatch) {
+    const page = praMatch[1] ? parseInt(praMatch[1], 10) : 1
+    return page >= 1 ? { category: 'public-rental-announcements', page } : null
   }
 
   // "ev-charger" → category='ev-charger', page=1
@@ -208,6 +216,30 @@ export default defineEventHandler(async (event) => {
         priority: 0.6,
       }
     })
+
+    return generateSitemapXml(urls)
+  }
+
+  // 공공임대 모집공고 상세 페이지
+  if (category === 'public-rental-announcements') {
+    const items = await fetchPublicRentalAnnouncementIds()
+    if (items.length === 0 && page > 1) {
+      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    }
+    const totalPages = Math.max(1, Math.ceil(items.length / MAX_URLS_PER_SITEMAP))
+    if (page > totalPages) {
+      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    }
+
+    const offset = (page - 1) * MAX_URLS_PER_SITEMAP
+    const pageItems = items.slice(offset, offset + MAX_URLS_PER_SITEMAP)
+
+    const urls = pageItems.map((item) => ({
+      loc: `${SITE_URL}/public-rental/announcements/${encodeURIComponent(item.pblancId)}`,
+      lastmod: formatDateForSitemap(item.updatedAt),
+      changefreq: 'daily' as const,
+      priority: 0.6,
+    }))
 
     return generateSitemapXml(urls)
   }
