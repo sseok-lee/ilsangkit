@@ -6,11 +6,13 @@ import {
   getSubscriptionDetail,
   getUpcomingSubscriptions,
   getRentalPriceStats,
+  getCompetitionRanking,
 } from '../services/subscriptionService.js';
 import {
   SubscriptionListSchema,
   SubscriptionIdSchema,
   RentalPriceStatsSchema,
+  SubscriptionCompetitionRankSchema,
 } from '../schemas/subscription.js';
 import type { z } from 'zod';
 
@@ -33,6 +35,17 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const items = await getUpcomingSubscriptions(5);
     res.json({ success: true, data: items });
+  })
+);
+
+// GET /api/subscription/competition - 경쟁률·가점 랭킹 (/:id 앞에 선언)
+router.get(
+  '/competition',
+  validate(SubscriptionCompetitionRankSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const params = req.query as unknown as z.infer<typeof SubscriptionCompetitionRankSchema>;
+    const result = await getCompetitionRanking(params);
+    res.json({ success: true, data: result });
   })
 );
 
