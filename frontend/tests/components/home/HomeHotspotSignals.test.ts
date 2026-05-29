@@ -87,6 +87,17 @@ describe('HomeHotspotSignals', () => {
     expect(wrapper.html()).toContain('/real-estate/ranking/');
   });
 
+  it('헤더에 신고가 단지 링크가 있다', () => {
+    const hotspots: RealEstateHotspots = { apt: fullBundle() };
+    const stubs = {
+      HardLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
+      HotspotCard: { template: '<div />', props: ['signal', 'regions', 'propertyType', 'txnType'] },
+      TxnTypeMiniTabs: { template: '<div />', props: ['modelValue'] },
+    };
+    const w = mount(HomeHotspotSignals, { props: { hotspots }, global: { stubs } });
+    expect(w.html()).toContain('/real-estate/new-high/');
+  });
+
   it('wolse tab hides rising/falling cards, shows only active', async () => {
     const wrapper = mount(HomeHotspotSignals, {
       props: { hotspots: { apt: fullBundle() } },

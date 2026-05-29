@@ -101,6 +101,11 @@ export default defineEventHandler(async (event) => {
     urls.push({ loc: `${SITE_URL}/real-estate/ranking/${pt}`, lastmod: weekStart, changefreq: 'weekly', priority: 0.7 })
   }
 
+  // 부동산 신고가 경신 단지 랜딩 (매일 갱신)
+  for (const pt of ['apt-sale', 'villa-sale', 'offitel-sale']) {
+    urls.push({ loc: `${SITE_URL}/real-estate/new-high/${pt}`, lastmod: weekStart, changefreq: 'daily', priority: 0.7 })
+  }
+
   // 청약 페이지 — Subscription 모델 maxUpdatedAt
   urls.push({ loc: `${SITE_URL}/subscription`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
   urls.push({ loc: `${SITE_URL}/subscription/sale`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })

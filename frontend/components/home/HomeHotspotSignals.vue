@@ -16,6 +16,9 @@
           <HardLink :to="`/real-estate/ranking/${rankingSlug}`" class="inline-flex items-center text-sm text-slate-600 font-bold hover:text-primary hover:underline whitespace-nowrap">
             시세 순위 →
           </HardLink>
+          <HardLink :to="`/real-estate/new-high/${newHighSlug}`" class="inline-flex items-center text-sm text-slate-600 font-bold hover:text-primary hover:underline whitespace-nowrap">
+            신고가 →
+          </HardLink>
           <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">
             전체 보기 →
           </HardLink>
@@ -162,5 +165,6 @@ const currentBundle = computed(() => {
 
 const cardGridCols = computed(() => (txnType.value === 'wolse' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'));
 
-const rankingSlug = computed(() => toApiSlug(propertyType.value, txnType.value === 'sale' ? 'sale' : 'rent'));
+const rankingSlug = computed(() => toApiSlug(propertyType.value, txnType.value === 'sale' ? 'sale' : 'rent'))
+const newHighSlug = computed(() => `${toApiSlug(propertyType.value, 'sale')}`);
 </script>
