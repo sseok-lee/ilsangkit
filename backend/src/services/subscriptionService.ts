@@ -275,9 +275,9 @@ export async function getCompetitionRanking(params: SubscriptionCompetitionRankP
 
     const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>(Prisma.sql`
       SELECT s.id AS subscriptionId, s.houseName, s.regionName, s.sourceType, s.winnerDate,
-             MIN(CAST(REPLACE(sc.minScore, ',', '') AS DECIMAL(6,1))) AS minCut,
-             MAX(CAST(REPLACE(sc.maxScore, ',', '') AS DECIMAL(6,1))) AS maxCut,
-             AVG(CAST(REPLACE(sc.avgScore, ',', '') AS DECIMAL(6,1))) AS avgCut
+             MIN(CASE WHEN sc.minScore REGEXP '^[0-9,]+(\\.[0-9]+)?$' THEN CAST(REPLACE(sc.minScore, ',', '') AS DECIMAL(6,1)) END) AS minCut,
+             MAX(CASE WHEN sc.maxScore REGEXP '^[0-9,]+(\\.[0-9]+)?$' THEN CAST(REPLACE(sc.maxScore, ',', '') AS DECIMAL(6,1)) END) AS maxCut,
+             AVG(CASE WHEN sc.avgScore REGEXP '^[0-9,]+(\\.[0-9]+)?$' THEN CAST(REPLACE(sc.avgScore, ',', '') AS DECIMAL(6,1)) END) AS avgCut
       FROM SubscriptionScore sc
       JOIN Subscription s ON s.id = sc.subscriptionId
       WHERE sc.avgScore REGEXP '^[0-9,]+(\\.[0-9]+)?$' ${sourceFilter} ${regionFilter}

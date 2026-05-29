@@ -58,6 +58,7 @@ describe('getCompetitionRanking (metric=score)', () => {
     const sql = flattenSql(mockQueryRaw.mock.calls[1]);
     expect(sql).toContain('avgScore');
     expect(sql).toContain("REGEXP '^[0-9,]+");
+    expect(sql).toContain('CASE WHEN sc.minScore REGEXP');
     expect(res.items[0]).toMatchObject({ subscriptionId: 7, minCut: 64, maxCut: 74, avgCut: 69.5 });
   });
 });
