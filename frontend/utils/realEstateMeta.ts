@@ -305,3 +305,50 @@ export const RANKING_FAQ: Record<RealEstateUrlType, Array<{ q: string; a: string
       ],
     ]),
   ) as Record<RealEstateUrlType, Array<{ q: string; a: string }>>
+
+// 신고가 경신 랜딩 타입별 메타·FAQ (매매 3슬러그)
+export const NEW_HIGH_TYPES = ['apt-sale', 'villa-sale', 'offitel-sale'] as const
+export type NewHighType = typeof NEW_HIGH_TYPES[number]
+
+export const NEW_HIGH_META: Record<NewHighType, { title: string; description: string }> = {
+  'apt-sale': {
+    title: '아파트 신고가 경신 단지 — 최근 면적별 전고점 돌파 | 일상킷',
+    description:
+      '면적대별 전고점을 새로 경신한 아파트 단지를 국토교통부 실거래가로 매일 집계합니다. 최근 신고된 거래 기준입니다.',
+  },
+  'villa-sale': {
+    title: '빌라 신고가 경신 단지 — 최근 면적별 전고점 돌파 | 일상킷',
+    description:
+      '면적대별 전고점을 새로 경신한 연립·다세대(빌라) 단지를 국토교통부 실거래가로 매일 집계합니다.',
+  },
+  'offitel-sale': {
+    title: '오피스텔 신고가 경신 단지 — 최근 면적별 전고점 돌파 | 일상킷',
+    description:
+      '면적대별 전고점을 새로 경신한 오피스텔을 국토교통부 실거래가로 매일 집계합니다.',
+  },
+}
+
+export const NEW_HIGH_FAQ: Record<NewHighType, Array<{ q: string; a: string }>> =
+  Object.fromEntries(
+    NEW_HIGH_TYPES.map((t) => [
+      t,
+      [
+        {
+          q: '신고가 경신이란 무엇인가요?',
+          a: '같은 단지의 동일 면적대(5㎡ 단위)에서 과거 최고 실거래가를 넘어선 새 거래가 나온 경우를 말합니다. 본 집계는 면적대별로 비교하므로 평형이 다른 거래가 섞여 왜곡되지 않습니다.',
+        },
+        {
+          q: '왜 면적대별로 비교하나요?',
+          a: '같은 단지라도 평형에 따라 가격대가 크게 다릅니다. 단지 전체 최고가와 비교하면 작은 평형의 신고가가 묻히므로, 5㎡ 면적대별로 전고점을 비교합니다.',
+        },
+        {
+          q: "'최근 신고된 거래 기준'은 무슨 뜻인가요?",
+          a: '실거래 신고는 계약 후 최대 30일이 걸립니다. 따라서 가장 최근 신고된 거래월을 기준으로 집계하며, 달력상 오늘과 며칠 차이가 날 수 있습니다.',
+        },
+        {
+          q: '얼마나 자주 갱신되나요?',
+          a: '국토교통부 실거래가를 매일 수집·집계해 갱신합니다.',
+        },
+      ],
+    ]),
+  ) as Record<NewHighType, Array<{ q: string; a: string }>>
