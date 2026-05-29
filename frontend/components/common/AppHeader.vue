@@ -27,6 +27,8 @@
 
       <!-- Center/Right: Desktop Navigation (single nav, fills remaining width) -->
       <nav class="hidden md:flex items-center flex-1 gap-1 ml-4">
+        <!-- 좌측 로고와 우측 정렬 네비 클러스터 사이 여백 -->
+        <div class="flex-1" aria-hidden="true"></div>
         <!-- 개별 드롭다운: NAV_LINK_GROUPS (부동산, 청약·임대) -->
         <div
           v-for="group in NAV_LINK_GROUPS"
@@ -147,8 +149,8 @@
           </Transition>
         </div>
 
-        <!-- Utility Links (오른쪽으로 밀기) -->
-        <div class="ml-auto flex items-center gap-1">
+        <!-- Utility Links (우측 정렬 클러스터 내부) -->
+        <div class="flex items-center gap-1">
           <div class="h-5 w-px bg-slate-200 mx-1"></div>
           <HardLink
             to="/guide"
