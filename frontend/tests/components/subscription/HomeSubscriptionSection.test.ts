@@ -130,4 +130,12 @@ describe('HomeSubscriptionSection', () => {
     expect(wrapper.find('section').exists()).toBe(true)
     expect(wrapper.text()).toContain('현재 접수 중이거나 예정된 청약 공고가 없어요')
   })
+
+  it('경쟁률·가점 랜딩으로 가는 링크가 있다', () => {
+    const wrapper = mount(HomeSubscriptionSection, {
+      props: { summary },
+      global: { stubs: { HardLink: { template: '<a :href="to"><slot /></a>', props: ['to'] } } },
+    })
+    expect(wrapper.html()).toContain('/subscription/competition')
+  })
 })

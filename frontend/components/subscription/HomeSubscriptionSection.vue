@@ -8,9 +8,14 @@
         </h2>
         <p class="text-sm text-slate-500 mt-1">지금 신청 가능한 공고와 예정된 일정을 확인하세요.</p>
       </div>
-      <HardLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
-        전체 보기 →
-      </HardLink>
+      <div class="flex items-center gap-3">
+        <HardLink to="/subscription/competition" class="inline-flex items-center min-h-[44px] text-sm text-slate-600 font-bold hover:text-primary hover:underline whitespace-nowrap">
+          경쟁률·가점 →
+        </HardLink>
+        <HardLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
+          전체 보기 →
+        </HardLink>
+      </div>
     </div>
 
     <!-- 요약 1줄 박스 -->
