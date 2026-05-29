@@ -386,6 +386,27 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     ).rejects.toMatchObject({ statusCode: 404 })
   })
 
+  it('static sitemap에 부동산 랭킹 6개 URL 포함', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+    for (const t of ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent']) {
+      expect(xml).toContain(`/real-estate/ranking/${t}`)
+    }
+  })
+
   it('static sitemap 에 LH 임대 hub/탭 URL 들이 포함된다', async () => {
     vi.mocked(ssrFetch).mockImplementation(((path: string) => {
       if (path.includes('/api/sitemap/page-counts')) {

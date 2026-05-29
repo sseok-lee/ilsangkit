@@ -96,6 +96,11 @@ export default defineEventHandler(async (event) => {
     urls.push({ loc: `${SITE_URL}/real-estate/${pt}`, lastmod: weekStart, changefreq: 'daily', priority: 0.8 })
   }
 
+  // 부동산 타입별 시세 랭킹 랜딩 (매주 갱신)
+  for (const pt of hubTypes) {
+    urls.push({ loc: `${SITE_URL}/real-estate/ranking/${pt}`, lastmod: weekStart, changefreq: 'weekly', priority: 0.7 })
+  }
+
   // 청약 페이지 — Subscription 모델 maxUpdatedAt
   urls.push({ loc: `${SITE_URL}/subscription`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
   urls.push({ loc: `${SITE_URL}/subscription/sale`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
