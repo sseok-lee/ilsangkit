@@ -13,6 +13,7 @@ import {
   getRealEstateCityDistrictHubs,
   getSubscriptionIds,
   getSitemapPageCounts,
+  getPublicRentalAnnouncementIds,
 } from '../services/sitemapService.js';
 
 const SitemapFacilitiesQuerySchema = z.object({
@@ -103,6 +104,18 @@ router.get(
   '/subscriptions',
   asyncHandler(async (_req: Request, res: Response) => {
     const data = await getSubscriptionIds();
+    res.json({ success: true, data });
+  })
+);
+
+/**
+ * GET /api/sitemap/public-rental-announcements
+ * 공공임대 모집공고 사이트맵용 pblancId + updatedAt
+ */
+router.get(
+  '/public-rental-announcements',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const data = await getPublicRentalAnnouncementIds();
     res.json({ success: true, data });
   })
 );

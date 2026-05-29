@@ -4,6 +4,7 @@ import * as wasteScheduleService from './wasteScheduleService.js';
 import type { FacilityCategory } from './facilityService.js';
 import { ALL_CATEGORIES } from './categoryRegistry.js';
 import { toKstDateString } from '../lib/dateUtils.js';
+import { listAnnouncementsForSitemap } from './publicRentalAnnouncementService.js';
 
 const SITEMAP_FACILITY_CATS: FacilityCategory[] = [
   'toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy',
@@ -256,6 +257,12 @@ export async function getRealEstateBuildings() {
   `;
   buildingsCache = { data: result, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
   return result;
+}
+
+/** 사이트맵용 — 진행중 + 30일 이내 마감 공공임대 공고 (pblancId dedup). */
+export async function getPublicRentalAnnouncementIds() {
+  const rows = await listAnnouncementsForSitemap();
+  return rows.map((r) => ({ pblancId: r.pblancId, updatedAt: r.updatedAt }));
 }
 
 /**
