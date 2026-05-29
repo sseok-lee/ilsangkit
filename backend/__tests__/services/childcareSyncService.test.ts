@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  fetchChildcarePage,
   transformChildcareItem,
   toIntOrNull,
   type ChildcareAPIItem,
@@ -24,6 +25,76 @@ describe('toIntOrNull', () => {
 
   it('returns null for non-numeric string', () => {
     expect(toIntOrNull('abc')).toBeNull();
+  });
+});
+
+describe('fetchChildcarePage', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const successXml = `
+    <response>
+      <totalCount>1</totalCount>
+      <item>
+        <stcode>CC-001</stcode>
+        <crname>행복어린이집</crname>
+      </item>
+    </response>
+  `;
+
+  it('retries transient fetch failures such as ECONNRESET', async () => {
+    const resetError = Object.assign(new TypeError('fetch failed'), {
+      cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }),
+    });
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(resetError)
+      .mockResolvedValueOnce(new Response(successXml, { status: 200 }));
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchChildcarePage('api-key', '28710', 1, {
+      maxRetries: 2,
+      retryDelayMs: 0,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.totalCount).toBe(1);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].stcode).toBe('CC-001');
+  });
+
+  it('retries retryable HTTP responses', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('temporary unavailable', {
+        status: 503,
+        statusText: 'Service Unavailable',
+      }))
+      .mockResolvedValueOnce(new Response(successXml, { status: 200 }));
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchChildcarePage('api-key', '28710', 1, {
+      maxRetries: 2,
+      retryDelayMs: 0,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.items[0].crname).toBe('행복어린이집');
+  });
+
+  it('does not retry non-retryable HTTP responses', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('bad request', { status: 400, statusText: 'Bad Request' })
+    );
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(fetchChildcarePage('api-key', '28710', 1, {
+      maxRetries: 3,
+      retryDelayMs: 0,
+    })).rejects.toThrow('API request failed: 400 Bad Request');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
