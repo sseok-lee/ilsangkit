@@ -206,4 +206,39 @@ describe('getBuildingInfo - bjdCode fallback', () => {
     expect(result?.lat).toBe(sampleCoordsOnly.lat);
     expect(result?.lng).toBe(sampleCoordsOnly.lng);
   });
+
+  // 회귀: getComplexList(summary)에서 온 bjdCode가 트랜잭션과 어긋나도(stale summary /
+  // startsWith 오매칭) buildingName으로 회수해 false noindex 를 막는다.
+  it('힌트 bjdCode 에 거래가 없으면 buildingName 으로 bjdCode 를 회수한다', async () => {
+    mockAptSaleFindFirst
+      .mockResolvedValueOnce(null) // 힌트 'STALE' 로는 최신 거래 없음
+      .mockResolvedValueOnce(sampleRecord); // 회수된 '11680' 의 최신 거래
+    mockAptSaleGroupBy
+      .mockResolvedValueOnce([]) // 힌트 buildForBjdCode 의 dongName groupBy (latest null 이라 미사용)
+      .mockResolvedValueOnce([{ bjdCode: '11680', _count: { _all: 9 } }]) // buildingName 재해석
+      .mockResolvedValueOnce([{ dongName: '역삼동', _count: { _all: 9 } }]); // 회수 후 dongName
+    mockAptSaleAggregate.mockResolvedValue(sampleAgg);
+
+    const result = await getBuildingInfo('apt-sale', 'STALE_BJD_0000', '래미안에든');
+
+    expect(result).not.toBeNull();
+    expect(result?.bjdCode).toBe('11680');
+    // buildingName 기반 bjdCode 재해석이 실제로 호출됐는지 확인
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        by: ['bjdCode'],
+        where: { buildingName: '래미안에든' },
+        take: 1,
+      })
+    );
+  });
+
+  it('힌트 bjdCode 도 buildingName 회수도 실패하면 null 을 반환한다', async () => {
+    mockAptSaleFindFirst.mockResolvedValue(null); // 힌트로 최신 거래 없음
+    mockAptSaleGroupBy.mockResolvedValue([]); // buildingName 회수도 0건
+
+    const result = await getBuildingInfo('apt-sale', 'STALE_BJD_0000', '없는건물');
+
+    expect(result).toBeNull();
+  });
 });
