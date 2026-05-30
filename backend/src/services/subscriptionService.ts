@@ -175,7 +175,7 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
 
     const batch = await prisma.subscription.findMany({
       where: { AND: [where, dateBasedStatusFilter(statusKey)] },
-      orderBy: { announcementDate: 'desc' },
+      orderBy: buildOrderBy(sort),
       skip: remainingSkip,
       take,
     });

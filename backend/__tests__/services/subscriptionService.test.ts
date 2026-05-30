@@ -245,6 +245,21 @@ describe('getSubscriptionList', () => {
       receptionStartDate: { sort: 'asc', nulls: 'last' },
     });
   });
+
+  it('status 없이 sort=deadline 이면 그룹 분기도 buildOrderBy를 사용한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount
+      .mockResolvedValueOnce(1) // total
+      .mockResolvedValueOnce(1) // ongoing
+      .mockResolvedValueOnce(0) // upcoming
+      .mockResolvedValueOnce(0); // closed
+
+    await getSubscriptionList({ sort: 'deadline', page: 1, limit: 5 });
+
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual({
+      receptionEndDate: { sort: 'asc', nulls: 'last' },
+    });
+  });
 });
 
 describe('getSubscriptionDetail', () => {
