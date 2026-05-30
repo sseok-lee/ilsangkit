@@ -466,6 +466,9 @@ export interface BuildingInfo {
   latestDealMonth: number | null;
   lat: number | null;
   lng: number | null;
+  /** rent 타입에서만 채워지는 건물-레벨 전세/월세 거래 건수 */
+  jeonseCount?: number;
+  wolseCount?: number;
 }
 
 /**
@@ -522,6 +525,15 @@ export async function getBuildingInfo(
 
     if (!latest) return null;
 
+    let jeonseCount: number | undefined
+    let wolseCount: number | undefined
+    if (!isSaleType(type)) {
+      [jeonseCount, wolseCount] = await Promise.all([
+        model.count({ where: { ...where, rentType: '전세' } }),
+        model.count({ where: { ...where, rentType: '월세' } }),
+      ])
+    }
+
     const representativeDongName: string | null = dongGroups[0]?.dongName ?? null;
 
     let lat = latest.lat;
@@ -564,6 +576,8 @@ export async function getBuildingInfo(
       latestDealMonth: latest.dealMonth,
       lat: lat !== null ? Number(lat) : null,
       lng: lng !== null ? Number(lng) : null,
+      jeonseCount,
+      wolseCount,
     };
   };
 
