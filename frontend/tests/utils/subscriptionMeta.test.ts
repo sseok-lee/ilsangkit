@@ -29,18 +29,21 @@ describe('subscriptionTypeBadge', () => {
   })
 
   it('OFFITEL은 오피스텔(틸)', () => {
-    expect(subscriptionTypeBadge('OFFITEL', null).label).toBe('오피스텔')
-    expect(subscriptionTypeBadge('OFFITEL', null).classes).toContain('teal')
+    const b = subscriptionTypeBadge('OFFITEL', null)
+    expect(b.label).toBe('오피스텔')
+    expect(b.classes).toContain('teal')
   })
 
   it('REMAINING은 무순위·잔여(오렌지)', () => {
-    expect(subscriptionTypeBadge('REMAINING', null).label).toBe('무순위·잔여')
-    expect(subscriptionTypeBadge('REMAINING', null).classes).toContain('orange')
+    const b = subscriptionTypeBadge('REMAINING', null)
+    expect(b.label).toBe('무순위·잔여')
+    expect(b.classes).toContain('orange')
   })
 
   it('OPTIONAL은 임의공급(퍼플)', () => {
-    expect(subscriptionTypeBadge('OPTIONAL', null).label).toBe('임의공급')
-    expect(subscriptionTypeBadge('OPTIONAL', null).classes).toContain('fuchsia')
+    const b = subscriptionTypeBadge('OPTIONAL', null)
+    expect(b.label).toBe('임의공급')
+    expect(b.classes).toContain('fuchsia')
   })
 
   it('APT + 공공임대 rentType은 공공임대(회색, rent)', () => {

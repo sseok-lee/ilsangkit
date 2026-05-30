@@ -128,7 +128,7 @@ export function getSourceTypeLabel(sourceType: string): string {
 }
 
 // 청약홈 API가 '임대주택' 대신 반환하는 실제 공공임대 rentType 값 (백엔드와 동일)
-export const PUBLIC_RENT_TYPES = ['분양전환 가능임대', '분양전환 불가임대']
+export const PUBLIC_RENT_TYPES: readonly string[] = ['분양전환 가능임대', '분양전환 불가임대']
 
 export interface SubscriptionTypeBadge {
   label: string
@@ -139,13 +139,14 @@ export interface SubscriptionTypeBadge {
 /**
  * (sourceType, rentType) → 홈 타임라인 타입 뱃지.
  * 분양 4종은 컬러, 임대 2종(공공/민간)은 회색으로 묶고 라벨로 구분.
- * 색 클래스 문자열은 tailwind content 글롭에 utils 가 포함돼야 purge 되지 않음(별도 Task).
  */
+// NOTE: 색 클래스가 purge 되지 않으려면 tailwind.config content 글롭에 './utils/**' 필요 (다음 Task에서 추가).
 export function subscriptionTypeBadge(
   sourceType: string,
   rentType: string | null,
 ): SubscriptionTypeBadge {
   if (sourceType === 'OFFITEL') return { label: '오피스텔', classes: 'bg-teal-50 text-teal-700', kind: 'sale' }
+  // 타임라인 칩용 압축 라벨 (의도적: getSourceTypeLabel '무순위'와 다름)
   if (sourceType === 'REMAINING') return { label: '무순위·잔여', classes: 'bg-orange-50 text-orange-700', kind: 'sale' }
   if (sourceType === 'OPTIONAL') return { label: '임의공급', classes: 'bg-fuchsia-50 text-fuchsia-700', kind: 'sale' }
   if (sourceType === 'PRIVATE_RENT') return { label: '민간임대', classes: 'bg-slate-100 text-slate-600', kind: 'rent' }
