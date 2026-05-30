@@ -1,31 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const {
-  mockAptSaleFindFirst,
-  mockAptSaleAggregate,
-  mockAptSaleGroupBy,
+  mockAptSaleFindFirst, mockAptSaleAggregate, mockAptSaleGroupBy, mockAptSaleCount,
+  mockAptRentFindFirst, mockAptRentAggregate, mockAptRentGroupBy, mockAptRentCount,
 } = vi.hoisted(() => ({
-  mockAptSaleFindFirst: vi.fn(),
-  mockAptSaleAggregate: vi.fn(),
-  mockAptSaleGroupBy: vi.fn(),
+  mockAptSaleFindFirst: vi.fn(), mockAptSaleAggregate: vi.fn(), mockAptSaleGroupBy: vi.fn(), mockAptSaleCount: vi.fn(),
+  mockAptRentFindFirst: vi.fn(), mockAptRentAggregate: vi.fn(), mockAptRentGroupBy: vi.fn(), mockAptRentCount: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
   const models = {
-    aptSaleTransaction: {
-      findFirst: mockAptSaleFindFirst,
-      aggregate: mockAptSaleAggregate,
-      groupBy: mockAptSaleGroupBy,
-      findMany: vi.fn(),
-      count: vi.fn(),
-    },
-    aptRentTransaction: {
-      findFirst: vi.fn(),
-      aggregate: vi.fn(),
-      groupBy: vi.fn(),
-      findMany: vi.fn(),
-      count: vi.fn(),
-    },
+    aptSaleTransaction: { findFirst: mockAptSaleFindFirst, aggregate: mockAptSaleAggregate, groupBy: mockAptSaleGroupBy, count: mockAptSaleCount, findMany: vi.fn() },
+    aptRentTransaction: { findFirst: mockAptRentFindFirst, aggregate: mockAptRentAggregate, groupBy: mockAptRentGroupBy, count: mockAptRentCount, findMany: vi.fn() },
     villaSaleTransaction: {
       findFirst: vi.fn(),
       aggregate: vi.fn(),
@@ -206,4 +192,79 @@ describe('getBuildingInfo - bjdCode fallback', () => {
     expect(result?.lat).toBe(sampleCoordsOnly.lat);
     expect(result?.lng).toBe(sampleCoordsOnly.lng);
   });
+
+  // 회귀: getComplexList(summary)에서 온 bjdCode가 트랜잭션과 어긋나도(stale summary /
+  // startsWith 오매칭) buildingName으로 회수해 false noindex 를 막는다.
+  it('힌트 bjdCode 에 거래가 없으면 buildingName 으로 bjdCode 를 회수한다', async () => {
+    mockAptSaleFindFirst
+      .mockResolvedValueOnce(null) // 힌트 'STALE' 로는 최신 거래 없음
+      .mockResolvedValueOnce(sampleRecord); // 회수된 '11680' 의 최신 거래
+    mockAptSaleGroupBy
+      .mockResolvedValueOnce([]) // 힌트 buildForBjdCode 의 dongName groupBy (latest null 이라 미사용)
+      .mockResolvedValueOnce([{ bjdCode: '11680', _count: { _all: 9 } }]) // buildingName 재해석
+      .mockResolvedValueOnce([{ dongName: '역삼동', _count: { _all: 9 } }]); // 회수 후 dongName
+    mockAptSaleAggregate.mockResolvedValue(sampleAgg);
+
+    const result = await getBuildingInfo('apt-sale', 'STALE_BJD_0000', '래미안에든');
+
+    expect(result).not.toBeNull();
+    expect(result?.bjdCode).toBe('11680');
+    // buildingName 기반 bjdCode 재해석이 실제로 호출됐는지 확인
+    expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        by: ['bjdCode'],
+        where: { buildingName: '래미안에든' },
+        take: 1,
+      })
+    );
+  });
+
+  it('힌트 bjdCode 도 buildingName 회수도 실패하면 null 을 반환한다', async () => {
+    mockAptSaleFindFirst.mockResolvedValue(null); // 힌트로 최신 거래 없음
+    mockAptSaleGroupBy.mockResolvedValue([]); // buildingName 회수도 0건
+
+    const result = await getBuildingInfo('apt-sale', 'STALE_BJD_0000', '없는건물');
+
+    expect(result).toBeNull();
+  });
 });
+
+describe('getBuildingInfo - 전·월세 건수 (rent 전용, 건물-레벨)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const rentRecord = {
+    buildingName: '래미안', bjdCode: '11680', city: '서울', district: '강남구', dongName: '역삼동',
+    roadName: null, jibun: '1', buildYear: 2009, dealYear: 2024, dealMonth: 1, dealDay: 15,
+    lat: 37.5, lng: 127.0, deposit: 120000, monthlyRent: 0, exclusiveArea: 84.8,
+  }
+
+  it('rent 타입이면 jeonseCount/wolseCount 를 건물-레벨로 채운다', async () => {
+    mockAptRentFindFirst.mockResolvedValue(rentRecord)
+    mockAptRentAggregate.mockResolvedValue({ _min: { exclusiveArea: 59.9 }, _max: { exclusiveArea: 114.8 } })
+    mockAptRentGroupBy.mockResolvedValue([{ dongName: '역삼동', _count: { dongName: 5 } }])
+    mockAptRentCount.mockResolvedValueOnce(7).mockResolvedValueOnce(3) // 전세, 월세
+
+    const result = await getBuildingInfo('apt-rent', '11680', '래미안')
+
+    expect(result?.jeonseCount).toBe(7)
+    expect(result?.wolseCount).toBe(3)
+    expect(mockAptRentCount).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { bjdCode: '11680', buildingName: '래미안', rentType: '전세' } }),
+    )
+    expect(mockAptRentCount).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { bjdCode: '11680', buildingName: '래미안', rentType: '월세' } }),
+    )
+  })
+
+  it('sale 타입이면 카운트하지 않고 필드도 없다', async () => {
+    mockAptSaleFindFirst.mockResolvedValue({ ...rentRecord, dealAmount: 250000 })
+    mockAptSaleAggregate.mockResolvedValue({ _min: { exclusiveArea: 59.9 }, _max: { exclusiveArea: 114.8 } })
+    mockAptSaleGroupBy.mockResolvedValue([{ dongName: '역삼동', _count: { dongName: 5 } }])
+
+    const result = await getBuildingInfo('apt-sale', '11680', '래미안')
+
+    expect(result?.jeonseCount).toBeUndefined()
+    expect(result?.wolseCount).toBeUndefined()
+    expect(mockAptSaleCount).not.toHaveBeenCalled()
+  })
+})

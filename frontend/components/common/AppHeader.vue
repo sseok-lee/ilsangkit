@@ -1,83 +1,71 @@
 <template>
   <header
     :class="[
-      'sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 h-14 md:h-16',
+      'sticky top-0 z-50 px-4 md:px-6 h-14 md:h-16',
       'bg-background-light',
       'border-b border-transparent',
       'transition-colors duration-300',
       props.transparent ? 'bg-transparent border-transparent' : ''
     ]"
   >
-    <!-- Left: Back Button (if enabled) or Logo -->
-    <div class="flex items-center gap-2">
-      <button
-        v-if="props.showBackButton"
-        class="flex size-11 items-center justify-center rounded-full hover:bg-black/5 transition-colors text-slate-900"
-        aria-label="뒤로가기"
-        @click="handleBack"
-      >
-        <span class="material-symbols-outlined text-[24px]">arrow_back</span>
-      </button>
-
-      <HardLink v-if="!props.showBackButton" to="/" class="flex items-center">
-        <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 w-auto shrink-0" width="91" height="36" />
-      </HardLink>
-    </div>
-
-    <!-- Center: Desktop Navigation (Group Dropdowns) -->
-    <nav class="hidden md:flex items-center gap-1">
-      <!-- Nav Group Dropdowns (시설 카테고리 + 부동산 링크) -->
-      <div
-        v-for="group in NAV_GROUPS"
-        :key="group.title"
-        class="relative"
-        @mouseenter="openDropdown(group.title)"
-        @mouseleave="scheduleCloseDropdown"
-        @focusout="handleDropdownFocusout($event, group.title)"
-      >
+    <div class="mx-auto flex h-full w-full max-w-[1200px] items-center">
+      <!-- Left: Back Button (if enabled) or Logo -->
+      <div class="flex items-center gap-2">
         <button
-          class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
-          aria-haspopup="true"
-          :aria-expanded="activeDropdown === group.title"
-          @click="toggleDropdown(group.title)"
-          @keydown.enter.prevent="openDropdown(group.title)"
-          @keydown.space.prevent="openDropdown(group.title)"
+          v-if="props.showBackButton"
+          class="flex size-11 items-center justify-center rounded-full hover:bg-black/5 transition-colors text-slate-900"
+          aria-label="뒤로가기"
+          @click="handleBack"
         >
-          <span class="material-symbols-outlined text-[18px]">{{ group.icon }}</span>
-          {{ group.title }}
-          <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === group.title }">expand_more</span>
+          <span class="material-symbols-outlined text-[24px]">arrow_back</span>
         </button>
-        <Transition
-          enter-active-class="transition duration-150 ease-out"
-          enter-from-class="opacity-0 scale-95 -translate-y-1"
-          enter-to-class="opacity-100 scale-100 translate-y-0"
-          leave-active-class="transition duration-100 ease-in"
-          leave-from-class="opacity-100 scale-100 translate-y-0"
-          leave-to-class="opacity-0 scale-95 -translate-y-1"
+
+        <HardLink v-if="!props.showBackButton" to="/" class="flex items-center">
+          <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 w-auto shrink-0" width="91" height="36" />
+        </HardLink>
+      </div>
+
+      <!-- Center/Right: Desktop Navigation (single nav, fills remaining width) -->
+      <nav class="hidden md:flex items-center flex-1 gap-1 ml-4">
+        <!-- 좌측 로고와 우측 정렬 네비 클러스터 사이 여백 -->
+        <div class="flex-1" aria-hidden="true"></div>
+        <!-- 개별 드롭다운: NAV_LINK_GROUPS (부동산, 청약·임대) -->
+        <div
+          v-for="group in NAV_LINK_GROUPS"
+          :key="group.title"
+          class="relative"
+          @mouseenter="openDropdown(group.title)"
+          @mouseleave="scheduleCloseDropdown"
+          @focusout="handleDropdownFocusout($event, group.title)"
         >
-          <div
-            v-if="activeDropdown === group.title"
-            class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-slate-200 p-2 z-50"
-            @mouseenter="cancelCloseDropdown"
-            @mouseleave="scheduleCloseDropdown"
+          <button
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+            aria-haspopup="true"
+            :aria-expanded="activeDropdown === group.title"
+            @click="toggleDropdown(group.title)"
+            @keydown.enter.prevent="openDropdown(group.title)"
+            @keydown.space.prevent="openDropdown(group.title)"
           >
-            <!-- 시설 카테고리 그룹 -->
-            <template v-if="!isLinkGroup(group)">
-              <HardLink
-                v-for="catId in group.categories"
-                :key="catId"
-                :to="`/${catId}`"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-base text-slate-700 transition-colors"
-                @click="closeDropdown"
-              >
-                <CategoryIcon :category-id="catId" size="sm" />
-                {{ CATEGORY_META[catId].shortLabel }}
-              </HardLink>
-            </template>
-            <!-- 부동산/청약 링크 그룹 -->
-            <template v-else>
+            <span class="material-symbols-outlined text-[18px]">{{ group.icon }}</span>
+            {{ group.title }}
+            <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === group.title }">expand_more</span>
+          </button>
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 scale-95 -translate-y-1"
+            enter-to-class="opacity-100 scale-100 translate-y-0"
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="opacity-100 scale-100 translate-y-0"
+            leave-to-class="opacity-0 scale-95 -translate-y-1"
+          >
+            <div
+              v-if="activeDropdown === group.title"
+              class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-slate-200 p-2 z-50"
+              @mouseenter="cancelCloseDropdown"
+              @mouseleave="scheduleCloseDropdown"
+            >
               <template v-for="(link, idx) in group.links" :key="link.to">
-                <!-- 섹션 시작점에 헤딩 표시 (idx===0 이거나 직전 항목과 section 가 다른 경우). -->
+                <!-- 섹션 시작점에 헤딩 표시 -->
                 <template v-if="link.section && (idx === 0 || link.section !== group.links[idx - 1].section)">
                   <div
                     v-if="idx > 0"
@@ -101,43 +89,96 @@
                   {{ link.label }}
                 </HardLink>
               </template>
-            </template>
-          </div>
-        </Transition>
-      </div>
+            </div>
+          </Transition>
+        </div>
 
-      <!-- Utility Links Divider -->
-      <div class="h-5 w-px bg-slate-200 mx-1"></div>
+        <!-- 생활시설: 시설 4개 그룹 통합 메가메뉴 -->
+        <div
+          class="relative"
+          @mouseenter="openDropdown('생활시설')"
+          @mouseleave="scheduleCloseDropdown"
+          @focusout="handleDropdownFocusout($event, '생활시설')"
+        >
+          <button
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+            aria-haspopup="true"
+            :aria-expanded="activeDropdown === '생활시설'"
+            @click="toggleDropdown('생활시설')"
+            @keydown.enter.prevent="openDropdown('생활시설')"
+            @keydown.space.prevent="openDropdown('생활시설')"
+          >
+            <span class="material-symbols-outlined text-[18px]">grid_view</span>
+            생활시설
+            <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === '생활시설' }">expand_more</span>
+          </button>
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 scale-95 -translate-y-1"
+            enter-to-class="opacity-100 scale-100 translate-y-0"
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="opacity-100 scale-100 translate-y-0"
+            leave-to-class="opacity-0 scale-95 -translate-y-1"
+          >
+            <div
+              v-if="activeDropdown === '생활시설'"
+              data-testid="nav-mega-menu"
+              role="region"
+              aria-label="생활시설 메뉴"
+              class="absolute top-full right-0 mt-1 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50"
+              @mouseenter="cancelCloseDropdown"
+              @mouseleave="scheduleCloseDropdown"
+            >
+              <div v-for="group in CATEGORY_GROUPS" :key="group.title">
+                <div class="flex items-center gap-1.5 px-2 pb-1.5 mb-1 border-b border-slate-100 text-[13px] font-bold text-slate-700">
+                  <span class="material-symbols-outlined text-[18px] text-primary">{{ group.icon }}</span>
+                  {{ group.title }}
+                </div>
+                <HardLink
+                  v-for="catId in group.categories"
+                  :key="catId"
+                  :to="`/${catId}`"
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
+                  @click="closeDropdown"
+                >
+                  <CategoryIcon :category-id="catId" size="sm" />
+                  {{ CATEGORY_META[catId].shortLabel }}
+                </HardLink>
+              </div>
+            </div>
+          </Transition>
+        </div>
 
-      <!-- Utility Links -->
-      <HardLink
-        to="/guide"
-        class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
-      >
-        <span class="material-symbols-outlined text-[18px]">menu_book</span>
-        가이드
-      </HardLink>
-      <HardLink
-        to="/search"
-        class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
-      >
-        <span class="material-symbols-outlined text-[18px]">search</span>
-        검색
-      </HardLink>
-      <HardLink
-        to="/about"
-        class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
-      >
-        <span class="material-symbols-outlined text-[18px]">info</span>
-        소개
-      </HardLink>
-    </nav>
+        <!-- Utility Links (우측 정렬 클러스터 내부) -->
+        <div class="flex items-center gap-1">
+          <div class="h-5 w-px bg-slate-200 mx-1"></div>
+          <HardLink
+            to="/guide"
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">menu_book</span>
+            가이드
+          </HardLink>
+          <HardLink
+            to="/search"
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">search</span>
+            검색
+          </HardLink>
+          <HardLink
+            to="/about"
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">info</span>
+            소개
+          </HardLink>
+        </div>
+      </nav>
 
-    <!-- Right: Desktop Actions & Mobile Menu Button -->
-    <div class="flex items-center justify-end">
       <!-- Mobile Menu Button -->
       <button
-        class="md:hidden flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
+        class="md:hidden ml-auto flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
         aria-label="메뉴"
         :aria-expanded="isMobileMenuOpen"
         @click="toggleMobileMenu($event)"
@@ -166,14 +207,41 @@
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">
-        <!-- Nav Groups (시설 카테고리 + 부동산 링크) -->
-        <div v-for="group in NAV_GROUPS" :key="group.title" class="mb-1">
+        <!-- 부동산 / 청약·임대 (link groups) -->
+        <div v-for="group in NAV_LINK_GROUPS" :key="group.title" class="mb-1">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
             {{ group.title }}
           </div>
-          <!-- 시설 카테고리 -->
-          <template v-if="!isLinkGroup(group)">
+          <template v-for="(link, idx) in group.links" :key="link.to">
+            <div
+              v-if="link.section && (idx === 0 || link.section !== group.links[idx - 1].section)"
+              class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+            >
+              {{ link.section }}
+            </div>
+            <HardLink
+              :to="link.to"
+              class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              @click="closeMobileMenu"
+            >
+              <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
+              <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
+              {{ link.label }}
+            </HardLink>
+          </template>
+        </div>
+
+        <!-- 생활시설 통합 섹션 (시설 4개 그룹) -->
+        <div class="mb-1">
+          <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span class="material-symbols-outlined text-[16px] text-primary">grid_view</span>
+            생활시설
+          </div>
+          <div v-for="group in CATEGORY_GROUPS" :key="group.title">
+            <div class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              {{ group.title }}
+            </div>
             <HardLink
               v-for="catId in group.categories"
               :key="catId"
@@ -184,27 +252,7 @@
               <CategoryIcon :category-id="catId" size="sm" />
               {{ CATEGORY_META[catId].shortLabel }}
             </HardLink>
-          </template>
-          <!-- 부동산 링크 -->
-          <template v-else>
-            <template v-for="(link, idx) in group.links" :key="link.to">
-              <div
-                v-if="link.section && (idx === 0 || link.section !== group.links[idx - 1].section)"
-                class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
-              >
-                {{ link.section }}
-              </div>
-              <HardLink
-                :to="link.to"
-                class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
-                @click="closeMobileMenu"
-              >
-                <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-                <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
-                {{ link.label }}
-              </HardLink>
-            </template>
-          </template>
+          </div>
         </div>
 
         <div class="h-px bg-slate-200 my-2"></div>
@@ -261,7 +309,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
-import { CATEGORY_META, NAV_GROUPS, isLinkGroup } from '~/types/facility'
+import { CATEGORY_META, NAV_LINK_GROUPS, CATEGORY_GROUPS } from '~/types/facility'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 
 interface Props {

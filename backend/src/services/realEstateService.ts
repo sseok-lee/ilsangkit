@@ -466,6 +466,9 @@ export interface BuildingInfo {
   latestDealMonth: number | null;
   lat: number | null;
   lng: number | null;
+  /** rent 타입에서만 채워지는 건물-레벨 전세/월세 거래 건수 */
+  jeonseCount?: number;
+  wolseCount?: number;
 }
 
 /**
@@ -481,8 +484,8 @@ export async function getBuildingInfo(
 ): Promise<BuildingInfo | null> {
   const model = getModel(type);
 
-  let effectiveBjdCode = bjdCode;
-  if (!effectiveBjdCode) {
+  // buildingName으로 거래가 가장 많은 bjdCode를 고른다.
+  const resolveBjdCodeByName = async (): Promise<string | null> => {
     const top = await model.groupBy({
       by: ['bjdCode'],
       where: { buildingName },
@@ -490,80 +493,107 @@ export async function getBuildingInfo(
       orderBy: { _count: { bjdCode: 'desc' } },
       take: 1,
     });
-    if (top.length === 0) return null;
-    effectiveBjdCode = top[0].bjdCode;
-  }
+    return top.length === 0 ? null : top[0].bjdCode;
+  };
 
-  const where = { bjdCode: effectiveBjdCode, buildingName };
   const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
-
   const areaField = 'exclusiveArea';
   const orderBy = [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }];
 
-  const [latest, agg, dongGroups] = await Promise.all([
-    model.findFirst({
-      where,
-      orderBy,
-    }),
-    model.aggregate({
-      where,
-      _min: { [areaField]: true },
-      _max: { [areaField]: true },
-    }),
-    model.groupBy({
-      by: ['dongName'],
-      where: { ...where, dongName: { not: '' } },
-      _count: { dongName: true },
-      orderBy: { _count: { dongName: 'desc' } },
-      take: 1,
-    }),
-  ]);
+  // 특정 bjdCode 로 BuildingInfo 를 조립한다. 해당 bjdCode 에 거래가 없으면 null.
+  const buildForBjdCode = async (effectiveBjdCode: string): Promise<BuildingInfo | null> => {
+    const where = { bjdCode: effectiveBjdCode, buildingName };
 
-  if (!latest) return null;
+    const [latest, agg, dongGroups] = await Promise.all([
+      model.findFirst({
+        where,
+        orderBy,
+      }),
+      model.aggregate({
+        where,
+        _min: { [areaField]: true },
+        _max: { [areaField]: true },
+      }),
+      model.groupBy({
+        by: ['dongName'],
+        where: { ...where, dongName: { not: '' } },
+        _count: { dongName: true },
+        orderBy: { _count: { dongName: 'desc' } },
+        take: 1,
+      }),
+    ]);
 
-  const representativeDongName: string | null = dongGroups[0]?.dongName ?? null;
+    if (!latest) return null;
 
-  let lat = latest.lat;
-  let lng = latest.lng;
+    let jeonseCount: number | undefined
+    let wolseCount: number | undefined
+    if (!isSaleType(type)) {
+      [jeonseCount, wolseCount] = await Promise.all([
+        model.count({ where: { ...where, rentType: '전세' } }),
+        model.count({ where: { ...where, rentType: '월세' } }),
+      ])
+    }
 
-  if (lat === null || lng === null) {
-    const latestWithCoords = await model.findFirst({
-      where: {
-        ...where,
-        lat: { not: null },
-        lng: { not: null },
-      },
-      orderBy,
-      select: {
-        lat: true,
-        lng: true,
-      },
-    });
+    const representativeDongName: string | null = dongGroups[0]?.dongName ?? null;
 
-    lat = latestWithCoords?.lat ?? null;
-    lng = latestWithCoords?.lng ?? null;
+    let lat = latest.lat;
+    let lng = latest.lng;
+
+    if (lat === null || lng === null) {
+      const latestWithCoords = await model.findFirst({
+        where: {
+          ...where,
+          lat: { not: null },
+          lng: { not: null },
+        },
+        orderBy,
+        select: {
+          lat: true,
+          lng: true,
+        },
+      });
+
+      lat = latestWithCoords?.lat ?? null;
+      lng = latestWithCoords?.lng ?? null;
+    }
+
+    return {
+      bjdCode: effectiveBjdCode,
+      buildingName: latest.buildingName,
+      city: latest.city,
+      district: latest.district,
+      dongName: representativeDongName,
+      roadName: latest.roadName ?? null,
+      jibun: latest.jibun ?? null,
+      buildYear: latest.buildYear ?? null,
+      minArea: agg._min[areaField] !== null && agg._min[areaField] !== undefined ? Number(agg._min[areaField]) : null,
+      maxArea: agg._max[areaField] !== null && agg._max[areaField] !== undefined ? Number(agg._max[areaField]) : null,
+      latestDealAmount: latest[priceField] !== null ? Number(latest[priceField]) : null,
+      latestMonthlyRent: isSaleType(type)
+        ? null
+        : (latest.monthlyRent !== null && latest.monthlyRent !== undefined ? Number(latest.monthlyRent) : null),
+      latestDealYear: latest.dealYear,
+      latestDealMonth: latest.dealMonth,
+      lat: lat !== null ? Number(lat) : null,
+      lng: lng !== null ? Number(lng) : null,
+      jeonseCount,
+      wolseCount,
+    };
+  };
+
+  // bjdCode 는 강한 조건이 아니라 "힌트"로 취급한다.
+  // getComplexList(summary 테이블)에서 온 bjdCode 가 트랜잭션과 어긋나도
+  // (stale summary / startsWith 오매칭) buildingName 으로 회수해서,
+  // 사이트맵엔 있는데 상세는 buildingInfo=null → false noindex 가 되는 것을 막는다.
+  // happy-path(힌트 유효)에는 추가 쿼리가 없고, 힌트가 빗나간 경우에만 1회 재해석한다.
+  if (bjdCode) {
+    const fromHint = await buildForBjdCode(bjdCode);
+    if (fromHint) return fromHint;
   }
 
-  return {
-    bjdCode: effectiveBjdCode,
-    buildingName: latest.buildingName,
-    city: latest.city,
-    district: latest.district,
-    dongName: representativeDongName,
-    roadName: latest.roadName ?? null,
-    jibun: latest.jibun ?? null,
-    buildYear: latest.buildYear ?? null,
-    minArea: agg._min[areaField] !== null && agg._min[areaField] !== undefined ? Number(agg._min[areaField]) : null,
-    maxArea: agg._max[areaField] !== null && agg._max[areaField] !== undefined ? Number(agg._max[areaField]) : null,
-    latestDealAmount: latest[priceField] !== null ? Number(latest[priceField]) : null,
-    latestMonthlyRent: isSaleType(type)
-      ? null
-      : (latest.monthlyRent !== null && latest.monthlyRent !== undefined ? Number(latest.monthlyRent) : null),
-    latestDealYear: latest.dealYear,
-    latestDealMonth: latest.dealMonth,
-    lat: lat !== null ? Number(lat) : null,
-    lng: lng !== null ? Number(lng) : null,
-  };
+  const resolvedBjdCode = await resolveBjdCodeByName();
+  if (!resolvedBjdCode || resolvedBjdCode === bjdCode) return null;
+  return buildForBjdCode(resolvedBjdCode);
 }
 
 // ─────────────────────────────────────────────

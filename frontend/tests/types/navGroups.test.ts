@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   NAV_GROUPS,
+  NAV_LINK_GROUPS,
   CATEGORY_GROUPS,
   isLinkGroup,
   type NavGroup,
@@ -120,5 +121,21 @@ describe('isLinkGroup 타입 가드', () => {
       categories: ['toilet'],
     }
     expect(isLinkGroup(categoryGroup)).toBe(false)
+  })
+})
+
+describe('NAV_LINK_GROUPS', () => {
+  it('링크 그룹 2개(부동산, 청약·임대)만 포함한다', () => {
+    expect(NAV_LINK_GROUPS).toHaveLength(2)
+    expect(NAV_LINK_GROUPS.every((g) => isLinkGroup(g))).toBe(true)
+  })
+
+  it('첫째는 부동산, 둘째는 청약·임대여야 한다', () => {
+    expect(NAV_LINK_GROUPS[0].title).toBe('부동산')
+    expect(NAV_LINK_GROUPS[1].title).toBe('청약·임대')
+  })
+
+  it('NAV_GROUPS의 앞 2개가 NAV_LINK_GROUPS와 동일해야 한다', () => {
+    expect(NAV_GROUPS.slice(0, 2)).toEqual([...NAV_LINK_GROUPS])
   })
 })

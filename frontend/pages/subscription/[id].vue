@@ -111,55 +111,7 @@
 
         <!-- "청약 일정" 블록 -->
         <SectionBlock heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
-          <div class="flex items-center gap-2 mb-2 text-primary">
-            <span class="material-symbols-outlined text-[20px]">schedule</span>
-            <span class="text-sm font-semibold text-slate-800">주요 일정</span>
-          </div>
-          <div class="space-y-4">
-            <TimelineItem
-              v-if="subscription.announcementDate"
-              title="모집공고"
-              :date="subscription.announcementDate"
-              icon="article"
-            />
-            <TimelineItem
-              v-if="subscription.specialStartDate && subscription.specialEndDate"
-              title="특별공급 접수"
-              :date="`${subscription.specialStartDate} ~ ${subscription.specialEndDate}`"
-              icon="edit_note"
-            />
-            <TimelineItem
-              v-if="subscription.rank1AreaStartDate && subscription.rank1AreaEndDate"
-              title="1순위 접수"
-              :date="`${subscription.rank1AreaStartDate} ~ ${subscription.rank1AreaEndDate}`"
-              icon="first_page"
-            />
-            <TimelineItem
-              v-if="subscription.rank2AreaStartDate && subscription.rank2AreaEndDate"
-              title="2순위 접수"
-              :date="`${subscription.rank2AreaStartDate} ~ ${subscription.rank2AreaEndDate}`"
-              icon="last_page"
-            />
-            <TimelineItem
-              v-if="subscription.winnerDate"
-              title="당첨자 발표"
-              :date="subscription.winnerDate"
-              icon="check_circle"
-            />
-            <TimelineItem
-              v-if="subscription.contractStartDate && subscription.contractEndDate"
-              title="계약 기간"
-              :date="`${subscription.contractStartDate} ~ ${subscription.contractEndDate}`"
-              icon="description"
-            />
-            <TimelineItem
-              v-if="subscription.moveInMonth"
-              title="입주 예정"
-              :date="formatMoveInMonth(subscription.moveInMonth)"
-              icon="home"
-              :is-last="true"
-            />
-          </div>
+          <SubscriptionScheduleTimeline :subscription="subscription" />
         </SectionBlock>
 
         <!-- Ad: 일정 이후 -->
@@ -483,6 +435,7 @@ import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import RentalPriceStatsBox from '~/components/subscription/RentalPriceStatsBox.vue'
+import SubscriptionScheduleTimeline from '~/components/subscription/SubscriptionScheduleTimeline.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
