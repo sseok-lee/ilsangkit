@@ -68,8 +68,16 @@ export function dateBasedStatusFilter(
   }
 }
 
+type SubscriptionSort = 'announcement' | 'deadline' | 'startSoon';
+
+function buildOrderBy(sort?: SubscriptionSort): Prisma.SubscriptionOrderByWithRelationInput {
+  if (sort === 'deadline') return { receptionEndDate: { sort: 'asc', nulls: 'last' } };
+  if (sort === 'startSoon') return { receptionStartDate: { sort: 'asc', nulls: 'last' } };
+  return { announcementDate: 'desc' };
+}
+
 export async function getSubscriptionList(params: SubscriptionListParams) {
-  const { status, region, houseType, rentType, sourceType, category, page, limit } = params;
+  const { status, region, houseType, rentType, sourceType, category, page, limit, sort } = params;
 
   const where: Prisma.SubscriptionWhereInput = {};
   // 공공임대 실제 rentType 값 (청약홈 API가 '임대주택' 대신 이 값들을 반환함)
@@ -114,7 +122,7 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
     const [items, total] = await Promise.all([
       prisma.subscription.findMany({
         where: filteredWhere,
-        orderBy: { announcementDate: 'desc' },
+        orderBy: buildOrderBy(sort),
         skip,
         take: limit,
       }),
@@ -167,7 +175,7 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
 
     const batch = await prisma.subscription.findMany({
       where: { AND: [where, dateBasedStatusFilter(statusKey)] },
-      orderBy: { announcementDate: 'desc' },
+      orderBy: buildOrderBy(sort),
       skip: remainingSkip,
       take,
     });

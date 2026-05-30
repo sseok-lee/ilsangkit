@@ -112,3 +112,20 @@ describe('SubscriptionIdSchema', () => {
     expect(() => SubscriptionIdSchema.parse({ id: 'abc' })).toThrow();
   });
 });
+
+describe('SubscriptionListSchema sort', () => {
+  it('sort 미지정도 통과한다', () => {
+    const parsed = SubscriptionListSchema.parse({});
+    expect(parsed.sort).toBeUndefined();
+  });
+
+  it('deadline / startSoon / announcement 값을 허용한다', () => {
+    expect(SubscriptionListSchema.parse({ sort: 'deadline' }).sort).toBe('deadline');
+    expect(SubscriptionListSchema.parse({ sort: 'startSoon' }).sort).toBe('startSoon');
+    expect(SubscriptionListSchema.parse({ sort: 'announcement' }).sort).toBe('announcement');
+  });
+
+  it('잘못된 sort 값은 거부한다', () => {
+    expect(() => SubscriptionListSchema.parse({ sort: 'random' })).toThrow();
+  });
+});

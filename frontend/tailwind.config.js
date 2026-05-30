@@ -7,7 +7,9 @@ export default {
     './components/**/*.{vue,js,ts}',
     './layouts/**/*.{vue,js,ts}',
     './pages/**/*.{vue,js,ts}',
-    './plugins/**/*.{js,ts}'
+    './plugins/**/*.{js,ts}',
+    './composables/**/*.{js,ts}',
+    './utils/**/*.{js,ts}'
   ],
   theme: {
     extend: {
