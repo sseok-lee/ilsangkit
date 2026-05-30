@@ -159,7 +159,7 @@
       <SectionBlock
         v-if="currentTab === 'rent' && rentRatioTotal > 0"
         heading="전·월세 거래 비중"
-        subtext="최근 거래의 전세·월세 구성입니다."
+        subtext="전체 거래의 전세·월세 구성입니다."
       >
         <RentRatioBar :jeonse-count="buildingInfo?.jeonseCount" :wolse-count="buildingInfo?.wolseCount" />
       </SectionBlock>
@@ -440,7 +440,7 @@ import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
-import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle } from '~/utils/realEstateDetailLabels'
+import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
 import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
 import {
@@ -831,8 +831,9 @@ const rentRatioTotal = computed(
 )
 const rentRatioLabel = computed(() => {
   const j = buildingInfo.value?.jeonseCount ?? 0
+  const w = buildingInfo.value?.wolseCount ?? 0
   if (rentRatioTotal.value === 0) return '정보 없음'
-  const jPct = Math.round((j / rentRatioTotal.value) * 100)
+  const jPct = getJeonsePct(j, w)
   return jPct >= 50 ? `전세 ${jPct}%` : `월세 ${100 - jPct}%`
 })
 const heroStats = computed(() => {

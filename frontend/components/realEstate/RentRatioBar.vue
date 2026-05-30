@@ -8,12 +8,13 @@
         월세 {{ 100 - jeonsePct }}%
       </div>
     </div>
-    <p class="mt-1 text-xs text-slate-500">최근 거래 기준 전세 {{ jeonseCount }}건 · 월세 {{ wolseCount }}건</p>
+    <p class="mt-1 text-xs text-slate-500">전체 거래 기준 전세 {{ jeonseCount }}건 · 월세 {{ wolseCount }}건</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { getJeonsePct } from '~/utils/realEstateDetailLabels'
 
 const props = withDefaults(defineProps<{ jeonseCount?: number; wolseCount?: number }>(), {
   jeonseCount: 0,
@@ -21,5 +22,5 @@ const props = withDefaults(defineProps<{ jeonseCount?: number; wolseCount?: numb
 })
 
 const total = computed(() => props.jeonseCount + props.wolseCount)
-const jeonsePct = computed(() => (total.value === 0 ? 0 : Math.round((props.jeonseCount / total.value) * 100)))
+const jeonsePct = computed(() => getJeonsePct(props.jeonseCount, props.wolseCount))
 </script>

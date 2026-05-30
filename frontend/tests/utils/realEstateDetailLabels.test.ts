@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle,
+  getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct,
 } from '~/utils/realEstateDetailLabels'
 
 describe('realEstateDetailLabels', () => {
@@ -15,5 +15,13 @@ describe('realEstateDetailLabels', () => {
   it('거래 내역 제목', () => {
     expect(getTxSectionTitle('sale')).toBe('매매 거래 내역')
     expect(getTxSectionTitle('rent')).toBe('전월세 거래 내역')
+  })
+  it('전세 비율을 반올림해 계산한다', () => {
+    expect(getJeonsePct(7, 3)).toBe(70)
+    expect(getJeonsePct(1, 1)).toBe(50)
+    expect(getJeonsePct(2, 1)).toBe(67)
+  })
+  it('합계가 0이면 0을 반환한다', () => {
+    expect(getJeonsePct(0, 0)).toBe(0)
   })
 })
