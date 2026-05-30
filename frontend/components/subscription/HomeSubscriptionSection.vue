@@ -29,7 +29,7 @@
       <!-- 타임라인 2그룹 -->
       <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4">
         <div v-if="ongoing.length > 0">
-          <h3 class="text-sm font-bold text-slate-700 mb-1.5">🔴 접수 중</h3>
+          <h3 class="text-sm font-bold text-slate-700 mb-1.5"><span aria-hidden="true">🔴</span> 접수 중</h3>
           <ul>
             <li
               v-for="(item, idx) in ongoing"
@@ -50,7 +50,7 @@
         </div>
 
         <div v-if="upcoming.length > 0">
-          <h3 class="text-sm font-bold text-slate-700 mb-1.5">🔵 접수 예정</h3>
+          <h3 class="text-sm font-bold text-slate-700 mb-1.5"><span aria-hidden="true">🔵</span> 접수 예정</h3>
           <ul>
             <li
               v-for="(item, idx) in upcoming"
