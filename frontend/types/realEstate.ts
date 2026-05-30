@@ -145,6 +145,8 @@ export interface BuildingInfo {
   latestDealMonth: number | null
   lat: number | null
   lng: number | null
+  jeonseCount?: number
+  wolseCount?: number
 }
 
 // 건물 목록 응답 (페이지네이션)

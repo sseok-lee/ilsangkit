@@ -93,7 +93,7 @@
 
       <!-- PageHero -->
       <PageHero
-        :eyebrow="`${propertyMeta?.label ?? ''} 실거래가`"
+        :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :title="buildingName"
         :description="fullAddress !== '-' ? fullAddress : undefined"
         :stats="heroStats"
@@ -155,8 +155,17 @@
       <!-- Ad: 로드뷰 이후 -->
       <AdBanner />
 
+      <!-- "전·월세 거래 비중" 블록 (rent 전용) -->
+      <SectionBlock
+        v-if="currentTab === 'rent' && rentRatioTotal > 0"
+        heading="전·월세 거래 비중"
+        subtext="최근 거래의 전세·월세 구성입니다."
+      >
+        <RentRatioBar :jeonse-count="buildingInfo?.jeonseCount" :wolse-count="buildingInfo?.wolseCount" />
+      </SectionBlock>
+
       <!-- "시세 추이" 블록 -->
-      <SectionBlock heading="시세 추이" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
+      <SectionBlock :heading="getTrendSectionTitle(currentTab)" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
         <template #right>
           <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
             <button
@@ -260,7 +269,7 @@
       <AdBanner />
 
       <!-- "거래 내역" 블록 -->
-      <SectionBlock heading="거래 내역" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
+      <SectionBlock :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
         <div v-if="txLoading" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -431,6 +440,8 @@ import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
+import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle } from '~/utils/realEstateDetailLabels'
+import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
 import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
 import {
   getPeriodTradeLabel,
@@ -815,16 +826,35 @@ const latestPrice = computed(() => {
 
 const compactFacilitySummary = computed(() => normalizeFacilitySummary(facilitySummary.value))
 
+const rentRatioTotal = computed(
+  () => (buildingInfo.value?.jeonseCount ?? 0) + (buildingInfo.value?.wolseCount ?? 0),
+)
+const rentRatioLabel = computed(() => {
+  const j = buildingInfo.value?.jeonseCount ?? 0
+  if (rentRatioTotal.value === 0) return '정보 없음'
+  const jPct = Math.round((j / rentRatioTotal.value) * 100)
+  return jPct >= 50 ? `전세 ${jPct}%` : `월세 ${100 - jPct}%`
+})
 const heroStats = computed(() => {
   const PLACEHOLDER = '정보 없음'
   const dealDate = buildingInfo.value?.latestDealYear && buildingInfo.value?.latestDealMonth
     ? `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월`
     : PLACEHOLDER
+  const area = { label: '전용면적', value: areaRange.value !== '-' ? areaRange.value : PLACEHOLDER }
+  const recent = latestPrice.value !== '-' ? latestPrice.value : PLACEHOLDER
+  if (currentTab.value === 'sale') {
+    return [
+      { label: '최근 매매가', value: recent },
+      { label: '최근 거래일', value: dealDate },
+      { label: '건축년도', value: buildingInfo.value?.buildYear ? `${buildingInfo.value.buildYear}년` : PLACEHOLDER },
+      area,
+    ]
+  }
   return [
-    { label: '최근 거래', value: latestPrice.value !== '-' ? latestPrice.value : PLACEHOLDER },
+    { label: '최근 거래', value: recent },
     { label: '최근 거래일', value: dealDate },
-    { label: '건축년도', value: buildingInfo.value?.buildYear ? `${buildingInfo.value.buildYear}년` : PLACEHOLDER },
-    { label: '전용면적', value: areaRange.value !== '-' ? areaRange.value : PLACEHOLDER },
+    { label: '전·월세 비중', value: rentRatioLabel.value },
+    area,
   ]
 })
 
