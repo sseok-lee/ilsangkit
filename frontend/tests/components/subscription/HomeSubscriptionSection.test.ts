@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 
-// vi.mock 은 hoisted 라서 일반 변수 참조 불가 → vi.hoisted 로 ref 들을 끌어올림.
-const { ongoingRef, upcomingRef } = vi.hoisted(() => {
-  // vitest hoisted scope 안에서 vue 동적 import.
+const { ongoingRef, upcomingRef, ongoingTotalRef, upcomingTotalRef } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { ref } = require('vue')
   return {
     ongoingRef: ref<Array<Record<string, unknown>>>([]),
     upcomingRef: ref<Array<Record<string, unknown>>>([]),
+    ongoingTotalRef: ref(0),
+    upcomingTotalRef: ref(0),
   }
 })
 
@@ -18,6 +18,8 @@ vi.mock('~/composables/useHomeSubscriptions', async () => {
     useHomeSubscriptions: () => ({
       ongoing: ongoingRef,
       upcoming: upcomingRef,
+      ongoingTotal: ongoingTotalRef,
+      upcomingTotal: upcomingTotalRef,
       hasAny: computed(() => ongoingRef.value.length > 0 || upcomingRef.value.length > 0),
     }),
   }
@@ -25,108 +27,73 @@ vi.mock('~/composables/useHomeSubscriptions', async () => {
 
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
 
-const sampleOngoing = [
-  {
-    id: 1,
-    houseName: '래미안 강동 팰리스',
-    regionName: '서울 강동구',
-    receptionStartDate: null,
-    receptionEndDate: '2026-05-21',
-    status: 'ongoing',
-    totalSupplyCount: 540,
-  },
+const ongoingSample = [
+  { id: 1, houseName: '래미안 원페를라', regionName: '서울 서초구', totalSupplyCount: 540, receptionStartDate: '2026-05-19', receptionEndDate: '2026-05-21', status: 'ongoing', sourceType: 'APT', rentType: null },
+  { id: 2, houseName: 'LH 고덕강일', regionName: '서울 강동구', totalSupplyCount: 120, receptionStartDate: '2026-05-18', receptionEndDate: '2026-05-25', status: 'ongoing', sourceType: 'APT', rentType: '분양전환 가능임대' },
 ]
-const sampleUpcoming = [
-  {
-    id: 2,
-    houseName: '디에이치 방배',
-    regionName: '서울 서초구',
-    receptionStartDate: '2026-05-25',
-    receptionEndDate: null,
-    status: 'upcoming',
-    totalSupplyCount: 1221,
-  },
+const upcomingSample = [
+  { id: 3, houseName: 'SK뷰 광명센트럴', regionName: '경기 광명시', totalSupplyCount: 80, receptionStartDate: '2026-05-28', receptionEndDate: null, status: 'upcoming', sourceType: 'OPTIONAL', rentType: null },
 ]
 
-const summary = {
-  closingThisWeek: 12,
-  upcomingNextWeek: 18,
-  avgSupplyPrice: 68000,
-  imminent: [
-    { id: 1, houseName: '래미안 강동 팰리스', regionName: '서울 강동구', endDate: '2026-05-21' },
-    { id: 3, houseName: '힐스테이트 광교', regionName: '경기 수원시', endDate: '2026-05-22' },
-  ],
-}
-
-describe('HomeSubscriptionSection', () => {
+describe('HomeSubscriptionSection (timeline)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ongoingRef.value = sampleOngoing
-    upcomingRef.value = sampleUpcoming
+    ongoingRef.value = ongoingSample
+    upcomingRef.value = upcomingSample
+    ongoingTotalRef.value = 7
+    upcomingTotalRef.value = 3
     ;(globalThis as any).useState = vi.fn((key: string, init?: () => string) => {
       if (key === 'home-today-iso') return { value: '2026-05-20' }
       return { value: init ? init() : null }
     })
   })
 
-  it('renders summary line with counts and average price', () => {
-    const wrapper = mount(HomeSubscriptionSection, { props: { summary } })
+  it('요약 한 줄에 접수중/예정 총 건수를 표시한다', () => {
+    const wrapper = mount(HomeSubscriptionSection)
     const text = wrapper.text()
-    expect(text).toContain('12건')
-    expect(text).toContain('18건')
-    expect(text).toContain('6.8억')
+    expect(text).toContain('접수중')
+    expect(text).toContain('7건')
+    expect(text).toContain('예정')
+    expect(text).toContain('3건')
   })
 
-  it('renders imminent (D-3) highlight with house names', () => {
-    const wrapper = mount(HomeSubscriptionSection, { props: { summary } })
-    const text = wrapper.text()
-    expect(text).toContain('마감 임박')
-    expect(text).toContain('래미안 강동 팰리스')
-  })
-
-  it('renders meta line with totals and shown counts', () => {
-    const wrapper = mount(HomeSubscriptionSection, { props: { summary } })
-    const text = wrapper.text()
-    expect(text).toMatch(/접수중\s+12건\s+중\s+1건/)
-    expect(text).toMatch(/예정\s+18건\s+중\s+1건/)
-  })
-
-  it('hides imminent block when imminent is empty', () => {
-    const summaryNoImminent = { ...summary, imminent: [] }
-    const wrapper = mount(HomeSubscriptionSection, { props: { summary: summaryNoImminent } })
+  it('평균 분양가와 D-3 배너는 더 이상 렌더하지 않는다', () => {
+    const wrapper = mount(HomeSubscriptionSection)
+    expect(wrapper.text()).not.toContain('평균 분양가')
     expect(wrapper.text()).not.toContain('마감 임박')
   })
 
-  it('shows section when only summary has counts (no cards)', () => {
-    ongoingRef.value = []
-    upcomingRef.value = []
-    const wrapper = mount(HomeSubscriptionSection, { props: { summary } })
-    expect(wrapper.find('section').exists()).toBe(true)
-    expect(wrapper.text()).toContain('12건')
-    expect(wrapper.text()).toContain('마감 임박')
-    // 카드 그리드 / 메타 라인은 카드 없을 때 미렌더
-    expect(wrapper.text()).not.toContain('표시')
+  it('접수중/예정 2그룹과 타입 뱃지를 렌더한다', () => {
+    const wrapper = mount(HomeSubscriptionSection)
+    const text = wrapper.text()
+    expect(text).toContain('접수 중')
+    expect(text).toContain('접수 예정')
+    expect(text).toContain('아파트')
+    expect(text).toContain('공공임대')
+    expect(text).toContain('임의공급')
   })
 
-  it('renders section with empty state when summary and cards all empty', () => {
-    ongoingRef.value = []
-    upcomingRef.value = []
-    const emptySummary = {
-      closingThisWeek: 0,
-      upcomingNextWeek: 0,
-      avgSupplyPrice: null,
-      imminent: [],
-    }
-    const wrapper = mount(HomeSubscriptionSection, { props: { summary: emptySummary } })
-    expect(wrapper.find('section').exists()).toBe(true)
-    expect(wrapper.text()).toContain('청약 한눈에')
-    expect(wrapper.text()).toContain('현재 접수 중이거나 예정된 청약 공고가 없어요')
+  it('접수중은 마감 D-day, 예정은 시작 D-day를 표시한다', () => {
+    const wrapper = mount(HomeSubscriptionSection)
+    const text = wrapper.text()
+    expect(text).toContain('D-1')
+    expect(text).toContain('D-8')
   })
 
-  it('renders section with empty state when summary prop is null and no cards', () => {
+  it('한쪽 그룹이 비면 그 그룹 헤더를 숨긴다', () => {
+    upcomingRef.value = []
+    upcomingTotalRef.value = 0
+    const wrapper = mount(HomeSubscriptionSection)
+    expect(wrapper.text()).toContain('접수 중')
+    expect(wrapper.text()).not.toContain('접수 예정')
+  })
+
+  it('둘 다 비면 빈 상태를 렌더한다', () => {
     ongoingRef.value = []
     upcomingRef.value = []
-    const wrapper = mount(HomeSubscriptionSection, { props: { summary: null } })
+    ongoingTotalRef.value = 0
+    upcomingTotalRef.value = 0
+    const wrapper = mount(HomeSubscriptionSection)
     expect(wrapper.find('section').exists()).toBe(true)
     expect(wrapper.text()).toContain('현재 접수 중이거나 예정된 청약 공고가 없어요')
   })
