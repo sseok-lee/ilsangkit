@@ -15,6 +15,7 @@ export const SubscriptionListSchema = z.object({
   category: SubscriptionCategorySchema.optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+  sort: z.enum(['announcement', 'deadline', 'startSoon']).optional(),
 });
 
 export const SubscriptionIdSchema = z.object({
