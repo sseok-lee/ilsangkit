@@ -98,7 +98,7 @@
     </div>
 
     <!-- 청약·임대 일정 섹션 -->
-    <HomeSubscriptionSection :summary="subscriptionSummary" />
+    <HomeSubscriptionSection />
 
     <!-- Ad: 청약·임대 이후 -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -333,7 +333,6 @@ const dashboard = computed(() => pageData.value?.dashboard ?? null)
 const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
 const hotspots = computed(() => dashboard.value?.realEstateHotspots ?? {})
 const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })
-const subscriptionSummary = computed(() => dashboard.value?.subscriptionSummary ?? null)
 const newlyListedToday = computed(() => dashboard.value?.newlyListedToday ?? 0)
 
 // Hero 통계박스에서 사용하는 3개 필드만 추림.
