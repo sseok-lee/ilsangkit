@@ -8,6 +8,8 @@ export interface HomeSubscriptionItem {
   receptionStartDate: string | null
   receptionEndDate: string | null
   status: 'ongoing' | 'upcoming' | 'closed'
+  sourceType: string
+  rentType: string | null
 }
 
 interface ApiListResponse {
@@ -20,37 +22,45 @@ interface ApiListResponse {
   }
 }
 
+const EMPTY: ApiListResponse = { success: false, data: { items: [], total: 0, page: 1, totalPages: 0 } }
+
 /**
- * 홈 "청약·임대 일정" 섹션용.
- * /api/subscription?status=ongoing&limit=2  +  ?status=upcoming&limit=2 를 병렬 페치.
+ * 홈 "청약 한눈에" 타임라인용.
+ * 접수중(마감 임박순) + 예정(시작 임박순) 각 5건 + 총 건수.
  * SSR 블로킹 (above-the-fold CLS 방지).
  */
 export function useHomeSubscriptions() {
   const apiBase = useApiBase()
 
-  const fetchByStatus = (status: 'ongoing' | 'upcoming') =>
+  const fetchByStatus = (status: 'ongoing' | 'upcoming', sort: 'deadline' | 'startSoon') =>
     $fetch<ApiListResponse>(`${apiBase}/api/subscription`, {
-      query: { status, limit: 4, page: 1 },
-    }).catch(() => ({ success: false, data: { items: [], total: 0, page: 1, totalPages: 0 } }) as ApiListResponse)
+      query: { status, sort, limit: 5, page: 1 },
+    }).catch(() => EMPTY)
 
   const asyncState = useAsyncData('home-subscriptions', async () => {
     const [ongoingRes, upcomingRes] = await Promise.all([
-      fetchByStatus('ongoing'),
-      fetchByStatus('upcoming'),
+      fetchByStatus('ongoing', 'deadline'),
+      fetchByStatus('upcoming', 'startSoon'),
     ])
     return {
       ongoing: ongoingRes.data?.items ?? [],
       upcoming: upcomingRes.data?.items ?? [],
+      ongoingTotal: ongoingRes.data?.total ?? 0,
+      upcomingTotal: upcomingRes.data?.total ?? 0,
     }
   })
 
   const ongoing = computed<HomeSubscriptionItem[]>(() => asyncState.data.value?.ongoing ?? [])
   const upcoming = computed<HomeSubscriptionItem[]>(() => asyncState.data.value?.upcoming ?? [])
+  const ongoingTotal = computed(() => asyncState.data.value?.ongoingTotal ?? 0)
+  const upcomingTotal = computed(() => asyncState.data.value?.upcomingTotal ?? 0)
   const hasAny = computed(() => ongoing.value.length > 0 || upcoming.value.length > 0)
 
   return {
     ongoing: readonly(ongoing),
     upcoming: readonly(upcoming),
+    ongoingTotal: readonly(ongoingTotal),
+    upcomingTotal: readonly(upcomingTotal),
     hasAny: readonly(hasAny),
   }
 }
