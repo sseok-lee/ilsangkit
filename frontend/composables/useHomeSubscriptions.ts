@@ -22,7 +22,10 @@ interface ApiListResponse {
   }
 }
 
-const EMPTY: ApiListResponse = { success: false, data: { items: [], total: 0, page: 1, totalPages: 0 } }
+const EMPTY: ApiListResponse = Object.freeze({
+  success: false,
+  data: Object.freeze({ items: Object.freeze([]) as HomeSubscriptionItem[], total: 0, page: 1, totalPages: 0 }),
+})
 
 /**
  * 홈 "청약 한눈에" 타임라인용.

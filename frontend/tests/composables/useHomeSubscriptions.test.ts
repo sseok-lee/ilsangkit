@@ -45,8 +45,8 @@ describe('useHomeSubscriptions', () => {
     await flushPromises()
     const ongoing = fetchCalls.find((q) => q.status === 'ongoing')
     const upcoming = fetchCalls.find((q) => q.status === 'upcoming')
-    expect(ongoing).toMatchObject({ status: 'ongoing', sort: 'deadline', limit: 5 })
-    expect(upcoming).toMatchObject({ status: 'upcoming', sort: 'startSoon', limit: 5 })
+    expect(ongoing).toMatchObject({ status: 'ongoing', sort: 'deadline', limit: 5, page: 1 })
+    expect(upcoming).toMatchObject({ status: 'upcoming', sort: 'startSoon', limit: 5, page: 1 })
   })
 
   it('응답 total을 ongoingTotal/upcomingTotal로 노출한다', async () => {
