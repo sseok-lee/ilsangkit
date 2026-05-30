@@ -223,6 +223,28 @@ describe('getSubscriptionList', () => {
     expect(mockFindMany.mock.calls[0][0].skip).toBe(20);
     expect(mockFindMany.mock.calls[0][0].take).toBe(10);
   });
+
+  it('sort=deadline 이면 receptionEndDate 오름차순(nulls last)으로 정렬한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await getSubscriptionList({ status: 'ongoing', sort: 'deadline', page: 1, limit: 5 });
+
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual({
+      receptionEndDate: { sort: 'asc', nulls: 'last' },
+    });
+  });
+
+  it('sort=startSoon 이면 receptionStartDate 오름차순(nulls last)으로 정렬한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await getSubscriptionList({ status: 'upcoming', sort: 'startSoon', page: 1, limit: 5 });
+
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual({
+      receptionStartDate: { sort: 'asc', nulls: 'last' },
+    });
+  });
 });
 
 describe('getSubscriptionDetail', () => {
