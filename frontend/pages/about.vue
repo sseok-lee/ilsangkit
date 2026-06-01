@@ -1,8 +1,9 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-5 md:mb-6">
-      일상킷 소개
-    </h1>
+    <StaticPageHeader
+      title="일상킷 소개"
+      lead="부동산 실거래가와 내 주변 생활시설을 한곳에서."
+    />
 
     <div class="space-y-5 md:space-y-6 text-slate-600 text-sm md:text-base leading-relaxed">
       <section>
@@ -48,61 +49,27 @@
           제공 정보
         </h2>
         <p class="mb-4">
-          일상킷은 부동산 실거래가와 다양한 카테고리의 전국 생활시설 정보를 제공합니다.
+          일상킷은 부동산 실거래가와 전국 생활시설 15종의 정보를 카테고리별로 제공합니다.
         </p>
         <ul class="list-disc pl-5 space-y-2">
-          <li>
-            <strong class="text-slate-900">공공화장실</strong>
-            — 전국 공공화장실의 위치, 운영 시간, 장애인 시설 여부 등을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">쓰레기 배출</strong>
-            — 지역별 생활쓰레기 배출 요일, 시간, 방법을 안내합니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">무료 와이파이</strong>
-            — 공공 무료 와이파이 설치 장소와 이용 정보를 제공합니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">의류수거함</strong>
-            — 주변 의류수거함의 위치를 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">무인민원발급기</strong>
-            — 무인민원발급기의 위치와 운영 시간을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">공영주차장</strong>
-            — 전국 공영주차장의 위치, 요금, 운영 시간 등을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">자동심장충격기(AED)</strong>
-            — 주변 자동심장충격기(AED) 설치 위치를 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">공공도서관</strong>
-            — 전국 공공도서관의 위치와 운영 정보를 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">병원</strong>
-            — 전국 병원의 위치, 진료과목, 운영 시간 등을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">약국</strong>
-            — 전국 약국의 위치와 운영 시간을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">아파트 실거래가</strong>
-            — 전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">빌라 실거래가</strong>
-            — 전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">오피스텔 실거래가</strong>
-            — 전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회할 수 있습니다.
-          </li>
+          <li><strong class="text-slate-900">공공화장실</strong> — 전국 공공화장실의 위치, 운영 시간, 장애인 시설 여부 등을 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">쓰레기 배출정보</strong> — 지역별 생활쓰레기 배출 요일, 시간, 방법을 안내합니다.</li>
+          <li><strong class="text-slate-900">무료와이파이</strong> — 공공 무료 와이파이 설치 장소와 이용 정보를 제공합니다.</li>
+          <li><strong class="text-slate-900">의류수거함</strong> — 주변 의류수거함의 위치를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">공영주차장</strong> — 전국 공영주차장의 위치, 요금, 운영 시간 등을 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">자동심장충격기(AED)</strong> — 주변 자동심장충격기(AED) 설치 위치를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">공공도서관</strong> — 전국 공공도서관의 위치와 운영 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">병원</strong> — 전국 병원의 위치, 진료과목, 운영 시간 등을 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">약국</strong> — 전국 약국의 위치와 운영 시간을 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">공원</strong> — 전국 도시공원의 위치와 종류, 면적 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">학교</strong> — 전국 학교의 위치와 기본 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">전통시장</strong> — 전국 전통시장의 위치와 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">어린이집</strong> — 전국 어린이집의 위치와 운영 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">전기차 충전소</strong> — 전국 전기차 충전소의 위치와 충전기 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">체육시설</strong> — 전국 공공체육시설의 위치와 종목 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">아파트 실거래가</strong> — 전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회할 수 있습니다.</li>
+          <li><strong class="text-slate-900">빌라 실거래가</strong> — 전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">오피스텔 실거래가</strong> — 전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회할 수 있습니다.</li>
         </ul>
       </section>
 
@@ -196,13 +163,6 @@
                   </td>
                 </tr>
                 <tr>
-                  <td class="py-2 pr-4">행정안전부_무인민원발급기정보 조회서비스</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15154774/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
                   <td class="py-2 pr-4">전국공영주차장표준데이터</td>
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
@@ -221,6 +181,62 @@
                   <td class="py-2 pr-4">행정안전부</td>
                   <td class="py-2">
                     <a href="https://www.data.go.kr/data/15013109/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">건강보험심사평가원_병원정보서비스</td>
+                  <td class="py-2 pr-4">건강보험심사평가원</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15001698/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">건강보험심사평가원_약국정보서비스</td>
+                  <td class="py-2 pr-4">건강보험심사평가원</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15000576/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">전국도시공원정보표준데이터</td>
+                  <td class="py-2 pr-4">행정안전부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15012890/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">전국전통시장표준데이터</td>
+                  <td class="py-2 pr-4">행정안전부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15012894/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">한국사회보장정보원_전국 어린이집 정보 조회</td>
+                  <td class="py-2 pr-4">한국사회보장정보원</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15101155/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">한국환경공단_전기자동차 충전소 정보</td>
+                  <td class="py-2 pr-4">한국환경공단</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15076352/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">국민체육진흥공단_전국체육시설 정보</td>
+                  <td class="py-2 pr-4">국민체육진흥공단</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15113986/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4">전국초중등학교위치표준데이터</td>
+                  <td class="py-2 pr-4">교육부</td>
+                  <td class="py-2">
+                    <a href="https://www.data.go.kr/data/15021148/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
                   </td>
                 </tr>
                 <tr>
