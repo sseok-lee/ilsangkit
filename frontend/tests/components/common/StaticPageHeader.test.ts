@@ -25,3 +25,4 @@ describe('StaticPageHeader', () => {
     expect(wrapper.text()).toContain('마지막 업데이트 2026.06.01')
   })
 })
+

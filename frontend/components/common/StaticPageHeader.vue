@@ -1,5 +1,5 @@
 <template>
-  <header class="mb-5 md:mb-6">
+  <div class="mb-5 md:mb-6">
     <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
       {{ title }}
     </h1>
@@ -12,7 +12,7 @@
         마지막 업데이트 {{ updatedAt }}
       </span>
     </p>
-  </header>
+  </div>
 </template>
 
 <script setup lang="ts">
