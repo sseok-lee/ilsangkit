@@ -1,8 +1,9 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-5 md:mb-6">
-      문의하기
-    </h1>
+    <StaticPageHeader
+      title="문의하기"
+      lead="문의·데이터 오류 신고·제휴 제안을 받습니다."
+    />
 
     <div class="space-y-5 md:space-y-6 text-slate-600 text-sm md:text-base leading-relaxed">
       <section>
