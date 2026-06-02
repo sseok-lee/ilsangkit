@@ -67,16 +67,7 @@
 
     <!-- Loading State -->
     <SectionBlock v-if="pending" :heading="`${getStatusLabel(currentStatus) || '전체'} 청약`">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
-          <div class="space-y-3">
-            <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-            <div class="h-3 bg-slate-100 rounded w-full"></div>
-            <div class="h-3 bg-slate-100 rounded w-3/4"></div>
-            <div class="h-8 bg-slate-200 rounded w-24 mt-4"></div>
-          </div>
-        </div>
-      </div>
+      <LoadingSkeleton variant="card" :footer="true" />
     </SectionBlock>
 
     <!-- Error State -->
@@ -131,6 +122,7 @@
 import type { Subscription, SubscriptionSourceType } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 
 /// 상태 칩 순서: 전체 → 청약중 → 청약예정 → 마감
 const STATUS_ORDER: { key: 'ongoing' | 'upcoming' | null | 'closed'; label: string }[] = [
