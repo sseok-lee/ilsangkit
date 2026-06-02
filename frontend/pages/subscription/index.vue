@@ -141,7 +141,7 @@
 
       <!-- 데이터 출처 -->
       <SectionBlock heading="데이터 정보">
-        <DataSourceCard :source="SUBSCRIPTION_DATA_SOURCE" />
+        <DataSourceSection domain="subscription" />
         <p class="mt-3 text-xs text-slate-500 leading-relaxed">
           분양·민영주택 청약 정보는 한국부동산원 청약Home(applyhome.co.kr) 공개 API 기준이며,
           공공임대(LH·SH) 매물은 각 공급기관 공고를 기준으로 합니다.
@@ -165,8 +165,7 @@
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, SUBSCRIPTION_HUB_DESCRIPTION, type RentGroup } from '~/utils/subscriptionMeta'
-import { SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const rentGroups: RentGroup[] = ['apply']
 import type { Subscription } from '~/types/subscription'

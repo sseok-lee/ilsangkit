@@ -54,7 +54,7 @@
     <!-- Ad: 본문 마무리 (청약 패턴 3번) -->
     <AdBanner />
 
-    <DataSourceCard :source="PUBLIC_RENTAL_DATA_SOURCE" :last-sync-date="lastSyncDate" />
+    <DataSourceSection domain="public-rental" :last-sync-date="lastSyncDate" />
   </div>
 </template>
 
@@ -63,7 +63,7 @@ import { computed, defineAsyncComponent } from 'vue'
 import type { PublicRentalComplex } from '~/types/publicRental'
 import type { FacilitySearchItem } from '~/types'
 import SectionBlock from '~/components/common/SectionBlock.vue'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import NearbyFacilities from '~/components/realEstate/NearbyFacilities.vue'
 import PublicRentalDetailHeader from '~/components/subscription/PublicRentalDetailHeader.vue'
 import PublicRentalPriceCard from '~/components/subscription/PublicRentalPriceCard.vue'
@@ -74,8 +74,6 @@ import PublicRentalEligibility from '~/components/subscription/PublicRentalEligi
 import PublicRentalApplyGuide from '~/components/subscription/PublicRentalApplyGuide.vue'
 import PublicRentalFAQ from '~/components/subscription/PublicRentalFAQ.vue'
 import PublicRentalNearbyComplexes from '~/components/subscription/PublicRentalNearbyComplexes.vue'
-import { PUBLIC_RENTAL_DATA_SOURCE } from '~/utils/dataSource'
-
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const props = defineProps<{
