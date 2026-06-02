@@ -109,4 +109,12 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
     await mountPage()
     expect(mockSetItemListSchema).toHaveBeenCalled()
   })
+
+  it('도시명+타입 맥락의 요약 인트로 문단을 렌더한다', async () => {
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+    expect(text).toContain('서울')        // cityName
+    expect(text).toContain('아파트')       // 타입 라벨
+    expect(text).toContain('국토교통부')   // 데이터 출처 문구
+  })
 })
