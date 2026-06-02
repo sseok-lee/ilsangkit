@@ -134,137 +134,11 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr>
-                  <td class="py-2 pr-4">전국공중화장실표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
+                <tr v-for="src in dataSources" :key="src.url">
+                  <td class="py-2 pr-4">{{ src.datasetName }}</td>
+                  <td class="py-2 pr-4">{{ src.provider }}</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15012892/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">행정안전부_생활쓰레기배출정보 조회서비스</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15155080/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국무료와이파이표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15013116/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국의류수거함표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15139214/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국공영주차장표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">자동심장충격기(AED) 설치장소</td>
-                  <td class="py-2 pr-4">보건복지부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15000652/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국공공도서관표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15013109/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">건강보험심사평가원_병원정보서비스</td>
-                  <td class="py-2 pr-4">건강보험심사평가원</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15001698/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">건강보험심사평가원_약국정보서비스</td>
-                  <td class="py-2 pr-4">건강보험심사평가원</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15000576/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국도시공원정보표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15012890/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국전통시장표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15012894/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">한국사회보장정보원_전국 어린이집 정보 조회</td>
-                  <td class="py-2 pr-4">한국사회보장정보원</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15101155/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">한국환경공단_전기자동차 충전소 정보</td>
-                  <td class="py-2 pr-4">한국환경공단</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15076352/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">국민체육진흥공단_전국체육시설 정보</td>
-                  <td class="py-2 pr-4">국민체육진흥공단</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15113986/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국초중등학교위치표준데이터</td>
-                  <td class="py-2 pr-4">교육부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15021148/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">아파트매매 실거래 자료</td>
-                  <td class="py-2 pr-4">국토교통부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15057511/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">아파트 전월세 실거래 자료</td>
-                  <td class="py-2 pr-4">국토교통부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058017/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">연립다세대 매매/전월세 실거래 자료</td>
-                  <td class="py-2 pr-4">국토교통부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058038/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">오피스텔 매매/전월세 실거래 자료</td>
-                  <td class="py-2 pr-4">국토교통부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058452/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                    <a :href="src.url" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">{{ sourceLabel(src.url) }}</a>
                   </td>
                 </tr>
               </tbody>
@@ -307,6 +181,21 @@
 <script setup lang="ts">
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import {
+  FACILITY_DATA_SOURCE,
+  REAL_ESTATE_DATASETS,
+  type DataSourceInfo,
+} from '~/utils/dataSource'
+
+// 데이터 출처 테이블은 dataSource.ts 레지스트리를 단일 소스로 사용 (시설 + 부동산 세부 데이터셋)
+const dataSources: DataSourceInfo[] = [
+  ...Object.values(FACILITY_DATA_SOURCE),
+  ...REAL_ESTATE_DATASETS,
+]
+
+function sourceLabel(url: string): string {
+  return url.includes('data.go.kr') ? '공공데이터포털' : '제공기관 사이트'
+}
 
 const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema } = useStructuredData()
