@@ -62,6 +62,7 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
     datasetName: '건강보험심사평가원 병원 정보',
     provider: '건강보험심사평가원',
     url: 'https://www.data.go.kr/data/15001698/openapi.do',
+    kogl: 1, // 페이지 "출처표시(제1유형)" 명시 확인 (2026-06)
   },
   pharmacy: {
     datasetName: '건강보험심사평가원 약국 정보',
@@ -71,7 +72,7 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
   park: {
     datasetName: '전국 도시공원 표준데이터',
     provider: '행정안전부',
-    url: 'https://www.data.go.kr/data/15012900/standard.do',
+    url: 'https://www.data.go.kr/data/15012890/standard.do',
   },
   school: {
     datasetName: '전국 초중등학교 표준데이터',
@@ -80,8 +81,8 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
   },
   market: {
     datasetName: '전국 전통시장 표준데이터',
-    provider: '중소벤처기업부',
-    url: 'https://www.data.go.kr/data/15012874/standard.do',
+    provider: '소상공인시장진흥공단',
+    url: 'https://www.data.go.kr/data/15012894/standard.do',
   },
   childcare: {
     datasetName: '어린이집정보공시',
@@ -92,6 +93,7 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
     datasetName: '전기차 충전소 운영정보',
     provider: '한국환경공단',
     url: 'https://www.data.go.kr/data/15076352/openapi.do',
+    kogl: 1, // 페이지 "출처표시(제1유형)" 명시 확인 (2026-06)
   },
   sports: {
     datasetName: '전국 공공체육시설 표준데이터',
