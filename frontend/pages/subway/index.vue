@@ -180,6 +180,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useStructuredData } from '~/composables/useStructuredData'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -288,6 +289,11 @@ const facilities = computed<Facility[]>(() => {
     },
   }))
 })
+
+const { setItemListSchema } = useStructuredData()
+setItemListSchema(
+  facilities.value.map((f, i) => ({ name: f.name, url: `/subway/${f.id}`, position: i + 1 })),
+)
 
 const totalPages = computed(() => {
   if (!stations.value) return 0
