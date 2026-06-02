@@ -123,3 +123,23 @@ export const PUBLIC_RENTAL_DATA_SOURCE: DataSourceInfo = {
   url: 'https://www.lh.or.kr',
   // kogl: TBD — LH/SH 공공누리 유형 확인 후 채워주세요
 }
+
+export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'public-rental'
+
+export function resolveDataSource(input: {
+  domain: DataSourceDomain
+  category?: FacilityCategory
+}): DataSourceInfo | null {
+  switch (input.domain) {
+    case 'facility':
+      return input.category ? (FACILITY_DATA_SOURCE[input.category] ?? null) : null
+    case 'real-estate':
+      return REAL_ESTATE_DATA_SOURCE
+    case 'subscription':
+      return SUBSCRIPTION_DATA_SOURCE
+    case 'public-rental':
+      return PUBLIC_RENTAL_DATA_SOURCE
+    default:
+      return null
+  }
+}
