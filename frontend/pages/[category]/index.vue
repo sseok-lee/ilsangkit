@@ -163,21 +163,7 @@
 
           <!-- Loading Skeleton -->
           <div v-if="loading || initialLoading" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
-                <div class="flex items-start gap-4">
-                  <div class="shrink-0 w-12 h-12 rounded-full bg-slate-200"></div>
-                  <div class="flex-1 space-y-2.5">
-                    <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-                    <div class="h-3 bg-slate-100 rounded w-full"></div>
-                    <div class="flex gap-2 mt-1">
-                      <div class="h-5 bg-slate-100 rounded-md w-14"></div>
-                      <div class="h-5 bg-slate-100 rounded-md w-20"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <LoadingSkeleton variant="facility-card" />
           </div>
 
           <template v-else-if="!initialLoading">
@@ -294,6 +280,7 @@ import { RELATED_CATEGORIES, POPULAR_REGIONS, CATEGORY_SEO_INTENT } from '~/util
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
+import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
