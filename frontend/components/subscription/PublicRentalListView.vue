@@ -33,15 +33,7 @@
         </div>
       </div>
 
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
-          <div class="space-y-3">
-            <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-            <div class="h-3 bg-slate-100 rounded w-full"></div>
-            <div class="h-3 bg-slate-100 rounded w-3/4"></div>
-          </div>
-        </div>
-      </div>
+      <LoadingSkeleton v-if="loading" variant="card" />
 
       <div v-else-if="error" class="rounded-xl bg-red-50 p-8 text-center">
         <p class="text-red-700 font-semibold">데이터를 불러오는 중 오류가 발생했습니다</p>
@@ -80,6 +72,7 @@
 import { ref, watch } from 'vue'
 import { usePublicRental } from '~/composables/usePublicRental'
 import type { PublicRentalComplex, PublicRentalType } from '~/types/publicRental'
+import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 
 const props = defineProps<{
   rentalTypeCode?: PublicRentalType
