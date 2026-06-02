@@ -79,20 +79,14 @@
     </SectionBlock>
 
     <!-- Data Info -->
-    <DataSourceCard
-      v-if="dataSource"
-      :source="dataSource"
-      :data-date="dataDate"
-      :last-sync-date="lastSyncDate"
-    />
+    <DataSourceSection domain="facility" :category="category" :last-sync-date="lastSyncDate" />
   </div>
 </template>
 
 <script setup lang="ts">
 import SectionBlock from '~/components/common/SectionBlock.vue'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { CATEGORY_META, type FacilityCategory } from '~/types/facility'
-import type { DataSourceInfo } from '~/utils/dataSource'
 
 interface RegionLink {
   href: string
@@ -113,8 +107,6 @@ defineProps<{
   categoryMeta: { label: string; icon?: string }
   categoryTips: string[]
   categoryFaqItems: FaqItem[]
-  dataSource: DataSourceInfo | null
-  dataDate: string | null
   lastSyncDate: string | null
 }>()
 </script>

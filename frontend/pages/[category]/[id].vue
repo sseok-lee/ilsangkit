@@ -197,8 +197,6 @@
                 :category-meta="categoryMeta"
                 :category-tips="categoryTips"
                 :category-faq-items="categoryFaqItems"
-                :data-source="dataSource"
-                :data-date="dataDate"
                 :last-sync-date="lastSyncDate"
               />
 
@@ -312,7 +310,6 @@ import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
-import { FACILITY_DATA_SOURCE, type DataSourceInfo } from '~/utils/dataSource'
 import { formatKstDate } from '~/utils/formatters'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
@@ -690,33 +687,6 @@ watch(isMapExpanded, (expanded) => {
   if (import.meta.client) {
     document.body.style.overflow = expanded ? 'hidden' : ''
   }
-})
-
-// 다양한 형식의 날짜 문자열을 "YYYY-MM-DD"로 정규화
-function formatDataDate(raw: string): string {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
-  if (/^\d{8}/.test(raw)) return `${raw.substring(0, 4)}-${raw.substring(4, 6)}-${raw.substring(6, 8)}`
-  const d = new Date(raw)
-  if (!isNaN(d.getTime())) {
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  }
-  return raw
-}
-
-// Data info card
-const dataDate = computed(() => {
-  if (!facility.value?.details) return null
-  const raw = (facility.value.details as { dataDate?: string | null }).dataDate
-  if (!raw) return null
-  return formatDataDate(raw)
-})
-
-const dataSource = computed<DataSourceInfo | null>(() => {
-  if (!facility.value) return null
-  return FACILITY_DATA_SOURCE[facility.value.category] ?? null
 })
 
 // 카테고리별 최근 동기화 날짜 — secondary fetch에서 sync-status 데이터 사용
