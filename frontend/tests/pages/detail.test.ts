@@ -222,6 +222,29 @@ describe('DetailPage', () => {
     expect(html.split('"자주 묻는 질문"').length - 1).toBeLessThanOrEqual(1)
   })
 
+  it('주변 시설(nearby/cross)을 SSR 데이터로 렌더링', async () => {
+    // key-aware: nearby-* 키는 주변시설, 그 외는 facility 응답
+    ;(globalThis as any).useAsyncData = vi.fn((key: string, _handler?: () => Promise<unknown>, opts?: any) => {
+      const isNearby = typeof key === 'string' && key.startsWith('nearby-')
+      const data = ref(
+        isNearby
+          ? {
+              nearby: [{ id: 'toilet-2', category: 'toilet', name: '역삼역 화장실', address: 'A', lat: 37.5, lng: 127.03 }],
+              cross: [{ id: 'hospital-9', category: 'hospital', name: '강남병원', address: 'B', lat: 37.5, lng: 127.03 }],
+            }
+          : { success: true, data: mockFacility },
+      )
+      const result = { data, status: ref('success'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+      void opts
+      return Object.assign(Promise.resolve(result), result)
+    })
+
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+
+    expect(wrapper.text()).toContain('역삼역 화장실') // 동일 카테고리 반경 nearby
+    expect(wrapper.text()).toContain('강남병원')       // cross-category nearby
+  })
+
   it('네트워크/서버 에러 시 404를 반환하지 않음 (SEO 보호)', async () => {
     createErrorMock.mockClear()
     mockUseAsyncDataWith(null, 'error', new Error('Failed to fetch'))
