@@ -111,6 +111,34 @@ export const REAL_ESTATE_DATA_SOURCE: DataSourceInfo = {
   url: 'https://rt.molit.go.kr',
 }
 
+/**
+ * 부동산 실거래가 세부 데이터셋 (공공데이터포털 OpenAPI)
+ * about 페이지 출처 테이블 등 데이터셋 단위 출처 표기가 필요한 곳에서 사용.
+ * 사이트 UI(DataSourceSection)는 요약본 REAL_ESTATE_DATA_SOURCE를 사용.
+ */
+export const REAL_ESTATE_DATASETS: DataSourceInfo[] = [
+  {
+    datasetName: '아파트 매매 실거래가 자료',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15057511/openapi.do',
+  },
+  {
+    datasetName: '아파트 전월세 실거래가 자료',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15058017/openapi.do',
+  },
+  {
+    datasetName: '연립다세대 매매·전월세 실거래가 자료',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15058038/openapi.do',
+  },
+  {
+    datasetName: '오피스텔 매매·전월세 실거래가 자료',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15058452/openapi.do',
+  },
+]
+
 export const SUBSCRIPTION_DATA_SOURCE: DataSourceInfo = {
   datasetName: '한국부동산원_청약Home 청약정보 API',
   provider: '한국부동산원',

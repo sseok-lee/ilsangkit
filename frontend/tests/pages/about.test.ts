@@ -49,13 +49,26 @@ describe('About Page', () => {
     expect(wrapper.text()).not.toContain('무인민원')
   })
 
-  it('data-source section includes hospital, pharmacy and new categories', async () => {
+  it('data-source 테이블을 dataSource.ts 레지스트리에서 단일 소스로 렌더한다', async () => {
     const wrapper = await mountSuspended(AboutPage)
     const text = wrapper.text()
-    expect(text).toContain('병원정보서비스')
-    expect(text).toContain('약국정보서비스')
+    // 레지스트리 기준 데이터셋명 (옛 하드코딩 명칭이 아님)
+    expect(text).toContain('건강보험심사평가원 병원 정보')
+    expect(text).toContain('건강보험심사평가원 약국 정보')
     expect(text).toContain('도시공원')
     expect(text).toContain('전통시장')
-    expect(text).toContain('체육시설')
+    expect(text).toContain('공공체육시설')
+    // 단일 소스화로 교정된 제공기관 (about 옛 값과 달라짐)
+    expect(text).toContain('환경부') // 쓰레기: 행정안전부 → 환경부
+    expect(text).toContain('과학기술정보통신부') // 와이파이: 행정안전부 → 과학기술정보통신부
+  })
+
+  it('data-source 테이블에 부동산 4개 세부 데이터셋을 유지한다', async () => {
+    const wrapper = await mountSuspended(AboutPage)
+    const text = wrapper.text()
+    expect(text).toContain('아파트 매매 실거래가 자료')
+    expect(text).toContain('아파트 전월세 실거래가 자료')
+    expect(text).toContain('연립다세대 매매·전월세 실거래가 자료')
+    expect(text).toContain('오피스텔 매매·전월세 실거래가 자료')
   })
 })
