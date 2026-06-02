@@ -27,7 +27,7 @@
 
       <AdBanner />
 
-      <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
+      <DataSourceSection domain="real-estate" />
     </main>
   </div>
 </template>
@@ -39,12 +39,11 @@ import { isRealEstateUrlType } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import type { RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { useStructuredData } from '~/composables/useStructuredData'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const route = useRoute()
 const realEstateTypeParam = route.params.realEstateType as string
