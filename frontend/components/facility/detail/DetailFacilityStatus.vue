@@ -320,9 +320,7 @@
         </div>
         <div v-if="schoolDepartments.length > 0" :class="schoolEnrollmentRows.length > 0 ? 'mt-5 border-t border-slate-100 pt-5' : ''">
           <h3 class="text-sm font-bold text-slate-900 mb-3">계열 정보</h3>
-          <div class="flex flex-wrap gap-2">
-            <span v-for="dept in schoolDepartments" :key="dept" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-sky-100 text-sky-800">{{ dept }}</span>
-          </div>
+          <TagBadges variant="sky" :items="schoolDepartments.map(d => ({ label: d }))" />
         </div>
       </template>
     
@@ -337,9 +335,7 @@
         </div>
         <div v-if="marketProductTags.length" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">주요 판매품목</h3>
-          <div class="flex flex-wrap gap-1">
-            <span v-for="tag in marketProductTags" :key="tag" class="inline-block bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-xs">{{ tag }}</span>
-          </div>
+          <TagBadges variant="gray" :items="marketProductTags.map(t => ({ label: t }))" />
         </div>
         <div v-if="details?.hasPublicToilet != null || details?.hasParking != null" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">편의시설</h3>
@@ -365,36 +361,20 @@
         <!-- 정원·현원 + 시설 정보 (2열 그리드) -->
         <div>
           <h3 class="text-sm font-bold text-slate-900 mb-3">정원·시설 현황</h3>
-          <div class="grid grid-cols-2 gap-3">
-            <div v-if="details?.crcapat != null" class="bg-slate-50 rounded-lg p-3 text-center">
-              <p class="text-xs text-gray-600 mb-1">정원</p>
-              <p class="text-lg font-bold text-slate-900">{{ details.crcapat }}<span class="text-xs font-normal text-gray-600">명</span></p>
-            </div>
-            <div v-if="details?.crchcnt != null" class="bg-slate-50 rounded-lg p-3 text-center">
-              <p class="text-xs text-gray-600 mb-1">현원</p>
-              <p class="text-lg font-bold text-slate-900">{{ details.crchcnt }}<span class="text-xs font-normal text-gray-600">명</span></p>
-            </div>
-            <div v-if="details?.nrtrroomcnt != null" class="bg-slate-50 rounded-lg p-3 text-center">
-              <p class="text-xs text-gray-600 mb-1">보육실</p>
-              <p class="text-lg font-bold text-slate-900">{{ details.nrtrroomcnt }}<span class="text-xs font-normal text-gray-600">개</span></p>
-            </div>
-            <div v-if="details?.cctvinstlcnt != null" class="bg-slate-50 rounded-lg p-3 text-center">
-              <p class="text-xs text-gray-600 mb-1">CCTV</p>
-              <p class="text-lg font-bold text-slate-900">{{ details.cctvinstlcnt }}<span class="text-xs font-normal text-gray-600">대</span></p>
-            </div>
-            <div v-if="details?.plgrdco != null" class="bg-slate-50 rounded-lg p-3 text-center">
-              <p class="text-xs text-gray-600 mb-1">놀이터</p>
-              <p class="text-lg font-bold text-slate-900">{{ details.plgrdco }}<span class="text-xs font-normal text-gray-600">개</span></p>
-            </div>
-            <div v-if="details?.chcrtescnt != null" class="bg-slate-50 rounded-lg p-3 text-center">
-              <p class="text-xs text-gray-600 mb-1">교직원</p>
-              <p class="text-lg font-bold text-slate-900">{{ details.chcrtescnt }}<span class="text-xs font-normal text-gray-600">명</span></p>
-            </div>
-            <div v-if="details?.nrtrroomsize != null" class="bg-slate-50 rounded-lg p-3 text-center">
-              <p class="text-xs text-gray-600 mb-1">보육실 면적</p>
-              <p class="text-lg font-bold text-slate-900">{{ details.nrtrroomsize }}<span class="text-xs font-normal text-gray-600">㎡</span></p>
-            </div>
-          </div>
+          <FieldGrid
+            :cols="2"
+            variant="prominent"
+            :always-show="true"
+            :items="[
+              { label: '정원', value: details?.crcapat, unit: '명' },
+              { label: '현원', value: details?.crchcnt, unit: '명' },
+              { label: '보육실', value: details?.nrtrroomcnt, unit: '개' },
+              { label: 'CCTV', value: details?.cctvinstlcnt, unit: '대' },
+              { label: '놀이터', value: details?.plgrdco, unit: '개' },
+              { label: '교직원', value: details?.chcrtescnt, unit: '명' },
+              { label: '보육실 면적', value: details?.nrtrroomsize, unit: '㎡' },
+            ]"
+          />
           <div v-if="details?.crcapat != null && details?.crchcnt != null && details.crcapat > 0" class="mt-3">
             <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
               <span>가용률</span>
@@ -447,11 +427,7 @@
         <!-- 교사 경력 분포 -->
         <div v-if="childcareCareerItems.length > 0" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">교사 경력 분포</h3>
-          <div class="flex flex-wrap gap-2">
-            <span v-for="item in childcareCareerItems" :key="item.label" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" :class="item.colorClass">
-              {{ item.label }} <span class="font-semibold">{{ item.cnt }}명</span>
-            </span>
-          </div>
+          <TagBadges variant="custom" :items="childcareCareerItems.map(it => ({ label: it.label, suffix: `${it.cnt}명`, colorClass: it.colorClass }))" />
         </div>
 </template>
     
@@ -544,15 +520,7 @@
         <!-- Hospital Departments -->
         <div v-if="details?.departments?.length" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">진료과목</h3>
-          <div class="flex flex-wrap gap-1.5">
-            <span
-v-for="dept in details.departments" :key="dept.dgsbjtCdNm"
-              class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700 border border-teal-200"
->
-              {{ dept.dgsbjtCdNm }}
-              <span v-if="dept.dgsbjtPrSdrCnt" class="ml-1 text-teal-500">({{ dept.dgsbjtPrSdrCnt }}명)</span>
-            </span>
-          </div>
+          <TagBadges variant="teal" :items="hospitalDeptBadges" />
         </div>
     
         <!-- Hospital Bed Info -->
@@ -586,6 +554,8 @@ v-for="dept in details.departments" :key="dept.dgsbjtCdNm"
 <script setup lang="ts">
 import { computed } from 'vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import TagBadges from '~/components/facility/detail/TagBadges.vue'
+import FieldGrid from '~/components/facility/detail/FieldGrid.vue'
 import type { FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 
 const props = defineProps<{
@@ -593,6 +563,14 @@ const props = defineProps<{
 }>()
 
 const details = computed(() => props.facility?.details as FacilityDetailsAll | undefined)
+
+const hospitalDeptBadges = computed(() => {
+  const depts = details.value?.departments as Array<{ dgsbjtCdNm: string; dgsbjtPrSdrCnt?: number }> | undefined
+  return (depts || []).map(d => ({
+    label: d.dgsbjtCdNm,
+    suffix: d.dgsbjtPrSdrCnt ? `(${d.dgsbjtPrSdrCnt}명)` : undefined,
+  }))
+})
 
 // 시설현황 카드 표시 여부
 const hasFacilityStatus = computed(() => {

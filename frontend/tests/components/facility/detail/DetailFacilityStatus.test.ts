@@ -123,4 +123,24 @@ describe('DetailFacilityStatus — 카테고리 메타데이터 제거 회귀', 
     expect(html).toContain('1층 로비')
     expect(html).toContain('CU')
   })
+
+  it('childcare: 빈 시설현황 필드도 "정보 없음"으로 항상 표시', () => {
+    const wrapper = mount(DetailFacilityStatus, {
+      props: {
+        facility: makeFacility('childcare', {
+          crcapat: 50,
+          crchcnt: null,
+          nrtrroomcnt: null,
+          cctvinstlcnt: null,
+          plgrdco: null,
+          chcrtescnt: null,
+          nrtrroomsize: null,
+        }),
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('정원')
+    expect(wrapper.text()).toContain('CCTV')
+    expect(wrapper.text()).toContain('정보 없음')
+  })
 })
