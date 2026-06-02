@@ -165,9 +165,9 @@
               <!-- 주변 시설 (same + cross category) -->
               <DetailNearby
                 :nearby-facilities="nearbyFiltered"
-                :nearby-loading="nearbyLoading"
+                :nearby-loading="nearbyPending"
                 :cross-facilities-grouped="crossFacilitiesGrouped"
-                :cross-loading="crossLoading"
+                :cross-loading="nearbyPending"
                 :category-meta="categoryMeta"
               />
 
@@ -306,7 +306,6 @@ definePageMeta({})
 import { computed, defineAsyncComponent, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
-import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
@@ -318,7 +317,7 @@ import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutub
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
-import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
+import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
 import type { YoutubeVideo } from '~/types/youtube'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
@@ -903,30 +902,43 @@ const handleShare = async () => {
   }
 }
 
-// 주변 시설
-const { search: searchNearby, facilities: nearbyFacilities, loading: nearbyLoading, searchNearbyCross, crossFacilities, crossLoading } = useFacilitySearch()
+// 주변 시설 — 메인 facility가 lazy라 좌표 확보 위해 상세 1회 재패칭 후 allSettled로 SSR 합류
+const { data: nearbyData, status: nearbyStatus } = await useAsyncData(
+  `nearby-${category.value}-${id.value}`,
+  async () => {
+    const detail = await $fetch<{ success: boolean; data: FacilityDetail }>(
+      `${apiBase}/api/facilities/${category.value}/${id.value}`,
+    ).catch(() => null)
+    const f = detail?.data
+    const crossP = $fetch<{ success: boolean; data: { items: Facility[] } }>(
+      `${apiBase}/api/facilities/${category.value}/${id.value}/nearby`,
+    )
+    const nearbyP = (f?.lat && f?.lng)
+      ? $fetch<{ success: boolean; data: { items: Facility[] } }>(
+          `${apiBase}/api/facilities/search`,
+          {
+            method: 'POST',
+            body: { category: f.category, lat: f.lat, lng: f.lng, radius: 1000, page: 1, limit: 10 },
+          },
+        )
+      : Promise.resolve(null)
+    const [nearbyR, crossR] = await Promise.allSettled([nearbyP, crossP])
+    return {
+      nearby: nearbyR.status === 'fulfilled' ? (nearbyR.value?.data?.items ?? []) : [],
+      cross: crossR.status === 'fulfilled' ? (crossR.value?.data?.items ?? []) : [],
+    }
+  },
+  { lazy: true, default: () => ({ nearby: [] as Facility[], cross: [] as Facility[] }) },
+)
 
-watch(() => facility.value, async (f) => {
-  if (!f?.lat || !f?.lng) return
-  await Promise.all([
-    searchNearby({
-      lat: f.lat,
-      lng: f.lng,
-      category: f.category,
-      radius: 1000,
-      page: 1,
-      limit: 5,
-    }),
-    searchNearbyCross(f.category, f.id),
-  ])
-}, { immediate: true })
+const nearbyPending = computed(() => nearbyStatus.value === 'pending')
 
 const nearbyFiltered = computed(() =>
-  (nearbyFacilities.value ?? []).filter(f => f.id !== facility.value?.id).slice(0, 4)
+  (nearbyData.value?.nearby ?? []).filter(f => f.id !== facility.value?.id).slice(0, 4)
 )
 
 const crossFacilitiesGrouped = computed(() => {
-  const items = crossFacilities?.value ?? []
+  const items = nearbyData.value?.cross ?? []
   if (items.length === 0) return []
 
   const grouped = new Map<string, Array<(typeof items)[number]>>()

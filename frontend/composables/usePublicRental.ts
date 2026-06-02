@@ -47,6 +47,15 @@ export function usePublicRental() {
     }
   }
 
+  const getList = async (params: PublicRentalListQuery = {}): Promise<PublicRentalListResponse> => {
+    const res = await $fetch<ApiEnvelope<PublicRentalListResponse>>(
+      `${apiBase()}/api/public-rental`,
+      { query: params },
+    )
+    if (res.success && res.data) return res.data
+    throw new Error('공공임대 목록 조회에 실패했습니다.')
+  }
+
   const fetchDetail = async (id: number): Promise<PublicRentalComplex | null> => {
     loading.value = true
     error.value = null
@@ -114,6 +123,7 @@ export function usePublicRental() {
     loading: readonly(loading),
     error: readonly(error),
     fetchList,
+    getList,
     fetchDetail,
     fetchSiblings,
     fetchNearby,

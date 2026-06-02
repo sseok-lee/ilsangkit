@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { ref, defineComponent, h, Suspense } from 'vue'
 import { usePublicRental } from '~/composables/usePublicRental'
 import PublicRentalListView from '~/components/subscription/PublicRentalListView.vue'
 import type { PublicRentalListResponse, PublicRentalComplex } from '~/types/publicRental'
@@ -10,6 +11,17 @@ vi.stubGlobal('useApiBase', () => 'http://localhost:8000')
 vi.stubGlobal('useRuntimeConfig', () => ({ public: { apiBase: 'http://localhost:8000' } }))
 vi.stubGlobal('usePublicRental', usePublicRental)
 
+// 컴포넌트가 useAsyncData(handler)로 SSR 시딩하므로 핸들러를 실제 실행시킨다
+vi.stubGlobal('useAsyncData', (_key: string, handler: () => Promise<unknown>, opts?: { default?: () => unknown }) => {
+  const data = ref<unknown>(opts?.default ? opts.default() : null)
+  const error = ref<unknown>(null)
+  const result = { data, pending: ref(false), error, refresh: vi.fn() }
+  const p = handler()
+    .then((r) => { data.value = r; return result })
+    .catch((e) => { error.value = e; return result })
+  return Object.assign(p, result)
+})
+
 const sample: PublicRentalComplex = {
   id: 1, complexCode: 'a', complexName: '강남 매입임대',
   city: '서울특별시', district: '강남구', rentalType: '매입임대',
@@ -17,6 +29,22 @@ const sample: PublicRentalComplex = {
   depositAmount: 50_000_000, monthlyRent: 200_000,
   landlordAgency: 'LH', sourceId: 'lh-1',
   createdAt: '', updatedAt: '',
+}
+
+// Helper to mount async components with Suspense
+async function mountSuspended(props: Record<string, unknown> = {}, globalOpts?: Record<string, unknown>) {
+  const wrapper = mount(
+    defineComponent({
+      render() {
+        return h(Suspense, null, {
+          default: () => h(PublicRentalListView, props),
+        })
+      },
+    }),
+    { global: globalOpts },
+  )
+  await flushPromises()
+  return wrapper
 }
 
 beforeEach(() => {
@@ -33,16 +61,13 @@ describe('PublicRentalListView', () => {
       } as PublicRentalListResponse,
     })
 
-    const wrapper = mount(PublicRentalListView, {
-      global: {
-        stubs: {
-          SectionBlock: { template: '<section><slot /></section>' },
-          Pagination: { template: '<nav />' },
-          PublicRentalCard: { template: '<div class="card-stub">{{ rental.complexName }}</div>', props: ['rental'] },
-        },
+    const wrapper = await mountSuspended({}, {
+      stubs: {
+        SectionBlock: { template: '<section><slot /></section>' },
+        Pagination: { template: '<nav />' },
+        PublicRentalCard: { template: '<div class="card-stub">{{ rental.complexName }}</div>', props: ['rental'] },
       },
     })
-    await flushPromises()
     expect(wrapper.html()).toContain('강남 매입임대')
   })
 
@@ -55,31 +80,33 @@ describe('PublicRentalListView', () => {
       } as PublicRentalListResponse,
     })
 
-    const wrapper = mount(PublicRentalListView, {
-      global: {
-        stubs: {
-          SectionBlock: { template: '<section><slot /></section>' },
-          Pagination: { template: '<nav />' },
-          PublicRentalCard: true,
-        },
+    const wrapper = await mountSuspended({}, {
+      stubs: {
+        SectionBlock: { template: '<section><slot /></section>' },
+        Pagination: { template: '<nav />' },
+        PublicRentalCard: true,
       },
     })
-    await flushPromises()
     expect(wrapper.text()).toContain('조건에 맞는 매물이 없습니다')
   })
 
-  it('shows error block when fetch fails', async () => {
-    mockFetch.mockRejectedValue(new Error('boom'))
-    const wrapper = mount(PublicRentalListView, {
-      global: {
-        stubs: {
-          SectionBlock: { template: '<section><slot /></section>' },
-          Pagination: { template: '<nav />' },
-          PublicRentalCard: true,
-        },
+  it('필터 변경 reload 실패 시 에러 블록을 표시한다', async () => {
+    mockFetch.mockResolvedValueOnce({
+      success: true,
+      data: { items: [], pagination: { page: 1, limit: 18, total: 0, totalPages: 0 } } as PublicRentalListResponse,
+    })
+    const wrapper = await mountSuspended({}, {
+      stubs: {
+        SectionBlock: { template: '<section><slot /></section>' },
+        Pagination: { template: '<nav />' },
+        PublicRentalCard: true,
       },
     })
+
+    mockFetch.mockRejectedValueOnce(new Error('boom'))
+    await wrapper.find('select').setValue('seoul')
     await flushPromises()
-    expect(wrapper.text()).toContain('오류가 발생했습니다')
+
+    expect(wrapper.text()).toContain('데이터를 불러오는 중 오류가 발생했습니다')
   })
 })
