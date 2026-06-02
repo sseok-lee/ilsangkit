@@ -276,9 +276,7 @@
       <CoupangBanner />
 
       <!-- 데이터 출처 -->
-      <section v-if="categoryDataSource">
-        <DataSourceCard :source="categoryDataSource" />
-      </section>
+      <DataSourceSection domain="facility" :category="categoryParam" />
     </div>
   </div>
 </template>
@@ -294,7 +292,7 @@ import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { RELATED_CATEGORIES, POPULAR_REGIONS, CATEGORY_SEO_INTENT } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
