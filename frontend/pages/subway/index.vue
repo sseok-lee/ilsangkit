@@ -97,12 +97,12 @@
           </div>
 
           <!-- Empty -->
-          <div v-else class="py-12 text-center">
-            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-              <span class="material-symbols-outlined text-[32px] text-slate-500">subway</span>
-            </div>
-            <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-            <p class="text-slate-500 text-sm mt-1 mb-6">다른 지역이나 검색어를 시도해보세요</p>
+          <EmptyState
+            v-else
+            icon="subway"
+            title="검색 결과가 없습니다"
+            description="다른 지역이나 검색어를 시도해보세요"
+          >
             <div class="flex items-center justify-center gap-3">
               <button
                 v-if="selectedCitySlug || selectedDistrict || keyword"
@@ -117,7 +117,7 @@
                 홈으로 돌아가기
               </NuxtLink>
             </div>
-          </div>
+          </EmptyState>
 
           <!-- Pagination -->
           <Pagination v-if="totalPages > 1" :current-page="page" :total-pages="totalPages" @page-change="(p) => (page = p)" />
@@ -187,6 +187,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 import Pagination from '~/components/common/Pagination.vue'
 import FacilityCard from '~/components/facility/FacilityCard.vue'
 import { useRegions } from '~/composables/useRegions'

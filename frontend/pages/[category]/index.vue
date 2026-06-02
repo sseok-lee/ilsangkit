@@ -191,12 +191,12 @@
             </div>
 
             <!-- Empty State -->
-            <div v-if="displayFacilities.length === 0" class="py-12 text-center">
-              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-                <span class="material-symbols-outlined text-[32px] text-slate-500">{{ categoryMeta?.icon || 'search_off' }}</span>
-              </div>
-              <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-              <p class="text-slate-500 text-sm mt-1 mb-6">다른 지역이나 검색어를 시도해보세요</p>
+            <EmptyState
+              v-if="displayFacilities.length === 0"
+              :icon="categoryMeta?.icon || 'search_off'"
+              title="검색 결과가 없습니다"
+              description="다른 지역이나 검색어를 시도해보세요"
+            >
               <div class="flex items-center justify-center gap-3">
                 <button
                   v-if="selectedCity || selectedDistrict || filterKeyword"
@@ -214,7 +214,7 @@
                   홈으로 돌아가기
                 </NuxtLink>
               </div>
-            </div>
+            </EmptyState>
 
             <!-- Pagination -->
             <Pagination :current-page="currentPage" :total-pages="displayTotalPages" @page-change="goToPage" />
@@ -293,6 +293,7 @@ import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { RELATED_CATEGORIES, POPULAR_REGIONS, CATEGORY_SEO_INTENT } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
