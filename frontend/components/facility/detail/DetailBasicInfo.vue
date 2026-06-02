@@ -264,30 +264,7 @@
         <!-- AED 요일별 이용시간 표 -->
         <template v-if="aedWeeklyHours.length > 0">
           <div class="h-px bg-slate-100 w-full"></div>
-          <div>
-            <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 이용시간</h3>
-            <table class="w-full text-sm border-collapse">
-              <thead>
-                <tr class="bg-slate-50">
-                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
-                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">이용시간</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr
-v-for="row in aedWeeklyHours" :key="row.day"
-                    :class="row.isToday ? 'bg-primary-50 font-semibold' : ''"
->
-                  <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-primary-700' : 'text-slate-600'">
-                    {{ row.day }}{{ row.isToday ? ' ★' : '' }}
-                  </td>
-                  <td class="py-1.5 px-2 text-xs" :class="row.allDay ? 'text-green-600 font-medium' : row.closed ? 'text-gray-400' : 'text-slate-800'">
-                    {{ row.time }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <WeekdayHoursTable title="요일별 이용시간" time-header="이용시간" :rows="aedWeeklyHours" />
         </template>
         <template v-if="aedOperatingHours.length > 0 && aedWeeklyHoursCount === 0">
           <div class="h-px bg-slate-100 w-full"></div>
@@ -344,30 +321,7 @@ v-for="row in aedWeeklyHours" :key="row.day"
         <template v-if="hospitalWeeklyHours.length > 0">
           <div class="h-px bg-slate-100 w-full"></div>
           <div>
-            <h3 class="text-sm font-bold text-slate-900 mb-3">요일별 진료시간</h3>
-            <table class="w-full text-sm border-collapse">
-              <thead>
-                <tr class="bg-slate-50">
-                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium w-12">요일</th>
-                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">진료시간</th>
-                  <th class="text-left py-1.5 px-2 text-xs text-gray-500 font-medium">점심</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr
-v-for="row in hospitalWeeklyHours" :key="row.day"
-                    :class="row.isToday ? 'bg-primary-50 font-semibold' : ''"
->
-                  <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-primary-700' : 'text-slate-600'">
-                    {{ row.day }}{{ row.isToday ? ' ★' : '' }}
-                  </td>
-                  <td class="py-1.5 px-2 text-xs" :class="row.closed ? 'text-gray-400' : 'text-slate-800'">
-                    {{ row.time }}
-                  </td>
-                  <td class="py-1.5 px-2 text-xs text-gray-500">{{ row.lunch }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <WeekdayHoursTable title="요일별 진료시간" time-header="진료시간" :show-lunch="true" :rows="hospitalWeeklyHours" />
             <p v-if="(details as any)?.noTrmtSun" class="mt-2 text-xs text-gray-500">
               <span class="font-medium">일요일 안내:</span> {{ (details as any).noTrmtSun }}
             </p>
@@ -644,6 +598,7 @@ v-for="row in hospitalWeeklyHours" :key="row.day"
 import { computed } from 'vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import OperatingStatusBanner from '~/components/facility/OperatingStatusBanner.vue'
+import WeekdayHoursTable from '~/components/facility/detail/WeekdayHoursTable.vue'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
 import { useAnalytics } from '~/composables/useAnalytics'
 import type { FacilityDetail, FacilityDetailsAll } from '~/types/facility'
