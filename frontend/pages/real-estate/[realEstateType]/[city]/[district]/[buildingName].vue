@@ -389,12 +389,8 @@
       <!-- 쿠팡 배너 -->
       <CoupangBanner />
 
-      <!-- 데이터 정보 -->
-      <DataSourceCard
-        v-if="lastSyncDate"
-        :source="REAL_ESTATE_DATA_SOURCE"
-        :last-sync-date="lastSyncDate"
-      />
+      <!-- 데이터 출처 -->
+      <DataSourceSection domain="real-estate" :last-sync-date="lastSyncDate" />
     </main>
 
     <!-- Mobile: Sticky Bottom Action Bar -->
@@ -457,7 +453,6 @@ import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { buildRealEstateDetailMeta } from '~/composables/useRealEstateDetailMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
-import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { toRealEstateUrl, toRealEstateListUrl, isRealEstateUrlType } from '~/utils/realEstateUrl'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
@@ -465,7 +460,7 @@ import {
   hasUsableRealEstateDetailData,
   type RealEstateDetailData,
 } from '~/utils/realEstateDetailData'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'

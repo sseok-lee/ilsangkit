@@ -62,6 +62,9 @@
 
         <!-- ④ 교차 CTA -->
         <RegionRealEstateCta :area-name="cityName" />
+
+        <!-- 데이터 출처 -->
+        <DataSourceSection domain="facility" compact class="mt-2" />
       </div>
 
       <!-- 에러 -->
@@ -76,6 +79,7 @@
 import { CITY_SLUG_MAP } from '~/composables/useRegions'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'

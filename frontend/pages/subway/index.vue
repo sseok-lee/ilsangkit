@@ -173,9 +173,7 @@
       <CoupangBanner />
 
       <!-- 데이터 출처 -->
-      <section v-if="categoryDataSource">
-        <DataSourceCard :source="categoryDataSource" />
-      </section>
+      <DataSourceSection domain="facility" category="subway" />
     </div>
   </div>
 </template>
@@ -187,7 +185,7 @@ import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import CoupangBanner from '~/components/ads/CoupangBanner.vue'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Pagination from '~/components/common/Pagination.vue'
 import FacilityCard from '~/components/facility/FacilityCard.vue'
 import { useRegions } from '~/composables/useRegions'
@@ -196,7 +194,6 @@ import { SITE_URL, POPULAR_REGIONS, RELATED_CATEGORIES } from '~/utils/seoConsta
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
-import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 
 interface SubwayStationGroup {
   id: string
@@ -336,8 +333,6 @@ const relatedCategories = computed(() => {
 const popularRegionLinks = computed(() => POPULAR_REGIONS)
 
 const faqItems = computed(() => CATEGORY_FAQ.subway ?? [])
-
-const categoryDataSource = computed(() => FACILITY_DATA_SOURCE.subway ?? null)
 
 function resetFilters() {
   selectedCitySlug.value = ''

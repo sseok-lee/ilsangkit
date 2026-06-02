@@ -15,7 +15,7 @@
 | Directory | Purpose |
 |-----------|---------|
 | `category/` | 카테고리 컴포넌트 (see `category/AGENTS.md`) |
-| `common/` | DataSourceCard/ErrorBoundary (see `common/AGENTS.md`) |
+| `common/` | DataSourceSection/ErrorBoundary (see `common/AGENTS.md`) |
 | `facility/` | 시설 카드/목록 + details (see `facility/AGENTS.md`) |
 | `map/` | 지도 컴포넌트 (see `map/AGENTS.md`) |
 | `navigation/` | 브레드크럼 (see `navigation/AGENTS.md`) |

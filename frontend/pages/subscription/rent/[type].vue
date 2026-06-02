@@ -35,6 +35,9 @@
         v-else-if="dataSource === 'lh-myhome'"
         :rental-type-code="typeMeta.rentalTypeCode"
       />
+
+      <!-- 데이터 출처 -->
+      <DataSourceSection domain="subscription" />
     </main>
   </div>
 </template>
@@ -42,6 +45,7 @@
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { RENT_TYPES } from '~/utils/subscriptionMeta'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const route = useRoute()

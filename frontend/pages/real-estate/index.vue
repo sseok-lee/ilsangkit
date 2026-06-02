@@ -56,7 +56,7 @@
       </SectionBlock>
 
       <section>
-        <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
+        <DataSourceSection domain="real-estate" />
       </section>
     </main>
   </div>
@@ -66,7 +66,7 @@
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
