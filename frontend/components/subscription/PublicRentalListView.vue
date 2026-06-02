@@ -77,9 +77,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { usePublicRental } from '~/composables/usePublicRental'
-import type { PublicRentalType } from '~/types/publicRental'
+import type { PublicRentalComplex, PublicRentalType } from '~/types/publicRental'
 
 const props = defineProps<{
   rentalTypeCode?: PublicRentalType
@@ -106,32 +106,56 @@ const CITY_OPTIONS = [
   { slug: 'jeju', label: '제주' },
 ]
 
-const { items, total, totalPages, currentPage, loading, error, fetchList } = usePublicRental()
+const { getList } = usePublicRental()
+
+// 로컬 상태 (SubscriptionListView SSR 패턴과 정렬)
+const items = ref<PublicRentalComplex[]>([])
+const total = ref(0)
+const totalPages = ref(0)
+const currentPage = ref(1)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 const currentCity = ref<string>('')
 const districtDetail = ref<string>('')
 const page = ref(1)
 
-const reload = (): Promise<void> => fetchList({
-  city: currentCity.value || undefined,
-  district: districtDetail.value.trim() || undefined,
-  rentalType: props.rentalTypeCode,
-  page: page.value,
-  limit: 18,
-})
+async function load(): Promise<void> {
+  loading.value = true
+  error.value = null
+  try {
+    const data = await getList({
+      city: currentCity.value || undefined,
+      district: districtDetail.value.trim() || undefined,
+      rentalType: props.rentalTypeCode,
+      page: page.value,
+      limit: 18,
+    })
+    items.value = data.items
+    total.value = data.pagination.total
+    totalPages.value = data.pagination.totalPages
+    currentPage.value = data.pagination.page
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '공공임대 목록 조회에 실패했습니다.'
+    items.value = []
+    total.value = 0
+    totalPages.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+// 템플릿의 "다시 시도" 버튼이 호출
+const reload = (): Promise<void> => load()
 
 function goToPage(p: number) {
   page.value = p
-  void reload()
+  void load()
 }
-
-onMounted(() => {
-  void reload()
-})
 
 watch([currentCity, () => props.rentalTypeCode], () => {
   page.value = 1
-  void reload()
+  void load()
 })
 
 // 상세 검색 입력은 디바운스 — 타이핑마다 호출 방지.
@@ -140,7 +164,20 @@ watch(districtDetail, () => {
   if (detailTimer) clearTimeout(detailTimer)
   detailTimer = setTimeout(() => {
     page.value = 1
-    void reload()
+    void load()
   }, 300)
 })
+
+// SSR: 초기 목록을 서버에서 패칭해 HTML에 포함
+const route = useRoute()
+const { data: ssrData } = await useAsyncData(
+  `public-rental-${route.path}-${props.rentalTypeCode ?? 'all'}`,
+  () => getList({ rentalType: props.rentalTypeCode, page: 1, limit: 18 }),
+)
+if (ssrData.value) {
+  items.value = ssrData.value.items
+  total.value = ssrData.value.pagination.total
+  totalPages.value = ssrData.value.pagination.totalPages
+  currentPage.value = ssrData.value.pagination.page
+}
 </script>
