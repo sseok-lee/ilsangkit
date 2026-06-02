@@ -9,7 +9,7 @@
 ## Key Files
 | File | Description |
 |------|-------------|
-| `DataSourceCard.test.ts` | 데이터 출처 카드 |
+| `DataSourceSection.test.ts` | 데이터 출처 표기 (도메인 인지) |
 | `ErrorBoundary.test.ts` | Vue 에러 경계 |
 
 ## For AI Agents
