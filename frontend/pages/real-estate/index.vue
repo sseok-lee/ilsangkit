@@ -133,7 +133,7 @@ const realEstateFAQs = [
 ]
 
 // Breadcrumb + ItemList JSON-LD
-const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema, setFAQSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
@@ -153,4 +153,5 @@ setDatasetSchema({
   sources: [REAL_ESTATE_DATA_SOURCE],
   keywords: ['부동산', '실거래가', '아파트', '빌라', '오피스텔', '국토교통부'],
 })
+setFAQSchema(realEstateFAQs)
 </script>

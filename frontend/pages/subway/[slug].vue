@@ -316,6 +316,7 @@ import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
+import { subwayCanonicalUrl } from '~/utils/subwayCanonical'
 import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
@@ -583,6 +584,7 @@ useSeoMeta({
 })
 
 useHead({
+  link: [{ rel: 'canonical', href: subwayCanonicalUrl(slug.value), key: 'canonical' }],
   script: [
     {
       type: 'application/ld+json',

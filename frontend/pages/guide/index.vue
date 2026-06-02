@@ -153,7 +153,7 @@ setMeta({
   path: '/guide',
 })
 
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '생활 가이드', url: '/guide' },
@@ -183,6 +183,9 @@ const { data: guidesData, status } = await useAsyncData(
 )
 
 const guides = computed(() => guidesData.value?.items ?? [])
+setItemListSchema(
+  guides.value.map((g, i) => ({ name: g.title, url: `/guide/${g.slug}`, position: i + 1 })),
+)
 const totalCount = computed(() => guidesData.value?.total ?? 0)
 const totalPages = computed(() => guidesData.value?.totalPages ?? 1)
 const loading = computed(() => status.value === 'pending')

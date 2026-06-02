@@ -94,6 +94,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
+import { computeAreaNoindex } from '~/utils/areaNoindex'
 import type { FacilityCategory } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -352,15 +353,17 @@ watch(() => route.query.page, (next) => {
   }
 })
 
-// noindex 조건: 시설 0건(완전히 비어있는 경우) 또는 페이지 2 이상.
+// noindex 조건: SSR summary.count 기반(비-trash) 또는 일정 없음(trash) 또는 페이지 2 이상.
 // 정책: noindex 일 때는 canonical 을 함께 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md).
 // route.query.page 변경에 reactive 하게 반응해야 client-side 페이지 이동에서도 정책이 유지된다.
 const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
 useHead(computed(() => {
-  const isEmpty = isTrash.value
-    ? (!wasteLoading.value && wasteSchedules.value.length === 0)
-    : (!loading.value && facilities.value.length === 0 && !error.value)
-  const isNoindex = isEmpty || pageQueryParam.value > 1
+  const isNoindex = computeAreaNoindex({
+    isTrash: isTrash.value,
+    summaryCount: summary.value?.count,
+    wasteEmpty: !wasteLoading.value && wasteSchedules.value.length === 0,
+    page: pageQueryParam.value,
+  })
   if (isNoindex) {
     return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
   }

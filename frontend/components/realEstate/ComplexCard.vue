@@ -70,26 +70,22 @@ const props = withDefaults(defineProps<Props>(), {
   minTransactionCount: 0,
 })
 
-// 지번/thin buildingName이거나 거래 건수가 모자라면 렌더링 자체를 건너뜀.
-// → 내부 링크로도 노출되지 않아 크롤 예산 회수.
+// 지번/thin buildingName이거나 거래 건수가 모자라거나 city/district 가 누락되면 렌더링 건너뜀.
+// → 내부 링크로도 노출되지 않아 크롤 예산 회수. city/district 없는 불완전 레코드는
+//   색인 부적합 legacy URL 대신 아예 미렌더.
 const isRenderable = computed(() => {
   if (!isValidBuildingName(props.complex.buildingName)) return false
   if (props.complex.transactionCount < props.minTransactionCount) return false
+  if (!props.complex.city || !props.complex.district) return false
   return true
 })
 
 // US-010: 신규 URL `/real-estate/{type}/{city}/{district}/{buildingName}` 로 직접 연결.
-// city/district 가 누락된 경우 — getComplexList 응답 구조상 거의 없지만 — legacy URL 로 폴백해
-// 리다이렉트 미들웨어가 bjdCode 로 최종 URL 을 해결하도록 한다.
+// isRenderable 에서 city/district 를 보장하므로 legacy 폴백 불필요.
 const linkUrl = computed(() => {
-  const { buildingName, city, district, bjdCode } = props.complex
-  if (city && district) {
-    const type = `${props.propertyType}-${props.tab}` as RealEstateUrlType
-    return toRealEstateUrl({ type, city, district, buildingName })
-  }
-  const name = encodeURIComponent(buildingName)
-  const tabPart = props.tab === 'rent' ? 'tab=rent&' : ''
-  return `/real-estate/${props.propertyType}/${name}?${tabPart}bjdCode=${bjdCode}`
+  const { buildingName, city, district } = props.complex
+  const type = `${props.propertyType}-${props.tab}` as RealEstateUrlType
+  return toRealEstateUrl({ type, city: city as string, district: district as string, buildingName })
 })
 
 const PROPERTY_ICONS: Record<string, { img: string; bg: string }> = {
