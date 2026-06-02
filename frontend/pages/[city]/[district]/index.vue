@@ -45,6 +45,9 @@
 
         <!-- ③ 교차 CTA -->
         <RegionRealEstateCta :area-name="districtName" />
+
+        <!-- 데이터 출처 -->
+        <DataSourceSection domain="facility" compact class="mt-2" />
       </div>
 
       <!-- 에러 -->
@@ -60,6 +63,7 @@ import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionFacilityCategoryGrid from '~/components/region/RegionFacilityCategoryGrid.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'

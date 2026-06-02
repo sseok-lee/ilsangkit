@@ -76,6 +76,9 @@
       :district-name="districtName"
       :categories="otherCategories"
     />
+
+    <!-- 데이터 출처 -->
+    <DataSourceSection domain="facility" :category="(category as FacilityCategory)" />
   </div>
 </template>
 
@@ -98,6 +101,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import RegionRelatedCategories from '~/components/region/RegionRelatedCategories.vue'
 import RegionTrashSchedule from '~/components/region/RegionTrashSchedule.vue'
 import RegionFacilitiesGrid from '~/components/region/RegionFacilitiesGrid.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 // Route params
 const route = useRoute()
