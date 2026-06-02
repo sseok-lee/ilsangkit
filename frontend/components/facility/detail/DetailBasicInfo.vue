@@ -558,13 +558,10 @@
             </div>
           </div>
         </template>
-        <template v-if="pharmacyOperatingHours.length > 0">
+        <template v-if="pharmacyWeeklyHours.length > 0">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">
-            <div v-for="item in pharmacyOperatingHours" :key="item.day" class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">{{ item.day }}</span>
-              <span class="text-sm font-medium text-slate-900">{{ item.time }}</span>
-            </div>
+            <WeekdayHoursTable title="요일별 운영시간" time-header="운영시간" :rows="pharmacyWeeklyHours" />
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">점심(평일)</span>
               <span v-if="details?.lunchWeek" class="text-sm font-medium text-slate-900">{{ details.lunchWeek }}</span>
@@ -576,18 +573,10 @@
               <span v-else class="text-sm text-slate-400">정보 없음</span>
             </div>
           </div>
-          <p v-if="details?.recpWeek" class="text-xs text-gray-500">
-            <span class="font-medium">접수(평일):</span> {{ details.recpWeek }}
-          </p>
-          <p v-if="details?.recpSat" class="text-xs text-gray-500">
-            <span class="font-medium">접수(토):</span> {{ details.recpSat }}
-          </p>
-          <p v-if="details?.noTrmtSun" class="text-xs text-gray-500">
-            <span class="font-medium">일요일 안내:</span> {{ details.noTrmtSun }}
-          </p>
-          <p v-if="details?.noTrmtHoli" class="text-xs text-gray-500">
-            <span class="font-medium">공휴일 안내:</span> {{ details.noTrmtHoli }}
-          </p>
+          <p v-if="details?.recpWeek" class="text-xs text-gray-500"><span class="font-medium">접수(평일):</span> {{ details.recpWeek }}</p>
+          <p v-if="details?.recpSat" class="text-xs text-gray-500"><span class="font-medium">접수(토):</span> {{ details.recpSat }}</p>
+          <p v-if="details?.noTrmtSun" class="text-xs text-gray-500"><span class="font-medium">일요일 안내:</span> {{ details.noTrmtSun }}</p>
+          <p v-if="details?.noTrmtHoli" class="text-xs text-gray-500"><span class="font-medium">공휴일 안내:</span> {{ details.noTrmtHoli }}</p>
         </template>
       </template>
     </div>
@@ -611,7 +600,7 @@ const props = defineProps<{
   aedOperatingHours: Array<{ day: string; time: string }>
   aedWeeklyHours: Array<{ day: string; time: string; allDay: boolean; closed: boolean; isToday: boolean }>
   aedWeeklyHoursCount: number
-  pharmacyOperatingHours: Array<{ day: string; time: string }>
+  pharmacyWeeklyHours: Array<{ day: string; time: string; closed: boolean; isToday: boolean }>
 }>()
 
 const details = computed(() => props.facility?.details as FacilityDetailsAll | undefined)

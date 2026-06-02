@@ -142,7 +142,7 @@
                 :aed-operating-hours="aedOperatingHours"
                 :aed-weekly-hours="aedWeeklyHours"
                 :aed-weekly-hours-count="aedWeeklyHours.length"
-                :pharmacy-operating-hours="pharmacyOperatingHours"
+                :pharmacy-weekly-hours="pharmacyWeeklyHours"
               />
 
               <!-- Ad: BASIC INFO ↔ FACILITY STATUS 사이 -->
@@ -732,22 +732,26 @@ const formatPharmacyTime = (start?: string | null, end?: string | null): string 
   return `${s.slice(0, 2)}:${s.slice(2)} ~ ${e.slice(0, 2)}:${e.slice(2)}`
 }
 
-const pharmacyOperatingHours = computed(() => {
+// Pharmacy 요일별 운영시간 표 (오늘 강조)
+const pharmacyWeeklyHours = computed(() => {
   if (facility.value?.category !== 'pharmacy' || !facility.value?.details) return []
   const d = facility.value.details as import('~/types/facility').PharmacyDetails
-  const days = [
-    { day: '월요일', start: d.dutyTime1s, end: d.dutyTime1c },
-    { day: '화요일', start: d.dutyTime2s, end: d.dutyTime2c },
-    { day: '수요일', start: d.dutyTime3s, end: d.dutyTime3c },
-    { day: '목요일', start: d.dutyTime4s, end: d.dutyTime4c },
-    { day: '금요일', start: d.dutyTime5s, end: d.dutyTime5c },
-    { day: '토요일', start: d.dutyTime6s, end: d.dutyTime6c },
-    { day: '일요일', start: d.dutyTime7s, end: d.dutyTime7c },
-    { day: '공휴일', start: d.dutyTime8s, end: d.dutyTime8c },
+  const today = new Date().getDay() // 0=일 ... 6=토
+  const DAY_DEFS = [
+    { label: '월', s: d.dutyTime1s, e: d.dutyTime1c, todayIdx: 1 },
+    { label: '화', s: d.dutyTime2s, e: d.dutyTime2c, todayIdx: 2 },
+    { label: '수', s: d.dutyTime3s, e: d.dutyTime3c, todayIdx: 3 },
+    { label: '목', s: d.dutyTime4s, e: d.dutyTime4c, todayIdx: 4 },
+    { label: '금', s: d.dutyTime5s, e: d.dutyTime5c, todayIdx: 5 },
+    { label: '토', s: d.dutyTime6s, e: d.dutyTime6c, todayIdx: 6 },
+    { label: '일', s: d.dutyTime7s, e: d.dutyTime7c, todayIdx: 0 },
+    { label: '공휴일', s: d.dutyTime8s, e: d.dutyTime8c, todayIdx: -1 },
   ]
-  return days
-    .map(({ day, start, end }) => ({ day, time: formatPharmacyTime(start, end) }))
-    .filter((item): item is { day: string; time: string } => item.time !== null)
+  const rows = DAY_DEFS.map(({ label, s, e, todayIdx }) => {
+    const time = formatPharmacyTime(s, e)
+    return { day: label, time: time ?? '휴무', closed: time === null, isToday: todayIdx === today }
+  })
+  return rows.some(r => !r.closed) ? rows : []
 })
 
 // Hospital operating hours
