@@ -1,3 +1,5 @@
+import { SITE_NAME } from '~/utils/seoConstants'
+
 type PropertyType = 'apt' | 'villa' | 'offitel'
 type TransactionMode = 'sale' | 'rent'
 
@@ -56,13 +58,14 @@ function formatArea(range: { min: number; max?: number } | null | undefined): st
 function buildTitle(input: DetailMetaInput): string {
   const propertyLabel = PROPERTY_LABEL[input.propertyType]
   const transactionLabel = TRANSACTION_LABEL[input.transactionMode]
-  const head = `${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래`
-
-  const cityShort = shortCityName(input.region.city)
-  const locParts = [cityShort, input.region.district, input.region.dong || '']
-    .filter((p) => p && p.length > 0)
-  if (locParts.length === 0) return head
-  return `${head} · ${locParts.join(' ')}`
+  // 아파트는 이름이 타입을 암시 → 타입어 생략. 빌라/오피스텔은 유지
+  const typePart = input.propertyType === 'apt' ? '' : `${propertyLabel} `
+  let core = `${input.buildingName} ${typePart}${transactionLabel} 실거래가`
+  // 30자(브랜드 제외 ~22자) 초과 + 타입어 있으면 타입어 생략
+  if (core.length > 22 && typePart) {
+    core = `${input.buildingName} ${transactionLabel} 실거래가`
+  }
+  return `${core} | ${SITE_NAME}`
 }
 
 function buildDescription(input: DetailMetaInput): string {
