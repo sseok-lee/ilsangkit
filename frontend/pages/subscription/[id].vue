@@ -421,7 +421,8 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -790,30 +791,19 @@ if (subscription.value) {
 
 // SEO
 const subscriptionOgImage = computed(() => {
-  if (!subscription.value || !hasCoords.value) return DEFAULT_OG_IMAGE
+  if (!subscription.value || !hasCoords.value) return undefined
   const name = subscription.value.houseName
-  return `${SITE_URL}/og-map?lat=${mapCenter.value.lat}&lng=${mapCenter.value.lng}&label=${encodeURIComponent(name)}&category=subscription&title=${encodeURIComponent(name)}`
+  return `${SITE_URL}/og-map?lat=${mapCenter.value!.lat}&lng=${mapCenter.value!.lng}&label=${encodeURIComponent(name)}&category=subscription&title=${encodeURIComponent(name)}`
 })
 
-useSeoMeta({
-  title: () => subscriptionSeoTitle.value,
-  description: () => subscriptionSeoDescription.value,
-  ogTitle: () => subscriptionSeoTitle.value,
-  ogDescription: () => subscriptionSeoDescription.value,
-  ogImage: () => subscriptionOgImage.value,
-  ogImageWidth: () => (hasCoords.value ? 1024 : 1200),
-  ogImageHeight: () => (hasCoords.value ? 536 : 630),
-  ogUrl: `${SITE_URL}/subscription/${id}`,
-  ogSiteName: SITE_NAME,
-  ogLocale: 'ko_KR',
-  twitterCard: 'summary_large_image',
-  twitterTitle: () => subscriptionSeoTitle.value,
-  twitterDescription: () => subscriptionSeoDescription.value,
-  twitterImage: () => subscriptionOgImage.value,
-})
-
-useHead({
-  link: [{ rel: 'canonical', href: `${SITE_URL}/subscription/${id}` }],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: subscriptionSeoTitle.value,
+  description: subscriptionSeoDescription.value,
+  path: `/subscription/${id}`,
+  image: subscriptionOgImage.value,
+  imageWidth: hasCoords.value ? 1024 : undefined,
+  imageHeight: hasCoords.value ? 536 : undefined,
 })
 </script>
 
