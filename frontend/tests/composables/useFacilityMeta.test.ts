@@ -256,6 +256,22 @@ describe('useFacilityMeta', () => {
     })
   })
 
+  describe('setMeta - 브랜드 부제 통일', () => {
+    it('title이 브랜드명과 같을 때 SITE_TAGLINE을 부제로 쓴다', () => {
+      const { setMeta } = useFacilityMeta()
+      setMeta({ title: '일상킷', description: '설명', path: '/' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('일상킷 | 부동산 실거래가·청약·내 주변 생활정보')
+    })
+    it('일반 title에는 브랜드 suffix가 1회만 붙는다', () => {
+      const { setMeta } = useFacilityMeta()
+      setMeta({ title: '병원 찾기', description: '설명', path: '/hospital' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('병원 찾기 | 일상킷')
+      expect(call.title.match(/일상킷/g)).toHaveLength(1)
+    })
+  })
+
   describe('setCategoryMeta - CTR 최적화', () => {
     it('toilet 카테고리 타이틀에 위치 또는 운영시간 포함', () => {
       const { setCategoryMeta } = useFacilityMeta()

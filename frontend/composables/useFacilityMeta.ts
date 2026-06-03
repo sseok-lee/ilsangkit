@@ -1,6 +1,6 @@
 import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails, ParkDetails, SchoolDetails, MarketDetails, ChildcareDetails, EvChargerDetails, SportsDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION } from '~/utils/seoConstants'
 
 /** 받침 유무에 따라 조사 선택 (은/는, 이/가, 을/를 등) */
 function getJosa(word: string, josaWithBatchim: string, josaWithout: string): string {
@@ -231,7 +231,7 @@ export function useFacilityMeta() {
   function setMeta(options: MetaOptions) {
     const normalizedTitle = normalizeSeoTitle(options.title)
     const fullTitle = normalizedTitle === SITE_NAME
-      ? `${SITE_NAME} | 내 주변 생활 정보`
+      ? `${SITE_NAME} | ${SITE_TAGLINE}`
       : `${normalizedTitle} | ${SITE_NAME}`
 
     const defaultUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL
