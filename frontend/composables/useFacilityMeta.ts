@@ -289,18 +289,27 @@ export function useFacilityMeta() {
   }
 
   /**
-   * 카테고리 페이지 메타태그
+   * 카테고리 페이지 메타태그 (head 전용).
+   * 위치 없으면 CATEGORY_SEO_TITLE 완성형, 위치 있으면 {지역} {카테고리} 찾기 앞배치형.
+   * 화면 h1/hero는 페이지의 SEO_TITLES(Set C)가 별도로 담당한다.
    */
-  function setCategoryMeta(category: FacilityCategory) {
+  function setCategoryMeta(category: FacilityCategory, location?: { cityName?: string; districtName?: string }) {
     const categoryName = CATEGORY_META[category]?.label || category
+    const loc = [location?.cityName, location?.districtName].filter(Boolean).join(' ')
+
+    if (loc) {
+      setMeta({
+        title: `${loc} ${categoryName} 찾기`,
+        description: `${loc} ${categoryName} 위치와 운영시간을 지도에서 확인하세요. 가까운 ${categoryName}을(를) 빠르게 찾을 수 있습니다.`,
+        path: `/${category}`,
+      })
+      return
+    }
+
     const intent = CATEGORY_SEO_INTENT[category] || '정보'
-
-    const title = CATEGORY_SEO_TITLE[category] ?? `${categoryName} | ${intent}`
-    const description = CATEGORY_SEO_DESCRIPTION[category] ?? `전국 ${categoryName}의 ${intent} 정보를 한눈에 확인하세요.`
-
     setMeta({
-      title,
-      description,
+      title: CATEGORY_SEO_TITLE[category] ?? `${categoryName} 찾기`,
+      description: CATEGORY_SEO_DESCRIPTION[category] ?? `전국 ${categoryName}의 ${intent} 정보를 한눈에 확인하세요.`,
       path: `/${category}`,
     })
   }

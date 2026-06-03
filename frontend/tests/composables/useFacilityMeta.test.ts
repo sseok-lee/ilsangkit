@@ -310,6 +310,26 @@ describe('useFacilityMeta', () => {
       const call = mockUseSeoMeta.mock.calls[0][0]
       expect(call.description).toBe(CATEGORY_SEO_DESCRIPTION['pharmacy'])
     })
+
+    it('위치 없으면 CATEGORY_SEO_TITLE 완성형을 쓴다', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+      setCategoryMeta('hospital')
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('병원 찾기 - 근처 병원 진료과·진료시간 확인 | 일상킷')
+    })
+    it('위치가 있으면 지역 앞배치 타이틀을 만든다', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+      setCategoryMeta('hospital', { cityName: '서울', districtName: '강남구' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('서울 강남구 병원 찾기 | 일상킷')
+      expect(call.description).toContain('서울 강남구')
+    })
+    it('위치가 시(city)만 있으면 시 기준 타이틀', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+      setCategoryMeta('hospital', { cityName: '서울' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('서울 병원 찾기 | 일상킷')
+    })
   })
 
   describe('buildFacilityDescription - CTA', () => {
