@@ -61,7 +61,7 @@ const dataSource = typeMeta.dataSource ?? 'applyhome'
 
 const { setMeta } = useFacilityMeta()
 setMeta({
-  title: `${typeMeta.label} 임대 청약`,
+  title: typeMeta.label,
   description: `${typeMeta.label} - ${typeMeta.description}`,
   path: `/subscription/rent/${type}`,
 })

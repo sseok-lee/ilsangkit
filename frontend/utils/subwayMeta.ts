@@ -6,23 +6,30 @@ export function buildSubwayTitle(station: SubwayStation): string {
   return `${station.name}역 (${station.line}) | ${SITE_NAME}`
 }
 
+/** 시/도 풀네임을 압축형으로 (서울특별시 → 서울). 도시명 압축 일관성(R2). */
+function compactCityName(city: string): string {
+  return String(city).replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+}
+
 export function buildSubwayDescription(station: SubwayStation): string {
-  const parts: string[] = []
-  parts.push(`${station.name}역 ${station.line} 정보`)
+  const stationName = station.name.endsWith('역') ? station.name : `${station.name}역`
+  const cityCompact = station.city ? compactCityName(station.city) : ''
+  const region = [cityCompact, station.district].filter(Boolean).join(' ')
 
-  if (station.transferLines.length > 0) {
-    parts.push(`환승: ${station.transferLines.join(', ')}`)
+  // 개요 문장
+  const regionPart = region ? `${region}의 ` : ''
+  let desc = `${stationName}(${station.line})은(는) ${regionPart}지하철역입니다.`
+
+  // 환승 정보
+  if (station.transferLines && station.transferLines.length > 0) {
+    const transferStr = station.transferLines.join(', ')
+    desc += ` ${transferStr} 환승이 가능하며,`
   }
 
-  if (station.city && station.district) {
-    parts.push(`${station.city} ${station.district}`)
-  }
+  // CTA
+  desc += ' 위치·노선·환승 정보를 확인하세요.'
 
-  if (station.operator) {
-    parts.push(`운영기관: ${station.operator}`)
-  }
-
-  return parts.join(' · ')
+  return desc
 }
 
 interface PlaceJsonLd {

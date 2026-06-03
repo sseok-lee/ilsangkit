@@ -77,10 +77,11 @@ if (!isRealEstateUrlType(realEstateTypeParam)) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
-const cityName = CITY_SLUG_MAP[citySlugParam]
-if (!cityName) {
+const cityNameRaw = CITY_SLUG_MAP[citySlugParam]
+if (!cityNameRaw) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
+const cityName = cityNameRaw.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
 
 const [propertyTypePart, tabPart] = realEstateTypeParam.split('-') as [RealEstatePropertyType, TransactionMode]
 const propertyMeta = PROPERTY_TYPE_META[propertyTypePart]

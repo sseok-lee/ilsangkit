@@ -149,4 +149,12 @@ describe('real-estate/[realEstateType]/[city]/[district]/index.vue — district 
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
     expect(crumbs[4].name).toBe('강남구')
   })
+
+  it('meta title uses compact city name — no 특별시/광역시/도 suffix (Fix 4)', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    // CITY_SLUG_MAP['seoul'] = '서울' (compact). Rendered text must never contain full suffix.
+    const text = wrapper.text()
+    expect(text).not.toMatch(/특별시|특별자치시|광역시|특별자치도/)
+  })
 })
