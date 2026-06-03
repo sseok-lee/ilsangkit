@@ -363,16 +363,18 @@ export function useFacilityMeta() {
   }
 
   /**
-   * 카테고리별 상세 타이틀 — 검색 의도 키워드를 전면 배치해 CTR 최적화
-   * {name} + 의도 키워드 + {loc} + {categoryName} 구조
+   * 카테고리별 상세 타이틀 — {name} | {loc} {categoryName}
+   * intent 꼬리표 제거. composite(name + " | " + loc + " " + category)가 24자 초과 시
+   * name 단독으로 fallback (setMeta가 " | 일상킷"을 추가하므로 총 30자 이내 보장).
    */
   function buildDetailTitle(facility: FacilityDetail): string {
     const cityShort = compactCityName(facility.city)
     const loc = facility.district ? `${cityShort} ${facility.district}` : cityShort
     const name = getFacilityDisplayName(facility)
     const categoryName = CATEGORY_META[facility.category]?.label || facility.category
-    const intent = CATEGORY_SEO_INTENT[facility.category] || '정보'
-    return `${name} | ${loc} ${categoryName} ${intent}`
+    const composite = `${name} | ${loc} ${categoryName}`
+    if (composite.length > 24) return name
+    return composite
   }
 
   /**

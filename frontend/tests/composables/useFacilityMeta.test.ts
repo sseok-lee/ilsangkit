@@ -427,4 +427,59 @@ describe('useFacilityMeta', () => {
       expect(hasMedicalCTA).toBe(true)
     })
   })
+
+  describe('buildDetailTitle — no intent tail + 30-char guard (Fix 2)', () => {
+    const makeHospitalFacility = (name: string): FacilityDetail => ({
+      id: 'h-1',
+      category: 'hospital',
+      name,
+      address: '서울 강남구 일원로 81',
+      roadAddress: '서울 강남구 일원로 81',
+      lat: 37.49,
+      lng: 127.09,
+      city: '서울',
+      district: '강남구',
+      bjdCode: '11680',
+      details: {},
+      sourceId: 'src-1',
+      sourceUrl: null,
+      viewCount: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      syncedAt: '2024-01-01T00:00:00Z',
+    })
+
+    it('normal hospital: title contains name + loc + category (no intent)', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(makeHospitalFacility('삼성서울병원'))
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      // full title includes " | 일상킷" appended by setMeta
+      const raw: string = call.title
+      expect(raw).toContain('삼성서울병원')
+      expect(raw).toContain('강남구')
+      expect(raw).toContain('병원')
+      // must NOT contain the intent string for hospital
+      expect(raw).not.toContain('진료과·진료시간')
+    })
+
+    it('normal hospital: title format is {name} | {loc} {category} | 일상킷', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(makeHospitalFacility('삼성서울병원'))
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('삼성서울병원 | 서울 강남구 병원 | 일상킷')
+    })
+
+    it('long-name facility (>24 chars before | 일상킷): title is just the name', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      // "서울대학교어린이병원응급의료센터" = 16 chars name; loc+category pushes composite >24
+      const longName = '서울대학교어린이병원응급의료센터입구'  // 17 chars
+      setFacilityDetailMeta(makeHospitalFacility(longName))
+
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      // when name alone > 24 or composite > 24, should fall back to just name | 일상킷
+      expect(call.title).toBe(`${longName} | 일상킷`)
+    })
+  })
 })
