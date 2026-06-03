@@ -51,7 +51,7 @@ describe('HomeSubscriptionSection (timeline)', () => {
   it('요약 한 줄에 접수중/예정 총 건수를 표시한다', () => {
     const wrapper = mount(HomeSubscriptionSection)
     const text = wrapper.text()
-    expect(text).toContain('접수중')
+    expect(text).toContain('청약중')
     expect(text).toContain('7건')
     expect(text).toContain('예정')
     expect(text).toContain('3건')

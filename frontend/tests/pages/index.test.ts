@@ -131,15 +131,19 @@ describe('Index Page', () => {
     expect(wrapper.findAll('.stub-ad-banner').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders "빠른 생활시설 찾기" 8-icon grid', async () => {
+  it('renders "빠른 생활시설 찾기" 16-icon grid (전 시설 카테고리 + 지하철)', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
     expect(wrapper.text()).toContain('빠른 생활시설 찾기')
-    // 8개 아이콘 중 대표 4개 확인
+    // 기존 대표
     expect(wrapper.text()).toContain('병원')
     expect(wrapper.text()).toContain('약국')
     expect(wrapper.text()).toContain('학교')
     expect(wrapper.text()).toContain('쓰레기')
+    // 신규 추가분
+    expect(wrapper.text()).toContain('도서관')
+    expect(wrapper.text()).toContain('공원')
+    expect(wrapper.text()).toContain('체육시설')
   })
 
   it('renders "인기 지역" chip row', async () => {

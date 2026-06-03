@@ -8,7 +8,7 @@
     </p>
     <p v-if="updatedAt" class="mt-3">
       <span class="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-        <span aria-hidden="true">📅</span>
+        <span class="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">calendar_month</span>
         마지막 업데이트 {{ updatedAt }}
       </span>
     </p>

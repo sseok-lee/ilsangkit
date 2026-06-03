@@ -238,7 +238,6 @@ import HardLink from '~/components/common/HardLink.vue'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
-import HomeMarketStats from '~/components/home/HomeMarketStats.vue'
 import HomeHotspotSignals from '~/components/home/HomeHotspotSignals.vue'
 import HomeTrendingBuildings from '~/components/home/HomeTrendingBuildings.vue'
 import type { GuideSummary } from '~/composables/useGuides'
@@ -384,7 +383,7 @@ const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFi
 // 시설 수 만 단위
 const facilityCountKor = computed(() => Math.floor(stats.value.total / 10000))
 
-// 빠른 생활시설 찾기 (와이어프레임 8개)
+// 빠른 생활시설 찾기 (전 시설 카테고리 15개 + 지하철 = 16개, 8-col 2줄)
 const quickFacilities: { id: string; label: string }[] = [
   { id: 'hospital', label: '병원' },
   { id: 'pharmacy', label: '약국' },
@@ -395,6 +394,13 @@ const quickFacilities: { id: string; label: string }[] = [
   { id: 'childcare', label: '어린이집' },
   { id: 'toilet', label: '화장실' },
   { id: 'trash', label: '쓰레기' },
+  { id: 'wifi', label: '와이파이' },
+  { id: 'clothes', label: '의류수거' },
+  { id: 'aed', label: 'AED' },
+  { id: 'library', label: '도서관' },
+  { id: 'park', label: '공원' },
+  { id: 'market', label: '전통시장' },
+  { id: 'sports', label: '체육시설' },
 ]
 
 function handleSearch() {

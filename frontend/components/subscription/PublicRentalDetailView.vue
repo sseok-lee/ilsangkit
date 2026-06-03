@@ -99,6 +99,7 @@ const markerFacility = computed<FacilitySearchItem[]>(() => {
     {
       id: `public-rental-${props.rental.id}`,
       name: props.rental.complexNameKor || props.rental.complexName,
+      // 지도 마커 타입(FacilityCategory) 충족용 placeholder — 실제 시설 아님(상세 페이지의 단일 위치 핀)
       category: 'toilet' as const,
       address: props.rental.complexName,
       roadAddress: null,
