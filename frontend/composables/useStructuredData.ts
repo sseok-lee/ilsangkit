@@ -502,7 +502,9 @@ export function useStructuredData() {
       }
       schema.mainEntityOfPage = options.url
       if (options.image) schema.image = options.image
-      if (options.recentAvg != null) schema.offers = { '@type': 'Offer', price: options.recentAvg, priceCurrency: 'KRW', availability: 'https://schema.org/InStock' }
+      if (options.recentAvg != null) {
+        ;(schema.additionalProperty as unknown[]).push({ '@type': 'PropertyValue', name: 'recentAveragePrice', value: String(options.recentAvg) })
+      }
       if (options.latestDealDate) schema.datePosted = options.latestDealDate
       return {
         script: [
