@@ -341,6 +341,21 @@ describe('useFacilityMeta', () => {
     })
   })
 
+  describe('setMeta - og:image:alt', () => {
+    it('ogImageAlt가 항상 설정된다 (기본=fullTitle)', () => {
+      const { setMeta } = useFacilityMeta()
+      setMeta({ title: '병원 찾기', description: '설명', path: '/hospital' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.ogImageAlt).toBe('병원 찾기 | 일상킷')
+    })
+    it('imageAlt 옵션이 있으면 그것을 쓴다', () => {
+      const { setMeta } = useFacilityMeta()
+      setMeta({ title: '병원 찾기', description: '설명', path: '/hospital', imageAlt: '커스텀 대체텍스트' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.ogImageAlt).toBe('커스텀 대체텍스트')
+    })
+  })
+
   describe('buildFacilityDescription - CTA', () => {
     const baseToiletFacility: FacilityDetail = {
       id: 'toilet-1',
