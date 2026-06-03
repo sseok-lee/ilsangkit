@@ -186,10 +186,14 @@ const heroDescription = computed(() => {
   return areaInfo ? `${primary}. ${areaInfo}` : primary
 })
 
+// noindex 조건: 데이터가 null이면 (API 실패/빈 응답) noindex 처리
+// 정책: noindex 페이지는 canonical 을 출력하지 않는다 (noindex-canonical-policy.md)
+const isNoindex = computed(() => areaData.value === null)
+
 // SEO 메타
 const { setMeta } = useFacilityMeta()
 watch(
-  [cityName, districtName],
+  [cityName, districtName, isNoindex],
   ([cName, dName]) => {
     const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cName)}&district=${encodeURIComponent(dName)}&title=${encodeURIComponent(`${cName} ${dName} 생활 정보`)}`
     setMeta({
@@ -197,10 +201,15 @@ watch(
       description: `${cName} ${dName}의 부동산 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 인프라 정보를 확인하세요.`,
       path: `/${city.value}/${district.value}`,
       image: ogImage,
+      canonical: isNoindex.value ? false : undefined,
     })
   },
   { immediate: true },
 )
+
+useHead(() => isNoindex.value
+  ? { meta: [{ name: 'robots', content: 'noindex, follow' }] }
+  : {})
 
 // JSON-LD 구조화 데이터
 const { setAreaReportSchema, setBreadcrumbSchema } = useStructuredData()
