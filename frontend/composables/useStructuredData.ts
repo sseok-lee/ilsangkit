@@ -742,7 +742,7 @@ export function useStructuredData() {
       item: {
         '@type': 'VideoObject',
         name: v.title,
-        description: v.title,
+        description: `${v.channelTitle} 채널 영상`,
         thumbnailUrl: v.thumbnail,
         uploadDate: v.publishedAt,
         embedUrl: `https://www.youtube-nocookie.com/embed/${v.videoId}`,
