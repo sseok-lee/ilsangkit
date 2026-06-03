@@ -51,7 +51,7 @@
 
         <SectionBlock
           :heading="`${districtName} ${typeLabel} 단지 목록`"
-          :subtext="`거래 10건 이상 유효 단지만 노출. 총 ${renderableComplexes.length.toLocaleString()}곳`"
+          :subtext="`유효 단지만 노출. 총 ${totalComplexes.toLocaleString()}곳`"
         >
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <ComplexCard
@@ -173,7 +173,7 @@ const typeHubPath = computed(() => `/real-estate/${realEstateType.value}`)
 const heroTitle = computed(() => `${districtName.value} ${typeLabel.value} 실거래가`)
 const heroDescription = computed(
   () =>
-    `${cityName.value} ${districtName.value} ${typeLabel.value} 거래 10건 이상 유효 단지만 선별해 노출합니다. 국토교통부 공식 데이터 기반.`,
+    `${cityName.value} ${districtName.value} ${typeLabel.value} 유효 단지만 선별해 노출합니다. 국토교통부 공식 데이터 기반.`,
 )
 
 // 데이터
@@ -222,9 +222,8 @@ async function goToPage(page: number) {
 
 const heroStats = computed(() => {
   const items = [] as { label: string; value: string }[]
-  items.push({ label: '유효 단지', value: `${renderableComplexes.value.length.toLocaleString()}곳` })
-  if (totalComplexes.value > 0) items.push({ label: '전체 단지', value: `${totalComplexes.value.toLocaleString()}곳` })
-  items.push({ label: '거래 기준', value: '10건 이상' })
+  items.push({ label: '유효 단지', value: `${totalComplexes.value.toLocaleString()}곳` })
+  items.push({ label: '데이터 출처', value: '국토교통부' })
   return items
 })
 
@@ -300,9 +299,9 @@ const canonicalPath = computed(() =>
 const { setMeta } = useFacilityMeta()
 
 watch(
-  [cityName, districtName, typeLabel, renderableComplexes],
+  [cityName, districtName, typeLabel, totalComplexes],
   () => {
-    const isNoindex = renderableComplexes.value.length === 0
+    const isNoindex = totalComplexes.value === 0
     const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(`${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`)}`
     if (isNoindex) {
       useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
