@@ -1,5 +1,5 @@
 <template>
-  <SectionBlock heading="신청 바로가기" subtext="공식 채널에서 모집 공고와 자격 자가진단을 확인하세요.">
+  <SectionBlock heading="신청 바로가기" subtext="공식 채널에서 모집공고와 자격 자가진단을 확인하세요.">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <a
         v-for="link in links"
