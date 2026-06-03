@@ -71,7 +71,7 @@ const typeLabel = tabPart === 'sale'
 const heroTitle = `${cityName} ${typeLabel} 실거래가`
 const heroDescription = `${cityName} ${typeLabel} 단지를 구/군별로 확인하세요. 국토교통부 공식 데이터 기반.`
 const typeHubPath = `/real-estate/${realEstateTypeParam}`
-const introParagraph = `${cityName} ${typeLabel} 실거래가 정보입니다. ${propertyMeta?.description ?? ''} 아래 구/군을 선택하면 ${cityName} 내 단지별 실거래 내역과 시세 추이를 확인할 수 있습니다. 모든 데이터는 국토교통부 실거래가 공개시스템 기준이며 매월 갱신됩니다.`
+const introParagraph = `${cityName} ${typeLabel} 실거래가 정보입니다. ${propertyMeta?.description ?? ''} 아래 구/군을 선택하면 ${cityName} 내 단지별 실거래 내역과 시세 추이를 확인할 수 있습니다. 모든 데이터는 국토교통부 실거래가 공개시스템 기준이며 매일 갱신됩니다.`
 
 const districts = computed(() =>
   (REGIONS[cityName] ?? []).map((name) => ({
