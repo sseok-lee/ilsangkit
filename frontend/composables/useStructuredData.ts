@@ -1,6 +1,6 @@
 import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_URL } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import type { DataSourceInfo } from '~/utils/dataSource'
 
 /**
@@ -582,9 +582,14 @@ export function useStructuredData() {
       datePublished: options.datePublished,
       ...(options.dateModified ? { dateModified: options.dateModified } : {}),
       url: options.url.startsWith('http') ? options.url : `${SITE_URL}${options.url}`,
-      ...(options.image ? { image: options.image } : {}),
+      image: options.image ?? DEFAULT_OG_IMAGE,
       author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
-      publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      publisher: {
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: { '@type': 'ImageObject', url: `${SITE_URL}/icons/logo.webp` },
+      },
     }
     useHead({
       script: [{ key: 'jsonld-article', type: 'application/ld+json', innerHTML: JSON.stringify(schema) }],
