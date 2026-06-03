@@ -47,7 +47,7 @@
         <!-- 카테고리별 바로가기 -->
         <section id="categories" class="mb-6">
           <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
-            <span class="material-symbols-outlined text-primary text-[22px]">category</span>
+            <span class="material-symbols-outlined text-primary text-[22px]">grid_view</span>
             카테고리별 바로가기
           </h2>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
