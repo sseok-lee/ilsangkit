@@ -114,7 +114,7 @@
               <AdBanner />
 
               <!-- Basic Info -->
-              <SectionBlock heading="역 정보" subtext="위치·운영기관·연락처 정보">
+              <SectionBlock heading="역정보" subtext="위치·운영기관·연락처 정보">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                   <div v-if="lines.length > 0" class="sm:col-span-2">
                     <dt class="text-xs font-medium text-slate-500 mb-1.5">노선</dt>
@@ -395,7 +395,7 @@ const regionLink = computed(() => {
   if (!station.value?.regionSlug || !station.value?.district) return null
   return {
     href: `/${station.value.regionSlug}`,
-    label: `${station.value.city} 전체 보기`,
+    label: `${station.value.city} 전체보기`,
   }
 })
 

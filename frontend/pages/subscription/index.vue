@@ -42,7 +42,7 @@
           </div>
         </template>
         <template #right>
-          <NuxtLink to="/subscription/sale" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
+          <NuxtLink to="/subscription/sale" class="ml-auto text-sm text-primary hover:underline">전체보기 →</NuxtLink>
         </template>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <NuxtLink
@@ -69,7 +69,7 @@
           </div>
         </template>
         <template #right>
-          <NuxtLink to="/subscription/rent" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
+          <NuxtLink to="/subscription/rent" class="ml-auto text-sm text-primary hover:underline">전체보기 →</NuxtLink>
         </template>
         <div class="space-y-5">
           <div v-for="group in rentGroups" :key="group" class="space-y-2.5" :data-test-group="group">

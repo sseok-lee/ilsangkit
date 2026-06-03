@@ -58,7 +58,7 @@ describe('RegionFacilityCategoryGrid', () => {
     expect(links[1].classes().some(c => c.includes('slate-200'))).toBe(true)
   })
 
-  it('H2 "생활시설 현황" 헤딩 + section id="facilities"', () => {
+  it('H2 "생활시설현황" 헤딩 + section id="facilities"', () => {
     const wrapper = mount(RegionFacilityCategoryGrid, {
       props: {
         city: 'seoul', district: 'gangnam', total: 0, categories: {}, topCategories: [],
@@ -66,6 +66,6 @@ describe('RegionFacilityCategoryGrid', () => {
       global: globalConfig,
     })
     expect(wrapper.find('section#facilities').exists()).toBe(true)
-    expect(wrapper.find('h2').text()).toContain('생활시설 현황')
+    expect(wrapper.find('h2').text()).toContain('생활시설현황')
   })
 })

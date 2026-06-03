@@ -2,7 +2,7 @@
   <section id="facilities" class="mb-6">
     <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
       <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
-      생활시설 현황
+      생활시설현황
     </h2>
     <p class="text-sm text-slate-500 mb-3">총 {{ total.toLocaleString() }}개 시설</p>
     <div class="grid grid-cols-2 md:grid-cols-5 gap-3">

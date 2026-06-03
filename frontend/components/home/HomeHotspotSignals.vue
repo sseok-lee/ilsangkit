@@ -12,7 +12,7 @@
         <p class="text-sm text-slate-500 mt-1">최근 7일 실거래 · 전주 대비 변동이 가장 큰 지역</p>
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">
-        전체 보기 →
+        전체보기 →
       </HardLink>
     </div>
 
