@@ -29,6 +29,24 @@
         </div>
       </SectionBlock>
 
+      <SectionBlock
+        v-if="topComplexes.length > 0"
+        :subtext="`${cityName} ${typeLabel} 거래가 활발한 단지`"
+      >
+        <template #heading>
+          <h2 class="text-display-3 text-slate-900">주요 단지</h2>
+        </template>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ComplexCard
+            v-for="c in topComplexes"
+            :key="`${c.buildingName}-${c.bjdCode}`"
+            :complex="c"
+            :property-type="propertyTypePart"
+            :tab="tabPart"
+          />
+        </div>
+      </SectionBlock>
+
       <AdBanner />
 
       <DataSourceSection domain="real-estate" />
@@ -41,9 +59,11 @@ import { computed } from 'vue'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
 import { isRealEstateUrlType } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
-import type { RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, RealEstateType, ComplexInfo } from '~/types/realEstate'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useRealEstate } from '~/composables/useRealEstate'
+import ComplexCard from '~/components/realEstate/ComplexCard.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -81,6 +101,17 @@ const districts = computed(() =>
     }`,
   })),
 )
+
+const { getComplexList } = useRealEstate()
+const { data: topComplexesData } = await useAsyncData(
+  `re-city-complexes-${realEstateTypeParam}-${citySlugParam}`,
+  () =>
+    getComplexList(realEstateTypeParam as RealEstateType, cityName, undefined, undefined, 1, 6)
+      .then((r) => r.items)
+      .catch(() => [] as ComplexInfo[]),
+  { default: () => [] as ComplexInfo[] },
+)
+const topComplexes = computed(() => topComplexesData.value ?? [])
 
 const breadcrumbItems = [
   { label: '홈', href: '/', current: false },
