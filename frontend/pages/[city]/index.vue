@@ -197,7 +197,7 @@ const realEstateCards = computed(() => {
 // SEO 메타
 const canonicalUrl = `${SITE_URL}/${city.value}`
 useHead(() => {
-  const title = `${cityName.value} 생활 정보·부동산 시세 | 일상킷`
+  const title = `${cityName.value} 부동산 시세·생활 정보 | 일상킷`
   const description = `${cityName.value} 아파트·빌라·오피스텔 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`
   const dynamicOgImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cityName.value)}&title=${encodeURIComponent(title)}`
   return {
