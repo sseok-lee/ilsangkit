@@ -32,33 +32,18 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { SALE_TYPES } from '~/utils/subscriptionMeta'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const activeType = null
 
-const title = '분양 청약 일정 | 일상킷'
-const description = '아파트, 오피스텔, 무순위·잔여세대 분양 청약 일정과 접수 상태, 유형별 정보를 확인하세요.'
-const canonicalUrl = `${SITE_URL}/subscription/sale`
-
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: '분양 청약 일정',
+  description: '아파트, 오피스텔, 무순위·잔여세대 분양 청약 일정과 접수 상태, 유형별 정보를 확인하세요.',
+  path: '/subscription/sale',
 })
 
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
