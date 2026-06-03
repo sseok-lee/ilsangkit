@@ -43,6 +43,7 @@
 </template>
 
 <script setup lang="ts">
+import { SITE_URL } from '~/utils/seoConstants'
 import { RENT_TYPES } from '~/utils/subscriptionMeta'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'

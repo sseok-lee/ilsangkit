@@ -37,6 +37,7 @@
 </template>
 
 <script setup lang="ts">
+import { SITE_URL } from '~/utils/seoConstants'
 import { RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
