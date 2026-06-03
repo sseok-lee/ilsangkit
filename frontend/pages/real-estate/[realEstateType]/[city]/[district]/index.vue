@@ -34,7 +34,7 @@
 
       <!-- 결과 -->
       <template v-if="pending">
-        <SectionBlock heading="건물 목록" subtext="불러오는 중입니다.">
+        <SectionBlock heading="건물 목록" :subtext="UI_MESSAGES.loading">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
               <div class="h-4 bg-slate-200 rounded w-2/3 mb-2"></div>
@@ -110,6 +110,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { formatKoreanPrice } from '~/utils/formatters'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import {

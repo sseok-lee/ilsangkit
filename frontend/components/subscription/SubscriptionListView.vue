@@ -40,7 +40,7 @@
         <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
           <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
         </div>
-        <p class="text-red-700 font-semibold">데이터를 불러오는 중 오류가 발생했습니다</p>
+        <p class="text-red-700 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
         <button
           class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
           @click="loadSubscriptions"
@@ -55,7 +55,7 @@
     <SectionBlock v-else-if="subscriptions.length === 0" :heading="`${getStatusLabel(currentStatus) || '전체'} 청약`">
       <div class="rounded-xl bg-slate-50 p-12 text-center">
         <span class="material-symbols-outlined text-[48px] text-slate-300 block mb-3">apartment</span>
-        <p class="text-slate-600 font-medium">조건에 맞는 청약이 없습니다</p>
+        <p class="text-slate-600 font-medium">{{ emptyFiltered('청약') }}</p>
         <p class="text-slate-500 text-sm mt-1">다른 조건으로 다시 검색해보세요</p>
       </div>
     </SectionBlock>
@@ -84,6 +84,7 @@
 
 <script setup lang="ts">
 import type { Subscription, SubscriptionSourceType } from '~/types/subscription'
+import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import { useSubscription } from '~/composables/useSubscription'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'

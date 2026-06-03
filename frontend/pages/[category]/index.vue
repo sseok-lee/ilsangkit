@@ -180,7 +180,7 @@
             <EmptyState
               v-if="displayFacilities.length === 0"
               :icon="categoryMeta?.icon || 'search_off'"
-              title="검색 결과가 없습니다"
+              :title="UI_MESSAGES.emptySearch"
               description="다른 지역이나 검색어를 시도해보세요"
             >
               <div class="flex items-center justify-center gap-3">
@@ -270,6 +270,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useWasteSchedule, transformToRegionSchedules } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'

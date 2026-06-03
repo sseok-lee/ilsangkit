@@ -5,7 +5,7 @@
       <div v-if="pending" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p class="text-gray-600">로딩 중...</p>
+          <p class="text-gray-600">{{ UI_MESSAGES.loading }}</p>
         </div>
       </div>
 
@@ -306,6 +306,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'

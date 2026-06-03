@@ -4,7 +4,7 @@
     <div v-if="ssrLoading" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
       <div class="text-center">
         <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p class="text-gray-600">로딩 중...</p>
+        <p class="text-gray-600">{{ UI_MESSAGES.loading }}</p>
       </div>
     </div>
 
@@ -281,7 +281,7 @@
           :hide-building="true"
         />
         <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
-          거래 내역이 없습니다.
+          {{ emptyFiltered('거래 내역') }}
         </div>
 
         <!-- 페이지네이션 -->
@@ -432,6 +432,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'

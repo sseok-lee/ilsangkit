@@ -67,6 +67,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 
 interface Props {
   title?: string
@@ -116,7 +117,7 @@ function formatErrorMessage(error: unknown): string {
     // API errors
     if ('statusCode' in error) {
       const statusCode = (error as any).statusCode
-      if (statusCode === 404) return '요청한 정보를 찾을 수 없습니다.'
+      if (statusCode === 404) return UI_MESSAGES.notFound
       if (statusCode === 500) return '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
       if (statusCode === 503) return '서비스가 일시적으로 이용 불가합니다.'
     }

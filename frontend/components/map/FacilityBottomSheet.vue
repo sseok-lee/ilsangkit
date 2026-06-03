@@ -38,7 +38,7 @@
 
       <!-- Empty -->
       <div v-else-if="facilities.length === 0" class="text-center py-8 text-slate-500">
-        <p>주변에 시설이 없습니다</p>
+        <p>{{ emptyFiltered('시설') }}</p>
         <p class="text-sm mt-1">지도를 이동하거나 검색해보세요</p>
       </div>
 
@@ -78,6 +78,7 @@
 <script setup lang="ts">
 import type { FacilitySearchItem, FacilityCategory } from '~/types'
 import { getMarkerColor as getSharedCategoryColor } from '~/utils/categoryColors'
+import { emptyFiltered } from '~/utils/uiMessages'
 
 interface Props {
   facilities: FacilitySearchItem[]

@@ -1,7 +1,7 @@
 <template>
   <div class="bg-background-light">
     <main class="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8 space-y-6">
-      <div v-if="loading" class="py-16 text-center text-slate-400 text-sm">불러오는 중…</div>
+      <div v-if="loading" class="py-16 text-center text-slate-400 text-sm">{{ UI_MESSAGES.loading }}</div>
       <div v-else-if="error" class="py-16 text-center text-rose-500 text-sm">{{ error }}</div>
       <template v-else-if="detail">
         <header class="bg-white border border-slate-200 rounded-xl p-5 md:p-6 space-y-3">
@@ -154,6 +154,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useRentalAnnouncements } from '~/composables/useRentalAnnouncements'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'

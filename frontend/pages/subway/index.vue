@@ -86,7 +86,7 @@
           <EmptyState
             v-else
             icon="subway"
-            title="검색 결과가 없습니다"
+            :title="UI_MESSAGES.emptySearch"
             description="다른 지역이나 검색어를 시도해보세요"
           >
             <div class="flex items-center justify-center gap-3">
@@ -166,6 +166,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useStructuredData } from '~/composables/useStructuredData'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
