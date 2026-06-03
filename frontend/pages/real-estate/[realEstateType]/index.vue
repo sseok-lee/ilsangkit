@@ -177,6 +177,7 @@ import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
+import { PAGINATION_ROBOTS_CONTENT } from '~/utils/pageQuery'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -258,7 +259,7 @@ watch(
     // (.omc/notes/noindex-canonical-policy.md).
     const isNoindex = currentPage.value > 1
     if (isNoindex) {
-      useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
+      useHead({ meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] })
     }
     setMeta({
       title: `${propertyLabel} ${tab} 실거래가`,

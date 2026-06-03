@@ -872,7 +872,8 @@ watch(loading, (now, prev) => {
   }
 })
 
-// ItemList 구조화 데이터 + 페이지네이션 link 태그 (flat view only)
+// ItemList 구조화 데이터 (flat view only)
+// 주의: /search 는 항상 noindex 이므로 rel=prev/next 링크를 내보내지 않는다 (모순 신호 방지).
 watch([facilities, currentPage, totalPages], () => {
   if (facilities.value.length > 0) {
     setItemListSchema(
@@ -883,26 +884,6 @@ watch([facilities, currentPage, totalPages], () => {
       }))
     )
   }
-
-  // 페이지네이션 rel link 태그
-  const paginationLinks: Array<{ rel: string; href: string }> = []
-  const baseUrl = 'https://ilsangkit.co.kr/search'
-  const queryParams = new URLSearchParams()
-  if (searchKeyword.value) queryParams.set('keyword', searchKeyword.value)
-  const baseQuery = queryParams.toString()
-
-  if (currentPage.value > 1) {
-    const prevParams = new URLSearchParams(baseQuery)
-    prevParams.set('page', String(currentPage.value - 1))
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?${prevParams.toString()}` })
-  }
-  if (currentPage.value < totalPages.value) {
-    const nextParams = new URLSearchParams(baseQuery)
-    nextParams.set('page', String(currentPage.value + 1))
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?${nextParams.toString()}` })
-  }
-
-  useHead({ link: paginationLinks })
 })
 </script>
 

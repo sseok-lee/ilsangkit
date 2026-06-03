@@ -357,14 +357,17 @@ watch(() => route.query.page, (next) => {
 // 정책: noindex 일 때는 canonical 을 함께 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md).
 // route.query.page 변경에 reactive 하게 반응해야 client-side 페이지 이동에서도 정책이 유지된다.
 const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
-useHead(computed(() => {
-  const isNoindex = computeAreaNoindex({
+// isPageNoindex 를 shared computed 로 추출해 rel=prev/next 게이팅에도 재사용한다.
+const isPageNoindex = computed(() =>
+  computeAreaNoindex({
     isTrash: isTrash.value,
     summaryCount: summary.value?.count,
     wasteEmpty: !wasteLoading.value && wasteSchedules.value.length === 0,
     page: pageQueryParam.value,
   })
-  if (isNoindex) {
+)
+useHead(computed(() => {
+  if (isPageNoindex.value) {
     return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
   }
   return {
@@ -391,6 +394,9 @@ watch([facilities, currentPage, totalPages], () => {
     )
   }
 
+  // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
+  if (isPageNoindex.value) return
+
   const paginationLinks: Array<{ rel: string; href: string }> = []
   const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
 
@@ -416,6 +422,9 @@ watch([wasteSchedules, wasteCurrentPage, wasteTotalPages], () => {
       }))
     )
   }
+
+  // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
+  if (isPageNoindex.value) return
 
   const paginationLinks: Array<{ rel: string; href: string }> = []
   const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`

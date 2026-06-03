@@ -158,7 +158,7 @@ export default defineEventHandler(async (event) => {
     return generateSitemapXml(urls)
   }
 
-  // 지하철역 SEO 페이지 — Phase 1은 noindex이지만 sitemap chunk는 생성한다
+  // 지하철역 SEO 페이지 — self-canonical + sitemap 등록으로 정식 색인 대상
   if (category === 'subway') {
     const stations = await fetchSubwaySlugs()
     if (stations.length === 0 && page > 1) {
