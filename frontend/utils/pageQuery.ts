@@ -6,7 +6,7 @@ const CITY_SLUG_SET = new Set<string>(Object.values(CITY_SLUGS))
 const STRICT_POSITIVE_INTEGER = /^0*[1-9]\d*$/
 const DUPLICATED_PAGE_QUERY = /^(0*[1-9]\d*)(?:\?page=\1)+$/
 
-export const PAGINATION_ROBOTS_CONTENT = 'noindex, nofollow'
+export const PAGINATION_ROBOTS_CONTENT = 'noindex, follow'
 
 function firstQueryValue(value: unknown): string | undefined {
   if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : undefined
