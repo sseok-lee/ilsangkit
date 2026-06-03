@@ -50,7 +50,7 @@ const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
   { name: '청약 정보', url: `${SITE_URL}/subscription` },
-  { name: '분양', url: canonicalUrl },
+  { name: '분양', url: `${SITE_URL}/subscription/sale` },
 ])
 
 // ItemList schema for sale subscriptions list page

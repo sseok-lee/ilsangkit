@@ -54,7 +54,7 @@ const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
   { name: '청약 정보', url: `${SITE_URL}/subscription` },
-  { name: '임대', url: canonicalUrl },
+  { name: '임대', url: `${SITE_URL}/subscription/rent` },
 ])
 
 setItemListSchema([

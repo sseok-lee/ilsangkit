@@ -63,6 +63,6 @@ setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
   { name: '청약 정보', url: `${SITE_URL}/subscription` },
   { name: '분양', url: `${SITE_URL}/subscription/sale` },
-  { name: typeMeta.label, url: canonicalUrl },
+  { name: typeMeta.label, url: `${SITE_URL}/subscription/sale/${type}` },
 ])
 </script>
