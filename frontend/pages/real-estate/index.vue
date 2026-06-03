@@ -63,8 +63,8 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -93,36 +93,17 @@ const { data: hubSummaries } = await useAsyncData(
   { default: () => null },
 )
 
-const title = '부동산 실거래가 | 아파트·빌라·오피스텔 | 일상킷'
-const description = '전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요.'
-const canonicalUrl = `${SITE_URL}/real-estate`
 const heroStats = [
   { label: '데이터 출처', value: '국토교통부' },
   { label: '거래 유형', value: '매매·전월세' },
   { label: '주택 유형', value: '아파트·빌라·오피스텔' },
 ]
 
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { property: 'og:image:width', content: '1200' },
-    { property: 'og:image:height', content: '630' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [
-    { rel: 'canonical', href: canonicalUrl },
-  ],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: '부동산 실거래가',
+  description: '전국 아파트·빌라·오피스텔 매매·전월세 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.',
+  path: '/real-estate',
 })
 
 const realEstateFAQs = [
