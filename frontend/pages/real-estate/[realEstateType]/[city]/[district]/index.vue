@@ -252,7 +252,7 @@ const districtSummaryText = computed(() => {
 
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
-  { label: '부동산', href: '/real-estate', current: false },
+  { label: '부동산 실거래가', href: '/real-estate', current: false },
   { label: typeLabel.value, href: typeHubPath.value, current: false },
   { label: cityName.value, href: `/real-estate/${realEstateType.value}/${citySlug.value}`, current: false },
   { label: districtName.value, current: true },
@@ -321,7 +321,7 @@ watch(
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
-  { name: '부동산', url: '/real-estate' },
+  { name: '부동산 실거래가', url: '/real-estate' },
   { name: typeLabel.value, url: typeHubPath.value },
   { name: cityName.value, url: `/real-estate/${realEstateType.value}/${citySlug.value}` },
   { name: districtName.value, url: canonicalPath.value },

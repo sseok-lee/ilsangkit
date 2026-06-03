@@ -372,7 +372,7 @@ async function fetchFacilitySummary(city: string, district?: string) {
 const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema, setFAQSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
-  { name: '부동산', url: '/real-estate' },
+  { name: '부동산 실거래가', url: '/real-estate' },
   { name: propertyMeta.value?.label ?? realEstateTypeParam.value, url: `/real-estate/${realEstateTypeParam.value}` },
 ])
 setDatasetSchema({
@@ -409,7 +409,7 @@ watch(
 // Breadcrumb + hero stats
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
-  { label: '부동산', href: '/real-estate', current: false },
+  { label: '부동산 실거래가', href: '/real-estate', current: false },
   { label: propertyMeta.value?.label ?? realEstateTypeParam.value, href: `/real-estate/${realEstateTypeParam.value}`, current: true },
 ])
 
