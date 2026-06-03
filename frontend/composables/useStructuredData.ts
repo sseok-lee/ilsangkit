@@ -180,7 +180,13 @@ export function useStructuredData() {
       }
       case 'library': {
         if (d?.weekdayOpenTime && d?.weekdayCloseTime) {
-          Object.assign(schema, { openingHours: `Mo-Fr ${d.weekdayOpenTime}-${d.weekdayCloseTime}` })
+          const normalizeTime = (v: unknown): string => {
+            const s = String(v)
+            return s.includes(':') ? s : formatTime(s)
+          }
+          const openStr = normalizeTime(d.weekdayOpenTime)
+          const closeStr = normalizeTime(d.weekdayCloseTime)
+          Object.assign(schema, { openingHours: `Mo-Fr ${openStr}-${closeStr}` })
         }
         break
       }
