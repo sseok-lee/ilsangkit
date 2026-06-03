@@ -101,121 +101,124 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
     ? `${facility.city} ${facility.district}`
     : facility.city
   const address = facility.roadAddress || facility.address || location
-  const parts: string[] = []
+  const intent = CATEGORY_SEO_INTENT[facility.category] || '정보'
 
-  // 시설명 + 지역 + 카테고리를 먼저 배치
+  // 시설명 + 지역 + 카테고리 개요 문장
   const name = getFacilityDisplayName(facility)
   const josa = getJosa(name, '은', '는')
-  parts.push(`${name}${josa} ${location}에 위치한 ${categoryName}입니다`)
+  const openingSentence = `${name}${josa} ${location}에 위치한 ${categoryName}입니다.`
 
+  // 카테고리별 facts 수집
+  const facts: string[] = []
   const d = facility.details as Record<string, unknown>
 
   switch (facility.category) {
     case 'toilet': {
       const det = d as ToiletDetails
-      const features: string[] = []
-      if (det.operatingHours === '24시간') features.push('상시 개방')
-      else if (det.operatingHours) features.push(det.operatingHours)
-      if (det.maleToilets || det.femaleToilets) features.push('남녀 분리')
-      if (det.hasCCTV) features.push('CCTV 설치')
-      if (det.hasDisabledToilet) features.push('장애인 화장실')
-      if (features.length) parts.push(features.join(', '))
+      if (det.operatingHours === '24시간') facts.push('상시 개방')
+      else if (det.operatingHours) facts.push(det.operatingHours)
+      if (det.maleToilets || det.femaleToilets) facts.push('남녀 분리')
+      if (det.hasCCTV) facts.push('CCTV 설치')
+      if (det.hasDisabledToilet) facts.push('장애인 화장실')
       break
     }
     case 'wifi': {
       const det = d as WifiDetails
-      if (det.ssid) parts.push(`SSID: ${det.ssid}`)
-      if (det.serviceProvider) parts.push(det.serviceProvider)
+      if (det.ssid) facts.push(`SSID: ${det.ssid}`)
+      if (det.serviceProvider) facts.push(det.serviceProvider)
       break
     }
     case 'parking': {
       const det = d as ParkingDetails
-      if (det.capacity) parts.push(`주차면수 ${det.capacity}면`)
-      if (det.baseFee != null && det.baseTime) parts.push(`기본 ${det.baseTime}분 ${det.baseFee.toLocaleString()}원`)
-      if (det.operatingHours) parts.push(det.operatingHours)
+      if (det.capacity) facts.push(`주차면수 ${det.capacity}면`)
+      if (det.baseFee != null && det.baseTime) facts.push(`기본 ${det.baseTime}분 ${det.baseFee.toLocaleString()}원`)
+      if (det.operatingHours) facts.push(det.operatingHours)
       break
     }
     case 'hospital': {
       const det = d as HospitalDetails
-      if (det.clCdNm) parts.push(det.clCdNm)
-      if (det.drTotCnt) parts.push(`의사 ${det.drTotCnt}명`)
+      if (det.clCdNm) facts.push(det.clCdNm)
+      if (det.drTotCnt) facts.push(`의사 ${det.drTotCnt}명`)
       break
     }
     case 'pharmacy': {
       const det = d as PharmacyDetails
-      if (det.dutyTime1s && det.dutyTime1c) parts.push(`월 ${formatTimeStr(det.dutyTime1s)}~${formatTimeStr(det.dutyTime1c)}`)
+      if (det.dutyTime1s && det.dutyTime1c) facts.push(`월 ${formatTimeStr(det.dutyTime1s)}~${formatTimeStr(det.dutyTime1c)}`)
       break
     }
     case 'aed': {
       const det = d as AedDetails
-      if (det.buildPlace) parts.push(`설치장소: ${det.buildPlace}`)
-      if (det.org) parts.push(det.org)
+      if (det.buildPlace) facts.push(`설치장소: ${det.buildPlace}`)
+      if (det.org) facts.push(det.org)
       break
     }
     case 'library': {
       const det = d as LibraryDetails
-      const info: string[] = []
-      if (det.seatCount) info.push(`좌석 ${det.seatCount}석`)
-      if (det.bookCount) info.push(`장서 ${det.bookCount.toLocaleString()}권`)
-      if (info.length) parts.push(info.join(', '))
-      if (det.weekdayOpenTime && det.weekdayCloseTime) parts.push(`평일 ${det.weekdayOpenTime}~${det.weekdayCloseTime}`)
+      if (det.seatCount) facts.push(`좌석 ${det.seatCount}석`)
+      if (det.bookCount) facts.push(`장서 ${det.bookCount.toLocaleString()}권`)
+      if (det.weekdayOpenTime && det.weekdayCloseTime) facts.push(`평일 ${det.weekdayOpenTime}~${det.weekdayCloseTime}`)
       break
     }
     case 'clothes': {
       const det = d as ClothesDetails
-      if (det.managementAgency) parts.push(`관리: ${det.managementAgency}`)
-      if (det.detailLocation) parts.push(det.detailLocation)
+      if (det.managementAgency) facts.push(`관리: ${det.managementAgency}`)
+      if (det.detailLocation) facts.push(det.detailLocation)
       break
     }
     case 'park': {
       const det = d as ParkDetails
-      if (det.parkType) parts.push(det.parkType)
-      if (det.area) parts.push(`면적 ${det.area.toLocaleString()}㎡`)
-      if (det.managingOrg) parts.push(`관리: ${det.managingOrg}`)
+      if (det.parkType) facts.push(det.parkType)
+      if (det.area) facts.push(`면적 ${det.area.toLocaleString()}㎡`)
+      if (det.managingOrg) facts.push(`관리: ${det.managingOrg}`)
       break
     }
     case 'school': {
       const det = d as SchoolDetails
-      if (det.schoolLevel) parts.push(det.schoolLevel)
-      if (det.foundationType) parts.push(det.foundationType)
-      if (det.operationStatus) parts.push(det.operationStatus)
+      if (det.schoolLevel) facts.push(det.schoolLevel)
+      if (det.foundationType) facts.push(det.foundationType)
+      if (det.operationStatus) facts.push(det.operationStatus)
       break
     }
     case 'market': {
       const det = d as MarketDetails
-      if (det.marketType) parts.push(det.marketType)
-      if (det.openingCycle) parts.push(`개장: ${det.openingCycle}`)
-      if (det.storeCount) parts.push(`점포 ${det.storeCount.toLocaleString()}개`)
+      if (det.marketType) facts.push(det.marketType)
+      if (det.openingCycle) facts.push(`개장: ${det.openingCycle}`)
+      if (det.storeCount) facts.push(`점포 ${det.storeCount.toLocaleString()}개`)
       break
     }
     case 'childcare': {
       const det = d as ChildcareDetails
-      if (det.crtypename) parts.push(det.crtypename)
-      if (det.crcapat) parts.push(`정원 ${det.crcapat}명`)
-      if (det.crchcnt) parts.push(`현원 ${det.crchcnt}명`)
+      if (det.crtypename) facts.push(det.crtypename)
+      if (det.crcapat) facts.push(`정원 ${det.crcapat}명`)
+      if (det.crchcnt) facts.push(`현원 ${det.crchcnt}명`)
       break
     }
     case 'ev-charger': {
       const det = d as EvChargerDetails
       const charger = det.chargers?.[0]
-      if (charger?.chgerType) parts.push(`충전기 타입: ${charger.chgerType}`)
-      if (charger?.output) parts.push(`출력 ${charger.output}kW`)
-      if (det.useTime) parts.push(det.useTime)
+      if (charger?.chgerType) facts.push(`충전기 타입: ${charger.chgerType}`)
+      if (charger?.output) facts.push(`출력 ${charger.output}kW`)
+      if (det.useTime) facts.push(det.useTime)
       break
     }
     case 'sports': {
       const det = d as SportsDetails
-      if (det.ftypeNm) parts.push(det.ftypeNm)
-      if (det.faciGbNm) parts.push(det.faciGbNm)
-      if (det.faciGfa) parts.push(`연면적 ${det.faciGfa}`)
+      if (det.ftypeNm) facts.push(det.ftypeNm)
+      if (det.faciGbNm) facts.push(det.faciGbNm)
+      if (det.faciGfa) facts.push(`연면적 ${det.faciGfa}`)
       break
     }
   }
 
-  if (address) parts.push(address)
+  // 주소를 facts 마지막에 포함
+  if (address) facts.push(address)
+
+  // 산문 구조: 개요 문장. facts 쉼표 결합. CTA 문장.
+  const ctaSentence = `${intent} 등 정보를 지도에서 확인하세요.`
+  const factClause = facts.length ? ` ${facts.join(', ')}.` : ''
+  let desc = `${openingSentence}${factClause} ${ctaSentence}`
 
   // 155자 이내로 자르기
-  let desc = parts.join('. ') + '.'
   if (desc.length > 155) {
     desc = desc.slice(0, 152) + '...'
   }

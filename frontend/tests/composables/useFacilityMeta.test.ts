@@ -428,6 +428,72 @@ describe('useFacilityMeta', () => {
     })
   })
 
+  describe('buildFacilityDescription — prose shape (Fix 3a)', () => {
+    const makeHospitalFacility = (overrides: Partial<FacilityDetail> = {}): FacilityDetail => ({
+      id: 'h-2',
+      category: 'hospital',
+      name: '삼성서울병원',
+      address: '서울 강남구 일원로 81',
+      roadAddress: '서울 강남구 일원로 81',
+      lat: 37.49,
+      lng: 127.09,
+      city: '서울',
+      district: '강남구',
+      bjdCode: '11680',
+      details: { clCdNm: '종합병원', drTotCnt: 1234 } as Record<string, unknown>,
+      sourceId: 'src-2',
+      sourceUrl: null,
+      viewCount: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      syncedAt: '2024-01-01T00:00:00Z',
+      ...overrides,
+    })
+
+    it('description ends with CTA "지도에서 확인하세요."', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(makeHospitalFacility())
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.description).toMatch(/지도에서 확인하세요\.$/)
+    })
+
+    it('facts are joined by ", " (not ". " raw dump)', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(makeHospitalFacility())
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      // The category-facts clause should use comma separators
+      expect(call.description).toMatch(/종합병원,/)
+    })
+
+    it('description contains name and category', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(makeHospitalFacility())
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.description).toContain('삼성서울병원')
+      expect(call.description).toContain('병원')
+    })
+
+    it('description does NOT contain intent string in a raw fact dump position', () => {
+      // intent is in CTA form "진료과·진료시간 등 정보를 지도에서 확인하세요." but NOT as a bare fragment
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(makeHospitalFacility())
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      const desc: string = call.description
+      // Must contain intent in CTA context, NOT as a raw ". 진료과·진료시간" fragment
+      expect(desc).not.toMatch(/\. 진료과·진료시간(?! 등 정보를)/)
+    })
+
+    it('155-char cap still applies', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(makeHospitalFacility({
+        name: '서울특별시강남구일원동초대형종합전문병원메디칼센터서울강남스페셜티클리닉',
+        roadAddress: '서울 강남구 일원로 81번길 180 메디칼타워 A동 3층',
+      }))
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.description.length).toBeLessThanOrEqual(155)
+    })
+  })
+
   describe('buildDetailTitle — no intent tail + 30-char guard (Fix 2)', () => {
     const makeHospitalFacility = (name: string): FacilityDetail => ({
       id: 'h-1',
