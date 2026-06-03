@@ -22,39 +22,25 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilterTabs.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 
-const title = '공공임대 매물 | 일상킷'
-const description = 'LH·SH 등 공공기관이 운영하는 매입임대·전세임대 매물 정보를 한눈에 비교하세요. 청약통장 없이 자격만 맞으면 수시 신청할 수 있는 공공 직접 공급 매물입니다.'
-const canonicalUrl = `${SITE_URL}/public-rental`
+const { setMeta } = useFacilityMeta()
 
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+setMeta({
+  title: '공공임대 매물',
+  description: 'LH·SH 등 공공기관이 운영하는 매입임대·전세임대 매물 정보를 한눈에 비교하세요. 청약통장 없이 자격만 맞으면 수시 신청할 수 있는 공공 직접 공급 매물입니다.',
+  path: '/public-rental',
 })
 
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
   { name: '청약 정보', url: `${SITE_URL}/subscription` },
-  { name: '공공임대', url: canonicalUrl },
+  { name: '공공임대', url: `${SITE_URL}/public-rental` },
 ])
 
 setItemListSchema([
