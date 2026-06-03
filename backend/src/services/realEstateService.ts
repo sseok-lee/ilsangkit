@@ -393,8 +393,34 @@ export interface ComplexListResult {
   totalPages: number;
 }
 
+// Valid-name SQL fragment (must stay character-identical to sitemapService.ts getRealEstateCityDistrictHubs)
+const VALID_NAME_SQL = `
+  buildingName IS NOT NULL
+  AND buildingName != ''
+  AND CHAR_LENGTH(buildingName) >= 2
+  AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+  AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+`;
+
+interface SummaryRawRow {
+  buildingName: string;
+  bjdCode: string;
+  city: string;
+  district: string;
+  dongName: string;
+  transactionCount: number | bigint;
+  latestPrice: bigint | null;
+  latestDealYear: number | null;
+  latestDealMonth: number | null;
+  buildYear: number | null;
+  lat: string | null;
+  lng: string | null;
+}
+
 /**
- * 건물 목록 조회 — RealEstateBuildingSummary 테이블 (GROUP BY 제거)
+ * 건물 목록 조회 — RealEstateBuildingSummary 테이블.
+ * 유효 단지명 필터(사이트맵 getRealEstateCityDistrictHubs와 동일 조건)를 적용하여
+ * 지번/숫자 건물명을 제외한다.
  */
 export async function getComplexList(
   type: string,
@@ -406,30 +432,54 @@ export async function getComplexList(
 ): Promise<ComplexListResult> {
   if (!TABLE_NAME_MAP[type]) throw new Error(`Unknown real estate type: ${type}`);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = { type };
-  if (city) where.city = city;
-  if (district) where.district = district;
-  if (buildingName) where.buildingName = { startsWith: buildingName };
+  // Build parameterised WHERE clauses
+  const conditions: string[] = ['type = ?', VALID_NAME_SQL];
+  const params: unknown[] = [type];
 
-  const [items, total] = await Promise.all([
-    prisma.realEstateBuildingSummary.findMany({
-      where,
-      orderBy: { transactionCount: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.realEstateBuildingSummary.count({ where }),
+  if (city) {
+    conditions.push('city = ?');
+    params.push(city);
+  }
+  if (district) {
+    conditions.push('district = ?');
+    params.push(district);
+  }
+  if (buildingName) {
+    conditions.push('buildingName LIKE CONCAT(?, \'%\')');
+    params.push(buildingName);
+  }
+
+  const whereClause = conditions.join(' AND ');
+  const offset = (page - 1) * limit;
+
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRawUnsafe<SummaryRawRow[]>(
+      `SELECT buildingName, bjdCode, city, district, dongName, transactionCount,
+              latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
+       FROM RealEstateBuildingSummary
+       WHERE ${whereClause}
+       ORDER BY transactionCount DESC
+       LIMIT ? OFFSET ?`,
+      ...params,
+      limit,
+      offset,
+    ),
+    prisma.$queryRawUnsafe<[{ total: bigint }]>(
+      `SELECT COUNT(*) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+      ...params,
+    ),
   ]);
 
+  const total = Number(countRows[0]?.total ?? 0);
+
   return {
-    items: items.map((row) => ({
+    items: rows.map((row) => ({
       buildingName: row.buildingName,
       bjdCode: row.bjdCode,
       city: row.city,
       district: row.district,
       dongName: row.dongName,
-      transactionCount: row.transactionCount,
+      transactionCount: Number(row.transactionCount),
       latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
       lat: row.lat != null ? Number(row.lat) : null,
       lng: row.lng != null ? Number(row.lng) : null,
