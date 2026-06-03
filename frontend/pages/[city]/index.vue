@@ -44,6 +44,25 @@
           </div>
         </section>
 
+        <!-- 카테고리별 바로가기 -->
+        <section id="categories" class="mb-6">
+          <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-primary text-[22px]">category</span>
+            카테고리별 바로가기
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <NuxtLink
+              v-for="cat in cityCategoryLinks"
+              :key="cat.slug"
+              :to="cat.to"
+              class="group flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 hover:border-primary/30"
+            >
+              <span class="material-symbols-outlined text-primary text-[22px]">{{ cat.icon }}</span>
+              <span class="font-semibold text-slate-900 text-sm">{{ cat.label }}</span>
+            </NuxtLink>
+          </div>
+        </section>
+
         <!-- Ad: District Grid 후 -->
         <div class="mb-6">
           <AdBanner />
@@ -77,6 +96,8 @@
 
 <script setup lang="ts">
 import { CITY_SLUG_MAP } from '~/composables/useRegions'
+import { CATEGORY_GROUPS, CATEGORY_META } from '~/types/facility'
+import type { FacilityCategory } from '~/types/facility'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -94,6 +115,15 @@ if (!CITY_SLUG_MAP[city.value]) {
 
 // CITY_SLUG_MAP에서 한글 이름
 const cityName = computed(() => CITY_SLUG_MAP[city.value] || city.value)
+
+const cityCategoryLinks = computed(() =>
+  CATEGORY_GROUPS.flatMap(g => g.categories).map((cat) => ({
+    slug: cat,
+    to: `/${cat}?city=${city.value}`,
+    icon: CATEGORY_META[cat as FacilityCategory]?.icon ?? 'place',
+    label: CATEGORY_META[cat as FacilityCategory]?.label ?? cat,
+  })),
+)
 
 // Breadcrumb (시설/부동산 PR과 동일 패턴)
 const breadcrumbItems = computed(() => [
