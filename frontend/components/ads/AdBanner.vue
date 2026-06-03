@@ -135,7 +135,7 @@ watch(matches, async (next) => {
   refresh()
 })
 
-watch(() => route.fullPath, async () => {
+watch(() => route.path, async () => {
   if (!shouldShow.value) return
   adKey.value++
   await nextTick()

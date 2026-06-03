@@ -24,5 +24,13 @@ describe('StaticPageHeader', () => {
     const wrapper = mount(StaticPageHeader, { props: { title: 'T', updatedAt: '2026.06.01' } })
     expect(wrapper.text()).toContain('마지막 업데이트 2026.06.01')
   })
+
+  it('renders the update badge icon as a material-symbol, not an emoji', () => {
+    const wrapper = mount(StaticPageHeader, { props: { title: 'T', updatedAt: '2026.06.01' } })
+    expect(wrapper.text()).not.toContain('📅')
+    const icon = wrapper.find('.material-symbols-outlined')
+    expect(icon.exists()).toBe(true)
+    expect(icon.text()).toBe('calendar_month')
+  })
 })
 
