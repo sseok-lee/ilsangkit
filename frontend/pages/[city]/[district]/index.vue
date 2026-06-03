@@ -45,6 +45,9 @@
 
         <!-- ③ 교차 CTA -->
         <RegionRealEstateCta :area-name="districtName" />
+
+        <!-- 데이터 출처 -->
+        <DataSourceSection domain="facility" compact class="mt-2" />
       </div>
 
       <!-- 에러 -->
@@ -60,6 +63,7 @@ import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionFacilityCategoryGrid from '~/components/region/RegionFacilityCategoryGrid.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
@@ -183,7 +187,7 @@ const heroDescription = computed(() => {
 // SEO 메타
 const canonicalUrl = `${SITE_URL}/${city.value}/${district.value}`
 useHead(() => {
-  const title = `${cityName.value} ${districtName.value} 생활 정보·부동산 시세 | 일상킷`
+  const title = `${cityName.value} ${districtName.value} 부동산 시세·생활 정보 | 일상킷`
   const description = `${cityName.value} ${districtName.value}의 부동산 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 인프라 정보를 확인하세요.`
   const dynamicOgImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}`
   return {

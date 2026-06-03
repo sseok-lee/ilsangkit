@@ -1,8 +1,10 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-5 md:mb-6">
-      이용약관
-    </h1>
+    <StaticPageHeader
+      title="이용약관"
+      lead="일상킷 서비스 이용 조건과 절차를 규정합니다."
+      updated-at="2026.06.01"
+    />
 
     <div class="space-y-5 md:space-y-6 text-slate-600 text-sm md:text-base leading-relaxed">
       <section>
@@ -31,12 +33,17 @@
           <li>생활쓰레기 배출 일정 및 방법</li>
           <li>무료 와이파이 위치 정보</li>
           <li>의류수거함 위치 정보</li>
-          <li>무인민원발급기 위치 및 운영 정보</li>
           <li>공영주차장 위치 및 운영 정보</li>
           <li>자동심장충격기(AED) 설치 위치 정보</li>
           <li>공공도서관 위치 및 운영 정보</li>
           <li>병원 위치 및 진료 정보</li>
           <li>약국 위치 및 운영 정보</li>
+          <li>공원 위치 및 정보</li>
+          <li>학교 위치 및 기본 정보</li>
+          <li>전통시장 위치 및 정보</li>
+          <li>어린이집 위치 및 운영 정보</li>
+          <li>전기차 충전소 위치 및 충전기 정보</li>
+          <li>체육시설 위치 및 종목 정보</li>
         </ul>
         <p class="mt-2">
           위 정보는 공공데이터포털(data.go.kr) 및 국토교통부 실거래가 공개시스템에서 제공하는 공공데이터를 기반으로 하며,

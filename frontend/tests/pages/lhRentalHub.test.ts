@@ -74,7 +74,7 @@ describe('public-rental/index.vue — breadcrumb schema', () => {
     expect(mockSetBreadcrumbSchema).toHaveBeenCalled()
     const breadcrumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
     expect(breadcrumbs).toHaveLength(3)
-    expect(breadcrumbs[1].name).toBe('청약·임대')
+    expect(breadcrumbs[1].name).toBe('청약 정보')
     expect(breadcrumbs[1].url).toContain('/subscription')
   })
 })

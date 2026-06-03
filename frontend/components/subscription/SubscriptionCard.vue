@@ -76,7 +76,7 @@ const rentTypeBadgeClass = computed(() => {
 const statusLabel = computed(() => {
   const status = props.subscription.status
   if (status === 'upcoming') return '접수예정'
-  if (status === 'ongoing') return '접수중'
+  if (status === 'ongoing') return '청약중'
   if (status === 'closed') return '마감'
   return ''
 })

@@ -30,6 +30,9 @@
         :source-type="typeMeta.sourceType"
         :rent-type="typeMeta.rentType"
       />
+
+      <!-- 데이터 출처 -->
+      <DataSourceSection domain="subscription" class="mt-6" />
     </main>
   </div>
 </template>
@@ -37,6 +40,7 @@
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { SALE_TYPES } from '~/utils/subscriptionMeta'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const route = useRoute()

@@ -1,8 +1,9 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-5 md:mb-6">
-      일상킷 소개
-    </h1>
+    <StaticPageHeader
+      title="일상킷 소개"
+      lead="부동산 실거래가와 내 주변 생활시설을 한곳에서."
+    />
 
     <div class="space-y-5 md:space-y-6 text-slate-600 text-sm md:text-base leading-relaxed">
       <section>
@@ -48,61 +49,27 @@
           제공 정보
         </h2>
         <p class="mb-4">
-          일상킷은 부동산 실거래가와 다양한 카테고리의 전국 생활시설 정보를 제공합니다.
+          일상킷은 전국 생활시설 15종과 부동산 실거래가(아파트·빌라·오피스텔) 정보를 카테고리별로 제공합니다.
         </p>
         <ul class="list-disc pl-5 space-y-2">
-          <li>
-            <strong class="text-slate-900">공공화장실</strong>
-            — 전국 공공화장실의 위치, 운영 시간, 장애인 시설 여부 등을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">쓰레기 배출</strong>
-            — 지역별 생활쓰레기 배출 요일, 시간, 방법을 안내합니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">무료 와이파이</strong>
-            — 공공 무료 와이파이 설치 장소와 이용 정보를 제공합니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">의류수거함</strong>
-            — 주변 의류수거함의 위치를 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">무인민원발급기</strong>
-            — 무인민원발급기의 위치와 운영 시간을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">공영주차장</strong>
-            — 전국 공영주차장의 위치, 요금, 운영 시간 등을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">자동심장충격기(AED)</strong>
-            — 주변 자동심장충격기(AED) 설치 위치를 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">공공도서관</strong>
-            — 전국 공공도서관의 위치와 운영 정보를 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">병원</strong>
-            — 전국 병원의 위치, 진료과목, 운영 시간 등을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">약국</strong>
-            — 전국 약국의 위치와 운영 시간을 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">아파트 실거래가</strong>
-            — 전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">빌라 실거래가</strong>
-            — 전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 확인할 수 있습니다.
-          </li>
-          <li>
-            <strong class="text-slate-900">오피스텔 실거래가</strong>
-            — 전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회할 수 있습니다.
-          </li>
+          <li><strong class="text-slate-900">공공화장실</strong> — 전국 공공화장실의 위치, 운영 시간, 장애인 시설 여부 등을 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">쓰레기 배출정보</strong> — 지역별 생활쓰레기 배출 요일, 시간, 방법을 안내합니다.</li>
+          <li><strong class="text-slate-900">무료와이파이</strong> — 공공 무료 와이파이 설치 장소와 이용 정보를 제공합니다.</li>
+          <li><strong class="text-slate-900">의류수거함</strong> — 주변 의류수거함의 위치를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">공영주차장</strong> — 전국 공영주차장의 위치, 요금, 운영 시간 등을 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">자동심장충격기(AED)</strong> — 주변 자동심장충격기(AED) 설치 위치를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">공공도서관</strong> — 전국 공공도서관의 위치와 운영 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">병원</strong> — 전국 병원의 위치, 진료과목, 운영 시간 등을 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">약국</strong> — 전국 약국의 위치와 운영 시간을 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">공원</strong> — 전국 도시공원의 위치와 종류, 면적 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">학교</strong> — 전국 학교의 위치와 기본 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">전통시장</strong> — 전국 전통시장의 위치와 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">어린이집</strong> — 전국 어린이집의 위치와 운영 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">전기차 충전소</strong> — 전국 전기차 충전소의 위치와 충전기 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">체육시설</strong> — 전국 공공체육시설의 위치와 종목 정보를 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">아파트 실거래가</strong> — 전국 아파트 매매·전월세 실거래가를 지역별, 단지별로 조회할 수 있습니다.</li>
+          <li><strong class="text-slate-900">빌라 실거래가</strong> — 전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 확인할 수 있습니다.</li>
+          <li><strong class="text-slate-900">오피스텔 실거래가</strong> — 전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회할 수 있습니다.</li>
         </ul>
       </section>
 
@@ -167,88 +134,11 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr>
-                  <td class="py-2 pr-4">전국공중화장실표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
+                <tr v-for="src in dataSources" :key="src.url">
+                  <td class="py-2 pr-4">{{ src.datasetName }}</td>
+                  <td class="py-2 pr-4">{{ src.provider }}</td>
                   <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15012892/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">행정안전부_생활쓰레기배출정보 조회서비스</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15155080/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국무료와이파이표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15013116/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국의류수거함표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15139214/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">행정안전부_무인민원발급기정보 조회서비스</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15154774/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국공영주차장표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">자동심장충격기(AED) 설치장소</td>
-                  <td class="py-2 pr-4">보건복지부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15000652/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">전국공공도서관표준데이터</td>
-                  <td class="py-2 pr-4">행정안전부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15013109/standard.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">아파트매매 실거래 자료</td>
-                  <td class="py-2 pr-4">국토교통부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15057511/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">아파트 전월세 실거래 자료</td>
-                  <td class="py-2 pr-4">국토교통부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058017/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">연립다세대 매매/전월세 실거래 자료</td>
-                  <td class="py-2 pr-4">국토교통부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058038/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 pr-4">오피스텔 매매/전월세 실거래 자료</td>
-                  <td class="py-2 pr-4">국토교통부</td>
-                  <td class="py-2">
-                    <a href="https://www.data.go.kr/data/15058452/openapi.do" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">공공데이터포털</a>
+                    <a :href="src.url" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary">{{ sourceLabel(src.url) }}</a>
                   </td>
                 </tr>
               </tbody>
@@ -291,6 +181,21 @@
 <script setup lang="ts">
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import {
+  FACILITY_DATA_SOURCE,
+  REAL_ESTATE_DATASETS,
+  type DataSourceInfo,
+} from '~/utils/dataSource'
+
+// 데이터 출처 테이블은 dataSource.ts 레지스트리를 단일 소스로 사용 (시설 + 부동산 세부 데이터셋)
+const dataSources: DataSourceInfo[] = [
+  ...Object.values(FACILITY_DATA_SOURCE),
+  ...REAL_ESTATE_DATASETS,
+]
+
+function sourceLabel(url: string): string {
+  return url.includes('data.go.kr') ? '공공데이터포털' : '제공기관 사이트'
+}
 
 const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema } = useStructuredData()

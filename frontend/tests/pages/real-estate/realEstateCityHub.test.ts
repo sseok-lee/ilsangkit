@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
-import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { mount, flushPromises } from '@vue/test-utils'
+import { defineComponent, Suspense, h, ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 
 ;(globalThis as any).ref = ref
 ;(globalThis as any).computed = computed
@@ -59,7 +59,16 @@ const globalStubs = {
 describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
   async function mountPage() {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/index.vue')
-    return mount(m.default, { global: { stubs: globalStubs } })
+    const wrapper = mount(
+      defineComponent({
+        render() {
+          return h(Suspense, null, { default: () => h(m.default) })
+        },
+      }),
+      { global: { stubs: globalStubs } },
+    )
+    await flushPromises()
+    return wrapper
   }
 
   it('컴포넌트가 존재해야 한다', async () => {
@@ -108,5 +117,38 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
   it('setItemListSchema가 호출되어야 한다 (ItemList 구조화 데이터)', async () => {
     await mountPage()
     expect(mockSetItemListSchema).toHaveBeenCalled()
+  })
+
+  it('도시명+타입 맥락의 요약 인트로 문단을 렌더한다', async () => {
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+    expect(text).toContain('서울')        // cityName
+    expect(text).toContain('아파트')       // 타입 라벨
+    expect(text).toContain('국토교통부')   // 데이터 출처 문구
+  })
+
+  it('주요 단지 섹션을 ComplexCard로 렌더한다', async () => {
+    ;(globalThis as any).useAsyncData = vi.fn((_k: string, _h: () => Promise<unknown>) => {
+      const data = ref<any>([
+        {
+          buildingName: '강남타워',
+          bjdCode: '11680',
+          dongName: '역삼동',
+          city: '서울특별시',
+          district: '강남구',
+          latestPrice: 120000,
+          transactionCount: 12,
+          lat: 37.5,
+          lng: 127.0,
+          lastDealYear: 2026,
+          lastDealMonth: 5,
+          buildYear: 2015,
+        },
+      ])
+      return Object.assign(Promise.resolve({ data }), { data, pending: ref(false), error: ref(null), refresh: vi.fn() })
+    })
+    const wrapper = await mountPage()
+    expect(wrapper.text()).toContain('주요 단지')
+    expect(wrapper.text()).toContain('강남타워')
   })
 })

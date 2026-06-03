@@ -38,6 +38,7 @@ vi.mock('~/composables/useStructuredData', () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
     setItemListSchema: mockSetItemListSchema,
     setDatasetSchema: vi.fn(),
+    setFAQSchema: vi.fn(),
   }),
 }))
 
@@ -108,7 +109,7 @@ async function mountSuspended(component: any, options?: any) {
           RealEstateSearchFilter: { template: '<div />' },
           ComplexCard: { template: '<div />' },
           Pagination: { template: '<div />' },
-          DataSourceCard: { template: '<div />' },
+          DataSourceSection: { template: '<div />' },
         },
         ...options?.global,
       },

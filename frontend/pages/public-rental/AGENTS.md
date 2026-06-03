@@ -30,14 +30,14 @@
 - 페이지 제목/설명 → meta 태그 + og 태그
 - Breadcrumb + ItemList 구조화 데이터 (JSON-LD)
 - 자식 라우트(`[type]/`, `announcements/`)에서 활성 탭 상태를 prop으로 전달 (`PublicRentalFilterTabs :active="..."`
-- 데이터 출처 공시 (DataSourceCard + 법적 고지문)
+- 데이터 출처 공시 (DataSourceSection + 법적 고지문)
 
 ## Dependencies
 
 ### Internal
 - `frontend/components/publicRental/PublicRentalFilterTabs.vue` — 탭 네비게이션
 - `frontend/components/subscription/PublicRentalListView.vue` — 매물 목록
-- `frontend/components/common/DataSourceCard.vue` — 출처 카드
+- `frontend/components/common/DataSourceSection.vue` — 출처 표기 (도메인 인지)
 - `frontend/utils/seoConstants.ts`, `frontend/utils/subscriptionMeta.ts`, `frontend/utils/dataSource.ts`
 - `frontend/composables/useStructuredData.ts` — 구조화 데이터 관리
 - `frontend/pages/public-rental/[type]/` (자식)

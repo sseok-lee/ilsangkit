@@ -99,13 +99,11 @@
 
       <!-- "관련 정보" SectionBlock -->
       <SectionBlock heading="관련 정보" subtext="같은 주제의 가이드와 바로가기 링크를 확인하세요.">
-        <ClientOnly>
-          <RelatedGuides
-            v-if="guide.category"
-            :category="guide.category"
-            :exclude-slug="guide.slug"
-          />
-        </ClientOnly>
+        <RelatedGuides
+          v-if="guide.category"
+          :category="guide.category"
+          :exclude-slug="guide.slug"
+        />
 
         <nav data-testid="guide-related-categories" class="mt-4 pt-4 border-t border-line">
           <p class="text-sm font-semibold text-slate-700 mb-3">바로가기</p>

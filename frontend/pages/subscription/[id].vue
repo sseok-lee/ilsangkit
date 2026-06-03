@@ -1,14 +1,6 @@
 <template>
   <div class="bg-background-light">
-    <!-- Loading State -->
-    <div v-if="pending" class="flex items-center justify-center py-20 min-h-[400px]">
-      <div class="text-center">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p class="text-slate-600">로딩 중...</p>
-      </div>
-    </div>
-
-    <template v-else-if="subscription">
+    <template v-if="subscription">
       <!-- Mobile: Map at top -->
       <div v-if="hasCoords" class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
         <ClientOnly>
@@ -404,7 +396,7 @@
         <AdBanner />
 
         <!-- 데이터 정보 -->
-        <DataSourceCard :source="SUBSCRIPTION_DATA_SOURCE" />
+        <DataSourceSection domain="subscription" />
 
       </main>
     </template>
@@ -440,8 +432,7 @@ import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
-import { SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const route = useRoute()
 const id = Number(route.params.id)
@@ -453,7 +444,6 @@ const unitTypes = ref<SubscriptionUnitType[]>([])
 const competitions = ref<SubscriptionCompetition[]>([])
 const scores = ref<SubscriptionScore[]>([])
 const specialStatuses = ref<SubscriptionSpecialStatus[]>([])
-const pending = ref(false)
 const error = ref<string | null>(null)
 const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
@@ -472,6 +462,7 @@ const mapMarker = computed(() => {
     name: subscription.value.houseName,
     lat: mapCenter.value.lat,
     lng: mapCenter.value.lng,
+    // 지도 마커 타입(FacilityCategory) 충족용 placeholder — 실제 시설 아님(상세 페이지의 단일 위치 핀)
     category: 'toilet' as const,
     address: subscription.value.supplyLocation || null,
     roadAddress: null,
@@ -586,7 +577,7 @@ const breadcrumbItems = computed(() => {
   const isRent = subscription.value.rentType === '임대주택' || subscription.value.sourceType === 'PRIVATE_RENT'
   const items: { label: string; href?: string; current?: boolean }[] = [
     { label: '홈', href: '/', current: false },
-    { label: '청약·임대', href: '/subscription', current: false },
+    { label: '청약 정보', href: '/subscription', current: false },
   ]
   if (isRent) items.push({ label: '임대', href: '/subscription/rent', current: false })
   else items.push({ label: '분양', href: '/subscription/sale', current: false })
@@ -689,7 +680,7 @@ const activeSpecialStatusColumns = computed(() =>
 // 포맷 함수들
 function getStatusLabel(status: string): string {
   if (status === 'upcoming') return '접수예정'
-  if (status === 'ongoing') return '접수중'
+  if (status === 'ongoing') return '청약중'
   return '마감'
 }
 

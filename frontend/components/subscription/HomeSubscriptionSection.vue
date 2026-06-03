@@ -14,60 +14,62 @@
     </div>
 
     <template v-if="hasAny">
-      <!-- 요약 한 줄 -->
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700">
-        <span class="flex items-center gap-1.5">
-          <span class="inline-block w-2 h-2 rounded-full bg-green-500" aria-hidden="true"></span>
-          접수중 <strong>{{ ongoingTotal }}건</strong>
-        </span>
-        <span class="flex items-center gap-1.5">
-          <span class="inline-block w-2 h-2 rounded-full bg-primary-500" aria-hidden="true"></span>
-          예정 <strong>{{ upcomingTotal }}건</strong>
-        </span>
-      </div>
-
-      <!-- 타임라인 2그룹 -->
-      <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4">
-        <div v-if="ongoing.length > 0">
-          <h3 class="text-sm font-bold text-slate-700 mb-1.5"><span aria-hidden="true">🔴</span> 접수 중</h3>
-          <ul>
-            <li
-              v-for="(item, idx) in ongoing"
-              :key="`ongoing-${item.id}`"
-              :class="['border-b border-slate-100', idx === 4 ? 'hidden sm:block' : '']"
-            >
-              <HardLink :to="`/subscription/${item.id}`" class="flex items-center gap-2 py-2 -mx-1 px-1 rounded hover:bg-slate-50">
-                <span
-                  v-if="dayBadge(item.receptionEndDate)"
-                  class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 min-w-[34px] text-center"
-                >{{ dayBadge(item.receptionEndDate) }}</span>
-                <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
-                <span class="flex-1 min-w-0 text-sm font-bold text-slate-900 truncate">{{ item.houseName }}</span>
-                <span class="hidden sm:inline shrink-0 text-[11px] text-slate-400">{{ item.regionName }}</span>
-              </HardLink>
-            </li>
-          </ul>
+      <div class="bg-white border border-line rounded-2xl shadow-card p-4 md:p-5">
+        <!-- 요약 한 줄 -->
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700">
+          <span class="flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-green-500" aria-hidden="true"></span>
+            청약중 <strong>{{ ongoingTotal }}건</strong>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-primary-500" aria-hidden="true"></span>
+            예정 <strong>{{ upcomingTotal }}건</strong>
+          </span>
         </div>
 
-        <div v-if="upcoming.length > 0">
-          <h3 class="text-sm font-bold text-slate-700 mb-1.5"><span aria-hidden="true">🔵</span> 접수 예정</h3>
-          <ul>
-            <li
-              v-for="(item, idx) in upcoming"
-              :key="`upcoming-${item.id}`"
-              :class="['border-b border-slate-100', idx === 4 ? 'hidden sm:block' : '']"
-            >
-              <HardLink :to="`/subscription/${item.id}`" class="flex items-center gap-2 py-2 -mx-1 px-1 rounded hover:bg-slate-50">
-                <span
-                  v-if="dayBadge(item.receptionStartDate)"
-                  class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 min-w-[34px] text-center"
-                >{{ dayBadge(item.receptionStartDate) }}</span>
-                <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
-                <span class="flex-1 min-w-0 text-sm font-bold text-slate-900 truncate">{{ item.houseName }}</span>
-                <span class="hidden sm:inline shrink-0 text-[11px] text-slate-400">{{ item.regionName }}</span>
-              </HardLink>
-            </li>
-          </ul>
+        <!-- 타임라인 2그룹 -->
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4">
+          <div v-if="ongoing.length > 0">
+            <h3 class="text-sm font-bold text-slate-700 mb-1.5"><span aria-hidden="true">🔴</span> 접수 중</h3>
+            <ul>
+              <li
+                v-for="(item, idx) in ongoing"
+                :key="`ongoing-${item.id}`"
+                :class="['border-b border-slate-100', idx === 4 ? 'hidden sm:block' : '']"
+              >
+                <HardLink :to="`/subscription/${item.id}`" class="flex items-center gap-2 py-2 -mx-1 px-1 rounded hover:bg-slate-50">
+                  <span
+                    v-if="dayBadge(item.receptionEndDate)"
+                    class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 min-w-[34px] text-center"
+                  >{{ dayBadge(item.receptionEndDate) }}</span>
+                  <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
+                  <span class="flex-1 min-w-0 text-sm font-bold text-slate-900 truncate">{{ item.houseName }}</span>
+                  <span class="hidden sm:inline shrink-0 text-[11px] text-slate-400">{{ item.regionName }}</span>
+                </HardLink>
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="upcoming.length > 0">
+            <h3 class="text-sm font-bold text-slate-700 mb-1.5"><span aria-hidden="true">🔵</span> 접수 예정</h3>
+            <ul>
+              <li
+                v-for="(item, idx) in upcoming"
+                :key="`upcoming-${item.id}`"
+                :class="['border-b border-slate-100', idx === 4 ? 'hidden sm:block' : '']"
+              >
+                <HardLink :to="`/subscription/${item.id}`" class="flex items-center gap-2 py-2 -mx-1 px-1 rounded hover:bg-slate-50">
+                  <span
+                    v-if="dayBadge(item.receptionStartDate)"
+                    class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 min-w-[34px] text-center"
+                  >{{ dayBadge(item.receptionStartDate) }}</span>
+                  <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
+                  <span class="flex-1 min-w-0 text-sm font-bold text-slate-900 truncate">{{ item.houseName }}</span>
+                  <span class="hidden sm:inline shrink-0 text-[11px] text-slate-400">{{ item.regionName }}</span>
+                </HardLink>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </template>

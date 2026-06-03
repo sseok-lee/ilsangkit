@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useGuides } from '~/composables/useGuides'
 import type { GuideSummary } from '~/composables/useGuides'
 
@@ -67,22 +67,30 @@ const config = useRuntimeConfig()
 const publicApiBase = config.public.apiBase
 const { fetchGuides } = useGuides()
 
-const rawItems = ref<GuideSummary[]>([])
+const route = useRoute()
+const asyncKey = computed(() =>
+  `related-guides-${route.path}-${props.categories?.join('-') ?? props.category ?? 'all'}`,
+)
 
-onMounted(async () => {
-  try {
-    const data = await fetchGuides({
-      ...(props.categories?.length ? { categories: props.categories } : { category: props.category }),
-      limit: props.limit + (props.excludeSlug ? 1 : 0),
-    })
-    rawItems.value = data.items
-  } catch {
-    // silently fail — guides are supplementary
-  }
-})
+const { data: rawItems } = await useAsyncData<GuideSummary[]>(
+  asyncKey,
+  async () => {
+    try {
+      const data = await fetchGuides({
+        ...(props.categories?.length ? { categories: props.categories } : { category: props.category }),
+        limit: props.limit + (props.excludeSlug ? 1 : 0),
+      })
+      return data.items
+    } catch {
+      // 보조 콘텐츠 — 실패 시 조용히 빈 목록
+      return []
+    }
+  },
+  { default: () => [], watch: [asyncKey] },
+)
 
 const guides = computed(() => {
-  const items = rawItems.value
+  const items = rawItems.value ?? []
   if (props.excludeSlug) {
     return items.filter(g => g.slug !== props.excludeSlug).slice(0, props.limit)
   }

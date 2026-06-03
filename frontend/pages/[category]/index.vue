@@ -163,21 +163,7 @@
 
           <!-- Loading Skeleton -->
           <div v-if="loading || initialLoading" role="status" aria-label="정보 로딩 중" aria-live="polite" aria-busy="true">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
-                <div class="flex items-start gap-4">
-                  <div class="shrink-0 w-12 h-12 rounded-full bg-slate-200"></div>
-                  <div class="flex-1 space-y-2.5">
-                    <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-                    <div class="h-3 bg-slate-100 rounded w-full"></div>
-                    <div class="flex gap-2 mt-1">
-                      <div class="h-5 bg-slate-100 rounded-md w-14"></div>
-                      <div class="h-5 bg-slate-100 rounded-md w-20"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <LoadingSkeleton variant="facility-card" />
           </div>
 
           <template v-else-if="!initialLoading">
@@ -191,12 +177,12 @@
             </div>
 
             <!-- Empty State -->
-            <div v-if="displayFacilities.length === 0" class="py-12 text-center">
-              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-                <span class="material-symbols-outlined text-[32px] text-slate-500">{{ categoryMeta?.icon || 'search_off' }}</span>
-              </div>
-              <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-              <p class="text-slate-500 text-sm mt-1 mb-6">다른 지역이나 검색어를 시도해보세요</p>
+            <EmptyState
+              v-if="displayFacilities.length === 0"
+              :icon="categoryMeta?.icon || 'search_off'"
+              title="검색 결과가 없습니다"
+              description="다른 지역이나 검색어를 시도해보세요"
+            >
               <div class="flex items-center justify-center gap-3">
                 <button
                   v-if="selectedCity || selectedDistrict || filterKeyword"
@@ -214,7 +200,7 @@
                   홈으로 돌아가기
                 </NuxtLink>
               </div>
-            </div>
+            </EmptyState>
 
             <!-- Pagination -->
             <Pagination :current-page="currentPage" :total-pages="displayTotalPages" @page-change="goToPage" />
@@ -276,9 +262,7 @@
       <CoupangBanner />
 
       <!-- 데이터 출처 -->
-      <section v-if="categoryDataSource">
-        <DataSourceCard :source="categoryDataSource" />
-      </section>
+      <DataSourceSection domain="facility" :category="categoryParam" />
     </div>
   </div>
 </template>
@@ -294,7 +278,9 @@ import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { RELATED_CATEGORIES, POPULAR_REGIONS, CATEGORY_SEO_INTENT } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
+import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'

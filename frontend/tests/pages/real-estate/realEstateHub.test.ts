@@ -17,6 +17,7 @@ vi.mock('~/composables/useStructuredData', () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
     setItemListSchema: mockSetItemListSchema,
     setDatasetSchema: vi.fn(),
+    setFAQSchema: vi.fn(),
   }),
 }))
 
@@ -41,7 +42,7 @@ const globalStubs = {
   SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
   AdBanner: { template: '<div />' },
   RealEstateCategoryCards: { template: '<div />' },
-  DataSourceCard: { template: '<div />' },
+  DataSourceSection: { template: '<div />' },
 }
 
 async function mountSuspended(component: any, options?: any) {

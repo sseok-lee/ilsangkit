@@ -155,11 +155,12 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRentalAnnouncements } from '~/composables/useRentalAnnouncements'
+import { useStructuredData } from '~/composables/useStructuredData'
 import type { AnnouncementStatus } from '~/types/publicRentalAnnouncement'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 
 const STATUS_LABEL: Record<AnnouncementStatus, string> = {
-  ongoing: '진행중',
+  ongoing: '모집중',
   upcoming: '예정',
   closed: '마감',
   unknown: '일정 미정',
@@ -177,6 +178,14 @@ const pblancId = String(route.params.pblancId)
 
 const { detail, loading, error, fetchDetail } = useRentalAnnouncements()
 await fetchDetail(pblancId)
+
+// 없는/만료 공고 → 404 (에러 UI를 200 OK로 색인하던 것 차단)
+if (!detail.value) {
+  throw createError({ statusCode: 404, statusMessage: 'Announcement not found', fatal: true })
+}
+const ann = detail.value   // non-null after guard
+
+const { setBreadcrumbSchema } = useStructuredData()
 
 function formatDateRange(begin: string | null, end: string | null): string {
   if (begin && end) return `${begin} ~ ${end}`
@@ -211,17 +220,13 @@ const totalSupply = computed(() => {
   return hasValue ? sum : null
 })
 
-const title = detail.value
-  ? `${detail.value.pblancNm} | 공공임대 모집공고 | 일상킷`
-  : '공공임대 모집공고 | 일상킷'
-const description = detail.value
-  ? `${detail.value.suplyInsttNm ?? '공공기관'}의 ${detail.value.suplyTyNm ?? '공공임대'} 모집공고. 접수기간·공급세대수·관련 단지 정보를 확인하세요.`
-  : '공공임대 모집공고 상세 정보입니다.'
 const canonicalUrl = `${SITE_URL}/public-rental/announcements/${encodeURIComponent(pblancId)}`
 
-useHead({
-  title,
-  meta: [
+useHead(() => {
+  const title = `${ann.pblancNm} | 공공임대 모집공고 | 일상킷`
+  const description = `${ann.suplyInsttNm ?? '공공기관'}의 ${ann.suplyTyNm ?? '공공임대'} 모집공고. 접수기간·공급세대수·관련 단지 정보를 확인하세요.`
+  const isClosed = ann.status === 'closed'
+  const meta: Array<Record<string, string>> = [
     { name: 'description', content: description },
     { property: 'og:title', content: title },
     { property: 'og:description', content: description },
@@ -230,7 +235,23 @@ useHead({
     { property: 'og:type', content: 'article' },
     { property: 'og:site_name', content: SITE_NAME },
     { property: 'og:locale', content: 'ko_KR' },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+  ]
+  if (isClosed) {
+    meta.push({ name: 'robots', content: 'noindex, follow' })
+  }
+  return {
+    title,
+    meta,
+    // noindex 페이지에서는 canonical 제거(신호 충돌 방지)
+    link: isClosed ? [] : [{ rel: 'canonical', href: canonicalUrl }],
+  }
 })
+
+// Breadcrumb JSON-LD
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: '공공임대', url: '/public-rental' },
+  { name: '모집공고', url: '/public-rental/announcements' },
+  { name: ann.pblancNm, url: canonicalUrl },
+])
 </script>

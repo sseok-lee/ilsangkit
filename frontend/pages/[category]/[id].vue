@@ -142,7 +142,7 @@
                 :aed-operating-hours="aedOperatingHours"
                 :aed-weekly-hours="aedWeeklyHours"
                 :aed-weekly-hours-count="aedWeeklyHours.length"
-                :pharmacy-operating-hours="pharmacyOperatingHours"
+                :pharmacy-weekly-hours="pharmacyWeeklyHours"
               />
 
               <!-- Ad: BASIC INFO ↔ FACILITY STATUS 사이 -->
@@ -165,9 +165,9 @@
               <!-- 주변 시설 (same + cross category) -->
               <DetailNearby
                 :nearby-facilities="nearbyFiltered"
-                :nearby-loading="nearbyLoading"
+                :nearby-loading="nearbyPending"
                 :cross-facilities-grouped="crossFacilitiesGrouped"
-                :cross-loading="crossLoading"
+                :cross-loading="nearbyPending"
                 :category-meta="categoryMeta"
               />
 
@@ -197,8 +197,6 @@
                 :category-meta="categoryMeta"
                 :category-tips="categoryTips"
                 :category-faq-items="categoryFaqItems"
-                :data-source="dataSource"
-                :data-date="dataDate"
                 :last-sync-date="lastSyncDate"
               />
 
@@ -308,11 +306,9 @@ definePageMeta({})
 import { computed, defineAsyncComponent, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
-import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
-import { FACILITY_DATA_SOURCE, type DataSourceInfo } from '~/utils/dataSource'
 import { formatKstDate } from '~/utils/formatters'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
@@ -321,11 +317,12 @@ import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutub
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
-import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
+import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
 import type { YoutubeVideo } from '~/types/youtube'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
+import { buildHeroStats } from '~/utils/categoryHeroStats'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
@@ -519,90 +516,25 @@ const desktopBreadcrumbItems = computed(() => {
 
 // 데스크톱 히어로 사이드바 통계
 const desktopHeroStats = computed(() => {
-  if (!facility.value) return []
-  const cat = facility.value.category
-  const d = details.value as any
-  const items: { label: string; value: string }[] = []
+  const cat = facility.value?.category
+  if (!cat) return []
 
   // 운영시간 (공통 - 있는 경우만, 단 hospital/pharmacy/aed/library/parking는 별도 배너/표 제공으로 제외)
+  const commonItems: { label: string; value: string }[] = []
   if (isOpen24Hours.value) {
-    items.push({ label: '운영', value: '24시간' })
-  } else if (details.value?.operatingHours && !['hospital', 'pharmacy', 'aed', 'library', 'parking'].includes(cat)) {
-    items.push({ label: '운영시간', value: formatOperatingHours(details.value.operatingHours).split('\n')[0] })
+    commonItems.push({ label: '운영', value: '24시간' })
+  }
+  else if (details.value?.operatingHours && !['hospital', 'pharmacy', 'aed', 'library', 'parking'].includes(cat)) {
+    commonItems.push({ label: '운영시간', value: formatOperatingHours(details.value.operatingHours).split('\n')[0] })
   }
 
-  // 카테고리별 고유 지표
-  if (cat === 'hospital') {
-    if (d?.clCdNm) items.push({ label: '종별', value: d.clCdNm })
-    if (d?.drTotCnt) items.push({ label: '의사', value: `${d.drTotCnt}명` })
-    if (d?.parkQty != null) items.push({ label: '주차', value: d.parkQty > 0 ? `${d.parkQty}대` : '불가' })
-  } else if (cat === 'pharmacy') {
-    if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
-  } else if (cat === 'parking') {
-    if (d?.capacity) items.push({ label: '주차면수', value: `${d.capacity}면` })
-    if (d?.feeType) items.push({ label: '요금', value: d.feeType })
-    if (d?.lotType) items.push({ label: '구분', value: d.lotType })
-  } else if (cat === 'library') {
-    if (d?.seatCount) items.push({ label: '좌석', value: `${d.seatCount.toLocaleString()}석` })
-    if (d?.bookCount) items.push({ label: '장서', value: `${d.bookCount.toLocaleString()}권` })
-  } else if (cat === 'aed') {
-    const trim = (s: string) => s.replace(/^[-\s]+|[-\s]+$/g, '').trim()
-    if (d?.buildPlace) {
-      const v = trim(d.buildPlace)
-      if (v) items.push({ label: '설치위치', value: v })
-    }
-    if (d?.org) {
-      const v = trim(d.org)
-      if (v) items.push({ label: '관리기관', value: v })
-    }
-  } else if (cat === 'childcare') {
-    if (d?.crcapat) items.push({ label: '정원', value: `${d.crcapat}명` })
-    if (d?.crchcnt != null) items.push({ label: '현원', value: `${d.crchcnt}명` })
-  } else if (cat === 'park') {
-    if (d?.parkType) items.push({ label: '공원유형', value: d.parkType })
-    if (d?.area != null) items.push({ label: '면적', value: `${d.area.toLocaleString()}㎡` })
-  } else if (cat === 'market') {
-    if (d?.marketType) items.push({ label: '시장유형', value: d.marketType })
-    if (d?.storeCount != null) items.push({ label: '점포수', value: `${d.storeCount}개` })
-  } else if (cat === 'school') {
-    if (d?.schoolLevel) items.push({ label: '학교급', value: d.schoolLevel })
-    if (d?.foundationType) items.push({ label: '설립형태', value: d.foundationType })
-    if (d?.coeducationType) items.push({ label: '남녀공학', value: d.coeducationType })
-  } else if (cat === 'sports') {
-    // 전화 우선, 없으면 시설구분/유형 fallback
-    if (facilityPhone.value) {
-      items.push({ label: '전화', value: facilityPhone.value })
-    } else {
-      if (d?.faciGbNm) items.push({ label: '시설구분', value: d.faciGbNm })
-      if (d?.ftypeNm) items.push({ label: '유형', value: d.ftypeNm })
-    }
-  } else if (cat === 'toilet') {
-    // 24시간/상시 개방 + 안전·접근성 배지
-    const openTimeRaw = (d?.openTime || '').toString().trim()
-    if (openTimeRaw === '상시' || isOpen24Hours.value) {
-      items.push({ label: '개방', value: '상시' })
-    }
-    if (d?.hasCCTV) items.push({ label: 'CCTV', value: '있음' })
-    if (d?.hasDisabledToilet) items.push({ label: '장애인', value: '가능' })
-    if (d?.hasDiaperChangingTable) items.push({ label: '기저귀대', value: '있음' })
-    if (items.length === 0 && facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
-  } else if (cat === 'wifi') {
-    if (d?.ssid) items.push({ label: 'SSID', value: d.ssid })
-  } else if (cat === 'ev-charger') {
-    // 완속/급속 분포: chgerType '01' 급속, '02','03','04','05','06','07' 완속/AC3상 등
-    const chargers = (d?.chargers || []) as Array<{ chgerType?: string }>
-    if (chargers.length > 0) {
-      const fast = chargers.filter(c => c.chgerType === '01' || c.chgerType === '03').length
-      const slow = chargers.length - fast
-      items.push({ label: '충전기', value: `${chargers.length}대` })
-      if (fast > 0 || slow > 0) items.push({ label: '구성', value: `급속 ${fast} · 완속 ${slow}` })
-    }
-  } else {
-    // 나머지 카테고리: 전화 표시 (clothes)
-    if (facilityPhone.value) items.push({ label: '전화', value: facilityPhone.value })
-  }
+  // toilet의 경우 isOpen24Hours가 '상시' 로직을 포함하므로 details에 isOpen24Hours 결과를 주입
+  const detailsWithMeta = cat === 'toilet'
+    ? { ...details.value, _isOpen24Hours: isOpen24Hours.value }
+    : details.value
 
-  return items
+  const categoryItems = buildHeroStats(cat, detailsWithMeta, facilityPhone.value)
+  return [...commonItems, ...categoryItems]
 })
 
 // 같은 지역 시설 링크
@@ -692,33 +624,6 @@ watch(isMapExpanded, (expanded) => {
   }
 })
 
-// 다양한 형식의 날짜 문자열을 "YYYY-MM-DD"로 정규화
-function formatDataDate(raw: string): string {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
-  if (/^\d{8}/.test(raw)) return `${raw.substring(0, 4)}-${raw.substring(4, 6)}-${raw.substring(6, 8)}`
-  const d = new Date(raw)
-  if (!isNaN(d.getTime())) {
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  }
-  return raw
-}
-
-// Data info card
-const dataDate = computed(() => {
-  if (!facility.value?.details) return null
-  const raw = (facility.value.details as { dataDate?: string | null }).dataDate
-  if (!raw) return null
-  return formatDataDate(raw)
-})
-
-const dataSource = computed<DataSourceInfo | null>(() => {
-  if (!facility.value) return null
-  return FACILITY_DATA_SOURCE[facility.value.category] ?? null
-})
-
 // 카테고리별 최근 동기화 날짜 — secondary fetch에서 sync-status 데이터 사용
 const lastSyncDate = computed(() => {
   if (!facility.value) return null
@@ -763,22 +668,26 @@ const formatPharmacyTime = (start?: string | null, end?: string | null): string 
   return `${s.slice(0, 2)}:${s.slice(2)} ~ ${e.slice(0, 2)}:${e.slice(2)}`
 }
 
-const pharmacyOperatingHours = computed(() => {
+// Pharmacy 요일별 운영시간 표 (오늘 강조)
+const pharmacyWeeklyHours = computed(() => {
   if (facility.value?.category !== 'pharmacy' || !facility.value?.details) return []
   const d = facility.value.details as import('~/types/facility').PharmacyDetails
-  const days = [
-    { day: '월요일', start: d.dutyTime1s, end: d.dutyTime1c },
-    { day: '화요일', start: d.dutyTime2s, end: d.dutyTime2c },
-    { day: '수요일', start: d.dutyTime3s, end: d.dutyTime3c },
-    { day: '목요일', start: d.dutyTime4s, end: d.dutyTime4c },
-    { day: '금요일', start: d.dutyTime5s, end: d.dutyTime5c },
-    { day: '토요일', start: d.dutyTime6s, end: d.dutyTime6c },
-    { day: '일요일', start: d.dutyTime7s, end: d.dutyTime7c },
-    { day: '공휴일', start: d.dutyTime8s, end: d.dutyTime8c },
+  const today = new Date().getDay() // 0=일 ... 6=토
+  const DAY_DEFS = [
+    { label: '월', s: d.dutyTime1s, e: d.dutyTime1c, todayIdx: 1 },
+    { label: '화', s: d.dutyTime2s, e: d.dutyTime2c, todayIdx: 2 },
+    { label: '수', s: d.dutyTime3s, e: d.dutyTime3c, todayIdx: 3 },
+    { label: '목', s: d.dutyTime4s, e: d.dutyTime4c, todayIdx: 4 },
+    { label: '금', s: d.dutyTime5s, e: d.dutyTime5c, todayIdx: 5 },
+    { label: '토', s: d.dutyTime6s, e: d.dutyTime6c, todayIdx: 6 },
+    { label: '일', s: d.dutyTime7s, e: d.dutyTime7c, todayIdx: 0 },
+    { label: '공휴일', s: d.dutyTime8s, e: d.dutyTime8c, todayIdx: -1 },
   ]
-  return days
-    .map(({ day, start, end }) => ({ day, time: formatPharmacyTime(start, end) }))
-    .filter((item): item is { day: string; time: string } => item.time !== null)
+  const rows = DAY_DEFS.map(({ label, s, e, todayIdx }) => {
+    const time = formatPharmacyTime(s, e)
+    return { day: label, time: time ?? '휴무', closed: time === null, isToday: todayIdx === today }
+  })
+  return rows.some(r => !r.closed) ? rows : []
 })
 
 // Hospital operating hours
@@ -933,30 +842,43 @@ const handleShare = async () => {
   }
 }
 
-// 주변 시설
-const { search: searchNearby, facilities: nearbyFacilities, loading: nearbyLoading, searchNearbyCross, crossFacilities, crossLoading } = useFacilitySearch()
+// 주변 시설 — 메인 facility가 lazy라 좌표 확보 위해 상세 1회 재패칭 후 allSettled로 SSR 합류
+const { data: nearbyData, status: nearbyStatus } = await useAsyncData(
+  `nearby-${category.value}-${id.value}`,
+  async () => {
+    const detail = await $fetch<{ success: boolean; data: FacilityDetail }>(
+      `${apiBase}/api/facilities/${category.value}/${id.value}`,
+    ).catch(() => null)
+    const f = detail?.data
+    const crossP = $fetch<{ success: boolean; data: { items: Facility[] } }>(
+      `${apiBase}/api/facilities/${category.value}/${id.value}/nearby`,
+    )
+    const nearbyP = (f?.lat && f?.lng)
+      ? $fetch<{ success: boolean; data: { items: Facility[] } }>(
+          `${apiBase}/api/facilities/search`,
+          {
+            method: 'POST',
+            body: { category: f.category, lat: f.lat, lng: f.lng, radius: 1000, page: 1, limit: 10 },
+          },
+        )
+      : Promise.resolve(null)
+    const [nearbyR, crossR] = await Promise.allSettled([nearbyP, crossP])
+    return {
+      nearby: nearbyR.status === 'fulfilled' ? (nearbyR.value?.data?.items ?? []) : [],
+      cross: crossR.status === 'fulfilled' ? (crossR.value?.data?.items ?? []) : [],
+    }
+  },
+  { lazy: true, default: () => ({ nearby: [] as Facility[], cross: [] as Facility[] }) },
+)
 
-watch(() => facility.value, async (f) => {
-  if (!f?.lat || !f?.lng) return
-  await Promise.all([
-    searchNearby({
-      lat: f.lat,
-      lng: f.lng,
-      category: f.category,
-      radius: 1000,
-      page: 1,
-      limit: 5,
-    }),
-    searchNearbyCross(f.category, f.id),
-  ])
-}, { immediate: true })
+const nearbyPending = computed(() => nearbyStatus.value === 'pending')
 
 const nearbyFiltered = computed(() =>
-  (nearbyFacilities.value ?? []).filter(f => f.id !== facility.value?.id).slice(0, 4)
+  (nearbyData.value?.nearby ?? []).filter(f => f.id !== facility.value?.id).slice(0, 4)
 )
 
 const crossFacilitiesGrouped = computed(() => {
-  const items = crossFacilities?.value ?? []
+  const items = nearbyData.value?.cross ?? []
   if (items.length === 0) return []
 
   const grouped = new Map<string, Array<(typeof items)[number]>>()

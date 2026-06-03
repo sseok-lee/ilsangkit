@@ -157,7 +157,7 @@
 
     <!-- 데이터 출처 -->
     <section>
-      <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
+      <DataSourceSection domain="real-estate" />
     </section>
   </div>
 </template>
@@ -175,7 +175,7 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -379,7 +379,7 @@ async function fetchFacilitySummary(city: string, district?: string) {
 }
 
 // Breadcrumb + ItemList JSON-LD
-const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema, setFAQSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산', url: '/real-estate' },
@@ -392,6 +392,7 @@ setDatasetSchema({
   sources: [REAL_ESTATE_DATA_SOURCE],
   keywords: ['부동산', '실거래가', propertyMeta.value?.label ?? realEstateTypeParam.value, '국토교통부'],
 })
+setFAQSchema(faqs.value.map(f => ({ question: f.q, answer: f.a })))
 
 watch(
   complexes,

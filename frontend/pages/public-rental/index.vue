@@ -12,7 +12,7 @@
 
       <PublicRentalListView />
 
-      <DataSourceCard :source="PUBLIC_RENTAL_DATA_SOURCE" />
+      <DataSourceSection domain="public-rental" />
       <p class="-mt-3 px-1 text-xs text-slate-500 leading-relaxed">
         공공임대 매물 정보는 각 공급기관(LH, SH 등)의 공고를 가공한 자료입니다.
         최신 모집 일정과 자격 조건은 반드시 해당 기관 공고문을 확인하세요.
@@ -23,8 +23,7 @@
 
 <script setup lang="ts">
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import { PUBLIC_RENTAL_DATA_SOURCE } from '~/utils/dataSource'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilterTabs.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 
@@ -54,7 +53,7 @@ useHead({
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
-  { name: '청약·임대', url: `${SITE_URL}/subscription` },
+  { name: '청약 정보', url: `${SITE_URL}/subscription` },
   { name: '공공임대', url: canonicalUrl },
 ])
 

@@ -176,10 +176,7 @@
       </SectionBlock>
 
       <!-- 데이터 정보 -->
-      <DataSourceCard
-        :source="FACILITY_DATA_SOURCE.trash"
-        :data-date="data.details?.lastModified ? formatDataDate(data.details.lastModified) : null"
-      />
+      <DataSourceSection domain="facility" category="trash" />
     </template>
   </div>
 </template>
@@ -191,11 +188,10 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
-import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 
@@ -277,18 +273,6 @@ function formatTimeRange(begin?: string, end?: string): string | null {
   return begin || end || null
 }
 
-function formatDataDate(raw: string): string {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
-  if (/^\d{8}/.test(raw)) return `${raw.substring(0, 4)}-${raw.substring(4, 6)}-${raw.substring(6, 8)}`
-  const d = new Date(raw)
-  if (!isNaN(d.getTime())) {
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  }
-  return raw
-}
 
 function goBack() {
   if (import.meta.client && window.history.length > 1) {

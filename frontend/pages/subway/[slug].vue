@@ -207,9 +207,7 @@
               <CoupangBanner class="md:hidden" />
 
               <!-- Data Source -->
-              <section v-if="categoryDataSource">
-                <DataSourceCard :source="categoryDataSource" />
-              </section>
+              <DataSourceSection domain="facility" category="subway" />
             </article>
 
             <!-- Sidebar -->
@@ -312,17 +310,17 @@ import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import CoupangBanner from '~/components/ads/CoupangBanner.vue'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import FacilityRoadview from '~/components/facility/FacilityRoadview.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
+import { subwayCanonicalUrl } from '~/utils/subwayCanonical'
 import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
-import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
@@ -400,7 +398,6 @@ const regionLink = computed(() => {
 })
 
 const faqItems = computed(() => CATEGORY_FAQ.subway ?? [])
-const categoryDataSource = computed(() => FACILITY_DATA_SOURCE.subway ?? null)
 
 const categoryMetaForNearby = computed(() => ({
   label: CATEGORY_META.subway.label,
@@ -587,6 +584,7 @@ useSeoMeta({
 })
 
 useHead({
+  link: [{ rel: 'canonical', href: subwayCanonicalUrl(slug.value), key: 'canonical' }],
   script: [
     {
       type: 'application/ld+json',

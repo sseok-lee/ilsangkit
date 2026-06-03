@@ -335,12 +335,11 @@
           <AdBanner v-if="facilities.length > 0" class="my-4" />
 
           <!-- Empty State (flat view) -->
-          <div v-if="facilities.length === 0" class="py-16 text-center">
-            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-              <span class="material-symbols-outlined text-[32px] text-slate-500">search_off</span>
-            </div>
-            <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-            <p class="text-slate-500 text-sm mt-1 mb-6">다른 검색어를 입력해보세요</p>
+          <EmptyState
+            v-if="facilities.length === 0"
+            title="검색 결과가 없습니다"
+            description="다른 검색어를 입력해보세요"
+          >
             <div class="flex items-center justify-center gap-3">
               <button
                 v-if="searchKeyword"
@@ -358,19 +357,18 @@
                 홈으로 돌아가기
               </NuxtLink>
             </div>
-          </div>
+          </EmptyState>
 
           <!-- Pagination -->
           <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
         </template>
 
         <!-- Empty State (grouped view) -->
-        <div v-if="!selectedCategory && groupedResults.length === 0 && realEstateResults.length === 0" class="py-16 text-center">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-            <span class="material-symbols-outlined text-[32px] text-slate-500">search_off</span>
-          </div>
-          <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
-          <p class="text-slate-500 text-sm mt-1 mb-5">다른 검색어를 입력해보세요</p>
+        <EmptyState
+          v-if="!selectedCategory && groupedResults.length === 0 && realEstateResults.length === 0"
+          title="검색 결과가 없습니다"
+          description="다른 검색어를 입력해보세요"
+        >
           <div class="flex flex-wrap items-center justify-center gap-2 mb-6">
             <NuxtLink
               v-for="cat in ['toilet', 'hospital', 'parking', 'pharmacy']"
@@ -389,7 +387,7 @@
             <span class="material-symbols-outlined text-[16px]">home</span>
             홈으로 돌아가기
           </NuxtLink>
-        </div>
+        </EmptyState>
       </div>
       </template>
 
@@ -425,9 +423,9 @@ import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META, CATEGORY_GROUPS, isFacilityCategory } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import type { RealEstateType, ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
-import ComplexCard from '~/components/realEstate/ComplexCard.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 
 const route = useRoute()
 const { searchAll: searchRealEstate, getComplexList } = useRealEstate()

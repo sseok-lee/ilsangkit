@@ -144,14 +144,20 @@ describe('ComplexCard', () => {
       expect(href).not.toContain('tab=')
     })
 
-    it('city/district 가 비어 있으면 레거시 URL 로 폴백 (리다이렉트 미들웨어가 해결)', () => {
+    it('city/district 가 비어 있으면 카드를 렌더하지 않는다', () => {
       const noCity: ComplexInfo = { ...mockComplex, city: '', district: '' }
       const wrapper = mount(ComplexCard, {
         props: { complex: noCity, propertyType: 'apt', tab: 'sale' },
       })
-      const href = wrapper.find('a').attributes('href')!
-      expect(href).toContain('/real-estate/apt/')
-      expect(href).toContain('bjdCode=1168010100')
+      expect(wrapper.find('a').exists()).toBe(false)
+    })
+
+    it('city/district 가 null 이면 카드를 렌더하지 않는다', () => {
+      const noCity: ComplexInfo = { ...mockComplex, city: null as any, district: null as any }
+      const wrapper = mount(ComplexCard, {
+        props: { complex: noCity, propertyType: 'apt', tab: 'sale' },
+      })
+      expect(wrapper.find('a').exists()).toBe(false)
     })
   })
 

@@ -44,6 +44,25 @@
           </div>
         </section>
 
+        <!-- 카테고리별 바로가기 -->
+        <section id="categories" class="mb-6">
+          <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-primary text-[22px]">grid_view</span>
+            카테고리별 바로가기
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <NuxtLink
+              v-for="cat in cityCategoryLinks"
+              :key="cat.slug"
+              :to="cat.to"
+              class="group flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 hover:border-primary/30"
+            >
+              <span class="material-symbols-outlined text-primary text-[22px]">{{ cat.icon }}</span>
+              <span class="font-semibold text-slate-900 text-sm">{{ cat.label }}</span>
+            </NuxtLink>
+          </div>
+        </section>
+
         <!-- Ad: District Grid 후 -->
         <div class="mb-6">
           <AdBanner />
@@ -62,6 +81,9 @@
 
         <!-- ④ 교차 CTA -->
         <RegionRealEstateCta :area-name="cityName" />
+
+        <!-- 데이터 출처 -->
+        <DataSourceSection domain="facility" compact class="mt-2" />
       </div>
 
       <!-- 에러 -->
@@ -74,8 +96,11 @@
 
 <script setup lang="ts">
 import { CITY_SLUG_MAP } from '~/composables/useRegions'
+import { CATEGORY_GROUPS, CATEGORY_META } from '~/types/facility'
+import type { FacilityCategory } from '~/types/facility'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -90,6 +115,15 @@ if (!CITY_SLUG_MAP[city.value]) {
 
 // CITY_SLUG_MAP에서 한글 이름
 const cityName = computed(() => CITY_SLUG_MAP[city.value] || city.value)
+
+const cityCategoryLinks = computed(() =>
+  CATEGORY_GROUPS.flatMap(g => g.categories).map((cat) => ({
+    slug: cat,
+    to: `/${cat}?city=${city.value}`,
+    icon: CATEGORY_META[cat as FacilityCategory]?.icon ?? 'place',
+    label: CATEGORY_META[cat as FacilityCategory]?.label ?? cat,
+  })),
+)
 
 // Breadcrumb (시설/부동산 PR과 동일 패턴)
 const breadcrumbItems = computed(() => [
@@ -163,7 +197,7 @@ const realEstateCards = computed(() => {
 // SEO 메타
 const canonicalUrl = `${SITE_URL}/${city.value}`
 useHead(() => {
-  const title = `${cityName.value} 생활 정보·부동산 시세 | 일상킷`
+  const title = `${cityName.value} 부동산 시세·생활 정보 | 일상킷`
   const description = `${cityName.value} 아파트·빌라·오피스텔 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`
   const dynamicOgImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cityName.value)}&title=${encodeURIComponent(title)}`
   return {

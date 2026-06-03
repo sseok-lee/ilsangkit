@@ -3,12 +3,8 @@
     <main class="mx-auto max-w-6xl px-4 py-4 md:px-6 md:py-6 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
-      <div v-if="!rental" class="rounded-xl bg-slate-50 p-12 text-center">
-        <p class="text-slate-600 font-medium">매물 정보를 불러올 수 없습니다</p>
-      </div>
-
       <PublicRentalDetailView
-        v-else
+        v-if="rental"
         :rental="rental"
         :siblings="siblings"
         :nearby="nearby"

@@ -49,7 +49,7 @@ const baseProps = {
   aedOperatingHours: [],
   aedWeeklyHours: [],
   aedWeeklyHoursCount: 0,
-  pharmacyOperatingHours: [],
+  pharmacyWeeklyHours: [],
 }
 
 describe('DetailBasicInfo', () => {
@@ -108,5 +108,21 @@ describe('DetailBasicInfo', () => {
       global: globalConfig,
     })
     expect(wrapper.html()).toContain('tel:02-1234-5678')
+  })
+
+  it('pharmacy는 요일별 운영시간 표(WeekdayHoursTable)를 렌더한다', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('pharmacy', {}),
+        ...baseProps,
+        pharmacyWeeklyHours: [
+          { day: '월', time: '09:00 ~ 18:00', isToday: false, closed: false },
+          { day: '일', time: '휴무', isToday: false, closed: true },
+        ],
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('요일별 운영시간')
+    expect(wrapper.findAll('tbody tr').length).toBeGreaterThanOrEqual(2)
   })
 })

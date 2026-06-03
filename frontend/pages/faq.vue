@@ -1,10 +1,10 @@
 <template>
   <div class="bg-background-light text-slate-900 font-display min-h-screen">
     <div class="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8">
-      <h1 class="text-2xl md:text-3xl font-bold mb-2">자주 묻는 질문</h1>
-      <p class="text-slate-500 text-sm mb-5">
-        일상킷에서 제공하는 부동산 실거래가와 생활시설 정보에 대해 자주 묻는 질문을 모았습니다.
-      </p>
+      <StaticPageHeader
+        title="자주 묻는 질문"
+        lead="일상킷에서 제공하는 부동산 실거래가와 생활시설 정보에 대해 자주 묻는 질문을 모았습니다."
+      />
 
       <AdBanner class="my-3" />
 
@@ -78,6 +78,7 @@
 </template>
 
 <script setup lang="ts">
+import StaticPageHeader from '~/components/common/StaticPageHeader.vue'
 import type { FacilityCategory } from '~/types/facility'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'

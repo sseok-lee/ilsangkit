@@ -62,6 +62,7 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
     datasetName: '건강보험심사평가원 병원 정보',
     provider: '건강보험심사평가원',
     url: 'https://www.data.go.kr/data/15001698/openapi.do',
+    kogl: 1, // 페이지 "출처표시(제1유형)" 명시 확인 (2026-06)
   },
   pharmacy: {
     datasetName: '건강보험심사평가원 약국 정보',
@@ -71,7 +72,7 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
   park: {
     datasetName: '전국 도시공원 표준데이터',
     provider: '행정안전부',
-    url: 'https://www.data.go.kr/data/15012900/standard.do',
+    url: 'https://www.data.go.kr/data/15012890/standard.do',
   },
   school: {
     datasetName: '전국 초중등학교 표준데이터',
@@ -80,8 +81,8 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
   },
   market: {
     datasetName: '전국 전통시장 표준데이터',
-    provider: '중소벤처기업부',
-    url: 'https://www.data.go.kr/data/15012874/standard.do',
+    provider: '소상공인시장진흥공단',
+    url: 'https://www.data.go.kr/data/15012894/standard.do',
   },
   childcare: {
     datasetName: '어린이집정보공시',
@@ -92,6 +93,7 @@ export const FACILITY_DATA_SOURCE: Record<FacilityCategory, DataSourceInfo> = {
     datasetName: '전기차 충전소 운영정보',
     provider: '한국환경공단',
     url: 'https://www.data.go.kr/data/15076352/openapi.do',
+    kogl: 1, // 페이지 "출처표시(제1유형)" 명시 확인 (2026-06)
   },
   sports: {
     datasetName: '전국 공공체육시설 표준데이터',
@@ -111,6 +113,34 @@ export const REAL_ESTATE_DATA_SOURCE: DataSourceInfo = {
   url: 'https://rt.molit.go.kr',
 }
 
+/**
+ * 부동산 실거래가 세부 데이터셋 (공공데이터포털 OpenAPI)
+ * about 페이지 출처 테이블 등 데이터셋 단위 출처 표기가 필요한 곳에서 사용.
+ * 사이트 UI(DataSourceSection)는 요약본 REAL_ESTATE_DATA_SOURCE를 사용.
+ */
+export const REAL_ESTATE_DATASETS: DataSourceInfo[] = [
+  {
+    datasetName: '아파트 매매 실거래가 자료',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15057511/openapi.do',
+  },
+  {
+    datasetName: '아파트 전월세 실거래가 자료',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15058017/openapi.do',
+  },
+  {
+    datasetName: '연립다세대 매매·전월세 실거래가 자료',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15058038/openapi.do',
+  },
+  {
+    datasetName: '오피스텔 매매·전월세 실거래가 자료',
+    provider: '국토교통부',
+    url: 'https://www.data.go.kr/data/15058452/openapi.do',
+  },
+]
+
 export const SUBSCRIPTION_DATA_SOURCE: DataSourceInfo = {
   datasetName: '한국부동산원_청약Home 청약정보 API',
   provider: '한국부동산원',
@@ -122,4 +152,24 @@ export const PUBLIC_RENTAL_DATA_SOURCE: DataSourceInfo = {
   provider: '한국토지주택공사(LH) · 서울주택도시공사(SH)',
   url: 'https://www.lh.or.kr',
   // kogl: TBD — LH/SH 공공누리 유형 확인 후 채워주세요
+}
+
+export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'public-rental'
+
+export function resolveDataSource(input: {
+  domain: DataSourceDomain
+  category?: FacilityCategory
+}): DataSourceInfo | null {
+  switch (input.domain) {
+    case 'facility':
+      return input.category ? (FACILITY_DATA_SOURCE[input.category] ?? null) : null
+    case 'real-estate':
+      return REAL_ESTATE_DATA_SOURCE
+    case 'subscription':
+      return SUBSCRIPTION_DATA_SOURCE
+    case 'public-rental':
+      return PUBLIC_RENTAL_DATA_SOURCE
+    default:
+      return null
+  }
 }

@@ -56,7 +56,7 @@
       </SectionBlock>
 
       <section>
-        <DataSourceCard :source="REAL_ESTATE_DATA_SOURCE" />
+        <DataSourceSection domain="real-estate" />
       </section>
     </main>
   </div>
@@ -66,7 +66,7 @@
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
-import DataSourceCard from '~/components/common/DataSourceCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
@@ -127,13 +127,13 @@ useHead({
 
 const realEstateFAQs = [
   { question: '실거래가란 무엇인가요?', answer: '실거래가는 부동산 거래 시 실제로 거래된 금액으로, 국토교통부에 신고된 공식 데이터입니다.' },
-  { question: '실거래가 데이터는 얼마나 자주 업데이트되나요?', answer: '국토교통부 실거래가 공개시스템을 통해 매월 업데이트됩니다.' },
+  { question: '실거래가 데이터는 얼마나 자주 업데이트되나요?', answer: '국토교통부 실거래가 공개시스템의 데이터를 매일 수집하여 업데이트합니다.' },
   { question: '아파트, 빌라, 오피스텔의 차이는 무엇인가요?', answer: '아파트는 5층 이상 공동주택, 빌라는 4층 이하 다세대/다가구 주택, 오피스텔은 업무와 주거를 겸할 수 있는 건물입니다.' },
   { question: '전세와 월세의 차이는 무엇인가요?', answer: '전세는 보증금을 맡기고 월 임대료 없이 거주하는 방식이고, 월세는 보증금과 함께 매월 임대료를 지불하는 방식입니다.' },
 ]
 
 // Breadcrumb + ItemList JSON-LD
-const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema } = useStructuredData()
+const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema, setFAQSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
@@ -153,4 +153,5 @@ setDatasetSchema({
   sources: [REAL_ESTATE_DATA_SOURCE],
   keywords: ['부동산', '실거래가', '아파트', '빌라', '오피스텔', '국토교통부'],
 })
+setFAQSchema(realEstateFAQs)
 </script>
