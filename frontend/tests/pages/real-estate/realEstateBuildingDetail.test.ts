@@ -190,7 +190,7 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(breadcrumbs.length).toBe(1)
   })
 
-  it('noindex 조건(buildingInfo=null)에서도 canonical link가 출력되어야 한다', async () => {
+  it('noindex 조건(buildingInfo=null)에서 canonical link가 출력되지 않아야 한다 (policy compliance)', async () => {
     // shouldNoindexRealEstateDetail이 true를 반환하도록 재모킹
     const { shouldNoindexRealEstateDetail } = await import('~/utils/realEstateNoindex')
     vi.mocked(shouldNoindexRealEstateDetail).mockReturnValue(true)
@@ -204,11 +204,29 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(useHeadSpy).toHaveBeenCalled()
     const headArg = useHeadSpy.mock.calls[useHeadSpy.mock.calls.length - 1][0]
     const resolved = typeof headArg === 'function' ? headArg() : headArg
-    expect(resolved.link).toEqual(
-      expect.arrayContaining([expect.objectContaining({ rel: 'canonical' })]),
-    )
+    // noindex 페이지에서는 canonical link가 없어야 한다 (noindex-canonical-policy.md)
+    const hasCanonical = (resolved.link ?? []).some((l: any) => l.rel === 'canonical')
+    expect(hasCanonical).toBe(false)
 
     // 복원
     vi.mocked(shouldNoindexRealEstateDetail).mockReturnValue(false)
+  })
+
+  it('indexable 조건에서는 canonical link가 출력되어야 한다', async () => {
+    const { shouldNoindexRealEstateDetail } = await import('~/utils/realEstateNoindex')
+    vi.mocked(shouldNoindexRealEstateDetail).mockReturnValue(false)
+
+    ;(globalThis as any).useHead = vi.fn()
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    await mountSuspended(m.default)
+
+    const useHeadSpy = (globalThis as any).useHead as ReturnType<typeof vi.fn>
+    expect(useHeadSpy).toHaveBeenCalled()
+    const headArg = useHeadSpy.mock.calls[useHeadSpy.mock.calls.length - 1][0]
+    const resolved = typeof headArg === 'function' ? headArg() : headArg
+    expect(resolved.link).toEqual(
+      expect.arrayContaining([expect.objectContaining({ rel: 'canonical' })]),
+    )
   })
 })

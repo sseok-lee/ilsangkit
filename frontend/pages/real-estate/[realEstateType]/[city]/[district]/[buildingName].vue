@@ -642,15 +642,14 @@ useHead(() => {
     { property: 'og:image:width', content: ogImageWidth },
     { property: 'og:image:height', content: ogImageHeight },
   ]
-  // noindex/canonical 정책: noindex 여부와 무관하게 canonical 을 항상 출력한다.
-  // 구글/네이버 모두 noindex+canonical 조합을 허용하며, canonical 을 유지해야 백링크 가치가 회수된다.
   if (noindex.value) {
     meta.push({ name: 'robots', content: 'noindex, follow' })
   }
+  // noindex-canonical-policy.md: noindex 페이지는 canonical 을 출력하지 않는다 (신호 충돌 방지)
   return {
     title,
     meta,
-    link: [{ rel: 'canonical', href: canonicalUrl }],
+    ...(noindex.value ? {} : { link: [{ rel: 'canonical', href: canonicalUrl }] }),
   }
 })
 
