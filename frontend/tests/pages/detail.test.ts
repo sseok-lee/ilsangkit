@@ -164,7 +164,7 @@ describe('DetailPage', () => {
       global: { stubs: globalStubs },
     })
 
-    expect(wrapper.text()).toContain('로딩')
+    expect(wrapper.text()).toContain('불러오는 중')
   })
 
   it('실제 404 에러 시 createError로 404 반환', async () => {

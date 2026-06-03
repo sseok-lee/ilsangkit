@@ -6,6 +6,7 @@ import type { FacilityCategory } from '~/types/facility'
 export const SITE_NAME = '일상킷'
 export const SITE_URL = 'https://ilsangkit.co.kr'
 export const SITE_DESCRIPTION = '아파트·빌라·오피스텔 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.'
+export const SITE_TAGLINE = '부동산 실거래가·청약·내 주변 생활정보'
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.webp`
 
 export function getCurrentYearMonth(): string {
@@ -100,22 +101,22 @@ export const CATEGORY_CTA: Record<FacilityCategory, string> = {
 }
 
 export const CATEGORY_SEO_TITLE: Record<FacilityCategory, string> = {
-  hospital:     '병원 찾기 - 근처 병원 진료과·진료시간을 지도에서 확인',
-  pharmacy:     '약국 찾기 - 근처 약국 영업시간·야간약국을 지도에서 확인',
-  parking:      '공영주차장 찾기 - 근처 주차장 요금·운영시간을 지도에서 확인',
-  toilet:       '공중화장실 찾기 - 근처 화장실 위치·개방시간을 지도에서 확인',
-  aed:          '자동심장충격기(AED) 찾기 - 근처 AED 위치를 지도에서 확인',
-  library:      '공공도서관 찾기 - 근처 도서관 운영시간·휴관일을 지도에서 확인',
+  hospital:     '병원 찾기 - 근처 병원 진료과·진료시간 확인',
+  pharmacy:     '약국 찾기 - 근처 약국 영업시간·야간약국 확인',
+  parking:      '공영주차장 찾기 - 근처 주차장 요금·운영시간 확인',
+  toilet:       '공중화장실 찾기 - 근처 화장실 위치·개방시간 확인',
+  aed:          '자동심장충격기(AED) 찾기 - 근처 AED 위치 확인',
+  library:      '공공도서관 찾기 - 근처 도서관 운영시간·휴관일 확인',
   clothes:      '의류수거함 찾기 - 근처 헌 옷 수거함 위치·배출 방법 안내',
   trash:        '쓰레기 배출 안내 - 지역별 분리수거 요일·방법을 동별로 확인',
-  park:         '공원 찾기 - 근처 공원 산책로·운동시설·위치를 지도에서 확인',
-  school:       '학교 찾기 - 근처 초중고 위치·설립유형 정보를 지도에서 확인',
-  market:       '전통시장 찾기 - 근처 시장 장날·위치·상점 정보를 지도에서 확인',
-  childcare:    '어린이집 찾기 - 근처 어린이집 정원·유형·위치를 지도에서 확인',
-  'ev-charger': '전기차 충전소 찾기 - 근처 충전기 종류·이용시간을 지도에서 확인',
-  sports:       '공공체육시설 찾기 - 근처 체육관·수영장 위치를 지도에서 확인',
-  wifi:         '공공 와이파이 찾기 - 근처 무료 와이파이 위치를 지도에서 확인',
-  subway:       '지하철역 찾기 - 근처 지하철역 위치·노선·환승 정보를 지도에서 확인',
+  park:         '공원 찾기 - 근처 공원 산책로·운동시설·위치 확인',
+  school:       '학교 찾기 - 근처 초중고 위치·설립유형 정보 확인',
+  market:       '전통시장 찾기 - 근처 시장 장날·위치·상점 정보 확인',
+  childcare:    '어린이집 찾기 - 근처 어린이집 정원·유형·위치 확인',
+  'ev-charger': '전기차 충전소 찾기 - 근처 충전기 종류·이용시간 확인',
+  sports:       '공공체육시설 찾기 - 근처 체육관·수영장 위치 확인',
+  wifi:         '공공 와이파이 찾기 - 근처 무료 와이파이 위치 확인',
+  subway:       '지하철역 찾기 - 근처 지하철역 위치·노선·환승 정보 확인',
 }
 
 export const CATEGORY_SEO_DESCRIPTION: Record<FacilityCategory, string> = {

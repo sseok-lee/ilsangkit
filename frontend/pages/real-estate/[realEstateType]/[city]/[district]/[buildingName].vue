@@ -4,7 +4,7 @@
     <div v-if="ssrLoading" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
       <div class="text-center">
         <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p class="text-gray-600">로딩 중...</p>
+        <p class="text-gray-600">{{ UI_MESSAGES.loading }}</p>
       </div>
     </div>
 
@@ -281,7 +281,7 @@
           :hide-building="true"
         />
         <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
-          거래 내역이 없습니다.
+          {{ emptyFiltered('거래 내역') }}
         </div>
 
         <!-- 페이지네이션 -->
@@ -432,6 +432,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
@@ -641,15 +642,14 @@ useHead(() => {
     { property: 'og:image:width', content: ogImageWidth },
     { property: 'og:image:height', content: ogImageHeight },
   ]
-  // noindex/canonical 정책: noindex 여부와 무관하게 canonical 을 항상 출력한다.
-  // 구글/네이버 모두 noindex+canonical 조합을 허용하며, canonical 을 유지해야 백링크 가치가 회수된다.
   if (noindex.value) {
     meta.push({ name: 'robots', content: 'noindex, follow' })
   }
+  // noindex-canonical-policy.md: noindex 페이지는 canonical 을 출력하지 않는다 (신호 충돌 방지)
   return {
     title,
     meta,
-    link: [{ rel: 'canonical', href: canonicalUrl }],
+    ...(noindex.value ? {} : { link: [{ rel: 'canonical', href: canonicalUrl }] }),
   }
 })
 
@@ -667,7 +667,7 @@ const listUrl = toRealEstateListUrl({ type: realEstateType, city: cityName, dist
 const typeHubPath = `/real-estate/${realEstateType}`
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
-  { name: '부동산', url: '/real-estate' },
+  { name: '부동산 실거래가', url: '/real-estate' },
   { name: `${propertyMeta.value?.label ?? ''} ${tabLabel.value}`, url: typeHubPath },
   { name: cityName, url: `/real-estate/${realEstateType}/${citySlugParam}` },
   { name: districtName, url: listUrl },
@@ -677,7 +677,7 @@ setBreadcrumbSchema([
 // Breadcrumb 컴포넌트용 아이템
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
-  { label: '부동산', href: '/real-estate', current: false },
+  { label: '부동산 실거래가', href: '/real-estate', current: false },
   { label: `${propertyMeta.value?.label ?? ''} ${tabLabel.value}`, href: typeHubPath, current: false },
   { label: cityName, href: `/real-estate/${realEstateType}/${citySlugParam}`, current: false },
   { label: districtName, href: listUrl, current: false },
@@ -840,7 +840,7 @@ const heroStats = computed(() => {
   const recent = latestPrice.value !== '-' ? latestPrice.value : PLACEHOLDER
   if (currentTab.value === 'sale') {
     return [
-      { label: '최근 매매가', value: recent },
+      { label: '최근 거래가', value: recent },
       { label: '최근 거래일', value: dealDate },
       { label: '건축년도', value: buildingInfo.value?.buildYear ? `${buildingInfo.value.buildYear}년` : PLACEHOLDER },
       area,
@@ -1024,16 +1024,16 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
           body: { lat: resolvedBuildingInfo.lat, lng: resolvedBuildingInfo.lng, radius: 1000 },
         })
         const facilityItems: any[] = (facilityRes as any)?.data?.items ?? (facilityRes as any)?.items ?? []
-        const DISPLAY_CATS = ['school', 'childcare', 'park', 'sports', 'hospital', 'pharmacy'] as const
+        const DISPLAY_CATS = ['school', 'hospital', 'park', 'childcare', 'sports', 'pharmacy'] as const
         const FACILITY_LABELS: Record<string, string> = {
-          school: '학교', childcare: '어린이집', park: '공원', sports: '체육시설', hospital: '병원', pharmacy: '약국',
+          school: '학교', hospital: '병원', park: '공원', childcare: '어린이집', sports: '체육시설', pharmacy: '약국',
         }
         const parts = DISPLAY_CATS
           .map(cat => ({ cat, count: facilityItems.filter((i: any) => i.category === cat).length }))
           .filter(({ count }) => count > 0)
-          .slice(0, 3)
+          .slice(0, 2)
           .map(({ cat, count }) => `${FACILITY_LABELS[cat]} ${count}곳`)
-        if (parts.length > 0) facilitySummarySSR = parts.join(', ') + ' 등 생활시설'
+        if (parts.length > 0) facilitySummarySSR = parts.join('·')
       } catch {
         // best-effort — facility summary is optional SEO enhancement
       }

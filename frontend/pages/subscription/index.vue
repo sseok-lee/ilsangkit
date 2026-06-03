@@ -42,7 +42,7 @@
           </div>
         </template>
         <template #right>
-          <NuxtLink to="/subscription/sale" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
+          <NuxtLink to="/subscription/sale" class="ml-auto text-sm text-primary hover:underline">전체보기 →</NuxtLink>
         </template>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <NuxtLink
@@ -69,7 +69,7 @@
           </div>
         </template>
         <template #right>
-          <NuxtLink to="/subscription/rent" class="ml-auto text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
+          <NuxtLink to="/subscription/rent" class="ml-auto text-sm text-primary hover:underline">전체보기 →</NuxtLink>
         </template>
         <div class="space-y-5">
           <div v-for="group in rentGroups" :key="group" class="space-y-2.5" :data-test-group="group">
@@ -163,9 +163,10 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, SUBSCRIPTION_HUB_DESCRIPTION, type RentGroup } from '~/utils/subscriptionMeta'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 
 const rentGroups: RentGroup[] = ['apply']
 import type { Subscription } from '~/types/subscription'
@@ -173,32 +174,17 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useSubscription } from '~/composables/useSubscription'
 import { useAnalytics } from '~/composables/useAnalytics'
 
-const title = '청약 일정·분양정보 | 분양·임대 전체 조회 | 일상킷'
-const description = SUBSCRIPTION_HUB_DESCRIPTION
-const canonicalUrl = `${SITE_URL}/subscription`
 const heroStats = [
   { label: '분양', value: '아파트·오피스텔·무순위' },
   { label: '임대', value: '공공·민간임대' },
   { label: '상태', value: '청약중·접수예정' },
 ]
 
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: '청약 일정·분양정보',
+  description: SUBSCRIPTION_HUB_DESCRIPTION,
+  path: '/subscription',
 })
 
 const faqs = [

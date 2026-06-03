@@ -18,7 +18,7 @@
       <LoadingSkeleton v-if="loading" variant="card" />
 
       <div v-else-if="error" class="rounded-xl bg-red-50 p-8 text-center">
-        <p class="text-red-700 font-semibold">데이터를 불러오는 중 오류가 발생했습니다</p>
+        <p class="text-red-700 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
         <button
           class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
           @click="reload"
@@ -28,7 +28,7 @@
       </div>
 
       <div v-else-if="items.length === 0" class="rounded-xl bg-slate-50 p-12 text-center">
-        <p class="text-slate-600 font-medium">조건에 맞는 매물이 없습니다</p>
+        <p class="text-slate-600 font-medium">{{ emptyFiltered('매물') }}</p>
         <p class="text-slate-500 text-sm mt-1">지역 필터를 다른 값으로 바꿔보세요</p>
       </div>
 
@@ -53,6 +53,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { usePublicRental } from '~/composables/usePublicRental'
+import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import type { PublicRentalComplex, PublicRentalType } from '~/types/publicRental'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 import RegionCascadingDropdown from '~/components/common/RegionCascadingDropdown.vue'

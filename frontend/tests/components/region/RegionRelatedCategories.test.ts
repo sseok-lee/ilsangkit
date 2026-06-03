@@ -39,7 +39,7 @@ describe('RegionRelatedCategories', () => {
     })
     expect(wrapper.findAll('a')).toHaveLength(0)
     // SectionBlock heading 자체는 렌더됨
-    expect(wrapper.text()).toContain('이 지역 다른 카테고리')
+    expect(wrapper.text()).toContain('관련 탐색')
   })
 
   it('data-testid="region-related-categories"로 식별 가능', () => {

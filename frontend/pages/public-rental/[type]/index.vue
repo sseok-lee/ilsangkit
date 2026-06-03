@@ -16,9 +16,10 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { LH_RENTAL_TYPES, type LhRentalTypeKey } from '~/utils/subscriptionMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilterTabs.vue'
 
 const route = useRoute()
@@ -29,33 +30,18 @@ if (!typeMeta) {
   throw createError({ statusCode: 404, statusMessage: '존재하지 않는 공공임대 카테고리입니다' })
 }
 
-const title = `${typeMeta.label} | 공공임대 | 일상킷`
-const description = `${typeMeta.label} - ${typeMeta.description}`
-const canonicalUrl = `${SITE_URL}/public-rental/${type}`
+const { setMeta } = useFacilityMeta()
 
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+setMeta({
+  title: typeMeta.label,
+  description: `${typeMeta.label} - ${typeMeta.description}`,
+  path: `/public-rental/${type}`,
 })
 
 const { setBreadcrumbSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
   { name: '공공임대', url: `${SITE_URL}/public-rental` },
-  { name: typeMeta.label, url: canonicalUrl },
+  { name: typeMeta.label, url: `${SITE_URL}/public-rental/${type}` },
 ])
 </script>

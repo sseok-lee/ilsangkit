@@ -1,7 +1,7 @@
 <template>
   <div class="bg-background-light">
     <main class="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8 space-y-6">
-      <div v-if="loading" class="py-16 text-center text-slate-400 text-sm">불러오는 중…</div>
+      <div v-if="loading" class="py-16 text-center text-slate-400 text-sm">{{ UI_MESSAGES.loading }}</div>
       <div v-else-if="error" class="py-16 text-center text-rose-500 text-sm">{{ error }}</div>
       <template v-else-if="detail">
         <header class="bg-white border border-slate-200 rounded-xl p-5 md:p-6 space-y-3">
@@ -154,10 +154,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useRentalAnnouncements } from '~/composables/useRentalAnnouncements'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { AnnouncementStatus } from '~/types/publicRentalAnnouncement'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 
 const STATUS_LABEL: Record<AnnouncementStatus, string> = {
   ongoing: '모집중',
@@ -222,30 +224,23 @@ const totalSupply = computed(() => {
 
 const canonicalUrl = `${SITE_URL}/public-rental/announcements/${encodeURIComponent(pblancId)}`
 
-useHead(() => {
-  const title = `${ann.pblancNm} | 공공임대 모집공고 | 일상킷`
-  const description = `${ann.suplyInsttNm ?? '공공기관'}의 ${ann.suplyTyNm ?? '공공임대'} 모집공고. 접수기간·공급세대수·관련 단지 정보를 확인하세요.`
-  const isClosed = ann.status === 'closed'
-  const meta: Array<Record<string, string>> = [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'article' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-  ]
-  if (isClosed) {
-    meta.push({ name: 'robots', content: 'noindex, follow' })
-  }
-  return {
-    title,
-    meta,
-    // noindex 페이지에서는 canonical 제거(신호 충돌 방지)
-    link: isClosed ? [] : [{ rel: 'canonical', href: canonicalUrl }],
-  }
+const isClosed = ann.status === 'closed'
+const annDescription = `${ann.suplyInsttNm ?? '공공기관'}의 ${ann.suplyTyNm ?? '공공임대'} 모집공고. 접수기간·공급세대수·관련 단지 정보를 확인하세요.`
+
+const { setMeta } = useFacilityMeta()
+
+setMeta({
+  title: ann.pblancNm,
+  description: annDescription,
+  path: `/public-rental/announcements/${encodeURIComponent(pblancId)}`,
+  type: 'article',
+  // noindex 페이지에서는 canonical 제거(신호 충돌 방지)
+  canonical: isClosed ? false : undefined,
 })
+
+if (isClosed) {
+  useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
+}
 
 // Breadcrumb JSON-LD
 setBreadcrumbSchema([

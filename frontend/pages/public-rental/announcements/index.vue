@@ -48,10 +48,10 @@
       </div>
 
       <!-- 목록 -->
-      <div v-if="loading" class="py-12 text-center text-slate-400 text-sm">불러오는 중…</div>
+      <div v-if="loading" class="py-12 text-center text-slate-400 text-sm">{{ UI_MESSAGES.loading }}</div>
       <div v-else-if="error" class="py-12 text-center text-rose-500 text-sm">{{ error }}</div>
       <div v-else-if="items.length === 0" class="py-12 text-center text-slate-400 text-sm">
-        해당 조건의 모집공고가 없습니다.
+        {{ emptyFiltered('모집공고') }}
       </div>
       <ul v-else class="grid gap-3 md:grid-cols-2">
         <li
@@ -104,9 +104,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRentalAnnouncements } from '~/composables/useRentalAnnouncements'
+import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { AnnouncementStatus } from '~/types/publicRentalAnnouncement'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilterTabs.vue'
 
 const STATUS_FILTERS: Array<{ value: AnnouncementStatus | undefined; label: string }> = [
@@ -189,22 +190,11 @@ setItemListSchema(
   })),
 )
 
-const title = '공공임대 모집공고 | 일상킷'
-const description = 'LH·SH·GH 등 공공기관 입주자 모집공고를 한눈에. 진행중·예정·마감 공고를 시기별로 확인하고 단지별 모집 정보를 비교하세요.'
-const canonicalUrl = `${SITE_URL}/public-rental/announcements`
+const { setMeta } = useFacilityMeta()
 
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+setMeta({
+  title: '공공임대 모집공고',
+  description: 'LH·SH·GH 등 공공기관 입주자 모집공고를 한눈에. 진행중·예정·마감 공고를 시기별로 확인하고 단지별 모집 정보를 비교하세요.',
+  path: '/public-rental/announcements',
 })
 </script>

@@ -23,6 +23,14 @@ vi.mock('~/composables/useStructuredData', () => ({
   }),
 }))
 
+vi.mock('~/utils/seoConstants', () => ({
+  SITE_URL: 'https://ilsangkit.co.kr',
+  SITE_NAME: '일상킷',
+  SITE_TAGLINE: '생활정보 플랫폼',
+  SITE_DESCRIPTION: '일상킷 - 생활정보 플랫폼',
+  DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
+}))
+
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()

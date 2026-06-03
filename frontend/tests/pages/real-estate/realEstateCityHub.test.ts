@@ -40,6 +40,8 @@ vi.mock('~/shared/regionSlugs', () => ({
 vi.mock('~/utils/seoConstants', () => ({
   SITE_URL: 'https://ilsangkit.co.kr',
   SITE_NAME: '일상킷',
+  SITE_TAGLINE: '생활정보 플랫폼',
+  SITE_DESCRIPTION: '일상킷 - 생활정보 플랫폼',
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
 }))
 
@@ -98,7 +100,7 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
   it('breadcrumb item[1]이 부동산 허브를 가리켜야 한다', async () => {
     await mountPage()
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
-    expect(crumbs[1].name).toBe('부동산')
+    expect(crumbs[1].name).toBe('부동산 실거래가')
     expect(crumbs[1].url).toContain('/real-estate')
   })
 
@@ -125,6 +127,15 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
     expect(text).toContain('서울')        // cityName
     expect(text).toContain('아파트')       // 타입 라벨
     expect(text).toContain('국토교통부')   // 데이터 출처 문구
+  })
+
+  it('meta title uses compact city name — no 특별시/광역시/도 suffix (Fix 4)', async () => {
+    const wrapper = await mountPage()
+    // CITY_SLUG_MAP['seoul'] = '서울' (compact). Rendered text must never contain full suffix.
+    const text = wrapper.text()
+    expect(text).not.toMatch(/특별시|특별자치시|광역시|특별자치도/)
+    // Compact city name appears in rendered content
+    expect(text).toContain('서울')
   })
 
   it('주요 단지 섹션을 ComplexCard로 렌더한다', async () => {

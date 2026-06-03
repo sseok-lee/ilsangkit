@@ -6,7 +6,7 @@
       <div v-if="loading" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p class="text-gray-600">로딩 중...</p>
+          <p class="text-gray-600">{{ UI_MESSAGES.loading }}</p>
         </div>
       </div>
 
@@ -305,6 +305,7 @@ definePageMeta({})
 
 import { computed, defineAsyncComponent, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'

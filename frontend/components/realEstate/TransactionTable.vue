@@ -50,7 +50,7 @@
       v-else-if="transactions.length === 0"
       class="flex items-center justify-center py-16 text-slate-500 text-sm"
     >
-      거래 내역이 없습니다
+      {{ emptyFiltered('거래 내역') }}
     </div>
 
     <!-- 매매 거래 내역 -->
@@ -346,6 +346,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { SaleTransaction, RentTransaction } from '~/types/realEstate'
+import { emptyFiltered } from '~/utils/uiMessages'
 import { formatKoreanPrice } from '~/utils/formatters'
 
 interface Column {

@@ -151,7 +151,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // 지하철 — 약 1100개 항목으로 단일 청크. Phase 1은 noindex이지만 chunk는 생성.
+  // 지하철 — 약 1100개 항목으로 단일 청크. self-canonical + sitemap 등록으로 정식 색인 대상.
   try {
     const subwayItems = await fetchSubwaySlugs()
     if (subwayItems.length > 0) {

@@ -14,10 +14,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { computed, watch } from 'vue'
+import { SITE_URL } from '~/utils/seoConstants'
 import { LH_RENTAL_TYPES, type LhRentalTypeKey } from '~/utils/subscriptionMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useApiBase } from '~/composables/useApiBase'
 import { fmtDeposit, fmtRent, isJeonseRental, rentalTypeToSlug } from '~/utils/publicRentalMeta'
 import { PUBLIC_RENTAL_FAQ } from '~/utils/publicRentalContent'
@@ -105,13 +106,6 @@ const cityShort = computed(() => {
   return rental.value.city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
 })
 
-const seoTitle = computed(() => {
-  const r = rental.value
-  if (!r) return `${typeMeta.label} | 공공임대 | 일상킷`
-  const region = `${cityShort.value} ${r.district}`.trim()
-  return `${displayName.value} ${r.rentalType} · ${region} | 공공임대 | 일상킷`
-})
-
 const seoDescription = computed(() => {
   const r = rental.value
   if (!r) return typeMeta.description
@@ -129,31 +123,30 @@ const seoDescription = computed(() => {
 
 const ogImageUrl = computed(() => {
   const r = rental.value
-  if (!r?.lat || !r?.lng) return DEFAULT_OG_IMAGE
+  if (!r?.lat || !r?.lng) return null
   return `${SITE_URL}/og-map?lat=${r.lat}&lng=${r.lng}&label=${encodeURIComponent(displayName.value)}&category=public-rental&title=${encodeURIComponent(displayName.value)}`
 })
-const hasMapImage = computed(() => ogImageUrl.value !== DEFAULT_OG_IMAGE)
+const hasMapImage = computed(() => ogImageUrl.value !== null)
 
-useHead(() => ({
-  title: seoTitle.value,
-  meta: [
-    { name: 'description', content: seoDescription.value },
-    { property: 'og:title', content: seoTitle.value },
-    { property: 'og:description', content: seoDescription.value },
-    { property: 'og:image', content: ogImageUrl.value },
-    { property: 'og:image:width', content: hasMapImage.value ? '1024' : '1200' },
-    { property: 'og:image:height', content: hasMapImage.value ? '536' : '630' },
-    { property: 'og:url', content: canonicalUrl.value },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: seoTitle.value },
-    { name: 'twitter:description', content: seoDescription.value },
-    { name: 'twitter:image', content: ogImageUrl.value },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl.value }],
-}))
+const { setMeta } = useFacilityMeta()
+
+function applyDetailMeta() {
+  setMeta({
+    title: `${displayName.value} ${rental.value?.rentalType ?? ''}`.trim(),
+    description: seoDescription.value,
+    path: `/public-rental/${typeParam}/${idParam}`,
+    canonical: canonicalUrl.value,
+    image: hasMapImage.value ? (ogImageUrl.value ?? undefined) : undefined,
+    imageWidth: hasMapImage.value ? 1024 : undefined,
+    imageHeight: hasMapImage.value ? 536 : undefined,
+  })
+}
+
+applyDetailMeta()
+
+watch([displayName, seoDescription, canonicalUrl, hasMapImage], () => {
+  applyDetailMeta()
+})
 
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },

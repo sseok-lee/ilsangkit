@@ -7,6 +7,7 @@ vi.stubGlobal('useHead', mockUseHead)
 vi.mock('~/utils/seoConstants', () => ({
   SITE_NAME: '일상킷',
   SITE_URL: 'https://ilsangkit.co.kr',
+  DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og-image.webp',
 }))
 
 // CATEGORY_META mock
@@ -399,7 +400,7 @@ describe('useStructuredData', () => {
       expect(parsed.mainEntityOfPage).toBe('https://ilsangkit.co.kr/x')
     })
 
-    it('recentAvg → offers (Offer/KRW/InStock)', () => {
+    it('recentAvg → recentAveragePrice additionalProperty (offers 제거됨)', () => {
       const { setRealEstateListingSchema } = useStructuredData()
       setRealEstateListingSchema({
         name: '래미안',
@@ -412,12 +413,13 @@ describe('useStructuredData', () => {
       })
       const factory = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(factory().script[0].innerHTML)
-      expect(parsed.offers).toEqual({
-        '@type': 'Offer',
-        price: 1_500_000_000,
-        priceCurrency: 'KRW',
-        availability: 'https://schema.org/InStock',
-      })
+      // offers 블록은 더 이상 포함되지 않는다 (역사적 평균가를 현재 재고처럼 표현하면 오해 소지)
+      expect(parsed.offers).toBeUndefined()
+      // 대신 additionalProperty 에 recentAveragePrice 로 추가된다
+      const avgProp = parsed.additionalProperty.find((p: { name: string }) => p.name === 'recentAveragePrice')
+      expect(avgProp).toBeDefined()
+      expect(avgProp['@type']).toBe('PropertyValue')
+      expect(avgProp.value).toBe('1500000000')
     })
 
     it('latestDealDate → datePosted', () => {
@@ -434,6 +436,255 @@ describe('useStructuredData', () => {
       const factory = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(factory().script[0].innerHTML)
       expect(parsed.datePosted).toBe('2026-04-01')
+    })
+  })
+
+  // ─── P1-4: setRealEstateListingSchema offers 제거 ──────────────────────────
+
+  describe('setRealEstateListingSchema - offers 제거', () => {
+    it('recentAvg 없을 때도 offers 는 undefined 이다', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema({
+        name: '래미안',
+        address: '서울 마포구',
+        city: '서울특별시',
+        district: '마포구',
+        propertyType: '아파트',
+        url: 'https://ilsangkit.co.kr/x',
+      })
+      const factory = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(factory().script[0].innerHTML)
+      expect(parsed.offers).toBeUndefined()
+    })
+
+    it('recentAvg 있을 때도 offers 는 undefined 이다 (역사적 평균가는 InStock 으로 표현 불가)', () => {
+      const { setRealEstateListingSchema } = useStructuredData()
+      setRealEstateListingSchema({
+        name: '래미안',
+        address: '서울 마포구',
+        city: '서울특별시',
+        district: '마포구',
+        propertyType: '아파트',
+        url: 'https://ilsangkit.co.kr/x',
+        recentAvg: 900_000_000,
+      })
+      const factory = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(factory().script[0].innerHTML)
+      expect(parsed.offers).toBeUndefined()
+    })
+  })
+
+  // ─── P0-1a/1b: setArticleSchema publisher.logo + image fallback ────────────
+
+  describe('setArticleSchema - publisher.logo + image fallback', () => {
+    it('publisher에 logo ImageObject가 포함된다', () => {
+      const { setArticleSchema } = useStructuredData()
+      setArticleSchema({
+        headline: '테스트 가이드',
+        description: '테스트 설명',
+        datePublished: '2024-01-01T00:00:00Z',
+        url: 'https://ilsangkit.co.kr/guide/test',
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.publisher['@type']).toBe('Organization')
+      expect(parsed.publisher.logo).toBeDefined()
+      expect(parsed.publisher.logo['@type']).toBe('ImageObject')
+      expect(parsed.publisher.logo.url).toBeTruthy()
+      expect(parsed.publisher.logo.url).toContain('logo.webp')
+    })
+
+    it('options.image 가 있으면 schema.image 에 그대로 사용된다', () => {
+      const { setArticleSchema } = useStructuredData()
+      setArticleSchema({
+        headline: '테스트',
+        description: '설명',
+        datePublished: '2024-01-01T00:00:00Z',
+        url: 'https://ilsangkit.co.kr/guide/test',
+        image: 'https://ilsangkit.co.kr/uploads/custom.jpg',
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.image).toBe('https://ilsangkit.co.kr/uploads/custom.jpg')
+    })
+
+    it('options.image 가 없으면 DEFAULT_OG_IMAGE 로 폴백된다', () => {
+      const { setArticleSchema } = useStructuredData()
+      setArticleSchema({
+        headline: '테스트',
+        description: '설명',
+        datePublished: '2024-01-01T00:00:00Z',
+        url: 'https://ilsangkit.co.kr/guide/test',
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      // image 필드가 항상 존재해야 한다 (Google Article rich result 필수)
+      expect(parsed.image).toBeDefined()
+      expect(typeof parsed.image).toBe('string')
+      expect(parsed.image.length).toBeGreaterThan(0)
+    })
+  })
+
+  // ─── P1-3: setFacilitySchema @type 유효성 ─────────────────────────────────
+
+  describe('setFacilitySchema - 유효한 schema.org @type 만 사용', () => {
+    const VALID_SCHEMA_TYPES = new Set([
+      'CivicStructure', 'LocalBusiness', 'EmergencyService', 'Library',
+      'Hospital', 'Pharmacy', 'Park', 'School', 'ChildCare',
+      'SportsActivityLocation', 'TrainStation', 'Place',
+    ])
+    const INVALID_TYPES = ['ParkingFacility', 'RecyclingCenter']
+
+    const makeMinimalFacility = (category: string) => ({
+      id: `${category}-1`,
+      category: category as any,
+      name: `테스트 ${category}`,
+      address: '서울시 강남구 테헤란로 1',
+      roadAddress: '서울시 강남구 테헤란로 1',
+      lat: 37.5,
+      lng: 127.0,
+      city: '서울시',
+      district: '강남구',
+      bjdCode: null,
+      sourceId: `${category}-001`,
+      sourceUrl: null,
+      viewCount: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      syncedAt: '2024-01-01T00:00:00Z',
+      details: {},
+    })
+
+    const categories = [
+      'toilet', 'trash', 'wifi', 'clothes', 'parking', 'aed',
+      'library', 'hospital', 'pharmacy', 'park', 'school',
+      'market', 'childcare', 'ev-charger', 'sports', 'subway',
+    ]
+
+    it.each(categories)('카테고리 %s의 @type이 유효한 schema.org 타입이다', (category) => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeMinimalFacility(category))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(INVALID_TYPES).not.toContain(parsed['@type'])
+      expect(VALID_SCHEMA_TYPES.has(parsed['@type'])).toBe(true)
+    })
+
+    it('parking 카테고리의 @type이 CivicStructure이다 (ParkingFacility 아님)', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeMinimalFacility('parking'))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed['@type']).toBe('CivicStructure')
+      expect(parsed['@type']).not.toBe('ParkingFacility')
+    })
+
+    it('clothes 카테고리의 @type이 CivicStructure이다 (RecyclingCenter 아님)', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeMinimalFacility('clothes'))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed['@type']).toBe('CivicStructure')
+      expect(parsed['@type']).not.toBe('RecyclingCenter')
+    })
+  })
+
+  // ─── P1-6: library openingHours HH:MM 정규화 ──────────────────────────────
+
+  describe('setFacilitySchema - library openingHours HH:MM 정규화', () => {
+    const makeLibraryFacility = (detailsOverride = {}) => ({
+      id: 'lib-1',
+      category: 'library' as const,
+      name: '테스트도서관',
+      address: '서울시 강남구 테헤란로 1',
+      roadAddress: '서울시 강남구 테헤란로 1',
+      lat: 37.5,
+      lng: 127.0,
+      city: '서울시',
+      district: '강남구',
+      bjdCode: null,
+      sourceId: 'L001',
+      sourceUrl: null,
+      viewCount: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      syncedAt: '2024-01-01T00:00:00Z',
+      details: { ...detailsOverride },
+    })
+
+    it('이미 HH:MM 콜론 형식인 경우 그대로 사용된다', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeLibraryFacility({ weekdayOpenTime: '09:00', weekdayCloseTime: '18:00' }))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.openingHours).toMatch(/^Mo-Fr \d{2}:\d{2}-\d{2}:\d{2}$/)
+      expect(parsed.openingHours).toBe('Mo-Fr 09:00-18:00')
+    })
+
+    it('raw 숫자 문자열(0900/1800)이 HH:MM 형식으로 정규화된다', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeLibraryFacility({ weekdayOpenTime: '0900', weekdayCloseTime: '1800' }))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.openingHours).toMatch(/^Mo-Fr \d{2}:\d{2}-\d{2}:\d{2}$/)
+      expect(parsed.openingHours).toBe('Mo-Fr 09:00-18:00')
+    })
+
+    it('세 자리 숫자(900)도 HH:MM 으로 정규화된다', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeLibraryFacility({ weekdayOpenTime: '900', weekdayCloseTime: '1700' }))
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.openingHours).toMatch(/^Mo-Fr \d{2}:\d{2}-\d{2}:\d{2}$/)
+    })
+
+    it('시간 값이 없으면 openingHours 필드가 포함되지 않는다', () => {
+      const { setFacilitySchema } = useStructuredData()
+      setFacilitySchema(makeLibraryFacility())
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.openingHours).toBeUndefined()
+    })
+  })
+
+  // ─── P2-7: VideoObject description !== name ────────────────────────────────
+
+  describe('setVideoListSchema - VideoObject description 중복 제거', () => {
+    const makeVideo = (overrides = {}) => ({
+      videoId: 'abc123',
+      title: '강남구 도서관 이용 방법',
+      channelTitle: '일상킷TV',
+      thumbnail: 'https://i.ytimg.com/vi/abc123/hq720.jpg',
+      publishedAt: '2024-01-15T10:00:00Z',
+      ...overrides,
+    })
+
+    it('VideoObject description이 name(title)과 다르다', () => {
+      const { setVideoListSchema } = useStructuredData()
+      setVideoListSchema([makeVideo()])
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      const video = parsed.itemListElement[0].item
+      expect(video['@type']).toBe('VideoObject')
+      expect(video.description).not.toBe(video.name)
+    })
+
+    it('VideoObject description이 channelTitle을 포함한다', () => {
+      const { setVideoListSchema } = useStructuredData()
+      setVideoListSchema([makeVideo()])
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      const video = parsed.itemListElement[0].item
+      expect(video.description).toContain('일상킷TV')
+    })
+
+    it('VideoObject description이 비어있지 않다', () => {
+      const { setVideoListSchema } = useStructuredData()
+      setVideoListSchema([makeVideo({ channelTitle: 'TestChannel' })])
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      const video = parsed.itemListElement[0].item
+      expect(video.description.length).toBeGreaterThan(0)
     })
   })
 })

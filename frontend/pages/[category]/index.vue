@@ -180,7 +180,7 @@
             <EmptyState
               v-if="displayFacilities.length === 0"
               :icon="categoryMeta?.icon || 'search_off'"
-              title="검색 결과가 없습니다"
+              :title="UI_MESSAGES.emptySearch"
               description="다른 지역이나 검색어를 시도해보세요"
             >
               <div class="flex items-center justify-center gap-3">
@@ -270,13 +270,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useWasteSchedule, transformToRegionSchedules } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
-import { RELATED_CATEGORIES, POPULAR_REGIONS, CATEGORY_SEO_INTENT } from '~/utils/seoConstants'
+import { RELATED_CATEGORIES, POPULAR_REGIONS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
@@ -317,7 +318,7 @@ const { loading, facilities, total, currentPage, totalPages, error: facilityErro
 const { trackCategoryPageView, trackSearchNoResults } = useAnalytics()
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const { loadRegions, citiesWithDistricts } = useRegions()
-const { setMeta } = useFacilityMeta()
+const { setCategoryMeta } = useFacilityMeta()
 const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema } = useStructuredData()
 
 // Region state
@@ -390,7 +391,7 @@ const displayTotalPages = computed(() => {
   return ssrTotalPages.value
 })
 
-// 카테고리별 SEO 타이틀/설명
+// h1/hero 전용 (Set C). <head> title/description은 setCategoryMeta(CATEGORY_SEO_*)가 담당한다.
 const SEO_TITLES: Record<string, string> = {
   toilet: '지금 이용 가능한 공공화장실 · 24시간 개방 위치 지도',
   parking: '내 주변 공영주차장 요금·운영시간 · 무료 주차장 검색',
@@ -424,24 +425,6 @@ const SEO_DESCRIPTIONS: Record<string, string> = {
   market: '주변 전통시장의 위치와 개장 정보를 확인하세요. 취급품목, 주차장/화장실 유무, 상점 수 정보를 제공합니다.',
   clothes: '안 입는 옷을 버릴 수 있는 가장 가까운 의류수거함 위치를 지도에서 확인하세요.',
   trash: '지역별 쓰레기 배출 요일과 분리수거 방법을 확인하세요. 일반/음식물/재활용 배출 일정을 안내합니다.',
-}
-
-function buildCategorySeoTitle(category: FacilityCategory, cityName?: string, districtName?: string): string {
-  const categoryName = CATEGORY_META[category]?.label || category
-  const intent = CATEGORY_SEO_INTENT[category] || '정보'
-  const location = [cityName, districtName].filter(Boolean).join(' ')
-  return location
-    ? `${location} ${categoryName} | ${intent}`
-    : `${categoryName} | ${intent}`
-}
-
-function buildCategorySeoDescription(category: FacilityCategory, cityName?: string, districtName?: string): string {
-  const categoryName = CATEGORY_META[category]?.label || category
-  const intent = CATEGORY_SEO_INTENT[category] || '정보'
-  const location = [cityName, districtName].filter(Boolean).join(' ')
-  return location
-    ? `${location}의 ${categoryName} ${intent} 정보를 확인하세요.`
-    : `전국 ${categoryName}의 ${intent} 정보를 한눈에 확인하세요.`
 }
 
 // Page title
@@ -480,12 +463,18 @@ const initialDistrictName = (route.query.district as string) || ''
 const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label || (route.params.category as string)
 const initialPageQueryParam = parsePositivePageQuery(route.query.page)
 
-setMeta({
-  title: buildCategorySeoTitle(route.params.category as FacilityCategory, initialCityName, initialDistrictName),
-  description: buildCategorySeoDescription(route.params.category as FacilityCategory, initialCityName, initialDistrictName),
-  path: `/${route.params.category}`,
-  ...(initialPageQueryParam >= 2 ? { canonical: false as const } : {}),
-})
+if (initialPageQueryParam >= 2) {
+  // 2페이지+ 는 noindex 정책 — setCategoryMeta에 canonical:false 위임
+  setCategoryMeta(route.params.category as FacilityCategory, {
+    cityName: initialCityName || undefined,
+    districtName: initialDistrictName || undefined,
+  }, { canonical: false })
+} else {
+  setCategoryMeta(route.params.category as FacilityCategory, {
+    cityName: initialCityName || undefined,
+    districtName: initialDistrictName || undefined,
+  })
+}
 
 // Breadcrumb JSON-LD
 setBreadcrumbSchema([
@@ -766,10 +755,10 @@ watch(loading, (isLoading) => {
 // Update meta when filters change
 watch([selectedCity, selectedDistrict], () => {
   const cat = categoryParam.value
-  const title = buildCategorySeoTitle(cat, selectedCity.value || undefined, selectedDistrict.value || undefined)
-  const description = buildCategorySeoDescription(cat, selectedCity.value || undefined, selectedDistrict.value || undefined)
-
-  setMeta({ title, description, path: `/${cat}` })
+  setCategoryMeta(cat, {
+    cityName: selectedCity.value || undefined,
+    districtName: selectedDistrict.value || undefined,
+  })
 })
 
 // ItemList structured data + 페이지네이션 rel link 태그

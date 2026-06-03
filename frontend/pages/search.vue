@@ -252,7 +252,7 @@
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
               <span class="material-symbols-outlined text-[32px] text-slate-500">search_off</span>
             </div>
-            <p class="text-slate-700 font-semibold text-lg">검색 결과가 없습니다</p>
+            <p class="text-slate-700 font-semibold text-lg">{{ UI_MESSAGES.emptySearch }}</p>
           </div>
         </template>
 
@@ -337,7 +337,7 @@
           <!-- Empty State (flat view) -->
           <EmptyState
             v-if="facilities.length === 0"
-            title="검색 결과가 없습니다"
+            :title="UI_MESSAGES.emptySearch"
             description="다른 검색어를 입력해보세요"
           >
             <div class="flex items-center justify-center gap-3">
@@ -366,7 +366,7 @@
         <!-- Empty State (grouped view) -->
         <EmptyState
           v-if="!selectedCategory && groupedResults.length === 0 && realEstateResults.length === 0"
-          title="검색 결과가 없습니다"
+          :title="UI_MESSAGES.emptySearch"
           description="다른 검색어를 입력해보세요"
         >
           <div class="flex flex-wrap items-center justify-center gap-2 mb-6">
@@ -414,6 +414,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
@@ -871,7 +872,8 @@ watch(loading, (now, prev) => {
   }
 })
 
-// ItemList 구조화 데이터 + 페이지네이션 link 태그 (flat view only)
+// ItemList 구조화 데이터 (flat view only)
+// 주의: /search 는 항상 noindex 이므로 rel=prev/next 링크를 내보내지 않는다 (모순 신호 방지).
 watch([facilities, currentPage, totalPages], () => {
   if (facilities.value.length > 0) {
     setItemListSchema(
@@ -882,26 +884,6 @@ watch([facilities, currentPage, totalPages], () => {
       }))
     )
   }
-
-  // 페이지네이션 rel link 태그
-  const paginationLinks: Array<{ rel: string; href: string }> = []
-  const baseUrl = 'https://ilsangkit.co.kr/search'
-  const queryParams = new URLSearchParams()
-  if (searchKeyword.value) queryParams.set('keyword', searchKeyword.value)
-  const baseQuery = queryParams.toString()
-
-  if (currentPage.value > 1) {
-    const prevParams = new URLSearchParams(baseQuery)
-    prevParams.set('page', String(currentPage.value - 1))
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?${prevParams.toString()}` })
-  }
-  if (currentPage.value < totalPages.value) {
-    const nextParams = new URLSearchParams(baseQuery)
-    nextParams.set('page', String(currentPage.value + 1))
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?${nextParams.toString()}` })
-  }
-
-  useHead({ link: paginationLinks })
 })
 </script>
 

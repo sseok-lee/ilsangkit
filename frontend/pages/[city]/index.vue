@@ -88,7 +88,7 @@
 
       <!-- 에러 -->
       <div v-else class="py-20 text-center text-slate-500">
-        데이터를 불러올 수 없습니다.
+        {{ UI_MESSAGES.fetchError }}
       </div>
     </main>
   </div>
@@ -96,12 +96,14 @@
 
 <script setup lang="ts">
 import { CITY_SLUG_MAP } from '~/composables/useRegions'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { CATEGORY_GROUPS, CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { SITE_URL } from '~/utils/seoConstants'
 import { useAnalytics } from '~/composables/useAnalytics'
 
@@ -194,35 +196,30 @@ const realEstateCards = computed(() => {
   ]
 })
 
+// noindex 조건: 데이터가 null이면 (API 실패/빈 응답) noindex 처리
+// 정책: noindex 페이지는 canonical 을 출력하지 않는다 (noindex-canonical-policy.md)
+const isNoindex = computed(() => cityData.value === null)
+
 // SEO 메타
-const canonicalUrl = `${SITE_URL}/${city.value}`
-useHead(() => {
-  const title = `${cityName.value} 부동산 시세·생활 정보 | 일상킷`
-  const description = `${cityName.value} 아파트·빌라·오피스텔 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`
-  const dynamicOgImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cityName.value)}&title=${encodeURIComponent(title)}`
-  return {
-    title,
-    meta: [
-      { name: 'description', content: description },
-      { property: 'og:title', content: title },
-      { property: 'og:description', content: description },
-      { property: 'og:image', content: dynamicOgImage },
-      { property: 'og:image:width', content: '1200' },
-      { property: 'og:image:height', content: '630' },
-      { property: 'og:url', content: canonicalUrl },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:site_name', content: '일상킷' },
-      { property: 'og:locale', content: 'ko_KR' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: title },
-      { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: dynamicOgImage },
-    ],
-    link: [
-      { rel: 'canonical', href: canonicalUrl },
-    ],
-  }
-})
+const { setMeta } = useFacilityMeta()
+watch(
+  [cityName, isNoindex],
+  ([name]) => {
+    const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(name)}&title=${encodeURIComponent(`${name} 생활 정보`)}`
+    setMeta({
+      title: `${name} 생활 정보`,
+      description: `${name} 아파트·빌라·오피스텔 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`,
+      path: `/${city.value}`,
+      image: ogImage,
+      canonical: isNoindex.value ? false : undefined,
+    })
+  },
+  { immediate: true },
+)
+
+useHead(() => isNoindex.value
+  ? { meta: [{ name: 'robots', content: 'noindex, follow' }] }
+  : {})
 
 // JSON-LD 구조화 데이터
 const { setAreaReportSchema, setBreadcrumbSchema } = useStructuredData()

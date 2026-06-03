@@ -1,6 +1,6 @@
 import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_URL } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import type { DataSourceInfo } from '~/utils/dataSource'
 
 /**
@@ -115,8 +115,8 @@ export function useStructuredData() {
       toilet: 'CivicStructure',
       trash: 'CivicStructure',
       wifi: 'LocalBusiness',
-      clothes: 'RecyclingCenter',
-      parking: 'ParkingFacility',
+      clothes: 'CivicStructure',
+      parking: 'CivicStructure',
       aed: 'EmergencyService',
       library: 'Library',
       hospital: 'Hospital',
@@ -180,7 +180,13 @@ export function useStructuredData() {
       }
       case 'library': {
         if (d?.weekdayOpenTime && d?.weekdayCloseTime) {
-          Object.assign(schema, { openingHours: `Mo-Fr ${d.weekdayOpenTime}-${d.weekdayCloseTime}` })
+          const normalizeTime = (v: unknown): string => {
+            const s = String(v)
+            return s.includes(':') ? s : formatTime(s)
+          }
+          const openStr = normalizeTime(d.weekdayOpenTime)
+          const closeStr = normalizeTime(d.weekdayCloseTime)
+          Object.assign(schema, { openingHours: `Mo-Fr ${openStr}-${closeStr}` })
         }
         break
       }
@@ -496,7 +502,9 @@ export function useStructuredData() {
       }
       schema.mainEntityOfPage = options.url
       if (options.image) schema.image = options.image
-      if (options.recentAvg != null) schema.offers = { '@type': 'Offer', price: options.recentAvg, priceCurrency: 'KRW', availability: 'https://schema.org/InStock' }
+      if (options.recentAvg != null) {
+        ;(schema.additionalProperty as unknown[]).push({ '@type': 'PropertyValue', name: 'recentAveragePrice', value: String(options.recentAvg) })
+      }
       if (options.latestDealDate) schema.datePosted = options.latestDealDate
       return {
         script: [
@@ -582,9 +590,14 @@ export function useStructuredData() {
       datePublished: options.datePublished,
       ...(options.dateModified ? { dateModified: options.dateModified } : {}),
       url: options.url.startsWith('http') ? options.url : `${SITE_URL}${options.url}`,
-      ...(options.image ? { image: options.image } : {}),
+      image: options.image ?? DEFAULT_OG_IMAGE,
       author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
-      publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      publisher: {
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: { '@type': 'ImageObject', url: `${SITE_URL}/icons/logo.webp` },
+      },
     }
     useHead({
       script: [{ key: 'jsonld-article', type: 'application/ld+json', innerHTML: JSON.stringify(schema) }],
@@ -729,7 +742,7 @@ export function useStructuredData() {
       item: {
         '@type': 'VideoObject',
         name: v.title,
-        description: v.title,
+        description: `${v.channelTitle} 채널 영상`,
         thumbnailUrl: v.thumbnail,
         uploadDate: v.publishedAt,
         embedUrl: `https://www.youtube-nocookie.com/embed/${v.videoId}`,

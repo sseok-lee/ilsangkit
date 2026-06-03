@@ -60,8 +60,8 @@ import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
 import { isRealEstateUrlType } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import type { RealEstatePropertyType, TransactionMode, RealEstateType, ComplexInfo } from '~/types/realEstate'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useRealEstate } from '~/composables/useRealEstate'
 import ComplexCard from '~/components/realEstate/ComplexCard.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -77,10 +77,11 @@ if (!isRealEstateUrlType(realEstateTypeParam)) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
-const cityName = CITY_SLUG_MAP[citySlugParam]
-if (!cityName) {
+const cityNameRaw = CITY_SLUG_MAP[citySlugParam]
+if (!cityNameRaw) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
+const cityName = cityNameRaw.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
 
 const [propertyTypePart, tabPart] = realEstateTypeParam.split('-') as [RealEstatePropertyType, TransactionMode]
 const propertyMeta = PROPERTY_TYPE_META[propertyTypePart]
@@ -115,36 +116,22 @@ const topComplexes = computed(() => topComplexesData.value ?? [])
 
 const breadcrumbItems = [
   { label: '홈', href: '/', current: false },
-  { label: '부동산', href: '/real-estate', current: false },
+  { label: '부동산 실거래가', href: '/real-estate', current: false },
   { label: typeLabel, href: typeHubPath, current: false },
   { label: cityName, href: `/real-estate/${realEstateTypeParam}/${citySlugParam}`, current: true },
 ]
 
-const canonicalUrl = `${SITE_URL}/real-estate/${realEstateTypeParam}/${citySlugParam}`
-
-useHead({
-  title: `${cityName} ${typeLabel} 실거래가 | 일상킷`,
-  meta: [
-    { name: 'description', content: heroDescription },
-    { property: 'og:title', content: `${cityName} ${typeLabel} 실거래가 | 일상킷` },
-    { property: 'og:description', content: heroDescription },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: `${cityName} ${typeLabel} 실거래가 | 일상킷` },
-    { name: 'twitter:description', content: heroDescription },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: `${cityName} ${typeLabel} 실거래가`,
+  description: heroDescription,
+  path: `/real-estate/${realEstateTypeParam}/${citySlugParam}`,
 })
 
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
-  { name: '부동산', url: '/real-estate' },
+  { name: '부동산 실거래가', url: '/real-estate' },
   { name: typeLabel, url: typeHubPath },
   { name: cityName, url: `/real-estate/${realEstateTypeParam}/${citySlugParam}` },
 ])

@@ -9,7 +9,7 @@
         <p class="text-sm text-slate-500 mt-1">지금 신청 가능한 공고와 예정된 일정을 확인하세요.</p>
       </div>
       <HardLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
-        전체 보기 →
+        전체보기 →
       </HardLink>
     </div>
 

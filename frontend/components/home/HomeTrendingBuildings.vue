@@ -8,7 +8,7 @@
         </h2>
         <p class="text-sm text-slate-500 mt-1">최근 7일 거래가 많은 단지의 주력 평형 실거래가 중앙값입니다.</p>
       </div>
-      <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체 보기 →</HardLink>
+      <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체보기 →</HardLink>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
       <div

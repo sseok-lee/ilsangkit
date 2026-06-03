@@ -5,7 +5,7 @@
     </div>
 
     <div v-else-if="facilityGroups.length === 0 && transitStations.length === 0" class="rounded-2xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
-      주변에 등록된 시설이 없습니다
+      {{ emptyFiltered('시설') }}
     </div>
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -76,6 +76,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
+import { emptyFiltered } from '~/utils/uiMessages'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import { lineColor } from '~/utils/subwayLineColors'

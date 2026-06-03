@@ -34,7 +34,7 @@
 
       <!-- 결과 -->
       <template v-if="pending">
-        <SectionBlock heading="건물 목록" subtext="불러오는 중입니다.">
+        <SectionBlock heading="건물 목록" :subtext="UI_MESSAGES.loading">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
               <div class="h-4 bg-slate-200 rounded w-2/3 mb-2"></div>
@@ -51,7 +51,7 @@
 
         <SectionBlock
           :heading="`${districtName} ${typeLabel} 단지 목록`"
-          :subtext="`거래 10건 이상 유효 단지만 노출. 총 ${renderableComplexes.length.toLocaleString()}곳`"
+          :subtext="`유효 단지만 노출. 총 ${totalComplexes.toLocaleString()}곳`"
         >
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <ComplexCard
@@ -110,6 +110,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { formatKoreanPrice } from '~/utils/formatters'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import {
@@ -119,9 +120,10 @@ import {
 } from '~/utils/realEstateUrl'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
-import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -144,8 +146,11 @@ const [propertyTypePart, tabPart] = realEstateType.value.split('-') as [
   TransactionMode,
 ]
 
-// citySlug → 한글 이름
-const cityName = computed(() => CITY_SLUG_MAP[citySlug.value])
+// citySlug → 한글 이름 (compact: strip 특별시/광역시/도 suffix)
+const cityName = computed(() => {
+  const raw = CITY_SLUG_MAP[citySlug.value]
+  return raw ? raw.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '') : raw
+})
 if (!cityName.value) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
@@ -171,7 +176,7 @@ const typeHubPath = computed(() => `/real-estate/${realEstateType.value}`)
 const heroTitle = computed(() => `${districtName.value} ${typeLabel.value} 실거래가`)
 const heroDescription = computed(
   () =>
-    `${cityName.value} ${districtName.value} ${typeLabel.value} 거래 10건 이상 유효 단지만 선별해 노출합니다. 국토교통부 공식 데이터 기반.`,
+    `${cityName.value} ${districtName.value} ${typeLabel.value} 유효 단지만 선별해 노출합니다. 국토교통부 공식 데이터 기반.`,
 )
 
 // 데이터
@@ -220,9 +225,8 @@ async function goToPage(page: number) {
 
 const heroStats = computed(() => {
   const items = [] as { label: string; value: string }[]
-  items.push({ label: '유효 단지', value: `${renderableComplexes.value.length.toLocaleString()}곳` })
-  if (totalComplexes.value > 0) items.push({ label: '전체 단지', value: `${totalComplexes.value.toLocaleString()}곳` })
-  items.push({ label: '거래 기준', value: '10건 이상' })
+  items.push({ label: '유효 단지', value: `${totalComplexes.value.toLocaleString()}곳` })
+  items.push({ label: '데이터 출처', value: '국토교통부' })
   return items
 })
 
@@ -250,7 +254,7 @@ const districtSummaryText = computed(() => {
 
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
-  { label: '부동산', href: '/real-estate', current: false },
+  { label: '부동산 실거래가', href: '/real-estate', current: false },
   { label: typeLabel.value, href: typeHubPath.value, current: false },
   { label: cityName.value, href: `/real-estate/${realEstateType.value}/${citySlug.value}`, current: false },
   { label: districtName.value, current: true },
@@ -294,36 +298,32 @@ const canonicalPath = computed(() =>
     district: districtName.value,
   }),
 )
-const canonicalUrl = computed(() => `${SITE_URL}${canonicalPath.value}`)
 
-useHead(() => {
-  const title = `${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가 | 일상킷`
-  const description = heroDescription.value
-  const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}`
-  const isNoindex = renderableComplexes.value.length === 0
-  return {
-    title,
-    meta: [
-      { name: 'description', content: description },
-      { property: 'og:title', content: title },
-      { property: 'og:description', content: description },
-      { property: 'og:image', content: ogImage },
-      { property: 'og:url', content: canonicalUrl.value },
-      { property: 'og:type', content: 'website' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: title },
-      { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: ogImage },
-      ...(isNoindex ? [{ name: 'robots', content: 'noindex, follow' }] : []),
-    ],
-    link: isNoindex ? [] : [{ rel: 'canonical', href: canonicalUrl.value }],
-  }
-})
+const { setMeta } = useFacilityMeta()
+
+watch(
+  [cityName, districtName, typeLabel, totalComplexes],
+  () => {
+    const isNoindex = totalComplexes.value === 0
+    const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(`${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`)}`
+    if (isNoindex) {
+      useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
+    }
+    setMeta({
+      title: `${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`,
+      description: heroDescription.value,
+      path: canonicalPath.value,
+      image: ogImage,
+      canonical: isNoindex ? false : undefined,
+    })
+  },
+  { immediate: true },
+)
 
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
-  { name: '부동산', url: '/real-estate' },
+  { name: '부동산 실거래가', url: '/real-estate' },
   { name: typeLabel.value, url: typeHubPath.value },
   { name: cityName.value, url: `/real-estate/${realEstateType.value}/${citySlug.value}` },
   { name: districtName.value, url: canonicalPath.value },

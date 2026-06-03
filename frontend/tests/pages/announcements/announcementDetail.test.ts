@@ -91,8 +91,9 @@ describe('announcements 상세 색인 위생', () => {
     mockState.detail.value = makeDetail({ status: 'ongoing' })
     await mountSuspended()
     const head = lastHead()
-    expect(head.meta.some((m: any) => m.name === 'robots')).toBe(false)
-    expect(head.link).toContainEqual({ rel: 'canonical', href: 'https://ilsangkit.co.kr/public-rental/announcements/PBLANC-1' })
+    // setMeta emits robots via useSeoMeta, not useHead — the last useHead call is the canonical link only
+    expect((head.meta ?? []).some((m: any) => m.name === 'robots')).toBe(false)
+    expect(head.link).toContainEqual(expect.objectContaining({ rel: 'canonical', href: 'https://ilsangkit.co.kr/public-rental/announcements/PBLANC-1' }))
     expect(setBreadcrumbSchema).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ name: '강남 행복주택 입주자 모집공고' }),

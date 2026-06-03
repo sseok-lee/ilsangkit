@@ -1,3 +1,5 @@
+import { SITE_NAME } from '~/utils/seoConstants'
+
 type PropertyType = 'apt' | 'villa' | 'offitel'
 type TransactionMode = 'sale' | 'rent'
 
@@ -56,13 +58,14 @@ function formatArea(range: { min: number; max?: number } | null | undefined): st
 function buildTitle(input: DetailMetaInput): string {
   const propertyLabel = PROPERTY_LABEL[input.propertyType]
   const transactionLabel = TRANSACTION_LABEL[input.transactionMode]
-  const head = `${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래`
-
-  const cityShort = shortCityName(input.region.city)
-  const locParts = [cityShort, input.region.district, input.region.dong || '']
-    .filter((p) => p && p.length > 0)
-  if (locParts.length === 0) return head
-  return `${head} · ${locParts.join(' ')}`
+  // 아파트는 이름이 타입을 암시 → 타입어 생략. 빌라/오피스텔은 유지
+  const typePart = input.propertyType === 'apt' ? '' : `${propertyLabel} `
+  let core = `${input.buildingName} ${typePart}${transactionLabel} 실거래가`
+  // 30자(브랜드 제외 ~22자) 초과 + 타입어 있으면 타입어 생략
+  if (core.length > 22 && typePart) {
+    core = `${input.buildingName} ${transactionLabel} 실거래가`
+  }
+  return `${core} | ${SITE_NAME}`
 }
 
 function buildDescription(input: DetailMetaInput): string {
@@ -73,41 +76,22 @@ function buildDescription(input: DetailMetaInput): string {
 
   const totalCount = input.summary?.totalCount ?? 0
   const recentDeal = input.summary?.recentDeal
-  const buildYear = input.buildYear
   const areaText = formatArea(input.areaRange)
 
+  const facilityClause = input.facilitySummary
+    ? `${input.facilitySummary} 등 주변 생활시설과 `
+    : '주변 생활시설과 '
+  const areaClause = areaText ? `전용 ${areaText} ` : ''
+
   if (totalCount === 0) {
-    return `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래가. 주변 시세를 함께 확인하세요.`
+    return `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래가. ${facilityClause}${areaClause}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
   }
 
-  const opening = `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래 ${totalCount.toLocaleString()}건.`
+  const priceText = recentDeal ? formatKoreanPrice(recentDeal.amount) : ''
+  const priceClause = priceText ? `, 최근 ${priceText}(${recentDeal!.dealDate})` : ''
+  const opening = `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래 ${totalCount.toLocaleString()}건${priceClause}.`
 
-  const priceFragments: string[] = []
-  if (recentDeal) {
-    const priceText = formatKoreanPrice(recentDeal.amount)
-    if (priceText) {
-      priceFragments.push(`최근 거래가는 ${priceText}(${recentDeal.dealDate})`)
-    }
-  }
-  if (buildYear) {
-    priceFragments.push(`${buildYear}년 준공된 단지입니다`)
-  }
-  let priceSentence = ''
-  if (priceFragments.length === 1 && recentDeal && !buildYear) {
-    priceSentence = `${priceFragments[0]}입니다.`
-  } else if (priceFragments.length >= 1) {
-    priceSentence = `${priceFragments.join(', ')}.`
-  }
-
-  const areaSentence = areaText
-    ? `전용 ${areaText} 면적별 시세와 거래 내역, `
-    : '면적별 시세와 거래 내역, '
-
-  const closing = input.facilitySummary
-    ? `${areaSentence}인근 ${input.facilitySummary}과 주변 시세를 함께 확인하세요.`
-    : `${areaSentence}주변 시세를 함께 확인하세요.`
-
-  return [opening, priceSentence, closing].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+  return `${opening} ${facilityClause}${areaClause}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
 }
 
 export function buildRealEstateDetailMeta(input: DetailMetaInput): DetailMetaResult {

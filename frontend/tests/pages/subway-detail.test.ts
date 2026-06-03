@@ -19,12 +19,12 @@ describe('subway/[slug].vue noindex regression', () => {
     expect(content).not.toMatch(/nofollow/i)
   })
 
-  it('useSeoMeta 호출이 여전히 존재한다 (메타태그 누락 방지)', () => {
-    expect(content).toMatch(/useSeoMeta\(/)
+  it('setMeta 호출이 여전히 존재한다 (메타태그 누락 방지)', () => {
+    expect(content).toMatch(/setMeta\(/)
   })
 
-  it('canonical 또는 ogUrl 등 기본 SEO 항목이 보존된다', () => {
-    expect(content).toMatch(/ogTitle/)
-    expect(content).toMatch(/ogDescription/)
+  it('title과 description 등 기본 SEO 항목이 보존된다', () => {
+    expect(content).toMatch(/buildSubwayTitle/)
+    expect(content).toMatch(/buildSubwayDescription/)
   })
 })

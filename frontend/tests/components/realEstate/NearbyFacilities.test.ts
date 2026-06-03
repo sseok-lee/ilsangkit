@@ -110,7 +110,7 @@ describe('NearbyFacilities', () => {
 
     const wrapper = await mountSuspended(defaultProps)
 
-    expect(wrapper.text()).toContain('주변에 등록된 시설이 없습니다')
+    expect(wrapper.text()).toContain('조건에 맞는 시설이 없습니다')
   })
 
   it('DISPLAY_CATEGORIES 순서대로 부동산 핵심 시설이 우선 표시되는지 확인', async () => {

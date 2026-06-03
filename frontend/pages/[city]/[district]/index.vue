@@ -52,7 +52,7 @@
 
       <!-- 에러 -->
       <div v-else class="py-20 text-center text-slate-500">
-        데이터를 불러올 수 없습니다.
+        {{ UI_MESSAGES.fetchError }}
       </div>
     </main>
   </div>
@@ -60,14 +60,16 @@
 
 <script setup lang="ts">
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionFacilityCategoryGrid from '~/components/region/RegionFacilityCategoryGrid.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
-import { SITE_URL, SITE_NAME } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { generateAreaDescription } from '~/utils/seoHelpers'
 import { useAnalytics } from '~/composables/useAnalytics'
 
@@ -184,35 +186,30 @@ const heroDescription = computed(() => {
   return areaInfo ? `${primary}. ${areaInfo}` : primary
 })
 
+// noindex 조건: 데이터가 null이면 (API 실패/빈 응답) noindex 처리
+// 정책: noindex 페이지는 canonical 을 출력하지 않는다 (noindex-canonical-policy.md)
+const isNoindex = computed(() => areaData.value === null)
+
 // SEO 메타
-const canonicalUrl = `${SITE_URL}/${city.value}/${district.value}`
-useHead(() => {
-  const title = `${cityName.value} ${districtName.value} 부동산 시세·생활 정보 | 일상킷`
-  const description = `${cityName.value} ${districtName.value}의 부동산 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 인프라 정보를 확인하세요.`
-  const dynamicOgImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}`
-  return {
-    title,
-    meta: [
-      { name: 'description', content: description },
-      { property: 'og:title', content: title },
-      { property: 'og:description', content: description },
-      { property: 'og:image', content: dynamicOgImage },
-      { property: 'og:image:width', content: '1200' },
-      { property: 'og:image:height', content: '630' },
-      { property: 'og:url', content: canonicalUrl },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:site_name', content: SITE_NAME },
-      { property: 'og:locale', content: 'ko_KR' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: title },
-      { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: dynamicOgImage },
-    ],
-    link: [
-      { rel: 'canonical', href: canonicalUrl },
-    ],
-  }
-})
+const { setMeta } = useFacilityMeta()
+watch(
+  [cityName, districtName, isNoindex],
+  ([cName, dName]) => {
+    const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cName)}&district=${encodeURIComponent(dName)}&title=${encodeURIComponent(`${cName} ${dName} 생활 정보`)}`
+    setMeta({
+      title: `${cName} ${dName} 생활 정보`,
+      description: `${cName} ${dName}의 부동산 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 인프라 정보를 확인하세요.`,
+      path: `/${city.value}/${district.value}`,
+      image: ogImage,
+      canonical: isNoindex.value ? false : undefined,
+    })
+  },
+  { immediate: true },
+)
+
+useHead(() => isNoindex.value
+  ? { meta: [{ name: 'robots', content: 'noindex, follow' }] }
+  : {})
 
 // JSON-LD 구조화 데이터
 const { setAreaReportSchema, setBreadcrumbSchema } = useStructuredData()
