@@ -318,6 +318,7 @@ import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
 import { subwayCanonicalUrl } from '~/utils/subwayCanonical'
 import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
@@ -570,21 +571,19 @@ const subwayOgImage = computed(() => {
   return `${SITE_URL}/og-map?lat=${s.lat}&lng=${s.lng}&label=${encodeURIComponent(stationLabel)}&category=area&title=${encodeURIComponent(s.name)}`
 })
 
-useSeoMeta({
-  title: () => buildSubwayTitle(station.value),
-  description: () => buildSubwayDescription(station.value),
-  ogTitle: () => buildSubwayTitle(station.value),
-  ogDescription: () => buildSubwayDescription(station.value),
-  ogImage: () => subwayOgImage.value,
-  ogImageWidth: 1024,
-  ogImageHeight: 536,
-  ogType: 'website',
-  twitterCard: 'summary_large_image',
-  twitterImage: () => subwayOgImage.value,
+const { setMeta } = useFacilityMeta()
+
+setMeta({
+  title: buildSubwayTitle(station.value),
+  description: buildSubwayDescription(station.value),
+  path: `/subway/${slug.value}`,
+  image: subwayOgImage.value,
+  imageWidth: 1024,
+  imageHeight: 536,
+  canonical: subwayCanonicalUrl(slug.value),
 })
 
 useHead({
-  link: [{ rel: 'canonical', href: subwayCanonicalUrl(slug.value), key: 'canonical' }],
   script: [
     {
       type: 'application/ld+json',
