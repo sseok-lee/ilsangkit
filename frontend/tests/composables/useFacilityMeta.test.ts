@@ -256,6 +256,22 @@ describe('useFacilityMeta', () => {
     })
   })
 
+  describe('setMeta - 브랜드 부제 통일', () => {
+    it('title이 브랜드명과 같을 때 SITE_TAGLINE을 부제로 쓴다', () => {
+      const { setMeta } = useFacilityMeta()
+      setMeta({ title: '일상킷', description: '설명', path: '/' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('일상킷 - 부동산 실거래가·청약·내 주변 생활정보')
+    })
+    it('일반 title에는 브랜드 suffix가 1회만 붙는다', () => {
+      const { setMeta } = useFacilityMeta()
+      setMeta({ title: '병원 찾기', description: '설명', path: '/hospital' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('병원 찾기 | 일상킷')
+      expect(call.title.match(/일상킷/g)).toHaveLength(1)
+    })
+  })
+
   describe('setCategoryMeta - CTR 최적화', () => {
     it('toilet 카테고리 타이틀에 위치 또는 운영시간 포함', () => {
       const { setCategoryMeta } = useFacilityMeta()
@@ -293,6 +309,35 @@ describe('useFacilityMeta', () => {
 
       const call = mockUseSeoMeta.mock.calls[0][0]
       expect(call.description).toBe(CATEGORY_SEO_DESCRIPTION['pharmacy'])
+    })
+
+    it('위치 없으면 CATEGORY_SEO_TITLE 완성형을 쓴다', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+      setCategoryMeta('hospital')
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('병원 찾기 - 근처 병원 진료과·진료시간 확인 | 일상킷')
+    })
+    it('위치가 있으면 지역 앞배치 타이틀을 만든다', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+      setCategoryMeta('hospital', { cityName: '서울', districtName: '강남구' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('서울 강남구 병원 찾기 | 일상킷')
+      expect(call.description).toContain('서울 강남구')
+    })
+    it('위치가 시(city)만 있으면 시 기준 타이틀', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+      setCategoryMeta('hospital', { cityName: '서울' })
+      const call = mockUseSeoMeta.mock.calls[0][0]
+      expect(call.title).toBe('서울 병원 찾기 | 일상킷')
+    })
+    it('canonical:false 옵션이면 canonical을 설정하지 않는다', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+      setCategoryMeta('hospital', undefined, { canonical: false })
+      const headCallsWithCanonical = mockUseHead.mock.calls.filter((c: unknown[]) => {
+        const arg = c[0] as { link?: Array<{ rel: string }> }
+        return arg?.link?.some((l) => l.rel === 'canonical')
+      })
+      expect(headCallsWithCanonical).toHaveLength(0)
     })
   })
 
