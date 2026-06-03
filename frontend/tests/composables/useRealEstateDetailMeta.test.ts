@@ -43,8 +43,11 @@ describe('buildRealEstateDetailMeta - description', () => {
   it('준공년도 문구를 더는 넣지 않는다(압축)', () => {
     expect(buildRealEstateDetailMeta(base).description).not.toContain('준공')
   })
-  it('전체 길이 100자 이하', () => {
-    expect(buildRealEstateDetailMeta(base).description.length).toBeLessThanOrEqual(100)
+  it('전체 길이 120자 이하', () => {
+    expect(buildRealEstateDetailMeta(base).description.length).toBeLessThanOrEqual(120)
+  })
+  it('가격이 있어도 전용 면적 범위를 포함한다', () => {
+    expect(buildRealEstateDetailMeta(base).description).toContain('전용 84~114㎡')
   })
   it('facilitySummary 없으면 "주변 생활시설과"로 일반화', () => {
     expect(buildRealEstateDetailMeta({ ...base, facilitySummary: null }).description).toContain('주변 생활시설과')
@@ -84,7 +87,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     })
     expect(description).toContain('광주 북구 새한A 아파트 매매 실거래 30건')
     expect(description).toContain('1억 700만원(2026년 5월)')
-    // areaClause is omitted when priceClause is present (100자 압축)
+    expect(description).toContain('전용 60㎡')
     expect(description).not.toContain('준공')
   })
 
@@ -107,13 +110,12 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     expect(description).toContain('1억 700만원(2026년 5월)')
   })
 
-  it('areaRange range — area shown when no price clause (totalCount=0)', () => {
+  it('areaRange range — formats as min~max', () => {
     const { description } = buildRealEstateDetailMeta({
       ...legacyBase,
       areaRange: { min: 39, max: 59 },
-      summary: { totalCount: 0 },
+      summary: { totalCount: 30, recentDeal: { amount: 10700, dealDate: '2026년 5월' } },
     })
-    // areaClause is included in the zero-count path
     expect(description).toContain('전용 39~59㎡')
   })
 

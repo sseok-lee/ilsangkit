@@ -90,10 +90,8 @@ function buildDescription(input: DetailMetaInput): string {
   const priceText = recentDeal ? formatKoreanPrice(recentDeal.amount) : ''
   const priceClause = priceText ? `, 최근 ${priceText}(${recentDeal!.dealDate})` : ''
   const opening = `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래 ${totalCount.toLocaleString()}건${priceClause}.`
-  // price clause already conveys recency; omit areaClause to stay within 100자
-  const areaInClosing = priceClause ? '' : areaClause
 
-  return `${opening} ${facilityClause}${areaInClosing}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
+  return `${opening} ${facilityClause}${areaClause}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
 }
 
 export function buildRealEstateDetailMeta(input: DetailMetaInput): DetailMetaResult {
