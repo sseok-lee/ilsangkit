@@ -112,9 +112,9 @@ describe('CATEGORY_SEO_TITLE', () => {
     })
   })
 
-  it('각 타이틀이 30자 이상 60자 이하다', () => {
+  it('각 타이틀이 20자 이상 60자 이하다', () => {
     Object.values(CATEGORY_SEO_TITLE).forEach(title => {
-      expect(title.length).toBeGreaterThanOrEqual(30)
+      expect(title.length).toBeGreaterThanOrEqual(20)
       expect(title.length).toBeLessThanOrEqual(60)
     })
   })
@@ -123,6 +123,12 @@ describe('CATEGORY_SEO_TITLE', () => {
     expect(CATEGORY_SEO_TITLE['hospital']).toContain('병원')
     const hasIntent = ['진료과', '진료시간'].some(kw => CATEGORY_SEO_TITLE['hospital'].includes(kw))
     expect(hasIntent).toBe(true)
+  })
+
+  it('타이틀에 군더더기 "지도에서" 가 없다', () => {
+    Object.values(CATEGORY_SEO_TITLE).forEach(title => {
+      expect(title).not.toContain('지도에서')
+    })
   })
 })
 
