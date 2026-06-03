@@ -196,21 +196,30 @@ const realEstateCards = computed(() => {
   ]
 })
 
+// noindex 조건: 데이터가 null이면 (API 실패/빈 응답) noindex 처리
+// 정책: noindex 페이지는 canonical 을 출력하지 않는다 (noindex-canonical-policy.md)
+const isNoindex = computed(() => cityData.value === null)
+
 // SEO 메타
 const { setMeta } = useFacilityMeta()
 watch(
-  cityName,
-  (name) => {
+  [cityName, isNoindex],
+  ([name]) => {
     const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(name)}&title=${encodeURIComponent(`${name} 생활 정보`)}`
     setMeta({
       title: `${name} 생활 정보`,
       description: `${name} 아파트·빌라·오피스텔 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`,
       path: `/${city.value}`,
       image: ogImage,
+      canonical: isNoindex.value ? false : undefined,
     })
   },
   { immediate: true },
 )
+
+useHead(() => isNoindex.value
+  ? { meta: [{ name: 'robots', content: 'noindex, follow' }] }
+  : {})
 
 // JSON-LD 구조화 데이터
 const { setAreaReportSchema, setBreadcrumbSchema } = useStructuredData()

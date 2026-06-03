@@ -70,3 +70,99 @@ describe('지역 허브 카테고리 바로가기', () => {
     expect(hrefs).toContain('/parking?city=seoul')
   })
 })
+
+describe('city hub — noindex guard (Issue E)', () => {
+  it('데이터가 null이면 useHead에 noindex 메타가 포함되어야 한다', async () => {
+    // null 데이터 반환으로 재스텁
+    vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
+      const data = ref<any>(null)
+      return Object.assign(Promise.resolve({ data, pending: ref(false), error: ref(null), refresh: vi.fn() }), {
+        data,
+        pending: ref(false),
+        error: ref(null),
+        refresh: vi.fn(),
+      })
+    })
+
+    const useHeadSpy = vi.fn()
+    ;(globalThis as any).useHead = useHeadSpy
+
+    // 모듈 캐시 제거 후 재임포트
+    vi.resetModules()
+    const { default: CityHubFresh } = await import('~/pages/[city]/index.vue')
+
+    const w = mount(
+      defineComponent({ render() { return h(Suspense, null, { default: () => h(CityHubFresh) }) } }),
+      { global: { stubs } },
+    )
+    await flushPromises()
+
+    // useHead 호출 중 noindex 신호가 있어야 함
+    const allCalls = useHeadSpy.mock.calls.map((c: any[]) => {
+      const arg = c[0]
+      return typeof arg === 'function' ? arg() : arg
+    })
+    const hasNoindex = allCalls.some((h: any) =>
+      (h?.meta ?? []).some((m: any) => m?.name === 'robots' && m?.content?.includes('noindex')),
+    )
+    expect(hasNoindex).toBe(true)
+
+    // 복원
+    vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
+      const data = ref<any>({
+        data: {
+          districts: [{ slug: 'gangnam-gu', name: '강남구', facilityTotal: 100 }],
+          realEstate: null,
+        },
+      })
+      return Object.assign(Promise.resolve({ data, pending: ref(false), error: ref(null), refresh: vi.fn() }), {
+        data,
+        pending: ref(false),
+        error: ref(null),
+        refresh: vi.fn(),
+      })
+    })
+    ;(globalThis as any).useHead = vi.fn()
+  })
+
+  it('데이터가 있으면 useHead에 noindex 메타가 없어야 한다', async () => {
+    // 정상 데이터 stub (이미 파일 상단에서 설정돼 있지만 null 테스트 이후 복원된 상태)
+    vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
+      const data = ref<any>({
+        data: {
+          districts: [{ slug: 'gangnam-gu', name: '강남구', facilityTotal: 100 }],
+          realEstate: null,
+        },
+      })
+      return Object.assign(Promise.resolve({ data, pending: ref(false), error: ref(null), refresh: vi.fn() }), {
+        data,
+        pending: ref(false),
+        error: ref(null),
+        refresh: vi.fn(),
+      })
+    })
+
+    const useHeadSpy = vi.fn()
+    ;(globalThis as any).useHead = useHeadSpy
+
+    vi.resetModules()
+    const { default: CityHubFresh } = await import('~/pages/[city]/index.vue')
+
+    const w = mount(
+      defineComponent({ render() { return h(Suspense, null, { default: () => h(CityHubFresh) }) } }),
+      { global: { stubs } },
+    )
+    await flushPromises()
+
+    const allCalls = useHeadSpy.mock.calls.map((c: any[]) => {
+      const arg = c[0]
+      return typeof arg === 'function' ? arg() : arg
+    })
+    const hasNoindex = allCalls.some((h: any) =>
+      (h?.meta ?? []).some((m: any) => m?.name === 'robots' && m?.content?.includes('noindex')),
+    )
+    expect(hasNoindex).toBe(false)
+
+    ;(globalThis as any).useHead = vi.fn()
+  })
+})
