@@ -6,6 +6,7 @@ import type { FacilityCategory } from '~/types/facility'
 export const SITE_NAME = '일상킷'
 export const SITE_URL = 'https://ilsangkit.co.kr'
 export const SITE_DESCRIPTION = '아파트·빌라·오피스텔 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.'
+export const SITE_TAGLINE = '부동산 실거래가·청약·내 주변 생활정보'
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.webp`
 
 export function getCurrentYearMonth(): string {

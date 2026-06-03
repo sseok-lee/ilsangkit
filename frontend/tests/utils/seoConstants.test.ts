@@ -6,6 +6,7 @@ import {
   POPULAR_REGIONS,
   CATEGORY_SEO_TITLE,
   CATEGORY_SEO_DESCRIPTION,
+  SITE_TAGLINE,
 } from '~/utils/seoConstants'
 
 describe('getCurrentYearMonth', () => {
@@ -93,6 +94,12 @@ describe('POPULAR_REGIONS', () => {
     const citySlugs = POPULAR_REGIONS.map(r => r.citySlug)
     expect(citySlugs).toContain('seoul')
     expect(citySlugs).toContain('gyeonggi')
+  })
+})
+
+describe('SITE_TAGLINE', () => {
+  it('부동산을 앞세운 단일 부제 문장이다', () => {
+    expect(SITE_TAGLINE).toBe('부동산 실거래가·청약·내 주변 생활정보')
   })
 })
 
