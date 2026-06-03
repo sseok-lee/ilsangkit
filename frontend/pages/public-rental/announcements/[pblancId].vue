@@ -160,7 +160,7 @@ import type { AnnouncementStatus } from '~/types/publicRentalAnnouncement'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 
 const STATUS_LABEL: Record<AnnouncementStatus, string> = {
-  ongoing: '진행중',
+  ongoing: '모집중',
   upcoming: '예정',
   closed: '마감',
   unknown: '일정 미정',

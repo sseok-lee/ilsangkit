@@ -18,7 +18,7 @@
       <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700">
         <span class="flex items-center gap-1.5">
           <span class="inline-block w-2 h-2 rounded-full bg-green-500" aria-hidden="true"></span>
-          접수중 <strong>{{ ongoingTotal }}건</strong>
+          청약중 <strong>{{ ongoingTotal }}건</strong>
         </span>
         <span class="flex items-center gap-1.5">
           <span class="inline-block w-2 h-2 rounded-full bg-primary-500" aria-hidden="true"></span>

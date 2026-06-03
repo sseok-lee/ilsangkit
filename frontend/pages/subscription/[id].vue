@@ -577,7 +577,7 @@ const breadcrumbItems = computed(() => {
   const isRent = subscription.value.rentType === '임대주택' || subscription.value.sourceType === 'PRIVATE_RENT'
   const items: { label: string; href?: string; current?: boolean }[] = [
     { label: '홈', href: '/', current: false },
-    { label: '청약·임대', href: '/subscription', current: false },
+    { label: '청약 정보', href: '/subscription', current: false },
   ]
   if (isRent) items.push({ label: '임대', href: '/subscription/rent', current: false })
   else items.push({ label: '분양', href: '/subscription/sale', current: false })
@@ -680,7 +680,7 @@ const activeSpecialStatusColumns = computed(() =>
 // 포맷 함수들
 function getStatusLabel(status: string): string {
   if (status === 'upcoming') return '접수예정'
-  if (status === 'ongoing') return '접수중'
+  if (status === 'ongoing') return '청약중'
   return '마감'
 }
 

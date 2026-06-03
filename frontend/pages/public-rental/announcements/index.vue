@@ -111,13 +111,13 @@ import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilter
 
 const STATUS_FILTERS: Array<{ value: AnnouncementStatus | undefined; label: string }> = [
   { value: undefined, label: '전체' },
-  { value: 'ongoing', label: '진행중' },
+  { value: 'ongoing', label: '모집중' },
   { value: 'upcoming', label: '예정' },
   { value: 'closed', label: '마감' },
 ]
 
 const STATUS_LABEL: Record<AnnouncementStatus, string> = {
-  ongoing: '진행중',
+  ongoing: '모집중',
   upcoming: '예정',
   closed: '마감',
   unknown: '일정 미정',
