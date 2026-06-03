@@ -136,7 +136,7 @@ function applyDetailMeta() {
     description: seoDescription.value,
     path: `/public-rental/${typeParam}/${idParam}`,
     canonical: canonicalUrl.value,
-    image: hasMapImage.value ? ogImageUrl.value : undefined,
+    image: hasMapImage.value ? (ogImageUrl.value ?? undefined) : undefined,
     imageWidth: hasMapImage.value ? 1024 : undefined,
     imageHeight: hasMapImage.value ? 536 : undefined,
   })
