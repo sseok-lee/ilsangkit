@@ -635,69 +635,92 @@ describe('getTransactionStats', () => {
 // getComplexList
 // ─────────────────────────────────────────────
 describe('getComplexList', () => {
-  const summaryRows = [
+  // Raw rows returned by $queryRawUnsafe (SELECT columns only — no id/type/updatedAt)
+  const rawSummaryRows = [
     {
-      id: 1, type: 'apt-sale',
       buildingName: '래미안', bjdCode: '11680',
       city: '서울특별시', district: '강남구', dongName: '역삼동',
       transactionCount: 10, latestPrice: BigInt(150000),
       latestDealYear: 2024, latestDealMonth: 1,
-      lat: 37.5, lng: 127.0, updatedAt: new Date(),
+      buildYear: 2008,
+      lat: '37.5', lng: '127.0',
     },
     {
-      id: 2, type: 'apt-sale',
       buildingName: '아이파크', bjdCode: '11680',
       city: '서울특별시', district: '강남구', dongName: '역삼동',
       transactionCount: 5, latestPrice: BigInt(120000),
       latestDealYear: 2023, latestDealMonth: 12,
-      lat: 37.6, lng: 127.1, updatedAt: new Date(),
+      buildYear: null,
+      lat: '37.6', lng: '127.1',
     },
   ];
 
   beforeEach(() => {
-    mockSummaryFindMany.mockReset();
-    mockSummaryCount.mockReset();
+    mockQueryRawUnsafe.mockReset();
   });
 
-  it('queries summary table for apt-sale type', async () => {
-    mockSummaryFindMany.mockResolvedValue(summaryRows);
-    mockSummaryCount.mockResolvedValue(2);
+  // Helper: set up mockQueryRawUnsafe to return rows on first call and count on second
+  function setupMocks(rows = rawSummaryRows, total = rows.length) {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce(rows)
+      .mockResolvedValueOnce([{ total: BigInt(total) }]);
+  }
+
+  it('uses $queryRawUnsafe for both SELECT and COUNT queries', async () => {
+    setupMocks();
 
     await getComplexList('apt-sale', '서울특별시', '강남구');
 
-    expect(mockSummaryFindMany).toHaveBeenCalledTimes(1);
-    expect(mockSummaryCount).toHaveBeenCalledTimes(1);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(2);
   });
 
-  it('queries summary table for villa-rent type', async () => {
-    mockSummaryFindMany.mockResolvedValue([]);
-    mockSummaryCount.mockResolvedValue(0);
-
-    await getComplexList('villa-rent', '서울특별시', '강남구');
-
-    expect(mockSummaryFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ type: 'villa-rent', city: '서울특별시', district: '강남구' }),
-      })
-    );
-  });
-
-  it('filters by city and district', async () => {
-    mockSummaryFindMany.mockResolvedValue(summaryRows);
-    mockSummaryCount.mockResolvedValue(2);
+  it('SELECT query includes valid-name REGEXP filter', async () => {
+    setupMocks();
 
     await getComplexList('apt-sale', '서울특별시', '강남구');
 
-    expect(mockSummaryFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ type: 'apt-sale', city: '서울특별시', district: '강남구' }),
-      })
-    );
+    const selectSql: string = mockQueryRawUnsafe.mock.calls[0][0];
+    expect(selectSql).toContain('CHAR_LENGTH(buildingName) >= 2');
+    expect(selectSql).toContain("NOT REGEXP '^[[:space:]]*[(][0-9]'");
+    expect(selectSql).toContain("NOT REGEXP '^[0-9()[:space:]-]+$'");
+  });
+
+  it('COUNT query includes valid-name REGEXP filter', async () => {
+    setupMocks();
+
+    await getComplexList('apt-sale', '서울특별시', '강남구');
+
+    const countSql: string = mockQueryRawUnsafe.mock.calls[1][0];
+    expect(countSql).toContain('CHAR_LENGTH(buildingName) >= 2');
+    expect(countSql).toContain("NOT REGEXP '^[[:space:]]*[(][0-9]'");
+    expect(countSql).toContain("NOT REGEXP '^[0-9()[:space:]-]+$'");
+  });
+
+  it('passes type, city, district as parameterised values', async () => {
+    setupMocks();
+
+    await getComplexList('apt-sale', '서울특별시', '강남구');
+
+    const selectParams = mockQueryRawUnsafe.mock.calls[0];
+    // params after the SQL string: type, city, district, limit, offset
+    expect(selectParams).toContain('apt-sale');
+    expect(selectParams).toContain('서울특별시');
+    expect(selectParams).toContain('강남구');
+  });
+
+  it('buildingName prefix filter passed via LIKE CONCAT param', async () => {
+    setupMocks([], 0);
+
+    await getComplexList('apt-sale', undefined, undefined, '래미안');
+
+    const selectSql: string = mockQueryRawUnsafe.mock.calls[0][0];
+    expect(selectSql).toContain("LIKE CONCAT(?, '%')");
+    const selectParams = mockQueryRawUnsafe.mock.calls[0];
+    expect(selectParams).toContain('래미안');
   });
 
   it('returns paginated result with items, total, page, totalPages', async () => {
-    mockSummaryFindMany.mockResolvedValue(summaryRows);
-    mockSummaryCount.mockResolvedValue(2);
+    setupMocks();
 
     const result = await getComplexList('apt-sale', '서울특별시', '강남구');
 
@@ -711,14 +734,82 @@ describe('getComplexList', () => {
     expect(result.items[0]).toHaveProperty('transactionCount', 10);
   });
 
-  it('returns lat and lng from summary', async () => {
-    mockSummaryFindMany.mockResolvedValue(summaryRows);
-    mockSummaryCount.mockResolvedValue(2);
+  it('returns lat and lng converted to Number from summary', async () => {
+    setupMocks();
 
     const result = await getComplexList('apt-sale', '서울특별시', '강남구');
 
     expect(result.items[0]).toHaveProperty('lat', 37.5);
     expect(result.items[0]).toHaveProperty('lng', 127.0);
+  });
+
+  it('maps latestDealYear/Month → lastDealYear/Month and converts latestPrice to Number', async () => {
+    setupMocks();
+
+    const result = await getComplexList('apt-sale', '서울특별시', '강남구');
+
+    expect(result.items[0]).toHaveProperty('lastDealYear', 2024);
+    expect(result.items[0]).toHaveProperty('lastDealMonth', 1);
+    expect(result.items[0]).toHaveProperty('latestPrice', 150000);
+  });
+
+  it('handles null latestPrice/lat/lng gracefully', async () => {
+    const nullRow = {
+      buildingName: '한강뷰', bjdCode: '11680',
+      city: '서울특별시', district: '강남구', dongName: '역삼동',
+      transactionCount: 3, latestPrice: null,
+      latestDealYear: null, latestDealMonth: null,
+      buildYear: null,
+      lat: null, lng: null,
+    };
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([nullRow])
+      .mockResolvedValueOnce([{ total: BigInt(1) }]);
+
+    const result = await getComplexList('apt-sale');
+
+    expect(result.items[0].latestPrice).toBeNull();
+    expect(result.items[0].lat).toBeNull();
+    expect(result.items[0].lng).toBeNull();
+  });
+
+  it('invalid 지번-style name "(12-3)" would be filtered at DB level — SQL contains the REGEXP', async () => {
+    // The filtering happens in MySQL via REGEXP, so the mock returns only valid rows.
+    // We verify the SQL contains the guard that would exclude e.g. "(12-3)", "123-4", "1".
+    setupMocks([], 0);
+
+    await getComplexList('apt-sale', '서울특별시', '강남구');
+
+    const selectSql: string = mockQueryRawUnsafe.mock.calls[0][0];
+    // First REGEXP catches names starting with optional spaces then '(' followed by digit
+    expect(selectSql).toMatch(/NOT REGEXP.*\^\[\[:space:\]\]\*\[\(\]\[0-9\]/);
+    // Second REGEXP catches names composed entirely of digits, parens, spaces, hyphens
+    expect(selectSql).toMatch(/NOT REGEXP.*\^\[0-9\(\)\[:space:\]-\]\+\$/);
+  });
+
+  it('total=0 yields totalPages=0', async () => {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+
+    const result = await getComplexList('apt-sale', '서울특별시', '강남구');
+
+    expect(result.total).toBe(0);
+    expect(result.totalPages).toBe(0);
+  });
+
+  it('page 2 passes correct LIMIT/OFFSET to raw query', async () => {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(30) }]);
+
+    await getComplexList('apt-sale', '서울특별시', '강남구', undefined, 2, 15);
+
+    const selectParams = mockQueryRawUnsafe.mock.calls[0];
+    // Last two params are LIMIT and OFFSET
+    const paramsArr = selectParams.slice(1); // remove SQL string
+    expect(paramsArr[paramsArr.length - 1]).toBe(15);  // OFFSET = (2-1)*15
+    expect(paramsArr[paramsArr.length - 2]).toBe(15);  // LIMIT
   });
 
   it('throws for unknown type slug', async () => {
