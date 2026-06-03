@@ -6,9 +6,15 @@ export function buildSubwayTitle(station: SubwayStation): string {
   return `${station.name}역 (${station.line}) | ${SITE_NAME}`
 }
 
+/** 시/도 풀네임을 압축형으로 (서울특별시 → 서울). 도시명 압축 일관성(R2). */
+function compactCityName(city: string): string {
+  return String(city).replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+}
+
 export function buildSubwayDescription(station: SubwayStation): string {
   const stationName = station.name.endsWith('역') ? station.name : `${station.name}역`
-  const region = [station.city, station.district].filter(Boolean).join(' ')
+  const cityCompact = station.city ? compactCityName(station.city) : ''
+  const region = [cityCompact, station.district].filter(Boolean).join(' ')
 
   // 개요 문장
   const regionPart = region ? `${region}의 ` : ''

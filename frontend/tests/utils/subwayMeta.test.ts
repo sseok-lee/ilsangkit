@@ -42,6 +42,12 @@ describe('buildSubwayDescription — prose shape (Fix 3b)', () => {
     expect(desc).toContain('강남')
   })
 
+  it('uses compact city name (서울 강남구), not full form (서울특별시)', () => {
+    const desc = buildSubwayDescription(makeStation())
+    expect(desc).toContain('서울 강남구')
+    expect(desc).not.toContain('서울특별시')
+  })
+
   it('contains transfer info when transferLines present', () => {
     const desc = buildSubwayDescription(makeStation({ transferLines: ['3호선', '신분당선'] }))
     expect(desc).toContain('3호선')
