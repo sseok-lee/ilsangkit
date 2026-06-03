@@ -60,8 +60,8 @@ import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
 import { isRealEstateUrlType } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import type { RealEstatePropertyType, TransactionMode, RealEstateType, ComplexInfo } from '~/types/realEstate'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useRealEstate } from '~/composables/useRealEstate'
 import ComplexCard from '~/components/realEstate/ComplexCard.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -120,25 +120,11 @@ const breadcrumbItems = [
   { label: cityName, href: `/real-estate/${realEstateTypeParam}/${citySlugParam}`, current: true },
 ]
 
-const canonicalUrl = `${SITE_URL}/real-estate/${realEstateTypeParam}/${citySlugParam}`
-
-useHead({
-  title: `${cityName} ${typeLabel} 실거래가 | 일상킷`,
-  meta: [
-    { name: 'description', content: heroDescription },
-    { property: 'og:title', content: `${cityName} ${typeLabel} 실거래가 | 일상킷` },
-    { property: 'og:description', content: heroDescription },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: `${cityName} ${typeLabel} 실거래가 | 일상킷` },
-    { name: 'twitter:description', content: heroDescription },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: `${cityName} ${typeLabel} 실거래가`,
+  description: heroDescription,
+  path: `/real-estate/${realEstateTypeParam}/${citySlugParam}`,
 })
 
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()

@@ -37,40 +37,25 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const groups: RentGroup[] = ['apply']
 
-const title = '임대 청약 일정 - 공공임대·LH 임대 청약 정보 | 일상킷'
-const description = '청약통장으로 접수하는 청약홈 임대청약(공공/민간)과 LH 분양·임대 공고를 한 곳에서 비교하세요.'
-const canonicalUrl = `${SITE_URL}/subscription/rent`
-
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: '임대 청약 일정',
+  description: '청약통장으로 접수하는 청약홈 임대청약(공공/민간)과 LH 분양·임대 공고를 한 곳에서 비교하세요.',
+  path: '/subscription/rent',
 })
 
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
   { name: '청약 정보', url: `${SITE_URL}/subscription` },
-  { name: '임대', url: canonicalUrl },
+  { name: '임대', url: `${SITE_URL}/subscription/rent` },
 ])
 
 setItemListSchema([

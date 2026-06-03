@@ -171,9 +171,10 @@ import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } fro
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { CITY_SLUGS } from '~/shared/regionSlugs'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -245,40 +246,28 @@ if (import.meta.server && complexes.value.length === 0) {
 
 // SEO 메타
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
-useHead(() => {
-  const tab = tabLabel.value
-  const propertyLabel = propertyMeta.value?.label || ''
-  const title = `${propertyLabel} ${tab} 실거래가 | 일상킷`
-  const description = `전국 ${propertyLabel} ${tab} 실거래가와 시세, 최근 거래 내역을 확인하세요.`
-  const canonicalUrl = `${SITE_URL}/real-estate/${realEstateTypeParam.value}`
-  const meta: Array<{ name?: string; property?: string; content: string }> = [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { property: 'og:image:width', content: '1200' },
-    { property: 'og:image:height', content: '630' },
-  ]
-  // 페이지 2 이상은 noindex (thin content 방지). 정책상 canonical 도 함께 제거
-  // (.omc/notes/noindex-canonical-policy.md).
-  const isNoindex = currentPage.value > 1
-  if (isNoindex) {
-    meta.push({ name: 'robots', content: 'noindex, follow' })
-  }
-  return {
-    title,
-    meta,
-    link: isNoindex ? [] : [{ rel: 'canonical', href: canonicalUrl }],
-  }
-})
+const { setMeta } = useFacilityMeta()
+
+watch(
+  [tabLabel, realEstateTypeParam, currentPage],
+  () => {
+    const tab = tabLabel.value
+    const propertyLabel = propertyMeta.value?.label || ''
+    // 페이지 2 이상은 noindex (thin content 방지). 정책상 canonical 도 함께 제거
+    // (.omc/notes/noindex-canonical-policy.md).
+    const isNoindex = currentPage.value > 1
+    if (isNoindex) {
+      useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
+    }
+    setMeta({
+      title: `${propertyLabel} ${tab} 실거래가`,
+      description: `전국 ${propertyLabel} ${tab} 실거래가와 시세, 최근 거래 내역을 확인하세요.`,
+      path: `/real-estate/${realEstateTypeParam.value}`,
+      canonical: isNoindex ? false : undefined,
+    })
+  },
+  { immediate: true },
+)
 
 // JSON-LD
 useHead(() => ({

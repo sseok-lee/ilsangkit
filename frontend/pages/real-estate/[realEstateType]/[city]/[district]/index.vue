@@ -119,9 +119,10 @@ import {
 } from '~/utils/realEstateUrl'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
-import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -294,31 +295,27 @@ const canonicalPath = computed(() =>
     district: districtName.value,
   }),
 )
-const canonicalUrl = computed(() => `${SITE_URL}${canonicalPath.value}`)
 
-useHead(() => {
-  const title = `${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가 | 일상킷`
-  const description = heroDescription.value
-  const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(title)}`
-  const isNoindex = renderableComplexes.value.length === 0
-  return {
-    title,
-    meta: [
-      { name: 'description', content: description },
-      { property: 'og:title', content: title },
-      { property: 'og:description', content: description },
-      { property: 'og:image', content: ogImage },
-      { property: 'og:url', content: canonicalUrl.value },
-      { property: 'og:type', content: 'website' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: title },
-      { name: 'twitter:description', content: description },
-      { name: 'twitter:image', content: ogImage },
-      ...(isNoindex ? [{ name: 'robots', content: 'noindex, follow' }] : []),
-    ],
-    link: isNoindex ? [] : [{ rel: 'canonical', href: canonicalUrl.value }],
-  }
-})
+const { setMeta } = useFacilityMeta()
+
+watch(
+  [cityName, districtName, typeLabel, renderableComplexes],
+  () => {
+    const isNoindex = renderableComplexes.value.length === 0
+    const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(`${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`)}`
+    if (isNoindex) {
+      useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
+    }
+    setMeta({
+      title: `${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`,
+      description: heroDescription.value,
+      path: canonicalPath.value,
+      image: ogImage,
+      canonical: isNoindex ? false : undefined,
+    })
+  },
+  { immediate: true },
+)
 
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([

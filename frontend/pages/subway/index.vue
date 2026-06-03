@@ -179,7 +179,8 @@ import Pagination from '~/components/common/Pagination.vue'
 import FacilityCard from '~/components/facility/FacilityCard.vue'
 import { useRegions } from '~/composables/useRegions'
 import { CITY_SLUGS } from '~/shared/regionSlugs'
-import { SITE_URL, POPULAR_REGIONS, RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { POPULAR_REGIONS, RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
@@ -353,16 +354,19 @@ watch([selectedDistrict, keyword], () => {
   page.value = 1
 })
 
-useSeoMeta({
-  title: () => `${pageTitle.value} - 일상킷`,
-  description: pageDescription,
-  ogTitle: () => `${pageTitle.value} - 일상킷`,
-  ogDescription: pageDescription,
-  ogUrl: `${SITE_URL}/subway/`,
-  ogType: 'website',
-})
+const { setMeta } = useFacilityMeta()
 
-useHead({
-  link: [{ rel: 'canonical', href: `${SITE_URL}/subway/` }],
+function applySubwayIndexMeta() {
+  setMeta({
+    title: pageTitle.value,
+    description: '전국 지하철역의 위치·노선·환승 정보를 지도에서 확인하세요. 환승역은 모든 노선이 함께 표시됩니다.',
+    path: '/subway',
+  })
+}
+
+applySubwayIndexMeta()
+
+watch(pageTitle, () => {
+  applySubwayIndexMeta()
 })
 </script>

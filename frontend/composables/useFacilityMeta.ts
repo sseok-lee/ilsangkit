@@ -72,6 +72,7 @@ interface MetaOptions {
   image?: string
   imageWidth?: number
   imageHeight?: number
+  imageAlt?: string
   type?: 'website' | 'article'
   category?: string
   /** false → canonical 태그 미삽입 (noindex 페이지용). string → 해당 URL을 canonical로 사용 */
@@ -256,9 +257,10 @@ export function useFacilityMeta() {
       ogType: options.type || 'website',
       ogLocale: 'ko_KR',
 
-      // OG Image dimensions
+      // OG Image dimensions & alt
       ogImageWidth: options.imageWidth ?? 1200,
       ogImageHeight: options.imageHeight ?? 630,
+      ogImageAlt: options.imageAlt ?? fullTitle,
 
       // Twitter Card
       twitterCard: 'summary_large_image',

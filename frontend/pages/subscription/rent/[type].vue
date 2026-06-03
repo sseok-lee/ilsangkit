@@ -43,9 +43,10 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL } from '~/utils/seoConstants'
 import { RENT_TYPES } from '~/utils/subscriptionMeta'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const route = useRoute()
@@ -58,27 +59,11 @@ if (!typeMeta) {
 
 const dataSource = typeMeta.dataSource ?? 'applyhome'
 
-const title = `${typeMeta.label} | 임대 | 일상킷`
-const description = `${typeMeta.label} - ${typeMeta.description}`
-const canonicalUrl = `${SITE_URL}/subscription/rent/${type}`
-
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: `${typeMeta.label} 임대 청약`,
+  description: `${typeMeta.label} - ${typeMeta.description}`,
+  path: `/subscription/rent/${type}`,
 })
 
 const { setBreadcrumbSchema } = useStructuredData()
@@ -86,6 +71,6 @@ setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
   { name: '청약 정보', url: `${SITE_URL}/subscription` },
   { name: '임대', url: `${SITE_URL}/subscription/rent` },
-  { name: typeMeta.label, url: canonicalUrl },
+  { name: typeMeta.label, url: `${SITE_URL}/subscription/rent/${type}` },
 ])
 </script>
