@@ -20,46 +20,10 @@
       </div>
 
       <!-- Region Filter -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1.5">지역</label>
-          <div class="relative">
-            <select
-              v-model="selectedRegion"
-              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
-            >
-              <option value="">전국</option>
-              <option value="서울">서울</option>
-              <option value="부산">부산</option>
-              <option value="대구">대구</option>
-              <option value="인천">인천</option>
-              <option value="광주">광주</option>
-              <option value="대전">대전</option>
-              <option value="울산">울산</option>
-              <option value="세종">세종</option>
-              <option value="경기">경기</option>
-              <option value="강원">강원</option>
-              <option value="충북">충북</option>
-              <option value="충남">충남</option>
-              <option value="전북">전북</option>
-              <option value="전남">전남</option>
-              <option value="경북">경북</option>
-              <option value="경남">경남</option>
-              <option value="제주">제주</option>
-            </select>
-            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1.5">지역 (상세)</label>
-          <input
-            v-model="regionDetail"
-            type="text"
-            placeholder="예: 강남, 분당"
-            class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-        </div>
-      </div>
+      <RegionCascadingDropdown
+        v-model:city="selectedRegion"
+        v-model:district="selectedDistrict"
+      />
     </SectionBlock>
 
     <!-- Ad (필터 이후) -->
@@ -123,6 +87,7 @@ import type { Subscription, SubscriptionSourceType } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
+import RegionCascadingDropdown from '~/components/common/RegionCascadingDropdown.vue'
 
 /// 상태 칩 순서: 전체 → 청약중 → 청약예정 → 마감
 const STATUS_ORDER: { key: 'ongoing' | 'upcoming' | null | 'closed'; label: string }[] = [
@@ -142,7 +107,7 @@ const { getSubscriptionList } = useSubscription()
 
 const currentStatus = ref<'upcoming' | 'ongoing' | 'closed' | null>(null)
 const selectedRegion = ref('')
-const regionDetail = ref('')
+const selectedDistrict = ref('')
 const currentPage = ref(1)
 
 const subscriptions = ref<Subscription[]>([])
@@ -151,7 +116,7 @@ const totalPages = ref(0)
 const pending = ref(false)
 const error = ref<string | null>(null)
 
-watch([currentStatus, selectedRegion, regionDetail], () => {
+watch([currentStatus, selectedRegion, selectedDistrict], () => {
   currentPage.value = 1
   loadSubscriptions()
 })
@@ -173,7 +138,7 @@ async function loadSubscriptions() {
   pending.value = true
   error.value = null
   try {
-    const region = [selectedRegion.value, regionDetail.value].filter(Boolean).join(' ') || undefined
+    const region = [selectedRegion.value, selectedDistrict.value].filter(Boolean).join(' ') || undefined
     const result = await getSubscriptionList({
       status: currentStatus.value ?? undefined,
       region,
