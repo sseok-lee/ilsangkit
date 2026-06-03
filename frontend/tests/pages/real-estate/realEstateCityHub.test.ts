@@ -129,6 +129,15 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
     expect(text).toContain('국토교통부')   // 데이터 출처 문구
   })
 
+  it('meta title uses compact city name — no 특별시/광역시/도 suffix (Fix 4)', async () => {
+    const wrapper = await mountPage()
+    // CITY_SLUG_MAP['seoul'] = '서울' (compact). Rendered text must never contain full suffix.
+    const text = wrapper.text()
+    expect(text).not.toMatch(/특별시|특별자치시|광역시|특별자치도/)
+    // Compact city name appears in rendered content
+    expect(text).toContain('서울')
+  })
+
   it('주요 단지 섹션을 ComplexCard로 렌더한다', async () => {
     ;(globalThis as any).useAsyncData = vi.fn((_k: string, _h: () => Promise<unknown>) => {
       const data = ref<any>([

@@ -146,8 +146,11 @@ const [propertyTypePart, tabPart] = realEstateType.value.split('-') as [
   TransactionMode,
 ]
 
-// citySlug → 한글 이름
-const cityName = computed(() => CITY_SLUG_MAP[citySlug.value])
+// citySlug → 한글 이름 (compact: strip 특별시/광역시/도 suffix)
+const cityName = computed(() => {
+  const raw = CITY_SLUG_MAP[citySlug.value]
+  return raw ? raw.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '') : raw
+})
 if (!cityName.value) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
