@@ -3,21 +3,21 @@
     v-if="hasSeedData"
     class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6"
   >
-    <div class="bg-white rounded-3xl border border-line shadow-card overflow-hidden">
-      <div class="px-6 pt-6 pb-4 flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]">trending_up</span>
-            오늘의 부동산 시장
-          </h2>
-          <p class="text-sm text-slate-500 mt-1">최근 7일 실거래 · 전주 대비 변동이 가장 큰 지역</p>
-        </div>
-        <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">
-          전체 보기 →
-        </HardLink>
+    <div class="flex items-end justify-between gap-4 mb-4 flex-wrap">
+      <div>
+        <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[24px]">trending_up</span>
+          오늘의 부동산 시장
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">최근 7일 실거래 · 전주 대비 변동이 가장 큰 지역</p>
       </div>
+      <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">
+        전체 보기 →
+      </HardLink>
+    </div>
 
-      <div class="px-6 pb-4 flex items-center gap-3 flex-wrap">
+    <div class="bg-white rounded-2xl border border-line shadow-card overflow-hidden">
+      <div class="px-6 pt-5 pb-4 flex items-center gap-3 flex-wrap">
         <div class="inline-flex bg-slate-100 rounded-full p-1 text-sm font-bold">
           <button
             v-for="opt in PROPERTY_OPTIONS"
