@@ -231,7 +231,7 @@ export function useFacilityMeta() {
   function setMeta(options: MetaOptions) {
     const normalizedTitle = normalizeSeoTitle(options.title)
     const fullTitle = normalizedTitle === SITE_NAME
-      ? `${SITE_NAME} | ${SITE_TAGLINE}`
+      ? `${SITE_NAME} - ${SITE_TAGLINE}`
       : `${normalizedTitle} | ${SITE_NAME}`
 
     const defaultUrl = options.path ? `${SITE_URL}${options.path}` : SITE_URL

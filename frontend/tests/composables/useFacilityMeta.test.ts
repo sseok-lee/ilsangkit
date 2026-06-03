@@ -261,7 +261,7 @@ describe('useFacilityMeta', () => {
       const { setMeta } = useFacilityMeta()
       setMeta({ title: '일상킷', description: '설명', path: '/' })
       const call = mockUseSeoMeta.mock.calls[0][0]
-      expect(call.title).toBe('일상킷 | 부동산 실거래가·청약·내 주변 생활정보')
+      expect(call.title).toBe('일상킷 - 부동산 실거래가·청약·내 주변 생활정보')
     })
     it('일반 title에는 브랜드 suffix가 1회만 붙는다', () => {
       const { setMeta } = useFacilityMeta()

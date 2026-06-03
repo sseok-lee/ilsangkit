@@ -189,6 +189,7 @@ export default defineNuxtConfig({
       htmlAttrs: {
         lang: 'ko',
       },
+      // keep in sync with `${SITE_NAME} - ${SITE_TAGLINE}` in utils/seoConstants.ts
       title: '일상킷 - 부동산 실거래가·청약·내 주변 생활정보',
       meta: [
         { charset: 'utf-8' },
