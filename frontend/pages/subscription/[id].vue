@@ -1,14 +1,6 @@
 <template>
   <div class="bg-background-light">
-    <!-- Loading State -->
-    <div v-if="pending" class="flex items-center justify-center py-20 min-h-[400px]">
-      <div class="text-center">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p class="text-slate-600">로딩 중...</p>
-      </div>
-    </div>
-
-    <template v-else-if="subscription">
+    <template v-if="subscription">
       <!-- Mobile: Map at top -->
       <div v-if="hasCoords" class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
         <ClientOnly>
@@ -452,7 +444,6 @@ const unitTypes = ref<SubscriptionUnitType[]>([])
 const competitions = ref<SubscriptionCompetition[]>([])
 const scores = ref<SubscriptionScore[]>([])
 const specialStatuses = ref<SubscriptionSpecialStatus[]>([])
-const pending = ref(false)
 const error = ref<string | null>(null)
 const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
