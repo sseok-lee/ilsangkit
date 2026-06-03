@@ -103,7 +103,7 @@ describe('DetailPage - 이 지역 다른 시설 링크', () => {
       global: { stubs: globalStubs },
     })
 
-    expect(wrapper.text()).toContain('이 지역 다른 시설')
+    expect(wrapper.text()).toContain('관련 탐색')
   })
 
   it('관련 카테고리 링크가 최소 1개 존재한다', async () => {

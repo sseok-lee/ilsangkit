@@ -9,7 +9,7 @@
     <!-- Loading State -->
     <div v-if="loading" class="text-center py-10">
       <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-      <p class="mt-4 text-slate-500 text-sm">시설 정보를 불러오는 중...</p>
+      <p class="mt-4 text-slate-500 text-sm">{{ UI_MESSAGES.loading }}</p>
     </div>
 
     <!-- Error State -->
@@ -26,7 +26,7 @@
     <!-- Facilities Grid -->
     <div v-else>
       <div v-if="facilities.length === 0" class="py-12 text-center">
-        <p class="text-slate-600">해당 지역에 등록된 시설이 없습니다.</p>
+        <p class="text-slate-600">{{ emptyFiltered('시설') }}</p>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -62,6 +62,7 @@
 <script setup lang="ts">
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import type { Facility } from '~/types/facility'
+import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 
 defineProps<{
   categoryName: string

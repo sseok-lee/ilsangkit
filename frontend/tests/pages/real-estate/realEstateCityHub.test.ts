@@ -100,7 +100,7 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
   it('breadcrumb item[1]이 부동산 허브를 가리켜야 한다', async () => {
     await mountPage()
     const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
-    expect(crumbs[1].name).toBe('부동산')
+    expect(crumbs[1].name).toBe('부동산 실거래가')
     expect(crumbs[1].url).toContain('/real-estate')
   })
 

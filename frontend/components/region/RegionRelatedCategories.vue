@@ -1,5 +1,5 @@
 <template>
-  <SectionBlock heading="이 지역 다른 카테고리" subtext="같은 지역의 다른 생활 정보도 확인해보세요.">
+  <SectionBlock heading="관련 탐색" subtext="같은 지역의 다른 생활 정보도 확인해보세요.">
     <div data-testid="region-related-categories" class="flex flex-wrap gap-2">
       <NuxtLink
         v-for="cat in categories"

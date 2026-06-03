@@ -47,7 +47,7 @@
           <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
             <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
           </div>
-          <p class="text-red-700 font-semibold">데이터를 불러오는 중 오류가 발생했습니다</p>
+          <p class="text-red-700 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
           <p class="text-red-500 text-sm mt-1">잠시 후 다시 시도해주세요</p>
           <button
             class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
@@ -165,6 +165,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse, RealEstateHubType } from '~/types/realEstate'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { HUB_TYPES } from '~/types/realEstate'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
@@ -371,7 +372,7 @@ async function fetchFacilitySummary(city: string, district?: string) {
 const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema, setFAQSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
-  { name: '부동산', url: '/real-estate' },
+  { name: '부동산 실거래가', url: '/real-estate' },
   { name: propertyMeta.value?.label ?? realEstateTypeParam.value, url: `/real-estate/${realEstateTypeParam.value}` },
 ])
 setDatasetSchema({
@@ -408,7 +409,7 @@ watch(
 // Breadcrumb + hero stats
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
-  { label: '부동산', href: '/real-estate', current: false },
+  { label: '부동산 실거래가', href: '/real-estate', current: false },
   { label: propertyMeta.value?.label ?? realEstateTypeParam.value, href: `/real-estate/${realEstateTypeParam.value}`, current: true },
 ])
 

@@ -1,5 +1,5 @@
 <template>
-  <SectionBlock :heading="`${regionLabel} 인근 공공임대 단지`" subtext="같은 자치구의 다른 공공임대 단지를 함께 비교해 보세요.">
+  <SectionBlock :heading="`${regionLabel} 주변 공공임대 단지`" subtext="같은 자치구의 다른 공공임대 단지를 함께 비교해 보세요.">
     <div v-if="complexes.length === 0" class="rounded-xl bg-slate-50 p-6 text-center text-slate-500 text-sm">
       같은 자치구에 등록된 다른 공공임대 단지가 아직 없습니다.
     </div>

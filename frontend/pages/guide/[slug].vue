@@ -4,7 +4,7 @@
     <div v-if="loading" class="flex items-center justify-center py-20">
       <div class="text-center">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-        <p class="text-slate-500 text-sm">가이드를 불러오는 중...</p>
+        <p class="text-slate-500 text-sm">{{ UI_MESSAGES.loading }}</p>
       </div>
     </div>
 
@@ -160,6 +160,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { marked } from 'marked'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import DOMPurify from 'isomorphic-dompurify'
 import { useGuides } from '~/composables/useGuides'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'

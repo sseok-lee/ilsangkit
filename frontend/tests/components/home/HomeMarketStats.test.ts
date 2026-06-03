@@ -29,7 +29,7 @@ describe('HomeMarketStats', () => {
     const wrapper = mount(HomeMarketStats, { props: { trends: fullTrends } });
     // 9 total HardLink rows (3 cards × 3 rows)
     const links = wrapper.findAll('a');
-    // 9 row links + 1 "전체 보기" link = 10
+    // 9 row links + 1 "전체보기" link = 10
     expect(links).toHaveLength(10);
     // each card has 매매/전세/월세
     expect(wrapper.findAll('li')).toHaveLength(9);
@@ -38,7 +38,7 @@ describe('HomeMarketStats', () => {
   it('row links to correct URL', () => {
     const wrapper = mount(HomeMarketStats, { props: { trends: fullTrends } });
     const links = wrapper.findAll('a');
-    // 전체 보기 is first link
+    // 전체보기 is first link
     const rowLinks = links.slice(1);
     // apt-sale
     expect(rowLinks[0].attributes('href')).toContain('/real-estate/apt-sale');

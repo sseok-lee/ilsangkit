@@ -115,7 +115,7 @@ const topComplexes = computed(() => topComplexesData.value ?? [])
 
 const breadcrumbItems = [
   { label: '홈', href: '/', current: false },
-  { label: '부동산', href: '/real-estate', current: false },
+  { label: '부동산 실거래가', href: '/real-estate', current: false },
   { label: typeLabel, href: typeHubPath, current: false },
   { label: cityName, href: `/real-estate/${realEstateTypeParam}/${citySlugParam}`, current: true },
 ]
@@ -130,7 +130,7 @@ setMeta({
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
-  { name: '부동산', url: '/real-estate' },
+  { name: '부동산 실거래가', url: '/real-estate' },
   { name: typeLabel, url: typeHubPath },
   { name: cityName, url: `/real-estate/${realEstateTypeParam}/${citySlugParam}` },
 ])

@@ -42,7 +42,7 @@
       <div v-if="loading" class="flex items-center justify-center py-16">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-          <p class="text-slate-500 text-sm">가이드를 불러오는 중...</p>
+          <p class="text-slate-500 text-sm">{{ UI_MESSAGES.loading }}</p>
         </div>
       </div>
 
@@ -94,7 +94,7 @@
       <!-- Empty State -->
       <div v-else class="py-16 text-center">
         <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">article</span>
-        <p class="text-slate-600 font-medium">조건에 맞는 가이드가 없습니다</p>
+        <p class="text-slate-600 font-medium">{{ emptyFiltered('가이드') }}</p>
         <p class="text-slate-500 text-sm mt-1">다른 카테고리를 선택해 보세요.</p>
       </div>
 
@@ -126,6 +126,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useGuides } from '~/composables/useGuides'
+import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'

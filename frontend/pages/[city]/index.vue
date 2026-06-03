@@ -88,7 +88,7 @@
 
       <!-- 에러 -->
       <div v-else class="py-20 text-center text-slate-500">
-        데이터를 불러올 수 없습니다.
+        {{ UI_MESSAGES.fetchError }}
       </div>
     </main>
   </div>
@@ -96,6 +96,7 @@
 
 <script setup lang="ts">
 import { CITY_SLUG_MAP } from '~/composables/useRegions'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import { CATEGORY_GROUPS, CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'

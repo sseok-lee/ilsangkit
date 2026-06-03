@@ -4,7 +4,7 @@
     <SectionBlock
       v-if="nearbyLoading || nearbyFacilities.length > 0"
       :heading="`주변 ${categoryMeta.label}`"
-      subtext="같은 카테고리 인근 시설입니다."
+      subtext="같은 카테고리 주변 시설입니다."
     >
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <template v-if="nearbyLoading">
@@ -34,7 +34,7 @@
         v-for="group in crossFacilitiesGrouped"
         :key="group.category"
         :heading="`주변 ${group.meta.label}`"
-        subtext="관련 카테고리의 인근 시설입니다."
+        subtext="관련 카테고리의 주변 시설입니다."
       >
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <FacilityCard

@@ -5,7 +5,7 @@
       <div v-if="pending" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p class="text-gray-600">로딩 중...</p>
+          <p class="text-gray-600">{{ UI_MESSAGES.loading }}</p>
         </div>
       </div>
 
@@ -114,7 +114,7 @@
               <AdBanner />
 
               <!-- Basic Info -->
-              <SectionBlock heading="역 정보" subtext="위치·운영기관·연락처 정보">
+              <SectionBlock heading="역정보" subtext="위치·운영기관·연락처 정보">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                   <div v-if="lines.length > 0" class="sm:col-span-2">
                     <dt class="text-xs font-medium text-slate-500 mb-1.5">노선</dt>
@@ -306,6 +306,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
@@ -394,7 +395,7 @@ const regionLink = computed(() => {
   if (!station.value?.regionSlug || !station.value?.district) return null
   return {
     href: `/${station.value.regionSlug}`,
-    label: `${station.value.city} 전체 보기`,
+    label: `${station.value.city} 전체보기`,
   }
 })
 

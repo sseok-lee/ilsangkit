@@ -9,7 +9,7 @@
             일상킷
           </HardLink>
           <p class="mt-2 text-xs text-slate-500 leading-relaxed">
-            생활 속 필요한 공공시설 정보와<br>부동산 실거래가를 한 곳에서.
+            {{ SITE_TAGLINE }}
           </p>
         </div>
 
@@ -72,6 +72,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
+import { SITE_TAGLINE } from '~/utils/seoConstants'
 
 const currentYear = computed(() => new Date().getFullYear())
 </script>

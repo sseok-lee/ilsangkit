@@ -23,7 +23,7 @@
       class="flex flex-col items-center justify-center py-16 px-4"
     >
       <div class="text-6xl mb-4">🔍</div>
-      <h3 class="text-xl font-bold text-slate-900 mb-2">검색 결과가 없습니다</h3>
+      <h3 class="text-xl font-bold text-slate-900 mb-2">{{ UI_MESSAGES.emptySearch }}</h3>
       <p class="text-slate-600 text-center">
         다른 검색어나 필터로 다시 시도해보세요
       </p>
@@ -42,6 +42,7 @@
 
 <script setup lang="ts">
 import type { Facility } from '~/types/facility'
+import { UI_MESSAGES } from '~/utils/uiMessages'
 
 interface Props {
   facilities: Facility[]

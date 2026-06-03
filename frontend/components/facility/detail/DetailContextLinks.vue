@@ -9,7 +9,7 @@
     <SectionBlock
       v-if="regionLink"
       size="compact"
-      heading="같은 지역 시설"
+      heading="관련 탐색"
       subtext="이 지역의 다른 시설로 바로 이동합니다."
     >
       <nav class="flex flex-col gap-3">
@@ -34,7 +34,7 @@
     <SectionBlock
       v-if="relatedCategories.length > 0"
       size="compact"
-      heading="이 지역 다른 시설"
+      heading="관련 탐색"
       subtext="관련 카테고리로 바로 이동합니다."
     >
       <nav data-testid="related-categories" class="flex flex-wrap gap-2">

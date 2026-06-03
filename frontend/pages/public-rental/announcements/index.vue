@@ -48,10 +48,10 @@
       </div>
 
       <!-- 목록 -->
-      <div v-if="loading" class="py-12 text-center text-slate-400 text-sm">불러오는 중…</div>
+      <div v-if="loading" class="py-12 text-center text-slate-400 text-sm">{{ UI_MESSAGES.loading }}</div>
       <div v-else-if="error" class="py-12 text-center text-rose-500 text-sm">{{ error }}</div>
       <div v-else-if="items.length === 0" class="py-12 text-center text-slate-400 text-sm">
-        해당 조건의 모집공고가 없습니다.
+        {{ emptyFiltered('모집공고') }}
       </div>
       <ul v-else class="grid gap-3 md:grid-cols-2">
         <li
@@ -104,6 +104,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRentalAnnouncements } from '~/composables/useRentalAnnouncements'
+import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { AnnouncementStatus } from '~/types/publicRentalAnnouncement'
