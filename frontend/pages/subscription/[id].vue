@@ -462,6 +462,7 @@ const mapMarker = computed(() => {
     name: subscription.value.houseName,
     lat: mapCenter.value.lat,
     lng: mapCenter.value.lng,
+    // 지도 마커 타입(FacilityCategory) 충족용 placeholder — 실제 시설 아님(상세 페이지의 단일 위치 핀)
     category: 'toilet' as const,
     address: subscription.value.supplyLocation || null,
     roadAddress: null,
