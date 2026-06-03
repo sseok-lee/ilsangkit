@@ -84,7 +84,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     })
     expect(description).toContain('광주 북구 새한A 아파트 매매 실거래 30건')
     expect(description).toContain('1억 700만원(2026년 5월)')
-    expect(description).toContain('전용 60㎡')
+    // areaClause is omitted when priceClause is present (100자 압축)
     expect(description).not.toContain('준공')
   })
 
@@ -107,12 +107,13 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     expect(description).toContain('1억 700만원(2026년 5월)')
   })
 
-  it('areaRange range — formats as min~max', () => {
+  it('areaRange range — area shown when no price clause (totalCount=0)', () => {
     const { description } = buildRealEstateDetailMeta({
       ...legacyBase,
       areaRange: { min: 39, max: 59 },
-      summary: { totalCount: 30, recentDeal: { amount: 10700, dealDate: '2026년 5월' } },
+      summary: { totalCount: 0 },
     })
+    // areaClause is included in the zero-count path
     expect(description).toContain('전용 39~59㎡')
   })
 
