@@ -330,6 +330,15 @@ describe('useFacilityMeta', () => {
       const call = mockUseSeoMeta.mock.calls[0][0]
       expect(call.title).toBe('서울 병원 찾기 | 일상킷')
     })
+    it('canonical:false 옵션이면 canonical을 설정하지 않는다', () => {
+      const { setCategoryMeta } = useFacilityMeta()
+      setCategoryMeta('hospital', undefined, { canonical: false })
+      const headCallsWithCanonical = mockUseHead.mock.calls.filter((c: unknown[]) => {
+        const arg = c[0] as { link?: Array<{ rel: string }> }
+        return arg?.link?.some((l) => l.rel === 'canonical')
+      })
+      expect(headCallsWithCanonical).toHaveLength(0)
+    })
   })
 
   describe('buildFacilityDescription - CTA', () => {

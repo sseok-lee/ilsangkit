@@ -276,7 +276,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
-import { RELATED_CATEGORIES, POPULAR_REGIONS, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE } from '~/utils/seoConstants'
+import { RELATED_CATEGORIES, POPULAR_REGIONS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
@@ -317,7 +317,7 @@ const { loading, facilities, total, currentPage, totalPages, error: facilityErro
 const { trackCategoryPageView, trackSearchNoResults } = useAnalytics()
 const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const { loadRegions, citiesWithDistricts } = useRegions()
-const { setMeta, setCategoryMeta } = useFacilityMeta()
+const { setCategoryMeta } = useFacilityMeta()
 const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema } = useStructuredData()
 
 // Region state
@@ -463,15 +463,11 @@ const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label
 const initialPageQueryParam = parsePositivePageQuery(route.query.page)
 
 if (initialPageQueryParam >= 2) {
-  // 2페이지+ 는 noindex 정책 — canonical:false 직접 지정
-  setMeta({
-    title: initialCityName
-      ? `${[initialCityName, initialDistrictName].filter(Boolean).join(' ')} ${catLabel} 찾기`
-      : (CATEGORY_SEO_TITLE[route.params.category as FacilityCategory] ?? `${catLabel} 찾기`),
-    description: `${catLabel} 검색 결과 ${initialPageQueryParam}페이지`,
-    path: `/${route.params.category}`,
-    canonical: false,
-  })
+  // 2페이지+ 는 noindex 정책 — setCategoryMeta에 canonical:false 위임
+  setCategoryMeta(route.params.category as FacilityCategory, {
+    cityName: initialCityName || undefined,
+    districtName: initialDistrictName || undefined,
+  }, { canonical: false })
 } else {
   setCategoryMeta(route.params.category as FacilityCategory, {
     cityName: initialCityName || undefined,
