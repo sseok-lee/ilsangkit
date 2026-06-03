@@ -1024,16 +1024,16 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
           body: { lat: resolvedBuildingInfo.lat, lng: resolvedBuildingInfo.lng, radius: 1000 },
         })
         const facilityItems: any[] = (facilityRes as any)?.data?.items ?? (facilityRes as any)?.items ?? []
-        const DISPLAY_CATS = ['school', 'childcare', 'park', 'sports', 'hospital', 'pharmacy'] as const
+        const DISPLAY_CATS = ['school', 'hospital', 'park', 'childcare', 'sports', 'pharmacy'] as const
         const FACILITY_LABELS: Record<string, string> = {
-          school: '학교', childcare: '어린이집', park: '공원', sports: '체육시설', hospital: '병원', pharmacy: '약국',
+          school: '학교', hospital: '병원', park: '공원', childcare: '어린이집', sports: '체육시설', pharmacy: '약국',
         }
         const parts = DISPLAY_CATS
           .map(cat => ({ cat, count: facilityItems.filter((i: any) => i.category === cat).length }))
           .filter(({ count }) => count > 0)
-          .slice(0, 3)
+          .slice(0, 2)
           .map(({ cat, count }) => `${FACILITY_LABELS[cat]} ${count}곳`)
-        if (parts.length > 0) facilitySummarySSR = parts.join(', ') + ' 등 생활시설'
+        if (parts.length > 0) facilitySummarySSR = parts.join('·')
       } catch {
         // best-effort — facility summary is optional SEO enhancement
       }
