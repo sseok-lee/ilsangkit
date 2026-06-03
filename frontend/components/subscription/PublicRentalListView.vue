@@ -7,31 +7,13 @@
         </span>
       </template>
 
-      <!-- 지역 필터: 청약 페이지(SubscriptionListView) 와 동일 패턴 -->
-      <div class="mb-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1.5">지역</label>
-          <div class="relative">
-            <select
-              v-model="currentCity"
-              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
-            >
-              <option value="">전국</option>
-              <option v-for="opt in CITY_OPTIONS" :key="opt.slug" :value="opt.slug">{{ opt.label }}</option>
-            </select>
-            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1.5">지역 (상세)</label>
-          <input
-            v-model="districtDetail"
-            type="text"
-            placeholder="예: 강남구, 분당구"
-            class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-        </div>
-      </div>
+      <!-- 지역 필터 -->
+      <RegionCascadingDropdown
+        v-model:city="currentCity"
+        v-model:district="selectedDistrict"
+        city-value-mode="slug"
+        class="mb-3"
+      />
 
       <LoadingSkeleton v-if="loading" variant="card" />
 
@@ -73,31 +55,11 @@ import { ref, watch } from 'vue'
 import { usePublicRental } from '~/composables/usePublicRental'
 import type { PublicRentalComplex, PublicRentalType } from '~/types/publicRental'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
+import RegionCascadingDropdown from '~/components/common/RegionCascadingDropdown.vue'
 
 const props = defineProps<{
   rentalTypeCode?: PublicRentalType
 }>()
-
-// 모든 광역시·도 (slug, label) — 청약 select 와 동일한 옵션셋 + 도 단위까지 포함.
-const CITY_OPTIONS = [
-  { slug: 'seoul', label: '서울' },
-  { slug: 'busan', label: '부산' },
-  { slug: 'daegu', label: '대구' },
-  { slug: 'incheon', label: '인천' },
-  { slug: 'gwangju', label: '광주' },
-  { slug: 'daejeon', label: '대전' },
-  { slug: 'ulsan', label: '울산' },
-  { slug: 'sejong', label: '세종' },
-  { slug: 'gyeonggi', label: '경기' },
-  { slug: 'gangwon', label: '강원' },
-  { slug: 'chungbuk', label: '충북' },
-  { slug: 'chungnam', label: '충남' },
-  { slug: 'jeonbuk', label: '전북' },
-  { slug: 'jeonnam', label: '전남' },
-  { slug: 'gyeongbuk', label: '경북' },
-  { slug: 'gyeongnam', label: '경남' },
-  { slug: 'jeju', label: '제주' },
-]
 
 const { getList } = usePublicRental()
 
@@ -110,7 +72,7 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const currentCity = ref<string>('')
-const districtDetail = ref<string>('')
+const selectedDistrict = ref<string>('')
 const page = ref(1)
 
 async function load(): Promise<void> {
@@ -119,7 +81,7 @@ async function load(): Promise<void> {
   try {
     const data = await getList({
       city: currentCity.value || undefined,
-      district: districtDetail.value.trim() || undefined,
+      district: selectedDistrict.value || undefined,
       rentalType: props.rentalTypeCode,
       page: page.value,
       limit: 18,
@@ -146,19 +108,9 @@ function goToPage(p: number) {
   void load()
 }
 
-watch([currentCity, () => props.rentalTypeCode], () => {
+watch([currentCity, selectedDistrict, () => props.rentalTypeCode], () => {
   page.value = 1
   void load()
-})
-
-// 상세 검색 입력은 디바운스 — 타이핑마다 호출 방지.
-let detailTimer: ReturnType<typeof setTimeout> | null = null
-watch(districtDetail, () => {
-  if (detailTimer) clearTimeout(detailTimer)
-  detailTimer = setTimeout(() => {
-    page.value = 1
-    void load()
-  }, 300)
 })
 
 // SSR: 초기 목록을 서버에서 패칭해 HTML에 포함

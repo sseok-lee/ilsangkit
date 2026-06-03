@@ -5,6 +5,24 @@ import { usePublicRental } from '~/composables/usePublicRental'
 import PublicRentalListView from '~/components/subscription/PublicRentalListView.vue'
 import type { PublicRentalListResponse, PublicRentalComplex } from '~/types/publicRental'
 
+// RegionCascadingDropdown stub: exposes city/district selects via update:city / update:district emits
+vi.mock('~/components/common/RegionCascadingDropdown.vue', () => ({
+  default: defineComponent({
+    name: 'RegionCascadingDropdown',
+    props: ['city', 'district', 'cityValueMode'],
+    emits: ['update:city', 'update:district'],
+    template: `<div>
+      <select data-testid="city-select" :value="city" @change="$emit('update:city', $event.target.value); $emit('update:district', '')">
+        <option value="">전국</option>
+        <option value="seoul">서울</option>
+      </select>
+      <select data-testid="district-select" :value="district" :disabled="!city" @change="$emit('update:district', $event.target.value)">
+        <option value="">전체</option>
+      </select>
+    </div>`,
+  }),
+}))
+
 const mockFetch = vi.fn()
 vi.stubGlobal('$fetch', mockFetch)
 vi.stubGlobal('useApiBase', () => 'http://localhost:8000')
@@ -104,7 +122,7 @@ describe('PublicRentalListView', () => {
     })
 
     mockFetch.mockRejectedValueOnce(new Error('boom'))
-    await wrapper.find('select').setValue('seoul')
+    await wrapper.find('[data-testid="city-select"]').setValue('seoul')
     await flushPromises()
 
     expect(wrapper.text()).toContain('데이터를 불러오는 중 오류가 발생했습니다')
