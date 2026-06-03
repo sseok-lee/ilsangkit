@@ -38,9 +38,9 @@
 </template>
 
 <script setup lang="ts">
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { SALE_TYPES } from '~/utils/subscriptionMeta'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
 const route = useRoute()
@@ -51,27 +51,11 @@ if (!typeMeta) {
   throw createError({ statusCode: 404, statusMessage: '존재하지 않는 청약 카테고리입니다' })
 }
 
-const title = `${typeMeta.label} 청약 일정 | 분양 | 일상킷`
-const description = `${typeMeta.label} 분양 청약 일정과 접수 상태, 공급 정보를 확인하세요.`
-const canonicalUrl = `${SITE_URL}/subscription/sale/${type}`
-
-useHead({
-  title,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:image', content: DEFAULT_OG_IMAGE },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:locale', content: 'ko_KR' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
-  ],
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+const { setMeta } = useFacilityMeta()
+setMeta({
+  title: `${typeMeta.label} 분양 청약 일정`,
+  description: `${typeMeta.label} 분양 청약 일정과 접수 상태, 공급 정보를 확인하세요.`,
+  path: `/subscription/sale/${type}`,
 })
 
 const { setBreadcrumbSchema } = useStructuredData()
