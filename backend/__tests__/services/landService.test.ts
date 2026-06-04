@@ -1,17 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockSummaryFindMany, mockSummaryCount } = vi.hoisted(() => ({
+const { mockSummaryFindMany, mockSummaryCount, mockTxnFindMany, mockTxnCount } = vi.hoisted(() => ({
   mockSummaryFindMany: vi.fn(),
   mockSummaryCount: vi.fn(),
+  mockTxnFindMany: vi.fn(),
+  mockTxnCount: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {
     landAreaSummary: { findMany: mockSummaryFindMany, count: mockSummaryCount },
+    landSaleTransaction: { findMany: mockTxnFindMany, count: mockTxnCount },
   },
 }));
 
-import { getRegionList } from '../../src/services/landService.js';
+import { getRegionList, getRegionDetail } from '../../src/services/landService.js';
 
 describe('getRegionList', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -43,5 +46,35 @@ describe('getRegionList', () => {
     mockSummaryCount.mockResolvedValue(0);
     await getRegionList({ page: 1, limit: 20 });
     expect(mockSummaryFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+  });
+});
+
+describe('getRegionDetail', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('거래내역 + 평당가 시계열 + 지목/용도지역 분포 반환', async () => {
+    const rows = [
+      { id: 1, jibun: '123-4', jimok: '대', landUse: '제2종일반주거지역', dealArea: 198.3,
+        shareDeal: false, dealAmount: 1500000n, dealType: '중개거래', dealYear: 2026, dealMonth: 3, dealDay: 15 },
+      { id: 2, jibun: '567', jimok: '전', landUse: '계획관리지역', dealArea: 330,
+        shareDeal: false, dealAmount: 990000n, dealType: '직거래', dealYear: 2026, dealMonth: 1, dealDay: 5 },
+    ];
+    mockTxnFindMany.mockResolvedValueOnce(rows).mockResolvedValueOnce(rows);
+    mockTxnCount.mockResolvedValue(2);
+
+    const r = await getRegionDetail({ bjdCode: '11680', dongName: '역삼동', page: 1, limit: 20 });
+
+    expect(r.total).toBe(2);
+    expect(r.items[0].pricePerPyeong).toBeGreaterThan(0);
+    expect(r.items[0].dealAmount).toBe(1500000); // BigInt → number
+    expect(r.jimokDistribution).toEqual(expect.arrayContaining([
+      { jimok: '대', count: 1 }, { jimok: '전', count: 1 },
+    ]));
+    expect(r.landUseDistribution).toEqual(expect.arrayContaining([
+      { landUse: '제2종일반주거지역', count: 1 }, { landUse: '계획관리지역', count: 1 },
+    ]));
+    expect(r.priceTimeline.length).toBeGreaterThan(0);
+    expect(r.priceTimeline[0]).toHaveProperty('year');
+    expect(r.priceTimeline[0]).toHaveProperty('avgPricePerPyeong');
   });
 });
