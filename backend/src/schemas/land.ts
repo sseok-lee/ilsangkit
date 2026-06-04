@@ -22,3 +22,13 @@ export const LandRegionDetailSchema = z.object({
 });
 
 export type LandRegionDetail = z.infer<typeof LandRegionDetailSchema>;
+
+// GET /api/real-estate/land/transactions — 전체 거래 내역 페이지네이션
+export const LandTransactionsSchema = z.object({
+  bjdCode: z.string().min(1).max(10),
+  dongName: z.string().min(1).max(50),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export type LandTransactions = z.infer<typeof LandTransactionsSchema>;

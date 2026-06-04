@@ -144,8 +144,8 @@
         </SectionBlock>
       </div>
 
-      <!-- 5. 전체 거래 내역 (접이식) -->
-      <SectionBlock v-if="detail && detail.total > 0" heading="전체 거래 내역" :subtext="`최근 거래 ${Math.min(detail.items.length, detail.total)}건 (전체 ${detail.total.toLocaleString('ko-KR')}건 · 지분·도로 포함)`">
+      <!-- 5. 전체 거래 내역 -->
+      <SectionBlock v-if="detail && detail.total > 0" heading="전체 거래 내역" :subtext="`전체 ${detail.total.toLocaleString('ko-KR')}건 · 지분·도로 포함`">
         <div class="overflow-x-auto">
             <table class="w-full text-sm border-collapse">
               <thead>
@@ -159,7 +159,7 @@
               </thead>
               <tbody>
                 <tr
-                  v-for="tx in detail.items"
+                  v-for="tx in txItems"
                   :key="tx.id"
                   class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                 >
@@ -176,6 +176,7 @@
               </tbody>
             </table>
           </div>
+        <Pagination :current-page="txPage" :total-pages="txTotalPages" @page-change="goToTxPage" />
       </SectionBlock>
 
       <!-- Ad: 전체거래 이후 -->
@@ -198,7 +199,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useLand } from '~/composables/useLand'
@@ -208,6 +209,7 @@ import { SITE_URL } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import Pagination from '~/components/common/Pagination.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const route = useRoute()
@@ -264,6 +266,23 @@ if (import.meta.server || !data.value) {
 
 const summary = computed(() => data.value?.summary ?? null)
 const detail = computed(() => data.value?.detail ?? null)
+
+// ── 전체 거래 내역 페이지네이션 ───────────────────────────────────────────────
+
+const TX_LIMIT = 20
+const txItems = ref([...(data.value?.detail?.items ?? [])])
+const txPage = ref(1)
+const txTotalPages = computed(() =>
+  detail.value ? (detail.value.total === 0 ? 0 : Math.ceil(detail.value.total / TX_LIMIT)) : 1
+)
+
+async function goToTxPage(p: number) {
+  const bjd = summary.value?.bjdCode
+  if (!bjd) return
+  const res = await useLand().getTransactions({ bjdCode: bjd, dongName: dong, page: p, limit: TX_LIMIT })
+  txItems.value = res.items
+  txPage.value = res.page
+}
 
 // ── SEO / Head ────────────────────────────────────────────────────────────────
 

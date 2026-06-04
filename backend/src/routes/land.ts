@@ -2,10 +2,10 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { getRegionList, getRegionDetail, getHubSummary, getSitemapEntries } from '../services/landService.js';
+import { getRegionList, getRegionDetail, getHubSummary, getSitemapEntries, getTransactions } from '../services/landService.js';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { LandRegionListSchema, LandRegionDetailSchema } from '../schemas/land.js';
+import { LandRegionListSchema, LandRegionDetailSchema, LandTransactionsSchema } from '../schemas/land.js';
 
 const router = Router();
 
@@ -36,6 +36,17 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const params = req.query as unknown as z.infer<typeof LandRegionDetailSchema>;
     const data = await getRegionDetail(params);
+    res.json({ success: true, data });
+  })
+);
+
+// GET /api/real-estate/land/transactions — 전체 거래 내역 페이지네이션
+router.get(
+  '/transactions',
+  validate(LandTransactionsSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const params = req.query as unknown as z.infer<typeof LandTransactionsSchema>;
+    const data = await getTransactions(params);
     res.json({ success: true, data });
   })
 );

@@ -149,6 +149,7 @@ vi.mock('~/composables/useLand', () => ({
     getRegions: mockGetRegions,
     getRegionDetail: mockGetRegionDetail,
     getHubSummary: async () => ({ cities: [], totalTransactions: 0 }),
+    getTransactions: vi.fn(async (_params: any) => ({ items: [], total: 0, page: 1, totalPages: 0 })),
   }),
 }))
 

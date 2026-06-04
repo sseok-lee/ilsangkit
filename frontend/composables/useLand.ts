@@ -2,6 +2,7 @@ import type {
   LandRegionListResult,
   LandRegionDetailResult,
   LandHubSummary,
+  LandTransactionsResult,
 } from '~/types/land'
 import { useApiBase } from '~/composables/useApiBase'
 
@@ -53,9 +54,28 @@ export function useLand() {
     return res.data
   }
 
+  async function getTransactions(params: {
+    bjdCode: string
+    dongName: string
+    page?: number
+    limit?: number
+  }): Promise<LandTransactionsResult> {
+    const query = new URLSearchParams()
+    query.set('bjdCode', params.bjdCode)
+    query.set('dongName', params.dongName)
+    if (params.page != null) query.set('page', String(params.page))
+    if (params.limit != null) query.set('limit', String(params.limit))
+
+    const res = await $fetch<{ success: boolean; data: LandTransactionsResult }>(
+      `${apiBase}/api/real-estate/land/transactions?${query.toString()}`
+    )
+    return res.data
+  }
+
   return {
     getRegions,
     getRegionDetail,
     getHubSummary,
+    getTransactions,
   }
 }

@@ -19,6 +19,54 @@ function serializeRow(row: any): any {
   return result;
 }
 
+export interface TransactionsParams {
+  bjdCode: string;
+  dongName: string;
+  page: number;
+  limit: number;
+}
+
+export interface TransactionsResult {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  items: any[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export async function getTransactions(params: TransactionsParams): Promise<TransactionsResult> {
+  const { bjdCode, dongName, page, limit } = params;
+  const where = { bjdCode, dongName, cancelDealDay: null };
+  const skip = (page - 1) * limit;
+
+  const [rows, total] = await Promise.all([
+    prisma.landSaleTransaction.findMany({
+      where,
+      select: {
+        id: true, jibun: true, jimok: true, landUse: true, dealArea: true, shareDeal: true,
+        dealAmount: true, dealType: true, dealYear: true, dealMonth: true, dealDay: true,
+      },
+      orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
+      skip,
+      take: limit,
+    }),
+    prisma.landSaleTransaction.count({ where }),
+  ]);
+
+  const items = rows.map((r) => {
+    const s = serializeRow(r);
+    s.pricePerPyeong = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
+    return s;
+  });
+
+  return {
+    items,
+    total,
+    page,
+    totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+  };
+}
+
 export interface RegionListParams {
   city?: string;
   district?: string;

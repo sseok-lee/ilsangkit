@@ -57,6 +57,13 @@ export interface LandRegionDetailResult {
   daeCount: number;
 }
 
+export interface LandTransactionsResult {
+  items: LandTransaction[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 export interface LandHubSummary {
   cities: Array<{ slug: string; city: string; indexableDongCount: number; totalTransactions: number }>;
   totalTransactions: number;

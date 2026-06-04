@@ -14,7 +14,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   },
 }));
 
-import { getRegionList, getRegionDetail, getHubSummary, getSitemapEntries } from '../../src/services/landService.js';
+import { getRegionList, getRegionDetail, getHubSummary, getSitemapEntries, getTransactions } from '../../src/services/landService.js';
 
 describe('getRegionList', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -131,6 +131,56 @@ describe('getHubSummary', () => {
     expect(seoul?.totalTransactions).toBe(15);
     expect(seoul?.slug).toBe('seoul');
     expect(r.totalTransactions).toBe(35);
+  });
+});
+
+describe('getTransactions', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('bjdCode/dongName 기준 페이지네이션 items + total + totalPages 반환', async () => {
+    mockTxnFindMany.mockResolvedValue([
+      { id: 1, jibun: '123-4', jimok: '대', landUse: '제2종일반주거지역', dealArea: 198.3,
+        shareDeal: false, dealAmount: 1500000n, dealType: '중개거래', dealYear: 2026, dealMonth: 3, dealDay: 15 },
+    ]);
+    mockTxnCount.mockResolvedValue(42);
+
+    const r = await getTransactions({ bjdCode: '11680', dongName: '역삼동', page: 2, limit: 20 });
+
+    expect(r.total).toBe(42);
+    expect(r.page).toBe(2);
+    expect(r.totalPages).toBe(3); // ceil(42/20)
+    expect(r.items).toHaveLength(1);
+    expect(r.items[0].dealAmount).toBe(1500000); // BigInt → number
+    expect(r.items[0].pricePerPyeong).toBeGreaterThan(0);
+
+    expect(mockTxnFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { bjdCode: '11680', dongName: '역삼동', cancelDealDay: null },
+        orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
+        skip: 20, // (page 2 - 1) * 20
+        take: 20,
+      })
+    );
+    expect(mockTxnCount).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { bjdCode: '11680', dongName: '역삼동', cancelDealDay: null } })
+    );
+  });
+
+  it('total=0 이면 totalPages=0', async () => {
+    mockTxnFindMany.mockResolvedValue([]);
+    mockTxnCount.mockResolvedValue(0);
+    const r = await getTransactions({ bjdCode: '11680', dongName: '역삼동', page: 1, limit: 20 });
+    expect(r.totalPages).toBe(0);
+    expect(r.items).toHaveLength(0);
+  });
+
+  it('page=1 일 때 skip=0', async () => {
+    mockTxnFindMany.mockResolvedValue([]);
+    mockTxnCount.mockResolvedValue(5);
+    await getTransactions({ bjdCode: '11680', dongName: '역삼동', page: 1, limit: 20 });
+    expect(mockTxnFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 20 })
+    );
   });
 });
 
