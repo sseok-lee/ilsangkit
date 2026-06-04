@@ -1,6 +1,17 @@
 #!/usr/bin/env tsx
 // 토지 매매 실거래가 동기화 스크립트
 
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
+import { prisma } from '../lib/prisma.js';
+import { installRuntimeGuard } from './_runtimeGuard.js';
+import {
+  fetchRealEstateData,
+  getAllLawdCodes,
+} from '../services/syncRealEstateBase.js';
+import { runSync, batchUpsert, transformAndDedupe } from '../services/baseSyncService.js';
+
+const API_ENDPOINT = 'RTMSDataSvcLandTrade/getRTMSDataSvcLandTrade';
 const CATEGORY = 'landSale';
 
 export interface RawLandSaleItem extends Record<string, unknown> {
@@ -67,4 +78,92 @@ export function transformLandSaleItem(item: RawLandSaleItem) {
     cancelDealDay: String(item.cdealDay ?? '').trim() || null,
     cancelDealType: String(item.cdealType ?? '').trim() || null,
   };
+}
+
+export async function refreshLandAreaSummary(): Promise<void> { /* implemented in Task 5 */ }
+
+export async function syncLandSaleByLawd(
+  lawdCd: string,
+  dealYmd: string,
+  serviceKey: string,
+  regionMap: Map<string, { city: string; district: string }>
+): Promise<void> {
+  const items = await fetchRealEstateData(API_ENDPOINT, lawdCd, dealYmd, serviceKey);
+  if (items.length === 0) return;
+
+  const regionInfo = regionMap.get(lawdCd) ?? { city: '', district: '' };
+  const enriched = items.map((item) => ({
+    ...(item as Record<string, unknown>),
+    city: regionInfo.city,
+    district: regionInfo.district,
+  })) as RawLandSaleItem[];
+
+  const stats = { totalRecords: 0, newRecords: 0, updatedRecords: 0, skippedRecords: 0, errors: [] as string[] };
+  const records = transformAndDedupe(enriched, transformLandSaleItem, (r) => r.sourceId, stats);
+  if (records.length === 0) return;
+
+  await batchUpsert(records, async (record) => {
+    const existing = await prisma.landSaleTransaction.findUnique({
+      where: { sourceId: record.sourceId },
+      select: { id: true },
+    });
+    await prisma.landSaleTransaction.upsert({
+      where: { sourceId: record.sourceId },
+      create: { ...record, syncedAt: new Date() },
+      update: { ...record, syncedAt: new Date() },
+    });
+    return existing ? 'updated' : 'new';
+  });
+}
+
+async function main(): Promise<void> {
+  const serviceKey = process.env.OPENAPI_SERVICE_KEY ?? '';
+  if (!serviceKey) throw new Error('OPENAPI_SERVICE_KEY environment variable is not set');
+
+  const args = process.argv.slice(2);
+  const lawdIndex = args.indexOf('--lawd');
+  const ymIndex = args.indexOf('--ym');
+  const lawdCdArg = lawdIndex !== -1 ? args[lawdIndex + 1] : undefined;
+  const dealYmdArg = ymIndex !== -1 ? args[ymIndex + 1] : undefined;
+
+  const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } });
+  const regionMap = new Map(regions.map((r) => [r.bjdCode, { city: r.city, district: r.district }]));
+
+  await runSync(CATEGORY, async () => {
+    const lawdCodes = lawdCdArg ? [lawdCdArg] : await getAllLawdCodes();
+    const now = new Date();
+    const ymList: string[] = [];
+    if (dealYmdArg) {
+      ymList.push(dealYmdArg);
+    } else {
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        ymList.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    }
+    console.info(`[landSale] 시작: ${lawdCodes.length}개 지역, ${ymList.length}개 월`);
+    for (const lawdCd of lawdCodes) {
+      for (const ym of ymList) {
+        try {
+          await syncLandSaleByLawd(lawdCd, ym, serviceKey, regionMap);
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`[landSale] ${lawdCd}/${ym} 실패: ${msg}`);
+        }
+      }
+    }
+  });
+
+  await refreshLandAreaSummary();
+
+  console.info('\n=== landSale sync completed ===');
+}
+
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
+  installRuntimeGuard({ maxMinutes: 20, name: 'syncLandSale', prisma });
+  main().catch((error) => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
 }

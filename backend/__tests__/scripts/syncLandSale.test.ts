@@ -22,6 +22,7 @@ global.fetch = mockFetch;
 
 import {
   transformLandSaleItem,
+  syncLandSaleByLawd,
   type RawLandSaleItem,
 } from '../../src/scripts/syncLandSale.js';
 
@@ -76,5 +77,50 @@ describe('transformLandSaleItem', () => {
   it('sourceId 형식 검증', () => {
     const r = transformLandSaleItem(makeItem({}));
     expect(r.sourceId).toBe('landSale-11680-역삼동-123-4-2026-3-15-198.30-1500000');
+  });
+});
+
+describe('syncLandSaleByLawd', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('API 응답에서 데이터를 가져와 upsert 수행', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <header><resultCode>00</resultCode><resultMsg>OK</resultMsg></header>
+  <body>
+    <totalCount>1</totalCount>
+    <items>
+      <item>
+        <sggCd>11680</sggCd><umdNm>역삼동</umdNm><jibun>123-4</jibun>
+        <jimok>대</jimok><landUse>제2종일반주거지역</landUse>
+        <dealArea>198.30</dealArea><dealAmount>1,500,000</dealAmount>
+        <shareDealingType>일반</shareDealingType><dealingGbn>중개거래</dealingGbn>
+        <dealYear>2026</dealYear><dealMonth>3</dealMonth><dealDay>15</dealDay>
+      </item>
+    </items>
+  </body>
+</response>`;
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => xml });
+    mockUpsert.mockResolvedValue({ id: 1 });
+    const regionMap = new Map([['11680', { city: '서울특별시', district: '강남구' }]]);
+
+    await syncLandSaleByLawd('11680', '202603', 'test-key', regionMap);
+
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(mockUpsert).toHaveBeenCalledOnce();
+  });
+
+  it('빈 items이면 upsert 안함', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<response><header><resultCode>00</resultCode><resultMsg>OK</resultMsg></header>
+<body><totalCount>0</totalCount><items/></body></response>`;
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => xml });
+    const regionMap = new Map([['11680', { city: '서울특별시', district: '강남구' }]]);
+
+    await syncLandSaleByLawd('11680', '202603', 'test-key', regionMap);
+
+    expect(mockUpsert).not.toHaveBeenCalled();
   });
 });
