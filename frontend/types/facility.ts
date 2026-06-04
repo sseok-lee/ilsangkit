@@ -543,6 +543,7 @@ export const NAV_LINK_GROUPS: readonly LinkGroup[] = [
       { to: '/real-estate/apt-sale', label: '아파트', icon: 'apartment', iconImg: 'apt' },
       { to: '/real-estate/villa-sale', label: '빌라', icon: 'holiday_village', iconImg: 'villa' },
       { to: '/real-estate/offitel-sale', label: '오피스텔', icon: 'business', iconImg: 'offitel' },
+      { to: '/real-estate/land', label: '토지', icon: 'landscape', iconImg: 'land' },
     ],
   },
   {
