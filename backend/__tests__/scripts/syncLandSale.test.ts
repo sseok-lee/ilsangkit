@@ -23,7 +23,9 @@ global.fetch = mockFetch;
 import {
   transformLandSaleItem,
   syncLandSaleByLawd,
+  computeAreaSummary,
   type RawLandSaleItem,
+  type LandTxnForSummary,
 } from '../../src/scripts/syncLandSale.js';
 
 function makeItem(overrides: Partial<RawLandSaleItem>): RawLandSaleItem {
@@ -122,5 +124,57 @@ describe('syncLandSaleByLawd', () => {
     await syncLandSaleByLawd('11680', '202603', 'test-key', regionMap);
 
     expect(mockUpsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('computeAreaSummary', () => {
+  const now = new Date('2026-06-01T00:00:00Z');
+
+  it('평당가 평균 = 거래금액(만원) / (면적/3.305) 의 평균', () => {
+    const txns: LandTxnForSummary[] = [
+      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대' },
+    ];
+    const s = computeAreaSummary(txns, now);
+    expect(s.avgPricePerPyeong).toBeGreaterThan(24000);
+    expect(s.avgPricePerPyeong).toBeLessThan(26000);
+    expect(s.transactionCount).toBe(1);
+  });
+
+  it('recentCount = 최근 12개월 거래 수', () => {
+    const txns: LandTxnForSummary[] = [
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대' },
+      { dealAmount: 100, dealArea: 100, dealYear: 2024, dealMonth: 1, jimok: '전' },
+    ];
+    const s = computeAreaSummary(txns, now);
+    expect(s.transactionCount).toBe(2);
+    expect(s.recentCount).toBe(1);
+  });
+
+  it('isIndexable: recentCount>=5 또는 transactionCount>=10', () => {
+    const recent = (n: number) => Array.from({ length: n }, () => ({ dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대' }));
+    expect(computeAreaSummary(recent(5), now).isIndexable).toBe(true);
+    expect(computeAreaSummary(recent(4), now).isIndexable).toBe(false);
+    const old = Array.from({ length: 10 }, () => ({ dealAmount: 100, dealArea: 100, dealYear: 2024, dealMonth: 1, jimok: '대' }));
+    expect(computeAreaSummary(old, now).isIndexable).toBe(true);
+  });
+
+  it('jimokBreakdown: 지목별 건수 집계', () => {
+    const txns: LandTxnForSummary[] = [
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대' },
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대' },
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '전' },
+    ];
+    const s = computeAreaSummary(txns, now);
+    expect(s.jimokBreakdown).toEqual({ '대': 2, '전': 1 });
+  });
+
+  it('면적 0/누락 거래는 평당가 계산에서 제외', () => {
+    const txns: LandTxnForSummary[] = [
+      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대' },
+      { dealAmount: 100, dealArea: 0, dealYear: 2026, dealMonth: 3, jimok: '대' },
+    ];
+    const s = computeAreaSummary(txns, now);
+    expect(s.transactionCount).toBe(2);
+    expect(s.avgPricePerPyeong).toBeGreaterThan(24000);
   });
 });

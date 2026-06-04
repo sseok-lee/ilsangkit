@@ -14,6 +14,54 @@ import { runSync, batchUpsert, transformAndDedupe } from '../services/baseSyncSe
 const API_ENDPOINT = 'RTMSDataSvcLandTrade/getRTMSDataSvcLandTrade';
 const CATEGORY = 'landSale';
 
+const PYEONG_PER_SQM = 3.305;
+const RECENT_MONTHS = 12;
+const INDEX_RECENT_MIN = 5;
+const INDEX_TOTAL_MIN = 10;
+
+export interface LandTxnForSummary {
+  dealAmount: number;
+  dealArea: number;
+  dealYear: number;
+  dealMonth: number;
+  jimok: string | null;
+}
+
+export interface AreaSummaryResult {
+  transactionCount: number;
+  recentCount: number;
+  avgPricePerPyeong: number | null;
+  jimokBreakdown: Record<string, number>;
+  isIndexable: boolean;
+}
+
+export function computeAreaSummary(txns: LandTxnForSummary[], now: Date): AreaSummaryResult {
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - RECENT_MONTHS + 1, 1);
+  let recentCount = 0;
+  const pyeongPrices: number[] = [];
+  const jimokBreakdown: Record<string, number> = {};
+
+  for (const t of txns) {
+    const txnDate = new Date(t.dealYear, t.dealMonth - 1, 1);
+    if (txnDate >= cutoff) recentCount++;
+
+    if (t.dealArea && t.dealArea > 0) {
+      const pyeong = t.dealArea / PYEONG_PER_SQM;
+      pyeongPrices.push(t.dealAmount / pyeong);
+    }
+    const key = t.jimok && t.jimok.trim() ? t.jimok.trim() : '기타';
+    jimokBreakdown[key] = (jimokBreakdown[key] ?? 0) + 1;
+  }
+
+  const avgPricePerPyeong = pyeongPrices.length
+    ? Math.round((pyeongPrices.reduce((a, b) => a + b, 0) / pyeongPrices.length) * 100) / 100
+    : null;
+  const transactionCount = txns.length;
+  const isIndexable = recentCount >= INDEX_RECENT_MIN || transactionCount >= INDEX_TOTAL_MIN;
+
+  return { transactionCount, recentCount, avgPricePerPyeong, jimokBreakdown, isIndexable };
+}
+
 export interface RawLandSaleItem extends Record<string, unknown> {
   sggCd: string;
   umdNm: string;
@@ -80,7 +128,50 @@ export function transformLandSaleItem(item: RawLandSaleItem) {
   };
 }
 
-export async function refreshLandAreaSummary(): Promise<void> { /* implemented in Task 5 */ }
+export async function refreshLandAreaSummary(): Promise<void> {
+  const groups = await prisma.landSaleTransaction.findMany({
+    select: { bjdCode: true, dongName: true, city: true, district: true },
+    distinct: ['bjdCode', 'dongName'],
+  });
+  const now = new Date();
+
+  for (const g of groups) {
+    const rows = await prisma.landSaleTransaction.findMany({
+      where: { bjdCode: g.bjdCode, dongName: g.dongName, cancelDealDay: null },
+      select: { dealAmount: true, dealArea: true, dealYear: true, dealMonth: true, dealDay: true, jimok: true },
+    });
+    const txns: LandTxnForSummary[] = rows.map((r) => ({
+      dealAmount: Number(r.dealAmount),
+      dealArea: r.dealArea ? Number(r.dealArea) : 0,
+      dealYear: r.dealYear,
+      dealMonth: r.dealMonth,
+      jimok: r.jimok,
+    }));
+    const summary = computeAreaSummary(txns, now);
+
+    const latest = rows.reduce<Date | null>((acc, r) => {
+      const d = new Date(r.dealYear, r.dealMonth - 1, r.dealDay ?? 1);
+      return !acc || d > acc ? d : acc;
+    }, null);
+
+    await prisma.landAreaSummary.upsert({
+      where: { bjdCode_dongName: { bjdCode: g.bjdCode, dongName: g.dongName } },
+      create: {
+        bjdCode: g.bjdCode, dongName: g.dongName, city: g.city, district: g.district,
+        transactionCount: summary.transactionCount, recentCount: summary.recentCount,
+        avgPricePerPyeong: summary.avgPricePerPyeong, latestDealDate: latest,
+        jimokBreakdown: summary.jimokBreakdown, isIndexable: summary.isIndexable,
+      },
+      update: {
+        city: g.city, district: g.district,
+        transactionCount: summary.transactionCount, recentCount: summary.recentCount,
+        avgPricePerPyeong: summary.avgPricePerPyeong, latestDealDate: latest,
+        jimokBreakdown: summary.jimokBreakdown, isIndexable: summary.isIndexable,
+      },
+    });
+  }
+  console.info(`[landSale] LandAreaSummary 갱신: ${groups.length}개 동`);
+}
 
 export async function syncLandSaleByLawd(
   lawdCd: string,
