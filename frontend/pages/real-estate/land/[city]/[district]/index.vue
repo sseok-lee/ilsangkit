@@ -24,10 +24,10 @@
             <span class="text-sm font-semibold text-slate-800">{{ dong.dongName }}</span>
             <template v-if="dong.avgPricePerPyeong != null">
               <span class="text-xs text-slate-500">
-                평당 {{ dong.avgPricePerPyeong.toLocaleString('ko-KR') }}만원
+                평당 {{ formatManwon(dong.avgPricePerPyeong) }}만원
               </span>
               <span class="text-xs text-slate-400">
-                (㎡당 {{ pyeongToSqm(dong.avgPricePerPyeong)?.toLocaleString('ko-KR') ?? '-' }}만원)
+                (㎡당 {{ formatManwon(pyeongToSqm(dong.avgPricePerPyeong)) }}만원)
               </span>
             </template>
             <span v-else class="text-xs text-slate-400">대지 거래 없음</span>
@@ -56,7 +56,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useLand } from '~/composables/useLand'
 import { buildLandRegionTitle, buildLandRegionDescription } from '~/utils/landMeta'
-import { pyeongToSqm } from '~/types/land'
+import { pyeongToSqm, formatManwon } from '~/types/land'
 import type { LandRegionSummary } from '~/types/land'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'

@@ -25,7 +25,7 @@
             <span class="text-xs text-slate-500">동 {{ card.dongCount }}개</span>
             <span class="text-xs text-slate-500">거래 {{ card.totalTransactions.toLocaleString('ko-KR') }}건</span>
             <span v-if="card.avgPricePerPyeong != null" class="text-xs text-slate-500">
-              평당 {{ card.avgPricePerPyeong.toLocaleString('ko-KR') }}만원
+              평당 {{ formatManwon(card.avgPricePerPyeong) }}만원
             </span>
           </NuxtLink>
         </div>
@@ -50,6 +50,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useLand } from '~/composables/useLand'
 import { buildLandRegionTitle, buildLandRegionDescription } from '~/utils/landMeta'
+import { formatManwon } from '~/types/land'
 import type { LandRegionSummary } from '~/types/land'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'

@@ -64,5 +64,20 @@ export function isLandIndexable(r: Pick<LandRegionSummary, 'isIndexable'>): bool
 }
 
 export function pyeongToSqm(pricePerPyeong: number | null): number | null {
-  return pricePerPyeong == null ? null : Math.round((pricePerPyeong / 3.305) * 100) / 100;
+  return pricePerPyeong == null ? null : Math.round(pricePerPyeong / 3.305);
+}
+
+export function formatLandDealDate(value: string | null | undefined): string {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '-';
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}.${m}.${day}`;
+}
+
+export function formatManwon(value: number | null | undefined): string {
+  if (value == null) return '-';
+  return Math.round(value).toLocaleString('ko-KR');
 }

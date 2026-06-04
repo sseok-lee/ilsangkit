@@ -18,10 +18,10 @@
           <div class="rounded-xl border border-slate-200 bg-white p-4">
             <span class="block text-xs font-semibold text-slate-500">대지 평당가</span>
             <strong class="block mt-1 text-base font-bold text-slate-900">
-              평당 {{ summary.avgPricePerPyeong.toLocaleString('ko-KR') }}만원
+              평당 {{ formatManwon(summary.avgPricePerPyeong) }}만원
             </strong>
             <span class="text-xs text-slate-400">
-              (㎡당 {{ pyeongToSqm(summary.avgPricePerPyeong)?.toLocaleString('ko-KR') ?? '-' }}만원)
+              (㎡당 {{ formatManwon(pyeongToSqm(summary.avgPricePerPyeong)) }}만원)
             </span>
           </div>
           <div class="rounded-xl border border-slate-200 bg-white p-4">
@@ -39,7 +39,7 @@
           <div class="rounded-xl border border-slate-200 bg-white p-4">
             <span class="block text-xs font-semibold text-slate-500">최신 거래일</span>
             <strong class="block mt-1 text-base font-bold text-slate-900">
-              {{ summary.latestDealDate ?? '-' }}
+              {{ formatLandDealDate(summary.latestDealDate) }}
             </strong>
           </div>
         </div>
@@ -72,7 +72,7 @@
                 <td class="py-2.5 pr-3 text-slate-700">{{ tx.jimok ?? '-' }}</td>
                 <td class="py-2.5 pr-3 text-slate-700">{{ tx.dealArea != null ? tx.dealArea.toLocaleString('ko-KR') : '-' }}</td>
                 <td class="py-2.5 pr-3 text-slate-700">
-                  {{ tx.pricePerPyeong != null ? tx.pricePerPyeong.toLocaleString('ko-KR') : '-' }}
+                  {{ formatManwon(tx.pricePerPyeong) }}
                 </td>
                 <td class="py-2.5 pr-3 text-slate-700">
                   {{ tx.dealYear }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}
@@ -115,7 +115,7 @@
               >
                 <td class="py-2.5 pr-3 text-slate-700">{{ point.year }}.{{ String(point.month).padStart(2, '0') }}</td>
                 <td class="py-2.5 pr-3 text-slate-700">
-                  {{ point.avgPricePerPyeong != null ? point.avgPricePerPyeong.toLocaleString('ko-KR') : '-' }}
+                  {{ formatManwon(point.avgPricePerPyeong) }}
                 </td>
                 <td class="py-2.5 text-slate-700">{{ point.count }}건</td>
               </tr>
@@ -139,7 +139,7 @@
             <span class="block text-sm font-semibold text-slate-800">{{ item.jimok }}</span>
             <span class="block text-xs text-slate-500 mt-1">{{ item.count.toLocaleString('ko-KR') }}건</span>
             <span v-if="item.avgPricePerPyeong != null" class="block text-xs text-slate-400">
-              평당 {{ item.avgPricePerPyeong.toLocaleString('ko-KR') }}만원
+              평당 {{ formatManwon(item.avgPricePerPyeong) }}만원
             </span>
           </div>
         </div>
@@ -188,7 +188,7 @@ import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useLand } from '~/composables/useLand'
 import { buildLandRegionTitle, buildLandRegionDescription, LAND_FAQ } from '~/utils/landMeta'
-import { pyeongToSqm } from '~/types/land'
+import { pyeongToSqm, formatManwon, formatLandDealDate } from '~/types/land'
 import { SITE_URL } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'

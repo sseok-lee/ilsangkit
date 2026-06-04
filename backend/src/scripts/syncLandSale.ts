@@ -156,7 +156,7 @@ export async function refreshLandAreaSummary(): Promise<void> {
     const summary = computeAreaSummary(txns, now);
 
     const latest = rows.reduce<Date | null>((acc, r) => {
-      const d = new Date(r.dealYear, r.dealMonth - 1, r.dealDay ?? 1);
+      const d = new Date(Date.UTC(r.dealYear, r.dealMonth - 1, r.dealDay ?? 1));
       return !acc || d > acc ? d : acc;
     }, null);
 
