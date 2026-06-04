@@ -18,9 +18,14 @@
             to="/real-estate/land"
             class="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
           >
-            <div>
-              <p class="text-sm font-semibold text-slate-900">토지 실거래가</p>
-              <p class="text-caption text-slate-500 mt-0.5">대지·전·답·임야 평당 시세</p>
+            <div class="flex items-center gap-3">
+              <span class="flex size-9 md:size-10 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors shrink-0">
+                <img src="/icons/category/land-plot.webp?v2" alt="토지" class="w-6 h-6 md:w-7 md:h-7" width="28" height="28" />
+              </span>
+              <div>
+                <p class="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">토지 실거래가</p>
+                <p class="text-caption text-slate-500 mt-0.5">대지·전·답·임야 평당 시세</p>
+              </div>
             </div>
             <span class="material-symbols-outlined text-primary/60 text-xl">chevron_right</span>
           </NuxtLink>
