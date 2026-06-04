@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { buildRegionFilter, SHORT_TO_SLUG, FULL_TO_SLUG, CITY_SLUG_TO_FULL } from './cityMapping.js';
 
 const PYEONG_PER_SQM = 3.305;
 
@@ -35,10 +36,7 @@ export interface RegionListResult {
 
 export async function getRegionList(params: RegionListParams): Promise<RegionListResult> {
   const { city, district, page, limit } = params;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = {};
-  if (city) where.city = city;
-  if (district) where.district = district;
+  const where = buildRegionFilter(city, district);
 
   const skip = (page - 1) * limit;
   const [rows, total] = await Promise.all([
@@ -83,7 +81,7 @@ export interface RegionDetailResult {
 }
 
 export interface HubSummaryResult {
-  cities: Array<{ city: string; indexableDongCount: number; totalTransactions: number }>;
+  cities: Array<{ slug: string; city: string; indexableDongCount: number; totalTransactions: number }>;
   totalTransactions: number;
 }
 
@@ -92,18 +90,23 @@ export async function getHubSummary(): Promise<HubSummaryResult> {
     select: { city: true, transactionCount: true, isIndexable: true },
   });
 
-  const cityMap = new Map<string, { indexableDongCount: number; totalTransactions: number }>();
+  const slugMap = new Map<string, { city: string; indexableDongCount: number; totalTransactions: number }>();
   let totalTransactions = 0;
   for (const r of rows) {
-    const e = cityMap.get(r.city) ?? { indexableDongCount: 0, totalTransactions: 0 };
+    const slug = SHORT_TO_SLUG[r.city] || FULL_TO_SLUG[r.city] || r.city;
+    const e = slugMap.get(slug) ?? {
+      city: CITY_SLUG_TO_FULL[slug] || r.city,
+      indexableDongCount: 0,
+      totalTransactions: 0,
+    };
     if (r.isIndexable) e.indexableDongCount++;
     e.totalTransactions += r.transactionCount;
     totalTransactions += r.transactionCount;
-    cityMap.set(r.city, e);
+    slugMap.set(slug, e);
   }
 
-  const cities = Array.from(cityMap.entries())
-    .map(([city, v]) => ({ city, ...v }))
+  const cities = Array.from(slugMap.entries())
+    .map(([slug, v]) => ({ slug, ...v }))
     .sort((a, b) => b.totalTransactions - a.totalTransactions);
 
   return { cities, totalTransactions };

@@ -33,7 +33,7 @@ describe('getRegionList', () => {
     expect(r.items[0].avgPricePerPyeong).toBe(25000); // Decimal/string → number
     expect(mockSummaryFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { city: '서울특별시', district: '강남구' },
+        where: { city: { in: expect.arrayContaining(['서울특별시', '서울']) }, district: '강남구' },
         orderBy: { transactionCount: 'desc' },
         skip: 0,
         take: 20,
@@ -94,6 +94,7 @@ describe('getHubSummary', () => {
     const seoul = r.cities.find((c) => c.city === '서울특별시');
     expect(seoul?.indexableDongCount).toBe(1);
     expect(seoul?.totalTransactions).toBe(15);
+    expect(seoul?.slug).toBe('seoul');
     expect(r.totalTransactions).toBe(35);
   });
 });
