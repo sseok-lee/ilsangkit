@@ -10,6 +10,7 @@ vi.stubGlobal('useHead', mockUseHead)
 // Import after mocking
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { FacilityDetail } from '~/types/facility'
+import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION } from '~/utils/seoConstants'
 
 describe('useFacilityMeta', () => {
@@ -174,6 +175,71 @@ describe('useFacilityMeta', () => {
           ogType: 'website',
         })
       )
+    })
+
+    it('시설명이 길어도 title에 지역명과 카테고리를 유지한다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+
+      const facility: FacilityDetail = {
+        id: 'test-long',
+        category: 'park',
+        name: '하복대근린공원 농구장 운동시설',
+        address: '충청북도 청주시 상당구',
+        roadAddress: '충청북도 청주시 상당구 하복대로 1',
+        lat: 36.62,
+        lng: 127.49,
+        city: '서울특별시',
+        district: '강남구',
+        bjdCode: '11680',
+        details: {},
+        sourceId: 'test-source',
+        sourceUrl: null,
+        viewCount: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+        syncedAt: '2024-01-01T00:00:00Z',
+      }
+
+      setFacilityDetailMeta(facility)
+
+      const call = mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }
+      expect(call.title).toContain('하복대근린공원 농구장 운동시설')
+      expect(call.title).toContain('서울')
+      expect(call.title).toContain('강남구')
+      expect(call.title).toContain(CATEGORY_META.park.label)
+    })
+
+    it('district가 없으면 title에 시명만 들어가고 undefined/null이 없다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+
+      const facility: FacilityDetail = {
+        id: 'test-no-district',
+        category: 'toilet',
+        name: '아주 길고 긴 어느 공중화장실 시설의 이름입니다',
+        address: '서울특별시',
+        roadAddress: null,
+        lat: 37.5,
+        lng: 127.0,
+        city: '서울특별시',
+        district: null,
+        bjdCode: '11000',
+        details: {},
+        sourceId: 'test-source',
+        sourceUrl: null,
+        viewCount: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+        syncedAt: '2024-01-01T00:00:00Z',
+      }
+
+      setFacilityDetailMeta(facility)
+
+      const call = mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }
+      expect(call.title).toContain('아주 길고 긴 어느 공중화장실 시설의 이름입니다')
+      expect(call.title).toContain('서울')
+      expect(call.title).toContain(CATEGORY_META.toilet.label)
+      expect(call.title).not.toContain('undefined')
+      expect(call.title).not.toContain('null')
     })
   })
 
@@ -537,15 +603,14 @@ describe('useFacilityMeta', () => {
       expect(call.title).toBe('삼성서울병원 | 서울 강남구 병원 | 일상킷')
     })
 
-    it('long-name facility (>24 chars before | 일상킷): title is just the name', () => {
+    it('long-name facility: keeps loc + category (no length guard)', () => {
       const { setFacilityDetailMeta } = useFacilityMeta()
-      // "서울대학교어린이병원응급의료센터" = 16 chars name; loc+category pushes composite >24
+      // composite가 24자를 한참 넘는 긴 이름이라도 지역·카테고리를 버리지 않는다
       const longName = '서울대학교어린이병원응급의료센터입구'  // 17 chars
       setFacilityDetailMeta(makeHospitalFacility(longName))
 
       const call = mockUseSeoMeta.mock.calls[0][0]
-      // when name alone > 24 or composite > 24, should fall back to just name | 일상킷
-      expect(call.title).toBe(`${longName} | 일상킷`)
+      expect(call.title).toBe(`${longName} | 서울 강남구 병원 | 일상킷`)
     })
   })
 })
