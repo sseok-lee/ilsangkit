@@ -1145,6 +1145,7 @@ model LandAreaSummary {
   transactionCount  Int       @default(0)
   recentCount       Int       @default(0)
   avgPricePerPyeong Decimal?  @db.Decimal(14, 2)
+  daeCount          Int       @default(0)
   latestDealDate    DateTime?
   jimokBreakdown    Json      @db.Json
   isIndexable       Boolean   @default(false)

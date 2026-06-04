@@ -138,6 +138,26 @@ describe('computeAreaSummary', () => {
     expect(s.avgPricePerPyeong).toBeGreaterThan(24000);
     expect(s.avgPricePerPyeong).toBeLessThan(26000);
     expect(s.transactionCount).toBe(1);
+    expect(s.daeCount).toBe(1);
+  });
+
+  it('헤드라인 평당가는 지목=대 거래만 반영', () => {
+    const txns: LandTxnForSummary[] = [
+      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대' },   // 평당 ~25000
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 3, jimok: '도로' },        // 무시
+    ];
+    const s = computeAreaSummary(txns, now);
+    expect(s.daeCount).toBe(1);
+    expect(s.transactionCount).toBe(2);
+    expect(s.avgPricePerPyeong).toBeGreaterThan(24000); // 도로 거래 미반영
+    expect(s.avgPricePerPyeong).toBeLessThan(26000);
+  });
+
+  it('대지 거래 없으면 헤드라인 평당가 null', () => {
+    const s = computeAreaSummary([{ dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 3, jimok: '도로' }], now);
+    expect(s.avgPricePerPyeong).toBeNull();
+    expect(s.daeCount).toBe(0);
+    expect(s.transactionCount).toBe(1);
   });
 
   it('recentCount = 최근 12개월 거래 수', () => {
@@ -176,5 +196,6 @@ describe('computeAreaSummary', () => {
     const s = computeAreaSummary(txns, now);
     expect(s.transactionCount).toBe(2);
     expect(s.avgPricePerPyeong).toBeGreaterThan(24000);
+    expect(s.daeCount).toBe(2);
   });
 });

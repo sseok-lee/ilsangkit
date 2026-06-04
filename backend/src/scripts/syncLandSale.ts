@@ -31,6 +31,7 @@ export interface AreaSummaryResult {
   transactionCount: number;
   recentCount: number;
   avgPricePerPyeong: number | null;
+  daeCount: number;
   jimokBreakdown: Record<string, number>;
   isIndexable: boolean;
 }
@@ -38,28 +39,33 @@ export interface AreaSummaryResult {
 export function computeAreaSummary(txns: LandTxnForSummary[], now: Date): AreaSummaryResult {
   const cutoff = new Date(now.getFullYear(), now.getMonth() - RECENT_MONTHS + 1, 1);
   let recentCount = 0;
-  const pyeongPrices: number[] = [];
+  let daeCount = 0;
+  const daePyeongPrices: number[] = [];
   const jimokBreakdown: Record<string, number> = {};
 
   for (const t of txns) {
     const txnDate = new Date(t.dealYear, t.dealMonth - 1, 1);
     if (txnDate >= cutoff) recentCount++;
 
-    if (t.dealArea && t.dealArea > 0) {
-      const pyeong = t.dealArea / PYEONG_PER_SQM;
-      pyeongPrices.push(t.dealAmount / pyeong);
-    }
     const key = t.jimok && t.jimok.trim() ? t.jimok.trim() : '기타';
     jimokBreakdown[key] = (jimokBreakdown[key] ?? 0) + 1;
+
+    if (t.jimok?.trim() === '대') {
+      daeCount++;
+      if (t.dealArea && t.dealArea > 0) {
+        const pyeong = t.dealArea / PYEONG_PER_SQM;
+        daePyeongPrices.push(t.dealAmount / pyeong);
+      }
+    }
   }
 
-  const avgPricePerPyeong = pyeongPrices.length
-    ? Math.round((pyeongPrices.reduce((a, b) => a + b, 0) / pyeongPrices.length) * 100) / 100
+  const avgPricePerPyeong = daePyeongPrices.length
+    ? Math.round((daePyeongPrices.reduce((a, b) => a + b, 0) / daePyeongPrices.length) * 100) / 100
     : null;
   const transactionCount = txns.length;
   const isIndexable = recentCount >= INDEX_RECENT_MIN || transactionCount >= INDEX_TOTAL_MIN;
 
-  return { transactionCount, recentCount, avgPricePerPyeong, jimokBreakdown, isIndexable };
+  return { transactionCount, recentCount, avgPricePerPyeong, daeCount, jimokBreakdown, isIndexable };
 }
 
 export interface RawLandSaleItem extends Record<string, unknown> {
@@ -159,13 +165,15 @@ export async function refreshLandAreaSummary(): Promise<void> {
       create: {
         bjdCode: g.bjdCode, dongName: g.dongName, city: g.city, district: g.district,
         transactionCount: summary.transactionCount, recentCount: summary.recentCount,
-        avgPricePerPyeong: summary.avgPricePerPyeong, latestDealDate: latest,
+        avgPricePerPyeong: summary.avgPricePerPyeong, daeCount: summary.daeCount,
+        latestDealDate: latest,
         jimokBreakdown: summary.jimokBreakdown, isIndexable: summary.isIndexable,
       },
       update: {
         city: g.city, district: g.district,
         transactionCount: summary.transactionCount, recentCount: summary.recentCount,
-        avgPricePerPyeong: summary.avgPricePerPyeong, latestDealDate: latest,
+        avgPricePerPyeong: summary.avgPricePerPyeong, daeCount: summary.daeCount,
+        latestDealDate: latest,
         jimokBreakdown: summary.jimokBreakdown, isIndexable: summary.isIndexable,
       },
     });

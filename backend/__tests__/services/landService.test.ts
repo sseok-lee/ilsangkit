@@ -67,15 +67,27 @@ describe('getRegionDetail', () => {
     expect(r.total).toBe(2);
     expect(r.items[0].pricePerPyeong).toBeGreaterThan(0);
     expect(r.items[0].dealAmount).toBe(1500000); // BigInt → number
+
+    // jimokDistribution: now includes avgPricePerPyeong per jimok
     expect(r.jimokDistribution).toEqual(expect.arrayContaining([
-      { jimok: '대', count: 1 }, { jimok: '전', count: 1 },
+      expect.objectContaining({ jimok: '대', count: 1 }),
+      expect.objectContaining({ jimok: '전', count: 1 }),
     ]));
+    const dae = r.jimokDistribution.find((d: any) => d.jimok === '대');
+    expect(dae.avgPricePerPyeong).toBeGreaterThan(0);
+
     expect(r.landUseDistribution).toEqual(expect.arrayContaining([
       { landUse: '제2종일반주거지역', count: 1 }, { landUse: '계획관리지역', count: 1 },
     ]));
+
+    // priceTimeline: 대지(jimok=대) only → only row1 (2026-3), row2 '전' excluded
     expect(r.priceTimeline.length).toBeGreaterThan(0);
     expect(r.priceTimeline[0]).toHaveProperty('year');
     expect(r.priceTimeline[0]).toHaveProperty('avgPricePerPyeong');
+    expect(r.priceTimeline[0].avgPricePerPyeong).toBeGreaterThan(0);
+
+    // daeCount: only the '대' row
+    expect(r.daeCount).toBe(1);
   });
 });
 

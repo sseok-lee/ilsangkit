@@ -75,9 +75,10 @@ export interface RegionDetailResult {
   total: number;
   page: number;
   totalPages: number;
-  jimokDistribution: Array<{ jimok: string; count: number }>;
+  jimokDistribution: Array<{ jimok: string; count: number; avgPricePerPyeong: number | null }>;
   landUseDistribution: Array<{ landUse: string; count: number }>;
   priceTimeline: Array<{ year: number; month: number; avgPricePerPyeong: number | null; count: number }>;
+  daeCount: number;
 }
 
 export interface HubSummaryResult {
@@ -144,31 +145,47 @@ export async function getRegionDetail(params: RegionDetailParams): Promise<Regio
     return s;
   });
 
-  const jimokMap = new Map<string, number>();
+  const jimokMap = new Map<string, { count: number; prices: number[] }>();
   const landUseMap = new Map<string, number>();
-  const timelineMap = new Map<string, { year: number; month: number; prices: number[]; count: number }>();
+  const daeTimelineMap = new Map<string, { year: number; month: number; prices: number[]; count: number }>();
+  let daeCount = 0;
 
   for (const r of allRows) {
     const jk = r.jimok?.trim() || '기타';
-    jimokMap.set(jk, (jimokMap.get(jk) ?? 0) + 1);
+    const jkEntry = jimokMap.get(jk) ?? { count: 0, prices: [] };
+    jkEntry.count++;
+    const pppJk = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
+    if (pppJk !== null) jkEntry.prices.push(pppJk);
+    jimokMap.set(jk, jkEntry);
+
     const lk = r.landUse?.trim() || '기타';
     landUseMap.set(lk, (landUseMap.get(lk) ?? 0) + 1);
 
-    const key = `${r.dealYear}-${r.dealMonth}`;
-    const entry = timelineMap.get(key) ?? { year: r.dealYear, month: r.dealMonth, prices: [], count: 0 };
-    entry.count++;
-    const ppp = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
-    if (ppp !== null) entry.prices.push(ppp);
-    timelineMap.set(key, entry);
+    // priceTimeline and daeCount: 대지(jimok=대) only
+    if (r.jimok?.trim() === '대') {
+      daeCount++;
+      const key = `${r.dealYear}-${r.dealMonth}`;
+      const entry = daeTimelineMap.get(key) ?? { year: r.dealYear, month: r.dealMonth, prices: [], count: 0 };
+      entry.count++;
+      const ppp = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
+      if (ppp !== null) entry.prices.push(ppp);
+      daeTimelineMap.set(key, entry);
+    }
   }
 
   const jimokDistribution = Array.from(jimokMap.entries())
-    .map(([jimok, count]) => ({ jimok, count }))
+    .map(([jimok, e]) => ({
+      jimok,
+      count: e.count,
+      avgPricePerPyeong: e.prices.length
+        ? Math.round((e.prices.reduce((a, b) => a + b, 0) / e.prices.length) * 100) / 100
+        : null,
+    }))
     .sort((a, b) => b.count - a.count);
   const landUseDistribution = Array.from(landUseMap.entries())
     .map(([landUse, count]) => ({ landUse, count }))
     .sort((a, b) => b.count - a.count);
-  const priceTimeline = Array.from(timelineMap.values())
+  const priceTimeline = Array.from(daeTimelineMap.values())
     .map((e) => ({
       year: e.year,
       month: e.month,
@@ -185,5 +202,6 @@ export async function getRegionDetail(params: RegionDetailParams): Promise<Regio
     jimokDistribution,
     landUseDistribution,
     priceTimeline,
+    daeCount,
   };
 }
