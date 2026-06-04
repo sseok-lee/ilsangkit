@@ -16,11 +16,11 @@
             v-for="city in hub.cities"
             :key="city.slug"
             :to="`/real-estate/land/${city.slug}`"
-            class="bg-white rounded-xl border border-slate-200 px-4 py-4 flex flex-col gap-1 hover:border-primary hover:shadow-sm transition-all"
+            class="group bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
           >
-            <span class="text-sm font-semibold text-slate-800">{{ city.city }}</span>
-            <span class="text-xs text-slate-500">색인 동 {{ city.indexableDongCount.toLocaleString('ko-KR') }}개</span>
-            <span class="text-xs text-slate-500">거래 {{ city.totalTransactions.toLocaleString('ko-KR') }}건</span>
+            <span class="text-display-3 text-slate-800">{{ city.city }}</span>
+            <span class="text-caption text-slate-500">색인 동 {{ city.indexableDongCount.toLocaleString('ko-KR') }}개</span>
+            <span class="text-caption text-slate-500">거래 {{ city.totalTransactions.toLocaleString('ko-KR') }}건</span>
           </NuxtLink>
         </div>
         <div v-else class="text-sm text-slate-500">지역 데이터를 불러오는 중입니다.</div>

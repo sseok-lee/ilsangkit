@@ -13,22 +13,22 @@
       <AdBanner />
 
       <!-- 1. 헤드라인 카드 -->
-      <div class="rounded-xl border border-slate-200 bg-white p-5 md:p-6">
-        <div class="text-xs font-semibold text-slate-500 mb-1">대지(일반 거래) 평당가</div>
+      <div class="bg-white rounded-xl border border-line shadow-card p-5 md:p-6">
+        <div class="text-eyebrow text-slate-500 mb-1">대지(일반 거래) 평당가</div>
         <template v-if="summary && summary.avgPricePerPyeong != null">
           <div class="flex flex-wrap items-baseline gap-2">
-            <strong class="text-2xl md:text-3xl font-bold text-slate-900">
+            <strong class="text-display-1 text-slate-900">
               {{ formatManwonKorean(summary.avgPricePerPyeong) }}
             </strong>
-            <span class="text-sm text-slate-500">
+            <span class="text-caption text-slate-500">
               (㎡당 {{ formatManwonKorean(pyeongToSqm(summary.avgPricePerPyeong)) }})
             </span>
           </div>
-          <p class="mt-2 text-xs text-slate-400 leading-relaxed">
+          <p class="mt-2 text-caption text-slate-400 leading-relaxed">
             비지분 대지 {{ summary.daeNonShareCount ?? 0 }}건 기준 · 최근 12개월 · 최신 거래 {{ formatLandDealDate(summary.latestDealDate) }} · 지분·도로 자투리 제외
           </p>
         </template>
-        <div v-else class="rounded-lg bg-slate-50 p-6 text-center text-slate-500 text-sm">
+        <div v-else class="rounded-xl bg-background-light p-6 text-center text-caption text-slate-500">
           비지분 대지 거래 없음 — 아래 지목별 시세를 참고하세요
         </div>
       </div>
@@ -39,17 +39,17 @@
           <div
             v-for="g in detail.jimokGroups"
             :key="g.group"
-            class="rounded-xl border bg-white p-4"
-            :class="g.group === '대지' ? 'border-blue-200' : 'border-slate-200'"
+            class="rounded-xl border p-4"
+            :class="g.group === '대지' ? 'border-primary/40 bg-primary-50/40' : 'bg-white border-slate-200'"
           >
-            <span class="block text-sm font-semibold text-slate-800">{{ g.group }}</span>
+            <span class="block text-display-3 text-slate-800">{{ g.group }}</span>
             <template v-if="g.avgPricePerPyeong != null">
-              <span class="block mt-1 text-base font-bold text-slate-900">
+              <span class="block mt-1 text-body font-bold text-slate-900">
                 {{ formatManwonKorean(g.avgPricePerPyeong) }}
               </span>
-              <span class="block text-xs text-slate-400 mt-0.5">{{ g.count.toLocaleString('ko-KR') }}건</span>
+              <span class="block text-caption text-slate-400 mt-0.5">{{ g.count.toLocaleString('ko-KR') }}건</span>
             </template>
-            <span v-else class="block mt-1 text-sm text-slate-500">
+            <span v-else class="block mt-1 text-caption text-slate-500">
               거래 {{ g.count.toLocaleString('ko-KR') }}건
             </span>
           </div>
@@ -65,21 +65,21 @@
           <div
             v-for="tx in detail.daeSamples"
             :key="tx.id"
-            class="rounded-xl border border-slate-200 bg-white p-4 flex flex-col gap-1.5"
+            class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col gap-2"
           >
             <div class="flex items-center justify-between">
-              <span class="text-xs text-slate-400">{{ tx.dealYear }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}</span>
-              <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">지분</span>
+              <span class="text-caption text-slate-400">{{ tx.dealYear }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}</span>
+              <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-caption font-semibold text-amber-700">지분</span>
             </div>
             <div class="flex flex-wrap items-baseline gap-1.5">
-              <strong class="text-base font-bold text-slate-900">{{ formatManwonKorean(tx.dealAmount) }}</strong>
-              <span v-if="tx.dealArea != null" class="text-xs text-slate-500">{{ tx.dealArea.toLocaleString('ko-KR') }}㎡</span>
+              <strong class="text-body font-bold text-slate-900">{{ formatManwonKorean(tx.dealAmount) }}</strong>
+              <span v-if="tx.dealArea != null" class="text-caption text-slate-500">{{ tx.dealArea.toLocaleString('ko-KR') }}㎡</span>
             </div>
-            <div class="text-xs text-slate-600">
-              평당 <span class="font-semibold">{{ formatManwonKorean(tx.pricePerPyeong) }}</span>
+            <div class="text-caption text-slate-600">
+              평당 <span class="font-semibold text-primary">{{ formatManwonKorean(tx.pricePerPyeong) }}</span>
             </div>
-            <div v-if="tx.landUse" class="text-xs text-slate-400">{{ tx.landUse }}</div>
-            <div v-if="tx.jibun" class="text-xs text-slate-300 mt-0.5">{{ tx.jibun }}</div>
+            <div v-if="tx.landUse" class="text-caption text-slate-400">{{ tx.landUse }}</div>
+            <div v-if="tx.jibun" class="text-caption text-slate-300 mt-0.5">{{ tx.jibun }}</div>
           </div>
         </div>
         <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
@@ -135,7 +135,7 @@
             <li
               v-for="item in detail.landUseDistribution"
               :key="item.landUse"
-              class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+              class="flex items-center justify-between rounded-lg border border-line bg-background-light px-3 py-2 text-sm"
             >
               <span class="text-slate-700">{{ item.landUse }}</span>
               <span class="font-semibold text-slate-900">{{ item.count.toLocaleString('ko-KR') }}건</span>
@@ -185,9 +185,9 @@
       <SectionBlock heading="자주 묻는 질문" subtext="토지 실거래가와 관련된 자주 묻는 질문입니다.">
         <p class="text-sm text-slate-700 mb-6 leading-relaxed">{{ pageDescription }}</p>
         <dl class="flex flex-col gap-4">
-          <div v-for="faq in LAND_FAQ" :key="faq.q" class="rounded-xl border border-slate-200 bg-white p-4">
-            <dt class="text-sm font-semibold text-slate-800">{{ faq.q }}</dt>
-            <dd class="mt-2 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</dd>
+          <div v-for="faq in LAND_FAQ" :key="faq.q" class="rounded-xl border border-line bg-white p-4">
+            <dt class="text-body font-semibold text-slate-800">{{ faq.q }}</dt>
+            <dd class="mt-2 text-body text-slate-600 leading-relaxed">{{ faq.a }}</dd>
           </div>
         </dl>
       </SectionBlock>

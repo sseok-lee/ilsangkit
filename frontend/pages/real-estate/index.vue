@@ -16,13 +16,13 @@
         <div class="mt-3">
           <NuxtLink
             to="/real-estate/land"
-            class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 hover:bg-slate-50 transition-colors"
+            class="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
           >
             <div>
               <p class="text-sm font-semibold text-slate-900">토지 실거래가</p>
-              <p class="text-xs text-slate-500 mt-0.5">대지·전·답·임야 평당 시세</p>
+              <p class="text-caption text-slate-500 mt-0.5">대지·전·답·임야 평당 시세</p>
             </div>
-            <span class="material-symbols-outlined text-slate-400 text-xl">chevron_right</span>
+            <span class="material-symbols-outlined text-primary/60 text-xl">chevron_right</span>
           </NuxtLink>
         </div>
       </SectionBlock>

@@ -19,12 +19,12 @@
             v-for="card in districtCards"
             :key="card.district"
             :to="`/real-estate/land/${citySlug}/${card.districtSlug}`"
-            class="bg-white rounded-xl border border-slate-200 px-4 py-4 flex flex-col gap-1 hover:border-primary hover:shadow-sm transition-all"
+            class="group bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
           >
-            <span class="text-sm font-semibold text-slate-800">{{ card.district }}</span>
-            <span class="text-xs text-slate-500">동 {{ card.dongCount }}개</span>
-            <span class="text-xs text-slate-500">거래 {{ card.totalTransactions.toLocaleString('ko-KR') }}건</span>
-            <span v-if="card.avgPricePerPyeong != null" class="text-xs text-slate-500">
+            <span class="text-display-3 text-slate-800">{{ card.district }}</span>
+            <span class="text-caption text-slate-500">동 {{ card.dongCount }}개</span>
+            <span class="text-caption text-slate-500">거래 {{ card.totalTransactions.toLocaleString('ko-KR') }}건</span>
+            <span v-if="card.avgPricePerPyeong != null" class="text-caption text-slate-500">
               평당 {{ formatManwon(card.avgPricePerPyeong) }}만원
             </span>
           </NuxtLink>

@@ -19,20 +19,20 @@
             v-for="dong in sortedDongs"
             :key="dong.bjdCode"
             :to="`/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong.dongName)}`"
-            class="bg-white rounded-xl border border-slate-200 px-4 py-4 flex flex-col gap-1 hover:border-primary hover:shadow-sm transition-all"
+            class="group bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
           >
-            <span class="text-sm font-semibold text-slate-800">{{ dong.dongName }}</span>
+            <span class="text-display-3 text-slate-800">{{ dong.dongName }}</span>
             <template v-if="dong.avgPricePerPyeong != null">
-              <span class="text-xs text-slate-500">
+              <span class="text-caption text-primary">
                 평당 {{ formatManwon(dong.avgPricePerPyeong) }}만원
               </span>
-              <span class="text-xs text-slate-400">
+              <span class="text-caption text-slate-400">
                 (㎡당 {{ formatManwon(pyeongToSqm(dong.avgPricePerPyeong)) }}만원)
               </span>
             </template>
-            <span v-else class="text-xs text-slate-400">대지 거래 없음</span>
-            <span class="text-xs text-slate-500">거래 {{ dong.transactionCount.toLocaleString('ko-KR') }}건</span>
-            <span class="text-xs text-slate-500">대지 {{ dong.daeCount.toLocaleString('ko-KR') }}건</span>
+            <span v-else class="text-caption text-slate-400">대지 거래 없음</span>
+            <span class="text-caption text-slate-500">거래 {{ dong.transactionCount.toLocaleString('ko-KR') }}건</span>
+            <span class="text-caption text-slate-500">대지 {{ dong.daeCount.toLocaleString('ko-KR') }}건</span>
           </NuxtLink>
         </div>
 
