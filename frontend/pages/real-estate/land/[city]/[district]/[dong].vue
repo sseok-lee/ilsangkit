@@ -25,7 +25,7 @@
             </span>
           </div>
           <p class="mt-2 text-xs text-slate-400 leading-relaxed">
-            비지분 대지 {{ summary.daeNonShareCount }}건 기준 · 최근 12개월 · 최신 거래 {{ formatLandDealDate(summary.latestDealDate) }} · 지분·도로 자투리 제외
+            비지분 대지 {{ summary.daeNonShareCount ?? 0 }}건 기준 · 최근 12개월 · 최신 거래 {{ formatLandDealDate(summary.latestDealDate) }} · 지분·도로 자투리 제외
           </p>
         </template>
         <div v-else class="rounded-lg bg-slate-50 p-6 text-center text-slate-500 text-sm">
@@ -43,13 +43,15 @@
             :class="g.group === '대지' ? 'border-blue-200' : 'border-slate-200'"
           >
             <span class="block text-sm font-semibold text-slate-800">{{ g.group }}</span>
-            <span v-if="g.avgPricePerPyeong != null" class="block mt-1 text-base font-bold text-slate-900">
-              {{ formatManwonKorean(g.avgPricePerPyeong) }}
-            </span>
+            <template v-if="g.avgPricePerPyeong != null">
+              <span class="block mt-1 text-base font-bold text-slate-900">
+                {{ formatManwonKorean(g.avgPricePerPyeong) }}
+              </span>
+              <span class="block text-xs text-slate-400 mt-0.5">{{ g.count.toLocaleString('ko-KR') }}건</span>
+            </template>
             <span v-else class="block mt-1 text-sm text-slate-500">
-              거래만 {{ g.count }}건
+              거래 {{ g.count.toLocaleString('ko-KR') }}건
             </span>
-            <span class="block text-xs text-slate-400 mt-0.5">{{ g.count.toLocaleString('ko-KR') }}건</span>
           </div>
         </div>
         <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
