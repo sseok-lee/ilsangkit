@@ -1122,7 +1122,7 @@ model LandSaleTransaction {
   dealDay        Int?
   cancelDealDay  String?   @db.VarChar(10)
   cancelDealType String?   @db.VarChar(20)
-  sourceId       String    @unique @db.VarChar(120)
+  sourceId       String    @unique @db.VarChar(200)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   syncedAt       DateTime  @default(now())

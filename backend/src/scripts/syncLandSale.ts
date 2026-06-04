@@ -243,9 +243,8 @@ async function main(): Promise<void> {
         }
       }
     }
+    await refreshLandAreaSummary();
   });
-
-  await refreshLandAreaSummary();
 
   console.info('\n=== landSale sync completed ===');
 }

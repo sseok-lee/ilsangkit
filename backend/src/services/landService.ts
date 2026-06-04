@@ -134,6 +134,8 @@ export async function getRegionDetail(params: RegionDetailParams): Promise<Regio
   const allRows = await prisma.landSaleTransaction.findMany({
     where,
     select: { jimok: true, landUse: true, dealArea: true, dealAmount: true, dealYear: true, dealMonth: true },
+    orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
+    take: 5000, // 안전 상한: 동 단위 토지 거래량은 이보다 훨씬 적음(미초과 시 전수). unbounded 쿼리로 버퍼풀 점유 방지.
   });
 
   const items = rows.map((r) => {
