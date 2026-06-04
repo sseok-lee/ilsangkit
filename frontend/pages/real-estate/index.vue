@@ -13,6 +13,18 @@
           <h2 class="text-display-3 text-slate-900">부동산 유형별 실거래가</h2>
         </template>
         <RealEstateCategoryCards :summaries="hubSummaries ?? undefined" />
+        <div class="mt-3">
+          <NuxtLink
+            to="/real-estate/land"
+            class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 hover:bg-slate-50 transition-colors"
+          >
+            <div>
+              <p class="text-sm font-semibold text-slate-900">토지 실거래가</p>
+              <p class="text-xs text-slate-500 mt-0.5">대지·전·답·임야 평당 시세</p>
+            </div>
+            <span class="material-symbols-outlined text-slate-400 text-xl">chevron_right</span>
+          </NuxtLink>
+        </div>
       </SectionBlock>
 
       <!-- Ad: Property Type Cards 후 -->
@@ -126,6 +138,7 @@ setItemListSchema([
   { name: '오피스텔 전월세', url: '/real-estate/offitel-rent' },
   { name: '빌라 매매',       url: '/real-estate/villa-sale' },
   { name: '빌라 전월세',     url: '/real-estate/villa-rent' },
+  { name: '토지 실거래가',   url: '/real-estate/land' },
 ])
 setDatasetSchema({
   name: '전국 부동산 실거래가 데이터',
