@@ -288,7 +288,7 @@ export function useFacilityMeta() {
   function setHomeMeta() {
     setMeta({
       title: '부동산 실거래가·청약·생활정보',
-      description: '매일 갱신되는 아파트·빌라·오피스텔 실거래가 통계와 이번 주 인기 단지, 청약 일정, 병원·약국·주차장 등 생활 정보를 한곳에서 확인하세요.',
+      description: '매일 갱신되는 아파트·빌라·오피스텔·토지 실거래가 통계와 이번 주 인기 단지, 청약 일정, 병원·약국·주차장 등 생활 정보를 한곳에서 확인하세요.',
       path: '/',
     })
   }
