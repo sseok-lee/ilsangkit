@@ -231,8 +231,12 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const lawdIndex = args.indexOf('--lawd');
   const ymIndex = args.indexOf('--ym');
+  const fromIndex = args.indexOf('--from');
+  const toIndex = args.indexOf('--to');
   const lawdCdArg = lawdIndex !== -1 ? args[lawdIndex + 1] : undefined;
   const dealYmdArg = ymIndex !== -1 ? args[ymIndex + 1] : undefined;
+  const fromArg = fromIndex !== -1 ? args[fromIndex + 1] : undefined;
+  const toArg = toIndex !== -1 ? args[toIndex + 1] : undefined;
 
   const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } });
   const regionMap = new Map(regions.map((r) => [r.bjdCode, { city: r.city, district: r.district }]));
@@ -241,7 +245,14 @@ async function main(): Promise<void> {
     const lawdCodes = lawdCdArg ? [lawdCdArg] : await getAllLawdCodes();
     const now = new Date();
     const ymList: string[] = [];
-    if (dealYmdArg) {
+    if (fromArg && toArg) {
+      // 범위 백필: --from YYYYMM --to YYYYMM (3년치 등 대량 수집용)
+      const start = new Date(parseInt(fromArg.slice(0, 4), 10), parseInt(fromArg.slice(4, 6), 10) - 1, 1);
+      const end = new Date(parseInt(toArg.slice(0, 4), 10), parseInt(toArg.slice(4, 6), 10) - 1, 1);
+      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+        ymList.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    } else if (dealYmdArg) {
       ymList.push(dealYmdArg);
     } else {
       for (let i = 0; i < 12; i++) {
@@ -268,7 +279,9 @@ async function main(): Promise<void> {
 
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
-  installRuntimeGuard({ maxMinutes: 20, name: 'syncLandSale', prisma });
+  // 가드 시간: 기본 20분(cron), 백필 시 SYNC_GUARD_MINUTES로 상향 (예: 3년 전국 = 600)
+  const guardMinutes = Number(process.env.SYNC_GUARD_MINUTES) || 20;
+  installRuntimeGuard({ maxMinutes: guardMinutes, name: 'syncLandSale', prisma });
   main().catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
