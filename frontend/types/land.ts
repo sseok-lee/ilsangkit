@@ -11,6 +11,7 @@ export interface LandRegionSummary {
   latestDealDate: string | null;
   isIndexable: boolean;
   jimokBreakdown: Record<string, number>;
+  daeCount: number;
 }
 
 export interface LandTransaction {
@@ -47,9 +48,10 @@ export interface LandRegionDetailResult {
   total: number;
   page: number;
   totalPages: number;
-  jimokDistribution: Array<{ jimok: string; count: number }>;
+  jimokDistribution: Array<{ jimok: string; count: number; avgPricePerPyeong: number | null }>;
   landUseDistribution: Array<{ landUse: string; count: number }>;
   priceTimeline: LandTimelinePoint[];
+  daeCount: number;
 }
 
 export interface LandHubSummary {
