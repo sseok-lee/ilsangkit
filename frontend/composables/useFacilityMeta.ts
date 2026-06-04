@@ -367,17 +367,16 @@ export function useFacilityMeta() {
 
   /**
    * 카테고리별 상세 타이틀 — {name} | {loc} {categoryName}
-   * intent 꼬리표 제거. composite(name + " | " + loc + " " + category)가 24자 초과 시
-   * name 단독으로 fallback (setMeta가 " | 일상킷"을 추가하므로 총 30자 이내 보장).
+   * 길이 제한 없음: 지역·카테고리를 항상 유지해 검색엔진 색인·매칭에서 지역 신호를
+   * 잃지 않도록 한다. 긴 타이틀은 SERP에서 시각적으로만 잘릴 뿐 페널티가 없으며,
+   * 쓰레기 배출일 페이지 등 다른 긴 타이틀과 동일한 정책이다.
    */
   function buildDetailTitle(facility: FacilityDetail): string {
     const cityShort = compactCityName(facility.city)
     const loc = facility.district ? `${cityShort} ${facility.district}` : cityShort
     const name = getFacilityDisplayName(facility)
     const categoryName = CATEGORY_META[facility.category]?.label || facility.category
-    const composite = `${name} | ${loc} ${categoryName}`
-    if (composite.length > 24) return name
-    return composite
+    return `${name} | ${loc} ${categoryName}`
   }
 
   /**
