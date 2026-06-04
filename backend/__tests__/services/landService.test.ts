@@ -14,7 +14,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   },
 }));
 
-import { getRegionList, getRegionDetail } from '../../src/services/landService.js';
+import { getRegionList, getRegionDetail, getHubSummary } from '../../src/services/landService.js';
 
 describe('getRegionList', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -76,5 +76,24 @@ describe('getRegionDetail', () => {
     expect(r.priceTimeline.length).toBeGreaterThan(0);
     expect(r.priceTimeline[0]).toHaveProperty('year');
     expect(r.priceTimeline[0]).toHaveProperty('avgPricePerPyeong');
+  });
+});
+
+describe('getHubSummary', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('시·도별 색인가능 동 수와 거래 합계 집계', async () => {
+    mockSummaryFindMany.mockResolvedValue([
+      { city: '서울특별시', transactionCount: 12, isIndexable: true },
+      { city: '서울특별시', transactionCount: 3, isIndexable: false },
+      { city: '경기도', transactionCount: 20, isIndexable: true },
+    ]);
+
+    const r = await getHubSummary();
+
+    const seoul = r.cities.find((c) => c.city === '서울특별시');
+    expect(seoul?.indexableDongCount).toBe(1);
+    expect(seoul?.totalTransactions).toBe(15);
+    expect(r.totalTransactions).toBe(35);
   });
 });

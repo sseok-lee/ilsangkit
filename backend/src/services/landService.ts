@@ -82,6 +82,33 @@ export interface RegionDetailResult {
   priceTimeline: Array<{ year: number; month: number; avgPricePerPyeong: number | null; count: number }>;
 }
 
+export interface HubSummaryResult {
+  cities: Array<{ city: string; indexableDongCount: number; totalTransactions: number }>;
+  totalTransactions: number;
+}
+
+export async function getHubSummary(): Promise<HubSummaryResult> {
+  const rows = await prisma.landAreaSummary.findMany({
+    select: { city: true, transactionCount: true, isIndexable: true },
+  });
+
+  const cityMap = new Map<string, { indexableDongCount: number; totalTransactions: number }>();
+  let totalTransactions = 0;
+  for (const r of rows) {
+    const e = cityMap.get(r.city) ?? { indexableDongCount: 0, totalTransactions: 0 };
+    if (r.isIndexable) e.indexableDongCount++;
+    e.totalTransactions += r.transactionCount;
+    totalTransactions += r.transactionCount;
+    cityMap.set(r.city, e);
+  }
+
+  const cities = Array.from(cityMap.entries())
+    .map(([city, v]) => ({ city, ...v }))
+    .sort((a, b) => b.totalTransactions - a.totalTransactions);
+
+  return { cities, totalTransactions };
+}
+
 export async function getRegionDetail(params: RegionDetailParams): Promise<RegionDetailResult> {
   const { bjdCode, dongName, page, limit } = params;
   const where = { bjdCode, dongName, cancelDealDay: null };
