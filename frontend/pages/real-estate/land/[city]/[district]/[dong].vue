@@ -145,13 +145,8 @@
       </div>
 
       <!-- 5. 전체 거래 내역 (접이식) -->
-      <SectionBlock v-if="detail && detail.total > 0" heading="전체 거래 내역" subtext="">
-        <details class="group">
-          <summary class="cursor-pointer select-none list-none flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors py-1">
-            <span>전체 거래 {{ detail.total }}건 보기</span>
-            <span class="text-slate-400 group-open:rotate-180 transition-transform inline-block">▼</span>
-          </summary>
-          <div class="mt-3 overflow-x-auto">
+      <SectionBlock v-if="detail && detail.total > 0" heading="전체 거래 내역" :subtext="`최근 거래 ${Math.min(detail.items.length, detail.total)}건 (전체 ${detail.total.toLocaleString('ko-KR')}건 · 지분·도로 포함)`">
+        <div class="overflow-x-auto">
             <table class="w-full text-sm border-collapse">
               <thead>
                 <tr class="border-b border-slate-200 text-left text-xs font-semibold text-slate-500">
@@ -181,7 +176,6 @@
               </tbody>
             </table>
           </div>
-        </details>
       </SectionBlock>
 
       <!-- Ad: 전체거래 이후 -->
