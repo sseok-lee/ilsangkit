@@ -142,7 +142,7 @@ export const REAL_ESTATE_DATASETS: DataSourceInfo[] = [
   {
     datasetName: '토지 매매 실거래가 자료',
     provider: '국토교통부',
-    url: 'https://www.data.go.kr/data/15056782/openapi.do',
+    url: 'https://www.data.go.kr/data/15126466/openapi.do',
   },
 ]
 
