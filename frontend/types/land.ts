@@ -12,6 +12,7 @@ export interface LandRegionSummary {
   isIndexable: boolean;
   jimokBreakdown: Record<string, number>;
   daeCount: number;
+  daeNonShareCount: number;
 }
 
 export interface LandTransaction {
@@ -31,7 +32,7 @@ export interface LandTransaction {
 
 export interface LandTimelinePoint {
   year: number;
-  month: number;
+  quarter: number;
   avgPricePerPyeong: number | null;
   count: number;
 }
@@ -48,7 +49,9 @@ export interface LandRegionDetailResult {
   total: number;
   page: number;
   totalPages: number;
-  jimokDistribution: Array<{ jimok: string; count: number; avgPricePerPyeong: number | null }>;
+  jimokGroups: Array<{ group: string; count: number; avgPricePerPyeong: number | null }>;
+  daeSamples: LandTransaction[];
+  daeNonShareCount: number;
   landUseDistribution: Array<{ landUse: string; count: number }>;
   priceTimeline: LandTimelinePoint[];
   daeCount: number;
@@ -80,4 +83,15 @@ export function formatLandDealDate(value: string | null | undefined): string {
 export function formatManwon(value: number | null | undefined): string {
   if (value == null) return '-';
   return Math.round(value).toLocaleString('ko-KR');
+}
+
+export function formatManwonKorean(value: number | null | undefined): string {
+  if (value == null) return '-';
+  const v = Math.round(value);
+  if (v >= 10000) {
+    const eok = Math.floor(v / 10000);
+    const rest = v % 10000;
+    return rest > 0 ? `${eok}억 ${rest.toLocaleString('ko-KR')}만원` : `${eok}억원`;
+  }
+  return `${v.toLocaleString('ko-KR')}만원`;
 }

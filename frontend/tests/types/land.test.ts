@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LAND_SLUG, isLandIndexable, pyeongToSqm, formatLandDealDate, formatManwon, type LandRegionSummary } from '~/types/land';
+import { LAND_SLUG, isLandIndexable, pyeongToSqm, formatLandDealDate, formatManwon, formatManwonKorean, type LandRegionSummary } from '~/types/land';
 
 describe('land types', () => {
   it('LAND_SLUG는 land', () => { expect(LAND_SLUG).toBe('land'); });
@@ -36,6 +36,24 @@ describe('land types', () => {
     });
     it('undefined 입력은 "-"를 반환한다', () => {
       expect(formatManwon(undefined)).toBe('-');
+    });
+  });
+
+  describe('formatManwonKorean', () => {
+    it('2억 4,180만원 — 억+나머지 형태', () => {
+      expect(formatManwonKorean(24180)).toBe('2억 4,180만원');
+    });
+    it('380만원 — 만원만', () => {
+      expect(formatManwonKorean(380)).toBe('380만원');
+    });
+    it('3억원 — 나머지 없을 때 억원만', () => {
+      expect(formatManwonKorean(30000)).toBe('3억원');
+    });
+    it('null → "-"', () => {
+      expect(formatManwonKorean(null)).toBe('-');
+    });
+    it('undefined → "-"', () => {
+      expect(formatManwonKorean(undefined)).toBe('-');
     });
   });
 });

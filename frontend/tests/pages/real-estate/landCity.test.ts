@@ -86,7 +86,7 @@ vi.mock('~/composables/useLand', () => ({
       totalPages: 1,
     }),
     getHubSummary: async () => ({ cities: [], totalTransactions: 0 }),
-    getRegionDetail: async () => ({ items: [], total: 0, page: 1, totalPages: 1, jimokDistribution: [], landUseDistribution: [], priceTimeline: [], daeCount: 0 }),
+    getRegionDetail: async () => ({ items: [], total: 0, page: 1, totalPages: 1, jimokGroups: [], daeSamples: [], daeNonShareCount: 0, landUseDistribution: [], priceTimeline: [], daeCount: 0 }),
   }),
 }))
 

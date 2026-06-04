@@ -35,7 +35,7 @@ describe('GET /api/real-estate/land/region', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('bjdCode+dongName 정상 응답', async () => {
-    mockGetRegionDetail.mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0, jimokDistribution: [], landUseDistribution: [], priceTimeline: [] });
+    mockGetRegionDetail.mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0, jimokGroups: [], daeSamples: [], daeNonShareCount: 0, landUseDistribution: [], priceTimeline: [] });
     const res = await request(app).get('/api/real-estate/land/region?bjdCode=11680&dongName=역삼동');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
