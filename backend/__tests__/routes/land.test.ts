@@ -1,16 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 
-const { mockGetRegionList, mockGetRegionDetail, mockGetHubSummary } = vi.hoisted(() => ({
+const { mockGetRegionList, mockGetRegionDetail, mockGetHubSummary, mockGetSitemapEntries } = vi.hoisted(() => ({
   mockGetRegionList: vi.fn(),
   mockGetRegionDetail: vi.fn(),
   mockGetHubSummary: vi.fn(),
+  mockGetSitemapEntries: vi.fn(),
 }));
 
 vi.mock('../../src/services/landService.js', () => ({
   getRegionList: mockGetRegionList,
   getRegionDetail: mockGetRegionDetail,
   getHubSummary: mockGetHubSummary,
+  getSitemapEntries: mockGetSitemapEntries,
 }));
 
 import app from '../../src/app.js';
@@ -53,5 +55,36 @@ describe('GET /api/real-estate/land/hub-summary', () => {
     const res = await request(app).get('/api/real-estate/land/hub-summary');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+});
+
+describe('GET /api/real-estate/land/sitemap', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('200 + success:true + {cities, indexableDongs} shape', async () => {
+    const mockData = {
+      cities: [
+        { city: '서울', district: '강남구' },
+        { city: '서울', district: '강북구' },
+      ],
+      indexableDongs: [
+        { city: '서울', district: '강남구', dongName: '역삼동' },
+      ],
+    };
+    mockGetSitemapEntries.mockResolvedValue(mockData);
+
+    const res = await request(app).get('/api/real-estate/land/sitemap');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('cities');
+    expect(res.body.data).toHaveProperty('indexableDongs');
+    expect(res.body.data.cities).toHaveLength(2);
+    expect(res.body.data.indexableDongs).toHaveLength(1);
+    expect(res.body.data.indexableDongs[0]).toMatchObject({
+      city: '서울',
+      district: '강남구',
+      dongName: '역삼동',
+    });
   });
 });

@@ -2,7 +2,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { getRegionList, getRegionDetail, getHubSummary } from '../services/landService.js';
+import { getRegionList, getRegionDetail, getHubSummary, getSitemapEntries } from '../services/landService.js';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { LandRegionListSchema, LandRegionDetailSchema } from '../schemas/land.js';
@@ -36,6 +36,15 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const params = req.query as unknown as z.infer<typeof LandRegionDetailSchema>;
     const data = await getRegionDetail(params);
+    res.json({ success: true, data });
+  })
+);
+
+// GET /api/real-estate/land/sitemap
+router.get(
+  '/sitemap',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const data = await getSitemapEntries();
     res.json({ success: true, data });
   })
 );

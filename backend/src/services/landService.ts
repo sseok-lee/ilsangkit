@@ -113,6 +113,25 @@ export async function getHubSummary(): Promise<HubSummaryResult> {
   return { cities, totalTransactions };
 }
 
+export interface LandSitemapEntries {
+  cities: Array<{ city: string; district: string }>;
+  indexableDongs: Array<{ city: string; district: string; dongName: string }>;
+}
+
+export async function getSitemapEntries(): Promise<LandSitemapEntries> {
+  const [cities, indexableDongs] = await Promise.all([
+    prisma.landAreaSummary.findMany({
+      distinct: ['city', 'district'],
+      select: { city: true, district: true },
+    }),
+    prisma.landAreaSummary.findMany({
+      where: { isIndexable: true },
+      select: { city: true, district: true, dongName: true },
+    }),
+  ]);
+  return { cities, indexableDongs };
+}
+
 export async function getRegionDetail(params: RegionDetailParams): Promise<RegionDetailResult> {
   const { bjdCode, dongName, page, limit } = params;
   const where = { bjdCode, dongName, cancelDealDay: null };

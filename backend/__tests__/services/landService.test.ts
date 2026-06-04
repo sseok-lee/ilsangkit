@@ -14,7 +14,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   },
 }));
 
-import { getRegionList, getRegionDetail, getHubSummary } from '../../src/services/landService.js';
+import { getRegionList, getRegionDetail, getHubSummary, getSitemapEntries } from '../../src/services/landService.js';
 
 describe('getRegionList', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -108,5 +108,63 @@ describe('getHubSummary', () => {
     expect(seoul?.totalTransactions).toBe(15);
     expect(seoul?.slug).toBe('seoul');
     expect(r.totalTransactions).toBe(35);
+  });
+});
+
+describe('getSitemapEntries', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('distinct (city, district) pairs와 isIndexable 동만 반환', async () => {
+    // First call: distinct city/district pairs
+    mockSummaryFindMany.mockResolvedValueOnce([
+      { city: '서울', district: '강남구' },
+      { city: '서울', district: '강북구' },
+      { city: '경기', district: '성남시분당구' },
+    ]);
+    // Second call: indexable dongs only
+    mockSummaryFindMany.mockResolvedValueOnce([
+      { city: '서울', district: '강남구', dongName: '역삼동' },
+      { city: '서울', district: '강남구', dongName: '삼성동' },
+      // 강북구 has no indexable dongs
+    ]);
+
+    const result = await getSitemapEntries();
+
+    expect(result.cities).toHaveLength(3);
+    expect(result.cities).toEqual(expect.arrayContaining([
+      { city: '서울', district: '강남구' },
+      { city: '서울', district: '강북구' },
+      { city: '경기', district: '성남시분당구' },
+    ]));
+
+    expect(result.indexableDongs).toHaveLength(2);
+    expect(result.indexableDongs).toEqual(expect.arrayContaining([
+      { city: '서울', district: '강남구', dongName: '역삼동' },
+      { city: '서울', district: '강남구', dongName: '삼성동' },
+    ]));
+
+    // First call: distinct city/district
+    expect(mockSummaryFindMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      distinct: ['city', 'district'],
+      select: { city: true, district: true },
+    }));
+    // Second call: isIndexable filter
+    expect(mockSummaryFindMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: { isIndexable: true },
+      select: { city: true, district: true, dongName: true },
+    }));
+  });
+
+  it('isIndexable=false인 동은 indexableDongs에 포함되지 않는다', async () => {
+    mockSummaryFindMany.mockResolvedValueOnce([
+      { city: '서울', district: '강남구' },
+    ]);
+    // Empty — no indexable dongs
+    mockSummaryFindMany.mockResolvedValueOnce([]);
+
+    const result = await getSitemapEntries();
+
+    expect(result.cities).toHaveLength(1);
+    expect(result.indexableDongs).toHaveLength(0);
   });
 });

@@ -270,6 +270,24 @@ export async function fetchSubwaySlugs(): Promise<{ slug: string; updatedAt: str
   }
 }
 
+export interface LandSitemapData {
+  cities: Array<{ city: string; district: string }>
+  indexableDongs: Array<{ city: string; district: string; dongName: string }>
+}
+
+export async function fetchLandSitemap(): Promise<LandSitemapData> {
+  try {
+    const json = await ssrFetch<{ data?: LandSitemapData }>(
+      '/api/real-estate/land/sitemap',
+      { timeoutMs: 25_000 },
+    )
+    return json.data ?? { cities: [], indexableDongs: [] }
+  } catch (err) {
+    console.error('[sitemap] fetchLandSitemap failed', err)
+    return { cities: [], indexableDongs: [] }
+  }
+}
+
 export async function fetchSubscriptionIds(): Promise<{ id: number; updatedAt: string }[]> {
   const cacheKey = 'subscriptions'
   const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
