@@ -13,21 +13,19 @@
           <h2 class="text-display-3 text-slate-900">부동산 유형별 실거래가</h2>
         </template>
         <RealEstateCategoryCards :summaries="hubSummaries ?? undefined" />
-        <div class="mt-3">
+        <div class="grid grid-cols-2 gap-3 md:gap-4 mt-3">
           <NuxtLink
             to="/real-estate/land"
-            class="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
+            class="group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
           >
-            <div class="flex items-center gap-3">
-              <span class="flex size-9 md:size-10 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="flex size-9 md:size-10 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
                 <img src="/icons/category/land-plot.webp?v2" alt="토지" class="w-6 h-6 md:w-7 md:h-7" width="28" height="28" />
               </span>
-              <div>
-                <p class="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">토지 실거래가</p>
-                <p class="text-caption text-slate-500 mt-0.5">대지·전·답·임야 평당 시세</p>
-              </div>
+              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-primary-100 text-primary-700">매매</span>
             </div>
-            <span class="material-symbols-outlined text-primary/60 text-xl">chevron_right</span>
+            <p class="text-sm md:text-base font-semibold text-slate-800 group-hover:text-primary transition-colors leading-tight">토지</p>
+            <p class="text-xs md:text-sm text-slate-700">대지·전·답·임야 평당 시세</p>
           </NuxtLink>
         </div>
       </SectionBlock>
