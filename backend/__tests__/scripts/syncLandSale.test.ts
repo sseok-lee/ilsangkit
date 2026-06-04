@@ -132,7 +132,7 @@ describe('computeAreaSummary', () => {
 
   it('평당가 평균 = 거래금액(만원) / (면적/3.305) 의 평균', () => {
     const txns: LandTxnForSummary[] = [
-      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대' },
+      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대', shareDeal: false },
     ];
     const s = computeAreaSummary(txns, now);
     expect(s.avgPricePerPyeong).toBeGreaterThan(24000);
@@ -143,8 +143,8 @@ describe('computeAreaSummary', () => {
 
   it('헤드라인 평당가는 지목=대 거래만 반영', () => {
     const txns: LandTxnForSummary[] = [
-      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대' },   // 평당 ~25000
-      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 3, jimok: '도로' },        // 무시
+      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대', shareDeal: false },   // 평당 ~25000
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 3, jimok: '도로', shareDeal: false },        // 무시
     ];
     const s = computeAreaSummary(txns, now);
     expect(s.daeCount).toBe(1);
@@ -154,7 +154,7 @@ describe('computeAreaSummary', () => {
   });
 
   it('대지 거래 없으면 헤드라인 평당가 null', () => {
-    const s = computeAreaSummary([{ dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 3, jimok: '도로' }], now);
+    const s = computeAreaSummary([{ dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 3, jimok: '도로', shareDeal: false }], now);
     expect(s.avgPricePerPyeong).toBeNull();
     expect(s.daeCount).toBe(0);
     expect(s.transactionCount).toBe(1);
@@ -162,8 +162,8 @@ describe('computeAreaSummary', () => {
 
   it('recentCount = 최근 12개월 거래 수', () => {
     const txns: LandTxnForSummary[] = [
-      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대' },
-      { dealAmount: 100, dealArea: 100, dealYear: 2024, dealMonth: 1, jimok: '전' },
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대', shareDeal: false },
+      { dealAmount: 100, dealArea: 100, dealYear: 2024, dealMonth: 1, jimok: '전', shareDeal: false },
     ];
     const s = computeAreaSummary(txns, now);
     expect(s.transactionCount).toBe(2);
@@ -171,18 +171,18 @@ describe('computeAreaSummary', () => {
   });
 
   it('isIndexable: recentCount>=5 또는 transactionCount>=10', () => {
-    const recent = (n: number) => Array.from({ length: n }, () => ({ dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대' }));
+    const recent = (n: number) => Array.from({ length: n }, () => ({ dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대', shareDeal: false }));
     expect(computeAreaSummary(recent(5), now).isIndexable).toBe(true);
     expect(computeAreaSummary(recent(4), now).isIndexable).toBe(false);
-    const old = Array.from({ length: 10 }, () => ({ dealAmount: 100, dealArea: 100, dealYear: 2024, dealMonth: 1, jimok: '대' }));
+    const old = Array.from({ length: 10 }, () => ({ dealAmount: 100, dealArea: 100, dealYear: 2024, dealMonth: 1, jimok: '대', shareDeal: false }));
     expect(computeAreaSummary(old, now).isIndexable).toBe(true);
   });
 
   it('jimokBreakdown: 지목별 건수 집계', () => {
     const txns: LandTxnForSummary[] = [
-      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대' },
-      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대' },
-      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '전' },
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대', shareDeal: false },
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '대', shareDeal: false },
+      { dealAmount: 100, dealArea: 100, dealYear: 2026, dealMonth: 5, jimok: '전', shareDeal: false },
     ];
     const s = computeAreaSummary(txns, now);
     expect(s.jimokBreakdown).toEqual({ '대': 2, '전': 1 });
@@ -190,12 +190,25 @@ describe('computeAreaSummary', () => {
 
   it('면적 0/누락 거래는 평당가 계산에서 제외', () => {
     const txns: LandTxnForSummary[] = [
-      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대' },
-      { dealAmount: 100, dealArea: 0, dealYear: 2026, dealMonth: 3, jimok: '대' },
+      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대', shareDeal: false },
+      { dealAmount: 100, dealArea: 0, dealYear: 2026, dealMonth: 3, jimok: '대', shareDeal: false },
     ];
     const s = computeAreaSummary(txns, now);
     expect(s.transactionCount).toBe(2);
     expect(s.avgPricePerPyeong).toBeGreaterThan(24000);
     expect(s.daeCount).toBe(2);
+  });
+
+  it('비지분 대지만 헤드라인 평당가/daeNonShareCount에 반영', () => {
+    const txns: LandTxnForSummary[] = [
+      { dealAmount: 1500000, dealArea: 198.3, dealYear: 2026, dealMonth: 3, jimok: '대', shareDeal: false },
+      { dealAmount: 14200, dealArea: 7.74, dealYear: 2026, dealMonth: 3, jimok: '대', shareDeal: true }, // 지분 대지 → 제외
+    ];
+    const s = computeAreaSummary(txns, now);
+    expect(s.daeCount).toBe(2);
+    expect(s.daeNonShareCount).toBe(1);
+    expect(s.avgPricePerPyeong).toBeGreaterThan(24000); // 비지분 대지(198.3㎡)만 반영
+    expect(s.avgPricePerPyeong).toBeLessThan(26000);
+    expect(s.transactionCount).toBe(2);
   });
 });

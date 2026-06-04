@@ -25,6 +25,7 @@ export interface LandTxnForSummary {
   dealYear: number;
   dealMonth: number;
   jimok: string | null;
+  shareDeal: boolean;
 }
 
 export interface AreaSummaryResult {
@@ -32,6 +33,7 @@ export interface AreaSummaryResult {
   recentCount: number;
   avgPricePerPyeong: number | null;
   daeCount: number;
+  daeNonShareCount: number;
   jimokBreakdown: Record<string, number>;
   isIndexable: boolean;
 }
@@ -40,6 +42,7 @@ export function computeAreaSummary(txns: LandTxnForSummary[], now: Date): AreaSu
   const cutoff = new Date(now.getFullYear(), now.getMonth() - RECENT_MONTHS + 1, 1);
   let recentCount = 0;
   let daeCount = 0;
+  let daeNonShareCount = 0;
   const daePyeongPrices: number[] = [];
   const jimokBreakdown: Record<string, number> = {};
 
@@ -52,9 +55,12 @@ export function computeAreaSummary(txns: LandTxnForSummary[], now: Date): AreaSu
 
     if (t.jimok?.trim() === '대') {
       daeCount++;
-      if (t.dealArea && t.dealArea > 0) {
-        const pyeong = t.dealArea / PYEONG_PER_SQM;
-        daePyeongPrices.push(t.dealAmount / pyeong);
+      if (!t.shareDeal) {
+        daeNonShareCount++;
+        if (t.dealArea && t.dealArea > 0) {
+          const pyeong = t.dealArea / PYEONG_PER_SQM;
+          daePyeongPrices.push(t.dealAmount / pyeong);
+        }
       }
     }
   }
@@ -65,7 +71,7 @@ export function computeAreaSummary(txns: LandTxnForSummary[], now: Date): AreaSu
   const transactionCount = txns.length;
   const isIndexable = recentCount >= INDEX_RECENT_MIN || transactionCount >= INDEX_TOTAL_MIN;
 
-  return { transactionCount, recentCount, avgPricePerPyeong, daeCount, jimokBreakdown, isIndexable };
+  return { transactionCount, recentCount, avgPricePerPyeong, daeCount, daeNonShareCount, jimokBreakdown, isIndexable };
 }
 
 export interface RawLandSaleItem extends Record<string, unknown> {
@@ -144,7 +150,7 @@ export async function refreshLandAreaSummary(): Promise<void> {
   for (const g of groups) {
     const rows = await prisma.landSaleTransaction.findMany({
       where: { bjdCode: g.bjdCode, dongName: g.dongName, cancelDealDay: null },
-      select: { dealAmount: true, dealArea: true, dealYear: true, dealMonth: true, dealDay: true, jimok: true },
+      select: { dealAmount: true, dealArea: true, dealYear: true, dealMonth: true, dealDay: true, jimok: true, shareDeal: true },
     });
     const txns: LandTxnForSummary[] = rows.map((r) => ({
       dealAmount: Number(r.dealAmount),
@@ -152,6 +158,7 @@ export async function refreshLandAreaSummary(): Promise<void> {
       dealYear: r.dealYear,
       dealMonth: r.dealMonth,
       jimok: r.jimok,
+      shareDeal: r.shareDeal,
     }));
     const summary = computeAreaSummary(txns, now);
 
@@ -166,6 +173,7 @@ export async function refreshLandAreaSummary(): Promise<void> {
         bjdCode: g.bjdCode, dongName: g.dongName, city: g.city, district: g.district,
         transactionCount: summary.transactionCount, recentCount: summary.recentCount,
         avgPricePerPyeong: summary.avgPricePerPyeong, daeCount: summary.daeCount,
+        daeNonShareCount: summary.daeNonShareCount,
         latestDealDate: latest,
         jimokBreakdown: summary.jimokBreakdown, isIndexable: summary.isIndexable,
       },
@@ -173,6 +181,7 @@ export async function refreshLandAreaSummary(): Promise<void> {
         city: g.city, district: g.district,
         transactionCount: summary.transactionCount, recentCount: summary.recentCount,
         avgPricePerPyeong: summary.avgPricePerPyeong, daeCount: summary.daeCount,
+        daeNonShareCount: summary.daeNonShareCount,
         latestDealDate: latest,
         jimokBreakdown: summary.jimokBreakdown, isIndexable: summary.isIndexable,
       },

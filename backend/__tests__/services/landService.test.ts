@@ -52,42 +52,65 @@ describe('getRegionList', () => {
 describe('getRegionDetail', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('거래내역 + 평당가 시계열 + 지목/용도지역 분포 반환', async () => {
+  it('거래내역 + 분기별 평당가 시계열 + 지목그룹/용도지역 분포 + 대지사례 반환', async () => {
     const rows = [
+      // 비지분 대지 — 헤드라인, daeSamples, priceTimeline에 포함
       { id: 1, jibun: '123-4', jimok: '대', landUse: '제2종일반주거지역', dealArea: 198.3,
         shareDeal: false, dealAmount: 1500000n, dealType: '중개거래', dealYear: 2026, dealMonth: 3, dealDay: 15 },
+      // 농지(전)
       { id: 2, jibun: '567', jimok: '전', landUse: '계획관리지역', dealArea: 330,
         shareDeal: false, dealAmount: 990000n, dealType: '직거래', dealYear: 2026, dealMonth: 1, dealDay: 5 },
+      // 지분 대지 — daeCount에는 포함, daeSamples·priceTimeline·jimokGroups대지평당가 제외
+      { id: 3, jibun: '99-1', jimok: '대', landUse: '제2종일반주거지역', dealArea: 7.74,
+        shareDeal: true, dealAmount: 14200n, dealType: '직거래', dealYear: 2026, dealMonth: 2, dealDay: 10 },
+      // 도로
+      { id: 4, jibun: '1-1', jimok: '도로', landUse: '도로', dealArea: 50,
+        shareDeal: false, dealAmount: 5000n, dealType: '직거래', dealYear: 2025, dealMonth: 6, dealDay: 1 },
     ];
     mockTxnFindMany.mockResolvedValueOnce(rows).mockResolvedValueOnce(rows);
-    mockTxnCount.mockResolvedValue(2);
+    mockTxnCount.mockResolvedValue(4);
 
     const r = await getRegionDetail({ bjdCode: '11680', dongName: '역삼동', page: 1, limit: 20 });
 
-    expect(r.total).toBe(2);
+    expect(r.total).toBe(4);
     expect(r.items[0].pricePerPyeong).toBeGreaterThan(0);
     expect(r.items[0].dealAmount).toBe(1500000); // BigInt → number
 
-    // jimokDistribution: now includes avgPricePerPyeong per jimok
-    expect(r.jimokDistribution).toEqual(expect.arrayContaining([
-      expect.objectContaining({ jimok: '대', count: 1 }),
-      expect.objectContaining({ jimok: '전', count: 1 }),
+    // jimokGroups: 대지(2건), 농지(1건), 도로·기타(1건)
+    expect(r.jimokGroups).toEqual(expect.arrayContaining([
+      expect.objectContaining({ group: '대지', count: 2 }),
+      expect.objectContaining({ group: '농지', count: 1 }),
+      expect.objectContaining({ group: '도로·기타', count: 1 }),
     ]));
-    const dae = r.jimokDistribution.find((d: any) => d.jimok === '대');
-    expect(dae.avgPricePerPyeong).toBeGreaterThan(0);
+    const daeGroup = r.jimokGroups.find((g: any) => g.group === '대지');
+    // 대지그룹 평당가는 비지분(id=1)만 반영
+    expect(daeGroup.avgPricePerPyeong).toBeGreaterThan(0);
+    // 지분 대지(id=3, dealAmount=14200, dealArea=7.74)를 포함하면 평균이 왜곡됨 → 비지분만임을 확인
+    expect(daeGroup.avgPricePerPyeong).toBeGreaterThan(24000);
+    expect(daeGroup.avgPricePerPyeong).toBeLessThan(26000);
 
     expect(r.landUseDistribution).toEqual(expect.arrayContaining([
-      { landUse: '제2종일반주거지역', count: 1 }, { landUse: '계획관리지역', count: 1 },
+      { landUse: '제2종일반주거지역', count: 2 },
+      { landUse: '계획관리지역', count: 1 },
     ]));
 
-    // priceTimeline: 대지(jimok=대) only → only row1 (2026-3), row2 '전' excluded
+    // priceTimeline: 비지분 대지 only → id=1(2026-Q1), id=3(지분) 제외
     expect(r.priceTimeline.length).toBeGreaterThan(0);
     expect(r.priceTimeline[0]).toHaveProperty('year');
+    expect(r.priceTimeline[0]).toHaveProperty('quarter');
     expect(r.priceTimeline[0]).toHaveProperty('avgPricePerPyeong');
     expect(r.priceTimeline[0].avgPricePerPyeong).toBeGreaterThan(0);
 
-    // daeCount: only the '대' row
-    expect(r.daeCount).toBe(1);
+    // daeCount: 비지분(1) + 지분(1) = 2
+    expect(r.daeCount).toBe(2);
+    // daeNonShareCount: 비지분만 = 1
+    expect(r.daeNonShareCount).toBe(1);
+
+    // daeSamples: 비지분 대지만 (id=1만 해당), 최신순
+    expect(r.daeSamples).toHaveLength(1);
+    expect(r.daeSamples[0].id).toBe(1);
+    expect(r.daeSamples[0].shareDeal).toBe(false);
+    expect(r.daeSamples[0].pricePerPyeong).toBeGreaterThan(0);
   });
 });
 

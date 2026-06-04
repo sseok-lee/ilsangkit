@@ -69,16 +69,32 @@ export interface RegionDetailParams {
   limit: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type LandTransaction = any;
+
+const JIMOK_GROUP_ORDER = ['대지', '농지', '임야', '잡종지', '도로·기타'];
+
+function jimokGroup(jimok: string | null): string {
+  const j = (jimok ?? '').trim();
+  if (j === '대') return '대지';
+  if (j === '전' || j === '답' || j === '과수원') return '농지';
+  if (j === '임야') return '임야';
+  if (j === '잡종지') return '잡종지';
+  return '도로·기타';
+}
+
 export interface RegionDetailResult {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   items: any[];
   total: number;
   page: number;
   totalPages: number;
-  jimokDistribution: Array<{ jimok: string; count: number; avgPricePerPyeong: number | null }>;
+  jimokGroups: Array<{ group: string; count: number; avgPricePerPyeong: number | null }>;
   landUseDistribution: Array<{ landUse: string; count: number }>;
-  priceTimeline: Array<{ year: number; month: number; avgPricePerPyeong: number | null; count: number }>;
+  priceTimeline: Array<{ year: number; quarter: number; avgPricePerPyeong: number | null; count: number }>;
   daeCount: number;
+  daeNonShareCount: number;
+  daeSamples: LandTransaction[];
 }
 
 export interface HubSummaryResult {
@@ -153,7 +169,10 @@ export async function getRegionDetail(params: RegionDetailParams): Promise<Regio
 
   const allRows = await prisma.landSaleTransaction.findMany({
     where,
-    select: { jimok: true, landUse: true, dealArea: true, dealAmount: true, dealYear: true, dealMonth: true },
+    select: {
+      id: true, jibun: true, jimok: true, landUse: true, dealArea: true, dealAmount: true,
+      shareDeal: true, dealType: true, dealYear: true, dealMonth: true, dealDay: true,
+    },
     orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
     take: 5000, // 안전 상한: 동 단위 토지 거래량은 이보다 훨씬 적음(미초과 시 전수). unbounded 쿼리로 버퍼풀 점유 방지.
   });
@@ -164,63 +183,90 @@ export async function getRegionDetail(params: RegionDetailParams): Promise<Regio
     return s;
   });
 
-  const jimokMap = new Map<string, { count: number; prices: number[] }>();
+  const jimokGroupMap = new Map<string, { count: number; prices: number[] }>();
   const landUseMap = new Map<string, number>();
-  const daeTimelineMap = new Map<string, { year: number; month: number; prices: number[]; count: number }>();
+  const quarterlyMap = new Map<string, { year: number; quarter: number; prices: number[]; count: number }>();
   let daeCount = 0;
+  let daeNonShareCount = 0;
+  const daeSampleRows: typeof allRows = [];
 
   for (const r of allRows) {
-    const jk = r.jimok?.trim() || '기타';
-    const jkEntry = jimokMap.get(jk) ?? { count: 0, prices: [] };
-    jkEntry.count++;
-    const pppJk = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
-    if (pppJk !== null) jkEntry.prices.push(pppJk);
-    jimokMap.set(jk, jkEntry);
+    const group = jimokGroup(r.jimok);
+    const grpEntry = jimokGroupMap.get(group) ?? { count: 0, prices: [] };
+    grpEntry.count++;
+    // For '대지' group, only non-share rows count toward avgPricePerPyeong
+    const isDaeNonShare = r.jimok?.trim() === '대' && !r.shareDeal;
+    if (group !== '대지' || isDaeNonShare) {
+      const pppGrp = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
+      if (pppGrp !== null) grpEntry.prices.push(pppGrp);
+    }
+    jimokGroupMap.set(group, grpEntry);
 
     const lk = r.landUse?.trim() || '기타';
     landUseMap.set(lk, (landUseMap.get(lk) ?? 0) + 1);
 
-    // priceTimeline and daeCount: 대지(jimok=대) only
     if (r.jimok?.trim() === '대') {
       daeCount++;
-      const key = `${r.dealYear}-${r.dealMonth}`;
-      const entry = daeTimelineMap.get(key) ?? { year: r.dealYear, month: r.dealMonth, prices: [], count: 0 };
-      entry.count++;
-      const ppp = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
-      if (ppp !== null) entry.prices.push(ppp);
-      daeTimelineMap.set(key, entry);
+      if (!r.shareDeal) {
+        daeNonShareCount++;
+        daeSampleRows.push(r);
+        // quarterly timeline: 비지분 대지만
+        const quarter = Math.ceil(r.dealMonth / 3);
+        const key = `${r.dealYear}-Q${quarter}`;
+        const entry = quarterlyMap.get(key) ?? { year: r.dealYear, quarter, prices: [], count: 0 };
+        entry.count++;
+        const ppp = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
+        if (ppp !== null) entry.prices.push(ppp);
+        quarterlyMap.set(key, entry);
+      }
     }
   }
 
-  const jimokDistribution = Array.from(jimokMap.entries())
-    .map(([jimok, e]) => ({
-      jimok,
-      count: e.count,
-      avgPricePerPyeong: e.prices.length
-        ? Math.round((e.prices.reduce((a, b) => a + b, 0) / e.prices.length) * 100) / 100
-        : null,
-    }))
-    .sort((a, b) => b.count - a.count);
+  const jimokGroups = JIMOK_GROUP_ORDER
+    .filter((g) => jimokGroupMap.has(g))
+    .map((g) => {
+      const e = jimokGroupMap.get(g)!;
+      return {
+        group: g,
+        count: e.count,
+        avgPricePerPyeong: e.prices.length
+          ? Math.round((e.prices.reduce((a, b) => a + b, 0) / e.prices.length) * 100) / 100
+          : null,
+      };
+    });
+
   const landUseDistribution = Array.from(landUseMap.entries())
     .map(([landUse, count]) => ({ landUse, count }))
     .sort((a, b) => b.count - a.count);
-  const priceTimeline = Array.from(daeTimelineMap.values())
+
+  const priceTimeline = Array.from(quarterlyMap.values())
     .map((e) => ({
       year: e.year,
-      month: e.month,
-      avgPricePerPyeong: e.prices.length ? Math.round((e.prices.reduce((a, b) => a + b, 0) / e.prices.length) * 100) / 100 : null,
+      quarter: e.quarter,
+      avgPricePerPyeong: e.prices.length
+        ? Math.round((e.prices.reduce((a, b) => a + b, 0) / e.prices.length) * 100) / 100
+        : null,
       count: e.count,
     }))
-    .sort((a, b) => (a.year - b.year) || (a.month - b.month));
+    .sort((a, b) => (a.year - b.year) || (a.quarter - b.quarter));
+
+  // daeSamples: 비지분 대지 최신순 최대 12건 (allRows already desc-ordered)
+  const daeSamples = daeSampleRows.slice(0, 12).map((r) => {
+    const s = serializeRow(r);
+    s.pricePerPyeong = pricePerPyeong(Number(r.dealAmount), r.dealArea ? Number(r.dealArea) : null);
+    return s;
+  });
 
   return {
     items,
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
-    jimokDistribution,
+    jimokGroups,
     landUseDistribution,
     priceTimeline,
     daeCount,
+    daeNonShareCount,
+    daeSamples,
   };
 }
