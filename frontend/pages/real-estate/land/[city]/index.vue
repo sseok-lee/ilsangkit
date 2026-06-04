@@ -25,7 +25,7 @@
             <span class="text-xs text-slate-500">동 {{ card.dongCount }}개</span>
             <span class="text-xs text-slate-500">거래 {{ card.totalTransactions.toLocaleString('ko-KR') }}건</span>
             <span v-if="card.avgPricePerPyeong != null" class="text-xs text-slate-500">
-              평당 {{ card.avgPricePerPyeong.toLocaleString('ko-KR') }}원
+              평당 {{ card.avgPricePerPyeong.toLocaleString('ko-KR') }}만원
             </span>
           </NuxtLink>
         </div>

@@ -27,7 +27,7 @@
                 평당 {{ dong.avgPricePerPyeong.toLocaleString('ko-KR') }}만원
               </span>
               <span class="text-xs text-slate-400">
-                (㎡당 {{ pyeongToSqm(dong.avgPricePerPyeong)?.toLocaleString('ko-KR') ?? '-' }}원)
+                (㎡당 {{ pyeongToSqm(dong.avgPricePerPyeong)?.toLocaleString('ko-KR') ?? '-' }}만원)
               </span>
             </template>
             <span v-else class="text-xs text-slate-400">대지 거래 없음</span>
