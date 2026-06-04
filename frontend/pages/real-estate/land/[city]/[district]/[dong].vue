@@ -271,16 +271,13 @@ useHead(() => {
   const title = pageTitle
   const description = pageDescription.value
 
-  // Canonical: self if indexable, district page if noindex
   const selfCanonical = `${SITE_URL}/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong)}`
-  const districtCanonical = `${SITE_URL}/real-estate/land/${citySlug}/${districtSlug}`
-  const canonicalUrl = noindex.value ? districtCanonical : selfCanonical
 
   const meta: Array<Record<string, string>> = [
     { name: 'description', content: description },
     { property: 'og:title', content: title },
     { property: 'og:description', content: description },
-    { property: 'og:url', content: canonicalUrl },
+    { property: 'og:url', content: selfCanonical },
     { property: 'og:type', content: 'website' },
   ]
 
@@ -288,12 +285,11 @@ useHead(() => {
     meta.push({ name: 'robots', content: 'noindex, follow' })
   }
 
+  // noindex-canonical-policy: noindex 페이지는 canonical 을 출력하지 않는다 (혼합 신호 방지)
   return {
     title,
     meta,
-    // noindex: point canonical to district (not omit, so crawlers know where to go)
-    // indexable: point canonical to self
-    link: [{ rel: 'canonical', href: canonicalUrl }],
+    ...(noindex.value ? {} : { link: [{ rel: 'canonical', href: selfCanonical }] }),
   }
 })
 

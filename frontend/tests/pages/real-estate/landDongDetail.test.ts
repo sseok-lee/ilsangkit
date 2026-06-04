@@ -321,7 +321,7 @@ describe('real-estate/land/[city]/[district]/[dong].vue — land dong detail pag
     expect(robotsMeta!.content).toBe('noindex, follow')
   })
 
-  it('[isIndexable=false] canonical은 district 페이지(/real-estate/land/seoul/gangnam)를 가리켜야 한다', async () => {
+  it('[isIndexable=false] canonical link는 생략되어야 한다(혼합 신호 방지)', async () => {
     mockGetRegions.mockImplementationOnce(async (_params: any) => ({
       items: [
         {
@@ -345,18 +345,13 @@ describe('real-estate/land/[city]/[district]/[dong].vue — land dong detail pag
 
     await mountPage()
     const head = resolveHead(capturedHeadCalls[0])
-    // When noindex, canonical points to district page (not self)
-    // The reference pattern: noindex → canonical to district; no canonical link omit (district page canonical)
+    // noindex → robots noindex meta + canonical link OMITTED entirely (no mixed signals)
     const meta: Array<Record<string, string>> = head.meta ?? []
     const links: Array<Record<string, string>> = head.link ?? []
     const robotsMeta = meta.find((m) => m.name === 'robots')
     expect(robotsMeta!.content).toBe('noindex, follow')
-    // Canonical should point to district, not to the dong URL
     const canonical = links.find((l) => l.rel === 'canonical')
-    if (canonical) {
-      expect(canonical.href).toBe('https://ilsangkit.co.kr/real-estate/land/seoul/gangnam')
-    }
-    // If no canonical link at all (omitted on noindex like the reference), that is also acceptable
+    expect(canonical).toBeUndefined()
   })
 
   // ── Content ──────────────────────────────────────────────────────────────────
