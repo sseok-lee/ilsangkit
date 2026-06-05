@@ -9,8 +9,8 @@ import {
 } from '../../types/facility'
 
 describe('NAV_GROUPS', () => {
-  it('6개 그룹을 포함해야 한다', () => {
-    expect(NAV_GROUPS).toHaveLength(6)
+  it('7개 그룹을 포함해야 한다', () => {
+    expect(NAV_GROUPS).toHaveLength(7)
   })
 
   it('첫 번째 그룹이 LinkGroup이어야 한다', () => {
@@ -97,7 +97,7 @@ describe('CATEGORY_GROUPS', () => {
   })
 
   it('NAV_GROUPS의 마지막 4개 그룹이 CATEGORY_GROUPS와 동일해야 한다', () => {
-    const lastFour = NAV_GROUPS.slice(2, 6)
+    const lastFour = NAV_GROUPS.slice(3, 7)
     lastFour.forEach((group, i) => {
       expect(group.title).toBe(CATEGORY_GROUPS[i].title)
       expect(group.icon).toBe(CATEGORY_GROUPS[i].icon)
@@ -126,17 +126,22 @@ describe('isLinkGroup 타입 가드', () => {
 })
 
 describe('NAV_LINK_GROUPS', () => {
-  it('링크 그룹 2개(부동산, 청약·임대)만 포함한다', () => {
-    expect(NAV_LINK_GROUPS).toHaveLength(2)
+  it('링크 그룹 3개(부동산, 청약·임대, 공매)를 포함한다', () => {
+    expect(NAV_LINK_GROUPS).toHaveLength(3)
     expect(NAV_LINK_GROUPS.every((g) => isLinkGroup(g))).toBe(true)
   })
 
-  it('첫째는 부동산, 둘째는 청약·임대여야 한다', () => {
+  it('첫째는 부동산, 둘째는 청약·임대, 셋째는 공매여야 한다', () => {
     expect(NAV_LINK_GROUPS[0].title).toBe('부동산')
     expect(NAV_LINK_GROUPS[1].title).toBe('청약·임대')
+    expect(NAV_LINK_GROUPS[2].title).toBe('공매')
   })
 
-  it('NAV_GROUPS의 앞 2개가 NAV_LINK_GROUPS와 동일해야 한다', () => {
-    expect(NAV_GROUPS.slice(0, 2)).toEqual([...NAV_LINK_GROUPS])
+  it('공매 그룹은 7개 링크를 포함한다', () => {
+    expect(NAV_LINK_GROUPS[2].links).toHaveLength(7)
+  })
+
+  it('NAV_GROUPS의 앞 3개가 NAV_LINK_GROUPS와 동일해야 한다', () => {
+    expect(NAV_GROUPS.slice(0, 3)).toEqual([...NAV_LINK_GROUPS])
   })
 })
