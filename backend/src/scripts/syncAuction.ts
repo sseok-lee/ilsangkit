@@ -275,61 +275,86 @@ function toSummaryData(s: ReturnType<typeof computeAuctionSummary>) {
   };
 }
 
+const PAGE_SIZE = 1000; // 일일 트래픽=호출횟수 제한이므로 페이지를 크게(1000) 잡아 호출 수 최소화(API 허용 확인)
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 // 반환: clean=true면 전 재산유형×수의여부 스냅샷이 에러 없이 완료됨(마감포착 안전).
 async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
   regionMap: Map<string, { city: string; district: string }>, stats: SyncStats): Promise<boolean> {
   let clean = true;
-  const PAGE_SIZE = 1000; // 일일 트래픽=호출횟수 제한이므로 페이지를 크게(1000) 잡아 호출 수 최소화(API 허용 확인)
+
+  // 한 페이지 적재(소재지 enrich + transform + upsert).
+  const processItems = async (items: Record<string, unknown>[]) => {
+    const enriched = items.map((it) => {
+      const raw = it as RawAuctionItem;
+      // bjdCode: ltnoPnu 앞 5자리 우선, fallback rdnmPnu
+      const pnu = String(raw.ltnoPnu ?? '').trim() || String(raw.rdnmPnu ?? '').trim();
+      const bjd5 = pnu.length >= 5 ? pnu.slice(0, 5) : '';
+      const region = regionMap.get(bjd5);
+      const city = region?.city ?? String(raw.lctnSdnm ?? '').trim();
+      const district = region?.district ?? String(raw.lctnSggnm ?? '').trim();
+      return { ...it, city, district } as unknown as RawAuctionItem;
+    });
+    const records = transformAndDedupe(enriched, (it) => transformAuctionItem(it, runStart), (r) => r!.sourceId, stats);
+    await batchUpsert(records, async (record) => {
+      const r = record as NonNullable<ReturnType<typeof transformAuctionItem>>;
+      const existing = await prisma.auctionItem.findUnique({ where: { cltrMngNo: r.cltrMngNo }, select: { id: true, isClosed: true } });
+      if (existing?.isClosed) return 'updated'; // 마감 물건은 active로 되돌리지 않음
+      // ⚠️ landArea/bldArea/dongName/pvctTrgtYn은 절대 drop하지 말 것. lat/lng만 분리 변환.
+      const { lat, lng, ...rest } = r;
+      const data = { ...rest, lat: lat ? Number(lat) : null, lng: lng ? Number(lng) : null };
+      await prisma.auctionItem.upsert({
+        where: { cltrMngNo: r.cltrMngNo },
+        create: { ...data, firstSeenAt: runStart, lastSeenAt: runStart, syncedAt: new Date() },
+        update: { ...data, lastSeenAt: runStart, syncedAt: new Date() },
+      });
+      return existing ? 'updated' : 'new';
+    });
+  };
+
+  // 한 페이지 fetch(재시도). expectFull=true면 마지막 아닌 페이지가 짧게/비어 오는 일시적 truncation도 재시도.
+  // 0건 빈 envelope(resultCode='')는 정상(데이터 없음)으로 간주. 반환 null=재시도 소진(진짜 실패).
+  type Page = Awaited<ReturnType<typeof fetchOnbidList>>;
+  const fetchPage = async (prptDivCd: string, pvctTrgtYn: string, pageNo: number, expectFull: boolean): Promise<Page | null> => {
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      let res: Page | null = null;
+      try {
+        res = await fetchOnbidList(serviceKey, prptDivCd, pvctTrgtYn, pageNo, PAGE_SIZE);
+      } catch (e) {
+        console.error(`[auction] 호출 실패 ${prptDivCd}/${pvctTrgtYn}/p${pageNo} (시도 ${attempt}/4): ${e instanceof Error ? e.message : e}`);
+      }
+      if (res) {
+        const code = res.resultCode;
+        const normal = code === NORMAL_CODE || code === '03' || (code === '' && res.items.length === 0);
+        if (normal) {
+          // 마지막 아닌 페이지가 PAGE_SIZE 미만 → 일시적 truncation 의심, 재시도
+          if (expectFull && res.items.length > 0 && res.items.length < PAGE_SIZE && attempt < 4) {
+            console.error(`[auction] 짧은 페이지 ${prptDivCd}/${pvctTrgtYn}/p${pageNo} got=${res.items.length}<${PAGE_SIZE} (재시도 ${attempt}/4)`);
+          } else {
+            return res;
+          }
+        } else {
+          console.error(`[auction] 목록 오류 ${prptDivCd}/${pvctTrgtYn}/p${pageNo} resultCode='${code}' (시도 ${attempt}/4)`);
+        }
+      }
+      if (attempt < 4) await sleep(1500 * attempt);
+    }
+    return null;
+  };
+
   for (const prptDivCd of PRPT_DIV_CODES) {
     for (const pvctTrgtYn of ['N', 'Y']) {
-      let pageNo = 1;
-      for (;;) {
-        // 일시적 오류(timeout/5xx/일시 오류코드)는 즉시 포기하지 않고 재시도 — 한 번의 hiccup으로
-        // 해당 재산유형 전체를 건너뛰던 회귀 방지(로컬 첫 수집에서 73k→23k 손실 원인).
-        let res: Awaited<ReturnType<typeof fetchOnbidList>> | null = null;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            res = await fetchOnbidList(serviceKey, prptDivCd, pvctTrgtYn, pageNo, PAGE_SIZE);
-          } catch (e) {
-            console.error(`[auction] 목록 호출 실패 ${prptDivCd}/${pvctTrgtYn}/p${pageNo} (시도 ${attempt}/3): ${e instanceof Error ? e.message : e}`);
-            res = null;
-          }
-          if (res && (res.resultCode === NORMAL_CODE || res.resultCode === '03')) break;
-          if (res) console.error(`[auction] 목록 오류 ${prptDivCd}/${pvctTrgtYn}/p${pageNo} resultCode=${res.resultCode} (시도 ${attempt}/3)`);
-          if (attempt < 3) await new Promise((r) => setTimeout(r, 1500 * attempt));
-        }
-        if (!res || (res.resultCode !== NORMAL_CODE && res.resultCode !== '03')) { clean = false; break; }
-        if (res.resultCode === '03' || res.items.length === 0) break;
-        const enriched = res.items.map((it) => {
-          const raw = it as RawAuctionItem;
-          // bjdCode: ltnoPnu 앞 5자리 우선, fallback rdnmPnu
-          const pnu = String(raw.ltnoPnu ?? '').trim() || String(raw.rdnmPnu ?? '').trim();
-          const bjd5 = pnu.length >= 5 ? pnu.slice(0, 5) : '';
-          const region = regionMap.get(bjd5);
-          // region 없으면 API 제공 lctnSdnm/lctnSggnm fallback
-          const city = region?.city ?? String(raw.lctnSdnm ?? '').trim();
-          const district = region?.district ?? String(raw.lctnSggnm ?? '').trim();
-          return { ...it, city, district } as unknown as RawAuctionItem;
-        });
-        const records = transformAndDedupe(enriched, (it) => transformAuctionItem(it, runStart), (r) => r!.sourceId, stats);
-        await batchUpsert(records, async (record) => {
-          const r = record as NonNullable<ReturnType<typeof transformAuctionItem>>;
-          const existing = await prisma.auctionItem.findUnique({ where: { cltrMngNo: r.cltrMngNo }, select: { id: true, isClosed: true } });
-          if (existing?.isClosed) return 'updated'; // 마감 물건은 active로 되돌리지 않음
-          // ⚠️ landArea/bldArea/dongName/pvctTrgtYn은 절대 drop하지 말 것(MAJOR #2 회귀 방지).
-          //   lat/lng만 string→number 변환 위해 분리, 나머지는 ...rest로 전부 전달.
-          //   Decimal? 컬럼(landArea/bldArea)은 land와 동일하게 string|null 그대로 Prisma에 전달 가능.
-          const { lat, lng, ...rest } = r;
-          const data = { ...rest, lat: lat ? Number(lat) : null, lng: lng ? Number(lng) : null };
-          await prisma.auctionItem.upsert({
-            where: { cltrMngNo: r.cltrMngNo },
-            create: { ...data, firstSeenAt: runStart, lastSeenAt: runStart, syncedAt: new Date() },
-            update: { ...data, lastSeenAt: runStart, syncedAt: new Date() },
-          });
-          return existing ? 'updated' : 'new';
-        });
-        if (res.items.length < PAGE_SIZE) break;
-        pageNo++;
+      const first = await fetchPage(prptDivCd, pvctTrgtYn, 1, false);
+      if (!first) { clean = false; continue; }   // 진짜 실패(재시도 소진)
+      if (first.items.length === 0) continue;     // 데이터 없음(정상)
+      await processItems(first.items);
+      // totalCount 기반으로 끝까지 — 짧은 페이지 하나로 루프를 끊지 않는다(73k→23k 손실 원인).
+      const totalCount = first.totalCount && first.totalCount > 0 ? first.totalCount : first.items.length;
+      const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+      for (let p = 2; p <= totalPages; p++) {
+        const res = await fetchPage(prptDivCd, pvctTrgtYn, p, p < totalPages);
+        if (!res) { clean = false; break; }       // 진짜 실패만 중단
+        if (res.items.length > 0) await processItems(res.items); // 중간 빈 페이지는 건너뛰고 계속
       }
     }
   }
