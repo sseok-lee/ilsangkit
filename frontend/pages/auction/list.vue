@@ -22,7 +22,7 @@
       <!-- 결과 -->
       <div v-if="data && data.items.length > 0">
         <p class="text-caption text-slate-500 mb-3">총 {{ data.total.toLocaleString('ko-KR') }}건</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AuctionCard v-for="item in data.items" :key="item.cltrMngNo" :item="item" />
         </div>
         <Pagination
