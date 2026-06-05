@@ -49,6 +49,7 @@ jobs:
                   *dist/scripts/refreshRealEstateSummary*|\
                   *dist/scripts/syncSubscription*|\
                   *dist/scripts/syncPublicRent*|\
+                  *dist/scripts/syncAuction*|\
                   *dist/scripts/syncRentalAnnouncement*)
                     kill -9 "$pid" 2>/dev/null || true
                     ;;
@@ -89,7 +90,7 @@ jobs:
             # 6개 부동산 타입 순차 실행 (API 부하 분산).
             # `timeout --kill-after=30s 20m`는 스크립트 내부 watchdog(20분)이 뚫려도
             # OS가 SIGTERM→SIGKILL로 반드시 종료시키는 최종 방어선.
-            for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSale syncOffitelRent syncLandSale; do
+            for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSale syncOffitelRent syncLandSale syncAuction; do
               echo "[step:loop-${SCRIPT}-start] $(date -u +%FT%TZ)"
               echo "--- ${SCRIPT} 동기화 ---"
               timeout --kill-after=30s 20m node "dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" \
