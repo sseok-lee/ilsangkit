@@ -82,3 +82,56 @@ export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date(
     lng: item.lng ? String(item.lng).trim() : null,
   };
 }
+
+// --- Task 4: computeAuctionSummary ---
+const INDEX_SOLD_MIN = 3;
+const INDEX_CLOSED_MIN = 5;
+const INDEX_ACTIVE_MIN = 3;
+
+export interface ItemForSummary {
+  isClosed: boolean;
+  resultType: string | null;
+  apslAssAmt: number;
+  winBidPrc: number | null;
+  resultDate: Date | null;
+}
+export interface AuctionSummaryResult {
+  activeCount: number; closedCount: number; soldCount: number;
+  avgBidRate: number | null; avgApslAmt: number | null; avgWinBidPrc: number | null;
+  failRate: number | null; latestResultDate: Date | null; isIndexable: boolean;
+}
+
+export function computeAuctionSummary(items: ItemForSummary[]): AuctionSummaryResult {
+  let activeCount = 0, closedCount = 0, soldCount = 0, failedCount = 0;
+  const rates: number[] = []; const apsls: number[] = []; const wins: number[] = [];
+  let latest: Date | null = null;
+  for (const it of items) {
+    if (it.isClosed) {
+      closedCount++;
+      if (it.resultType === 'sold') {
+        soldCount++;
+        if (it.apslAssAmt > 0 && it.winBidPrc != null && it.winBidPrc > 0) {
+          rates.push((it.winBidPrc / it.apslAssAmt) * 100);
+          wins.push(it.winBidPrc);
+        }
+        if (it.apslAssAmt > 0) apsls.push(it.apslAssAmt);
+      } else if (it.resultType === 'failed') {
+        failedCount++;
+      }
+      if (it.resultDate && (!latest || it.resultDate > latest)) latest = it.resultDate;
+    } else {
+      activeCount++;
+    }
+  }
+  const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+  const round2 = (n: number | null) => (n == null ? null : Math.round(n * 100) / 100);
+  const avgBidRate = round2(avg(rates));
+  const failRate = closedCount > 0 ? round2((failedCount / closedCount) * 100) : null;
+  const isIndexable = soldCount >= INDEX_SOLD_MIN || closedCount >= INDEX_CLOSED_MIN || activeCount >= INDEX_ACTIVE_MIN;
+  return {
+    activeCount, closedCount, soldCount, avgBidRate,
+    avgApslAmt: avg(apsls) != null ? Math.round(avg(apsls)!) : null,
+    avgWinBidPrc: avg(wins) != null ? Math.round(avg(wins)!) : null,
+    failRate, latestResultDate: latest, isIndexable,
+  };
+}
