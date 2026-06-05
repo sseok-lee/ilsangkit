@@ -108,7 +108,8 @@ export async function getItems(p: ItemsParams) {
   if (p.usage) where.usageGroup = p.usage;
   if (p.status === 'ongoing') where.status = { in: ['ongoing', 'scheduled'] };
   else if (p.status === 'negotiable') where.status = 'negotiable';
-  else if (p.status === 'closed') where.isClosed = true;
+  // 마감: close-capture로 확정된 낙찰/유찰/취소(isClosed=true) + API가 직접 '입찰마감'으로 준 것(status='closed')
+  else if (p.status === 'closed') where.OR = [{ isClosed: true }, { status: 'closed' }];
   const orderBy = p.sort === 'apsl' ? { apslAssAmt: 'desc' as const }
     : p.sort === 'bidRate' ? { bidRate: 'desc' as const }
     : { bidCloseDtm: 'asc' as const };
