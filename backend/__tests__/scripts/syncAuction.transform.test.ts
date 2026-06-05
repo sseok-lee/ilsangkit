@@ -67,8 +67,18 @@ describe('transformAuctionItem (차세대 Srvc2 필드명)', () => {
     expect(r.status).toBe('scheduled');
   });
 
-  it('종료일이 지났어도 활성 목록 물건은 closed가 아니라 ongoing (재공고 대기 — closed는 captureClosedItems 전담)', () => {
+  it('종료일이 지났어도 활성 목록 물건은 closed가 아니라 ongoing (pbctStatNm 없을 때 날짜 fallback)', () => {
     const r = transformAuctionItem({ ...base, cltrBidBgngDt: '202501011100', cltrBidEndDt: '202502011600' })!;
+    expect(r.status).toBe('ongoing');
+  });
+
+  it('pbctStatNm="입찰준비중"이면 begin이 과거여도 scheduled(예정) — API 상태가 권위값', () => {
+    const r = transformAuctionItem({ ...base, pbctStatNm: '입찰준비중', cltrBidBgngDt: '202501011100', cltrBidEndDt: '202502011600' })!;
+    expect(r.status).toBe('scheduled');
+  });
+
+  it('pbctStatNm="입찰진행중"이면 ongoing', () => {
+    const r = transformAuctionItem({ ...base, pbctStatNm: '입찰진행중', cltrBidBgngDt: '202612011100' })!;
     expect(r.status).toBe('ongoing');
   });
 

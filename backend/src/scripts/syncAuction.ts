@@ -49,6 +49,7 @@ export interface RawAuctionItem extends Record<string, unknown> {
   lctnSdnm?: string;       // 소재지 시도명 (fallback city)
   lctnSggnm?: string;      // 소재지 시군구명 (fallback district)
   lctnEmdNm?: string;      // 소재지 읍면동명 → dongName
+  pbctStatNm?: string;     // 입찰상태명 "입찰준비중"(예정)/"입찰진행중" — 배지의 권위값
 }
 
 function parseBigIntOrNull(v: unknown): bigint | null {
@@ -89,10 +90,17 @@ export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date(
 
   const bidBeginDtm = parseDtm(item.cltrBidBgngDt);
   const bidCloseDtm = parseDtm(item.cltrBidEndDt);
-  // 활성 목록(입찰중/예정) 물건은 'closed'로 판정하지 않는다.
-  // 종료일이 지났어도 목록에 남아 있으면 재공고/다음 회차 대기 상태이므로 진행/예정으로 둔다.
-  // 진짜 마감(낙찰/유찰/취소)은 목록에서 사라질 때 captureClosedItems가 설정한다.
-  const status = bidBeginDtm && bidBeginDtm > now ? 'scheduled' : 'ongoing';
+  // 상태 배지: API의 pbctStatNm(입찰상태명)이 권위값. 활성 목록은 '입찰준비중'(예정)/'입찰진행중'뿐.
+  //  - 날짜 추론은 부정확(begin이 과거인 재공고/회차대기 '준비중'을 진행중으로 오분류) → pbctStatNm 우선.
+  //  - 진짜 마감(낙찰/유찰/취소)은 목록에서 사라질 때 captureClosedItems가 설정(여기선 closed 판정 안 함).
+  const statNm = String(item.pbctStatNm ?? '').trim();
+  const status = /진행/.test(statNm)
+    ? 'ongoing'
+    : /준비|예정/.test(statNm)
+      ? 'scheduled'
+      : bidBeginDtm && bidBeginDtm > now // pbctStatNm 없을 때만 날짜 fallback
+        ? 'scheduled'
+        : 'ongoing';
 
   // 면적: 0이면 null로 정규화
   const landSqms = parseIntOrNull(item.landSqms);
