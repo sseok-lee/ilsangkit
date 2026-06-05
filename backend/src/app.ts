@@ -17,6 +17,7 @@ import subscriptionRouter from './routes/subscription.js';
 import publicRentalRouter from './routes/publicRental.js';
 import transitRouter from './routes/transit.js';
 import subwayRouter from './routes/subway.js';
+import auctionRouter from './routes/auction.js';
 import facilityYoutubeRouter from './routes/facilityYoutube.js';
 import facilityNaverBlogRouter from './routes/facilityNaverBlog.js';
 import realEstateNaverBlogRouter from './routes/realEstateNaverBlog.js';
@@ -77,6 +78,7 @@ app.use('/api/subscription', subscriptionRouter);
 app.use('/api/public-rental', publicRentalRouter);
 app.use('/api/transit', transitRouter);
 app.use('/api/subway', subwayRouter);
+app.use('/api/auction', auctionRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
