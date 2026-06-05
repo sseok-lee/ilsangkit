@@ -36,6 +36,21 @@ export function computeAuctionRegionHead(
   return o.isIndexable ? { title, meta, link: [{ rel: 'canonical', href: selfUrl }] } : { title, meta }
 }
 
+export function computeAuctionCityHead(
+  o: { city: string; anyIndexable: boolean },
+  selfUrl: string
+): Head {
+  const title = `${o.city} 공매 물건·낙찰가율 | 일상킷`
+  const description = `${o.city} 구·군별 부동산 공매 물건과 낙찰가율 통계를 확인하세요. 온비드 공식 데이터 기반.`
+  const meta: Array<Record<string, string>> = [
+    { name: 'description', content: description },
+    { property: 'og:title', content: title },
+    { property: 'og:url', content: selfUrl },
+  ]
+  if (!o.anyIndexable) meta.push({ name: 'robots', content: 'noindex, follow' })
+  return o.anyIndexable ? { title, meta, link: [{ rel: 'canonical', href: selfUrl }] } : { title, meta }
+}
+
 export function buildAuctionListTitle(usage: string): string {
   const map: Record<string, string> = { residential: '아파트·주거용', land: '토지', commercial: '상가·업무', industrial: '공장·창고' }
   return usage && map[usage] ? `${map[usage]} 공매 물건 | 일상킷` : '부동산 공매 물건 | 일상킷'

@@ -33,7 +33,8 @@ router.get('/sitemap', asyncHandler(async (_req: Request, res: Response) => {
 }));
 // item/:cltrMngNo 는 마지막(정적 경로 우선)
 router.get('/item/:cltrMngNo', validate(AuctionItemDetailSchema, 'params'), asyncHandler(async (req: Request, res: Response) => {
-  const data = await getItemDetail(req.params.cltrMngNo);
+  const cltrMngNo = Array.isArray(req.params.cltrMngNo) ? req.params.cltrMngNo[0] : req.params.cltrMngNo;
+  const data = await getItemDetail(cltrMngNo);
   if (!data) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '물건을 찾을 수 없습니다' } }); return; }
   res.json({ success: true, data });
 }));

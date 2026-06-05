@@ -96,12 +96,13 @@ export async function getHubSummary() {
   return { totalActive, totalSold, regionCount: new Set(summaries.map((s) => s.bjdCode)).size };
 }
 
-export interface RankingParams { usage?: string; order: 'high' | 'low'; limit: number; }
+export interface RankingParams { usage?: string; order: 'high' | 'low' | 'count'; limit: number; }
 export async function getRanking(p: RankingParams) {
   const where: Record<string, any> = { isIndexable: true, soldCount: { gte: 3 }, avgBidRate: { not: null } };
   if (p.usage) where.usageGroup = p.usage;
+  const orderBy = p.order === 'count' ? { soldCount: 'desc' as const } : { avgBidRate: p.order === 'high' ? 'desc' as const : 'asc' as const };
   const rows = await prisma.auctionAreaSummary.findMany({
-    where, orderBy: { avgBidRate: p.order === 'high' ? 'desc' : 'asc' }, take: p.limit,
+    where, orderBy, take: p.limit,
   });
   return rows.map(serializeRow);
 }

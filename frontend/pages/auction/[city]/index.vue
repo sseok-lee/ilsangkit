@@ -46,6 +46,7 @@
 import { computed } from 'vue'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useAuction } from '~/composables/useAuction'
+import { computeAuctionCityHead } from '~/utils/auctionHead'
 import { SITE_URL } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -98,15 +99,9 @@ const breadcrumbItems = [
   { label: cityName, href: `/auction/${citySlug}`, current: true },
 ]
 
+const anyIndexable = computed(() => districtCards.value.some((d) => d.isIndexable))
+
 const selfUrl = `${SITE_URL}/auction/${citySlug}`
 
-useHead({
-  title: `${cityName} 공매 물건·낙찰가율 | 일상킷`,
-  meta: [
-    { name: 'description', content: `${cityName} 구·군별 부동산 공매 물건과 낙찰가율 통계를 확인하세요. 온비드 공식 데이터 기반.` },
-    { property: 'og:title', content: `${cityName} 공매 물건·낙찰가율 | 일상킷` },
-    { property: 'og:url', content: selfUrl },
-  ],
-  link: [{ rel: 'canonical', href: selfUrl }],
-})
+useHead(() => computeAuctionCityHead({ city: cityName, anyIndexable: anyIndexable.value }, selfUrl))
 </script>

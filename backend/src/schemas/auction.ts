@@ -18,6 +18,6 @@ export const AuctionCitySchema = z.object({ city: z.string().min(1).max(50) });
 export const AuctionItemDetailSchema = z.object({ cltrMngNo: z.string().min(1).max(50) });
 export const AuctionRankingSchema = z.object({
   usage: z.enum(['residential', 'land', 'commercial', 'industrial', 'complex', 'etc']).optional(),
-  order: z.enum(['high', 'low']).default('high'),
+  order: z.enum(['high', 'low', 'count']).default('high'),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
