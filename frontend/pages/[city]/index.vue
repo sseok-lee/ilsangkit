@@ -208,7 +208,7 @@ watch(
     const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(name)}&title=${encodeURIComponent(`${name} 생활 정보`)}`
     setMeta({
       title: `${name} 생활 정보`,
-      description: `${name} 아파트·빌라·오피스텔 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`,
+      description: `${name} 아파트·빌라·오피스텔·토지 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`,
       path: `/${city.value}`,
       image: ogImage,
       canonical: isNoindex.value ? false : undefined,

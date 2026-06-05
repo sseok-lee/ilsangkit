@@ -12,6 +12,7 @@ import {
   fetchSubscriptionIds,
   fetchSubwaySlugs,
   getWeekStartDate,
+  fetchLandSitemap,
 } from '../utils/sitemap'
 import {
   SITEMAP_FACILITY_CATEGORIES,
@@ -36,6 +37,9 @@ export default defineEventHandler(async (event) => {
 
     // real-estate hub (city/district listing pages)
     sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: realEstateLastmod })
+
+    // 토지 실거래가 sitemap (hub + city + district always; dong only if isIndexable)
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/land.xml`, lastmod: weekStart })
 
     // real estate buildings
     const realEstatePages = Math.max(
@@ -87,6 +91,9 @@ export default defineEventHandler(async (event) => {
   } else {
     // fallback: 구 방식 (page-counts 엔드포인트 장애 시)
     sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate-hub.xml`, lastmod: weekStart })
+
+    // 토지 실거래가 sitemap (hub + city + district always; dong only if isIndexable)
+    sitemaps.push({ loc: `${SITE_URL}/sitemap/land.xml`, lastmod: weekStart })
 
     const realEstateBuildings = await fetchRealEstateBuildings()
     const realEstatePages = Math.max(1, Math.ceil(realEstateBuildings.length / MAX_URLS_PER_SITEMAP))

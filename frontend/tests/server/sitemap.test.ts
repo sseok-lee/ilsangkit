@@ -548,3 +548,117 @@ describe('real-estate sitemap — invalid building name filtering', () => {
     expect(urlCount).toBe(2)
   })
 })
+
+describe('land sitemap — isIndexable quality gate', () => {
+  interface MockEvent {
+    path: string
+    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+  }
+
+  function createMockEvent(path: string): MockEvent {
+    return { path, node: { req: { url: path }, res: { setHeader: () => {} } } }
+  }
+
+  const landData = {
+    cities: [
+      { city: '서울', district: '강남구' },
+      { city: '서울', district: '강북구' },
+      { city: '경기', district: '성남시분당구' },
+    ],
+    indexableDongs: [
+      { city: '서울', district: '강남구', dongName: '역삼동' },
+      { city: '서울', district: '강남구', dongName: '삼성동' },
+      // 강북구 has no indexable dongs — its dong URLs must be absent
+    ],
+  }
+
+  function mockSsrFetchWithLand(path: string): Promise<unknown> {
+    if (path.includes('/api/real-estate/land/sitemap')) {
+      return Promise.resolve({ success: true, data: landData })
+    }
+    return Promise.resolve({ success: true, data: [] })
+  }
+
+  beforeEach(() => {
+    vi.mocked(ssrFetch).mockImplementation(mockSsrFetchWithLand as typeof ssrFetch)
+    vi.resetModules()
+  })
+
+  afterEach(() => {
+    vi.mocked(ssrFetch).mockReset()
+  })
+
+  it('land.xml에 hub URL이 포함된다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/land.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/real-estate/land</loc>')
+  })
+
+  it('land.xml에 모든 city hub URL이 포함된다 (seenCityUrls 중복 제거)', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/land.xml') as never)) as string
+    // 서울 city hub — 두 district가 같은 city이지만 city hub는 1개
+    const seoulCityMatches = xml.match(/https:\/\/ilsangkit\.co\.kr\/real-estate\/land\/seoul<\/loc>/g)
+    expect(seoulCityMatches).toHaveLength(1)
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/real-estate/land/gyeonggi</loc>')
+  })
+
+  it('land.xml에 모든 district URL이 포함된다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/land.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/real-estate/land/seoul/gangnam</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/real-estate/land/seoul/gangbuk</loc>')
+    // 성남시분당구 has no slug mapping → toDistrictSlug returns the Korean string as-is (lowercased)
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/real-estate/land/gyeonggi/성남시분당구</loc>')
+  })
+
+  it('isIndexable=true인 동 URL이 포함된다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/land.xml') as never)) as string
+    expect(xml).toContain(encodeURIComponent('역삼동'))
+    expect(xml).toContain(encodeURIComponent('삼성동'))
+  })
+
+  it('isIndexable=false인 동(강북구)의 dong URL은 포함되지 않는다 — 품질 게이트', async () => {
+    // fetchLandSitemap only returns indexable dongs; 강북구 has none in the mock
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/land.xml') as never)) as string
+    // Any dong URL under gangbuk should be absent
+    expect(xml).not.toMatch(/real-estate\/land\/seoul\/gangbuk\//)
+  })
+
+  it('sitemap index에 land.xml이 포함된다', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.reject(new Error('mock: page-counts unavailable'))
+      }
+      if (path.includes('/api/real-estate/land/sitemap')) {
+        return Promise.resolve({ success: true, data: landData })
+      }
+      if (path.includes('/api/sitemap/real-estate-buildings')) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+      if (path.includes('/api/sitemap/real-estate-hubs')) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+      if (path.includes('/api/sitemap/subscriptions')) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+      if (path.includes('/api/sitemap/facilities/')) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+      if (path.includes('/api/sitemap/waste-schedules')) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+      if (path.includes('/api/subway/stations')) {
+        return Promise.resolve({ success: true, data: { items: [] } })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+    vi.resetModules()
+
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const xml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
+    expect(xml).toContain('/sitemap/land.xml')
+  })
+})

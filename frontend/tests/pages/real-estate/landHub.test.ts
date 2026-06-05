@@ -9,6 +9,24 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
 ;(globalThis as any).onMounted = onMounted
 ;(globalThis as any).onUnmounted = onUnmounted
 
+// Override useAsyncData to actually call the fetcher so hub data is populated
+;(globalThis as any).useAsyncData = vi.fn(async (_key: string, fetcher: () => unknown) => {
+  let value: unknown = null
+  try {
+    value = await fetcher()
+  } catch {
+    value = null
+  }
+  const data = ref(value)
+  return Object.assign(Promise.resolve({ data, status: ref('success'), error: ref(null), refresh: vi.fn(), pending: ref(false) }), {
+    data,
+    status: ref('success'),
+    error: ref(null),
+    refresh: vi.fn(),
+    pending: ref(false),
+  })
+})
+
 const mockSetBreadcrumbSchema = vi.fn()
 const mockSetItemListSchema = vi.fn()
 
@@ -21,16 +39,28 @@ vi.mock('~/composables/useStructuredData', () => ({
   }),
 }))
 
+vi.mock('~/composables/useLand', () => ({
+  useLand: () => ({
+    getHubSummary: async () => ({
+      cities: [
+        {
+          slug: 'seoul',
+          city: '서울특별시',
+          indexableDongCount: 10,
+          totalTransactions: 500,
+        },
+      ],
+      totalTransactions: 500,
+    }),
+  }),
+}))
+
 vi.mock('~/utils/seoConstants', () => ({
   SITE_URL: 'https://ilsangkit.co.kr',
   SITE_NAME: '일상킷',
   SITE_TAGLINE: '생활정보 플랫폼',
   SITE_DESCRIPTION: '일상킷 - 생활정보 플랫폼',
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
-}))
-
-vi.mock('~/utils/dataSource', () => ({
-  REAL_ESTATE_DATA_SOURCE: { name: '국토교통부', url: 'https://rtms.molit.go.kr' },
 }))
 
 beforeEach(() => {
@@ -43,7 +73,6 @@ const globalStubs = {
   PageHero: { template: '<div data-stub="hero" />' },
   SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
   AdBanner: { template: '<div />' },
-  RealEstateCategoryCards: { template: '<div />' },
   DataSourceSection: { template: '<div />' },
 }
 
@@ -62,41 +91,28 @@ async function mountSuspended(component: any, options?: any) {
   return wrapper
 }
 
-describe('real-estate/index.vue — hub page', () => {
+describe('real-estate/land/index.vue — land hub page', () => {
   it('컴포넌트가 존재해야 한다', async () => {
-    const m = await import('~/pages/real-estate/index.vue')
+    const m = await import('~/pages/real-estate/land/index.vue')
     expect(m.default).toBeDefined()
   })
 
-  it('setItemListSchema가 canonical realEstateType URL로 호출되어야 한다', async () => {
-    const m = await import('~/pages/real-estate/index.vue')
+  it('setBreadcrumbSchema가 /real-estate/land를 마지막 크럼으로 호출되어야 한다', async () => {
+    const m = await import('~/pages/real-estate/land/index.vue')
+    await mountSuspended(m.default)
+    expect(mockSetBreadcrumbSchema).toHaveBeenCalled()
+    const crumbs = mockSetBreadcrumbSchema.mock.calls[0][0]
+    const lastCrumb = crumbs[crumbs.length - 1]
+    expect(lastCrumb.url).toBe('/real-estate/land')
+  })
+
+  it('setItemListSchema가 /real-estate/land/ 로 시작하는 URL을 포함하여 호출되어야 한다', async () => {
+    const m = await import('~/pages/real-estate/land/index.vue')
     await mountSuspended(m.default)
     expect(mockSetItemListSchema).toHaveBeenCalled()
     const items = mockSetItemListSchema.mock.calls[0][0]
-    const urls = items.map((i: any) => i.url)
-    expect(urls).toContain('/real-estate/apt-sale')
-    expect(urls).toContain('/real-estate/apt-rent')
-    expect(urls).toContain('/real-estate/villa-sale')
-    expect(urls).toContain('/real-estate/villa-rent')
-    expect(urls).toContain('/real-estate/offitel-sale')
-    expect(urls).toContain('/real-estate/offitel-rent')
-    expect(urls).toContain('/real-estate/land')
-  })
-
-  it('setItemListSchema가 레거시 hub URL을 포함하지 않아야 한다', async () => {
-    const m = await import('~/pages/real-estate/index.vue')
-    await mountSuspended(m.default)
-    const items = mockSetItemListSchema.mock.calls[0][0]
-    const urls = items.map((i: any) => i.url)
-    expect(urls).not.toContain('/real-estate/apt')
-    expect(urls).not.toContain('/real-estate/villa')
-    expect(urls).not.toContain('/real-estate/offitel')
-  })
-
-  it('setItemListSchema 항목이 7개여야 한다 (매매+전월세 × 3 주택유형 + 토지)', async () => {
-    const m = await import('~/pages/real-estate/index.vue')
-    await mountSuspended(m.default)
-    const items = mockSetItemListSchema.mock.calls[0][0]
-    expect(items).toHaveLength(7)
+    expect(items.length).toBeGreaterThan(0)
+    const urls: string[] = items.map((i: any) => i.url)
+    expect(urls.some((u) => u.startsWith('/real-estate/land/'))).toBe(true)
   })
 })

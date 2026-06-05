@@ -3,7 +3,7 @@
     <h3 class="text-display-3 text-slate-800 mb-2">
       {{ areaName }} 부동산 실거래가 상세 보기
     </h3>
-    <p class="text-sm text-slate-600 mb-4">아파트, 빌라, 오피스텔 실거래가를 확인해보세요</p>
+    <p class="text-sm text-slate-600 mb-4">아파트, 빌라, 오피스텔, 토지 실거래가를 확인해보세요</p>
     <div class="flex justify-center gap-3">
       <NuxtLink
         to="/real-estate/apt-sale"
