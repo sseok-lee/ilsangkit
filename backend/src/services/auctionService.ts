@@ -6,7 +6,7 @@ import { buildRegionFilter } from './cityMapping.js';
 const PYEONG_PER_SQM = 3.305;
 
 /**
- * 시세 비교 데이터. 용도별 단위:
+ * 시세 비교 데이터. 현재 land(평당)만 지원:
  *
  * land:
  *   marketAvg = 원/평 (LandAreaSummary.avgPricePerPyeong [만원/평] × 10000)
@@ -14,10 +14,8 @@ const PYEONG_PER_SQM = 3.305;
  *   → AuctionPriceCompare에 apslAssAmt 대신 apslAssAmtForCompare를 넘겨 단위 일치시킴
  *   → landArea가 없으면 null
  *
- * residential:
- *   marketAvg = 원 (aptSaleTransaction bjdCode 평균 dealAmount [만원] × 10000)
- *   apslAssAmtForCompare = undefined (원래 apslAssAmt [원] 그대로 사용)
- *   → 시군구 아파트 총액 평균 vs 물건 감정가 총액 비교 (참고값)
+ * 주거/기타: 감정가(물건 전체, 다세대·일괄 포함) vs 단일세대 평균이라 단위 비교 부정확 → null
+ *   (후속: 세대당 정규화 필요)
  */
 export interface MarketCompare {
   marketAvg: number;
@@ -82,23 +80,8 @@ async function computeMarketCompare(
       };
     }
 
-    if (item.usageGroup === 'residential') {
-      // dealAmount: 만원 → ×10000 = 원. apslAssAmt도 원. 단위 일치.
-      const agg = await (prisma as any).aptSaleTransaction.aggregate({
-        where: { bjdCode: item.bjdCode, cancelDealDay: null },
-        _avg: { dealAmount: true },
-        _count: { id: true },
-      });
-      if (!agg._count.id || agg._avg.dealAmount == null) return null;
-      const avgDealWon = Math.round(
-        (typeof agg._avg.dealAmount.toNumber === 'function'
-          ? agg._avg.dealAmount.toNumber()
-          : Number(agg._avg.dealAmount)) * 10000,
-      );
-      if (avgDealWon <= 0) return null;
-      return { marketAvg: avgDealWon, label: '시군구 아파트 평균 실거래가' };
-    }
-
+    // 주거/기타는 감정가(물건 전체, 다세대·일괄 포함) vs 단일세대 평균이라 단위 비교 부정확
+    // → 후속(세대당 정규화 필요). 현재 land(평당)만 지원
     return null;
   } catch {
     return null;

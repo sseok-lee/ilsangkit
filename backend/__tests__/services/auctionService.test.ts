@@ -74,23 +74,15 @@ describe('getItemDetail', () => {
     const r = await getItemDetail('C');
     expect(r?.marketCompare).toBeNull();
   });
-  it('residential: aptSaleTransaction 집계 → marketCompare 반환 (원 단위)', async () => {
+  it('residential: 감정가(물건 전체) vs 단일세대 평균 단위 부정확 → marketCompare=null', async () => {
     mockPrisma.auctionItem.findUnique.mockResolvedValue({
       id: 4, cltrMngNo: 'D', usageGroup: 'residential', bjdCode: '11680',
       dongName: '역삼동', landArea: null, apslAssAmt: 800_000_000n,
       winBidPrc: null, bidRate: null,
     });
     mockPrisma.auctionItem.findMany.mockResolvedValue([]);
-    // avg dealAmount = 50000 만원 → 500_000_000원
-    mockPrisma.aptSaleTransaction.aggregate.mockResolvedValue({
-      _avg: { dealAmount: { toNumber: () => 50000 } },
-      _count: { id: 10 },
-    });
     const r = await getItemDetail('D');
-    expect(r?.marketCompare).not.toBeNull();
-    expect(r?.marketCompare?.marketAvg).toBe(500_000_000); // 50000만원 × 10000
-    expect(r?.marketCompare?.label).toContain('아파트');
-    expect(r?.marketCompare?.apslAssAmtForCompare).toBeUndefined();
+    expect(r?.marketCompare).toBeNull();
   });
 });
 
