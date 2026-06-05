@@ -67,10 +67,10 @@ describe('AppHeader', () => {
 
     it('생활시설 메가메뉴는 4개 그룹 열과 시설 카테고리 링크를 보여준다', async () => {
       const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
-      // 부동산=0, 청약·임대=1, 생활시설=2 (총 3개)
-      expect(groupButtons.length).toBe(3)
+      // 부동산=0, 청약·임대=1, 공매=2, 생활시설=3 (총 4개)
+      expect(groupButtons.length).toBe(4)
 
-      await groupButtons[2].trigger('mouseenter')
+      await groupButtons[3].trigger('mouseenter')
 
       const mega = wrapper.find('[data-testid="nav-mega-menu"]')
       expect(mega.exists()).toBe(true)
