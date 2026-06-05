@@ -65,9 +65,7 @@
         </dl>
       </SectionBlock>
 
-      <section>
-        <p class="text-caption text-slate-400">출처: 한국자산관리공사 온비드 (공공데이터포털)</p>
-      </section>
+      <DataSourceSection domain="auction" />
     </main>
   </div>
 </template>
@@ -79,11 +77,13 @@ import { useAuction } from '~/composables/useAuction'
 import { USAGE_GROUP_LABEL, formatBidRate } from '~/types/auction'
 import { AUCTION_FAQ } from '~/utils/auctionMeta'
 import { computeAuctionRegionHead } from '~/utils/auctionHead'
+import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const route = useRoute()
 const citySlug = route.params.city as string
@@ -152,4 +152,12 @@ const breadcrumbItems = [
   { label: cityName, href: `/auction/${citySlug}`, current: false },
   { label: districtName, href: `/auction/${citySlug}/${districtSlug}`, current: true },
 ]
+
+const { setBreadcrumbSchema } = useStructuredData()
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: '공매', url: '/auction' },
+  { name: cityName, url: `/auction/${citySlug}` },
+  { name: districtName, url: `/auction/${citySlug}/${districtSlug}` },
+])
 </script>

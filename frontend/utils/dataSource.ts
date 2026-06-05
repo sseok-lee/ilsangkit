@@ -165,7 +165,7 @@ export const AUCTION_DATA_SOURCE: DataSourceInfo = {
   url: 'https://www.data.go.kr/data/15157207/openapi.do',
 }
 
-export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'public-rental'
+export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'public-rental' | 'auction'
 
 export function resolveDataSource(input: {
   domain: DataSourceDomain
@@ -180,6 +180,8 @@ export function resolveDataSource(input: {
       return SUBSCRIPTION_DATA_SOURCE
     case 'public-rental':
       return PUBLIC_RENTAL_DATA_SOURCE
+    case 'auction':
+      return AUCTION_DATA_SOURCE
     default:
       return null
   }

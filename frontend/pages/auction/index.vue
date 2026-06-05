@@ -1,6 +1,8 @@
 <template>
   <div class="bg-background-light min-h-screen">
     <main class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+      <Breadcrumb :items="breadcrumbItems" />
+
       <PageHero
         eyebrow="공매"
         title="부동산 공매 물건 검색"
@@ -96,9 +98,7 @@
         </div>
       </SectionBlock>
 
-      <section>
-        <p class="text-caption text-slate-400">출처: 한국자산관리공사 온비드 (공공데이터포털)</p>
-      </section>
+      <DataSourceSection domain="auction" />
     </main>
   </div>
 </template>
@@ -109,10 +109,13 @@ import { useAuction } from '~/composables/useAuction'
 import { AUCTION_META, AUCTION_FAQ } from '~/utils/auctionMeta'
 import { USAGE_GROUP_LABEL } from '~/types/auction'
 import { buildAuctionListTitle } from '~/utils/auctionHead'
+import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const auction = useAuction()
 
@@ -143,6 +146,17 @@ const { data: deadline } = await useAsyncData(
 const usageCards = computed(() =>
   (Object.entries(USAGE_GROUP_LABEL) as [string, string][]).map(([key, label]) => ({ key, label })),
 )
+
+const breadcrumbItems = [
+  { label: '홈', href: '/', current: false },
+  { label: '공매', href: '/auction', current: true },
+]
+
+const { setBreadcrumbSchema } = useStructuredData()
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: '공매', url: '/auction' },
+])
 
 useHead({
   title: '부동산 공매 물건 검색 | 일상킷',

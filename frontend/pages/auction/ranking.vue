@@ -1,6 +1,8 @@
 <template>
   <div class="bg-background-light min-h-screen">
     <main class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+      <Breadcrumb :items="breadcrumbItems" />
+
       <PageHero
         eyebrow="공매"
         title="지역별 낙찰가율 랭킹"
@@ -36,9 +38,7 @@
 
       <AdBanner />
 
-      <section>
-        <p class="text-caption text-slate-400">출처: 한국자산관리공사 온비드 (공공데이터포털)</p>
-      </section>
+      <DataSourceSection domain="auction" />
     </main>
   </div>
 </template>
@@ -47,9 +47,12 @@
 import { computed, ref, watch } from 'vue'
 import { useAuction } from '~/composables/useAuction'
 import { USAGE_GROUP_LABEL } from '~/types/auction'
+import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
 import AuctionRankingTable from '~/components/auction/AuctionRankingTable.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const auction = useAuction()
 
@@ -76,11 +79,27 @@ watch([selectedUsage, selectedOrder], () => {
   refresh()
 })
 
+const breadcrumbItems = [
+  { label: '홈', href: '/', current: false },
+  { label: '공매', href: '/auction', current: false },
+  { label: '낙찰가율 랭킹', href: '/auction/ranking', current: true },
+]
+
+const { setBreadcrumbSchema } = useStructuredData()
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: '공매', url: '/auction' },
+  { name: '낙찰가율 랭킹', url: '/auction/ranking' },
+])
+
+const rankingDescription = '지역별·용도별 공매 낙찰가율 통계를 확인하세요. 온비드 공식 데이터 기반.'
+
 useHead({
   title: '지역별 낙찰가율 랭킹 | 공매 | 일상킷',
   meta: [
-    { name: 'description', content: '지역별·용도별 공매 낙찰가율 통계를 확인하세요. 온비드 공식 데이터 기반.' },
+    { name: 'description', content: rankingDescription },
     { property: 'og:title', content: '지역별 낙찰가율 랭킹 | 공매 | 일상킷' },
+    { property: 'og:description', content: rankingDescription },
     { property: 'og:url', content: `${SITE_URL}/auction/ranking` },
   ],
   link: [{ rel: 'canonical', href: `${SITE_URL}/auction/ranking` }],

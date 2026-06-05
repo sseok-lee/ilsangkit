@@ -35,9 +35,7 @@
 
       <AdBanner />
 
-      <section>
-        <p class="text-caption text-slate-400">출처: 한국자산관리공사 온비드 (공공데이터포털)</p>
-      </section>
+      <DataSourceSection domain="auction" />
     </main>
   </div>
 </template>
@@ -47,10 +45,12 @@ import { computed } from 'vue'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useAuction } from '~/composables/useAuction'
 import { computeAuctionCityHead } from '~/utils/auctionHead'
+import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const route = useRoute()
 const citySlug = route.params.city as string
@@ -98,6 +98,13 @@ const breadcrumbItems = [
   { label: '공매', href: '/auction', current: false },
   { label: cityName, href: `/auction/${citySlug}`, current: true },
 ]
+
+const { setBreadcrumbSchema } = useStructuredData()
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: '공매', url: '/auction' },
+  { name: cityName, url: `/auction/${citySlug}` },
+])
 
 const anyIndexable = computed(() => districtCards.value.some((d) => d.isIndexable))
 
