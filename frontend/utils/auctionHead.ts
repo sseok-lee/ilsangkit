@@ -52,6 +52,6 @@ export function computeAuctionCityHead(
 }
 
 export function buildAuctionListTitle(usage: string): string {
-  const map: Record<string, string> = { residential: '아파트·주거용', land: '토지', commercial: '상가·업무', industrial: '공장·창고' }
+  const map: Record<string, string> = { residential: '아파트·주거용', land: '토지', commercial: '상가·업무', industrial: '공장·창고', complex: '복합', etc: '기타' }
   return usage && map[usage] ? `${map[usage]} 공매 물건 | 일상킷` : '부동산 공매 물건 | 일상킷'
 }

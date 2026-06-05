@@ -21,6 +21,12 @@ export interface AuctionAreaSummary {
   avgBidRate: number | null; avgApslAmt: number | null; avgWinBidPrc: number | null;
   failRate: number | null; latestResultDate: string | null; isIndexable: boolean;
 }
+/** Shape returned by GET /api/auction/regions (per-district aggregates, no usageGroup/avgBidRate) */
+export interface AuctionRegionListItem {
+  bjdCode: string; city: string; district: string;
+  activeCount: number; closedCount: number; soldCount: number;
+  isIndexable: boolean;
+}
 export interface AuctionRegionDetailResult {
   usageGroups: AuctionAreaSummary[]; activeItems: AuctionItem[]; recentSold: AuctionItem[];
 }

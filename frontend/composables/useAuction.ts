@@ -1,6 +1,6 @@
 import type {
   AuctionItemsResult, AuctionItemDetailResult, AuctionRegionDetailResult,
-  AuctionCityDetailResult, AuctionHubSummary, AuctionAreaSummary,
+  AuctionCityDetailResult, AuctionHubSummary, AuctionAreaSummary, AuctionRegionListItem,
 } from '~/types/auction'
 import { useApiBase } from '~/composables/useApiBase'
 
@@ -35,8 +35,8 @@ export function useAuction() {
     const res = await $fetch<{ success: boolean; data: AuctionAreaSummary[] }>(`${apiBase}/api/auction/ranking?${q(params)}`)
     return res.data
   }
-  async function getRegions(params: { city?: string; onlyIndexable?: boolean }): Promise<{ items: AuctionAreaSummary[] }> {
-    const res = await $fetch<{ success: boolean; data: { items: AuctionAreaSummary[] } }>(`${apiBase}/api/auction/regions?${q(params)}`)
+  async function getRegions(params: { city?: string; onlyIndexable?: boolean }): Promise<{ items: AuctionRegionListItem[] }> {
+    const res = await $fetch<{ success: boolean; data: { items: AuctionRegionListItem[] } }>(`${apiBase}/api/auction/regions?${q(params)}`)
     return res.data
   }
   return { getItems, getItemDetail, getRegionDetail, getCityDetail, getHubSummary, getRanking, getRegions }

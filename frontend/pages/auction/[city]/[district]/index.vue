@@ -109,18 +109,22 @@ const auction = useAuction()
 const { data } = await useAsyncData(
   `auction-region-${citySlug}-${districtSlug}`,
   async () => {
-    // derive bjdCode from /regions list then fetch detail
-    const list = await auction.getRegions({ city: cityName })
-    const row = list.items.find((i) => i.district === districtName)
-    if (!row) return null
-    const detail = await auction.getRegionDetail(row.bjdCode)
-    return { row, detail }
+    try {
+      // derive bjdCode from /regions list then fetch detail
+      const list = await auction.getRegions({ city: cityName })
+      const row = list.items.find((i) => i.district === districtName)
+      if (!row) return null
+      const detail = await auction.getRegionDetail(row.bjdCode)
+      return { row, detail }
+    } catch {
+      return null
+    }
   },
   { default: () => null },
 )
 
-if (!data.value) {
-  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+if (import.meta.server || !data.value) {
+  if (!data.value) throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
 const usageGroups = computed(() => data.value?.detail.usageGroups ?? [])

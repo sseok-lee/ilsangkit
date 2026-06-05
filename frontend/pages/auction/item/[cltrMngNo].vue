@@ -19,8 +19,20 @@ import DataSourceSection from '~/components/common/DataSourceSection.vue'
 const route = useRoute()
 const cltrMngNo = String(route.params.cltrMngNo)
 const auction = useAuction()
-const { data } = await useAsyncData(`auction-item-${cltrMngNo}`, () => auction.getItemDetail(cltrMngNo), { default: () => null })
-if (!data.value) throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+const { data } = await useAsyncData(
+  `auction-item-${cltrMngNo}`,
+  async () => {
+    try {
+      return await auction.getItemDetail(cltrMngNo)
+    } catch {
+      return null
+    }
+  },
+  { default: () => null },
+)
+if (import.meta.server || !data.value) {
+  if (!data.value) throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
 
 const item = computed(() => data.value!.item)
 const nearby = computed(() => data.value!.nearby)
