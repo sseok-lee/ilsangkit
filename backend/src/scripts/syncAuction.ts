@@ -5,21 +5,50 @@ import { resolve } from 'path';
 import { prisma } from '../lib/prisma.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 import { runSync, batchUpsert, transformAndDedupe, type SyncStats } from '../services/baseSyncService.js';
-import { fetchOnbidList, fetchOnbidDetail } from '../services/onbidBase.js';
+import { fetchOnbidList, fetchOnbidDetail, NORMAL_CODE } from '../services/onbidBase.js';
 import { toUsageGroup } from '../services/auctionUsage.js';
 
 const CATEGORY = 'auction';
-// 부동산 재산유형코드 (Task 0에서 유효값 확정 후 갱신)
-export const PRPT_DIV_CODES = ['0001', '0002', '0003', '0004', '0005', '0006'];
 
+// 온비드 차세대 API 재산유형코드 (prptDivCd) — 실거래 부동산 전용 서비스이므로 전 유형 수집
+export const PRPT_DIV_CODES = [
+  '0007', // 압류재산
+  '0010', // 국유재산
+  '0005', // 기타일반재산
+  '0002', // 공유재산
+  '0003', // 금융권담보재산
+  '0004', // 불용품
+  '0006', // 유입재산
+  '0008', // 수탁재산
+  '0011', // 공공개발재산
+  '0013', // 파산자산
+];
+
+// 차세대 OnbidRlstListSrvc2 API 실제 필드명 (라이브 검증 완료)
 export interface RawAuctionItem extends Record<string, unknown> {
-  cltrMngNo: string; pbctCdtnNo: string; plnmNo?: string;
-  cltrNm: string; ctgrFullNm?: string; prptDivNm?: string; dpslMtdNm?: string;
-  apslAssAmt?: string; minBidPrc?: string;
-  pbctBegnDtm?: string; pbctClsDtm?: string;
-  fbdrCnt?: string; pbctSno?: string; orgNm?: string;
-  ldCd?: string; lat?: string; lng?: string;
-  city?: string; district?: string;
+  cltrMngNo: string;       // 물건관리번호 "2019-02917-004"
+  pbctCdtnNo: unknown;     // 공매조건번호 NUMBER 6001661
+  onbidPbancNo?: unknown;  // 공고번호 NUMBER → plnmNo
+  onbidCltrNm?: string;    // 소재지/물건명
+  cltrUsgMclsCtgrNm?: string; // 용도 대분류 "토지"
+  cltrUsgSclsCtgrNm?: string; // 용도 소분류 "임야"
+  prptDivNm?: string;      // 재산유형 "압류재산"
+  dspsMthodNm?: string;    // 처분방법 "매각"
+  landSqms?: unknown;      // 토지면적(㎡) NUMBER
+  bldSqms?: unknown;       // 건물면적(㎡) NUMBER
+  apslEvlAmt?: unknown;    // 감정평가금액 NUMBER → apslAssAmt (DB 필드명 유지)
+  lowstBidPrcIndctCont?: string; // 최저입찰가 STRING "5236000"
+  usbdNft?: unknown;       // 유찰횟수 NUMBER
+  pbctNsq?: string;        // 입찰회차 STRING "035"
+  cltrBidBgngDt?: string;  // 입찰시작일시 "202610061400"
+  cltrBidEndDt?: string;   // 입찰종료일시 "202610071700"
+  orgNm?: string;          // 기관명
+  pvctTrgtYn?: string;     // 공매예외여부 per-item "Y"/"N"
+  ltnoPnu?: string;        // 지번 PNU (19자리)
+  rdnmPnu?: string;        // 도로명 PNU (fallback)
+  lctnSdnm?: string;       // 소재지 시도명 (fallback city)
+  lctnSggnm?: string;      // 소재지 시군구명 (fallback district)
+  lctnEmdNm?: string;      // 소재지 읍면동명 → dongName
 }
 
 function parseBigIntOrNull(v: unknown): bigint | null {
@@ -46,44 +75,54 @@ function parseDtm(v: unknown): Date | null {
 export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date()) {
   const cltrMngNo = String(item.cltrMngNo ?? '').trim();
   if (!cltrMngNo) return null;
-  const address = String(item.cltrNm ?? '').trim();
-  const usage = String(item.ctgrFullNm ?? '').trim() || null;
-  // ⚠️ MAJOR #3: 'ldCd'는 가정한 필드명. Task 0 라이브 probe에서 실제 시군구코드 필드명 확정 필수.
-  //   ldCd가 없거나 다른 이름이면 bjdCode=''가 되어 해당 물건이 모든 지역/집계 페이지에서 누락됨(SEO 자산 0).
-  //   1순위: 시군구코드 필드 직접 사용. 2순위(없을 때): enrich 단계에서 city/district명↔regionMap 역매칭으로 bjdCode 채움.
-  const ldCd = String(item.ldCd ?? '').trim();
-  const bjdCode = ldCd ? ldCd.slice(0, 5) : '';
-  const bidBeginDtm = parseDtm(item.pbctBegnDtm);
-  const bidCloseDtm = parseDtm(item.pbctClsDtm);
+
+  const address = String(item.onbidCltrNm ?? '').trim();
+
+  // 용도: 대분류+소분류 조합 → usageGroup
+  const mCls = String(item.cltrUsgMclsCtgrNm ?? '').trim();
+  const sCls = String(item.cltrUsgSclsCtgrNm ?? '').trim();
+  const usage = [mCls, sCls].filter(Boolean).join(' ') || null;
+
+  // bjdCode: ltnoPnu 앞 5자리(시군구코드). 없으면 rdnmPnu fallback, 그래도 없으면 ''
+  const pnu = String(item.ltnoPnu ?? '').trim() || String(item.rdnmPnu ?? '').trim();
+  const bjdCode = pnu.length >= 5 ? pnu.slice(0, 5) : '';
+
+  const bidBeginDtm = parseDtm(item.cltrBidBgngDt);
+  const bidCloseDtm = parseDtm(item.cltrBidEndDt);
   const status = bidCloseDtm && bidCloseDtm < now ? 'closed'
     : bidBeginDtm && bidBeginDtm > now ? 'scheduled' : 'ongoing';
+
+  // 면적: 0이면 null로 정규화
+  const landSqms = parseIntOrNull(item.landSqms);
+  const bldSqms = parseIntOrNull(item.bldSqms);
+
   return {
     sourceId: `${CATEGORY}-${cltrMngNo}`,
     cltrMngNo,
     pbctCdtnNo: String(item.pbctCdtnNo ?? '').trim(),
-    plnmNo: String(item.plnmNo ?? '').trim() || null,
-    city: String(item.city ?? '').trim(),
-    district: String(item.district ?? '').trim(),
+    plnmNo: item.onbidPbancNo ? String(item.onbidPbancNo).trim() || null : null,
+    city: '',    // snapshot enrich 단계에서 regionMap 또는 lctnSdnm 으로 채워짐
+    district: '', // 동일
     bjdCode,
-    dongName: null as string | null, // 주소 파싱은 Task 0 결과 따라 보강(법정동)
+    dongName: String(item.lctnEmdNm ?? '').trim() || null,
     address,
     usage,
     usageGroup: toUsageGroup(usage),
     propertyType: String(item.prptDivNm ?? '').trim() || null,
-    dpslMtdNm: String(item.dpslMtdNm ?? '').trim() || null,
-    landArea: null as string | null,
-    bldArea: null as string | null,
-    apslAssAmt: parseBigIntOrNull(item.apslAssAmt),
-    minBidPrc: parseBigIntOrNull(item.minBidPrc),
-    failCnt: parseIntOrNull(item.fbdrCnt) ?? 0,
-    bidRound: parseIntOrNull(item.pbctSno),
+    dpslMtdNm: String(item.dspsMthodNm ?? '').trim() || null,
+    landArea: landSqms != null && landSqms > 0 ? String(landSqms) : null,
+    bldArea: bldSqms != null && bldSqms > 0 ? String(bldSqms) : null,
+    apslAssAmt: parseBigIntOrNull(item.apslEvlAmt),
+    minBidPrc: parseBigIntOrNull(item.lowstBidPrcIndctCont),
+    failCnt: parseIntOrNull(item.usbdNft) ?? 0,
+    bidRound: parseIntOrNull(item.pbctNsq),
     bidBeginDtm,
     bidCloseDtm,
     orgNm: String(item.orgNm ?? '').trim() || null,
-    pvctTrgtYn: (item as { pvctTrgtYn?: boolean }).pvctTrgtYn === true, // enriched에서 'Y'→true 주입됨
+    pvctTrgtYn: item.pvctTrgtYn === 'Y',  // per-item 필드; 주입 불필요
     status,
-    lat: item.lat ? String(item.lat).trim() : null,
-    lng: item.lng ? String(item.lng).trim() : null,
+    lat: null as string | null,  // 좌표는 차세대 API 미제공 — geocoding 별도 follow-up
+    lng: null as string | null,
   };
 }
 
@@ -143,22 +182,59 @@ export function computeAuctionSummary(items: ItemForSummary[]): AuctionSummaryRe
 
 // --- Task 6: mapDetailResult + refreshAuctionSummary + syncAuctionSnapshot + main ---
 
-export interface DetailResultRaw { scsbidAmt?: string; pbctCltrStatNm?: string; rsltDtm?: string; }
+// 회차별 이전입찰결과 항목 (prcnBidClgList 각 entry)
+export interface PrcnBidClgEntry {
+  pbctNsq?: string;                  // 회차
+  pbctsn?: string;                   // 공매일련번호
+  cltrOpbdDt?: string;               // 개찰일시 "202401111100"
+  pbctStatNm?: string;               // 상태명 "취소"/"유찰"/"낙찰"/"매각"...
+  lowstBidPrcIndctCont?: string;     // 회차 최저가 string
+  scfbAmt?: unknown;                 // 낙찰가 추정 (null when not sold)
+  apslPrcCtrsLowstBidRto?: unknown;  // 감정가 대비 최저가 비율
+  frstCtrsLowstBidPrcRto?: unknown;  // 최초 최저가 대비 비율
+}
+
+export interface DetailItemRaw {
+  prcnBidClgList?: PrcnBidClgEntry | PrcnBidClgEntry[] | '';
+  [key: string]: unknown;
+}
+
 export interface MappedResult {
   isClosed: boolean; resultType: string | null; winBidPrc: bigint | null;
   bidRate: number | null; resultDate: Date | null; status: string;
 }
-export function mapDetailResult(d: DetailResultRaw, apslAssAmt: bigint | null): MappedResult {
-  const stat = String(d.pbctCltrStatNm ?? '').trim();
-  const win = parseBigIntOrNull(d.scsbidAmt);
-  const resultDate = parseDtm(d.rsltDtm);
-  if (win && win > 0n) {
-    const bidRate = apslAssAmt && apslAssAmt > 0n
-      ? Math.round((Number(win) / Number(apslAssAmt)) * 100 * 100) / 100 : null;
+
+export function mapDetailResult(detailItem: DetailItemRaw, apslAssAmt: bigint | null): MappedResult {
+  // prcnBidClgList: 회차별 이전입찰결과 배열. 빈 문자열/undefined → 결과 없음
+  const raw = detailItem?.prcnBidClgList;
+  let entries: PrcnBidClgEntry[] = [];
+  if (Array.isArray(raw)) entries = raw;
+  else if (raw && typeof raw === 'object') entries = [raw];
+  // 빈 배열이면 아직 개찰 전이거나 데이터 없음
+  if (entries.length === 0) {
+    return { isClosed: true, resultType: null, winBidPrc: null, bidRate: null, resultDate: null, status: 'closed' };
+  }
+  // 최신 회차 = cltrOpbdDt(개찰일시) 문자열 최대값
+  const latest = entries.reduce((a, b) =>
+    String(b.cltrOpbdDt ?? '') > String(a.cltrOpbdDt ?? '') ? b : a
+  );
+  const stat = String(latest.pbctStatNm ?? '').trim();
+  // scfbAmt(낙찰가) 필드명은 실 낙찰 케이스로 추후 확정 — 유찰/취소는 정확, 낙찰가는 best-effort
+  const win = parseBigIntOrNull(latest.scfbAmt);
+  const resultDate = parseDtm(latest.cltrOpbdDt);
+
+  if ((win && win > 0n) || /낙찰|매각/.test(stat)) {
+    const bidRate = win && apslAssAmt && apslAssAmt > 0n
+      ? Math.round((Number(win) / Number(apslAssAmt)) * 100 * 100) / 100
+      : null;
     return { isClosed: true, resultType: 'sold', winBidPrc: win, bidRate, resultDate, status: 'sold' };
   }
-  if (/유찰/.test(stat)) return { isClosed: true, resultType: 'failed', winBidPrc: null, bidRate: null, resultDate, status: 'failed' };
-  if (/취소|해제|중지/.test(stat)) return { isClosed: true, resultType: 'cancelled', winBidPrc: null, bidRate: null, resultDate, status: 'cancelled' };
+  if (/유찰/.test(stat)) {
+    return { isClosed: true, resultType: 'failed', winBidPrc: null, bidRate: null, resultDate, status: 'failed' };
+  }
+  if (/취소|해제|중지|취하/.test(stat)) {
+    return { isClosed: true, resultType: 'cancelled', winBidPrc: null, bidRate: null, resultDate, status: 'cancelled' };
+  }
   return { isClosed: true, resultType: null, winBidPrc: null, bidRate: null, resultDate, status: 'closed' };
 }
 
@@ -210,18 +286,24 @@ async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
           res = await fetchOnbidList(serviceKey, prptDivCd, pvctTrgtYn, pageNo, 100);
         } catch (e) {
           console.error(`[auction] 목록 호출 실패 ${prptDivCd}/${pvctTrgtYn}/p${pageNo}: ${e instanceof Error ? e.message : e}`);
-          clean = false; break; // 이 조합 중단 — 부분 실패 표시
+          clean = false; break;
         }
-        if (res.resultCode !== '00') { // API 오류 → 부분 실패(빈 결과와 구분)
+        if (res.resultCode !== NORMAL_CODE) {
           if (res.resultCode !== '03' /* NODATA가 아닌 진짜 오류 */) clean = false;
           break;
         }
-        if (res.items.length === 0) break; // 정상 종료
+        if (res.items.length === 0) break;
         const enriched = res.items.map((it) => {
-          const ldCd = String((it as Record<string, unknown>).ldCd ?? '').slice(0, 5);
-          const region = regionMap.get(ldCd) ?? { city: '', district: '' };
-          return { ...it, city: region.city, district: region.district, pvctTrgtYn: pvctTrgtYn === 'Y' };
-        }) as unknown as RawAuctionItem[];
+          const raw = it as RawAuctionItem;
+          // bjdCode: ltnoPnu 앞 5자리 우선, fallback rdnmPnu
+          const pnu = String(raw.ltnoPnu ?? '').trim() || String(raw.rdnmPnu ?? '').trim();
+          const bjd5 = pnu.length >= 5 ? pnu.slice(0, 5) : '';
+          const region = regionMap.get(bjd5);
+          // region 없으면 API 제공 lctnSdnm/lctnSggnm fallback
+          const city = region?.city ?? String(raw.lctnSdnm ?? '').trim();
+          const district = region?.district ?? String(raw.lctnSggnm ?? '').trim();
+          return { ...it, city, district } as unknown as RawAuctionItem;
+        });
         const records = transformAndDedupe(enriched, (it) => transformAuctionItem(it, runStart), (r) => r!.sourceId, stats);
         await batchUpsert(records, async (record) => {
           const r = record as NonNullable<ReturnType<typeof transformAuctionItem>>;
@@ -248,7 +330,6 @@ async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
 }
 
 async function captureClosedItems(serviceKey: string, runStart: Date): Promise<void> {
-  // 이번 런에서 안 보인(=목록서 사라진) 미마감 물건 = 마감 후보
   const candidates = await prisma.auctionItem.findMany({
     where: { isClosed: false, lastSeenAt: { lt: runStart } },
     select: { cltrMngNo: true, pbctCdtnNo: true, apslAssAmt: true },
@@ -258,8 +339,8 @@ async function captureClosedItems(serviceKey: string, runStart: Date): Promise<v
   for (const c of candidates) {
     try {
       const res = await fetchOnbidDetail(serviceKey, c.cltrMngNo, c.pbctCdtnNo);
-      const d = (res.items[0] ?? {}) as DetailResultRaw;
-      const mapped = mapDetailResult(d, c.apslAssAmt);
+      const detailItem = (res.items[0] ?? {}) as DetailItemRaw;
+      const mapped = mapDetailResult(detailItem, c.apslAssAmt);
       await prisma.auctionItem.update({
         where: { cltrMngNo: c.cltrMngNo },
         data: { isClosed: mapped.isClosed, resultType: mapped.resultType, winBidPrc: mapped.winBidPrc,
@@ -281,8 +362,6 @@ async function main(): Promise<void> {
   await runSync(CATEGORY, async (stats) => {
     const runStart = new Date();
     const clean = await syncAuctionSnapshot(serviceKey, runStart, regionMap, stats);
-    // GAP 방지: 스냅샷이 부분 실패하면 "사라진 물건"을 신뢰할 수 없으므로 마감포착 건너뜀
-    // (살아있는 물건을 오인 마감 처리하는 사고 방지). 다음 정상 런에서 포착됨.
     if (clean) await captureClosedItems(serviceKey, runStart);
     else console.warn('[auction] 스냅샷 부분 실패 → 마감포착 스킵(다음 런에서 재시도)');
     await refreshAuctionSummary();

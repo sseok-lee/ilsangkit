@@ -1,9 +1,9 @@
 // backend/src/services/onbidBase.ts
-import { XMLParser } from 'fast-xml-parser';
-
-const LIST_URL = 'https://open.kamco.or.kr/services/OnbidRlstListSrvc/getRlstCltrList';
-const DETAIL_URL = 'https://open.kamco.or.kr/services/OnbidRlstDetailSrvc/getRlstCltrDetail';
+const LIST_URL = 'https://apis.data.go.kr/B010003/OnbidRlstListSrvc2/getRlstCltrList2';
+const DETAIL_URL = 'https://apis.data.go.kr/B010003/OnbidCltrBidDtlSrvc2/getCltrBidInf2';
 const TIMEOUT_MS = 30000;
+
+export const NORMAL_CODE = '00';
 
 export interface ParsedOnbid {
   resultCode: string;
@@ -12,37 +12,62 @@ export interface ParsedOnbid {
   items: Record<string, unknown>[];
 }
 
-export function parseOnbidXml(xml: string): ParsedOnbid {
-  const parser = new XMLParser({ ignoreAttributes: true, parseTagValue: false, trimValues: true });
-  const doc = parser.parse(xml) as Record<string, any>;
-  const root = doc.response ?? doc.result ?? doc;
-  const header = root.header ?? root;
-  const body = root.body ?? root;
+/** JSON 응답 파싱: body.items.item 을 항상 배열로 정규화 */
+export function parseOnbid(jsonText: string): ParsedOnbid {
+  let doc: Record<string, any>;
+  try {
+    doc = JSON.parse(jsonText) as Record<string, any>;
+  } catch {
+    return { resultCode: 'PARSE_ERROR', resultMsg: 'JSON parse failed', totalCount: 0, items: [] };
+  }
+  const header = doc.header ?? {};
+  const body = doc.body ?? {};
   const resultCode = String(header.resultCode ?? '');
   const resultMsg = String(header.resultMsg ?? '');
   let items: Record<string, unknown>[] = [];
   const rawItems = body?.items?.item;
-  if (Array.isArray(rawItems)) items = rawItems;
-  else if (rawItems && typeof rawItems === 'object') items = [rawItems];
+  // items:""(공백 문자열) 또는 undefined → 빈 배열로 정규화
+  if (Array.isArray(rawItems)) items = rawItems as Record<string, unknown>[];
+  else if (rawItems && typeof rawItems === 'object') items = [rawItems as Record<string, unknown>];
   const totalCount = parseInt(String(body?.totalCount ?? items.length), 10) || 0;
   return { resultCode, resultMsg, totalCount, items };
 }
 
-async function fetchXml(url: string): Promise<string> {
+async function fetchJson(url: string): Promise<string> {
   const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
   return res.text();
 }
 
 export async function fetchOnbidList(
-  serviceKey: string, prptDivCd: string, pvctTrgtYn: string, pageNo: number, numOfRows = 100
+  serviceKey: string,
+  prptDivCd: string,
+  pvctTrgtYn: string,
+  pageNo: number,
+  numOfRows = 100,
 ): Promise<ParsedOnbid> {
-  const qs = new URLSearchParams({ serviceKey, prptDivCd, pvctTrgtYn, pageNo: String(pageNo), numOfRows: String(numOfRows) });
-  return parseOnbidXml(await fetchXml(`${LIST_URL}?${qs}`));
+  const qs = new URLSearchParams({
+    serviceKey,
+    pageNo: String(pageNo),
+    numOfRows: String(numOfRows),
+    resultType: 'json',
+    prptDivCd,
+    pvctTrgtYn,
+  });
+  return parseOnbid(await fetchJson(`${LIST_URL}?${qs}`));
 }
 
 export async function fetchOnbidDetail(
-  serviceKey: string, cltrMngNo: string, pbctCdtnNo: string
+  serviceKey: string,
+  cltrMngNo: string,
+  pbctCdtnNo: string,
 ): Promise<ParsedOnbid> {
-  const qs = new URLSearchParams({ serviceKey, cltrMngNo, pbctCdtnNo });
-  return parseOnbidXml(await fetchXml(`${DETAIL_URL}?${qs}`));
+  const qs = new URLSearchParams({
+    serviceKey,
+    pageNo: '1',
+    numOfRows: '50',
+    resultType: 'json',
+    cltrMngNo,
+    pbctCdtnNo,
+  });
+  return parseOnbid(await fetchJson(`${DETAIL_URL}?${qs}`));
 }
