@@ -45,7 +45,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick } from 'vue'
+import type { LocationQueryRaw } from 'vue-router'
 import { useAuction } from '~/composables/useAuction'
 import { buildAuctionListTitle } from '~/utils/auctionHead'
 import { SITE_URL } from '~/utils/seoConstants'
@@ -97,20 +98,33 @@ const { data } = await useAsyncData(
   { watch: [usage, filterStatus, filterCity, filterDistrict, currentPage], default: () => null },
 )
 
+// 한 번의 사용자 동작이 여러 emit을 낼 수 있다(예: 시/도 변경 시 시군구 리셋까지 동반 emit).
+// 각 emit마다 router.push하면 두 번째 push가 stale route.query를 펼쳐 첫 push를 덮어써(=clobber)
+// 지역 필터가 동작하지 않았다. 같은 tick의 patch들을 누적해 nextTick에 한 번만 push한다.
+let pendingQuery: LocationQueryRaw | null = null
+function applyQuery(patch: LocationQueryRaw) {
+  pendingQuery = { ...(pendingQuery ?? route.query), ...patch }
+  void nextTick(() => {
+    if (!pendingQuery) return
+    const q = pendingQuery
+    pendingQuery = null
+    router.push({ query: q })
+  })
+}
 function onUsage(v: string) {
-  router.push({ query: { ...route.query, usage: v || undefined, page: undefined } })
+  applyQuery({ usage: v || undefined, page: undefined })
 }
 function onStatus(v: string) {
-  router.push({ query: { ...route.query, status: v || undefined, page: undefined } })
+  applyQuery({ status: v || undefined, page: undefined })
 }
 function onCity(v: string) {
-  router.push({ query: { ...route.query, city: v || undefined, district: undefined, page: undefined } })
+  applyQuery({ city: v || undefined, district: undefined, page: undefined })
 }
 function onDistrict(v: string) {
-  router.push({ query: { ...route.query, district: v || undefined, page: undefined } })
+  applyQuery({ district: v || undefined, page: undefined })
 }
 function onPageChange(p: number) {
-  router.push({ query: { ...route.query, page: p === 1 ? undefined : p } })
+  applyQuery({ page: p === 1 ? undefined : p })
 }
 
 const selfUrl = computed(() => {
