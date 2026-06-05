@@ -89,8 +89,10 @@ export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date(
 
   const bidBeginDtm = parseDtm(item.cltrBidBgngDt);
   const bidCloseDtm = parseDtm(item.cltrBidEndDt);
-  const status = bidCloseDtm && bidCloseDtm < now ? 'closed'
-    : bidBeginDtm && bidBeginDtm > now ? 'scheduled' : 'ongoing';
+  // 활성 목록(입찰중/예정) 물건은 'closed'로 판정하지 않는다.
+  // 종료일이 지났어도 목록에 남아 있으면 재공고/다음 회차 대기 상태이므로 진행/예정으로 둔다.
+  // 진짜 마감(낙찰/유찰/취소)은 목록에서 사라질 때 captureClosedItems가 설정한다.
+  const status = bidBeginDtm && bidBeginDtm > now ? 'scheduled' : 'ongoing';
 
   // 면적: 0이면 null로 정규화
   const landSqms = parseIntOrNull(item.landSqms);
@@ -101,8 +103,8 @@ export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date(
     cltrMngNo,
     pbctCdtnNo: String(item.pbctCdtnNo ?? '').trim(),
     plnmNo: item.onbidPbancNo ? String(item.onbidPbancNo).trim() || null : null,
-    city: '',    // snapshot enrich 단계에서 regionMap 또는 lctnSdnm 으로 채워짐
-    district: '', // 동일
+    city: String((item as { city?: string }).city ?? '').trim(),         // enrich가 regionMap/lctnSdnm으로 주입한 값
+    district: String((item as { district?: string }).district ?? '').trim(), // 동일
     bjdCode,
     dongName: String(item.lctnEmdNm ?? '').trim() || null,
     address,
@@ -277,22 +279,27 @@ function toSummaryData(s: ReturnType<typeof computeAuctionSummary>) {
 async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
   regionMap: Map<string, { city: string; district: string }>, stats: SyncStats): Promise<boolean> {
   let clean = true;
+  const PAGE_SIZE = 1000; // 일일 트래픽=호출횟수 제한이므로 페이지를 크게(1000) 잡아 호출 수 최소화(API 허용 확인)
   for (const prptDivCd of PRPT_DIV_CODES) {
     for (const pvctTrgtYn of ['N', 'Y']) {
       let pageNo = 1;
       for (;;) {
-        let res;
-        try {
-          res = await fetchOnbidList(serviceKey, prptDivCd, pvctTrgtYn, pageNo, 100);
-        } catch (e) {
-          console.error(`[auction] 목록 호출 실패 ${prptDivCd}/${pvctTrgtYn}/p${pageNo}: ${e instanceof Error ? e.message : e}`);
-          clean = false; break;
+        // 일시적 오류(timeout/5xx/일시 오류코드)는 즉시 포기하지 않고 재시도 — 한 번의 hiccup으로
+        // 해당 재산유형 전체를 건너뛰던 회귀 방지(로컬 첫 수집에서 73k→23k 손실 원인).
+        let res: Awaited<ReturnType<typeof fetchOnbidList>> | null = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            res = await fetchOnbidList(serviceKey, prptDivCd, pvctTrgtYn, pageNo, PAGE_SIZE);
+          } catch (e) {
+            console.error(`[auction] 목록 호출 실패 ${prptDivCd}/${pvctTrgtYn}/p${pageNo} (시도 ${attempt}/3): ${e instanceof Error ? e.message : e}`);
+            res = null;
+          }
+          if (res && (res.resultCode === NORMAL_CODE || res.resultCode === '03')) break;
+          if (res) console.error(`[auction] 목록 오류 ${prptDivCd}/${pvctTrgtYn}/p${pageNo} resultCode=${res.resultCode} (시도 ${attempt}/3)`);
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 1500 * attempt));
         }
-        if (res.resultCode !== NORMAL_CODE) {
-          if (res.resultCode !== '03' /* NODATA가 아닌 진짜 오류 */) clean = false;
-          break;
-        }
-        if (res.items.length === 0) break;
+        if (!res || (res.resultCode !== NORMAL_CODE && res.resultCode !== '03')) { clean = false; break; }
+        if (res.resultCode === '03' || res.items.length === 0) break;
         const enriched = res.items.map((it) => {
           const raw = it as RawAuctionItem;
           // bjdCode: ltnoPnu 앞 5자리 우선, fallback rdnmPnu
@@ -321,7 +328,7 @@ async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
           });
           return existing ? 'updated' : 'new';
         });
-        if (res.items.length < 100) break;
+        if (res.items.length < PAGE_SIZE) break;
         pageNo++;
       }
     }

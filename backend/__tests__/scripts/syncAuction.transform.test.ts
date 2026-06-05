@@ -67,9 +67,9 @@ describe('transformAuctionItem (차세대 Srvc2 필드명)', () => {
     expect(r.status).toBe('scheduled');
   });
 
-  it('입찰 종료 후면 closed', () => {
+  it('종료일이 지났어도 활성 목록 물건은 closed가 아니라 ongoing (재공고 대기 — closed는 captureClosedItems 전담)', () => {
     const r = transformAuctionItem({ ...base, cltrBidBgngDt: '202501011100', cltrBidEndDt: '202502011600' })!;
-    expect(r.status).toBe('closed');
+    expect(r.status).toBe('ongoing');
   });
 
   it('빈 금액/누락 필드는 null', () => {
