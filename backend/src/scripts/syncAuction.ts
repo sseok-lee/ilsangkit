@@ -94,13 +94,17 @@ export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date(
   //  - 날짜 추론은 부정확(begin이 과거인 재공고/회차대기 '준비중'을 진행중으로 오분류) → pbctStatNm 우선.
   //  - 진짜 마감(낙찰/유찰/취소)은 목록에서 사라질 때 captureClosedItems가 설정(여기선 closed 판정 안 함).
   const statNm = String(item.pbctStatNm ?? '').trim();
-  const status = /진행/.test(statNm)
-    ? 'ongoing'
-    : /준비|예정/.test(statNm)
-      ? 'scheduled'
-      : bidBeginDtm && bidBeginDtm > now // pbctStatNm 없을 때만 날짜 fallback
+  const status = /수의/.test(statNm) // 수의계약가능 — 별도 상태(유찰 누적 후 협의매각)
+    ? 'negotiable'
+    : /진행/.test(statNm)
+      ? 'ongoing'
+      : /준비|예정/.test(statNm)
         ? 'scheduled'
-        : 'ongoing';
+        : /마감|종료/.test(statNm)
+          ? 'closed'
+          : bidBeginDtm && bidBeginDtm > now // pbctStatNm 없을 때만 날짜 fallback
+            ? 'scheduled'
+            : 'ongoing';
 
   // 면적: 0이면 null로 정규화
   const landSqms = parseIntOrNull(item.landSqms);

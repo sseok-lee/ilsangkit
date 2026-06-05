@@ -107,6 +107,7 @@ export async function getItems(p: ItemsParams) {
   const where: Record<string, any> = { ...buildRegionFilter(p.city, p.district) };
   if (p.usage) where.usageGroup = p.usage;
   if (p.status === 'ongoing') where.status = { in: ['ongoing', 'scheduled'] };
+  else if (p.status === 'negotiable') where.status = 'negotiable';
   else if (p.status === 'closed') where.isClosed = true;
   const orderBy = p.sort === 'apsl' ? { apslAssAmt: 'desc' as const }
     : p.sort === 'bidRate' ? { bidRate: 'desc' as const }

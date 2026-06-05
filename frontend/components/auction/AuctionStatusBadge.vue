@@ -8,6 +8,7 @@ const cls = computed(() => {
   switch (props.status) {
     case 'ongoing': return 'bg-primary-50 text-primary'
     case 'scheduled': return 'bg-amber-50 text-amber-700'
+    case 'negotiable': return 'bg-violet-50 text-violet-700'
     case 'sold': return 'bg-emerald-50 text-emerald-700'
     case 'failed': return 'bg-slate-100 text-slate-600'
     case 'cancelled': return 'bg-rose-50 text-rose-700'

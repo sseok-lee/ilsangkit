@@ -82,6 +82,11 @@ describe('transformAuctionItem (차세대 Srvc2 필드명)', () => {
     expect(r.status).toBe('ongoing');
   });
 
+  it('pbctStatNm="수의계약가능"이면 negotiable(수의계약)', () => {
+    const r = transformAuctionItem({ ...base, pbctStatNm: '수의계약가능' })!;
+    expect(r.status).toBe('negotiable');
+  });
+
   it('빈 금액/누락 필드는 null', () => {
     const r = transformAuctionItem({ ...base, apslEvlAmt: ' ', lowstBidPrcIndctCont: '' })!;
     expect(r.apslAssAmt).toBeNull();

@@ -1,6 +1,6 @@
 export const AUCTION_SLUG = 'auction' as const;
 export type UsageGroup = 'residential' | 'land' | 'commercial' | 'industrial' | 'complex' | 'etc';
-export type AuctionStatus = 'ongoing' | 'scheduled' | 'closed' | 'sold' | 'failed' | 'cancelled';
+export type AuctionStatus = 'ongoing' | 'scheduled' | 'negotiable' | 'closed' | 'sold' | 'failed' | 'cancelled';
 
 export interface AuctionItem {
   id: number; cltrMngNo: string; pbctCdtnNo: string; plnmNo: string | null;
@@ -76,7 +76,7 @@ export function formatAuctionDate(value: string | null | undefined): string {
   return `${y}.${m}.${day}`;
 }
 export function statusLabel(s: AuctionStatus | string): string {
-  const map: Record<string, string> = { ongoing: '진행중', scheduled: '입찰예정', closed: '마감', sold: '낙찰', failed: '유찰', cancelled: '취소' };
+  const map: Record<string, string> = { ongoing: '진행중', scheduled: '입찰예정', negotiable: '수의계약', closed: '마감', sold: '낙찰', failed: '유찰', cancelled: '취소' };
   return map[s] ?? s;
 }
 export function isAuctionItemIndexable(item: Pick<AuctionItem, 'status'>): boolean {

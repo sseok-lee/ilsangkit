@@ -4,7 +4,7 @@ export const AuctionItemsSchema = z.object({
   city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
   usage: z.enum(['residential', 'land', 'commercial', 'industrial', 'complex', 'etc']).optional(),
-  status: z.enum(['ongoing', 'closed']).optional(),
+  status: z.enum(['ongoing', 'closed', 'negotiable']).optional(),
   sort: z.enum(['deadline', 'apsl', 'bidRate']).default('deadline'),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
