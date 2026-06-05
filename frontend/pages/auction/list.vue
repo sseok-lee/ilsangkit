@@ -92,7 +92,9 @@ const { data } = await useAsyncData(
       return null
     }
   },
-  { default: () => null },
+  // ⚠️ 쿼리파라미터 필터/페이지는 같은 페이지에서 바뀌므로(컴포넌트 unmount 안 됨)
+  //    watch 없으면 재요청이 안 일어나 필터·페이징이 전부 죽는다.
+  { watch: [usage, filterStatus, filterCity, filterDistrict, currentPage], default: () => null },
 )
 
 function onUsage(v: string) {
