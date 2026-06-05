@@ -1,7 +1,11 @@
 #!/usr/bin/env tsx
 // 온비드 부동산 공매 동기화 — 일일 스냅샷 + 마감포착 archive
-// NOTE: imports for prisma, _runtimeGuard, baseSyncService, onbidBase are deferred to later tasks
-// and are omitted here to allow Task 3 tests to run without module-not-found errors.
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
+import { prisma } from '../lib/prisma.js';
+import { installRuntimeGuard } from './_runtimeGuard.js';
+import { runSync, batchUpsert, transformAndDedupe, type SyncStats } from '../services/baseSyncService.js';
+import { fetchOnbidList, fetchOnbidDetail } from '../services/onbidBase.js';
 import { toUsageGroup } from '../services/auctionUsage.js';
 
 const CATEGORY = 'auction';
@@ -84,6 +88,7 @@ export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date(
 }
 
 // --- Task 4: computeAuctionSummary ---
+
 const INDEX_SOLD_MIN = 3;
 const INDEX_CLOSED_MIN = 5;
 const INDEX_ACTIVE_MIN = 3;
@@ -134,4 +139,160 @@ export function computeAuctionSummary(items: ItemForSummary[]): AuctionSummaryRe
     avgWinBidPrc: avg(wins) != null ? Math.round(avg(wins)!) : null,
     failRate, latestResultDate: latest, isIndexable,
   };
+}
+
+// --- Task 6: mapDetailResult + refreshAuctionSummary + syncAuctionSnapshot + main ---
+
+export interface DetailResultRaw { scsbidAmt?: string; pbctCltrStatNm?: string; rsltDtm?: string; }
+export interface MappedResult {
+  isClosed: boolean; resultType: string | null; winBidPrc: bigint | null;
+  bidRate: number | null; resultDate: Date | null; status: string;
+}
+export function mapDetailResult(d: DetailResultRaw, apslAssAmt: bigint | null): MappedResult {
+  const stat = String(d.pbctCltrStatNm ?? '').trim();
+  const win = parseBigIntOrNull(d.scsbidAmt);
+  const resultDate = parseDtm(d.rsltDtm);
+  if (win && win > 0n) {
+    const bidRate = apslAssAmt && apslAssAmt > 0n
+      ? Math.round((Number(win) / Number(apslAssAmt)) * 100 * 100) / 100 : null;
+    return { isClosed: true, resultType: 'sold', winBidPrc: win, bidRate, resultDate, status: 'sold' };
+  }
+  if (/유찰/.test(stat)) return { isClosed: true, resultType: 'failed', winBidPrc: null, bidRate: null, resultDate, status: 'failed' };
+  if (/취소|해제|중지/.test(stat)) return { isClosed: true, resultType: 'cancelled', winBidPrc: null, bidRate: null, resultDate, status: 'cancelled' };
+  return { isClosed: true, resultType: null, winBidPrc: null, bidRate: null, resultDate, status: 'closed' };
+}
+
+export async function refreshAuctionSummary(): Promise<void> {
+  const groups = await prisma.auctionItem.findMany({
+    select: { bjdCode: true, usageGroup: true, city: true, district: true },
+    distinct: ['bjdCode', 'usageGroup'],
+    where: { bjdCode: { not: '' } },
+  });
+  for (const g of groups) {
+    const rows = await prisma.auctionItem.findMany({
+      where: { bjdCode: g.bjdCode, usageGroup: g.usageGroup },
+      select: { isClosed: true, resultType: true, apslAssAmt: true, winBidPrc: true, resultDate: true },
+    });
+    const summary = computeAuctionSummary(rows.map((r) => ({
+      isClosed: r.isClosed, resultType: r.resultType,
+      apslAssAmt: r.apslAssAmt ? Number(r.apslAssAmt) : 0,
+      winBidPrc: r.winBidPrc ? Number(r.winBidPrc) : null,
+      resultDate: r.resultDate,
+    })));
+    await prisma.auctionAreaSummary.upsert({
+      where: { bjdCode_usageGroup: { bjdCode: g.bjdCode, usageGroup: g.usageGroup } },
+      create: { bjdCode: g.bjdCode, usageGroup: g.usageGroup, city: g.city, district: g.district,
+        ...toSummaryData(summary) },
+      update: { city: g.city, district: g.district, ...toSummaryData(summary) },
+    });
+  }
+  console.info(`[auction] AreaSummary 갱신: ${groups.length}개 (시군구×용도)`);
+}
+function toSummaryData(s: ReturnType<typeof computeAuctionSummary>) {
+  return {
+    activeCount: s.activeCount, closedCount: s.closedCount, soldCount: s.soldCount,
+    avgBidRate: s.avgBidRate, avgApslAmt: s.avgApslAmt != null ? BigInt(s.avgApslAmt) : null,
+    avgWinBidPrc: s.avgWinBidPrc != null ? BigInt(s.avgWinBidPrc) : null,
+    failRate: s.failRate, latestResultDate: s.latestResultDate, isIndexable: s.isIndexable,
+  };
+}
+
+// 반환: clean=true면 전 재산유형×수의여부 스냅샷이 에러 없이 완료됨(마감포착 안전).
+async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
+  regionMap: Map<string, { city: string; district: string }>, stats: SyncStats): Promise<boolean> {
+  let clean = true;
+  for (const prptDivCd of PRPT_DIV_CODES) {
+    for (const pvctTrgtYn of ['N', 'Y']) {
+      let pageNo = 1;
+      for (;;) {
+        let res;
+        try {
+          res = await fetchOnbidList(serviceKey, prptDivCd, pvctTrgtYn, pageNo, 100);
+        } catch (e) {
+          console.error(`[auction] 목록 호출 실패 ${prptDivCd}/${pvctTrgtYn}/p${pageNo}: ${e instanceof Error ? e.message : e}`);
+          clean = false; break; // 이 조합 중단 — 부분 실패 표시
+        }
+        if (res.resultCode !== '00') { // API 오류 → 부분 실패(빈 결과와 구분)
+          if (res.resultCode !== '03' /* NODATA가 아닌 진짜 오류 */) clean = false;
+          break;
+        }
+        if (res.items.length === 0) break; // 정상 종료
+        const enriched = res.items.map((it) => {
+          const ldCd = String((it as Record<string, unknown>).ldCd ?? '').slice(0, 5);
+          const region = regionMap.get(ldCd) ?? { city: '', district: '' };
+          return { ...it, city: region.city, district: region.district, pvctTrgtYn: pvctTrgtYn === 'Y' };
+        }) as unknown as RawAuctionItem[];
+        const records = transformAndDedupe(enriched, (it) => transformAuctionItem(it, runStart), (r) => r!.sourceId, stats);
+        await batchUpsert(records, async (record) => {
+          const r = record as NonNullable<ReturnType<typeof transformAuctionItem>>;
+          const existing = await prisma.auctionItem.findUnique({ where: { cltrMngNo: r.cltrMngNo }, select: { id: true, isClosed: true } });
+          if (existing?.isClosed) return 'updated'; // 마감 물건은 active로 되돌리지 않음
+          // ⚠️ landArea/bldArea/dongName/pvctTrgtYn은 절대 drop하지 말 것(MAJOR #2 회귀 방지).
+          //   lat/lng만 string→number 변환 위해 분리, 나머지는 ...rest로 전부 전달.
+          //   Decimal? 컬럼(landArea/bldArea)은 land와 동일하게 string|null 그대로 Prisma에 전달 가능.
+          const { lat, lng, ...rest } = r;
+          const data = { ...rest, lat: lat ? Number(lat) : null, lng: lng ? Number(lng) : null };
+          await prisma.auctionItem.upsert({
+            where: { cltrMngNo: r.cltrMngNo },
+            create: { ...data, firstSeenAt: runStart, lastSeenAt: runStart, syncedAt: new Date() },
+            update: { ...data, lastSeenAt: runStart, syncedAt: new Date() },
+          });
+          return existing ? 'updated' : 'new';
+        });
+        if (res.items.length < 100) break;
+        pageNo++;
+      }
+    }
+  }
+  return clean;
+}
+
+async function captureClosedItems(serviceKey: string, runStart: Date): Promise<void> {
+  // 이번 런에서 안 보인(=목록서 사라진) 미마감 물건 = 마감 후보
+  const candidates = await prisma.auctionItem.findMany({
+    where: { isClosed: false, lastSeenAt: { lt: runStart } },
+    select: { cltrMngNo: true, pbctCdtnNo: true, apslAssAmt: true },
+    take: 2000,
+  });
+  let closed = 0;
+  for (const c of candidates) {
+    try {
+      const res = await fetchOnbidDetail(serviceKey, c.cltrMngNo, c.pbctCdtnNo);
+      const d = (res.items[0] ?? {}) as DetailResultRaw;
+      const mapped = mapDetailResult(d, c.apslAssAmt);
+      await prisma.auctionItem.update({
+        where: { cltrMngNo: c.cltrMngNo },
+        data: { isClosed: mapped.isClosed, resultType: mapped.resultType, winBidPrc: mapped.winBidPrc,
+          bidRate: mapped.bidRate, resultDate: mapped.resultDate ?? runStart, status: mapped.status, syncedAt: new Date() },
+      });
+      closed++;
+    } catch (e) {
+      console.error(`[auction] 마감포착 실패 ${c.cltrMngNo}: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  console.info(`[auction] 마감 포착: ${closed}/${candidates.length}`);
+}
+
+async function main(): Promise<void> {
+  const serviceKey = process.env.OPENAPI_SERVICE_KEY ?? '';
+  if (!serviceKey) throw new Error('OPENAPI_SERVICE_KEY is not set');
+  const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } });
+  const regionMap = new Map(regions.map((r) => [r.bjdCode.slice(0, 5), { city: r.city, district: r.district }]));
+  await runSync(CATEGORY, async (stats) => {
+    const runStart = new Date();
+    const clean = await syncAuctionSnapshot(serviceKey, runStart, regionMap, stats);
+    // GAP 방지: 스냅샷이 부분 실패하면 "사라진 물건"을 신뢰할 수 없으므로 마감포착 건너뜀
+    // (살아있는 물건을 오인 마감 처리하는 사고 방지). 다음 정상 런에서 포착됨.
+    if (clean) await captureClosedItems(serviceKey, runStart);
+    else console.warn('[auction] 스냅샷 부분 실패 → 마감포착 스킵(다음 런에서 재시도)');
+    await refreshAuctionSummary();
+  });
+  console.info('\n=== auction sync completed ===');
+}
+
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
+  const guardMinutes = Number(process.env.SYNC_GUARD_MINUTES) || 20;
+  installRuntimeGuard({ maxMinutes: guardMinutes, name: 'syncAuction', prisma });
+  main().catch((e) => { console.error('Fatal error:', e); process.exit(1); });
 }
