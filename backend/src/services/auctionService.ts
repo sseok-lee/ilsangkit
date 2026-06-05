@@ -3,6 +3,108 @@ import { prisma } from '../lib/prisma.js';
 // ⚠️ buildRegionFilter는 src/services/cityMapping.ts에 있음 (landService.ts:2와 동일 — '../lib/' 아님!)
 import { buildRegionFilter } from './cityMapping.js';
 
+const PYEONG_PER_SQM = 3.305;
+
+/**
+ * 시세 비교 데이터. 용도별 단위:
+ *
+ * land:
+ *   marketAvg = 원/평 (LandAreaSummary.avgPricePerPyeong [만원/평] × 10000)
+ *   apslAssAmtForCompare = 물건의 평당 감정가(원/평) = apslAssAmt(원) ÷ (landArea㎡ ÷ 3.305)
+ *   → AuctionPriceCompare에 apslAssAmt 대신 apslAssAmtForCompare를 넘겨 단위 일치시킴
+ *   → landArea가 없으면 null
+ *
+ * residential:
+ *   marketAvg = 원 (aptSaleTransaction bjdCode 평균 dealAmount [만원] × 10000)
+ *   apslAssAmtForCompare = undefined (원래 apslAssAmt [원] 그대로 사용)
+ *   → 시군구 아파트 총액 평균 vs 물건 감정가 총액 비교 (참고값)
+ */
+export interface MarketCompare {
+  marketAvg: number;
+  label: string;
+  /** land 전용: 물건의 평당 감정가(원/평). 미설정이면 apslAssAmt 원본 사용. */
+  apslAssAmtForCompare?: number;
+}
+
+async function computeMarketCompare(
+  item: {
+    bjdCode: string;
+    dongName: string | null;
+    usageGroup: string;
+    landArea: { toNumber?: () => number } | number | null;
+    apslAssAmt: bigint | number | null;
+  },
+): Promise<MarketCompare | null> {
+  try {
+    if (item.usageGroup === 'land') {
+      // landArea 필수: 없으면 평당 감정가 산출 불가
+      const landAreaVal = item.landArea == null ? null
+        : typeof item.landArea === 'object' && typeof (item.landArea as any).toNumber === 'function'
+          ? (item.landArea as any).toNumber()
+          : Number(item.landArea);
+      if (!landAreaVal || landAreaVal <= 0) return null;
+
+      // LandAreaSummary: bjdCode(5-digit 시군구) + dongName으로 조회. dongName 없으면 최다거래 동 fallback.
+      let summary: { avgPricePerPyeong: any; dongName: string; district: string } | null = null;
+      if (item.dongName) {
+        summary = await prisma.landAreaSummary.findUnique({
+          where: { bjdCode_dongName: { bjdCode: item.bjdCode, dongName: item.dongName } },
+          select: { avgPricePerPyeong: true, dongName: true, district: true },
+        });
+      }
+      if (!summary) {
+        summary = await prisma.landAreaSummary.findFirst({
+          where: { bjdCode: item.bjdCode },
+          orderBy: { transactionCount: 'desc' },
+          select: { avgPricePerPyeong: true, dongName: true, district: true },
+        }) as typeof summary;
+      }
+      if (!summary?.avgPricePerPyeong) return null;
+
+      // avgPricePerPyeong: 만원/평 → 원/평으로 변환
+      const avgPPP = typeof (summary.avgPricePerPyeong as any).toNumber === 'function'
+        ? (summary.avgPricePerPyeong as any).toNumber()
+        : Number(summary.avgPricePerPyeong);
+      if (!avgPPP || avgPPP <= 0) return null;
+
+      const apslAssAmtVal = item.apslAssAmt == null ? null
+        : typeof item.apslAssAmt === 'bigint' ? Number(item.apslAssAmt) : Number(item.apslAssAmt);
+      const pyeong = landAreaVal / PYEONG_PER_SQM;
+      const apslPerPyeong = apslAssAmtVal != null && pyeong > 0
+        ? Math.round(apslAssAmtVal / pyeong)
+        : undefined;
+
+      const locationLabel = item.dongName ?? summary.district ?? '';
+      return {
+        marketAvg: Math.round(avgPPP * 10000),   // 원/평
+        label: `${locationLabel} 토지 평균(평당)`,
+        ...(apslPerPyeong != null ? { apslAssAmtForCompare: apslPerPyeong } : {}),
+      };
+    }
+
+    if (item.usageGroup === 'residential') {
+      // dealAmount: 만원 → ×10000 = 원. apslAssAmt도 원. 단위 일치.
+      const agg = await (prisma as any).aptSaleTransaction.aggregate({
+        where: { bjdCode: item.bjdCode, cancelDealDay: null },
+        _avg: { dealAmount: true },
+        _count: { id: true },
+      });
+      if (!agg._count.id || agg._avg.dealAmount == null) return null;
+      const avgDealWon = Math.round(
+        (typeof agg._avg.dealAmount.toNumber === 'function'
+          ? agg._avg.dealAmount.toNumber()
+          : Number(agg._avg.dealAmount)) * 10000,
+      );
+      if (avgDealWon <= 0) return null;
+      return { marketAvg: avgDealWon, label: '시군구 아파트 평균 실거래가' };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function serializeRow<T extends Record<string, any>>(row: T): any {
   const out: Record<string, any> = { ...row };
   for (const k of Object.keys(out)) {
@@ -36,11 +138,14 @@ export async function getItems(p: ItemsParams) {
 export async function getItemDetail(cltrMngNo: string) {
   const item = await prisma.auctionItem.findUnique({ where: { cltrMngNo } });
   if (!item) return null;
-  const nearby = await prisma.auctionItem.findMany({
-    where: { bjdCode: item.bjdCode, usageGroup: item.usageGroup, cltrMngNo: { not: cltrMngNo }, isClosed: false },
-    orderBy: { bidCloseDtm: 'asc' }, take: 6,
-  });
-  return { item: serializeRow(item), nearby: nearby.map(serializeRow) };
+  const [nearby, marketCompare] = await Promise.all([
+    prisma.auctionItem.findMany({
+      where: { bjdCode: item.bjdCode, usageGroup: item.usageGroup, cltrMngNo: { not: cltrMngNo }, isClosed: false },
+      orderBy: { bidCloseDtm: 'asc' }, take: 6,
+    }),
+    computeMarketCompare(item),
+  ]);
+  return { item: serializeRow(item), nearby: nearby.map(serializeRow), marketCompare };
 }
 
 export interface RegionDetailParams { bjdCode: string; }

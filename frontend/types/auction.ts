@@ -14,7 +14,13 @@ export interface AuctionItem {
   lat: number | null; lng: number | null;
 }
 export interface AuctionItemsResult { items: AuctionItem[]; total: number; page: number; totalPages: number; }
-export interface AuctionItemDetailResult { item: AuctionItem; nearby: AuctionItem[]; }
+export interface AuctionMarketCompare {
+  marketAvg: number;
+  label: string;
+  /** land 전용: 물건의 평당 감정가(원/평). 설정 시 apslAssAmt 원본 대신 이 값으로 비교. */
+  apslAssAmtForCompare?: number;
+}
+export interface AuctionItemDetailResult { item: AuctionItem; nearby: AuctionItem[]; marketCompare: AuctionMarketCompare | null; }
 export interface AuctionAreaSummary {
   bjdCode: string; usageGroup: UsageGroup; city: string; district: string;
   activeCount: number; closedCount: number; soldCount: number;

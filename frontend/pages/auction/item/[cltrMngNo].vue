@@ -11,6 +11,7 @@ import AuctionStatusBadge from '~/components/auction/AuctionStatusBadge.vue'
 import AuctionBidHistory from '~/components/auction/AuctionBidHistory.vue'
 import AuctionMap from '~/components/auction/AuctionMap.vue'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
+import AuctionPriceCompare from '~/components/auction/AuctionPriceCompare.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -36,6 +37,11 @@ if (import.meta.server || !data.value) {
 
 const item = computed(() => data.value!.item)
 const nearby = computed(() => data.value!.nearby)
+const marketCompare = computed(() => data.value!.marketCompare ?? null)
+// land: apslAssAmtForCompare(원/평)가 있으면 그 값을 컴포넌트에 주입해 단위 일치
+const compareApslAmt = computed(() =>
+  marketCompare.value?.apslAssAmtForCompare ?? item.value.apslAssAmt ?? null,
+)
 const selfUrl = `${SITE_URL}/auction/item/${cltrMngNo}`
 useHead(() => computeAuctionItemHead(item.value, selfUrl))
 
@@ -96,6 +102,12 @@ setBreadcrumbSchema(
 
       <div class="mt-4 grid gap-4">
         <AuctionBidHistory :item="item" />
+        <AuctionPriceCompare
+          v-if="marketCompare"
+          :apsl-ass-amt="compareApslAmt"
+          :market-avg="marketCompare.marketAvg"
+          :market-label="marketCompare.label"
+        />
         <AuctionMap v-if="item.lat != null && item.lng != null" :lat="item.lat" :lng="item.lng" :address="item.address" />
 
         <div v-if="nearby.length" class="bg-white rounded-xl border border-line p-4 shadow-card">
