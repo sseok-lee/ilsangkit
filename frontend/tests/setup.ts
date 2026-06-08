@@ -81,6 +81,11 @@ config.global.stubs = {
       },
     },
   },
+  // @nuxt/image 컴포넌트 → 테스트에선 단순 img로 패스스루
+  NuxtImg: {
+    template: '<img :src="src" :alt="alt" :width="width" :height="height" />',
+    props: ['src', 'alt', 'width', 'height', 'sizes', 'format', 'quality', 'loading', 'decoding'],
+  },
   // 광고 컴포넌트는 window.adsbygoogle/Nuxt 라우터에 의존 → 테스트에서 무해 스터브
   AdBanner: { template: '<div class="stub-ad-banner" />' },
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브

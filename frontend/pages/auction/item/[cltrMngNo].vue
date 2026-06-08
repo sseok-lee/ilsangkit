@@ -111,6 +111,10 @@ setBreadcrumbSchema(
       <div class="mt-1 grid grid-cols-1 gap-4">
         <AuctionBidHistory :item="item" />
         <AuctionDetailInfo :item="item" />
+
+        <!-- Ad: 입찰이력·상세정보 이후 -->
+        <AdBanner />
+
         <AuctionPriceCompare
           v-if="marketCompare"
           :apsl-ass-amt="compareApslAmt"
@@ -118,6 +122,9 @@ setBreadcrumbSchema(
           :market-label="marketCompare.label"
         />
         <AuctionMap v-if="item.lat != null && item.lng != null" :lat="item.lat" :lng="item.lng" :address="item.address" />
+
+        <!-- Ad: 시세비교·지도 이후 -->
+        <AdBanner />
 
         <SectionBlock v-if="nearby.length" heading="같은 지역 공매 물건">
           <div class="grid grid-cols-1 gap-2 sm:grid-cols-2"><AuctionCard v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
@@ -133,6 +140,9 @@ setBreadcrumbSchema(
         </SectionBlock>
       </div>
 
+      <!-- Ad: 같은지역·주변시설 이후 -->
+      <AdBanner />
+
       <!-- FAQ -->
       <SectionBlock heading="자주 묻는 질문" subtext="공매와 관련된 자주 묻는 질문입니다.">
         <dl class="flex flex-col gap-4">
@@ -142,6 +152,9 @@ setBreadcrumbSchema(
           </div>
         </dl>
       </SectionBlock>
+
+      <!-- Ad: 쿠팡 (페이지 맨 아래) -->
+      <CoupangBanner />
 
       <DataSourceSection domain="auction" />
     </main>

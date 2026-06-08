@@ -11,21 +11,33 @@ describe('CoupangBanner', () => {
     )
   })
 
-  it('renders the Coupang widget iframe with the configured tracking code', () => {
+  it('links to the Coupang promotion deep link', () => {
     const wrapper = mount(CoupangBanner)
-    const iframe = wrapper.find('iframe')
+    const link = wrapper.find('a')
 
-    expect(iframe.exists()).toBe(true)
-    const src = iframe.attributes('src') ?? ''
-    expect(src).toContain('ads-partners.coupang.com/widgets.html')
-    expect(src).toContain('id=985751')
-    expect(src).toContain('trackingCode=AF5459655')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe('https://link.coupang.com/a/epur2JvKIS')
   })
 
-  it('reserves banner height to reduce layout shift', () => {
+  it('opens the promotion in a new tab with affiliate-safe rel attributes', () => {
     const wrapper = mount(CoupangBanner)
-    const iframe = wrapper.find('iframe')
+    const link = wrapper.find('a')
 
-    expect(iframe.attributes('height')).toBe('140')
+    expect(link.attributes('target')).toBe('_blank')
+    const rel = link.attributes('rel') ?? ''
+    expect(rel).toContain('sponsored')
+    expect(rel).toContain('nofollow')
+    expect(rel).toContain('noopener')
+  })
+
+  it('renders the Coupang-supplied banner image with reserved dimensions', () => {
+    const wrapper = mount(CoupangBanner)
+    const img = wrapper.find('img')
+
+    expect(img.exists()).toBe(true)
+    expect(img.attributes('src')).toContain('coupangcdn.com')
+    expect(img.attributes('width')).toBe('1000')
+    expect(img.attributes('height')).toBe('1000')
+    expect(img.attributes('alt') ?? '').not.toBe('')
   })
 })
