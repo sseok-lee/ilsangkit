@@ -101,27 +101,20 @@ setBreadcrumbSchema(
       <h1 class="text-display-3 font-bold text-slate-900">{{ item.address }}</h1>
       <p class="text-caption text-slate-500 mt-1">{{ item.usage }} · {{ item.orgNm }}</p>
 
-      <div class="mt-4 grid gap-4 lg:grid-cols-3 lg:items-start">
-        <!-- 좌: 입찰·물건 정보 -->
-        <div class="flex flex-col gap-4 lg:col-span-2">
-          <AuctionBidHistory :item="item" />
-          <AuctionDetailInfo :item="item" />
-          <AuctionPriceCompare
-            v-if="marketCompare"
-            :apsl-ass-amt="compareApslAmt"
-            :market-avg="marketCompare.marketAvg"
-            :market-label="marketCompare.label"
-          />
-        </div>
+      <div class="mt-4 grid gap-4">
+        <AuctionBidHistory :item="item" />
+        <AuctionDetailInfo :item="item" />
+        <AuctionPriceCompare
+          v-if="marketCompare"
+          :apsl-ass-amt="compareApslAmt"
+          :market-avg="marketCompare.marketAvg"
+          :market-label="marketCompare.label"
+        />
+        <AuctionMap v-if="item.lat != null && item.lng != null" :lat="item.lat" :lng="item.lng" :address="item.address" />
 
-        <!-- 우: 지도·로드뷰 + 같은 지역 물건 -->
-        <div class="flex flex-col gap-4">
-          <AuctionMap v-if="item.lat != null && item.lng != null" :lat="item.lat" :lng="item.lng" :address="item.address" />
-
-          <div v-if="nearby.length" class="bg-white rounded-xl border border-line p-4 shadow-card">
-            <h3 class="text-sm font-semibold text-slate-900 mb-3">같은 지역 공매 물건</h3>
-            <div class="grid gap-2"><AuctionCard v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
-          </div>
+        <div v-if="nearby.length" class="bg-white rounded-xl border border-line p-4 shadow-card">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">같은 지역 공매 물건</h3>
+          <div class="grid gap-2 sm:grid-cols-2"><AuctionCard v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
         </div>
       </div>
 
