@@ -14,6 +14,7 @@ import AuctionMap from '~/components/auction/AuctionMap.vue'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
 import AuctionPriceCompare from '~/components/auction/AuctionPriceCompare.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 // useRoute/useAsyncData/createError/useHead 는 Nuxt auto-import (land [dong].vue와 동일)
@@ -94,14 +95,19 @@ setBreadcrumbSchema(
     <main class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
-      <div class="flex items-center gap-2 mb-2">
-        <AuctionStatusBadge :status="item.status" />
-        <span v-if="item.propertyType" class="text-caption text-slate-500">{{ item.propertyType }}</span>
-      </div>
-      <h1 class="text-display-3 font-bold text-slate-900">{{ item.address }}</h1>
-      <p class="text-caption text-slate-500 mt-1">{{ item.usage }} · {{ item.orgNm }}</p>
+      <PageHero :description="[item.usage, item.orgNm].filter(Boolean).join(' · ')">
+        <template #title>
+          <span class="mb-2 flex items-center gap-2">
+            <AuctionStatusBadge :status="item.status" />
+            <span v-if="item.propertyType" class="text-caption font-normal text-slate-500">{{ item.propertyType }}</span>
+          </span>
+          {{ item.address }}
+        </template>
+      </PageHero>
 
-      <div class="mt-4 grid gap-4">
+      <AdBanner />
+
+      <div class="mt-1 grid gap-4">
         <AuctionBidHistory :item="item" />
         <AuctionDetailInfo :item="item" />
         <AuctionPriceCompare
