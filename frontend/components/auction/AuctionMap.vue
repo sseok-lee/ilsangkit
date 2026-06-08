@@ -21,15 +21,21 @@ onMounted(async () => {
 <template>
   <div data-testid="auction-map" class="bg-white rounded-xl border border-line p-4 shadow-card">
     <h3 class="text-sm font-semibold text-slate-900 mb-2">위치</h3>
-    <!-- 지도 + 로드뷰 반반(데스크톱), 모바일 세로 적층. 로드뷰 없으면 지도 전체폭 -->
+    <!-- 지도 + 로드뷰 반반(데스크톱), 모바일 세로 적층. 로드뷰 없으면 자리는 유지하고 안내 표시 -->
     <div class="grid gap-3 md:grid-cols-2">
-      <div :class="roadviewAvailable ? '' : 'md:col-span-2'">
+      <div>
         <p class="text-caption text-slate-500 mb-1">🗺️ 지도</p>
         <div ref="mapEl" class="w-full h-64 rounded-lg overflow-hidden bg-slate-100" />
       </div>
-      <div v-show="roadviewAvailable">
+      <div>
         <p class="text-caption text-slate-500 mb-1">🛣️ 로드뷰</p>
-        <div ref="roadviewEl" class="w-full h-64 rounded-lg overflow-hidden bg-slate-100" />
+        <div class="relative w-full h-64 rounded-lg overflow-hidden bg-slate-100">
+          <div v-show="roadviewAvailable" ref="roadviewEl" class="w-full h-full" />
+          <div v-show="!roadviewAvailable" class="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
+            <span class="text-3xl opacity-40" aria-hidden="true">🛣️</span>
+            <p class="text-caption text-slate-400">로드뷰가 제공되지 않는 위치입니다</p>
+          </div>
+        </div>
       </div>
     </div>
     <p v-if="address" class="mt-2 text-caption text-slate-500">{{ address }}</p>
