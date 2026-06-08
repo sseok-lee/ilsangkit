@@ -92,18 +92,8 @@
     <!-- 이번 주 인기 단지 -->
     <HomeTrendingBuildings :buildings="trendingBuildings" />
 
-    <!-- Ad: 인기 단지 이후 -->
-    <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-      <AdBanner />
-    </div>
-
     <!-- 청약·임대 일정 섹션 -->
     <HomeSubscriptionSection />
-
-    <!-- Ad: 청약·임대 이후 -->
-    <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-      <AdBanner />
-    </div>
 
     <!-- 빠른 생활시설 찾기 (8 아이콘) -->
     <section id="facilities" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -201,9 +191,9 @@
       </div>
     </section>
 
-    <!-- Ad: 생활 가이드 이후 -->
+    <!-- 쿠팡 배너 (데이터 출처 위) -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-      <AdBanner />
+      <CoupangBanner />
     </div>
 
     <!-- 데이터 출처 요약 -->
@@ -233,7 +223,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import AdBanner from '~/components/ads/AdBanner.vue'
+import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import HardLink from '~/components/common/HardLink.vue'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'

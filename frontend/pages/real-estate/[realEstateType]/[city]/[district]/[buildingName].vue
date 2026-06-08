@@ -366,6 +366,9 @@
         </SectionBlock>
       </template>
 
+      <!-- Ad: 인근 단지 이후 -->
+      <AdBanner />
+
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
         v-if="buildingInfo?.lat && buildingInfo?.lng"
@@ -374,6 +377,9 @@
       >
         <NearbyFacilities :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
       </SectionBlock>
+
+      <!-- Ad: 주변 생활시설 이후 -->
+      <AdBanner />
 
       <!-- 네이버 블로그 후기 -->
       <BlogReviewSection

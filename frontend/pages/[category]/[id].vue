@@ -171,6 +171,9 @@
                 :category-meta="categoryMeta"
               />
 
+              <!-- Ad: 주변 시설 바로 아래 -->
+              <AdBanner />
+
               <!-- 관련 YouTube 영상 -->
               <FacilityYoutubeSection
                 v-if="facility"
