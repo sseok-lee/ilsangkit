@@ -50,6 +50,7 @@ jobs:
                   *dist/scripts/syncSubscription*|\
                   *dist/scripts/syncPublicRent*|\
                   *dist/scripts/syncAuction*|\
+                  *dist/scripts/geocodeAuction*|\
                   *dist/scripts/syncRentalAnnouncement*)
                     kill -9 "$pid" 2>/dev/null || true
                     ;;
@@ -104,6 +105,13 @@ jobs:
             timeout --kill-after=30s 45m node dist/scripts/geocodeRealEstate.js \
               || echo "[WARN] 지오코딩 실패 (exit=$?)"
             echo "[step:geocode-end]"
+
+            # 공매 물건 지오코딩 (온비드 API 무좌표 → 카카오 주소검색, 30분)
+            echo "[step:geocode-auction-start]"
+            echo "--- 공매 지오코딩 ---"
+            timeout --kill-after=30s 30m node dist/scripts/geocodeAuction.js \
+              || echo "[WARN] 공매 지오코딩 실패 (exit=$?)"
+            echo "[step:geocode-auction-end]"
 
             # Summary 테이블 갱신 (MySQL MAX_EXECUTION_TIME=60s가 내부에서 강제)
             echo "[step:summary-start]"

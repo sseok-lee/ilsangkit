@@ -1647,6 +1647,7 @@ model AuctionItem {
   resultDate    DateTime?
   lat           Decimal?  @db.Decimal(10, 7)
   lng           Decimal?  @db.Decimal(10, 7)
+  geocodedAt    DateTime? // 지오코딩 시도 시각(실패 재시도 스킵용)
   sourceId      String    @unique @db.VarChar(200)
   firstSeenAt   DateTime  @default(now())
   lastSeenAt    DateTime  @default(now())
