@@ -4,6 +4,9 @@ import { computed } from 'vue'
 import type { AuctionItem } from '~/types/auction'
 import { formatWonKorean, formatDiscount, formatAuctionDate, USAGE_GROUP_LABEL } from '~/types/auction'
 import AuctionStatusBadge from '~/components/auction/AuctionStatusBadge.vue'
+// 목록→상세 이동을 전체 새로고침(MPA)으로 — SPA soft-nav 시 AdSense가 unfill-optimized로
+// 광고를 안 채우는 문제 회피. 기존 카드(FacilityCard 등)와 동일하게 HardLink 사용.
+import HardLink from '~/components/common/HardLink.vue'
 const props = defineProps<{ item: AuctionItem }>()
 const to = computed(() => `/auction/item/${props.item.cltrMngNo}`)
 const apsl = computed(() => props.item.apslAssAmt)
@@ -19,7 +22,7 @@ const hasDiscount = computed(() => !!apsl.value && apsl.value > 0 && !!minBid.va
 const discount = computed(() => formatDiscount(props.item.apslAssAmt, props.item.minBidPrc))
 </script>
 <template>
-  <NuxtLink :to="to" class="block bg-white rounded-xl border border-line p-4 shadow-card hover:border-primary/30 transition-[box-shadow,border-color]">
+  <HardLink :to="to" class="block bg-white rounded-xl border border-line p-4 shadow-card hover:border-primary/30 transition-[box-shadow,border-color]">
     <div class="flex items-center gap-2 mb-2">
       <AuctionStatusBadge :status="item.status" />
       <span v-if="item.propertyType" class="text-caption text-slate-500">{{ item.propertyType }}</span>
@@ -38,5 +41,5 @@ const discount = computed(() => formatDiscount(props.item.apslAssAmt, props.item
       </div>
       <p class="text-caption text-slate-500 whitespace-nowrap">{{ formatAuctionDate(item.bidCloseDtm) }} 마감</p>
     </div>
-  </NuxtLink>
+  </HardLink>
 </template>
