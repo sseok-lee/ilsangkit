@@ -7,14 +7,16 @@
       referrerpolicy="unsafe-url"
       class="mx-auto block w-full max-w-[360px] overflow-hidden rounded-xl border border-slate-200 transition-shadow hover:shadow-md"
     >
-      <NuxtImg
+      <!--
+        외부 광고 이미지를 빌드 타임에 미리 webp로 변환해 /public/ads 에 정적 호스팅한다.
+        Cafe24 운영 서버 CPU가 sharp(0.33+) prebuilt(x86-64-v2)를 미지원 → 런타임 IPX(NuxtImg)가 500.
+        그래서 sharp 의존 없는 정적 <img>로 서빙한다. 배너 교체 시 webp 재생성 후 커밋(scripts/optimizeAdImage).
+      -->
+      <img
         :src="bannerSrc"
         alt="쿠팡 이벤트 배너 - 삼성전자 감사 페스티벌"
         width="1000"
         height="1000"
-        sizes="320px sm:360px"
-        format="webp"
-        quality="80"
         loading="lazy"
         decoding="async"
         class="block h-auto w-full"
@@ -28,6 +30,7 @@
 
 <script setup lang="ts">
 const promoUrl = 'https://link.coupang.com/a/epur2JvKIS'
-const bannerSrc =
-  'https://image1.coupangcdn.com/image/affiliate/event/promotion/2026/06/08/bd1df149685f00d201079638982d356f.png'
+// 원본: https://image1.coupangcdn.com/image/affiliate/event/promotion/2026/06/08/bd1df149685f00d201079638982d356f.png
+// → scripts/optimizeAdImage.mjs 로 webp 변환해 정적 호스팅 (1.25MB PNG → ~152KB webp)
+const bannerSrc = '/ads/coupang-samsung-festival.webp'
 </script>

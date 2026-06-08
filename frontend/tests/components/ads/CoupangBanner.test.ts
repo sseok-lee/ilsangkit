@@ -35,9 +35,11 @@ describe('CoupangBanner', () => {
     const img = wrapper.find('img')
 
     expect(img.exists()).toBe(true)
-    expect(img.attributes('src')).toContain('coupangcdn.com')
+    // 런타임 sharp/IPX 미지원 서버 대응: /public/ads 의 사전최적화 webp를 정적 서빙
+    expect(img.attributes('src')).toBe('/ads/coupang-samsung-festival.webp')
     expect(img.attributes('width')).toBe('1000')
     expect(img.attributes('height')).toBe('1000')
+    expect(img.attributes('loading')).toBe('lazy')
     expect(img.attributes('alt') ?? '').not.toBe('')
   })
 })
