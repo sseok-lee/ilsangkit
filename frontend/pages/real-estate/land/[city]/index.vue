@@ -38,6 +38,9 @@
 
       <AdBanner />
 
+      <!-- Ad: 쿠팡 (페이지 맨 아래) -->
+      <CoupangBanner />
+
       <DataSourceSection domain="real-estate" />
     </main>
   </div>
