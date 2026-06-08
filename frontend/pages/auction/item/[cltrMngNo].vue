@@ -9,6 +9,7 @@ import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useStructuredData } from '~/composables/useStructuredData'
 import AuctionStatusBadge from '~/components/auction/AuctionStatusBadge.vue'
 import AuctionBidHistory from '~/components/auction/AuctionBidHistory.vue'
+import AuctionDetailInfo from '~/components/auction/AuctionDetailInfo.vue'
 import AuctionMap from '~/components/auction/AuctionMap.vue'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
 import AuctionPriceCompare from '~/components/auction/AuctionPriceCompare.vue'
@@ -102,6 +103,7 @@ setBreadcrumbSchema(
 
       <div class="mt-4 grid gap-4">
         <AuctionBidHistory :item="item" />
+        <AuctionDetailInfo :item="item" />
         <AuctionPriceCompare
           v-if="marketCompare"
           :apsl-ass-amt="compareApslAmt"

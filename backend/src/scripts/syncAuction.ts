@@ -50,6 +50,12 @@ export interface RawAuctionItem extends Record<string, unknown> {
   lctnSggnm?: string;      // 소재지 시군구명 (fallback district)
   lctnEmdNm?: string;      // 소재지 읍면동명 → dongName
   pbctStatNm?: string;     // 입찰상태명 "입찰준비중"(예정)/"입찰진행중" — 배지의 권위값
+  bidMthodNm?: string;     // 입찰방식 "최고가방식"
+  cptnMthodNm?: string;    // 경쟁방식 "일반경쟁"
+  bidDivNm?: string;       // 입찰구분 "전자입찰"
+  evcRsbyTrgtCont?: string; // 명도책임 "매수자"
+  alcYn?: string;          // 지분물건 여부 "Y"/"N"
+  thnlImgUrlAdr?: string;  // 썸네일 이미지 URL
 }
 
 function parseBigIntOrNull(v: unknown): bigint | null {
@@ -63,11 +69,20 @@ function parseIntOrNull(v: unknown): number | null {
   const n = parseInt(s, 10);
   return isNaN(n) ? null : n;
 }
+// 소수점 포함 숫자 파싱(면적 등). 0/음수/빈값 → null
+function parseDecimalOrNull(v: unknown): number | null {
+  const s = String(v ?? '').replace(/,/g, '').trim();
+  if (!s) return null;
+  const n = Number(s);
+  return !isFinite(n) || n <= 0 ? null : n;
+}
 // YYYYMMDDhhmm(또는 YYYYMMDD) → Date(UTC)
+// 온비드는 "기한 미정"을 2999/9999 같은 far-future sentinel로 표기 → null 처리(잘못된 마감일 방지)
 function parseDtm(v: unknown): Date | null {
   const s = String(v ?? '').replace(/[^0-9]/g, '').trim();
   if (s.length < 8) return null;
   const y = +s.slice(0, 4), mo = +s.slice(4, 6) - 1, d = +s.slice(6, 8);
+  if (y >= 2999) return null; // sentinel (예: 299912301000 = 기한 미정)
   const h = s.length >= 12 ? +s.slice(8, 10) : 0, mi = s.length >= 12 ? +s.slice(10, 12) : 0;
   const dt = new Date(Date.UTC(y, mo, d, h, mi));
   return isNaN(dt.getTime()) ? null : dt;
@@ -106,9 +121,9 @@ export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date(
             ? 'scheduled'
             : 'ongoing';
 
-  // 면적: 0이면 null로 정규화
-  const landSqms = parseIntOrNull(item.landSqms);
-  const bldSqms = parseIntOrNull(item.bldSqms);
+  // 면적: 소수점 보존(62.45㎡), 0이면 null
+  const landSqms = parseDecimalOrNull(item.landSqms);
+  const bldSqms = parseDecimalOrNull(item.bldSqms);
 
   return {
     sourceId: `${CATEGORY}-${cltrMngNo}`,
@@ -124,8 +139,14 @@ export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date(
     usageGroup: toUsageGroup(usage),
     propertyType: String(item.prptDivNm ?? '').trim() || null,
     dpslMtdNm: String(item.dspsMthodNm ?? '').trim() || null,
-    landArea: landSqms != null && landSqms > 0 ? String(landSqms) : null,
-    bldArea: bldSqms != null && bldSqms > 0 ? String(bldSqms) : null,
+    bidMethod: String(item.bidMthodNm ?? '').trim() || null,
+    competitionMethod: String(item.cptnMthodNm ?? '').trim() || null,
+    bidType: String(item.bidDivNm ?? '').trim() || null,
+    evictionResp: String(item.evcRsbyTrgtCont ?? '').trim() || null,
+    isShare: item.alcYn === 'Y',
+    thumbnailUrl: String(item.thnlImgUrlAdr ?? '').trim() || null,
+    landArea: landSqms != null ? String(landSqms) : null,
+    bldArea: bldSqms != null ? String(bldSqms) : null,
     apslAssAmt: parseBigIntOrNull(item.apslEvlAmt),
     minBidPrc: parseBigIntOrNull(item.lowstBidPrcIndctCont),
     failCnt: parseIntOrNull(item.usbdNft) ?? 0,

@@ -87,6 +87,31 @@ describe('transformAuctionItem (차세대 Srvc2 필드명)', () => {
     expect(r.status).toBe('negotiable');
   });
 
+  it('far-future sentinel 날짜(2999~)는 null (기한 미정)', () => {
+    const r = transformAuctionItem({ ...base, cltrBidBgngDt: '202601011000', cltrBidEndDt: '299912301600' })!;
+    expect(r.bidCloseDtm).toBeNull();
+  });
+
+  it('입찰방식·경쟁방식·입찰구분·명도책임·지분·썸네일 매핑', () => {
+    const r = transformAuctionItem({
+      ...base,
+      bidMthodNm: '최고가방식', cptnMthodNm: '일반경쟁', bidDivNm: '전자입찰',
+      evcRsbyTrgtCont: '매수자', alcYn: 'Y', thnlImgUrlAdr: 'https://onbid/x.jpg',
+    })!;
+    expect(r.bidMethod).toBe('최고가방식');
+    expect(r.competitionMethod).toBe('일반경쟁');
+    expect(r.bidType).toBe('전자입찰');
+    expect(r.evictionResp).toBe('매수자');
+    expect(r.isShare).toBe(true);
+    expect(r.thumbnailUrl).toBe('https://onbid/x.jpg');
+  });
+
+  it('면적은 소수점 보존, 0은 null', () => {
+    const r = transformAuctionItem({ ...base, landSqms: 62.453, bldSqms: 0 })!;
+    expect(r.landArea).toBe('62.453');
+    expect(r.bldArea).toBeNull();
+  });
+
   it('빈 금액/누락 필드는 null', () => {
     const r = transformAuctionItem({ ...base, apslEvlAmt: ' ', lowstBidPrcIndctCont: '' })!;
     expect(r.apslAssAmt).toBeNull();

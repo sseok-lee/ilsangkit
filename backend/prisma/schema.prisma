@@ -1623,6 +1623,12 @@ model AuctionItem {
   usageGroup    String    @db.VarChar(20)
   propertyType  String?   @db.VarChar(50)
   dpslMtdNm     String?   @db.VarChar(20)
+  bidMethod     String?   @db.VarChar(40)  // 입찰방식 bidMthodNm (최고가방식 등)
+  competitionMethod String? @db.VarChar(40) // 경쟁방식 cptnMthodNm (일반경쟁 등)
+  bidType       String?   @db.VarChar(40)  // 입찰구분 bidDivNm (전자입찰 등)
+  evictionResp  String?   @db.VarChar(40)  // 명도책임 evcRsbyTrgtCont (매수자 등)
+  isShare       Boolean   @default(false)  // 지분물건 여부 alcYn
+  thumbnailUrl  String?   @db.VarChar(500) // 썸네일 thnlImgUrlAdr
   landArea      Decimal?  @db.Decimal(12, 2)
   bldArea       Decimal?  @db.Decimal(12, 2)
   apslAssAmt    BigInt?

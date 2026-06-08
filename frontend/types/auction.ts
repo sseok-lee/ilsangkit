@@ -6,6 +6,8 @@ export interface AuctionItem {
   id: number; cltrMngNo: string; pbctCdtnNo: string; plnmNo: string | null;
   city: string; district: string; bjdCode: string; dongName: string | null; address: string;
   usage: string | null; usageGroup: UsageGroup; propertyType: string | null; dpslMtdNm: string | null;
+  bidMethod: string | null; competitionMethod: string | null; bidType: string | null;
+  evictionResp: string | null; isShare: boolean; thumbnailUrl: string | null;
   landArea: number | null; bldArea: number | null;
   apslAssAmt: number | null; minBidPrc: number | null; failCnt: number; bidRound: number | null;
   bidBeginDtm: string | null; bidCloseDtm: string | null; orgNm: string | null; pvctTrgtYn: boolean;
@@ -74,6 +76,13 @@ export function formatAuctionDate(value: string | null | undefined): string {
   if (isNaN(d.getTime())) return '-';
   const y = d.getUTCFullYear(), m = String(d.getUTCMonth() + 1).padStart(2, '0'), day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}.${m}.${day}`;
+}
+/** ㎡ → "62.45㎡ (19평)" 표기. 1평 = 3.305785㎡ */
+export function formatArea(sqm: number | null | undefined): string {
+  if (sqm == null || sqm <= 0) return '-';
+  const pyeong = Math.round(sqm / 3.305785);
+  const sqmStr = Number.isInteger(sqm) ? String(sqm) : sqm.toFixed(2).replace(/\.?0+$/, '');
+  return `${sqmStr}㎡ (${pyeong.toLocaleString('ko-KR')}평)`;
 }
 export function statusLabel(s: AuctionStatus | string): string {
   const map: Record<string, string> = { ongoing: '진행중', scheduled: '입찰예정', negotiable: '수의계약', closed: '마감', sold: '낙찰', failed: '유찰', cancelled: '취소' };
