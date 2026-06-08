@@ -11,7 +11,14 @@ const { mockPrisma } = vi.hoisted(() => ({
 }));
 vi.mock('../../src/lib/prisma.js', () => ({ prisma: mockPrisma, default: mockPrisma }));
 
-import { getItems, getItemDetail, getRanking } from '../../src/services/auctionService.js';
+const { mockFacilitySearch, mockFindNearbyStations } = vi.hoisted(() => ({
+  mockFacilitySearch: vi.fn(),
+  mockFindNearbyStations: vi.fn(),
+}));
+vi.mock('../../src/services/facilityService.js', () => ({ search: mockFacilitySearch }));
+vi.mock('../../src/services/subwayService.js', () => ({ findNearbyStations: mockFindNearbyStations }));
+
+import { getItems, getItemDetail, getRanking, computeNearbyFacilities } from '../../src/services/auctionService.js';
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -83,6 +90,38 @@ describe('getItemDetail', () => {
     mockPrisma.auctionItem.findMany.mockResolvedValue([]);
     const r = await getItemDetail('D');
     expect(r?.marketCompare).toBeNull();
+  });
+});
+
+describe('computeNearbyFacilities', () => {
+  it('좌표 없으면 빈 배열(서비스 호출 안 함)', async () => {
+    const r = await computeNearbyFacilities(null, null);
+    expect(r).toEqual([]);
+    expect(mockFacilitySearch).not.toHaveBeenCalled();
+    expect(mockFindNearbyStations).not.toHaveBeenCalled();
+  });
+  it('지하철+카테고리 top3 수집, distance 포함', async () => {
+    mockFindNearbyStations.mockResolvedValue([
+      { name: '강남역', distance: 120 }, { name: '역삼역', distance: 400 },
+    ]);
+    mockFacilitySearch.mockImplementation(async ({ category }: { category: string }) => ({
+      items: [{ name: `${category}1`, category, distance: 50 }, { name: `${category}2`, category, distance: 90 }],
+      total: 2, page: 1, totalPages: 1,
+    }));
+    const r = await computeNearbyFacilities(37.5, 127.0);
+    const subway = r.filter((f) => f.category === 'subway');
+    expect(subway).toHaveLength(2);
+    expect(subway[0]).toMatchObject({ categoryLabel: '지하철역', name: '강남역', distance: 120 });
+    // 5개 시설 카테고리 × 2건 + 지하철 2건 = 12
+    expect(r).toHaveLength(12);
+    expect(r.some((f) => f.categoryLabel === '병원')).toBe(true);
+  });
+  it('한 소스 실패해도 나머지 반환', async () => {
+    mockFindNearbyStations.mockRejectedValue(new Error('subway down'));
+    mockFacilitySearch.mockResolvedValue({ items: [{ name: 'h1', category: 'hospital', distance: 30 }], total: 1, page: 1, totalPages: 1 });
+    const r = await computeNearbyFacilities(37.5, 127.0);
+    expect(r.some((f) => f.category === 'subway')).toBe(false);
+    expect(r.some((f) => f.categoryLabel === '병원')).toBe(true);
   });
 });
 
