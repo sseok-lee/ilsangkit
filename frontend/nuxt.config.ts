@@ -57,6 +57,8 @@ export default defineNuxtConfig({
   image: {
     quality: 80,
     format: ['webp'],
+    // 외부 이미지(쿠팡 파트너스 배너) IPX 최적화 허용
+    domains: ['image1.coupangcdn.com'],
     screens: {
       xs: 320,
       sm: 640,

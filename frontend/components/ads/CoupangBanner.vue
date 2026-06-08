@@ -7,12 +7,16 @@
       referrerpolicy="unsafe-url"
       class="mx-auto block w-full max-w-[360px] overflow-hidden rounded-xl border border-slate-200 transition-shadow hover:shadow-md"
     >
-      <img
+      <NuxtImg
         :src="bannerSrc"
         alt="쿠팡 이벤트 배너 - 삼성전자 감사 페스티벌"
         width="1000"
         height="1000"
+        sizes="320px sm:360px"
+        format="webp"
+        quality="80"
         loading="lazy"
+        decoding="async"
         class="block h-auto w-full"
       />
     </a>
