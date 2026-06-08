@@ -88,11 +88,16 @@ function parseDtm(v: unknown): Date | null {
   return isNaN(dt.getTime()) ? null : dt;
 }
 
+// 온비드 테스트/검증용 더미 물건 (예: "[ 입찰불가 ] 온비드 검증 부동산 물건") 식별
+const DUMMY_ADDRESS_RE = /입찰불가|온비드\s*검증|온비드\s*부동산\s*물건/;
+
 export function transformAuctionItem(item: RawAuctionItem, now: Date = new Date()) {
   const cltrMngNo = String(item.cltrMngNo ?? '').trim();
   if (!cltrMngNo) return null;
 
   const address = String(item.onbidCltrNm ?? '').trim();
+  // 온비드 검증/테스트 더미 물건 제외
+  if (!address || DUMMY_ADDRESS_RE.test(address)) return null;
 
   // 용도: 대분류+소분류 조합 → usageGroup
   const mCls = String(item.cltrUsgMclsCtgrNm ?? '').trim();

@@ -87,6 +87,12 @@ describe('transformAuctionItem (차세대 Srvc2 필드명)', () => {
     expect(r.status).toBe('negotiable');
   });
 
+  it('온비드 검증/테스트 더미 물건은 제외(null)', () => {
+    expect(transformAuctionItem({ ...base, onbidCltrNm: '[ 입찰불가 ] 온비드 검증 부동산 물건' })).toBeNull();
+    expect(transformAuctionItem({ ...base, onbidCltrNm: '[ 입찰불가 ] 온비드 부동산 물건' })).toBeNull();
+    expect(transformAuctionItem({ ...base, onbidCltrNm: '' })).toBeNull();
+  });
+
   it('far-future sentinel 날짜(2999~)는 null (기한 미정)', () => {
     const r = transformAuctionItem({ ...base, cltrBidBgngDt: '202601011000', cltrBidEndDt: '299912301600' })!;
     expect(r.bidCloseDtm).toBeNull();
