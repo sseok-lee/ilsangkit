@@ -11,6 +11,8 @@ import {
   fetchWasteScheduleIds,
   fetchRealEstateBuildings,
   fetchRealEstateCityDistrictHubs,
+  fetchLandSitemap,
+  fetchAuctionSitemap,
   fetchSubscriptionIds,
   fetchSubwaySlugs,
   getWeekStartDate,
@@ -31,6 +33,16 @@ function parseSlug(slug: string): { category: string; page: number } | null {
   // "real-estate-hub" → city/district hub sitemap (no pagination)
   if (slug === 'real-estate-hub') {
     return { category: 'real-estate-hub', page: 1 }
+  }
+
+  // "land" → 토지 실거래가 사이트맵 (no pagination)
+  if (slug === 'land') {
+    return { category: 'land', page: 1 }
+  }
+
+  // "auction" → 공매 사이트맵 (no pagination)
+  if (slug === 'auction') {
+    return { category: 'auction', page: 1 }
   }
 
   // "real-estate" → category='real-estate', page=1
@@ -153,6 +165,73 @@ export default defineEventHandler(async (event) => {
 
       const districtUrl = `${SITE_URL}/real-estate/${hub.realEstateType}/${citySlug}/${districtSlug}`
       urls.push({ loc: districtUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+    }
+
+    return generateSitemapXml(urls)
+  }
+
+  // 토지 실거래가 — hub + city + district 항상 포함, 동(dong)은 isIndexable=true인 것만 포함
+  if (category === 'land') {
+    const { cities, indexableDongs } = await fetchLandSitemap()
+    const weekStart = getWeekStartDate()
+
+    const urls: Parameters<typeof generateSitemapXml>[0] = []
+
+    // hub
+    urls.push({ loc: `${SITE_URL}/real-estate/land`, lastmod: weekStart, changefreq: 'weekly', priority: 0.7 })
+
+    // city + district (always included)
+    const seenCityUrls = new Set<string>()
+    for (const { city, district } of cities) {
+      const citySlug = toCitySlug(city)
+      const districtSlug = toDistrictSlug(district)
+      const cityUrl = `${SITE_URL}/real-estate/land/${citySlug}`
+      if (!seenCityUrls.has(cityUrl)) {
+        seenCityUrls.add(cityUrl)
+        urls.push({ loc: cityUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+      }
+      urls.push({ loc: `${SITE_URL}/real-estate/land/${citySlug}/${districtSlug}`, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+    }
+
+    // dong URLs — only isIndexable=true (quality gate)
+    for (const { city, district, dongName } of indexableDongs) {
+      urls.push({
+        loc: `${SITE_URL}/real-estate/land/${toCitySlug(city)}/${toDistrictSlug(district)}/${encodeURIComponent(dongName)}`,
+        lastmod: weekStart,
+        changefreq: 'weekly',
+        priority: 0.5,
+      })
+    }
+
+    return generateSitemapXml(urls)
+  }
+
+  // 공매(온비드) — 색인 가능 시군구 + 물건 상세
+  if (category === 'auction') {
+    const { regions, items } = await fetchAuctionSitemap()
+    const weekStart = getWeekStartDate()
+
+    const urls: Parameters<typeof generateSitemapXml>[0] = []
+
+    // hub
+    urls.push({ loc: `${SITE_URL}/auction`, lastmod: weekStart, changefreq: 'daily', priority: 0.8 })
+
+    // indexable region pages (dedupe to unique city/district)
+    const seenRegionUrls = new Set<string>()
+    for (const region of regions) {
+      if (!region.isIndexable) continue
+      const citySlug = toCitySlug(region.city)
+      const districtSlug = toDistrictSlug(region.district)
+      const regionUrl = `${SITE_URL}/auction/${citySlug}/${districtSlug}`
+      if (!seenRegionUrls.has(regionUrl)) {
+        seenRegionUrls.add(regionUrl)
+        urls.push({ loc: regionUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+      }
+    }
+
+    // item pages
+    for (const cltrMngNo of items) {
+      urls.push({ loc: `${SITE_URL}/auction/item/${cltrMngNo}`, lastmod: weekStart, changefreq: 'weekly', priority: 0.5 })
     }
 
     return generateSitemapXml(urls)

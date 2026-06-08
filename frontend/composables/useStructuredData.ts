@@ -56,7 +56,7 @@ export function useStructuredData() {
       name: SITE_NAME,
       alternateName: 'ilsangkit',
       url: SITE_URL,
-      description: '아파트·빌라·오피스텔 실거래가와 청약 정보, 내 주변 병원·약국·주차장 등 생활시설을 한곳에서 확인하세요.',
+      description: '아파트·빌라·오피스텔·토지 실거래가와 청약 정보, 내 주변 병원·약국·주차장 등 생활시설을 한곳에서 확인하세요.',
       potentialAction: {
         '@type': 'SearchAction',
         target: {
@@ -317,7 +317,7 @@ export function useStructuredData() {
       name: SITE_NAME,
       url: SITE_URL,
       logo: `${SITE_URL}/icons/logo.webp`,
-      description: '부동산 실거래가와 청약 정보, 전국 생활시설을 한곳에서 제공하는 생활 정보 서비스. 아파트·빌라·오피스텔 시세 조회와 청약 일정 확인, 학교·어린이집·공원 등 생활시설 통합 검색을 지원합니다.',
+      description: '부동산 실거래가와 청약 정보, 전국 생활시설을 한곳에서 제공하는 생활 정보 서비스. 아파트·빌라·오피스텔·토지 실거래가 조회와 청약 일정 확인, 학교·어린이집·공원 등 생활시설 통합 검색을 지원합니다.',
       contactPoint: {
         '@type': 'ContactPoint',
         contactType: 'customer service',

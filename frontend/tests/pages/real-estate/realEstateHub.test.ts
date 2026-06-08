@@ -80,6 +80,7 @@ describe('real-estate/index.vue — hub page', () => {
     expect(urls).toContain('/real-estate/villa-rent')
     expect(urls).toContain('/real-estate/offitel-sale')
     expect(urls).toContain('/real-estate/offitel-rent')
+    expect(urls).toContain('/real-estate/land')
   })
 
   it('setItemListSchema가 레거시 hub URL을 포함하지 않아야 한다', async () => {
@@ -92,10 +93,10 @@ describe('real-estate/index.vue — hub page', () => {
     expect(urls).not.toContain('/real-estate/offitel')
   })
 
-  it('setItemListSchema 항목이 6개여야 한다 (매매+전월세 × 3 주택유형)', async () => {
+  it('setItemListSchema 항목이 7개여야 한다 (매매+전월세 × 3 주택유형 + 토지)', async () => {
     const m = await import('~/pages/real-estate/index.vue')
     await mountSuspended(m.default)
     const items = mockSetItemListSchema.mock.calls[0][0]
-    expect(items).toHaveLength(6)
+    expect(items).toHaveLength(7)
   })
 })

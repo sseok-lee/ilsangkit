@@ -543,6 +543,7 @@ export const NAV_LINK_GROUPS: readonly LinkGroup[] = [
       { to: '/real-estate/apt-sale', label: '아파트', icon: 'apartment', iconImg: 'apt' },
       { to: '/real-estate/villa-sale', label: '빌라', icon: 'holiday_village', iconImg: 'villa' },
       { to: '/real-estate/offitel-sale', label: '오피스텔', icon: 'business', iconImg: 'offitel' },
+      { to: '/real-estate/land', label: '토지', icon: 'landscape', iconImg: 'land-plot' },
     ],
   },
   {
@@ -566,6 +567,19 @@ export const NAV_LINK_GROUPS: readonly LinkGroup[] = [
       { to: '/public-rental/announcements', label: '모집공고', icon: 'campaign', iconImg: 'subscription', section: '공공임대 입주' },
       { to: '/public-rental/buy-lease', label: '매입임대', icon: 'shopping_cart', iconImg: 'store', section: '공공임대 입주' },
       { to: '/public-rental/charter', label: '전세임대', icon: 'savings', iconImg: 'land', section: '공공임대 입주' },
+    ],
+  },
+  {
+    title: '공매',
+    icon: 'gavel',
+    links: [
+      { to: '/auction', label: '공매 홈', icon: 'gavel', iconImg: 'auction' },
+      { to: '/auction/list?usage=residential', label: '아파트·주거용', icon: 'apartment', iconImg: 'auction' },
+      { to: '/auction/list?usage=land', label: '토지', icon: 'landscape', iconImg: 'auction' },
+      { to: '/auction/list?usage=commercial', label: '상가·업무', icon: 'storefront', iconImg: 'auction' },
+      { to: '/auction/list?usage=industrial', label: '공장·창고', icon: 'storefront', iconImg: 'auction' },
+      { to: '/auction/ranking', label: '낙찰가율 랭킹', icon: 'bar_chart', iconImg: 'auction' },
+      { to: '/auction/list', label: '전체 물건', icon: 'grid_view', iconImg: 'auction' },
     ],
   },
 ] as const

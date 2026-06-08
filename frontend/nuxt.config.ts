@@ -57,6 +57,8 @@ export default defineNuxtConfig({
   image: {
     quality: 80,
     format: ['webp'],
+    // 외부 이미지(쿠팡 파트너스 배너) IPX 최적화 허용
+    domains: ['image1.coupangcdn.com'],
     screens: {
       xs: 320,
       sm: 640,
@@ -194,7 +196,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: '아파트·빌라·오피스텔 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.' },
+        { name: 'description', content: '아파트·빌라·오피스텔·토지 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.' },
         { name: 'theme-color', content: '#3b82f6' },
         { name: 'application-name', content: '일상킷' },
         { name: 'apple-mobile-web-app-title', content: '일상킷' },
@@ -216,7 +218,7 @@ export default defineNuxtConfig({
         },
         // 폰트 CSS: head에서 JS로 비동기 삽입 (논블로킹 + 빠른 시작)
         {
-          innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_drop_down,arrow_drop_up,arrow_forward,article,baby_changing_station,bar_chart,bolt,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checklist,checkroom,chevron_left,chevron_right,child_care,close,corporate_fare,delete,description,directions,domain,download,eco,edit_note,emergency,error,error_outline,ev_station,event_upcoming,expand_less,expand_more,explore,favorite,first_page,grid_view,groups,health_and_safety,help,holiday_village,home,house,info,key,landscape,last_page,lightbulb,local_fire_department,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_off,location_on,man,meeting_room,menu,menu_book,near_me,notifications_active,open_in_full,open_in_new,park,payments,person,place,play_circle,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,sell,share,sports,stars,storefront,subway,support_agent,trending_down,trending_up,verified,verified_user,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
+          innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_drop_down,arrow_drop_up,arrow_forward,article,baby_changing_station,bar_chart,bolt,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checklist,checkroom,chevron_left,chevron_right,child_care,close,corporate_fare,delete,description,directions,domain,download,eco,edit_note,emergency,error,error_outline,ev_station,event_upcoming,expand_less,expand_more,explore,favorite,first_page,gavel,grid_view,groups,health_and_safety,help,holiday_village,home,house,info,key,landscape,last_page,lightbulb,local_fire_department,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_off,location_on,man,meeting_room,menu,menu_book,near_me,notifications_active,open_in_full,open_in_new,park,payments,person,place,play_circle,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,sell,share,sports,stars,storefront,subway,support_agent,trending_down,trending_up,verified,verified_user,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
           type: 'text/javascript',
         },
       ],

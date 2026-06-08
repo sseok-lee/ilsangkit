@@ -121,14 +121,16 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('진행중 청약')
   })
 
-  it('renders the three new home sections and ad banners', async () => {
+  it('renders the home sections and a single Coupang banner (no AdBanner)', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
     // HomeHotspotSignals replaces HomeMarketStats — check for its heading text (requires hotspot data)
     expect(wrapper.text()).toContain('오늘의 부동산 시장')
     // HomeSubscriptionSection is present
     expect(wrapper.find('section').exists()).toBe(true)
-    expect(wrapper.findAll('.stub-ad-banner').length).toBeGreaterThanOrEqual(1)
+    // 홈은 AdBanner를 모두 제거하고 데이터 출처 위에 CoupangBanner 1개만 노출
+    expect(wrapper.findAll('.stub-ad-banner').length).toBe(0)
+    expect(wrapper.findAll('.stub-coupang-banner').length).toBe(1)
   })
 
   it('renders "빠른 생활시설 찾기" 16-icon grid (전 시설 카테고리 + 지하철)', async () => {

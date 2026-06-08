@@ -32,7 +32,7 @@ describe('Terms Page', () => {
     for (const label of ['공원', '학교', '전통시장', '어린이집', '전기차 충전소', '체육시설']) {
       expect(listText, `expected 제2조 service list to include "${label}"`).toContain(label)
     }
-    expect(serviceList.findAll('li').length).toBe(21)
+    expect(serviceList.findAll('li').length).toBe(22)
   })
 
   it('does NOT mention 무인민원발급기', async () => {

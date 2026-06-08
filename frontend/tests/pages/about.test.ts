@@ -63,12 +63,13 @@ describe('About Page', () => {
     expect(text).toContain('과학기술정보통신부') // 와이파이: 행정안전부 → 과학기술정보통신부
   })
 
-  it('data-source 테이블에 부동산 4개 세부 데이터셋을 유지한다', async () => {
+  it('data-source 테이블에 부동산 세부 데이터셋을 유지한다', async () => {
     const wrapper = await mountSuspended(AboutPage)
     const text = wrapper.text()
     expect(text).toContain('아파트 매매 실거래가 자료')
     expect(text).toContain('아파트 전월세 실거래가 자료')
     expect(text).toContain('연립다세대 매매·전월세 실거래가 자료')
     expect(text).toContain('오피스텔 매매·전월세 실거래가 자료')
+    expect(text).toContain('토지 매매 실거래가 자료')
   })
 })

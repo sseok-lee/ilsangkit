@@ -11,11 +11,13 @@ import wasteSchedulesRouter from './routes/wasteSchedules.js';
 import sitemapRouter from './routes/sitemap.js';
 import guidesRouter from './routes/guides.js';
 import realEstateRouter from './routes/realEstate.js';
+import landRouter from './routes/land.js';
 import areaRouter from './routes/area.js';
 import subscriptionRouter from './routes/subscription.js';
 import publicRentalRouter from './routes/publicRental.js';
 import transitRouter from './routes/transit.js';
 import subwayRouter from './routes/subway.js';
+import auctionRouter from './routes/auction.js';
 import facilityYoutubeRouter from './routes/facilityYoutube.js';
 import facilityNaverBlogRouter from './routes/facilityNaverBlog.js';
 import realEstateNaverBlogRouter from './routes/realEstateNaverBlog.js';
@@ -68,6 +70,7 @@ app.use('/api/meta', metaRouter);
 app.use('/api/waste-schedules', wasteSchedulesRouter);
 app.use('/api/sitemap', sitemapRouter);
 app.use('/api/guides', guidesRouter);
+app.use('/api/real-estate/land', landRouter);
 app.use('/api/real-estate', realEstateRouter);
 app.use('/api/real-estate', realEstateNaverBlogRouter);
 app.use('/api/area', areaRouter);
@@ -75,6 +78,7 @@ app.use('/api/subscription', subscriptionRouter);
 app.use('/api/public-rental', publicRentalRouter);
 app.use('/api/transit', transitRouter);
 app.use('/api/subway', subwayRouter);
+app.use('/api/auction', auctionRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
