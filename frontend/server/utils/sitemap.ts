@@ -288,6 +288,24 @@ export async function fetchLandSitemap(): Promise<LandSitemapData> {
   }
 }
 
+export interface AuctionSitemapData {
+  regions: Array<{ city: string; district: string; bjdCode: string; usageGroup: string; isIndexable?: boolean }>
+  items: string[]
+}
+
+export async function fetchAuctionSitemap(): Promise<AuctionSitemapData> {
+  try {
+    const json = await ssrFetch<{ data?: AuctionSitemapData }>(
+      '/api/auction/sitemap',
+      { timeoutMs: 25_000 },
+    )
+    return json.data ?? { regions: [], items: [] }
+  } catch (err) {
+    console.error('[sitemap] fetchAuctionSitemap failed', err)
+    return { regions: [], items: [] }
+  }
+}
+
 export async function fetchSubscriptionIds(): Promise<{ id: number; updatedAt: string }[]> {
   const cacheKey = 'subscriptions'
   const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)

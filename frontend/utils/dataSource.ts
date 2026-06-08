@@ -159,7 +159,13 @@ export const PUBLIC_RENTAL_DATA_SOURCE: DataSourceInfo = {
   // kogl: TBD — LH/SH 공공누리 유형 확인 후 채워주세요
 }
 
-export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'public-rental'
+export const AUCTION_DATA_SOURCE: DataSourceInfo = {
+  datasetName: '차세대 온비드 부동산 물건목록 조회서비스',
+  provider: '한국자산관리공사',
+  url: 'https://www.data.go.kr/data/15157207/openapi.do',
+}
+
+export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'public-rental' | 'auction'
 
 export function resolveDataSource(input: {
   domain: DataSourceDomain
@@ -174,6 +180,8 @@ export function resolveDataSource(input: {
       return SUBSCRIPTION_DATA_SOURCE
     case 'public-rental':
       return PUBLIC_RENTAL_DATA_SOURCE
+    case 'auction':
+      return AUCTION_DATA_SOURCE
     default:
       return null
   }

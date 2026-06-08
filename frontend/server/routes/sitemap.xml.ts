@@ -13,6 +13,7 @@ import {
   fetchSubwaySlugs,
   getWeekStartDate,
   fetchLandSitemap,
+  fetchAuctionSitemap,
 } from '../utils/sitemap'
 import {
   SITEMAP_FACILITY_CATEGORIES,
@@ -178,6 +179,17 @@ export default defineEventHandler(async (event) => {
     }
   } catch (err) {
     console.error('[sitemap] subway index entry build failed:', err)
+  }
+
+  // 공매(온비드) — 색인 가능 항목이 있을 때만 추가
+  try {
+    const auctionData = await fetchAuctionSitemap()
+    const hasAuctionUrls = auctionData.regions.some((r) => r.isIndexable) || auctionData.items.length > 0
+    if (hasAuctionUrls) {
+      sitemaps.push({ loc: `${SITE_URL}/sitemap/auction.xml`, lastmod: weekStart })
+    }
+  } catch (err) {
+    console.error('[sitemap] auction index entry build failed:', err)
   }
 
   return generateSitemapIndexXml(sitemaps)
