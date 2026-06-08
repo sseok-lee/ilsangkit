@@ -2,8 +2,6 @@
 import { prisma } from '../lib/prisma.js';
 // ⚠️ buildRegionFilter는 src/services/cityMapping.ts에 있음 (landService.ts:2와 동일 — '../lib/' 아님!)
 import { buildRegionFilter } from './cityMapping.js';
-import { search as facilitySearch } from './facilityService.js';
-import { findNearbyStations } from './subwayService.js';
 
 const PYEONG_PER_SQM = 3.305;
 
@@ -122,75 +120,18 @@ export async function getItems(p: ItemsParams) {
   return { items: rows.map(serializeRow), total, page: p.page, totalPages: Math.ceil(total / p.limit) };
 }
 
-export interface NearbyFacility {
-  category: string;       // 'subway' | 'hospital' | ...
-  categoryLabel: string;  // '지하철역' | '병원' | ...
-  name: string;
-  distance: number;       // m
-}
-
-const NEARBY_RADIUS_M = 1000;
-const NEARBY_PER_CATEGORY = 3;
-// 표시 순서 고정. subway는 별도 데이터셋(findNearbyStations).
-const NEARBY_FACILITY_CATS: Array<{ category: 'hospital' | 'pharmacy' | 'school' | 'childcare' | 'park'; label: string }> = [
-  { category: 'hospital', label: '병원' },
-  { category: 'pharmacy', label: '약국' },
-  { category: 'school', label: '학교' },
-  { category: 'childcare', label: '어린이집' },
-  { category: 'park', label: '공원' },
-];
-
-/** 물건 좌표 기준 반경 1km 주변 편의시설(카테고리별 최근접 3개). 좌표 없으면 []. */
-export async function computeNearbyFacilities(
-  lat: number | null,
-  lng: number | null,
-): Promise<NearbyFacility[]> {
-  if (lat == null || lng == null) return [];
-  const result: NearbyFacility[] = [];
-
-  // 지하철역(별도 데이터셋)
-  try {
-    const stations = await findNearbyStations(lat, lng, NEARBY_RADIUS_M, NEARBY_PER_CATEGORY);
-    for (const s of stations) {
-      result.push({ category: 'subway', categoryLabel: '지하철역', name: s.name, distance: s.distance });
-    }
-  } catch { /* 한 소스 실패는 무시 */ }
-
-  // 시설 카테고리(병렬)
-  const facilityResults = await Promise.all(
-    NEARBY_FACILITY_CATS.map(async ({ category, label }) => {
-      try {
-        const res = await facilitySearch({
-          category, lat, lng, radius: NEARBY_RADIUS_M,
-          page: 1, limit: NEARBY_PER_CATEGORY, grouped: false, sort: 'name', departments: undefined,
-        });
-        return res.items
-          .filter((it) => it.distance != null)
-          .slice(0, NEARBY_PER_CATEGORY)
-          .map((it): NearbyFacility => ({ category, categoryLabel: label, name: it.name, distance: it.distance as number }));
-      } catch {
-        return [] as NearbyFacility[];
-      }
-    }),
-  );
-  for (const items of facilityResults) result.push(...items);
-  return result;
-}
-
 export async function getItemDetail(cltrMngNo: string) {
   const item = await prisma.auctionItem.findUnique({ where: { cltrMngNo } });
   if (!item) return null;
-  const itemLat = item.lat != null ? Number(item.lat) : null;
-  const itemLng = item.lng != null ? Number(item.lng) : null;
-  const [nearby, marketCompare, nearbyFacilities] = await Promise.all([
+  // 주변 생활시설은 프론트 NearbyFacilities 컴포넌트가 좌표로 직접 조회(부동산 상세와 동일).
+  const [nearby, marketCompare] = await Promise.all([
     prisma.auctionItem.findMany({
       where: { bjdCode: item.bjdCode, usageGroup: item.usageGroup, cltrMngNo: { not: cltrMngNo }, isClosed: false },
       orderBy: { bidCloseDtm: 'asc' }, take: 6,
     }),
     computeMarketCompare(item),
-    computeNearbyFacilities(itemLat, itemLng),
   ]);
-  return { item: serializeRow(item), nearby: nearby.map(serializeRow), marketCompare, nearbyFacilities };
+  return { item: serializeRow(item), nearby: nearby.map(serializeRow), marketCompare };
 }
 
 export interface RegionDetailParams { bjdCode: string; }

@@ -13,7 +13,7 @@ import AuctionDetailInfo from '~/components/auction/AuctionDetailInfo.vue'
 import AuctionMap from '~/components/auction/AuctionMap.vue'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
 import AuctionPriceCompare from '~/components/auction/AuctionPriceCompare.vue'
-import AuctionNearbyFacilities from '~/components/auction/AuctionNearbyFacilities.vue'
+import NearbyFacilities from '~/components/realEstate/NearbyFacilities.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -40,7 +40,6 @@ if (import.meta.server || !data.value) {
 
 const item = computed(() => data.value!.item)
 const nearby = computed(() => data.value!.nearby)
-const nearbyFacilities = computed(() => data.value!.nearbyFacilities ?? [])
 const marketCompare = computed(() => data.value!.marketCompare ?? null)
 // land: apslAssAmtForCompare(원/평)가 있으면 그 값을 컴포넌트에 주입해 단위 일치
 const compareApslAmt = computed(() =>
@@ -124,8 +123,14 @@ setBreadcrumbSchema(
           <div class="grid gap-2 sm:grid-cols-2"><AuctionCard v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
         </SectionBlock>
 
-        <!-- 주변 편의시설 (같은 지역 물건 아래) -->
-        <AuctionNearbyFacilities :facilities="nearbyFacilities" />
+        <!-- 주변 생활시설 (같은 지역 물건 아래) — 부동산 상세와 동일 컴포넌트 -->
+        <SectionBlock
+          v-if="item.lat != null && item.lng != null"
+          heading="주변 생활시설"
+          subtext="부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다."
+        >
+          <NearbyFacilities :lat="item.lat" :lng="item.lng" />
+        </SectionBlock>
       </div>
 
       <!-- FAQ -->
