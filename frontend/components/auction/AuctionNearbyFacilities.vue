@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NearbyFacility } from '~/types/auction'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const props = defineProps<{ facilities: NearbyFacility[] }>()
 
@@ -22,9 +23,7 @@ function fmtDist(m: number): string {
 }
 </script>
 <template>
-  <div v-if="facilities.length" class="bg-white rounded-xl border border-line p-4 shadow-card">
-    <h3 class="text-sm font-semibold text-slate-900 mb-1">주변 생활 인프라</h3>
-    <p class="text-caption text-slate-400 mb-3">반경 1km 이내 · 가까운 순</p>
+  <SectionBlock v-if="facilities.length" heading="주변 생활 인프라" subtext="반경 1km 이내 · 가까운 순">
     <div class="flex flex-col gap-3">
       <div v-for="g in groups" :key="g.label">
         <p class="text-caption font-medium text-slate-500 mb-1">{{ g.label }}</p>
@@ -36,5 +35,5 @@ function fmtDist(m: number): string {
         </ul>
       </div>
     </div>
-  </div>
+  </SectionBlock>
 </template>

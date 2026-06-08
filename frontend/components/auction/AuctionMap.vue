@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useKakaoMap } from '~/composables/useKakaoMap'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 const props = defineProps<{ lat: number; lng: number; address?: string }>()
 const mapEl = ref<HTMLElement | null>(null)
 const roadviewEl = ref<HTMLElement | null>(null)
@@ -19,8 +20,7 @@ onMounted(async () => {
 })
 </script>
 <template>
-  <div data-testid="auction-map" class="bg-white rounded-xl border border-line p-4 shadow-card">
-    <h3 class="text-sm font-semibold text-slate-900 mb-2">위치</h3>
+  <SectionBlock data-testid="auction-map" heading="위치">
     <!-- 지도 + 로드뷰 반반(데스크톱), 모바일 세로 적층. 로드뷰 없으면 자리는 유지하고 안내 표시 -->
     <div class="grid gap-3 md:grid-cols-2">
       <div>
@@ -39,5 +39,5 @@ onMounted(async () => {
       </div>
     </div>
     <p v-if="address" class="mt-2 text-caption text-slate-500">{{ address }}</p>
-  </div>
+  </SectionBlock>
 </template>

@@ -1,12 +1,12 @@
 <!-- frontend/components/auction/AuctionBidHistory.vue -->
 <script setup lang="ts">
 import type { AuctionItem } from '~/types/auction'
-import { formatWon, formatWonKorean, formatBidRate, statusLabel } from '~/types/auction'
+import { formatWonKorean, formatBidRate, statusLabel } from '~/types/auction'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 defineProps<{ item: AuctionItem }>()
 </script>
 <template>
-  <div class="bg-white rounded-xl border border-line p-4 shadow-card">
-    <h3 class="text-sm font-semibold text-slate-900 mb-3">입찰 정보</h3>
+  <SectionBlock heading="입찰 정보">
     <dl class="grid grid-cols-2 gap-y-2 text-sm">
       <dt class="text-slate-500">감정가</dt><dd class="text-right font-medium">{{ formatWonKorean(item.apslAssAmt) }}</dd>
       <dt class="text-slate-500">최저입찰가</dt><dd class="text-right font-medium">{{ formatWonKorean(item.minBidPrc) }}</dd>
@@ -18,5 +18,5 @@ defineProps<{ item: AuctionItem }>()
       <dt class="text-slate-500">처분방식</dt><dd class="text-right">{{ item.dpslMtdNm ?? '-' }}</dd>
       <dt class="text-slate-500">상태</dt><dd class="text-right">{{ statusLabel(item.status) }}</dd>
     </dl>
-  </div>
+  </SectionBlock>
 </template>

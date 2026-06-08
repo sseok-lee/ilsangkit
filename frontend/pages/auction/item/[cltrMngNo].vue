@@ -120,10 +120,9 @@ setBreadcrumbSchema(
         />
         <AuctionMap v-if="item.lat != null && item.lng != null" :lat="item.lat" :lng="item.lng" :address="item.address" />
 
-        <div v-if="nearby.length" class="bg-white rounded-xl border border-line p-4 shadow-card">
-          <h3 class="text-sm font-semibold text-slate-900 mb-3">같은 지역 공매 물건</h3>
+        <SectionBlock v-if="nearby.length" heading="같은 지역 공매 물건">
           <div class="grid gap-2 sm:grid-cols-2"><AuctionCard v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
-        </div>
+        </SectionBlock>
 
         <!-- 주변 편의시설 (같은 지역 물건 아래) -->
         <AuctionNearbyFacilities :facilities="nearbyFacilities" />

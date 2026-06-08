@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import type { AuctionItem } from '~/types/auction'
 import { formatWonKorean, formatArea, statusLabel } from '~/types/auction'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const props = defineProps<{ item: AuctionItem }>()
 
@@ -56,37 +57,34 @@ const dealRows = computed<Row[]>(() =>
     </div>
 
     <!-- 공매 기본정보 -->
-    <section class="bg-white rounded-xl border border-line shadow-card overflow-hidden">
-      <h3 class="text-sm font-semibold text-slate-900 px-4 py-3 border-b border-line">공매 기본정보</h3>
-      <dl class="divide-y divide-line">
-        <div v-for="r in basicRows" :key="r.label" class="flex px-4 py-2.5 text-sm">
+    <SectionBlock heading="공매 기본정보">
+      <dl class="divide-y divide-line -my-1">
+        <div v-for="r in basicRows" :key="r.label" class="flex py-2.5 text-sm">
           <dt class="w-28 shrink-0 text-slate-500">{{ r.label }}</dt>
           <dd class="text-slate-900 font-medium break-all">{{ r.value }}</dd>
         </div>
       </dl>
-    </section>
+    </SectionBlock>
 
     <!-- 면적 정보 -->
-    <section v-if="areaRows.length" class="bg-white rounded-xl border border-line shadow-card overflow-hidden">
-      <h3 class="text-sm font-semibold text-slate-900 px-4 py-3 border-b border-line">면적 정보</h3>
-      <dl class="divide-y divide-line">
-        <div v-for="r in areaRows" :key="r.label" class="flex px-4 py-2.5 text-sm">
+    <SectionBlock v-if="areaRows.length" heading="면적 정보">
+      <dl class="divide-y divide-line -my-1">
+        <div v-for="r in areaRows" :key="r.label" class="flex py-2.5 text-sm">
           <dt class="w-28 shrink-0 text-slate-500">{{ r.label }}</dt>
           <dd class="text-slate-900 font-medium">{{ r.value }}</dd>
         </div>
       </dl>
-    </section>
+    </SectionBlock>
 
     <!-- 거래 조건 -->
-    <section v-if="dealRows.length" class="bg-white rounded-xl border border-line shadow-card overflow-hidden">
-      <h3 class="text-sm font-semibold text-slate-900 px-4 py-3 border-b border-line">거래 조건</h3>
-      <dl class="divide-y divide-line">
-        <div v-for="r in dealRows" :key="r.label" class="flex px-4 py-2.5 text-sm">
+    <SectionBlock v-if="dealRows.length" heading="거래 조건">
+      <dl class="divide-y divide-line -my-1">
+        <div v-for="r in dealRows" :key="r.label" class="flex py-2.5 text-sm">
           <dt class="w-28 shrink-0 text-slate-500">{{ r.label }}</dt>
           <dd class="text-slate-900 font-medium">{{ r.value }}</dd>
         </div>
       </dl>
-    </section>
+    </SectionBlock>
 
     <p class="text-caption text-slate-400 leading-relaxed">
       ⚠️ 공매 물건은 공부상 면적과 실제 면적이 다를 수 있으므로 입찰 전 현장 확인을 권장합니다.
