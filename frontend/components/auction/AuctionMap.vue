@@ -22,7 +22,7 @@ onMounted(async () => {
 <template>
   <SectionBlock data-testid="auction-map" heading="위치">
     <!-- 지도 + 로드뷰 반반(데스크톱), 모바일 세로 적층. 로드뷰 없으면 자리는 유지하고 안내 표시 -->
-    <div class="grid gap-3 md:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       <div>
         <p class="text-caption text-slate-500 mb-1">🗺️ 지도</p>
         <div ref="mapEl" class="w-full h-64 rounded-lg overflow-hidden bg-slate-100" />

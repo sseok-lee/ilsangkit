@@ -108,7 +108,7 @@ setBreadcrumbSchema(
 
       <AdBanner />
 
-      <div class="mt-1 grid gap-4">
+      <div class="mt-1 grid grid-cols-1 gap-4">
         <AuctionBidHistory :item="item" />
         <AuctionDetailInfo :item="item" />
         <AuctionPriceCompare
@@ -120,7 +120,7 @@ setBreadcrumbSchema(
         <AuctionMap v-if="item.lat != null && item.lng != null" :lat="item.lat" :lng="item.lng" :address="item.address" />
 
         <SectionBlock v-if="nearby.length" heading="같은 지역 공매 물건">
-          <div class="grid gap-2 sm:grid-cols-2"><AuctionCard v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2"><AuctionCard v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
         </SectionBlock>
 
         <!-- 주변 생활시설 (같은 지역 물건 아래) — 부동산 상세와 동일 컴포넌트 -->
