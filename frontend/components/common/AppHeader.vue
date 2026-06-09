@@ -151,6 +151,9 @@
           </Transition>
         </div>
 
+        <!-- 통합 검색창 (메가메뉴와 유틸리티 링크 사이 자체 영역) -->
+        <HeaderSearch v-show="showHeaderSearch" class="w-48 lg:w-56" />
+
         <!-- Utility Links (우측 정렬 클러스터 내부) -->
         <div class="flex items-center gap-1">
           <div class="h-5 w-px bg-slate-200 mx-1"></div>
@@ -161,7 +164,6 @@
             <span class="material-symbols-outlined text-[18px]">menu_book</span>
             가이드
           </HardLink>
-          <HeaderSearch v-show="showHeaderSearch" class="w-48 lg:w-56" />
           <HardLink
             to="/about"
             class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
