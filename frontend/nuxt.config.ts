@@ -210,12 +210,6 @@ export default defineNuxtConfig({
         ...(gaId && process.env.NODE_ENV === 'production' ? [{
           innerHTML: `window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments)};window.gtag('js',new Date());window.gtag('config','${gaId}');(function(){var cb=function(){var s=document.createElement('script');s.src='https://www.googletagmanager.com/gtag/js?id=${gaId}';s.async=true;document.head.appendChild(s)};('requestIdleCallback' in window)?requestIdleCallback(cb):setTimeout(cb,1)})()`,
         }] : []),
-        // AdSense: async 유지 (수익 영향 방지)
-        {
-          src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2088264360250020',
-          async: true,
-          crossorigin: 'anonymous',
-        },
         // 폰트 CSS: head에서 JS로 비동기 삽입 (논블로킹 + 빠른 시작)
         {
           innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_drop_down,arrow_drop_up,arrow_forward,article,baby_changing_station,bar_chart,bolt,business,calendar_month,call,cancel,chat_bubble_outline,check,check_circle,checklist,checkroom,chevron_left,chevron_right,child_care,close,corporate_fare,delete,description,directions,domain,download,eco,edit_note,emergency,error,error_outline,ev_station,event_upcoming,expand_less,expand_more,explore,favorite,first_page,gavel,grid_view,groups,health_and_safety,help,holiday_village,home,house,info,key,landscape,last_page,lightbulb,local_fire_department,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_off,location_on,man,meeting_room,menu,menu_book,near_me,notifications_active,open_in_full,open_in_new,park,payments,person,place,play_circle,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,sell,share,sports,stars,storefront,subway,support_agent,trending_down,trending_up,verified,verified_user,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
