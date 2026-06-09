@@ -874,16 +874,13 @@ describe('searchAll', () => {
     expect(mockOffitelRentGroupBy).toHaveBeenCalledTimes(1);
   });
 
-  it('searches buildingName/dongName with contains (OR) for each model', async () => {
+  it('searches buildingName with startsWith for each model', async () => {
     await searchAll('래미안');
 
     expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          OR: expect.arrayContaining([
-            expect.objectContaining({ buildingName: expect.objectContaining({ contains: '래미안' }) }),
-            expect.objectContaining({ dongName: expect.objectContaining({ contains: '래미안' }) }),
-          ]),
+          buildingName: expect.objectContaining({ startsWith: '래미안' }),
         }),
       })
     );

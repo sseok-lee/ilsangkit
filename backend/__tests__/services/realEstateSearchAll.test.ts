@@ -74,20 +74,23 @@ describe('searchAll (파서 연동)', () => {
     expect(callArg.where).toHaveProperty('district', '강남구');
   });
 
-  it('이름 토큰이 OR buildingName/dongName contains로 전달됨', async () => {
+  it('이름 토큰이 buildingName startsWith로 전달됨', async () => {
     await searchAll('강남 래미안');
     const callArg = mockGroupBy.mock.calls[0][0];
-    expect(callArg.where.OR).toBeDefined();
-    const orClause = callArg.where.OR as Array<Record<string, unknown>>;
-    expect(orClause.some((c) => (c.buildingName as any)?.contains === '래미안')).toBe(true);
-    expect(orClause.some((c) => (c.dongName as any)?.contains === '래미안')).toBe(true);
+    expect(callArg.where.buildingName).toBeDefined();
+    expect((callArg.where.buildingName as any)?.startsWith).toBe('래미안');
   });
 
   it('명시적 city 파라미터가 파서보다 우선', async () => {
-    await searchAll('래미안', '부산광역시');
+    // 키워드에 부산 토큰이 있어도, 명시적 city='서울특별시'가 우선해야 함
+    await searchAll('부산 래미안', '서울특별시');
     const callArg = mockGroupBy.mock.calls[0][0];
-    // 부산 variants가 city 조건에 들어가 있어야 함
+    // buildRegionFilter가 서울 variants를 city.in으로 주입했어야 함
     const cityFilter = callArg.where.city;
     expect(cityFilter).toBeDefined();
+    const inArr: string[] = cityFilter?.in ?? [];
+    expect(inArr.some((v) => v === '서울특별시' || v === '서울')).toBe(true);
+    // 부산은 포함되어서는 안 됨
+    expect(inArr.some((v) => v.includes('부산'))).toBe(false);
   });
 });

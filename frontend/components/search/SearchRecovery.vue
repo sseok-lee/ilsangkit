@@ -11,16 +11,24 @@
         :key="chip.label + chip.category"
         :to="chipTo(chip)"
         class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/5 text-primary border border-primary/20 rounded-full text-xs font-medium hover:bg-primary hover:text-white transition-colors"
-      >{{ chip.label }}</NuxtLink>
+      >{{ chipLabel(chip) }}</NuxtLink>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { CITY_FULL_NAME_TO_SLUG, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
+import { CATEGORY_META } from '~/types/facility'
 import type { Recovery, RecoveryChip } from '~/composables/useFacilitySearch'
 
-defineProps<{ recovery: Recovery | null }>()
+const props = defineProps<{ recovery: Recovery | null }>()
+
+function chipLabel(chip: RecoveryChip): string {
+  if (props.recovery?.scope === 'category') {
+    return (CATEGORY_META as Record<string, { shortLabel?: string }>)[chip.category]?.shortLabel ?? chip.label
+  }
+  return chip.label
+}
 
 function chipTo(chip: RecoveryChip): string {
   if (chip.city && chip.district) {

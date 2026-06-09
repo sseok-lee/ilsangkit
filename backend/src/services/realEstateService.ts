@@ -734,11 +734,8 @@ export async function searchAll(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = { ...buildRegionFilter(effectiveCity, effectiveDistrict) };
-  if (nameText) {
-    where.OR = [
-      { buildingName: { contains: nameText } },
-      { dongName: { contains: nameText } },
-    ];
+  if (nameText && nameText.length >= 2) {
+    where.buildingName = { startsWith: nameText };
   }
 
   const results = await Promise.all(
@@ -751,11 +748,8 @@ export async function searchAll(
       // 건물 단위 groupBy: 중복 제거 + 건물별 거래건수 + 최신 거래 정보
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const summaryWhere: Record<string, any> = { type, ...buildRegionFilter(effectiveCity, effectiveDistrict) };
-      if (nameText) {
-        summaryWhere.OR = [
-          { buildingName: { contains: nameText } },
-          { dongName: { contains: nameText } },
-        ];
+      if (nameText && nameText.length >= 2) {
+        summaryWhere.buildingName = { startsWith: nameText };
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

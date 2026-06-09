@@ -19,6 +19,9 @@ export function parseSearchQuery(
   const result: ParsedQuery = { cityToken: null, districtToken: null, categoryToken: null, freeText: '', raw };
   if (!raw) return result;
 
+  // v1 한계(의도적): 토큰별 "first match wins". 카테고리 동의어("시장","공원")나
+  // 구 축약형("강남")과 같은 토큰은 지역/카테고리로 먼저 소비되어 freeText(건물명 매칭)에서 빠진다.
+  // 동음이의 건물명 매칭 보강은 Phase 2(자동완성) 과제. 공백 토큰화만 수행(세그멘테이션/오타교정 없음).
   const leftover: string[] = [];
   for (const token of raw.split(/\s+/)) {
     if (!result.cityToken && regionIndex.cityNames.has(token)) {
