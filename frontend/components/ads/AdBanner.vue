@@ -73,6 +73,7 @@ const route = useRoute()
 const container = ref<HTMLElement | null>(null)
 const isTimedOut = ref(false)
 let statusTimeoutId: ReturnType<typeof setTimeout> | null = null
+let statusObserver: MutationObserver | null = null
 
 // viewport gate: only prop 가 없으면 항상 노출, 있으면 매칭될 때만 노출.
 const matches = ref(false)
@@ -97,14 +98,51 @@ function clearStatusTimeout() {
   }
 }
 
-function watchStatusTimeout() {
+function disconnectStatusObserver() {
+  if (statusObserver) {
+    statusObserver.disconnect()
+    statusObserver = null
+  }
+}
+
+// AdSense 가 설정한 data-ad-status 는 terminal 상태다.
+// - filled        → (timeout 으로 미리 collapse 됐더라도) 다시 노출. 늦은 응답 회복.
+// - unfilled / unfill-optimized → CSS 가 collapse. 그대로 둔다.
+function handleStatus(status: string) {
+  if (status === 'filled') {
+    isTimedOut.value = false
+  }
+  clearStatusTimeout()
+  disconnectStatusObserver()
+}
+
+// status 가 4s 안에 안 잡히면 일단 collapse(빈 박스 방지)하되, observer 는 계속 살려둬
+// AdSense 가 4s 이후 늦게 filled 하면 handleStatus 에서 collapse 를 복구한다.
+function watchStatus() {
   // onMounted / route watch 는 클라이언트에서만 호출되므로 별도 가드 불필요.
   clearStatusTimeout()
+  disconnectStatusObserver()
   isTimedOut.value = false
+
+  const ins = container.value?.querySelector<HTMLElement>('ins.adsbygoogle')
+  if (!ins) return
+
+  // 이미 status 가 잡혀 있으면 즉시 처리.
+  if (ins.dataset.adStatus) {
+    handleStatus(ins.dataset.adStatus)
+    return
+  }
+
+  if (typeof MutationObserver !== 'undefined') {
+    statusObserver = new MutationObserver(() => {
+      const status = ins.dataset.adStatus
+      if (status) handleStatus(status)
+    })
+    statusObserver.observe(ins, { attributes: true, attributeFilter: ['data-ad-status'] })
+  }
+
   statusTimeoutId = setTimeout(() => {
     statusTimeoutId = null
-    const ins = container.value?.querySelector<HTMLElement>('ins.adsbygoogle')
-    if (!ins) return
     if (!ins.dataset.adStatus) {
       isTimedOut.value = true
     }
@@ -113,7 +151,7 @@ function watchStatusTimeout() {
 
 function refresh() {
   scheduleAdRequest()
-  watchStatusTimeout()
+  watchStatus()
 }
 
 onMounted(() => {
@@ -145,6 +183,7 @@ watch(() => route.path, async () => {
 onBeforeUnmount(() => {
   mq?.removeEventListener('change', applyMatches)
   clearStatusTimeout()
+  disconnectStatusObserver()
 })
 </script>
 

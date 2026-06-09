@@ -29,6 +29,8 @@ describe('AdBanner', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllGlobals()
+    delete (window as unknown as { adsbygoogle?: unknown }).adsbygoogle
   })
 
   it('persists the AdSense queue on window before pushing the manual slot request', () => {
@@ -99,6 +101,60 @@ describe('AdBanner', () => {
     await nextTick()
 
     expect(wrapper.classes()).not.toContain('ad-banner--timed-out')
+  })
+
+  it('타임아웃으로 collapse 된 뒤에도 AdSense 가 늦게 filled 하면 다시 노출한다 (recoverable collapse)', async () => {
+    const wrapper = mount(AdBanner, {
+      global: { stubs: { ClientOnly: clientOnlyStub } },
+    })
+    await flushAdMount()
+
+    // status 가 끝내 안 잡혀 4s timeout 으로 일단 collapse
+    vi.advanceTimersByTime(5000)
+    await nextTick()
+    expect(wrapper.classes()).toContain('ad-banner--timed-out')
+
+    // 4s 이후 AdSense 가 뒤늦게 filled → collapse 가 복구되어 다시 노출되어야 한다
+    wrapper.get('ins.adsbygoogle').element.setAttribute('data-ad-status', 'filled')
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    expect(wrapper.classes()).not.toContain('ad-banner--timed-out')
+  })
+
+  it('unfilled 가 늦게 와도 collapse 상태를 유지한다', async () => {
+    const wrapper = mount(AdBanner, {
+      global: { stubs: { ClientOnly: clientOnlyStub } },
+    })
+    await flushAdMount()
+    vi.advanceTimersByTime(5000)
+    await nextTick()
+    expect(wrapper.classes()).toContain('ad-banner--timed-out')
+
+    wrapper.get('ins.adsbygoogle').element.setAttribute('data-ad-status', 'unfilled')
+    await nextTick()
+    await nextTick()
+
+    // filled 가 아니므로 복구되지 않고 collapse 유지 (CSS 가 unfilled 도 collapse)
+    expect(wrapper.classes()).toContain('ad-banner--timed-out')
+  })
+
+  // 런타임 push 경로는 import.meta.client 게이트라 unit 환경(undefined)에서 실행되지 않으므로,
+  // 이 모듈의 기존 테스트(39-47행)와 동일하게 소스 구조로 재시도 메커니즘을 보증한다.
+  it('zero-width 컨테이너에서 push 를 포기하지 않고 ResizeObserver 로 재시도한다', () => {
+    const src = requestSource()
+    // 0폭이면 그냥 return 하지 않고 폭이 잡힐 때까지 재시도를 예약
+    expect(src).toMatch(/offsetWidth === 0[\s\S]*scheduleResizeRetry/)
+    expect(src).toContain('new ResizeObserver(')
+    // 폭이 생기면 pushAd 재시도
+    expect(src).toMatch(/offsetWidth > 0[\s\S]*pushAd\(generation\)/)
+    // 언마운트/세대 변경 시 observer 정리
+    expect(src).toContain('teardownResizeRetry')
+    expect(src).toContain('resizeObserver.disconnect()')
+    // 기존 lazy/지연 게이팅 회귀 금지
+    expect(src).not.toContain('IntersectionObserver')
+    expect(src).not.toContain('requestAnimationFrame')
   })
 
   it('keeps the default manual slot attributes configurable through props', () => {
