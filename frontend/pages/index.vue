@@ -237,9 +237,11 @@ import type { HomeDashboard } from '~/composables/useHomeDashboard'
 import { CITY_LINKS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
+import { useAnalytics } from '~/composables/useAnalytics'
 
 const config = useRuntimeConfig()
 const apiBase = useApiBase()
+const { trackSearch } = useAnalytics()
 // Image src URLs must use the public base (not loopback) so browsers can load them.
 // eslint-disable-next-line no-restricted-syntax
 const publicApiBase = config.public.apiBase
@@ -394,8 +396,10 @@ const quickFacilities: { id: string; label: string }[] = [
 ]
 
 function handleSearch() {
-  if (!searchKeyword.value) return
-  navigateTo(`/search?keyword=${encodeURIComponent(searchKeyword.value)}`)
+  const q = searchKeyword.value.trim()
+  if (!q) return
+  trackSearch({ keyword: q })
+  navigateTo(`/search?keyword=${encodeURIComponent(q)}`)
 }
 </script>
 
