@@ -110,6 +110,15 @@ vi.mock('../../src/lib/prisma.js', () => {
   };
 });
 
+// 파서 캐시가 DB(getRegionIndex)를 타지 않도록 region index를 모킹
+vi.mock('../../src/services/search/searchRegionIndex.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/search/searchRegionIndex.js');
+  return {
+    ...actual,
+    getRegionIndex: async () => actual.buildRegionIndex([{ city: '서울특별시', district: '강남구' }]),
+  };
+});
+
 import {
   searchTransactions,
   getTransactionStats,
@@ -865,13 +874,16 @@ describe('searchAll', () => {
     expect(mockOffitelRentGroupBy).toHaveBeenCalledTimes(1);
   });
 
-  it('searches buildingName with startsWith for each model', async () => {
+  it('searches buildingName/dongName with contains (OR) for each model', async () => {
     await searchAll('래미안');
 
     expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          buildingName: expect.objectContaining({ startsWith: '래미안' }),
+          OR: expect.arrayContaining([
+            expect.objectContaining({ buildingName: expect.objectContaining({ contains: '래미안' }) }),
+            expect.objectContaining({ dongName: expect.objectContaining({ contains: '래미안' }) }),
+          ]),
         }),
       })
     );
@@ -923,7 +935,9 @@ describe('searchAll', () => {
 
     expect(mockAptSaleGroupBy).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ city: '서울특별시' }),
+        where: expect.objectContaining({
+          city: expect.objectContaining({ in: expect.arrayContaining(['서울특별시', '서울']) }),
+        }),
       })
     );
   });
