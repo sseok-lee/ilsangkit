@@ -137,6 +137,14 @@ jobs:
 
             pm2 save
 
+            # 배포 스큐 방지: nginx proxy_cache 의 옛 HTML 을 제거한다.
+            # 캐시 키가 URL 기준($request_uri, 빌드ID 없음)이라 배포해도 자동 무효화되지 않으므로
+            # 명시 퍼지한다. 반드시 워밍업 루프 '앞'에 둔다 — 그래야 아래 워밍업 GET 이 stale HIT 대신
+            # 새 origin 을 타격해 새 HTML 로 캐시를 재선점한다 (배포 SSH 계정 root 라 권한 OK).
+            # 경로는 서버 nginx proxy_cache_path 와 일치해야 함 — 변경 시 함께 수정.
+            echo "[deploy] nginx proxy_cache 퍼지"
+            find /var/cache/nginx/ilsangkit -mindepth 1 -delete || true
+
             # 배포 직후 콜드 부트 5xx 차단 워밍업.
             # 1) backend /api/health 폴링으로 light ready 시점 감지 (최대 30초)
             # 2) backend /api/sitemap/page-counts 폴링으로 heavy ready 감지 (최대 60초)
