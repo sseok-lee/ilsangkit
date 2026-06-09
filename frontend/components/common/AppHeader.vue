@@ -33,6 +33,7 @@
         <div
           v-for="group in NAV_LINK_GROUPS"
           :key="group.title"
+          data-testid="nav-group"
           class="relative"
           @mouseenter="openDropdown(group.title)"
           @mouseleave="scheduleCloseDropdown"
@@ -95,6 +96,7 @@
 
         <!-- 생활시설: 시설 4개 그룹 통합 메가메뉴 -->
         <div
+          data-testid="nav-group"
           class="relative"
           @mouseenter="openDropdown('생활시설')"
           @mouseleave="scheduleCloseDropdown"

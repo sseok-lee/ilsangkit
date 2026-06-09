@@ -57,16 +57,16 @@ describe('AppHeader', () => {
       expect(text).toContain('생활시설')
     })
 
-    it('should have utility links for search and about', () => {
+    it('should have a search input and an about link', () => {
       const nav = wrapper.find('nav.hidden.md\\:flex')
-      const links = nav.findAll('a')
-      const hrefs = links.map((link) => link.attributes('href'))
-      expect(hrefs).toContain('/search')
+      // 검색은 이제 링크가 아니라 HeaderSearch 입력창
+      expect(wrapper.findComponent({ name: 'HeaderSearch' }).exists()).toBe(true)
+      const hrefs = nav.findAll('a').map((link) => link.attributes('href'))
       expect(hrefs).toContain('/about')
     })
 
     it('생활시설 메가메뉴는 4개 그룹 열과 시설 카테고리 링크를 보여준다', async () => {
-      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
+      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex [data-testid="nav-group"]')
       // 부동산=0, 청약·임대=1, 공매=2, 생활시설=3 (총 4개)
       expect(groupButtons.length).toBe(4)
 
@@ -89,7 +89,7 @@ describe('AppHeader', () => {
     })
 
     it('should show 4 real estate links including hub in navigation', async () => {
-      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
+      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex [data-testid="nav-group"]')
       // 부동산 그룹 (첫 번째, index 0)
       await groupButtons[0].trigger('mouseenter')
       const dropdown = groupButtons[0].find('.absolute')
@@ -103,7 +103,7 @@ describe('AppHeader', () => {
     })
 
     it('청약·임대 드롭다운에 청약홈/LH 섹션 구분이 있어야 한다', async () => {
-      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex .relative')
+      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex [data-testid="nav-group"]')
       // 청약·임대 그룹 (두 번째, index 1)
       await groupButtons[1].trigger('mouseenter')
       const dropdown = groupButtons[1].find('.absolute')
