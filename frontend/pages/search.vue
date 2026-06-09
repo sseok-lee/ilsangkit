@@ -194,6 +194,16 @@
         </div>
       </SectionBlock>
 
+      <!-- Partial-empty notice: one side has results, the other doesn't -->
+        <div
+          v-if="isMounted && searchKeyword && (groupedResults.length === 0) !== (realEstateResults.length === 0)"
+          class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 border border-line rounded-lg px-3 py-2 mb-3"
+        >
+          <span class="material-symbols-outlined text-[16px]">info</span>
+          <span v-if="groupedResults.length === 0">"{{ searchKeyword }}"에 맞는 <b class="mx-1">생활시설</b> 결과는 없어요. 부동산 결과를 보여드릴게요.</span>
+          <span v-else>"{{ searchKeyword }}"에 맞는 <b class="mx-1">부동산</b> 결과는 없어요. 생활시설 결과를 보여드릴게요.</span>
+        </div>
+
       <!-- Loading Skeleton -->
       <div v-if="loading" aria-live="polite" aria-busy="true">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -369,6 +379,7 @@
           :title="UI_MESSAGES.emptySearch"
           description="다른 검색어를 입력해보세요"
         >
+          <SearchRecovery v-if="recovery" :recovery="recovery" class="mb-6" />
           <div class="flex flex-wrap items-center justify-center gap-2 mb-6">
             <NuxtLink
               v-for="cat in ['toilet', 'hospital', 'parking', 'pharmacy']"
@@ -421,6 +432,7 @@ import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
+import SearchRecovery from '~/components/search/SearchRecovery.vue'
 import { CATEGORY_META, CATEGORY_GROUPS, isFacilityCategory } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import type { RealEstateType, ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
@@ -432,12 +444,12 @@ const route = useRoute()
 const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
 const { setSearchMeta } = useFacilityMeta()
 const { setItemListSchema } = useStructuredData()
-const { trackSearchResultsView } = useAnalytics()
+const { trackSearchResultsView, trackSearchNoResults } = useAnalytics()
 
 // Search State
 const {
   loading, facilities, total, currentPage, totalPages, error,
-  groupedResults, groupedTotalCount,
+  groupedResults, groupedTotalCount, recovery,
   search, searchGrouped, resetPage, setPage,
 } = useFacilitySearch()
 
@@ -869,6 +881,10 @@ watch(loading, (now, prev) => {
       resultCount: total.value || 0,
       category: selectedCategory.value || undefined,
     })
+    const totalAll = (total.value || 0) + (groupedTotalCount.value || 0) + realEstateResults.value.reduce((s, r) => s + r.count, 0)
+    if (totalAll === 0) {
+      trackSearchNoResults({ keyword: searchKeyword.value })
+    }
   }
 })
 
