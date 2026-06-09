@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
+import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
+import { buildRegionFilter } from './cityMapping.js';
 
 // ─────────────────────────────────────────────
 // Types
@@ -727,11 +729,14 @@ export async function searchAll(
   city?: string,
   district?: string
 ): Promise<SearchAllResult> {
+  const parsed = await parseSearchQueryCached(keyword);
+  const { effectiveCity, effectiveDistrict, nameText } = resolveScope({ city, district }, parsed);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = {};
-  if (keyword) where.buildingName = { startsWith: keyword };
-  if (city) where.city = city;
-  if (district) where.district = district;
+  const where: Record<string, any> = { ...buildRegionFilter(effectiveCity, effectiveDistrict) };
+  if (nameText && nameText.length >= 2) {
+    where.buildingName = { startsWith: nameText };
+  }
 
   const results = await Promise.all(
     ALL_TYPES.map(async (type) => {
@@ -742,10 +747,10 @@ export async function searchAll(
 
       // 건물 단위 groupBy: 중복 제거 + 건물별 거래건수 + 최신 거래 정보
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const summaryWhere: Record<string, any> = { type };
-      if (keyword) summaryWhere.buildingName = { startsWith: keyword };
-      if (city) summaryWhere.city = city;
-      if (district) summaryWhere.district = district;
+      const summaryWhere: Record<string, any> = { type, ...buildRegionFilter(effectiveCity, effectiveDistrict) };
+      if (nameText && nameText.length >= 2) {
+        summaryWhere.buildingName = { startsWith: nameText };
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const [grouped, buildingCount] = await Promise.all([
