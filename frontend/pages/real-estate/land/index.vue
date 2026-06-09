@@ -12,7 +12,7 @@
           <h2 class="text-display-3 text-slate-900">시·도별 토지 실거래가</h2>
         </template>
         <div v-if="hub && hub.cities.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          <NuxtLink
+          <HardLink
             v-for="city in hub.cities"
             :key="city.slug"
             :to="`/real-estate/land/${city.slug}`"
@@ -21,7 +21,7 @@
             <span class="text-display-3 text-slate-800">{{ city.city }}</span>
             <span class="text-caption text-slate-500">색인 동 {{ city.indexableDongCount.toLocaleString('ko-KR') }}개</span>
             <span class="text-caption text-slate-500">거래 {{ city.totalTransactions.toLocaleString('ko-KR') }}건</span>
-          </NuxtLink>
+          </HardLink>
         </div>
         <div v-else class="text-sm text-slate-500">지역 데이터를 불러오는 중입니다.</div>
       </SectionBlock>
@@ -66,6 +66,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useLand } from '~/composables/useLand'
 import { LAND_META, LAND_FAQ, buildLandRegionTitle } from '~/utils/landMeta'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import HardLink from '~/components/common/HardLink.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
