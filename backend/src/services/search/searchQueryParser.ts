@@ -46,3 +46,23 @@ export async function parseSearchQueryCached(keyword: string | undefined): Promi
   const index = await getRegionIndex();
   return parseSearchQuery(keyword, index, CATEGORY_SYNONYM_MAP);
 }
+
+export interface SearchScope {
+  effectiveCity?: string;
+  effectiveDistrict?: string;
+  nameText?: string;
+  parsed: ParsedQuery;
+}
+
+// 명시적 city/district 파라미터가 파서 토큰보다 우선. freeText만 이름 매칭에 사용.
+export function resolveScope(
+  params: { city?: string; district?: string },
+  parsed: ParsedQuery,
+): SearchScope {
+  return {
+    effectiveCity: params.city ?? parsed.cityToken ?? undefined,
+    effectiveDistrict: params.district ?? parsed.districtToken ?? undefined,
+    nameText: parsed.freeText || undefined,
+    parsed,
+  };
+}

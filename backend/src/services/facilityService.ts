@@ -33,6 +33,8 @@ import { CATEGORY_REGISTRY, ALL_CATEGORIES } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, buildRegionFilter } from './cityMapping.js';
 import { bufferViewCount } from './viewCountService.js';
 import { evChargerStationSearch } from './evChargerService.js';
+import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
+import { buildRecovery, type Recovery } from './search/searchRecovery.js';
 
 // 정렬 옵션 매핑
 const ORDER_BY_MAP: Record<string, Record<string, string>> = {
@@ -192,6 +194,8 @@ interface GroupedCategoryResult {
 interface GroupedSearchResult {
   categories: GroupedCategoryResult[];
   totalCount: number;
+  parsed: import('./search/searchQueryParser.js').ParsedQuery;
+  recovery: Recovery | null;
 }
 
 const CATEGORY_LABELS: Record<FacilityCategory, string> = {
@@ -293,9 +297,12 @@ export async function getNearbyFacilities(
 export async function searchGrouped(params: FacilitySearchInput): Promise<GroupedSearchResult> {
   const { keyword, city, district } = params;
 
+  const parsed = await parseSearchQueryCached(keyword);
+  const { effectiveCity, effectiveDistrict, nameText } = resolveScope({ city, district }, parsed);
+
   const where = {
-    ...buildKeywordFilter(keyword),
-    ...buildRegionFilter(city, district),
+    ...buildKeywordFilter(nameText),
+    ...buildRegionFilter(effectiveCity, effectiveDistrict),
   };
 
   // Phase 1: count만 먼저 — 14개 병렬
@@ -303,7 +310,7 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
     ALL_CATEGORIES.map(async (cat) => {
       if (cat === 'ev-charger') {
         const stationResult = await evChargerStationSearch({
-          keyword, city, district, page: 1, limit: 3,
+          keyword: nameText, city: effectiveCity, district: effectiveDistrict, page: 1, limit: 3,
         });
         return { category: cat, count: stationResult.total, items: stationResult.items };
       }
@@ -344,12 +351,12 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
   // trash(WasteSchedule) 별도 조회 — 좌표 없는 일정 데이터이므로 ALL_CATEGORIES와 분리
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const trashWhere: any = {
-    ...buildRegionFilter(city, district),
+    ...buildRegionFilter(effectiveCity, effectiveDistrict),
   };
-  if (keyword) {
+  if (nameText) {
     trashWhere.OR = [
-      { targetRegion: { contains: keyword } },
-      { emissionPlace: { contains: keyword } },
+      { targetRegion: { contains: nameText } },
+      { emissionPlace: { contains: nameText } },
     ];
   }
   const [trashCount, trashRecords] = await Promise.all([
@@ -366,8 +373,9 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
   }
 
   const totalCount = categories.reduce((sum, r) => sum + r.count, 0);
+  const recovery = totalCount === 0 ? buildRecovery(parsed) : null;
 
-  return { categories, totalCount };
+  return { categories, totalCount, parsed, recovery };
 }
 
 /**
