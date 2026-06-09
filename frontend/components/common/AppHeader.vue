@@ -159,13 +159,7 @@
             <span class="material-symbols-outlined text-[18px]">menu_book</span>
             가이드
           </HardLink>
-          <HardLink
-            to="/search"
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            <span class="material-symbols-outlined text-[18px]">search</span>
-            검색
-          </HardLink>
+          <HeaderSearch v-show="showHeaderSearch" class="w-48 lg:w-56" />
           <HardLink
             to="/about"
             class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
@@ -307,10 +301,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { CATEGORY_META, NAV_LINK_GROUPS, CATEGORY_GROUPS } from '~/types/facility'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
+import HeaderSearch from '~/components/common/HeaderSearch.vue'
 
 interface Props {
   transparent?: boolean
@@ -331,6 +326,14 @@ const activeDropdown = ref<string | null>(null)
 const mobileMenuRef = ref<HTMLElement | null>(null)
 const mobileMenuTriggerRef = ref<HTMLElement | null>(null)
 let dropdownTimer: ReturnType<typeof setTimeout> | null = null
+
+const route = useRoute()
+const heroOut = ref(false) // 메인에서 히어로가 화면 밖으로 나갔는지
+
+// 메인이 아니면 항상 표시, 메인이면 heroOut일 때만 표시
+const showHeaderSearch = computed(() => route.path !== '/' || heroOut.value)
+
+let headerScrollHandler: (() => void) | null = null
 
 const toggleMobileMenu = (event?: Event) => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
@@ -429,11 +432,18 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
+  if (!import.meta.client) return
+  if (route.path === '/') {
+    headerScrollHandler = () => { heroOut.value = window.scrollY > 360 }
+    window.addEventListener('scroll', headerScrollHandler, { passive: true })
+    headerScrollHandler()
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
   cancelCloseDropdown()
+  if (headerScrollHandler) window.removeEventListener('scroll', headerScrollHandler)
 })
 </script>
 
