@@ -15,7 +15,7 @@
         </template>
 
         <div v-if="sortedDongs.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          <NuxtLink
+          <HardLink
             v-for="dong in sortedDongs"
             :key="dong.bjdCode"
             :to="`/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong.dongName)}`"
@@ -33,7 +33,7 @@
             <span v-else class="text-caption text-slate-400">대지 거래 없음</span>
             <span class="text-caption text-slate-500">거래 {{ dong.transactionCount.toLocaleString('ko-KR') }}건</span>
             <span class="text-caption text-slate-500">대지 {{ dong.daeCount.toLocaleString('ko-KR') }}건</span>
-          </NuxtLink>
+          </HardLink>
         </div>
 
         <div v-else class="rounded-xl bg-slate-50 p-12 text-center">
@@ -62,6 +62,7 @@ import { buildLandRegionTitle, buildLandRegionDescription } from '~/utils/landMe
 import { pyeongToSqm, formatManwon } from '~/types/land'
 import type { LandRegionSummary } from '~/types/land'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import HardLink from '~/components/common/HardLink.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'

@@ -15,7 +15,7 @@
         </template>
 
         <div v-if="districtCards.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          <NuxtLink
+          <HardLink
             v-for="card in districtCards"
             :key="card.district"
             :to="`/real-estate/land/${citySlug}/${card.districtSlug}`"
@@ -27,7 +27,7 @@
             <span v-if="card.avgPricePerPyeong != null" class="text-caption text-slate-500">
               평당 {{ formatManwon(card.avgPricePerPyeong) }}만원
             </span>
-          </NuxtLink>
+          </HardLink>
         </div>
 
         <div v-else class="rounded-xl bg-slate-50 p-12 text-center">
@@ -56,6 +56,7 @@ import { buildLandRegionTitle, buildLandRegionDescription } from '~/utils/landMe
 import { formatManwon } from '~/types/land'
 import type { LandRegionSummary } from '~/types/land'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import HardLink from '~/components/common/HardLink.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
