@@ -432,6 +432,7 @@ import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
+import { useSearchSuggest } from '~/composables/useSearchSuggest'
 import SearchRecovery from '~/components/search/SearchRecovery.vue'
 import { CATEGORY_META, CATEGORY_GROUPS, isFacilityCategory } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
@@ -445,6 +446,7 @@ const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
 const { setSearchMeta } = useFacilityMeta()
 const { setItemListSchema } = useStructuredData()
 const { trackSearchResultsView, trackSearchNoResults } = useAnalytics()
+const { logSearch } = useSearchSuggest()
 
 // Search State
 const {
@@ -882,6 +884,13 @@ watch(loading, (now, prev) => {
       category: selectedCategory.value || undefined,
     })
     const totalAll = (total.value || 0) + (groupedTotalCount.value || 0) + realEstateResults.value.reduce((s, r) => s + r.count, 0)
+    logSearch({
+      keyword: searchKeyword.value,
+      resultCount: totalAll,
+      city: selectedCity.value || undefined,
+      district: selectedDistrict.value || undefined,
+      category: selectedCategory.value || undefined,
+    })
     if (totalAll === 0) {
       trackSearchNoResults({ keyword: searchKeyword.value })
     }
