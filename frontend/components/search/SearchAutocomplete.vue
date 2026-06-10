@@ -107,7 +107,11 @@ const { items, popular, recent, suggest, loadPopular, addRecent, removeRecent, c
   useSearchSuggest()
 const { trackSuggestSelect } = useAnalytics()
 
-const query = computed(() => props.modelValue.trim())
+// 한글 IME 조합 중에는 v-model(modelValue)이 한 음절 지연된다. 부모가 네이티브
+// input의 실시간 값을 setQuery로 넘기면 liveQuery가 즉시 갱신되어 지연을 보정한다.
+// 빈 문자열로 시작해, 아래 immediate watch가 초기 modelValue로 첫 suggest를 돌리게 한다.
+const liveQuery = ref('')
+const query = computed(() => liveQuery.value.trim())
 
 // ── Flat entries list for keyboard nav ──────────────────────────────────────
 
@@ -139,7 +143,12 @@ function popularEntryIndex(localIdx: number): number {
 watch(
   () => props.modelValue,
   (v) => {
-    suggest(v)
+    // 외부/프로그램적 변경(초기값, 클리어 등)만 반영. 타이핑 경로는 setQuery가
+    // 이미 liveQuery를 최신으로 만들어 두므로(커밋 시 v===liveQuery) 중복 호출이 없다.
+    if (v !== liveQuery.value) {
+      liveQuery.value = v
+      suggest(v)
+    }
     activeIndex.value = -1
   },
   { immediate: true },
@@ -191,7 +200,14 @@ function onKeydown(e: KeyboardEvent): boolean {
   return false
 }
 
-defineExpose({ onKeydown })
+// 부모가 네이티브 input의 실시간 값(IME 조합 중 포함)을 직접 전달하는 진입점.
+function setQuery(raw: string) {
+  liveQuery.value = raw
+  suggest(raw)
+  activeIndex.value = -1
+}
+
+defineExpose({ onKeydown, setQuery })
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

@@ -13,6 +13,7 @@
         placeholder="지역·단지명·시설 검색"
         @focus="focused = true"
         @blur="focused = false"
+        @input="(e) => acDesktopRef?.setQuery?.((e.target as HTMLInputElement).value)"
         @keydown="(e) => onInputKeydown(e, acDesktopRef)"
       />
     </div>
@@ -43,6 +44,7 @@
               aria-label="통합 검색"
               class="flex-1 bg-transparent text-sm focus:outline-none"
               placeholder="지역·단지명·시설 검색"
+              @input="(e) => acMobileRef?.setQuery?.((e.target as HTMLInputElement).value)"
               @keydown="(e) => onInputKeydown(e, acMobileRef)"
             />
           </div>

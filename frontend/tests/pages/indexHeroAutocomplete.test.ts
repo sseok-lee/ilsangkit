@@ -80,4 +80,23 @@ describe('메인 히어로 자동완성', () => {
     const ac = wrapper.findComponent({ name: 'SearchAutocomplete' });
     expect(ac.props('modelValue')).toBe('강남');
   });
+
+  it('IME 조합 중(v-model 미갱신)에도 실시간 입력이 자동완성에 전달된다', async () => {
+    const wrapper = await mountSuspended(IndexPage);
+    const input = wrapper.find('input[aria-label="단지명·동네·시설 검색"]');
+    await input.trigger('focus');
+    // 한글 조합 시작 → Vue v-model은 compositionend까지 모델 갱신을 보류한다
+    await input.trigger('compositionstart');
+    (input.element as HTMLInputElement).value = '강남';
+    await input.trigger('input');
+    await flushPromises();
+    await new Promise((r) => setTimeout(r, 250)); // suggest 디바운스
+    await flushPromises();
+
+    const ac = wrapper.findComponent({ name: 'SearchAutocomplete' });
+    // 조합 중이라 modelValue(v-model)는 아직 비어 있다
+    expect(ac.props('modelValue')).toBe('');
+    // 그러나 @input → setQuery 경로로 자동완성은 실시간 값 '강남'으로 동작한다
+    expect(wrapper.text()).toContain('"강남"');
+  });
 });
