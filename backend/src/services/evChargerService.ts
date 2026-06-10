@@ -132,9 +132,11 @@ export async function evChargerStationSearch(params: {
   const whereClause = conditions.join(' AND ');
   const offset = (page - 1) * limit;
 
+  // 서브쿼리 DISTINCT 형태 — COUNT(DISTINCT) 직접형은 옵티마이저가 [statId,...] 인덱스
+  // loose scan(99k행, ~0.5s)을 고집함. 이 형태가 [city, district, statId] index-only를 탐(~60ms).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const countResult: any[] = await prisma.$queryRawUnsafe(
-    `SELECT COUNT(DISTINCT statId) as cnt FROM EvCharger WHERE ${whereClause}`,
+    `SELECT COUNT(*) as cnt FROM (SELECT DISTINCT statId FROM EvCharger WHERE ${whereClause}) t`,
     ...values,
   );
   const total = Number(countResult[0]?.cnt || 0);

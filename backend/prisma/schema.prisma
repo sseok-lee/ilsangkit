@@ -637,6 +637,8 @@ model EvCharger {
   @@index([chgerType])
   @@index([statId])
   @@index([statId, city, district])
+  // 지역 필터 선두 → COUNT(DISTINCT statId) 인덱스-only (지역 검색 512ms → ms단위)
+  @@index([city, district, statId])
   @@index([viewCount])
   @@index([name])
   // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
