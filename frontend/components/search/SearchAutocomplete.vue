@@ -93,7 +93,7 @@
 import { computed, ref, watch } from 'vue'
 import { useSearchSuggest, type SuggestItem } from '~/composables/useSearchSuggest'
 import { useAnalytics } from '~/composables/useAnalytics'
-import { CITY_FULL_NAME_TO_SLUG, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
+import { CITY_FULL_NAME_TO_SLUG, CITY_SLUGS, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { toRealEstateUrl, isRealEstateUrlType } from '~/utils/realEstateUrl'
 
 const props = defineProps<{ open: boolean; modelValue: string }>()
@@ -191,6 +191,11 @@ defineExpose({ onKeydown })
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
+function citySlug(city: string | undefined): string {
+  if (!city) return ''
+  return CITY_FULL_NAME_TO_SLUG[city] || CITY_SLUGS[city] || ''
+}
+
 function icon(t: SuggestItem['type']): string {
   return t === 'region' ? 'location_on' : t === 'building' ? 'apartment' : 'category'
 }
@@ -208,11 +213,11 @@ function select(it: SuggestItem) {
   trackSuggestSelect({ keyword: it.label, suggestType: it.type })
   emit('close')
   if (it.type === 'region' && it.city) {
-    const c = CITY_FULL_NAME_TO_SLUG[it.city]
+    const c = citySlug(it.city)
     const d = it.district ? DISTRICT_SLUG_MAP[it.district] : ''
     navigateTo(d ? `/${c}/${d}` : `/${c}`)
   } else if (it.type === 'category' && it.category) {
-    const c = it.city ? CITY_FULL_NAME_TO_SLUG[it.city] : ''
+    const c = it.city ? citySlug(it.city) : ''
     const d = it.district ? DISTRICT_SLUG_MAP[it.district] : ''
     navigateTo(c && d ? `/${c}/${d}/${it.category}` : `/${it.category}`)
   } else if (

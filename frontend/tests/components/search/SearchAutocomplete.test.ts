@@ -34,4 +34,20 @@ describe('SearchAutocomplete', () => {
     await wrapper.find('[data-suggest-type="region"]').trigger('click');
     expect(navigateTo).toHaveBeenCalledWith('/seoul/gangnam');
   });
+
+  it('지역 추천 city가 축약명(서울)이어도 올바른 슬러그로 이동', async () => {
+    // 실제 suggest API는 region item을 축약 city명으로 반환한다
+    vi.mocked($fetch).mockImplementation(async (url: string) => {
+      if (url.includes('/popular')) return { success: true, data: { items: [] } };
+      return { success: true, data: { items: [
+        { type: 'region', label: '강남구', sublabel: '서울', city: '서울', district: '강남구' },
+      ] } };
+    });
+    const wrapper = mount(SearchAutocomplete, { props: { open: true, modelValue: '강남' } });
+    await flushPromises();
+    await new Promise((r) => setTimeout(r, 250));
+    await flushPromises();
+    await wrapper.find('[data-suggest-type="region"]').trigger('click');
+    expect(navigateTo).toHaveBeenCalledWith('/seoul/gangnam');
+  });
 });
