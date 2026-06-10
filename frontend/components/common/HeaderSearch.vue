@@ -11,8 +11,13 @@
         aria-label="통합 검색"
         class="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
         placeholder="지역·단지명·시설 검색"
+        @focus="focused = true"
+        @blur="focused = false"
         @keydown.enter="submit"
       />
+    </div>
+    <div v-if="variant === 'desktop'" class="hidden md:block absolute left-0 right-0 top-full z-50">
+      <SearchAutocomplete :open="focused" :model-value="keyword" @close="focused = false" />
     </div>
 
     <!-- 모바일 아이콘 + 전체화면 오버레이 -->
@@ -42,6 +47,7 @@
             />
           </div>
         </div>
+        <SearchAutocomplete :open="overlayOpen" :model-value="keyword" @close="overlayOpen = false" />
       </div>
     </template>
   </div>
@@ -50,6 +56,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { useAnalytics } from '~/composables/useAnalytics'
+import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
 
 withDefaults(defineProps<{ variant?: 'desktop' | 'mobile' }>(), {
   variant: 'desktop',
@@ -57,6 +64,7 @@ withDefaults(defineProps<{ variant?: 'desktop' | 'mobile' }>(), {
 
 const keyword = ref('')
 const overlayOpen = ref(false)
+const focused = ref(false)
 const overlayInput = ref<HTMLInputElement | null>(null)
 const { trackSearch } = useAnalytics()
 
