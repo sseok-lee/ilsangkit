@@ -47,7 +47,7 @@
 
     <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-20 md:pb-10 flex flex-col gap-3">
       <!-- Unified Breadcrumb + Share (모바일 badge는 PageHero eyebrow가 흡수) -->
-      <div class="flex items-center justify-between gap-2 order-0 md:order-0">
+      <div class="flex items-center justify-between gap-2 order-1 md:order-1">
         <Breadcrumb :items="breadcrumbItems" />
         <button
           class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
@@ -61,7 +61,7 @@
 
       <!-- Hero: 모바일 헤더 / 데스크톱 PageHero -->
       <MobileRealEstateHeader
-        class="order-1 md:order-1"
+        class="order-2 md:order-2"
         :title="buildingName"
         :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :stats="mobileHeaderStats"
@@ -71,7 +71,7 @@
         @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
       />
       <PageHero
-        class="hidden md:block order-1 md:order-1"
+        class="hidden md:block order-2 md:order-2"
         :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :title="buildingName"
         :description="fullAddress !== '-' ? fullAddress : undefined"
@@ -79,10 +79,10 @@
       />
 
       <!-- Ad: Hero 직후 (fold 하단) -->
-      <AdBanner class="order-2 md:order-2" />
+      <AdBanner class="order-3 md:order-3" />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
-      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" class="order-8 md:order-3" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
+      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" class="order-9 md:order-4" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
         <template #right>
           <div class="hidden md:flex items-center gap-1">
             <button
@@ -139,12 +139,12 @@
       </SectionBlock>
 
       <!-- Ad: 로드뷰 이후 -->
-      <AdBanner class="order-9 md:order-4" />
+      <AdBanner class="order-10 md:order-5" />
 
       <!-- "전·월세 거래 비중" 블록 (rent 전용) -->
       <SectionBlock
         v-if="currentTab === 'rent' && rentRatioTotal > 0"
-        class="order-7 md:order-5"
+        class="order-8 md:order-6"
         heading="전·월세 거래 비중"
         subtext="전체 거래의 전세·월세 구성입니다."
       >
@@ -152,7 +152,7 @@
       </SectionBlock>
 
       <!-- "시세 추이" 블록 -->
-      <SectionBlock class="order-3 md:order-6" :heading="getTrendSectionTitle(currentTab)" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
+      <SectionBlock class="order-4 md:order-7" :heading="getTrendSectionTitle(currentTab)" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
         <template #right>
           <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
             <button
@@ -253,10 +253,10 @@
       </SectionBlock>
 
       <!-- Ad: 시세 추이 ↔ 거래 내역 사이 -->
-      <AdBanner class="order-4 md:order-7" />
+      <AdBanner class="order-5 md:order-8" />
 
       <!-- "거래 내역" 블록 -->
-      <SectionBlock class="order-5 md:order-8" :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
+      <SectionBlock class="order-6 md:order-9" :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
         <div v-if="txLoading" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -282,12 +282,12 @@
       </SectionBlock>
 
       <!-- Ad: 거래내역 이후 (In-Article) -->
-      <AdBanner class="order-6 md:order-9" />
+      <AdBanner class="order-7 md:order-10" />
 
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
       <div
         v-if="nearbyByType.apt.length > 0 || nearbyByType.offitel.length > 0 || nearbyByType.villa.length > 0"
-        class="flex flex-col gap-3 order-10 md:order-10"
+        class="flex flex-col gap-3 order-12 md:order-12"
       >
         <SectionBlock
           v-if="nearbyByType.apt.length > 0"
@@ -357,7 +357,7 @@
       </div>
 
       <!-- Ad: 인근 단지 이후 -->
-      <AdBanner class="order-11 md:order-11" />
+      <AdBanner class="order-12 md:order-12" />
 
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
@@ -370,25 +370,25 @@
       </SectionBlock>
 
       <!-- Ad: 주변 생활시설 이후 -->
-      <AdBanner class="order-[13] md:order-[13]" />
+      <AdBanner class="order-12 md:order-12" />
 
       <!-- 네이버 블로그 후기 -->
       <BlogReviewSection
         v-if="buildingName"
-        class="order-[14] md:order-[14]"
+        class="order-12 md:order-12"
         kind="real-estate"
         :primary-key="(realEstateTypeParam as string)"
         :secondary-key="`${cityName}|${districtName}|${buildingName}`"
       />
 
       <!-- 관련 가이드 -->
-      <RelatedGuides class="order-[15] md:order-[15]" :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
+      <RelatedGuides class="order-12 md:order-12" :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
       <!-- 쿠팡 배너 -->
-      <CoupangBanner class="order-[16] md:order-[16]" />
+      <CoupangBanner class="order-12 md:order-12" />
 
       <!-- 데이터 출처 -->
-      <DataSourceSection class="order-[17] md:order-[17]" domain="real-estate" :last-sync-date="lastSyncDate" />
+      <DataSourceSection class="order-12 md:order-12" domain="real-estate" :last-sync-date="lastSyncDate" />
     </main>
     </template>
   </div>
