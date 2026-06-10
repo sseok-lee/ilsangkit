@@ -27,39 +27,6 @@
 
       <!-- Facility Detail -->
       <template v-else-if="facility">
-        <!-- Mobile: Map at top -->
-        <div class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
-          <ClientOnly>
-            <FacilityMap
-              :center="{ lat: facility.lat, lng: facility.lng }"
-              :facilities="[facility]"
-              :level="3"
-              class="w-full h-full !min-h-0 !rounded-none"
-            />
-          </ClientOnly>
-
-          <!-- Back Button & Name Overlay -->
-          <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-            <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="handleBack">
-              <span class="material-symbols-outlined text-slate-900">arrow_back</span>
-            </div>
-            <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-900 shadow-sm backdrop-blur-sm">{{ displayName }}</span>
-          </div>
-
-          <!-- Gradient Overlay at bottom -->
-          <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
-
-          <!-- Map expand button -->
-          <button
-            class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-            @click="isMapExpanded = true"
-          >
-            <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-            지도 크게 보기
-          </button>
-
-        </div>
-
         <!-- Fullscreen Map Overlay (Mobile) -->
         <Teleport to="body">
           <Transition
@@ -307,7 +274,7 @@
 definePageMeta({})
 
 import { computed, defineAsyncComponent, onMounted, ref, watch, watchEffect } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -331,7 +298,6 @@ import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
-const router = useRouter()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro, getFacilityDisplayName } from '~/composables/useFacilityMeta'
 const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema } = useStructuredData()
@@ -810,14 +776,6 @@ const aedWeeklyHours = computed(() => {
 
 
 // Actions
-const handleBack = () => {
-  if (window.history.length <= 1) {
-    navigateTo(`/${category.value}`)
-  } else {
-    router.back()
-  }
-}
-
 const handleShare = async () => {
   if (!facility.value) return
 
