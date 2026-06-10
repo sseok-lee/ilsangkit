@@ -31,7 +31,7 @@ async function main() {
     const rows = await prisma.$queryRawUnsafe<Array<Record<string, string>>>(
       `SHOW CREATE TABLE \`${t.table}\``,
     );
-    const ddl = Object.values(rows[0]).join(' ');
+    const ddl = Object.values(rows[0]).join('\n');
     const hasIndex = ddl.includes(`\`${t.index}\``);
     const hasNgram = hasIndex && new RegExp(`\`${t.index}\`[^\\n]*ngram`).test(ddl);
 
