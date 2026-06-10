@@ -51,6 +51,7 @@
                 class="flex-1 min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
                 placeholder="단지명, 지역, 시설 검색"
                 @keydown="onHeroKeydown"
+                @input="onHeroInput"
                 @focus="heroFocused = true"
                 @blur="heroFocused = false"
               />
@@ -411,6 +412,11 @@ function handleSearch() {
   if (!q) return
   trackSearch({ keyword: q })
   navigateTo(`/search?keyword=${encodeURIComponent(q)}`)
+}
+
+// IME 조합 중에도 실시간 입력값을 자동완성에 전달(v-model은 조합 종료까지 지연됨)
+function onHeroInput(e: Event) {
+  heroAcRef.value?.setQuery?.((e.target as HTMLInputElement).value)
 }
 
 function onHeroKeydown(e: KeyboardEvent) {

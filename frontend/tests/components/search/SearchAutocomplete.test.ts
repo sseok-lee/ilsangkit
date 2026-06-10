@@ -50,4 +50,29 @@ describe('SearchAutocomplete', () => {
     await wrapper.find('[data-suggest-type="region"]').trigger('click');
     expect(navigateTo).toHaveBeenCalledWith('/seoul/gangnam');
   });
+
+  // 한글 IME 조합 중에는 v-model(modelValue)이 마지막 커밋 음절까지만 갱신되어
+  // 한 음절 지연된다("강남" 입력 시 modelValue는 "강"). 부모가 네이티브 input의
+  // 실시간 값을 setQuery로 직접 넘기면 컴포넌트는 지연 없이 그 값으로 추천해야 한다.
+  it('setQuery로 넘긴 실시간 값이 modelValue보다 우선해 추천된다 (IME 지연 보정)', async () => {
+    const wrapper = mount(SearchAutocomplete, { props: { open: true, modelValue: '강' } });
+    await flushPromises();
+    await new Promise((r) => setTimeout(r, 250));
+    await flushPromises();
+    vi.mocked($fetch).mockClear();
+
+    // 부모 @input이 조합 중 실시간 값을 전달하는 상황
+    (wrapper.vm as unknown as { setQuery: (q: string) => void }).setQuery('강남');
+    await new Promise((r) => setTimeout(r, 250)); // 디바운스
+    await flushPromises();
+
+    // suggest는 modelValue('강')가 아니라 실시간 값('강남')으로 호출되어야 한다
+    const calls = vi.mocked($fetch).mock.calls.filter(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('/suggest'),
+    );
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.some((c) => (c[1] as { params?: { q?: string } })?.params?.q === '강남')).toBe(true);
+    // "그대로 검색" 행도 실시간 값을 표시
+    expect(wrapper.text()).toContain('"강남"');
+  });
 });
