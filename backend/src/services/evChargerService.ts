@@ -6,6 +6,7 @@
 import { prisma } from '../lib/prisma.js';
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, SHORT_TO_SLUG, FULL_TO_SLUG } from './cityMapping.js';
+import { canUseFulltext, toBooleanPhrase } from './search/fulltextKeyword.js';
 import { bufferViewCount } from './viewCountService.js';
 
 function toRad(deg: number): number {
@@ -78,8 +79,14 @@ export async function evChargerStationSearch(params: {
   const values: unknown[] = [];
 
   if (keyword) {
-    conditions.push('(name LIKE ? OR address LIKE ? OR roadAddress LIKE ?)');
-    values.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    if (canUseFulltext(keyword)) {
+      // ngram FULLTEXT 인덱스 사용 — LIKE '%x%' 풀스캔(44만 행) 대체
+      conditions.push('MATCH(name, address, roadAddress) AGAINST (? IN BOOLEAN MODE)');
+      values.push(toBooleanPhrase(keyword));
+    } else {
+      conditions.push('(name LIKE ? OR address LIKE ? OR roadAddress LIKE ?)');
+      values.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    }
   }
   if (city) {
     // city variants: short(서울) ↔ full(서울특별시) 모두 매칭

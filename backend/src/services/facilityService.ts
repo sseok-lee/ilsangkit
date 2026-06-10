@@ -31,7 +31,7 @@ export { evChargerStationSearch, getEvChargerStationDetail } from './evChargerSe
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CATEGORY_REGISTRY, ALL_CATEGORIES } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, buildRegionFilter, cityVariantList } from './cityMapping.js';
-import { FULLTEXT_TABLES, canUseFulltext, fulltextIds, fulltextCount } from './search/fulltextKeyword.js';
+import { FULLTEXT_TABLES, canUseFulltext, fulltextIds, fulltextCount, toBooleanPhrase } from './search/fulltextKeyword.js';
 import { bufferViewCount } from './viewCountService.js';
 import { evChargerStationSearch } from './evChargerService.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
@@ -381,10 +381,20 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
       ...buildRegionFilter(effectiveCity, effectiveDistrict),
     };
     if (nameText) {
-      trashWhere.OR = [
-        { targetRegion: { contains: nameText } },
-        { emissionPlace: { contains: nameText } },
-      ];
+      if (useFt) {
+        // FULLTEXT 경로: 컬럼이 달라(targetRegion/emissionPlace) 공용 헬퍼 대신 인라인 raw.
+        // LIMIT 500은 in-절 폭주 방지 안전캡 (region 필터는 trashWhere에서 결합).
+        const trashIds = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+          'SELECT id FROM `WasteSchedule` WHERE MATCH(targetRegion, emissionPlace) AGAINST (? IN BOOLEAN MODE) LIMIT 500',
+          toBooleanPhrase(nameText),
+        );
+        trashWhere.id = { in: trashIds.map((r) => Number(r.id)) };
+      } else {
+        trashWhere.OR = [
+          { targetRegion: { contains: nameText } },
+          { emissionPlace: { contains: nameText } },
+        ];
+      }
     }
     const [trashCount, trashRecords] = await Promise.all([
       prisma.wasteSchedule.count({ where: trashWhere }),

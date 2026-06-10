@@ -102,4 +102,23 @@ describe('searchGrouped (fulltext 경로)', () => {
     await searchGrouped({ keyword: '갸', grouped: true } as any);
     expect(mockFtCount).not.toHaveBeenCalled();
   });
+
+  it('trash 키워드 검색이 fulltext id 경로로 동작한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    // '서초동' — 지역/카테고리 토큰으로 소비되지 않는 freeText → trash 블록 진입
+    await searchGrouped({ keyword: '서초동', grouped: true } as any);
+    const matchCall = mockQueryRawUnsafe.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('MATCH(targetRegion, emissionPlace)'),
+    );
+    expect(matchCall).toBeTruthy();
+    expect(matchCall![1]).toBe('"서초동"'); // toBooleanPhrase 구문 검색
+  });
+
+  it('1자 freeText의 trash 검색은 기존 LIKE(contains) 경로를 유지한다', async () => {
+    await searchGrouped({ keyword: '갸', grouped: true } as any);
+    const matchCall = mockQueryRawUnsafe.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('MATCH(targetRegion'),
+    );
+    expect(matchCall).toBeUndefined();
+  });
 });
