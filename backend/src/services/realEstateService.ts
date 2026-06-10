@@ -740,52 +740,42 @@ export async function searchAll(
     return { categories: [] };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = { ...buildRegionFilter(effectiveCity, effectiveDistrict) };
-  if (nameText && nameText.length >= 2) {
-    where.buildingName = { startsWith: nameText };
-  }
-
   const results = await Promise.all(
     ALL_TYPES.map(async (type) => {
-      const model = getModel(type);
       const isSale = isSaleType(type);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const priceMax = isSale ? { dealAmount: true } : { deposit: true };
-
-      // 건물 단위 groupBy: 중복 제거 + 건물별 거래건수 + 최신 거래 정보
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const summaryWhere: Record<string, any> = { type, ...buildRegionFilter(effectiveCity, effectiveDistrict) };
-      if (nameText && nameText.length >= 2) {
+      if (hasName) {
         summaryWhere.buildingName = { startsWith: nameText };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [grouped, buildingCount] = await Promise.all([
-        (model as any).groupBy({
-          by: ['buildingName', 'bjdCode', 'city', 'district', 'dongName', 'buildYear'],
-          where,
-          _count: { id: true },
-          _max: { dealYear: true, dealMonth: true, ...priceMax },
-          orderBy: [{ _max: { dealYear: 'desc' } }, { _max: { dealMonth: 'desc' } }],
+      // 거래 원본 groupBy(수백만 행) 대신 사전집계 summary(인덱스 커버) 사용
+      const [rows, buildingCount] = await Promise.all([
+        prisma.realEstateBuildingSummary.findMany({
+          where: summaryWhere,
+          orderBy: { transactionCount: 'desc' },
           take: 3,
+          select: {
+            buildingName: true, bjdCode: true, city: true, district: true,
+            dongName: true, buildYear: true, latestDealYear: true,
+            latestDealMonth: true, latestPrice: true, transactionCount: true,
+          },
         }),
         prisma.realEstateBuildingSummary.count({ where: summaryWhere }),
       ]);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const items = grouped.map((g: any) => serializeRow({
-        buildingName: g.buildingName,
-        bjdCode: g.bjdCode,
-        city: g.city,
-        district: g.district,
-        dongName: g.dongName,
-        buildYear: g.buildYear,
-        dealYear: g._max.dealYear,
-        dealMonth: g._max.dealMonth,
-        dealAmount: isSale ? g._max.dealAmount : null,
-        deposit: !isSale ? g._max.deposit : null,
-        transactionCount: g._count.id,
+      const items = rows.map((r) => serializeRow({
+        buildingName: r.buildingName,
+        bjdCode: r.bjdCode,
+        city: r.city,
+        district: r.district,
+        dongName: r.dongName,
+        buildYear: r.buildYear,
+        dealYear: r.latestDealYear,
+        dealMonth: r.latestDealMonth,
+        dealAmount: isSale ? r.latestPrice : null,
+        deposit: !isSale ? r.latestPrice : null,
+        transactionCount: r.transactionCount,
       }));
 
       return { type, count: buildingCount, items };
