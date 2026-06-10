@@ -240,7 +240,7 @@
               <NuxtLink
                 v-for="item in reComplexItems"
                 :key="`${item.buildingName}-${item.bjdCode}`"
-                :to="`/real-estate/${selectedRealEstateType}/${encodeURIComponent(item.buildingName)}?bjdCode=${item.bjdCode}`"
+                :to="complexCardUrl(item)"
                 class="bg-white rounded-xl p-4 border border-slate-200 hover:border-primary/30 hover:shadow-sm transition-all"
               >
                 <div class="flex items-start gap-3">
@@ -426,6 +426,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { UI_MESSAGES } from '~/utils/uiMessages'
+import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
@@ -738,6 +739,18 @@ function selectCategory(category: FacilityCategory | null) {
   selectedRealEstateType.value = ''
   resetPage()
   performSearch()
+}
+
+// 단지 카드 링크 — 4-세그먼트 정식 URL.
+// 구 2-세그먼트(/real-estate/{propertyType}/{building})는 서버 리다이렉트만 있고
+// 클라이언트 내비게이션에선 404가 난다. 페이지드 목록은 항상 {propertyType}-sale 데이터.
+function complexCardUrl(item: { buildingName: string; city?: string; district?: string }): string {
+  return toRealEstateUrl({
+    type: `${selectedRealEstateType.value}-sale` as RealEstateUrlType,
+    city: item.city || '',
+    district: item.district || '',
+    buildingName: item.buildingName,
+  })
 }
 
 function selectRealEstateType(type: string) {
