@@ -30,7 +30,8 @@ export { evChargerStationSearch, getEvChargerStationDetail } from './evChargerSe
 // --- Local imports from sub-modules for internal use ---
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CATEGORY_REGISTRY, ALL_CATEGORIES } from './categoryRegistry.js';
-import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, buildRegionFilter } from './cityMapping.js';
+import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, buildRegionFilter, cityVariantList } from './cityMapping.js';
+import { FULLTEXT_TABLES, canUseFulltext, fulltextIds, fulltextCount, toBooleanPhrase } from './search/fulltextKeyword.js';
 import { bufferViewCount } from './viewCountService.js';
 import { evChargerStationSearch } from './evChargerService.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
@@ -305,14 +306,32 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
     ...buildRegionFilter(effectiveCity, effectiveDistrict),
   };
 
-  // Phase 1: count만 먼저 — 14개 병렬
+  // 파서가 카테고리를 특정하면("화장실"→toilet) 그 카테고리만 조회 — 나머지 13개 테이블 스킵.
+  // 토큰이 ALL_CATEGORIES 밖이면(예: 미래의 subway 동의어) 조용히 0건이 되지 않도록 전체 검색으로 폴백.
+  const categoryTokenStr = parsed.categoryToken as string | null;
+  const tokenInScope = !!categoryTokenStr && categoryTokenStr !== 'trash'
+    && (ALL_CATEGORIES as string[]).includes(categoryTokenStr);
+  const scopedCategories: FacilityCategory[] = tokenInScope
+    ? [categoryTokenStr as FacilityCategory]
+    : categoryTokenStr === 'trash' ? [] : ALL_CATEGORIES;
+  // categoryToken이 trash이거나, 스코프된 일반 카테고리가 아닐 때만 WasteSchedule 조회
+  const shouldSearchTrash = !tokenInScope;
+
+  const useFt = canUseFulltext(nameText);
+  const ftRegion = { cityVariants: cityVariantList(effectiveCity), district: effectiveDistrict };
+
+  // Phase 1: count만 먼저 — 병렬
   const countResults = await Promise.all(
-    ALL_CATEGORIES.map(async (cat) => {
+    scopedCategories.map(async (cat) => {
       if (cat === 'ev-charger') {
         const stationResult = await evChargerStationSearch({
           keyword: nameText, city: effectiveCity, district: effectiveDistrict, page: 1, limit: 3,
         });
         return { category: cat, count: stationResult.total, items: stationResult.items };
+      }
+      if (useFt && FULLTEXT_TABLES[cat]) {
+        const count = await fulltextCount(FULLTEXT_TABLES[cat], nameText!, ftRegion);
+        return { category: cat, count, items: null };
       }
       const model = CATEGORY_REGISTRY[cat].model();
       const count = await model.count({ where });
@@ -336,7 +355,13 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
         return { category: cr.category, label: CATEGORY_LABELS[cr.category], count: 0, items: [] };
       }
       const model = CATEGORY_REGISTRY[cr.category].model();
-      const records = await model.findMany({ where, take: 3, select: buildListSelect(cr.category) });
+      let records;
+      if (useFt && FULLTEXT_TABLES[cr.category]) {
+        const ids = await fulltextIds(FULLTEXT_TABLES[cr.category], nameText!, ftRegion, 3);
+        records = await model.findMany({ where: { id: { in: ids } }, select: buildListSelect(cr.category) });
+      } else {
+        records = await model.findMany({ where, take: 3, select: buildListSelect(cr.category) });
+      }
       return {
         category: cr.category,
         label: CATEGORY_LABELS[cr.category],
@@ -349,27 +374,40 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
   const categories = results.filter((r) => r.count > 0);
 
   // trash(WasteSchedule) 별도 조회 — 좌표 없는 일정 데이터이므로 ALL_CATEGORIES와 분리
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const trashWhere: any = {
-    ...buildRegionFilter(effectiveCity, effectiveDistrict),
-  };
-  if (nameText) {
-    trashWhere.OR = [
-      { targetRegion: { contains: nameText } },
-      { emissionPlace: { contains: nameText } },
-    ];
-  }
-  const [trashCount, trashRecords] = await Promise.all([
-    prisma.wasteSchedule.count({ where: trashWhere }),
-    prisma.wasteSchedule.findMany({ where: trashWhere, take: 3, orderBy: { targetRegion: 'asc' } }),
-  ]);
-  if (trashCount > 0) {
-    categories.push({
-      category: 'trash' as FacilityCategory,
-      label: '쓰레기배출',
-      count: trashCount,
-      items: trashRecords.map(mapWasteScheduleToFacilityItem),
-    });
+  // categoryToken이 trash이거나 미특정일 때만 조회
+  if (shouldSearchTrash) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const trashWhere: any = {
+      ...buildRegionFilter(effectiveCity, effectiveDistrict),
+    };
+    if (nameText) {
+      if (useFt) {
+        // FULLTEXT 경로: 컬럼이 달라(targetRegion/emissionPlace) 공용 헬퍼 대신 인라인 raw.
+        // LIMIT 500은 in-절 폭주 방지 안전캡 (region 필터는 trashWhere에서 결합).
+        const trashIds = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+          'SELECT id FROM `WasteSchedule` WHERE MATCH(targetRegion, emissionPlace) AGAINST (? IN BOOLEAN MODE) LIMIT 500',
+          toBooleanPhrase(nameText),
+        );
+        trashWhere.id = { in: trashIds.map((r) => Number(r.id)) };
+      } else {
+        trashWhere.OR = [
+          { targetRegion: { contains: nameText } },
+          { emissionPlace: { contains: nameText } },
+        ];
+      }
+    }
+    const [trashCount, trashRecords] = await Promise.all([
+      prisma.wasteSchedule.count({ where: trashWhere }),
+      prisma.wasteSchedule.findMany({ where: trashWhere, take: 3, orderBy: { targetRegion: 'asc' } }),
+    ]);
+    if (trashCount > 0) {
+      categories.push({
+        category: 'trash' as FacilityCategory,
+        label: '쓰레기배출',
+        count: trashCount,
+        items: trashRecords.map(mapWasteScheduleToFacilityItem),
+      });
+    }
   }
 
   const totalCount = categories.reduce((sum, r) => sum + r.count, 0);
@@ -514,6 +552,27 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
   const orderBy = ORDER_BY_MAP[sort] || ORDER_BY_MAP.name;
   if (category) {
     const model = CATEGORY_REGISTRY[category as FacilityCategory].model();
+    if (
+      canUseFulltext(keyword) && FULLTEXT_TABLES[category]
+      && !departments?.length && (!sort || sort === 'name')
+    ) {
+      // FULLTEXT 경로: 키워드 매칭 id를 인덱스로 추출 후 기존 select/매핑 재사용
+      const ftRegion = { cityVariants: cityVariantList(city), district };
+      const [ids, total] = await Promise.all([
+        fulltextIds(FULLTEXT_TABLES[category], keyword!, ftRegion, limit, skip),
+        fulltextCount(FULLTEXT_TABLES[category], keyword!, ftRegion),
+      ]);
+      const records = await model.findMany({
+        where: { id: { in: ids } },
+        select: buildListSelect(category as FacilityCategory),
+      });
+      // fulltextIds의 name ASC 순서 보존 (findMany in은 순서 비보장)
+      const order = new Map(ids.map((id, i) => [id, i]));
+      records.sort((a: any, b: any) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)); // eslint-disable-line @typescript-eslint/no-explicit-any
+      const items = records.map((r: any) => toFacilityItem(r, category as FacilityCategory)); // eslint-disable-line @typescript-eslint/no-explicit-any
+      return { items, total, page, totalPages: Math.ceil(total / limit) };
+    }
+    // 기존 LIKE 경로 (키워드 없음 / 1자 / 진료과목 필터·비기본 정렬 시)
     const [records, total] = await Promise.all([
       model.findMany({ where, skip, take: limit, orderBy, select: buildListSelect(category as FacilityCategory) }),
       model.count({ where }),
