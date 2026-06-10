@@ -13,11 +13,11 @@
         placeholder="지역·단지명·시설 검색"
         @focus="focused = true"
         @blur="focused = false"
-        @keydown.enter="submit"
+        @keydown="(e) => onInputKeydown(e, acDesktopRef)"
       />
     </div>
     <div v-if="variant === 'desktop'" class="hidden md:block absolute left-0 right-0 top-full z-50">
-      <SearchAutocomplete :open="focused" :model-value="keyword" @close="focused = false" />
+      <SearchAutocomplete ref="acDesktopRef" :open="focused" :model-value="keyword" @close="focused = false" />
     </div>
 
     <!-- 모바일 아이콘 + 전체화면 오버레이 -->
@@ -43,11 +43,11 @@
               aria-label="통합 검색"
               class="flex-1 bg-transparent text-sm focus:outline-none"
               placeholder="지역·단지명·시설 검색"
-              @keydown.enter="submit"
+              @keydown="(e) => onInputKeydown(e, acMobileRef)"
             />
           </div>
         </div>
-        <SearchAutocomplete :open="overlayOpen" :model-value="keyword" @close="overlayOpen = false" />
+        <SearchAutocomplete ref="acMobileRef" :open="overlayOpen" :model-value="keyword" @close="overlayOpen = false" />
       </div>
     </template>
   </div>
@@ -66,6 +66,8 @@ const keyword = ref('')
 const overlayOpen = ref(false)
 const focused = ref(false)
 const overlayInput = ref<HTMLInputElement | null>(null)
+const acDesktopRef = ref<InstanceType<typeof SearchAutocomplete> | null>(null)
+const acMobileRef = ref<InstanceType<typeof SearchAutocomplete> | null>(null)
 const { trackSearch } = useAnalytics()
 
 function submit() {
@@ -74,6 +76,14 @@ function submit() {
   trackSearch({ keyword: q })
   overlayOpen.value = false
   navigateTo('/search?keyword=' + encodeURIComponent(q))
+}
+
+function onInputKeydown(
+  e: KeyboardEvent,
+  acRef: InstanceType<typeof SearchAutocomplete> | null,
+) {
+  const handled = (acRef as { onKeydown?: (e: KeyboardEvent) => boolean } | null)?.onKeydown?.(e)
+  if (!handled && e.key.toLowerCase() === 'enter') submit()
 }
 
 watch(overlayOpen, async (open) => {
