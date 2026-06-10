@@ -62,4 +62,10 @@ describe('MobileDetailHeader', () => {
     await w.get('[data-test="directions-kakao"]').trigger('click')
     expect(w.emitted('directions')?.[0]).toEqual(['kakao'])
   })
+
+  it('최소 props(title만)로도 크래시 없이 렌더한다', () => {
+    const w = mount(MobileDetailHeader, { props: { title: '이름만' } })
+    expect(w.find('h1').text()).toBe('이름만')
+    expect(w.find('a[href^="tel:"]').exists()).toBe(false)
+  })
 })

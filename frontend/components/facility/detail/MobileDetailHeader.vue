@@ -10,7 +10,7 @@
     </div>
 
     <!-- stat 칩 -->
-    <div v-if="stats.length" class="mt-3 flex flex-wrap gap-1.5">
+    <div v-if="stats?.length" class="mt-3 flex flex-wrap gap-1.5">
       <span
         v-for="stat in stats"
         :key="stat.label"
@@ -48,6 +48,8 @@
       <div class="relative flex-[1.4]">
         <button
           data-test="directions-pill"
+          :aria-expanded="showNav"
+          aria-haspopup="menu"
           class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-lg shadow-primary-500/30 active:scale-[0.98] transition"
           @click="showNav = !showNav"
         >
@@ -74,6 +76,7 @@ import OperatingStatusBadge from '~/components/facility/OperatingStatusBadge.vue
 type OperatingStatus = 'open24h' | 'openNow' | 'closed' | 'limited'
 interface Stat { label: string; value: string }
 
+// kakaoMapUrl/naverMapUrl: 길찾기 URL은 부모가 directions emit을 받아 처리. 미선언 시 속성 fall-through 방지 위해 선언만 유지.
 defineProps<{
   title: string
   categoryLabel?: string
