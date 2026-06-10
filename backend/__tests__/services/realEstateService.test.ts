@@ -850,7 +850,7 @@ describe('searchAll', () => {
     mockSummaryCount.mockResolvedValue(0);
   });
 
-  it('calls groupBy on all 6 models in parallel', async () => {
+  it('calls findMany on summary for all 6 types in parallel', async () => {
     await searchAll('래미안');
 
     // summary findMany가 6번(타입마다) 호출됨 — groupBy 대신 summary 사용

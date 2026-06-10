@@ -141,4 +141,15 @@ describe('searchAll (파서 연동)', () => {
     const aptRent = res.categories.find((c) => c.type === 'apt-rent');
     expect(aptRent!.items[0]).toMatchObject({ dealAmount: null, deposit: 50000 });
   });
+
+  it('latest 필드가 null이어도 응답 shape를 유지한다', async () => {
+    mockSummaryFindMany.mockResolvedValue([{
+      buildingName: '신축단지', bjdCode: '11680', city: '서울', district: '강남구',
+      dongName: '역삼동', buildYear: null, latestDealYear: null, latestDealMonth: null,
+      latestPrice: null, transactionCount: 0,
+    }]);
+    const res = await searchAll('신축단지');
+    const aptSale = res.categories.find((c) => c.type === 'apt-sale');
+    expect(aptSale!.items[0]).toMatchObject({ dealYear: null, dealMonth: null, dealAmount: null, deposit: null });
+  });
 });
