@@ -70,6 +70,8 @@ model Toilet {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // @TASK T0.4 - 무료와이파이 테이블
@@ -108,6 +110,8 @@ model Wifi {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // @TASK T0.4 - 의류수거함 테이블
@@ -143,6 +147,8 @@ model Clothes {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // 공원 테이블
@@ -183,6 +189,8 @@ model Park {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // 학교 테이블
@@ -238,6 +246,8 @@ model School {
   @@index([schoolLevel])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 model SchoolEnrollment {
@@ -364,6 +374,8 @@ model Childcare {
   @@index([crtypename])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // 전통시장 테이블
@@ -404,6 +416,8 @@ model Market {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // @TASK T9.1.1 - 공영주차장 테이블
@@ -456,6 +470,8 @@ model Parking {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // @TASK T9.2 - 자동심장충격기(AED) 테이블
@@ -505,6 +521,8 @@ model Aed {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // @TASK T9.3 - 공공도서관 테이블
@@ -556,6 +574,8 @@ model Library {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // 전기차 충전소 테이블
@@ -617,8 +637,12 @@ model EvCharger {
   @@index([chgerType])
   @@index([statId])
   @@index([statId, city, district])
+  // 지역 필터 선두 → COUNT(DISTINCT statId) 인덱스-only (지역 검색 512ms → ms단위)
+  @@index([city, district, statId])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // 체육시설 테이블
@@ -663,6 +687,8 @@ model Sports {
   @@index([ftypeNm])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // @TASK T0.4 - 카테고리 마스터 테이블
@@ -794,6 +820,8 @@ model WasteSchedule {
 
   @@unique([city, district, sourceId])
   @@index([city, district])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([targetRegion, emissionPlace])
 }
 
 // 병원 테이블
@@ -893,6 +921,8 @@ model Hospital {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // 병원 진료과목 테이블 (1:N)
@@ -970,6 +1000,8 @@ model Pharmacy {
   @@index([ykiho])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // ============================================

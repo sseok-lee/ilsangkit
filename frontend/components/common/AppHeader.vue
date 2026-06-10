@@ -33,6 +33,7 @@
         <div
           v-for="group in NAV_LINK_GROUPS"
           :key="group.title"
+          data-testid="nav-group"
           class="relative"
           @mouseenter="openDropdown(group.title)"
           @mouseleave="scheduleCloseDropdown"
@@ -95,6 +96,7 @@
 
         <!-- 생활시설: 시설 4개 그룹 통합 메가메뉴 -->
         <div
+          data-testid="nav-group"
           class="relative"
           @mouseenter="openDropdown('생활시설')"
           @mouseleave="scheduleCloseDropdown"
@@ -149,6 +151,9 @@
           </Transition>
         </div>
 
+        <!-- 통합 검색창 (메가메뉴와 유틸리티 링크 사이 자체 영역) -->
+        <HeaderSearch variant="desktop" v-show="showHeaderSearch" class="w-48 lg:w-56" />
+
         <!-- Utility Links (우측 정렬 클러스터 내부) -->
         <div class="flex items-center gap-1">
           <div class="h-5 w-px bg-slate-200 mx-1"></div>
@@ -160,13 +165,6 @@
             가이드
           </HardLink>
           <HardLink
-            to="/search"
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            <span class="material-symbols-outlined text-[18px]">search</span>
-            검색
-          </HardLink>
-          <HardLink
             to="/about"
             class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
           >
@@ -176,15 +174,18 @@
         </div>
       </nav>
 
-      <!-- Mobile Menu Button -->
-      <button
-        class="md:hidden ml-auto flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
-        aria-label="메뉴"
-        :aria-expanded="isMobileMenuOpen"
-        @click="toggleMobileMenu($event)"
-      >
-        <span class="material-symbols-outlined text-[28px]">menu</span>
-      </button>
+      <!-- Mobile Cluster: 검색 + 메뉴 (우측 정렬) -->
+      <div class="md:hidden ml-auto flex items-center gap-0.5">
+        <HeaderSearch variant="mobile" v-show="showHeaderSearch" />
+        <button
+          class="flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
+          aria-label="메뉴"
+          :aria-expanded="isMobileMenuOpen"
+          @click="toggleMobileMenu($event)"
+        >
+          <span class="material-symbols-outlined text-[28px]">menu</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -307,10 +308,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { CATEGORY_META, NAV_LINK_GROUPS, CATEGORY_GROUPS } from '~/types/facility'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
+import HeaderSearch from '~/components/common/HeaderSearch.vue'
 
 interface Props {
   transparent?: boolean
@@ -331,6 +333,14 @@ const activeDropdown = ref<string | null>(null)
 const mobileMenuRef = ref<HTMLElement | null>(null)
 const mobileMenuTriggerRef = ref<HTMLElement | null>(null)
 let dropdownTimer: ReturnType<typeof setTimeout> | null = null
+
+const route = useRoute()
+const heroOut = ref(false) // 메인에서 히어로가 화면 밖으로 나갔는지
+
+// 메인이 아니면 항상 표시, 메인이면 heroOut일 때만 표시
+const showHeaderSearch = computed(() => route.path !== '/' || heroOut.value)
+
+let headerScrollHandler: (() => void) | null = null
 
 const toggleMobileMenu = (event?: Event) => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
@@ -429,11 +439,18 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
+  if (!import.meta.client) return
+  if (route.path === '/') {
+    headerScrollHandler = () => { heroOut.value = window.scrollY > 360 }
+    window.addEventListener('scroll', headerScrollHandler, { passive: true })
+    headerScrollHandler()
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
   cancelCloseDropdown()
+  if (headerScrollHandler) window.removeEventListener('scroll', headerScrollHandler)
 })
 </script>
 

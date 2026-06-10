@@ -114,6 +114,7 @@ jobs:
 
             cd /home/project2/backend
             npm ci
+            npm run db:fulltext || echo "[fulltext-ngram] WARN: exited $? — skipped (ngram 미지원 또는 오류, 검색은 LIKE 폴백)"
 
             # pm2 reload 는 fork mode 단일 프로세스에서는 restart 와 동일 동작이라 무해하고,
             # 향후 cluster mode 전환 시 자동으로 zero-downtime rolling restart 로 동작한다.

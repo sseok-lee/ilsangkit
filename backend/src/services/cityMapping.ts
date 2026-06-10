@@ -52,6 +52,17 @@ export const FULL_TO_SLUG = Object.fromEntries(
 );
 
 /**
+ * city의 축약/정식 variant 목록 (raw SQL `IN (?)` 용).
+ * buildRegionFilter와 동일 로직 — Prisma where가 아닌 배열 형태가 필요할 때 사용.
+ */
+export function cityVariantList(city?: string): string[] {
+  if (!city) return [];
+  const slug = SHORT_TO_SLUG[city] || FULL_TO_SLUG[city];
+  if (!slug) return [city];
+  return [...new Set([city, CITY_SLUG_TO_FULL[slug], CITY_SLUG_TO_SHORT[slug]].filter(Boolean))] as string[];
+}
+
+/**
  * 지역 필터 조건 생성
  */
 export function buildRegionFilter(city?: string, district?: string): Record<string, unknown> {

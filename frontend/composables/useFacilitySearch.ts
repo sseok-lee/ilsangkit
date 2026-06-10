@@ -1,6 +1,9 @@
 import { ref, readonly } from 'vue'
 import type { SearchParams, SearchResponse, GroupedSearchResponse, GroupedCategory, ApiResponse, Facility, FacilityCategory } from '~/types/facility'
 
+export interface RecoveryChip { label: string; category: string; city: string | null; district: string | null }
+export interface Recovery { scope: 'region' | 'category' | 'popular'; regionLabel: string | null; chips: RecoveryChip[] }
+
 export function useFacilitySearch() {
   const loading = ref(false)
   const facilities = ref<Facility[]>([])
@@ -12,6 +15,7 @@ export function useFacilitySearch() {
   const groupedTotalCount = ref(0)
   const crossFacilities = ref<Facility[]>([])
   const crossLoading = ref(false)
+  const recovery = ref<Recovery | null>(null)
 
   const search = async (params: SearchParams) => {
     loading.value = true
@@ -82,11 +86,13 @@ export function useFacilitySearch() {
       if (response.success && response.data) {
         groupedResults.value = response.data.categories
         groupedTotalCount.value = response.data.totalCount
+        recovery.value = (response.data as unknown as { recovery?: Recovery }).recovery ?? null
       }
     } catch (err: any) {
       error.value = err?.message || '검색 중 오류가 발생했습니다'
       groupedResults.value = []
       groupedTotalCount.value = 0
+      recovery.value = null
     } finally {
       loading.value = false
     }
@@ -118,6 +124,7 @@ export function useFacilitySearch() {
     groupedResults.value = []
     groupedTotalCount.value = 0
     crossFacilities.value = []
+    recovery.value = null
   }
 
   return {
@@ -131,6 +138,7 @@ export function useFacilitySearch() {
     groupedTotalCount: readonly(groupedTotalCount),
     crossFacilities: readonly(crossFacilities),
     crossLoading: readonly(crossLoading),
+    recovery: readonly(recovery),
     search,
     searchGrouped,
     searchNearby,

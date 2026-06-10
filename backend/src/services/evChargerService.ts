@@ -6,6 +6,7 @@
 import { prisma } from '../lib/prisma.js';
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, SHORT_TO_SLUG, FULL_TO_SLUG } from './cityMapping.js';
+import { canUseFulltext, toBooleanPhrase } from './search/fulltextKeyword.js';
 import { bufferViewCount } from './viewCountService.js';
 
 function toRad(deg: number): number {
@@ -78,8 +79,14 @@ export async function evChargerStationSearch(params: {
   const values: unknown[] = [];
 
   if (keyword) {
-    conditions.push('(name LIKE ? OR address LIKE ? OR roadAddress LIKE ?)');
-    values.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    if (canUseFulltext(keyword)) {
+      // ngram FULLTEXT 인덱스 사용 — LIKE '%x%' 풀스캔(44만 행) 대체
+      conditions.push('MATCH(name, address, roadAddress) AGAINST (? IN BOOLEAN MODE)');
+      values.push(toBooleanPhrase(keyword));
+    } else {
+      conditions.push('(name LIKE ? OR address LIKE ? OR roadAddress LIKE ?)');
+      values.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    }
   }
   if (city) {
     // city variants: short(서울) ↔ full(서울특별시) 모두 매칭
@@ -125,9 +132,11 @@ export async function evChargerStationSearch(params: {
   const whereClause = conditions.join(' AND ');
   const offset = (page - 1) * limit;
 
+  // 서브쿼리 DISTINCT 형태 — COUNT(DISTINCT) 직접형은 옵티마이저가 [statId,...] 인덱스
+  // loose scan(99k행, ~0.5s)을 고집함. 이 형태가 [city, district, statId] index-only를 탐(~60ms).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const countResult: any[] = await prisma.$queryRawUnsafe(
-    `SELECT COUNT(DISTINCT statId) as cnt FROM EvCharger WHERE ${whereClause}`,
+    `SELECT COUNT(*) as cnt FROM (SELECT DISTINCT statId FROM EvCharger WHERE ${whereClause}) t`,
     ...values,
   );
   const total = Number(countResult[0]?.cnt || 0);
