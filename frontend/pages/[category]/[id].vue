@@ -89,8 +89,21 @@
                 </button>
               </div>
 
-              <!-- Hero (H1) -->
+              <!-- Hero: 모바일 핵심 정보 헤더 / 데스크톱 PageHero -->
+              <MobileDetailHeader
+                :title="displayName"
+                :category-label="categoryMeta.label"
+                :status="operatingStatus"
+                :stats="mobileHeaderStats"
+                :phone="facilityPhone"
+                :kakao-map-url="kakaoMapUrl"
+                :naver-map-url="naverMapUrl"
+                @share="handleShare"
+                @copy="copyFacilityAddress"
+                @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
+              />
               <PageHero
+                class="hidden md:block"
                 :eyebrow="categoryMeta.label"
                 :title="displayName"
                 :description="facilityIntro || undefined"
@@ -229,42 +242,6 @@
             </aside>
           </div>
         </div>
-
-        <!-- Mobile: Sticky Bottom CTA -->
-        <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
-          <div class="flex gap-3">
-            <button
-              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-3.5 text-base font-bold text-slate-900 border border-gray-200 transition hover:bg-gray-200 active:scale-[0.98]"
-              aria-label="이 시설 공유하기"
-              @click="handleShare"
-            >
-              <span class="material-symbols-outlined text-[20px]">share</span>
-              공유하기
-            </button>
-            <div class="relative flex-[2]">
-              <button
-                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
-                @click="showMobileNavDropdown = !showMobileNavDropdown"
-              >
-                <span class="material-symbols-outlined text-[20px]">directions</span>
-                길찾기
-                <span class="material-symbols-outlined text-[16px]">expand_more</span>
-              </button>
-              <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl); showMobileNavDropdown = false">
-                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                </button>
-                <div class="h-px bg-slate-100"></div>
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl); showMobileNavDropdown = false">
-                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom padding for mobile CTA -->
-        <div class="md:hidden h-24"></div>
       </template>
     </main>
   </div>
@@ -287,6 +264,8 @@ import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.
 import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
+import MobileDetailHeader from '~/components/facility/detail/MobileDetailHeader.vue'
+import { getOperatingStatus } from '~/utils/facilityStatus'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
 import type { YoutubeVideo } from '~/types/youtube'
@@ -507,6 +486,28 @@ const desktopHeroStats = computed(() => {
   return [...commonItems, ...categoryItems]
 })
 
+// 모바일 헤더용 영업상태 — facilityStatus 유틸 재사용 (null 가능, 헤더에서 v-if 가드)
+const operatingStatus = computed(() => {
+  if (!facility.value) return null
+  return getOperatingStatus(facility.value as unknown as Record<string, any>)
+})
+
+// 모바일 헤더 칩: 데스크톱 stat을 재사용하되 최대 4개로 제한
+const mobileHeaderStats = computed(() => desktopHeroStats.value.slice(0, 4))
+
+// 모바일 헤더 '주소복사' — DetailBasicInfo.copyAddress와 동일 로직
+async function copyFacilityAddress() {
+  if (!facility.value) return
+  const address = facility.value.roadAddress || facility.value.address
+  if (!address) return
+  try {
+    await navigator.clipboard.writeText(address)
+    alert('주소가 복사되었습니다.')
+  } catch (err) {
+    console.error('주소 복사 실패:', err)
+  }
+}
+
 // 같은 지역 시설 링크
 const regionLink = computed(() => {
   if (!facility.value) return null
@@ -565,7 +566,6 @@ const naverMapUrl = computed(() => {
 })
 
 const showNavDropdown = ref(false)
-const showMobileNavDropdown = ref(false)
 const openNavigation = (url: string) => {
   if (facility.value) {
     const provider = url.includes('kakao') ? 'kakao' : 'naver'
