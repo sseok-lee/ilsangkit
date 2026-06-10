@@ -120,6 +120,13 @@ function trackOutboundClick(params: { url: string; linkType: string; placement?:
   })
 }
 
+function trackSuggestSelect(params: { keyword: string; suggestType: string }) {
+  track(ANALYTICS_EVENTS.SEARCH_SUGGEST_SELECT, {
+    search_term: params.keyword,
+    suggest_type: params.suggestType,
+  })
+}
+
 export function useAnalytics() {
   return {
     trackSearch,
@@ -139,5 +146,6 @@ export function useAnalytics() {
     trackGuideListView,
     trackGuideView,
     trackOutboundClick,
+    trackSuggestSelect,
   }
 }

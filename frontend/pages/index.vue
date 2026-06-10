@@ -50,7 +50,9 @@
                 aria-label="단지명·동네·시설 검색"
                 class="flex-1 min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
                 placeholder="단지명, 지역, 시설 검색"
-                @keydown.enter="handleSearch"
+                @keydown="onHeroKeydown"
+                @focus="heroFocused = true"
+                @blur="heroFocused = false"
               />
               <div class="flex items-center pr-2">
                 <button
@@ -62,6 +64,9 @@
                   <span class="hidden md:inline">검색</span>
                 </button>
               </div>
+            </div>
+            <div class="absolute left-0 right-0 top-full z-50">
+              <SearchAutocomplete ref="heroAcRef" :open="heroFocused" :model-value="searchKeyword" @close="heroFocused = false" />
             </div>
           </label>
         </div>
@@ -222,7 +227,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
+// heroAcRef typed as any to avoid circular InstanceType complexity in pages
+
 import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import HardLink from '~/components/common/HardLink.vue'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
@@ -274,6 +282,9 @@ useHead({
 })
 
 const searchKeyword = ref('')
+const heroFocused = ref(false)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const heroAcRef = ref<any>(null)
 
 // 홈 대시보드 SSR (above-fold, CLS 방지).
 // /api/meta/home-dashboard 응답이 /api/meta/stats 의 superset(total, buildingCount,
@@ -400,6 +411,11 @@ function handleSearch() {
   if (!q) return
   trackSearch({ keyword: q })
   navigateTo(`/search?keyword=${encodeURIComponent(q)}`)
+}
+
+function onHeroKeydown(e: KeyboardEvent) {
+  const handled = heroAcRef.value?.onKeydown?.(e)
+  if (!handled && e.key.toLowerCase() === 'enter') handleSearch()
 }
 </script>
 

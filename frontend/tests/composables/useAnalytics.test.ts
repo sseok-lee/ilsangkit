@@ -32,7 +32,8 @@ describe('useAnalytics', () => {
     expect(typeof analytics.trackGuideListView).toBe('function')
     expect(typeof analytics.trackGuideView).toBe('function')
     expect(typeof analytics.trackOutboundClick).toBe('function')
-    expect(Object.keys(analytics)).toHaveLength(17)
+    expect(typeof analytics.trackSuggestSelect).toBe('function')
+    expect(Object.keys(analytics)).toHaveLength(18)
   })
 
   it('trackSearch → gtag search_executed 이벤트 호출', () => {

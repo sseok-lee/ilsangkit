@@ -22,6 +22,12 @@ export const PopularSearchQuerySchema = z.object({
   period: z.enum(['day', 'week', 'month']).default('week'),
 });
 
+// 자동완성 추천 쿼리 스키마
+export const SuggestQuerySchema = z.object({
+  q: z.string().max(50).default(''),
+});
+export type SuggestQuery = z.infer<typeof SuggestQuerySchema>;
+
 // 타입 추출
 export type SearchLogInput = z.infer<typeof SearchLogSchema>;
 export type PopularSearchQuery = z.infer<typeof PopularSearchQuerySchema>;

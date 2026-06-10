@@ -16,4 +16,5 @@ export const ANALYTICS_EVENTS = {
   GUIDE_LIST_VIEW: 'guide_list_viewed',
   GUIDE_VIEW: 'guide_detail_viewed',
   OUTBOUND_CLICK: 'outbound_link_clicked',
+  SEARCH_SUGGEST_SELECT: 'search_suggest_select',
 } as const
