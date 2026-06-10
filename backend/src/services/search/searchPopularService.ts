@@ -9,9 +9,9 @@ const STATIC_POPULAR: string[] = [
 const MIN_DISTINCT = 10;        // 집계 전환 임계치
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
-let cache: { result: PopularResult; at: number } | null = null;
+const cache = new Map<string, { result: PopularResult; at: number }>();
 
-export function __clearPopularCache(): void { cache = null; }
+export function __clearPopularCache(): void { cache.clear(); }
 
 function periodStart(period: 'day' | 'week' | 'month', now: number): Date {
   const days = period === 'day' ? 1 : period === 'week' ? 7 : 30;
@@ -22,7 +22,9 @@ export async function getPopular(
   params: { limit: number; period: 'day' | 'week' | 'month' },
   now: number = Date.now(),
 ): Promise<PopularResult> {
-  if (cache && now - cache.at < CACHE_TTL_MS) return cache.result;
+  const cacheKey = `${params.period}:${params.limit}`;
+  const cached = cache.get(cacheKey);
+  if (cached && now - cached.at < CACHE_TTL_MS) return cached.result;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const grouped: any[] = await prisma.searchLog.groupBy({
@@ -39,6 +41,6 @@ export async function getPopular(
   } else {
     result = { source: 'static', items: STATIC_POPULAR.slice(0, params.limit).map((keyword) => ({ keyword })) };
   }
-  cache = { result, at: now };
+  cache.set(cacheKey, { result, at: now });
   return result;
 }

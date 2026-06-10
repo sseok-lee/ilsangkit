@@ -26,11 +26,15 @@
               <span class="material-symbols-outlined text-slate-400 text-[18px]">history</span>
               {{ kw }}
             </span>
-            <span
+            <button
+              type="button"
+              aria-label="최근 검색어 삭제"
               class="material-symbols-outlined text-slate-300 text-[16px] hover:text-slate-500"
               @mousedown.prevent
               @click.stop="removeRecent(kw)"
-            >close</span>
+            >
+close
+</button>
           </li>
         </ul>
       </div>

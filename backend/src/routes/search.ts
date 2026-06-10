@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { searchRateLimiter } from '../middlewares/rateLimit.js';
-import { SuggestQuerySchema, SearchLogSchema, PopularSearchQuerySchema } from '../schemas/search.js';
+import { SuggestQuerySchema, SearchLogSchema, PopularSearchQuerySchema, type SearchLogInput } from '../schemas/search.js';
 import { suggest } from '../services/search/searchSuggestService.js';
 import { getPopular } from '../services/search/searchPopularService.js';
 import { prisma } from '../lib/prisma.js';
@@ -27,7 +27,7 @@ router.get('/popular', validate(PopularSearchQuerySchema, 'query'),
 // POST /api/search/log (fire-and-forget)
 router.post('/log', searchRateLimiter, validate(SearchLogSchema, 'body'),
   asyncHandler(async (req: Request, res: Response) => {
-    const body = req.body as { sessionId: string; keyword?: string; category?: string; city?: string; district?: string; resultCount: number };
+    const body = req.body as SearchLogInput;
     await prisma.searchLog.create({ data: body }).catch(() => undefined);
     res.json({ success: true });
   }));
