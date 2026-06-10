@@ -305,9 +305,21 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
     ...buildRegionFilter(effectiveCity, effectiveDistrict),
   };
 
-  // Phase 1: count만 먼저 — 14개 병렬
+  // 파서가 카테고리를 특정하면("화장실"→toilet) 그 카테고리만 조회 — 나머지 13개 테이블 스킵
+  // parsed.categoryToken은 FacilityCategory(trash 미포함)이므로 string 비교로 처리
+  const categoryTokenStr: string | undefined = parsed.categoryToken as string | undefined;
+  const scopedCategories: FacilityCategory[] = categoryTokenStr && categoryTokenStr !== 'trash'
+    ? ALL_CATEGORIES.filter((c) => c === categoryTokenStr)
+    : categoryTokenStr === 'trash'
+      ? []
+      : ALL_CATEGORIES;
+
+  // categoryToken이 trash이거나 미특정일 때만 WasteSchedule 조회
+  const shouldSearchTrash = !categoryTokenStr || categoryTokenStr === 'trash';
+
+  // Phase 1: count만 먼저 — 병렬
   const countResults = await Promise.all(
-    ALL_CATEGORIES.map(async (cat) => {
+    scopedCategories.map(async (cat) => {
       if (cat === 'ev-charger') {
         const stationResult = await evChargerStationSearch({
           keyword: nameText, city: effectiveCity, district: effectiveDistrict, page: 1, limit: 3,
@@ -349,27 +361,30 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
   const categories = results.filter((r) => r.count > 0);
 
   // trash(WasteSchedule) 별도 조회 — 좌표 없는 일정 데이터이므로 ALL_CATEGORIES와 분리
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const trashWhere: any = {
-    ...buildRegionFilter(effectiveCity, effectiveDistrict),
-  };
-  if (nameText) {
-    trashWhere.OR = [
-      { targetRegion: { contains: nameText } },
-      { emissionPlace: { contains: nameText } },
-    ];
-  }
-  const [trashCount, trashRecords] = await Promise.all([
-    prisma.wasteSchedule.count({ where: trashWhere }),
-    prisma.wasteSchedule.findMany({ where: trashWhere, take: 3, orderBy: { targetRegion: 'asc' } }),
-  ]);
-  if (trashCount > 0) {
-    categories.push({
-      category: 'trash' as FacilityCategory,
-      label: '쓰레기배출',
-      count: trashCount,
-      items: trashRecords.map(mapWasteScheduleToFacilityItem),
-    });
+  // categoryToken이 trash이거나 미특정일 때만 조회
+  if (shouldSearchTrash) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const trashWhere: any = {
+      ...buildRegionFilter(effectiveCity, effectiveDistrict),
+    };
+    if (nameText) {
+      trashWhere.OR = [
+        { targetRegion: { contains: nameText } },
+        { emissionPlace: { contains: nameText } },
+      ];
+    }
+    const [trashCount, trashRecords] = await Promise.all([
+      prisma.wasteSchedule.count({ where: trashWhere }),
+      prisma.wasteSchedule.findMany({ where: trashWhere, take: 3, orderBy: { targetRegion: 'asc' } }),
+    ]);
+    if (trashCount > 0) {
+      categories.push({
+        category: 'trash' as FacilityCategory,
+        label: '쓰레기배출',
+        count: trashCount,
+        items: trashRecords.map(mapWasteScheduleToFacilityItem),
+      });
+    }
   }
 
   const totalCount = categories.reduce((sum, r) => sum + r.count, 0);
