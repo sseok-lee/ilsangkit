@@ -9,38 +9,6 @@
     </div>
 
     <template v-else>
-    <!-- Mobile: Map at top -->
-    <div v-if="buildingInfo?.lat && buildingInfo?.lng" class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
-      <ClientOnly>
-        <FacilityMap
-          :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
-          :facilities="buildingMarker"
-          :level="3"
-          class="w-full h-full !min-h-0 !rounded-none"
-        />
-      </ClientOnly>
-
-      <!-- Back & Name Overlay -->
-      <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-        <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="$router.back()">
-          <span class="material-symbols-outlined text-slate-800">arrow_back</span>
-        </div>
-        <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow-sm backdrop-blur-sm">{{ buildingName }}</span>
-      </div>
-
-      <!-- Gradient Overlay -->
-      <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
-
-      <!-- Map expand button -->
-      <button
-        class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-        @click="isMapExpanded = true"
-      >
-        <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-        지도 크게 보기
-      </button>
-    </div>
-
     <!-- Fullscreen Map Overlay (Mobile) -->
     <Teleport to="body">
       <Transition
@@ -91,8 +59,18 @@
         </button>
       </div>
 
-      <!-- PageHero -->
+      <!-- Hero: 모바일 헤더 / 데스크톱 PageHero -->
+      <MobileRealEstateHeader
+        :title="buildingName"
+        :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
+        :stats="mobileHeaderStats"
+        :kakao-map-url="kakaoMapUrl"
+        :naver-map-url="naverMapUrl"
+        @share="handleShare"
+        @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
+      />
       <PageHero
+        class="hidden md:block"
         :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :title="buildingName"
         :description="fullAddress !== '-' ? fullAddress : undefined"
@@ -398,39 +376,6 @@
       <!-- 데이터 출처 -->
       <DataSourceSection domain="real-estate" :last-sync-date="lastSyncDate" />
     </main>
-
-    <!-- Mobile: Sticky Bottom Action Bar -->
-    <div v-if="buildingInfo?.lat && buildingInfo?.lng" class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
-      <div class="flex gap-3">
-        <button
-          class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-3.5 text-base font-bold text-slate-800 border border-slate-200 transition hover:bg-slate-200 active:scale-[0.98]"
-          aria-label="이 건물 공유하기"
-          @click="handleShare"
-        >
-          <span class="material-symbols-outlined text-[20px]">share</span>
-          공유하기
-        </button>
-        <div class="relative flex-[2]">
-          <button
-            class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
-            @click="showMobileNavDropdown = !showMobileNavDropdown"
-          >
-            <span class="material-symbols-outlined text-[20px]">directions</span>
-            길찾기
-            <span class="material-symbols-outlined text-[16px]">expand_more</span>
-          </button>
-          <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-            <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl); showMobileNavDropdown = false">
-              <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-            </button>
-            <div class="h-px bg-slate-100"></div>
-            <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl); showMobileNavDropdown = false">
-              <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
     </template>
   </div>
 </template>
@@ -472,6 +417,7 @@ import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import MobileRealEstateHeader from '~/components/realEstate/MobileRealEstateHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
@@ -699,7 +645,6 @@ const naverMapUrl = computed(() =>
 
 const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
-const showMobileNavDropdown = ref(false)
 
 const { trackBuildingView, trackDirectionsClick, trackShareClick } = useAnalytics()
 
@@ -708,7 +653,6 @@ function openNavigation(url: string) {
   trackDirectionsClick({ facilityId: buildingName.value, category: propertyTypeParam, provider })
   window.open(url, '_blank')
   showNavDropdown.value = false
-  showMobileNavDropdown.value = false
 }
 
 async function handleShare() {
@@ -740,7 +684,6 @@ function handleClickOutside(e: MouseEvent) {
   const target = e.target as HTMLElement
   if (!target.closest('.relative')) {
     showNavDropdown.value = false
-    showMobileNavDropdown.value = false
   }
 }
 onMounted(() => {
@@ -859,6 +802,11 @@ const heroStats = computed(() => {
     area,
   ]
 })
+
+// 모바일 헤더 칩 — heroStats 재사용, '정보 없음' 항목 제외, 최대 4개
+const mobileHeaderStats = computed(() =>
+  heroStats.value.filter(s => s.value && s.value !== '정보 없음').slice(0, 4),
+)
 
 // ── Stats / Transactions ──────────────────────────────────────────────────────
 
