@@ -20,6 +20,10 @@ describe('canUseFulltext', () => {
     expect(canUseFulltext('')).toBe(false);
     expect(canUseFulltext(undefined)).toBe(false);
   });
+
+  it('연산자만 있는 키워드는 false (cleaned 후 빈 문자열)', () => {
+    expect(canUseFulltext('+-')).toBe(false);
+  });
 });
 
 describe('toBooleanPhrase', () => {
@@ -28,13 +32,17 @@ describe('toBooleanPhrase', () => {
     expect(toBooleanPhrase('강남+화장실*')).toBe('"강남 화장실"');
     expect(toBooleanPhrase('  "test"  ')).toBe('"test"');
   });
+
+  it('연산자만 입력하면 빈 구문을 반환한다', () => {
+    expect(toBooleanPhrase('+-><')).toBe('""');
+  });
 });
 
 describe('fulltextIds', () => {
   it('MATCH AGAINST 쿼리로 id 목록을 반환한다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([{ id: 1 }, { id: 7 }]);
+    mockQueryRawUnsafe.mockResolvedValue([{ id: 'A1' }, { id: 'B7' }]);
     const ids = await fulltextIds('Toilet', '래미안', {}, 3);
-    expect(ids).toEqual([1, 7]);
+    expect(ids).toEqual(['A1', 'B7']);
     const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
     expect(sql).toContain('MATCH(name, address, roadAddress) AGAINST (? IN BOOLEAN MODE)');
     expect(params[0]).toBe('"래미안"');

@@ -15,7 +15,9 @@ const ALLOWED_TABLES = new Set([...Object.values(FULLTEXT_TABLES), 'WasteSchedul
 const MIN_FT_LENGTH = 2; // ngram_token_size=2 — 1자는 매칭 불가, 호출부가 LIKE 폴백
 
 export function canUseFulltext(keyword?: string | null): keyword is string {
-  return !!keyword && keyword.trim().length >= MIN_FT_LENGTH;
+  if (!keyword) return false;
+  const cleaned = keyword.replace(/["+\-><()~*@]/g, '').trim();
+  return cleaned.length >= MIN_FT_LENGTH;
 }
 
 /** BOOLEAN MODE 연산자 무력화 + 구문(phrase) 검색 고정 */
@@ -27,7 +29,7 @@ export function toBooleanPhrase(keyword: string): string {
 export interface FtRegion { cityVariants?: string[]; district?: string }
 
 function assertTable(table: string): void {
-  if (!ALLOWED_TABLES.has(table)) throw new Error(`fulltext 미지원 테이블: ${table}`);
+  if (!ALLOWED_TABLES.has(table)) throw new Error('fulltext 미지원 테이블');
 }
 
 function regionClause(region: FtRegion): { sql: string; values: unknown[] } {
@@ -47,14 +49,14 @@ function regionClause(region: FtRegion): { sql: string; values: unknown[] } {
 /** MATCH 매칭 id 목록 (name 순 정렬 — 페이지네이션 결정성 확보) */
 export async function fulltextIds(
   table: string, keyword: string, region: FtRegion, limit: number, offset = 0,
-): Promise<number[]> {
+): Promise<string[]> {
   assertTable(table);
   const { sql, values } = regionClause(region);
-  const rows = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
     `SELECT id FROM \`${table}\` WHERE MATCH(name, address, roadAddress) AGAINST (? IN BOOLEAN MODE)${sql} ORDER BY name ASC LIMIT ? OFFSET ?`,
     toBooleanPhrase(keyword), ...values, limit, offset,
   );
-  return rows.map((r) => Number(r.id));
+  return rows.map((r) => String(r.id));
 }
 
 export async function fulltextCount(table: string, keyword: string, region: FtRegion): Promise<number> {
