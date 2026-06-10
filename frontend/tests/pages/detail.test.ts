@@ -197,17 +197,18 @@ describe('DetailPage', () => {
     wrapper.unmount()
   })
 
-  // ---------------- SEO 회귀 가드 (Step 6) ----------------
-  // 모바일 h2(시설명) → unified PageHero h1으로 승격된 이후, 단일 H1 보장.
-  // (이전: 데스크톱 PageHero h1 + 모바일 manual h2 → SSR HTML에 h1·h2 중복)
-  it('시설명 H1이 단 1개만 존재 (모바일/데스크톱 통합)', async () => {
+  // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
+  // 모바일 전용 헤더(MobileDetailHeader, md:hidden) + 데스크톱 PageHero(hidden md:block)로 분기.
+  // 둘 다 h1을 갖지만 CSS로 한 화면당 하나만 노출(모바일 우선 색인 시 모바일 h1만 표시).
+  // 가드: h1은 정확히 2개(모바일+데스크톱)이며 둘 다 시설명이어야 한다 (stray h1/h2 방지).
+  it('시설명 H1은 모바일/데스크톱 각 1개씩 정확히 2개이며 동일 텍스트', async () => {
     const wrapper = await mountSuspended(DetailPage, {
       global: { stubs: globalStubs },
     })
 
     const h1s = wrapper.findAll('h1')
-    expect(h1s.length).toBe(1)
-    expect(h1s[0].text()).toBe('강남역 공중화장실')
+    expect(h1s.length).toBe(2)
+    expect(h1s.every(h => h.text() === '강남역 공중화장실')).toBe(true)
   })
 
   // BasicInfo + FacilityStatus + Nearby + ContextLinks 각각 1번씩만 렌더 (중복 제거 회귀 가드)
