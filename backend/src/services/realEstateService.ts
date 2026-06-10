@@ -732,6 +732,14 @@ export async function searchAll(
   const parsed = await parseSearchQueryCached(keyword);
   const { effectiveCity, effectiveDistrict, nameText } = resolveScope({ city, district }, parsed);
 
+  // 순수 카테고리 키워드("화장실")는 부동산 검색 의도가 아님 — DB 접근 없이 종료.
+  // freeText 2자 미만(예: "강")도 buildingName 필터를 못 만들어 전체 스캔이 되므로 동일 처리.
+  const hasName = !!(nameText && nameText.length >= 2);
+  const hasRegion = !!(effectiveCity || effectiveDistrict);
+  if (!hasName && !hasRegion) {
+    return { categories: [] };
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = { ...buildRegionFilter(effectiveCity, effectiveDistrict) };
   if (nameText && nameText.length >= 2) {

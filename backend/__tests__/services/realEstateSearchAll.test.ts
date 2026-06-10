@@ -59,10 +59,10 @@ describe('searchAll (파서 연동)', () => {
     expect(types).toContain('offitel-sale');
   });
 
-  it('키워드 없이 호출해도 정상 반환', async () => {
+  it('키워드 없이 호출해도 정상 반환 (freeText·지역 없으므로 빈 배열)', async () => {
     const res = await searchAll();
     expect(res).toHaveProperty('categories');
-    expect(res.categories).toHaveLength(6);
+    expect(res.categories).toEqual([]);
   });
 
   it('파서가 강남을 district로 파싱하여 groupBy where에 district 포함', async () => {
@@ -92,5 +92,23 @@ describe('searchAll (파서 연동)', () => {
     expect(inArr.some((v) => v === '서울특별시' || v === '서울')).toBe(true);
     // 부산은 포함되어서는 안 됨
     expect(inArr.some((v) => v.includes('부산'))).toBe(false);
+  });
+
+  it('freeText도 지역도 없으면(순수 카테고리어) DB 접근 없이 빈 categories 반환', async () => {
+    // '화장실'은 파서가 categoryToken으로 흡수 → freeText 없음, 지역 없음
+    const res = await searchAll('화장실');
+    expect(res.categories).toEqual([]);
+    expect(mockGroupBy).not.toHaveBeenCalled();
+    expect(mockCount).not.toHaveBeenCalled();
+  });
+
+  it('freeText가 있으면(래미안) 검색을 실행한다', async () => {
+    const res = await searchAll('래미안');
+    expect(res.categories).toHaveLength(6);
+  });
+
+  it('지역만 있어도(강남구) 검색을 실행한다', async () => {
+    const res = await searchAll('강남구');
+    expect(res.categories).toHaveLength(6);
   });
 });
