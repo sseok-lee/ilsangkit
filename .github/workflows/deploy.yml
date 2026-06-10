@@ -114,7 +114,10 @@ jobs:
 
             cd /home/project2/backend
             npm ci
-            npm run db:fulltext || echo "[fulltext-ngram] WARN: exited $? — skipped (ngram 미지원 또는 오류, 검색은 LIKE 폴백)"
+            # src/ 는 서버로 배포되지 않으므로 tsx 기반 npm run db:fulltext 불가 —
+            # tsc 빌드 산출물(dist/scripts)을 직접 실행한다. 스크립트는 멱등이라
+            # 이미 ngram 인 인덱스는 스킵하고, 기본 파서 인덱스는 ngram 으로 재생성.
+            node dist/scripts/applyFulltextNgram.js || echo "[fulltext-ngram] WARN: exited $? — skipped (ngram 미지원 또는 오류, 검색은 LIKE 폴백)"
 
             # pm2 reload 는 fork mode 단일 프로세스에서는 restart 와 동일 동작이라 무해하고,
             # 향후 cluster mode 전환 시 자동으로 zero-downtime rolling restart 로 동작한다.
