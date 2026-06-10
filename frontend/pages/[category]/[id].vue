@@ -134,8 +134,26 @@
               <!-- Ad: DETAILS ↔ MAP 사이 -->
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
-              <!-- Roadview -->
-              <SectionBlock heading="로드뷰" subtext="시설 주변의 거리 뷰를 확인하세요.">
+              <!-- 위치·로드뷰 -->
+              <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
+                <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
+                <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
+                  <ClientOnly>
+                    <FacilityMap
+                      :center="{ lat: facility.lat, lng: facility.lng }"
+                      :facilities="[facility]"
+                      :level="3"
+                      class="w-full h-full !min-h-0"
+                    />
+                  </ClientOnly>
+                  <button
+                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+                    @click="isMapExpanded = true"
+                  >
+                    <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+                    지도 크게 보기
+                  </button>
+                </div>
                 <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
               </SectionBlock>
 
