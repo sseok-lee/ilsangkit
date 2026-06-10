@@ -9,6 +9,15 @@ const { mockFindMany, mockCount, mockFindUnique, mockUpdate, mockFindFirst } = v
   mockFindFirst: vi.fn(),
 }));
 
+const { mockFtIds, mockFtCount } = vi.hoisted(() => ({
+  mockFtIds: vi.fn(), mockFtCount: vi.fn(),
+}));
+
+vi.mock('../../src/services/search/fulltextKeyword.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/search/fulltextKeyword.js');
+  return { ...actual, fulltextIds: mockFtIds, fulltextCount: mockFtCount };
+});
+
 vi.mock('../../src/lib/prisma.js', () => {
   const model = {
     findMany: mockFindMany,
@@ -74,6 +83,9 @@ beforeEach(async () => {
   await flushViewCounts();
   vi.clearAllMocks();
   mockUpdate.mockResolvedValue({});
+  // fulltext 헬퍼 기본값
+  mockFtIds.mockResolvedValue([]);
+  mockFtCount.mockResolvedValue(0);
 });
 
 describe('CATEGORY_REGISTRY', () => {
@@ -229,18 +241,40 @@ describe('search', () => {
   });
 
   it('searches with keyword filter', async () => {
+    mockFtIds.mockResolvedValue(['t1', 't2']);
+    mockFtCount.mockResolvedValue(2);
     mockFindMany.mockResolvedValue([]);
-    mockCount.mockResolvedValue(0);
 
     await search({ category: 'toilet', keyword: '강남', page: 1, limit: 20 });
 
+    // 2자 이상 키워드는 fulltext 경로 사용
+    expect(mockFtIds).toHaveBeenCalled();
+    expect(mockFtCount).toHaveBeenCalled();
+    // findMany는 id in 형태로 호출됨
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: { in: ['t1', 't2'] },
+        }),
+      })
+    );
+  });
+
+  it('1자 키워드는 LIKE 경로를 유지한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await search({ category: 'toilet', keyword: '갸', page: 1, limit: 20 });
+
+    expect(mockFtIds).not.toHaveBeenCalled();
+    expect(mockFtCount).not.toHaveBeenCalled();
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           OR: [
-            { name: { contains: '강남' } },
-            { address: { contains: '강남' } },
-            { roadAddress: { contains: '강남' } },
+            { name: { contains: '갸' } },
+            { address: { contains: '갸' } },
+            { roadAddress: { contains: '갸' } },
           ],
         }),
       })

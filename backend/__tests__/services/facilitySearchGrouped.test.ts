@@ -7,6 +7,10 @@ const { mockCount, mockFindMany, mockQueryRawUnsafe } = vi.hoisted(() => ({
   mockQueryRawUnsafe: vi.fn(),
 }));
 
+const { mockFtIds, mockFtCount } = vi.hoisted(() => ({
+  mockFtIds: vi.fn(), mockFtCount: vi.fn(),
+}));
+
 vi.mock('../../src/lib/prisma.js', () => {
   const model = { findMany: mockFindMany, count: mockCount, findUnique: vi.fn(), update: vi.fn().mockResolvedValue({}) };
   const prismaClient = {
@@ -30,6 +34,11 @@ vi.mock('../../src/services/search/searchRegionIndex.js', async (orig) => {
   };
 });
 
+vi.mock('../../src/services/search/fulltextKeyword.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/search/fulltextKeyword.js');
+  return { ...actual, fulltextIds: mockFtIds, fulltextCount: mockFtCount };
+});
+
 import { searchGrouped } from '../../src/services/facilityService.js';
 
 beforeEach(() => {
@@ -41,6 +50,9 @@ beforeEach(() => {
   mockQueryRawUnsafe
     .mockResolvedValueOnce([{ cnt: 0n }])
     .mockResolvedValue([]);
+  // fulltext 헬퍼 기본값
+  mockFtIds.mockResolvedValue([]);
+  mockFtCount.mockResolvedValue(0);
 });
 
 describe('searchGrouped (다중토큰)', () => {
@@ -63,9 +75,31 @@ describe('searchGrouped (카테고리 스코핑)', () => {
     expect(mockQueryRawUnsafe).not.toHaveBeenCalled();
   });
 
-  it('categoryToken이 없으면(freeText) 기존처럼 전체 카테고리를 조회한다', async () => {
+  it('categoryToken이 없으면(freeText) 전체 카테고리를 조회한다 (fulltext 또는 LIKE)', async () => {
     await searchGrouped({ keyword: '래미안', grouped: true } as any);
-    // ALL_CATEGORIES 14개 중 ev-charger 제외 13개 + wasteSchedule 1 = 14회 count (ev-charger는 raw)
-    expect(mockCount.mock.calls.length).toBeGreaterThanOrEqual(14);
+    // 2자 이상 freeText → fulltext 경로: fulltextCount가 13개 카테고리에 대해 호출됨
+    // ev-charger는 raw, wasteSchedule은 별도 — 총 13회
+    expect(mockFtCount.mock.calls.length + mockCount.mock.calls.length).toBeGreaterThanOrEqual(13);
+  });
+});
+
+describe('searchGrouped (fulltext 경로)', () => {
+  it('freeText 2자 이상이면 LIKE count 대신 fulltextCount를 사용한다', async () => {
+    mockFtCount.mockResolvedValue(3);
+    mockFtIds.mockResolvedValue(['1', '2', '3']);
+    mockFindMany.mockResolvedValue([]);
+    await searchGrouped({ keyword: '래미안', grouped: true } as any);
+    expect(mockFtCount).toHaveBeenCalled();
+    // findMany는 id in 형태로 호출됨
+    const idInCall = mockFindMany.mock.calls.find(
+      (c) => c[0]?.where?.id?.in !== undefined,
+    );
+    expect(idInCall).toBeTruthy();
+  });
+
+  it('1자 키워드는 기존 LIKE 경로를 유지한다', async () => {
+    // '갸' — 지역/카테고리 토큰으로 소비되지 않는 1자 freeText
+    await searchGrouped({ keyword: '갸', grouped: true } as any);
+    expect(mockFtCount).not.toHaveBeenCalled();
   });
 });
