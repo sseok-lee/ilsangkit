@@ -97,6 +97,7 @@ jobs:
 
             cd /home/project2/backend
             npx prisma db push --accept-data-loss
+            npm run db:fulltext || echo "[fulltext-ngram] skipped"
             npx prisma generate
 
       - name: Install Dependencies and Restart Services
