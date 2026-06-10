@@ -305,17 +305,16 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
     ...buildRegionFilter(effectiveCity, effectiveDistrict),
   };
 
-  // 파서가 카테고리를 특정하면("화장실"→toilet) 그 카테고리만 조회 — 나머지 13개 테이블 스킵
-  // parsed.categoryToken은 FacilityCategory(trash 미포함)이므로 string 비교로 처리
-  const categoryTokenStr: string | undefined = parsed.categoryToken as string | undefined;
-  const scopedCategories: FacilityCategory[] = categoryTokenStr && categoryTokenStr !== 'trash'
-    ? ALL_CATEGORIES.filter((c) => c === categoryTokenStr)
-    : categoryTokenStr === 'trash'
-      ? []
-      : ALL_CATEGORIES;
-
-  // categoryToken이 trash이거나 미특정일 때만 WasteSchedule 조회
-  const shouldSearchTrash = !categoryTokenStr || categoryTokenStr === 'trash';
+  // 파서가 카테고리를 특정하면("화장실"→toilet) 그 카테고리만 조회 — 나머지 13개 테이블 스킵.
+  // 토큰이 ALL_CATEGORIES 밖이면(예: 미래의 subway 동의어) 조용히 0건이 되지 않도록 전체 검색으로 폴백.
+  const categoryTokenStr = parsed.categoryToken as string | null;
+  const tokenInScope = !!categoryTokenStr && categoryTokenStr !== 'trash'
+    && (ALL_CATEGORIES as string[]).includes(categoryTokenStr);
+  const scopedCategories: FacilityCategory[] = tokenInScope
+    ? [categoryTokenStr as FacilityCategory]
+    : categoryTokenStr === 'trash' ? [] : ALL_CATEGORIES;
+  // categoryToken이 trash이거나, 스코프된 일반 카테고리가 아닐 때만 WasteSchedule 조회
+  const shouldSearchTrash = !tokenInScope;
 
   // Phase 1: count만 먼저 — 병렬
   const countResults = await Promise.all(

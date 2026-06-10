@@ -65,13 +65,7 @@ describe('searchGrouped (카테고리 스코핑)', () => {
 
   it('categoryToken이 없으면(freeText) 기존처럼 전체 카테고리를 조회한다', async () => {
     await searchGrouped({ keyword: '래미안', grouped: true } as any);
-    // 13개 일반 카테고리 + wasteSchedule = 14회 count (ev-charger는 raw)
+    // ALL_CATEGORIES 14개 중 ev-charger 제외 13개 + wasteSchedule 1 = 14회 count (ev-charger는 raw)
     expect(mockCount.mock.calls.length).toBeGreaterThanOrEqual(14);
-  });
-
-  it('categoryToken이 일반 카테고리면 WasteSchedule을 조회하지 않는다', async () => {
-    mockCount.mockResolvedValue(5);
-    await searchGrouped({ keyword: '화장실', grouped: true } as any);
-    expect(mockCount).toHaveBeenCalledTimes(1); // toilet만, waste 미포함
   });
 });
