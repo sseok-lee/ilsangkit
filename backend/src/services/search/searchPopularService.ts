@@ -30,7 +30,7 @@ export async function getPopular(
     where: { keyword: { not: null }, createdAt: { gte: periodStart(params.period, now) } },
     _count: { keyword: true },
     orderBy: { _count: { keyword: 'desc' } },
-    take: params.limit,
+    take: Math.max(params.limit, MIN_DISTINCT),
   }).catch(() => []);
 
   let result: PopularResult;

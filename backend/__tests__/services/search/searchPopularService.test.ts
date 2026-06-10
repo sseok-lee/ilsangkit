@@ -27,4 +27,13 @@ describe('getPopular', () => {
     expect(res.items).toHaveLength(8);
     expect(res.items[0].keyword).toBe('kw0');
   });
+
+  it('임계치만큼(10) 데이터가 있으면 limit(8) 미만이어도 aggregated', async () => {
+    mockGroupBy.mockResolvedValue(
+      Array.from({ length: 10 }, (_, i) => ({ keyword: `kw${i}`, _count: { keyword: 50 - i } }))
+    );
+    const res = await getPopular({ limit: 8, period: 'week' });
+    expect(res.source).toBe('aggregated');
+    expect(res.items).toHaveLength(8);
+  });
 });
