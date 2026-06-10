@@ -152,7 +152,7 @@
         </div>
 
         <!-- 통합 검색창 (메가메뉴와 유틸리티 링크 사이 자체 영역) -->
-        <HeaderSearch v-show="showHeaderSearch" class="w-48 lg:w-56" />
+        <HeaderSearch variant="desktop" v-show="showHeaderSearch" class="w-48 lg:w-56" />
 
         <!-- Utility Links (우측 정렬 클러스터 내부) -->
         <div class="flex items-center gap-1">
@@ -174,15 +174,18 @@
         </div>
       </nav>
 
-      <!-- Mobile Menu Button -->
-      <button
-        class="md:hidden ml-auto flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
-        aria-label="메뉴"
-        :aria-expanded="isMobileMenuOpen"
-        @click="toggleMobileMenu($event)"
-      >
-        <span class="material-symbols-outlined text-[28px]">menu</span>
-      </button>
+      <!-- Mobile Cluster: 검색 + 메뉴 (우측 정렬) -->
+      <div class="md:hidden ml-auto flex items-center gap-0.5">
+        <HeaderSearch variant="mobile" v-show="showHeaderSearch" />
+        <button
+          class="flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
+          aria-label="메뉴"
+          :aria-expanded="isMobileMenuOpen"
+          @click="toggleMobileMenu($event)"
+        >
+          <span class="material-symbols-outlined text-[28px]">menu</span>
+        </button>
+      </div>
     </div>
   </header>
 

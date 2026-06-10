@@ -198,9 +198,12 @@ describe('AppHeader', () => {
   })
 
   describe('Responsive Design', () => {
-    it('should have mobile menu button with md:hidden class', () => {
+    it('should have mobile menu button hidden on desktop (md:hidden cluster)', () => {
       const menuButton = wrapper.find('button[aria-label="메뉴"]')
-      expect(menuButton.classes()).toContain('md:hidden')
+      expect(menuButton.exists()).toBe(true)
+      // 메뉴 버튼은 검색+메뉴 모바일 클러스터(md:hidden) 안에 있어 데스크톱에서 숨겨진다
+      const cluster = menuButton.element.parentElement
+      expect(cluster?.className).toContain('md:hidden')
     })
 
     it('should have desktop navigation with hidden mobile class', () => {
