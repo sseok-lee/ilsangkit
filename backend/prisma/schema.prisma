@@ -70,6 +70,8 @@ model Toilet {
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
+  @@fulltext([name, address, roadAddress])
 }
 
 // @TASK T0.4 - 무료와이파이 테이블
