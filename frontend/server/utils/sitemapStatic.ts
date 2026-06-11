@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import * as fs from 'node:fs/promises'
 import { getHeader, setHeader, type H3Event } from 'h3'
 
 export const REGEN_TOKEN_HEADER = 'x-sitemap-regen-token'
@@ -43,7 +43,7 @@ export async function tryServeStaticSitemap(event: H3Event): Promise<string | nu
   const filePath = resolveSitemapFile(event.path || '', dir)
   if (!filePath) return null
   try {
-    const xml = await readFile(filePath, 'utf-8')
+    const xml = await fs.readFile(filePath, 'utf-8')
     setHeader(event, 'Content-Type', 'application/xml')
     setHeader(event, 'X-Sitemap-Source', 'static')
     return xml

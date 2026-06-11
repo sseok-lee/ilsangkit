@@ -2,6 +2,7 @@
 // 카테고리 목록과 per-category limit 은 sitemapPolicy 를 단일 소스로 참조해
 // 인덱스(sitemap.xml.ts)와 완전히 동일한 청크 구성을 반환한다.
 import { defineEventHandler, setHeader, createError } from 'h3'
+import { isRegenRequest, tryServeStaticSitemap } from '../../utils/sitemapStatic'
 import {
   SITE_URL,
   MAX_URLS_PER_SITEMAP,
@@ -92,8 +93,13 @@ function parseSlug(slug: string): { category: string; page: number } | null {
 }
 
 export default defineEventHandler(async (event) => {
-  // URL path에서 slug 추출: /sitemap/wifi-1.xml → wifi-1
-  const path = event.path || ''
+  if (!isRegenRequest(event)) {
+    const cached = await tryServeStaticSitemap(event)
+    if (cached !== null) return cached
+  }
+
+  // URL path에서 slug 추출 (쿼리 제거 방어). /sitemap/wifi-1.xml → wifi-1
+  const path = (event.path || '').split('?')[0]
   const lastSegment = path.split('/').pop() || ''
 
   // .xml 확장자 필수

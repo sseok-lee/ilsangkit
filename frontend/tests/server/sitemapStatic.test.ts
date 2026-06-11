@@ -6,7 +6,10 @@ vi.mock('h3', () => ({
   setHeader: vi.fn(),
 }))
 
-import { resolveSitemapFile, isRegenRequest } from '../../server/utils/sitemapStatic'
+vi.mock('node:fs/promises', () => ({ readFile: vi.fn() }))
+
+import { resolveSitemapFile, isRegenRequest, tryServeStaticSitemap } from '../../server/utils/sitemapStatic'
+import * as fsPromises from 'node:fs/promises'
 
 const ev = (headers: Record<string, string> = {}) => ({ headers }) as any
 
@@ -59,5 +62,31 @@ describe('isRegenRequest', () => {
   it('헤더 없으면 false', () => {
     process.env.SITEMAP_REGEN_TOKEN = 'secret123'
     expect(isRegenRequest(ev({}))).toBe(false)
+  })
+})
+
+describe('tryServeStaticSitemap', () => {
+  const ENV = process.env
+  beforeEach(() => { process.env = { ...ENV }; vi.mocked(fsPromises.readFile).mockReset() })
+  afterEach(() => { process.env = ENV })
+
+  const ev = (path: string) => ({ path }) as any
+
+  it('SITEMAP_DIR 미설정이면 null(동적 폴백)', async () => {
+    delete process.env.SITEMAP_DIR
+    expect(await tryServeStaticSitemap(ev('/sitemap/toilet.xml'))).toBeNull()
+  })
+
+  it('파일 있으면 내용 반환', async () => {
+    process.env.SITEMAP_DIR = '/srv/sitemaps'
+    vi.mocked(fsPromises.readFile).mockResolvedValue('<?xml version="1.0"?><urlset/>' as any)
+    const out = await tryServeStaticSitemap(ev('/sitemap/toilet.xml'))
+    expect(out).toContain('<urlset')
+  })
+
+  it('파일 없으면(ENOENT) null(동적 폴백)', async () => {
+    process.env.SITEMAP_DIR = '/srv/sitemaps'
+    vi.mocked(fsPromises.readFile).mockRejectedValue(Object.assign(new Error('no'), { code: 'ENOENT' }))
+    expect(await tryServeStaticSitemap(ev('/sitemap/parking.xml'))).toBeNull()
   })
 })
