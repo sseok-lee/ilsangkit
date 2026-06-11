@@ -51,7 +51,8 @@ jobs:
                   *dist/scripts/syncPublicRent*|\
                   *dist/scripts/syncAuction*|\
                   *dist/scripts/geocodeAuction*|\
-                  *dist/scripts/syncRentalAnnouncement*)
+                  *dist/scripts/syncRentalAnnouncement*|\
+                  *dist/scripts/generateSitemaps*)
                     kill -9 "$pid" 2>/dev/null || true
                     ;;
                 esac
@@ -151,6 +152,20 @@ jobs:
             timeout --kill-after=30s 10m node dist/scripts/submitIndexing.js --limit 200 \
               || echo "[WARN] Google Indexing 제출 실패 (exit=$?)"
             echo "[step:google-indexing-end]"
+
+            # --- 사이트맵 정적 파일 재생성 -------------------------------
+            # 동기화로 데이터가 갱신됐으니 디스크 sitemap 을 새로 굽는다.
+            # 실패/가드거부 시 기존 파일 유지(크롤러 영향 없음).
+            echo "[step:sitemap-gen-start]"
+            echo "--- 사이트맵 정적 재생성 ---"
+            export SITEMAP_DIR="/home/project2/sitemaps"
+            export SITEMAP_REGEN_BASE="http://127.0.0.1:3000"
+            set +x
+            export SITEMAP_REGEN_TOKEN="${{ secrets.SITEMAP_REGEN_TOKEN }}"
+            set -x
+            timeout --kill-after=30s 10m node dist/scripts/generateSitemaps.js \
+              || echo "[WARN] 사이트맵 재생성 실패/스킵 (exit=$?)"
+            echo "[step:sitemap-gen-end]"
 
             # --- 좀비 청소 (종료 후) -------------------------------------
             # 만에 하나 남은 프로세스/커넥션이 있으면 여기서 확실히 정리.
