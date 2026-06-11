@@ -388,7 +388,10 @@
       <CoupangBanner class="order-12 md:order-12" />
 
       <!-- 데이터 출처 -->
-      <DataSourceSection class="order-12 md:order-12" domain="real-estate" :last-sync-date="lastSyncDate" />
+      <!-- DataSourceSection은 멀티 루트 템플릿(compact/full v-if·v-else)이라 class fall-through가 안 됨 → order를 wrapper div에 부여 -->
+      <div class="order-12 md:order-12">
+        <DataSourceSection domain="real-estate" :last-sync-date="lastSyncDate" />
+      </div>
     </main>
     </template>
   </div>
