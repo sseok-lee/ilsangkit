@@ -78,7 +78,7 @@ function openNavigation(url: string) {
 </template>
 
 <style scoped>
-/* 부동산 상세와 동일 — FacilityRoadview를 300px 래퍼 높이에 맞춤 */
+/* 부동산 상세와 동일 — FacilityRoadview(h-full)가 래퍼 높이를 상속하도록 강제 (모바일 220 / 데스크톱 300) */
 .roadview-wrapper :deep(> div) { height: 100% !important; }
 .roadview-wrapper :deep(> div > div) { height: 100% !important; }
 </style>
