@@ -174,13 +174,15 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(crumbs[5].name).toBe('반포자이')
   })
 
-  // ---------------- SEO 회귀 가드 (PR #2 Step 1: 듀얼 분기 통합 후) ----------------
-  it('건물명 H1이 단 1개만 존재 (PageHero 단일 진입점)', async () => {
+  // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
+  // 모바일 전용 헤더(MobileRealEstateHeader, md:hidden) + 데스크톱 PageHero(hidden md:block) 분기.
+  // 둘 다 h1을 갖지만 CSS로 한 화면당 하나만 노출. 가드: h1 정확히 2개 + 둘 다 건물명 (stray h1 방지).
+  it('건물명 H1은 모바일/데스크톱 각 1개씩 정확히 2개이며 동일 텍스트', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)
     const h1s = wrapper.findAll('h1')
-    expect(h1s.length).toBe(1)
-    expect(h1s[0].text()).toBe('반포자이')
+    expect(h1s.length).toBe(2)
+    expect(h1s.every(h => h.text() === '반포자이')).toBe(true)
   })
 
   it('Breadcrumb이 viewport에 무관하게 단일 렌더 (hidden md:block 제거됨)', async () => {
