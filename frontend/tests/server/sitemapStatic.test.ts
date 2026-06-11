@@ -10,6 +10,7 @@ vi.mock('node:fs/promises', () => ({ readFile: vi.fn() }))
 
 import { resolveSitemapFile, isRegenRequest, tryServeStaticSitemap } from '../../server/utils/sitemapStatic'
 import * as fsPromises from 'node:fs/promises'
+import { setHeader } from 'h3'
 
 const ev = (headers: Record<string, string> = {}) => ({ headers }) as any
 
@@ -67,7 +68,7 @@ describe('isRegenRequest', () => {
 
 describe('tryServeStaticSitemap', () => {
   const ENV = process.env
-  beforeEach(() => { process.env = { ...ENV }; vi.mocked(fsPromises.readFile).mockReset() })
+  beforeEach(() => { process.env = { ...ENV }; vi.mocked(fsPromises.readFile).mockReset(); vi.mocked(setHeader).mockClear() })
   afterEach(() => { process.env = ENV })
 
   const ev = (path: string) => ({ path }) as any
@@ -82,6 +83,8 @@ describe('tryServeStaticSitemap', () => {
     vi.mocked(fsPromises.readFile).mockResolvedValue('<?xml version="1.0"?><urlset/>' as any)
     const out = await tryServeStaticSitemap(ev('/sitemap/toilet.xml'))
     expect(out).toContain('<urlset')
+    expect(vi.mocked(setHeader)).toHaveBeenCalledWith(expect.anything(), 'Content-Type', 'application/xml')
+    expect(vi.mocked(setHeader)).toHaveBeenCalledWith(expect.anything(), 'X-Sitemap-Source', 'static')
   })
 
   it('파일 없으면(ENOENT) null(동적 폴백)', async () => {
