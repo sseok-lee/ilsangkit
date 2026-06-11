@@ -1,3 +1,6 @@
+import { mkdir, writeFile, readFile, rm, rename } from 'node:fs/promises'
+import { join, dirname } from 'node:path'
+
 /** sitemapindex XML에서 자식 sitemap의 <loc> URL 목록 추출 */
 export function parseChildLocs(indexXml: string): string[] {
   const locs: string[] = []
@@ -39,10 +42,8 @@ export function evaluateCountGuard(
   return { ok: regressions.length === 0, regressions }
 }
 
-import { mkdir, writeFile, readFile, rm, rename } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
-
-type Fetcher = (url: string, headers: Record<string, string>) => Promise<{ ok: boolean; status: number; text: () => Promise<string> }>
+type FetcherResponse = { ok: boolean; status: number; text: () => Promise<string> }
+type Fetcher = (url: string, headers: Record<string, string>) => Promise<FetcherResponse>
 
 export interface GenerationOptions {
   dir: string
@@ -63,12 +64,13 @@ function locToRelPath(loc: string): string {
   return new URL(loc).pathname.replace(/^\/+/, '')
 }
 
+// fetch의 .text()는 본문을 완전히 버퍼링하므로, 여기선 HTML 에러 페이지(<!DOCTYPE/<html)를 거른다
 function isValidXml(body: string): boolean {
   return body.trimStart().startsWith('<?xml')
 }
 
 export async function runGeneration(opts: GenerationOptions): Promise<GenerationResult> {
-  const fetcher: Fetcher = opts.fetcher ?? ((url, headers) => fetch(url, { headers }) as unknown as ReturnType<Fetcher>)
+  const fetcher: Fetcher = opts.fetcher ?? ((url, headers) => fetch(url, { headers }))
   const headers = { [REGEN_TOKEN_HEADER]: opts.token }
   const fail = (error: string): GenerationResult => ({ ok: false, regressions: [], error })
 
@@ -123,10 +125,17 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
   // 그 창에 들어온 요청은 reader가 동적 폴백으로 강등하므로 안전하다(완전 atomic 아님).
   const old = `${opts.dir}.old`
   await rm(old, { recursive: true, force: true })
+  let movedAside = false
   try {
     await rename(opts.dir, old)
+    movedAside = true
   } catch { /* dir 없음(첫 실행) */ }
-  await rename(tmp, opts.dir)
+  try {
+    await rename(tmp, opts.dir)
+  } catch (swapErr) {
+    if (movedAside) { try { await rename(old, opts.dir) } catch { /* swallow */ } }
+    throw swapErr
+  }
   await rm(old, { recursive: true, force: true })
 
   return guard

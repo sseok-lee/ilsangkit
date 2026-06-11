@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseChildLocs, countLocs, evaluateCountGuard, runGeneration } from '../../src/scripts/generateSitemaps.js'
-import { mkdtemp, readFile, writeFile, mkdir } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile, mkdir, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -84,6 +84,8 @@ describe('runGeneration', () => {
       }),
     })
     expect(result.ok).toBe(true)
+    await expect(stat(`${dir}.old`)).rejects.toThrow()
+    await expect(stat(`${dir}.tmp`)).rejects.toThrow()
     expect(await readFile(join(dir, 'sitemap.xml'), 'utf-8')).toContain('<sitemapindex')
     expect(await readFile(join(dir, 'sitemap', 'toilet.xml'), 'utf-8')).toContain('/toilet/2')
     const counts = JSON.parse(await readFile(join(dir, '.counts.json'), 'utf-8'))
