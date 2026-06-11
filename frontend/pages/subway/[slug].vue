@@ -19,36 +19,6 @@
       </div>
 
       <template v-else>
-        <!-- Mobile: Map at top -->
-        <div class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
-          <ClientOnly>
-            <FacilityMap
-              :center="{ lat: station.lat, lng: station.lng }"
-              :facilities="[mapFacility]"
-              :level="3"
-              class="w-full h-full !min-h-0 !rounded-none"
-            />
-          </ClientOnly>
-
-          <!-- Back + Name overlay -->
-          <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-            <button class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="handleBack">
-              <span class="material-symbols-outlined text-slate-900">arrow_back</span>
-            </button>
-            <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-900 shadow-sm backdrop-blur-sm">{{ displayName }}</span>
-          </div>
-
-          <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
-
-          <button
-            class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-            @click="isMapExpanded = true"
-          >
-            <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-            지도 크게 보기
-          </button>
-        </div>
-
         <!-- Fullscreen Map Overlay (Mobile) -->
         <Teleport to="body">
           <Transition
@@ -103,8 +73,20 @@
                 </button>
               </div>
 
-              <!-- Hero -->
+              <!-- Hero: 모바일 핵심 정보 헤더 / 데스크톱 PageHero -->
+              <MobileDetailHeader
+                :title="displayName"
+                category-label="지하철역"
+                :stats="heroStats"
+                :phone="station.phoneNumber"
+                :kakao-map-url="kakaoMapUrl"
+                :naver-map-url="naverMapUrl"
+                @share="handleShare"
+                @copy="copyStationAddress"
+                @directions="openDirections"
+              />
               <PageHero
+                class="hidden md:block"
                 eyebrow="지하철역"
                 :title="displayName"
                 :description="introText"
@@ -151,8 +133,26 @@
 
               <AdBanner />
 
-              <!-- Roadview -->
-              <SectionBlock heading="로드뷰" subtext="역 주변의 거리 뷰를 확인하세요.">
+              <!-- 위치·로드뷰 -->
+              <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 역 주변을 확인하세요.">
+                <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
+                <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
+                  <ClientOnly>
+                    <FacilityMap
+                      :center="{ lat: station.lat, lng: station.lng }"
+                      :facilities="[mapFacility]"
+                      :level="3"
+                      class="w-full h-full !min-h-0"
+                    />
+                  </ClientOnly>
+                  <button
+                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+                    @click="isMapExpanded = true"
+                  >
+                    <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+                    지도 크게 보기
+                  </button>
+                </div>
                 <FacilityRoadview :lat="station.lat" :lng="station.lng" />
               </SectionBlock>
 
@@ -263,41 +263,6 @@
             </aside>
           </div>
         </div>
-
-        <!-- Mobile sticky bottom CTA -->
-        <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
-          <div class="flex gap-3">
-            <button
-              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-3.5 text-base font-bold text-slate-900 border border-gray-200 transition hover:bg-gray-200 active:scale-[0.98]"
-              aria-label="공유하기"
-              @click="handleShare"
-            >
-              <span class="material-symbols-outlined text-[20px]">share</span>
-              공유하기
-            </button>
-            <div class="relative flex-[2]">
-              <button
-                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
-                @click="showMobileNavDropdown = !showMobileNavDropdown"
-              >
-                <span class="material-symbols-outlined text-[20px]">directions</span>
-                길찾기
-                <span class="material-symbols-outlined text-[16px]">expand_more</span>
-              </button>
-              <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                </a>
-                <div class="h-px bg-slate-100"></div>
-                <a :href="naverMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="md:hidden h-24"></div>
       </template>
     </main>
   </div>
@@ -314,6 +279,7 @@ import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import FacilityRoadview from '~/components/facility/FacilityRoadview.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
+import MobileDetailHeader from '~/components/facility/detail/MobileDetailHeader.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
@@ -327,7 +293,6 @@ import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
-const router = useRouter()
 const slug = computed(() => String(route.params.slug ?? ''))
 
 const { data, error, pending } = await useSubwayStation(slug.value)
@@ -533,13 +498,22 @@ const naverMapUrl = computed(() => {
 // UI state
 const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
-const showMobileNavDropdown = ref(false)
 
-function handleBack() {
-  if (window.history.length > 1) {
-    router.back()
-  } else {
-    router.push('/subway')
+// 모바일 헤더 길찾기 — provider별 외부 지도 열기
+function openDirections(provider: 'kakao' | 'naver') {
+  const url = provider === 'kakao' ? kakaoMapUrl.value : naverMapUrl.value
+  window.open(url, '_blank')
+}
+
+// 모바일 헤더 주소 복사
+async function copyStationAddress() {
+  const address = station.value?.roadAddress || station.value?.address
+  if (!address) return
+  try {
+    await navigator.clipboard.writeText(address)
+    alert('주소가 복사되었습니다.')
+  } catch (err) {
+    console.error('주소 복사 실패:', err)
   }
 }
 
