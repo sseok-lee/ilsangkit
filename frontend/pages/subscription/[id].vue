@@ -1,38 +1,6 @@
 <template>
   <div class="bg-background-light">
     <template v-if="subscription">
-      <!-- Mobile: Map at top -->
-      <div v-if="hasCoords" class="md:hidden relative h-[220px] w-full overflow-hidden bg-gray-200">
-        <ClientOnly>
-          <FacilityMap
-            :center="mapCenter!"
-            :facilities="mapMarker"
-            :level="4"
-            class="w-full h-full !min-h-0 !rounded-none"
-          />
-        </ClientOnly>
-
-        <!-- Back & Name Overlay -->
-        <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-          <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="$router.back()">
-            <span class="material-symbols-outlined text-slate-800">arrow_back</span>
-          </div>
-          <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow-sm backdrop-blur-sm">{{ subscription.houseName }}</span>
-        </div>
-
-        <!-- Gradient Overlay -->
-        <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
-
-        <!-- Map expand button -->
-        <button
-          class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-          @click="isMapExpanded = true"
-        >
-          <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-          지도 크게 보기
-        </button>
-      </div>
-
       <!-- Fullscreen Map Overlay (Mobile) -->
       <Teleport to="body">
         <Transition
@@ -314,8 +282,26 @@
           </div>
         </SectionBlock>
 
-        <!-- 로드뷰 (모바일) -->
-        <SectionBlock v-if="hasCoords" heading="로드뷰" class="md:hidden">
+        <!-- 위치·로드뷰 (모바일) -->
+        <SectionBlock v-if="hasCoords" heading="위치·로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="md:hidden">
+          <!-- 모바일 전용 라이브 지도 (데스크톱은 위 사이드 섹션 사용) -->
+          <div class="relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
+            <ClientOnly>
+              <FacilityMap
+                :center="mapCenter!"
+                :facilities="mapMarker"
+                :level="4"
+                class="w-full h-full !min-h-0"
+              />
+            </ClientOnly>
+            <button
+              class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+              @click="isMapExpanded = true"
+            >
+              <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+              지도 크게 보기
+            </button>
+          </div>
           <div class="roadview-wrapper rounded-xl overflow-hidden h-[220px]">
             <FacilityRoadview :lat="Number(subscription.lat)" :lng="Number(subscription.lng)" />
           </div>
