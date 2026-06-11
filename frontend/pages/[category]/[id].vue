@@ -190,6 +190,9 @@
               <!-- Ad: NEARBY 이후 -->
               <AdBanner />
 
+              <!-- Mobile-only inline CoupangBanner (데이터 출처 위로 이동, md+에서는 사이드바 Coupang 사용) -->
+              <CoupangBanner class="md:hidden" />
+
               <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
               <DetailContextLinks
                 :category="category"
@@ -200,9 +203,6 @@
                 :category-faq-items="categoryFaqItems"
                 :last-sync-date="lastSyncDate"
               />
-
-              <!-- Mobile-only inline CoupangBanner (md+에서는 사이드바 Coupang 사용) -->
-              <CoupangBanner class="md:hidden" />
             </article>
 
             <!-- Desktop/tablet sidebar: Map + Actions + Coupang (md+에서 노출) -->
