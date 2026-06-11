@@ -48,17 +48,7 @@
         <!-- Breadcrumb -->
         <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
-        <!-- 상태·임대구분 배지 (타이틀 위) -->
-        <div class="flex items-center gap-2">
-          <span v-if="subscription.rentType" :class="rentTypeBadgeClass">
-            {{ subscription.rentType === '임대주택' ? '임대' : '분양' }}
-          </span>
-          <span :class="statusBadgeClass">
-            {{ getStatusLabel(subscription.status) }}
-          </span>
-        </div>
-
-        <!-- PageHero -->
+        <!-- PageHero (상태·임대구분은 eyebrow "분양 · 마감"으로 표시) -->
         <PageHero
           :eyebrow="heroEyebrow"
           :title="subscription.houseName"
@@ -473,14 +463,6 @@ function openNavigation(url: string) {
   showNavDropdown.value = false
 }
 
-const rentTypeBadgeClass = computed(() => {
-  if (!subscription.value) return ''
-  const rt = subscription.value.rentType
-  const baseClass = 'inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold'
-  if (rt === '임대주택') return `${baseClass} bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200`
-  return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
-})
-
 const priceRange = computed(() => {
   const amounts = unitTypes.value.map(u => u.topAmount).filter((a): a is number => a != null && a > 0)
   if (amounts.length === 0) return null
@@ -569,15 +551,6 @@ const breadcrumbItems = computed(() => {
   else items.push({ label: '분양', href: '/subscription/sale', current: false })
   items.push({ label: subscription.value.houseName, current: true })
   return items
-})
-
-const statusBadgeClass = computed(() => {
-  if (!subscription.value) return ''
-  const status = subscription.value.status
-  const baseClass = 'inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold'
-  if (status === 'upcoming') return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
-  if (status === 'ongoing') return `${baseClass} bg-green-100 text-green-700 ring-1 ring-inset ring-green-200`
-  return `${baseClass} bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200`
 })
 
 // 합계 계산
