@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { setHeader, type H3Event } from 'h3'
+import { getQuery, setHeader, type H3Event } from 'h3'
 
 /** SITEMAP_DIR env. 미설정이면 빈 문자열 → 디스크 서빙 비활성(동적 폴백). */
 export function getSitemapDir(): string {
@@ -17,6 +17,7 @@ export function resolveSitemapFile(reqPath: string, dir: string): string | null 
   } catch {
     return null
   }
+  if (decoded.length > 64) return null
   if (decoded.includes('..') || decoded.includes('\0')) return null
   // 허용: /sitemap.xml, /sitemap/<name>.xml  (영숫자/하이픈만)
   if (!/^\/sitemap(\/[a-z0-9-]+)?\.xml$/.test(decoded)) return null
@@ -24,13 +25,10 @@ export function resolveSitemapFile(reqPath: string, dir: string): string | null 
 }
 
 /** __regen 쿼리 토큰이 SITEMAP_REGEN_TOKEN과 일치하는지. 토큰 미설정 시 항상 false. */
-export function isRegenRequest(event: { path?: string }): boolean {
+export function isRegenRequest(event: H3Event): boolean {
   const token = process.env.SITEMAP_REGEN_TOKEN
   if (!token) return false
-  const q = (event.path || '').split('?')[1]
-  if (!q) return false
-  const params = new URLSearchParams(q)
-  return params.get('__regen') === token
+  return getQuery(event).__regen === token
 }
 
 /**
