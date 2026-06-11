@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises'
-import { getQuery, setHeader, type H3Event } from 'h3'
+import { getHeader, setHeader, type H3Event } from 'h3'
+
+export const REGEN_TOKEN_HEADER = 'x-sitemap-regen-token'
 
 /** SITEMAP_DIR env. 미설정이면 빈 문자열 → 디스크 서빙 비활성(동적 폴백). */
 export function getSitemapDir(): string {
@@ -24,11 +26,11 @@ export function resolveSitemapFile(reqPath: string, dir: string): string | null 
   return `${dir}${decoded}`
 }
 
-/** __regen 쿼리 토큰이 SITEMAP_REGEN_TOKEN과 일치하는지. 토큰 미설정 시 항상 false. */
+/** X-Sitemap-Regen-Token 헤더가 SITEMAP_REGEN_TOKEN과 일치하는지. 토큰 미설정 시 항상 false. */
 export function isRegenRequest(event: H3Event): boolean {
   const token = process.env.SITEMAP_REGEN_TOKEN
   if (!token) return false
-  return getQuery(event).__regen === token
+  return getHeader(event, REGEN_TOKEN_HEADER) === token
 }
 
 /**
