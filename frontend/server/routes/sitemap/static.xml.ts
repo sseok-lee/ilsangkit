@@ -1,5 +1,6 @@
 // 정적 + 지역 조합 페이지 사이트맵
 import { defineEventHandler, setHeader } from 'h3'
+import { isRegenRequest, tryServeStaticSitemap } from '../../utils/sitemapStatic'
 import { SITE_URL, generateSitemapXml } from '../../utils/sitemap'
 import type { SitemapUrl } from '../../utils/sitemap'
 import { CITY_SLUGS, DISTRICT_SLUG_MAP, REGIONS, getDistrictSlug } from '../../../shared/regionSlugs'
@@ -38,6 +39,11 @@ function addFallbackHubPages(urls: SitemapUrl[], lastmod: string): void {
 }
 
 export default defineEventHandler(async (event) => {
+  if (!isRegenRequest(event)) {
+    const cached = await tryServeStaticSitemap(event)
+    if (cached !== null) return cached
+  }
+
   setHeader(event, 'Content-Type', 'application/xml')
 
   const today = new Date().toISOString().split('T')[0]

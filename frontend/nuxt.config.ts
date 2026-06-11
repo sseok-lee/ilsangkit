@@ -121,8 +121,10 @@ export default defineNuxtConfig({
       '/real-estate/**': { swr: 300 },
       // 가이드 — 1시간
       '/guide/**': { swr: 3600 },
-      '/sitemap.xml': { swr: 86400 },
-      '/sitemap/**': { swr: 86400 },
+      // sitemap은 디스크 정적 파일을 직접 서빙(없으면 동적 폴백)하므로 Nitro SWR 캐시 불필요.
+      // SWR 유지 시 재생성 후에도 최대 24h 구버전이 잔존하므로 제거한다.
+      '/sitemap.xml': { headers: { 'cache-control': 'public, max-age=3600' } },
+      '/sitemap/**': { headers: { 'cache-control': 'public, max-age=3600' } },
       '/': { swr: 3600 },
       '/about': { prerender: true },
       '/faq': { prerender: true },

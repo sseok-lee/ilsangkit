@@ -1,6 +1,7 @@
 // 사이트맵 인덱스 — /api/sitemap/page-counts 단일 호출로 페이지 수 계산.
 // 카테고리 목록과 per-category limit 은 sitemapPolicy 를 단일 소스로 참조한다.
 import { defineEventHandler, setHeader } from 'h3'
+import { isRegenRequest, tryServeStaticSitemap } from '../utils/sitemapStatic'
 import {
   SITE_URL,
   MAX_URLS_PER_SITEMAP,
@@ -21,6 +22,11 @@ import {
 } from '../utils/sitemapPolicy'
 
 export default defineEventHandler(async (event) => {
+  if (!isRegenRequest(event)) {
+    const cached = await tryServeStaticSitemap(event)
+    if (cached !== null) return cached
+  }
+
   setHeader(event, 'Content-Type', 'application/xml')
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
