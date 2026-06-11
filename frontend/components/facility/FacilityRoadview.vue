@@ -19,6 +19,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { useKakaoMap } from '~/composables/useKakaoMap'
 
 const props = defineProps<{
