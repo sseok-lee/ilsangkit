@@ -2,7 +2,7 @@
   <div class="bg-background-light">
     <template v-if="subscription">
       <!-- Mobile: Map at top -->
-      <div v-if="hasCoords" class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
+      <div v-if="hasCoords" class="md:hidden relative h-[220px] w-full overflow-hidden bg-gray-200">
         <ClientOnly>
           <FacilityMap
             :center="mapCenter!"
@@ -316,7 +316,7 @@
 
         <!-- 로드뷰 (모바일) -->
         <SectionBlock v-if="hasCoords" heading="로드뷰" class="md:hidden">
-          <div class="roadview-wrapper rounded-xl overflow-hidden h-[200px]">
+          <div class="roadview-wrapper rounded-xl overflow-hidden h-[220px]">
             <FacilityRoadview :lat="Number(subscription.lat)" :lng="Number(subscription.lng)" />
           </div>
         </SectionBlock>

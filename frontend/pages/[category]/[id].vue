@@ -154,7 +154,9 @@
                     지도 크게 보기
                   </button>
                 </div>
-                <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+                <div class="h-[220px]">
+                  <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+                </div>
               </SectionBlock>
 
               <!-- Ad: ROADVIEW ↔ NEARBY 사이 -->

@@ -49,4 +49,15 @@ describe('AuctionMap', () => {
     expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('map.kakao.com'), '_blank');
     openSpy.mockRestore();
   });
+
+  it('지도·로드뷰 래퍼는 모바일 220 / 데스크톱 300 높이로 통일', () => {
+    const w = mountMap();
+    const wrappers = w.findAll('.grid > div');
+    expect(wrappers.length).toBe(2);
+    wrappers.forEach((wrap) => {
+      expect(wrap.classes()).toContain('h-[220px]');
+      expect(wrap.classes()).toContain('md:h-[300px]');
+      expect(wrap.classes()).not.toContain('h-[200px]');
+    });
+  });
 });

@@ -116,7 +116,7 @@
         </template>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- 지도: 모바일에서도 노출 (짧은 높이 + 크게 보기 버튼) -->
-          <div class="relative rounded-xl border border-line overflow-hidden h-[220px] md:h-[300px]">
+          <div class="relative rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
             <ClientOnly>
               <FacilityMap
                 :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
@@ -132,7 +132,7 @@
               지도 크게 보기
             </button>
           </div>
-          <div class="roadview-wrapper rounded-xl border border-line overflow-hidden h-[200px] md:h-[300px]">
+          <div class="roadview-wrapper rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
             <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
           </div>
         </div>
@@ -439,6 +439,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
+import { DETAIL_MAP_MEDIA_HEIGHT } from '~/utils/mapMedia'
 
 const route = useRoute()
 const router = useRouter()

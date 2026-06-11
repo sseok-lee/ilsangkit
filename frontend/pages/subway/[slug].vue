@@ -153,7 +153,9 @@
                     지도 크게 보기
                   </button>
                 </div>
-                <FacilityRoadview :lat="station.lat" :lng="station.lng" />
+                <div class="h-[220px]">
+                  <FacilityRoadview :lat="station.lat" :lng="station.lng" />
+                </div>
               </SectionBlock>
 
               <AdBanner />
