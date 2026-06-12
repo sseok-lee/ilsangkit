@@ -21,7 +21,7 @@
             'px-3.5 py-1.5 rounded-full text-sm font-bold transition-colors border',
             activeChip === chip.key
               ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary'
+              : 'bg-white text-ink border-line hover:border-primary hover:text-primary'
           ]"
           @click="selectChip(chip.key)"
         >
@@ -42,7 +42,7 @@
       <div v-if="loading" class="flex items-center justify-center py-16">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-          <p class="text-slate-500 text-sm">{{ UI_MESSAGES.loading }}</p>
+          <p class="text-muted text-sm">{{ UI_MESSAGES.loading }}</p>
         </div>
       </div>
 
@@ -55,7 +55,7 @@
           :prefetch="false"
           class="group bg-white rounded-xl border border-line overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
         >
-          <div class="aspect-video bg-slate-100 overflow-hidden">
+          <div class="aspect-video bg-background-light overflow-hidden">
             <img
               v-if="guide.thumbnailUrl"
               :src="`${publicApiBase}${guide.thumbnailUrl}`"
@@ -67,20 +67,20 @@
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
             <div v-else class="w-full h-full flex items-center justify-center">
-              <span class="material-symbols-outlined text-[48px] text-slate-300">article</span>
+              <span class="material-symbols-outlined text-[48px] text-faint">article</span>
             </div>
           </div>
           <div class="p-4">
             <span class="inline-block px-2.5 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-full mb-2">
               {{ getCategoryLabel(guide.category) }}
             </span>
-            <h2 class="text-base font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+            <h2 class="text-base font-bold text-strong mb-2 line-clamp-2 group-hover:text-primary transition-colors">
               {{ guide.title }}
             </h2>
-            <p class="text-sm text-slate-500 line-clamp-2 mb-3">
+            <p class="text-sm text-muted line-clamp-2 mb-3">
               {{ guide.summary }}
             </p>
-            <div class="flex items-center justify-between text-xs text-slate-500">
+            <div class="flex items-center justify-between text-xs text-muted">
               <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
@@ -93,9 +93,9 @@
 
       <!-- Empty State -->
       <div v-else class="py-16 text-center">
-        <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">article</span>
-        <p class="text-slate-600 font-medium">{{ emptyFiltered('가이드') }}</p>
-        <p class="text-slate-500 text-sm mt-1">다른 카테고리를 선택해 보세요.</p>
+        <span class="material-symbols-outlined text-[48px] text-faint mb-4 block">article</span>
+        <p class="text-muted font-medium">{{ emptyFiltered('가이드') }}</p>
+        <p class="text-muted text-sm mt-1">다른 카테고리를 선택해 보세요.</p>
       </div>
 
       <!-- 광고: 첫 그리드 이후 -->
@@ -105,15 +105,15 @@
       <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-4">
         <button
           :disabled="currentPage <= 1"
-          class="px-4 py-2 border border-line rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+          class="px-4 py-2 border border-line rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-background-light transition-colors"
           @click="goToPage(currentPage - 1)"
         >
           이전
         </button>
-        <span class="text-sm text-slate-600">{{ currentPage }} / {{ totalPages }}</span>
+        <span class="text-sm text-muted">{{ currentPage }} / {{ totalPages }}</span>
         <button
           :disabled="currentPage >= totalPages"
-          class="px-4 py-2 border border-line rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+          class="px-4 py-2 border border-line rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-background-light transition-colors"
           @click="goToPage(currentPage + 1)"
         >
           다음

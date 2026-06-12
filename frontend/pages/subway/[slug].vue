@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-background-light flex flex-col text-slate-900">
+  <div class="min-h-screen bg-background-light flex flex-col text-strong">
     <main class="flex-1 w-full">
       <!-- Loading -->
       <div v-if="pending" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
@@ -32,9 +32,9 @@
             <div v-if="isMapExpanded" class="md:hidden fixed inset-0 z-[60] bg-background-light">
               <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
                 <button class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm" @click="isMapExpanded = false">
-                  <span class="material-symbols-outlined text-slate-700">close</span>
+                  <span class="material-symbols-outlined text-strong">close</span>
                 </button>
-                <span class="text-sm font-bold text-slate-900 bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ displayName }}</span>
+                <span class="text-sm font-bold text-strong bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ displayName }}</span>
                 <a
                   :href="kakaoMapUrl"
                   target="_blank"
@@ -64,7 +64,7 @@
               <div class="flex items-center justify-between gap-2">
                 <Breadcrumb :items="breadcrumbItems" />
                 <button
-                  class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
+                  class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-muted hover:text-primary hover:border-primary transition-colors text-sm"
                   aria-label="이 지하철역 공유하기"
                   @click="handleShare"
                 >
@@ -99,7 +99,7 @@
               <SectionBlock heading="역정보" subtext="위치·운영기관·연락처 정보">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                   <div v-if="lines.length > 0" class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-slate-500 mb-1.5">노선</dt>
+                    <dt class="text-xs font-medium text-muted mb-1.5">노선</dt>
                     <dd class="flex flex-wrap gap-1.5">
                       <span
                         v-for="ln in lines"
@@ -113,18 +113,18 @@
                   </div>
 
                   <div v-if="station.roadAddress || station.address" class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-slate-500 mb-1">주소</dt>
-                    <dd class="text-sm text-slate-900">{{ station.roadAddress || station.address }}</dd>
+                    <dt class="text-xs font-medium text-muted mb-1">주소</dt>
+                    <dd class="text-sm text-strong">{{ station.roadAddress || station.address }}</dd>
                   </div>
 
                   <div v-if="station.operator">
-                    <dt class="text-xs font-medium text-slate-500 mb-1">운영기관</dt>
-                    <dd class="text-sm text-slate-900">{{ station.operator }}</dd>
+                    <dt class="text-xs font-medium text-muted mb-1">운영기관</dt>
+                    <dd class="text-sm text-strong">{{ station.operator }}</dd>
                   </div>
 
                   <div v-if="station.phoneNumber">
-                    <dt class="text-xs font-medium text-slate-500 mb-1">전화번호</dt>
-                    <dd class="text-sm text-slate-900">
+                    <dt class="text-xs font-medium text-muted mb-1">전화번호</dt>
+                    <dd class="text-sm text-strong">
                       <a :href="`tel:${station.phoneNumber}`" class="hover:text-primary hover:underline">{{ station.phoneNumber }}</a>
                     </dd>
                   </div>
@@ -146,7 +146,7 @@
                     />
                   </ClientOnly>
                   <button
-                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
                     @click="isMapExpanded = true"
                   >
                     <span class="material-symbols-outlined text-[16px]">open_in_full</span>
@@ -174,21 +174,21 @@
               <!-- 관련 탐색 -->
               <SectionBlock heading="관련 탐색" subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요.">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-xs text-slate-500 font-medium pr-1">관련 카테고리</span>
+                  <span class="text-xs text-muted font-medium pr-1">관련 카테고리</span>
                   <NuxtLink
                     v-for="cat in relatedCategories"
                     :key="cat.slug"
                     :to="`/${cat.slug}`"
-                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
                   >
                     {{ cat.label }}
                   </NuxtLink>
                 </div>
                 <div v-if="regionLink" class="flex flex-wrap items-center gap-2 mt-3">
-                  <span class="text-xs text-slate-500 font-medium pr-1">지역</span>
+                  <span class="text-xs text-muted font-medium pr-1">지역</span>
                   <NuxtLink
                     :to="regionLink.href"
-                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
                   >
                     {{ regionLink.label }}
                   </NuxtLink>
@@ -199,8 +199,8 @@
               <SectionBlock v-if="faqItems.length > 0" heading="자주 묻는 질문">
                 <div class="space-y-1">
                   <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-line last:border-b-0">
-                    <summary class="py-3 cursor-pointer font-medium text-slate-800 hover:text-primary">{{ faq.question }}</summary>
-                    <p class="pb-3 text-slate-600 text-sm leading-relaxed">{{ faq.answer }}</p>
+                    <summary class="py-3 cursor-pointer font-medium text-ink hover:text-primary">{{ faq.question }}</summary>
+                    <p class="pb-3 text-muted text-sm leading-relaxed">{{ faq.answer }}</p>
                   </details>
                 </div>
               </SectionBlock>
@@ -227,9 +227,9 @@
               </div>
 
               <!-- Actions -->
-              <div class="mt-3 p-4 bg-white border border-slate-200 flex gap-3 shadow-card rounded-xl">
+              <div class="mt-3 p-4 bg-white border border-line-2 flex gap-3 shadow-card rounded-xl">
                 <button
-                  class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-900 font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
+                  class="flex-1 h-12 rounded-xl bg-background-light text-strong font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
                   aria-label="공유하기"
                   @click="handleShare"
                 >
@@ -245,12 +245,12 @@
                     길찾기
                     <span class="material-symbols-outlined text-[18px]">expand_more</span>
                   </button>
-                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                    <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-line-2 overflow-hidden z-20">
+                    <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-gray-50 flex items-center gap-3 transition-colors">
                       <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                     </a>
-                    <div class="h-px bg-slate-100"></div>
-                    <a :href="naverMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                    <div class="h-px bg-background-light"></div>
+                    <a :href="naverMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-gray-50 flex items-center gap-3 transition-colors">
                       <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
                     </a>
                   </div>

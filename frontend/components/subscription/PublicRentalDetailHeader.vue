@@ -7,15 +7,15 @@
       </span>
     </div>
 
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 leading-tight break-keep">
+    <h1 class="text-2xl md:text-3xl font-bold text-strong leading-tight break-keep">
       {{ displayName }}
     </h1>
 
-    <p class="mt-2 text-slate-600 text-sm md:text-base break-keep">
+    <p class="mt-2 text-ink text-sm md:text-base break-keep">
       {{ rental.complexName }}
     </p>
 
-    <p class="mt-3 inline-flex items-center gap-1.5 text-xs md:text-sm text-slate-500">
+    <p class="mt-3 inline-flex items-center gap-1.5 text-xs md:text-sm text-muted">
       <span class="material-symbols-outlined text-[16px]">apartment</span>
       {{ rental.landlordAgency || NO_DATA }}
     </p>

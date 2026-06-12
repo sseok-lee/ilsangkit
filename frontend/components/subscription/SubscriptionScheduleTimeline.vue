@@ -2,7 +2,7 @@
   <div>
     <div class="flex items-center gap-2 mb-2 text-primary">
       <span class="material-symbols-outlined text-[20px]">schedule</span>
-      <span class="text-sm font-semibold text-slate-800">주요 일정</span>
+      <span class="text-sm font-semibold text-ink">주요 일정</span>
     </div>
     <div class="space-y-4">
       <TimelineItem

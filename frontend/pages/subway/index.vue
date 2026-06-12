@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background-light text-slate-900 font-display min-h-screen">
+  <div class="bg-background-light text-strong font-display min-h-screen">
     <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <!-- Breadcrumb -->
       <Breadcrumb :items="breadcrumbItems" />
@@ -21,38 +21,38 @@
       <SectionBlock heading="지역과 키워드" subtext="지역을 먼저 선택하면 정확한 목록을 빠르게 찾을 수 있어요.">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div class="relative">
-            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">시/도</label>
+            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">시/도</label>
             <select
               v-model="selectedCitySlug"
               aria-label="시/도 선택"
-              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 px-3 text-strong text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
             >
               <option value="">시/도 선택</option>
               <option v-for="c in cityOptions" :key="c.slug" :value="c.slug">{{ c.name }}</option>
             </select>
-            <span class="material-symbols-outlined absolute right-3 bottom-2.5 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
+            <span class="material-symbols-outlined absolute right-3 bottom-2.5 text-muted pointer-events-none text-[18px]">expand_more</span>
           </div>
           <div class="relative">
-            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">구/군</label>
+            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">구/군</label>
             <select
               v-model="selectedDistrict"
               :disabled="!selectedCitySlug"
               aria-label="구/군 선택"
-              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 px-3 text-strong text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">구/군 선택</option>
               <option v-for="d in districtOptions" :key="d" :value="d">{{ d }}</option>
             </select>
-            <span class="material-symbols-outlined absolute right-3 bottom-2.5 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
+            <span class="material-symbols-outlined absolute right-3 bottom-2.5 text-muted pointer-events-none text-[18px]">expand_more</span>
           </div>
           <div class="relative">
-            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">키워드</label>
+            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">키워드</label>
             <div class="absolute left-3 bottom-2.5 pointer-events-none">
-              <span class="material-symbols-outlined text-slate-500 text-[18px]">search</span>
+              <span class="material-symbols-outlined text-muted text-[18px]">search</span>
             </div>
             <input
               v-model="keyword"
-              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 pl-9 pr-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 pl-9 pr-3 text-strong text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
               type="search"
               placeholder="역 이름 검색 (예: 강남)"
             />
@@ -92,7 +92,7 @@
             <div class="flex items-center justify-center gap-3">
               <button
                 v-if="selectedCitySlug || selectedDistrict || keyword"
-                class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-background-light text-ink rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
                 @click="resetFilters"
               >
                 <span class="material-symbols-outlined text-[16px]">refresh</span>
@@ -120,23 +120,23 @@
         subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요."
       >
         <div v-if="relatedCategories.length > 0" class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-slate-500 font-medium pr-1">관련 카테고리</span>
+          <span class="text-xs text-muted font-medium pr-1">관련 카테고리</span>
           <NuxtLink
             v-for="cat in relatedCategories"
             :key="cat.slug"
             :to="`/${cat.slug}`"
-            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
           >
             {{ cat.label }}
           </NuxtLink>
         </div>
         <div v-if="popularRegionLinks.length > 0" class="flex flex-wrap items-center gap-2 mt-3">
-          <span class="text-xs text-slate-500 font-medium pr-1">인기 지역</span>
+          <span class="text-xs text-muted font-medium pr-1">인기 지역</span>
           <NuxtLink
             v-for="region in popularRegionLinks"
             :key="`${region.citySlug}-${region.districtSlug}`"
             :to="`/${region.citySlug}/${region.districtSlug}/subway`"
-            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
           >
             {{ region.label }} 지하철역
           </NuxtLink>
@@ -147,10 +147,10 @@
       <SectionBlock v-if="faqItems.length > 0" heading="자주 묻는 질문">
         <div class="space-y-1">
           <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-line last:border-b-0">
-            <summary class="py-3 cursor-pointer font-medium text-slate-800 hover:text-primary">
+            <summary class="py-3 cursor-pointer font-medium text-ink hover:text-primary">
               {{ faq.question }}
             </summary>
-            <p class="pb-3 text-slate-600 text-sm leading-relaxed">{{ faq.answer }}</p>
+            <p class="pb-3 text-muted text-sm leading-relaxed">{{ faq.answer }}</p>
           </details>
         </div>
       </SectionBlock>

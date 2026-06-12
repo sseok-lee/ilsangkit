@@ -21,7 +21,7 @@
 
       <!-- 결과 -->
       <div v-if="data && data.items.length > 0">
-        <p class="text-caption text-slate-500 mb-3">총 {{ data.total.toLocaleString('ko-KR') }}건</p>
+        <p class="text-caption text-muted mb-3">총 <span class="font-display tabular-nums">{{ data.total.toLocaleString('ko-KR') }}</span>건</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AuctionCard v-for="item in data.items" :key="item.cltrMngNo" :item="item" />
         </div>
@@ -31,12 +31,12 @@
           @page-change="onPageChange"
         />
       </div>
-      <div v-else-if="data && data.items.length === 0" class="rounded-xl bg-slate-50 p-12 text-center">
-        <p class="text-slate-700 font-semibold">조회된 공매 물건이 없습니다</p>
-        <p class="text-slate-500 text-sm mt-1">필터를 변경하거나 나중에 다시 확인해 주세요.</p>
+      <div v-else-if="data && data.items.length === 0" class="rounded-xl bg-background-light p-12 text-center">
+        <p class="text-strong font-semibold">조회된 공매 물건이 없습니다</p>
+        <p class="text-muted text-sm mt-1">필터를 변경하거나 나중에 다시 확인해 주세요.</p>
       </div>
-      <div v-else class="rounded-xl bg-slate-50 p-12 text-center">
-        <p class="text-slate-500 text-sm">데이터를 불러오는 중입니다.</p>
+      <div v-else class="rounded-xl bg-background-light p-12 text-center">
+        <p class="text-muted text-sm">데이터를 불러오는 중입니다.</p>
       </div>
 
       <AdBanner />

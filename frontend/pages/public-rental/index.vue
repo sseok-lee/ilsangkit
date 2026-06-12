@@ -1,9 +1,9 @@
 <template>
   <div class="bg-background-light">
-    <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
+    <div class="bg-gradient-to-b from-background-light to-background-light border-b border-line">
       <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">공공임대 매물</h1>
-        <p class="mt-2 text-slate-500 text-sm">LH·SH 등 공공기관이 운영하는 수시모집 매물 카탈로그입니다. 청약통장 없이 자격만 맞으면 신청할 수 있습니다.</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-strong">공공임대 매물</h1>
+        <p class="mt-2 text-muted text-sm">LH·SH 등 공공기관이 운영하는 수시모집 매물 카탈로그입니다. 청약통장 없이 자격만 맞으면 신청할 수 있습니다.</p>
       </div>
     </div>
 
@@ -13,7 +13,7 @@
       <PublicRentalListView />
 
       <DataSourceSection domain="public-rental" />
-      <p class="-mt-3 px-1 text-xs text-slate-500 leading-relaxed">
+      <p class="-mt-3 px-1 text-xs text-muted leading-relaxed">
         공공임대 매물 정보는 각 공급기관(LH, SH 등)의 공고를 가공한 자료입니다.
         최신 모집 일정과 자격 조건은 반드시 해당 기관 공고문을 확인하세요.
       </p>

@@ -1,9 +1,9 @@
 <template>
   <SectionBlock heading="단지 정보" subtext="LH 마이홈 포털에서 제공하는 단지 기본 제원입니다.">
     <dl class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div v-for="spec in specs" :key="spec.label" class="rounded-lg border border-slate-100 bg-slate-50/60 px-4 py-3">
-        <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{{ spec.label }}</dt>
-        <dd :class="['mt-1 text-sm md:text-base font-bold break-keep', spec.value === NO_DATA ? 'text-slate-400' : 'text-slate-900']">
+      <div v-for="spec in specs" :key="spec.label" class="rounded-lg border border-line bg-background-light/60 px-4 py-3">
+        <dt class="text-[11px] font-semibold uppercase tracking-wide text-faint">{{ spec.label }}</dt>
+        <dd :class="['mt-1 text-sm md:text-base font-bold break-keep font-display tabular-nums', spec.value === NO_DATA ? 'text-faint' : 'text-strong']">
           {{ spec.value }}
         </dd>
       </div>

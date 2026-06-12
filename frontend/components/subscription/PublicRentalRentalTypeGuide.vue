@@ -1,6 +1,6 @@
 <template>
   <SectionBlock :heading="`${rentalType} 안내`" :subtext="`${rentalType} 제도의 핵심 특징과 대상자입니다.`">
-    <p class="text-sm md:text-base text-slate-700 leading-relaxed break-keep">
+    <p class="text-sm md:text-base text-ink leading-relaxed break-keep">
       {{ guide.summary }}
     </p>
 
@@ -10,7 +10,7 @@
           <span class="material-symbols-outlined text-[16px]">check_circle</span>
           주요 특징
         </h4>
-        <ul class="space-y-1.5 text-sm text-slate-700">
+        <ul class="space-y-1.5 text-sm text-ink">
           <li v-for="feature in guide.features" :key="feature" class="flex items-start gap-2">
             <span class="text-primary-500 mt-1">•</span>
             <span class="break-keep">{{ feature }}</span>
@@ -23,7 +23,7 @@
           <span class="material-symbols-outlined text-[16px]">groups</span>
           신청 대상
         </h4>
-        <p class="text-sm text-slate-700 leading-relaxed break-keep">
+        <p class="text-sm text-ink leading-relaxed break-keep">
           {{ guide.targetAudience }}
         </p>
       </div>

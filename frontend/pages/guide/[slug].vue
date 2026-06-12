@@ -4,7 +4,7 @@
     <div v-if="loading" class="flex items-center justify-center py-20">
       <div class="text-center">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-        <p class="text-slate-500 text-sm">{{ UI_MESSAGES.loading }}</p>
+        <p class="text-muted text-sm">{{ UI_MESSAGES.loading }}</p>
       </div>
     </div>
 
@@ -15,7 +15,7 @@
 
       <!-- 히어로 카드 (썸네일 + eyebrow + title + meta) -->
       <section class="bg-white border border-line rounded-xl shadow-card overflow-hidden">
-        <div v-if="guide.thumbnailUrl" class="w-full aspect-video bg-slate-100">
+        <div v-if="guide.thumbnailUrl" class="w-full aspect-video bg-background-light">
           <img
             :src="`${publicApiBase}${guide.thumbnailUrl}`"
             :alt="guide.title"
@@ -29,10 +29,10 @@
           <span class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
             {{ categoryLabel }}
           </span>
-          <h1 class="text-2xl md:text-[32px] leading-tight font-bold text-slate-900 mb-2">
+          <h1 class="text-2xl md:text-[32px] leading-tight font-bold text-strong mb-2">
             {{ guide.title }}
           </h1>
-          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
             <span class="flex items-center gap-1">
               <span class="material-symbols-outlined text-[16px]">edit_note</span>
               일상킷 편집팀
@@ -52,12 +52,12 @@
           class="
             prose prose-slate max-w-none
             prose-headings:font-bold
-            prose-h2:text-2xl prose-h2:mt-7 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
+            prose-h2:text-2xl prose-h2:mt-7 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-line-2
             prose-h3:text-lg prose-h3:mt-5
-            prose-p:leading-relaxed prose-p:text-slate-700
+            prose-p:leading-relaxed prose-p:text-ink
             prose-li:leading-relaxed
             prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-            prose-strong:text-slate-900
+            prose-strong:text-strong
             prose-ul:my-3 prose-ol:my-3
           "
           v-html="contentParts[0]"
@@ -71,12 +71,12 @@
           class="
             prose prose-slate max-w-none
             prose-headings:font-bold
-            prose-h2:text-2xl prose-h2:mt-7 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200
+            prose-h2:text-2xl prose-h2:mt-7 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-line-2
             prose-h3:text-lg prose-h3:mt-5
-            prose-p:leading-relaxed prose-p:text-slate-700
+            prose-p:leading-relaxed prose-p:text-ink
             prose-li:leading-relaxed
             prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-            prose-strong:text-slate-900
+            prose-strong:text-strong
             prose-ul:my-3 prose-ol:my-3
           "
           v-html="contentParts[1]"
@@ -87,7 +87,7 @@
           <span
             v-for="keyword in keywordList"
             :key="keyword"
-            class="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full"
+            class="px-3 py-1 bg-slate-100 text-muted text-xs rounded-full"
           >
             #{{ keyword }}
           </span>
@@ -106,13 +106,13 @@
         />
 
         <nav data-testid="guide-related-categories" class="mt-4 pt-4 border-t border-line">
-          <p class="text-sm font-semibold text-slate-700 mb-3">바로가기</p>
+          <p class="text-sm font-semibold text-ink mb-3">바로가기</p>
           <div class="flex flex-wrap gap-2">
             <NuxtLink
               v-for="cat in relatedGuideCategories"
               :key="cat"
               :to="`/${cat}`"
-              class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
+              class="inline-flex items-center gap-1.5 px-4 py-2 bg-background-light border border-line-2 text-ink rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
             >
               {{ CATEGORY_META[cat as FacilityCategory]?.label || cat }}
             </NuxtLink>
@@ -121,9 +121,9 @@
       </SectionBlock>
 
       <!-- AI 작성 안내 -->
-      <div class="bg-slate-50 rounded-lg p-4">
-        <p class="text-xs font-semibold text-slate-500 mb-1">AI 작성 안내</p>
-        <p class="text-xs text-slate-500 leading-relaxed">
+      <div class="bg-background-light rounded-lg p-4">
+        <p class="text-xs font-semibold text-muted mb-1">AI 작성 안내</p>
+        <p class="text-xs text-muted leading-relaxed">
           본 콘텐츠는 인공지능(AI) 기술을 활용하여 정보를 정리 및 요약한 글입니다.
           내용의 정확성을 보증하지 않으며, 투자나 법적 판단의 근거로 활용하기에는
           적합하지 않을 수 있습니다. 정확한 정보는 관련 기관의 공식 자료를 확인해
@@ -135,7 +135,7 @@
       <div>
         <NuxtLink
           to="/guide"
-          class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+          class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-100 text-ink rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
         >
           <span class="material-symbols-outlined text-[18px]">arrow_back</span>
           목록으로 돌아가기
@@ -145,8 +145,8 @@
 
     <!-- Not Found -->
     <div v-else class="py-20 text-center">
-      <span class="material-symbols-outlined text-[48px] text-slate-300 mb-4 block">error</span>
-      <p class="text-slate-600 font-medium">가이드를 찾을 수 없습니다</p>
+      <span class="material-symbols-outlined text-[48px] text-faint mb-4 block">error</span>
+      <p class="text-muted font-medium">가이드를 찾을 수 없습니다</p>
       <NuxtLink
         to="/guide"
         class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors mt-4"

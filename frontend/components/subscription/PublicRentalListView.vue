@@ -27,9 +27,9 @@
         </button>
       </div>
 
-      <div v-else-if="items.length === 0" class="rounded-xl bg-slate-50 p-12 text-center">
-        <p class="text-slate-600 font-medium">{{ emptyFiltered('매물') }}</p>
-        <p class="text-slate-500 text-sm mt-1">지역 필터를 다른 값으로 바꿔보세요</p>
+      <div v-else-if="items.length === 0" class="rounded-xl bg-background-light p-12 text-center">
+        <p class="text-ink font-medium">{{ emptyFiltered('매물') }}</p>
+        <p class="text-muted text-sm mt-1">지역 필터를 다른 값으로 바꿔보세요</p>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

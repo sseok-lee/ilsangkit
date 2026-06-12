@@ -1,9 +1,9 @@
 <template>
   <div class="bg-background-light">
-    <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
+    <div class="bg-gradient-to-b from-background-light to-background-light border-b border-line">
       <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">공공임대 모집공고</h1>
-        <p class="mt-2 text-slate-500 text-sm">
+        <h1 class="text-2xl md:text-3xl font-bold text-strong">공공임대 모집공고</h1>
+        <p class="mt-2 text-muted text-sm">
           LH·SH·GH 등 공공기관이 발표한 입주자 모집공고를 모아 확인하세요.
           진행중인 공고와 예정 공고, 최근 마감 공고를 시기별로 분류해 보여드립니다.
         </p>
@@ -22,7 +22,7 @@
           class="px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
           :class="status === opt.value
             ? 'bg-primary text-white border-primary'
-            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+            : 'bg-white text-muted border-line-2 hover:bg-background-light'"
           @click="setStatus(opt.value)"
         >
           {{ opt.label }}
@@ -35,7 +35,7 @@
           v-model="q"
           type="search"
           placeholder="공고명·단지명·기관명 검색"
-          class="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-slate-400"
+          class="flex-1 px-3 py-2 rounded-lg border border-line-2 text-sm focus:outline-none focus:border-line-2"
           @keydown.enter="reload"
         />
         <button
@@ -48,16 +48,16 @@
       </div>
 
       <!-- 목록 -->
-      <div v-if="loading" class="py-12 text-center text-slate-400 text-sm">{{ UI_MESSAGES.loading }}</div>
+      <div v-if="loading" class="py-12 text-center text-faint text-sm">{{ UI_MESSAGES.loading }}</div>
       <div v-else-if="error" class="py-12 text-center text-rose-500 text-sm">{{ error }}</div>
-      <div v-else-if="items.length === 0" class="py-12 text-center text-slate-400 text-sm">
+      <div v-else-if="items.length === 0" class="py-12 text-center text-faint text-sm">
         {{ emptyFiltered('모집공고') }}
       </div>
       <ul v-else class="grid gap-3 md:grid-cols-2">
         <li
           v-for="ann in items"
           :key="ann.pblancId"
-          class="bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors"
+          class="bg-white border border-line-2 rounded-xl p-4 hover:border-line-2 transition-colors"
         >
           <NuxtLink :to="`/public-rental/announcements/${encodeURIComponent(ann.pblancId)}`" class="block">
             <div class="flex items-start justify-between gap-3 mb-2">
@@ -67,24 +67,24 @@
               >
                 {{ STATUS_LABEL[ann.status] }}
               </span>
-              <span v-if="ann.suplyTyNm" class="text-xs text-slate-500 shrink-0">{{ ann.suplyTyNm }}</span>
+              <span v-if="ann.suplyTyNm" class="text-xs text-muted shrink-0">{{ ann.suplyTyNm }}</span>
             </div>
-            <h2 class="text-base font-semibold text-slate-900 leading-snug line-clamp-2">
+            <h2 class="text-base font-semibold text-strong leading-snug line-clamp-2">
               {{ ann.pblancNm }}
             </h2>
-            <p class="mt-1 text-xs text-slate-500">
+            <p class="mt-1 text-xs text-muted">
               <span v-if="ann.suplyInsttNm">{{ ann.suplyInsttNm }}</span>
               <span v-if="ann.brtcNm || ann.signguNm" class="ml-1">
                 · {{ [ann.brtcNm, ann.signguNm].filter(Boolean).join(' ') }}
               </span>
             </p>
-            <p class="mt-2 text-xs text-slate-600">
+            <p class="mt-2 text-xs text-ink">
               <span v-if="ann.beginDe || ann.endDe">
                 접수 {{ formatDateRange(ann.beginDe, ann.endDe) }}
               </span>
-              <span v-else class="text-slate-400">접수 일정 미정</span>
-              <span v-if="ann.totalSupply" class="ml-2 text-slate-500">· {{ ann.totalSupply }}세대</span>
-              <span v-if="ann.variantCount > 1" class="ml-1 text-slate-400">({{ ann.variantCount }}개 단지)</span>
+              <span v-else class="text-faint">접수 일정 미정</span>
+              <span v-if="ann.totalSupply" class="ml-2 text-muted">· {{ ann.totalSupply }}세대</span>
+              <span v-if="ann.variantCount > 1" class="ml-1 text-faint">({{ ann.variantCount }}개 단지)</span>
             </p>
           </NuxtLink>
         </li>

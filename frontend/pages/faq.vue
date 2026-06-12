@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background-light text-slate-900 font-display min-h-screen">
+  <div class="bg-background-light text-strong font-display min-h-screen">
     <div class="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8">
       <StaticPageHeader
         title="자주 묻는 질문"
@@ -10,7 +10,7 @@
 
       <!-- 부동산 실거래가 FAQ -->
       <div class="mb-6">
-        <h2 class="text-display-2 text-slate-700 mb-3 flex items-center gap-2">
+        <h2 class="text-display-2 text-strong mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">apartment</span>
           부동산 실거래가
         </h2>
@@ -19,17 +19,17 @@
           <details
             v-for="(faq, index) in realEstateFaqItems"
             :key="`re-${index}`"
-            class="group bg-white rounded-lg border border-slate-100"
+            class="group bg-white rounded-lg border border-line"
           >
             <summary
-              class="flex items-center justify-between gap-2 cursor-pointer px-4 py-3 text-sm font-medium text-slate-900 select-none list-none [&::-webkit-details-marker]:hidden"
+              class="flex items-center justify-between gap-2 cursor-pointer px-4 py-3 text-sm font-medium text-strong select-none list-none [&::-webkit-details-marker]:hidden"
             >
               <span>Q. {{ faq.question }}</span>
               <span
-                class="material-symbols-outlined text-[18px] text-slate-500 transition-transform group-open:rotate-180 shrink-0"
+                class="material-symbols-outlined text-[18px] text-muted transition-transform group-open:rotate-180 shrink-0"
               >expand_more</span>
             </summary>
-            <div class="px-4 pb-4 text-sm text-slate-600 leading-relaxed">
+            <div class="px-4 pb-4 text-sm text-muted leading-relaxed">
               {{ faq.answer }}
             </div>
           </details>
@@ -38,13 +38,13 @@
 
       <!-- 시설 카테고리 FAQ -->
       <div v-for="group in groups" :key="group.title" class="mb-6">
-        <h2 class="text-display-2 text-slate-700 mb-3 flex items-center gap-2">
+        <h2 class="text-display-2 text-strong mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">{{ group.icon }}</span>
           {{ group.title }}
         </h2>
 
         <div v-for="cat in group.categories" :key="cat" class="mb-4">
-          <h3 class="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h3 class="text-base font-semibold text-strong mb-3 flex items-center gap-2">
             <span
               class="material-symbols-outlined text-[18px]"
               :class="categoryColorClass(cat)"
@@ -56,17 +56,17 @@
             <details
               v-for="(faq, index) in CATEGORY_FAQ[cat]"
               :key="index"
-              class="group bg-white rounded-lg border border-slate-100"
+              class="group bg-white rounded-lg border border-line"
             >
               <summary
-                class="flex items-center justify-between gap-2 cursor-pointer px-4 py-3 text-sm font-medium text-slate-900 select-none list-none [&::-webkit-details-marker]:hidden"
+                class="flex items-center justify-between gap-2 cursor-pointer px-4 py-3 text-sm font-medium text-strong select-none list-none [&::-webkit-details-marker]:hidden"
               >
                 <span>Q. {{ faq.question }}</span>
                 <span
-                  class="material-symbols-outlined text-[18px] text-slate-500 transition-transform group-open:rotate-180 shrink-0"
+                  class="material-symbols-outlined text-[18px] text-muted transition-transform group-open:rotate-180 shrink-0"
                 >expand_more</span>
               </summary>
-              <div class="px-4 pb-4 text-sm text-slate-600 leading-relaxed">
+              <div class="px-4 pb-4 text-sm text-muted leading-relaxed">
                 {{ faq.answer }}
               </div>
             </details>
@@ -132,6 +132,6 @@ function categoryColorClass(cat: FacilityCategory): string {
     indigo: 'text-indigo-500',
     amber: 'text-amber-500',
   }
-  return colorMap[CATEGORY_META[cat].color] || 'text-slate-500'
+  return colorMap[CATEGORY_META[cat].color] || 'text-muted'
 }
 </script>

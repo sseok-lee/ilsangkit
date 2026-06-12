@@ -1,9 +1,9 @@
 <template>
   <div class="bg-background-light">
-    <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
+    <div class="bg-gradient-to-b from-background-light to-background-light border-b border-line">
       <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">{{ typeMeta.label }}</h1>
-        <p class="mt-2 text-slate-500 text-sm">{{ typeMeta.description }}</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-strong">{{ typeMeta.label }}</h1>
+        <p class="mt-2 text-muted text-sm">{{ typeMeta.description }}</p>
       </div>
     </div>
 

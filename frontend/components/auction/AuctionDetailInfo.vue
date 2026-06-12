@@ -43,16 +43,16 @@ const dealRows = computed<Row[]>(() =>
     <!-- 핵심 스탯 카드 -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div class="bg-white rounded-xl border border-line p-4 shadow-card text-center">
-        <p class="text-caption text-slate-400 mb-1">최저입찰가</p>
-        <p class="text-base font-bold text-primary">{{ formatWonKorean(item.minBidPrc) }}</p>
+        <p class="text-caption text-faint mb-1">최저입찰가</p>
+        <p class="text-base font-bold text-primary font-display tabular-nums">{{ formatWonKorean(item.minBidPrc) }}</p>
       </div>
       <div class="bg-white rounded-xl border border-line p-4 shadow-card text-center">
-        <p class="text-caption text-slate-400 mb-1">입찰방식</p>
-        <p class="text-base font-bold text-slate-900">{{ item.bidMethod ?? statusLabel(item.status) }}</p>
+        <p class="text-caption text-faint mb-1">입찰방식</p>
+        <p class="text-base font-bold text-strong">{{ item.bidMethod ?? statusLabel(item.status) }}</p>
       </div>
       <div class="bg-white rounded-xl border border-line p-4 shadow-card text-center">
-        <p class="text-caption text-slate-400 mb-1">집행기관</p>
-        <p class="text-base font-bold text-slate-900 truncate">{{ item.orgNm ?? '-' }}</p>
+        <p class="text-caption text-faint mb-1">집행기관</p>
+        <p class="text-base font-bold text-strong truncate">{{ item.orgNm ?? '-' }}</p>
       </div>
     </div>
 
@@ -60,8 +60,8 @@ const dealRows = computed<Row[]>(() =>
     <SectionBlock heading="공매 기본정보">
       <dl class="divide-y divide-line -my-1">
         <div v-for="r in basicRows" :key="r.label" class="flex py-2.5 text-sm">
-          <dt class="w-28 shrink-0 text-slate-500">{{ r.label }}</dt>
-          <dd class="text-slate-900 font-medium break-all">{{ r.value }}</dd>
+          <dt class="w-28 shrink-0 text-muted">{{ r.label }}</dt>
+          <dd class="text-strong font-medium break-all">{{ r.value }}</dd>
         </div>
       </dl>
     </SectionBlock>
@@ -70,8 +70,8 @@ const dealRows = computed<Row[]>(() =>
     <SectionBlock v-if="areaRows.length" heading="면적 정보">
       <dl class="divide-y divide-line -my-1">
         <div v-for="r in areaRows" :key="r.label" class="flex py-2.5 text-sm">
-          <dt class="w-28 shrink-0 text-slate-500">{{ r.label }}</dt>
-          <dd class="text-slate-900 font-medium">{{ r.value }}</dd>
+          <dt class="w-28 shrink-0 text-muted">{{ r.label }}</dt>
+          <dd class="text-strong font-medium">{{ r.value }}</dd>
         </div>
       </dl>
     </SectionBlock>
@@ -80,13 +80,13 @@ const dealRows = computed<Row[]>(() =>
     <SectionBlock v-if="dealRows.length" heading="거래 조건">
       <dl class="divide-y divide-line -my-1">
         <div v-for="r in dealRows" :key="r.label" class="flex py-2.5 text-sm">
-          <dt class="w-28 shrink-0 text-slate-500">{{ r.label }}</dt>
-          <dd class="text-slate-900 font-medium">{{ r.value }}</dd>
+          <dt class="w-28 shrink-0 text-muted">{{ r.label }}</dt>
+          <dd class="text-strong font-medium">{{ r.value }}</dd>
         </div>
       </dl>
     </SectionBlock>
 
-    <p class="text-caption text-slate-400 leading-relaxed">
+    <p class="text-caption text-faint leading-relaxed">
       ⚠️ 공매 물건은 공부상 면적과 실제 면적이 다를 수 있으므로 입찰 전 현장 확인을 권장합니다.
       상세 내역은 온비드(Onbid)를 통해 재확인하시기 바랍니다.
     </p>

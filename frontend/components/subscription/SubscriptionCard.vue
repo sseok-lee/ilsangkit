@@ -1,13 +1,13 @@
 <template>
   <HardLink :to="`/subscription/${subscription.id}`" class="block">
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
+    <div class="bg-white rounded-xl shadow-sm border border-line-2 overflow-hidden hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
       <!-- Header with status badge -->
       <div class="p-4 pb-3 flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0">
-          <h3 class="font-bold text-slate-900 text-sm md:text-base truncate">
+          <h3 class="font-bold text-strong text-sm md:text-base truncate">
             {{ subscription.houseName }}
           </h3>
-          <p class="text-xs md:text-sm text-slate-500 mt-1">{{ subscription.regionName }}</p>
+          <p class="text-xs md:text-sm text-muted mt-1">{{ subscription.regionName }}</p>
         </div>
         <span :class="statusBadgeClass">
           {{ statusLabel }}
@@ -18,9 +18,9 @@
       <div class="px-4 pb-4 flex-1 space-y-3">
         <!-- Supply count -->
         <div v-if="subscription.totalSupplyCount" class="flex items-center gap-2 text-sm">
-          <span class="material-symbols-outlined text-slate-400 text-[18px]">home</span>
-          <span class="text-slate-600">공급</span>
-          <span class="font-semibold text-slate-900">{{ subscription.totalSupplyCount.toLocaleString() }}호</span>
+          <span class="material-symbols-outlined text-faint text-[18px]">home</span>
+          <span class="text-muted">공급</span>
+          <span class="font-semibold text-strong font-display tabular-nums">{{ subscription.totalSupplyCount.toLocaleString() }}호</span>
         </div>
 
         <!-- House type & detail -->
@@ -32,13 +32,13 @@
         </div>
 
         <!-- Date range -->
-        <div class="text-xs text-slate-500 space-y-1">
+        <div class="text-xs text-muted space-y-1">
           <p v-if="receptionDateRange">
-            <span class="font-medium text-slate-600">접수:</span>
+            <span class="font-medium text-muted">접수:</span>
             {{ receptionDateRange }}
           </p>
           <p v-if="specialDateRange">
-            <span class="font-medium text-slate-600">특공:</span>
+            <span class="font-medium text-muted">특공:</span>
             {{ specialDateRange }}
           </p>
         </div>

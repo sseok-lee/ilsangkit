@@ -89,7 +89,7 @@ describe('RentalPriceStatsBox', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('해당 지역 시세 데이터가 없습니다')
-    expect(wrapper.html()).toMatch(/text-slate-400/)
+    expect(wrapper.html()).toMatch(/text-faint/)
   })
 
   it('로딩 중일 때 skeleton UI를 표시하는지 확인', () => {
