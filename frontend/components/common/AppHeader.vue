@@ -13,7 +13,7 @@
       <div class="flex items-center gap-2">
         <button
           v-if="props.showBackButton"
-          class="flex size-11 items-center justify-center rounded-full hover:bg-black/5 transition-colors text-slate-900"
+          class="flex size-11 items-center justify-center rounded-full hover:bg-black/5 transition-colors text-strong"
           aria-label="뒤로가기"
           @click="handleBack"
         >
@@ -40,7 +40,7 @@
           @focusout="handleDropdownFocusout($event, group.title)"
         >
           <button
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
             aria-haspopup="true"
             :aria-expanded="activeDropdown === group.title"
             @click="toggleDropdown(group.title)"
@@ -61,7 +61,7 @@
           >
             <div
               v-if="activeDropdown === group.title"
-              class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-slate-200 p-2 z-50"
+              class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-line-2 p-2 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
             >
@@ -71,22 +71,22 @@
                   <div
                     v-if="idx > 0"
                     data-testid="nav-section-divider"
-                    class="h-px bg-slate-100 my-1 mx-2"
+                    class="h-px bg-line my-1 mx-2"
                   />
                   <div
                     data-testid="nav-section-heading"
-                    class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                    class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-faint"
                   >
                     {{ link.section }}
                   </div>
                 </template>
                 <HardLink
                   :to="link.to"
-                  class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
+                  class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
                   @click="closeDropdown"
                 >
                   <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-                  <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
+                  <span v-else class="material-symbols-outlined text-[18px] text-faint">{{ link.icon }}</span>
                   {{ link.label }}
                 </HardLink>
               </template>
@@ -103,7 +103,7 @@
           @focusout="handleDropdownFocusout($event, '생활시설')"
         >
           <button
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
             aria-haspopup="true"
             :aria-expanded="activeDropdown === '생활시설'"
             @click="toggleDropdown('생활시설')"
@@ -127,12 +127,12 @@
               data-testid="nav-mega-menu"
               role="region"
               aria-label="생활시설 메뉴"
-              class="absolute top-full right-0 mt-1 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50"
+              class="absolute top-full right-0 mt-1 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-line-2 p-4 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
             >
               <div v-for="group in CATEGORY_GROUPS" :key="group.title">
-                <div class="flex items-center gap-1.5 px-2 pb-1.5 mb-1 border-b border-slate-100 text-[13px] font-bold text-slate-700">
+                <div class="flex items-center gap-1.5 px-2 pb-1.5 mb-1 border-b border-line text-[13px] font-bold text-strong">
                   <span class="material-symbols-outlined text-[18px] text-primary">{{ group.icon }}</span>
                   {{ group.title }}
                 </div>
@@ -140,7 +140,7 @@
                   v-for="catId in group.categories"
                   :key="catId"
                   :to="`/${catId}`"
-                  class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 text-[15px] text-slate-700 transition-colors"
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
                   @click="closeDropdown"
                 >
                   <CategoryIcon :category-id="catId" size="sm" />
@@ -156,17 +156,17 @@
 
         <!-- Utility Links (우측 정렬 클러스터 내부) -->
         <div class="flex items-center gap-1">
-          <div class="h-5 w-px bg-slate-200 mx-1"></div>
+          <div class="h-5 w-px bg-line-2 mx-1"></div>
           <HardLink
             to="/guide"
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
           >
             <span class="material-symbols-outlined text-[18px]">menu_book</span>
             가이드
           </HardLink>
           <HardLink
             to="/about"
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
           >
             <span class="material-symbols-outlined text-[18px]">info</span>
             소개
@@ -178,7 +178,7 @@
       <div class="md:hidden ml-auto flex items-center gap-0.5">
         <HeaderSearch variant="mobile" v-show="showHeaderSearch" />
         <button
-          class="flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-slate-900"
+          class="flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-strong"
           aria-label="메뉴"
           :aria-expanded="isMobileMenuOpen"
           @click="toggleMobileMenu($event)"
@@ -204,30 +204,30 @@
       data-testid="mobile-menu"
       role="navigation"
       aria-label="모바일 메뉴"
-      class="md:hidden fixed top-[56px] left-0 right-0 bottom-0 z-40 bg-background-light border-b border-slate-200 shadow-lg overflow-y-auto"
+      class="md:hidden fixed top-[56px] left-0 right-0 bottom-0 z-40 bg-background-light border-b border-line-2 shadow-lg overflow-y-auto"
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">
         <!-- 부동산 / 청약·임대 (link groups) -->
         <div v-for="group in NAV_LINK_GROUPS" :key="group.title" class="mb-1">
-          <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-wider">
             <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
             {{ group.title }}
           </div>
           <template v-for="(link, idx) in group.links" :key="link.to">
             <div
               v-if="link.section && (idx === 0 || link.section !== group.links[idx - 1].section)"
-              class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+              class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-faint"
             >
               {{ link.section }}
             </div>
             <HardLink
               :to="link.to"
-              class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              class="pl-6 pr-4 py-2.5 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
               <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-              <span v-else class="material-symbols-outlined text-[18px] text-slate-400">{{ link.icon }}</span>
+              <span v-else class="material-symbols-outlined text-[18px] text-faint">{{ link.icon }}</span>
               {{ link.label }}
             </HardLink>
           </template>
@@ -235,19 +235,19 @@
 
         <!-- 생활시설 통합 섹션 (시설 4개 그룹) -->
         <div class="mb-1">
-          <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-wider">
             <span class="material-symbols-outlined text-[16px] text-primary">grid_view</span>
             생활시설
           </div>
           <div v-for="group in CATEGORY_GROUPS" :key="group.title">
-            <div class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            <div class="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-faint">
               {{ group.title }}
             </div>
             <HardLink
               v-for="catId in group.categories"
               :key="catId"
               :to="`/${catId}`"
-              class="pl-6 pr-4 py-2.5 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              class="pl-6 pr-4 py-2.5 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
               @click="closeMobileMenu"
             >
               <CategoryIcon :category-id="catId" size="sm" />
@@ -256,47 +256,47 @@
           </div>
         </div>
 
-        <div class="h-px bg-slate-200 my-2"></div>
+        <div class="h-px bg-line-2 my-2"></div>
         <HardLink
           to="/"
-          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           홈
         </HardLink>
         <HardLink
           to="/search"
-          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           검색
         </HardLink>
         <HardLink
           to="/guide"
-          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           가이드
         </HardLink>
         <HardLink
           to="/about"
-          class="px-4 py-3 text-slate-900 hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
+          class="px-4 py-3 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium"
           @click="closeMobileMenu"
         >
           소개
         </HardLink>
-        <div class="h-px bg-slate-200 my-2"></div>
+        <div class="h-px bg-line-2 my-2"></div>
         <div class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2">
           <HardLink
             to="/privacy"
-            class="text-xs text-slate-500 hover:text-primary transition-colors"
+            class="text-xs text-muted hover:text-primary transition-colors"
             @click="closeMobileMenu"
           >
             개인정보처리방침
           </HardLink>
           <HardLink
             to="/terms"
-            class="text-xs text-slate-500 hover:text-primary transition-colors"
+            class="text-xs text-muted hover:text-primary transition-colors"
             @click="closeMobileMenu"
           >
             이용약관
