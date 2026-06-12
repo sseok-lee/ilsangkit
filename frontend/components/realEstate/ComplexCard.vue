@@ -2,7 +2,7 @@
   <HardLink
     v-if="isRenderable"
     :to="linkUrl"
-    class="group bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 ease-out border border-slate-200 hover:border-primary/30 cursor-pointer block"
+    class="group bg-white rounded-xl p-4 shadow-card hover:shadow-card-2 transition-[box-shadow,border-color,transform] duration-200 ease-out border border-line hover:border-primary/30 hover:-translate-y-0.5 cursor-pointer block"
   >
     <!-- 상단: 아이콘 + 건물명/주소 -->
     <div class="flex items-start gap-3">
@@ -16,32 +16,32 @@
       </div>
 
       <div class="flex-1 min-w-0">
-        <h3 class="text-slate-900 text-[15px] font-bold truncate">
+        <h3 class="font-display text-strong text-[15px] font-extrabold tracking-tight truncate">
           {{ complex.buildingName }}
         </h3>
-        <p class="text-slate-500 text-xs truncate mt-0.5">
+        <p class="text-faint text-xs truncate mt-0.5">
           {{ complex.city }} {{ complex.district }} {{ complex.dongName }}
         </p>
       </div>
     </div>
 
     <!-- 하단: 메타 정보 3열 -->
-    <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100">
+    <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-line">
       <div class="text-center">
-        <p class="text-[10px] text-slate-500 tracking-wide">최근 거래</p>
-        <p class="text-sm font-semibold text-slate-700 mt-0.5">
+        <p class="text-[10px] text-faint tracking-wide">최근 거래</p>
+        <p class="font-display text-sm font-bold text-ink mt-0.5 tabular-nums">
           {{ complex.lastDealYear ? `${complex.lastDealYear}.${String(complex.lastDealMonth).padStart(2, '0')}` : '-' }}
         </p>
       </div>
       <div class="text-center">
-        <p class="text-[10px] text-slate-500 tracking-wide">건축년도</p>
-        <p class="text-sm font-semibold text-slate-700 mt-0.5">
+        <p class="text-[10px] text-faint tracking-wide">건축년도</p>
+        <p class="font-display text-sm font-bold text-ink mt-0.5 tabular-nums">
           {{ complex.buildYear ? `${complex.buildYear}년` : '-' }}
         </p>
       </div>
       <div class="text-center">
-        <p class="text-[10px] text-slate-500 tracking-wide">거래</p>
-        <p class="text-sm font-semibold text-slate-700 mt-0.5">{{ complex.transactionCount }}건</p>
+        <p class="text-[10px] text-faint tracking-wide">거래</p>
+        <p class="font-display text-sm font-bold text-ink mt-0.5 tabular-nums">{{ complex.transactionCount }}건</p>
       </div>
     </div>
   </HardLink>

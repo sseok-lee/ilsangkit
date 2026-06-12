@@ -29,11 +29,11 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <!-- 시/도 선택 -->
           <div class="relative">
-            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">시/도</label>
+            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">시/도</label>
             <select
               v-model="selectedCity"
               aria-label="시/도 선택"
-              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 px-3 text-ink text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
               @change="handleCityChange"
             >
               <option value="">시/도 선택</option>
@@ -43,12 +43,12 @@
           </div>
           <!-- 구/군 선택 -->
           <div class="relative">
-            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">구/군</label>
+            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">구/군</label>
             <select
               v-model="selectedDistrict"
               :disabled="!selectedCity"
               aria-label="구/군 선택"
-              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 px-3 text-ink text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               @change="handleDistrictChange"
             >
               <option value="">구/군 선택</option>
@@ -58,13 +58,13 @@
           </div>
           <!-- 키워드 검색 -->
           <div class="relative">
-            <label class="block text-xs font-medium text-slate-600 mb-1 hidden md:block">키워드</label>
+            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">키워드</label>
             <div class="absolute left-3 bottom-2.5 pointer-events-none">
               <span class="material-symbols-outlined text-slate-500 text-[18px]">search</span>
             </div>
             <input
               v-model="filterKeyword"
-              class="w-full bg-slate-50 border border-line rounded-lg py-2.5 pl-9 pr-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 pl-9 pr-3 text-ink text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
               type="text"
               :placeholder="categoryParam === 'trash' ? '동/지역 이름 검색' : '시설명/주소 검색'"
               @input="handleFilterSearch"
