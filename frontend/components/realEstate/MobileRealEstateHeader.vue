@@ -1,10 +1,10 @@
 <!-- frontend/components/realEstate/MobileRealEstateHeader.vue -->
 <template>
   <section class="md:hidden bg-white border border-line rounded-xl shadow-card p-4">
-    <span v-if="eyebrow" class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded text-eyebrow">
+    <span v-if="eyebrow" class="inline-flex items-center mb-2 px-2.5 py-1 bg-primary/10 text-primary rounded-full text-eyebrow">
       {{ eyebrow }}
     </span>
-    <h1 class="text-display-2 text-slate-900 break-keep">{{ title }}</h1>
+    <h1 class="text-display-1 text-strong break-keep">{{ title }}</h1>
 
     <div v-if="stats?.length" class="mt-3 flex flex-wrap gap-1.5">
       <span

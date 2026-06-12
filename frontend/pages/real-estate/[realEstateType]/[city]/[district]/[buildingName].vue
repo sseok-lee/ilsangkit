@@ -196,24 +196,24 @@
         >
           <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">{{ periodTradeLabel }}</span>
-              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodTradeCount }}건</strong>
+              <span class="block text-faint text-xs font-bold">{{ periodTradeLabel }}</span>
+              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodTradeCount }}건</strong>
             </div>
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">최근 평균가</span>
-              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ summaryLatestAvg }}</strong>
+              <span class="block text-faint text-xs font-bold">최근 평균가</span>
+              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ summaryLatestAvg }}</strong>
             </div>
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">최고 거래가</span>
-              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodMaxPriceLabel }}</strong>
+              <span class="block text-faint text-xs font-bold">최고 거래가</span>
+              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodMaxPriceLabel }}</strong>
             </div>
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">최저 거래가</span>
-              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodMinPriceLabel }}</strong>
+              <span class="block text-faint text-xs font-bold">최저 거래가</span>
+              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodMinPriceLabel }}</strong>
             </div>
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">전월 대비</span>
-              <strong :class="['block mt-1 text-base md:text-lg font-bold truncate', changeRateColor]">
+              <span class="block text-faint text-xs font-bold">전월 대비</span>
+              <strong :class="['block mt-1 text-base md:text-lg font-display font-extrabold tabular-nums truncate', changeRateColor]">
                 {{ summaryChangeRate }}
               </strong>
             </div>
@@ -244,7 +244,7 @@
           :loading="false"
           :price-label="summary?.priceLabel"
         />
-        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
+        <div v-else class="rounded-xl bg-background-light p-8 text-center text-faint">
           시세 데이터가 아직 없습니다.
         </div>
         <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-400">
@@ -267,7 +267,7 @@
           :loading="false"
           :hide-building="true"
         />
-        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
+        <div v-else class="rounded-xl bg-background-light p-8 text-center text-faint">
           {{ emptyFiltered('거래 내역') }}
         </div>
 

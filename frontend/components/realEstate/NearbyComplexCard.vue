@@ -1,21 +1,21 @@
 <template>
   <HardLink
     :to="linkUrl"
-    class="block bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition border border-slate-200 hover:border-primary/30"
+    class="block bg-white rounded-xl p-4 shadow-card hover:shadow-card-2 transition-[box-shadow,border-color,transform] duration-200 ease-out border border-line hover:border-primary/30 hover:-translate-y-0.5"
   >
     <div class="flex items-start gap-2 mb-2">
-      <h3 class="text-slate-900 text-[15px] font-bold truncate flex-1 min-w-0">{{ item.buildingName }}</h3>
+      <h3 class="font-display text-strong text-[15px] font-extrabold tracking-tight truncate flex-1 min-w-0">{{ item.buildingName }}</h3>
       <span :class="['shrink-0 text-[11px] font-bold rounded-md px-2 py-0.5', badgeClass]">{{ propertyLabel }}</span>
     </div>
-    <p class="text-slate-500 text-xs truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
+    <p class="text-faint text-xs truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
     <p :class="['mt-2 text-[13px] font-bold rounded-md inline-flex items-center gap-1 px-2 py-1', priceBadgeClass]">
       <span>{{ priceLabel }}</span>
       <span>{{ priceText }}</span>
     </p>
-    <dl v-if="metaItems.length > 0" class="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-slate-100">
+    <dl v-if="metaItems.length > 0" class="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-line">
       <div v-for="meta in metaItems" :key="meta.label" class="text-center">
-        <dt class="text-[10px] text-slate-500 tracking-wide">{{ meta.label }}</dt>
-        <dd class="mt-0.5 text-[13px] font-semibold text-slate-700">{{ meta.value }}</dd>
+        <dt class="text-[10px] text-faint tracking-wide">{{ meta.label }}</dt>
+        <dd class="mt-0.5 text-[13px] font-display font-bold text-ink tabular-nums">{{ meta.value }}</dd>
       </div>
     </dl>
   </HardLink>
