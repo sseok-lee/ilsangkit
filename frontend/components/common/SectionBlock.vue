@@ -6,9 +6,9 @@
     <header v-if="heading || $slots.heading || $slots.right" class="flex justify-between items-end gap-4 mb-3">
       <div class="min-w-0">
         <slot name="heading">
-          <h3 v-if="heading" class="text-display-3 text-slate-900">{{ heading }}</h3>
+          <h3 v-if="heading" class="text-display-2 text-strong">{{ heading }}</h3>
         </slot>
-        <p v-if="subtext" class="mt-1 text-slate-500 text-xs md:text-sm">{{ subtext }}</p>
+        <p v-if="subtext" class="mt-1 text-faint text-xs md:text-sm">{{ subtext }}</p>
       </div>
       <div v-if="$slots.right" class="shrink-0">
         <slot name="right" />

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-background-light flex flex-col text-slate-900">
+  <div class="min-h-screen bg-background-light flex flex-col text-slate-900" :style="{ '--cat': catColorVar }">
     <!-- Main Content -->
     <main class="flex-1 w-full">
       <!-- Loading State -->
@@ -449,6 +449,9 @@ useHead(computed(() => {
 
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })
+
+// OD 진화판 — 카테고리 색을 --cat CSS 변수로 주입 (kicker·타일·아이콘 테마링)
+const catColorVar = computed(() => `var(--c-${category.value}, var(--brand))`)
 
 // 사용자에게 노출할 이름 (원본 name이 비어있거나 "-"일 때 fallback)
 const displayName = computed(() => {
