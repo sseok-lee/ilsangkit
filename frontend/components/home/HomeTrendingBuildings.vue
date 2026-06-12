@@ -2,11 +2,11 @@
   <section v-if="hasAny" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="flex items-end justify-between gap-4 mb-4">
       <div>
-        <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
+        <h2 class="text-display-2 text-strong flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]">local_fire_department</span>
           이번 주 인기 단지
         </h2>
-        <p class="text-sm text-slate-500 mt-1">최근 7일 거래가 많은 단지의 주력 평형 실거래가 중앙값입니다.</p>
+        <p class="text-sm text-muted mt-1">최근 7일 거래가 많은 단지의 주력 평형 실거래가 중앙값입니다.</p>
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체보기 →</HardLink>
     </div>
@@ -17,13 +17,13 @@
         class="bg-white border border-line rounded-2xl shadow-card overflow-hidden flex flex-col"
       >
         <!-- Column header -->
-        <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+        <div class="flex items-center gap-3 px-4 py-3 border-b border-line">
           <div :class="['w-[1.5px] h-5 rounded-full', col.accentBar]" />
-          <span class="font-bold text-slate-900 text-sm">{{ col.label }}</span>
-          <span class="ml-auto text-[11px] text-slate-400">최근 7일</span>
+          <span class="font-bold text-strong text-sm">{{ col.label }}</span>
+          <span class="ml-auto text-[11px] text-faint">최근 7일</span>
         </div>
         <!-- Empty state -->
-        <div v-if="col.items.length === 0" class="flex-1 flex items-center justify-center py-8 text-sm text-slate-400">
+        <div v-if="col.items.length === 0" class="flex-1 flex items-center justify-center py-8 text-sm text-faint">
           이번 주 거래 없음
         </div>
         <!-- Building rows -->
@@ -32,30 +32,30 @@
             v-for="(b, i) in col.items"
             :key="b.slug"
             :href="buildUrl(col.type, b)"
-            :class="['flex items-center gap-3 px-4 py-3 border-b border-slate-50 last:border-b-0 transition-colors', col.hoverBg]"
+            :class="['flex items-center gap-3 px-4 py-3 border-b border-line last:border-b-0 transition-colors', col.hoverBg]"
           >
             <!-- Rank -->
             <span
-              :class="['w-5 text-center text-sm font-bold shrink-0', i < 2 ? col.accentText : 'text-slate-400']"
+              :class="['w-5 text-center text-sm font-display font-extrabold shrink-0 tabular-nums', i < 2 ? col.accentText : 'text-faint']"
             >{{ i + 1 }}</span>
             <!-- Name + region -->
             <div class="flex-1 min-w-0">
-              <div class="text-sm font-semibold text-slate-900 truncate">{{ b.buildingName }}</div>
-              <div class="text-[11px] text-slate-400">{{ shortRegion(b.city, b.district) }}</div>
+              <div class="text-sm font-semibold text-strong truncate">{{ b.buildingName }}</div>
+              <div class="text-[11px] text-faint">{{ shortRegion(b.city, b.district) }}</div>
             </div>
             <!-- Txn count + price -->
             <div class="text-right shrink-0">
-              <div class="text-[11px] text-slate-400">
+              <div class="text-[11px] text-faint tabular-nums">
                 {{ b.txnCount }}건<template v-if="b.representativeArea"> · {{ b.representativeArea }}㎡</template>
               </div>
-              <div :class="['text-sm font-bold', col.accentText]">{{ formatBuildingPrice(col.type, b) }}</div>
+              <div :class="['text-sm font-display font-bold tabular-nums', col.accentText]">{{ formatBuildingPrice(col.type, b) }}</div>
             </div>
           </a>
         </template>
       </div>
     </div>
     <!-- Caption -->
-    <p class="text-[11px] text-slate-400 mt-2">단지 내 거래 최다 평형의 실거래가 중앙값입니다. 월세는 보증금/월세(만원).</p>
+    <p class="text-[11px] text-faint mt-2">단지 내 거래 최다 평형의 실거래가 중앙값입니다. 월세는 보증금/월세(만원).</p>
   </section>
 </template>
 
