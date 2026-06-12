@@ -23,6 +23,61 @@
   --c-library: #D9820B; --c-park: #22A95B; --c-market: #F2730C; --c-sports: #8B5CF6;
 }
 
+/* ── OD 진화판 상세 페이지 반복 패턴 (Tailwind 유틸로 표현이 번거로운 것만) ──
+   --cat: 페이지 루트([id].vue)에서 카테고리 색을 주입. 미주입 시 브랜드로 폴백. */
+@layer components {
+  /* 4칸 통계 그리드 (PageHero) — 테두리 분할 + 모바일 2열 */
+  .od-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(var(--od-cols, 4), 1fr);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .od-hero-stats > .s { padding: 14px 16px; border-right: 1px solid var(--border); }
+  .od-hero-stats > .s:last-child { border-right: 0; }
+  .od-hero-stats > .s .k { font-size: 12px; color: var(--faint); font-weight: 600; }
+  .od-hero-stats > .s .v {
+    font-family: 'Public Sans', 'Pretendard Variable', sans-serif;
+    font-weight: 800; font-size: 17px; color: var(--strong);
+    margin-top: 5px; letter-spacing: -.01em; font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 640px) {
+    .od-hero-stats { grid-template-columns: 1fr 1fr; }
+    .od-hero-stats > .s:nth-child(2n) { border-right: 0; }
+    .od-hero-stats > .s:nth-child(1), .od-hero-stats > .s:nth-child(2) { border-bottom: 1px solid var(--border); }
+  }
+
+  /* 현황 타일 (DetailFacilityStatus) */
+  .od-stile {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 14px 15px;
+  }
+  .od-stile .k { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .od-stile .k .material-symbols-outlined { font-size: 18px; color: var(--cat, var(--brand)); }
+  .od-stile .v {
+    font-family: 'Public Sans', sans-serif; font-weight: 800; font-size: 17px;
+    color: var(--strong); margin-top: 6px; letter-spacing: -.01em;
+  }
+
+  /* 편의시설 칩 (DetailFacilityStatus / DetailBasicInfo) */
+  .od-amen {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px;
+    border-radius: 999px; background: var(--surface); border: 1px solid var(--border);
+    font-size: 13.5px; font-weight: 600; color: var(--ink);
+  }
+  .od-amen .material-symbols-outlined { font-size: 17px; color: var(--cat, var(--brand)); }
+  .od-amen.off { color: var(--faint); border-style: dashed; }
+  .od-amen.off .material-symbols-outlined { color: var(--border-2); }
+
+  /* 카테고리 틴트 원형 아이콘 (FacilityCard) */
+  .od-cat-ic {
+    background: color-mix(in srgb, var(--cat, var(--brand)) 12%, white);
+    color: var(--cat, var(--brand));
+  }
+}
+
 /* Pretendard Variable: CDN 동적 서브셋 사용 (nuxt.config.ts에서 CSS 링크로 로드) */
 
 @layer base {
