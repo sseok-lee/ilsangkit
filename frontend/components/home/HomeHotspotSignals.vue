@@ -5,11 +5,11 @@
   >
     <div class="flex items-end justify-between gap-4 mb-4 flex-wrap">
       <div>
-        <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
+        <h2 class="text-display-2 text-strong flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]">trending_up</span>
           오늘의 부동산 시장
         </h2>
-        <p class="text-sm text-slate-500 mt-1">최근 7일 실거래 · 전주 대비 변동이 가장 큰 지역</p>
+        <p class="text-sm text-muted mt-1">최근 7일 실거래 · 전주 대비 변동이 가장 큰 지역</p>
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">
         전체보기 →
@@ -24,7 +24,7 @@
             :key="opt.value"
             :class="[
               'px-4 py-1.5 rounded-full transition inline-flex items-center gap-1.5',
-              propertyType === opt.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
+              propertyType === opt.value ? 'bg-white text-strong shadow-sm' : 'text-muted hover:text-ink',
             ]"
             @click="onPropertyChange(opt.value)"
           >
@@ -37,24 +37,24 @@
           </button>
         </div>
         <TxnTypeMiniTabs v-model="txnType" />
-        <span class="ml-auto text-[11px] text-slate-400">자치구 단위 · 표본 30건 이상</span>
+        <span class="ml-auto text-[11px] text-faint">자치구 단위 · 표본 30건 이상</span>
       </div>
 
       <div v-if="txnType !== 'wolse'" class="px-6 pb-2 lg:hidden">
-        <div class="flex gap-1 text-[12px] font-bold border-b border-slate-100">
+        <div class="flex gap-1 text-[12px] font-bold border-b border-line">
           <button
             v-for="opt in SIGNAL_OPTIONS"
             :key="opt.value"
             :class="[
               'px-2 py-2 border-b-2',
-              mobileSignal === opt.value ? `${opt.borderClass} text-slate-900` : 'border-transparent text-slate-500',
+              mobileSignal === opt.value ? `${opt.borderClass} text-strong` : 'border-transparent text-muted',
             ]"
             @click="mobileSignal = opt.value"
           >{{ opt.label }}</button>
         </div>
       </div>
 
-      <div :class="['grid gap-px bg-slate-100 border-t border-slate-100', cardGridCols]">
+      <div :class="['grid gap-px bg-line border-t border-line', cardGridCols]">
         <div
           v-if="txnType !== 'wolse'"
           :class="['lg:block', mobileSignal === 'rising' ? '' : 'hidden']"
@@ -87,8 +87,8 @@
         </div>
       </div>
 
-      <div class="px-6 py-3 bg-slate-50/60 border-t border-slate-100 text-[11px] text-slate-500 flex items-center gap-2">
-        <span class="material-symbols-outlined text-[14px] text-slate-400">info</span>
+      <div class="px-6 py-3 bg-background-light border-t border-line text-[11px] text-muted flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-faint">info</span>
         국토교통부 실거래가 · 최근 7일 vs 직전 7일 · 표본 30건 미만 지역 제외
       </div>
     </div>

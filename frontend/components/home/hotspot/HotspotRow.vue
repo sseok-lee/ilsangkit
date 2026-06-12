@@ -1,14 +1,14 @@
 <template>
   <HardLink :to="href" :class="rowClass">
-    <span class="w-5 text-[12px] font-bold text-slate-400">{{ rank }}</span>
+    <span class="w-5 text-[12px] font-display font-extrabold text-faint tabular-nums">{{ rank }}</span>
     <div class="flex-1 min-w-0">
-      <div class="text-sm font-bold text-slate-900 truncate">{{ cityShort }} {{ region.district }}</div>
-      <div class="text-[11px] text-slate-500">
+      <div class="text-sm font-bold text-strong truncate">{{ cityShort }} {{ region.district }}</div>
+      <div class="text-[11px] text-muted tabular-nums">
         <template v-if="region.pricePerPyeong !== null">평당 {{ formatPyeong(region.pricePerPyeong) }} · </template>
         {{ region.txnCount.toLocaleString('ko-KR') }}건
       </div>
     </div>
-    <span :class="['text-sm font-bold', changeColorClass]">{{ changeLabel }}</span>
+    <span :class="['text-sm font-display font-bold tabular-nums', changeColorClass]">{{ changeLabel }}</span>
   </HardLink>
 </template>
 
