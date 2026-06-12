@@ -20,7 +20,7 @@
             {{ facility.roadAddress || facility.address }}
           </p>
         </div>
-        <button class="ml-auto text-primary text-sm font-medium hover:underline whitespace-nowrap shrink-0" @click="copyAddress">복사</button>
+        <button class="ml-auto inline-flex items-center gap-1 text-primary text-xs font-medium bg-primary-50 hover:bg-primary-100 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 transition-colors" @click="copyAddress"><span class="material-symbols-outlined text-[14px]">content_copy</span>복사</button>
       </div>
 
       <div v-if="(details?.operatingHours || isOpen24Hours || facilityPhone) && !hideOperatingHours" class="h-px bg-slate-100 w-full"></div>

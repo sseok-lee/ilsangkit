@@ -37,11 +37,11 @@
         <div
           v-for="amenity in facilityAmenities"
           :key="amenity"
-          class="bg-white border border-slate-200 rounded-lg p-3 flex flex-col items-center justify-center gap-2 text-center"
+          class="bg-surface-2 border border-line rounded-lg p-3 flex flex-col items-center justify-center gap-2 text-center"
         >
-          <span class="material-symbols-outlined text-primary text-3xl">{{ getAmenityIcon(amenity) }}</span>
-          <span class="text-sm font-medium text-slate-900">{{ amenity }}</span>
-          <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">설치됨</span>
+          <span class="material-symbols-outlined text-3xl" :style="{ color: 'var(--cat, var(--brand))' }">{{ getAmenityIcon(amenity) }}</span>
+          <span class="text-sm font-medium text-ink">{{ amenity }}</span>
+          <span class="text-xs font-bold text-success bg-green-50 px-2 py-0.5 rounded-full">설치됨</span>
         </div>
       </div>
     

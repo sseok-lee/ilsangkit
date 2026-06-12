@@ -1,11 +1,15 @@
 <!-- frontend/components/facility/detail/MobileDetailHeader.vue -->
 <template>
   <section class="md:hidden bg-white border border-line rounded-xl shadow-card p-4">
-    <span v-if="categoryLabel" class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded text-eyebrow">
+    <span
+      v-if="categoryLabel"
+      class="inline-flex items-center mb-2 px-2.5 py-1 rounded-full text-eyebrow"
+      :style="{ color: 'var(--cat, var(--brand))', background: 'color-mix(in srgb, var(--cat, var(--brand)) 10%, white)' }"
+    >
       {{ categoryLabel }}
     </span>
     <div class="flex items-start gap-2 flex-wrap">
-      <h1 class="text-display-2 text-slate-900 break-keep">{{ title }}</h1>
+      <h1 class="text-display-1 text-strong break-keep">{{ title }}</h1>
       <OperatingStatusBadge v-if="status" :status="status" class="mt-1 shrink-0" />
     </div>
 
