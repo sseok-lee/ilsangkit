@@ -32,8 +32,8 @@
       <div v-if="rows && rows.length > 0" class="bg-white rounded-xl border border-line shadow-card p-4">
         <AuctionRankingTable :rows="rows" />
       </div>
-      <div v-else class="rounded-xl bg-slate-50 p-12 text-center">
-        <p class="text-slate-500 text-sm">낙찰 데이터가 충분히 쌓이면 랭킹이 표시됩니다.</p>
+      <div v-else class="rounded-xl bg-background-light p-12 text-center">
+        <p class="text-muted text-sm">낙찰 데이터가 충분히 쌓이면 랭킹이 표시됩니다.</p>
       </div>
 
       <AdBanner />

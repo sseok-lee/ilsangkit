@@ -21,15 +21,15 @@
           />
         </ClientOnly>
       </div>
-      <div v-else class="rounded-xl bg-slate-50 p-8 text-center">
-        <p class="text-slate-500 text-sm">이 단지는 좌표 정보가 등록되지 않아 지도를 표시할 수 없습니다.</p>
-        <p class="mt-1 text-slate-400 text-xs">{{ rental.complexName }}</p>
+      <div v-else class="rounded-xl bg-background-light p-8 text-center">
+        <p class="text-muted text-sm">이 단지는 좌표 정보가 등록되지 않아 지도를 표시할 수 없습니다.</p>
+        <p class="mt-1 text-faint text-xs">{{ rental.complexName }}</p>
       </div>
     </SectionBlock>
 
     <SectionBlock heading="주변 생활시설" subtext="단지 반경 1km 이내의 학교·병원·약국·공원 등을 확인하세요.">
       <NearbyFacilities v-if="hasCoords" :lat="rental.lat as number" :lng="rental.lng as number" />
-      <div v-else class="rounded-xl bg-slate-50 p-6 text-center text-slate-500 text-sm">
+      <div v-else class="rounded-xl bg-background-light p-6 text-center text-muted text-sm">
         좌표 정보가 등록되어 있지 않아 주변 생활시설을 표시할 수 없습니다. 단지 주소를 참고하여 직접 확인해 주세요.
       </div>
     </SectionBlock>

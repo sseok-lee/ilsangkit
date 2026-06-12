@@ -12,7 +12,7 @@ const diff = computed(() => {
 </script>
 <template>
   <SectionBlock v-if="marketAvg != null" heading="실거래가 시세 비교">
-    <p class="text-sm text-slate-600">{{ marketLabel }} 평균 실거래가 <b>{{ formatWonKorean(marketAvg) }}</b></p>
+    <p class="text-sm text-muted">{{ marketLabel }} 평균 실거래가 <b class="font-display tabular-nums text-strong">{{ formatWonKorean(marketAvg) }}</b></p>
     <p v-if="diff != null" class="text-sm mt-1">감정가는 시세 대비
       <b :class="diff <= 0 ? 'text-emerald-700' : 'text-rose-600'">{{ diff > 0 ? '+' : '' }}{{ diff }}%</b>
     </p>

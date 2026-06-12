@@ -7,41 +7,41 @@
     </div>
   </div>
 
-  <div v-else-if="!hasData" class="bg-slate-50 rounded-xl border border-slate-200 p-5 mb-6">
-    <p class="text-slate-400 text-sm text-center">해당 지역 시세 데이터가 없습니다</p>
+  <div v-else-if="!hasData" class="bg-background-light rounded-xl border border-line-2 p-5 mb-6">
+    <p class="text-faint text-sm text-center">해당 지역 시세 데이터가 없습니다</p>
   </div>
 
   <div v-else class="bg-primary-50 rounded-xl border border-primary-100 p-5 mb-6">
     <!-- Header -->
     <div class="mb-4">
-      <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+      <h3 class="text-sm font-bold text-strong flex items-center gap-2">
         <span>📊 주변 아파트 전월세 시세</span>
-        <span v-if="stats?.period" class="text-xs text-slate-500">({{ stats.period }})</span>
+        <span v-if="stats?.period" class="text-xs text-muted">({{ stats.period }})</span>
       </h3>
-      <p class="text-xs text-slate-500 mt-1">지역: {{ regionName }}</p>
+      <p class="text-xs text-muted mt-1">지역: {{ regionName }}</p>
     </div>
 
     <!-- Stats (인라인 summary-grid) -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-primary-200">
       <!-- 전세 -->
       <div>
-        <span class="block text-slate-500 text-xs font-bold">전세</span>
-        <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">
+        <span class="block text-muted text-xs font-bold">전세</span>
+        <strong class="block mt-1 text-base md:text-lg font-bold text-strong font-display tabular-nums truncate">
           {{ stats?.jeonsae?.avgDeposit ? formatDeposit(stats.jeonsae.avgDeposit) : '-' }}
         </strong>
-        <p class="mt-1 text-xs text-slate-500">거래 {{ stats?.jeonsae?.count ?? 0 }}건</p>
+        <p class="mt-1 text-xs text-muted">거래 {{ stats?.jeonsae?.count ?? 0 }}건</p>
       </div>
 
       <!-- 월세 -->
       <div>
-        <span class="block text-slate-500 text-xs font-bold">월세</span>
-        <strong class="block mt-1 text-sm md:text-base font-bold text-slate-900 truncate">
+        <span class="block text-muted text-xs font-bold">월세</span>
+        <strong class="block mt-1 text-sm md:text-base font-bold text-strong font-display tabular-nums truncate">
           보증금 {{ stats?.wolse?.avgDeposit ? formatDeposit(stats.wolse.avgDeposit) : '-' }}
         </strong>
-        <strong class="block text-sm md:text-base font-bold text-slate-900 truncate">
+        <strong class="block text-sm md:text-base font-bold text-strong font-display tabular-nums truncate">
           월 {{ stats?.wolse?.avgMonthlyRent ? formatMonthlyRent(stats.wolse.avgMonthlyRent) : '-' }}
         </strong>
-        <p class="mt-1 text-xs text-slate-500">거래 {{ stats?.wolse?.count ?? 0 }}건</p>
+        <p class="mt-1 text-xs text-muted">거래 {{ stats?.wolse?.count ?? 0 }}건</p>
       </div>
     </div>
   </div>

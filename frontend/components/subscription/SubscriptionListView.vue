@@ -11,7 +11,7 @@
             'px-3.5 py-1.5 rounded-full text-sm font-bold transition-colors border',
             currentStatus === tab.key
               ? 'bg-primary text-white border-primary'
-              : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary'
+              : 'bg-white text-ink border-line hover:border-primary hover:text-primary'
           ]"
           @click="selectStatus(tab.key)"
         >
@@ -53,10 +53,10 @@
 
     <!-- Empty State -->
     <SectionBlock v-else-if="subscriptions.length === 0" :heading="`${getStatusLabel(currentStatus) || '전체'} 청약`">
-      <div class="rounded-xl bg-slate-50 p-12 text-center">
-        <span class="material-symbols-outlined text-[48px] text-slate-300 block mb-3">apartment</span>
-        <p class="text-slate-600 font-medium">{{ emptyFiltered('청약') }}</p>
-        <p class="text-slate-500 text-sm mt-1">다른 조건으로 다시 검색해보세요</p>
+      <div class="rounded-xl bg-background-light p-12 text-center">
+        <span class="material-symbols-outlined text-[48px] text-faint block mb-3">apartment</span>
+        <p class="text-muted font-medium">{{ emptyFiltered('청약') }}</p>
+        <p class="text-muted text-sm mt-1">다른 조건으로 다시 검색해보세요</p>
       </div>
     </SectionBlock>
 

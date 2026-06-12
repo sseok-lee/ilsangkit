@@ -7,17 +7,17 @@
         :href="link.url"
         target="_blank"
         rel="noopener noreferrer"
-        class="group rounded-xl border border-slate-200 bg-white p-4 hover:border-primary hover:shadow-md transition-all"
+        class="group rounded-xl border border-line-2 bg-white p-4 hover:border-primary hover:shadow-md transition-all"
       >
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">
+          <span class="text-sm font-bold text-strong group-hover:text-primary transition-colors">
             {{ link.label }}
           </span>
-          <span class="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-primary transition-colors">
+          <span class="material-symbols-outlined text-[18px] text-faint group-hover:text-primary transition-colors">
             open_in_new
           </span>
         </div>
-        <p class="text-xs text-slate-500 leading-relaxed break-keep">{{ link.description }}</p>
+        <p class="text-xs text-muted leading-relaxed break-keep">{{ link.description }}</p>
       </a>
     </div>
 

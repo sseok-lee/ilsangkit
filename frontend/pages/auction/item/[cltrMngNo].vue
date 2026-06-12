@@ -100,7 +100,7 @@ setBreadcrumbSchema(
         <template #title>
           <span class="mb-2 flex items-center gap-2">
             <AuctionStatusBadge :status="item.status" />
-            <span v-if="item.propertyType" class="text-caption font-normal text-slate-500">{{ item.propertyType }}</span>
+            <span v-if="item.propertyType" class="text-caption font-normal text-muted">{{ item.propertyType }}</span>
           </span>
           {{ item.address }}
         </template>
@@ -147,8 +147,8 @@ setBreadcrumbSchema(
       <SectionBlock heading="자주 묻는 질문" subtext="공매와 관련된 자주 묻는 질문입니다.">
         <dl class="flex flex-col gap-4">
           <div v-for="faq in AUCTION_FAQ" :key="faq.q" class="rounded-xl border border-line bg-white p-4">
-            <dt class="text-body font-semibold text-slate-800">{{ faq.q }}</dt>
-            <dd class="mt-2 text-body text-slate-600 leading-relaxed">{{ faq.a }}</dd>
+            <dt class="text-body font-semibold text-ink">{{ faq.q }}</dt>
+            <dd class="mt-2 text-body text-muted leading-relaxed">{{ faq.a }}</dd>
           </div>
         </dl>
       </SectionBlock>
