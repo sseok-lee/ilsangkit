@@ -3,14 +3,14 @@
     <!-- Loading state -->
     <template v-if="loading">
       <!-- 데스크탑 스켈레톤 -->
-      <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-slate-200">
+      <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-line">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-slate-200">
+            <tr class="border-b border-line">
               <th
                 v-for="col in columns"
                 :key="col.key"
-                class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+                class="px-4 py-3 text-left text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap"
               >
                 {{ col.label }}
               </th>
@@ -21,7 +21,7 @@
               v-for="i in 5"
               :key="i"
               data-testid="skeleton-row"
-              class="border-b border-slate-100"
+              class="border-b border-line"
             >
               <td v-for="col in columns" :key="col.key" class="px-4 py-3">
                 <div class="h-4 bg-slate-200 rounded animate-pulse" />
@@ -36,7 +36,7 @@
           v-for="i in 5"
           :key="i"
           data-testid="skeleton-card"
-          class="rounded-lg border border-slate-200 p-4 space-y-3"
+          class="rounded-lg border border-line p-4 space-y-3"
         >
           <div class="h-4 w-2/3 bg-slate-200 rounded animate-pulse" />
           <div class="h-5 w-1/2 bg-slate-200 rounded animate-pulse" />
@@ -56,14 +56,14 @@
     <!-- 매매 거래 내역 -->
     <template v-else-if="type === 'sale'">
       <!-- 데스크탑 테이블 -->
-      <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-slate-200">
+      <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-line">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-slate-200 bg-slate-50">
+            <tr class="border-b border-line bg-background-light">
               <th
                 v-for="col in columns"
                 :key="col.key"
-                class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+                class="px-4 py-3 text-left text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap"
               >
                 {{ col.label }}
               </th>
@@ -74,7 +74,7 @@
               v-for="tx in saleTransactions"
               :key="tx.id"
               :class="[
-                'border-b border-slate-100 hover:bg-slate-50 transition-colors',
+                'border-b border-line hover:bg-background-light transition-colors',
                 tx.cancelDealDay ? 'opacity-50' : '',
               ]"
             >
@@ -96,7 +96,7 @@
               <td class="px-4 py-3 text-slate-600">
                 {{ formatArea(tx) }}
               </td>
-              <td class="px-4 py-3 font-semibold text-slate-900">
+              <td class="px-4 py-3 font-display font-bold text-strong tabular-nums">
                 {{ formatKoreanPrice(tx.dealAmount) }}
               </td>
               <td class="px-4 py-3 text-slate-600">
@@ -134,7 +134,7 @@
           :key="tx.id"
           :class="[
             'rounded-lg border bg-white p-4',
-            tx.cancelDealDay ? 'border-red-200 opacity-60' : 'border-slate-200',
+            tx.cancelDealDay ? 'border-red-200 opacity-60' : 'border-line',
           ]"
         >
           <div class="flex items-center justify-between text-sm">
@@ -152,7 +152,7 @@
             </span>
           </div>
           <div class="mt-2 flex items-center justify-between">
-            <span class="text-base font-semibold text-slate-900">
+            <span class="text-base font-display font-bold text-strong tabular-nums">
               {{ formatKoreanPrice(tx.dealAmount) }}
             </span>
             <span
@@ -181,14 +181,14 @@
     <!-- 전월세 거래 내역 -->
     <template v-else>
       <!-- 데스크탑 테이블 -->
-      <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-slate-200">
+      <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-line">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-slate-200 bg-slate-50">
+            <tr class="border-b border-line bg-background-light">
               <th
                 v-for="col in columns"
                 :key="col.key"
-                class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+                class="px-4 py-3 text-left text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap"
               >
                 {{ col.label }}
               </th>
@@ -198,7 +198,7 @@
             <tr
               v-for="tx in rentTransactions"
               :key="tx.id"
-              class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+              class="border-b border-line hover:bg-background-light transition-colors"
             >
               <td class="px-4 py-3 whitespace-nowrap text-slate-600">
                 {{ formatDate(tx) }}
@@ -212,7 +212,7 @@
               <td class="px-4 py-3 text-slate-600">
                 {{ formatArea(tx) }}
               </td>
-              <td class="px-4 py-3 font-semibold text-slate-900">
+              <td class="px-4 py-3 font-display font-bold text-strong tabular-nums">
                 <div>{{ formatKoreanPrice(tx.deposit) }}</div>
                 <div
                   v-if="depositChangeRate(tx) !== null"
@@ -275,7 +275,7 @@
         <div
           v-for="tx in rentTransactions"
           :key="tx.id"
-          class="rounded-lg border bg-white p-4 border-slate-200"
+          class="rounded-lg border bg-white p-4 border-line"
         >
           <div class="flex items-center justify-between text-sm">
             <span class="text-slate-500">{{ formatDate(tx) }}</span>
@@ -284,7 +284,7 @@
             </span>
           </div>
           <div class="mt-2 flex items-center gap-2">
-            <span class="text-base font-semibold text-slate-900">
+            <span class="text-base font-display font-bold text-strong tabular-nums">
               {{ formatKoreanPrice(tx.deposit) }}
               <span
                 v-if="depositChangeRate(tx) !== null"

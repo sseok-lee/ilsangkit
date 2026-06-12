@@ -4,13 +4,13 @@
       <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
     </div>
 
-    <div v-else-if="facilityGroups.length === 0 && transitStations.length === 0" class="rounded-2xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
+    <div v-else-if="facilityGroups.length === 0 && transitStations.length === 0" class="rounded-2xl bg-background-light p-8 text-center text-faint text-sm">
       {{ emptyFiltered('시설') }}
     </div>
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <!-- 지하철역 카드 -->
-      <div v-if="transitStations.length > 0" class="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+      <div v-if="transitStations.length > 0" class="rounded-2xl bg-white border border-line overflow-hidden">
         <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-50 bg-sky-50/60">
           <span class="text-lg">🚇</span>
           <h4 class="text-sm font-semibold text-slate-700">지하철역</h4>
@@ -44,7 +44,7 @@
       <div
         v-for="group in facilityGroups"
         :key="group.category"
-        class="rounded-2xl bg-white border border-slate-100 overflow-hidden"
+        class="rounded-2xl bg-white border border-line overflow-hidden"
       >
         <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-50" :class="categoryBgClass(group.category)">
           <span class="text-lg">{{ group.icon }}</span>

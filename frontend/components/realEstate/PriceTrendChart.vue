@@ -10,24 +10,24 @@
     <!-- Empty state -->
     <div
       v-else-if="stats.length === 0"
-      class="flex items-center justify-center h-80 text-slate-500 text-sm"
+      class="flex items-center justify-center h-80 text-faint text-sm"
     >
       데이터가 없습니다
     </div>
 
     <!-- Chart -->
     <template v-else>
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-xs text-slate-500">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-xs text-muted">
         <span class="flex items-center gap-1.5">
-          <span class="inline-block w-4 h-0.5 bg-primary-500 rounded" />
+          <span class="inline-block w-4 h-0.5 bg-primary rounded" />
           평균가
         </span>
         <span class="flex items-center gap-1.5">
-          <span class="inline-block w-4 h-0.5 border-t border-dashed border-primary-300" />
+          <span class="inline-block w-4 h-0.5 border-t border-dashed border-primary/40" />
           최고/최저가
         </span>
         <span class="flex items-center gap-1.5">
-          <span class="inline-block w-3 h-3 bg-primary-300 rounded-sm" />
+          <span class="inline-block w-3 h-3 bg-primary/40 rounded-sm" />
           거래건수
         </span>
       </div>
@@ -75,14 +75,14 @@ const tooltip = ref({
 
 // Chart color tokens (lightweight-charts API requires raw color strings)
 const CHART_COLORS = {
-  line: '#3b82f6',        // primary-500
-  lineLight: 'rgba(59, 130, 246, 0.15)',
-  lineFaint: 'rgba(59, 130, 246, 0.02)',
-  barBase: 'rgba(147, 197, 253, 0.6)',  // primary-300/60
-  barFn: (alpha: number) => `rgba(59, 130, 246, ${alpha.toFixed(2)})`,
-  bg: '#ffffff',          // surface-light
-  text: '#64748b',        // slate-500
-  grid: '#f1f5f9',        // slate-100
+  line: '#2450DC',        // OD brand cobalt
+  lineLight: 'rgba(36, 80, 220, 0.15)',
+  lineFaint: 'rgba(36, 80, 220, 0.02)',
+  barBase: 'rgba(36, 80, 220, 0.35)',
+  barFn: (alpha: number) => `rgba(36, 80, 220, ${alpha.toFixed(2)})`,
+  bg: '#ffffff',          // paper
+  text: '#56627A',        // --muted
+  grid: '#E6E9F0',        // --border
   markerBorder: '#ffffff',
 } as const
 
