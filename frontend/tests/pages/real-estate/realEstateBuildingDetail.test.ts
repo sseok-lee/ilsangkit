@@ -114,7 +114,7 @@ async function mountSuspended(component: any, options?: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-          PageHero: { template: '<section><h1>{{ title }}</h1></section>', props: ['eyebrow', 'title', 'description', 'stats'] },
+          PageHero: { template: '<section><component :is="titleTag || \'h1\'">{{ title }}</component></section>', props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'] },
           SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
           AdBanner: { template: '<div />' },
           ComplexCard: { template: '<div />' },
@@ -175,13 +175,14 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
   })
 
   // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
-  // 모바일 전용 헤더(MobileRealEstateHeader, md:hidden) + 데스크톱 PageHero(hidden md:block) 분기.
-  // 둘 다 h1을 갖지만 CSS로 한 화면당 하나만 노출. 가드: h1 정확히 2개 + 둘 다 건물명 (stray h1 방지).
-  it('건물명 H1은 모바일/데스크톱 각 1개씩 정확히 2개이며 동일 텍스트', async () => {
+  // 모바일 전용 헤더(MobileRealEstateHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
+  // title-tag="div"(role=heading aria-level=1)로 강등 → raw HTML 의 literal <h1> 은 1개여야 한다.
+  // 가드: h1 정확히 1개 + 건물명 (중복 h1 회귀 방지).
+  it('건물명 H1은 raw HTML 에서 정확히 1개(모바일 헤더)이며 건물명', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)
     const h1s = wrapper.findAll('h1')
-    expect(h1s.length).toBe(2)
+    expect(h1s.length).toBe(1)
     expect(h1s.every(h => h.text() === '반포자이')).toBe(true)
   })
 
