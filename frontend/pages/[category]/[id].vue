@@ -104,6 +104,7 @@
               />
               <PageHero
                 class="hidden md:block"
+                title-tag="div"
                 :eyebrow="categoryMeta.label"
                 :title="displayName"
                 :description="facilityIntro || undefined"

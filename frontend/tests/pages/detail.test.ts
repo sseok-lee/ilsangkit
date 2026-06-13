@@ -73,10 +73,11 @@ const globalStubs = {
   FacilityFeatureCard: { template: '<div>FeatureCard</div>' },
   Breadcrumb: { template: '<nav>Breadcrumb</nav>' },
   // PageHero는 Nuxt auto-import 컴포넌트라 테스트 env에 별도 stub 필요.
-  // 시설명을 h1으로 렌더하여 SEO 회귀 가드 테스트가 H1 단일성을 검증할 수 있게 함.
+  // 실제 PageHero 처럼 title-tag 로 제목 태그를 결정한다(기본 h1; 상세 페이지는 div 강등).
+  // 상세 페이지가 title-tag="div" 를 넘기므로 데스크톱 제목은 h1 이 아니어야 SEO 가드(단일 h1)가 성립.
   PageHero: {
-    template: '<section><h1>{{ title }}</h1><p>{{ description }}</p></section>',
-    props: ['eyebrow', 'title', 'description', 'stats'],
+    template: '<section><component :is="titleTag || \'h1\'">{{ title }}</component><p>{{ description }}</p></section>',
+    props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'],
   },
 }
 
@@ -198,16 +199,16 @@ describe('DetailPage', () => {
   })
 
   // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
-  // 모바일 전용 헤더(MobileDetailHeader, md:hidden) + 데스크톱 PageHero(hidden md:block)로 분기.
-  // 둘 다 h1을 갖지만 CSS로 한 화면당 하나만 노출(모바일 우선 색인 시 모바일 h1만 표시).
-  // 가드: h1은 정확히 2개(모바일+데스크톱)이며 둘 다 시설명이어야 한다 (stray h1/h2 방지).
-  it('시설명 H1은 모바일/데스크톱 각 1개씩 정확히 2개이며 동일 텍스트', async () => {
+  // 모바일 전용 헤더(MobileDetailHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
+  // title-tag="div"(role=heading aria-level=1)로 강등 → raw HTML 의 literal <h1> 은 1개여야 한다.
+  // 가드: h1 정확히 1개 + 시설명 (네이버 등 비렌더 파서의 중복 h1 회귀 방지).
+  it('시설명 H1은 raw HTML 에서 정확히 1개(모바일 헤더)이며 시설명', async () => {
     const wrapper = await mountSuspended(DetailPage, {
       global: { stubs: globalStubs },
     })
 
     const h1s = wrapper.findAll('h1')
-    expect(h1s.length).toBe(2)
+    expect(h1s.length).toBe(1)
     expect(h1s.every(h => h.text() === '강남역 공중화장실')).toBe(true)
   })
 

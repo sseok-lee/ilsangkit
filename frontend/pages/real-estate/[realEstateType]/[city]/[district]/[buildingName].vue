@@ -72,6 +72,7 @@
       />
       <PageHero
         class="hidden md:block order-2 md:order-2"
+        title-tag="div"
         :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :title="buildingName"
         :description="fullAddress !== '-' ? fullAddress : undefined"

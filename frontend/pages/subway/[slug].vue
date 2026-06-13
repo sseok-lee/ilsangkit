@@ -87,6 +87,7 @@
               />
               <PageHero
                 class="hidden md:block"
+                title-tag="div"
                 eyebrow="지하철역"
                 :title="displayName"
                 :description="introText"
