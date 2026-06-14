@@ -505,8 +505,11 @@ const subscriptionTypeLabel = computed(() => {
 })
 
 const subscriptionDateRange = computed(() => {
-  if (!subscription.value?.receptionStartDate || !subscription.value?.receptionEndDate) return null
-  return `${subscription.value.receptionStartDate}~${subscription.value.receptionEndDate}`
+  const start = subscription.value?.receptionStartDate
+  const end = subscription.value?.receptionEndDate
+  if (!start || !end) return null
+  // ISO datetime(2026-06-15T00:00:00.000Z)을 SEO/OG 설명에 그대로 노출하지 않도록 날짜만 표기.
+  return `${start.slice(0, 10)}~${end.slice(0, 10)}`
 })
 
 const subscriptionSeoTitle = computed(() => {
@@ -528,7 +531,7 @@ const subscriptionSeoDescription = computed(() => {
     facts.push(`접수 ${subscriptionDateRange.value}`)
   }
   else if (subscription.value.winnerDate) {
-    facts.push(`발표 ${subscription.value.winnerDate}`)
+    facts.push(`발표 ${subscription.value.winnerDate.slice(0, 10)}`)
   }
   else if (subscription.value.moveInMonth) {
     facts.push(`입주 ${formatMoveInMonth(subscription.value.moveInMonth)}`)

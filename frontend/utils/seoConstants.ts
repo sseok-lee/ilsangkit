@@ -7,7 +7,28 @@ export const SITE_NAME = '일상킷'
 export const SITE_URL = 'https://ilsangkit.co.kr'
 export const SITE_DESCRIPTION = '아파트·빌라·오피스텔·토지 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.'
 export const SITE_TAGLINE = '부동산 실거래가·청약·내 주변 생활정보'
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.webp`
+// 네이버/카카오 썸네일 크롤러는 webp og:image를 안정적으로 렌더링하지 못하므로 PNG를 기본값으로 사용한다.
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`
+
+/**
+ * 시/도 풀네임 → 축약형 매핑 (메타/타이틀 노출용).
+ * 도 단위 중 단순 접미사 제거로는 어색해지는 6개만 명시 매핑하고,
+ * 나머지(특별시/광역시/특별자치시·도, 경기도→경기, 강원도→강원 등)는 접미사 제거로 처리.
+ */
+export const CITY_FULL_TO_SHORT: Record<string, string> = {
+  경상남도: '경남',
+  경상북도: '경북',
+  전라남도: '전남',
+  전라북도: '전북',
+  충청남도: '충남',
+  충청북도: '충북',
+}
+
+/** 시/도 풀네임을 축약형으로 (서울특별시 → 서울, 경상남도 → 경남). */
+export function compactCityName(city: string): string {
+  if (!city) return ''
+  return CITY_FULL_TO_SHORT[city] ?? String(city).replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+}
 
 export function getCurrentYearMonth(): string {
   const now = new Date()

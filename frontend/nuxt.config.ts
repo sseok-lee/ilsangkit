@@ -227,6 +227,8 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://dapi.kakao.com' },
         { rel: 'dns-prefetch', href: 'https://dapi.kakao.com' },
         { rel: 'manifest', href: '/site.webmanifest' },
+        // 생활 가이드 RSS 자동발견 — 네이버 서치어드바이저 RSS 수집 + 신규 콘텐츠 빠른 색인.
+        { rel: 'alternate', type: 'application/rss+xml', title: '일상킷 - 생활 가이드', href: 'https://ilsangkit.co.kr/rss.xml' },
       ]
     }
   },

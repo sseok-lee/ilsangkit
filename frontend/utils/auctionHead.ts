@@ -2,8 +2,25 @@
 import type { AuctionItem } from '~/types/auction'
 import { isAuctionItemIndexable } from '~/types/auction'
 import { buildAuctionItemTitle, buildAuctionItemDescription, buildAuctionRegionTitle, buildAuctionRegionDescription } from '~/utils/auctionMeta'
+import { SITE_URL } from '~/utils/seoConstants'
 
 type Head = { title: string; meta: Array<Record<string, string>>; link?: Array<Record<string, string>> }
+
+/** og:image + twitter 카드 메타 세트 (네이버/카카오 썸네일). 색인 분기에서만 사용. */
+function ogImageMeta(url: string, width: string, height: string, title: string, description: string): Array<Record<string, string>> {
+  return [
+    { property: 'og:image', content: url },
+    { property: 'og:image:width', content: width },
+    { property: 'og:image:height', content: height },
+    { property: 'og:image:alt', content: title },
+    { property: 'og:site_name', content: '일상킷' },
+    { property: 'og:locale', content: 'ko_KR' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: title },
+    { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: url },
+  ]
+}
 
 export function computeAuctionItemHead(item: AuctionItem, selfUrl: string): Head {
   const title = buildAuctionItemTitle(item)
@@ -16,8 +33,17 @@ export function computeAuctionItemHead(item: AuctionItem, selfUrl: string): Head
     { property: 'og:url', content: selfUrl },
     { property: 'og:type', content: 'website' },
   ]
-  if (noindex) meta.push({ name: 'robots', content: 'noindex, follow' })
-  return noindex ? { title, meta } : { title, meta, link: [{ rel: 'canonical', href: selfUrl }] }
+  if (noindex) {
+    meta.push({ name: 'robots', content: 'noindex, follow' })
+    return { title, meta }
+  }
+  // 색인 페이지: 좌표 있으면 네이버 Static Map(/og-map), 없으면 정적 PNG.
+  const ogImage = (item.lat && item.lng)
+    ? `${SITE_URL}/og-map?lat=${item.lat}&lng=${item.lng}&label=${encodeURIComponent(title)}&category=auction&title=${encodeURIComponent(title)}`
+    : `${SITE_URL}/og-image.png`
+  const [w, h] = (item.lat && item.lng) ? ['1024', '536'] : ['1200', '630']
+  meta.push(...ogImageMeta(ogImage, w, h, title, description))
+  return { title, meta, link: [{ rel: 'canonical', href: selfUrl }] }
 }
 
 export function computeAuctionRegionHead(
@@ -32,8 +58,13 @@ export function computeAuctionRegionHead(
     { property: 'og:description', content: description },
     { property: 'og:url', content: selfUrl },
   ]
-  if (!o.isIndexable) meta.push({ name: 'robots', content: 'noindex, follow' })
-  return o.isIndexable ? { title, meta, link: [{ rel: 'canonical', href: selfUrl }] } : { title, meta }
+  if (o.isIndexable) {
+    meta.push({ property: 'og:type', content: 'website' })
+    meta.push(...ogImageMeta(`${SITE_URL}/og-image.png`, '1200', '630', title, description))
+    return { title, meta, link: [{ rel: 'canonical', href: selfUrl }] }
+  }
+  meta.push({ name: 'robots', content: 'noindex, follow' })
+  return { title, meta }
 }
 
 export function computeAuctionCityHead(
@@ -47,8 +78,13 @@ export function computeAuctionCityHead(
     { property: 'og:title', content: title },
     { property: 'og:url', content: selfUrl },
   ]
-  if (!o.anyIndexable) meta.push({ name: 'robots', content: 'noindex, follow' })
-  return o.anyIndexable ? { title, meta, link: [{ rel: 'canonical', href: selfUrl }] } : { title, meta }
+  if (o.anyIndexable) {
+    meta.push({ property: 'og:type', content: 'website' })
+    meta.push(...ogImageMeta(`${SITE_URL}/og-image.png`, '1200', '630', title, description))
+    return { title, meta, link: [{ rel: 'canonical', href: selfUrl }] }
+  }
+  meta.push({ name: 'robots', content: 'noindex, follow' })
+  return { title, meta }
 }
 
 export function buildAuctionListTitle(usage: string): string {
