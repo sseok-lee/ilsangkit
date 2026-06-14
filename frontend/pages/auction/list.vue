@@ -144,7 +144,24 @@ useHead(() => {
     { property: 'og:description', content: description },
     { property: 'og:url', content: selfUrl.value },
   ]
-  if (!isIndexable.value) {
+  if (isIndexable.value) {
+    // 공매 목록도 og:image(정적 PNG) 노출 — 네이버 SERP/카톡·블로그 공유 썸네일.
+    const ogImage = `${SITE_URL}/og-image.png`
+    meta.push(
+      { property: 'og:type', content: 'website' },
+      { property: 'og:image', content: ogImage },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
+      { property: 'og:image:alt', content: title },
+      { property: 'og:site_name', content: '일상킷' },
+      { property: 'og:locale', content: 'ko_KR' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: title },
+      { name: 'twitter:description', content: description },
+      { name: 'twitter:image', content: ogImage },
+    )
+  }
+  else {
     meta.push({ name: 'robots', content: 'noindex, follow' })
   }
   return {

@@ -1,14 +1,10 @@
 import type { SubwayStation } from '~/types/subway'
+import { compactCityName } from '~/utils/seoConstants'
 
 const SITE_NAME = '일상킷'
 
 export function buildSubwayTitle(station: SubwayStation): string {
   return `${station.name}역 (${station.line}) | ${SITE_NAME}`
-}
-
-/** 시/도 풀네임을 압축형으로 (서울특별시 → 서울). 도시명 압축 일관성(R2). */
-function compactCityName(city: string): string {
-  return String(city).replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
 }
 
 export function buildSubwayDescription(station: SubwayStation): string {
@@ -20,10 +16,10 @@ export function buildSubwayDescription(station: SubwayStation): string {
   const regionPart = region ? `${region}의 ` : ''
   let desc = `${stationName}(${station.line})은(는) ${regionPart}지하철역입니다.`
 
-  // 환승 정보
-  if (station.transferLines && station.transferLines.length > 0) {
-    const transferStr = station.transferLines.join(', ')
-    desc += ` ${transferStr} 환승이 가능하며,`
+  // 환승 정보 — '-' 등 플레이스홀더 토큰은 제외 (백엔드가 빈 환승을 '-'로 채우는 경우 방지).
+  const transfers = (station.transferLines ?? []).filter(t => t && t.trim() && t.trim() !== '-')
+  if (transfers.length > 0) {
+    desc += ` ${transfers.join(', ')} 환승이 가능하며,`
   }
 
   // CTA

@@ -268,7 +268,10 @@ if (guide.value) {
     description: guide.value.summary,
     path: `/guide/${guide.value.slug}`,
     type: 'article',
-    image: guide.value.thumbnailUrl ? `${publicApiBase}${guide.value.thumbnailUrl}` : undefined,
+    // 가이드 썸네일은 800x630이 아닌 800x800(1:1) webp라 1200x630 선언과 불일치 + 네이버 webp 썸네일 미지원.
+    // 1.91:1 PNG 카드(정적 기본 OG)로 대체해 선언 치수와 일치시키고 네이버/카카오 썸네일을 보장한다.
+    // (장기: generateGuide.ts에서 가이드별 1200x630 PNG OG 변형을 생성해 교체)
+    image: `${SITE_URL}/og-image.png`,
   })
 
   useHead({
