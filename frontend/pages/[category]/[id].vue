@@ -92,10 +92,12 @@
               <!-- Hero: 모바일 핵심 정보 헤더 / 데스크톱 PageHero -->
               <MobileDetailHeader
                 :title="displayName"
-                :category-label="categoryMeta.label"
+                :eyebrow="categoryMeta.label"
                 :status="operatingStatus"
                 :stats="mobileHeaderStats"
                 :phone="facilityPhone"
+                copyable
+                share-label="이 시설 공유하기"
                 :kakao-map-url="kakaoMapUrl"
                 :naver-map-url="naverMapUrl"
                 @share="handleShare"
@@ -285,7 +287,7 @@ import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.
 import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
-import MobileDetailHeader from '~/components/facility/detail/MobileDetailHeader.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { getOperatingStatus } from '~/utils/facilityStatus'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'

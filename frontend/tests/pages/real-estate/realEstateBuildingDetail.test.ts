@@ -176,7 +176,7 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
   })
 
   // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
-  // 모바일 전용 헤더(MobileRealEstateHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
+  // 모바일 전용 헤더(공용 MobileDetailHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
   // title-tag="div"(role=heading aria-level=1)로 강등 → raw HTML 의 literal <h1> 은 1개여야 한다.
   // 가드: h1 정확히 1개 + 건물명 (중복 h1 회귀 방지).
   it('건물명 H1은 raw HTML 에서 정확히 1개(모바일 헤더)이며 건물명', async () => {
