@@ -44,13 +44,14 @@ const capturedHeadCalls: any[] = []
 })
 
 const mockSetBreadcrumbSchema = vi.fn()
+const mockSetFAQSchema = vi.fn()
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
     setItemListSchema: vi.fn(),
     setDatasetSchema: vi.fn(),
-    setFAQSchema: vi.fn(),
+    setFAQSchema: mockSetFAQSchema,
   }),
 }))
 
@@ -176,6 +177,7 @@ vi.mock('~/utils/seoConstants', () => ({
 
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
+  mockSetFAQSchema.mockClear()
   mockGetRegions.mockClear()
   mockGetRegionDetail.mockClear()
   capturedHeadCalls.length = 0
@@ -222,10 +224,22 @@ function resolveHead(arg: any): any {
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  PageHero: { template: '<div data-stub="hero" />' },
+  // PageHero: title-tag prop을 받아 h1 미렌더(데스크톱 제목은 div 강등). 단일 h1 불변식 검증용.
+  PageHero: {
+    template: '<div data-stub="hero" :data-title-tag="titleTag" :class="$attrs.class" />',
+    props: ['titleTag'],
+    inheritAttrs: false,
+  },
+  // 공용 모바일 헤더: literal h1 1개 소유.
+  MobileDetailHeader: {
+    template: '<section data-stub="mobile-header" :data-hide-directions="hideDirections"><h1>{{ title }}</h1></section>',
+    props: ['title', 'eyebrow', 'status', 'stats', 'phone', 'copyable', 'hideDirections', 'kakaoMapUrl', 'naverMapUrl'],
+  },
   SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
   AdBanner: { template: '<div class="stub-ad" />' },
-  DataSourceSection: { template: '<div />' },
+  CoupangBanner: { template: '<div class="stub-coupang" />' },
+  Pagination: { template: '<div data-stub="pagination" />' },
+  DataSourceSection: { template: '<div data-stub="datasource" />' },
 }
 
 async function mountPage() {
@@ -424,5 +438,104 @@ describe('real-estate/land/[city]/[district]/[dong].vue — land dong detail pag
     const wrapper = await mountPage()
     // LAND_FAQ has FAQ questions
     expect(wrapper.text()).toContain('지목이란 무엇인가요')
+  })
+})
+
+describe('real-estate/land/[city]/[district]/[dong].vue — 섹션 재배치(spec §4.4)', () => {
+  it('렌더된 DOM에 literal h1이 정확히 1개다(단일 h1 불변식)', async () => {
+    const wrapper = await mountPage()
+    expect(wrapper.findAll('h1')).toHaveLength(1)
+  })
+
+  it('모바일 헤더(MobileDetailHeader)가 렌더되고 title=동 이름이다', async () => {
+    const wrapper = await mountPage()
+    const header = wrapper.find('[data-stub="mobile-header"]')
+    expect(header.exists()).toBe(true)
+    expect(header.find('h1').text()).toBe('역삼동')
+  })
+
+  it('토지 헤더는 hideDirections=true(좌표 없음 → 공유만)다', async () => {
+    const wrapper = await mountPage()
+    const header = wrapper.find('[data-stub="mobile-header"]')
+    // Vue는 boolean true prop을 HTML 속성으로 직렬화할 때 빈 문자열('')로 표현(속성 존재 = true)
+    // 또는 prop이 직접 바인딩되므로 undefined가 아닌 것으로 확인
+    const val = header.attributes('data-hide-directions')
+    expect(val).not.toBeUndefined()
+  })
+
+  it('PageHero는 title-tag="div"로 강등되고 hidden md:block을 갖는다', async () => {
+    const wrapper = await mountPage()
+    const hero = wrapper.find('[data-stub="hero"]')
+    expect(hero.exists()).toBe(true)
+    expect(hero.attributes('data-title-tag')).toBe('div')
+    expect(hero.classes()).toContain('hidden')
+    expect(hero.classes()).toContain('md:block')
+  })
+
+  it('헤드라인 카드(대지 평당가)가 첫 AdBanner보다 DOM 앞에 온다(T1 승격)', async () => {
+    const wrapper = await mountPage()
+    const html = wrapper.html()
+    const headlineIdx = html.indexOf('대지(일반 거래) 평당가')
+    const firstAdIdx = html.indexOf('stub-ad')
+    expect(headlineIdx).toBeGreaterThan(-1)
+    expect(firstAdIdx).toBeGreaterThan(-1)
+    expect(headlineIdx).toBeLessThan(firstAdIdx)
+  })
+
+  it('헤드라인 카드 wrapper에 order 클래스가 부여된다', async () => {
+    const wrapper = await mountPage()
+    // 헤드라인 카드는 "대지(일반 거래) 평당가" 텍스트를 포함하는 카드 div
+    const card = wrapper
+      .findAll('div')
+      .find((d) => d.text().includes('대지(일반 거래) 평당가') && d.classes().some((c) => c.startsWith('order-')))
+    expect(card, '헤드라인 카드에 order-* 클래스가 있어야 한다').toBeTruthy()
+    expect(card!.classes().some((c) => c.startsWith('order-'))).toBe(true)
+    expect(card!.classes()).toContain('order-3')
+  })
+
+  it('DataSourceSection은 order 클래스를 가진 wrapper로 감싸진다(멀티루트)', async () => {
+    const wrapper = await mountPage()
+    const ds = wrapper.find('[data-stub="datasource"]')
+    expect(ds.exists()).toBe(true)
+    // wrapper div(부모)에 order 클래스
+    const parent = ds.element.parentElement as HTMLElement
+    expect(parent.className).toContain('order-12')
+  })
+
+  it('AdBanner는 정확히 3개, CoupangBanner는 1개다(광고 개수 불변)', async () => {
+    const wrapper = await mountPage()
+    expect(wrapper.findAll('.stub-ad')).toHaveLength(3)
+    expect(wrapper.findAll('.stub-coupang')).toHaveLength(1)
+  })
+
+  it('AdBanner②가 추이/분포 섹션과 전체거래 섹션 사이에 위치한다', async () => {
+    const wrapper = await mountPage()
+    const html = wrapper.html()
+    const distIdx = html.indexOf('용도지역 분포')
+    const totalIdx = html.indexOf('전체 거래 내역')
+    // 추이/분포 < (둘째)Ad < 전체거래 순서. 광고 인덱스를 분포~전체거래 구간에서 탐색.
+    const adInBetween = html.slice(distIdx, totalIdx).includes('stub-ad')
+    expect(distIdx).toBeGreaterThan(-1)
+    expect(totalIdx).toBeGreaterThan(-1)
+    expect(distIdx).toBeLessThan(totalIdx)
+    expect(adInBetween, '추이/분포와 전체거래 사이에 AdBanner가 있어야 한다').toBe(true)
+  })
+
+  it('setFAQSchema가 LAND_FAQ 길이만큼 {question,answer} 형태로 호출된다', async () => {
+    await mountPage()
+    expect(mockSetFAQSchema).toHaveBeenCalledTimes(1)
+    const faqs = mockSetFAQSchema.mock.calls[0][0]
+    expect(Array.isArray(faqs)).toBe(true)
+    expect(faqs.length).toBeGreaterThan(0)
+    expect(faqs[0]).toHaveProperty('question')
+    expect(faqs[0]).toHaveProperty('answer')
+    expect(faqs[0].question).toContain('토지 실거래가 데이터는 어디서')
+  })
+
+  it('마운트 시 콘솔 에러가 없다', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await mountPage()
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
   })
 })
