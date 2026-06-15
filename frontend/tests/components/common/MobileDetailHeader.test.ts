@@ -55,6 +55,19 @@ describe('common/MobileDetailHeader', () => {
     expect(w.emitted('directions')?.[0]).toEqual(['kakao'])
   })
 
+  it('네이버 선택 시 naver를 emit하고 선택 후 메뉴를 닫는다', async () => {
+    const w = mount(MobileDetailHeader, { props: base })
+    await w.find('[data-test="directions-pill"]').trigger('click')
+    await w.find('[data-test="directions-naver"]').trigger('click')
+    expect(w.emitted('directions')?.[0]).toEqual(['naver'])
+    expect(w.find('[data-test="directions-kakao"]').exists()).toBe(false)
+  })
+
+  it('shareLabel을 공유 pill의 aria-label로 적용한다', () => {
+    const w = mount(MobileDetailHeader, { props: { ...base, shareLabel: '이 시설 공유하기' } })
+    expect(w.find('[data-test="share-pill"]').attributes('aria-label')).toBe('이 시설 공유하기')
+  })
+
   it('stats를 칩으로 렌더하고 color 클래스를 적용한다', () => {
     const w = mount(MobileDetailHeader, { props: { ...base, stats: [{ label: '최근거래', value: '9.8억', color: 'text-primary' }] } })
     expect(w.text()).toContain('최근거래')

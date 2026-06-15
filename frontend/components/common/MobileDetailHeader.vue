@@ -47,7 +47,7 @@
       <button
         data-test="share-pill"
         class="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-900 active:scale-[0.98] transition"
-        aria-label="공유하기"
+        :aria-label="shareLabel"
         @click="$emit('share')"
       >
         <span class="material-symbols-outlined text-[18px]">share</span>공유
@@ -92,11 +92,13 @@ withDefaults(defineProps<{
   phone?: string | null
   copyable?: boolean
   hideDirections?: boolean
+  shareLabel?: string
   kakaoMapUrl?: string
   naverMapUrl?: string
 }>(), {
   copyable: false,
   hideDirections: false,
+  shareLabel: '공유하기',
 })
 
 const emit = defineEmits<{
