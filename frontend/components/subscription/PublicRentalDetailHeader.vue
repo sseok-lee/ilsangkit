@@ -1,5 +1,5 @@
 <template>
-  <header class="bg-white border border-line rounded-xl shadow-card p-4 md:p-5">
+  <header class="hidden md:block bg-white border border-line rounded-xl shadow-card p-4 md:p-5">
     <div class="flex flex-wrap items-center gap-2 mb-3">
       <span :class="rentalTypeBadgeClass">{{ rental.rentalType }}</span>
       <span v-if="rental.houseType" class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
@@ -7,9 +7,9 @@
       </span>
     </div>
 
-    <h1 class="text-2xl md:text-3xl font-bold text-strong leading-tight break-keep">
+    <div role="heading" aria-level="1" class="text-2xl md:text-3xl font-bold text-strong leading-tight break-keep">
       {{ displayName }}
-    </h1>
+    </div>
 
     <p class="mt-2 text-ink text-sm md:text-base break-keep">
       {{ rental.complexName }}
