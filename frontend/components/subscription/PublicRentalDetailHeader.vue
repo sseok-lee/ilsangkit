@@ -7,11 +7,11 @@
       </span>
     </div>
 
-    <div role="heading" aria-level="1" class="text-2xl md:text-3xl font-bold text-strong leading-tight break-keep">
+    <div role="heading" aria-level="1" class="text-2xl md:text-3xl font-bold text-strong leading-tight break-keep [overflow-wrap:anywhere]">
       {{ displayName }}
     </div>
 
-    <p class="mt-2 text-ink text-sm md:text-base break-keep">
+    <p class="mt-2 text-ink text-sm md:text-base break-keep [overflow-wrap:anywhere]">
       {{ rental.complexName }}
     </p>
 
