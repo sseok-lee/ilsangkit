@@ -76,9 +76,10 @@
               <!-- Hero: 모바일 핵심 정보 헤더 / 데스크톱 PageHero -->
               <MobileDetailHeader
                 :title="displayName"
-                category-label="지하철역"
+                eyebrow="지하철역"
                 :stats="heroStats"
                 :phone="station.phoneNumber"
+                copyable
                 :kakao-map-url="kakaoMapUrl"
                 :naver-map-url="naverMapUrl"
                 @share="handleShare"
@@ -98,21 +99,19 @@
 
               <!-- Basic Info -->
               <SectionBlock heading="역정보" subtext="위치·운영기관·연락처 정보">
-                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-                  <div v-if="lines.length > 0" class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-muted mb-1.5">노선</dt>
-                    <dd class="flex flex-wrap gap-1.5">
-                      <span
-                        v-for="ln in lines"
-                        :key="ln"
-                        class="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full text-white"
-                        :style="{ backgroundColor: lineColor(ln) }"
-                      >
-                        {{ lineLabel(ln) }}
-                      </span>
-                    </dd>
-                  </div>
+                <!-- 노선 headline (대표 정보 1순위) -->
+                <div v-if="lines.length > 0" data-test="line-headline" class="mb-4 flex flex-wrap gap-2">
+                  <span
+                    v-for="ln in lines"
+                    :key="ln"
+                    class="inline-flex items-center text-sm font-bold px-3.5 py-1.5 rounded-full text-white shadow-sm"
+                    :style="{ backgroundColor: lineColor(ln) }"
+                  >
+                    {{ lineLabel(ln) }}
+                  </span>
+                </div>
 
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                   <div v-if="station.roadAddress || station.address" class="sm:col-span-2">
                     <dt class="text-xs font-medium text-muted mb-1">주소</dt>
                     <dd class="text-sm text-strong">{{ station.roadAddress || station.address }}</dd>
@@ -229,6 +228,16 @@
 
               <!-- Actions -->
               <div class="mt-3 p-4 bg-white border border-line-2 flex gap-3 shadow-card rounded-xl">
+                <a
+                  v-if="station.phoneNumber"
+                  data-test="sidebar-call"
+                  :href="`tel:${station.phoneNumber}`"
+                  class="flex-1 h-12 rounded-xl bg-background-light text-strong font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
+                  aria-label="전화 걸기"
+                >
+                  <span class="material-symbols-outlined">call</span>
+                  전화
+                </a>
                 <button
                   class="flex-1 h-12 rounded-xl bg-background-light text-strong font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
                   aria-label="공유하기"
@@ -282,7 +291,7 @@ import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import FacilityRoadview from '~/components/facility/FacilityRoadview.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
-import MobileDetailHeader from '~/components/facility/detail/MobileDetailHeader.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
@@ -292,6 +301,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
+import { useStructuredData } from '~/composables/useStructuredData'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
@@ -560,6 +570,10 @@ setMeta({
   imageHeight: 536,
   canonical: subwayCanonicalUrl(slug.value),
 })
+
+// FAQPage JSON-LD (spec §6 결정4: FAQ 있는 페이지는 스키마 발행 통일)
+const { setFAQSchema } = useStructuredData()
+setFAQSchema(faqItems.value)
 
 useHead({
   script: [
