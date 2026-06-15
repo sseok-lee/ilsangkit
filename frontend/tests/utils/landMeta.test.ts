@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { buildLandRegionTitle, buildLandRegionDescription, LAND_FAQ, LAND_META } from '~/utils/landMeta';
 
 describe('landMeta', () => {
-  it('동 타이틀에 동·구·브랜드 포함', () => {
+  it('동 타이틀에 동·시·구·브랜드 포함', () => {
     const t = buildLandRegionTitle({ city: '서울', district: '강남구', dong: '역삼동' });
-    expect(t).toContain('역삼동'); expect(t).toContain('강남구'); expect(t).toContain('일상킷');
+    expect(t).toBe('역삼동 토지 시세·실거래가 | 서울 강남구 | 일상킷');
   });
   it('구 타이틀에 구·시도', () => {
     const t = buildLandRegionTitle({ city: '서울', district: '강남구' });

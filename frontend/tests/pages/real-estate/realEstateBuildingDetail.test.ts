@@ -73,6 +73,7 @@ vi.mock('~/utils/seoConstants', () => ({
   SITE_URL: 'https://ilsangkit.co.kr',
   SITE_NAME: '일상킷',
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
+  compactCityName: (city: string) => (city || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, ''),
 }))
 
 vi.mock('~/utils/realEstateUrl', () => ({
