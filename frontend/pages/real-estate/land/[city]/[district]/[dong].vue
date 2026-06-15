@@ -224,7 +224,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useLand } from '~/composables/useLand'
 import { buildLandRegionTitle, buildLandRegionDescription, LAND_FAQ } from '~/utils/landMeta'
 import { pyeongToSqm, formatManwonKorean, formatLandDealDate } from '~/types/land'
-import { SITE_URL } from '~/utils/seoConstants'
+import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
@@ -363,12 +363,19 @@ useHead(() => {
 
   const selfCanonical = `${SITE_URL}/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong)}`
 
+  // 토지 동상세는 단일 대표 좌표가 없어(LandRegionSummary에 lat/lng 없음) /og-map 대신
+  // 정적 대표 PNG를 사용. 네이버 썸네일 크롤러는 webp/SVG를 미렌더하므로 항상 PNG여야 한다.
   const meta: Array<Record<string, string>> = [
     { name: 'description', content: description },
     { property: 'og:title', content: title },
     { property: 'og:description', content: description },
     { property: 'og:url', content: selfCanonical },
     { property: 'og:type', content: 'website' },
+    { property: 'og:image', content: DEFAULT_OG_IMAGE },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
   ]
 
   if (noindex.value) {
