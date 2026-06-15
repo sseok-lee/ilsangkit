@@ -1,19 +1,29 @@
 <template>
   <div class="bg-background-light min-h-screen">
     <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <Breadcrumb :items="breadcrumbItems" />
+      <Breadcrumb :items="breadcrumbItems" class="order-1 md:order-1" />
 
+      <!-- T0: 모바일 핵심정보 헤더 (literal h1 1개 소유). 좌표 없음 → hideDirections(공유만). -->
+      <MobileDetailHeader
+        :title="dong"
+        eyebrow="토지 실거래가"
+        :stats="mobileHeaderStats"
+        hide-directions
+        class="order-2 md:order-2"
+        @share="handleShare"
+      />
+
+      <!-- T0: 데스크톱 제목 (title-tag="div"로 강등 → 단일 h1 유지) -->
       <PageHero
+        class="hidden md:block order-2 md:order-2"
+        title-tag="div"
         eyebrow="토지 실거래가"
         :title="`${dong} 토지 실거래가`"
         :description="`${cityName} ${districtName} ${dong} 지역의 토지 매매 실거래가와 평당 시세를 확인하세요.`"
       />
 
-      <!-- Ad: Hero 직후 -->
-      <AdBanner />
-
-      <!-- 1. 헤드라인 카드 -->
-      <div class="bg-white rounded-xl border border-line shadow-card p-5 md:p-6">
+      <!-- T1: 헤드라인 카드 (대지 평당가) — 첫 광고보다 위로 승격 -->
+      <div class="order-3 md:order-3 bg-white rounded-xl border border-line shadow-card p-5 md:p-6">
         <div class="text-eyebrow text-slate-500 mb-1">대지(일반 거래) 평당가</div>
         <template v-if="summary && summary.avgPricePerPyeong != null">
           <div class="flex flex-wrap items-baseline gap-2">
@@ -33,8 +43,11 @@
         </div>
       </div>
 
-      <!-- 2. 지목별 시세 -->
-      <SectionBlock heading="지목별 시세" subtext="지목 그룹별 평균 평당가와 거래 건수입니다.">
+      <!-- Ad①: T0/T1 직후 (고가시성 보존) -->
+      <AdBanner class="order-4 md:order-4" />
+
+      <!-- T1: 지목별 시세 -->
+      <SectionBlock class="order-5 md:order-5" heading="지목별 시세" subtext="지목 그룹별 평균 평당가와 거래 건수입니다.">
         <div v-if="detail && detail.jimokGroups.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           <div
             v-for="g in detail.jimokGroups"
@@ -59,8 +72,8 @@
         </div>
       </SectionBlock>
 
-      <!-- 3. 대지 거래 사례 -->
-      <SectionBlock heading="대지 거래 사례" subtext="비지분 대지 거래 최신 사례입니다.">
+      <!-- T3: 대지 거래 사례 -->
+      <SectionBlock class="order-6 md:order-6" heading="대지 거래 사례" subtext="비지분 대지 거래 최신 사례입니다.">
         <div v-if="detail && detail.daeSamples.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div
             v-for="tx in detail.daeSamples"
@@ -87,13 +100,10 @@
         </div>
       </SectionBlock>
 
-      <!-- Ad: 사례 이후 -->
-      <AdBanner />
-
-      <!-- 4. 분기별 추이 + 용도지역 분포 (2-col grid) -->
+      <!-- T3: 분기별 추이 + 용도지역 분포 (2-col grid) -->
       <div
         v-if="detail && (detail.priceTimeline.length > 0 || detail.landUseDistribution.length > 0)"
-        class="grid grid-cols-1 md:grid-cols-2 gap-3"
+        class="order-7 md:order-7 grid grid-cols-1 md:grid-cols-2 gap-3"
       >
         <!-- 분기별 대지 평당가 추이 -->
         <SectionBlock
@@ -144,8 +154,11 @@
         </SectionBlock>
       </div>
 
-      <!-- 5. 전체 거래 내역 -->
-      <SectionBlock v-if="detail && detail.total > 0" heading="전체 거래 내역" :subtext="`전체 ${detail.total.toLocaleString('ko-KR')}건 · 지분·도로 포함`">
+      <!-- Ad②: 추이/분포 ↔ 전체거래 사이로 이동 -->
+      <AdBanner class="order-8 md:order-8" />
+
+      <!-- T3: 전체 거래 내역 -->
+      <SectionBlock v-if="detail && detail.total > 0" class="order-9 md:order-9" heading="전체 거래 내역" :subtext="`전체 ${detail.total.toLocaleString('ko-KR')}건 · 지분·도로 포함`">
         <div class="overflow-x-auto">
             <table class="w-full text-sm border-collapse">
               <thead>
@@ -179,11 +192,11 @@
         <Pagination :current-page="txPage" :total-pages="txTotalPages" @page-change="goToTxPage" />
       </SectionBlock>
 
-      <!-- Ad: 전체거래 이후 -->
-      <AdBanner />
+      <!-- Ad③: 전체거래 이후 -->
+      <AdBanner class="order-10 md:order-10" />
 
-      <!-- 6. FAQ -->
-      <SectionBlock heading="자주 묻는 질문" subtext="토지 실거래가와 관련된 자주 묻는 질문입니다.">
+      <!-- T5: FAQ -->
+      <SectionBlock class="order-11 md:order-11" heading="자주 묻는 질문" subtext="토지 실거래가와 관련된 자주 묻는 질문입니다.">
         <p class="text-sm text-slate-700 mb-6 leading-relaxed">{{ pageDescription }}</p>
         <dl class="flex flex-col gap-4">
           <div v-for="faq in LAND_FAQ" :key="faq.q" class="rounded-xl border border-line bg-white p-4">
@@ -194,9 +207,12 @@
       </SectionBlock>
 
       <!-- Ad: 쿠팡 (페이지 맨 아래) -->
-      <CoupangBanner />
+      <CoupangBanner class="order-12 md:order-12" />
 
-      <DataSourceSection domain="real-estate" />
+      <!-- T6: 데이터 출처 (멀티루트 컴포넌트 → wrapper div에 order 부여) -->
+      <div class="order-12 md:order-12">
+        <DataSourceSection domain="real-estate" />
+      </div>
     </main>
   </div>
 </template>
@@ -211,6 +227,7 @@ import { pyeongToSqm, formatManwonKorean, formatLandDealDate } from '~/types/lan
 import { SITE_URL } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import Pagination from '~/components/common/Pagination.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -270,6 +287,23 @@ if (import.meta.server || !data.value) {
 const summary = computed(() => data.value?.summary ?? null)
 const detail = computed(() => data.value?.detail ?? null)
 
+// 모바일 헤더 stat 칩: 평당가 · 거래건수 · 최신거래일 ('정보없음' 필터 후 최대 4개)
+const mobileHeaderStats = computed(() => {
+  const s = summary.value
+  if (!s) return []
+  const stats: Array<{ label: string; value: string; color?: string }> = []
+  if (s.avgPricePerPyeong != null) {
+    stats.push({ label: '평당가', value: formatManwonKorean(s.avgPricePerPyeong), color: 'text-primary' })
+  }
+  if (s.transactionCount != null && s.transactionCount > 0) {
+    stats.push({ label: '거래', value: `${s.transactionCount.toLocaleString('ko-KR')}건` })
+  }
+  if (s.latestDealDate) {
+    stats.push({ label: '최신거래', value: formatLandDealDate(s.latestDealDate) })
+  }
+  return stats.slice(0, 4)
+})
+
 // ── 전체 거래 내역 페이지네이션 ───────────────────────────────────────────────
 
 const TX_LIMIT = 20
@@ -285,6 +319,25 @@ async function goToTxPage(p: number) {
   const res = await useLand().getTransactions({ bjdCode: bjd, dongName: dong, page: p, limit: TX_LIMIT })
   txItems.value = res.items
   txPage.value = res.page
+}
+
+// 헤더 공유 버튼: Web Share API 우선, 미지원 시 URL 클립보드 복사
+async function handleShare() {
+  if (!import.meta.client) return
+  const url = window.location.href
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: pageTitle, url })
+    } catch {
+      // 사용자가 취소한 경우 등 — 무시
+    }
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(url)
+  } catch {
+    // 클립보드 미지원 — 무시
+  }
 }
 
 // ── SEO / Head ────────────────────────────────────────────────────────────────
@@ -341,7 +394,7 @@ const breadcrumbItems = [
   { label: dong, href: `/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong)}`, current: true },
 ]
 
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setFAQSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
@@ -350,4 +403,7 @@ setBreadcrumbSchema([
   { name: districtName, url: `/real-estate/land/${citySlug}/${districtSlug}` },
   { name: dong, url: `/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong)}` },
 ])
+
+// FAQPage JSON-LD (LAND_FAQ는 {q,a} → setFAQSchema는 {question,answer} 요구 → 어댑터)
+setFAQSchema(LAND_FAQ.map((f) => ({ question: f.q, answer: f.a })))
 </script>
