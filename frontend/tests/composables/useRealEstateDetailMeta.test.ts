@@ -19,15 +19,18 @@ describe('buildRealEstateDetailMeta - title', () => {
     expect(title.match(/일상킷/g)).toHaveLength(1)
   })
   it('아파트는 "아파트" 타입어를 생략한다', () => {
-    expect(buildRealEstateDetailMeta(base).title).toBe('래미안대치팰리스 매매 실거래가 | 서울 강남구 | 일상킷')
+    expect(buildRealEstateDetailMeta(base).title).toBe('래미안대치팰리스 매매 실거래가·주변 인프라 | 서울 강남구 | 일상킷')
+  })
+  it('타이틀에 주변 인프라 인텐트가 포함된다', () => {
+    expect(buildRealEstateDetailMeta(base).title).toContain('주변 인프라')
   })
   it('빌라/오피스텔은 타입어를 유지한다', () => {
     const { title } = buildRealEstateDetailMeta({ ...base, buildingName: '역삼e편한세상', propertyType: 'villa', transactionMode: 'rent' })
-    expect(title).toBe('역삼e편한세상 빌라 전월세 실거래가 | 서울 강남구 | 일상킷')
+    expect(title).toBe('역삼e편한세상 빌라 전월세 실거래가·주변 인프라 | 서울 강남구 | 일상킷')
   })
   it('이름이 길면 타입어를 생략해 30자에 근접시킨다', () => {
     const { title } = buildRealEstateDetailMeta({ ...base, buildingName: '강남역푸르지오시티', propertyType: 'offitel', transactionMode: 'rent' })
-    expect(title).toBe('강남역푸르지오시티 전월세 실거래가 | 서울 강남구 | 일상킷')
+    expect(title).toBe('강남역푸르지오시티 전월세 실거래가·주변 인프라 | 서울 강남구 | 일상킷')
   })
   it('지역(시축약 구)을 헤드라인 뒤 접미사로 넣는다', () => {
     const { title } = buildRealEstateDetailMeta(base)
@@ -36,7 +39,7 @@ describe('buildRealEstateDetailMeta - title', () => {
   })
   it('지역 정보가 없으면 지역 세그먼트를 생략한다', () => {
     const { title } = buildRealEstateDetailMeta({ ...base, region: { city: '', district: '', dong: null } })
-    expect(title).toBe('래미안대치팰리스 매매 실거래가 | 일상킷')
+    expect(title).toBe('래미안대치팰리스 매매 실거래가·주변 인프라 | 일상킷')
   })
   it('도 단위 시도는 사이트 공용 축약형으로 표기한다 (경상남도 → 경남)', () => {
     const { title } = buildRealEstateDetailMeta({ ...base, region: { city: '경상남도', district: '창원시', dong: null } })
@@ -88,7 +91,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
         recentDeal: { amount: 10700, dealDate: '2026년 5월' },
       },
     })
-    expect(title).toBe('새한A 매매 실거래가 | 광주 북구 | 일상킷')
+    expect(title).toBe('새한A 매매 실거래가·주변 인프라 | 광주 북구 | 일상킷')
   })
 
   it('full payload — description has 실거래 count and recent price', () => {

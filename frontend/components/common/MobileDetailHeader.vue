@@ -12,7 +12,7 @@
       {{ eyebrow }}
     </span>
     <div class="flex items-start gap-2 flex-wrap">
-      <h1 class="text-display-1 text-strong break-keep">{{ title }}</h1>
+      <h1 class="text-display-1 text-strong min-w-0 break-keep [overflow-wrap:anywhere]">{{ title }}</h1>
       <OperatingStatusBadge v-if="status" :status="status" class="mt-1 shrink-0" />
     </div>
 

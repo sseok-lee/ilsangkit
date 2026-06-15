@@ -14,7 +14,7 @@ export function buildSubwayTitle(station: SubwayStation): string {
   const cityCompact = station.city ? compactCityName(station.city) : ''
   const region = [cityCompact, station.district].filter(Boolean).join(' ')
   const regionPart = region ? ` | ${region}` : ''
-  return `${stationDisplayName(station.name)} (${station.line})${regionPart} | ${SITE_NAME}`
+  return `${stationDisplayName(station.name)} (${station.line})·주변 시설${regionPart} | ${SITE_NAME}`
 }
 
 export function buildSubwayDescription(station: SubwayStation): string {

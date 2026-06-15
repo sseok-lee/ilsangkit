@@ -116,7 +116,13 @@
               <!-- Ad: HERO 아래 -->
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
-              <!-- BasicInfo -->
+              <!-- T1 FacilityStatus — 헤더 광고 직후 1차 고유 콘텐츠로 승격 -->
+              <DetailFacilityStatus :facility="facility" />
+
+              <!-- Ad: T1 ↔ T3 사이 -->
+              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
+
+              <!-- T3 BasicInfo (기본정보·운영시간) -->
               <DetailBasicInfo
                 :facility="facility"
                 :hospital-operating-hours="hospitalOperatingHours"
@@ -128,13 +134,7 @@
                 :pharmacy-weekly-hours="pharmacyWeeklyHours"
               />
 
-              <!-- Ad: BASIC INFO ↔ FACILITY STATUS 사이 -->
-              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
-
-              <!-- FacilityStatus -->
-              <DetailFacilityStatus :facility="facility" />
-
-              <!-- Ad: DETAILS ↔ MAP 사이 -->
+              <!-- Ad: BASIC INFO ↔ MAP 사이 -->
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
               <!-- 위치·로드뷰 -->
@@ -302,7 +302,7 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 const route = useRoute()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro, getFacilityDisplayName } from '~/composables/useFacilityMeta'
-const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema } = useStructuredData()
+const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
@@ -405,6 +405,11 @@ watchEffect(() => {
     const ssrVideos = secondaryResponse.value?.youtube?.videos ?? []
     if (ssrVideos.length >= 2) {
       setVideoListSchema(ssrVideos)
+    }
+    // FAQPage JSON-LD 발행 (화면 FAQ 와 동일 소스 generateDynamicFAQ → SEO 구조화 데이터)
+    const faqItems = generateDynamicFAQ(facility.value)
+    if (faqItems.length > 0) {
+      setFAQSchema(faqItems)
     }
   }
 })

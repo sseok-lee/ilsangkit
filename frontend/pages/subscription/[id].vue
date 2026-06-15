@@ -45,30 +45,41 @@
       </Teleport>
 
       <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
-        <!-- Breadcrumb -->
+        <!-- Breadcrumb (데스크톱만 — chrome, order 미부여로 소스 최상단 유지) -->
         <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
-        <!-- PageHero (상태·임대구분은 eyebrow "분양 · 마감"으로 표시) -->
+        <!-- T0 모바일 헤더 (literal h1 소유) -->
+        <MobileDetailHeader
+          class="order-1 md:order-1"
+          :title="subscription.houseName"
+          :eyebrow="heroEyebrow"
+          :stats="heroStats"
+          :kakao-map-url="kakaoMapUrl"
+          :naver-map-url="naverMapUrl"
+          @share="handleShare"
+          @directions="(p: string) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
+        />
+
+        <!-- T0 데스크톱 헤더 (title-tag="div"로 강등 → literal h1 아님) -->
         <PageHero
+          class="hidden md:block order-1 md:order-1"
+          title-tag="div"
           :eyebrow="heroEyebrow"
           :title="subscription.houseName"
           :description="subscription.supplyLocation || subscription.regionName"
           :stats="heroStats"
         />
 
-        <!-- Ad: PageHero 직후 -->
-        <AdBanner />
+        <!-- 광고① : 헤더 직후 (최고 가시성) -->
+        <AdBanner class="order-2 md:order-2" />
 
-        <!-- "청약 일정" 블록 -->
-        <SectionBlock heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
+        <!-- T1a "청약 일정" 블록 -->
+        <SectionBlock class="order-3 md:order-3" heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
           <SubscriptionScheduleTimeline :subscription="subscription" />
         </SectionBlock>
 
-        <!-- Ad: 일정 이후 -->
-        <AdBanner />
-
-        <!-- "면적별 공급정보" 블록 -->
-        <SectionBlock v-if="unitTypes && unitTypes.length > 0" heading="면적별 공급정보" subtext="주택형별 공급 규모와 분양가를 비교합니다.">
+        <!-- T1b "면적별 공급정보" 블록 (일정과 인접 — 사이에 광고 없음) -->
+        <SectionBlock v-if="unitTypes && unitTypes.length > 0" class="order-4 md:order-4" heading="면적별 공급정보" subtext="주택형별 공급 규모와 분양가를 비교합니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -112,8 +123,11 @@
           </div>
         </SectionBlock>
 
-        <!-- "면적별 경쟁률" 블록 -->
-        <SectionBlock v-if="competitions.length > 0" heading="면적별 경쟁률" subtext="1·2순위 접수자수와 공급세대수 기준 경쟁률입니다.">
+        <!-- Ad: T1(일정+공급정보) 두 표 직후로 한 칸 이동 -->
+        <AdBanner class="order-5 md:order-5" />
+
+        <!-- T3 "면적별 경쟁률" 블록 -->
+        <SectionBlock v-if="competitions.length > 0" class="order-6 md:order-6" heading="면적별 경쟁률" subtext="1·2순위 접수자수와 공급세대수 기준 경쟁률입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -143,7 +157,7 @@
         </SectionBlock>
 
         <!-- "당첨 가점 분석" 블록 -->
-        <SectionBlock v-if="validScores.length > 0" heading="당첨 가점 분석" subtext="가점제 적용 단지의 1순위 당첨 가점 · 84점 만점 기준입니다.">
+        <SectionBlock v-if="validScores.length > 0" class="order-6 md:order-6" heading="당첨 가점 분석" subtext="가점제 적용 단지의 1순위 당첨 가점 · 84점 만점 기준입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -173,10 +187,10 @@
         </SectionBlock>
 
         <!-- Ad: 가점·경쟁률 이후 1회 -->
-        <AdBanner />
+        <AdBanner class="order-7 md:order-7" />
 
         <!-- "면적별 특별공급 내역" 블록 -->
-        <SectionBlock v-if="hasSpecialSupply" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
+        <SectionBlock v-if="hasSpecialSupply" class="order-8 md:order-8" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -209,7 +223,7 @@
         </SectionBlock>
 
         <!-- "특별공급 신청현황" 블록 -->
-        <SectionBlock v-if="specialStatuses.length > 0" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
+        <SectionBlock v-if="specialStatuses.length > 0" class="order-8 md:order-8" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -231,10 +245,10 @@
         </SectionBlock>
 
         <!-- 전월세 시세 (임대주택만) -->
-        <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" :subscription-id="subscription.id" :region-name="subscription.regionName" />
+        <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" class="order-8 md:order-8" :subscription-id="subscription.id" :region-name="subscription.regionName" />
 
         <!-- "위치와 로드뷰" 데스크톱 -->
-        <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block">
+        <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block order-9 md:order-9">
           <template #right>
             <div class="relative">
               <button
@@ -273,7 +287,7 @@
         </SectionBlock>
 
         <!-- 위치·로드뷰 (모바일) -->
-        <SectionBlock v-if="hasCoords" heading="위치·로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="md:hidden">
+        <SectionBlock v-if="hasCoords" heading="위치·로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="md:hidden order-9 md:order-9">
           <!-- 모바일 전용 라이브 지도 (데스크톱은 위 사이드 섹션 사용) -->
           <div class="relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
             <ClientOnly>
@@ -298,13 +312,13 @@
         </SectionBlock>
 
         <!-- 좌표 없음 fallback -->
-        <div v-if="!hasCoords" class="rounded-xl border border-line bg-background-light p-6 text-center">
+        <div v-if="!hasCoords" class="rounded-xl border border-line bg-background-light p-6 text-center order-9 md:order-9">
           <span class="material-symbols-outlined text-[32px] text-faint mb-2">location_off</span>
           <p class="text-sm text-muted">위치 정보가 제공되지 않아 지도를 표시할 수 없습니다.</p>
         </div>
 
         <!-- "기본정보" 블록 -->
-        <SectionBlock heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
+        <SectionBlock class="order-10 md:order-10" heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
             <div class="flex justify-between py-2 border-b border-line">
               <span class="text-muted">주택유형</span>
@@ -342,7 +356,7 @@
         </SectionBlock>
 
         <!-- 외부 링크 버튼 -->
-        <div class="flex flex-col md:flex-row gap-4">
+        <div class="flex flex-col md:flex-row gap-4 order-10 md:order-10">
           <a
             v-if="subscription.homepage"
             :href="subscription.homepage"
@@ -366,13 +380,15 @@
         </div>
 
         <!-- 관련 가이드 -->
-        <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
+        <RelatedGuides class="order-11 md:order-11" :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
 
         <!-- Ad: 본문 마무리 (하단) -->
-        <AdBanner />
+        <AdBanner class="order-12 md:order-12" />
 
-        <!-- 데이터 정보 -->
-        <DataSourceSection domain="subscription" />
+        <!-- 데이터 정보 (멀티루트 → wrapper에 order) -->
+        <div class="order-12 md:order-12">
+          <DataSourceSection domain="subscription" />
+        </div>
 
       </main>
     </template>
@@ -408,6 +424,7 @@ import SubscriptionScheduleTimeline from '~/components/subscription/Subscription
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
@@ -457,6 +474,16 @@ const naverMapUrl = computed(() => {
   if (!mapCenter.value || !subscription.value) return ''
   return `https://map.naver.com/v5/directions/-/-/-/transit?c=${mapCenter.value.lng},${mapCenter.value.lat},15,0,0,0,dh&destination=${encodeURIComponent(subscription.value.houseName)},${mapCenter.value.lng},${mapCenter.value.lat}`
 })
+
+function handleShare() {
+  if (!subscription.value) return
+  const url = `${SITE_URL}/subscription/${id}`
+  if (import.meta.client && navigator.share) {
+    navigator.share({ title: subscription.value.houseName, url }).catch(() => {})
+  } else if (import.meta.client && navigator.clipboard) {
+    navigator.clipboard.writeText(url).catch(() => {})
+  }
+}
 
 function openNavigation(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer')
@@ -515,7 +542,7 @@ const subscriptionDateRange = computed(() => {
 const subscriptionSeoTitle = computed(() => {
   if (!subscription.value) return '청약 일정'
   // 위치/유형/상태는 description에만 노출(타이틀 길이 제한 회피). setMeta가 ` | 일상킷` 접미사를 붙임.
-  return `${subscription.value.houseName} 청약 일정`
+  return `${subscription.value.houseName} 청약 일정·경쟁률`
 })
 
 const subscriptionSeoDescription = computed(() => {

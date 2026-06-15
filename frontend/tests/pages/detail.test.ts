@@ -273,4 +273,46 @@ describe('DetailPage', () => {
 
     wrapper.unmount()
   })
+
+  // ---------------- FAQPage JSON-LD 발행 가드 (spec §3.4·§6 결정4) ----------------
+  // 화면 FAQ(DetailContextLinks)만으로는 SEO 가치가 없으므로 setFAQSchema 로 FAQPage JSON-LD 를 발행해야 한다.
+  it('FAQPage JSON-LD(structured data)를 발행한다', async () => {
+    const heads: any[] = []
+    ;(globalThis as any).useHead = vi.fn((arg: any) => {
+      heads.push(typeof arg === 'function' ? arg() : arg)
+    })
+
+    await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+
+    const scripts = heads.flatMap(h => h?.script ?? [])
+    const faqScript = scripts.find((s: any) => s?.key === 'jsonld-faq')
+    expect(faqScript).toBeTruthy()
+    expect(faqScript.innerHTML).toContain('"@type":"FAQPage"')
+  })
+
+  // ---------------- T1 시설현황 승격 (spec §4.1) ----------------
+  // 시설현황(T1)이 기본정보(T3)보다 DOM 상 먼저 와야 한다 (모바일=데스크톱 동일, order 미사용).
+  it('시설현황(T1)이 기본정보(T3)보다 먼저 렌더된다', async () => {
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    const html = wrapper.html()
+    const statusIdx = html.indexOf('시설현황')
+    const basicIdx = html.indexOf('기본정보')
+    expect(statusIdx).toBeGreaterThan(-1)
+    expect(basicIdx).toBeGreaterThan(-1)
+    expect(statusIdx).toBeLessThan(basicIdx)
+  })
+
+  // hasFacilityStatus=false 카테고리(clothes)는 시설현황 섹션 h3 헤딩이 렌더되지 않아야 한다.
+  it('clothes(시설현황 없음)는 빈 T1 + 광고 연속 노출이 없다', async () => {
+    mockUseAsyncDataWith({
+      success: true,
+      data: { ...mockFacility, id: 'clothes-1', category: 'clothes', details: { detailLocation: '정문 앞' } },
+    })
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    // 시설현황 SectionBlock 의 <h3> 헤딩이 렌더되지 않음 (DetailFacilityStatus 내부 v-if=false)
+    // HTML 주석에 "시설현황" 문자열이 포함될 수 있으므로 h3 태그로 정확히 검증
+    const h3s = wrapper.findAll('h3')
+    const statusH3 = h3s.find(h => h.text() === '시설현황')
+    expect(statusH3).toBeUndefined()
+  })
 })

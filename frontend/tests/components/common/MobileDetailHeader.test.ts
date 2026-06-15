@@ -12,6 +12,15 @@ describe('common/MobileDetailHeader', () => {
     expect(h1s[0].text()).toBe('테스트 대상')
   })
 
+  // 긴 공백 없는 이름(예: '㈜NHF제2호공공임대위탁관리부동산투자회사')이 카드 밖으로 넘치지 않도록
+  // h1은 줄바꿈 회복 유틸을 가져야 한다(break-keep로 keep-all이라 긴 토큰엔 overflow-wrap:anywhere 필수).
+  it('h1은 긴 토큰 줄바꿈 회복 클래스를 가진다 (오버플로 회귀 가드)', () => {
+    const w = mount(MobileDetailHeader, { props: { title: '㈜NHF제2호공공임대위탁관리부동산투자회사(리벤티움)' } })
+    const cls = w.find('h1').classes()
+    expect(cls).toContain('min-w-0')
+    expect(cls).toContain('[overflow-wrap:anywhere]')
+  })
+
   it('eyebrow가 있으면 배지를, 없으면 숨긴다', () => {
     const w = mount(MobileDetailHeader, { props: { ...base, eyebrow: '아파트 · 매매' } })
     expect(w.text()).toContain('아파트 · 매매')
