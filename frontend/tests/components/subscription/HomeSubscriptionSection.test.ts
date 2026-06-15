@@ -73,6 +73,19 @@ describe('HomeSubscriptionSection (timeline)', () => {
     expect(text).toContain('임의공급')
   })
 
+  // 가로 넘침 회귀 가드 — 그리드 아이템 기본값 min-width:auto 가 긴 공고명(truncate=nowrap)
+  // 너비로 트랙을 늘려 모바일에서 카드가 viewport 밖으로 넘쳤던 버그(2026-06-15) 방지.
+  // 컬럼(h3 부모 div)에 min-w-0 이 있어야 truncate 가 작동하고 트랙이 컨테이너에 갇힌다.
+  it('타임라인 그룹 컬럼에 min-w-0 이 있어 긴 공고명 가로 넘침을 막는다', () => {
+    const wrapper = mount(HomeSubscriptionSection)
+    const headings = wrapper.findAll('h3')
+    const groupCols = headings.filter((h) => h.text().includes('접수 중') || h.text().includes('접수 예정'))
+    expect(groupCols.length).toBe(2)
+    groupCols.forEach((h) => {
+      expect((h.element.parentElement as HTMLElement).className).toContain('min-w-0')
+    })
+  })
+
   it('접수중은 마감 D-day, 예정은 시작 D-day를 표시한다', () => {
     const wrapper = mount(HomeSubscriptionSection)
     const text = wrapper.text()
