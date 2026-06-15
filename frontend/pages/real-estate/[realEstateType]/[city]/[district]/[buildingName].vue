@@ -84,7 +84,7 @@
       <AdBanner class="order-3 md:order-3" />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
-      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" class="order-9 md:order-4" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
+      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" class="order-9 md:order-7" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
         <template #right>
           <div class="hidden md:flex items-center gap-1">
             <button
@@ -140,21 +140,21 @@
         </div>
       </SectionBlock>
 
-      <!-- Ad: 로드뷰 이후 -->
-      <AdBanner class="order-10 md:order-5" />
+      <!-- Ad: 로드뷰 이후 (데스크톱은 위치(md:order-7)와 거래내역(md:order-9) 사이) -->
+      <AdBanner class="order-10 md:order-8" />
 
-      <!-- "전·월세 거래 비중" 블록 (rent 전용) -->
+      <!-- "전·월세 거래 비중" 블록 (rent 전용) — 시세추이(order-4) 직후로 승격 -->
       <SectionBlock
         v-if="currentTab === 'rent' && rentRatioTotal > 0"
-        class="order-8 md:order-6"
+        class="order-5 md:order-5"
         heading="전·월세 거래 비중"
         subtext="전체 거래의 전세·월세 구성입니다."
       >
         <RentRatioBar :jeonse-count="buildingInfo?.jeonseCount" :wolse-count="buildingInfo?.wolseCount" />
       </SectionBlock>
 
-      <!-- "시세 추이" 블록 -->
-      <SectionBlock class="order-4 md:order-7" :heading="getTrendSectionTitle(currentTab)" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
+      <!-- "시세 추이" 블록 — T1 고유 콘텐츠: 데스크톱·모바일 모두 헤더 광고 직후 최상단(order-4) -->
+      <SectionBlock class="order-4 md:order-4" :heading="getTrendSectionTitle(currentTab)" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
         <template #right>
           <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
             <button
@@ -254,8 +254,8 @@
         </p>
       </SectionBlock>
 
-      <!-- Ad: 시세 추이 ↔ 거래 내역 사이 -->
-      <AdBanner class="order-5 md:order-8" />
+      <!-- Ad: 시세 추이/비중 ↔ 위치 사이 (데스크톱 md:order-6, 모바일 order-5는 비중 뒤로 tie-break) -->
+      <AdBanner class="order-5 md:order-6" />
 
       <!-- "거래 내역" 블록 -->
       <SectionBlock class="order-6 md:order-9" :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
