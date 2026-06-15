@@ -322,6 +322,57 @@ describe('real-estate/land/[city]/[district]/[dong].vue — land dong detail pag
     expect(canonical!.href).toContain(encodeURIComponent('역삼동'))
   })
 
+  // og:image 누락 회귀 가드 — 토지 동상세는 단일 좌표가 없어 정적 대표 PNG 사용.
+  // 네이버 썸네일 크롤러는 webp/SVG 미렌더 → 반드시 절대경로 PNG 가 존재해야 한다.
+  it('og:image 가 PNG 절대경로로 설정되고 twitter:image·치수가 함께 출력돼야 한다', async () => {
+    await mountPage()
+    const head = resolveHead(capturedHeadCalls[0])
+    const meta: Array<Record<string, string>> = head.meta ?? []
+
+    const ogImage = meta.find((m) => m.property === 'og:image')
+    expect(ogImage).toBeDefined()
+    expect(ogImage!.content).toMatch(/^https:\/\/ilsangkit\.co\.kr\//)
+    expect(ogImage!.content).toMatch(/\.png$/)
+
+    const twitterImage = meta.find((m) => m.name === 'twitter:image')
+    expect(twitterImage?.content).toBe(ogImage!.content)
+
+    expect(meta.find((m) => m.property === 'og:image:width')).toBeDefined()
+    expect(meta.find((m) => m.property === 'og:image:height')).toBeDefined()
+  })
+
+  // og:image 는 색인 여부와 무관한 소셜 공유 신호 → noindex 동상세에도 존재해야 한다.
+  it('[isIndexable=false] noindex 여도 og:image PNG 는 존재해야 한다', async () => {
+    mockGetRegions.mockImplementationOnce(async (_params: any) => ({
+      items: [
+        {
+          bjdCode: '1168010999',
+          dongName: '역삼동',
+          city: '서울',
+          district: '강남구',
+          transactionCount: 2,
+          recentCount: 1,
+          avgPricePerPyeong: null,
+          latestDealDate: null,
+          isIndexable: false,
+          jimokBreakdown: {},
+          daeCount: 0,
+          daeNonShareCount: 0,
+        },
+      ],
+      total: 1,
+      page: 1,
+      totalPages: 1,
+    }))
+
+    await mountPage()
+    const head = resolveHead(capturedHeadCalls[0])
+    const meta: Array<Record<string, string>> = head.meta ?? []
+    const ogImage = meta.find((m) => m.property === 'og:image')
+    expect(ogImage).toBeDefined()
+    expect(ogImage!.content).toMatch(/\.png$/)
+  })
+
   // ── SEO: isIndexable = false 케이스 ──────────────────────────────────────────
 
   it('[isIndexable=false] useHead에 robots: noindex, follow meta가 있어야 한다', async () => {
