@@ -4,13 +4,13 @@
       <span :class="['w-7 h-7 rounded-full inline-flex items-center justify-center', iconBg]">
         <span :class="['material-symbols-outlined text-[18px]', iconColor]">{{ iconName }}</span>
       </span>
-      <strong class="text-sm font-bold text-slate-900">{{ title }}</strong>
-      <span class="ml-auto text-[11px] text-slate-400">{{ caption }}</span>
+      <strong class="text-sm font-bold text-strong">{{ title }}</strong>
+      <span class="ml-auto text-[11px] text-faint">{{ caption }}</span>
     </div>
-    <p v-if="isWolse && signal === 'active'" class="text-[11px] text-slate-500 mb-3">
+    <p v-if="isWolse && signal === 'active'" class="text-[11px] text-muted mb-3">
       월세는 거래량 시그널만 제공해요
     </p>
-    <ol v-if="regions.length > 0" class="divide-y divide-slate-100">
+    <ol v-if="regions.length > 0" class="divide-y divide-line">
       <HotspotRow
         v-for="(region, idx) in regions"
         :key="`${region.citySlug}-${region.districtSlug}`"
@@ -20,7 +20,7 @@
         :href="buildHref(region)"
       />
     </ol>
-    <p v-else class="text-sm text-slate-500 py-4 text-center">이번 주는 유의미한 변동이 없어요</p>
+    <p v-else class="text-sm text-muted py-4 text-center">이번 주는 유의미한 변동이 없어요</p>
   </div>
 </template>
 

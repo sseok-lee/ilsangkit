@@ -14,43 +14,63 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary color (Stitch 디자인 시스템)
+        // Primary color (OD 진화판 — 차분한 코발트로 한 칸 이동)
         primary: {
-          DEFAULT: '#2563eb',
-          dark: '#1d4ed8',
-          50:  '#eff6ff',
-          100: '#dbeafe',
+          DEFAULT: '#2450DC',
+          dark: '#1A3CB0',   // brand-strong
+          press: '#16358F',  // brand-press
+          ink: '#0F2C8C',    // 틴트 위 텍스트
+          50:  '#EBF0FE',    // brand-tint
+          100: '#DCE6FD',    // brand-tint-2
           200: '#bfdbfe',
           300: '#93c5fd',
           400: '#60a5fa',
           500: '#3c83f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
+          600: '#2450DC',
+          700: '#1A3CB0',
           800: '#1e40af',
           900: '#1e3a8a',
         },
         // Secondary color
         secondary: '#8b5cf6',
-        // Background colors (Stitch 디자인 시스템)
-        'background-light': '#f9fafb',
-        // Surface colors (Stitch 디자인 시스템)
-        'surface-light': '#ffffff',
+        // Background / surface (OD 진화판 — 시원한 종이 톤)
+        'background-light': '#F7F8FA',  // paper
+        'surface-light': '#FFFFFF',
+        'surface-2': '#FBFCFE',
+        // Neutral ink scale (OD)
+        ink: '#15213B',
+        strong: '#0C1424',
+        muted: '#56627A',
+        faint: '#677087',
         // Category accent color (purple for toilet)
         'accent-purple': '#8b5cf6',
-        // Category colors
-        toilet: '#8b5cf6',
-        trash: '#10b981',
-        wifi: '#f59e0b',
-        clothes: '#ec4899',
+        // Category colors (OD 16종 정렬 + subway)
+        toilet: '#7C4DEC',
+        trash: '#0FA968',
+        wifi: '#E8920C',
+        clothes: '#E2548E',
+        hospital: '#3B82F6',
+        pharmacy: '#14B8A6',
+        parking: '#0EA5E9',
+        'ev-charger': '#06B6D4',
+        subway: '#64748B',
+        school: '#6366F1',
+        childcare: '#EC6AA5',
+        aed: '#E0443B',
+        library: '#D9820B',
+        park: '#22A95B',
+        market: '#F2730C',
+        sports: '#8B5CF6',
         battery: '#06b6d4',
         kiosk: '#6366f1',
-        // Semantic colors
-        success: '#10b981',
-        warning: '#f59e0b',
-        error: '#ef4444',
-        info: '#3b82f6',
-        // Wireframe card border
-        line: '#d8e0ea',
+        // Semantic colors (OD)
+        success: '#0FA968',
+        warning: '#E8920C',
+        error: '#E0443B',
+        info: '#2450DC',
+        // Card border (OD)
+        line: '#E6E9F0',
+        'line-2': '#D7DCE7',
       },
       fontFamily: {
         display: ['Public Sans', 'Noto Sans KR', 'sans-serif'],
@@ -74,15 +94,18 @@ export default {
         '144': '36rem',
       },
       borderRadius: {
-        'DEFAULT': '0.5rem',
-        'lg': '0.5rem',
-        'xl': '0.5rem',
-        '2xl': '0.5rem',
+        // OD 진화판 — 2단계 radius (r-sm 10px / r-md 16px)
+        'DEFAULT': '0.625rem',  // 10px (r-sm)
+        'sm': '0.625rem',       // 10px
+        'lg': '0.625rem',       // 10px (r-sm)
+        'xl': '1rem',           // 16px (r-md)
+        '2xl': '1rem',          // 16px
         'full': '9999px',
       },
       boxShadow: {
         'subtle': '0 2px 10px rgba(0, 0, 0, 0.03)',
-        'card': '0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.04)',
+        'card': '0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.05)',     // sh-1
+        'card-2': '0 6px 24px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06)',  // sh-2
       },
     },
   },

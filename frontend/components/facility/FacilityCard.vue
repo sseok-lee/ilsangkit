@@ -3,11 +3,12 @@
     :to="`/${facility.category}/${facility.id}`"
     :aria-label="`${facility.name} 상세보기`"
     :aria-current="isActive ? 'location' : undefined"
+    :style="{ '--cat': cardCatVar }"
     :class="[
       'group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-[box-shadow,border-color] duration-200 ease-out border cursor-pointer',
       isActive
         ? 'border-primary/20'
-        : 'border-transparent hover:border-primary/20',
+        : 'border-line hover:border-primary/30',
     ]"
   >
     <div class="flex items-start gap-4">
@@ -15,9 +16,7 @@
       <div
         :class="[
           'shrink-0 w-12 h-12 rounded-full flex items-center justify-center',
-          isActive
-            ? 'bg-primary/10'
-            : 'bg-slate-100',
+          isActive ? 'bg-primary/10' : 'od-cat-ic',
         ]"
       >
         <CategoryIcon :category-id="facility.category" size="md" />
@@ -138,6 +137,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import type { Facility } from '~/types/facility'
 import { formatDistance } from '~/utils/formatters'
@@ -162,6 +162,9 @@ function formatDutyTime(raw: string | number): string {
   const s = String(raw).padStart(4, '0')
   return `${s.slice(0, 2)}:${s.slice(2)}`
 }
+
+// OD 진화판 — 카드 자신의 카테고리 색을 --cat으로 (원형 아이콘 틴트·hover)
+const cardCatVar = computed(() => `var(--c-${props.facility.category}, var(--brand))`)
 
 const isCloseDistance = (): boolean => {
   if (props.highlightDistance) return true

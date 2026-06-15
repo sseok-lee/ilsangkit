@@ -1,38 +1,6 @@
 <template>
   <div class="bg-background-light">
     <template v-if="subscription">
-      <!-- Mobile: Map at top -->
-      <div v-if="hasCoords" class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
-        <ClientOnly>
-          <FacilityMap
-            :center="mapCenter!"
-            :facilities="mapMarker"
-            :level="4"
-            class="w-full h-full !min-h-0 !rounded-none"
-          />
-        </ClientOnly>
-
-        <!-- Back & Name Overlay -->
-        <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-          <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="$router.back()">
-            <span class="material-symbols-outlined text-slate-800">arrow_back</span>
-          </div>
-          <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow-sm backdrop-blur-sm">{{ subscription.houseName }}</span>
-        </div>
-
-        <!-- Gradient Overlay -->
-        <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
-
-        <!-- Map expand button -->
-        <button
-          class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-          @click="isMapExpanded = true"
-        >
-          <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-          지도 크게 보기
-        </button>
-      </div>
-
       <!-- Fullscreen Map Overlay (Mobile) -->
       <Teleport to="body">
         <Transition
@@ -52,9 +20,9 @@
                 class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm"
                 @click="isMapExpanded = false"
               >
-                <span class="material-symbols-outlined text-slate-700">close</span>
+                <span class="material-symbols-outlined text-ink">close</span>
               </button>
-              <span class="text-sm font-bold text-slate-900 bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ subscription.houseName }}</span>
+              <span class="text-sm font-bold text-strong bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ subscription.houseName }}</span>
               <a
                 :href="kakaoMapUrl"
                 target="_blank"
@@ -77,76 +45,77 @@
       </Teleport>
 
       <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
-        <!-- Breadcrumb -->
+        <!-- Breadcrumb (데스크톱만 — chrome, order 미부여로 소스 최상단 유지) -->
         <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
-        <!-- 상태·임대구분 배지 (타이틀 위) -->
-        <div class="flex items-center gap-2">
-          <span v-if="subscription.rentType" :class="rentTypeBadgeClass">
-            {{ subscription.rentType === '임대주택' ? '임대' : '분양' }}
-          </span>
-          <span :class="statusBadgeClass">
-            {{ getStatusLabel(subscription.status) }}
-          </span>
-        </div>
+        <!-- T0 모바일 헤더 (literal h1 소유) -->
+        <MobileDetailHeader
+          class="order-1 md:order-1"
+          :title="subscription.houseName"
+          :eyebrow="heroEyebrow"
+          :stats="heroStats"
+          :kakao-map-url="kakaoMapUrl"
+          :naver-map-url="naverMapUrl"
+          @share="handleShare"
+          @directions="(p: string) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
+        />
 
-        <!-- PageHero -->
+        <!-- T0 데스크톱 헤더 (title-tag="div"로 강등 → literal h1 아님) -->
         <PageHero
+          class="hidden md:block order-1 md:order-1"
+          title-tag="div"
           :eyebrow="heroEyebrow"
           :title="subscription.houseName"
           :description="subscription.supplyLocation || subscription.regionName"
           :stats="heroStats"
         />
 
-        <!-- Ad: PageHero 직후 -->
-        <AdBanner />
+        <!-- 광고① : 헤더 직후 (최고 가시성) -->
+        <AdBanner class="order-2 md:order-2" />
 
-        <!-- "청약 일정" 블록 -->
-        <SectionBlock heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
+        <!-- T1a "청약 일정" 블록 -->
+        <SectionBlock class="order-3 md:order-3" heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
           <SubscriptionScheduleTimeline :subscription="subscription" />
         </SectionBlock>
 
-        <!-- Ad: 일정 이후 -->
-        <AdBanner />
-
-        <!-- "면적별 공급정보" 블록 -->
-        <SectionBlock v-if="unitTypes && unitTypes.length > 0" heading="면적별 공급정보" subtext="주택형별 공급 규모와 분양가를 비교합니다.">
+        <!-- T1b "면적별 공급정보" 블록 (일정과 인접 — 사이에 광고 없음) -->
+        <SectionBlock v-if="unitTypes && unitTypes.length > 0" class="order-4 md:order-4" heading="면적별 공급정보" subtext="주택형별 공급 규모와 분양가를 비교합니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
-                <tr class="border-b-2 border-slate-200">
-                  <th class="text-left py-3 px-4 font-semibold text-slate-800">주택형</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">전용면적</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">공급면적</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">일반공급</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">특별공급</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">합계</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">분양최고가</th>
-                  <th class="text-right py-3 px-4 font-semibold text-slate-800">평당가</th>
+                <tr class="border-b-2 border-line-2 bg-background-light">
+                  <th class="text-left py-3 px-4 font-semibold text-faint">주택형</th>
+                  <th class="text-right py-3 px-4 font-semibold text-faint">전용면적</th>
+                  <th class="text-right py-3 px-4 font-semibold text-faint">공급면적</th>
+                  <th class="text-right py-3 px-4 font-semibold text-faint">일반공급</th>
+                  <th class="text-right py-3 px-4 font-semibold text-faint">특별공급</th>
+                  <th class="text-right py-3 px-4 font-semibold text-faint">합계</th>
+                  <th class="text-right py-3 px-4 font-semibold text-faint">분양최고가</th>
+                  <th class="text-right py-3 px-4 font-semibold text-faint">평당가</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-slate-100 hover:bg-slate-50">
-                  <td class="py-3 px-4 text-slate-900 font-medium">{{ formatHouseType(unit.houseType) }}</td>
-                  <td class="py-3 px-4 text-slate-600 text-right">{{ formatExclusiveArea(unit.houseType) }}</td>
-                  <td class="py-3 px-4 text-slate-600 text-right">{{ formatSupplyArea(unit.supplyArea) }}</td>
-                  <td class="py-3 px-4 text-slate-600 text-right">{{ unit.generalCount?.toLocaleString() || '-' }}호</td>
-                  <td class="py-3 px-4 text-slate-600 text-right">{{ unit.specialCount?.toLocaleString() || '-' }}호</td>
-                  <td class="py-3 px-4 text-primary font-bold text-right">{{ ((unit.generalCount || 0) + (unit.specialCount || 0)).toLocaleString() }}호</td>
-                  <td class="py-3 px-4 text-slate-900 font-semibold text-right">
+                <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-line hover:bg-background-light">
+                  <td class="py-3 px-4 text-strong font-medium">{{ formatHouseType(unit.houseType) }}</td>
+                  <td class="py-3 px-4 text-muted text-right">{{ formatExclusiveArea(unit.houseType) }}</td>
+                  <td class="py-3 px-4 text-muted text-right">{{ formatSupplyArea(unit.supplyArea) }}</td>
+                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">{{ unit.generalCount?.toLocaleString() || '-' }}호</td>
+                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">{{ unit.specialCount?.toLocaleString() || '-' }}호</td>
+                  <td class="py-3 px-4 text-primary font-bold text-right font-display tabular-nums">{{ ((unit.generalCount || 0) + (unit.specialCount || 0)).toLocaleString() }}호</td>
+                  <td class="py-3 px-4 text-strong font-semibold text-right font-display tabular-nums">
                     {{ unit.topAmount ? formatPrice(unit.topAmount) : '-' }}
                   </td>
-                  <td class="py-3 px-4 text-slate-600 text-right">
+                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">
                     {{ calcPricePerPyeong(unit) }}
                   </td>
                 </tr>
               </tbody>
               <tfoot v-if="unitTypes.length > 1">
-                <tr class="border-t-2 border-slate-300 bg-slate-50">
-                  <td class="py-3 px-4 font-bold text-slate-800" colspan="3">합계</td>
-                  <td class="py-3 px-4 font-bold text-slate-800 text-right">{{ totalGeneral.toLocaleString() }}호</td>
-                  <td class="py-3 px-4 font-bold text-slate-800 text-right">{{ totalSpecial.toLocaleString() }}호</td>
-                  <td class="py-3 px-4 font-bold text-primary text-right">{{ (totalGeneral + totalSpecial).toLocaleString() }}호</td>
+                <tr class="border-t-2 border-line-2 bg-background-light">
+                  <td class="py-3 px-4 font-bold text-ink" colspan="3">합계</td>
+                  <td class="py-3 px-4 font-bold text-ink text-right font-display tabular-nums">{{ totalGeneral.toLocaleString() }}호</td>
+                  <td class="py-3 px-4 font-bold text-ink text-right font-display tabular-nums">{{ totalSpecial.toLocaleString() }}호</td>
+                  <td class="py-3 px-4 font-bold text-primary text-right font-display tabular-nums">{{ (totalGeneral + totalSpecial).toLocaleString() }}호</td>
                   <td class="py-3 px-4"></td>
                 </tr>
               </tfoot>
@@ -154,96 +123,99 @@
           </div>
         </SectionBlock>
 
-        <!-- "면적별 경쟁률" 블록 -->
-        <SectionBlock v-if="competitions.length > 0" heading="면적별 경쟁률" subtext="1·2순위 접수자수와 공급세대수 기준 경쟁률입니다.">
+        <!-- Ad: T1(일정+공급정보) 두 표 직후로 한 칸 이동 -->
+        <AdBanner class="order-5 md:order-5" />
+
+        <!-- T3 "면적별 경쟁률" 블록 -->
+        <SectionBlock v-if="competitions.length > 0" class="order-6 md:order-6" heading="면적별 경쟁률" subtext="1·2순위 접수자수와 공급세대수 기준 경쟁률입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
-                <tr class="border-b-2 border-slate-200">
-                  <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
-                  <th class="text-right py-3 px-3 font-semibold text-slate-800">1순위(해당)</th>
-                  <th class="text-right py-3 px-3 font-semibold text-slate-800">1순위(기타)</th>
-                  <th class="text-right py-3 px-3 font-semibold text-slate-800">2순위(해당)</th>
-                  <th class="text-right py-3 px-3 font-semibold text-slate-800">2순위(기타)</th>
+                <tr class="border-b-2 border-line-2 bg-background-light">
+                  <th class="text-left py-3 px-3 font-semibold text-faint">주택형</th>
+                  <th class="text-right py-3 px-3 font-semibold text-faint">1순위(해당)</th>
+                  <th class="text-right py-3 px-3 font-semibold text-faint">1순위(기타)</th>
+                  <th class="text-right py-3 px-3 font-semibold text-faint">2순위(해당)</th>
+                  <th class="text-right py-3 px-3 font-semibold text-faint">2순위(기타)</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="row in competitionByModel" :key="row.modelNo" class="border-b border-slate-100 hover:bg-slate-50">
-                  <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(row.houseType) }}</td>
-                  <td class="py-3 px-3 text-right" :class="getCompetitionClass(row.rank1Area)">{{ formatCompetition(row.rank1Area) }}</td>
-                  <td class="py-3 px-3 text-right" :class="getCompetitionClass(row.rank1Other)">{{ formatCompetition(row.rank1Other) }}</td>
-                  <td class="py-3 px-3 text-right text-slate-600">{{ formatCompetition(row.rank2Area) }}</td>
-                  <td class="py-3 px-3 text-right text-slate-600">{{ formatCompetition(row.rank2Other) }}</td>
+                <tr v-for="row in competitionByModel" :key="row.modelNo" class="border-b border-line hover:bg-background-light">
+                  <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(row.houseType) }}</td>
+                  <td class="py-3 px-3 text-right font-display tabular-nums" :class="getCompetitionClass(row.rank1Area)">{{ formatCompetition(row.rank1Area) }}</td>
+                  <td class="py-3 px-3 text-right font-display tabular-nums" :class="getCompetitionClass(row.rank1Other)">{{ formatCompetition(row.rank1Other) }}</td>
+                  <td class="py-3 px-3 text-right text-muted font-display tabular-nums">{{ formatCompetition(row.rank2Area) }}</td>
+                  <td class="py-3 px-3 text-right text-muted font-display tabular-nums">{{ formatCompetition(row.rank2Other) }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+          <p class="text-xs text-faint mt-3 flex items-center gap-1">
             <span class="material-symbols-outlined text-[14px]">info</span>
             접수자수/공급세대수 기준 경쟁률입니다
           </p>
         </SectionBlock>
 
         <!-- "당첨 가점 분석" 블록 -->
-        <SectionBlock v-if="validScores.length > 0" heading="당첨 가점 분석" subtext="가점제 적용 단지의 1순위 당첨 가점 · 84점 만점 기준입니다.">
+        <SectionBlock v-if="validScores.length > 0" class="order-6 md:order-6" heading="당첨 가점 분석" subtext="가점제 적용 단지의 1순위 당첨 가점 · 84점 만점 기준입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
-                <tr class="border-b-2 border-slate-200">
-                  <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
-                  <th class="text-left py-3 px-3 font-semibold text-slate-800">지역</th>
-                  <th class="text-right py-3 px-3 font-semibold text-slate-800">최저 가점</th>
-                  <th class="text-right py-3 px-3 font-semibold text-slate-800">최고 가점</th>
-                  <th class="text-right py-3 px-3 font-semibold text-slate-800">평균 가점</th>
+                <tr class="border-b-2 border-line-2 bg-background-light">
+                  <th class="text-left py-3 px-3 font-semibold text-faint">주택형</th>
+                  <th class="text-left py-3 px-3 font-semibold text-faint">지역</th>
+                  <th class="text-right py-3 px-3 font-semibold text-faint">최저 가점</th>
+                  <th class="text-right py-3 px-3 font-semibold text-faint">최고 가점</th>
+                  <th class="text-right py-3 px-3 font-semibold text-faint">평균 가점</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="score in validScores" :key="`${score.modelNo}-${score.regionCode}`" class="border-b border-slate-100 hover:bg-slate-50">
-                  <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(score.houseType) }}</td>
-                  <td class="py-3 px-3 text-slate-600">{{ score.regionName || '-' }}</td>
-                  <td class="py-3 px-3 text-right font-semibold text-primary">{{ score.minScore || '-' }}</td>
-                  <td class="py-3 px-3 text-right font-semibold text-red-600">{{ score.maxScore || '-' }}</td>
-                  <td class="py-3 px-3 text-right font-bold text-slate-900">{{ score.avgScore || '-' }}</td>
+                <tr v-for="score in validScores" :key="`${score.modelNo}-${score.regionCode}`" class="border-b border-line hover:bg-background-light">
+                  <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(score.houseType) }}</td>
+                  <td class="py-3 px-3 text-muted">{{ score.regionName || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-semibold text-primary font-display tabular-nums">{{ score.minScore || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-semibold text-red-600 font-display tabular-nums">{{ score.maxScore || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-bold text-strong font-display tabular-nums">{{ score.avgScore || '-' }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+          <p class="text-xs text-faint mt-3 flex items-center gap-1">
             <span class="material-symbols-outlined text-[14px]">info</span>
             가점제 적용 단지의 1순위 당첨 가점입니다. 84점 만점 기준.
           </p>
         </SectionBlock>
 
         <!-- Ad: 가점·경쟁률 이후 1회 -->
-        <AdBanner />
+        <AdBanner class="order-7 md:order-7" />
 
         <!-- "면적별 특별공급 내역" 블록 -->
-        <SectionBlock v-if="hasSpecialSupply" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
+        <SectionBlock v-if="hasSpecialSupply" class="order-8 md:order-8" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
-                <tr class="border-b-2 border-slate-200">
-                  <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
-                  <th v-for="col in activeSpecialColumns" :key="col.key" class="text-right py-3 px-3 font-semibold text-slate-800">{{ col.label }}</th>
-                  <th class="text-right py-3 px-3 font-semibold text-slate-800">합계</th>
+                <tr class="border-b-2 border-line-2 bg-background-light">
+                  <th class="text-left py-3 px-3 font-semibold text-faint">주택형</th>
+                  <th v-for="col in activeSpecialColumns" :key="col.key" class="text-right py-3 px-3 font-semibold text-faint">{{ col.label }}</th>
+                  <th class="text-right py-3 px-3 font-semibold text-faint">합계</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-slate-100 hover:bg-slate-50">
-                  <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(unit.houseType) }}</td>
-                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 text-slate-600 text-right">
+                <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-line hover:bg-background-light">
+                  <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(unit.houseType) }}</td>
+                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 text-muted text-right font-display tabular-nums">
                     {{ (unit[col.key as keyof SubscriptionUnitType] as number) || '-' }}
                   </td>
-                  <td class="py-3 px-3 text-primary font-bold text-right">{{ unit.specialCount || 0 }}</td>
+                  <td class="py-3 px-3 text-primary font-bold text-right font-display tabular-nums">{{ unit.specialCount || 0 }}</td>
                 </tr>
               </tbody>
               <tfoot v-if="unitTypes.length > 1">
-                <tr class="border-t-2 border-slate-300 bg-slate-50">
-                  <td class="py-3 px-3 font-bold text-slate-800">합계</td>
-                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 font-bold text-slate-800 text-right">
+                <tr class="border-t-2 border-line-2 bg-background-light">
+                  <td class="py-3 px-3 font-bold text-ink">합계</td>
+                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 font-bold text-ink text-right font-display tabular-nums">
                     {{ specialColumnTotal(col.key) }}
                   </td>
-                  <td class="py-3 px-3 font-bold text-primary text-right">{{ totalSpecial }}</td>
+                  <td class="py-3 px-3 font-bold text-primary text-right font-display tabular-nums">{{ totalSpecial }}</td>
                 </tr>
               </tfoot>
             </table>
@@ -251,20 +223,20 @@
         </SectionBlock>
 
         <!-- "특별공급 신청현황" 블록 -->
-        <SectionBlock v-if="specialStatuses.length > 0" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
+        <SectionBlock v-if="specialStatuses.length > 0" class="order-8 md:order-8" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
-                <tr class="border-b-2 border-slate-200">
-                  <th class="text-left py-3 px-3 font-semibold text-slate-800">주택형</th>
-                  <th v-for="col in activeSpecialStatusColumns" :key="col.key" class="text-right py-3 px-3 font-semibold text-slate-800">{{ col.label }}</th>
+                <tr class="border-b-2 border-line-2 bg-background-light">
+                  <th class="text-left py-3 px-3 font-semibold text-faint">주택형</th>
+                  <th v-for="col in activeSpecialStatusColumns" :key="col.key" class="text-right py-3 px-3 font-semibold text-faint">{{ col.label }}</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="status in specialStatuses" :key="status.houseType ?? status.id" class="border-b border-slate-100 hover:bg-slate-50">
-                  <td class="py-3 px-3 text-slate-900 font-medium">{{ formatHouseType(status.houseType) }}</td>
-                  <td v-for="col in activeSpecialStatusColumns" :key="col.key" class="py-3 px-3 text-right text-slate-600">
-                    <span class="block text-xs text-slate-400">{{ (status[col.applyKey] as number) || 0 }}명 / {{ (status[col.supplyKey] as number) || 0 }}세대</span>
+                <tr v-for="status in specialStatuses" :key="status.houseType ?? status.id" class="border-b border-line hover:bg-background-light">
+                  <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(status.houseType) }}</td>
+                  <td v-for="col in activeSpecialStatusColumns" :key="col.key" class="py-3 px-3 text-right text-muted">
+                    <span class="block text-xs text-faint font-display tabular-nums">{{ (status[col.applyKey] as number) || 0 }}명 / {{ (status[col.supplyKey] as number) || 0 }}세대</span>
                   </td>
                 </tr>
               </tbody>
@@ -273,10 +245,10 @@
         </SectionBlock>
 
         <!-- 전월세 시세 (임대주택만) -->
-        <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" :subscription-id="subscription.id" :region-name="subscription.regionName" />
+        <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" class="order-8 md:order-8" :subscription-id="subscription.id" :region-name="subscription.regionName" />
 
         <!-- "위치와 로드뷰" 데스크톱 -->
-        <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block">
+        <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block order-9 md:order-9">
           <template #right>
             <div class="relative">
               <button
@@ -287,12 +259,12 @@
                 길찾기
                 <span class="material-symbols-outlined text-[14px]">expand_more</span>
               </button>
-              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-line-2 overflow-hidden z-20">
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
                   <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                 </button>
-                <div class="h-px bg-slate-100"></div>
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                <div class="h-px bg-line"></div>
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
                   <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
                 </button>
               </div>
@@ -314,59 +286,77 @@
           </div>
         </SectionBlock>
 
-        <!-- 로드뷰 (모바일) -->
-        <SectionBlock v-if="hasCoords" heading="로드뷰" class="md:hidden">
-          <div class="roadview-wrapper rounded-xl overflow-hidden h-[200px]">
+        <!-- 위치·로드뷰 (모바일) -->
+        <SectionBlock v-if="hasCoords" heading="위치·로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="md:hidden order-9 md:order-9">
+          <!-- 모바일 전용 라이브 지도 (데스크톱은 위 사이드 섹션 사용) -->
+          <div class="relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
+            <ClientOnly>
+              <FacilityMap
+                :center="mapCenter!"
+                :facilities="mapMarker"
+                :level="4"
+                class="w-full h-full !min-h-0"
+              />
+            </ClientOnly>
+            <button
+              class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+              @click="isMapExpanded = true"
+            >
+              <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+              지도 크게 보기
+            </button>
+          </div>
+          <div class="roadview-wrapper rounded-xl overflow-hidden h-[220px]">
             <FacilityRoadview :lat="Number(subscription.lat)" :lng="Number(subscription.lng)" />
           </div>
         </SectionBlock>
 
         <!-- 좌표 없음 fallback -->
-        <div v-if="!hasCoords" class="rounded-xl border border-line bg-slate-50 p-6 text-center">
-          <span class="material-symbols-outlined text-[32px] text-slate-400 mb-2">location_off</span>
-          <p class="text-sm text-slate-500">위치 정보가 제공되지 않아 지도를 표시할 수 없습니다.</p>
+        <div v-if="!hasCoords" class="rounded-xl border border-line bg-background-light p-6 text-center order-9 md:order-9">
+          <span class="material-symbols-outlined text-[32px] text-faint mb-2">location_off</span>
+          <p class="text-sm text-muted">위치 정보가 제공되지 않아 지도를 표시할 수 없습니다.</p>
         </div>
 
         <!-- "기본정보" 블록 -->
-        <SectionBlock heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
+        <SectionBlock class="order-10 md:order-10" heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-            <div class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">주택유형</span>
-              <span class="font-medium text-slate-900">{{ subscription.houseType }}</span>
+            <div class="flex justify-between py-2 border-b border-line">
+              <span class="text-muted">주택유형</span>
+              <span class="font-medium text-strong">{{ subscription.houseType }}</span>
             </div>
-            <div v-if="subscription.houseDetailType" class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">분양구분</span>
-              <span class="font-medium text-slate-900">{{ subscription.houseDetailType }}</span>
+            <div v-if="subscription.houseDetailType" class="flex justify-between py-2 border-b border-line">
+              <span class="text-muted">분양구분</span>
+              <span class="font-medium text-strong">{{ subscription.houseDetailType }}</span>
             </div>
-            <div v-if="subscription.supplyLocation" class="flex flex-col gap-1 py-2 border-b border-slate-100 md:flex-row md:justify-between md:items-baseline md:gap-4">
-              <span class="text-slate-500 shrink-0">공급위치</span>
-              <span class="font-medium text-slate-900 md:text-right">{{ subscription.supplyLocation }}</span>
+            <div v-if="subscription.supplyLocation" class="flex flex-col gap-1 py-2 border-b border-line md:flex-row md:justify-between md:items-baseline md:gap-4">
+              <span class="text-muted shrink-0">공급위치</span>
+              <span class="font-medium text-strong md:text-right">{{ subscription.supplyLocation }}</span>
             </div>
-            <div v-if="subscription.totalSupplyCount" class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">총 공급호수</span>
-              <span class="font-medium text-slate-900">{{ subscription.totalSupplyCount.toLocaleString() }}호</span>
+            <div v-if="subscription.totalSupplyCount" class="flex justify-between py-2 border-b border-line">
+              <span class="text-muted">총 공급호수</span>
+              <span class="font-medium text-strong font-display tabular-nums">{{ subscription.totalSupplyCount.toLocaleString() }}호</span>
             </div>
-            <div v-if="subscription.constructorName" class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">시공사</span>
-              <span class="font-medium text-slate-900">{{ subscription.constructorName }}</span>
+            <div v-if="subscription.constructorName" class="flex justify-between py-2 border-b border-line">
+              <span class="text-muted">시공사</span>
+              <span class="font-medium text-strong">{{ subscription.constructorName }}</span>
             </div>
-            <div v-if="subscription.developerName" class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">시행사</span>
-              <span class="font-medium text-slate-900">{{ subscription.developerName }}</span>
+            <div v-if="subscription.developerName" class="flex justify-between py-2 border-b border-line">
+              <span class="text-muted">시행사</span>
+              <span class="font-medium text-strong">{{ subscription.developerName }}</span>
             </div>
-            <div v-if="subscription.moveInMonth" class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">입주예정</span>
-              <span class="font-medium text-slate-900">{{ formatMoveInMonth(subscription.moveInMonth) }}</span>
+            <div v-if="subscription.moveInMonth" class="flex justify-between py-2 border-b border-line">
+              <span class="text-muted">입주예정</span>
+              <span class="font-medium text-strong font-display tabular-nums">{{ formatMoveInMonth(subscription.moveInMonth) }}</span>
             </div>
-            <div v-if="subscription.inquiryTel" class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">문의전화</span>
+            <div v-if="subscription.inquiryTel" class="flex justify-between py-2 border-b border-line">
+              <span class="text-muted">문의전화</span>
               <a :href="`tel:${subscription.inquiryTel}`" class="font-medium text-primary hover:underline">{{ subscription.inquiryTel }}</a>
             </div>
           </div>
         </SectionBlock>
 
         <!-- 외부 링크 버튼 -->
-        <div class="flex flex-col md:flex-row gap-4">
+        <div class="flex flex-col md:flex-row gap-4 order-10 md:order-10">
           <a
             v-if="subscription.homepage"
             :href="subscription.homepage"
@@ -382,7 +372,7 @@
             :href="subscription.pblancUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-line-2 text-ink font-medium rounded-xl hover:bg-background-light transition-colors shadow-sm"
           >
             <span class="material-symbols-outlined text-[20px]">description</span>
             청약홈 공고 보기
@@ -390,13 +380,15 @@
         </div>
 
         <!-- 관련 가이드 -->
-        <RelatedGuides :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
+        <RelatedGuides class="order-11 md:order-11" :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
 
         <!-- Ad: 본문 마무리 (하단) -->
-        <AdBanner />
+        <AdBanner class="order-12 md:order-12" />
 
-        <!-- 데이터 정보 -->
-        <DataSourceSection domain="subscription" />
+        <!-- 데이터 정보 (멀티루트 → wrapper에 order) -->
+        <div class="order-12 md:order-12">
+          <DataSourceSection domain="subscription" />
+        </div>
 
       </main>
     </template>
@@ -432,6 +424,7 @@ import SubscriptionScheduleTimeline from '~/components/subscription/Subscription
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
@@ -482,18 +475,20 @@ const naverMapUrl = computed(() => {
   return `https://map.naver.com/v5/directions/-/-/-/transit?c=${mapCenter.value.lng},${mapCenter.value.lat},15,0,0,0,dh&destination=${encodeURIComponent(subscription.value.houseName)},${mapCenter.value.lng},${mapCenter.value.lat}`
 })
 
+function handleShare() {
+  if (!subscription.value) return
+  const url = `${SITE_URL}/subscription/${id}`
+  if (import.meta.client && navigator.share) {
+    navigator.share({ title: subscription.value.houseName, url }).catch(() => {})
+  } else if (import.meta.client && navigator.clipboard) {
+    navigator.clipboard.writeText(url).catch(() => {})
+  }
+}
+
 function openNavigation(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer')
   showNavDropdown.value = false
 }
-
-const rentTypeBadgeClass = computed(() => {
-  if (!subscription.value) return ''
-  const rt = subscription.value.rentType
-  const baseClass = 'inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold'
-  if (rt === '임대주택') return `${baseClass} bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200`
-  return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
-})
 
 const priceRange = computed(() => {
   const amounts = unitTypes.value.map(u => u.topAmount).filter((a): a is number => a != null && a > 0)
@@ -537,14 +532,17 @@ const subscriptionTypeLabel = computed(() => {
 })
 
 const subscriptionDateRange = computed(() => {
-  if (!subscription.value?.receptionStartDate || !subscription.value?.receptionEndDate) return null
-  return `${subscription.value.receptionStartDate}~${subscription.value.receptionEndDate}`
+  const start = subscription.value?.receptionStartDate
+  const end = subscription.value?.receptionEndDate
+  if (!start || !end) return null
+  // ISO datetime(2026-06-15T00:00:00.000Z)을 SEO/OG 설명에 그대로 노출하지 않도록 날짜만 표기.
+  return `${start.slice(0, 10)}~${end.slice(0, 10)}`
 })
 
 const subscriptionSeoTitle = computed(() => {
   if (!subscription.value) return '청약 일정'
   // 위치/유형/상태는 description에만 노출(타이틀 길이 제한 회피). setMeta가 ` | 일상킷` 접미사를 붙임.
-  return `${subscription.value.houseName} 청약 일정`
+  return `${subscription.value.houseName} 청약 일정·경쟁률`
 })
 
 const subscriptionSeoDescription = computed(() => {
@@ -560,7 +558,7 @@ const subscriptionSeoDescription = computed(() => {
     facts.push(`접수 ${subscriptionDateRange.value}`)
   }
   else if (subscription.value.winnerDate) {
-    facts.push(`발표 ${subscription.value.winnerDate}`)
+    facts.push(`발표 ${subscription.value.winnerDate.slice(0, 10)}`)
   }
   else if (subscription.value.moveInMonth) {
     facts.push(`입주 ${formatMoveInMonth(subscription.value.moveInMonth)}`)
@@ -583,15 +581,6 @@ const breadcrumbItems = computed(() => {
   else items.push({ label: '분양', href: '/subscription/sale', current: false })
   items.push({ label: subscription.value.houseName, current: true })
   return items
-})
-
-const statusBadgeClass = computed(() => {
-  if (!subscription.value) return ''
-  const status = subscription.value.status
-  const baseClass = 'inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold'
-  if (status === 'upcoming') return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
-  if (status === 'ongoing') return `${baseClass} bg-green-100 text-green-700 ring-1 ring-inset ring-green-200`
-  return `${baseClass} bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200`
 })
 
 // 합계 계산
@@ -648,12 +637,12 @@ function formatCompetition(c: SubscriptionCompetition | null): string {
 }
 
 function getCompetitionClass(c: SubscriptionCompetition | null): string {
-  if (!c || !c.applicantCount || !c.supplyCount) return 'text-slate-600'
+  if (!c || !c.applicantCount || !c.supplyCount) return 'text-muted'
   const rate = c.applicantCount / c.supplyCount
   if (rate >= 10) return 'text-red-600 font-bold'
   if (rate >= 5) return 'text-orange-600 font-semibold'
-  if (rate >= 1) return 'text-slate-900 font-medium'
-  return 'text-slate-600'
+  if (rate >= 1) return 'text-strong font-medium'
+  return 'text-muted'
 }
 
 // 유효한 가점 (모두 "-"인 행 제외)

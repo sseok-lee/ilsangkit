@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-background-light flex flex-col text-slate-900">
+  <div class="min-h-screen bg-background-light flex flex-col text-strong">
     <main class="flex-1 w-full">
       <!-- Loading -->
       <div v-if="pending" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
@@ -19,36 +19,6 @@
       </div>
 
       <template v-else>
-        <!-- Mobile: Map at top -->
-        <div class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
-          <ClientOnly>
-            <FacilityMap
-              :center="{ lat: station.lat, lng: station.lng }"
-              :facilities="[mapFacility]"
-              :level="3"
-              class="w-full h-full !min-h-0 !rounded-none"
-            />
-          </ClientOnly>
-
-          <!-- Back + Name overlay -->
-          <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-            <button class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="handleBack">
-              <span class="material-symbols-outlined text-slate-900">arrow_back</span>
-            </button>
-            <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-900 shadow-sm backdrop-blur-sm">{{ displayName }}</span>
-          </div>
-
-          <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
-
-          <button
-            class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-            @click="isMapExpanded = true"
-          >
-            <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-            지도 크게 보기
-          </button>
-        </div>
-
         <!-- Fullscreen Map Overlay (Mobile) -->
         <Teleport to="body">
           <Transition
@@ -62,9 +32,9 @@
             <div v-if="isMapExpanded" class="md:hidden fixed inset-0 z-[60] bg-background-light">
               <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
                 <button class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm" @click="isMapExpanded = false">
-                  <span class="material-symbols-outlined text-slate-700">close</span>
+                  <span class="material-symbols-outlined text-strong">close</span>
                 </button>
-                <span class="text-sm font-bold text-slate-900 bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ displayName }}</span>
+                <span class="text-sm font-bold text-strong bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ displayName }}</span>
                 <a
                   :href="kakaoMapUrl"
                   target="_blank"
@@ -94,7 +64,7 @@
               <div class="flex items-center justify-between gap-2">
                 <Breadcrumb :items="breadcrumbItems" />
                 <button
-                  class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
+                  class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-muted hover:text-primary hover:border-primary transition-colors text-sm"
                   aria-label="이 지하철역 공유하기"
                   @click="handleShare"
                 >
@@ -103,8 +73,22 @@
                 </button>
               </div>
 
-              <!-- Hero -->
+              <!-- Hero: 모바일 핵심 정보 헤더 / 데스크톱 PageHero -->
+              <MobileDetailHeader
+                :title="displayName"
+                eyebrow="지하철역"
+                :stats="heroStats"
+                :phone="station.phoneNumber"
+                copyable
+                :kakao-map-url="kakaoMapUrl"
+                :naver-map-url="naverMapUrl"
+                @share="handleShare"
+                @copy="copyStationAddress"
+                @directions="openDirections"
+              />
               <PageHero
+                class="hidden md:block"
+                title-tag="div"
                 eyebrow="지하철역"
                 :title="displayName"
                 :description="introText"
@@ -115,34 +99,32 @@
 
               <!-- Basic Info -->
               <SectionBlock heading="역정보" subtext="위치·운영기관·연락처 정보">
-                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-                  <div v-if="lines.length > 0" class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-slate-500 mb-1.5">노선</dt>
-                    <dd class="flex flex-wrap gap-1.5">
-                      <span
-                        v-for="ln in lines"
-                        :key="ln"
-                        class="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full text-white"
-                        :style="{ backgroundColor: lineColor(ln) }"
-                      >
-                        {{ lineLabel(ln) }}
-                      </span>
-                    </dd>
-                  </div>
+                <!-- 노선 headline (대표 정보 1순위) -->
+                <div v-if="lines.length > 0" data-test="line-headline" class="mb-4 flex flex-wrap gap-2">
+                  <span
+                    v-for="ln in lines"
+                    :key="ln"
+                    class="inline-flex items-center text-sm font-bold px-3.5 py-1.5 rounded-full text-white shadow-sm"
+                    :style="{ backgroundColor: lineColor(ln) }"
+                  >
+                    {{ lineLabel(ln) }}
+                  </span>
+                </div>
 
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                   <div v-if="station.roadAddress || station.address" class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-slate-500 mb-1">주소</dt>
-                    <dd class="text-sm text-slate-900">{{ station.roadAddress || station.address }}</dd>
+                    <dt class="text-xs font-medium text-muted mb-1">주소</dt>
+                    <dd class="text-sm text-strong">{{ station.roadAddress || station.address }}</dd>
                   </div>
 
                   <div v-if="station.operator">
-                    <dt class="text-xs font-medium text-slate-500 mb-1">운영기관</dt>
-                    <dd class="text-sm text-slate-900">{{ station.operator }}</dd>
+                    <dt class="text-xs font-medium text-muted mb-1">운영기관</dt>
+                    <dd class="text-sm text-strong">{{ station.operator }}</dd>
                   </div>
 
                   <div v-if="station.phoneNumber">
-                    <dt class="text-xs font-medium text-slate-500 mb-1">전화번호</dt>
-                    <dd class="text-sm text-slate-900">
+                    <dt class="text-xs font-medium text-muted mb-1">전화번호</dt>
+                    <dd class="text-sm text-strong">
                       <a :href="`tel:${station.phoneNumber}`" class="hover:text-primary hover:underline">{{ station.phoneNumber }}</a>
                     </dd>
                   </div>
@@ -151,9 +133,29 @@
 
               <AdBanner />
 
-              <!-- Roadview -->
-              <SectionBlock heading="로드뷰" subtext="역 주변의 거리 뷰를 확인하세요.">
-                <FacilityRoadview :lat="station.lat" :lng="station.lng" />
+              <!-- 위치·로드뷰 -->
+              <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 역 주변을 확인하세요.">
+                <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
+                <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
+                  <ClientOnly>
+                    <FacilityMap
+                      :center="{ lat: station.lat, lng: station.lng }"
+                      :facilities="[mapFacility]"
+                      :level="3"
+                      class="w-full h-full !min-h-0"
+                    />
+                  </ClientOnly>
+                  <button
+                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+                    @click="isMapExpanded = true"
+                  >
+                    <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+                    지도 크게 보기
+                  </button>
+                </div>
+                <div class="h-[220px]">
+                  <FacilityRoadview :lat="station.lat" :lng="station.lng" />
+                </div>
               </SectionBlock>
 
               <AdBanner />
@@ -172,21 +174,21 @@
               <!-- 관련 탐색 -->
               <SectionBlock heading="관련 탐색" subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요.">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-xs text-slate-500 font-medium pr-1">관련 카테고리</span>
+                  <span class="text-xs text-muted font-medium pr-1">관련 카테고리</span>
                   <NuxtLink
                     v-for="cat in relatedCategories"
                     :key="cat.slug"
                     :to="`/${cat.slug}`"
-                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
                   >
                     {{ cat.label }}
                   </NuxtLink>
                 </div>
                 <div v-if="regionLink" class="flex flex-wrap items-center gap-2 mt-3">
-                  <span class="text-xs text-slate-500 font-medium pr-1">지역</span>
+                  <span class="text-xs text-muted font-medium pr-1">지역</span>
                   <NuxtLink
                     :to="regionLink.href"
-                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
                   >
                     {{ regionLink.label }}
                   </NuxtLink>
@@ -197,8 +199,8 @@
               <SectionBlock v-if="faqItems.length > 0" heading="자주 묻는 질문">
                 <div class="space-y-1">
                   <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-line last:border-b-0">
-                    <summary class="py-3 cursor-pointer font-medium text-slate-800 hover:text-primary">{{ faq.question }}</summary>
-                    <p class="pb-3 text-slate-600 text-sm leading-relaxed">{{ faq.answer }}</p>
+                    <summary class="py-3 cursor-pointer font-medium text-ink hover:text-primary">{{ faq.question }}</summary>
+                    <p class="pb-3 text-muted text-sm leading-relaxed">{{ faq.answer }}</p>
                   </details>
                 </div>
               </SectionBlock>
@@ -225,9 +227,19 @@
               </div>
 
               <!-- Actions -->
-              <div class="mt-3 p-4 bg-white border border-slate-200 flex gap-3 shadow-card rounded-xl">
+              <div class="mt-3 p-4 bg-white border border-line-2 flex gap-3 shadow-card rounded-xl">
+                <a
+                  v-if="station.phoneNumber"
+                  data-test="sidebar-call"
+                  :href="`tel:${station.phoneNumber}`"
+                  class="flex-1 h-12 rounded-xl bg-background-light text-strong font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
+                  aria-label="전화 걸기"
+                >
+                  <span class="material-symbols-outlined">call</span>
+                  전화
+                </a>
                 <button
-                  class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-900 font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
+                  class="flex-1 h-12 rounded-xl bg-background-light text-strong font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
                   aria-label="공유하기"
                   @click="handleShare"
                 >
@@ -243,12 +255,12 @@
                     길찾기
                     <span class="material-symbols-outlined text-[18px]">expand_more</span>
                   </button>
-                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                    <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-line-2 overflow-hidden z-20">
+                    <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-gray-50 flex items-center gap-3 transition-colors">
                       <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                     </a>
-                    <div class="h-px bg-slate-100"></div>
-                    <a :href="naverMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                    <div class="h-px bg-background-light"></div>
+                    <a :href="naverMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-gray-50 flex items-center gap-3 transition-colors">
                       <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
                     </a>
                   </div>
@@ -263,41 +275,6 @@
             </aside>
           </div>
         </div>
-
-        <!-- Mobile sticky bottom CTA -->
-        <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
-          <div class="flex gap-3">
-            <button
-              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-3.5 text-base font-bold text-slate-900 border border-gray-200 transition hover:bg-gray-200 active:scale-[0.98]"
-              aria-label="공유하기"
-              @click="handleShare"
-            >
-              <span class="material-symbols-outlined text-[20px]">share</span>
-              공유하기
-            </button>
-            <div class="relative flex-[2]">
-              <button
-                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
-                @click="showMobileNavDropdown = !showMobileNavDropdown"
-              >
-                <span class="material-symbols-outlined text-[20px]">directions</span>
-                길찾기
-                <span class="material-symbols-outlined text-[16px]">expand_more</span>
-              </button>
-              <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                </a>
-                <div class="h-px bg-slate-100"></div>
-                <a :href="naverMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="md:hidden h-24"></div>
       </template>
     </main>
   </div>
@@ -314,6 +291,7 @@ import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import FacilityRoadview from '~/components/facility/FacilityRoadview.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
@@ -323,11 +301,11 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
+import { useStructuredData } from '~/composables/useStructuredData'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
-const router = useRouter()
 const slug = computed(() => String(route.params.slug ?? ''))
 
 const { data, error, pending } = await useSubwayStation(slug.value)
@@ -533,13 +511,22 @@ const naverMapUrl = computed(() => {
 // UI state
 const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
-const showMobileNavDropdown = ref(false)
 
-function handleBack() {
-  if (window.history.length > 1) {
-    router.back()
-  } else {
-    router.push('/subway')
+// 모바일 헤더 길찾기 — provider별 외부 지도 열기
+function openDirections(provider: 'kakao' | 'naver') {
+  const url = provider === 'kakao' ? kakaoMapUrl.value : naverMapUrl.value
+  window.open(url, '_blank')
+}
+
+// 모바일 헤더 주소 복사
+async function copyStationAddress() {
+  const address = station.value?.roadAddress || station.value?.address
+  if (!address) return
+  try {
+    await navigator.clipboard.writeText(address)
+    alert('주소가 복사되었습니다.')
+  } catch (err) {
+    console.error('주소 복사 실패:', err)
   }
 }
 
@@ -583,6 +570,10 @@ setMeta({
   imageHeight: 536,
   canonical: subwayCanonicalUrl(slug.value),
 })
+
+// FAQPage JSON-LD (spec §6 결정4: FAQ 있는 페이지는 스키마 발행 통일)
+const { setFAQSchema } = useStructuredData()
+setFAQSchema(faqItems.value)
 
 useHead({
   script: [

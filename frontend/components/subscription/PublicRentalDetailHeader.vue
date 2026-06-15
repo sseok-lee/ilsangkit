@@ -1,5 +1,5 @@
 <template>
-  <header class="bg-white border border-line rounded-xl shadow-card p-4 md:p-5">
+  <header class="hidden md:block bg-white border border-line rounded-xl shadow-card p-4 md:p-5">
     <div class="flex flex-wrap items-center gap-2 mb-3">
       <span :class="rentalTypeBadgeClass">{{ rental.rentalType }}</span>
       <span v-if="rental.houseType" class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
@@ -7,15 +7,15 @@
       </span>
     </div>
 
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 leading-tight break-keep">
+    <div role="heading" aria-level="1" class="text-2xl md:text-3xl font-bold text-strong leading-tight break-keep [overflow-wrap:anywhere]">
       {{ displayName }}
-    </h1>
+    </div>
 
-    <p class="mt-2 text-slate-600 text-sm md:text-base break-keep">
+    <p class="mt-2 text-ink text-sm md:text-base break-keep [overflow-wrap:anywhere]">
       {{ rental.complexName }}
     </p>
 
-    <p class="mt-3 inline-flex items-center gap-1.5 text-xs md:text-sm text-slate-500">
+    <p class="mt-3 inline-flex items-center gap-1.5 text-xs md:text-sm text-muted">
       <span class="material-symbols-outlined text-[16px]">apartment</span>
       {{ rental.landlordAgency || NO_DATA }}
     </p>

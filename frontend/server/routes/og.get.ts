@@ -41,9 +41,12 @@ export default defineEventHandler(async (event) => {
     return pngBuffer
   }
   catch {
-    // sharp 사용 불가 시 SVG fallback (Cafe24 등 native binding 미지원 환경)
-    setHeader(event, 'Content-Type', 'image/svg+xml')
-    setHeader(event, 'Cache-Control', 'public, max-age=86400, s-maxage=86400')
-    return svg
+    // sharp 사용 불가(Cafe24 등 native binding 미지원) 시, SVG는 네이버/카카오 썸네일
+    // 크롤러가 렌더링하지 못하므로 정적 PNG로 302 리다이렉트한다 (상단 invalid-category 분기와 동일).
+    setHeader(event, 'Location', '/og-image.png')
+    setHeader(event, 'Cache-Control', 'public, max-age=86400')
+    event.node.res.statusCode = 302
+    event.node.res.end()
+    return
   }
 })

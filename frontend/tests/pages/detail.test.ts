@@ -73,10 +73,11 @@ const globalStubs = {
   FacilityFeatureCard: { template: '<div>FeatureCard</div>' },
   Breadcrumb: { template: '<nav>Breadcrumb</nav>' },
   // PageHero는 Nuxt auto-import 컴포넌트라 테스트 env에 별도 stub 필요.
-  // 시설명을 h1으로 렌더하여 SEO 회귀 가드 테스트가 H1 단일성을 검증할 수 있게 함.
+  // 실제 PageHero 처럼 title-tag 로 제목 태그를 결정한다(기본 h1; 상세 페이지는 div 강등).
+  // 상세 페이지가 title-tag="div" 를 넘기므로 데스크톱 제목은 h1 이 아니어야 SEO 가드(단일 h1)가 성립.
   PageHero: {
-    template: '<section><h1>{{ title }}</h1><p>{{ description }}</p></section>',
-    props: ['eyebrow', 'title', 'description', 'stats'],
+    template: '<section><component :is="titleTag || \'h1\'">{{ title }}</component><p>{{ description }}</p></section>',
+    props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'],
   },
 }
 
@@ -197,17 +198,18 @@ describe('DetailPage', () => {
     wrapper.unmount()
   })
 
-  // ---------------- SEO 회귀 가드 (Step 6) ----------------
-  // 모바일 h2(시설명) → unified PageHero h1으로 승격된 이후, 단일 H1 보장.
-  // (이전: 데스크톱 PageHero h1 + 모바일 manual h2 → SSR HTML에 h1·h2 중복)
-  it('시설명 H1이 단 1개만 존재 (모바일/데스크톱 통합)', async () => {
+  // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
+  // 모바일 전용 헤더(MobileDetailHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
+  // title-tag="div"(role=heading aria-level=1)로 강등 → raw HTML 의 literal <h1> 은 1개여야 한다.
+  // 가드: h1 정확히 1개 + 시설명 (네이버 등 비렌더 파서의 중복 h1 회귀 방지).
+  it('시설명 H1은 raw HTML 에서 정확히 1개(모바일 헤더)이며 시설명', async () => {
     const wrapper = await mountSuspended(DetailPage, {
       global: { stubs: globalStubs },
     })
 
     const h1s = wrapper.findAll('h1')
     expect(h1s.length).toBe(1)
-    expect(h1s[0].text()).toBe('강남역 공중화장실')
+    expect(h1s.every(h => h.text() === '강남역 공중화장실')).toBe(true)
   })
 
   // BasicInfo + FacilityStatus + Nearby + ContextLinks 각각 1번씩만 렌더 (중복 제거 회귀 가드)
@@ -270,5 +272,47 @@ describe('DetailPage', () => {
     expect(createErrorMock).not.toHaveBeenCalled()
 
     wrapper.unmount()
+  })
+
+  // ---------------- FAQPage JSON-LD 발행 가드 (spec §3.4·§6 결정4) ----------------
+  // 화면 FAQ(DetailContextLinks)만으로는 SEO 가치가 없으므로 setFAQSchema 로 FAQPage JSON-LD 를 발행해야 한다.
+  it('FAQPage JSON-LD(structured data)를 발행한다', async () => {
+    const heads: any[] = []
+    ;(globalThis as any).useHead = vi.fn((arg: any) => {
+      heads.push(typeof arg === 'function' ? arg() : arg)
+    })
+
+    await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+
+    const scripts = heads.flatMap(h => h?.script ?? [])
+    const faqScript = scripts.find((s: any) => s?.key === 'jsonld-faq')
+    expect(faqScript).toBeTruthy()
+    expect(faqScript.innerHTML).toContain('"@type":"FAQPage"')
+  })
+
+  // ---------------- T1 시설현황 승격 (spec §4.1) ----------------
+  // 시설현황(T1)이 기본정보(T3)보다 DOM 상 먼저 와야 한다 (모바일=데스크톱 동일, order 미사용).
+  it('시설현황(T1)이 기본정보(T3)보다 먼저 렌더된다', async () => {
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    const html = wrapper.html()
+    const statusIdx = html.indexOf('시설현황')
+    const basicIdx = html.indexOf('기본정보')
+    expect(statusIdx).toBeGreaterThan(-1)
+    expect(basicIdx).toBeGreaterThan(-1)
+    expect(statusIdx).toBeLessThan(basicIdx)
+  })
+
+  // hasFacilityStatus=false 카테고리(clothes)는 시설현황 섹션 h3 헤딩이 렌더되지 않아야 한다.
+  it('clothes(시설현황 없음)는 빈 T1 + 광고 연속 노출이 없다', async () => {
+    mockUseAsyncDataWith({
+      success: true,
+      data: { ...mockFacility, id: 'clothes-1', category: 'clothes', details: { detailLocation: '정문 앞' } },
+    })
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    // 시설현황 SectionBlock 의 <h3> 헤딩이 렌더되지 않음 (DetailFacilityStatus 내부 v-if=false)
+    // HTML 주석에 "시설현황" 문자열이 포함될 수 있으므로 h3 태그로 정확히 검증
+    const h3s = wrapper.findAll('h3')
+    const statusH3 = h3s.find(h => h.text() === '시설현황')
+    expect(statusH3).toBeUndefined()
   })
 })

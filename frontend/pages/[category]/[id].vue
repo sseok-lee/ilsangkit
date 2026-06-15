@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-background-light flex flex-col text-slate-900">
+  <div class="min-h-screen bg-background-light flex flex-col text-slate-900" :style="{ '--cat': catColorVar }">
     <!-- Main Content -->
     <main class="flex-1 w-full">
       <!-- Loading State -->
@@ -27,39 +27,6 @@
 
       <!-- Facility Detail -->
       <template v-else-if="facility">
-        <!-- Mobile: Map at top -->
-        <div class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
-          <ClientOnly>
-            <FacilityMap
-              :center="{ lat: facility.lat, lng: facility.lng }"
-              :facilities="[facility]"
-              :level="3"
-              class="w-full h-full !min-h-0 !rounded-none"
-            />
-          </ClientOnly>
-
-          <!-- Back Button & Name Overlay -->
-          <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-            <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="handleBack">
-              <span class="material-symbols-outlined text-slate-900">arrow_back</span>
-            </div>
-            <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-900 shadow-sm backdrop-blur-sm">{{ displayName }}</span>
-          </div>
-
-          <!-- Gradient Overlay at bottom -->
-          <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
-
-          <!-- Map expand button -->
-          <button
-            class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-            @click="isMapExpanded = true"
-          >
-            <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-            지도 크게 보기
-          </button>
-
-        </div>
-
         <!-- Fullscreen Map Overlay (Mobile) -->
         <Teleport to="body">
           <Transition
@@ -122,8 +89,24 @@
                 </button>
               </div>
 
-              <!-- Hero (H1) -->
+              <!-- Hero: 모바일 핵심 정보 헤더 / 데스크톱 PageHero -->
+              <MobileDetailHeader
+                :title="displayName"
+                :eyebrow="categoryMeta.label"
+                :status="operatingStatus"
+                :stats="mobileHeaderStats"
+                :phone="facilityPhone"
+                copyable
+                share-label="이 시설 공유하기"
+                :kakao-map-url="kakaoMapUrl"
+                :naver-map-url="naverMapUrl"
+                @share="handleShare"
+                @copy="copyFacilityAddress"
+                @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
+              />
               <PageHero
+                class="hidden md:block"
+                title-tag="div"
                 :eyebrow="categoryMeta.label"
                 :title="displayName"
                 :description="facilityIntro || undefined"
@@ -133,7 +116,13 @@
               <!-- Ad: HERO 아래 -->
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
-              <!-- BasicInfo -->
+              <!-- T1 FacilityStatus — 헤더 광고 직후 1차 고유 콘텐츠로 승격 -->
+              <DetailFacilityStatus :facility="facility" />
+
+              <!-- Ad: T1 ↔ T3 사이 -->
+              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
+
+              <!-- T3 BasicInfo (기본정보·운영시간) -->
               <DetailBasicInfo
                 :facility="facility"
                 :hospital-operating-hours="hospitalOperatingHours"
@@ -145,18 +134,32 @@
                 :pharmacy-weekly-hours="pharmacyWeeklyHours"
               />
 
-              <!-- Ad: BASIC INFO ↔ FACILITY STATUS 사이 -->
+              <!-- Ad: BASIC INFO ↔ MAP 사이 -->
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
-              <!-- FacilityStatus -->
-              <DetailFacilityStatus :facility="facility" />
-
-              <!-- Ad: DETAILS ↔ MAP 사이 -->
-              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
-
-              <!-- Roadview -->
-              <SectionBlock heading="로드뷰" subtext="시설 주변의 거리 뷰를 확인하세요.">
-                <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+              <!-- 위치·로드뷰 -->
+              <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
+                <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
+                <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
+                  <ClientOnly>
+                    <FacilityMap
+                      :center="{ lat: facility.lat, lng: facility.lng }"
+                      :facilities="[facility]"
+                      :level="3"
+                      class="w-full h-full !min-h-0"
+                    />
+                  </ClientOnly>
+                  <button
+                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+                    @click="isMapExpanded = true"
+                  >
+                    <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+                    지도 크게 보기
+                  </button>
+                </div>
+                <div class="h-[220px]">
+                  <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+                </div>
               </SectionBlock>
 
               <!-- Ad: ROADVIEW ↔ NEARBY 사이 -->
@@ -192,6 +195,9 @@
               <!-- Ad: NEARBY 이후 -->
               <AdBanner />
 
+              <!-- Mobile-only inline CoupangBanner (데이터 출처 위로 이동, md+에서는 사이드바 Coupang 사용) -->
+              <CoupangBanner class="md:hidden" />
+
               <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
               <DetailContextLinks
                 :category="category"
@@ -202,9 +208,6 @@
                 :category-faq-items="categoryFaqItems"
                 :last-sync-date="lastSyncDate"
               />
-
-              <!-- Mobile-only inline CoupangBanner (md+에서는 사이드바 Coupang 사용) -->
-              <CoupangBanner class="md:hidden" />
             </article>
 
             <!-- Desktop/tablet sidebar: Map + Actions + Coupang (md+에서 노출) -->
@@ -262,42 +265,6 @@
             </aside>
           </div>
         </div>
-
-        <!-- Mobile: Sticky Bottom CTA -->
-        <div class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
-          <div class="flex gap-3">
-            <button
-              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-3.5 text-base font-bold text-slate-900 border border-gray-200 transition hover:bg-gray-200 active:scale-[0.98]"
-              aria-label="이 시설 공유하기"
-              @click="handleShare"
-            >
-              <span class="material-symbols-outlined text-[20px]">share</span>
-              공유하기
-            </button>
-            <div class="relative flex-[2]">
-              <button
-                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
-                @click="showMobileNavDropdown = !showMobileNavDropdown"
-              >
-                <span class="material-symbols-outlined text-[20px]">directions</span>
-                길찾기
-                <span class="material-symbols-outlined text-[16px]">expand_more</span>
-              </button>
-              <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl); showMobileNavDropdown = false">
-                  <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                </button>
-                <div class="h-px bg-slate-100"></div>
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl); showMobileNavDropdown = false">
-                  <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom padding for mobile CTA -->
-        <div class="md:hidden h-24"></div>
       </template>
     </main>
   </div>
@@ -307,7 +274,7 @@
 definePageMeta({})
 
 import { computed, defineAsyncComponent, onMounted, ref, watch, watchEffect } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -320,6 +287,8 @@ import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.
 import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
+import { getOperatingStatus } from '~/utils/facilityStatus'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
 import type { YoutubeVideo } from '~/types/youtube'
@@ -331,10 +300,9 @@ import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
-const router = useRouter()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro, getFacilityDisplayName } from '~/composables/useFacilityMeta'
-const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema } = useStructuredData()
+const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
@@ -438,6 +406,11 @@ watchEffect(() => {
     if (ssrVideos.length >= 2) {
       setVideoListSchema(ssrVideos)
     }
+    // FAQPage JSON-LD 발행 (화면 FAQ 와 동일 소스 generateDynamicFAQ → SEO 구조화 데이터)
+    const faqItems = generateDynamicFAQ(facility.value)
+    if (faqItems.length > 0) {
+      setFAQSchema(faqItems)
+    }
   }
 })
 
@@ -484,6 +457,9 @@ useHead(computed(() => {
 
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })
+
+// OD 진화판 — 카테고리 색을 --cat CSS 변수로 주입 (kicker·타일·아이콘 테마링)
+const catColorVar = computed(() => `var(--c-${category.value}, var(--brand))`)
 
 // 사용자에게 노출할 이름 (원본 name이 비어있거나 "-"일 때 fallback)
 const displayName = computed(() => {
@@ -540,6 +516,28 @@ const desktopHeroStats = computed(() => {
   const categoryItems = buildHeroStats(cat, detailsWithMeta, facilityPhone.value)
   return [...commonItems, ...categoryItems]
 })
+
+// 모바일 헤더용 영업상태 — facilityStatus 유틸 재사용 (null 가능, 헤더에서 v-if 가드)
+const operatingStatus = computed(() => {
+  if (!facility.value) return null
+  return getOperatingStatus(facility.value as unknown as Record<string, any>)
+})
+
+// 모바일 헤더 칩: 데스크톱 stat을 재사용하되 최대 4개로 제한
+const mobileHeaderStats = computed(() => desktopHeroStats.value.slice(0, 4))
+
+// 모바일 헤더 '주소복사' — DetailBasicInfo.copyAddress와 동일 로직
+async function copyFacilityAddress() {
+  if (!facility.value) return
+  const address = facility.value.roadAddress || facility.value.address
+  if (!address) return
+  try {
+    await navigator.clipboard.writeText(address)
+    alert('주소가 복사되었습니다.')
+  } catch (err) {
+    console.error('주소 복사 실패:', err)
+  }
+}
 
 // 같은 지역 시설 링크
 const regionLink = computed(() => {
@@ -599,7 +597,6 @@ const naverMapUrl = computed(() => {
 })
 
 const showNavDropdown = ref(false)
-const showMobileNavDropdown = ref(false)
 const openNavigation = (url: string) => {
   if (facility.value) {
     const provider = url.includes('kakao') ? 'kakao' : 'naver'
@@ -810,14 +807,6 @@ const aedWeeklyHours = computed(() => {
 
 
 // Actions
-const handleBack = () => {
-  if (window.history.length <= 1) {
-    navigateTo(`/${category.value}`)
-  } else {
-    router.back()
-  }
-}
-
 const handleShare = async () => {
   if (!facility.value) return
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PublicRentalDetailView from '~/components/subscription/PublicRentalDetailView.vue'
 import type { PublicRentalComplex } from '~/types/publicRental'
@@ -36,6 +36,7 @@ const stubs = {
   ClientOnly: { template: '<div><slot /></div>' },
   FacilityMap: { template: '<div class="stub-map" />' },
   NearbyFacilities: { template: '<div class="stub-nearby-facilities" />' },
+  AdBanner: { template: '<div class="stub-ad" />' },
 }
 
 describe('PublicRentalDetailView', () => {
@@ -137,5 +138,88 @@ describe('PublicRentalDetailView', () => {
     expect(text).toContain('LH 청약플러스')
     expect(text).toContain('마이홈 포털')
     expect(text).toContain('자주 묻는 질문')
+  })
+
+  it('단일 h1 불변식: literal h1이 정확히 1개다 (모바일 헤더가 소유)', () => {
+    const wrapper = mount(PublicRentalDetailView, {
+      props: { rental: baseRental, siblings: [], nearby: [] },
+      global: { stubs },
+    })
+    expect(wrapper.findAll('h1')).toHaveLength(1)
+  })
+
+  it('데스크톱 헤더는 h1이 아니라 role="heading" aria-level="1"로 강등된다', () => {
+    const wrapper = mount(PublicRentalDetailView, {
+      props: { rental: baseRental, siblings: [], nearby: [] },
+      global: { stubs },
+    })
+    const desktopHeading = wrapper.find('[role="heading"][aria-level="1"]')
+    expect(desktopHeading.exists()).toBe(true)
+    expect(desktopHeading.element.tagName).not.toBe('H1')
+    expect(desktopHeading.text()).toContain('강남 매입임대 1단지')
+  })
+
+  it('모바일 공용 헤더가 보증금/월세/전용/세대 stat 칩을 노출한다', () => {
+    const wrapper = mount(PublicRentalDetailView, {
+      props: { rental: baseRental, siblings: [], nearby: [] },
+      global: { stubs },
+    })
+    const text = wrapper.text()
+    // stat 라벨
+    expect(text).toContain('보증금')
+    expect(text).toContain('월세')
+    expect(text).toContain('전용')
+    expect(text).toContain('세대')
+    // stat 값 (보증금 1.2억, 세대 240)
+    expect(text).toContain('1억 2,000만원')
+    expect(text).toContain('240세대')
+  })
+
+  it('공유 pill 클릭이 크래시 없이 동작한다(navigator.share 폴백)', async () => {
+    const wrapper = mount(PublicRentalDetailView, {
+      props: { rental: baseRental, siblings: [], nearby: [] },
+      global: { stubs },
+    })
+    const share = wrapper.find('[data-test="share-pill"]')
+    expect(share.exists()).toBe(true)
+    await expect(share.trigger('click')).resolves.not.toThrow()
+  })
+
+  it('AdBanner는 정확히 3개 유지된다 (재배치 후 개수 불변)', () => {
+    const wrapper = mount(PublicRentalDetailView, {
+      props: { rental: baseRental, siblings: [], nearby: [] },
+      global: { stubs },
+    })
+    expect(wrapper.findAll('.stub-ad')).toHaveLength(3)
+  })
+
+  it('재배치: T1 가격카드(order-2)·위치(order-5)·FAQ(order-11)·출처(order-12) wrapper에 order 클래스가 있다', () => {
+    const wrapper = mount(PublicRentalDetailView, {
+      props: { rental: baseRental, siblings: [], nearby: [] },
+      global: { stubs },
+    })
+    const html = wrapper.html()
+    // 대표 order 토큰이 존재 (전체 스케일 중 일부 샘플)
+    expect(html).toContain('order-2')   // 가격카드 (T1)
+    expect(html).toContain('md:order-2')
+    expect(html).toContain('order-12')  // 데이터 출처 wrapper (T6)
+    expect(html).toContain('md:order-12')
+  })
+
+  it('재배치 후에도 핵심 섹션이 모두 렌더된다 (콘솔 에러 없음)', () => {
+    const errSpy = vi.spyOn(console, 'error')
+    const wrapper = mount(PublicRentalDetailView, {
+      props: { rental: baseRental, siblings: [], nearby: [] },
+      global: { stubs },
+    })
+    const text = wrapper.text()
+    expect(text).toContain('가격 정보')
+    expect(text).toContain('단지 정보')
+    expect(text).toContain('위치')
+    expect(text).toContain('주변 생활시설')
+    expect(text).toContain('매입임대 안내')
+    expect(text).toContain('자주 묻는 질문')
+    expect(errSpy).not.toHaveBeenCalled()
+    errSpy.mockRestore()
   })
 })

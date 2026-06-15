@@ -121,8 +121,10 @@ export default defineNuxtConfig({
       '/real-estate/**': { swr: 300 },
       // 가이드 — 1시간
       '/guide/**': { swr: 3600 },
-      '/sitemap.xml': { swr: 86400 },
-      '/sitemap/**': { swr: 86400 },
+      // sitemap은 디스크 정적 파일을 직접 서빙(없으면 동적 폴백)하므로 Nitro SWR 캐시 불필요.
+      // SWR 유지 시 재생성 후에도 최대 24h 구버전이 잔존하므로 제거한다.
+      '/sitemap.xml': { headers: { 'cache-control': 'public, max-age=3600' } },
+      '/sitemap/**': { headers: { 'cache-control': 'public, max-age=3600' } },
       '/': { swr: 3600 },
       '/about': { prerender: true },
       '/faq': { prerender: true },
@@ -212,7 +214,7 @@ export default defineNuxtConfig({
         }] : []),
         // 폰트 CSS: head에서 JS로 비동기 삽입 (논블로킹 + 빠른 시작)
         {
-          innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_drop_down,arrow_drop_up,arrow_forward,article,baby_changing_station,bar_chart,bolt,business,calendar_month,call,cancel,category,chat_bubble_outline,check,check_circle,checklist,checkroom,chevron_left,chevron_right,child_care,close,corporate_fare,delete,description,directions,domain,download,eco,edit_note,emergency,error,error_outline,ev_station,event_upcoming,expand_less,expand_more,explore,favorite,first_page,gavel,grid_view,groups,health_and_safety,help,history,holiday_village,home,house,info,key,landscape,last_page,lightbulb,local_fire_department,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_off,location_on,man,meeting_room,menu,menu_book,my_location,near_me,notifications_active,open_in_full,open_in_new,park,payments,person,place,play_circle,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,sell,share,sports,stars,storefront,subway,support_agent,trending_down,trending_up,verified,verified_user,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
+          innerHTML: `(function(){var f=['https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=accessible,add,apartment,arrow_back,arrow_drop_down,arrow_drop_up,arrow_forward,article,baby_changing_station,bar_chart,bolt,business,calendar_month,call,cancel,category,chat_bubble_outline,check,check_circle,checklist,checkroom,chevron_left,chevron_right,child_care,close,content_copy,corporate_fare,delete,description,directions,domain,download,eco,edit_note,emergency,error,error_outline,ev_station,event_upcoming,expand_less,expand_more,explore,favorite,first_page,gavel,grid_view,groups,health_and_safety,help,history,holiday_village,home,house,info,key,landscape,last_page,lightbulb,local_fire_department,local_hospital,local_library,local_parking,local_pharmacy,location_city,location_off,location_on,man,meeting_room,menu,menu_book,my_location,near_me,notifications_active,open_in_full,open_in_new,park,payments,person,place,play_circle,print,rate_review,recycling,refresh,remove,restaurant,schedule,school,search,search_off,sell,share,sports,stars,storefront,subway,support_agent,trending_down,trending_up,verified,verified_user,videocam,visibility,visibility_off,warning,wc,weekend,wifi,woman&display=swap','https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})()`,
           type: 'text/javascript',
         },
       ],
@@ -225,6 +227,8 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://dapi.kakao.com' },
         { rel: 'dns-prefetch', href: 'https://dapi.kakao.com' },
         { rel: 'manifest', href: '/site.webmanifest' },
+        // 생활 가이드 RSS 자동발견 — 네이버 서치어드바이저 RSS 수집 + 신규 콘텐츠 빠른 색인.
+        { rel: 'alternate', type: 'application/rss+xml', title: '일상킷 - 생활 가이드', href: 'https://ilsangkit.co.kr/rss.xml' },
       ]
     }
   },

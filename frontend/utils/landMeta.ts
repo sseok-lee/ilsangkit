@@ -1,3 +1,5 @@
+import { compactCityName } from '~/utils/seoConstants'
+
 export interface LandMeta {
   label: string
   icon: string
@@ -19,7 +21,8 @@ interface LandRegionTitleParams {
 
 export function buildLandRegionTitle({ city, district, dong }: LandRegionTitleParams = {}): string {
   if (dong && district && city) {
-    return `${dong} 토지 시세·실거래가 | ${district} | 일상킷`
+    // 동 페이지에도 시(축약)+구를 함께 — 기존엔 구만 있어 도시 신호가 누락됐다.
+    return `${dong} 토지 시세·실거래가 | ${compactCityName(city)} ${district} | 일상킷`
   }
   if (district && city) {
     return `${district} 토지 실거래가 | ${city} | 일상킷`

@@ -1,6 +1,6 @@
 import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails, ParkDetails, SchoolDetails, MarketDetails, ChildcareDetails, EvChargerDetails, SportsDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION, compactCityName } from '~/utils/seoConstants'
 
 /** 받침 유무에 따라 조사 선택 (은/는, 이/가, 을/를 등) */
 function getJosa(word: string, josaWithBatchim: string, josaWithout: string): string {
@@ -20,10 +20,6 @@ function getJosa(word: string, josaWithBatchim: string, josaWithout: string): st
 function formatTimeStr(t: string): string {
   const s = String(t).padStart(4, '0')
   return `${s.slice(0, 2)}:${s.slice(2)}`
-}
-
-function compactCityName(city: string): string {
-  return city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
 }
 
 function normalizeSeoTitle(title: string): string {
@@ -87,9 +83,10 @@ interface MetaOptions {
  */
 export function buildFacilityIntro(facility: FacilityDetail): string {
   const categoryName = CATEGORY_META[facility.category]?.label || facility.category
+  const cityShort = compactCityName(facility.city)
   const location = facility.district
-    ? `${facility.city} ${facility.district}`
-    : facility.city
+    ? (facility.district.startsWith(cityShort) ? facility.district : `${cityShort} ${facility.district}`)
+    : cityShort
   const name = getFacilityDisplayName(facility)
   const josa = getJosa(name, '은', '는')
   return `${name}${josa} ${location}에 위치한 ${categoryName}입니다.`
@@ -97,9 +94,10 @@ export function buildFacilityIntro(facility: FacilityDetail): string {
 
 export function buildFacilityDescription(facility: FacilityDetail): string {
   const categoryName = CATEGORY_META[facility.category]?.label || facility.category
+  const cityShort = compactCityName(facility.city)
   const location = facility.district
-    ? `${facility.city} ${facility.district}`
-    : facility.city
+    ? (facility.district.startsWith(cityShort) ? facility.district : `${cityShort} ${facility.district}`)
+    : cityShort
   const address = facility.roadAddress || facility.address || location
   const intent = CATEGORY_SEO_INTENT[facility.category] || '정보'
 
@@ -365,18 +363,38 @@ export function useFacilityMeta() {
     })
   }
 
+  const CATEGORY_TITLE_INTENT: Partial<Record<FacilityCategory, string>> = {
+    toilet: '개방시간·위치',
+    pharmacy: '영업시간·심야',
+    hospital: '진료시간·진료과목',
+    parking: '요금·운영시간',
+    library: '운영시간·휴관일',
+    childcare: '정원·현원',
+    park: '편의시설·주차',
+    'ev-charger': '충전기·요금',
+    sports: '시설·이용시간',
+    school: '학급정보·위치',
+    market: '위치·주차',
+    wifi: '설치 위치',
+    clothes: '설치 위치',
+    aed: '설치 위치',
+  }
+
   /**
-   * 카테고리별 상세 타이틀 — {name} | {loc} {categoryName}
+   * 카테고리별 상세 타이틀 — {name} | {loc} {categoryName} {intent}
    * 길이 제한 없음: 지역·카테고리를 항상 유지해 검색엔진 색인·매칭에서 지역 신호를
    * 잃지 않도록 한다. 긴 타이틀은 SERP에서 시각적으로만 잘릴 뿐 페널티가 없으며,
    * 쓰레기 배출일 페이지 등 다른 긴 타이틀과 동일한 정책이다.
    */
   function buildDetailTitle(facility: FacilityDetail): string {
     const cityShort = compactCityName(facility.city)
-    const loc = facility.district ? `${cityShort} ${facility.district}` : cityShort
+    const loc = facility.district
+      ? (facility.district.startsWith(cityShort) ? facility.district : `${cityShort} ${facility.district}`)
+      : cityShort
     const name = getFacilityDisplayName(facility)
     const categoryName = CATEGORY_META[facility.category]?.label || facility.category
-    return `${name} | ${loc} ${categoryName}`
+    const intent = CATEGORY_TITLE_INTENT[facility.category]
+    return intent ? `${name} | ${loc} ${categoryName} ${intent}` : `${name} | ${loc} ${categoryName}`
   }
 
   /**
@@ -414,13 +432,17 @@ export function useFacilityMeta() {
     district: string
     districtName: string
     category: FacilityCategory
+    count?: number
     canonical?: string | false
   }) {
     const categoryName = CATEGORY_META[params.category]?.label || params.category
     const intent = CATEGORY_SEO_INTENT[params.category] || '정보'
 
     const title = `${params.cityName} ${params.districtName} ${categoryName} | ${intent}`
-    const description = `${params.cityName} ${params.districtName}의 ${categoryName} ${intent} 정보를 확인하세요.`
+    // 실제 시설 개수를 설명에 넣어 구·동×카테고리 페이지(롱테일 지역 검색)의 description을 차별화한다.
+    const description = params.count && params.count > 0
+      ? `${params.cityName} ${params.districtName}의 ${categoryName} ${params.count.toLocaleString('ko-KR')}곳 — 위치·운영시간·${intent} 정보를 확인하세요.`
+      : `${params.cityName} ${params.districtName}의 ${categoryName} ${intent} 정보를 확인하세요.`
 
     setMeta({
       title,
@@ -440,7 +462,14 @@ export function useFacilityMeta() {
     targetRegion?: string | null
   }) {
     const location = `${schedule.city} ${schedule.district}`
-    const region = schedule.targetRegion?.replaceAll('+', ', ')
+    // targetRegion이 수십 개 세부지역을 '+'로 연결하면 제목/설명이 과도하게 길어진다(네이버 SERP 잘림·키워드 스터핑).
+    // 4개 이상이면 '{첫지역} 외 N곳'으로 축약한다 (전체 목록은 본문에 그대로 노출).
+    const regionParts = schedule.targetRegion ? schedule.targetRegion.split('+').filter(Boolean) : []
+    const region = regionParts.length === 0
+      ? undefined
+      : regionParts.length <= 3
+        ? regionParts.join(', ')
+        : `${regionParts[0]} 외 ${regionParts.length - 1}곳`
     const title = region
       ? `${location} ${region} 쓰레기 배출일 | 재활용·음식물·대형폐기물`
       : `${location} 쓰레기 배출일 | 재활용·음식물·대형폐기물`

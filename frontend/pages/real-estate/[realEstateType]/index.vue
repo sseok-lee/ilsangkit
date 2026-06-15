@@ -85,7 +85,7 @@
 
     <template v-else>
       <SectionBlock heading="건물 목록">
-        <div class="rounded-xl bg-slate-50 p-12 text-center">
+        <div class="rounded-xl bg-background-light p-12 text-center">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-white flex items-center justify-center shadow-card">
             <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp?v2`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
           </div>

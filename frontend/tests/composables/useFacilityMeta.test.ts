@@ -560,7 +560,7 @@ describe('useFacilityMeta', () => {
     })
   })
 
-  describe('buildDetailTitle — no intent tail + 30-char guard (Fix 2)', () => {
+  describe('buildDetailTitle — intent tail per category (Fix 2)', () => {
     const makeHospitalFacility = (name: string): FacilityDetail => ({
       id: 'h-1',
       category: 'hospital',
@@ -581,7 +581,7 @@ describe('useFacilityMeta', () => {
       syncedAt: '2024-01-01T00:00:00Z',
     })
 
-    it('normal hospital: title contains name + loc + category (no intent)', () => {
+    it('normal hospital: title contains name + loc + category + intent', () => {
       const { setFacilityDetailMeta } = useFacilityMeta()
       setFacilityDetailMeta(makeHospitalFacility('삼성서울병원'))
 
@@ -591,26 +591,26 @@ describe('useFacilityMeta', () => {
       expect(raw).toContain('삼성서울병원')
       expect(raw).toContain('강남구')
       expect(raw).toContain('병원')
-      // must NOT contain the intent string for hospital
-      expect(raw).not.toContain('진료과·진료시간')
+      // must contain the intent string for hospital
+      expect(raw).toContain('진료시간·진료과목')
     })
 
-    it('normal hospital: title format is {name} | {loc} {category} | 일상킷', () => {
+    it('normal hospital: title format is {name} | {loc} {category} {intent} | 일상킷', () => {
       const { setFacilityDetailMeta } = useFacilityMeta()
       setFacilityDetailMeta(makeHospitalFacility('삼성서울병원'))
 
       const call = mockUseSeoMeta.mock.calls[0][0]
-      expect(call.title).toBe('삼성서울병원 | 서울 강남구 병원 | 일상킷')
+      expect(call.title).toBe('삼성서울병원 | 서울 강남구 병원 진료시간·진료과목 | 일상킷')
     })
 
-    it('long-name facility: keeps loc + category (no length guard)', () => {
+    it('long-name facility: keeps loc + category + intent (no length guard)', () => {
       const { setFacilityDetailMeta } = useFacilityMeta()
       // composite가 24자를 한참 넘는 긴 이름이라도 지역·카테고리를 버리지 않는다
       const longName = '서울대학교어린이병원응급의료센터입구'  // 17 chars
       setFacilityDetailMeta(makeHospitalFacility(longName))
 
       const call = mockUseSeoMeta.mock.calls[0][0]
-      expect(call.title).toBe(`${longName} | 서울 강남구 병원 | 일상킷`)
+      expect(call.title).toBe(`${longName} | 서울 강남구 병원 진료시간·진료과목 | 일상킷`)
     })
   })
 })

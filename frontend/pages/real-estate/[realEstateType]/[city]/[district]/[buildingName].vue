@@ -9,38 +9,6 @@
     </div>
 
     <template v-else>
-    <!-- Mobile: Map at top -->
-    <div v-if="buildingInfo?.lat && buildingInfo?.lng" class="md:hidden relative h-[240px] w-full overflow-hidden bg-gray-200">
-      <ClientOnly>
-        <FacilityMap
-          :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
-          :facilities="buildingMarker"
-          :level="3"
-          class="w-full h-full !min-h-0 !rounded-none"
-        />
-      </ClientOnly>
-
-      <!-- Back & Name Overlay -->
-      <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
-        <div class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95" @click="$router.back()">
-          <span class="material-symbols-outlined text-slate-800">arrow_back</span>
-        </div>
-        <span class="max-w-[calc(100vw-100px)] truncate rounded-full bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow-sm backdrop-blur-sm">{{ buildingName }}</span>
-      </div>
-
-      <!-- Gradient Overlay -->
-      <div class="absolute bottom-0 left-0 h-12 w-full bg-gradient-to-t from-background-light to-transparent"></div>
-
-      <!-- Map expand button -->
-      <button
-        class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-        @click="isMapExpanded = true"
-      >
-        <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-        지도 크게 보기
-      </button>
-    </div>
-
     <!-- Fullscreen Map Overlay (Mobile) -->
     <Teleport to="body">
       <Transition
@@ -79,7 +47,7 @@
 
     <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-20 md:pb-10 flex flex-col gap-3">
       <!-- Unified Breadcrumb + Share (모바일 badge는 PageHero eyebrow가 흡수) -->
-      <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center justify-between gap-2 order-1 md:order-1">
         <Breadcrumb :items="breadcrumbItems" />
         <button
           class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
@@ -91,8 +59,21 @@
         </button>
       </div>
 
-      <!-- PageHero -->
+      <!-- Hero: 모바일 헤더 / 데스크톱 PageHero -->
+      <MobileDetailHeader
+        class="order-2 md:order-2"
+        :title="buildingName"
+        :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
+        :stats="mobileHeaderStats"
+        :kakao-map-url="kakaoMapUrl"
+        :naver-map-url="naverMapUrl"
+        share-label="이 건물 공유하기"
+        @share="handleShare"
+        @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
+      />
       <PageHero
+        class="hidden md:block order-2 md:order-2"
+        title-tag="div"
         :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :title="buildingName"
         :description="fullAddress !== '-' ? fullAddress : undefined"
@@ -100,10 +81,10 @@
       />
 
       <!-- Ad: Hero 직후 (fold 하단) -->
-      <AdBanner />
+      <AdBanner class="order-3 md:order-3" />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
-      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
+      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" class="order-9 md:order-7" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
         <template #right>
           <div class="hidden md:flex items-center gap-1">
             <button
@@ -136,8 +117,8 @@
           </div>
         </template>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- 지도: md+에서만 (모바일은 상단 240px 지도가 별도로 노출됨) -->
-          <div class="hidden md:block rounded-xl border border-line overflow-hidden h-[300px]">
+          <!-- 지도: 모바일에서도 노출 (짧은 높이 + 크게 보기 버튼) -->
+          <div class="relative rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
             <ClientOnly>
               <FacilityMap
                 :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
@@ -145,27 +126,35 @@
                 :level="3"
               />
             </ClientOnly>
+            <button
+              class="md:hidden absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+              @click="isMapExpanded = true"
+            >
+              <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+              지도 크게 보기
+            </button>
           </div>
-          <div class="roadview-wrapper rounded-xl border border-line overflow-hidden h-[200px] md:h-[300px]">
+          <div class="roadview-wrapper rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
             <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
           </div>
         </div>
       </SectionBlock>
 
-      <!-- Ad: 로드뷰 이후 -->
-      <AdBanner />
+      <!-- Ad: 로드뷰 이후 (데스크톱은 위치(md:order-7)와 거래내역(md:order-9) 사이) -->
+      <AdBanner class="order-10 md:order-8" />
 
-      <!-- "전·월세 거래 비중" 블록 (rent 전용) -->
+      <!-- "전·월세 거래 비중" 블록 (rent 전용) — 시세추이(order-4) 직후로 승격 -->
       <SectionBlock
         v-if="currentTab === 'rent' && rentRatioTotal > 0"
+        class="order-5 md:order-5"
         heading="전·월세 거래 비중"
         subtext="전체 거래의 전세·월세 구성입니다."
       >
         <RentRatioBar :jeonse-count="buildingInfo?.jeonseCount" :wolse-count="buildingInfo?.wolseCount" />
       </SectionBlock>
 
-      <!-- "시세 추이" 블록 -->
-      <SectionBlock :heading="getTrendSectionTitle(currentTab)" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
+      <!-- "시세 추이" 블록 — T1 고유 콘텐츠: 데스크톱·모바일 모두 헤더 광고 직후 최상단(order-4) -->
+      <SectionBlock class="order-4 md:order-4" :heading="getTrendSectionTitle(currentTab)" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
         <template #right>
           <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
             <button
@@ -209,24 +198,24 @@
         >
           <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">{{ periodTradeLabel }}</span>
-              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodTradeCount }}건</strong>
+              <span class="block text-faint text-xs font-bold">{{ periodTradeLabel }}</span>
+              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodTradeCount }}건</strong>
             </div>
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">최근 평균가</span>
-              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ summaryLatestAvg }}</strong>
+              <span class="block text-faint text-xs font-bold">최근 평균가</span>
+              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ summaryLatestAvg }}</strong>
             </div>
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">최고 거래가</span>
-              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodMaxPriceLabel }}</strong>
+              <span class="block text-faint text-xs font-bold">최고 거래가</span>
+              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodMaxPriceLabel }}</strong>
             </div>
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">최저 거래가</span>
-              <strong class="block mt-1 text-base md:text-lg font-bold text-slate-900 truncate">{{ periodMinPriceLabel }}</strong>
+              <span class="block text-faint text-xs font-bold">최저 거래가</span>
+              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodMinPriceLabel }}</strong>
             </div>
             <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-slate-500 text-xs font-bold">전월 대비</span>
-              <strong :class="['block mt-1 text-base md:text-lg font-bold truncate', changeRateColor]">
+              <span class="block text-faint text-xs font-bold">전월 대비</span>
+              <strong :class="['block mt-1 text-base md:text-lg font-display font-extrabold tabular-nums truncate', changeRateColor]">
                 {{ summaryChangeRate }}
               </strong>
             </div>
@@ -257,7 +246,7 @@
           :loading="false"
           :price-label="summary?.priceLabel"
         />
-        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
+        <div v-else class="rounded-xl bg-background-light p-8 text-center text-faint">
           시세 데이터가 아직 없습니다.
         </div>
         <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-400">
@@ -265,11 +254,11 @@
         </p>
       </SectionBlock>
 
-      <!-- Ad: 시세 추이 ↔ 거래 내역 사이 -->
-      <AdBanner />
+      <!-- Ad: 시세 추이/비중 ↔ 위치 사이 (데스크톱 md:order-6, 모바일 order-5는 비중 뒤로 tie-break) -->
+      <AdBanner class="order-5 md:order-6" />
 
       <!-- "거래 내역" 블록 -->
-      <SectionBlock :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
+      <SectionBlock class="order-6 md:order-9" :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
         <div v-if="txLoading" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -280,7 +269,7 @@
           :loading="false"
           :hide-building="true"
         />
-        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500">
+        <div v-else class="rounded-xl bg-background-light p-8 text-center text-faint">
           {{ emptyFiltered('거래 내역') }}
         </div>
 
@@ -295,10 +284,13 @@
       </SectionBlock>
 
       <!-- Ad: 거래내역 이후 (In-Article) -->
-      <AdBanner />
+      <AdBanner class="order-7 md:order-10" />
 
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
-      <template v-if="nearbyByType.apt.length > 0 || nearbyByType.offitel.length > 0 || nearbyByType.villa.length > 0">
+      <div
+        v-if="nearbyByType.apt.length > 0 || nearbyByType.offitel.length > 0 || nearbyByType.villa.length > 0"
+        class="flex flex-col gap-3 order-12 md:order-12"
+      >
         <SectionBlock
           v-if="nearbyByType.apt.length > 0"
           subtext="같은 동 내 다른 아파트 단지를 함께 확인하세요."
@@ -364,14 +356,15 @@
             />
           </div>
         </SectionBlock>
-      </template>
+      </div>
 
       <!-- Ad: 인근 단지 이후 -->
-      <AdBanner />
+      <AdBanner class="order-12 md:order-12" />
 
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
         v-if="buildingInfo?.lat && buildingInfo?.lng"
+        class="order-12 md:order-12"
         heading="주변 생활시설"
         subtext="부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다."
       >
@@ -379,58 +372,29 @@
       </SectionBlock>
 
       <!-- Ad: 주변 생활시설 이후 -->
-      <AdBanner />
+      <AdBanner class="order-12 md:order-12" />
 
       <!-- 네이버 블로그 후기 -->
       <BlogReviewSection
         v-if="buildingName"
+        class="order-12 md:order-12"
         kind="real-estate"
         :primary-key="(realEstateTypeParam as string)"
         :secondary-key="`${cityName}|${districtName}|${buildingName}`"
       />
 
       <!-- 관련 가이드 -->
-      <RelatedGuides :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
+      <RelatedGuides class="order-12 md:order-12" :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
       <!-- 쿠팡 배너 -->
-      <CoupangBanner />
+      <CoupangBanner class="order-12 md:order-12" />
 
       <!-- 데이터 출처 -->
-      <DataSourceSection domain="real-estate" :last-sync-date="lastSyncDate" />
-    </main>
-
-    <!-- Mobile: Sticky Bottom Action Bar -->
-    <div v-if="buildingInfo?.lat && buildingInfo?.lng" class="md:hidden fixed bottom-0 left-0 z-50 w-full bg-white/95 px-4 pt-3 shadow-[0_-4px_16px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm" :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }">
-      <div class="flex gap-3">
-        <button
-          class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-3.5 text-base font-bold text-slate-800 border border-slate-200 transition hover:bg-slate-200 active:scale-[0.98]"
-          aria-label="이 건물 공유하기"
-          @click="handleShare"
-        >
-          <span class="material-symbols-outlined text-[20px]">share</span>
-          공유하기
-        </button>
-        <div class="relative flex-[2]">
-          <button
-            class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-dark active:scale-[0.98]"
-            @click="showMobileNavDropdown = !showMobileNavDropdown"
-          >
-            <span class="material-symbols-outlined text-[20px]">directions</span>
-            길찾기
-            <span class="material-symbols-outlined text-[16px]">expand_more</span>
-          </button>
-          <div v-if="showMobileNavDropdown" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-            <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl); showMobileNavDropdown = false">
-              <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-            </button>
-            <div class="h-px bg-slate-100"></div>
-            <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl); showMobileNavDropdown = false">
-              <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-            </button>
-          </div>
-        </div>
+      <!-- DataSourceSection은 멀티 루트 템플릿(compact/full v-if·v-else)이라 class fall-through가 안 됨 → order를 wrapper div에 부여 -->
+      <div class="order-12 md:order-12">
+        <DataSourceSection domain="real-estate" :last-sync-date="lastSyncDate" />
       </div>
-    </div>
+    </main>
     </template>
   </div>
 </template>
@@ -472,10 +436,12 @@ import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
+import { DETAIL_MAP_MEDIA_HEIGHT } from '~/utils/mapMedia'
 
 const route = useRoute()
 const router = useRouter()
@@ -699,7 +665,6 @@ const naverMapUrl = computed(() =>
 
 const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
-const showMobileNavDropdown = ref(false)
 
 const { trackBuildingView, trackDirectionsClick, trackShareClick } = useAnalytics()
 
@@ -708,7 +673,6 @@ function openNavigation(url: string) {
   trackDirectionsClick({ facilityId: buildingName.value, category: propertyTypeParam, provider })
   window.open(url, '_blank')
   showNavDropdown.value = false
-  showMobileNavDropdown.value = false
 }
 
 async function handleShare() {
@@ -740,7 +704,6 @@ function handleClickOutside(e: MouseEvent) {
   const target = e.target as HTMLElement
   if (!target.closest('.relative')) {
     showNavDropdown.value = false
-    showMobileNavDropdown.value = false
   }
 }
 onMounted(() => {
@@ -859,6 +822,11 @@ const heroStats = computed(() => {
     area,
   ]
 })
+
+// 모바일 헤더 칩 — heroStats 재사용, '정보 없음' 항목 제외, 최대 4개
+const mobileHeaderStats = computed(() =>
+  heroStats.value.filter(s => s.value && s.value !== '정보 없음').slice(0, 4),
+)
 
 // ── Stats / Transactions ──────────────────────────────────────────────────────
 

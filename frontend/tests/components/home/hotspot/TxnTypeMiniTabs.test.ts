@@ -14,7 +14,7 @@ describe('TxnTypeMiniTabs', () => {
     const wrapper = mount(TxnTypeMiniTabs, { props: { modelValue: 'jeonse' } });
     const buttons = wrapper.findAll('button');
     const jeonseBtn = buttons.find((b) => b.text().includes('전세'))!;
-    expect(jeonseBtn.classes()).toContain('bg-slate-900');
+    expect(jeonseBtn.classes()).toContain('bg-strong');
   });
 
   it('clicking emits update:modelValue with new key', async () => {

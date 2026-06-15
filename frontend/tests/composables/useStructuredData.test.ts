@@ -7,7 +7,7 @@ vi.stubGlobal('useHead', mockUseHead)
 vi.mock('~/utils/seoConstants', () => ({
   SITE_NAME: '일상킷',
   SITE_URL: 'https://ilsangkit.co.kr',
-  DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og-image.webp',
+  DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og-image.png',
 }))
 
 // CATEGORY_META mock

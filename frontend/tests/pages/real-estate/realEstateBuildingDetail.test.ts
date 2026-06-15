@@ -73,6 +73,7 @@ vi.mock('~/utils/seoConstants', () => ({
   SITE_URL: 'https://ilsangkit.co.kr',
   SITE_NAME: '일상킷',
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
+  compactCityName: (city: string) => (city || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, ''),
 }))
 
 vi.mock('~/utils/realEstateUrl', () => ({
@@ -114,7 +115,7 @@ async function mountSuspended(component: any, options?: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-          PageHero: { template: '<section><h1>{{ title }}</h1></section>', props: ['eyebrow', 'title', 'description', 'stats'] },
+          PageHero: { template: '<section><component :is="titleTag || \'h1\'">{{ title }}</component></section>', props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'] },
           SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
           AdBanner: { template: '<div />' },
           ComplexCard: { template: '<div />' },
@@ -174,13 +175,16 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(crumbs[5].name).toBe('반포자이')
   })
 
-  // ---------------- SEO 회귀 가드 (PR #2 Step 1: 듀얼 분기 통합 후) ----------------
-  it('건물명 H1이 단 1개만 존재 (PageHero 단일 진입점)', async () => {
+  // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
+  // 모바일 전용 헤더(공용 MobileDetailHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
+  // title-tag="div"(role=heading aria-level=1)로 강등 → raw HTML 의 literal <h1> 은 1개여야 한다.
+  // 가드: h1 정확히 1개 + 건물명 (중복 h1 회귀 방지).
+  it('건물명 H1은 raw HTML 에서 정확히 1개(모바일 헤더)이며 건물명', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)
     const h1s = wrapper.findAll('h1')
     expect(h1s.length).toBe(1)
-    expect(h1s[0].text()).toBe('반포자이')
+    expect(h1s.every(h => h.text() === '반포자이')).toBe(true)
   })
 
   it('Breadcrumb이 viewport에 무관하게 단일 렌더 (hidden md:block 제거됨)', async () => {
@@ -228,5 +232,39 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(resolved.link).toEqual(
       expect.arrayContaining([expect.objectContaining({ rel: 'canonical' })]),
     )
+  })
+
+  // ---------------- 섹션 재배치 회귀 가드 (spec §4.3 / 결정 1) ----------------
+  // 데스크톱 사다리: 시세추이(md:order-4) → 전·월세비중(md:order-5) → Ad③(md:order-6)
+  //                 → 위치(md:order-7) → Ad②(md:order-8) → 거래내역(md:order-9) → Ad④(md:order-10).
+  // 모바일: 전·월세비중(order-5)이 시세추이(order-4) 직후로 승격.
+  // SectionBlock stub의 루트 <section>에 class가 fall-through되므로 order 클래스로 직접 검사한다.
+  // (heading prop은 stub 템플릿에 렌더되지 않으므로 텍스트 검색 불가)
+  function sectionByOrderClass(wrapper: any, orderClass: string) {
+    return wrapper.findAll('section').find((s: any) => s.classes().includes(orderClass))
+  }
+
+  it('시세 추이 섹션이 데스크톱 md:order-4 + 모바일 order-4 를 가진다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    // 시세 추이 SectionBlock은 order-4 md:order-4 (유일한 order-4 section)
+    const sec = sectionByOrderClass(wrapper, 'order-4')
+    expect(sec, '시세 추이 섹션(order-4)이 렌더되어야 한다').toBeTruthy()
+    expect(sec.classes()).toContain('md:order-4')
+  })
+
+  it('거래 내역 섹션이 데스크톱 md:order-9 를 가진다 (위치보다 아래는 아님: 위치는 md:order-7)', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    // 거래 내역 SectionBlock은 order-6 md:order-9 (유일한 order-6 section)
+    const sec = sectionByOrderClass(wrapper, 'order-6')
+    expect(sec, '거래 내역 섹션(order-6)이 렌더되어야 한다').toBeTruthy()
+    expect(sec.classes()).toContain('md:order-9')
+  })
+
+  it('재배치 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    expect(wrapper.findAll('h1').length).toBe(1)
   })
 })

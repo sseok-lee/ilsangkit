@@ -185,6 +185,7 @@ setRegionMeta({
   district: district.value,
   districtName: districtName.value,
   category: category.value as FacilityCategory,
+  count: summary.value?.count,
   canonical: false,
 })
 

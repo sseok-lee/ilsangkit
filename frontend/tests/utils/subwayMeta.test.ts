@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSubwayDescription } from '~/utils/subwayMeta'
+import { buildSubwayDescription, buildSubwayTitle } from '~/utils/subwayMeta'
 import type { SubwayStation } from '~/types/subway'
 
 function makeStation(overrides: Partial<SubwayStation> = {}): SubwayStation {
@@ -24,6 +24,32 @@ function makeStation(overrides: Partial<SubwayStation> = {}): SubwayStation {
     ...overrides,
   }
 }
+
+describe('buildSubwayTitle — region suffix', () => {
+  it('역명·호선·지역(시축약 구)·브랜드를 포함한다', () => {
+    expect(buildSubwayTitle(makeStation())).toBe('강남역 (2호선)·주변 시설 | 서울 강남구 | 일상킷')
+  })
+
+  it('타이틀에 주변 시설 인텐트가 포함된다', () => {
+    expect(buildSubwayTitle(makeStation())).toContain('주변 시설')
+  })
+
+  it('full city form(서울특별시) 대신 compact(서울)을 쓴다', () => {
+    const title = buildSubwayTitle(makeStation())
+    expect(title).toContain('서울 강남구')
+    expect(title).not.toContain('서울특별시')
+  })
+
+  it('지역 정보가 없으면 지역 세그먼트를 생략한다', () => {
+    expect(buildSubwayTitle(makeStation({ city: null, district: null }))).toBe('강남역 (2호선)·주변 시설 | 일상킷')
+  })
+
+  it('역명이 이미 "역"으로 끝나면 중복 접미하지 않는다', () => {
+    const title = buildSubwayTitle(makeStation({ name: '시청역', line: '1호선', district: '중구' }))
+    expect(title).toBe('시청역 (1호선)·주변 시설 | 서울 중구 | 일상킷')
+    expect(title).not.toContain('역역')
+  })
+})
 
 describe('buildSubwayDescription — prose shape (Fix 3b)', () => {
   it('contains "지하철역입니다" (prose opening)', () => {

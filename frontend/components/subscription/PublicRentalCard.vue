@@ -1,7 +1,7 @@
 <template>
   <HardLink
     :to="detailLink"
-    class="block bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-primary transition-all duration-200"
+    class="block bg-white rounded-xl shadow-sm border border-line-2 p-4 hover:shadow-md hover:border-primary transition-all duration-200"
   >
     <div class="flex items-start justify-between gap-3 mb-2">
       <div class="flex-1 min-w-0">
@@ -19,10 +19,10 @@
             모집예정
           </span>
         </div>
-        <h3 class="font-bold text-slate-900 text-sm md:text-base truncate">
+        <h3 class="font-bold text-strong text-sm md:text-base truncate">
           {{ rental.complexName }}
         </h3>
-        <p class="text-xs md:text-sm text-slate-500 mt-1">{{ regionLabel }}</p>
+        <p class="text-xs md:text-sm text-muted mt-1">{{ regionLabel }}</p>
       </div>
       <span :class="rentalTypeBadgeClass">{{ rental.rentalType }}</span>
     </div>
@@ -42,7 +42,7 @@
       </span>
     </div>
 
-    <div class="space-y-1 text-xs text-slate-600">
+    <div class="space-y-1 text-xs text-ink">
       <p v-if="rental.depositAmount !== null">
         <span class="font-medium">보증금:</span>
         {{ formatDeposit(rental.depositAmount) }}

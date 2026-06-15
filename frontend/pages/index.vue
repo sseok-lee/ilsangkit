@@ -13,8 +13,8 @@
         <div class="flex items-center gap-2 text-xs flex-wrap">
           <span class="w-2 h-2 rounded-full bg-primary shrink-0"></span>
           <span class="text-primary font-semibold">공공데이터 기반</span>
-          <span class="hidden md:inline text-slate-300">·</span>
-          <span class="hidden md:inline text-slate-500">공공데이터포털 · 국토교통부</span>
+          <span class="hidden md:inline text-line-2">·</span>
+          <span class="hidden md:inline text-muted">공공데이터포털 · 국토교통부</span>
           <span v-if="newlyListedToday > 0" class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold">
             <span class="relative flex w-2 h-2">
               <span class="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-75 animate-ping"></span>
@@ -28,27 +28,27 @@
         <div class="flex flex-col gap-2">
           <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
           <div class="tracking-tight font-bold leading-[1.15]">
-            <div class="text-slate-900 text-[38px] md:text-[62px] md:font-black">우리 동네 정보,</div>
+            <div class="text-strong text-[38px] md:text-[62px] md:font-black">우리 동네 정보,</div>
             <div class="text-[38px] md:text-[62px] md:font-black">
               <span class="md:hidden text-primary">한번에.</span>
-              <span class="hidden md:inline"><span class="text-primary">일상킷에서</span><span class="text-slate-900"> 한번에.</span></span>
+              <span class="hidden md:inline"><span class="text-primary">일상킷에서</span><span class="text-strong"> 한번에.</span></span>
             </div>
           </div>
-          <p class="md:hidden text-slate-500 text-[15px] mt-1">부동산 · 청약 · 생활시설을 한 곳에서</p>
-          <p class="hidden md:block text-slate-500 text-lg mt-1">부동산 실거래가, 청약 정보, 생활시설을 한 곳에서.</p>
+          <p class="md:hidden text-muted text-[15px] mt-1">부동산 · 청약 · 생활시설을 한 곳에서</p>
+          <p class="hidden md:block text-muted text-lg mt-1">부동산 실거래가, 청약 정보, 생활시설을 한 곳에서.</p>
         </div>
 
         <!-- 검색바 -->
         <div class="w-full md:max-w-[580px]">
           <label class="relative block">
-            <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-slate-200 md:border-2 shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-slate-300 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
-              <div class="flex items-center pl-4 pr-2 text-slate-400">
+            <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-line-2 md:border-2 shadow-card focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-line-2 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
+              <div class="flex items-center pl-4 pr-2 text-faint">
                 <span class="material-symbols-outlined">search</span>
               </div>
               <input
                 v-model="searchKeyword"
                 aria-label="단지명·동네·시설 검색"
-                class="flex-1 min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
+                class="flex-1 min-w-0 bg-transparent text-ink placeholder:text-faint px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
                 placeholder="단지명, 지역, 시설 검색"
                 @keydown="onHeroKeydown"
                 @input="onHeroInput"
@@ -74,18 +74,18 @@
 
         <!-- 통계 박스 -->
         <div class="bg-white border border-line rounded-2xl shadow-card md:max-w-[580px]">
-          <div class="flex items-stretch divide-x divide-slate-100">
+          <div class="flex items-stretch divide-x divide-line">
             <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
-              <strong class="text-slate-900 font-bold text-xl tracking-tight">{{ buildingCountKor }}만</strong>
-              <span class="text-[11px] text-slate-400">실거래 부동산</span>
+              <strong class="text-strong font-display font-extrabold text-xl tracking-tight tabular-nums">{{ buildingCountKor }}만</strong>
+              <span class="text-[11px] text-faint">실거래 부동산</span>
             </div>
             <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
-              <strong class="text-primary font-bold text-xl tracking-tight">{{ stats.subscriptionActiveCount }}건</strong>
-              <span class="text-[11px] text-slate-400">진행중 청약</span>
+              <strong class="text-primary font-display font-extrabold text-xl tracking-tight tabular-nums">{{ stats.subscriptionActiveCount }}건</strong>
+              <span class="text-[11px] text-faint">진행중 청약</span>
             </div>
             <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
-              <strong class="text-slate-900 font-bold text-xl tracking-tight">{{ facilityCountKor }}만</strong>
-              <span class="text-[11px] text-slate-400">등록 시설</span>
+              <strong class="text-strong font-display font-extrabold text-xl tracking-tight tabular-nums">{{ facilityCountKor }}만</strong>
+              <span class="text-[11px] text-faint">등록 시설</span>
             </div>
           </div>
         </div>
@@ -104,11 +104,11 @@
     <!-- 빠른 생활시설 찾기 (8 아이콘) -->
     <section id="facilities" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="mb-4">
-        <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
+        <h2 class="text-display-2 text-strong flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">location_on</span>
           빠른 생활시설 찾기
         </h2>
-        <p class="text-sm text-slate-500 mt-1">자주 찾는 시설을 바로 확인하세요.</p>
+        <p class="text-sm text-muted mt-1">자주 찾는 시설을 바로 확인하세요.</p>
       </div>
       <div class="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-2.5">
         <HardLink
@@ -119,7 +119,7 @@
           class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary hover:bg-primary/5 transition-all"
         >
           <CategoryIcon :category-id="(q.id as CategoryId)" size="md" class="mb-1.5" />
-          <span class="text-[13px] font-bold text-slate-700">{{ q.label }}</span>
+          <span class="text-[13px] font-bold text-strong">{{ q.label }}</span>
         </HardLink>
       </div>
     </section>
@@ -127,18 +127,18 @@
     <!-- 인기 지역 -->
     <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="mb-4">
-        <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
+        <h2 class="text-display-2 text-strong flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">place</span>
           인기 지역
         </h2>
-        <p class="text-sm text-slate-500 mt-1">많이 찾는 지역부터 둘러보세요.</p>
+        <p class="text-sm text-muted mt-1">많이 찾는 지역부터 둘러보세요.</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <HardLink
           v-for="city in CITY_LINKS"
           :key="city.slug"
           :to="`/${city.slug}/`"
-          class="inline-flex items-center min-h-[44px] px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+          class="inline-flex items-center min-h-[44px] px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-strong hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
         >
           {{ city.label }}
         </HardLink>
@@ -149,11 +149,11 @@
     <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
+          <h2 class="text-display-2 text-strong flex items-center gap-2">
             <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">menu_book</span>
             생활 가이드
           </h2>
-          <p class="text-sm text-slate-500 mt-1">최근 가이드를 확인하세요.</p>
+          <p class="text-sm text-muted mt-1">최근 가이드를 확인하세요.</p>
         </div>
         <HardLink
           to="/guide"
@@ -170,7 +170,7 @@
           :to="`/guide/${guide.slug}`"
           class="group bg-white border border-line rounded-xl overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
         >
-          <div class="aspect-video bg-slate-100 overflow-hidden">
+          <div class="aspect-video bg-background-light overflow-hidden">
             <img
               v-if="guide.thumbnailUrl"
               :src="`${publicApiBase}${guide.thumbnailUrl}`"
@@ -182,14 +182,14 @@
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
             <div v-else class="w-full h-full flex items-center justify-center">
-              <span class="material-symbols-outlined text-[36px] text-slate-300">article</span>
+              <span class="material-symbols-outlined text-[36px] text-faint">article</span>
             </div>
           </div>
           <div class="p-3">
-            <h3 class="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-primary transition-colors">
+            <h3 class="text-sm font-bold text-strong line-clamp-2 group-hover:text-primary transition-colors">
               {{ guide.title }}
             </h3>
-            <p class="text-xs text-slate-500 mt-1 line-clamp-1">
+            <p class="text-xs text-muted mt-1 line-clamp-1">
               {{ guide.summary }}
             </p>
           </div>
@@ -208,8 +208,8 @@
         <div class="flex items-start gap-3 flex-1">
           <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">verified</span>
           <div>
-            <p class="text-sm font-bold text-slate-900">공공데이터 기반 서비스</p>
-            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+            <p class="text-sm font-bold text-strong">공공데이터 기반 서비스</p>
+            <p class="text-xs text-muted mt-1 leading-relaxed">
               행정안전부 · 국토교통부 · 보건복지부 · 한국부동산원 등
               공공데이터포털 및 각 부처 공개 API/CSV를 출처로 사용합니다.
               공공누리(KOGL) 이용 조건을 준수하여 표기합니다.
