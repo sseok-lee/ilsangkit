@@ -60,13 +60,14 @@
       </div>
 
       <!-- Hero: 모바일 헤더 / 데스크톱 PageHero -->
-      <MobileRealEstateHeader
+      <MobileDetailHeader
         class="order-2 md:order-2"
         :title="buildingName"
         :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :stats="mobileHeaderStats"
         :kakao-map-url="kakaoMapUrl"
         :naver-map-url="naverMapUrl"
+        share-label="이 건물 공유하기"
         @share="handleShare"
         @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
       />
@@ -435,7 +436,7 @@ import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
-import MobileRealEstateHeader from '~/components/realEstate/MobileRealEstateHeader.vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
