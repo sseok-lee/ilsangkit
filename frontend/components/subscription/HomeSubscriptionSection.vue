@@ -28,8 +28,11 @@
         </div>
 
         <!-- 타임라인 2그룹 -->
+        <!-- grid 아이템 기본 min-width:auto 는 긴 공고명(truncate=nowrap) 너비로 트랙을 늘려
+             모바일에서 카드를 viewport 밖으로 밀어낸다. 컬럼에 min-w-0 을 줘 트랙을 컨테이너에
+             가두고 내부 truncate 가 동작하도록 한다. -->
         <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4">
-          <div v-if="ongoing.length > 0">
+          <div v-if="ongoing.length > 0" class="min-w-0">
             <h3 class="text-sm font-bold text-strong mb-1.5"><span aria-hidden="true">🔴</span> 접수 중</h3>
             <ul>
               <li
@@ -50,7 +53,7 @@
             </ul>
           </div>
 
-          <div v-if="upcoming.length > 0">
+          <div v-if="upcoming.length > 0" class="min-w-0">
             <h3 class="text-sm font-bold text-strong mb-1.5"><span aria-hidden="true">🔵</span> 접수 예정</h3>
             <ul>
               <li
