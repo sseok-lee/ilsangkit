@@ -3,12 +3,22 @@ import { compactCityName } from '~/utils/seoConstants'
 
 const SITE_NAME = '일상킷'
 
+// 역사명이 이미 '역'으로 끝나면 중복 접미를 막는다 (일부 원천 데이터는 '역'을 포함). 역곡/역삼 등 '역'으로
+// 끝나지 않는 이름은 그대로 접미한다.
+function stationDisplayName(name: string): string {
+  return name.endsWith('역') ? name : `${name}역`
+}
+
 export function buildSubwayTitle(station: SubwayStation): string {
-  return `${station.name}역 (${station.line}) | ${SITE_NAME}`
+  // 지역(시축약 구)을 역명·호선 뒤 접미사로 — 동명이역(예: 여러 도시의 시청역) 구분 + 로컬 검색 신호.
+  const cityCompact = station.city ? compactCityName(station.city) : ''
+  const region = [cityCompact, station.district].filter(Boolean).join(' ')
+  const regionPart = region ? ` | ${region}` : ''
+  return `${stationDisplayName(station.name)} (${station.line})${regionPart} | ${SITE_NAME}`
 }
 
 export function buildSubwayDescription(station: SubwayStation): string {
-  const stationName = station.name.endsWith('역') ? station.name : `${station.name}역`
+  const stationName = stationDisplayName(station.name)
   const cityCompact = station.city ? compactCityName(station.city) : ''
   const region = [cityCompact, station.district].filter(Boolean).join(' ')
 
@@ -56,7 +66,7 @@ export function buildSubwayJsonLd(station: SubwayStation): PlaceJsonLd {
   const jsonLd: PlaceJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'TrainStation',
-    name: `${station.name}역`,
+    name: stationDisplayName(station.name),
     geo: {
       '@type': 'GeoCoordinates',
       latitude: station.lat,

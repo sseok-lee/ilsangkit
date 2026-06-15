@@ -1,4 +1,4 @@
-import { SITE_NAME } from '~/utils/seoConstants'
+import { SITE_NAME, compactCityName } from '~/utils/seoConstants'
 
 type PropertyType = 'apt' | 'villa' | 'offitel'
 type TransactionMode = 'sale' | 'rent'
@@ -33,10 +33,6 @@ export interface DetailMetaResult {
   description: string
 }
 
-function shortCityName(city: string): string {
-  return (city || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
-}
-
 function formatKoreanPrice(amountManwon: number): string {
   if (!Number.isFinite(amountManwon) || amountManwon <= 0) return ''
   const eok = Math.floor(amountManwon / 10000)
@@ -61,17 +57,21 @@ function buildTitle(input: DetailMetaInput): string {
   // 아파트는 이름이 타입을 암시 → 타입어 생략. 빌라/오피스텔은 유지
   const typePart = input.propertyType === 'apt' ? '' : `${propertyLabel} `
   let core = `${input.buildingName} ${typePart}${transactionLabel} 실거래가`
-  // 30자(브랜드 제외 ~22자) 초과 + 타입어 있으면 타입어 생략
+  // 핵심 헤드라인 길이 가드: 30자(지역·브랜드 제외 ~22자) 초과 + 타입어 있으면 타입어 생략
   if (core.length > 22 && typePart) {
     core = `${input.buildingName} ${transactionLabel} 실거래가`
   }
-  return `${core} | ${SITE_NAME}`
+  // 지역(시축약 구)을 헤드라인 뒤에 접미사로 (길이 가드 이후). 제목이 길어 잘려도 핵심 키워드
+  // (단지명·실거래가)는 앞에 보존되고 지역/브랜드만 우아하게 잘린다. 지역 정보가 없으면 세그먼트 생략.
+  const regionLabel = [compactCityName(input.region.city), input.region.district].filter(Boolean).join(' ')
+  const regionPart = regionLabel ? ` | ${regionLabel}` : ''
+  return `${core}${regionPart} | ${SITE_NAME}`
 }
 
 function buildDescription(input: DetailMetaInput): string {
   const propertyLabel = PROPERTY_LABEL[input.propertyType]
   const transactionLabel = TRANSACTION_LABEL[input.transactionMode]
-  const cityShort = shortCityName(input.region.city)
+  const cityShort = compactCityName(input.region.city)
   const regionLabel = [cityShort, input.region.district].filter(Boolean).join(' ')
 
   const totalCount = input.summary?.totalCount ?? 0
