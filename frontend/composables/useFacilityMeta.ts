@@ -381,10 +381,13 @@ export function useFacilityMeta() {
   }
 
   /**
-   * 카테고리별 상세 타이틀 — {name} | {loc} {categoryName} {intent}
-   * 길이 제한 없음: 지역·카테고리를 항상 유지해 검색엔진 색인·매칭에서 지역 신호를
-   * 잃지 않도록 한다. 긴 타이틀은 SERP에서 시각적으로만 잘릴 뿐 페널티가 없으며,
-   * 쓰레기 배출일 페이지 등 다른 긴 타이틀과 동일한 정책이다.
+   * 카테고리별 상세 타이틀 — {name} {categoryName} {intent} | {loc}
+   * 이름 바로 뒤에 카테고리+인텐트(검색 키워드)를 묶어 앞으로 배치하고 지역은 뒤 칸으로.
+   * 인텐트가 맨 끝(지역 뒤)에 트레일링하면 모바일 SERP에서 잘리고 가중치가 낮아지는데,
+   * 카테고리가 이름과 인텐트를 이어줘 이름≠카테고리(예: 정비공업사의 EV충전소) 경우에도
+   * 토픽이 명확하다. 지역은 타이틀 2번째 칸 + URL·breadcrumb·h1·og 에 강하게 남는다.
+   * 길이 제한 없음: 지역·카테고리를 항상 유지(긴 타이틀은 SERP에서 시각적으로만 잘릴 뿐
+   * 페널티 없음 — 다른 긴 타이틀과 동일한 정책).
    */
   function buildDetailTitle(facility: FacilityDetail): string {
     const cityShort = compactCityName(facility.city)
@@ -392,9 +395,16 @@ export function useFacilityMeta() {
       ? (facility.district.startsWith(cityShort) ? facility.district : `${cityShort} ${facility.district}`)
       : cityShort
     const name = getFacilityDisplayName(facility)
-    const categoryName = CATEGORY_META[facility.category]?.label || facility.category
+    const meta = CATEGORY_META[facility.category]
+    const categoryName = meta?.label || facility.category
     const intent = CATEGORY_TITLE_INTENT[facility.category]
-    return intent ? `${name} | ${loc} ${categoryName} ${intent}` : `${name} | ${loc} ${categoryName}`
+    // 이름이 이미 카테고리명을 포함하면(예: "삼성서울병원") 중복 표기를 피한다. 정식 label 과
+    // shortLabel 둘 다로 검사한다 — label='공공화장실'이어도 실제 이름은 '공중화장실'이라
+    // shortLabel='화장실'로 잡아야 "공중화장실 공공화장실" 스터터가 안 난다. 포함하지 않으면
+    // (예: 정비공업사의 EV충전소) 카테고리를 이름 뒤에 붙여 토픽을 명확히 한다.
+    const inName = name.includes(categoryName) || (!!meta?.shortLabel && name.includes(meta.shortLabel))
+    const head = inName ? name : `${name} ${categoryName}`
+    return intent ? `${head} ${intent} | ${loc}` : `${head} | ${loc}`
   }
 
   /**
