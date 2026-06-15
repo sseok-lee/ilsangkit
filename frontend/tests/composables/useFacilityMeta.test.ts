@@ -237,7 +237,10 @@ describe('useFacilityMeta', () => {
       const call = mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }
       expect(call.title).toContain('아주 길고 긴 어느 공중화장실 시설의 이름입니다')
       expect(call.title).toContain('서울')
-      expect(call.title).toContain(CATEGORY_META.toilet.label)
+      // 이름이 '공중화장실'을 포함 → dedup으로 정식 label('공공화장실')은 안 붙고 카테고리는
+      // shortLabel('화장실')로 전달된다(이름 안에 존재). "공중화장실 공공화장실" 스터터 방지.
+      expect(call.title).toContain(CATEGORY_META.toilet.shortLabel)
+      expect(call.title).not.toContain('공중화장실 공공화장실')
       expect(call.title).not.toContain('undefined')
       expect(call.title).not.toContain('null')
     })
@@ -595,22 +598,59 @@ describe('useFacilityMeta', () => {
       expect(raw).toContain('진료시간·진료과목')
     })
 
-    it('normal hospital: title format is {name} | {loc} {category} {intent} | 일상킷', () => {
+    // 이름이 카테고리명('병원')을 이미 포함 → 카테고리 라벨 중복 삽입 안 함.
+    it('name이 카테고리명 포함 시: 중복 없이 {name} {intent} | {loc} | 일상킷', () => {
       const { setFacilityDetailMeta } = useFacilityMeta()
       setFacilityDetailMeta(makeHospitalFacility('삼성서울병원'))
 
       const call = mockUseSeoMeta.mock.calls[0][0]
-      expect(call.title).toBe('삼성서울병원 | 서울 강남구 병원 진료시간·진료과목 | 일상킷')
+      expect(call.title).toBe('삼성서울병원 진료시간·진료과목 | 서울 강남구 | 일상킷')
+      expect(call.title).not.toContain('병원 병원') // 중복 방지
     })
 
-    it('long-name facility: keeps loc + category + intent (no length guard)', () => {
+    it('long-name facility: 카테고리+인텐트+지역 유지(길이 가드 없음)', () => {
       const { setFacilityDetailMeta } = useFacilityMeta()
-      // composite가 24자를 한참 넘는 긴 이름이라도 지역·카테고리를 버리지 않는다
-      const longName = '서울대학교어린이병원응급의료센터입구'  // 17 chars
+      // composite가 24자를 한참 넘는 긴 이름이라도 지역·인텐트를 버리지 않는다. '병원' 포함 → 중복 생략.
+      const longName = '서울대학교어린이병원응급의료센터입구'  // 17 chars, '병원' 포함
       setFacilityDetailMeta(makeHospitalFacility(longName))
 
       const call = mockUseSeoMeta.mock.calls[0][0]
-      expect(call.title).toBe(`${longName} | 서울 강남구 병원 진료시간·진료과목 | 일상킷`)
+      expect(call.title).toBe(`${longName} 진료시간·진료과목 | 서울 강남구 | 일상킷`)
+    })
+
+    // toilet: 정식 label('공공화장실')과 실제 이름('공중화장실')이 달라도 shortLabel('화장실')로
+    // dedup 되어 "공중화장실 공공화장실" 스터터가 나지 않아야 한다 (고트래픽 카테고리 회귀 가드).
+    it('toilet: label≠실제이름이어도 shortLabel dedup으로 중복 스터터 없음', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      const facility: FacilityDetail = {
+        id: 'toilet-dedup', category: 'toilet', name: '강남역 공중화장실',
+        address: '서울시 강남구', roadAddress: null, lat: 37.49, lng: 127.02,
+        city: '서울특별시', district: '강남구', bjdCode: '11680', details: {},
+        sourceId: 's', sourceUrl: null, viewCount: 0,
+        createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z', syncedAt: '2024-01-01T00:00:00Z',
+      }
+      setFacilityDetailMeta(facility)
+      const t: string = mockUseSeoMeta.mock.calls.at(-1)![0].title
+      expect(t).toBe('강남역 공중화장실 개방시간·위치 | 서울 강남구 | 일상킷')
+      expect(t).not.toContain('화장실 공공화장실') // label-only dedup이 놓치던 스터터
+    })
+
+    // 이름이 카테고리명을 안 가지면 카테고리를 이름 뒤에 삽입.
+    // 인텐트(검색 키워드)는 지역보다 앞에 — 지역 뒤 트레일링하던 구조를 뒤집어 SERP 잘림·가중치 개선.
+    it('name이 카테고리명 미포함 시: 카테고리 삽입 + 순서 name<category<intent<region', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      // '연세365의원'은 '병원'을 포함하지 않음 → 카테고리 '병원' 이 이름 뒤에 삽입됨
+      setFacilityDetailMeta(makeHospitalFacility('연세365의원'))
+
+      const t: string = mockUseSeoMeta.mock.calls[0][0].title
+      expect(t).toBe('연세365의원 병원 진료시간·진료과목 | 서울 강남구 | 일상킷')
+      const iName = t.indexOf('연세365의원')
+      const iCategory = t.indexOf('병원')
+      const iIntent = t.indexOf('진료시간·진료과목')
+      const iRegion = t.indexOf('강남구')
+      expect(iName).toBeLessThan(iCategory)
+      expect(iCategory).toBeLessThan(iIntent)
+      expect(iIntent).toBeLessThan(iRegion) // 핵심: 인텐트가 지역보다 앞
     })
   })
 })
