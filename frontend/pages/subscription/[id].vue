@@ -542,7 +542,7 @@ const subscriptionDateRange = computed(() => {
 const subscriptionSeoTitle = computed(() => {
   if (!subscription.value) return '청약 일정'
   // 위치/유형/상태는 description에만 노출(타이틀 길이 제한 회피). setMeta가 ` | 일상킷` 접미사를 붙임.
-  return `${subscription.value.houseName} 청약 일정`
+  return `${subscription.value.houseName} 청약 일정·경쟁률`
 })
 
 const subscriptionSeoDescription = computed(() => {

@@ -363,8 +363,25 @@ export function useFacilityMeta() {
     })
   }
 
+  const CATEGORY_TITLE_INTENT: Partial<Record<FacilityCategory, string>> = {
+    toilet: '개방시간·위치',
+    pharmacy: '영업시간·심야',
+    hospital: '진료시간·진료과목',
+    parking: '요금·운영시간',
+    library: '운영시간·휴관일',
+    childcare: '정원·현원',
+    park: '편의시설·주차',
+    'ev-charger': '충전기·요금',
+    sports: '시설·이용시간',
+    school: '학급정보·위치',
+    market: '위치·주차',
+    wifi: '설치 위치',
+    clothes: '설치 위치',
+    aed: '설치 위치',
+  }
+
   /**
-   * 카테고리별 상세 타이틀 — {name} | {loc} {categoryName}
+   * 카테고리별 상세 타이틀 — {name} | {loc} {categoryName} {intent}
    * 길이 제한 없음: 지역·카테고리를 항상 유지해 검색엔진 색인·매칭에서 지역 신호를
    * 잃지 않도록 한다. 긴 타이틀은 SERP에서 시각적으로만 잘릴 뿐 페널티가 없으며,
    * 쓰레기 배출일 페이지 등 다른 긴 타이틀과 동일한 정책이다.
@@ -376,7 +393,8 @@ export function useFacilityMeta() {
       : cityShort
     const name = getFacilityDisplayName(facility)
     const categoryName = CATEGORY_META[facility.category]?.label || facility.category
-    return `${name} | ${loc} ${categoryName}`
+    const intent = CATEGORY_TITLE_INTENT[facility.category]
+    return intent ? `${name} | ${loc} ${categoryName} ${intent}` : `${name} | ${loc} ${categoryName}`
   }
 
   /**
