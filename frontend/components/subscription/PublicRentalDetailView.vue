@@ -150,7 +150,7 @@ const mobileHeaderStats = computed(() => {
     { label: '전용', value: fmtArea(props.rental.exclusiveArea) },
     { label: '세대', value: fmtCount(props.rental.householdCount, '세대') },
   ]
-  return raw.filter((s) => s.label === '월세' ? true : s.value !== NO).slice(0, 4)
+  return raw.filter((s) => s.value !== NO).slice(0, 4)
 })
 
 // 길찾기 URL (좌표 있을 때만)
