@@ -10,6 +10,8 @@
 
 **참조 spec:** `docs/superpowers/specs/2026-06-15-detail-section-ordering-design.md` (§4.1 시설 facility, §3.2 광고 cadence, §3.3 order 컨벤션, §3.4 headline-first, §5 표(T3)·FAQ(T5), §6 결정4 FAQ 스키마 통일)
 
+> **⚠️ 사용자 결정 (2026-06-15) — 광고 6개 유지:** 시설현황 없는 카테고리(clothes/trash/빈 pharmacy)에서도 **광고 6개를 그대로 유지**한다. 따라서 Task 2의 `v-if="hasFacilityStatus"` **짝 광고 가드와 `hasFacilityStatus` 미러 computed는 구현하지 말 것**. 콘텐츠(`DetailFacilityStatus`)만 내부 v-if로 자연 폴백되고 광고 6개는 항상 렌더된다(현행 thin-카테고리 광고 동작과 동일, 개수 불변). Task 2에서는 BasicInfo↔FacilityStatus **블록 스왑 + FAQ 스키마 발행만** 수행하고, 광고 `v-if`·미러 computed 관련 스텝/테스트는 생략한다.
+
 **선행:** Foundation 플랜(공용 헤더) 먼저 적용 — `pages/[category]/[id].vue:288`이 이미 `~/components/common/MobileDetailHeader.vue`를 import하고 헤더 사용부가 `eyebrow`/`copyable` 형태여야 한다. (본 플랜은 헤더는 건드리지 않고 본문 순서·FAQ 스키마만 다룬다.)
 
 **작업 위치:** 작업 브랜치 `docs/detail-section-ordering-design`(또는 별도 feat 브랜치). 명령은 모두 `cd frontend` 기준. Node 20 (`nvm use 20`). 재배치 검증 시 Nitro route cache(`.nuxt/cache/nitro/routes`) stale 주의 — 단위 테스트는 영향 없으나 dev 스모크 시 캐시 삭제.
