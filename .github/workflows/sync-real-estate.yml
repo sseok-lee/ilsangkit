@@ -22,7 +22,11 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 1h30m
+          # 부동산 sync 루프(8종)만 ~1h10m + 지오코딩·summary 갱신으로 upstream 이
+          # 이미 ~1h26m 소요(데이터 증가). 1h30m 으론 청약·색인·사이트맵까지 못 끝내고
+          # 매일 타임아웃(2026-06-16/17). 풀런 추정 ~2h20m + 변동 → 3h 로 상향해 여유 확보.
+          # 개별 스텝은 각자 timeout(20m 등)으로 캡되고 좀비 가드가 있어 hang 위험은 별개로 차단됨.
+          command_timeout: 3h
           script: |
             set -u
             set -x
