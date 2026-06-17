@@ -643,6 +643,10 @@ async function syncSource(config: SourceConfig, isDryRun: boolean): Promise<{ ne
 
 async function main() {
   const isDryRun = process.argv.includes('--dry-run');
+  // --skip-geocode: 지오코딩을 이 스크립트에서 분리한다. 지오코딩은 항상-실패하는
+  // 청약 주소가 많아 느려 시간예산을 위협하므로, daily cron 에서는 색인·사이트맵
+  // 생성을 먼저 끝낸 뒤 별도 단계(geocodeSubscriptions.js)에서 격리 실행한다.
+  const skipGeocode = process.argv.includes('--skip-geocode');
   const sourceArg = process.argv.find(a => a.startsWith('--source='))?.split('=')[1]
     ?? process.argv[process.argv.indexOf('--source') + 1]
     ?? 'ALL';
@@ -694,8 +698,9 @@ async function main() {
 
   console.log('\n청약 동기화 완료');
 
-  // Run geocoding for subscriptions if not dry-run
-  if (!isDryRun) {
+  // Run geocoding for subscriptions if not dry-run and not skipped.
+  // --skip-geocode 시 daily cron 의 별도 단계(geocodeSubscriptions.js)가 담당.
+  if (!isDryRun && !skipGeocode) {
     try {
       console.log('\n청약 주소 지오코딩 시작...');
       await processSubscriptions(prisma);
@@ -703,6 +708,8 @@ async function main() {
     } catch (err) {
       console.error('청약 주소 지오코딩 실패:', err);
     }
+  } else if (skipGeocode) {
+    console.log('\n청약 주소 지오코딩 스킵 (--skip-geocode) — 별도 단계에서 실행\n');
   }
 
   await prisma.$disconnect();

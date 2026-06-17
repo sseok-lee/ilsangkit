@@ -1392,6 +1392,10 @@ model Subscription {
   lat                 Decimal?  @db.Decimal(10, 7)
   lng                 Decimal?  @db.Decimal(10, 7)
   geocodedAt          DateTime?
+  // 지오코딩 실패 누적 횟수. MAX_GEOCODE_ATTEMPTS 도달 시 영구 스킵 —
+  // 블록코드/지구명/일원 등 구조적으로 지오코딩 불가한 청약 주소가 30일마다
+  // 부활해 매번 시간예산을 소진하던 문제(2026-06-16 sync 타임아웃) 방지.
+  geocodeAttempts     Int       @default(0)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
