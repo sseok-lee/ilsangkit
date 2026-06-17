@@ -20,6 +20,19 @@ interface KakaoResponse {
 /** Retry threshold for failed geocoding attempts (days) */
 const GEOCODE_RETRY_DAYS = 30;
 
+/**
+ * 영구 스킵 임계 — 이 횟수만큼 지오코딩에 실패한 주소는 더 이상 재시도하지 않는다.
+ * 청약 supplyLocation 은 블록코드/지구명/일원 등 Kakao 가 해석 못 하는 형식이 많아
+ * 영원히 ✗ 가 나는데, 30일마다 부활시키면 매번 시간예산을 태운다(2026-06-16 타임아웃).
+ */
+const MAX_GEOCODE_ATTEMPTS = Number(process.env.SUBSCRIPTION_GEOCODE_MAX_ATTEMPTS ?? 5);
+
+/**
+ * 1회 실행당 지오코딩 상한. 크리티컬 패스(색인·사이트맵) 밖으로 옮겼지만,
+ * 백로그가 한꺼번에 몰려도 실행 시간이 bound 되도록 배치 크기를 제한한다.
+ */
+const GEOCODE_BATCH_LIMIT = Number(process.env.SUBSCRIPTION_GEOCODE_LIMIT ?? 400);
+
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -126,11 +139,16 @@ export async function getSubscriptionsToGeocode(
     where: {
       lat: null,
       supplyLocation: { not: null },
+      // MAX 도달한 주소는 영구 스킵 — 무한 재시도로 시간예산 태우는 것 방지.
+      geocodeAttempts: { lt: MAX_GEOCODE_ATTEMPTS },
       OR: [
         { geocodedAt: null },
         { geocodedAt: { lt: retryCutoff } },
       ],
     },
+    // 미시도(geocodedAt=null) 건을 먼저 처리해 신규 공고가 빨리 좌표를 얻도록 한다.
+    orderBy: { geocodedAt: { sort: 'asc', nulls: 'first' } },
+    take: GEOCODE_BATCH_LIMIT,
     select: {
       id: true,
       supplyLocation: true,
@@ -168,7 +186,7 @@ export async function markGeocodeAttempted(
 ): Promise<void> {
   await prisma.subscription.update({
     where: { id },
-    data: { geocodedAt: new Date() },
+    data: { geocodedAt: new Date(), geocodeAttempts: { increment: 1 } },
   });
 }
 
@@ -184,7 +202,7 @@ export async function processSubscriptions(prisma: PrismaClient): Promise<void> 
     return;
   }
 
-  console.info(`[Subscription] Starting geocoding for ${subscriptions.length} subscriptions`);
+  console.info(`[Subscription] Starting geocoding for ${subscriptions.length} subscriptions (per-run cap ${GEOCODE_BATCH_LIMIT}, skip ≥${MAX_GEOCODE_ATTEMPTS} fails)`);
   let successCount = 0;
   let failCount = 0;
 
