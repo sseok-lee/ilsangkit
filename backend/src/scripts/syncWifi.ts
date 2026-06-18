@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as iconv from 'iconv-lite';
 import { KOREA_BOUNDS, SYNC } from '../constants/index.js';
-import { CITY_NORMALIZATION_MAP } from '../lib/addressParser.js';
+import { CITY_NORMALIZATION_MAP, normalizeDistrict } from '../lib/addressParser.js';
 
 // 와이파이 기본 CSV 경로
 const DEFAULT_CSV_PATH = path.resolve(
@@ -106,7 +106,8 @@ export function transformWifiData(row: WifiCSVRow): TransformedWifi | null {
   // 시/도, 구/군 - CSV에서 직접 제공되는 값 사용
   const rawCity = row.설치시도명?.trim() || '';
   const city = CITY_NORMALIZATION_MAP[rawCity] || rawCity || 'unknown';
-  const district = row.설치시군구명?.trim() || 'unknown';
+  // 일부 단축형 광역시는 설치시군구명에 시명이 박혀 "대구동구"로 옴 → 주소 기준으로 보정
+  const district = normalizeDistrict(row.설치시군구명?.trim() || '', address || roadAddress) || 'unknown';
 
   // 고유 ID 생성
   const sourceId = `wifi_${row.관리번호}`;
