@@ -65,7 +65,7 @@ function buildTitle(input: DetailMetaInput): string {
   // (단지명·실거래가)는 앞에 보존되고 지역/브랜드만 우아하게 잘린다. 지역 정보가 없으면 세그먼트 생략.
   const regionLabel = [compactCityName(input.region.city), input.region.district].filter(Boolean).join(' ')
   const regionPart = regionLabel ? ` | ${regionLabel}` : ''
-  return `${core}·주변 인프라${regionPart} | ${SITE_NAME}`
+  return `${core}·시세${regionPart} | ${SITE_NAME}`
 }
 
 function buildDescription(input: DetailMetaInput): string {
