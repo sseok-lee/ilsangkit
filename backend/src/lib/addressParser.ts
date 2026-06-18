@@ -119,3 +119,35 @@ export function extractCityDistrict(address: string): { city: string; district: 
     district: parts[1] || '',
   };
 }
+
+/**
+ * district 정규화.
+ * 일부 공공 API(특히 단축형 광역시: 대구/부산/인천/광주/대전/울산)가 시군구명에
+ * 시명을 붙여 "대구동구"처럼 내려주는 문제를 보정한다.
+ *
+ * 신뢰 가능한 address가 있으면 그걸 파싱해 district를 도출하므로, "부산진구"처럼
+ * 시명으로 시작하는 실제 구도 안전하게 보존된다(단순 접두사 제거는 부산진구→진구로
+ * 망가지므로 쓰지 않는다). address가 없거나 파싱 실패 시 raw 값을 그대로 둔다.
+ *
+ * @example normalizeDistrict('대구동구', '대구광역시 동구 안심로 58') → '동구'
+ * @example normalizeDistrict('부산진구', '부산광역시 부산진구 가야대로') → '부산진구'
+ * @example normalizeDistrict('동구',     '부산광역시 동구 중앙대로 206') → '동구'
+ */
+// 시/도 풀네임 접미사 — district 후보로 잘못 잡히면(예: "울산광역시 울산광역시 남구"
+// 처럼 시명이 중복된 주소) 거부하기 위함. 시군구는 구/군/시로 끝나되 시/도명은 아니어야 함.
+const SIDO_SUFFIX_RE = /(특별시|광역시|특별자치시|특별자치도|도)$/;
+
+function isValidDistrictToken(d?: string): boolean {
+  return !!d && /[구군시]$/.test(d) && !SIDO_SUFFIX_RE.test(d);
+}
+
+export function normalizeDistrict(rawDistrict: string, address?: string | null): string {
+  const raw = (rawDistrict || '').trim();
+  if (address && address.trim()) {
+    const parsed = parseAddress(address);
+    if (isValidDistrictToken(parsed?.district)) return parsed!.district;
+    const ext = extractCityDistrict(address);
+    if (isValidDistrictToken(ext.district)) return ext.district;
+  }
+  return raw;
+}

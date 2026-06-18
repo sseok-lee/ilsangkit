@@ -6,7 +6,7 @@ import prisma from '../lib/prisma.js';
 import crypto from 'crypto';
 import { XMLParser } from 'fast-xml-parser';
 import { SYNC } from '../constants/index.js';
-import { normalizeCity } from '../lib/addressParser.js';
+import { normalizeCity, normalizeDistrict } from '../lib/addressParser.js';
 
 /**
  * Hospital API 응답 아이템 타입
@@ -285,7 +285,8 @@ export async function syncHospitals(): Promise<{ totalRecords: number; newRecord
       if (!sidoCdNm || !sgguCdNm) continue;
 
       const city = normalizeCity(sidoCdNm);
-      const district = sgguCdNm;
+      // 일부 단축형 광역시는 sgguCdNm에 시명이 박혀 "대구동구"로 옴 → 주소 기준으로 보정
+      const district = normalizeDistrict(sgguCdNm, safeString(item.addr));
 
       transformedItems.push({
         id,
