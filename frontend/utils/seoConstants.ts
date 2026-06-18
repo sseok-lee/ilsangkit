@@ -159,21 +159,29 @@ export const CATEGORY_SEO_DESCRIPTION: Record<FacilityCategory, string> = {
   subway:       '전국 지하철역의 위치·노선·환승 정보를 지도에서 확인하세요. 1~9호선·수도권 광역철도·코레일 노선까지 역명과 좌표를 한눈에 검색할 수 있습니다.',
 }
 
+/**
+ * 카테고리 단일 인텐트 — 상세 title의 인텐트 슬롯과 description·목록·지역 메타가
+ * 공유하는 단일 소스(single source of truth). 값 선정 기준:
+ *  1) 상세 페이지에 실제 표시되는 데이터만 주장(과장 금지)
+ *  2) 네이버 검색어 기준 키워드 우선
+ * (이전에는 상세 title이 useFacilityMeta의 별도 CATEGORY_TITLE_INTENT 맵을 써서
+ *  두 맵이 어긋나는 drift가 발생 → 이 맵으로 통합.)
+ */
 export const CATEGORY_SEO_INTENT: Record<FacilityCategory, string> = {
-  toilet: '위치·개방시간',
-  hospital: '진료과·진료시간',
-  pharmacy: '영업시간·야간운영',
+  toilet: '개방시간·위치',
+  hospital: '진료과목·진료시간',
+  pharmacy: '영업시간·야간',
   parking: '요금·운영시간',
-  wifi: '위치·SSID',
-  aed: '설치위치·이용가능시간',
+  wifi: '설치 위치',
+  aed: '설치위치·이용시간',
   library: '운영시간·휴관일',
-  clothes: '위치·배출안내',
-  trash: '배출일·분리수거 안내',
-  park: '산책로·운동시설',
-  school: '학교정보·설립유형',
-  market: '장날·상점정보',
+  clothes: '설치 위치',
+  trash: '배출일·분리수거',
+  park: '운동시설·편의시설',
+  school: '설립유형·학급정보',
+  market: '점포·판매품목',
   childcare: '정원·현원',
-  'ev-charger': '충전기·이용시간',
-  sports: '시설규모·이용정보',
+  'ev-charger': '실시간 충전상태',
+  sports: '시설유형·규모',
   subway: '위치·노선·환승',
 }
