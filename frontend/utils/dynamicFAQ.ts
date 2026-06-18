@@ -291,7 +291,7 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
       }
       dynamic.push({
         question: `${name}의 충전기가 지금 사용 가능한가요?`,
-        answer: `${name}의 충전기 상태는 이 페이지에서 실시간으로 확인할 수 있습니다. 각 충전기별 충전대기·충전중·운영중지 상태가 30초마다 자동 갱신됩니다.`,
+        answer: `${name}의 충전기 상태는 이 페이지에서 실시간으로 확인할 수 있습니다. 각 충전기별 충전대기·충전중·운영중지 상태를 표시합니다.`,
       })
       break
     }

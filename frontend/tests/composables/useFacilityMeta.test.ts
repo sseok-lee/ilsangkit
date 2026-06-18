@@ -260,8 +260,8 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: '서울 강남구 공공화장실 | 위치·개방시간 | 일상킷',
-          description: '서울 강남구의 공공화장실 위치·개방시간 정보를 확인하세요.',
+          title: '서울 강남구 공공화장실 | 개방시간·위치 | 일상킷',
+          description: '서울 강남구의 공공화장실 개방시간·위치 정보를 확인하세요.',
         })
       )
     })
@@ -595,7 +595,7 @@ describe('useFacilityMeta', () => {
       expect(raw).toContain('강남구')
       expect(raw).toContain('병원')
       // must contain the intent string for hospital
-      expect(raw).toContain('진료시간·진료과목')
+      expect(raw).toContain('진료과목·진료시간')
     })
 
     // 이름이 카테고리명('병원')을 이미 포함 → 카테고리 라벨 중복 삽입 안 함.
@@ -604,7 +604,7 @@ describe('useFacilityMeta', () => {
       setFacilityDetailMeta(makeHospitalFacility('삼성서울병원'))
 
       const call = mockUseSeoMeta.mock.calls[0][0]
-      expect(call.title).toBe('삼성서울병원 진료시간·진료과목 | 서울 강남구 | 일상킷')
+      expect(call.title).toBe('삼성서울병원 진료과목·진료시간 | 서울 강남구 | 일상킷')
       expect(call.title).not.toContain('병원 병원') // 중복 방지
     })
 
@@ -615,7 +615,7 @@ describe('useFacilityMeta', () => {
       setFacilityDetailMeta(makeHospitalFacility(longName))
 
       const call = mockUseSeoMeta.mock.calls[0][0]
-      expect(call.title).toBe(`${longName} 진료시간·진료과목 | 서울 강남구 | 일상킷`)
+      expect(call.title).toBe(`${longName} 진료과목·진료시간 | 서울 강남구 | 일상킷`)
     })
 
     // toilet: 정식 label('공공화장실')과 실제 이름('공중화장실')이 달라도 shortLabel('화장실')로
@@ -643,10 +643,10 @@ describe('useFacilityMeta', () => {
       setFacilityDetailMeta(makeHospitalFacility('연세365의원'))
 
       const t: string = mockUseSeoMeta.mock.calls[0][0].title
-      expect(t).toBe('연세365의원 병원 진료시간·진료과목 | 서울 강남구 | 일상킷')
+      expect(t).toBe('연세365의원 병원 진료과목·진료시간 | 서울 강남구 | 일상킷')
       const iName = t.indexOf('연세365의원')
       const iCategory = t.indexOf('병원')
-      const iIntent = t.indexOf('진료시간·진료과목')
+      const iIntent = t.indexOf('진료과목·진료시간')
       const iRegion = t.indexOf('강남구')
       expect(iName).toBeLessThan(iCategory)
       expect(iCategory).toBeLessThan(iIntent)
