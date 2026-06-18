@@ -363,23 +363,6 @@ export function useFacilityMeta() {
     })
   }
 
-  const CATEGORY_TITLE_INTENT: Partial<Record<FacilityCategory, string>> = {
-    toilet: '개방시간·위치',
-    pharmacy: '영업시간·심야',
-    hospital: '진료시간·진료과목',
-    parking: '요금·운영시간',
-    library: '운영시간·휴관일',
-    childcare: '정원·현원',
-    park: '편의시설·주차',
-    'ev-charger': '충전기·요금',
-    sports: '시설·이용시간',
-    school: '학급정보·위치',
-    market: '위치·주차',
-    wifi: '설치 위치',
-    clothes: '설치 위치',
-    aed: '설치 위치',
-  }
-
   /**
    * 카테고리별 상세 타이틀 — {name} {categoryName} {intent} | {loc}
    * 이름 바로 뒤에 카테고리+인텐트(검색 키워드)를 묶어 앞으로 배치하고 지역은 뒤 칸으로.
@@ -397,7 +380,7 @@ export function useFacilityMeta() {
     const name = getFacilityDisplayName(facility)
     const meta = CATEGORY_META[facility.category]
     const categoryName = meta?.label || facility.category
-    const intent = CATEGORY_TITLE_INTENT[facility.category]
+    const intent = CATEGORY_SEO_INTENT[facility.category]
     // 이름이 이미 카테고리명을 포함하면(예: "삼성서울병원") 중복 표기를 피한다. 정식 label 과
     // shortLabel 둘 다로 검사한다 — label='공공화장실'이어도 실제 이름은 '공중화장실'이라
     // shortLabel='화장실'로 잡아야 "공중화장실 공공화장실" 스터터가 안 난다. 포함하지 않으면
