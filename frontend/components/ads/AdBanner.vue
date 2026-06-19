@@ -141,6 +141,13 @@ function handleStatus(status: string) {
   disconnectStatusObserver()
 }
 
+// <ins> 는 <ClientOnly> 안에 있어 onMounted 동기 시점엔 아직 DOM 에 없을 수 있다
+// (ClientOnly 가 다음 렌더 틱에 slot 을 삽입). 그 순간 watchStatus 가 ins 를 못 찾고
+// bail 하면 collapse 타이머가 영영 설치되지 않아, AdSense 가 status 를 보류한(unset)
+// 슬롯이 빈 박스로 남는다. ins 가 나타날 때까지 제한된 틱 동안 재시도한 뒤 watcher 를 건다.
+const MAX_INS_WAIT_TICKS = 10
+let statusWatchGeneration = 0
+
 // status 가 4s 안에 안 잡히면 일단 collapse(빈 박스 방지)하되, observer 는 계속 살려둬
 // AdSense 가 4s 이후 늦게 filled 하면 handleStatus 에서 collapse 를 복구한다.
 function watchStatus() {
@@ -148,9 +155,20 @@ function watchStatus() {
   clearStatusTimeout()
   disconnectStatusObserver()
   isTimedOut.value = false
+  armStatusWatch(++statusWatchGeneration, 0)
+}
+
+function armStatusWatch(generation: number, attempt: number) {
+  // 더 최신 watchStatus 호출(route 변경 등)이나 언마운트가 발생하면 이 재시도는 폐기.
+  if (generation !== statusWatchGeneration) return
 
   const ins = container.value?.querySelector<HTMLElement>('ins.adsbygoogle')
-  if (!ins) return
+  if (!ins) {
+    // ClientOnly 가 ins 를 다음 틱에 삽입하므로, 아직 없으면 잠깐 기다렸다 재시도.
+    if (attempt >= MAX_INS_WAIT_TICKS) return
+    void nextTick(() => armStatusWatch(generation, attempt + 1))
+    return
+  }
 
   // 이미 status 가 잡혀 있으면 즉시 처리.
   if (ins.dataset.adStatus) {
@@ -214,6 +232,7 @@ watch(() => route.path, async () => {
 
 onBeforeUnmount(() => {
   mq?.removeEventListener('change', applyMatches)
+  statusWatchGeneration++ // 대기 중인 ins 재시도 폐기
   clearStatusTimeout()
   disconnectStatusObserver()
 })

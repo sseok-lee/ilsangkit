@@ -2,12 +2,28 @@ import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { defineComponent, nextTick, onMounted, ref } from 'vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 
 const clientOnlyStub = {
   template: '<slot />',
 }
+
+// 실제 Nuxt <ClientOnly> 처럼, mount 직후 한 틱 뒤에야 slot(=<ins>)을 DOM 에 삽입한다.
+// 동기 렌더 stub('<slot/>')은 ins 가 onMounted 시점에 이미 존재해 production 의
+// 타이밍 레이스를 가린다. watchStatus 가 onMounted 에서 동기로 ins 를 못 찾고 bail 하면
+// 4s collapse 타이머가 영영 설치되지 않는 회귀를 이 stub 으로 재현한다.
+const deferredClientOnlyStub = defineComponent({
+  setup(_, { slots }) {
+    const show = ref(false)
+    onMounted(() => {
+      void nextTick(() => {
+        show.value = true
+      })
+    })
+    return () => (show.value ? slots.default?.() : null)
+  },
+})
 
 async function flushAdMount() {
   await nextTick()
@@ -84,6 +100,27 @@ describe('AdBanner', () => {
     expect(wrapper.classes()).toContain('ad-banner--timed-out')
     // ins 자체의 data-ad-status 는 여전히 우리가 조작하지 않는다
     expect(wrapper.get('ins.adsbygoogle').attributes('data-ad-status')).toBeUndefined()
+  })
+
+  it('ins 가 한 틱 늦게(ClientOnly) 삽입돼도 status 미설정 시 timeout 으로 collapse 한다', async () => {
+    const wrapper = mount(AdBanner, {
+      global: {
+        stubs: { ClientOnly: deferredClientOnlyStub },
+      },
+    })
+
+    // ClientOnly 가 ins 를 다음 틱에 삽입 — 충분히 flush 해서 ins 존재를 확인.
+    await nextTick()
+    await nextTick()
+    await nextTick()
+    expect(wrapper.find('ins.adsbygoogle').exists()).toBe(true)
+
+    // 4s timeout 진행. status 가 끝내 안 잡힌 슬롯은 부모가 collapse 돼야 한다.
+    vi.advanceTimersByTime(5000)
+    await nextTick()
+    await nextTick()
+
+    expect(wrapper.classes()).toContain('ad-banner--timed-out')
   })
 
   it('does not collapse the parent when AdSense sets data-ad-status before timeout', async () => {
