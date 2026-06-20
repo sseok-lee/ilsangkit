@@ -20,3 +20,12 @@ describe('shouldNoindexSsr', () => {
     expect(shouldNoindexSsr({ fetchFailed: false, confirmedEmpty: false })).toBe(false)
   })
 })
+
+describe('shouldNoindexSsr — 지역목록 의미 매핑', () => {
+  it('fetch 실패면 total 0이어도 noindex 금지', () => {
+    expect(shouldNoindexSsr({ fetchFailed: true, confirmedEmpty: true })).toBe(false)
+  })
+  it('성공 + 진짜 0건이면 noindex 유지(thin)', () => {
+    expect(shouldNoindexSsr({ fetchFailed: false, confirmedEmpty: true })).toBe(true)
+  })
+})
