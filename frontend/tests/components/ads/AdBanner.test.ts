@@ -198,4 +198,48 @@ describe('AdBanner', () => {
     expect(ins.attributes('data-full-width-responsive')).toBe('true')
     expect(ins.attributes('style') || '').not.toMatch(/height:\s*\d/)
   })
+
+  it('compact-mobile variant는 모바일용 150px 고정 슬롯을 중앙 정렬한다', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+
+    const wrapper = mount(AdBanner, {
+      props: { variant: 'compact-mobile' },
+      global: { stubs: { ClientOnly: clientOnlyStub } },
+    })
+    await flushAdMount()
+
+    expect(wrapper.classes()).toContain('ad-banner--compact-mobile')
+    const ins = wrapper.get('ins.adsbygoogle')
+    expect(ins.attributes('style')).toMatch(/display:\s*inline-block/)
+    expect(ins.attributes('style')).toMatch(/width:\s*100%/)
+    expect(ins.attributes('style')).toMatch(/max-width:\s*336px/)
+    expect(ins.attributes('style')).toMatch(/height:\s*150px/)
+    expect(ins.attributes('data-full-width-responsive')).toBe('false')
+    expect(ins.attributes('data-ad-format')).toBe('horizontal')
+  })
+
+  it('compact-mobile variant도 데스크톱 뷰포트에서는 기존 auto 슬롯으로 동작한다', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+
+    const wrapper = mount(AdBanner, {
+      props: { variant: 'compact-mobile' },
+      global: { stubs: { ClientOnly: clientOnlyStub } },
+    })
+    await flushAdMount()
+
+    expect(wrapper.classes()).not.toContain('ad-banner--compact-mobile')
+    expect(wrapper.classes()).toContain('ad-banner--auto')
+    const ins = wrapper.get('ins.adsbygoogle')
+    expect(ins.attributes('data-ad-format')).toBe('auto')
+    expect(ins.attributes('data-full-width-responsive')).toBe('true')
+    expect(ins.attributes('style') || '').not.toMatch(/height:\s*150px/)
+  })
 })

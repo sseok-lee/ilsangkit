@@ -4,7 +4,8 @@
     ref="container"
     :class="[
       'ad-banner',
-      `ad-banner--${adFormat}`,
+      `ad-banner--${effectiveAdFormat}`,
+      isCompactMobileActive ? 'ad-banner--compact-mobile' : 'ad-banner--default',
       'my-3 w-full',
       { 'ad-banner--timed-out': isTimedOut },
     ]"
@@ -16,7 +17,7 @@
         :style="insStyle"
         :data-ad-client="AD_CLIENT"
         :data-ad-slot="adSlot"
-        :data-ad-format="adFormat"
+        :data-ad-format="effectiveAdFormat"
         :data-full-width-responsive="insFullWidthResponsive"
         :data-adtest="adTest"
       />
@@ -42,11 +43,13 @@ const props = withDefaults(defineProps<{
   only?: 'mobile' | 'desktop'
   sizing?: 'fixed' | 'min'
   fixedHeight?: number
+  variant?: 'default' | 'compact-mobile'
 }>(), {
   adSlot: '1878068382',
   adFormat: 'auto',
   fullWidthResponsive: 'true',
   sizing: 'min',
+  variant: 'default',
 })
 
 // dev-only warn — sizing="fixed"에 명시 포맷/높이 필수
@@ -59,15 +62,6 @@ if (import.meta.dev && props.sizing === 'fixed') {
   }
 }
 
-const insStyle = computed(() =>
-  props.sizing === 'fixed' && props.fixedHeight
-    ? `display:inline-block; width:100%; height:${props.fixedHeight}px`
-    : 'display: block; width: 100%'
-)
-const insFullWidthResponsive = computed(() =>
-  props.sizing === 'fixed' ? 'false' : props.fullWidthResponsive
-)
-
 const adKey = ref(0)
 const route = useRoute()
 const container = ref<HTMLElement | null>(null)
@@ -77,11 +71,37 @@ let statusObserver: MutationObserver | null = null
 
 // viewport gate: only prop 가 없으면 항상 노출, 있으면 매칭될 때만 노출.
 const matches = ref(false)
+const isDesktopViewport = ref(false)
 let mq: MediaQueryList | null = null
 
 const shouldShow = computed(() => !props.only || matches.value)
+const isCompactMobileActive = computed(() =>
+  props.variant === 'compact-mobile' && !isDesktopViewport.value
+)
+
+const effectiveAdFormat = computed(() =>
+  isCompactMobileActive.value && props.adFormat === 'auto'
+    ? 'horizontal'
+    : props.adFormat
+)
+
+const insStyle = computed(() =>
+  isCompactMobileActive.value
+    ? 'display:inline-block; width:100%; max-width:336px; height:150px'
+    : props.sizing === 'fixed' && props.fixedHeight
+    ? `display:inline-block; width:100%; height:${props.fixedHeight}px`
+    : 'display: block; width: 100%'
+)
+const insFullWidthResponsive = computed(() =>
+  isCompactMobileActive.value || props.sizing === 'fixed'
+    ? 'false'
+    : props.fullWidthResponsive
+)
 
 function applyMatches() {
+  if (mq) {
+    isDesktopViewport.value = mq.matches
+  }
   if (!props.only || !mq) {
     matches.value = true
     return
@@ -155,11 +175,15 @@ function refresh() {
 }
 
 onMounted(() => {
-  if (props.only) {
-    mq = window.matchMedia('(min-width: 768px)')
+  if (props.only || props.variant === 'compact-mobile') {
+    mq = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 768px)')
+      : null
     applyMatches()
-    mq.addEventListener('change', applyMatches)
-    // matches 가 false→true 로 바뀌는 순간은 아래 watch 에서 refresh.
+    mq?.addEventListener('change', applyMatches)
+    // only는 matches 가 false→true 로 바뀌는 순간 아래 watch 에서 refresh.
+    // compact-mobile은 같은 슬롯이 데스크톱에서 기본 auto 동작으로 돌아가므로 즉시 refresh.
+    if (!props.only) refresh()
   } else {
     matches.value = true
     refresh()
@@ -204,6 +228,10 @@ onBeforeUnmount(() => {
 }
 .ad-banner--rectangle {
   min-height: 250px;
+}
+.ad-banner--compact-mobile {
+  min-height: 150px;
+  text-align: center;
 }
 
 /* AdSense 가 채우지 않기로 결정한 슬롯(unfilled / unfill-optimized) 은 ins 와 부모
