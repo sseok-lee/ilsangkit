@@ -124,6 +124,8 @@ import { SITE_URL } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { shouldNoindexSsr } from '~/utils/ssrIndexability'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -191,10 +193,11 @@ const renderableComplexes = computed<ComplexInfo[]>(() =>
   complexes.value.filter((c) => isValidBuildingName(c.buildingName)),
 )
 
-const { data: ssrData } = await useAsyncData(
+const { data: ssrData, error } = await useAsyncData(
   `re-region-${realEstateType.value}-${citySlug.value}-${districtSlug.value}`,
   () => getComplexList(realEstateType.value as never, cityName.value, districtName.value, undefined, 1, 24),
 )
+if (import.meta.server && error.value) markDegradedResponse()
 if (ssrData.value) {
   complexes.value = ssrData.value.items
   totalComplexes.value = ssrData.value.total
@@ -202,6 +205,7 @@ if (ssrData.value) {
   currentPage.value = ssrData.value.page
 }
 pending.value = false
+const fetchFailed = computed(() => !!error.value)
 
 async function goToPage(page: number) {
   if (page < 1 || page > totalPages.value) return
@@ -304,7 +308,10 @@ const { setMeta } = useFacilityMeta()
 watch(
   [cityName, districtName, typeLabel, totalComplexes],
   () => {
-    const isNoindex = totalComplexes.value === 0
+    const isNoindex = shouldNoindexSsr({
+      fetchFailed: fetchFailed.value,
+      confirmedEmpty: !fetchFailed.value && totalComplexes.value === 0,
+    })
     const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(`${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`)}`
     if (isNoindex) {
       useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })

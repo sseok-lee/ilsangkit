@@ -104,8 +104,12 @@ export function useRealEstate() {
         `${apiBase}/api/real-estate/${type}/building-info?${query.toString()}`
       )
       return res.data
-    } catch {
-      return null
+    } catch (err) {
+      const status = (err as { statusCode?: number; status?: number }).statusCode
+        ?? (err as { status?: number }).status
+      // 진짜 없는 건물(404)만 null. 5xx/timeout/network(status 없음 포함)는 일시 장애로 전파.
+      if (status === 404) return null
+      throw err
     }
   }
 

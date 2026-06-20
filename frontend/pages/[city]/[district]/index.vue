@@ -72,6 +72,8 @@ import type { FacilityCategory } from '~/types/facility'
 import { SITE_URL } from '~/utils/seoConstants'
 import { generateAreaDescription } from '~/utils/seoHelpers'
 import { useAnalytics } from '~/composables/useAnalytics'
+import { shouldNoindexSsr } from '~/utils/ssrIndexability'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -108,11 +110,12 @@ const breadcrumbItems = computed(() => [
 ])
 
 // Area API 단일 호출
-const { data: response, pending } = await useAsyncData(
+const { data: response, pending, error } = await useAsyncData(
   `area-${city.value}-${district.value}`,
   () => $fetch<any>(`/api/area/${encodeURIComponent(city.value)}/${encodeURIComponent(district.value)}`)
-    .catch(() => null)
 )
+const fetchFailed = computed(() => !!error.value)
+if (import.meta.server && error.value) markDegradedResponse()
 
 const areaData = computed(() => response.value?.data ?? null)
 
@@ -186,9 +189,12 @@ const heroDescription = computed(() => {
   return areaInfo ? `${primary}. ${areaInfo}` : primary
 })
 
-// noindex 조건: 데이터가 null이면 (API 실패/빈 응답) noindex 처리
+// noindex 조건: fetch 실패는 noindex 금지(fail-open), 성공 후 빈값만 noindex
 // 정책: noindex 페이지는 canonical 을 출력하지 않는다 (noindex-canonical-policy.md)
-const isNoindex = computed(() => areaData.value === null)
+const isNoindex = computed(() => shouldNoindexSsr({
+  fetchFailed: fetchFailed.value,
+  confirmedEmpty: !fetchFailed.value && areaData.value === null,
+}))
 
 // SEO 메타
 const { setMeta } = useFacilityMeta()
