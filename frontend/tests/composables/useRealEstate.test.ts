@@ -68,3 +68,31 @@ describe('useRealEstate.getNearby', () => {
     expect(url).toContain('/api/real-estate/nearby')
   })
 })
+
+describe('useRealEstate.getBuildingInfo — 실패 구분', () => {
+  beforeEach(() => { mockFetch.mockReset() })
+
+  it('정상 응답이면 data 반환', async () => {
+    mockFetch.mockResolvedValue({ success: true, data: { buildingName: '래미안', bjdCode: '1' } })
+    const { getBuildingInfo } = useRealEstate()
+    await expect(getBuildingInfo('apt-sale' as never, '1', '래미안')).resolves.toEqual({ buildingName: '래미안', bjdCode: '1' })
+  })
+
+  it('404(없는 건물)면 null 반환', async () => {
+    mockFetch.mockRejectedValue({ statusCode: 404 })
+    const { getBuildingInfo } = useRealEstate()
+    await expect(getBuildingInfo('apt-sale' as never, '1', '없는건물')).resolves.toBeNull()
+  })
+
+  it('500(서버 장애)면 throw (일시 장애)', async () => {
+    mockFetch.mockRejectedValue({ statusCode: 500 })
+    const { getBuildingInfo } = useRealEstate()
+    await expect(getBuildingInfo('apt-sale' as never, '1', '래미안')).rejects.toBeTruthy()
+  })
+
+  it('status 없는 에러(timeout/network)면 throw', async () => {
+    mockFetch.mockRejectedValue(new Error('aborted'))
+    const { getBuildingInfo } = useRealEstate()
+    await expect(getBuildingInfo('apt-sale' as never, '1', '래미안')).rejects.toBeTruthy()
+  })
+})

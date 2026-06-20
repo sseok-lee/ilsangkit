@@ -8,6 +8,7 @@ import { defineComponent, h, Suspense, ref, computed, watch, onMounted } from 'v
 ;(globalThis as any).onMounted = onMounted
 
 ;(globalThis as any).createError = vi.fn((opts: unknown) => opts)
+;(globalThis as any).useRequestEvent = () => undefined
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
@@ -88,6 +89,32 @@ describe('district hub — noindex guard (Issue E)', () => {
     )
     expect(hasNoindex).toBe(true)
 
+    ;(globalThis as any).useHead = vi.fn()
+  })
+
+  it('fetch 실패(error 있음)면 데이터가 null이어도 noindex가 없어야 한다 (fail-open)', async () => {
+    vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
+      const data = ref<any>(null)
+      const error = ref<any>(new Error('boom'))
+      return Object.assign(Promise.resolve({ data, pending: ref(false), error, refresh: vi.fn() }), {
+        data, pending: ref(false), error, refresh: vi.fn(),
+      })
+    })
+    const useHeadSpy = vi.fn()
+    ;(globalThis as any).useHead = useHeadSpy
+    vi.resetModules()
+    const { default: DistrictHub } = await import('~/pages/[city]/[district]/index.vue')
+    mount(
+      defineComponent({ render() { return h(Suspense, null, { default: () => h(DistrictHub) }) } }),
+      { global: { stubs } },
+    )
+    await flushPromises()
+    const allCalls = useHeadSpy.mock.calls.map((c: any[]) => {
+      const arg = c[0]; return typeof arg === 'function' ? arg() : arg
+    })
+    const hasNoindex = allCalls.some((h: any) =>
+      (h?.meta ?? []).some((m: any) => m?.name === 'robots' && m?.content?.includes('noindex')))
+    expect(hasNoindex).toBe(false)
     ;(globalThis as any).useHead = vi.fn()
   })
 

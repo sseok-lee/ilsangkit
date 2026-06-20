@@ -431,6 +431,7 @@ import {
   hasUsableRealEstateDetailData,
   type RealEstateDetailData,
 } from '~/utils/realEstateDetailData'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
@@ -510,6 +511,7 @@ const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam])
 // ── SEO / Head ────────────────────────────────────────────────────────────────
 
 const buildingInfo = ref<BuildingInfo | null>(null)
+const fetchFailed = ref(false)   // SSR building-info 일시 실패 여부
 const summary = ref<StatsSummary | null>(null)
 const statsLoading = ref(true)
 const txLoading = ref(true)
@@ -526,6 +528,7 @@ const noindex = computed(() =>
     buildingName: buildingName.value,
     loaded: !statsLoading.value && !txLoading.value,
     hasBuildingInfo: buildingInfo.value !== null,
+    fetchFailed: fetchFailed.value,
   }),
 )
 
@@ -942,29 +945,20 @@ function buildTransactionSearchParams(
 
 async function resolveBuildingContext(): Promise<{ bjdCode: string; building: BuildingInfo | null }> {
   if (resolvedBjdCode.value) {
-    return {
-      bjdCode: resolvedBjdCode.value,
-      building: buildingInfo.value,
-    }
+    return { bjdCode: resolvedBjdCode.value, building: buildingInfo.value }
   }
 
-  try {
-    const listResult = await getComplexList(apiSlug.value, cityName, districtName, buildingName.value, 1, 1)
-    const candidate = listResult.items[0]
-    if (candidate?.bjdCode) {
-      return { bjdCode: candidate.bjdCode, building: null }
-    }
-  } catch {
-    // fall through to building-info based recovery
+  // getComplexList: HTTP 에러(일시 장애)면 throw되어 상위 로더가 잡는다. 빈 목록은 정상 통과.
+  const listResult = await getComplexList(apiSlug.value, cityName, districtName, buildingName.value, 1, 1)
+  const candidate = listResult.items[0]
+  if (candidate?.bjdCode) {
+    return { bjdCode: candidate.bjdCode, building: null }
   }
 
-  try {
-    const fallbackBuilding = await getBuildingInfo(apiSlug.value, '', buildingName.value)
-    if (fallbackBuilding?.bjdCode) {
-      return { bjdCode: fallbackBuilding.bjdCode, building: fallbackBuilding }
-    }
-  } catch {
-    // final fallback keeps empty bjdCode
+  // fallback: getBuildingInfo는 404→null(없는 건물), 일시 장애→throw.
+  const fallbackBuilding = await getBuildingInfo(apiSlug.value, '', buildingName.value)
+  if (fallbackBuilding?.bjdCode) {
+    return { bjdCode: fallbackBuilding.bjdCode, building: fallbackBuilding }
   }
 
   return { bjdCode: '', building: null }
@@ -975,7 +969,16 @@ async function resolveBuildingContext(): Promise<{ bjdCode: string; building: Bu
 const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData(
   `re-detail-new-${realEstateType}-${citySlugParam}-${districtSlugParam}-${route.params.buildingName}`,
   async () => {
-    const { bjdCode, building: primedBuilding } = await resolveBuildingContext()
+    let infoFetchFailed = false
+    let bjdCode = ''
+    let primedBuilding: BuildingInfo | null = null
+    try {
+      const ctx = await resolveBuildingContext()
+      bjdCode = ctx.bjdCode
+      primedBuilding = ctx.building
+    } catch {
+      infoFetchFailed = true   // bjdCode 해석 단계의 일시 장애
+    }
 
     const [statsResult, txResult, infoResult, areaResult] = await Promise.allSettled([
       bjdCode
@@ -990,6 +993,7 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
         : Promise.resolve([]),
     ])
     const resolvedBuildingInfo = infoResult.status === 'fulfilled' ? infoResult.value : null
+    if (infoResult.status === 'rejected') infoFetchFailed = true
     let facilitySummarySSR: string | null = null
     if (resolvedBuildingInfo?.lat && resolvedBuildingInfo?.lng) {
       try {
@@ -1019,9 +1023,14 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
       buildingInfo: resolvedBuildingInfo,
       areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
       facilitySummary: facilitySummarySSR,
+      infoFetchFailed,
     }
   },
 )
+if (import.meta.server && ssrData.value?.infoFetchFailed) {
+  fetchFailed.value = true
+  markDegradedResponse()
+}
 const ssrLoading = computed(() => ssrStatus.value === 'pending')
 
 watch(ssrData, (data) => {
@@ -1035,6 +1044,7 @@ watch(ssrData, (data) => {
   facilitySummary.value = data.facilitySummary ?? null
   statsLoading.value = false
   txLoading.value = false
+  fetchFailed.value = data.infoFetchFailed ?? false
 
   if (import.meta.client && !hasUsableRealEstateDetailData(data)) {
     loadData()
