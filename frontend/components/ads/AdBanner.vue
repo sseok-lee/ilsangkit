@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
+import { useAdsPolicy } from '~/composables/useAdsPolicy'
 
 const AD_CLIENT = 'ca-pub-2088264360250020'
 const adTest = import.meta.dev ? 'on' : undefined
@@ -65,6 +66,7 @@ if (import.meta.dev && props.sizing === 'fixed') {
 const adKey = ref(0)
 const route = useRoute()
 const container = ref<HTMLElement | null>(null)
+const { shouldServeAds } = useAdsPolicy()
 const isTimedOut = ref(false)
 let statusTimeoutId: ReturnType<typeof setTimeout> | null = null
 let statusObserver: MutationObserver | null = null
@@ -74,7 +76,7 @@ const matches = ref(false)
 const isDesktopViewport = ref(false)
 let mq: MediaQueryList | null = null
 
-const shouldShow = computed(() => !props.only || matches.value)
+const shouldShow = computed(() => shouldServeAds.value && (!props.only || matches.value))
 const isCompactMobileActive = computed(() =>
   props.variant === 'compact-mobile' && !isDesktopViewport.value
 )
@@ -109,7 +111,7 @@ function applyMatches() {
   matches.value = props.only === 'desktop' ? mq.matches : !mq.matches
 }
 
-const { scheduleAdRequest } = useDeferredAdSenseRequest(container)
+const { scheduleAdRequest } = useDeferredAdSenseRequest(container, () => shouldServeAds.value)
 
 function clearStatusTimeout() {
   if (statusTimeoutId !== null) {

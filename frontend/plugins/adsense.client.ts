@@ -1,3 +1,5 @@
+import { canLoadAdScript } from '~/composables/useAdsPolicy'
+
 // AdSense adsbygoogle.js 를 hydration 완료 후(onNuxtReady)에 주입한다.
 // head 에 정적 async 로 두면 Auto Ads 가 hydration 도중 #__nuxt 내부에 광고 DOM 을 주입해
 // Vue hydration mismatch + adsbygoogle no_div + 순간 레이아웃 깨짐을 유발한다 (2026-06-09 Playwright 실측).
@@ -8,6 +10,8 @@ const ADSENSE_SRC =
 
 export default defineNuxtPlugin(() => {
   onNuxtReady(() => {
+    // CI(adsEnabled=false)·봇/헤드리스(Playwright 등)면 광고 스크립트 자체를 주입하지 않는다.
+    if (!canLoadAdScript()) return
     // HMR/재실행 대비 중복 주입 가드
     if (document.querySelector(`script[src="${ADSENSE_SRC}"]`)) return
     const s = document.createElement('script')

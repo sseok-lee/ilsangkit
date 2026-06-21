@@ -75,6 +75,7 @@ jobs:
           NUXT_PUBLIC_API_BASE: http://localhost:8000
           NUXT_PUBLIC_KAKAO_MAP_KEY: dummy_key_for_ci
           NUXT_PUBLIC_GA_ID: G-XXXXXXXXXX
+          NUXT_PUBLIC_ADS_ENABLED: 'false'
 
       # lighthouserc.js의 SAMPLE_FACILITY_URL / SAMPLE_REGION_URL은 prod 데이터 기준
       # hardcoded 기본값을 갖는데 CI seed에는 그 데이터가 없어 lighthouse 404.
@@ -122,6 +123,7 @@ jobs:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
           SAMPLE_FACILITY_URL: ${{ env.SAMPLE_FACILITY_URL }}
           SAMPLE_REGION_URL: ${{ env.SAMPLE_REGION_URL }}
+          NUXT_PUBLIC_ADS_ENABLED: 'false'
 
       - name: Upload Lighthouse results
         uses: actions/upload-artifact@v4

@@ -184,7 +184,10 @@ export default defineNuxtConfig({
       kakaoMapKey: process.env.NUXT_PUBLIC_KAKAO_MAP_KEY || '',
       gaId: process.env.NUXT_PUBLIC_GA_ID || '',
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://ilsangkit.co.kr',
-      disableMsw: process.env.NUXT_PUBLIC_DISABLE_MSW === 'true'
+      disableMsw: process.env.NUXT_PUBLIC_DISABLE_MSW === 'true',
+      // ⚠️ 리터럴 boolean 필수 — NUXT_PUBLIC_ADS_ENABLED override가 boolean으로 강제 변환됨.
+      // process.env 읽기/문자열 금지. CI/Lighthouse에서만 NUXT_PUBLIC_ADS_ENABLED=false.
+      adsEnabled: true
     }
   },
 

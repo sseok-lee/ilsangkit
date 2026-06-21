@@ -108,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watchEffect } from 'vue'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
@@ -126,6 +126,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { shouldNoindexSsr } from '~/utils/ssrIndexability'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { suppressAds } from '~/composables/useAdsPolicy'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -206,6 +207,8 @@ if (ssrData.value) {
 }
 pending.value = false
 const fetchFailed = computed(() => !!error.value)
+
+watchEffect(() => suppressAds(fetchFailed.value || totalComplexes.value === 0))
 
 async function goToPage(page: number) {
   if (page < 1 || page > totalPages.value) return

@@ -23,6 +23,7 @@ const mockRuntimeConfig = {
     apiBase: 'http://localhost:8000',
     kakaoMapKey: 'test-key',
     gaId: '',
+    adsEnabled: true,
   },
 }
 
@@ -49,6 +50,19 @@ const mockRuntimeConfig = {
   meta: {},
   redirectedFrom: undefined,
 })
+
+// useState 키별 공유 ref 스토어 — useAdsPolicy 등 composable 단위테스트용
+const __useStateStore = new Map<string, ReturnType<typeof ref>>()
+;(globalThis as any).useState = <T>(key: string, init?: () => T) => {
+  if (!__useStateStore.has(key)) {
+    __useStateStore.set(key, ref(init ? init() : (null as unknown as T)))
+  }
+  return __useStateStore.get(key)
+}
+;(globalThis as any).__resetUseState = () => __useStateStore.clear()
+
+// Passthrough mock for defineNuxtRouteMiddleware — middleware files must be importable in vitest
+;(globalThis as any).defineNuxtRouteMiddleware = (fn: any) => fn
 
 // Mock Nuxt auto-imports
 config.global.mocks = {

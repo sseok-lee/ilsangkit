@@ -28,7 +28,7 @@ const LIGHTHOUSE_URLS = [
 module.exports = {
   ci: {
     collect: {
-      startServerCommand: 'PORT=4173 npm run preview',
+      startServerCommand: 'NUXT_PUBLIC_ADS_ENABLED=false PORT=4173 npm run preview',
       startServerReadyPattern: 'Listening',
       startServerReadyTimeout: 60000,
       url: LIGHTHOUSE_URLS,
