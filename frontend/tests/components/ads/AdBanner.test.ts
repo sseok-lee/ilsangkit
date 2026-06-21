@@ -244,6 +244,11 @@ describe('AdBanner', () => {
     expect(ins.attributes('style') || '').not.toMatch(/height:\s*150px/)
   })
 
+  it('라우트 변경 재요청에 rapid-nav 스로틀 가드가 있다', () => {
+    expect(source()).toContain('MIN_NAV_INTERVAL_MS')
+    expect(source()).toMatch(/route\.path[\s\S]*MIN_NAV_INTERVAL_MS/)
+  })
+
   it('ads:suppressed=true면 광고를 렌더하지 않는다', async () => {
     ;(globalThis as any).useState('ads:suppressed', () => false).value = true
     const wrapper = mount(AdBanner, { global: { stubs: { ClientOnly: clientOnlyStub } } })
