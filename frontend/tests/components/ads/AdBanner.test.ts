@@ -31,6 +31,7 @@ describe('AdBanner', () => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
     delete (window as unknown as { adsbygoogle?: unknown }).adsbygoogle
+    ;(globalThis as any).__resetUseState?.()
   })
 
   it('persists the AdSense queue on window before pushing the manual slot request', () => {
@@ -39,7 +40,7 @@ describe('AdBanner', () => {
   })
 
   it('pushes the ad request immediately on mount without lazy/IntersectionObserver gating', () => {
-    expect(source()).toContain('useDeferredAdSenseRequest(container)')
+    expect(source()).toContain('useDeferredAdSenseRequest(container, () => shouldServeAds.value)')
     expect(requestSource()).toContain('hasRequestedAd.value = true')
     expect(requestSource()).toContain('onBeforeUnmount(clearPendingAdRequest)')
     expect(requestSource()).not.toContain('IntersectionObserver')
@@ -241,5 +242,17 @@ describe('AdBanner', () => {
     expect(ins.attributes('data-ad-format')).toBe('auto')
     expect(ins.attributes('data-full-width-responsive')).toBe('true')
     expect(ins.attributes('style') || '').not.toMatch(/height:\s*150px/)
+  })
+
+  it('라우트 변경 재요청에 rapid-nav 스로틀 가드가 있다', () => {
+    expect(source()).toContain('MIN_NAV_INTERVAL_MS')
+    expect(source()).toMatch(/route\.path[\s\S]*MIN_NAV_INTERVAL_MS/)
+  })
+
+  it('ads:suppressed=true면 광고를 렌더하지 않는다', async () => {
+    ;(globalThis as any).useState('ads:suppressed', () => false).value = true
+    const wrapper = mount(AdBanner, { global: { stubs: { ClientOnly: clientOnlyStub } } })
+    await flushAdMount()
+    expect(wrapper.find('ins.adsbygoogle').exists()).toBe(false)
   })
 })

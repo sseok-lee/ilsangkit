@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
+import { useAdsPolicy } from '~/composables/useAdsPolicy'
 
 const AD_CLIENT = 'ca-pub-2088264360250020'
 const adTest = import.meta.dev ? 'on' : undefined
@@ -35,6 +36,9 @@ const adTest = import.meta.dev ? 'on' : undefined
 // data-ad-status 가 영영 설정되지 않아 빈 박스가 그대로 남는다.
 // 이 시간 안에 status 가 안 잡히면 부모를 collapse 한다.
 const STATUS_TIMEOUT_MS = 4000
+// 짧은 간격 연속 네비게이션(봇/빠른 클릭) 시 광고 재요청을 억제 — 인위적 임프레션 방지.
+const MIN_NAV_INTERVAL_MS = 1500
+let lastNavAt = 0
 
 const props = withDefaults(defineProps<{
   adSlot?: string
@@ -65,6 +69,7 @@ if (import.meta.dev && props.sizing === 'fixed') {
 const adKey = ref(0)
 const route = useRoute()
 const container = ref<HTMLElement | null>(null)
+const { shouldServeAds } = useAdsPolicy()
 const isTimedOut = ref(false)
 let statusTimeoutId: ReturnType<typeof setTimeout> | null = null
 let statusObserver: MutationObserver | null = null
@@ -74,7 +79,7 @@ const matches = ref(false)
 const isDesktopViewport = ref(false)
 let mq: MediaQueryList | null = null
 
-const shouldShow = computed(() => !props.only || matches.value)
+const shouldShow = computed(() => shouldServeAds.value && (!props.only || matches.value))
 const isCompactMobileActive = computed(() =>
   props.variant === 'compact-mobile' && !isDesktopViewport.value
 )
@@ -109,7 +114,7 @@ function applyMatches() {
   matches.value = props.only === 'desktop' ? mq.matches : !mq.matches
 }
 
-const { scheduleAdRequest } = useDeferredAdSenseRequest(container)
+const { scheduleAdRequest } = useDeferredAdSenseRequest(container, () => shouldServeAds.value)
 
 function clearStatusTimeout() {
   if (statusTimeoutId !== null) {
@@ -199,6 +204,9 @@ watch(matches, async (next) => {
 
 watch(() => route.path, async () => {
   if (!shouldShow.value) return
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+  if (now - lastNavAt < MIN_NAV_INTERVAL_MS) return // rapid-nav 가드
+  lastNavAt = now
   adKey.value++
   await nextTick()
   refresh()

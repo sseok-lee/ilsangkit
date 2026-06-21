@@ -140,8 +140,6 @@
         </div>
       </SectionBlock>
 
-      <!-- Ad: 로드뷰 이후 (데스크톱은 위치(md:order-7)와 거래내역(md:order-9) 사이) -->
-      <AdBanner class="order-10 md:order-8" variant="compact-mobile" />
 
       <!-- "전·월세 거래 비중" 블록 (rent 전용) — 시세추이(order-4) 직후로 승격 -->
       <SectionBlock
@@ -358,8 +356,6 @@
         </SectionBlock>
       </div>
 
-      <!-- Ad: 인근 단지 이후 -->
-      <AdBanner class="order-12 md:order-12" variant="compact-mobile" />
 
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
@@ -400,7 +396,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import type { FacilitySearchItem } from '~/types'
@@ -432,6 +428,7 @@ import {
   type RealEstateDetailData,
 } from '~/utils/realEstateDetailData'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { suppressAds } from '~/composables/useAdsPolicy'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
@@ -531,6 +528,9 @@ const noindex = computed(() =>
     fetchFailed: fetchFailed.value,
   }),
 )
+
+// degraded(503) 또는 noindex(빈 건물) 페이지에선 광고 발화를 억제한다 (SSR·클라 네비 모두).
+watchEffect(() => suppressAds(fetchFailed.value || noindex.value))
 
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 
