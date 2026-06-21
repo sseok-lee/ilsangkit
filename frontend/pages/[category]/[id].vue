@@ -120,7 +120,7 @@
               <DetailFacilityStatus :facility="facility" />
 
               <!-- Ad: T1 ↔ T3 사이 -->
-              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
+              <AdBanner variant="compact-mobile" />
 
               <!-- T3 BasicInfo (기본정보·운영시간) -->
               <DetailBasicInfo
@@ -135,7 +135,7 @@
               />
 
               <!-- Ad: BASIC INFO ↔ MAP 사이 -->
-              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
+              <AdBanner variant="compact-mobile" />
 
               <!-- 위치·로드뷰 -->
               <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
@@ -162,9 +162,6 @@
                 </div>
               </SectionBlock>
 
-              <!-- Ad: ROADVIEW ↔ NEARBY 사이 -->
-              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
-
               <!-- 주변 시설 (same + cross category) -->
               <DetailNearby
                 :nearby-facilities="nearbyFiltered"
@@ -174,8 +171,6 @@
                 :category-meta="categoryMeta"
               />
 
-              <!-- Ad: 주변 시설 바로 아래 -->
-              <AdBanner />
 
               <!-- 관련 YouTube 영상 -->
               <FacilityYoutubeSection
@@ -193,7 +188,7 @@
               />
 
               <!-- Ad: NEARBY 이후 -->
-              <AdBanner />
+              <AdBanner variant="compact-mobile" />
 
               <!-- Mobile-only inline CoupangBanner (데이터 출처 위로 이동, md+에서는 사이드바 Coupang 사용) -->
               <CoupangBanner class="md:hidden" />
