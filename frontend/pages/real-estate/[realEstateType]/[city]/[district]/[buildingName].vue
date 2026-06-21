@@ -400,7 +400,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import type { FacilitySearchItem } from '~/types'
@@ -432,6 +432,7 @@ import {
   type RealEstateDetailData,
 } from '~/utils/realEstateDetailData'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { suppressAds } from '~/composables/useAdsPolicy'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
@@ -531,6 +532,9 @@ const noindex = computed(() =>
     fetchFailed: fetchFailed.value,
   }),
 )
+
+// degraded(503) 또는 noindex(빈 건물) 페이지에선 광고 발화를 억제한다 (SSR·클라 네비 모두).
+watchEffect(() => suppressAds(fetchFailed.value || noindex.value))
 
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 

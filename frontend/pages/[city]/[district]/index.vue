@@ -74,6 +74,8 @@ import { generateAreaDescription } from '~/utils/seoHelpers'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { shouldNoindexSsr } from '~/utils/ssrIndexability'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { watchEffect } from 'vue'
+import { suppressAds } from '~/composables/useAdsPolicy'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -195,6 +197,8 @@ const isNoindex = computed(() => shouldNoindexSsr({
   fetchFailed: fetchFailed.value,
   confirmedEmpty: !fetchFailed.value && areaData.value === null,
 }))
+
+watchEffect(() => suppressAds(fetchFailed.value || isNoindex.value))
 
 // SEO 메타
 const { setMeta } = useFacilityMeta()
