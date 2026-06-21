@@ -61,6 +61,9 @@ const __useStateStore = new Map<string, ReturnType<typeof ref>>()
 }
 ;(globalThis as any).__resetUseState = () => __useStateStore.clear()
 
+// Passthrough mock for defineNuxtRouteMiddleware — middleware files must be importable in vitest
+;(globalThis as any).defineNuxtRouteMiddleware = (fn: any) => fn
+
 // Mock Nuxt auto-imports
 config.global.mocks = {
   $config: mockRuntimeConfig,
