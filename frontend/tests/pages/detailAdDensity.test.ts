@@ -18,3 +18,16 @@ describe('시설 상세 광고 밀도', () => {
     expect(src()).not.toContain('Ad: 주변 시설 바로 아래')
   })
 })
+
+describe('부동산 상세 광고 밀도', () => {
+  const src = () => read('pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+  it('AdBanner는 4개', () => {
+    expect(count(src(), /<AdBanner/g)).toBe(4)
+  })
+  it('로드뷰 이후 광고는 제거됐다', () => {
+    expect(src()).not.toContain('Ad: 로드뷰 이후')
+  })
+  it('인근 단지 이후 광고는 제거됐다', () => {
+    expect(src()).not.toContain('Ad: 인근 단지 이후')
+  })
+})

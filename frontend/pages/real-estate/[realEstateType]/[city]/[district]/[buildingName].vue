@@ -140,8 +140,6 @@
         </div>
       </SectionBlock>
 
-      <!-- Ad: 로드뷰 이후 (데스크톱은 위치(md:order-7)와 거래내역(md:order-9) 사이) -->
-      <AdBanner class="order-10 md:order-8" variant="compact-mobile" />
 
       <!-- "전·월세 거래 비중" 블록 (rent 전용) — 시세추이(order-4) 직후로 승격 -->
       <SectionBlock
@@ -358,8 +356,6 @@
         </SectionBlock>
       </div>
 
-      <!-- Ad: 인근 단지 이후 -->
-      <AdBanner class="order-12 md:order-12" variant="compact-mobile" />
 
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
