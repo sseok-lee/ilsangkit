@@ -401,7 +401,7 @@ const breadcrumbItems = [
   { label: dong, href: `/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong)}`, current: true },
 ]
 
-const { setBreadcrumbSchema, setFAQSchema } = useStructuredData()
+const { setBreadcrumbSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
@@ -413,4 +413,36 @@ setBreadcrumbSchema([
 
 // FAQPage JSON-LD (LAND_FAQ는 {q,a} → setFAQSchema는 {question,answer} 요구 → 어댑터)
 setFAQSchema(LAND_FAQ.map((f) => ({ question: f.q, answer: f.a })))
+
+// 출처 Dataset(provenance) — 국토교통부 토지 실거래가. (토지 요약엔 page updatedAt 없음 → dateModified 생략)
+setDetailProvenance({
+  domain: 'real-estate',
+  path: `/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong)}`,
+  description: `${cityName} ${districtName} ${dong} 토지 실거래가·지목·용도지역 (국토교통부 토지 실거래가 기반)`,
+  updatedAt: null,
+  noindex: noindex.value,
+})
+
+// 동(洞) 엔티티 — 좌표 없는 행정구역이라 minimal Place(주소 기반). 인덱서블일 때만.
+if (!noindex.value) {
+  useHead({
+    script: [
+      {
+        key: 'jsonld-land-place',
+        type: 'application/ld+json',
+        innerHTML: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Place',
+          name: `${districtName} ${dong}`,
+          address: {
+            '@type': 'PostalAddress',
+            addressCountry: 'KR',
+            addressRegion: cityName,
+            addressLocality: `${districtName} ${dong}`,
+          },
+        }),
+      },
+    ],
+  })
+}
 </script>
