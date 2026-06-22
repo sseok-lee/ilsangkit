@@ -24,7 +24,7 @@ vi.mock('~/composables/useSubscription', () => ({
   useSubscription: () => ({ getSubscriptionDetail: vi.fn() }),
 }))
 vi.mock('~/composables/useStructuredData', () => ({
-  useStructuredData: () => ({ setBreadcrumbSchema: vi.fn(), setEventSchema: vi.fn() }),
+  useStructuredData: () => ({ setBreadcrumbSchema: vi.fn(), setEventSchema: vi.fn(), setDetailProvenance: vi.fn() }),
 }))
 vi.mock('~/composables/useAnalytics', () => ({
   useAnalytics: () => ({ trackSubscriptionView: vi.fn() }),
@@ -58,6 +58,7 @@ const mockSubscription = {
   constructorName: null,
   developerName: null,
   houseDetailType: null,
+  updatedAt: '2026-06-01T00:00:00.000Z',
 }
 
 const mockUnitTypes = [
@@ -84,7 +85,7 @@ const stubs = {
   SubscriptionScheduleTimeline: { template: '<div data-testid="schedule">Schedule</div>', props: ['subscription'] },
   RentalPriceStatsBox: { template: '<div />', props: ['subscriptionId', 'regionName'] },
   RelatedGuides: { template: '<div data-testid="related-guides" />', props: ['categories', 'limit'] },
-  DataSourceSection: { template: '<div data-testid="data-source" />', props: ['domain'] },
+  DataSourceSection: { template: '<div data-testid="data-source" />', props: ['domain', 'lastSyncDate'] },
   AdBanner: { template: '<div data-testid="ad-banner" />' },
   SectionBlock: { template: '<section><h2 v-if="heading">{{ heading }}</h2><slot name="right" /><slot /></section>', props: ['heading', 'subtext'] },
   // 공용 헤더: 실제처럼 literal h1 1개 + eyebrow 노출 (단일 h1 가드 의미 유지)

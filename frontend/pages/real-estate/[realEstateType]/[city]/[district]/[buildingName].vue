@@ -635,7 +635,7 @@ const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups,
 const { useApiBase } = await import('~/composables/useApiBase')
 const apiBase = useApiBase()
 
-const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema } = useStructuredData()
+const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema, setDetailProvenance } = useStructuredData()
 
 // Breadcrumb JSON-LD
 const listUrl = toRealEstateListUrl({ type: realEstateType, city: cityName, district: districtName })
@@ -742,11 +742,16 @@ const { data: secondaryResponse } = await useAsyncData(
     default: () => ({ syncStatus: null as Record<string, string | null> | null }),
   }
 )
+const syncStatusKey = computed(() => apiSlug.value.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()))
 const lastSyncDate = computed(() => {
   const syncStatus = secondaryResponse.value?.syncStatus
   if (!syncStatus) return null
-  const key = apiSlug.value.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-  return formatKstDate(syncStatus[key])
+  return formatKstDate(syncStatus[syncStatusKey.value])
+})
+const rawSyncDate = computed(() => {
+  const syncStatus = secondaryResponse.value?.syncStatus
+  if (!syncStatus) return null
+  return syncStatus[syncStatusKey.value] ?? null
 })
 
 // ── Computed display values ───────────────────────────────────────────────────
@@ -1207,6 +1212,15 @@ setRealEstateListingSchema(() => {
     recentAvg: summary.value?.recentAvg != null ? summary.value.recentAvg * 10_000 : undefined,
     latestDealDate,
   }
+})
+watchEffect(() => {
+  setDetailProvenance({
+    domain: 'real-estate',
+    path: route.path,
+    description: `${buildingName.value} 실거래가·시세 (국토교통부 공개 데이터 기반)`,
+    updatedAt: rawSyncDate.value,
+    noindex: noindex.value,
+  })
 })
 
 // building_viewed analytics 는 클라이언트에서 buildingInfo 로드 후만 발화

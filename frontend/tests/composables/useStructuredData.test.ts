@@ -711,6 +711,12 @@ describe('useStructuredData', () => {
       setDetailProvenance({ domain: 'facility', path: '/x', description: 'x' })
       expect(mockUseHead).not.toHaveBeenCalled()
     })
+
+    it('path가 없으면 아무것도 출력하지 않는다', () => {
+      const { setDetailProvenance } = useStructuredData()
+      setDetailProvenance({ domain: 'facility', category: 'toilet', path: '', description: 'x', updatedAt: '2026-06-20T00:00:00Z' })
+      expect(mockUseHead).not.toHaveBeenCalled()
+    })
   })
 
   describe('setDatasetSchema provenance/date 옵션', () => {
