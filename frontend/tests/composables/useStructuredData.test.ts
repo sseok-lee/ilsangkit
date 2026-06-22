@@ -687,4 +687,60 @@ describe('useStructuredData', () => {
       expect(video.description.length).toBeGreaterThan(0)
     })
   })
+
+  describe('setDetailProvenance', () => {
+    it('facility/toilet에 대해 원본 데이터셋명·제공기관·dateModified를 가진 Dataset을 출력한다', () => {
+      const { setDetailProvenance } = useStructuredData()
+      setDetailProvenance({ domain: 'facility', category: 'toilet', path: '/toilet/1', description: '역삼동 공중화장실 위치·운영시간', updatedAt: '2026-06-20T03:00:00Z' })
+      const parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
+      expect(parsed['@type']).toBe('Dataset')
+      expect(parsed.name).toBe('전국 공중화장실 표준데이터')
+      expect(parsed.sourceOrganization.name).toBe('행정안전부')
+      expect(parsed.isBasedOn).toContain('data.go.kr')
+      expect(parsed.dateModified).toBe('2026-06-20')
+    })
+
+    it('noindex=true면 아무것도 출력하지 않는다', () => {
+      const { setDetailProvenance } = useStructuredData()
+      setDetailProvenance({ domain: 'facility', category: 'toilet', path: '/toilet/1', description: 'x', noindex: true })
+      expect(mockUseHead).not.toHaveBeenCalled()
+    })
+
+    it('출처가 없는 도메인(예: category 없는 facility)이면 출력하지 않는다', () => {
+      const { setDetailProvenance } = useStructuredData()
+      setDetailProvenance({ domain: 'facility', path: '/x', description: 'x' })
+      expect(mockUseHead).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('setDatasetSchema provenance/date 옵션', () => {
+    const baseSource = { datasetName: '전국 공중화장실 표준데이터', provider: '행정안전부', url: 'https://www.data.go.kr/data/15012892/standard.do' }
+
+    it('provenance 옵션 전달 시 isBasedOn/sourceOrganization/citation/dateModified/datePublished를 출력한다', () => {
+      const { setDatasetSchema } = useStructuredData()
+      setDatasetSchema({
+        name: baseSource.datasetName, description: '설명', url: '/toilet/1', sources: [baseSource],
+        isBasedOn: baseSource.url,
+        sourceOrganization: { '@type': 'Organization', name: baseSource.provider },
+        citation: { '@type': 'Dataset', name: baseSource.datasetName, url: baseSource.url },
+        dateModified: '2026-06-20', datePublished: '2026-01-01',
+      })
+      const parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
+      expect(parsed.isBasedOn).toBe(baseSource.url)
+      expect(parsed.sourceOrganization).toEqual({ '@type': 'Organization', name: '행정안전부' })
+      expect(parsed.citation['@type']).toBe('Dataset')
+      expect(parsed.dateModified).toBe('2026-06-20')
+      expect(parsed.datePublished).toBe('2026-01-01')
+    })
+
+    it('provenance 옵션 미전달 시 새 필드는 출력되지 않는다 (하위호환)', () => {
+      const { setDatasetSchema } = useStructuredData()
+      setDatasetSchema({ name: baseSource.datasetName, description: '설명', url: '/toilet', sources: [baseSource] })
+      const parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
+      expect(parsed.isBasedOn).toBeUndefined()
+      expect(parsed.sourceOrganization).toBeUndefined()
+      expect(parsed.dateModified).toBeUndefined()
+      expect(parsed.datePublished).toBeUndefined()
+    })
+  })
 })
