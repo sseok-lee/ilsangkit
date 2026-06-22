@@ -146,6 +146,8 @@
 
         <!-- Ad: 본문 마무리 (청약 패턴 3번) -->
         <AdBanner />
+
+        <DataSourceSection domain="public-rental" :last-sync-date="lastSyncDate" />
       </template>
     </main>
   </div>
@@ -158,6 +160,8 @@ import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useRentalAnnouncements } from '~/composables/useRentalAnnouncements'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { formatKstDate } from '~/utils/formatters'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import type { AnnouncementStatus } from '~/types/publicRentalAnnouncement'
 import { SITE_URL } from '~/utils/seoConstants'
 
@@ -187,7 +191,7 @@ if (!detail.value) {
 }
 const ann = detail.value   // non-null after guard
 
-const { setBreadcrumbSchema } = useStructuredData()
+const { setBreadcrumbSchema, setArticleSchema, setEventSchema, setDetailProvenance } = useStructuredData()
 
 function formatDateRange(begin: string | null, end: string | null): string {
   if (begin && end) return `${begin} ~ ${end}`
@@ -249,4 +253,36 @@ setBreadcrumbSchema([
   { name: '모집공고', url: '/public-rental/announcements' },
   { name: ann.pblancNm, url: canonicalUrl },
 ])
+
+// Article 또는 Event JSON-LD (접수기간 있으면 Event, 없으면 Article) — 기존 BreadcrumbList만 있던 누락 보강
+if (ann.beginDe && ann.endDe) {
+  setEventSchema({
+    name: ann.pblancNm,
+    description: annDescription,
+    startDate: ann.beginDe,
+    endDate: ann.endDe,
+    url: canonicalUrl,
+    eventStatus: isClosed ? 'EventCancelled' : 'EventScheduled',
+  })
+} else {
+  setArticleSchema({
+    headline: ann.pblancNm,
+    description: annDescription,
+    datePublished: ann.rcritPblancDe ?? ann.beginDe ?? '',
+    dateModified: ann.updatedAt ?? undefined,
+    url: canonicalUrl,
+  })
+}
+
+// 출처 Dataset(provenance) — LH·SH 공공데이터
+setDetailProvenance({
+  domain: 'public-rental',
+  path: `/public-rental/announcements/${encodeURIComponent(pblancId)}`,
+  description: `${ann.pblancNm} 공공임대 공고 (LH·SH 공공데이터 기반)`,
+  updatedAt: ann.updatedAt ?? null,
+  noindex: isClosed,
+})
+
+// 가시 '최근 동기화' (DataSourceSection)
+const lastSyncDate = ann.updatedAt ? formatKstDate(ann.updatedAt) : null
 </script>
