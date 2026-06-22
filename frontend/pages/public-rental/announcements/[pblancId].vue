@@ -265,13 +265,17 @@ if (ann.beginDe && ann.endDe) {
     eventStatus: isClosed ? 'EventCancelled' : 'EventScheduled',
   })
 } else {
-  setArticleSchema({
-    headline: ann.pblancNm,
-    description: annDescription,
-    datePublished: ann.rcritPblancDe ?? ann.beginDe ?? '',
-    dateModified: ann.updatedAt ?? undefined,
-    url: canonicalUrl,
-  })
+  // datePublished는 schema.org Article 필수 — 유효한 날짜가 있을 때만 Article 발행(빈 문자열 금지)
+  const pubDate = ann.rcritPblancDe ?? ann.beginDe ?? null
+  if (pubDate) {
+    setArticleSchema({
+      headline: ann.pblancNm,
+      description: annDescription,
+      datePublished: pubDate,
+      dateModified: ann.updatedAt ?? undefined,
+      url: canonicalUrl,
+    })
+  }
 }
 
 // 출처 Dataset(provenance) — LH·SH 공공데이터
