@@ -176,7 +176,7 @@
       </SectionBlock>
 
       <!-- 데이터 정보 -->
-      <DataSourceSection domain="facility" category="trash" />
+      <DataSourceSection domain="facility" category="trash" :last-sync-date="lastSyncDate" />
     </template>
   </div>
 </template>
@@ -194,6 +194,7 @@ import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
+import { formatKstDate } from '~/utils/formatters'
 
 const trashTips = CATEGORY_TIPS.trash
 const trashFaqItems = CATEGORY_FAQ.trash.slice(0, 3)
@@ -201,7 +202,7 @@ const trashFaqItems = CATEGORY_FAQ.trash.slice(0, 3)
 const route = useRoute()
 const router = useRouter()
 const { setWasteScheduleDetailMeta } = useFacilityMeta()
-const { setBreadcrumbSchema, setWasteScheduleSchema } = useStructuredData()
+const { setBreadcrumbSchema, setWasteScheduleSchema, setDetailProvenance } = useStructuredData()
 
 interface WasteTypeInfo {
   dayOfWeek?: string
@@ -324,6 +325,11 @@ const trashRegionLink = computed(() => {
   }
 })
 
+const lastSyncDate = computed(() => {
+  const ts = data.value?.details?.lastModified ?? data.value?.details?.dataCreatedDate
+  return ts ? formatKstDate(String(ts)) : null
+})
+
 // SSR에서 메타태그 및 JSON-LD 설정
 watchEffect(() => {
   if (data.value) {
@@ -334,6 +340,11 @@ watchEffect(() => {
       { name: '쓰레기 배출', url: '/search?category=trash' },
       { name: `${data.value.city} ${data.value.district}`, url: `/trash/${data.value.id}` },
     ])
+    setDetailProvenance({
+      domain: 'facility', category: 'trash', path: `/trash/${data.value.id}`,
+      description: `${data.value.city ?? ''} ${data.value.district ?? ''} 생활폐기물 배출일정 (환경부 공공데이터 기반)`.trim(),
+      updatedAt: data.value.details?.lastModified ?? data.value.details?.dataCreatedDate ?? null,
+    })
   }
 })
 </script>
