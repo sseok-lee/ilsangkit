@@ -687,4 +687,35 @@ describe('useStructuredData', () => {
       expect(video.description.length).toBeGreaterThan(0)
     })
   })
+
+  describe('setDatasetSchema provenance/date 옵션', () => {
+    const baseSource = { datasetName: '전국 공중화장실 표준데이터', provider: '행정안전부', url: 'https://www.data.go.kr/data/15012892/standard.do' }
+
+    it('provenance 옵션 전달 시 isBasedOn/sourceOrganization/citation/dateModified/datePublished를 출력한다', () => {
+      const { setDatasetSchema } = useStructuredData()
+      setDatasetSchema({
+        name: baseSource.datasetName, description: '설명', url: '/toilet/1', sources: [baseSource],
+        isBasedOn: baseSource.url,
+        sourceOrganization: { '@type': 'Organization', name: baseSource.provider },
+        citation: { '@type': 'Dataset', name: baseSource.datasetName, url: baseSource.url },
+        dateModified: '2026-06-20', datePublished: '2026-01-01',
+      })
+      const parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
+      expect(parsed.isBasedOn).toBe(baseSource.url)
+      expect(parsed.sourceOrganization).toEqual({ '@type': 'Organization', name: '행정안전부' })
+      expect(parsed.citation['@type']).toBe('Dataset')
+      expect(parsed.dateModified).toBe('2026-06-20')
+      expect(parsed.datePublished).toBe('2026-01-01')
+    })
+
+    it('provenance 옵션 미전달 시 새 필드는 출력되지 않는다 (하위호환)', () => {
+      const { setDatasetSchema } = useStructuredData()
+      setDatasetSchema({ name: baseSource.datasetName, description: '설명', url: '/toilet', sources: [baseSource] })
+      const parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
+      expect(parsed.isBasedOn).toBeUndefined()
+      expect(parsed.sourceOrganization).toBeUndefined()
+      expect(parsed.dateModified).toBeUndefined()
+      expect(parsed.datePublished).toBeUndefined()
+    })
+  })
 })

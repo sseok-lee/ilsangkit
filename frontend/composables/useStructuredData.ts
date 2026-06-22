@@ -772,8 +772,14 @@ export function useStructuredData() {
     sources: DataSourceInfo[]
     keywords?: string[]
     spatialCoverage?: string
+    dateModified?: string
+    datePublished?: string
+    isBasedOn?: string
+    sourceOrganization?: { '@type': 'Organization'; name: string }
+    citation?: { '@type': 'Dataset'; name: string; url: string }
   }) {
-    const { name, description, url, sources, keywords, spatialCoverage } = options
+    const { name, description, url, sources, keywords, spatialCoverage,
+      dateModified, datePublished, isBasedOn, sourceOrganization, citation } = options
     const koglLicenseUrl = (kogl?: 1 | 2 | 3 | 4) =>
       kogl ? `https://www.kogl.or.kr/info/licenseType0${kogl}.do` : 'https://www.kogl.or.kr/info/license.do'
 
@@ -805,6 +811,11 @@ export function useStructuredData() {
         name: SITE_NAME,
         url: SITE_URL,
       },
+      ...(dateModified ? { dateModified } : {}),
+      ...(datePublished ? { datePublished } : {}),
+      ...(isBasedOn ? { isBasedOn } : {}),
+      ...(sourceOrganization ? { sourceOrganization } : {}),
+      ...(citation ? { citation } : {}),
     }
     if (keywords && keywords.length > 0) {
       schema.keywords = keywords.join(',')
