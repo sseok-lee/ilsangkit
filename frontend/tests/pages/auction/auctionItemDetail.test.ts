@@ -52,10 +52,12 @@ vi.mock('~/composables/useAuction', () => ({
 
 const mockSetBreadcrumbSchema = vi.fn()
 const mockSetFAQSchema = vi.fn()
+const mockSetDetailProvenance = vi.fn()
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
     setFAQSchema: mockSetFAQSchema,
+    setDetailProvenance: mockSetDetailProvenance,
   }),
 }))
 
@@ -73,6 +75,7 @@ vi.mock('~/shared/regionSlugs', () => ({
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetFAQSchema.mockClear()
+  mockSetDetailProvenance.mockClear()
 })
 
 async function mountSuspended(component: any) {

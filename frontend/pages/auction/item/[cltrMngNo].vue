@@ -5,7 +5,7 @@ import { useAuction } from '~/composables/useAuction'
 import { SITE_URL } from '~/utils/seoConstants'
 import { computeAuctionItemHead } from '~/utils/auctionHead'
 import { AUCTION_FAQ } from '~/utils/auctionMeta'
-import { formatWonKorean, formatDiscount } from '~/types/auction'
+import { formatWonKorean, formatDiscount, isAuctionItemIndexable } from '~/types/auction'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useStructuredData } from '~/composables/useStructuredData'
 import AuctionStatusBadge from '~/components/auction/AuctionStatusBadge.vue'
@@ -133,12 +133,18 @@ const breadcrumbItems = computed(() => {
   ]
 })
 
-const { setBreadcrumbSchema, setFAQSchema } = useStructuredData()
+const { setBreadcrumbSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
 // ── FAQ 구조화 데이터(FAQPage JSON-LD) — spec §3.4 / 결정4 ────────────────────
 setFAQSchema(AUCTION_FAQ.map((f) => ({ question: f.q, answer: f.a })))
 setBreadcrumbSchema(
   breadcrumbItems.value.map((b) => ({ name: b.label, url: b.href })),
 )
+setDetailProvenance({
+  domain: 'auction', path: `/auction/item/${item.value.cltrMngNo}`,
+  description: `${item.value.address ?? '공매 물건'} 온비드 공매 정보 (한국자산관리공사 기반)`,
+  updatedAt: null,
+  noindex: !isAuctionItemIndexable(item.value),
+})
 </script>
 
 <template>
@@ -247,7 +253,7 @@ setBreadcrumbSchema(
       <!-- Ad: 쿠팡 (페이지 맨 아래) -->
       <CoupangBanner />
 
-      <DataSourceSection domain="auction" />
+      <DataSourceSection domain="auction" :last-sync-date="null" />
     </main>
   </div>
 </template>
