@@ -1,7 +1,8 @@
 import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import type { DataSourceInfo } from '~/utils/dataSource'
+import { resolveDataSource, type DataSourceDomain, type DataSourceInfo } from '~/utils/dataSource'
+import { formatKstDate } from '~/utils/formatters'
 
 /**
  * BreadcrumbList 스키마
@@ -832,6 +833,37 @@ export function useStructuredData() {
     })
   }
 
+  /**
+   * 상세 페이지 출처 Dataset (provenance) 일괄 출력 헬퍼.
+   * 엔티티 스키마(Place/Event 등)는 페이지가 따로 출력하고, 여기서는
+   * 이 페이지가 가공한 "원본 공공데이터셋"을 별도 Dataset 노드로 선언한다.
+   * noindex 페이지/출처 미상이면 아무것도 출력하지 않는다.
+   */
+  function setDetailProvenance(opts: {
+    domain: DataSourceDomain
+    category?: FacilityCategory
+    path: string
+    description: string
+    updatedAt?: string | null
+    createdAt?: string | null
+    noindex?: boolean
+  }) {
+    if (opts.noindex) return
+    const src = resolveDataSource({ domain: opts.domain, category: opts.category })
+    if (!src) return
+    setDatasetSchema({
+      name: src.datasetName,
+      description: opts.description,
+      url: opts.path,
+      sources: [src],
+      isBasedOn: src.url,
+      sourceOrganization: { '@type': 'Organization', name: src.provider },
+      citation: { '@type': 'Dataset', name: src.datasetName, url: src.url },
+      ...(opts.updatedAt ? { dateModified: formatKstDate(opts.updatedAt) } : {}),
+      ...(opts.createdAt ? { datePublished: formatKstDate(opts.createdAt) } : {}),
+    })
+  }
+
   return {
     setWebsiteSchema,
     setBreadcrumbSchema,
@@ -848,5 +880,6 @@ export function useStructuredData() {
     setEventSchema,
     setDatasetSchema,
     setVideoListSchema,
+    setDetailProvenance,
   }
 }
