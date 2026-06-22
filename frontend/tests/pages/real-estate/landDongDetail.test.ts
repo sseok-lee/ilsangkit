@@ -51,6 +51,7 @@ vi.mock('~/composables/useStructuredData', () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
     setItemListSchema: vi.fn(),
     setDatasetSchema: vi.fn(),
+    setDetailProvenance: vi.fn(),
     setFAQSchema: mockSetFAQSchema,
   }),
 }))

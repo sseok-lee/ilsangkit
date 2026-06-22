@@ -209,7 +209,7 @@
               <CoupangBanner class="md:hidden" />
 
               <!-- Data Source -->
-              <DataSourceSection domain="facility" category="subway" />
+              <DataSourceSection domain="facility" category="subway" :last-sync-date="station?.updatedAt ? formatKstDate(station.updatedAt) : null" />
             </article>
 
             <!-- Sidebar -->
@@ -295,6 +295,7 @@ import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
+import { formatKstDate } from '~/utils/formatters'
 import { subwayCanonicalUrl } from '~/utils/subwayCanonical'
 import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -572,8 +573,25 @@ setMeta({
 })
 
 // FAQPage JSON-LD (spec §6 결정4: FAQ 있는 페이지는 스키마 발행 통일)
-const { setFAQSchema } = useStructuredData()
+const { setFAQSchema, setBreadcrumbSchema, setDetailProvenance } = useStructuredData()
 setFAQSchema(faqItems.value)
+
+// BreadcrumbList JSON-LD — 화면 Breadcrumb UI와 동일 경로 (마지막 현재 항목은 자기 URL)
+setBreadcrumbSchema(
+  breadcrumbItems.value.map((b) => ({
+    name: b.label,
+    url: 'href' in b && b.href ? b.href : `/subway/${slug.value}`,
+  })),
+)
+
+// 출처 Dataset(provenance) — 국토교통부 도시철도역사 표준데이터
+setDetailProvenance({
+  domain: 'facility',
+  category: 'subway',
+  path: `/subway/${slug.value}`,
+  description: `${displayName.value} 지하철역 정보 (국토교통부 도시철도역사 표준데이터 기반)`,
+  updatedAt: station.value?.updatedAt ?? null,
+})
 
 useHead({
   script: [
