@@ -8,6 +8,7 @@
         :rental="rental"
         :siblings="siblings"
         :nearby="nearby"
+        :last-sync-date="rental.updatedAt ? formatKstDate(rental.updatedAt) : null"
       />
     </main>
   </div>
@@ -21,6 +22,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useApiBase } from '~/composables/useApiBase'
 import { fmtDeposit, fmtRent, isJeonseRental, rentalTypeToSlug } from '~/utils/publicRentalMeta'
+import { formatKstDate } from '~/utils/formatters'
 import { PUBLIC_RENTAL_FAQ } from '~/utils/publicRentalContent'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PublicRentalDetailView from '~/components/subscription/PublicRentalDetailView.vue'
@@ -155,7 +157,7 @@ const breadcrumbItems = computed(() => [
   { label: displayName.value, href: canonicalUrl.value, current: true },
 ])
 
-const { setBreadcrumbSchema, setFAQSchema } = useStructuredData()
+const { setBreadcrumbSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
 
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
@@ -165,4 +167,11 @@ setBreadcrumbSchema([
 ])
 
 setFAQSchema(PUBLIC_RENTAL_FAQ)
+
+setDetailProvenance({
+  domain: 'public-rental',
+  path: `/public-rental/${typeParam}/${idParam}`,
+  description: `${rental.value?.complexNameKor ?? '공공임대'} 공급 정보 (LH·SH 공공데이터 기반)`,
+  updatedAt: rental.value?.updatedAt ?? null,
+})
 </script>
