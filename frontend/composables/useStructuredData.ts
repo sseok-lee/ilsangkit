@@ -849,6 +849,7 @@ export function useStructuredData() {
     noindex?: boolean
   }) {
     if (opts.noindex) return
+    if (!opts.path) return        // no URL → no Dataset (prevents undefined.startsWith crash)
     const src = resolveDataSource({ domain: opts.domain, category: opts.category })
     if (!src) return
     setDatasetSchema({
