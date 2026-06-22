@@ -297,7 +297,7 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 const route = useRoute()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro, getFacilityDisplayName } from '~/composables/useFacilityMeta'
-const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema } = useStructuredData()
+const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
@@ -449,6 +449,20 @@ useHead(computed(() => {
     link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${route.path}`, key: 'canonical' }],
   }
 }))
+
+// 출처 Dataset provenance — isFacilityNoindex 선언 이후에 배치 (TDZ 회피)
+watchEffect(() => {
+  if (!facility.value) return
+  setDetailProvenance({
+    domain: 'facility',
+    category: facility.value.category,
+    path: route.path,
+    description: `${facility.value.name} ${CATEGORY_META[facility.value.category]?.label ?? ''} 위치·운영정보 (공공데이터 기반)`,
+    updatedAt: facility.value.updatedAt,
+    createdAt: facility.value.createdAt,
+    noindex: isFacilityNoindex.value,
+  })
+})
 
 // Category metadata
 const categoryMeta = computed(() => CATEGORY_META[category.value] || { label: category.value, icon: '📍' })
