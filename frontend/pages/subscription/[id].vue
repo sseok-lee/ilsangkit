@@ -387,7 +387,7 @@
 
         <!-- 데이터 정보 (멀티루트 → wrapper에 order) -->
         <div class="order-12 md:order-12">
-          <DataSourceSection domain="subscription" />
+          <DataSourceSection domain="subscription" :last-sync-date="subscription?.updatedAt ? formatKstDate(subscription.updatedAt) : null" />
         </div>
 
       </main>
@@ -418,6 +418,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { formatKstDate } from '~/utils/formatters'
 import { useAnalytics } from '~/composables/useAnalytics'
 import RentalPriceStatsBox from '~/components/subscription/RentalPriceStatsBox.vue'
 import SubscriptionScheduleTimeline from '~/components/subscription/SubscriptionScheduleTimeline.vue'
@@ -742,7 +743,7 @@ if (data.value) {
   specialStatuses.value = specials || []
 }
 
-const { setBreadcrumbSchema, setEventSchema } = useStructuredData()
+const { setBreadcrumbSchema, setEventSchema, setDetailProvenance } = useStructuredData()
 const { trackSubscriptionView } = useAnalytics()
 
 if (subscription.value) {
@@ -775,6 +776,12 @@ if (subscription.value) {
       url: `/subscription/${id}`,
     })
   }
+
+  setDetailProvenance({
+    domain: 'subscription', path: `/subscription/${sub.id}`,
+    description: `${sub.houseName ?? '청약'} 청약 일정·정보 (한국부동산원 청약홈 기반)`,
+    updatedAt: sub.updatedAt ?? null,
+  })
 }
 
 // SEO
