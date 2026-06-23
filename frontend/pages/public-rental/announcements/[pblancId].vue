@@ -46,7 +46,7 @@
             </div>
             <div v-if="detail.refrnc" class="flex gap-2 sm:col-span-2">
               <dt class="text-muted w-20 shrink-0">문의처</dt>
-              <dd class="text-ink">{{ detail.refrnc }}</dd>
+              <dd class="text-ink"><a :href="`tel:${detail.refrnc.split(/[\/,]/)[0].trim()}`" class="hover:underline">{{ detail.refrnc }}</a></dd>
             </div>
           </dl>
           <div class="flex flex-wrap gap-2 mt-2">

@@ -92,4 +92,32 @@ describe('FacilityCard', () => {
     // hover 클래스나 transition 확인
     expect(wrapper.html()).toContain('hover:')
   })
+
+  it('병원 카드의 전화번호는 tel: 링크다', () => {
+    const hospitalWithPhone = {
+      ...mockFacility,
+      category: 'hospital' as const,
+      extras: { phone: '02-123-4567' },
+    }
+    const wrapper = mount(FacilityCard, {
+      props: { facility: hospitalWithPhone },
+    })
+    const tel = wrapper.find('a[href^="tel:"]')
+    expect(tel.exists()).toBe(true)
+    expect(tel.attributes('href')).toBe('tel:02-123-4567')
+  })
+
+  it('약국 카드의 전화번호도 tel: 링크다', () => {
+    const pharmacyWithPhone = {
+      ...mockFacility,
+      category: 'pharmacy' as const,
+      extras: { phone: '02-999-1234' },
+    }
+    const wrapper = mount(FacilityCard, {
+      props: { facility: pharmacyWithPhone },
+    })
+    const tel = wrapper.find('a[href^="tel:"]')
+    expect(tel.exists()).toBe(true)
+    expect(tel.attributes('href')).toBe('tel:02-999-1234')
+  })
 })
