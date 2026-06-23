@@ -253,10 +253,8 @@
         </div>
       </SectionBlock>
 
-      <!-- 관련 가이드 -->
-      <ClientOnly>
-        <RelatedGuides :category="categoryParam" />
-      </ClientOnly>
+      <!-- 관련 가이드 (SSR 렌더 — 내부링크 색인 노출) -->
+      <RelatedGuides :category="categoryParam" />
 
       <!-- 쿠팡 배너 -->
       <CoupangBanner />

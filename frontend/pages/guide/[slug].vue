@@ -142,18 +142,6 @@
         </NuxtLink>
       </div>
     </article>
-
-    <!-- Not Found -->
-    <div v-else class="py-20 text-center">
-      <span class="material-symbols-outlined text-[48px] text-faint mb-4 block">error</span>
-      <p class="text-muted font-medium">가이드를 찾을 수 없습니다</p>
-      <NuxtLink
-        to="/guide"
-        class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors mt-4"
-      >
-        가이드 목록 보기
-      </NuxtLink>
-    </div>
   </div>
 </template>
 
