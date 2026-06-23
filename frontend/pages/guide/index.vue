@@ -102,23 +102,11 @@
       <AdBanner class="mt-4" />
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-4">
-        <button
-          :disabled="currentPage <= 1"
-          class="px-4 py-2 border border-line rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-background-light transition-colors"
-          @click="goToPage(currentPage - 1)"
-        >
-          이전
-        </button>
-        <span class="text-sm text-muted">{{ currentPage }} / {{ totalPages }}</span>
-        <button
-          :disabled="currentPage >= totalPages"
-          class="px-4 py-2 border border-line rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-background-light transition-colors"
-          @click="goToPage(currentPage + 1)"
-        >
-          다음
-        </button>
-      </div>
+      <Pagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        @page-change="goToPage"
+      />
     </SectionBlock>
   </div>
 </template>
@@ -135,6 +123,7 @@ import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import Pagination from '~/components/common/Pagination.vue'
 
 // 카테고리 칩: 콘텐츠 주제별 묶음 (backend categories 배열 필터 사용)
 const CATEGORY_CHIPS: { key: string | null; label: string; categories?: string[] }[] = [

@@ -38,29 +38,18 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-4">
-        <button
-          :disabled="currentPage === 1"
-          class="px-4 py-2 border border-line rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-          @click="emit('page-change', currentPage - 1)"
-        >
-          이전
-        </button>
-        <span class="text-slate-700 text-sm">{{ currentPage }} / {{ totalPages }}</span>
-        <button
-          :disabled="currentPage === totalPages"
-          class="px-4 py-2 border border-line rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-          @click="emit('page-change', currentPage + 1)"
-        >
-          다음
-        </button>
-      </div>
+      <Pagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        @page-change="(page) => emit('page-change', page)"
+      />
     </div>
   </SectionBlock>
 </template>
 
 <script setup lang="ts">
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import Pagination from '~/components/common/Pagination.vue'
 import type { Facility } from '~/types/facility'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 
