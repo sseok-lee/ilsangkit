@@ -30,7 +30,7 @@
 
     <!-- 이 지역 다른 시설 -->
     <SectionBlock
-      v-if="relatedCategories.length > 0"
+      v-if="relatedCategories.length > 0 || regionLink"
       size="compact"
       heading="관련 탐색"
       subtext="관련 카테고리로 바로 이동합니다."
@@ -43,6 +43,15 @@
           class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
         >
           {{ CATEGORY_META[cat]?.label || cat }}
+        </NuxtLink>
+        <!-- 부동산 교차 pill: regionLink에서 city/district 슬러그 추출 -->
+        <NuxtLink
+          v-if="regionLink"
+          :to="`/real-estate/apt-sale/${regionLink.href.split('/').slice(1, 3).join('/')}`"
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
+        >
+          <span class="material-symbols-outlined text-[16px]">apartment</span>
+          이 지역 부동산 시세
         </NuxtLink>
       </nav>
     </SectionBlock>
