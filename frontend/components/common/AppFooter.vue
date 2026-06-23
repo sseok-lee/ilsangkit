@@ -20,7 +20,7 @@
             <HardLink to="/real-estate" class="text-sm text-muted hover:text-primary transition-colors">부동산</HardLink>
             <HardLink to="/subscription" class="text-sm text-muted hover:text-primary transition-colors">청약</HardLink>
             <HardLink to="/public-rental" class="text-sm text-muted hover:text-primary transition-colors">공공임대</HardLink>
-            <HardLink to="/search" class="text-sm text-muted hover:text-primary transition-colors">시설 찾기</HardLink>
+            <HardLink to="/search" class="text-sm text-muted hover:text-primary transition-colors">생활시설</HardLink>
           </nav>
         </div>
 
