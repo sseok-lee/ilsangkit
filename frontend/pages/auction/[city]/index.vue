@@ -27,9 +27,15 @@
           </NuxtLink>
         </div>
 
-        <div v-else class="rounded-xl bg-slate-50 p-12 text-center">
-          <p class="text-slate-700 font-semibold">아직 공매 데이터가 없습니다</p>
-          <p class="text-slate-500 text-sm mt-1">{{ cityName }} 지역의 공매 데이터가 준비 중입니다.</p>
+        <div v-else>
+          <EmptyState icon="gavel" title="아직 공매 데이터가 없습니다" :description="`${cityName} 지역의 공매 데이터가 준비 중입니다.`">
+            <NuxtLink
+              to="/auction"
+              class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              전국 공매 허브로
+            </NuxtLink>
+          </EmptyState>
         </div>
       </SectionBlock>
 
@@ -54,6 +60,7 @@ import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 
 const route = useRoute()
 const citySlug = route.params.city as string
