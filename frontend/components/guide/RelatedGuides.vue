@@ -68,6 +68,8 @@ const publicApiBase = config.public.apiBase
 const { fetchGuides } = useGuides()
 
 const route = useRoute()
+// 인스턴스당 route.path+category 단위 키. 동일 route에 같은 category prop의
+// RelatedGuides를 2개 마운트하면 useAsyncData 캐시가 공유되니 페이지당 1개만 둘 것.
 const asyncKey = computed(() =>
   `related-guides-${route.path}-${props.categories?.join('-') ?? props.category ?? 'all'}`,
 )
