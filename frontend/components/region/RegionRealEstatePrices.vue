@@ -8,7 +8,7 @@
       <NuxtLink
         v-for="item in cards"
         :key="item.type"
-        :to="`/real-estate/${item.type}`"
+        :to="`/real-estate/${item.type}-sale`"
         class="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
       >
         <div class="flex items-center gap-2 mb-4">
