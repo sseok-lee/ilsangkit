@@ -335,6 +335,7 @@ async function handleShare() {
   }
   try {
     await navigator.clipboard.writeText(url)
+    alert('링크가 복사되었습니다.')
   } catch {
     // 클립보드 미지원 — 무시
   }

@@ -4,7 +4,7 @@
       v-for="opt in OPTIONS"
       :key="opt.value"
       :class="[
-        'px-2 py-0.5 rounded-full transition',
+        'px-3 min-h-[44px] rounded-full transition',
         modelValue === opt.value ? 'bg-strong text-white' : 'text-muted hover:bg-background-light',
       ]"
       @click="$emit('update:modelValue', opt.value)"
