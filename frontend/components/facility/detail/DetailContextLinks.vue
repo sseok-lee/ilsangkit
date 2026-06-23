@@ -28,12 +28,12 @@
       </nav>
     </SectionBlock>
 
-    <!-- 이 지역 다른 시설 -->
+    <!-- 관련 카테고리 + 부동산 교차 -->
     <SectionBlock
-      v-if="relatedCategories.length > 0 || regionLink"
+      v-if="relatedCategories.length > 0 || realEstateHref"
       size="compact"
-      heading="관련 탐색"
-      subtext="관련 카테고리로 바로 이동합니다."
+      heading="관련 카테고리"
+      subtext="다른 카테고리와 부동산 시세로 바로 이동합니다."
     >
       <nav data-testid="related-categories" class="flex flex-wrap gap-2">
         <NuxtLink
@@ -44,10 +44,10 @@
         >
           {{ CATEGORY_META[cat]?.label || cat }}
         </NuxtLink>
-        <!-- 부동산 교차 pill: regionLink에서 city/district 슬러그 추출 -->
+        <!-- 부동산 교차 pill (구 단위가 있을 때만) -->
         <NuxtLink
-          v-if="regionLink"
-          :to="`/real-estate/apt-sale/${regionLink.href.split('/').slice(1, 3).join('/')}`"
+          v-if="realEstateHref"
+          :to="realEstateHref"
           class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
         >
           <span class="material-symbols-outlined text-[16px]">apartment</span>
@@ -91,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { CATEGORY_META, type FacilityCategory } from '~/types/facility'
@@ -107,7 +108,7 @@ interface FaqItem {
   answer: string
 }
 
-defineProps<{
+const props = defineProps<{
   category: FacilityCategory
   regionLink: RegionLink | null
   relatedCategories: FacilityCategory[]
@@ -116,4 +117,13 @@ defineProps<{
   categoryFaqItems: FaqItem[]
   lastSyncDate: string | null
 }>()
+
+// 부동산 교차 링크: regionLink에서 city/district 슬러그 추출. 구(district)가 없는
+// 시 단위(예: /seoul)면 null → 시 단위 링크가 "이 지역" 라벨과 어긋나는 것을 방지.
+const realEstateHref = computed<string | null>(() => {
+  if (!props.regionLink) return null
+  const parts = props.regionLink.href.split('/').filter(Boolean)
+  if (parts.length < 2) return null
+  return `/real-estate/apt-sale/${parts[0]}/${parts[1]}`
+})
 </script>
