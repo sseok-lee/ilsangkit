@@ -1,9 +1,7 @@
 <template>
   <div class="flex flex-col gap-3 md:gap-4">
-    <!-- 관련 가이드 -->
-    <ClientOnly>
-      <RelatedGuides :category="category" />
-    </ClientOnly>
+    <!-- 관련 가이드 (SSR 렌더 — 내부링크 색인 노출) -->
+    <RelatedGuides :category="category" />
 
     <!-- 같은 지역 시설 -->
     <SectionBlock

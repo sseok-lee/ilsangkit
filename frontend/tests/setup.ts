@@ -105,8 +105,7 @@ config.global.stubs = {
   CoupangBanner: { template: '<div class="stub-coupang-banner" />' },
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브
   HomeSubscriptionSection: { template: '<section data-testid="subscription" class="stub-home-subscription" />' },
-  // 홈 마켓 통계/인기단지 섹션
-  HomeMarketStats: { template: '<section data-testid="market-stats" />' },
+  // 홈 인기단지 섹션
   HomeTrendingBuildings: { template: '<section data-testid="trending-buildings" />' },
 }
 

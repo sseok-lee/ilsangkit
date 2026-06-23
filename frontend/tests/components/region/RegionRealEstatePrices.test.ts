@@ -15,16 +15,16 @@ const sampleCards = [
 ]
 
 describe('RegionRealEstatePrices', () => {
-  it('3개 부동산 카드를 각각 /real-estate/{type}으로 링크', () => {
+  it('3개 부동산 카드를 각각 정식 /real-estate/{type}-sale 허브로 링크(301 우회)', () => {
     const wrapper = mount(RegionRealEstatePrices, {
       props: { cards: sampleCards },
       global: globalConfig,
     })
     const links = wrapper.findAll('a')
     expect(links).toHaveLength(3)
-    expect(links[0].attributes('href')).toBe('/real-estate/apt')
-    expect(links[1].attributes('href')).toBe('/real-estate/villa')
-    expect(links[2].attributes('href')).toBe('/real-estate/offitel')
+    expect(links[0].attributes('href')).toBe('/real-estate/apt-sale')
+    expect(links[1].attributes('href')).toBe('/real-estate/villa-sale')
+    expect(links[2].attributes('href')).toBe('/real-estate/offitel-sale')
   })
 
   it('각 카드에 매매 평균/거래수 + 전월세 평균/거래수 표시', () => {
