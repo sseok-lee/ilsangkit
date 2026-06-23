@@ -49,9 +49,29 @@
 
       <!-- 목록 -->
       <div v-if="loading" class="py-12 text-center text-faint text-sm">{{ UI_MESSAGES.loading }}</div>
-      <div v-else-if="error" class="py-12 text-center text-rose-500 text-sm">{{ error }}</div>
-      <div v-else-if="items.length === 0" class="py-12 text-center text-faint text-sm">
-        {{ emptyFiltered('모집공고') }}
+      <div v-else-if="error" class="rounded-xl bg-red-50 border border-red-200 p-8 text-center">
+        <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
+          <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+        </div>
+        <p class="text-red-700 font-semibold">{{ error }}</p>
+        <button
+          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+          @click="reload"
+        >
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+          다시 시도
+        </button>
+      </div>
+      <div v-else-if="items.length === 0">
+        <EmptyState icon="campaign" :title="emptyFiltered('모집공고')" description="다른 조건으로 다시 검색해보세요">
+          <button
+            class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+            @click="resetAndReload"
+          >
+            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            전체 공고 보기
+          </button>
+        </EmptyState>
       </div>
       <ul v-else class="grid gap-3 md:grid-cols-2">
         <li
@@ -109,6 +129,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { AnnouncementStatus } from '~/types/publicRentalAnnouncement'
 import PublicRentalFilterTabs from '~/components/publicRental/PublicRentalFilterTabs.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 
 const STATUS_FILTERS: Array<{ value: AnnouncementStatus | undefined; label: string }> = [
   { value: undefined, label: '전체' },
@@ -147,6 +168,13 @@ async function load() {
 }
 
 function reload() {
+  page.value = 1
+  load()
+}
+
+function resetAndReload() {
+  status.value = undefined
+  q.value = ''
   page.value = 1
   load()
 }
