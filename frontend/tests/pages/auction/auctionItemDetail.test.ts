@@ -158,4 +158,12 @@ describe('auction/item/[cltrMngNo].vue — 입찰정보 상세 재배치', () =>
     expect(faqs[0]).toHaveProperty('question')
     expect(faqs[0]).toHaveProperty('answer')
   })
+
+  it('온비드 입찰 외부 링크(onbid.co.kr)가 렌더된다', async () => {
+    const m = await import('~/pages/auction/item/[cltrMngNo].vue')
+    const wrapper = await mountSuspended(m.default)
+    const onbidLink = wrapper.find('a[href*="onbid.co.kr"]')
+    expect(onbidLink.exists()).toBe(true)
+    expect(onbidLink.attributes('href')).toContain('2024-00001-001')
+  })
 })

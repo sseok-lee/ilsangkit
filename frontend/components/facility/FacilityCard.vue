@@ -87,7 +87,8 @@
 
           <!-- hospital -->
           <span v-if="facility.extras.clCdNm" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-700">{{ facility.extras.clCdNm }}</span>
-          <span v-if="facility.extras.phone" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ facility.extras.phone }}</span>
+          <a v-if="facility.extras.phone && (facility.category === 'hospital' || facility.category === 'pharmacy')" :href="`tel:${facility.extras.phone}`" class="inline-flex items-center min-h-[44px] px-3 py-2 rounded-md text-xs font-medium bg-slate-100 text-slate-600 hover:underline" @click.stop>{{ facility.extras.phone }}</a>
+          <span v-else-if="facility.extras.phone" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{{ facility.extras.phone }}</span>
           <span v-if="facility.extras.drTotCnt" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">의사 {{ facility.extras.drTotCnt }}명</span>
 
           <!-- sports -->

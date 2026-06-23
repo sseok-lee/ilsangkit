@@ -250,6 +250,16 @@ setDetailProvenance({
         </dl>
       </SectionBlock>
 
+      <!-- 온비드 입찰 외부 CTA (order-9) -->
+      <div class="order-9">
+        <a :href="`https://www.onbid.co.kr/op/cta/cltrMgNo/ctaCltrMgNoInfo.do?cltrMgNo=${item.cltrMngNo}`"
+           target="_blank" rel="noopener noreferrer"
+           class="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
+          <span class="material-symbols-outlined text-[20px]">gavel</span>
+          온비드에서 입찰하기
+        </a>
+      </div>
+
       <!-- Ad: 쿠팡 (페이지 맨 아래) -->
       <CoupangBanner />
 
