@@ -53,11 +53,15 @@
 
     <!-- Empty State -->
     <SectionBlock v-else-if="subscriptions.length === 0" :heading="`${getStatusLabel(currentStatus) || '전체'} 청약`">
-      <div class="rounded-xl bg-background-light p-12 text-center">
-        <span class="material-symbols-outlined text-[48px] text-faint block mb-3">apartment</span>
-        <p class="text-muted font-medium">{{ emptyFiltered('청약') }}</p>
-        <p class="text-muted text-sm mt-1">다른 조건으로 다시 검색해보세요</p>
-      </div>
+      <EmptyState icon="apartment" :title="emptyFiltered('청약')" description="다른 조건으로 다시 검색해보세요">
+        <button
+          class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+          @click="resetFilters"
+        >
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+          필터 초기화
+        </button>
+      </EmptyState>
     </SectionBlock>
 
     <!-- Subscription List -->
@@ -89,6 +93,7 @@ import { useSubscription } from '~/composables/useSubscription'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 import RegionCascadingDropdown from '~/components/common/RegionCascadingDropdown.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 
 /// 상태 칩 순서: 전체 → 청약중 → 청약예정 → 마감
 const STATUS_ORDER: { key: 'ongoing' | 'upcoming' | null | 'closed'; label: string }[] = [
@@ -159,6 +164,14 @@ async function loadSubscriptions() {
   } finally {
     pending.value = false
   }
+}
+
+function resetFilters() {
+  currentStatus.value = null
+  selectedRegion.value = ''
+  selectedDistrict.value = ''
+  currentPage.value = 1
+  loadSubscriptions()
 }
 
 function goToPage(page: number) {
