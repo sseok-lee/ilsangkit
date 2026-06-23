@@ -51,8 +51,32 @@
       </div>
 
       <!-- 에러 -->
-      <div v-else class="py-20 text-center text-slate-500">
-        {{ UI_MESSAGES.fetchError }}
+      <div v-else class="rounded-xl bg-red-50 border border-red-200 p-8 text-center">
+        <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
+          <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+        </div>
+        <p class="text-red-800 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
+        <div class="mt-4 flex items-center justify-center gap-2">
+          <button
+            class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            @click="retryFetch"
+          >
+            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            다시 시도
+          </button>
+          <NuxtLink
+            :to="`/${city}`"
+            class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            {{ cityName }} 허브로
+          </NuxtLink>
+          <NuxtLink
+            to="/"
+            class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            홈으로
+          </NuxtLink>
+        </div>
       </div>
     </main>
   </div>
@@ -112,12 +136,16 @@ const breadcrumbItems = computed(() => [
 ])
 
 // Area API 단일 호출
-const { data: response, pending, error } = await useAsyncData(
+const { data: response, pending, error, refresh } = await useAsyncData(
   `area-${city.value}-${district.value}`,
   () => $fetch<any>(`/api/area/${encodeURIComponent(city.value)}/${encodeURIComponent(district.value)}`)
 )
 const fetchFailed = computed(() => !!error.value)
 if (import.meta.server && error.value) markDegradedResponse()
+
+function retryFetch() {
+  void refresh()
+}
 
 const areaData = computed(() => response.value?.data ?? null)
 
