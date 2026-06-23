@@ -186,7 +186,7 @@
               <div class="flex items-center justify-center gap-3">
                 <button
                   v-if="selectedCity || selectedDistrict || filterKeyword"
-                  class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
                   @click="selectedCity = ''; selectedDistrict = ''; filterKeyword = ''; performSearch()"
                 >
                   <span class="material-symbols-outlined text-[16px]">refresh</span>
@@ -194,7 +194,7 @@
                 </button>
                 <NuxtLink
                   to="/"
-                  class="btn-primary inline-flex items-center gap-1.5 text-sm"
+                  class="btn-primary inline-flex items-center gap-1.5 min-h-[44px] text-sm"
                 >
                   <span class="material-symbols-outlined text-[16px]">home</span>
                   홈으로 돌아가기

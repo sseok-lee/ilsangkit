@@ -18,19 +18,16 @@
     </div>
 
     <!-- Empty State -->
-    <EmptyState
+    <div
       v-else-if="!loading && facilities.length === 0"
-      :title="UI_MESSAGES.emptySearch"
-      description="다른 검색어나 필터로 다시 시도해보세요"
+      class="flex flex-col items-center justify-center py-16 px-4"
     >
-      <button
-        class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-        @click="emit('reset')"
-      >
-        <span class="material-symbols-outlined text-[16px]">refresh</span>
-        필터 초기화
-      </button>
-    </EmptyState>
+      <div class="text-6xl mb-4">🔍</div>
+      <h3 class="text-xl font-bold text-slate-900 mb-2">{{ UI_MESSAGES.emptySearch }}</h3>
+      <p class="text-slate-600 text-center">
+        다른 검색어나 필터로 다시 시도해보세요
+      </p>
+    </div>
 
     <!-- Facility List -->
     <div v-else class="space-y-4">
@@ -46,7 +43,6 @@
 <script setup lang="ts">
 import type { Facility } from '~/types/facility'
 import { UI_MESSAGES } from '~/utils/uiMessages'
-import EmptyState from '~/components/common/EmptyState.vue'
 
 interface Props {
   facilities: Facility[]
@@ -54,8 +50,4 @@ interface Props {
 }
 
 defineProps<Props>()
-
-const emit = defineEmits<{
-  (e: 'reset'): void
-}>()
 </script>

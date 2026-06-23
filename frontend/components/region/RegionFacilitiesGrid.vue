@@ -31,6 +31,7 @@
         description="다른 지역이나 카테고리를 선택해보세요"
       >
         <NuxtLink
+          v-if="categorySlug"
           :to="`/${categorySlug}`"
           class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
         >
