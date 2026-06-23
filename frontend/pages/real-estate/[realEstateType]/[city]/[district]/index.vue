@@ -75,18 +75,20 @@
 
       <template v-else>
         <SectionBlock heading="건물 목록">
-          <div class="rounded-xl bg-slate-50 p-12 text-center">
-            <p class="text-slate-700 font-semibold text-lg">이 지역에는 아직 공개 가능한 단지가 없습니다</p>
-            <p class="text-slate-500 text-sm mt-1">국토교통부 실거래 신고가 누적되면 순차적으로 노출됩니다.</p>
-            <div class="mt-4 flex items-center justify-center gap-2">
-              <NuxtLink to="/real-estate" class="btn-primary inline-flex items-center gap-1.5 text-sm">
+          <EmptyState
+            icon="apartment"
+            title="이 지역에는 아직 공개 가능한 단지가 없습니다"
+            description="국토교통부 실거래 신고가 누적되면 순차적으로 노출됩니다."
+          >
+            <div class="flex items-center justify-center gap-2">
+              <NuxtLink to="/real-estate" class="btn-primary inline-flex items-center gap-1.5 text-sm min-h-[44px]">
                 전국 부동산 허브로
               </NuxtLink>
-              <NuxtLink :to="`/${citySlug}/${districtSlug}`" class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200">
+              <NuxtLink :to="`/${citySlug}/${districtSlug}`" class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200">
                 지역 허브로
               </NuxtLink>
             </div>
-          </div>
+          </EmptyState>
         </SectionBlock>
       </template>
 
@@ -111,6 +113,7 @@
 import { ref, computed, watchEffect } from 'vue'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { UI_MESSAGES } from '~/utils/uiMessages'
+import EmptyState from '~/components/common/EmptyState.vue'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import {

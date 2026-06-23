@@ -62,6 +62,7 @@
       :facilities="facilities"
       :current-page="currentPage"
       :total-pages="totalPages"
+      :category-slug="category"
       @page-change="goToPage"
       @retry="loadFacilities"
     />
