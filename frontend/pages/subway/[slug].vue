@@ -589,7 +589,7 @@ setDetailProvenance({
   domain: 'facility',
   category: 'subway',
   path: `/subway/${slug.value}`,
-  description: `${displayName.value} 지하철역 정보 (국토교통부 도시철도역사 표준데이터 기반)`,
+  description: buildSubwayDescription(station.value),
   updatedAt: station.value?.updatedAt ?? null,
 })
 

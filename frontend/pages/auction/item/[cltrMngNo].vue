@@ -141,7 +141,7 @@ setBreadcrumbSchema(
 )
 setDetailProvenance({
   domain: 'auction', path: `/auction/item/${item.value.cltrMngNo}`,
-  description: `${item.value.address ?? '공매 물건'} 온비드 공매 정보 (한국자산관리공사 기반)`,
+  description: `${item.value.address ?? '공매 물건'} ${item.value.usage ? item.value.usage + ' ' : ''}물건의 온비드 공매 정보 데이터입니다. 한국자산관리공사 기반으로 감정가·최저입찰가·입찰일정 등 공매 정보를 제공합니다.`,
   updatedAt: null,
   noindex: !isAuctionItemIndexable(item.value),
 })
