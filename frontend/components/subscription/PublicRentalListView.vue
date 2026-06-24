@@ -18,18 +18,29 @@
       <LoadingSkeleton v-if="loading" variant="card" />
 
       <div v-else-if="error" class="rounded-xl bg-red-50 p-8 text-center">
+        <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
+          <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+        </div>
         <p class="text-red-700 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
         <button
-          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
           @click="reload"
         >
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
           다시 시도
         </button>
       </div>
 
-      <div v-else-if="items.length === 0" class="rounded-xl bg-background-light p-12 text-center">
-        <p class="text-ink font-medium">{{ emptyFiltered('매물') }}</p>
-        <p class="text-muted text-sm mt-1">지역 필터를 다른 값으로 바꿔보세요</p>
+      <div v-else-if="items.length === 0">
+        <EmptyState icon="apartment" :title="emptyFiltered('매물')" description="지역 필터를 다른 값으로 바꿔보세요">
+          <button
+            class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+            @click="resetFilters"
+          >
+            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            필터 초기화
+          </button>
+        </EmptyState>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -57,6 +68,7 @@ import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import type { PublicRentalComplex, PublicRentalType } from '~/types/publicRental'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 import RegionCascadingDropdown from '~/components/common/RegionCascadingDropdown.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 
 const props = defineProps<{
   rentalTypeCode?: PublicRentalType
@@ -103,6 +115,13 @@ async function load(): Promise<void> {
 
 // 템플릿의 "다시 시도" 버튼이 호출
 const reload = (): Promise<void> => load()
+
+function resetFilters() {
+  currentCity.value = ''
+  selectedDistrict.value = ''
+  page.value = 1
+  void load()
+}
 
 function goToPage(p: number) {
   page.value = p

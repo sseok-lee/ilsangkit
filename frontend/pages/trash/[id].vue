@@ -342,7 +342,7 @@ watchEffect(() => {
     ])
     setDetailProvenance({
       domain: 'facility', category: 'trash', path: `/trash/${data.value.id}`,
-      description: `${data.value.city ?? ''} ${data.value.district ?? ''} 생활폐기물 배출일정 (환경부 공공데이터 기반)`.trim(),
+      description: `${data.value.city ?? ''} ${data.value.district ?? ''} 지역의 생활폐기물 배출일정 데이터입니다. 환경부 공공데이터 기반으로 일반·음식물·재활용·대형폐기물의 배출 요일·시간·방법을 제공합니다.`.trim(),
       updatedAt: data.value.details?.lastModified ?? data.value.details?.dataCreatedDate ?? null,
     })
   }

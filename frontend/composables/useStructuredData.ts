@@ -1,7 +1,7 @@
 import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
-import { resolveDataSource, type DataSourceDomain, type DataSourceInfo } from '~/utils/dataSource'
+import { resolveDataSource, ensureDatasetDescription, type DataSourceDomain, type DataSourceInfo } from '~/utils/dataSource'
 import { formatKstDate } from '~/utils/formatters'
 
 /**
@@ -854,7 +854,7 @@ export function useStructuredData() {
     if (!src) return
     setDatasetSchema({
       name: src.datasetName,
-      description: opts.description,
+      description: ensureDatasetDescription(opts.description, src),
       url: opts.path,
       sources: [src],
       isBasedOn: src.url,

@@ -31,9 +31,25 @@
           @page-change="onPageChange"
         />
       </div>
-      <div v-else-if="data && data.items.length === 0" class="rounded-xl bg-background-light p-12 text-center">
-        <p class="text-strong font-semibold">조회된 공매 물건이 없습니다</p>
-        <p class="text-muted text-sm mt-1">필터를 변경하거나 나중에 다시 확인해 주세요.</p>
+      <div v-else-if="data && data.items.length === 0">
+        <EmptyState icon="gavel" title="조회된 공매 물건이 없습니다" description="필터를 변경하거나 전체 목록을 확인해 보세요.">
+          <div class="flex items-center justify-center gap-3">
+            <button
+              v-if="hasActiveFilter"
+              class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+              @click="resetFilters"
+            >
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+              필터 초기화
+            </button>
+            <NuxtLink
+              to="/auction"
+              class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              전체 공매 보기
+            </NuxtLink>
+          </div>
+        </EmptyState>
       </div>
       <div v-else class="rounded-xl bg-background-light p-12 text-center">
         <p class="text-muted text-sm">데이터를 불러오는 중입니다.</p>
@@ -57,6 +73,7 @@ import AuctionCard from '~/components/auction/AuctionCard.vue'
 import AuctionFilters from '~/components/auction/AuctionFilters.vue'
 import Pagination from '~/components/common/Pagination.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -128,6 +145,14 @@ function onDistrict(v: string) {
 }
 function onPageChange(p: number) {
   applyQuery({ page: p === 1 ? undefined : p })
+}
+
+const hasActiveFilter = computed(() =>
+  !!(usage.value || filterStatus.value || filterCity.value || filterDistrict.value),
+)
+
+function resetFilters() {
+  router.push({ query: {} })
 }
 
 const selfUrl = computed(() => {

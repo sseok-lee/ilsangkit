@@ -141,7 +141,7 @@ setBreadcrumbSchema(
 )
 setDetailProvenance({
   domain: 'auction', path: `/auction/item/${item.value.cltrMngNo}`,
-  description: `${item.value.address ?? '공매 물건'} 온비드 공매 정보 (한국자산관리공사 기반)`,
+  description: `${item.value.address ?? '공매 물건'} ${item.value.usage ? item.value.usage + ' ' : ''}물건의 온비드 공매 정보 데이터입니다. 한국자산관리공사 기반으로 감정가·최저입찰가·입찰일정 등 공매 정보를 제공합니다.`,
   updatedAt: null,
   noindex: !isAuctionItemIndexable(item.value),
 })
@@ -249,6 +249,16 @@ setDetailProvenance({
           </div>
         </dl>
       </SectionBlock>
+
+      <!-- 온비드 입찰 외부 CTA (order-9) -->
+      <div class="order-9">
+        <a :href="`https://www.onbid.co.kr/op/cta/cltrMgNo/ctaCltrMgNoInfo.do?cltrMgNo=${item.cltrMngNo}`"
+           target="_blank" rel="noopener noreferrer"
+           class="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
+          <span class="material-symbols-outlined text-[20px]">gavel</span>
+          온비드에서 입찰하기
+        </a>
+      </div>
 
       <!-- Ad: 쿠팡 (페이지 맨 아래) -->
       <CoupangBanner />

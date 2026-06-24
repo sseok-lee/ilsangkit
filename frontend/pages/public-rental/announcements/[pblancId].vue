@@ -46,7 +46,10 @@
             </div>
             <div v-if="detail.refrnc" class="flex gap-2 sm:col-span-2">
               <dt class="text-muted w-20 shrink-0">문의처</dt>
-              <dd class="text-ink">{{ detail.refrnc }}</dd>
+              <dd class="text-ink">
+                <template v-if="refrncPhone"><a :href="`tel:${refrncPhone}`" class="hover:underline">{{ refrncPhone }}</a><span v-if="refrncExtra" class="text-muted"> {{ refrncExtra }}</span></template>
+                <template v-else>{{ detail.refrnc }}</template>
+              </dd>
             </div>
           </dl>
           <div class="flex flex-wrap gap-2 mt-2">
@@ -226,6 +229,15 @@ const totalSupply = computed(() => {
   return hasValue ? sum : null
 })
 
+// 문의처(refrnc): 첫 전화번호 토큰만 tel: 링크, 나머지(담당자명 등)는 plain text.
+const refrncPhone = computed(() => (ann.refrnc ?? '').split(/[/,]/)[0].trim())
+const refrncExtra = computed(() => {
+  const full = (ann.refrnc ?? '').trim()
+  const phone = refrncPhone.value
+  if (!phone || full === phone) return ''
+  return full.slice(full.indexOf(phone) + phone.length).replace(/^[\s/,]+/, '').trim()
+})
+
 const canonicalUrl = `${SITE_URL}/public-rental/announcements/${encodeURIComponent(pblancId)}`
 
 const isClosed = ann.status === 'closed'
@@ -282,7 +294,7 @@ if (ann.beginDe && ann.endDe) {
 setDetailProvenance({
   domain: 'public-rental',
   path: `/public-rental/announcements/${encodeURIComponent(pblancId)}`,
-  description: `${ann.pblancNm} 공공임대 공고 (LH·SH 공공데이터 기반)`,
+  description: annDescription,
   updatedAt: ann.updatedAt ?? null,
   noindex: isClosed,
 })

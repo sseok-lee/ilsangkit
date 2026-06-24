@@ -335,6 +335,7 @@ async function handleShare() {
   }
   try {
     await navigator.clipboard.writeText(url)
+    alert('링크가 복사되었습니다.')
   } catch {
     // 클립보드 미지원 — 무시
   }
@@ -418,7 +419,7 @@ setFAQSchema(LAND_FAQ.map((f) => ({ question: f.q, answer: f.a })))
 setDetailProvenance({
   domain: 'real-estate',
   path: `/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong)}`,
-  description: `${cityName} ${districtName} ${dong} 토지 실거래가·지목·용도지역 (국토교통부 토지 실거래가 기반)`,
+  description: pageDescription.value,
   updatedAt: null,
   noindex: noindex.value,
 })

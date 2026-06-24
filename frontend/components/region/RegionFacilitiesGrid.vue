@@ -25,9 +25,20 @@
 
     <!-- Facilities Grid -->
     <div v-else>
-      <div v-if="facilities.length === 0" class="py-12 text-center">
-        <p class="text-slate-600">{{ emptyFiltered('시설') }}</p>
-      </div>
+      <EmptyState
+        v-if="facilities.length === 0"
+        :title="emptyFiltered('시설')"
+        description="다른 지역이나 카테고리를 선택해보세요"
+      >
+        <NuxtLink
+          v-if="categorySlug"
+          :to="`/${categorySlug}`"
+          class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+        >
+          <span class="material-symbols-outlined text-[16px]">travel_explore</span>
+          전국으로
+        </NuxtLink>
+      </EmptyState>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <FacilityCard
@@ -38,29 +49,19 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-4">
-        <button
-          :disabled="currentPage === 1"
-          class="px-4 py-2 border border-line rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-          @click="emit('page-change', currentPage - 1)"
-        >
-          이전
-        </button>
-        <span class="text-slate-700 text-sm">{{ currentPage }} / {{ totalPages }}</span>
-        <button
-          :disabled="currentPage === totalPages"
-          class="px-4 py-2 border border-line rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-          @click="emit('page-change', currentPage + 1)"
-        >
-          다음
-        </button>
-      </div>
+      <Pagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        @page-change="(page) => emit('page-change', page)"
+      />
     </div>
   </SectionBlock>
 </template>
 
 <script setup lang="ts">
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import Pagination from '~/components/common/Pagination.vue'
+import EmptyState from '~/components/common/EmptyState.vue'
 import type { Facility } from '~/types/facility'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 
@@ -73,6 +74,7 @@ defineProps<{
   facilities: Facility[]
   currentPage: number
   totalPages: number
+  categorySlug?: string
 }>()
 
 const emit = defineEmits<{

@@ -296,7 +296,7 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 
 const route = useRoute()
 const { setFacilityDetailMeta } = useFacilityMeta()
-import { buildFacilityIntro, getFacilityDisplayName } from '~/composables/useFacilityMeta'
+import { buildFacilityIntro, getFacilityDisplayName, buildFacilityDescription } from '~/composables/useFacilityMeta'
 const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
@@ -457,7 +457,7 @@ watchEffect(() => {
     domain: 'facility',
     category: facility.value.category,
     path: route.path,
-    description: `${facility.value.name} ${CATEGORY_META[facility.value.category]?.label ?? ''} 위치·운영정보 (공공데이터 기반)`,
+    description: buildFacilityDescription(facility.value),
     updatedAt: facility.value.updatedAt,
     createdAt: facility.value.createdAt,
     noindex: isFacilityNoindex.value,
