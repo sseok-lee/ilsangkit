@@ -294,7 +294,7 @@ if (ann.beginDe && ann.endDe) {
 setDetailProvenance({
   domain: 'public-rental',
   path: `/public-rental/announcements/${encodeURIComponent(pblancId)}`,
-  description: `${ann.pblancNm} 공공임대 공고 (LH·SH 공공데이터 기반)`,
+  description: annDescription,
   updatedAt: ann.updatedAt ?? null,
   noindex: isClosed,
 })

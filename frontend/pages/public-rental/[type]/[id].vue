@@ -171,7 +171,7 @@ setFAQSchema(PUBLIC_RENTAL_FAQ)
 setDetailProvenance({
   domain: 'public-rental',
   path: `/public-rental/${typeParam}/${idParam}`,
-  description: `${rental.value?.complexNameKor ?? '공공임대'} 공급 정보 (LH·SH 공공데이터 기반)`,
+  description: seoDescription.value,
   updatedAt: rental.value?.updatedAt ?? null,
 })
 </script>

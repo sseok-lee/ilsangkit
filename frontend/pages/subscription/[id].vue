@@ -779,7 +779,7 @@ if (subscription.value) {
 
   setDetailProvenance({
     domain: 'subscription', path: `/subscription/${sub.id}`,
-    description: `${sub.houseName ?? '청약'} 청약 일정·정보 (한국부동산원 청약홈 기반)`,
+    description: subscriptionSeoDescription.value,
     updatedAt: sub.updatedAt ?? null,
   })
 }
