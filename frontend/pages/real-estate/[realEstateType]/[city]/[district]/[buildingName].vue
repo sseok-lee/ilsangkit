@@ -543,10 +543,9 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
   return `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
 }
 
-useHead(() => {
+const detailMeta = computed(() => {
   const mode = currentTab.value
 
-  // Area range from areaGroups (AreaGroup.area is the exclusive area in ㎡)
   let areaRange: { min: number; max?: number } | null = null
   const areaValues = areaGroups.value
     .map((g: AreaGroup) => Number(g.area))
@@ -557,7 +556,6 @@ useHead(() => {
     areaRange = maxA > minA ? { min: minA, max: maxA } : { min: minA }
   }
 
-  // Recent deal from first transaction item
   let recentDeal: { amount: number; dealDate: string } | undefined
   const firstTx = transactions.value.items[0]
   if (firstTx) {
@@ -573,7 +571,7 @@ useHead(() => {
   const totalCount = summary.value?.totalCount ?? 0
   const buildYearVal = firstTx?.buildYear ?? buildingInfo.value?.buildYear ?? null
 
-  const { title, description } = buildRealEstateDetailMeta({
+  return buildRealEstateDetailMeta({
     buildingName: buildingName.value,
     region: {
       city: buildingInfo.value?.city || cityName,
@@ -587,6 +585,10 @@ useHead(() => {
     areaRange,
     facilitySummary: facilitySummary.value,
   })
+})
+
+useHead(() => {
+  const { title, description } = detailMeta.value
 
   // Canonical uses new URL structure — distinct per realEstateType (apt-sale ≠ apt-rent)
   const canonicalUrl = `${SITE_URL}${toRealEstateUrl({
@@ -1217,7 +1219,7 @@ watchEffect(() => {
   setDetailProvenance({
     domain: 'real-estate',
     path: route.path,
-    description: `${buildingName.value} 실거래가·시세 (국토교통부 공개 데이터 기반)`,
+    description: detailMeta.value.description,
     updatedAt: rawSyncDate.value,
     noindex: noindex.value,
   })
