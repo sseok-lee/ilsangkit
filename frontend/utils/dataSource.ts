@@ -167,6 +167,18 @@ export const AUCTION_DATA_SOURCE: DataSourceInfo = {
 
 export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'public-rental' | 'auction'
 
+/**
+ * Google Dataset structured data 의 description 규격(50~5000자)을 보장한다.
+ * 50자 미만이면 데이터셋 컨텍스트 문장을 덧붙이고, 항상 5000자 이하로 자른다.
+ */
+export function ensureDatasetDescription(base: string, src: DataSourceInfo): string {
+  const trimmed = (base ?? '').trim();
+  const result = trimmed.length >= 50
+    ? trimmed
+    : `${trimmed} ${src.datasetName} 기반으로 일상킷이 전국 지역·항목별로 정리해 최신 기준으로 제공하는 공식 공개 데이터입니다.`.trim();
+  return result.slice(0, 5000);
+}
+
 export function resolveDataSource(input: {
   domain: DataSourceDomain
   category?: FacilityCategory
