@@ -728,13 +728,13 @@ describe('useStructuredData', () => {
         name: baseSource.datasetName, description: '설명', url: '/toilet/1', sources: [baseSource],
         isBasedOn: baseSource.url,
         sourceOrganization: { '@type': 'Organization', name: baseSource.provider },
-        citation: { '@type': 'Dataset', name: baseSource.datasetName, url: baseSource.url },
+        citation: { '@type': 'CreativeWork', name: baseSource.datasetName, url: baseSource.url },
         dateModified: '2026-06-20', datePublished: '2026-01-01',
       })
       const parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
       expect(parsed.isBasedOn).toBe(baseSource.url)
       expect(parsed.sourceOrganization).toEqual({ '@type': 'Organization', name: '행정안전부' })
-      expect(parsed.citation['@type']).toBe('Dataset')
+      expect(parsed.citation['@type']).toBe('CreativeWork')
       expect(parsed.dateModified).toBe('2026-06-20')
       expect(parsed.datePublished).toBe('2026-01-01')
     })
