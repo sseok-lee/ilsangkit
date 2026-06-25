@@ -777,7 +777,7 @@ export function useStructuredData() {
     datePublished?: string
     isBasedOn?: string
     sourceOrganization?: { '@type': 'Organization'; name: string }
-    citation?: { '@type': 'Dataset'; name: string; url: string }
+    citation?: { '@type': 'CreativeWork'; name: string; url: string }
   }) {
     const { name, description, url, sources, keywords, spatialCoverage,
       dateModified, datePublished, isBasedOn, sourceOrganization, citation } = options
@@ -859,7 +859,9 @@ export function useStructuredData() {
       sources: [src],
       isBasedOn: src.url,
       sourceOrganization: { '@type': 'Organization', name: src.provider },
-      citation: { '@type': 'Dataset', name: src.datasetName, url: src.url },
+      // 출처 인용은 CreativeWork로 선언 — @type:Dataset이면 Google이 중첩 Dataset으로
+      // 파싱해 description 누락 리치결과 오류가 발생(페이지당 Dataset은 메인 하나만 유지).
+      citation: { '@type': 'CreativeWork', name: src.datasetName, url: src.url },
       ...(opts.updatedAt ? { dateModified: formatKstDate(opts.updatedAt) } : {}),
       ...(opts.createdAt ? { datePublished: formatKstDate(opts.createdAt) } : {}),
     })
