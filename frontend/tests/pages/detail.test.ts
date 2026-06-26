@@ -335,6 +335,14 @@ describe('DetailPage', () => {
     expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(4)
   })
 
+  it('재설계(ev-charger): 라이브 컴포넌트(ev-charger-detail)가 렌더된다', async () => {
+    routeMock.category = 'ev-charger'
+    routeMock.id = 'ev-charger-1'
+    mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id: 'ev-charger-1', category: 'ev-charger', details: { statId: 'ST123', chargers: [] } } })
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    expect(wrapper.find('[data-testid="ev-charger-detail"]').exists()).toBe(true)
+  })
+
   // hasFacilityStatus=false 카테고리(clothes, 재설계)는 시설현황 h3 미렌더 + 광고 인접(연속) 노출 없음.
   it('clothes(재설계)는 빈 시설현황 + 광고 연속 노출이 없다', async () => {
     routeMock.category = 'clothes'
@@ -372,7 +380,7 @@ describe('DetailPage', () => {
     expect(wrapper.find('a[href="https://www.kacpr.org/"]').exists()).toBe(false)
   })
 
-  // ── Phase 2 게이트 가드: wifi, park, parking, library, sports, aed, pharmacy, hospital ─────────────
+  // ── Phase 2 게이트 가드: wifi, park, parking, library, sports, aed, pharmacy, hospital, ev-charger ─────────────
   // 각 카테고리: 단일 h1, AdBanner 4개, spec-grid 존재, DetailBasicInfo/Status h3 없음
   const phase2Categories: Array<{ cat: string; id: string }> = [
     { cat: 'wifi', id: 'wifi-1' },
@@ -386,6 +394,7 @@ describe('DetailPage', () => {
     { cat: 'aed', id: 'aed-1' },
     { cat: 'pharmacy', id: 'pharmacy-1' },
     { cat: 'hospital', id: 'hospital-2' },
+    { cat: 'ev-charger', id: 'ev-charger-1' },
   ]
 
   for (const { cat, id } of phase2Categories) {
