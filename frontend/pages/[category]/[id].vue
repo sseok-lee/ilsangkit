@@ -180,7 +180,7 @@
                 <DetailLocationGuide
                   v-if="isRedesigned"
                   class="mt-4"
-                  :stations="transitData?.stations ?? []"
+                  :stations="nearbyData?.stations ?? []"
                   :alternatives="nearbyFiltered"
                   :alternative-label="`가까운 다른 ${categoryMeta.label}`"
                 />
@@ -897,24 +897,18 @@ const { data: nearbyData, status: nearbyStatus } = await useAsyncData(
           },
         )
       : Promise.resolve(null)
-    const [nearbyR, crossR] = await Promise.allSettled([nearbyP, crossP])
+    // 교통(지하철) 인근 — redesigned + 좌표 있을 때만, 그 외 빈 배열. 메인 fetch가 lazy라 재패칭한 f 사용
+    const transitP = (isRedesigned.value && f?.lat && f?.lng)
+      ? fetchTransitNearby(apiBase, f.lat, f.lng, 2000)
+      : Promise.resolve([] as NearbyStation[])
+    const [nearbyR, crossR, transitR] = await Promise.allSettled([nearbyP, crossP, transitP])
     return {
       nearby: nearbyR.status === 'fulfilled' ? (nearbyR.value?.data?.items ?? []) : [],
       cross: crossR.status === 'fulfilled' ? (crossR.value?.data?.items ?? []) : [],
+      stations: transitR.status === 'fulfilled' ? (transitR.value ?? []) : [],
     }
   },
-  { lazy: true, default: () => ({ nearby: [] as Facility[], cross: [] as Facility[] }) },
-)
-
-// 교통(지하철) 인근 — redesigned(toilet/clothes) + 좌표 있을 때만 호출, 그 외 빈 배열
-const { data: transitData } = await useAsyncData(
-  `transit-${category.value}-${id.value}`,
-  async (): Promise<{ stations: NearbyStation[] }> => {
-    const f = facilityResponse.value?.data
-    if (!isRedesigned.value || !f?.lat || !f?.lng) return { stations: [] }
-    return { stations: await fetchTransitNearby(apiBase, f.lat, f.lng, 2000) }
-  },
-  { lazy: true, default: () => ({ stations: [] as NearbyStation[] }) },
+  { lazy: true, default: () => ({ nearby: [] as Facility[], cross: [] as Facility[], stations: [] as NearbyStation[] }) },
 )
 
 const nearbyPending = computed(() => nearbyStatus.value === 'pending')
