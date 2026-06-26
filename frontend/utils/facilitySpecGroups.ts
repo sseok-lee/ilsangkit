@@ -360,6 +360,126 @@ function clothesGroups(d: D): SpecGroup[] {
   return rows.length ? [{ heading: '상세 정보', render: 'kv', rows }] : []
 }
 
+// ── Group C builders (Task 4): aed, pharmacy, hospital ──────────────────────
+
+function aedGroups(d: D): SpecGroup[] {
+  const groups: SpecGroup[] = []
+  const dayDefs = [
+    { day: '월', s: d.monSttTme, e: d.monEndTme, i: 1 }, { day: '화', s: d.tueSttTme, e: d.tueEndTme, i: 2 },
+    { day: '수', s: d.wedSttTme, e: d.wedEndTme, i: 3 }, { day: '목', s: d.thuSttTme, e: d.thuEndTme, i: 4 },
+    { day: '금', s: d.friSttTme, e: d.friEndTme, i: 5 }, { day: '토', s: d.satSttTme, e: d.satEndTme, i: 6 },
+    { day: '일', s: d.sunSttTme, e: d.sunEndTme, i: 0 }, { day: '공휴일', s: d.holSttTme, e: d.holEndTme, i: -1 },
+  ]
+  const rows: SpecWeeklyRow[] = dayDefs.map(({ day, s, e, i }) => {
+    const st = fmtHm(s); const en = fmtHm(e)
+    const allDay = st === '00:00' && en === '24:00'; const closed = !st && !en
+    return { day, time: allDay ? '24시간' : closed ? '이용불가' : st && en ? `${st} ~ ${en}` : '정보없음', allDay, closed, todayIdx: i }
+  })
+  if (rows.some(r => !r.closed && r.time !== '정보없음')) groups.push({ heading: '요일별 이용시간', render: 'weekly', weekly: { timeHeader: '이용시간', rows } })
+  groups.push({ heading: '설치 · 장비', render: 'kv', rows: [
+    { label: '설치 위치', value: str(d.buildPlace), kind: 'value' },
+    { label: '설치 기관', value: trimDashes(d.org), kind: 'value' },
+    { label: '담당자 전화', value: formatPhone(d.clerkTel), kind: 'value' },
+    { label: '제조사', value: str(d.mfg), kind: 'value' },
+    { label: '모델명', value: str(d.model), kind: 'value' },
+    { label: '자료 기준일', value: str(d.dataDate), kind: 'value' },
+  ] })
+  return groups
+}
+
+function pharmacyGroups(d: D): SpecGroup[] {
+  const groups: SpecGroup[] = []
+  const dayDefs = [
+    { day: '월', s: d.dutyTime1s, e: d.dutyTime1c, i: 1 }, { day: '화', s: d.dutyTime2s, e: d.dutyTime2c, i: 2 },
+    { day: '수', s: d.dutyTime3s, e: d.dutyTime3c, i: 3 }, { day: '목', s: d.dutyTime4s, e: d.dutyTime4c, i: 4 },
+    { day: '금', s: d.dutyTime5s, e: d.dutyTime5c, i: 5 }, { day: '토', s: d.dutyTime6s, e: d.dutyTime6c, i: 6 },
+    { day: '일', s: d.dutyTime7s, e: d.dutyTime7c, i: 0 }, { day: '공휴일', s: d.dutyTime8s, e: d.dutyTime8c, i: -1 },
+  ]
+  const rows: SpecWeeklyRow[] = dayDefs.map(({ day, s, e, i }) => {
+    const st = fmtHm(s); const en = fmtHm(e); const time = st && en ? `${st} ~ ${en}` : null
+    return { day, time: time ?? '휴무', closed: time === null, todayIdx: i }
+  })
+  if (rows.some(r => !r.closed)) {
+    const notes = [
+      ['접수(평일)', str(d.recpWeek)], ['접수(토)', str(d.recpSat)],
+      ['일요일 안내', str(d.noTrmtSun)], ['공휴일 안내', str(d.noTrmtHoli)],
+    ].filter(([, v]) => v != null).map(([l, v]) => `${l}: ${v}`)
+    groups.push({ heading: '요일별 운영시간', render: 'weekly', weekly: { timeHeader: '운영시간', rows, notes } })
+  }
+  groups.push({ heading: '점심시간', render: 'kv', rows: [
+    { label: '점심(평일)', value: str(d.lunchWeek), kind: 'value' },
+    { label: '점심(토)', value: str(d.lunchSat), kind: 'value' },
+  ] })
+  groups.push({ heading: '약국 정보', render: 'kv', rows: [
+    { label: '약사 수', value: num(d.pharmacistCnt), unit: '명', kind: 'value' },
+    { label: '응급전화', value: formatPhone(d.dutyTel3), kind: 'value' },
+    { label: '자료 기준일', value: str(d.dataDate), kind: 'value' },
+  ] })
+  const guideRows: SpecRow[] = [
+    { label: '안내', value: str(d.dutyInf) }, { label: '기타', value: str(d.dutyEtc) },
+  ].filter(r => r.value != null)
+  if (guideRows.length) groups.push({ heading: '이용 안내', render: 'kv', rows: guideRows })
+  return groups
+}
+
+const HOSPITAL_BED_DEFS: [string, string][] = [
+  ['generalUpperBeds', '일반(상급)'], ['generalNormalBeds', '일반(일반)'], ['adultIcuBeds', '성인 중환자'],
+  ['childIcuBeds', '소아 중환자'], ['neonatalIcuBeds', '신생아 중환자'], ['deliveryBeds', '분만실'],
+  ['operatingBeds', '수술실'], ['emergencyBeds', '응급실'], ['physicalTherapyBeds', '물리치료실'],
+  ['psychClosedUpper', '정신과 폐쇄(상급)'], ['psychClosedNormal', '정신과 폐쇄(일반)'],
+  ['psychOpenUpper', '정신과 개방(상급)'], ['psychOpenNormal', '정신과 개방(일반)'],
+  ['isolationBeds', '격리병실'], ['sterileBeds', '무균치료실'],
+]
+const HOSPITAL_DAYS: [string, string, string, number][] = [
+  ['월', 'trmtMonStart', 'trmtMonEnd', 1], ['화', 'trmtTueStart', 'trmtTueEnd', 2],
+  ['수', 'trmtWedStart', 'trmtWedEnd', 3], ['목', 'trmtThuStart', 'trmtThuEnd', 4],
+  ['금', 'trmtFriStart', 'trmtFriEnd', 5], ['토', 'trmtSatStart', 'trmtSatEnd', 6],
+  ['일', 'trmtSunStart', 'trmtSunEnd', 0],
+]
+function hospitalGroups(d: D): SpecGroup[] {
+  const groups: SpecGroup[] = []
+  const home = httpUrl(d.homepage)
+  groups.push({ heading: '병원 정보', render: 'kv', rows: [
+    { label: '종별', value: str(d.clCdNm), kind: 'value' },
+    { label: '설립구분', value: str(d.foundationCdNm), kind: 'value' },
+    { label: '간호등급', value: str(d.nurseGrade), unit: '등급', kind: 'value' },
+    { label: '개설일자', value: formatYmd(d.estbDd), kind: 'value' },
+    { label: '홈페이지', value: home, href: home ?? undefined, kind: 'value' },
+  ] })
+  const wRows: SpecWeeklyRow[] = HOSPITAL_DAYS.map(([day, sk, ek, i]) => {
+    const s = fmtHm(d[sk]); const e = fmtHm(d[ek]); const closed = !s && !e
+    const lunch = closed ? undefined : day === '토' ? (str(d.lunchSat) || str(d.lunchWeek) || undefined) : day === '일' ? undefined : (str(d.lunchWeek) || undefined)
+    return { day, time: closed ? '휴진' : `${s} ~ ${e}`, lunch, closed, todayIdx: i }
+  })
+  wRows.push({ day: '공휴일', time: '휴진', closed: true, todayIdx: -1 })
+  if (wRows.some(r => !r.closed)) {
+    const notes: string[] = []
+    if (str(d.noTrmtSun)) notes.push(`일요일 안내: ${d.noTrmtSun}`)
+    if (str(d.noTrmtHoli)) notes.push(`공휴일 안내: ${d.noTrmtHoli}`)
+    groups.push({ heading: '요일별 진료시간', render: 'weekly', weekly: { timeHeader: '진료시간', showLunch: true, rows: wRows, notes } })
+  }
+  const staff: SpecRow[] = [
+    { label: '의사 총수', value: num(d.drTotCnt), unit: '명' }, { label: '간호사', value: num(d.pnursCnt), unit: '명' },
+  ].filter(r => r.value != null)
+  if (staff.length) groups.push({ heading: '의료진', render: 'kv', rows: staff })
+  const docRows: SpecTable['rows'] = [
+    { label: '의과', cells: [num(d.mdeptSdrCnt), num(d.mdeptGdrCnt), num(d.mdeptIntnCnt), num(d.mdeptResdntCnt)] },
+    { label: '치과', cells: [num(d.detySdrCnt), num(d.detyGdrCnt), num(d.detyIntnCnt), num(d.detyResdntCnt)] },
+    { label: '한방', cells: [num(d.cmdcSdrCnt), num(d.cmdcGdrCnt), num(d.cmdcIntnCnt), num(d.cmdcResdntCnt)] },
+  ].filter(r => r.cells.some(c => c != null))
+  if (docRows.length) groups.push({ heading: '진료영역별 의사', render: 'table', table: { columns: ['구분', '전문의', '일반의', '인턴', '레지던트'], rows: docRows } })
+  const deptTags: SpecTag[] = arr(d.departments).map((x: any) => ({ label: str(x?.dgsbjtCdNm) ?? '', suffix: num(x?.dgsbjtPrSdrCnt) != null ? `${x.dgsbjtPrSdrCnt}명` : undefined })).filter(t => !!t.label) // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (deptTags.length) groups.push({ heading: '진료과목', render: 'tags', tagVariant: 'teal', tags: deptTags })
+  const bedRows = HOSPITAL_BED_DEFS.map(([k, label]) => ({ label, value: num(d[k]), unit: '병상' })).filter(r => r.value != null && (r.value as number) > 0)
+  if (bedRows.length) { const total = bedRows.reduce((s, r) => s + (r.value as number), 0); groups.push({ heading: `병상 정보 (총 ${total}병상)`, render: 'kv', rows: bedRows }) }
+  const parkRows: SpecRow[] = []
+  if (num(d.parkQty) != null) parkRows.push({ label: '주차가능대수', value: num(d.parkQty), unit: '대' })
+  if (str(d.parkEtc)) parkRows.push({ label: '주차안내', value: str(d.parkEtc) })
+  if (parkRows.length) groups.push({ heading: '주차정보', render: 'kv', rows: parkRows })
+  return groups
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const REGISTRY: Partial<Record<FacilityCategory, (d: D) => SpecGroup[]>> = {
   toilet: toiletGroups,
   clothes: clothesGroups,
@@ -371,6 +491,9 @@ const REGISTRY: Partial<Record<FacilityCategory, (d: D) => SpecGroup[]>> = {
   market: marketGroups,
   school: schoolGroups,
   childcare: childcareGroups,
+  pharmacy: pharmacyGroups,
+  aed: aedGroups,
+  hospital: hospitalGroups,
 }
 
 export function buildSpecGroups(category: FacilityCategory, details: Record<string, unknown>): SpecGroup[] {

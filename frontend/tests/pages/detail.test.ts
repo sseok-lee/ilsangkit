@@ -317,10 +317,18 @@ describe('DetailPage', () => {
     expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(4)
   })
 
-  it('비대상(hospital)은 광고 5개를 렌더 (불변)', async () => {
+  it('재설계(hospital)는 광고 4개를 렌더 (불변)', async () => {
     routeMock.category = 'hospital'
     routeMock.id = 'hospital-1'
     mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id: 'hospital-1', category: 'hospital' } })
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(4)
+  })
+
+  it('비대상(ev-charger)은 광고 5개를 렌더 (불변)', async () => {
+    routeMock.category = 'ev-charger'
+    routeMock.id = 'ev-charger-1'
+    mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id: 'ev-charger-1', category: 'ev-charger' } })
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
     expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(5)
   })

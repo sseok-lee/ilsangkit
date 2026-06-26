@@ -596,3 +596,295 @@ describe('buildSpecGroups — childcare (빈 {})', () => {
     expect(groups.find(g => g.heading?.includes('특이'))).toBeUndefined()
   })
 })
+
+// ─────────────────────────────────────────
+// Task 4: aed, pharmacy, hospital
+// ─────────────────────────────────────────
+
+describe('buildSpecGroups — aed (full fixture)', () => {
+  const details = {
+    monSttTme: '0900', monEndTme: '1800',
+    tueSttTme: '0900', tueEndTme: '1800',
+    wedSttTme: '0900', wedEndTme: '1800',
+    thuSttTme: '0900', thuEndTme: '1800',
+    friSttTme: '0900', friEndTme: '1800',
+    satSttTme: null,   satEndTme: null,
+    sunSttTme: null,   sunEndTme: null,
+    holSttTme: null,   holEndTme: null,
+    buildPlace: '1층 로비',
+    org: '서울특별시 강남구청',
+    clerkTel: '0221556700',
+    mfg: '(주)필립스메디컬',
+    model: 'HeartStart HS1',
+    dataDate: '2024-01-01',
+  }
+
+  it('요일별 이용시간 weekly 그룹이 있다 (≥1 non-closed day)', () => {
+    const groups = buildSpecGroups('aed', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')
+    expect(weeklyGroup).toBeTruthy()
+    expect(weeklyGroup!.heading).toBe('요일별 이용시간')
+  })
+
+  it('fmtHm: "0900" → "09:00", "1800" → "18:00"', () => {
+    const groups = buildSpecGroups('aed', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    const monRow = weeklyGroup.weekly!.rows.find(r => r.day === '월')!
+    expect(monRow.time).toBe('09:00 ~ 18:00')
+  })
+
+  it('todayIdx: 월=1, 일=0, 공휴일=-1', () => {
+    const groups = buildSpecGroups('aed', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    const rows = weeklyGroup.weekly!.rows
+    expect(rows.find(r => r.day === '월')!.todayIdx).toBe(1)
+    expect(rows.find(r => r.day === '일')!.todayIdx).toBe(0)
+    expect(rows.find(r => r.day === '공휴일')!.todayIdx).toBe(-1)
+  })
+
+  it('토/일/공휴일 시간 없으면 closed=true, time="이용불가"', () => {
+    const groups = buildSpecGroups('aed', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    const satRow = weeklyGroup.weekly!.rows.find(r => r.day === '토')!
+    expect(satRow.closed).toBe(true)
+    expect(satRow.time).toBe('이용불가')
+  })
+
+  it('24시간: 00:00~24:00 → allDay=true, time="24시간"', () => {
+    const groups = buildSpecGroups('aed', { ...details, monSttTme: '0000', monEndTme: '2400' })
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    const monRow = weeklyGroup.weekly!.rows.find(r => r.day === '월')!
+    expect(monRow.allDay).toBe(true)
+    expect(monRow.time).toBe('24시간')
+  })
+
+  it('설치·장비 kv 그룹 있다', () => {
+    const groups = buildSpecGroups('aed', details)
+    expect(groups.find(g => g.heading === '설치 · 장비')).toBeTruthy()
+  })
+
+  it('org trimDashes 적용', () => {
+    const groups = buildSpecGroups('aed', { ...details, org: '-- 강남구청 --' })
+    const kvGroup = groups.find(g => g.heading === '설치 · 장비')!
+    const row = kvGroup.rows!.find(r => r.label === '설치 기관')!
+    expect(row.value).toBe('강남구청')
+  })
+})
+
+describe('buildSpecGroups — aed (모든 요일 closed → weekly 그룹 생략)', () => {
+  it('모두 null이면 weekly 그룹 없음', () => {
+    expect(() => buildSpecGroups('aed', {})).not.toThrow()
+    const groups = buildSpecGroups('aed', {})
+    expect(groups.find(g => g.render === 'weekly')).toBeUndefined()
+  })
+})
+
+// ─────────────────────────────────────────
+
+describe('buildSpecGroups — pharmacy (full fixture)', () => {
+  const details = {
+    dutyTime1s: '0900', dutyTime1c: '1800', // 월
+    dutyTime2s: '0900', dutyTime2c: '1800', // 화
+    dutyTime3s: '0900', dutyTime3c: '1800', // 수
+    dutyTime4s: '0900', dutyTime4c: '1800', // 목
+    dutyTime5s: '0900', dutyTime5c: '1800', // 금
+    dutyTime6s: '1000', dutyTime6c: '1400', // 토
+    dutyTime7s: null,   dutyTime7c: null,   // 일 휴무
+    dutyTime8s: null,   dutyTime8c: null,   // 공휴일 휴무
+    lunchWeek: '13:00~14:00',
+    lunchSat: null,
+    noTrmtSun: '일요일 휴무',
+    noTrmtHoli: '공휴일 휴무',
+    recpWeek: '18:00 접수마감',
+    recpSat: null,
+    pharmacistCnt: 2,
+    dutyTel3: '0221556700',
+    dutyInf: '주차가능',
+    dataDate: '2024-01-01',
+  }
+
+  it('요일별 운영시간 weekly 그룹 있다 (≥1 non-closed day)', () => {
+    const groups = buildSpecGroups('pharmacy', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')
+    expect(weeklyGroup).toBeTruthy()
+    expect(weeklyGroup!.heading).toBe('요일별 운영시간')
+  })
+
+  it('fmtHm: 월요일 "0900"~"1800" → "09:00 ~ 18:00"', () => {
+    const groups = buildSpecGroups('pharmacy', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    const monRow = weeklyGroup.weekly!.rows.find(r => r.day === '월')!
+    expect(monRow.time).toBe('09:00 ~ 18:00')
+  })
+
+  it('일요일 시간 없으면 closed=true, time="휴무"', () => {
+    const groups = buildSpecGroups('pharmacy', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    const sunRow = weeklyGroup.weekly!.rows.find(r => r.day === '일')!
+    expect(sunRow.closed).toBe(true)
+    expect(sunRow.time).toBe('휴무')
+  })
+
+  it('notes에 접수/안내 문자열 포함', () => {
+    const groups = buildSpecGroups('pharmacy', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    expect(weeklyGroup.weekly!.notes).toBeDefined()
+    expect(weeklyGroup.weekly!.notes!.some(n => n.includes('접수'))).toBe(true)
+  })
+
+  it('점심시간 kv 그룹 있다', () => {
+    const groups = buildSpecGroups('pharmacy', details)
+    expect(groups.find(g => g.heading === '점심시간')).toBeTruthy()
+  })
+
+  it('약국 정보 — pharmacistCnt 있다', () => {
+    const groups = buildSpecGroups('pharmacy', details)
+    const infoGroup = groups.find(g => g.heading === '약국 정보')!
+    const row = infoGroup.rows!.find(r => r.label === '약사 수')!
+    expect(row.value).toBe(2)
+    expect(row.unit).toBe('명')
+  })
+
+  it('이용 안내 그룹 — dutyInf 있으면 포함', () => {
+    const groups = buildSpecGroups('pharmacy', details)
+    expect(groups.find(g => g.heading === '이용 안내')).toBeTruthy()
+  })
+})
+
+describe('buildSpecGroups — pharmacy (빈 {})', () => {
+  it('throw 없음, weekly 그룹 없음(모두 closed)', () => {
+    expect(() => buildSpecGroups('pharmacy', {})).not.toThrow()
+    const groups = buildSpecGroups('pharmacy', {})
+    expect(groups.find(g => g.render === 'weekly')).toBeUndefined()
+  })
+})
+
+// ─────────────────────────────────────────
+
+describe('buildSpecGroups — hospital (full fixture)', () => {
+  const details = {
+    clCdNm: '종합병원',
+    foundationCdNm: '법인',
+    nurseGrade: '1',
+    estbDd: '19850315',
+    homepage: 'https://hospital.example.com',
+    trmtMonStart: '0900', trmtMonEnd: '1700',
+    trmtTueStart: '0900', trmtTueEnd: '1700',
+    trmtWedStart: '0900', trmtWedEnd: '1700',
+    trmtThuStart: '0900', trmtThuEnd: '1700',
+    trmtFriStart: '0900', trmtFriEnd: '1700',
+    trmtSatStart: '0900', trmtSatEnd: '1300',
+    trmtSunStart: null,   trmtSunEnd: null,
+    lunchWeek: '12:30~13:30',
+    lunchSat: null,
+    noTrmtSun: '일요일 휴진',
+    noTrmtHoli: '공휴일 휴진',
+    drTotCnt: 120,
+    pnursCnt: 200,
+    mdeptSdrCnt: 80, mdeptGdrCnt: 20, mdeptIntnCnt: 10, mdeptResdntCnt: 10,
+    detySdrCnt: null, detyGdrCnt: null, detyIntnCnt: null, detyResdntCnt: null,
+    cmdcSdrCnt: null, cmdcGdrCnt: null, cmdcIntnCnt: null, cmdcResdntCnt: null,
+    departments: [
+      { dgsbjtCdNm: '내과', dgsbjtPrSdrCnt: 15 },
+      { dgsbjtCdNm: '외과', dgsbjtPrSdrCnt: 8 },
+      { dgsbjtCdNm: '소아과', dgsbjtPrSdrCnt: null },
+    ],
+    generalUpperBeds: 100,
+    generalNormalBeds: 200,
+    adultIcuBeds: 20,
+    childIcuBeds: 0,
+    emergencyBeds: 10,
+    parkQty: 50,
+    parkEtc: '지하 주차장',
+  }
+
+  it('병원 정보 kv 그룹 있다', () => {
+    const groups = buildSpecGroups('hospital', details)
+    expect(groups.find(g => g.heading === '병원 정보')).toBeTruthy()
+  })
+
+  it('요일별 진료시간 weekly 그룹 있다 (≥1 non-closed day)', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')
+    expect(weeklyGroup).toBeTruthy()
+    expect(weeklyGroup!.heading).toBe('요일별 진료시간')
+  })
+
+  it('fmtHm: 월요일 "0900"~"1700" → time 포함', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    const monRow = weeklyGroup.weekly!.rows.find(r => r.day === '월')!
+    expect(monRow.time).toBe('09:00 ~ 17:00')
+    expect(monRow.closed).toBeFalsy()
+  })
+
+  it('일요일 휴진 → closed=true', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const weeklyGroup = groups.find(g => g.render === 'weekly')!
+    const sunRow = weeklyGroup.weekly!.rows.find(r => r.day === '일')!
+    expect(sunRow.closed).toBe(true)
+  })
+
+  it('estbDd formatYmd: 19850315 → "1985년 3월 15일"', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const infoGroup = groups.find(g => g.heading === '병원 정보')!
+    const row = infoGroup.rows!.find(r => r.label === '개설일자')!
+    expect(row.value).toBe('1985년 3월 15일')
+  })
+
+  it('진료과목 tags render, tagVariant teal, dgsbjtCdNm key 사용', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const tagGroup = groups.find(g => g.heading === '진료과목')!
+    expect(tagGroup.render).toBe('tags')
+    expect(tagGroup.tagVariant).toBe('teal')
+    const labels = tagGroup.tags!.map(t => t.label)
+    expect(labels).toContain('내과')
+    expect(labels).toContain('외과')
+    expect(labels).toContain('소아과')
+  })
+
+  it('진료과목 tags suffix — dgsbjtPrSdrCnt 있으면 "N명"', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const tagGroup = groups.find(g => g.heading === '진료과목')!
+    const naeTag = tagGroup.tags!.find(t => t.label === '내과')!
+    expect(naeTag.suffix).toBe('15명')
+    const soTag = tagGroup.tags!.find(t => t.label === '소아과')!
+    expect(soTag.suffix).toBeUndefined()
+  })
+
+  it('진료영역별 의사 table — 의과 행 있음', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const tableGroup = groups.find(g => g.heading === '진료영역별 의사')!
+    expect(tableGroup.render).toBe('table')
+    const rows = tableGroup.table!.rows
+    expect(rows.find(r => r.label === '의과')).toBeTruthy()
+    // 치과/한방은 모두 null이므로 생략
+    expect(rows.find(r => r.label === '치과')).toBeUndefined()
+  })
+
+  it('병상 정보 — 총 병상수 헤딩에 포함, childIcuBeds=0은 제외', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const bedGroup = groups.find(g => g.heading?.includes('병상 정보'))!
+    expect(bedGroup.heading).toContain('330병상') // 100+200+20+10
+    expect(bedGroup.rows!.find(r => r.label === '소아 중환자')).toBeUndefined()
+  })
+
+  it('주차정보 kv 그룹 — parkQty=50', () => {
+    const groups = buildSpecGroups('hospital', details)
+    const parkGroup = groups.find(g => g.heading === '주차정보')!
+    const row = parkGroup.rows!.find(r => r.label === '주차가능대수')!
+    expect(row.value).toBe(50)
+    expect(row.unit).toBe('대')
+  })
+})
+
+describe('buildSpecGroups — hospital (빈 {})', () => {
+  it('throw 없음, weekly/tags/table/beds/parking 없으면 생략', () => {
+    expect(() => buildSpecGroups('hospital', {})).not.toThrow()
+    const groups = buildSpecGroups('hospital', {})
+    expect(groups.find(g => g.render === 'weekly')).toBeUndefined()
+    expect(groups.find(g => g.heading === '진료과목')).toBeUndefined()
+    expect(groups.find(g => g.heading === '진료영역별 의사')).toBeUndefined()
+    expect(groups.find(g => g.heading?.includes('병상'))).toBeUndefined()
+  })
+})
