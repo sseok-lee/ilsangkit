@@ -6,16 +6,22 @@ export interface SpecRow {
   unit?: string
   /** 'value' = 빈 값도 행 유지(컴포넌트가 '정보 없음'). 'flag' = 값 없으면 행 생략. */
   kind?: 'value' | 'flag'
+  href?: string
 }
 export interface SpecTable {
   columns: string[]
   rows: Array<{ label: string; cells: Array<string | number | null> }>
 }
+export interface SpecTag { label: string; suffix?: string; colorClass?: string }
+export interface SpecWeeklyRow { day: string; time: string; lunch?: string; closed?: boolean; allDay?: boolean; todayIdx?: number }
 export interface SpecGroup {
   heading?: string
-  render: 'kv' | 'table'
+  render: 'kv' | 'table' | 'tags' | 'weekly'
   rows?: SpecRow[]
   table?: SpecTable
+  tags?: SpecTag[]
+  tagVariant?: 'teal' | 'gray' | 'sky' | 'custom'
+  weekly?: { timeHeader: string; showLunch?: boolean; rows: SpecWeeklyRow[]; notes?: string[] }
 }
 
 type D = Record<string, unknown>

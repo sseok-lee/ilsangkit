@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import DetailSpecGrid from '~/components/facility/detail/DetailSpecGrid.vue'
+import WeekdayHoursTable from '~/components/facility/detail/WeekdayHoursTable.vue'
 import type { SpecGroup } from '~/utils/facilitySpecGroups'
 
 const globalConfig = {
@@ -43,5 +44,25 @@ describe('DetailSpecGrid', () => {
   it('빈 groups면 아무 행도 없다', () => {
     const wrapper = mountGrid([])
     expect(wrapper.text()).not.toContain('정보 없음')
+  })
+
+  it('tags group: 칩으로 렌더', () => {
+    const html = mountGrid([{ render: 'tags', tagVariant: 'gray', tags: [{ label: '채소' }, { label: '과일' }] }]).html()
+    expect(html).toContain('채소'); expect(html).toContain('과일')
+  })
+
+  it('weekly group: WeekdayHoursTable에 위임', () => {
+    const w = mountGrid([{ heading: '진료시간', render: 'weekly', weekly: { timeHeader: '진료시간', rows: [{ day: '월', time: '09:00 ~ 18:00', todayIdx: 1 }] } }])
+    expect(w.findComponent(WeekdayHoursTable).exists()).toBe(true)
+  })
+
+  it('href row: 앵커로 렌더', () => {
+    const w = mountGrid([{ render: 'kv', rows: [{ label: '홈페이지', value: 'example.com', href: 'http://example.com', kind: 'value' }] }])
+    const a = w.find('a'); expect(a.exists()).toBe(true); expect(a.attributes('href')).toBe('http://example.com')
+  })
+
+  it('visibleGroups: 빈 tags/weekly 그룹 숨김', () => {
+    expect(mountGrid([{ render: 'tags', tags: [] }]).text().trim()).toBe('')
+    expect(mountGrid([{ render: 'weekly', weekly: { timeHeader: 't', rows: [{ day: '월', time: '휴진', closed: true, todayIdx: 1 }] } }]).text().trim()).toBe('')
   })
 })
