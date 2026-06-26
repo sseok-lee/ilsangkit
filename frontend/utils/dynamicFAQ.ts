@@ -6,7 +6,10 @@ import { CATEGORY_FAQ, type FAQItem } from '~/utils/categoryFAQ'
  * 각 시설의 실제 데이터를 반영하여 페이지마다 고유한 FAQ를 생성하고,
  * 정적 FAQ를 보충하여 총 5개 FAQ를 반환한다.
  */
-export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
+export function generateDynamicFAQ(
+  facility: FacilityDetail,
+  opts: { staticFill?: boolean } = {},
+): FAQItem[] {
   const d = facility.details as FacilityDetailsAll
   const cat = facility.category
   const name = facility.name
@@ -311,11 +314,10 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
       break
   }
 
-  // 동적 FAQ 최대 3개 + 정적 FAQ 보충하여 총 5개
+  // 동적 FAQ 최대 3개 + (옵션) 정적 FAQ 보충하여 총 5개
   const dynamicSlice = dynamic.slice(0, 3)
+  if (opts.staticFill === false) return dynamicSlice
   const staticFaqs = CATEGORY_FAQ[cat] ?? []
   const needed = 5 - dynamicSlice.length
-  const staticSlice = staticFaqs.slice(0, needed)
-
-  return [...dynamicSlice, ...staticSlice]
+  return [...dynamicSlice, ...staticFaqs.slice(0, needed)]
 }

@@ -5,7 +5,10 @@ import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
  * 시설 데이터 기반 동적 이용 팁 생성
  * 시설의 실제 속성에 맞는 팁을 우선 배치하고, 정적 팁으로 보충하여 총 5개 반환
  */
-export function generateDynamicTips(facility: FacilityDetail): string[] {
+export function generateDynamicTips(
+  facility: FacilityDetail,
+  opts: { staticFill?: boolean } = {},
+): string[] {
   const d = facility.details as FacilityDetailsAll
   const cat = facility.category
 
@@ -115,11 +118,10 @@ export function generateDynamicTips(facility: FacilityDetail): string[] {
       break
   }
 
-  // 동적 팁 최대 3개 + 정적 팁 보충하여 총 5개
+  // 동적 팁 최대 3개 + (옵션) 정적 팁 보충하여 총 5개
   const dynamicSlice = dynamic.slice(0, 3)
+  if (opts.staticFill === false) return dynamicSlice
   const staticTips = CATEGORY_TIPS[cat] ?? []
   const needed = 5 - dynamicSlice.length
-  const staticSlice = staticTips.slice(0, needed)
-
-  return [...dynamicSlice, ...staticSlice]
+  return [...dynamicSlice, ...staticTips.slice(0, needed)]
 }
