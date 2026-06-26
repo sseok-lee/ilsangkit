@@ -240,6 +240,13 @@ export default defineNuxtConfig({
 
   experimental: {
     treeshakeClientOnly: true,
-    inlineSSRStyles: true,
+    // CSS를 인라인하지 않고 외부 캐시 파일(/_nuxt/*.css)로 서빙한다.
+    // true면 Tailwind 전역 CSS(~150KB)가 모든 SSR 페이지에 인라인돼 상세 페이지가
+    // ~220KB로 비대해진다. 부동산 37만 페이지에서 Yeti가 매 페이지 150KB를 중복
+    // 다운로드 → 크롤예산을 잠식해 색인 커버리지를 떨어뜨린다(경쟁사 ayo는 외부
+    // 캐시 CSS로 페이지 ~10KB). 외부화 시 CSS는 1회 캐시되고 페이지는 ~70KB로 경량화.
+    // 트레이드오프: 첫 페인트(FCP)에 CSS 요청 1회가 더해져 Lighthouse가 소폭 하락할
+    // 수 있다 — 네이버 색인 커버리지(크롤 효율)를 우선해 false로 둔다.
+    inlineSSRStyles: false,
   }
 })
