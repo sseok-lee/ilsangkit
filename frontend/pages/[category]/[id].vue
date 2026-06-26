@@ -329,7 +329,7 @@ const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
 
 // 재설계 게이트 — toilet/clothes만 새 사다리(스펙 그리드 + 위치·길찾기 + 슬롭 제거)
-const REDESIGNED_CATEGORIES: FacilityCategory[] = ['toilet', 'clothes', 'wifi', 'park', 'parking', 'library', 'sports']
+const REDESIGNED_CATEGORIES: FacilityCategory[] = ['toilet', 'clothes', 'wifi', 'park', 'parking', 'library', 'sports', 'market', 'school', 'childcare']
 const isRedesigned = computed(() => REDESIGNED_CATEGORIES.includes(category.value))
 
 // 도시명(한글) → 도시 허브 페이지 경로

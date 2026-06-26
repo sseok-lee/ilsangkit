@@ -181,6 +181,128 @@ function sportsGroups(d: D): SpecGroup[] {
 }
 // ───────────────────────────────────────────────────────────────────────────
 
+// ── Group B builders (Task 3): market, school, childcare ─────────────────
+
+const CHILD_CLASS_DEFS: [string, string, string][] = [
+  ['0세', 'classCnt00', 'childCnt00'], ['1세', 'classCnt01', 'childCnt01'], ['2세', 'classCnt02', 'childCnt02'],
+  ['3세', 'classCnt03', 'childCnt03'], ['4세', 'classCnt04', 'childCnt04'], ['5세', 'classCnt05', 'childCnt05'],
+  ['만2세미만', 'classCntM2', 'childCntM2'], ['만5세이상', 'classCntM5', 'childCntM5'], ['장애아', 'classCntSp', 'childCntSp'],
+]
+const CHILD_STAFF_DEFS: [string, string][] = [
+  ['원장', 'emCntA1'], ['보육교사', 'emCntA2'], ['특수교사', 'emCntA3'], ['치료사', 'emCntA4'], ['영양사', 'emCntA5'],
+  ['간호사(조무사)', 'emCntA6'], ['조리원', 'emCntA10'], ['사무원', 'emCntA7'], ['기타', 'emCntA8'],
+]
+const CHILD_CAREER_DEFS: [string, string][] = [
+  ['1년 미만', 'emCnt0y'], ['1년 이상', 'emCnt1y'], ['2년 이상', 'emCnt2y'], ['4년 이상', 'emCnt4y'], ['6년 이상', 'emCnt6y'],
+]
+
+function marketGroups(d: D): SpecGroup[] {
+  const groups: SpecGroup[] = []
+  const storeCount = num(d.storeCount); const foundedYear = num(d.foundedYear)
+  const home = httpUrl(d.homepageUrl)
+  groups.push({ heading: '시장 개요', render: 'kv', rows: [
+    { label: '시장 유형', value: str(d.marketType), kind: 'value' },
+    { label: '개설 주기', value: formatOpeningCycle(d.openingCycle), kind: 'value' },
+    { label: '점포 수', value: storeCount != null ? storeCount.toLocaleString() : null, unit: '개', kind: 'value' },
+    { label: '개설 연도', value: foundedYear != null ? String(foundedYear) : null, unit: '년', kind: 'value' },
+  ] })
+  const productTags = splitList(d.products)
+  if (productTags.length) groups.push({ heading: '주요 판매품목', render: 'tags', tagVariant: 'gray', tags: productTags.map(t => ({ label: t })) })
+  groups.push({ heading: '편의시설', render: 'kv', rows: [
+    { label: '공중화장실', value: yesNo(d.hasPublicToilet), kind: 'value' },
+    { label: '주차시설', value: yesNo(d.hasParking), kind: 'value' },
+    { label: '취급 상품권', value: str(d.giftCertificates), kind: 'value' },
+  ] })
+  groups.push({ heading: '연락 · 안내', render: 'kv', rows: [
+    { label: '연락처', value: formatPhone(d.phoneNumber), kind: 'value' },
+    { label: '홈페이지', value: home, href: home ?? undefined, kind: 'value' },
+    { label: '자료 기준일', value: str(d.dataDate), kind: 'value' },
+  ] })
+  return groups
+}
+
+function schoolGroups(d: D): SpecGroup[] {
+  const groups: SpecGroup[] = []
+  const home = httpUrl(d.homepageUrl)
+  const ovRows: SpecRow[] = [
+    { label: '학교급', value: str(d.schoolLevel), kind: 'value' },
+    { label: '설립형태', value: str(d.foundationType), kind: 'value' },
+    { label: '운영상태', value: str(d.operationStatus), kind: 'value' },
+  ]
+  const pushIf = (label: string, v: string | null) => { if (v) ovRows.push({ label, value: v, kind: 'value' }) }
+  pushIf('남녀공학', str(d.coeducationType))
+  pushIf('고교유형', str(d.highSchoolType))
+  pushIf('주야구분', str(d.dayNightType))
+  pushIf('본/분교', str(d.branchType))
+  pushIf('설립일', formatYmd(d.foundedDate))
+  groups.push({ heading: '학교 개요', render: 'kv', rows: ovRows })
+  groups.push({ heading: '연락 · 관할', render: 'kv', rows: [
+    { label: '팩스', value: str(d.faxNumber), kind: 'value' },
+    { label: '홈페이지', value: home, href: home ?? undefined, kind: 'value' },
+    { label: '시도교육청', value: str(d.sidoEduName), kind: 'value' },
+    { label: '교육지원청', value: str(d.localEduName), kind: 'value' },
+  ] })
+  const enr = arr(d.enrollments).map((e: any) => ({ grade: num(e?.grade), cls: num(e?.classCount) })) // eslint-disable-line @typescript-eslint/no-explicit-any
+    .filter(e => e.grade != null).sort((a, b) => (a.grade as number) - (b.grade as number))
+  if (enr.length) {
+    const rows: SpecTable['rows'] = enr.map(e => ({ label: `${e.grade}학년`, cells: [e.cls] }))
+    if (enr.length > 1) rows.push({ label: '합계', cells: [enr.reduce((s, e) => s + (e.cls ?? 0), 0)] })
+    groups.push({ heading: '학급 현황', render: 'table', table: { columns: ['학년', '학급 수'], rows } })
+  }
+  const deptTags: SpecTag[] = arr(d.departments).map((x: any) => ({ label: str(x?.departmentName) ?? '' })).filter(t => !!t.label) // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (deptTags.length) groups.push({ heading: '계열 정보', render: 'tags', tagVariant: 'sky', tags: deptTags })
+  return groups
+}
+
+function childcareGroups(d: D): SpecGroup[] {
+  const groups: SpecGroup[] = []
+  const home = httpUrl(d.crhome)
+  const opRows: SpecRow[] = [
+    { label: '어린이집 유형', value: str(d.crtypename), kind: 'value' },
+    { label: '운영 상태', value: str(d.crstatusname), kind: 'value' },
+  ]
+  const pb = str(d.crpausebegindt); const pe = str(d.crpauseenddt)
+  if (pb && pe) opRows.push({ label: '휴지기간', value: `${pb} ~ ${pe}`, kind: 'value' })
+  opRows.push(
+    { label: '인가일', value: formatYmd(d.crcnfmdt), kind: 'value' },
+    { label: '대표자', value: str(d.crrepname), kind: 'value' },
+    { label: '통학차량', value: str(d.crcargbname), kind: 'value' },
+    { label: '팩스', value: str(d.crfaxno), kind: 'value' },
+    { label: '홈페이지', value: home, href: home ?? undefined, kind: 'value' },
+    { label: '데이터 기준일', value: str(d.datastdrdt), kind: 'value' },
+  )
+  groups.push({ heading: '운영 현황', render: 'kv', rows: opRows })
+  const capRows: SpecRow[] = [
+    { label: '정원', value: num(d.crcapat), unit: '명', kind: 'value' },
+    { label: '현원', value: num(d.crchcnt), unit: '명', kind: 'value' },
+    { label: '보육실', value: num(d.nrtrroomcnt), unit: '개', kind: 'value' },
+    { label: '보육실 면적', value: str(d.nrtrroomsize), unit: '㎡', kind: 'value' },
+    { label: '놀이터', value: num(d.plgrdco), unit: '개', kind: 'value' },
+    { label: 'CCTV', value: num(d.cctvinstlcnt), unit: '대', kind: 'value' },
+    { label: '교직원', value: num(d.chcrtescnt), unit: '명', kind: 'value' },
+  ]
+  const cap = num(d.crcapat); const cur = num(d.crchcnt)
+  if (cap != null && cur != null && cap > 0) capRows.push({ label: '가용률', value: `${Math.round((cap - cur) / cap * 100)}% (여석 ${Math.max(cap - cur, 0)}명)`, kind: 'value' })
+  groups.push({ heading: '정원·시설 현황', render: 'kv', rows: capRows })
+  const classRows: SpecTable['rows'] = CHILD_CLASS_DEFS.map(([label, ck, nk]) => {
+    const c = num(d[ck]); const n = num(d[nk])
+    const avg = (c != null && c > 0 && n != null) ? Math.round(n / c * 10) / 10 : null
+    return { label, cells: [c, n, avg] }
+  }).filter(r => (r.cells[0] != null && r.cells[0] !== 0) || (r.cells[1] != null && r.cells[1] !== 0))
+  if (classRows.length) {
+    const tc = num(d.classCntTot); const tn = num(d.childCntTot)
+    if (tc != null || tn != null) classRows.push({ label: '합계', cells: [tc, tn, (tc && tn != null) ? Math.round(tn / tc * 10) / 10 : null] })
+    groups.push({ heading: '연령별 반·아동 현황', render: 'table', table: { columns: ['연령', '반 수', '아동 수', '반당 평균'], rows: classRows } })
+  }
+  const staffRows = CHILD_STAFF_DEFS.map(([label, k]) => ({ label, value: num(d[k]), unit: '명' })).filter(r => r.value != null && r.value > 0)
+  if (staffRows.length) { const tot = num(d.emCntTot); groups.push({ heading: tot != null ? `직원 현황 (총 ${tot}명)` : '직원 현황', render: 'kv', rows: staffRows }) }
+  const careerTags = CHILD_CAREER_DEFS.map(([label, k]) => ({ label, n: num(d[k]) })).filter(t => t.n != null && t.n > 0).map(t => ({ label: t.label, suffix: `${t.n}명` }))
+  if (careerTags.length) groups.push({ heading: '교사 경력 분포', render: 'tags', tagVariant: 'custom', tags: careerTags })
+  if (str(d.crspec)) groups.push({ heading: '특이사항', render: 'kv', rows: [{ label: '특이사항', value: str(d.crspec), kind: 'value' }] })
+  return groups
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 function toiletGroups(d: D): SpecGroup[] {
   const groups: SpecGroup[] = []
 
@@ -246,6 +368,9 @@ const REGISTRY: Partial<Record<FacilityCategory, (d: D) => SpecGroup[]>> = {
   parking: parkingGroups,
   library: libraryGroups,
   sports: sportsGroups,
+  market: marketGroups,
+  school: schoolGroups,
+  childcare: childcareGroups,
 }
 
 export function buildSpecGroups(category: FacilityCategory, details: Record<string, unknown>): SpecGroup[] {

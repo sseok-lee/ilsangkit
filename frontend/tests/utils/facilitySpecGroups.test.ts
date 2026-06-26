@@ -377,3 +377,222 @@ describe('buildSpecGroups — clothes (thin, 있는 만큼만)', () => {
     expect(labels).not.toContain('연락처')
   })
 })
+
+// ─────────────────────────────────────────
+// Task 3: market, school, childcare
+// ─────────────────────────────────────────
+
+describe('buildSpecGroups — market (full fixture)', () => {
+  const details = {
+    marketType: '전통시장',
+    openingCycle: '3+8',
+    storeCount: 250,
+    products: '채소+과일+생선',
+    giftCertificates: '온누리상품권',
+    homepageUrl: 'https://market.example.com',
+    hasPublicToilet: true,
+    hasParking: false,
+    foundedYear: 1972,
+    phoneNumber: '0312345678',
+    dataDate: '2024-01-01',
+  }
+
+  it('그룹 헤딩에 시장 개요, 주요 판매품목, 편의시설, 연락 · 안내 포함', () => {
+    const groups = buildSpecGroups('market', details)
+    const headings = groups.map(g => g.heading)
+    expect(headings).toContain('시장 개요')
+    expect(headings).toContain('주요 판매품목')
+    expect(headings).toContain('편의시설')
+    expect(headings).toContain('연락 · 안내')
+  })
+
+  it('주요 판매품목 tags render, tagVariant gray', () => {
+    const groups = buildSpecGroups('market', details)
+    const tagGroup = groups.find(g => g.heading === '주요 판매품목')!
+    expect(tagGroup.render).toBe('tags')
+    expect(tagGroup.tagVariant).toBe('gray')
+    expect(tagGroup.tags!.map(t => t.label)).toEqual(['채소', '과일', '생선'])
+  })
+
+  it('openingCycle "3+8" → "매월 3, 8" (formatOpeningCycle)', () => {
+    const groups = buildSpecGroups('market', details)
+    const row = groups[0].rows!.find(r => r.label === '개설 주기')!
+    expect(row.value).toBe('매월 3, 8')
+  })
+
+  it('hasPublicToilet=true → 있음, hasParking=false → 없음 (yesNo)', () => {
+    const groups = buildSpecGroups('market', details)
+    const convGroup = groups.find(g => g.heading === '편의시설')!
+    expect(convGroup.rows!.find(r => r.label === '공중화장실')!.value).toBe('있음')
+    expect(convGroup.rows!.find(r => r.label === '주차시설')!.value).toBe('없음')
+  })
+})
+
+describe('buildSpecGroups — market (빈 {})', () => {
+  it('throw 없음, 주요 판매품목 태그 그룹은 products 없으면 생략', () => {
+    expect(() => buildSpecGroups('market', {})).not.toThrow()
+    const groups = buildSpecGroups('market', {})
+    expect(groups.find(g => g.heading === '주요 판매품목')).toBeUndefined()
+  })
+})
+
+// ─────────────────────────────────────────
+
+describe('buildSpecGroups — school (full fixture)', () => {
+  const details = {
+    schoolLevel: '중학교',
+    foundationType: '공립',
+    operationStatus: '운영',
+    coeducationType: '남녀공학',
+    highSchoolType: null,
+    dayNightType: null,
+    branchType: '본교',
+    foundedDate: '19820301',
+    faxNumber: '02-555-1234',
+    homepageUrl: 'https://school.example.com',
+    sidoEduName: '서울특별시교육청',
+    localEduName: '강남교육지원청',
+    enrollments: [
+      { grade: 1, classCount: 8 },
+      { grade: 2, classCount: 7 },
+      { grade: 3, classCount: 6 },
+    ],
+    departments: [
+      { departmentName: '인문계열' },
+      { departmentName: '자연계열' },
+    ],
+  }
+
+  it('그룹 헤딩에 학교 개요, 연락 · 관할, 학급 현황, 계열 정보 포함', () => {
+    const groups = buildSpecGroups('school', details)
+    const headings = groups.map(g => g.heading)
+    expect(headings).toContain('학교 개요')
+    expect(headings).toContain('연락 · 관할')
+    expect(headings).toContain('학급 현황')
+    expect(headings).toContain('계열 정보')
+  })
+
+  it('학급 현황 table render — 학년별 행 + 합계 행', () => {
+    const groups = buildSpecGroups('school', details)
+    const tableGroup = groups.find(g => g.heading === '학급 현황')!
+    expect(tableGroup.render).toBe('table')
+    const rows = tableGroup.table!.rows
+    expect(rows.find(r => r.label === '1학년')!.cells[0]).toBe(8)
+    expect(rows.find(r => r.label === '합계')!.cells[0]).toBe(21) // 8+7+6
+  })
+
+  it('계열 정보 tags render, tagVariant sky', () => {
+    const groups = buildSpecGroups('school', details)
+    const tagGroup = groups.find(g => g.heading === '계열 정보')!
+    expect(tagGroup.render).toBe('tags')
+    expect(tagGroup.tagVariant).toBe('sky')
+    expect(tagGroup.tags!.map(t => t.label)).toEqual(['인문계열', '자연계열'])
+  })
+
+  it('foundedDate formatYmd: 19820301 → "1982년 3월 1일"', () => {
+    const groups = buildSpecGroups('school', details)
+    const ovGroup = groups.find(g => g.heading === '학교 개요')!
+    const row = ovGroup.rows!.find(r => r.label === '설립일')!
+    expect(row.value).toBe('1982년 3월 1일')
+  })
+})
+
+describe('buildSpecGroups — school (빈 {})', () => {
+  it('throw 없음, 학급현황/계열정보 배열 없으면 생략', () => {
+    expect(() => buildSpecGroups('school', {})).not.toThrow()
+    const groups = buildSpecGroups('school', {})
+    expect(groups.find(g => g.heading === '학급 현황')).toBeUndefined()
+    expect(groups.find(g => g.heading === '계열 정보')).toBeUndefined()
+  })
+})
+
+// ─────────────────────────────────────────
+
+describe('buildSpecGroups — childcare (full fixture)', () => {
+  const details = {
+    crtypename: '국공립',
+    crstatusname: '정상',
+    crpausebegindt: null,
+    crpauseenddt: null,
+    crcnfmdt: '20100315',
+    crrepname: '홍길동',
+    crcargbname: '있음',
+    crfaxno: '02-111-2222',
+    crhome: 'https://care.example.com',
+    datastdrdt: '2024-01-01',
+    crcapat: 80,
+    crchcnt: 60,
+    nrtrroomcnt: 5,
+    nrtrroomsize: '120',
+    plgrdco: 1,
+    cctvinstlcnt: 4,
+    chcrtescnt: 10,
+    classCnt00: 1, childCnt00: 5,
+    classCnt01: 1, childCnt01: 6,
+    classCnt02: 2, childCnt02: 14,
+    classCnt03: 2, childCnt03: 16,
+    classCnt04: 0, childCnt04: 0,
+    classCnt05: 0, childCnt05: 0,
+    classCntM2: 0, childCntM2: 0,
+    classCntM5: 0, childCntM5: 0,
+    classCntSp: 0, childCntSp: 0,
+    classCntTot: 6, childCntTot: 41,
+    emCntA1: 1, emCntA2: 5, emCntA3: 0, emCntA4: 0,
+    emCntA5: 1, emCntA6: 0, emCntA7: 1, emCntA8: 0, emCntA10: 1,
+    emCntTot: 9,
+    emCnt0y: 1, emCnt1y: 2, emCnt2y: 1, emCnt4y: 0, emCnt6y: 1,
+    crspec: null,
+  }
+
+  it('그룹 헤딩에 운영 현황, 정원·시설 현황, 연령별 반·아동 현황, 직원 현황, 교사 경력 분포 포함', () => {
+    const groups = buildSpecGroups('childcare', details)
+    const headings = groups.map(g => g.heading ?? '')
+    expect(headings.some(h => h.includes('운영 현황'))).toBe(true)
+    expect(headings.some(h => h.includes('정원·시설 현황'))).toBe(true)
+    expect(headings.some(h => h.includes('연령별 반·아동 현황'))).toBe(true)
+    expect(headings.some(h => h.includes('직원 현황'))).toBe(true)
+    expect(headings.some(h => h.includes('교사 경력 분포'))).toBe(true)
+  })
+
+  it('가용률 계산: crcapat=80, crchcnt=60 → 25% (여석 20명)', () => {
+    const groups = buildSpecGroups('childcare', details)
+    const capGroup = groups.find(g => g.heading === '정원·시설 현황')!
+    const row = capGroup.rows!.find(r => r.label === '가용률')!
+    expect(row.value).toContain('25%')
+    expect(row.value).toContain('여석 20명')
+  })
+
+  it('연령별 현황 table render — 비어있지 않은 연령 행 + 합계 행', () => {
+    const groups = buildSpecGroups('childcare', details)
+    const tableGroup = groups.find(g => g.heading === '연령별 반·아동 현황')!
+    expect(tableGroup.render).toBe('table')
+    const rows = tableGroup.table!.rows
+    expect(rows.find(r => r.label === '0세')).toBeTruthy()
+    expect(rows.find(r => r.label === '합계')).toBeTruthy()
+  })
+
+  it('교사 경력 분포 tags render, tagVariant custom, suffix에 인원수 포함', () => {
+    const groups = buildSpecGroups('childcare', details)
+    const tagGroup = groups.find(g => g.heading === '교사 경력 분포')!
+    expect(tagGroup.render).toBe('tags')
+    expect(tagGroup.tagVariant).toBe('custom')
+    const tag = tagGroup.tags!.find(t => t.label === '1년 미만')!
+    expect(tag.suffix).toBe('1명')
+  })
+
+  it('직원 현황 — emCntTot 있으면 헤딩에 총원 포함', () => {
+    const groups = buildSpecGroups('childcare', details)
+    const staffGroup = groups.find(g => g.heading?.includes('직원 현황'))!
+    expect(staffGroup.heading).toContain('9명')
+  })
+})
+
+describe('buildSpecGroups — childcare (빈 {})', () => {
+  it('throw 없음, 연령표/경력태그/특이사항 없으면 생략', () => {
+    expect(() => buildSpecGroups('childcare', {})).not.toThrow()
+    const groups = buildSpecGroups('childcare', {})
+    expect(groups.find(g => g.heading?.includes('연령별'))).toBeUndefined()
+    expect(groups.find(g => g.heading?.includes('경력'))).toBeUndefined()
+    expect(groups.find(g => g.heading?.includes('특이'))).toBeUndefined()
+  })
+})

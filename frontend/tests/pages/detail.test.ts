@@ -351,6 +351,9 @@ describe('DetailPage', () => {
     { cat: 'parking', id: 'parking-1' },
     { cat: 'library', id: 'library-1' },
     { cat: 'sports', id: 'sports-1' },
+    { cat: 'market', id: 'market-1' },
+    { cat: 'school', id: 'school-1' },
+    { cat: 'childcare', id: 'childcare-1' },
   ]
 
   for (const { cat, id } of phase2Categories) {
