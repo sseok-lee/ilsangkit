@@ -119,6 +119,10 @@
               <!-- 신: 스펙 그리드 (toilet/clothes) — 헤더 광고 직후 1차 고유 콘텐츠로 승격 -->
               <DetailSpecGrid v-if="isRedesigned && facility" :groups="specGroups" />
 
+              <!-- ev-charger 실시간 충전 현황 (재설계 경로 — 30초 폴링, 라이브 상태)
+                   정적 SpecGrid와 형제로 배치. DetailFacilityStatus 게이트오프 이후에도 라이브 리스트 보존. -->
+              <EvChargerDetail v-if="isRedesigned && category === 'ev-charger'" :details="(facility!.details as any)" />
+
               <!-- AED 긴급 CTA (재설계 aed 전용 — DetailBasicInfo가 게이트오프되므로 이쪽에서 렌더) -->
               <div v-if="isRedesigned && category === 'aed'" class="flex flex-col gap-3">
                 <div class="h-px bg-slate-100 w-full"></div>
@@ -329,6 +333,7 @@ import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.
 import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
+import EvChargerDetail from '~/components/facility/details/EvChargerDetail.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { getOperatingStatus } from '~/utils/facilityStatus'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
@@ -352,7 +357,7 @@ const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
 
 // 재설계 게이트 — toilet/clothes만 새 사다리(스펙 그리드 + 위치·길찾기 + 슬롭 제거)
-const REDESIGNED_CATEGORIES: FacilityCategory[] = ['toilet', 'clothes', 'wifi', 'park', 'parking', 'library', 'sports', 'market', 'school', 'childcare', 'aed', 'pharmacy', 'hospital']
+const REDESIGNED_CATEGORIES: FacilityCategory[] = ['toilet', 'clothes', 'wifi', 'park', 'parking', 'library', 'sports', 'market', 'school', 'childcare', 'aed', 'pharmacy', 'hospital', 'ev-charger']
 const isRedesigned = computed(() => REDESIGNED_CATEGORIES.includes(category.value))
 
 // 도시명(한글) → 도시 허브 페이지 경로

@@ -83,6 +83,8 @@ const globalStubs = {
   // 재설계 신규 컴포넌트는 Nuxt 자동 import 라 raw vitest mount 에선 미해소 → 명시 stub 으로 존재 검증 가능케 함.
   DetailSpecGrid: { template: '<div data-testid="spec-grid">SpecGrid</div>', props: ['groups', 'heading'] },
   DetailLocationGuide: { template: '<div data-testid="location-guide">LocationGuide</div>', props: ['stations', 'alternatives', 'alternativeLabel'] },
+  // EvChargerDetail 은 명시 import (auto-import 아님) → 테스트 env 에서 useApiBase 등 Nuxt 훅 호출 방지용 stub 필수.
+  EvChargerDetail: { template: '<div data-testid="ev-charger-detail" />', props: ['details'] },
 }
 
 // Helper to mount async components with Suspense
@@ -325,12 +327,12 @@ describe('DetailPage', () => {
     expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(4)
   })
 
-  it('비대상(ev-charger)은 광고 5개를 렌더 (불변)', async () => {
+  it('재설계(ev-charger)는 광고 4개를 렌더 (불변)', async () => {
     routeMock.category = 'ev-charger'
     routeMock.id = 'ev-charger-1'
     mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id: 'ev-charger-1', category: 'ev-charger' } })
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
-    expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(5)
+    expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(4)
   })
 
   // hasFacilityStatus=false 카테고리(clothes, 재설계)는 시설현황 h3 미렌더 + 광고 인접(연속) 노출 없음.

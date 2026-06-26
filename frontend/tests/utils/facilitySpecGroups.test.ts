@@ -888,3 +888,97 @@ describe('buildSpecGroups — hospital (빈 {})', () => {
     expect(groups.find(g => g.heading?.includes('병상'))).toBeUndefined()
   })
 })
+
+// ─────────────────────────────────────────
+// Task 5: ev-charger
+// ─────────────────────────────────────────
+
+describe('buildSpecGroups — ev-charger (full fixture)', () => {
+  const details = {
+    busiNm: '한국전력공사',
+    busiCall: '1234567890',
+    useTime: '24시간',
+    parkingFree: 'Y',
+    limitYn: 'Y',
+    limitDetail: '아파트 입주민 전용',
+    note: '우천 시 사용 불가',
+    addrDetail: '지하주차장 B1',
+    location: '지하주차장',
+    year: '2022',
+  }
+
+  it('운영 정보 그룹 존재', () => {
+    const groups = buildSpecGroups('ev-charger', details)
+    expect(groups.find(g => g.heading === '운영 정보')).toBeDefined()
+  })
+
+  it('운영기관명 노출', () => {
+    const groups = buildSpecGroups('ev-charger', details)
+    const opGroup = groups.find(g => g.heading === '운영 정보')!
+    const row = opGroup.rows!.find(r => r.label === '운영기관')!
+    expect(row.value).toBe('한국전력공사')
+  })
+
+  it('parkingFree Y → 무료', () => {
+    const groups = buildSpecGroups('ev-charger', details)
+    const opGroup = groups.find(g => g.heading === '운영 정보')!
+    const row = opGroup.rows!.find(r => r.label === '주차')!
+    expect(row.value).toBe('무료')
+  })
+
+  it('parkingFree N → 유료', () => {
+    const groups = buildSpecGroups('ev-charger', { ...details, parkingFree: 'N' })
+    const opGroup = groups.find(g => g.heading === '운영 정보')!
+    const row = opGroup.rows!.find(r => r.label === '주차')!
+    expect(row.value).toBe('유료')
+  })
+
+  it('limitYn=Y + limitDetail → 이용제한 상세 표시', () => {
+    const groups = buildSpecGroups('ev-charger', details)
+    const opGroup = groups.find(g => g.heading === '운영 정보')!
+    const row = opGroup.rows!.find(r => r.label === '이용 제한')!
+    expect(row.value).toBe('아파트 입주민 전용')
+  })
+
+  it('limitYn=N → 제한 없음', () => {
+    const groups = buildSpecGroups('ev-charger', { ...details, limitYn: 'N', limitDetail: null })
+    const opGroup = groups.find(g => g.heading === '운영 정보')!
+    const row = opGroup.rows!.find(r => r.label === '이용 제한')!
+    expect(row.value).toBe('제한 없음')
+  })
+
+  it('위치 상세 그룹 존재, addrDetail 우선', () => {
+    const groups = buildSpecGroups('ev-charger', details)
+    const locGroup = groups.find(g => g.heading === '위치 상세')!
+    expect(locGroup).toBeDefined()
+    const row = locGroup.rows!.find(r => r.label === '상세 위치')!
+    expect(row.value).toBe('지하주차장 B1')
+  })
+
+  it('addrDetail 없으면 location 폴백', () => {
+    const groups = buildSpecGroups('ev-charger', { ...details, addrDetail: null })
+    const locGroup = groups.find(g => g.heading === '위치 상세')!
+    const row = locGroup.rows!.find(r => r.label === '상세 위치')!
+    expect(row.value).toBe('지하주차장')
+  })
+
+  it('설치 연도 노출', () => {
+    const groups = buildSpecGroups('ev-charger', details)
+    const locGroup = groups.find(g => g.heading === '위치 상세')!
+    const row = locGroup.rows!.find(r => r.label === '설치 연도')!
+    expect(row.value).toBe('2022')
+  })
+
+  it('모든 그룹이 kv render', () => {
+    const groups = buildSpecGroups('ev-charger', details)
+    expect(groups.every(g => g.render === 'kv')).toBe(true)
+  })
+})
+
+describe('buildSpecGroups — ev-charger (빈 {})', () => {
+  it('throw 없음, 필드 없으면 그룹 0개', () => {
+    expect(() => buildSpecGroups('ev-charger', {})).not.toThrow()
+    const groups = buildSpecGroups('ev-charger', {})
+    expect(groups).toHaveLength(0)
+  })
+})

@@ -480,6 +480,36 @@ function hospitalGroups(d: D): SpecGroup[] {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Task 5: ev-charger ────────────────────────────────────────────────────────
+// 정적 필드만 담당. 실시간 충전 상태(chargers[]) 는 EvChargerDetail 라이브 컴포넌트가 처리.
+function evChargerGroups(d: D): SpecGroup[] {
+  const groups: SpecGroup[] = []
+
+  // 운영 정보
+  const limitVal = str(d.limitYn) === 'Y'
+    ? (str(d.limitDetail) || '제한 있음')
+    : str(d.limitYn) === 'N' ? '제한 없음' : null
+  const opRows: SpecRow[] = [
+    { label: '운영기관', value: str(d.busiNm), kind: 'value' },
+    { label: '운영기관 연락처', value: formatPhone(d.busiCall), kind: 'value' },
+    { label: '이용 가능 시간', value: str(d.useTime), kind: 'value' },
+    { label: '주차', value: str(d.parkingFree) === 'Y' ? '무료' : str(d.parkingFree) === 'N' ? '유료' : null, kind: 'value' },
+    { label: '이용 제한', value: limitVal, kind: 'value' },
+    { label: '안내', value: trimDashes(d.note), kind: 'value' },
+  ].filter(r => r.value != null)
+  if (opRows.length) groups.push({ heading: '운영 정보', render: 'kv', rows: opRows })
+
+  // 위치 상세
+  const locRows: SpecRow[] = [
+    { label: '상세 위치', value: str(d.addrDetail) || str(d.location), kind: 'value' },
+    { label: '설치 연도', value: str(d.year), kind: 'value' },
+  ].filter(r => r.value != null)
+  if (locRows.length) groups.push({ heading: '위치 상세', render: 'kv', rows: locRows })
+
+  return groups
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const REGISTRY: Partial<Record<FacilityCategory, (d: D) => SpecGroup[]>> = {
   toilet: toiletGroups,
   clothes: clothesGroups,
@@ -494,6 +524,7 @@ const REGISTRY: Partial<Record<FacilityCategory, (d: D) => SpecGroup[]>> = {
   pharmacy: pharmacyGroups,
   aed: aedGroups,
   hospital: hospitalGroups,
+  'ev-charger': evChargerGroups,
 }
 
 export function buildSpecGroups(category: FacilityCategory, details: Record<string, unknown>): SpecGroup[] {
