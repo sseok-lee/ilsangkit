@@ -29,12 +29,13 @@ const mockFacility: FacilityDetail = {
   syncedAt: '2024-01-01T00:00:00Z',
 }
 
-// Mock useRoute
+// Mock useRoute — category 는 routeMock 으로 가변(재설계 vs 비대상 광고개수 검증용). 기본 toilet.
+const routeMock = vi.hoisted(() => ({ category: 'toilet', id: 'toilet-1' }))
 vi.mock('vue-router', () => ({
   useRoute: () => ({
     params: {
-      category: 'toilet',
-      id: 'toilet-1',
+      category: routeMock.category,
+      id: routeMock.id,
     },
   }),
   useRouter: () => ({
@@ -114,7 +115,9 @@ function mockUseAsyncDataWith(data: any, status = 'success', error: any = null) 
 
 describe('DetailPage', () => {
   beforeEach(() => {
-    // Default: return facility data
+    // Default: toilet(재설계) + facility data
+    routeMock.category = 'toilet'
+    routeMock.id = 'toilet-1'
     mockUseAsyncDataWith({ success: true, data: mockFacility })
   })
 
@@ -307,17 +310,36 @@ describe('DetailPage', () => {
     expect(wrapper.find('[data-testid="spec-grid"]').exists()).toBe(true)
   })
 
-  // hasFacilityStatus=false 카테고리(clothes)는 시설현황 섹션 h3 헤딩이 렌더되지 않아야 한다.
-  it('clothes(시설현황 없음)는 빈 T1 + 광고 연속 노출이 없다', async () => {
+  // ---------------- 광고 슬롯 (spec-owner 결정: 재설계=4, 비대상=5, 인접 금지) ----------------
+  // AdBanner 는 tests/setup.ts 에서 `<div class="stub-ad-banner" />` 로 전역 stub.
+  it('재설계(toilet)는 광고 4개를 렌더 (고아 compact 광고 제거)', async () => {
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(4)
+  })
+
+  it('비대상(hospital)은 광고 5개를 렌더 (불변)', async () => {
+    routeMock.category = 'hospital'
+    routeMock.id = 'hospital-1'
+    mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id: 'hospital-1', category: 'hospital' } })
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(5)
+  })
+
+  // hasFacilityStatus=false 카테고리(clothes, 재설계)는 시설현황 h3 미렌더 + 광고 인접(연속) 노출 없음.
+  it('clothes(재설계)는 빈 시설현황 + 광고 연속 노출이 없다', async () => {
+    routeMock.category = 'clothes'
+    routeMock.id = 'clothes-1'
     mockUseAsyncDataWith({
       success: true,
       data: { ...mockFacility, id: 'clothes-1', category: 'clothes', details: { detailLocation: '정문 앞' } },
     })
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
-    // 시설현황 SectionBlock 의 <h3> 헤딩이 렌더되지 않음 (DetailFacilityStatus 내부 v-if=false)
-    // HTML 주석에 "시설현황" 문자열이 포함될 수 있으므로 h3 태그로 정확히 검증
-    const h3s = wrapper.findAll('h3')
-    const statusH3 = h3s.find(h => h.text() === '시설현황')
+    // 시설현황 SectionBlock 의 <h3> 헤딩이 렌더되지 않음 (DetailFacilityStatus v-if=!isRedesigned=false)
+    const statusH3 = wrapper.findAll('h3').find(h => h.text() === '시설현황')
     expect(statusH3).toBeUndefined()
+    // 광고 인접(연속) 노출 없음 — 고아 compact 광고 제거 검증
+    const ads = wrapper.findAll('.stub-ad-banner').map(w => w.element)
+    const anyAdjacent = ads.some(ad => ad.nextElementSibling?.classList.contains('stub-ad-banner'))
+    expect(anyAdjacent).toBe(false)
   })
 })

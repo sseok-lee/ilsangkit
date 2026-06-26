@@ -138,8 +138,9 @@
                 :pharmacy-weekly-hours="pharmacyWeeklyHours"
               />
 
-              <!-- Ad: BASIC INFO ↔ MAP 사이 -->
-              <AdBanner variant="compact-mobile" />
+              <!-- Ad: BASIC INFO ↔ MAP 사이 — 재설계는 DetailBasicInfo 게이트오프로 고아 슬롯 → 비대상만 렌더
+                   (spec-owner 결정: 재설계 4개 / 비대상 5개, 광고 인접 금지) -->
+              <AdBanner v-if="!isRedesigned" variant="compact-mobile" />
 
               <!-- 위치·로드뷰 -->
               <SectionBlock :heading="isRedesigned ? '위치·길찾기' : '위치·로드뷰'" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
