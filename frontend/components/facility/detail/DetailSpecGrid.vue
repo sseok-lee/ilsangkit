@@ -35,7 +35,7 @@
               :title="group.heading ?? ''"
               :time-header="group.weekly.timeHeader"
               :show-lunch="group.weekly.showLunch"
-              :rows="group.weekly.rows.map(r => ({ ...r, isToday: r.todayIdx === todayDow.value }))"
+              :rows="group.weekly.rows.map(r => ({ ...r, isToday: r.todayIdx === todayDow }))"
             />
             <p v-for="(n, ni) in group.weekly.notes ?? []" :key="ni" class="mt-1 text-xs text-gray-500">{{ n }}</p>
           </div>

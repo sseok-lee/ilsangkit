@@ -117,7 +117,7 @@
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
               <!-- 신: 스펙 그리드 (toilet/clothes) — 헤더 광고 직후 1차 고유 콘텐츠로 승격 -->
-              <DetailSpecGrid v-if="isRedesigned && facility" :groups="specGroups" />
+              <DetailSpecGrid v-if="isRedesigned && facility && specGroups.length" :groups="specGroups" />
 
               <!-- ev-charger 실시간 충전 현황 (재설계 경로 — 30초 폴링, 라이브 상태)
                    정적 SpecGrid와 형제로 배치. DetailFacilityStatus 게이트오프 이후에도 라이브 리스트 보존. -->

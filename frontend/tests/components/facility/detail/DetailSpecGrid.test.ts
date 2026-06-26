@@ -1,6 +1,6 @@
 // frontend/tests/components/facility/detail/DetailSpecGrid.test.ts
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import DetailSpecGrid from '~/components/facility/detail/DetailSpecGrid.vue'
 import WeekdayHoursTable from '~/components/facility/detail/WeekdayHoursTable.vue'
 import type { SpecGroup } from '~/utils/facilitySpecGroups'
@@ -54,6 +54,44 @@ describe('DetailSpecGrid', () => {
   it('weekly group: WeekdayHoursTable에 위임', () => {
     const w = mountGrid([{ heading: '진료시간', render: 'weekly', weekly: { timeHeader: '진료시간', rows: [{ day: '월', time: '09:00 ~ 18:00', todayIdx: 1 }] } }])
     expect(w.findComponent(WeekdayHoursTable).exists()).toBe(true)
+  })
+
+  describe('weekly today-highlight (todayDow ref unwrap)', () => {
+    beforeEach(() => {
+      // 2026-06-22 is Monday → getDay() === 1
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-06-22T10:00:00'))
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('todayIdx:1 행은 isToday=true, todayIdx:2 행은 isToday=false (월요일 기준)', async () => {
+      const groups: SpecGroup[] = [{
+        heading: '운영시간',
+        render: 'weekly',
+        weekly: {
+          timeHeader: '운영시간',
+          rows: [
+            { day: '월', time: '09:00 ~ 18:00', todayIdx: 1 },
+            { day: '화', time: '09:00 ~ 18:00', todayIdx: 2 },
+          ],
+        },
+      }]
+      const w = mountGrid(groups)
+      // onMounted에서 todayDow 업데이트 → flushPromises로 대기
+      await flushPromises()
+
+      const tableComp = w.findComponent(WeekdayHoursTable)
+      expect(tableComp.exists()).toBe(true)
+
+      const rows = tableComp.props('rows') as Array<{ todayIdx: number; isToday: boolean }>
+      const mondayRow = rows.find(r => r.todayIdx === 1)
+      const tuesdayRow = rows.find(r => r.todayIdx === 2)
+
+      expect(mondayRow?.isToday).toBe(true)   // 월요일이므로 highlight
+      expect(tuesdayRow?.isToday).toBe(false)  // 화요일은 아님
+    })
   })
 
   it('href row: 앵커로 렌더', () => {

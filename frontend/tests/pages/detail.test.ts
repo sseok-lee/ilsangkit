@@ -382,7 +382,7 @@ describe('DetailPage', () => {
 
   // ── Phase 2 게이트 가드: wifi, park, parking, library, sports, aed, pharmacy, hospital, ev-charger ─────────────
   // 각 카테고리: 단일 h1, AdBanner 4개, spec-grid 존재, DetailBasicInfo/Status h3 없음
-  const phase2Categories: Array<{ cat: string; id: string }> = [
+  const phase2Categories: Array<{ cat: string; id: string; specDetails?: Record<string, unknown> }> = [
     { cat: 'wifi', id: 'wifi-1' },
     { cat: 'park', id: 'park-1' },
     { cat: 'parking', id: 'parking-1' },
@@ -394,10 +394,11 @@ describe('DetailPage', () => {
     { cat: 'aed', id: 'aed-1' },
     { cat: 'pharmacy', id: 'pharmacy-1' },
     { cat: 'hospital', id: 'hospital-2' },
-    { cat: 'ev-charger', id: 'ev-charger-1' },
+    // ev-charger: evChargerGroups({}) → [] (모든 필드 null); specGroups.length 가드 통과를 위해 최소 데이터 제공
+    { cat: 'ev-charger', id: 'ev-charger-1', specDetails: { busiNm: '테스트기관' } },
   ]
 
-  for (const { cat, id } of phase2Categories) {
+  for (const { cat, id, specDetails } of phase2Categories) {
     it(`재설계(${cat}): 단일 h1`, async () => {
       routeMock.category = cat
       routeMock.id = id
@@ -417,7 +418,7 @@ describe('DetailPage', () => {
     it(`재설계(${cat}): spec-grid 존재`, async () => {
       routeMock.category = cat
       routeMock.id = id
-      mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id, category: cat, details: {} } })
+      mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id, category: cat, details: specDetails ?? {} } })
       const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
       expect(wrapper.find('[data-testid="spec-grid"]').exists()).toBe(true)
     })
