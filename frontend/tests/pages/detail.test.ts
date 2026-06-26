@@ -115,15 +115,15 @@ describe('DetailPage', () => {
     mockUseAsyncDataWith({ success: true, data: mockFacility })
   })
 
-  it('시설 이름을 표시 (재설계 toilet)', async () => {
+  it('시설 이름과 도로명 주소를 가시 렌더 (재설계 toilet)', async () => {
     const wrapper = await mountSuspended(DetailPage, {
       global: { stubs: globalStubs },
     })
 
     expect(wrapper.text()).toContain('강남역 공중화장실')
-    // 재설계(toilet/clothes): 기본정보 섹션(주소 라인)을 게이트 오프하고 DetailSpecGrid 로 레코드 전개.
-    // 주소는 헤더 '주소복사' 액션 + FacilitySchema(JSON-LD address)로 보존되므로
-    // 본문 가시 주소 라인은 더 이상 단언하지 않는다(spec §4.1 T0 헤더).
+    // 핵심 정보 회귀 가드: 재설계에서도 도로명 주소는 위치·길찾기 섹션에 가시 텍스트로 노출되어야 한다.
+    // (기본정보 섹션은 게이트 오프되지만 주소 자체는 '도로명' 행으로 본문에 남는다.)
+    expect(wrapper.text()).toContain('서울특별시 강남구 강남대로 396')
   })
 
   it('카테고리별 상세 컴포넌트를 렌더링', async () => {
