@@ -115,13 +115,15 @@ describe('DetailPage', () => {
     mockUseAsyncDataWith({ success: true, data: mockFacility })
   })
 
-  it('시설 이름과 주소를 표시', async () => {
+  it('시설 이름을 표시 (재설계 toilet)', async () => {
     const wrapper = await mountSuspended(DetailPage, {
       global: { stubs: globalStubs },
     })
 
     expect(wrapper.text()).toContain('강남역 공중화장실')
-    expect(wrapper.text()).toContain('서울특별시 강남구 강남대로 396')
+    // 재설계(toilet/clothes): 기본정보 섹션(주소 라인)을 게이트 오프하고 DetailSpecGrid 로 레코드 전개.
+    // 주소는 헤더 '주소복사' 액션 + FacilitySchema(JSON-LD address)로 보존되므로
+    // 본문 가시 주소 라인은 더 이상 단언하지 않는다(spec §4.1 T0 헤더).
   })
 
   it('카테고리별 상세 컴포넌트를 렌더링', async () => {
@@ -290,16 +292,16 @@ describe('DetailPage', () => {
     expect(faqScript.innerHTML).toContain('"@type":"FAQPage"')
   })
 
-  // ---------------- T1 시설현황 승격 (spec §4.1) ----------------
-  // 시설현황(T1)이 기본정보(T3)보다 DOM 상 먼저 와야 한다 (모바일=데스크톱 동일, order 미사용).
-  it('시설현황(T1)이 기본정보(T3)보다 먼저 렌더된다', async () => {
+  // ---------------- 재설계 게이트 (Phase 1: toilet/clothes) ----------------
+  // toilet 은 재설계 대상 → 구 사다리(시설현황 T1 + 기본정보 T3) SectionBlock 헤딩(h3)이
+  // 게이트로 제거되고 DetailSpecGrid + DetailLocationGuide 로 교체된다.
+  // (신 컴포넌트는 Nuxt 자동 import 라 이 단위 테스트 env 에선 미해소 → 신 컴포넌트 내용 대신
+  //  '구 섹션 부재'로 게이트를 검증한다. 구 T1→T3 순서 가드는 toilet 픽스처에서 더 이상 유효치 않음.)
+  it('재설계(toilet)는 구 시설현황(T1)·기본정보(T3) 섹션을 렌더하지 않는다', async () => {
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
-    const html = wrapper.html()
-    const statusIdx = html.indexOf('시설현황')
-    const basicIdx = html.indexOf('기본정보')
-    expect(statusIdx).toBeGreaterThan(-1)
-    expect(basicIdx).toBeGreaterThan(-1)
-    expect(statusIdx).toBeLessThan(basicIdx)
+    const h3s = wrapper.findAll('h3').map(h => h.text())
+    expect(h3s).not.toContain('기본정보')
+    expect(h3s).not.toContain('시설현황')
   })
 
   // hasFacilityStatus=false 카테고리(clothes)는 시설현황 섹션 h3 헤딩이 렌더되지 않아야 한다.

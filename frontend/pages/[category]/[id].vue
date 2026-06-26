@@ -109,21 +109,25 @@
                 title-tag="div"
                 :eyebrow="categoryMeta.label"
                 :title="displayName"
-                :description="facilityIntro || undefined"
+                :description="isRedesigned ? undefined : (facilityIntro || undefined)"
                 :stats="desktopHeroStats"
               />
 
               <!-- Ad: HERO 아래 -->
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
-              <!-- T1 FacilityStatus — 헤더 광고 직후 1차 고유 콘텐츠로 승격 -->
-              <DetailFacilityStatus :facility="facility" />
+              <!-- 신: 스펙 그리드 (toilet/clothes) — 헤더 광고 직후 1차 고유 콘텐츠로 승격 -->
+              <DetailSpecGrid v-if="isRedesigned && facility" :groups="specGroups" />
 
-              <!-- Ad: T1 ↔ T3 사이 -->
+              <!-- T1 FacilityStatus — 비대상 카테고리 (기존 그대로) -->
+              <DetailFacilityStatus v-if="!isRedesigned" :facility="facility" />
+
+              <!-- Ad: T1 ↔ T3 사이 (게이트 무관 항상 렌더 — 광고 슬롯 1:1 보존) -->
               <AdBanner variant="compact-mobile" />
 
-              <!-- T3 BasicInfo (기본정보·운영시간) -->
+              <!-- T3 BasicInfo (기본정보·운영시간) — 비대상 카테고리 -->
               <DetailBasicInfo
+                v-if="!isRedesigned"
                 :facility="facility"
                 :hospital-operating-hours="hospitalOperatingHours"
                 :hospital-weekly-hours="hospitalWeeklyHours"
@@ -138,7 +142,7 @@
               <AdBanner variant="compact-mobile" />
 
               <!-- 위치·로드뷰 -->
-              <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
+              <SectionBlock :heading="isRedesigned ? '위치·길찾기' : '위치·로드뷰'" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
                 <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
                 <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
                   <ClientOnly>
@@ -160,6 +164,15 @@
                 <div class="h-[220px]">
                   <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
                 </div>
+
+                <!-- 위치·길찾기: 가는 법(지하철) + 가까운 다른 시설 (toilet/clothes 전용) -->
+                <DetailLocationGuide
+                  v-if="isRedesigned"
+                  class="mt-4"
+                  :stations="transitData?.stations ?? []"
+                  :alternatives="nearbyFiltered"
+                  :alternative-label="`가까운 다른 ${categoryMeta.label}`"
+                />
               </SectionBlock>
 
               <!-- 주변 시설 (same + cross category) -->
@@ -298,9 +311,15 @@ const route = useRoute()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro, getFacilityDisplayName, buildFacilityDescription } from '~/composables/useFacilityMeta'
 const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
+import { buildSpecGroups } from '~/utils/facilitySpecGroups'
+import { fetchTransitNearby, type NearbyStation } from '~/composables/useTransitNearby'
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
+
+// 재설계 게이트 — toilet/clothes만 새 사다리(스펙 그리드 + 위치·길찾기 + 슬롭 제거)
+const REDESIGNED_CATEGORIES: FacilityCategory[] = ['toilet', 'clothes']
+const isRedesigned = computed(() => REDESIGNED_CATEGORIES.includes(category.value))
 
 // 도시명(한글) → 도시 허브 페이지 경로
 function getCityHubPath(cityName: string): string {
@@ -385,6 +404,11 @@ const error = ref<{ message: string } | null>(null)
 // 템플릿용 타입 안전 details 접근 (v-if 카테고리 가드로 런타임 보호)
 const details = computed(() => facility.value?.details as FacilityDetailsAll | undefined)
 
+// 스펙 그리드 그룹 (toilet/clothes) — buildSpecGroups 레지스트리로 details 완전 전개
+const specGroups = computed(() =>
+  facility.value ? buildSpecGroups(facility.value.category, (facility.value.details ?? {}) as Record<string, unknown>) : [],
+)
+
 // SSR에서 메타태그 및 JSON-LD 설정
 watchEffect(() => {
   if (facility.value) {
@@ -402,7 +426,7 @@ watchEffect(() => {
       setVideoListSchema(ssrVideos)
     }
     // FAQPage JSON-LD 발행 (화면 FAQ 와 동일 소스 generateDynamicFAQ → SEO 구조화 데이터)
-    const faqItems = generateDynamicFAQ(facility.value)
+    const faqItems = generateDynamicFAQ(facility.value, { staticFill: !isRedesigned.value })
     if (faqItems.length > 0) {
       setFAQSchema(faqItems)
     }
@@ -483,14 +507,12 @@ const facilityIntro = computed(() => {
 })
 
 // 카테고리별 이용 팁 & FAQ (상세 페이지 하단 콘텐츠 보강)
-const categoryTips = computed(() => {
-  if (!facility.value) return []
-  return generateDynamicTips(facility.value)
-})
-const categoryFaqItems = computed(() => {
-  if (!facility.value) return []
-  return generateDynamicFAQ(facility.value)
-})
+const categoryTips = computed(() =>
+  facility.value ? generateDynamicTips(facility.value, { staticFill: !isRedesigned.value }) : [],
+)
+const categoryFaqItems = computed(() =>
+  facility.value ? generateDynamicFAQ(facility.value, { staticFill: !isRedesigned.value }) : [],
+)
 
 // 데스크톱 브레드크럼 (city 포함)
 const desktopBreadcrumbItems = computed(() => {
@@ -871,6 +893,17 @@ const { data: nearbyData, status: nearbyStatus } = await useAsyncData(
     }
   },
   { lazy: true, default: () => ({ nearby: [] as Facility[], cross: [] as Facility[] }) },
+)
+
+// 교통(지하철) 인근 — redesigned(toilet/clothes) + 좌표 있을 때만 호출, 그 외 빈 배열
+const { data: transitData } = await useAsyncData(
+  `transit-${category.value}-${id.value}`,
+  async (): Promise<{ stations: NearbyStation[] }> => {
+    const f = facilityResponse.value?.data
+    if (!isRedesigned.value || !f?.lat || !f?.lng) return { stations: [] }
+    return { stations: await fetchTransitNearby(apiBase, f.lat, f.lng, 2000) }
+  },
+  { lazy: true, default: () => ({ stations: [] as NearbyStation[] }) },
 )
 
 const nearbyPending = computed(() => nearbyStatus.value === 'pending')
