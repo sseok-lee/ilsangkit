@@ -79,6 +79,9 @@ const globalStubs = {
     template: '<section><component :is="titleTag || \'h1\'">{{ title }}</component><p>{{ description }}</p></section>',
     props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'],
   },
+  // 재설계 신규 컴포넌트는 Nuxt 자동 import 라 raw vitest mount 에선 미해소 → 명시 stub 으로 존재 검증 가능케 함.
+  DetailSpecGrid: { template: '<div data-testid="spec-grid">SpecGrid</div>', props: ['groups', 'heading'] },
+  DetailLocationGuide: { template: '<div data-testid="location-guide">LocationGuide</div>', props: ['stations', 'alternatives', 'alternativeLabel'] },
 }
 
 // Helper to mount async components with Suspense
@@ -294,14 +297,14 @@ describe('DetailPage', () => {
 
   // ---------------- 재설계 게이트 (Phase 1: toilet/clothes) ----------------
   // toilet 은 재설계 대상 → 구 사다리(시설현황 T1 + 기본정보 T3) SectionBlock 헤딩(h3)이
-  // 게이트로 제거되고 DetailSpecGrid + DetailLocationGuide 로 교체된다.
-  // (신 컴포넌트는 Nuxt 자동 import 라 이 단위 테스트 env 에선 미해소 → 신 컴포넌트 내용 대신
-  //  '구 섹션 부재'로 게이트를 검증한다. 구 T1→T3 순서 가드는 toilet 픽스처에서 더 이상 유효치 않음.)
-  it('재설계(toilet)는 구 시설현황(T1)·기본정보(T3) 섹션을 렌더하지 않는다', async () => {
+  // 게이트로 제거되고 DetailSpecGrid 로 교체된다. (구 T1→T3 순서 가드는 toilet 픽스처에서 무의미.)
+  it('재설계(toilet)는 구 시설현황·기본정보 대신 DetailSpecGrid 를 렌더한다', async () => {
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
     const h3s = wrapper.findAll('h3').map(h => h.text())
     expect(h3s).not.toContain('기본정보')
     expect(h3s).not.toContain('시설현황')
+    // 신 스펙 그리드 존재 검증
+    expect(wrapper.find('[data-testid="spec-grid"]').exists()).toBe(true)
   })
 
   // hasFacilityStatus=false 카테고리(clothes)는 시설현황 섹션 h3 헤딩이 렌더되지 않아야 한다.

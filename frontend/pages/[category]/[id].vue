@@ -165,14 +165,14 @@
                   <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
                 </div>
 
-                <!-- 도로명 주소 (재설계 전용 — 핵심 정보 가시 노출, mockup: "도로명 · {주소}") -->
+                <!-- 도로명 주소 (재설계 전용 — 핵심 정보 가시 노출). 모바일·데스크톱 공통(md 게이트 없음).
+                     presence 가드: 주소가 둘 다 없으면 빈 '도로명' 행(슬롭) 방지 — spec §5 anti-slop. -->
                 <div
                   v-if="isRedesigned && (facility.roadAddress || facility.address)"
-                  class="mt-4 flex items-start gap-1.5 bg-slate-50 rounded-lg px-3 py-2.5 text-sm"
+                  class="flex items-start justify-between gap-3 mb-3 text-sm"
                 >
-                  <span class="shrink-0 font-bold text-gray-500">도로명</span>
-                  <span class="shrink-0 text-gray-300">·</span>
-                  <span class="text-slate-700 break-keep [overflow-wrap:anywhere]">{{ facility.roadAddress || facility.address }}</span>
+                  <span class="text-gray-600 shrink-0">도로명</span>
+                  <span class="text-slate-900 font-medium text-right">{{ facility.roadAddress || facility.address }}</span>
                 </div>
 
                 <!-- 위치·길찾기: 가는 법(지하철) + 가까운 다른 시설 (toilet/clothes 전용) -->
