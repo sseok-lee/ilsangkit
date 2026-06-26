@@ -342,4 +342,50 @@ describe('DetailPage', () => {
     const anyAdjacent = ads.some(ad => ad.nextElementSibling?.classList.contains('stub-ad-banner'))
     expect(anyAdjacent).toBe(false)
   })
+
+  // ── Phase 2 게이트 가드: wifi, park, parking, library, sports ─────────────
+  // 각 카테고리: 단일 h1, AdBanner 4개, spec-grid 존재, DetailBasicInfo/Status h3 없음
+  const phase2Categories: Array<{ cat: string; id: string }> = [
+    { cat: 'wifi', id: 'wifi-1' },
+    { cat: 'park', id: 'park-1' },
+    { cat: 'parking', id: 'parking-1' },
+    { cat: 'library', id: 'library-1' },
+    { cat: 'sports', id: 'sports-1' },
+  ]
+
+  for (const { cat, id } of phase2Categories) {
+    it(`재설계(${cat}): 단일 h1`, async () => {
+      routeMock.category = cat
+      routeMock.id = id
+      mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id, category: cat, details: {} } })
+      const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+      expect(wrapper.findAll('h1')).toHaveLength(1)
+    })
+
+    it(`재설계(${cat}): AdBanner 정확히 4개`, async () => {
+      routeMock.category = cat
+      routeMock.id = id
+      mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id, category: cat, details: {} } })
+      const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+      expect(wrapper.findAll('.stub-ad-banner')).toHaveLength(4)
+    })
+
+    it(`재설계(${cat}): spec-grid 존재`, async () => {
+      routeMock.category = cat
+      routeMock.id = id
+      mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id, category: cat, details: {} } })
+      const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+      expect(wrapper.find('[data-testid="spec-grid"]').exists()).toBe(true)
+    })
+
+    it(`재설계(${cat}): DetailBasicInfo·DetailFacilityStatus h3 없음`, async () => {
+      routeMock.category = cat
+      routeMock.id = id
+      mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id, category: cat, details: {} } })
+      const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+      const h3texts = wrapper.findAll('h3').map(h => h.text())
+      expect(h3texts).not.toContain('기본정보')
+      expect(h3texts).not.toContain('시설현황')
+    })
+  }
 })
