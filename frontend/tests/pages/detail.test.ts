@@ -351,7 +351,26 @@ describe('DetailPage', () => {
     expect(anyAdjacent).toBe(false)
   })
 
-  // ── Phase 2 게이트 가드: wifi, park, parking, library, sports ─────────────
+  // ── AED 긴급 CTA 존재 가드 (Phase 2, Step 5 "드롭 금지" 딜리버러블) ─────────
+  it('재설계(aed): 긴급 CTA tel:119 와 kacpr.org 링크가 렌더된다', async () => {
+    routeMock.category = 'aed'
+    routeMock.id = 'aed-1'
+    mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id: 'aed-1', category: 'aed', details: {} } })
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    expect(wrapper.find('a[href="tel:119"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="https://www.kacpr.org/"]').exists()).toBe(true)
+  })
+
+  it('재설계(aed 외 카테고리)는 긴급 CTA가 렌더되지 않는다 (category===aed 게이트)', async () => {
+    routeMock.category = 'hospital'
+    routeMock.id = 'hospital-1'
+    mockUseAsyncDataWith({ success: true, data: { ...mockFacility, id: 'hospital-1', category: 'hospital', details: {} } })
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    expect(wrapper.find('a[href="tel:119"]').exists()).toBe(false)
+    expect(wrapper.find('a[href="https://www.kacpr.org/"]').exists()).toBe(false)
+  })
+
+  // ── Phase 2 게이트 가드: wifi, park, parking, library, sports, aed, pharmacy, hospital ─────────────
   // 각 카테고리: 단일 h1, AdBanner 4개, spec-grid 존재, DetailBasicInfo/Status h3 없음
   const phase2Categories: Array<{ cat: string; id: string }> = [
     { cat: 'wifi', id: 'wifi-1' },
@@ -362,6 +381,9 @@ describe('DetailPage', () => {
     { cat: 'market', id: 'market-1' },
     { cat: 'school', id: 'school-1' },
     { cat: 'childcare', id: 'childcare-1' },
+    { cat: 'aed', id: 'aed-1' },
+    { cat: 'pharmacy', id: 'pharmacy-1' },
+    { cat: 'hospital', id: 'hospital-2' },
   ]
 
   for (const { cat, id } of phase2Categories) {
