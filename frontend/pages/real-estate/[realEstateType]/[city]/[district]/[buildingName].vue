@@ -403,6 +403,7 @@ import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
+import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
 import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
@@ -1023,6 +1024,23 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
         // best-effort — facility summary is optional SEO enhancement
       }
     }
+    // 인근 단지 — SSR best-effort. 내부링크·SEO 보조이므로 실패/지연이 페이지·noindex에 영향 X.
+    // (Yeti는 client-only JS를 못 봐 기존엔 SSR HTML에 인근 섹션이 비어 나갔다)
+    let nearbySSR: NearbyResponse = { apt: [], villa: [], offitel: [] }
+    if (bjdCode) {
+      const nearbyMode = currentTab.value
+      const nearbyRentType = nearbyMode === 'rent'
+        ? (selectedRentType.value === 'jeonse' ? 'jeonse'
+          : selectedRentType.value === 'wolse' ? 'wolse'
+            : 'all') as 'all' | 'jeonse' | 'wolse'
+        : undefined
+      nearbySSR = await fetchNearbyForSsr(() => getNearby(bjdCode, nearbyMode, {
+        rentType: nearbyRentType,
+        dongName: resolvedBuildingInfo?.dongName,
+        excludeBuildingName: buildingName.value,
+        limitPerType: 4,
+      }))
+    }
     return {
       bjdCode,
       statsResponse: statsResult.status === 'fulfilled' ? statsResult.value : EMPTY_STATS_RESPONSE,
@@ -1030,6 +1048,7 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
       buildingInfo: resolvedBuildingInfo,
       areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
       facilitySummary: facilitySummarySSR,
+      nearby: nearbySSR,
       infoFetchFailed,
     }
   },
@@ -1049,6 +1068,7 @@ watch(ssrData, (data) => {
   buildingInfo.value = data.buildingInfo as BuildingInfo | null
   areaGroups.value = (data.areaGroups ?? []) as AreaGroup[]
   facilitySummary.value = data.facilitySummary ?? null
+  nearbyByType.value = (data.nearby ?? { apt: [], villa: [], offitel: [] }) as NearbyResponse
   statsLoading.value = false
   txLoading.value = false
   fetchFailed.value = data.infoFetchFailed ?? false
@@ -1258,6 +1278,9 @@ function nearbyHeading(propertyType: 'apt' | 'villa' | 'offitel'): string {
 }
 
 async function loadNearby() {
+  // SSR 단계의 인근 데이터는 useAsyncData(re-detail)에서 best-effort로 채운다.
+  // 서버에서 또 부르면 버려지는 중복 fetch라 풀 부하만 키운다 → 클라이언트 갱신 전용.
+  if (import.meta.server) return
   const bjd = resolvedBjdCode.value
   if (!bjd) {
     nearbyByType.value = { apt: [], villa: [], offitel: [] }
