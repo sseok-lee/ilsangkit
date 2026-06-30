@@ -125,4 +125,28 @@ describe('DetailBasicInfo', () => {
     expect(wrapper.text()).toContain('요일별 운영시간')
     expect(wrapper.findAll('tbody tr').length).toBeGreaterThanOrEqual(2)
   })
+
+  it('parking: 주차장 유형(lotType)을 기본정보 주차 구분 옆에 표시', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('parking', { parkingType: '공영', lotType: '노외' }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('주차장 유형')
+    expect(wrapper.text()).toContain('노외')
+  })
+
+  it('ev-charger: useTime을 운영시간으로, busiCall을 전화로 기본정보에 노출', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('ev-charger', { useTime: '24시간', busiCall: '1600-1234' }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('24시간')
+    expect(wrapper.html()).toContain('tel:1600-1234')
+  })
 })
