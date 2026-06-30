@@ -169,12 +169,17 @@
       </template>
 
       <!-- Parking -->
-      <template v-if="facility.category === 'parking' && (details?.parkingType || details?.operatingDays || details?.managingOrg)">
+      <template v-if="facility.category === 'parking' && (details?.parkingType || details?.lotType || details?.operatingDays || details?.managingOrg)">
         <div class="h-px bg-slate-100 w-full"></div>
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">주차 구분</span>
             <span v-if="details?.parkingType" class="text-sm font-medium text-slate-900">{{ details?.parkingType }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">주차장 유형</span>
+            <span v-if="details?.lotType" class="text-sm font-medium text-slate-900">{{ details?.lotType }}</span>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
           <div class="flex items-center justify-between">

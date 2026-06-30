@@ -143,11 +143,6 @@
           <h3 class="text-sm font-bold text-slate-900 mb-3">시설 정보</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">주차장 유형</span>
-              <span v-if="details?.lotType" class="text-sm font-medium text-slate-900">{{ details?.lotType }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-            <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">주차면수</span>
               <span v-if="details?.capacity" class="text-sm font-medium text-slate-900">{{ details?.capacity }}면</span>
               <span v-else class="text-sm text-slate-400">정보 없음</span>
