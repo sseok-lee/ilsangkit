@@ -23,16 +23,16 @@
         <button class="ml-auto inline-flex items-center gap-1 text-primary text-xs font-medium bg-primary-50 hover:bg-primary-100 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 transition-colors" @click="copyAddress"><span class="material-symbols-outlined text-[14px]">content_copy</span>복사</button>
       </div>
 
-      <div v-if="(details?.operatingHours || isOpen24Hours || facilityPhone) && !hideOperatingHours" class="h-px bg-slate-100 w-full"></div>
+      <div v-if="(operatingHoursText || isOpen24Hours || facilityPhone) && !hideOperatingHours" class="h-px bg-slate-100 w-full"></div>
 
       <!-- Operating Hours (병원·AED는 시설현황 테이블이 있으면 여기서는 숨김) -->
-      <div v-if="(details?.operatingHours || isOpen24Hours) && !hideOperatingHours" class="flex gap-4 items-start">
+      <div v-if="(operatingHoursText || isOpen24Hours) && !hideOperatingHours" class="flex gap-4 items-start">
         <div class="mt-0.5 text-slate-500">
           <span class="material-symbols-outlined">schedule</span>
         </div>
         <div class="flex flex-col gap-1">
           <div class="flex items-center gap-2 flex-wrap">
-            <p class="text-slate-900 text-base font-medium whitespace-pre-line">{{ details?.operatingHours ? formatOperatingHours(details.operatingHours) : '24시간 운영' }}</p>
+            <p class="text-slate-900 text-base font-medium whitespace-pre-line">{{ operatingHoursText || '24시간 운영' }}</p>
             <span v-if="isOpen24Hours" class="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
               <span class="relative flex h-2 w-2">
                 <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -68,42 +68,49 @@
             <span v-if="details?.openTime" class="text-sm font-medium text-slate-900">{{ details?.openTime }}</span>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">관리기관</span>
-            <span v-if="details?.managingOrg" class="text-sm font-medium text-slate-900">{{ details?.managingOrg }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">설치일</span>
-            <span v-if="details?.installDate" class="text-sm font-medium text-slate-900">{{ details?.installDate }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">소유구분</span>
-            <span v-if="details?.ownershipType" class="text-sm font-medium text-slate-900">{{ details?.ownershipType }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
+        </div>
+        <div v-if="details?.managingOrg || details?.installDate || details?.ownershipType" class="mt-1 pt-3 border-t border-slate-100">
+          <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">관리기관</span>
+              <span v-if="details?.managingOrg" class="text-xs text-slate-500">{{ details?.managingOrg }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">설치일</span>
+              <span v-if="details?.installDate" class="text-xs text-slate-500">{{ details?.installDate }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">소유구분</span>
+              <span v-if="details?.ownershipType" class="text-xs text-slate-500">{{ details?.ownershipType }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
           </div>
         </div>
       </template>
 
-      <!-- WiFi -->
+      <!-- WiFi (관리기관·서비스 제공사·설치일 전부 기타) -->
       <template v-if="facility.category === 'wifi' && (details?.managementAgency || details?.serviceProvider || details?.installDate)">
-        <div class="h-px bg-slate-100 w-full"></div>
-        <div class="flex flex-col gap-3">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">관리기관</span>
-            <span v-if="details?.managementAgency" class="text-sm font-medium text-slate-900">{{ details?.managementAgency }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">서비스 제공사</span>
-            <span v-if="details?.serviceProvider" class="text-sm font-medium text-slate-900">{{ details?.serviceProvider }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">설치일</span>
-            <span v-if="details?.installDate" class="text-sm font-medium text-slate-900">{{ details?.installDate }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
+        <div class="mt-1 pt-3 border-t border-slate-100">
+          <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">관리기관</span>
+              <span v-if="details?.managementAgency" class="text-xs text-slate-500">{{ details?.managementAgency }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">서비스 제공사</span>
+              <span v-if="details?.serviceProvider" class="text-xs text-slate-500">{{ details?.serviceProvider }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">설치일</span>
+              <span v-if="details?.installDate" class="text-xs text-slate-500">{{ details?.installDate }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
           </div>
         </div>
       </template>
@@ -117,15 +124,20 @@
             <span v-if="details?.detailLocation" class="text-sm font-medium text-slate-900">{{ details?.detailLocation }}</span>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">운영기관</span>
-            <span v-if="details?.providerName" class="text-sm font-medium text-slate-900">{{ details?.providerName }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">관리기관</span>
-            <span v-if="details?.managementAgency" class="text-sm font-medium text-slate-900">{{ details?.managementAgency }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
+        </div>
+        <div v-if="details?.providerName || details?.managementAgency" class="mt-1 pt-3 border-t border-slate-100">
+          <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">운영기관</span>
+              <span v-if="details?.providerName" class="text-xs text-slate-500">{{ details?.providerName }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">관리기관</span>
+              <span v-if="details?.managementAgency" class="text-xs text-slate-500">{{ details?.managementAgency }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
           </div>
         </div>
       </template>
@@ -155,21 +167,26 @@
             <span v-if="(details as any)?.parkType" class="text-sm font-medium text-slate-900">{{ (details as any).parkType }}</span>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">지정일</span>
-            <span v-if="(details as any)?.designatedDate" class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).designatedDate) }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">관리기관</span>
-            <span v-if="(details as any)?.managingOrg" class="text-sm font-medium text-slate-900">{{ (details as any).managingOrg }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
+        </div>
+        <div v-if="(details as any)?.designatedDate || (details as any)?.managingOrg" class="mt-1 pt-3 border-t border-slate-100">
+          <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">지정일</span>
+              <span v-if="(details as any)?.designatedDate" class="text-xs text-slate-500">{{ formatKoreanDate((details as any).designatedDate) }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">관리기관</span>
+              <span v-if="(details as any)?.managingOrg" class="text-xs text-slate-500">{{ (details as any).managingOrg }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
           </div>
         </div>
       </template>
 
       <!-- Parking -->
-      <template v-if="facility.category === 'parking' && (details?.parkingType || details?.operatingDays || details?.managingOrg)">
+      <template v-if="facility.category === 'parking' && (details?.parkingType || details?.lotType || details?.operatingDays || details?.managingOrg)">
         <div class="h-px bg-slate-100 w-full"></div>
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between">
@@ -178,31 +195,36 @@
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
           <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">주차장 유형</span>
+            <span v-if="details?.lotType" class="text-sm font-medium text-slate-900">{{ details?.lotType }}</span>
+            <span v-else class="text-sm text-slate-400">정보 없음</span>
+          </div>
+          <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">운영요일</span>
             <span v-if="details?.operatingDays" class="text-sm font-medium text-slate-900">{{ details?.operatingDays }}</span>
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">관리기관</span>
-            <span v-if="details?.managingOrg" class="text-sm font-medium text-slate-900">{{ details?.managingOrg }}</span>
-            <span v-else class="text-sm text-slate-400">정보 없음</span>
+        </div>
+        <div class="mt-1 pt-3 border-t border-slate-100">
+          <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">관리기관</span>
+              <span v-if="details?.managingOrg" class="text-xs text-slate-500">{{ details?.managingOrg }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
+            </div>
           </div>
         </div>
       </template>
 
       <!-- Library -->
       <template v-if="facility.category === 'library'">
-        <template v-if="details?.libraryType || details?.operatingOrg || details?.closedDays">
+        <template v-if="details?.libraryType || details?.closedDays">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">도서관유형</span>
               <span v-if="details?.libraryType" class="text-sm font-medium text-slate-900">{{ details?.libraryType }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">운영기관</span>
-              <span v-if="details?.operatingOrg" class="text-sm font-medium text-slate-900">{{ details?.operatingOrg }}</span>
               <span v-else class="text-sm text-slate-400">정보 없음</span>
             </div>
             <div class="flex items-center justify-between">
@@ -239,6 +261,18 @@
             <a :href="details?.homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">바로가기</a>
           </div>
         </template>
+        <template v-if="details?.libraryType || details?.closedDays || details?.operatingOrg">
+          <div class="mt-1 pt-3 border-t border-slate-100">
+            <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">운영기관</span>
+                <span v-if="details?.operatingOrg" class="text-xs text-slate-500">{{ details?.operatingOrg }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
 
       <!-- AED -->
@@ -254,13 +288,6 @@
             AED 사용법
           </a>
         </div>
-        <template v-if="details?.org">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">설치기관</span>
-            <span class="text-sm font-medium text-slate-900">{{ String(details?.org || '').replace(/^[\s-]+|[\s-]+$/g, '') }}</span>
-          </div>
-        </template>
         <!-- AED 요일별 이용시간 표 -->
         <template v-if="aedWeeklyHours.length > 0">
           <div class="h-px bg-slate-100 w-full"></div>
@@ -283,21 +310,27 @@
             <a :href="`tel:${(details as any).clerkTel}`" class="text-sm font-medium text-primary hover:underline">{{ (details as any).clerkTel }}</a>
           </div>
         </template>
+        <template v-if="details?.org">
+          <div class="mt-1 pt-3 border-t border-slate-100">
+            <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">설치기관</span>
+                <span class="text-xs text-slate-500">{{ String(details?.org || '').replace(/^[\s-]+|[\s-]+$/g, '') }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
 
       <!-- Hospital -->
       <template v-if="facility.category === 'hospital'">
-        <template v-if="details?.clCdNm || details?.homepage || details?.estbDd">
+        <template v-if="details?.clCdNm || details?.homepage || details?.nurseGrade">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">종별</span>
               <span v-if="details?.clCdNm" class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-700 border border-teal-200">{{ details?.clCdNm }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">설립구분</span>
-              <span v-if="details?.foundationCdNm" class="text-sm font-medium text-slate-900">{{ details.foundationCdNm }}</span>
               <span v-else class="text-sm text-slate-400">정보 없음</span>
             </div>
             <div class="flex items-center justify-between">
@@ -308,11 +341,6 @@
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">홈페이지</span>
               <a v-if="details?.homepage" :href="details?.homepage" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ details?.homepage }}</a>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">개설일자</span>
-              <span v-if="details?.estbDd" class="text-sm font-medium text-slate-900">{{ formatKoreanDate(details?.estbDd) }}</span>
               <span v-else class="text-sm text-slate-400">정보 없음</span>
             </div>
           </div>
@@ -355,6 +383,23 @@
             <span class="font-medium">공휴일 안내:</span> {{ details.noTrmtHoli }}
           </p>
         </template>
+        <template v-if="details?.foundationCdNm || details?.estbDd">
+          <div class="mt-1 pt-3 border-t border-slate-100">
+            <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">설립구분</span>
+                <span v-if="details?.foundationCdNm" class="text-xs text-slate-500">{{ details.foundationCdNm }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">개설일자</span>
+                <span v-if="details?.estbDd" class="text-xs text-slate-500">{{ formatKoreanDate(details?.estbDd) }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
 
       <!-- School -->
@@ -388,21 +433,6 @@
             </div>
           </div>
         </template>
-        <template v-if="(details as any)?.foundedDate || (details as any)?.faxNumber">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div class="flex flex-col gap-3">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">설립일</span>
-              <span v-if="(details as any)?.foundedDate" class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).foundedDate) }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">팩스</span>
-              <span v-if="(details as any)?.faxNumber" class="text-sm font-medium text-slate-900">{{ (details as any).faxNumber }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-          </div>
-        </template>
         <template v-if="(details as any)?.homepageUrl">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex items-center justify-between">
@@ -410,18 +440,30 @@
             <a :href="schoolHomepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).homepageUrl }}</a>
           </div>
         </template>
-        <template v-if="(details as any)?.sidoEduName || (details as any)?.localEduName">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div class="flex flex-col gap-3">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">시도교육청</span>
-              <span v-if="(details as any)?.sidoEduName" class="text-sm font-medium text-slate-900">{{ (details as any).sidoEduName }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">교육지원청</span>
-              <span v-if="(details as any)?.localEduName" class="text-sm font-medium text-slate-900">{{ (details as any).localEduName }}</span>
-              <span v-else class="text-sm text-slate-400">정보 없음</span>
+        <template v-if="(details as any)?.foundedDate || (details as any)?.faxNumber || (details as any)?.sidoEduName || (details as any)?.localEduName">
+          <div class="mt-1 pt-3 border-t border-slate-100">
+            <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">설립일</span>
+                <span v-if="(details as any)?.foundedDate" class="text-xs text-slate-500">{{ formatKoreanDate((details as any).foundedDate) }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">팩스</span>
+                <span v-if="(details as any)?.faxNumber" class="text-xs text-slate-500">{{ (details as any).faxNumber }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">시도교육청</span>
+                <span v-if="(details as any)?.sidoEduName" class="text-xs text-slate-500">{{ (details as any).sidoEduName }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">교육지원청</span>
+                <span v-if="(details as any)?.localEduName" class="text-xs text-slate-500">{{ (details as any).localEduName }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
             </div>
           </div>
         </template>
@@ -442,18 +484,22 @@
             </div>
           </div>
         </template>
-        <template v-if="(details as any)?.foundedYear != null">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">개설연도</span>
-            <span class="text-sm font-medium text-slate-900">{{ (details as any).foundedYear }}년</span>
-          </div>
-        </template>
         <template v-if="(details as any)?.homepageUrl">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">홈페이지</span>
             <a :href="(details as any).homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).homepageUrl }}</a>
+          </div>
+        </template>
+        <template v-if="(details as any)?.foundedYear != null">
+          <div class="mt-1 pt-3 border-t border-slate-100">
+            <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">개설연도</span>
+                <span class="text-xs text-slate-500">{{ (details as any).foundedYear }}년</span>
+              </div>
+            </div>
           </div>
         </template>
       </template>
@@ -473,46 +519,47 @@
             </div>
           </div>
         </template>
-        <template v-if="(details as any)?.crpausebegindt && (details as any)?.crpauseenddt">
-          <div class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-            휴지 기간: {{ (details as any).crpausebegindt }} ~ {{ (details as any).crpauseenddt }}
+        <template v-if="(details as any)?.crhome">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">홈페이지</span>
+            <a :href="(details as any).crhome" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).crhome }}</a>
           </div>
         </template>
-        <template v-if="(details as any)?.crcnfmdt || (details as any)?.crrepname || (details as any)?.crfaxno || (details as any)?.crcargbname || (details as any)?.crhome">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div class="flex flex-col gap-3">
-            <div v-if="(details as any)?.crcnfmdt" class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">인가일</span>
-              <span class="text-sm font-medium text-slate-900">{{ formatKoreanDate((details as any).crcnfmdt) }}</span>
+        <template v-if="(details as any)?.crcnfmdt || (details as any)?.crrepname || (details as any)?.crfaxno || (details as any)?.crcargbname || ((details as any)?.crpausebegindt && (details as any)?.crpauseenddt) || (details as any)?.crspec || (details as any)?.datastdrdt">
+          <div class="mt-1 pt-3 border-t border-slate-100">
+            <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">인가일</span>
+                <span v-if="(details as any)?.crcnfmdt" class="text-xs text-slate-500">{{ formatKoreanDate((details as any).crcnfmdt) }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">대표자</span>
+                <span v-if="(details as any)?.crrepname" class="text-xs text-slate-500">{{ (details as any).crrepname }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">팩스</span>
+                <span v-if="(details as any)?.crfaxno" class="text-xs text-slate-500">{{ (details as any).crfaxno }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">통학차량</span>
+                <span v-if="(details as any)?.crcargbname" class="text-xs text-slate-500">{{ (details as any).crcargbname }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
+              </div>
             </div>
-            <div v-if="(details as any)?.crrepname" class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">대표자</span>
-              <span class="text-sm font-medium text-slate-900">{{ (details as any).crrepname }}</span>
+            <div v-if="(details as any)?.crpausebegindt && (details as any)?.crpauseenddt" class="mt-2 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+              휴지 기간: {{ (details as any).crpausebegindt }} ~ {{ (details as any).crpauseenddt }}
             </div>
-            <div v-if="(details as any)?.crfaxno" class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">팩스</span>
-              <span class="text-sm font-medium text-slate-900">{{ (details as any).crfaxno }}</span>
+            <div v-if="(details as any)?.crspec" class="mt-2">
+              <p class="text-xs font-medium text-slate-400 mb-1">특이사항</p>
+              <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{{ (details as any).crspec }}</p>
             </div>
-            <div v-if="(details as any)?.crcargbname" class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">통학차량</span>
-              <span class="text-sm font-medium text-slate-900">{{ (details as any).crcargbname }}</span>
-            </div>
-            <div v-if="(details as any)?.crhome" class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">홈페이지</span>
-              <a :href="(details as any).crhome" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).crhome }}</a>
-            </div>
+            <p v-if="(details as any)?.datastdrdt" class="mt-2 text-xs text-[#9ca3af]">데이터 기준일: {{ (details as any).datastdrdt }}</p>
           </div>
-        </template>
-        <template v-if="(details as any)?.crspec">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div>
-            <h3 class="text-sm font-bold text-slate-900 mb-2">특이사항</h3>
-            <p class="text-sm text-gray-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{{ (details as any).crspec }}</p>
-          </div>
-        </template>
-        <template v-if="(details as any)?.datastdrdt">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <p class="text-xs text-[#9ca3af]">데이터 기준일: {{ (details as any).datastdrdt }}</p>
         </template>
       </template>
 
@@ -536,10 +583,14 @@
           </div>
         </template>
         <template v-if="(details as any)?.fcobNm">
-          <div class="h-px bg-slate-100 w-full"></div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">업종명</span>
-            <span class="text-sm font-medium text-slate-900">{{ (details as any).fcobNm }}</span>
+          <div class="mt-1 pt-3 border-t border-slate-100">
+            <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">업종명</span>
+                <span class="text-xs text-slate-500">{{ (details as any).fcobNm }}</span>
+              </div>
+            </div>
           </div>
         </template>
       </template>
@@ -589,6 +640,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import OperatingStatusBanner from '~/components/facility/OperatingStatusBanner.vue'
 import WeekdayHoursTable from '~/components/facility/detail/WeekdayHoursTable.vue'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
+import { resolveFacilityPhone } from '~/utils/facilityPhone'
 import { useAnalytics } from '~/composables/useAnalytics'
 import type { FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 
@@ -611,11 +663,14 @@ const isOpen24Hours = computed(() => {
   return det.operatingHours === '24시간' || det.is24Hour === true
 })
 
-const facilityPhone = computed(() => {
-  if (!details.value) return null
-  const d = details.value as FacilityDetailsAll & { phone?: string; clerkTel?: string; crtelno?: string }
-  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || null
+// ev-charger 등 operatingHours 미사용 카테고리 폴백 (useTime)
+const operatingHoursText = computed(() => {
+  const d = details.value as (FacilityDetailsAll & { useTime?: string }) | undefined
+  const raw = d?.operatingHours || d?.useTime
+  return raw ? formatOperatingHours(raw) : null
 })
+
+const facilityPhone = computed(() => resolveFacilityPhone(details.value as Record<string, unknown> | undefined))
 
 const hideOperatingHours = computed(() => {
   return (

@@ -116,13 +116,7 @@
               <!-- Ad: HERO 아래 -->
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
-              <!-- T1 FacilityStatus — 헤더 광고 직후 1차 고유 콘텐츠로 승격 -->
-              <DetailFacilityStatus :facility="facility" />
-
-              <!-- Ad: T1 ↔ T3 사이 -->
-              <AdBanner variant="compact-mobile" />
-
-              <!-- T3 BasicInfo (기본정보·운영시간) -->
+              <!-- T1 BasicInfo (기본정보·운영시간) — 헤더 광고 직후 핵심 정보 우선 -->
               <DetailBasicInfo
                 :facility="facility"
                 :hospital-operating-hours="hospitalOperatingHours"
@@ -134,7 +128,13 @@
                 :pharmacy-weekly-hours="pharmacyWeeklyHours"
               />
 
-              <!-- Ad: BASIC INFO ↔ MAP 사이 -->
+              <!-- Ad: 기본정보 ↔ 시설현황 사이 -->
+              <AdBanner variant="compact-mobile" />
+
+              <!-- T2 FacilityStatus (시설현황) -->
+              <DetailFacilityStatus :facility="facility" />
+
+              <!-- Ad: 시설현황 ↔ MAP 사이 -->
               <AdBanner variant="compact-mobile" />
 
               <!-- 위치·로드뷰 -->
@@ -284,6 +284,7 @@ import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { getOperatingStatus } from '~/utils/facilityStatus'
+import { resolveFacilityPhone } from '~/utils/facilityPhone'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
 import type { YoutubeVideo } from '~/types/youtube'
@@ -586,11 +587,7 @@ const isOpen24Hours = computed(() => {
 })
 
 // 전 카테고리 통합 전화번호
-const facilityPhone = computed(() => {
-  if (!details.value) return null
-  const d = details.value as FacilityDetailsAll & { crtelno?: string }
-  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || null
-})
+const facilityPhone = computed(() => resolveFacilityPhone(details.value as Record<string, unknown> | undefined))
 
 // Generate map URLs (길찾기)
 const kakaoMapUrl = computed(() => {

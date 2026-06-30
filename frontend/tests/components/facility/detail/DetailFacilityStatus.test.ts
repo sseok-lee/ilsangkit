@@ -143,4 +143,14 @@ describe('DetailFacilityStatus — 카테고리 메타데이터 제거 회귀', 
     expect(wrapper.text()).toContain('CCTV')
     expect(wrapper.text()).toContain('정보 없음')
   })
+
+  it('parking: 시설현황에 주차장 유형(lotType) 행이 없다', () => {
+    const wrapper = mount(DetailFacilityStatus, {
+      props: { facility: makeFacility('parking', { lotType: '노외', capacity: 30 }) },
+      global: globalConfig,
+    })
+    const html = wrapper.html()
+    expect(html).not.toContain('주차장 유형')
+    expect(html).toContain('30') // 주차면수는 그대로 시설현황에 남는다
+  })
 })
