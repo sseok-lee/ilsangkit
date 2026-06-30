@@ -149,4 +149,35 @@ describe('DetailBasicInfo', () => {
     expect(wrapper.text()).toContain('24시간')
     expect(wrapper.html()).toContain('tel:1600-1234')
   })
+
+  it('childcare: 행정 메타(대표자·팩스)는 muted "기타 정보" 그룹에 남아 SSR에 노출', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('childcare', {
+          crtypename: '국공립', crrepname: '홍길동', crfaxno: '02-1-2', crcnfmdt: '20100101',
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('기타 정보')
+    expect(wrapper.text()).toContain('국공립')   // 분류 유지
+    expect(wrapper.text()).toContain('홍길동')   // 기타지만 DOM 유지(크롤러 가시)
+    expect(wrapper.text()).toContain('02-1-2')
+  })
+
+  it('school: 교육청·팩스가 muted 그룹에 남아 SSR에 노출', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('school', {
+          schoolLevel: '초등학교', faxNumber: '02-9-9', sidoEduName: '서울시교육청',
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('초등학교')      // 분류 유지
+    expect(wrapper.text()).toContain('서울시교육청')   // 기타 DOM 유지
+    expect(wrapper.text()).toContain('02-9-9')
+  })
 })
