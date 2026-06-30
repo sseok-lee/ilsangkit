@@ -23,16 +23,16 @@
         <button class="ml-auto inline-flex items-center gap-1 text-primary text-xs font-medium bg-primary-50 hover:bg-primary-100 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 transition-colors" @click="copyAddress"><span class="material-symbols-outlined text-[14px]">content_copy</span>복사</button>
       </div>
 
-      <div v-if="(details?.operatingHours || isOpen24Hours || facilityPhone) && !hideOperatingHours" class="h-px bg-slate-100 w-full"></div>
+      <div v-if="(operatingHoursText || isOpen24Hours || facilityPhone) && !hideOperatingHours" class="h-px bg-slate-100 w-full"></div>
 
       <!-- Operating Hours (병원·AED는 시설현황 테이블이 있으면 여기서는 숨김) -->
-      <div v-if="(details?.operatingHours || isOpen24Hours) && !hideOperatingHours" class="flex gap-4 items-start">
+      <div v-if="(operatingHoursText || isOpen24Hours) && !hideOperatingHours" class="flex gap-4 items-start">
         <div class="mt-0.5 text-slate-500">
           <span class="material-symbols-outlined">schedule</span>
         </div>
         <div class="flex flex-col gap-1">
           <div class="flex items-center gap-2 flex-wrap">
-            <p class="text-slate-900 text-base font-medium whitespace-pre-line">{{ details?.operatingHours ? formatOperatingHours(details.operatingHours) : '24시간 운영' }}</p>
+            <p class="text-slate-900 text-base font-medium whitespace-pre-line">{{ operatingHoursText || '24시간 운영' }}</p>
             <span v-if="isOpen24Hours" class="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
               <span class="relative flex h-2 w-2">
                 <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -616,10 +616,17 @@ const isOpen24Hours = computed(() => {
   return det.operatingHours === '24시간' || det.is24Hour === true
 })
 
+// ev-charger 등 operatingHours 미사용 카테고리 폴백 (useTime)
+const operatingHoursText = computed(() => {
+  const d = details.value as (FacilityDetailsAll & { useTime?: string }) | undefined
+  const raw = d?.operatingHours || d?.useTime
+  return raw ? formatOperatingHours(raw) : null
+})
+
 const facilityPhone = computed(() => {
   if (!details.value) return null
-  const d = details.value as FacilityDetailsAll & { phone?: string; clerkTel?: string; crtelno?: string }
-  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || null
+  const d = details.value as FacilityDetailsAll & { phone?: string; clerkTel?: string; crtelno?: string; busiCall?: string }
+  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || d.busiCall || null
 })
 
 const hideOperatingHours = computed(() => {

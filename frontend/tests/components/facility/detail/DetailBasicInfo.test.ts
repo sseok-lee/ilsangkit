@@ -137,4 +137,16 @@ describe('DetailBasicInfo', () => {
     expect(wrapper.text()).toContain('주차장 유형')
     expect(wrapper.text()).toContain('노외')
   })
+
+  it('ev-charger: useTime을 운영시간으로, busiCall을 전화로 기본정보에 노출', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('ev-charger', { useTime: '24시간', busiCall: '1600-1234' }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('24시간')
+    expect(wrapper.html()).toContain('tel:1600-1234')
+  })
 })

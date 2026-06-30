@@ -13,22 +13,11 @@
       </span>
     </div>
 
-    <!-- 충전소 기본 정보 -->
-    <DetailRow
-      v-if="details.useTime"
-      label="이용시간"
-      :value="formatOperatingHours(details.useTime)"
-    />
+    <!-- 충전소 기본 정보 (운영시간·연락처는 기본정보로 이동) -->
     <DetailRow
       v-if="details.busiNm"
       label="운영기관"
       :value="details.busiNm"
-    />
-    <DetailRow
-      v-if="details.busiCall"
-      label="운영기관 연락처"
-      :value="details.busiCall"
-      type="phone"
     />
     <DetailRow
       v-if="details.year"
@@ -110,7 +99,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { EvChargerDetails, EvChargerItem } from '~/types/facility'
-import { formatOperatingHours } from '~/utils/formatOperatingHours'
 
 const POLL_INTERVAL = 30_000
 const TICK_INTERVAL = 15_000
