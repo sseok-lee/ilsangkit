@@ -205,12 +205,13 @@
             <span v-else class="text-sm text-slate-400">정보 없음</span>
           </div>
         </div>
-        <div v-if="details?.managingOrg" class="mt-1 pt-3 border-t border-slate-100">
+        <div class="mt-1 pt-3 border-t border-slate-100">
           <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
           <div class="flex flex-col gap-2">
             <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">관리기관</span>
-              <span class="text-xs text-slate-500">{{ details?.managingOrg }}</span>
+              <span v-if="details?.managingOrg" class="text-xs text-slate-500">{{ details?.managingOrg }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
           </div>
         </div>
@@ -260,13 +261,14 @@
             <a :href="details?.homepageUrl" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline">바로가기</a>
           </div>
         </template>
-        <template v-if="details?.operatingOrg">
+        <template v-if="details?.libraryType || details?.closedDays || details?.operatingOrg">
           <div class="mt-1 pt-3 border-t border-slate-100">
             <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
             <div class="flex flex-col gap-2">
               <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">운영기관</span>
-                <span class="text-xs text-slate-500">{{ details?.operatingOrg }}</span>
+                <span v-if="details?.operatingOrg" class="text-xs text-slate-500">{{ details?.operatingOrg }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
             </div>
           </div>

@@ -181,6 +181,38 @@ describe('DetailBasicInfo', () => {
     expect(wrapper.text()).toContain('02-9-9')
   })
 
+  it('parking: managingOrg 없어도 muted 기타 그룹에 관리기관 레이블과 "정보 없음" 표시', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('parking', {
+          parkingType: '공영',
+          // managingOrg 없음
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('기타 정보')
+    expect(wrapper.text()).toContain('관리기관')
+    expect(wrapper.text()).toContain('정보 없음')
+  })
+
+  it('library: operatingOrg 없어도 libraryType 있으면 muted 기타 그룹에 운영기관 레이블과 "정보 없음" 표시', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('library', {
+          libraryType: '공공도서관',
+          // operatingOrg 없음
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('기타 정보')
+    expect(wrapper.text()).toContain('운영기관')
+    expect(wrapper.text()).toContain('정보 없음')
+  })
+
   it('toilet: muted 기타 그룹의 빈 행정 항목을 레이블과 "정보 없음"으로 표시', () => {
     // managingOrg만 있어서 기타 그룹이 렌더됨, installDate·ownershipType은 비어있음
     const wrapper = mount(DetailBasicInfo, {
