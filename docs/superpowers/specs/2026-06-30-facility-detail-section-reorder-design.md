@@ -137,9 +137,9 @@ T3  위치·로드뷰                            ← 무변경
      폴백하도록 보정(`facilityPhone`에 `|| d.busiCall`).
 3. `frontend/components/facility/detail/DetailFacilityStatus.vue`
    - 내용 대부분 무변경(이동만). **parking '시설 정보'에서 주차장 유형(lotType) 행 제거**(기본정보로 이동).
-4. `frontend/components/facility/detail/EvChargerDetail.vue`
-   - 기본정보로 끌어올린 `useTime`·`busiCall`을 '충전소 기본 정보' 그룹에서 **트림**(중복 제거).
-     운영기관·설치년도·위치 등 나머지는 유지.
+4. `frontend/components/facility/details/EvChargerDetail.vue` (경로 주의: `details/` 복수형)
+   - 기본정보로 끌어올린 `useTime`(L17-21)·`busiCall`(L27-32) `DetailRow`를 **제거**(중복 트림).
+     운영기관(busiNm)·설치년도(year)·이용정보·위치·충전기목록은 유지.
 5. `frontend/tests/components/facility/detail/*` (해당 시)
    - 순서 의존 단언 갱신, 필드 존재(누락 없음) 검증, parking lotType·ev-charger 노출 위치 검증.
 
