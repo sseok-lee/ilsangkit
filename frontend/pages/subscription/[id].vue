@@ -428,6 +428,7 @@ import PageHero from '~/components/common/PageHero.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 
 const route = useRoute()
 const id = Number(route.params.id)
@@ -730,9 +731,17 @@ function formatPrice(amount: number): string {
 }
 
 // SSR: Load initial data
-const { data } = await useAsyncData(`subscription-${id}`, () =>
+const { data, error: fetchError } = await useAsyncData(`subscription-${id}`, () =>
   getSubscriptionDetail(id)
 )
+
+if (fetchError.value) {
+  // 백엔드 일시 장애(5xx) — soft-503 fail-open (404 오인 색인 방지)
+  if (import.meta.server) markDegradedResponse()
+} else if (!data.value) {
+  // 존재하지 않는 청약 → 진짜 404 (soft-404 색인 방지)
+  throw createError({ statusCode: 404, statusMessage: '존재하지 않는 청약 정보입니다' })
+}
 
 if (data.value) {
   const { unitTypes: units, competitions: comps, scores: scrs, specialStatuses: specials, ...sub } = data.value

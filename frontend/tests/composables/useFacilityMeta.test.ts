@@ -246,6 +246,64 @@ describe('useFacilityMeta', () => {
     })
   })
 
+  describe('setFacilityDetailMeta - AED 중복 제목 분리', () => {
+    function aedFacility(id: string, buildPlace: string): FacilityDetail {
+      return {
+        id,
+        category: 'aed',
+        name: 'S-OIL(주)온산공장',
+        address: '울산 울주군',
+        roadAddress: '울산광역시 울주군 온산읍 화산리 1',
+        lat: 35.4,
+        lng: 129.3,
+        city: '울산광역시',
+        district: '울주군',
+        bjdCode: '31710',
+        details: { buildPlace },
+        sourceId: `src-${id}`,
+        sourceUrl: null,
+        viewCount: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+        syncedAt: '2024-01-01T00:00:00Z',
+      }
+    }
+
+    it('같은 설치기관명이라도 buildPlace로 제목이 구분된다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+
+      setFacilityDetailMeta(aedFacility('a', '본관 1층 로비'))
+      const titleA = (mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }).title
+      setFacilityDetailMeta(aedFacility('b', '별관 경비실'))
+      const titleB = (mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }).title
+
+      expect(titleA).toContain('본관 1층 로비')
+      expect(titleB).toContain('별관 경비실')
+      expect(titleA).not.toBe(titleB)
+    })
+
+    it('buildPlace가 없으면 제목은 기존과 동일(설치기관명 + 카테고리 라벨)', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+
+      setFacilityDetailMeta(aedFacility('c', ''))
+      const title = (mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }).title
+
+      expect(title).toContain('S-OIL(주)온산공장')
+      expect(title).toContain(CATEGORY_META.aed.label)
+      expect(title).not.toContain('  ') // 빈 보조어로 인한 이중 공백 없음
+    })
+
+    it('buildPlace가 이름과 중복되면 보조어를 생략한다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      const f = aedFacility('d', 'S-OIL(주)온산공장')
+
+      setFacilityDetailMeta(f)
+      const title = (mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }).title
+
+      expect(title).not.toContain('S-OIL(주)온산공장 S-OIL(주)온산공장')
+    })
+  })
+
   describe('setRegionMeta', () => {
     it('sets region page meta', () => {
       const { setRegionMeta } = useFacilityMeta()
@@ -560,6 +618,42 @@ describe('useFacilityMeta', () => {
       }))
       const call = mockUseSeoMeta.mock.calls[0][0]
       expect(call.description.length).toBeLessThanOrEqual(155)
+    })
+  })
+
+  describe('title 포맷 동결 (churn 방지 — 변경 시 의도 확인 후 -u)', () => {
+    function facility(partial: Partial<FacilityDetail> & Pick<FacilityDetail, 'category' | 'name' | 'city' | 'district'>): FacilityDetail {
+      return {
+        id: 'freeze', address: '', roadAddress: null, lat: null, lng: null,
+        bjdCode: '00000', details: {}, sourceId: 'freeze', sourceUrl: null, viewCount: 0,
+        createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z', syncedAt: '2024-01-01T00:00:00Z',
+        ...partial,
+      } as FacilityDetail
+    }
+    const titleOf = () => (mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }).title
+
+    it('wifi 제목 포맷', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(facility({ category: 'wifi', name: '황성공원', city: '경상북도', district: '경주시' }))
+      expect(titleOf()).toMatchInlineSnapshot(`"황성공원 무료와이파이 설치 위치 | 경북 경주시 | 일상킷"`)
+    })
+
+    it('aed 제목 포맷 (buildPlace 보조어 포함)', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(facility({ category: 'aed', name: 'S-OIL(주)온산공장', city: '울산광역시', district: '울주군', details: { buildPlace: '본관 1층 로비' } }))
+      expect(titleOf()).toMatchInlineSnapshot(`"S-OIL(주)온산공장 본관 1층 로비 자동심장충격기 설치위치·이용시간 | 울산 울주군 | 일상킷"`)
+    })
+
+    it('parking 제목 포맷', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(facility({ category: 'parking', name: '조천읍 공영주차장', city: '제주특별자치도', district: '제주시' }))
+      expect(titleOf()).toMatchInlineSnapshot(`"조천읍 공영주차장 요금·운영시간 | 제주시 | 일상킷"`)
+    })
+
+    it('trash 제목 포맷', () => {
+      const { setWasteScheduleDetailMeta } = useFacilityMeta()
+      setWasteScheduleDetailMeta({ id: 1, city: '전북특별자치도', district: '고창군', targetRegion: '흥덕면' })
+      expect(titleOf()).toMatchInlineSnapshot(`"전북특별자치도 고창군 흥덕면 쓰레기 배출일 | 재활용·음식물·대형폐기물 | 일상킷"`)
     })
   })
 
