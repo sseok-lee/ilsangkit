@@ -284,6 +284,7 @@ import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { getOperatingStatus } from '~/utils/facilityStatus'
+import { resolveFacilityPhone } from '~/utils/facilityPhone'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
 import type { YoutubeVideo } from '~/types/youtube'
@@ -586,11 +587,7 @@ const isOpen24Hours = computed(() => {
 })
 
 // 전 카테고리 통합 전화번호
-const facilityPhone = computed(() => {
-  if (!details.value) return null
-  const d = details.value as FacilityDetailsAll & { crtelno?: string; busiCall?: string }
-  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || d.busiCall || null
-})
+const facilityPhone = computed(() => resolveFacilityPhone(details.value as Record<string, unknown> | undefined))
 
 // Generate map URLs (길찾기)
 const kakaoMapUrl = computed(() => {

@@ -594,6 +594,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import OperatingStatusBanner from '~/components/facility/OperatingStatusBanner.vue'
 import WeekdayHoursTable from '~/components/facility/detail/WeekdayHoursTable.vue'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
+import { resolveFacilityPhone } from '~/utils/facilityPhone'
 import { useAnalytics } from '~/composables/useAnalytics'
 import type { FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 
@@ -623,11 +624,7 @@ const operatingHoursText = computed(() => {
   return raw ? formatOperatingHours(raw) : null
 })
 
-const facilityPhone = computed(() => {
-  if (!details.value) return null
-  const d = details.value as FacilityDetailsAll & { phone?: string; clerkTel?: string; crtelno?: string; busiCall?: string }
-  return d.phoneNumber || d.phone || d.clerkTel || d.crtelno || d.busiCall || null
-})
+const facilityPhone = computed(() => resolveFacilityPhone(details.value as Record<string, unknown> | undefined))
 
 const hideOperatingHours = computed(() => {
   return (
