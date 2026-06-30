@@ -1,6 +1,6 @@
 <template>
   <HardLink
-    :to="'/trash/' + region.id"
+    :to="buildTrashRegionPath(region.city, region.district) ?? ('/trash/' + region.id)"
     :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세보기`"
     class="group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer border-transparent hover:border-primary/20"
   >
@@ -55,6 +55,7 @@
 import { computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import type { RegionSchedule, WasteType } from '~/composables/useWasteSchedule'
+import { buildTrashRegionPath } from '~/utils/trashRegion'
 
 const props = defineProps<{
   region: RegionSchedule
