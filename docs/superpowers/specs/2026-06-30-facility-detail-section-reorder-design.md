@@ -48,6 +48,35 @@
   병상·의료진·진료과목, 면적·관람석, 점포·판매품목, EV 충전기 등.
 - 위치만 기본정보 뒤로 이동.
 
+## 필드 재배치 감사 결과 (2026-06-30, 14개 카테고리 find→적대적 검증)
+
+분류는 이미 ~정확. 섹션 간 통째 오배치는 **확정 1건**, 경계라 유지 9건.
+
+### 확정 이동 — 1건
+
+- **parking · 주차장 유형(lotType): 시설현황 → 기본정보.** 노상/노외/부설 분류 필드인데
+  시설현황 '시설 정보'에 들어가 있다. 동일 성격의 **주차 구분(parkingType)이 이미 기본정보**에 있어
+  떨어져 있는 게 비일관. 모든 다른 카테고리가 유형/종별을 기본정보에 두는데 parking만 예외.
+  시설현황→기본정보 방향이라 게이팅 손실 없음. 두 필드는 값이 겹칠 수 있으니 기본정보 분류 영역에
+  나란히 배치하고 값이 동일하면 표시 중복을 피한다.
+
+### 경계 검토 후 "현행 유지"로 판정 — 9건 (참고용, 변경 없음)
+
+- wifi SSID(시설현황 유지: 설치장소와 묶인 기술 식별자), aed 설치위치(기기 속성, wifi 선례),
+  hospital 간호등급(종별 옆 단일 분류 배지·인력 수치 아님), childcare 통학차량(단일 라벨).
+- ev-charger 5건(이용시간·연락처·운영기관·설치년도·위치) — 아래 별도 처리.
+
+### ev-charger 구조 보정 — 결정: 기본정보로 끌어올리기
+
+ev-charger는 기본정보에 카테고리 전용 블록이 없고 운영시간·전화 등이 전부 `EvChargerDetail`
+(시설현황)에 통합돼 있다. 기본정보 공통 행은 `operatingHours`/`phoneNumber·phone·clerkTel·crtelno`만
+읽어 ev-charger의 `useTime`(운영시간)·`busiCall`(전화)이 **기본정보에 전혀 노출되지 않음** →
+13개 카테고리와 달리 ev-charger 기본정보가 주소만 보임.
+
+**처방:** ev-charger의 `useTime`→공통 운영시간 행, `busiCall`→공통 전화 폴백으로 **기본정보에 노출**하고,
+`EvChargerDetail`에서 해당 중복을 **트림**(이전 redesign의 '라이브전용 트림' 선례와 동일 방식).
+운영기관(busiNm)·설치년도(year)·위치(addrDetail/location) 등 나머지는 EvChargerDetail에 유지.
+
 ## 페이지 본문 순서 (변경 후)
 
 ```
@@ -90,20 +119,29 @@ T3  위치·로드뷰                            ← 무변경
 - **pharmacy(약사수 0)** — 시설현황 숨김. 동일하게 기본정보로 충분.
 - 빈 시설현황(clothes 등) 뒤에 광고가 인접하는 현상은 현행에도 존재(기존과 동등) — 광고 정책상
   개수 축소 금지이므로 현행 유지. (개선 여지는 별도 결정 사항으로 분리.)
+- **ev-charger 중복 금지** — `useTime`·`busiCall`을 기본정보 공통 행에 노출하면 반드시
+  `EvChargerDetail`에서 같은 값을 제거해 한 페이지에 두 번 나오지 않게 한다.
 
 ## 변경 파일
 
 1. `frontend/pages/[category]/[id].vue`
    - `DetailFacilityStatus`(현 L120)와 `DetailBasicInfo`(현 L126) 블록 순서 교환.
    - 사이 광고 배너 3개는 제자리 유지(구조적 구분자).
+   - ev-charger 전화 폴백: `facilityPhone` computed에 `|| d.busiCall` 추가(모바일 헤더용).
 2. `frontend/components/facility/detail/DetailBasicInfo.vue`
    - 카테고리별 `<template v-if>` 블록 내부를 핵심 → 분류 → 기타(muted) 순으로 재배열.
    - 기타 정보 묶음에 muted 컨테이너 적용(예: `mt-4 pt-4 border-t border-slate-100`,
      라벨 `text-slate-400`, 값 `text-sm`). **CSS 강등만, 콘텐츠 SSR 유지.**
+   - **parking 분류 영역에 주차장 유형(lotType) 행 추가**(시설현황에서 이동). 주차 구분과 나란히.
+   - **ev-charger**: 공통 운영시간 행이 `useTime`도 읽도록, 공통 전화 행이 `busiCall`도
+     폴백하도록 보정(`facilityPhone`에 `|| d.busiCall`).
 3. `frontend/components/facility/detail/DetailFacilityStatus.vue`
-   - 내용 무변경(이동만). 필요 시 주석 보정.
-4. `frontend/tests/components/facility/detail/*` (해당 시)
-   - 순서 의존 단언 갱신, 필드 존재(누락 없음) 검증.
+   - 내용 대부분 무변경(이동만). **parking '시설 정보'에서 주차장 유형(lotType) 행 제거**(기본정보로 이동).
+4. `frontend/components/facility/detail/EvChargerDetail.vue`
+   - 기본정보로 끌어올린 `useTime`·`busiCall`을 '충전소 기본 정보' 그룹에서 **트림**(중복 제거).
+     운영기관·설치년도·위치 등 나머지는 유지.
+5. `frontend/tests/components/facility/detail/*` (해당 시)
+   - 순서 의존 단언 갱신, 필드 존재(누락 없음) 검증, parking lotType·ev-charger 노출 위치 검증.
 
 ## 검증
 
