@@ -72,17 +72,20 @@
         <div v-if="details?.managingOrg || details?.installDate || details?.ownershipType" class="mt-1 pt-3 border-t border-slate-100">
           <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
           <div class="flex flex-col gap-2">
-            <div v-if="details?.managingOrg" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">관리기관</span>
-              <span class="text-xs text-slate-500">{{ details?.managingOrg }}</span>
+              <span v-if="details?.managingOrg" class="text-xs text-slate-500">{{ details?.managingOrg }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
-            <div v-if="details?.installDate" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">설치일</span>
-              <span class="text-xs text-slate-500">{{ details?.installDate }}</span>
+              <span v-if="details?.installDate" class="text-xs text-slate-500">{{ details?.installDate }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
-            <div v-if="details?.ownershipType" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">소유구분</span>
-              <span class="text-xs text-slate-500">{{ details?.ownershipType }}</span>
+              <span v-if="details?.ownershipType" class="text-xs text-slate-500">{{ details?.ownershipType }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
           </div>
         </div>
@@ -93,17 +96,20 @@
         <div class="mt-1 pt-3 border-t border-slate-100">
           <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
           <div class="flex flex-col gap-2">
-            <div v-if="details?.managementAgency" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">관리기관</span>
-              <span class="text-xs text-slate-500">{{ details?.managementAgency }}</span>
+              <span v-if="details?.managementAgency" class="text-xs text-slate-500">{{ details?.managementAgency }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
-            <div v-if="details?.serviceProvider" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">서비스 제공사</span>
-              <span class="text-xs text-slate-500">{{ details?.serviceProvider }}</span>
+              <span v-if="details?.serviceProvider" class="text-xs text-slate-500">{{ details?.serviceProvider }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
-            <div v-if="details?.installDate" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">설치일</span>
-              <span class="text-xs text-slate-500">{{ details?.installDate }}</span>
+              <span v-if="details?.installDate" class="text-xs text-slate-500">{{ details?.installDate }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
           </div>
         </div>
@@ -122,13 +128,15 @@
         <div v-if="details?.providerName || details?.managementAgency" class="mt-1 pt-3 border-t border-slate-100">
           <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
           <div class="flex flex-col gap-2">
-            <div v-if="details?.providerName" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">운영기관</span>
-              <span class="text-xs text-slate-500">{{ details?.providerName }}</span>
+              <span v-if="details?.providerName" class="text-xs text-slate-500">{{ details?.providerName }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
-            <div v-if="details?.managementAgency" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">관리기관</span>
-              <span class="text-xs text-slate-500">{{ details?.managementAgency }}</span>
+              <span v-if="details?.managementAgency" class="text-xs text-slate-500">{{ details?.managementAgency }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
           </div>
         </div>
@@ -163,13 +171,15 @@
         <div v-if="(details as any)?.designatedDate || (details as any)?.managingOrg" class="mt-1 pt-3 border-t border-slate-100">
           <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
           <div class="flex flex-col gap-2">
-            <div v-if="(details as any)?.designatedDate" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">지정일</span>
-              <span class="text-xs text-slate-500">{{ formatKoreanDate((details as any).designatedDate) }}</span>
+              <span v-if="(details as any)?.designatedDate" class="text-xs text-slate-500">{{ formatKoreanDate((details as any).designatedDate) }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
-            <div v-if="(details as any)?.managingOrg" class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
               <span class="text-xs text-slate-400">관리기관</span>
-              <span class="text-xs text-slate-500">{{ (details as any).managingOrg }}</span>
+              <span v-if="(details as any)?.managingOrg" class="text-xs text-slate-500">{{ (details as any).managingOrg }}</span>
+              <span v-else class="text-xs text-slate-400">정보 없음</span>
             </div>
           </div>
         </div>
@@ -375,13 +385,15 @@
           <div class="mt-1 pt-3 border-t border-slate-100">
             <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
             <div class="flex flex-col gap-2">
-              <div v-if="details?.foundationCdNm" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">설립구분</span>
-                <span class="text-xs text-slate-500">{{ details.foundationCdNm }}</span>
+                <span v-if="details?.foundationCdNm" class="text-xs text-slate-500">{{ details.foundationCdNm }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
-              <div v-if="details?.estbDd" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">개설일자</span>
-                <span class="text-xs text-slate-500">{{ formatKoreanDate(details?.estbDd) }}</span>
+                <span v-if="details?.estbDd" class="text-xs text-slate-500">{{ formatKoreanDate(details?.estbDd) }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
             </div>
           </div>
@@ -430,21 +442,25 @@
           <div class="mt-1 pt-3 border-t border-slate-100">
             <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
             <div class="flex flex-col gap-2">
-              <div v-if="(details as any)?.foundedDate" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">설립일</span>
-                <span class="text-xs text-slate-500">{{ formatKoreanDate((details as any).foundedDate) }}</span>
+                <span v-if="(details as any)?.foundedDate" class="text-xs text-slate-500">{{ formatKoreanDate((details as any).foundedDate) }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
-              <div v-if="(details as any)?.faxNumber" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">팩스</span>
-                <span class="text-xs text-slate-500">{{ (details as any).faxNumber }}</span>
+                <span v-if="(details as any)?.faxNumber" class="text-xs text-slate-500">{{ (details as any).faxNumber }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
-              <div v-if="(details as any)?.sidoEduName" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">시도교육청</span>
-                <span class="text-xs text-slate-500">{{ (details as any).sidoEduName }}</span>
+                <span v-if="(details as any)?.sidoEduName" class="text-xs text-slate-500">{{ (details as any).sidoEduName }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
-              <div v-if="(details as any)?.localEduName" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">교육지원청</span>
-                <span class="text-xs text-slate-500">{{ (details as any).localEduName }}</span>
+                <span v-if="(details as any)?.localEduName" class="text-xs text-slate-500">{{ (details as any).localEduName }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
             </div>
           </div>
@@ -512,21 +528,25 @@
           <div class="mt-1 pt-3 border-t border-slate-100">
             <p class="text-xs font-medium text-slate-400 mb-2">기타 정보</p>
             <div class="flex flex-col gap-2">
-              <div v-if="(details as any)?.crcnfmdt" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">인가일</span>
-                <span class="text-xs text-slate-500">{{ formatKoreanDate((details as any).crcnfmdt) }}</span>
+                <span v-if="(details as any)?.crcnfmdt" class="text-xs text-slate-500">{{ formatKoreanDate((details as any).crcnfmdt) }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
-              <div v-if="(details as any)?.crrepname" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">대표자</span>
-                <span class="text-xs text-slate-500">{{ (details as any).crrepname }}</span>
+                <span v-if="(details as any)?.crrepname" class="text-xs text-slate-500">{{ (details as any).crrepname }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
-              <div v-if="(details as any)?.crfaxno" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">팩스</span>
-                <span class="text-xs text-slate-500">{{ (details as any).crfaxno }}</span>
+                <span v-if="(details as any)?.crfaxno" class="text-xs text-slate-500">{{ (details as any).crfaxno }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
-              <div v-if="(details as any)?.crcargbname" class="flex items-center justify-between">
+              <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">통학차량</span>
-                <span class="text-xs text-slate-500">{{ (details as any).crcargbname }}</span>
+                <span v-if="(details as any)?.crcargbname" class="text-xs text-slate-500">{{ (details as any).crcargbname }}</span>
+                <span v-else class="text-xs text-slate-400">정보 없음</span>
               </div>
             </div>
             <div v-if="(details as any)?.crpausebegindt && (details as any)?.crpauseenddt" class="mt-2 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">

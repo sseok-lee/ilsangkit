@@ -180,4 +180,23 @@ describe('DetailBasicInfo', () => {
     expect(wrapper.text()).toContain('서울시교육청')   // 기타 DOM 유지
     expect(wrapper.text()).toContain('02-9-9')
   })
+
+  it('toilet: muted 기타 그룹의 빈 행정 항목을 레이블과 "정보 없음"으로 표시', () => {
+    // managingOrg만 있어서 기타 그룹이 렌더됨, installDate·ownershipType은 비어있음
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('toilet', {
+          facilityType: '공중화장실',
+          managingOrg: '서울시',
+          // installDate, ownershipType 없음
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('기타 정보')
+    // 빈 행의 레이블이 항상 렌더되어야 함 (fix 전: v-if 실패로 행 전체 숨김)
+    expect(wrapper.text()).toContain('설치일')
+    expect(wrapper.text()).toContain('소유구분')
+  })
 })
