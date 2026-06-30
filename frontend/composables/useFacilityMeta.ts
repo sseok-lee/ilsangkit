@@ -35,6 +35,22 @@ function cleanFacilityName(raw: string | null | undefined): string | null {
 }
 
 /**
+ * 동일 시설명이 여러 레코드에 공유될 때(예: 한 건물의 AED 다수, 한 보건소의 여러 설치점)
+ * 제목을 구분하는 카테고리별 보조어. 이름과 중복되면 '' 반환.
+ * aed 외 카테고리는 별도 플랜에서 확장한다(현재는 빈 문자열 반환).
+ */
+function getTitleDisambiguator(facility: FacilityDetail, name: string): string {
+  const d = (facility.details ?? {}) as Record<string, unknown>
+  let raw: string | null = null
+  if (facility.category === 'aed') {
+    raw = cleanFacilityName(d.buildPlace as string | null | undefined)
+  }
+  if (!raw) return ''
+  if (name.includes(raw) || raw.includes(name)) return ''
+  return raw
+}
+
+/**
  * 사용자에게 노출할 시설 이름.
  * 원본 name이 비었거나 "-" 인 경우 카테고리·관리기관·도로명 기반 fallback 생성.
  */
@@ -378,6 +394,8 @@ export function useFacilityMeta() {
       ? (facility.district.startsWith(cityShort) ? facility.district : `${cityShort} ${facility.district}`)
       : cityShort
     const name = getFacilityDisplayName(facility)
+    const disamb = getTitleDisambiguator(facility, name)
+    const displayName = disamb ? `${name} ${disamb}` : name
     const meta = CATEGORY_META[facility.category]
     const categoryName = meta?.label || facility.category
     const intent = CATEGORY_SEO_INTENT[facility.category]
@@ -385,8 +403,8 @@ export function useFacilityMeta() {
     // shortLabel 둘 다로 검사한다 — label='공공화장실'이어도 실제 이름은 '공중화장실'이라
     // shortLabel='화장실'로 잡아야 "공중화장실 공공화장실" 스터터가 안 난다. 포함하지 않으면
     // (예: 정비공업사의 EV충전소) 카테고리를 이름 뒤에 붙여 토픽을 명확히 한다.
-    const inName = name.includes(categoryName) || (!!meta?.shortLabel && name.includes(meta.shortLabel))
-    const head = inName ? name : `${name} ${categoryName}`
+    const inName = displayName.includes(categoryName) || (!!meta?.shortLabel && displayName.includes(meta.shortLabel))
+    const head = inName ? displayName : `${displayName} ${categoryName}`
     return intent ? `${head} ${intent} | ${loc}` : `${head} | ${loc}`
   }
 
