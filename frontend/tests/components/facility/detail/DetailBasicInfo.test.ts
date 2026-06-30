@@ -149,4 +149,86 @@ describe('DetailBasicInfo', () => {
     expect(wrapper.text()).toContain('24시간')
     expect(wrapper.html()).toContain('tel:1600-1234')
   })
+
+  it('childcare: 행정 메타(대표자·팩스)는 muted "기타 정보" 그룹에 남아 SSR에 노출', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('childcare', {
+          crtypename: '국공립', crrepname: '홍길동', crfaxno: '02-1-2', crcnfmdt: '20100101',
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('기타 정보')
+    expect(wrapper.text()).toContain('국공립')   // 분류 유지
+    expect(wrapper.text()).toContain('홍길동')   // 기타지만 DOM 유지(크롤러 가시)
+    expect(wrapper.text()).toContain('02-1-2')
+  })
+
+  it('school: 교육청·팩스가 muted 그룹에 남아 SSR에 노출', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('school', {
+          schoolLevel: '초등학교', faxNumber: '02-9-9', sidoEduName: '서울시교육청',
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('초등학교')      // 분류 유지
+    expect(wrapper.text()).toContain('서울시교육청')   // 기타 DOM 유지
+    expect(wrapper.text()).toContain('02-9-9')
+  })
+
+  it('parking: managingOrg 없어도 muted 기타 그룹에 관리기관 레이블과 "정보 없음" 표시', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('parking', {
+          parkingType: '공영',
+          // managingOrg 없음
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('기타 정보')
+    expect(wrapper.text()).toContain('관리기관')
+    expect(wrapper.text()).toContain('정보 없음')
+  })
+
+  it('library: operatingOrg 없어도 libraryType 있으면 muted 기타 그룹에 운영기관 레이블과 "정보 없음" 표시', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('library', {
+          libraryType: '공공도서관',
+          // operatingOrg 없음
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('기타 정보')
+    expect(wrapper.text()).toContain('운영기관')
+    expect(wrapper.text()).toContain('정보 없음')
+  })
+
+  it('toilet: muted 기타 그룹의 빈 행정 항목을 레이블과 "정보 없음"으로 표시', () => {
+    // managingOrg만 있어서 기타 그룹이 렌더됨, installDate·ownershipType은 비어있음
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('toilet', {
+          facilityType: '공중화장실',
+          managingOrg: '서울시',
+          // installDate, ownershipType 없음
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('기타 정보')
+    // 빈 행의 레이블이 항상 렌더되어야 함 (fix 전: v-if 실패로 행 전체 숨김)
+    expect(wrapper.text()).toContain('설치일')
+    expect(wrapper.text()).toContain('소유구분')
+  })
 })

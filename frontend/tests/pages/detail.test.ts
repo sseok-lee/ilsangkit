@@ -294,9 +294,9 @@ describe('DetailPage', () => {
   // 기본정보가 시설현황보다 DOM 상 먼저 와야 한다 (모바일=데스크톱 동일, order 미사용).
   it('기본정보가 시설현황보다 먼저 렌더된다', async () => {
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
-    const html = wrapper.html()
-    const basicIdx = html.indexOf('기본정보')
-    const statusIdx = html.indexOf('시설현황')
+    const h3s = wrapper.findAll('h3').map(h => h.text())
+    const basicIdx = h3s.indexOf('기본정보')
+    const statusIdx = h3s.indexOf('시설현황')
     expect(basicIdx).toBeGreaterThan(-1)
     expect(statusIdx).toBeGreaterThan(-1)
     expect(basicIdx).toBeLessThan(statusIdx)
