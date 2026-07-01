@@ -138,6 +138,9 @@ jobs:
             # --update-env 플래그로 pm2 가 기존 child process 의 env 를 현재 shell 의 env 로 교체.
             cd /home/project2/frontend
             export NUXT_INTERNAL_API_BASE
+            # Nitro SSR 서버를 loopback 에만 바인딩 — nginx 가 127.0.0.1:3000 으로 프록시하므로
+            # 외부 직접 노출(nginx 우회) 차단. --update-env 로 이 값이 frontend 프로세스에 주입됨.
+            export NITRO_HOST="127.0.0.1"
             pm2 describe ilsangkit-frontend > /dev/null
             if [ $? -eq 0 ]; then
               pm2 reload ilsangkit-frontend --update-env

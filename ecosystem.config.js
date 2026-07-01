@@ -14,7 +14,9 @@ module.exports = {
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 8000
+        PORT: 8000,
+        // loopback 바인딩 — nginx 우회 외부 직접 노출 방지 (server.ts 기본값과 일치)
+        HOST: '127.0.0.1'
       },
       error_file: './logs/api-error.log',
       out_file: './logs/api-out.log',
@@ -35,6 +37,8 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 3000,
+        // Nitro SSR loopback 바인딩 — nginx 우회 외부 직접 노출 방지 (deploy.yml 과 일치)
+        NITRO_HOST: '127.0.0.1',
         NUXT_INTERNAL_API_BASE: 'http://127.0.0.1:8000'
       },
       error_file: './logs/web-error.log',
