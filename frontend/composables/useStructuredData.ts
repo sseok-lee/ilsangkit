@@ -247,7 +247,7 @@ export function useStructuredData() {
    */
   type ItemListItem = {
     name: string
-    url: string
+    url?: string
     position?: number
     type?: 'Apartment' | 'Place'
     address?: {
@@ -280,7 +280,7 @@ export function useStructuredData() {
             item: {
               '@type': item.type ?? 'Place',
               name: item.name,
-              url: resolveUrl(item.url),
+              ...(item.url !== undefined ? { url: resolveUrl(item.url) } : {}),
               ...(item.address
                 ? {
                     address: {
@@ -293,7 +293,11 @@ export function useStructuredData() {
             },
           }
         }
-        return { ...base, name: item.name, url: resolveUrl(item.url) }
+        return {
+          ...base,
+          name: item.name,
+          ...(item.url !== undefined ? { url: resolveUrl(item.url) } : {}),
+        }
       }),
     }
 
