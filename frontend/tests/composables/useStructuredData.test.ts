@@ -301,6 +301,58 @@ describe('useStructuredData', () => {
       const call = mockUseHead.mock.calls[0][0]
       expect(call.script[0].key).toBe('jsonld-itemlist')
     })
+
+    // ─── C1: url 없는 항목 null-safe (trash 집계 페이지) ───────────────────────
+    it('url 없는 항목을 전달해도 TypeError가 발생하지 않는다', () => {
+      const { setItemListSchema } = useStructuredData()
+      expect(() => {
+        setItemListSchema([
+          { name: '서울시 강남구 쓰레기 배출 일정', position: 1 },
+          { name: '서울시 서초구 쓰레기 배출 일정', position: 2 },
+        ])
+      }).not.toThrow()
+    })
+
+    it('url 없는 항목의 ListItem에 url 키가 포함되지 않는다', () => {
+      const { setItemListSchema } = useStructuredData()
+      setItemListSchema([
+        { name: '서울시 강남구 쓰레기 배출 일정', position: 1 },
+        { name: '서울시 서초구 쓰레기 배출 일정', position: 2 },
+      ])
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed['@type']).toBe('ItemList')
+      const el0 = parsed.itemListElement[0]
+      expect(el0['@type']).toBe('ListItem')
+      expect(el0.position).toBe(1)
+      expect(el0.name).toBe('서울시 강남구 쓰레기 배출 일정')
+      // url 키가 없어야 한다 (undefined가 아닌 키 자체가 없어야 함)
+      expect(Object.prototype.hasOwnProperty.call(el0, 'url')).toBe(false)
+    })
+
+    it('url 있는 항목은 기존 동작 그대로 절대 URL로 변환된다 (다른 콜러 무영향)', () => {
+      const { setItemListSchema } = useStructuredData()
+      setItemListSchema([
+        { name: '단지A', url: '/real-estate/apt-sale/seoul/gangnam/A', position: 1 },
+        { name: '단지B', url: 'https://ilsangkit.co.kr/real-estate/apt-sale/seoul/mapo/B', position: 2 },
+      ])
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.itemListElement[0].url).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/A')
+      expect(parsed.itemListElement[1].url).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/mapo/B')
+    })
+
+    it('url 있는 항목 + url 없는 항목 혼합 시 url 있는 항목만 url 키를 가진다', () => {
+      const { setItemListSchema } = useStructuredData()
+      setItemListSchema([
+        { name: '항목A(url있음)', url: '/category/list', position: 1 },
+        { name: '항목B(url없음)', position: 2 },
+      ])
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(Object.prototype.hasOwnProperty.call(parsed.itemListElement[0], 'url')).toBe(true)
+      expect(Object.prototype.hasOwnProperty.call(parsed.itemListElement[1], 'url')).toBe(false)
+    })
   })
 
   describe('setRealEstateListingSchema (page-mirrored SSR first render)', () => {

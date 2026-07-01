@@ -419,7 +419,6 @@ watch([wasteSchedules, wasteCurrentPage, wasteTotalPages], () => {
     setItemListSchema(
       wasteSchedules.value.map((s, index) => ({
         name: s.targetRegion,
-        url: `/trash/${s.id}`,
         position: (wasteCurrentPage.value - 1) * 20 + index + 1,
       }))
     )

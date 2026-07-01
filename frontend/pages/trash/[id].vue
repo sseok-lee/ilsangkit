@@ -187,6 +187,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
+import { buildTrashRegionPath } from '~/utils/trashRegion'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -262,6 +263,13 @@ if (fetchError.value) {
 }
 
 const data = computed(() => scheduleResponse.value?.data ?? null)
+
+// 구·군 단위 집계 페이지로 301 리다이렉트 (개별 trash 상세는 중복 메타 → 색인 통합)
+const trashRegionPath = computed(() => data.value ? buildTrashRegionPath(data.value.city, data.value.district) : null)
+if (import.meta.server && trashRegionPath.value) {
+  await navigateTo(trashRegionPath.value, { redirectCode: 301 })
+}
+
 const loading = computed(() => status.value === 'pending')
 const errorMsg = computed(() => {
   if (isNaN(scheduleId.value)) return '잘못된 요청입니다'
