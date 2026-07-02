@@ -1,0 +1,45 @@
+name: Regen Sitemaps
+
+# 정적 사이트맵(디스크 우선 서빙본)을 수동 재생성한다.
+# generateSitemaps 의 count-drop 가드(evaluateCountGuard, 기본 threshold 0.2)가
+# 의도적 대량 변경(예: TRASH 개별 /trash/[id] → 구·군 집계 URL, ~9,951→~250)을 회귀로 보고
+# 전체 swap 을 거부·구파일 보존한다. 그 경우 force=true 로 1회 강제 스왑 →
+# 새 기준선(.counts.json)을 기록하면 이후 스케줄 재생성(deploy/daily sync)은 정상 통과한다.
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'count-drop 가드 우회 (SITEMAP_FORCE_SWAP=1). 의도적 대량 변경 시에만 true.'
+        type: boolean
+        default: false
+
+# deploy / daily sync 와 서버 자원(DB·sitemap 디스크) 경합 방지 — deploy.yml 과 동일 그룹.
+concurrency:
+  group: cafe24-db
+  cancel-in-progress: false
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Regenerate static sitemaps on Cafe24 server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          command_timeout: 15m
+          script: |
+            set -e
+            # reader(frontend)·생성 스크립트 공용 env — deploy.yml 과 동일.
+            export SITEMAP_DIR="/home/project2/sitemaps"
+            export SITEMAP_REGEN_TOKEN="${{ secrets.SITEMAP_REGEN_TOKEN }}"
+            export SITEMAP_REGEN_BASE="http://127.0.0.1:3000"
+            if [ "${{ inputs.force }}" = "true" ]; then
+              export SITEMAP_FORCE_SWAP=1
+              echo "[regen] FORCE swap 활성화 — count-drop 가드 우회"
+            fi
+            cd /home/project2/backend
+            # 동적 Nitro 라우트를 크롤해 디스크 정적본 재생성 (source-agnostic).
+            timeout --kill-after=30s 10m node dist/scripts/generateSitemaps.js
+            echo "[regen] 사이트맵 정적 생성 완료"
