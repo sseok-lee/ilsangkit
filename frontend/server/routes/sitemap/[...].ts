@@ -9,7 +9,7 @@ import {
   generateSitemapXml,
   formatDateForSitemap,
   fetchFacilityIds,
-  fetchWasteScheduleIds,
+  fetchWasteScheduleRegions,
   fetchRealEstateBuildings,
   fetchRealEstateCityDistrictHubs,
   fetchLandSitemap,
@@ -24,6 +24,7 @@ import {
   isSitemapFacilityCategory,
 } from '../../utils/sitemapPolicy'
 import { toAbsoluteRealEstateUrl, toCitySlug, toDistrictSlug, type RealEstateUrlType } from '~/utils/realEstateUrl'
+import { buildTrashRegionPath } from '~/shared/regionSlugs'
 
 // wifi는 noindex-only 상세 정책에 따라 사이트맵 인덱스에서 제외된 카테고리다.
 // 동적 핸들러에서도 제외하여 sitemap URL은 404를 반환한다.
@@ -297,14 +298,43 @@ export default defineEventHandler(async (event) => {
     return generateSitemapXml(urls)
   }
 
-  // 시설 카테고리 + trash — 인덱스와 동일한 limit을 적용해 청크 수가 어긋나지 않게 한다
-  const items =
-    category === 'trash'
-      ? await fetchWasteScheduleIds()
-      : await fetchFacilityIds(
-          category,
-          isSitemapFacilityCategory(category) ? getSitemapFacilityLimit(category) : undefined,
-        )
+  // 쓰레기 배출(trash) — 개별 /trash/[id] 대신 구·군 집계 URL 사이트맵.
+  // buildTrashRegionPath 출력이 개별 상세의 301 타겟·집계 페이지 canonical과 byte-match 되어야 한다.
+  if (category === 'trash') {
+    const regions = await fetchWasteScheduleRegions()
+    // API 실패로 데이터 없음 — page>1 요청은 503으로 크롤러 재시도 유도 (빈 sitemap 캐시 방지)
+    if (regions.length === 0 && page > 1) {
+      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    }
+
+    const seen = new Set<string>()
+    const urls: Parameters<typeof generateSitemapXml>[0] = []
+    for (const r of regions) {
+      const regionPath = buildTrashRegionPath(r.city, r.district)
+      if (!regionPath || seen.has(regionPath)) continue
+      seen.add(regionPath)
+      urls.push({
+        loc: `${SITE_URL}${regionPath}`,
+        lastmod: formatDateForSitemap(r.updatedAt),
+        changefreq: 'weekly',
+        priority: 0.6,
+      })
+    }
+
+    // region 수(~250)는 MAX_URLS_PER_SITEMAP 이하라 단일 청크. page>totalPages 404 유지.
+    const totalPages = Math.max(1, Math.ceil(urls.length / MAX_URLS_PER_SITEMAP))
+    if (page > totalPages) {
+      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    }
+    const offset = (page - 1) * MAX_URLS_PER_SITEMAP
+    return generateSitemapXml(urls.slice(offset, offset + MAX_URLS_PER_SITEMAP))
+  }
+
+  // 시설 카테고리 — 인덱스와 동일한 limit을 적용해 청크 수가 어긋나지 않게 한다
+  const items = await fetchFacilityIds(
+    category,
+    isSitemapFacilityCategory(category) ? getSitemapFacilityLimit(category) : undefined,
+  )
 
   // API 실패로 데이터 없음 — 503으로 크롤러 재시도 유도 (빈 sitemap 캐시 방지)
   if (items.length === 0 && page > 1) {

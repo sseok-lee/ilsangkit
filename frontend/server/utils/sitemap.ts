@@ -144,6 +144,33 @@ export async function fetchWasteScheduleIds(): Promise<{ id: number; updatedAt: 
   }
 }
 
+export interface SitemapWasteRegion {
+  city: string
+  district: string
+  updatedAt: string
+}
+
+// 쓰레기 배출 구·군 집계 지역 목록. 개별 /trash/[id] 대신 집계 URL 사이트맵 생성에 사용.
+// 응답 형태: { success, data: { regions: [{ city, district, updatedAt }] } }
+export async function fetchWasteScheduleRegions(): Promise<SitemapWasteRegion[]> {
+  const cacheKey = 'waste-schedule-regions'
+  const cached = getCached<SitemapWasteRegion>(cacheKey)
+  if (cached) return cached
+
+  try {
+    const json = await ssrFetch<{ data?: { regions?: SitemapWasteRegion[] } }>(
+      '/api/sitemap/waste-schedule-regions',
+      { timeoutMs: 25_000 },
+    )
+    const data = json.data?.regions ?? []
+    if (data.length > 0) setCache(cacheKey, data)
+    return data
+  } catch (err) {
+    console.error('[sitemap] fetchWasteScheduleRegions failed', err)
+    return []
+  }
+}
+
 export interface SitemapRealEstateBuilding {
   realEstateType: 'apt-sale' | 'apt-rent' | 'villa-sale' | 'villa-rent' | 'offitel-sale' | 'offitel-rent'
   city: string
