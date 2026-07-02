@@ -125,25 +125,6 @@ export async function fetchFacilityIds(
   }
 }
 
-export async function fetchWasteScheduleIds(): Promise<{ id: number; updatedAt: string }[]> {
-  const cacheKey = 'waste-schedules'
-  const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
-  if (cached) return cached
-
-  try {
-    const json = await ssrFetch<{ data?: { id: number; updatedAt: string }[] }>(
-      '/api/sitemap/waste-schedules',
-      { timeoutMs: 25_000 },
-    )
-    const data = json.data ?? []
-    if (data.length > 0) setCache(cacheKey, data)
-    return data
-  } catch (err) {
-    console.error('[sitemap] fetchWasteScheduleIds failed', err)
-    return []
-  }
-}
-
 export interface SitemapWasteRegion {
   city: string
   district: string
