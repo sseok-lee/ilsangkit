@@ -125,21 +125,29 @@ export async function fetchFacilityIds(
   }
 }
 
-export async function fetchWasteScheduleIds(): Promise<{ id: number; updatedAt: string }[]> {
-  const cacheKey = 'waste-schedules'
-  const cached = getCached<{ id: number; updatedAt: string }>(cacheKey)
+export interface SitemapWasteRegion {
+  city: string
+  district: string
+  updatedAt: string
+}
+
+// 쓰레기 배출 구·군 집계 지역 목록. 개별 /trash/[id] 대신 집계 URL 사이트맵 생성에 사용.
+// 응답 형태: { success, data: { regions: [{ city, district, updatedAt }] } }
+export async function fetchWasteScheduleRegions(): Promise<SitemapWasteRegion[]> {
+  const cacheKey = 'waste-schedule-regions'
+  const cached = getCached<SitemapWasteRegion>(cacheKey)
   if (cached) return cached
 
   try {
-    const json = await ssrFetch<{ data?: { id: number; updatedAt: string }[] }>(
-      '/api/sitemap/waste-schedules',
+    const json = await ssrFetch<{ data?: { regions?: SitemapWasteRegion[] } }>(
+      '/api/sitemap/waste-schedule-regions',
       { timeoutMs: 25_000 },
     )
-    const data = json.data ?? []
+    const data = json.data?.regions ?? []
     if (data.length > 0) setCache(cacheKey, data)
     return data
   } catch (err) {
-    console.error('[sitemap] fetchWasteScheduleIds failed', err)
+    console.error('[sitemap] fetchWasteScheduleRegions failed', err)
     return []
   }
 }

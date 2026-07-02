@@ -8,6 +8,7 @@ import {
   isValidCategory,
   getFacilityIds,
   getWasteScheduleIds,
+  getWasteScheduleRegions,
   getRegionCategoryCombinations,
   getRealEstateBuildings,
   getRealEstateCityDistrictHubs,
@@ -56,6 +57,19 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const data = await getWasteScheduleIds();
     res.json({ success: true, data });
+  })
+);
+
+/**
+ * GET /api/sitemap/waste-schedule-regions
+ * 쓰레기 배출 일정 지역(구·군) 집계 목록 조회 (사이트맵용)
+ * 개별 /trash/[id] 대신 구·군 집계 URL 사이트맵 생성에 사용
+ */
+router.get(
+  '/waste-schedule-regions',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const regions = await getWasteScheduleRegions();
+    res.json({ success: true, data: { regions } });
   })
 );
 

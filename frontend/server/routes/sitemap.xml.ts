@@ -8,7 +8,7 @@ import {
   generateSitemapIndexXml,
   fetchSitemapPageCounts,
   fetchFacilityIds,
-  fetchWasteScheduleIds,
+  fetchWasteScheduleRegions,
   fetchRealEstateBuildings,
   fetchSubscriptionIds,
   fetchSubwaySlugs,
@@ -85,9 +85,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // trash (waste schedules)
+    // trash — 개별 상세(~8,882)가 아닌 구·군 집계 URL(~250)이므로 region 수로 청크 계산
+    const trashRegions = await fetchWasteScheduleRegions()
     const trashLastmod = pageCounts.waste.maxUpdatedAt || today
-    const trashPages = Math.max(1, Math.ceil(pageCounts.waste.count / MAX_URLS_PER_SITEMAP))
+    const trashPages = Math.max(1, Math.ceil(trashRegions.length / MAX_URLS_PER_SITEMAP))
     if (trashPages === 1) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/trash.xml`, lastmod: trashLastmod })
     } else {
@@ -149,13 +150,13 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const trashItems = await fetchWasteScheduleIds()
-    const trashLatestDate = trashItems.reduce((max, item) => {
+    const trashRegions = await fetchWasteScheduleRegions()
+    const trashLatestDate = trashRegions.reduce((max, item) => {
       const d = item.updatedAt?.split('T')[0]
       return d && d > max ? d : max
     }, '')
     const trashLastmod = trashLatestDate || today
-    const trashPages = Math.max(1, Math.ceil(trashItems.length / MAX_URLS_PER_SITEMAP))
+    const trashPages = Math.max(1, Math.ceil(trashRegions.length / MAX_URLS_PER_SITEMAP))
     if (trashPages === 1) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/trash.xml`, lastmod: trashLastmod })
     } else {

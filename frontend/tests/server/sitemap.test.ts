@@ -184,6 +184,17 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
       const data = makeItems(serveCount)
       return Promise.resolve({ success: true, data })
     }
+    if (path.includes('/api/sitemap/waste-schedule-regions')) {
+      return Promise.resolve({
+        success: true,
+        data: {
+          regions: [
+            { city: '서울특별시', district: '강남구', updatedAt: '2026-04-01T00:00:00Z' },
+            { city: '경기도', district: '가평군', updatedAt: '2026-04-02T00:00:00Z' },
+          ],
+        },
+      })
+    }
     if (path.includes('/api/sitemap/waste-schedules')) {
       return Promise.resolve({ success: true, data: [] })
     }
@@ -292,6 +303,29 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
 
     const firstChunk = await chunkHandler(createMockEvent('/sitemap/aed-1.xml') as never)
     expect(firstChunk as string).toContain('<loc>https://ilsangkit.co.kr/aed/1</loc>')
+  })
+
+  it('trash 사이트맵은 구·군 집계 URL만 내보내고 개별 /trash/[id]는 0건이다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/trash.xml') as never)) as string
+    // buildTrashRegionPath 출력 = 개별 상세 301 타겟 = 집계 페이지 canonical (byte-match)
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/seoul/gangnam/trash</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/gyeonggi/gapyeong/trash</loc>')
+    // 개별 /trash/{id} 형태는 존재하지 않아야 한다
+    expect(xml).not.toMatch(/\/trash\/\d+</)
+  })
+
+  it('trash 인덱스는 region 수(~250) 기준 단일 청크이고 trash-2는 404다', async () => {
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+
+    const indexXml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
+    const advertised = countChunksForCategory(indexXml, 'trash')
+    expect(advertised).toBe(1)
+
+    await expect(
+      chunkHandler(createMockEvent('/sitemap/trash-2.xml') as never),
+    ).rejects.toMatchObject({ statusCode: 404 })
   })
 
   it('/contact 은 static sitemap 에 포함된다 (US-006)', async () => {
@@ -419,6 +453,9 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
   function mockSsrFetchWithHubs(path: string): Promise<unknown> {
     if (path.includes('/api/sitemap/real-estate-hubs')) {
       return Promise.resolve({ success: true, data: hubData })
+    }
+    if (path.includes('/api/sitemap/waste-schedule-regions')) {
+      return Promise.resolve({ success: true, data: { regions: [] } })
     }
     if (
       path.includes('/api/sitemap/real-estate-buildings') ||
@@ -646,6 +683,9 @@ describe('land sitemap — isIndexable quality gate', () => {
       }
       if (path.includes('/api/sitemap/facilities/')) {
         return Promise.resolve({ success: true, data: [] })
+      }
+      if (path.includes('/api/sitemap/waste-schedule-regions')) {
+        return Promise.resolve({ success: true, data: { regions: [] } })
       }
       if (path.includes('/api/sitemap/waste-schedules')) {
         return Promise.resolve({ success: true, data: [] })
