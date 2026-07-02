@@ -58,6 +58,7 @@ import {
   getRealEstateBuildings,
   getRealEstateCityDistrictHubs,
   getSitemapPageCounts,
+  dealKeyToDateString,
   _resetSitemapCacheForTests,
 } from '../../src/services/sitemapService.js';
 
@@ -164,6 +165,60 @@ describe('getRealEstateBuildings (US-008 new URL contract)', () => {
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
     expect(sql.match(/buildingName\s+IS\s+NOT\s+NULL/g)?.length).toBe(6);
     expect(sql.match(/buildingName\s*!=\s*''/g)?.length).toBe(6);
+  });
+
+  it('computes per-building MAX(dealYmd) key in all 6 branches and selects lastDealKey', async () => {
+    mockQueryRaw.mockResolvedValue([]);
+    await getRealEstateBuildings();
+    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
+    // MAX(dealYear*10000 + dealMonth*100 + COALESCE(dealDay,1)) in each of the 6 branches
+    const maxKeyMatches = sql.match(
+      /MAX\(dealYear\s*\*\s*10000\s*\+\s*dealMonth\s*\*\s*100\s*\+\s*COALESCE\(dealDay,\s*1\)\)/g,
+    );
+    expect(maxKeyMatches?.length).toBe(6);
+    // outer SELECT exposes lastDealKey
+    expect(sql).toMatch(/SELECT\s+realEstateType,\s*city,\s*district,\s*buildingName,\s*bjdCode,\s*lastDealKey/);
+  });
+
+  it('maps lastDealKey (BigInt) to a real per-building lastmod string, no BigInt leak', async () => {
+    mockQueryRaw.mockResolvedValue([
+      { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안', bjdCode: '1168011700', lastDealKey: 20260615n },
+      { realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구', buildingName: '해운대빌라', bjdCode: '2635011700', lastDealKey: 20260301n },
+    ]);
+    const rows = await getRealEstateBuildings();
+    expect(rows[0].lastmod).toBe('2026-06-15');
+    expect(rows[1].lastmod).toBe('2026-03-01');
+    // no BigInt survives to the API boundary (JSON.stringify would throw on BigInt)
+    expect(() => JSON.stringify(rows)).not.toThrow();
+  });
+
+  it('falls back to empty lastmod when a building has no dealKey (null)', async () => {
+    mockQueryRaw.mockResolvedValue([
+      { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안', bjdCode: '1168011700', lastDealKey: null },
+    ]);
+    const rows = await getRealEstateBuildings();
+    expect(rows[0].lastmod).toBe('');
+  });
+});
+
+describe('dealKeyToDateString', () => {
+  it('converts YYYYMMDD integer key to W3C YYYY-MM-DD', () => {
+    expect(dealKeyToDateString(20260615)).toBe('2026-06-15');
+    expect(dealKeyToDateString(20260701)).toBe('2026-07-01');
+  });
+
+  it('pads single-digit month/day', () => {
+    expect(dealKeyToDateString(20260305)).toBe('2026-03-05');
+  });
+
+  it('COALESCE(dealDay,1) → day 01 when dealDay was null', () => {
+    // dealYear*10000 + dealMonth*100 + 1
+    expect(dealKeyToDateString(20260601)).toBe('2026-06-01');
+  });
+
+  it('clamps out-of-range month/day defensively', () => {
+    expect(dealKeyToDateString(20261399)).toBe('2026-12-31');
+    expect(dealKeyToDateString(20260000)).toBe('2026-01-01');
   });
 });
 

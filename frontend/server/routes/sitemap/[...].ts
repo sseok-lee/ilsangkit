@@ -144,7 +144,8 @@ export default defineEventHandler(async (event) => {
         district: item.district,
         buildingName: item.buildingName,
       }),
-      lastmod: weekStart,
+      // 건물별 최근 실거래월(진짜 freshness). 백엔드 미배포/구버전 응답 시 weekStart 폴백.
+      lastmod: item.lastmod || weekStart,
       changefreq: 'weekly' as const,
       priority: 0.6,
     }))
