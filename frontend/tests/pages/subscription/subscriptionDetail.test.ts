@@ -113,6 +113,26 @@ async function mountSuspended() {
   return wrapper
 }
 
+// flex `order-N` 이 시각 순서를 결정하므로(happy-dom 은 레이아웃 미계산),
+// order 값으로 정렬해 시각 순서를 복원한 뒤 광고↔광고 인접 쌍의 개수를 센다.
+// 조건부 섹션이 비어 사라져도 두 광고가 붙지 않아야 한다(= 0).
+function adAdjacencyViolations(wrapper: Awaited<ReturnType<typeof mountSuspended>>): number {
+  const items = wrapper.findAll('*')
+    .map((el, domIdx) => {
+      const m = (el.attributes('class') || '').match(/\border-(\d+)\b/)
+      return m
+        ? { order: Number(m[1]), isAd: el.attributes('data-testid') === 'ad-banner', domIdx }
+        : null
+    })
+    .filter((x): x is { order: number; isAd: boolean; domIdx: number } => x !== null)
+    .sort((a, b) => a.order - b.order || a.domIdx - b.domIdx)
+  let violations = 0
+  for (let i = 1; i < items.length; i++) {
+    if (items[i].isAd && items[i - 1].isAd) violations++
+  }
+  return violations
+}
+
 describe('subscription/[id].vue 섹션 재배치', () => {
   beforeEach(() => {
     mockUseAsyncDataWith({ ...mockSubscription, unitTypes: mockUnitTypes, competitions: [], scores: [], specialStatuses: [] })
@@ -138,6 +158,24 @@ describe('subscription/[id].vue 섹션 재배치', () => {
 
   it('AdBanner는 정확히 4개다 (추가·삭제 금지)', async () => {
     const wrapper = await mountSuspended()
+    expect(wrapper.findAll('[data-testid="ad-banner"]').length).toBe(4)
+  })
+
+  it('결과 미발표(경쟁률·가점·특별공급 empty) 상태에서 광고가 연속으로 붙지 않는다', async () => {
+    // beforeEach 목: competitions/scores/specialStatuses 전부 [] → 5790류 결과 미발표 청약 재현.
+    // 광고②(order-5)와 광고③(order-10) 사이에 항상 렌더되는 기본정보(order-9)가 있어야 함.
+    const wrapper = await mountSuspended()
+    expect(adAdjacencyViolations(wrapper)).toBe(0)
+  })
+
+  it('좌표·공급정보까지 없는 최소 데이터에서도 광고가 연속으로 붙지 않고 4개 유지', async () => {
+    // 최악 케이스: 좌표 없음(위치·로드뷰 대신 fallback) + 공급정보 없음 + 결과 미발표.
+    mockUseAsyncDataWith({
+      ...mockSubscription, lat: null, lng: null,
+      unitTypes: [], competitions: [], scores: [], specialStatuses: [],
+    })
+    const wrapper = await mountSuspended()
+    expect(adAdjacencyViolations(wrapper)).toBe(0)
     expect(wrapper.findAll('[data-testid="ad-banner"]').length).toBe(4)
   })
 
