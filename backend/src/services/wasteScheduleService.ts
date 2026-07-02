@@ -188,6 +188,29 @@ export async function getAllIds(): Promise<{ id: number; updatedAt: Date }[]> {
 }
 
 /**
+ * 사이트맵용 지역(구·군) distinct 목록 조회
+ * city/district null 레코드 제외, 그룹별 최신 updatedAt 포함
+ * @returns { city, district, updatedAt } 배열
+ */
+export async function getWasteScheduleRegions(): Promise<
+  { city: string; district: string; updatedAt: Date }[]
+> {
+  const grouped = await prisma.wasteSchedule.groupBy({
+    by: ['city', 'district'],
+    _max: { updatedAt: true },
+    orderBy: [{ city: 'asc' }, { district: 'asc' }],
+  });
+
+  return grouped
+    .filter((item) => item.city != null && item.district != null && item._max.updatedAt != null)
+    .map((item) => ({
+      city: item.city,
+      district: item.district,
+      updatedAt: item._max.updatedAt as Date,
+    }));
+}
+
+/**
  * 단건 조회 (상세 페이지용)
  * @param id - WasteSchedule id
  * @returns 배출 일정 아이템 또는 null

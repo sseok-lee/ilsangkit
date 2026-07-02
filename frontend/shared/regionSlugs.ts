@@ -392,3 +392,25 @@ export const REGIONS: Record<string, string[]> = {
 export function getDistrictSlug(koreanName: string): string {
   return DISTRICT_SLUG_MAP[koreanName] || koreanName.toLowerCase().replace(/\s+/g, '-')
 }
+
+/**
+ * useRegions.generateSlug와 동일한 district 슬러그 규칙 (순수·서버안전).
+ * 301 리다이렉트 타겟과 byte-match 보장용.
+ */
+export function trashDistrictSlug(district: string): string {
+  return (
+    DISTRICT_SLUG_MAP[district] ||
+    district.replace(/[시군구]/g, '').replace(/[가-힣]/g, '').toLowerCase().replace(/\s+/g, '-')
+  )
+}
+
+/**
+ * 쓰레기 배출 구·군 집계 경로를 생성한다. 301 타겟·canonical과 byte-match.
+ * citySlug 미해결 시 null 반환. Vue import 없는 순수 함수 (Nitro 서버안전).
+ */
+export function buildTrashRegionPath(city: string, district: string): string | null {
+  const shortCity = city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+  const citySlug = CITY_FULL_NAME_TO_SLUG[city] || CITY_SLUGS[city] || CITY_SLUGS[shortCity]
+  if (!citySlug) return null
+  return `/${citySlug}/${trashDistrictSlug(district)}/trash`
+}
