@@ -5,6 +5,7 @@ import express from 'express';
 const getRealEstateBuildingsMock = vi.fn();
 const getFacilityIdsMock = vi.fn();
 const getWasteScheduleIdsMock = vi.fn();
+const getWasteScheduleRegionsMock = vi.fn();
 const getRegionCategoryCombinationsMock = vi.fn();
 const getSubscriptionIdsMock = vi.fn();
 // isValidCategory 는 테스트별로 override 가능한 mock 으로 둔다 (invalid category → 400 검증).
@@ -14,6 +15,7 @@ vi.mock('../../src/services/sitemapService.js', () => ({
   isValidCategory: (c: string) => isValidCategoryMock(c),
   getFacilityIds: (...args: unknown[]) => getFacilityIdsMock(...args),
   getWasteScheduleIds: () => getWasteScheduleIdsMock(),
+  getWasteScheduleRegions: () => getWasteScheduleRegionsMock(),
   getRegionCategoryCombinations: () => getRegionCategoryCombinationsMock(),
   getRealEstateBuildings: () => getRealEstateBuildingsMock(),
   getSubscriptionIds: () => getSubscriptionIdsMock(),
@@ -31,6 +33,7 @@ beforeEach(() => {
   getRealEstateBuildingsMock.mockReset();
   getFacilityIdsMock.mockReset().mockResolvedValue([]);
   getWasteScheduleIdsMock.mockReset().mockResolvedValue([]);
+  getWasteScheduleRegionsMock.mockReset().mockResolvedValue([]);
   getRegionCategoryCombinationsMock.mockReset().mockResolvedValue([]);
   getSubscriptionIdsMock.mockReset().mockResolvedValue([]);
   isValidCategoryMock.mockReset().mockReturnValue(true);
@@ -113,6 +116,42 @@ describe('GET /api/sitemap/region-categories', () => {
     const res = await request(app).get('/api/sitemap/region-categories');
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([]);
+  });
+});
+
+describe('GET /api/sitemap/waste-schedule-regions', () => {
+  it('returns 200 with { success, data: { regions } } shape', async () => {
+    getWasteScheduleRegionsMock.mockResolvedValue([
+      { city: '경기도', district: '가평군', updatedAt: new Date('2026-06-01T00:00:00Z') },
+      { city: '서울특별시', district: '강남구', updatedAt: new Date('2026-06-10T00:00:00Z') },
+    ]);
+    const res = await request(app).get('/api/sitemap/waste-schedule-regions');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('regions');
+    expect(Array.isArray(res.body.data.regions)).toBe(true);
+    expect(res.body.data.regions).toHaveLength(2);
+    expect(res.body.data.regions[0]).toMatchObject({ city: '경기도', district: '가평군' });
+  });
+
+  it('returns each region with city, district, updatedAt fields', async () => {
+    getWasteScheduleRegionsMock.mockResolvedValue([
+      { city: '부산광역시', district: '해운대구', updatedAt: new Date('2026-05-15T00:00:00Z') },
+    ]);
+    const res = await request(app).get('/api/sitemap/waste-schedule-regions');
+    expect(res.status).toBe(200);
+    const region = res.body.data.regions[0];
+    expect(region).toHaveProperty('city', '부산광역시');
+    expect(region).toHaveProperty('district', '해운대구');
+    expect(region).toHaveProperty('updatedAt');
+  });
+
+  it('returns empty regions array without 500 when DB has no waste schedules', async () => {
+    getWasteScheduleRegionsMock.mockResolvedValue([]);
+    const res = await request(app).get('/api/sitemap/waste-schedule-regions');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.regions).toEqual([]);
   });
 });
 

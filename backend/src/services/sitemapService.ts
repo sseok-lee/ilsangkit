@@ -156,6 +156,10 @@ export async function getWasteScheduleIds() {
   return wasteScheduleService.getAllIds();
 }
 
+export async function getWasteScheduleRegions() {
+  return wasteScheduleService.getWasteScheduleRegions();
+}
+
 export async function getRegionCategoryCombinations() {
   return facilityService.getRegionCategoryCombinations();
 }

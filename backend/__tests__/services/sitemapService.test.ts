@@ -48,6 +48,7 @@ vi.mock('../../src/services/facilityService.js', () => ({
 }));
 vi.mock('../../src/services/wasteScheduleService.js', () => ({
   getAllIds: vi.fn(),
+  getWasteScheduleRegions: vi.fn(),
 }));
 vi.mock('../../src/services/categoryRegistry.js', () => ({
   ALL_CATEGORIES: [],
