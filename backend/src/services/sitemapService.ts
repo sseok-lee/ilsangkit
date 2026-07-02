@@ -12,17 +12,39 @@ const SITEMAP_FACILITY_CATS: FacilityCategory[] = [
 
 // 부동산 사이트맵 쿼리는 6-table UNION으로 느림 — 6시간 모듈 레벨 캐시로 콜드 스타트 최소화
 const SITEMAP_CACHE_TTL = 6 * 60 * 60 * 1000;
-type RealEstateRow = { realEstateType: string; city: string; district: string; buildingName: string; bjdCode: string };
+// lastmod은 건물의 "가장 최근 실거래월"(MAX dealYmd) 기반 — 매 sync마다 today로 오염되는 updatedAt 대신
+// 실제 콘텐츠 변경 신호(실거래 발생)를 반영해 Google lastmod 신뢰(consistently/verifiably accurate)를 확보한다.
+type RealEstateRow = {
+  realEstateType: string;
+  city: string;
+  district: string;
+  buildingName: string;
+  bjdCode: string;
+  lastmod: string;
+};
+// $queryRaw 원본 행: 정수식 MAX는 MySQL에서 BIGINT → Prisma가 bigint로 반환하므로 API 경계 전에 문자열로 변환한다.
+type RealEstateRawRow = Omit<RealEstateRow, 'lastmod'> & { lastDealKey: bigint | number | null };
 type HubRow = { realEstateType: string; city: string; district: string };
 let buildingsCache: { data: RealEstateRow[]; expiresAt: number } | null = null;
 let hubsCache: { data: HubRow[]; expiresAt: number } | null = null;
-let realEstateMaxUpdatedAtCache: { data: Date | null; expiresAt: number } | null = null;
+let realEstateMaxDealDateCache: { data: string | null; expiresAt: number } | null = null;
 
 /** 테스트 전용 — 모듈 레벨 캐시 초기화 */
 export function _resetSitemapCacheForTests() {
   buildingsCache = null;
   hubsCache = null;
-  realEstateMaxUpdatedAtCache = null;
+  realEstateMaxDealDateCache = null;
+}
+
+/**
+ * `dealYear*10000 + dealMonth*100 + COALESCE(dealDay,1)` 정수 키를 W3C 'YYYY-MM-DD'로 변환.
+ * month/day는 방어적으로 clamp(1..12, 1..31)해 항상 유효한 날짜 문자열을 반환한다.
+ */
+export function dealKeyToDateString(key: number): string {
+  const y = Math.floor(key / 10000);
+  const m = Math.min(12, Math.max(1, Math.floor((key % 10000) / 100)));
+  const d = Math.min(31, Math.max(1, key % 100));
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 const SITEMAP_FACILITY_LIMITS: Partial<Record<FacilityCategory, number>> = {
@@ -77,36 +99,39 @@ async function getRealEstateBuildingCount(): Promise<number> {
 }
 
 /**
- * 6개 부동산 트랜잭션 테이블의 MAX(updatedAt) 중 최댓값.
- * 사이트맵 lastmod 갱신용. updatedAt 컬럼에 인덱스가 없어 풀스캔이지만,
+ * 6개 부동산 트랜잭션 테이블 전체에서 가장 최근 실거래월(MAX dealYmd)을 'YYYY-MM-DD'로 반환.
+ * 사이트맵 인덱스의 real-estate 청크 lastmod 용. dealYear/Month/Day에 인덱스가 있어 저비용,
  * 6시간 캐시 + sitemap.xml 호출 빈도 고려 시 허용 가능.
+ * updatedAt 대신 dealYmd를 쓰는 이유: updatedAt은 매 sync(12개월 rolling window)마다 today로
+ * 갱신돼 freshness 신호로 무의미하지만, dealYmd는 실제 거래 발생 시점이라 신뢰 가능.
  */
-async function getRealEstateMaxUpdatedAt(): Promise<Date | null> {
-  if (realEstateMaxUpdatedAtCache && realEstateMaxUpdatedAtCache.expiresAt > Date.now()) {
-    return realEstateMaxUpdatedAtCache.data;
+async function getRealEstateMaxDealDate(): Promise<string | null> {
+  if (realEstateMaxDealDateCache && realEstateMaxDealDateCache.expiresAt > Date.now()) {
+    return realEstateMaxDealDateCache.data;
   }
   try {
-    const result = await prisma.$queryRaw<[{ maxUpdatedAt: Date | null }]>`
-      SELECT GREATEST(
-        (SELECT MAX(updatedAt) FROM AptSaleTransaction),
-        (SELECT MAX(updatedAt) FROM AptRentTransaction),
-        (SELECT MAX(updatedAt) FROM VillaSaleTransaction),
-        (SELECT MAX(updatedAt) FROM VillaRentTransaction),
-        (SELECT MAX(updatedAt) FROM OffitelSaleTransaction),
-        (SELECT MAX(updatedAt) FROM OffitelRentTransaction)
-      ) AS maxUpdatedAt
+    const result = await prisma.$queryRaw<[{ maxKey: bigint | number | null }]>`
+      SELECT MAX(k) AS maxKey FROM (
+        SELECT MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1)) AS k FROM AptSaleTransaction
+        UNION ALL SELECT MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1)) FROM AptRentTransaction
+        UNION ALL SELECT MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1)) FROM VillaSaleTransaction
+        UNION ALL SELECT MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1)) FROM VillaRentTransaction
+        UNION ALL SELECT MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1)) FROM OffitelSaleTransaction
+        UNION ALL SELECT MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1)) FROM OffitelRentTransaction
+      ) t
     `;
-    const data = result[0]?.maxUpdatedAt ?? null;
-    realEstateMaxUpdatedAtCache = { data, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
+    const key = result[0]?.maxKey;
+    const data = key == null ? null : dealKeyToDateString(Number(key));
+    realEstateMaxDealDateCache = { data, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
     return data;
   } catch (err) {
-    console.error('[sitemap] getRealEstateMaxUpdatedAt error:', err);
+    console.error('[sitemap] getRealEstateMaxDealDate error:', err);
     return null;
   }
 }
 
 export async function getSitemapPageCounts() {
-  const [facilities, wasteCount, wasteLatest, subCount, subLatest, realEstateCount, realEstateMaxUpdatedAt] =
+  const [facilities, wasteCount, wasteLatest, subCount, subLatest, realEstateCount, realEstateMaxDealDate] =
     await Promise.all([
       Promise.all(
         SITEMAP_FACILITY_CATS.map((cat) =>
@@ -124,7 +149,7 @@ export async function getSitemapPageCounts() {
       prisma.subscription.count(),
       prisma.subscription.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
       getRealEstateBuildingCount(),
-      getRealEstateMaxUpdatedAt(),
+      getRealEstateMaxDealDate(),
     ]);
 
   return {
@@ -139,7 +164,8 @@ export async function getSitemapPageCounts() {
     },
     realEstateBuildings: {
       count: realEstateCount,
-      maxUpdatedAt: toKstDateString(realEstateMaxUpdatedAt),
+      // dealYmd 기반 'YYYY-MM-DD' 문자열 (이미 KST date-only) — toKstDateString 불필요
+      maxUpdatedAt: realEstateMaxDealDate,
     },
   };
 }
@@ -184,11 +210,13 @@ export async function getSubscriptionIds() {
  */
 export async function getRealEstateBuildings() {
   if (buildingsCache && buildingsCache.expiresAt > Date.now()) return buildingsCache.data;
-  const result = await prisma.$queryRaw<RealEstateRow[]>`
-    SELECT realEstateType, city, district, buildingName, bjdCode
+  // lastDealKey = 그룹(건물)별 가장 최근 실거래월. `@@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])`가 지원.
+  const rows = await prisma.$queryRaw<RealEstateRawRow[]>`
+    SELECT realEstateType, city, district, buildingName, bjdCode, lastDealKey
     FROM (
       -- apt-sale
-      SELECT 'apt-sale' AS realEstateType, city, district, buildingName, bjdCode, COUNT(*) AS cnt
+      SELECT 'apt-sale' AS realEstateType, city, district, buildingName, bjdCode,
+        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1)) AS lastDealKey
       FROM AptSaleTransaction
       WHERE buildingName IS NOT NULL
         AND buildingName != ''
@@ -200,7 +228,8 @@ export async function getRealEstateBuildings() {
       UNION ALL
 
       -- apt-rent
-      SELECT 'apt-rent', city, district, buildingName, bjdCode, COUNT(*)
+      SELECT 'apt-rent', city, district, buildingName, bjdCode,
+        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
       FROM AptRentTransaction
       WHERE buildingName IS NOT NULL
         AND buildingName != ''
@@ -212,7 +241,8 @@ export async function getRealEstateBuildings() {
       UNION ALL
 
       -- villa-sale
-      SELECT 'villa-sale', city, district, buildingName, bjdCode, COUNT(*)
+      SELECT 'villa-sale', city, district, buildingName, bjdCode,
+        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
       FROM VillaSaleTransaction
       WHERE buildingName IS NOT NULL
         AND buildingName != ''
@@ -224,7 +254,8 @@ export async function getRealEstateBuildings() {
       UNION ALL
 
       -- villa-rent
-      SELECT 'villa-rent', city, district, buildingName, bjdCode, COUNT(*)
+      SELECT 'villa-rent', city, district, buildingName, bjdCode,
+        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
       FROM VillaRentTransaction
       WHERE buildingName IS NOT NULL
         AND buildingName != ''
@@ -236,7 +267,8 @@ export async function getRealEstateBuildings() {
       UNION ALL
 
       -- offitel-sale
-      SELECT 'offitel-sale', city, district, buildingName, bjdCode, COUNT(*)
+      SELECT 'offitel-sale', city, district, buildingName, bjdCode,
+        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
       FROM OffitelSaleTransaction
       WHERE buildingName IS NOT NULL
         AND buildingName != ''
@@ -248,7 +280,8 @@ export async function getRealEstateBuildings() {
       UNION ALL
 
       -- offitel-rent
-      SELECT 'offitel-rent', city, district, buildingName, bjdCode, COUNT(*)
+      SELECT 'offitel-rent', city, district, buildingName, bjdCode,
+        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
       FROM OffitelRentTransaction
       WHERE buildingName IS NOT NULL
         AND buildingName != ''
@@ -258,8 +291,17 @@ export async function getRealEstateBuildings() {
       GROUP BY city, district, buildingName, bjdCode
     ) unioned
   `;
-  buildingsCache = { data: result, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
-  return result;
+  // BigInt(lastDealKey)를 API 경계 전에 'YYYY-MM-DD' 문자열로 변환 (res.json BigInt 직렬화 오류 방지)
+  const data: RealEstateRow[] = rows.map((r) => ({
+    realEstateType: r.realEstateType,
+    city: r.city,
+    district: r.district,
+    buildingName: r.buildingName,
+    bjdCode: r.bjdCode,
+    lastmod: r.lastDealKey == null ? '' : dealKeyToDateString(Number(r.lastDealKey)),
+  }));
+  buildingsCache = { data, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
+  return data;
 }
 
 /**

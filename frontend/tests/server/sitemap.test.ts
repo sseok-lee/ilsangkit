@@ -540,10 +540,10 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
 
 describe('real-estate sitemap — invalid building name filtering', () => {
   const buildingData = [
-    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안강남', bjdCode: '1168011700' },
-    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '(535-3)', bjdCode: '1168011701' },
-    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '123-4', bjdCode: '1168011702' },
-    { realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구', buildingName: '해운대빌라', bjdCode: '2635011700' },
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안강남', bjdCode: '1168011700', lastmod: '2026-06-15' },
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '(535-3)', bjdCode: '1168011701', lastmod: '2026-06-15' },
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '123-4', bjdCode: '1168011702', lastmod: '2026-06-15' },
+    { realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구', buildingName: '해운대빌라', bjdCode: '2635011700', lastmod: '2026-03-01' },
   ]
 
   interface MockEvent {
@@ -583,6 +583,47 @@ describe('real-estate sitemap — invalid building name filtering', () => {
     const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
     const urlCount = (xml.match(/<url>/g) ?? []).length
     expect(urlCount).toBe(2)
+  })
+
+  it('건물별 최근 실거래월(item.lastmod)이 per-URL lastmod로 방출된다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
+    expect(xml).toContain('<lastmod>2026-06-15</lastmod>')
+    expect(xml).toContain('<lastmod>2026-03-01</lastmod>')
+  })
+})
+
+describe('real-estate sitemap — lastmod fallback when backend omits lastmod', () => {
+  interface MockEvent {
+    path: string
+    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+  }
+  function createMockEvent(path: string): MockEvent {
+    return { path, node: { req: { url: path }, res: { setHeader: () => {} } } }
+  }
+
+  beforeEach(() => {
+    // 구버전 백엔드 응답: lastmod 필드 없음 → weekStart 폴백 경로
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/real-estate-buildings')) {
+        return Promise.resolve({
+          success: true,
+          data: [{ realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안강남', bjdCode: '1168011700' }],
+        })
+      }
+      return Promise.resolve({ success: true, data: [] })
+    }) as typeof ssrFetch)
+    vi.resetModules()
+  })
+  afterEach(() => {
+    vi.mocked(ssrFetch).mockReset()
+  })
+
+  it('lastmod 누락 시 weekStart(YYYY-MM-DD)로 폴백해 항상 유효한 lastmod를 방출한다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const { getWeekStartDate } = await import('../../server/utils/sitemap')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
+    expect(xml).toContain(`<lastmod>${getWeekStartDate()}</lastmod>`)
   })
 })
 
