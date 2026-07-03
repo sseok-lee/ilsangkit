@@ -186,11 +186,8 @@
           </p>
         </SectionBlock>
 
-        <!-- Ad: 가점·경쟁률 이후 1회 -->
-        <AdBanner class="order-7 md:order-7" />
-
         <!-- "면적별 특별공급 내역" 블록 -->
-        <SectionBlock v-if="hasSpecialSupply" class="order-8 md:order-8" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
+        <SectionBlock v-if="hasSpecialSupply" class="order-7 md:order-7" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -223,7 +220,7 @@
         </SectionBlock>
 
         <!-- "특별공급 신청현황" 블록 -->
-        <SectionBlock v-if="specialStatuses.length > 0" class="order-8 md:order-8" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
+        <SectionBlock v-if="specialStatuses.length > 0" class="order-7 md:order-7" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -245,10 +242,10 @@
         </SectionBlock>
 
         <!-- 전월세 시세 (임대주택만) -->
-        <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" class="order-8 md:order-8" :subscription-id="subscription.id" :region-name="subscription.regionName" />
+        <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" class="order-7 md:order-7" :subscription-id="subscription.id" :region-name="subscription.regionName" />
 
         <!-- "위치와 로드뷰" 데스크톱 -->
-        <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block order-9 md:order-9">
+        <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block order-8 md:order-8">
           <template #right>
             <div class="relative">
               <button
@@ -287,7 +284,7 @@
         </SectionBlock>
 
         <!-- 위치·로드뷰 (모바일) -->
-        <SectionBlock v-if="hasCoords" heading="위치·로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="md:hidden order-9 md:order-9">
+        <SectionBlock v-if="hasCoords" heading="위치·로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="md:hidden order-8 md:order-8">
           <!-- 모바일 전용 라이브 지도 (데스크톱은 위 사이드 섹션 사용) -->
           <div class="relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
             <ClientOnly>
@@ -312,13 +309,13 @@
         </SectionBlock>
 
         <!-- 좌표 없음 fallback -->
-        <div v-if="!hasCoords" class="rounded-xl border border-line bg-background-light p-6 text-center order-9 md:order-9">
+        <div v-if="!hasCoords" class="rounded-xl border border-line bg-background-light p-6 text-center order-8 md:order-8">
           <span class="material-symbols-outlined text-[32px] text-faint mb-2">location_off</span>
           <p class="text-sm text-muted">위치 정보가 제공되지 않아 지도를 표시할 수 없습니다.</p>
         </div>
 
         <!-- "기본정보" 블록 -->
-        <SectionBlock class="order-10 md:order-10" heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
+        <SectionBlock class="order-9 md:order-9" heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
             <div class="flex justify-between py-2 border-b border-line">
               <span class="text-muted">주택유형</span>
@@ -356,7 +353,7 @@
         </SectionBlock>
 
         <!-- 외부 링크 버튼 -->
-        <div class="flex flex-col md:flex-row gap-4 order-10 md:order-10">
+        <div class="flex flex-col md:flex-row gap-4 order-9 md:order-9">
           <a
             v-if="subscription.homepage"
             :href="subscription.homepage"
@@ -378,6 +375,9 @@
             청약홈 공고 보기
           </a>
         </div>
+
+        <!-- Ad③: 기본정보 이후 · 관련 가이드 앞 (항상 존재하는 블록 사이로 이동 — 결과 미발표 청약에서 경쟁률·가점 섹션이 비어 광고②와 연속 노출되던 문제 방지) -->
+        <AdBanner class="order-10 md:order-10" />
 
         <!-- 관련 가이드 -->
         <RelatedGuides class="order-11 md:order-11" :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
