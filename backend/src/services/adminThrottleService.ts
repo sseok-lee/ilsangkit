@@ -1,0 +1,33 @@
+import prisma from '../lib/prisma.js';
+
+export const MAX_ATTEMPTS = 5;
+const LOCK_MS = 15 * 60 * 1000;
+const ID = 'admin';
+
+export async function isLockedOut(): Promise<boolean> {
+  const row = await prisma.adminLoginThrottle.findUnique({ where: { id: ID } });
+  if (!row || !row.lockedUntil) return false;
+  return row.lockedUntil.getTime() > Date.now();
+}
+
+export async function recordLoginFailure(): Promise<void> {
+  const row = await prisma.adminLoginThrottle.upsert({
+    where: { id: ID },
+    create: { id: ID, failedAttempts: 1 },
+    update: { failedAttempts: { increment: 1 } },
+  });
+  if (row.failedAttempts >= MAX_ATTEMPTS) {
+    await prisma.adminLoginThrottle.update({
+      where: { id: ID },
+      data: { lockedUntil: new Date(Date.now() + LOCK_MS) },
+    });
+  }
+}
+
+export async function clearLoginFailures(): Promise<void> {
+  await prisma.adminLoginThrottle.upsert({
+    where: { id: ID },
+    create: { id: ID, failedAttempts: 0 },
+    update: { failedAttempts: 0, lockedUntil: null },
+  });
+}
