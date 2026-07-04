@@ -79,4 +79,25 @@ describe('admin auth', () => {
     await request(makeApp()).post('/api/admin/login').set('Origin', 'http://localhost:3000').send({ password: 'p<a>ss' });
     expect(mockCompare.mock.calls[0][0]).toBe('p<a>ss'); // sanitize 안 됨(라우터 자체엔 sanitize 없음)
   });
+
+  it('ADMIN_PASSWORD_HASH 미설정 시 503(ADMIN_NOT_CONFIGURED) fail-closed, 세션 발급 없음', async () => {
+    const saved = process.env.ADMIN_PASSWORD_HASH;
+    delete process.env.ADMIN_PASSWORD_HASH;
+    try {
+      const res = await request(makeApp()).post('/api/admin/login').set('Origin', 'http://localhost:3000').send({ password: 'x' });
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe('ADMIN_NOT_CONFIGURED');
+      expect(res.headers['set-cookie']).toBeUndefined();
+      expect(mockCompare).not.toHaveBeenCalled();
+      expect(mockSessionCreate).not.toHaveBeenCalled();
+    } finally {
+      process.env.ADMIN_PASSWORD_HASH = saved;
+    }
+  });
+
+  it('Origin·Referer 둘 다 없으면 403 (CSRF)', async () => {
+    const res = await request(makeApp()).post('/api/admin/login').send({ password: 'x' });
+    expect(res.status).toBe(403);
+    expect(mockCompare).not.toHaveBeenCalled();
+  });
 });

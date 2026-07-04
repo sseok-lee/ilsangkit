@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { SESSION_COOKIE_NAME } from '../config/adminConfig.js';
 import { verifySession } from '../services/adminSessionService.js';
 import { ForbiddenError } from '../lib/errors.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
 
 function isAllowedOrigin(value: string | undefined): boolean {
   if (!value) return false;
@@ -25,7 +26,7 @@ export function requireSameOrigin(req: Request, _res: Response, next: NextFuncti
   next();
 }
 
-export async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+export const requireAdmin = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const token = (req.cookies?.[SESSION_COOKIE_NAME] as string | undefined) ?? '';
   const ok = await verifySession(token);
   if (!ok) {
@@ -33,7 +34,7 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     return;
   }
   next();
-}
+});
 
 // 로그인 전용 리미터 — 기존 rateLimit.ts와 달리 loopback 스킵 없음.
 export const adminLoginRateLimiter = rateLimit({
