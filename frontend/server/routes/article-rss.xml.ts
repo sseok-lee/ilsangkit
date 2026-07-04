@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
       title: '일상킷 - 오늘의 이슈',
       link: 'https://ilsangkit.co.kr/article',
       description: '부동산 실거래가와 청약 시장 동향을 요약하는 일상킷의 오늘의 이슈',
+      selfUrl: 'https://ilsangkit.co.kr/article-rss.xml',
     })
 
     setResponseHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
@@ -28,6 +29,7 @@ export default defineEventHandler(async (event) => {
       title: '일상킷 - 오늘의 이슈',
       link: 'https://ilsangkit.co.kr/article',
       description: '부동산 실거래가와 청약 시장 동향을 요약하는 일상킷의 오늘의 이슈',
+      selfUrl: 'https://ilsangkit.co.kr/article-rss.xml',
     })
   }
 })
