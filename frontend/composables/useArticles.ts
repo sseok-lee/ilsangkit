@@ -17,6 +17,7 @@ export interface ArticleSummary {
 export interface ArticleDetail extends ArticleSummary {
   content: string
   sources: Array<{ title: string; url: string }> | null
+  updatedAt: string
 }
 
 interface PaginatedArticles {
