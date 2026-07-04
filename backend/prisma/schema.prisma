@@ -813,6 +813,13 @@ model AdminLoginThrottle {
   updatedAt      DateTime  @updatedAt
 }
 
+// 생성 단일-플라이트 락 (고정 id='singleton'). stale-timeout 재확보.
+model ArticleGenerationLock {
+  id        String   @id @db.VarChar(20)
+  running   Boolean  @default(false)
+  startedAt DateTime @default(now())
+}
+
 // 지하철역 테이블 (data.go.kr 전국도시철도역사정보표준데이터 기반)
 // 시설 카테고리(15종)와 분리된 도메인. /subway/[slug] SEO 페이지 + /api/transit/nearby 데이터 소스.
 model SubwayStation {

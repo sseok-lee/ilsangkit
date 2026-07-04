@@ -46,3 +46,14 @@ export const adminLoginRateLimiter = rateLimit({
     res.status(429).json({ success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: '로그인 시도가 많습니다. 잠시 후 다시 시도하세요.', requestId: req.requestId } });
   },
 });
+
+// 생성 트리거 전용 리미터 — child_process spawn을 유발하므로 로그인 리미터와 마찬가지로 loopback 스킵 없음.
+export const adminGenerateRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({ success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: '생성 요청이 많습니다. 잠시 후 다시 시도하세요.', requestId: req.requestId } });
+  },
+});
