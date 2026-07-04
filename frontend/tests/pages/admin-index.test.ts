@@ -212,17 +212,31 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
     expect(removeMock).not.toHaveBeenCalled()
   })
 
-  it('"재생성" 클릭 시 regenerate(id)를 호출하고 목록을 새로고침한다', async () => {
+  it('"재생성" 클릭 시 확인 후 regenerate(id)를 호출하고 편집기를 닫고 안내 메시지를 표시하며 목록을 새로고침한다', async () => {
     const wrapper = await mountAndSelect()
 
     await wrapper.find('[data-testid="regenerate-button"]').trigger('click')
     await flushPromises()
 
+    expect(confirmSpy).toHaveBeenCalled()
     expect(regenerateMock).toHaveBeenCalledWith('1')
     expect(listMock).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-testid="editor-title"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('재생성이 시작되었습니다')
   })
 
-  it('"지금 생성" 클릭 시 generate()를 호출하고 목록을 새로고침한다', async () => {
+  it('확인 취소 시 재생성이 실행되지 않는다', async () => {
+    confirmSpy.mockReturnValue(false)
+    const wrapper = await mountAndSelect()
+
+    await wrapper.find('[data-testid="regenerate-button"]').trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(regenerateMock).not.toHaveBeenCalled()
+  })
+
+  it('"지금 생성" 클릭 시 generate()를 호출하고 안내 메시지를 표시하며 목록을 새로고침한다', async () => {
     const wrapper = mount(AdminIndexPage)
     await flushPromises()
 
@@ -231,6 +245,7 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
 
     expect(generateMock).toHaveBeenCalled()
     expect(listMock).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('생성이 시작되었습니다')
   })
 
   it('list() 실패 시 원본 에러 대신 일반 에러 메시지를 보여준다', async () => {

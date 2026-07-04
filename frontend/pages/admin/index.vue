@@ -13,6 +13,20 @@
       </button>
     </header>
 
+    <div v-if="notice" data-testid="notice" class="max-w-7xl mx-auto w-full px-4 pt-3">
+      <div class="flex items-center justify-between gap-3 rounded-md border border-line bg-primary/5 px-3 py-2 text-sm text-primary">
+        <span>{{ notice }}</span>
+        <button
+          type="button"
+          data-testid="notice-dismiss"
+          class="shrink-0 text-xs text-muted hover:text-slate-900"
+          @click="notice = ''"
+        >
+          닫기
+        </button>
+      </div>
+    </div>
+
     <div class="flex-1 max-w-7xl mx-auto w-full p-4 flex flex-col md:flex-row gap-4">
       <!-- 좌측: 초안 큐 -->
       <aside class="md:w-96 shrink-0 flex flex-col gap-3">
@@ -107,6 +121,7 @@ const statusFilter = ref<StatusFilter>('all')
 const loading = ref(false)
 const generating = ref(false)
 const error = ref('')
+const notice = ref('')
 
 async function load() {
   loading.value = true
@@ -193,10 +208,16 @@ async function onDelete() {
 
 async function onRegenerate() {
   if (!selected.value) return
+  if (!confirm('현재 초안을 반려하고 같은 카테고리로 다시 생성합니다. 계속할까요?')) return
+  error.value = ''
+  notice.value = ''
   try {
     await useAdminArticles().regenerate(selected.value.id)
+    selected.value = null
+    notice.value = '재생성이 시작되었습니다. 잠시 후 목록을 새로고침하세요.'
     await load()
   } catch {
+    notice.value = ''
     error.value = GENERIC_ERROR
   }
 }
@@ -204,10 +225,13 @@ async function onRegenerate() {
 async function onGenerate() {
   generating.value = true
   error.value = ''
+  notice.value = ''
   try {
     await useAdminArticles().generate()
+    notice.value = '생성이 시작되었습니다. 완료까지 30초~1분 걸릴 수 있으니 잠시 후 목록을 새로고침하세요.'
     await load()
   } catch {
+    notice.value = ''
     error.value = GENERIC_ERROR
   } finally {
     generating.value = false
