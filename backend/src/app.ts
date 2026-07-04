@@ -23,6 +23,7 @@ import searchRouter from './routes/search.js';
 import facilityYoutubeRouter from './routes/facilityYoutube.js';
 import facilityNaverBlogRouter from './routes/facilityNaverBlog.js';
 import realEstateNaverBlogRouter from './routes/realEstateNaverBlog.js';
+import adminRouter from './routes/admin.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
@@ -83,6 +84,7 @@ app.use('/api/transit', transitRouter);
 app.use('/api/subway', subwayRouter);
 app.use('/api/auction', auctionRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/admin', adminRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
