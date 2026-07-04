@@ -12,11 +12,13 @@ export interface AdminArticleSummary {
   status: AdminArticleStatus
   publishedAt: string | null
   createdAt: string
+  viewCount: number
+  updatedAt: string
 }
 
 export interface AdminArticleDetail extends AdminArticleSummary {
   content: string
-  sources: string | null
+  sources: Array<{ title: string; url: string }> | null
 }
 
 interface PaginatedAdminArticles {
