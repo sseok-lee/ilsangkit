@@ -226,37 +226,66 @@ describe('POST /api/admin/articles/generate', () => {
 });
 
 describe('POST /api/admin/articles/:id/regenerate', () => {
-  it('정상: 반려 후 해당 category로 spawn + 202', async () => {
-    mockArticleFindUnique.mockResolvedValueOnce({ id: 'a1' }); // rejectArticle 존재 확인
+  it('정상: 생성 가능 확인(락 확보) 후에만 반려 + 해당 category로 spawn(count=1) + 202', async () => {
+    mockArticleFindUnique
+      .mockResolvedValueOnce({ id: 'a1', category: 'toilet' }) // getAdminArticle(대상 조회)
+      .mockResolvedValueOnce({ id: 'a1' }); // rejectArticle 내부 존재 확인
     mockArticleUpdate.mockResolvedValueOnce({ id: 'a1', status: 'rejected', category: 'toilet' });
 
     const res = await request(makeApp()).post('/api/admin/articles/a1/regenerate').set('Origin', ORIGIN);
 
     expect(res.status).toBe(202);
+    expect(mockLockUpdateMany).toHaveBeenCalledTimes(1); // assertGenerationReady에서 락 확보
     expect(mockArticleUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'a1' }, data: { status: 'rejected' } }));
     expect(mockSpawn).toHaveBeenCalledTimes(1);
     const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args).toContain('--count');
+    expect(args[args.indexOf('--count') + 1]).toBe('1');
     expect(args).toContain('--category');
     expect(args[args.indexOf('--category') + 1]).toBe('toilet');
   });
 
-  it('대상 없으면 404, spawn 호출 안 됨', async () => {
-    mockArticleFindUnique.mockResolvedValueOnce(null);
+  it('대상 없으면 404, 락 시도 없음, 반려도 적용 안 됨', async () => {
+    mockArticleFindUnique.mockResolvedValueOnce(null); // getAdminArticle에서 404
 
     const res = await request(makeApp()).post('/api/admin/articles/missing/regenerate').set('Origin', ORIGIN);
 
     expect(res.status).toBe(404);
+    expect(mockLockUpdateMany).not.toHaveBeenCalled(); // 락 확보 자체를 시도하지 않음
+    expect(mockArticleUpdate).not.toHaveBeenCalled();
     expect(mockSpawn).not.toHaveBeenCalled();
   });
 
-  it('락이 이미 running이면 409, spawn 호출 안 됨(반려는 이미 반영됨)', async () => {
-    mockArticleFindUnique.mockResolvedValueOnce({ id: 'a1' });
-    mockArticleUpdate.mockResolvedValueOnce({ id: 'a1', status: 'rejected', category: 'toilet' });
-    mockLockUpdateMany.mockResolvedValue({ count: 0 });
+  it('락이 이미 running이면 409, spawn 호출 안 됨, 반려도 적용 안 됨(초안 원본 유지)', async () => {
+    mockArticleFindUnique.mockResolvedValueOnce({ id: 'a1', category: 'toilet' }); // getAdminArticle만 성공
+    mockLockUpdateMany.mockResolvedValue({ count: 0 }); // 확보 실패
 
     const res = await request(makeApp()).post('/api/admin/articles/a1/regenerate').set('Origin', ORIGIN);
 
     expect(res.status).toBe(409);
+    expect(mockArticleUpdate).not.toHaveBeenCalled(); // rejectArticle이 호출되지 않아 반려 미적용
+    expect(mockSpawn).not.toHaveBeenCalled();
+  });
+
+  it('OPENAI_API_KEY 없으면 503, spawn 호출 안 됨, 반려도 적용 안 됨(초안 원본 유지)', async () => {
+    delete process.env.OPENAI_API_KEY;
+    mockArticleFindUnique.mockResolvedValueOnce({ id: 'a1', category: 'toilet' }); // getAdminArticle만 성공
+
+    const res = await request(makeApp()).post('/api/admin/articles/a1/regenerate').set('Origin', ORIGIN);
+
+    expect(res.status).toBe(503);
+    expect(mockArticleUpdate).not.toHaveBeenCalled();
+    expect(mockSpawn).not.toHaveBeenCalled();
+  });
+
+  it('dist 생성 스크립트 없으면 500, spawn 호출 안 됨, 반려도 적용 안 됨(초안 원본 유지)', async () => {
+    mockExistsSync.mockReturnValue(false);
+    mockArticleFindUnique.mockResolvedValueOnce({ id: 'a1', category: 'toilet' }); // getAdminArticle만 성공
+
+    const res = await request(makeApp()).post('/api/admin/articles/a1/regenerate').set('Origin', ORIGIN);
+
+    expect(res.status).toBe(500);
+    expect(mockArticleUpdate).not.toHaveBeenCalled();
     expect(mockSpawn).not.toHaveBeenCalled();
   });
 });

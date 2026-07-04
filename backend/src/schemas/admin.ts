@@ -21,6 +21,7 @@ export const AdminArticlePatchSchema = z.object({
 // category는 GUIDE_CATEGORIES allowlist만 허용(그 외 값은 422로 거부, spawn 도달 불가).
 export const AdminGenerateSchema = z.object({
   count: z.coerce.number()
+    // Number.isFinite 분기는 ±Infinity만 걸러낸다 — NaN은 이미 base z.coerce.number() 타입체크에서 .transform() 실행 전에 거부됨.
     .transform((n) => (Number.isFinite(n) ? Math.min(3, Math.max(1, Math.trunc(n))) : 3))
     .default(3),
   category: z.enum(GUIDE_CATEGORIES).optional(),
