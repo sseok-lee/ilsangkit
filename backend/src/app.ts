@@ -5,6 +5,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
 import wasteSchedulesRouter from './routes/wasteSchedules.js';
@@ -22,6 +23,7 @@ import searchRouter from './routes/search.js';
 import facilityYoutubeRouter from './routes/facilityYoutube.js';
 import facilityNaverBlogRouter from './routes/facilityNaverBlog.js';
 import realEstateNaverBlogRouter from './routes/realEstateNaverBlog.js';
+import adminRouter from './routes/admin.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
@@ -39,6 +41,7 @@ app.use(requestIdMiddleware);
 app.use(globalRateLimiter); // Apply global rate limiter
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(sanitizeInput);
 
 // Static file serving (uploaded images)
@@ -81,6 +84,7 @@ app.use('/api/transit', transitRouter);
 app.use('/api/subway', subwayRouter);
 app.use('/api/auction', auctionRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/admin', adminRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
