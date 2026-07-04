@@ -42,6 +42,7 @@
     "seed:medical-enrich": "tsx src/scripts/seedMedicalEnrich.ts",
     "generate:guide": "tsx src/scripts/generateGuide.ts",
     "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
+    "generate:article": "tsx src/scripts/generateArticle.ts",
     "fix:region-slugs": "tsx src/scripts/fixRegionSlugs.ts",
     "sync:geocode-real-estate": "tsx src/scripts/geocodeRealEstate.ts",
     "sync:apt-sale": "tsx src/scripts/syncAptSale.ts",

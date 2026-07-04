@@ -591,9 +591,10 @@ export async function generateThumbnail(
       console.log(
         `썸네일: ${(buffer.length / 1024).toFixed(0)}KB → ${(optimized.size / 1024).toFixed(0)}KB`
       );
-    } catch {
-      await writeFile(outputPath, buffer);
-      console.log(`썸네일 (리사이즈 스킵): ${(buffer.length / 1024).toFixed(0)}KB`);
+    } catch (e) {
+      await unlink(tmpPath).catch(() => {});
+      console.warn('썸네일 인코딩 실패(webp 변환 불가) — 초안 미생성:', e instanceof Error ? e.message : e);
+      return false; // PNG를 .webp로 저장하지 않음(Safari 거부 방지). 호출부가 throw 처리.
     }
 
     await unlink(tmpPath).catch(() => {});
