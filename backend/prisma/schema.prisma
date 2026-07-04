@@ -796,6 +796,23 @@ model Article {
   @@index([articleType])
 }
 
+// 어드민 불투명 세션 — id = sha256(랜덤 토큰). 쿠키엔 raw 토큰, DB엔 해시만.
+model AdminSession {
+  id        String   @id @db.VarChar(64) // sha256 hex
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// 어드민 로그인 브루트포스 잠금 (단일 관리자, 고정 id='admin'). cluster-safe.
+model AdminLoginThrottle {
+  id             String    @id @db.VarChar(20) // 'admin' 고정
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  updatedAt      DateTime  @updatedAt
+}
+
 // 지하철역 테이블 (data.go.kr 전국도시철도역사정보표준데이터 기반)
 // 시설 카테고리(15종)와 분리된 도메인. /subway/[slug] SEO 페이지 + /api/transit/nearby 데이터 소스.
 model SubwayStation {
