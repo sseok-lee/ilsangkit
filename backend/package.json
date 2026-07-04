@@ -70,8 +70,10 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.3.0",
     "@prisma/client": "^6.19.2",
+    "@types/cookie-parser": "^1.4.10",
     "adm-zip": "^0.5.16",
     "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",

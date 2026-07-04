@@ -5,6 +5,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
 import wasteSchedulesRouter from './routes/wasteSchedules.js';
@@ -39,6 +40,7 @@ app.use(requestIdMiddleware);
 app.use(globalRateLimiter); // Apply global rate limiter
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(sanitizeInput);
 
 // Static file serving (uploaded images)
