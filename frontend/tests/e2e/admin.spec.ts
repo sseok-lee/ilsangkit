@@ -7,16 +7,16 @@ import { expect, test } from '@playwright/test'
 test.describe('어드민 로그인 → 검토 → 발행', () => {
   test.skip(!process.env.ADMIN_TEST_PASSWORD, 'requires ADMIN_TEST_PASSWORD + running backend with matching ADMIN_PASSWORD_HASH')
 
-  test('비로그인 상태로 /admin 접근 시 /admin/login으로 리다이렉트된다', async ({ page, browserName }) => {
-    test.skip(browserName !== 'chromium', '어드민 플로우는 chromium에서만 검증(--project=chromium)')
+  test('비로그인 상태로 /admin 접근 시 /admin/login으로 리다이렉트된다', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', '어드민 플로우는 chromium 프로젝트에서만 검증(--project=chromium)')
 
     await page.goto('/admin')
     await expect(page).toHaveURL(/\/admin\/login$/)
     await expect(page.getByRole('heading', { name: '어드민 로그인' })).toBeVisible()
   })
 
-  test('로그인 → 대시보드 → 초안 검토 → 발행', async ({ page, browserName }) => {
-    test.skip(browserName !== 'chromium', '어드민 플로우는 chromium에서만 검증(--project=chromium)')
+  test('로그인 → 대시보드 → 초안 검토 → 발행', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', '어드민 플로우는 chromium 프로젝트에서만 검증(--project=chromium)')
 
     const password = process.env.ADMIN_TEST_PASSWORD as string
 
@@ -28,26 +28,16 @@ test.describe('어드민 로그인 → 검토 → 발행', () => {
     await expect(page).toHaveURL(/\/admin$/)
     await expect(page.getByRole('heading', { name: '오늘의 이슈 어드민' })).toBeVisible()
 
-    // 2. 초안 필터로 좁혀 검토할 draft 확보. 없으면 "지금 생성"으로 트리거해보고,
-    //    그래도(키 미설정 등으로) 확보 실패하면 하드-fail 대신 skip한다.
+    // 2. 초안 필터로 좁혀 검토할 draft 확보. 생성은 백엔드가 spawn하는 detached 백그라운드
+    //    프로세스(즉시 202 응답)이고, 대시보드는 생성 트리거 직후 1회 load()만 하고
+    //    이후 재조회하지 않으므로 방금 생성된 초안은 DOM에 나타나지 않는다.
+    //    따라서 라이브 생성은 트리거하지 않고, 사전 존재하는 draft에만 의존한다 — 없으면 skip.
     await page.getByTestId('filter-draft').click()
 
     const draftCard = page.getByTestId('admin-article-card').first()
-    let hasDraft = await draftCard.isVisible().catch(() => false)
+    const hasDraft = await draftCard.isVisible().catch(() => false)
 
-    if (!hasDraft) {
-      await page.getByTestId('generate-button').click()
-      // 생성 트리거 직후 키 미설정(GENERATION_NOT_CONFIGURED 등) 시 에러 배너가 뜬다 — 잠시 대기 후 확인.
-      await page.waitForTimeout(3000)
-      const generateFailed = await page.getByTestId('error').isVisible().catch(() => false)
-      test.skip(generateFailed, '초안 생성 트리거 실패(OPENAI/NAVER 키 미설정 등) — 발행 플로우 검증용 초안을 확보하지 못했다')
-
-      // 백그라운드 생성(LLM 호출 포함)이 끝나 초안이 목록에 나타날 때까지 폴링.
-      await expect(draftCard).toBeVisible({ timeout: 60_000 })
-      hasDraft = true
-    }
-
-    test.skip(!hasDraft, '검토할 초안이 없어 발행 플로우를 검증할 수 없다')
+    test.skip(!hasDraft, 'no pre-existing draft to review — seed a draft (run generate:article) before running this E2E')
 
     // 3. 초안 선택 → 편집기 + 마크다운 미리보기 렌더 확인
     await draftCard.click()
