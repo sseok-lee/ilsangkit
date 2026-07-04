@@ -58,6 +58,18 @@ vi.mock('child_process', () => ({
   execFileSync: vi.fn(),
 }));
 
+// NOTE: execFileSync above is a no-op and never actually writes `outputPath`, and
+// fs/promises isn't mocked elsewhere in this file. Since articleGenerationCore's
+// generateThumbnail no longer falls back to writing the raw PNG buffer when the
+// `convert` step's result can't be verified (PNG-as-webp fallback removed — Task 3
+// core edit, backend/src/services/articleGenerationCore.ts), `stat(outputPath)` would
+// always throw ENOENT here otherwise, making the happy-path thumbnail step unreachable.
+// Simulate a successful `convert` result instead (mirrors real ImageMagick behavior).
+vi.mock('fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs/promises')>();
+  return { ...actual, stat: vi.fn().mockResolvedValue({ size: 12345 } as any) };
+});
+
 vi.stubGlobal('fetch', mockFetch);
 
 process.env.NAVER_CLIENT_ID = 'test-naver-client-id';
