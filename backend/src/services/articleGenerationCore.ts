@@ -593,6 +593,7 @@ export async function generateThumbnail(
       );
     } catch (e) {
       await unlink(tmpPath).catch(() => {});
+      await unlink(outputPath).catch(() => {}); // convert가 outputPath를 부분 생성했을 수 있음 — 정리
       console.warn('썸네일 인코딩 실패(webp 변환 불가) — 초안 미생성:', e instanceof Error ? e.message : e);
       return false; // PNG를 .webp로 저장하지 않음(Safari 거부 방지). 호출부가 throw 처리.
     }

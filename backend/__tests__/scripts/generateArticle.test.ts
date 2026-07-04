@@ -48,9 +48,17 @@ vi.mock('child_process', () => ({ execFileSync: vi.fn() }));
 // without this, `stat(outputPath)` in generateThumbnail always throws ENOENT once the
 // PNG-as-webp fallback is removed (Step 4) — making every thumbnail-success path
 // unreachable regardless of test intent. Simulate a successful `convert` result instead.
+// writeFile/unlink are wrapped (not replaced) with vi.fn(actual.*) so they still perform
+// real I/O (preserving behavior for every existing test) while becoming spy-able for the
+// convert-failure regression test below (Fix A / review wave).
 vi.mock('fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs/promises')>();
-  return { ...actual, stat: vi.fn().mockResolvedValue({ size: 12345 } as any) };
+  return {
+    ...actual,
+    stat: vi.fn().mockResolvedValue({ size: 12345 } as any),
+    writeFile: vi.fn(actual.writeFile),
+    unlink: vi.fn(actual.unlink),
+  };
 });
 vi.stubGlobal('fetch', mockFetch);
 
@@ -58,12 +66,20 @@ process.env.NAVER_CLIENT_ID = 'test-id';
 process.env.NAVER_CLIENT_SECRET = 'test-secret';
 process.env.OPENAI_API_KEY = 'test-openai-key';
 
+import { execFileSync } from 'child_process';
+import { writeFile, unlink } from 'fs/promises';
+import path from 'path';
+import os from 'os';
+import OpenAI from 'openai';
+
 import {
   parseArticleCliOptions,
   toSources,
   buildArticleInternalLinks,
   generateOneArticle,
 } from '../../src/scripts/generateArticle.js';
+// generateThumbnail is NOT re-exported from generateArticle.ts — import from the shared core.
+import { generateThumbnail } from '../../src/services/articleGenerationCore.js';
 
 const DEFAULT_HEADINGS = ['핵심 요약', '이번 이슈에서 봐야 할 점', '달라지는 내용', '지금 확인할 것', '주의할 점', '참고 자료'];
 const SECTION_BODY = '이 섹션 본문입니다. 실제 확인 행동과 사이트 데이터 연결을 구체적으로 설명합니다. 기관명·절차를 포함합니다. '.repeat(10);
@@ -175,5 +191,47 @@ describe('generateOneArticle — happy path', () => {
     const k = process.env.OPENAI_API_KEY; delete process.env.OPENAI_API_KEY;
     await expect(generateOneArticle({ category: 'toilet', topic: 't' })).rejects.toThrow(/OPENAI_API_KEY/);
     process.env.OPENAI_API_KEY = k;
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateThumbnail — convert 인코딩 실패 브랜치 회귀 가드
+//
+// PNG-as-webp fallback(사이트 landmine: PNG를 .webp 경로에 그대로 저장 → Safari 거부)이
+// 제거된 상태를 지킨다. execFileSync(convert)가 실패하면 outputPath(.webp)에는 절대
+// 아무것도 쓰이지 않아야 한다. 이 테스트는 그 catch 블록에 `writeFile(outputPath, buffer)`
+// 폴백이 재도입되면 반드시 실패한다(아래 assertion이 outputPath 호출을 감지).
+// ---------------------------------------------------------------------------
+describe('generateThumbnail — convert 인코딩 실패 브랜치 (회귀 가드)', () => {
+  beforeEach(() => {
+    vi.mocked(execFileSync).mockClear();
+    vi.mocked(writeFile).mockClear();
+    vi.mocked(unlink).mockClear();
+    mockImageGenerate.mockReset();
+  });
+
+  it('convert 실패 시 false 반환 + PNG를 .webp 경로에 저장하지 않음(tmp만 unlink 시도)', async () => {
+    mockImageGenerate.mockResolvedValue({
+      data: [{ b64_json: Buffer.from('fake-png-bytes').toString('base64') }],
+    });
+    // convert(execFileSync) 실패 시뮬레이션 — 이미지 생성 자체는 성공
+    vi.mocked(execFileSync).mockImplementationOnce(() => {
+      throw new Error('convert not found');
+    });
+
+    const openai = new OpenAI({ apiKey: 'test' });
+    const outputPath = path.join(os.tmpdir(), `article-thumb-regression-${Date.now()}.webp`);
+    const tmpPath = `${outputPath}.tmp.png`;
+
+    const result = await generateThumbnail(openai, 'pharmacy', '테스트 제목', outputPath);
+
+    expect(result).toBe(false);
+
+    // 회귀 가드 핵심: PNG 원본 버퍼가 .webp 출력 경로로 저장된 적이 없어야 함
+    expect(vi.mocked(writeFile)).not.toHaveBeenCalledWith(outputPath, expect.anything());
+    // 실제로 쓰인 건 tmp png 뿐
+    expect(vi.mocked(writeFile)).toHaveBeenCalledWith(tmpPath, expect.any(Buffer));
+    // tmp 파일 unlink 시도됨
+    expect(vi.mocked(unlink)).toHaveBeenCalledWith(tmpPath);
   });
 });
