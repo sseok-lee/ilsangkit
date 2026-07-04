@@ -10,6 +10,9 @@ export async function isLockedOut(): Promise<boolean> {
   return row.lockedUntil.getTime() > Date.now();
 }
 
+// failedAttempts는 로그인 성공(clearLoginFailures) 시에만 리셋된다 — 즉, 최초 잠금 이후에는
+// 매 실패 시도마다 failedAttempts>=MAX_ATTEMPTS라 lockedUntil이 매번 전체 윈도우(LOCK_MS)로 재설정된다.
+// 의도된(공격적) 동작 — 버그로 보고 "완화"하지 말 것.
 export async function recordLoginFailure(): Promise<void> {
   const row = await prisma.adminLoginThrottle.upsert({
     where: { id: ID },

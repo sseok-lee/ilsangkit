@@ -197,6 +197,13 @@ describe('admin articles CRUD', () => {
       expect(res.status).toBe(200);
       expect(mockArticleUpdate).toHaveBeenCalledWith({ where: { id: 'a4' }, data: { status: 'rejected' } });
     });
+
+    it('존재하지 않는 id는 404', async () => {
+      mockArticleFindUnique.mockResolvedValueOnce(null);
+      const res = await request(makeApp()).post('/api/admin/articles/missing/reject').set('Origin', ORIGIN);
+      expect(res.status).toBe(404);
+      expect(mockArticleUpdate).not.toHaveBeenCalled();
+    });
   });
 
   describe('PATCH /api/admin/articles/:id', () => {
@@ -220,6 +227,31 @@ describe('admin articles CRUD', () => {
       mockArticleFindUnique.mockResolvedValueOnce(null);
       const res = await request(makeApp()).patch('/api/admin/articles/missing').set('Origin', ORIGIN).send({ title: 'x' });
       expect(res.status).toBe(404);
+    });
+
+    // mass-assignment 가드: AdminArticlePatchSchema가 status/slug/publishedAt을 스키마에서 제외(omit)하고
+    // validate 미들웨어가 Zod의 stripped output으로 req.body를 교체하므로, 보호 필드만 보낸 요청은
+    // strip 후 빈 객체가 되어 refine(비어있으면 거부)에 걸려 422가 되어야 한다.
+    it('status만 보내면 422 (Zod가 스키마 밖 필드를 strip → 빈 객체 → refine 거부), update 호출 안 됨', async () => {
+      const res = await request(makeApp()).patch('/api/admin/articles/a5').set('Origin', ORIGIN).send({ status: 'published' });
+
+      expect(res.status).toBe(422);
+      expect(mockArticleUpdate).not.toHaveBeenCalled();
+    });
+
+    it('title과 함께 status/slug를 보내도 허용 필드(title)만 update data에 반영되고 status/slug/publishedAt은 유입되지 않음', async () => {
+      mockArticleFindUnique.mockResolvedValueOnce({ id: 'a5' });
+      mockArticleUpdate.mockResolvedValueOnce({ id: 'a5', title: '새 제목' });
+
+      const res = await request(makeApp()).patch('/api/admin/articles/a5').set('Origin', ORIGIN)
+        .send({ title: '새 제목', status: 'published', slug: 'evil' });
+
+      expect(res.status).toBe(200);
+      const updateArgs = mockArticleUpdate.mock.calls[0][0];
+      expect(updateArgs).toEqual({ where: { id: 'a5' }, data: { title: '새 제목' } });
+      expect(updateArgs.data).not.toHaveProperty('status');
+      expect(updateArgs.data).not.toHaveProperty('slug');
+      expect(updateArgs.data).not.toHaveProperty('publishedAt');
     });
   });
 

@@ -49,12 +49,20 @@ async function assertGenerationReady(): Promise<string> {
 function spawnGenerated(scriptPath: string, count: number, category?: string): void {
   const args = [scriptPath, '--count', String(count)];
   if (category) args.push('--category', category);
-  // 쉘 없이 execPath로 직접 spawn — 문자열 보간/exec 금지, argv 배열만 사용.
-  const child = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
-  child.on('exit', () => {
-    void releaseGenerationLock(); // best-effort — 실패해도 stale-reclaim이 뒤에서 회수
-  });
-  child.unref();
+  try {
+    // 쉘 없이 execPath로 직접 spawn — 문자열 보간/exec 금지, argv 배열만 사용.
+    const child = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
+    child.on('exit', () => {
+      void releaseGenerationLock(); // best-effort — 실패해도 stale-reclaim이 뒤에서 회수
+    });
+    child.unref();
+  } catch (err) {
+    // spawn 자체가 동기적으로 throw하면(EMFILE 등) exit 리스너가 등록되지 못해 락이 stale-reclaim(10분)까지
+    // 방치된다 — best-effort로 즉시 해제한 뒤 원본 에러를 그대로 rethrow(호출부의 assertGenerationReady 락-해제
+    // 패턴과 대칭).
+    void releaseGenerationLock().catch(() => {});
+    throw err;
+  }
 }
 
 function cookieOptions(): { httpOnly: boolean; secure: boolean; sameSite: 'strict'; path: string; maxAge: number } {

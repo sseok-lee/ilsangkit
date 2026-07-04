@@ -113,7 +113,11 @@ export async function deleteAdminArticle(id: string): Promise<void> {
     const resolved = path.resolve(ARTICLES_IMAGE_DIR, filename);
     const isInsideArticlesDir = resolved.startsWith(ARTICLES_IMAGE_DIR + path.sep);
     if (isInsideArticlesDir) {
-      await unlink(resolved).catch(() => {}); // 파일 없어도 삭제 흐름은 계속
+      // ENOENT(이미 없는 파일)는 무시하고 삭제 흐름을 계속하되, 그 외 오류(EACCES 등)는 관측 가능하도록 로깅한다.
+      await unlink(resolved).catch((err: unknown) => {
+        const code = (err as { code?: string } | undefined)?.code;
+        if (code !== 'ENOENT') console.warn('썸네일 삭제 실패:', err instanceof Error ? err.message : err);
+      });
     }
   }
 

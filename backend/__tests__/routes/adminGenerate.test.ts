@@ -288,4 +288,19 @@ describe('POST /api/admin/articles/:id/regenerate', () => {
     expect(mockArticleUpdate).not.toHaveBeenCalled();
     expect(mockSpawn).not.toHaveBeenCalled();
   });
+
+  it('생성 가능 확인(락 확보) 후 rejectArticle의 update가 throw하면 500 + 락 해제(release) 호출됨(락 누수 없음)', async () => {
+    mockArticleFindUnique
+      .mockResolvedValueOnce({ id: 'a1', category: 'toilet' }) // getAdminArticle(대상 조회)
+      .mockResolvedValueOnce({ id: 'a1' }); // rejectArticle 내부 존재 확인
+    mockArticleUpdate.mockRejectedValueOnce(new Error('DB 오류'));
+
+    const res = await request(makeApp()).post('/api/admin/articles/a1/regenerate').set('Origin', ORIGIN);
+
+    expect(res.status).toBe(500);
+    expect(mockSpawn).not.toHaveBeenCalled();
+    // 1회차 = assertGenerationReady의 acquire(running:true), 2회차 = 반려 실패 후 best-effort release(running:false)
+    expect(mockLockUpdateMany).toHaveBeenCalledTimes(2);
+    expect(mockLockUpdateMany).toHaveBeenLastCalledWith(expect.objectContaining({ data: { running: false } }));
+  });
 });
