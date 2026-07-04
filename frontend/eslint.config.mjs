@@ -54,6 +54,7 @@ export default [
         setResponseHeader: 'readonly',
         useApiBase: 'readonly',
         useAdminAuth: 'readonly',
+        useAdminArticles: 'readonly',
         // Vue
         ref: 'readonly',
         reactive: 'readonly',
