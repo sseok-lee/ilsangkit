@@ -16,6 +16,7 @@ export interface GuideSummary {
 export interface GuideDetail extends GuideSummary {
   content: string
   published: boolean
+  publishedAt: string | null
   updatedAt: string
 }
 

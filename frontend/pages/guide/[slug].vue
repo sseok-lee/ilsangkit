@@ -272,7 +272,7 @@ if (guide.value) {
 
   useHead({
     meta: [
-      { property: 'article:published_time', content: guide.value.createdAt },
+      { property: 'article:published_time', content: guide.value.publishedAt || guide.value.createdAt },
       { property: 'article:modified_time', content: guide.value.updatedAt || guide.value.createdAt },
     ],
   })
@@ -288,7 +288,7 @@ if (guide.value) {
   setArticleSchema({
     headline: guide.value.title,
     description: guide.value.summary,
-    datePublished: guide.value.createdAt,
+    datePublished: guide.value.publishedAt || guide.value.createdAt,
     dateModified: guide.value.updatedAt || undefined,
     url: `/guide/${guide.value.slug}`,
     image: guide.value.thumbnailUrl ? `${publicApiBase}${guide.value.thumbnailUrl}` : undefined,
