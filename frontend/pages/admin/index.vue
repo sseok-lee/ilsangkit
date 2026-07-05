@@ -1,8 +1,21 @@
 <template>
   <div class="min-h-screen bg-slate-50 flex flex-col">
     <header class="bg-white border-b border-line px-4 py-3 flex items-center justify-between">
-      <h1 class="text-lg font-bold text-slate-900">오늘의 이슈 어드민</h1>
+      <div class="flex items-center gap-1">
+        <button
+          v-for="t in TABS"
+          :key="t.value"
+          type="button"
+          :data-testid="`tab-${t.value}`"
+          class="px-3 py-1.5 rounded-md text-sm font-semibold transition-colors"
+          :class="tab === t.value ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100'"
+          @click="onTabChange(t.value)"
+        >
+          {{ t.label }}
+        </button>
+      </div>
       <button
+        v-if="tab === 'article'"
         type="button"
         data-testid="generate-button"
         :disabled="generating"
@@ -28,60 +41,117 @@
     </div>
 
     <div class="flex-1 max-w-7xl mx-auto w-full p-4 flex flex-col md:flex-row gap-4">
-      <!-- 좌측: 초안 큐 -->
-      <aside class="md:w-96 shrink-0 flex flex-col gap-3">
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="f in FILTERS"
-            :key="f.value"
-            type="button"
-            :data-testid="`filter-${f.value}`"
-            class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-            :class="statusFilter === f.value ? 'bg-primary text-white' : 'bg-white border border-line text-slate-600'"
-            @click="onFilterChange(f.value)"
-          >
-            {{ f.label }}
-          </button>
-        </div>
+      <template v-if="tab === 'article'">
+        <!-- 좌측: 초안 큐 -->
+        <aside class="md:w-96 shrink-0 flex flex-col gap-3">
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="f in FILTERS"
+              :key="f.value"
+              type="button"
+              :data-testid="`filter-${f.value}`"
+              class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              :class="statusFilter === f.value ? 'bg-primary text-white' : 'bg-white border border-line text-slate-600'"
+              @click="onFilterChange(f.value)"
+            >
+              {{ f.label }}
+            </button>
+          </div>
 
-        <p v-if="error" data-testid="error" role="alert" class="text-sm text-red-600">
-          {{ error }}
-        </p>
-
-        <p v-if="loading" data-testid="loading" class="text-sm text-muted">
-          불러오는 중...
-        </p>
-
-        <div v-else class="flex flex-col gap-2">
-          <AdminArticleCard
-            v-for="a in articles"
-            :key="a.id"
-            :article="a"
-            :selected="selected?.id === a.id"
-            @select="onSelect"
-          />
-          <p v-if="articles.length === 0" class="text-sm text-muted text-center py-8">
-            글이 없습니다
+          <p v-if="error" data-testid="error" role="alert" class="text-sm text-red-600">
+            {{ error }}
           </p>
-        </div>
-      </aside>
 
-      <!-- 우측: 상세 편집 -->
-      <section class="flex-1 bg-white rounded-lg border border-line p-4">
-        <AdminArticleEditor
-          v-if="selected"
-          :article="selected"
-          @save="onSave"
-          @publish="onPublish"
-          @unpublish="onUnpublish"
-          @reject="onReject"
-          @delete="onDelete"
-          @regenerate="onRegenerate"
-        />
-        <p v-else class="text-sm text-muted text-center py-20">
-          왼쪽에서 글을 선택하세요
-        </p>
-      </section>
+          <p v-if="loading" data-testid="loading" class="text-sm text-muted">
+            불러오는 중...
+          </p>
+
+          <div v-else class="flex flex-col gap-2">
+            <AdminArticleCard
+              v-for="a in articles"
+              :key="a.id"
+              :article="a"
+              :selected="selected?.id === a.id"
+              @select="onSelect"
+            />
+            <p v-if="articles.length === 0" class="text-sm text-muted text-center py-8">
+              글이 없습니다
+            </p>
+          </div>
+        </aside>
+
+        <!-- 우측: 상세 편집 -->
+        <section class="flex-1 bg-white rounded-lg border border-line p-4">
+          <AdminArticleEditor
+            v-if="selected"
+            :article="selected"
+            @save="onSave"
+            @publish="onPublish"
+            @unpublish="onUnpublish"
+            @reject="onReject"
+            @delete="onDelete"
+            @regenerate="onRegenerate"
+          />
+          <p v-else class="text-sm text-muted text-center py-20">
+            왼쪽에서 글을 선택하세요
+          </p>
+        </section>
+      </template>
+
+      <template v-else>
+        <!-- 좌측: 가이드 목록 -->
+        <aside class="md:w-96 shrink-0 flex flex-col gap-3">
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="f in GUIDE_FILTERS"
+              :key="f.value"
+              type="button"
+              :data-testid="`guide-filter-${f.value}`"
+              class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              :class="guideStatusFilter === f.value ? 'bg-primary text-white' : 'bg-white border border-line text-slate-600'"
+              @click="onGuideFilterChange(f.value)"
+            >
+              {{ f.label }}
+            </button>
+          </div>
+
+          <p v-if="error" data-testid="error" role="alert" class="text-sm text-red-600">
+            {{ error }}
+          </p>
+
+          <p v-if="loading" data-testid="loading" class="text-sm text-muted">
+            불러오는 중...
+          </p>
+
+          <div v-else class="flex flex-col gap-2">
+            <AdminGuideCard
+              v-for="g in guides"
+              :key="g.id"
+              :guide="g"
+              :selected="selectedGuide?.id === g.id"
+              @select="onSelectGuide"
+            />
+            <p v-if="guides.length === 0" class="text-sm text-muted text-center py-8">
+              가이드가 없습니다
+            </p>
+          </div>
+        </aside>
+
+        <!-- 우측: 가이드 편집 -->
+        <section class="flex-1 bg-white rounded-lg border border-line p-4">
+          <AdminGuideEditor
+            v-if="selectedGuide"
+            :guide="selectedGuide"
+            @save="onSaveGuide"
+            @publish="onPublishGuide"
+            @unpublish="onUnpublishGuide"
+            @delete="onDeleteGuide"
+          />
+          <p v-else class="text-sm text-muted text-center py-20">
+            왼쪽에서 가이드를 선택하세요
+          </p>
+        </section>
+      </template>
     </div>
   </div>
 </template>
@@ -92,12 +162,20 @@ definePageMeta({ middleware: 'admin', layout: false })
 import { ref, onMounted } from 'vue'
 import AdminArticleCard from '~/components/admin/AdminArticleCard.vue'
 import AdminArticleEditor from '~/components/admin/AdminArticleEditor.vue'
+import AdminGuideCard from '~/components/admin/AdminGuideCard.vue'
+import AdminGuideEditor from '~/components/admin/AdminGuideEditor.vue'
 import type {
   AdminArticleSummary,
   AdminArticleDetail,
   AdminArticleStatus,
   AdminArticlePatch,
 } from '~/composables/useAdminArticles'
+import type {
+  AdminGuideSummary,
+  AdminGuideDetail,
+  AdminGuideStatus,
+  AdminGuidePatch,
+} from '~/composables/useAdminGuides'
 
 useSeoMeta({
   robots: 'noindex, nofollow',
@@ -113,6 +191,18 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'rejected', label: '반려됨' },
 ]
 
+type AdminTab = 'article' | 'guide'
+const TABS: { value: AdminTab; label: string }[] = [
+  { value: 'article', label: '오늘의 이슈' },
+  { value: 'guide', label: '생활 가이드' },
+]
+type GuideStatusFilter = AdminGuideStatus | 'all'
+const GUIDE_FILTERS: { value: GuideStatusFilter; label: string }[] = [
+  { value: 'all', label: '전체' },
+  { value: 'draft', label: '초안' },
+  { value: 'published', label: '발행됨' },
+]
+
 const GENERIC_ERROR = '문제가 발생했습니다. 잠시 후 다시 시도해주세요.'
 
 const articles = ref<AdminArticleSummary[]>([])
@@ -122,6 +212,12 @@ const loading = ref(false)
 const generating = ref(false)
 const error = ref('')
 const notice = ref('')
+
+const tab = ref<AdminTab>('article')
+const guides = ref<AdminGuideSummary[]>([])
+const selectedGuide = ref<AdminGuideDetail | null>(null)
+const guideStatusFilter = ref<GuideStatusFilter>('all')
+const guidesLoaded = ref(false)
 
 async function load() {
   loading.value = true
@@ -235,6 +331,84 @@ async function onGenerate() {
     error.value = GENERIC_ERROR
   } finally {
     generating.value = false
+  }
+}
+
+async function loadGuides() {
+  loading.value = true
+  error.value = ''
+  try {
+    const params: { status?: AdminGuideStatus; limit: number } = { limit: 50 }
+    if (guideStatusFilter.value !== 'all') params.status = guideStatusFilter.value
+    guides.value = (await useAdminGuides().list(params)).items
+    guidesLoaded.value = true
+  } catch {
+    error.value = GENERIC_ERROR
+  } finally {
+    loading.value = false
+  }
+}
+
+function onTabChange(value: AdminTab) {
+  tab.value = value
+  error.value = ''
+  if (value === 'guide' && !guidesLoaded.value) loadGuides()
+}
+
+function onGuideFilterChange(value: GuideStatusFilter) {
+  guideStatusFilter.value = value
+  loadGuides()
+}
+
+async function onSelectGuide(id: string) {
+  error.value = ''
+  try {
+    selectedGuide.value = await useAdminGuides().get(id)
+  } catch {
+    error.value = GENERIC_ERROR
+  }
+}
+
+async function onSaveGuide(patch: AdminGuidePatch) {
+  if (!selectedGuide.value) return
+  try {
+    selectedGuide.value = await useAdminGuides().update(selectedGuide.value.id, patch)
+    await loadGuides()
+  } catch {
+    error.value = GENERIC_ERROR
+  }
+}
+
+async function onPublishGuide() {
+  if (!selectedGuide.value) return
+  if (!confirm('이 가이드를 발행하시겠습니까?')) return
+  try {
+    selectedGuide.value = await useAdminGuides().publish(selectedGuide.value.id)
+    await loadGuides()
+  } catch {
+    error.value = GENERIC_ERROR
+  }
+}
+
+async function onUnpublishGuide() {
+  if (!selectedGuide.value) return
+  try {
+    selectedGuide.value = await useAdminGuides().unpublish(selectedGuide.value.id)
+    await loadGuides()
+  } catch {
+    error.value = GENERIC_ERROR
+  }
+}
+
+async function onDeleteGuide() {
+  if (!selectedGuide.value) return
+  if (!confirm('이 가이드를 삭제하시겠습니까? 되돌릴 수 없습니다.')) return
+  try {
+    await useAdminGuides().remove(selectedGuide.value.id)
+    selectedGuide.value = null
+    await loadGuides()
+  } catch {
+    error.value = GENERIC_ERROR
   }
 }
 

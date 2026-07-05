@@ -30,6 +30,34 @@ function makeDetail(overrides: Partial<Record<string, unknown>> = {}) {
   }
 }
 
+function makeGuideSummary(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'g1',
+    title: '강남구 화장실 완전정복 가이드',
+    slug: 'gangnam-toilet-guide',
+    summary: '요약 텍스트입니다.',
+    category: 'toilet',
+    articleType: 'guide',
+    thumbnailUrl: null,
+    keywords: '화장실,공중화장실',
+    published: false,
+    status: 'draft',
+    publishedAt: null,
+    viewCount: 0,
+    createdAt: '2026-07-01T00:00:00Z',
+    updatedAt: '2026-07-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+function makeGuideDetail(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    ...makeGuideSummary(),
+    content: '# 제목\n\n**본문** 내용입니다.',
+    ...overrides,
+  }
+}
+
 describe('admin dashboard (pages/admin/index.vue)', () => {
   let listMock: ReturnType<typeof vi.fn>
   let getMock: ReturnType<typeof vi.fn>
@@ -40,6 +68,12 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
   let removeMock: ReturnType<typeof vi.fn>
   let generateMock: ReturnType<typeof vi.fn>
   let regenerateMock: ReturnType<typeof vi.fn>
+  let guideListMock: ReturnType<typeof vi.fn>
+  let guideGetMock: ReturnType<typeof vi.fn>
+  let guideUpdateMock: ReturnType<typeof vi.fn>
+  let guidePublishMock: ReturnType<typeof vi.fn>
+  let guideUnpublishMock: ReturnType<typeof vi.fn>
+  let guideRemoveMock: ReturnType<typeof vi.fn>
   let confirmSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
@@ -53,6 +87,13 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
     generateMock = vi.fn().mockResolvedValue({ started: true, count: 1, category: null })
     regenerateMock = vi.fn().mockResolvedValue({ started: true, count: 1, category: 'toilet' })
 
+    guideListMock = vi.fn().mockResolvedValue({ items: [makeGuideSummary()], total: 1, page: 1, totalPages: 1 })
+    guideGetMock = vi.fn().mockResolvedValue(makeGuideDetail())
+    guideUpdateMock = vi.fn().mockResolvedValue(makeGuideDetail({ title: '수정된 가이드 제목' }))
+    guidePublishMock = vi.fn().mockResolvedValue(makeGuideDetail({ status: 'published', published: true }))
+    guideUnpublishMock = vi.fn().mockResolvedValue(makeGuideDetail({ status: 'draft', published: false }))
+    guideRemoveMock = vi.fn().mockResolvedValue({ deleted: true })
+
     vi.stubGlobal('definePageMeta', vi.fn())
     vi.stubGlobal('useAdminArticles', () => ({
       list: listMock,
@@ -64,6 +105,14 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
       remove: removeMock,
       generate: generateMock,
       regenerate: regenerateMock,
+    }))
+    vi.stubGlobal('useAdminGuides', () => ({
+      list: guideListMock,
+      get: guideGetMock,
+      update: guideUpdateMock,
+      publish: guidePublishMock,
+      unpublish: guideUnpublishMock,
+      remove: guideRemoveMock,
     }))
 
     confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
@@ -78,6 +127,14 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
     const wrapper = mount(AdminIndexPage)
     await flushPromises()
     await wrapper.find('[data-testid="admin-article-card"]').trigger('click')
+    await flushPromises()
+    return wrapper
+  }
+
+  async function mountAndSwitchToGuideTab() {
+    const wrapper = mount(AdminIndexPage)
+    await flushPromises()
+    await wrapper.find('[data-testid="tab-guide"]').trigger('click')
     await flushPromises()
     return wrapper
   }
@@ -255,5 +312,163 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
 
     expect(wrapper.text()).not.toContain('DB connection refused')
     expect(wrapper.text().length).toBeGreaterThan(0)
+  })
+
+  describe('생활 가이드 탭', () => {
+    it('기본 탭은 article이며 마운트 시 가이드 list()는 호출되지 않는다', async () => {
+      const wrapper = mount(AdminIndexPage)
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="admin-article-card"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="admin-guide-card"]').exists()).toBe(false)
+      expect(guideListMock).not.toHaveBeenCalled()
+    })
+
+    it('article 탭에서만 generate-button이 노출된다', async () => {
+      const wrapper = mount(AdminIndexPage)
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="generate-button"]').exists()).toBe(true)
+
+      await wrapper.find('[data-testid="tab-guide"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="generate-button"]').exists()).toBe(false)
+    })
+
+    it('tab-guide 클릭 시 useAdminGuides().list()를 호출하고 admin-guide-card를 렌더한다 (첫 전환에만 lazy-load)', async () => {
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      expect(guideListMock).toHaveBeenCalledTimes(1)
+      expect(guideListMock).toHaveBeenCalledWith({ limit: 50 })
+      expect(wrapper.findAll('[data-testid="admin-guide-card"]')).toHaveLength(1)
+      expect(wrapper.text()).toContain('강남구 화장실 완전정복 가이드')
+
+      // article 탭으로 갔다가 다시 guide 탭으로 돌아와도 재호출하지 않는다 (lazy-load)
+      await wrapper.find('[data-testid="tab-article"]').trigger('click')
+      await flushPromises()
+      await wrapper.find('[data-testid="tab-guide"]').trigger('click')
+      await flushPromises()
+
+      expect(guideListMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('가이드 상태 필터 전환 시 list({status})를 재호출한다 (전체는 status 생략)', async () => {
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      await wrapper.find('[data-testid="guide-filter-draft"]').trigger('click')
+      await flushPromises()
+      expect(guideListMock).toHaveBeenNthCalledWith(2, { status: 'draft', limit: 50 })
+
+      await wrapper.find('[data-testid="guide-filter-published"]').trigger('click')
+      await flushPromises()
+      expect(guideListMock).toHaveBeenNthCalledWith(3, { status: 'published', limit: 50 })
+
+      await wrapper.find('[data-testid="guide-filter-all"]').trigger('click')
+      await flushPromises()
+      expect(guideListMock).toHaveBeenNthCalledWith(4, { limit: 50 })
+    })
+
+    it('가이드 선택 시 get(id)를 호출하고 편집 영역에 값을 채운다', async () => {
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      await wrapper.find('[data-testid="admin-guide-card"]').trigger('click')
+      await flushPromises()
+
+      expect(guideGetMock).toHaveBeenCalledWith('g1')
+      const titleInput = wrapper.find('[data-testid="editor-title"]')
+      expect((titleInput.element as HTMLInputElement).value).toBe('강남구 화장실 완전정복 가이드')
+    })
+
+    it('가이드 선택 후 "발행" 클릭 시 확인 후 useAdminGuides().publish(id)를 호출하고 목록을 새로고침한다', async () => {
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      await wrapper.find('[data-testid="admin-guide-card"]').trigger('click')
+      await flushPromises()
+
+      await wrapper.find('[data-testid="publish-button"]').trigger('click')
+      await flushPromises()
+
+      expect(confirmSpy).toHaveBeenCalled()
+      expect(guidePublishMock).toHaveBeenCalledWith('g1')
+      expect(guideListMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('확인 취소 시 가이드 발행이 실행되지 않는다', async () => {
+      confirmSpy.mockReturnValue(false)
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      await wrapper.find('[data-testid="admin-guide-card"]').trigger('click')
+      await flushPromises()
+
+      await wrapper.find('[data-testid="publish-button"]').trigger('click')
+      await flushPromises()
+
+      expect(guidePublishMock).not.toHaveBeenCalled()
+    })
+
+    it('가이드 "저장" 클릭 시 update(id, patch)를 호출하고 목록을 새로고침한다 (확인 불필요)', async () => {
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      await wrapper.find('[data-testid="admin-guide-card"]').trigger('click')
+      await flushPromises()
+
+      await wrapper.find('[data-testid="editor-title"]').setValue('바뀐 가이드 제목')
+      await wrapper.find('[data-testid="save-button"]').trigger('click')
+      await flushPromises()
+
+      expect(confirmSpy).not.toHaveBeenCalled()
+      expect(guideUpdateMock).toHaveBeenCalledWith('g1', expect.objectContaining({ title: '바뀐 가이드 제목' }))
+      expect(guideListMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('가이드 "발행취소" 클릭 시 unpublish(id)를 호출하고 목록을 새로고침한다', async () => {
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      await wrapper.find('[data-testid="admin-guide-card"]').trigger('click')
+      await flushPromises()
+
+      await wrapper.find('[data-testid="unpublish-button"]').trigger('click')
+      await flushPromises()
+
+      expect(guideUnpublishMock).toHaveBeenCalledWith('g1')
+      expect(guideListMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('가이드 "삭제" 클릭 시 확인 후 remove(id)를 호출하고 선택을 해제하며 목록을 새로고침한다', async () => {
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      await wrapper.find('[data-testid="admin-guide-card"]').trigger('click')
+      await flushPromises()
+
+      await wrapper.find('[data-testid="delete-button"]').trigger('click')
+      await flushPromises()
+
+      expect(confirmSpy).toHaveBeenCalled()
+      expect(guideRemoveMock).toHaveBeenCalledWith('g1')
+      expect(guideListMock).toHaveBeenCalledTimes(2)
+      expect(wrapper.find('[data-testid="editor-title"]').exists()).toBe(false)
+    })
+
+    it('재생성/반려 버튼은 가이드 에디터에 존재하지 않는다', async () => {
+      const wrapper = await mountAndSwitchToGuideTab()
+
+      await wrapper.find('[data-testid="admin-guide-card"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="regenerate-button"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="reject-button"]').exists()).toBe(false)
+    })
+
+    it('가이드 list() 실패 시 원본 에러 대신 일반 에러 메시지를 보여준다', async () => {
+      guideListMock.mockReset().mockRejectedValueOnce(new Error('DB connection refused at 10.0.0.5'))
+      const wrapper = mount(AdminIndexPage)
+      await flushPromises()
+      await wrapper.find('[data-testid="tab-guide"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.text()).not.toContain('DB connection refused')
+      expect(wrapper.find('[data-testid="error"]').exists()).toBe(true)
+    })
   })
 })
