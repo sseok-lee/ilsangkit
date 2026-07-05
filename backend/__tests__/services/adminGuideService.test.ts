@@ -55,11 +55,20 @@ describe('rejectGuide', () => {
     expect(unlink).toHaveBeenCalledTimes(1);
     expect(guide.delete).toHaveBeenCalledWith({ where: { id: 'g1' } });
   });
-  it('경로 탈출 시도(../)는 unlink 스킵하되 삭제는 진행', async () => {
+  it('basename이 경로를 중화하므로 디렉터리 안 파일로 unlink', async () => {
     guide.findUnique.mockResolvedValue({ id: 'g1', thumbnailUrl: '/api/images/guides/../../etc/passwd' });
     guide.delete.mockResolvedValue({ id: 'g1' });
     await rejectGuide('g1');
-    // basename('../../etc/passwd')='passwd' → GUIDES_IMAGE_DIR 안으로 정규화되어 unlink 1회, 탈출 아님
-    expect(guide.delete).toHaveBeenCalled();
+    // basename('.../../etc/passwd')='passwd' → GUIDES_IMAGE_DIR 안으로 정규화되어 unlink 1회, 탈출 아님
+    expect(unlink).toHaveBeenCalledTimes(1);
+    expect(guide.delete).toHaveBeenCalledWith({ where: { id: 'g1' } });
+  });
+  it('디렉터리 탈출 시도(thumbnailUrl이 ..로 끝남)는 unlink 스킵하되 삭제는 진행', async () => {
+    guide.findUnique.mockResolvedValue({ id: 'g1', thumbnailUrl: '/api/images/guides/..' });
+    guide.delete.mockResolvedValue({ id: 'g1' });
+    await rejectGuide('g1');
+    // basename('/api/images/guides/..')='..' → resolve 결과가 GUIDES_IMAGE_DIR의 부모 디렉터리가 되어 unlink 스킵
+    expect(unlink).not.toHaveBeenCalled();
+    expect(guide.delete).toHaveBeenCalledWith({ where: { id: 'g1' } });
   });
 });
