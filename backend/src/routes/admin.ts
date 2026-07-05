@@ -7,7 +7,10 @@ import { spawn } from 'child_process';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middlewares/validate.js';
 import { AppError, ConflictError } from '../lib/errors.js';
-import { AdminLoginSchema, AdminArticleListSchema, AdminArticleIdSchema, AdminArticlePatchSchema, AdminGenerateSchema } from '../schemas/admin.js';
+import {
+  AdminLoginSchema, AdminArticleListSchema, AdminArticleIdSchema, AdminArticlePatchSchema, AdminGenerateSchema,
+  AdminGuideListSchema, AdminGuideIdSchema, AdminGuidePatchSchema,
+} from '../schemas/admin.js';
 import { SESSION_COOKIE_NAME, getAdminPasswordHash, getSessionTtlMs } from '../config/adminConfig.js';
 import { createSession, revokeSession } from '../services/adminSessionService.js';
 import { isLockedOut, recordLoginFailure, clearLoginFailures } from '../services/adminThrottleService.js';
@@ -22,6 +25,14 @@ import {
   rejectArticle,
   deleteAdminArticle,
 } from '../services/adminArticleService.js';
+import {
+  listAdminGuides,
+  getAdminGuide,
+  updateAdminGuide,
+  publishGuide,
+  unpublishGuide,
+  rejectGuide,
+} from '../services/adminGuideService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -197,6 +208,69 @@ router.post('/articles/:id/regenerate', requireAdmin, requireSameOrigin, adminGe
     // 안전(배열-인자 spawn은 쉘을 거치지 않아 인젝션 경로가 없음).
     spawnGenerated(scriptPath, 1, article.category);
     res.status(202).json({ success: true, data: { started: true, count: 1, category: article.category } });
+  })
+);
+
+// GET /api/admin/guides — 목록(전체 상태, 공개 API와 달리 published 강제 없음)
+router.get('/guides', requireAdmin, validate(AdminGuideListSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await listAdminGuides(req.query as unknown as { page: number; limit: number; published?: boolean; category?: string });
+    res.json({ success: true, data: result });
+  })
+);
+
+// GET /api/admin/guides/:id — 상세
+router.get('/guides/:id', requireAdmin, validate(AdminGuideIdSchema, 'params'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as unknown as { id: string };
+    const guide = await getAdminGuide(id);
+    res.json({ success: true, data: guide });
+  })
+);
+
+// PATCH /api/admin/guides/:id — 편집(허용 필드만)
+router.patch('/guides/:id', requireAdmin, requireSameOrigin,
+  validate(AdminGuideIdSchema, 'params'), validate(AdminGuidePatchSchema, 'body'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as unknown as { id: string };
+    const guide = await updateAdminGuide(id, req.body);
+    res.json({ success: true, data: guide });
+  })
+);
+
+// POST /api/admin/guides/:id/publish
+router.post('/guides/:id/publish', requireAdmin, requireSameOrigin, validate(AdminGuideIdSchema, 'params'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as unknown as { id: string };
+    const guide = await publishGuide(id);
+    res.json({ success: true, data: guide });
+  })
+);
+
+// POST /api/admin/guides/:id/unpublish
+router.post('/guides/:id/unpublish', requireAdmin, requireSameOrigin, validate(AdminGuideIdSchema, 'params'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as unknown as { id: string };
+    const guide = await unpublishGuide(id);
+    res.json({ success: true, data: guide });
+  })
+);
+
+// POST /api/admin/guides/:id/reject — 초안+썸네일 삭제
+router.post('/guides/:id/reject', requireAdmin, requireSameOrigin, validate(AdminGuideIdSchema, 'params'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as unknown as { id: string };
+    await rejectGuide(id);
+    res.json({ success: true, data: { deleted: true } });
+  })
+);
+
+// DELETE /api/admin/guides/:id
+router.delete('/guides/:id', requireAdmin, requireSameOrigin, validate(AdminGuideIdSchema, 'params'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as unknown as { id: string };
+    await rejectGuide(id);
+    res.json({ success: true, data: { deleted: true } });
   })
 );
 

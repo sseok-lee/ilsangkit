@@ -43,6 +43,7 @@
     "generate:guide": "tsx src/scripts/generateGuide.ts",
     "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
     "generate:article": "tsx src/scripts/generateArticle.ts",
+    "generate:guide:drafts": "tsx src/scripts/generateGuideDrafts.ts",
     "fix:region-slugs": "tsx src/scripts/fixRegionSlugs.ts",
     "sync:geocode-real-estate": "tsx src/scripts/geocodeRealEstate.ts",
     "sync:apt-sale": "tsx src/scripts/syncAptSale.ts",

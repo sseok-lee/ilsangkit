@@ -26,3 +26,20 @@ export const AdminGenerateSchema = z.object({
     .default(3),
   category: z.enum(GUIDE_CATEGORIES).optional(),
 });
+
+// 어드민 가이드 — Guide 모델엔 status enum 없이 published:boolean만 존재(Article과 구분)
+export const AdminGuideListSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  published: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  category: z.string().min(1).max(50).optional(),
+});
+
+export const AdminGuideIdSchema = z.object({ id: z.string().min(1) });
+
+export const AdminGuidePatchSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  summary: z.string().min(1).max(500).optional(),
+  keywords: z.string().max(500).nullable().optional(),
+  content: z.string().min(1).optional(),
+}).refine((o) => Object.keys(o).length > 0, { message: '수정할 필드가 없습니다' });

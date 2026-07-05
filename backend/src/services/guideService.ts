@@ -29,8 +29,13 @@ const GUIDE_SELECT = {
   thumbnailUrl: true,
   keywords: true,
   viewCount: true,
+  publishedAt: true, // NEW
   createdAt: true,
 };
+
+export function serializeGuide<T extends { publishedAt: Date | null; createdAt: Date }>(g: T) {
+  return { ...g, publishedAt: g.publishedAt ?? g.createdAt };
+}
 
 export interface GuideListParams {
   page: number;
@@ -64,7 +69,7 @@ export async function listGuides(params: GuideListParams) {
     ...(articleType ? { articleType } : {}),
   };
 
-  const [total, items] = await Promise.all([
+  const [total, rows] = await Promise.all([
     prisma.guide.count({ where }),
     prisma.guide.findMany({
       where,
@@ -75,17 +80,19 @@ export async function listGuides(params: GuideListParams) {
     }),
   ]);
 
+  const items = rows.map(serializeGuide);
   const totalPages = Math.ceil(total / limit);
   return { items, total, page, totalPages };
 }
 
 export async function listRecentGuides(limit: number) {
-  return prisma.guide.findMany({
+  const rows = await prisma.guide.findMany({
     where: { published: true },
     orderBy: { createdAt: 'desc' },
     take: limit,
     select: GUIDE_SELECT,
   });
+  return rows.map(serializeGuide);
 }
 
 export async function getGuideBySlug(slug: string) {
@@ -95,5 +102,9 @@ export async function getGuideBySlug(slug: string) {
   const currentCount = guideViewBuffer.get(slug) ?? 0;
   guideViewBuffer.set(slug, currentCount + 1);
 
-  return { ...guide, viewCount: guide.viewCount + 1 };
+  return {
+    ...guide,
+    viewCount: guide.viewCount + 1,
+    publishedAt: guide.publishedAt ?? guide.createdAt, // NEW
+  };
 }
