@@ -48,6 +48,30 @@ describe('validateGuideDraftStructure', () => {
   it('너무 짧으면 실패', () => {
     expect(validateGuideDraftStructure('## 자주 묻는 질문\n\n**Q. a**\nA. b', 'guide').valid).toBe(false);
   });
+  it('howto에서 단계별 방법 섹션의 단계가 2개뿐이면 실패', () => {
+    // HOWTO_MD의 3번째 단계("3. **할인 신청하기**" 블록)를 제거해 단계 2개만 남긴다
+    const twoSteps = HOWTO_MD.replace(
+      '\n\n3. **할인 신청하기**\n   경차·다자녀 할인을 신청합니다.',
+      ''
+    );
+    const r = validateGuideDraftStructure(twoSteps, 'howto');
+    expect(r.valid).toBe(false);
+    expect(r.errors.join('; ')).toMatch(/단계별 방법/);
+  });
+  it('섹션-스코프 카운트: FAQ 섹션 밖의 가짜 Q/A는 세지 않는다', () => {
+    // "## 개요" 섹션에 가짜 Q/A 하나를 끼워 넣는다 — 구버전(전체 문서 카운트)은
+    // 이걸 포함해 3개로 세서 valid였겠지만, 신버전은 FAQ 섹션 안의 2개만 세야 한다
+    const withStrayQaInOverview = HOWTO_MD.replace(
+      '## 개요',
+      '## 개요\n\n**Q. 가짜?**\nA. 가짜.\n'
+    ).replace(
+      '**Q. 정기권도 있나요?**\nA. 월 정기권을 운영합니다.',
+      ''
+    );
+    const r = validateGuideDraftStructure(withStrayQaInOverview, 'howto');
+    expect(r.valid).toBe(false);
+    expect(r.errors.join('; ')).toMatch(/FAQ/);
+  });
 });
 
 describe('generateGuideDraft (OpenAI mock)', () => {
@@ -80,5 +104,27 @@ describe('generateGuideDraft (OpenAI mock)', () => {
     const steps = [...res.content.matchAll(STEP_RE)];
     expect(faqs.length).toBeGreaterThanOrEqual(3);
     expect(steps.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('제목에 연도가 포함되면 에버그린 위반으로 throw한다', async () => {
+    const openai = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValueOnce({
+            choices: [{ message: { content: JSON.stringify({
+              title: '2026년 공영주차장 할인 받는 법',
+              summary: '공영주차장 요금을 아끼는 실전 방법을 단계별로 안내합니다.',
+              keywords: '공영주차장, 주차요금, 할인',
+            }) } }],
+          }),
+        },
+      },
+    } as unknown as import('openai').default;
+
+    await expect(
+      generateGuideDraft(openai, {
+        category: 'parking', topic: '공영주차장 무료·할인 요금 받는 법', articleType: 'howto',
+      })
+    ).rejects.toThrow(/year|연도/);
   });
 });

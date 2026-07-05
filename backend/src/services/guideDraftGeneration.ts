@@ -27,20 +27,30 @@ export function validateGuideDraftStructure(
   const errors: string[] = [];
   const has = (re: RegExp) => headings.some((h) => re.test(h));
 
-  if (articleType === 'howto' && !has(/단계별\s*방법/)) {
-    errors.push('howto requires a "단계별 방법" section');
-  }
+  // FAQ: 프론트와 동일하게 "## 자주 묻는 질문" 블록을 먼저 잘라 그 안에서만 Q/A 카운트
   if (!has(/자주\s*묻는\s*질문/)) {
     errors.push('requires a "자주 묻는 질문" (FAQ) section');
+  } else {
+    const faqBlock = content.match(/## 자주 묻는 질문[\s\S]*?(?=\n## |$)/)?.[0] ?? '';
+    const faqCount = [...faqBlock.matchAll(/\*\*Q\.\s*(.+?)\*\*\s*\n\s*A\.\s*([\s\S]*?)(?=\n\*\*Q\.|$)/g)].length;
+    if (faqCount < 3) {
+      errors.push(`FAQ items must be "**Q. ...**\\nA. ..." within the FAQ section and >=3 (got ${faqCount})`);
+    }
   }
-  if (articleType === 'howto' && !/^\s*\d+\.\s+\*\*.+\*\*/m.test(content)) {
-    errors.push('howto steps must be "1. **name**\\n text" formatted');
+
+  // howto: "## 단계별 방법" 블록 안에서 번호 단계 >=3 강제
+  if (articleType === 'howto') {
+    if (!has(/단계별\s*방법/)) {
+      errors.push('howto requires a "단계별 방법" section');
+    } else {
+      const stepBlock = content.match(/## 단계별 방법[\s\S]*?(?=\n## |$)/)?.[0] ?? '';
+      const stepCount = [...stepBlock.matchAll(/\d+\.\s*\*\*(.+?)\*\*\s*\n([\s\S]*?)(?=\n\d+\.\s*\*\*|$)/g)].length;
+      if (stepCount < 3) {
+        errors.push(`howto "단계별 방법" needs >=3 steps formatted "1. **name**\\n text" (got ${stepCount})`);
+      }
+    }
   }
-  // 프론트 FAQ 정규식과 동일 형태로 최소 3개 파싱되는지 확인
-  const faqCount = [...content.matchAll(/\*\*Q\.\s*(.+?)\*\*\s*\n\s*A\.\s*([\s\S]*?)(?=\n\*\*Q\.|$)/g)].length;
-  if (faqCount < 3) {
-    errors.push(`FAQ items must be "**Q. ...**\\nA. ..." and >=3 (got ${faqCount})`);
-  }
+
   if (content.trim().length < 1200) {
     errors.push(`content too short: ${content.trim().length} chars`);
   }
@@ -175,6 +185,11 @@ export async function generateGuideDraft(
 
   const meta = await generateGuideMeta(openai, category, topic, articleType, researchContext, dbStats);
   if (!meta.title || !meta.summary) throw new Error('guide meta returned empty title/summary');
+
+  // 에버그린 보장: 제목/요약에 "YYYY년" 연도 표기 금지 (본문은 stripDateMarkers가 처리)
+  if (/(19|20)\d{2}\s*년/.test(`${meta.title} ${meta.summary}`)) {
+    throw new Error(`evergreen guide title/summary must not contain a year: "${meta.title}"`);
+  }
 
   const rawBody = await generateGuideBody(openai, category, topic, articleType, researchContext, dbStats, meta.title);
   const content = stripDateMarkers(rawBody);
