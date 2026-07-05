@@ -408,6 +408,133 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-101</loc>')
   })
 
+  it('/article 목록 URL이 static sitemap에 포함된다', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/articles')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+    vi.resetModules()
+
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/article</loc>')
+  })
+
+  it('발행 article이 없으면(0건) article 개별 URL 없이도 static sitemap이 정상 생성된다', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/articles')) {
+        return Promise.resolve({ data: { items: [], total: 0, page: 1, totalPages: 0 } })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+    vi.resetModules()
+
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+    expect(xml).toContain('<urlset')
+    expect(xml).not.toMatch(/\/article\/[a-z0-9-]+</)
+  })
+
+  it('발행 article이 100건을 초과하면 모든 페이지가 static sitemap에 포함된다 (pagination)', async () => {
+    const articleCounts: { page: number; slugs: string[] }[] = [
+      {
+        page: 1,
+        slugs: Array.from({ length: 100 }, (_, i) => `article-${i + 1}`),
+      },
+      {
+        page: 2,
+        slugs: ['article-101'],
+      },
+    ]
+    const totalPages = articleCounts.length
+
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/articles')) {
+        const pageMatch = path.match(/page=(\d+)/)
+        const page = pageMatch ? parseInt(pageMatch[1], 10) : 1
+        const bucket = articleCounts.find((b) => b.page === page)
+        return Promise.resolve({
+          data: {
+            items: bucket
+              ? bucket.slugs.map((slug) => ({ slug, publishedAt: '2026-07-01T09:00:00.000Z' }))
+              : [],
+            total: 101,
+            totalPages,
+            page,
+          },
+        })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+    vi.resetModules()
+
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/article/article-1</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/article/article-100</loc>')
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/article/article-101</loc>')
+  })
+
+  it('article의 lastmod는 publishedAt(YYYY-MM-DD)로 방출된다', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/articles')) {
+        return Promise.resolve({
+          data: {
+            items: [{ slug: 'issue-1', publishedAt: '2026-06-15T03:20:00.000Z' }],
+            total: 1,
+            page: 1,
+            totalPages: 1,
+          },
+        })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+    vi.resetModules()
+
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/article/issue-1</loc>')
+    expect(xml).toContain('<lastmod>2026-06-15</lastmod>')
+  })
+
   it('wifi는 noindex-only 상세 정책에 따라 index에 노출되지 않고 handler는 404를 반환한다', async () => {
     const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
     const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')

@@ -149,6 +149,38 @@ export default defineEventHandler(async (event) => {
     console.error('[sitemap] Failed to fetch guides:', err)
   }
 
+  // 오늘의 이슈(article) 목록 페이지 — 발행 article 추가 빈도 따라감
+  urls.push({ loc: `${SITE_URL}/article`, lastmod: today, changefreq: 'daily', priority: 0.7 })
+
+  // 오늘의 이슈(article) 개별 글 — 공개 API는 published 만 반환.
+  // 백엔드가 페이지당 최대 100건만 반환하므로 totalPages 까지 순차 수집 (guide 루프와 동일 구조).
+  try {
+    const MAX_ARTICLE_PAGES = 50 // 총 5000 건까지 안전 가드 — 실운영에서는 훨씬 적음
+    for (let page = 1; page <= MAX_ARTICLE_PAGES; page++) {
+      let articlesJson: {
+        data?: {
+          items?: Array<{ slug: string; publishedAt: string | null }>
+          totalPages?: number
+        }
+      } | null = null
+      try {
+        articlesJson = await ssrFetch(`/api/articles?limit=100&page=${page}`)
+      } catch (err) {
+        console.error(`[sitemap] Failed to fetch articles page=${page}:`, err)
+        break
+      }
+      const articles: Array<{ slug: string; publishedAt: string | null }> = articlesJson?.data?.items ?? []
+      for (const article of articles) {
+        const lastmod = article.publishedAt ? new Date(article.publishedAt).toISOString().split('T')[0] : today
+        urls.push({ loc: `${SITE_URL}/article/${article.slug}`, lastmod, changefreq: 'weekly', priority: 0.7 })
+      }
+      const totalPages = Number(articlesJson?.data?.totalPages ?? 1)
+      if (page >= totalPages || articles.length === 0) break
+    }
+  } catch (err) {
+    console.error('[sitemap] Failed to fetch articles:', err)
+  }
+
   // API에서 실제 데이터가 있는 지역-카테고리 조합만 가져오기
   try {
     const json = await ssrFetch<{

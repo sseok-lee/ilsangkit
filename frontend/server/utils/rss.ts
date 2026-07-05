@@ -7,10 +7,10 @@ export interface RssItem {
 
 export function generateRssXml(
   items: RssItem[],
-  channelInfo: { title: string; link: string; description: string; selfUrl?: string },
+  channelInfo: { title: string; link: string; description: string; selfUrl: string },
 ): string {
   const lastBuildDate = new Date().toUTCString()
-  const selfUrl = channelInfo.selfUrl || 'https://ilsangkit.co.kr/rss.xml'
+  const selfUrl = channelInfo.selfUrl
 
   const itemsXml = items.map(item => `
     <item>

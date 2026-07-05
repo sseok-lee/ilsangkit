@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
       title: '일상킷 - 생활 가이드',
       link: 'https://ilsangkit.co.kr/guide',
       description: '부동산 실거래가와 생활시설 정보를 제공하는 일상킷의 생활 가이드',
+      selfUrl: 'https://ilsangkit.co.kr/rss.xml',
     })
 
     setResponseHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
@@ -28,6 +29,7 @@ export default defineEventHandler(async (event) => {
       title: '일상킷 - 생활 가이드',
       link: 'https://ilsangkit.co.kr/guide',
       description: '부동산 실거래가와 생활시설 정보를 제공하는 일상킷의 생활 가이드',
+      selfUrl: 'https://ilsangkit.co.kr/rss.xml',
     })
   }
 })

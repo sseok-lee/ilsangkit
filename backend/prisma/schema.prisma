@@ -772,6 +772,54 @@ model Guide {
   @@index([articleType, category])
 }
 
+// 오늘의 이슈(/article) 콘텐츠 테이블 — 시의성 뉴스/정책. 검토 워크플로우(draft→published) 지원.
+model Article {
+  id           String    @id @default(cuid())
+  title        String    @db.VarChar(200)
+  slug         String    @unique @db.VarChar(200)
+  content      String    @db.LongText
+  summary      String    @db.VarChar(500)
+  category     String    @db.VarChar(50)
+  articleType  String    @default("news-brief") @db.VarChar(20)
+  thumbnailUrl String?   @db.VarChar(500)
+  keywords     String?   @db.VarChar(500)
+  sources      Json?
+  status       String    @default("draft") @db.VarChar(20)
+  viewCount    Int       @default(0)
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([category])
+  @@index([slug])
+  @@index([articleType])
+}
+
+// 어드민 불투명 세션 — id = sha256(랜덤 토큰). 쿠키엔 raw 토큰, DB엔 해시만.
+model AdminSession {
+  id        String   @id @db.VarChar(64) // sha256 hex
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// 어드민 로그인 브루트포스 잠금 (단일 관리자, 고정 id='admin'). cluster-safe.
+model AdminLoginThrottle {
+  id             String    @id @db.VarChar(20) // 'admin' 고정
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  updatedAt      DateTime  @updatedAt
+}
+
+// 생성 단일-플라이트 락 (고정 id='singleton'). stale-timeout 재확보.
+model ArticleGenerationLock {
+  id        String   @id @db.VarChar(20)
+  running   Boolean  @default(false)
+  startedAt DateTime @default(now())
+}
+
 // 지하철역 테이블 (data.go.kr 전국도시철도역사정보표준데이터 기반)
 // 시설 카테고리(15종)와 분리된 도메인. /subway/[slug] SEO 페이지 + /api/transit/nearby 데이터 소스.
 model SubwayStation {

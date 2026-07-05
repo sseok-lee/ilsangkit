@@ -95,6 +95,11 @@ export const corsOptions = {
  * - 요청 본문의 문자열 값에서 위험한 HTML/스크립트 태그 제거
  */
 export function sanitizeInput(req: Request, _res: Response, next: NextFunction): void {
+  // 어드민 라우트는 제외: 비밀번호(bcrypt 비교 대상)·마크다운 본문(< 포함)이 DOMPurify로 훼손되면 안 됨.
+  if (req.path.startsWith('/api/admin')) {
+    next();
+    return;
+  }
   if (req.body && typeof req.body === 'object') {
     sanitizeObject(req.body);
   }
