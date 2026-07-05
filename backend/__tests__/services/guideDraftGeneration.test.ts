@@ -127,4 +127,38 @@ describe('generateGuideDraft (OpenAI mock)', () => {
       })
     ).rejects.toThrow(/year|연도/);
   });
+
+  it('본문이 처음 검증 실패해도 재시도로 통과한다', async () => {
+    const create = vi.fn()
+      // meta
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify({
+        title: '공영주차장 할인 받는 법', summary: '요약입니다.', keywords: 'a, b, c',
+      }) } }] })
+      // 1st body attempt = invalid(짧고 FAQ/단계 없음)
+      .mockResolvedValueOnce({ choices: [{ message: { content: '## 개요\n짧은 본문' } }] })
+      // 2nd body attempt = valid
+      .mockResolvedValueOnce({ choices: [{ message: { content: HOWTO_MD } }] });
+    const openai = { chat: { completions: { create } } } as unknown as import('openai').default;
+
+    const res = await generateGuideDraft(openai, { category: 'parking', topic: 't', articleType: 'howto' });
+    expect(res.content).toContain('## 단계별 방법');
+    expect(create).toHaveBeenCalledTimes(3); // meta + 2 body attempts
+  });
+
+  it('3회 재시도 모두 실패하면 throw한다', async () => {
+    const invalidBody = { choices: [{ message: { content: '## 개요\n짧은 본문' } }] };
+    const create = vi.fn()
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify({
+        title: '공영주차장 할인 받는 법', summary: '요약입니다.', keywords: 'a, b, c',
+      }) } }] })
+      .mockResolvedValueOnce(invalidBody)
+      .mockResolvedValueOnce(invalidBody)
+      .mockResolvedValueOnce(invalidBody);
+    const openai = { chat: { completions: { create } } } as unknown as import('openai').default;
+
+    await expect(
+      generateGuideDraft(openai, { category: 'parking', topic: 't', articleType: 'howto' })
+    ).rejects.toThrow(/3 attempts/);
+    expect(create).toHaveBeenCalledTimes(4); // meta + 3 body attempts
+  });
 });
