@@ -118,9 +118,15 @@ describe('migrateNewsGuides', () => {
     expect(result).toEqual({ migrated: 2, skipped: 0, thumbnailsCopied: 0, failures: [] });
   });
 
-  it('실제 실행: guide당 $transaction([article.create, guide.delete]) + $executeRaw(updatedAt) + 썸네일 copyFile', async () => {
+  it('실제 실행: guide당 $transaction([article.create, $executeRaw(updatedAt), guide.delete]) 원자적 배치 + 썸네일 copyFile', async () => {
     const guide = makeGuide();
     mockGuideFindMany.mockResolvedValue([guide]);
+    const createSentinel = { __kind: 'create' };
+    const executeRawSentinel = { __kind: 'executeRaw' };
+    const deleteSentinel = { __kind: 'delete' };
+    mockArticleCreate.mockReturnValue(createSentinel);
+    mockExecuteRaw.mockReturnValue(executeRawSentinel);
+    mockGuideDelete.mockReturnValue(deleteSentinel);
 
     const result = await migrateNewsGuides({ dryRun: false });
 
@@ -129,6 +135,13 @@ describe('migrateNewsGuides', () => {
     expect(mockArticleCreate.mock.calls[0][0].data.slug).toBe(guide.slug);
     expect(mockGuideDelete).toHaveBeenCalledWith({ where: { id: guide.id } });
     expect(mockExecuteRaw).toHaveBeenCalledOnce();
+    // updatedAt 리셋이 create/delete와 같은 $transaction 배치 안에 들어있는지(원자성) 확인.
+    // 순서도 검증: create가 먼저(행이 존재해야 UPDATE가 히트), delete는 마지막.
+    const batch = mockTransaction.mock.calls[0][0];
+    expect(batch).toEqual([createSentinel, executeRawSentinel, deleteSentinel]);
+    // 태그드 템플릿 파라미터: [strings, g.createdAt, g.slug]
+    expect(mockExecuteRaw.mock.calls[0][1]).toBe(guide.createdAt);
+    expect(mockExecuteRaw.mock.calls[0][2]).toBe(guide.slug);
     expect(copyFile).toHaveBeenCalledOnce();
     expect(result.migrated).toBe(1);
     expect(result.thumbnailsCopied).toBe(1);
@@ -145,6 +158,7 @@ describe('migrateNewsGuides', () => {
     expect(mockArticleCreate).not.toHaveBeenCalled();
     expect(mockGuideDelete).not.toHaveBeenCalled();
     expect(mockTransaction).not.toHaveBeenCalled();
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
     expect(copyFile).not.toHaveBeenCalled();
     expect(result).toEqual({ migrated: 0, skipped: 1, thumbnailsCopied: 0, failures: [] });
   });
@@ -166,21 +180,26 @@ describe('migrateNewsGuides', () => {
     warnSpy.mockRestore();
   });
 
-  it('per-guide 실패는 failures 배열에 담기고 루프는 계속 진행됨', async () => {
+  it('원자성: $transaction 전체가 실패(rollback)하면 failures에 담기고 migrated에서 제외, 부분 적용 없음', async () => {
     const guide1 = makeGuide({ id: 'g1', slug: 'fail-1' });
     const guide2 = makeGuide({ id: 'g2', slug: 'ok-2' });
     mockGuideFindMany.mockResolvedValue([guide1, guide2]);
     mockTransaction
       .mockRejectedValueOnce(new Error('DB 오류'))
-      .mockResolvedValueOnce([{}, {}]);
+      .mockResolvedValueOnce([{}, {}, {}]);
 
     const result = await migrateNewsGuides({ dryRun: false });
 
+    // create+updatedAt리셋+delete가 한 배치로 묶여 실패했으므로(원자적 rollback),
+    // 실패한 guide는 migrated로 카운트되지 않고 부분 적용(예: 썸네일 복사) 없이 failures로만 담김.
     expect(result.migrated).toBe(1);
     expect(result.failures).toHaveLength(1);
     expect(result.failures[0]).toContain('fail-1');
     expect(result.failures[0]).toContain('DB 오류');
-    // 실패한 guide는 썸네일 복사도 스킵되어야 함(트랜잭션 실패 후 진행 안 함)
+    expect(mockTransaction).toHaveBeenCalledTimes(2);
+    // 실패한 guide(fail-1)는 트랜잭션이 롤백되어 이후 단계(썸네일 복사)로 진행하지 않음 —
+    // copyFile은 성공한 guide2(ok-2)에 대해서만 1회 호출됨.
     expect(copyFile).toHaveBeenCalledOnce();
+    expect(vi.mocked(copyFile).mock.calls[0][1]).toContain('ok-2');
   });
 });

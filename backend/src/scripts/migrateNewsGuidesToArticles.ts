@@ -78,12 +78,13 @@ export async function migrateNewsGuides(opts: MigrateOptions): Promise<MigrateRe
 
     try {
       const data = mapGuideToArticleData(g);
+      // create → updatedAt 리셋(가짜 freshness 방지) → delete를 하나의 트랜잭션으로 묶어 원자성 보장.
+      // $executeRaw 단독 실패로 create+delete만 커밋되고 updatedAt 리셋이 누락되는 것을 방지(재실행 불가 상태 방지).
       await prisma.$transaction([
         prisma.article.create({ data }),
+        prisma.$executeRaw`UPDATE Article SET updatedAt = ${g.createdAt} WHERE slug = ${g.slug}`,
         prisma.guide.delete({ where: { id: g.id } }),
       ]);
-      // @updatedAt이 create 시 now()로 세팅되므로 원 createdAt으로 되돌림(가짜 freshness 신호 방지)
-      await prisma.$executeRaw`UPDATE Article SET updatedAt = ${g.createdAt} WHERE slug = ${g.slug}`;
       migrated++;
 
       // 썸네일 복사(원본 없으면 경고만 하고 마이그레이션은 유지)
