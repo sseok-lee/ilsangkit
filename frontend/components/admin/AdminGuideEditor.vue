@@ -10,25 +10,33 @@
 
     <div>
       <label for="admin-guide-title" class="block text-xs font-medium text-muted mb-1">제목</label>
-      <input id="admin-guide-title" v-model="draftTitle" type="text" data-testid="editor-title"
-        class="w-full rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+      <input
+id="admin-guide-title" v-model="draftTitle" type="text" data-testid="editor-title"
+        class="w-full rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+>
     </div>
     <div>
       <label for="admin-guide-summary" class="block text-xs font-medium text-muted mb-1">요약</label>
-      <textarea id="admin-guide-summary" v-model="draftSummary" rows="2" data-testid="editor-summary"
-        class="w-full rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+      <textarea
+id="admin-guide-summary" v-model="draftSummary" rows="2" data-testid="editor-summary"
+        class="w-full rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+/>
     </div>
     <div>
       <label for="admin-guide-keywords" class="block text-xs font-medium text-muted mb-1">키워드 (쉼표 구분)</label>
-      <input id="admin-guide-keywords" v-model="draftKeywords" type="text" data-testid="editor-keywords"
-        class="w-full rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+      <input
+id="admin-guide-keywords" v-model="draftKeywords" type="text" data-testid="editor-keywords"
+        class="w-full rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <div>
         <label for="admin-guide-content" class="block text-xs font-medium text-muted mb-1">본문 (마크다운)</label>
-        <textarea id="admin-guide-content" v-model="draftContent" rows="18" data-testid="editor-content"
-          class="w-full rounded-md border border-line px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary" />
+        <textarea
+id="admin-guide-content" v-model="draftContent" rows="18" data-testid="editor-content"
+          class="w-full rounded-md border border-line px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+/>
       </div>
       <div>
         <span class="block text-xs font-medium text-muted mb-1">미리보기</span>
