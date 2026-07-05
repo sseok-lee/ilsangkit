@@ -763,6 +763,7 @@ model Guide {
   keywords     String?  @db.VarChar(500)
   published    Boolean  @default(true)
   viewCount    Int      @default(0)
+  publishedAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
