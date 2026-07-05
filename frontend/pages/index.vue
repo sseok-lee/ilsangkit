@@ -197,6 +197,58 @@
       </div>
     </section>
 
+    <!-- 오늘의 이슈 -->
+    <section v-if="recentArticles.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-display-2 text-strong flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">article</span>
+            오늘의 이슈
+          </h2>
+          <p class="text-sm text-muted mt-1">부동산·청약 시장 소식을 확인하세요.</p>
+        </div>
+        <HardLink
+          to="/article"
+          class="text-sm text-primary font-bold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
+        >
+          더보기
+          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </HardLink>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <HardLink
+          v-for="article in recentArticles"
+          :key="article.id"
+          :to="`/article/${article.slug}`"
+          class="group bg-white border border-line rounded-xl overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+        >
+          <div class="aspect-video bg-background-light overflow-hidden">
+            <img
+              v-if="article.thumbnailUrl"
+              :src="`${publicApiBase}${article.thumbnailUrl}`"
+              :alt="article.title"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              width="400"
+              height="225"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <span class="material-symbols-outlined text-[36px] text-faint">article</span>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="text-sm font-bold text-strong line-clamp-2 group-hover:text-primary transition-colors">
+              {{ article.title }}
+            </h3>
+            <p class="text-xs text-muted mt-1 line-clamp-1">
+              {{ article.summary }}
+            </p>
+          </div>
+        </HardLink>
+      </div>
+    </section>
+
     <!-- 쿠팡 배너 (데이터 출처 위) -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
       <CoupangBanner />
@@ -240,6 +292,7 @@ import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionS
 import HomeHotspotSignals from '~/components/home/HomeHotspotSignals.vue'
 import HomeTrendingBuildings from '~/components/home/HomeTrendingBuildings.vue'
 import type { GuideSummary } from '~/composables/useGuides'
+import type { ArticleSummary } from '~/composables/useArticles'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import type { HomeDashboard } from '~/composables/useHomeDashboard'
@@ -298,13 +351,17 @@ const { data: pageData } = await useAsyncData(
   'home-page',
   async () => {
     const signal = AbortSignal.timeout(8000)
-    const [dashR, guidesR] = await Promise.allSettled([
+    const [dashR, guidesR, articlesR] = await Promise.allSettled([
       $fetch<{ success: boolean; data: HomeDashboard }>(
         `${apiBase}/api/meta/home-dashboard`,
         { signal }
       ),
       $fetch<{ success: boolean; data: GuideSummary[] }>(
         `${apiBase}/api/guides/recent`,
+        { query: { limit: 4 }, signal }
+      ),
+      $fetch<{ success: boolean; data: ArticleSummary[] }>(
+        `${apiBase}/api/articles/recent`,
         { query: { limit: 4 }, signal }
       ),
     ])
@@ -314,15 +371,20 @@ const { data: pageData } = await useAsyncData(
     if (guidesR.status === 'rejected') {
       console.warn('[home-page] recent-guides failed:', guidesR.reason)
     }
+    if (articlesR.status === 'rejected') {
+      console.warn('[home-page] recent-articles failed:', articlesR.reason)
+    }
     return {
       dashboard: dashR.status === 'fulfilled' ? dashR.value.data : null,
       recentGuides: guidesR.status === 'fulfilled' ? guidesR.value.data : ([] as GuideSummary[]),
+      recentArticles: articlesR.status === 'fulfilled' ? articlesR.value.data : ([] as ArticleSummary[]),
     }
   },
   {
     default: () => ({
       dashboard: null as HomeDashboard | null,
       recentGuides: [] as GuideSummary[],
+      recentArticles: [] as ArticleSummary[],
     }),
   }
 )
@@ -380,6 +442,7 @@ if (dashboard.value) {
 }
 
 const recentGuides = computed(() => pageData.value?.recentGuides ?? [])
+const recentArticles = computed(() => pageData.value?.recentArticles ?? [])
 
 // 등록 부동산 건물 수 (만 단위, 소수점 1자리)
 const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFixed(1))

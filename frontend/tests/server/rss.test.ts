@@ -6,6 +6,7 @@ describe('generateRssXml', () => {
     title: '일상킷 - 생활 가이드',
     link: 'https://ilsangkit.co.kr/guide',
     description: '부동산 실거래가와 생활시설 정보를 제공하는 일상킷의 생활 가이드',
+    selfUrl: 'https://ilsangkit.co.kr/rss.xml',
   }
 
   it('유효한 RSS 2.0 구조를 반환해야 한다', () => {
@@ -22,6 +23,11 @@ describe('generateRssXml', () => {
     const xml = generateRssXml([], channelInfo)
     expect(xml).toContain('xmlns:atom=')
     expect(xml).toContain('rel="self"')
+  })
+
+  it('selfUrl로 전달한 가이드 피드 URL을 atom:link self href로 사용해야 한다', () => {
+    const xml = generateRssXml([], channelInfo)
+    expect(xml).toContain('<atom:link href="https://ilsangkit.co.kr/rss.xml" rel="self" type="application/rss+xml" />')
   })
 
   it('lastBuildDate를 포함해야 한다', () => {

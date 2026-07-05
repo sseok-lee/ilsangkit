@@ -232,6 +232,8 @@ export default defineNuxtConfig({
         { rel: 'manifest', href: '/site.webmanifest' },
         // 생활 가이드 RSS 자동발견 — 네이버 서치어드바이저 RSS 수집 + 신규 콘텐츠 빠른 색인.
         { rel: 'alternate', type: 'application/rss+xml', title: '일상킷 - 생활 가이드', href: 'https://ilsangkit.co.kr/rss.xml' },
+        // 오늘의 이슈 RSS 자동발견 — 가이드와 별도 피드(별도 self URL).
+        { rel: 'alternate', type: 'application/rss+xml', title: '일상킷 - 오늘의 이슈', href: 'https://ilsangkit.co.kr/article-rss.xml' },
       ]
     }
   },

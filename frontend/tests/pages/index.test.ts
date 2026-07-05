@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted, readonly } from 'vue'
 import IndexPage from '~/pages/index.vue'
@@ -184,6 +184,51 @@ describe('Index Page', () => {
 
     const indexRoot = wrapper.find('.flex.flex-col')
     expect(indexRoot.exists()).toBe(true)
+  })
+})
+
+describe('오늘의 이슈 (recentArticles) section', () => {
+  afterEach(() => {
+    // 다른 테스트에 영향 없도록 기본 mock(recentArticles 없음)으로 복원
+    ;(globalThis as any).useAsyncData = vi.fn((key?: string, _fetcher?: () => unknown) => {
+      const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
+      const result = {
+        data,
+        status: ref('idle'),
+        error: ref(null),
+        refresh: vi.fn(),
+        pending: ref(false),
+      }
+      return Object.assign(Promise.resolve(result), result)
+    })
+  })
+
+  it('renders "오늘의 이슈" section with article links when recentArticles has items', async () => {
+    ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
+      const payload = {
+        ...homePagePayload,
+        recentArticles: [
+          { id: 'art-1', slug: 'issue-1', title: '오늘의 이슈 기사 1', summary: '요약1', thumbnailUrl: null },
+          { id: 'art-2', slug: 'issue-2', title: '오늘의 이슈 기사 2', summary: '요약2', thumbnailUrl: null },
+        ],
+      }
+      const data = key === 'home-page' ? ref(payload) : ref(null)
+      const result = { data, status: ref('idle'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+      return Object.assign(Promise.resolve(result), result)
+    })
+
+    const wrapper = await mountSuspended(IndexPage)
+
+    expect(wrapper.text()).toContain('오늘의 이슈')
+    expect(wrapper.text()).toContain('오늘의 이슈 기사 1')
+    expect(wrapper.find('a[href="/article/issue-1"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/article"]').exists()).toBe(true)
+  })
+
+  it('does not render "오늘의 이슈" section or any /article/ link when recentArticles is empty', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+
+    expect(wrapper.findAll('a[href^="/article/"]').length).toBe(0)
   })
 })
 
