@@ -112,52 +112,80 @@ async function generateGuideBody(
     ? '부동산·주거 정보를 알기 쉽게 정리하는 생활 가이드 에디터'
     : '생활 정보를 알기 쉽게 정리하는 생활 가이드 에디터';
 
-  const stepBlock =
+  // howto는 "## 단계별 방법"에 번호 단계 4개 이상을 예시 형식으로 강제한다.
+  const stepSection =
     articleType === 'howto'
       ? `## 단계별 방법
-- 3~8개의 순서를 반드시 번호 리스트로 작성
-- 각 단계는 정확히 이 형식: \`1. **단계 이름**\\n   설명 문장\`
-- 각 단계는 행동 가능하게, 사이트명·서류명·비용을 구체적으로
+1. **첫 번째 단계 이름**
+   이 단계에서 실제로 무엇을 하는지 2~3문장으로 구체적으로 씁니다. 앱·사이트·서류·요금 등 실물 정보를 포함합니다.
+2. **두 번째 단계 이름**
+   2~3문장.
+3. **세 번째 단계 이름**
+   2~3문장.
+4. **네 번째 단계 이름**
+   2~3문장.
+(단계는 최소 4개. 각 줄은 반드시 "번호. **단계 이름**" 다음 줄에 설명.)
 
 `
       : '';
 
-  const prompt = `당신은 ${role}입니다. "${title}" 가이드 본문을 마크다운으로 작성하세요.
+  // guide는 단계별 방법이 없어 본문 섹션을 3개로 늘려 분량을 확보한다.
+  const bodySections =
+    articleType === 'howto'
+      ? `## 알아두면 좋은 배경
+관련 배경·기준·유의점을 4~6문장으로 설명합니다.
 
-<context>
+## 주의사항과 팁
+실전 팁·자주 하는 실수·유의점을 4~6문장으로 설명합니다.
+
+`
+      : `## 핵심 포인트
+개념·차이·기준을 4~6문장으로 설명합니다.
+
+## 자세한 이용 방법
+실제 이용 절차·조건·준비물을 5~7문장으로 구체적으로 설명합니다.
+
+## 주의사항과 팁
+자주 하는 실수·유의점·꿀팁을 4~6문장으로 설명합니다.
+
+`;
+
+  const prompt = `당신은 ${role}입니다. "${title}"에 대한 실용 가이드 본문을 한국어 마크다운으로 작성합니다.
+
+<참고>
 카테고리: ${label}
 주제: ${topic}
 ${researchContext}
 ${dbStats}
-</context>
+</참고>
 
-<structure>
-아래 "## " 섹션 제목을 그대로 사용하고 순서를 지키세요.
+아래 골격을 **그대로** 따르되 각 부분을 충분히 상세히 채웁니다. **전체 분량은 공백 포함 1800자 이상**이어야 합니다(짧으면 안 됩니다).
+
 ## 개요
-- 2~3문장으로 이 글이 답하는 문제와 결론 요약
+이 글이 해결하는 문제와 핵심 결론을 3~4문장으로 설명합니다.
 
-(주제에 맞는 "## 소제목" 1~3개를 추가로 작성 — 자유 제목)
+${bodySections}${stepSection}## 자주 묻는 질문
+**Q. 자주 나오는 질문 1?**
+A. 2~3문장 답변.
+**Q. 자주 나오는 질문 2?**
+A. 2~3문장 답변.
+**Q. 자주 나오는 질문 3?**
+A. 2~3문장 답변.
+(FAQ는 최소 3개. 각 항목은 반드시 "**Q. 질문?**" 다음 줄에 "A. 답변." 형식.)
 
-${stepBlock}## 자주 묻는 질문
-- 3~5개 문답
-- 각 항목은 정확히 이 형식: \`**Q. 질문?**\\nA. 답변.\`
-</structure>
-
-<rules>
-- 친절한 한국어 경어체, 한 문장 80자 이내
-- "YYYY년 N월 기준", "오늘 기준" 등 날짜 표기 금지(에버그린)
-- 리서치 자료에 없는 수치·금액은 임의 생성 금지
-- 코드 블록 금지
-- 일상킷(사이트)에서 해당 시설을 찾을 수 있음을 자연스럽게 1회 언급
-</rules>
-
-마크다운 본문만 출력하세요:`;
+<규칙>
+- 위의 "## " 헤딩 문구와 "번호. **단계 이름**", "**Q. …**" / "A. …" 형식을 정확히 지킵니다(글자·기호 변경 금지).
+- 친절한 한국어 경어체, 구체적이고 실용적으로.
+- "YYYY년 N월 기준", "오늘 기준" 등 날짜 표기 금지(에버그린).
+- 리서치 자료에 없는 수치·금액은 임의 생성 금지.
+- 코드 블록·표 금지. "일상킷"에서 해당 시설을 찾을 수 있음을 자연스럽게 1회 언급.
+- 마크다운 본문만 출력.`;
 
   const c = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.5,
-    max_tokens: 2500,
+    temperature: 0.6,
+    max_tokens: 3500,
   });
   return (c.choices[0]?.message?.content ?? '').trim();
 }
@@ -191,11 +219,17 @@ export async function generateGuideDraft(
     throw new Error(`evergreen guide title/summary must not contain a year: "${meta.title}"`);
   }
 
-  const rawBody = await generateGuideBody(openai, category, topic, articleType, researchContext, dbStats, meta.title);
-  const content = stripDateMarkers(rawBody);
-
-  const { valid, errors } = validateGuideDraftStructure(content, articleType);
-  if (!valid) throw new Error(`guide draft failed validation: ${errors.join('; ')}`);
-
-  return { title: meta.title, summary: meta.summary, keywords: meta.keywords, content };
+  // 본문은 LLM 변동으로 가끔 분량/섹션 미달이 나므로 검증 통과까지 최대 MAX_BODY_ATTEMPTS회 재시도한다.
+  const MAX_BODY_ATTEMPTS = 3;
+  let lastErrors: string[] = [];
+  for (let attempt = 1; attempt <= MAX_BODY_ATTEMPTS; attempt += 1) {
+    const rawBody = await generateGuideBody(openai, category, topic, articleType, researchContext, dbStats, meta.title);
+    const content = stripDateMarkers(rawBody);
+    const { valid, errors } = validateGuideDraftStructure(content, articleType);
+    if (valid) {
+      return { title: meta.title, summary: meta.summary, keywords: meta.keywords, content };
+    }
+    lastErrors = errors;
+  }
+  throw new Error(`guide draft failed validation after ${MAX_BODY_ATTEMPTS} attempts: ${lastErrors.join('; ')}`);
 }
