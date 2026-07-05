@@ -55,7 +55,8 @@
     "sync:ev-charger": "tsx src/scripts/syncEvCharger.ts",
     "sync:sports": "tsx src/scripts/syncSports.ts",
     "sync:subway": "tsx src/scripts/syncSubway.ts",
-    "submit:indexing": "tsx src/scripts/submitIndexing.ts"
+    "submit:indexing": "tsx src/scripts/submitIndexing.ts",
+    "migrate:news-articles": "tsx src/scripts/migrateNewsGuidesToArticles.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

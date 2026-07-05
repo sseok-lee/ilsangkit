@@ -151,6 +151,7 @@ import { marked } from 'marked'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import DOMPurify from 'isomorphic-dompurify'
 import { useGuides } from '~/composables/useGuides'
+import { useArticles } from '~/composables/useArticles'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -169,6 +170,7 @@ const config = useRuntimeConfig()
 // eslint-disable-next-line no-restricted-syntax
 const publicApiBase = config.public.apiBase
 const { fetchGuideBySlug } = useGuides()
+const { fetchArticleBySlug } = useArticles()
 const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema, setArticleSchema, setFAQSchema, setHowToSchema } = useStructuredData()
 
@@ -180,7 +182,13 @@ const { data: guide, status } = await useAsyncData(
 
 // 가이드를 찾을 수 없으면 404 반환 (SSR에서 HTTP 404 상태 코드 전송)
 if (!guide.value) {
-  throw createError({ statusCode: 404, statusMessage: '가이드를 찾을 수 없습니다' })
+  // 이전된 news 가이드: 같은 slug의 published Article이 있으면 /article로 영구(301) 이동.
+  const migrated = await fetchArticleBySlug(slug.value).catch(() => null)
+  if (migrated) {
+    await navigateTo(`/article/${slug.value}`, { redirectCode: 301, replace: true })
+  } else {
+    throw createError({ statusCode: 404, statusMessage: '가이드를 찾을 수 없습니다' })
+  }
 }
 
 const { trackGuideView } = useAnalytics()
