@@ -14,7 +14,7 @@
       -->
       <img
         :src="bannerSrc"
-        alt="쿠팡 이벤트 배너 - 삼성전자 감사 페스티벌"
+        alt="쿠팡 이벤트 배너 - 2026 여름맞이 숙박세일 페스타"
         width="1000"
         height="1000"
         loading="lazy"
@@ -29,8 +29,8 @@
 </template>
 
 <script setup lang="ts">
-const promoUrl = 'https://link.coupang.com/a/epur2JvKIS'
-// 원본: https://image1.coupangcdn.com/image/affiliate/event/promotion/2026/06/08/bd1df149685f00d201079638982d356f.png
-// → scripts/optimizeAdImage.mjs 로 webp 변환해 정적 호스팅 (1.25MB PNG → ~152KB webp)
-const bannerSrc = '/ads/coupang-samsung-festival.webp'
+const promoUrl = 'https://link.coupang.com/a/e9vQESWMTc'
+// 원본: 쿠팡 트래블 2026 여름맞이 숙박세일 페스타 배너 (Downloads/coupang.png, 800×800 PNG)
+// → scripts/optimizeAdImage.mjs 로 webp 변환해 정적 호스팅 (349KB PNG → ~43KB webp)
+const bannerSrc = '/ads/coupang-summer-lodging-festa.webp'
 </script>

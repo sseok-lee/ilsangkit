@@ -16,7 +16,7 @@ describe('CoupangBanner', () => {
     const link = wrapper.find('a')
 
     expect(link.exists()).toBe(true)
-    expect(link.attributes('href')).toBe('https://link.coupang.com/a/epur2JvKIS')
+    expect(link.attributes('href')).toBe('https://link.coupang.com/a/e9vQESWMTc')
   })
 
   it('opens the promotion in a new tab with affiliate-safe rel attributes', () => {
@@ -36,7 +36,7 @@ describe('CoupangBanner', () => {
 
     expect(img.exists()).toBe(true)
     // 런타임 sharp/IPX 미지원 서버 대응: /public/ads 의 사전최적화 webp를 정적 서빙
-    expect(img.attributes('src')).toBe('/ads/coupang-samsung-festival.webp')
+    expect(img.attributes('src')).toBe('/ads/coupang-summer-lodging-festa.webp')
     expect(img.attributes('width')).toBe('1000')
     expect(img.attributes('height')).toBe('1000')
     expect(img.attributes('loading')).toBe('lazy')
