@@ -14,7 +14,7 @@
         <p class="mb-3">
           <strong>청약</strong>은 새로 짓는 아파트·오피스텔을 분양받기 위해 사전에 신청하는 절차입니다. 일상킷에서는
           한국부동산원 청약홈, LH·SH, 민간 분양사가 공고하는 모든 청약·임대 일정을
-          <NuxtLink to="/subscription/sale" class="text-primary hover:underline">분양</NuxtLink>·<NuxtLink to="/subscription/rent" class="text-primary hover:underline">임대</NuxtLink>·<NuxtLink to="/public-rental" class="text-primary hover:underline">공공임대</NuxtLink> 카테고리로 구분해 모아 보여줍니다.
+          <NuxtLink to="/subscription/sale" class="text-primary hover:underline">분양</NuxtLink>·<NuxtLink to="/subscription/rent" class="text-primary hover:underline">임대</NuxtLink> 카테고리로 구분해 모아 보여줍니다.
         </p>
         <h3 class="font-semibold text-slate-900 mt-4 mb-1.5">어떤 정보를 확인할 수 있나요?</h3>
         <ul class="list-disc pl-5 space-y-1 mb-3">

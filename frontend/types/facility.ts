@@ -563,10 +563,6 @@ export const NAV_LINK_GROUPS: readonly LinkGroup[] = [
       // 임대 청약 — 청약통장 사용
       { to: '/subscription/rent/public', label: '공공임대 청약', icon: 'home', iconImg: 'rent', section: '임대 청약' },
       { to: '/subscription/rent/private', label: '공공지원 민간임대', icon: 'bungalow', iconImg: 'villa', section: '임대 청약' },
-      // 공공임대 입주 — 자격 기반 수시 신청 (LH/SH 등)
-      { to: '/public-rental/announcements', label: '모집공고', icon: 'campaign', iconImg: 'subscription', section: '공공임대 입주' },
-      { to: '/public-rental/buy-lease', label: '매입임대', icon: 'shopping_cart', iconImg: 'store', section: '공공임대 입주' },
-      { to: '/public-rental/charter', label: '전세임대', icon: 'savings', iconImg: 'land', section: '공공임대 입주' },
     ],
   },
   {
