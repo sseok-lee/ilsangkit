@@ -254,7 +254,7 @@ function setupPolicyFetch() {
 function setupPolicyGen(candidate: object = { index: 0, category: 'subscription', keyword: '청약 특별공급 개편' }) {
   mockChatCreate.mockImplementation(async ({ messages }: { messages: Array<{ content: string }> }) => {
     const prompt = messages[0]?.content ?? '';
-    if (prompt.includes('정책뉴스 후보')) {
+    if (prompt.includes('정부 정책뉴스')) {
       return { choices: [{ message: { content: JSON.stringify(candidate) } }] };
     }
     if (prompt.includes('제목·요약·키워드')) {

@@ -5,6 +5,7 @@ import {
   stripHtml,
   parsePolicyResponse,
   fetchRecentPolicyNews,
+  fetchRecentPolicyWindows,
 } from '../../src/services/policyBriefingClient.js';
 
 const XML_OK = `<?xml version="1.0" encoding="UTF-8"?><response><header><resultCode>0</resultCode><resultMsg>NORMAL_SERVICE</resultMsg></header><body>` +
@@ -87,5 +88,38 @@ describe('fetchRecentPolicyNews', () => {
     const calledUrl = String(mockFetch.mock.calls[0][0]);
     expect(calledUrl).toContain('startDate=20260705');
     expect(calledUrl).toContain('endDate=20260707');
+  });
+});
+
+const xmlWith = (id: string, title: string) =>
+  `<?xml version="1.0" encoding="UTF-8"?><response><header><resultCode>0</resultCode><resultMsg>NORMAL_SERVICE</resultMsg></header><body>` +
+  `<NewsItem><NewsItemId>${id}</NewsItemId><Title><![CDATA[${title}]]></Title><SubTitle1><![CDATA[sub]]></SubTitle1>` +
+  `<ContentsType>H</ContentsType><DataContents><![CDATA[<p>본문 ${title}</p>]]></DataContents>` +
+  `<MinisterCode>국토교통부</MinisterCode><OriginalUrl>https://www.korea.kr/news/policyNewsView.do?newsId=${id}</OriginalUrl>` +
+  `<ApproveDate>07/05/2026 10:00:00</ApproveDate><ModifyDate>07/05/2026 10:00:00</ModifyDate><KoglType>1</KoglType></NewsItem></body></response>`;
+
+describe('fetchRecentPolicyWindows', () => {
+  const mockFetch = vi.fn();
+  beforeEach(() => { mockFetch.mockReset(); vi.stubGlobal('fetch', mockFetch); process.env.OPENAPI_SERVICE_KEY = 'test-key'; });
+
+  it('여러 3일창을 조회하고 newsItemId로 중복 제거', async () => {
+    // 창1=A, 창2=A(중복)+B, 창3=C
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, text: async () => xmlWith('A', '정책A') })
+      .mockResolvedValueOnce({ ok: true, text: async () => xmlWith('A', '정책A') })
+      .mockResolvedValueOnce({ ok: true, text: async () => xmlWith('C', '정책C') });
+    const out = await fetchRecentPolicyWindows(9, 3, 100);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    const ids = out.map((it) => it.newsItemId).sort();
+    expect(ids).toEqual(['A', 'C']); // A 중복 제거
+  });
+
+  it('한 창이 실패(빈 배열)여도 나머지 창 결과는 수집', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+      .mockResolvedValueOnce({ ok: true, text: async () => xmlWith('B', '정책B') })
+      .mockResolvedValueOnce({ ok: true, text: async () => xmlWith('C', '정책C') });
+    const out = await fetchRecentPolicyWindows(9, 3, 100);
+    expect(out.map((it) => it.newsItemId).sort()).toEqual(['B', 'C']);
   });
 });

@@ -652,13 +652,30 @@ export async function getDbStats(category: GuideCategory): Promise<string> {
 // 정책 브리핑 트랙 — 정책뉴스 원문 전문 기반 생성 앞단
 // ---------------------------------------------------------------------------
 
-// 국가 정책이 실제로 움직이고 독자 관심도 높은 카테고리로 한정(국토부·복지부 중심).
+// 생활정보 사이트 성격에 맞춰 국가 정책 커버리지가 있는 카테고리로 확장.
 export const POLICY_FOCUS_CATEGORIES: GuideCategory[] = [
-  'subscription',
-  'apt-sale',
-  'apt-rent',
-  'childcare',
+  'subscription', 'apt-sale', 'apt-rent', 'childcare',
+  'hospital', 'pharmacy', 'park', 'trash',
+  'school', 'library', 'market', 'ev-charger', 'sports',
 ];
+
+// 카테고리를 '시설'이 아니라 '생활 주제'로 설명 — 정책(제도·요금·규제)은 시설 위치가 아니므로
+// 이 주제 설명으로 물어야 진짜 매칭된다(예: 전기차 충전요금 개편→ev-charger, 도수치료 급여→hospital).
+export const POLICY_CATEGORY_DOMAINS: Partial<Record<GuideCategory, string>> = {
+  subscription: '주택청약',
+  'apt-sale': '아파트매매·부동산시장',
+  'apt-rent': '전세·월세·임대',
+  childcare: '보육·육아·어린이집',
+  hospital: '의료·건강·병원',
+  pharmacy: '의약품·약국',
+  park: '공원·녹지',
+  trash: '폐기물·재활용·환경',
+  school: '학교·교육',
+  library: '도서관·독서',
+  market: '전통시장·소상공인·골목상권',
+  'ev-charger': '전기차·충전',
+  sports: '체육·생활체육',
+};
 
 // 뉴스 트랙의 formatResearchContext와 동일 계약이되, 스니펫이 아닌 정책 원문 전문을 근거로 제공.
 export function formatPolicyContext(item: PolicyNewsItem): string {
@@ -688,23 +705,26 @@ export async function selectPolicyCandidate(
 ): Promise<PolicyCandidate | null> {
   if (items.length === 0) return null;
 
-  const catList = focusCategories.map((c) => `${c}(${CATEGORY_LABELS[c]})`).join(', ');
+  const catList = focusCategories
+    .map((c) => `${c}=${POLICY_CATEGORY_DOMAINS[c] ?? CATEGORY_LABELS[c]}`)
+    .join(', ');
   const listing = items
-    .map((it, i) => `${i}. [${it.title}] ${it.subTitle}\n   ${it.dataContents.slice(0, 200)}`)
+    .map((it, i) => `${i}. [${it.ministerCode}] ${it.title} / ${it.subTitle}`)
     .join('\n');
 
-  const prompt = `다음은 최근 정부 정책뉴스 후보 ${items.length}건입니다.
+  const prompt = `아래는 최근 정부 정책뉴스 ${items.length}건입니다.
 ${listing}
 
-아래 카테고리 중 하나에 명확히 해당하고, 시민 관심도가 가장 높은 정책 1건을 고르세요.
-카테고리: ${catList}
+다음 '생활 주제' 중 하나에 실질적으로 해당하는(그 주제 독자가 관심 가질) 정책 1건을 고르세요.
+주제: ${catList}
 
 규칙:
-- 위 카테고리 중 하나에 명확히 해당하는 정책만 선택
-- 해당하는 정책이 없으면 none
-- keyword는 글 주제가 될 구체적인 2~8단어
+- 그 주제의 제도·지원·요금·규제 변화면 해당됨(시설 위치가 아니어도 됨).
+- 위 주제와 무관하거나(외교·국방·산업기술·행정내부 등) 단순 해명·보도설명 자료뿐이면 none.
+- 억지로 끼워맞추지 말 것.
+- keyword는 글 주제가 될 구체적인 2~8단어.
 
-JSON으로만 응답: { "index": 0, "category": "subscription", "keyword": "..." } 또는 { "none": true }`;
+JSON으로만 응답: { "index": 0, "category": "apt-sale", "keyword": "..." } 또는 { "none": true }`;
 
   try {
     const completion = await openai.chat.completions.create({
