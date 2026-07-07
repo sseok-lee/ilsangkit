@@ -65,6 +65,7 @@ vi.stubGlobal('fetch', mockFetch);
 process.env.NAVER_CLIENT_ID = 'test-id';
 process.env.NAVER_CLIENT_SECRET = 'test-secret';
 process.env.OPENAI_API_KEY = 'test-openai-key';
+process.env.OPENAPI_SERVICE_KEY = 'test-service-key';
 
 import { execFileSync } from 'child_process';
 import { writeFile, unlink } from 'fs/promises';
@@ -77,6 +78,7 @@ import {
   toSources,
   buildArticleInternalLinks,
   generateOneArticle,
+  generateOnePolicyArticle,
 } from '../../src/scripts/generateArticle.js';
 // generateThumbnail is NOT re-exported from generateArticle.ts — import from the shared core.
 import { generateThumbnail } from '../../src/services/articleGenerationCore.js';
@@ -233,5 +235,105 @@ describe('generateThumbnail — convert 인코딩 실패 브랜치 (회귀 가�
     expect(vi.mocked(writeFile)).toHaveBeenCalledWith(tmpPath, expect.any(Buffer));
     // tmp 파일 unlink 시도됨
     expect(vi.mocked(unlink)).toHaveBeenCalledWith(tmpPath);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 정책 브리핑 트랙
+// ---------------------------------------------------------------------------
+function setupPolicyFetch() {
+  mockFetch.mockImplementation(async () => ({
+    ok: true,
+    json: async () => ({
+      NewsItem: [
+        {
+          NewsItemId: 'P1001',
+          Title: '청약제도 개편안 발표',
+          SubTitle1: '무주택 실수요자 중심',
+          MinisterCode: '1741000',
+          DataContents: '<p>국토교통부는 특별공급을 확대한다. 신혼부부 물량이 늘어난다.</p>'.repeat(3),
+          ApproveDate: '20260705',
+          OriginalUrl: 'https://www.korea.kr/news/policyView.do?newsId=P1001',
+          ThumbnailUrl: '',
+        },
+      ],
+    }),
+  }));
+}
+
+function setupPolicyGen(candidate: object = { index: 0, category: 'subscription', keyword: '청약 특별공급 개편' }) {
+  mockChatCreate.mockImplementation(async ({ messages }: { messages: Array<{ content: string }> }) => {
+    const prompt = messages[0]?.content ?? '';
+    if (prompt.includes('정책뉴스 후보')) {
+      return { choices: [{ message: { content: JSON.stringify(candidate) } }] };
+    }
+    if (prompt.includes('제목·요약·키워드')) {
+      return { choices: [{ message: { content: JSON.stringify({
+        title: '청약 특별공급 이렇게 바뀐다 실수요자 3가지 변화',
+        summary: '이번 청약 개편의 핵심을 무주택 실수요자 관점에서 정리했습니다. 무엇이 달라지는지 봅니다.',
+        keywords: '청약, 특별공급, 개편',
+        sections: DEFAULT_HEADINGS.map((h) => ({ heading: h, description: `${h} 설명` })),
+      }) } }] };
+    }
+    return { choices: [{ message: { content: SECTION_BODY } }] };
+  });
+}
+
+describe('parseArticleCliOptions — track', () => {
+  it('기본 track은 news', () => {
+    expect(parseArticleCliOptions([]).track).toBe('news');
+  });
+  it('--track policy 파싱', () => {
+    expect(parseArticleCliOptions(['--track', 'policy']).track).toBe('policy');
+  });
+  it('알 수 없는 track은 news로 폴백', () => {
+    expect(parseArticleCliOptions(['--track', 'garbage']).track).toBe('news');
+  });
+});
+
+describe('generateOnePolicyArticle', () => {
+  beforeEach(() => {
+    mockFetch.mockReset(); mockChatCreate.mockReset(); mockImageGenerate.mockReset();
+    mockArticleCreate.mockReset();
+    mockArticleFindMany.mockReset().mockResolvedValue([]);
+    mockArticleFindUnique.mockReset().mockResolvedValue(null);
+    mockGuideFindUnique.mockReset().mockResolvedValue(null);
+    mockGuideFindMany.mockReset().mockResolvedValue([]);
+  });
+
+  it('policy-brief로 저장 + sourceExternalId + 출처 표기', async () => {
+    setupPolicyFetch();
+    setupPolicyGen();
+    mockImageGenerate.mockResolvedValue({ data: [{ b64_json: Buffer.from('x').toString('base64') }] });
+    mockArticleCreate.mockImplementation(async ({ data }: any) => ({ id: 'p1', ...data }));
+
+    const result = await generateOnePolicyArticle();
+
+    expect(result).not.toBeNull();
+    expect(result!.category).toBe('subscription');
+    const arg = mockArticleCreate.mock.calls[0][0].data;
+    expect(arg.articleType).toBe('policy-brief');
+    expect(arg.sourceExternalId).toBe('P1001');
+    expect(arg.status).toBe('draft');
+    expect(arg.sources[0].url).toContain('korea.kr');
+    expect(arg.content).toContain('정책브리핑');
+    expect(arg.content).toContain('https://www.korea.kr/news/policyView.do?newsId=P1001');
+  });
+
+  it('적합 후보 없으면 null + 미저장', async () => {
+    setupPolicyFetch();
+    setupPolicyGen({ none: true });
+    const result = await generateOnePolicyArticle();
+    expect(result).toBeNull();
+    expect(mockArticleCreate).not.toHaveBeenCalled();
+  });
+
+  it('이미 쓴 정책(sourceExternalId 중복)은 제외 → null', async () => {
+    setupPolicyFetch();
+    setupPolicyGen();
+    mockArticleFindMany.mockResolvedValue([{ sourceExternalId: 'P1001' }]); // 이미 사용됨
+    const result = await generateOnePolicyArticle();
+    expect(result).toBeNull();
+    expect(mockArticleCreate).not.toHaveBeenCalled();
   });
 });
