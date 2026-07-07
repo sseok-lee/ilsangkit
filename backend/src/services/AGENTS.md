@@ -20,8 +20,6 @@
 | `publicApiClient.ts` | 공공데이터포털 API HTTP 클라이언트 |
 | `neisApiClient.ts` | NEIS 교육부 API 클라이언트 |
 | `evChargerService.ts` | 충전소 `statId` GROUP BY raw query |
-| `publicRentalService.ts` | 공공임대 매물 CRUD |
-| `publicRentalAnnouncementService.ts` | 공공임대 공고 목록/상세 |
 | `subscriptionService.ts` | 청약 분류/필터링 |
 | `viewCountService.ts` | 조회수 카운팅 |
 | `geocodingService.ts` | Kakao 지도 API 역지오코딩 |
