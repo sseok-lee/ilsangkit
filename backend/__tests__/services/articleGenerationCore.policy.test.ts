@@ -14,6 +14,7 @@ import {
   POLICY_FOCUS_CATEGORIES,
   formatPolicyContext,
   selectPolicyCandidate,
+  generateArticleMeta,
 } from '../../src/services/articleGenerationCore.js';
 import type { PolicyNewsItem } from '../../src/services/policyBriefingClient.js';
 
@@ -75,5 +76,25 @@ describe('selectPolicyCandidate', () => {
   it('빈 목록이면 null', async () => {
     expect(await selectPolicyCandidate(openai, [], POLICY_FOCUS_CATEGORIES)).toBeNull();
     expect(mockChatCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('generateArticleMeta — 제목 규칙 강화', () => {
+  beforeEach(() => mockChatCreate.mockReset());
+  const openai = new OpenAI({ apiKey: 'test' });
+
+  it('프롬프트에 title-rules(관심유발·과장금지)가 포함된다', async () => {
+    mockChatCreate.mockResolvedValue({ choices: [{ message: { content: JSON.stringify({
+      title: '테스트 제목입니다 스무자 이상으로 작성',
+      summary: '테스트 요약입니다. 50자 이상의 요약 텍스트를 채워 넣습니다 채워요.',
+      keywords: 'a, b, c',
+      sections: [{ heading: '핵심 요약', description: 'x' }, { heading: '참고 자료', description: 'y' }],
+    }) } }] });
+
+    await generateArticleMeta(openai, 'subscription', '청약 개편', '[정책 원문] ...', '');
+
+    const sentPrompt = String(mockChatCreate.mock.calls[0][0].messages[0].content);
+    expect(sentPrompt).toContain('title-rules');
+    expect(sentPrompt).toContain('낚시');
   });
 });
