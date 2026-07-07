@@ -53,10 +53,8 @@ jobs:
                   *dist/scripts/refreshRealEstateSummary*|\
                   *dist/scripts/syncSubscription*|\
                   *dist/scripts/geocodeSubscriptions*|\
-                  *dist/scripts/syncPublicRent*|\
                   *dist/scripts/syncAuction*|\
                   *dist/scripts/geocodeAuction*|\
-                  *dist/scripts/syncRentalAnnouncement*|\
                   *dist/scripts/generateSitemaps*)
                     kill -9 "$pid" 2>/dev/null || true
                     ;;
@@ -134,21 +132,6 @@ jobs:
             timeout --kill-after=30s 30m node dist/scripts/syncSubscription.js --source ALL --skip-geocode \
               || echo "[WARN] 청약 동기화 실패 (exit=$?)"
             echo "[step:subscription-end]"
-
-            # LH 공공임대 동기화
-            echo "[step:public-rent-start]"
-            echo "--- LH 임대 동기화 ---"
-            timeout --kill-after=30s 30m node dist/scripts/syncPublicRent.js \
-              || echo "[WARN] LH 임대 동기화 실패 (exit=$?)"
-            echo "[step:public-rent-end]"
-
-            # 마이홈 공공임대 모집공고 동기화 (HWSPR02: 일반+장기 통합)
-            # API 가 활성 공고만 반환하는 구조 — 매일 누적되어야 마감 공고가 archive 됨.
-            echo "[step:rental-announcement-start]"
-            echo "--- 공공임대 모집공고 동기화 ---"
-            timeout --kill-after=30s 15m node dist/scripts/syncRentalAnnouncement.js \
-              || echo "[WARN] 모집공고 동기화 실패 (exit=$?)"
-            echo "[step:rental-announcement-end]"
 
             # Google Indexing API 자동 제출은 중단됨 (2026-06-19).
             # Indexing API 는 공식적으로 JobPosting / BroadcastEvent 타입만 지원하므로

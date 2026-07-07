@@ -57,7 +57,6 @@ function getArticleHubUrl(c: GuideCategory): string {
   if (c === 'apt-sale') return '/real-estate/apt-sale';
   if (c === 'apt-rent') return '/real-estate/apt-rent';
   if (c === 'subscription') return '/real-estate/subscription';
-  if (c === 'public-rental') return '/public-rental';
   return `/${c}`;
 }
 
@@ -66,7 +65,7 @@ const RELATED_HUB: Partial<Record<GuideCategory, GuideCategory>> = {
   parking: 'ev-charger', clothes: 'trash', park: 'sports', school: 'childcare',
   market: 'parking', library: 'school', trash: 'clothes', childcare: 'school',
   'ev-charger': 'parking', sports: 'park', 'apt-sale': 'subscription',
-  'apt-rent': 'apt-sale', subscription: 'apt-sale', 'public-rental': 'subscription',
+  'apt-rent': 'apt-sale', subscription: 'apt-sale',
 };
 
 export async function buildArticleInternalLinks(category: GuideCategory, currentSlug: string): Promise<string> {
@@ -87,7 +86,6 @@ export async function buildArticleInternalLinks(category: GuideCategory, current
 function getArticleCta(c: GuideCategory): string {
   const label = CATEGORY_LABELS[c];
   if (c === 'subscription') return `일상킷에서 ${label} 정보를 바로 확인해보세요.`;
-  if (c === 'public-rental') return `일상킷에서 ${label} 매물을 바로 확인해보세요.`;
   if (isRealEstateLike(c)) return `일상킷에서 ${label} 실거래가를 바로 확인해보세요.`;
   return `일상킷에서 내 주변 ${label} 정보를 바로 확인해보세요.`;
 }

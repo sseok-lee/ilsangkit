@@ -11,7 +11,6 @@ CLI 스크립트 테스트. 동기화 orchestrator, 부동산 동기화 6종, �
 |------|-------------|
 | `syncAll.test.ts` | 전체 동기화 orchestrator (순서/에러 전파) |
 | `syncAptSale.test.ts` / `syncAptRent.test.ts` / `syncVillaSale.test.ts` / `syncVillaRent.test.ts` / `syncOffitelSale.test.ts` / `syncOffitelRent.test.ts` | 부동산 실거래가 6종 |
-| `syncPublicRent.test.ts` | 공공임대 |
 | `geocodeRealEstate.test.ts` | 부동산 주소 → 좌표 |
 | `generateGuide.test.ts` | 가이드 자동 생성 |
 | `_runtimeGuard.test.ts` | 런타임 환경 검증 |

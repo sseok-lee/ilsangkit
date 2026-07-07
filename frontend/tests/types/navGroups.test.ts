@@ -41,7 +41,7 @@ describe('NAV_GROUPS', () => {
     expect(links).toEqual(expectedLinks)
   })
 
-  it('청약·임대 그룹은 청약홈 단독 + 분양·임대 청약·공공임대 입주 3개 섹션 링크를 포함한다', () => {
+  it('청약·임대 그룹은 청약홈 단독 + 분양·임대 청약 2개 섹션 링크를 포함한다', () => {
     const subscriptionGroup = NAV_GROUPS[1] as LinkGroup
     expect(subscriptionGroup.title).toBe('청약·임대')
     const links = subscriptionGroup.links.map(({ to, label }) => ({ to, label }))
@@ -56,21 +56,16 @@ describe('NAV_GROUPS', () => {
       // 임대 청약 (청약통장)
       { to: '/subscription/rent/public', label: '공공임대 청약' },
       { to: '/subscription/rent/private', label: '공공지원 민간임대' },
-      // 공공임대 입주 (자격 기반)
-      { to: '/public-rental/announcements', label: '모집공고' },
-      { to: '/public-rental/buy-lease', label: '매입임대' },
-      { to: '/public-rental/charter', label: '전세임대' },
     ])
   })
 
-  it('청약·임대 그룹 첫 링크(청약홈)는 섹션이 없고 나머지는 3개 섹션으로 나뉜다', () => {
+  it('청약·임대 그룹 첫 링크(청약홈)는 섹션이 없고 나머지는 2개 섹션으로 나뉜다', () => {
     const subscriptionGroup = NAV_GROUPS[1] as LinkGroup
     const sections = subscriptionGroup.links.map(l => l.section)
     expect(sections).toEqual([
       undefined,                                    // 청약홈
       '분양', '분양', '분양', '분양',
       '임대 청약', '임대 청약',
-      '공공임대 입주', '공공임대 입주', '공공임대 입주',
     ])
   })
 })

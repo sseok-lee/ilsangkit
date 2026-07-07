@@ -13,8 +13,6 @@ Express 5 라우트 핸들러. 각 파일은 도메인별 엔드포인트 그룹
 | `facilities.ts` | `/api/facilities` — 15개 시설 카테고리 목록/상세/검색 |
 | `guides.ts` | `/api/guides` — 카테고리/지역 가이드 콘텐츠 |
 | `meta.ts` | `/api/meta` — 카테고리/지역 메타, 지역별 통계 |
-| `publicRental.ts` | `/api/public-rental` — 공공임대 매물 목록/상세 |
-| `publicRentalAnnouncement.ts` | `/api/public-rental-announcement` — 공공임대 공고 목록/상세 |
 | `realEstate.ts` | `/api/real-estate` — 부동산 거래/건물 목록, 상세, 시계열 |
 | `sitemap.ts` | `/api/sitemap` — 사이트맵 청크, 총 URL 수 |
 | `subscription.ts` | `/api/subscription` — 청약 목록/상세, 공급 유형 분류 |

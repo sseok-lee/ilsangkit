@@ -152,20 +152,13 @@ export const SUBSCRIPTION_DATA_SOURCE: DataSourceInfo = {
   url: 'https://www.applyhome.co.kr',
 }
 
-export const PUBLIC_RENTAL_DATA_SOURCE: DataSourceInfo = {
-  datasetName: 'LH 임대주택 공급정보 / SH 공공임대 공고',
-  provider: '한국토지주택공사(LH) · 서울주택도시공사(SH)',
-  url: 'https://www.lh.or.kr',
-  // kogl: TBD — LH/SH 공공누리 유형 확인 후 채워주세요
-}
-
 export const AUCTION_DATA_SOURCE: DataSourceInfo = {
   datasetName: '차세대 온비드 부동산 물건목록 조회서비스',
   provider: '한국자산관리공사',
   url: 'https://www.data.go.kr/data/15157207/openapi.do',
 }
 
-export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'public-rental' | 'auction'
+export type DataSourceDomain = 'facility' | 'real-estate' | 'subscription' | 'auction'
 
 /**
  * Google Dataset structured data 의 description 규격(50~5000자)을 보장한다.
@@ -190,8 +183,6 @@ export function resolveDataSource(input: {
       return REAL_ESTATE_DATA_SOURCE
     case 'subscription':
       return SUBSCRIPTION_DATA_SOURCE
-    case 'public-rental':
-      return PUBLIC_RENTAL_DATA_SOURCE
     case 'auction':
       return AUCTION_DATA_SOURCE
     default:

@@ -33,12 +33,11 @@ export const GUIDE_CATEGORIES = [
   'apt-sale',
   'apt-rent',
   'subscription',
-  'public-rental',
 ] as const;
 
 export type GuideCategory = (typeof GUIDE_CATEGORIES)[number];
 
-const REAL_ESTATE_LIKE: readonly GuideCategory[] = ['apt-sale', 'apt-rent', 'subscription', 'public-rental'];
+const REAL_ESTATE_LIKE: readonly GuideCategory[] = ['apt-sale', 'apt-rent', 'subscription'];
 
 export const CATEGORY_LABELS: Record<GuideCategory, string> = {
   toilet: '공공화장실',
@@ -59,7 +58,6 @@ export const CATEGORY_LABELS: Record<GuideCategory, string> = {
   'apt-sale': '아파트 매매',
   'apt-rent': '아파트 전월세',
   subscription: '아파트 청약',
-  'public-rental': '공공임대',
 };
 
 export function isGuideCategory(v: string): v is GuideCategory {

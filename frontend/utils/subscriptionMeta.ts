@@ -12,17 +12,6 @@ export interface SubscriptionTypeMeta {
   rentType?: string
   group?: RentGroup
   dataSource?: RentDataSource
-  rentalTypeCode?: string
-}
-
-export type LhRentalTypeKey = 'buy-lease' | 'charter'
-
-export interface LhRentalTypeMeta {
-  label: string
-  icon: string
-  iconImg?: string
-  description: string
-  rentalTypeCode: '매입임대' | '전세임대'
 }
 
 export const SALE_TYPES: Record<string, SubscriptionTypeMeta> = {
@@ -56,8 +45,6 @@ export const SALE_TYPES: Record<string, SubscriptionTypeMeta> = {
   },
 }
 
-// "공공임대 청약" / "공공지원 민간임대" — 헤더 메뉴의 /public-rental(공공임대 입주, 자격 기반 수시 신청)와
-// 어휘 충돌을 피하려 페이지 컨텍스트에 맞게 명확히 구분.
 export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
   public: {
     label: '공공임대 청약',
@@ -77,23 +64,6 @@ export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
     sourceType: 'PRIVATE_RENT',
     group: 'apply',
     dataSource: 'applyhome',
-  },
-}
-
-export const LH_RENTAL_TYPES: Record<LhRentalTypeKey, LhRentalTypeMeta> = {
-  'buy-lease': {
-    label: '매입임대',
-    icon: 'apartment',
-    iconImg: 'rent',
-    description: '공공기관이 기존 주택을 매입해 시세보다 저렴하게 재임대하는 매입임대 매물입니다. 청약통장 없이 소득·자산 기준 충족 시 수시 신청 가능합니다.',
-    rentalTypeCode: '매입임대',
-  },
-  charter: {
-    label: '전세임대',
-    icon: 'key',
-    iconImg: 'rent',
-    description: '공공기관이 전세보증금을 대신 지원하는 전세임대 매물입니다. 월세 부담 없이 기존 주택에 거주할 수 있으며 소득 기준 충족 시 신청 가능합니다.',
-    rentalTypeCode: '전세임대',
   },
 }
 

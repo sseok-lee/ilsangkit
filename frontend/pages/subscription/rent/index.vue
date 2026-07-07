@@ -3,7 +3,7 @@
     <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
       <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">임대 청약</h1>
-        <p class="mt-2 text-slate-500 text-sm">청약통장으로 접수하는 공공임대 청약과 공공지원 민간임대 청약 일정을 안내합니다. (자격 기반 수시 신청인 LH 매입·전세임대는 <NuxtLink to="/public-rental" class="text-amber-600 hover:underline">공공임대 입주</NuxtLink>에서 확인하세요.)</p>
+        <p class="mt-2 text-slate-500 text-sm">청약통장으로 접수하는 공공임대 청약과 공공지원 민간임대 청약 일정을 안내합니다.</p>
       </div>
     </div>
 
