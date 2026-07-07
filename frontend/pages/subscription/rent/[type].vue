@@ -31,11 +31,6 @@
         :source-type="typeMeta.sourceType"
         :rent-type="typeMeta.rentType"
       />
-      <PublicRentalListView
-        v-else-if="dataSource === 'lh-myhome'"
-        :rental-type-code="typeMeta.rentalTypeCode"
-      />
-
       <!-- 데이터 출처 -->
       <DataSourceSection domain="subscription" />
     </main>
