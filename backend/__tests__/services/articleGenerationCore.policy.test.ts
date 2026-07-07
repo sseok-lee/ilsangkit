@@ -13,6 +13,7 @@ import OpenAI from 'openai';
 import {
   POLICY_FOCUS_CATEGORIES,
   formatPolicyContext,
+  formatApproveDate,
   selectPolicyCandidate,
   generateArticleMeta,
 } from '../../src/services/articleGenerationCore.js';
@@ -39,12 +40,27 @@ describe('POLICY_FOCUS_CATEGORIES', () => {
   });
 });
 
+describe('formatApproveDate', () => {
+  it('MM/DD/YYYY(실제 API) 파싱', () => {
+    expect(formatApproveDate('06/30/2026 14:58:00')).toBe('2026년 6월 30일');
+  });
+  it('YYYYMMDD 파싱', () => {
+    expect(formatApproveDate('20260705')).toBe('2026년 7월 5일');
+  });
+  it('알 수 없는 형식은 빈 문자열', () => {
+    expect(formatApproveDate('')).toBe('');
+  });
+});
+
 describe('formatPolicyContext', () => {
-  it('원문 전문 포함 + 임의생성 금지 계약 + 정책 원문 블록', () => {
+  it('원문 전문 + 발표일 앵커 + 연도 임의생성 금지 규칙', () => {
     const ctx = formatPolicyContext(ITEM);
     expect(ctx).toContain('[정책 원문]');
     expect(ctx).toContain('국토교통부는 특별공급을 확대한다');
     expect(ctx).toContain('임의로 만들지 마세요');
+    expect(ctx).toContain('발표일: 2026년 7월 5일');
+    expect(ctx).toContain('원문에 없는 연도·시행일·유효기간을 지어내지 마세요');
+    expect(ctx).toContain('내년');
     expect(ctx).toContain('정책브리핑');
   });
 });
