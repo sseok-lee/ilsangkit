@@ -30,8 +30,12 @@ const ITEM: PolicyNewsItem = {
 };
 
 describe('POLICY_FOCUS_CATEGORIES', () => {
-  it('부동산·주거·육아 4종', () => {
-    expect(POLICY_FOCUS_CATEGORIES).toEqual(['subscription', 'apt-sale', 'apt-rent', 'childcare']);
+  it('생활정보 전반(부동산·주거·육아 + 의료·환경·교육·생활편의) 13종', () => {
+    expect(POLICY_FOCUS_CATEGORIES).toEqual([
+      'subscription', 'apt-sale', 'apt-rent', 'childcare',
+      'hospital', 'pharmacy', 'park', 'trash',
+      'school', 'library', 'market', 'ev-charger', 'sports',
+    ]);
   });
 });
 
@@ -76,6 +80,15 @@ describe('selectPolicyCandidate', () => {
   it('빈 목록이면 null', async () => {
     expect(await selectPolicyCandidate(openai, [], POLICY_FOCUS_CATEGORIES)).toBeNull();
     expect(mockChatCreate).not.toHaveBeenCalled();
+  });
+
+  it('프롬프트가 시설이 아닌 생활 주제로 묻고 억지 매칭을 금지한다', async () => {
+    mockChatCreate.mockResolvedValue({ choices: [{ message: { content: JSON.stringify({ index: 0, category: 'apt-sale', keyword: '투기과열지구 지정' }) } }] });
+    await selectPolicyCandidate(openai, [ITEM], POLICY_FOCUS_CATEGORIES);
+    const sent = String(mockChatCreate.mock.calls[0][0].messages[0].content);
+    expect(sent).toContain('생활 주제');
+    expect(sent).toContain('억지');
+    expect(sent).toContain('아파트매매·부동산시장'); // 도메인 설명 사용 확인
   });
 });
 
