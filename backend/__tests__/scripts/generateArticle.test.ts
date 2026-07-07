@@ -242,23 +242,13 @@ describe('generateThumbnail — convert 인코딩 실패 브랜치 (회귀 가�
 // 정책 브리핑 트랙
 // ---------------------------------------------------------------------------
 function setupPolicyFetch() {
-  mockFetch.mockImplementation(async () => ({
-    ok: true,
-    json: async () => ({
-      NewsItem: [
-        {
-          NewsItemId: 'P1001',
-          Title: '청약제도 개편안 발표',
-          SubTitle1: '무주택 실수요자 중심',
-          MinisterCode: '1741000',
-          DataContents: '<p>국토교통부는 특별공급을 확대한다. 신혼부부 물량이 늘어난다.</p>'.repeat(3),
-          ApproveDate: '20260705',
-          OriginalUrl: 'https://www.korea.kr/news/policyView.do?newsId=P1001',
-          ThumbnailUrl: '',
-        },
-      ],
-    }),
-  }));
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><response><header><resultCode>0</resultCode><resultMsg>NORMAL_SERVICE</resultMsg></header><body>` +
+    `<NewsItem><NewsItemId>P1001</NewsItemId><GroupingCode>policy</GroupingCode>` +
+    `<Title><![CDATA[청약제도 개편안 발표]]></Title><SubTitle1><![CDATA[무주택 실수요자 중심]]></SubTitle1>` +
+    `<ContentsType>H</ContentsType><DataContents><![CDATA[<p>국토교통부는 특별공급을 확대한다. 신혼부부 물량이 늘어난다.</p>]]></DataContents>` +
+    `<MinisterCode>국토교통부</MinisterCode><OriginalUrl>https://www.korea.kr/news/policyView.do?newsId=P1001</OriginalUrl>` +
+    `<ApproveDate>07/05/2026 10:00:00</ApproveDate><ModifyDate>07/05/2026 10:00:00</ModifyDate><KoglType>1</KoglType></NewsItem></body></response>`;
+  mockFetch.mockImplementation(async () => ({ ok: true, text: async () => xml }));
 }
 
 function setupPolicyGen(candidate: object = { index: 0, category: 'subscription', keyword: '청약 특별공급 개편' }) {

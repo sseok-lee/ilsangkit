@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { XMLParser } from 'fast-xml-parser';
 import {
   toYyyymmdd,
   stripHtml,
@@ -6,22 +7,17 @@ import {
   fetchRecentPolicyNews,
 } from '../../src/services/policyBriefingClient.js';
 
-const SAMPLE = {
-  NewsItem: [
-    {
-      NewsItemId: 'P1001',
-      Title: '청약제도 개편안 발표',
-      SubTitle1: '무주택 실수요자 중심 개편',
-      MinisterCode: '1741000',
-      DataContents: '<p>국토교통부는 청약제도를 <b>개편</b>한다.</p>',
-      ContentsType: 'H',
-      ApproveDate: '20260705',
-      OriginalUrl: 'https://www.korea.kr/news/policyView.do?newsId=P1001',
-      ThumbnailUrl: 'https://www.korea.kr/thumb/P1001.jpg',
-    },
-    { NewsItemId: '', Title: '', DataContents: '' }, // 불완전 → 필터링됨
-  ],
-};
+const XML_OK = `<?xml version="1.0" encoding="UTF-8"?><response><header><resultCode>0</resultCode><resultMsg>NORMAL_SERVICE</resultMsg></header><body>` +
+  `<NewsItem><NewsItemId>148967733</NewsItemId><GroupingCode>policy</GroupingCode>` +
+  `<Title><![CDATA[청약제도 개편안 발표]]></Title><SubTitle1><![CDATA[무주택 실수요자 중심]]></SubTitle1>` +
+  `<ContentsType>H</ContentsType><DataContents><![CDATA[<p>국토교통부는 청약제도를 <b>개편</b>한다.</p>]]></DataContents>` +
+  `<MinisterCode>국토교통부</MinisterCode><OriginalUrl>https://www.korea.kr/news/policyNewsView.do?newsId=148967733</OriginalUrl>` +
+  `<ApproveDate>07/05/2026 10:00:00</ApproveDate><ModifyDate>07/05/2026 10:00:00</ModifyDate><KoglType>1</KoglType></NewsItem>` +
+  `<NewsItem><NewsItemId></NewsItemId><Title></Title><DataContents></DataContents></NewsItem></body></response>`;
+
+const XML_ERR = `<?xml version="1.0"?><response><header><resultCode>98</resultCode><resultMsg>THREE_DAYS_OVER_ERROR</resultMsg></header><body></body></response>`;
+
+const parseXml = (s: string) => new XMLParser({ ignoreAttributes: true, parseTagValue: false, trimValues: true }).parse(s);
 
 describe('toYyyymmdd', () => {
   it('YYYYMMDD로 0패딩 포맷', () => {
@@ -36,18 +32,18 @@ describe('stripHtml', () => {
 });
 
 describe('parsePolicyResponse', () => {
-  it('필드 매핑 + HTML 제거 + 불완전 항목 필터', () => {
-    const out = parsePolicyResponse(SAMPLE);
+  it('XML 파싱 객체에서 필드 매핑 + HTML 제거 + 불완전 항목 필터', () => {
+    const out = parsePolicyResponse(parseXml(XML_OK));
     expect(out).toHaveLength(1);
     expect(out[0]).toEqual({
-      newsItemId: 'P1001',
+      newsItemId: '148967733',
       title: '청약제도 개편안 발표',
-      subTitle: '무주택 실수요자 중심 개편',
-      ministerCode: '1741000',
+      subTitle: '무주택 실수요자 중심',
+      ministerCode: '국토교통부',
       dataContents: '국토교통부는 청약제도를 개편한다.',
-      approveDate: '20260705',
-      originalUrl: 'https://www.korea.kr/news/policyView.do?newsId=P1001',
-      thumbnailUrl: 'https://www.korea.kr/thumb/P1001.jpg',
+      approveDate: '07/05/2026 10:00:00',
+      originalUrl: 'https://www.korea.kr/news/policyNewsView.do?newsId=148967733',
+      thumbnailUrl: '',
     });
   });
   it('알 수 없는 형태면 빈 배열', () => {
@@ -66,7 +62,7 @@ describe('fetchRecentPolicyNews', () => {
 
   it('키 없으면 빈 배열(fail-soft)', async () => {
     delete process.env.OPENAPI_SERVICE_KEY;
-    const out = await fetchRecentPolicyNews({ startDate: '20260601', endDate: '20260705' });
+    const out = await fetchRecentPolicyNews({ startDate: '20260705', endDate: '20260707' });
     expect(out).toEqual([]);
     expect(mockFetch).not.toHaveBeenCalled();
     process.env.OPENAPI_SERVICE_KEY = 'test-key';
@@ -74,18 +70,22 @@ describe('fetchRecentPolicyNews', () => {
 
   it('HTTP 실패면 빈 배열', async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 500 });
-    const out = await fetchRecentPolicyNews({ startDate: '20260601', endDate: '20260705' });
-    expect(out).toEqual([]);
+    expect(await fetchRecentPolicyNews({ startDate: '20260705', endDate: '20260707' })).toEqual([]);
   });
 
-  it('성공 시 파싱 + startDate/endDate 쿼리 포함', async () => {
-    mockFetch.mockResolvedValue({ ok: true, json: async () => SAMPLE });
-    const out = await fetchRecentPolicyNews({ startDate: '20260601', endDate: '20260705', numOfRows: 50 });
+  it('resultCode!=0(에러 XML)이면 빈 배열', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: async () => XML_ERR });
+    expect(await fetchRecentPolicyNews({ startDate: '20260701', endDate: '20260707' })).toEqual([]);
+  });
+
+  it('성공 XML 파싱 + startDate/endDate 쿼리 포함', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: async () => XML_OK });
+    const out = await fetchRecentPolicyNews({ startDate: '20260705', endDate: '20260707', numOfRows: 100 });
     expect(out).toHaveLength(1);
-    expect(out[0].newsItemId).toBe('P1001');
+    expect(out[0].newsItemId).toBe('148967733');
+    expect(out[0].ministerCode).toBe('국토교통부');
     const calledUrl = String(mockFetch.mock.calls[0][0]);
-    expect(calledUrl).toContain('startDate=20260601');
-    expect(calledUrl).toContain('endDate=20260705');
-    expect(calledUrl).toContain('numOfRows=50');
+    expect(calledUrl).toContain('startDate=20260705');
+    expect(calledUrl).toContain('endDate=20260707');
   });
 });
