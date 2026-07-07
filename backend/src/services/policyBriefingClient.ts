@@ -4,6 +4,7 @@
 // 라이선스: 공공누리 제1유형(출처표시). 인증: OPENAPI_SERVICE_KEY(data.go.kr).
 
 import 'dotenv/config';
+import { XMLParser } from 'fast-xml-parser';
 
 const POLICY_NEWS_ENDPOINT =
   'http://apis.data.go.kr/1371000/policyNewsService/policyNewsList';
@@ -41,13 +42,13 @@ export function stripHtml(s: string): string {
 function pickItemsArray(raw: unknown): Record<string, unknown>[] {
   if (!raw || typeof raw !== 'object') return [];
   const r = raw as Record<string, any>;
+  // XML 파싱 객체: response.body.NewsItem (1건이면 객체)
+  const news = r.response?.body?.NewsItem;
+  if (Array.isArray(news)) return news;
+  if (news) return [news];
+  // 폴백(테스트/기타 형태)
   if (Array.isArray(r.NewsItem)) return r.NewsItem;
   if (r.NewsItem) return [r.NewsItem];
-  const body = r.response?.body ?? r.body;
-  const items = body?.items;
-  if (Array.isArray(items)) return items;
-  if (items?.item) return Array.isArray(items.item) ? items.item : [items.item];
-  if (Array.isArray(r.items)) return r.items;
   return [];
 }
 
@@ -91,21 +92,26 @@ export async function fetchRecentPolicyNews(
   url.searchParams.set('startDate', opts.startDate);
   url.searchParams.set('endDate', opts.endDate);
   url.searchParams.set('pageNo', String(opts.pageNo ?? 1));
-  url.searchParams.set('numOfRows', String(opts.numOfRows ?? 50));
-  url.searchParams.set('type', 'json');
+  url.searchParams.set('numOfRows', String(opts.numOfRows ?? 100));
 
   try {
     const res = await fetch(url.toString(), {
       method: 'GET',
-      headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
       console.warn(`정책뉴스 API 실패: HTTP ${res.status}`);
       return [];
     }
-    const data = (await res.json()) as unknown;
-    return parsePolicyResponse(data);
+    const xml = await res.text();
+    const parsed = new XMLParser({ ignoreAttributes: true, parseTagValue: false, trimValues: true }).parse(xml) as Record<string, any>;
+    const code = String(parsed?.response?.header?.resultCode ?? '');
+    if (code !== '0') {
+      const msg = String(parsed?.response?.header?.resultMsg ?? '');
+      console.warn(`정책뉴스 API 비정상 응답: ${code} ${msg}`);
+      return [];
+    }
+    return parsePolicyResponse(parsed);
   } catch (err) {
     console.warn('정책뉴스 API 에러:', err instanceof Error ? err.message : err);
     return [];
