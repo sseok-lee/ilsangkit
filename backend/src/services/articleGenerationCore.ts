@@ -678,16 +678,29 @@ export const POLICY_CATEGORY_DOMAINS: Partial<Record<GuideCategory, string>> = {
 };
 
 // 뉴스 트랙의 formatResearchContext와 동일 계약이되, 스니펫이 아닌 정책 원문 전문을 근거로 제공.
+// 정책 발표일을 "YYYY년 M월 D일"로. 실제 API는 "MM/DD/YYYY HH:MM:SS", 일부 픽스처는 "YYYYMMDD".
+export function formatApproveDate(raw: string): string {
+  let m = raw.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); // MM/DD/YYYY (실제 API)
+  if (m) return `${m[3]}년 ${Number(m[1])}월 ${Number(m[2])}일`;
+  m = raw.match(/^(\d{4})(\d{2})(\d{2})/); // YYYYMMDD
+  if (m) return `${m[1]}년 ${Number(m[2])}월 ${Number(m[3])}일`;
+  return '';
+}
+
 export function formatPolicyContext(item: PolicyNewsItem): string {
   const sub = item.subTitle ? `부제: ${item.subTitle}\n` : '';
+  const approveDate = formatApproveDate(item.approveDate);
+  const pub = approveDate ? `발표일: ${approveDate}\n` : '';
   return `[정책 원문]
 제목: ${item.title}
-${sub}출처: 대한민국 정책브리핑(korea.kr)
+${sub}${pub}출처: 대한민국 정책브리핑(korea.kr)
 
 ${item.dataContents}
 [/정책 원문]
 
-위 정책 원문에서 확인되는 사실만 사용하세요. 원문에 없는 수치·조건·일정은 임의로 만들지 마세요.`;
+위 정책 원문에서 확인되는 사실만 사용하세요. 원문에 없는 수치·조건·일정은 임의로 만들지 마세요.
+- 날짜·연도는 원문에 근거해서만 쓰고, 원문에 없는 연도·시행일·유효기간을 지어내지 마세요.
+- '오는·올해·내년' 같은 상대 날짜는 위 발표일을 기준으로 해석하세요(예: 발표일이 2026년이면 '내년'은 2027년). 확실하지 않으면 원문 표현을 그대로 쓰세요.`;
 }
 
 export interface PolicyCandidate {
