@@ -38,6 +38,7 @@ export interface AdminArticlePatch {
 export interface AdminGenerateBody {
   count?: number
   category?: string
+  track?: 'news' | 'policy'
 }
 
 export function useAdminArticles() {
