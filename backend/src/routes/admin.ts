@@ -42,8 +42,15 @@ const router = Router();
 // Phase 1(assertGenerationReady): 키 preflight(503) → dist 스크립트 존재확인(500) → 단일-플라이트 락 확보(409).
 // DB 뮤테이션이 전혀 없다 — 성공 반환 시점에 락은 이미 HELD. /regenerate가 이 단계 실패 시 반려를 하지 않는 이유.
 // 이 함수에 도달하기 전 count/category는 이미 Zod로 검증된 값만 전달되어야 한다.
-async function assertGenerationReady(): Promise<string> {
-  if (!process.env.OPENAI_API_KEY || !process.env.NAVER_CLIENT_ID) {
+async function assertGenerationReady(track: 'news' | 'policy' = 'news'): Promise<string> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new AppError(503, '생성 키가 설정되지 않았습니다', 'GENERATION_NOT_CONFIGURED');
+  }
+  if (track === 'policy') {
+    if (!process.env.OPENAPI_SERVICE_KEY) {
+      throw new AppError(503, '정책 생성 키(OPENAPI_SERVICE_KEY)가 설정되지 않았습니다', 'POLICY_API_NOT_CONFIGURED');
+    }
+  } else if (!process.env.NAVER_CLIENT_ID) {
     throw new AppError(503, '생성 키가 설정되지 않았습니다', 'GENERATION_NOT_CONFIGURED');
   }
   const scriptPath = path.resolve(__dirname, '../scripts/generateArticle.js'); // dist 기준(ts 소스 아님)
@@ -57,9 +64,10 @@ async function assertGenerationReady(): Promise<string> {
 
 // Phase 2(spawnGenerated): assertGenerationReady()로 락을 이미 확보한 뒤에만 호출.
 // spawn 호출/인자 구성/안전 옵션은 기존과 동일 — 변경 대상 아님.
-function spawnGenerated(scriptPath: string, count: number, category?: string): void {
+function spawnGenerated(scriptPath: string, count: number, category?: string, track: 'news' | 'policy' = 'news'): void {
   const args = [scriptPath, '--count', String(count)];
   if (category) args.push('--category', category);
+  if (track === 'policy') args.push('--track', 'policy');
   try {
     // 쉘 없이 execPath로 직접 spawn — 문자열 보간/exec 금지, argv 배열만 사용.
     const child = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
@@ -182,10 +190,10 @@ router.delete('/articles/:id', requireAdmin, requireSameOrigin, validate(AdminAr
 // POST /api/admin/articles/generate — 생성 트리거(단일-플라이트 락 + 검증된 안전 spawn)
 router.post('/articles/generate', requireAdmin, requireSameOrigin, adminGenerateRateLimiter, validate(AdminGenerateSchema, 'body'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { count, category } = req.body as { count: number; category?: string };
-    const scriptPath = await assertGenerationReady();
-    spawnGenerated(scriptPath, count, category);
-    res.status(202).json({ success: true, data: { started: true, count, category: category ?? null } });
+    const { count, category, track } = req.body as { count: number; category?: string; track: 'news' | 'policy' };
+    const scriptPath = await assertGenerationReady(track);
+    spawnGenerated(scriptPath, count, category, track);
+    res.status(202).json({ success: true, data: { started: true, count, category: category ?? null, track } });
   })
 );
 

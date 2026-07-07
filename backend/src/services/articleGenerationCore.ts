@@ -9,6 +9,7 @@ import { mkdir, stat, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 
 import prisma from '../lib/prisma.js';
+import type { PolicyNewsItem } from './policyBriefingClient.js';
 
 // ---------------------------------------------------------------------------
 // Categories
@@ -356,6 +357,14 @@ ${researchContext}
 ${dbStats}
 </context>
 
+<title-rules>
+- 25~40자. 독자가 "내 얘기다" 싶게 구체적 대상·변화·이득을 담을 것
+- 무엇이 → 누구에게 → 어떻게 달라지는지가 드러나게
+- 숫자·핵심 변화를 앞에 (예: "3가지", "6개월 내", "이렇게 바뀐다")
+- 금지: 과장어("충격·대박·필독"), 낚시 물음표 남발, 허위 긴급성, 근거 없는 단정
+- 카테고리/지역 키워드를 자연스럽게 포함
+</title-rules>
+
 <section-rules>
 - 총 ${MIN_SECTION_COUNT}~${MAX_SECTION_COUNT}개의 섹션을 주제에 맞게 자유롭게 구성
 - 첫 섹션은 반드시 "핵심 요약" 계열 (예: "핵심 요약", "한눈에 보기")
@@ -366,7 +375,7 @@ ${dbStats}
 
 JSON으로만 응답:
 {
-  "title": "20~40자, 핵심이 드러나는 제목",
+  "title": "25~40자, 구체적이고 눈이 가는 제목 (title-rules 준수)",
   "summary": "50~100자 요약",
   "keywords": "키워드1, 키워드2, 키워드3, 키워드4, 키워드5",
   "sections": [
@@ -636,5 +645,89 @@ export async function getDbStats(category: GuideCategory): Promise<string> {
     return `\n일상킷 DB: ${CATEGORY_LABELS[category]} ${total.toLocaleString('ko-KR')}${unit}`;
   } catch {
     return '';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 정책 브리핑 트랙 — 정책뉴스 원문 전문 기반 생성 앞단
+// ---------------------------------------------------------------------------
+
+// 국가 정책이 실제로 움직이고 독자 관심도 높은 카테고리로 한정(국토부·복지부 중심).
+export const POLICY_FOCUS_CATEGORIES: GuideCategory[] = [
+  'subscription',
+  'apt-sale',
+  'apt-rent',
+  'childcare',
+];
+
+// 뉴스 트랙의 formatResearchContext와 동일 계약이되, 스니펫이 아닌 정책 원문 전문을 근거로 제공.
+export function formatPolicyContext(item: PolicyNewsItem): string {
+  const sub = item.subTitle ? `부제: ${item.subTitle}\n` : '';
+  return `[정책 원문]
+제목: ${item.title}
+${sub}출처: 대한민국 정책브리핑(korea.kr)
+
+${item.dataContents}
+[/정책 원문]
+
+위 정책 원문에서 확인되는 사실만 사용하세요. 원문에 없는 수치·조건·일정은 임의로 만들지 마세요.`;
+}
+
+export interface PolicyCandidate {
+  item: PolicyNewsItem;
+  category: GuideCategory;
+  keyword: string;
+}
+
+// 후보 정책 목록에서 (a) 시민 관심도 높은 1건 (b) 포커스 카테고리 배정 (c) 주제 키워드를 뽑는다.
+// 적합 후보가 없으면 null(억지 생성 방지).
+export async function selectPolicyCandidate(
+  openai: OpenAI,
+  items: PolicyNewsItem[],
+  focusCategories: GuideCategory[]
+): Promise<PolicyCandidate | null> {
+  if (items.length === 0) return null;
+
+  const catList = focusCategories.map((c) => `${c}(${CATEGORY_LABELS[c]})`).join(', ');
+  const listing = items
+    .map((it, i) => `${i}. [${it.title}] ${it.subTitle}\n   ${it.dataContents.slice(0, 200)}`)
+    .join('\n');
+
+  const prompt = `다음은 최근 정부 정책뉴스 후보 ${items.length}건입니다.
+${listing}
+
+아래 카테고리 중 하나에 명확히 해당하고, 시민 관심도가 가장 높은 정책 1건을 고르세요.
+카테고리: ${catList}
+
+규칙:
+- 위 카테고리 중 하나에 명확히 해당하는 정책만 선택
+- 해당하는 정책이 없으면 none
+- keyword는 글 주제가 될 구체적인 2~8단어
+
+JSON으로만 응답: { "index": 0, "category": "subscription", "keyword": "..." } 또는 { "none": true }`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      temperature: 0.3,
+      max_tokens: 200,
+    });
+    const parsed = JSON.parse(completion.choices[0].message.content ?? '{}');
+    if (parsed.none === true) return null;
+
+    const index = Number(parsed.index);
+    const category = String(parsed.category ?? '').trim();
+    const keyword = String(parsed.keyword ?? '').trim();
+
+    if (!Number.isInteger(index) || index < 0 || index >= items.length) return null;
+    if (!isGuideCategory(category) || !focusCategories.includes(category)) return null;
+    if (keyword.length < 2 || keyword.length > 60) return null;
+
+    return { item: items[index], category, keyword };
+  } catch (err) {
+    console.warn('정책 후보 선정 실패:', err instanceof Error ? err.message : err);
+    return null;
   }
 }

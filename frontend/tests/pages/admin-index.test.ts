@@ -305,6 +305,16 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
     expect(wrapper.text()).toContain('생성이 시작되었습니다')
   })
 
+  it('"정책 생성" 클릭 시 generate({track:"policy"})를 호출', async () => {
+    const wrapper = mount(AdminIndexPage)
+    await flushPromises()
+
+    await wrapper.find('[data-testid="generate-policy-button"]').trigger('click')
+    await flushPromises()
+
+    expect(generateMock).toHaveBeenCalledWith({ track: 'policy' })
+  })
+
   it('list() 실패 시 원본 에러 대신 일반 에러 메시지를 보여준다', async () => {
     listMock.mockReset().mockRejectedValueOnce(new Error('DB connection refused at 10.0.0.5'))
     const wrapper = mount(AdminIndexPage)

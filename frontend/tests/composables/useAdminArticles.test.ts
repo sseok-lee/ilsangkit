@@ -91,6 +91,14 @@ describe('useAdminArticles', () => {
     expect(opts).toMatchObject({ method: 'POST', credentials: 'include' });
   });
 
+  it('generate: track=policy를 body로 전달', async () => {
+    vi.mocked($fetch).mockResolvedValueOnce({ success: true, data: { started: true, count: 3, category: null, track: 'policy' } });
+    await useAdminArticles().generate({ track: 'policy' });
+    const [url, opts] = vi.mocked($fetch).mock.calls[0];
+    expect(url).toContain('/api/admin/articles/generate');
+    expect(opts).toMatchObject({ method: 'POST', body: { track: 'policy' }, credentials: 'include' });
+  });
+
   it('regenerate: POST /api/admin/articles/:id/regenerate', async () => {
     vi.mocked($fetch).mockResolvedValueOnce({ success: true, data: { started: true, count: 1, category: 'toilet' } });
     await useAdminArticles().regenerate('a1');

@@ -94,6 +94,7 @@ beforeEach(async () => {
   mockLockUpdateMany.mockResolvedValue({ count: 1 });
   process.env.OPENAI_API_KEY = 'test-openai-key';
   process.env.NAVER_CLIENT_ID = 'test-naver-client';
+  process.env.OPENAPI_SERVICE_KEY = 'test-service-key';
   // adminGenerateRateLimiter는 모듈 싱글톤(라우터 재사용) — 테스트마다 supertest의 loopback IP(127.0.0.1) 카운트를 리셋해
   // 테스트 간 429 누적으로 인한 오염을 방지(전용 리미터의 실제 max=5/시간 로직 자체는 그대로 검증 대상).
   await adminGenerateRateLimiter.resetKey('127.0.0.1');
@@ -222,6 +223,52 @@ describe('POST /api/admin/articles/generate', () => {
     }
     const limited = await request(app).post('/api/admin/articles/generate').set('Origin', ORIGIN).send({ count: 1 });
     expect(limited.status).toBe(429);
+  });
+
+  it('track=policy 지정 시 spawn args에 --track policy 포함', async () => {
+    const res = await request(makeApp())
+      .post('/api/admin/articles/generate')
+      .set('Origin', ORIGIN)
+      .send({ track: 'policy' });
+
+    expect(res.status).toBe(202);
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args).toContain('--track');
+    expect(args[args.indexOf('--track') + 1]).toBe('policy');
+    expect(res.body.data.track).toBe('policy');
+  });
+
+  it('track 미지정 시 기본 news — spawn args에 --track 없음', async () => {
+    const res = await request(makeApp())
+      .post('/api/admin/articles/generate')
+      .set('Origin', ORIGIN)
+      .send({ count: 1 });
+
+    expect(res.status).toBe(202);
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args).not.toContain('--track');
+    expect(res.body.data.track).toBe('news');
+  });
+
+  it('track=policy인데 OPENAPI_SERVICE_KEY 없으면 503 POLICY_API_NOT_CONFIGURED', async () => {
+    const prev = process.env.OPENAPI_SERVICE_KEY;
+    delete process.env.OPENAPI_SERVICE_KEY;
+    const res = await request(makeApp())
+      .post('/api/admin/articles/generate')
+      .set('Origin', ORIGIN)
+      .send({ track: 'policy' });
+
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe('POLICY_API_NOT_CONFIGURED');
+    if (prev !== undefined) process.env.OPENAPI_SERVICE_KEY = prev;
+  });
+
+  it('잘못된 track 값은 422', async () => {
+    const res = await request(makeApp())
+      .post('/api/admin/articles/generate')
+      .set('Origin', ORIGIN)
+      .send({ track: 'garbage' });
+    expect(res.status).toBe(422);
   });
 });
 

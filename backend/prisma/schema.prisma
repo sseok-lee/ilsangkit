@@ -785,6 +785,7 @@ model Article {
   thumbnailUrl String?   @db.VarChar(500)
   keywords     String?   @db.VarChar(500)
   sources      Json?
+  sourceExternalId String? @db.VarChar(100)
   status       String    @default("draft") @db.VarChar(20)
   viewCount    Int       @default(0)
   publishedAt  DateTime?
@@ -795,6 +796,7 @@ model Article {
   @@index([category])
   @@index([slug])
   @@index([articleType])
+  @@index([sourceExternalId])
 }
 
 // 어드민 불투명 세션 — id = sha256(랜덤 토큰). 쿠키엔 raw 토큰, DB엔 해시만.
