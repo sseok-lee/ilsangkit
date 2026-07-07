@@ -25,6 +25,7 @@ export const AdminGenerateSchema = z.object({
     .transform((n) => (Number.isFinite(n) ? Math.min(3, Math.max(1, Math.trunc(n))) : 3))
     .default(3),
   category: z.enum(GUIDE_CATEGORIES).optional(),
+  track: z.enum(['news', 'policy']).default('news'),
 });
 
 // 어드민 가이드 — Guide 모델엔 status enum 없이 published:boolean만 존재(Article과 구분)

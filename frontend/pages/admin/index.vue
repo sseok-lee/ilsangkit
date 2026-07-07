@@ -20,9 +20,19 @@
         data-testid="generate-button"
         :disabled="generating"
         class="px-3 py-2 rounded-md text-sm font-medium bg-primary text-white disabled:opacity-50"
-        @click="onGenerate"
+        @click="onGenerate('news')"
       >
-        {{ generating ? '생성 중...' : '지금 생성' }}
+        {{ generating ? '생성 중...' : '뉴스 생성' }}
+      </button>
+      <button
+        v-if="tab === 'article'"
+        type="button"
+        data-testid="generate-policy-button"
+        :disabled="generating"
+        class="px-3 py-2 rounded-md text-sm font-medium bg-blue-600 text-white disabled:opacity-50"
+        @click="onGenerate('policy')"
+      >
+        {{ generating ? '생성 중...' : '정책 생성' }}
       </button>
     </header>
 
@@ -318,13 +328,15 @@ async function onRegenerate() {
   }
 }
 
-async function onGenerate() {
+async function onGenerate(track: 'news' | 'policy' = 'news') {
   generating.value = true
   error.value = ''
   notice.value = ''
   try {
-    await useAdminArticles().generate()
-    notice.value = '생성이 시작되었습니다. 완료까지 30초~1분 걸릴 수 있으니 잠시 후 목록을 새로고침하세요.'
+    await useAdminArticles().generate({ track })
+    notice.value = track === 'policy'
+      ? '정책 생성이 시작되었습니다. 적합한 신규 정책이 없으면 생성되지 않을 수 있습니다. 잠시 후 목록을 새로고침하세요.'
+      : '생성이 시작되었습니다. 완료까지 30초~1분 걸릴 수 있으니 잠시 후 목록을 새로고침하세요.'
     await load()
   } catch {
     notice.value = ''

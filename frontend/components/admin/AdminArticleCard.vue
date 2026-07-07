@@ -18,6 +18,10 @@
       <div class="flex items-center gap-2 mb-1">
         <span class="text-xs font-medium text-muted">{{ article.category }}</span>
         <span
+          v-if="article.articleType === 'policy-brief'"
+          class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700"
+        >정책</span>
+        <span
           class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold"
           :class="STATUS_CLASS[article.status]"
         >
