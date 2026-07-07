@@ -6,7 +6,7 @@
 ## Purpose
 Express 5 + TypeScript (ESM) API 서버. MySQL 8을 Prisma ORM으로 조작하며 공공데이터 API를 동기화해 프론트엔드에 서빙한다. 포트 8000. 프로세스 매니저는 PM2 (`ilsangkit-backend`).
 
-**Key Domains** (updated 2026-05): 시설(15개), 부동산(6종), 공공임대(`publicRental`), 공공임대공고(`publicRentalAnnouncement`), 청약(`subscription`), 대중교통(`transit`), 색인제출(`indexNow`), 리뷰/가이드/지역 메타.
+**Key Domains** (updated 2026-05): 시설(15개), 부동산(6종), 청약(`subscription`), 대중교통(`transit`), 색인제출(`indexNow`), 리뷰/가이드/지역 메타.
 
 ## Key Files
 | File | Description |
