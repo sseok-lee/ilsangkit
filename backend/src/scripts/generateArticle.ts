@@ -23,14 +23,23 @@ import {
   generateArticle,
   generateThumbnail,
   getDbStats,
+  formatPolicyContext,
+  selectPolicyCandidate,
+  POLICY_FOCUS_CATEGORIES,
 } from '../services/articleGenerationCore.js';
 import type { GuideCategory, NaverSearchItem } from '../services/articleGenerationCore.js';
+import {
+  fetchRecentPolicyNews,
+  toYyyymmdd,
+} from '../services/policyBriefingClient.js';
+import type { PolicyNewsItem } from '../services/policyBriefingClient.js';
 
 export interface ArticleCliOptions {
   category?: GuideCategory;
   topic?: string;
   count: number;
   dryRun: boolean;
+  track: 'news' | 'policy';
 }
 
 export function parseArticleCliOptions(args: string[] = process.argv.slice(2)): ArticleCliOptions {
@@ -44,11 +53,14 @@ export function parseArticleCliOptions(args: string[] = process.argv.slice(2)): 
   }
   const rawCount = Number(read('--count') ?? '3');
   const count = Number.isFinite(rawCount) ? Math.min(3, Math.max(1, Math.trunc(rawCount))) : 3;
+  const rawTrack = read('--track');
+  const track: 'news' | 'policy' = rawTrack === 'policy' ? 'policy' : 'news';
   return {
     category: rawCategory as GuideCategory | undefined,
     topic: read('--topic'),
     count,
     dryRun: args.includes('--dry-run'),
+    track,
   };
 }
 
@@ -192,6 +204,94 @@ export async function generateOneArticle(options: { category?: GuideCategory; to
   return { id: created.id, slug: created.slug, title: article.title, category, keyword };
 }
 
+// 이미 쓴 정책 제외 — Article.sourceExternalId 기준.
+export async function filterUnseenPolicyItems(items: PolicyNewsItem[]): Promise<PolicyNewsItem[]> {
+  const ids = items.map((it) => it.newsItemId).filter(Boolean);
+  if (ids.length === 0) return [];
+  const seen = await prisma.article.findMany({
+    where: { sourceExternalId: { in: ids } },
+    select: { sourceExternalId: true },
+  });
+  const seenSet = new Set(seen.map((r) => r.sourceExternalId));
+  return items.filter((it) => !seenSet.has(it.newsItemId));
+}
+
+// 정책 브리핑 트랙: 정책뉴스 원문 전문 1건을 골라 그 근거로 draft 생성.
+// 적합 후보가 없으면 null(무생성). 뉴스 트랙과 달리 키워드 발굴 대신 정책 항목이 주제가 된다.
+export async function generateOnePolicyArticle(
+  options: { lookbackDays?: number } = {}
+): Promise<GeneratedArticle | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY 환경변수가 필요합니다');
+  const openai = new OpenAI({ apiKey });
+
+  const lookbackDays = options.lookbackDays ?? 10;
+  const end = new Date();
+  const start = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
+  const raw = await fetchRecentPolicyNews({
+    startDate: toYyyymmdd(start),
+    endDate: toYyyymmdd(end),
+    numOfRows: 50,
+  });
+  const unseen = await filterUnseenPolicyItems(raw);
+  const candidate = await selectPolicyCandidate(openai, unseen, POLICY_FOCUS_CATEGORIES);
+  if (!candidate) {
+    console.log('[policy] 적합한 신규 정책 후보 없음 — 무생성 종료');
+    return null;
+  }
+  const { item, category, keyword } = candidate;
+  console.log(`[policy] 선정: "${item.title}" → ${category} / "${keyword}"`);
+
+  const researchContext = formatPolicyContext(item);
+  const dbStats = await getDbStats(category);
+  const article = await generateArticle(openai, category, keyword, researchContext, dbStats);
+
+  const slug = await generateUniqueArticleSlug(category);
+  const cta = getArticleCta(category);
+  if (!article.content.includes(cta)) {
+    article.content = `${article.content.trimEnd()}\n\n${cta}\n`;
+  }
+  const links = await buildArticleInternalLinks(category, slug);
+  article.content = `${article.content.trimEnd()}\n\n${links}\n`;
+
+  // 출처 표기(공공누리 제1유형) — 항상 삽입.
+  const attribution = `> 출처: 대한민국 정책브리핑(korea.kr)${
+    item.originalUrl ? ` · [원문 보기](${item.originalUrl})` : ''
+  }`;
+  article.content = `${article.content.trimEnd()}\n\n${attribution}\n`;
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const uploadDir = process.env.UPLOAD_DIR || path.resolve(__dirname, '../../../assets/images');
+  const imagePath = path.join(uploadDir, 'articles', `${slug}.webp`);
+
+  const imageOk = await generateThumbnail(openai, category, article.title, imagePath);
+  if (!imageOk) {
+    throw new Error(`썸네일 생성 실패 — 오늘의 이슈(정책) 등록 중단 (category: ${category})`);
+  }
+  const thumbnailUrl = `/api/images/articles/${slug}.webp`;
+
+  const created = await prisma.article.create({
+    data: {
+      slug,
+      title: article.title,
+      summary: article.summary,
+      content: article.content,
+      category,
+      articleType: 'policy-brief',
+      keywords: article.keywords || null,
+      thumbnailUrl,
+      sources: [{ title: item.title, url: item.originalUrl }],
+      sourceExternalId: item.newsItemId,
+      status: 'draft',
+      publishedAt: null,
+    },
+  });
+  console.log(`[policy] draft 저장: id=${created.id}, slug=${created.slug}`);
+
+  return { id: created.id, slug: created.slug, title: article.title, category, keyword };
+}
+
 export async function generateArticles(count: number, opts: { category?: GuideCategory } = {}): Promise<GeneratedArticle[]> {
   const out: GeneratedArticle[] = [];
   for (let i = 0; i < count; i += 1) {
@@ -206,6 +306,10 @@ export async function generateArticles(count: number, opts: { category?: GuideCa
 
 async function main(): Promise<void> {
   const options = parseArticleCliOptions();
+  if (options.track === 'policy') {
+    await generateOnePolicyArticle();
+    return;
+  }
   if (options.dryRun) {
     const category = options.category ?? pickRandomCategory();
     console.log(JSON.stringify({ category, categoryLabel: CATEGORY_LABELS[category], count: options.count, dryRun: true }, null, 2));
