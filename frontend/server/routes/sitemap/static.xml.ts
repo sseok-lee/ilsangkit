@@ -112,10 +112,6 @@ export default defineEventHandler(async (event) => {
   urls.push({ loc: `${SITE_URL}/subscription/rent`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
   urls.push({ loc: `${SITE_URL}/subscription/rent/public`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
   urls.push({ loc: `${SITE_URL}/subscription/rent/private`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/public-rental`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
-  urls.push({ loc: `${SITE_URL}/public-rental/announcements`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
-  urls.push({ loc: `${SITE_URL}/public-rental/buy-lease`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/public-rental/charter`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
 
   // 가이드 목록 페이지 — 가이드 추가 빈도 따라감 (today 유지: 신규 가이드가 자주 올라옴)
   urls.push({ loc: `${SITE_URL}/guide`, lastmod: today, changefreq: 'daily', priority: 0.8 })

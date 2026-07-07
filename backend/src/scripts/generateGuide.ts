@@ -97,21 +97,18 @@ const RELATED: Record<GuideCategory, GuideCategory[]> = {
   'apt-sale': ['apt-rent', 'subscription'],
   'apt-rent': ['apt-sale', 'subscription'],
   subscription: ['apt-sale', 'apt-rent'],
-  'public-rental': ['subscription', 'apt-rent'],
 };
 
 function getHubUrl(c: GuideCategory): string {
   if (c === 'apt-sale') return '/real-estate/apt-sale';
   if (c === 'apt-rent') return '/real-estate/apt-rent';
   if (c === 'subscription') return '/real-estate/subscription';
-  if (c === 'public-rental') return '/public-rental';
   return `/${c}`;
 }
 
 function getCta(c: GuideCategory): string {
   const label = CATEGORY_LABELS[c];
   if (c === 'subscription') return `일상킷에서 ${label} 정보를 바로 확인해보세요!`;
-  if (c === 'public-rental') return `일상킷에서 ${label} 매물을 바로 확인해보세요!`;
   if (isRealEstateLike(c)) return `일상킷에서 ${label} 실거래가를 바로 확인해보세요!`;
   return `일상킷에서 내 주변 ${label} 정보를 바로 확인해보세요!`;
 }

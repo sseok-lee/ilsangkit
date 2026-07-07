@@ -4,7 +4,7 @@
 # frontend/pages
 
 ## Purpose
-Nuxt 파일시스템 라우팅. 정적 페이지(`about`, `faq`, `privacy`, `terms`, `contact`)와 동적 라우트(`[category]`, `[city]/[district]`, `real-estate/*`, `public-rental/*`, `subscription/*`, `guide/[slug]`) 양쪽을 포함한다.
+Nuxt 파일시스템 라우팅. 정적 페이지(`about`, `faq`, `privacy`, `terms`, `contact`)와 동적 라우트(`[category]`, `[city]/[district]`, `real-estate/*`, `subscription/*`, `guide/[slug]`) 양쪽을 포함한다.
 
 ## Key Files
 | File | Description |
@@ -21,7 +21,6 @@ Nuxt 파일시스템 라우팅. 정적 페이지(`about`, `faq`, `privacy`, `ter
 | `[category]/` | 카테고리 허브/상세 `/[category]/`, `/[category]/[id]` (see `[category]/AGENTS.md`) |
 | `[city]/` | 지역 허브 `/[city]/`, `/[city]/[district]/...` (see `[city]/AGENTS.md`) |
 | `guide/` | 가이드 목록/상세 (see `guide/AGENTS.md`) |
-| `public-rental/` | 공공임대주택 섹션 (see `public-rental/AGENTS.md`) |
 | `real-estate/` | 부동산 섹션 (see `real-estate/AGENTS.md`) |
 | `subscription/` | 청약 섹션 (see `subscription/AGENTS.md`) |
 | `trash/` | 쓰레기 배출 상세 (see `trash/AGENTS.md`) |

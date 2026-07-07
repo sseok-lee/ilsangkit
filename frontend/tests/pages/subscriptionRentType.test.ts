@@ -14,7 +14,6 @@ vi.mock('~/composables/useFacilityMeta', () => ({
 const stubs = {
   NuxtLink: { template: '<a><slot /></a>', props: ['to'] },
   SubscriptionListView: { template: '<div data-test-pane="applyhome">applyhome pane</div>', props: ['sourceType', 'rentType'] },
-  PublicRentalListView: { template: '<div data-test-pane="lh-myhome">{{ rentalTypeCode }}</div>', props: ['rentalTypeCode'] },
   DataSourceSection: { template: '<div />' },
 }
 
@@ -34,7 +33,6 @@ describe('subscription/rent/[type].vue dataSource branching', () => {
   it('renders SubscriptionListView for applyhome (public)', () => {
     const wrapper = mountWith('public')
     expect(wrapper.find('[data-test-pane="applyhome"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test-pane="lh-myhome"]').exists()).toBe(false)
   })
 
   it('throws createError 404 for buy-lease (now redirected via server middleware, not handled here)', () => {

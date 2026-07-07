@@ -4,7 +4,6 @@ import {
   FACILITY_DATA_SOURCE,
   REAL_ESTATE_DATA_SOURCE,
   SUBSCRIPTION_DATA_SOURCE,
-  PUBLIC_RENTAL_DATA_SOURCE,
 } from './dataSource'
 
 describe('resolveDataSource', () => {
@@ -28,9 +27,5 @@ describe('resolveDataSource', () => {
 
   it('subscription 도메인은 청약 출처를 반환한다', () => {
     expect(resolveDataSource({ domain: 'subscription' })).toBe(SUBSCRIPTION_DATA_SOURCE)
-  })
-
-  it('public-rental 도메인은 공공임대 출처를 반환한다', () => {
-    expect(resolveDataSource({ domain: 'public-rental' })).toBe(PUBLIC_RENTAL_DATA_SOURCE)
   })
 })

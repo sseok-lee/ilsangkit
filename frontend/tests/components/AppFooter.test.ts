@@ -113,22 +113,6 @@ describe('AppFooter', () => {
       expect(hrefs).toContain('/subscription')
     })
 
-    it('should have link to LH rental hub', () => {
-      const wrapper = mount(AppFooter, {
-        global: {
-          stubs: {
-            NuxtLink: {
-              template: '<a :href="to"><slot /></a>',
-              props: ['to'],
-            },
-          },
-        },
-      })
-
-      const links = wrapper.findAll('a')
-      const hrefs = links.map((l) => l.attributes('href'))
-      expect(hrefs).toContain('/public-rental')
-    })
   })
 
   describe('Styling', () => {
