@@ -225,13 +225,13 @@ export async function generateOnePolicyArticle(
   if (!apiKey) throw new Error('OPENAI_API_KEY 환경변수가 필요합니다');
   const openai = new OpenAI({ apiKey });
 
-  const lookbackDays = options.lookbackDays ?? 10;
+  const lookbackDays = options.lookbackDays ?? 3;
   const end = new Date();
   const start = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
   const raw = await fetchRecentPolicyNews({
     startDate: toYyyymmdd(start),
     endDate: toYyyymmdd(end),
-    numOfRows: 50,
+    numOfRows: 100,
   });
   const unseen = await filterUnseenPolicyItems(raw);
   const candidate = await selectPolicyCandidate(openai, unseen, POLICY_FOCUS_CATEGORIES);
