@@ -117,3 +117,31 @@ export async function fetchRecentPolicyNews(
     return [];
   }
 }
+
+// data.go.kr 정책뉴스 API는 요청당 날짜범위 3일 상한(THREE_DAYS_OVER_ERROR).
+// 3일짜리 창을 뒤로 밀며 여러 번 조회해 ~totalDays 범위를 커버하고 newsItemId로 중복 제거.
+export async function fetchRecentPolicyWindows(
+  totalDays = 9,
+  windowDays = 3,
+  numOfRows = 100
+): Promise<PolicyNewsItem[]> {
+  const windows = Math.max(1, Math.ceil(totalDays / windowDays));
+  const seen = new Set<string>();
+  const out: PolicyNewsItem[] = [];
+  for (let w = 0; w < windows; w += 1) {
+    const end = new Date(Date.now() - w * windowDays * 24 * 60 * 60 * 1000);
+    const start = new Date(end.getTime() - windowDays * 24 * 60 * 60 * 1000);
+    const items = await fetchRecentPolicyNews({
+      startDate: toYyyymmdd(start),
+      endDate: toYyyymmdd(end),
+      numOfRows,
+    });
+    for (const it of items) {
+      if (!seen.has(it.newsItemId)) {
+        seen.add(it.newsItemId);
+        out.push(it);
+      }
+    }
+  }
+  return out;
+}
