@@ -1092,36 +1092,6 @@ function getRentTypeParam(): string | undefined {
   return undefined
 }
 
-async function reloadStats() {
-  if (!buildingName.value) return
-  statsLoading.value = true
-  try {
-    const { bjdCode, building } = await resolveBuildingContext()
-    resolvedBjdCode.value = bjdCode
-    if (building) {
-      buildingInfo.value = building
-    }
-
-    if (!bjdCode) {
-      monthly.value = []
-      summary.value = null
-      return
-    }
-
-    const res = await getTransactionStats(
-      apiSlug.value, bjdCode, buildingName.value, selectedMonths.value ?? undefined,
-      selectedArea.value ?? undefined,
-      getRentTypeParam()
-    )
-    monthly.value = res.monthly
-    summary.value = res.summary
-  } catch (e) {
-    console.error('Failed to load stats:', e)
-  } finally {
-    statsLoading.value = false
-  }
-}
-
 async function loadAreaGroups() {
   const { bjdCode } = await resolveBuildingContext()
   resolvedBjdCode.value = bjdCode
