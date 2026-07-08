@@ -79,7 +79,10 @@ import {
   buildArticleInternalLinks,
   generateOneArticle,
   generateOnePolicyArticle,
+  TODAY_ISSUE_NEWS_CATEGORIES,
+  filterPolicyByRealEstate,
 } from '../../src/scripts/generateArticle.js';
+import type { PolicyNewsItem } from '../../src/services/policyBriefingClient.js';
 // generateThumbnail is NOT re-exported from generateArticle.ts — import from the shared core.
 import { generateThumbnail } from '../../src/services/articleGenerationCore.js';
 
@@ -103,6 +106,31 @@ function setupGen() {
     return { choices: [{ message: { content: SECTION_BODY } }] };
   });
 }
+
+describe('TODAY_ISSUE_NEWS_CATEGORIES', () => {
+  it('뉴스 트랙 랜덤 생성은 부동산·청약 3종에서만', () => {
+    expect(TODAY_ISSUE_NEWS_CATEGORIES).toEqual(['subscription', 'apt-sale', 'apt-rent']);
+  });
+});
+
+describe('filterPolicyByRealEstate', () => {
+  const mk = (o: Partial<PolicyNewsItem>): PolicyNewsItem => ({
+    newsItemId: 'x', title: '', subTitle: '', ministerCode: '', dataContents: '',
+    approveDate: '', originalUrl: '', thumbnailUrl: '', ...o,
+  });
+  it('부동산 부처(국토부·금융위 등)는 통과', () => {
+    const out = filterPolicyByRealEstate([mk({ ministerCode: '국토교통부', title: '자율주행 가이드라인' })]);
+    expect(out).toHaveLength(1);
+  });
+  it('부동산 키워드(청약 등)는 부처 무관하게 통과', () => {
+    const out = filterPolicyByRealEstate([mk({ ministerCode: '문화체육관광부', title: '청약제도 개편' })]);
+    expect(out).toHaveLength(1);
+  });
+  it('부동산과 무관하면 제외', () => {
+    const out = filterPolicyByRealEstate([mk({ ministerCode: '과학기술정보통신부', title: 'AI반도체 지원센터', dataContents: '반도체 생태계' })]);
+    expect(out).toHaveLength(0);
+  });
+});
 
 describe('parseArticleCliOptions', () => {
   it('count를 1..3으로 clamp하고 파싱', () => {
