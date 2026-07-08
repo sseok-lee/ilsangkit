@@ -32,6 +32,42 @@ const NEW_HUB = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/
 // City hub slugs — 3-segment URLs ending with a city slug are new city hub pages, not legacy detail
 const CITY_SLUGS_SET = new Set(Object.values(CITY_SLUGS))
 
+/**
+ * 화성·부천 7개 신설 일반구의 slug 드리프트로 과거 색인·IndexNow 에 유출된 "깨진" 지역 슬러그를
+ * 정본으로 매핑한다. 두 종류의 깨진 형태가 존재:
+ *   - 로마자-한글 혼합 `hwaseong-효행구` (구 Region.slug / syncRegion split 폴백)
+ *   - 전-한글 `화성시-효행구` (backend lib toDistrictSlug 폴백 → IndexNow 제출본)
+ * 근본 원인(맵 동기화)은 별도 수정했고, 이 맵은 이미 밖에 나간 URL 을 404 대신 301 로 구제한다.
+ */
+const BROKEN_DISTRICT_REDIRECTS: Record<string, string> = {
+  'hwaseong-효행구': 'hwaseong-hyohaeng', '화성시-효행구': 'hwaseong-hyohaeng',
+  'hwaseong-동탄구': 'hwaseong-dongtan', '화성시-동탄구': 'hwaseong-dongtan',
+  'hwaseong-만세구': 'hwaseong-manse', '화성시-만세구': 'hwaseong-manse',
+  'hwaseong-병점구': 'hwaseong-byeongjeom', '화성시-병점구': 'hwaseong-byeongjeom',
+  'bucheon-소사구': 'bucheon-sosa', '부천시-소사구': 'bucheon-sosa',
+  'bucheon-오정구': 'bucheon-ojeong', '부천시-오정구': 'bucheon-ojeong',
+  'bucheon-원미구': 'bucheon-wonmi', '부천시-원미구': 'bucheon-wonmi',
+}
+
+/**
+ * /real-estate/{type}/{city}/{district}[/{building}] 의 district 세그먼트가 깨진 슬러그면
+ * 정본 슬러그로 치환한 경로를 반환. 해당 없으면 null. (pathname 은 인코딩 여부 무관하게 디코드해 매칭)
+ */
+export function resolveBrokenDistrictRedirect(pathname: string): string | null {
+  const segments = pathname.split('/') // ['', 'real-estate', type, city, district, ...building]
+  if (segments[1] !== 'real-estate' || segments.length < 5 || !segments[4]) return null
+  let districtDecoded: string
+  try {
+    districtDecoded = decodeURIComponent(segments[4])
+  } catch {
+    districtDecoded = segments[4]
+  }
+  const canonical = BROKEN_DISTRICT_REDIRECTS[districtDecoded]
+  if (!canonical) return null
+  segments[4] = canonical
+  return segments.join('/')
+}
+
 type PropertyType = 'apt' | 'villa' | 'offitel'
 type TransactionMode = 'sale' | 'rent'
 
@@ -180,6 +216,14 @@ export default defineEventHandler(async (event) => {
     pathname.startsWith('/api/')
   ) {
     return
+  }
+
+  // 과거 색인·IndexNow 에 유출된 깨진 지역 슬러그(화성/부천 신설 구)를 정본으로 301.
+  // NEW_HUB/NEW_DETAIL 패턴에도 매치되므로 아래 체인-방지 pass-through 보다 먼저 처리해야 한다.
+  const brokenRedirect = resolveBrokenDistrictRedirect(pathname)
+  if (brokenRedirect) {
+    setHeader(event, 'cache-control', 'public, max-age=300')
+    return sendRedirect(event, brokenRedirect + url.search, 301)
   }
 
   // 신규 URL은 미들웨어가 절대 가로채지 않는다 (체인 방지)
