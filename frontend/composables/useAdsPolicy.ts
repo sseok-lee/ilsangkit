@@ -1,4 +1,4 @@
-import { computed, type ComputedRef } from 'vue'
+import { computed, type ComputedRef, type Ref } from 'vue'
 
 // 광고를 발화하면 안 되는 비인간/자동화 UA. 'Headless'는 구·신 헤드리스 모두 커버.
 const BOT_UA = /Headless|playwright|puppeteer|lighthouse|bot|crawl|spider|slurp|bingbot|googlebot|yeti|yandex|amazonbot|bytespider|ahrefs|semrush/i
@@ -35,10 +35,24 @@ export function suppressAds(value: boolean): void {
   useState<boolean>('ads:suppressed', () => false).value = value
 }
 
+/** 애드블록(스크립트 로드 실패) 감지 시 호출. 넘겨받은 blocked ref 를 true 로 + 세션 저장.
+ *  ref 를 인자로 받아 async 콜백(plugin onerror/timeout)에서 useState 문맥 없이 쓸 수 있게 한다. */
+export function markAdsBlocked(blocked: Ref<boolean>): void {
+  blocked.value = true
+  try {
+    sessionStorage.setItem('ads:blocked', '1')
+  } catch {
+    // SSR(sessionStorage 미정의)·프라이빗 모드 등 — 무시(런타임 state 만으로 동작)
+  }
+}
+
 /** AdBanner용 — 3요소 전부. shouldServeAds는 suppression을 추적하는 reactive. */
 export function useAdsPolicy(): { shouldServeAds: ComputedRef<boolean> } {
   const adsEnabled = useAdsEnabled()
   const suppressed = useState<boolean>('ads:suppressed', () => false)
-  const shouldServeAds = computed(() => adsEnabled && !isLikelyBot() && !suppressed.value)
+  const blocked = useState<boolean>('ads:blocked', () => false)
+  const shouldServeAds = computed(
+    () => adsEnabled && !isLikelyBot() && !suppressed.value && !blocked.value
+  )
   return { shouldServeAds }
 }

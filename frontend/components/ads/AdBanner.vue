@@ -32,10 +32,10 @@ import { useAdsPolicy } from '~/composables/useAdsPolicy'
 
 const AD_CLIENT = 'ca-pub-2088264360250020'
 const adTest = import.meta.dev ? 'on' : undefined
-// SPA 네비게이션 시 AdSense 가 페이지 한도 초과로 응답을 보류하면
-// data-ad-status 가 영영 설정되지 않아 빈 박스가 그대로 남는다.
-// 이 시간 안에 status 가 안 잡히면 부모를 collapse 한다.
-const STATUS_TIMEOUT_MS = 4000
+// SPA 네비게이션/애드블록 등으로 AdSense 가 data-ad-status 를 끝내 설정하지 않으면
+// 빈 박스가 남는다. 이 시간 안에 status 가 안 잡히면 부모를 collapse 한다.
+// 늦게 filled 되면 살아있는 MutationObserver 가 handleStatus 에서 복구한다(광고 무손실).
+const STATUS_TIMEOUT_MS = 1500
 // 짧은 간격 연속 네비게이션(봇/빠른 클릭) 시 광고 재요청을 억제 — 인위적 임프레션 방지.
 const MIN_NAV_INTERVAL_MS = 1500
 let lastNavAt = 0
@@ -148,8 +148,8 @@ function handleStatus(status: string) {
 const MAX_INS_WAIT_TICKS = 10
 let statusWatchGeneration = 0
 
-// status 가 4s 안에 안 잡히면 일단 collapse(빈 박스 방지)하되, observer 는 계속 살려둬
-// AdSense 가 4s 이후 늦게 filled 하면 handleStatus 에서 collapse 를 복구한다.
+// status 가 1.5s 안에 안 잡히면 일단 collapse(빈 박스 방지)하되, observer 는 계속 살려둬
+// AdSense 가 1.5s 이후 늦게 filled 하면 handleStatus 에서 collapse 를 복구한다.
 function watchStatus() {
   // onMounted / route watch 는 클라이언트에서만 호출되므로 별도 가드 불필요.
   clearStatusTimeout()
