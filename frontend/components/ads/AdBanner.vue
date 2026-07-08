@@ -148,8 +148,8 @@ function handleStatus(status: string) {
 const MAX_INS_WAIT_TICKS = 10
 let statusWatchGeneration = 0
 
-// status 가 4s 안에 안 잡히면 일단 collapse(빈 박스 방지)하되, observer 는 계속 살려둬
-// AdSense 가 4s 이후 늦게 filled 하면 handleStatus 에서 collapse 를 복구한다.
+// status 가 1.5s 안에 안 잡히면 일단 collapse(빈 박스 방지)하되, observer 는 계속 살려둬
+// AdSense 가 1.5s 이후 늦게 filled 하면 handleStatus 에서 collapse 를 복구한다.
 function watchStatus() {
   // onMounted / route watch 는 클라이언트에서만 호출되므로 별도 가드 불필요.
   clearStatusTimeout()
