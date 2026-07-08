@@ -737,6 +737,51 @@ export function useStructuredData() {
   }
 
   /**
+   * Product 스키마 (공매 물건 상세용)
+   *
+   * 공매 물건은 최저입찰가로 응찰 가능한 판매 대상이므로 Product + Offer 로 표현한다.
+   * 다른 상세 유형(시설=Place, 부동산=Residence, 청약=Event)처럼 본문 엔티티를 선언해
+   * 리치결과·GEO 인용성을 확보한다. null/undefined 필드는 절대 스키마에 넣지 않는다.
+   */
+  function setAuctionListingSchema(options: {
+    address?: string | null
+    usage?: string | null
+    minBidPrc?: number | null
+    appraisalAmt?: number | null
+  }) {
+    const schema: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: options.address || options.usage || '공매 물건',
+    }
+    if (options.usage) schema.category = options.usage
+    // minBidPrc(최저입찰가)가 없으면 Offer 자체를 생략한다.
+    if (options.minBidPrc != null) {
+      schema.offers = {
+        '@type': 'Offer',
+        price: options.minBidPrc,
+        priceCurrency: 'KRW',
+        availability: 'https://schema.org/InStock',
+      }
+    }
+    if (options.appraisalAmt != null) {
+      schema.additionalProperty = [
+        { '@type': 'PropertyValue', name: 'appraisalAmount', value: String(options.appraisalAmt) },
+      ]
+    }
+
+    useHead({
+      script: [
+        {
+          key: 'jsonld-auction-listing',
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(schema),
+        },
+      ],
+    })
+  }
+
+  /**
    * VideoObject ItemList 스키마 (시설 YouTube 영상 캐시 히트용)
    */
   function setVideoListSchema(videos: { videoId: string; title: string; channelTitle: string; thumbnail: string; publishedAt: string }[]) {
@@ -885,6 +930,7 @@ export function useStructuredData() {
     setFAQSchema,
     setHowToSchema,
     setEventSchema,
+    setAuctionListingSchema,
     setDatasetSchema,
     setVideoListSchema,
     setDetailProvenance,

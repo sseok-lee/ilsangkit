@@ -542,7 +542,9 @@ const canonicalPath = computed(() => {
     return `/${citySlug}/${districtSlug}/${categoryParam.value}`
   }
   if (citySlug) {
-    return `/${citySlug}/${categoryParam.value}`
+    // 2-segment /[city]/[category] 라우트는 실재하지 않으므로(과거엔 404·noindex 페이지를 가리켜 색인 손실)
+    // 도시-only 필터 페이지는 자기 자신을 canonical 로 지정한다.
+    return `/${categoryParam.value}?city=${citySlug}`
   }
   return `/${categoryParam.value}`
 })

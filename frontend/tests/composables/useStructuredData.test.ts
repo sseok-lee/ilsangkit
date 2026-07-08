@@ -740,6 +740,65 @@ describe('useStructuredData', () => {
     })
   })
 
+  // ─── 공매 물건 본문 엔티티(Product + Offer) ────────────────────────────────
+
+  describe('setAuctionListingSchema', () => {
+    it('minBidPrc가 있으면 Product + Offer(price/KRW/InStock)를 출력한다', () => {
+      const { setAuctionListingSchema } = useStructuredData()
+      setAuctionListingSchema({
+        address: '서울특별시 강남구 테헤란로 1',
+        usage: '아파트',
+        minBidPrc: 350_000_000,
+        appraisalAmt: 500_000_000,
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      expect(call.script[0].key).toBe('jsonld-auction-listing')
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed['@type']).toBe('Product')
+      expect(parsed.name).toBe('서울특별시 강남구 테헤란로 1')
+      expect(parsed.category).toBe('아파트')
+      expect(parsed.offers['@type']).toBe('Offer')
+      expect(parsed.offers.price).toBe(350_000_000)
+      expect(parsed.offers.priceCurrency).toBe('KRW')
+      expect(parsed.offers.availability).toBe('https://schema.org/InStock')
+      // 감정가는 additionalProperty로 부착
+      const appraisal = parsed.additionalProperty.find((p: { name: string }) => p.name === 'appraisalAmount')
+      expect(appraisal.value).toBe('500000000')
+    })
+
+    it('minBidPrc가 null이면 offers 자체를 생략한다', () => {
+      const { setAuctionListingSchema } = useStructuredData()
+      setAuctionListingSchema({
+        address: '부산광역시 해운대구 우동 100',
+        usage: '오피스텔',
+        minBidPrc: null,
+        appraisalAmt: null,
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed['@type']).toBe('Product')
+      expect(parsed.name).toBe('부산광역시 해운대구 우동 100')
+      expect(parsed.offers).toBeUndefined()
+      // appraisalAmt가 null이면 additionalProperty도 없어야 한다
+      expect(parsed.additionalProperty).toBeUndefined()
+    })
+
+    it('address가 없으면 usage로, usage도 없으면 기본 라벨로 name을 채운다', () => {
+      const { setAuctionListingSchema } = useStructuredData()
+      setAuctionListingSchema({ address: null, usage: '토지', minBidPrc: null })
+      let parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
+      expect(parsed.name).toBe('토지')
+      // category는 usage가 있을 때만
+      expect(parsed.category).toBe('토지')
+
+      mockUseHead.mockClear()
+      setAuctionListingSchema({ address: null, usage: null, minBidPrc: null })
+      parsed = JSON.parse(mockUseHead.mock.calls[0][0].script[0].innerHTML)
+      expect(parsed.name).toBe('공매 물건')
+      expect(parsed.category).toBeUndefined()
+    })
+  })
+
   describe('setDetailProvenance', () => {
     it('facility/toilet에 대해 원본 데이터셋명·제공기관·dateModified를 가진 Dataset을 출력한다', () => {
       const { setDetailProvenance } = useStructuredData()

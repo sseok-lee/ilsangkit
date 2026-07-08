@@ -86,12 +86,5 @@ export function buildSubwayJsonLd(station: SubwayStation): PlaceJsonLd {
     if (station.city) jsonLd.address.addressRegion = station.city
   }
 
-  if (station.operator) {
-    jsonLd.containedInPlace = {
-      '@type': 'Organization',
-      name: station.operator,
-    }
-  }
-
   return jsonLd
 }
