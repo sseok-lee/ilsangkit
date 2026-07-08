@@ -127,8 +127,12 @@ export async function generateUniqueArticleSlug(category: GuideCategory): Promis
   throw new Error('slug 충돌 회피 실패(5회 시도)');
 }
 
+// 오늘의 이슈는 부동산·청약 시의성 스트림 — 뉴스 트랙도 부동산·청약 카테고리에서만 생성.
+// (시설 how-to는 /guide가 담당) 명시적 --category 지정은 그대로 허용.
+export const TODAY_ISSUE_NEWS_CATEGORIES: GuideCategory[] = ['subscription', 'apt-sale', 'apt-rent'];
+
 function pickRandomCategory(): GuideCategory {
-  return GUIDE_CATEGORIES[Math.floor(Math.random() * GUIDE_CATEGORIES.length)];
+  return TODAY_ISSUE_NEWS_CATEGORIES[Math.floor(Math.random() * TODAY_ISSUE_NEWS_CATEGORIES.length)];
 }
 
 export interface GeneratedArticle {
@@ -213,6 +217,21 @@ export async function filterUnseenPolicyItems(items: PolicyNewsItem[]): Promise<
   return items.filter((it) => !seenSet.has(it.newsItemId));
 }
 
+// 부동산·청약 관련 정책만 사전 선별. 정책뉴스는 전 부처가 섞여 있어(하루 수십 건),
+// 부동산 3주제만 좁게 물으면 LLM이 대다수 무관 항목에 눌려 과잉 none을 낸다.
+// 부처(국토부·금융위·기재부) 또는 부동산 키워드로 먼저 걸러 짧은 관련 목록을 만든 뒤 LLM이 선정.
+const REALESTATE_MINISTRIES = /국토교통부|금융위원회|기획재정부|재정경제부/;
+const REALESTATE_KEYWORDS =
+  /부동산|청약|주택|전세|월세|아파트|대출|임대|투기과열|조정대상|분양|재건축|재개발|디딤돌|보금자리|LTV|DSR|주거/;
+
+export function filterPolicyByRealEstate(items: PolicyNewsItem[]): PolicyNewsItem[] {
+  return items.filter(
+    (it) =>
+      REALESTATE_MINISTRIES.test(it.ministerCode) ||
+      REALESTATE_KEYWORDS.test(`${it.title} ${it.subTitle} ${it.dataContents.slice(0, 300)}`)
+  );
+}
+
 // 정책 브리핑 트랙: 정책뉴스 원문 전문 1건을 골라 그 근거로 draft 생성.
 // 적합 후보가 없으면 null(무생성). 뉴스 트랙과 달리 키워드 발굴 대신 정책 항목이 주제가 된다.
 export async function generateOnePolicyArticle(
@@ -223,7 +242,8 @@ export async function generateOnePolicyArticle(
   const openai = new OpenAI({ apiKey });
 
   const raw = await fetchRecentPolicyWindows(options.lookbackDays ?? 9);
-  const unseen = await filterUnseenPolicyItems(raw);
+  const relevant = filterPolicyByRealEstate(raw);
+  const unseen = await filterUnseenPolicyItems(relevant);
   const candidate = await selectPolicyCandidate(openai, unseen, POLICY_FOCUS_CATEGORIES);
   if (!candidate) {
     console.log('[policy] 적합한 신규 정책 후보 없음 — 무생성 종료');
