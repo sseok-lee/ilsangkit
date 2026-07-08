@@ -1142,7 +1142,18 @@ async function loadData() {
   statsLoading.value = true
   txLoading.value = true
 
-  const { bjdCode, building: primedBuilding } = await resolveBuildingContext()
+  // SSR useAsyncData 팩토리(line 977~1074)와 동일한 fail-open 시맨틱:
+  // bjdCode 해석 단계의 일시 장애(throw)를 삼키지 말고 infoFetchFailed 로 추적한다.
+  let infoFetchFailed = false
+  let bjdCode = ''
+  let primedBuilding: BuildingInfo | null = null
+  try {
+    const ctx = await resolveBuildingContext()
+    bjdCode = ctx.bjdCode
+    primedBuilding = ctx.building
+  } catch {
+    infoFetchFailed = true
+  }
   resolvedBjdCode.value = bjdCode
   if (primedBuilding) {
     buildingInfo.value = primedBuilding
@@ -1167,7 +1178,18 @@ async function loadData() {
     summary.value = null
   }
   transactions.value = txResult.status === 'fulfilled' ? txResult.value : EMPTY_TRANSACTIONS
-  buildingInfo.value = infoResult.status === 'fulfilled' ? infoResult.value : null
+
+  // fail-open: building-info 재요청이 404 가 아닌 일시 장애(5xx/timeout/network)로 rejected 면
+  // buildingInfo 를 null 로 덮지 않고(직전 SSR/primed 값 유지) fetchFailed 로 표시한다.
+  // 진짜 없는 건물은 getBuildingInfo 가 fulfilled+null 로 주므로 그대로 confirmedEmpty→noindex 가 유지된다.
+  // 이 fail-open 이 빠져 있어(구: `... : null`) 클라 재요청 실패 시 멀쩡한 상세 페이지가
+  // noindex 로 뒤집히던 버그를 수정한다. (SSR 경로 line 987~1004,1074 와 동일 시맨틱)
+  if (infoResult.status === 'fulfilled') {
+    buildingInfo.value = infoResult.value
+  } else {
+    infoFetchFailed = true
+  }
+  fetchFailed.value = infoFetchFailed
 
   statsLoading.value = false
   txLoading.value = false
