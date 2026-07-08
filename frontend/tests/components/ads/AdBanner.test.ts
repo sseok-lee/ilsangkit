@@ -292,4 +292,25 @@ describe('AdBanner', () => {
     await flushAdMount()
     expect(wrapper.find('ins.adsbygoogle').exists()).toBe(false)
   })
+
+  describe('status 타임아웃 = 1500ms', () => {
+    it('1500ms 경과 시 timed-out collapse (status 미응답)', async () => {
+      const wrapper = mount(AdBanner, {
+        global: {
+          stubs: { ClientOnly: clientOnlyStub },
+        },
+      })
+
+      await flushAdMount()
+      // status 미설정 상태에서 1500ms 직전에는 collapse 아님
+      vi.advanceTimersByTime(1400)
+      await nextTick()
+      expect(wrapper.classes()).not.toContain('ad-banner--timed-out')
+
+      // 1500ms 도달 시 collapse
+      vi.advanceTimersByTime(200)
+      await nextTick()
+      expect(wrapper.classes()).toContain('ad-banner--timed-out')
+    })
+  })
 })
