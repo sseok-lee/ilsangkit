@@ -652,12 +652,9 @@ export async function getDbStats(category: GuideCategory): Promise<string> {
 // 정책 브리핑 트랙 — 정책뉴스 원문 전문 기반 생성 앞단
 // ---------------------------------------------------------------------------
 
-// 생활정보 사이트 성격에 맞춰 국가 정책 커버리지가 있는 카테고리로 확장.
-export const POLICY_FOCUS_CATEGORIES: GuideCategory[] = [
-  'subscription', 'apt-sale', 'apt-rent', 'childcare',
-  'hospital', 'pharmacy', 'park', 'trash',
-  'school', 'library', 'market', 'ev-charger', 'sports',
-];
+// 오늘의 이슈는 부동산·청약 시의성 스트림 — 정책 트랙도 부동산·청약으로 한정.
+// (부동산 정책은 대출규제·청약개편·투기과열지구 등으로 시의적으로 자주 나와 다중 3일창으로 잘 잡힘)
+export const POLICY_FOCUS_CATEGORIES: GuideCategory[] = ['subscription', 'apt-sale', 'apt-rent'];
 
 // 카테고리를 '시설'이 아니라 '생활 주제'로 설명 — 정책(제도·요금·규제)은 시설 위치가 아니므로
 // 이 주제 설명으로 물어야 진짜 매칭된다(예: 전기차 충전요금 개편→ev-charger, 도수치료 급여→hospital).

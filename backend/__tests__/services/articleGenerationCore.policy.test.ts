@@ -31,12 +31,8 @@ const ITEM: PolicyNewsItem = {
 };
 
 describe('POLICY_FOCUS_CATEGORIES', () => {
-  it('생활정보 전반(부동산·주거·육아 + 의료·환경·교육·생활편의) 13종', () => {
-    expect(POLICY_FOCUS_CATEGORIES).toEqual([
-      'subscription', 'apt-sale', 'apt-rent', 'childcare',
-      'hospital', 'pharmacy', 'park', 'trash',
-      'school', 'library', 'market', 'ev-charger', 'sports',
-    ]);
+  it('부동산·청약 3종 (오늘의 이슈 = 부동산 스트림)', () => {
+    expect(POLICY_FOCUS_CATEGORIES).toEqual(['subscription', 'apt-sale', 'apt-rent']);
   });
 });
 
