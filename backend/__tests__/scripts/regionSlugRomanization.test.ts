@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { normalizeKoreanToSlug } from '../../src/scripts/syncRegion.js';
+import { DISTRICT_SLUG_MAP as BACKEND_LIB_DISTRICT_SLUG_MAP } from '../../src/lib/regionSlugs.js';
 
 /**
  * 프론트엔드 단일 소스(`frontend/shared/regionSlugs.ts`)의 DISTRICT_SLUG_MAP을
@@ -67,5 +68,25 @@ describe('Region slug 로마자화 가드', () => {
       }
     }
     expect(koreanLeak).toEqual([]);
+  });
+
+  // backend/src/lib/regionSlugs.ts 의 DISTRICT_SLUG_MAP 은 IndexNow·색인 제출 URL 생성에
+  // 쓰인다(toDistrictSlug). 프론트 맵과 어긋나면 매핑 실패 → 한글 fallback slug(404 URL)를
+  // 검색엔진에 제출한다. 과거 화성·부천 7개 신설 구가 이 맵에만 누락돼 사고가 났으므로
+  // 프론트 단일 소스와 완전 일치를 강제한다.
+  it('backend/lib DISTRICT_SLUG_MAP 이 프론트 단일 소스와 완전 일치한다 (IndexNow 유출 차단)', () => {
+    const mismatches: string[] = [];
+    for (const [district, expectedSlug] of Object.entries(DISTRICT_SLUG_MAP)) {
+      const got = BACKEND_LIB_DISTRICT_SLUG_MAP[district];
+      if (got !== expectedSlug) {
+        mismatches.push(`${district}: front=${expectedSlug} backendLib=${got ?? '(누락)'}`);
+      }
+    }
+    for (const district of Object.keys(BACKEND_LIB_DISTRICT_SLUG_MAP)) {
+      if (!(district in DISTRICT_SLUG_MAP)) {
+        mismatches.push(`${district}: backendLib 에만 존재(프론트 누락)`);
+      }
+    }
+    expect(mismatches).toEqual([]);
   });
 });
