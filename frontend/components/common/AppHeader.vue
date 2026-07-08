@@ -59,8 +59,9 @@
             leave-from-class="opacity-100 scale-100 translate-y-0"
             leave-to-class="opacity-0 scale-95 -translate-y-1"
           >
+            <!-- v-show(v-if 아님): 링크를 SSR DOM에 항상 노출해 크롤러/사이트링크 후보로 잡히게 함. 시각적으로는 hover 전 display:none -->
             <div
-              v-if="activeDropdown === group.title"
+              v-show="activeDropdown === group.title"
               class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-line-2 p-2 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
@@ -122,8 +123,9 @@
             leave-from-class="opacity-100 scale-100 translate-y-0"
             leave-to-class="opacity-0 scale-95 -translate-y-1"
           >
+            <!-- v-show(v-if 아님): 시설 카테고리 링크를 SSR DOM에 항상 노출(크롤러 가시). hover 전 display:none -->
             <div
-              v-if="activeDropdown === '생활시설'"
+              v-show="activeDropdown === '생활시설'"
               data-testid="nav-mega-menu"
               role="region"
               aria-label="생활시설 메뉴"

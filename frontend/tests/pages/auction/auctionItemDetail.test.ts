@@ -53,11 +53,13 @@ vi.mock('~/composables/useAuction', () => ({
 const mockSetBreadcrumbSchema = vi.fn()
 const mockSetFAQSchema = vi.fn()
 const mockSetDetailProvenance = vi.fn()
+const mockSetAuctionListingSchema = vi.fn()
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
     setFAQSchema: mockSetFAQSchema,
     setDetailProvenance: mockSetDetailProvenance,
+    setAuctionListingSchema: mockSetAuctionListingSchema,
   }),
 }))
 

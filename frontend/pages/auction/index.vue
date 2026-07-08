@@ -113,7 +113,7 @@ import { AUCTION_META, AUCTION_FAQ } from '~/utils/auctionMeta'
 import { USAGE_GROUP_LABEL } from '~/types/auction'
 import { buildAuctionListTitle } from '~/utils/auctionHead'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { SITE_URL } from '~/utils/seoConstants'
+import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -168,6 +168,11 @@ useHead({
     { property: 'og:title', content: '부동산 공매 물건 검색 | 일상킷' },
     { property: 'og:description', content: AUCTION_META.description },
     { property: 'og:url', content: `${SITE_URL}/auction` },
+    { property: 'og:image', content: DEFAULT_OG_IMAGE },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: '부동산 공매 물건 검색 | 일상킷' },
+    { name: 'twitter:description', content: AUCTION_META.description },
+    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
   ],
   link: [{ rel: 'canonical', href: `${SITE_URL}/auction` }],
 })
