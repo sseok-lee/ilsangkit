@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { isBotSignature, useAdsEnabled, useAdsPolicy, suppressAds } from '~/composables/useAdsPolicy'
+import { ref } from 'vue'
+import { isBotSignature, useAdsEnabled, useAdsPolicy, suppressAds, markAdsBlocked } from '~/composables/useAdsPolicy'
 
 const realConfig = (globalThis as any).useRuntimeConfig
 
 afterEach(() => {
   ;(globalThis as any).useRuntimeConfig = realConfig
   ;(globalThis as any).__resetUseState?.()
+  sessionStorage.clear()
 })
 
 describe('isBotSignature', () => {
@@ -50,5 +52,18 @@ describe('useAdsPolicy.shouldServeAds', () => {
   it('suppressAds(true)면 false', () => {
     suppressAds(true)
     expect(useAdsPolicy().shouldServeAds.value).toBe(false)
+  })
+})
+
+describe('useAdsPolicy — 애드블록', () => {
+  it('ads:blocked state가 true면 shouldServeAds=false', () => {
+    ;(globalThis as any).useState('ads:blocked', () => false).value = true
+    expect(useAdsPolicy().shouldServeAds.value).toBe(false)
+  })
+  it('markAdsBlocked는 ref를 true로 + sessionStorage 세팅', () => {
+    const r = ref(false)
+    markAdsBlocked(r)
+    expect(r.value).toBe(true)
+    expect(sessionStorage.getItem('ads:blocked')).toBe('1')
   })
 })
