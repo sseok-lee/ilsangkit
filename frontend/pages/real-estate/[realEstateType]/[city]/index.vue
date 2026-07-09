@@ -58,7 +58,7 @@
 import { computed } from 'vue'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
 import { isRealEstateUrlType } from '~/utils/realEstateUrl'
-import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
+import { PROPERTY_TYPE_META, buildReCityDescription } from '~/utils/realEstateMeta'
 import type { RealEstatePropertyType, TransactionMode, RealEstateType, ComplexInfo } from '~/types/realEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -90,7 +90,6 @@ const typeLabel = tabPart === 'sale'
   : `${propertyMeta?.label ?? ''} 전월세`
 
 const heroTitle = `${cityName} ${typeLabel} 실거래가`
-const heroDescription = `${cityName} ${typeLabel} 단지를 구/군별로 확인하세요. 국토교통부 공식 데이터 기반.`
 const typeHubPath = `/real-estate/${realEstateTypeParam}`
 const introParagraph = `${cityName} ${typeLabel} 실거래가 정보입니다. ${propertyMeta?.description ?? ''} 아래 구/군을 선택하면 ${cityName} 내 단지별 실거래 내역과 시세 추이를 확인할 수 있습니다. 모든 데이터는 국토교통부 실거래가 공개시스템 기준이며 매일 갱신됩니다.`
 
@@ -114,6 +113,16 @@ const { data: topComplexesData } = await useAsyncData(
 )
 const topComplexes = computed(() => topComplexesData.value ?? [])
 
+// meta/hero description: 구·군 개수 + 대표 단지를 주입해 시 간 설명문 중복을 없앤다.
+const heroDescription = computed(() =>
+  buildReCityDescription({
+    cityName,
+    typeLabel,
+    districtCount: districts.value.length,
+    topComplexName: topComplexes.value[0]?.buildingName,
+  }),
+)
+
 const breadcrumbItems = [
   { label: '홈', href: '/', current: false },
   { label: '부동산 실거래가', href: '/real-estate', current: false },
@@ -124,7 +133,7 @@ const breadcrumbItems = [
 const { setMeta } = useFacilityMeta()
 setMeta({
   title: `${cityName} ${typeLabel} 실거래가`,
-  description: heroDescription,
+  description: heroDescription.value,
   path: `/real-estate/${realEstateTypeParam}/${citySlugParam}`,
 })
 

@@ -113,11 +113,28 @@ if (import.meta.server && (regionsData.value?.items ?? []).length === 0) {
   }
 }
 
-// SEO
+// SEO — 동별 거래 건수·평당 시세(대지건수 가중평균)를 주입해 구·군 간 설명문 중복을 없앤다.
+const landTotalTx = sortedDongs.value.reduce((sum, d) => sum + d.transactionCount, 0)
+const landAvgPerPyeong = (() => {
+  let weightedSum = 0
+  let totalWeight = 0
+  for (const d of sortedDongs.value) {
+    if (d.avgPricePerPyeong != null && d.daeCount > 0) {
+      weightedSum += d.avgPricePerPyeong * d.daeCount
+      totalWeight += d.daeCount
+    }
+  }
+  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : null
+})()
 const { setMeta } = useFacilityMeta()
 setMeta({
   title: buildLandRegionTitle({ city: cityName, district: districtName }),
-  description: buildLandRegionDescription({ city: cityName, district: districtName }),
+  description: buildLandRegionDescription({
+    city: cityName,
+    district: districtName,
+    avgPricePerPyeong: landAvgPerPyeong,
+    count: landTotalTx,
+  }),
   path: `/real-estate/land/${citySlug}/${districtSlug}`,
 })
 
