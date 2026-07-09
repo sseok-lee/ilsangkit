@@ -122,7 +122,7 @@ import {
   toRealEstateListUrl,
 } from '~/utils/realEstateUrl'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
-import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
+import { PROPERTY_TYPE_META, buildReRegionDescription } from '~/utils/realEstateMeta'
 import { SITE_URL } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -180,9 +180,18 @@ const typeLabel = computed(() => {
 const typeHubPath = computed(() => `/real-estate/${realEstateType.value}`)
 
 const heroTitle = computed(() => `${districtName.value} ${typeLabel.value} 실거래가`)
-const heroDescription = computed(
-  () =>
-    `${cityName.value} ${districtName.value} ${typeLabel.value} 유효 단지만 선별해 노출합니다. 국토교통부 공식 데이터 기반.`,
+// meta description 은 데이터 로드 후의 topComplex/avgLatestPrice 를 참조한다 (아래에서 정의).
+// computed 는 setMeta watch(immediate) 시점(=데이터 세팅 이후)에 평가되므로 참조 순서 문제 없음.
+const heroDescription = computed(() =>
+  buildReRegionDescription({
+    cityName: cityName.value,
+    districtName: districtName.value,
+    typeLabel: typeLabel.value,
+    count: totalComplexes.value,
+    topComplexName: topComplex.value?.buildingName,
+    topComplexTx: topComplex.value?.transactionCount,
+    avgPriceText: avgLatestPrice.value != null ? formatKoreanPrice(avgLatestPrice.value) : undefined,
+  }),
 )
 
 // 데이터
@@ -196,6 +205,15 @@ const pending = ref(true)
 const renderableComplexes = computed<ComplexInfo[]>(() =>
   complexes.value.filter((c) => isValidBuildingName(c.buildingName)),
 )
+
+// 대표 단지(거래 활발 상위) 및 상위 단지 평균 시세 — meta description·요약 문단이 공유한다.
+const topComplex = computed<ComplexInfo | null>(() => renderableComplexes.value[0] ?? null)
+const avgLatestPrice = computed<number | null>(() => {
+  const withPrice = renderableComplexes.value.filter((c) => c.latestPrice !== null && c.latestPrice > 0)
+  return withPrice.length > 0
+    ? Math.round(withPrice.reduce((sum, c) => sum + (c.latestPrice as number), 0) / withPrice.length)
+    : null
+})
 
 const { data: ssrData, error } = await useAsyncData(
   `re-region-${realEstateType.value}-${citySlug.value}-${districtSlug.value}`,
@@ -243,16 +261,13 @@ const heroStats = computed(() => {
 const districtSummaryText = computed(() => {
   const count = totalComplexes.value || renderableComplexes.value.length
   if (count === 0) return ''
-  const withPrice = renderableComplexes.value.filter(c => c.latestPrice !== null && c.latestPrice > 0)
-  const avgPrice = withPrice.length > 0
-    ? Math.round(withPrice.reduce((sum, c) => sum + (c.latestPrice as number), 0) / withPrice.length)
-    : null
-  const topComplex = renderableComplexes.value[0] ?? null
+  const avgPrice = avgLatestPrice.value
+  const top = topComplex.value
   const parts: string[] = [
     `${districtName.value} ${typeLabel.value} 실거래가를 확인할 수 있는 단지는 총 ${count.toLocaleString()}곳입니다.`,
   ]
-  if (topComplex) {
-    parts.push(`거래가 가장 활발한 단지는 ${topComplex.buildingName}(${topComplex.transactionCount.toLocaleString()}건)입니다.`)
+  if (top) {
+    parts.push(`거래가 가장 활발한 단지는 ${top.buildingName}(${top.transactionCount.toLocaleString()}건)입니다.`)
   }
   if (avgPrice) {
     parts.push(`상위 단지 최근 평균 시세는 약 ${formatKoreanPrice(avgPrice)}이며, 국토교통부 실거래가 공개시스템 기반 데이터입니다.`)
@@ -312,7 +327,7 @@ const canonicalPath = computed(() =>
 const { setMeta } = useFacilityMeta()
 
 watch(
-  [cityName, districtName, typeLabel, totalComplexes],
+  [cityName, districtName, typeLabel, totalComplexes, complexes],
   () => {
     const isNoindex = shouldNoindexSsr({
       fetchFailed: fetchFailed.value,

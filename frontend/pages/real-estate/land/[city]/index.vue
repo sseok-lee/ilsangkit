@@ -130,11 +130,27 @@ if (import.meta.server && (regionsData.value?.items ?? []).length === 0) {
   }
 }
 
-// SEO
+// SEO — 구·군 거래 건수·평당 시세(거래건수 가중평균)를 주입해 시 간 설명문 중복을 없앤다.
+const landCityTotalTx = districtCards.value.reduce((sum, d) => sum + d.totalTransactions, 0)
+const landCityAvgPerPyeong = (() => {
+  let weightedSum = 0
+  let totalWeight = 0
+  for (const d of districtCards.value) {
+    if (d.avgPricePerPyeong != null && d.totalTransactions > 0) {
+      weightedSum += d.avgPricePerPyeong * d.totalTransactions
+      totalWeight += d.totalTransactions
+    }
+  }
+  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : null
+})()
 const { setMeta } = useFacilityMeta()
 setMeta({
   title: buildLandRegionTitle({ city: cityName }),
-  description: buildLandRegionDescription({ city: cityName }),
+  description: buildLandRegionDescription({
+    city: cityName,
+    avgPricePerPyeong: landCityAvgPerPyeong,
+    count: landCityTotalTx,
+  }),
   path: `/real-estate/land/${citySlug}`,
 })
 

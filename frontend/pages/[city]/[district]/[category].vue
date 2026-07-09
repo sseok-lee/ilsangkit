@@ -177,6 +177,34 @@ const { data: summary } = await useAsyncData<AreaSummary | null>(
   },
 )
 
+// slug → DB 풀네임 (서울특별시 등) 역매핑 — waste-schedules 는 정식 시도명으로 정확매칭한다.
+const SLUG_TO_FULL_CITY = Object.entries(CITY_FULL_NAME_TO_SLUG).reduce(
+  (acc, [fullName, slug]) => ({ ...acc, [slug]: fullName }),
+  {} as Record<string, string>,
+)
+
+// trash 지역: 배출 일정 건수를 SSR 에서 확보해 meta description 을 지역별로 차별화한다.
+// 경량(count) · fail-open(에러/타임아웃 → null → 일반 설명문 폴백) · non-trash 는 네트워크 미발생.
+const { data: wasteCount } = await useAsyncData<number | null>(
+  `waste-count-${city.value}-${district.value}-${category.value}`,
+  async () => {
+    if (category.value !== 'trash') return null
+    try {
+      const fullCityName = SLUG_TO_FULL_CITY[city.value] || cityName.value
+      const res = await $fetch<{ success: boolean; data: { total: number } }>(
+        `${apiBase}/api/waste-schedules`,
+        {
+          query: { city: fullCityName, district: districtName.value, page: 1, limit: 1 },
+          signal: AbortSignal.timeout(8000),
+        },
+      )
+      return res?.success ? (res.data?.total ?? null) : null
+    } catch {
+      return null
+    }
+  },
+)
+
 // SEO - top-level에서 설정 (SSR에서 메타태그 렌더링).
 // canonical 은 아래 useHead(computed...) 에서 noindex 상태와 함께 reactive 하게 관리한다 (정책: .omc/notes/noindex-canonical-policy.md).
 const { setRegionMeta } = useFacilityMeta()
@@ -186,7 +214,7 @@ setRegionMeta({
   district: district.value,
   districtName: districtName.value,
   category: category.value as FacilityCategory,
-  count: summary.value?.count,
+  count: isTrash.value ? (wasteCount.value ?? undefined) : summary.value?.count,
   canonical: false,
 })
 
@@ -258,12 +286,6 @@ const wasteContact = ref<{ name: string; phone?: string } | null>(null)
 const wasteCurrentPage = ref(initialPage)
 const wasteTotalPages = ref(1)
 const wasteTotal = ref(0)
-
-// slug → DB 풀네임 (서울특별시 등) 역매핑
-const SLUG_TO_FULL_CITY = Object.entries(CITY_FULL_NAME_TO_SLUG).reduce(
-  (acc, [fullName, slug]) => ({ ...acc, [slug]: fullName }),
-  {} as Record<string, string>,
-)
 
 async function loadWasteSchedules() {
   const fullCityName = SLUG_TO_FULL_CITY[city.value] || cityName.value

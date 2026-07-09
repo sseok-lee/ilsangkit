@@ -8,7 +8,7 @@ vi.stubGlobal('useSeoMeta', mockUseSeoMeta)
 vi.stubGlobal('useHead', mockUseHead)
 
 // Import after mocking
-import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { useFacilityMeta, isUndifferentiatedFacility } from '~/composables/useFacilityMeta'
 import type { FacilityDetail } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION } from '~/utils/seoConstants'
@@ -282,7 +282,7 @@ describe('useFacilityMeta', () => {
       expect(titleA).not.toBe(titleB)
     })
 
-    it('buildPlace가 없으면 제목은 기존과 동일(설치기관명 + 카테고리 라벨)', () => {
+    it('buildPlace가 없으면 도로명 주소 꼬리로 제목을 구분한다', () => {
       const { setFacilityDetailMeta } = useFacilityMeta()
 
       setFacilityDetailMeta(aedFacility('c', ''))
@@ -290,7 +290,8 @@ describe('useFacilityMeta', () => {
 
       expect(title).toContain('S-OIL(주)온산공장')
       expect(title).toContain(CATEGORY_META.aed.label)
-      expect(title).not.toContain('  ') // 빈 보조어로 인한 이중 공백 없음
+      expect(title).toContain('화산리 1') // roadAddress granular 꼬리로 구분
+      expect(title).not.toContain('  ') // 이중 공백 없음
     })
 
     it('buildPlace가 이름과 중복되면 보조어를 생략한다', () => {
@@ -320,6 +321,36 @@ describe('useFacilityMeta', () => {
         expect.objectContaining({
           title: '서울 강남구 공공화장실 | 개방시간·위치 | 일상킷',
           description: '서울 강남구의 공공화장실 개방시간·위치 정보를 확인하세요.',
+        })
+      )
+    })
+
+    it('trash: count가 있으면 배출 일정 N건으로 차별화한다 (곳 아님)', () => {
+      const { setRegionMeta } = useFacilityMeta()
+      setRegionMeta({ city: 'seoul', cityName: '서울', district: 'gangnam', districtName: '강남구', category: 'trash', count: 214 })
+      expect(mockUseSeoMeta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '서울 강남구의 쓰레기 배출 일정 214건 — 배출 요일·분리수거·시간 정보를 확인하세요.',
+        })
+      )
+    })
+
+    it('trash: count가 없으면(fail-open) 일반 설명문으로 폴백한다', () => {
+      const { setRegionMeta } = useFacilityMeta()
+      setRegionMeta({ city: 'seoul', cityName: '서울', district: 'gangnam', districtName: '강남구', category: 'trash' })
+      expect(mockUseSeoMeta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '서울 강남구의 쓰레기 배출정보 배출일·분리수거 정보를 확인하세요.',
+        })
+      )
+    })
+
+    it('non-trash: count가 있으면 기존 N곳(위치·운영시간) 문안을 유지한다', () => {
+      const { setRegionMeta } = useFacilityMeta()
+      setRegionMeta({ city: 'seoul', cityName: '서울', district: 'gangnam', districtName: '강남구', category: 'toilet', count: 42 })
+      expect(mockUseSeoMeta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '서울 강남구의 공공화장실 42곳 — 위치·운영시간·개방시간·위치 정보를 확인하세요.',
         })
       )
     })
@@ -745,6 +776,69 @@ describe('useFacilityMeta', () => {
       expect(iName).toBeLessThan(iCategory)
       expect(iCategory).toBeLessThan(iIntent)
       expect(iIntent).toBeLessThan(iRegion) // 핵심: 인텐트가 지역보다 앞
+    })
+  })
+
+  describe('주소 기반 중복 제목 분리 (parking/aed/clothes)', () => {
+    const make = (over: Partial<FacilityDetail> & Pick<FacilityDetail, 'category' | 'name' | 'city' | 'district'>): FacilityDetail => ({
+      id: 'x', address: null, roadAddress: null, lat: 37, lng: 127,
+      bjdCode: '00000', details: {}, sourceId: 'x', sourceUrl: null, viewCount: 0,
+      createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z', syncedAt: '2024-01-01T00:00:00Z',
+      ...over,
+    } as FacilityDetail)
+    const titleOf = () => (mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string }).title
+
+    it('같은 이름 주차장도 도로명 주소로 제목이 구분된다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(make({ category: 'parking', name: '조천읍 공영주차장', city: '제주특별자치도', district: '제주시', roadAddress: '제주특별자치도 제주시 조천읍 신북로 456' }))
+      const a = titleOf()
+      setFacilityDetailMeta(make({ category: 'parking', name: '조천읍 공영주차장', city: '제주특별자치도', district: '제주시', roadAddress: '제주특별자치도 제주시 조천읍 함덕로 12' }))
+      const b = titleOf()
+      expect(a).toContain('신북로 456')
+      expect(b).toContain('함덕로 12')
+      expect(a).not.toBe(b)
+    })
+
+    it('aed: buildPlace가 있으면 buildPlace 우선(주소 미사용)', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(make({ category: 'aed', name: 'S-OIL(주)', city: '울산광역시', district: '울주군', roadAddress: '울산광역시 울주군 온산읍 화산리 1', details: { buildPlace: '본관 로비' } }))
+      const t = titleOf()
+      expect(t).toContain('본관 로비')
+      expect(t).not.toContain('화산리 1')
+    })
+
+    it('주소가 시·구뿐이면(granular 없음) 보조어를 붙이지 않는다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(make({ category: 'parking', name: '공영주차장', city: '서울특별시', district: '강남구', roadAddress: '서울특별시 강남구' }))
+      expect(titleOf()).not.toContain('강남구 강남구')
+    })
+
+    it('비대상 카테고리(hospital 등)는 주소 보조어를 붙이지 않는다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(make({ category: 'hospital', name: '연세의원', city: '서울특별시', district: '강남구', roadAddress: '서울특별시 강남구 테헤란로 1' }))
+      expect(titleOf()).not.toContain('테헤란로 1')
+    })
+  })
+
+  describe('isUndifferentiatedFacility (noindex 판정)', () => {
+    const base = (over: Partial<FacilityDetail>): FacilityDetail => ({
+      id: 'u', category: 'parking', name: '', address: null, roadAddress: null, lat: 37, lng: 127,
+      city: '서울특별시', district: '강남구', bjdCode: '0', details: {}, sourceId: 'u', sourceUrl: null,
+      viewCount: 0, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z', syncedAt: '2024-01-01T00:00:00Z',
+      ...over,
+    } as FacilityDetail)
+
+    it('이름·기관·granular주소 모두 없으면 true (지역+카테고리뿐인 중복 제목)', () => {
+      expect(isUndifferentiatedFacility(base({ name: '', roadAddress: '서울특별시 강남구' }))).toBe(true)
+    })
+    it('고유 이름이 있으면 false', () => {
+      expect(isUndifferentiatedFacility(base({ name: '역삼공영주차장' }))).toBe(false)
+    })
+    it('granular 주소가 있으면 false', () => {
+      expect(isUndifferentiatedFacility(base({ name: '', roadAddress: '서울특별시 강남구 테헤란로 1' }))).toBe(false)
+    })
+    it('관리기관이 있으면 false', () => {
+      expect(isUndifferentiatedFacility(base({ name: '', details: { managingOrg: '강남구청' } }))).toBe(false)
     })
   })
 })

@@ -258,3 +258,52 @@ export const PROPERTY_TYPE_DESCRIPTIONS: Record<RealEstatePropertyType, string> 
   villa: '전국 연립다세대(빌라) 매매·전월세 실거래가를 지역별로 조회하세요. 아파트 대비 저렴한 빌라의 최근 실거래 사례를 비교해보세요.',
   offitel: '전국 오피스텔 매매·전월세 실거래가를 지역별, 건물별로 조회하세요. 1인 가구와 투자자에게 인기 높은 오피스텔의 최신 시세를 확인하세요.',
 }
+
+/**
+ * 구·군 목록 페이지 meta description.
+ * 과거엔 `{지역} 유효 단지만 선별해 노출합니다. 국토교통부 공식 데이터 기반.` 이라는
+ * 지역 토큰만 다른 보일러플레이트라 네이버 SEO 진단에서 "중복 설명문"으로 대량 플래그됐다.
+ * SSR 시점에 이미 확보한 실데이터(단지 수·대표 단지·평균 시세)를 주입해 페이지별로 차별화한다.
+ */
+export function buildReRegionDescription(params: {
+  cityName: string
+  districtName: string
+  typeLabel: string
+  count: number
+  topComplexName?: string
+  topComplexTx?: number
+  avgPriceText?: string
+}): string {
+  const { cityName, districtName, typeLabel, count, topComplexName, topComplexTx, avgPriceText } = params
+  if (!count || count <= 0) {
+    return `${cityName} ${districtName} ${typeLabel} 실거래가 정보를 국토교통부 실거래가 공개시스템 기반으로 제공합니다.`
+  }
+  let s = `${cityName} ${districtName} ${typeLabel} 실거래가 — 총 ${count.toLocaleString('ko-KR')}곳`
+  if (topComplexName) {
+    s += topComplexTx != null
+      ? `, 대표 단지 ${topComplexName}(${topComplexTx.toLocaleString('ko-KR')}건)`
+      : `, 대표 단지 ${topComplexName}`
+  }
+  if (avgPriceText) {
+    s += `, 최근 평균 시세 ${avgPriceText}`
+  }
+  return `${s}. 국토교통부 실거래가 공개시스템 기반.`
+}
+
+/**
+ * 시 목록 페이지 meta description.
+ * 구·군 개수와 대표 단지를 주입해 `{시} 단지를 구/군별로 확인하세요…` 보일러플레이트를 대체한다.
+ */
+export function buildReCityDescription(params: {
+  cityName: string
+  typeLabel: string
+  districtCount: number
+  topComplexName?: string
+}): string {
+  const { cityName, typeLabel, districtCount, topComplexName } = params
+  let s = `${cityName} ${typeLabel} 실거래가 — ${districtCount.toLocaleString('ko-KR')}개 구·군`
+  if (topComplexName) {
+    s += `, 대표 단지 ${topComplexName}`
+  }
+  return `${s}. 구·군별 단지 시세를 확인하세요. 국토교통부 실거래가 공개시스템 기반.`
+}

@@ -34,20 +34,58 @@ function cleanFacilityName(raw: string | null | undefined): string | null {
   return cleaned
 }
 
-/**
- * 동일 시설명이 여러 레코드에 공유될 때(예: 한 건물의 AED 다수, 한 보건소의 여러 설치점)
- * 제목을 구분하는 카테고리별 보조어. 이름과 중복되면 '' 반환.
- * aed 외 카테고리는 별도 플랜에서 확장한다(현재는 빈 문자열 반환).
- */
-function getTitleDisambiguator(facility: FacilityDetail, name: string): string {
+/** 관리·운영 기관명 (여러 소스 필드 중 첫 유효값) */
+function orgOf(facility: FacilityDetail): string | null {
   const d = (facility.details ?? {}) as Record<string, unknown>
-  let raw: string | null = null
-  if (facility.category === 'aed') {
-    raw = cleanFacilityName(d.buildPlace as string | null | undefined)
-  }
+  return cleanFacilityName((d.managingOrg || d.org || d.operatingOrg || d.providerName) as string | null | undefined)
+}
+
+/**
+ * 도로명/지번 주소에서 시·도·구·군 토큰(제목 loc 에 이미 존재)을 제거한 granular 꼬리(동·로·번지 등)
+ * 마지막 2토큰. 지역 내 동일·유사 이름 시설을 구분하는 데 쓴다.
+ */
+function granularAddressTail(facility: FacilityDetail): string {
+  const addr = cleanFacilityName(facility.roadAddress) ?? cleanFacilityName(facility.address)
+  if (!addr) return ''
+  const cityShort = compactCityName(facility.city)
+  const tokens = addr.split(/\s+/).filter(Boolean)
+  const granular = tokens.filter((t) => {
+    if (t === facility.city || t === cityShort) return false
+    if (/(특별자치시|특별자치도|특별시|광역시|자치도|자치시)$/.test(t)) return false
+    if (facility.district && (t === facility.district || facility.district.includes(t) || t.includes(facility.district))) return false
+    return true
+  })
+  return granular.slice(-2).join(' ').trim()
+}
+
+/** name 에 이미 포함된(또는 name 을 포함하는) 보조어는 중복이므로 제외 */
+function usableDisambiguator(raw: string, name: string): string {
   if (!raw) return ''
   if (name.includes(raw) || raw.includes(name)) return ''
   return raw
+}
+
+// 동일·유사 이름이 지역 내 다수 레코드에 공유되는(→ 중복 제목) 카테고리. granular 주소로 구분한다.
+const ADDRESS_DISAMBIGUATE_CATEGORIES = new Set<FacilityCategory>(['parking', 'aed', 'clothes'])
+
+/**
+ * 동일·유사 시설명이 지역 내 다수 레코드에 공유될 때(예: 한 건물의 AED 다수, "{동} 공영주차장"
+ * 동명 주차장 다수) 제목을 구분하는 보조어.
+ * - aed: 설치장소(buildPlace) 우선, 없으면 granular 주소.
+ * - parking/clothes: granular 주소.
+ * 그 외 카테고리는 고유 이름 비중이 높아 보조어를 붙이지 않는다(''). 이름과 중복되면 ''.
+ */
+function getTitleDisambiguator(facility: FacilityDetail, name: string): string {
+  const d = (facility.details ?? {}) as Record<string, unknown>
+  if (facility.category === 'aed') {
+    const bp = usableDisambiguator(cleanFacilityName(d.buildPlace as string | null | undefined) ?? '', name)
+    if (bp) return bp
+  }
+  if (ADDRESS_DISAMBIGUATE_CATEGORIES.has(facility.category)) {
+    const tail = usableDisambiguator(granularAddressTail(facility), name)
+    if (tail) return tail
+  }
+  return ''
 }
 
 /**
@@ -60,18 +98,25 @@ export function getFacilityDisplayName(facility: FacilityDetail): string {
 
   const categoryLabel = CATEGORY_META[facility.category]?.label || facility.category
   const region = facility.district || facility.city || ''
-  const d = (facility.details ?? {}) as Record<string, unknown>
-  const org = (d.managingOrg || d.org || d.operatingOrg || d.providerName) as string | undefined
-  if (org) {
-    const cleanOrg = cleanFacilityName(org)
-    if (cleanOrg) return `${cleanOrg} ${categoryLabel}`
-  }
+  const cleanOrg = orgOf(facility)
+  if (cleanOrg) return `${cleanOrg} ${categoryLabel}`
   const addr = facility.roadAddress || facility.address
   if (addr) {
     const lastSegment = addr.split(/\s+/).slice(-2).join(' ')
     return `${region} ${lastSegment} ${categoryLabel}`.trim()
   }
   return `${region} ${categoryLabel}`.trim()
+}
+
+/**
+ * 이름·관리기관·granular 주소가 모두 없어 제목이 `{지역} {카테고리}` 형태로만 생성되는,
+ * 지역 내 중복이 불가피한 시설. 색인해도 중복 제목/설명으로 분류되므로 noindex 대상이다.
+ */
+export function isUndifferentiatedFacility(facility: FacilityDetail): boolean {
+  if (cleanFacilityName(facility.name)) return false
+  if (orgOf(facility)) return false
+  if (granularAddressTail(facility)) return false
+  return true
 }
 
 /**
@@ -451,9 +496,15 @@ export function useFacilityMeta() {
 
     const title = `${params.cityName} ${params.districtName} ${categoryName} | ${intent}`
     // 실제 시설 개수를 설명에 넣어 구·동×카테고리 페이지(롱테일 지역 검색)의 description을 차별화한다.
-    const description = params.count && params.count > 0
-      ? `${params.cityName} ${params.districtName}의 ${categoryName} ${params.count.toLocaleString('ko-KR')}곳 — 위치·운영시간·${intent} 정보를 확인하세요.`
-      : `${params.cityName} ${params.districtName}의 ${categoryName} ${intent} 정보를 확인하세요.`
+    let description: string
+    if (params.count && params.count > 0) {
+      // trash 는 '건' 단위 + 배출 문맥(위치·운영시간 아님)으로 별도 문안.
+      description = params.category === 'trash'
+        ? `${params.cityName} ${params.districtName}의 쓰레기 배출 일정 ${params.count.toLocaleString('ko-KR')}건 — 배출 요일·분리수거·시간 정보를 확인하세요.`
+        : `${params.cityName} ${params.districtName}의 ${categoryName} ${params.count.toLocaleString('ko-KR')}곳 — 위치·운영시간·${intent} 정보를 확인하세요.`
+    } else {
+      description = `${params.cityName} ${params.districtName}의 ${categoryName} ${intent} 정보를 확인하세요.`
+    }
 
     setMeta({
       title,
