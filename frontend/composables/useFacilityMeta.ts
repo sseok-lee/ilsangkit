@@ -496,9 +496,15 @@ export function useFacilityMeta() {
 
     const title = `${params.cityName} ${params.districtName} ${categoryName} | ${intent}`
     // 실제 시설 개수를 설명에 넣어 구·동×카테고리 페이지(롱테일 지역 검색)의 description을 차별화한다.
-    const description = params.count && params.count > 0
-      ? `${params.cityName} ${params.districtName}의 ${categoryName} ${params.count.toLocaleString('ko-KR')}곳 — 위치·운영시간·${intent} 정보를 확인하세요.`
-      : `${params.cityName} ${params.districtName}의 ${categoryName} ${intent} 정보를 확인하세요.`
+    let description: string
+    if (params.count && params.count > 0) {
+      // trash 는 '건' 단위 + 배출 문맥(위치·운영시간 아님)으로 별도 문안.
+      description = params.category === 'trash'
+        ? `${params.cityName} ${params.districtName}의 쓰레기 배출 일정 ${params.count.toLocaleString('ko-KR')}건 — 배출 요일·분리수거·시간 정보를 확인하세요.`
+        : `${params.cityName} ${params.districtName}의 ${categoryName} ${params.count.toLocaleString('ko-KR')}곳 — 위치·운영시간·${intent} 정보를 확인하세요.`
+    } else {
+      description = `${params.cityName} ${params.districtName}의 ${categoryName} ${intent} 정보를 확인하세요.`
+    }
 
     setMeta({
       title,
