@@ -12,6 +12,8 @@ Disallow: /*&page=
 # Nuxt _payload.json 은 SSR HTML 의 중복 데이터 — 크롤 예산 낭비 차단 (?buildId 쿼리 때문에 $ 앵커 미사용)
 Disallow: /*_payload.json
 Disallow: /admin
+# wifi 상세(/wifi/wifi-) 는 영구 noindex — 재크롤 예산 낭비 방지 위해 크롤 차단. 허브 /wifi·지역 wifi 는 허용.
+Disallow: /wifi/wifi-
 
 User-agent: *
 Allow: /
@@ -23,9 +25,11 @@ Disallow: /api/
 # payload URL 에 ?<buildId> 쿼리가 붙으므로 $ 앵커는 쓰지 않는다(붙이면 매칭 실패).
 Disallow: /*_payload.json
 Disallow: /admin
-# wifi 상세 페이지는 중복·저가치 URL 방지를 위해 HTML noindex 로 제외한다.
-# robots.txt 에서는 차단하지 않아 Googlebot 이 noindex 를 직접 확인할 수 있게 한다.
+# wifi 상세(/wifi/wifi-) 는 영구 noindex 라 색인된 적이 없다(색인 제거가 아니라 처음부터 미색인).
+# 따라서 noindex 재확인용 크롤을 유지할 이유가 없어, 재크롤 예산 낭비를 막기 위해 상세 URL 을 크롤 차단한다.
+# 카테고리 허브 /wifi 와 지역 wifi(/[city]/[district]/wifi)는 계속 크롤·색인 허용한다.
 # sitemapPolicy.ts 에서 wifi 상세 URL은 계속 sitemap 제외 대상이다.
+Disallow: /wifi/wifi-
 
 # AI 검색 크롤러 — 허용 (AI 검색 노출)
 User-agent: GPTBot
