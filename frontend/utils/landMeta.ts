@@ -54,10 +54,14 @@ export function buildLandRegionDescription({
     const priceStr = avgPricePerPyeong.toLocaleString('ko-KR')
     const countPart =
       count != null && count > 0 ? ` 최근 거래 ${count.toLocaleString('ko-KR')}건을 포함한` : ''
-    return `${regionName} 토지 매매 실거래가를 확인하세요. 대지 평당 ${priceStr}원 기준${countPart} 거래 내역과 지목·용도지역 분포를 한눈에 파악할 수 있습니다. 국토교통부 공식 데이터를 기반으로 신뢰할 수 있는 토지 시세 정보를 제공합니다.`
+    // avgPricePerPyeong 은 '만원/평' 단위(템플릿 formatManwon+만원 표기와 동일). '원'이라 쓰면 1만배 오표기.
+    return `${regionName} 토지 매매 실거래가를 확인하세요. 대지 평당 ${priceStr}만원 기준${countPart} 거래 내역과 지목·용도지역 분포를 한눈에 파악할 수 있습니다. 국토교통부 공식 데이터를 기반으로 신뢰할 수 있는 토지 시세 정보를 제공합니다.`
   }
 
-  // 평당가 없는 경우 폴백
+  // 평당가 없는 경우 폴백 — 거래 건수라도 있으면 주입해 지역 간 설명문 중복을 피한다.
+  if (count != null && count > 0) {
+    return `${regionName} 토지 매매 실거래가를 조회하세요. 최근 거래 ${count.toLocaleString('ko-KR')}건의 내역과 지목·용도지역 분포를 확인할 수 있으며, 국토교통부 공식 데이터 기반으로 신뢰할 수 있는 토지 시세 정보를 제공합니다.`
+  }
   return `${regionName} 토지 매매 실거래가를 조회하세요. 거래 내역과 지목·용도지역 분포를 확인하고, 국토교통부 공식 데이터 기반으로 신뢰할 수 있는 토지 시세 정보를 제공합니다.`
 }
 
