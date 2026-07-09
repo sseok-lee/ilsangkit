@@ -324,6 +324,36 @@ describe('useFacilityMeta', () => {
         })
       )
     })
+
+    it('trash: count가 있으면 배출 일정 N건으로 차별화한다 (곳 아님)', () => {
+      const { setRegionMeta } = useFacilityMeta()
+      setRegionMeta({ city: 'seoul', cityName: '서울', district: 'gangnam', districtName: '강남구', category: 'trash', count: 214 })
+      expect(mockUseSeoMeta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '서울 강남구의 쓰레기 배출 일정 214건 — 배출 요일·분리수거·시간 정보를 확인하세요.',
+        })
+      )
+    })
+
+    it('trash: count가 없으면(fail-open) 일반 설명문으로 폴백한다', () => {
+      const { setRegionMeta } = useFacilityMeta()
+      setRegionMeta({ city: 'seoul', cityName: '서울', district: 'gangnam', districtName: '강남구', category: 'trash' })
+      expect(mockUseSeoMeta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '서울 강남구의 쓰레기 배출정보 배출일·분리수거 정보를 확인하세요.',
+        })
+      )
+    })
+
+    it('non-trash: count가 있으면 기존 N곳(위치·운영시간) 문안을 유지한다', () => {
+      const { setRegionMeta } = useFacilityMeta()
+      setRegionMeta({ city: 'seoul', cityName: '서울', district: 'gangnam', districtName: '강남구', category: 'toilet', count: 42 })
+      expect(mockUseSeoMeta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '서울 강남구의 공공화장실 42곳 — 위치·운영시간·개방시간·위치 정보를 확인하세요.',
+        })
+      )
+    })
   })
 
   describe('setErrorMeta', () => {
