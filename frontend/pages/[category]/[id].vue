@@ -297,7 +297,7 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 
 const route = useRoute()
 const { setFacilityDetailMeta } = useFacilityMeta()
-import { buildFacilityIntro, getFacilityDisplayName, buildFacilityDescription } from '~/composables/useFacilityMeta'
+import { buildFacilityIntro, getFacilityDisplayName, buildFacilityDescription, isUndifferentiatedFacility } from '~/composables/useFacilityMeta'
 const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
@@ -441,7 +441,9 @@ const isThinContent = computed(() => {
 
 // noindex/canonical 정책 통일 — robots=noindex 를 내보낼 때는 canonical 을 동시에 내보내지 않는다.
 // (정책: .omc/notes/noindex-canonical-policy.md)
-const isFacilityNoindex = computed(() => isLowValueCategory.value || isThinContent.value)
+// 이름·기관·주소가 모두 없어 제목이 `{지역} {카테고리}` 뿐이라 지역 내 중복이 불가피한 시설.
+const isUndifferentiated = computed(() => (facility.value ? isUndifferentiatedFacility(facility.value) : false))
+const isFacilityNoindex = computed(() => isLowValueCategory.value || isThinContent.value || isUndifferentiated.value)
 useHead(computed(() => {
   if (isFacilityNoindex.value) {
     return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
