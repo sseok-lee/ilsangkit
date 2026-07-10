@@ -80,6 +80,9 @@
             <p class="text-sm text-muted line-clamp-2 mb-3">
               {{ guide.summary }}
             </p>
+            <p class="mt-2 text-[11px] text-faint">
+              {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(guide.publishedAt) }}</span>
+            </p>
             <div class="flex items-center justify-between text-xs text-muted">
               <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
               <span class="flex items-center gap-1">
@@ -120,6 +123,8 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
+import { CONTENT_AUTHOR } from '~/utils/seoConstants'
+import { formatDotDate } from '~/utils/syncFreshness'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'

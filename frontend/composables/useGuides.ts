@@ -10,13 +10,13 @@ export interface GuideSummary {
   thumbnailUrl: string | null
   keywords: string | null
   viewCount: number
+  publishedAt: string | null
   createdAt: string
 }
 
 export interface GuideDetail extends GuideSummary {
   content: string
   published: boolean
-  publishedAt: string | null
   updatedAt: string
 }
 
