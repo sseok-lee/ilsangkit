@@ -8,6 +8,7 @@
       <slot />
     </main>
 
+    <TrustLine v-if="route.path !== '/'" />
     <!-- Footer (Desktop only) -->
     <AppFooter />
   </div>
@@ -16,8 +17,10 @@
 <script setup lang="ts">
 import AppHeader from '~/components/common/AppHeader.vue'
 import AppFooter from '~/components/common/AppFooter.vue'
+import TrustLine from '~/components/common/TrustLine.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 
+const route = useRoute()
 const { setOrganizationSchema } = useStructuredData()
 setOrganizationSchema()
 </script>
