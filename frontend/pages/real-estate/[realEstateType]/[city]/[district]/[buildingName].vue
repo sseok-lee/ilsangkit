@@ -247,6 +247,15 @@
         <div v-else class="rounded-xl bg-background-light p-8 text-center text-faint">
           시세 데이터가 아직 없습니다.
         </div>
+        <SourceStamp
+          v-if="monthly.length > 0"
+          class="mt-2"
+          variant="plain"
+          provider="국토교통부"
+          :basis="txBasis"
+          :synced-at="rawSyncDate"
+          :stale-days="2"
+        />
         <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-400">
           ※ 월세 거래는 전환율 5% 기준 환산보증금으로 표시됩니다
         </p>
@@ -257,6 +266,15 @@
 
       <!-- "거래 내역" 블록 -->
       <SectionBlock class="order-6 md:order-9" :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
+        <template #right>
+          <SourceStamp
+            provider="국토교통부"
+            :synced-at="rawSyncDate"
+            :stale-days="2"
+            source-url="https://rt.molit.go.kr"
+            link-label="원본 보기"
+          />
+        </template>
         <div v-if="txLoading" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -755,6 +773,13 @@ const rawSyncDate = computed(() => {
   const syncStatus = secondaryResponse.value?.syncStatus
   if (!syncStatus) return null
   return syncStatus[syncStatusKey.value] ?? null
+})
+
+// 시세 추이 각주용 기준월 — 최신 거래월(dealYmd)이 없으면 표기 생략
+const txBasis = computed(() => {
+  const info = buildingInfo.value
+  if (!info?.latestDealYear || !info?.latestDealMonth) return null
+  return `기준 ${info.latestDealYear}.${String(info.latestDealMonth).padStart(2, '0')}`
 })
 
 // ── Computed display values ───────────────────────────────────────────────────

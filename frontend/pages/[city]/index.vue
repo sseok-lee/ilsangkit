@@ -23,6 +23,7 @@
         <RegionRealEstatePrices
           v-if="cityData.realEstate"
           :cards="realEstateCards"
+          :synced-at="reSyncedAt"
         />
 
         <!-- ② 구/군 선택 -->
@@ -188,6 +189,29 @@ function formatPrice(amount: number | null): string {
   }
   return `${amount.toLocaleString()}만원`
 }
+
+const RE_SYNC_KEYS = ['aptSale', 'aptRent', 'villaSale', 'villaRent', 'offitelSale', 'offitelRent'] as const
+
+const hubSyncApiBase = useApiBase()
+const { data: hubSyncStatus } = useAsyncData<Record<string, string | null> | null>(
+  'city-hub-sync-status',
+  async () => {
+    const res = await $fetch<{ success: boolean; data: Record<string, string | null> }>(
+      `${hubSyncApiBase}/api/meta/sync-status`,
+      { signal: AbortSignal.timeout(8000) },
+    )
+    return res.data ?? null
+  },
+  { server: false },
+)
+
+// 부동산 6개 테이블 중 가장 최근 동기화 시각 (ISO 문자열은 사전순 = 시간순)
+const reSyncedAt = computed<string | null>(() => {
+  const s = hubSyncStatus.value
+  if (!s) return null
+  const dates = RE_SYNC_KEYS.map(k => s[k]).filter((v): v is string => !!v)
+  return dates.length ? [...dates].sort().at(-1) ?? null : null
+})
 
 const realEstateCards = computed(() => {
   const re = cityData.value?.realEstate

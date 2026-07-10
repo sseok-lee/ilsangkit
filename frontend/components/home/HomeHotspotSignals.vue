@@ -87,9 +87,12 @@
         </div>
       </div>
 
-      <div class="px-6 py-3 bg-background-light border-t border-line text-[11px] text-muted flex items-center gap-2">
-        <span class="material-symbols-outlined text-[14px] text-faint">info</span>
-        국토교통부 실거래가 · 최근 7일 vs 직전 7일 · 표본 30건 미만 지역 제외
+      <div class="px-6 py-3 bg-background-light border-t border-line">
+        <SourceStamp
+          variant="plain"
+          provider="국토교통부 실거래가"
+          basis="최근 7일 vs 직전 7일 · 표본 30건 미만 지역 제외"
+        />
       </div>
     </div>
   </section>
@@ -98,6 +101,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import HardLink from '~/components/common/HardLink.vue';
+import SourceStamp from '~/components/common/SourceStamp.vue';
 import HotspotCard from './hotspot/HotspotCard.vue';
 import TxnTypeMiniTabs from './hotspot/TxnTypeMiniTabs.vue';
 import type { RealEstateHotspots } from '~/composables/useHomeDashboard';

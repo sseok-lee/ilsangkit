@@ -56,3 +56,14 @@ describe('RegionRealEstatePrices', () => {
     expect(wrapper.find('h2').text()).toContain('부동산 시세 현황')
   })
 })
+
+describe('RegionRealEstatePrices — SourceStamp 각주', () => {
+  it('출처·산출조건(전체 기간 누적)을 렌더한다', () => {
+    // 이 파일 상단의 기존 mount 헬퍼/픽스처와 동일한 props에 syncedAt만 추가해 mount
+    const w = mount(RegionRealEstatePrices, {
+      props: { cards: [], syncedAt: '2026-07-10T00:00:00.000Z' },
+    })
+    expect(w.text()).toContain('국토교통부')
+    expect(w.text()).toContain('전체 기간 누적')
+  })
+})

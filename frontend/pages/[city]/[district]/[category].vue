@@ -98,6 +98,7 @@ import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQ
 import { computeAreaNoindex } from '~/utils/areaNoindex'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { resolveRegionDisplay } from '~/utils/regionDisplayState'
+import { withSyncDate } from '~/utils/syncFreshness'
 import type { FacilityCategory, Facility } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -251,6 +252,18 @@ const heroDescription = computed(() =>
     ? `${cityName.value} ${districtName.value}의 쓰레기 배출 일정 정보를 확인하세요.`
     : `${cityName.value} ${districtName.value}의 ${categoryName.value} 위치·운영시간을 확인하세요.`
 )
+const { data: syncStatusData } = useAsyncData<Record<string, string | null> | null>(
+  `region-sync-status-${category.value}`,
+  async () => {
+    const res = await $fetch<{ success: boolean; data: Record<string, string | null> }>(
+      `${apiBase}/api/meta/sync-status`,
+      { signal: AbortSignal.timeout(8000) },
+    )
+    return res.data ?? null
+  },
+  { server: false },
+)
+
 const heroStats = computed(() => {
   const s: { label: string; value: string }[] = []
   const count = isTrash.value ? wasteTotal.value : (summary.value?.count ?? total.value ?? 0)
@@ -260,7 +273,14 @@ const heroStats = computed(() => {
   if (!isTrash.value && summary.value?.nearbyDistricts?.length) {
     s.push({ label: '주변 지역', value: summary.value.nearbyDistricts.slice(0, 2).map(n => n.district).join(' · ') })
   }
-  s.push({ label: '업데이트', value: isTrash.value ? '매일 자동' : '월 1회 자동' })
+  s.push({
+    label: '업데이트',
+    value: withSyncDate(
+      isTrash.value ? '매일 자동' : '월 1회 자동',
+      syncStatusData.value?.[category.value],
+      isTrash.value ? 3 : 62,
+    ),
+  })
   return s
 })
 

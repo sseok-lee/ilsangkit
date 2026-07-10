@@ -35,10 +35,20 @@
         </div>
       </NuxtLink>
     </div>
+    <SourceStamp
+      class="mt-3"
+      variant="plain"
+      provider="국토교통부"
+      basis="전체 기간 누적"
+      :synced-at="syncedAt ?? null"
+      :stale-days="2"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
+import SourceStamp from '~/components/common/SourceStamp.vue'
+
 interface RealEstateCard {
   type: string
   label: string
@@ -50,5 +60,6 @@ interface RealEstateCard {
 
 defineProps<{
   cards: RealEstateCard[]
+  syncedAt?: string | null
 }>()
 </script>

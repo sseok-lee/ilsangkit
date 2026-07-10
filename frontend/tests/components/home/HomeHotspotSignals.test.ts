@@ -94,3 +94,12 @@ describe('HomeHotspotSignals', () => {
     expect(wrapper.text()).toContain('영등포구');
   });
 });
+
+describe('HomeHotspotSignals — 각주 규격', () => {
+  it('출처·산출조건 각주 텍스트를 유지한다', () => {
+    const wrapper = mount(HomeHotspotSignals, {
+      props: { hotspots: { apt: fullBundle() } },
+    });
+    expect(wrapper.text()).toContain('국토교통부 실거래가 · 최근 7일 vs 직전 7일 · 표본 30건 미만 지역 제외');
+  });
+});
