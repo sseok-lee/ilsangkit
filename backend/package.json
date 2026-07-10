@@ -57,6 +57,7 @@
     "sync:sports": "tsx src/scripts/syncSports.ts",
     "sync:subway": "tsx src/scripts/syncSubway.ts",
     "submit:indexing": "tsx src/scripts/submitIndexing.ts",
+    "report:adsense-coverage": "tsx src/scripts/adsenseCoverageReport.ts",
     "migrate:news-articles": "tsx src/scripts/migrateNewsGuidesToArticles.ts"
   },
   "prisma": {
