@@ -93,7 +93,7 @@ import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { CITY_FULL_NAME_TO_SLUG } from '~/shared/regionSlugs'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
+import { CATEGORY_META, CATEGORY_GROUPS, NON_REGION_CATEGORIES } from '~/types/facility'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 import { computeAreaNoindex } from '~/utils/areaNoindex'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
@@ -265,7 +265,8 @@ const heroStats = computed(() => {
 })
 
 // Other categories (dynamically from CATEGORY_GROUPS, excluding current)
-const EXCLUDED_REGION_CATEGORIES = new Set<string>([])
+// 지역 페이지가 없는 카테고리(subway 등)는 "이 지역 다른 카테고리" 링크에서 제외 (404 방지).
+const EXCLUDED_REGION_CATEGORIES = new Set<string>(NON_REGION_CATEGORIES)
 const otherCategories = computed(() => {
   const all: { slug: string; name: string }[] = []
   for (const group of CATEGORY_GROUPS) {

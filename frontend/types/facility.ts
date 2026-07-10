@@ -533,6 +533,11 @@ export const CATEGORY_GROUPS: readonly CategoryGroup[] = [
   },
 ] as const
 
+// 지역×카테고리(/[city]/[district]/[category]) 페이지가 없는 카테고리.
+// subway 는 역(station) 그룹 단위라 지역 목록 라우트가 없고(/[city]/[district]/subway → 404),
+// 허브 /subway·상세 /subway/[id] 만 존재한다. 지역 스코프 링크 생성 시 제외한다.
+export const NON_REGION_CATEGORIES: readonly string[] = ['subway']
+
 // 개별 드롭다운으로 남는 링크 그룹 (부동산, 청약·임대)
 export const NAV_LINK_GROUPS: readonly LinkGroup[] = [
   {
