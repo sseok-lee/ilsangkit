@@ -6,15 +6,15 @@
     <span v-if="showDate" class="size-1.5 shrink-0 rounded-full bg-success" aria-hidden="true"></span>
     <span class="font-bold text-muted">{{ provider }}</span>
     <template v-if="basis">
-      <span aria-hidden="true">·</span>
+      <span aria-hidden="true"> · </span>
       <span>{{ basis }}</span>
     </template>
     <template v-if="showDate">
-      <span aria-hidden="true">·</span>
+      <span aria-hidden="true"> · </span>
       <span class="[font-variant-numeric:tabular-nums]">{{ displayDate }} 동기화</span>
     </template>
     <template v-if="sourceUrl">
-      <span aria-hidden="true">·</span>
+      <span aria-hidden="true"> · </span>
       <a
         :href="sourceUrl"
         target="_blank"

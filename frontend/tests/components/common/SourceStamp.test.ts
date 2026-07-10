@@ -53,4 +53,9 @@ describe('SourceStamp', () => {
     const w = mount(SourceStamp, { props: { provider: 'x', variant: 'plain' } })
     expect(w.attributes('class')).not.toContain('md:border')
   })
+
+  it('구분자는 공백을 포함한 " · "로 렌더된다 (textContent 문구 보존)', () => {
+    const w = mount(SourceStamp, { props: { provider: '국토교통부', basis: '전체 기간 누적' } })
+    expect(w.text()).toContain('국토교통부 · 전체 기간 누적')
+  })
 })
