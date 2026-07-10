@@ -248,6 +248,7 @@
           시세 데이터가 아직 없습니다.
         </div>
         <SourceStamp
+          v-if="monthly.length > 0"
           class="mt-2"
           variant="plain"
           provider="국토교통부"
@@ -274,7 +275,6 @@
             link-label="원본 보기"
           />
         </template>
-
         <div v-if="txLoading" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
