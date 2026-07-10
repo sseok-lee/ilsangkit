@@ -129,6 +129,7 @@ import { shouldNoindexSsr } from '~/utils/ssrIndexability'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { watchEffect } from 'vue'
 import { suppressAds } from '~/composables/useAdsPolicy'
+import { useSyncStatus } from '~/composables/useSyncStatus'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -192,18 +193,7 @@ function formatPrice(amount: number | null): string {
 
 const RE_SYNC_KEYS = ['aptSale', 'aptRent', 'villaSale', 'villaRent', 'offitelSale', 'offitelRent'] as const
 
-const hubSyncApiBase = useApiBase()
-const { data: hubSyncStatus } = useAsyncData<Record<string, string | null> | null>(
-  'city-hub-sync-status',
-  async () => {
-    const res = await $fetch<{ success: boolean; data: Record<string, string | null> }>(
-      `${hubSyncApiBase}/api/meta/sync-status`,
-      { signal: AbortSignal.timeout(8000) },
-    )
-    return res.data ?? null
-  },
-  { server: false },
-)
+const { syncStatus: hubSyncStatus } = useSyncStatus()
 
 // 부동산 6개 테이블 중 가장 최근 동기화 시각 (ISO 문자열은 사전순 = 시간순)
 const reSyncedAt = computed<string | null>(() => {

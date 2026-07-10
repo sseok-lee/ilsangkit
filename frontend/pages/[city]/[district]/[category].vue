@@ -98,7 +98,8 @@ import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQ
 import { computeAreaNoindex } from '~/utils/areaNoindex'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { resolveRegionDisplay } from '~/utils/regionDisplayState'
-import { withSyncDate } from '~/utils/syncFreshness'
+import { withSyncDate, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
+import { useSyncStatus } from '~/composables/useSyncStatus'
 import type { FacilityCategory, Facility } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -252,17 +253,7 @@ const heroDescription = computed(() =>
     ? `${cityName.value} ${districtName.value}의 쓰레기 배출 일정 정보를 확인하세요.`
     : `${cityName.value} ${districtName.value}의 ${categoryName.value} 위치·운영시간을 확인하세요.`
 )
-const { data: syncStatusData } = useAsyncData<Record<string, string | null> | null>(
-  `region-sync-status-${category.value}`,
-  async () => {
-    const res = await $fetch<{ success: boolean; data: Record<string, string | null> }>(
-      `${apiBase}/api/meta/sync-status`,
-      { signal: AbortSignal.timeout(8000) },
-    )
-    return res.data ?? null
-  },
-  { server: false },
-)
+const { syncStatus } = useSyncStatus()
 
 const heroStats = computed(() => {
   const s: { label: string; value: string }[] = []
@@ -277,8 +268,8 @@ const heroStats = computed(() => {
     label: '업데이트',
     value: withSyncDate(
       isTrash.value ? '매일 자동' : '월 1회 자동',
-      syncStatusData.value?.[category.value],
-      isTrash.value ? 3 : 62,
+      syncStatus.value?.[category.value],
+      isTrash.value ? TRASH_STALE_DAYS : FACILITY_STALE_DAYS,
     ),
   })
   return s
