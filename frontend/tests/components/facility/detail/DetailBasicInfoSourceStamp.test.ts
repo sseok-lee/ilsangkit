@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import type { FacilityDetail } from '~/types/facility'
@@ -23,6 +23,14 @@ const baseProps = {
 }
 
 describe('DetailBasicInfo — SourceStamp', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-10T09:00:00+09:00'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('제공기관과 동기화 날짜를 섹션 헤더에 렌더한다', () => {
     const w = mount(DetailBasicInfo, {
       props: { facility: pharmacyFixture, ...baseProps, rawSyncDate: '2026-06-19T00:00:00.000Z' },
