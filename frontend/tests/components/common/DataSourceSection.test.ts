@@ -75,3 +75,24 @@ describe('DataSourceSection', () => {
     expect(wrapper.text()).toContain('공공누리 제1유형')
   })
 })
+
+describe('DataSourceSection — 수정 요청 링크', () => {
+  it('full 카드에 수정 요청 링크와 SLA를 렌더한다', () => {
+    const w = mount(DataSourceSection, {
+      props: { domain: 'facility', category: 'pharmacy' },
+      global: { stubs: { NuxtLink: NuxtLinkStub } },
+    })
+    expect(w.text()).toContain('정보가 실제와 다른가요?')
+    expect(w.text()).toContain('수정 요청')
+    expect(w.text()).toContain('3~5일 내 반영')
+    expect(w.html()).toContain('/contact#data-fix')
+  })
+
+  it('compact 모드에는 수정 요청 링크가 없다', () => {
+    const w = mount(DataSourceSection, {
+      props: { domain: 'facility', compact: true },
+      global: { stubs: { NuxtLink: NuxtLinkStub } },
+    })
+    expect(w.text()).not.toContain('수정 요청')
+  })
+})
