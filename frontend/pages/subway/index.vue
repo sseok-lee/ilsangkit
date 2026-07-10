@@ -115,9 +115,9 @@
 
       <!-- 관련 탐색 -->
       <SectionBlock
-        v-if="relatedCategories.length > 0 || popularRegionLinks.length > 0"
+        v-if="relatedCategories.length > 0"
         heading="관련 탐색"
-        subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요."
+        subtext="비슷한 카테고리로 탐색을 이어가세요."
       >
         <div v-if="relatedCategories.length > 0" class="flex flex-wrap items-center gap-2">
           <span class="text-xs text-muted font-medium pr-1">관련 카테고리</span>
@@ -128,17 +128,6 @@
             class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
           >
             {{ cat.label }}
-          </NuxtLink>
-        </div>
-        <div v-if="popularRegionLinks.length > 0" class="flex flex-wrap items-center gap-2 mt-3">
-          <span class="text-xs text-muted font-medium pr-1">인기 지역</span>
-          <NuxtLink
-            v-for="region in popularRegionLinks"
-            :key="`${region.citySlug}-${region.districtSlug}`"
-            :to="`/${region.citySlug}/${region.districtSlug}/subway`"
-            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
-          >
-            {{ region.label }} 지하철역
           </NuxtLink>
         </div>
       </SectionBlock>
@@ -180,7 +169,7 @@ import Pagination from '~/components/common/Pagination.vue'
 import FacilityCard from '~/components/facility/FacilityCard.vue'
 import { useRegions } from '~/composables/useRegions'
 import { CITY_SLUGS } from '~/shared/regionSlugs'
-import { POPULAR_REGIONS, RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
@@ -326,7 +315,6 @@ const relatedCategories = computed(() => {
   return related.map((c) => ({ slug: c, label: CATEGORY_META[c as FacilityCategory]?.label ?? c }))
 })
 
-const popularRegionLinks = computed(() => POPULAR_REGIONS)
 
 const faqItems = computed(() => CATEGORY_FAQ.subway ?? [])
 
