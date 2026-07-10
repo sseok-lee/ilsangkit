@@ -84,7 +84,7 @@
               {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(guide.publishedAt) }}</span>
             </p>
             <div class="flex items-center justify-between text-xs text-muted">
-              <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
+              <time :datetime="guide.publishedAt">{{ formatDate(guide.publishedAt) }}</time>
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
                 {{ guide.viewCount.toLocaleString() }}
