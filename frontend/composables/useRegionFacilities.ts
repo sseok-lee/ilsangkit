@@ -78,6 +78,39 @@ export function useRegionFacilities() {
     };
   }
 
+  // 순수 페치: ref 를 건드리지 않고 데이터만 반환한다.
+  // - SSR(useAsyncData)와 클라이언트(fetchFacilities)가 공유하는 단일 데이터 소스.
+  // - 페치 실패(네트워크/5xx)는 삼키지 않고 throw → 호출자(useAsyncData)가 degraded(503) 판정 가능.
+  // - API 가 success:false 면 null 반환(빈 목록으로 정상 렌더, degraded 아님).
+  async function loadRegionFacilities(
+    city: string,
+    district: string,
+    category: string,
+    currentPage: number = 1,
+    pageSize: number = 20,
+    departments?: string[]
+  ): Promise<RegionFacilitiesResponse | null> {
+    if (category === 'subway') {
+      return fetchSubwayRegion(city, district, currentPage, pageSize);
+    }
+
+    const query: Record<string, unknown> = {
+      page: currentPage,
+      limit: pageSize,
+    };
+    if (departments && departments.length > 0) {
+      query.departments = departments.join(',');
+    }
+
+    const response = await $fetch<ApiResponse<RegionFacilitiesResponse>>(
+      `${apiBase}/api/facilities/region/${city}/${district}/${category}`,
+      { query },
+    );
+
+    return response.success && response.data ? response.data : null;
+  }
+
+  // 클라이언트 명령형 로더: loadRegionFacilities 를 감싸 ref 를 갱신한다 (페이지네이션·필터용).
   async function fetchFacilities(
     city: string,
     district: string,
@@ -90,36 +123,12 @@ export function useRegionFacilities() {
     error.value = null;
 
     try {
-      if (category === 'subway') {
-        const normalized = await fetchSubwayRegion(city, district, currentPage, pageSize);
-        if (normalized) {
-          facilities.value = normalized.items;
-          total.value = normalized.total;
-          page.value = normalized.page;
-          totalPages.value = normalized.totalPages;
-        }
-        return;
-      }
-
-  
-      const query: Record<string, unknown> = {
-        page: currentPage,
-        limit: pageSize,
-      };
-      if (departments && departments.length > 0) {
-        query.departments = departments.join(',');
-      }
-
-      const response = await $fetch<ApiResponse<RegionFacilitiesResponse>>(
-        `${apiBase}/api/facilities/region/${city}/${district}/${category}`,
-        { query },
-      );
-
-      if (response.success && response.data) {
-        facilities.value = response.data.items;
-        total.value = response.data.total;
-        page.value = response.data.page;
-        totalPages.value = response.data.totalPages;
+      const data = await loadRegionFacilities(city, district, category, currentPage, pageSize, departments);
+      if (data) {
+        facilities.value = data.items;
+        total.value = data.total;
+        page.value = data.page;
+        totalPages.value = data.totalPages;
       }
     } catch (err) {
       console.error('Failed to fetch region facilities:', err);
@@ -177,6 +186,7 @@ export function useRegionFacilities() {
     total: readonly(total),
     page: readonly(page),
     totalPages: readonly(totalPages),
+    loadRegionFacilities,
     fetchFacilities,
     fetchAllFacilities,
   };

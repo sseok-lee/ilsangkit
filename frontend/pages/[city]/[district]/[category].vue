@@ -56,12 +56,12 @@
       v-else
       :category-name="categoryName"
       :district-name="districtName"
-      :total="total || 0"
-      :loading="loading"
+      :total="displayTotal"
+      :loading="displayLoading"
       :error="error"
-      :facilities="facilities"
+      :facilities="displayFacilities"
       :current-page="currentPage"
-      :total-pages="totalPages"
+      :total-pages="displayTotalPages"
       :category-slug="category"
       @page-change="goToPage"
       @retry="loadFacilities"
@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRegionFacilities } from '~/composables/useRegionFacilities'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
@@ -96,7 +96,9 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 import { computeAreaNoindex } from '~/utils/areaNoindex'
-import type { FacilityCategory } from '~/types/facility'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { resolveRegionDisplay } from '~/utils/regionDisplayState'
+import type { FacilityCategory, Facility } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -324,15 +326,48 @@ const {
   loading,
   error,
   total,
-  page,
   totalPages,
+  loadRegionFacilities,
   fetchFacilities,
 } = useRegionFacilities()
 
 const currentPage = ref(initialPage)
 const selectedDepartments = ref<string[]>([])
 
+// SSR: 시설 목록을 서버에서 로드해 HTML 에 실제 시설 데이터를 렌더한다.
+// (기존엔 클라이언트 fetch 라 SSR HTML 에 로딩 자리표시자만 남아 네이버가 얇은 중복 문서로 인식했다.)
+const { data: ssrFacilityData, error: ssrFacilityError } = await useAsyncData(
+  `region-facilities-${city.value}-${district.value}-${category.value}-p${initialPage}`,
+  () => isTrash.value
+    ? Promise.resolve(null)
+    : loadRegionFacilities(city.value, district.value, category.value, initialPage, 20),
+)
+// fail-open: SSR 페치 실패 시 503+no-store (크롤러는 기존 색인 유지·재방문, 조용한 noindex 금지).
+// 과거 SSR 풀고갈→noindex 사고 방지 (.omc/notes 정책).
+if (import.meta.server && ssrFacilityError.value) markDegradedResponse()
+
+// 표시 상태: 초기(SSR)엔 서버 데이터, 클라이언트 페이지네이션/필터 후엔 composable ref 우선.
+// 선택 규칙은 resolveRegionDisplay(순수 함수, 단위 테스트 대상)에 위임한다.
+const ssrConsumed = ref(false)
+const displayState = computed(() =>
+  resolveRegionDisplay({
+    ssrConsumed: ssrConsumed.value,
+    ssr: ssrFacilityData.value,
+    client: {
+      items: facilities.value as Facility[],
+      total: total.value || 0,
+      totalPages: totalPages.value,
+      loading: loading.value,
+    },
+  })
+)
+const displayFacilities = computed(() => displayState.value.facilities)
+const displayTotal = computed(() => displayState.value.total)
+const displayTotalPages = computed(() => displayState.value.totalPages)
+const displayLoading = computed(() => displayState.value.loading)
+
 async function loadFacilities() {
+  ssrConsumed.value = true
   const departments = category.value === 'hospital' && selectedDepartments.value.length > 0
     ? selectedDepartments.value
     : undefined
@@ -354,12 +389,15 @@ async function goToPage(pageNum: number) {
   }
 }
 
-// 초기 데이터 로드
+// 초기 데이터: 비-trash 목록은 위 useAsyncData(SSR)가 로드한다. trash 만 클라이언트 로드.
 if (isTrash.value) {
   loadWasteSchedules()
-} else {
-  loadFacilities()
 }
+
+// SSR 페치가 실패(degraded)했을 때만 클라이언트에서 1회 보충 로드 — 실사용자 정상 표시.
+onMounted(() => {
+  if (!isTrash.value && !ssrFacilityData.value) loadFacilities()
+})
 
 // URL → 상태 동기화: 브라우저 뒤로가기/앞으로가기 혹은 query-only 네비게이션에서도
 // pageQueryParam(아래 computed)과 실제 페이지 상태가 어긋나지 않도록 한다.
@@ -406,11 +444,13 @@ useHead(computed(() => {
 }))
 
 // ItemList 구조화 데이터 (non-trash only)
-watch([facilities, currentPage, totalPages], () => {
+// display* 를 소스로 immediate:true → SSR HTML 에도 ItemList/rel=prev·next 가 포함된다.
+// 링크에 key 를 부여해 재실행 시 중복 태그가 쌓이지 않게 한다.
+watch([displayFacilities, currentPage, displayTotalPages], () => {
   if (isTrash.value) return
-  if (facilities.value.length > 0) {
+  if (displayFacilities.value.length > 0) {
     setItemListSchema(
-      facilities.value.map((f, index) => ({
+      displayFacilities.value.map((f, index) => ({
         name: f.name,
         url: `/${f.category}/${f.id}`,
         position: (currentPage.value - 1) * 20 + index + 1,
@@ -421,18 +461,18 @@ watch([facilities, currentPage, totalPages], () => {
   // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
   if (isPageNoindex.value) return
 
-  const paginationLinks: Array<{ rel: string; href: string }> = []
+  const paginationLinks: Array<{ rel: string; href: string; key: string }> = []
   const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
 
   if (currentPage.value > 1) {
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${currentPage.value - 1}` })
+    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${currentPage.value - 1}`, key: 'seo-rel-prev' })
   }
-  if (currentPage.value < totalPages.value) {
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${currentPage.value + 1}` })
+  if (currentPage.value < displayTotalPages.value) {
+    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${currentPage.value + 1}`, key: 'seo-rel-next' })
   }
 
   useHead({ link: paginationLinks })
-})
+}, { immediate: true })
 
 // ItemList 구조화 데이터 (trash)
 watch([wasteSchedules, wasteCurrentPage, wasteTotalPages], () => {
