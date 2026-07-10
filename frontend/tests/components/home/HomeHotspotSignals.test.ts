@@ -94,3 +94,14 @@ describe('HomeHotspotSignals', () => {
     expect(wrapper.text()).toContain('영등포구');
   });
 });
+
+describe('HomeHotspotSignals — 각주 규격', () => {
+  it('출처·산출조건 각주 텍스트를 유지한다', () => {
+    const wrapper = mount(HomeHotspotSignals, {
+      props: { hotspots: { apt: fullBundle() } },
+    });
+    const wrapperText = wrapper.text();
+    expect(wrapperText).toContain('국토교통부 실거래가');
+    expect(wrapperText).toContain('최근 7일 vs 직전 7일');
+  });
+});
