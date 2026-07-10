@@ -126,6 +126,7 @@
                 :aed-weekly-hours="aedWeeklyHours"
                 :aed-weekly-hours-count="aedWeeklyHours.length"
                 :pharmacy-weekly-hours="pharmacyWeeklyHours"
+                :raw-sync-date="rawSyncDate"
               />
 
               <!-- Ad: 기본정보 ↔ 시설현황 사이 -->
@@ -640,6 +641,14 @@ const lastSyncDate = computed(() => {
   if (!data) return null
   const cat = facility.value.category
   return formatKstDate(data[cat])
+})
+
+// SourceStamp용 미포맷 ISO (lastSyncDate는 DataSourceSection용 포맷 문자열)
+const rawSyncDate = computed<string | null>(() => {
+  if (!facility.value) return null
+  const data = secondaryResponse.value?.syncStatus
+  if (!data) return null
+  return data[facility.value.category] ?? null
 })
 
 

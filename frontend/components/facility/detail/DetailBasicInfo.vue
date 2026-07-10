@@ -1,5 +1,14 @@
 <template>
   <SectionBlock heading="기본정보" subtext="주소·운영시간·연락처 등 공통 정보를 먼저 확인합니다.">
+    <template #right>
+      <SourceStamp
+        v-if="dataSource"
+        :provider="dataSource.provider"
+        :synced-at="rawSyncDate ?? null"
+        :source-url="dataSource.url"
+        link-label="데이터셋"
+      />
+    </template>
     <div class="flex flex-col gap-3">
       <!-- Operating Status Banner -->
       <ClientOnly>
@@ -639,8 +648,10 @@ import { computed } from 'vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import OperatingStatusBanner from '~/components/facility/OperatingStatusBanner.vue'
 import WeekdayHoursTable from '~/components/facility/detail/WeekdayHoursTable.vue'
+import SourceStamp from '~/components/common/SourceStamp.vue'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
 import { resolveFacilityPhone } from '~/utils/facilityPhone'
+import { resolveDataSource } from '~/utils/dataSource'
 import { useAnalytics } from '~/composables/useAnalytics'
 import type { FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 
@@ -653,9 +664,12 @@ const props = defineProps<{
   aedWeeklyHours: Array<{ day: string; time: string; allDay: boolean; closed: boolean; isToday: boolean }>
   aedWeeklyHoursCount: number
   pharmacyWeeklyHours: Array<{ day: string; time: string; closed: boolean; isToday: boolean }>
+  rawSyncDate?: string | null
 }>()
 
 const details = computed(() => props.facility?.details as FacilityDetailsAll | undefined)
+
+const dataSource = computed(() => resolveDataSource({ domain: 'facility', category: props.facility.category }))
 
 const isOpen24Hours = computed(() => {
   if (!details.value) return false
