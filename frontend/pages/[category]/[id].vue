@@ -192,7 +192,11 @@
               <AdBanner variant="compact-mobile" />
 
               <!-- Mobile-only inline CoupangBanner (데이터 출처 위로 이동, md+에서는 사이드바 Coupang 사용) -->
-              <CoupangBanner class="md:hidden" />
+              <!-- 고지문은 모바일/데스크톱 두 CoupangBanner 인스턴스에서 끄고(disclosure=false) 아래
+                   단일 <p>로 페이지당 1회만 노출한다(모든 뷰포트, 반대 브레이크포인트에서 광고만 있고
+                   고지 누락되는 사고 방지 — 절대 md:hidden/hidden md:flex 금지). -->
+              <CoupangBanner class="md:hidden" :disclosure="false" />
+              <p class="mt-2 text-center text-[11px] leading-relaxed text-slate-400">{{ COUPANG_DISCLOSURE }}</p>
 
               <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
               <DetailContextLinks
@@ -251,8 +255,8 @@
                 </div>
               </div>
 
-              <!-- 쿠팡 배너 (Desktop Sticky) -->
-              <CoupangBanner class="mt-3" />
+              <!-- 쿠팡 배너 (Desktop Sticky) — 고지문은 모바일 인라인 배너 옆 단일 <p>로 통합됐으므로 여기선 끔 -->
+              <CoupangBanner class="mt-3" :disclosure="false" />
 
               <!-- Ad: 사이드바 (sidebar-sticky, desktop only) -->
               <div class="mt-3">
@@ -294,6 +298,7 @@ import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
 import { buildHeroStats } from '~/utils/categoryHeroStats'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { COUPANG_DISCLOSURE } from '~/components/ads/CoupangBanner.vue'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
