@@ -313,4 +313,38 @@ describe('AdBanner', () => {
       expect(wrapper.classes()).toContain('ad-banner--timed-out')
     })
   })
+
+  describe('신뢰 디자인: "광고" 라벨 + 점선 테두리 + surface-2 배경', () => {
+    it('"광고" 라벨을 .ad-banner 내부에 렌더한다', async () => {
+      const wrapper = mount(AdBanner, {
+        global: { stubs: { ClientOnly: clientOnlyStub } },
+      })
+      await flushAdMount()
+
+      const banner = wrapper.find('.ad-banner')
+      expect(banner.exists()).toBe(true)
+      const label = banner.find('.ad-banner__label')
+      expect(label.exists()).toBe(true)
+      expect(label.text()).toBe('광고')
+    })
+
+    it('라벨은 .ad-banner의 자식이라 collapse 시 부모와 함께 숨겨진다 (독립 최상위 요소가 아니다)', async () => {
+      const wrapper = mount(AdBanner, {
+        global: { stubs: { ClientOnly: clientOnlyStub } },
+      })
+      await flushAdMount()
+
+      // 라벨이 .ad-banner 밖 형제로 새면 collapse(부모 display:none)를 안 타 유령 라벨이 됨
+      expect(wrapper.find('.ad-banner > .ad-banner__label').exists()).toBe(true)
+    })
+
+    it('min-height는 CLS 보존을 위해 라벨+테두리(22px)만큼 상향된 값을 유지한다', () => {
+      const src = source()
+      expect(src).toContain('.ad-banner--auto { min-height: 122px;')
+      expect(src).toContain('min-height: 302px;')   // 모바일 auto
+      expect(src).toContain('.ad-banner--horizontal { min-height: 112px;')
+      expect(src).toContain('.ad-banner--rectangle { min-height: 272px;')
+      expect(src).toContain('.ad-banner--compact-mobile { min-height: 170px;')
+    })
+  })
 })
