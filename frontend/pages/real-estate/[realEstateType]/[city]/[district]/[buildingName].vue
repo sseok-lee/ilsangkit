@@ -563,6 +563,18 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
   return `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
 }
 
+// 최근 거래가 단일 소스: meta description·헤더(heroStats·latestPrice)가 반드시 동일 값을
+// 쓰도록 buildingInfo(latestDealAmount/Year/Month)에서만 산출한다. currentTab/apiSlug 가 URL
+// 고정이라 buildingInfo 는 페이지당 불변 → transactions 페이지네이션·필터와 무관하게 meta==헤더.
+const recentDealForDisplay = computed<{ amount: number | null; dealDate: string | null }>(() => {
+  const info = buildingInfo.value
+  const amount = info?.latestDealAmount ? Number(info.latestDealAmount) : null
+  const dealDate = info?.latestDealYear && info?.latestDealMonth
+    ? `${info.latestDealYear}년 ${info.latestDealMonth}월`
+    : null
+  return { amount, dealDate }
+})
+
 const detailMeta = computed(() => {
   const mode = currentTab.value
 
@@ -576,20 +588,13 @@ const detailMeta = computed(() => {
     areaRange = maxA > minA ? { min: minA, max: maxA } : { min: minA }
   }
 
-  let recentDeal: { amount: number; dealDate: string } | undefined
-  const firstTx = transactions.value.items[0]
-  if (firstTx) {
-    const amount = 'dealAmount' in firstTx ? firstTx.dealAmount : firstTx.deposit
-    if (amount) {
-      recentDeal = {
-        amount: Number(amount),
-        dealDate: `${firstTx.dealYear}년 ${firstTx.dealMonth}월`,
-      }
-    }
-  }
+  // 헤더와 동일 소스(buildingInfo)에서만 최근 거래를 뽑는다 — transactions.items[0] 의존 제거.
+  const rd = recentDealForDisplay.value
+  const recentDeal: { amount: number; dealDate: string } | undefined =
+    rd.amount && rd.dealDate ? { amount: rd.amount, dealDate: rd.dealDate } : undefined
 
   const totalCount = summary.value?.totalCount ?? 0
-  const buildYearVal = firstTx?.buildYear ?? buildingInfo.value?.buildYear ?? null
+  const buildYearVal = buildingInfo.value?.buildYear ?? null
 
   return buildRealEstateDetailMeta({
     buildingName: buildingName.value,
@@ -816,11 +821,12 @@ const areaRange = computed(() => {
 })
 
 const latestPrice = computed(() => {
-  const info = buildingInfo.value
-  if (!info?.latestDealAmount) return '-'
-  const deposit = formatKoreanPrice(info.latestDealAmount)
-  if (info.latestMonthlyRent && info.latestMonthlyRent > 0) {
-    return `${deposit} / ${formatKoreanPrice(info.latestMonthlyRent)}`
+  const amount = recentDealForDisplay.value.amount
+  if (!amount) return '-'
+  const deposit = formatKoreanPrice(amount)
+  const monthlyRent = buildingInfo.value?.latestMonthlyRent
+  if (monthlyRent && monthlyRent > 0) {
+    return `${deposit} / ${formatKoreanPrice(monthlyRent)}`
   }
   return deposit
 })
@@ -839,9 +845,7 @@ const rentRatioLabel = computed(() => {
 })
 const heroStats = computed(() => {
   const PLACEHOLDER = '정보 없음'
-  const dealDate = buildingInfo.value?.latestDealYear && buildingInfo.value?.latestDealMonth
-    ? `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월`
-    : PLACEHOLDER
+  const dealDate = recentDealForDisplay.value.dealDate ?? PLACEHOLDER
   const area = { label: '전용면적', value: areaRange.value !== '-' ? areaRange.value : PLACEHOLDER }
   const recent = latestPrice.value !== '-' ? latestPrice.value : PLACEHOLDER
   if (currentTab.value === 'sale') {

@@ -217,6 +217,7 @@ export async function searchTransactions(
         { dealYear: 'desc' },
         { dealMonth: 'desc' },
         { dealDay: 'desc' },
+        { id: 'desc' },
       ],
     }),
     model.count({ where }),
@@ -550,11 +551,16 @@ export async function getBuildingInfo(
 
   const priceField = isSaleType(type) ? 'dealAmount' : 'deposit';
   const areaField = 'exclusiveArea';
-  const orderBy = [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }];
+  // 거래일 desc → id desc tie-break: 같은 날 다건이어도 '최신 1건'이 결정적으로 고정된다.
+  // 검색 엔드포인트(searchTransactions) 와 동일 규칙이라 meta·헤더가 같은 거래를 선택한다.
+  const orderBy = [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }, { id: 'desc' }];
 
   // 특정 bjdCode 로 BuildingInfo 를 조립한다. 해당 bjdCode 에 거래가 없으면 null.
   const buildForBjdCode = async (effectiveBjdCode: string): Promise<BuildingInfo | null> => {
-    const where = { bjdCode: effectiveBjdCode, buildingName };
+    // sale 은 취소거래(cancelDealDay)를 제외 — searchTransactions/getTransactionStats 와 정렬.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = { bjdCode: effectiveBjdCode, buildingName };
+    if (isSaleType(type)) where.cancelDealDay = null;
 
     const [latest, agg, dongGroups] = await Promise.all([
       model.findFirst({

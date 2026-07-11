@@ -1,4 +1,6 @@
 import { SITE_NAME, compactCityName } from '~/utils/seoConstants'
+// 헤더(heroStats·latestPrice)와 동일한 가격 포맷 함수를 공유 — meta·헤더 표기 완전 일치.
+import { formatKoreanPrice } from '~/utils/formatters'
 
 type PropertyType = 'apt' | 'villa' | 'offitel'
 type TransactionMode = 'sale' | 'rent'
@@ -31,15 +33,6 @@ export interface DetailMetaInput {
 export interface DetailMetaResult {
   title: string
   description: string
-}
-
-function formatKoreanPrice(amountManwon: number): string {
-  if (!Number.isFinite(amountManwon) || amountManwon <= 0) return ''
-  const eok = Math.floor(amountManwon / 10000)
-  const manwon = amountManwon % 10000
-  if (eok > 0 && manwon > 0) return `${eok}억 ${manwon.toLocaleString()}만원`
-  if (eok > 0) return `${eok}억원`
-  return `${manwon.toLocaleString()}만원`
 }
 
 function formatArea(range: { min: number; max?: number } | null | undefined): string | null {
@@ -87,7 +80,9 @@ function buildDescription(input: DetailMetaInput): string {
     return `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래가. ${facilityClause}${areaClause}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
   }
 
-  const priceText = recentDeal ? formatKoreanPrice(recentDeal.amount) : ''
+  // 유효 금액(>0)일 때만 최근 거래가 절을 붙인다(utils formatKoreanPrice 는 0/음수도 "0만원" 반환).
+  const hasPrice = !!recentDeal && Number.isFinite(recentDeal.amount) && recentDeal.amount > 0
+  const priceText = hasPrice ? formatKoreanPrice(recentDeal!.amount) : ''
   const priceClause = priceText ? `, 최근 ${priceText}(${recentDeal!.dealDate})` : ''
   const opening = `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래 ${totalCount.toLocaleString()}건${priceClause}.`
 
