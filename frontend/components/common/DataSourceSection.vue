@@ -46,6 +46,11 @@
           {{ source.datasetName }} 기준 정보입니다<span v-if="source.kogl"> · 공공누리 제{{ source.kogl }}유형</span>
         </span>
       </div>
+      <p class="mt-3 text-xs text-slate-500">
+        정보가 실제와 다른가요?
+        <NuxtLink to="/contact#data-fix" class="font-semibold text-primary hover:underline">수정 요청 →</NuxtLink>
+        확인 후 3~5일 내 반영
+      </p>
     </div>
   </div>
 </template>

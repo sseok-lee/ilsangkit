@@ -288,7 +288,8 @@ import type { RegionSchedule } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
-import { withSyncDate } from '~/utils/syncFreshness'
+import { withSyncDate, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
+import { useSyncStatus } from '~/composables/useSyncStatus'
 
 const route = useRoute()
 
@@ -517,18 +518,7 @@ const breadcrumbItems = computed(() => [
   },
 ])
 
-const syncApiBase = useApiBase()
-const { data: syncStatusData } = useAsyncData<Record<string, string | null> | null>(
-  `sync-status-${categoryParam.value}`,
-  async () => {
-    const res = await $fetch<{ success: boolean; data: Record<string, string | null> }>(
-      `${syncApiBase}/api/meta/sync-status`,
-      { signal: AbortSignal.timeout(8000) },
-    )
-    return res.data ?? null
-  },
-  { server: false },
-)
+const { syncStatus } = useSyncStatus()
 
 // PageHero sidebar stats
 const heroStats = computed(() => {
@@ -541,8 +531,8 @@ const heroStats = computed(() => {
     label: '데이터 갱신',
     value: withSyncDate(
       categoryParam.value === 'trash' ? '매일 자동' : '월 1회 자동',
-      syncStatusData.value?.[categoryParam.value],
-      categoryParam.value === 'trash' ? 3 : 62,
+      syncStatus.value?.[categoryParam.value],
+      categoryParam.value === 'trash' ? TRASH_STALE_DAYS : FACILITY_STALE_DAYS,
     ),
   })
   stats.push({

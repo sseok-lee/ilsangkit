@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { formatDotDate, isSyncStale, withSyncDate } from '~/utils/syncFreshness'
+import { formatDotDate, isSyncStale, withSyncDate, formatDotDateTime, RE_STALE_DAYS, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
 
 describe('syncFreshness', () => {
   beforeEach(() => {
@@ -38,5 +38,20 @@ describe('syncFreshness', () => {
   it('withSyncDate: stale이거나 날짜가 없으면 라벨만 반환한다', () => {
     expect(withSyncDate('월 1회 자동', '2020-01-01T00:00:00.000Z')).toBe('월 1회 자동')
     expect(withSyncDate('매일 자동', null, 3)).toBe('매일 자동')
+  })
+
+  it('formatDotDateTime: ISO를 KST YYYY.MM.DD HH:mm로 변환한다', () => {
+    expect(formatDotDateTime('2026-07-10T03:00:00.000Z')).toBe('2026.07.10 12:00')
+  })
+
+  it('formatDotDateTime: null·무효 입력은 null', () => {
+    expect(formatDotDateTime(null)).toBeNull()
+    expect(formatDotDateTime('nope')).toBeNull()
+  })
+
+  it('STALE_DAYS 상수는 도메인 규칙(RE 2·trash 3·시설 62)을 노출한다', () => {
+    expect(RE_STALE_DAYS).toBe(2)
+    expect(TRASH_STALE_DAYS).toBe(3)
+    expect(FACILITY_STALE_DAYS).toBe(62)
   })
 })

@@ -33,11 +33,14 @@
             {{ guide.title }}
           </h1>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-            <span class="flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px]">edit_note</span>
-              일상킷 편집팀
+            <span class="inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">edit_note</span>
+              {{ CONTENT_AUTHOR }}
             </span>
-            <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
+            <span class="inline-flex items-center gap-1 font-semibold text-success">
+              <span aria-hidden="true">✓</span> 공공데이터 원문 대조 검수
+            </span>
+            <time :datetime="guide.publishedAt">{{ formatDate(guide.publishedAt) }}</time>
             <span class="flex items-center gap-1">
               <span class="material-symbols-outlined text-[16px]">visibility</span>
               {{ guide.viewCount.toLocaleString() }}
@@ -157,7 +160,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
-import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { SITE_URL, RELATED_CATEGORIES, CONTENT_AUTHOR } from '~/utils/seoConstants'
 import type { FacilityCategory } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'

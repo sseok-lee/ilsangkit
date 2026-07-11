@@ -80,8 +80,10 @@
             <p class="text-sm text-muted line-clamp-2 mb-3">
               {{ article.summary }}
             </p>
-            <div class="flex items-center justify-between text-xs text-muted">
-              <time :datetime="displayDate(article)">{{ formatDate(displayDate(article)) }}</time>
+            <p class="mt-2 text-[11px] text-faint">
+              {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(displayDate(article)) }}</span>
+            </p>
+            <div class="flex items-center justify-end text-xs text-muted">
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
                 {{ article.viewCount.toLocaleString() }}
@@ -120,6 +122,8 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
+import { CONTENT_AUTHOR } from '~/utils/seoConstants'
+import { formatDotDate } from '~/utils/syncFreshness'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -214,12 +218,6 @@ function getCategoryLabel(category: string): string {
 // 방어적으로 createdAt을 폴백으로 둔다 (article/[slug].vue의 displayPublishedAt과 동일 패턴).
 function displayDate(article: ArticleSummary): string {
   return article.publishedAt ?? article.createdAt
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
 async function goToPage(page: number) {

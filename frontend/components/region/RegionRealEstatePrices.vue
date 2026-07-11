@@ -41,13 +41,14 @@
       provider="국토교통부"
       basis="전체 기간 누적"
       :synced-at="syncedAt ?? null"
-      :stale-days="2"
+      :stale-days="RE_STALE_DAYS"
     />
   </section>
 </template>
 
 <script setup lang="ts">
 import SourceStamp from '~/components/common/SourceStamp.vue'
+import { RE_STALE_DAYS } from '~/utils/syncFreshness'
 
 interface RealEstateCard {
   type: string

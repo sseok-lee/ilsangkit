@@ -1,6 +1,6 @@
 import type { FacilityDetail, FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE, CONTENT_AUTHOR } from '~/utils/seoConstants'
 import { resolveDataSource, ensureDatasetDescription, type DataSourceDomain, type DataSourceInfo } from '~/utils/dataSource'
 import { formatKstDate } from '~/utils/formatters'
 
@@ -596,7 +596,7 @@ export function useStructuredData() {
       ...(options.dateModified ? { dateModified: options.dateModified } : {}),
       url: options.url.startsWith('http') ? options.url : `${SITE_URL}${options.url}`,
       image: options.image ?? DEFAULT_OG_IMAGE,
-      author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      author: { '@type': 'Organization', name: CONTENT_AUTHOR, url: SITE_URL },
       publisher: {
         '@type': 'Organization',
         name: SITE_NAME,

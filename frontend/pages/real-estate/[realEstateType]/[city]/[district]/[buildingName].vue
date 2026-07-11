@@ -254,7 +254,7 @@
           provider="국토교통부"
           :basis="txBasis"
           :synced-at="rawSyncDate"
-          :stale-days="2"
+          :stale-days="RE_STALE_DAYS"
         />
         <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-400">
           ※ 월세 거래는 전환율 5% 기준 환산보증금으로 표시됩니다
@@ -270,7 +270,7 @@
           <SourceStamp
             provider="국토교통부"
             :synced-at="rawSyncDate"
-            :stale-days="2"
+            :stale-days="RE_STALE_DAYS"
             source-url="https://rt.molit.go.kr"
             link-label="원본 보기"
           />
@@ -425,6 +425,7 @@ import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
 import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
+import { RE_STALE_DAYS } from '~/utils/syncFreshness'
 import {
   getPeriodTradeLabel,
   getPriceExtremes,

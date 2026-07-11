@@ -80,8 +80,10 @@
             <p class="text-sm text-muted line-clamp-2 mb-3">
               {{ guide.summary }}
             </p>
-            <div class="flex items-center justify-between text-xs text-muted">
-              <time :datetime="guide.createdAt">{{ formatDate(guide.createdAt) }}</time>
+            <p class="mt-2 text-[11px] text-faint">
+              {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(guide.publishedAt) }}</span>
+            </p>
+            <div class="flex items-center justify-end text-xs text-muted">
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
                 {{ guide.viewCount.toLocaleString() }}
@@ -120,6 +122,8 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
+import { CONTENT_AUTHOR } from '~/utils/seoConstants'
+import { formatDotDate } from '~/utils/syncFreshness'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -209,11 +213,6 @@ function getCategoryLabel(category: string): string {
   if (facilityLabel) return facilityLabel
   const camelKey = category.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
   return REAL_ESTATE_META[camelKey as keyof typeof REAL_ESTATE_META]?.label ?? category
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
 async function goToPage(page: number) {
