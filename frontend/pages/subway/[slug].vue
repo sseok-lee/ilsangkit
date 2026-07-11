@@ -206,7 +206,11 @@
               </SectionBlock>
 
               <!-- Mobile inline CoupangBanner -->
-              <CoupangBanner class="md:hidden" />
+              <!-- 고지문은 모바일/데스크톱 두 CoupangBanner 인스턴스에서 끄고(disclosure=false) 아래
+                   단일 <p>로 페이지당 1회만 노출한다(모든 뷰포트, 반대 브레이크포인트에서 광고만 있고
+                   고지 누락되는 사고 방지 — 절대 md:hidden/hidden md:flex 금지). -->
+              <CoupangBanner class="md:hidden" :disclosure="false" />
+              <p class="mt-2 text-center text-[11px] leading-relaxed text-slate-400">{{ COUPANG_DISCLOSURE }}</p>
 
               <!-- Data Source -->
               <DataSourceSection domain="facility" category="subway" :last-sync-date="station?.updatedAt ? formatKstDate(station.updatedAt) : null" />
@@ -267,7 +271,8 @@
                 </div>
               </div>
 
-              <CoupangBanner class="mt-3" />
+              <!-- 고지문은 모바일 인라인 배너 옆 단일 <p>로 통합됐으므로 여기선 끔 -->
+              <CoupangBanner class="mt-3" :disclosure="false" />
 
               <div class="mt-3">
                 <AdBanner />
@@ -287,7 +292,7 @@ import { UI_MESSAGES } from '~/utils/uiMessages'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
-import CoupangBanner from '~/components/ads/CoupangBanner.vue'
+import CoupangBanner, { COUPANG_DISCLOSURE } from '~/components/ads/CoupangBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import FacilityRoadview from '~/components/facility/FacilityRoadview.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'

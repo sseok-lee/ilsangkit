@@ -20,7 +20,8 @@ describe('WeekdayHoursTable', () => {
   it('isToday 행에 ★ 및 강조 클래스를 적용한다', () => {
     const w = mount(WeekdayHoursTable, { props: { title: '요일별 진료시간', timeHeader: '진료시간', rows } })
     const todayRow = w.findAll('tbody tr')[1]
-    expect(todayRow.text()).toContain('★')
+    expect(todayRow.text()).toContain('오늘')
+    expect(todayRow.text()).not.toContain('★')
     expect(todayRow.classes()).toContain('bg-primary-50')
   })
 

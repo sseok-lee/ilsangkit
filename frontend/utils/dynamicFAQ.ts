@@ -1,5 +1,6 @@
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 import { CATEGORY_FAQ, type FAQItem } from '~/utils/categoryFAQ'
+import { formatHHMM } from '~/utils/formatTime'
 
 /**
  * 시설 데이터 기반 동적 FAQ 생성
@@ -119,8 +120,8 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
           dynamic.push({
             question: `${name}의 AED는 언제 이용 가능한가요?`,
             answer: is24h
-              ? `${name}의 AED는 평일 ${d.monSttTme}~${d.monEndTme}에 이용 가능하며, 주말에도 접근할 수 있습니다. 설치 장소의 운영 시간에 따라 접근이 제한될 수 있으니 참고해 주세요.`
-              : `${name}의 AED는 평일 ${d.monSttTme}~${d.monEndTme}에 이용 가능합니다. 설치 장소의 운영 시간에 따라 접근이 제한될 수 있습니다.`,
+              ? `${name}의 AED는 평일 ${formatHHMM(d.monSttTme)}~${formatHHMM(d.monEndTme)}에 이용 가능하며, 주말에도 접근할 수 있습니다. 설치 장소의 운영 시간에 따라 접근이 제한될 수 있으니 참고해 주세요.`
+              : `${name}의 AED는 평일 ${formatHHMM(d.monSttTme)}~${formatHHMM(d.monEndTme)}에 이용 가능합니다. 설치 장소의 운영 시간에 따라 접근이 제한될 수 있습니다.`,
           })
         }
       }
@@ -140,9 +141,9 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
         })
       }
       if (d.weekdayOpenTime && d.weekdayCloseTime) {
-        let hours = `평일 ${d.weekdayOpenTime}~${d.weekdayCloseTime}`
-        if (d.saturdayOpenTime && d.saturdayCloseTime) hours += `, 토요일 ${d.saturdayOpenTime}~${d.saturdayCloseTime}`
-        if (d.holidayOpenTime && d.holidayCloseTime) hours += `, 공휴일 ${d.holidayOpenTime}~${d.holidayCloseTime}`
+        let hours = `평일 ${formatHHMM(d.weekdayOpenTime)}~${formatHHMM(d.weekdayCloseTime)}`
+        if (d.saturdayOpenTime && d.saturdayCloseTime) hours += `, 토요일 ${formatHHMM(d.saturdayOpenTime)}~${formatHHMM(d.saturdayCloseTime)}`
+        if (d.holidayOpenTime && d.holidayCloseTime) hours += `, 공휴일 ${formatHHMM(d.holidayOpenTime)}~${formatHHMM(d.holidayCloseTime)}`
         dynamic.push({
           question: `${name}의 운영 시간은 어떻게 되나요?`,
           answer: `${name}의 운영 시간은 ${hours}입니다.`,
@@ -172,9 +173,9 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
         })
       }
       if (d.trmtMonStart && d.trmtMonEnd) {
-        let hours = `평일 ${d.trmtMonStart}~${d.trmtMonEnd}`
-        if (d.trmtSatStart && d.trmtSatEnd) hours += `, 토요일 ${d.trmtSatStart}~${d.trmtSatEnd}`
-        const sunInfo = d.noTrmtSun === 'Y' ? '일요일 휴진' : (d.trmtSunStart && d.trmtSunEnd ? `일요일 ${d.trmtSunStart}~${d.trmtSunEnd}` : '')
+        let hours = `평일 ${formatHHMM(d.trmtMonStart)}~${formatHHMM(d.trmtMonEnd)}`
+        if (d.trmtSatStart && d.trmtSatEnd) hours += `, 토요일 ${formatHHMM(d.trmtSatStart)}~${formatHHMM(d.trmtSatEnd)}`
+        const sunInfo = d.noTrmtSun === 'Y' ? '일요일 휴진' : (d.trmtSunStart && d.trmtSunEnd ? `일요일 ${formatHHMM(d.trmtSunStart)}~${formatHHMM(d.trmtSunEnd)}` : '')
         if (sunInfo) hours += `, ${sunInfo}`
         dynamic.push({
           question: `${name}의 진료 시간은 어떻게 되나요?`,
@@ -193,9 +194,9 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
 
     case 'pharmacy':
       if (d.dutyTime1s && d.dutyTime1c) {
-        let hours = `월요일 ${d.dutyTime1s}~${d.dutyTime1c}`
-        if (d.dutyTime6s && d.dutyTime6c) hours += `, 토요일 ${d.dutyTime6s}~${d.dutyTime6c}`
-        if (d.dutyTime7s && d.dutyTime7c) hours += `, 일요일 ${d.dutyTime7s}~${d.dutyTime7c}`
+        let hours = `월요일 ${formatHHMM(d.dutyTime1s)}~${formatHHMM(d.dutyTime1c)}`
+        if (d.dutyTime6s && d.dutyTime6c) hours += `, 토요일 ${formatHHMM(d.dutyTime6s)}~${formatHHMM(d.dutyTime6c)}`
+        if (d.dutyTime7s && d.dutyTime7c) hours += `, 일요일 ${formatHHMM(d.dutyTime7s)}~${formatHHMM(d.dutyTime7c)}`
         dynamic.push({
           question: `${name}의 영업 시간은 어떻게 되나요?`,
           answer: `${name}의 영업 시간은 ${hours}입니다. 정확한 운영 시간은 방문 전 전화로 확인하시는 것을 권장합니다.`,

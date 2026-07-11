@@ -41,7 +41,7 @@
               <span aria-hidden="true">✓</span> 공공데이터 원문 대조 검수
             </span>
             <time :datetime="guide.publishedAt">{{ formatDate(guide.publishedAt) }}</time>
-            <span class="flex items-center gap-1">
+            <span v-if="guide.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center gap-1">
               <span class="material-symbols-outlined text-[16px]">visibility</span>
               {{ guide.viewCount.toLocaleString() }}
             </span>
@@ -159,8 +159,8 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
-import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
-import { SITE_URL, RELATED_CATEGORIES, CONTENT_AUTHOR } from '~/utils/seoConstants'
+import { getContentCategoryLabel } from '~/utils/contentCategoryLabel'
+import { SITE_URL, RELATED_CATEGORIES, CONTENT_AUTHOR, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
 import type { FacilityCategory } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -204,11 +204,7 @@ const loading = computed(() => status.value === 'pending')
 
 const categoryLabel = computed(() => {
   if (!guide.value) return ''
-  const category = guide.value.category
-  const facilityLabel = CATEGORY_META[category as FacilityCategory]?.label
-  if (facilityLabel) return facilityLabel
-  const camelKey = category.replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase())
-  return REAL_ESTATE_META[camelKey as keyof typeof REAL_ESTATE_META]?.label ?? category
+  return getContentCategoryLabel(guide.value.category)
 })
 
 const renderedContent = computed(() => {

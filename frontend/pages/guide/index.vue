@@ -72,7 +72,7 @@
           </div>
           <div class="p-4">
             <span class="inline-block px-2.5 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-full mb-2">
-              {{ getCategoryLabel(guide.category) }}
+              {{ getContentCategoryLabel(guide.category) }}
             </span>
             <h2 class="text-base font-bold text-strong mb-2 line-clamp-2 group-hover:text-primary transition-colors">
               {{ guide.title }}
@@ -83,7 +83,7 @@
             <p class="mt-2 text-[11px] text-faint">
               {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(guide.publishedAt) }}</span>
             </p>
-            <div class="flex items-center justify-end text-xs text-muted">
+            <div v-if="guide.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center justify-end text-xs text-muted">
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
                 {{ guide.viewCount.toLocaleString() }}
@@ -120,9 +120,8 @@ import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
-import { CATEGORY_META } from '~/types/facility'
-import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
-import { CONTENT_AUTHOR } from '~/utils/seoConstants'
+import { getContentCategoryLabel } from '~/utils/contentCategoryLabel'
+import { CONTENT_AUTHOR, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
 import { formatDotDate } from '~/utils/syncFreshness'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -204,15 +203,6 @@ async function selectChip(key: string | null) {
     limit: 12,
     categories: chipCategories.value,
   })
-}
-
-function getCategoryLabel(category: string): string {
-  if (category === 'apt-sale' || category === 'apt-rent') return '부동산'
-  if (category === 'subscription') return '청약/임대'
-  const facilityLabel = CATEGORY_META[category as keyof typeof CATEGORY_META]?.label
-  if (facilityLabel) return facilityLabel
-  const camelKey = category.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-  return REAL_ESTATE_META[camelKey as keyof typeof REAL_ESTATE_META]?.label ?? category
 }
 
 async function goToPage(page: number) {

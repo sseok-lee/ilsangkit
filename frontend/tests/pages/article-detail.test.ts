@@ -239,4 +239,29 @@ describe('ArticlePage - /article/[slug]', () => {
 
     expect(wrapper.text()).toContain('AI 작성 안내')
   })
+
+  it('viewCount >= 100이면 조회수 visibility를 렌더링한다', async () => {
+    const wrapper = await mountArticlePage({ ...mockArticleBase, viewCount: 150 })
+
+    const text = wrapper.text()
+    // visibility 텍스트 콘텐츠에 150이 포함되어 있는지 확인
+    expect(text).toContain('visibility')
+    expect(text).toContain('150')
+  })
+
+  it('viewCount < 100이면 조회수 visibility를 렌더링하지 않는다', async () => {
+    const wrapper = await mountArticlePage({ ...mockArticleBase, viewCount: 50 })
+
+    const text = wrapper.text()
+    // visibility 텍스트가 renderring되지 않거나 50이 함께 표시되지 않아야 함
+    const hasVisibilityWith50 = text.includes('visibility') && text.match(/visibility\s*50/)
+    expect(hasVisibilityWith50).toBe(false)
+  })
+
+  it('삭제된 카테고리(public-rental) 기사는 히어로 pill에 raw slug 대신 안전 폴백 라벨을 표시한다', async () => {
+    const wrapper = await mountArticlePage({ ...mockArticleBase, category: 'public-rental' })
+
+    expect(wrapper.text()).not.toContain('public-rental')
+    expect(wrapper.text()).toContain('매입임대')
+  })
 })

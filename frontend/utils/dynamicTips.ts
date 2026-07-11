@@ -1,5 +1,6 @@
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
 import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
+import { formatHHMM } from '~/utils/formatTime'
 
 /**
  * 시설 데이터 기반 동적 이용 팁 생성
@@ -40,8 +41,8 @@ export function generateDynamicTips(facility: FacilityDetail): string[] {
 
     case 'aed':
       if (d.buildPlace) dynamic.push(`AED는 ${d.buildPlace}에 설치되어 있습니다. 위치를 미리 확인해 두세요.`)
-      if (d.monSttTme && d.monEndTme) dynamic.push(`평일 ${d.monSttTme}~${d.monEndTme}에 접근 가능합니다.`)
-      if (d.satSttTme && d.satEndTme) dynamic.push(`토요일에도 ${d.satSttTme}~${d.satEndTme}에 이용할 수 있습니다.`)
+      if (d.monSttTme && d.monEndTme) dynamic.push(`평일 ${formatHHMM(d.monSttTme)}~${formatHHMM(d.monEndTme)}에 접근 가능합니다.`)
+      if (d.satSttTme && d.satEndTme) dynamic.push(`토요일에도 ${formatHHMM(d.satSttTme)}~${formatHHMM(d.satEndTme)}에 이용할 수 있습니다.`)
       break
 
     case 'library':
@@ -63,8 +64,8 @@ export function generateDynamicTips(facility: FacilityDetail): string[] {
 
     case 'pharmacy':
       if (d.dutyTel3) dynamic.push(`응급 상황 시 ${d.dutyTel3}으로 연락하실 수 있습니다.`)
-      if (d.dutyTime7s && d.dutyTime7c) dynamic.push(`일요일에도 ${d.dutyTime7s}~${d.dutyTime7c}에 운영합니다.`)
-      if (d.dutyTime8s && d.dutyTime8c) dynamic.push(`공휴일에도 ${d.dutyTime8s}~${d.dutyTime8c}에 운영합니다.`)
+      if (d.dutyTime7s && d.dutyTime7c) dynamic.push(`일요일에도 ${formatHHMM(d.dutyTime7s)}~${formatHHMM(d.dutyTime7c)}에 운영합니다.`)
+      if (d.dutyTime8s && d.dutyTime8c) dynamic.push(`공휴일에도 ${formatHHMM(d.dutyTime8s)}~${formatHHMM(d.dutyTime8c)}에 운영합니다.`)
       break
 
     case 'trash':
