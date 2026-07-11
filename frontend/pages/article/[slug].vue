@@ -154,10 +154,8 @@ import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useArticles } from '~/composables/useArticles'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { CATEGORY_META } from '~/types/facility'
-import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
+import { getContentCategoryLabel } from '~/utils/contentCategoryLabel'
 import { SITE_URL, CONTENT_AUTHOR, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
-import type { FacilityCategory } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
@@ -187,11 +185,7 @@ const loading = computed(() => status.value === 'pending')
 
 const categoryLabel = computed(() => {
   if (!article.value) return ''
-  const category = article.value.category
-  const facilityLabel = CATEGORY_META[category as FacilityCategory]?.label
-  if (facilityLabel) return facilityLabel
-  const camelKey = category.replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase())
-  return REAL_ESTATE_META[camelKey as keyof typeof REAL_ESTATE_META]?.label ?? category
+  return getContentCategoryLabel(article.value.category)
 })
 
 const renderedContent = computed(() => {

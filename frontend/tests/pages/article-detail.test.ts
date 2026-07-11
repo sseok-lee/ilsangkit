@@ -257,4 +257,11 @@ describe('ArticlePage - /article/[slug]', () => {
     const hasVisibilityWith50 = text.includes('visibility') && text.match(/visibility\s*50/)
     expect(hasVisibilityWith50).toBe(false)
   })
+
+  it('삭제된 카테고리(public-rental) 기사는 히어로 pill에 raw slug 대신 안전 폴백 라벨을 표시한다', async () => {
+    const wrapper = await mountArticlePage({ ...mockArticleBase, category: 'public-rental' })
+
+    expect(wrapper.text()).not.toContain('public-rental')
+    expect(wrapper.text()).toContain('매입임대')
+  })
 })

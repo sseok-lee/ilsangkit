@@ -72,7 +72,7 @@
           </div>
           <div class="p-4">
             <span class="inline-block px-2.5 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-full mb-2">
-              {{ getCategoryLabel(article.category) }}
+              {{ getContentCategoryLabel(article.category) }}
             </span>
             <h2 class="text-base font-bold text-strong mb-2 line-clamp-2 group-hover:text-primary transition-colors">
               {{ article.title }}
@@ -120,8 +120,7 @@ import type { ArticleSummary } from '~/composables/useArticles'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { CATEGORY_META } from '~/types/facility'
-import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
+import { getContentCategoryLabel } from '~/utils/contentCategoryLabel'
 import { CONTENT_AUTHOR, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
 import { formatDotDate } from '~/utils/syncFreshness'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -203,15 +202,6 @@ async function selectChip(key: string | null) {
     limit: 12,
     categories: chipCategories.value,
   })
-}
-
-function getCategoryLabel(category: string): string {
-  if (category === 'apt-sale' || category === 'apt-rent') return '부동산'
-  if (category === 'subscription') return '청약/임대'
-  const facilityLabel = CATEGORY_META[category as keyof typeof CATEGORY_META]?.label
-  if (facilityLabel) return facilityLabel
-  const camelKey = category.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-  return REAL_ESTATE_META[camelKey as keyof typeof REAL_ESTATE_META]?.label ?? category
 }
 
 // publishedAt은 published 상태에서 항상 채워지지만(발행 시 1회 부여) 타입상 nullable이라

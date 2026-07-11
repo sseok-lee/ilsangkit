@@ -32,6 +32,19 @@ const mockArticles = [
     publishedAt: '2026-06-30T09:00:00.000Z',
     createdAt: '2026-06-30T09:00:00.000Z',
   },
+  {
+    id: 'a3',
+    slug: 'issue-3',
+    title: '오늘의 이슈 3',
+    summary: '삭제된 공공임대 카테고리 이슈입니다.',
+    category: 'public-rental',
+    articleType: 'news',
+    thumbnailUrl: null,
+    keywords: null,
+    viewCount: 10,
+    publishedAt: '2026-06-29T09:00:00.000Z',
+    createdAt: '2026-06-29T09:00:00.000Z',
+  },
 ]
 
 // ─── Composable mocks ─────────────────────────────────────────────────────────
@@ -188,5 +201,14 @@ describe('ArticleIndexPage - /article', () => {
     expect(link2.exists()).toBe(true)
     // 카드의 텍스트에 50이 포함되지 않아야 함
     expect(link2.text()).not.toContain('50')
+  })
+
+  it('삭제된 카테고리(public-rental) 카드는 raw slug 대신 안전 폴백 라벨을 표시한다', async () => {
+    const wrapper = await mountArticleIndex()
+
+    const link3 = wrapper.find('a[href="/article/issue-3"]')
+    expect(link3.exists()).toBe(true)
+    expect(link3.text()).not.toContain('public-rental')
+    expect(link3.text()).toContain('매입임대')
   })
 })
