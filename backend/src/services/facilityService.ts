@@ -216,6 +216,24 @@ function mapWasteScheduleToFacilityItem(r: any): FacilityItem {
 }
 
 /**
+ * 동일 시설이 서로 다른 id/sourceId로 중복 유입되는 경우를 name+좌표로 병합.
+ * - FacilityItem에는 sourceId가 실려오지 않으므로 id로는 dedup 불가.
+ * - 키 = category|name|lat|lng(소수 5자리≈1m 반올림)로 동일 좌표+이름만 정확히 병합(오탐 없음).
+ * - 입력 순서(거리순 정렬 후 호출)를 보존해 첫 항목(최근접)만 유지한다.
+ */
+function dedupeByLocation(items: FacilityItem[]): FacilityItem[] {
+  const seen = new Set<string>();
+  const out: FacilityItem[] = [];
+  for (const item of items) {
+    const key = `${item.category}|${item.name}|${item.lat.toFixed(5)}|${item.lng.toFixed(5)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+/**
  * 키워드 기반 검색 조건 생성
  */
 function buildKeywordFilter(keyword?: string): Record<string, unknown> {
@@ -349,14 +367,15 @@ export async function getNearbyFacilities(
   const allItems = fetchResults.flat();
 
   // ev-charger는 이미 거리 계산됨, 나머지만 계산
-  return allItems
+  const sorted = allItems
     .map((item) => item.distance !== undefined ? item : {
       ...item,
       distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
     })
     .filter((item) => item.distance! <= radius)
-    .sort((a, b) => a.distance! - b.distance!)
-    .slice(0, 6);
+    .sort((a, b) => a.distance! - b.distance!);
+  // 동일 시설(다른 id) 중복 노출 제거 → 정렬 후(최근접 유지) slice(0,6) 앞에서 병합
+  return dedupeByLocation(sorted).slice(0, 6);
 }
 
 /**
@@ -562,13 +581,16 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
 
     // Haversine으로 정확한 거리 계산 + radius 필터
     // ev-charger는 이미 거리 계산됨, 나머지만 계산
-    const withDistance = allItems
-      .map((item) => item.distance !== undefined ? item : ({
-        ...item,
-        distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
-      }))
-      .filter((item) => item.distance! <= radius)
-      .sort((a, b) => a.distance! - b.distance!);
+    // 동일 시설(다른 id) 중복 노출/지도 핀 제거를 위해 정렬 직후 dedup → total/totalPages도 dedup 정합.
+    const withDistance = dedupeByLocation(
+      allItems
+        .map((item) => item.distance !== undefined ? item : ({
+          ...item,
+          distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
+        }))
+        .filter((item) => item.distance! <= radius)
+        .sort((a, b) => a.distance! - b.distance!),
+    );
 
     const total = withDistance.length;
     const skip = (page - 1) * limit;

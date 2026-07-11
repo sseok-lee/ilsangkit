@@ -51,7 +51,7 @@ vi.mock('../../src/lib/prisma.js', () => {
   };
 });
 
-import { search, getDetail, getAllIds, getByRegion, CATEGORY_REGISTRY, flushViewCounts } from '../../src/services/facilityService.js';
+import { search, getDetail, getAllIds, getByRegion, getNearbyFacilities, CATEGORY_REGISTRY, flushViewCounts } from '../../src/services/facilityService.js';
 
 const sampleRecord = {
   id: 'test-1',
@@ -412,6 +412,53 @@ describe('search', () => {
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 0, take: 20 })
     );
+  });
+});
+
+describe('주변 시설 name+좌표 dedup', () => {
+  // 동일 시설이 서로 다른 id로 중복 유입되는 상황 (예: 온천초등학교 353m 2회)
+  const twinA = { ...sampleRecord, id: 'twin-a', name: '온천초등학교', lat: 37.5, lng: 127.0 };
+  const twinB = { ...sampleRecord, id: 'twin-b', name: '온천초등학교', lat: 37.5, lng: 127.0 };
+
+  it('getNearbyFacilities()는 동일 name+좌표(다른 id) 2건을 1건으로 병합한다', async () => {
+    // toilet → CROSS_CATEGORY_MAP: [park, wifi]. 첫 카테고리에만 쌍둥이 2건, 나머지는 빈 배열.
+    mockFindMany.mockResolvedValueOnce([twinA, twinB]).mockResolvedValue([]);
+
+    const result = await getNearbyFacilities('toilet', 37.5, 127.0, 1000);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('온천초등학교');
+  });
+
+  it('getNearbyFacilities()는 동명이지만 좌표가 다른 시설은 2건 유지한다 (과다 dedup 방지)', async () => {
+    const near = { ...sampleRecord, id: 'near', name: '온천초등학교', lat: 37.5, lng: 127.0 };
+    const far = { ...sampleRecord, id: 'far', name: '온천초등학교', lat: 37.501, lng: 127.001 };
+    mockFindMany.mockResolvedValueOnce([near, far]).mockResolvedValue([]);
+
+    const result = await getNearbyFacilities('toilet', 37.5, 127.0, 5000);
+
+    expect(result).toHaveLength(2);
+  });
+
+  it('search() 좌표 경로는 items와 total을 dedup한다 (total/totalPages 재계산)', async () => {
+    mockFindMany.mockResolvedValue([twinA, twinB]);
+
+    const result = await search({ category: 'toilet', lat: 37.5, lng: 127.0, radius: 1000, page: 1, limit: 20 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.total).toBe(1);
+    expect(result.totalPages).toBe(1);
+  });
+
+  it('search() 좌표 경로는 동명이지만 좌표가 다른 시설은 2건 유지한다', async () => {
+    const near = { ...sampleRecord, id: 'near', name: '온천초등학교', lat: 37.5, lng: 127.0 };
+    const far = { ...sampleRecord, id: 'far', name: '온천초등학교', lat: 37.501, lng: 127.001 };
+    mockFindMany.mockResolvedValue([near, far]);
+
+    const result = await search({ category: 'toilet', lat: 37.5, lng: 127.0, radius: 5000, page: 1, limit: 20 });
+
+    expect(result.items).toHaveLength(2);
+    expect(result.total).toBe(2);
   });
 });
 
