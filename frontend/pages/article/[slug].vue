@@ -41,7 +41,7 @@
               <span aria-hidden="true">✓</span> 공공데이터 원문 대조 검수
             </span>
             <time :datetime="displayPublishedAt">{{ formatDate(displayPublishedAt) }}</time>
-            <span class="flex items-center gap-1">
+            <span v-if="article.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center gap-1">
               <span class="material-symbols-outlined text-[16px]">visibility</span>
               {{ article.viewCount.toLocaleString() }}
             </span>
@@ -156,7 +156,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
-import { SITE_URL, CONTENT_AUTHOR } from '~/utils/seoConstants'
+import { SITE_URL, CONTENT_AUTHOR, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
 import type { FacilityCategory } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'

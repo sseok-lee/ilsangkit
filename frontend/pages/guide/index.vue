@@ -83,7 +83,7 @@
             <p class="mt-2 text-[11px] text-faint">
               {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(guide.publishedAt) }}</span>
             </p>
-            <div class="flex items-center justify-end text-xs text-muted">
+            <div v-if="guide.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center justify-end text-xs text-muted">
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
                 {{ guide.viewCount.toLocaleString() }}
@@ -122,7 +122,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { REAL_ESTATE_META } from '~/utils/realEstateMeta'
-import { CONTENT_AUTHOR } from '~/utils/seoConstants'
+import { CONTENT_AUTHOR, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
 import { formatDotDate } from '~/utils/syncFreshness'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'

@@ -15,7 +15,7 @@ const mockArticles = [
     articleType: 'news',
     thumbnailUrl: null,
     keywords: null,
-    viewCount: 10,
+    viewCount: 150,
     publishedAt: '2026-07-01T09:00:00.000Z',
     createdAt: '2026-07-01T09:00:00.000Z',
   },
@@ -28,7 +28,7 @@ const mockArticles = [
     articleType: 'news',
     thumbnailUrl: null,
     keywords: null,
-    viewCount: 5,
+    viewCount: 50,
     publishedAt: '2026-06-30T09:00:00.000Z',
     createdAt: '2026-06-30T09:00:00.000Z',
   },
@@ -169,5 +169,24 @@ describe('ArticleIndexPage - /article', () => {
     expect(mockSetItemListSchema).toHaveBeenCalledWith(
       mockArticles.map((a, i) => ({ name: a.title, url: `/article/${a.slug}`, position: i + 1 })),
     )
+  })
+
+  it('viewCount >= 100인 카드는 조회수 visibility를 렌더링한다', async () => {
+    const wrapper = await mountArticleIndex()
+
+    // 첫 번째 카드: viewCount 150 (>= 100)
+    const link1 = wrapper.find('a[href="/article/issue-1"]')
+    expect(link1.exists()).toBe(true)
+    expect(link1.text()).toContain('150')
+  })
+
+  it('viewCount < 100인 카드는 조회수 visibility를 렌더링하지 않는다', async () => {
+    const wrapper = await mountArticleIndex()
+
+    // 두 번째 카드: viewCount 50 (< 100) - visibility div 전체가 렌더링되지 않음
+    const link2 = wrapper.find('a[href="/article/issue-2"]')
+    expect(link2.exists()).toBe(true)
+    // 카드의 텍스트에 50이 포함되지 않아야 함
+    expect(link2.text()).not.toContain('50')
   })
 })

@@ -239,4 +239,22 @@ describe('ArticlePage - /article/[slug]', () => {
 
     expect(wrapper.text()).toContain('AI 작성 안내')
   })
+
+  it('viewCount >= 100이면 조회수 visibility를 렌더링한다', async () => {
+    const wrapper = await mountArticlePage({ ...mockArticleBase, viewCount: 150 })
+
+    const text = wrapper.text()
+    // visibility 텍스트 콘텐츠에 150이 포함되어 있는지 확인
+    expect(text).toContain('visibility')
+    expect(text).toContain('150')
+  })
+
+  it('viewCount < 100이면 조회수 visibility를 렌더링하지 않는다', async () => {
+    const wrapper = await mountArticlePage({ ...mockArticleBase, viewCount: 50 })
+
+    const text = wrapper.text()
+    // visibility 텍스트가 renderring되지 않거나 50이 함께 표시되지 않아야 함
+    const hasVisibilityWith50 = text.includes('visibility') && text.match(/visibility\s*50/)
+    expect(hasVisibilityWith50).toBe(false)
+  })
 })
