@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // These must be declared with vi.hoisted so they're available inside vi.mock factory
-const { mockFindMany, mockCount, mockFindUnique, mockUpdate, mockFindFirst } = vi.hoisted(() => ({
+const { mockFindMany, mockCount, mockFindUnique, mockUpdate, mockFindFirst, mockQueryRaw } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
   mockCount: vi.fn(),
   mockFindUnique: vi.fn(),
   mockUpdate: vi.fn().mockResolvedValue({}),
   mockFindFirst: vi.fn(),
+  mockQueryRaw: vi.fn(),
 }));
 
 const { mockFtIds, mockFtCount } = vi.hoisted(() => ({
@@ -42,6 +43,7 @@ vi.mock('../../src/lib/prisma.js', () => {
     sports: model,
     wasteSchedule: model,
     region: { findFirst: mockFindFirst },
+    $queryRawUnsafe: mockQueryRaw,
   };
   return {
     default: prismaClient,
@@ -86,6 +88,8 @@ beforeEach(async () => {
   // fulltext 헬퍼 기본값
   mockFtIds.mockResolvedValue([]);
   mockFtCount.mockResolvedValue(0);
+  // 한글 우선 정렬 raw SQL 기본값 (id 없음)
+  mockQueryRaw.mockResolvedValue([]);
 });
 
 describe('CATEGORY_REGISTRY', () => {
@@ -213,7 +217,9 @@ describe('CATEGORY_REGISTRY', () => {
 });
 
 describe('search', () => {
-  it('searches single category with DB pagination', async () => {
+  it('searches single category with DB pagination (한글 우선 raw 정렬)', async () => {
+    // 키워드 없는 기본 목록 → 한글 우선 raw SQL 경로
+    mockQueryRaw.mockResolvedValue([{ id: 'test-1' }]);
     mockFindMany.mockResolvedValue([sampleRecord]);
     mockCount.mockResolvedValue(1);
 
@@ -225,9 +231,13 @@ describe('search', () => {
     expect(result.total).toBe(1);
     expect(result.page).toBe(1);
     expect(result.totalPages).toBe(1);
+    // raw 정렬 id를 findMany id-in으로 재수화
+    expect(mockQueryRaw).toHaveBeenCalled();
     expect(mockFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 0, take: 20 })
+      expect.objectContaining({ where: { id: { in: ['test-1'] } } })
     );
+    // total은 model.count 재사용
+    expect(mockCount).toHaveBeenCalled();
   });
 
   it('searches all categories and aggregates counts', async () => {
@@ -281,13 +291,30 @@ describe('search', () => {
     );
   });
 
-  it('searches with city/district filter', async () => {
+  it('searches with city/district filter (지역값은 raw SQL ? 바인딩)', async () => {
+    mockQueryRaw.mockResolvedValue([]);
     mockFindMany.mockResolvedValue([]);
     mockCount.mockResolvedValue(0);
 
     await search({ category: 'wifi', city: '서울특별시', district: '강남구', page: 1, limit: 20 });
 
+    // 한글 우선 raw SQL: 테이블명만 보간, 지역값은 ? 파라미터 바인딩 인자로 전달
+    const rawCall = mockQueryRaw.mock.calls[0];
+    const sql = rawCall[0] as string;
+    expect(sql).toContain('`Wifi`');
+    expect(sql).toContain('city IN (?');
+    expect(sql).toContain('district = ?');
+    expect(sql).not.toContain('서울특별시'); // 지역은 SQL 문자열에 직접 보간되지 않음
+    // 지역값이 바인딩 인자로 전달됨
+    expect(rawCall).toContain('서울특별시');
+    expect(rawCall).toContain('서울');
+    expect(rawCall).toContain('강남구');
+    // findMany는 id-in 재수화 형태로 호출
     expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: [] } } })
+    );
+    // count는 기존 where(지역 필터)로 재사용
+    expect(mockCount).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           city: { in: expect.arrayContaining(['서울특별시', '서울']) },
@@ -298,6 +325,7 @@ describe('search', () => {
   });
 
   it('searches hospital category', async () => {
+    mockQueryRaw.mockResolvedValue([{ id: 'test-1' }]);
     mockFindMany.mockResolvedValue([sampleRecord]);
     mockCount.mockResolvedValue(1);
 
@@ -308,6 +336,7 @@ describe('search', () => {
   });
 
   it('searches pharmacy category', async () => {
+    mockQueryRaw.mockResolvedValue([{ id: 'test-1' }]);
     mockFindMany.mockResolvedValue([sampleRecord]);
     mockCount.mockResolvedValue(1);
 
@@ -315,6 +344,74 @@ describe('search', () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0].category).toBe('pharmacy');
+  });
+
+  it('전국 시설 목록은 한글 우선 정렬 raw SQL을 사용한다', async () => {
+    mockQueryRaw.mockResolvedValue([{ id: 'k1' }, { id: 'k2' }]);
+    mockCount.mockResolvedValue(2);
+    // findMany(id in)은 순서 비보장 → 역순 반환으로 재정렬 검증
+    mockFindMany.mockResolvedValue([
+      { ...sampleRecord, id: 'k2', name: '하늘약국' },
+      { ...sampleRecord, id: 'k1', name: '가나약국' },
+    ]);
+
+    const result = await search({ category: 'pharmacy', page: 1, limit: 20 });
+
+    // 한글 우선 + name ASC ORDER BY (테이블명은 고정맵 보간)
+    const sql = mockQueryRaw.mock.calls[0][0] as string;
+    expect(sql).toContain("(name REGEXP '^[가-힣]') DESC");
+    expect(sql).toContain('name ASC');
+    expect(sql).toContain('`Pharmacy`');
+    expect(sql).toContain('LIMIT ? OFFSET ?');
+    // limit/offset도 ? 바인딩
+    const rawCall = mockQueryRaw.mock.calls[0];
+    expect(rawCall).toContain(20); // limit
+    expect(rawCall).toContain(0); // offset
+    // findMany id-in 재수화
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: ['k1', 'k2'] } } })
+    );
+    // raw id 순서(k1, k2) 보존
+    expect(result.items.map((i) => i.id)).toEqual(['k1', 'k2']);
+    expect(result.total).toBe(2);
+  });
+
+  it('키워드 있으면 한글 우선 raw 정렬을 쓰지 않는다 (fulltext 유지)', async () => {
+    mockFtIds.mockResolvedValue(['t1']);
+    mockFtCount.mockResolvedValue(1);
+    mockFindMany.mockResolvedValue([]);
+
+    await search({ category: 'pharmacy', keyword: '종로', page: 1, limit: 20 });
+
+    // fulltext 경로 사용, 한글 우선 raw SQL 미호출
+    expect(mockFtIds).toHaveBeenCalled();
+    expect(mockQueryRaw).not.toHaveBeenCalled();
+  });
+
+  it('latest 정렬은 한글 우선 raw 정렬을 쓰지 않는다', async () => {
+    mockFindMany.mockResolvedValue([sampleRecord]);
+    mockCount.mockResolvedValue(1);
+
+    await search({ category: 'toilet', sort: 'latest', page: 1, limit: 20 });
+
+    // 비기본 정렬 → 기존 orderBy 경로(skip/take), raw SQL 미호출
+    expect(mockQueryRaw).not.toHaveBeenCalled();
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { updatedAt: 'desc' }, skip: 0, take: 20 })
+    );
+  });
+
+  it('hospital 진료과목 필터는 한글 우선 raw 정렬을 쓰지 않는다', async () => {
+    mockFindMany.mockResolvedValue([sampleRecord]);
+    mockCount.mockResolvedValue(1);
+
+    await search({ category: 'hospital', departments: ['내과'], page: 1, limit: 20 });
+
+    // departments 필터 → 기존 orderBy 경로, raw SQL 미호출
+    expect(mockQueryRaw).not.toHaveBeenCalled();
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 20 })
+    );
   });
 });
 
@@ -415,12 +512,13 @@ describe('getAllIds', () => {
 });
 
 describe('getByRegion', () => {
-  it('returns paginated results for a region', async () => {
+  it('returns paginated results for a region (한글 우선 raw 정렬)', async () => {
     mockFindFirst.mockResolvedValue({
       city: '서울특별시',
       district: '강남구',
       bjdCode: '1168000000',
     });
+    mockQueryRaw.mockResolvedValue([{ id: 'test-1' }]);
     mockFindMany.mockResolvedValue([sampleRecord]);
     mockCount.mockResolvedValue(1);
 
@@ -431,6 +529,15 @@ describe('getByRegion', () => {
     expect(result.items).toHaveLength(1);
     expect(result.total).toBe(1);
     expect(result.page).toBe(1);
+    // 한글 우선 raw SQL 사용 + 지역은 ? 바인딩
+    const sql = mockQueryRaw.mock.calls[0][0] as string;
+    expect(sql).toContain("(name REGEXP '^[가-힣]') DESC");
+    expect(sql).toContain('`Toilet`');
+    expect(mockQueryRaw.mock.calls[0]).toContain('강남구');
+    // findMany는 id-in 재수화
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: ['test-1'] } } })
+    );
   });
 
   it('returns empty items for invalid category', async () => {
