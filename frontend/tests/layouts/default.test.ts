@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import DefaultLayout from '~/layouts/default.vue'
@@ -148,6 +148,56 @@ describe('Default Layout', () => {
 
       // Layout should work across all screen sizes
       expect(wrapper.element.tagName).toBe('DIV')
+    })
+  })
+
+  describe('TrustLine visibility (route-based)', () => {
+    // layouts/default.vue의 `const route = useRoute()`는 auto-import 전역(globalThis.useRoute)을
+    // 참조한다(로컬 import 없음). tests/setup.ts의 전역 mock은 path:'/' 고정이라, 라우터
+    // plugin의 실제 네비게이션(router.push)으로는 이 값을 바꿀 수 없다 — 대신 전역 자체를
+    // 이 describe 안에서 stubGlobal로 override해 `route.path !== '/'` 분기를 직접 검증한다.
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('홈(/)에서는 TrustLine을 렌더하지 않는다', () => {
+      vi.stubGlobal('useRoute', () => ({
+        fullPath: '/', path: '/', params: {}, query: {}, name: 'index',
+        hash: '', matched: [], meta: {}, redirectedFrom: undefined,
+      }))
+
+      const wrapper = mount(DefaultLayout, {
+        global: {
+          plugins: [router],
+          stubs: {
+            AppHeader: { template: '<header>Header</header>' },
+            AppFooter: { template: '<footer>Footer</footer>' },
+            NuxtPage: { template: '<div>Page</div>' },
+          },
+        },
+      })
+
+      expect(wrapper.findComponent({ name: 'TrustLine' }).exists()).toBe(false)
+    })
+
+    it('홈이 아닌 경로에서는 TrustLine을 렌더한다', () => {
+      vi.stubGlobal('useRoute', () => ({
+        fullPath: '/guide', path: '/guide', params: {}, query: {}, name: 'guide',
+        hash: '', matched: [], meta: {}, redirectedFrom: undefined,
+      }))
+
+      const wrapper = mount(DefaultLayout, {
+        global: {
+          plugins: [router],
+          stubs: {
+            AppHeader: { template: '<header>Header</header>' },
+            AppFooter: { template: '<footer>Footer</footer>' },
+            NuxtPage: { template: '<div>Page</div>' },
+          },
+        },
+      })
+
+      expect(wrapper.findComponent({ name: 'TrustLine' }).exists()).toBe(true)
     })
   })
 })

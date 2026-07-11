@@ -81,10 +81,9 @@
               {{ article.summary }}
             </p>
             <p class="mt-2 text-[11px] text-faint">
-              {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(article.publishedAt) }}</span>
+              {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(displayDate(article)) }}</span>
             </p>
-            <div class="flex items-center justify-between text-xs text-muted">
-              <time :datetime="displayDate(article)">{{ formatDate(displayDate(article)) }}</time>
+            <div class="flex items-center justify-end text-xs text-muted">
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
                 {{ article.viewCount.toLocaleString() }}
@@ -219,12 +218,6 @@ function getCategoryLabel(category: string): string {
 // 방어적으로 createdAt을 폴백으로 둔다 (article/[slug].vue의 displayPublishedAt과 동일 패턴).
 function displayDate(article: ArticleSummary): string {
   return article.publishedAt ?? article.createdAt
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
 async function goToPage(page: number) {

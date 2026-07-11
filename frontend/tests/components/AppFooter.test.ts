@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { ref } from 'vue'
 import AppFooter from '~/components/common/AppFooter.vue'
 
 describe('AppFooter', () => {
@@ -190,6 +191,27 @@ describe('AppFooter', () => {
     it('동기화 데이터가 없으면 "데이터 최종 동기화" 행을 렌더하지 않는다', () => {
       const w = mount(AppFooter) // 전역 useAsyncData mock은 null 데이터
       expect(w.text()).not.toContain('데이터 최종 동기화')
+    })
+
+    describe('신선한 동기화 데이터가 있는 경우', () => {
+      afterEach(() => {
+        vi.unstubAllGlobals()
+        vi.useRealTimers()
+      })
+
+      it('"데이터 최종 동기화" 행을 날짜와 함께 렌더한다', () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date('2026-07-11T12:00:00.000Z'))
+
+        // 전역 useAsyncData mock(null 고정)을 이 테스트에서만 override
+        vi.stubGlobal('useAsyncData', () => ({
+          data: ref({ pharmacy: '2026-07-11T06:00:00.000Z' }),
+        }))
+
+        const w = mount(AppFooter)
+        expect(w.text()).toContain('데이터 최종 동기화')
+        expect(w.text()).toContain('2026.07.11 15:00')
+      })
     })
   })
 })

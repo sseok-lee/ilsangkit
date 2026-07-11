@@ -83,8 +83,7 @@
             <p class="mt-2 text-[11px] text-faint">
               {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(guide.publishedAt) }}</span>
             </p>
-            <div class="flex items-center justify-between text-xs text-muted">
-              <time :datetime="guide.publishedAt">{{ formatDate(guide.publishedAt) }}</time>
+            <div class="flex items-center justify-end text-xs text-muted">
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">visibility</span>
                 {{ guide.viewCount.toLocaleString() }}
@@ -214,11 +213,6 @@ function getCategoryLabel(category: string): string {
   if (facilityLabel) return facilityLabel
   const camelKey = category.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
   return REAL_ESTATE_META[camelKey as keyof typeof REAL_ESTATE_META]?.label ?? category
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
 async function goToPage(page: number) {
