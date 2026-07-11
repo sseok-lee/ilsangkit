@@ -10,7 +10,7 @@
         <p v-if="hasValue(item.value)" class="font-bold text-slate-900" :class="variant === 'prominent' ? 'text-lg' : 'text-sm'">
           {{ item.value }}<span v-if="item.unit" class="text-xs font-normal text-gray-600">{{ item.unit }}</span>
         </p>
-        <p v-else class="text-sm text-slate-400">정보 없음</p>
+        <p v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</p>
       </div>
     </template>
   </div>
@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { EMPTY_FIELD_TEXT } from '~/utils/emptyField'
 
 export interface FieldGridItem { label: string; value: string | number | null | undefined; unit?: string }
 
