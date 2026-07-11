@@ -387,7 +387,7 @@
 
         <!-- 데이터 정보 (멀티루트 → wrapper에 order) -->
         <div class="order-12 md:order-12">
-          <DataSourceSection domain="subscription" :last-sync-date="subscription?.updatedAt ? formatKstDate(subscription.updatedAt) : null" />
+          <DataSourceSection domain="subscription" :last-sync-date="subscription?.updatedAt ? formatDotDate(subscription.updatedAt) : null" />
         </div>
 
       </main>
@@ -418,7 +418,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { formatKstDate } from '~/utils/formatters'
+import { formatDotDate } from '~/utils/syncFreshness'
 import { useAnalytics } from '~/composables/useAnalytics'
 import RentalPriceStatsBox from '~/components/subscription/RentalPriceStatsBox.vue'
 import SubscriptionScheduleTimeline from '~/components/subscription/SubscriptionScheduleTimeline.vue'

@@ -213,7 +213,7 @@
               <p class="mt-2 text-center text-[11px] leading-relaxed text-slate-400">{{ COUPANG_DISCLOSURE }}</p>
 
               <!-- Data Source -->
-              <DataSourceSection domain="facility" category="subway" :last-sync-date="station?.updatedAt ? formatKstDate(station.updatedAt) : null" />
+              <DataSourceSection domain="facility" category="subway" :last-sync-date="station?.updatedAt ? formatDotDate(station.updatedAt) : null" />
             </article>
 
             <!-- Sidebar -->
@@ -300,7 +300,7 @@ import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
 import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/utils/subwayMeta'
-import { formatKstDate } from '~/utils/formatters'
+import { formatDotDate } from '~/utils/syncFreshness'
 import { subwayCanonicalUrl } from '~/utils/subwayCanonical'
 import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
