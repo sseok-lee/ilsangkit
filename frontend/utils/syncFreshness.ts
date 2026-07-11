@@ -11,6 +11,12 @@ export function formatDotDate(iso?: string | null): string | null {
   return ymd ? ymd.replace(/-/g, '.') : null
 }
 
+/** ISO/날짜 → KST 'YY.MM.DD' (표 컨텍스트, 스펙 §5-8 항목3). 무효 입력 null. */
+export function formatDotDateShort(iso?: string | null): string | null {
+  const full = formatDotDate(iso)      // 'YYYY.MM.DD'
+  return full ? full.slice(2) : null   // 'YY.MM.DD'
+}
+
 /**
  * 마지막 동기화가 staleDays를 초과해 오래됐으면 true — 날짜 표기를 숨겨야 한다.
  * 낡은 날짜의 상시 노출은 무표기보다 신뢰를 깎는다(스펙 §5-1 stale 가드).
