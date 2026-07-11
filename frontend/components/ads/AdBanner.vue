@@ -10,6 +10,7 @@
       { 'ad-banner--timed-out': isTimedOut },
     ]"
   >
+    <span class="ad-banner__label">광고</span>
     <ClientOnly>
       <ins
         :key="adKey"
@@ -242,24 +243,28 @@ onBeforeUnmount(() => {
 /* CLS 방지: 광고 슬롯 형식별로 예약 공간(min-height) 확보.
    AdSense 가 status 판정 전에 슬롯 크기를 측정할 수 있도록 ins 높이는 앱에서
    0으로 강제하지 않는다. unfilled 가 확정된 경우에만 부모까지 collapse 한다. */
-.ad-banner--auto {
-  min-height: 100px;
+.ad-banner {
+  position: relative;
+  border: 1px dashed var(--border);
+  background: var(--surface-2);
 }
+.ad-banner__label {
+  display: block;
+  height: 20px;
+  line-height: 20px;
+  padding: 0 10px;           /* 가로 padding은 라벨에만 — ins 폭 측정에 무관(라벨은 ins 위 별도 블록) */
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.ad-banner--auto { min-height: 122px; }        /* 100 → 122 */
 @media (max-width: 767px) {
-  .ad-banner--auto {
-    min-height: 280px;
-  }
+  .ad-banner--auto { min-height: 302px; }       /* 280 → 302 */
 }
-.ad-banner--horizontal {
-  min-height: 90px;
-}
-.ad-banner--rectangle {
-  min-height: 250px;
-}
-.ad-banner--compact-mobile {
-  min-height: 150px;
-  text-align: center;
-}
+.ad-banner--horizontal { min-height: 112px; }   /* 90 → 112 */
+.ad-banner--rectangle { min-height: 272px; }    /* 250 → 272 */
+.ad-banner--compact-mobile { min-height: 170px; text-align: center; } /* 150 → 170 */
 
 /* AdSense 가 채우지 않기로 결정한 슬롯(unfilled / unfill-optimized) 은 ins 와 부모
    컨테이너 모두 제거해 예약 공간을 회수한다. unfill-optimized 는 SPA 네비게이션 시
