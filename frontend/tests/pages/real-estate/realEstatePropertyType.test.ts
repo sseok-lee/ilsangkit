@@ -90,6 +90,15 @@ beforeEach(() => {
   mockRouteQuery = {}
 })
 
+// 전역 useAsyncData 목(tests/setup.ts)은 fetcher를 실제로 호출하지 않으므로 SSR
+// totalComplexes를 검증하는 테스트에서는 딱 1회만 진짜로 fetcher를 실행하도록 오버라이드한다.
+function mockAsyncDataOnceWithFetcher() {
+  ;(globalThis as any).useAsyncData.mockImplementationOnce(async (_key: string, fetcher: () => Promise<unknown>) => {
+    const value = await fetcher()
+    return { data: ref(value), status: ref('success'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+  })
+}
+
 async function mountSuspended(component: any, options?: any) {
   const wrapper = mount(
     defineComponent({
@@ -104,7 +113,7 @@ async function mountSuspended(component: any, options?: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-          PageHero: { template: '<div data-stub="hero" />' },
+          PageHero: { props: ['stats'], template: '<div data-stub="hero"><span v-for="s in (stats||[])" :key="s.label" class="hero-stat" :data-label="s.label">{{ s.value }}</span></div>' },
           SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
           AdBanner: { template: '<div />' },
           TransactionModeTab: { template: '<div />' },
@@ -150,6 +159,21 @@ describe('real-estate/[realEstateType]/index.vue — property type list page', (
     )
     // 모킹된 CITY_SLUGS는 3개
     expect(cityHubLinks.length).toBe(3)
+  })
+
+  it('heroStats에 "전국 등록" 셀이 존재해야 한다 (totalComplexes>0, PR⑧ S3)', async () => {
+    mockGetComplexList.mockResolvedValueOnce({
+      items: [],
+      total: 123456,
+      page: 1,
+      totalPages: 0,
+    })
+    mockAsyncDataOnceWithFetcher()
+    const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const cell = wrapper.find('[data-label="전국 등록"]')
+    expect(cell.exists()).toBe(true)
+    expect(cell.text()).toBe('123,456곳')
   })
 
 })

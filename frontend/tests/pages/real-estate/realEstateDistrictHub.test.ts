@@ -39,15 +39,23 @@ vi.mock('~/composables/useStructuredData', () => ({
   }),
 }))
 
+const mockGetComplexList = vi.fn().mockResolvedValue({
+  items: [],
+  total: 0,
+  page: 1,
+  totalPages: 0,
+})
+
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
-    getComplexList: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      totalPages: 0,
-    }),
+    getComplexList: mockGetComplexList,
   }),
+}))
+
+// 전국 등록 단지 수(fail-open) — 테스트별로 mockNationalTotal.value 를 제어한다.
+const mockNationalTotal = ref<number | null>(0)
+vi.mock('~/composables/useNationalComplexCount', () => ({
+  useNationalComplexCount: () => ({ total: mockNationalTotal }),
 }))
 
 vi.mock('~/shared/regionSlugs', () => ({
@@ -79,7 +87,20 @@ vi.mock('~/utils/realEstateUrl', () => ({
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()
+  mockGetComplexList.mockClear()
+  mockGetComplexList.mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0 })
+  mockNationalTotal.value = 0
+  ;(globalThis as any).useHead.mockClear()
 })
+
+// 전역 useAsyncData 목(tests/setup.ts)은 fetcher를 실제로 호출하지 않으므로 SSR
+// totalComplexes를 검증하는 테스트에서는 딱 1회만 진짜로 fetcher를 실행하도록 오버라이드한다.
+function mockAsyncDataOnceWithFetcher() {
+  ;(globalThis as any).useAsyncData.mockImplementationOnce(async (_key: string, fetcher: () => Promise<unknown>) => {
+    const value = await fetcher()
+    return { data: ref(value), status: ref('success'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+  })
+}
 
 async function mountSuspended(component: any, options?: any) {
   const wrapper = mount(
@@ -95,7 +116,7 @@ async function mountSuspended(component: any, options?: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-          PageHero: { template: '<div data-stub="hero" />' },
+          PageHero: { props: ['stats'], template: '<div data-stub="hero"><span v-for="s in (stats||[])" :key="s.label" class="hero-stat" :data-label="s.label">{{ s.value }}</span></div>' },
           SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
           AdBanner: { template: '<div />' },
           ComplexCard: { template: '<div />' },
@@ -156,5 +177,40 @@ describe('real-estate/[realEstateType]/[city]/[district]/index.vue — district 
     // CITY_SLUG_MAP['seoul'] = '서울' (compact). Rendered text must never contain full suffix.
     const text = wrapper.text()
     expect(text).not.toMatch(/특별시|특별자치시|광역시|특별자치도/)
+  })
+
+  it('heroStats에 "이 지역"·"전국 등록" 셀이 존재해야 한다 (둘 다 카운트>0, PR⑧ S4)', async () => {
+    mockGetComplexList.mockResolvedValue({ items: [], total: 42, page: 1, totalPages: 1 })
+    mockNationalTotal.value = 98765
+    mockAsyncDataOnceWithFetcher()
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const region = wrapper.find('[data-label="이 지역"]')
+    const national = wrapper.find('[data-label="전국 등록"]')
+    expect(region.exists()).toBe(true)
+    expect(region.text()).toBe('42곳')
+    expect(national.exists()).toBe(true)
+    expect(national.text()).toBe('98,765곳')
+  })
+
+  it('전국 등록 fail-open: 전국 카운트 null이면 셀 부재만, 밴드는 그대로 렌더되고 noindex 는 영향받지 않는다 (PR⑧ S4)', async () => {
+    mockGetComplexList.mockResolvedValue({ items: [], total: 42, page: 1, totalPages: 1 })
+    mockNationalTotal.value = null
+    mockAsyncDataOnceWithFetcher()
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    // 셀 부재만 — 밴드(이 지역/데이터 출처)는 그대로 렌더
+    expect(wrapper.find('[data-label="전국 등록"]').exists()).toBe(false)
+    expect(wrapper.find('[data-label="이 지역"]').exists()).toBe(true)
+    expect(wrapper.find('[data-label="데이터 출처"]').exists()).toBe(true)
+    // noindex 무영향: 지역 데이터가 있고(confirmedEmpty=false) fetch 도 실패하지 않았으므로
+    // useHead(robots noindex meta) 호출은 절대 없어야 한다 — 전국 카운트 실패가 이
+    // 경로에 전혀 연결되어 있지 않음을 검증(canonical 등 다른 useHead 호출은 무관하므로
+    // robots meta 존재 여부만 정밀하게 확인한다).
+    const useHeadMock = (globalThis as any).useHead as { mock: { calls: unknown[][] } }
+    const robotsCalls = useHeadMock.mock.calls.filter(([arg]) =>
+      Array.isArray((arg as any)?.meta) && (arg as any).meta.some((m: any) => m.name === 'robots'),
+    )
+    expect(robotsCalls).toHaveLength(0)
   })
 })
