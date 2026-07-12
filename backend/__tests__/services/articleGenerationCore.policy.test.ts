@@ -16,6 +16,7 @@ import {
   formatApproveDate,
   selectPolicyCandidate,
   generateArticleMeta,
+  generateSectionBody,
 } from '../../src/services/articleGenerationCore.js';
 import type { PolicyNewsItem } from '../../src/services/policyBriefingClient.js';
 
@@ -121,5 +122,29 @@ describe('generateArticleMeta — 제목 규칙 강화', () => {
     const sentPrompt = String(mockChatCreate.mock.calls[0][0].messages[0].content);
     expect(sentPrompt).toContain('title-rules');
     expect(sentPrompt).toContain('낚시');
+    // §5-8: summary 해요체 + 상투어 금지
+    expect(sentPrompt).toContain('summary-rules');
+    expect(sentPrompt).toContain('해요체');
+    expect(sentPrompt).toContain('살펴봅니다');
+  });
+});
+
+describe('generateSectionBody — §5-8 해요체 톤 규칙', () => {
+  beforeEach(() => mockChatCreate.mockReset());
+  const openai = new OpenAI({ apiKey: 'test' });
+
+  it('본문 프롬프트에 해요체·상투어 금지 규칙이 포함된다', async () => {
+    mockChatCreate.mockResolvedValue({ choices: [{ message: { content: '본문 예시입니다.' } }] });
+    await generateSectionBody(
+      openai,
+      'subscription',
+      '청약 개편',
+      '[정책 원문] ...',
+      { heading: '핵심 요약', description: '요점 먼저' },
+      { title: '테스트 제목', summary: '요약', keywords: 'a, b', sections: [] },
+    );
+    const sent = String(mockChatCreate.mock.calls[0][0].messages[0].content);
+    expect(sent).toContain('해요체');
+    expect(sent).toContain('살펴봅니다');
   });
 });
