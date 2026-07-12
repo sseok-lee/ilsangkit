@@ -355,4 +355,21 @@ describe('TransactionTable', () => {
       expect(wrapper.html()).toContain('overflow-x-auto')
     })
   })
+
+  describe('숫자 타이포 (PR⑦ §6-4)', () => {
+    it('숫자 컬럼은 tabular-nums로 렌더된다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: mockSaleTransactions, type: 'sale', loading: false },
+      })
+      expect(wrapper.find('table').classes()).toContain('tabular-nums')
+    })
+
+    it('증감률 색은 delta 토큰을 쓴다 (red/primary 아님)', () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: mockRentTransactions, type: 'rent', loading: false },
+      })
+      expect(wrapper.html()).toMatch(/text-delta-up|text-delta-down/)
+      expect(wrapper.html()).not.toMatch(/text-red-500|text-primary-500/)
+    })
+  })
 })
