@@ -29,6 +29,28 @@ describe('HotspotCard', () => {
     expect(wrapper.findAllComponents({ name: 'HotspotRow' })).toHaveLength(3);
   });
 
+  it('상승 시그널은 delta-up 토큰 색을 쓴다', () => {
+    const wrapper = mount(HotspotCard, {
+      props: { signal: 'rising', regions: mockRegions(1), propertyType: 'apt', txnType: 'sale' },
+      global: { stubs },
+    });
+    expect(wrapper.html()).toMatch(/text-delta-up/);
+    expect(wrapper.html()).toMatch(/bg-delta-up\/10/);
+    expect(wrapper.html()).not.toMatch(/text-red-500/);
+    expect(wrapper.html()).not.toMatch(/bg-red-50/);
+  });
+
+  it('하락 시그널은 delta-down 토큰 색을 쓴다', () => {
+    const wrapper = mount(HotspotCard, {
+      props: { signal: 'falling', regions: mockRegions(1), propertyType: 'apt', txnType: 'sale' },
+      global: { stubs },
+    });
+    expect(wrapper.html()).toMatch(/text-delta-down/);
+    expect(wrapper.html()).toMatch(/bg-delta-down\/10/);
+    expect(wrapper.html()).not.toMatch(/text-primary-500/);
+    expect(wrapper.html()).not.toMatch(/bg-primary-50/);
+  });
+
   it('renders empty state when regions is []', () => {
     const wrapper = mount(HotspotCard, {
       props: { signal: 'rising', regions: [], propertyType: 'apt', txnType: 'sale' },

@@ -28,7 +28,7 @@ describe('HotspotRow', () => {
       props: { region: baseRegion(), rank: 1, signal: 'rising', href: '/x' },
       global: { stubs: { HardLink: linkStub } },
     });
-    expect(wrapper.html()).toMatch(/text-red-500/);
+    expect(wrapper.html()).toMatch(/text-delta-up/);
     expect(wrapper.text()).toContain('+4.2%');
   });
 
@@ -38,7 +38,7 @@ describe('HotspotRow', () => {
       props: { region, rank: 1, signal: 'falling', href: '/x' },
       global: { stubs: { HardLink: linkStub } },
     });
-    expect(wrapper.html()).toMatch(/text-primary-500/);
+    expect(wrapper.html()).toMatch(/text-delta-down/);
     expect(wrapper.text()).toContain('−2.4%');
   });
 

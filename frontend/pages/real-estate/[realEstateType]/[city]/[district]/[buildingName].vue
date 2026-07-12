@@ -900,8 +900,8 @@ const summaryChangeRate = computed(() => {
 
 const changeRateColor = computed(() => {
   if (summary.value?.changeRate == null) return 'text-slate-500'
-  if (summary.value.changeRate > 0) return 'text-red-500'
-  if (summary.value.changeRate < 0) return 'text-primary-500'
+  if (summary.value.changeRate > 0) return 'text-delta-up'
+  if (summary.value.changeRate < 0) return 'text-delta-down'
   return 'text-slate-500'
 })
 

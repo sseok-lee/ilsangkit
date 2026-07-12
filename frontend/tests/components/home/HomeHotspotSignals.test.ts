@@ -80,6 +80,21 @@ describe('HomeHotspotSignals', () => {
     expect(wrapper.find('.animate-spin').exists()).toBe(false);
   });
 
+  it('상승/하락 모바일 탭은 delta 테두리 토큰을 쓴다', async () => {
+    const wrapper = mount(HomeHotspotSignals, {
+      props: { hotspots: { apt: fullBundle() } },
+    });
+    const risingBtn = wrapper.findAll('button').find((b) => b.text().trim() === '상승')!;
+    await risingBtn.trigger('click');
+    expect(wrapper.html()).toMatch(/border-delta-up/);
+    expect(wrapper.html()).not.toMatch(/border-red-500/);
+
+    const fallingBtn = wrapper.findAll('button').find((b) => b.text().trim() === '하락')!;
+    await fallingBtn.trigger('click');
+    expect(wrapper.html()).toMatch(/border-delta-down/);
+    expect(wrapper.html()).not.toMatch(/border-primary-500/);
+  });
+
   it('wolse tab hides rising/falling cards, shows only active', async () => {
     const wrapper = mount(HomeHotspotSignals, {
       props: { hotspots: { apt: fullBundle() } },
