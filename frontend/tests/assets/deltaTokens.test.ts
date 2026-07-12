@@ -16,8 +16,14 @@ describe('등락 토큰 (§6-4)', () => {
     expect(tw).toMatch(/delta-up/)
     expect(tw).toMatch(/delta-down/)
   })
-  it('semantic success/danger와 값이 다르다 (분리)', () => {
-    expect('#DC2626').not.toBe('#E0443B') // delta-up ≠ danger
-    expect('#2563EB').not.toBe('#2450DC') // delta-down ≠ brand
+  it('semantic success/danger·brand와 값이 다르다 (분리)', () => {
+    const deltaUp = css.match(/--delta-up:\s*(#[0-9A-Fa-f]{3,6})/)?.[1]
+    const deltaDown = css.match(/--delta-down:\s*(#[0-9A-Fa-f]{3,6})/)?.[1]
+    const danger = css.match(/--danger:\s*(#[0-9A-Fa-f]{3,6})/)?.[1]
+    const brand = css.match(/--brand:\s*(#[0-9A-Fa-f]{3,6})/)?.[1]
+    expect(deltaUp).toBeTruthy()
+    expect(deltaDown).toBeTruthy()
+    expect(deltaUp).not.toBe(danger) // 상승 ≠ semantic danger
+    expect(deltaDown).not.toBe(brand) // 하락 ≠ 브랜드 코발트
   })
 })

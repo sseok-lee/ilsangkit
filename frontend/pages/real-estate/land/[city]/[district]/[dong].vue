@@ -62,7 +62,7 @@
               </span>
               <span class="block text-caption text-slate-400 mt-0.5 tabular-nums">{{ g.count.toLocaleString('ko-KR') }}건</span>
             </template>
-            <span v-else class="block mt-1 text-caption text-slate-500">
+            <span v-else class="block mt-1 text-caption text-slate-500 tabular-nums">
               거래 {{ g.count.toLocaleString('ko-KR') }}건
             </span>
           </div>
@@ -81,7 +81,7 @@
             class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col gap-2"
           >
             <div class="flex items-center justify-between">
-              <span class="text-caption text-slate-400">{{ String(tx.dealYear).slice(2) }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}</span>
+              <span class="text-caption text-slate-400 tabular-nums">{{ String(tx.dealYear).slice(2) }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}</span>
               <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-caption font-semibold text-amber-700">지분</span>
             </div>
             <div class="flex flex-wrap items-baseline gap-1.5">

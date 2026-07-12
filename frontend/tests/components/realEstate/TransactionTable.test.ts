@@ -132,6 +132,32 @@ const mockRentTransactions: RentTransaction[] = [
     preMonthlyRent: null,
     useRenewalRight: null,
   },
+  {
+    id: 5,
+    city: '서울특별시',
+    district: '강남구',
+    bjdCode: '1168010100',
+    dongName: '대치동',
+    buildingName: '대치아이파크',
+    buildYear: 2005,
+    floor: 10,
+    exclusiveArea: 84.5,
+    jibun: '123',
+    roadName: '테헤란로',
+    lat: 37.5,
+    lng: 127.0,
+    dealYear: 2024,
+    dealMonth: 3,
+    dealDay: 25,
+    rentType: '월세',
+    deposit: 4000,
+    monthlyRent: 150,
+    contractTerm: 24,
+    contractType: '갱신',
+    preDeposit: 5000,
+    preMonthlyRent: 200,
+    useRenewalRight: '사용',
+  },
 ]
 
 describe('TransactionTable', () => {
@@ -370,6 +396,17 @@ describe('TransactionTable', () => {
       })
       expect(wrapper.html()).toMatch(/text-delta-up|text-delta-down/)
       expect(wrapper.html()).not.toMatch(/text-red-500|text-primary-500/)
+    })
+
+    it('하락(이전 대비 감소) 시 text-delta-down이 렌더되고 text-primary-500은 쓰이지 않는다', () => {
+      // id: 5 — deposit 4000 ← preDeposit 5000 (-20%), monthlyRent 150 ← preMonthlyRent 200 (-25%)
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: [mockRentTransactions[2]], type: 'rent', loading: false },
+      })
+      expect(wrapper.text()).toContain('↓20.0%')
+      expect(wrapper.text()).toContain('↓25.0%')
+      expect(wrapper.html()).toMatch(/text-delta-down/)
+      expect(wrapper.html()).not.toContain('text-primary-500')
     })
   })
 })
