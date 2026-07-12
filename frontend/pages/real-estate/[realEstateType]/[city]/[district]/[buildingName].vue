@@ -417,6 +417,7 @@
 import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
+import { EMPTY_FIELD_TEXT } from '~/utils/emptyField'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
@@ -839,12 +840,12 @@ const rentRatioTotal = computed(
 const rentRatioLabel = computed(() => {
   const j = buildingInfo.value?.jeonseCount ?? 0
   const w = buildingInfo.value?.wolseCount ?? 0
-  if (rentRatioTotal.value === 0) return '정보 없음'
+  if (rentRatioTotal.value === 0) return EMPTY_FIELD_TEXT
   const jPct = getJeonsePct(j, w)
   return jPct >= 50 ? `전세 ${jPct}%` : `월세 ${100 - jPct}%`
 })
 const heroStats = computed(() => {
-  const PLACEHOLDER = '정보 없음'
+  const PLACEHOLDER = EMPTY_FIELD_TEXT
   const dealDate = recentDealForDisplay.value.dealDate ?? PLACEHOLDER
   const area = { label: '전용면적', value: areaRange.value !== '-' ? areaRange.value : PLACEHOLDER }
   const recent = latestPrice.value !== '-' ? latestPrice.value : PLACEHOLDER
@@ -864,9 +865,9 @@ const heroStats = computed(() => {
   ]
 })
 
-// 모바일 헤더 칩 — heroStats 재사용, '정보 없음' 항목 제외, 최대 4개
+// 모바일 헤더 칩 — heroStats 재사용, 빈값(EMPTY_FIELD_TEXT) 항목 제외, 최대 4개
 const mobileHeaderStats = computed(() =>
-  heroStats.value.filter(s => s.value && s.value !== '정보 없음').slice(0, 4),
+  heroStats.value.filter(s => s.value && s.value !== EMPTY_FIELD_TEXT).slice(0, 4),
 )
 
 // ── Stats / Transactions ──────────────────────────────────────────────────────
