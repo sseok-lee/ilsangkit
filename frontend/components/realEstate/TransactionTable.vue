@@ -400,7 +400,7 @@ const columns = computed(() => {
 function formatDate(tx: SaleTransaction | RentTransaction): string {
   const month = String(tx.dealMonth).padStart(2, '0')
   const day = tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '01'
-  return `${tx.dealYear}.${month}.${day}`
+  return `${String(tx.dealYear).slice(2)}.${month}.${day}`
 }
 
 function formatMonthlyRent(tx: RentTransaction): string {

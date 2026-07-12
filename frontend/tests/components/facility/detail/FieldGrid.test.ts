@@ -18,4 +18,8 @@ describe('FieldGrid', () => {
     const w = mount(FieldGrid, { props: { variant: 'prominent', cols: 2, items: [{ label: 'CCTV', value: null, unit: '대' }] } })
     expect(w.text()).not.toContain('CCTV')
   })
+  it('빈 값은 "정보 없음 · 현장 확인 필요" 전체 문구로 렌더한다', () => {
+    const w = mount(FieldGrid, { props: { variant: 'prominent', cols: 2, alwaysShow: true, items: [{ label: '운영시간', value: null, unit: '' }] } })
+    expect(w.text()).toContain('정보 없음 · 현장 확인 필요')
+  })
 })

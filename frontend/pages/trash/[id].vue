@@ -195,7 +195,7 @@ import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
-import { formatKstDate } from '~/utils/formatters'
+import { formatDotDate } from '~/utils/syncFreshness'
 
 const trashTips = CATEGORY_TIPS.trash
 const trashFaqItems = CATEGORY_FAQ.trash.slice(0, 3)
@@ -335,7 +335,7 @@ const trashRegionLink = computed(() => {
 
 const lastSyncDate = computed(() => {
   const ts = data.value?.details?.lastModified ?? data.value?.details?.dataCreatedDate
-  return ts ? formatKstDate(String(ts)) : null
+  return ts ? formatDotDate(String(ts)) : null
 })
 
 // SSR에서 메타태그 및 JSON-LD 설정

@@ -280,7 +280,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
-import { formatKstDate } from '~/utils/formatters'
+import { formatDotDate } from '~/utils/syncFreshness'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
@@ -645,7 +645,7 @@ const lastSyncDate = computed(() => {
   const data = secondaryResponse.value?.syncStatus
   if (!data) return null
   const cat = facility.value.category
-  return formatKstDate(data[cat])
+  return formatDotDate(data[cat])
 })
 
 // SourceStamp용 미포맷 ISO (lastSyncDate는 DataSourceSection용 포맷 문자열)

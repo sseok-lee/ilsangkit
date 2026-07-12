@@ -424,8 +424,8 @@ import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
-import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
-import { RE_STALE_DAYS } from '~/utils/syncFreshness'
+import { formatKoreanPrice } from '~/utils/formatters'
+import { RE_STALE_DAYS, formatDotDate } from '~/utils/syncFreshness'
 import {
   getPeriodTradeLabel,
   getPriceExtremes,
@@ -773,7 +773,7 @@ const syncStatusKey = computed(() => apiSlug.value.replace(/-([a-z])/g, (_, c: s
 const lastSyncDate = computed(() => {
   const syncStatus = secondaryResponse.value?.syncStatus
   if (!syncStatus) return null
-  return formatKstDate(syncStatus[syncStatusKey.value])
+  return formatDotDate(syncStatus[syncStatusKey.value])
 })
 const rawSyncDate = computed(() => {
   const syncStatus = secondaryResponse.value?.syncStatus

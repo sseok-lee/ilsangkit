@@ -147,6 +147,18 @@ describe('TransactionTable', () => {
       expect(wrapper.text()).toContain('거래금액')
     })
 
+    it('거래일을 YY.MM.DD 형식(2자리 연도)으로 표시한다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: mockSaleTransactions, type: 'sale', loading: false },
+      })
+      // dealYear: 2024 → '24.03.15', '24.03.20' (YYYY.MM.DD가 아닌 YY.MM.DD)
+      expect(wrapper.text()).toContain('24.03.15')
+      expect(wrapper.text()).toContain('24.03.20')
+      // 4자리 연도 형식이 없어야 함
+      expect(wrapper.text()).not.toContain('2024.03.15')
+      expect(wrapper.text()).not.toContain('2024.03.20')
+    })
+
     it('매매 거래 데이터를 렌더링한다', () => {
       const wrapper = mount(TransactionTable, {
         props: { transactions: mockSaleTransactions, type: 'sale', loading: false },

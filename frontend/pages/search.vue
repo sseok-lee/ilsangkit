@@ -249,7 +249,7 @@
                     <p class="font-semibold text-slate-800 text-sm truncate">{{ item.buildingName }}</p>
                     <p class="text-xs text-slate-500 mt-0.5 truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
                     <div class="flex items-center gap-2 mt-2">
-                      <span v-if="item.latestPrice" class="text-xs font-semibold text-primary">{{ formatRealEstatePrice(item.latestPrice) }}</span>
+                      <span v-if="item.latestPrice" class="text-xs font-semibold text-primary">{{ formatKoreanPrice(item.latestPrice) }}</span>
                       <span class="text-[10px] text-slate-500">거래 {{ item.transactionCount }}건</span>
                     </div>
                   </div>
@@ -427,6 +427,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
+import { formatKoreanPrice } from '~/utils/formatters'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
@@ -612,14 +613,6 @@ async function searchRealEstatePaged(propertyType: string, page: number = 1) {
   } finally {
     reLoading.value = false
   }
-}
-
-function formatRealEstatePrice(amount: number): string {
-  const uk = Math.floor(amount / 10000)
-  const man = amount % 10000
-  if (uk > 0 && man > 0) return `${uk}억 ${man.toLocaleString()}만원`
-  if (uk > 0) return `${uk}억`
-  return `${amount.toLocaleString()}만원`
 }
 
 // Computed

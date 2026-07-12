@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { formatDotDate, isSyncStale, withSyncDate, formatDotDateTime, RE_STALE_DAYS, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
+import { formatDotDate, formatDotDateShort, isSyncStale, withSyncDate, formatDotDateTime, RE_STALE_DAYS, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
 
 describe('syncFreshness', () => {
   beforeEach(() => {
@@ -18,6 +18,16 @@ describe('syncFreshness', () => {
     expect(formatDotDate(null)).toBeNull()
     expect(formatDotDate(undefined)).toBeNull()
     expect(formatDotDate('not-a-date')).toBeNull()
+  })
+
+  it('formatDotDateShort: ISO를 KST YY.MM.DD로 변환한다', () => {
+    expect(formatDotDateShort('2026-06-19T00:00:00.000Z')).toBe('26.06.19')
+  })
+
+  it('formatDotDateShort: null·무효 입력은 null을 반환한다', () => {
+    expect(formatDotDateShort(null)).toBeNull()
+    expect(formatDotDateShort(undefined)).toBeNull()
+    expect(formatDotDateShort('not-a-date')).toBeNull()
   })
 
   it('isSyncStale: staleDays 이내면 false, 초과하면 true', () => {

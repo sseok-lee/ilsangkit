@@ -9,6 +9,24 @@ describe('formatKoreanPrice', () => {
   it('carries rounded 만원 values into 억 units', () => {
     expect(formatKoreanPrice(9999.6)).toBe('1억')
   })
+
+  it('formats zero', () => {
+    expect(formatKoreanPrice(0)).toBe('0만원')
+  })
+
+  it('formats a plain integer under 1억 (no round needed)', () => {
+    expect(formatKoreanPrice(5000)).toBe('5,000만원')
+  })
+
+  it('formats exactly at the 억 boundary (no round needed)', () => {
+    expect(formatKoreanPrice(10000)).toBe('1억')
+  })
+
+  it('formats 억 + 만 combination for an integer input (no round needed)', () => {
+    // 기지 사실: search.vue의 구 formatRealEstatePrice(정수 dealAmount 입력)와 byte-identical.
+    // 15억 3,000만원 (153000 → uk=15, man=3000) — round는 정수 입력에서 no-op.
+    expect(formatKoreanPrice(153000)).toBe('15억 3,000만원')
+  })
 })
 
 describe('formatKstDate', () => {
