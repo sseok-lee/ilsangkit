@@ -606,6 +606,11 @@ function handleDepartmentApply(): void {
 }
 
 async function loadWasteSchedules() {
+  // trash 카테고리는 performSearch()를 타지 않아 ssrConsumed 가 영영 false 로 남는 문제 수정.
+  // 인터랙티브 지역 재조회(여기) 진입 시점에 동기 설정 — SSR 직후 딥링크 onMounted 는
+  // `!ssrData.value?.data` 가드로 이 함수 호출 자체가 스킵되므로 영향받지 않는다(전국 등록 유지).
+  ssrConsumed.value = true
+
   const result = await getSchedules({
     city: selectedCity.value || undefined,
     district: selectedDistrict.value || undefined,
