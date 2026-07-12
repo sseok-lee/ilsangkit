@@ -590,4 +590,12 @@ describe('real-estate/land/[city]/[district]/[dong].vue — 섹션 재배치(spe
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
   })
+
+  // §6-4 숫자 타이포: 토지 거래 표(분기별 추이·전체 거래) 두 표 모두 tabular-nums로 렌더되어야 한다.
+  it('토지 거래 표는 tabular-nums로 렌더된다', async () => {
+    const wrapper = await mountPage()
+    const tables = wrapper.findAll('table')
+    expect(tables.length).toBeGreaterThan(0)
+    expect(tables.every((t) => t.classes().includes('tabular-nums'))).toBe(true)
+  })
 })

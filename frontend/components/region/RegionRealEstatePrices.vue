@@ -19,19 +19,19 @@
         </div>
         <div class="flex items-center justify-between py-2 border-b border-slate-100">
           <span class="text-sm text-slate-500">매매 평균</span>
-          <span class="text-sm font-semibold text-slate-800">{{ item.saleAvg }}</span>
+          <span class="text-sm font-semibold text-slate-800 tabular-nums">{{ item.saleAvg }}</span>
         </div>
         <div class="flex items-center justify-between py-2 border-b border-slate-100">
           <span class="text-sm text-slate-500">매매 거래</span>
-          <span class="text-sm text-slate-600">{{ item.saleCount }}건</span>
+          <span class="text-sm text-slate-600 tabular-nums">{{ item.saleCount }}건</span>
         </div>
         <div class="flex items-center justify-between py-2 border-b border-slate-100">
           <span class="text-sm text-slate-500">전월세 평균 보증금</span>
-          <span class="text-sm font-semibold text-slate-800">{{ item.rentAvg }}</span>
+          <span class="text-sm font-semibold text-slate-800 tabular-nums">{{ item.rentAvg }}</span>
         </div>
         <div class="flex items-center justify-between py-2">
           <span class="text-sm text-slate-500">전월세 거래</span>
-          <span class="text-sm text-slate-600">{{ item.rentCount }}건</span>
+          <span class="text-sm text-slate-600 tabular-nums">{{ item.rentCount }}건</span>
         </div>
       </NuxtLink>
     </div>

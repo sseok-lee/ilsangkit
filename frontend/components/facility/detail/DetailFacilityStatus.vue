@@ -385,7 +385,7 @@
         <div v-if="childcareClassRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">연령별 반·아동 현황</h3>
           <div class="overflow-x-auto">
-            <table class="w-full text-xs">
+            <table class="w-full text-xs tabular-nums">
               <thead>
                 <tr class="bg-slate-50">
                   <th class="py-2 px-3 text-left text-gray-600 font-medium rounded-tl-lg">연령</th>
@@ -409,7 +409,7 @@
         <!-- 직원 현황 -->
         <div v-if="(details as any)?.emCntTot || childcareStaffRoles.length > 0" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">직원 현황 <span v-if="(details as any)?.emCntTot" class="text-gray-600 font-normal">(총 {{ (details as any).emCntTot }}명)</span></h3>
-          <table class="w-full text-sm">
+          <table class="w-full text-sm tabular-nums">
             <tbody class="divide-y divide-[#f0f2f5]">
               <tr v-for="role in childcareStaffRoles" :key="role.label">
                 <td class="py-2 text-gray-600">{{ role.label }}</td>

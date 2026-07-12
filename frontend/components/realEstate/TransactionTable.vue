@@ -4,13 +4,16 @@
     <template v-if="loading">
       <!-- 데스크탑 스켈레톤 -->
       <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-line">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm tabular-nums">
           <thead>
             <tr class="border-b border-line">
               <th
                 v-for="col in columns"
                 :key="col.key"
-                class="px-4 py-3 text-left text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap"
+                :class="[
+                  'px-4 py-3 text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap',
+                  numericColumnKeys.has(col.key) ? 'text-right' : 'text-left',
+                ]"
               >
                 {{ col.label }}
               </th>
@@ -57,13 +60,16 @@
     <template v-else-if="type === 'sale'">
       <!-- 데스크탑 테이블 -->
       <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-line">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm tabular-nums">
           <thead>
             <tr class="border-b border-line bg-background-light">
               <th
                 v-for="col in columns"
                 :key="col.key"
-                class="px-4 py-3 text-left text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap"
+                :class="[
+                  'px-4 py-3 text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap',
+                  numericColumnKeys.has(col.key) ? 'text-right' : 'text-left',
+                ]"
               >
                 {{ col.label }}
               </th>
@@ -90,16 +96,16 @@
               <td v-if="!hideBuilding" class="px-4 py-3 font-medium text-slate-900">
                 {{ tx.buildingName }}
               </td>
-              <td class="px-4 py-3 text-slate-600">
+              <td class="px-4 py-3 text-right text-slate-600">
                 {{ tx.floor != null ? `${tx.floor}층` : '-' }}
               </td>
-              <td class="px-4 py-3 text-slate-600">
+              <td class="px-4 py-3 text-right text-slate-600">
                 {{ formatArea(tx) }}
               </td>
-              <td class="px-4 py-3 font-display font-bold text-strong tabular-nums">
+              <td class="px-4 py-3 text-right font-display font-bold text-strong tabular-nums">
                 {{ formatKoreanPrice(tx.dealAmount) }}
               </td>
-              <td class="px-4 py-3 text-slate-600">
+              <td class="px-4 py-3 text-right text-slate-600">
                 {{ pricePerPyeong(tx) ?? '-' }}
               </td>
               <td class="px-4 py-3">
@@ -182,13 +188,16 @@
     <template v-else>
       <!-- 데스크탑 테이블 -->
       <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-line">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm tabular-nums">
           <thead>
             <tr class="border-b border-line bg-background-light">
               <th
                 v-for="col in columns"
                 :key="col.key"
-                class="px-4 py-3 text-left text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap"
+                :class="[
+                  'px-4 py-3 text-xs font-semibold text-faint uppercase tracking-wider whitespace-nowrap',
+                  numericColumnKeys.has(col.key) ? 'text-right' : 'text-left',
+                ]"
               >
                 {{ col.label }}
               </th>
@@ -206,31 +215,31 @@
               <td v-if="!hideBuilding" class="px-4 py-3 font-medium text-slate-900">
                 {{ tx.buildingName }}
               </td>
-              <td class="px-4 py-3 text-slate-600">
+              <td class="px-4 py-3 text-right text-slate-600">
                 {{ tx.floor != null ? `${tx.floor}층` : '-' }}
               </td>
-              <td class="px-4 py-3 text-slate-600">
+              <td class="px-4 py-3 text-right text-slate-600">
                 {{ formatArea(tx) }}
               </td>
-              <td class="px-4 py-3 font-display font-bold text-strong tabular-nums">
+              <td class="px-4 py-3 text-right font-display font-bold text-strong tabular-nums">
                 <div>{{ formatKoreanPrice(tx.deposit) }}</div>
                 <div
                   v-if="depositChangeRate(tx) !== null"
                   :class="[
                     'text-xs mt-0.5',
-                    depositChangeRate(tx)! > 0 ? 'text-red-500' : 'text-primary-500',
+                    depositChangeRate(tx)! > 0 ? 'text-delta-up' : 'text-delta-down',
                   ]"
                 >
                   {{ formatChangeRate(depositChangeRate(tx)!) }}
                 </div>
               </td>
-              <td class="px-4 py-3 text-slate-600">
+              <td class="px-4 py-3 text-right text-slate-600">
                 <div>{{ formatMonthlyRent(tx) }}</div>
                 <div
                   v-if="monthlyRentChangeRate(tx) !== null"
                   :class="[
                     'text-xs mt-0.5',
-                    monthlyRentChangeRate(tx)! > 0 ? 'text-red-500' : 'text-primary-500',
+                    monthlyRentChangeRate(tx)! > 0 ? 'text-delta-up' : 'text-delta-down',
                   ]"
                 >
                   {{ formatChangeRate(monthlyRentChangeRate(tx)!) }}
@@ -290,7 +299,7 @@
                 v-if="depositChangeRate(tx) !== null"
                 :class="[
                   'text-xs ml-1',
-                  depositChangeRate(tx)! > 0 ? 'text-red-500' : 'text-primary-500',
+                  depositChangeRate(tx)! > 0 ? 'text-delta-up' : 'text-delta-down',
                 ]"
               >
                 {{ formatChangeRate(depositChangeRate(tx)!) }}
@@ -325,7 +334,7 @@
                 v-if="monthlyRentChangeRate(tx) !== null"
                 :class="[
                   'text-xs',
-                  monthlyRentChangeRate(tx)! > 0 ? 'text-red-500' : 'text-primary-500',
+                  monthlyRentChangeRate(tx)! > 0 ? 'text-delta-up' : 'text-delta-down',
                 ]"
               >
                 {{ formatChangeRate(monthlyRentChangeRate(tx)!) }}
@@ -388,6 +397,8 @@ const rentColumnsAll: Column[] = [
   { key: 'contractType', label: '계약유형' },
   { key: 'contractTerm', label: '계약기간' },
 ]
+
+const numericColumnKeys = new Set(['floor', 'exclusiveArea', 'dealAmount', 'pricePerPyeong', 'deposit', 'monthlyRent'])
 
 const columns = computed(() => {
   const base = props.type === 'sale' ? saleColumnsAll : rentColumnsAll

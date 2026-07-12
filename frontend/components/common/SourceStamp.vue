@@ -11,7 +11,7 @@
     </template>
     <template v-if="showDate">
       <span aria-hidden="true"> · </span>
-      <span class="[font-variant-numeric:tabular-nums]">{{ displayDate }} 동기화</span>
+      <span class="tabular-nums">{{ displayDate }} 동기화</span>
     </template>
     <template v-if="sourceUrl">
       <span aria-hidden="true"> · </span>

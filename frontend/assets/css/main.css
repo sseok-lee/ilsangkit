@@ -12,6 +12,9 @@
   --brand: #2450DC; --brand-strong: #1A3CB0; --brand-press: #16358F;
   --brand-tint: #EBF0FE; --brand-tint-2: #DCE6FD; --brand-ink: #0F2C8C;
   --success: #0FA968; --warning: #E8920C; --danger: #E0443B;
+  /* 등락(상승/하락) 전용 — semantic success/danger와 분리(spec §6-4, 한국 금융 관례) */
+  --delta-up: #DC2626;
+  --delta-down: #2563EB;
   --sh-1: 0 1px 2px rgba(15,23,42,.04), 0 2px 8px rgba(15,23,42,.05);
   --sh-2: 0 6px 24px rgba(15,23,42,.10), 0 2px 6px rgba(15,23,42,.06);
   --r-sm: 10px; --r-md: 16px;
@@ -64,6 +67,7 @@
   .od-stile .v {
     font-family: 'Public Sans', sans-serif; font-weight: 800; font-size: 17px;
     color: var(--strong); margin-top: 6px; letter-spacing: -.01em;
+    font-variant-numeric: tabular-nums;
   }
 
   /* 편의시설 칩 (DetailFacilityStatus / DetailBasicInfo) */

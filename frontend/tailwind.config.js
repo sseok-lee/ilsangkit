@@ -68,6 +68,9 @@ export default {
         warning: '#E8920C',
         error: '#E0443B',
         info: '#2450DC',
+        // 등락(상승/하락) 전용 — main.css --delta-up/--delta-down와 동기화 유지
+        'delta-up': '#DC2626',
+        'delta-down': '#2563EB',
         // Card border (OD)
         line: '#E6E9F0',
         'line-2': '#D7DCE7',

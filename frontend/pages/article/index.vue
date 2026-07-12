@@ -81,7 +81,7 @@
               {{ article.summary }}
             </p>
             <p class="mt-2 text-[11px] text-faint">
-              {{ CONTENT_AUTHOR }} · <span class="[font-variant-numeric:tabular-nums]">{{ formatDotDate(displayDate(article)) }}</span>
+              {{ CONTENT_AUTHOR }} · <span class="tabular-nums">{{ formatDotDate(displayDate(article)) }}</span>
             </p>
             <div v-if="article.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center justify-end text-xs text-muted">
               <span class="flex items-center gap-1">
