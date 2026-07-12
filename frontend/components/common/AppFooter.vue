@@ -21,7 +21,7 @@
               — 확인 후 3~5일 내 반영
             </p>
             <p v-if="latestSyncLabel">
-              데이터 최종 동기화 <span class="[font-variant-numeric:tabular-nums]">{{ latestSyncLabel }}</span>
+              데이터 최종 동기화 <span class="tabular-nums">{{ latestSyncLabel }}</span>
             </p>
           </div>
         </div>

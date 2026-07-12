@@ -67,6 +67,7 @@
   .od-stile .v {
     font-family: 'Public Sans', sans-serif; font-weight: 800; font-size: 17px;
     color: var(--strong); margin-top: 6px; letter-spacing: -.01em;
+    font-variant-numeric: tabular-nums;
   }
 
   /* 편의시설 칩 (DetailFacilityStatus / DetailBasicInfo) */

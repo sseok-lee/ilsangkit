@@ -57,10 +57,10 @@
           >
             <span class="block text-display-3 text-slate-800">{{ g.group }}</span>
             <template v-if="g.avgPricePerPyeong != null">
-              <span class="block mt-1 text-body font-bold text-slate-900">
+              <span class="block mt-1 text-body font-bold text-slate-900 tabular-nums">
                 {{ formatManwonKorean(g.avgPricePerPyeong) }}
               </span>
-              <span class="block text-caption text-slate-400 mt-0.5">{{ g.count.toLocaleString('ko-KR') }}건</span>
+              <span class="block text-caption text-slate-400 mt-0.5 tabular-nums">{{ g.count.toLocaleString('ko-KR') }}건</span>
             </template>
             <span v-else class="block mt-1 text-caption text-slate-500">
               거래 {{ g.count.toLocaleString('ko-KR') }}건
@@ -85,11 +85,11 @@
               <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-caption font-semibold text-amber-700">지분</span>
             </div>
             <div class="flex flex-wrap items-baseline gap-1.5">
-              <strong class="text-body font-bold text-slate-900">{{ formatManwonKorean(tx.dealAmount) }}</strong>
-              <span v-if="tx.dealArea != null" class="text-caption text-slate-500">{{ tx.dealArea.toLocaleString('ko-KR') }}㎡</span>
+              <strong class="text-body font-bold text-slate-900 tabular-nums">{{ formatManwonKorean(tx.dealAmount) }}</strong>
+              <span v-if="tx.dealArea != null" class="text-caption text-slate-500 tabular-nums">{{ tx.dealArea.toLocaleString('ko-KR') }}㎡</span>
             </div>
             <div class="text-caption text-slate-600">
-              평당 <span class="font-semibold text-primary">{{ formatManwonKorean(tx.pricePerPyeong) }}</span>
+              평당 <span class="font-semibold text-primary tabular-nums">{{ formatManwonKorean(tx.pricePerPyeong) }}</span>
             </div>
             <div v-if="tx.landUse" class="text-caption text-slate-400">{{ tx.landUse }}</div>
             <div v-if="tx.jibun" class="text-caption text-slate-300 mt-0.5">{{ tx.jibun }}</div>
@@ -112,12 +112,12 @@
           subtext="비지분 대지 기준 분기별 평균 평당가입니다."
         >
           <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
+            <table class="w-full text-sm border-collapse tabular-nums">
               <thead>
                 <tr class="border-b border-slate-200 text-left text-xs font-semibold text-slate-500">
                   <th class="py-2 pr-3">분기</th>
-                  <th class="py-2 pr-3">평균 평당가</th>
-                  <th class="py-2">거래</th>
+                  <th class="py-2 pr-3 text-right">평균 평당가</th>
+                  <th class="py-2 text-right">거래</th>
                 </tr>
               </thead>
               <tbody>
@@ -127,8 +127,8 @@
                   class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                 >
                   <td class="py-2 pr-3 text-slate-700">{{ point.year }}년 {{ point.quarter }}Q</td>
-                  <td class="py-2 pr-3 text-slate-700">{{ formatManwonKorean(point.avgPricePerPyeong) }}</td>
-                  <td class="py-2 text-slate-700">{{ point.count }}건</td>
+                  <td class="py-2 pr-3 text-slate-700 text-right">{{ formatManwonKorean(point.avgPricePerPyeong) }}</td>
+                  <td class="py-2 text-slate-700 text-right">{{ point.count }}건</td>
                 </tr>
               </tbody>
             </table>
@@ -148,7 +148,7 @@
               class="flex items-center justify-between rounded-lg border border-line bg-background-light px-3 py-2 text-sm"
             >
               <span class="text-slate-700">{{ item.landUse }}</span>
-              <span class="font-semibold text-slate-900">{{ item.count.toLocaleString('ko-KR') }}건</span>
+              <span class="font-semibold text-slate-900 tabular-nums">{{ item.count.toLocaleString('ko-KR') }}건</span>
             </li>
           </ul>
         </SectionBlock>
@@ -160,12 +160,12 @@
       <!-- T3: 전체 거래 내역 -->
       <SectionBlock v-if="detail && detail.total > 0" class="order-9 md:order-9" heading="전체 거래 내역" :subtext="`전체 ${detail.total.toLocaleString('ko-KR')}건 · 지분·도로 포함`">
         <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
+            <table class="w-full text-sm border-collapse tabular-nums">
               <thead>
                 <tr class="border-b border-slate-200 text-left text-xs font-semibold text-slate-500">
                   <th class="py-2 pr-3">지목</th>
-                  <th class="py-2 pr-3">면적(㎡)</th>
-                  <th class="py-2 pr-3">평당가</th>
+                  <th class="py-2 pr-3 text-right">면적(㎡)</th>
+                  <th class="py-2 pr-3 text-right">평당가</th>
                   <th class="py-2 pr-3">거래일</th>
                   <th class="py-2"></th>
                 </tr>
@@ -177,8 +177,8 @@
                   class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                 >
                   <td class="py-2.5 pr-3 text-slate-700">{{ tx.jimok ?? '-' }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700">{{ tx.dealArea != null ? tx.dealArea.toLocaleString('ko-KR') : '-' }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700">{{ formatManwonKorean(tx.pricePerPyeong) }}</td>
+                  <td class="py-2.5 pr-3 text-slate-700 text-right">{{ tx.dealArea != null ? tx.dealArea.toLocaleString('ko-KR') : '-' }}</td>
+                  <td class="py-2.5 pr-3 text-slate-700 text-right">{{ formatManwonKorean(tx.pricePerPyeong) }}</td>
                   <td class="py-2.5 pr-3 text-slate-700">
                     {{ String(tx.dealYear).slice(2) }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}
                   </td>
