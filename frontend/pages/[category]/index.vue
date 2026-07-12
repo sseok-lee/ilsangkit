@@ -290,6 +290,8 @@ import { useAnalytics } from '~/composables/useAnalytics'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 import { withSyncDate, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
 import { useSyncStatus } from '~/composables/useSyncStatus'
+import { useNationalStats } from '~/composables/useNationalStats'
+import { buildCategoryListStats } from '~/utils/heroBandStats'
 
 const route = useRoute()
 
@@ -519,27 +521,29 @@ const breadcrumbItems = computed(() => [
 ])
 
 const { syncStatus } = useSyncStatus()
+const { stats: nationalStats } = useNationalStats()
+
+// 현재 필터가 지역으로 좁혀졌는지 여부. selectedCity 는 이 페이지의 실제 지역 필터 상태 ref이며
+// displayTotal/wasteTotal 을 지역 스코프로 좁히는 유일한 트리거(handleCityChange 등)이기도 하다.
+const isRegionScoped = computed(() => !!selectedCity.value)
 
 // PageHero sidebar stats
 const heroStats = computed(() => {
-  const totalCount = categoryParam.value === 'trash' ? wasteTotal.value : displayTotal.value
-  const stats: { label: string; value: string }[] = []
-  if (totalCount > 0) {
-    stats.push({ label: '전체', value: `${totalCount.toLocaleString('ko-KR')}${categoryParam.value === 'trash' ? '건' : '곳'}` })
-  }
-  stats.push({
-    label: '데이터 갱신',
-    value: withSyncDate(
-      categoryParam.value === 'trash' ? '매일 자동' : '월 1회 자동',
+  const trash = categoryParam.value === 'trash'
+  const totalCount = trash ? wasteTotal.value : displayTotal.value
+  const nat = nationalStats.value?.[categoryParam.value]
+  return buildCategoryListStats({
+    isRegionScoped: isRegionScoped.value,
+    displayTotal: totalCount,
+    nationalCount: typeof nat === 'number' ? nat : null,
+    unit: trash ? '건' : '곳',
+    syncCellValue: withSyncDate(
+      trash ? '매일 자동' : '월 1회 자동',
       syncStatus.value?.[categoryParam.value],
-      categoryParam.value === 'trash' ? TRASH_STALE_DAYS : FACILITY_STALE_DAYS,
+      trash ? TRASH_STALE_DAYS : FACILITY_STALE_DAYS,
     ),
+    basisValue: trash ? '시·군·구 / 동' : '지역 선택 후 정렬',
   })
-  stats.push({
-    label: '목록 기준',
-    value: categoryParam.value === 'trash' ? '시·군·구 / 동' : '지역 선택 후 정렬',
-  })
-  return stats
 })
 
 // Canonical URL: city+district → region route, city only → city route, otherwise self
