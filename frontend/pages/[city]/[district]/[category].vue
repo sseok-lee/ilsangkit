@@ -100,6 +100,8 @@ import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { resolveRegionDisplay } from '~/utils/regionDisplayState'
 import { withSyncDate, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
 import { useSyncStatus } from '~/composables/useSyncStatus'
+import { useNationalStats } from '~/composables/useNationalStats'
+import { buildRegionCategoryStats } from '~/utils/heroBandStats'
 import type { FacilityCategory, Facility } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -254,25 +256,22 @@ const heroDescription = computed(() =>
     : `${cityName.value} ${districtName.value}의 ${categoryName.value} 위치·운영시간을 확인하세요.`
 )
 const { syncStatus } = useSyncStatus()
+const { stats: nationalStats } = useNationalStats()
 
 const heroStats = computed(() => {
-  const s: { label: string; value: string }[] = []
   const count = isTrash.value ? wasteTotal.value : (summary.value?.count ?? total.value ?? 0)
-  if (count > 0) {
-    s.push({ label: isTrash.value ? '배출 일정' : '시설 수', value: `${count.toLocaleString('ko-KR')}${isTrash.value ? '건' : '곳'}` })
-  }
-  if (!isTrash.value && summary.value?.nearbyDistricts?.length) {
-    s.push({ label: '주변 지역', value: summary.value.nearbyDistricts.slice(0, 2).map(n => n.district).join(' · ') })
-  }
-  s.push({
-    label: '업데이트',
-    value: withSyncDate(
+  const nat = nationalStats.value?.[category.value]
+  return buildRegionCategoryStats({
+    regionCount: count,
+    nationalCount: typeof nat === 'number' ? nat : null,
+    unit: isTrash.value ? '건' : '곳',
+    syncCellValue: withSyncDate(
       isTrash.value ? '매일 자동' : '월 1회 자동',
       syncStatus.value?.[category.value],
       isTrash.value ? TRASH_STALE_DAYS : FACILITY_STALE_DAYS,
     ),
+    syncLabel: '업데이트',
   })
-  return s
 })
 
 // Other categories (dynamically from CATEGORY_GROUPS, excluding current)
