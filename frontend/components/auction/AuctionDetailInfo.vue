@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import type { AuctionItem } from '~/types/auction'
 import { formatWonKorean, formatArea, statusLabel } from '~/types/auction'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import { EMPTY_FIELD_TEXT } from '~/utils/emptyField'
 
 const props = defineProps<{ item: AuctionItem }>()
 
@@ -52,7 +53,8 @@ const dealRows = computed<Row[]>(() =>
       </div>
       <div class="bg-white rounded-xl border border-line p-4 shadow-card text-center">
         <p class="text-caption text-faint mb-1">집행기관</p>
-        <p class="text-base font-bold text-strong truncate">{{ item.orgNm ?? '-' }}</p>
+        <p v-if="item.orgNm" class="text-base font-bold text-strong truncate">{{ item.orgNm }}</p>
+        <p v-else class="text-sm font-medium text-faint">{{ EMPTY_FIELD_TEXT }}</p>
       </div>
     </div>
 
