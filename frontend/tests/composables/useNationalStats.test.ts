@@ -39,11 +39,16 @@ describe('useNationalStats', () => {
   })
 
   it('fetch 실패 시 null을 반환한다 (fail-open, throw 안 함)', async () => {
-    vi.stubGlobal('$fetch', vi.fn().mockRejectedValue(new Error('network down')))
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network down'))
+    vi.stubGlobal('$fetch', fetchMock)
     stubNuxt()
     expect(() => useNationalStats()).not.toThrow()
     const { stats } = useNationalStats()
-    // fail-open: 초기값도 null, 실패 후에도 null 유지
+    // 거부(rejection)가 컴포저블의 catch를 실제로 통과할 때까지 대기
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    await Promise.resolve()
+    await Promise.resolve()
+    // fail-open: catch를 거친 뒤에도 null 유지 (throw 안 함)
     expect(stats.value).toBeNull()
   })
 
