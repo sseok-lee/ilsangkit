@@ -525,7 +525,12 @@ const { stats: nationalStats } = useNationalStats()
 
 // 현재 필터가 지역으로 좁혀졌는지 여부. selectedCity 는 이 페이지의 실제 지역 필터 상태 ref이며
 // displayTotal/wasteTotal 을 지역 스코프로 좁히는 유일한 트리거(handleCityChange 등)이기도 하다.
-const isRegionScoped = computed(() => !!selectedCity.value)
+// ssrConsumed 가드 필수: 딥링크 진입(`/{category}?city=slug`) 시 onMounted 가 selectedCity 를
+// query 에서 즉시 복원하지만(723행) SSR 데이터가 이미 있으면 재조회를 스킵한다(734행) — 그 결과
+// selectedCity 는 채워지는데 displayTotal/wasteTotal 은 여전히 SSR의 "전국" 값이라, ssrConsumed
+// 없이는 전국 수치에 "이 지역" 라벨이 잘못 붙는다. performSearch()가 실제 지역 재조회 직전
+// ssrConsumed=true 를 동기 설정하므로, 인터랙티브 도시/구 변경 경로는 영향받지 않는다.
+const isRegionScoped = computed(() => ssrConsumed.value && !!selectedCity.value)
 
 // PageHero sidebar stats
 const heroStats = computed(() => {
