@@ -42,3 +42,30 @@ describe('pharmacy 칩 보강', () => {
     expect(stats).toEqual([{ label: '약사', value: '1명' }])
   })
 })
+
+describe('얇은 카테고리 칩 보강', () => {
+  it('wifi: SSID + 설치장소', () => {
+    expect(buildHeroStats('wifi', { ssid: '3층', installLocation: '시청 로비' }, '')).toEqual([
+      { label: 'SSID', value: '3층' },
+      { label: '설치장소', value: '시청 로비' },
+    ])
+  })
+  it('wifi: 설치장소 없으면 SSID만', () => {
+    expect(buildHeroStats('wifi', { ssid: 'A' }, '')).toEqual([{ label: 'SSID', value: 'A' }])
+  })
+  it('sports: 전화 있어도 시설구분·유형·면적을 보여준다(전화 fallback 제거)', () => {
+    const stats = buildHeroStats('sports', { faciGbNm: '공공', ftypeNm: '체육관', faciGfa: 1200 }, '02-1')
+    expect(stats).toEqual([
+      { label: '시설구분', value: '공공' },
+      { label: '유형', value: '체육관' },
+      { label: '면적', value: '1,200㎡' },
+    ])
+  })
+  it('sports: 정보 전무하면 전화 fallback', () => {
+    expect(buildHeroStats('sports', {}, '02-1')).toEqual([{ label: '전화', value: '02-1' }])
+  })
+  it('clothes: 상세위치 있으면 표시, 없으면 전화 fallback', () => {
+    expect(buildHeroStats('clothes', { detailLocation: '정문 앞' }, '02-1')).toEqual([{ label: '위치', value: '정문 앞' }])
+    expect(buildHeroStats('clothes', {}, '02-1')).toEqual([{ label: '전화', value: '02-1' }])
+  })
+})
