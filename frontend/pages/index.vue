@@ -1,45 +1,34 @@
 <template>
   <div class="flex flex-col">
     <!-- Hero Section -->
-    <section class="relative overflow-hidden px-4 sm:px-6 pb-8 pt-6 md:pt-14 md:pb-12">
-      <!-- 배경 이미지 레이어 -->
-      <div class="absolute inset-0 opacity-10 md:opacity-[0.08]">
-        <img src="/images/hero-bg-light.webp" class="w-full h-full object-cover object-bottom" loading="eager" width="480" height="270" fetchpriority="high" aria-hidden="true" alt="일상킷 생활 정보 서비스" sizes="100vw" />
-      </div>
-      <div class="absolute bottom-0 left-0 right-0 h-10 md:h-12 bg-background-light/80"></div>
-
-      <div class="relative z-10 flex flex-col gap-5 md:max-w-[680px] md:mx-auto">
-        <!-- 라이브 뱃지 -->
-        <div class="flex items-center gap-2 text-xs flex-wrap">
-          <span class="w-2 h-2 rounded-full bg-primary shrink-0"></span>
-          <span class="text-primary font-semibold">공공데이터 기반</span>
-          <span class="hidden md:inline text-line-2">·</span>
-          <span class="hidden md:inline text-muted">공공데이터포털 · 국토교통부</span>
-          <span v-if="newlyListedToday > 0" class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold">
-            <span class="relative flex w-2 h-2">
-              <span class="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-75 animate-ping"></span>
-              <span class="relative inline-flex w-2 h-2 rounded-full bg-red-500"></span>
-            </span>
-            오늘 신규 등록 {{ newlyListedToday.toLocaleString('ko-KR') }}건
+    <section class="px-4 sm:px-6 pt-4 md:pt-8 pb-8 md:pb-12">
+      <div class="relative overflow-hidden bg-primary-press text-white -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-8 py-6 md:py-9 md:rounded-2xl">
+        <!-- 출처 배지 + 기준일 스탬프 -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="hidden md:inline-flex items-center text-[11.5px] font-bold bg-white/[0.12] border border-white/20 px-2.5 py-1 rounded-full text-[#DCE6FD]">공공데이터포털</span>
+          <span class="hidden md:inline-flex items-center text-[11.5px] font-bold bg-white/[0.12] border border-white/20 px-2.5 py-1 rounded-full text-[#DCE6FD]">국토교통부 실거래가</span>
+          <span class="md:hidden inline-flex items-center text-[10px] font-bold bg-white/[0.12] border border-white/20 px-2 py-0.5 rounded-full text-[#DCE6FD]">공공데이터 기반</span>
+          <span class="ml-auto text-[10.5px] md:text-xs font-semibold text-[#B9C9F8]">
+            <template v-if="stampDate">
+              <b class="text-white font-extrabold tabular-nums">{{ stampDate }} 기준</b><span class="hidden md:inline"> · 매일 자동 동기화</span>
+            </template>
+            <template v-else>매일 자동 동기화</template>
           </span>
         </div>
 
-        <!-- 헤드라인 + 서브텍스트 -->
-        <div class="flex flex-col gap-2">
-          <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
-          <div class="tracking-tight font-bold leading-[1.15]">
-            <div class="text-strong text-[38px] md:text-[62px] md:font-black">우리 동네 정보,</div>
-            <div class="text-[38px] md:text-[62px] md:font-black">
-              <span class="md:hidden text-primary">한번에.</span>
-              <span class="hidden md:inline"><span class="text-primary">일상킷에서</span><span class="text-strong"> 한번에.</span></span>
-            </div>
+        <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
+        <div class="tracking-tight font-bold leading-[1.15] mt-4">
+          <div class="text-white text-[38px] md:text-[62px] md:font-black">우리 동네 정보,</div>
+          <div class="text-[38px] md:text-[62px] md:font-black">
+            <span class="md:hidden text-[#9DB4F5]">한번에.</span>
+            <span class="hidden md:inline"><span class="text-[#9DB4F5]">일상킷에서</span><span class="text-white"> 한번에.</span></span>
           </div>
-          <p class="md:hidden text-muted text-[15px] mt-1">부동산 · 청약 · 생활시설을 한 곳에서</p>
-          <p class="hidden md:block text-muted text-lg mt-1">부동산 실거래가, 청약 정보, 생활시설을 한 곳에서.</p>
         </div>
+        <p class="md:hidden text-[#C9D6FA] text-[15px] mt-1">부동산 · 청약 · 생활시설을 한 곳에서</p>
+        <p class="hidden md:block text-[#C9D6FA] text-lg mt-1">부동산 실거래가, 청약 정보, 생활시설을 한 곳에서.</p>
 
         <!-- 검색바 -->
-        <div class="w-full md:max-w-[580px]">
+        <div class="w-full md:max-w-[580px] mt-4 md:mt-5">
           <label class="relative block">
             <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-line-2 md:border-2 shadow-card focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-line-2 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
               <div class="flex items-center pl-4 pr-2 text-faint">
@@ -72,23 +61,7 @@
           </label>
         </div>
 
-        <!-- 통계 박스 -->
-        <div class="bg-white border border-line rounded-2xl shadow-card md:max-w-[580px]">
-          <div class="flex items-stretch divide-x divide-line">
-            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
-              <strong class="text-strong font-display font-extrabold text-xl tracking-tight tabular-nums">{{ buildingCountKor }}만</strong>
-              <span class="text-[11px] text-faint">실거래 부동산</span>
-            </div>
-            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
-              <strong class="text-primary font-display font-extrabold text-xl tracking-tight tabular-nums">{{ stats.subscriptionActiveCount }}건</strong>
-              <span class="text-[11px] text-faint">진행중 청약</span>
-            </div>
-            <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
-              <strong class="text-strong font-display font-extrabold text-xl tracking-tight tabular-nums">{{ facilityCountKor }}만</strong>
-              <span class="text-[11px] text-faint">등록 시설</span>
-            </div>
-          </div>
-        </div>
+        <!-- 스탯 4칸: Task 5에서 이 자리에 삽입 -->
       </div>
     </section>
 
@@ -300,6 +273,8 @@ import { CITY_LINKS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
 import { useAnalytics } from '~/composables/useAnalytics'
+import { useSyncStatus } from '~/composables/useSyncStatus'
+import { isSyncStale, formatDotDate, RE_STALE_DAYS } from '~/utils/syncFreshness'
 
 const config = useRuntimeConfig()
 const apiBase = useApiBase()
@@ -326,13 +301,6 @@ setDatasetSchema({
     SUBSCRIPTION_DATA_SOURCE,
   ],
   keywords: ['부동산 실거래가', '청약', '생활시설', '공공데이터', 'KOGL', '대한민국'],
-})
-
-// 홈 히어로 배경 이미지 preload (홈 한정)
-useHead({
-  link: [
-    { rel: 'preload', href: '/images/hero-bg-light.webp', as: 'image', type: 'image/webp' },
-  ],
 })
 
 const searchKeyword = ref('')
@@ -399,6 +367,21 @@ const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
 const hotspots = computed(() => dashboard.value?.realEstateHotspots ?? {})
 const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })
 const newlyListedToday = computed(() => dashboard.value?.newlyListedToday ?? 0)
+
+const RE_SYNC_KEYS = ['aptSale', 'aptRent', 'villaSale', 'villaRent', 'offitelSale', 'offitelRent'] as const
+const { syncStatus } = useSyncStatus()
+// 실거래 6개 테이블 중 가장 최근 동기화 시각(ISO 사전순 = 시간순)
+const reSyncedAt = computed<string | null>(() => {
+  const s = syncStatus.value
+  if (!s) return null
+  const dates = RE_SYNC_KEYS.map((k) => s[k]).filter((v): v is string => !!v)
+  return dates.length ? [...dates].sort().at(-1) ?? null : null
+})
+// stale/null이면 날짜 생략(fail-open). "매일 자동 동기화" 라벨은 항상 노출.
+const stampDate = computed<string | null>(() => {
+  const iso = reSyncedAt.value
+  return iso && !isSyncStale(iso, RE_STALE_DAYS) ? formatDotDate(iso) : null
+})
 
 // Hero 통계박스에서 사용하는 3개 필드만 추림.
 const stats = computed(() => ({
