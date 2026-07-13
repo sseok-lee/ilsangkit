@@ -23,6 +23,10 @@
         <HardLink v-if="!props.showBackButton" to="/" class="flex items-center">
           <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 w-auto shrink-0" width="91" height="36" />
         </HardLink>
+        <span
+          v-if="!props.showBackButton"
+          class="hidden md:inline-flex items-center self-center pl-2.5 ml-1.5 border-l border-line-2 text-[11px] leading-none text-faint"
+        >공공데이터 기반 생활정보</span>
       </div>
 
       <!-- Center/Right: Desktop Navigation (single nav, fills remaining width) -->

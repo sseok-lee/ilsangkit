@@ -283,3 +283,26 @@ describe('AppHeader', () => {
     })
   })
 })
+
+describe('데스크톱 마이크로 라벨', () => {
+  it('로고 옆에 "공공데이터 기반 생활정보" 라벨을 데스크톱 전용으로 렌더한다', () => {
+    const wrapper = mount(AppHeader, {
+      global: {
+        plugins: [router],
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to"><slot /></a>',
+            props: ['to'],
+          },
+        },
+      },
+    })
+    const label = wrapper
+      .findAll('span')
+      .find((s) => s.text() === '공공데이터 기반 생활정보')
+    expect(label).toBeTruthy()
+    // 데스크톱 전용(모바일 숨김)
+    expect(label!.classes()).toContain('hidden')
+    expect(label!.classes().some((c) => c.startsWith('md:'))).toBe(true)
+  })
+})
