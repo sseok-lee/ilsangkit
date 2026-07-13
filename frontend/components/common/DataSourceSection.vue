@@ -43,20 +43,15 @@
       <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-500">
         <span class="material-symbols-outlined text-[14px] mt-px">info</span>
         <span>
-          {{ source.datasetName }} 기준 정보입니다<span v-if="source.kogl"> · 공공누리 제{{ source.kogl }}유형</span>
+          공표된 원본 데이터 기준입니다<span v-if="source.kogl"> · 공공누리 제{{ source.kogl }}유형</span>
         </span>
       </div>
-      <p class="mt-3 text-xs text-slate-500">
-        정보가 실제와 다른가요?
-        <NuxtLink to="/contact#data-fix" class="font-semibold text-primary hover:underline">수정 요청 →</NuxtLink>
-        확인 후 3~5일 내 반영
-      </p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject, onUnmounted, type Ref } from 'vue'
 import { resolveDataSource, type DataSourceDomain } from '~/utils/dataSource'
 import type { FacilityCategory } from '~/types/facility'
 
@@ -68,4 +63,14 @@ const props = defineProps<{
 }>()
 
 const source = computed(() => resolveDataSource({ domain: props.domain, category: props.category }))
+
+// 풀카드(비-compact + source 존재)를 렌더하면 레이아웃의 전역 TrustLine을 억제한다(출처 정보 중복 방지).
+// setup 시점 등록이라 SSR에서도 TrustLine(<slot/> 뒤) 렌더 전에 반영된다.
+const sourceCardRegistry = inject<Ref<number> | null>('sourceCardRegistry', null)
+if (sourceCardRegistry && !props.compact && source.value) {
+  sourceCardRegistry.value++
+  onUnmounted(() => {
+    sourceCardRegistry.value--
+  })
+}
 </script>
