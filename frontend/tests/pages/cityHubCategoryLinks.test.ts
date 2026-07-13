@@ -22,6 +22,11 @@ vi.mock('~/composables/useAnalytics', () => ({
   useAnalytics: () => ({ trackRegionPageView: vi.fn() }),
 }))
 
+let nationalStatsTotal: number | null = 4500000
+vi.mock('~/composables/useNationalStats', () => ({
+  useNationalStats: () => ({ stats: ref(nationalStatsTotal === null ? null : { total: nationalStatsTotal }) }),
+}))
+
 // Override the global useRoute stub (set in setup.ts) to provide city param
 ;(globalThis as any).useRoute = () => ({ params: { city: 'seoul' }, query: {}, fullPath: '/seoul', path: '/seoul', name: 'city', hash: '', matched: [], meta: {}, redirectedFrom: undefined })
 
@@ -43,7 +48,10 @@ vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
 const stubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: true,
-  PageHero: true,
+  PageHero: {
+    props: ['stats'],
+    template: '<div data-stub="hero"><span v-for="s in (stats||[])" :key="s.label" class="hero-stat" :data-label="s.label">{{ s.value }}</span></div>',
+  },
   AdBanner: true,
   RegionRealEstatePrices: true,
   RegionRealEstateCta: true,
@@ -164,5 +172,30 @@ describe('city hub — noindex guard (Issue E)', () => {
     expect(hasNoindex).toBe(false)
 
     ;(globalThis as any).useHead = vi.fn()
+  })
+})
+
+describe('city hub — 카운터 밴드 (PR⑧ S5)', () => {
+  it('허브 밴드: 이 지역·전국 등록·데이터 갱신 3칸', async () => {
+    nationalStatsTotal = 4500000
+    const w = await mountSuspended()
+    const cells = w.findAll('.hero-stat')
+    const labels = cells.map(c => c.attributes('data-label'))
+    expect(labels).toContain('이 지역')
+    expect(labels).toContain('전국 등록')
+    expect(labels).toContain('데이터 갱신')
+
+    const regionCell = cells.find(c => c.attributes('data-label') === '이 지역')
+    expect(regionCell?.text()).toBe('100곳') // districts facilityTotal 합
+  })
+
+  it('허브 밴드 fail-open: 전국 stats null이면 전국 등록 셀만 부재', async () => {
+    nationalStatsTotal = null
+    const w = await mountSuspended()
+    const labels = w.findAll('.hero-stat').map(c => c.attributes('data-label'))
+    expect(labels).not.toContain('전국 등록')
+    expect(w.findAll('.hero-stat').length).toBeGreaterThan(0) // 밴드는 렌더 (이 지역 + 데이터 갱신)
+
+    nationalStatsTotal = 4500000 // 복원
   })
 })

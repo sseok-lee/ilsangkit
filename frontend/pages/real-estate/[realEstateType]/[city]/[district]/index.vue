@@ -125,6 +125,7 @@ import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { PROPERTY_TYPE_META, buildReRegionDescription } from '~/utils/realEstateMeta'
 import { SITE_URL } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
+import { useNationalComplexCount } from '~/composables/useNationalComplexCount'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { shouldNoindexSsr } from '~/utils/ssrIndexability'
@@ -251,9 +252,15 @@ async function goToPage(page: number) {
   }
 }
 
+// 전국 등록 단지 수 — '이 지역'과 동일 단위(VALID_NAME 단지 수) 비교용.
+// fail-open 컴포저블: 실패 시 total=null → 셀 부재만, shouldNoindexSsr(아래)에는 절대 연결하지 않는다.
+const { total: nationalComplexes } = useNationalComplexCount(realEstateType)
+
 const heroStats = computed(() => {
   const items = [] as { label: string; value: string }[]
-  items.push({ label: '유효 단지', value: `${totalComplexes.value.toLocaleString()}곳` })
+  if (totalComplexes.value > 0) items.push({ label: '이 지역', value: `${totalComplexes.value.toLocaleString()}곳` })
+  const nat = nationalComplexes.value
+  if (typeof nat === 'number' && nat > 0) items.push({ label: '전국 등록', value: `${nat.toLocaleString('ko-KR')}곳` })
   items.push({ label: '데이터 출처', value: '국토교통부' })
   return items
 })

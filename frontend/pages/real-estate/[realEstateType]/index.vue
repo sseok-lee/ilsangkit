@@ -417,7 +417,7 @@ const breadcrumbItems = computed(() => [
 const heroStats = computed(() => {
   const stats: { label: string; value: string }[] = []
   if (totalComplexes.value > 0) {
-    stats.push({ label: `${propertyMeta.value?.label ?? ''} 거래`, value: `${totalComplexes.value.toLocaleString('ko-KR')}건` })
+    stats.push({ label: '전국 등록', value: `${totalComplexes.value.toLocaleString('ko-KR')}곳` })
   }
   stats.push({ label: '보기 방식', value: '매매 / 전월세' })
   stats.push({ label: '함께 보기', value: '지역 생활 인프라' })
