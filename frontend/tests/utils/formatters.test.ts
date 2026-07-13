@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatKoreanPrice, formatKstDate } from '../../utils/formatters'
+import { buildYearLabel, formatKoreanPrice, formatKstDate } from '../../utils/formatters'
 
 describe('formatKoreanPrice', () => {
   it('rounds decimal 만원 values before rendering', () => {
@@ -53,5 +53,21 @@ describe('formatKstDate', () => {
   it('renders KST date when sync completed late afternoon KST', () => {
     // KST 2026-05-07 18:00 = UTC 2026-05-07 09:00
     expect(formatKstDate('2026-05-07T09:00:00.000Z')).toBe('2026-05-07')
+  })
+})
+
+describe('buildYearLabel', () => {
+  it('연차를 병기한다', () => {
+    expect(buildYearLabel(2018, 2026)).toBe('2018년 (8년차)')
+  })
+
+  it('당해 준공(연차 0 이하)은 연도만', () => {
+    expect(buildYearLabel(2026, 2026)).toBe('2026년')
+    expect(buildYearLabel(2027, 2026)).toBe('2027년') // 미래 데이터 방어
+  })
+
+  it('buildYear 없으면 null', () => {
+    expect(buildYearLabel(null, 2026)).toBeNull()
+    expect(buildYearLabel(undefined, 2026)).toBeNull()
   })
 })
