@@ -16,6 +16,11 @@
       <OperatingStatusBadge v-if="status" :status="status" class="mt-1 shrink-0" />
     </div>
 
+    <!-- 주소 등 부가 정보 (데스크톱 PageHero #description 대응). RE 상세는 AddressLine(핀+복사)를 여기에 넣는다. -->
+    <div v-if="$slots.address" data-test="address" class="mt-2 text-body text-muted">
+      <slot name="address" />
+    </div>
+
     <div v-if="stats?.length" class="mt-3 flex flex-wrap gap-1.5">
       <span
         v-for="stat in stats"

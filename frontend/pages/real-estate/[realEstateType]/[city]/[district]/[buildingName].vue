@@ -70,7 +70,11 @@
         share-label="이 건물 공유하기"
         @share="handleShare"
         @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
-      />
+      >
+        <template #address>
+          <AddressLine :address="fullAddress" />
+        </template>
+      </MobileDetailHeader>
       <PageHero
         class="hidden md:block order-2 md:order-2"
         title-tag="div"

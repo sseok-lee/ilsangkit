@@ -87,4 +87,19 @@ describe('common/MobileDetailHeader', () => {
   it('최소 props(title만)로도 크래시 없이 렌더한다', () => {
     expect(() => mount(MobileDetailHeader, { props: base })).not.toThrow()
   })
+
+  // 부동산 상세는 주소(핀+복사)를 이 슬롯으로 넣는다. 데스크톱 PageHero #description의 모바일 대응.
+  it('address 슬롯이 있으면 h1 아래 주소 영역을 렌더한다', () => {
+    const w = mount(MobileDetailHeader, {
+      props: base,
+      slots: { address: '<span data-test="addr-content">경기 안양시 만안구 1303</span>' },
+    })
+    expect(w.find('[data-test="address"]').exists()).toBe(true)
+    expect(w.find('[data-test="addr-content"]').exists()).toBe(true)
+    expect(w.text()).toContain('경기 안양시 만안구 1303')
+  })
+
+  it('address 슬롯이 없으면 주소 영역을 렌더하지 않는다', () => {
+    expect(mount(MobileDetailHeader, { props: base }).find('[data-test="address"]').exists()).toBe(false)
+  })
 })
