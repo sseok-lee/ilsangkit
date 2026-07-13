@@ -35,6 +35,16 @@ export function formatKstDate(iso: string | null | undefined): string | null {
 }
 
 /**
+ * 준공연도 + 경과 연차. currentYear는 호출측에서 getCurrentYear() 주입(테스트 결정성).
+ * 연차 1 이상일 때만 병기, 그 외(당해 준공·미래 데이터 방어)는 연도만.
+ */
+export function buildYearLabel(buildYear: number | null | undefined, currentYear: number): string | null {
+  if (typeof buildYear !== 'number' || Number.isNaN(buildYear)) return null
+  const age = currentYear - buildYear
+  return age >= 1 ? `${buildYear}년 (${age}년차)` : `${buildYear}년`
+}
+
+/**
  * 날짜를 상대 시간 문자열로 변환 (예: "3일 전", "1시간 전")
  */
 export function formatRelativeTime(dateStr: string): string {

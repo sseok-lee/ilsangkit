@@ -527,9 +527,12 @@ const desktopHeroStats = computed(() => {
   }
 
   // toilet의 경우 isOpen24Hours가 '상시' 로직을 포함하므로 details에 isOpen24Hours 결과를 주입
+  // pharmacy의 경우 pharmacyWeeklyHours 기반 오늘 영업시간 결과를 주입
   const detailsWithMeta = cat === 'toilet'
     ? { ...details.value, _isOpen24Hours: isOpen24Hours.value }
-    : details.value
+    : cat === 'pharmacy'
+      ? { ...details.value, _todayHours: pharmacyTodayHours.value }
+      : details.value
 
   const categoryItems = buildHeroStats(cat, detailsWithMeta, facilityPhone.value)
   return [...commonItems, ...categoryItems]
@@ -711,6 +714,12 @@ const pharmacyWeeklyHours = computed(() => {
     return { day: label, time: time ?? '휴무', closed: time === null, isToday: todayIdx === today }
   })
   return rows.some(r => !r.closed) ? rows : []
+})
+
+// Pharmacy 오늘 영업시간 — pharmacyWeeklyHours(기존, KST 오늘 판정 포함)에서 오늘 행을 뽑아 도출 (휴무/데이터없음 → null)
+const pharmacyTodayHours = computed<string | null>(() => {
+  const today = pharmacyWeeklyHours.value.find(r => r.isToday)
+  return today && !today.closed ? today.time : null
 })
 
 // Hospital operating hours

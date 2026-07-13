@@ -425,7 +425,7 @@ import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
-import { formatKoreanPrice } from '~/utils/formatters'
+import { buildYearLabel, formatKoreanPrice } from '~/utils/formatters'
 import { RE_STALE_DAYS, formatDotDate } from '~/utils/syncFreshness'
 import {
   getPeriodTradeLabel,
@@ -438,7 +438,7 @@ import {
   type RealEstateSummaryBadge,
 } from '~/utils/realEstateDetailSummary'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getCurrentYear } from '~/utils/seoConstants'
 import { buildRealEstateDetailMeta } from '~/composables/useRealEstateDetailMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
@@ -853,7 +853,7 @@ const heroStats = computed(() => {
     return [
       { label: '최근 거래가', value: recent },
       { label: '최근 거래일', value: dealDate },
-      { label: '건축년도', value: buildingInfo.value?.buildYear ? `${buildingInfo.value.buildYear}년` : PLACEHOLDER },
+      { label: '건축년도', value: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER },
       area,
     ]
   }

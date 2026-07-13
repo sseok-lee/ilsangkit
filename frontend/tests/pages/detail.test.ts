@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref, defineComponent, h, Suspense, onErrorCaptured } from 'vue'
 import DetailPage from '~/pages/[category]/[id].vue'
+import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import type { FacilityDetail } from '~/types/facility'
 
 const mockFacility: FacilityDetail = {
@@ -314,5 +315,78 @@ describe('DetailPage', () => {
     const h3s = wrapper.findAll('h3')
     const statusH3 = h3s.find(h => h.text() === '시설현황')
     expect(statusH3).toBeUndefined()
+  })
+
+  // ---------------- 약국 헤더 칩 보강 (약사수·오늘 영업시간) ----------------
+  // pharmacyWeeklyHours가 KST 기준 '오늘'을 판정하므로 요일을 고정하기 위해 fake timers 사용.
+  // 2026-07-13(월)을 시스템 시각으로 고정 — dutyTime1s/c(월요일) row가 isToday=true가 된다.
+  describe('pharmacy 헤더 칩 (약사수·오늘 영업시간)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-07-13T12:00:00+09:00')) // 월요일 정오 KST
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('약사수·오늘 영업시간 칩을 모바일 헤더에 노출한다', async () => {
+      mockUseAsyncDataWith({
+        success: true,
+        data: {
+          ...mockFacility,
+          id: 'pharmacy-1',
+          category: 'pharmacy',
+          details: {
+            phone: '02-123-4567',
+            pharmacistCnt: 2,
+            dutyTime1s: '0900', // 월요일 09:00
+            dutyTime1c: '1800', // 월요일 18:00
+          },
+        },
+      })
+
+      const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+
+      // WeekdayHoursTable(기본정보 섹션)도 독립적으로 '오늘' 배지를 렌더하므로
+      // wrapper.text() 전체가 아닌 MobileDetailHeader 서브트리로 정확히 스코프해 검증한다.
+      const header = wrapper.findComponent(MobileDetailHeader)
+      expect(header.exists()).toBe(true)
+      expect(header.text()).toContain('약사')
+      expect(header.text()).toContain('2명')
+      expect(header.text()).toContain('오늘')
+      expect(header.text()).toContain('09:00 ~ 18:00')
+
+      // 단일 h1 · 헤더 구조 불변식 (기존 SEO 가드와 동일 기준)
+      const h1s = wrapper.findAll('h1')
+      expect(h1s.length).toBe(1)
+    })
+
+    it('오늘 휴무(dutyTime1s/c 없음)면 오늘 칩을 생략한다', async () => {
+      mockUseAsyncDataWith({
+        success: true,
+        data: {
+          ...mockFacility,
+          id: 'pharmacy-2',
+          category: 'pharmacy',
+          details: {
+            phone: '02-123-4567',
+            pharmacistCnt: 1,
+            // 월요일 dutyTime 없음 → 오늘 휴무
+            dutyTime2s: '0900',
+            dutyTime2c: '1800',
+          },
+        },
+      })
+
+      const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+
+      // MobileDetailHeader 서브트리로 스코프(WeekdayHoursTable의 독립적인 '오늘' 배지와 혼동 방지)
+      const header = wrapper.findComponent(MobileDetailHeader)
+      expect(header.exists()).toBe(true)
+      expect(header.text()).toContain('약사')
+      expect(header.text()).toContain('1명')
+      expect(header.text()).not.toContain('오늘')
+    })
   })
 })
