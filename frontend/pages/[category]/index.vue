@@ -120,6 +120,7 @@
               v-for="region in wasteSchedules"
               :key="region.id"
               :region="region"
+              @select="openWasteSchedule"
             />
           </div>
 
@@ -152,6 +153,14 @@
             </div>
           </EmptyState>
         </SectionBlock>
+
+        <WasteScheduleDetailModal
+          :open="selectedWasteScheduleId !== null"
+          :schedule="selectedWasteSchedule"
+          :loading="wasteDetailLoading"
+          :error="wasteDetailError"
+          @close="closeWasteSchedule"
+        />
       </template>
 
       <!-- Non-trash: facility card grid -->
@@ -267,7 +276,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import type { LocationQueryRaw } from 'vue-router'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useWasteSchedule, transformToRegionSchedules } from '~/composables/useWasteSchedule'
@@ -283,13 +293,15 @@ import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import WasteScheduleDetailModal from '~/components/trash/WasteScheduleDetailModal.vue'
 import { CITY_SLUG_MAP, useRegions } from '~/composables/useRegions'
-import type { RegionSchedule } from '~/composables/useWasteSchedule'
+import type { RegionSchedule, WasteScheduleDetail } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 
 const route = useRoute()
+const router = useRouter()
 
 // Route params
 const categoryParam = computed(() => route.params.category as FacilityCategory)
@@ -314,7 +326,7 @@ const queryCitySlug = computed(() => (route.query.city as string) || '')
 // Search composables
 const { loading, facilities, total, currentPage, totalPages, error: facilityError, search, resetPage, setPage } = useFacilitySearch()
 const { trackCategoryPageView, trackSearchNoResults } = useAnalytics()
-const { getCities, getDistricts, getSchedules, isLoading: wasteLoading } = useWasteSchedule()
+const { getCities, getDistricts, getSchedules, getScheduleDetail, isLoading: wasteLoading } = useWasteSchedule()
 const { loadRegions, citiesWithDistricts } = useRegions()
 const { setCategoryMeta } = useFacilityMeta()
 const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema } = useStructuredData()
@@ -363,6 +375,52 @@ const wasteContact = ref<{ name: string; phone?: string } | null>(
 const wasteCurrentPage = ref(initialPage)
 const wasteTotalPages = ref(isTrash && ssrItems ? ssrItems.totalPages ?? 1 : 1)
 const wasteTotal = ref(isTrash && ssrItems ? ssrItems.total ?? 0 : 0)
+const selectedWasteSchedule = ref<WasteScheduleDetail | null>(null)
+const wasteDetailLoading = ref(false)
+const wasteDetailError = ref(false)
+let detailRequestId = 0
+let modalOpenedFromList = false
+
+function parseScheduleQuery(value: unknown): number | null {
+  const raw = Array.isArray(value) ? value[0] : value
+  const id = Number(raw)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
+
+const selectedWasteScheduleId = computed(() =>
+  categoryParam.value === 'trash' ? parseScheduleQuery(route.query.schedule) : null
+)
+
+async function loadWasteScheduleDetail(id: number) {
+  const requestId = ++detailRequestId
+  wasteDetailLoading.value = true
+  wasteDetailError.value = false
+  selectedWasteSchedule.value = null
+
+  const detail = await getScheduleDetail(id)
+  if (requestId !== detailRequestId) return
+
+  selectedWasteSchedule.value = detail
+  wasteDetailError.value = detail === null
+  wasteDetailLoading.value = false
+}
+
+async function openWasteSchedule(schedule: RegionSchedule) {
+  modalOpenedFromList = true
+  await navigateTo({ query: { ...route.query, schedule: String(schedule.id) } })
+}
+
+function closeWasteSchedule() {
+  if (modalOpenedFromList) {
+    modalOpenedFromList = false
+    router.back()
+    return
+  }
+
+  const nextQuery: LocationQueryRaw = { ...route.query }
+  delete nextQuery.schedule
+  navigateTo({ query: nextQuery }, { replace: true })
+}
 
 // 시설 목록 — SSR 데이터가 있으면 composable 대신 표시
 const ssrFacilities = ref(!isTrash && ssrItems ? ssrItems.items ?? [] : [])
@@ -604,8 +662,8 @@ async function loadWasteSchedules() {
 
 // URL `?page=N` 을 갱신해 reactive noindex/canonical 이 정확히 켜지도록 한다.
 // page=1 이면 query 에서 page 키 자체를 제거해 canonical URL 과 동일하게 유지한다.
-function syncPageQuery(page: number) {
-  const nextQuery: Record<string, unknown> = { ...route.query }
+function syncPageQuery(page: number): LocationQueryRaw {
+  const nextQuery: LocationQueryRaw = { ...route.query }
   if (page > 1) nextQuery.page = String(page)
   else delete nextQuery.page
   return nextQuery
@@ -682,7 +740,9 @@ function handleFilterSearch() {
 
 async function goToWastePage(page: number) {
   wasteCurrentPage.value = page
-  await navigateTo({ query: syncPageQuery(page) })
+  const nextQuery = syncPageQuery(page)
+  delete nextQuery.schedule
+  await navigateTo({ query: nextQuery })
   loadWasteSchedules()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -745,6 +805,18 @@ watch(() => route.query.page, (next) => {
     performSearch()
   }
 })
+
+watch(selectedWasteScheduleId, (id) => {
+  if (id === null) {
+    modalOpenedFromList = false
+    detailRequestId += 1
+    selectedWasteSchedule.value = null
+    wasteDetailLoading.value = false
+    wasteDetailError.value = false
+    return
+  }
+  loadWasteScheduleDetail(id)
+}, { immediate: true })
 
 watch(loading, (isLoading) => {
   if (!isLoading && ssrConsumed.value && filterKeyword.value && displayTotal.value === 0) {
