@@ -284,6 +284,47 @@ describe('AppHeader', () => {
   })
 })
 
+describe('데스크톱 GNB 텍스트-온리', () => {
+  const REMOVED_GLYPHS = [
+    'apartment', 'calendar_month', 'gavel', 'grid_view',
+    'local_library', 'health_and_safety', 'home', 'eco', 'menu_book', 'info',
+  ]
+
+  const mountHeader = () =>
+    mount(AppHeader, {
+      global: {
+        plugins: [router],
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to"><slot /></a>',
+            props: ['to'],
+          },
+        },
+      },
+    })
+
+  it('데스크톱 nav에서 장식 material-symbols 아이콘을 제거한다(캐럿 expand_more만 유지)', () => {
+    const wrapper = mountHeader()
+    const nav = wrapper.find('nav.hidden.md\\:flex')
+    const glyphs = nav.findAll('.material-symbols-outlined').map((s) => s.text().trim())
+    for (const g of REMOVED_GLYPHS) expect(glyphs).not.toContain(g)
+    // 캐럿은 유지 (탑레벨 트리거 4개)
+    expect(glyphs.filter((g) => g === 'expand_more').length).toBe(4)
+  })
+
+  it('데스크톱 nav 메가패널에 카테고리 webp 아이콘(img)이 없다', () => {
+    const wrapper = mountHeader()
+    const nav = wrapper.find('nav.hidden.md\\:flex')
+    expect(nav.findAll('img[src*="/icons/category/"]').length).toBe(0)
+  })
+
+  it('사이트링크 보호: 데스크톱 nav leaf 앵커 수가 36개로 유지된다', () => {
+    const wrapper = mountHeader()
+    const nav = wrapper.find('nav.hidden.md\\:flex')
+    expect(nav.findAll('a').length).toBe(36)
+  })
+})
+
 describe('데스크톱 마이크로 라벨', () => {
   it('로고 옆에 "공공데이터 기반 생활정보" 라벨을 데스크톱 전용으로 렌더한다', () => {
     const wrapper = mount(AppHeader, {

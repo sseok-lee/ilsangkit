@@ -51,7 +51,6 @@
             @keydown.enter.prevent="openDropdown(group.title)"
             @keydown.space.prevent="openDropdown(group.title)"
           >
-            <span class="material-symbols-outlined text-[18px]">{{ group.icon }}</span>
             {{ group.title }}
             <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === group.title }">expand_more</span>
           </button>
@@ -87,11 +86,9 @@
                 </template>
                 <HardLink
                   :to="link.to"
-                  class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
+                  class="flex items-center px-3 py-2 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
                   @click="closeDropdown"
                 >
-                  <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-                  <span v-else class="material-symbols-outlined text-[18px] text-faint">{{ link.icon }}</span>
                   {{ link.label }}
                 </HardLink>
               </template>
@@ -115,7 +112,6 @@
             @keydown.enter.prevent="openDropdown('생활시설')"
             @keydown.space.prevent="openDropdown('생활시설')"
           >
-            <span class="material-symbols-outlined text-[18px]">grid_view</span>
             생활시설
             <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === '생활시설' }">expand_more</span>
           </button>
@@ -138,18 +134,16 @@
               @mouseleave="scheduleCloseDropdown"
             >
               <div v-for="group in CATEGORY_GROUPS" :key="group.title">
-                <div class="flex items-center gap-1.5 px-2 pb-1.5 mb-1 border-b border-line text-[13px] font-bold text-strong">
-                  <span class="material-symbols-outlined text-[18px] text-primary">{{ group.icon }}</span>
+                <div class="px-2 pb-1.5 mb-1 border-b border-line text-[11px] font-extrabold uppercase tracking-wider text-faint">
                   {{ group.title }}
                 </div>
                 <HardLink
                   v-for="catId in group.categories"
                   :key="catId"
                   :to="`/${catId}`"
-                  class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
+                  class="flex items-center px-2 py-1.5 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
                   @click="closeDropdown"
                 >
-                  <CategoryIcon :category-id="catId" size="sm" />
                   {{ CATEGORY_META[catId].shortLabel }}
                 </HardLink>
               </div>
@@ -165,16 +159,14 @@
           <div class="h-5 w-px bg-line-2 mx-1"></div>
           <HardLink
             to="/guide"
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
+            class="flex items-center px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
           >
-            <span class="material-symbols-outlined text-[18px]">menu_book</span>
             가이드
           </HardLink>
           <HardLink
             to="/about"
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
+            class="flex items-center px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
           >
-            <span class="material-symbols-outlined text-[18px]">info</span>
             소개
           </HardLink>
         </div>
