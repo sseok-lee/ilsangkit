@@ -299,6 +299,14 @@ describe('데스크톱 GNB 텍스트-온리', () => {
             template: '<a :href="to"><slot /></a>',
             props: ['to'],
           },
+          // tests/setup.ts의 전역 CategoryIcon 스텁은 name이 없어 findComponent({name})으로
+          // 잡히지 않는다(src 없는 <img>만 남아 DOM 셀렉터도 우회됨). 이 describe에서만
+          // name + 식별 가능한 data-testid를 가진 스텁으로 로컬 오버라이드해 부재를 검증한다.
+          CategoryIcon: {
+            name: 'CategoryIcon',
+            props: ['categoryId', 'size'],
+            template: '<div data-testid="category-icon-stub" />',
+          },
         },
       },
     })
@@ -316,6 +324,9 @@ describe('데스크톱 GNB 텍스트-온리', () => {
     const wrapper = mountHeader()
     const nav = wrapper.find('nav.hidden.md\\:flex')
     expect(nav.findAll('img[src*="/icons/category/"]').length).toBe(0)
+    // CategoryIcon 부재를 컴포넌트 트리로 직접 검증(위 로컬 오버라이드 스텁 사용).
+    expect(nav.findAllComponents({ name: 'CategoryIcon' }).length).toBe(0)
+    expect(nav.findAll('[data-testid="category-icon-stub"]').length).toBe(0)
   })
 
   it('사이트링크 보호: 데스크톱 nav leaf 앵커 수가 36개로 유지된다', () => {
