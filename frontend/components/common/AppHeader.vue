@@ -23,6 +23,10 @@
         <HardLink v-if="!props.showBackButton" to="/" class="flex items-center">
           <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 w-auto shrink-0" width="91" height="36" />
         </HardLink>
+        <span
+          v-if="!props.showBackButton"
+          class="hidden md:inline-flex items-center self-center pl-2.5 ml-1.5 border-l border-line-2 text-[11px] leading-none text-faint"
+        >공공데이터 기반 생활정보</span>
       </div>
 
       <!-- Center/Right: Desktop Navigation (single nav, fills remaining width) -->
@@ -47,7 +51,6 @@
             @keydown.enter.prevent="openDropdown(group.title)"
             @keydown.space.prevent="openDropdown(group.title)"
           >
-            <span class="material-symbols-outlined text-[18px]">{{ group.icon }}</span>
             {{ group.title }}
             <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === group.title }">expand_more</span>
           </button>
@@ -83,11 +86,9 @@
                 </template>
                 <HardLink
                   :to="link.to"
-                  class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
+                  class="flex items-center px-3 py-2 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
                   @click="closeDropdown"
                 >
-                  <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-                  <span v-else class="material-symbols-outlined text-[18px] text-faint">{{ link.icon }}</span>
                   {{ link.label }}
                 </HardLink>
               </template>
@@ -111,7 +112,6 @@
             @keydown.enter.prevent="openDropdown('생활시설')"
             @keydown.space.prevent="openDropdown('생활시설')"
           >
-            <span class="material-symbols-outlined text-[18px]">grid_view</span>
             생활시설
             <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === '생활시설' }">expand_more</span>
           </button>
@@ -134,18 +134,16 @@
               @mouseleave="scheduleCloseDropdown"
             >
               <div v-for="group in CATEGORY_GROUPS" :key="group.title">
-                <div class="flex items-center gap-1.5 px-2 pb-1.5 mb-1 border-b border-line text-[13px] font-bold text-strong">
-                  <span class="material-symbols-outlined text-[18px] text-primary">{{ group.icon }}</span>
+                <div class="px-2 pb-1.5 mb-1 border-b border-line text-[11px] font-extrabold uppercase tracking-wider text-faint">
                   {{ group.title }}
                 </div>
                 <HardLink
                   v-for="catId in group.categories"
                   :key="catId"
                   :to="`/${catId}`"
-                  class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
+                  class="flex items-center px-2 py-1.5 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
                   @click="closeDropdown"
                 >
-                  <CategoryIcon :category-id="catId" size="sm" />
                   {{ CATEGORY_META[catId].shortLabel }}
                 </HardLink>
               </div>
@@ -161,16 +159,14 @@
           <div class="h-5 w-px bg-line-2 mx-1"></div>
           <HardLink
             to="/guide"
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
+            class="flex items-center px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
           >
-            <span class="material-symbols-outlined text-[18px]">menu_book</span>
             가이드
           </HardLink>
           <HardLink
             to="/about"
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
+            class="flex items-center px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
           >
-            <span class="material-symbols-outlined text-[18px]">info</span>
             소개
           </HardLink>
         </div>
@@ -211,9 +207,8 @@
     >
       <nav class="flex flex-col p-4 gap-1">
         <!-- 부동산 / 청약·임대 (link groups) -->
-        <div v-for="group in NAV_LINK_GROUPS" :key="group.title" class="mb-1">
+        <div v-for="group in NAV_LINK_GROUPS" :key="group.title" class="mb-4">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-wider">
-            <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
             {{ group.title }}
           </div>
           <template v-for="(link, idx) in group.links" :key="link.to">
@@ -225,20 +220,17 @@
             </div>
             <HardLink
               :to="link.to"
-              class="pl-6 pr-4 py-2.5 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              class="pl-6 pr-4 py-2.5 min-h-[42px] text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center"
               @click="closeMobileMenu"
             >
-              <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-              <span v-else class="material-symbols-outlined text-[18px] text-faint">{{ link.icon }}</span>
               {{ link.label }}
             </HardLink>
           </template>
         </div>
 
         <!-- 생활시설 통합 섹션 (시설 4개 그룹) -->
-        <div class="mb-1">
+        <div class="mb-4">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-wider">
-            <span class="material-symbols-outlined text-[16px] text-primary">grid_view</span>
             생활시설
           </div>
           <div v-for="group in CATEGORY_GROUPS" :key="group.title">
@@ -249,10 +241,9 @@
               v-for="catId in group.categories"
               :key="catId"
               :to="`/${catId}`"
-              class="pl-6 pr-4 py-2.5 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              class="pl-6 pr-4 py-2.5 min-h-[42px] text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center"
               @click="closeMobileMenu"
             >
-              <CategoryIcon :category-id="catId" size="sm" />
               {{ CATEGORY_META[catId].shortLabel }}
             </HardLink>
           </div>
@@ -313,7 +304,6 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { CATEGORY_META, NAV_LINK_GROUPS, CATEGORY_GROUPS } from '~/types/facility'
-import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import HeaderSearch from '~/components/common/HeaderSearch.vue'
 
 interface Props {

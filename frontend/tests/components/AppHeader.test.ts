@@ -283,3 +283,156 @@ describe('AppHeader', () => {
     })
   })
 })
+
+describe('데스크톱 GNB 텍스트-온리', () => {
+  const REMOVED_GLYPHS = [
+    'apartment', 'calendar_month', 'gavel', 'grid_view',
+    'local_library', 'health_and_safety', 'home', 'eco', 'menu_book', 'info',
+  ]
+
+  const mountHeader = () =>
+    mount(AppHeader, {
+      global: {
+        plugins: [router],
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to"><slot /></a>',
+            props: ['to'],
+          },
+          // tests/setup.ts의 전역 CategoryIcon 스텁은 name이 없어 findComponent({name})으로
+          // 잡히지 않는다(src 없는 <img>만 남아 DOM 셀렉터도 우회됨). 이 describe에서만
+          // name + 식별 가능한 data-testid를 가진 스텁으로 로컬 오버라이드해 부재를 검증한다.
+          CategoryIcon: {
+            name: 'CategoryIcon',
+            props: ['categoryId', 'size'],
+            template: '<div data-testid="category-icon-stub" />',
+          },
+        },
+      },
+    })
+
+  it('데스크톱 nav에서 장식 material-symbols 아이콘을 제거한다(캐럿 expand_more만 유지)', () => {
+    const wrapper = mountHeader()
+    const nav = wrapper.find('nav.hidden.md\\:flex')
+    const glyphs = nav.findAll('.material-symbols-outlined').map((s) => s.text().trim())
+    for (const g of REMOVED_GLYPHS) expect(glyphs).not.toContain(g)
+    // 캐럿은 유지 (탑레벨 트리거 4개)
+    expect(glyphs.filter((g) => g === 'expand_more').length).toBe(4)
+  })
+
+  it('데스크톱 nav 메가패널에 카테고리 webp 아이콘(img)이 없다', () => {
+    const wrapper = mountHeader()
+    const nav = wrapper.find('nav.hidden.md\\:flex')
+    expect(nav.findAll('img[src*="/icons/category/"]').length).toBe(0)
+    // CategoryIcon 부재를 컴포넌트 트리로 직접 검증(위 로컬 오버라이드 스텁 사용).
+    expect(nav.findAllComponents({ name: 'CategoryIcon' }).length).toBe(0)
+    expect(nav.findAll('[data-testid="category-icon-stub"]').length).toBe(0)
+  })
+
+  it('사이트링크 보호: 데스크톱 nav leaf 앵커 수가 36개로 유지된다', () => {
+    const wrapper = mountHeader()
+    const nav = wrapper.find('nav.hidden.md\\:flex')
+    expect(nav.findAll('a').length).toBe(36)
+  })
+})
+
+describe('모바일 메뉴 텍스트-온리', () => {
+  const mountHeader = () =>
+    mount(AppHeader, {
+      global: {
+        plugins: [router],
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to"><slot /></a>',
+            props: ['to'],
+          },
+          // tests/setup.ts의 전역 CategoryIcon 스텁은 name이 없어 findAllComponents({name})으로
+          // 잡히지 않는다(src 없는 <img>만 남아 DOM 셀렉터도 우회됨). 이 describe에서만
+          // name + 식별 가능한 data-testid를 가진 스텁으로 로컬 오버라이드해 부재를 검증한다.
+          CategoryIcon: {
+            name: 'CategoryIcon',
+            props: ['categoryId', 'size'],
+            template: '<div data-testid="category-icon-stub" />',
+          },
+        },
+      },
+    })
+
+  const openMobileMenu = async (wrapper: VueWrapper) => {
+    await wrapper.find('button[aria-label="메뉴"]').trigger('click')
+    return wrapper.find('[data-testid="mobile-menu"]')
+  }
+
+  it('모바일 메뉴에서 카테고리 아이콘(CategoryIcon/webp img)과 그룹 eyebrow 아이콘을 전부 제거한다', async () => {
+    const wrapper = mountHeader()
+    const menu = await openMobileMenu(wrapper)
+
+    expect(menu.findAll('img[src*="/icons/category/"]').length).toBe(0)
+    // CategoryIcon 부재를 컴포넌트 트리로 직접 검증(로컬 오버라이드 스텁 사용) — 나이브 DOM
+    // img[src] 체크는 전역 스텁이 src 없는 <img>를 렌더해 부재를 위양성으로 통과시킨다.
+    expect(menu.findAllComponents({ name: 'CategoryIcon' }).length).toBe(0)
+    expect(menu.findAll('[data-testid="category-icon-stub"]').length).toBe(0)
+    // 그룹 eyebrow(부동산/청약·임대/공매/생활시설) + leaf material-symbols 아이콘 전부 제거
+    expect(menu.findAll('.material-symbols-outlined').length).toBe(0)
+  })
+
+  it('사이트링크 보호: 모바일 메뉴 링크 수가 40개로 유지된다', async () => {
+    const wrapper = mountHeader()
+    const menu = await openMobileMenu(wrapper)
+    expect(menu.findAll('a').length).toBe(40)
+  })
+
+  it('그룹 간 여백이 mb-4로 확대되고 3단 위계(그룹 eyebrow→서브그룹→항목)를 유지한다', async () => {
+    const wrapper = mountHeader()
+    const menu = await openMobileMenu(wrapper)
+
+    // NAV_LINK_GROUPS(3) + 생활시설(1) = 4개 그룹 래퍼
+    const groupWrappers = menu.findAll('nav > div.mb-4')
+    expect(groupWrappers.length).toBe(4)
+    expect(menu.findAll('nav > div.mb-1').length).toBe(0)
+
+    expect(menu.text()).toContain('부동산')
+    expect(menu.text()).toContain('생활시설')
+    expect(menu.text()).toContain('교육/육아')
+  })
+
+  it('leaf 링크가 min-h-[42px] 터치 타깃 + pl-6 들여쓰기를 유지하고 gap-3을 제거한다', async () => {
+    const wrapper = mountHeader()
+    const menu = await openMobileMenu(wrapper)
+
+    const toiletLink = menu.findAll('a').find((a) => a.attributes('href') === '/toilet')
+    expect(toiletLink).toBeTruthy()
+    expect(toiletLink!.classes()).toContain('pl-6')
+    expect(toiletLink!.classes()).toContain('min-h-[42px]')
+    expect(toiletLink!.classes()).not.toContain('gap-3')
+
+    const realEstateLink = menu.findAll('a').find((a) => a.attributes('href') === '/real-estate/apt-sale')
+    expect(realEstateLink).toBeTruthy()
+    expect(realEstateLink!.classes()).toContain('pl-6')
+    expect(realEstateLink!.classes()).toContain('min-h-[42px]')
+    expect(realEstateLink!.classes()).not.toContain('gap-3')
+  })
+})
+
+describe('데스크톱 마이크로 라벨', () => {
+  it('로고 옆에 "공공데이터 기반 생활정보" 라벨을 데스크톱 전용으로 렌더한다', () => {
+    const wrapper = mount(AppHeader, {
+      global: {
+        plugins: [router],
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to"><slot /></a>',
+            props: ['to'],
+          },
+        },
+      },
+    })
+    const label = wrapper
+      .findAll('span')
+      .find((s) => s.text() === '공공데이터 기반 생활정보')
+    expect(label).toBeTruthy()
+    // 데스크톱 전용(모바일 숨김)
+    expect(label!.classes()).toContain('hidden')
+    expect(label!.classes().some((c) => c.startsWith('md:'))).toBe(true)
+  })
+})
