@@ -12,7 +12,14 @@ const REGISTRY: Partial<Record<FacilityCategory, StatBuilder>> = {
     return items
   },
 
-  pharmacy: (_d, phone) => (phone ? [{ label: '전화', value: phone }] : []),
+  pharmacy: (d, phone) => {
+    const items: HeroStat[] = []
+    // _todayHours: 호출측([id].vue)에서 pharmacyWeeklyHours 기반 오늘 영업시간 결과를 주입
+    if (d?.pharmacistCnt) items.push({ label: '약사', value: `${d.pharmacistCnt}명` })
+    if (d?._todayHours) items.push({ label: '오늘', value: d._todayHours })
+    if (phone) items.push({ label: '전화', value: phone })
+    return items
+  },
 
   parking: (d) => {
     const items: HeroStat[] = []

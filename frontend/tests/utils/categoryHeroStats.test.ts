@@ -24,3 +24,21 @@ describe('buildHeroStats', () => {
     warn.mockRestore()
   })
 })
+
+describe('pharmacy 칩 보강', () => {
+  it('약사수·오늘 영업시간·전화 순으로 렌더한다', () => {
+    const stats = buildHeroStats('pharmacy', { pharmacistCnt: 2, _todayHours: '09:00~18:00' }, '02-123-4567')
+    expect(stats).toEqual([
+      { label: '약사', value: '2명' },
+      { label: '오늘', value: '09:00~18:00' },
+      { label: '전화', value: '02-123-4567' },
+    ])
+  })
+  it('데이터 없으면 해당 칩 생략(전화만)', () => {
+    expect(buildHeroStats('pharmacy', {}, '02-1')).toEqual([{ label: '전화', value: '02-1' }])
+  })
+  it('오늘 휴무(_todayHours null)면 오늘 칩 생략', () => {
+    const stats = buildHeroStats('pharmacy', { pharmacistCnt: 1, _todayHours: null }, '')
+    expect(stats).toEqual([{ label: '약사', value: '1명' }])
+  })
+})
