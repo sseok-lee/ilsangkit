@@ -76,9 +76,12 @@
         title-tag="div"
         :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :title="buildingName"
-        :description="fullAddress !== '-' ? fullAddress : undefined"
         :stats="heroStats"
-      />
+      >
+        <template #description>
+          <AddressLine :address="fullAddress" />
+        </template>
+      </PageHero>
 
       <!-- Ad: Hero 직후 (fold 하단) -->
       <AdBanner class="order-3 md:order-3" variant="compact-mobile" />
