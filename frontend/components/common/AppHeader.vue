@@ -86,7 +86,7 @@
                 </template>
                 <HardLink
                   :to="link.to"
-                  class="flex items-center px-3 py-2 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
+                  class="flex items-center px-3 py-2 rounded-lg hover:bg-background-light text-[15px] font-medium text-ink transition-colors"
                   @click="closeDropdown"
                 >
                   {{ link.label }}
@@ -141,7 +141,7 @@
                   v-for="catId in group.categories"
                   :key="catId"
                   :to="`/${catId}`"
-                  class="flex items-center px-2 py-1.5 rounded-lg hover:bg-background-light text-[15px] text-ink transition-colors"
+                  class="flex items-center px-2 py-1.5 rounded-lg hover:bg-background-light text-[15px] font-medium text-ink transition-colors"
                   @click="closeDropdown"
                 >
                   {{ CATEGORY_META[catId].shortLabel }}

@@ -86,6 +86,11 @@ describe('AppHeader', () => {
       expect(hrefs).toContain('/hospital')  // 건강/안전
       expect(hrefs).toContain('/park')      // 생활/편의
       expect(hrefs).toContain('/clothes')   // 환경/생활
+
+      // 아이콘 제거 후 텍스트-온리 항목은 font-medium으로 크리스프하게(밋밋함 방지)
+      const megaLinks = mega.findAll('a')
+      expect(megaLinks.length).toBeGreaterThan(0)
+      expect(megaLinks.every((l) => l.classes().includes('font-medium'))).toBe(true)
     })
 
     it('should show 4 real estate links including hub in navigation', async () => {
