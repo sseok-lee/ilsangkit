@@ -83,7 +83,7 @@ const REGISTRY: Partial<Record<FacilityCategory, StatBuilder>> = {
     const items: HeroStat[] = []
     if (d?.faciGbNm) items.push({ label: '시설구분', value: d.faciGbNm })
     if (d?.ftypeNm) items.push({ label: '유형', value: d.ftypeNm })
-    if (d?.faciGfa != null) items.push({ label: '면적', value: `${Number(d.faciGfa).toLocaleString()}㎡` })
+    if (d?.faciGfa > 0) items.push({ label: '면적', value: `${Number(d.faciGfa).toLocaleString()}㎡` })
     if (items.length === 0 && phone) items.push({ label: '전화', value: phone })
     return items
   },

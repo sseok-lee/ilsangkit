@@ -68,4 +68,13 @@ describe('얇은 카테고리 칩 보강', () => {
     expect(buildHeroStats('clothes', { detailLocation: '정문 앞' }, '02-1')).toEqual([{ label: '위치', value: '정문 앞' }])
     expect(buildHeroStats('clothes', {}, '02-1')).toEqual([{ label: '전화', value: '02-1' }])
   })
+  it('sports: 면적 0이면 면적 칩 생략', () => {
+    expect(buildHeroStats('sports', { faciGbNm: '공공', faciGfa: 0 }, '')).toEqual([{ label: '시설구분', value: '공공' }])
+  })
+  it('sports: 일부 팩트만 있어도 전화 칩은 숨긴다', () => {
+    expect(buildHeroStats('sports', { faciGbNm: '공공' }, '02-1')).toEqual([{ label: '시설구분', value: '공공' }])
+  })
+  it('wifi: SSID 없이 설치장소만 있어도 표시', () => {
+    expect(buildHeroStats('wifi', { installLocation: '시청 로비' }, '')).toEqual([{ label: '설치장소', value: '시청 로비' }])
+  })
 })
