@@ -1,8 +1,9 @@
 <template>
-  <HardLink
-    :to="buildTrashRegionPath(region.city, region.district) ?? ('/trash/' + region.id)"
-    :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세보기`"
-    class="group bg-white rounded-xl p-4 shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer border-transparent hover:border-primary/20"
+  <button
+    type="button"
+    :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세 정보 보기`"
+    class="group w-full bg-white rounded-xl p-4 text-left shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer border-transparent hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    @click="emit('select', region)"
   >
     <div class="flex items-start gap-4">
       <!-- Icon -->
@@ -48,17 +49,19 @@
         </div>
       </div>
     </div>
-  </HardLink>
+  </button>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import HardLink from '~/components/common/HardLink.vue'
 import type { RegionSchedule, WasteType } from '~/composables/useWasteSchedule'
-import { buildTrashRegionPath } from '~/utils/trashRegion'
 
 const props = defineProps<{
   region: RegionSchedule
+}>()
+
+const emit = defineEmits<{
+  (e: 'select', region: RegionSchedule): void
 }>()
 
 const shortCity = computed(() =>
