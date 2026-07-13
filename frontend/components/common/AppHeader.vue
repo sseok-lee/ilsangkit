@@ -207,9 +207,8 @@
     >
       <nav class="flex flex-col p-4 gap-1">
         <!-- 부동산 / 청약·임대 (link groups) -->
-        <div v-for="group in NAV_LINK_GROUPS" :key="group.title" class="mb-1">
+        <div v-for="group in NAV_LINK_GROUPS" :key="group.title" class="mb-4">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-wider">
-            <span class="material-symbols-outlined text-[16px] text-primary">{{ group.icon }}</span>
             {{ group.title }}
           </div>
           <template v-for="(link, idx) in group.links" :key="link.to">
@@ -221,20 +220,17 @@
             </div>
             <HardLink
               :to="link.to"
-              class="pl-6 pr-4 py-2.5 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              class="pl-6 pr-4 py-2.5 min-h-[42px] text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center"
               @click="closeMobileMenu"
             >
-              <img v-if="link.iconImg" :src="`/icons/category/${link.iconImg}.webp?v2`" :alt="link.label" class="w-5 h-5" width="20" height="20" />
-              <span v-else class="material-symbols-outlined text-[18px] text-faint">{{ link.icon }}</span>
               {{ link.label }}
             </HardLink>
           </template>
         </div>
 
         <!-- 생활시설 통합 섹션 (시설 4개 그룹) -->
-        <div class="mb-1">
+        <div class="mb-4">
           <div class="px-4 py-2 flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-wider">
-            <span class="material-symbols-outlined text-[16px] text-primary">grid_view</span>
             생활시설
           </div>
           <div v-for="group in CATEGORY_GROUPS" :key="group.title">
@@ -245,10 +241,9 @@
               v-for="catId in group.categories"
               :key="catId"
               :to="`/${catId}`"
-              class="pl-6 pr-4 py-2.5 text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center gap-3"
+              class="pl-6 pr-4 py-2.5 min-h-[42px] text-strong hover:bg-primary/10 hover:text-primary transition-colors rounded-lg font-medium flex items-center"
               @click="closeMobileMenu"
             >
-              <CategoryIcon :category-id="catId" size="sm" />
               {{ CATEGORY_META[catId].shortLabel }}
             </HardLink>
           </div>
@@ -309,7 +304,6 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { CATEGORY_META, NAV_LINK_GROUPS, CATEGORY_GROUPS } from '~/types/facility'
-import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import HeaderSearch from '~/components/common/HeaderSearch.vue'
 
 interface Props {
