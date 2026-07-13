@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+import { ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
@@ -76,23 +77,70 @@ describe('DataSourceSection', () => {
   })
 })
 
-describe('DataSourceSection — 수정 요청 링크', () => {
-  it('full 카드에 수정 요청 링크와 SLA를 렌더한다', () => {
+describe('DataSourceSection — 수정 요청은 카드가 아닌 푸터가 담당', () => {
+  it('full 카드에는 수정 요청 링크를 렌더하지 않는다(푸터 운영블록과 중복 제거)', () => {
     const w = mount(DataSourceSection, {
       props: { domain: 'facility', category: 'pharmacy' },
       global: { stubs: { NuxtLink: NuxtLinkStub } },
     })
-    expect(w.text()).toContain('정보가 실제와 다른가요?')
-    expect(w.text()).toContain('수정 요청')
-    expect(w.text()).toContain('3~5일 내 반영')
-    expect(w.html()).toContain('/contact#data-fix')
+    expect(w.text()).not.toContain('정보가 실제와 다른가요?')
+    expect(w.text()).not.toContain('수정 요청')
+    expect(w.text()).not.toContain('3~5일 내 반영')
+    expect(w.html()).not.toContain('/contact#data-fix')
   })
 
-  it('compact 모드에는 수정 요청 링크가 없다', () => {
+  it('compact 모드에도 수정 요청 링크가 없다', () => {
     const w = mount(DataSourceSection, {
       props: { domain: 'facility', compact: true },
       global: { stubs: { NuxtLink: NuxtLinkStub } },
     })
     expect(w.text()).not.toContain('수정 요청')
+  })
+})
+
+describe('DataSourceSection — ⓘ 안내 문구(데이터셋 이름 미반복)', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('full 카드 안내 문구가 데이터셋 이름을 반복하지 않고 "공표된 원본 데이터 기준입니다"를 렌더한다', () => {
+    vi.spyOn(dataSourceModule, 'resolveDataSource').mockReturnValue({
+      datasetName: '테스트셋',
+      provider: '테스트기관',
+      url: 'https://example.com',
+    })
+    const w = mountSection({ domain: 'facility', category: 'toilet' })
+    expect(w.text()).toContain('공표된 원본 데이터 기준입니다')
+    // 데이터셋 이름을 값 행 + 안내 문구에 이중 렌더하지 않는다
+    expect(w.text()).not.toContain('테스트셋 기준 정보입니다')
+  })
+})
+
+describe('DataSourceSection — TrustLine 억제 레지스트리', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  function mountWithRegistry(props: Record<string, unknown>, registry: { value: number }) {
+    return mount(DataSourceSection, {
+      props,
+      global: { stubs: { NuxtLink: NuxtLinkStub }, provide: { sourceCardRegistry: registry } },
+    })
+  }
+
+  it('full 카드는 sourceCardRegistry를 +1 하고 언마운트 시 -1 한다(전역 TrustLine 억제)', () => {
+    const reg = ref(0)
+    const w = mountWithRegistry({ domain: 'facility', category: 'hospital' }, reg)
+    expect(reg.value).toBe(1)
+    w.unmount()
+    expect(reg.value).toBe(0)
+  })
+
+  it('compact 모드는 레지스트리를 증가시키지 않는다(작은 인라인 안내는 억제 대상 아님)', () => {
+    const reg = ref(0)
+    mountWithRegistry({ domain: 'facility', compact: true }, reg)
+    expect(reg.value).toBe(0)
+  })
+
+  it('source가 없으면(카드 미렌더) 레지스트리를 증가시키지 않는다', () => {
+    const reg = ref(0)
+    mountWithRegistry({ domain: 'facility' }, reg) // category 없음 → source null → 카드 미렌더
+    expect(reg.value).toBe(0)
   })
 })

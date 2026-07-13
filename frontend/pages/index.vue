@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col">
     <!-- Hero Section -->
-    <section class="px-4 sm:px-6 pt-4 md:pt-8 pb-8 md:pb-12">
-      <div class="relative overflow-hidden bg-primary-press text-white -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-8 py-6 md:py-9 md:rounded-2xl">
+    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 md:pt-8 pb-8 md:pb-12">
+      <div class="relative overflow-hidden bg-primary-press text-white -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-8 py-5 md:py-7 md:rounded-2xl">
         <!-- 출처 배지 + 기준일 스탬프 -->
         <div class="flex items-center gap-2 flex-wrap">
           <span class="hidden md:inline-flex items-center text-[11.5px] font-bold bg-white/[0.12] border border-white/20 px-2.5 py-1 rounded-full text-[#DCE6FD]">공공데이터포털</span>
@@ -17,9 +17,9 @@
         </div>
 
         <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
-        <div class="tracking-tight font-bold leading-[1.15] mt-4">
-          <div class="text-white text-[38px] md:text-[62px] md:font-black">우리 동네 정보,</div>
-          <div class="text-[38px] md:text-[62px] md:font-black">
+        <div class="tracking-tight font-bold leading-[1.15] mt-3">
+          <div class="text-white text-[26px] md:text-[40px] md:font-extrabold">우리 동네 정보,</div>
+          <div class="text-[26px] md:text-[40px] md:font-extrabold">
             <span class="md:hidden text-[#9DB4F5]">한번에.</span>
             <span class="hidden md:inline"><span class="text-[#9DB4F5]">일상킷에서</span><span class="text-white"> 한번에.</span></span>
           </div>
@@ -28,7 +28,7 @@
         <p class="hidden md:block text-[#C9D6FA] text-lg mt-1">부동산 실거래가, 청약 정보, 생활시설을 한 곳에서.</p>
 
         <!-- 검색바 -->
-        <div class="w-full md:max-w-[580px] mt-4 md:mt-5">
+        <div class="w-full md:max-w-[860px] mt-4 md:mt-5">
           <label class="relative block">
             <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-line-2 md:border-2 shadow-card focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-line-2 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
               <div class="flex items-center pl-4 pr-2 text-faint">
