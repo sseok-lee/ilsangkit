@@ -49,6 +49,7 @@
       :current-page="wasteCurrentPage"
       :total-pages="wasteTotalPages"
       @page-change="goToWastePage"
+      @select="openWasteSchedule"
     />
 
     <!-- 일반 시설 그리드 -->
@@ -65,6 +66,14 @@
       :category-slug="category"
       @page-change="goToPage"
       @retry="loadFacilities"
+    />
+
+    <WasteScheduleDetailModal
+      :open="selectedWasteScheduleId !== null"
+      :schedule="selectedWasteSchedule"
+      :loading="wasteDetailLoading"
+      :error="wasteDetailError"
+      @close="closeWasteSchedule"
     />
 
     <!-- Ad: 결과 뒤 -->
@@ -85,10 +94,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import type { LocationQueryRaw } from 'vue-router'
 import { useRegionFacilities } from '~/composables/useRegionFacilities'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
-import type { RegionSchedule } from '~/composables/useWasteSchedule'
+import type { RegionSchedule, WasteScheduleDetail } from '~/composables/useWasteSchedule'
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { CITY_FULL_NAME_TO_SLUG } from '~/shared/regionSlugs'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -106,9 +116,11 @@ import RegionRelatedCategories from '~/components/region/RegionRelatedCategories
 import RegionTrashSchedule from '~/components/region/RegionTrashSchedule.vue'
 import RegionFacilitiesGrid from '~/components/region/RegionFacilitiesGrid.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import WasteScheduleDetailModal from '~/components/trash/WasteScheduleDetailModal.vue'
 
 // Route params
 const route = useRoute()
+const router = useRouter()
 const city = computed(() => route.params.city as string)
 const district = computed(() => route.params.district as string)
 const category = computed(() => route.params.category as string)
@@ -283,12 +295,56 @@ const otherCategories = computed(() => {
 const initialPage = parsePositivePageQuery(route.query.page)
 
 // ========== Waste Schedule (trash) ==========
-const { getSchedules, isLoading: wasteLoading } = useWasteSchedule()
+const { getSchedules, getScheduleDetail, isLoading: wasteLoading } = useWasteSchedule()
 const wasteSchedules = ref<RegionSchedule[]>([])
 const wasteContact = ref<{ name: string; phone?: string } | null>(null)
 const wasteCurrentPage = ref(initialPage)
 const wasteTotalPages = ref(1)
 const wasteTotal = ref(0)
+const selectedWasteSchedule = ref<WasteScheduleDetail | null>(null)
+const wasteDetailLoading = ref(false)
+const wasteDetailError = ref(false)
+let detailRequestId = 0
+let modalOpenedFromList = false
+
+function parseScheduleQuery(value: unknown): number | null {
+  const raw = Array.isArray(value) ? value[0] : value
+  const id = Number(raw)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
+
+const selectedWasteScheduleId = computed(() => isTrash.value ? parseScheduleQuery(route.query.schedule) : null)
+
+async function loadWasteScheduleDetail(id: number) {
+  const requestId = ++detailRequestId
+  wasteDetailLoading.value = true
+  wasteDetailError.value = false
+  selectedWasteSchedule.value = null
+
+  const detail = await getScheduleDetail(id)
+  if (requestId !== detailRequestId) return
+
+  selectedWasteSchedule.value = detail
+  wasteDetailError.value = detail === null
+  wasteDetailLoading.value = false
+}
+
+async function openWasteSchedule(schedule: RegionSchedule) {
+  modalOpenedFromList = true
+  await navigateTo({ query: { ...route.query, schedule: String(schedule.id) } })
+}
+
+function closeWasteSchedule() {
+  if (modalOpenedFromList) {
+    modalOpenedFromList = false
+    router.back()
+    return
+  }
+
+  const nextQuery: LocationQueryRaw = { ...route.query }
+  delete nextQuery.schedule
+  navigateTo({ query: nextQuery }, { replace: true })
+}
 
 async function loadWasteSchedules() {
   const fullCityName = SLUG_TO_FULL_CITY[city.value] || cityName.value
@@ -305,8 +361,8 @@ async function loadWasteSchedules() {
 }
 
 // URL query 를 함께 갱신해야 reactive noindex 가 정확히 동작한다.
-function syncPageQuery(page: number) {
-  const nextQuery: Record<string, unknown> = { ...route.query }
+function syncPageQuery(page: number): LocationQueryRaw {
+  const nextQuery: LocationQueryRaw = { ...route.query }
   if (page > 1) nextQuery.page = String(page)
   else delete nextQuery.page
   return nextQuery
@@ -314,7 +370,9 @@ function syncPageQuery(page: number) {
 
 async function goToWastePage(page: number) {
   wasteCurrentPage.value = page
-  await navigateTo({ query: syncPageQuery(page) })
+  const nextQuery = syncPageQuery(page)
+  delete nextQuery.schedule
+  await navigateTo({ query: nextQuery })
   loadWasteSchedules()
   if (import.meta.client) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -415,6 +473,18 @@ watch(() => route.query.page, (next) => {
     loadFacilities()
   }
 })
+
+watch(selectedWasteScheduleId, (id) => {
+  if (id === null) {
+    modalOpenedFromList = false
+    detailRequestId += 1
+    selectedWasteSchedule.value = null
+    wasteDetailLoading.value = false
+    wasteDetailError.value = false
+    return
+  }
+  loadWasteScheduleDetail(id)
+}, { immediate: true })
 
 // noindex 조건: SSR summary.count 기반(비-trash) 또는 일정 없음(trash) 또는 페이지 2 이상.
 // 정책: noindex 일 때는 canonical 을 함께 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md).

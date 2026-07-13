@@ -264,10 +264,14 @@ if (fetchError.value) {
 
 const data = computed(() => scheduleResponse.value?.data ?? null)
 
-// 구·군 단위 집계 페이지로 301 리다이렉트 (개별 trash 상세는 중복 메타 → 색인 통합)
+// 구·군 단위 집계 페이지의 상세 모달로 301 리다이렉트
+// (개별 trash 상세의 색인은 통합하면서 기존 딥링크의 상세 맥락은 보존한다.)
 const trashRegionPath = computed(() => data.value ? buildTrashRegionPath(data.value.city, data.value.district) : null)
 if (import.meta.server && trashRegionPath.value) {
-  await navigateTo(trashRegionPath.value, { redirectCode: 301 })
+  await navigateTo(
+    { path: trashRegionPath.value, query: { schedule: String(scheduleId.value) } },
+    { redirectCode: 301 },
+  )
 }
 
 const loading = computed(() => status.value === 'pending')
