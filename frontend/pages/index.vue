@@ -61,7 +61,29 @@
           </label>
         </div>
 
-        <!-- 스탯 4칸: Task 5에서 이 자리에 삽입 -->
+        <!-- 스탯 4칸 -->
+        <div class="mt-5 md:mt-6 border-t border-white/[0.16] pt-4">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 md:gap-y-0 md:divide-x md:divide-white/[0.14]">
+            <div class="flex flex-col md:px-4 md:first:pl-0">
+              <strong class="text-white font-display font-extrabold text-lg md:text-xl tracking-tight tabular-nums">{{ buildingCountKor }}만</strong>
+              <span class="text-[11px] md:text-xs text-[#AEC0F7] font-semibold mt-0.5">실거래 부동산</span>
+            </div>
+            <div class="flex flex-col md:px-4">
+              <strong class="text-white font-display font-extrabold text-lg md:text-xl tracking-tight tabular-nums">{{ stats.subscriptionActiveCount }}건</strong>
+              <span class="text-[11px] md:text-xs text-[#AEC0F7] font-semibold mt-0.5">진행중 청약</span>
+            </div>
+            <div class="flex flex-col md:px-4">
+              <strong class="text-white font-display font-extrabold text-lg md:text-xl tracking-tight tabular-nums">{{ facilityCountKor }}만</strong>
+              <span class="text-[11px] md:text-xs text-[#AEC0F7] font-semibold mt-0.5">등록 시설</span>
+            </div>
+            <div class="flex flex-col md:px-4">
+              <strong class="text-white font-display font-extrabold text-lg md:text-xl tracking-tight tabular-nums">
+                {{ newlyListedToday.toLocaleString('ko-KR') }}<span v-if="newlyListedToday > 0" class="text-[10px] md:text-xs font-bold text-[#7EE3B8] ml-1 align-middle"><span class="md:hidden">오늘</span><span class="hidden md:inline">오늘 신규</span></span>
+              </strong>
+              <span class="text-[11px] md:text-xs text-[#AEC0F7] font-semibold mt-0.5">오늘 업데이트</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -383,7 +405,8 @@ const stampDate = computed<string | null>(() => {
   return iso && !isSyncStale(iso, RE_STALE_DAYS) ? formatDotDate(iso) : null
 })
 
-// Hero 통계박스에서 사용하는 3개 필드만 추림.
+// 히어로 4칸 스탯 패널에서 사용하는 필드(subscriptionActiveCount)만 추림. total/buildingCount는
+// buildingCountKor/facilityCountKor 계산에 별도로 쓰임.
 const stats = computed(() => ({
   total: dashboard.value?.total ?? 0,
   buildingCount: dashboard.value?.buildingCount ?? 0,

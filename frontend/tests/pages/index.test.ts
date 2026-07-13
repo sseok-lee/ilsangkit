@@ -257,3 +257,49 @@ describe('히어로 코발트 패널', () => {
     expect(wrapper.find('h1').text()).toBe('부동산 실거래가·생활시설 통합 검색 - 일상킷')
   })
 })
+
+describe('히어로 4칸 스탯', () => {
+  it('4개 스탯 라벨을 렌더한다(진행중 청약 포함)', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+    const t = wrapper.text()
+    for (const label of ['실거래 부동산', '진행중 청약', '등록 시설', '오늘 업데이트']) {
+      expect(t).toContain(label)
+    }
+  })
+
+  it('오늘 업데이트 수치를 렌더하고, newlyListedToday>0이면 "오늘 신규" 배지를 노출한다(mock fixture=12)', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+    const t = wrapper.text()
+    expect(t).toContain('12')
+    expect(t).toContain('오늘 신규')
+  })
+
+  it('스탯 값에 tabular-nums를 적용한다(4개 이상)', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+    expect(wrapper.findAll('strong.tabular-nums').length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('newlyListedToday=0이면 배지 없이 숫자만 렌더한다(zero-state, 셀은 항상 렌더)', async () => {
+    ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
+      const payload = {
+        ...homePagePayload,
+        dashboard: { ...homePagePayload.dashboard, newlyListedToday: 0 },
+      }
+      const data = key === 'home-page' ? ref(payload) : ref(null)
+      const result = { data, status: ref('idle'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+      return Object.assign(Promise.resolve(result), result)
+    })
+
+    const wrapper = await mountSuspended(IndexPage)
+    const t = wrapper.text()
+    expect(t).toContain('오늘 업데이트')
+    expect(t).not.toContain('오늘 신규')
+
+    // 다른 테스트에 영향 없도록 기본 mock으로 복원
+    ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
+      const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
+      const result = { data, status: ref('idle'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+      return Object.assign(Promise.resolve(result), result)
+    })
+  })
+})
