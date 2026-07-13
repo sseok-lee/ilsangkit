@@ -1,13 +1,13 @@
 import { ref, readonly } from 'vue'
 
-interface WasteTypeInfo {
+export interface WasteTypeInfo {
   dayOfWeek?: string
   beginTime?: string
   endTime?: string
   method?: string
 }
 
-interface BulkWasteInfo {
+export interface BulkWasteInfo {
   beginTime?: string
   endTime?: string
   method?: string
@@ -46,7 +46,7 @@ interface RegionScheduleResponse {
 }
 
 // Backend response types
-interface BackendScheduleItem {
+export interface WasteScheduleDetail {
   id: number
   city: string
   district: string
@@ -68,7 +68,7 @@ interface BackendScheduleItem {
 }
 
 interface BackendScheduleData {
-  items: BackendScheduleItem[]
+  items: WasteScheduleDetail[]
   total: number
   page: number
   totalPages: number
@@ -176,9 +176,9 @@ export function useWasteSchedule() {
     }
   }
 
-  async function getScheduleDetail(id: number): Promise<BackendScheduleItem | null> {
+  async function getScheduleDetail(id: number): Promise<WasteScheduleDetail | null> {
     try {
-      const response = await $fetch<{ success: boolean; data: BackendScheduleItem }>(
+      const response = await $fetch<{ success: boolean; data: WasteScheduleDetail }>(
         `${apiBase}/api/waste-schedules/${id}`
       )
       return response.data
@@ -246,6 +246,8 @@ function getMockSchedules(district: string): RegionScheduleResponse {
     schedules: [
       {
         id: 1,
+        city: '서울특별시',
+        district,
         targetRegion: `${district} 1동~3동`,
         emissionPlace: '각 세대 앞',
         emissionPlaceType: '문전수거',
@@ -259,6 +261,8 @@ function getMockSchedules(district: string): RegionScheduleResponse {
       },
       {
         id: 2,
+        city: '서울특별시',
+        district,
         targetRegion: `${district} 4동~6동`,
         emissionPlace: '거점 수거',
         emissionPlaceType: '거점수거',
