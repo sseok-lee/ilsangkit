@@ -965,6 +965,9 @@ model Hospital {
   // 간호등급 (xlsx 파일 9 — medicInsttDetailInfo_07, 단일 등급)
   nurseGrade String? @db.VarChar(10)
 
+  // 전문병원 지정분야 (xlsx 파일 11 — medicInsttDetailInfo_09, 보건복지부 지정)
+  specialtyField String? @db.VarChar(100)
+
   departments HospitalDepartment[]
   equipment   HospitalEquipment[]
 
