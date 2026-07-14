@@ -96,3 +96,30 @@ describe('toRealEstateListUrl / toAbsoluteRealEstateUrl (frontend)', () => {
     )
   })
 })
+
+describe('전남광주통합특별시 disambiguate (frontend)', () => {
+  it('광주 자치구는 gwangju로', () => {
+    expect(toRealEstateUrl({ type: 'apt-sale', city: '전남광주통합특별시', district: '서구', buildingName: '더샵염주센트럴파크' }))
+      .toBe(`/real-estate/apt-sale/gwangju/seo/${encodeURIComponent('더샵염주센트럴파크')}`)
+    expect(toRealEstateUrl({ type: 'apt-sale', city: '전남광주통합특별시', district: '광산구', buildingName: 'X' }))
+      .toBe(`/real-estate/apt-sale/gwangju/gwangsan/${encodeURIComponent('X')}`)
+  })
+
+  it('전남 시·군은 jeonnam으로', () => {
+    expect(toRealEstateUrl({ type: 'apt-sale', city: '전남광주통합특별시', district: '나주시', buildingName: '빛가람코오롱하늘채' }))
+      .toBe(`/real-estate/apt-sale/jeonnam/naju/${encodeURIComponent('빛가람코오롱하늘채')}`)
+    expect(toRealEstateListUrl({ type: 'apt-rent', city: '전남광주통합특별시', district: '여수시' }))
+      .toBe('/real-estate/apt-rent/jeonnam/yeosu')
+  })
+
+  it('citySlug 세그먼트에 한글을 남기지 않는다 (404 방지)', () => {
+    const url = toRealEstateUrl({ type: 'apt-sale', city: '전남광주통합특별시', district: '서구', buildingName: 'X' })
+    expect(url).not.toContain('전남광주통합특별시')
+    expect(url.split('/')[3]).toMatch(/^[a-z]+$/)
+  })
+
+  it('일반 도시(부산 서구)는 통합시 아니라 영향 없음', () => {
+    expect(toRealEstateListUrl({ type: 'apt-sale', city: '부산광역시', district: '서구' }))
+      .toBe('/real-estate/apt-sale/busan/seo')
+  })
+})
