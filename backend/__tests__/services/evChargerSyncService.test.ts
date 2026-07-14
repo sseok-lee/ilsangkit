@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   transformEvChargerItem,
+  fetchEvChargerPage,
   type EvChargerAPIItem,
 } from '../../src/services/evChargerSyncService.js';
 
@@ -209,5 +210,89 @@ describe('transformEvChargerItem', () => {
     expect(result!.note).toBeNull();
     expect(result!.addrDetail).toBeNull();
     expect(result!.location).toBeNull();
+  });
+});
+
+describe('fetchEvChargerPage 재시도 (일시적 상류 오류 복원력)', () => {
+  const OLD_KEY = process.env.OPENAPI_SERVICE_KEY;
+
+  beforeEach(() => {
+    process.env.OPENAPI_SERVICE_KEY = 'test-key';
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    if (OLD_KEY === undefined) delete process.env.OPENAPI_SERVICE_KEY;
+    else process.env.OPENAPI_SERVICE_KEY = OLD_KEY;
+  });
+
+  it('일시적 502 후 재시도로 성공한다', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 502, statusText: 'Bad Gateway' })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalCount: 1, items: { item: [{ statId: 'X', chgerId: '01' }] } }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const p = fetchEvChargerPage(1, 10);
+    await vi.runAllTimersAsync();
+    const res = await p;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(res.totalCount).toBe(1);
+    expect(res.items).toHaveLength(1);
+  });
+
+  it('MAX_RETRIES(3)회 모두 실패하면 마지막 에러를 던진다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 502, statusText: 'Bad Gateway' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const p = fetchEvChargerPage(1, 10);
+    const assertion = expect(p).rejects.toThrow('502');
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('30s 내 응답이 없으면 abort하고 재시도한다 (signal 전달 + 타임아웃 배선 검증)', async () => {
+    let calls = 0;
+    const fetchMock = vi.fn((_url: string, opts: { signal: AbortSignal }) => {
+      calls += 1;
+      if (calls === 1) {
+        // 첫 시도: 응답 없이 매달림 → 30s 타임아웃의 abort로만 reject됨
+        return new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () =>
+            reject(Object.assign(new Error('The operation was aborted'), { name: 'AbortError' })));
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ totalCount: 1, items: { item: [{ statId: 'X', chgerId: '01' }] } }),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const p = fetchEvChargerPage(1, 10);
+    await vi.runAllTimersAsync();
+    const res = await p;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2); // 타임아웃 abort → 재시도 → 성공
+    expect(res.totalCount).toBe(1);
+  });
+
+  it('단일 item(비배열)도 배열로 정규화한다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ totalCount: 1, items: { item: { statId: 'S', chgerId: '01' } } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await fetchEvChargerPage(1, 10);
+    expect(Array.isArray(res.items)).toBe(true);
+    expect(res.items).toHaveLength(1);
   });
 });
