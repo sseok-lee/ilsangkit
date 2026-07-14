@@ -65,7 +65,7 @@ export const CATEGORY_REGISTRY: Record<FacilityCategory, CategoryConfig> = {
       'generalUpperBeds', 'generalNormalBeds', 'adultIcuBeds', 'childIcuBeds', 'neonatalIcuBeds',
       'deliveryBeds', 'operatingBeds', 'emergencyBeds', 'physicalTherapyBeds',
       'psychClosedUpper', 'psychClosedNormal', 'psychOpenUpper', 'psychOpenNormal',
-      'isolationBeds', 'sterileBeds'],
+      'isolationBeds', 'sterileBeds', 'specialtyField'],
   },
   pharmacy: {
     model: () => prisma.pharmacy,

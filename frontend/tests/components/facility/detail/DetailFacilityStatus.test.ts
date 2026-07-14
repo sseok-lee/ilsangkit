@@ -153,4 +153,19 @@ describe('DetailFacilityStatus — 카테고리 메타데이터 제거 회귀', 
     expect(html).not.toContain('주차장 유형')
     expect(html).toContain('30') // 주차면수는 그대로 시설현황에 남는다
   })
+
+  it('hospital: 보유 장비 목록을 렌더한다', () => {
+    const wrapper = mount(DetailFacilityStatus, {
+      props: {
+        facility: makeFacility('hospital', {
+          equipment: [{ eqpCdNm: 'CT', eqpCnt: 2 }, { eqpCdNm: 'MRI', eqpCnt: 1 }],
+        }),
+      },
+      global: globalConfig,
+    })
+    const text = wrapper.text()
+    expect(text).toContain('보유 장비')
+    expect(text).toContain('CT')
+    expect(text).toContain('MRI')
+  })
 })

@@ -12,6 +12,7 @@
  */
 
 import * as path from 'path';
+import fs from 'fs';
 import { syncToilets } from '../services/toiletSyncService.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 import { syncTrashData } from './syncTrash.js';
@@ -29,6 +30,8 @@ import { syncLibrariesFromApi } from '../services/librarySyncService.js';
 import { syncHospitals } from './syncHospital.js';
 import { syncPharmacies } from './syncPharmacy.js';
 import { runMedicalEnrich } from './seedMedicalEnrich.js';
+import { runHospitalDetail } from './seedHospitalDetail.js';
+import { ensureLatestHiraFiles, DATA_DIR as HIRA_DATA_DIR } from '../services/hiraFileDownloader.js';
 import { syncChildcare } from '../services/childcareSyncService.js';
 import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
@@ -54,6 +57,19 @@ const SUBWAY_CSV_PATH = path.resolve(
   '../../prisma/data/subway.csv'
 );
 
+// hospital-detail SEED(진료과·장비·병상 등 대량 upsert) freshness 마커.
+// HIRA 원본 데이터는 분기 단위로만 갱신되므로, 다운로드 마커(.hira_filesno)와 값이
+// 같은 "이미 이 분기를 시딩함" 마커(.hospital_detail_seeded)를 별도로 둔다.
+const HOSPITAL_DETAIL_SEEDED_MARKER_PATH = path.join(HIRA_DATA_DIR, '.hospital_detail_seeded');
+
+function readMarkerFile(filePath: string): string | null {
+  try {
+    return fs.readFileSync(filePath, 'utf-8').trim();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * 동기화 결과 타입
  */
@@ -68,7 +84,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'hira-file', 'hospital-detail', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -142,6 +158,48 @@ async function syncCategory(category: Category): Promise<SyncResult> {
           category,
           success: true,
           count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'hira-file': {
+        const result = await ensureLatestHiraFiles();
+        return {
+          category,
+          success: true,
+          count: result.updated ? 1 : 0,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'hospital-detail': {
+        // freshness 게이트: 현재 분기(.hira_filesno)가 이미 시딩됨(.hospital_detail_seeded)과
+        // 같으면 ~435k건 department + ~62k건 equipment + ~23k건 detail update를 스킵한다.
+        // HIRA 데이터는 분기 단위로만 바뀌므로 매일 이 대량 upsert를 반복할 필요가 없다.
+        const currentMarker = readMarkerFile(path.join(HIRA_DATA_DIR, '.hira_filesno'));
+        const seededMarker = readMarkerFile(HOSPITAL_DETAIL_SEEDED_MARKER_PATH);
+
+        if (currentMarker && currentMarker === seededMarker) {
+          console.log(`[hospital-detail] 이미 시딩됨(fileSno=${currentMarker}), 스킵`);
+          return {
+            category,
+            success: true,
+            count: 0,
+            duration: Date.now() - start,
+          };
+        }
+
+        await runHospitalDetail();
+
+        // 다운로드 마커가 있을 때만(=파일이 자동다운로드로 왔을 때만) 시딩 완료를 기록한다.
+        // 마커가 없으면(수동 배치 등) 매번 재시딩 — YAGNI, 별도 상태를 추측해 만들지 않는다.
+        if (currentMarker) {
+          fs.writeFileSync(HOSPITAL_DETAIL_SEEDED_MARKER_PATH, currentMarker);
+        }
+
+        return {
+          category,
+          success: true,
           duration: Date.now() - start,
         };
       }
@@ -362,14 +420,13 @@ async function main(): Promise<void> {
     console.log(`\n✅ 성공: ${successList.join(', ')}`);
   }
 
-  // 실패한 카테고리 상세
+  // 실패한 카테고리 상세 (exit는 IndexNow/요약 갱신 이후로 미룬다 — 아래 참고)
   const failedResults = results.filter(r => !r.success);
   if (failedResults.length > 0) {
     console.log('\n❌ 실패한 카테고리:');
     failedResults.forEach(r => {
       console.log(`  - ${r.category}: ${r.error}`);
     });
-    process.exit(1);
   }
 
   // IndexNow: 동기화된 시설 URL 제출
@@ -451,7 +508,17 @@ async function main(): Promise<void> {
     await refreshAllSummaries();
   }
 
-  console.log('\n모든 동기화가 성공적으로 완료되었습니다.');
+  if (failedResults.length === 0) {
+    console.log('\n모든 동기화가 성공적으로 완료되었습니다.');
+  }
+
+  // 실패한 카테고리가 있었으면 IndexNow/요약 갱신을 모두 마친 뒤 이제 exit(1)로 반영한다.
+  // (성공한 카테고리의 IndexNow 제출·부동산 요약 갱신을 건너뛰지 않기 위해 위쪽의
+  // early exit를 제거하고 여기로 옮김)
+  if (failedResults.length > 0) {
+    console.error(`\n일부 카테고리 실패(${failedResults.length}개)로 종료 코드 1을 반환합니다.`);
+    process.exit(1);
+  }
 }
 
 // 스크립트 실행

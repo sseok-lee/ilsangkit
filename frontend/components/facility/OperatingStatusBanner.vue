@@ -3,23 +3,25 @@
     v-if="statusInfo"
     :class="[
       'flex items-center gap-3 px-4 py-3 rounded-lg text-sm',
-      statusInfo.isOpen ? openClasses : closedClasses,
+      statusInfo.unknown ? neutralClasses : (statusInfo.isOpen ? openClasses : closedClasses),
     ]"
   >
     <span class="relative flex h-2.5 w-2.5 shrink-0">
       <span
         v-if="statusInfo.isOpen"
-        class="absolute inline-flex h-full w-full rounded-full animate-pulse"
-        :class="statusInfo.isOpen ? 'bg-green-400' : 'bg-red-400'"
+        class="absolute inline-flex h-full w-full rounded-full animate-pulse bg-green-400"
       ></span>
       <span
         class="relative inline-flex rounded-full h-2.5 w-2.5"
-        :class="statusInfo.isOpen ? 'bg-green-500' : 'bg-red-400'"
+        :class="statusInfo.unknown ? 'bg-slate-400' : (statusInfo.isOpen ? 'bg-green-500' : 'bg-red-400')"
       ></span>
     </span>
     <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-      <span class="font-bold">{{ statusInfo.isOpen ? '운영중' : '운영종료' }}</span>
-      <span class="text-xs opacity-75">{{ statusInfo.description }}</span>
+      <span class="font-bold">{{ statusInfo.unknown ? '운영시간 정보 없음' : (statusInfo.isOpen ? '운영중' : '운영종료') }}</span>
+      <span
+        v-if="!statusInfo.unknown && statusInfo.description"
+        class="text-xs opacity-75"
+      >{{ statusInfo.description }}</span>
     </div>
   </div>
 </template>
@@ -45,6 +47,7 @@ const props = defineProps<Props>()
 interface StatusInfo {
   isOpen: boolean
   description: string
+  unknown?: boolean
 }
 
 function parseTime(val?: string | null): { hour: number; minute: number } | null {
@@ -116,6 +119,8 @@ const statusInfo = computed<StatusInfo | null>(() => {
         6: { start: h.trmtSatStart, end: h.trmtSatEnd },
         0: { start: h.trmtSunStart, end: h.trmtSunEnd },
       }
+      const hasAnyHours = Object.values(dayMap).some((v) => !!v.start)
+      if (!hasAnyHours) return { isOpen: false, unknown: true, description: '운영시간 정보 없음' }
       const today = dayMap[dayOfWeek]
       if (!today?.start) return { isOpen: false, description: '오늘 휴진' }
       return checkTimeRange(today.start, today.end, currentTime)
@@ -132,6 +137,8 @@ const statusInfo = computed<StatusInfo | null>(() => {
         6: { start: p.dutyTime6s, end: p.dutyTime6c },
         0: { start: p.dutyTime7s, end: p.dutyTime7c },
       }
+      const hasAnyHours = Object.values(dayMap).some((v) => !!v.start)
+      if (!hasAnyHours) return { isOpen: false, unknown: true, description: '운영시간 정보 없음' }
       const today = dayMap[dayOfWeek]
       if (!today?.start) return { isOpen: false, description: '오늘 휴무' }
       return checkTimeRange(today.start, today.end, currentTime)
@@ -148,6 +155,8 @@ const statusInfo = computed<StatusInfo | null>(() => {
         6: { start: a.satSttTme, end: a.satEndTme },
         0: { start: a.sunSttTme, end: a.sunEndTme },
       }
+      const hasAnyHours = Object.values(dayMap).some((v) => !!v.start)
+      if (!hasAnyHours) return { isOpen: false, unknown: true, description: '운영시간 정보 없음' }
       const today = dayMap[dayOfWeek]
       if (!today?.start) return { isOpen: false, description: '오늘 이용 불가' }
       return checkTimeRange(today.start, today.end, currentTime)
@@ -155,6 +164,8 @@ const statusInfo = computed<StatusInfo | null>(() => {
 
     case 'library': {
       const l = d as LibraryDetails
+      const hasAnyHours = !!(l.weekdayOpenTime || l.saturdayOpenTime || l.holidayOpenTime)
+      if (!hasAnyHours) return { isOpen: false, unknown: true, description: '운영시간 정보 없음' }
       if (dayOfWeek === 0) {
         return checkTimeRange(l.holidayOpenTime, l.holidayCloseTime, currentTime)
           ?? { isOpen: false, description: '오늘 휴관' }
@@ -165,7 +176,7 @@ const statusInfo = computed<StatusInfo | null>(() => {
           ?? { isOpen: false, description: '오늘 휴관' }
       }
       return checkTimeRange(l.weekdayOpenTime, l.weekdayCloseTime, currentTime)
-        ?? { isOpen: false, description: '운영시간 정보 없음' }
+        ?? { isOpen: false, unknown: true, description: '운영시간 정보 없음' }
     }
 
     case 'parking':
@@ -186,4 +197,5 @@ const statusInfo = computed<StatusInfo | null>(() => {
 
 const openClasses = 'bg-green-50 text-green-800 border border-green-200'
 const closedClasses = 'bg-red-50 text-red-800 border border-red-200'
+const neutralClasses = 'bg-slate-50 text-slate-600 border border-slate-200'
 </script>
