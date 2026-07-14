@@ -69,13 +69,39 @@ const EQUIP_COLUMN_MAP: Record<string, string> = {
   '장비대수': 'eqpCnt',
 };
 
+// 전문병원지정분야 시트/컬럼 매핑
+const SPECIALTY_SHEET_NAMES = ['medicInsttDetailInfo_09', '전문병원지정분야'];
+const SPECIALTY_COLUMN_MAP: Record<string, string> = {
+  '암호화요양기호': 'ykiho',
+  '검색코드명': 'specialtyField',
+};
+
 // ============================================
 // 유틸리티
 // ============================================
 
+/**
+ * ExcelJS 셀 값에서 순수 텍스트 추출.
+ * 셀이 richText 객체({ richText: [{text, font}, ...] })이거나 formula 결과({result})인
+ * 경우가 있으므로 String(value)로 바로 변환하면 "[object Object]"가 나올 수 있다.
+ */
+function readCellText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') {
+    const v = value as Record<string, unknown>;
+    if (Array.isArray(v.richText)) {
+      return v.richText.map((p) => (p as { text?: string }).text ?? '').join('');
+    }
+    if (typeof v.text === 'string') return v.text;
+    if (v.result !== undefined) return String(v.result);
+  }
+  return String(value);
+}
+
 function safeString(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;
-  return String(value).trim() || null;
+  const s = readCellText(value).trim();
+  return s || null;
 }
 
 function safeInt(value: unknown): number | null {
@@ -400,6 +426,70 @@ async function seedEquipment(workbook: ExcelJS.Workbook, ykihoMap: Map<string, s
 }
 
 // ============================================
+// 전문병원지정분야 시딩
+// ============================================
+
+export interface SpecialtyRecord {
+  hospitalId: string;
+  specialtyField: string;
+}
+
+/**
+ * 전문병원지정분야 시트 → hospitalId별 지정분야 레코드 매핑 (순수 함수)
+ * 동일 병원이 여러 분야로 지정된 경우 ", "로 조인(중복 제거)한다.
+ */
+export function mapSpecialtyRows(sheet: ExcelJS.Worksheet, ykihoMap: Map<string, string>): SpecialtyRecord[] {
+  const mapping = buildColumnMapping(sheet, SPECIALTY_COLUMN_MAP);
+  if (!mapping.size) return [];
+  const byHospital = new Map<string, string[]>();
+  const totalRows = sheet.rowCount;
+  for (let i = 2; i <= totalRows; i++) {
+    const obj = rowToObject(sheet.getRow(i), mapping);
+    const ykiho = safeString(obj.ykiho);
+    if (!ykiho) continue;
+    const hospitalId = ykihoMap.get(ykiho);
+    if (!hospitalId) continue;
+    const field = safeString(obj.specialtyField);
+    if (!field) continue;
+    const arr = byHospital.get(hospitalId) ?? [];
+    if (!arr.includes(field)) arr.push(field);
+    byHospital.set(hospitalId, arr);
+  }
+  return [...byHospital.entries()].map(([hospitalId, fields]) => ({
+    hospitalId,
+    specialtyField: fields.join(', '),
+  }));
+}
+
+async function seedSpecialty(workbook: ExcelJS.Workbook, ykihoMap: Map<string, string>): Promise<number> {
+  const sheet = findSheet(workbook, SPECIALTY_SHEET_NAMES);
+  if (!sheet) {
+    console.log('전문병원지정 시트를 찾을 수 없습니다. 사용 가능한 시트:', workbook.worksheets.map(w => w.name).join(', '));
+    return 0;
+  }
+
+  console.log(`전문병원지정 시트 발견: "${sheet.name}" (${sheet.rowCount}행)`);
+
+  const recs = mapSpecialtyRows(sheet, ykihoMap);
+  const BATCH_SIZE = SYNC.BATCH_SIZE;
+  let updated = 0;
+  for (let i = 0; i < recs.length; i += BATCH_SIZE) {
+    const batch = recs.slice(i, i + BATCH_SIZE);
+    await prisma.$transaction(
+      batch.map((r) =>
+        prisma.hospital.update({
+          where: { id: r.hospitalId },
+          data: { specialtyField: r.specialtyField },
+        })
+      )
+    );
+    updated += batch.length;
+  }
+  console.log(`전문병원지정 완료: ${updated}건`);
+  return updated;
+}
+
+// ============================================
 // 메인
 // ============================================
 
@@ -452,6 +542,9 @@ export async function runHospitalDetail(): Promise<void> {
   const equipFile =
     xlsxFiles.find(f => path.basename(f).normalize('NFC').includes('의료장비'))
     || xlsxFiles.find(f => /(^|\/)7\./.test(path.basename(f)));
+  const specialtyFile =
+    xlsxFiles.find(f => path.basename(f).normalize('NFC').includes('전문병원'))
+    || xlsxFiles.find(f => /(^|\/)11\./.test(path.basename(f)));
 
   if (!detailFile && !deptFile) {
     console.error('세부정보 또는 진료과목 파일을 찾을 수 없습니다.');
@@ -469,6 +562,7 @@ export async function runHospitalDetail(): Promise<void> {
   let totalDetailUpdated = 0;
   let totalDeptUpserted = 0;
   let totalEquipUpserted = 0;
+  let totalSpecialtyUpdated = 0;
 
   // 세부정보 시딩
   if (detailFile) {
@@ -503,10 +597,22 @@ export async function runHospitalDetail(): Promise<void> {
     console.log('\n의료장비 파일을 찾지 못했습니다. 스킵합니다.');
   }
 
+  // 전문병원지정분야 시딩
+  if (specialtyFile) {
+    console.log(`\n전문병원지정 파일 처리 중: ${path.basename(specialtyFile)}`);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(specialtyFile);
+    console.log('시트 목록:', workbook.worksheets.map(w => `"${w.name}" (${w.rowCount}행)`).join(', '));
+    totalSpecialtyUpdated = await seedSpecialty(workbook, ykihoMap);
+  } else {
+    console.log('\n전문병원지정 파일을 찾지 못했습니다. 스킵합니다.');
+  }
+
   console.log('\n=== 시딩 완료 ===');
   console.log(`세부정보 업데이트: ${totalDetailUpdated}건`);
   console.log(`진료과목 upsert: ${totalDeptUpserted}건`);
   console.log(`의료장비 upsert: ${totalEquipUpserted}건`);
+  console.log(`전문병원지정 업데이트: ${totalSpecialtyUpdated}건`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
