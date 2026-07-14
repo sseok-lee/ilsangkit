@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
 
 ;(globalThis as any).ref = ref
 ;(globalThis as any).computed = computed
@@ -75,6 +78,8 @@ vi.mock('~/utils/seoConstants', () => ({
   SITE_NAME: '일상킷',
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
   compactCityName: (city: string) => (city || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, ''),
+  // heroStats가 매 마운트마다 getCurrentYear()를 호출하므로(건축년도 칩) 반드시 export 필요.
+  getCurrentYear: () => 2026,
 }))
 
 vi.mock('~/utils/realEstateUrl', () => ({
@@ -264,6 +269,44 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
   })
 
   it('재배치 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    expect(wrapper.findAll('h1').length).toBe(1)
+  })
+
+  // ---------------- 건축년도 칩 '(N년차)' 병기 (PR ⑪ Task 1) ----------------
+  // 이 페이지의 heroStats.건축년도는 buildingInfo(useAsyncData 경유 SSR fetch, 없으면
+  // import.meta.client 게이트의 client-side loadData() fallback)에 의존한다. 이 테스트
+  // 하네스의 전역 useAsyncData mock(tests/setup.ts)은 fetcher를 호출하지 않고, 이 vitest
+  // 환경(plain @vitejs/plugin-vue, Nuxt 빌드 파이프라인 없음)에선 import.meta.client도
+  // falsy라 client fallback도 트리거되지 않는다 — 즉 마운트로는 buildingInfo.value를
+  // 실제 채울 수 없다(실측: mock 오버라이드해도 getBuildingInfo 호출 0회).
+  // 형제 가드(buildingDetailHeroEmpty.test.ts)가 동일한 이유로 채택한 소스 텍스트 계약
+  // 고정 방식을 따른다 — "페이지 마운트는 과도하므로 소스 가드 채택".
+  it('건축년도 heroStats 항목이 buildYearLabel(...) ?? PLACEHOLDER 계약을 사용한다', () => {
+    const targetPath = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../../pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue',
+    )
+    const src = readFileSync(targetPath, 'utf-8')
+
+    // import: buildYearLabel(~/utils/formatters), getCurrentYear(~/utils/seoConstants)
+    expect(src).toMatch(/import\s*\{[^}]*buildYearLabel[^}]*\}\s*from\s*'~\/utils\/formatters'/)
+    expect(src).toMatch(/import\s*\{[^}]*getCurrentYear[^}]*\}\s*from\s*'~\/utils\/seoConstants'/)
+
+    // heroStats 건축년도 라인: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER
+    expect(src).toContain(
+      "{ label: '건축년도', value: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER },",
+    )
+
+    // 다른 heroStats 항목(최근 거래가/거래일/전·월세비중/전용면적)은 이 PR에서 손대지 않는다
+    expect(src).toContain("{ label: '최근 거래가', value: recent }")
+    expect(src).toContain("{ label: '전·월세 비중', value: rentRatioLabel.value }")
+  })
+
+  // buildYearLabel 자체의 '(N년차)' 병기 행동은 tests/utils/formatters.test.ts에서 결정적으로 검증됨.
+
+  it('재배치·건축년도 병기 변경 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)
     expect(wrapper.findAll('h1').length).toBe(1)

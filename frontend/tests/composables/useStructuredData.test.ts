@@ -8,6 +8,7 @@ vi.mock('~/utils/seoConstants', () => ({
   SITE_NAME: '일상킷',
   SITE_URL: 'https://ilsangkit.co.kr',
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og-image.png',
+  CONTENT_AUTHOR: '일상킷 데이터팀',
 }))
 
 // CATEGORY_META mock
@@ -529,6 +530,20 @@ describe('useStructuredData', () => {
   // ─── P0-1a/1b: setArticleSchema publisher.logo + image fallback ────────────
 
   describe('setArticleSchema - publisher.logo + image fallback', () => {
+    it('author는 CONTENT_AUTHOR(일상킷 데이터팀) Organization이고 publisher는 SITE_NAME을 유지한다', () => {
+      const { setArticleSchema } = useStructuredData()
+      setArticleSchema({
+        headline: '테스트 가이드',
+        description: '테스트 설명',
+        datePublished: '2024-01-01T00:00:00Z',
+        url: 'https://ilsangkit.co.kr/guide/test',
+      })
+      const call = mockUseHead.mock.calls[0][0]
+      const parsed = JSON.parse(call.script[0].innerHTML)
+      expect(parsed.author).toEqual({ '@type': 'Organization', name: '일상킷 데이터팀', url: 'https://ilsangkit.co.kr' })
+      expect(parsed.publisher.name).toBe('일상킷')
+    })
+
     it('publisher에 logo ImageObject가 포함된다', () => {
       const { setArticleSchema } = useStructuredData()
       setArticleSchema({

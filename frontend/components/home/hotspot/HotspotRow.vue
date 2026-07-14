@@ -27,14 +27,14 @@ const props = defineProps<{
 }>();
 
 const SIGNAL_HOVER: Record<Signal, string> = {
-  rising:  'hover:bg-red-50/40',
-  falling: 'hover:bg-primary-50/40',
+  rising:  'hover:bg-delta-up/[.06]',
+  falling: 'hover:bg-delta-down/[.06]',
   active:  'hover:bg-violet-50/40',
 };
 
 const SIGNAL_COLOR: Record<Signal, string> = {
-  rising:  'text-red-500',
-  falling: 'text-primary-500',
+  rising:  'text-delta-up',
+  falling: 'text-delta-down',
   active:  'text-violet-600',
 };
 

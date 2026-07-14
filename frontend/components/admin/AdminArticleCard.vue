@@ -29,14 +29,14 @@
         </span>
       </div>
       <h3 class="text-sm font-semibold text-slate-900 truncate">{{ article.title }}</h3>
-      <p class="text-xs text-muted mt-1">{{ formatKstDate(article.createdAt) }}</p>
+      <p class="text-xs text-muted mt-1">{{ formatDotDate(article.createdAt) }}</p>
     </div>
   </button>
 </template>
 
 <script setup lang="ts">
 import type { AdminArticleSummary } from '~/composables/useAdminArticles'
-import { formatKstDate } from '~/utils/formatters'
+import { formatDotDate } from '~/utils/syncFreshness'
 
 withDefaults(
   defineProps<{

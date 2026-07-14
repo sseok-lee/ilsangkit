@@ -114,11 +114,12 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('부동산')
   })
 
-  it('renders stats chips with key labels', async () => {
+  // Task 4에서 히어로 3칸 통계 박스(실거래 부동산/진행중 청약/등록 시설) 제거.
+  // '진행중 청약' 칩은 Task 5의 코발트 패널 4칸 스탯(newlyListedToday 포함)에서 재도입 예정.
+  it('renders "생활시설" text (stats chip box moves to Task 5 4-stat panel)', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
     expect(wrapper.text()).toContain('생활시설')
-    expect(wrapper.text()).toContain('진행중 청약')
   })
 
   it('renders the home sections and a single Coupang banner (no AdBanner)', async () => {
@@ -232,46 +233,73 @@ describe('오늘의 이슈 (recentArticles) section', () => {
   })
 })
 
-describe('Hero image optimization', () => {
-  it('hero 이미지에 width, height 속성 존재', async () => {
+describe('히어로 코발트 패널', () => {
+  it('흐릿한 배경 사진(hero-bg webp)을 제거한다', async () => {
     const wrapper = await mountSuspended(IndexPage)
-
-    const imgs = wrapper.findAll('section > div > img[aria-hidden="true"]')
-    expect(imgs.length).toBeGreaterThan(0)
-    imgs.forEach(img => {
-      expect(img.attributes('width')).toBeTruthy()
-      expect(img.attributes('height')).toBeTruthy()
-    })
+    expect(wrapper.findAll('img[src*="hero-bg"]').length).toBe(0)
   })
 
-  it('hero 이미지가 .webp 포맷 사용', async () => {
+  it('단색 코발트 패널(bg-primary-press)로 렌더한다', async () => {
     const wrapper = await mountSuspended(IndexPage)
-
-    const imgs = wrapper.findAll('section > div > img[aria-hidden="true"]')
-    expect(imgs.length).toBeGreaterThan(0)
-    imgs.forEach(img => {
-      expect(img.attributes('src')).toMatch(/\.webp/)
-    })
+    expect(wrapper.find('.bg-primary-press').exists()).toBe(true)
   })
 
-  it('장식 이미지: aria-hidden="true"와 alt="" 유지', async () => {
+  it('출처 배지와 "매일 자동 동기화" 스탬프 라벨을 SSR 텍스트로 노출한다', async () => {
     const wrapper = await mountSuspended(IndexPage)
-
-    const imgs = wrapper.findAll('section > div > img[aria-hidden="true"]')
-    expect(imgs.length).toBeGreaterThan(0)
-    imgs.forEach(img => {
-      expect(img.attributes('aria-hidden')).toBe('true')
-      expect(img.attributes('alt')).toBeTruthy()
-    })
+    const text = wrapper.text()
+    expect(text).toContain('국토교통부 실거래가')
+    expect(text).toContain('매일 자동 동기화')
   })
 
-  it('hero 이미지에 loading 속성 존재', async () => {
+  it('단일 h1을 유지한다', async () => {
     const wrapper = await mountSuspended(IndexPage)
+    expect(wrapper.findAll('h1').length).toBe(1)
+    expect(wrapper.find('h1').text()).toBe('부동산 실거래가·생활시설 통합 검색 - 일상킷')
+  })
+})
 
-    const imgs = wrapper.findAll('section > div > img[aria-hidden="true"]')
-    expect(imgs.length).toBeGreaterThan(0)
-    imgs.forEach(img => {
-      expect(img.attributes('loading')).toBeTruthy()
+describe('히어로 4칸 스탯', () => {
+  it('4개 스탯 라벨을 렌더한다(진행중 청약 포함)', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+    const t = wrapper.text()
+    for (const label of ['실거래 부동산', '진행중 청약', '등록 시설', '오늘 업데이트']) {
+      expect(t).toContain(label)
+    }
+  })
+
+  it('오늘 업데이트 수치를 렌더하고, newlyListedToday>0이면 "오늘 신규" 배지를 노출한다(mock fixture=12)', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+    const t = wrapper.text()
+    expect(t).toContain('12')
+    expect(t).toContain('오늘 신규')
+  })
+
+  it('스탯 값에 tabular-nums를 적용한다(4개 이상)', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+    expect(wrapper.findAll('strong.tabular-nums').length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('newlyListedToday=0이면 배지 없이 숫자만 렌더한다(zero-state, 셀은 항상 렌더)', async () => {
+    ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
+      const payload = {
+        ...homePagePayload,
+        dashboard: { ...homePagePayload.dashboard, newlyListedToday: 0 },
+      }
+      const data = key === 'home-page' ? ref(payload) : ref(null)
+      const result = { data, status: ref('idle'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+      return Object.assign(Promise.resolve(result), result)
+    })
+
+    const wrapper = await mountSuspended(IndexPage)
+    const t = wrapper.text()
+    expect(t).toContain('오늘 업데이트')
+    expect(t).not.toContain('오늘 신규')
+
+    // 다른 테스트에 영향 없도록 기본 mock으로 복원
+    ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
+      const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
+      const result = { data, status: ref('idle'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+      return Object.assign(Promise.resolve(result), result)
     })
   })
 })

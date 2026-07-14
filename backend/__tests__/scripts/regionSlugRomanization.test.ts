@@ -59,6 +59,14 @@ describe('Region slug 로마자화 가드', () => {
     expect(mismatches).toEqual([]);
   });
 
+  // 2026-07-01 인천 2군9구 개편 신설 구 — 3중 맵(syncRegion·프론트·backend/lib) 로마자 등록 가드.
+  it('인천 신설 4구가 로마자 slug로 매핑된다', () => {
+    expect(normalizeKoreanToSlug('제물포구')).toBe('jemulpo');
+    expect(normalizeKoreanToSlug('영종구')).toBe('yeongjong');
+    expect(normalizeKoreanToSlug('서해구')).toBe('seohae');
+    expect(normalizeKoreanToSlug('검단구')).toBe('geomdan');
+  });
+
   it('어떤 구/군/시도 한글이 섞인 slug를 생성하지 않는다 (한글 fallback 차단)', () => {
     const koreanLeak: string[] = [];
     for (const district of Object.keys(DISTRICT_SLUG_MAP)) {

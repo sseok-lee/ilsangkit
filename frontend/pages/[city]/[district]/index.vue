@@ -85,6 +85,7 @@
 <script setup lang="ts">
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { UI_MESSAGES } from '~/utils/uiMessages'
+import { formatRegionAvgPrice } from '~/utils/regionPrice'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionFacilityCategoryGrid from '~/components/region/RegionFacilityCategoryGrid.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
@@ -160,17 +161,6 @@ const sortedFacilityCategories = computed(() => {
   )
 })
 
-// 금액 포맷
-function formatPrice(amount: number | null): string {
-  if (!amount || amount === 0) return '데이터 없음'
-  if (amount >= 10000) {
-    const eok = Math.floor(amount / 10000)
-    const remainder = amount % 10000
-    return remainder > 0 ? `${eok}억 ${remainder.toLocaleString()}만원` : `${eok}억`
-  }
-  return `${amount.toLocaleString()}만원`
-}
-
 const realEstateCards = computed(() => {
   const re = areaData.value?.realEstate
   if (!re) return []
@@ -179,27 +169,27 @@ const realEstateCards = computed(() => {
       type: 'apt',
       label: '아파트',
       icon: 'apartment',
-      saleAvg: formatPrice(re.apt?.sale?.avg),
+      saleAvg: formatRegionAvgPrice(re.apt?.sale?.avg),
       saleCount: (re.apt?.sale?.count ?? 0).toLocaleString(),
-      rentAvg: formatPrice(re.apt?.rent?.avg),
+      rentAvg: formatRegionAvgPrice(re.apt?.rent?.avg),
       rentCount: (re.apt?.rent?.count ?? 0).toLocaleString(),
     },
     {
       type: 'villa',
       label: '빌라',
       icon: 'holiday_village',
-      saleAvg: formatPrice(re.villa?.sale?.avg),
+      saleAvg: formatRegionAvgPrice(re.villa?.sale?.avg),
       saleCount: (re.villa?.sale?.count ?? 0).toLocaleString(),
-      rentAvg: formatPrice(re.villa?.rent?.avg),
+      rentAvg: formatRegionAvgPrice(re.villa?.rent?.avg),
       rentCount: (re.villa?.rent?.count ?? 0).toLocaleString(),
     },
     {
       type: 'offitel',
       label: '오피스텔',
       icon: 'business',
-      saleAvg: formatPrice(re.offitel?.sale?.avg),
+      saleAvg: formatRegionAvgPrice(re.offitel?.sale?.avg),
       saleCount: (re.offitel?.sale?.count ?? 0).toLocaleString(),
-      rentAvg: formatPrice(re.offitel?.rent?.avg),
+      rentAvg: formatRegionAvgPrice(re.offitel?.rent?.avg),
       rentCount: (re.offitel?.rent?.count ?? 0).toLocaleString(),
     },
   ]

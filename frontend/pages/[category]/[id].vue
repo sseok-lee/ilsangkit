@@ -126,6 +126,7 @@
                 :aed-weekly-hours="aedWeeklyHours"
                 :aed-weekly-hours-count="aedWeeklyHours.length"
                 :pharmacy-weekly-hours="pharmacyWeeklyHours"
+                :raw-sync-date="rawSyncDate"
               />
 
               <!-- Ad: 기본정보 ↔ 시설현황 사이 -->
@@ -191,7 +192,11 @@
               <AdBanner variant="compact-mobile" />
 
               <!-- Mobile-only inline CoupangBanner (데이터 출처 위로 이동, md+에서는 사이드바 Coupang 사용) -->
-              <CoupangBanner class="md:hidden" />
+              <!-- 고지문은 모바일/데스크톱 두 CoupangBanner 인스턴스에서 끄고(disclosure=false) 아래
+                   단일 <p>로 페이지당 1회만 노출한다(모든 뷰포트, 반대 브레이크포인트에서 광고만 있고
+                   고지 누락되는 사고 방지 — 절대 md:hidden/hidden md:flex 금지). -->
+              <CoupangBanner class="md:hidden" :disclosure="false" />
+              <p class="mt-2 text-center text-[11px] leading-relaxed text-slate-400">{{ COUPANG_DISCLOSURE }}</p>
 
               <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
               <DetailContextLinks
@@ -250,8 +255,8 @@
                 </div>
               </div>
 
-              <!-- 쿠팡 배너 (Desktop Sticky) -->
-              <CoupangBanner class="mt-3" />
+              <!-- 쿠팡 배너 (Desktop Sticky) — 고지문은 모바일 인라인 배너 옆 단일 <p>로 통합됐으므로 여기선 끔 -->
+              <CoupangBanner class="mt-3" :disclosure="false" />
 
               <!-- Ad: 사이드바 (sidebar-sticky, desktop only) -->
               <div class="mt-3">
@@ -275,7 +280,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
-import { formatKstDate } from '~/utils/formatters'
+import { formatDotDate } from '~/utils/syncFreshness'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
@@ -293,6 +298,7 @@ import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
 import { buildHeroStats } from '~/utils/categoryHeroStats'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { COUPANG_DISCLOSURE } from '~/components/ads/CoupangBanner.vue'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
@@ -521,9 +527,12 @@ const desktopHeroStats = computed(() => {
   }
 
   // toilet의 경우 isOpen24Hours가 '상시' 로직을 포함하므로 details에 isOpen24Hours 결과를 주입
+  // pharmacy의 경우 pharmacyWeeklyHours 기반 오늘 영업시간 결과를 주입
   const detailsWithMeta = cat === 'toilet'
     ? { ...details.value, _isOpen24Hours: isOpen24Hours.value }
-    : details.value
+    : cat === 'pharmacy'
+      ? { ...details.value, _todayHours: pharmacyTodayHours.value }
+      : details.value
 
   const categoryItems = buildHeroStats(cat, detailsWithMeta, facilityPhone.value)
   return [...commonItems, ...categoryItems]
@@ -639,7 +648,15 @@ const lastSyncDate = computed(() => {
   const data = secondaryResponse.value?.syncStatus
   if (!data) return null
   const cat = facility.value.category
-  return formatKstDate(data[cat])
+  return formatDotDate(data[cat])
+})
+
+// SourceStamp용 미포맷 ISO (lastSyncDate는 DataSourceSection용 포맷 문자열)
+const rawSyncDate = computed<string | null>(() => {
+  if (!facility.value) return null
+  const data = secondaryResponse.value?.syncStatus
+  if (!data) return null
+  return data[facility.value.category] ?? null
 })
 
 
@@ -697,6 +714,12 @@ const pharmacyWeeklyHours = computed(() => {
     return { day: label, time: time ?? '휴무', closed: time === null, isToday: todayIdx === today }
   })
   return rows.some(r => !r.closed) ? rows : []
+})
+
+// Pharmacy 오늘 영업시간 — pharmacyWeeklyHours(기존, KST 오늘 판정 포함)에서 오늘 행을 뽑아 도출 (휴무/데이터없음 → null)
+const pharmacyTodayHours = computed<string | null>(() => {
+  const today = pharmacyWeeklyHours.value.find(r => r.isToday)
+  return today && !today.closed ? today.time : null
 })
 
 // Hospital operating hours

@@ -9,6 +9,7 @@
         eyebrow="지역 허브"
         :title="`${cityName} 생활 정보`"
         :description="heroDescription"
+        :stats="heroStats"
         class="mb-5"
       />
 
@@ -23,6 +24,7 @@
         <RegionRealEstatePrices
           v-if="cityData.realEstate"
           :cards="realEstateCards"
+          :synced-at="reSyncedAt"
         />
 
         <!-- ② 구/군 선택 -->
@@ -115,6 +117,7 @@
 <script setup lang="ts">
 import { CITY_SLUG_MAP } from '~/composables/useRegions'
 import { UI_MESSAGES } from '~/utils/uiMessages'
+import { formatRegionAvgPrice } from '~/utils/regionPrice'
 import { CATEGORY_GROUPS, CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
@@ -128,6 +131,9 @@ import { shouldNoindexSsr } from '~/utils/ssrIndexability'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { watchEffect } from 'vue'
 import { suppressAds } from '~/composables/useAdsPolicy'
+import { useSyncStatus } from '~/composables/useSyncStatus'
+import { useNationalStats } from '~/composables/useNationalStats'
+import { withSyncDate, RE_STALE_DAYS } from '~/utils/syncFreshness'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -178,16 +184,39 @@ const heroDescription = computed(() => {
     : primary
 })
 
-// 금액 포맷
-function formatPrice(amount: number | null): string {
-  if (!amount || amount === 0) return '데이터 없음'
-  if (amount >= 10000) {
-    const eok = Math.floor(amount / 10000)
-    const remainder = amount % 10000
-    return remainder > 0 ? `${eok}억 ${remainder.toLocaleString()}만원` : `${eok}억`
+const RE_SYNC_KEYS = ['aptSale', 'aptRent', 'villaSale', 'villaRent', 'offitelSale', 'offitelRent'] as const
+
+const { syncStatus: hubSyncStatus } = useSyncStatus()
+
+// 부동산 6개 테이블 중 가장 최근 동기화 시각 (ISO 문자열은 사전순 = 시간순)
+const reSyncedAt = computed<string | null>(() => {
+  const s = hubSyncStatus.value
+  if (!s) return null
+  const dates = RE_SYNC_KEYS.map(k => s[k]).filter((v): v is string => !!v)
+  return dates.length ? [...dates].sort().at(-1) ?? null : null
+})
+
+// 도시 전체 시설 합 (구/군 facilityTotal 합산) — heroStats·JSON-LD 양쪽에서 재사용 (SSR-safe: cityData는 useAsyncData)
+const cityFacilityTotal = computed(() =>
+  (cityData.value?.districts ?? []).reduce((sum: number, d: any) => sum + (d.facilityTotal ?? 0), 0),
+)
+
+const { stats: nationalStats } = useNationalStats()
+
+// PageHero 카운터 밴드: 이 지역 → 전국 등록 → 데이터 갱신(마지막). fail-open — 확인된 셀만 push
+const heroStats = computed(() => {
+  const stats: { label: string; value: string }[] = []
+  if (cityFacilityTotal.value > 0) {
+    stats.push({ label: '이 지역', value: `${cityFacilityTotal.value.toLocaleString('ko-KR')}곳` })
   }
-  return `${amount.toLocaleString()}만원`
-}
+  const nat = nationalStats.value?.total
+  if (typeof nat === 'number' && nat > 0) {
+    stats.push({ label: '전국 등록', value: `${nat.toLocaleString('ko-KR')}곳` })
+  }
+  // 라벨 '자동 갱신'은 중립 표기(허브=시설 월1회+RE 매일 혼합 cadence라 '매일 자동'은 오표기)
+  stats.push({ label: '데이터 갱신', value: withSyncDate('자동 갱신', reSyncedAt.value, RE_STALE_DAYS) })
+  return stats
+})
 
 const realEstateCards = computed(() => {
   const re = cityData.value?.realEstate
@@ -197,27 +226,27 @@ const realEstateCards = computed(() => {
       type: 'apt',
       label: '아파트',
       icon: 'apartment',
-      saleAvg: formatPrice(re.apt?.sale?.avg),
+      saleAvg: formatRegionAvgPrice(re.apt?.sale?.avg),
       saleCount: (re.apt?.sale?.count ?? 0).toLocaleString(),
-      rentAvg: formatPrice(re.apt?.rent?.avg),
+      rentAvg: formatRegionAvgPrice(re.apt?.rent?.avg),
       rentCount: (re.apt?.rent?.count ?? 0).toLocaleString(),
     },
     {
       type: 'villa',
       label: '빌라',
       icon: 'holiday_village',
-      saleAvg: formatPrice(re.villa?.sale?.avg),
+      saleAvg: formatRegionAvgPrice(re.villa?.sale?.avg),
       saleCount: (re.villa?.sale?.count ?? 0).toLocaleString(),
-      rentAvg: formatPrice(re.villa?.rent?.avg),
+      rentAvg: formatRegionAvgPrice(re.villa?.rent?.avg),
       rentCount: (re.villa?.rent?.count ?? 0).toLocaleString(),
     },
     {
       type: 'offitel',
       label: '오피스텔',
       icon: 'business',
-      saleAvg: formatPrice(re.offitel?.sale?.avg),
+      saleAvg: formatRegionAvgPrice(re.offitel?.sale?.avg),
       saleCount: (re.offitel?.sale?.count ?? 0).toLocaleString(),
-      rentAvg: formatPrice(re.offitel?.rent?.avg),
+      rentAvg: formatRegionAvgPrice(re.offitel?.rent?.avg),
       rentCount: (re.offitel?.rent?.count ?? 0).toLocaleString(),
     },
   ]
@@ -263,11 +292,10 @@ setBreadcrumbSchema([
 
 watch(cityData, (data) => {
   if (data?.districts) {
-    const totalFacilities = data.districts.reduce((sum: number, d: any) => sum + (d.facilityTotal ?? 0), 0)
     setAreaReportSchema({
       city: cityName.value,
       district: '',
-      facilityTotal: totalFacilities,
+      facilityTotal: cityFacilityTotal.value,
       topCategories: [],
     })
   }

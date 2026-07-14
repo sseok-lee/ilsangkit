@@ -12,7 +12,14 @@ const REGISTRY: Partial<Record<FacilityCategory, StatBuilder>> = {
     return items
   },
 
-  pharmacy: (_d, phone) => (phone ? [{ label: '전화', value: phone }] : []),
+  pharmacy: (d, phone) => {
+    const items: HeroStat[] = []
+    // _todayHours: 호출측([id].vue)에서 pharmacyWeeklyHours 기반 오늘 영업시간 결과를 주입
+    if (d?.pharmacistCnt) items.push({ label: '약사', value: `${d.pharmacistCnt}명` })
+    if (d?._todayHours) items.push({ label: '오늘', value: d._todayHours })
+    if (phone) items.push({ label: '전화', value: phone })
+    return items
+  },
 
   parking: (d) => {
     const items: HeroStat[] = []
@@ -74,14 +81,10 @@ const REGISTRY: Partial<Record<FacilityCategory, StatBuilder>> = {
 
   sports: (d, phone) => {
     const items: HeroStat[] = []
-    // 전화 우선, 없으면 시설구분/유형 fallback
-    if (phone) {
-      items.push({ label: '전화', value: phone })
-    }
-    else {
-      if (d?.faciGbNm) items.push({ label: '시설구분', value: d.faciGbNm })
-      if (d?.ftypeNm) items.push({ label: '유형', value: d.ftypeNm })
-    }
+    if (d?.faciGbNm) items.push({ label: '시설구분', value: d.faciGbNm })
+    if (d?.ftypeNm) items.push({ label: '유형', value: d.ftypeNm })
+    if (d?.faciGfa > 0) items.push({ label: '면적', value: `${Number(d.faciGfa).toLocaleString()}㎡` })
+    if (items.length === 0 && phone) items.push({ label: '전화', value: phone })
     return items
   },
 
@@ -103,6 +106,7 @@ const REGISTRY: Partial<Record<FacilityCategory, StatBuilder>> = {
   wifi: (d) => {
     const items: HeroStat[] = []
     if (d?.ssid) items.push({ label: 'SSID', value: d.ssid })
+    if (d?.installLocation) items.push({ label: '설치장소', value: d.installLocation })
     return items
   },
 
@@ -119,8 +123,11 @@ const REGISTRY: Partial<Record<FacilityCategory, StatBuilder>> = {
     return items
   },
 
-  // clothes: 전화 fallback (나머지 카테고리와 동일)
-  clothes: (_d, phone) => (phone ? [{ label: '전화', value: phone }] : []),
+  // clothes: 상세위치 우선, 없으면 전화 fallback
+  clothes: (d, phone) => {
+    if (d?.detailLocation) return [{ label: '위치', value: d.detailLocation }]
+    return phone ? [{ label: '전화', value: phone }] : []
+  },
 
   // trash: 별도 WasteSchedule 모델 — heroStat 해당 없음
   trash: () => [],

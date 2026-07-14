@@ -16,7 +16,7 @@
           :class="row.isToday ? 'bg-primary-50 font-semibold' : ''"
         >
           <td class="py-1.5 px-2 text-xs font-medium" :class="row.isToday ? 'text-primary-700' : 'text-slate-600'">
-            {{ row.day }}{{ row.isToday ? ' ★' : '' }}
+            {{ row.day }}<span v-if="row.isToday" class="ml-1 inline-block rounded bg-primary-100 px-1 py-0.5 text-[10px] font-semibold text-primary-700 align-middle">오늘</span>
           </td>
           <td
             class="py-1.5 px-2 text-xs"

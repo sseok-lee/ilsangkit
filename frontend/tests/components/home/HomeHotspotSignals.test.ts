@@ -80,6 +80,21 @@ describe('HomeHotspotSignals', () => {
     expect(wrapper.find('.animate-spin').exists()).toBe(false);
   });
 
+  it('상승/하락 모바일 탭은 delta 테두리 토큰을 쓴다', async () => {
+    const wrapper = mount(HomeHotspotSignals, {
+      props: { hotspots: { apt: fullBundle() } },
+    });
+    const risingBtn = wrapper.findAll('button').find((b) => b.text().trim() === '상승')!;
+    await risingBtn.trigger('click');
+    expect(wrapper.html()).toMatch(/border-delta-up/);
+    expect(wrapper.html()).not.toMatch(/border-red-500/);
+
+    const fallingBtn = wrapper.findAll('button').find((b) => b.text().trim() === '하락')!;
+    await fallingBtn.trigger('click');
+    expect(wrapper.html()).toMatch(/border-delta-down/);
+    expect(wrapper.html()).not.toMatch(/border-primary-500/);
+  });
+
   it('wolse tab hides rising/falling cards, shows only active', async () => {
     const wrapper = mount(HomeHotspotSignals, {
       props: { hotspots: { apt: fullBundle() } },
@@ -92,5 +107,14 @@ describe('HomeHotspotSignals', () => {
     expect(wrapper.text()).not.toContain('평당가 하락');
     expect(wrapper.text()).toContain('거래 급증');
     expect(wrapper.text()).toContain('영등포구');
+  });
+});
+
+describe('HomeHotspotSignals — 각주 규격', () => {
+  it('출처·산출조건 각주 텍스트를 유지한다', () => {
+    const wrapper = mount(HomeHotspotSignals, {
+      props: { hotspots: { apt: fullBundle() } },
+    });
+    expect(wrapper.text()).toContain('국토교통부 실거래가 · 최근 7일 vs 직전 7일 · 표본 30건 미만 지역 제외');
   });
 });

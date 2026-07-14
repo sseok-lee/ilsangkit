@@ -44,6 +44,20 @@ const ORDER_BY_MAP: Record<string, Record<string, string>> = {
   popular: { viewCount: 'desc' },
 };
 
+/**
+ * 한글 우선 정렬(raw SQL) 대상 카테고리 → MySQL 테이블명 화이트리스트.
+ * - schema.prisma 모델명(@@map 없음)과 정확히 일치해야 함 — Linux MySQL은 테이블명 케이스 민감.
+ * - 테이블명 보간은 반드시 이 고정맵을 거친다(임의 문자열 보간 금지 = SQL 인젝션 방지).
+ * - ev-charger/trash는 search()에서 조기 return, subway는 인덱스 없음 → 이 경로 미사용.
+ * - 값 집합은 FULLTEXT_TABLES와 동일한 13개 시설 테이블.
+ */
+const NAME_SORT_TABLES: Record<string, string> = {
+  toilet: 'Toilet', wifi: 'Wifi', clothes: 'Clothes', parking: 'Parking',
+  aed: 'Aed', library: 'Library', hospital: 'Hospital', pharmacy: 'Pharmacy',
+  park: 'Park', school: 'School', market: 'Market', childcare: 'Childcare',
+  sports: 'Sports',
+};
+
 // --- Haversine 거리 계산 ---
 
 function toRad(deg: number): number {
@@ -131,6 +145,61 @@ function toFacilityItem(record: any, category: FacilityCategory): FacilityItem {
   };
 }
 
+/**
+ * 한글 우선 정렬 id 조회 (raw SQL).
+ * `ORDER BY (name REGEXP '^[가-힣]') DESC, name ASC` — 한글로 시작하는 실명을 앞으로,
+ * 기호·숫자·라틴 시작 항목(예: "(새)…", "1004약국")을 뒤로 보낸다.
+ * SQL 안전: 테이블명만 NAME_SORT_TABLES 고정 화이트리스트에서 보간, 지역(city/district)·
+ * limit·offset은 전부 `?` 파라미터 바인딩(사용자 입력 직접 보간 금지).
+ */
+async function koreanNameFirstIds(
+  category: string,
+  cityVariants: string[],
+  district: string | undefined,
+  limit: number,
+  offset: number,
+): Promise<string[] | null> {
+  const table = NAME_SORT_TABLES[category];
+  if (!table) return null; // 화이트리스트 밖 → 호출부가 기존 orderBy 경로로 폴백
+  const parts: string[] = [];
+  const values: unknown[] = [];
+  if (cityVariants.length > 0) {
+    parts.push(`city IN (${cityVariants.map(() => '?').join(', ')})`);
+    values.push(...cityVariants);
+  }
+  if (district) {
+    parts.push('district = ?');
+    values.push(district);
+  }
+  const whereSql = parts.length ? ` WHERE ${parts.join(' AND ')}` : '';
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+    `SELECT id FROM \`${table}\`${whereSql} ORDER BY (name REGEXP '^[가-힣]') DESC, name ASC LIMIT ? OFFSET ?`,
+    ...values, limit, offset,
+  );
+  return rows.map((r) => String(r.id));
+}
+
+/**
+ * id 배열 순서를 보존하며 findMany 재수화 (findMany `id: { in }`는 순서 비보장).
+ * 정렬된 id(raw SQL/FULLTEXT)로 select/매핑을 재사용할 때 공통 사용.
+ */
+async function fetchByIdsInOrder(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model: { findMany: (args: object) => Promise<any[]> },
+  ids: string[],
+  category: FacilityCategory,
+): Promise<FacilityItem[]> {
+  const records = await model.findMany({
+    where: { id: { in: ids } },
+    select: buildListSelect(category),
+  });
+  const order = new Map(ids.map((id, i) => [id, i]));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  records.sort((a: any, b: any) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return records.map((r: any) => toFacilityItem(r, category));
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapWasteScheduleToFacilityItem(r: any): FacilityItem {
   return {
@@ -144,6 +213,24 @@ function mapWasteScheduleToFacilityItem(r: any): FacilityItem {
     city: r.city,
     district: r.district,
   };
+}
+
+/**
+ * 동일 시설이 서로 다른 id/sourceId로 중복 유입되는 경우를 name+좌표로 병합.
+ * - FacilityItem에는 sourceId가 실려오지 않으므로 id로는 dedup 불가.
+ * - 키 = category|name|lat|lng(소수 5자리≈1m 반올림)로 동일 좌표+이름만 정확히 병합(오탐 없음).
+ * - 입력 순서(거리순 정렬 후 호출)를 보존해 첫 항목(최근접)만 유지한다.
+ */
+function dedupeByLocation(items: FacilityItem[]): FacilityItem[] {
+  const seen = new Set<string>();
+  const out: FacilityItem[] = [];
+  for (const item of items) {
+    const key = `${item.category}|${item.name}|${item.lat.toFixed(5)}|${item.lng.toFixed(5)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
 }
 
 /**
@@ -280,14 +367,15 @@ export async function getNearbyFacilities(
   const allItems = fetchResults.flat();
 
   // ev-charger는 이미 거리 계산됨, 나머지만 계산
-  return allItems
+  const sorted = allItems
     .map((item) => item.distance !== undefined ? item : {
       ...item,
       distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
     })
     .filter((item) => item.distance! <= radius)
-    .sort((a, b) => a.distance! - b.distance!)
-    .slice(0, 6);
+    .sort((a, b) => a.distance! - b.distance!);
+  // 동일 시설(다른 id) 중복 노출 제거 → 정렬 후(최근접 유지) slice(0,6) 앞에서 병합
+  return dedupeByLocation(sorted).slice(0, 6);
 }
 
 /**
@@ -493,13 +581,16 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
 
     // Haversine으로 정확한 거리 계산 + radius 필터
     // ev-charger는 이미 거리 계산됨, 나머지만 계산
-    const withDistance = allItems
-      .map((item) => item.distance !== undefined ? item : ({
-        ...item,
-        distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
-      }))
-      .filter((item) => item.distance! <= radius)
-      .sort((a, b) => a.distance! - b.distance!);
+    // 동일 시설(다른 id) 중복 노출/지도 핀 제거를 위해 정렬 직후 dedup → total/totalPages도 dedup 정합.
+    const withDistance = dedupeByLocation(
+      allItems
+        .map((item) => item.distance !== undefined ? item : ({
+          ...item,
+          distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
+        }))
+        .filter((item) => item.distance! <= radius)
+        .sort((a, b) => a.distance! - b.distance!),
+    );
 
     const total = withDistance.length;
     const skip = (page - 1) * limit;
@@ -562,15 +653,21 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         fulltextIds(FULLTEXT_TABLES[category], keyword!, ftRegion, limit, skip),
         fulltextCount(FULLTEXT_TABLES[category], keyword!, ftRegion),
       ]);
-      const records = await model.findMany({
-        where: { id: { in: ids } },
-        select: buildListSelect(category as FacilityCategory),
-      });
       // fulltextIds의 name ASC 순서 보존 (findMany in은 순서 비보장)
-      const order = new Map(ids.map((id, i) => [id, i]));
-      records.sort((a: any, b: any) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)); // eslint-disable-line @typescript-eslint/no-explicit-any
-      const items = records.map((r: any) => toFacilityItem(r, category as FacilityCategory)); // eslint-disable-line @typescript-eslint/no-explicit-any
+      const items = await fetchByIdsInOrder(model, ids, category as FacilityCategory);
       return { items, total, page, totalPages: Math.ceil(total / limit) };
+    }
+    // 한글 우선 정렬 경로: 키워드 없음 + 기본 name 정렬 + 진료과목 없음.
+    // MySQL 콜레이션상 기호·숫자·라틴이 한글보다 앞서므로 raw SQL로 한글 시작 실명을 앞으로.
+    if (!keyword && !departments?.length && (!sort || sort === 'name') && NAME_SORT_TABLES[category]) {
+      const [ids, total] = await Promise.all([
+        koreanNameFirstIds(category, cityVariantList(city), district, limit, skip),
+        model.count({ where }),
+      ]);
+      if (ids) {
+        const items = await fetchByIdsInOrder(model, ids, category as FacilityCategory);
+        return { items, total, page, totalPages: Math.ceil(total / limit) };
+      }
     }
     // 기존 LIKE 경로 (키워드 없음 / 1자 / 진료과목 필터·비기본 정렬 시)
     const [records, total] = await Promise.all([
@@ -903,6 +1000,8 @@ export async function getByRegion(
   const cityCondition = cityVariants.length > 0
     ? { in: [resolved.city, ...cityVariants] }
     : resolved.city;
+  // raw SQL(한글 우선 정렬)의 city IN (?) 바인딩용 — where.city와 동일 집합
+  const cityMatchList = [resolved.city, ...cityVariants];
 
   const where = {
     city: cityCondition,
@@ -974,18 +1073,29 @@ export async function getByRegion(
 
   if (config) {
     const model = config.model();
-    const [records, count] = await Promise.all([
-      model.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { name: 'asc' },
-        select: buildListSelect(category as FacilityCategory),
-      }),
-      model.count({ where }),
-    ]);
-    items = records.map((r: any) => toFacilityItem(r, category as FacilityCategory)); // eslint-disable-line @typescript-eslint/no-explicit-any
-    total = count;
+    // 한글 우선 정렬: 진료과목 필터 없고 화이트리스트 테이블일 때만 raw SQL(search()와 동일 정렬식)
+    const useKorean = !departments?.length && !!NAME_SORT_TABLES[category];
+    if (useKorean) {
+      const [koreanIds, count] = await Promise.all([
+        koreanNameFirstIds(category, cityMatchList, resolved.district, limit, (page - 1) * limit),
+        model.count({ where }),
+      ]);
+      items = koreanIds ? await fetchByIdsInOrder(model, koreanIds, category as FacilityCategory) : [];
+      total = count;
+    } else {
+      const [records, count] = await Promise.all([
+        model.findMany({
+          where,
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy: { name: 'asc' },
+          select: buildListSelect(category as FacilityCategory),
+        }),
+        model.count({ where }),
+      ]);
+      items = records.map((r: any) => toFacilityItem(r, category as FacilityCategory)); // eslint-disable-line @typescript-eslint/no-explicit-any
+      total = count;
+    }
   }
 
   return {

@@ -15,7 +15,7 @@ const mockArticles = [
     articleType: 'news',
     thumbnailUrl: null,
     keywords: null,
-    viewCount: 10,
+    viewCount: 150,
     publishedAt: '2026-07-01T09:00:00.000Z',
     createdAt: '2026-07-01T09:00:00.000Z',
   },
@@ -28,9 +28,22 @@ const mockArticles = [
     articleType: 'news',
     thumbnailUrl: null,
     keywords: null,
-    viewCount: 5,
+    viewCount: 50,
     publishedAt: '2026-06-30T09:00:00.000Z',
     createdAt: '2026-06-30T09:00:00.000Z',
+  },
+  {
+    id: 'a3',
+    slug: 'issue-3',
+    title: '오늘의 이슈 3',
+    summary: '삭제된 공공임대 카테고리 이슈입니다.',
+    category: 'public-rental',
+    articleType: 'news',
+    thumbnailUrl: null,
+    keywords: null,
+    viewCount: 10,
+    publishedAt: '2026-06-29T09:00:00.000Z',
+    createdAt: '2026-06-29T09:00:00.000Z',
   },
 ]
 
@@ -169,5 +182,33 @@ describe('ArticleIndexPage - /article', () => {
     expect(mockSetItemListSchema).toHaveBeenCalledWith(
       mockArticles.map((a, i) => ({ name: a.title, url: `/article/${a.slug}`, position: i + 1 })),
     )
+  })
+
+  it('viewCount >= 100인 카드는 조회수 visibility를 렌더링한다', async () => {
+    const wrapper = await mountArticleIndex()
+
+    // 첫 번째 카드: viewCount 150 (>= 100)
+    const link1 = wrapper.find('a[href="/article/issue-1"]')
+    expect(link1.exists()).toBe(true)
+    expect(link1.text()).toContain('150')
+  })
+
+  it('viewCount < 100인 카드는 조회수 visibility를 렌더링하지 않는다', async () => {
+    const wrapper = await mountArticleIndex()
+
+    // 두 번째 카드: viewCount 50 (< 100) - visibility div 전체가 렌더링되지 않음
+    const link2 = wrapper.find('a[href="/article/issue-2"]')
+    expect(link2.exists()).toBe(true)
+    // 카드의 텍스트에 50이 포함되지 않아야 함
+    expect(link2.text()).not.toContain('50')
+  })
+
+  it('삭제된 카테고리(public-rental) 카드는 raw slug 대신 안전 폴백 라벨을 표시한다', async () => {
+    const wrapper = await mountArticleIndex()
+
+    const link3 = wrapper.find('a[href="/article/issue-3"]')
+    expect(link3.exists()).toBe(true)
+    expect(link3.text()).not.toContain('public-rental')
+    expect(link3.text()).toContain('매입임대')
   })
 })

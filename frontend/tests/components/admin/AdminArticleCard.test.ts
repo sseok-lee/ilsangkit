@@ -37,3 +37,13 @@ describe('AdminArticleCard — 정책 뱃지', () => {
     expect(wrapper.text()).not.toContain('정책')
   })
 })
+
+describe('AdminArticleCard — 날짜 점 표기 (§5-8 rule3)', () => {
+  it('생성일을 YYYY.MM.DD(점)로 노출한다(대시 금지)', () => {
+    const wrapper = mount(AdminArticleCard, {
+      props: { article: makeSummary({ createdAt: '2026-07-07T00:00:00.000Z' }) },
+    })
+    expect(wrapper.text()).toContain('2026.07.07')
+    expect(wrapper.text()).not.toContain('2026-07-07')
+  })
+})

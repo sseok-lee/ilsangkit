@@ -161,4 +161,22 @@ describe('generateGuideDraft (OpenAI mock)', () => {
     ).rejects.toThrow(/3 attempts/);
     expect(create).toHaveBeenCalledTimes(4); // meta + 3 body attempts
   });
+
+  it('§5-8: 메타·본문 프롬프트에 해요체·상투어 금지 규칙이 포함된다', async () => {
+    const create = vi.fn()
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify({
+        title: '공영주차장 무료·할인 요금 받는 법',
+        summary: '요약입니다.', keywords: 'a, b, c',
+      }) } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: HOWTO_MD } }] });
+    const openai = { chat: { completions: { create } } } as unknown as import('openai').default;
+
+    await generateGuideDraft(openai, { category: 'parking', topic: 't', articleType: 'howto' });
+
+    const metaPrompt = String(create.mock.calls[0][0].messages[0].content);
+    const bodyPrompt = String(create.mock.calls[1][0].messages[0].content);
+    expect(metaPrompt).toContain('해요체');    // generateGuideMeta summary 규칙 (편집#4)
+    expect(bodyPrompt).toContain('해요체');     // generateGuideBody 규칙 (편집#3)
+    expect(bodyPrompt).toContain('살펴봅니다'); // 상투어 금지
+  });
 });

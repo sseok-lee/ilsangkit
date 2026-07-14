@@ -70,15 +70,22 @@
         share-label="이 건물 공유하기"
         @share="handleShare"
         @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
-      />
+      >
+        <template #address>
+          <AddressLine :address="fullAddress" />
+        </template>
+      </MobileDetailHeader>
       <PageHero
         class="hidden md:block order-2 md:order-2"
         title-tag="div"
         :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
         :title="buildingName"
-        :description="fullAddress !== '-' ? fullAddress : undefined"
         :stats="heroStats"
-      />
+      >
+        <template #description>
+          <AddressLine :address="fullAddress" />
+        </template>
+      </PageHero>
 
       <!-- Ad: Hero 직후 (fold 하단) -->
       <AdBanner class="order-3 md:order-3" variant="compact-mobile" />
@@ -247,6 +254,15 @@
         <div v-else class="rounded-xl bg-background-light p-8 text-center text-faint">
           시세 데이터가 아직 없습니다.
         </div>
+        <SourceStamp
+          v-if="monthly.length > 0"
+          class="mt-2"
+          variant="plain"
+          provider="국토교통부"
+          :basis="txBasis"
+          :synced-at="rawSyncDate"
+          :stale-days="RE_STALE_DAYS"
+        />
         <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-400">
           ※ 월세 거래는 전환율 5% 기준 환산보증금으로 표시됩니다
         </p>
@@ -257,6 +273,15 @@
 
       <!-- "거래 내역" 블록 -->
       <SectionBlock class="order-6 md:order-9" :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
+        <template #right>
+          <SourceStamp
+            provider="국토교통부"
+            :synced-at="rawSyncDate"
+            :stale-days="RE_STALE_DAYS"
+            source-url="https://rt.molit.go.kr"
+            link-label="원본 보기"
+          />
+        </template>
         <div v-if="txLoading" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -399,6 +424,7 @@
 import { ref, computed, watch, watchEffect, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
+import { EMPTY_FIELD_TEXT } from '~/utils/emptyField'
 import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
@@ -406,7 +432,8 @@ import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
-import { formatKoreanPrice, formatKstDate } from '~/utils/formatters'
+import { buildYearLabel, formatKoreanPrice } from '~/utils/formatters'
+import { RE_STALE_DAYS, formatDotDate } from '~/utils/syncFreshness'
 import {
   getPeriodTradeLabel,
   getPriceExtremes,
@@ -418,7 +445,7 @@ import {
   type RealEstateSummaryBadge,
 } from '~/utils/realEstateDetailSummary'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getCurrentYear } from '~/utils/seoConstants'
 import { buildRealEstateDetailMeta } from '~/composables/useRealEstateDetailMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
@@ -544,6 +571,18 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
   return `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
 }
 
+// 최근 거래가 단일 소스: meta description·헤더(heroStats·latestPrice)가 반드시 동일 값을
+// 쓰도록 buildingInfo(latestDealAmount/Year/Month)에서만 산출한다. currentTab/apiSlug 가 URL
+// 고정이라 buildingInfo 는 페이지당 불변 → transactions 페이지네이션·필터와 무관하게 meta==헤더.
+const recentDealForDisplay = computed<{ amount: number | null; dealDate: string | null }>(() => {
+  const info = buildingInfo.value
+  const amount = info?.latestDealAmount ? Number(info.latestDealAmount) : null
+  const dealDate = info?.latestDealYear && info?.latestDealMonth
+    ? `${info.latestDealYear}년 ${info.latestDealMonth}월`
+    : null
+  return { amount, dealDate }
+})
+
 const detailMeta = computed(() => {
   const mode = currentTab.value
 
@@ -557,20 +596,13 @@ const detailMeta = computed(() => {
     areaRange = maxA > minA ? { min: minA, max: maxA } : { min: minA }
   }
 
-  let recentDeal: { amount: number; dealDate: string } | undefined
-  const firstTx = transactions.value.items[0]
-  if (firstTx) {
-    const amount = 'dealAmount' in firstTx ? firstTx.dealAmount : firstTx.deposit
-    if (amount) {
-      recentDeal = {
-        amount: Number(amount),
-        dealDate: `${firstTx.dealYear}년 ${firstTx.dealMonth}월`,
-      }
-    }
-  }
+  // 헤더와 동일 소스(buildingInfo)에서만 최근 거래를 뽑는다 — transactions.items[0] 의존 제거.
+  const rd = recentDealForDisplay.value
+  const recentDeal: { amount: number; dealDate: string } | undefined =
+    rd.amount && rd.dealDate ? { amount: rd.amount, dealDate: rd.dealDate } : undefined
 
   const totalCount = summary.value?.totalCount ?? 0
-  const buildYearVal = firstTx?.buildYear ?? buildingInfo.value?.buildYear ?? null
+  const buildYearVal = buildingInfo.value?.buildYear ?? null
 
   return buildRealEstateDetailMeta({
     buildingName: buildingName.value,
@@ -749,12 +781,19 @@ const syncStatusKey = computed(() => apiSlug.value.replace(/-([a-z])/g, (_, c: s
 const lastSyncDate = computed(() => {
   const syncStatus = secondaryResponse.value?.syncStatus
   if (!syncStatus) return null
-  return formatKstDate(syncStatus[syncStatusKey.value])
+  return formatDotDate(syncStatus[syncStatusKey.value])
 })
 const rawSyncDate = computed(() => {
   const syncStatus = secondaryResponse.value?.syncStatus
   if (!syncStatus) return null
   return syncStatus[syncStatusKey.value] ?? null
+})
+
+// 시세 추이 각주용 기준월 — 최신 거래월(dealYmd)이 없으면 표기 생략
+const txBasis = computed(() => {
+  const info = buildingInfo.value
+  if (!info?.latestDealYear || !info?.latestDealMonth) return null
+  return `기준 ${info.latestDealYear}.${String(info.latestDealMonth).padStart(2, '0')}`
 })
 
 // ── Computed display values ───────────────────────────────────────────────────
@@ -790,11 +829,12 @@ const areaRange = computed(() => {
 })
 
 const latestPrice = computed(() => {
-  const info = buildingInfo.value
-  if (!info?.latestDealAmount) return '-'
-  const deposit = formatKoreanPrice(info.latestDealAmount)
-  if (info.latestMonthlyRent && info.latestMonthlyRent > 0) {
-    return `${deposit} / ${formatKoreanPrice(info.latestMonthlyRent)}`
+  const amount = recentDealForDisplay.value.amount
+  if (!amount) return '-'
+  const deposit = formatKoreanPrice(amount)
+  const monthlyRent = buildingInfo.value?.latestMonthlyRent
+  if (monthlyRent && monthlyRent > 0) {
+    return `${deposit} / ${formatKoreanPrice(monthlyRent)}`
   }
   return deposit
 })
@@ -807,22 +847,20 @@ const rentRatioTotal = computed(
 const rentRatioLabel = computed(() => {
   const j = buildingInfo.value?.jeonseCount ?? 0
   const w = buildingInfo.value?.wolseCount ?? 0
-  if (rentRatioTotal.value === 0) return '정보 없음'
+  if (rentRatioTotal.value === 0) return EMPTY_FIELD_TEXT
   const jPct = getJeonsePct(j, w)
   return jPct >= 50 ? `전세 ${jPct}%` : `월세 ${100 - jPct}%`
 })
 const heroStats = computed(() => {
-  const PLACEHOLDER = '정보 없음'
-  const dealDate = buildingInfo.value?.latestDealYear && buildingInfo.value?.latestDealMonth
-    ? `${buildingInfo.value.latestDealYear}년 ${buildingInfo.value.latestDealMonth}월`
-    : PLACEHOLDER
+  const PLACEHOLDER = EMPTY_FIELD_TEXT
+  const dealDate = recentDealForDisplay.value.dealDate ?? PLACEHOLDER
   const area = { label: '전용면적', value: areaRange.value !== '-' ? areaRange.value : PLACEHOLDER }
   const recent = latestPrice.value !== '-' ? latestPrice.value : PLACEHOLDER
   if (currentTab.value === 'sale') {
     return [
       { label: '최근 거래가', value: recent },
       { label: '최근 거래일', value: dealDate },
-      { label: '건축년도', value: buildingInfo.value?.buildYear ? `${buildingInfo.value.buildYear}년` : PLACEHOLDER },
+      { label: '건축년도', value: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER },
       area,
     ]
   }
@@ -834,9 +872,9 @@ const heroStats = computed(() => {
   ]
 })
 
-// 모바일 헤더 칩 — heroStats 재사용, '정보 없음' 항목 제외, 최대 4개
+// 모바일 헤더 칩 — heroStats 재사용, 빈값(EMPTY_FIELD_TEXT) 항목 제외, 최대 4개
 const mobileHeaderStats = computed(() =>
-  heroStats.value.filter(s => s.value && s.value !== '정보 없음').slice(0, 4),
+  heroStats.value.filter(s => s.value && s.value !== EMPTY_FIELD_TEXT).slice(0, 4),
 )
 
 // ── Stats / Transactions ──────────────────────────────────────────────────────
@@ -869,8 +907,8 @@ const summaryChangeRate = computed(() => {
 
 const changeRateColor = computed(() => {
   if (summary.value?.changeRate == null) return 'text-slate-500'
-  if (summary.value.changeRate > 0) return 'text-red-500'
-  if (summary.value.changeRate < 0) return 'text-primary-500'
+  if (summary.value.changeRate > 0) return 'text-delta-up'
+  if (summary.value.changeRate < 0) return 'text-delta-down'
   return 'text-slate-500'
 })
 

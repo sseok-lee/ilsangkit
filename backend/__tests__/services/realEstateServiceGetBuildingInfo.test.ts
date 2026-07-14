@@ -110,7 +110,7 @@ describe('getBuildingInfo - bjdCode fallback', () => {
     );
     expect(mockAptSaleFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { bjdCode: '11680', buildingName: '래미안에든' },
+        where: { bjdCode: '11680', buildingName: '래미안에든', cancelDealDay: null },
       })
     );
     expect(result).not.toBeNull();
@@ -133,7 +133,7 @@ describe('getBuildingInfo - bjdCode fallback', () => {
     );
     expect(mockAptSaleFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { bjdCode: '11680', buildingName: '래미안에든' },
+        where: { bjdCode: '11680', buildingName: '래미안에든', cancelDealDay: null },
       })
     );
     expect(result?.bjdCode).toBe('11680');
@@ -183,6 +183,7 @@ describe('getBuildingInfo - bjdCode fallback', () => {
         where: {
           bjdCode: '11680',
           buildingName: '래미안에든',
+          cancelDealDay: null,
           lat: { not: null },
           lng: { not: null },
         },
@@ -266,5 +267,68 @@ describe('getBuildingInfo - 전·월세 건수 (rent 전용, 건물-레벨)', ()
     expect(result?.jeonseCount).toBeUndefined()
     expect(result?.wolseCount).toBeUndefined()
     expect(mockAptSaleCount).not.toHaveBeenCalled()
+  })
+})
+
+// 결함4: meta·헤더 최근 거래가 정합의 뿌리 = getBuildingInfo 가 검색 엔드포인트와
+// 동일한 규칙(거래일 desc → id desc tie-break, sale 취소거래 제외)으로 '최신 1건'을 고른다.
+describe('getBuildingInfo - 결정적 tie-break & 취소거래 제외 (결함4)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('sale: 최신 거래 findFirst 의 orderBy 마지막이 { id: "desc" } tie-break', async () => {
+    mockAptSaleFindFirst.mockResolvedValue(sampleRecord)
+    mockAptSaleAggregate.mockResolvedValue(sampleAgg)
+    mockAptSaleGroupBy.mockResolvedValue([{ dongName: '역삼동', _count: { dongName: 3 } }])
+
+    await getBuildingInfo('apt-sale', '11680', '래미안에든')
+
+    expect(mockAptSaleFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [
+          { dealYear: 'desc' },
+          { dealMonth: 'desc' },
+          { dealDay: 'desc' },
+          { id: 'desc' },
+        ],
+      }),
+    )
+  })
+
+  it('sale: findFirst where 에 취소거래 제외(cancelDealDay: null) 를 포함한다', async () => {
+    mockAptSaleFindFirst.mockResolvedValue(sampleRecord)
+    mockAptSaleAggregate.mockResolvedValue(sampleAgg)
+    mockAptSaleGroupBy.mockResolvedValue([{ dongName: '역삼동', _count: { dongName: 3 } }])
+
+    await getBuildingInfo('apt-sale', '11680', '래미안에든')
+
+    expect(mockAptSaleFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { bjdCode: '11680', buildingName: '래미안에든', cancelDealDay: null },
+      }),
+    )
+  })
+
+  it('rent: findFirst where 에는 cancelDealDay 를 넣지 않는다 (취소 필드 없음)', async () => {
+    mockAptRentFindFirst.mockResolvedValue({
+      buildingName: '래미안', bjdCode: '11680', city: '서울', district: '강남구', dongName: '역삼동',
+      roadName: null, jibun: '1', buildYear: 2009, dealYear: 2024, dealMonth: 1, dealDay: 15,
+      lat: 37.5, lng: 127.0, deposit: 120000, monthlyRent: 0, exclusiveArea: 84.8,
+    })
+    mockAptRentAggregate.mockResolvedValue({ _min: { exclusiveArea: 59.9 }, _max: { exclusiveArea: 114.8 } })
+    mockAptRentGroupBy.mockResolvedValue([{ dongName: '역삼동', _count: { dongName: 5 } }])
+    mockAptRentCount.mockResolvedValueOnce(7).mockResolvedValueOnce(3)
+
+    await getBuildingInfo('apt-rent', '11680', '래미안')
+
+    const call = mockAptRentFindFirst.mock.calls[0][0]
+    expect(call.where).toEqual({ bjdCode: '11680', buildingName: '래미안' })
+    expect(call.where).not.toHaveProperty('cancelDealDay')
+    // rent 도 동일한 id desc tie-break 로 결정적
+    expect(call.orderBy).toEqual([
+      { dealYear: 'desc' },
+      { dealMonth: 'desc' },
+      { dealDay: 'desc' },
+      { id: 'desc' },
+    ])
   })
 })

@@ -40,7 +40,7 @@
             <h3 class="text-sm font-bold text-slate-800 mb-2">서비스 이용 관련 문의</h3>
             <p class="text-sm">일상킷 서비스 사용 중 겪는 불편사항, 기능 개선 요청, 이용 방법 등에 대해 문의해 주세요.</p>
           </div>
-          <div class="bg-slate-50 rounded-lg p-4">
+          <div id="data-fix" class="bg-slate-50 rounded-lg p-4 scroll-mt-20">
             <h3 class="text-sm font-bold text-slate-800 mb-2">데이터 오류 및 수정 요청</h3>
             <p class="text-sm">시설 위치, 운영시간, 전화번호 등의 정보가 실제와 다른 경우 알려주시면 빠르게 수정하겠습니다. 해당 시설의 이름과 정확한 정보를 함께 보내주시면 더 빠른 처리가 가능합니다.</p>
           </div>

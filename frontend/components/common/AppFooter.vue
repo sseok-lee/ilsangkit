@@ -11,6 +11,19 @@
           <p class="mt-2 text-xs text-muted leading-relaxed">
             {{ SITE_TAGLINE }}
           </p>
+          <div class="mt-3 space-y-1 text-xs text-faint">
+            <p>
+              운영 <span class="font-semibold text-muted">일상킷 팀</span> · 문의
+              <a href="mailto:contact@ilsangkit.co.kr" class="text-primary hover:underline">contact@ilsangkit.co.kr</a>
+            </p>
+            <p>
+              <HardLink to="/contact#data-fix" class="font-semibold text-primary hover:underline">정보 수정 요청</HardLink>
+              — 확인 후 3~5일 내 반영
+            </p>
+            <p v-if="latestSyncLabel">
+              데이터 최종 동기화 <span class="tabular-nums">{{ latestSyncLabel }}</span>
+            </p>
+          </div>
         </div>
 
         <!-- 서비스 -->
@@ -49,6 +62,7 @@
           © {{ currentYear }} 일상킷. All rights reserved.
         </p>
         <p class="text-xs text-faint">
+          본 서비스의 정보는 공공데이터포털(data.go.kr)·국토교통부 실거래가 공개시스템 자료를 가공한 참고용 정보입니다.
           <a
             href="https://www.data.go.kr"
             target="_blank"
@@ -72,6 +86,16 @@
 import { computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { SITE_TAGLINE } from '~/utils/seoConstants'
+import { useSyncStatus } from '~/composables/useSyncStatus'
+import { formatDotDateTime, isSyncStale, RE_STALE_DAYS } from '~/utils/syncFreshness'
 
 const currentYear = computed(() => new Date().getFullYear())
+
+const { latestOverall } = useSyncStatus()
+// 전체 max는 daily sync(부동산)가 지배하므로 stale 기준 2일 — 파이프라인이 죽으면 행 자체를 숨긴다
+const latestSyncLabel = computed(() => {
+  const iso = latestOverall.value
+  if (!iso || isSyncStale(iso, RE_STALE_DAYS)) return null
+  return formatDotDateTime(iso)
+})
 </script>

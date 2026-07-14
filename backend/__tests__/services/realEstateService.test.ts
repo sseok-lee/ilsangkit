@@ -274,6 +274,26 @@ describe('searchTransactions', () => {
     );
   });
 
+  // 결함4: 같은 거래일(dealYear/월/일) 다건일 때 items[0] 이 결정적이도록 id desc tie-break.
+  // getBuildingInfo 와 동일 규칙이라 meta·헤더가 같은 거래를 '최신'으로 선택한다.
+  it('orderBy 마지막에 { id: "desc" } tie-break 를 포함해 결정적으로 정렬한다', async () => {
+    mockAptSaleFindMany.mockResolvedValue([]);
+    mockAptSaleCount.mockResolvedValue(0);
+
+    await searchTransactions('apt-sale', { page: 1, limit: 20 });
+
+    expect(mockAptSaleFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [
+          { dealYear: 'desc' },
+          { dealMonth: 'desc' },
+          { dealDay: 'desc' },
+          { id: 'desc' },
+        ],
+      })
+    );
+  });
+
   it('filters by city when provided', async () => {
     mockAptSaleFindMany.mockResolvedValue([]);
     mockAptSaleCount.mockResolvedValue(0);
@@ -341,7 +361,7 @@ describe('searchTransactions', () => {
     );
   });
 
-  it('orders by dealYear desc, dealMonth desc, dealDay desc', async () => {
+  it('orders by dealYear desc, dealMonth desc, dealDay desc, id desc', async () => {
     mockAptSaleFindMany.mockResolvedValue([]);
     mockAptSaleCount.mockResolvedValue(0);
 
@@ -353,6 +373,7 @@ describe('searchTransactions', () => {
           { dealYear: 'desc' },
           { dealMonth: 'desc' },
           { dealDay: 'desc' },
+          { id: 'desc' },
         ],
       })
     );

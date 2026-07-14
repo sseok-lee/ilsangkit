@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildRealEstateDetailMeta, type DetailMetaInput } from '~/composables/useRealEstateDetailMeta'
+import { formatKoreanPrice } from '~/utils/formatters'
 
 const base: DetailMetaInput = {
   buildingName: '래미안대치팰리스',
@@ -68,6 +69,18 @@ describe('buildRealEstateDetailMeta - description', () => {
   })
   it('facilitySummary 없으면 "주변 생활시설과"로 일반화', () => {
     expect(buildRealEstateDetailMeta({ ...base, facilitySummary: null }).description).toContain('주변 생활시설과')
+  })
+
+  // 결함4: meta 가격 포맷을 헤더(utils formatKoreanPrice)와 동일 함수로 통일.
+  // 억 단위(만원=0) 거래가는 "N억"으로만 표기 → 헤더와 완전 일치("N억원" 불일치 제거).
+  it('억 단위 거래가는 헤더(utils formatKoreanPrice)와 동일하게 "N억"으로 표기한다', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...base,
+      summary: { totalCount: 30, recentDeal: { amount: 50000, dealDate: '2026년 5월' } },
+    })
+    expect(description).toContain(`최근 ${formatKoreanPrice(50000)}(2026년 5월)`)
+    expect(description).toContain('최근 5억(2026년 5월)')
+    expect(description).not.toContain('5억원')
   })
 })
 

@@ -5,6 +5,10 @@ import type { FacilityCategory } from '~/types/facility'
 
 export const SITE_NAME = '일상킷'
 export const SITE_URL = 'https://ilsangkit.co.kr'
+/** 콘텐츠 바이라인 저자 — UI·구조화 데이터 공용 단일 소스 (스펙 §5-5) */
+export const CONTENT_AUTHOR = '일상킷 데이터팀'
+/** 콘텐츠 조회수 표시 임계 — 이 미만이면 비노출(방문자 없는 사이트 역신호 방지, 스펙 §5-6) */
+export const VIEW_COUNT_DISPLAY_MIN = 100
 export const SITE_DESCRIPTION = '아파트·빌라·오피스텔·토지 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.'
 export const SITE_TAGLINE = '부동산 실거래가·청약·내 주변 생활정보'
 // 네이버/카카오 썸네일 크롤러는 webp og:image를 안정적으로 렌더링하지 못하므로 PNG를 기본값으로 사용한다.
