@@ -72,6 +72,12 @@ describe('downloadHiraZip', () => {
       expect.stringContaining('/dext5upload/handler/upload.dx'),
       expect.objectContaining({ method: 'POST' }),
     );
+    // 헤더 회귀 가드: Cookie/User-Agent가 나중에 실수로 빠지면 이 단언이 잡아낸다.
+    const [, requestInit] = mockFetch.mock.calls[0];
+    expect(requestInit.headers).toMatchObject({
+      Cookie: 'WMONID=abc; HIRAODSESSION=def',
+      'User-Agent': expect.stringContaining('Mozilla/5.0'),
+    });
   });
 
   it('content-type이 zip이 아니면 throw', async () => {
