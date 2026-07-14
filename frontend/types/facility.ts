@@ -259,7 +259,9 @@ export interface HospitalDetails {
   psychOpenNormal?: number | null
   isolationBeds?: number | null
   sterileBeds?: number | null
+  specialtyField?: string | null
   departments?: HospitalDepartment[]
+  equipment?: { eqpCdNm: string; eqpCnt: number | null }[]
 }
 
 export interface PharmacyDetails {

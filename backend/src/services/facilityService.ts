@@ -765,6 +765,12 @@ function toDetail(record: any, category: FacilityCategory): FacilityDetail {
       dgsbjtPrSdrCnt: d.dgsbjtPrSdrCnt,
     }));
   }
+  if (category === 'hospital' && record.equipment) {
+    details.equipment = record.equipment.map((e: { eqpCdNm: string; eqpCnt: number | null }) => ({
+      eqpCdNm: e.eqpCdNm,
+      eqpCnt: e.eqpCnt,
+    }));
+  }
   // school: enrollments + departments 관계 포함
   if (category === 'school') {
     if (record.enrollments) {
@@ -823,7 +829,7 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   const model = config.model();
   const findOptions: { where: { id: string }; include?: Record<string, boolean> } = { where: { id } };
   if (category === 'hospital') {
-    findOptions.include = { departments: true };
+    findOptions.include = { departments: true, equipment: true };
   }
   if (category === 'school') {
     findOptions.include = { enrollments: true, departments: true };

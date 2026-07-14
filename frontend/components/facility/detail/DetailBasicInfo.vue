@@ -334,6 +334,13 @@
 
       <!-- Hospital -->
       <template v-if="facility.category === 'hospital'">
+        <template v-if="details?.specialtyField">
+          <div class="h-px bg-slate-100 w-full"></div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-700 border border-teal-200">보건복지부 지정 전문병원</span>
+            <span class="text-sm font-medium text-slate-900">{{ details.specialtyField }}</span>
+          </div>
+        </template>
         <template v-if="details?.clCdNm || details?.homepage || details?.nurseGrade">
           <div class="h-px bg-slate-100 w-full"></div>
           <div class="flex flex-col gap-3">

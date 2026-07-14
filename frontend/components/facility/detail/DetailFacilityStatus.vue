@@ -517,7 +517,18 @@
           <h3 class="text-sm font-bold text-slate-900 mb-3">진료과목</h3>
           <TagBadges variant="teal" :items="hospitalDeptBadges" />
         </div>
-    
+
+        <!-- Hospital Equipment -->
+        <div v-if="hospitalEquipRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
+          <h3 class="text-sm font-bold text-slate-900 mb-3">보유 장비</h3>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+            <div v-for="row in hospitalEquipRows" :key="row.label" class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">{{ row.label }}</span>
+              <span class="text-sm font-medium text-slate-900">{{ row.value }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Hospital Bed Info -->
         <div v-if="hospitalBedRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
           <h3 class="text-sm font-bold text-slate-900 mb-3">병상 정보 <span class="text-xs text-gray-500 font-normal">(총 {{ hospitalTotalBeds }}병상)</span></h3>
@@ -565,6 +576,14 @@ const hospitalDeptBadges = computed(() => {
   return (depts || []).map(d => ({
     label: d.dgsbjtCdNm,
     suffix: d.dgsbjtPrSdrCnt ? `(${d.dgsbjtPrSdrCnt}명)` : undefined,
+  }))
+})
+
+const hospitalEquipRows = computed(() => {
+  const eq = details.value?.equipment
+  return (eq || []).map(e => ({
+    label: e.eqpCdNm,
+    value: e.eqpCnt != null ? `${e.eqpCnt}대` : '보유',
   }))
 })
 

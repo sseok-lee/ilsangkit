@@ -48,6 +48,9 @@ backend/data/*.zip
 backend/prisma/data/*.xlsx
 backend/prisma/data/*.xls
 
+# HIRA 자동 다운로드 원본(분기 62MB) — 커밋 금지
+backend/prisma/data/extra_hospital_latest/
+
 # Misc
 nul
 *.log

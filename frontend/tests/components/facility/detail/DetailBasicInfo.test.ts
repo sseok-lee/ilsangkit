@@ -231,4 +231,17 @@ describe('DetailBasicInfo', () => {
     expect(wrapper.text()).toContain('설치일')
     expect(wrapper.text()).toContain('소유구분')
   })
+
+  it('hospital: specialtyField 있으면 전문병원 뱃지를 렌더', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('hospital', { specialtyField: '관절', clCdNm: '병원' }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    const text = wrapper.text()
+    expect(text).toContain('전문병원')
+    expect(text).toContain('관절')
+  })
 })
