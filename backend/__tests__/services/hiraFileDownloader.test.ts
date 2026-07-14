@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -9,6 +9,8 @@ import {
   buildDext5DownloadBody,
   downloadHiraZip,
   extractZipToDir,
+  ensureLatestHiraFiles,
+  MARKER_PATH,
 } from '../../src/services/hiraFileDownloader.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -109,5 +111,43 @@ describe('extractZipToDir', () => {
     const names = extractZipToDir(buf, dest);
     expect(names.some((n) => n.normalize('NFC').includes('의료장비'))).toBe(true);
     expect(fs.readdirSync(dest).some((n) => n.normalize('NFC').includes('의료장비'))).toBe(true);
+  });
+});
+
+describe('ensureLatestHiraFiles freshness gate', () => {
+  const originalMarker = fs.existsSync(MARKER_PATH) ? fs.readFileSync(MARKER_PATH, 'utf-8') : null;
+
+  afterEach(() => {
+    // 이 describe가 실 DATA_DIR/.hira_filesno(MARKER_PATH)에 직접 쓰므로,
+    // 테스트가 끝나면 실행 전 상태로 복원해 다른 테스트·라이브 스모크를 오염시키지 않는다.
+    if (originalMarker === null) {
+      fs.rmSync(MARKER_PATH, { force: true });
+    } else {
+      fs.writeFileSync(MARKER_PATH, originalMarker);
+    }
+  });
+
+  it('마커 fileSno와 최신이 같으면 다운로드 없이 updated:false', async () => {
+    // 픽스처(2026-07-14 캡처)의 최신 fileSno=326801을 마커에도 기록해 게이트를 태운다.
+    fs.mkdirSync(path.dirname(MARKER_PATH), { recursive: true });
+    fs.writeFileSync(MARKER_PATH, '326801');
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'set-cookie': 'WMONID=x' }),
+      text: () => Promise.resolve(html),
+    });
+    // @ts-expect-error test override
+    global.fetch = mockFetch;
+
+    const result = await ensureLatestHiraFiles();
+    expect(result.updated).toBe(false);
+    expect(result.fileSno).toBe('326801');
+    // 포털 GET 1회만 호출되고, 다운로드(POST handler)는 호출되지 않아야 함
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).not.toHaveBeenCalledWith(
+      expect.stringContaining('/dext5upload/handler/upload.dx'),
+      expect.anything(),
+    );
   });
 });

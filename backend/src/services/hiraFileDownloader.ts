@@ -1,6 +1,7 @@
 import AdmZip from 'adm-zip';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 export interface HiraFileRef {
   fileSno: string;
@@ -177,4 +178,85 @@ export function extractZipToDir(zip: Buffer, destDir: string): string[] {
     written.push(base);
   }
   return written;
+}
+
+// ── ensureLatestHiraFiles 오케스트레이션 (Task A4) ──────────────────────
+//
+// 포털 GET(쿠키+HTML) → scrapeLatestFile → 신선도 게이트(마커=최신 fileSno면
+// 스킵) → downloadHiraZip → 크기 하한 검증(다운로드 핸들러가 아닌 여기서 —
+// mock 테스트의 소형 fakeZip을 깨뜨리지 않기 위해 Task A2에서 의도적으로
+// 미룸) → extractZipToDir → 성공 후에만 마커 갱신.
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+export const DATA_DIR = path.resolve(__dirname, '../../prisma/data/extra_hospital_latest');
+export const MARKER_PATH = path.join(DATA_DIR, '.hira_filesno');
+
+const PORTAL_URL = 'https://opendata.hira.or.kr/op/opc/selectOpenData.do?sno=11925';
+
+// 실 다운로드 zip 크기 하한(바이트). Task A2 라이브 실측(64,452,916B)보다 훨씬
+// 낮게 잡아 향후 분기별 크기 변동을 흡수하되, 서버 오류 응답(수 KB의
+// `[FAIL]...` text/plain, 단 content-type 불일치로 downloadHiraZip에서 이미
+// throw됨) 및 손상/빈 응답을 잡아내는 안전망 역할을 한다.
+const MIN_ZIP_BYTES = 10_000_000;
+
+function readMarker(): string | null {
+  try {
+    return fs.readFileSync(MARKER_PATH, 'utf-8').trim();
+  } catch {
+    return null;
+  }
+}
+
+// Node 20 undici는 여러 Set-Cookie 헤더를 getSetCookie()로 배열 그대로 제공한다
+// (Headers.get('set-cookie')는 콤마로 뭉쳐 파싱이 불안정해질 수 있음). 있으면
+// 우선 사용하고, 없으면(구버전 폴리필 등) get('set-cookie') 파싱으로 폴백한다.
+function extractCookie(headers: Headers): string {
+  const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
+  const rawCookies =
+    typeof getSetCookie === 'function' ? getSetCookie.call(headers) : null;
+
+  if (rawCookies && rawCookies.length > 0) {
+    return rawCookies
+      .map((c) => c.split(';')[0].trim())
+      .filter(Boolean)
+      .join('; ');
+  }
+
+  // 폴백: 단일 문자열로 뭉쳐진 set-cookie 헤더를 "다음 key=value 직전"에서 분리
+  const combined = headers.get('set-cookie') || '';
+  return combined
+    .split(/,(?=\s*[\w-]+=)/)
+    .map((c) => c.split(';')[0].trim())
+    .filter(Boolean)
+    .join('; ');
+}
+
+export async function ensureLatestHiraFiles(): Promise<{ updated: boolean; fileSno?: string }> {
+  // 1) 포털 GET → 쿠키 + HTML
+  const res = await fetch(PORTAL_URL, { headers: { 'User-Agent': BROWSER_UA } });
+  if (!res.ok) throw new Error(`HIRA portal HTTP ${res.status}`);
+  const cookie = extractCookie(res.headers);
+  const html = await res.text();
+
+  const ref = scrapeLatestFile(html);
+  if (!ref) throw new Error('HIRA 포털에서 다운로드 파일을 찾지 못했습니다.');
+
+  // 2) 신선도 게이트 — 마커의 fileSno가 최신과 같으면 다운로드 없이 스킵
+  if (readMarker() === ref.fileSno) {
+    console.info(`[HIRA] 최신 파일(${ref.fileSno}) 이미 반영됨 — 스킵`);
+    return { updated: false, fileSno: ref.fileSno };
+  }
+
+  // 3) 다운로드 → 크기 검증 → 전개
+  console.info(`[HIRA] 새 분기 파일 다운로드: ${ref.fileName} (fileSno=${ref.fileSno})`);
+  const zip = await downloadHiraZip(ref, cookie);
+  if (zip.length < MIN_ZIP_BYTES) {
+    throw new Error(`HIRA zip too small: ${zip.length} bytes (min ${MIN_ZIP_BYTES})`);
+  }
+  const names = extractZipToDir(zip, DATA_DIR);
+  console.info(`[HIRA] 전개 완료: ${names.length}개 파일`);
+
+  // 4) 성공 후에만 마커 갱신 (실패 시 기존 파일·마커 그대로 유지 — fail-soft 무결성)
+  fs.writeFileSync(MARKER_PATH, ref.fileSno);
+  return { updated: true, fileSno: ref.fileSno };
 }
