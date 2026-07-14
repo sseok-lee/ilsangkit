@@ -1,10 +1,10 @@
 import { defineEventHandler, sendRedirect, getRequestURL, setHeader, setResponseStatus } from 'h3'
 import type { H3Event } from 'h3'
 import {
-  CITY_FULL_NAME_TO_SLUG,
   DISTRICT_SLUG_MAP,
   CITY_SLUGS,
 } from '~/shared/regionSlugs'
+import { toCitySlugByDistrict } from '~/utils/realEstateUrl'
 import { ssrFetch } from '~/server/utils/ssrFetch'
 
 /**
@@ -149,14 +149,6 @@ export async function resolveBjdCode(
   }
 }
 
-function citySlugOf(cityFullName: string): string {
-  return (
-    CITY_FULL_NAME_TO_SLUG[cityFullName] ??
-    CITY_SLUGS[cityFullName] ??
-    cityFullName.toLowerCase()
-  )
-}
-
 function districtSlugOf(districtName: string): string {
   return DISTRICT_SLUG_MAP[districtName] ?? districtName.toLowerCase().replace(/\s+/g, '-')
 }
@@ -169,7 +161,7 @@ function buildNewDetailPath(
   buildingName: string,
 ): string {
   const nfcName = decodeURIComponent(buildingName).normalize('NFC')
-  return `/real-estate/${propertyType}-${mode}/${citySlugOf(cityFullName)}/${districtSlugOf(districtName)}/${encodeURIComponent(nfcName)}`
+  return `/real-estate/${propertyType}-${mode}/${toCitySlugByDistrict(cityFullName, districtName)}/${districtSlugOf(districtName)}/${encodeURIComponent(nfcName)}`
 }
 
 function renderMissingBjdHtml(originalPath: string): string {
