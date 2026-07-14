@@ -1,3 +1,7 @@
+import AdmZip from 'adm-zip';
+import fs from 'fs';
+import path from 'path';
+
 export interface HiraFileRef {
   fileSno: string;
   filePath: string; // /shared/data/uploadFiles/file/<UUID>.zip
@@ -152,4 +156,25 @@ export async function downloadHiraZip(ref: HiraFileRef, cookie: string): Promise
   // 크기 하한 검증은 여기서 하지 않는다(모의 테스트의 소형 fakeZip을 깨뜨림).
   // 실다운로드 크기 하한 가드는 Task A4 오케스트레이터에서 수행한다.
   return Buffer.from(await res.arrayBuffer());
+}
+
+// ── zip 전개 (Task A3) ──────────────────────────────────────────────────
+//
+// Task A2의 라이브 다운로드 실측(위 downloadHiraZip 코멘트 3-a)으로 확인된 대로,
+// 실제 HIRA zip은 UTF-8 general-purpose flag로 저장되어 있어 adm-zip의 기본
+// entryName 디코딩이 이미 정확한 한글이다. 별도의 CP949/EUC-KR 디코딩은 하지
+// 않는다 — 실증되지 않은 포맷 변경을 미리 가정하는 추측성 분기이며, 향후 HIRA가
+// 실제로 레거시 인코딩 zip을 배포하면 그때 그라운드 트루스로 대응한다.
+export function extractZipToDir(zip: Buffer, destDir: string): string[] {
+  fs.mkdirSync(destDir, { recursive: true });
+  const admzip = new AdmZip(zip);
+  const written: string[] = [];
+  for (const entry of admzip.getEntries()) {
+    if (entry.isDirectory) continue;
+    const base = path.basename(entry.entryName).normalize('NFC');
+    const out = path.join(destDir, base);
+    fs.writeFileSync(out, entry.getData());
+    written.push(base);
+  }
+  return written;
 }

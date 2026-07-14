@@ -1,11 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import AdmZip from 'adm-zip';
 import {
   scrapeLatestFile,
   buildDext5DownloadBody,
   downloadHiraZip,
+  extractZipToDir,
 } from '../../src/services/hiraFileDownloader.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -91,5 +94,20 @@ describe('downloadHiraZip', () => {
     await expect(
       downloadHiraZip({ fileSno: '1', filePath: '/x.zip', fileName: 'x.zip' }, 'c=1'),
     ).rejects.toThrow();
+  });
+});
+
+describe('extractZipToDir', () => {
+  it('UTF-8 파일명(실제 HIRA zip 시나리오)을 그대로 전개한다', () => {
+    // Task A2 라이브 다운로드 실측: HIRA zip은 UTF-8 general-purpose flag로 저장되어
+    // adm-zip의 기본 entryName이 이미 정확한 한글이다 — 디코딩 변환 없이 그대로 사용한다.
+    const zip = new AdmZip();
+    zip.addFile('7.의료장비정보.xlsx', Buffer.from('dummy'));
+    const buf = zip.toBuffer();
+
+    const dest = fs.mkdtempSync(path.join(os.tmpdir(), 'hira-utf8-'));
+    const names = extractZipToDir(buf, dest);
+    expect(names.some((n) => n.normalize('NFC').includes('의료장비'))).toBe(true);
+    expect(fs.readdirSync(dest).some((n) => n.normalize('NFC').includes('의료장비'))).toBe(true);
   });
 });
