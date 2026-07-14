@@ -966,6 +966,7 @@ model Hospital {
   nurseGrade String? @db.VarChar(10)
 
   departments HospitalDepartment[]
+  equipment   HospitalEquipment[]
 
   @@index([city, district])
   @@index([lat, lng])
@@ -985,6 +986,19 @@ model HospitalDepartment {
   dgsbjtPrSdrCnt Int?
 
   @@unique([hospitalId, dgsbjtCdNm])
+  @@index([hospitalId])
+}
+
+// 병원 의료장비 테이블 (1:N — xlsx 파일 7 medicInsttDetailInfo_05)
+model HospitalEquipment {
+  id         Int      @id @default(autoincrement())
+  hospitalId String   @db.VarChar(50)
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  eqpCd      String   @db.VarChar(20)
+  eqpCdNm    String   @db.VarChar(100)
+  eqpCnt     Int?
+
+  @@unique([hospitalId, eqpCd])
   @@index([hospitalId])
 }
 
