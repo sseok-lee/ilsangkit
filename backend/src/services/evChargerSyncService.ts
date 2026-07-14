@@ -13,7 +13,11 @@ export { createSyncHistory, updateSyncHistory };
 export type { SyncStats, SyncHistoryUpdateData };
 
 const EV_CHARGER_API_URL = 'https://apis.data.go.kr/B552584/EvCharger/getChargerInfo';
-const NUM_OF_ROWS = 9999;
+// 9999행/요청은 상류 API가 느릴 때 응답 지연(>30s 타임아웃)·502를 유발.
+// 작은 페이지(기본 1000, parking sync와 동일)로 요청당 빠르고 안정적으로.
+// 상류 상태에 따라 env로 무재배포 튜닝(더 작게/타임아웃 상향).
+const NUM_OF_ROWS = Number(process.env.EV_CHARGER_NUM_OF_ROWS) || 1000;
+const FETCH_TIMEOUT_MS = Number(process.env.EV_CHARGER_FETCH_TIMEOUT_MS) || 60_000;
 
 /**
  * API raw item 타입
@@ -251,7 +255,7 @@ export async function fetchEvChargerPage(
     try {
       // 타임아웃은 fetch에만 스코프 — 응답 수신 즉시 해제(백오프 대기와 분리).
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       let response: Response;
       try {
         response = await fetch(url, { signal: controller.signal });
