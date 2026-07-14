@@ -164,6 +164,8 @@ const statusInfo = computed<StatusInfo | null>(() => {
 
     case 'library': {
       const l = d as LibraryDetails
+      const hasAnyHours = !!(l.weekdayOpenTime || l.saturdayOpenTime || l.holidayOpenTime)
+      if (!hasAnyHours) return { isOpen: false, unknown: true, description: '운영시간 정보 없음' }
       if (dayOfWeek === 0) {
         return checkTimeRange(l.holidayOpenTime, l.holidayCloseTime, currentTime)
           ?? { isOpen: false, description: '오늘 휴관' }
@@ -174,7 +176,7 @@ const statusInfo = computed<StatusInfo | null>(() => {
           ?? { isOpen: false, description: '오늘 휴관' }
       }
       return checkTimeRange(l.weekdayOpenTime, l.weekdayCloseTime, currentTime)
-        ?? { isOpen: false, description: '운영시간 정보 없음' }
+        ?? { isOpen: false, unknown: true, description: '운영시간 정보 없음' }
     }
 
     case 'parking':
