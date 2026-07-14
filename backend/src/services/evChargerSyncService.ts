@@ -1,4 +1,4 @@
-import { KOREA_BOUNDS } from '../constants/index.js';
+import { KOREA_BOUNDS, SYNC } from '../constants/index.js';
 import { CITY_NAME_MAP } from './csvParser.js';
 import {
   type SyncStats,
@@ -243,29 +243,55 @@ export async function fetchEvChargerPage(
   });
 
   const url = `${EV_CHARGER_API_URL}?${params.toString()}`;
-  const response = await fetch(url);
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  // 전체 ~52페이지 페이지네이션 중 상류 API의 일시적 5xx(502 등)·네트워크·타임아웃으로
+  // sync 전체가 중단되지 않도록 지수 백오프 재시도. (page당 최대 SYNC.MAX_RETRIES회)
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= SYNC.MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const json = await response.json() as {
+        items?: { item?: EvChargerAPIItem | EvChargerAPIItem[] };
+        totalCount?: number | string;
+      };
+
+      const totalCount = parseInt(String(json?.totalCount ?? '0'), 10) || 0;
+
+      let rawItems = json?.items?.item;
+      if (!rawItems) {
+        return { items: [], totalCount };
+      }
+
+      if (!Array.isArray(rawItems)) {
+        rawItems = [rawItems];
+      }
+
+      return { items: rawItems as EvChargerAPIItem[], totalCount };
+    } catch (error) {
+      lastError = error;
+      if (attempt < SYNC.MAX_RETRIES) {
+        const backoff = SYNC.RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+        console.warn(
+          `ev-charger page ${pageNo} fetch 실패 (attempt ${attempt}/${SYNC.MAX_RETRIES}): ` +
+            `${error instanceof Error ? error.message : String(error)} — ${backoff}ms 후 재시도`
+        );
+        await new Promise((resolve) => setTimeout(resolve, backoff));
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
-  const json = await response.json() as {
-    items?: { item?: EvChargerAPIItem | EvChargerAPIItem[] };
-    totalCount?: number | string;
-  };
-
-  const totalCount = parseInt(String(json?.totalCount ?? '0'), 10) || 0;
-
-  let rawItems = json?.items?.item;
-  if (!rawItems) {
-    return { items: [], totalCount };
-  }
-
-  if (!Array.isArray(rawItems)) {
-    rawItems = [rawItems];
-  }
-
-  return { items: rawItems as EvChargerAPIItem[], totalCount };
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`ev-charger page ${pageNo} fetch 실패: ${String(lastError)}`);
 }
 
 /**
