@@ -29,6 +29,8 @@ import { syncLibrariesFromApi } from '../services/librarySyncService.js';
 import { syncHospitals } from './syncHospital.js';
 import { syncPharmacies } from './syncPharmacy.js';
 import { runMedicalEnrich } from './seedMedicalEnrich.js';
+import { runHospitalDetail } from './seedHospitalDetail.js';
+import { ensureLatestHiraFiles } from '../services/hiraFileDownloader.js';
 import { syncChildcare } from '../services/childcareSyncService.js';
 import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
@@ -68,7 +70,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
+const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'hira-file', 'hospital-detail', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -142,6 +144,25 @@ async function syncCategory(category: Category): Promise<SyncResult> {
           category,
           success: true,
           count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'hira-file': {
+        const result = await ensureLatestHiraFiles();
+        return {
+          category,
+          success: true,
+          count: result.updated ? 1 : 0,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'hospital-detail': {
+        await runHospitalDetail();
+        return {
+          category,
+          success: true,
           duration: Date.now() - start,
         };
       }
