@@ -580,7 +580,7 @@ const hospitalDeptBadges = computed(() => {
 })
 
 const hospitalEquipRows = computed(() => {
-  const eq = details.value?.equipment as Array<{ eqpCdNm: string; eqpCnt?: number | null }> | undefined
+  const eq = details.value?.equipment
   return (eq || []).map(e => ({
     label: e.eqpCdNm,
     value: e.eqpCnt != null ? `${e.eqpCnt}대` : '보유',

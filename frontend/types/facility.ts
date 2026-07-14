@@ -261,6 +261,7 @@ export interface HospitalDetails {
   sterileBeds?: number | null
   specialtyField?: string | null
   departments?: HospitalDepartment[]
+  equipment?: { eqpCdNm: string; eqpCnt: number | null }[]
 }
 
 export interface PharmacyDetails {

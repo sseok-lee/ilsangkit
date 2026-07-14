@@ -166,6 +166,11 @@ export async function downloadHiraZip(ref: HiraFileRef, cookie: string): Promise
 // entryName 디코딩이 이미 정확한 한글이다. 별도의 CP949/EUC-KR 디코딩은 하지
 // 않는다 — 실증되지 않은 포맷 변경을 미리 가정하는 추측성 분기이며, 향후 HIRA가
 // 실제로 레거시 인코딩 zip을 배포하면 그때 그라운드 트루스로 대응한다.
+// 엔트리는 파일 단위로 비원자적(non-atomic)으로 기록된다 — 도중에 프로세스가 죽으면
+// destDir에 일부 파일만 갱신된 상태로 남을 수 있다. 그래도 self-heal된다: 마커
+// (.hira_filesno)는 extractZipToDir 전체가 끝난 뒤 ensureLatestHiraFiles에서만 갱신되므로,
+// 부분 전개 상태에서 재실행되면 마커가 여전히 이전 값이라 "새 분기"로 인식해 처음부터
+// 다시 다운로드·전개한다.
 export function extractZipToDir(zip: Buffer, destDir: string): string[] {
   fs.mkdirSync(destDir, { recursive: true });
   const admzip = new AdmZip(zip);
