@@ -248,10 +248,16 @@ export async function fetchEvChargerPage(
   // sync 전체가 중단되지 않도록 지수 백오프 재시도. (page당 최대 SYNC.MAX_RETRIES회)
   let lastError: unknown;
   for (let attempt = 1; attempt <= SYNC.MAX_RETRIES; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
-      const response = await fetch(url, { signal: controller.signal });
+      // 타임아웃은 fetch에만 스코프 — 응답 수신 즉시 해제(백오프 대기와 분리).
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      let response: Response;
+      try {
+        response = await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
@@ -284,8 +290,6 @@ export async function fetchEvChargerPage(
         );
         await new Promise((resolve) => setTimeout(resolve, backoff));
       }
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 

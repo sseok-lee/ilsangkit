@@ -258,6 +258,32 @@ describe('fetchEvChargerPage 재시도 (일시적 상류 오류 복원력)', () 
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it('30s 내 응답이 없으면 abort하고 재시도한다 (signal 전달 + 타임아웃 배선 검증)', async () => {
+    let calls = 0;
+    const fetchMock = vi.fn((_url: string, opts: { signal: AbortSignal }) => {
+      calls += 1;
+      if (calls === 1) {
+        // 첫 시도: 응답 없이 매달림 → 30s 타임아웃의 abort로만 reject됨
+        return new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () =>
+            reject(Object.assign(new Error('The operation was aborted'), { name: 'AbortError' })));
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ totalCount: 1, items: { item: [{ statId: 'X', chgerId: '01' }] } }),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const p = fetchEvChargerPage(1, 10);
+    await vi.runAllTimersAsync();
+    const res = await p;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2); // 타임아웃 abort → 재시도 → 성공
+    expect(res.totalCount).toBe(1);
+  });
+
   it('단일 item(비배열)도 배열로 정규화한다', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
