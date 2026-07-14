@@ -60,6 +60,15 @@ const DEPT_COLUMN_MAP: Record<string, string> = {
   '과목별 전문의수': 'dgsbjtPrSdrCnt',
 };
 
+// 의료장비정보 시트/컬럼 매핑
+const EQUIP_SHEET_NAMES = ['medicInsttDetailInfo_05', '의료장비정보'];
+const EQUIP_COLUMN_MAP: Record<string, string> = {
+  '암호화요양기호': 'ykiho',
+  '장비코드': 'eqpCd',
+  '장비코드명': 'eqpCdNm',
+  '장비대수': 'eqpCnt',
+};
+
 // ============================================
 // 유틸리티
 // ============================================
@@ -326,6 +335,71 @@ async function seedDepartments(workbook: ExcelJS.Workbook, ykihoMap: Map<string,
 }
 
 // ============================================
+// 의료장비 시딩
+// ============================================
+
+export interface EquipmentRecord {
+  hospitalId: string;
+  eqpCd: string;
+  eqpCdNm: string;
+  eqpCnt: number | null;
+}
+
+/**
+ * 의료장비 시트 → (hospitalId, eqpCd) 레코드 매핑 (순수 함수)
+ */
+export function mapEquipmentRows(sheet: ExcelJS.Worksheet, ykihoMap: Map<string, string>): EquipmentRecord[] {
+  const mapping = buildColumnMapping(sheet, EQUIP_COLUMN_MAP);
+  if (!mapping.size) return [];
+  const out: EquipmentRecord[] = [];
+  const totalRows = sheet.rowCount;
+  for (let i = 2; i <= totalRows; i++) {
+    const obj = rowToObject(sheet.getRow(i), mapping);
+    const ykiho = safeString(obj.ykiho);
+    if (!ykiho) continue;
+    const hospitalId = ykihoMap.get(ykiho);
+    if (!hospitalId) continue;
+    const eqpCd = safeString(obj.eqpCd);
+    const eqpCdNm = safeString(obj.eqpCdNm);
+    if (!eqpCd || !eqpCdNm) continue;
+    out.push({ hospitalId, eqpCd, eqpCdNm, eqpCnt: safeInt(obj.eqpCnt) });
+  }
+  return out;
+}
+
+async function seedEquipment(workbook: ExcelJS.Workbook, ykihoMap: Map<string, string>): Promise<number> {
+  const sheet = findSheet(workbook, EQUIP_SHEET_NAMES);
+  if (!sheet) {
+    console.log('의료장비 시트를 찾을 수 없습니다. 사용 가능한 시트:', workbook.worksheets.map(w => w.name).join(', '));
+    return 0;
+  }
+
+  console.log(`의료장비 시트 발견: "${sheet.name}" (${sheet.rowCount}행)`);
+
+  const recs = mapEquipmentRows(sheet, ykihoMap);
+  const BATCH_SIZE = SYNC.BATCH_SIZE;
+  let upserted = 0;
+  for (let i = 0; i < recs.length; i += BATCH_SIZE) {
+    const batch = recs.slice(i, i + BATCH_SIZE);
+    await prisma.$transaction(
+      batch.map((r) =>
+        prisma.hospitalEquipment.upsert({
+          where: { hospitalId_eqpCd: { hospitalId: r.hospitalId, eqpCd: r.eqpCd } },
+          create: r,
+          update: { eqpCdNm: r.eqpCdNm, eqpCnt: r.eqpCnt },
+        })
+      )
+    );
+    upserted += batch.length;
+    if (upserted % 10000 === 0) {
+      console.log(`의료장비: ${upserted}건 upsert`);
+    }
+  }
+  console.log(`의료장비 완료: ${upserted}건 upsert`);
+  return upserted;
+}
+
+// ============================================
 // 메인
 // ============================================
 
@@ -375,6 +449,9 @@ export async function runHospitalDetail(): Promise<void> {
   const deptFile =
     xlsxFiles.find(f => path.basename(f).normalize('NFC').includes('진료과목'))
     || xlsxFiles.find(f => /(^|\/)5\./.test(path.basename(f)));
+  const equipFile =
+    xlsxFiles.find(f => path.basename(f).normalize('NFC').includes('의료장비'))
+    || xlsxFiles.find(f => /(^|\/)7\./.test(path.basename(f)));
 
   if (!detailFile && !deptFile) {
     console.error('세부정보 또는 진료과목 파일을 찾을 수 없습니다.');
@@ -391,6 +468,7 @@ export async function runHospitalDetail(): Promise<void> {
 
   let totalDetailUpdated = 0;
   let totalDeptUpserted = 0;
+  let totalEquipUpserted = 0;
 
   // 세부정보 시딩
   if (detailFile) {
@@ -414,9 +492,21 @@ export async function runHospitalDetail(): Promise<void> {
     console.log('\n진료과목 파일을 찾지 못했습니다. 스킵합니다.');
   }
 
+  // 의료장비 시딩
+  if (equipFile) {
+    console.log(`\n의료장비 파일 처리 중: ${path.basename(equipFile)}`);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(equipFile);
+    console.log('시트 목록:', workbook.worksheets.map(w => `"${w.name}" (${w.rowCount}행)`).join(', '));
+    totalEquipUpserted = await seedEquipment(workbook, ykihoMap);
+  } else {
+    console.log('\n의료장비 파일을 찾지 못했습니다. 스킵합니다.');
+  }
+
   console.log('\n=== 시딩 완료 ===');
   console.log(`세부정보 업데이트: ${totalDetailUpdated}건`);
   console.log(`진료과목 upsert: ${totalDeptUpserted}건`);
+  console.log(`의료장비 upsert: ${totalEquipUpserted}건`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
