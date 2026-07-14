@@ -50,6 +50,7 @@ export interface RealEstateUrlParts {
  * 2026-07-01 전남광주통합특별시: 신설명은 광주+전남을 모두 포함해 city명만으론 slug를 못 가른다.
  * district로 disambiguate — 광주 5개 자치구면 gwangju, 그 외(전남 시·군)면 jeonnam.
  * 그 외 도시는 기존 toCitySlug 그대로. (frontend utils/realEstateUrl.ts와 동일 로직 유지)
+ * 참고: bjdCode 기반 동일 판정은 services/cityMapping.ts의 GWANGJU_GU_BJD/resolveCitySlug — 셋 다 동기화 유지.
  */
 const MERGED_JNGJ_CITY = '전남광주통합특별시';
 const GWANGJU_GU_NAMES = new Set(['동구', '서구', '남구', '북구', '광산구']);
