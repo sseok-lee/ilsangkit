@@ -52,6 +52,27 @@ export const FULL_TO_SLUG = Object.fromEntries(
 );
 
 /**
+ * 2026-07-01 전남광주통합특별시(bjdCode 접두 '12') 하위 광주 5개 자치구 코드.
+ * 통합시 데이터를 기존 gwangju slug로 되돌리는 집합. 그 외 '12###'는 jeonnam.
+ */
+export const GWANGJU_GU_BJD = new Set(['12210', '12240', '12270', '12300', '12330']);
+
+/**
+ * bjdCode + city명 → 사이트 안정 citySlug + 표시 라벨(short).
+ * 통합시(코드12)는 이름이 하나라 bjdCode로 광주/전남 disambiguate.
+ * bjdCode가 없으면(테스트/구데이터) city명 기반으로 폴백.
+ */
+export function resolveCitySlug(bjdCode: string, city: string): { citySlug: string; cityLabel: string } {
+  if (bjdCode && bjdCode.startsWith('12')) {
+    return GWANGJU_GU_BJD.has(bjdCode)
+      ? { citySlug: 'gwangju', cityLabel: '광주' }
+      : { citySlug: 'jeonnam', cityLabel: '전남' };
+  }
+  const slug = SHORT_TO_SLUG[city] || FULL_TO_SLUG[city] || '';
+  return { citySlug: slug, cityLabel: CITY_SLUG_TO_SHORT[slug] || city };
+}
+
+/**
  * city의 축약/정식 variant 목록 (raw SQL `IN (?)` 용).
  * buildRegionFilter와 동일 로직 — Prisma where가 아닌 배열 형태가 필요할 때 사용.
  */
@@ -72,6 +93,12 @@ export function buildRegionFilter(city?: string, district?: string): Record<stri
     const slug = SHORT_TO_SLUG[city] || FULL_TO_SLUG[city];
     if (slug) {
       const variants = new Set([city, CITY_SLUG_TO_FULL[slug], CITY_SLUG_TO_SHORT[slug]].filter(Boolean));
+      // 2026 통합: 광주/전남 데이터가 신설명(전남광주통합특별시·코드12)으로 유입됨.
+      // district 지정 시에만 통합명을 변형에 추가 — 구명이 광주/전남 간 겹치지 않아 안전.
+      // (district 없는 city-hub 질의에 넣으면 27구 전체를 끌어와 오버매칭 → 제외.)
+      if ((slug === 'gwangju' || slug === 'jeonnam') && district) {
+        variants.add('전남광주통합특별시');
+      }
       filter.city = variants.size > 1 ? { in: [...variants] } : city;
     } else {
       filter.city = city;

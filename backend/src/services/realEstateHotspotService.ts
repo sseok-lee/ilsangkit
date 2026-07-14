@@ -4,7 +4,7 @@ import type {
   HotspotRegion, HotspotBundle, WolseHotspotBundle, PropertyHotspots,
 } from '../types/homeDashboard.js';
 import type { RealEstatePropertyType } from '../schemas/realEstate.js';
-import { FULL_TO_SLUG, SHORT_TO_SLUG } from './cityMapping.js';
+import { resolveCitySlug } from './cityMapping.js';
 
 const MAX_PER_SIGNAL = 5;
 
@@ -17,6 +17,7 @@ const SAMPLE_THRESHOLD: Record<RealEstatePropertyType, number> = {
 // Prisma raw query에서 Decimal 컬럼은 string으로 직렬화될 수 있어 명시적 변환 필요
 type RawPricedRow = {
   city: string;
+  bjdCode: string;
   districtSlug: string;
   district: string;
   pricePerPyeong: number | string | null;
@@ -25,27 +26,46 @@ type RawPricedRow = {
   volumeChangePct: number | string | null;
 };
 
-function cityToSlug(city: string): string {
-  return FULL_TO_SLUG[city] ?? SHORT_TO_SLUG[city] ?? '';
-}
-
 function toNumberOrNull(v: number | string | null | undefined): number | null {
   if (v === null || v === undefined) return null;
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
 
-function normalizeRow(r: RawPricedRow): HotspotRegion {
-  return {
-    citySlug: cityToSlug(r.city),
-    city: r.city,
-    districtSlug: r.districtSlug,
-    district: r.district,
-    pricePerPyeong: toNumberOrNull(r.pricePerPyeong),
-    txnCount: Number(r.txnCount),
-    changePct: toNumberOrNull(r.changePct),
-    volumeChangePct: toNumberOrNull(r.volumeChangePct),
-  };
+/**
+ * URL 생성 가능 여부: citySlug가 있고 districtSlug가 ASCII(로마자)인지.
+ * 2026 행정개편 등으로 미매핑 도시(citySlug='')·미로마자 구(한글 slug)는 404 URL이 되므로 제외.
+ */
+function isRoutable(citySlug: string, districtSlug: string): boolean {
+  // 유효 slug는 소문자 영숫자+하이픈. 한글 원문 slug(로마자화 안 됨)는 여기서 배제된다.
+  return !!citySlug && /^[a-z0-9-]+$/.test(districtSlug || '');
+}
+
+/**
+ * 매매/전세 행 정규화 + 방어 가드.
+ * bjdCode로 통합시(전남광주통합특별시·코드12)를 기존 gwangju/jeonnam slug·라벨로 되돌린다.
+ * 라우팅 불가 행(미매핑 도시·한글 구 slug)은 404 방지를 위해 제외하고 로그를 남긴다.
+ */
+export function normalizeAndGuard(rows: RawPricedRow[]): HotspotRegion[] {
+  const out: HotspotRegion[] = [];
+  for (const r of rows) {
+    const { citySlug, cityLabel } = resolveCitySlug(r.bjdCode, r.city);
+    if (!isRoutable(citySlug, r.districtSlug)) {
+      console.warn(`[hotspot] skip unroutable region: ${r.city} ${r.district} (${r.bjdCode})`);
+      continue;
+    }
+    out.push({
+      citySlug,
+      city: cityLabel,
+      districtSlug: r.districtSlug,
+      district: r.district,
+      pricePerPyeong: toNumberOrNull(r.pricePerPyeong),
+      txnCount: Number(r.txnCount),
+      changePct: toNumberOrNull(r.changePct),
+      volumeChangePct: toNumberOrNull(r.volumeChangePct),
+    });
+  }
+  return out;
 }
 
 type PricedSliceTable =
@@ -113,6 +133,7 @@ export async function getPricedSliceHotspots(
     )
     SELECT
       r.city AS city,
+      reg.bjdCode AS bjdCode,
       reg.slug AS districtSlug,
       r.district AS district,
       r.pricePerPyeong AS pricePerPyeong,
@@ -128,7 +149,7 @@ export async function getPricedSliceHotspots(
     INNER JOIN Region reg ON reg.city = r.city AND reg.district = r.district
   `;
 
-  const all = rows.map(normalizeRow);
+  const all = normalizeAndGuard(rows);
 
   return {
     rising: all
@@ -150,6 +171,7 @@ type WolseTable = 'AptRentTransaction' | 'VillaRentTransaction' | 'OffitelRentTr
 
 type RawWolseRow = {
   city: string;
+  bjdCode: string;
   districtSlug: string;
   district: string;
   txnCount: bigint | number | string;
@@ -196,6 +218,7 @@ export async function getWolseHotspots(
     )
     SELECT
       r.city AS city,
+      reg.bjdCode AS bjdCode,
       reg.slug AS districtSlug,
       r.district AS district,
       r.txnCount AS txnCount,
@@ -208,17 +231,24 @@ export async function getWolseHotspots(
   `;
 
   const active: HotspotRegion[] = rows
-    .map((r) => ({
-      citySlug: cityToSlug(r.city),
-      city: r.city,
-      districtSlug: r.districtSlug,
-      district: r.district,
-      pricePerPyeong: null,
-      txnCount: Number(r.txnCount),
-      changePct: null,
-      volumeChangePct: toNumberOrNull(r.volumeChangePct),
-    }))
-    .filter((r) => r.volumeChangePct !== null && r.volumeChangePct > 0)
+    .map((r): HotspotRegion | null => {
+      const { citySlug, cityLabel } = resolveCitySlug(r.bjdCode, r.city);
+      if (!isRoutable(citySlug, r.districtSlug)) {
+        console.warn(`[hotspot] skip unroutable region: ${r.city} ${r.district} (${r.bjdCode})`);
+        return null;
+      }
+      return {
+        citySlug,
+        city: cityLabel,
+        districtSlug: r.districtSlug,
+        district: r.district,
+        pricePerPyeong: null,
+        txnCount: Number(r.txnCount),
+        changePct: null,
+        volumeChangePct: toNumberOrNull(r.volumeChangePct),
+      };
+    })
+    .filter((r): r is HotspotRegion => r !== null && r.volumeChangePct !== null && r.volumeChangePct > 0)
     .sort((a, b) => (b.volumeChangePct as number) - (a.volumeChangePct as number))
     .slice(0, MAX_PER_SIGNAL);
 

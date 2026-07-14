@@ -69,6 +69,8 @@ export const DISTRICT_SLUG_MAP: Record<string, string> = {
   // 인천
   미추홀구: 'michuhol', 연수구: 'yeonsu', 남동구: 'namdong', 부평구: 'bupyeong', 계양구: 'gyeyang',
   강화군: 'ganghwa', 옹진군: 'ongjin',
+  // 인천 2026-07-01 신설(2군9구). 중구/동구/서구는 generic 재활용.
+  제물포구: 'jemulpo', 영종구: 'yeongjong', 서해구: 'seohae', 검단구: 'geomdan',
   // 광주
   광산구: 'gwangsan',
   // 대전

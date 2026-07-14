@@ -9,7 +9,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   default: { $queryRaw: mockQueryRaw },
 }));
 
-import { getPricedSliceHotspots, getWolseHotspots, getPropertyHotspots, _hotspotCache } from '../../src/services/realEstateHotspotService.js';
+import { getPricedSliceHotspots, getWolseHotspots, getPropertyHotspots, _hotspotCache, normalizeAndGuard } from '../../src/services/realEstateHotspotService.js';
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
@@ -48,8 +48,8 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
 
   it('각 시그널 최대 5개로 자름', async () => {
     const rows = Array.from({ length: 10 }, (_, i) => ({
-      citySlug: `city-${i}`,
-      city: `시-${i}`,
+      city: '서울',
+      bjdCode: '11110',
       districtSlug: `dist-${i}`,
       district: `구-${i}`,
       pricePerPyeong: 5000 + i,
@@ -123,7 +123,7 @@ describe('getWolseHotspots', () => {
 
   it('volumeChangePct DESC 정렬 + 최대 5개', async () => {
     const rows = Array.from({ length: 8 }, (_, i) => ({
-      citySlug: `c-${i}`, city: `시-${i}`, districtSlug: `d-${i}`, district: `구-${i}`,
+      city: '서울', bjdCode: '11110', districtSlug: `d-${i}`, district: `구-${i}`,
       txnCount: 100n, volumeChangePct: 10 - i,
     }));
     mockQueryRaw.mockResolvedValue(rows);
@@ -132,6 +132,64 @@ describe('getWolseHotspots', () => {
 
     expect(bundle.active).toHaveLength(5);
     expect(bundle.active.map((r) => r.volumeChangePct)).toEqual([10, 9, 8, 7, 6]);
+  });
+
+  it('한글 districtSlug 행은 active에서 제외 (방어 가드)', async () => {
+    mockQueryRaw.mockResolvedValue([
+      { city: '인천', bjdCode: '28275', districtSlug: '서해구', district: '서해구', txnCount: 67n, volumeChangePct: 71 },
+      { city: '서울', bjdCode: '11110', districtSlug: 'gangnam-gu', district: '강남구', txnCount: 50n, volumeChangePct: 10 },
+    ]);
+    const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
+    expect(bundle.active).toHaveLength(1);
+    expect(bundle.active[0].district).toBe('강남구');
+  });
+});
+
+describe('normalizeAndGuard (통합시 되돌림 + 방어 가드)', () => {
+  it('통합시 광주 자치구(코드12)를 gwangju/광주로 되돌림', () => {
+    const out = normalizeAndGuard([
+      { city: '전남광주통합특별시', bjdCode: '12240', districtSlug: 'seo', district: '서구',
+        pricePerPyeong: 1500, txnCount: 88n, changePct: 12, volumeChangePct: 50 },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].citySlug).toBe('gwangju');
+    expect(out[0].city).toBe('광주');
+    expect(out[0].districtSlug).toBe('seo');
+  });
+
+  it('통합시 전남 시·군(코드12)을 jeonnam/전남으로 되돌림', () => {
+    const out = normalizeAndGuard([
+      { city: '전남광주통합특별시', bjdCode: '12130', districtSlug: 'yeosu', district: '여수시',
+        pricePerPyeong: 1000, txnCount: 40n, changePct: 5, volumeChangePct: 10 },
+    ]);
+    expect(out[0].citySlug).toBe('jeonnam');
+    expect(out[0].city).toBe('전남');
+  });
+
+  it('districtSlug가 한글(미로마자)인 행은 제외 (404 방지)', () => {
+    const out = normalizeAndGuard([
+      { city: '인천', bjdCode: '28275', districtSlug: '서해구', district: '서해구',
+        pricePerPyeong: 1687, txnCount: 67n, changePct: -11, volumeChangePct: 71 },
+    ]);
+    expect(out).toHaveLength(0);
+  });
+
+  it('citySlug를 못 구하는 행(미매핑 도시)은 제외', () => {
+    const out = normalizeAndGuard([
+      { city: '없는시', bjdCode: '99999', districtSlug: 'foo', district: '없는구',
+        pricePerPyeong: 1000, txnCount: 40n, changePct: 5, volumeChangePct: 10 },
+    ]);
+    expect(out).toHaveLength(0);
+  });
+
+  it('정상 행은 유지 + citySlug 계산', () => {
+    const out = normalizeAndGuard([
+      { city: '충남', bjdCode: '44200', districtSlug: 'asan', district: '아산시',
+        pricePerPyeong: 1384, txnCount: 65n, changePct: 24, volumeChangePct: -27 },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].citySlug).toBe('chungnam');
+    expect(out[0].city).toBe('충남');
   });
 });
 

@@ -166,6 +166,11 @@ const KOREAN_TO_ROMANIZATION: Record<string, string> = {
   계양구: 'gyeyang',
   옹진군: 'ongjin',
   강화군: 'ganghwa',
+  // 인천 2026-07-01 신설(2군9구 개편). 중구/동구/서구는 generic(jung/dong/seo) 재활용.
+  제물포구: 'jemulpo',
+  영종구: 'yeongjong',
+  서해구: 'seohae',
+  검단구: 'geomdan',
 
   // 광주
   광산구: 'gwangsan',
