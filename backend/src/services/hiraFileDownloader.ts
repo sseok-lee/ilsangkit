@@ -199,33 +199,27 @@ const PORTAL_URL = 'https://opendata.hira.or.kr/op/opc/selectOpenData.do?sno=119
 // throw됨) 및 손상/빈 응답을 잡아내는 안전망 역할을 한다.
 const MIN_ZIP_BYTES = 10_000_000;
 
-function readMarker(): string | null {
+// 활성 데이터 디렉터리를 호출 시점에 해석한다(모듈 로드 시점 아님) — 테스트가
+// ensureLatestHiraFiles 호출 전에 HIRA_DATA_DIR을 설정해 실 마커 파일을
+// 건드리지 않고 임시 디렉터리로 격리할 수 있도록. 환경변수 미설정 시(운영
+// 기본 경로) 동작은 기존과 동일하다.
+function resolveDataDir(): string {
+  return process.env.HIRA_DATA_DIR || DATA_DIR;
+}
+
+function readMarker(dir: string): string | null {
   try {
-    return fs.readFileSync(MARKER_PATH, 'utf-8').trim();
+    return fs.readFileSync(path.join(dir, '.hira_filesno'), 'utf-8').trim();
   } catch {
     return null;
   }
 }
 
-// Node 20 undici는 여러 Set-Cookie 헤더를 getSetCookie()로 배열 그대로 제공한다
-// (Headers.get('set-cookie')는 콤마로 뭉쳐 파싱이 불안정해질 수 있음). 있으면
-// 우선 사용하고, 없으면(구버전 폴리필 등) get('set-cookie') 파싱으로 폴백한다.
+// Node 20(undici)은 항상 getSetCookie()를 제공하므로(런타임 고정, Node 20)
+// 콤마 분할 폴백은 불필요 — YAGNI로 제거.
 function extractCookie(headers: Headers): string {
-  const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
-  const rawCookies =
-    typeof getSetCookie === 'function' ? getSetCookie.call(headers) : null;
-
-  if (rawCookies && rawCookies.length > 0) {
-    return rawCookies
-      .map((c) => c.split(';')[0].trim())
-      .filter(Boolean)
-      .join('; ');
-  }
-
-  // 폴백: 단일 문자열로 뭉쳐진 set-cookie 헤더를 "다음 key=value 직전"에서 분리
-  const combined = headers.get('set-cookie') || '';
-  return combined
-    .split(/,(?=\s*[\w-]+=)/)
+  const rawCookies = headers.getSetCookie();
+  return rawCookies
     .map((c) => c.split(';')[0].trim())
     .filter(Boolean)
     .join('; ');
@@ -241,8 +235,10 @@ export async function ensureLatestHiraFiles(): Promise<{ updated: boolean; fileS
   const ref = scrapeLatestFile(html);
   if (!ref) throw new Error('HIRA 포털에서 다운로드 파일을 찾지 못했습니다.');
 
+  const dir = resolveDataDir();
+
   // 2) 신선도 게이트 — 마커의 fileSno가 최신과 같으면 다운로드 없이 스킵
-  if (readMarker() === ref.fileSno) {
+  if (readMarker(dir) === ref.fileSno) {
     console.info(`[HIRA] 최신 파일(${ref.fileSno}) 이미 반영됨 — 스킵`);
     return { updated: false, fileSno: ref.fileSno };
   }
@@ -253,10 +249,10 @@ export async function ensureLatestHiraFiles(): Promise<{ updated: boolean; fileS
   if (zip.length < MIN_ZIP_BYTES) {
     throw new Error(`HIRA zip too small: ${zip.length} bytes (min ${MIN_ZIP_BYTES})`);
   }
-  const names = extractZipToDir(zip, DATA_DIR);
+  const names = extractZipToDir(zip, dir);
   console.info(`[HIRA] 전개 완료: ${names.length}개 파일`);
 
   // 4) 성공 후에만 마커 갱신 (실패 시 기존 파일·마커 그대로 유지 — fail-soft 무결성)
-  fs.writeFileSync(MARKER_PATH, ref.fileSno);
+  fs.writeFileSync(path.join(dir, '.hira_filesno'), ref.fileSno);
   return { updated: true, fileSno: ref.fileSno };
 }

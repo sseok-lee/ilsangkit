@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -10,7 +10,6 @@ import {
   downloadHiraZip,
   extractZipToDir,
   ensureLatestHiraFiles,
-  MARKER_PATH,
 } from '../../src/services/hiraFileDownloader.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -115,22 +114,24 @@ describe('extractZipToDir', () => {
 });
 
 describe('ensureLatestHiraFiles freshness gate', () => {
-  const originalMarker = fs.existsSync(MARKER_PATH) ? fs.readFileSync(MARKER_PATH, 'utf-8') : null;
+  // 실 backend/prisma/data/extra_hospital_latest/.hira_filesno는 절대 건드리지 않는다 —
+  // ensureLatestHiraFiles가 HIRA_DATA_DIR 환경변수(process.env, 호출 시점에 읽음)를
+  // 우선 사용하도록 되어 있으므로, 테스트 전용 임시 디렉터리로 완전히 격리한다.
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hira-marker-test-'));
+    process.env.HIRA_DATA_DIR = tmpDir;
+  });
 
   afterEach(() => {
-    // 이 describe가 실 DATA_DIR/.hira_filesno(MARKER_PATH)에 직접 쓰므로,
-    // 테스트가 끝나면 실행 전 상태로 복원해 다른 테스트·라이브 스모크를 오염시키지 않는다.
-    if (originalMarker === null) {
-      fs.rmSync(MARKER_PATH, { force: true });
-    } else {
-      fs.writeFileSync(MARKER_PATH, originalMarker);
-    }
+    delete process.env.HIRA_DATA_DIR;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
   it('마커 fileSno와 최신이 같으면 다운로드 없이 updated:false', async () => {
-    // 픽스처(2026-07-14 캡처)의 최신 fileSno=326801을 마커에도 기록해 게이트를 태운다.
-    fs.mkdirSync(path.dirname(MARKER_PATH), { recursive: true });
-    fs.writeFileSync(MARKER_PATH, '326801');
+    // 픽스처(2026-07-14 캡처)의 최신 fileSno=326801을 임시 디렉터리 마커에 기록해 게이트를 태운다.
+    fs.writeFileSync(path.join(tmpDir, '.hira_filesno'), '326801');
 
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
