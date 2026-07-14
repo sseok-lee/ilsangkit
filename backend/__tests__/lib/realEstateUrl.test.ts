@@ -139,3 +139,25 @@ describe('toAbsoluteRealEstateUrl', () => {
     );
   });
 });
+
+describe('전남광주통합특별시 disambiguate (backend, 사이트맵/IndexNow)', () => {
+  it('광주 자치구는 gwangju로', () => {
+    expect(toRealEstateUrl({ type: 'apt-sale', city: '전남광주통합특별시', district: '광산구', buildingName: 'X' }))
+      .toBe(`/real-estate/apt-sale/gwangju/gwangsan/${encodeURIComponent('X')}`);
+  });
+
+  it('전남 시·군은 jeonnam으로', () => {
+    expect(toRealEstateUrl({ type: 'apt-sale', city: '전남광주통합특별시', district: '나주시', buildingName: '빛가람코오롱하늘채' }))
+      .toBe(`/real-estate/apt-sale/jeonnam/naju/${encodeURIComponent('빛가람코오롱하늘채')}`);
+    expect(toRealEstateListUrl({ type: 'apt-rent', city: '전남광주통합특별시', district: '여수시' }))
+      .toBe('/real-estate/apt-rent/jeonnam/yeosu');
+  });
+
+  it('절대 URL(사이트맵)에도 한글 slug를 남기지 않는다', () => {
+    const url = toAbsoluteRealEstateUrl('https://ilsangkit.co.kr', {
+      type: 'apt-sale', city: '전남광주통합특별시', district: '서구', buildingName: 'X',
+    });
+    expect(url).not.toContain('전남광주통합특별시');
+    expect(url).toContain('/gwangju/seo/');
+  });
+});

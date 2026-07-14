@@ -23,7 +23,7 @@ import {
   getSitemapFacilityLimit,
   isSitemapFacilityCategory,
 } from '../../utils/sitemapPolicy'
-import { toAbsoluteRealEstateUrl, toCitySlug, toDistrictSlug, type RealEstateUrlType } from '~/utils/realEstateUrl'
+import { toAbsoluteRealEstateUrl, toCitySlugByDistrict, toDistrictSlug, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { buildTrashRegionPath } from '~/shared/regionSlugs'
 
 // wifi는 noindex-only 상세 정책에 따라 사이트맵 인덱스에서 제외된 카테고리다.
@@ -162,7 +162,7 @@ export default defineEventHandler(async (event) => {
     const urls: Parameters<typeof generateSitemapXml>[0] = []
 
     for (const hub of hubs) {
-      const citySlug = toCitySlug(hub.city)
+      const citySlug = toCitySlugByDistrict(hub.city, hub.district)
       const districtSlug = toDistrictSlug(hub.district)
 
       const cityUrl = `${SITE_URL}/real-estate/${hub.realEstateType}/${citySlug}`
@@ -191,7 +191,7 @@ export default defineEventHandler(async (event) => {
     // city + district (always included)
     const seenCityUrls = new Set<string>()
     for (const { city, district } of cities) {
-      const citySlug = toCitySlug(city)
+      const citySlug = toCitySlugByDistrict(city, district)
       const districtSlug = toDistrictSlug(district)
       const cityUrl = `${SITE_URL}/real-estate/land/${citySlug}`
       if (!seenCityUrls.has(cityUrl)) {
@@ -204,7 +204,7 @@ export default defineEventHandler(async (event) => {
     // dong URLs — only isIndexable=true (quality gate)
     for (const { city, district, dongName } of indexableDongs) {
       urls.push({
-        loc: `${SITE_URL}/real-estate/land/${toCitySlug(city)}/${toDistrictSlug(district)}/${encodeURIComponent(dongName)}`,
+        loc: `${SITE_URL}/real-estate/land/${toCitySlugByDistrict(city, district)}/${toDistrictSlug(district)}/${encodeURIComponent(dongName)}`,
         lastmod: weekStart,
         changefreq: 'weekly',
         priority: 0.5,
@@ -228,7 +228,7 @@ export default defineEventHandler(async (event) => {
     const seenRegionUrls = new Set<string>()
     for (const region of regions) {
       if (!region.isIndexable) continue
-      const citySlug = toCitySlug(region.city)
+      const citySlug = toCitySlugByDistrict(region.city, region.district)
       const districtSlug = toDistrictSlug(region.district)
       const regionUrl = `${SITE_URL}/auction/${citySlug}/${districtSlug}`
       if (!seenRegionUrls.has(regionUrl)) {
