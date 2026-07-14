@@ -508,7 +508,9 @@ async function main(): Promise<void> {
     await refreshAllSummaries();
   }
 
-  console.log('\n모든 동기화가 성공적으로 완료되었습니다.');
+  if (failedResults.length === 0) {
+    console.log('\n모든 동기화가 성공적으로 완료되었습니다.');
+  }
 
   // 실패한 카테고리가 있었으면 IndexNow/요약 갱신을 모두 마친 뒤 이제 exit(1)로 반영한다.
   // (성공한 카테고리의 IndexNow 제출·부동산 요약 갱신을 건너뛰지 않기 위해 위쪽의
