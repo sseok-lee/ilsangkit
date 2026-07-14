@@ -329,7 +329,7 @@ async function seedDepartments(workbook: ExcelJS.Workbook, ykihoMap: Map<string,
 // 메인
 // ============================================
 
-async function main(): Promise<void> {
+export async function runHospitalDetail(): Promise<void> {
   // --file 인수로 특정 파일 지정 가능
   const fileArgIdx = process.argv.indexOf('--file');
   const fileArg = process.argv.find(a => a.startsWith('--file='))?.split('=')[1]
@@ -341,7 +341,7 @@ async function main(): Promise<void> {
     const filePath = path.resolve(fileArg);
     if (!fs.existsSync(filePath)) {
       console.error(`파일 없음: ${filePath}`);
-      process.exit(1);
+      throw new Error(`파일 없음: ${filePath}`);
     }
     xlsxFiles = [filePath];
   } else {
@@ -350,7 +350,7 @@ async function main(): Promise<void> {
       console.error(`데이터 디렉토리 없음: ${DATA_DIR}`);
       console.error('1. https://opendata.hira.or.kr/op/opc/selectOpenData.do?sno=11925 에서 zip 다운로드');
       console.error('2. zip 해제 후 xlsx 파일을 backend/data/ 에 배치');
-      process.exit(1);
+      throw new Error(`데이터 디렉토리 없음: ${DATA_DIR}`);
     }
 
     const allFiles = fs.readdirSync(DATA_DIR)
@@ -358,7 +358,7 @@ async function main(): Promise<void> {
 
     if (allFiles.length === 0) {
       console.error(`${DATA_DIR} 에 xlsx 파일이 없습니다.`);
-      process.exit(1);
+      throw new Error(`${DATA_DIR} 에 xlsx 파일이 없습니다.`);
     }
 
     xlsxFiles = allFiles.map(f => path.join(DATA_DIR, f));
@@ -369,20 +369,24 @@ async function main(): Promise<void> {
 
   // 파일명 패턴으로 세부정보/진료과목 파일 분류
   // macOS는 파일명을 NFD로 저장하므로 NFC 정규화 후 비교
-  const detailFile = xlsxFiles.find(f => path.basename(f).normalize('NFC').includes('세부정보'));
-  const deptFile = xlsxFiles.find(f => path.basename(f).normalize('NFC').includes('진료과목'));
+  const detailFile =
+    xlsxFiles.find(f => path.basename(f).normalize('NFC').includes('세부정보'))
+    || xlsxFiles.find(f => /(^|\/)4\./.test(path.basename(f)));
+  const deptFile =
+    xlsxFiles.find(f => path.basename(f).normalize('NFC').includes('진료과목'))
+    || xlsxFiles.find(f => /(^|\/)5\./.test(path.basename(f)));
 
   if (!detailFile && !deptFile) {
     console.error('세부정보 또는 진료과목 파일을 찾을 수 없습니다.');
     console.error('파일명에 "세부정보" 또는 "진료과목"이 포함되어야 합니다.');
-    process.exit(1);
+    throw new Error('세부정보 또는 진료과목 파일을 찾을 수 없습니다.');
   }
 
   // ykiho → Hospital ID 매핑
   const ykihoMap = await buildYkihoMap();
   if (ykihoMap.size === 0) {
     console.error('DB에 ykiho가 있는 병원이 없습니다. 먼저 npm run sync:facilities 로 병원 데이터를 동기화하세요.');
-    process.exit(1);
+    throw new Error('DB에 ykiho가 있는 병원이 없습니다.');
   }
 
   let totalDetailUpdated = 0;
@@ -415,12 +419,11 @@ async function main(): Promise<void> {
   console.log(`진료과목 upsert: ${totalDeptUpserted}건`);
 }
 
-main()
-  .then(() => {
-    console.log('완료');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('시딩 실패:', error);
-    process.exit(1);
-  });
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runHospitalDetail()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('시딩 실패:', error);
+      process.exit(1);
+    });
+}
