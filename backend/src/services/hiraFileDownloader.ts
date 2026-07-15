@@ -185,6 +185,22 @@ export function extractZipToDir(zip: Buffer, destDir: string): string[] {
   return written;
 }
 
+// 압축해제된 현재 분기 파일(keep) 외의 이전 분기 .xlsx/.xls 를 제거한다.
+// 파일명에 분기가 박혀 있어(예: '(2026.6.)') 새 분기 파일이 옛 파일을 덮어쓰지 않고
+// 쌓이며, 파서가 옛 분기 파일을 고를 수 있으므로 정리한다. 마커(.hira_filesno 등)·
+// 비-xlsx는 건드리지 않는다.
+export function pruneStaleXlsx(dir: string, keep: string[]): string[] {
+  const keepSet = new Set(keep);
+  const removed: string[] = [];
+  for (const f of fs.readdirSync(dir)) {
+    if ((f.endsWith('.xlsx') || f.endsWith('.xls')) && !keepSet.has(f)) {
+      fs.unlinkSync(path.join(dir, f));
+      removed.push(f);
+    }
+  }
+  return removed;
+}
+
 // ── ensureLatestHiraFiles 오케스트레이션 (Task A4) ──────────────────────
 //
 // 포털 GET(쿠키+HTML) → scrapeLatestFile → 신선도 게이트(마커=최신 fileSno면
@@ -256,6 +272,11 @@ export async function ensureLatestHiraFiles(): Promise<{ updated: boolean; fileS
   }
   const names = extractZipToDir(zip, dir);
   console.info(`[HIRA] 전개 완료: ${names.length}개 파일`);
+
+  const removed = pruneStaleXlsx(dir, names);
+  if (removed.length > 0) {
+    console.info(`[HIRA] 이전 분기 파일 ${removed.length}개 정리: ${removed.join(', ')}`);
+  }
 
   // 4) 성공 후에만 마커 갱신 (실패 시 기존 파일·마커 그대로 유지 — fail-soft 무결성)
   fs.writeFileSync(path.join(dir, '.hira_filesno'), ref.fileSno);
