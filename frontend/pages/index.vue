@@ -244,9 +244,7 @@
       </div>
     </section>
 
-    <!-- 쿠팡 배너 (데이터 출처 위) -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-      <CoupangBanner />
     </div>
 
     <!-- 데이터 출처 요약 -->
@@ -279,7 +277,6 @@ import { computed, ref } from 'vue'
 import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
 // heroAcRef typed as any to avoid circular InstanceType complexity in pages
 
-import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import HardLink from '~/components/common/HardLink.vue'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'

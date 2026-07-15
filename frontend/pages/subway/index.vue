@@ -144,8 +144,6 @@
         </div>
       </SectionBlock>
 
-      <!-- 쿠팡 배너 -->
-      <CoupangBanner />
 
       <!-- 데이터 출처 -->
       <DataSourceSection domain="facility" category="subway" />
@@ -161,7 +159,6 @@ import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
-import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'

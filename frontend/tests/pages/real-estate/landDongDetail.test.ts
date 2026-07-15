@@ -238,7 +238,6 @@ const globalStubs = {
   },
   SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
   AdBanner: { template: '<div class="stub-ad" />' },
-  CoupangBanner: { template: '<div class="stub-coupang" />' },
   Pagination: { template: '<div data-stub="pagination" />' },
   DataSourceSection: { template: '<div data-stub="datasource" />' },
 }
@@ -554,10 +553,9 @@ describe('real-estate/land/[city]/[district]/[dong].vue — 섹션 재배치(spe
     expect(parent.className).toContain('order-12')
   })
 
-  it('AdBanner는 정확히 3개, CoupangBanner는 1개다(광고 개수 불변)', async () => {
+  it('AdBanner는 정확히 3개다(광고 개수 불변)', async () => {
     const wrapper = await mountPage()
     expect(wrapper.findAll('.stub-ad')).toHaveLength(3)
-    expect(wrapper.findAll('.stub-coupang')).toHaveLength(1)
   })
 
   it('AdBanner②가 추이/분포 섹션과 전체거래 섹션 사이에 위치한다', async () => {
