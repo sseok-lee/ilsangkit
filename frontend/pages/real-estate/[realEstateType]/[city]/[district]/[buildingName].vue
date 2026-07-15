@@ -407,8 +407,6 @@
       <!-- 관련 가이드 -->
       <RelatedGuides class="order-12 md:order-12" :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
-      <!-- 쿠팡 배너 -->
-      <CoupangBanner class="order-12 md:order-12" />
 
       <!-- 데이터 출처 -->
       <!-- DataSourceSection은 멀티 루트 템플릿(compact/full v-if·v-else)이라 class fall-through가 안 됨 → order를 wrapper div에 부여 -->
