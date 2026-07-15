@@ -17,7 +17,7 @@
         class="adsbygoogle"
         :style="insStyle"
         :data-ad-client="AD_CLIENT"
-        :data-ad-slot="adSlot"
+        :data-ad-slot="effectiveAdSlot"
         :data-ad-format="effectiveAdFormat"
         :data-full-width-responsive="insFullWidthResponsive"
         :data-adtest="adTest"
@@ -25,6 +25,19 @@
     </ClientOnly>
   </div>
 </template>
+
+<script lang="ts">
+// 기기별 AdSense 광고 단위 — AdSense 는 광고 단위 단위로 최적화·리포팅한다.
+// 단위가 하나면 모바일(336×150)과 데스크톱(전폭 auto)이 같은 단위로 섞여
+// 구글도 학습을 못 하고 우리도 기기별 성과를 리포트에서 분리할 수 없다.
+// 실측(LAST_7_DAYS, In-page): 모바일 채움 93.7%·RPM 0.413 vs 데스크톱 76.1%·RPM 0.165.
+//
+// legacy `ilsangkit-display`(1878068382) 는 과거 리포트 보존을 위해 계정에 남겨두되
+// 코드에서는 더 이상 쓰지 않는다.
+// <script setup> 은 export 를 허용하지 않아 일반 <script> 블록에 둔다(테스트에서 import).
+export const AD_SLOT_MOBILE = '9920012184' // AdSense: ilsangkit-mobile
+export const AD_SLOT_DESKTOP = '8606930518' // AdSense: ilsangkit-desktop
+</script>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -42,6 +55,7 @@ const MIN_NAV_INTERVAL_MS = 1500
 let lastNavAt = 0
 
 const props = withDefaults(defineProps<{
+  /** 명시하면 기기별 단위 대신 이 슬롯을 쓴다. */
   adSlot?: string
   adFormat?: 'auto' | 'rectangle' | 'horizontal' | 'vertical'
   fullWidthResponsive?: 'true' | 'false'
@@ -50,7 +64,6 @@ const props = withDefaults(defineProps<{
   fixedHeight?: number
   variant?: 'default' | 'compact-mobile'
 }>(), {
-  adSlot: '1878068382',
   adFormat: 'auto',
   fullWidthResponsive: 'true',
   sizing: 'min',
@@ -89,6 +102,13 @@ const effectiveAdFormat = computed(() =>
   isCompactMobileActive.value && props.adFormat === 'auto'
     ? 'horizontal'
     : props.adFormat
+)
+
+// 기기별 광고 단위. adSlot 을 명시하면 그쪽이 우선한다.
+// isDesktopViewport 는 onMounted 의 matchMedia 로 확정되고, <ins> 는 <ClientOnly> 안이라
+// 그 다음 틱에 삽입되므로 첫 렌더부터 올바른 슬롯이 나간다(요청 후 슬롯이 바뀌지 않음).
+const effectiveAdSlot = computed(() =>
+  props.adSlot ?? (isDesktopViewport.value ? AD_SLOT_DESKTOP : AD_SLOT_MOBILE)
 )
 
 const insStyle = computed(() =>
@@ -199,17 +219,20 @@ function refresh() {
 }
 
 onMounted(() => {
+  // mq 는 항상 만든다 — 기기별 광고 단위(effectiveAdSlot)가 isDesktopViewport 에 의존하므로,
+  // only/compact-mobile 이 아닌 기본 AdBanner 도 기기를 판정해야 한다.
+  // (이전에는 이 블록이 조건부여서 기본 AdBanner 는 isDesktopViewport 가 false 로 고정됐다.)
+  mq = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(min-width: 768px)')
+    : null
+  applyMatches()
+  mq?.addEventListener('change', applyMatches)
+
   if (props.only || props.variant === 'compact-mobile') {
-    mq = typeof window.matchMedia === 'function'
-      ? window.matchMedia('(min-width: 768px)')
-      : null
-    applyMatches()
-    mq?.addEventListener('change', applyMatches)
     // only는 matches 가 false→true 로 바뀌는 순간 아래 watch 에서 refresh.
     // compact-mobile은 같은 슬롯이 데스크톱에서 기본 auto 동작으로 돌아가므로 즉시 refresh.
     if (!props.only) refresh()
   } else {
-    matches.value = true
     refresh()
   }
 })
