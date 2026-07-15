@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, nextTick, onMounted, ref } from 'vue'
-import AdBanner from '~/components/ads/AdBanner.vue'
+import AdBanner, { AD_SLOT_MOBILE, AD_SLOT_DESKTOP } from '~/components/ads/AdBanner.vue'
 
 const clientOnlyStub = {
   template: '<slot />',
@@ -235,6 +235,70 @@ describe('AdBanner', () => {
     expect(ins.attributes('data-ad-format')).toBe('auto')
     expect(ins.attributes('data-full-width-responsive')).toBe('true')
     expect(ins.attributes('style') || '').not.toMatch(/height:\s*\d/)
+  })
+
+
+  // ── 기기별 광고 단위 분리 (AdSense: ilsangkit-mobile / ilsangkit-desktop) ──
+  // 단위가 하나면 AdSense 가 기기별로 최적화·리포팅을 못 한다. 실측상 데스크톱 In-page
+  // 채움률 76.1% / RPM 0.165 vs 모바일 93.7% / 0.413 로 격차가 커 기기부터 분리한다.
+  function stubViewport(isDesktop: boolean) {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: isDesktop,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+  }
+
+  it('모바일 뷰포트에서는 모바일 광고 단위를 요청한다', async () => {
+    stubViewport(false)
+    const wrapper = mount(AdBanner, { global: { stubs: { ClientOnly: clientOnlyStub } } })
+    await flushAdMount()
+    expect(wrapper.get('ins.adsbygoogle').attributes('data-ad-slot')).toBe(AD_SLOT_MOBILE)
+  })
+
+  it('데스크톱 뷰포트에서는 데스크톱 광고 단위를 요청한다', async () => {
+    stubViewport(true)
+    const wrapper = mount(AdBanner, { global: { stubs: { ClientOnly: clientOnlyStub } } })
+    await flushAdMount()
+    expect(wrapper.get('ins.adsbygoogle').attributes('data-ad-slot')).toBe(AD_SLOT_DESKTOP)
+  })
+
+  it('variant/only 없는 기본 AdBanner 도 기기를 판정한다 (mq 초기화 회귀)', async () => {
+    // 회귀: mq 생성이 `props.only || variant === 'compact-mobile'` 안에만 있으면
+    // 기본 AdBanner 는 isDesktopViewport 가 false 로 고정돼 데스크톱에서도 모바일 슬롯을 받는다.
+    stubViewport(true)
+    const wrapper = mount(AdBanner, { global: { stubs: { ClientOnly: clientOnlyStub } } })
+    await flushAdMount()
+    expect(wrapper.get('ins.adsbygoogle').attributes('data-ad-slot')).toBe(AD_SLOT_DESKTOP)
+  })
+
+  it('compact-mobile variant 도 기기별 단위를 따른다', async () => {
+    stubViewport(false)
+    const wrapper = mount(AdBanner, {
+      props: { variant: 'compact-mobile' },
+      global: { stubs: { ClientOnly: clientOnlyStub } },
+    })
+    await flushAdMount()
+    expect(wrapper.get('ins.adsbygoogle').attributes('data-ad-slot')).toBe(AD_SLOT_MOBILE)
+  })
+
+  it('adSlot prop 을 명시하면 기기 분리보다 우선한다', async () => {
+    stubViewport(true)
+    const wrapper = mount(AdBanner, {
+      props: { adSlot: '1234567890' },
+      global: { stubs: { ClientOnly: clientOnlyStub } },
+    })
+    await flushAdMount()
+    expect(wrapper.get('ins.adsbygoogle').attributes('data-ad-slot')).toBe('1234567890')
+  })
+
+  it('두 단위 ID 가 서로 다르고 legacy 단위를 쓰지 않는다', () => {
+    const LEGACY = '1878068382' // ilsangkit-display — 계정엔 남기되(과거 리포트 보존) 코드는 안 쓴다
+    expect(AD_SLOT_MOBILE).not.toBe(AD_SLOT_DESKTOP)
+    expect(AD_SLOT_MOBILE).not.toBe(LEGACY)
+    expect(AD_SLOT_DESKTOP).not.toBe(LEGACY)
+    // prop 기본값으로 legacy 가 되살아나면 기기 분리가 통째로 무력화된다.
+    expect(source()).not.toMatch(/adSlot:\s*['"]\d+['"]/)
   })
 
   it('compact-mobile variant는 모바일용 150px 고정 슬롯을 중앙 정렬한다', async () => {

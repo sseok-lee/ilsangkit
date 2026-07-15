@@ -31,19 +31,49 @@ Disallow: /admin
 # sitemapPolicy.ts 에서 wifi 상세 URL은 계속 sitemap 제외 대상이다.
 Disallow: /wifi/wifi-
 
-# AI 검색 크롤러 — 허용 (AI 검색 노출)
+# AI 검색 크롤러 — 본문은 허용하되(AI 검색 노출) 크롤 예산 낭비 경로는 User-agent: * 와 동일하게 차단한다.
+# robots.txt 그룹은 상속되지 않는다 — 자기 이름 그룹이 있는 봇은 User-agent: * 를 통째로 무시하므로
+# Allow: / 만 두면 _payload.json·wifi 상세가 이 봇들에게만 열린다. 실제로 GPTBot 이 하루 79,579 요청 중
+# 41,741 회(52%)를 _payload.json(28,814)·/wifi/wifi-(12,927)에 쏟아 서버 부하만 유발하고 있었다.
 User-agent: GPTBot
 Allow: /
+Allow: /_nuxt/
+Allow: /api/images/
+Disallow: /api/
+Disallow: /*_payload.json
+Disallow: /admin
+Disallow: /wifi/wifi-
 
 User-agent: ChatGPT-User
 Allow: /
+Allow: /_nuxt/
+Allow: /api/images/
+Disallow: /api/
+Disallow: /*_payload.json
+Disallow: /admin
+Disallow: /wifi/wifi-
 
 User-agent: ClaudeBot
 Allow: /
+Allow: /_nuxt/
+Allow: /api/images/
+Disallow: /api/
+Disallow: /*_payload.json
+Disallow: /admin
+Disallow: /wifi/wifi-
 
 User-agent: PerplexityBot
 Allow: /
+Allow: /_nuxt/
+Allow: /api/images/
+Disallow: /api/
+Disallow: /*_payload.json
+Disallow: /admin
+Disallow: /wifi/wifi-
 
+# Applebot-Extended / Google-Extended 는 크롤러가 아니라 "AI 학습·grounding 사용 여부" 제어 토큰이다.
+# (수집은 Applebot / Googlebot 이 하고 위 그룹들이 이미 규칙을 갖는다.)
+# 따라서 크롤 예산과 무관하며, AI 노출 허용 의도를 그대로 두기 위해 Allow: / 만 유지한다.
 User-agent: Applebot-Extended
 Allow: /
 

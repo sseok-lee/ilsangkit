@@ -265,8 +265,6 @@
       <!-- 관련 가이드 (SSR 렌더 — 내부링크 색인 노출) -->
       <RelatedGuides :category="categoryParam" />
 
-      <!-- 쿠팡 배너 -->
-      <CoupangBanner />
 
       <!-- 데이터 출처 -->
       <DataSourceSection domain="facility" :category="categoryParam" />

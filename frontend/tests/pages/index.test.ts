@@ -122,16 +122,27 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('생활시설')
   })
 
-  it('renders the home sections and a single Coupang banner (no AdBanner)', async () => {
+  it('renders the home sections and exactly 2 ad banners', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
     // HomeHotspotSignals replaces HomeMarketStats — check for its heading text (requires hotspot data)
     expect(wrapper.text()).toContain('오늘의 부동산 시장')
     // HomeSubscriptionSection is present
     expect(wrapper.find('section').exists()).toBe(true)
-    // 홈은 AdBanner를 모두 제거하고 데이터 출처 위에 CoupangBanner 1개만 노출
-    expect(wrapper.findAll('.stub-ad-banner').length).toBe(0)
-    expect(wrapper.findAll('.stub-coupang-banner').length).toBe(1)
+    // 홈 광고는 2개 — fold 아래 첫 섹션 경계 + 데이터 출처 위(구 쿠팡 자리).
+    // 히어로 검색 위/안에는 두지 않는다(홈의 핵심 기능 + 콘텐츠 위 대형 광고 정책 리스크).
+    expect(wrapper.findAll('.stub-ad-banner').length).toBe(2)
+  })
+
+  it('히어로 검색 영역보다 뒤에만 광고를 둔다 (fold 위 광고 금지)', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+    const html = wrapper.html()
+    const firstAd = html.indexOf('stub-ad-banner')
+    const hero = html.indexOf('오늘의 부동산 시장')
+    expect(firstAd).toBeGreaterThan(-1)
+    expect(hero).toBeGreaterThan(-1)
+    // 첫 광고는 첫 콘텐츠 섹션(오늘의 부동산 시장) 뒤에 나와야 한다.
+    expect(firstAd).toBeGreaterThan(hero)
   })
 
   it('renders "빠른 생활시설 찾기" 16-icon grid (전 시설 카테고리 + 지하철)', async () => {

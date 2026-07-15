@@ -97,7 +97,6 @@ async function mountSuspended(component: any) {
           AuctionMap: { template: '<section data-stub="auction-map" />' },
           NearbyFacilities: { template: '<div data-stub="nearby-facilities" />' },
           AdBanner: { template: '<div data-stub="ad" />' },
-          CoupangBanner: { template: '<div data-stub="coupang" />' },
           DataSourceSection: { template: '<div data-stub="datasource" />' },
         },
       },
@@ -144,11 +143,10 @@ describe('auction/item/[cltrMngNo].vue — 입찰정보 상세 재배치', () =>
     expect(wrapper.find('[data-test="tier-detail-info"]').classes()).toContain('order-4')
   })
 
-  it('광고 AdBanner 4개 + 쿠팡 1개가 유지된다(개수 불변)', async () => {
+  it('광고 AdBanner 4개가 유지된다(개수 불변)', async () => {
     const m = await import('~/pages/auction/item/[cltrMngNo].vue')
     const wrapper = await mountSuspended(m.default)
     expect(wrapper.findAll('[data-stub="ad"]').length).toBe(4)
-    expect(wrapper.findAll('[data-stub="coupang"]').length).toBe(1)
   })
 
   it('setFAQSchema 가 AUCTION_FAQ(5건)로 호출된다', async () => {

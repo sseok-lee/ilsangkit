@@ -93,6 +93,11 @@
     <!-- 이번 주 인기 단지 -->
     <HomeTrendingBuildings :buildings="trendingBuildings" />
 
+    <!-- Ad: fold 아래 첫 섹션 경계 (히어로 검색은 홈의 핵심 기능이라 그 위/안에는 두지 않는다) -->
+    <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+      <AdBanner />
+    </div>
+
     <!-- 청약·임대 일정 섹션 -->
     <HomeSubscriptionSection />
 
@@ -244,9 +249,10 @@
       </div>
     </section>
 
-    <!-- 쿠팡 배너 (데이터 출처 위) -->
+    <!-- Ad: 데이터 출처 위 (쿠팡 배너가 있던 자리)
+         앞의 생활 가이드·오늘의 이슈는 v-if 조건부라 데이터가 없으면 이 광고가 위로 올라온다. -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-      <CoupangBanner />
+      <AdBanner />
     </div>
 
     <!-- 데이터 출처 요약 -->
@@ -279,7 +285,6 @@ import { computed, ref } from 'vue'
 import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
 // heroAcRef typed as any to avoid circular InstanceType complexity in pages
 
-import CoupangBanner from '~/components/ads/CoupangBanner.vue'
 import HardLink from '~/components/common/HardLink.vue'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'
