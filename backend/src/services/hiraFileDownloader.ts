@@ -273,6 +273,13 @@ export async function ensureLatestHiraFiles(): Promise<{ updated: boolean; fileS
   const names = extractZipToDir(zip, dir);
   console.info(`[HIRA] 전개 완료: ${names.length}개 파일`);
 
+  // 0개 전개는 비정상(빈/손상 zip이 크기·content-type 게이트를 통과한 경우). 이대로 진행하면
+  // pruneStaleXlsx(dir, [])가 기존 xlsx를 전부 삭제하고 아래에서 마커까지 갱신해 조용한 영구
+  // 데이터 소실이 되므로, 정리 전에 방어적으로 중단한다(마커 미갱신 → 다음 실행이 재시도).
+  if (names.length === 0) {
+    throw new Error('HIRA 압축해제 결과가 0개 파일 — 정리/마커 갱신 중단(데이터 보호)');
+  }
+
   const removed = pruneStaleXlsx(dir, names);
   if (removed.length > 0) {
     console.info(`[HIRA] 이전 분기 파일 ${removed.length}개 정리: ${removed.join(', ')}`);
