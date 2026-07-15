@@ -10,6 +10,7 @@ import {
   downloadHiraZip,
   extractZipToDir,
   ensureLatestHiraFiles,
+  pruneStaleXlsx,
 } from '../../src/services/hiraFileDownloader.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -110,6 +111,51 @@ describe('extractZipToDir', () => {
     const names = extractZipToDir(buf, dest);
     expect(names.some((n) => n.normalize('NFC').includes('의료장비'))).toBe(true);
     expect(fs.readdirSync(dest).some((n) => n.normalize('NFC').includes('의료장비'))).toBe(true);
+  });
+});
+
+describe('pruneStaleXlsx', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hira-prune-test-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('keep 목록에 없는 이전 분기 xlsx/xls만 제거하고, 마커·비-xlsx는 건드리지 않는다', () => {
+    const oldXlsx = '4.세부정보(2026.6.).xlsx';
+    const newXlsx = '4.세부정보(2026.9.).xlsx';
+    const marker = '.hira_filesno';
+    const other = 'subway.csv';
+
+    fs.writeFileSync(path.join(tmpDir, oldXlsx), 'old');
+    fs.writeFileSync(path.join(tmpDir, newXlsx), 'new');
+    fs.writeFileSync(path.join(tmpDir, marker), '326801');
+    fs.writeFileSync(path.join(tmpDir, other), 'not-xlsx');
+
+    const removed = pruneStaleXlsx(tmpDir, [newXlsx]);
+
+    expect(removed).toContain(oldXlsx);
+    expect(fs.existsSync(path.join(tmpDir, oldXlsx))).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, newXlsx))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, marker))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, other))).toBe(true);
+  });
+
+  it('keep이 현재 존재하는 모든 xlsx를 포함하면 아무것도 제거하지 않는다', () => {
+    const a = '4.세부정보(2026.9.).xlsx';
+    const b = '7.의료장비정보(2026.9.).xlsx';
+    fs.writeFileSync(path.join(tmpDir, a), 'a');
+    fs.writeFileSync(path.join(tmpDir, b), 'b');
+
+    const removed = pruneStaleXlsx(tmpDir, [a, b]);
+
+    expect(removed).toEqual([]);
+    expect(fs.existsSync(path.join(tmpDir, a))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, b))).toBe(true);
   });
 });
 
