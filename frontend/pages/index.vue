@@ -244,9 +244,6 @@
       </div>
     </section>
 
-    <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-    </div>
-
     <!-- 데이터 출처 요약 -->
     <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="bg-white border border-line rounded-2xl p-5 shadow-card flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
