@@ -88,7 +88,7 @@
       </PageHero>
 
       <!-- Ad: Hero 직후 (fold 하단) -->
-      <AdBanner class="order-3 md:order-3" variant="compact-mobile" />
+      <AdBanner class="order-3 md:order-3" />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
       <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" class="order-9 md:order-7" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
@@ -269,7 +269,7 @@
       </SectionBlock>
 
       <!-- Ad: 시세 추이/비중 ↔ 위치 사이 (데스크톱 md:order-6, 모바일 order-5는 비중 뒤로 tie-break) -->
-      <AdBanner class="order-5 md:order-6" variant="compact-mobile" />
+      <AdBanner class="order-5 md:order-6" />
 
       <!-- "거래 내역" 블록 -->
       <SectionBlock class="order-6 md:order-9" :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
@@ -307,7 +307,7 @@
       </SectionBlock>
 
       <!-- Ad: 거래내역 이후 (In-Article) -->
-      <AdBanner class="order-7 md:order-10" variant="compact-mobile" />
+      <AdBanner class="order-7 md:order-10" />
 
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
       <div
@@ -393,7 +393,7 @@
       </SectionBlock>
 
       <!-- Ad: 주변 생활시설 이후 -->
-      <AdBanner class="order-12 md:order-12" variant="compact-mobile" />
+      <AdBanner class="order-12 md:order-12" />
 
       <!-- 네이버 블로그 후기 -->
       <BlogReviewSection
