@@ -84,8 +84,10 @@ export interface BuildingKey {
  * 290만 행짜리 테이블에서 수 GB 를 요구해 서버를 OOM 으로 몰았다(2026-07-16).
  * 반드시 SQL DISTINCT 로 유지할 것.
  *
- * bjdCode/buildingName 만 뽑아 커버링 인덱스(<table>_bjdCode_buildingName_idx)
- * 안에서 끝낸다. 주소 컬럼을 함께 뽑으면 데이터 페이지 풀스캔이 된다.
+ * 키 2개만 뽑으면 <table>_bjdCode_buildingName_idx 를 순서대로 훑어 정렬·중복
+ * 제거가 공짜다(EXPLAIN type=index, 로컬 실측 5초). 주소 컬럼을 얹는 순간 그
+ * 인덱스가 무용해져 풀스캔+filesort 로 떨어진다(EXPLAIN type=ALL, key=NULL).
+ * 커버링 인덱스는 아니다 — lat 이 인덱스에 없어 행 조회가 뒤따른다.
  */
 export async function getBuildingsNeedingCoords(
   prisma: PrismaClient,
@@ -302,6 +304,40 @@ export async function markGeocodeAttempted(
 }
 
 /**
+ * 대상 건물들의 좌표를 seedTable 에서 찾아 채운다.
+ *
+ * 구동 방향에 주의: 반드시 '좌표가 없는 건물'(수천 건)에서 출발한다.
+ * '좌표가 있는 행'(수백만)에서 출발하면 힙이 터진다.
+ */
+async function copyCoordsFor(
+  prisma: PrismaClient,
+  table: RealEstateTable,
+  seedTable: RealEstateTable,
+  targets: BuildingKey[],
+): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const model = (prisma as any)[table];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const seedModel = (prisma as any)[seedTable];
+
+  let totalCopied = 0;
+  for (const target of targets) {
+    const seed = await seedModel.findFirst({
+      where: { bjdCode: target.bjdCode, buildingName: target.buildingName, lat: { not: null } },
+      select: { lat: true, lng: true },
+    });
+    if (!seed) continue;
+
+    const res = await model.updateMany({
+      where: { bjdCode: target.bjdCode, buildingName: target.buildingName, lat: null },
+      data: { lat: seed.lat, lng: seed.lng, geocodedAt: new Date() },
+    });
+    totalCopied += res.count;
+  }
+  return totalCopied;
+}
+
+/**
  * 같은 테이블 내에서 이미 좌표가 있는 건물의 좌표를 복사해 null row 채우기
  * — 카카오 API 호출 없이 '알려진 건물' 해결
  */
@@ -309,26 +345,9 @@ export async function copyCoordsWithinTable(
   prisma: PrismaClient,
   table: RealEstateTable,
 ): Promise<number> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const model = (prisma as any)[table];
-
-  // 1) 좌표가 있는 건물의 (bjdCode, buildingName, lat, lng) 시드 수집
-  const seeds: Array<{ bjdCode: string; buildingName: string; lat: unknown; lng: unknown }> =
-    await model.findMany({
-      where: { lat: { not: null } },
-      select: { bjdCode: true, buildingName: true, lat: true, lng: true },
-      distinct: ['bjdCode', 'buildingName'],
-    });
-
-  let totalCopied = 0;
-  for (const seed of seeds) {
-    const res = await model.updateMany({
-      where: { bjdCode: seed.bjdCode, buildingName: seed.buildingName, lat: null },
-      data: { lat: seed.lat, lng: seed.lng, geocodedAt: new Date() },
-    });
-    totalCopied += res.count;
-  }
-  return totalCopied;
+  const targets = await getBuildingsNeedingCoords(prisma, table);
+  if (targets.length === 0) return 0;
+  return copyCoordsFor(prisma, table, table, targets);
 }
 
 /**
@@ -342,27 +361,9 @@ export async function copyCoordsFromSibling(
   const sibling = SIBLING_TABLE[table];
   if (!sibling) return 0;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const siblingModel = (prisma as any)[sibling];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const model = (prisma as any)[table];
-
-  const seeds: Array<{ bjdCode: string; buildingName: string; lat: unknown; lng: unknown }> =
-    await siblingModel.findMany({
-      where: { lat: { not: null } },
-      select: { bjdCode: true, buildingName: true, lat: true, lng: true },
-      distinct: ['bjdCode', 'buildingName'],
-    });
-
-  let totalCopied = 0;
-  for (const seed of seeds) {
-    const res = await model.updateMany({
-      where: { bjdCode: seed.bjdCode, buildingName: seed.buildingName, lat: null },
-      data: { lat: seed.lat, lng: seed.lng, geocodedAt: new Date() },
-    });
-    totalCopied += res.count;
-  }
-  return totalCopied;
+  const targets = await getBuildingsNeedingCoords(prisma, table);
+  if (targets.length === 0) return 0;
+  return copyCoordsFor(prisma, table, sibling, targets);
 }
 
 // 하위 호환
