@@ -57,6 +57,54 @@ const SIBLING_TABLE: Partial<Record<RealEstateTable, RealEstateTable>> = {
   offitelRentTransaction: 'offitelSaleTransaction',
 };
 
+/**
+ * Prisma 델리게이트명 → 실제 SQL 테이블명.
+ * raw SQL 에서 사용. schema.prisma 에 @@map 이 없어 모델명 = 테이블명이다.
+ * realEstateService 의 TABLE_NAME_MAP 은 슬러그('apt-sale') 기준이라 재사용 불가.
+ */
+export const SQL_TABLE_NAME: Record<RealEstateTable, string> = {
+  aptSaleTransaction: 'AptSaleTransaction',
+  aptRentTransaction: 'AptRentTransaction',
+  villaSaleTransaction: 'VillaSaleTransaction',
+  villaRentTransaction: 'VillaRentTransaction',
+  offitelSaleTransaction: 'OffitelSaleTransaction',
+  offitelRentTransaction: 'OffitelRentTransaction',
+};
+
+export interface BuildingKey {
+  bjdCode: string;
+  buildingName: string;
+}
+
+/**
+ * 좌표가 필요한 건물키만 조회.
+ *
+ * Prisma 의 `distinct` 는 MySQL 에서 SQL 로 내려가지 않고 앱 메모리에서 수행된다.
+ * findMany 로 뽑으면 조건에 맞는 행을 전부 힙에 적재한 뒤 JS 로 줄이므로,
+ * 290만 행짜리 테이블에서 수 GB 를 요구해 서버를 OOM 으로 몰았다(2026-07-16).
+ * 반드시 SQL DISTINCT 로 유지할 것.
+ *
+ * bjdCode/buildingName 만 뽑아 커버링 인덱스(<table>_bjdCode_buildingName_idx)
+ * 안에서 끝낸다. 주소 컬럼을 함께 뽑으면 데이터 페이지 풀스캔이 된다.
+ */
+export async function getBuildingsNeedingCoords(
+  prisma: PrismaClient,
+  table: RealEstateTable,
+  retryCutoff?: Date,
+): Promise<BuildingKey[]> {
+  const sqlTable = SQL_TABLE_NAME[table];
+  if (retryCutoff) {
+    return prisma.$queryRawUnsafe<BuildingKey[]>(
+      `SELECT DISTINCT bjdCode, buildingName FROM \`${sqlTable}\`
+       WHERE lat IS NULL AND (geocodedAt IS NULL OR geocodedAt < ?)`,
+      retryCutoff,
+    );
+  }
+  return prisma.$queryRawUnsafe<BuildingKey[]>(
+    `SELECT DISTINCT bjdCode, buildingName FROM \`${sqlTable}\` WHERE lat IS NULL`,
+  );
+}
+
 /** 실패한 지오코딩 재시도 최소 대기 기간 (일) — 카카오 coverage 개선/전략 변경 대비 */
 const GEOCODE_RETRY_DAYS = 30;
 
