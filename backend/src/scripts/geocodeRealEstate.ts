@@ -244,32 +244,44 @@ async function geocodeBuilding(
   return null;
 }
 
+/**
+ * 좌표 보강 대상 건물 목록.
+ *
+ * 2단계 조회:
+ *  1) SELECT DISTINCT bjdCode, buildingName — 인덱스 순서 스캔(실측 5초).
+ *  2) 건물별 findFirst 로 주소 필드를 **한 행에서** 읽는다.
+ *
+ * 주소를 1)에 합치면 인덱스가 무용해져 풀스캔+filesort 가 되고(EXPLAIN
+ * type=ALL), MIN()/ANY_VALUE() 로 뽑으면 서로 다른 행의 roadName 과 jibun 이
+ * 섞여 존재하지 않는 주소가 만들어진다.
+ */
 export async function getUniqueBuildings(
   prisma: PrismaClient,
   table: RealEstateTable
 ): Promise<UniqueBuilding[]> {
   const retryCutoff = new Date(Date.now() - GEOCODE_RETRY_DAYS * 24 * 60 * 60 * 1000);
+  const targets = await getBuildingsNeedingCoords(prisma, table, retryCutoff);
+  if (targets.length === 0) return [];
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const model = (prisma as any)[table];
-  return model.findMany({
-    where: {
-      lat: null,
-      OR: [
-        { geocodedAt: null },
-        { geocodedAt: { lt: retryCutoff } },
-      ],
-    },
-    select: {
-      buildingName: true,
-      bjdCode: true,
-      city: true,
-      district: true,
-      dongName: true,
-      roadName: true,
-      jibun: true,
-    },
-    distinct: ['buildingName', 'bjdCode'],
-  }) as Promise<UniqueBuilding[]>;
+  const buildings: UniqueBuilding[] = [];
+  for (const target of targets) {
+    const row = await model.findFirst({
+      where: { bjdCode: target.bjdCode, buildingName: target.buildingName, lat: null },
+      select: {
+        buildingName: true,
+        bjdCode: true,
+        city: true,
+        district: true,
+        dongName: true,
+        roadName: true,
+        jibun: true,
+      },
+    });
+    if (row) buildings.push(row as UniqueBuilding);
+  }
+  return buildings;
 }
 
 export async function updateBuildingCoordinates(

@@ -300,36 +300,64 @@ describe('getUniqueBuildings', () => {
     vi.clearAllMocks();
   });
 
-  it('lat IS NULL인 DISTINCT(buildingName, bjdCode) + 주소 필드 반환', async () => {
-    const mockBuildings = [
-      { buildingName: '래미안아파트', bjdCode: '1168010800', city: '서울특별시', district: '강남구', dongName: '역삼동', roadName: '강남대로 123', jibun: '123-4' },
-      { buildingName: '현대아파트', bjdCode: '1168010900', city: '서울특별시', district: '강남구', dongName: '삼성동', roadName: null, jibun: null },
-    ];
-    mockFindMany.mockResolvedValue(mockBuildings);
+  it('대상 건물키를 SQL DISTINCT 로 뽑고 건물별 주소를 한 행에서 읽는다', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([
+      { bjdCode: '1168010800', buildingName: '래미안아파트' },
+      { bjdCode: '1168010900', buildingName: '현대아파트' },
+    ]);
+    mockFindFirst
+      .mockResolvedValueOnce({ buildingName: '래미안아파트', bjdCode: '1168010800', city: '서울특별시', district: '강남구', dongName: '역삼동', roadName: '강남대로 123', jibun: '123-4' })
+      .mockResolvedValueOnce({ buildingName: '현대아파트', bjdCode: '1168010900', city: '서울특별시', district: '강남구', dongName: '삼성동', roadName: null, jibun: null });
 
-    const prisma = makePrisma();
+    const buildings = await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
 
-    const buildings = await getUniqueBuildings(prisma, 'aptSaleTransaction');
-    expect(buildings).toEqual(mockBuildings);
-    expect(mockFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          lat: null,
-          OR: expect.any(Array),
-        }),
-        select: { buildingName: true, bjdCode: true, city: true, district: true, dongName: true, roadName: true, jibun: true },
-        distinct: ['buildingName', 'bjdCode'],
-      }),
-    );
+    expect(buildings).toHaveLength(2);
+    expect(buildings[0].buildingName).toBe('래미안아파트');
+    expect(buildings[1].dongName).toBe('삼성동');
+    expect(mockFindFirst).toHaveBeenCalledWith({
+      where: { bjdCode: '1168010800', buildingName: '래미안아파트', lat: null },
+      select: { buildingName: true, bjdCode: true, city: true, district: true, dongName: true, roadName: true, jibun: true },
+    });
+  });
+
+  it('GEOCODE_RETRY_DAYS(30일) 컷오프를 SQL 파라미터로 넘긴다', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
+    const before = Date.now();
+
+    await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
+
+    const [sql, cutoff] = mockQueryRawUnsafe.mock.calls[0];
+    expect(sql).toContain('geocodedAt IS NULL OR geocodedAt <');
+    const expected = before - 30 * 24 * 60 * 60 * 1000;
+    expect(Math.abs((cutoff as Date).getTime() - expected)).toBeLessThan(5000);
   });
 
   it('결과가 없으면 빈 배열 반환', async () => {
-    mockFindMany.mockResolvedValue([]);
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
-    const prisma = makePrisma();
+    const buildings = await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
 
-    const buildings = await getUniqueBuildings(prisma, 'aptSaleTransaction');
     expect(buildings).toEqual([]);
+    expect(mockFindFirst).not.toHaveBeenCalled();
+  });
+
+  it('행이 사라진 건물은 결과에서 제외한다', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([
+      { bjdCode: '1168010800', buildingName: '사라진건물' },
+    ]);
+    mockFindFirst.mockResolvedValue(null);
+
+    const buildings = await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
+
+    expect(buildings).toEqual([]);
+  });
+
+  it('절대로 findMany 를 쓰지 않는다 (인메모리 distinct 회귀 방지)', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
+
+    await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
+
+    expect(mockFindMany).not.toHaveBeenCalled();
   });
 });
 
