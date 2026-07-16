@@ -130,13 +130,13 @@
               />
 
               <!-- Ad: 기본정보 ↔ 시설현황 사이 -->
-              <AdBanner variant="compact-mobile" />
+              <AdBanner />
 
               <!-- T2 FacilityStatus (시설현황) -->
               <DetailFacilityStatus :facility="facility" />
 
               <!-- Ad: 시설현황 ↔ MAP 사이 -->
-              <AdBanner variant="compact-mobile" />
+              <AdBanner />
 
               <!-- 위치·로드뷰 -->
               <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
@@ -189,7 +189,7 @@
               />
 
               <!-- Ad: NEARBY 이후 -->
-              <AdBanner variant="compact-mobile" />
+              <AdBanner />
 
 
               <!-- 컨텍스트 링크 (관련 가이드 + 지역 + 팁 + FAQ + 데이터 출처) -->
