@@ -4,7 +4,7 @@
 # backend/src/scripts
 
 ## Purpose
-CLI 스크립트 모음. 공공데이터 동기화 (`sync*.ts`), 지오코딩 (`geocode*.ts`), 시드 (`seed*.ts`), 런타임 가드 (`_runtimeGuard.ts`), 유지보수 (`fixRegionSlugs.ts`, `copyCoords.ts`, `refreshRealEstateSummary.ts`). `npx tsx src/scripts/<name>.ts`로 실행.
+CLI 스크립트 모음. 공공데이터 동기화 (`sync*.ts`), 지오코딩 (`geocode*.ts`), 시드 (`seed*.ts`), 런타임 가드 (`_runtimeGuard.ts`), 유지보수 (`fixRegionSlugs.ts`, `refreshRealEstateSummary.ts`). `npx tsx src/scripts/<name>.ts`로 실행.
 
 ## Key Files
 | File | Description |
@@ -18,7 +18,7 @@ CLI 스크립트 모음. 공공데이터 동기화 (`sync*.ts`), 지오코딩 (`
 | `syncRegion.ts` | 지역 마스터 데이터 |
 | `geocodeRealEstate.ts`/`geocodeSchool.ts`/`geocodeSubscriptions.ts` | 주소 → 좌표 지오코딩 |
 | `seedHospitalDetail.ts`/`seedSubscription.ts` | 상세 정보 시드 |
-| `copyCoords.ts`/`refreshRealEstateSummary.ts` | 좌표 복제/요약 갱신 |
+| `refreshRealEstateSummary.ts` | 요약 갱신 |
 | `submitIndexing.ts` | Google IndexNow/Search Console 색인 요청 |
 | `generateGuide.ts` | 가이드 콘텐츠 자동 생성 |
 | `loadTest.ts` | API 부하 테스트 |
