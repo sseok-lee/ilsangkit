@@ -91,9 +91,9 @@
       <AdBanner class="order-3 md:order-3" variant="compact-mobile" />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
-      <SectionBlock v-if="buildingInfo?.lat && buildingInfo?.lng" class="order-9 md:order-7" heading="위치와 로드뷰" subtext="지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.">
+      <SectionBlock class="order-9 md:order-7" heading="위치와 로드뷰" :subtext="hasMapCoords ? '지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.' : '원본 자료에 좌표가 없어 지도를 표시하지 못합니다.'">
         <template #right>
-          <div class="hidden md:flex items-center gap-1">
+          <div v-if="hasMapCoords" class="hidden md:flex items-center gap-1">
             <button
               class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
               aria-label="이 건물 공유하기"
@@ -123,7 +123,37 @@
             </div>
           </div>
         </template>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 좌표 결측: 섹션을 숨기지 않고 사실 + 대안 경로를 제시한다.
+             (숨기면 앞뒤 광고가 붙고, 사용자는 주소로 찾을 방법도 잃는다.) -->
+        <EmptyState
+          v-if="!hasMapCoords"
+          icon="location_off"
+          title="지번 좌표가 실거래가 자료에 없습니다"
+          :description="`${buildingName}의 좌표가 원본에 등록되지 않아 지도·로드뷰를 표시하지 못합니다. 주소로 직접 찾아보세요.`"
+        >
+          <AddressLine :address="fullAddress" class="justify-center" />
+          <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <a
+              :href="kakaoSearchUrl"
+              target="_blank"
+              rel="noopener"
+              class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
+            >
+              <img src="/images/icons/kakaomap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
+              카카오맵에서 주소 검색
+            </a>
+            <a
+              :href="naverSearchUrl"
+              target="_blank"
+              rel="noopener"
+              class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
+            >
+              <img src="/images/icons/navermap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
+              네이버맵에서 주소 검색
+            </a>
+          </div>
+        </EmptyState>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- 지도: 모바일에서도 노출 (짧은 높이 + 크게 보기 버튼) -->
           <div class="relative rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
             <ClientOnly>
@@ -310,10 +340,7 @@
       <AdBanner class="order-7 md:order-10" variant="compact-mobile" />
 
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
-      <div
-        v-if="nearbyByType.apt.length > 0 || nearbyByType.offitel.length > 0 || nearbyByType.villa.length > 0"
-        class="flex flex-col gap-3 order-12 md:order-12"
-      >
+      <div class="flex flex-col gap-3 order-12 md:order-12">
         <SectionBlock
           v-if="nearbyByType.apt.length > 0"
           subtext="같은 동 내 다른 아파트 단지를 함께 확인하세요."
@@ -379,17 +406,49 @@
             />
           </div>
         </SectionBlock>
+
+        <!-- 인근 단지 결측: 세 유형이 모두 비면 블록째 사라져 앞뒤 광고가 붙는다. -->
+        <SectionBlock v-if="!hasNearby" heading="인근 단지" subtext="반경 내 등록된 다른 단지가 없습니다.">
+          <EmptyState
+            icon="apartment"
+            title="반경 내 다른 단지가 없습니다"
+            :description="`${buildingName} 주변에 실거래가가 등록된 다른 단지를 찾지 못했습니다. ${districtName}의 전체 목록에서 비교해보세요.`"
+          >
+            <NuxtLink
+              :to="`/real-estate/${realEstateTypeParam}/${citySlugParam}/${districtSlugParam}`"
+              class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
+            >
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">apartment</span>
+              {{ districtName }} {{ propertyMeta?.label ?? '' }} 전체 보기
+            </NuxtLink>
+          </EmptyState>
+        </SectionBlock>
       </div>
 
 
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
-        v-if="buildingInfo?.lat && buildingInfo?.lng"
         class="order-12 md:order-12"
         heading="주변 생활시설"
-        subtext="부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다."
+        :subtext="hasMapCoords
+          ? '부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다.'
+          : '좌표가 없어 반경 검색을 할 수 없습니다.'"
       >
-        <NearbyFacilities :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
+        <NearbyFacilities v-if="hasMapCoords" :lat="buildingInfo!.lat!" :lng="buildingInfo!.lng!" />
+        <EmptyState
+          v-else
+          icon="search_off"
+          title="반경 검색을 할 수 없습니다"
+          :description="`${buildingName}의 좌표가 없어 주변 인프라를 반경으로 찾지 못합니다. ${districtName} 전체 시설은 지역 페이지에서 볼 수 있습니다.`"
+        >
+          <NuxtLink
+            :to="`/${citySlugParam}/${districtSlugParam}`"
+            class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
+          >
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">location_on</span>
+            {{ districtName }} 생활시설 전체 보기
+          </NuxtLink>
+        </EmptyState>
       </SectionBlock>
 
       <!-- Ad: 주변 생활시설 이후 -->
@@ -958,6 +1017,19 @@ function summaryBadgeClass(tone: RealEstateSummaryBadge['tone']): string {
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
 const nearbyByType = ref<NearbyResponse>({ apt: [], villa: [], offitel: [] })
+
+/** 좌표·인근단지 결측 판정 — 섹션을 숨기는 대신 빈 상태로 렌더할지 가른다. */
+const hasMapCoords = computed(() => !!(buildingInfo.value?.lat && buildingInfo.value?.lng))
+const hasNearby = computed(() =>
+  nearbyByType.value.apt.length > 0
+  || nearbyByType.value.offitel.length > 0
+  || nearbyByType.value.villa.length > 0)
+
+// 좌표가 없을 때의 대안 — 길찾기(좌표 필요) 대신 주소 검색으로 보낸다.
+const kakaoSearchUrl = computed(() =>
+  `https://map.kakao.com/link/search/${encodeURIComponent(fullAddress.value)}`)
+const naverSearchUrl = computed(() =>
+  `https://map.naver.com/v5/search/${encodeURIComponent(fullAddress.value)}`)
 const isApt = computed(() => propertyTypeParam === 'apt')
 const priceAnalysis = ref<PriceAnalysis | null>(null)
 const showPriceAnalysis = computed(() => isApt.value && !!priceAnalysis.value && priceAnalysis.value.saleCount >= 5)
