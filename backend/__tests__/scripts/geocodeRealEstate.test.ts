@@ -263,6 +263,9 @@ describe('getBuildingsNeedingCoords', () => {
     expect(sql).toContain('SELECT DISTINCT');
     expect(sql).toContain('AptSaleTransaction');
     expect(sql).toContain('lat IS NULL');
+    // 주소 컬럼을 DISTINCT 에 얹으면 EXPLAIN 이 type=ALL + filesort 로 무너진다.
+    // 2단계 조회를 1단계로 "최적화"하려는 시도를 CI 에서 막는다.
+    expect(sql).not.toMatch(/roadName|jibun|dongName|city|district/);
   });
 
   it('retryCutoff 를 주면 geocodedAt 조건과 파라미터가 붙는다', async () => {
