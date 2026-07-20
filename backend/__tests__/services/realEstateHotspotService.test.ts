@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Prisma } from '@prisma/client';
 
 const { mockQueryRaw } = vi.hoisted(() => ({
   mockQueryRaw: vi.fn(),
@@ -179,12 +180,28 @@ describe('getWolseHotspots', () => {
     expect(mockQueryRaw).toHaveBeenCalledTimes(1);
   });
 
-  it('anchor dealDay가 null이어도 예외 없이 처리 (COALESCE 대체 fallback)', async () => {
+  it('anchor dealDay가 null이면 day 1로 처리 (COALESCE 대체 fallback) — 슬라이스 쿼리 날짜 경계 검증', async () => {
     mockQueryRaw
       .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: null }])
       .mockResolvedValueOnce([]);
-    const res = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
+
+    const res = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 1 });
+
     expect(Array.isArray(res.active)).toBe(true);
+    expect(mockQueryRaw).toHaveBeenCalledTimes(2); // anchor + slice (빈 배열이어도 slice는 실행됨)
+
+    // latest = Date.UTC(2026, 1, dealDay ?? 1) → dealDay:null 이 1로 fallback 되어야 latest=2026-02-01.
+    // 만약 ?? 1 이 깨져 0으로 처리되면 Date.UTC(2026,1,0)=2026-01-31 로 하루 밀려 아래 경계가 전부 어긋난다.
+    // slice 쿼리(2번째 $queryRaw 호출) 템플릿의 인터폴레이션 순서:
+    //   [tableRaw, recentSql, sampleThreshold, tableRaw, priorSql, sampleThreshold]
+    // → calls[1][2]=recentSql(recentFrom~recentTo), calls[1][5]=priorSql(priorFrom~priorTo)
+    const recentSql = mockQueryRaw.mock.calls[1][2] as Prisma.Sql;
+    const priorSql = mockQueryRaw.mock.calls[1][5] as Prisma.Sql;
+
+    expect(recentSql.values).toContain('2026-01-25'); // recentFrom = latest(2026-02-01) - 7일
+    expect(recentSql.values).toContain('2026-02-01'); // recentTo = latest
+    expect(priorSql.values).toContain('2026-01-18'); // priorFrom = latest - 14일
+    expect(priorSql.values).toContain('2026-01-24'); // priorTo = latest - 8일
   });
 });
 

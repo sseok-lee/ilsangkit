@@ -15,6 +15,9 @@ import { Prisma } from '@prisma/client';
 export function dealDateRangeFilter(from: string, to: string, alias?: string): Prisma.Sql {
   const [fy, fm] = from.split('-').map(Number);
   const [ty, tm] = to.split('-').map(Number);
+  if (alias !== undefined && !/^[a-z][a-z0-9_]*$/i.test(alias)) {
+    throw new Error(`Invalid table alias: ${alias}`);
+  }
   const p = alias ? `${alias}.` : '';
   const yCol = Prisma.raw(`${p}dealYear`);
   const mCol = Prisma.raw(`${p}dealMonth`);

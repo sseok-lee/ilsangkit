@@ -40,4 +40,14 @@ describe('dealDateRangeFilter', () => {
     expect(text).toContain('dealYear');
     expect(text).not.toContain('t.dealYear');
   });
+
+  it('부정한 alias는 거부한다 (injection 방어)', () => {
+    expect(() => dealDateRangeFilter('2026-07-02', '2026-07-08', 't; DROP TABLE x')).toThrow(/Invalid table alias/);
+    expect(() => dealDateRangeFilter('2026-07-02', '2026-07-08', 't.dealYear')).toThrow(/Invalid table alias/);
+  });
+
+  it('유효한 alias와 alias 없음은 그대로 동작', () => {
+    expect(() => dealDateRangeFilter('2026-07-02', '2026-07-08', 't')).not.toThrow();
+    expect(() => dealDateRangeFilter('2026-07-02', '2026-07-08')).not.toThrow();
+  });
 });
