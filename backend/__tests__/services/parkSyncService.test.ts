@@ -6,25 +6,25 @@ import * as iconv from 'iconv-lite';
 
 describe('transformParkRow', () => {
   const baseRow: ParkCSVRow = {
-    '관리번호': 'PK-001',
-    '공원명': '테스트공원',
-    '공원구분': '근린공원',
-    '소재지도로명주소': '서울특별시 강남구 테헤란로 123',
-    '소재지지번주소': '서울특별시 강남구 역삼동 123',
-    '위도': '37.4979517',
-    '경도': '127.0276188',
-    '공원면적': '5000.50',
-    '공원보유시설(운동시설)': '축구장,농구장',
-    '공원보유시설(유희시설)': '미끄럼틀,그네',
-    '공원보유시설(편익시설)': '화장실,주차장',
-    '공원보유시설(교양시설)': '도서관',
-    '공원보유시설(기타시설)': '조형물',
-    '지정고시일': '2010-01-01',
-    '관리기관명': '강남구청',
-    '전화번호': '02-1234-5678',
-    '데이터기준일자': '2024-01-01',
-    '제공기관코드': '6110000',
-    '제공기관명': '서울특별시',
+    manageNo: 'PK-001',
+    parkNm: '테스트공원',
+    parkSe: '근린공원',
+    rdnmadr: '서울특별시 강남구 테헤란로 123',
+    lnmadr: '서울특별시 강남구 역삼동 123',
+    latitude: '37.4979517',
+    longitude: '127.0276188',
+    parkAr: '5000.50',
+    mvmFclty: '축구장,농구장',
+    amsmtFclty: '미끄럼틀,그네',
+    cnvnncFclty: '화장실,주차장',
+    cltrFclty: '도서관',
+    etcFclty: '조형물',
+    appnNtfcDate: '2010-01-01',
+    institutionNm: '강남구청',
+    phoneNumber: '02-1234-5678',
+    referenceDate: '2024-01-01',
+    insttCode: '6110000',
+    insttNm: '서울특별시',
   };
 
   it('should transform normal CSV row with correct field mapping', () => {
@@ -44,7 +44,7 @@ describe('transformParkRow', () => {
     expect(result!.providerName).toBe('서울특별시');
   });
 
-  it('should use 관리번호 directly as sourceId', () => {
+  it('should use manageNo directly as sourceId', () => {
     const result = transformParkRow(baseRow);
 
     expect(result).not.toBeNull();
@@ -63,8 +63,8 @@ describe('transformParkRow', () => {
   it('should return null when coordinates are outside KOREA_BOUNDS', () => {
     const row: ParkCSVRow = {
       ...baseRow,
-      '위도': '10.0',   // outside Korea
-      '경도': '100.0',
+      latitude: '10.0',   // outside Korea
+      longitude: '100.0',
     };
 
     const result = transformParkRow(row);
@@ -74,8 +74,8 @@ describe('transformParkRow', () => {
   it('should return null when coordinates are missing', () => {
     const row: ParkCSVRow = {
       ...baseRow,
-      '위도': '',
-      '경도': '',
+      latitude: '',
+      longitude: '',
     };
 
     const result = transformParkRow(row);
@@ -103,7 +103,7 @@ describe('transformParkRow', () => {
   it('should handle missing area as null', () => {
     const row: ParkCSVRow = {
       ...baseRow,
-      '공원면적': '',
+      parkAr: '',
     };
 
     const result = transformParkRow(row);
@@ -114,7 +114,7 @@ describe('transformParkRow', () => {
   it('should return null when park name is missing', () => {
     const row: ParkCSVRow = {
       ...baseRow,
-      '공원명': '',
+      parkNm: '',
     };
 
     const result = transformParkRow(row);

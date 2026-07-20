@@ -94,7 +94,10 @@ export async function syncToilets(csvFilePath: string): Promise<SyncStats> {
       rowsForUpsert,
       100,
       syncHistory.id,
-      { exactStats: true, uniqueKey: 'sourceId' }
+      // skipUpdateCols: lat/lng — 복구된 CSV에는 좌표가 없어(transformToiletRow가 null 반환) 매 sync마다
+      // 기존 행의 지오코딩된 좌표를 NULL로 덮어쓰는 회귀를 막는다. INSERT에는 여전히 포함되어
+      // 신규 행은 (대개 null인) 좌표로 생성되고, geocodeToilets가 이후 채운다.
+      { exactStats: true, uniqueKey: 'sourceId', skipUpdateCols: ['lat', 'lng'] }
     );
 
     stats.newRecords = newCount;

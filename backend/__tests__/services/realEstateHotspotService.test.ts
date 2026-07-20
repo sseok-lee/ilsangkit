@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Prisma } from '@prisma/client';
 
 const { mockQueryRaw } = vi.hoisted(() => ({
   mockQueryRaw: vi.fn(),
@@ -17,14 +18,17 @@ beforeEach(() => {
 
 describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
   it('rising은 changePct DESC, falling은 ASC, active는 volumeChangePct DESC 정렬', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: 8000, txnCount: 100n, changePct: 5, volumeChangePct: 30 },
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'mapo-gu', district: '마포구',
-        pricePerPyeong: 5000, txnCount: 60n, changePct: -3, volumeChangePct: 10 },
-      { citySlug: 'busan', city: '부산광역시', districtSlug: 'haeundae-gu', district: '해운대구',
-        pricePerPyeong: 4000, txnCount: 80n, changePct: 2, volumeChangePct: 50 },
-    ]);
+    // 1) anchor 최신일 조회, 2) 본 slice 쿼리
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: 8000, txnCount: 100n, changePct: 5, volumeChangePct: 30 },
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'mapo-gu', district: '마포구',
+          pricePerPyeong: 5000, txnCount: 60n, changePct: -3, volumeChangePct: 10 },
+        { citySlug: 'busan', city: '부산광역시', districtSlug: 'haeundae-gu', district: '해운대구',
+          pricePerPyeong: 4000, txnCount: 80n, changePct: 2, volumeChangePct: 50 },
+      ]);
 
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
 
@@ -34,10 +38,12 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
   });
 
   it('changePct가 null인 행은 rising/falling에서 제외, active에는 영향 없음', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: 8000, txnCount: 100n, changePct: null, volumeChangePct: 30 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: 8000, txnCount: 100n, changePct: null, volumeChangePct: 30 },
+      ]);
 
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
 
@@ -57,7 +63,9 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
       changePct: i + 1,
       volumeChangePct: i + 1,
     }));
-    mockQueryRaw.mockResolvedValue(rows);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce(rows);
 
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
 
@@ -66,10 +74,12 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
   });
 
   it('BigInt txnCount는 number로 변환됨', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: 8000, txnCount: 12345n, changePct: 5, volumeChangePct: 30 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: 8000, txnCount: 12345n, changePct: 5, volumeChangePct: 30 },
+      ]);
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
     expect(bundle.rising[0].txnCount).toBe(12345);
     expect(typeof bundle.rising[0].txnCount).toBe('number');
@@ -77,10 +87,12 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
 
   it('Decimal string(Prisma raw 반환) 도 number로 정규화', async () => {
     // Prisma raw query는 DECIMAL 컬럼을 문자열로 반환할 수 있음
-    mockQueryRaw.mockResolvedValue([
-      { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: '1034.265', txnCount: 61n, changePct: '52.32', volumeChangePct: '15.09' },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: '1034.265', txnCount: 61n, changePct: '52.32', volumeChangePct: '15.09' },
+      ]);
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
     const row = bundle.rising[0];
     expect(typeof row.pricePerPyeong).toBe('number');
@@ -91,26 +103,39 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
   });
 
   it('citySlug는 city 한글명에서 자동 계산 (short/full 모두)', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: 8000, txnCount: 50n, changePct: 5, volumeChangePct: 10 },
-      { city: '전북', districtSlug: 'iksan', district: '익산시',
-        pricePerPyeong: 1000, txnCount: 60n, changePct: 3, volumeChangePct: 8 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: 8000, txnCount: 50n, changePct: 5, volumeChangePct: 10 },
+        { city: '전북', districtSlug: 'iksan', district: '익산시',
+          pricePerPyeong: 1000, txnCount: 60n, changePct: 3, volumeChangePct: 8 },
+      ]);
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
     const seoul = bundle.rising.find((r) => r.district === '강남구');
     const jeonbuk = bundle.rising.find((r) => r.district === '익산시');
     expect(seoul?.citySlug).toBe('seoul');
     expect(jeonbuk?.citySlug).toBe('jeonbuk');
   });
+
+  it('거래가 없으면(anchor 빈 결과) 빈 번들 반환', async () => {
+    mockQueryRaw.mockResolvedValueOnce([]); // anchor 0행
+    const res = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 1 });
+    expect(res.rising).toEqual([]);
+    expect(res.falling).toEqual([]);
+    expect(res.active).toEqual([]);
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1); // slice 쿼리는 실행 안 함
+  });
 });
 
 describe('getWolseHotspots', () => {
   it('pricePerPyeong과 changePct는 null로 채워짐', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        txnCount: 150n, volumeChangePct: 40 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          txnCount: 150n, volumeChangePct: 40 },
+      ]);
 
     const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
 
@@ -126,7 +151,9 @@ describe('getWolseHotspots', () => {
       city: '서울', bjdCode: '11110', districtSlug: `d-${i}`, district: `구-${i}`,
       txnCount: 100n, volumeChangePct: 10 - i,
     }));
-    mockQueryRaw.mockResolvedValue(rows);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce(rows);
 
     const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
 
@@ -135,13 +162,46 @@ describe('getWolseHotspots', () => {
   });
 
   it('한글 districtSlug 행은 active에서 제외 (방어 가드)', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { city: '인천', bjdCode: '28275', districtSlug: '서해구', district: '서해구', txnCount: 67n, volumeChangePct: 71 },
-      { city: '서울', bjdCode: '11110', districtSlug: 'gangnam-gu', district: '강남구', txnCount: 50n, volumeChangePct: 10 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { city: '인천', bjdCode: '28275', districtSlug: '서해구', district: '서해구', txnCount: 67n, volumeChangePct: 71 },
+        { city: '서울', bjdCode: '11110', districtSlug: 'gangnam-gu', district: '강남구', txnCount: 50n, volumeChangePct: 10 },
+      ]);
     const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
     expect(bundle.active).toHaveLength(1);
     expect(bundle.active[0].district).toBe('강남구');
+  });
+
+  it('거래가 없으면(anchor 빈 결과) 빈 active 반환', async () => {
+    mockQueryRaw.mockResolvedValueOnce([]);
+    const res = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 1 });
+    expect(res.active).toEqual([]);
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('anchor dealDay가 null이면 day 1로 처리 (COALESCE 대체 fallback) — 슬라이스 쿼리 날짜 경계 검증', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: null }])
+      .mockResolvedValueOnce([]);
+
+    const res = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 1 });
+
+    expect(Array.isArray(res.active)).toBe(true);
+    expect(mockQueryRaw).toHaveBeenCalledTimes(2); // anchor + slice (빈 배열이어도 slice는 실행됨)
+
+    // latest = Date.UTC(2026, 1, dealDay ?? 1) → dealDay:null 이 1로 fallback 되어야 latest=2026-02-01.
+    // 만약 ?? 1 이 깨져 0으로 처리되면 Date.UTC(2026,1,0)=2026-01-31 로 하루 밀려 아래 경계가 전부 어긋난다.
+    // slice 쿼리(2번째 $queryRaw 호출) 템플릿의 인터폴레이션 순서:
+    //   [tableRaw, recentSql, sampleThreshold, tableRaw, priorSql, sampleThreshold]
+    // → calls[1][2]=recentSql(recentFrom~recentTo), calls[1][5]=priorSql(priorFrom~priorTo)
+    const recentSql = mockQueryRaw.mock.calls[1][2] as Prisma.Sql;
+    const priorSql = mockQueryRaw.mock.calls[1][5] as Prisma.Sql;
+
+    expect(recentSql.values).toContain('2026-01-25'); // recentFrom = latest(2026-02-01) - 7일
+    expect(recentSql.values).toContain('2026-02-01'); // recentTo = latest
+    expect(priorSql.values).toContain('2026-01-18'); // priorFrom = latest - 14일
+    expect(priorSql.values).toContain('2026-01-24'); // priorTo = latest - 8일
   });
 });
 

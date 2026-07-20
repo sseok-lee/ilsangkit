@@ -22,6 +22,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:fulltext": "tsx src/scripts/applyFulltextNgram.ts",
     "sync:toilet": "tsx src/scripts/syncToilet.ts",
+    "sync:toilet:geocode": "tsx src/scripts/geocodeToilets.ts",
     "sync:trash": "tsx src/scripts/syncTrash.ts",
     "sync:wifi": "tsx src/scripts/syncWifi.ts",
     "sync:clothes": "tsx src/scripts/syncClothes.ts",

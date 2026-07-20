@@ -5,6 +5,7 @@ import type {
 } from '../types/homeDashboard.js';
 import type { RealEstatePropertyType } from '../schemas/realEstate.js';
 import { resolveCitySlug } from './cityMapping.js';
+import { dealDateRangeFilter } from './realEstateDateFilter.js';
 
 const MAX_PER_SIGNAL = 5;
 
@@ -97,22 +98,37 @@ export async function getPricedSliceHotspots(
 
   const tableRaw = Prisma.raw(table);
 
-  // 국토부 실거래가는 30일 reporting lag이 있어 NOW() 기준 윈도우는 거의 비어있음.
-  // 윈도우는 데이터의 MAX(dealDate)를 anchor로 잡아 "최근 7일 vs 직전 7일" 의미를 보존한다.
+  // 국토부 실거래가는 30일 reporting lag이 있어 NOW() 기준 윈도우는 거의 비어있다.
+  // 데이터의 최신 거래일(anchor)을 인덱스로 뽑아 "최근 7일 vs 직전 7일" 의미를 보존한다.
+  // MAX(STR_TO_DATE(...)) 는 풀스캔이므로 ORDER BY ... LIMIT 1 (인덱스 후미 읽기)로 대체.
+  const anchorRows = await prisma.$queryRaw<{ dealYear: number; dealMonth: number; dealDay: number | null }[]>`
+    SELECT t.dealYear, t.dealMonth, t.dealDay
+    FROM ${tableRaw} t
+    WHERE 1=1 ${rentTypeClause}
+    ORDER BY t.dealYear DESC, t.dealMonth DESC, t.dealDay DESC
+    LIMIT 1`;
+
+  if (anchorRows.length === 0) {
+    return { rising: [], falling: [], active: [] };
+  }
+
+  const a = anchorRows[0];
+  const latest = new Date(Date.UTC(a.dealYear, a.dealMonth - 1, a.dealDay ?? 1));
+  const ymd = (d: Date) => d.toISOString().slice(0, 10);
+  const minusDays = (n: number) => { const x = new Date(latest); x.setUTCDate(x.getUTCDate() - n); return ymd(x); };
+
+  // recent: [latest-7, latest],  prior: [latest-14, latest-8] (= < latest-7)
+  const recentFrom = minusDays(7); const recentTo = minusDays(0);
+  const priorFrom = minusDays(14); const priorTo = minusDays(8);
+
   const rows = await prisma.$queryRaw<RawPricedRow[]>`
-    WITH anchor AS (
-      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
-      FROM ${tableRaw} t
-      WHERE 1=1 ${rentTypeClause}
-    ),
-    recent AS (
+    WITH recent AS (
       SELECT t.city, t.district,
              AVG(${priceExpr} / (t.exclusiveArea / 3.3058)) AS pricePerPyeong,
              COUNT(*) AS txnCount
-      FROM ${tableRaw} t, anchor a
+      FROM ${tableRaw} t
       WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
-        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            >= DATE_SUB(a.latest, INTERVAL 7 DAY)
+        AND ${dealDateRangeFilter(recentFrom, recentTo, 't')}
         ${rentTypeClause}
       GROUP BY t.city, t.district
       HAVING COUNT(*) >= ${sampleThreshold}
@@ -121,12 +137,9 @@ export async function getPricedSliceHotspots(
       SELECT t.city, t.district,
              AVG(${priceExpr} / (t.exclusiveArea / 3.3058)) AS prevPrice,
              COUNT(*) AS prevTxnCount
-      FROM ${tableRaw} t, anchor a
+      FROM ${tableRaw} t
       WHERE t.exclusiveArea IS NOT NULL AND t.exclusiveArea > 0
-        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            >= DATE_SUB(a.latest, INTERVAL 14 DAY)
-        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            <  DATE_SUB(a.latest, INTERVAL 7 DAY)
+        AND ${dealDateRangeFilter(priorFrom, priorTo, 't')}
         ${rentTypeClause}
       GROUP BY t.city, t.district
       HAVING COUNT(*) >= ${sampleThreshold}
@@ -189,30 +202,40 @@ export async function getWolseHotspots(
   const { sampleThreshold } = opts;
   const tableRaw = Prisma.raw(table);
 
-  // 윈도우는 MAX(dealDate) anchor 기준 (NOW() 기준은 reporting lag으로 데이터가 거의 없음)
+  // 최신 거래일 anchor (MAX(STR_TO_DATE) 풀스캔 대신 인덱스 후미 읽기)
+  const anchorRows = await prisma.$queryRaw<{ dealYear: number; dealMonth: number; dealDay: number | null }[]>`
+    SELECT t.dealYear, t.dealMonth, t.dealDay
+    FROM ${tableRaw} t
+    WHERE t.rentType = '월세'
+    ORDER BY t.dealYear DESC, t.dealMonth DESC, t.dealDay DESC
+    LIMIT 1`;
+
+  if (anchorRows.length === 0) {
+    return { active: [] };
+  }
+
+  const a = anchorRows[0];
+  const latest = new Date(Date.UTC(a.dealYear, a.dealMonth - 1, a.dealDay ?? 1));
+  const ymd = (d: Date) => d.toISOString().slice(0, 10);
+  const minusDays = (n: number) => { const x = new Date(latest); x.setUTCDate(x.getUTCDate() - n); return ymd(x); };
+
+  const recentFrom = minusDays(7); const recentTo = minusDays(0);
+  const priorFrom = minusDays(14); const priorTo = minusDays(8);
+
   const rows = await prisma.$queryRaw<RawWolseRow[]>`
-    WITH anchor AS (
-      SELECT MAX(STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')) AS latest
+    WITH recent AS (
+      SELECT t.city, t.district, COUNT(*) AS txnCount
       FROM ${tableRaw} t
       WHERE t.rentType = '월세'
-    ),
-    recent AS (
-      SELECT t.city, t.district, COUNT(*) AS txnCount
-      FROM ${tableRaw} t, anchor a
-      WHERE t.rentType = '월세'
-        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            >= DATE_SUB(a.latest, INTERVAL 7 DAY)
+        AND ${dealDateRangeFilter(recentFrom, recentTo, 't')}
       GROUP BY t.city, t.district
       HAVING COUNT(*) >= ${sampleThreshold}
     ),
     prior AS (
       SELECT t.city, t.district, COUNT(*) AS prevTxnCount
-      FROM ${tableRaw} t, anchor a
+      FROM ${tableRaw} t
       WHERE t.rentType = '월세'
-        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            >= DATE_SUB(a.latest, INTERVAL 14 DAY)
-        AND STR_TO_DATE(CONCAT(t.dealYear,'-',LPAD(t.dealMonth,2,'0'),'-',LPAD(COALESCE(t.dealDay,1),2,'0')),'%Y-%m-%d')
-            <  DATE_SUB(a.latest, INTERVAL 7 DAY)
+        AND ${dealDateRangeFilter(priorFrom, priorTo, 't')}
       GROUP BY t.city, t.district
       HAVING COUNT(*) >= ${sampleThreshold}
     )

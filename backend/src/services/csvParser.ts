@@ -7,22 +7,22 @@ import * as iconv from 'iconv-lite';
 import { createHash } from 'crypto';
 import { KOREA_BOUNDS } from '../constants/index.js';
 
-// CSV 로우 타입 정의
+// CSV 로우 타입 정의 (data.go.kr TN 표준데이터 API 영문 필드명)
 export interface ClothesCSVRow {
-  '관리번호': string;
-  '설치장소명': string;
-  '시도명': string;
-  '시군구명': string;
-  '소재지도로명주소': string;
-  '소재지지번주소': string;
-  '위도': string;
-  '경도': string;
-  '상세위치'?: string;
-  '관리기관명'?: string;
-  '관리기관전화번호'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  mngNo: string;
+  instlPlcNm: string;
+  ctpvNm: string;
+  sggNm: string;
+  lctnRoadNmAddr: string;
+  lctnLotnoAddr: string;
+  lat: string;
+  lot: string; // ⚠️ 경도(longitude) — clothes API는 `lot` 키를 사용
+  dtlPstn?: string;
+  mngInstNm?: string;
+  mngInstTelno?: string;
+  dataCrtrYmd?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -57,6 +57,7 @@ export interface ToiletCSVRow {
   '구분명'?: string;
   '근거법령명'?: string;
   '개방자치단체코드'?: string;
+  '관리번호'?: string;
   '데이터기준일자'?: string;
   [key: string]: string | undefined;
 }
@@ -124,75 +125,75 @@ export interface TransformedClothes {
   providerName: string;
 }
 
-// Parking CSV 로우 타입
+// Parking CSV 로우 타입 (data.go.kr TN 표준데이터 API 영문 필드명)
 export interface ParkingCSVRow {
-  '주차장관리번호': string;
-  '주차장명': string;
-  '주차장구분': string;       // 공영/민영
-  '주차장유형': string;       // 노외/노상/부설
-  '소재지도로명주소': string;
-  '소재지지번주소': string;
-  '주차구획수': string;
-  '급지구분'?: string;
-  '부제시행구분'?: string;
-  '운영요일': string;
-  '평일운영시작시각': string;
-  '평일운영종료시각': string;
-  '토요일운영시작시각'?: string;
-  '토요일운영종료시각'?: string;
-  '공휴일운영시작시각'?: string;
-  '공휴일운영종료시각'?: string;
-  '요금정보': string;         // 유료/무료
-  '주차기본시간': string;
-  '주차기본요금': string;
-  '추가단위시간': string;
-  '추가단위요금': string;
-  '1일주차권요금'?: string;
-  '월정기권요금'?: string;
-  '결제방법'?: string;
-  '특기사항'?: string;
-  '장애인전용주차구역보유여부'?: string;
-  '전화번호'?: string;
-  '위도': string;
-  '경도': string;
-  '관리기관명'?: string;
-  '1일주차권요금적용시간'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  prkplceNo: string;
+  prkplceNm: string;
+  prkplceSe: string;       // 공영/민영
+  prkplceType: string;     // 노외/노상/부설
+  rdnmadr: string;
+  lnmadr: string;
+  prkcmprt: string;
+  feedingSe?: string;
+  enforceSe?: string;
+  operDay: string;
+  weekdayOperOpenHhmm: string;
+  weekdayOperColseHhmm: string;
+  satOperOperOpenHhmm?: string;
+  satOperCloseHhmm?: string;
+  holidayOperOpenHhmm?: string;
+  holidayCloseOpenHhmm?: string;
+  parkingchrgeInfo: string; // 유료/무료
+  basicTime: string;
+  basicCharge: string;
+  addUnitTime: string;
+  addUnitCharge: string;
+  dayCmmtkt?: string;
+  monthCmmtkt?: string;
+  metpay?: string;
+  spcmnt?: string;
+  pwdbsPpkZoneYn?: string;
+  phoneNumber?: string;
+  latitude: string;
+  longitude: string;
+  institutionNm?: string;
+  dayCmmtktAdjTime?: string;
+  referenceDate?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
 // Library CSV 로우 타입
 export interface LibraryCSVRow {
-  '도서관명': string;
-  '시도명': string;
-  '시군구명': string;
-  '도서관유형': string;
-  '휴관일': string;
-  '평일운영시작시각': string;
-  '평일운영종료시각': string;
-  '토요일운영시작시각'?: string;
-  '토요일운영종료시각'?: string;
-  '공휴일운영시작시각'?: string;
-  '공휴일운영종료시각'?: string;
-  '열람좌석수': string;
-  '자료수(도서)': string;
-  '소재지도로명주소': string;
-  '운영기관명'?: string;
-  '도서관전화번호'?: string;
-  '홈페이지주소'?: string;
-  '자료수(연속간행물)'?: string;
-  '자료수(비도서)'?: string;
-  '대출가능권수'?: string;
-  '대출가능일수'?: string;
-  '위도': string;
-  '경도': string;
-  '부지면적'?: string;
-  '건물면적'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  lbrryNm: string;
+  ctprvnNm: string;
+  signguNm: string;
+  lbrrySe?: string;
+  closeDay?: string;
+  weekdayOperOpenHhmm?: string;
+  weekdayOperColseHhmm?: string;
+  satOperOperOpenHhmm?: string;
+  satOperCloseHhmm?: string;
+  holidayOperOpenHhmm?: string;
+  holidayCloseOpenHhmm?: string;
+  seatCo?: string;
+  bookCo?: string;
+  rdnmadr: string;
+  operInstitutionNm?: string;
+  phoneNumber?: string;
+  homepageUrl?: string;
+  pblictnCo?: string;
+  noneBookCo?: string;
+  lonCo?: string;
+  lonDaycnt?: string;
+  latitude: string;
+  longitude: string;
+  plotAr?: string;
+  buldAr?: string;
+  referenceDate?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -395,6 +396,13 @@ function generateSourceId(name: string, lat: string, lng: string): string {
 }
 
 /**
+ * Toilet sourceId 생성 (개방자치단체코드 + 관리번호 기반 — 좌표 무관 안정키)
+ */
+export function generateToiletSourceId(govCode: string, mngNo: string): string {
+  return createHash('md5').update(`toilet-${govCode}-${mngNo}`).digest('hex').substring(0, 16);
+}
+
+/**
  * CSV 로우를 Toilet 형식으로 변환
  */
 export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null {
@@ -412,15 +420,17 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
   const lat = parseFloat(latStr);
   const lng = parseFloat(lngStr);
 
-  // 유효성 검사: NaN 또는 한국 범위 밖의 좌표는 제외
-  if (isNaN(lat) || isNaN(lng)) {
-    return null;
-  }
+  // 좌표는 옵션 — 없거나(NaN) 한국 범위 밖이면 null로 저장 (행 자체는 유지)
+  const hasValidCoords =
+    !isNaN(lat) &&
+    !isNaN(lng) &&
+    lat >= KOREA_BOUNDS.LAT_MIN &&
+    lat <= KOREA_BOUNDS.LAT_MAX &&
+    lng >= KOREA_BOUNDS.LNG_MIN &&
+    lng <= KOREA_BOUNDS.LNG_MAX;
 
-  // 한국 좌표 범위 검증
-  if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX || lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) {
-    return null;
-  }
+  const finalLat = hasValidCoords ? lat : null;
+  const finalLng = hasValidCoords ? lng : null;
 
   // 주소 결정 (도로명 우선, 없으면 지번)
   const primaryAddress = roadAddress || jibunAddress;
@@ -429,12 +439,18 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
   }
 
   const { city, district } = parseAddress(primaryAddress);
+  const normalizedCity = normalizeCityName(city);
 
-  if (!city || !district) {
+  if (!normalizedCity || !district) {
     return null;
   }
 
-  const sourceId = generateSourceId(name, latStr, lngStr);
+  // sourceId: 개방자치단체코드+관리번호 기반 안정키 (관리번호 없으면 name+주소 해시로 폴백 → 좌표 의존 제거)
+  const govCode = row['개방자치단체코드']?.trim() || '';
+  const mngNo = row['관리번호']?.trim() || '';
+  const sourceId = mngNo
+    ? generateToiletSourceId(govCode, mngNo)
+    : generateSourceId(name, roadAddress, jibunAddress);
   const toiletId = `toilet-${sourceId}`;
 
   // 장애인용 대변기 유무 (남성용 또는 여성용 중 하나라도 있으면 true)
@@ -447,9 +463,9 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
     name,
     address: jibunAddress || roadAddress,
     roadAddress: roadAddress || null,
-    lat,
-    lng,
-    city,
+    lat: finalLat,
+    lng: finalLng,
+    city: normalizedCity,
     district,
     sourceId,
     // Toilet 전용 필드
@@ -561,14 +577,14 @@ export async function parseClothesCSV(filePath: string): Promise<ClothesCSVRow[]
  * 좌표가 없어도 저장 (null로 처리)
  */
 export function transformClothesRow(row: ClothesCSVRow): TransformedClothes | null {
-  const mngNo = row['관리번호']?.trim() || '';
-  const name = row['설치장소명']?.trim() || '';
-  const city = row['시도명']?.trim() || '';
-  const district = row['시군구명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const mngNo = row['mngNo']?.trim() || '';
+  const name = row['instlPlcNm']?.trim() || '';
+  const city = row['ctpvNm']?.trim() || '';
+  const district = row['sggNm']?.trim() || '';
+  const roadAddress = row['lctnRoadNmAddr']?.trim() || '';
+  const jibunAddress = row['lctnLotnoAddr']?.trim() || '';
+  const latStr = row['lat']?.trim() || '';
+  const lngStr = row['lot']?.trim() || '';
 
   // 관리번호 없어도 진행 (sourceId 생성 시 대체값 사용)
 
@@ -615,13 +631,13 @@ export function transformClothesRow(row: ClothesCSVRow): TransformedClothes | nu
     district,
     sourceId,
     // Clothes 전용 필드
-    managementAgency: row['관리기관명']?.trim() || '',
-    phoneNumber: row['관리기관전화번호']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    detailLocation: row['상세위치']?.trim() || '',
+    managementAgency: row['mngInstNm']?.trim() || '',
+    phoneNumber: row['mngInstTelno']?.trim() || '',
+    dataDate: row['dataCrtrYmd']?.trim() || '',
+    detailLocation: row['dtlPstn']?.trim() || '',
     // 추가 상세 필드
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 
@@ -671,20 +687,20 @@ export async function parseParkingCSV(filePath: string): Promise<ParkingCSVRow[]
 function buildParkingOperatingHours(row: ParkingCSVRow): string {
   const parts: string[] = [];
 
-  const weekdayStart = row['평일운영시작시각']?.trim();
-  const weekdayEnd = row['평일운영종료시각']?.trim();
+  const weekdayStart = row['weekdayOperOpenHhmm']?.trim();
+  const weekdayEnd = row['weekdayOperColseHhmm']?.trim();
   if (weekdayStart && weekdayEnd) {
     parts.push(`평일 ${weekdayStart}~${weekdayEnd}`);
   }
 
-  const satStart = row['토요일운영시작시각']?.trim();
-  const satEnd = row['토요일운영종료시각']?.trim();
+  const satStart = row['satOperOperOpenHhmm']?.trim();
+  const satEnd = row['satOperCloseHhmm']?.trim();
   if (satStart && satEnd) {
     parts.push(`토요일 ${satStart}~${satEnd}`);
   }
 
-  const holStart = row['공휴일운영시작시각']?.trim();
-  const holEnd = row['공휴일운영종료시각']?.trim();
+  const holStart = row['holidayOperOpenHhmm']?.trim();
+  const holEnd = row['holidayCloseOpenHhmm']?.trim();
   if (holStart && holEnd) {
     parts.push(`공휴일 ${holStart}~${holEnd}`);
   }
@@ -696,12 +712,12 @@ function buildParkingOperatingHours(row: ParkingCSVRow): string {
  * 공영주차장 CSV 로우를 Parking 형식으로 변환
  */
 export function transformParkingRow(row: ParkingCSVRow): TransformedParking | null {
-  const mngNo = row['주차장관리번호']?.trim() || '';
-  const name = row['주차장명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const mngNo = row['prkplceNo']?.trim() || '';
+  const name = row['prkplceNm']?.trim() || '';
+  const roadAddress = row['rdnmadr']?.trim() || '';
+  const jibunAddress = row['lnmadr']?.trim() || '';
+  const latStr = row['latitude']?.trim() || '';
+  const lngStr = row['longitude']?.trim() || '';
 
   if (!name) {
     return null;
@@ -762,30 +778,30 @@ export function transformParkingRow(row: ParkingCSVRow): TransformedParking | nu
     district,
     sourceId,
     // Parking 전용 필드
-    parkingType: row['주차장구분']?.trim() || '',
-    lotType: row['주차장유형']?.trim() || '',
-    capacity: parseInt(row['주차구획수'] || '0', 10) || 0,
-    baseFee: parseIntSafe(row['주차기본요금']),
-    baseTime: parseIntSafe(row['주차기본시간']),
-    additionalFee: parseIntSafe(row['추가단위요금']),
-    additionalTime: parseIntSafe(row['추가단위시간']),
-    dailyMaxFee: parseIntSafe(row['1일주차권요금']),
-    monthlyFee: parseIntSafe(row['월정기권요금']),
+    parkingType: row['prkplceSe']?.trim() || '',
+    lotType: row['prkplceType']?.trim() || '',
+    capacity: parseInt(row['prkcmprt'] || '0', 10) || 0,
+    baseFee: parseIntSafe(row['basicCharge']),
+    baseTime: parseIntSafe(row['basicTime']),
+    additionalFee: parseIntSafe(row['addUnitCharge']),
+    additionalTime: parseIntSafe(row['addUnitTime']),
+    dailyMaxFee: parseIntSafe(row['dayCmmtkt']),
+    monthlyFee: parseIntSafe(row['monthCmmtkt']),
     operatingHours: buildParkingOperatingHours(row),
-    phone: row['전화번호']?.trim() || '',
-    paymentMethod: row['결제방법']?.trim() || '',
-    remarks: row['특기사항']?.trim() || '',
-    hasDisabledParking: row['장애인전용주차구역보유여부']?.trim() === 'Y',
+    phone: row['phoneNumber']?.trim() || '',
+    paymentMethod: row['metpay']?.trim() || '',
+    remarks: row['spcmnt']?.trim() || '',
+    hasDisabledParking: row['pwdbsPpkZoneYn']?.trim() === 'Y',
     // 추가 상세 필드
-    zoneClass: row['급지구분']?.trim() || '',
-    alternateParking: row['부제시행구분']?.trim() || '',
-    operatingDays: row['운영요일']?.trim() || '',
-    feeType: row['요금정보']?.trim() || '',
-    dailyMaxFeeHours: row['1일주차권요금적용시간']?.trim() || '',
-    managingOrg: row['관리기관명']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    zoneClass: row['feedingSe']?.trim() || '',
+    alternateParking: row['enforceSe']?.trim() || '',
+    operatingDays: row['operDay']?.trim() || '',
+    feeType: row['parkingchrgeInfo']?.trim() || '',
+    dailyMaxFeeHours: row['dayCmmtktAdjTime']?.trim() || '',
+    managingOrg: row['institutionNm']?.trim() || '',
+    dataDate: row['referenceDate']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 
@@ -833,12 +849,12 @@ export async function parseLibraryCSV(filePath: string): Promise<LibraryCSVRow[]
  * 도서관 CSV 로우를 Library 형식으로 변환
  */
 export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | null {
-  const name = row['도서관명']?.trim() || '';
-  const city = row['시도명']?.trim() || '';
-  const district = row['시군구명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const name = row['lbrryNm']?.trim() || '';
+  const city = row['ctprvnNm']?.trim() || '';
+  const district = row['signguNm']?.trim() || '';
+  const roadAddress = row['rdnmadr']?.trim() || '';
+  const latStr = row['latitude']?.trim() || '';
+  const lngStr = row['longitude']?.trim() || '';
 
   if (!name) {
     return null;
@@ -882,53 +898,53 @@ export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | nu
     district,
     sourceId,
     // Library 전용 필드
-    libraryType: row['도서관유형']?.trim() || '',
-    closedDays: row['휴관일']?.trim() || '',
-    weekdayOpenTime: row['평일운영시작시각']?.trim() || '',
-    weekdayCloseTime: row['평일운영종료시각']?.trim() || '',
-    saturdayOpenTime: row['토요일운영시작시각']?.trim() || '',
-    saturdayCloseTime: row['토요일운영종료시각']?.trim() || '',
-    holidayOpenTime: row['공휴일운영시작시각']?.trim() || '',
-    holidayCloseTime: row['공휴일운영종료시각']?.trim() || '',
-    seatCount: parseInt(row['열람좌석수'] || '0', 10) || 0,
-    bookCount: parseInt(row['자료수(도서)'] || '0', 10) || 0,
-    serialCount: parseInt(row['자료수(연속간행물)'] || '0', 10) || 0,
-    nonBookCount: parseInt(row['자료수(비도서)'] || '0', 10) || 0,
-    loanableBooks: parseInt(row['대출가능권수'] || '0', 10) || 0,
-    loanableDays: parseInt(row['대출가능일수'] || '0', 10) || 0,
-    phoneNumber: row['도서관전화번호']?.trim() || '',
-    homepageUrl: row['홈페이지주소']?.trim() || '',
-    operatingOrg: row['운영기관명']?.trim() || '',
+    libraryType: row['lbrrySe']?.trim() || '',
+    closedDays: row['closeDay']?.trim() || '',
+    weekdayOpenTime: row['weekdayOperOpenHhmm']?.trim() || '',
+    weekdayCloseTime: row['weekdayOperColseHhmm']?.trim() || '',
+    saturdayOpenTime: row['satOperOperOpenHhmm']?.trim() || '',
+    saturdayCloseTime: row['satOperCloseHhmm']?.trim() || '',
+    holidayOpenTime: row['holidayOperOpenHhmm']?.trim() || '',
+    holidayCloseTime: row['holidayCloseOpenHhmm']?.trim() || '',
+    seatCount: parseInt(row['seatCo'] || '0', 10) || 0,
+    bookCount: parseInt(row['bookCo'] || '0', 10) || 0,
+    serialCount: parseInt(row['pblictnCo'] || '0', 10) || 0,
+    nonBookCount: parseInt(row['noneBookCo'] || '0', 10) || 0,
+    loanableBooks: parseInt(row['lonCo'] || '0', 10) || 0,
+    loanableDays: parseInt(row['lonDaycnt'] || '0', 10) || 0,
+    phoneNumber: row['phoneNumber']?.trim() || '',
+    homepageUrl: row['homepageUrl']?.trim() || '',
+    operatingOrg: row['operInstitutionNm']?.trim() || '',
     // 추가 상세 필드
-    lotArea: row['부지면적']?.trim() || '',
-    buildingArea: row['건물면적']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    lotArea: row['plotAr']?.trim() || '',
+    buildingArea: row['buldAr']?.trim() || '',
+    dataDate: row['referenceDate']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 
 // Park CSV 로우 타입
 export interface ParkCSVRow {
-  '관리번호': string;
-  '공원명': string;
-  '공원구분': string;
-  '소재지도로명주소': string;
-  '소재지지번주소': string;
-  '위도': string;
-  '경도': string;
-  '공원면적'?: string;
-  '공원보유시설(운동시설)'?: string;
-  '공원보유시설(유희시설)'?: string;
-  '공원보유시설(편익시설)'?: string;
-  '공원보유시설(교양시설)'?: string;
-  '공원보유시설(기타시설)'?: string;
-  '지정고시일'?: string;
-  '관리기관명'?: string;
-  '전화번호'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  manageNo: string;
+  parkNm: string;
+  parkSe: string;
+  rdnmadr: string;
+  lnmadr: string;
+  latitude: string;
+  longitude: string;
+  parkAr?: string;
+  mvmFclty?: string;
+  amsmtFclty?: string;
+  cnvnncFclty?: string;
+  cltrFclty?: string;
+  etcFclty?: string;
+  appnNtfcDate?: string;
+  institutionNm?: string;
+  phoneNumber?: string;
+  referenceDate?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -1014,24 +1030,24 @@ export interface TransformedSchool {
 
 // Market CSV 로우 타입
 export interface MarketCSVRow {
-  '시장명': string;
-  '시장유형'?: string;
-  '소재지도로명주소': string;
-  '소재지지번주소'?: string;
-  '시장개설주기'?: string;
-  '위도': string;
-  '경도': string;
-  '점포수'?: string;
-  '취급품목'?: string;
-  '사용가능상품권'?: string;
-  '홈페이지주소'?: string;
-  '공중화장실보유여부'?: string;
-  '주차장보유여부'?: string;
-  '개설연도'?: string;
-  '전화번호'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  mrktNm: string;
+  mrktType?: string;
+  rdnmadr: string;
+  lnmadr?: string;
+  mrktEstblCycle?: string;
+  latitude: string;
+  longitude: string;
+  storNumber?: string;
+  trtmntPrdlst?: string;
+  useGcct?: string;
+  homepageUrl?: string;
+  pblicToiletYn?: string;
+  prkplceYn?: string;
+  estblYear?: string;
+  phoneNumber?: string;
+  referenceDate?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -1112,12 +1128,12 @@ export async function parseParkCSV(filePath: string): Promise<ParkCSVRow[]> {
  * 공원 CSV 로우를 Park 형식으로 변환
  */
 export function transformParkRow(row: ParkCSVRow): TransformedPark | null {
-  const sourceId = row['관리번호']?.trim() || '';
-  const name = row['공원명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const sourceId = row['manageNo']?.trim() || '';
+  const name = row['parkNm']?.trim() || '';
+  const roadAddress = row['rdnmadr']?.trim() || '';
+  const jibunAddress = row['lnmadr']?.trim() || '';
+  const latStr = row['latitude']?.trim() || '';
+  const lngStr = row['longitude']?.trim() || '';
 
   if (!name) return null;
   if (!sourceId) return null;
@@ -1139,7 +1155,7 @@ export function transformParkRow(row: ParkCSVRow): TransformedPark | null {
 
   if (!normalizedCity || !district) return null;
 
-  const areaStr = row['공원면적']?.trim() || '';
+  const areaStr = row['parkAr']?.trim() || '';
   const area = areaStr ? parseFloat(areaStr) : null;
 
   return {
@@ -1152,19 +1168,19 @@ export function transformParkRow(row: ParkCSVRow): TransformedPark | null {
     city: normalizedCity,
     district,
     sourceId,
-    parkType: row['공원구분']?.trim() || '',
+    parkType: row['parkSe']?.trim() || '',
     area: area !== null && !isNaN(area) ? area : null,
-    exerciseFacilities: row['공원보유시설(운동시설)']?.trim() || '',
-    playFacilities: row['공원보유시설(유희시설)']?.trim() || '',
-    convenienceFacilities: row['공원보유시설(편익시설)']?.trim() || '',
-    cultureFacilities: row['공원보유시설(교양시설)']?.trim() || '',
-    otherFacilities: row['공원보유시설(기타시설)']?.trim() || '',
-    designatedDate: row['지정고시일']?.trim() || '',
-    managingOrg: row['관리기관명']?.trim() || '',
-    phoneNumber: row['전화번호']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    exerciseFacilities: row['mvmFclty']?.trim() || '',
+    playFacilities: row['amsmtFclty']?.trim() || '',
+    convenienceFacilities: row['cnvnncFclty']?.trim() || '',
+    cultureFacilities: row['cltrFclty']?.trim() || '',
+    otherFacilities: row['etcFclty']?.trim() || '',
+    designatedDate: row['appnNtfcDate']?.trim() || '',
+    managingOrg: row['institutionNm']?.trim() || '',
+    phoneNumber: row['phoneNumber']?.trim() || '',
+    dataDate: row['referenceDate']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 
@@ -1252,11 +1268,11 @@ export async function parseMarketCSV(filePath: string): Promise<MarketCSVRow[]> 
  * 전통시장 CSV 로우를 Market 형식으로 변환
  */
 export function transformMarketRow(row: MarketCSVRow): TransformedMarket | null {
-  const name = row['시장명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const name = row['mrktNm']?.trim() || '';
+  const roadAddress = row['rdnmadr']?.trim() || '';
+  const jibunAddress = row['lnmadr']?.trim() || '';
+  const latStr = row['latitude']?.trim() || '';
+  const lngStr = row['longitude']?.trim() || '';
 
   if (!name) return null;
 
@@ -1283,10 +1299,10 @@ export function transformMarketRow(row: MarketCSVRow): TransformedMarket | null 
     .digest('hex')
     .substring(0, 16);
 
-  const storeCountStr = row['점포수']?.trim() || '';
+  const storeCountStr = row['storNumber']?.trim() || '';
   const storeCount = storeCountStr ? parseInt(storeCountStr, 10) : null;
 
-  const foundedYearStr = row['개설연도']?.trim() || '';
+  const foundedYearStr = row['estblYear']?.trim() || '';
   const foundedYear = foundedYearStr ? parseInt(foundedYearStr, 10) : null;
 
   return {
@@ -1299,19 +1315,19 @@ export function transformMarketRow(row: MarketCSVRow): TransformedMarket | null 
     city: normalizedCity,
     district,
     sourceId,
-    marketType: row['시장유형']?.trim() || '',
-    openingCycle: row['시장개설주기']?.trim() || '',
+    marketType: row['mrktType']?.trim() || '',
+    openingCycle: row['mrktEstblCycle']?.trim() || '',
     storeCount: storeCount !== null && !isNaN(storeCount) ? storeCount : null,
-    products: row['취급품목']?.trim() || '',
-    giftCertificates: row['사용가능상품권']?.trim() || '',
-    homepageUrl: row['홈페이지주소']?.trim() || '',
-    hasPublicToilet: parseYN(row['공중화장실보유여부']),
-    hasParking: parseYN(row['주차장보유여부']),
+    products: row['trtmntPrdlst']?.trim() || '',
+    giftCertificates: row['useGcct']?.trim() || '',
+    homepageUrl: row['homepageUrl']?.trim() || '',
+    hasPublicToilet: parseYN(row['pblicToiletYn']),
+    hasParking: parseYN(row['prkplceYn']),
     foundedYear: foundedYear !== null && !isNaN(foundedYear) ? foundedYear : null,
-    phoneNumber: row['전화번호']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    phoneNumber: row['phoneNumber']?.trim() || '',
+    dataDate: row['referenceDate']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 

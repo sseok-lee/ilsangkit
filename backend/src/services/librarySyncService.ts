@@ -88,7 +88,7 @@ export async function syncLibrariesFromApi(): Promise<SyncStats> {
     console.info('Starting library data sync (API mode)...');
 
     const client = new PublicApiClient(
-      'http://api.data.go.kr/openapi/tn_pubr_public_lbrry_api',
+      'https://api.data.go.kr/openapi/tn_pubr_public_lbrry_api',
       serviceKey,
       { maxRetries: SYNC.MAX_RETRIES, retryDelay: SYNC.RETRY_BASE_DELAY_MS }
     );
