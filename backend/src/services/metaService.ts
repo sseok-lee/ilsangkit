@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { dateBasedStatusFilter } from './subscriptionService.js';
 import { getPropertyHotspots } from './realEstateHotspotService.js';
+import { dealDateRangeFilter } from './realEstateDateFilter.js';
 import type { HomeDashboardResponse, RealEstateTrend, TrendingBuildingItem } from '../types/homeDashboard.js';
 
 export interface StatsData {
@@ -264,8 +265,7 @@ async function aggregateSaleRange(daysFrom: number, daysTo: number) {
   const rows = await prisma.$queryRaw<[RawSumRow]>`
     SELECT SUM(dealAmount) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM AptSaleTransaction
-    WHERE STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+    WHERE ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -277,8 +277,7 @@ async function aggregateRentJeonseRange(daysFrom: number, daysTo: number) {
     SELECT SUM(deposit) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM AptRentTransaction
     WHERE rentType = '전세'
-      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+      AND ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -290,8 +289,7 @@ async function aggregateRentWolseRange(daysFrom: number, daysTo: number) {
     SELECT SUM(monthlyRent) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM AptRentTransaction
     WHERE rentType = '월세'
-      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+      AND ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -302,8 +300,7 @@ async function aggregateVillaSaleRange(daysFrom: number, daysTo: number) {
   const rows = await prisma.$queryRaw<[RawSumRow]>`
     SELECT SUM(dealAmount) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM VillaSaleTransaction
-    WHERE STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+    WHERE ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -315,8 +312,7 @@ async function aggregateVillaRentJeonseRange(daysFrom: number, daysTo: number) {
     SELECT SUM(deposit) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM VillaRentTransaction
     WHERE rentType = '전세'
-      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+      AND ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -328,8 +324,7 @@ async function aggregateVillaRentWolseRange(daysFrom: number, daysTo: number) {
     SELECT SUM(monthlyRent) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM VillaRentTransaction
     WHERE rentType = '월세'
-      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+      AND ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -340,8 +335,7 @@ async function aggregateOffitelSaleRange(daysFrom: number, daysTo: number) {
   const rows = await prisma.$queryRaw<[RawSumRow]>`
     SELECT SUM(dealAmount) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM OffitelSaleTransaction
-    WHERE STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+    WHERE ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -353,8 +347,7 @@ async function aggregateOffitelRentJeonseRange(daysFrom: number, daysTo: number)
     SELECT SUM(deposit) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM OffitelRentTransaction
     WHERE rentType = '전세'
-      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+      AND ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -366,8 +359,7 @@ async function aggregateOffitelRentWolseRange(daysFrom: number, daysTo: number) 
     SELECT SUM(monthlyRent) AS sumPrice, SUM(exclusiveArea) AS sumArea, COUNT(*) AS cnt
     FROM OffitelRentTransaction
     WHERE rentType = '월세'
-      AND STR_TO_DATE(CONCAT(dealYear, '-', LPAD(dealMonth,2,'0'), '-', LPAD(COALESCE(dealDay,1),2,'0')), '%Y-%m-%d')
-          BETWEEN ${from} AND ${to}
+      AND ${dealDateRangeFilter(from, to)}
       AND exclusiveArea IS NOT NULL AND exclusiveArea > 0`;
   return rowToPricePerPyeong(rows[0]);
 }
@@ -508,7 +500,7 @@ export async function getTrendingBuildings(): Promise<{ sale: TrendingBuildingIt
                ROUND(exclusiveArea / 5) * 5 AS areaBucket,
                dealAmount AS price
         FROM AptSaleTransaction
-        WHERE STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
+        WHERE ${dealDateRangeFilter(from, to)}
           AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
       ),
       top_buildings AS (
@@ -549,7 +541,7 @@ export async function getTrendingBuildings(): Promise<{ sale: TrendingBuildingIt
                deposit AS price
         FROM AptRentTransaction
         WHERE rentType = '전세'
-          AND STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
+          AND ${dealDateRangeFilter(from, to)}
           AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
       ),
       top_buildings AS (
@@ -591,7 +583,7 @@ export async function getTrendingBuildings(): Promise<{ sale: TrendingBuildingIt
                monthlyRent AS monthlyRent
         FROM AptRentTransaction
         WHERE rentType = '월세'
-          AND STR_TO_DATE(CONCAT(dealYear,'-',LPAD(dealMonth,2,'0'),'-',LPAD(COALESCE(dealDay,1),2,'0')),'%Y-%m-%d') BETWEEN ${from} AND ${to}
+          AND ${dealDateRangeFilter(from, to)}
           AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
       ),
       top_buildings AS (
