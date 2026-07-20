@@ -93,7 +93,7 @@ export async function syncParkingFromApi(): Promise<SyncStats> {
     console.info('Starting parking data sync (API mode)...');
 
     const client = new PublicApiClient(
-      'http://api.data.go.kr/openapi/tn_pubr_prkplce_info_api',
+      'https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api',
       serviceKey,
       { maxRetries: SYNC.MAX_RETRIES, retryDelay: SYNC.RETRY_BASE_DELAY_MS }
     );
