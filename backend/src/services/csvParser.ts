@@ -398,7 +398,7 @@ function generateSourceId(name: string, lat: string, lng: string): string {
 /**
  * Toilet sourceId 생성 (개방자치단체코드 + 관리번호 기반 — 좌표 무관 안정키)
  */
-function generateToiletSourceId(govCode: string, mngNo: string): string {
+export function generateToiletSourceId(govCode: string, mngNo: string): string {
   return createHash('md5').update(`toilet-${govCode}-${mngNo}`).digest('hex').substring(0, 16);
 }
 
