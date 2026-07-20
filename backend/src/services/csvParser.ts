@@ -1014,24 +1014,24 @@ export interface TransformedSchool {
 
 // Market CSV 로우 타입
 export interface MarketCSVRow {
-  '시장명': string;
-  '시장유형'?: string;
-  '소재지도로명주소': string;
-  '소재지지번주소'?: string;
-  '시장개설주기'?: string;
-  '위도': string;
-  '경도': string;
-  '점포수'?: string;
-  '취급품목'?: string;
-  '사용가능상품권'?: string;
-  '홈페이지주소'?: string;
-  '공중화장실보유여부'?: string;
-  '주차장보유여부'?: string;
-  '개설연도'?: string;
-  '전화번호'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  mrktNm: string;
+  mrktType?: string;
+  rdnmadr: string;
+  lnmadr?: string;
+  mrktEstblCycle?: string;
+  latitude: string;
+  longitude: string;
+  storNumber?: string;
+  trtmntPrdlst?: string;
+  useGcct?: string;
+  homepageUrl?: string;
+  pblicToiletYn?: string;
+  prkplceYn?: string;
+  estblYear?: string;
+  phoneNumber?: string;
+  referenceDate?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -1252,11 +1252,11 @@ export async function parseMarketCSV(filePath: string): Promise<MarketCSVRow[]> 
  * 전통시장 CSV 로우를 Market 형식으로 변환
  */
 export function transformMarketRow(row: MarketCSVRow): TransformedMarket | null {
-  const name = row['시장명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const name = row['mrktNm']?.trim() || '';
+  const roadAddress = row['rdnmadr']?.trim() || '';
+  const jibunAddress = row['lnmadr']?.trim() || '';
+  const latStr = row['latitude']?.trim() || '';
+  const lngStr = row['longitude']?.trim() || '';
 
   if (!name) return null;
 
@@ -1283,10 +1283,10 @@ export function transformMarketRow(row: MarketCSVRow): TransformedMarket | null 
     .digest('hex')
     .substring(0, 16);
 
-  const storeCountStr = row['점포수']?.trim() || '';
+  const storeCountStr = row['storNumber']?.trim() || '';
   const storeCount = storeCountStr ? parseInt(storeCountStr, 10) : null;
 
-  const foundedYearStr = row['개설연도']?.trim() || '';
+  const foundedYearStr = row['estblYear']?.trim() || '';
   const foundedYear = foundedYearStr ? parseInt(foundedYearStr, 10) : null;
 
   return {
@@ -1299,19 +1299,19 @@ export function transformMarketRow(row: MarketCSVRow): TransformedMarket | null 
     city: normalizedCity,
     district,
     sourceId,
-    marketType: row['시장유형']?.trim() || '',
-    openingCycle: row['시장개설주기']?.trim() || '',
+    marketType: row['mrktType']?.trim() || '',
+    openingCycle: row['mrktEstblCycle']?.trim() || '',
     storeCount: storeCount !== null && !isNaN(storeCount) ? storeCount : null,
-    products: row['취급품목']?.trim() || '',
-    giftCertificates: row['사용가능상품권']?.trim() || '',
-    homepageUrl: row['홈페이지주소']?.trim() || '',
-    hasPublicToilet: parseYN(row['공중화장실보유여부']),
-    hasParking: parseYN(row['주차장보유여부']),
+    products: row['trtmntPrdlst']?.trim() || '',
+    giftCertificates: row['useGcct']?.trim() || '',
+    homepageUrl: row['homepageUrl']?.trim() || '',
+    hasPublicToilet: parseYN(row['pblicToiletYn']),
+    hasParking: parseYN(row['prkplceYn']),
     foundedYear: foundedYear !== null && !isNaN(foundedYear) ? foundedYear : null,
-    phoneNumber: row['전화번호']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    phoneNumber: row['phoneNumber']?.trim() || '',
+    dataDate: row['referenceDate']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 

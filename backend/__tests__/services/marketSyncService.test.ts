@@ -7,24 +7,24 @@ import * as iconv from 'iconv-lite';
 
 describe('transformMarketRow', () => {
   const baseRow: MarketCSVRow = {
-    '시장명': '강남전통시장',
-    '시장유형': '일반시장',
-    '소재지도로명주소': '서울특별시 강남구 테헤란로 123',
-    '소재지지번주소': '서울특별시 강남구 역삼동 123',
-    '시장개설주기': '매일',
-    '위도': '37.4979517',
-    '경도': '127.0276188',
-    '점포수': '200',
-    '취급품목': '농산물,수산물,축산물',
-    '사용가능상품권': '온누리상품권',
-    '홈페이지주소': 'https://example.com',
-    '공중화장실보유여부': 'Y',
-    '주차장보유여부': 'N',
-    '개설연도': '1980',
-    '전화번호': '02-1234-5678',
-    '데이터기준일자': '2024-01-01',
-    '제공기관코드': '6110000',
-    '제공기관명': '서울특별시',
+    mrktNm: '강남전통시장',
+    mrktType: '일반시장',
+    rdnmadr: '서울특별시 강남구 테헤란로 123',
+    lnmadr: '서울특별시 강남구 역삼동 123',
+    mrktEstblCycle: '매일',
+    latitude: '37.4979517',
+    longitude: '127.0276188',
+    storNumber: '200',
+    trtmntPrdlst: '농산물,수산물,축산물',
+    useGcct: '온누리상품권',
+    homepageUrl: 'https://example.com',
+    pblicToiletYn: 'Y',
+    prkplceYn: 'N',
+    estblYear: '1980',
+    phoneNumber: '02-1234-5678',
+    referenceDate: '2024-01-01',
+    insttCode: '6110000',
+    insttNm: '서울특별시',
   };
 
   it('should generate sourceId as MD5(시장명+주소)', () => {
@@ -46,7 +46,7 @@ describe('transformMarketRow', () => {
   });
 
   it('should convert N to false for hasPublicToilet', () => {
-    const row: MarketCSVRow = { ...baseRow, '공중화장실보유여부': 'N' };
+    const row: MarketCSVRow = { ...baseRow, pblicToiletYn: 'N' };
     const result = transformMarketRow(row);
 
     expect(result).not.toBeNull();
@@ -54,7 +54,7 @@ describe('transformMarketRow', () => {
   });
 
   it('should convert empty string to null for hasPublicToilet', () => {
-    const row: MarketCSVRow = { ...baseRow, '공중화장실보유여부': '' };
+    const row: MarketCSVRow = { ...baseRow, pblicToiletYn: '' };
     const result = transformMarketRow(row);
 
     expect(result).not.toBeNull();
@@ -62,7 +62,7 @@ describe('transformMarketRow', () => {
   });
 
   it('should convert Y to true for hasParking', () => {
-    const row: MarketCSVRow = { ...baseRow, '주차장보유여부': 'Y' };
+    const row: MarketCSVRow = { ...baseRow, prkplceYn: 'Y' };
     const result = transformMarketRow(row);
 
     expect(result).not.toBeNull();
@@ -111,8 +111,8 @@ describe('transformMarketRow', () => {
   it('should return null when coordinates are outside KOREA_BOUNDS', () => {
     const row: MarketCSVRow = {
       ...baseRow,
-      '위도': '10.0',
-      '경도': '100.0',
+      latitude: '10.0',
+      longitude: '100.0',
     };
 
     const result = transformMarketRow(row);
@@ -122,8 +122,8 @@ describe('transformMarketRow', () => {
   it('should return null when coordinates are missing', () => {
     const row: MarketCSVRow = {
       ...baseRow,
-      '위도': '',
-      '경도': '',
+      latitude: '',
+      longitude: '',
     };
 
     const result = transformMarketRow(row);
@@ -131,7 +131,7 @@ describe('transformMarketRow', () => {
   });
 
   it('should handle null storeCount for empty string', () => {
-    const row: MarketCSVRow = { ...baseRow, '점포수': '' };
+    const row: MarketCSVRow = { ...baseRow, storNumber: '' };
     const result = transformMarketRow(row);
 
     expect(result).not.toBeNull();
@@ -139,7 +139,7 @@ describe('transformMarketRow', () => {
   });
 
   it('should handle null foundedYear for empty string', () => {
-    const row: MarketCSVRow = { ...baseRow, '개설연도': '' };
+    const row: MarketCSVRow = { ...baseRow, estblYear: '' };
     const result = transformMarketRow(row);
 
     expect(result).not.toBeNull();
