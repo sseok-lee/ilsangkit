@@ -396,3 +396,110 @@ describe('syncEvChargers 페이지별 증분 upsert (메모리 바운드 + 부�
     });
   });
 });
+
+describe('syncEvChargers 페이지 영구 실패 skip-continue (부분 내구성, Task 2)', () => {
+  const OLD_KEY = process.env.OPENAPI_SERVICE_KEY;
+  // totalCount=10000, NUM_OF_ROWS(기본 1000) 기준 totalPages=10 → failureThreshold=ceil(10*0.2)=2
+  const TOTAL_COUNT = 10000;
+
+  beforeEach(() => {
+    process.env.OPENAPI_SERVICE_KEY = 'test-key';
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+
+    vi.mocked(prisma.syncHistory.create).mockResolvedValue({ id: 1 } as never);
+    vi.mocked(prisma.syncHistory.update).mockResolvedValue({} as never);
+    vi.mocked(prisma.$queryRawUnsafe).mockResolvedValue([] as never);
+    vi.mocked(prisma.$transaction).mockImplementation((async (cb: (tx: unknown) => unknown) =>
+      cb({ $executeRawUnsafe: vi.fn().mockResolvedValue(0) })) as never);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    if (OLD_KEY === undefined) delete process.env.OPENAPI_SERVICE_KEY;
+    else process.env.OPENAPI_SERVICE_KEY = OLD_KEY;
+  });
+
+  /** pageNo가 failPages에 속하면 항상 502(재시도 소진까지), 아니면 유효 item 1건으로 성공. */
+  function makeFetchMock(failPages: Set<number>) {
+    return vi.fn(async (url: string) => {
+      const pageNo = Number(new URL(url).searchParams.get('pageNo'));
+      if (failPages.has(pageNo)) {
+        return { ok: false, status: 502, statusText: 'Bad Gateway' };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          totalCount: TOTAL_COUNT,
+          items: {
+            item: [{ statId: `S${pageNo}`, chgerId: '01', statNm: `충전소${pageNo}`, addr: '서울특별시 중구 세종대로 1' }],
+          },
+        }),
+      };
+    });
+  }
+
+  it('중간 페이지가 영구 실패해도 전체 throw 없이 나머지 페이지를 upsert하고, 부분 성공을 errorMessage에 기록한다', async () => {
+    const failPages = new Set([5]); // 1개 실패 < threshold(2) → 부분 성공
+    vi.stubGlobal('fetch', makeFetchMock(failPages));
+
+    const p = syncEvChargers();
+    await vi.runAllTimersAsync();
+    const stats = await p;
+
+    // 실패한 페이지를 제외한 9개 페이지는 여전히 즉시 upsert됨(부분 내구성 증명)
+    expect(prisma.$transaction).toHaveBeenCalledTimes(9);
+    expect(stats.errors).toHaveLength(0); // throw 없이 정상 반환 — stats.errors에 쌓이지 않음
+
+    expect(prisma.syncHistory.update).toHaveBeenLastCalledWith({
+      where: { id: 1 },
+      data: expect.objectContaining({
+        status: 'success',
+        errorMessage: expect.stringContaining('부분 성공'),
+      }),
+    });
+    const lastCall = vi.mocked(prisma.syncHistory.update).mock.calls.at(-1)![0];
+    expect(lastCall.data.errorMessage).toContain('1/10');
+    expect(lastCall.data.errorMessage).toContain('5');
+  });
+
+  it('첫 페이지(totalCount 확보용) 실패는 전체 sync를 failed로 중단한다', async () => {
+    const failPages = new Set([1]);
+    vi.stubGlobal('fetch', makeFetchMock(failPages));
+
+    const p = syncEvChargers();
+    const assertion = expect(p).rejects.toThrow('첫 페이지');
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    // 첫 페이지 실패 시 페이지 루프에 진입조차 못하므로 upsert가 전혀 일어나지 않음
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.syncHistory.update).toHaveBeenLastCalledWith({
+      where: { id: 1 },
+      data: expect.objectContaining({ status: 'failed' }),
+    });
+    const lastCall = vi.mocked(prisma.syncHistory.update).mock.calls.at(-1)![0];
+    expect(lastCall.data.errorMessage).toContain('첫 페이지');
+  });
+
+  it('실패 페이지 수가 임계값(20%) 이상이면 이미 처리된 페이지는 durable하되 최종 status는 failed다', async () => {
+    const failPages = new Set([5, 6]); // 2개 실패 >= threshold(2) → failed
+    vi.stubGlobal('fetch', makeFetchMock(failPages));
+
+    const p = syncEvChargers();
+    const assertion = expect(p).rejects.toThrow(/임계값/);
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    // 실패한 2페이지를 제외한 8개 페이지는 throw 전에 이미 upsert 완료(부분 내구성)
+    expect(prisma.$transaction).toHaveBeenCalledTimes(8);
+    expect(prisma.syncHistory.update).toHaveBeenLastCalledWith({
+      where: { id: 1 },
+      data: expect.objectContaining({ status: 'failed' }),
+    });
+    const lastCall = vi.mocked(prisma.syncHistory.update).mock.calls.at(-1)![0];
+    expect(lastCall.data.errorMessage).toContain('5');
+    expect(lastCall.data.errorMessage).toContain('6');
+  });
+});
