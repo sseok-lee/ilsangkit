@@ -311,115 +311,169 @@ export async function syncEvChargers(): Promise<SyncStats> {
   const syncHistory = await createSyncHistory('ev-charger');
 
   try {
-    const allItems: TransformedEvCharger[] = [];
-    let pageNo = 1;
-
-    // 첫 페이지로 totalCount 파악
-    const firstPage = await fetchEvChargerPage(pageNo, NUM_OF_ROWS);
-    const totalCount = firstPage.totalCount;
-    console.info(`Total records: ${totalCount}`);
-
-    for (const item of firstPage.items) {
-      const transformed = transformEvChargerItem(item);
-      if (transformed) {
-        allItems.push(transformed);
-      } else {
-        stats.skippedRecords++;
-      }
+    // 첫 페이지로 totalCount 파악 (아래 루프에서 pageNo=1로 재사용 — 중복 fetch 방지).
+    // 첫 페이지는 totalCount 확보의 유일한 수단이라 여기서 실패하면 전체 진행 불가 —
+    // fetchEvChargerPage의 백오프 재시도가 소진된 뒤에도 실패하면 명확한 메시지로 감싸
+    // 바깥 catch가 status 'failed'로 기록하도록 그대로 전파(skip-continue 대상 아님).
+    let firstPage: { items: EvChargerAPIItem[]; totalCount: number };
+    try {
+      firstPage = await fetchEvChargerPage(1, NUM_OF_ROWS);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error(`ev-charger sync: 첫 페이지(totalCount 확보용) 조회 실패로 동기화를 진행할 수 없음 — ${msg}`);
     }
-    stats.totalRecords += firstPage.items.length;
-    console.info(`page ${pageNo}: ${firstPage.items.length} items`);
+    const totalCount = firstPage.totalCount;
+    const totalPages = Math.ceil(totalCount / NUM_OF_ROWS);
+    // 부분 실패 허용 임계값 — totalPages의 20% 미만이면 부분 성공(success+errorMessage),
+    // 그 이상이면 상류 장애 가능성이 높다고 보고 failed 처리.
+    const failureThreshold = Math.ceil(totalPages * 0.2);
+    console.info(`Total records: ${totalCount} (${totalPages} pages)`);
 
-    // 나머지 페이지
-    while (stats.totalRecords < totalCount) {
-      pageNo++;
-      const page = await fetchEvChargerPage(pageNo, NUM_OF_ROWS);
-      if (page.items.length === 0) break;
+    const now = new Date();
+    let failedPages = 0;
+    const failedPageNos: number[] = [];
 
-      for (const item of page.items) {
-        const transformed = transformEvChargerItem(item);
-        if (transformed) {
-          allItems.push(transformed);
-        } else {
-          stats.skippedRecords++;
+    // 페이지별 증분 upsert — 메모리에는 항상 한 페이지 분량만 보유(바운드),
+    // 페이지 처리 직후 batchUpsertRaw로 즉시 반영해 중간 실패 시에도 이미 처리한 페이지는 durable.
+    // 종료조건은 totalPages(페이지 인덱스) 기준 — totalRecords 누적 기준이 아님
+    // (skip 로직 도입 시에도 안전하게 종료하기 위함, Task 2).
+    for (let pageNo = 1; pageNo <= totalPages; pageNo++) {
+      let page: { items: EvChargerAPIItem[]; totalCount: number };
+      if (pageNo === 1) {
+        page = firstPage;
+      } else {
+        try {
+          page = await fetchEvChargerPage(pageNo, NUM_OF_ROWS);
+        } catch (error) {
+          // fetchEvChargerPage 내부 지수 백오프 재시도가 모두 소진된 뒤의 영구 실패.
+          // 전체 sync를 throw로 중단하지 않고 이 페이지만 skip — 나머지 페이지는 계속 진행(부분 내구성).
+          failedPages++;
+          failedPageNos.push(pageNo);
+          console.error(
+            `ev-charger page ${pageNo}/${totalPages} 영구 실패(재시도 소진) — skip: ` +
+              `${error instanceof Error ? error.message : String(error)}`
+          );
+          continue;
         }
       }
 
+      // 변환 + 페이지 내 dedup (sourceId 기준) — 크로스 페이지 dedup은 불필요
+      // (upsert-by-sourceId라 이후 페이지가 같은 sourceId를 다시 upsert해도 덮어쓸 뿐 안전).
+      const pageMap = new Map<string, TransformedEvCharger>();
+      let transformedCount = 0;
+      let pageSkipped = 0;
+      for (const item of page.items) {
+        const transformed = transformEvChargerItem(item);
+        if (transformed) {
+          pageMap.set(transformed.sourceId, transformed);
+          transformedCount++;
+        } else {
+          pageSkipped++;
+        }
+      }
+      const duplicateCount = transformedCount - pageMap.size;
+
       stats.totalRecords += page.items.length;
-      console.info(`page ${pageNo}: ${page.items.length} items (fetched: ${stats.totalRecords}/${totalCount})`);
+      stats.skippedRecords += pageSkipped + duplicateCount;
+
+      const pageRows = Array.from(pageMap.values()).map((c) => ({
+        id: c.id,
+        name: c.name,
+        address: c.address,
+        roadAddress: c.roadAddress,
+        lat: c.lat,
+        lng: c.lng,
+        city: c.city,
+        district: c.district,
+        sourceId: c.sourceId,
+        statId: c.statId,
+        chgerId: c.chgerId,
+        chgerType: c.chgerType,
+        addrDetail: c.addrDetail,
+        location: c.location,
+        useTime: c.useTime,
+        busiId: c.busiId,
+        bnm: c.bnm,
+        busiNm: c.busiNm,
+        busiCall: c.busiCall,
+        stat: c.stat,
+        statUpdDt: c.statUpdDt,
+        lastTsdt: c.lastTsdt,
+        lastTedt: c.lastTedt,
+        nowTsdt: c.nowTsdt,
+        powerType: c.powerType,
+        output: c.output,
+        method: c.method,
+        zcode: c.zcode,
+        zscode: c.zscode,
+        kind: c.kind,
+        kindDetail: c.kindDetail,
+        parkingFree: c.parkingFree,
+        note: c.note,
+        limitYn: c.limitYn,
+        limitDetail: c.limitDetail,
+        delYn: c.delYn,
+        delDetail: c.delDetail,
+        trafficYn: c.trafficYn,
+        year: c.year,
+        floorNum: c.floorNum,
+        floorType: c.floorType,
+        maker: c.maker,
+        // createdAt 생략 — schema @default(now())가 처리. SKIP_UPDATE_COLS 의존 감소.
+        updatedAt: now,   // raw INSERT 필수 (NULL 위반 방지). UPDATE는 batchUpsertRaw가 NOW()로 강제.
+        syncedAt: now,    // DB default 있지만 ON DUPLICATE NOW() 갱신 위해 payload 포함.
+      }));
+
+      if (pageRows.length > 0) {
+        const { newCount, updateCount } = await batchUpsertRaw(
+          'EvCharger',
+          pageRows,
+          100,
+          syncHistory.id,
+          { exactStats: true, uniqueKey: 'sourceId' }
+        );
+        stats.newRecords += newCount;
+        stats.updatedRecords += updateCount;
+      }
+
+      // 참조 해제(pageMap/pageRows는 루프 스코프 로컬 — 다음 반복에서 GC 대상, 메모리 바운드 유지)
+      console.info(
+        `page ${pageNo}/${totalPages}: ${pageRows.length} items upserted ` +
+          `(total so far: ${stats.totalRecords}/${totalCount}, new=${stats.newRecords}, updated=${stats.updatedRecords})`
+      );
     }
 
-    // 중복 제거 (sourceId 기준)
-    const uniqueMap = new Map<string, TransformedEvCharger>();
-    for (const item of allItems) {
-      uniqueMap.set(item.sourceId, item);
+    if (failedPages > 0) {
+      const pagesSummary = failedPageNos.length <= 20
+        ? failedPageNos.join(', ')
+        : `${failedPageNos.slice(0, 20).join(', ')} 외 ${failedPageNos.length - 20}개`;
+
+      if (failedPages >= failureThreshold) {
+        // 임계값(totalPages의 20%) 이상 페이지가 영구 실패 — 상류 장애 가능성이 높음.
+        // 이미 처리한 페이지는 durable하지만(멱등 upsert로 다음 run이 이어감), 이번 run은 failed로 표기.
+        throw new Error(
+          `ev-charger sync: ${failedPages}/${totalPages}페이지 영구 실패(임계값 ${failureThreshold} 이상) — ` +
+            `실패 페이지: ${pagesSummary}. 상류 장애 가능성 — 실패 처리(성공한 페이지 데이터는 유지, 다음 run에서 재시도).`
+        );
+      }
+
+      // 임계값 미만 — 부분 성공. 데이터는 성공한 페이지만큼 durable, 실패 페이지는 다음 run(멱등 upsert)이 재시도.
+      const partialFailureMessage =
+        `부분 성공: ${failedPages}/${totalPages}페이지 영구 실패(재시도 소진, skip) — ` +
+        `실패 페이지: ${pagesSummary}. 다음 run에서 재시도됨(멱등 upsert).`;
+
+      await updateSyncHistory(syncHistory.id, {
+        status: 'success',
+        totalRecords: stats.totalRecords,
+        newRecords: stats.newRecords,
+        updatedRecords: stats.updatedRecords,
+        errorMessage: partialFailureMessage,
+      });
+
+      console.warn(`ev-charger sync 부분 성공: ${partialFailureMessage}`);
+      console.info(`ev-charger sync completed: Total=${stats.totalRecords}, New=${stats.newRecords}, Updated=${stats.updatedRecords}, Skipped=${stats.skippedRecords}`);
+      return stats;
     }
-    const uniqueItems = Array.from(uniqueMap.values());
-    const duplicateCount = allItems.length - uniqueItems.length;
-    stats.skippedRecords += duplicateCount;
-
-    console.info(`Transformed ${uniqueItems.length} unique records, skipped ${stats.skippedRecords}`);
-    console.info('Upserting to database...');
-
-    const now = new Date();
-    const rowsForUpsert = uniqueItems.map((c) => ({
-      id: c.id,
-      name: c.name,
-      address: c.address,
-      roadAddress: c.roadAddress,
-      lat: c.lat,
-      lng: c.lng,
-      city: c.city,
-      district: c.district,
-      sourceId: c.sourceId,
-      statId: c.statId,
-      chgerId: c.chgerId,
-      chgerType: c.chgerType,
-      addrDetail: c.addrDetail,
-      location: c.location,
-      useTime: c.useTime,
-      busiId: c.busiId,
-      bnm: c.bnm,
-      busiNm: c.busiNm,
-      busiCall: c.busiCall,
-      stat: c.stat,
-      statUpdDt: c.statUpdDt,
-      lastTsdt: c.lastTsdt,
-      lastTedt: c.lastTedt,
-      nowTsdt: c.nowTsdt,
-      powerType: c.powerType,
-      output: c.output,
-      method: c.method,
-      zcode: c.zcode,
-      zscode: c.zscode,
-      kind: c.kind,
-      kindDetail: c.kindDetail,
-      parkingFree: c.parkingFree,
-      note: c.note,
-      limitYn: c.limitYn,
-      limitDetail: c.limitDetail,
-      delYn: c.delYn,
-      delDetail: c.delDetail,
-      trafficYn: c.trafficYn,
-      year: c.year,
-      floorNum: c.floorNum,
-      floorType: c.floorType,
-      maker: c.maker,
-      // createdAt 생략 — schema @default(now())가 처리. SKIP_UPDATE_COLS 의존 감소.
-      updatedAt: now,   // raw INSERT 필수 (NULL 위반 방지). UPDATE는 batchUpsertRaw가 NOW()로 강제.
-      syncedAt: now,    // DB default 있지만 ON DUPLICATE NOW() 갱신 위해 payload 포함.
-    }));
-
-    const { newCount, updateCount } = await batchUpsertRaw(
-      'EvCharger',
-      rowsForUpsert,
-      100,
-      syncHistory.id,
-      { exactStats: true, uniqueKey: 'sourceId' }
-    );
-
-    stats.newRecords = newCount;
-    stats.updatedRecords = updateCount;
 
     await updateSyncHistory(syncHistory.id, {
       status: 'success',
