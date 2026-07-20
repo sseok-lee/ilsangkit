@@ -14,6 +14,7 @@
 import * as path from 'path';
 import fs from 'fs';
 import { syncToilets } from '../services/toiletSyncService.js';
+import { geocodeToilets } from './geocodeToilets.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 import { syncTrashData } from './syncTrash.js';
 import { syncWifiData } from './syncWifi.js';
@@ -84,7 +85,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'hira-file', 'hospital-detail', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
+const CATEGORIES = ['toilet', 'toilet-geocode', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'hira-file', 'hospital-detail', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -103,6 +104,16 @@ async function syncCategory(category: Category): Promise<SyncResult> {
           category,
           success: true,
           count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'toilet-geocode': {
+        const result = await geocodeToilets();
+        return {
+          category,
+          success: true,
+          count: result.updated,
           duration: Date.now() - start,
         };
       }
