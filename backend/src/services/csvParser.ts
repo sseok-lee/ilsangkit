@@ -910,25 +910,25 @@ export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | nu
 
 // Park CSV 로우 타입
 export interface ParkCSVRow {
-  '관리번호': string;
-  '공원명': string;
-  '공원구분': string;
-  '소재지도로명주소': string;
-  '소재지지번주소': string;
-  '위도': string;
-  '경도': string;
-  '공원면적'?: string;
-  '공원보유시설(운동시설)'?: string;
-  '공원보유시설(유희시설)'?: string;
-  '공원보유시설(편익시설)'?: string;
-  '공원보유시설(교양시설)'?: string;
-  '공원보유시설(기타시설)'?: string;
-  '지정고시일'?: string;
-  '관리기관명'?: string;
-  '전화번호'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  manageNo: string;
+  parkNm: string;
+  parkSe: string;
+  rdnmadr: string;
+  lnmadr: string;
+  latitude: string;
+  longitude: string;
+  parkAr?: string;
+  mvmFclty?: string;
+  amsmtFclty?: string;
+  cnvnncFclty?: string;
+  cltrFclty?: string;
+  etcFclty?: string;
+  appnNtfcDate?: string;
+  institutionNm?: string;
+  phoneNumber?: string;
+  referenceDate?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -1112,12 +1112,12 @@ export async function parseParkCSV(filePath: string): Promise<ParkCSVRow[]> {
  * 공원 CSV 로우를 Park 형식으로 변환
  */
 export function transformParkRow(row: ParkCSVRow): TransformedPark | null {
-  const sourceId = row['관리번호']?.trim() || '';
-  const name = row['공원명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const sourceId = row['manageNo']?.trim() || '';
+  const name = row['parkNm']?.trim() || '';
+  const roadAddress = row['rdnmadr']?.trim() || '';
+  const jibunAddress = row['lnmadr']?.trim() || '';
+  const latStr = row['latitude']?.trim() || '';
+  const lngStr = row['longitude']?.trim() || '';
 
   if (!name) return null;
   if (!sourceId) return null;
@@ -1139,7 +1139,7 @@ export function transformParkRow(row: ParkCSVRow): TransformedPark | null {
 
   if (!normalizedCity || !district) return null;
 
-  const areaStr = row['공원면적']?.trim() || '';
+  const areaStr = row['parkAr']?.trim() || '';
   const area = areaStr ? parseFloat(areaStr) : null;
 
   return {
@@ -1152,19 +1152,19 @@ export function transformParkRow(row: ParkCSVRow): TransformedPark | null {
     city: normalizedCity,
     district,
     sourceId,
-    parkType: row['공원구분']?.trim() || '',
+    parkType: row['parkSe']?.trim() || '',
     area: area !== null && !isNaN(area) ? area : null,
-    exerciseFacilities: row['공원보유시설(운동시설)']?.trim() || '',
-    playFacilities: row['공원보유시설(유희시설)']?.trim() || '',
-    convenienceFacilities: row['공원보유시설(편익시설)']?.trim() || '',
-    cultureFacilities: row['공원보유시설(교양시설)']?.trim() || '',
-    otherFacilities: row['공원보유시설(기타시설)']?.trim() || '',
-    designatedDate: row['지정고시일']?.trim() || '',
-    managingOrg: row['관리기관명']?.trim() || '',
-    phoneNumber: row['전화번호']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    exerciseFacilities: row['mvmFclty']?.trim() || '',
+    playFacilities: row['amsmtFclty']?.trim() || '',
+    convenienceFacilities: row['cnvnncFclty']?.trim() || '',
+    cultureFacilities: row['cltrFclty']?.trim() || '',
+    otherFacilities: row['etcFclty']?.trim() || '',
+    designatedDate: row['appnNtfcDate']?.trim() || '',
+    managingOrg: row['institutionNm']?.trim() || '',
+    phoneNumber: row['phoneNumber']?.trim() || '',
+    dataDate: row['referenceDate']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 
