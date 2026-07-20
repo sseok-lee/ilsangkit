@@ -165,34 +165,34 @@ export interface ParkingCSVRow {
 
 // Library CSV 로우 타입
 export interface LibraryCSVRow {
-  '도서관명': string;
-  '시도명': string;
-  '시군구명': string;
-  '도서관유형': string;
-  '휴관일': string;
-  '평일운영시작시각': string;
-  '평일운영종료시각': string;
-  '토요일운영시작시각'?: string;
-  '토요일운영종료시각'?: string;
-  '공휴일운영시작시각'?: string;
-  '공휴일운영종료시각'?: string;
-  '열람좌석수': string;
-  '자료수(도서)': string;
-  '소재지도로명주소': string;
-  '운영기관명'?: string;
-  '도서관전화번호'?: string;
-  '홈페이지주소'?: string;
-  '자료수(연속간행물)'?: string;
-  '자료수(비도서)'?: string;
-  '대출가능권수'?: string;
-  '대출가능일수'?: string;
-  '위도': string;
-  '경도': string;
-  '부지면적'?: string;
-  '건물면적'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  lbrryNm: string;
+  ctprvnNm: string;
+  signguNm: string;
+  lbrrySe?: string;
+  closeDay?: string;
+  weekdayOperOpenHhmm?: string;
+  weekdayOperColseHhmm?: string;
+  satOperOperOpenHhmm?: string;
+  satOperCloseHhmm?: string;
+  holidayOperOpenHhmm?: string;
+  holidayCloseOpenHhmm?: string;
+  seatCo?: string;
+  bookCo?: string;
+  rdnmadr: string;
+  operInstitutionNm?: string;
+  phoneNumber?: string;
+  homepageUrl?: string;
+  pblictnCo?: string;
+  noneBookCo?: string;
+  lonCo?: string;
+  lonDaycnt?: string;
+  latitude: string;
+  longitude: string;
+  plotAr?: string;
+  buldAr?: string;
+  referenceDate?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -833,12 +833,12 @@ export async function parseLibraryCSV(filePath: string): Promise<LibraryCSVRow[]
  * 도서관 CSV 로우를 Library 형식으로 변환
  */
 export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | null {
-  const name = row['도서관명']?.trim() || '';
-  const city = row['시도명']?.trim() || '';
-  const district = row['시군구명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const name = row['lbrryNm']?.trim() || '';
+  const city = row['ctprvnNm']?.trim() || '';
+  const district = row['signguNm']?.trim() || '';
+  const roadAddress = row['rdnmadr']?.trim() || '';
+  const latStr = row['latitude']?.trim() || '';
+  const lngStr = row['longitude']?.trim() || '';
 
   if (!name) {
     return null;
@@ -882,29 +882,29 @@ export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | nu
     district,
     sourceId,
     // Library 전용 필드
-    libraryType: row['도서관유형']?.trim() || '',
-    closedDays: row['휴관일']?.trim() || '',
-    weekdayOpenTime: row['평일운영시작시각']?.trim() || '',
-    weekdayCloseTime: row['평일운영종료시각']?.trim() || '',
-    saturdayOpenTime: row['토요일운영시작시각']?.trim() || '',
-    saturdayCloseTime: row['토요일운영종료시각']?.trim() || '',
-    holidayOpenTime: row['공휴일운영시작시각']?.trim() || '',
-    holidayCloseTime: row['공휴일운영종료시각']?.trim() || '',
-    seatCount: parseInt(row['열람좌석수'] || '0', 10) || 0,
-    bookCount: parseInt(row['자료수(도서)'] || '0', 10) || 0,
-    serialCount: parseInt(row['자료수(연속간행물)'] || '0', 10) || 0,
-    nonBookCount: parseInt(row['자료수(비도서)'] || '0', 10) || 0,
-    loanableBooks: parseInt(row['대출가능권수'] || '0', 10) || 0,
-    loanableDays: parseInt(row['대출가능일수'] || '0', 10) || 0,
-    phoneNumber: row['도서관전화번호']?.trim() || '',
-    homepageUrl: row['홈페이지주소']?.trim() || '',
-    operatingOrg: row['운영기관명']?.trim() || '',
+    libraryType: row['lbrrySe']?.trim() || '',
+    closedDays: row['closeDay']?.trim() || '',
+    weekdayOpenTime: row['weekdayOperOpenHhmm']?.trim() || '',
+    weekdayCloseTime: row['weekdayOperColseHhmm']?.trim() || '',
+    saturdayOpenTime: row['satOperOperOpenHhmm']?.trim() || '',
+    saturdayCloseTime: row['satOperCloseHhmm']?.trim() || '',
+    holidayOpenTime: row['holidayOperOpenHhmm']?.trim() || '',
+    holidayCloseTime: row['holidayCloseOpenHhmm']?.trim() || '',
+    seatCount: parseInt(row['seatCo'] || '0', 10) || 0,
+    bookCount: parseInt(row['bookCo'] || '0', 10) || 0,
+    serialCount: parseInt(row['pblictnCo'] || '0', 10) || 0,
+    nonBookCount: parseInt(row['noneBookCo'] || '0', 10) || 0,
+    loanableBooks: parseInt(row['lonCo'] || '0', 10) || 0,
+    loanableDays: parseInt(row['lonDaycnt'] || '0', 10) || 0,
+    phoneNumber: row['phoneNumber']?.trim() || '',
+    homepageUrl: row['homepageUrl']?.trim() || '',
+    operatingOrg: row['operInstitutionNm']?.trim() || '',
     // 추가 상세 필드
-    lotArea: row['부지면적']?.trim() || '',
-    buildingArea: row['건물면적']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    lotArea: row['plotAr']?.trim() || '',
+    buildingArea: row['buldAr']?.trim() || '',
+    dataDate: row['referenceDate']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 
