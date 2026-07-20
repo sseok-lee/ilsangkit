@@ -200,6 +200,15 @@ export interface BatchUpsertRawOptions {
   exactStats?: boolean;
   /** 정확 통계 시 unique key 컬럼명. 기본 'sourceId'. UNIQUE INDEX 필수, String 타입 권장 */
   uniqueKey?: string;
+  /**
+   * ON DUPLICATE KEY UPDATE에서 추가로 제외할 컬럼 (기본 SKIP_UPDATE_COLS와 합집합).
+   * INSERT 컬럼 목록에는 그대로 남아 신규 행 생성 시에는 값이 세팅되지만,
+   * 기존 행 UPDATE 시에는 갱신되지 않고 기존 값이 보존된다.
+   * 용례: 소스 데이터에 좌표가 없는 동기화(toilet 등)에서 기존 지오코딩된 lat/lng이
+   * NULL로 덮어써지는 것을 방지.
+   * 기본값(미지정/빈 배열) = 기존 동작과 완전히 동일.
+   */
+  skipUpdateCols?: string[];
 }
 
 export async function batchUpsertRaw<T extends Record<string, unknown>>(
@@ -209,7 +218,7 @@ export async function batchUpsertRaw<T extends Record<string, unknown>>(
   syncHistoryId?: number,
   options: BatchUpsertRawOptions = {}
 ): Promise<{ newCount: number; updateCount: number }> {
-  const { exactStats = false, uniqueKey = 'sourceId' } = options;
+  const { exactStats = false, uniqueKey = 'sourceId', skipUpdateCols = [] } = options;
   if (items.length === 0) return { newCount: 0, updateCount: 0 };
 
   // 테이블명 안전성 검증 (영문자, 숫자, 하이픈, 언더스코어만 허용)
@@ -228,7 +237,12 @@ export async function batchUpsertRaw<T extends Record<string, unknown>>(
   let processedRecords = 0;
 
   // ON DUPLICATE KEY UPDATE에서 제외할 컬럼 (삽입 시 세팅되고 이후 불변이어야 하는 것들)
-  const SKIP_UPDATE_COLS = new Set(['id', 'sourceId', 'viewCount', 'createdAt', 'updatedAt', 'syncedAt']);
+  // 호출자가 skipUpdateCols로 넘긴 컬럼은 여기에 합집합되어 추가로 UPDATE에서 제외된다
+  // (INSERT 컬럼 목록에는 남아있어 신규 행에는 값이 세팅됨).
+  const SKIP_UPDATE_COLS = new Set([
+    'id', 'sourceId', 'viewCount', 'createdAt', 'updatedAt', 'syncedAt',
+    ...skipUpdateCols,
+  ]);
 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);

@@ -73,4 +73,66 @@ describe('batchUpsertRaw with exactStats', () => {
     expect(newCount).toBe(2);
     expect(updateCount).toBe(0);
   });
+
+  it('skipUpdateCols 미지정 시 lat/lng이 매 upsert마다 VALUES로 덮어써진다 (기존 동작, 회귀 가드)', async () => {
+    await prisma.toilet.create({ data: row('6') }); // lat=37.5, lng=127.0
+
+    await batchUpsertRaw(
+      'Toilet',
+      [{ ...row('6'), lat: null, lng: null }],
+      100,
+      undefined,
+      { exactStats: true, uniqueKey: 'sourceId' }
+    );
+
+    const updated = await prisma.toilet.findUnique({ where: { sourceId: `${TEST_PREFIX}6` } });
+    expect(updated?.lat).toBeNull();
+    expect(updated?.lng).toBeNull();
+  });
+
+  it('skipUpdateCols: ["lat","lng"] 지정 시 기존 좌표가 coordless 재입력에도 보존된다', async () => {
+    await prisma.toilet.create({ data: row('7') }); // lat=37.5, lng=127.0
+
+    const { newCount, updateCount } = await batchUpsertRaw(
+      'Toilet',
+      [{ ...row('7'), lat: null, lng: null }],
+      100,
+      undefined,
+      { exactStats: true, uniqueKey: 'sourceId', skipUpdateCols: ['lat', 'lng'] }
+    );
+
+    expect(newCount).toBe(0);
+    expect(updateCount).toBe(1);
+
+    const updated = await prisma.toilet.findUnique({ where: { sourceId: `${TEST_PREFIX}7` } });
+    expect(Number(updated?.lat)).toBeCloseTo(37.5, 5);
+    expect(Number(updated?.lng)).toBeCloseTo(127.0, 5);
+
+    // 신규 행(다른 sourceId)은 skipUpdateCols와 무관하게 INSERT 컬럼에 lat/lng이 그대로 세팅됨
+    const { newCount: newCount2 } = await batchUpsertRaw(
+      'Toilet',
+      [row('8')], // lat=37.5, lng=127.0, 신규 sourceId
+      100,
+      undefined,
+      { exactStats: true, uniqueKey: 'sourceId', skipUpdateCols: ['lat', 'lng'] }
+    );
+    expect(newCount2).toBe(1);
+    const inserted = await prisma.toilet.findUnique({ where: { sourceId: `${TEST_PREFIX}8` } });
+    expect(Number(inserted?.lat)).toBeCloseTo(37.5, 5);
+  });
+
+  it('skipUpdateCols는 다른 컬럼(예: name)의 UPDATE 동작에 영향을 주지 않는다', async () => {
+    await prisma.toilet.create({ data: row('9', '기존이름') });
+
+    await batchUpsertRaw(
+      'Toilet',
+      [row('9', '변경된이름')],
+      100,
+      undefined,
+      { exactStats: true, uniqueKey: 'sourceId', skipUpdateCols: ['lat', 'lng'] }
+    );
+
+    const updated = await prisma.toilet.findUnique({ where: { sourceId: `${TEST_PREFIX}9` } });
+    expect(updated?.name).toBe('변경된이름');
+  });
 });
