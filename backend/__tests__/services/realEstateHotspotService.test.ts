@@ -17,14 +17,17 @@ beforeEach(() => {
 
 describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
   it('rising은 changePct DESC, falling은 ASC, active는 volumeChangePct DESC 정렬', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: 8000, txnCount: 100n, changePct: 5, volumeChangePct: 30 },
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'mapo-gu', district: '마포구',
-        pricePerPyeong: 5000, txnCount: 60n, changePct: -3, volumeChangePct: 10 },
-      { citySlug: 'busan', city: '부산광역시', districtSlug: 'haeundae-gu', district: '해운대구',
-        pricePerPyeong: 4000, txnCount: 80n, changePct: 2, volumeChangePct: 50 },
-    ]);
+    // 1) anchor 최신일 조회, 2) 본 slice 쿼리
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: 8000, txnCount: 100n, changePct: 5, volumeChangePct: 30 },
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'mapo-gu', district: '마포구',
+          pricePerPyeong: 5000, txnCount: 60n, changePct: -3, volumeChangePct: 10 },
+        { citySlug: 'busan', city: '부산광역시', districtSlug: 'haeundae-gu', district: '해운대구',
+          pricePerPyeong: 4000, txnCount: 80n, changePct: 2, volumeChangePct: 50 },
+      ]);
 
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
 
@@ -34,10 +37,12 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
   });
 
   it('changePct가 null인 행은 rising/falling에서 제외, active에는 영향 없음', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: 8000, txnCount: 100n, changePct: null, volumeChangePct: 30 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: 8000, txnCount: 100n, changePct: null, volumeChangePct: 30 },
+      ]);
 
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
 
@@ -57,7 +62,9 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
       changePct: i + 1,
       volumeChangePct: i + 1,
     }));
-    mockQueryRaw.mockResolvedValue(rows);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce(rows);
 
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
 
@@ -66,10 +73,12 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
   });
 
   it('BigInt txnCount는 number로 변환됨', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: 8000, txnCount: 12345n, changePct: 5, volumeChangePct: 30 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: 8000, txnCount: 12345n, changePct: 5, volumeChangePct: 30 },
+      ]);
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
     expect(bundle.rising[0].txnCount).toBe(12345);
     expect(typeof bundle.rising[0].txnCount).toBe('number');
@@ -77,10 +86,12 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
 
   it('Decimal string(Prisma raw 반환) 도 number로 정규화', async () => {
     // Prisma raw query는 DECIMAL 컬럼을 문자열로 반환할 수 있음
-    mockQueryRaw.mockResolvedValue([
-      { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: '1034.265', txnCount: 61n, changePct: '52.32', volumeChangePct: '15.09' },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: '1034.265', txnCount: 61n, changePct: '52.32', volumeChangePct: '15.09' },
+      ]);
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
     const row = bundle.rising[0];
     expect(typeof row.pricePerPyeong).toBe('number');
@@ -91,17 +102,28 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
   });
 
   it('citySlug는 city 한글명에서 자동 계산 (short/full 모두)', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        pricePerPyeong: 8000, txnCount: 50n, changePct: 5, volumeChangePct: 10 },
-      { city: '전북', districtSlug: 'iksan', district: '익산시',
-        pricePerPyeong: 1000, txnCount: 60n, changePct: 3, volumeChangePct: 8 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          pricePerPyeong: 8000, txnCount: 50n, changePct: 5, volumeChangePct: 10 },
+        { city: '전북', districtSlug: 'iksan', district: '익산시',
+          pricePerPyeong: 1000, txnCount: 60n, changePct: 3, volumeChangePct: 8 },
+      ]);
     const bundle = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 30 });
     const seoul = bundle.rising.find((r) => r.district === '강남구');
     const jeonbuk = bundle.rising.find((r) => r.district === '익산시');
     expect(seoul?.citySlug).toBe('seoul');
     expect(jeonbuk?.citySlug).toBe('jeonbuk');
+  });
+
+  it('거래가 없으면(anchor 빈 결과) 빈 번들 반환', async () => {
+    mockQueryRaw.mockResolvedValueOnce([]); // anchor 0행
+    const res = await getPricedSliceHotspots('AptSaleTransaction', { sampleThreshold: 1 });
+    expect(res.rising).toEqual([]);
+    expect(res.falling).toEqual([]);
+    expect(res.active).toEqual([]);
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1); // slice 쿼리는 실행 안 함
   });
 });
 
