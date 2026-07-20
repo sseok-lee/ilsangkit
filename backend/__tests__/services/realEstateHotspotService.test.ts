@@ -129,10 +129,12 @@ describe('getPricedSliceHotspots (sale/jeonse 슬라이스)', () => {
 
 describe('getWolseHotspots', () => {
   it('pricePerPyeong과 changePct는 null로 채워짐', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
-        txnCount: 150n, volumeChangePct: 40 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam-gu', district: '강남구',
+          txnCount: 150n, volumeChangePct: 40 },
+      ]);
 
     const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
 
@@ -148,7 +150,9 @@ describe('getWolseHotspots', () => {
       city: '서울', bjdCode: '11110', districtSlug: `d-${i}`, district: `구-${i}`,
       txnCount: 100n, volumeChangePct: 10 - i,
     }));
-    mockQueryRaw.mockResolvedValue(rows);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce(rows);
 
     const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
 
@@ -157,13 +161,30 @@ describe('getWolseHotspots', () => {
   });
 
   it('한글 districtSlug 행은 active에서 제외 (방어 가드)', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { city: '인천', bjdCode: '28275', districtSlug: '서해구', district: '서해구', txnCount: 67n, volumeChangePct: 71 },
-      { city: '서울', bjdCode: '11110', districtSlug: 'gangnam-gu', district: '강남구', txnCount: 50n, volumeChangePct: 10 },
-    ]);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: 26 }])
+      .mockResolvedValueOnce([
+        { city: '인천', bjdCode: '28275', districtSlug: '서해구', district: '서해구', txnCount: 67n, volumeChangePct: 71 },
+        { city: '서울', bjdCode: '11110', districtSlug: 'gangnam-gu', district: '강남구', txnCount: 50n, volumeChangePct: 10 },
+      ]);
     const bundle = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
     expect(bundle.active).toHaveLength(1);
     expect(bundle.active[0].district).toBe('강남구');
+  });
+
+  it('거래가 없으면(anchor 빈 결과) 빈 active 반환', async () => {
+    mockQueryRaw.mockResolvedValueOnce([]);
+    const res = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 1 });
+    expect(res.active).toEqual([]);
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('anchor dealDay가 null이어도 예외 없이 처리 (COALESCE 대체 fallback)', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dealYear: 2026, dealMonth: 2, dealDay: null }])
+      .mockResolvedValueOnce([]);
+    const res = await getWolseHotspots('AptRentTransaction', { sampleThreshold: 30 });
+    expect(Array.isArray(res.active)).toBe(true);
   });
 });
 
