@@ -124,42 +124,42 @@ export interface TransformedClothes {
   providerName: string;
 }
 
-// Parking CSV 로우 타입
+// Parking CSV 로우 타입 (data.go.kr TN 표준데이터 API 영문 필드명)
 export interface ParkingCSVRow {
-  '주차장관리번호': string;
-  '주차장명': string;
-  '주차장구분': string;       // 공영/민영
-  '주차장유형': string;       // 노외/노상/부설
-  '소재지도로명주소': string;
-  '소재지지번주소': string;
-  '주차구획수': string;
-  '급지구분'?: string;
-  '부제시행구분'?: string;
-  '운영요일': string;
-  '평일운영시작시각': string;
-  '평일운영종료시각': string;
-  '토요일운영시작시각'?: string;
-  '토요일운영종료시각'?: string;
-  '공휴일운영시작시각'?: string;
-  '공휴일운영종료시각'?: string;
-  '요금정보': string;         // 유료/무료
-  '주차기본시간': string;
-  '주차기본요금': string;
-  '추가단위시간': string;
-  '추가단위요금': string;
-  '1일주차권요금'?: string;
-  '월정기권요금'?: string;
-  '결제방법'?: string;
-  '특기사항'?: string;
-  '장애인전용주차구역보유여부'?: string;
-  '전화번호'?: string;
-  '위도': string;
-  '경도': string;
-  '관리기관명'?: string;
-  '1일주차권요금적용시간'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  prkplceNo: string;
+  prkplceNm: string;
+  prkplceSe: string;       // 공영/민영
+  prkplceType: string;     // 노외/노상/부설
+  rdnmadr: string;
+  lnmadr: string;
+  prkcmprt: string;
+  feedingSe?: string;
+  enforceSe?: string;
+  operDay: string;
+  weekdayOperOpenHhmm: string;
+  weekdayOperColseHhmm: string;
+  satOperOperOpenHhmm?: string;
+  satOperCloseHhmm?: string;
+  holidayOperOpenHhmm?: string;
+  holidayCloseOpenHhmm?: string;
+  parkingchrgeInfo: string; // 유료/무료
+  basicTime: string;
+  basicCharge: string;
+  addUnitTime: string;
+  addUnitCharge: string;
+  dayCmmtkt?: string;
+  monthCmmtkt?: string;
+  metpay?: string;
+  spcmnt?: string;
+  pwdbsPpkZoneYn?: string;
+  phoneNumber?: string;
+  latitude: string;
+  longitude: string;
+  institutionNm?: string;
+  dayCmmtktAdjTime?: string;
+  referenceDate?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -671,20 +671,20 @@ export async function parseParkingCSV(filePath: string): Promise<ParkingCSVRow[]
 function buildParkingOperatingHours(row: ParkingCSVRow): string {
   const parts: string[] = [];
 
-  const weekdayStart = row['평일운영시작시각']?.trim();
-  const weekdayEnd = row['평일운영종료시각']?.trim();
+  const weekdayStart = row['weekdayOperOpenHhmm']?.trim();
+  const weekdayEnd = row['weekdayOperColseHhmm']?.trim();
   if (weekdayStart && weekdayEnd) {
     parts.push(`평일 ${weekdayStart}~${weekdayEnd}`);
   }
 
-  const satStart = row['토요일운영시작시각']?.trim();
-  const satEnd = row['토요일운영종료시각']?.trim();
+  const satStart = row['satOperOperOpenHhmm']?.trim();
+  const satEnd = row['satOperCloseHhmm']?.trim();
   if (satStart && satEnd) {
     parts.push(`토요일 ${satStart}~${satEnd}`);
   }
 
-  const holStart = row['공휴일운영시작시각']?.trim();
-  const holEnd = row['공휴일운영종료시각']?.trim();
+  const holStart = row['holidayOperOpenHhmm']?.trim();
+  const holEnd = row['holidayCloseOpenHhmm']?.trim();
   if (holStart && holEnd) {
     parts.push(`공휴일 ${holStart}~${holEnd}`);
   }
@@ -696,12 +696,12 @@ function buildParkingOperatingHours(row: ParkingCSVRow): string {
  * 공영주차장 CSV 로우를 Parking 형식으로 변환
  */
 export function transformParkingRow(row: ParkingCSVRow): TransformedParking | null {
-  const mngNo = row['주차장관리번호']?.trim() || '';
-  const name = row['주차장명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const mngNo = row['prkplceNo']?.trim() || '';
+  const name = row['prkplceNm']?.trim() || '';
+  const roadAddress = row['rdnmadr']?.trim() || '';
+  const jibunAddress = row['lnmadr']?.trim() || '';
+  const latStr = row['latitude']?.trim() || '';
+  const lngStr = row['longitude']?.trim() || '';
 
   if (!name) {
     return null;
@@ -762,30 +762,30 @@ export function transformParkingRow(row: ParkingCSVRow): TransformedParking | nu
     district,
     sourceId,
     // Parking 전용 필드
-    parkingType: row['주차장구분']?.trim() || '',
-    lotType: row['주차장유형']?.trim() || '',
-    capacity: parseInt(row['주차구획수'] || '0', 10) || 0,
-    baseFee: parseIntSafe(row['주차기본요금']),
-    baseTime: parseIntSafe(row['주차기본시간']),
-    additionalFee: parseIntSafe(row['추가단위요금']),
-    additionalTime: parseIntSafe(row['추가단위시간']),
-    dailyMaxFee: parseIntSafe(row['1일주차권요금']),
-    monthlyFee: parseIntSafe(row['월정기권요금']),
+    parkingType: row['prkplceSe']?.trim() || '',
+    lotType: row['prkplceType']?.trim() || '',
+    capacity: parseInt(row['prkcmprt'] || '0', 10) || 0,
+    baseFee: parseIntSafe(row['basicCharge']),
+    baseTime: parseIntSafe(row['basicTime']),
+    additionalFee: parseIntSafe(row['addUnitCharge']),
+    additionalTime: parseIntSafe(row['addUnitTime']),
+    dailyMaxFee: parseIntSafe(row['dayCmmtkt']),
+    monthlyFee: parseIntSafe(row['monthCmmtkt']),
     operatingHours: buildParkingOperatingHours(row),
-    phone: row['전화번호']?.trim() || '',
-    paymentMethod: row['결제방법']?.trim() || '',
-    remarks: row['특기사항']?.trim() || '',
-    hasDisabledParking: row['장애인전용주차구역보유여부']?.trim() === 'Y',
+    phone: row['phoneNumber']?.trim() || '',
+    paymentMethod: row['metpay']?.trim() || '',
+    remarks: row['spcmnt']?.trim() || '',
+    hasDisabledParking: row['pwdbsPpkZoneYn']?.trim() === 'Y',
     // 추가 상세 필드
-    zoneClass: row['급지구분']?.trim() || '',
-    alternateParking: row['부제시행구분']?.trim() || '',
-    operatingDays: row['운영요일']?.trim() || '',
-    feeType: row['요금정보']?.trim() || '',
-    dailyMaxFeeHours: row['1일주차권요금적용시간']?.trim() || '',
-    managingOrg: row['관리기관명']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    zoneClass: row['feedingSe']?.trim() || '',
+    alternateParking: row['enforceSe']?.trim() || '',
+    operatingDays: row['operDay']?.trim() || '',
+    feeType: row['parkingchrgeInfo']?.trim() || '',
+    dailyMaxFeeHours: row['dayCmmtktAdjTime']?.trim() || '',
+    managingOrg: row['institutionNm']?.trim() || '',
+    dataDate: row['referenceDate']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 
