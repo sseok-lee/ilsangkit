@@ -57,6 +57,7 @@ export interface ToiletCSVRow {
   '구분명'?: string;
   '근거법령명'?: string;
   '개방자치단체코드'?: string;
+  '관리번호'?: string;
   '데이터기준일자'?: string;
   [key: string]: string | undefined;
 }
@@ -395,6 +396,13 @@ function generateSourceId(name: string, lat: string, lng: string): string {
 }
 
 /**
+ * Toilet sourceId 생성 (개방자치단체코드 + 관리번호 기반 — 좌표 무관 안정키)
+ */
+function generateToiletSourceId(govCode: string, mngNo: string): string {
+  return createHash('md5').update(`toilet-${govCode}-${mngNo}`).digest('hex').substring(0, 16);
+}
+
+/**
  * CSV 로우를 Toilet 형식으로 변환
  */
 export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null {
@@ -412,15 +420,17 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
   const lat = parseFloat(latStr);
   const lng = parseFloat(lngStr);
 
-  // 유효성 검사: NaN 또는 한국 범위 밖의 좌표는 제외
-  if (isNaN(lat) || isNaN(lng)) {
-    return null;
-  }
+  // 좌표는 옵션 — 없거나(NaN) 한국 범위 밖이면 null로 저장 (행 자체는 유지)
+  const hasValidCoords =
+    !isNaN(lat) &&
+    !isNaN(lng) &&
+    lat >= KOREA_BOUNDS.LAT_MIN &&
+    lat <= KOREA_BOUNDS.LAT_MAX &&
+    lng >= KOREA_BOUNDS.LNG_MIN &&
+    lng <= KOREA_BOUNDS.LNG_MAX;
 
-  // 한국 좌표 범위 검증
-  if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX || lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) {
-    return null;
-  }
+  const finalLat = hasValidCoords ? lat : null;
+  const finalLng = hasValidCoords ? lng : null;
 
   // 주소 결정 (도로명 우선, 없으면 지번)
   const primaryAddress = roadAddress || jibunAddress;
@@ -429,12 +439,18 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
   }
 
   const { city, district } = parseAddress(primaryAddress);
+  const normalizedCity = normalizeCityName(city);
 
-  if (!city || !district) {
+  if (!normalizedCity || !district) {
     return null;
   }
 
-  const sourceId = generateSourceId(name, latStr, lngStr);
+  // sourceId: 개방자치단체코드+관리번호 기반 안정키 (관리번호 없으면 name+주소 해시로 폴백 → 좌표 의존 제거)
+  const govCode = row['개방자치단체코드']?.trim() || '';
+  const mngNo = row['관리번호']?.trim() || '';
+  const sourceId = mngNo
+    ? generateToiletSourceId(govCode, mngNo)
+    : generateSourceId(name, roadAddress, jibunAddress);
   const toiletId = `toilet-${sourceId}`;
 
   // 장애인용 대변기 유무 (남성용 또는 여성용 중 하나라도 있으면 true)
@@ -447,9 +463,9 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
     name,
     address: jibunAddress || roadAddress,
     roadAddress: roadAddress || null,
-    lat,
-    lng,
-    city,
+    lat: finalLat,
+    lng: finalLng,
+    city: normalizedCity,
     district,
     sourceId,
     // Toilet 전용 필드

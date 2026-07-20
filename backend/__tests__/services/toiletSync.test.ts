@@ -135,7 +135,7 @@ describe('CSV Parser - transformToiletRow', () => {
     expect(toilet!.address).toBe('서울특별시 강남구 역삼동 858');
     expect(toilet!.lat).toBeCloseTo(37.4979517, 6);
     expect(toilet!.lng).toBeCloseTo(127.0276188, 6);
-    expect(toilet!.city).toBe('서울특별시');
+    expect(toilet!.city).toBe('서울');
     expect(toilet!.district).toBe('강남구');
     // Toilet 전용 필드
     expect(toilet!.operatingHours).toBe('06:00~23:00');
@@ -178,7 +178,7 @@ describe('CSV Parser - transformToiletRow', () => {
 
     expect(toilet).not.toBeNull();
     expect(toilet!.address).toBe('서울특별시 강남구 역삼동 123');
-    expect(toilet!.city).toBe('서울특별시');
+    expect(toilet!.city).toBe('서울');
     expect(toilet!.district).toBe('강남구');
   });
 
@@ -200,7 +200,7 @@ describe('CSV Parser - transformToiletRow', () => {
     expect(toilet!.maleToilets).toBe(0);
   });
 
-  it('should return null for rows with invalid coordinates', () => {
+  it('should store row with null lat/lng when coordinates are invalid (좌표 옵션화)', () => {
     const row: ToiletCSVRow = {
       '화장실명': '잘못된화장실',
       '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
@@ -212,7 +212,9 @@ describe('CSV Parser - transformToiletRow', () => {
 
     const toilet = transformToiletRow(row);
 
-    expect(toilet).toBeNull();
+    expect(toilet).not.toBeNull();
+    expect(toilet!.lat).toBeNull();
+    expect(toilet!.lng).toBeNull();
   });
 
   it('should return null for rows without name', () => {
