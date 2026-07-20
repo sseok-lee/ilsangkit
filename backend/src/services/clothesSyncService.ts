@@ -76,7 +76,7 @@ export async function syncClothesFromApi(): Promise<SyncStats> {
     console.info('Starting clothes data sync (API mode)...');
 
     const client = new PublicApiClient(
-      'http://api.data.go.kr/openapi/tn_pubr_public_clothing_collect_bins_api',
+      'https://api.data.go.kr/openapi/tn_pubr_public_clothing_collect_bins_api',
       serviceKey,
       { maxRetries: SYNC.MAX_RETRIES, retryDelay: SYNC.RETRY_BASE_DELAY_MS }
     );

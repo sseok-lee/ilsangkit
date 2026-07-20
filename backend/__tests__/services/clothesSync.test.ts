@@ -101,18 +101,18 @@ EUCKR-001,부산 수거함,부산광역시,동구,부산광역시 동구 중앙�
 describe('CSV Parser - transformClothesRow', () => {
   it('should transform CSV row to Clothes format', () => {
     const row: ClothesCSVRow = {
-      '관리번호': 'CLOTHES-001',
-      '설치장소명': '강남역 수거함',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '서울특별시 강남구 강남대로 396',
-      '소재지지번주소': '서울특별시 강남구 역삼동 858',
-      '위도': '37.4979517',
-      '경도': '127.0276188',
-      '상세위치': '역 출구 앞',
-      '관리기관명': '강남구청',
-      '관리기관전화번호': '02-3423-1234',
-      '데이터기준일자': '2025-01-01',
+      mngNo: 'CLOTHES-001',
+      instlPlcNm: '강남역 수거함',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '서울특별시 강남구 강남대로 396',
+      lctnLotnoAddr: '서울특별시 강남구 역삼동 858',
+      lat: '37.4979517',
+      lot: '127.0276188',
+      dtlPstn: '역 출구 앞',
+      mngInstNm: '강남구청',
+      mngInstTelno: '02-3423-1234',
+      dataCrtrYmd: '2025-01-01',
     };
 
     const clothes = transformClothesRow(row);
@@ -145,14 +145,14 @@ describe('CSV Parser - transformClothesRow', () => {
 
     for (const tc of testCases) {
       const row: ClothesCSVRow = {
-        '관리번호': 'TEST',
-        '설치장소명': '테스트',
-        '시도명': tc.ctprvnNm,
-        '시군구명': '테스트구',
-        '소재지도로명주소': '',
-        '소재지지번주소': '테스트 주소',
-        '위도': '37.5',
-        '경도': '127.0',
+        mngNo: 'TEST',
+        instlPlcNm: '테스트',
+        ctpvNm: tc.ctprvnNm,
+        sggNm: '테스트구',
+        lctnRoadNmAddr: '',
+        lctnLotnoAddr: '테스트 주소',
+        lat: '37.5',
+        lot: '127.0',
       };
 
       const clothes = transformClothesRow(row);
@@ -164,25 +164,25 @@ describe('CSV Parser - transformClothesRow', () => {
 
   it('should generate unique sourceId from city-district-managementNo', () => {
     const row1: ClothesCSVRow = {
-      '관리번호': 'TEST-001',
-      '설치장소명': '테스트 수거함 1',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '',
-      '소재지지번주소': '서울특별시 강남구 역삼동 123',
-      '위도': '37.5012345',
-      '경도': '127.0367890',
+      mngNo: 'TEST-001',
+      instlPlcNm: '테스트 수거함 1',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '',
+      lctnLotnoAddr: '서울특별시 강남구 역삼동 123',
+      lat: '37.5012345',
+      lot: '127.0367890',
     };
 
     const row2: ClothesCSVRow = {
-      '관리번호': 'TEST-002',
-      '설치장소명': '테스트 수거함 2',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '',
-      '소재지지번주소': '서울특별시 강남구 역삼동 456',
-      '위도': '37.5023456',
-      '경도': '127.0378901',
+      mngNo: 'TEST-002',
+      instlPlcNm: '테스트 수거함 2',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '',
+      lctnLotnoAddr: '서울특별시 강남구 역삼동 456',
+      lat: '37.5023456',
+      lot: '127.0378901',
     };
 
     const clothes1 = transformClothesRow(row1);
@@ -195,14 +195,14 @@ describe('CSV Parser - transformClothesRow', () => {
 
   it('should use jibun address when road address is empty', () => {
     const row: ClothesCSVRow = {
-      '관리번호': 'TEST-001',
-      '설치장소명': '테스트 수거함',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '',
-      '소재지지번주소': '서울특별시 강남구 역삼동 123',
-      '위도': '37.5012345',
-      '경도': '127.0367890',
+      mngNo: 'TEST-001',
+      instlPlcNm: '테스트 수거함',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '',
+      lctnLotnoAddr: '서울특별시 강남구 역삼동 123',
+      lat: '37.5012345',
+      lot: '127.0367890',
     };
 
     const clothes = transformClothesRow(row);
@@ -214,14 +214,14 @@ describe('CSV Parser - transformClothesRow', () => {
 
   it('should return clothes with null coordinates for rows with invalid coordinates', () => {
     const row: ClothesCSVRow = {
-      '관리번호': 'TEST-001',
-      '설치장소명': '잘못된 수거함',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
-      '소재지지번주소': '',
-      '위도': 'invalid',
-      '경도': '127.0',
+      mngNo: 'TEST-001',
+      instlPlcNm: '잘못된 수거함',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '서울특별시 강남구 테헤란로 1',
+      lctnLotnoAddr: '',
+      lat: 'invalid',
+      lot: '127.0',
     };
 
     const clothes = transformClothesRow(row);
@@ -234,14 +234,14 @@ describe('CSV Parser - transformClothesRow', () => {
 
   it('should return clothes with null coordinates for rows with zero coordinates', () => {
     const row: ClothesCSVRow = {
-      '관리번호': 'TEST-001',
-      '설치장소명': '좌표없는 수거함',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
-      '소재지지번주소': '',
-      '위도': '0',
-      '경도': '0',
+      mngNo: 'TEST-001',
+      instlPlcNm: '좌표없는 수거함',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '서울특별시 강남구 테헤란로 1',
+      lctnLotnoAddr: '',
+      lat: '0',
+      lot: '0',
     };
 
     const clothes = transformClothesRow(row);
@@ -254,14 +254,14 @@ describe('CSV Parser - transformClothesRow', () => {
 
   it('should return clothes for rows without management number using address+name for sourceId', () => {
     const row: ClothesCSVRow = {
-      '관리번호': '',
-      '설치장소명': '테스트 수거함',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
-      '소재지지번주소': '',
-      '위도': '37.5',
-      '경도': '127.0',
+      mngNo: '',
+      instlPlcNm: '테스트 수거함',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '서울특별시 강남구 테헤란로 1',
+      lctnLotnoAddr: '',
+      lat: '37.5',
+      lot: '127.0',
     };
 
     const clothes = transformClothesRow(row);
@@ -276,14 +276,14 @@ describe('CSV Parser - transformClothesRow', () => {
 
   it('should use district as default name when both management number and installation place are empty', () => {
     const row: ClothesCSVRow = {
-      '관리번호': '',
-      '설치장소명': '',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
-      '소재지지번주소': '',
-      '위도': '37.5',
-      '경도': '127.0',
+      mngNo: '',
+      instlPlcNm: '',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '서울특별시 강남구 테헤란로 1',
+      lctnLotnoAddr: '',
+      lat: '37.5',
+      lot: '127.0',
     };
 
     const clothes = transformClothesRow(row);
@@ -294,14 +294,14 @@ describe('CSV Parser - transformClothesRow', () => {
 
   it('should return clothes with null coordinates for rows outside Korea coordinates', () => {
     const row: ClothesCSVRow = {
-      '관리번호': 'TEST-001',
-      '설치장소명': '해외 수거함',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
-      '소재지지번주소': '',
-      '위도': '40.7128', // New York
-      '경도': '-74.0060',
+      mngNo: 'TEST-001',
+      instlPlcNm: '해외 수거함',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '서울특별시 강남구 테헤란로 1',
+      lctnLotnoAddr: '',
+      lat: '40.7128', // New York
+      lot: '-74.0060',
     };
 
     const clothes = transformClothesRow(row);
@@ -314,14 +314,14 @@ describe('CSV Parser - transformClothesRow', () => {
 
   it('should use default name when installation place is empty', () => {
     const row: ClothesCSVRow = {
-      '관리번호': 'TEST-001',
-      '설치장소명': '',
-      '시도명': '서울특별시',
-      '시군구명': '강남구',
-      '소재지도로명주소': '서울특별시 강남구 테헤란로 1',
-      '소재지지번주소': '',
-      '위도': '37.5',
-      '경도': '127.0',
+      mngNo: 'TEST-001',
+      instlPlcNm: '',
+      ctpvNm: '서울특별시',
+      sggNm: '강남구',
+      lctnRoadNmAddr: '서울특별시 강남구 테헤란로 1',
+      lctnLotnoAddr: '',
+      lat: '37.5',
+      lot: '127.0',
     };
 
     const clothes = transformClothesRow(row);

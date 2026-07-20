@@ -7,22 +7,22 @@ import * as iconv from 'iconv-lite';
 import { createHash } from 'crypto';
 import { KOREA_BOUNDS } from '../constants/index.js';
 
-// CSV 로우 타입 정의
+// CSV 로우 타입 정의 (data.go.kr TN 표준데이터 API 영문 필드명)
 export interface ClothesCSVRow {
-  '관리번호': string;
-  '설치장소명': string;
-  '시도명': string;
-  '시군구명': string;
-  '소재지도로명주소': string;
-  '소재지지번주소': string;
-  '위도': string;
-  '경도': string;
-  '상세위치'?: string;
-  '관리기관명'?: string;
-  '관리기관전화번호'?: string;
-  '데이터기준일자'?: string;
-  '제공기관코드'?: string;
-  '제공기관명'?: string;
+  mngNo: string;
+  instlPlcNm: string;
+  ctpvNm: string;
+  sggNm: string;
+  lctnRoadNmAddr: string;
+  lctnLotnoAddr: string;
+  lat: string;
+  lot: string; // ⚠️ 경도(longitude) — clothes API는 `lot` 키를 사용
+  dtlPstn?: string;
+  mngInstNm?: string;
+  mngInstTelno?: string;
+  dataCrtrYmd?: string;
+  insttCode?: string;
+  insttNm?: string;
   [key: string]: string | undefined;
 }
 
@@ -561,14 +561,14 @@ export async function parseClothesCSV(filePath: string): Promise<ClothesCSVRow[]
  * 좌표가 없어도 저장 (null로 처리)
  */
 export function transformClothesRow(row: ClothesCSVRow): TransformedClothes | null {
-  const mngNo = row['관리번호']?.trim() || '';
-  const name = row['설치장소명']?.trim() || '';
-  const city = row['시도명']?.trim() || '';
-  const district = row['시군구명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
+  const mngNo = row['mngNo']?.trim() || '';
+  const name = row['instlPlcNm']?.trim() || '';
+  const city = row['ctpvNm']?.trim() || '';
+  const district = row['sggNm']?.trim() || '';
+  const roadAddress = row['lctnRoadNmAddr']?.trim() || '';
+  const jibunAddress = row['lctnLotnoAddr']?.trim() || '';
+  const latStr = row['lat']?.trim() || '';
+  const lngStr = row['lot']?.trim() || '';
 
   // 관리번호 없어도 진행 (sourceId 생성 시 대체값 사용)
 
@@ -615,13 +615,13 @@ export function transformClothesRow(row: ClothesCSVRow): TransformedClothes | nu
     district,
     sourceId,
     // Clothes 전용 필드
-    managementAgency: row['관리기관명']?.trim() || '',
-    phoneNumber: row['관리기관전화번호']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    detailLocation: row['상세위치']?.trim() || '',
+    managementAgency: row['mngInstNm']?.trim() || '',
+    phoneNumber: row['mngInstTelno']?.trim() || '',
+    dataDate: row['dataCrtrYmd']?.trim() || '',
+    detailLocation: row['dtlPstn']?.trim() || '',
     // 추가 상세 필드
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
+    providerCode: row['insttCode']?.trim() || '',
+    providerName: row['insttNm']?.trim() || '',
   };
 }
 
