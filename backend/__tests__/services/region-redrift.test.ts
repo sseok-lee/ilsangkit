@@ -17,6 +17,7 @@ import {
   type SubwayCsvRow,
 } from '../../src/services/subwayDataSource.js';
 import { transformTrashData, type TrashApiResponse } from '../../src/scripts/syncTrash.js';
+import { transformWifiData, type WifiCSVRow } from '../../src/scripts/syncWifi.js';
 
 /**
  * Task A2 회귀 방지: 옛 지역명(광주/전남 변종)을 주는 모든 시설 수집 소스가
@@ -33,6 +34,27 @@ function toiletRow(roadAddress: string): ToiletCSVRow {
     'WGS84경도': '126.9100',
     '개방시간상세': '',
   } as ToiletCSVRow;
+}
+
+function wifiRow(설치시도명: string, 설치시군구명: string, roadAddress: string): WifiCSVRow {
+  return {
+    관리번호: 'W1',
+    설치장소명: '테스트와이파이',
+    설치장소상세: '',
+    설치시도명,
+    설치시군구명,
+    설치시설구분명: '',
+    서비스제공사명: '',
+    와이파이SSID: 'Test_WiFi',
+    설치연월: '',
+    소재지도로명주소: roadAddress,
+    소재지지번주소: '',
+    관리기관명: '',
+    관리기관전화번호: '',
+    WGS84위도: '35.1500',
+    WGS84경도: '126.9100',
+    데이터기준일자: '',
+  } as WifiCSVRow;
 }
 
 describe('Task A2 — 시설 수집 소스 지역 정규화 (재드리프트 방지)', () => {
@@ -144,6 +166,13 @@ describe('Task A2 — 시설 수집 소스 지역 정규화 (재드리프트 방
     expect(t!.district).toBe('동구');
   });
 
+  it('transformWifiData: 설치시도명=광주광역시 → JNGJ (재드리프트 차단)', () => {
+    const t = transformWifiData(wifiRow('광주광역시', '북구', '광주광역시 북구 우치로 77'));
+    expect(t).not.toBeNull();
+    expect(t!.city).toBe(JNGJ_CITY);
+    expect(t!.district).toBe('북구');
+  });
+
   it('transformTrashData(WasteSchedule): 광주광역시 → JNGJ, 풀네임 컨벤션 유지', () => {
     const t = transformTrashData({
       CTPV_NM: '광주광역시',
@@ -186,6 +215,13 @@ describe('Task A2 — 시설 수집 소스 지역 정규화 (재드리프트 방
       } as TrashApiResponse);
       expect(t).not.toBeNull();
       expect(t!.city).toBe('경기도');
+      expect(t!.district).toBe('광주시');
+    });
+    it('transformWifiData: 설치시도명=경기도(광주시) 유지, JNGJ 아님', () => {
+      const t = transformWifiData(wifiRow('경기도', '광주시', '경기도 광주시 경안동 1'));
+      expect(t).not.toBeNull();
+      expect(t!.city).toBe('경기');
+      expect(t!.city).not.toBe(JNGJ_CITY);
       expect(t!.district).toBe('광주시');
     });
   });
