@@ -76,7 +76,7 @@ describe('runGeneration', () => {
       dir,
       base: 'http://127.0.0.1:3000',
       token: 'tok',
-      threshold: 0.2,
+      threshold: 0.2, sleep: () => Promise.resolve(),
       fetcher: mockFetcher({
         '/sitemap.xml': INDEX,
         '/sitemap/static.xml': STATIC,
@@ -96,11 +96,34 @@ describe('runGeneration', () => {
     const dir = await mkdtemp(join(tmpdir(), 'smap-'))
     await writeFile(join(dir, 'sitemap.xml'), '<existing/>')
     const result = await runGeneration({
-      dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2,
+      dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2, sleep: () => Promise.resolve(),
       fetcher: mockFetcher({ '/sitemap.xml': INDEX /* 자식 없음 → 404 */ }),
     })
     expect(result.ok).toBe(false)
     expect(await readFile(join(dir, 'sitemap.xml'), 'utf-8')).toBe('<existing/>')
+  })
+
+  it('자식 fetch가 일시적 503 후 성공하면 재시도로 완성한다', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'smap-'))
+    let toiletAttempts = 0
+    const flaky = async (url: string) => {
+      const path = new URL(url).pathname
+      if (path === '/sitemap.xml') return { ok: true, status: 200, text: async () => INDEX }
+      if (path === '/sitemap/static.xml') return { ok: true, status: 200, text: async () => STATIC }
+      if (path === '/sitemap/toilet.xml') {
+        toiletAttempts++
+        if (toiletAttempts <= 2) return { ok: false, status: 503, text: async () => '' }
+        return { ok: true, status: 200, text: async () => TOILET }
+      }
+      return { ok: false, status: 404, text: async () => '' }
+    }
+    const result = await runGeneration({
+      dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2,
+      fetcher: flaky, sleep: () => Promise.resolve(),
+    })
+    expect(result.ok).toBe(true)
+    expect(toiletAttempts).toBe(3) // 503, 503, 200 — 재시도로 흡수
+    expect(await readFile(join(dir, 'sitemap', 'toilet.xml'), 'utf-8')).toBe(TOILET)
   })
 
   it('개수 회귀 가드 거부 시 교체 안 함', async () => {
@@ -109,7 +132,7 @@ describe('runGeneration', () => {
     await writeFile(join(dir, '.counts.json'), JSON.stringify({ 'sitemap/toilet.xml': 1000, 'sitemap/static.xml': 1 }))
     await writeFile(join(dir, 'sitemap', 'toilet.xml'), '<old-big/>')
     const result = await runGeneration({
-      dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2,
+      dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2, sleep: () => Promise.resolve(),
       fetcher: mockFetcher({ '/sitemap.xml': INDEX, '/sitemap/static.xml': STATIC, '/sitemap/toilet.xml': TOILET }),
     })
     expect(result.ok).toBe(false)
