@@ -27,3 +27,6 @@ data/indexing-log.json
 # Google Service Account 키 파일
 study-*.json
 
+# adoptRegionReform 백업/캡처 산출물(운영 아티팩트)
+.reform-backup/
+
