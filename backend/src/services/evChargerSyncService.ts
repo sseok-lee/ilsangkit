@@ -1,5 +1,6 @@
 import { KOREA_BOUNDS, SYNC } from '../constants/index.js';
 import { CITY_NAME_MAP } from './csvParser.js';
+import { normalizeRegionName } from '../lib/normalizeRegionName.js';
 import {
   type SyncStats,
   type SyncHistoryUpdateData,
@@ -175,7 +176,10 @@ export function transformEvChargerItem(item: EvChargerAPIItem): TransformedEvCha
 
   if (!address) return null;
 
-  const { city, district } = parseAddress(address);
+  const parsed = parseAddress(address);
+  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지). parseAddress가 이미
+  // CITY_NAME_MAP 축약을 적용하므로 그 결과를 normalizeRegionName에 넘긴다.
+  const { city, district } = normalizeRegionName(parsed.city, parsed.district);
   if (!city || !district) return null;
 
   const { lat, lng } = toValidCoord(item.lat, item.lng);

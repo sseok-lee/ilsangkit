@@ -29,6 +29,9 @@ export const CITY_FULL_NAME_TO_SLUG: Record<string, string> = {
   경상북도: 'gyeongbuk',
   경상남도: 'gyeongnam',
   제주특별자치도: 'jeju',
+  // 2026-07-01 전남광주통합특별시 출범. flat 27 시군구 단일 slug.
+  // gwangju/jeonnam 엔트리는 유지(제거는 정규화 Phase C1 담당). frontend shared/regionSlugs.ts CITY_SLUGS와 동기.
+  전남광주통합특별시: 'jeonnamgwangju',
 };
 
 /** 축약형 한글 → slug (`서울` → `seoul`). */

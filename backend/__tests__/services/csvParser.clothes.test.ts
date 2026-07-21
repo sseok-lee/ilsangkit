@@ -31,7 +31,8 @@ describe('CSV Parser - transformClothesRow (TN API 영문 필드명)', () => {
     expect(clothes!.name).toBe('의류수거함');
     expect(clothes!.roadAddress).toBe('광주광역시 서구 상무대로 396');
     expect(clothes!.address).toBe('광주광역시 서구 치평동 123');
-    expect(clothes!.city).toBe('광주');
+    // 2026 통합: 광주 → 전남광주통합특별시로 정규화 (재드리프트 방지, Task A2)
+    expect(clothes!.city).toBe('전남광주통합특별시');
     expect(clothes!.district).toBe('서구');
     // 경도는 longitude가 아닌 `lot` 필드에서 읽어야 한다.
     expect(clothes!.lat).toBeCloseTo(35.15, 6);

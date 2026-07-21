@@ -12,6 +12,7 @@ import * as iconv from 'iconv-lite';
 import { KOREA_BOUNDS } from '../constants/index.js';
 import { slugifyStation } from '../utils/subwaySlug.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './cityMapping.js';
+import { normalizeRegionName } from '../lib/normalizeRegionName.js';
 
 export interface SubwayCsvRow {
   '역번호': string;
@@ -232,7 +233,11 @@ export function transformSubwayRow(
     takenSlugs: ctx.takenSlugs,
   });
 
-  const { city, district } = parseCityDistrict(roadAddress);
+  const { city: parsedCity, district } = parseCityDistrict(roadAddress);
+  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지). district는 이미
+  // 분리돼 있어 정규화로 바뀌지 않으므로 null 의미를 그대로 보존한다.
+  // parsedCity가 통합명이 되면 regionSlug는 slug 맵(CITY_SLUG_TO_SHORT) 갱신에 의존한다.
+  const city = parsedCity ? normalizeRegionName(parsedCity, district ?? '').city : parsedCity;
   const regionSlug = findRegionSlug(city);
   const transferLines = buildTransferLines(row);
 

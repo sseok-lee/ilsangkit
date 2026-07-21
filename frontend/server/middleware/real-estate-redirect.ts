@@ -30,7 +30,36 @@ const NEW_DETAIL = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]
 const NEW_HUB = /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/?$/
 
 // City hub slugs — 3-segment URLs ending with a city slug are new city hub pages, not legacy detail
-const CITY_SLUGS_SET = new Set(Object.values(CITY_SLUGS))
+// (CITY_SLUGS 는 shared/regionSlugs.ts에 jeonnamgwangju 포함 — 신 slug 요청은 자동으로 pass-through)
+export const CITY_SLUGS_SET = new Set(Object.values(CITY_SLUGS))
+
+/**
+ * 2026-07 전남광주통합특별시 정규화 — 부동산 NEW-format URL의 옛 city slug(gwangju/jeonnam) → jeonnamgwangju 301.
+ *
+ * env `REGION_REORG_301`='1' 일 때만 발동(Phase A는 로직만 심고 기본 OFF).
+ * 대상: `/real-estate/{type}-{mode}/{city}/{district}[/{building}]` (NEW_HUB 4세그·NEW_DETAIL 5세그).
+ * district/building 세그먼트는 byte-match 로 불변 — city 세그먼트(segments[3])만 치환한다.
+ *
+ * 이 판정은 반드시 아래 NEW_DETAIL/NEW_HUB pass-through(체인 방지) 보다 먼저 호출해야 한다 —
+ * 그렇지 않으면 gwangju/jeonnam 도 이미 "신규 URL"로 오인되어 pass-through 에 먹혀 리다이렉트가 발동하지 않는다.
+ */
+const LEGACY_JNGJ_CITIES = new Set(['gwangju', 'jeonnam'])
+const JNGJ_SLUG = 'jeonnamgwangju'
+const NEW_FORMAT_TYPE_MODE = /^(apt|villa|offitel)-(sale|rent)$/
+
+export function resolveRegionReorgCityRedirect(pathname: string, flagOn: boolean): string | null {
+  if (!flagOn) return null
+
+  const segments = pathname.split('/') // ['', 'real-estate', type-mode, city, district, ...building]
+  if (segments[1] !== 'real-estate' || segments.length < 5) return null
+  if (!NEW_FORMAT_TYPE_MODE.test(segments[2] ?? '')) return null
+
+  const city = segments[3]
+  if (!city || !LEGACY_JNGJ_CITIES.has(city)) return null
+
+  segments[3] = JNGJ_SLUG
+  return segments.join('/')
+}
 
 /**
  * 화성·부천 7개 신설 일반구의 slug 드리프트로 과거 색인·IndexNow 에 유출된 "깨진" 지역 슬러그를
@@ -216,6 +245,17 @@ export default defineEventHandler(async (event) => {
   if (brokenRedirect) {
     setHeader(event, 'cache-control', 'public, max-age=300')
     return sendRedirect(event, brokenRedirect + url.search, 301)
+  }
+
+  // 전남광주통합특별시 정규화 301 (REGION_REORG_301='1' 일 때만, 기본 OFF).
+  // NEW_HUB/NEW_DETAIL 패턴에도 매치되므로 아래 체인-방지 pass-through 보다 먼저 처리해야 한다.
+  const reorgCityRedirect = resolveRegionReorgCityRedirect(
+    pathname,
+    process.env.REGION_REORG_301 === '1',
+  )
+  if (reorgCityRedirect) {
+    setHeader(event, 'cache-control', 'public, max-age=300')
+    return sendRedirect(event, reorgCityRedirect + url.search, 301)
   }
 
   // 신규 URL은 미들웨어가 절대 가로채지 않는다 (체인 방지)

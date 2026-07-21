@@ -81,7 +81,11 @@ const cityNameRaw = CITY_SLUG_MAP[citySlugParam]
 if (!cityNameRaw) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
-const cityName = cityNameRaw.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+// 전남광주통합특별시는 예외: 접미사(특별시)를 떼면 '전남광주통합'으로 잘려
+// REGIONS/getComplexList 조회가 파손된다. flat 27 시군구 키는 풀네임 그대로여야 한다.
+const cityName = cityNameRaw === '전남광주통합특별시'
+  ? cityNameRaw
+  : cityNameRaw.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
 
 const [propertyTypePart, tabPart] = realEstateTypeParam.split('-') as [RealEstatePropertyType, TransactionMode]
 const propertyMeta = PROPERTY_TYPE_META[propertyTypePart]

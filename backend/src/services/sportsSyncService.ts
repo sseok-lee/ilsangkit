@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { KOREA_BOUNDS } from '../constants/index.js';
 import { CITY_NAME_MAP } from './csvParser.js';
+import { normalizeRegionName } from '../lib/normalizeRegionName.js';
 import {
   type SyncStats,
   type SyncHistoryUpdateData,
@@ -158,8 +159,9 @@ export function transformSportsItem(item: SportsAPIItem): TransformedSports | nu
 
   if (!rawCity || !district) return null;
 
-  // 시도명 정규화 (서울특별시 → 서울)
-  const city = CITY_NAME_MAP[rawCity] || rawCity;
+  // 시도명 정규화 (서울특별시 → 서울) + 광주/전남 변종을 전남광주통합특별시로 통합
+  // (재드리프트 방지). district(addr_cpb_nm)를 넘겨 '광주시' 모호성을 안전하게 처리한다.
+  const city = normalizeRegionName(CITY_NAME_MAP[rawCity] || rawCity, district).city;
 
   const { lat, lng } = toValidCoord(item.faci_lat, item.faci_lot);
 

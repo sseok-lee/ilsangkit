@@ -14,6 +14,7 @@ import {
   createSyncStats,
 } from '../services/baseSyncService.js';
 import { CITY_NAME_MAP } from '../services/csvParser.js';
+import { normalizeRegionName } from '../lib/normalizeRegionName.js';
 
 interface NeisSchoolRow {
   ATPT_OFCDC_SC_CODE: string;   // 시도교육청코드
@@ -50,6 +51,15 @@ function normalizeCityName(name: string): string {
 function parseAddress(address: string): { city: string; district: string } {
   const parts = address.trim().split(/\s+/);
   return { city: parts[0] || '', district: parts[1] || '' };
+}
+
+/**
+ * 도로명주소에서 city/district를 도출하고 광주/전남 변종을 전남광주통합특별시로 통합한다
+ * (재드리프트 방지). NEIS가 학교 실소스이므로 이 경로도 반드시 정규화를 거쳐야 한다.
+ */
+export function resolveSchoolRegion(roadAddress: string): { city: string; district: string } {
+  const { city, district } = parseAddress(roadAddress);
+  return normalizeRegionName(normalizeCityName(city), district);
 }
 
 function mapSchoolLevel(kind: string): string {
@@ -130,8 +140,7 @@ export async function syncSchoolsNeis(): Promise<SyncStats> {
           continue;
         }
 
-        const { city, district } = parseAddress(roadAddress);
-        const normalizedCity = normalizeCityName(city);
+        const { city: normalizedCity, district } = resolveSchoolRegion(roadAddress);
 
         if (!normalizedCity || !district) {
           skipCount++;
