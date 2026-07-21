@@ -1,16 +1,45 @@
 // @TASK Task A3 — Region sync 정규화 + 옛코드 재생성 가드
 // @SPEC .superpowers/sdd/task-A3-brief.md
 
-import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import prisma from '../../src/lib/prisma.js';
+import { syncRegionData } from '../../src/scripts/syncRegion.js';
 import { JNGJ_CITY } from '../../src/lib/normalizeRegionName.js';
 
-// syncRegion.ts는 geocodingService.geocode()로 실제 Kakao API를 호출한다. 로컬에는
-// 유효한 KAKAO_REST_API_KEY가 있어 실호출이 성공하지만, CI에는 키가 없어 401이 되고
-// REGION_COORDINATES 폴백도 이 테스트 지역(신코드 12010)을 커버하지 않아 Region 행이
-// 생성되지 않는다(비-hermetic). geocode()를 고정 좌표로 mock해 환경과 무관하게
-// 결정적으로 동작하도록 한다. 아래 global.fetch mock(StanReginCd API)은 그대로 유지 —
-// 이건 geocode 경로와 무관하게 정상 동작한다.
+/**
+ * 이 테스트는 완전 hermetic한 단위 테스트다(실 DB·실 네트워크·실 API 키 불필요).
+ *
+ * - prisma를 통째로 mock한다 → 실제 DB 연결/상태에 의존하지 않는다. 기존 통합
+ *   테스트는 CI(빈 DB)와 로컬(채워진 DB)에서 결과가 갈려 flaky했다(신규 create 경로가
+ *   CI에서 결정적으로 조회되지 않아 `expect(newRow).not.toBeNull()` 실패).
+ * - syncRegion.ts는 geocodingService.geocode()로 실제 Kakao API를 호출하므로 고정
+ *   좌표로 mock한다(CI엔 KAKAO_REST_API_KEY 부재).
+ * - fetchRegionsFromApi()는 OPENAPI_SERVICE_KEY가 없으면 throw→로컬 fallback으로
+ *   빠지므로(테스트 대상 신코드 12010이 사라짐), 테스트 내에서 더미 키를 세팅해
+ *   API(fetch mock) 경로가 결정적으로 타지도록 한다. StanReginCd 응답은 global.fetch
+ *   mock으로 공급한다.
+ *
+ * 검증 방식: 실 DB 조회(findFirst→not.toBeNull) 대신 prisma.region.create/update의
+ * mock 호출 인자를 단언한다.
+ */
+
+// prisma default export를 통째로 mock (실 DB 의존 제거 → DATABASE_URL 불필요)
+vi.mock('../../src/lib/prisma.js', () => ({
+  default: {
+    region: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+      count: vi.fn(),
+    },
+    $disconnect: vi.fn(),
+  },
+}));
+
+// geocode()를 고정 좌표로 mock (환경·키와 무관하게 결정적 동작)
 vi.mock('../../src/services/geocodingService.js', () => ({
   geocode: vi.fn(async () => ({ lat: 35.1468, lng: 126.9226 })), // 광주 동구 근방 고정 좌표
 }));
@@ -26,20 +55,41 @@ vi.mock('../../src/services/geocodingService.js', () => ({
  * 옛코드(29) 로우에 의해 덮어써지는 회귀가 발생한다.
  */
 describe('syncRegion — JNGJ 정규화 + 옛코드 재생성 가드 (Task A3)', () => {
-  const TEST_BJD_CODES = ['12010', '29010'];
+  // 통째로 mock된 prisma.region 접근용 타입 캐스트
+  const region = prisma.region as unknown as {
+    findFirst: Mock;
+    create: Mock;
+    update: Mock;
+    delete: Mock;
+    deleteMany: Mock;
+    count: Mock;
+  };
+
   const originalFetch = global.fetch;
+  const originalServiceKey = process.env.OPENAPI_SERVICE_KEY;
 
-  beforeEach(async () => {
-    await prisma.region.deleteMany({ where: { bjdCode: { in: TEST_BJD_CODES } } });
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // 빈 DB 시뮬레이션: 기존 행이 없어 create(신규) 경로가 강제된다
+    region.findFirst.mockResolvedValue(null);
+    region.count.mockResolvedValue(0);
+    region.create.mockResolvedValue({} as never);
+    region.update.mockResolvedValue({} as never);
+    region.delete.mockResolvedValue({} as never);
+    region.deleteMany.mockResolvedValue({ count: 0 } as never);
+
+    // API(fetch mock) 경로를 결정적으로 타도록 더미 서비스 키 세팅
+    process.env.OPENAPI_SERVICE_KEY = 'test-service-key';
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     global.fetch = originalFetch;
-    await prisma.region.deleteMany({ where: { bjdCode: { in: TEST_BJD_CODES } } });
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
+    if (originalServiceKey === undefined) {
+      delete process.env.OPENAPI_SERVICE_KEY;
+    } else {
+      process.env.OPENAPI_SERVICE_KEY = originalServiceKey;
+    }
   });
 
   it('법정동 API가 신코드(12, JNGJ명) 로우와 전환기 잔존 옛코드(29, 구명) 로우를 함께 줘도 옛코드는 upsert 0건이고 city는 JNGJ로 저장된다', async () => {
@@ -91,12 +141,6 @@ describe('syncRegion — JNGJ 정규화 + 옛코드 재생성 가드 (Task A3)',
       ],
     };
 
-    // 동기화 전 옛코드(29/46) 행 개수 스냅샷(운영/개발 DB에 이미 존재할 수 있는 미정리 옛코드
-    // 행은 Phase B 범위 — 이 테스트는 "이 sync 실행이 새로 upsert하지 않는다"만 검증한다)
-    const oldCodeCountBefore = await prisma.region.count({
-      where: { OR: [{ bjdCode: { startsWith: '29' } }, { bjdCode: { startsWith: '46' } }] },
-    });
-
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url.includes('StanReginCd')) {
@@ -115,26 +159,29 @@ describe('syncRegion — JNGJ 정규화 + 옛코드 재생성 가드 (Task A3)',
       } as Response;
     }) as unknown as typeof fetch;
 
-    const { syncRegionData } = await import('../../src/scripts/syncRegion.js');
-
     const result = await syncRegionData({});
 
     expect(result.status).toBe('success');
 
-    // (1) city가 전남광주통합특별시로 저장됨 (신코드 12 행)
-    const newRow = await prisma.region.findFirst({ where: { bjdCode: '12010' } });
-    expect(newRow).not.toBeNull();
-    expect(newRow?.city).toBe(JNGJ_CITY);
-    expect(newRow?.district).toBe('동구');
+    // 저장(create/update)된 data 인자를 모두 수집
+    const savedData = [
+      ...region.create.mock.calls.map((c) => (c[0] as { data?: Record<string, unknown> })?.data),
+      ...region.update.mock.calls.map((c) => (c[0] as { data?: Record<string, unknown> })?.data),
+    ].filter((d): d is Record<string, unknown> => Boolean(d));
 
-    // (2) 옛코드(29) 자체가 upsert되지 않음 (신코드 행이 옛코드로 덮어써지지 않음)
-    const oldRow = await prisma.region.findFirst({ where: { bjdCode: '29010' } });
-    expect(oldRow).toBeNull();
+    // (1) city가 전남광주통합특별시로 정규화되어 신코드(12010) 행이 저장됨
+    expect(region.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bjdCode: '12010',
+          city: JNGJ_CITY,
+          district: '동구',
+        }),
+      })
+    );
+    expect(savedData.some((d) => d.bjdCode === '12010')).toBe(true);
 
-    // (3) 이 sync 실행이 옛코드 접두(29/46) Region 행을 새로 upsert하지 않음(개수 불변)
-    const oldCodeCountAfter = await prisma.region.count({
-      where: { OR: [{ bjdCode: { startsWith: '29' } }, { bjdCode: { startsWith: '46' } }] },
-    });
-    expect(oldCodeCountAfter).toBe(oldCodeCountBefore);
+    // (2) 옛코드(29010) 자체는 어떤 create/update에도 담기지 않음(가드로 스킵)
+    expect(savedData.some((d) => d.bjdCode === '29010')).toBe(false);
   });
 });
