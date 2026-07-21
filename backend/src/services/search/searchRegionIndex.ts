@@ -1,10 +1,19 @@
 import { getRegions } from '../metaService.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, FULL_TO_SLUG } from '../cityMapping.js';
+import { JNGJ_CITY } from '../../lib/normalizeRegionName.js';
 
 export interface RegionIndex {
   cityNames: Map<string, string>; // 입력형(정식/축약) → 정식 city명
   districtNames: Map<string, { city: string; district: string }>; // 입력형 → {정식 city, district}
 }
+
+/**
+ * 2026-07 전남광주통합특별시(JNGJ) 정규화 회귀 방지(리뷰 M1):
+ * 정규화 완료 후 Region 테이블엔 city=JNGJ_CITY 행만 남고 옛 광주/전남 축약 city 값은
+ * 더 이상 존재하지 않는다. 옛 시/도명 단독 검색("광주 화장실", "전남 약국")이 지역
+ * 스코프를 잃지 않도록, JNGJ 지역에 한해 옛 명칭 별칭을 cityNames에 함께 등록한다.
+ */
+const JNGJ_CITY_ALIASES = ['광주', '광주광역시', '전남', '전라남도', '전남광주'];
 
 export function buildRegionIndex(regions: Array<{ city: string; district: string }>): RegionIndex {
   const cityNames = new Map<string, string>();
@@ -15,6 +24,9 @@ export function buildRegionIndex(regions: Array<{ city: string; district: string
     const slug = FULL_TO_SLUG[city];
     if (slug && CITY_SLUG_TO_SHORT[slug]) cityNames.set(CITY_SLUG_TO_SHORT[slug], city);
     if (slug && CITY_SLUG_TO_FULL[slug]) cityNames.set(CITY_SLUG_TO_FULL[slug], city);
+    if (city === JNGJ_CITY) {
+      for (const alias of JNGJ_CITY_ALIASES) cityNames.set(alias, JNGJ_CITY);
+    }
 
     if (district) {
       districtNames.set(district, { city, district });

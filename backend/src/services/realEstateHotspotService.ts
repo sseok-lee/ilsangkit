@@ -44,7 +44,7 @@ function isRoutable(citySlug: string, districtSlug: string): boolean {
 
 /**
  * 매매/전세 행 정규화 + 방어 가드.
- * bjdCode로 통합시(전남광주통합특별시·코드12)를 기존 gwangju/jeonnam slug·라벨로 되돌린다.
+ * 통합시(전남광주통합특별시·코드12)는 resolveCitySlug가 flat 단일 slug(jeonnamgwangju)로 매핑한다.
  * 라우팅 불가 행(미매핑 도시·한글 구 slug)은 404 방지를 위해 제외하고 로그를 남긴다.
  */
 export function normalizeAndGuard(rows: RawPricedRow[]): HotspotRegion[] {

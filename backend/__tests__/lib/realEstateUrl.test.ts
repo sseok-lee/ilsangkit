@@ -5,6 +5,7 @@ import {
   toRealEstateUrl,
   toRealEstateListUrl,
   toAbsoluteRealEstateUrl,
+  toCitySlugByDistrict,
 } from '../../src/lib/realEstateUrl.js';
 
 describe('isRealEstateUrlType', () => {
@@ -140,17 +141,18 @@ describe('toAbsoluteRealEstateUrl', () => {
   });
 });
 
-describe('전남광주통합특별시 disambiguate (backend, 사이트맵/IndexNow)', () => {
-  it('광주 자치구는 gwangju로', () => {
+describe('전남광주통합특별시 flat jeonnamgwangju (backend, 사이트맵/IndexNow)', () => {
+  it('광주 자치구도 jeonnamgwangju flat으로', () => {
     expect(toRealEstateUrl({ type: 'apt-sale', city: '전남광주통합특별시', district: '광산구', buildingName: 'X' }))
-      .toBe(`/real-estate/apt-sale/gwangju/gwangsan/${encodeURIComponent('X')}`);
+      .toBe(`/real-estate/apt-sale/jeonnamgwangju/gwangsan/${encodeURIComponent('X')}`);
+    expect(toCitySlugByDistrict('전남광주통합특별시', '북구')).toBe('jeonnamgwangju');
   });
 
-  it('전남 시·군은 jeonnam으로', () => {
+  it('(구)전남 시·군도 동일 jeonnamgwangju flat으로', () => {
     expect(toRealEstateUrl({ type: 'apt-sale', city: '전남광주통합특별시', district: '나주시', buildingName: '빛가람코오롱하늘채' }))
-      .toBe(`/real-estate/apt-sale/jeonnam/naju/${encodeURIComponent('빛가람코오롱하늘채')}`);
+      .toBe(`/real-estate/apt-sale/jeonnamgwangju/naju/${encodeURIComponent('빛가람코오롱하늘채')}`);
     expect(toRealEstateListUrl({ type: 'apt-rent', city: '전남광주통합특별시', district: '여수시' }))
-      .toBe('/real-estate/apt-rent/jeonnam/yeosu');
+      .toBe('/real-estate/apt-rent/jeonnamgwangju/yeosu');
   });
 
   it('절대 URL(사이트맵)에도 한글 slug를 남기지 않는다', () => {
@@ -158,6 +160,6 @@ describe('전남광주통합특별시 disambiguate (backend, 사이트맵/IndexN
       type: 'apt-sale', city: '전남광주통합특별시', district: '서구', buildingName: 'X',
     });
     expect(url).not.toContain('전남광주통합특별시');
-    expect(url).toContain('/gwangju/seo/');
+    expect(url).toContain('/jeonnamgwangju/seo/');
   });
 });
