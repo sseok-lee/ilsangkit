@@ -205,25 +205,26 @@ describe('getWolseHotspots', () => {
   });
 });
 
-describe('normalizeAndGuard (통합시 되돌림 + 방어 가드)', () => {
-  it('통합시 광주 자치구(코드12)를 gwangju/광주로 되돌림', () => {
+// ⚠️ A5~C1 전환기: 통합시(코드12)는 flat 단일 slug(jeonnamgwangju)로 수렴 (구 gwangju/jeonnam split 폐지).
+describe('normalizeAndGuard (통합시 flat + 방어 가드)', () => {
+  it('통합시 광주 자치구(코드12)도 jeonnamgwangju flat으로', () => {
     const out = normalizeAndGuard([
       { city: '전남광주통합특별시', bjdCode: '12240', districtSlug: 'seo', district: '서구',
         pricePerPyeong: 1500, txnCount: 88n, changePct: 12, volumeChangePct: 50 },
     ]);
     expect(out).toHaveLength(1);
-    expect(out[0].citySlug).toBe('gwangju');
-    expect(out[0].city).toBe('광주');
+    expect(out[0].citySlug).toBe('jeonnamgwangju');
+    expect(out[0].city).toBe('전남광주통합특별시');
     expect(out[0].districtSlug).toBe('seo');
   });
 
-  it('통합시 전남 시·군(코드12)을 jeonnam/전남으로 되돌림', () => {
+  it('통합시 (구)전남 시·군(코드12)도 동일 jeonnamgwangju flat으로', () => {
     const out = normalizeAndGuard([
       { city: '전남광주통합특별시', bjdCode: '12130', districtSlug: 'yeosu', district: '여수시',
         pricePerPyeong: 1000, txnCount: 40n, changePct: 5, volumeChangePct: 10 },
     ]);
-    expect(out[0].citySlug).toBe('jeonnam');
-    expect(out[0].city).toBe('전남');
+    expect(out[0].citySlug).toBe('jeonnamgwangju');
+    expect(out[0].city).toBe('전남광주통합특별시');
   });
 
   it('districtSlug가 한글(미로마자)인 행은 제외 (404 방지)', () => {
