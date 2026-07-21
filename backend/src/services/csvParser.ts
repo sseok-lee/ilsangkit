@@ -6,6 +6,7 @@ import { parse } from 'csv-parse';
 import * as iconv from 'iconv-lite';
 import { createHash } from 'crypto';
 import { KOREA_BOUNDS } from '../constants/index.js';
+import { normalizeRegionName } from '../lib/normalizeRegionName.js';
 
 // CSV 로우 타입 정의 (data.go.kr TN 표준데이터 API 영문 필드명)
 export interface ClothesCSVRow {
@@ -438,8 +439,10 @@ export function transformToiletRow(row: ToiletCSVRow): TransformedToilet | null 
     return null;
   }
 
-  const { city, district } = parseAddress(primaryAddress);
-  const normalizedCity = normalizeCityName(city);
+  const parsed = parseAddress(primaryAddress);
+  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지). normalizeCityName은
+  // 다른 지역 축약(전라남도→전남 등)용이라 유지하고 그 결과를 normalizeRegionName에 넘긴다.
+  const { city: normalizedCity, district } = normalizeRegionName(normalizeCityName(parsed.city), parsed.district);
 
   if (!normalizedCity || !district) {
     return null;
@@ -588,8 +591,9 @@ export function transformClothesRow(row: ClothesCSVRow): TransformedClothes | nu
 
   // 관리번호 없어도 진행 (sourceId 생성 시 대체값 사용)
 
-  // 시도명 정규화
-  const normalizedCity = normalizeCityName(city);
+  // 시도명 정규화 + 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지).
+  // district를 넘겨 '광주시' 모호성(경기 광주시 vs 광주 5구)을 안전하게 처리한다.
+  const normalizedCity = normalizeRegionName(normalizeCityName(city), district).city;
 
   if (!normalizedCity || !district) {
     return null;
@@ -729,8 +733,10 @@ export function transformParkingRow(row: ParkingCSVRow): TransformedParking | nu
     return null;
   }
 
-  const { city, district } = parseAddress(primaryAddress);
-  const normalizedCity = normalizeCityName(city);
+  const parsed = parseAddress(primaryAddress);
+  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지). normalizeCityName은
+  // 다른 지역 축약(전라남도→전남 등)용이라 유지하고 그 결과를 normalizeRegionName에 넘긴다.
+  const { city: normalizedCity, district } = normalizeRegionName(normalizeCityName(parsed.city), parsed.district);
 
   if (!normalizedCity || !district) {
     return null;
@@ -860,8 +866,9 @@ export function transformLibraryRow(row: LibraryCSVRow): TransformedLibrary | nu
     return null;
   }
 
-  // 시도명 정규화
-  const normalizedCity = normalizeCityName(city);
+  // 시도명 정규화 + 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지).
+  // district를 넘겨 '광주시' 모호성(경기 광주시 vs 광주 5구)을 안전하게 처리한다.
+  const normalizedCity = normalizeRegionName(normalizeCityName(city), district).city;
 
   if (!normalizedCity || !district) {
     return null;
@@ -1150,8 +1157,10 @@ export function transformParkRow(row: ParkCSVRow): TransformedPark | null {
   const primaryAddress = roadAddress || jibunAddress;
   if (!primaryAddress) return null;
 
-  const { city, district } = parseAddress(primaryAddress);
-  const normalizedCity = normalizeCityName(city);
+  const parsed = parseAddress(primaryAddress);
+  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지). normalizeCityName은
+  // 다른 지역 축약(전라남도→전남 등)용이라 유지하고 그 결과를 normalizeRegionName에 넘긴다.
+  const { city: normalizedCity, district } = normalizeRegionName(normalizeCityName(parsed.city), parsed.district);
 
   if (!normalizedCity || !district) return null;
 
@@ -1217,8 +1226,10 @@ export function transformSchoolRow(row: SchoolCSVRow): TransformedSchool | null 
   const primaryAddress = roadAddress || jibunAddress;
   if (!primaryAddress) return null;
 
-  const { city, district } = parseAddress(primaryAddress);
-  const normalizedCity = normalizeCityName(city);
+  const parsed = parseAddress(primaryAddress);
+  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지). normalizeCityName은
+  // 다른 지역 축약(전라남도→전남 등)용이라 유지하고 그 결과를 normalizeRegionName에 넘긴다.
+  const { city: normalizedCity, district } = normalizeRegionName(normalizeCityName(parsed.city), parsed.district);
 
   if (!normalizedCity || !district) return null;
 
@@ -1288,8 +1299,10 @@ export function transformMarketRow(row: MarketCSVRow): TransformedMarket | null 
   const primaryAddress = roadAddress || jibunAddress;
   if (!primaryAddress) return null;
 
-  const { city, district } = parseAddress(primaryAddress);
-  const normalizedCity = normalizeCityName(city);
+  const parsed = parseAddress(primaryAddress);
+  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지). normalizeCityName은
+  // 다른 지역 축약(전라남도→전남 등)용이라 유지하고 그 결과를 normalizeRegionName에 넘긴다.
+  const { city: normalizedCity, district } = normalizeRegionName(normalizeCityName(parsed.city), parsed.district);
 
   if (!normalizedCity || !district) return null;
 

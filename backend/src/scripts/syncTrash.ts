@@ -7,6 +7,7 @@ import prisma from '../lib/prisma.js';
 import type { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 import { SYNC } from '../constants/index.js';
+import { normalizeRegionName } from '../lib/normalizeRegionName.js';
 
 /**
  * 공공데이터 API 응답 타입 (생활쓰레기 배출정보)
@@ -219,9 +220,15 @@ export function transformTrashData(row: TrashApiResponse): TransformedWasteSched
         }
       : undefined;
 
+  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지, Task A2 — WasteSchedule).
+  // trash는 시도 풀네임을 그대로 저장하는 컨벤션이라 normalizeCityName은 적용하지 않는다.
+  // normalizeRegionName은 광주/전남 변종만 통합하고 그 외(서울특별시 등)는 passthrough.
+  // sourceId는 원본 CTPV_NM/SGG_NM 기반 해시라 정규화하지 않아 식별자 안정성을 유지한다.
+  const { city, district } = normalizeRegionName(row.CTPV_NM, row.SGG_NM);
+
   return {
-    city: row.CTPV_NM,
-    district: row.SGG_NM,
+    city,
+    district,
     targetRegion: row.MNG_ZONE_TRGT_RGN_NM || null,
     emissionPlace: row.EMSN_PLC || null,
     details: {

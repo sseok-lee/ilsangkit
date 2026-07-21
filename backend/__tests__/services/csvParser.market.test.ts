@@ -27,7 +27,8 @@ describe('transformMarketRow (영문 API 필드)', () => {
     const r = transformMarketRow(sample);
     expect(r).not.toBeNull();
     expect(r!.name).toBe('동문전통시장');
-    expect(r!.city).toBe('전남');
+    // 2026 통합: 전남 → 전남광주통합특별시로 정규화 (재드리프트 방지, Task A2)
+    expect(r!.city).toBe('전남광주통합특별시');
     expect(r!.district).toBe('목포시');
     expect(r!.lat).toBeCloseTo(35.1, 5);
     expect(r!.lng).toBeCloseTo(126.9, 5);

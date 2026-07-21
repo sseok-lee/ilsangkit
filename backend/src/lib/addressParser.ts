@@ -1,6 +1,8 @@
 // 주소 파싱 유틸리티
 // syncWifi, syncAed 등에서 중복되던 주소 파싱 로직 통합
 
+import { normalizeRegionName } from './normalizeRegionName.js';
+
 /**
  * 시/도 정규화 맵
  * 공공데이터의 다양한 시/도 표기를 2글자 약칭으로 정규화
@@ -59,12 +61,16 @@ export const CITY_NORMALIZATION_MAP: Record<string, string> = {
  * @example normalizeCity('경기도') → '경기'
  */
 export function normalizeCity(rawCity: string): string {
-  return CITY_NORMALIZATION_MAP[rawCity] || rawCity;
+  const short = CITY_NORMALIZATION_MAP[rawCity] || rawCity;
+  // 최종 단계: 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지).
+  // district 미지정이라 '광주시' 모호성은 발생하지 않고, 광주광역시 단축 '광주'만 통합됨.
+  return normalizeRegionName(short).city;
 }
 
 // 시/도 패턴 (정규식용)
+// '전남광주통합특별시'는 '전남'보다 먼저 와야 통째로 매칭됨(alternation 우선순위).
 const CITY_PATTERN =
-  '서울특별시|서울시|서울|부산광역시|부산시|부산|대구광역시|대구시|대구|인천광역시|인천시|인천|광주광역시|광주시|광주|대전광역시|대전시|대전|울산광역시|울산시|울산|세종특별자치시|세종시|세종|경기도|경기|강원특별자치도|강원도|강원|충청북도|충북|충청남도|충남|전북특별자치도|전라북도|전북|전라남도|전남|경상북도|경북|경상남도|경남|제주특별자치도|제주도|제주';
+  '전남광주통합특별시|서울특별시|서울시|서울|부산광역시|부산시|부산|대구광역시|대구시|대구|인천광역시|인천시|인천|광주광역시|광주시|광주|대전광역시|대전시|대전|울산광역시|울산시|울산|세종특별자치시|세종시|세종|경기도|경기|강원특별자치도|강원도|강원|충청북도|충북|충청남도|충남|전북특별자치도|전라북도|전북|전라남도|전남|경상북도|경북|경상남도|경남|제주특별자치도|제주도|제주';
 
 const ADDRESS_REGEX = new RegExp(
   `^(${CITY_PATTERN})\\s+(\\S+[구군시])`
@@ -100,8 +106,11 @@ export function parseAddress(
   }
 
   const rawCity = match[1];
-  const district = match[2];
-  const city = CITY_NORMALIZATION_MAP[rawCity] || rawCity;
+  const rawDistrict = match[2];
+  const shortCity = CITY_NORMALIZATION_MAP[rawCity] || rawCity;
+  // 최종 단계: 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지).
+  // 경기도 광주시는 city='경기'라 normalizeRegionName이 passthrough.
+  const { city, district } = normalizeRegionName(shortCity, rawDistrict);
 
   return { city, district };
 }
@@ -114,10 +123,9 @@ export function parseAddress(
  */
 export function extractCityDistrict(address: string): { city: string; district: string } {
   const parts = address.trim().split(/\s+/);
-  return {
-    city: parts[0] || '',
-    district: parts[1] || '',
-  };
+  // 최종 단계: 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지).
+  // 경기도 광주시(city='경기도', district='광주시')는 passthrough로 보존됨.
+  return normalizeRegionName(parts[0] || '', parts[1] || '');
 }
 
 /**

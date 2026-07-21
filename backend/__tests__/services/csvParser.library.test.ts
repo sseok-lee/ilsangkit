@@ -43,7 +43,8 @@ describe('CSV Parser - transformLibraryRow (TN API 영문 필드명)', () => {
 
     expect(library).not.toBeNull();
     expect(library!.name).toBe('○○도서관');
-    expect(library!.city).toBe('광주');
+    // 2026 통합: 광주 → 전남광주통합특별시로 정규화 (재드리프트 방지, Task A2)
+    expect(library!.city).toBe('전남광주통합특별시');
     expect(library!.district).toBe('북구');
     expect(library!.lat).toBeCloseTo(35.18, 5);
     expect(library!.lng).toBeCloseTo(126.9, 5);
