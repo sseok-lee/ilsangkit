@@ -7,9 +7,11 @@
 //     DB·네트워크·env를 전혀 건드리지 않는다.
 //   검증: env -u DATABASE_URL -u KAKAO_REST_API_KEY -u OPENAPI_SERVICE_KEY npx vitest run 통과.
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // prisma 모듈을 무력화 — apply 실행부가 import하는 PrismaClient 생성/연결을 차단한다.
+// 아래 실행부(processTable/applyCityOnlyWithConflictSkip) 테스트는 이 동일 객체에
+// $queryRawUnsafe/$executeRawUnsafe 를 vi.fn 으로 주입해 라우팅한다(실 DB 의존 0).
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {},
 }));
@@ -18,11 +20,30 @@ import {
   planCityNormalization,
   computeNormalizationPlan,
   reencodeSourceId,
+  splitDedup,
+  countDedupDefeatRisk,
+  isDuplicateKeyError,
+  applyCityOnlyWithConflictSkip,
+  processTable,
   REGION12_LOOKUP,
   SOURCEID_BJD_TABLES,
   type ReformRow,
+  type ReformPlanItem,
 } from '../../src/scripts/adoptRegionReform.js';
 import { JNGJ_CITY, JNGJ_DISTRICTS } from '../../src/lib/normalizeRegionName.js';
+import { prisma } from '../../src/lib/prisma.js';
+
+// mock prisma 핸들을 라우팅 가능한 형태로 캐스팅.
+const mockPrisma = prisma as unknown as {
+  $queryRawUnsafe: ReturnType<typeof vi.fn>;
+  $executeRawUnsafe: ReturnType<typeof vi.fn>;
+};
+
+beforeEach(() => {
+  // 각 테스트가 자체 라우팅을 주입. 기본은 빈 결과 / no-op.
+  mockPrisma.$queryRawUnsafe = vi.fn(async () => []);
+  mockPrisma.$executeRawUnsafe = vi.fn(async () => 0);
+});
 
 describe('REGION12_LOOKUP (정본 매핑 — 시작 시 27쌍 완비 assert 대상)', () => {
   it('정확히 27쌍이며 JNGJ_DISTRICTS 전부를 12xxx로 커버한다', () => {
@@ -229,5 +250,170 @@ describe('planCityNormalization — 테이블 종류별 규칙', () => {
     const [p] = planCityNormalization(rows, lookup);
     expect(p.toCity).toBe(JNGJ_CITY);
     expect(p.toBjd).toBe('12210');
+  });
+});
+
+// ============================================================================
+// I-1: dry-run이 dedup-DELETE 예정 건수를 미리보기 하는지(순수 splitDedup + processTable dry-run)
+// ============================================================================
+
+describe('splitDedup (I-1 — update vs dedup-DELETE 분할, 순수)', () => {
+  it('기존 sourceId(신 sync 삽입분)와 충돌하는 옛 행은 dedup-DELETE, 나머지는 UPDATE', () => {
+    const src: ReformPlanItem[] = [
+      { id: 1, table: 'AptSaleTransaction', fromCity: '광주', toCity: JNGJ_CITY, toSourceId: 'aptSale-12210-A' },
+      { id: 2, table: 'AptSaleTransaction', fromCity: '광주', toCity: JNGJ_CITY, toSourceId: 'aptSale-12210-B' },
+    ];
+    const existing = new Set(['aptSale-12210-A']); // 신 sync가 이미 넣음
+    const { toUpdate, toDeleteIds } = splitDedup(src, existing);
+    expect(toDeleteIds).toEqual([1]);
+    expect(toUpdate.map((p) => p.id)).toEqual([2]);
+  });
+
+  it('이번 실행 내부 중복(claimed)도 dedup-DELETE로 처리', () => {
+    const src: ReformPlanItem[] = [
+      { id: 1, table: 'AptSaleTransaction', fromCity: '광주', toCity: JNGJ_CITY, toSourceId: 'dup' },
+      { id: 2, table: 'AptSaleTransaction', fromCity: '광주', toCity: JNGJ_CITY, toSourceId: 'dup' },
+    ];
+    const { toUpdate, toDeleteIds } = splitDedup(src, new Set());
+    expect(toUpdate.map((p) => p.id)).toEqual([1]); // 먼저 배정
+    expect(toDeleteIds).toEqual([2]); // 나중은 dedup
+  });
+});
+
+describe('processTable — I-1: dry-run에서도 dedup-DELETE 예정 건수를 리포트(mutation 없음)', () => {
+  it('AptSaleTransaction dry-run: plannedDedupDelete=1 / plannedUpdate=1, $executeRawUnsafe 미호출', async () => {
+    mockPrisma.$queryRawUnsafe = vi.fn(async (sql: string, ...params: unknown[]) => {
+      if (/^SELECT id,/.test(sql)) {
+        // selectCandidates — 광주/동구 두 행(29140 → 12210), 서로 다른 sourceId
+        return [
+          { id: 1, city: '광주', district: '동구', bjdCode: '29140', sourceId: 'aptSale-29140-A' },
+          { id: 2, city: '광주', district: '동구', bjdCode: '29140', sourceId: 'aptSale-29140-B' },
+        ];
+      }
+      if (/^SELECT sourceId FROM/.test(sql)) {
+        // findExistingSourceIds — params 는 조회할 toSourceId 목록. A만 이미 존재(신 sync 삽입분).
+        return (params as string[]).filter((s) => s === 'aptSale-12210-A').map((s) => ({ sourceId: s }));
+      }
+      return [];
+    });
+
+    const result = await processTable('AptSaleTransaction', /* apply */ false);
+
+    expect(result.planned).toBe(2);
+    expect(result.plannedDedupDelete).toBe(1); // ← I-1: dry-run이 삭제 예정 규모를 노출
+    expect(result.plannedUpdate).toBe(1);
+    // dry-run 이므로 실제 mutation(UPDATE/DELETE/백업) 없음
+    expect(result.updated).toBe(0);
+    expect(result.deletedDedup).toBe(0);
+    expect(mockPrisma.$executeRawUnsafe).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// I-2: WasteSchedule city 리네임 충돌 — dry-run pre-check + apply conflict-skip(abort 방지)
+// ============================================================================
+
+describe('processTable — I-2(a): city-only 충돌 dry-run pre-check', () => {
+  it('WasteSchedule dry-run: (JNGJ,district,sourceId) 기존행 충돌 예정 건수를 센다', async () => {
+    mockPrisma.$queryRawUnsafe = vi.fn(async (sql: string) => {
+      if (/^SELECT id,/.test(sql)) {
+        return [
+          { id: 100, city: '광주광역시', district: '동구', sourceId: 'w1' },
+          { id: 101, city: '전남', district: '목포시', sourceId: 'w2' },
+        ];
+      }
+      if (/^SELECT district, sourceId FROM/.test(sql)) {
+        // JNGJ + 동구 + w1 이 이미 존재(sync 선삽입) → 옛 행(100) 리네임은 충돌 예정
+        return [{ district: '동구', sourceId: 'w1' }];
+      }
+      return [];
+    });
+
+    const result = await processTable('WasteSchedule', /* apply */ false);
+    expect(result.planned).toBe(2);
+    expect(result.cityConflictExisting).toBe(1);
+    expect(mockPrisma.$executeRawUnsafe).not.toHaveBeenCalled();
+  });
+});
+
+describe('applyCityOnlyWithConflictSkip — I-2(b): duplicate-key skip + continue(abort 금지)', () => {
+  const items: ReformPlanItem[] = [
+    { id: 1, table: 'WasteSchedule', fromCity: '광주광역시', toCity: JNGJ_CITY },
+    { id: 2, table: 'WasteSchedule', fromCity: '전남', toCity: JNGJ_CITY },
+    { id: 3, table: 'WasteSchedule', fromCity: '광주', toCity: JNGJ_CITY },
+  ];
+
+  it('중간 행이 duplicate-key로 실패해도 skip+카운트 후 다음 행 계속(전체 abort 없음)', async () => {
+    mockPrisma.$executeRawUnsafe = vi.fn(async (_sql: string, _city: string, id: number) => {
+      if (id === 2) {
+        // Prisma $executeRawUnsafe raw 오류 형태(P2010 래핑 + meta 1062)
+        throw { code: 'P2010', meta: { code: '1062', message: "Duplicate entry 'x' for key 'city'" } };
+      }
+      return 1;
+    });
+
+    const r = await applyCityOnlyWithConflictSkip('WasteSchedule', items);
+    expect(r.updated).toBe(2); // id=1, id=3
+    expect(r.skipped).toBe(1); // id=2
+    // 3행 전부 시도됨 = 충돌 후에도 멈추지 않고 계속 진행
+    expect(mockPrisma.$executeRawUnsafe).toHaveBeenCalledTimes(3);
+  });
+
+  it('duplicate-key가 아닌 오류는 rethrow(삼키지 않음)', async () => {
+    mockPrisma.$executeRawUnsafe = vi.fn(async () => {
+      throw new Error('connection reset by peer');
+    });
+    await expect(
+      applyCityOnlyWithConflictSkip('WasteSchedule', [items[0]])
+    ).rejects.toThrow('connection reset');
+  });
+});
+
+describe('isDuplicateKeyError (I-2 — dup-key 판정, DB 비의존)', () => {
+  it('P2002 / meta 1062 / ER_DUP_ENTRY 메시지를 dup-key로 판정', () => {
+    expect(isDuplicateKeyError({ code: 'P2002' })).toBe(true);
+    expect(isDuplicateKeyError({ code: 'P2010', meta: { code: '1062', message: 'Duplicate entry' } })).toBe(true);
+    expect(isDuplicateKeyError({ code: 'ER_DUP_ENTRY' })).toBe(true);
+    expect(isDuplicateKeyError(new Error('ER_DUP_ENTRY: Duplicate entry ...'))).toBe(true);
+  });
+
+  it('무관 오류/널은 false', () => {
+    expect(isDuplicateKeyError(new Error('connection reset'))).toBe(false);
+    expect(isDuplicateKeyError(null)).toBe(false);
+    expect(isDuplicateKeyError(undefined)).toBe(false);
+    expect(isDuplicateKeyError({ code: 'P2024' })).toBe(false);
+  });
+});
+
+// ============================================================================
+// M-1: dedup 무력화 사전경고 — bjdChanged인데 srcChanged 아님 카운트(경고만, apply 미차단)
+// ============================================================================
+
+describe('countDedupDefeatRisk (M-1 — 순수)', () => {
+  it('거래테이블: bjdChanged(toBjd 존재)인데 srcChanged 아님(toSourceId 부재) 건수', () => {
+    const planned: ReformPlanItem[] = [
+      { id: 1, table: 'AptSaleTransaction', fromCity: '광주', toCity: JNGJ_CITY, fromBjd: '29140', toBjd: '12210', fromSourceId: 'a', toSourceId: 'aptSale-12210-a' }, // 정상(srcChanged)
+      { id: 2, table: 'AptSaleTransaction', fromCity: '광주', toCity: JNGJ_CITY, fromBjd: '29140', toBjd: '12210' }, // 위반: bjd만 바뀜
+    ];
+    expect(countDedupDefeatRisk('AptSaleTransaction', planned)).toBe(1);
+  });
+
+  it('비-거래테이블(Aed 등)은 항상 0', () => {
+    const planned: ReformPlanItem[] = [
+      { id: 1, table: 'Aed', fromCity: '광주', toCity: JNGJ_CITY, fromBjd: '29170', toBjd: '12300' },
+    ];
+    expect(countDedupDefeatRisk('Aed', planned)).toBe(0);
+  });
+
+  it('실전: sourceId에 옛 bjd 토큰이 없어 reencode 무효인 거래 행 → M-1 위반으로 검출', () => {
+    // bjdCode=29140 이지만 sourceId 에 29140 토큰 부재 → reencode 원본반환 → toSourceId 미설정
+    const rows: ReformRow[] = [
+      { id: 5, table: 'AptSaleTransaction', city: '광주', district: '동구', bjdCode: '29140', sourceId: 'aptSale-99999-x' },
+    ];
+    const plan = computeNormalizationPlan(rows, REGION12_LOOKUP);
+    expect(plan.planned).toHaveLength(1);
+    expect(plan.planned[0].toBjd).toBe('12210'); // bjdChanged
+    expect(plan.planned[0].toSourceId).toBeUndefined(); // srcChanged 아님
+    expect(countDedupDefeatRisk('AptSaleTransaction', plan.planned)).toBe(1);
   });
 });

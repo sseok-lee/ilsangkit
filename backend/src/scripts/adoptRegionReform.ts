@@ -282,6 +282,59 @@ export function planCityNormalization(
   return computeNormalizationPlan(rows, regionLookup).planned;
 }
 
+/**
+ * sourceId 재코딩 대상(SOURCEID_BJD_TABLES)의 계획을 기존 sourceId 집합에 대해
+ * update / dedup-delete로 분할한다(순수함수 — dry-run·apply 공통).
+ *   - toSourceId가 이미 테이블에 존재(신 sync 삽입분)하거나, 이번 실행에서 먼저 배정(claimed)됐으면
+ *     → 옛 행 DELETE(dedup).
+ *   - 아니면 → UPDATE(city+bjdCode+sourceId).
+ */
+export function splitDedup(
+  srcItems: ReformPlanItem[],
+  existing: Set<string>
+): { toUpdate: ReformPlanItem[]; toDeleteIds: (number | string)[] } {
+  const claimed = new Set<string>();
+  const toUpdate: ReformPlanItem[] = [];
+  const toDeleteIds: (number | string)[] = [];
+  for (const p of srcItems) {
+    const sid = p.toSourceId as string;
+    if (existing.has(sid) || claimed.has(sid)) {
+      toDeleteIds.push(p.id);
+    } else {
+      claimed.add(sid);
+      toUpdate.push(p);
+    }
+  }
+  return { toUpdate, toDeleteIds };
+}
+
+/**
+ * M-1 사전경고(순수함수): 거래테이블(sourceId에 bjd 임베드)에서 **bjdChanged인데 srcChanged가 아닌**
+ * 계획 행 수. reencodeSourceId가 옛 bjd 토큰을 못 찾아 원본을 반환하면 sourceId가 그대로 남아,
+ * bjdCode만 신 코드로 바뀐다. 이 경우 다음 sync가 신 bjd로 sourceId를 재생성 → **dedup 무력화(중복 생성)** 위험.
+ * 0이 정상. apply를 막지 않고 경고만 낸다.
+ */
+export function countDedupDefeatRisk(table: string, planned: ReformPlanItem[]): number {
+  if (!SOURCEID_BJD_TABLES.has(table)) return 0;
+  // toBjd 존재 = bjdChanged, toSourceId 부재 = srcChanged 아님.
+  return planned.filter((p) => p.toBjd !== undefined && p.toSourceId === undefined).length;
+}
+
+/**
+ * MySQL duplicate-key(ER_DUP_ENTRY, 1062) / Prisma P2002 판정(near-pure, DB 비의존).
+ * $executeRawUnsafe의 raw 오류는 보통 P2010로 래핑되며 meta/message에 원 드라이버 오류(1062)를 담는다.
+ */
+export function isDuplicateKeyError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { code?: unknown; meta?: { code?: unknown; message?: unknown }; message?: unknown };
+  if (e.code === 'P2002') return true;
+  const codeStr = String(e.code ?? '');
+  const metaCode = String(e.meta?.code ?? '');
+  if (metaCode === '1062' || codeStr === '1062' || codeStr === 'ER_DUP_ENTRY') return true;
+  const text = `${String(e.message ?? '')} ${String(e.meta?.message ?? '')}`;
+  return /duplicate entry/i.test(text) || /er_dup_entry/i.test(text);
+}
+
 // ============================================================================
 // DB 실행부 (apply) — 아래는 --apply 경로에서만 동작. 테스트에서는 prisma를 mock.
 // ============================================================================
@@ -457,19 +510,98 @@ async function findExistingSourceIds(table: string, sourceIds: string[]): Promis
   return found;
 }
 
-interface TableResult {
+/**
+ * I-2(a) dry-run pre-check: city-only 리네임 후 `(JNGJ_CITY, district, sourceId)`가 **이미 존재하는**
+ * 행 수(= apply 시 unique 충돌로 스킵 예정 건수)를 SELECT(read-only)로 센다.
+ * WasteSchedule `@@unique([city,district,sourceId])` 처럼 unique에 city가 포함된 테이블 대상.
+ */
+async function countCityRenameConflicts(
+  table: string,
+  targets: { district: string; sourceId: string }[]
+): Promise<number> {
+  assertKnownTable(table);
+  if (targets.length === 0) return 0;
+  const matched = new Set<string>();
+  for (let i = 0; i < targets.length; i += SELECT_IN_CHUNK) {
+    const chunk = targets.slice(i, i + SELECT_IN_CHUNK);
+    const placeholders = chunk.map(() => '(?, ?)').join(', ');
+    const params: string[] = [JNGJ_CITY];
+    for (const t of chunk) params.push(t.district, t.sourceId);
+    const rows = (await prisma.$queryRawUnsafe(
+      `SELECT district, sourceId FROM \`${table}\` WHERE city = ? AND (district, sourceId) IN (${placeholders})`,
+      ...params
+    )) as { district: string; sourceId: string }[];
+    for (const r of rows) matched.add(`${r.district} ${r.sourceId}`);
+  }
+  let conflicts = 0;
+  for (const t of targets) {
+    if (matched.has(`${t.district} ${t.sourceId}`)) conflicts++;
+  }
+  return conflicts;
+}
+
+/**
+ * I-2(b) apply 견고 경로: city-only UPDATE를 **per-row try/catch**로 실행.
+ * duplicate-key(ER_DUP_ENTRY/P2002) 충돌은 **skip+카운트+로그**하고 다음 행으로 계속(전체 abort 금지).
+ * 그래서 WasteSchedule 충돌이 있어도 processTable가 정상 반환 → main이 Region 정규화까지 도달한다.
+ */
+export async function applyCityOnlyWithConflictSkip(
+  table: string,
+  items: ReformPlanItem[]
+): Promise<{ updated: number; skipped: number }> {
+  assertKnownTable(table);
+  let updated = 0;
+  let skipped = 0;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    try {
+      const affected = await prisma.$executeRawUnsafe(
+        `UPDATE \`${table}\` SET city = ? WHERE id = ?`,
+        it.toCity,
+        it.id
+      );
+      updated += Number(affected);
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        skipped++;
+        console.warn(`   [${table}] dup-key skip id=${it.id} → city='${it.toCity}' (이미 JNGJ 행 존재)`);
+      } else {
+        throw err;
+      }
+    }
+    if ((i + 1) % ROW_UPDATE_CHUNK === 0) {
+      console.info(`   [${table}] city-only update ${i + 1}/${items.length} (skip ${skipped})`);
+      await sleep(BATCH_SLEEP_MS);
+    }
+  }
+  console.info(`   [${table}] city-only 완료 update=${updated} conflict-skip=${skipped}`);
+  return { updated, skipped };
+}
+
+export interface TableResult {
   table: string;
   candidates: number;
   planned: number;
   unchanged: number;
   excludedNonTarget: number;
   skippedDistrictUnmatched: number;
+  /** 계획상 UPDATE 예정 건수(dry-run에서도 산출). */
+  plannedUpdate: number;
+  /** 계획상 dedup-DELETE 예정 건수(I-1 — dry-run에서도 산출). */
+  plannedDedupDelete: number;
+  /** I-2(a) city-only 리네임 시 (JNGJ,district,sourceId) 기존행 충돌 예정 수(dry-run pre-check). */
+  cityConflictExisting: number;
+  /** M-1 dedup 무력화 위험(bjdChanged인데 srcChanged 아님) 건수. 0이 정상. */
+  dedupDefeatWarn: number;
   updated: number;
   deletedDedup: number;
+  /** I-2(b) apply 시 duplicate-key로 실제 스킵된 city-only 건수. */
+  cityConflictSkipped: number;
 }
 
-async function processTable(table: string, apply: boolean): Promise<TableResult> {
-  const hasBjd = table !== 'SubwayStation' && table !== 'WasteSchedule';
+export async function processTable(table: string, apply: boolean): Promise<TableResult> {
+  const isCityOnly = CITY_ONLY_TABLES.includes(table);
+  const hasBjd = !isCityOnly;
   const candidates = await selectCandidates(table, hasBjd);
   const rows: ReformRow[] = candidates.map((r) => ({ ...r, table }));
   const plan = computeNormalizationPlan(rows, REGION12_LOOKUP);
@@ -489,10 +621,64 @@ async function processTable(table: string, apply: boolean): Promise<TableResult>
     unchanged: plan.unchanged,
     excludedNonTarget: plan.excludedNonTarget,
     skippedDistrictUnmatched: plan.skippedDistrictUnmatched.length,
+    plannedUpdate: 0,
+    plannedDedupDelete: 0,
+    cityConflictExisting: 0,
+    dedupDefeatWarn: 0,
     updated: 0,
     deletedDedup: 0,
+    cityConflictSkipped: 0,
   };
 
+  // ────────────────────────────────────────────────────────────────────────
+  // 계획 세분화 — dry-run에서도 산출한다(SELECT는 read-only라 안전). 실제 mutation만 apply로 가드.
+  // ────────────────────────────────────────────────────────────────────────
+
+  // I-1: sourceId 재코딩 대상은 충돌 조회(SELECT)로 update vs dedup-DELETE를 미리 분할.
+  let srcToUpdate: ReformPlanItem[] = [];
+  let srcToDeleteIds: (number | string)[] = [];
+  let cityBjdOnly: ReformPlanItem[] = [];
+  if (SOURCEID_BJD_TABLES.has(table)) {
+    const srcItems = plan.planned.filter((p) => p.toSourceId);
+    cityBjdOnly = plan.planned.filter((p) => !p.toSourceId); // bjd 미변경(예: 이미 12)이거나 city만
+    const existing = await findExistingSourceIds(table, srcItems.map((p) => p.toSourceId as string));
+    ({ toUpdate: srcToUpdate, toDeleteIds: srcToDeleteIds } = splitDedup(srcItems, existing));
+    result.plannedUpdate = srcToUpdate.length + cityBjdOnly.length;
+    result.plannedDedupDelete = srcToDeleteIds.length;
+    console.info(
+      `   [${table}] sourceId 재코딩 update=${srcToUpdate.length} dedup-delete=${srcToDeleteIds.length} ` +
+        `city-only=${cityBjdOnly.length}${apply ? '' : ' (dry-run 미리보기)'}`
+    );
+
+    // M-1: dedup 무력화 사전경고(bjdChanged인데 srcChanged 아님 — 0이 정상).
+    result.dedupDefeatWarn = countDedupDefeatRisk(table, plan.planned);
+    if (result.dedupDefeatWarn > 0) {
+      console.warn(
+        `   [${table}] ⚠️ M-1: bjdChanged인데 sourceId 미재코딩 ${result.dedupDefeatWarn}건 — ` +
+          `다음 sync가 신 bjd로 sourceId 재생성 시 중복 생성 위험(옛 bjd 토큰 부재로 reencode 무효).`
+      );
+    }
+  } else {
+    result.plannedUpdate = plan.planned.length;
+  }
+
+  // I-2(a): city-only 리네임 충돌 pre-check(dry-run 포함) — unique에 city 포함(WasteSchedule 등).
+  if (isCityOnly && plan.planned.length > 0) {
+    const candById = new Map(candidates.map((c) => [String(c.id), c]));
+    const targets = plan.planned
+      .map((p) => candById.get(String(p.id)))
+      .filter((c): c is RawRow => !!c && c.sourceId != null)
+      .map((c) => ({ district: c.district, sourceId: c.sourceId as string }));
+    result.cityConflictExisting = await countCityRenameConflicts(table, targets);
+    if (result.cityConflictExisting > 0) {
+      console.warn(
+        `   [${table}] ⚠️ I-2: city 리네임 후 (${JNGJ_CITY}, district, sourceId) 기존행과 충돌 예정 ` +
+          `${result.cityConflictExisting}건 — apply 시 스킵됩니다.`
+      );
+    }
+  }
+
+  // ── 여기부터 실제 mutation(apply 전용) — SELECT 기반 계획/경고는 위에서 이미 완료 ──
   if (!apply || plan.planned.length === 0) return result;
 
   // 백업 — 계획된 행의 원본만 (충돌·삭제 포함 전부 보존)
@@ -500,30 +686,17 @@ async function processTable(table: string, apply: boolean): Promise<TableResult>
   await backupRows(table, candidates.filter((c) => plannedIdSet.has(String(c.id))));
 
   if (SOURCEID_BJD_TABLES.has(table)) {
-    // sourceId 재코딩 대상: 충돌 사전검사 → dedup(delete) / update 분기
-    const srcItems = plan.planned.filter((p) => p.toSourceId);
-    const cityBjdOnly = plan.planned.filter((p) => !p.toSourceId); // bjd 미변경(예: 이미 12) 이나 city만 변경
-
-    const existing = await findExistingSourceIds(table, srcItems.map((p) => p.toSourceId as string));
-    const claimed = new Set<string>();
-    const toUpdate: ReformPlanItem[] = [];
-    const toDeleteIds: (number | string)[] = [];
-    for (const p of srcItems) {
-      const sid = p.toSourceId as string;
-      if (existing.has(sid) || claimed.has(sid)) {
-        // 신 sync가 이미 넣었거나 이번 실행에서 먼저 배정됨 → 옛 행 삭제(dedup)
-        toDeleteIds.push(p.id);
-      } else {
-        claimed.add(sid);
-        toUpdate.push(p);
-      }
-    }
-    console.info(`   [${table}] sourceId 재코딩 update=${toUpdate.length} dedup-delete=${toDeleteIds.length} city-only=${cityBjdOnly.length}`);
-    result.deletedDedup += await applyDeletes(table, toDeleteIds);
-    result.updated += await applyRowUpdatesWithSourceId(table, toUpdate);
+    // sourceId 재코딩 대상: 위에서 계산한 dedup(delete) / update 분기를 그대로 실행.
+    result.deletedDedup += await applyDeletes(table, srcToDeleteIds);
+    result.updated += await applyRowUpdatesWithSourceId(table, srcToUpdate);
     if (cityBjdOnly.length > 0) result.updated += await applyGroupedUpdate(table, cityBjdOnly);
+  } else if (isCityOnly) {
+    // I-2(b): city-only는 per-row conflict-skip 경로로 실행(duplicate-key skip+continue).
+    const r = await applyCityOnlyWithConflictSkip(table, plan.planned);
+    result.updated += r.updated;
+    result.cityConflictSkipped += r.skipped;
   } else {
-    // 시설 / Auction / city-only : city[+bjdCode] 그룹 IN 업데이트
+    // 시설 / Auction : city[+bjdCode] 그룹 IN 업데이트
     result.updated += await applyGroupedUpdate(table, plan.planned);
   }
 
@@ -647,14 +820,27 @@ async function main(): Promise<void> {
   // 요약
   console.info('\n=================== 요약 ===================');
   let totalPlanned = 0, totalUpdated = 0, totalDeleted = 0, totalSkipped = 0;
+  let totalPlannedUpdate = 0, totalPlannedDedup = 0, totalCityConflict = 0, totalCitySkipped = 0, totalDedupWarn = 0;
   for (const r of results) {
     totalPlanned += r.planned;
     totalUpdated += r.updated;
     totalDeleted += r.deletedDedup;
     totalSkipped += r.skippedDistrictUnmatched;
+    totalPlannedUpdate += r.plannedUpdate;
+    totalPlannedDedup += r.plannedDedupDelete;
+    totalCityConflict += r.cityConflictExisting;
+    totalCitySkipped += r.cityConflictSkipped;
+    totalDedupWarn += r.dedupDefeatWarn;
+    // I-1: dry-run에서도 UPDATE/ dedup-DELETE 예정 건수를 표기(가장 위험한 DELETE 규모를 apply 전에 노출).
     console.info(
-      `  ${r.table.padEnd(24)} 계획 ${String(r.planned).padStart(7)} | 적용 ${String(r.updated).padStart(7)} | ` +
-        `dedup삭제 ${String(r.deletedDedup).padStart(6)} | skip ${r.skippedDistrictUnmatched}`
+      `  ${r.table.padEnd(24)} 계획 ${String(r.planned).padStart(7)} | ` +
+        `update예정 ${String(r.plannedUpdate).padStart(7)} | dedup삭제예정 ${String(r.plannedDedupDelete).padStart(6)} | ` +
+        (apply
+          ? `적용 ${String(r.updated).padStart(7)} | dedup삭제 ${String(r.deletedDedup).padStart(6)} | city충돌skip ${r.cityConflictSkipped} | `
+          : '') +
+        `skip ${r.skippedDistrictUnmatched}` +
+        (r.cityConflictExisting > 0 ? ` | ⚠️city충돌예정 ${r.cityConflictExisting}` : '') +
+        (r.dedupDefeatWarn > 0 ? ` | ⚠️M-1 ${r.dedupDefeatWarn}` : '')
     );
   }
   if (regionSummary) {
@@ -663,7 +849,19 @@ async function main(): Promise<void> {
     );
   }
   console.info('--------------------------------------------');
-  console.info(`  합계  계획 ${totalPlanned} | 적용 ${totalUpdated} | dedup삭제 ${totalDeleted} | district미매칭 skip ${totalSkipped}`);
+  console.info(
+    `  합계  계획 ${totalPlanned} | update예정 ${totalPlannedUpdate} | dedup삭제예정 ${totalPlannedDedup} | ` +
+      `적용 ${totalUpdated} | dedup삭제 ${totalDeleted} | district미매칭 skip ${totalSkipped}`
+  );
+  if (totalCityConflict > 0) {
+    console.warn(`  ⚠️ I-2 city 리네임 충돌 예정(apply 시 스킵) 합계: ${totalCityConflict}건 (WasteSchedule 등 unique에 city 포함)`);
+  }
+  if (apply && totalCitySkipped > 0) {
+    console.warn(`  ⚠️ I-2 city 리네임 duplicate-key로 실제 스킵된 합계: ${totalCitySkipped}건`);
+  }
+  if (totalDedupWarn > 0) {
+    console.warn(`  ⚠️ M-1 dedup 무력화 위험(bjdChanged & sourceId 미재코딩) 합계: ${totalDedupWarn}건 (0이 정상)`);
+  }
   if (!apply) {
     console.info('\n  DRY-RUN — DB 미변경. 실제 적용하려면 --apply 를 사용하세요.');
   }
