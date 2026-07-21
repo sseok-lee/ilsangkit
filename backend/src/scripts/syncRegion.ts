@@ -3,6 +3,12 @@
 
 import prisma from '../lib/prisma.js';
 import { geocode } from '../services/geocodingService.js';
+import { normalizeRegionName, JNGJ_CITY } from '../lib/normalizeRegionName.js';
+
+/**
+ * 전남광주통합특별시 목표 bjdCode 접두어(2026-07-01 출범, Task A3 재생성 가드용).
+ */
+const JNGJ_BJD_PREFIX = '12';
 
 /**
  * 동기화 결과 인터페이스
@@ -823,11 +829,15 @@ function parseApiRegion(apiRegion: ApiRegion): RegionData | null {
   const nameParts = apiRegion.locatadd_nm.trim().split(' ');
   if (nameParts.length < 2) return null;
 
-  const city = normalizeCityName(nameParts[0]);
-  const district = nameParts.slice(1).join(' ');
+  const shortCity = normalizeCityName(nameParts[0]);
+  const rawDistrict = nameParts.slice(1).join(' ');
   const bjdCode = apiRegion.region_cd.substring(0, 5);
 
-  const coords = REGION_COORDINATES[city]?.[district];
+  // 좌표는 정규화 이전의 원본 시/도 키로 조회 (REGION_COORDINATES는 '광주'/'전남' 키를 유지)
+  const coords = REGION_COORDINATES[shortCity]?.[rawDistrict];
+
+  // 2026-07-01 전남광주통합특별시 출범 대응(Task A3): city 저장 직전 정규화
+  const { city, district } = normalizeRegionName(shortCity, rawDistrict);
 
   return {
     bjdCode,
@@ -982,6 +992,18 @@ export async function syncRegionData(options: SyncOptions = {}): Promise<SyncRes
 
     // DB 저장 (upsert)
     for (const region of regionsToSync) {
+      // 옛코드 재생성 가드(Task A3): 전남광주통합특별시로 정규화되는 지역인데 bjdCode가
+      // 신코드(12) 접두가 아니면 — 법정동 API 전환기 잔존/오염 로우이거나 로컬 fallback의
+      // 옛코드 데이터. upsert하지 않고 스킵한다(기존 정상 로우가 옛코드로 덮어써지는 것도,
+      // 옛코드 행이 신규 생성되는 것도 방지). 기존에 이미 존재하는 옛코드 행 삭제는 Phase B 범위.
+      const normalizedForGuard = normalizeRegionName(region.city, region.district);
+      if (normalizedForGuard.city === JNGJ_CITY && !region.bjdCode.startsWith(JNGJ_BJD_PREFIX)) {
+        console.warn(
+          `[syncRegion] 옛코드 Region 재생성 가드: city=${region.city} district=${region.district} bjdCode=${region.bjdCode} → 스킵`
+        );
+        continue;
+      }
+
       const slug = normalizeKoreanToSlug(region.district);
 
       // 풀네임 city도 매칭하기 위한 역매핑
