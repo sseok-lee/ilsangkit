@@ -5,6 +5,16 @@ import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vites
 import prisma from '../../src/lib/prisma.js';
 import { JNGJ_CITY } from '../../src/lib/normalizeRegionName.js';
 
+// syncRegion.ts는 geocodingService.geocode()로 실제 Kakao API를 호출한다. 로컬에는
+// 유효한 KAKAO_REST_API_KEY가 있어 실호출이 성공하지만, CI에는 키가 없어 401이 되고
+// REGION_COORDINATES 폴백도 이 테스트 지역(신코드 12010)을 커버하지 않아 Region 행이
+// 생성되지 않는다(비-hermetic). geocode()를 고정 좌표로 mock해 환경과 무관하게
+// 결정적으로 동작하도록 한다. 아래 global.fetch mock(StanReginCd API)은 그대로 유지 —
+// 이건 geocode 경로와 무관하게 정상 동작한다.
+vi.mock('../../src/services/geocodingService.js', () => ({
+  geocode: vi.fn(async () => ({ lat: 35.1468, lng: 126.9226 })), // 광주 동구 근방 고정 좌표
+}));
+
 /**
  * 2026-07-01 전남광주통합특별시 출범 대응(A3): syncRegion(법정동코드 API)이
  * city를 전남광주통합특별시로 정규화 저장하고, 옛 코드(bjdCode 29/46) Region 행을
@@ -96,7 +106,7 @@ describe('syncRegion — JNGJ 정규화 + 옛코드 재생성 가드 (Task A3)',
           json: async () => mockApiResponse,
         } as Response;
       }
-      // Kakao 지오코딩 등 그 외 호출은 실패 응답으로 처리(geocode()는 null-safe)
+      // StanReginCd 이외 호출(사용되지 않을 것으로 예상 — geocode()는 위에서 mock됨)
       return {
         ok: false,
         status: 404,
