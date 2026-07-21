@@ -51,6 +51,8 @@ export interface GenerationOptions {
   token: string
   threshold: number
   fetcher?: Fetcher
+  /** 재시도 백오프·자식 간 지연용. 테스트에서 no-op 주입해 즉시 실행. 기본은 실제 setTimeout. */
+  sleep?: (ms: number) => Promise<void>
 }
 
 export interface GenerationResult extends CountGuardResult {
@@ -72,17 +74,40 @@ function isValidXml(body: string): boolean {
 export async function runGeneration(opts: GenerationOptions): Promise<GenerationResult> {
   const fetcher: Fetcher = opts.fetcher ?? ((url, headers) => fetch(url, { headers }))
   const headers = { [REGEN_TOKEN_HEADER]: opts.token }
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
   const fail = (error: string): GenerationResult => ({ ok: false, regressions: [], error })
 
   const tmp = `${opts.dir}.tmp`
   await rm(tmp, { recursive: true, force: true })
   await mkdir(tmp, { recursive: true })
 
+  // 무거운 사이트맵(real-estate-N, region-categories 등)은 생성 크롤 중 DB 부하로
+  // 간헐 503/타임아웃이 난다. 첫 실패에 전체를 중단하지 않고 백오프 재시도로 흡수한다.
+  const MAX_FETCH_RETRIES = 4
+  const fetchXmlWithRetry = async (url: string): Promise<{ ok: boolean; status: number; body: string }> => {
+    let lastStatus = 0
+    for (let attempt = 1; attempt <= MAX_FETCH_RETRIES; attempt++) {
+      try {
+        const res = await fetcher(url, headers)
+        if (res.ok) {
+          const body = await res.text()
+          if (isValidXml(body)) return { ok: true, status: res.status, body }
+          lastStatus = res.status // 200이지만 XML 아님(에러 페이지) — 재시도
+        } else {
+          lastStatus = res.status
+        }
+      } catch {
+        lastStatus = 0
+      }
+      if (attempt < MAX_FETCH_RETRIES) await sleep(1000 * 2 ** (attempt - 1))
+    }
+    return { ok: false, status: lastStatus, body: '' }
+  }
+
   // 1) 인덱스
-  const idxRes = await fetcher(`${opts.base}/sitemap.xml`, headers)
-  if (!idxRes.ok) { await rm(tmp, { recursive: true, force: true }); return fail(`index fetch failed: ${idxRes.status}`) }
-  const indexXml = await idxRes.text()
-  if (!isValidXml(indexXml)) { await rm(tmp, { recursive: true, force: true }); return fail('index not valid xml') }
+  const idx = await fetchXmlWithRetry(`${opts.base}/sitemap.xml`)
+  if (!idx.ok) { await rm(tmp, { recursive: true, force: true }); return fail(`index fetch failed: ${idx.status}`) }
+  const indexXml = idx.body
 
   const nextCounts: Record<string, number> = { 'sitemap.xml': countLocs(indexXml) }
   const files: { rel: string; body: string }[] = [{ rel: 'sitemap.xml', body: indexXml }]
@@ -90,12 +115,12 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
   // 2) 자식들 — 순차(동시성 1)
   for (const loc of parseChildLocs(indexXml)) {
     const rel = locToRelPath(loc)
-    const res = await fetcher(`${opts.base}${new URL(loc).pathname}`, headers)
-    if (!res.ok) { await rm(tmp, { recursive: true, force: true }); return fail(`child fetch failed ${rel}: ${res.status}`) }
-    const body = await res.text()
-    if (!isValidXml(body)) { await rm(tmp, { recursive: true, force: true }); return fail(`child not valid xml: ${rel}`) }
-    nextCounts[rel] = countLocs(body)
-    files.push({ rel, body })
+    const child = await fetchXmlWithRetry(`${opts.base}${new URL(loc).pathname}`)
+    if (!child.ok) { await rm(tmp, { recursive: true, force: true }); return fail(`child fetch failed ${rel}: ${child.status}`) }
+    nextCounts[rel] = countLocs(child.body)
+    files.push({ rel, body: child.body })
+    // 무거운 쿼리 연속 타격으로 DB 풀이 소진되지 않게 자식 간 소폭 지연
+    await sleep(150)
   }
 
   // 3) tmp에 기록
