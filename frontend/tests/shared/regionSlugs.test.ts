@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildTrashRegionPath, CITY_SLUGS, CITY_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
+import { buildTrashRegionPath, CITY_SLUGS, CITY_SLUG_MAP, CITY_FULL_NAME_TO_SLUG, REGIONS } from '~/shared/regionSlugs'
 
 describe('전남광주통합특별시 slug/읽기맵 등록 (Task A4)', () => {
   it('CITY_SLUG_MAP[jeonnamgwangju]가 truthy여야 한다', () => {
@@ -52,6 +52,16 @@ describe('전남광주통합특별시 slug/읽기맵 등록 (Task A4)', () => {
     expect(CITY_SLUGS['전남']).toBe('jeonnam')
     expect(REGIONS['광주']).toEqual(['동구', '서구', '남구', '북구', '광산구'])
     expect(REGIONS['전남']?.length).toBe(22)
+  })
+
+  it('CITY_FULL_NAME_TO_SLUG에 전남광주통합특별시 → jeonnamgwangju 등록 (Task A8: SearchRecovery chipTo robustness)', () => {
+    expect(CITY_FULL_NAME_TO_SLUG['전남광주통합특별시']).toBe('jeonnamgwangju')
+  })
+
+  it('CITY_FULL_NAME_TO_SLUG 무관 지역(서울 등) 무회귀', () => {
+    expect(CITY_FULL_NAME_TO_SLUG['서울특별시']).toBe('seoul')
+    expect(CITY_FULL_NAME_TO_SLUG['전라남도']).toBe('jeonnam')
+    expect(CITY_FULL_NAME_TO_SLUG['광주광역시']).toBe('gwangju')
   })
 
   it('suffix-strip 로직이 전남광주통합특별시를 자르지 않는다 (예외 처리) — 일반 로직은 잘라야 하는 대조군 포함', () => {
