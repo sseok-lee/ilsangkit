@@ -1,7 +1,18 @@
 // @TASK T2.4 - 통합 동기화 스케줄러 테스트
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const { mockFindMany } = vi.hoisted(() => ({
+  mockFindMany: vi.fn(),
+}));
+
+vi.mock('../../src/lib/prisma.js', () => ({
+  prisma: {
+    evCharger: { findMany: mockFindMany },
+    region: { findMany: vi.fn() },
+  },
+}));
 
 /**
  * 옵션 파싱 테스트
@@ -118,5 +129,47 @@ describe('syncAll 결과 집계', () => {
     const exitCode = failed > 0 ? 1 : 0;
 
     expect(exitCode).toBe(1);
+  });
+});
+
+/**
+ * ev-charger IndexNow modelQueries 회귀 테스트
+ * EvCharger.id(충전기 row, ~51만행)가 아닌 DISTINCT statId(충전소)를 제출해야
+ * 실제 상세페이지(/ev-charger/{statId}) URL과 일치한다.
+ */
+describe('syncAll IndexNow — ev-charger modelQueries', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('getEvChargerIndexNowItems는 DISTINCT statId를 { id: statId } 형태로 반환한다', async () => {
+    mockFindMany.mockResolvedValue([
+      { statId: 'ME12345' },
+      { statId: 'ME67890' },
+    ]);
+
+    const { getEvChargerIndexNowItems } = await import('../../src/scripts/syncAll.js');
+    const cutoff = new Date('2026-07-21T00:00:00Z');
+    const items = await getEvChargerIndexNowItems(cutoff);
+
+    expect(mockFindMany).toHaveBeenCalledWith({
+      where: { syncedAt: { gte: cutoff }, statId: { not: null } },
+      select: { statId: true },
+      distinct: ['statId'],
+    });
+    expect(items).toEqual([{ id: 'ME12345' }, { id: 'ME67890' }]);
+  });
+
+  it('반환된 items를 downstream 소비 로직(items.map(i => i.id) → buildFacilityUrls)에 그대로 넣으면 statId 기반 URL이 나온다', async () => {
+    mockFindMany.mockResolvedValue([{ statId: 'ME12345' }]);
+
+    const { getEvChargerIndexNowItems } = await import('../../src/scripts/syncAll.js');
+    const { buildFacilityUrls } = await import('../../src/services/indexNowService.js');
+
+    const items = await getEvChargerIndexNowItems(new Date());
+    const urls = buildFacilityUrls('ev-charger', items.map((i) => String(i.id)));
+
+    expect(urls).toEqual(['https://ilsangkit.co.kr/ev-charger/ME12345']);
+    expect(urls[0]).not.toContain('ev-charger-'); // EvCharger.id(row) 포맷 회귀 방지
   });
 });

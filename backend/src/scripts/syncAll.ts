@@ -13,6 +13,7 @@
 
 import * as path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { syncToilets } from '../services/toiletSyncService.js';
 import { geocodeToilets } from './geocodeToilets.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
@@ -69,6 +70,22 @@ function readMarkerFile(filePath: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * IndexNow용 최근 동기화 ev-charger 충전소(station) ID 목록 조회.
+ * EvCharger는 충전기(row) 단위(`id` = statId-chgerId, ~51만행)지만
+ * 상세페이지/사이트맵은 충전소(statId) 단위이므로, DISTINCT statId를
+ * `{ id: statId }` 형태로 반환해 기존 modelQueries 소비 로직(items.map(i => i.id))과
+ * 그대로 호환되게 한다.
+ */
+export async function getEvChargerIndexNowItems(syncCutoff: Date): Promise<{ id: string }[]> {
+  const rows = await prisma.evCharger.findMany({
+    where: { syncedAt: { gte: syncCutoff }, statId: { not: null } },
+    select: { statId: true },
+    distinct: ['statId'],
+  });
+  return rows.map((r) => ({ id: r.statId! }));
 }
 
 /**
@@ -460,7 +477,7 @@ async function main(): Promise<void> {
       school: () => prisma.school.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
       market: () => prisma.market.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
       childcare: () => prisma.childcare.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      'ev-charger': () => prisma.evCharger.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
+      'ev-charger': () => getEvChargerIndexNowItems(syncCutoff),
       sports: () => prisma.sports.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
     };
 
@@ -533,8 +550,11 @@ async function main(): Promise<void> {
 }
 
 // 스크립트 실행
-installRuntimeGuard({ maxMinutes: 120, name: 'syncAll', prisma });
-main().catch(error => {
-  console.error('치명적 오류:', error);
-  process.exit(1);
-});
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename)) {
+  installRuntimeGuard({ maxMinutes: 120, name: 'syncAll', prisma });
+  main().catch(error => {
+    console.error('치명적 오류:', error);
+    process.exit(1);
+  });
+}
