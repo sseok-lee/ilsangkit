@@ -170,6 +170,6 @@ describe('syncAll IndexNow — ev-charger modelQueries', () => {
     const urls = buildFacilityUrls('ev-charger', items.map((i) => String(i.id)));
 
     expect(urls).toEqual(['https://ilsangkit.co.kr/ev-charger/ME12345']);
-    expect(urls[0]).not.toContain('evcharger-'); // EvCharger.id(row) 포맷 회귀 방지
+    expect(urls[0]).not.toContain('ev-charger-'); // EvCharger.id(row) 포맷 회귀 방지
   });
 });

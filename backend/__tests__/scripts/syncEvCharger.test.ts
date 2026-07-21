@@ -46,8 +46,8 @@ describe('getRecentlySyncedStationIds', () => {
     const urls = buildFacilityUrls('ev-charger', statIds);
 
     expect(urls).toEqual(['https://ilsangkit.co.kr/ev-charger/ME12345']);
-    // 회귀 방지: EvCharger.id 포맷(evcharger-{statId}-{chgerId})이 섞여 들어가면 안 된다
-    expect(urls[0]).not.toContain('evcharger-');
+    // 회귀 방지: EvCharger.id 포맷(ev-charger-{statId}-{chgerId})이 섞여 들어가면 안 된다
+    expect(urls[0]).not.toContain('ev-charger-');
   });
 
   it('동일 충전소의 여러 충전기 row가 있어도 1개 URL로 중복 제거된다', async () => {
