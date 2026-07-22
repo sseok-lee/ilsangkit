@@ -12,9 +12,9 @@
     />
 
     <!-- 거래 유형과 지역 -->
-    <SectionBlock heading="거래 유형과 지역" subtext="매매/전월세 탭과 시·도·구·군·단지명을 선택하세요.">
+    <SectionBlock heading="거래 유형과 지역" subtext="매매/전월세 탭을 고르고 시/도를 선택해 지역별 실거래가를 확인하세요.">
       <TransactionModeTab v-model="currentTab" class="mb-3" />
-      <RealEstateSearchFilter :type="apiSlug" @search="handleSearch" />
+      <RegionChips :href-for="(slug) => `/real-estate/${apiSlug}/${slug}`" />
     </SectionBlock>
 
     <!-- Ad: 거래유형·지역 필터 직후 -->
@@ -95,49 +95,6 @@
       </SectionBlock>
     </template>
 
-    <!-- 지역 생활 인프라 (검색 후에만 노출) -->
-    <SectionBlock
-      v-if="facilityStats || facilityLoading"
-      heading="지역 생활 인프라"
-      :subtext="lastSearch?.district || lastSearch?.city ? `${lastSearch?.district || lastSearch?.city} 주변 시설 밀집도` : '부동산 판단에 필요한 주변 인프라를 확인하세요.'"
-    >
-      <div v-if="facilityLoading" class="flex justify-center py-6">
-        <div class="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-      <div v-else-if="facilityStats">
-        <div class="flex flex-wrap gap-2">
-          <NuxtLink
-            v-for="(count, cat) in topFacilityCategories"
-            :key="cat"
-            :to="`/${cat}`"
-            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 transition-all"
-          >
-            <span class="material-symbols-outlined text-[16px] text-primary">{{ CATEGORY_META[cat as keyof typeof CATEGORY_META]?.icon }}</span>
-            <span>{{ CATEGORY_META[cat as keyof typeof CATEGORY_META]?.label }}</span>
-            <span class="font-bold">{{ count }}곳</span>
-          </NuxtLink>
-        </div>
-        <p class="mt-3 text-xs text-slate-500">총 {{ facilityStats.total?.toLocaleString() }}개 시설</p>
-      </div>
-    </SectionBlock>
-
-    <!-- 지역별 도시 허브 링크 -->
-    <SectionBlock>
-      <template #heading>
-        <h2 class="text-display-3 text-slate-900">지역별 {{ propertyMeta?.label }} 실거래가</h2>
-      </template>
-      <div class="flex flex-wrap gap-2">
-        <NuxtLink
-          v-for="(citySlug, cityName) in CITY_SLUGS"
-          :key="citySlug"
-          :to="`/real-estate/${apiSlug}/${citySlug}`"
-          class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 transition-all"
-        >
-          {{ cityName }}
-        </NuxtLink>
-      </div>
-    </SectionBlock>
-
     <!-- FAQ -->
     <SectionBlock v-if="faqs.length > 0" heading="자주 묻는 질문">
       <div class="space-y-1">
@@ -170,8 +127,6 @@ import { HUB_TYPES } from '~/types/realEstate'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META, PROPERTY_TYPE_FAQ, PROPERTY_TYPE_DESCRIPTIONS } from '~/utils/realEstateMeta'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
-import { CITY_SLUGS } from '~/shared/regionSlugs'
-import { CATEGORY_META } from '~/types/facility'
 import { SITE_URL } from '~/utils/seoConstants'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -182,6 +137,7 @@ import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import RegionChips from '~/components/common/RegionChips.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -220,7 +176,6 @@ const currentPage = ref(1)
 const totalPages = ref(0)
 const pending = ref(true)
 const error = ref(false)
-const lastSearch = ref<{ city: string; district: string; buildingName: string } | null>(null)
 
 // SSR: 초기 건물 목록을 서버에서 로드.
 // 2026-05 villa-sale 허브가 한 번의 fetch 실패로 빈 본문이 stale-while-revalidate
@@ -297,24 +252,11 @@ const paginationRange = computed(() => {
   return range
 })
 
-async function handleSearch(params: { city: string; district: string; buildingName: string }) {
-  if (!params.city && !params.district && !params.buildingName) return
-  lastSearch.value = params
-  currentPage.value = 1
-
-  // 건물 목록 + 시설 요약을 병렬로 요청
-  const complexPromise = loadComplexes(params.city || undefined, params.district || undefined, params.buildingName || undefined)
-  const facilityPromise = params.city
-    ? fetchFacilitySummary(params.city, params.district || undefined)
-    : Promise.resolve()
-  await Promise.all([complexPromise, facilityPromise])
-}
-
-async function loadComplexes(city?: string, district?: string, buildingName?: string, page: number = 1) {
+async function loadComplexes(page: number = 1) {
   pending.value = true
   error.value = false
   try {
-    const result = await getComplexList(apiSlug.value, city, district, buildingName, page)
+    const result = await getComplexList(apiSlug.value, undefined, undefined, undefined, page)
     complexes.value = result.items
     totalComplexes.value = result.total
     currentPage.value = result.page
@@ -328,13 +270,11 @@ async function loadComplexes(city?: string, district?: string, buildingName?: st
 
 function goToPage(page: number) {
   if (page < 1 || page > totalPages.value) return
-  const s = lastSearch.value
-  loadComplexes(s?.city || undefined, s?.district || undefined, s?.buildingName || undefined, page)
+  loadComplexes(page)
 }
 
 function retryLoad() {
-  const s = lastSearch.value
-  loadComplexes(s?.city || undefined, s?.district || undefined, s?.buildingName || undefined, currentPage.value)
+  loadComplexes(currentPage.value)
 }
 
 // 탭 전환 시 SSR 데이터와 다른 탭이면 재로드 (클라이언트)
@@ -342,32 +282,10 @@ if (import.meta.client && !initialData.value) {
   loadComplexes()
 }
 
-// 탭 전환 시 마지막 검색 조건으로 재로드
+// 탭 전환 시 목록 재로드
 watch(currentTab, () => {
-  if (lastSearch.value) {
-    loadComplexes(lastSearch.value.city || undefined, lastSearch.value.district || undefined, lastSearch.value.buildingName || undefined)
-  } else {
-    loadComplexes()
-  }
+  loadComplexes()
 })
-
-// 지역 시설 밀집도
-const facilityStats = ref<{ categories: Record<string, number>; total: number; topCategories: string[] } | null>(null)
-const facilityLoading = ref(false)
-
-async function fetchFacilitySummary(city: string, district?: string) {
-  facilityLoading.value = true
-  try {
-    const res = await $fetch<any>('/api/meta/region-facilities-summary', {
-      params: { city, district },
-    })
-    facilityStats.value = res?.data ?? null
-  } catch {
-    facilityStats.value = null
-  } finally {
-    facilityLoading.value = false
-  }
-}
 
 // Breadcrumb + ItemList JSON-LD
 const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema, setFAQSchema } = useStructuredData()
@@ -420,19 +338,6 @@ const heroStats = computed(() => {
     stats.push({ label: '전국 등록', value: `${totalComplexes.value.toLocaleString('ko-KR')}곳` })
   }
   stats.push({ label: '보기 방식', value: '매매 / 전월세' })
-  stats.push({ label: '함께 보기', value: '지역 생활 인프라' })
   return stats
-})
-
-const topFacilityCategories = computed(() => {
-  if (!facilityStats.value) return {}
-  const cats = facilityStats.value.categories
-  if (!cats) return {}
-  return Object.fromEntries(
-    Object.entries(cats)
-      .filter(([, v]) => v > 0)
-      .sort(([, a], [, b]) => (b as number) - (a as number))
-      .slice(0, 5)
-  )
 })
 </script>

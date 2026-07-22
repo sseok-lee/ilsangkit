@@ -142,7 +142,7 @@ describe('real-estate/[realEstateType]/index.vue — property type list page', (
     expect(mockSetItemListSchema).toHaveBeenCalled()
   })
 
-  it('지역별 도시 허브 링크가 렌더링되어야 한다', async () => {
+  it('RegionChips 지역 칩이 렌더링되어야 한다 (셀렉트 → 칩 교체, Task 3)', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
     const wrapper = await mountSuspended(m.default)
     const hrefs = wrapper.findAll('a').map((a) => a.attributes('href'))
@@ -151,14 +151,16 @@ describe('real-estate/[realEstateType]/index.vue — property type list page', (
     expect(hrefs).toContain('/real-estate/apt-sale/daegu')
   })
 
-  it('도시 허브 링크가 17개 이상이어야 한다', async () => {
+  it('지역 칩이 SIDO_CHIPS(시/도) 개수만큼 렌더링되어야 한다', async () => {
+    const { SIDO_CHIPS } = await import('~/utils/regionChips')
     const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
     const wrapper = await mountSuspended(m.default)
     const cityHubLinks = wrapper.findAll('a').filter((a) =>
       /^\/real-estate\/apt-sale\/\w+$/.test(a.attributes('href') ?? ''),
     )
-    // 모킹된 CITY_SLUGS는 3개
-    expect(cityHubLinks.length).toBe(3)
+    // RealEstateSearchFilter 셀렉트가 RegionChips(실제 SIDO_CHIPS, 16개 시/도)로 교체됨(Task 3).
+    // 모킹된 ~/shared/regionSlugs 의 CITY_SLUGS는 더 이상 이 페이지에서 쓰이지 않는다.
+    expect(cityHubLinks.length).toBe(SIDO_CHIPS.length)
   })
 
   it('heroStats에 "전국 등록" 셀이 존재해야 한다 (totalComplexes>0, PR⑧ S3)', async () => {
