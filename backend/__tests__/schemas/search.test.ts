@@ -2,7 +2,7 @@
 // @TEST backend/__tests__/schemas/search.test.ts
 
 import { describe, it, expect } from 'vitest';
-import { SearchLogSchema, PopularSearchQuerySchema } from '../../src/schemas/search';
+import { SearchLogSchema, PopularSearchQuerySchema, SuggestQuerySchema } from '../../src/schemas/search';
 
 describe('SearchLogSchema', () => {
   it('유효한 검색 로그를 파싱해야 한다', () => {
@@ -99,5 +99,27 @@ describe('PopularSearchQuerySchema', () => {
   it('문자열 limit을 숫자로 변환해야 한다', () => {
     const result = PopularSearchQuerySchema.parse({ limit: '15' });
     expect(result.limit).toBe(15);
+  });
+});
+
+describe('SuggestQuerySchema', () => {
+  it('q만 있어도 통과해야 한다(scope optional, 하위호환)', () => {
+    const result = SuggestQuerySchema.parse({ q: '강남' });
+    expect(result).toEqual({ q: '강남', scope: undefined });
+  });
+
+  it('scope=realestate 를 통과시켜야 한다', () => {
+    const result = SuggestQuerySchema.parse({ q: '강남', scope: 'realestate' });
+    expect(result.scope).toBe('realestate');
+  });
+
+  it('scope=facility:{category} 형태를 통과시켜야 한다', () => {
+    const result = SuggestQuerySchema.parse({ q: '강남', scope: 'facility:toilet' });
+    expect(result.scope).toBe('facility:toilet');
+  });
+
+  it('q 생략 시 기본값 빈 문자열이어야 한다', () => {
+    const result = SuggestQuerySchema.parse({});
+    expect(result.q).toBe('');
   });
 });

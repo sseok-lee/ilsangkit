@@ -25,6 +25,7 @@ export const PopularSearchQuerySchema = z.object({
 // 자동완성 추천 쿼리 스키마
 export const SuggestQuerySchema = z.object({
   q: z.string().max(50).default(''),
+  scope: z.string().max(40).optional(), // 'realestate' | 'facility:{category}'
 });
 export type SuggestQuery = z.infer<typeof SuggestQuerySchema>;
 
