@@ -37,3 +37,29 @@ export function resolveCityParam(slug: string | undefined): string | undefined {
   if (!slug) return undefined
   return CITY_SLUG_MAP[slug] || undefined
 }
+
+export interface ListFetchRequest {
+  url: string
+  options: { method?: 'POST'; params?: Record<string, unknown>; body?: Record<string, unknown> }
+}
+
+/**
+ * 시설 목록/배출 일정 목록 페이지의 SSR 데이터 로더가 실제로 호출할 `{ url, options }` 를
+ * 순수 함수로 계산한다. `pages/[category]/index.vue` 의 `useAsyncData` 핸들러가 그대로 사용하며,
+ * 페이지 컴포넌트를 mount 하지 않고도(라우터 주입·Suspense 문제 없이) city 필터 로직을
+ * 단위 테스트할 수 있게 분리한 것이 유일한 목적이다.
+ * citySlug 가 없거나 잘못된 slug 면(fail-open) city 파라미터 없이 전국을 조회한다.
+ */
+export function buildListFetch(category: string, citySlug: string | undefined, page: number): ListFetchRequest {
+  const cityKorean = resolveCityParam(citySlug)
+  if (category === 'trash') {
+    return {
+      url: '/api/waste-schedules',
+      options: { params: { page, limit: 20, ...(cityKorean ? { city: cityKorean } : {}) } },
+    }
+  }
+  return {
+    url: '/api/facilities/search',
+    options: { method: 'POST', body: { category, page, limit: 20, ...(cityKorean ? { city: cityKorean } : {}) } },
+  }
+}
