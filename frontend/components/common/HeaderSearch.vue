@@ -10,7 +10,7 @@
         v-model="keyword"
         aria-label="통합 검색"
         class="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
-        placeholder="지역·단지명·시설 검색"
+        :placeholder="placeholder"
         @focus="focused = true"
         @blur="focused = false"
         @input="(e) => acDesktopRef?.setQuery?.((e.target as HTMLInputElement).value)"
@@ -18,7 +18,7 @@
       />
     </div>
     <div v-if="variant === 'desktop'" class="hidden md:block absolute left-0 right-0 top-full z-50">
-      <SearchAutocomplete ref="acDesktopRef" :open="focused" :model-value="keyword" @close="focused = false" />
+      <SearchAutocomplete ref="acDesktopRef" :open="focused" :model-value="keyword" :scope="scope" @close="focused = false" />
     </div>
 
     <!-- 모바일 아이콘 + 전체화면 오버레이 -->
@@ -43,22 +43,23 @@
               v-model="keyword"
               aria-label="통합 검색"
               class="flex-1 bg-transparent text-sm focus:outline-none"
-              placeholder="지역·단지명·시설 검색"
+              :placeholder="placeholder"
               @input="(e) => acMobileRef?.setQuery?.((e.target as HTMLInputElement).value)"
               @keydown="(e) => onInputKeydown(e, acMobileRef)"
             />
           </div>
         </div>
-        <SearchAutocomplete ref="acMobileRef" :open="overlayOpen" :model-value="keyword" @close="overlayOpen = false" />
+        <SearchAutocomplete ref="acMobileRef" :open="overlayOpen" :model-value="keyword" :scope="scope" @close="overlayOpen = false" />
       </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useAnalytics } from '~/composables/useAnalytics'
 import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
+import { resolveSearchScope, buildSearchDestination, scopePlaceholder } from '~/utils/searchScope'
 
 withDefaults(defineProps<{ variant?: 'desktop' | 'mobile' }>(), {
   variant: 'desktop',
@@ -72,12 +73,16 @@ const acDesktopRef = ref<InstanceType<typeof SearchAutocomplete> | null>(null)
 const acMobileRef = ref<InstanceType<typeof SearchAutocomplete> | null>(null)
 const { trackSearch } = useAnalytics()
 
+const route = useRoute()               // Nuxt 전역(auto-import), AppHeader.vue 와 동일 패턴
+const scope = computed(() => resolveSearchScope(route))
+const placeholder = computed(() => scopePlaceholder(scope.value))
+
 function submit() {
   const q = keyword.value.trim()
   if (!q) return
   trackSearch({ keyword: q })
   overlayOpen.value = false
-  navigateTo('/search?keyword=' + encodeURIComponent(q))
+  navigateTo(buildSearchDestination(scope.value, q))
 }
 
 function onInputKeydown(

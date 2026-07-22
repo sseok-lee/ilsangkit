@@ -49,17 +49,20 @@ export interface ListFetchRequest {
  * 페이지 컴포넌트를 mount 하지 않고도(라우터 주입·Suspense 문제 없이) city 필터 로직을
  * 단위 테스트할 수 있게 분리한 것이 유일한 목적이다.
  * citySlug 가 없거나 잘못된 slug 면(fail-open) city 파라미터 없이 전국을 조회한다.
+ * keyword 는 헤더 검색(Task 2: `/{category}?keyword=`)이 넘겨주는 검색어 — 선택 인자라
+ * 기존 3-인자 호출부와 하위 호환된다. 앞뒤 공백은 trim, 빈 문자열이면 파라미터 자체를 생략한다.
  */
-export function buildListFetch(category: string, citySlug: string | undefined, page: number): ListFetchRequest {
+export function buildListFetch(category: string, citySlug: string | undefined, page: number, keyword?: string): ListFetchRequest {
   const cityKorean = resolveCityParam(citySlug)
+  const kw = keyword?.trim()
   if (category === 'trash') {
     return {
       url: '/api/waste-schedules',
-      options: { params: { page, limit: 20, ...(cityKorean ? { city: cityKorean } : {}) } },
+      options: { params: { page, limit: 20, ...(cityKorean ? { city: cityKorean } : {}), ...(kw ? { keyword: kw } : {}) } },
     }
   }
   return {
     url: '/api/facilities/search',
-    options: { method: 'POST', body: { category, page, limit: 20, ...(cityKorean ? { city: cityKorean } : {}) } },
+    options: { method: 'POST', body: { category, page, limit: 20, ...(cityKorean ? { city: cityKorean } : {}), ...(kw ? { keyword: kw } : {}) } },
   }
 }

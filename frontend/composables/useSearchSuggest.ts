@@ -63,7 +63,7 @@ export function useSearchSuggest() {
     return id
   }
 
-  function suggest(q: string) {
+  function suggest(q: string, scope?: string) {
     if (debounceTimer) clearTimeout(debounceTimer)
     const query = q.trim()
     if (!query) {
@@ -73,7 +73,7 @@ export function useSearchSuggest() {
     debounceTimer = setTimeout(async () => {
       try {
         const res = await $fetch<{ success: boolean; data: { items: SuggestItem[] } }>('/api/search/suggest', {
-          params: { q: query },
+          params: { q: query, ...(scope ? { scope } : {}) },
         })
         items.value = res?.data?.items ?? []
       } catch {

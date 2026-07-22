@@ -12,6 +12,19 @@
         :stats="heroStats"
       />
 
+      <!-- 헤더 검색(?keyword=) 결과 배지 + 검색 해제 -->
+      <div v-if="queryKeyword" class="flex items-center gap-2 text-sm">
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary font-medium">
+          '{{ queryKeyword }}' 검색 결과 · {{ catLabel }}
+        </span>
+        <NuxtLink
+          :to="queryCitySlug ? `/${categoryParam}?city=${queryCitySlug}` : `/${categoryParam}`"
+          class="text-slate-500 hover:text-primary inline-flex items-center gap-0.5"
+        >
+          <span class="material-symbols-outlined text-[16px]">close</span>검색 해제
+        </NuxtLink>
+      </div>
+
       <!-- Error State -->
       <div
         v-if="facilityError"
@@ -27,7 +40,7 @@
         :subtext="categoryParam === 'trash' ? '시/도를 선택해 배출 정보를 확인하세요.' : '지역을 먼저 선택하면 정확한 목록을 빠르게 찾을 수 있어요.'"
       >
         <RegionChips
-          :href-for="(slug) => (slug ? `/${categoryParam}?city=${slug}` : `/${categoryParam}`)"
+          :href-for="regionChipHref"
           :active-slug="queryCitySlug"
         />
       </SectionBlock>
@@ -253,6 +266,9 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import WasteScheduleDetailModal from '~/components/trash/WasteScheduleDetailModal.vue'
 import RegionChips from '~/components/common/RegionChips.vue'
 import { resolveCityParam, buildListFetch } from '~/utils/regionChips'
+import { shouldNoindexFacilityList } from '~/utils/facilityListRobots'
+import { buildFacilitySearchLog } from '~/utils/searchLog'
+import { useSearchSuggest } from '~/composables/useSearchSuggest'
 import type { RegionSchedule, WasteScheduleDetail } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -285,10 +301,24 @@ if (!CATEGORY_META[route.params.category as FacilityCategory]) {
 // Query params (city slug → Korean name)
 const queryCitySlug = computed(() => (route.query.city as string) || '')
 const cityName = computed(() => resolveCityParam(queryCitySlug.value) || '')
+// 헤더 검색(Task 2)이 `/{category}?keyword=` 로 보내는 검색어. 이 페이지는 인-페이지 키워드
+// 인풋을 신설하지 않고 이 값을 읽어 SSR/재조회 fetch 에 반영하기만 한다(진입로는 헤더가 담당).
+const queryKeyword = computed(() => ((route.query.keyword as string) || '').trim())
+
+// RegionChips 클릭(지역 전환) 시에도 현재 검색어를 유지한다(사용자 결정 ②: 플랜 기본값인
+// "키워드 버림" 대신 채택). 예: "미소" 검색 후 "서울" 칩 클릭 → `/childcare?city=seoul&keyword=미소`.
+const regionChipHref = (slug: string) => {
+  const kw = queryKeyword.value ? `keyword=${encodeURIComponent(queryKeyword.value)}` : ''
+  if (slug) {
+    return `/${categoryParam.value}?city=${slug}${kw ? `&${kw}` : ''}`
+  }
+  return `/${categoryParam.value}${kw ? `?${kw}` : ''}`
+}
 
 // Search composables
 const { loading, facilities, total, currentPage, totalPages, error: facilityError, search, resetPage, setPage } = useFacilitySearch()
 const { trackCategoryPageView } = useAnalytics()
+const { logSearch } = useSearchSuggest()
 const { getSchedules, getScheduleDetail, isLoading: wasteLoading } = useWasteSchedule()
 const { setCategoryMeta } = useFacilityMeta()
 const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema } = useStructuredData()
@@ -300,12 +330,15 @@ const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema }
 // 진입 시 SSR HTML이 전국 목록이 아닌 서울 필터 목록으로 렌더된다(thin-dup 해소).
 // fetch 대상(url/options) 결정 로직은 buildListFetch(순수 함수, ~/utils/regionChips)로 분리해
 // 라우터 주입·Suspense 없이도 city 필터를 단위 테스트할 수 있게 한다.
+// route.query.keyword 도 SSR 시점에서 함께 반영해야 `/toilet?keyword=역삼` 직접 진입 시
+// SSR HTML이 전국 목록이 아닌 키워드 검색 결과로 렌더된다(헤더 검색 진입 경로, Task 2/4).
 const isTrash = categoryParam.value === 'trash'
 const initialPage = parsePositivePageQuery(route.query.page)
+const initialKeyword = ((route.query.keyword as string) || '').trim()
 const { data: ssrData } = await useAsyncData(
-  `cat-list-${categoryParam.value}-${queryCitySlug.value || 'all'}-p${initialPage}`,
+  `cat-list-${categoryParam.value}-${queryCitySlug.value || 'all'}-k${initialKeyword || 'none'}-p${initialPage}`,
   () => {
-    const { url, options } = buildListFetch(categoryParam.value, queryCitySlug.value, initialPage)
+    const { url, options } = buildListFetch(categoryParam.value, queryCitySlug.value, initialPage, initialKeyword || undefined)
     return $fetch<any>(url, options)
   },
 )
@@ -565,7 +598,9 @@ const canonicalPath = computed(() => {
 // Pagination: page 2+ 는 noindex 하고 canonical 은 함께 제거 (noindex/canonical 정책 통일)
 // pageQueryParam 은 route.query.page 에 reactive 로 연동해야 client-side 페이지 이동 시에도 정책이 켜진다.
 const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
-const isNoindex = computed(() => pageQueryParam.value >= 2)
+// keyword 검색 결과는(city 만 있는 경우와 달리) noindex — shouldNoindexFacilityList(순수 함수)로 판정.
+// `?city=` 만 있는 경우는 기존과 동일하게 색인 유지된다.
+const isNoindex = computed(() => shouldNoindexFacilityList({ page: pageQueryParam.value, keyword: queryKeyword.value }))
 
 useHead(computed(() => {
   if (isNoindex.value) {
@@ -587,6 +622,7 @@ async function performSearch() {
     category: categoryParam.value,
   }
   if (cityName.value) params.city = cityName.value
+  if (queryKeyword.value) params.keyword = queryKeyword.value
   if (categoryParam.value === 'hospital' && selectedDepartments.value.length > 0) {
     params.departments = selectedDepartments.value
   }
@@ -609,7 +645,7 @@ async function loadWasteSchedules() {
   const result = await getSchedules({
     city: cityName.value || undefined,
     district: undefined,
-    keyword: undefined,
+    keyword: queryKeyword.value || undefined,
     page: wasteCurrentPage.value,
     limit: 20,
   })
@@ -617,6 +653,16 @@ async function loadWasteSchedules() {
   wasteContact.value = result.contact || null
   wasteTotal.value = result.total
   wasteTotalPages.value = result.totalPages
+
+  // 검색 로깅(§3 D6) — trash 는 `loading` 이 아닌 이 함수의 완료 시점이 곧 결과 확정 시점이다.
+  if (queryKeyword.value) {
+    logSearch(buildFacilitySearchLog({
+      keyword: queryKeyword.value,
+      resultCount: wasteTotal.value,
+      cityName: cityName.value,
+      category: 'trash',
+    }))
+  }
 }
 
 // URL `?page=N` 을 갱신해 reactive noindex/canonical 이 정확히 켜지도록 한다.
@@ -670,14 +716,52 @@ onMounted(async () => {
     } else {
       await performSearch()
     }
+  } else if (queryKeyword.value) {
+    // 헤더 검색(Task 2)이 이 카테고리로 navigateTo 하면 useAsyncData 가 SSR/CSR 진입 시점에 이미
+    // keyword 결과를 반환해 performSearch()/loadWasteSchedules() 를 타지 않는다(위 분기가 스킵됨) —
+    // 즉 아래 watch(loading)/loadWasteSchedules 내부 로깅이 트리거되지 않는다. 검색 로깅 편향
+    // 해소가 이 태스크의 목적이므로(§3 D6), 실제 검색 진입의 대부분을 차지하는 이 최초 도착
+    // 시점을 별도로 1회 로깅한다.
+    logSearch(buildFacilitySearchLog({
+      keyword: queryKeyword.value,
+      resultCount: categoryParam.value === 'trash' ? wasteTotal.value : displayTotal.value,
+      cityName: cityName.value,
+      category: categoryParam.value,
+    }))
   }
   initialLoading.value = false
   trackCategoryPageView({ category: categoryParam.value })
 })
 
+// 검색 로깅(§3 D6) — client-side 재검색(키워드 변경·지역 전환 등) 완료 시점. trash 는
+// loadWasteSchedules() 내부에서 별도 로깅하므로 제외한다.
+watch(loading, (now, prev) => {
+  if (prev && !now && queryKeyword.value && categoryParam.value !== 'trash') {
+    logSearch(buildFacilitySearchLog({
+      keyword: queryKeyword.value,
+      resultCount: displayTotal.value,
+      cityName: cityName.value,
+      category: categoryParam.value,
+    }))
+  }
+})
+
 // 칩 클릭(=?city= 변경) 시 page1 로 리셋하고 재조회. immediate 없음 — 첫 페인트/하이드레이션은
 // useAsyncData(SSR) 가 이미 city 로 필터해 렌더하므로 재조회하지 않는다.
 watch(() => route.query.city, () => {
+  if (categoryParam.value === 'trash') {
+    wasteCurrentPage.value = 1
+    loadWasteSchedules()
+  } else {
+    resetPage()
+    performSearch()
+  }
+})
+
+// 헤더 검색(?keyword= 변경) 시에도 page1 로 리셋하고 재조회한다. 헤더가 검색 진입로를
+// 전담하므로 이 페이지에는 별도 키워드 인풋을 두지 않는다 — 값 변경은 오직 URL(헤더 재검색·
+// 검색 해제 링크·뒤로가기)로만 일어난다.
+watch(() => route.query.keyword, () => {
   if (categoryParam.value === 'trash') {
     wasteCurrentPage.value = 1
     loadWasteSchedules()

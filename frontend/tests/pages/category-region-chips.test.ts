@@ -53,11 +53,25 @@ describe('시설 목록 페이지 — 셀렉트 제거 + RegionChips 렌더 (sou
     expect(source).toContain(':active-slug="queryCitySlug"')
   })
 
-  it('useAsyncData 가 buildListFetch 를 사용해 SSR 시점에 city 를 반영한다', () => {
-    expect(source).toContain('buildListFetch(categoryParam.value, queryCitySlug.value, initialPage)')
+  it('useAsyncData 가 buildListFetch 를 사용해 SSR 시점에 city/keyword 를 반영한다', () => {
+    expect(source).toContain('buildListFetch(categoryParam.value, queryCitySlug.value, initialPage, initialKeyword || undefined)')
   })
 
   it('"인기 지역" 링크 블록은 유지된다', () => {
     expect(source).toContain('popularRegionLinks')
+  })
+
+  it('인-페이지 키워드 인풋을 신설하지 않는다(헤더가 검색 진입로 전담)', () => {
+    expect(source).not.toMatch(/<input[^>]*v-model(?:\.trim)?="(searchKeyword|keywordInput|localKeyword)"/)
+  })
+
+  it('shouldNoindexFacilityList 로 keyword 유무를 robots 분기에 반영한다', () => {
+    expect(source).toContain("import { shouldNoindexFacilityList } from '~/utils/facilityListRobots'")
+    expect(source).toContain('shouldNoindexFacilityList({ page: pageQueryParam.value, keyword: queryKeyword.value })')
+  })
+
+  it('RegionChips 클릭 시 현재 keyword 를 유지한다(사용자 결정 ②)', () => {
+    expect(source).toContain('regionChipHref')
+    expect(source).toContain('encodeURIComponent(queryKeyword.value)')
   })
 })

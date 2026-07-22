@@ -4,32 +4,11 @@ import { ref } from 'vue'
 import type { VueWrapper } from '@vue/test-utils'
 import SearchPage from '~/pages/search.vue'
 
-// --- mock shared state so we can drive loading transitions ---
-const loadingRef = ref(false)
 const logSearchMock = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: {} }),
   useRouter: () => ({ push: vi.fn() }),
-}))
-
-vi.mock('~/composables/useFacilitySearch', () => ({
-  useFacilitySearch: () => ({
-    loading: loadingRef,
-    facilities: ref([]),
-    total: ref(5),
-    currentPage: ref(1),
-    totalPages: ref(0),
-    error: ref(null),
-    groupedResults: ref([]),
-    groupedTotalCount: ref(3),
-    recovery: ref(null),
-    search: vi.fn(),
-    searchGrouped: vi.fn().mockResolvedValue({}),
-    resetPage: vi.fn(),
-    setPage: vi.fn(),
-    clearResults: vi.fn(),
-  }),
 }))
 
 vi.mock('~/composables/useFacilityMeta', () => ({
@@ -53,12 +32,6 @@ vi.mock('~/composables/useWasteSchedule', () => ({
   }),
 }))
 
-vi.mock('~/composables/useStructuredData', () => ({
-  useStructuredData: () => ({
-    setItemListSchema: vi.fn(),
-  }),
-}))
-
 vi.mock('~/composables/useAnalytics', () => ({
   useAnalytics: () => ({
     trackSearchResultsView: vi.fn(),
@@ -66,9 +39,15 @@ vi.mock('~/composables/useAnalytics', () => ({
   }),
 }))
 
+// /search는 부동산 전용 — resultCount는 부동산 categories count 합으로 산출된다 (시설 병렬 제거)
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
-    searchAll: vi.fn().mockResolvedValue({ categories: [] }),
+    searchAll: vi.fn().mockResolvedValue({
+      categories: [
+        { type: 'apt-sale', count: 4, items: [] },
+        { type: 'villa-sale', count: 3, items: [] },
+      ],
+    }),
     getComplexList: vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 }),
   }),
 }))
@@ -96,7 +75,6 @@ const globalStubs = {
   PageHero: { template: '<div><slot name="search" /></div>' },
   SectionBlock: { template: '<div><slot /><slot name="right" /></div>' },
   EmptyState: { template: '<div><slot /></div>' },
-  SearchRecovery: { template: '<div />' },
   NuxtLink: { template: '<a><slot /></a>' },
 }
 
@@ -104,7 +82,6 @@ describe('/search 검색 로깅 (logSearch)', () => {
   let wrapper: VueWrapper | null = null
 
   beforeEach(() => {
-    loadingRef.value = false
     logSearchMock.mockClear()
     localStorage.clear()
   })
@@ -120,37 +97,28 @@ describe('/search 검색 로깅 (logSearch)', () => {
     expect(wrapper.exists()).toBe(true)
   })
 
-  it('loading true→false 전이 + keyword 있을 때 logSearch가 /api/search/log payload로 호출된다', async () => {
+  it('loading true→false 전이 + keyword 있을 때 logSearch가 부동산 결과 합계로 호출된다', async () => {
     wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
     await flushPromises()
+    // 마운트 시 초기 검색(키워드 없음)은 로깅되지 않지만, 방어적으로 초기화
+    logSearchMock.mockClear()
 
-    // Set a search keyword via the input
-    const input = wrapper.find('input[aria-label="시설 검색"]')
+    // Set a search keyword and trigger the real search flow (다시 검색 = handleSearch → performSearch)
+    const input = wrapper.find('input[aria-label="부동산 검색"]')
     await input.setValue('강남')
-    await flushPromises()
-
-    // Simulate loading: true → false transition (what happens after performSearch)
-    loadingRef.value = true
-    await flushPromises()
-    loadingRef.value = false
+    await input.trigger('keyup.enter')
     await flushPromises()
 
     expect(logSearchMock).toHaveBeenCalledOnce()
     const call = logSearchMock.mock.calls[0][0]
     expect(call.keyword).toBe('강남')
-    expect(typeof call.resultCount).toBe('number')
-    // resultCount = total(5) + groupedTotalCount(3) + realEstateResults(0) = 8
-    expect(call.resultCount).toBe(8)
+    // resultCount = 부동산 categories count 합 (4 + 3, 시설 병렬 제거)
+    expect(call.resultCount).toBe(7)
+    expect(call.category).toBe('realestate')
   })
 
   it('keyword가 없을 때 logSearch가 호출되지 않는다', async () => {
     wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
-    await flushPromises()
-
-    // No keyword set — trigger loading transition
-    loadingRef.value = true
-    await flushPromises()
-    loadingRef.value = false
     await flushPromises()
 
     expect(logSearchMock).not.toHaveBeenCalled()
