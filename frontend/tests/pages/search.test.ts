@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
-import { ref } from 'vue'
+import { mount, flushPromises } from '@vue/test-utils'
 import SearchPage from '~/pages/search.vue'
 
 // Mock vue-router
@@ -10,25 +9,6 @@ vi.mock('vue-router', () => ({
   }),
   useRouter: () => ({
     push: vi.fn(),
-  }),
-}))
-
-// Mock composables
-vi.mock('~/composables/useFacilitySearch', () => ({
-  useFacilitySearch: () => ({
-    loading: ref(false),
-    facilities: ref([]),
-    total: ref(0),
-    currentPage: ref(1),
-    totalPages: ref(0),
-    error: ref(null),
-    groupedResults: ref([]),
-    groupedTotalCount: ref(0),
-    search: vi.fn(),
-    searchGrouped: vi.fn(),
-    resetPage: vi.fn(),
-    setPage: vi.fn(),
-    clearResults: vi.fn(),
   }),
 }))
 
@@ -55,10 +35,13 @@ vi.mock('~/composables/useWasteSchedule', () => ({
   }),
 }))
 
-// Mock useStructuredData
-vi.mock('~/composables/useStructuredData', () => ({
-  useStructuredData: () => ({
-    setItemListSchema: vi.fn(),
+// Mock useRealEstate — /search는 부동산 전용이므로 이 페이지가 소비하는 유일한 검색 소스
+const searchAllMock = vi.fn().mockResolvedValue({ categories: [] })
+const getComplexListMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
+vi.mock('~/composables/useRealEstate', () => ({
+  useRealEstate: () => ({
+    searchAll: searchAllMock,
+    getComplexList: getComplexListMock,
   }),
 }))
 
@@ -66,12 +49,15 @@ vi.mock('~/composables/useStructuredData', () => ({
 const globalStubs = {
   FacilityCard: { template: '<div data-testid="facility-card">FacilityCard</div>' },
   CategoryIcon: { template: '<span>Icon</span>' },
-  WasteScheduleCard: { template: '<div>WasteScheduleCard</div>' },
+  AdBanner: { template: '<div />' },
+  Pagination: { template: '<div />' },
 }
 
 describe('SearchPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    searchAllMock.mockResolvedValue({ categories: [] })
+    getComplexListMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
   })
 
   it('페이지가 올바르게 렌더링되는지 확인', () => {
@@ -92,19 +78,32 @@ describe('SearchPage', () => {
       },
     })
 
-    // Search input exists
-    expect(wrapper.find('input[aria-label="시설 검색"]').exists()).toBe(true)
+    // Search input exists (부동산 전용 검색)
+    expect(wrapper.find('input[aria-label="부동산 검색"]').exists()).toBe(true)
   })
 
-  it('시설 목록이 렌더링되는지 확인', () => {
+  it('부동산 검색만 호출된다(시설 병렬 검색 제거)', async () => {
+    const wrapper = mount(SearchPage, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await flushPromises()
+
+    // 마운트 시 초기 검색이 부동산 searchAll을 통해 이루어짐
+    expect(searchAllMock).toHaveBeenCalled()
+    expect(wrapper.exists()).toBe(true)
+  })
+
+  it('생활시설 3-탭·시설 관련 텍스트가 렌더되지 않는다(부동산 전용)', () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
       },
     })
 
-    // 기본 레이아웃이 렌더링됨 (isMounted 이전에는 검색 결과 영역이 숨겨짐)
-    expect(wrapper.find('.min-h-screen').exists()).toBe(true)
+    expect(wrapper.find('[role="tablist"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('생활시설')
   })
 
   it('페이지네이션이 렌더링되는지 확인', () => {
@@ -114,8 +113,8 @@ describe('SearchPage', () => {
       },
     })
 
-    // 페이지네이션은 totalPages > 1일 때만 렌더링됨
-    // 기본 mock에서는 totalPages가 0이므로 렌더링되지 않음
+    // 페이지네이션은 유형 선택 후 결과가 있을 때만 렌더링됨
+    // 기본 mock에서는 결과가 없으므로 렌더링되지 않음
     expect(wrapper.find('[data-testid="pagination"]').exists()).toBe(false)
   })
 
@@ -126,7 +125,7 @@ describe('SearchPage', () => {
       },
     })
 
-    // Region filter selects exist for non-trash categories
+    // Region filter selects exist (시/도, 구/군)
     const selects = wrapper.findAll('select')
     expect(selects.length).toBeGreaterThanOrEqual(2)
   })
@@ -159,7 +158,7 @@ describe('SearchPage', () => {
       },
     })
 
-    // 그룹 결과가 비어있으면 빈 상태가 표시되고, 그리드는 카테고리 선택 또는 그룹 결과가 있을 때 렌더링됨
+    // 부동산 결과가 비어있으면 빈 상태가 표시되고, 그리드는 결과가 있을 때 렌더링됨
     expect(wrapper.find('.min-h-screen').exists()).toBe(true)
   })
 })
