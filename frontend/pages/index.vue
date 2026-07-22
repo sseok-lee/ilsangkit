@@ -56,7 +56,7 @@
               </div>
             </div>
             <div class="absolute left-0 right-0 top-full z-50">
-              <SearchAutocomplete ref="heroAcRef" :open="heroFocused" :model-value="searchKeyword" :scope="{ kind: 'realestate' }" @close="heroFocused = false" />
+              <SearchAutocomplete ref="heroAcRef" :open="heroFocused" :model-value="searchKeyword" @close="heroFocused = false" />
             </div>
           </label>
         </div>
