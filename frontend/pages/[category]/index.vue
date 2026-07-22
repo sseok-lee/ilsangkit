@@ -267,6 +267,8 @@ import WasteScheduleDetailModal from '~/components/trash/WasteScheduleDetailModa
 import RegionChips from '~/components/common/RegionChips.vue'
 import { resolveCityParam, buildListFetch } from '~/utils/regionChips'
 import { shouldNoindexFacilityList } from '~/utils/facilityListRobots'
+import { buildFacilitySearchLog } from '~/utils/searchLog'
+import { useSearchSuggest } from '~/composables/useSearchSuggest'
 import type { RegionSchedule, WasteScheduleDetail } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -316,6 +318,7 @@ const regionChipHref = (slug: string) => {
 // Search composables
 const { loading, facilities, total, currentPage, totalPages, error: facilityError, search, resetPage, setPage } = useFacilitySearch()
 const { trackCategoryPageView } = useAnalytics()
+const { logSearch } = useSearchSuggest()
 const { getSchedules, getScheduleDetail, isLoading: wasteLoading } = useWasteSchedule()
 const { setCategoryMeta } = useFacilityMeta()
 const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema } = useStructuredData()
@@ -650,6 +653,16 @@ async function loadWasteSchedules() {
   wasteContact.value = result.contact || null
   wasteTotal.value = result.total
   wasteTotalPages.value = result.totalPages
+
+  // 검색 로깅(§3 D6) — trash 는 `loading` 이 아닌 이 함수의 완료 시점이 곧 결과 확정 시점이다.
+  if (queryKeyword.value) {
+    logSearch(buildFacilitySearchLog({
+      keyword: queryKeyword.value,
+      resultCount: wasteTotal.value,
+      cityName: cityName.value,
+      category: 'trash',
+    }))
+  }
 }
 
 // URL `?page=N` 을 갱신해 reactive noindex/canonical 이 정확히 켜지도록 한다.
@@ -703,9 +716,34 @@ onMounted(async () => {
     } else {
       await performSearch()
     }
+  } else if (queryKeyword.value) {
+    // 헤더 검색(Task 2)이 이 카테고리로 navigateTo 하면 useAsyncData 가 SSR/CSR 진입 시점에 이미
+    // keyword 결과를 반환해 performSearch()/loadWasteSchedules() 를 타지 않는다(위 분기가 스킵됨) —
+    // 즉 아래 watch(loading)/loadWasteSchedules 내부 로깅이 트리거되지 않는다. 검색 로깅 편향
+    // 해소가 이 태스크의 목적이므로(§3 D6), 실제 검색 진입의 대부분을 차지하는 이 최초 도착
+    // 시점을 별도로 1회 로깅한다.
+    logSearch(buildFacilitySearchLog({
+      keyword: queryKeyword.value,
+      resultCount: categoryParam.value === 'trash' ? wasteTotal.value : displayTotal.value,
+      cityName: cityName.value,
+      category: categoryParam.value,
+    }))
   }
   initialLoading.value = false
   trackCategoryPageView({ category: categoryParam.value })
+})
+
+// 검색 로깅(§3 D6) — client-side 재검색(키워드 변경·지역 전환 등) 완료 시점. trash 는
+// loadWasteSchedules() 내부에서 별도 로깅하므로 제외한다.
+watch(loading, (now, prev) => {
+  if (prev && !now && queryKeyword.value && categoryParam.value !== 'trash') {
+    logSearch(buildFacilitySearchLog({
+      keyword: queryKeyword.value,
+      resultCount: displayTotal.value,
+      cityName: cityName.value,
+      category: categoryParam.value,
+    }))
+  }
 })
 
 // 칩 클릭(=?city= 변경) 시 page1 로 리셋하고 재조회. immediate 없음 — 첫 페인트/하이드레이션은
