@@ -7,7 +7,7 @@
       </div>
     </div>
 
-    <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-8">
+    <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-8">
       <section
         v-for="group in groups"
         :key="group"
@@ -32,7 +32,7 @@
       </section>
 
       <SubscriptionListView category="rent" />
-    </main>
+    </div>
   </div>
 </template>
 

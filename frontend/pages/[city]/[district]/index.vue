@@ -1,6 +1,6 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="mx-auto max-w-6xl px-4 py-6 md:px-6">
+    <div class="mx-auto max-w-6xl px-4 py-6 md:px-6">
       <!-- Breadcrumb -->
       <Breadcrumb :items="breadcrumbItems" class="mb-4" />
 
@@ -78,7 +78,7 @@
           </NuxtLink>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 </template>
 

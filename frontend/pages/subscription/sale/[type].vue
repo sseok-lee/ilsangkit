@@ -7,7 +7,7 @@
       </div>
     </div>
 
-    <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
+    <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
       <!-- Sub-category Tabs -->
       <div class="mb-4 flex flex-wrap gap-2">
         <NuxtLink
@@ -33,7 +33,7 @@
 
       <!-- 데이터 출처 -->
       <DataSourceSection domain="subscription" class="mt-6" />
-    </main>
+    </div>
   </div>
 </template>
 

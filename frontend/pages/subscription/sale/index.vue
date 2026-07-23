@@ -7,7 +7,7 @@
       </div>
     </div>
 
-    <main class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
+    <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
       <!-- Sub-category Tabs -->
       <div class="mb-4 flex flex-wrap gap-2">
         <NuxtLink
@@ -27,7 +27,7 @@
       </div>
 
       <SubscriptionListView category="sale" :breadcrumb-label="'분양'" :breadcrumb-path="'/subscription/sale'" />
-    </main>
+    </div>
   </div>
 </template>
 
