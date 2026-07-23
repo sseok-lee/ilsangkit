@@ -154,7 +154,7 @@
       <template v-if="facility.category === 'clothes'">
         <div class="h-px bg-slate-100 w-full"></div>
         <div>
-          <h3 class="text-sm font-bold text-slate-900 mb-2">수거 가능 품목</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-2">수거 가능 품목</h3>
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div class="flex items-center gap-1.5 text-gray-700"><span class="text-green-600">✓</span> 의류·내의·양말</div>
             <div class="flex items-center gap-1.5 text-gray-700"><span class="text-green-600">✓</span> 신발·가방·벨트</div>

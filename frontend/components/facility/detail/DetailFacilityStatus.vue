@@ -49,7 +49,7 @@
       <template v-if="facility.category === 'toilet'">
         <!-- Toilet Accessibility Details -->
         <div v-if="toiletAccessibilityDetails.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">접근성 상세</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">접근성 상세</h3>
           <div class="grid grid-cols-2 gap-3">
             <div
               v-for="item in toiletAccessibilityDetails"
@@ -64,7 +64,7 @@
     
         <!-- Emergency Bell / Diaper Changing Location -->
         <div v-if="details?.emergencyBellLocation || details?.diaperChangingLocation" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">편의시설 위치</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">편의시설 위치</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">비상벨 위치</span>
@@ -104,7 +104,7 @@
       <!-- Parking Details -->
       <template v-if="facility.category === 'parking'">
         <div :class="[hasGridContent ? 'mt-5 border-t border-slate-100 pt-5' : '']">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">요금 정보</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">요금 정보</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">요금구분</span>
@@ -140,7 +140,7 @@
         </div>
     
         <div class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">시설 정보</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">시설 정보</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">주차면수</span>
@@ -213,7 +213,7 @@
     
         <!-- Library Facility Size -->
         <div v-if="details?.lotArea || details?.buildingArea" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">시설 규모</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">시설 규모</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">부지면적</span>
@@ -271,7 +271,7 @@
           </div>
         </div>
         <div v-if="parkHasFacilities" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">보유 시설</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">보유 시설</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-start justify-between gap-4">
               <span class="text-sm text-gray-600 shrink-0">운동시설</span>
@@ -305,7 +305,7 @@
       <!-- School Details -->
       <template v-if="facility.category === 'school'">
         <div v-if="schoolEnrollmentRows.length > 0">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">학급 현황</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">학급 현황</h3>
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
             <div v-for="row in schoolEnrollmentRows" :key="row.label" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2" :class="row.isTotal ? 'bg-indigo-50 col-span-full' : 'bg-slate-50'">
               <span class="text-xs text-gray-600">{{ row.label }}</span>
@@ -314,7 +314,7 @@
           </div>
         </div>
         <div v-if="schoolDepartments.length > 0" :class="schoolEnrollmentRows.length > 0 ? 'mt-5 border-t border-slate-100 pt-5' : ''">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">계열 정보</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">계열 정보</h3>
           <TagBadges variant="sky" :items="schoolDepartments.map(d => ({ label: d }))" />
         </div>
       </template>
@@ -329,11 +329,11 @@
           </div>
         </div>
         <div v-if="marketProductTags.length" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">주요 판매품목</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">주요 판매품목</h3>
           <TagBadges variant="gray" :items="marketProductTags.map(t => ({ label: t }))" />
         </div>
         <div v-if="details?.hasPublicToilet != null || details?.hasParking != null" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">편의시설</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">편의시설</h3>
           <div class="grid grid-cols-2 gap-2">
             <div v-if="details?.hasPublicToilet != null" class="flex items-center gap-1.5 text-sm text-gray-700">
               <span :class="details.hasPublicToilet ? 'text-green-600' : 'text-gray-400'">{{ details.hasPublicToilet ? '✓' : '✗' }}</span>
@@ -355,7 +355,7 @@
       <template v-if="facility.category === 'childcare'">
         <!-- 정원·현원 + 시설 정보 (2열 그리드) -->
         <div>
-          <h3 class="text-sm font-bold text-slate-900 mb-3">정원·시설 현황</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">정원·시설 현황</h3>
           <FieldGrid
             :cols="2"
             variant="prominent"
@@ -383,7 +383,7 @@
     
         <!-- 반별 정원·현원 -->
         <div v-if="childcareClassRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">연령별 반·아동 현황</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">연령별 반·아동 현황</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-xs tabular-nums">
               <thead>
@@ -408,7 +408,7 @@
     
         <!-- 직원 현황 -->
         <div v-if="(details as any)?.emCntTot || childcareStaffRoles.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">직원 현황 <span v-if="(details as any)?.emCntTot" class="text-gray-600 font-normal">(총 {{ (details as any).emCntTot }}명)</span></h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">직원 현황 <span v-if="(details as any)?.emCntTot" class="text-gray-600 font-normal">(총 {{ (details as any).emCntTot }}명)</span></h3>
           <table class="w-full text-sm tabular-nums">
             <tbody class="divide-y divide-[#f0f2f5]">
               <tr v-for="role in childcareStaffRoles" :key="role.label">
@@ -421,7 +421,7 @@
     
         <!-- 교사 경력 분포 -->
         <div v-if="childcareCareerItems.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">교사 경력 분포</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">교사 경력 분포</h3>
           <TagBadges variant="custom" :items="childcareCareerItems.map(it => ({ label: it.label, suffix: `${it.cnt}명`, colorClass: it.colorClass }))" />
         </div>
 </template>
@@ -451,7 +451,7 @@
       <template v-if="facility.category === 'hospital'">
         <!-- Hospital Staff Info -->
         <div v-if="details?.drTotCnt" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">의료진 현황</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">의료진 현황</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">의사 총수</span>
@@ -514,13 +514,13 @@
     
         <!-- Hospital Departments -->
         <div v-if="details?.departments?.length" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">진료과목</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">진료과목</h3>
           <TagBadges variant="teal" :items="hospitalDeptBadges" />
         </div>
 
         <!-- Hospital Equipment -->
         <div v-if="hospitalEquipRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">보유 장비</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">보유 장비</h3>
           <div class="grid grid-cols-2 gap-x-4 gap-y-2">
             <div v-for="row in hospitalEquipRows" :key="row.label" class="flex items-center justify-between">
               <span class="text-sm text-gray-600">{{ row.label }}</span>
@@ -531,7 +531,7 @@
 
         <!-- Hospital Bed Info -->
         <div v-if="hospitalBedRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">병상 정보 <span class="text-xs text-gray-500 font-normal">(총 {{ hospitalTotalBeds }}병상)</span></h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">병상 정보 <span class="text-xs text-gray-500 font-normal">(총 {{ hospitalTotalBeds }}병상)</span></h3>
           <div class="grid grid-cols-2 gap-x-4 gap-y-2">
             <div v-for="row in hospitalBedRows" :key="row.label" class="flex items-center justify-between">
               <span class="text-sm text-gray-600">{{ row.label }}</span>
@@ -542,7 +542,7 @@
     
         <!-- Hospital Parking Info -->
         <div v-if="details?.parkQty != null || details?.parkEtc" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">주차정보</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">주차정보</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">주차가능대수</span>
