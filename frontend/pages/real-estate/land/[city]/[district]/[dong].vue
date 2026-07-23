@@ -1,6 +1,6 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" class="order-1 md:order-1" />
 
       <!-- T0: 모바일 핵심정보 헤더 (literal h1 1개 소유). 좌표 없음 → hideDirections(공유만). -->
@@ -34,7 +34,7 @@
               (㎡당 {{ formatManwonKorean(pyeongToSqm(summary.avgPricePerPyeong)) }})
             </span>
           </div>
-          <p class="mt-2 text-caption text-slate-400 leading-relaxed">
+          <p class="mt-2 text-caption text-slate-500 leading-relaxed">
             비지분 대지 {{ summary.daeNonShareCount ?? 0 }}건 기준 · 최근 12개월 · 최신 거래 {{ formatLandDealDate(summary.latestDealDate) }} · 지분·도로 자투리 제외
           </p>
         </template>
@@ -60,7 +60,7 @@
               <span class="block mt-1 text-body font-bold text-slate-900 tabular-nums">
                 {{ formatManwonKorean(g.avgPricePerPyeong) }}
               </span>
-              <span class="block text-caption text-slate-400 mt-0.5 tabular-nums">{{ g.count.toLocaleString('ko-KR') }}건</span>
+              <span class="block text-caption text-slate-500 mt-0.5 tabular-nums">{{ g.count.toLocaleString('ko-KR') }}건</span>
             </template>
             <span v-else class="block mt-1 text-caption text-slate-500 tabular-nums">
               거래 {{ g.count.toLocaleString('ko-KR') }}건
@@ -81,7 +81,7 @@
             class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col gap-2"
           >
             <div class="flex items-center justify-between">
-              <span class="text-caption text-slate-400 tabular-nums">{{ String(tx.dealYear).slice(2) }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}</span>
+              <span class="text-caption text-slate-500 tabular-nums">{{ String(tx.dealYear).slice(2) }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}</span>
               <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-caption font-semibold text-amber-700">지분</span>
             </div>
             <div class="flex flex-wrap items-baseline gap-1.5">
@@ -91,7 +91,7 @@
             <div class="text-caption text-slate-600">
               평당 <span class="font-semibold text-primary tabular-nums">{{ formatManwonKorean(tx.pricePerPyeong) }}</span>
             </div>
-            <div v-if="tx.landUse" class="text-caption text-slate-400">{{ tx.landUse }}</div>
+            <div v-if="tx.landUse" class="text-caption text-slate-500">{{ tx.landUse }}</div>
             <div v-if="tx.jibun" class="text-caption text-slate-300 mt-0.5">{{ tx.jibun }}</div>
           </div>
         </div>
@@ -211,7 +211,7 @@
       <div class="order-12 md:order-12">
         <DataSourceSection domain="real-estate" />
       </div>
-    </main>
+    </div>
   </div>
 </template>
 

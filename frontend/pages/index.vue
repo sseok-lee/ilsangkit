@@ -2,7 +2,10 @@
   <div class="flex flex-col">
     <!-- Hero Section -->
     <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 md:pt-8 pb-8 md:pb-12">
-      <div class="relative overflow-hidden bg-primary-press text-white -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-8 py-5 md:py-7 md:rounded-2xl">
+      <!-- overflow-hidden 금지: 이 히어로 밴드가 검색 자동완성(아래 label 안 absolute top-full)의
+           조상이라, overflow-hidden 을 걸면 드롭다운이 히어로 하단 경계에서 잘린다. 둥근 모서리는
+           md:rounded-2xl 만으로 자기 배경이 클리핑되므로 overflow-hidden 없이도 유지된다. -->
+      <div class="relative bg-primary-press text-white -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-8 py-5 md:py-7 md:rounded-2xl">
         <!-- 출처 배지 + 기준일 스탬프 -->
         <div class="flex items-center gap-2 flex-wrap">
           <span class="hidden md:inline-flex items-center text-[11.5px] font-bold bg-white/[0.12] border border-white/20 px-2.5 py-1 rounded-full text-[#DCE6FD]">공공데이터포털</span>
@@ -56,7 +59,7 @@
               </div>
             </div>
             <div class="absolute left-0 right-0 top-full z-50">
-              <SearchAutocomplete ref="heroAcRef" :open="heroFocused" :model-value="searchKeyword" @close="heroFocused = false" />
+              <SearchAutocomplete ref="heroAcRef" :open="heroFocused" :model-value="searchKeyword" :scope="{ kind: 'realestate' }" @close="heroFocused = false" />
             </div>
           </label>
         </div>
@@ -108,7 +111,6 @@
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">location_on</span>
           빠른 생활시설 찾기
         </h2>
-        <p class="text-sm text-muted mt-1">자주 찾는 시설을 바로 확인하세요.</p>
       </div>
       <div class="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-2.5">
         <HardLink
@@ -119,7 +121,7 @@
           class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary hover:bg-primary/5 transition-all"
         >
           <CategoryIcon :category-id="(q.id as CategoryId)" size="md" class="mb-1.5" />
-          <span class="text-[13px] font-bold text-strong">{{ q.label }}</span>
+          <span class="text-[13px] font-semibold text-strong">{{ q.label }}</span>
         </HardLink>
       </div>
     </section>
@@ -131,7 +133,6 @@
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">place</span>
           인기 지역
         </h2>
-        <p class="text-sm text-muted mt-1">많이 찾는 지역부터 둘러보세요.</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <HardLink
@@ -145,58 +146,6 @@
       </div>
     </section>
 
-    <!-- 생활 가이드 -->
-    <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h2 class="text-display-2 text-strong flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">menu_book</span>
-            생활 가이드
-          </h2>
-          <p class="text-sm text-muted mt-1">최근 가이드를 확인하세요.</p>
-        </div>
-        <HardLink
-          to="/guide"
-          class="text-sm text-primary font-bold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
-        >
-          더보기
-          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-        </HardLink>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <HardLink
-          v-for="guide in recentGuides"
-          :key="guide.id"
-          :to="`/guide/${guide.slug}`"
-          class="group bg-white border border-line rounded-xl overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
-        >
-          <div class="aspect-video bg-background-light overflow-hidden">
-            <img
-              v-if="guide.thumbnailUrl"
-              :src="`${publicApiBase}${guide.thumbnailUrl}`"
-              :alt="guide.title"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-              width="400"
-              height="225"
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center">
-              <span class="material-symbols-outlined text-[36px] text-faint">article</span>
-            </div>
-          </div>
-          <div class="p-3">
-            <h3 class="text-sm font-bold text-strong line-clamp-2 group-hover:text-primary transition-colors">
-              {{ guide.title }}
-            </h3>
-            <p class="text-xs text-muted mt-1 line-clamp-1">
-              {{ guide.summary }}
-            </p>
-          </div>
-        </HardLink>
-      </div>
-    </section>
-
     <!-- 오늘의 이슈 -->
     <section v-if="recentArticles.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="flex items-center justify-between mb-4">
@@ -205,11 +154,10 @@
             <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">article</span>
             오늘의 이슈
           </h2>
-          <p class="text-sm text-muted mt-1">부동산·청약 시장 소식을 확인하세요.</p>
         </div>
         <HardLink
           to="/article"
-          class="text-sm text-primary font-bold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
+          class="text-sm text-primary font-semibold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
         >
           더보기
           <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -238,11 +186,62 @@
             </div>
           </div>
           <div class="p-3">
-            <h3 class="text-sm font-bold text-strong line-clamp-2 group-hover:text-primary transition-colors">
+            <h3 class="text-sm font-semibold text-strong line-clamp-2 group-hover:text-primary transition-colors">
               {{ article.title }}
             </h3>
             <p class="text-xs text-muted mt-1 line-clamp-1">
               {{ article.summary }}
+            </p>
+          </div>
+        </HardLink>
+      </div>
+    </section>
+
+    <!-- 생활 가이드 -->
+    <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-display-2 text-strong flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">menu_book</span>
+            생활 가이드
+          </h2>
+        </div>
+        <HardLink
+          to="/guide"
+          class="text-sm text-primary font-semibold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
+        >
+          더보기
+          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </HardLink>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <HardLink
+          v-for="guide in recentGuides"
+          :key="guide.id"
+          :to="`/guide/${guide.slug}`"
+          class="group bg-white border border-line rounded-xl overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+        >
+          <div class="aspect-video bg-background-light overflow-hidden">
+            <img
+              v-if="guide.thumbnailUrl"
+              :src="`${publicApiBase}${guide.thumbnailUrl}`"
+              :alt="guide.title"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              width="400"
+              height="225"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <span class="material-symbols-outlined text-[36px] text-faint">article</span>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="text-sm font-semibold text-strong line-clamp-2 group-hover:text-primary transition-colors">
+              {{ guide.title }}
+            </h3>
+            <p class="text-xs text-muted mt-1 line-clamp-1">
+              {{ guide.summary }}
             </p>
           </div>
         </HardLink>
@@ -261,7 +260,7 @@
         <div class="flex items-start gap-3 flex-1">
           <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">verified</span>
           <div>
-            <p class="text-sm font-bold text-strong">공공데이터 기반 서비스</p>
+            <p class="text-sm font-semibold text-strong">공공데이터 기반 서비스</p>
             <p class="text-xs text-muted mt-1 leading-relaxed">
               행정안전부 · 국토교통부 · 보건복지부 · 한국부동산원 등
               공공데이터포털 및 각 부처 공개 API/CSV를 출처로 사용합니다.
@@ -271,7 +270,7 @@
         </div>
         <HardLink
           to="/about#data-sources"
-          class="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
+          class="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors"
         >
           전체 출처 보기 →
         </HardLink>
@@ -283,6 +282,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
+import { resolveSearchScope, buildSearchDestination } from '~/utils/searchScope'
 // heroAcRef typed as any to avoid circular InstanceType complexity in pages
 
 import HardLink from '~/components/common/HardLink.vue'
@@ -485,7 +485,7 @@ function handleSearch() {
   const q = searchKeyword.value.trim()
   if (!q) return
   trackSearch({ keyword: q })
-  navigateTo(`/search?keyword=${encodeURIComponent(q)}`)
+  navigateTo(buildSearchDestination(resolveSearchScope(useRoute()), q))
 }
 
 // IME 조합 중에도 실시간 입력값을 자동완성에 전달(v-model은 조합 종료까지 지연됨)

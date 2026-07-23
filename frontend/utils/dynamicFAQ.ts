@@ -1,5 +1,5 @@
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
-import { CATEGORY_FAQ, type FAQItem } from '~/utils/categoryFAQ'
+import type { FAQItem } from '~/utils/categoryFAQ'
 import { formatHHMM } from '~/utils/formatTime'
 
 /**
@@ -312,11 +312,9 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
       break
   }
 
-  // 동적 FAQ 최대 3개 + 정적 FAQ 보충하여 총 5개
-  const dynamicSlice = dynamic.slice(0, 3)
-  const staticFaqs = CATEGORY_FAQ[cat] ?? []
-  const needed = 5 - dynamicSlice.length
-  const staticSlice = staticFaqs.slice(0, needed)
-
-  return [...dynamicSlice, ...staticSlice]
+  // 시설 데이터 기반 FAQ만(최대 3개) 반환한다.
+  // 과거엔 카테고리 공통 정적 CATEGORY_FAQ로 5개까지 채웠는데, 그러면 카테고리 내
+  // 전 상세페이지가 동일 Q&A를 공유해 중복콘텐츠(SEO)가 됐다. 정적 FAQ는 카테고리
+  // 목록 페이지(카테고리당 1개)에서만 노출한다.
+  return dynamic.slice(0, 3)
 }

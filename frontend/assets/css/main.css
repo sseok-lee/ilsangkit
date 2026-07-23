@@ -114,18 +114,20 @@
      - body:      본문 (15px / 1.6 line-height)
      - caption:   보조 텍스트 (13px / weight 500) */
   .text-display-1 {
-    /* OD 진화판 — hero H1 위계 강화 (28→44px) */
-    font-size: clamp(1.75rem, 4.5vw, 2.75rem);
-    line-height: 1.08;
-    font-weight: 800;
-    letter-spacing: -0.03em;
+    /* 헤딩 경량화(2026-07): hero H1 축소 44→32px, 800→700.
+       경쟁사(ayo H1 25/700) 대비 +72% 과대·과중이던 것을 완화. */
+    font-size: clamp(1.625rem, 3.2vw, 2rem); /* 26 → 32px */
+    line-height: 1.12;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
   .text-display-2 {
-    /* OD 진화판 — 섹션 H2 키움 (20→24px / 800) */
-    font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+    /* 헤딩 경량화(2026-07): 크기(20→24px)는 유지, 굵기만 800→700로
+       H1과 함께 낮춰 헤딩 시스템 전체 톤을 통일. */
+    font-size: clamp(1.25rem, 2.4vw, 1.5rem); /* 20 → 24px */
     line-height: 1.15;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
 

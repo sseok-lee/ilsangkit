@@ -1,6 +1,6 @@
 <template>
   <div class="bg-background-light">
-    <main class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <PageHero
         eyebrow="청약"
         title="청약 일정·분양정보"
@@ -158,7 +158,7 @@
           </details>
         </div>
       </SectionBlock>
-    </main>
+    </div>
   </div>
 </template>
 

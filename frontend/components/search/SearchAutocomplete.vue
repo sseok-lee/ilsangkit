@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="open"
-    class="search-ac bg-white border border-line rounded-b-xl shadow-lg overflow-hidden"
+    class="search-ac bg-white text-slate-800 border border-line rounded-b-xl shadow-lg overflow-hidden"
     role="listbox"
   >
     <!-- 빈 입력: 최근 + 인기 -->
@@ -9,7 +9,7 @@
       <div v-if="recent.length" class="pt-2">
         <div class="px-4 py-1 flex items-center justify-between">
           <span class="text-xs font-bold text-slate-500">최근 검색</span>
-          <button class="text-[11px] text-slate-400 hover:text-slate-600" @mousedown.prevent @click="clearRecent">전체 삭제</button>
+          <button class="text-[11px] text-slate-500 hover:text-slate-600" @mousedown.prevent @click="clearRecent">전체 삭제</button>
         </div>
         <ul class="pb-1">
           <li
@@ -23,7 +23,7 @@
             @click="goKeyword(kw)"
           >
             <span class="flex items-center gap-2.5 text-sm">
-              <span class="material-symbols-outlined text-slate-400 text-[18px]">history</span>
+              <span class="material-symbols-outlined text-slate-500 text-[18px]">history</span>
               {{ kw }}
             </span>
             <button
@@ -71,10 +71,10 @@ close
           @mousedown.prevent
           @click="select(it)"
         >
-          <span class="material-symbols-outlined text-slate-400 text-[18px]">{{ icon(it.type) }}</span>
+          <span class="material-symbols-outlined text-slate-500 text-[18px]">{{ icon(it.type) }}</span>
           <span class="text-sm flex-1 truncate">
             {{ it.label }}
-            <span v-if="it.sublabel" class="text-slate-400 text-xs"> · {{ it.sublabel }}</span>
+            <span v-if="it.sublabel" class="text-slate-500 text-xs"> · {{ it.sublabel }}</span>
           </span>
         </li>
       </ul>
@@ -99,9 +99,15 @@ import { useSearchSuggest, type SuggestItem } from '~/composables/useSearchSugge
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CITY_FULL_NAME_TO_SLUG, CITY_SLUGS, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { toRealEstateUrl, isRealEstateUrlType } from '~/utils/realEstateUrl'
+import type { SearchScope } from '~/utils/searchScope'
+import { buildSearchDestination, scopeSuggestParam } from '~/utils/searchScope'
 
-const props = defineProps<{ open: boolean; modelValue: string }>()
+const props = defineProps<{ open: boolean; modelValue: string; scope?: SearchScope }>()
 const emit = defineEmits<{ close: [] }>()
+
+// scope 미지정(homepage 히어로 외 일부 사용처 등)이어도 무회귀: suggest scope param 생략 +
+// freeText 목적지는 기존 '/search?keyword=' 고정 경로로 폴백.
+const suggestScopeParam = computed(() => (props.scope ? scopeSuggestParam(props.scope) : undefined))
 
 const { items, popular, recent, suggest, loadPopular, addRecent, removeRecent, clearRecent } =
   useSearchSuggest()
@@ -147,7 +153,7 @@ watch(
     // 이미 liveQuery를 최신으로 만들어 두므로(커밋 시 v===liveQuery) 중복 호출이 없다.
     if (v !== liveQuery.value) {
       liveQuery.value = v
-      suggest(v)
+      suggest(v, suggestScopeParam.value)
     }
     activeIndex.value = -1
   },
@@ -203,7 +209,7 @@ function onKeydown(e: KeyboardEvent): boolean {
 // 부모가 네이티브 input의 실시간 값(IME 조합 중 포함)을 직접 전달하는 진입점.
 function setQuery(raw: string) {
   liveQuery.value = raw
-  suggest(raw)
+  suggest(raw, suggestScopeParam.value)
   activeIndex.value = -1
 }
 
@@ -220,12 +226,16 @@ function icon(t: SuggestItem['type']): string {
   return t === 'region' ? 'location_on' : t === 'building' ? 'apartment' : 'category'
 }
 
+function keywordDestination(kw: string): string {
+  return props.scope ? buildSearchDestination(props.scope, kw) : '/search?keyword=' + encodeURIComponent(kw.trim())
+}
+
 function goKeyword(kw: string) {
   const k = kw.trim()
   if (!k) return
   addRecent(k)
   emit('close')
-  navigateTo('/search?keyword=' + encodeURIComponent(k))
+  navigateTo(keywordDestination(k))
 }
 
 function select(it: SuggestItem) {
@@ -252,7 +262,7 @@ function select(it: SuggestItem) {
       toRealEstateUrl({ type: it.reType, city: it.city, district: it.district, buildingName: it.buildingName }),
     )
   } else {
-    navigateTo('/search?keyword=' + encodeURIComponent(it.label))
+    navigateTo(keywordDestination(it.label))
   }
 }
 </script>

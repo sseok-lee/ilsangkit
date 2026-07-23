@@ -27,7 +27,7 @@
         :key="stat.label"
         class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
       >
-        <span class="text-slate-400">{{ stat.label }}</span>
+        <span class="text-slate-500">{{ stat.label }}</span>
         <span :class="['font-semibold', stat.color ?? 'text-slate-800']">{{ stat.value }}</span>
       </span>
     </div>

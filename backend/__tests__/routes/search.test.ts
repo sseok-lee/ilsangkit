@@ -20,6 +20,13 @@ describe('/api/search', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.items.length).toBeGreaterThan(0);
   });
+  it('GET /suggest?scope=facility:toilet 는 scope 를 suggest() 로 그대로 전달한다', async () => {
+    const { suggest } = await import('../../src/services/search/searchSuggestService.js');
+    vi.mocked(suggest).mockClear();
+    const res = await request(app).get('/api/search/suggest?q=화장실&scope=facility:toilet');
+    expect(res.status).toBe(200);
+    expect(vi.mocked(suggest)).toHaveBeenCalledWith('화장실', 'facility:toilet');
+  });
   it('GET /popular 200', async () => {
     const res = await request(app).get('/api/search/popular');
     expect(res.status).toBe(200);

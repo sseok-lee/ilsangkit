@@ -42,4 +42,32 @@ describe('suggest', () => {
     const res = await suggest('');
     expect(res.items).toEqual([]);
   });
+
+  it('scope=realestate → 카테고리 추천 억제, 건물명 유지', async () => {
+    mockGroupBy.mockResolvedValue([
+      { buildingName: '화장품타워', type: 'apt-sale', city: '서울', district: '강남구', bjdCode: '1168010100', transactionCount: 5 },
+    ]);
+    const res = await suggest('화장', 'realestate');
+    expect(res.items.some(i => i.type === 'category')).toBe(false);
+    expect(res.items.some(i => i.type === 'building')).toBe(true);
+  });
+
+  it('scope=facility:toilet → 단지명(building) 억제, 카테고리/지역 유지', async () => {
+    mockGroupBy.mockResolvedValue([
+      { buildingName: '화장품타워', type: 'apt-sale', city: '서울', district: '강남구', bjdCode: '1168010100', transactionCount: 5 },
+    ]);
+    const res = await suggest('화장', 'facility:toilet');
+    expect(res.items.some(i => i.type === 'building')).toBe(false);
+    expect(res.items.some(i => i.type === 'category')).toBe(true);
+  });
+
+  it('scope 없음 → 현행 혼합(회귀)', async () => {
+    mockGroupBy.mockResolvedValue([
+      { buildingName: '강남효성', type: 'apt-sale', city: '서울', district: '강남구', bjdCode: '1168010100', transactionCount: 5 },
+    ]);
+    const res = await suggest('강남');
+    const types = res.items.map(i => i.type);
+    expect(types).toContain('region');
+    expect(types).toContain('building');
+  });
 });

@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-background-light flex flex-col text-slate-900" :style="{ '--cat': catColorVar }">
     <!-- Main Content -->
-    <main class="flex-1 w-full">
+    <div class="flex-1 w-full">
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
         <div class="text-center">
@@ -158,7 +158,7 @@
                     지도 크게 보기
                   </button>
                 </div>
-                <div class="h-[220px]">
+                <div class="h-[220px] md:h-[300px]">
                   <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
                 </div>
               </SectionBlock>
@@ -257,7 +257,7 @@
           </div>
         </div>
       </template>
-    </main>
+    </div>
   </div>
 </template>
 

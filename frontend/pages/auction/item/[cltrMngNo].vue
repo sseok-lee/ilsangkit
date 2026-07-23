@@ -155,7 +155,7 @@ setAuctionListingSchema({
 
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <!-- 모바일: 공용 핵심정보 헤더(literal h1 1개 소유) -->
@@ -268,6 +268,6 @@ setAuctionListingSchema({
 
 
       <DataSourceSection domain="auction" :last-sync-date="null" />
-    </main>
+    </div>
   </div>
 </template>

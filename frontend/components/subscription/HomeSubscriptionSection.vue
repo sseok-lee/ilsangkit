@@ -6,7 +6,6 @@
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">calendar_month</span>
           청약 한눈에
         </h2>
-        <p class="text-sm text-muted mt-1">지금 신청 가능한 공고와 예정된 일정을 확인하세요.</p>
       </div>
       <HardLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
         전체보기 →
@@ -33,7 +32,7 @@
              가두고 내부 truncate 가 동작하도록 한다. -->
         <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4">
           <div v-if="ongoing.length > 0" class="min-w-0">
-            <h3 class="text-sm font-bold text-strong mb-1.5"><span aria-hidden="true">🔴</span> 접수 중</h3>
+            <h3 class="text-sm font-semibold text-strong mb-1.5"><span aria-hidden="true">🔴</span> 접수 중</h3>
             <ul>
               <li
                 v-for="(item, idx) in ongoing"
@@ -46,7 +45,7 @@
                     class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 min-w-[34px] text-center"
                   >{{ dayBadge(item.receptionEndDate) }}</span>
                   <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
-                  <span class="flex-1 min-w-0 text-sm font-bold text-strong truncate">{{ item.houseName }}</span>
+                  <span class="flex-1 min-w-0 text-sm font-semibold text-strong truncate">{{ item.houseName }}</span>
                   <span class="hidden sm:inline shrink-0 text-[11px] text-faint">{{ item.regionName }}</span>
                 </HardLink>
               </li>
@@ -54,7 +53,7 @@
           </div>
 
           <div v-if="upcoming.length > 0" class="min-w-0">
-            <h3 class="text-sm font-bold text-strong mb-1.5"><span aria-hidden="true">🔵</span> 접수 예정</h3>
+            <h3 class="text-sm font-semibold text-strong mb-1.5"><span aria-hidden="true">🔵</span> 접수 예정</h3>
             <ul>
               <li
                 v-for="(item, idx) in upcoming"
@@ -67,7 +66,7 @@
                     class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 min-w-[34px] text-center"
                   >{{ dayBadge(item.receptionStartDate) }}</span>
                   <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
-                  <span class="flex-1 min-w-0 text-sm font-bold text-strong truncate">{{ item.houseName }}</span>
+                  <span class="flex-1 min-w-0 text-sm font-semibold text-strong truncate">{{ item.houseName }}</span>
                   <span class="hidden sm:inline shrink-0 text-[11px] text-faint">{{ item.regionName }}</span>
                 </HardLink>
               </li>

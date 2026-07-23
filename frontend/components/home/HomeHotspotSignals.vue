@@ -18,7 +18,7 @@
 
     <div class="bg-white rounded-2xl border border-line shadow-card overflow-hidden">
       <div class="px-6 pt-5 pb-4 flex items-center gap-3 flex-wrap">
-        <div class="inline-flex bg-slate-100 rounded-full p-1 text-sm font-bold">
+        <div class="inline-flex bg-slate-100 rounded-full p-1 text-sm font-semibold">
           <button
             v-for="opt in PROPERTY_OPTIONS"
             :key="opt.value"

@@ -6,7 +6,6 @@
           <span class="material-symbols-outlined text-primary text-[24px]">local_fire_department</span>
           이번 주 인기 단지
         </h2>
-        <p class="text-sm text-muted mt-1">최근 7일 거래가 많은 단지의 주력 평형 실거래가 중앙값입니다.</p>
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체보기 →</HardLink>
     </div>
@@ -19,7 +18,7 @@
         <!-- Column header -->
         <div class="flex items-center gap-3 px-4 py-3 border-b border-line">
           <div :class="['w-[1.5px] h-5 rounded-full', col.accentBar]" />
-          <span class="font-bold text-strong text-sm">{{ col.label }}</span>
+          <span class="font-semibold text-strong text-sm">{{ col.label }}</span>
           <span class="ml-auto text-[11px] text-faint">최근 7일</span>
         </div>
         <!-- Empty state -->

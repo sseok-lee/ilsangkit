@@ -3,16 +3,17 @@ import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { searchRateLimiter } from '../middlewares/rateLimit.js';
 import { SuggestQuerySchema, SearchLogSchema, PopularSearchQuerySchema, type SearchLogInput } from '../schemas/search.js';
-import { suggest } from '../services/search/searchSuggestService.js';
+import { suggest, type SuggestScope } from '../services/search/searchSuggestService.js';
 import { getPopular } from '../services/search/searchPopularService.js';
 import { prisma } from '../lib/prisma.js';
 
 const router = Router();
 
-// GET /api/search/suggest?q=
+// GET /api/search/suggest?q=&scope=realestate|facility:{category}
 router.get('/suggest', searchRateLimiter, validate(SuggestQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
-    const result = await suggest((req.query as unknown as { q: string }).q);
+    const { q, scope } = req.query as unknown as { q: string; scope?: string };
+    const result = await suggest(q, scope as SuggestScope);
     res.json({ success: true, data: result });
   }));
 

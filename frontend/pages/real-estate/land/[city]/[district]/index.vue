@@ -1,6 +1,6 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <PageHero
@@ -26,11 +26,11 @@
               <span class="text-caption text-primary">
                 평당 {{ formatManwon(dong.avgPricePerPyeong) }}만원
               </span>
-              <span class="text-caption text-slate-400">
+              <span class="text-caption text-slate-500">
                 (㎡당 {{ formatManwon(pyeongToSqm(dong.avgPricePerPyeong)) }}만원)
               </span>
             </template>
-            <span v-else class="text-caption text-slate-400">대지 거래 없음</span>
+            <span v-else class="text-caption text-slate-500">대지 거래 없음</span>
             <span class="text-caption text-slate-500">거래 {{ dong.transactionCount.toLocaleString('ko-KR') }}건</span>
             <span class="text-caption text-slate-500">대지 {{ dong.daeCount.toLocaleString('ko-KR') }}건</span>
           </HardLink>
@@ -46,7 +46,7 @@
 
 
       <DataSourceSection domain="real-estate" />
-    </main>
+    </div>
   </div>
 </template>
 

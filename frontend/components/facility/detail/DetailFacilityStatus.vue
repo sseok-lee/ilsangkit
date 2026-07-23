@@ -49,7 +49,7 @@
       <template v-if="facility.category === 'toilet'">
         <!-- Toilet Accessibility Details -->
         <div v-if="toiletAccessibilityDetails.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">접근성 상세</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">접근성 상세</h3>
           <div class="grid grid-cols-2 gap-3">
             <div
               v-for="item in toiletAccessibilityDetails"
@@ -64,17 +64,17 @@
     
         <!-- Emergency Bell / Diaper Changing Location -->
         <div v-if="details?.emergencyBellLocation || details?.diaperChangingLocation" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">편의시설 위치</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">편의시설 위치</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">비상벨 위치</span>
               <span v-if="details?.emergencyBellLocation" class="text-sm font-medium text-slate-900">{{ details?.emergencyBellLocation }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">기저귀교환대 위치</span>
               <span v-if="details?.diaperChangingLocation" class="text-sm font-medium text-slate-900">{{ details?.diaperChangingLocation }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
           </div>
         </div>
@@ -86,17 +86,17 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">SSID</span>
             <span v-if="details?.ssid" class="text-sm font-medium text-slate-900">{{ details?.ssid }}</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">설치 장소</span>
             <span v-if="details?.installLocation" class="text-sm font-medium text-slate-900">{{ details?.installLocation }}</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">설치 장소 상세</span>
             <span v-if="details?.installLocationDetail && details?.installLocationDetail !== details?.installLocation" class="text-sm font-medium text-slate-900">{{ details?.installLocationDetail }}</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
         </div>
       </template>
@@ -104,73 +104,73 @@
       <!-- Parking Details -->
       <template v-if="facility.category === 'parking'">
         <div :class="[hasGridContent ? 'mt-5 border-t border-slate-100 pt-5' : '']">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">요금 정보</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">요금 정보</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">요금구분</span>
               <span v-if="details?.feeType" class="text-sm font-medium text-slate-900">{{ details?.feeType }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">기본요금</span>
               <span v-if="details?.baseFee != null && details?.baseTime != null" class="text-sm font-medium text-slate-900">{{ details?.baseFee }}원 / {{ details?.baseTime }}분</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">추가요금</span>
               <span v-if="details?.additionalFee != null && details?.additionalTime != null" class="text-sm font-medium text-slate-900">{{ details?.additionalFee }}원 / {{ details?.additionalTime }}분</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">일 최대요금</span>
               <span v-if="details?.dailyMaxFee != null" class="text-sm font-medium text-slate-900">{{ details?.dailyMaxFee }}원</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">일최대요금 적용시간</span>
               <span v-if="details?.dailyMaxFeeHours" class="text-sm font-medium text-slate-900">{{ details?.dailyMaxFeeHours }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">월정기권</span>
               <span v-if="details?.monthlyFee != null" class="text-sm font-medium text-slate-900">{{ details?.monthlyFee }}원</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
           </div>
         </div>
     
         <div class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">시설 정보</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">시설 정보</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">주차면수</span>
               <span v-if="details?.capacity" class="text-sm font-medium text-slate-900">{{ details?.capacity }}면</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">결제방법</span>
               <span v-if="details?.paymentMethod" class="text-sm font-medium text-slate-900">{{ details?.paymentMethod }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">장애인 주차구역</span>
               <span v-if="details?.hasDisabledParking !== undefined" class="text-sm font-medium text-slate-900">{{ details?.hasDisabledParking ? '있음' : '없음' }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">부제 운영</span>
               <span v-if="details?.alternateParking" class="text-sm font-medium text-slate-900">{{ details?.alternateParking }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">특기사항</span>
               <span v-if="details?.remarks" class="text-sm font-medium text-slate-900">{{ details?.remarks }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">구역구분</span>
               <span v-if="details?.zoneClass" class="text-sm font-medium text-slate-900">{{ details?.zoneClass }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
           </div>
         </div>
@@ -182,48 +182,48 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">좌석수</span>
             <span v-if="details?.seatCount" class="text-sm font-medium text-slate-900">{{ details?.seatCount.toLocaleString() }}석</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">장서수</span>
             <span v-if="details?.bookCount" class="text-sm font-medium text-slate-900">{{ details?.bookCount.toLocaleString() }}권</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">연속간행물</span>
             <span v-if="details?.serialCount" class="text-sm font-medium text-slate-900">{{ details?.serialCount.toLocaleString() }}종</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">비도서 자료</span>
             <span v-if="details?.nonBookCount" class="text-sm font-medium text-slate-900">{{ details?.nonBookCount.toLocaleString() }}점</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">대출가능 권수</span>
             <span v-if="details?.loanableBooks" class="text-sm font-medium text-slate-900">{{ details?.loanableBooks }}권</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">대출가능 일수</span>
             <span v-if="details?.loanableDays" class="text-sm font-medium text-slate-900">{{ details?.loanableDays }}일</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
         </div>
     
         <!-- Library Facility Size -->
         <div v-if="details?.lotArea || details?.buildingArea" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">시설 규모</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">시설 규모</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">부지면적</span>
               <span v-if="details?.lotArea" class="text-sm font-medium text-slate-900">{{ details?.lotArea }}㎡</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">건물면적</span>
               <span v-if="details?.buildingArea" class="text-sm font-medium text-slate-900">{{ details?.buildingArea }}㎡</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
           </div>
         </div>
@@ -235,17 +235,17 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">설치위치</span>
             <span v-if="details?.buildPlace" class="text-sm font-medium text-slate-900">{{ details?.buildPlace }}</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">제조사</span>
             <span v-if="details?.mfg" class="text-sm font-medium text-slate-900">{{ details?.mfg }}</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">모델명</span>
             <span v-if="details?.model" class="text-sm font-medium text-slate-900">{{ details?.model }}</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
         </div>
       </template>
@@ -256,7 +256,7 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">약사 수</span>
             <span v-if="(details as any)?.pharmacistCnt" class="text-sm font-bold text-slate-900">{{ (details as any).pharmacistCnt }}명</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
         </div>
       </template>
@@ -267,36 +267,36 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">면적</span>
             <span v-if="details?.area != null" class="text-sm font-medium text-slate-900">{{ details.area.toLocaleString() }}㎡ (약 {{ Math.round(details.area * 0.3025).toLocaleString() }}평)</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
         </div>
         <div v-if="parkHasFacilities" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">보유 시설</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">보유 시설</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-start justify-between gap-4">
               <span class="text-sm text-gray-600 shrink-0">운동시설</span>
               <span v-if="details?.exerciseFacilities" class="text-sm font-medium text-slate-900 text-right">{{ details.exerciseFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-start justify-between gap-4">
               <span class="text-sm text-gray-600 shrink-0">놀이시설</span>
               <span v-if="details?.playFacilities" class="text-sm font-medium text-slate-900 text-right">{{ details.playFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-start justify-between gap-4">
               <span class="text-sm text-gray-600 shrink-0">편의시설</span>
               <span v-if="details?.convenienceFacilities" class="text-sm font-medium text-slate-900 text-right">{{ details.convenienceFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-start justify-between gap-4">
               <span class="text-sm text-gray-600 shrink-0">교양시설</span>
               <span v-if="details?.cultureFacilities" class="text-sm font-medium text-slate-900 text-right">{{ details.cultureFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <div class="flex items-start justify-between gap-4">
               <span class="text-sm text-gray-600 shrink-0">기타시설</span>
               <span v-if="details?.otherFacilities" class="text-sm font-medium text-slate-900 text-right">{{ details.otherFacilities.split('+').map(s => s.trim()).filter(Boolean).join(', ') }}</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
           </div>
         </div>
@@ -305,7 +305,7 @@
       <!-- School Details -->
       <template v-if="facility.category === 'school'">
         <div v-if="schoolEnrollmentRows.length > 0">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">학급 현황</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">학급 현황</h3>
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
             <div v-for="row in schoolEnrollmentRows" :key="row.label" class="flex flex-col items-center justify-center rounded-lg py-2.5 px-2" :class="row.isTotal ? 'bg-indigo-50 col-span-full' : 'bg-slate-50'">
               <span class="text-xs text-gray-600">{{ row.label }}</span>
@@ -314,7 +314,7 @@
           </div>
         </div>
         <div v-if="schoolDepartments.length > 0" :class="schoolEnrollmentRows.length > 0 ? 'mt-5 border-t border-slate-100 pt-5' : ''">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">계열 정보</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">계열 정보</h3>
           <TagBadges variant="sky" :items="schoolDepartments.map(d => ({ label: d }))" />
         </div>
       </template>
@@ -325,15 +325,15 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">점포 수</span>
             <span v-if="details?.storeCount != null" class="text-sm font-medium text-slate-900">{{ details.storeCount.toLocaleString() }}개</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
         </div>
         <div v-if="marketProductTags.length" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">주요 판매품목</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">주요 판매품목</h3>
           <TagBadges variant="gray" :items="marketProductTags.map(t => ({ label: t }))" />
         </div>
         <div v-if="details?.hasPublicToilet != null || details?.hasParking != null" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">편의시설</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">편의시설</h3>
           <div class="grid grid-cols-2 gap-2">
             <div v-if="details?.hasPublicToilet != null" class="flex items-center gap-1.5 text-sm text-gray-700">
               <span :class="details.hasPublicToilet ? 'text-green-600' : 'text-gray-400'">{{ details.hasPublicToilet ? '✓' : '✗' }}</span>
@@ -355,7 +355,7 @@
       <template v-if="facility.category === 'childcare'">
         <!-- 정원·현원 + 시설 정보 (2열 그리드) -->
         <div>
-          <h3 class="text-sm font-bold text-slate-900 mb-3">정원·시설 현황</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">정원·시설 현황</h3>
           <FieldGrid
             :cols="2"
             variant="prominent"
@@ -383,7 +383,7 @@
     
         <!-- 반별 정원·현원 -->
         <div v-if="childcareClassRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">연령별 반·아동 현황</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">연령별 반·아동 현황</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-xs tabular-nums">
               <thead>
@@ -408,7 +408,7 @@
     
         <!-- 직원 현황 -->
         <div v-if="(details as any)?.emCntTot || childcareStaffRoles.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">직원 현황 <span v-if="(details as any)?.emCntTot" class="text-gray-600 font-normal">(총 {{ (details as any).emCntTot }}명)</span></h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">직원 현황 <span v-if="(details as any)?.emCntTot" class="text-gray-600 font-normal">(총 {{ (details as any).emCntTot }}명)</span></h3>
           <table class="w-full text-sm tabular-nums">
             <tbody class="divide-y divide-[#f0f2f5]">
               <tr v-for="role in childcareStaffRoles" :key="role.label">
@@ -421,7 +421,7 @@
     
         <!-- 교사 경력 분포 -->
         <div v-if="childcareCareerItems.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">교사 경력 분포</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">교사 경력 분포</h3>
           <TagBadges variant="custom" :items="childcareCareerItems.map(it => ({ label: it.label, suffix: `${it.cnt}명`, colorClass: it.colorClass }))" />
         </div>
 </template>
@@ -437,12 +437,12 @@
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">시설면적</span>
             <span v-if="details?.faciGfa" class="text-sm font-medium text-slate-900">{{ details.faciGfa }}㎡</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-600">관람석수</span>
             <span v-if="details?.standCptPsnCnt != null" class="text-sm font-medium text-slate-900">{{ details.standCptPsnCnt.toLocaleString() }}석</span>
-            <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+            <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
         </div>
       </template>
@@ -451,7 +451,7 @@
       <template v-if="facility.category === 'hospital'">
         <!-- Hospital Staff Info -->
         <div v-if="details?.drTotCnt" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">의료진 현황</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">의료진 현황</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">의사 총수</span>
@@ -514,13 +514,13 @@
     
         <!-- Hospital Departments -->
         <div v-if="details?.departments?.length" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">진료과목</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">진료과목</h3>
           <TagBadges variant="teal" :items="hospitalDeptBadges" />
         </div>
 
         <!-- Hospital Equipment -->
         <div v-if="hospitalEquipRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">보유 장비</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">보유 장비</h3>
           <div class="grid grid-cols-2 gap-x-4 gap-y-2">
             <div v-for="row in hospitalEquipRows" :key="row.label" class="flex items-center justify-between">
               <span class="text-sm text-gray-600">{{ row.label }}</span>
@@ -531,7 +531,7 @@
 
         <!-- Hospital Bed Info -->
         <div v-if="hospitalBedRows.length > 0" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">병상 정보 <span class="text-xs text-gray-500 font-normal">(총 {{ hospitalTotalBeds }}병상)</span></h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">병상 정보 <span class="text-xs text-gray-500 font-normal">(총 {{ hospitalTotalBeds }}병상)</span></h3>
           <div class="grid grid-cols-2 gap-x-4 gap-y-2">
             <div v-for="row in hospitalBedRows" :key="row.label" class="flex items-center justify-between">
               <span class="text-sm text-gray-600">{{ row.label }}</span>
@@ -542,12 +542,12 @@
     
         <!-- Hospital Parking Info -->
         <div v-if="details?.parkQty != null || details?.parkEtc" class="mt-5 border-t border-slate-100 pt-5">
-          <h3 class="text-sm font-bold text-slate-900 mb-3">주차정보</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">주차정보</h3>
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">주차가능대수</span>
               <span v-if="details?.parkQty != null" class="text-sm font-medium text-slate-900">{{ details.parkQty }}대</span>
-              <span v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</span>
+              <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
             </div>
             <p v-if="details?.parkEtc" class="text-sm text-gray-600">{{ details.parkEtc }}</p>
           </div>

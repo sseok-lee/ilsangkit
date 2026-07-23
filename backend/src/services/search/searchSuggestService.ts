@@ -20,13 +20,20 @@ export interface SuggestResponse { items: SuggestItem[] }
 
 const SECTION_LIMIT = 5;
 
-export async function suggest(q: string): Promise<SuggestResponse> {
+// scope 없음(undefined) = 하위호환 혼합. 'realestate' = 카테고리 추천 억제(단지명 유지).
+// 'facility:{category}' = 단지명 추천 억제(카테고리+지역 유지). 개별 시설명 조회는 v1 범위 밖(스펙 §5-4).
+export type SuggestScope = 'realestate' | `facility:${string}` | undefined;
+
+export async function suggest(q: string, scope?: SuggestScope): Promise<SuggestResponse> {
   const query = (q ?? '').trim();
   if (!query) return { items: [] };
 
+  const suppressCategory = scope === 'realestate';
+  const suppressBuilding = typeof scope === 'string' && scope.startsWith('facility:');
+
   const items: SuggestItem[] = [];
 
-  // 1) 지역: 지역 인덱스에서 접두 매칭(시/구)
+  // 1) 지역: 지역 인덱스에서 접두 매칭(시/구) — scope 무관 항상 노출
   const index = await getRegionIndex();
   const regionHits: SuggestItem[] = [];
   for (const [name, hit] of index.districtNames) {
@@ -37,45 +44,50 @@ export async function suggest(q: string): Promise<SuggestResponse> {
   }
   items.push(...dedupeRegions(regionHits));
 
-  // 2) 카테고리: 파서가 인식한 카테고리(+지역 결합)
   const parsed = await parseSearchQueryCached(query);
-  if (parsed.categoryToken) {
-    const label = parsed.districtToken ? `${parsed.districtToken} ${categoryKo(parsed.categoryToken)}` : categoryKo(parsed.categoryToken);
-    items.push({
-      type: 'category', label, sublabel: '생활시설',
-      category: parsed.categoryToken,
-      city: parsed.cityToken ?? undefined,
-      district: parsed.districtToken ?? undefined,
-    });
-  } else {
-    for (const [word, cat] of CATEGORY_SYNONYM_MAP) {
-      if (word.startsWith(query)) {
-        items.push({ type: 'category', label: categoryKo(cat), sublabel: '생활시설', category: cat });
-        break;
+
+  // 2) 카테고리: 파서가 인식한 카테고리(+지역 결합) — realestate scope 면 억제
+  if (!suppressCategory) {
+    if (parsed.categoryToken) {
+      const label = parsed.districtToken ? `${parsed.districtToken} ${categoryKo(parsed.categoryToken)}` : categoryKo(parsed.categoryToken);
+      items.push({
+        type: 'category', label, sublabel: '생활시설',
+        category: parsed.categoryToken,
+        city: parsed.cityToken ?? undefined,
+        district: parsed.districtToken ?? undefined,
+      });
+    } else {
+      for (const [word, cat] of CATEGORY_SYNONYM_MAP) {
+        if (word.startsWith(query)) {
+          items.push({ type: 'category', label: categoryKo(cat), sublabel: '생활시설', category: cat });
+          break;
+        }
       }
     }
   }
 
-  // 3) 건물명: startsWith + transactionCount 내림차순 top N (q>=2 가드)
-  const nameForBuilding = parsed.freeText || query;
-  if (nameForBuilding.length >= 2) {
-    const rows = await prisma.realEstateBuildingSummary.findMany({
-      where: { buildingName: { startsWith: nameForBuilding } },
-      orderBy: { transactionCount: 'desc' },
-      take: SECTION_LIMIT,
-      select: { buildingName: true, type: true, city: true, district: true, bjdCode: true, transactionCount: true },
-    });
-    for (const r of rows) {
-      items.push({
-        type: 'building',
-        label: r.buildingName,
-        sublabel: `${r.district} · 거래 ${r.transactionCount}건`,
-        buildingName: r.buildingName,
-        bjdCode: r.bjdCode,
-        city: r.city,
-        district: r.district,
-        reType: r.type,
+  // 3) 건물명: startsWith + transactionCount 내림차순 top N (q>=2 가드) — facility scope 면 억제
+  if (!suppressBuilding) {
+    const nameForBuilding = parsed.freeText || query;
+    if (nameForBuilding.length >= 2) {
+      const rows = await prisma.realEstateBuildingSummary.findMany({
+        where: { buildingName: { startsWith: nameForBuilding } },
+        orderBy: { transactionCount: 'desc' },
+        take: SECTION_LIMIT,
+        select: { buildingName: true, type: true, city: true, district: true, bjdCode: true, transactionCount: true },
       });
+      for (const r of rows) {
+        items.push({
+          type: 'building',
+          label: r.buildingName,
+          sublabel: `${r.district} · 거래 ${r.transactionCount}건`,
+          buildingName: r.buildingName,
+          bjdCode: r.bjdCode,
+          city: r.city,
+          district: r.district,
+          reType: r.type,
+        });
+      }
     }
   }
 
