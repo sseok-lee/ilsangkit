@@ -348,13 +348,15 @@ const closeMobileMenu = () => {
 // Focus trap for mobile menu
 watch(isMobileMenuOpen, async (isOpen) => {
   if (!import.meta.client) return
+  // 배경(본문/푸터)만 inert 처리해 스크린리더·키보드에서 제외한다.
+  // (과거엔 document.body 전체에 aria-hidden을 걸어 드로어 자신까지 숨겨져 SR에서 메뉴가 사라졌다.)
   if (isOpen) {
-    document.body.setAttribute('aria-hidden', 'true')
+    for (const el of [document.querySelector('main'), document.querySelector('footer')]) el?.setAttribute('inert', '')
     await nextTick()
     const firstFocusable = mobileMenuRef.value?.querySelector<HTMLElement>('a, button')
     firstFocusable?.focus()
   } else {
-    document.body.removeAttribute('aria-hidden')
+    for (const el of [document.querySelector('main'), document.querySelector('footer')]) el?.removeAttribute('inert')
     mobileMenuTriggerRef.value?.focus()
   }
 })
