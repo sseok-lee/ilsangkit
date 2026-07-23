@@ -212,7 +212,7 @@
 
       <!-- 관련 탐색 -->
       <SectionBlock
-        v-if="relatedCategories.length > 0 || popularRegionLinks.length > 0"
+        v-if="relatedCategories.length > 0 || (popularRegionLinks.length > 0 && (queryCitySlug || categoryParam === 'trash'))"
         heading="관련 탐색"
         subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요."
       >
@@ -227,7 +227,8 @@
             {{ cat.label }}
           </NuxtLink>
         </div>
-        <div v-if="popularRegionLinks.length > 0" class="flex flex-wrap items-center gap-2 mt-3">
+        <!-- 지역 미선택 시엔 상단 '인기 지역 바로가기'가 대신 노출되므로 중복 방지 위해 숨김 -->
+        <div v-if="popularRegionLinks.length > 0 && (queryCitySlug || categoryParam === 'trash')" class="flex flex-wrap items-center gap-2 mt-3">
           <span class="text-xs text-slate-500 font-medium pr-1">인기 지역</span>
           <NuxtLink
             v-for="region in popularRegionLinks"
