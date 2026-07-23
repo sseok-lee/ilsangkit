@@ -1,7 +1,7 @@
 <template>
   <header
     :class="[
-      'sticky top-0 z-50 px-4 md:px-6 h-14 md:h-16',
+      'sticky top-0 z-50 px-4 md:px-6 h-14 lg:h-16',
       'bg-background-light',
       'border-b border-transparent',
       'transition-colors duration-300',
@@ -21,16 +21,16 @@
         </button>
 
         <HardLink v-if="!props.showBackButton" to="/" class="flex items-center">
-          <img src="/icons/logo.webp" alt="일상킷" class="h-9 md:h-12 w-auto shrink-0" width="91" height="36" />
+          <img src="/icons/logo.webp" alt="일상킷" class="h-9 lg:h-12 w-auto shrink-0" width="91" height="36" />
         </HardLink>
         <span
           v-if="!props.showBackButton"
-          class="hidden md:inline-flex items-center self-center pl-2.5 ml-1.5 border-l border-line-2 text-[11px] leading-none text-faint"
+          class="hidden lg:inline-flex items-center self-center pl-2.5 ml-1.5 border-l border-line-2 text-[11px] leading-none text-faint"
         >공공데이터 기반 생활정보</span>
       </div>
 
       <!-- Center/Right: Desktop Navigation (single nav, fills remaining width) -->
-      <nav class="hidden md:flex items-center flex-1 gap-1 ml-4">
+      <nav class="hidden lg:flex items-center flex-1 gap-1 ml-4">
         <!-- 좌측 로고와 우측 정렬 네비 클러스터 사이 여백 -->
         <div class="flex-1" aria-hidden="true"></div>
         <!-- 개별 드롭다운: NAV_LINK_GROUPS (부동산, 청약·임대) -->
@@ -173,7 +173,7 @@
       </nav>
 
       <!-- Mobile Cluster: 검색 + 메뉴 (우측 정렬) -->
-      <div class="md:hidden ml-auto flex items-center gap-0.5">
+      <div class="lg:hidden ml-auto flex items-center gap-0.5">
         <HeaderSearch variant="mobile" v-show="showHeaderSearch" />
         <button
           class="flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-strong"
@@ -202,7 +202,7 @@
       data-testid="mobile-menu"
       role="navigation"
       aria-label="모바일 메뉴"
-      class="md:hidden fixed top-[56px] left-0 right-0 bottom-0 z-40 bg-background-light border-b border-line-2 shadow-lg overflow-y-auto"
+      class="lg:hidden fixed top-[56px] left-0 right-0 bottom-0 z-40 bg-background-light border-b border-line-2 shadow-lg overflow-y-auto"
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">
