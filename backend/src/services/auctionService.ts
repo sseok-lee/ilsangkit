@@ -1,4 +1,5 @@
 // backend/src/services/auctionService.ts
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 // ⚠️ buildRegionFilter는 src/services/cityMapping.ts에 있음 (landService.ts:2와 동일 — '../lib/' 아님!)
 import { buildRegionFilter } from './cityMapping.js';
@@ -110,13 +111,59 @@ export async function getItems(p: ItemsParams) {
   else if (p.status === 'negotiable') where.status = 'negotiable';
   // 마감: close-capture로 확정된 낙찰/유찰/취소(isClosed=true) + API가 직접 '입찰마감'으로 준 것(status='closed')
   else if (p.status === 'closed') where.OR = [{ isClosed: true }, { status: 'closed' }];
-  const orderBy = p.sort === 'apsl' ? { apslAssAmt: 'desc' as const }
-    : p.sort === 'bidRate' ? { bidRate: 'desc' as const }
-    : { bidCloseDtm: 'asc' as const };
-  const [total, rows] = await Promise.all([
+  const skip = (p.page - 1) * p.limit;
+
+  // 명시적 정렬(감정가·낙찰가율)은 단순 컬럼 정렬 — Prisma orderBy 그대로.
+  if (p.sort === 'apsl' || p.sort === 'bidRate') {
+    const orderBy = p.sort === 'apsl' ? { apslAssAmt: 'desc' as const } : { bidRate: 'desc' as const };
+    const [total, rows] = await Promise.all([
+      prisma.auctionItem.count({ where }),
+      prisma.auctionItem.findMany({ where, orderBy, skip, take: p.limit }),
+    ]);
+    return { items: rows.map(serializeRow), total, page: p.page, totalPages: Math.ceil(total / p.limit) };
+  }
+
+  // 기본(browse) 정렬: 상태 우선순위 진행중 → 예정 → 수의계약 → 마감, 각 그룹 내 마감임박순
+  // (bidCloseDtm asc, null은 뒤). 기존 'bidCloseDtm asc'는 null(예정·수의계약)을 최상단에 올려
+  // 진행중 물건을 아래로 묻는 문제가 있었다. Prisma orderBy는 CASE를 못 쓰므로 정렬된 id만 raw로
+  // 뽑고, 실제 행은 Prisma findMany로 조회해 Decimal/BigInt 직렬화(serializeRow)를 보존한다.
+  const conds: Prisma.Sql[] = [];
+  const rf = buildRegionFilter(p.city, p.district) as { city?: unknown; district?: string };
+  if (rf.city != null) {
+    if (typeof rf.city === 'object' && 'in' in (rf.city as Record<string, unknown>)) {
+      conds.push(Prisma.sql`city IN (${Prisma.join((rf.city as { in: string[] }).in)})`);
+    } else {
+      conds.push(Prisma.sql`city = ${rf.city as string}`);
+    }
+  }
+  if (rf.district) conds.push(Prisma.sql`district = ${rf.district}`);
+  if (p.usage) conds.push(Prisma.sql`usageGroup = ${p.usage}`);
+  if (p.status === 'ongoing') conds.push(Prisma.sql`status IN ('ongoing', 'scheduled')`);
+  else if (p.status === 'negotiable') conds.push(Prisma.sql`status = 'negotiable'`);
+  else if (p.status === 'closed') conds.push(Prisma.sql`(isClosed = true OR status = 'closed')`);
+  const whereSql = conds.length ? Prisma.sql`WHERE ${Prisma.join(conds, ' AND ')}` : Prisma.empty;
+
+  const [total, idRows] = await Promise.all([
     prisma.auctionItem.count({ where }),
-    prisma.auctionItem.findMany({ where, orderBy, skip: (p.page - 1) * p.limit, take: p.limit }),
+    prisma.$queryRaw<Array<{ id: number }>>`
+      SELECT id FROM AuctionItem
+      ${whereSql}
+      ORDER BY
+        CASE
+          WHEN isClosed = false AND status = 'ongoing'    THEN 0
+          WHEN isClosed = false AND status = 'scheduled'  THEN 1
+          WHEN isClosed = false AND status = 'negotiable' THEN 2
+          ELSE 3
+        END,
+        (bidCloseDtm IS NULL),
+        bidCloseDtm ASC
+      LIMIT ${p.limit} OFFSET ${skip}
+    `,
   ]);
+  const ids = idRows.map((r) => Number(r.id));
+  const unordered = ids.length ? await prisma.auctionItem.findMany({ where: { id: { in: ids } } }) : [];
+  const byId = new Map(unordered.map((r) => [r.id, r]));
+  const rows = ids.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => r != null);
   return { items: rows.map(serializeRow), total, page: p.page, totalPages: Math.ceil(total / p.limit) };
 }
 
