@@ -18,7 +18,7 @@
         <!-- Column header -->
         <div class="flex items-center gap-3 px-4 py-3 border-b border-line">
           <div :class="['w-[1.5px] h-5 rounded-full', col.accentBar]" />
-          <span class="font-bold text-strong text-sm">{{ col.label }}</span>
+          <span class="font-semibold text-strong text-sm">{{ col.label }}</span>
           <span class="ml-auto text-[11px] text-faint">최근 7일</span>
         </div>
         <!-- Empty state -->
