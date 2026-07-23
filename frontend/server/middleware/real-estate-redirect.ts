@@ -62,6 +62,58 @@ export function resolveRegionReorgCityRedirect(pathname: string, flagOn: boolean
 }
 
 /**
+ * 2026-07-01 인천 개편 — 소멸구(서구·중구·동구) 부동산 URL을 신설구로 301.
+ *   서구→서해구+검단구, 중구→제물포구+영종구, 동구→제물포구 (1:N 분리라 단지=동별 현행구 조회 필요).
+ * env `INCHEON_REORG_301`='1' 일 때만 발동(데이터 재싱크·삭제 완료 후 ON).
+ * 대상: `/real-estate/{type}-{mode}/incheon/{seo|jung|dong}[/{building}]` (NEW_HUB 4세그·NEW_DETAIL 5세그).
+ *   - 허브(구 목록, building 없음) → 시 허브 `/real-estate/{type}-{mode}/incheon`
+ *   - 단지 상세 → 국토부 현행 귀속(신설구) 조회 후 신설구 URL로 301, 미발견 시 notFound
+ * NEW_DETAIL/NEW_HUB pass-through 보다 먼저 호출해야 발동됨(gwangju와 동일).
+ */
+const INCHEON_DISSOLVED_DISTRICT_SLUGS = new Set(['seo', 'jung', 'dong'])
+const INCHEON_CURRENT_DISTRICT_SLUGS = new Set([
+  'jemulpo', 'yeongjong', 'michuhol', 'yeonsu', 'namdong',
+  'bupyeong', 'gyeyang', 'seohae', 'geomdan', 'ganghwa', 'ongjin',
+])
+
+export async function resolveIncheonReorgRedirect(
+  pathname: string,
+  fetcher: (path: string) => Promise<unknown>,
+): Promise<{ redirect: string } | { notFound: true } | null> {
+  const seg = pathname.split('/') // ['', 'real-estate', type-mode, 'incheon', dslug, building?]
+  if (seg[1] !== 'real-estate' || !NEW_FORMAT_TYPE_MODE.test(seg[2] ?? '')) return null
+  if (seg[3] !== 'incheon') return null
+  const dslug = seg[4]
+  if (!dslug || !INCHEON_DISSOLVED_DISTRICT_SLUGS.has(dslug)) return null
+
+  const building = seg[5]
+  // 구 허브(단지 없음) → 시 허브 (서구는 2구로 분리라 단일 신설구로 못 보냄)
+  if (!building) return { redirect: `/real-estate/${seg[2]}/incheon` }
+
+  // 단지 상세: 국토부 현행 귀속(신설구)을 조회해 목적지 결정
+  let decoded: string
+  try { decoded = decodeURIComponent(building) } catch { decoded = building }
+  const nfc = decoded.normalize('NFC')
+  try {
+    const res = (await fetcher(
+      `/api/real-estate/${seg[2]}/complexes?city=${encodeURIComponent('인천')}&buildingName=${encodeURIComponent(nfc)}&limit=20`,
+    )) as { success?: boolean; data?: { items?: Array<{ district: string; buildingName: string }> } } | null
+    const items = res?.data?.items ?? []
+    const isCurrent = (d: string) => {
+      const s = DISTRICT_SLUG_MAP[d]
+      return !!s && INCHEON_CURRENT_DISTRICT_SLUGS.has(s)
+    }
+    // 정확 일치(현행구) 우선, 없으면 현행구 첫 건
+    const cur = items.find((it) => it.buildingName === nfc && isCurrent(it.district))
+      ?? items.find((it) => isCurrent(it.district))
+    if (!cur) return { notFound: true }
+    return { redirect: `/real-estate/${seg[2]}/incheon/${DISTRICT_SLUG_MAP[cur.district]}/${building}` }
+  } catch {
+    return { notFound: true }
+  }
+}
+
+/**
  * 화성·부천 7개 신설 일반구의 slug 드리프트로 과거 색인·IndexNow 에 유출된 "깨진" 지역 슬러그를
  * 정본으로 매핑한다. 두 종류의 깨진 형태가 존재:
  *   - 로마자-한글 혼합 `hwaseong-효행구` (구 Region.slug / syncRegion split 폴백)
@@ -256,6 +308,22 @@ export default defineEventHandler(async (event) => {
   if (reorgCityRedirect) {
     setHeader(event, 'cache-control', 'public, max-age=300')
     return sendRedirect(event, reorgCityRedirect + url.search, 301)
+  }
+
+  // 인천 개편 소멸구(서구/중구/동구) → 신설구 301 (INCHEON_REORG_301='1' 일 때만).
+  // NEW_DETAIL/NEW_HUB 패턴에도 매치되므로 아래 체인-방지 pass-through 보다 먼저 처리.
+  if (process.env.INCHEON_REORG_301 === '1') {
+    const incheon = await resolveIncheonReorgRedirect(pathname, (path) => ssrFetch(path))
+    if (incheon && 'redirect' in incheon) {
+      setHeader(event, 'cache-control', 'public, max-age=300')
+      return sendRedirect(event, incheon.redirect + url.search, 301)
+    }
+    if (incheon && 'notFound' in incheon) {
+      setResponseStatus(event, 404)
+      setHeader(event, 'content-type', 'text/html; charset=utf-8')
+      setHeader(event, 'cache-control', 'no-store')
+      return event.respondWith(new Response(renderMissingBjdHtml(pathname), { status: 404 }))
+    }
   }
 
   // 신규 URL은 미들웨어가 절대 가로채지 않는다 (체인 방지)
