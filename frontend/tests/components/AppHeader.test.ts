@@ -45,12 +45,12 @@ describe('AppHeader', () => {
 
   describe('Desktop Navigation', () => {
     it('should render navigation with group dropdowns', () => {
-      const nav = wrapper.find('nav.hidden.md\\:flex')
+      const nav = wrapper.find('nav.hidden.lg\\:flex')
       expect(nav.exists()).toBe(true)
     })
 
     it('should display top-level nav buttons (부동산/청약·임대/생활시설)', () => {
-      const nav = wrapper.find('nav.hidden.md\\:flex')
+      const nav = wrapper.find('nav.hidden.lg\\:flex')
       const text = nav.text()
       expect(text).toContain('부동산')
       expect(text).toContain('청약·임대')
@@ -58,7 +58,7 @@ describe('AppHeader', () => {
     })
 
     it('should have a search input and an about link', () => {
-      const nav = wrapper.find('nav.hidden.md\\:flex')
+      const nav = wrapper.find('nav.hidden.lg\\:flex')
       // 검색은 이제 링크가 아니라 HeaderSearch 입력창
       expect(wrapper.findComponent({ name: 'HeaderSearch' }).exists()).toBe(true)
       const hrefs = nav.findAll('a').map((link) => link.attributes('href'))
@@ -66,7 +66,7 @@ describe('AppHeader', () => {
     })
 
     it('생활시설 메가메뉴는 4개 그룹 열과 시설 카테고리 링크를 보여준다', async () => {
-      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex [data-testid="nav-group"]')
+      const groupButtons = wrapper.findAll('nav.hidden.lg\\:flex [data-testid="nav-group"]')
       // 부동산=0, 청약·임대=1, 공매=2, 생활시설=3 (총 4개)
       expect(groupButtons.length).toBe(4)
 
@@ -94,7 +94,7 @@ describe('AppHeader', () => {
     })
 
     it('should show 4 real estate links including hub in navigation', async () => {
-      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex [data-testid="nav-group"]')
+      const groupButtons = wrapper.findAll('nav.hidden.lg\\:flex [data-testid="nav-group"]')
       // 부동산 그룹 (첫 번째, index 0)
       await groupButtons[0].trigger('mouseenter')
       const dropdown = groupButtons[0].find('.absolute')
@@ -108,7 +108,7 @@ describe('AppHeader', () => {
     })
 
     it('청약·임대 드롭다운에 청약홈/LH 섹션 구분이 있어야 한다', async () => {
-      const groupButtons = wrapper.findAll('nav.hidden.md\\:flex [data-testid="nav-group"]')
+      const groupButtons = wrapper.findAll('nav.hidden.lg\\:flex [data-testid="nav-group"]')
       // 청약·임대 그룹 (두 번째, index 1)
       await groupButtons[1].trigger('mouseenter')
       const dropdown = groupButtons[1].find('.absolute')
@@ -203,16 +203,16 @@ describe('AppHeader', () => {
   })
 
   describe('Responsive Design', () => {
-    it('should have mobile menu button hidden on desktop (md:hidden cluster)', () => {
+    it('should have mobile menu button hidden on desktop (lg:hidden cluster)', () => {
       const menuButton = wrapper.find('button[aria-label="메뉴"]')
       expect(menuButton.exists()).toBe(true)
-      // 메뉴 버튼은 검색+메뉴 모바일 클러스터(md:hidden) 안에 있어 데스크톱에서 숨겨진다
+      // 메뉴 버튼은 검색+메뉴 모바일 클러스터(lg:hidden) 안에 있어 데스크톱에서 숨겨진다
       const cluster = menuButton.element.parentElement
-      expect(cluster?.className).toContain('md:hidden')
+      expect(cluster?.className).toContain('lg:hidden')
     })
 
     it('should have desktop navigation with hidden mobile class', () => {
-      const desktopNav = wrapper.find('nav.hidden.md\\:flex')
+      const desktopNav = wrapper.find('nav.hidden.lg\\:flex')
       expect(desktopNav.exists()).toBe(true)
     })
   })
@@ -318,7 +318,7 @@ describe('데스크톱 GNB 텍스트-온리', () => {
 
   it('데스크톱 nav에서 장식 material-symbols 아이콘을 제거한다(캐럿 expand_more만 유지)', () => {
     const wrapper = mountHeader()
-    const nav = wrapper.find('nav.hidden.md\\:flex')
+    const nav = wrapper.find('nav.hidden.lg\\:flex')
     const glyphs = nav.findAll('.material-symbols-outlined').map((s) => s.text().trim())
     for (const g of REMOVED_GLYPHS) expect(glyphs).not.toContain(g)
     // 캐럿은 유지 (탑레벨 트리거 4개)
@@ -327,7 +327,7 @@ describe('데스크톱 GNB 텍스트-온리', () => {
 
   it('데스크톱 nav 메가패널에 카테고리 webp 아이콘(img)이 없다', () => {
     const wrapper = mountHeader()
-    const nav = wrapper.find('nav.hidden.md\\:flex')
+    const nav = wrapper.find('nav.hidden.lg\\:flex')
     expect(nav.findAll('img[src*="/icons/category/"]').length).toBe(0)
     // CategoryIcon 부재를 컴포넌트 트리로 직접 검증(위 로컬 오버라이드 스텁 사용).
     expect(nav.findAllComponents({ name: 'CategoryIcon' }).length).toBe(0)
@@ -336,7 +336,7 @@ describe('데스크톱 GNB 텍스트-온리', () => {
 
   it('사이트링크 보호: 데스크톱 nav leaf 앵커 수가 36개로 유지된다', () => {
     const wrapper = mountHeader()
-    const nav = wrapper.find('nav.hidden.md\\:flex')
+    const nav = wrapper.find('nav.hidden.lg\\:flex')
     expect(nav.findAll('a').length).toBe(36)
   })
 })
@@ -438,6 +438,6 @@ describe('데스크톱 마이크로 라벨', () => {
     expect(label).toBeTruthy()
     // 데스크톱 전용(모바일 숨김)
     expect(label!.classes()).toContain('hidden')
-    expect(label!.classes().some((c) => c.startsWith('md:'))).toBe(true)
+    expect(label!.classes().some((c) => c.startsWith('lg:'))).toBe(true)
   })
 })
