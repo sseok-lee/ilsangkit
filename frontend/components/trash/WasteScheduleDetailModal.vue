@@ -52,7 +52,7 @@
             </div>
 
             <div v-else-if="error || !schedule" class="flex min-h-64 flex-col items-center justify-center text-center" role="alert">
-              <span class="material-symbols-outlined text-4xl text-slate-400">error</span>
+              <span class="material-symbols-outlined text-4xl text-slate-500">error</span>
               <p class="mt-3 font-semibold text-slate-800">상세 일정을 불러오지 못했습니다</p>
               <p class="mt-1 text-sm text-slate-500">잠시 후 다시 시도해주세요.</p>
             </div>
@@ -76,11 +76,11 @@
                     {{ item.primary }}
                   </p>
                   <p v-if="item.time" class="mt-2 flex items-center gap-1.5 text-sm font-medium text-slate-600">
-                    <span class="material-symbols-outlined text-[17px] text-slate-400">schedule</span>
+                    <span class="material-symbols-outlined text-[17px] text-slate-500">schedule</span>
                     {{ item.time }}
                   </p>
                   <div v-if="item.method" class="mt-3 border-t border-slate-100 pt-3">
-                    <p class="text-[11px] font-semibold text-slate-400">배출 방법</p>
+                    <p class="text-[11px] font-semibold text-slate-500">배출 방법</p>
                     <p class="mt-1 text-sm leading-relaxed text-slate-700">{{ item.method }}</p>
                   </div>
                 </article>
@@ -104,7 +104,7 @@
                     <span class="material-symbols-outlined text-[19px]">support_agent</span>
                   </span>
                   <div>
-                    <p class="text-[11px] font-semibold text-slate-400">담당부서</p>
+                    <p class="text-[11px] font-semibold text-slate-500">담당부서</p>
                     <p class="font-bold text-slate-800">{{ schedule.details.manageDepartment }}</p>
                   </div>
                 </div>
@@ -117,7 +117,7 @@
                     <span class="material-symbols-outlined text-[19px]">call</span>
                   </span>
                   <div>
-                    <p class="text-[11px] font-semibold text-slate-400">전화번호</p>
+                    <p class="text-[11px] font-semibold text-slate-500">전화번호</p>
                     <p class="font-bold text-blue-600">{{ schedule.details.managePhone }}</p>
                   </div>
                 </a>

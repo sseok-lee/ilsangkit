@@ -32,7 +32,7 @@
 
           <!-- 부동산 -->
           <div class="mb-4">
-            <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">부동산</h2>
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">부동산</h2>
             <div class="grid grid-cols-3 gap-2">
               <a
                 v-for="re in realEstateLinks"
@@ -47,7 +47,7 @@
 
           <!-- 생활시설 -->
           <div>
-            <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">생활시설</h2>
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">생활시설</h2>
             <div class="grid grid-cols-3 gap-2">
               <a
                 v-for="cat in facilityLinks"

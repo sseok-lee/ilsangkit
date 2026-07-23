@@ -9,7 +9,7 @@
       <div v-if="recent.length" class="pt-2">
         <div class="px-4 py-1 flex items-center justify-between">
           <span class="text-xs font-bold text-slate-500">최근 검색</span>
-          <button class="text-[11px] text-slate-400 hover:text-slate-600" @mousedown.prevent @click="clearRecent">전체 삭제</button>
+          <button class="text-[11px] text-slate-500 hover:text-slate-600" @mousedown.prevent @click="clearRecent">전체 삭제</button>
         </div>
         <ul class="pb-1">
           <li
@@ -23,7 +23,7 @@
             @click="goKeyword(kw)"
           >
             <span class="flex items-center gap-2.5 text-sm">
-              <span class="material-symbols-outlined text-slate-400 text-[18px]">history</span>
+              <span class="material-symbols-outlined text-slate-500 text-[18px]">history</span>
               {{ kw }}
             </span>
             <button
@@ -71,10 +71,10 @@ close
           @mousedown.prevent
           @click="select(it)"
         >
-          <span class="material-symbols-outlined text-slate-400 text-[18px]">{{ icon(it.type) }}</span>
+          <span class="material-symbols-outlined text-slate-500 text-[18px]">{{ icon(it.type) }}</span>
           <span class="text-sm flex-1 truncate">
             {{ it.label }}
-            <span v-if="it.sublabel" class="text-slate-400 text-xs"> · {{ it.sublabel }}</span>
+            <span v-if="it.sublabel" class="text-slate-500 text-xs"> · {{ it.sublabel }}</span>
           </span>
         </li>
       </ul>

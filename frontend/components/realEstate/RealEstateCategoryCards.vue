@@ -43,7 +43,7 @@
       <p
         v-else
         data-test="hub-card-count-placeholder"
-        class="text-xs md:text-sm text-slate-400"
+        class="text-xs md:text-sm text-slate-500"
       >
         데이터 동기화 중
       </p>
