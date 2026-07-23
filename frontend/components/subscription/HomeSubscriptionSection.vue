@@ -6,7 +6,6 @@
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">calendar_month</span>
           청약 한눈에
         </h2>
-        <p class="text-sm text-muted mt-1">지금 신청 가능한 공고와 예정된 일정을 확인하세요.</p>
       </div>
       <HardLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
         전체보기 →

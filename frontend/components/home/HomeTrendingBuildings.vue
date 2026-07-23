@@ -6,7 +6,6 @@
           <span class="material-symbols-outlined text-primary text-[24px]">local_fire_department</span>
           이번 주 인기 단지
         </h2>
-        <p class="text-sm text-muted mt-1">최근 7일 거래가 많은 단지의 주력 평형 실거래가 중앙값입니다.</p>
       </div>
       <HardLink to="/real-estate" class="inline-flex items-center text-sm text-primary font-bold hover:underline whitespace-nowrap">전체보기 →</HardLink>
     </div>
