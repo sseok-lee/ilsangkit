@@ -4,7 +4,7 @@
       v-for="option in options"
       :key="option.value"
       :class="[
-        'flex-1 px-4 py-2 text-sm font-medium transition-all',
+        'flex-1 min-h-[44px] flex items-center justify-center px-4 py-2 text-sm font-medium transition-all',
         modelValue === option.value
           ? 'bg-primary text-white'
           : 'bg-slate-100 text-slate-600 hover:bg-slate-200',

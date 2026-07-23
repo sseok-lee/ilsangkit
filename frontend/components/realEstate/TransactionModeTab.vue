@@ -5,7 +5,7 @@
       :key="tab.value"
       :disabled="tab.value === 'rent' && disableRent"
       :class="[
-        'flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50',
+        'flex-1 min-h-[44px] flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50',
         modelValue === tab.value
           ? 'bg-white text-primary shadow-sm'
           : 'text-slate-500 hover:text-slate-700 disabled:hover:text-slate-500',

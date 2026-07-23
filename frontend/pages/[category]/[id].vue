@@ -158,7 +158,7 @@
                     지도 크게 보기
                   </button>
                 </div>
-                <div class="h-[220px]">
+                <div class="h-[220px] md:h-[300px]">
                   <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
                 </div>
               </SectionBlock>
