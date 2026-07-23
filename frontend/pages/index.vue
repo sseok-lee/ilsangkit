@@ -146,57 +146,6 @@
       </div>
     </section>
 
-    <!-- 생활 가이드 -->
-    <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h2 class="text-display-2 text-strong flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">menu_book</span>
-            생활 가이드
-          </h2>
-        </div>
-        <HardLink
-          to="/guide"
-          class="text-sm text-primary font-semibold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
-        >
-          더보기
-          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-        </HardLink>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <HardLink
-          v-for="guide in recentGuides"
-          :key="guide.id"
-          :to="`/guide/${guide.slug}`"
-          class="group bg-white border border-line rounded-xl overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
-        >
-          <div class="aspect-video bg-background-light overflow-hidden">
-            <img
-              v-if="guide.thumbnailUrl"
-              :src="`${publicApiBase}${guide.thumbnailUrl}`"
-              :alt="guide.title"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-              width="400"
-              height="225"
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center">
-              <span class="material-symbols-outlined text-[36px] text-faint">article</span>
-            </div>
-          </div>
-          <div class="p-3">
-            <h3 class="text-sm font-semibold text-strong line-clamp-2 group-hover:text-primary transition-colors">
-              {{ guide.title }}
-            </h3>
-            <p class="text-xs text-muted mt-1 line-clamp-1">
-              {{ guide.summary }}
-            </p>
-          </div>
-        </HardLink>
-      </div>
-    </section>
-
     <!-- 오늘의 이슈 -->
     <section v-if="recentArticles.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="flex items-center justify-between mb-4">
@@ -242,6 +191,57 @@
             </h3>
             <p class="text-xs text-muted mt-1 line-clamp-1">
               {{ article.summary }}
+            </p>
+          </div>
+        </HardLink>
+      </div>
+    </section>
+
+    <!-- 생활 가이드 -->
+    <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-display-2 text-strong flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">menu_book</span>
+            생활 가이드
+          </h2>
+        </div>
+        <HardLink
+          to="/guide"
+          class="text-sm text-primary font-semibold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
+        >
+          더보기
+          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </HardLink>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <HardLink
+          v-for="guide in recentGuides"
+          :key="guide.id"
+          :to="`/guide/${guide.slug}`"
+          class="group bg-white border border-line rounded-xl overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+        >
+          <div class="aspect-video bg-background-light overflow-hidden">
+            <img
+              v-if="guide.thumbnailUrl"
+              :src="`${publicApiBase}${guide.thumbnailUrl}`"
+              :alt="guide.title"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              width="400"
+              height="225"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <span class="material-symbols-outlined text-[36px] text-faint">article</span>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="text-sm font-semibold text-strong line-clamp-2 group-hover:text-primary transition-colors">
+              {{ guide.title }}
+            </h3>
+            <p class="text-xs text-muted mt-1 line-clamp-1">
+              {{ guide.summary }}
             </p>
           </div>
         </HardLink>
