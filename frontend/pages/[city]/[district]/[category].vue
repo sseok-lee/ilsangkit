@@ -8,7 +8,6 @@
       :eyebrow="isTrash ? '지역 쓰레기 배출' : '지역 시설 목록'"
       :title="heroTitle"
       :description="heroDescription"
-      :stats="heroStats"
     />
 
     <!-- 지역 요약 (non-trash) -->
@@ -108,10 +107,6 @@ import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQ
 import { computeAreaNoindex } from '~/utils/areaNoindex'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { resolveRegionDisplay } from '~/utils/regionDisplayState'
-import { withSyncDate, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
-import { useSyncStatus } from '~/composables/useSyncStatus'
-import { useNationalStats } from '~/composables/useNationalStats'
-import { buildRegionCategoryStats } from '~/utils/heroBandStats'
 import type { FacilityCategory, Facility } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -267,24 +262,7 @@ const heroDescription = computed(() =>
     ? `${cityName.value} ${districtName.value}의 쓰레기 배출 일정 정보를 확인하세요.`
     : `${cityName.value} ${districtName.value}의 ${categoryName.value} 위치·운영시간을 확인하세요.`
 )
-const { syncStatus } = useSyncStatus()
-const { stats: nationalStats } = useNationalStats()
 
-const heroStats = computed(() => {
-  const count = isTrash.value ? wasteTotal.value : (summary.value?.count ?? total.value ?? 0)
-  const nat = nationalStats.value?.[category.value]
-  return buildRegionCategoryStats({
-    regionCount: count,
-    nationalCount: typeof nat === 'number' ? nat : null,
-    unit: isTrash.value ? '건' : '곳',
-    syncCellValue: withSyncDate(
-      isTrash.value ? '매일 자동' : '월 1회 자동',
-      syncStatus.value?.[category.value],
-      isTrash.value ? TRASH_STALE_DAYS : FACILITY_STALE_DAYS,
-    ),
-    syncLabel: '업데이트',
-  })
-})
 
 // Other categories (dynamically from CATEGORY_GROUPS, excluding current)
 // 지역 페이지가 없는 카테고리(subway 등)는 "이 지역 다른 카테고리" 링크에서 제외 (404 방지).

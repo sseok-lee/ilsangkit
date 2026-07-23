@@ -9,7 +9,6 @@
         eyebrow="지역 허브"
         :title="`${cityName} 생활 정보`"
         :description="heroDescription"
-        :stats="heroStats"
         class="mb-5"
       />
 
@@ -132,8 +131,6 @@ import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { watchEffect } from 'vue'
 import { suppressAds } from '~/composables/useAdsPolicy'
 import { useSyncStatus } from '~/composables/useSyncStatus'
-import { useNationalStats } from '~/composables/useNationalStats'
-import { withSyncDate, RE_STALE_DAYS } from '~/utils/syncFreshness'
 
 const route = useRoute()
 const city = computed(() => route.params.city as string)
@@ -201,22 +198,6 @@ const cityFacilityTotal = computed(() =>
   (cityData.value?.districts ?? []).reduce((sum: number, d: any) => sum + (d.facilityTotal ?? 0), 0),
 )
 
-const { stats: nationalStats } = useNationalStats()
-
-// PageHero 카운터 밴드: 이 지역 → 전국 등록 → 데이터 갱신(마지막). fail-open — 확인된 셀만 push
-const heroStats = computed(() => {
-  const stats: { label: string; value: string }[] = []
-  if (cityFacilityTotal.value > 0) {
-    stats.push({ label: '이 지역', value: `${cityFacilityTotal.value.toLocaleString('ko-KR')}곳` })
-  }
-  const nat = nationalStats.value?.total
-  if (typeof nat === 'number' && nat > 0) {
-    stats.push({ label: '전국 등록', value: `${nat.toLocaleString('ko-KR')}곳` })
-  }
-  // 라벨 '자동 갱신'은 중립 표기(허브=시설 월1회+RE 매일 혼합 cadence라 '매일 자동'은 오표기)
-  stats.push({ label: '데이터 갱신', value: withSyncDate('자동 갱신', reSyncedAt.value, RE_STALE_DAYS) })
-  return stats
-})
 
 const realEstateCards = computed(() => {
   const re = cityData.value?.realEstate

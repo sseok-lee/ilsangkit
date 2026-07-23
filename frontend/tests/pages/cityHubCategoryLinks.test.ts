@@ -175,27 +175,5 @@ describe('city hub — noindex guard (Issue E)', () => {
   })
 })
 
-describe('city hub — 카운터 밴드 (PR⑧ S5)', () => {
-  it('허브 밴드: 이 지역·전국 등록·데이터 갱신 3칸', async () => {
-    nationalStatsTotal = 4500000
-    const w = await mountSuspended()
-    const cells = w.findAll('.hero-stat')
-    const labels = cells.map(c => c.attributes('data-label'))
-    expect(labels).toContain('이 지역')
-    expect(labels).toContain('전국 등록')
-    expect(labels).toContain('데이터 갱신')
-
-    const regionCell = cells.find(c => c.attributes('data-label') === '이 지역')
-    expect(regionCell?.text()).toBe('100곳') // districts facilityTotal 합
-  })
-
-  it('허브 밴드 fail-open: 전국 stats null이면 전국 등록 셀만 부재', async () => {
-    nationalStatsTotal = null
-    const w = await mountSuspended()
-    const labels = w.findAll('.hero-stat').map(c => c.attributes('data-label'))
-    expect(labels).not.toContain('전국 등록')
-    expect(w.findAll('.hero-stat').length).toBeGreaterThan(0) // 밴드는 렌더 (이 지역 + 데이터 갱신)
-
-    nationalStatsTotal = 4500000 // 복원
-  })
-})
+// '카운터 밴드' describe 제거: 시설 목록/허브 상단 스탯 밴드(이 지역·전국 등록·데이터 갱신)를
+// 사용자 요청으로 제거함에 따라 해당 밴드 테스트도 함께 삭제.
