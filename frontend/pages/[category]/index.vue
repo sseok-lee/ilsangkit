@@ -45,24 +45,6 @@
         />
       </SectionBlock>
 
-      <!-- 인기 지역 바로가기: 지역 미선택 시 전국 가나다 목록보다 유용한 구·군 페이지로 먼저 유도 -->
-      <SectionBlock
-        v-if="!queryCitySlug && categoryParam !== 'trash' && popularRegionLinks.length > 0"
-        heading="인기 지역 바로가기"
-        subtext="자주 찾는 지역부터 바로 확인하세요."
-      >
-        <div class="flex flex-wrap items-center gap-2">
-          <NuxtLink
-            v-for="region in popularRegionLinks"
-            :key="`top-${region.citySlug}-${region.districtSlug}`"
-            :to="`/${region.citySlug}/${region.districtSlug}/${categoryParam}`"
-            class="inline-flex items-center min-h-[44px] px-3 py-2 bg-white border border-line rounded-full text-sm font-medium text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
-          >
-            {{ region.label }} {{ catLabel }}
-          </NuxtLink>
-        </div>
-      </SectionBlock>
-
       <!-- 진료과목 필터 (병원 전용) -->
       <HospitalDepartmentFilter
         v-if="categoryParam === 'hospital'"
@@ -155,7 +137,7 @@
 
       <!-- Non-trash: facility card grid -->
       <template v-else>
-        <SectionBlock :heading="`${resultTitle} ${catLabel} 목록`" :subtext="queryCitySlug ? '목록·페이지를 확인하세요.' : '지역을 선택하면 내 주변만 볼 수 있어요. 아래는 전국 전체 목록입니다.'">
+        <SectionBlock :heading="`${resultTitle} ${catLabel} 목록`" subtext="지역 선택 후 목록·페이지를 확인하세요.">
           <template #right>
             <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ displayTotal.toLocaleString('ko-KR') }}건</span>
           </template>
@@ -212,7 +194,7 @@
 
       <!-- 관련 탐색 -->
       <SectionBlock
-        v-if="relatedCategories.length > 0 || (popularRegionLinks.length > 0 && (queryCitySlug || categoryParam === 'trash'))"
+        v-if="relatedCategories.length > 0 || popularRegionLinks.length > 0"
         heading="관련 탐색"
         subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요."
       >
@@ -227,8 +209,7 @@
             {{ cat.label }}
           </NuxtLink>
         </div>
-        <!-- 지역 미선택 시엔 상단 '인기 지역 바로가기'가 대신 노출되므로 중복 방지 위해 숨김 -->
-        <div v-if="popularRegionLinks.length > 0 && (queryCitySlug || categoryParam === 'trash')" class="flex flex-wrap items-center gap-2 mt-3">
+        <div v-if="popularRegionLinks.length > 0" class="flex flex-wrap items-center gap-2 mt-3">
           <span class="text-xs text-slate-500 font-medium pr-1">인기 지역</span>
           <NuxtLink
             v-for="region in popularRegionLinks"
