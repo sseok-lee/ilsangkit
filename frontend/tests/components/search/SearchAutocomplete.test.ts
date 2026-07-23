@@ -75,4 +75,15 @@ describe('SearchAutocomplete', () => {
     // "그대로 검색" 행도 실시간 값을 표시
     expect(wrapper.text()).toContain('"강남"');
   });
+
+  // 회귀 가드: 이 드롭다운은 홈 히어로(text-white) 안에 렌더된다. 루트에 텍스트 색을
+  // 명시하지 않으면 최근/인기 검색·추천 텍스트가 흰 글씨로 상속돼 흰 배경 위에서 안 보인다.
+  // 색 상속은 happy-dom에서 계산되지 않으므로, 루트에 명시적 어두운 텍스트 색 클래스가
+  // 존재하는지로 가드한다(text-white 는 매치되지 않음).
+  it('루트에 명시적 어두운 텍스트 색이 있어 히어로 text-white 상속을 차단한다', async () => {
+    const wrapper = mount(SearchAutocomplete, { props: { open: true, modelValue: '' } });
+    await flushPromises();
+    const rootClasses = wrapper.get('.search-ac').classes();
+    expect(rootClasses.some((c) => /^text-(slate|gray|zinc|neutral|ink|strong)/.test(c))).toBe(true);
+  });
 });

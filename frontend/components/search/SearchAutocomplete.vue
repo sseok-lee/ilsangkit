@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="open"
-    class="search-ac bg-white border border-line rounded-b-xl shadow-lg overflow-hidden"
+    class="search-ac bg-white text-slate-800 border border-line rounded-b-xl shadow-lg overflow-hidden"
     role="listbox"
   >
     <!-- 빈 입력: 최근 + 인기 -->
