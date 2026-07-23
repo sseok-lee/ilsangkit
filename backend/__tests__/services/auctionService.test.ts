@@ -7,6 +7,7 @@ const { mockPrisma } = vi.hoisted(() => ({
     auctionAreaSummary: { findMany: vi.fn() },
     landAreaSummary: { findUnique: vi.fn(), findFirst: vi.fn() },
     aptSaleTransaction: { aggregate: vi.fn() },
+    $queryRaw: vi.fn(),
   },
 }));
 vi.mock('../../src/lib/prisma.js', () => ({ prisma: mockPrisma, default: mockPrisma }));
@@ -16,15 +17,33 @@ import { getItems, getItemDetail, getRanking } from '../../src/services/auctionS
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe('getItems', () => {
-  it('필터+페이징, BigInt 직렬화', async () => {
+  it('기본 정렬: 상태 우선순위 raw로 id 조회 후 Prisma로 행 조회 + BigInt 직렬화', async () => {
     mockPrisma.auctionItem.count.mockResolvedValue(1);
+    // 기본(browse) 정렬은 정렬된 id를 raw로 뽑는다.
+    mockPrisma.$queryRaw.mockResolvedValue([{ id: 1 }]);
     mockPrisma.auctionItem.findMany.mockResolvedValue([
       { id: 1, cltrMngNo: 'A', apslAssAmt: 300000000n, minBidPrc: 210000000n, usageGroup: 'residential' },
     ]);
     const r = await getItems({ usage: 'residential', page: 1, limit: 20 });
     expect(r.total).toBe(1);
     expect(r.items[0].apslAssAmt).toBe(300000000); // Number
-    expect(mockPrisma.auctionItem.findMany).toHaveBeenCalled();
+    // 상태 우선순위 정렬은 raw 경로를 사용한다.
+    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1);
+    // 실제 행은 id로 Prisma에서 조회한다.
+    expect(mockPrisma.auctionItem.findMany).toHaveBeenCalledWith({ where: { id: { in: [1] } } });
+  });
+
+  it('명시적 정렬(apsl)은 raw 없이 Prisma orderBy를 사용한다', async () => {
+    mockPrisma.auctionItem.count.mockResolvedValue(1);
+    mockPrisma.auctionItem.findMany.mockResolvedValue([
+      { id: 2, cltrMngNo: 'B', apslAssAmt: 500000000n, usageGroup: 'land' },
+    ]);
+    const r = await getItems({ sort: 'apsl', page: 1, limit: 20 });
+    expect(r.items[0].apslAssAmt).toBe(500000000);
+    expect(mockPrisma.$queryRaw).not.toHaveBeenCalled();
+    expect(mockPrisma.auctionItem.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { apslAssAmt: 'desc' } }),
+    );
   });
 });
 
