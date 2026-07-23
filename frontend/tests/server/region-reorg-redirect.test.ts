@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { resolveRegionReorgRedirect, VALID_CITIES } from '../../server/middleware/redirects'
 import {
   resolveRegionReorgCityRedirect,
+  resolveIncheonReorgRedirect,
   CITY_SLUGS_SET,
 } from '../../server/middleware/real-estate-redirect'
 
@@ -147,5 +148,55 @@ describe('resolveRegionReorgCityRedirect — 부동산 NEW-format', () => {
 describe('CITY_SLUGS_SET — jeonnamgwangju 수용(A4 pass-through)', () => {
   it('jeonnamgwangju 를 포함한다', () => {
     expect(CITY_SLUGS_SET.has('jeonnamgwangju')).toBe(true)
+  })
+})
+
+describe('resolveIncheonReorgRedirect — 인천 개편 소멸구(서구/중구/동구) → 신설구', () => {
+  const mkFetcher = (items: Array<{ district: string; buildingName: string }>) =>
+    async () => ({ success: true, data: { items } })
+
+  it('구 허브(단지 없음): /incheon/seo → 시 허브', async () => {
+    expect(await resolveIncheonReorgRedirect('/real-estate/apt-sale/incheon/seo', mkFetcher([])))
+      .toEqual({ redirect: '/real-estate/apt-sale/incheon' })
+  })
+
+  it('jung/dong 허브도 시 허브로', async () => {
+    expect(await resolveIncheonReorgRedirect('/real-estate/villa-rent/incheon/jung', mkFetcher([])))
+      .toEqual({ redirect: '/real-estate/villa-rent/incheon' })
+    expect(await resolveIncheonReorgRedirect('/real-estate/offitel-sale/incheon/dong', mkFetcher([])))
+      .toEqual({ redirect: '/real-estate/offitel-sale/incheon' })
+  })
+
+  it('단지 상세: 서구 청라단지 → 현행 서해구', async () => {
+    expect(await resolveIncheonReorgRedirect(
+      '/real-estate/apt-sale/incheon/seo/청라제일풍경채2차에듀앤파크',
+      mkFetcher([{ district: '서해구', buildingName: '청라제일풍경채2차에듀앤파크' }]),
+    )).toEqual({ redirect: '/real-estate/apt-sale/incheon/seohae/청라제일풍경채2차에듀앤파크' })
+  })
+
+  it('단지 상세: 서구 검단단지 → 현행 검단구', async () => {
+    expect(await resolveIncheonReorgRedirect(
+      '/real-estate/apt-sale/incheon/seo/당하푸르지오',
+      mkFetcher([{ district: '검단구', buildingName: '당하푸르지오' }]),
+    )).toEqual({ redirect: '/real-estate/apt-sale/incheon/geomdan/당하푸르지오' })
+  })
+
+  it('현행 구 결과 없으면 notFound', async () => {
+    expect(await resolveIncheonReorgRedirect('/real-estate/apt-sale/incheon/seo/사라진단지', mkFetcher([])))
+      .toEqual({ notFound: true })
+  })
+
+  it('옛 소멸구 결과만 있고 현행구 없으면 notFound(과도기 오배송 방지)', async () => {
+    expect(await resolveIncheonReorgRedirect(
+      '/real-estate/apt-sale/incheon/seo/xx',
+      mkFetcher([{ district: '서구', buildingName: 'xx' }]),
+    )).toEqual({ notFound: true })
+  })
+
+  it('현행 구 slug(seohae 등)·비인천·legacy형은 통과(null)', async () => {
+    expect(await resolveIncheonReorgRedirect('/real-estate/apt-sale/incheon/seohae/x', mkFetcher([]))).toBeNull()
+    expect(await resolveIncheonReorgRedirect('/real-estate/apt-sale/incheon/yeonsu', mkFetcher([]))).toBeNull()
+    expect(await resolveIncheonReorgRedirect('/real-estate/apt-sale/busan/seo/x', mkFetcher([]))).toBeNull()
+    expect(await resolveIncheonReorgRedirect('/real-estate/apt/incheon/seo/x', mkFetcher([]))).toBeNull()
   })
 })
