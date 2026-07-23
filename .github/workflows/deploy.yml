@@ -144,6 +144,9 @@ jobs:
             # 2026-07 전남광주통합특별시 정규화: 광주/전남 → jeonnamgwangju 301 활성.
             # 데이터 마이그레이션 완료 후 켬 — 옛 URL을 신 slug로 301 이전(404 아님).
             export REGION_REORG_301="1"
+            # 2026-07 인천 개편: 소멸구(서구/중구/동구) → 신설구 301 활성.
+            # 부동산 데이터 재싱크·삭제·요약갱신 완료 후 켬.
+            export INCHEON_REORG_301="1"
             pm2 describe ilsangkit-frontend > /dev/null
             if [ $? -eq 0 ]; then
               pm2 reload ilsangkit-frontend --update-env
