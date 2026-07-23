@@ -93,7 +93,7 @@ describe('FacilityCard', () => {
     expect(wrapper.html()).toContain('hover:')
   })
 
-  it('병원 카드의 전화번호는 tel: 링크다', () => {
+  it('병원 카드의 전화번호는 텍스트로 표시하고 tel: 링크를 중첩하지 않는다', () => {
     const hospitalWithPhone = {
       ...mockFacility,
       category: 'hospital' as const,
@@ -102,12 +102,12 @@ describe('FacilityCard', () => {
     const wrapper = mount(FacilityCard, {
       props: { facility: hospitalWithPhone },
     })
-    const tel = wrapper.find('a[href^="tel:"]')
-    expect(tel.exists()).toBe(true)
-    expect(tel.attributes('href')).toBe('tel:02-123-4567')
+    // 번호는 노출되지만 카드 링크(<a>) 안에 tel: <a>를 중첩하지 않는다.
+    expect(wrapper.text()).toContain('02-123-4567')
+    expect(wrapper.find('a[href^="tel:"]').exists()).toBe(false)
   })
 
-  it('약국 카드의 전화번호도 tel: 링크다', () => {
+  it('약국 카드의 전화번호도 텍스트로 표시하고 tel: 링크를 중첩하지 않는다', () => {
     const pharmacyWithPhone = {
       ...mockFacility,
       category: 'pharmacy' as const,
@@ -116,8 +116,26 @@ describe('FacilityCard', () => {
     const wrapper = mount(FacilityCard, {
       props: { facility: pharmacyWithPhone },
     })
-    const tel = wrapper.find('a[href^="tel:"]')
-    expect(tel.exists()).toBe(true)
-    expect(tel.attributes('href')).toBe('tel:02-999-1234')
+    expect(wrapper.text()).toContain('02-999-1234')
+    expect(wrapper.find('a[href^="tel:"]').exists()).toBe(false)
+  })
+
+  // 회귀 방지: 카드 전체가 상세로 가는 <a>(HardLink)이므로, 그 안에 또 다른 <a>를
+  // 중첩하면 브라우저가 SSR HTML을 재구성해 하이드레이션 불일치가 발생하고
+  // 카드 href가 다른 시설로 어긋난다(P0). 카드에는 링크가 정확히 1개여야 한다.
+  it('전화가 있는 병원/약국/학교 카드도 <a>를 중첩하지 않는다 (SSR 하이드레이션 안정성)', () => {
+    const cases = [
+      { category: 'hospital' as const, extras: { phone: '02-123-4567' }, phone: '02-123-4567' },
+      { category: 'pharmacy' as const, extras: { phone: '02-999-1234' }, phone: '02-999-1234' },
+      { category: 'school' as const, extras: { phoneNumber: '02-777-8888' }, phone: '02-777-8888' },
+    ]
+    for (const c of cases) {
+      const wrapper = mount(FacilityCard, {
+        props: { facility: { ...mockFacility, category: c.category, extras: c.extras } },
+      })
+      expect(wrapper.findAll('a')).toHaveLength(1)
+      expect(wrapper.find('a[href^="tel:"]').exists()).toBe(false)
+      expect(wrapper.text()).toContain(c.phone)
+    }
   })
 })
