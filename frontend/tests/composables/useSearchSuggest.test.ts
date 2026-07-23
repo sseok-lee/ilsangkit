@@ -22,6 +22,15 @@ describe('useSearchSuggest 최근검색', () => {
     s.clearRecent();
     expect(s.recent.value).toEqual([]);
   });
+  it('loadRecent: 저장된 빈 문자열·공백·비문자열·중복 항목을 걸러 로드한다', () => {
+    // 과거 데이터에 빈 문자열이 섞여 있어도 "최근 검색"에 유령 행이 뜨지 않아야 한다.
+    localStorage.setItem(
+      'ilsangkit:recentSearches',
+      JSON.stringify(['', '  ', '화장실', '화장실', null, 42, ' 약국 ']),
+    );
+    const s = useSearchSuggest();
+    expect(s.recent.value).toEqual(['화장실', '약국']);
+  });
   it('sessionId: 32자 hex 생성·재사용', () => {
     const s = useSearchSuggest();
     const id1 = s.getSessionId();

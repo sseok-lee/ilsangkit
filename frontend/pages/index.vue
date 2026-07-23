@@ -2,7 +2,10 @@
   <div class="flex flex-col">
     <!-- Hero Section -->
     <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 md:pt-8 pb-8 md:pb-12">
-      <div class="relative overflow-hidden bg-primary-press text-white -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-8 py-5 md:py-7 md:rounded-2xl">
+      <!-- overflow-hidden 금지: 이 히어로 밴드가 검색 자동완성(아래 label 안 absolute top-full)의
+           조상이라, overflow-hidden 을 걸면 드롭다운이 히어로 하단 경계에서 잘린다. 둥근 모서리는
+           md:rounded-2xl 만으로 자기 배경이 클리핑되므로 overflow-hidden 없이도 유지된다. -->
+      <div class="relative bg-primary-press text-white -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-8 py-5 md:py-7 md:rounded-2xl">
         <!-- 출처 배지 + 기준일 스탬프 -->
         <div class="flex items-center gap-2 flex-wrap">
           <span class="hidden md:inline-flex items-center text-[11.5px] font-bold bg-white/[0.12] border border-white/20 px-2.5 py-1 rounded-full text-[#DCE6FD]">공공데이터포털</span>

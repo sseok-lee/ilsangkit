@@ -25,7 +25,22 @@ export function useSearchSuggest() {
   function loadRecent(): string[] {
     if (typeof localStorage === 'undefined') return []
     try {
-      return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+      const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+      if (!Array.isArray(raw)) return []
+      // 과거(트림 가드 도입 이전)에 저장된 빈 문자열·공백·비문자열 항목을 걸러낸다.
+      // 이것을 걸러내지 않으면 "최근 검색"에 텍스트 없는 유령 행(시계 아이콘만)이 렌더된다.
+      // 트림·중복 제거·상한(RECENT_MAX)까지 적용해 addRecent 와 동일한 불변식을 로드 시에도 보장한다.
+      const seen = new Set<string>()
+      const clean: string[] = []
+      for (const x of raw) {
+        if (typeof x !== 'string') continue
+        const k = x.trim()
+        if (!k || seen.has(k)) continue
+        seen.add(k)
+        clean.push(k)
+        if (clean.length >= RECENT_MAX) break
+      }
+      return clean
     } catch {
       return []
     }
