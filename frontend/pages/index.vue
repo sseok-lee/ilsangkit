@@ -121,7 +121,7 @@
           class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary hover:bg-primary/5 transition-all"
         >
           <CategoryIcon :category-id="(q.id as CategoryId)" size="md" class="mb-1.5" />
-          <span class="text-[13px] font-bold text-strong">{{ q.label }}</span>
+          <span class="text-[13px] font-semibold text-strong">{{ q.label }}</span>
         </HardLink>
       </div>
     </section>
@@ -157,7 +157,7 @@
         </div>
         <HardLink
           to="/guide"
-          class="text-sm text-primary font-bold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
+          class="text-sm text-primary font-semibold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
         >
           더보기
           <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -186,7 +186,7 @@
             </div>
           </div>
           <div class="p-3">
-            <h3 class="text-sm font-bold text-strong line-clamp-2 group-hover:text-primary transition-colors">
+            <h3 class="text-sm font-semibold text-strong line-clamp-2 group-hover:text-primary transition-colors">
               {{ guide.title }}
             </h3>
             <p class="text-xs text-muted mt-1 line-clamp-1">
@@ -208,7 +208,7 @@
         </div>
         <HardLink
           to="/article"
-          class="text-sm text-primary font-bold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
+          class="text-sm text-primary font-semibold hover:underline flex items-center min-h-[44px] gap-1 whitespace-nowrap"
         >
           더보기
           <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -237,7 +237,7 @@
             </div>
           </div>
           <div class="p-3">
-            <h3 class="text-sm font-bold text-strong line-clamp-2 group-hover:text-primary transition-colors">
+            <h3 class="text-sm font-semibold text-strong line-clamp-2 group-hover:text-primary transition-colors">
               {{ article.title }}
             </h3>
             <p class="text-xs text-muted mt-1 line-clamp-1">
@@ -260,7 +260,7 @@
         <div class="flex items-start gap-3 flex-1">
           <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">verified</span>
           <div>
-            <p class="text-sm font-bold text-strong">공공데이터 기반 서비스</p>
+            <p class="text-sm font-semibold text-strong">공공데이터 기반 서비스</p>
             <p class="text-xs text-muted mt-1 leading-relaxed">
               행정안전부 · 국토교통부 · 보건복지부 · 한국부동산원 등
               공공데이터포털 및 각 부처 공개 API/CSV를 출처로 사용합니다.
@@ -270,7 +270,7 @@
         </div>
         <HardLink
           to="/about#data-sources"
-          class="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
+          class="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors"
         >
           전체 출처 보기 →
         </HardLink>
