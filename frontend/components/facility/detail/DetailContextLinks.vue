@@ -79,7 +79,7 @@
     >
       <div class="flex flex-col gap-4">
         <div v-for="(faq, i) in categoryFaqItems" :key="i">
-          <h3 class="text-sm font-bold text-slate-900 mb-1">Q. {{ faq.question }}</h3>
+          <h3 class="text-sm font-semibold text-slate-900 mb-1">Q. {{ faq.question }}</h3>
           <p class="text-sm text-gray-600 leading-relaxed">{{ faq.answer }}</p>
         </div>
       </div>

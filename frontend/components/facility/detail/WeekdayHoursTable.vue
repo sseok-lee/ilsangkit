@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3 class="text-sm font-bold text-slate-900 mb-3">{{ title }}</h3>
+    <h3 class="text-sm font-semibold text-slate-900 mb-3">{{ title }}</h3>
     <table class="w-full text-sm border-collapse">
       <thead>
         <tr class="bg-slate-50">
