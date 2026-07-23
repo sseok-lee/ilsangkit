@@ -9,7 +9,6 @@
         :eyebrow="categoryParam === 'trash' ? '쓰레기 배출 목록' : '생활시설 목록'"
         :title="pageTitle"
         :description="pageDescription"
-        :stats="heroStats"
       />
 
       <!-- 헤더 검색(?keyword=) 결과 배지 + 검색 해제 -->
@@ -273,10 +272,6 @@ import type { RegionSchedule, WasteScheduleDetail } from '~/composables/useWaste
 import type { FacilityCategory } from '~/types/facility'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
-import { withSyncDate, TRASH_STALE_DAYS, FACILITY_STALE_DAYS } from '~/utils/syncFreshness'
-import { useSyncStatus } from '~/composables/useSyncStatus'
-import { useNationalStats } from '~/composables/useNationalStats'
-import { buildCategoryListStats } from '~/utils/heroBandStats'
 
 const route = useRoute()
 const router = useRouter()
@@ -552,34 +547,6 @@ const breadcrumbItems = computed(() => [
   },
 ])
 
-const { syncStatus } = useSyncStatus()
-const { stats: nationalStats } = useNationalStats()
-
-// 현재 필터가 지역으로 좁혀졌는지 여부. cityName 은 route.query.city(RegionChips 클릭)에서
-// 파생되는 유일한 지역 필터 소스다. Task 2(SSR city 필터)부터 useAsyncData 자체가 이미 city 로
-// 필터한 데이터를 반환하므로(딥링크 `/{category}?city=slug` 진입 시에도 displayTotal/wasteTotal 이
-// 처음부터 지역 스코프 값) 과거처럼 ssrConsumed 로 게이팅할 필요가 없다 — 오히려 게이팅하면
-// 초기 SSR 렌더에서 이미 올바른 지역 수치에 "전국" 라벨이 붙는 회귀가 생긴다.
-const isRegionScoped = computed(() => !!cityName.value)
-
-// PageHero sidebar stats
-const heroStats = computed(() => {
-  const trash = categoryParam.value === 'trash'
-  const totalCount = trash ? wasteTotal.value : displayTotal.value
-  const nat = nationalStats.value?.[categoryParam.value]
-  return buildCategoryListStats({
-    isRegionScoped: isRegionScoped.value,
-    displayTotal: totalCount,
-    nationalCount: typeof nat === 'number' ? nat : null,
-    unit: trash ? '건' : '곳',
-    syncCellValue: withSyncDate(
-      trash ? '매일 자동' : '월 1회 자동',
-      syncStatus.value?.[categoryParam.value],
-      trash ? TRASH_STALE_DAYS : FACILITY_STALE_DAYS,
-    ),
-    basisValue: trash ? '시·군·구 / 동' : '지역 선택 후 정렬',
-  })
-})
 
 // Canonical URL: city+district → region route, city only → city route, otherwise self
 const canonicalPath = computed(() => {
