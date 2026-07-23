@@ -10,7 +10,7 @@
         <p v-if="hasValue(item.value)" class="font-bold text-slate-900 tabular-nums" :class="variant === 'prominent' ? 'text-lg' : 'text-sm'">
           {{ item.value }}<span v-if="item.unit" class="text-xs font-normal text-gray-600">{{ item.unit }}</span>
         </p>
-        <p v-else class="text-sm text-slate-400">{{ EMPTY_FIELD_TEXT }}</p>
+        <p v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</p>
       </div>
     </template>
   </div>

@@ -26,11 +26,11 @@
               <span class="text-caption text-primary">
                 평당 {{ formatManwon(dong.avgPricePerPyeong) }}만원
               </span>
-              <span class="text-caption text-slate-400">
+              <span class="text-caption text-slate-500">
                 (㎡당 {{ formatManwon(pyeongToSqm(dong.avgPricePerPyeong)) }}만원)
               </span>
             </template>
-            <span v-else class="text-caption text-slate-400">대지 거래 없음</span>
+            <span v-else class="text-caption text-slate-500">대지 거래 없음</span>
             <span class="text-caption text-slate-500">거래 {{ dong.transactionCount.toLocaleString('ko-KR') }}건</span>
             <span class="text-caption text-slate-500">대지 {{ dong.daeCount.toLocaleString('ko-KR') }}건</span>
           </HardLink>

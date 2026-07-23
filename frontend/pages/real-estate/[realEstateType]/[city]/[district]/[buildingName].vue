@@ -293,7 +293,7 @@
           :synced-at="rawSyncDate"
           :stale-days="RE_STALE_DAYS"
         />
-        <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-400">
+        <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-500">
           ※ 월세 거래는 전환율 5% 기준 환산보증금으로 표시됩니다
         </p>
       </SectionBlock>

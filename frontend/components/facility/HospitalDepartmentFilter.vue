@@ -10,7 +10,7 @@
       <span v-if="selected.length > 0" class="text-xs font-medium text-primary">
         {{ selected.length }}개 선택
       </span>
-      <span class="ml-auto material-symbols-outlined text-slate-400 text-[20px]">
+      <span class="ml-auto material-symbols-outlined text-slate-500 text-[20px]">
         {{ expanded ? 'expand_less' : 'expand_more' }}
       </span>
     </button>
