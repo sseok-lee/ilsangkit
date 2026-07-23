@@ -435,25 +435,6 @@ const displayTotalPages = computed(() => {
   return ssrTotalPages.value
 })
 
-// h1/hero 전용 (Set C). <head> title/description은 setCategoryMeta(CATEGORY_SEO_*)가 담당한다.
-const SEO_TITLES: Record<string, string> = {
-  toilet: '지금 이용 가능한 공공화장실 · 24시간 개방 위치 지도',
-  parking: '내 주변 공영주차장 요금·운영시간 · 무료 주차장 검색',
-  'ev-charger': '전기차 충전소 실시간 현황 · 급속/완속 사용 가능 확인',
-  park: '산책하기 좋은 내 주변 공원 · 운동시설·산책로 한눈에',
-  school: '우리 동네 학군 정보 · 초·중·고 학교 위치 찾기',
-  childcare: '내 주변 어린이집 · 정원·현원·빈자리 확인 국공립/민간',
-  library: '내 주변 도서관 운영시간 · 주말·야간 개방 확인',
-  hospital: '지금 문 연 병원 찾기 · 야간·주말 진료 실시간',
-  pharmacy: '지금 문 연 약국 찾기 · 심야·공휴일 운영 약국',
-  aed: '가장 가까운 AED 위치 · 심폐소생 골든타임 지키기',
-  sports: '내 주변 공공체육시설 · 헬스·수영·풋살장 이용 안내',
-  market: '내 주변 전통시장 · 장날·개장시간·상점 정보',
-  clothes: '헌옷 버리는 곳 · 내 주변 의류수거함 위치 지도',
-  trash: '우리 동네 쓰레기 배출일 달력 · 재활용·음식물 요일',
-  wifi: '내 주변 공공 와이파이 무료 접속 위치 지도',
-}
-
 const SEO_DESCRIPTIONS: Record<string, string> = {
   toilet: '지금 이용 가능한 주변 공공화장실과 개방화장실 위치를 확인하세요. 24시간 운영 여부와 장애인화장실 정보를 제공합니다.',
   parking: '목적지 근처 공영주차장의 위치와 요금을 한눈에 비교하세요. 무료 주차 여부와 주차 가능 면수 정보를 제공합니다.',
@@ -474,10 +455,9 @@ const SEO_DESCRIPTIONS: Record<string, string> = {
 // Page title
 const pageTitle = computed(() => {
   const catLabel = categoryMeta.value?.label || categoryParam.value
-  if (cityName.value) {
-    return `${cityName.value} ${catLabel}`
-  }
-  return SEO_TITLES[categoryParam.value] || `전국 ${catLabel} 찾기`
+  // H1은 카테고리 이름만(예: '약국'). 지역 선택 시 지역명 접두(예: '서울 약국').
+  // 키워드성 SEO 문장은 <head> title/description(setCategoryMeta)이 담당한다.
+  return cityName.value ? `${cityName.value} ${catLabel}` : catLabel
 })
 
 const pageDescription = computed(() => {
