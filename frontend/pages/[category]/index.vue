@@ -34,10 +34,7 @@
       </div>
 
       <!-- 지역 선택 -->
-      <SectionBlock
-        heading="지역 선택"
-        :subtext="categoryParam === 'trash' ? '시/도를 선택해 배출 정보를 확인하세요.' : '지역을 먼저 선택하면 정확한 목록을 빠르게 찾을 수 있어요.'"
-      >
+      <SectionBlock heading="지역 선택">
         <RegionChips
           :href-for="regionChipHref"
           :active-slug="queryCitySlug"
@@ -136,7 +133,7 @@
 
       <!-- Non-trash: facility card grid -->
       <template v-else>
-        <SectionBlock :heading="`${resultTitle} ${catLabel} 목록`" subtext="지역 선택 후 목록·페이지를 확인하세요.">
+        <SectionBlock :heading="`${resultTitle} ${catLabel} 목록`">
           <template #right>
             <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ displayTotal.toLocaleString('ko-KR') }}건</span>
           </template>
@@ -195,7 +192,6 @@
       <SectionBlock
         v-if="relatedCategories.length > 0 || popularRegionLinks.length > 0"
         heading="관련 탐색"
-        subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요."
       >
         <div v-if="relatedCategories.length > 0" class="flex flex-wrap items-center gap-2">
           <span class="text-xs text-slate-500 font-medium pr-1">관련 카테고리</span>
