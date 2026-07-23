@@ -111,7 +111,6 @@
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">location_on</span>
           빠른 생활시설 찾기
         </h2>
-        <p class="text-sm text-muted mt-1">자주 찾는 시설을 바로 확인하세요.</p>
       </div>
       <div class="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-2.5">
         <HardLink
@@ -134,7 +133,6 @@
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">place</span>
           인기 지역
         </h2>
-        <p class="text-sm text-muted mt-1">많이 찾는 지역부터 둘러보세요.</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <HardLink
@@ -156,7 +154,6 @@
             <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">menu_book</span>
             생활 가이드
           </h2>
-          <p class="text-sm text-muted mt-1">최근 가이드를 확인하세요.</p>
         </div>
         <HardLink
           to="/guide"
@@ -208,7 +205,6 @@
             <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">article</span>
             오늘의 이슈
           </h2>
-          <p class="text-sm text-muted mt-1">부동산·청약 시장 소식을 확인하세요.</p>
         </div>
         <HardLink
           to="/article"
