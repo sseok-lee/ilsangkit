@@ -44,7 +44,7 @@
         </Transition>
       </Teleport>
 
-      <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
+      <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
         <!-- Breadcrumb (데스크톱만 — chrome, order 미부여로 소스 최상단 유지) -->
         <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
@@ -390,7 +390,7 @@
           <DataSourceSection domain="subscription" :last-sync-date="subscription?.updatedAt ? formatDotDate(subscription.updatedAt) : null" />
         </div>
 
-      </main>
+      </div>
     </template>
 
     <!-- Error State -->

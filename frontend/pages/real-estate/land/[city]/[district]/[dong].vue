@@ -1,6 +1,6 @@
 <template>
   <div class="bg-background-light min-h-screen">
-    <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" class="order-1 md:order-1" />
 
       <!-- T0: 모바일 핵심정보 헤더 (literal h1 1개 소유). 좌표 없음 → hideDirections(공유만). -->
@@ -211,7 +211,7 @@
       <div class="order-12 md:order-12">
         <DataSourceSection domain="real-estate" />
       </div>
-    </main>
+    </div>
   </div>
 </template>
 

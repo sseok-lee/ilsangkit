@@ -1,6 +1,6 @@
 <template>
   <div class="bg-background-light">
-    <main class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <PageHero
         eyebrow="부동산"
         :title="LAND_META.label + ' 실거래가'"
@@ -54,7 +54,7 @@
       <section>
         <DataSourceSection domain="real-estate" />
       </section>
-    </main>
+    </div>
   </div>
 </template>
 

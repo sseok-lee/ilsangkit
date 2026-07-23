@@ -45,7 +45,7 @@
       </Transition>
     </Teleport>
 
-    <main class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-20 md:pb-10 flex flex-col gap-3">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-20 md:pb-10 flex flex-col gap-3">
       <!-- Unified Breadcrumb + Share (모바일 badge는 PageHero eyebrow가 흡수) -->
       <div class="flex items-center justify-between gap-2 order-1 md:order-1">
         <Breadcrumb :items="breadcrumbItems" />
@@ -472,7 +472,7 @@
       <div class="order-12 md:order-12">
         <DataSourceSection domain="real-estate" :last-sync-date="lastSyncDate" />
       </div>
-    </main>
+    </div>
     </template>
   </div>
 </template>
