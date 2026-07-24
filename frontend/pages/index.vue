@@ -59,7 +59,7 @@
               </div>
             </div>
             <div class="absolute left-0 right-0 top-full z-50">
-              <SearchAutocomplete ref="heroAcRef" :open="heroFocused" :model-value="searchKeyword" :scope="{ kind: 'realestate' }" @close="heroFocused = false" />
+              <SearchAutocomplete ref="heroAcRef" :open="heroFocused" :model-value="searchKeyword" @close="heroFocused = false" />
             </div>
           </label>
         </div>
@@ -282,7 +282,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
-import { resolveSearchScope, buildSearchDestination } from '~/utils/searchScope'
 // heroAcRef typed as any to avoid circular InstanceType complexity in pages
 
 import HardLink from '~/components/common/HardLink.vue'
@@ -485,7 +484,7 @@ function handleSearch() {
   const q = searchKeyword.value.trim()
   if (!q) return
   trackSearch({ keyword: q })
-  navigateTo(buildSearchDestination(resolveSearchScope(useRoute()), q))
+  navigateTo('/search?keyword=' + encodeURIComponent(q))
 }
 
 // IME 조합 중에도 실시간 입력값을 자동완성에 전달(v-model은 조합 종료까지 지연됨)
