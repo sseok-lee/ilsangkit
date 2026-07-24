@@ -15,7 +15,7 @@
             </div>
             <input
               v-model="searchKeyword"
-              aria-label="부동산 검색"
+              aria-label="통합 검색"
               class="flex-1 min-w-0 bg-transparent text-slate-900 text-sm font-medium focus:outline-none"
               type="text"
               placeholder="단지명·지역으로 검색하세요"
@@ -253,6 +253,7 @@ import { UI_MESSAGES } from '~/utils/uiMessages'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { useRealEstate } from '~/composables/useRealEstate'
+import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -265,11 +266,12 @@ import EmptyState from '~/components/common/EmptyState.vue'
 
 const route = useRoute()
 const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
+const { searchGrouped: searchFacilitiesGrouped } = useFacilitySearch()
 const { setSearchMeta } = useFacilityMeta()
 const { trackSearchResultsView, trackSearchNoResults } = useAnalytics()
 const { logSearch } = useSearchSuggest()
 
-// 부동산 전용 검색 상태 (useFacilitySearch 제거 — 이 페이지는 더 이상 시설을 검색하지 않음)
+// 통합 검색 상태: 부동산 + 시설(grouped) 병렬 fetch
 const loading = ref(false)
 
 // Region dropdowns (reuse waste schedule API for city/district lists)
@@ -432,12 +434,18 @@ async function performSearch() {
       await searchRealEstatePaged(selectedRealEstateType.value, reCurrentPage.value)
       return
     }
-    const reResult = await searchRealEstate(
-      searchKeyword.value || undefined,
-      selectedCity.value || undefined,
-      selectedDistrict.value || undefined,
-    ).catch(() => null)
-    realEstateResults.value = ((reResult?.categories as unknown) as RealEstateResultCategory[] | undefined)?.filter(c => c.count > 0) || []
+    const kw = searchKeyword.value || undefined
+    const city = selectedCity.value || undefined
+    const district = selectedDistrict.value || undefined
+    await Promise.all([
+      searchRealEstate(kw, city, district)
+        .then(r => { realEstateResults.value = ((r?.categories as unknown) as RealEstateResultCategory[] | undefined)?.filter(c => c.count > 0) || [] })
+        .catch(() => { realEstateResults.value = [] }),
+      // 시설은 키워드가 있을 때만 (grouped는 전국 팬아웃이라 빈 키워드 방지)
+      kw
+        ? searchFacilitiesGrouped({ keyword: kw, city, district, limit: 20 }).catch(() => undefined)
+        : Promise.resolve(),
+    ])
   } finally {
     loading.value = false
   }

@@ -32,6 +32,17 @@ vi.mock('~/composables/useWasteSchedule', () => ({
   }),
 }))
 
+// 최소 mock — 통합 검색으로 search.vue가 useFacilitySearch를 다시 소비하므로 필요.
+// 실제 카운트 반영은 Task 5에서 정교화.
+vi.mock('~/composables/useFacilitySearch', () => ({
+  useFacilitySearch: () => ({
+    searchGrouped: vi.fn().mockResolvedValue(undefined),
+    groupedResults: ref([]),
+    groupedTotalCount: ref(0),
+    recovery: ref(null),
+  }),
+}))
+
 vi.mock('~/composables/useAnalytics', () => ({
   useAnalytics: () => ({
     trackSearchResultsView: vi.fn(),
@@ -104,7 +115,7 @@ describe('/search 검색 로깅 (logSearch)', () => {
     logSearchMock.mockClear()
 
     // Set a search keyword and trigger the real search flow (다시 검색 = handleSearch → performSearch)
-    const input = wrapper.find('input[aria-label="부동산 검색"]')
+    const input = wrapper.find('input[aria-label="통합 검색"]')
     await input.setValue('강남')
     await input.trigger('keyup.enter')
     await flushPromises()

@@ -1,14 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { ref } from 'vue'
 import SearchPage from '~/pages/search.vue'
 
-// Mock vue-router
+// Mock vue-router — query는 테스트별로 변경 가능하도록 mutable 객체 사용
+const routeQuery: Record<string, string> = {}
 vi.mock('vue-router', () => ({
   useRoute: () => ({
-    query: {},
+    query: routeQuery,
   }),
   useRouter: () => ({
     push: vi.fn(),
+  }),
+}))
+
+// Mock useFacilitySearch — 통합 검색: 시설 grouped 병렬 fetch
+const searchGroupedMock = vi.fn().mockResolvedValue(undefined)
+const groupedResultsRef = ref<any[]>([])
+const groupedTotalRef = ref(0)
+vi.mock('~/composables/useFacilitySearch', () => ({
+  useFacilitySearch: () => ({
+    searchGrouped: searchGroupedMock,
+    groupedResults: groupedResultsRef,
+    groupedTotalCount: groupedTotalRef,
+    recovery: ref(null),
   }),
 }))
 
@@ -56,8 +71,12 @@ const globalStubs = {
 describe('SearchPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    for (const key of Object.keys(routeQuery)) delete routeQuery[key]
     searchAllMock.mockResolvedValue({ categories: [] })
     getComplexListMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
+    searchGroupedMock.mockResolvedValue(undefined)
+    groupedResultsRef.value = []
+    groupedTotalRef.value = 0
   })
 
   it('페이지가 올바르게 렌더링되는지 확인', () => {
@@ -71,18 +90,13 @@ describe('SearchPage', () => {
     expect(wrapper.find('.min-h-screen').exists()).toBe(true)
   })
 
-  it('검색 필터가 렌더링되는지 확인', () => {
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    // Search input exists (부동산 전용 검색)
-    expect(wrapper.find('input[aria-label="부동산 검색"]').exists()).toBe(true)
+  it('통합 검색 입력이 렌더된다', () => {
+    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+    expect(wrapper.find('input[aria-label="통합 검색"]').exists()).toBe(true)
   })
 
-  it('부동산 검색만 호출된다(시설 병렬 검색 제거)', async () => {
+  it('마운트 시 키워드가 있으면 부동산·시설 검색을 모두 호출한다', async () => {
+    routeQuery.keyword = '강남'
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
@@ -90,20 +104,22 @@ describe('SearchPage', () => {
     })
     await flushPromises()
 
-    // 마운트 시 초기 검색이 부동산 searchAll을 통해 이루어짐
     expect(searchAllMock).toHaveBeenCalled()
+    expect(searchGroupedMock).toHaveBeenCalled() // 시설 병렬 fetch 복원
     expect(wrapper.exists()).toBe(true)
   })
 
-  it('생활시설 3-탭·시설 관련 텍스트가 렌더되지 않는다(부동산 전용)', () => {
+  it('키워드가 없으면 시설 grouped 팬아웃은 호출되지 않는다(전국 팬아웃 방지)', async () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
       },
     })
+    await flushPromises()
 
-    expect(wrapper.find('[role="tablist"]').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('생활시설')
+    expect(searchAllMock).toHaveBeenCalled()
+    expect(searchGroupedMock).not.toHaveBeenCalled()
+    expect(wrapper.exists()).toBe(true)
   })
 
   it('페이지네이션이 렌더링되는지 확인', () => {
