@@ -83,6 +83,15 @@ vi.mock('~/composables/useRealEstate', () => ({
       }],
       page: 1, totalPages: 1, total: 1,
     }),
+    // 드릴다운은 키워드 해석 경로(searchComplexesByKeyword)로 동일한 ComplexCard를 렌더한다
+    searchComplexesByKeyword: vi.fn().mockResolvedValue({
+      items: [{
+        buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
+        dongName: '역삼동', latestPrice: 150000, transactionCount: 12,
+        lat: null, lng: null, lastDealYear: 2026, lastDealMonth: 5, buildYear: 2010,
+      }],
+      page: 1, totalPages: 1, total: 1,
+    }),
   }),
 }))
 

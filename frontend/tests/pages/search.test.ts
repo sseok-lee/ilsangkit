@@ -54,10 +54,13 @@ vi.mock('~/composables/useWasteSchedule', () => ({
 // Mock useRealEstate — /search는 부동산 전용이므로 이 페이지가 소비하는 유일한 검색 소스
 const searchAllMock = vi.fn().mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
 const getComplexListMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
+// 드릴다운은 키워드를 지역/이름으로 해석하는 searchComplexesByKeyword를 사용(미리보기와 일관)
+const searchComplexesByKeywordMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
     searchAll: searchAllMock,
     getComplexList: getComplexListMock,
+    searchComplexesByKeyword: searchComplexesByKeywordMock,
   }),
 }))
 
@@ -75,6 +78,7 @@ describe('SearchPage', () => {
     for (const key of Object.keys(routeQuery)) delete routeQuery[key]
     searchAllMock.mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
     getComplexListMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
+    searchComplexesByKeywordMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
     searchGroupedMock.mockResolvedValue(undefined)
     groupedResultsRef.value = []
     groupedTotalRef.value = 0
@@ -217,7 +221,7 @@ describe('SearchPage', () => {
       }],
       buildingCounts: { apt: 3, villa: 0, offitel: 0 },
     })
-    getComplexListMock.mockResolvedValue({
+    searchComplexesByKeywordMock.mockResolvedValue({
       items: [{
         buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
         dongName: '역삼동', latestPrice: 150000, transactionCount: 12,
@@ -235,6 +239,11 @@ describe('SearchPage', () => {
     expect(aptGroup, '아파트 그룹이 렌더되어야 함').toBeTruthy()
     await aptGroup!.find('button').trigger('click')
     await flushPromises()
+
+    // 드릴다운은 키워드를 지역/이름으로 해석하는 searchComplexesByKeyword로 조회한다
+    // (getComplexList의 buildingName-prefix가 아님 — 지역 키워드가 0건이 되던 버그 방지).
+    expect(searchComplexesByKeywordMock).toHaveBeenCalledWith('apt-sale', '강남', 1, 20)
+    expect(getComplexListMock).not.toHaveBeenCalled()
 
     // 드릴다운 상태: 통합 도메인 섹션(h2)은 사라지고 페이징 뷰가 표시된다
     expect(wrapper.findAll('h2').map(h => h.text())).not.toContain('부동산')
