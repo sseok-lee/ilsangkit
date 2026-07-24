@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import SearchPage from '~/pages/search.vue'
+import SearchResultGroup from '~/components/search/SearchResultGroup.vue'
 
 // 회귀 방지: 검색 결과의 부동산 단지 카드는 4-세그먼트 정식 URL
 // (/real-estate/{type}/{city}/{district}/{building})로 링크해야 한다.
@@ -111,10 +112,12 @@ describe('검색 결과 부동산 단지 카드 URL', () => {
     const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
     await flushPromises()
 
-    // 아파트 칩 클릭 → searchRealEstatePaged('apt') → getComplexList mock
-    const aptChip = wrapper.findAll('button').find((b) => b.text().includes('아파트'))
-    expect(aptChip, '아파트 칩이 렌더되어야 함').toBeTruthy()
-    await aptChip!.trigger('click')
+    // 부동산 도메인 섹션의 "아파트" SearchResultGroup 더보기 클릭 → selectRealEstateType('apt') → getComplexList mock
+    const aptGroup = wrapper.findAllComponents(SearchResultGroup).find((g) => g.props('label') === '아파트')
+    expect(aptGroup, '아파트 그룹이 렌더되어야 함').toBeTruthy()
+    const aptMoreButton = aptGroup!.find('button')
+    expect(aptMoreButton.exists(), '아파트 더보기 버튼이 렌더되어야 함').toBe(true)
+    await aptMoreButton.trigger('click')
     await flushPromises()
 
     const cardLink = wrapper

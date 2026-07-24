@@ -3,7 +3,7 @@
     <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <!-- Hero -->
       <PageHero
-        eyebrow="부동산 검색"
+        eyebrow="통합 검색"
         :title="heroTitle"
         :description="heroDescription"
         :stats="heroStats"
@@ -18,7 +18,7 @@
               aria-label="통합 검색"
               class="flex-1 min-w-0 bg-transparent text-slate-900 text-sm font-medium focus:outline-none"
               type="text"
-              placeholder="단지명·지역으로 검색하세요"
+              placeholder="장소·단지명·시설명 검색"
               @keyup.enter="handleSearch"
             />
             <button
@@ -78,48 +78,6 @@
 
       <!-- 데이터 의존 영역: isMounted 가드로 hydration mismatch 방지 -->
       <template v-if="isMounted">
-      <!-- 결과 타입 -->
-      <SectionBlock
-        v-if="realEstateResults.length > 0"
-        heading="결과 타입"
-        subtext="유형을 고르면 결과가 빠르게 좁혀집니다."
-      >
-        <template #right>
-          <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-            {{ displayTotalCount.toLocaleString('ko-KR') }}건
-          </span>
-        </template>
-
-        <!-- 세부 유형 chip bar -->
-        <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          <button
-            :class="[
-              'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border',
-              !selectedRealEstateType
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary',
-            ]"
-            @click="clearChipFilter"
-          >
-            전체
-          </button>
-          <button
-            v-for="group in realEstateGrouped"
-            :key="group.propertyType"
-            :class="[
-              'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5',
-              selectedRealEstateType === group.propertyType
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-slate-700 border-line hover:border-primary hover:text-primary',
-            ]"
-            @click="selectRealEstateType(group.propertyType)"
-          >
-            <img :src="`/icons/category/${group.iconImg}.webp?v2`" :alt="group.label" class="w-4 h-4" width="16" height="16" />
-            {{ group.label }}
-          </button>
-        </div>
-      </SectionBlock>
-
       <!-- Loading Skeleton -->
       <div v-if="loading" aria-live="polite" aria-busy="true">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -180,49 +138,75 @@
             </div>
             <p class="text-slate-700 font-semibold text-lg">{{ UI_MESSAGES.emptySearch }}</p>
           </div>
+
+          <!-- Ad: 부동산 페이징 뷰 결과 후 -->
+          <AdBanner v-if="reComplexItems.length > 0" class="my-4" />
         </template>
 
-        <!-- 부동산 그룹 뷰 (유형 미선택 시) -->
-        <div v-else-if="realEstateResults.length > 0" class="mb-6 bg-white rounded-xl p-5 shadow-sm border border-slate-200">
-          <div class="flex items-center gap-2 mb-4">
-            <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
-            <h2 class="text-slate-900 text-base font-bold">부동산 실거래가</h2>
-          </div>
-
-          <!-- 타입별 요약 카드 그리드 -->
-          <div class="grid grid-cols-3 gap-3 mb-5">
-            <button
-              v-for="group in realEstateGrouped"
-              :key="group.propertyType"
-              class="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-slate-200 hover:border-primary/40 hover:bg-primary/5 transition-all text-center"
-              @click="selectRealEstateType(group.propertyType)"
-            >
-              <img :src="`/icons/category/${group.iconImg}.webp?v2`" :alt="group.label" class="w-10 h-10" width="40" height="40" />
-              <p class="text-slate-800 text-sm font-semibold">{{ group.label }}</p>
-              <p v-if="group.totalCount > 0" class="text-primary font-bold text-base leading-none">
-                {{ group.totalCount.toLocaleString('ko-KR') }}<span class="text-[11px] font-normal text-slate-500 ml-0.5">건물</span>
-              </p>
-            </button>
-          </div>
-        </div>
-
-        <!-- Ad: 검색결과 후 -->
-        <AdBanner v-if="realEstateResults.length > 0 || (selectedRealEstateType && reComplexItems.length > 0)" class="my-4" />
-
-        <!-- Empty State -->
-        <EmptyState
-          v-if="realEstateResults.length === 0 && !selectedRealEstateType"
-          :title="UI_MESSAGES.emptySearch"
-          description="아파트·빌라·오피스텔 단지명이나 지역으로 검색해보세요"
-        >
-          <NuxtLink
-            to="/real-estate"
-            class="btn-primary inline-flex items-center gap-1.5 text-sm"
+        <!-- 통합 도메인 뷰 (유형 미선택 시): 부동산 먼저 → 생활시설 -->
+        <template v-if="!selectedRealEstateType">
+          <SearchDomainSection
+            v-if="realEstateGroups.length"
+            title="부동산"
+            :count="realEstateTotalCount"
+            count-label="실거래가"
           >
-            <span class="material-symbols-outlined text-[16px]">apartment</span>
-            부동산 실거래가 보기
-          </NuxtLink>
-        </EmptyState>
+            <SearchResultGroup
+              v-for="g in realEstateGroups"
+              :key="g.propertyType"
+              :label="g.label"
+              :count="g.totalCount"
+              count-unit="곳"
+              :icon-img="g.iconImg"
+              @more="selectRealEstateType(g.propertyType)"
+            >
+              <ComplexCard
+                v-for="(it, i) in g.items.slice(0, 3)"
+                :key="`${it.buildingName}-${i}`"
+                :complex="reItemToComplex(it)"
+                :property-type="g.propertyType"
+                tab="sale"
+              />
+            </SearchResultGroup>
+          </SearchDomainSection>
+
+          <SearchDomainSection
+            v-if="facilityGroups.length"
+            title="생활시설"
+            :count="facilityTotalCount"
+            :count-label="`${facilityGroups.length}개 카테고리`"
+          >
+            <SearchResultGroup
+              v-for="g in facilityGroups"
+              :key="g.category"
+              :label="g.label"
+              :count="g.count"
+              count-unit="곳"
+              :cat-category="g.category"
+              :more-href="facilityMoreHref(g.category)"
+            >
+              <FacilityCard v-for="item in g.items.slice(0, 3)" :key="item.id" :facility="item" />
+            </SearchResultGroup>
+          </SearchDomainSection>
+
+          <!-- Ad: 통합 검색결과 후 -->
+          <AdBanner v-if="realEstateGroups.length || facilityGroups.length" class="my-4" />
+
+          <!-- Empty State -->
+          <EmptyState
+            v-if="realEstateGroups.length === 0 && facilityGroups.length === 0"
+            :title="searchKeyword ? '검색 결과가 없어요' : UI_MESSAGES.emptySearch"
+            description="장소·단지명·시설명으로 검색해보세요"
+          >
+            <NuxtLink
+              to="/real-estate"
+              class="btn-primary inline-flex items-center gap-1.5 text-sm"
+            >
+              <span class="material-symbols-outlined text-[16px]">apartment</span>
+              부동산 실거래가 보기
+            </NuxtLink>
+          </EmptyState>
+        </template>
       </div>
       </template>
 
@@ -258,15 +242,19 @@ import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { useSearchSuggest } from '~/composables/useSearchSuggest'
-import { isFacilityCategory } from '~/types/facility'
+import { isFacilityCategory, type GroupedCategory } from '~/types/facility'
 import type { RealEstateType, ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
+import SearchDomainSection from '~/components/search/SearchDomainSection.vue'
+import SearchResultGroup from '~/components/search/SearchResultGroup.vue'
+import ComplexCard from '~/components/realEstate/ComplexCard.vue'
+import FacilityCard from '~/components/facility/FacilityCard.vue'
 
 const route = useRoute()
 const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
-const { searchGrouped: searchFacilitiesGrouped } = useFacilitySearch()
+const { searchGrouped: searchFacilitiesGrouped, groupedResults, groupedTotalCount } = useFacilitySearch()
 const { setSearchMeta } = useFacilityMeta()
 const { trackSearchResultsView, trackSearchNoResults } = useAnalytics()
 const { logSearch } = useSearchSuggest()
@@ -301,7 +289,23 @@ const RE_TYPE_LABELS: Record<string, string> = {
 }
 
 // 부동산 결과를 건물유형별(apt/villa/offitel)로 재그룹
-type RealEstatePreviewItem = { type: string; buildingName: string; bjdCode: string; propertyType: string; tab: string; typeLabel: string; dealAmount: number | null; city: string; district: string }
+type RealEstatePreviewItem = {
+  type: string
+  buildingName: string
+  bjdCode: string
+  propertyType: string
+  tab: string
+  typeLabel: string
+  dealAmount: number | null
+  deposit: number | null
+  city: string
+  district: string
+  dongName: string
+  dealYear: number | null
+  dealMonth: number | null
+  buildYear: number | null
+  transactionCount: number
+}
 const RE_PROPERTY_META: Record<string, { label: string; iconImg: string }> = {
   apt: { label: '아파트', iconImg: 'apt' },
   villa: { label: '빌라', iconImg: 'villa' },
@@ -394,36 +398,30 @@ async function searchRealEstatePaged(propertyType: string, page: number = 1) {
 
 const realEstateTotalCount = computed(() => realEstateResults.value.reduce((s, r) => s + r.count, 0))
 
-const displayTotalCount = computed(() => {
-  if (selectedRealEstateType.value) {
-    return reTotal.value
-  }
-  return realEstateTotalCount.value
-})
+// 부동산 도메인 섹션: 유형 표시 순서 고정 (아파트 → 빌라 → 오피스텔)
+const RE_ORDER: Record<string, number> = { apt: 0, villa: 1, offitel: 2 }
+const realEstateGroups = computed(() =>
+  [...realEstateGrouped.value].sort((a, b) => (RE_ORDER[a.propertyType] ?? 9) - (RE_ORDER[b.propertyType] ?? 9))
+)
 
-// Hero content
-const heroTitle = computed(() => {
-  if (searchKeyword.value) return `"${searchKeyword.value}" 검색 결과`
-  return '부동산 검색'
-})
-const heroDescription = computed(() => {
-  if (searchKeyword.value) {
-    return '부동산 실거래가 검색 결과입니다.'
-  }
-  return '아파트·빌라·오피스텔 단지명이나 지역으로 부동산 실거래가를 검색하세요.'
-})
+// 생활시설 도메인 섹션: 건수 많은 카테고리부터
+const facilityGroups = computed<GroupedCategory[]>(() =>
+  [...groupedResults.value].filter(g => g.count > 0).sort((a, b) => b.count - a.count)
+)
+const facilityTotalCount = computed(() => groupedTotalCount.value)
+const combinedTotalCount = computed(() => facilityTotalCount.value + realEstateTotalCount.value)
+
+// Hero content — 통합 검색(부동산 + 생활시설)
+const heroTitle = computed(() => (searchKeyword.value ? `'${searchKeyword.value}' 검색 결과` : '통합 검색'))
+const heroDescription = computed(() => searchKeyword.value
+  ? '생활시설과 부동산 실거래가를 한 번에 찾았어요.'
+  : '장소·단지명·시설명으로 생활시설과 부동산을 함께 검색하세요.')
 const heroStats = computed(() => {
-  const stats: { label: string; value: string }[] = []
-  stats.push({ label: '부동산', value: realEstateTotalCount.value > 0 ? `${realEstateTotalCount.value.toLocaleString('ko-KR')}건` : '—' })
-  if (selectedCity.value || selectedDistrict.value) {
-    const region = [selectedCity.value, selectedDistrict.value].filter(Boolean).join(' ')
-    stats.push({ label: '검색 지역', value: region })
-  } else if (searchKeyword.value) {
-    stats.push({ label: '검색어', value: searchKeyword.value })
-  } else {
-    stats.push({ label: '추천', value: '단지명 또는 지역' })
-  }
-  return stats
+  if (!searchKeyword.value) return []
+  return [
+    { label: '생활시설', value: facilityTotalCount.value > 0 ? `${facilityTotalCount.value.toLocaleString('ko-KR')}곳` : '—' },
+    { label: '부동산', value: realEstateTotalCount.value > 0 ? `${realEstateTotalCount.value.toLocaleString('ko-KR')}건` : '—' },
+  ]
 })
 
 // Methods
@@ -460,14 +458,6 @@ function clearSearch() {
   handleSearch()
 }
 
-function clearChipFilter() {
-  selectedRealEstateType.value = ''
-  reComplexItems.value = []
-  reCurrentPage.value = 1
-  reTotalPages.value = 0
-  performSearch()
-}
-
 // 단지 카드 링크 — 4-세그먼트 정식 URL.
 // 구 2-세그먼트(/real-estate/{propertyType}/{building})는 서버 리다이렉트만 있고
 // 클라이언트 내비게이션에선 404가 난다. 페이지드 목록은 항상 {propertyType}-sale 데이터.
@@ -478,6 +468,28 @@ function complexCardUrl(item: { buildingName: string; city?: string; district?: 
     district: item.district || '',
     buildingName: item.buildingName,
   })
+}
+
+// 도메인 뷰 부동산 프리뷰 아이템 → ComplexCard 소비용 매핑.
+// ComplexCard 내부 isRenderable 가드가 city/district/유효 buildingName을 요구하므로 그대로 전달.
+function reItemToComplex(item: RealEstatePreviewItem): ComplexInfo {
+  return {
+    buildingName: item.buildingName,
+    city: item.city || '',
+    district: item.district || '',
+    dongName: item.dongName || '',
+    lastDealYear: item.dealYear ?? null,
+    lastDealMonth: item.dealMonth ?? null,
+    buildYear: item.buildYear ?? null,
+    transactionCount: item.transactionCount ?? 0,
+  } as ComplexInfo
+}
+
+// 생활시설 더보기 링크 — 카테고리 목록 페이지로 현재 키워드/지역 조건을 그대로 전달.
+function facilityMoreHref(category: string): string {
+  const kw = encodeURIComponent(searchKeyword.value.trim())
+  const city = selectedCity.value ? `&city=${encodeURIComponent(selectedCity.value)}` : ''
+  return `/${category}?keyword=${kw}${city}`
 }
 
 function selectRealEstateType(type: string) {
@@ -602,7 +614,7 @@ watch(searchKeyword, () => {
 // 검색 완료 시 결과 viewed 이벤트 (loading true → false 전이 + keyword 있을 때만)
 watch(loading, (now, prev) => {
   if (prev && !now && searchKeyword.value) {
-    const resultCount = selectedRealEstateType.value ? reTotal.value : realEstateTotalCount.value
+    const resultCount = selectedRealEstateType.value ? reTotal.value : combinedTotalCount.value
     trackSearchResultsView({
       keyword: searchKeyword.value,
       resultCount,

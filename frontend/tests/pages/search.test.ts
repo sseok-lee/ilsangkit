@@ -177,4 +177,27 @@ describe('SearchPage', () => {
     // 부동산 결과가 비어있으면 빈 상태가 표시되고, 그리드는 결과가 있을 때 렌더링됨
     expect(wrapper.find('.min-h-screen').exists()).toBe(true)
   })
+
+  it('결과가 있으면 부동산·생활시설 도메인 섹션을 렌더한다 (부동산 먼저)', async () => {
+    routeQuery.keyword = '강남'
+    groupedResultsRef.value = [{ category: 'toilet', label: '화장실', count: 12, items: [] }]
+    groupedTotalRef.value = 12
+    searchAllMock.mockResolvedValue({ categories: [{ type: 'apt-sale', count: 3, items: [] }] })
+
+    const wrapper = mount(SearchPage, {
+      global: {
+        stubs: {
+          ...globalStubs,
+          SearchDomainSection: { template: '<section><h2>{{ title }}</h2><slot/></section>', props: ['title', 'count', 'countLabel'] },
+          SearchResultGroup: { template: '<div><slot/></div>', props: ['label', 'count', 'moreHref', 'iconImg', 'catColor', 'countUnit', 'catCategory'] },
+        },
+      },
+    })
+    await flushPromises()
+
+    const h2s = wrapper.findAll('h2').map(h => h.text())
+    expect(h2s).toContain('부동산')
+    expect(h2s).toContain('생활시설')
+    expect(h2s.indexOf('부동산')).toBeLessThan(h2s.indexOf('생활시설'))
+  })
 })
