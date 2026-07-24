@@ -26,8 +26,9 @@ describe('useFacilityMeta', () => {
 
       expect(mockUseSeoMeta).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: '부동산 실거래가·청약·생활정보 | 일상킷',
-          ogTitle: '부동산 실거래가·청약·생활정보 | 일상킷',
+          // 브랜드 선두형: 브랜드 검색("일상킷")에서 홈이 /about 대신 대표결과가 되도록.
+          title: '일상킷 - 부동산 실거래가·청약·내 주변 생활정보',
+          ogTitle: '일상킷 - 부동산 실거래가·청약·내 주변 생활정보',
           ogSiteName: '일상킷',
           ogLocale: 'ko_KR',
           twitterCard: 'summary_large_image',
