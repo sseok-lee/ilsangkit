@@ -173,7 +173,7 @@
                 :key="`${it.buildingName}-${i}`"
                 :complex="reItemToComplex(it)"
                 :property-type="g.propertyType"
-                tab="sale"
+                :tab="it.tab || 'sale'"
               />
             </SearchResultGroup>
           </SearchDomainSection>
@@ -539,7 +539,7 @@ useHead({
   title: initialKeyword ? `${initialKeyword} 검색 결과 | 일상킷` : '검색 | 일상킷',
   meta: [
     { name: 'robots', content: 'noindex, follow' },
-    { name: 'description', content: initialKeyword ? `${initialKeyword} 관련 부동산 실거래가 정보를 찾아보세요.` : '단지명이나 지역으로 부동산 실거래가 정보를 검색하세요.' },
+    { name: 'description', content: initialKeyword ? `${initialKeyword} 관련 생활시설·부동산 정보를 찾아보세요.` : '장소·단지명·시설명으로 생활시설과 부동산을 검색하세요.' },
   ],
   // noindex 페이지에서는 canonical 제거 (Google 신호 충돌 방지)
 })

@@ -24,7 +24,7 @@
         class="shrink-0 inline-flex items-center gap-0.5 text-[13px] font-bold text-primary px-2 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
       >
         더보기
-        <span class="material-symbols-outlined text-[15px]">chevron_right</span>
+        <span class="material-symbols-outlined text-[15px]" aria-hidden="true">chevron_right</span>
       </NuxtLink>
       <button
         v-else
@@ -33,7 +33,7 @@
         @click="emit('more')"
       >
         더보기
-        <span class="material-symbols-outlined text-[15px]">chevron_right</span>
+        <span class="material-symbols-outlined text-[15px]" aria-hidden="true">chevron_right</span>
       </button>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

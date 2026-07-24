@@ -250,4 +250,31 @@ describe('SearchPage', () => {
     expect(h2sAfterBack).toContain('부동산')
     expect(h2sAfterBack).toContain('생활시설')
   })
+
+  it('통합뷰 부동산 프리뷰 카드는 전세/월세(rent) 원본 아이템을 -rent URL로 링크한다 (하드코딩된 tab="sale" 회귀 방지)', async () => {
+    routeQuery.keyword = '역삼'
+    searchAllMock.mockResolvedValue({
+      categories: [{
+        type: 'villa-rent',
+        count: 1,
+        items: [{
+          buildingName: '○○빌라', bjdCode: '11680', city: '서울특별시', district: '강남구',
+          dongName: '역삼동', dealAmount: null, deposit: 5000,
+          dealYear: 2026, dealMonth: 5, buildYear: 2005, transactionCount: 3,
+        }],
+      }],
+    })
+
+    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+    await flushPromises()
+
+    const cardLink = wrapper
+      .findAll('a')
+      .find(a => (a.attributes('href') || '').includes('/real-estate/') && a.text().includes('○○빌라'))
+    expect(cardLink, '빌라 프리뷰 카드 링크가 렌더되어야 함').toBeTruthy()
+
+    const href = cardLink!.attributes('href')!
+    expect(href).toBe(`/real-estate/villa-rent/seoul/gangnam/${encodeURIComponent('○○빌라')}`)
+    expect(href).not.toContain('villa-sale')
+  })
 })
