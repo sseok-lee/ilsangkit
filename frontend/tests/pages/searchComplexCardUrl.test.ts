@@ -7,6 +7,9 @@ import SearchResultGroup from '~/components/search/SearchResultGroup.vue'
 // 회귀 방지: 검색 결과의 부동산 단지 카드는 4-세그먼트 정식 URL
 // (/real-estate/{type}/{city}/{district}/{building})로 링크해야 한다.
 // 구 2-세그먼트(/real-estate/apt/{building})는 클라이언트 내비게이션에서 404.
+// 드릴다운(페이지드) 뷰는 프리뷰와 동일하게 ComplexCard(사이트 표준 컴포넌트)를 사용한다 —
+// ComplexCard 고유 마크업(최근 거래/건축년도/거래 3열 메타)이 렌더되는지까지 확인해
+// 우연히 일치하는 커스텀 카드가 아니라 실제 ComplexCard→toRealEstateUrl 경로를 검증한다.
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: { keyword: '래미안' } }),
@@ -76,6 +79,7 @@ vi.mock('~/composables/useRealEstate', () => ({
       items: [{
         buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
         dongName: '역삼동', latestPrice: 150000, transactionCount: 12,
+        lat: null, lng: null, lastDealYear: 2026, lastDealMonth: 5, buildYear: 2010,
       }],
       page: 1, totalPages: 1, total: 1,
     }),
@@ -130,5 +134,17 @@ describe('검색 결과 부동산 단지 카드 URL', () => {
     expect(href).toBe(`/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안강남')}`)
     // 구 2-세그먼트 금지
     expect(href).not.toMatch(/\/real-estate\/apt\//)
+
+    // ComplexCard 고유 마크업(최근 거래/건축년도/거래 3열 메타) — 프리뷰와 동일 컴포넌트임을 증명.
+    // 구 인라인 카드는 이 레이블들을 렌더하지 않았다(가격 칩 + "거래 N건"만 표시).
+    expect(cardLink!.text()).toContain('최근 거래')
+    expect(cardLink!.text()).toContain('건축년도')
+    expect(cardLink!.text()).toContain('2026.05')
+    expect(cardLink!.text()).toContain('2010년')
+    expect(cardLink!.text()).toContain('12건')
+
+    // 가격 칩은 의도적으로 제거됨 — 사이트 표준 RE 목록 카드는 가격을 표시하지 않는다.
+    expect(cardLink!.text()).not.toContain('만원')
+    expect(cardLink!.text()).not.toContain('억')
   })
 })

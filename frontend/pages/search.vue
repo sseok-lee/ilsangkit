@@ -81,24 +81,13 @@
           </div>
           <div v-else-if="reComplexItems.length > 0">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <NuxtLink
+              <ComplexCard
                 v-for="item in reComplexItems"
                 :key="`${item.buildingName}-${item.bjdCode}`"
-                :to="complexCardUrl(item)"
-                class="bg-white rounded-xl p-4 border border-slate-200 hover:border-primary/30 hover:shadow-sm transition-all"
-              >
-                <div class="flex items-start gap-3">
-                  <img :src="`/icons/category/${selectedRealEstateType}.webp?v2`" :alt="RE_PROPERTY_META[selectedRealEstateType]?.label" class="w-10 h-10 shrink-0" width="40" height="40" />
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-slate-800 text-sm truncate">{{ item.buildingName }}</p>
-                    <p class="text-xs text-slate-500 mt-0.5 truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
-                    <div class="flex items-center gap-2 mt-2">
-                      <span v-if="item.latestPrice" class="text-xs font-semibold text-primary">{{ formatKoreanPrice(item.latestPrice) }}</span>
-                      <span class="text-[10px] text-slate-500">거래 {{ item.transactionCount }}건</span>
-                    </div>
-                  </div>
-                </div>
-              </NuxtLink>
+                :complex="item"
+                :property-type="(selectedRealEstateType as RealEstatePropertyType)"
+                tab="sale"
+              />
             </div>
             <Pagination :current-page="reCurrentPage" :total-pages="reTotalPages" @page-change="goToRealEstatePage" />
           </div>
@@ -204,15 +193,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { UI_MESSAGES } from '~/utils/uiMessages'
-import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
-import { formatKoreanPrice } from '~/utils/formatters'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { useSearchSuggest } from '~/composables/useSearchSuggest'
 import { isFacilityCategory, type GroupedCategory } from '~/types/facility'
-import type { RealEstateType, ComplexInfo } from '~/types/realEstate'
+import type { RealEstateType, RealEstatePropertyType, ComplexInfo } from '~/types/realEstate'
 import PageHero from '~/components/common/PageHero.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 import SearchDomainSection from '~/components/search/SearchDomainSection.vue'
@@ -406,18 +393,6 @@ function handleSearch() {
 function clearSearch() {
   searchKeyword.value = ''
   handleSearch()
-}
-
-// 단지 카드 링크 — 4-세그먼트 정식 URL.
-// 구 2-세그먼트(/real-estate/{propertyType}/{building})는 서버 리다이렉트만 있고
-// 클라이언트 내비게이션에선 404가 난다. 페이지드 목록은 항상 {propertyType}-sale 데이터.
-function complexCardUrl(item: { buildingName: string; city?: string; district?: string }): string {
-  return toRealEstateUrl({
-    type: `${selectedRealEstateType.value}-sale` as RealEstateUrlType,
-    city: item.city || '',
-    district: item.district || '',
-    buildingName: item.buildingName,
-  })
 }
 
 // 도메인 뷰 부동산 프리뷰 아이템 → ComplexCard 소비용 매핑.
