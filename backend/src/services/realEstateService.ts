@@ -497,6 +497,84 @@ export async function getComplexList(
   };
 }
 
+/**
+ * 키워드 기반 건물 목록 조회 — /search 드릴다운(더보기) 전용.
+ *
+ * searchAll(미리보기 카운트)과 동일하게 키워드를 파서로 지역/이름으로 해석한다.
+ * 지역 키워드(예: "강남", "전남광주")는 buildingName LIKE가 아니라 지역 필터로 스코프되어
+ * 미리보기 카운트와 드릴다운 결과가 일관된다. (getComplexList의 buildingName-prefix 경로는
+ * 지역 키워드에 대해 0건을 반환하던 버그.)
+ *
+ * region/name 모두 ?-파라미터 바인딩 — SQL 인젝션 안전. summary 사전집계 테이블만 조회하고
+ * groupBy/앱메모리 distinct를 쓰지 않아 OOM 위험이 없다. 반환 shape은 getComplexList와 동일.
+ */
+export async function searchComplexesByKeyword(
+  type: string,
+  keyword: string,
+  page: number = 1,
+  limit: number = 20
+): Promise<ComplexListResult> {
+  if (!TABLE_NAME_MAP[type]) throw new Error(`Unknown real estate type: ${type}`);
+
+  const parsed = await parseSearchQueryCached(keyword);
+  const { effectiveCity, effectiveDistrict, nameText } = resolveScope({}, parsed);
+  const hasName = !!(nameText && nameText.length >= 2);
+  const hasRegion = !!(effectiveCity || effectiveDistrict);
+  // 순수 카테고리어/1자 등 지역·이름 어느 쪽으로도 해석 안 되면 전체 스캔 방지 — DB 접근 없이 종료.
+  if (!hasName && !hasRegion) return { items: [], total: 0, page, totalPages: 0 };
+
+  const region = regionFilterToSql(buildRegionFilter(effectiveCity, effectiveDistrict));
+  const conditions: string[] = ['type = ?', VALID_NAME_SQL, ...region.clauses];
+  const params: unknown[] = [type, ...region.params];
+  if (hasName) {
+    conditions.push('buildingName LIKE CONCAT(?, \'%\')');
+    params.push(nameText);
+  }
+
+  const whereClause = conditions.join(' AND ');
+  const offset = (page - 1) * limit;
+
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRawUnsafe<SummaryRawRow[]>(
+      `SELECT buildingName, bjdCode, city, district, dongName, transactionCount,
+              latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
+       FROM RealEstateBuildingSummary
+       WHERE ${whereClause}
+       ORDER BY transactionCount DESC
+       LIMIT ? OFFSET ?`,
+      ...params,
+      limit,
+      offset,
+    ),
+    prisma.$queryRawUnsafe<[{ total: bigint }]>(
+      `SELECT COUNT(*) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+      ...params,
+    ),
+  ]);
+
+  const total = Number(countRows[0]?.total ?? 0);
+
+  return {
+    items: rows.map((row) => ({
+      buildingName: row.buildingName,
+      bjdCode: row.bjdCode,
+      city: row.city,
+      district: row.district,
+      dongName: row.dongName,
+      transactionCount: Number(row.transactionCount),
+      latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
+      lat: row.lat != null ? Number(row.lat) : null,
+      lng: row.lng != null ? Number(row.lng) : null,
+      lastDealYear: row.latestDealYear,
+      lastDealMonth: row.latestDealMonth,
+      buildYear: row.buildYear,
+    })),
+    total,
+    page,
+    totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+  };
+}
+
 // ─────────────────────────────────────────────
 // getBuildingInfo
 // ─────────────────────────────────────────────

@@ -92,6 +92,25 @@ export function useRealEstate() {
     return res.data
   }
 
+  // /search 드릴다운 전용 — 키워드를 백엔드 파서가 지역/이름으로 해석한다(미리보기 searchAll과 일관).
+  // 지역 키워드(예: "강남")도 buildingName-prefix가 아니라 지역 필터로 스코프된다.
+  async function searchComplexesByKeyword(
+    type: RealEstateType,
+    keyword: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<ComplexListResponse> {
+    const query = new URLSearchParams()
+    query.set('keyword', keyword)
+    query.set('page', String(page))
+    query.set('limit', String(limit))
+
+    const res = await $fetch<{ success: boolean; data: ComplexListResponse }>(
+      `${apiBase}/api/real-estate/${type}/complexes?${query.toString()}`
+    )
+    return res.data
+  }
+
   async function getBuildingInfo(
     type: RealEstateType,
     bjdCode: string,
@@ -184,6 +203,7 @@ export function useRealEstate() {
     searchTransactions,
     getTransactionStats,
     getComplexList,
+    searchComplexesByKeyword,
     getBuildingInfo,
     searchAll,
     getAreaGroups,

@@ -208,7 +208,7 @@ import ComplexCard from '~/components/realEstate/ComplexCard.vue'
 import FacilityCard from '~/components/facility/FacilityCard.vue'
 
 const route = useRoute()
-const { searchAll: searchRealEstate, getComplexList } = useRealEstate()
+const { searchAll: searchRealEstate, searchComplexesByKeyword } = useRealEstate()
 const { searchGrouped: searchFacilitiesGrouped, groupedResults, groupedTotalCount } = useFacilitySearch()
 const { setSearchMeta } = useFacilityMeta()
 const { trackSearchResultsView, trackSearchNoResults } = useAnalytics()
@@ -316,11 +316,10 @@ async function searchRealEstatePaged(propertyType: string, page: number = 1) {
   reLoading.value = true
   try {
     const type = `${propertyType}-sale` as RealEstateType
-    const result = await getComplexList(
+    // 드릴다운은 키워드를 지역/이름으로 해석(미리보기 searchAll과 일관) — 건물명 prefix가 아님.
+    const result = await searchComplexesByKeyword(
       type,
-      undefined,
-      undefined,
-      searchKeyword.value || undefined,
+      searchKeyword.value || '',
       page,
       20
     )
