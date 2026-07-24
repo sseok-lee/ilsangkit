@@ -869,6 +869,8 @@ describe('searchAll', () => {
   beforeEach(() => {
     mockSummaryFindMany.mockResolvedValue([]);
     mockSummaryCount.mockResolvedValue(0);
+    // 유형별 유니크 건물수 COUNT(DISTINCT ...) — DB-free 기본값
+    mockQueryRawUnsafe.mockResolvedValue([{ c: 0n }]);
   });
 
   it('calls findMany on summary for all 6 types in parallel', async () => {
@@ -972,6 +974,21 @@ describe('searchAll', () => {
     await searchAll('래미안');
 
     expect(callOrder.filter((c) => c.endsWith('-findMany'))).toHaveLength(6);
+  });
+
+  it('유형별 유니크 건물수를 COUNT(DISTINCT) raw로 조회해 buildingCounts로 반환한다', async () => {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([{ c: 6n }])   // apt
+      .mockResolvedValueOnce([{ c: 2n }])   // villa
+      .mockResolvedValueOnce([{ c: 1n }]);  // offitel
+
+    const result = await searchAll('래미안');
+
+    expect(result.buildingCounts).toEqual({ apt: 6, villa: 2, offitel: 1 });
+    // 유형 묶음당 1회 = 3회, 앱메모리 groupBy/distinct가 아니라 COUNT(DISTINCT) SQL 사용
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(3);
+    const sql = mockQueryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).toContain('COUNT(DISTINCT buildingName, bjdCode)');
   });
 });
 

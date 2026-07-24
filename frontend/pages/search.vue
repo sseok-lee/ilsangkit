@@ -241,6 +241,8 @@ interface RealEstateResultCategory {
   items: Array<{ buildingName: string; bjdCode: string; [key: string]: unknown }>
 }
 const realEstateResults = ref<RealEstateResultCategory[]>([])
+// 유형별(apt/villa/offitel) 유니크 건물수 — 백엔드 buildingCounts. sale/rent 이중카운트를 제거한 총계.
+const reBuildingCounts = ref<{ apt: number; villa: number; offitel: number }>({ apt: 0, villa: 0, offitel: 0 })
 
 const RE_TYPE_LABELS: Record<string, string> = {
   'apt-sale': '아파트 매매', 'apt-rent': '아파트 전월세',
@@ -274,6 +276,8 @@ const RE_PROPERTY_META: Record<string, { label: string; iconImg: string }> = {
 
 const realEstateGrouped = computed(() => {
   const map = new Map<string, { propertyType: string; label: string; iconImg: string; items: RealEstatePreviewItem[]; totalCount: number }>()
+  // 프리뷰 아이템 중복 제거용: 동일 건물(buildingName|bjdCode)이 sale/rent 양쪽에서 오면 1번만 표시.
+  const seen = new Map<string, Set<string>>()
   for (const cat of realEstateResults.value) {
     const propertyType = cat.type.replace(/-(?:sale|rent)$/, '')
     const tab = cat.type.endsWith('-rent') ? 'rent' : 'sale'
@@ -281,10 +285,16 @@ const realEstateGrouped = computed(() => {
     if (!map.has(propertyType)) {
       const meta = RE_PROPERTY_META[propertyType] || { label: propertyType, iconImg: 'apt' }
       map.set(propertyType, { propertyType, label: meta.label, iconImg: meta.iconImg, items: [], totalCount: 0 })
+      seen.set(propertyType, new Set<string>())
     }
     const group = map.get(propertyType)!
-    group.totalCount += cat.count
+    // totalCount는 유형별 유니크 건물수(백엔드 buildingCounts) — sale/rent per-type count 합산(이중카운트) 금지.
+    group.totalCount = reBuildingCounts.value[propertyType as 'apt' | 'villa' | 'offitel'] ?? 0
+    const seenSet = seen.get(propertyType)!
     for (const item of cat.items) {
+      const dedupeKey = `${item.buildingName}|${item.bjdCode}`
+      if (seenSet.has(dedupeKey)) continue
+      seenSet.add(dedupeKey)
       group.items.push({
         type: cat.type,
         buildingName: item.buildingName,
@@ -340,7 +350,10 @@ async function searchRealEstatePaged(propertyType: string, page: number = 1) {
   }
 }
 
-const realEstateTotalCount = computed(() => realEstateResults.value.reduce((s, r) => s + r.count, 0))
+// 유형별 유니크 건물수 합. apt/villa/offitel은 서로 disjoint라 유형 간 이중카운트가 없다.
+const realEstateTotalCount = computed(() =>
+  reBuildingCounts.value.apt + reBuildingCounts.value.villa + reBuildingCounts.value.offitel
+)
 
 // 부동산 도메인 섹션: 유형 표시 순서 고정 (아파트 → 빌라 → 오피스텔)
 const RE_ORDER: Record<string, number> = { apt: 0, villa: 1, offitel: 2 }
@@ -371,8 +384,11 @@ async function performSearch() {
     const kw = searchKeyword.value || undefined
     await Promise.all([
       searchRealEstate(kw)
-        .then(r => { realEstateResults.value = ((r?.categories as unknown) as RealEstateResultCategory[] | undefined)?.filter(c => c.count > 0) || [] })
-        .catch(() => { realEstateResults.value = [] }),
+        .then(r => {
+          realEstateResults.value = ((r?.categories as unknown) as RealEstateResultCategory[] | undefined)?.filter(c => c.count > 0) || []
+          reBuildingCounts.value = (r?.buildingCounts as { apt: number; villa: number; offitel: number } | undefined) ?? { apt: 0, villa: 0, offitel: 0 }
+        })
+        .catch(() => { realEstateResults.value = []; reBuildingCounts.value = { apt: 0, villa: 0, offitel: 0 } }),
       // 시설은 키워드가 있을 때만 (grouped는 전국 팬아웃이라 빈 키워드 방지)
       kw
         ? searchFacilitiesGrouped({ keyword: kw, limit: 20 }).catch(() => undefined)

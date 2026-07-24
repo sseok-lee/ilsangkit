@@ -177,6 +177,8 @@ export interface RealEstateGroupedCategory {
 export interface RealEstateGroupedResponse {
   categories: RealEstateGroupedCategory[]
   totalCount: number
+  // 유형별(apt/villa/offitel) 유니크 건물수 — sale/rent 이중카운트를 제거한 DISTINCT 집계
+  buildingCounts?: { apt: number; villa: number; offitel: number }
 }
 
 // 카테고리 <-> slug 매핑 테이블

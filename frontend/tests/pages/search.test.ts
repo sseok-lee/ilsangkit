@@ -52,7 +52,7 @@ vi.mock('~/composables/useWasteSchedule', () => ({
 }))
 
 // Mock useRealEstate — /search는 부동산 전용이므로 이 페이지가 소비하는 유일한 검색 소스
-const searchAllMock = vi.fn().mockResolvedValue({ categories: [] })
+const searchAllMock = vi.fn().mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
 const getComplexListMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
@@ -73,7 +73,7 @@ describe('SearchPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     for (const key of Object.keys(routeQuery)) delete routeQuery[key]
-    searchAllMock.mockResolvedValue({ categories: [] })
+    searchAllMock.mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
     getComplexListMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
     searchGroupedMock.mockResolvedValue(undefined)
     groupedResultsRef.value = []
@@ -184,7 +184,7 @@ describe('SearchPage', () => {
     routeQuery.keyword = '강남'
     groupedResultsRef.value = [{ category: 'toilet', label: '화장실', count: 12, items: [] }]
     groupedTotalRef.value = 12
-    searchAllMock.mockResolvedValue({ categories: [{ type: 'apt-sale', count: 3, items: [] }] })
+    searchAllMock.mockResolvedValue({ categories: [{ type: 'apt-sale', count: 3, items: [] }], buildingCounts: { apt: 3, villa: 0, offitel: 0 } })
 
     const wrapper = mount(SearchPage, {
       global: {
@@ -215,6 +215,7 @@ describe('SearchPage', () => {
           dealYear: 2026, dealMonth: 5, buildYear: 2010, transactionCount: 12,
         }],
       }],
+      buildingCounts: { apt: 3, villa: 0, offitel: 0 },
     })
     getComplexListMock.mockResolvedValue({
       items: [{
@@ -264,6 +265,7 @@ describe('SearchPage', () => {
           dealYear: 2026, dealMonth: 5, buildYear: 2005, transactionCount: 3,
         }],
       }],
+      buildingCounts: { apt: 0, villa: 1, offitel: 0 },
     })
 
     const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
@@ -277,5 +279,52 @@ describe('SearchPage', () => {
     const href = cardLink!.attributes('href')!
     expect(href).toBe(`/real-estate/villa-rent/seoul/gangnam/${encodeURIComponent('○○빌라')}`)
     expect(href).not.toContain('villa-sale')
+  })
+
+  it('아파트 그룹 총계는 sale+rent 유니크 건물수(buildingCounts)로 표시된다 (매매+전월세 이중카운트 방지)', async () => {
+    routeQuery.keyword = '강남'
+    // apt-sale 5 + apt-rent 4 = 9지만, 두 테이블에 걸친 동일 건물을 제외한 유니크는 6.
+    searchAllMock.mockResolvedValue({
+      categories: [
+        { type: 'apt-sale', count: 5, items: [] },
+        { type: 'apt-rent', count: 4, items: [] },
+      ],
+      buildingCounts: { apt: 6, villa: 0, offitel: 0 },
+    })
+
+    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+    await flushPromises()
+
+    const aptGroup = wrapper.findAllComponents(SearchResultGroup).find(g => g.props('label') === '아파트')
+    expect(aptGroup, '아파트 그룹이 렌더되어야 함').toBeTruthy()
+    // 5+4=9(이중카운트)가 아니라 유니크 건물수 6
+    expect(aptGroup!.props('count')).toBe(6)
+  })
+
+  it('부동산 도메인 총계는 buildingCounts(apt+villa+offitel) 합계로 표시된다', async () => {
+    routeQuery.keyword = '강남'
+    searchAllMock.mockResolvedValue({
+      categories: [
+        { type: 'apt-sale', count: 5, items: [] },
+        { type: 'apt-rent', count: 4, items: [] },
+        { type: 'villa-sale', count: 2, items: [] },
+      ],
+      buildingCounts: { apt: 6, villa: 2, offitel: 0 },
+    })
+
+    const wrapper = mount(SearchPage, {
+      global: {
+        stubs: {
+          ...globalStubs,
+          SearchDomainSection: { template: '<section data-testid="domain"><span class="dc">{{ count }}</span><slot/></section>', props: ['title', 'count', 'countLabel'] },
+        },
+      },
+    })
+    await flushPromises()
+
+    // 도메인 총계 = 6 + 2 + 0 = 8 (per-type 합 5+4+2=11 아님)
+    const domainCount = wrapper.find('[data-testid="domain"] .dc')
+    expect(domainCount.exists()).toBe(true)
+    expect(domainCount.text()).toBe('8')
   })
 })

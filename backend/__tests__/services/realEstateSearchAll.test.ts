@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ─── Prisma mock ────────────────────────────────────────────────────────────
-const { mockGroupBy, mockCount, mockSummaryFindMany } = vi.hoisted(() => ({
+const { mockGroupBy, mockCount, mockSummaryFindMany, mockQueryRawUnsafe } = vi.hoisted(() => ({
   mockGroupBy: vi.fn(),
   mockCount: vi.fn(),
   mockSummaryFindMany: vi.fn(),
+  mockQueryRawUnsafe: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -18,6 +19,8 @@ vi.mock('../../src/lib/prisma.js', () => {
     offitelSaleTransaction: txModel,
     offitelRentTransaction: txModel,
     realEstateBuildingSummary: summaryModel,
+    // searchAll이 유형별 유니크 건물수를 COUNT(DISTINCT ...) raw로 조회 — DB-free 기본값 제공
+    $queryRawUnsafe: mockQueryRawUnsafe,
   };
   return { default: prismaClient, prisma: prismaClient };
 });
@@ -42,6 +45,7 @@ beforeEach(() => {
   mockGroupBy.mockResolvedValue([]);
   mockCount.mockResolvedValue(0);
   mockSummaryFindMany.mockResolvedValue([]);
+  mockQueryRawUnsafe.mockResolvedValue([{ c: 0n }]);
 });
 
 describe('searchAll (파서 연동)', () => {
@@ -151,5 +155,39 @@ describe('searchAll (파서 연동)', () => {
     const res = await searchAll('신축단지');
     const aptSale = res.categories.find((c) => c.type === 'apt-sale');
     expect(aptSale!.items[0]).toMatchObject({ dealYear: null, dealMonth: null, dealAmount: null, deposit: null });
+  });
+
+  it('유형별 유니크 건물수를 apt/villa/offitel 순서로 buildingCounts에 매핑한다', async () => {
+    // PROPERTY_GROUPS 순서(apt→villa→offitel)대로 3회 호출되는 COUNT(DISTINCT) 결과
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([{ c: 6n }])   // apt
+      .mockResolvedValueOnce([{ c: 2n }])   // villa
+      .mockResolvedValueOnce([{ c: 0n }]);  // offitel
+    const res = await searchAll('래미안');
+    expect(res.buildingCounts).toEqual({ apt: 6, villa: 2, offitel: 0 });
+    // 유형 묶음당 1회 = 3회
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(3);
+  });
+
+  it('유니크 건물수는 groupBy/distinct(앱메모리)가 아닌 COUNT(DISTINCT) raw SQL로 집계한다 (OOM 방지)', async () => {
+    await searchAll('강남 래미안');
+    // 거래/summary groupBy를 쓰지 않는다
+    expect(mockGroupBy).not.toHaveBeenCalled();
+    const sql = mockQueryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).toContain('COUNT(DISTINCT buildingName, bjdCode)');
+    expect(sql).toContain('FROM RealEstateBuildingSummary');
+    // type IN (?, ?) — apt 묶음 두 타입이 파라미터로 바인딩된다
+    expect(sql).toContain('type IN (?, ?)');
+    const aptParams = mockQueryRawUnsafe.mock.calls[0].slice(1);
+    expect(aptParams).toContain('apt-sale');
+    expect(aptParams).toContain('apt-rent');
+    // 이름 토큰(래미안)이 LIKE 바인딩으로 전달
+    expect(aptParams).toContain('래미안');
+  });
+
+  it('freeText/지역이 없으면 buildingCounts는 0이고 raw SQL을 호출하지 않는다', async () => {
+    const res = await searchAll('화장실');
+    expect(res.buildingCounts).toEqual({ apt: 0, villa: 0, offitel: 0 });
+    expect(mockQueryRawUnsafe).not.toHaveBeenCalled();
   });
 });

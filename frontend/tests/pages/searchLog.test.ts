@@ -49,7 +49,7 @@ vi.mock('~/composables/useAnalytics', () => ({
   }),
 }))
 
-// resultCount = 부동산(4+3) + 시설(5) 합, category='unified'
+// resultCount = 부동산 유니크 건물수(buildingCounts apt 4 + villa 3 = 7) + 시설(5) = 12, category='unified'
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
     searchAll: vi.fn().mockResolvedValue({
@@ -57,6 +57,7 @@ vi.mock('~/composables/useRealEstate', () => ({
         { type: 'apt-sale', count: 4, items: [] },
         { type: 'villa-sale', count: 3, items: [] },
       ],
+      buildingCounts: { apt: 4, villa: 3, offitel: 0 },
     }),
     getComplexList: vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 }),
   }),
@@ -122,7 +123,7 @@ describe('/search 검색 로깅 (logSearch)', () => {
     expect(logSearchMock).toHaveBeenCalledOnce()
     const call = logSearchMock.mock.calls[0][0]
     expect(call.keyword).toBe('강남')
-    // resultCount = 부동산(4+3) + 시설(5) 합 = 12, category='unified'
+    // resultCount = 부동산 유니크 건물수(buildingCounts 4+3) + 시설(5) = 12, category='unified'
     expect(call.resultCount).toBe(12)
     expect(call.category).toBe('unified')
   })
