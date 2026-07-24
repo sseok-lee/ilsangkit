@@ -100,6 +100,14 @@
       <div v-else aria-live="polite">
         <!-- 부동산 페이징 뷰 (유형 선택 시) -->
         <template v-if="selectedRealEstateType">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 text-sm font-semibold text-primary mb-4 hover:underline"
+            @click="clearRealEstateTypeFilter"
+          >
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_back</span>
+            통합 검색 결과로
+          </button>
           <div v-if="reLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-slate-200 animate-pulse">
               <div class="space-y-2.5">
@@ -498,6 +506,15 @@ function selectRealEstateType(type: string) {
   searchRealEstatePaged(type, 1)
 }
 
+// 부동산 유형 드릴다운(페이징 뷰) → 통합 결과(2도메인) 뷰로 복귀
+function clearRealEstateTypeFilter() {
+  selectedRealEstateType.value = ''
+  reComplexItems.value = []
+  reCurrentPage.value = 1
+  reTotalPages.value = 0
+  performSearch()
+}
+
 function goToRealEstatePage(page: number) {
   reCurrentPage.value = page
   searchRealEstatePaged(selectedRealEstateType.value, page)
@@ -552,6 +569,8 @@ watch(
   (newKeyword, oldKeyword) => {
     if (newKeyword !== oldKeyword) {
       searchKeyword.value = (newKeyword as string) || ''
+      selectedRealEstateType.value = ''
+      reComplexItems.value = []
       performSearch()
     }
   }

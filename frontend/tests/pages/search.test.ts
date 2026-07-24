@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import SearchPage from '~/pages/search.vue'
+import SearchResultGroup from '~/components/search/SearchResultGroup.vue'
 
 // Mock vue-router — query는 테스트별로 변경 가능하도록 mutable 객체 사용
 const routeQuery: Record<string, string> = {}
@@ -199,5 +200,54 @@ describe('SearchPage', () => {
     expect(h2s).toContain('부동산')
     expect(h2s).toContain('생활시설')
     expect(h2s.indexOf('부동산')).toBeLessThan(h2s.indexOf('생활시설'))
+  })
+
+  it('부동산 유형 드릴다운 후 뒤로가기로 통합 결과 뷰로 복귀한다', async () => {
+    routeQuery.keyword = '강남'
+    searchAllMock.mockResolvedValue({
+      categories: [{
+        type: 'apt-sale',
+        count: 3,
+        items: [{
+          buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
+          dongName: '역삼동', dealAmount: 150000, deposit: null,
+          dealYear: 2026, dealMonth: 5, buildYear: 2010, transactionCount: 12,
+        }],
+      }],
+    })
+    getComplexListMock.mockResolvedValue({
+      items: [{
+        buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
+        dongName: '역삼동', latestPrice: 150000, transactionCount: 12,
+      }],
+      page: 1, totalPages: 1, total: 1,
+    })
+    groupedResultsRef.value = [{ category: 'toilet', label: '화장실', count: 12, items: [] }]
+    groupedTotalRef.value = 12
+
+    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+    await flushPromises()
+
+    // 부동산 "아파트" 그룹의 더보기 클릭 → 페이징 드릴다운 뷰로 전환
+    const aptGroup = wrapper.findAllComponents(SearchResultGroup).find(g => g.props('label') === '아파트')
+    expect(aptGroup, '아파트 그룹이 렌더되어야 함').toBeTruthy()
+    await aptGroup!.find('button').trigger('click')
+    await flushPromises()
+
+    // 드릴다운 상태: 통합 도메인 섹션(h2)은 사라지고 페이징 뷰가 표시된다
+    expect(wrapper.findAll('h2').map(h => h.text())).not.toContain('부동산')
+
+    // (a) 페이징 뷰 상단에 "통합 검색 결과로" 뒤로가기 컨트롤이 존재한다
+    const backButton = wrapper.findAll('button').find(b => b.text().includes('통합 검색 결과로'))
+    expect(backButton, '뒤로가기 버튼이 렌더되어야 함').toBeTruthy()
+
+    // (b) 뒤로가기 클릭 → selectedRealEstateType이 초기화되고 통합 뷰(부동산+생활시설)가 다시 렌더된다
+    await backButton!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findAll('button').some(b => b.text().includes('통합 검색 결과로'))).toBe(false)
+    const h2sAfterBack = wrapper.findAll('h2').map(h => h.text())
+    expect(h2sAfterBack).toContain('부동산')
+    expect(h2sAfterBack).toContain('생활시설')
   })
 })
