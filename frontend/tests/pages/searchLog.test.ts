@@ -32,13 +32,12 @@ vi.mock('~/composables/useWasteSchedule', () => ({
   }),
 }))
 
-// 최소 mock — 통합 검색으로 search.vue가 useFacilitySearch를 다시 소비하므로 필요.
-// 실제 카운트 반영은 Task 5에서 정교화.
+// 통합 검색으로 search.vue가 useFacilitySearch를 다시 소비 — 시설 5건으로 combinedTotalCount 검증
 vi.mock('~/composables/useFacilitySearch', () => ({
   useFacilitySearch: () => ({
     searchGrouped: vi.fn().mockResolvedValue(undefined),
-    groupedResults: ref([]),
-    groupedTotalCount: ref(0),
+    groupedResults: ref([{ category: 'toilet', label: '화장실', count: 5, items: [] }]),
+    groupedTotalCount: ref(5),
     recovery: ref(null),
   }),
 }))
@@ -50,7 +49,7 @@ vi.mock('~/composables/useAnalytics', () => ({
   }),
 }))
 
-// /search는 부동산 전용 — resultCount는 부동산 categories count 합으로 산출된다 (시설 병렬 제거)
+// resultCount = 부동산(4+3) + 시설(5) 합, category='unified'
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
     searchAll: vi.fn().mockResolvedValue({
@@ -108,7 +107,7 @@ describe('/search 검색 로깅 (logSearch)', () => {
     expect(wrapper.exists()).toBe(true)
   })
 
-  it('loading true→false 전이 + keyword 있을 때 logSearch가 부동산 결과 합계로 호출된다', async () => {
+  it('loading true→false 전이 + keyword 있을 때 logSearch가 통합 결과 합계로 호출된다', async () => {
     wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
     await flushPromises()
     // 마운트 시 초기 검색(키워드 없음)은 로깅되지 않지만, 방어적으로 초기화
@@ -123,9 +122,9 @@ describe('/search 검색 로깅 (logSearch)', () => {
     expect(logSearchMock).toHaveBeenCalledOnce()
     const call = logSearchMock.mock.calls[0][0]
     expect(call.keyword).toBe('강남')
-    // resultCount = 부동산 categories count 합 (4 + 3, 시설 병렬 제거)
-    expect(call.resultCount).toBe(7)
-    expect(call.category).toBe('realestate')
+    // resultCount = 부동산(4+3) + 시설(5) 합 = 12, category='unified'
+    expect(call.resultCount).toBe(12)
+    expect(call.category).toBe('unified')
   })
 
   it('keyword가 없을 때 logSearch가 호출되지 않는다', async () => {

@@ -637,14 +637,14 @@ watch(loading, (now, prev) => {
     trackSearchResultsView({
       keyword: searchKeyword.value,
       resultCount,
-      category: 'realestate',
+      category: 'unified',
     })
     logSearch({
       keyword: searchKeyword.value,
       resultCount,
       city: selectedCity.value || undefined,
       district: selectedDistrict.value || undefined,
-      category: 'realestate',
+      category: 'unified',
     })
     if (resultCount === 0) {
       trackSearchNoResults({ keyword: searchKeyword.value })
