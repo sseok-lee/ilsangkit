@@ -251,7 +251,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { useSearchSuggest } from '~/composables/useSearchSuggest'
 import { isFacilityCategory, type GroupedCategory } from '~/types/facility'
-import type { RealEstateType, ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
+import type { RealEstateType, ComplexInfo } from '~/types/realEstate'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
@@ -362,22 +362,6 @@ const reCurrentPage = ref(1)
 const reTotalPages = ref(0)
 const reTotal = ref(0)
 const reLoading = ref(false)
-
-const rePaginationRange = computed(() => {
-  const total = reTotalPages.value
-  const current = reCurrentPage.value
-  const delta = 2
-  const range: number[] = []
-  for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
-    range.push(i)
-  }
-  return range
-})
-
-const filteredRealEstateGrouped = computed(() => {
-  if (!selectedRealEstateType.value) return realEstateGrouped.value
-  return realEstateGrouped.value.filter(g => g.propertyType === selectedRealEstateType.value)
-})
 
 async function searchRealEstatePaged(propertyType: string, page: number = 1) {
   reLoading.value = true
