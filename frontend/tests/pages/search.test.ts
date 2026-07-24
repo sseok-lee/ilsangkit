@@ -135,16 +135,17 @@ describe('SearchPage', () => {
     expect(wrapper.find('[data-testid="pagination"]').exists()).toBe(false)
   })
 
-  it('지역 필터 드롭다운이 렌더링되는지 확인', () => {
+  it('지역 필터 섹션이 제거되었는지 확인 (키워드 파서가 지역을 처리)', () => {
     const wrapper = mount(SearchPage, {
       global: {
         stubs: globalStubs,
       },
     })
 
-    // Region filter selects exist (시/도, 구/군)
-    const selects = wrapper.findAll('select')
-    expect(selects.length).toBeGreaterThanOrEqual(2)
+    // Region filter selects(시/도, 구/군)는 더 이상 렌더되지 않는다
+    expect(wrapper.findAll('select').length).toBe(0)
+    // '지역' 섹션 헤딩도 사라져야 한다
+    expect(wrapper.text()).not.toContain('시·도·구·군으로 결과를 좁힐 수 있습니다')
   })
 
   it('검색 결과 개수가 표시되는지 확인', async () => {

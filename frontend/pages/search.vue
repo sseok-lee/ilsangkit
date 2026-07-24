@@ -39,43 +39,6 @@
         </template>
       </PageHero>
 
-      <!-- 지역 필터 -->
-      <SectionBlock heading="지역" subtext="시·도·구·군으로 결과를 좁힐 수 있습니다.">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">시/도</label>
-            <div class="relative">
-              <select
-                v-model="selectedCity"
-                aria-label="시/도 선택"
-                class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
-                @change="handleCityChange"
-              >
-                <option value="">시/도 선택</option>
-                <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
-              </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">구/군</label>
-            <div class="relative">
-              <select
-                v-model="selectedDistrict"
-                :disabled="!selectedCity"
-                aria-label="구/군 선택"
-                class="w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                @change="handleDistrictChange"
-              >
-                <option value="">구/군 선택</option>
-                <option v-for="dist in districts" :key="dist" :value="dist">{{ dist }}</option>
-              </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]">expand_more</span>
-            </div>
-          </div>
-        </div>
-      </SectionBlock>
-
       <!-- 데이터 의존 영역: isMounted 가드로 hydration mismatch 방지 -->
       <template v-if="isMounted">
       <!-- Loading Skeleton -->
@@ -246,14 +209,12 @@ import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useFacilitySearch } from '~/composables/useFacilitySearch'
-import { useWasteSchedule } from '~/composables/useWasteSchedule'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { useSearchSuggest } from '~/composables/useSearchSuggest'
 import { isFacilityCategory, type GroupedCategory } from '~/types/facility'
 import type { RealEstateType, ComplexInfo } from '~/types/realEstate'
 import PageHero from '~/components/common/PageHero.vue'
-import SectionBlock from '~/components/common/SectionBlock.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 import SearchDomainSection from '~/components/search/SearchDomainSection.vue'
 import SearchResultGroup from '~/components/search/SearchResultGroup.vue'
@@ -269,14 +230,6 @@ const { logSearch } = useSearchSuggest()
 
 // 통합 검색 상태: 부동산 + 시설(grouped) 병렬 fetch
 const loading = ref(false)
-
-// Region dropdowns (reuse waste schedule API for city/district lists)
-const { getCities, getDistricts } = useWasteSchedule()
-
-const selectedCity = ref('')
-const selectedDistrict = ref('')
-const cities = ref<string[]>([])
-const districts = ref<string[]>([])
 
 // Hydration guard: SSR과 클라이언트가 동일한 초기 HTML을 렌더링하도록 보장
 const isMounted = ref(false)
@@ -369,8 +322,8 @@ async function searchRealEstatePaged(propertyType: string, page: number = 1) {
     const type = `${propertyType}-sale` as RealEstateType
     const result = await getComplexList(
       type,
-      selectedCity.value || undefined,
-      selectedDistrict.value || undefined,
+      undefined,
+      undefined,
       searchKeyword.value || undefined,
       page,
       20
@@ -425,15 +378,13 @@ async function performSearch() {
       return
     }
     const kw = searchKeyword.value || undefined
-    const city = selectedCity.value || undefined
-    const district = selectedDistrict.value || undefined
     await Promise.all([
-      searchRealEstate(kw, city, district)
+      searchRealEstate(kw)
         .then(r => { realEstateResults.value = ((r?.categories as unknown) as RealEstateResultCategory[] | undefined)?.filter(c => c.count > 0) || [] })
         .catch(() => { realEstateResults.value = [] }),
       // 시설은 키워드가 있을 때만 (grouped는 전국 팬아웃이라 빈 키워드 방지)
       kw
-        ? searchFacilitiesGrouped({ keyword: kw, city, district, limit: 20 }).catch(() => undefined)
+        ? searchFacilitiesGrouped({ keyword: kw, limit: 20 }).catch(() => undefined)
         : Promise.resolve(),
     ])
   } finally {
@@ -477,11 +428,10 @@ function reItemToComplex(item: RealEstatePreviewItem): ComplexInfo {
   } as ComplexInfo
 }
 
-// 생활시설 더보기 링크 — 카테고리 목록 페이지로 현재 키워드/지역 조건을 그대로 전달.
+// 생활시설 더보기 링크 — 카테고리 목록 페이지로 현재 키워드 조건을 그대로 전달.
 function facilityMoreHref(category: string): string {
   const kw = encodeURIComponent(searchKeyword.value.trim())
-  const city = selectedCity.value ? `&city=${encodeURIComponent(selectedCity.value)}` : ''
-  return `/${category}?keyword=${kw}${city}`
+  return `/${category}?keyword=${kw}`
 }
 
 function selectRealEstateType(type: string) {
@@ -503,22 +453,6 @@ function goToRealEstatePage(page: number) {
   reCurrentPage.value = page
   searchRealEstatePaged(selectedRealEstateType.value, page)
   window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-async function handleCityChange() {
-  selectedDistrict.value = ''
-
-  if (selectedCity.value) {
-    districts.value = await getDistricts(selectedCity.value)
-  } else {
-    districts.value = []
-  }
-
-  performSearch()
-}
-
-function handleDistrictChange() {
-  performSearch()
 }
 
 // SSR redirect: /search?category=X → /X (301)
@@ -581,25 +515,6 @@ onMounted(async () => {
     searchKeyword.value = route.query.keyword as string
   }
 
-  // Load cities for region filter
-  cities.value = await getCities()
-
-  // Read city filter from query param
-  if (route.query.city) {
-    const cityParam = route.query.city as string
-    // 단축명(서울)→풀네임(서울특별시) 정규화
-    const matchedCity = cities.value.find(c => c === cityParam || c.startsWith(cityParam))
-    selectedCity.value = matchedCity || cityParam
-    if (selectedCity.value) {
-      districts.value = await getDistricts(selectedCity.value)
-    }
-  }
-
-  // Read district filter from query param
-  if (route.query.district) {
-    selectedDistrict.value = route.query.district as string
-  }
-
   // Initial search
   performSearch()
 })
@@ -626,8 +541,6 @@ watch(loading, (now, prev) => {
     logSearch({
       keyword: searchKeyword.value,
       resultCount,
-      city: selectedCity.value || undefined,
-      district: selectedDistrict.value || undefined,
       category: 'unified',
     })
     if (resultCount === 0) {
