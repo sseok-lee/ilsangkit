@@ -56,6 +56,8 @@ export const RealEstateComplexSchema = z.object({
   city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
   buildingName: z.string().max(100).optional(),
+  // /search 드릴다운 전용 — 지역/이름을 파서로 해석하는 키워드. 지역 허브 경로(city/district)와 배타적.
+  keyword: z.string().max(100).optional(),
   category: RealEstateTypeSchema.optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(15),

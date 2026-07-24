@@ -82,6 +82,7 @@ export interface SearchAllResult {
     count: number;
     items: unknown[];
   }>;
+  buildingCounts: { apt: number; villa: number; offitel: number };
 }
 
 // ─────────────────────────────────────────────
@@ -496,6 +497,84 @@ export async function getComplexList(
   };
 }
 
+/**
+ * 키워드 기반 건물 목록 조회 — /search 드릴다운(더보기) 전용.
+ *
+ * searchAll(미리보기 카운트)과 동일하게 키워드를 파서로 지역/이름으로 해석한다.
+ * 지역 키워드(예: "강남", "전남광주")는 buildingName LIKE가 아니라 지역 필터로 스코프되어
+ * 미리보기 카운트와 드릴다운 결과가 일관된다. (getComplexList의 buildingName-prefix 경로는
+ * 지역 키워드에 대해 0건을 반환하던 버그.)
+ *
+ * region/name 모두 ?-파라미터 바인딩 — SQL 인젝션 안전. summary 사전집계 테이블만 조회하고
+ * groupBy/앱메모리 distinct를 쓰지 않아 OOM 위험이 없다. 반환 shape은 getComplexList와 동일.
+ */
+export async function searchComplexesByKeyword(
+  type: string,
+  keyword: string,
+  page: number = 1,
+  limit: number = 20
+): Promise<ComplexListResult> {
+  if (!TABLE_NAME_MAP[type]) throw new Error(`Unknown real estate type: ${type}`);
+
+  const parsed = await parseSearchQueryCached(keyword);
+  const { effectiveCity, effectiveDistrict, nameText } = resolveScope({}, parsed);
+  const hasName = !!(nameText && nameText.length >= 2);
+  const hasRegion = !!(effectiveCity || effectiveDistrict);
+  // 순수 카테고리어/1자 등 지역·이름 어느 쪽으로도 해석 안 되면 전체 스캔 방지 — DB 접근 없이 종료.
+  if (!hasName && !hasRegion) return { items: [], total: 0, page, totalPages: 0 };
+
+  const region = regionFilterToSql(buildRegionFilter(effectiveCity, effectiveDistrict));
+  const conditions: string[] = ['type = ?', VALID_NAME_SQL, ...region.clauses];
+  const params: unknown[] = [type, ...region.params];
+  if (hasName) {
+    conditions.push('buildingName LIKE CONCAT(?, \'%\')');
+    params.push(nameText);
+  }
+
+  const whereClause = conditions.join(' AND ');
+  const offset = (page - 1) * limit;
+
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRawUnsafe<SummaryRawRow[]>(
+      `SELECT buildingName, bjdCode, city, district, dongName, transactionCount,
+              latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
+       FROM RealEstateBuildingSummary
+       WHERE ${whereClause}
+       ORDER BY transactionCount DESC
+       LIMIT ? OFFSET ?`,
+      ...params,
+      limit,
+      offset,
+    ),
+    prisma.$queryRawUnsafe<[{ total: bigint }]>(
+      `SELECT COUNT(*) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+      ...params,
+    ),
+  ]);
+
+  const total = Number(countRows[0]?.total ?? 0);
+
+  return {
+    items: rows.map((row) => ({
+      buildingName: row.buildingName,
+      bjdCode: row.bjdCode,
+      city: row.city,
+      district: row.district,
+      dongName: row.dongName,
+      transactionCount: Number(row.transactionCount),
+      latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
+      lat: row.lat != null ? Number(row.lat) : null,
+      lng: row.lng != null ? Number(row.lng) : null,
+      lastDealYear: row.latestDealYear,
+      lastDealMonth: row.latestDealMonth,
+      buildYear: row.buildYear,
+    })),
+    total,
+    page,
+    totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+  };
+}
+
 // ─────────────────────────────────────────────
 // getBuildingInfo
 // ─────────────────────────────────────────────
@@ -728,6 +807,32 @@ const ALL_TYPES: RealEstateType[] = [
 ];
 
 /**
+ * buildRegionFilter() 결과(Prisma where 조각)를 raw-SQL 조각 + 파라미터로 변환한다.
+ * city-variant(서울/서울특별시) 로직을 중복 없이 재사용하기 위한 순수 함수 — DB 접근 없음.
+ * COUNT(DISTINCT ...) 같은 raw 쿼리에서 `IN (?, ?)` 파라미터 바인딩에 사용한다.
+ */
+export function regionFilterToSql(filter: Record<string, unknown>): { clauses: string[]; params: unknown[] } {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  const city = filter.city;
+  if (city && typeof city === 'object' && city !== null && 'in' in (city as object)) {
+    const arr = (city as { in: string[] }).in;
+    if (arr.length) { clauses.push(`city IN (${arr.map(() => '?').join(', ')})`); params.push(...arr); }
+  } else if (typeof city === 'string') {
+    clauses.push('city = ?'); params.push(city);
+  }
+  if (typeof filter.district === 'string') { clauses.push('district = ?'); params.push(filter.district); }
+  return { clauses, params };
+}
+
+/** 유형별(apt/villa/offitel) 유니크 건물수 집계용 — 각 유형의 sale/rent 테이블 타입 묶음. */
+const PROPERTY_GROUPS = [
+  { pt: 'apt' as const, types: ['apt-sale', 'apt-rent'] },
+  { pt: 'villa' as const, types: ['villa-sale', 'villa-rent'] },
+  { pt: 'offitel' as const, types: ['offitel-sale', 'offitel-rent'] },
+];
+
+/**
  * 통합 검색 - 6개 테이블 buildingName LIKE 검색 (병렬)
  */
 export async function searchAll(
@@ -743,7 +848,7 @@ export async function searchAll(
   const hasName = !!(nameText && nameText.length >= 2);
   const hasRegion = !!(effectiveCity || effectiveDistrict);
   if (!hasName && !hasRegion) {
-    return { categories: [] };
+    return { categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } };
   }
 
   const results = await Promise.all(
@@ -788,7 +893,24 @@ export async function searchAll(
     })
   );
 
-  return { categories: results };
+  // 유형별(apt/villa/offitel) 유니크 건물수 — sale/rent 두 테이블에 걸친 동일 건물의 이중카운트 제거.
+  // RealEstateBuildingSummary는 (type, buildingName, bjdCode) 유니크라 매매+전월세를 함께 가진 건물이
+  // per-type count에서 두 번 잡힌다. 앱메모리 distinct(과거 2GB OOM)를 피해 DB-side로 COUNT(DISTINCT ...).
+  // type IN (?, ?)는 고정 상수 배열 값이라 안전, region/name 파라미터는 바인딩으로 전달.
+  const region = regionFilterToSql(buildRegionFilter(effectiveCity, effectiveDistrict));
+  const distinctCounts = await Promise.all(PROPERTY_GROUPS.map(async ({ types }) => {
+    const clauses = ['type IN (?, ?)', ...region.clauses];
+    const params: unknown[] = [types[0], types[1], ...region.params];
+    if (hasName) { clauses.push(`buildingName LIKE CONCAT(?, '%')`); params.push(nameText); }
+    const rows = await prisma.$queryRawUnsafe<Array<{ c: bigint }>>(
+      `SELECT COUNT(DISTINCT buildingName, bjdCode) AS c FROM RealEstateBuildingSummary WHERE ${clauses.join(' AND ')}`,
+      ...params,
+    );
+    return Number(rows[0]?.c ?? 0);
+  }));
+  const buildingCounts = { apt: distinctCounts[0], villa: distinctCounts[1], offitel: distinctCounts[2] };
+
+  return { categories: results, buildingCounts };
 }
 
 // ─────────────────────────────────────────────

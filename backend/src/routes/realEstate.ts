@@ -5,6 +5,7 @@ import {
   searchTransactions,
   getTransactionStats,
   getComplexList,
+  searchComplexesByKeyword,
   getBuildingInfo,
   searchAll,
   getAreaGroups,
@@ -125,9 +126,13 @@ router.get(
   }),
   asyncHandler(async (_req: Request, res: Response) => {
     const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
-    const { city, district, buildingName, page, limit } =
+    const { city, district, buildingName, keyword, page, limit } =
       res.locals.validated.query as z.infer<typeof RealEstateComplexSchema>;
-    const result = await getComplexList(type, city, district, buildingName, page, limit);
+    // keyword가 있으면 /search 드릴다운 — 키워드를 지역/이름으로 해석(미리보기와 일관).
+    // 없으면 기존 지역 허브 경로(city/district/buildingName) 그대로.
+    const result = keyword
+      ? await searchComplexesByKeyword(type, keyword, page, limit)
+      : await getComplexList(type, city, district, buildingName, page, limit);
     res.json({ success: true, data: result });
   })
 );

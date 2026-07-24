@@ -295,26 +295,27 @@ describe('DetailPage', () => {
   // 기본정보가 시설현황보다 DOM 상 먼저 와야 한다 (모바일=데스크톱 동일, order 미사용).
   it('기본정보가 시설현황보다 먼저 렌더된다', async () => {
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
-    const h3s = wrapper.findAll('h3').map(h => h.text())
-    const basicIdx = h3s.indexOf('기본정보')
-    const statusIdx = h3s.indexOf('시설현황')
+    // SectionBlock 헤딩은 h2 (페이지 h1 → 섹션 h2 위계, I-21)
+    const h2s = wrapper.findAll('h2').map(h => h.text())
+    const basicIdx = h2s.indexOf('기본정보')
+    const statusIdx = h2s.indexOf('시설현황')
     expect(basicIdx).toBeGreaterThan(-1)
     expect(statusIdx).toBeGreaterThan(-1)
     expect(basicIdx).toBeLessThan(statusIdx)
   })
 
-  // hasFacilityStatus=false 카테고리(clothes)는 시설현황 섹션 h3 헤딩이 렌더되지 않아야 한다.
+  // hasFacilityStatus=false 카테고리(clothes)는 시설현황 섹션 h2 헤딩이 렌더되지 않아야 한다.
   it('clothes(시설현황 없음)는 빈 T1 + 광고 연속 노출이 없다', async () => {
     mockUseAsyncDataWith({
       success: true,
       data: { ...mockFacility, id: 'clothes-1', category: 'clothes', details: { detailLocation: '정문 앞' } },
     })
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
-    // 시설현황 SectionBlock 의 <h3> 헤딩이 렌더되지 않음 (DetailFacilityStatus 내부 v-if=false)
-    // HTML 주석에 "시설현황" 문자열이 포함될 수 있으므로 h3 태그로 정확히 검증
-    const h3s = wrapper.findAll('h3')
-    const statusH3 = h3s.find(h => h.text() === '시설현황')
-    expect(statusH3).toBeUndefined()
+    // 시설현황 SectionBlock 의 <h2> 헤딩이 렌더되지 않음 (DetailFacilityStatus 내부 v-if=false)
+    // HTML 주석에 "시설현황" 문자열이 포함될 수 있으므로 h2 태그로 정확히 검증
+    const h2s = wrapper.findAll('h2')
+    const statusH2 = h2s.find(h => h.text() === '시설현황')
+    expect(statusH2).toBeUndefined()
   })
 
   // ---------------- 약국 헤더 칩 보강 (약사수·오늘 영업시간) ----------------

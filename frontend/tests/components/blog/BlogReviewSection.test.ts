@@ -36,7 +36,7 @@ describe('BlogReviewSection', () => {
     const w = mount(BlogReviewSection, { props: { kind: 'facility' as const, primaryKey: 'parking', secondaryKey: '123' } })
     await flushPromises(); await nextTick()
     expect(w.find('[data-testid="blog-section"]').exists()).toBe(true)
-    expect(w.find('h3').exists()).toBe(false)
+    expect(w.find('h2').exists()).toBe(false)
     expect(w.findAll('[data-testid="blog-card"]')).toHaveLength(0)
   })
 
@@ -45,7 +45,7 @@ describe('BlogReviewSection', () => {
     const w = mount(BlogReviewSection, { props: { kind: 'facility' as const, primaryKey: 'parking', secondaryKey: '123' } })
     await flushPromises(); await nextTick()
     expect(w.findAll('[data-testid="blog-card"]')).toHaveLength(5)
-    expect(w.find('h3').text()).toContain('관련 블로그')
+    expect(w.find('h2').text()).toContain('관련 블로그')
   })
 
   it('kind=real-estate 경로 호출', async () => {

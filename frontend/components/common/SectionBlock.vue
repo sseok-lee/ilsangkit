@@ -6,7 +6,8 @@
     <header v-if="heading || $slots.heading || $slots.right" class="flex flex-col gap-2 md:flex-row md:justify-between md:items-end md:gap-4 mb-3">
       <div class="min-w-0">
         <slot name="heading">
-          <h3 v-if="heading" class="text-display-2 text-strong">{{ heading }}</h3>
+          <!-- 페이지 h1 바로 아래 섹션이 표준 사용처 → 기본 h2로 문서 개요 위계 정합 (h1→h3 점프 방지) -->
+          <h2 v-if="heading" class="text-display-2 text-strong">{{ heading }}</h2>
         </slot>
         <p v-if="subtext" class="mt-1 text-faint text-xs md:text-sm">{{ subtext }}</p>
       </div>
