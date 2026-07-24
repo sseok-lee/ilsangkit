@@ -4,7 +4,8 @@
       <li
         v-for="(item, index) in items"
         :key="index"
-        class="flex items-center shrink-0"
+        class="flex items-center"
+        :class="item.current ? 'min-w-0' : 'shrink-0'"
       >
         <!-- Separator -->
         <span
@@ -28,7 +29,7 @@
         <span
           v-else
           aria-current="page"
-          class="font-semibold text-slate-900"
+          class="font-semibold text-slate-900 truncate"
         >
           {{ item.label }}
         </span>

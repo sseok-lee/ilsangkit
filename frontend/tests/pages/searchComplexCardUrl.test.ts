@@ -98,7 +98,6 @@ const globalStubs = {
   PageHero: { template: '<div><slot name="search" /></div>' },
   SectionBlock: { template: '<div><slot /><slot name="right" /></div>' },
   EmptyState: { template: '<div><slot /></div>' },
-  SearchRecovery: { template: '<div />' },
   SearchAutocomplete: { template: '<div />' },
   NuxtLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'\'"><slot /></a>' },
 }

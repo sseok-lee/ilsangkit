@@ -54,7 +54,7 @@ describe('전남광주통합특별시 slug/읽기맵 등록 (Task A4)', () => {
     expect(REGIONS['전남']?.length).toBe(22)
   })
 
-  it('CITY_FULL_NAME_TO_SLUG에 전남광주통합특별시 → jeonnamgwangju 등록 (Task A8: SearchRecovery chipTo robustness)', () => {
+  it('CITY_FULL_NAME_TO_SLUG에 전남광주통합특별시 → jeonnamgwangju 등록', () => {
     expect(CITY_FULL_NAME_TO_SLUG['전남광주통합특별시']).toBe('jeonnamgwangju')
   })
 

@@ -66,6 +66,30 @@ describe('Breadcrumb', () => {
     expect(wrapper.html()).toMatch(/\/|>/);
   });
 
+  it('truncates the current (last) item to avoid mobile horizontal overflow', () => {
+    const items = [
+      { label: '홈', href: '/', current: false },
+      { label: '경기', href: '/gyeonggi', current: false },
+      { label: '군포시', href: '/gyeonggi/gunpo', current: false },
+      { label: '주공(1단지) 아파트 실거래가 매우 긴 이름', href: '/x', current: true },
+    ];
+
+    const wrapper = mount(Breadcrumb, {
+      props: { items },
+    });
+
+    // 현재 항목 span은 truncate로 줄임표 처리
+    const current = wrapper.find('[aria-current="page"]');
+    expect(current.classes()).toContain('truncate');
+
+    // 현재 항목 li는 축소 가능(min-w-0), 나머지는 shrink-0 유지
+    const lis = wrapper.findAll('li');
+    const currentLi = lis[lis.length - 1];
+    expect(currentLi.classes()).toContain('min-w-0');
+    expect(currentLi.classes()).not.toContain('shrink-0');
+    expect(lis[0].classes()).toContain('shrink-0');
+  });
+
   it('handles single item breadcrumb', () => {
     const items = [
       { label: '홈', href: '/', current: true },
