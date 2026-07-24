@@ -10,6 +10,9 @@ describe('SearchDomainSection', () => {
     })
     expect(w.find('h2').text()).toBe('부동산')
     expect(w.text()).toContain('13')
+    // 단위는 건물·시설 수(곳)이지 거래 건수(건)가 아니다 — 오해 소지 있는 '건' 금지
+    expect(w.text()).toContain('곳')
+    expect(w.text()).not.toContain('건')
     expect(w.find('.g').exists()).toBe(true)
   })
 })

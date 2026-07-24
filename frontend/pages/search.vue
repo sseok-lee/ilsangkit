@@ -6,7 +6,6 @@
         eyebrow="통합 검색"
         :title="heroTitle"
         :description="heroDescription"
-        :stats="heroStats"
       >
         <template #search>
           <div class="flex items-center gap-2 bg-white rounded-lg p-1.5 border-2 border-slate-300 focus-within:border-primary">
@@ -361,14 +360,6 @@ const heroTitle = computed(() => (searchKeyword.value ? `'${searchKeyword.value}
 const heroDescription = computed(() => searchKeyword.value
   ? '생활시설과 부동산 실거래가를 한 번에 찾았어요.'
   : '장소·단지명·시설명으로 생활시설과 부동산을 함께 검색하세요.')
-const heroStats = computed(() => {
-  if (!searchKeyword.value) return []
-  return [
-    { label: '생활시설', value: facilityTotalCount.value > 0 ? `${facilityTotalCount.value.toLocaleString('ko-KR')}곳` : '—' },
-    { label: '부동산', value: realEstateTotalCount.value > 0 ? `${realEstateTotalCount.value.toLocaleString('ko-KR')}건` : '—' },
-  ]
-})
-
 // Methods
 async function performSearch() {
   loading.value = true
