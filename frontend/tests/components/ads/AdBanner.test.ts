@@ -55,26 +55,14 @@ describe('AdBanner', () => {
     expect(requestSource()).toContain('win.adsbygoogle.push({})')
   })
 
-  // 뷰어빌리티 게이트: 슬롯이 뷰포트에 근접했을 때만 광고를 요청한다.
-  // (무스크롤 바운스에서 폴드 밖 슬롯까지 즉시 impression 을 만들던 무효트래픽 근본원인 차단)
-  // push 경로는 import.meta.client 게이트라 unit(undefined)에서 실행되지 않으므로 소스 구조로 보증한다.
-  it('슬롯이 뷰포트에 근접했을 때만 광고를 요청한다 (IntersectionObserver 뷰어빌리티 게이트)', () => {
-    const src = requestSource()
+  it('pushes the ad request immediately on mount without lazy/IntersectionObserver gating', () => {
     expect(source()).toContain('useDeferredAdSenseRequest(container, () => shouldServeAds.value)')
-    expect(src).toContain('hasRequestedAd.value = true')
-    expect(src).toContain('onBeforeUnmount(clearPendingAdRequest)')
-    // 뷰포트 진입 시에만 발화하도록 IntersectionObserver + rootMargin 게이트
-    expect(src).toContain('new IntersectionObserver(')
-    expect(src).toContain('isIntersecting')
-    expect(src).toContain('rootMargin')
-    // IO 미지원(구형/SSR/테스트) 시 광고 유실 방지 폴백
-    expect(src).toContain("typeof IntersectionObserver === 'undefined'")
-    // 관찰자는 세대 변경/언마운트 시 정리
-    expect(src).toContain('teardownViewabilityGate')
-    // SSR/봇 게이트는 유지
-    expect(src).toContain('import.meta.client')
-    // 지연은 뷰포트 게이트로만 — 인위적 시간지연/rAF 는 쓰지 않는다
-    expect(src).not.toContain('requestAnimationFrame')
+    expect(requestSource()).toContain('hasRequestedAd.value = true')
+    expect(requestSource()).toContain('onBeforeUnmount(clearPendingAdRequest)')
+    expect(requestSource()).not.toContain('IntersectionObserver')
+    expect(requestSource()).not.toContain('AD_REQUEST_DELAY_MS')
+    expect(requestSource()).not.toContain('AD_REQUEST_ROOT_MARGIN')
+    expect(requestSource()).not.toContain('requestAnimationFrame')
   })
 
   it('does not fabricate data-ad-status=unfilled when AdSense has not responded yet', async () => {
@@ -202,7 +190,8 @@ describe('AdBanner', () => {
     // 언마운트/세대 변경 시 observer 정리
     expect(src).toContain('teardownResizeRetry')
     expect(src).toContain('resizeObserver.disconnect()')
-    // 0폭 재시도(ResizeObserver)와 뷰어빌리티 게이트(IntersectionObserver)는 별개 관찰자다
+    // 기존 lazy/지연 게이팅 회귀 금지
+    expect(src).not.toContain('IntersectionObserver')
     expect(src).not.toContain('requestAnimationFrame')
   })
 
