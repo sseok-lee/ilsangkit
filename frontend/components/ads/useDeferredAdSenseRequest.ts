@@ -1,13 +1,5 @@
 import { nextTick, onBeforeUnmount, ref, type Ref } from 'vue'
 
-// 뷰어빌리티 게이트: 슬롯이 뷰포트에 근접(rootMargin)했을 때만 광고를 요청한다.
-// 무스크롤 바운스에서 화면 밖 슬롯까지 즉시 impression 을 만들어 unviewable 비율을
-// 끌어올리던 문제(AdSense 무효트래픽 반복 재발의 근본원인)를 막는다.
-// 폴드 상단 슬롯은 로드 시 이미 교차하므로 즉시 발화(=정상 뷰어블),
-// 폴드 아래 슬롯만 사용자가 근접했을 때 발화한다(경쟁사에서 검증된 lazy 패턴).
-// 값은 채움률/뷰어빌리티 균형점 — AdSense 리포트로 조정 가능.
-const VIEWABILITY_ROOT_MARGIN = '200px 0px'
-
 export function useDeferredAdSenseRequest(
   container: Ref<HTMLElement | null>,
   canRequest: () => boolean = () => true,
@@ -15,7 +7,6 @@ export function useDeferredAdSenseRequest(
   const hasRequestedAd = ref(false)
   let requestGeneration = 0
   let resizeObserver: ResizeObserver | null = null
-  let viewabilityObserver: IntersectionObserver | null = null
 
   function teardownResizeRetry() {
     if (resizeObserver) {
@@ -24,17 +15,9 @@ export function useDeferredAdSenseRequest(
     }
   }
 
-  function teardownViewabilityGate() {
-    if (viewabilityObserver) {
-      viewabilityObserver.disconnect()
-      viewabilityObserver = null
-    }
-  }
-
   function clearPendingAdRequest() {
     requestGeneration++
     teardownResizeRetry()
-    teardownViewabilityGate()
   }
 
   // 컨테이너가 아직 0폭(레이아웃 미완료/cross-viewport hidden 등)이면 push 를 그냥
@@ -79,30 +62,9 @@ export function useDeferredAdSenseRequest(
     if (!import.meta.client || !canRequest()) return
     hasRequestedAd.value = false
     teardownResizeRetry()
-    teardownViewabilityGate()
     const generation = ++requestGeneration
-    const el = container.value
-    // IntersectionObserver 미지원(구형 브라우저/SSR/테스트 환경) → 즉시 push 폴백(광고 유실 방지).
-    if (!el || typeof IntersectionObserver === 'undefined') {
-      nextTick(() => pushAd(generation))
-      return
-    }
-    // 슬롯이 뷰포트에 근접하면 1회만 발화하고 정리한다.
-    // 폴드 상단 슬롯은 관찰 즉시 교차 콜백이 와서 사실상 로드 시 발화한다.
-    viewabilityObserver = new IntersectionObserver(
-      (entries) => {
-        if (generation !== requestGeneration) {
-          teardownViewabilityGate()
-          return
-        }
-        if (entries.some((entry) => entry.isIntersecting)) {
-          teardownViewabilityGate()
-          nextTick(() => pushAd(generation))
-        }
-      },
-      { rootMargin: VIEWABILITY_ROOT_MARGIN },
-    )
-    viewabilityObserver.observe(el)
+    // 즉시 push — 지연/뷰포트 게이팅 제거 (AdSense가 동일 페이지 다중 슬롯을 한꺼번에 인지해야 채움률 확보)
+    nextTick(() => pushAd(generation))
   }
 
   onBeforeUnmount(clearPendingAdRequest)
