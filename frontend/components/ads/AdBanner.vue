@@ -218,6 +218,39 @@ function refresh() {
   watchStatus()
 }
 
+// 뷰어빌리티 게이트: 슬롯(.ad-banner)이 뷰포트에 근접했을 때만 refresh(=광고 요청 +
+// status 감시 타이머)를 실행한다. 요청과 collapse 타이머를 함께 뷰어블 시점으로 미뤄,
+// 폴드 밖 슬롯이 "요청도 하기 전에 1.5s status 타임아웃으로 collapse" 되는 것을 막는다.
+// (무효트래픽 근본원인인 무스크롤 즉시 다중요청도 함께 제거 — unviewable impression↓)
+// 폴드 상단 슬롯은 관찰 즉시 교차 콜백이 와서 사실상 로드 시 실행된다.
+// IntersectionObserver 미지원(구형/SSR/테스트) → 즉시 refresh 폴백(광고 유실 방지).
+const VIEWABILITY_ROOT_MARGIN = '200px 0px'
+let viewabilityObserver: IntersectionObserver | null = null
+function teardownViewability() {
+  if (viewabilityObserver) {
+    viewabilityObserver.disconnect()
+    viewabilityObserver = null
+  }
+}
+function requestWhenViewable() {
+  teardownViewability()
+  const el = container.value
+  if (!el || typeof IntersectionObserver === 'undefined') {
+    refresh()
+    return
+  }
+  viewabilityObserver = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        teardownViewability()
+        refresh()
+      }
+    },
+    { rootMargin: VIEWABILITY_ROOT_MARGIN },
+  )
+  viewabilityObserver.observe(el)
+}
+
 onMounted(() => {
   // mq 는 항상 만든다 — 기기별 광고 단위(effectiveAdSlot)가 isDesktopViewport 에 의존하므로,
   // only/compact-mobile 이 아닌 기본 AdBanner 도 기기를 판정해야 한다.
@@ -229,11 +262,11 @@ onMounted(() => {
   mq?.addEventListener('change', applyMatches)
 
   if (props.only || props.variant === 'compact-mobile') {
-    // only는 matches 가 false→true 로 바뀌는 순간 아래 watch 에서 refresh.
-    // compact-mobile은 같은 슬롯이 데스크톱에서 기본 auto 동작으로 돌아가므로 즉시 refresh.
-    if (!props.only) refresh()
+    // only는 matches 가 false→true 로 바뀌는 순간 아래 watch 에서 요청.
+    // compact-mobile은 같은 슬롯이 데스크톱에서 기본 auto 동작으로 돌아가므로 즉시 뷰어빌리티 게이트.
+    if (!props.only) requestWhenViewable()
   } else {
-    refresh()
+    requestWhenViewable()
   }
 })
 
@@ -241,7 +274,7 @@ onMounted(() => {
 watch(matches, async (next) => {
   if (!props.only || !next) return
   await nextTick()
-  refresh()
+  requestWhenViewable()
 })
 
 watch(() => route.path, async () => {
@@ -251,7 +284,7 @@ watch(() => route.path, async () => {
   lastNavAt = now
   adKey.value++
   await nextTick()
-  refresh()
+  requestWhenViewable()
 })
 
 onBeforeUnmount(() => {
@@ -259,6 +292,7 @@ onBeforeUnmount(() => {
   statusWatchGeneration++ // 대기 중인 ins 재시도 폐기
   clearStatusTimeout()
   disconnectStatusObserver()
+  teardownViewability()
 })
 </script>
 

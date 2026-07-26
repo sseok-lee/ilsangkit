@@ -41,6 +41,21 @@ const requestSource = () => readFileSync(requestSourcePath, 'utf8')
 describe('AdBanner', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    // happy-dom 에는 실제 교차가 없으므로 IntersectionObserver 를 "즉시 교차" 스텁으로 대체.
+    // 뷰어빌리티 게이트(requestWhenViewable)가 mount 시 슬롯을 뷰어블로 보고 refresh 하도록 —
+    // 실제 사용자가 슬롯을 보는 상황을 재현(그래야 collapse/status 타이머 로직을 검증할 수 있다).
+    class IO {
+      cb: IntersectionObserverCallback
+      constructor(cb: IntersectionObserverCallback) { this.cb = cb }
+      observe(el: Element) { this.cb([{ isIntersecting: true, target: el } as unknown as IntersectionObserverEntry], this as unknown as IntersectionObserver) }
+      unobserve() {}
+      disconnect() {}
+      takeRecords() { return [] }
+      root = null
+      rootMargin = ''
+      thresholds = []
+    }
+    vi.stubGlobal('IntersectionObserver', IO as unknown as typeof IntersectionObserver)
   })
 
   afterEach(() => {
@@ -55,26 +70,35 @@ describe('AdBanner', () => {
     expect(requestSource()).toContain('win.adsbygoogle.push({})')
   })
 
-  // 뷰어빌리티 게이트: 슬롯이 뷰포트에 근접했을 때만 광고를 요청한다.
-  // (무스크롤 바운스에서 폴드 밖 슬롯까지 즉시 impression 을 만들던 무효트래픽 근본원인 차단)
-  // push 경로는 import.meta.client 게이트라 unit(undefined)에서 실행되지 않으므로 소스 구조로 보증한다.
-  it('슬롯이 뷰포트에 근접했을 때만 광고를 요청한다 (IntersectionObserver 뷰어빌리티 게이트)', () => {
-    const src = requestSource()
-    expect(source()).toContain('useDeferredAdSenseRequest(container, () => shouldServeAds.value)')
-    expect(src).toContain('hasRequestedAd.value = true')
-    expect(src).toContain('onBeforeUnmount(clearPendingAdRequest)')
-    // 뷰포트 진입 시에만 발화하도록 IntersectionObserver + rootMargin 게이트
+  // 뷰어빌리티 게이트는 AdBanner 레벨에서 refresh(=요청 + status 감시 타이머) 전체를 감싼다.
+  // 요청과 collapse 타이머를 함께 뷰어블 시점으로 미뤄야, 폴드 밖 슬롯이 "요청 전 1.5s
+  // 타임아웃으로 collapse" 되어 스크롤해도 영영 광고를 못 받는 회귀를 막는다.
+  // (무스크롤 바운스에서 폴드 밖 슬롯까지 즉시 impression 을 만들던 무효트래픽 근본원인도 차단)
+  it('뷰어빌리티 게이트가 AdBanner 레벨에서 refresh(요청+status타이머)를 감싼다', () => {
+    const src = source()
+    // AdBanner: 뷰포트 근접 시에만 refresh 실행
+    expect(src).toContain('function requestWhenViewable')
     expect(src).toContain('new IntersectionObserver(')
     expect(src).toContain('isIntersecting')
     expect(src).toContain('rootMargin')
-    // IO 미지원(구형/SSR/테스트) 시 광고 유실 방지 폴백
+    expect(src).toContain('viewabilityObserver')
+    // IO 미지원(구형/SSR/테스트) 시 광고 유실 방지 즉시 refresh 폴백
     expect(src).toContain("typeof IntersectionObserver === 'undefined'")
-    // 관찰자는 세대 변경/언마운트 시 정리
-    expect(src).toContain('teardownViewabilityGate')
-    // SSR/봇 게이트는 유지
-    expect(src).toContain('import.meta.client')
-    // 지연은 뷰포트 게이트로만 — 인위적 시간지연/rAF 는 쓰지 않는다
-    expect(src).not.toContain('requestAnimationFrame')
+    // 요청과 collapse 타이머가 함께 게이팅되도록, mount/route/matches 는 requestWhenViewable 로 진입
+    expect(src).toContain('requestWhenViewable()')
+    // 언마운트 시 관찰자 정리
+    expect(src).toContain('teardownViewability()')
+
+    // 컴포저블(useDeferredAdSenseRequest)은 "요청하라" 지시가 오면 즉시 push (게이팅은 호출측 책임)
+    const rsrc = requestSource()
+    expect(source()).toContain('useDeferredAdSenseRequest(container, () => shouldServeAds.value)')
+    expect(rsrc).toContain('hasRequestedAd.value = true')
+    expect(rsrc).toContain('win.adsbygoogle.push({})')
+    expect(rsrc).toContain('onBeforeUnmount(clearPendingAdRequest)')
+    expect(rsrc).toContain('import.meta.client')
+    // 컴포저블에는 IntersectionObserver/지연이 없다(뷰어빌리티는 AdBanner 담당)
+    expect(rsrc).not.toContain('IntersectionObserver')
+    expect(rsrc).not.toContain('requestAnimationFrame')
   })
 
   it('does not fabricate data-ad-status=unfilled when AdSense has not responded yet', async () => {
@@ -202,7 +226,8 @@ describe('AdBanner', () => {
     // 언마운트/세대 변경 시 observer 정리
     expect(src).toContain('teardownResizeRetry')
     expect(src).toContain('resizeObserver.disconnect()')
-    // 0폭 재시도(ResizeObserver)와 뷰어빌리티 게이트(IntersectionObserver)는 별개 관찰자다
+    // 뷰어빌리티 게이트(IntersectionObserver)는 AdBanner 담당 — 컴포저블엔 없다
+    expect(src).not.toContain('IntersectionObserver')
     expect(src).not.toContain('requestAnimationFrame')
   })
 
