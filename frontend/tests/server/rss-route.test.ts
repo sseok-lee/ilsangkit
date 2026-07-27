@@ -94,6 +94,62 @@ describe('rss.xml route handler', () => {
     expect(xml).toContain('<atom:link href="https://ilsangkit.co.kr/rss.xml" rel="self" type="application/rss+xml" />')
   })
 
+  // 가이드는 published:false / publishedAt:null 초안으로 생성된 뒤 어드민 발행 시점에
+  // publishedAt 이 채워진다. createdAt 을 발행일로 쓰면 초안 작성일이 새어나가고,
+  // 상세 페이지 JSON-LD(datePublished=publishedAt)·사이트맵과 서로 다른 날짜를 주장하게 된다.
+  it('pubDate 는 createdAt 이 아니라 publishedAt 이어야 한다', async () => {
+    vi.mocked(ssrFetch).mockResolvedValue({
+      data: {
+        items: [
+          {
+            title: '발행일이 다른 가이드',
+            slug: 'guide-dates',
+            summary: '요약',
+            createdAt: '2026-07-05T14:55:02.350Z',
+            publishedAt: '2026-07-07T22:54:28.236Z',
+          },
+        ],
+      },
+    })
+
+    const { default: handler } = await import('../../server/routes/rss.xml')
+    const xml = (await handler(mockEvent())) as string
+
+    expect(xml).toContain('<pubDate>Tue, 07 Jul 2026 22:54:28 GMT</pubDate>')
+    expect(xml).not.toContain('Sun, 05 Jul 2026 14:55:02 GMT')
+  })
+
+  it('publishedAt 이 없으면 createdAt 으로 폴백한다', async () => {
+    vi.mocked(ssrFetch).mockResolvedValue({
+      data: {
+        items: [
+          { title: '미발행 날짜 가이드', slug: 'guide-fallback', summary: '요약', createdAt: '2026-07-05T14:55:02.350Z', publishedAt: null },
+        ],
+      },
+    })
+
+    const { default: handler } = await import('../../server/routes/rss.xml')
+    const xml = (await handler(mockEvent())) as string
+
+    expect(xml).toContain('<pubDate>Sun, 05 Jul 2026 14:55:02 GMT</pubDate>')
+  })
+
+  it('API 응답 순서와 무관하게 최신 발행순으로 정렬된다', async () => {
+    vi.mocked(ssrFetch).mockResolvedValue({
+      data: {
+        items: [
+          { title: '오래된 글', slug: 'old', summary: 'o', publishedAt: '2026-04-02T06:30:18.000Z' },
+          { title: '최신 글', slug: 'new', summary: 'n', publishedAt: '2026-07-20T09:00:00.000Z' },
+        ],
+      },
+    })
+
+    const { default: handler } = await import('../../server/routes/rss.xml')
+    const xml = (await handler(mockEvent())) as string
+
+    expect(xml.indexOf('최신 글')).toBeLessThan(xml.indexOf('오래된 글'))
+  })
+
   // 아래 두 개는 catch 폴백이 아니라 "성공 경로에서 조용히 빈 피드가 되는" 방어 분기다.
   // 이쪽은 s-maxage=3600 이 붙은 채로 캐시되므로 catch 경로보다 오히려 위험하다.
   it('응답 형태가 어긋나도(data 누락) 크래시 없이 빈 피드를 만든다', async () => {

@@ -32,7 +32,11 @@ describe('generateRssXml', () => {
   })
 
   it('lastBuildDate를 포함해야 한다', () => {
-    const xml = generateRssXml([], channelInfo)
+    const items = [{
+      title: '테스트', link: 'https://ilsangkit.co.kr/guide/test',
+      description: '설명', pubDate: '2026-07-05T14:55:02.000Z',
+    }]
+    const xml = generateRssXml(items, channelInfo)
     expect(xml).toContain('<lastBuildDate>')
   })
 
@@ -198,5 +202,78 @@ describe('generateRssXml — XML 하드닝', () => {
   it('정상 pubDate 는 RFC 822 형식으로 유지되어야 한다', () => {
     const xml = generateRssXml([baseItem], baseChannel)
     expect(parseFeed(xml).rss.channel.item.pubDate).toBe('Sun, 05 Jul 2026 14:55:02 GMT')
+  })
+})
+
+// 피드의 신선도 신호는 콘텐츠에서만 도출한다. 서빙 시각을 끌어다 쓰면
+// 3주째 같은 내용인 피드가 매 요청 "방금 갱신"을 주장하게 되고, 캐시 만료마다
+// 바이트가 달라져 조건부 요청도 무력해진다.
+describe('generateRssXml — 날짜 의미론', () => {
+  const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', processEntities: true, parseTagValue: false })
+
+  const channel = {
+    title: '일상킷 - 생활 가이드',
+    link: 'https://ilsangkit.co.kr/guide',
+    description: '일상킷의 생활 가이드',
+    selfUrl: 'https://ilsangkit.co.kr/rss.xml',
+  }
+
+  const item = (slug: string, pubDate: string) => ({
+    title: slug,
+    link: `https://ilsangkit.co.kr/guide/${slug}`,
+    description: `${slug} 설명`,
+    pubDate,
+  })
+
+  function channelOf(xml: string) {
+    return parser.parse(xml).rss.channel
+  }
+
+  function itemsOf(xml: string) {
+    const c = channelOf(xml)
+    return Array.isArray(c.item) ? c.item : c.item ? [c.item] : []
+  }
+
+  it('lastBuildDate 는 서빙 시각이 아니라 가장 최신 item 의 pubDate 여야 한다', () => {
+    const xml = generateRssXml(
+      [item('a', '2026-07-05T14:55:02.000Z'), item('b', '2026-07-20T09:00:00.000Z')],
+      channel,
+    )
+    expect(channelOf(xml).lastBuildDate).toBe('Mon, 20 Jul 2026 09:00:00 GMT')
+  })
+
+  it('같은 입력으로 두 번 호출하면 출력이 완전히 동일해야 한다 (결정성)', () => {
+    const items = [item('a', '2026-07-05T14:55:02.000Z'), item('b', '2026-07-20T09:00:00.000Z')]
+    expect(generateRssXml(items, channel)).toBe(generateRssXml(items, channel))
+  })
+
+  it('유효한 pubDate 가 하나도 없으면 lastBuildDate 를 생략해야 한다', () => {
+    // 날짜를 지어내느니 선택 요소인 lastBuildDate 를 비우는 편이 정직하다.
+    expect(generateRssXml([], channel)).not.toContain('<lastBuildDate>')
+    expect(generateRssXml([item('a', 'not-a-date')], channel)).not.toContain('<lastBuildDate>')
+  })
+
+  it('item 은 입력 순서와 무관하게 pubDate 내림차순으로 정렬되어야 한다', () => {
+    const xml = generateRssXml(
+      [
+        item('old', '2026-04-02T06:30:18.000Z'),
+        item('new', '2026-07-20T09:00:00.000Z'),
+        item('mid', '2026-07-05T14:55:02.000Z'),
+      ],
+      channel,
+    )
+    expect(itemsOf(xml).map((i: { title: string }) => i.title)).toEqual(['new', 'mid', 'old'])
+  })
+
+  it('pubDate 가 없는 item 은 날짜 있는 item 뒤로 밀되 상대 순서는 유지한다', () => {
+    const xml = generateRssXml(
+      [
+        item('undated-1', 'not-a-date'),
+        item('dated', '2026-07-20T09:00:00.000Z'),
+        item('undated-2', ''),
+      ],
+      channel,
+    )
+    expect(itemsOf(xml).map((i: { title: string }) => i.title)).toEqual(['dated', 'undated-1', 'undated-2'])
   })
 })

@@ -9,7 +9,8 @@ export default defineEventHandler(async (event) => {
       title: article.title,
       link: `https://ilsangkit.co.kr/article/${article.slug}`,
       description: article.summary || article.title,
-      pubDate: article.publishedAt || new Date().toISOString(),
+      // 날짜가 없으면 서빙 시각을 지어내지 않고 빈 값으로 넘겨 pubDate 요소를 생략시킨다.
+      pubDate: article.publishedAt || '',
     }))
 
     const xml = generateRssXml(items, {
