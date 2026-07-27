@@ -162,10 +162,28 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
   } catch { /* 첫 실행 */ }
 
   const force = process.env.SITEMAP_FORCE_SWAP === '1'
-  const guard = evaluateCountGuard(oldCounts, nextCounts, opts.threshold)
+  let guard = evaluateCountGuard(oldCounts, nextCounts, opts.threshold)
   if (!guard.ok && !force) {
-    await rm(tmp, { recursive: true, force: true })
-    return { ...guard, carriedForward }
+    // 자식이 200 이어도 URL 이 0/급감으로 올 수 있다. 프론트 fetch 헬퍼가 upstream 실패를
+    // catch 해서 빈 배열을 반환하기 때문이다(2026-07-27 재생성 실패의 실제 원인).
+    // 이 경로는 child.ok=true 라 위의 이월이 발동하지 않으므로 여기서 한 번 더 막는다.
+    // 회귀한 파일만 직전 생성본으로 되돌리고 나머지는 갱신한다.
+    for (const r of guard.regressions) {
+      try {
+        const previous = await readFile(join(opts.dir, r.file), 'utf-8')
+        await writeFile(join(tmp, r.file), previous, 'utf-8')
+        nextCounts[r.file] = countLocs(previous)
+        if (!carriedForward.includes(r.file)) carriedForward.push(r.file)
+        console.warn(`[generateSitemaps] ${r.file}: 개수 급감(${r.old}→${r.next}) — 직전 생성본 이월`)
+      } catch {
+        // 이월할 파일이 없다 — 아래 재평가에서 회귀로 남아 전체가 거부된다.
+      }
+    }
+    guard = evaluateCountGuard(oldCounts, nextCounts, opts.threshold)
+    if (!guard.ok) {
+      await rm(tmp, { recursive: true, force: true })
+      return { ...guard, carriedForward }
+    }
   }
 
   await writeFile(join(tmp, '.counts.json'), JSON.stringify(nextCounts, null, 2), 'utf-8')
