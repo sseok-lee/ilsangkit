@@ -227,4 +227,84 @@ describe('runGeneration', () => {
     expect(result.regressions?.length).toBeGreaterThan(0)
     expect(await readFile(join(dir, 'sitemap', 'toilet.xml'), 'utf-8')).toBe('<old-big/>')
   })
+
+  // 2026-07-27 재생성 시도: 자식이 503이 아니라 "200 + URL 0개"로 돌아왔다.
+  // 프론트 fetch 헬퍼가 upstream 실패를 catch 해서 빈 배열을 반환하기 때문이다(sitemap.ts).
+  //   [sitemap] fetchRealEstateBuildings failed FetchError: ... This operation was aborted
+  // child.ok=true·isValidXml=true 라 carry-forward 가 발동하지 않고, 가드가 잡은 뒤
+  // tmp 를 통째로 버려서 멀쩡한 76개까지 폐기됐다. 가드 경로에도 이월을 적용한다.
+  describe('carry-forward (가드 회귀 격리)', () => {
+    const EMPTY = '<?xml version="1.0"?><urlset></urlset>'
+
+    it('회귀한 파일만 이월하고 나머지는 갱신한다', async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'smap-'))
+      await mkdir(join(dir, 'sitemap'), { recursive: true })
+      await writeFile(join(dir, 'sitemap.xml'), '<old-index/>')
+      await writeFile(join(dir, 'sitemap', 'static.xml'), '<old-static/>')
+      await writeFile(join(dir, 'sitemap', 'toilet.xml'), TOILET)
+      // 파일 내용과 일치하는 counts (실제 운영에서는 같은 생성이 둘 다 기록하므로 항상 일치)
+      await writeFile(
+        join(dir, '.counts.json'),
+        JSON.stringify({ 'sitemap.xml': 2, 'sitemap/static.xml': 1, 'sitemap/toilet.xml': 2 }),
+      )
+
+      const result = await runGeneration({
+        dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2, sleep: () => Promise.resolve(),
+        // toilet 이 200 이지만 URL 0개 — upstream 실패가 빈 결과로 둔갑한 경우
+        fetcher: mockFetcher({ '/sitemap.xml': INDEX, '/sitemap/static.xml': STATIC, '/sitemap/toilet.xml': EMPTY }),
+      })
+
+      expect(result.ok).toBe(true)
+      expect(result.carriedForward).toEqual(['sitemap/toilet.xml'])
+      expect(result.regressions).toEqual([])
+      // 회귀한 자식은 직전 생성본 유지
+      expect(await readFile(join(dir, 'sitemap', 'toilet.xml'), 'utf-8')).toBe(TOILET)
+      // 나머지는 갱신
+      expect(await readFile(join(dir, 'sitemap', 'static.xml'), 'utf-8')).toBe(STATIC)
+      expect(await readFile(join(dir, 'sitemap.xml'), 'utf-8')).toBe(INDEX)
+      // 이월본의 개수가 기록되어 다음 실행에서도 회귀로 오인되지 않는다
+      const counts = JSON.parse(await readFile(join(dir, '.counts.json'), 'utf-8'))
+      expect(counts['sitemap/toilet.xml']).toBe(2)
+    })
+
+    it('이월해도 회귀가 남으면 종전대로 전체를 거부한다', async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'smap-'))
+      await mkdir(join(dir, 'sitemap'), { recursive: true })
+      // 직전 생성본 파일이 없는데 counts 에는 기록돼 있는 불일치 상태 — 이월 불가
+      await writeFile(
+        join(dir, '.counts.json'),
+        JSON.stringify({ 'sitemap.xml': 2, 'sitemap/static.xml': 1, 'sitemap/toilet.xml': 1000 }),
+      )
+
+      const result = await runGeneration({
+        dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2, sleep: () => Promise.resolve(),
+        fetcher: mockFetcher({ '/sitemap.xml': INDEX, '/sitemap/static.xml': STATIC, '/sitemap/toilet.xml': EMPTY }),
+      })
+
+      expect(result.ok).toBe(false)
+      expect(result.regressions.length).toBeGreaterThan(0)
+    })
+
+    it('force=1 이면 이월 없이 그대로 스왑한다 (의도적 대량 변경)', async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'smap-'))
+      await mkdir(join(dir, 'sitemap'), { recursive: true })
+      await writeFile(join(dir, 'sitemap', 'toilet.xml'), TOILET)
+      await writeFile(
+        join(dir, '.counts.json'),
+        JSON.stringify({ 'sitemap.xml': 2, 'sitemap/static.xml': 1, 'sitemap/toilet.xml': 2 }),
+      )
+      process.env.SITEMAP_FORCE_SWAP = '1'
+      try {
+        const result = await runGeneration({
+          dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2, sleep: () => Promise.resolve(),
+          fetcher: mockFetcher({ '/sitemap.xml': INDEX, '/sitemap/static.xml': STATIC, '/sitemap/toilet.xml': EMPTY }),
+        })
+        expect(result.carriedForward).toEqual([])
+        // force 는 회귀를 무시하고 새 내용(빈 것)을 그대로 반영한다
+        expect(await readFile(join(dir, 'sitemap', 'toilet.xml'), 'utf-8')).toBe(EMPTY)
+      } finally {
+        delete process.env.SITEMAP_FORCE_SWAP
+      }
+    })
+  })
 })
