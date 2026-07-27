@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import { generateRssXml } from '../../server/utils/rss'
 
 describe('generateRssXml', () => {
@@ -31,7 +32,11 @@ describe('generateRssXml', () => {
   })
 
   it('lastBuildDate를 포함해야 한다', () => {
-    const xml = generateRssXml([], channelInfo)
+    const items = [{
+      title: '테스트', link: 'https://ilsangkit.co.kr/guide/test',
+      description: '설명', pubDate: '2026-07-05T14:55:02.000Z',
+    }]
+    const xml = generateRssXml(items, channelInfo)
     expect(xml).toContain('<lastBuildDate>')
   })
 
@@ -86,5 +91,189 @@ describe('generateRssXml', () => {
   it('<language>ko</language> 태그를 포함해야 한다', () => {
     const xml = generateRssXml([], channelInfo)
     expect(xml).toContain('<language>ko</language>')
+  })
+})
+
+// 어드민 PATCH 는 title/summary 에 길이 제한만 걸고(schemas/admin.ts), 전역 sanitize 미들웨어는
+// /api/admin 경로를 명시적으로 제외한다(middlewares/security.ts). 즉 특수문자는 직렬화 시점까지
+// 걸러지지 않은 채 도달할 수 있으므로, 여기서 well-formedness 와 값 보존을 함께 고정한다.
+describe('generateRssXml — XML 하드닝', () => {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    processEntities: true,
+    parseTagValue: false,
+    parseAttributeValue: false,
+    trimValues: false,
+  })
+
+  // XMLValidator 는 문자데이터 안의 `]]>` 를 통과시킨다(엄격한 파서는 거부).
+  // 따라서 well-formedness 검사만으로는 부족하고, 파싱 후 원문 복원까지 확인해야 한다.
+  function parseFeed(xml: string) {
+    const verdict = XMLValidator.validate(xml)
+    expect(verdict, `well-formed 하지 않은 XML: ${JSON.stringify(verdict)}`).toBe(true)
+    return parser.parse(xml)
+  }
+
+  const HOSTILE = [
+    ['앰퍼샌드', '주차장 & 화장실'],
+    ['꺾쇠', '<script>alert(1)</script>'],
+    ['큰따옴표', '그는 "안녕"이라고 말했다'],
+    ['작은따옴표', "오늘's 이슈"],
+    ['CDATA 종료 시퀀스', 'a]]>b'],
+    ['혼합', `<a href="x">A & B</a> ]]> 'q'`],
+  ] as const
+
+  const baseChannel = {
+    title: '일상킷 - 생활 가이드',
+    link: 'https://ilsangkit.co.kr/guide',
+    description: '일상킷의 생활 가이드',
+    selfUrl: 'https://ilsangkit.co.kr/rss.xml',
+  }
+
+  const baseItem = {
+    title: '제목',
+    link: 'https://ilsangkit.co.kr/guide/test',
+    description: '설명',
+    pubDate: '2026-07-05T14:55:02.000Z',
+  }
+
+  describe.each(HOSTILE)('%s: %j', (_label, payload) => {
+    it('item.title 이 원문 그대로 복원되어야 한다', () => {
+      const xml = generateRssXml([{ ...baseItem, title: payload }], baseChannel)
+      expect(parseFeed(xml).rss.channel.item.title).toBe(payload)
+    })
+
+    it('item.description 이 원문 그대로 복원되어야 한다', () => {
+      const xml = generateRssXml([{ ...baseItem, description: payload }], baseChannel)
+      expect(parseFeed(xml).rss.channel.item.description).toBe(payload)
+    })
+
+    it('item.link 와 guid 가 원문 그대로 복원되어야 한다', () => {
+      const link = `https://ilsangkit.co.kr/guide/test?q=${payload}`
+      const xml = generateRssXml([{ ...baseItem, link }], baseChannel)
+      const item = parseFeed(xml).rss.channel.item
+      expect(item.link).toBe(link)
+      expect(item.guid['#text']).toBe(link)
+    })
+
+    it('channel.title / description / link 가 원문 그대로 복원되어야 한다', () => {
+      const xml = generateRssXml([], {
+        ...baseChannel,
+        title: payload,
+        description: payload,
+        link: `https://ilsangkit.co.kr/guide?q=${payload}`,
+      })
+      const channel = parseFeed(xml).rss.channel
+      expect(channel.title).toBe(payload)
+      expect(channel.description).toBe(payload)
+      expect(channel.link).toBe(`https://ilsangkit.co.kr/guide?q=${payload}`)
+    })
+
+    it('selfUrl 이 atom:link href 속성에서 원문 그대로 복원되어야 한다', () => {
+      const selfUrl = `https://ilsangkit.co.kr/rss.xml?q=${payload}`
+      const xml = generateRssXml([], { ...baseChannel, selfUrl })
+      expect(parseFeed(xml).rss.channel['atom:link']['@_href']).toBe(selfUrl)
+    })
+  })
+
+  it('XML 1.0 이 금지하는 제어문자는 제거되어야 한다', () => {
+    const xml = generateRssXml(
+      [{ ...baseItem, title: '수직탭\x0B과 널\x00과 벨\x07' }],
+      baseChannel,
+    )
+    expect(parseFeed(xml).rss.channel.item.title).toBe('수직탭과 널과 벨')
+  })
+
+  it('파싱 불가능한 pubDate 는 Invalid Date 를 출력하지 않고 pubDate 를 생략해야 한다', () => {
+    const xml = generateRssXml([{ ...baseItem, pubDate: 'not-a-date' }], baseChannel)
+    expect(xml).not.toContain('Invalid Date')
+    const item = parseFeed(xml).rss.channel.item
+    expect(item.pubDate).toBeUndefined()
+    expect(item.title).toBe('제목')
+  })
+
+  it('빈 문자열 pubDate 도 동일하게 생략해야 한다', () => {
+    const xml = generateRssXml([{ ...baseItem, pubDate: '' }], baseChannel)
+    expect(xml).not.toContain('Invalid Date')
+    expect(parseFeed(xml).rss.channel.item.pubDate).toBeUndefined()
+  })
+
+  it('정상 pubDate 는 RFC 822 형식으로 유지되어야 한다', () => {
+    const xml = generateRssXml([baseItem], baseChannel)
+    expect(parseFeed(xml).rss.channel.item.pubDate).toBe('Sun, 05 Jul 2026 14:55:02 GMT')
+  })
+})
+
+// 피드의 신선도 신호는 콘텐츠에서만 도출한다. 서빙 시각을 끌어다 쓰면
+// 3주째 같은 내용인 피드가 매 요청 "방금 갱신"을 주장하게 되고, 캐시 만료마다
+// 바이트가 달라져 조건부 요청도 무력해진다.
+describe('generateRssXml — 날짜 의미론', () => {
+  const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', processEntities: true, parseTagValue: false })
+
+  const channel = {
+    title: '일상킷 - 생활 가이드',
+    link: 'https://ilsangkit.co.kr/guide',
+    description: '일상킷의 생활 가이드',
+    selfUrl: 'https://ilsangkit.co.kr/rss.xml',
+  }
+
+  const item = (slug: string, pubDate: string) => ({
+    title: slug,
+    link: `https://ilsangkit.co.kr/guide/${slug}`,
+    description: `${slug} 설명`,
+    pubDate,
+  })
+
+  function channelOf(xml: string) {
+    return parser.parse(xml).rss.channel
+  }
+
+  function itemsOf(xml: string) {
+    const c = channelOf(xml)
+    return Array.isArray(c.item) ? c.item : c.item ? [c.item] : []
+  }
+
+  it('lastBuildDate 는 서빙 시각이 아니라 가장 최신 item 의 pubDate 여야 한다', () => {
+    const xml = generateRssXml(
+      [item('a', '2026-07-05T14:55:02.000Z'), item('b', '2026-07-20T09:00:00.000Z')],
+      channel,
+    )
+    expect(channelOf(xml).lastBuildDate).toBe('Mon, 20 Jul 2026 09:00:00 GMT')
+  })
+
+  it('같은 입력으로 두 번 호출하면 출력이 완전히 동일해야 한다 (결정성)', () => {
+    const items = [item('a', '2026-07-05T14:55:02.000Z'), item('b', '2026-07-20T09:00:00.000Z')]
+    expect(generateRssXml(items, channel)).toBe(generateRssXml(items, channel))
+  })
+
+  it('유효한 pubDate 가 하나도 없으면 lastBuildDate 를 생략해야 한다', () => {
+    // 날짜를 지어내느니 선택 요소인 lastBuildDate 를 비우는 편이 정직하다.
+    expect(generateRssXml([], channel)).not.toContain('<lastBuildDate>')
+    expect(generateRssXml([item('a', 'not-a-date')], channel)).not.toContain('<lastBuildDate>')
+  })
+
+  it('item 은 입력 순서와 무관하게 pubDate 내림차순으로 정렬되어야 한다', () => {
+    const xml = generateRssXml(
+      [
+        item('old', '2026-04-02T06:30:18.000Z'),
+        item('new', '2026-07-20T09:00:00.000Z'),
+        item('mid', '2026-07-05T14:55:02.000Z'),
+      ],
+      channel,
+    )
+    expect(itemsOf(xml).map((i: { title: string }) => i.title)).toEqual(['new', 'mid', 'old'])
+  })
+
+  it('pubDate 가 없는 item 은 날짜 있는 item 뒤로 밀되 상대 순서는 유지한다', () => {
+    const xml = generateRssXml(
+      [
+        item('undated-1', 'not-a-date'),
+        item('dated', '2026-07-20T09:00:00.000Z'),
+        item('undated-2', ''),
+      ],
+      channel,
+    )
+    expect(itemsOf(xml).map((i: { title: string }) => i.title)).toEqual(['dated', 'undated-1', 'undated-2'])
   })
 })

@@ -7,10 +7,11 @@ export async function flushArticleViewCounts(): Promise<void> {
   articleViewBuffer.clear();
   await Promise.all(
     entries.map(([slug, count]) =>
-      prisma.article.update({
-        where: { slug },
-        data: { viewCount: { increment: count } },
-      }).catch(() => {}) // ignore errors for deleted articles
+      // prisma.article.update() 를 쓰면 @updatedAt 이 SET 절에 함께 실려 나가,
+      // 조회수 반영이 '문서 수정'으로 둔갑해 dateModified·article:modified_time 을 오염시킨다.
+      // (DDL 에 ON UPDATE 절이 없으므로 갱신 주체는 오직 Prisma Client — raw 면 보존된다.)
+      prisma.$executeRaw`UPDATE \`Article\` SET \`viewCount\` = \`viewCount\` + ${count} WHERE \`slug\` = ${slug}`
+        .catch(() => {}) // ignore errors for deleted articles
     )
   );
 }

@@ -57,6 +57,11 @@ export interface GenerationOptions {
 
 export interface GenerationResult extends CountGuardResult {
   error?: string
+  /**
+   * 새로 받지 못해 직전 생성본을 그대로 재사용한 파일들.
+   * 비어있지 않으면 "부분 갱신" — 호출부는 이를 조용히 성공으로 처리하면 안 된다.
+   */
+  carriedForward: string[]
 }
 
 const REGEN_TOKEN_HEADER = 'X-Sitemap-Regen-Token'
@@ -75,7 +80,7 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
   const fetcher: Fetcher = opts.fetcher ?? ((url, headers) => fetch(url, { headers }))
   const headers = { [REGEN_TOKEN_HEADER]: opts.token }
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
-  const fail = (error: string): GenerationResult => ({ ok: false, regressions: [], error })
+  const fail = (error: string): GenerationResult => ({ ok: false, regressions: [], carriedForward: [], error })
 
   const tmp = `${opts.dir}.tmp`
   await rm(tmp, { recursive: true, force: true })
@@ -113,12 +118,32 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
   const files: { rel: string; body: string }[] = [{ rel: 'sitemap.xml', body: indexXml }]
 
   // 2) 자식들 — 순차(동시성 1)
+  //
+  // 자식 1건이 최종 실패해도 전체를 버리지 않는다. 직전 생성본이 디스크에 있으면 그것을
+  // 이월(carry-forward)하고 나머지는 갱신한다. 이월할 파일조차 없으면(첫 실행 등) 어쩔 수 없이
+  // 중단한다 — 없는 파일을 지어낼 수는 없다.
+  // 배경: 2026-07-22~27 real-estate-2.xml 하나의 503 때문에 78개 파일이 5일간 얼어붙었다.
+  const carriedForward: string[] = []
   for (const loc of parseChildLocs(indexXml)) {
     const rel = locToRelPath(loc)
     const child = await fetchXmlWithRetry(`${opts.base}${new URL(loc).pathname}`)
-    if (!child.ok) { await rm(tmp, { recursive: true, force: true }); return fail(`child fetch failed ${rel}: ${child.status}`) }
-    nextCounts[rel] = countLocs(child.body)
-    files.push({ rel, body: child.body })
+    if (child.ok) {
+      nextCounts[rel] = countLocs(child.body)
+      files.push({ rel, body: child.body })
+    } else {
+      let previous: string
+      try {
+        previous = await readFile(join(opts.dir, rel), 'utf-8')
+      } catch {
+        await rm(tmp, { recursive: true, force: true })
+        return fail(`child fetch failed ${rel}: ${child.status} (이월할 직전 생성본 없음)`)
+      }
+      // 이월본의 개수를 그대로 기록해야 다음 실행에서 회귀로 오인되지 않는다.
+      nextCounts[rel] = countLocs(previous)
+      files.push({ rel, body: previous })
+      carriedForward.push(rel)
+      console.warn(`[generateSitemaps] ${rel}: fetch 실패(${child.status}) — 직전 생성본 이월`)
+    }
     // 무거운 쿼리 연속 타격으로 DB 풀이 소진되지 않게 자식 간 소폭 지연
     await sleep(150)
   }
@@ -137,10 +162,28 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
   } catch { /* 첫 실행 */ }
 
   const force = process.env.SITEMAP_FORCE_SWAP === '1'
-  const guard = evaluateCountGuard(oldCounts, nextCounts, opts.threshold)
+  let guard = evaluateCountGuard(oldCounts, nextCounts, opts.threshold)
   if (!guard.ok && !force) {
-    await rm(tmp, { recursive: true, force: true })
-    return guard
+    // 자식이 200 이어도 URL 이 0/급감으로 올 수 있다. 프론트 fetch 헬퍼가 upstream 실패를
+    // catch 해서 빈 배열을 반환하기 때문이다(2026-07-27 재생성 실패의 실제 원인).
+    // 이 경로는 child.ok=true 라 위의 이월이 발동하지 않으므로 여기서 한 번 더 막는다.
+    // 회귀한 파일만 직전 생성본으로 되돌리고 나머지는 갱신한다.
+    for (const r of guard.regressions) {
+      try {
+        const previous = await readFile(join(opts.dir, r.file), 'utf-8')
+        await writeFile(join(tmp, r.file), previous, 'utf-8')
+        nextCounts[r.file] = countLocs(previous)
+        if (!carriedForward.includes(r.file)) carriedForward.push(r.file)
+        console.warn(`[generateSitemaps] ${r.file}: 개수 급감(${r.old}→${r.next}) — 직전 생성본 이월`)
+      } catch {
+        // 이월할 파일이 없다 — 아래 재평가에서 회귀로 남아 전체가 거부된다.
+      }
+    }
+    guard = evaluateCountGuard(oldCounts, nextCounts, opts.threshold)
+    if (!guard.ok) {
+      await rm(tmp, { recursive: true, force: true })
+      return { ...guard, carriedForward }
+    }
   }
 
   await writeFile(join(tmp, '.counts.json'), JSON.stringify(nextCounts, null, 2), 'utf-8')
@@ -163,7 +206,7 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
   }
   await rm(old, { recursive: true, force: true })
 
-  return guard
+  return { ...guard, carriedForward }
 }
 
 // --- CLI 엔트리 ---
@@ -182,6 +225,14 @@ if (isMain) {
       if (!r.ok) {
         console.error('[generateSitemaps] 실패/거부 — 기존 sitemap 유지:', r.error || JSON.stringify(r.regressions))
         process.exit(2)
+      }
+      if (r.carriedForward.length > 0) {
+        // 스왑은 됐지만 일부는 갱신되지 않았다. 호출부(배포 워크플로)가 성공과 구분할 수 있도록
+        // 별도 종료 코드를 쓴다 — 조용히 넘어가면 이번 사고처럼 며칠간 아무도 모른다.
+        console.error(
+          `[generateSitemaps] 부분 갱신 — ${r.carriedForward.length}개 파일이 직전 생성본으로 이월됨: ${r.carriedForward.join(', ')}`,
+        )
+        process.exit(4)
       }
       console.log('[generateSitemaps] 완료 — 디스크 sitemap 갱신')
     })

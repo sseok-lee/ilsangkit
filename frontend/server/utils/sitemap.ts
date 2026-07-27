@@ -1,5 +1,6 @@
 import { isValidBuildingName } from '../../utils/realEstateBuildingName'
 import { ssrFetch } from './ssrFetch'
+import { escapeXml } from './xml'
 
 export const SITE_URL = 'https://ilsangkit.co.kr'
 
@@ -20,15 +21,6 @@ export interface SitemapUrl {
 interface SitemapIndexEntry {
   loc: string
   lastmod?: string
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
 }
 
 export function generateSitemapXml(urls: SitemapUrl[]): string {
@@ -86,6 +78,21 @@ export function formatDateForSitemap(date: string | Date): string {
 const cache = new Map<string, { data: unknown[]; expires: number }>()
 const CACHE_TTL = 10 * 60 * 1000 // 10분
 
+/**
+ * 사이트맵 집계 API 호출 예산.
+ *
+ * 사용자 요청이 아니라 배치(생성 스크립트)·크롤러 대면 폴백 경로다. 아무도 인터랙티브하게
+ * 기다리지 않으므로 사용자 요청용 예산(ssrFetch 기본 5초)을 그대로 쓸 이유가 없다.
+ *
+ * 종전 25초는 가장 무거운 /api/sitemap/real-estate-buildings 실측(25.0초)과 사실상 동일해
+ * 부하가 조금만 얹혀도 AbortError 가 났다. ssrFetch 의 isRetriable 은 AbortError 를 재시도
+ * 대상에서 제외하므로, 한 번 타임아웃되면 상위 재시도까지 전부 같은 벽에 부딪힌다.
+ * (2026-07-22~27 사이트맵 5일 정지 사고)
+ *
+ * 이 쿼리는 거래 테이블 약 660만 행을 훑으므로 데이터가 쌓일수록 느려진다 — 여유를 둔다.
+ */
+export const SITEMAP_FETCH_TIMEOUT_MS = 60_000
+
 function getCached<T>(key: string): T[] | null {
   const entry = cache.get(key)
   if (!entry) return null
@@ -114,7 +121,7 @@ export async function fetchFacilityIds(
 
   try {
     const json = await ssrFetch<{ data?: { id: string; updatedAt: string }[] }>(path, {
-      timeoutMs: 25_000,
+      timeoutMs: SITEMAP_FETCH_TIMEOUT_MS,
     })
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)
@@ -141,7 +148,7 @@ export async function fetchWasteScheduleRegions(): Promise<SitemapWasteRegion[]>
   try {
     const json = await ssrFetch<{ data?: { regions?: SitemapWasteRegion[] } }>(
       '/api/sitemap/waste-schedule-regions',
-      { timeoutMs: 25_000 },
+      { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
     const data = json.data?.regions ?? []
     if (data.length > 0) setCache(cacheKey, data)
@@ -170,7 +177,7 @@ export async function fetchRealEstateBuildings(): Promise<SitemapRealEstateBuild
   try {
     const json = await ssrFetch<{ data?: SitemapRealEstateBuilding[] }>(
       '/api/sitemap/real-estate-buildings',
-      { timeoutMs: 25_000 },
+      { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
     const raw = json.data ?? []
     const data = raw.filter((item) => isValidBuildingName(item.buildingName))
@@ -207,7 +214,7 @@ export async function fetchRealEstateCityDistrictHubs(): Promise<SitemapRealEsta
   try {
     const json = await ssrFetch<{ data?: SitemapRealEstateHub[] }>(
       '/api/sitemap/real-estate-hubs',
-      { timeoutMs: 25_000 },
+      { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)
@@ -228,7 +235,7 @@ export async function fetchRegionCategories(): Promise<
   try {
     const json = await ssrFetch<{
       data?: Array<{ city: string; district: string; category: string }>
-    }>('/api/sitemap/region-categories', { timeoutMs: 25_000 })
+    }>('/api/sitemap/region-categories', { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS })
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)
     return data
@@ -248,7 +255,7 @@ export interface SitemapPageCounts {
 export async function fetchSitemapPageCounts(): Promise<SitemapPageCounts | null> {
   try {
     const json = await ssrFetch<{ data?: SitemapPageCounts }>('/api/sitemap/page-counts', {
-      timeoutMs: 25_000,
+      timeoutMs: SITEMAP_FETCH_TIMEOUT_MS,
     })
     return json.data ?? null
   } catch (err) {
@@ -266,7 +273,7 @@ export async function fetchSubwaySlugs(): Promise<{ slug: string; updatedAt: str
     // grouped=true → nameSlug 단위 distinct 응답. 환승역 중복 방지.
     const json = await ssrFetch<{
       data?: { items?: Array<{ nameSlug: string; updatedAt: string }> }
-    }>('/api/subway/stations?limit=5000&grouped=true', { timeoutMs: 25_000 })
+    }>('/api/subway/stations?limit=5000&grouped=true', { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS })
     const items = json?.data?.items ?? []
     const data = items.map((s) => ({
       slug: s.nameSlug,
@@ -289,7 +296,7 @@ export async function fetchLandSitemap(): Promise<LandSitemapData> {
   try {
     const json = await ssrFetch<{ data?: LandSitemapData }>(
       '/api/real-estate/land/sitemap',
-      { timeoutMs: 25_000 },
+      { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
     return json.data ?? { cities: [], indexableDongs: [] }
   } catch (err) {
@@ -307,7 +314,7 @@ export async function fetchAuctionSitemap(): Promise<AuctionSitemapData> {
   try {
     const json = await ssrFetch<{ data?: AuctionSitemapData }>(
       '/api/auction/sitemap',
-      { timeoutMs: 25_000 },
+      { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
     return json.data ?? { regions: [], items: [] }
   } catch (err) {
@@ -324,7 +331,7 @@ export async function fetchSubscriptionIds(): Promise<{ id: number; updatedAt: s
   try {
     const json = await ssrFetch<{ data?: { id: number; updatedAt: string }[] }>(
       '/api/sitemap/subscriptions',
-      { timeoutMs: 25_000 },
+      { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
     const data = json.data ?? []
     if (data.length > 0) setCache(cacheKey, data)

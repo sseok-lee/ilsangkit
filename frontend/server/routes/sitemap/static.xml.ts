@@ -123,7 +123,7 @@ export default defineEventHandler(async (event) => {
     for (let page = 1; page <= MAX_GUIDE_PAGES; page++) {
       let guidesJson: {
         data?: {
-          items?: Array<{ slug: string; createdAt: string }>
+          items?: Array<{ slug: string; createdAt: string; publishedAt?: string | null }>
           totalPages?: number
         }
       } | null = null
@@ -133,9 +133,12 @@ export default defineEventHandler(async (event) => {
         console.error(`[sitemap] Failed to fetch guides page=${page}:`, err)
         break
       }
-      const guides: Array<{ slug: string; createdAt: string }> = guidesJson?.data?.items ?? []
+      const guides: Array<{ slug: string; createdAt: string; publishedAt?: string | null }> = guidesJson?.data?.items ?? []
       for (const guide of guides) {
-        const lastmod = guide.createdAt ? new Date(guide.createdAt).toISOString().split('T')[0] : today
+        // article 블록과 동일하게 발행일 기준. createdAt 은 초안 작성일이라
+        // 상세 페이지 JSON-LD(datePublished=publishedAt)·RSS 와 날짜가 어긋난다.
+        const publishedAt = guide.publishedAt || guide.createdAt
+        const lastmod = publishedAt ? new Date(publishedAt).toISOString().split('T')[0] : today
         urls.push({ loc: `${SITE_URL}/guide/${guide.slug}`, lastmod, changefreq: 'weekly', priority: 0.7 })
       }
       const totalPages = Number(guidesJson?.data?.totalPages ?? 1)
