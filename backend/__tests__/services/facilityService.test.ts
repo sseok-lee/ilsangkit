@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // These must be declared with vi.hoisted so they're available inside vi.mock factory
-const { mockFindMany, mockCount, mockFindUnique, mockUpdate, mockFindFirst, mockQueryRaw } = vi.hoisted(() => ({
+const { mockFindMany, mockCount, mockFindUnique, mockUpdate, mockFindFirst, mockQueryRaw, mockExecuteRawUnsafe } = vi.hoisted(() => ({
+  mockExecuteRawUnsafe: vi.fn().mockResolvedValue(1),
   mockFindMany: vi.fn(),
   mockCount: vi.fn(),
   mockFindUnique: vi.fn(),
@@ -44,6 +45,7 @@ vi.mock('../../src/lib/prisma.js', () => {
     wasteSchedule: model,
     region: { findFirst: mockFindFirst },
     $queryRawUnsafe: mockQueryRaw,
+    $executeRawUnsafe: mockExecuteRawUnsafe,
   };
   return {
     default: prismaClient,
@@ -81,10 +83,12 @@ const sampleRecord = {
 beforeEach(async () => {
   vi.clearAllMocks();
   mockUpdate.mockResolvedValue({});
+  mockExecuteRawUnsafe.mockResolvedValue(1);
   // 이전 테스트에서 남은 viewCount 버퍼 비우기
   await flushViewCounts();
   vi.clearAllMocks();
   mockUpdate.mockResolvedValue({});
+  mockExecuteRawUnsafe.mockResolvedValue(1);
   // fulltext 헬퍼 기본값
   mockFtIds.mockResolvedValue([]);
   mockFtCount.mockResolvedValue(0);
@@ -492,13 +496,17 @@ describe('getDetail', () => {
 
     await getDetail('toilet', 'test-1');
 
-    // viewCount는 버퍼에 누적 → flush 시 일괄 반영
-    expect(mockUpdate).not.toHaveBeenCalled();
+    // viewCount는 버퍼에 누적 → flush 시 일괄 반영.
+    // 반영은 model.update() 가 아니라 raw UPDATE 로 한다 — update() 는 @updatedAt 을 함께
+    // 갱신해 조회가 사이트맵 lastmod 를 오염시키기 때문이다.
+    expect(mockExecuteRawUnsafe).not.toHaveBeenCalled();
     await flushViewCounts();
-    expect(mockUpdate).toHaveBeenCalledWith({
-      where: { id: 'test-1' },
-      data: { viewCount: { increment: 1 } },
-    });
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockExecuteRawUnsafe).toHaveBeenCalledTimes(1);
+    const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
+    expect(sql).toContain('`Toilet`');
+    expect(sql).not.toContain('updatedAt');
+    expect(params).toEqual([1, 'test-1']);
   });
 
   it('returns hospital details with detailFields', async () => {

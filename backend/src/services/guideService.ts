@@ -7,10 +7,10 @@ export async function flushGuideViewCounts(): Promise<void> {
   guideViewBuffer.clear();
   await Promise.all(
     entries.map(([slug, count]) =>
-      prisma.guide.update({
-        where: { slug },
-        data: { viewCount: { increment: count } },
-      }).catch(() => {}) // ignore errors for deleted guides
+      // articleService 와 동일한 이유 — model.update() 는 @updatedAt 을 함께 갱신해
+      // 조회수 반영이 dateModified 오염으로 이어진다. raw UPDATE 는 viewCount 만 건드린다.
+      prisma.$executeRaw`UPDATE \`Guide\` SET \`viewCount\` = \`viewCount\` + ${count} WHERE \`slug\` = ${slug}`
+        .catch(() => {}) // ignore errors for deleted guides
     )
   );
 }

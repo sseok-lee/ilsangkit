@@ -1,14 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockArticleCount, mockArticleFindMany, mockArticleFindUnique, mockArticleUpdate } = vi.hoisted(() => ({
+const { mockArticleCount, mockArticleFindMany, mockArticleFindUnique, mockArticleUpdate, mockExecuteRaw } = vi.hoisted(() => ({
   mockArticleCount: vi.fn(),
   mockArticleFindMany: vi.fn(),
   mockArticleFindUnique: vi.fn(),
   mockArticleUpdate: vi.fn(),
+  mockExecuteRaw: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {
+    $executeRaw: mockExecuteRaw,
     article: {
       count: mockArticleCount,
       findMany: mockArticleFindMany,
@@ -29,6 +31,7 @@ import {
 beforeEach(() => {
   vi.clearAllMocks();
   articleViewBuffer.clear();
+  mockExecuteRaw.mockResolvedValue(1);
 });
 
 describe('listArticles', () => {
@@ -199,34 +202,32 @@ describe('getArticleBySlug', () => {
 });
 
 describe('flushArticleViewCounts', () => {
-  it('버퍼를 prisma.article.update increment로 flush 후 clear', async () => {
+  // model.update() 가 아니라 raw UPDATE 를 쓴다 — update() 는 @updatedAt 을 함께 갱신해
+  // 조회수 반영이 dateModified 오염으로 이어지기 때문이다.
+  // SQL 형태 자체의 회귀는 __tests__/services/viewCountUpdatedAt.test.ts 가 고정한다.
+  it('버퍼를 raw UPDATE increment로 flush 후 clear', async () => {
     articleViewBuffer.set('article-1', 3);
     articleViewBuffer.set('article-2', 1);
-    mockArticleUpdate.mockResolvedValue({});
 
     await flushArticleViewCounts();
 
-    expect(mockArticleUpdate).toHaveBeenCalledWith({
-      where: { slug: 'article-1' },
-      data: { viewCount: { increment: 3 } },
-    });
-    expect(mockArticleUpdate).toHaveBeenCalledWith({
-      where: { slug: 'article-2' },
-      data: { viewCount: { increment: 1 } },
-    });
+    expect(mockArticleUpdate).not.toHaveBeenCalled();
+    const params = mockExecuteRaw.mock.calls.map(c => c.slice(1));
+    expect(params).toContainEqual([3, 'article-1']);
+    expect(params).toContainEqual([1, 'article-2']);
     expect(articleViewBuffer.size).toBe(0);
   });
 
-  it('버퍼가 비어있으면 update 호출 없이 종료', async () => {
+  it('버퍼가 비어있으면 쿼리 실행 없이 종료', async () => {
     await flushArticleViewCounts();
     expect(mockArticleUpdate).not.toHaveBeenCalled();
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
   });
 
-  it('개별 update 실패는 무시되고 나머지는 계속 진행된다', async () => {
+  it('개별 쿼리 실패는 무시되고 나머지는 계속 진행된다', async () => {
     articleViewBuffer.set('article-1', 1);
     articleViewBuffer.set('article-2', 1);
-    mockArticleUpdate.mockRejectedValueOnce(new Error('삭제된 기사'));
-    mockArticleUpdate.mockResolvedValueOnce({});
+    mockExecuteRaw.mockRejectedValueOnce(new Error('삭제된 기사'));
 
     await expect(flushArticleViewCounts()).resolves.toBeUndefined();
     expect(articleViewBuffer.size).toBe(0);
