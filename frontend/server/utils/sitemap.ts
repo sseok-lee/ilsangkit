@@ -1,5 +1,6 @@
 import { isValidBuildingName } from '../../utils/realEstateBuildingName'
 import { ssrFetch } from './ssrFetch'
+import { escapeXml } from './xml'
 
 export const SITE_URL = 'https://ilsangkit.co.kr'
 
@@ -20,15 +21,6 @@ export interface SitemapUrl {
 interface SitemapIndexEntry {
   loc: string
   lastmod?: string
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
 }
 
 export function generateSitemapXml(urls: SitemapUrl[]): string {

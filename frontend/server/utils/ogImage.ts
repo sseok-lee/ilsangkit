@@ -1,5 +1,6 @@
 import type { FacilityCategory } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
+import { escapeXml } from './xml'
 
 export const OG_WIDTH = 1200
 export const OG_HEIGHT = 630
@@ -59,15 +60,6 @@ function sanitizeForSvg(str: string, maxLen = 100): string {
     .slice(0, maxLen)
     // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // remove control chars
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
 }
 
 export function generateOgImageSvg(options: OgImageOptions): string {
