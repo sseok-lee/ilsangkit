@@ -535,6 +535,71 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     expect(xml).toContain('<lastmod>2026-06-15</lastmod>')
   })
 
+  it('guide의 lastmod는 createdAt이 아닌 publishedAt(YYYY-MM-DD)로 방출된다', async () => {
+    // article 은 이미 publishedAt 을 쓰는데 guide 만 createdAt 을 써서, 같은 글이
+    // 사이트맵과 상세 페이지 JSON-LD 에서 서로 다른 날짜를 주장하고 있었다.
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({
+          data: {
+            items: [{ slug: 'guide-1', createdAt: '2026-07-05T14:55:02.350Z', publishedAt: '2026-07-07T22:54:28.236Z' }],
+            total: 1,
+            page: 1,
+            totalPages: 1,
+          },
+        })
+      }
+      if (path.includes('/api/articles')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+    vi.resetModules()
+
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-1</loc>')
+    expect(xml).toContain('<lastmod>2026-07-07</lastmod>')
+    expect(xml).not.toContain('<lastmod>2026-07-05</lastmod>')
+  })
+
+  it('guide의 publishedAt이 없으면 createdAt으로 폴백한다', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) {
+        return Promise.resolve({
+          data: {
+            items: [{ slug: 'guide-2', createdAt: '2026-07-05T14:55:02.350Z', publishedAt: null }],
+            total: 1,
+            page: 1,
+            totalPages: 1,
+          },
+        })
+      }
+      if (path.includes('/api/articles')) {
+        return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      }
+      if (path.includes('/api/sitemap/region-categories')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+    vi.resetModules()
+
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    const xml = (await staticHandler(createMockEvent('/sitemap/static.xml') as never)) as string
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/guide/guide-2</loc>')
+    expect(xml).toContain('<lastmod>2026-07-05</lastmod>')
+  })
+
   it('wifi는 noindex-only 상세 정책에 따라 index에 노출되지 않고 handler는 404를 반환한다', async () => {
     const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
     const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
