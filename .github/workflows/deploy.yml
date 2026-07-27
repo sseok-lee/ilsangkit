@@ -221,9 +221,22 @@ jobs:
 
             # 배포 직후 1회 정적 sitemap 생성 (첫 롤아웃·SITEMAP_DIR 비어있을 때 대비).
             # 실패/가드거부 시 비제로 exit 하지만 기존 파일은 보존되므로 배포는 실패시키지 않는다.
+            #
+            # 종전에는 결과를 `|| echo "[WARN]"` 로만 흘려서, 5일간 사이트맵이 얼어붙었는데도
+            # 배포는 계속 초록이었다(2026-07-22~27). 종료 코드별로 Actions 주석을 남겨
+            # 실패·부분갱신이 로그를 뒤지지 않아도 보이게 한다.
+            #   0=완전 갱신 / 4=부분 갱신(일부 이월) / 2=거부·실패 / 3=예외 / 1=env 누락
+            #
+            # 예산 10m→20m: 자식 하나당 최대 60초(SITEMAP_FETCH_TIMEOUT_MS)를 쓸 수 있고
+            # 자식이 78개라 무거운 것이 여러 개 겹치면 10분으로는 부족하다.
             echo "[deploy] 사이트맵 정적 생성"
-            ( cd /home/project2/backend && timeout --kill-after=30s 10m node dist/scripts/generateSitemaps.js ) \
-              || echo "[WARN] 배포 후 사이트맵 생성 실패/스킵 (exit=$?)"
+            SITEMAP_EXIT=0
+            ( cd /home/project2/backend && timeout --kill-after=30s 20m node dist/scripts/generateSitemaps.js ) || SITEMAP_EXIT=$?
+            case "$SITEMAP_EXIT" in
+              0) echo "[deploy] 사이트맵 갱신 완료" ;;
+              4) echo "::warning::사이트맵 부분 갱신 — 일부 파일이 직전 생성본으로 이월됐다. 위 로그의 이월 목록 확인." ;;
+              *) echo "::warning::사이트맵 생성 실패/거부 (exit=$SITEMAP_EXIT) — 기존 파일 유지. 반복되면 stale 사이트맵이 서빙된다." ;;
+            esac
 
       - name: Deployment Status
         run: echo "✅ Deployment completed successfully!"
