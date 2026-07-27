@@ -90,8 +90,13 @@ const CACHE_TTL = 10 * 60 * 1000 // 10분
  * (2026-07-22~27 사이트맵 5일 정지 사고)
  *
  * 이 쿼리는 거래 테이블 약 660만 행을 훑으므로 데이터가 쌓일수록 느려진다 — 여유를 둔다.
+ *
+ * 60초 → 120초 상향 근거(프로덕션 실측): 콜드 쿼리는 가장 큰 블록(AptRent 3.1M행)만
+ * 24.7초이고 6블록 UNION ALL 전체가 약 50~55초다. 60초는 여유가 10초도 안 된다.
+ * 평상시에는 배포 워밍업이 backend 캐시를 선점하므로 이 예산까지 오지 않지만
+ * (deploy.yml 의 "backend 집계 캐시 선점"), 워밍이 실패했을 때의 안전판으로 둔다.
  */
-export const SITEMAP_FETCH_TIMEOUT_MS = 60_000
+export const SITEMAP_FETCH_TIMEOUT_MS = 120_000
 
 function getCached<T>(key: string): T[] | null {
   const entry = cache.get(key)
