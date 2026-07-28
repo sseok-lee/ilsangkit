@@ -519,7 +519,10 @@ const isPageNoindex = computed(() =>
   computeAreaNoindex({
     isTrash: isTrash.value,
     summaryCount: summary.value?.count,
-    wasteEmpty: !wasteLoading.value && wasteSchedules.value.length === 0,
+    // ⚠️ SSR 반영 값(display*)을 읽어야 한다. 클라이언트 전용 ref(wasteSchedules/wasteLoading)를
+    // 읽으면 SSR 시점엔 항상 비어 있어(로드는 useAsyncData 가 wasteSsr 로 한다) 모든 trash
+    // 지역 페이지가 noindex 로 나간다 — #677 배포 직후 실제로 발생한 회귀.
+    wasteEmpty: !displayWasteLoading.value && displayWasteSchedules.value.length === 0,
     page: pageQueryParam.value,
   })
 )
