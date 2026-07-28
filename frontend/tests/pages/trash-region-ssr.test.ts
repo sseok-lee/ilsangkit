@@ -68,4 +68,17 @@ describe('구·군 trash 집계 페이지 SSR', () => {
   it('클라이언트 재조회 시 SSR 데이터를 소비 처리한다', () => {
     expect(regionCategory).toMatch(/async function loadWasteSchedules\(\)\s*\{\s*\n\s*wasteSsrConsumed\.value = true/)
   })
+
+  it('noindex 판정이 SSR 반영 값을 읽는다 — 클라이언트 전용 ref 금지 (전 trash 지역 noindex 회귀)', () => {
+    // 회귀: 목록 로드를 onMounted 로 옮기면서 wasteEmpty 가 클라이언트 전용 ref 를 계속 읽어,
+    // SSR 시점에 wasteLoading=false + wasteSchedules=[] → wasteEmpty=true 로 판정됐다.
+    // computeAreaNoindex 는 isTrash 면 wasteEmpty 를 그대로 반환하므로(utils/areaNoindex.ts:18)
+    // 전국 trash 지역 페이지가 일제히 noindex 로 나갔다.
+    expect(regionCategory).toContain(
+      'wasteEmpty: !displayWasteLoading.value && displayWasteSchedules.value.length === 0'
+    )
+    expect(regionCategory).not.toContain(
+      'wasteEmpty: !wasteLoading.value && wasteSchedules.value.length === 0'
+    )
+  })
 })
