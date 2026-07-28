@@ -289,6 +289,8 @@ import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
 import { buildHeroStats } from '~/utils/categoryHeroStats'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { resolveFacilitySsrOutcome } from '~/utils/facilitySsrOutcome'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
@@ -319,15 +321,24 @@ const { data: facilityResponse, status, error: fetchError } = await useAsyncData
   ),
   { lazy: true }
 )
-// fetch 에러 처리: SSR에서는 즉시, 클라이언트에서는 watch로 처리
-if (import.meta.server && fetchError.value) {
-  const errStatus = fetchError.value.statusCode
-  if (errStatus === 404 || errStatus === 422) {
+// fetch 에러 처리: SSR에서는 즉시, 클라이언트에서는 watch로 처리.
+// 판정은 순수 함수(resolveFacilitySsrOutcome)에 위임한다 — 근거·회귀 배경은 그쪽 주석 참조.
+if (import.meta.server) {
+  const outcome = resolveFacilitySsrOutcome({
+    errorStatusCode: fetchError.value?.statusCode,
+    fetchSettled: status.value === 'success',
+    hasData: !!facilityResponse.value?.data,
+  })
+  if (outcome === 'not-found') {
     throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
   }
-}
-if (import.meta.server && status.value === 'success' && !facilityResponse.value?.data) {
-  throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
+  if (outcome === 'degraded') {
+    // 5xx·네트워크 실패·미해결 상태. throw 하면 정상 URL 이 하드 404 로 둔갑하고,
+    // 그냥 두면 facility=null 인 채 렌더돼 사이트 기본 title 이 200 + index,follow 로 색인된다.
+    // 503 + no-store 로만 표시해 크롤러는 기존 색인을 유지한 채 재방문하고(fail-open),
+    // 실사용자는 클라이언트 refetch 로 정상 표시된다.
+    markDegradedResponse()
+  }
 }
 // 클라이언트 네비게이션 시 lazy 로드 후 에러 처리
 watch(fetchError, (err) => {
