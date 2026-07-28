@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { generateSitemapXml } from '../../server/utils/sitemap'
+import { generateSitemapXml, SITEMAP_FETCH_TIMEOUT_MS } from '../../server/utils/sitemap'
 import {
   SITEMAP_FACILITY_CATEGORIES,
   SITEMAP_FACILITY_CATEGORY_LIMITS,
@@ -335,6 +335,36 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     await expect(
       chunkHandler(createMockEvent('/sitemap/trash-2.xml') as never),
     ).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  // static.xml.ts 는 utils/sitemap.ts 의 fetch 헬퍼를 쓰지 않고 ssrFetch 를 직접 호출한다.
+  // 그래서 SITEMAP_FETCH_TIMEOUT_MS 가 적용되지 않고 ssrFetch 기본값 5,000ms 로 돌았다.
+  // /api/sitemap/region-categories 는 프로덕션 실측 3.6~6.0초라 5초 경계에 걸쳐,
+  // 넘는 날에는 AbortError → catch → [] → static.xml 이 3,630 → 402 로 급감했다
+  // (2026-07-28 새벽 sync·오전 배포 2회 재현). 예산을 명시하지 않으면 재발한다.
+  it('static.xml 의 모든 ssrFetch 는 사이트맵 예산을 명시해야 한다', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/page-counts')) {
+        return Promise.resolve({ data: { facilities: [], subscriptions: { maxUpdatedAt: null } } })
+      }
+      if (path.includes('/api/guides')) return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      if (path.includes('/api/articles')) return Promise.resolve({ data: { items: [], totalPages: 0 } })
+      if (path.includes('/api/sitemap/region-categories')) return Promise.resolve({ data: [] })
+      return Promise.reject(new Error(`mock: unhandled path ${path}`))
+    }) as typeof ssrFetch)
+    vi.resetModules()
+
+    const { default: staticHandler } = await import('../../server/routes/sitemap/static.xml')
+    await staticHandler(createMockEvent('/sitemap/static.xml') as never)
+
+    const calls = vi.mocked(ssrFetch).mock.calls
+    expect(calls.length).toBeGreaterThan(0)
+    for (const [path, opts] of calls) {
+      expect(
+        (opts as { timeoutMs?: number } | undefined)?.timeoutMs,
+        `${path} 가 timeoutMs 를 지정하지 않았다 — ssrFetch 기본 5초로 돈다`,
+      ).toBe(SITEMAP_FETCH_TIMEOUT_MS)
+    }
   })
 
   it('/contact 은 static sitemap 에 포함된다 (US-006)', async () => {

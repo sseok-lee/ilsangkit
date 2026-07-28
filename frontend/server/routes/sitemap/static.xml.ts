@@ -1,7 +1,7 @@
 // 정적 + 지역 조합 페이지 사이트맵
 import { defineEventHandler, setHeader } from 'h3'
 import { isRegenRequest, tryServeStaticSitemap } from '../../utils/sitemapStatic'
-import { SITE_URL, generateSitemapXml } from '../../utils/sitemap'
+import { SITE_URL, generateSitemapXml, SITEMAP_FETCH_TIMEOUT_MS } from '../../utils/sitemap'
 import type { SitemapUrl } from '../../utils/sitemap'
 import { CITY_SLUGS, DISTRICT_SLUG_MAP, REGIONS, getDistrictSlug } from '../../../shared/regionSlugs'
 import { ssrFetch } from '../../utils/ssrFetch'
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
         facilities?: Array<{ category: string; maxUpdatedAt: string | null }>
         subscriptions?: { maxUpdatedAt: string | null }
       }
-    }>('/api/sitemap/page-counts')
+    }>('/api/sitemap/page-counts', { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS })
     const facilities: Array<{ category: string; maxUpdatedAt: string | null }> =
       json.data?.facilities ?? []
     for (const f of facilities) {
@@ -124,7 +124,7 @@ export default defineEventHandler(async (event) => {
         }
       } | null = null
       try {
-        guidesJson = await ssrFetch(`/api/guides?limit=100&page=${page}`)
+        guidesJson = await ssrFetch(`/api/guides?limit=100&page=${page}`, { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS })
       } catch (err) {
         console.error(`[sitemap] Failed to fetch guides page=${page}:`, err)
         break
@@ -159,7 +159,7 @@ export default defineEventHandler(async (event) => {
         }
       } | null = null
       try {
-        articlesJson = await ssrFetch(`/api/articles?limit=100&page=${page}`)
+        articlesJson = await ssrFetch(`/api/articles?limit=100&page=${page}`, { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS })
       } catch (err) {
         console.error(`[sitemap] Failed to fetch articles page=${page}:`, err)
         break
@@ -186,7 +186,7 @@ export default defineEventHandler(async (event) => {
         districtSlug: string
         category: string
       }>
-    }>('/api/sitemap/region-categories')
+    }>('/api/sitemap/region-categories', { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS })
 
     const combinations = json.data ?? []
 
