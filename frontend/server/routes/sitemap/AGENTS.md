@@ -18,7 +18,8 @@
 - 청크 하나당 50,000 URL 미만 유지 (Google 권장)
 - Notepad에 "사이트맵 82만 → 27만 축소" 메모 — 중복/저가치 URL 제거 지속 권장
 - 부동산 색인 위기 (Notepad): 83K URL 중 17개만 색인됨 — 빌라 buildingName이 지번 "(535-3)" 형태 문제 + apt/offitel 거의 색인 안됨 → 이 라우트의 반영 여부 점검
-- `lastmod`, `changefreq`, `priority` 설정
+- `lastmod` 설정 (`changefreq`·`priority`는 방출하지 않는다 — Google 공식 문서가
+  "Google ignores `<priority>` and `<changefreq>` values."로 명시. 다시 추가하지 말 것)
 
 ### Testing Requirements
 - `tests/server/sitemap.test.ts` — 청크 응답 검증
