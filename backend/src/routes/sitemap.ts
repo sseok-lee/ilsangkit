@@ -11,6 +11,7 @@ import {
   getWasteScheduleRegions,
   getRegionCategoryCombinations,
   getRealEstateBuildings,
+  getRealEstateBuildingCount,
   getRealEstateCityDistrictHubs,
   getSubscriptionIds,
   getSitemapPageCounts,
@@ -89,11 +90,23 @@ router.get(
  * GET /api/sitemap/real-estate-buildings
  * 부동산 건물 목록 (사이트맵용) - propertyType + buildingName + bjdCode
  */
+const RealEstateBuildingsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(50000).default(10000),
+});
+
 router.get(
   '/real-estate-buildings',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const buildings = await getRealEstateBuildings();
-    res.json({ success: true, data: buildings });
+  validate(RealEstateBuildingsQuerySchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    // 전량 반환(356,461행 / 50.8MB)은 백엔드 메모리를 +275MB 밀어올려 PM2 재시작을 유발했다.
+    // 청크 단위로만 반환한다. total 은 프론트가 청크 수를 계산하는 데 필요하다.
+    const { page, limit } = req.query as unknown as z.infer<typeof RealEstateBuildingsQuerySchema>;
+    const [data, total] = await Promise.all([
+      getRealEstateBuildings({ page, limit }),
+      getRealEstateBuildingCount(),
+    ]);
+    res.json({ success: true, data, total });
   })
 );
 

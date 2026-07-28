@@ -103,8 +103,9 @@ export default defineEventHandler(async (event) => {
     // 토지 실거래가 sitemap (hub + city + district always; dong only if isIndexable)
     sitemaps.push({ loc: `${SITE_URL}/sitemap/land.xml`, lastmod: weekStart })
 
-    const realEstateBuildings = await fetchRealEstateBuildings()
-    const realEstatePages = Math.max(1, Math.ceil(realEstateBuildings.length / MAX_URLS_PER_SITEMAP))
+    // 1페이지만 받아 total 로 청크 수를 센다 — 전량(50.8MB)을 받을 이유가 없다.
+    const { total: realEstateTotal } = await fetchRealEstateBuildings(1)
+    const realEstatePages = Math.max(1, Math.ceil(realEstateTotal / MAX_URLS_PER_SITEMAP))
     if (realEstatePages === 1) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/real-estate.xml`, lastmod: weekStart })
     } else {
