@@ -229,6 +229,7 @@ import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import Pagination from '~/components/common/Pagination.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 
 const route = useRoute()
 const citySlug = route.params.city as string
@@ -256,7 +257,7 @@ const dong = decodeURIComponent(route.params.dong as string).normalize('NFC')
 
 const land = useLand()
 
-const { data } = await useAsyncData(
+const { data, error: landError } = await useAsyncData(
   `land-dong-${citySlug}-${districtSlug}-${dong}`,
   async () => {
     const list = await land.getRegions({ city: cityName, district: districtName, page: 1, limit: 100 })
@@ -273,11 +274,18 @@ const { data } = await useAsyncData(
   { default: () => null },
 )
 
-// 404 if dong not found
-if (import.meta.server || !data.value) {
-  if (!data.value) {
-    throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
-  }
+// 확정 부재(목록에 그 동이 없음)만 하드 404. 일시 장애(5xx·네트워크·타임아웃)는 fail-open.
+//
+// useLand 의 getRegions/getRegionDetail 은 $fetch 예외를 삼키지 않으므로 실패가 landError 로 올라온다.
+// 기존엔 error 를 보지 않고 `!data.value` 만으로 404 를 던져, 백엔드가 잠깐 흔들리면
+// 사이트맵에 살아있는 정상 URL 이 하드 404 로 굳었다.
+// 실측(2026-07-28 네이버 진단): `페이지를 찾을 수 없습니다` 그룹 50건 중 49건이 이 land 경로였고,
+// 같은 시점 사이트맵 land URL 표본은 전부 200 이었다 — 그때의 일시 장애가 404 로 기록돼 남은 것이다.
+// 정책은 #467(fail-open) / #674(시설 상세)와 동일하다. 대상 4,888 URL.
+if (landError.value) {
+  if (import.meta.server) markDegradedResponse()
+} else if (!data.value) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
 // ── Computed helpers ──────────────────────────────────────────────────────────

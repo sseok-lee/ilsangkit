@@ -735,11 +735,22 @@ const { data, error: fetchError } = await useAsyncData(`subscription-${id}`, () 
   getSubscriptionDetail(id)
 )
 
-if (fetchError.value) {
-  // 백엔드 일시 장애(5xx) — soft-503 fail-open (404 오인 색인 방지)
+// getSubscriptionDetail 은 $fetch 예외를 삼키지 않는다. 따라서 백엔드가 404 를 주면
+// data 가 null 이 되는 게 아니라 fetchError 로 올라온다 — 상태코드를 보지 않으면
+// "존재하지 않는 청약"까지 일시 장애로 오인해 503 을 내보내게 된다.
+// 실측(2026-07-28 라이브): /subscription/does-not-exist-999999 →
+//   HTTP 503 + robots `index, follow` + title `청약 일정 | 일상킷`
+// 게다가 그 title 은 청약 상세 전체가 공유하므로, 백엔드가 흔들리면 약 5,000건이
+// 동시에 같은 title 로 나간다(네이버 진단에 표본 상한 50건 기록됨).
+// 정책은 #674(시설 상세)와 동일: 확정 부재만 404, 그 외는 fail-open.
+const subErrStatus = fetchError.value?.statusCode
+if (subErrStatus === 404 || subErrStatus === 422) {
+  // 백엔드가 "없다"고 확정 → 진짜 404 (soft-404 색인 방지)
+  throw createError({ statusCode: 404, statusMessage: '존재하지 않는 청약 정보입니다' })
+} else if (fetchError.value) {
+  // 5xx·네트워크 등 일시 장애 — soft-503 fail-open (404 오인 색인 방지)
   if (import.meta.server) markDegradedResponse()
 } else if (!data.value) {
-  // 존재하지 않는 청약 → 진짜 404 (soft-404 색인 방지)
   throw createError({ statusCode: 404, statusMessage: '존재하지 않는 청약 정보입니다' })
 }
 
