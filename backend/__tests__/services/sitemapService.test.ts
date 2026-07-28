@@ -92,115 +92,97 @@ describe('getSitemapPageCounts facility policy', () => {
   });
 });
 
-describe('getRealEstateBuildings (US-008 new URL contract)', () => {
-  it('emits 6 realEstateType branches (apt|villa|offitel × sale|rent)', async () => {
+describe('getRealEstateBuildings — RealEstateBuildingSummary 기반', () => {
+  // 종전에는 거래 6.7M행을 UNION ALL + GROUP BY 로 집계해 56초가 걸렸고, 그래서 6시간 캐시와
+  // 배포 워밍업이 필요했다. 그 메모리 스파이크가 PM2 재시작을 유발했다(2026-07-28).
+  // 이미 있던 RealEstateBuildingSummary 로 바꿔 0.34초가 됐다. URL 수 356,461 는 동일.
+  it('거래 테이블이 아니라 RealEstateBuildingSummary 에서 읽는다', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    for (const t of [
-      'apt-sale',
-      'apt-rent',
-      'villa-sale',
-      'villa-rent',
-      'offitel-sale',
-      'offitel-rent',
-    ]) {
-      expect(sql).toContain(`'${t}'`);
+    expect(sql).toContain('RealEstateBuildingSummary');
+    // 거래 테이블을 다시 집계하면 56초 문제가 되살아난다.
+    for (const t of ['AptSaleTransaction', 'AptRentTransaction', 'VillaSaleTransaction']) {
+      expect(sql).not.toContain(t);
     }
-    // 6-way union produces 5 UNION ALL between them
-    const unionCount = sql.match(/UNION ALL/g)?.length ?? 0;
-    expect(unionCount).toBeGreaterThanOrEqual(5);
   });
 
-  it('groups by (city, district, buildingName, bjdCode) — fields required by new URL', async () => {
+  it('URL 생성에 필요한 필드를 모두 선택한다', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    const groupByMatches = sql.match(
-      /GROUP BY\s+city,\s*district,\s*buildingName,\s*bjdCode/g,
-    );
-    expect(groupByMatches?.length).toBe(6);
+    expect(sql).toContain('type AS realEstateType');
+    expect(sql).toContain('city');
+    expect(sql).toContain('district');
+    expect(sql).toContain('buildingName');
+    expect(sql).toContain('bjdCode');
   });
 
-  it('거래 건수 임계값 없음 — HAVING COUNT 필터 제거됨 (noindex 정책과 일치)', async () => {
+  it('건물명 품질 필터를 유지한다 (URL 집합이 바뀌면 안 된다)', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    expect(sql).not.toMatch(/HAVING\s+COUNT\(\*\)\s*>=\s*10/);
+    expect(sql).toContain('CHAR_LENGTH(buildingName) >= 2');
+    expect(sql).toContain("'^[[:space:]]*[(][0-9]'");
+    expect(sql).toContain("'^[0-9()[:space:]-]+$'");
+    expect(sql).toContain('buildingName IS NOT NULL');
+    expect(sql).toContain("buildingName != ''");
   });
 
-  it('keeps isValidBuildingName-equivalent regex filter in all 6 branches', async () => {
+  it('lastmod 키에 latestDealDay 를 포함한다 (없으면 356,461개 URL 이 월초로 밀린다)', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateBuildings();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    // digit-opener paren prefix
-    const parenMatches = sql.match(
-      /buildingName\s+NOT\s+REGEXP\s+'\^\[\[:space:\]\]\*\[\(\]\[0-9\]'/g,
-    );
-    expect(parenMatches?.length).toBe(6);
-    // pure-digit/hyphen/paren/space-only
-    const numericMatches = sql.match(
-      /buildingName\s+NOT\s+REGEXP\s+'\^\[0-9\(\)\[:space:\]-\]\+\$'/g,
-    );
-    expect(numericMatches?.length).toBe(6);
-    // length >= 2
-    const lenMatches = sql.match(/CHAR_LENGTH\(buildingName\)\s*>=\s*2/g);
-    expect(lenMatches?.length).toBe(6);
+    expect(sql).toContain('latestDealYear * 10000');
+    expect(sql).toContain('latestDealMonth * 100');
+    // refresh 가 아직 안 돈 행은 latestDealDay 가 NULL — 원본 dealDay 가 NULL 일 때와 같게 1 일로.
+    expect(sql).toContain('COALESCE(latestDealDay, 1)');
   });
 
-  it('selects realEstateType + city + district + buildingName + bjdCode', async () => {
-    mockQueryRaw.mockResolvedValue([]);
-    await getRealEstateBuildings();
-    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    expect(sql).toMatch(/SELECT\s+realEstateType,\s*city,\s*district,\s*buildingName,\s*bjdCode/);
-  });
-
-  it('keeps NOT NULL / != "" guards', async () => {
-    mockQueryRaw.mockResolvedValue([]);
-    await getRealEstateBuildings();
-    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    expect(sql.match(/buildingName\s+IS\s+NOT\s+NULL/g)?.length).toBe(6);
-    expect(sql.match(/buildingName\s*!=\s*''/g)?.length).toBe(6);
-  });
-
-  it('computes per-building MAX(dealYmd) key in all 6 branches and selects lastDealKey', async () => {
-    mockQueryRaw.mockResolvedValue([]);
-    await getRealEstateBuildings();
-    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    // MAX(dealYear*10000 + dealMonth*100 + COALESCE(dealDay,1)) in each of the 6 branches
-    const maxKeyMatches = sql.match(
-      /MAX\(dealYear\s*\*\s*10000\s*\+\s*dealMonth\s*\*\s*100\s*\+\s*COALESCE\(dealDay,\s*1\)\)/g,
-    );
-    expect(maxKeyMatches?.length).toBe(6);
-    // outer SELECT exposes lastDealKey
-    expect(sql).toMatch(/SELECT\s+realEstateType,\s*city,\s*district,\s*buildingName,\s*bjdCode,\s*lastDealKey/);
-  });
-
-  it('maps lastDealKey (BigInt) to a real per-building lastmod string, no BigInt leak', async () => {
+  it('lastDealKey(BigInt)를 YYYY-MM-DD 문자열로 바꾼다 — BigInt 누출 없음', async () => {
     mockQueryRaw.mockResolvedValue([
-      { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안', bjdCode: '1168011700', lastDealKey: 20260615n },
-      { realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구', buildingName: '해운대빌라', bjdCode: '2635011700', lastDealKey: 20260301n },
+      {
+        realEstateType: 'apt-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '래미안강남',
+        bjdCode: '1168010100',
+        lastDealKey: BigInt(20260715),
+      },
     ]);
     const rows = await getRealEstateBuildings();
-    expect(rows[0].lastmod).toBe('2026-06-15');
-    expect(rows[1].lastmod).toBe('2026-03-01');
-    // no BigInt survives to the API boundary (JSON.stringify would throw on BigInt)
-    expect(() => JSON.stringify(rows)).not.toThrow();
+    expect(rows[0].lastmod).toBe('2026-07-15');
+    expect(typeof rows[0].lastmod).toBe('string');
+    expect(JSON.stringify(rows)).toContain('2026-07-15');
   });
 
-  it('falls back to empty lastmod when a building has no dealKey (null)', async () => {
+  it('lastDealKey 가 null 이면 lastmod 는 빈 문자열', async () => {
     mockQueryRaw.mockResolvedValue([
-      { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안', bjdCode: '1168011700', lastDealKey: null },
+      {
+        realEstateType: 'apt-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '래미안강남',
+        bjdCode: '1168010100',
+        lastDealKey: null,
+      },
     ]);
     const rows = await getRealEstateBuildings();
     expect(rows[0].lastmod).toBe('');
   });
-});
 
+  it('캐시하지 않는다 — 매 호출마다 조회한다', async () => {
+    // 6시간 캐시가 356,312행을 상주시켜 +169MB 를 먹었고 그게 PM2 재시작의 원인이었다.
+    mockQueryRaw.mockResolvedValue([]);
+    await getRealEstateBuildings();
+    await getRealEstateBuildings();
+    expect(mockQueryRaw).toHaveBeenCalledTimes(2);
+  });
+});
 describe('dealKeyToDateString', () => {
   it('converts YYYYMMDD integer key to W3C YYYY-MM-DD', () => {
     expect(dealKeyToDateString(20260615)).toBe('2026-06-15');
@@ -222,68 +204,40 @@ describe('dealKeyToDateString', () => {
   });
 });
 
-describe('getRealEstateCityDistrictHubs', () => {
-  it('emits 6 realEstateType branches (apt|villa|offitel × sale|rent)', async () => {
+describe('getRealEstateCityDistrictHubs — RealEstateBuildingSummary 기반', () => {
+  it('거래 테이블이 아니라 Summary 에서 DISTINCT 로 읽는다', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    for (const t of ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent']) {
-      expect(sql).toContain(`'${t}'`);
-    }
-    const unionCount = sql.match(/UNION ALL/g)?.length ?? 0;
-    expect(unionCount).toBeGreaterThanOrEqual(5);
+    expect(sql).toContain('RealEstateBuildingSummary');
+    expect(sql).toContain('SELECT DISTINCT');
+    expect(sql).toContain('type AS realEstateType');
+    expect(sql).not.toContain('AptSaleTransaction');
   });
 
-  it('inner subqueries group by buildingName; outer uses DISTINCT', async () => {
+  it('건물명 품질 필터를 유지한다', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    // inner GROUP BY must include buildingName so each unique building shows up once per district
-    expect(sql).toMatch(/GROUP BY\s+city,\s*district,\s*buildingName/);
-    // outer query deduplicates with DISTINCT, not GROUP BY
-    expect(sql).toMatch(/SELECT\s+DISTINCT\s+realEstateType,\s*city,\s*district/);
+    expect(sql).toContain("'^[0-9()[:space:]-]+$'");
+    expect(sql).toContain('CHAR_LENGTH(buildingName) >= 2');
   });
 
-  it('거래 건수 임계값 없음 — HAVING COUNT 필터 제거됨', async () => {
+  it('bjdCode 없이 (realEstateType, city, district) 단위로만 구분한다', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    expect(sql).not.toMatch(/HAVING\s+COUNT\(\*\)\s*>=\s*10/);
+    const distinctClause = sql.slice(sql.indexOf('SELECT DISTINCT'), sql.indexOf('FROM'));
+    expect(distinctClause).not.toContain('bjdCode');
   });
 
-  it('applies isValidBuildingName-equivalent regex filter in all 6 branches', async () => {
+  it('캐시하지 않는다', async () => {
     mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
-
-    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    const parenMatches = sql.match(/buildingName\s+NOT\s+REGEXP\s+'\^\[\[:space:\]\]\*\[\(\]\[0-9\]'/g);
-    expect(parenMatches?.length).toBe(6);
-    const numericMatches = sql.match(/buildingName\s+NOT\s+REGEXP\s+'\^\[0-9\(\)\[:space:\]-\]\+\$'/g);
-    expect(numericMatches?.length).toBe(6);
-  });
-
-  it('outer SELECT uses DISTINCT on (realEstateType, city, district) without bjdCode', async () => {
-    mockQueryRaw.mockResolvedValue([]);
     await getRealEstateCityDistrictHubs();
-
-    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    // outer SELECT must use DISTINCT on (realEstateType, city, district)
-    expect(sql).toMatch(/SELECT\s+DISTINCT\s+realEstateType,\s*city,\s*district/);
-    // bjdCode must not be selected
-    expect(sql).not.toMatch(/SELECT[^)]*bjdCode/);
-  });
-
-  it('returns typed rows with realEstateType, city, district fields', async () => {
-    mockQueryRaw.mockResolvedValue([
-      { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구' },
-      { realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구' },
-    ]);
-    const result = await getRealEstateCityDistrictHubs();
-    expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ realEstateType: 'apt-sale', city: '서울특별시', district: '강남구' });
-    expect(result[1]).toEqual({ realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구' });
+    expect(mockQueryRaw).toHaveBeenCalledTimes(2);
   });
 });

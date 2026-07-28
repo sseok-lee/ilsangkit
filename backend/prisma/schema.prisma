@@ -1407,6 +1407,10 @@ model RealEstateBuildingSummary {
   latestPrice      BigInt?
   latestDealYear   Int?
   latestDealMonth  Int?
+  /// 사이트맵 lastmod 가 일(day)까지 쓰므로 저장한다. 없으면 356,461개 URL 의 lastmod 가
+  /// 일제히 월초로 바뀐다. refresh 쿼리는 이미 dealDay 로 정렬해 대표 행을 고르고 있었고
+  /// 값만 버리고 있었다. NULL 이면 소비처에서 COALESCE(.,1) — 원본 dealDay 가 NULL 일 때와 같다.
+  latestDealDay    Int?
   buildYear        Int?
   lat              Decimal? @db.Decimal(10, 7)
   lng              Decimal? @db.Decimal(10, 7)
