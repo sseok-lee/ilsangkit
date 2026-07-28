@@ -264,14 +264,22 @@ if (fetchError.value) {
 
 const data = computed(() => scheduleResponse.value?.data ?? null)
 
-// 구·군 단위 집계 페이지의 상세 모달로 301 리다이렉트
-// (개별 trash 상세의 색인은 통합하면서 기존 딥링크의 상세 맥락은 보존한다.)
+// 구·군 단위 집계 페이지로 301 리다이렉트 (개별 trash 상세의 색인 통합).
+//
+// ⚠️ 목적지에 쿼리(?schedule=)를 붙이지 말 것.
+// 붙이면 개별 상세 N개가 N개의 서로 다른 URL 로 되살아나, 중복 title 이 해소되지 않고
+// /trash/{id} → /{city}/{district}/trash?schedule={id} 로 이동만 한다.
+// 실측(2026-07-28 네이버 진단 내보내기): /trash/* 664건(표본의 33.2%)이 전부 05~06월
+// 크롤 사본이었고, 그 중 이미 재크롤된 93건은 정확히 위 쿼리 형태의 새 중복으로 전환돼
+// 있었다 — 예: 전북 고창군 33건이 모두 "전북 고창군 쓰레기 배출정보 | 배출일·분리수거 | 일상킷".
+// canonical 은 이미 파라미터 없는 URL 을 가리키지만, 네이버 SEO 진단은 canonical 과 무관하게
+// "크롤한 문서" 단위로 중복을 세므로 canonical 만으로는 지표가 내려가지 않는다.
+//
+// 딥링크 맥락(어느 배출 일정이었는지)은 포기한다. 대신 집계 페이지가 배출 일정 목록을
+// SSR 로 렌더하므로(같은 PR), 도착 페이지에서 해당 지역의 전체 일정을 바로 볼 수 있다.
 const trashRegionPath = computed(() => data.value ? buildTrashRegionPath(data.value.city, data.value.district) : null)
 if (import.meta.server && trashRegionPath.value) {
-  await navigateTo(
-    { path: trashRegionPath.value, query: { schedule: String(scheduleId.value) } },
-    { redirectCode: 301 },
-  )
+  await navigateTo(trashRegionPath.value, { redirectCode: 301 })
 }
 
 const loading = computed(() => status.value === 'pending')

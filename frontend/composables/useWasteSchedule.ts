@@ -37,7 +37,7 @@ interface ContactInfo {
   phone?: string
 }
 
-interface RegionScheduleResponse {
+export interface RegionScheduleResponse {
   schedules: RegionSchedule[]
   contact?: ContactInfo
   total: number
@@ -67,7 +67,7 @@ export interface WasteScheduleDetail {
   } | null
 }
 
-interface BackendScheduleData {
+export interface BackendScheduleData {
   items: WasteScheduleDetail[]
   total: number
   page: number

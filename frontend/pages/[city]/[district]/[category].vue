@@ -41,12 +41,12 @@
     <!-- Trash: 배출 일정 -->
     <RegionTrashSchedule
       v-if="isTrash"
-      :total="wasteTotal"
-      :loading="wasteLoading"
-      :contact="wasteContact"
-      :schedules="wasteSchedules"
+      :total="displayWasteTotal"
+      :loading="displayWasteLoading"
+      :contact="displayWasteContact"
+      :schedules="displayWasteSchedules"
       :current-page="wasteCurrentPage"
-      :total-pages="wasteTotalPages"
+      :total-pages="displayWasteTotalPages"
       @page-change="goToWastePage"
       @select="openWasteSchedule"
     />
@@ -96,8 +96,8 @@ import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { LocationQueryRaw } from 'vue-router'
 import { useRegionFacilities } from '~/composables/useRegionFacilities'
-import { useWasteSchedule } from '~/composables/useWasteSchedule'
-import type { RegionSchedule, WasteScheduleDetail } from '~/composables/useWasteSchedule'
+import { useWasteSchedule, transformToRegionSchedules } from '~/composables/useWasteSchedule'
+import type { RegionSchedule, WasteScheduleDetail, BackendScheduleData } from '~/composables/useWasteSchedule'
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { CITY_FULL_NAME_TO_SLUG } from '~/shared/regionSlugs'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -196,27 +196,40 @@ const SLUG_TO_FULL_CITY = Object.entries(CITY_FULL_NAME_TO_SLUG).reduce(
   {} as Record<string, string>,
 )
 
-// trash 지역: 배출 일정 건수를 SSR 에서 확보해 meta description 을 지역별로 차별화한다.
-// 경량(count) · fail-open(에러/타임아웃 → null → 일반 설명문 폴백) · non-trash 는 네트워크 미발생.
-const { data: wasteCount } = await useAsyncData<number | null>(
-  `waste-count-${city.value}-${district.value}-${category.value}`,
+// URL `?page=N` 에서 초기 페이지를 유추 — SSR/클라이언트 진입 모두 동일한 페이지를 렌더하도록.
+const initialPage = parsePositivePageQuery(route.query.page)
+
+// trash 지역: 배출 일정 "목록"을 SSR 에서 로드한다.
+//
+// 기존엔 건수(limit=1)만 SSR 하고 목록은 클라이언트 로드였다. 그래서 크롤러가 받는 HTML 에는
+// "배출 일정 0건 · 배출 일정 조회 중..." 만 남아 전국 구·군 trash 페이지의 본문이 사실상 동일했다.
+// 실측(2026-07-28 라이브): /jeonbuk/gochang/trash 의 SSR HTML 에 schedule 링크 0개, 목록 0건,
+// __NUXT__ payload 에 schedules 없음 — meta description 만 "704건" 으로 채워져 본문과 어긋났다.
+// 시설 카테고리는 #550/552 에서 SSR 화됐지만 trash 만 제외돼 있었다([category].vue 주석에 명시).
+//
+// 목록까지 SSR 하면 지역별 실제 배출 요일·구역이 렌더되어 본문이 차별화되고,
+// meta 용 건수도 같은 응답에서 얻으므로 요청 수는 늘지 않는다(limit=1 → limit=20 로 대체).
+const { data: wasteSsr, error: wasteSsrError } = await useAsyncData(
+  `waste-region-${city.value}-${district.value}-${category.value}-p${initialPage}`,
   async () => {
     if (category.value !== 'trash') return null
-    try {
-      const fullCityName = SLUG_TO_FULL_CITY[city.value] || cityName.value
-      const res = await $fetch<{ success: boolean; data: { total: number } }>(
-        `${apiBase}/api/waste-schedules`,
-        {
-          query: { city: fullCityName, district: districtName.value, page: 1, limit: 1 },
-          signal: AbortSignal.timeout(8000),
-        },
-      )
-      return res?.success ? (res.data?.total ?? null) : null
-    } catch {
-      return null
-    }
+    const fullCityName = SLUG_TO_FULL_CITY[city.value] || cityName.value
+    const res = await $fetch<{ success: boolean; data: BackendScheduleData }>(
+      `${apiBase}/api/waste-schedules`,
+      {
+        query: { city: fullCityName, district: districtName.value, page: initialPage, limit: 20 },
+        signal: AbortSignal.timeout(8000),
+      },
+    )
+    if (!res?.success) return null
+    return transformToRegionSchedules(res.data)
   },
 )
+// fail-open: SSR 페치 실패 시 503+no-store. 시설 경로와 동일 정책(#467) —
+// 조용한 noindex 도, 빈 본문 200 색인도 만들지 않는다.
+if (import.meta.server && wasteSsrError.value) markDegradedResponse()
+
+const wasteCount = computed<number | null>(() => wasteSsr.value?.total ?? null)
 
 // SEO - top-level에서 설정 (SSR에서 메타태그 렌더링).
 // canonical 은 아래 useHead(computed...) 에서 noindex 상태와 함께 reactive 하게 관리한다 (정책: .omc/notes/noindex-canonical-policy.md).
@@ -279,9 +292,6 @@ const otherCategories = computed(() => {
   return all
 })
 
-// URL `?page=N` 에서 초기 페이지를 유추 — SSR/클라이언트 진입 모두 동일한 페이지를 렌더하도록.
-const initialPage = parsePositivePageQuery(route.query.page)
-
 // ========== Waste Schedule (trash) ==========
 const { getSchedules, getScheduleDetail, isLoading: wasteLoading } = useWasteSchedule()
 const wasteSchedules = ref<RegionSchedule[]>([])
@@ -289,6 +299,31 @@ const wasteContact = ref<{ name: string; phone?: string } | null>(null)
 const wasteCurrentPage = ref(initialPage)
 const wasteTotalPages = ref(1)
 const wasteTotal = ref(0)
+// SSR 목록 우선, 클라이언트가 페이지네이션 등으로 재조회하면 그때부터 client 우선.
+// 규칙은 시설 목록과 동일한 순수 함수(resolveRegionDisplay)에 위임한다.
+const wasteSsrConsumed = ref(false)
+const wasteDisplay = computed(() =>
+  resolveRegionDisplay<RegionSchedule>({
+    ssrConsumed: wasteSsrConsumed.value,
+    ssr: wasteSsr.value
+      ? { items: wasteSsr.value.schedules, total: wasteSsr.value.total, totalPages: wasteSsr.value.totalPages }
+      : null,
+    client: {
+      items: wasteSchedules.value,
+      total: wasteTotal.value,
+      totalPages: wasteTotalPages.value,
+      loading: wasteLoading.value,
+    },
+  })
+)
+const displayWasteSchedules = computed(() => wasteDisplay.value.facilities)
+const displayWasteTotal = computed(() => wasteDisplay.value.total)
+const displayWasteTotalPages = computed(() => wasteDisplay.value.totalPages)
+const displayWasteLoading = computed(() => wasteDisplay.value.loading)
+const displayWasteContact = computed(() =>
+  wasteSsrConsumed.value ? wasteContact.value : (wasteSsr.value?.contact ?? wasteContact.value)
+)
+
 const selectedWasteSchedule = ref<WasteScheduleDetail | null>(null)
 const wasteDetailLoading = ref(false)
 const wasteDetailError = ref(false)
@@ -335,6 +370,7 @@ function closeWasteSchedule() {
 }
 
 async function loadWasteSchedules() {
+  wasteSsrConsumed.value = true
   const fullCityName = SLUG_TO_FULL_CITY[city.value] || cityName.value
   const result = await getSchedules({
     city: fullCityName || undefined,
@@ -436,14 +472,14 @@ async function goToPage(pageNum: number) {
   }
 }
 
-// 초기 데이터: 비-trash 목록은 위 useAsyncData(SSR)가 로드한다. trash 만 클라이언트 로드.
-if (isTrash.value) {
-  loadWasteSchedules()
-}
-
+// 초기 데이터: trash·비-trash 모두 위 useAsyncData(SSR)가 로드한다.
 // SSR 페치가 실패(degraded)했을 때만 클라이언트에서 1회 보충 로드 — 실사용자 정상 표시.
 onMounted(() => {
-  if (!isTrash.value && !ssrFacilityData.value) loadFacilities()
+  if (isTrash.value) {
+    if (!wasteSsr.value) loadWasteSchedules()
+  } else if (!ssrFacilityData.value) {
+    loadFacilities()
+  }
 })
 
 // URL → 상태 동기화: 브라우저 뒤로가기/앞으로가기 혹은 query-only 네비게이션에서도
