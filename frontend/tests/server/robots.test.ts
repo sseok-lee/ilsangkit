@@ -43,11 +43,14 @@ describe('robots.txt crawl policy', () => {
     expect(robots).not.toMatch(/^Disallow:\s*\/aed\/aed-/m)
   })
 
-  it('blocks wifi detail crawl in Yeti + default groups (permanent noindex → reclaim crawl budget), hub stays crawlable', () => {
-    // wifi 상세(/wifi/wifi-)는 영구 noindex → 크롤 차단으로 예산 회수. 상세 프리픽스만 막고 허브 /wifi 는 허용.
-    expect(robots).toMatch(/User-agent:\s*Yeti[\s\S]*Disallow:\s*\/wifi\/wifi-/)
-    expect(robots).toMatch(/User-agent:\s*\*[\s\S]*Disallow:\s*\/wifi\/wifi-/)
-    // 카테고리 허브(/wifi)와 지역 wifi 는 차단하지 않는다 — 정확 슬래시/무접미 패턴 부재로 보장.
+  it('keeps wifi detail crawlable for search engines so the noindex meta can be re-verified', () => {
+    // wifi 상세(/wifi/wifi-)는 영구 noindex 다. 그런데 noindex 는 크롤해야만 확인되므로
+    // robots.txt 로 크롤을 막으면 이미 수집된 사본이 색인에 영구 고착된다.
+    // 실측(2026-07-28 네이버 진단): wifi 657건이 중복 title 로 남아 있고 마지막 크롤이 06-29,
+    // 7월 크롤 0건 — 크롤 차단이 회수 경로를 없앤 상태였다. 검색엔진에는 크롤을 허용한다.
+    expect(extractGroup(robots, 'Yeti')).not.toContain('Disallow: /wifi/wifi-')
+    expect(extractGroup(robots, '*')).not.toContain('Disallow: /wifi/wifi-')
+    // 카테고리 허브(/wifi)와 지역 wifi 도 계속 크롤 허용.
     expect(robots).not.toMatch(/^Disallow:\s*\/wifi\/$/m)
     expect(robots).not.toMatch(/^Disallow:\s*\/wifi$/m)
   })

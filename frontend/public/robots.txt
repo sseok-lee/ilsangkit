@@ -12,8 +12,6 @@ Disallow: /*&page=
 # Nuxt _payload.json 은 SSR HTML 의 중복 데이터 — 크롤 예산 낭비 차단 (?buildId 쿼리 때문에 $ 앵커 미사용)
 Disallow: /*_payload.json
 Disallow: /admin
-# wifi 상세(/wifi/wifi-) 는 영구 noindex — 재크롤 예산 낭비 방지 위해 크롤 차단. 허브 /wifi·지역 wifi 는 허용.
-Disallow: /wifi/wifi-
 
 User-agent: *
 Allow: /
@@ -25,11 +23,15 @@ Disallow: /api/
 # payload URL 에 ?<buildId> 쿼리가 붙으므로 $ 앵커는 쓰지 않는다(붙이면 매칭 실패).
 Disallow: /*_payload.json
 Disallow: /admin
-# wifi 상세(/wifi/wifi-) 는 영구 noindex 라 색인된 적이 없다(색인 제거가 아니라 처음부터 미색인).
-# 따라서 noindex 재확인용 크롤을 유지할 이유가 없어, 재크롤 예산 낭비를 막기 위해 상세 URL 을 크롤 차단한다.
-# 카테고리 허브 /wifi 와 지역 wifi(/[city]/[district]/wifi)는 계속 크롤·색인 허용한다.
-# sitemapPolicy.ts 에서 wifi 상세 URL은 계속 sitemap 제외 대상이다.
-Disallow: /wifi/wifi-
+
+# wifi 상세(/wifi/wifi-) 는 크롤 차단하지 않는다 — 검색엔진 그룹(Yeti·*)에 Disallow 를 두지 말 것.
+# 이유: wifi 상세는 pages/[category]/[id].vue 에서 영구 noindex 로 나가는데, noindex 는 크롤러가
+# 페이지를 실제로 가져와야만 확인된다. robots.txt 로 막으면 크롤러는 "이미 수집해 둔 사본"을
+# 재평가할 방법이 없어져 색인/진단에 영구 고착된다(= 색인 제거가 아니라 색인 동결).
+# 2026-07 에 이 Disallow 를 넣었다가 정확히 그 현상이 관측됐다: 네이버 중복 title 진단의 wifi 657건이
+# 마지막 크롤 06-29 에 멈춘 채 7월 크롤 0건이었고, SEO 이슈 문서 수가 한 번도 감소하지 못했다.
+# 크롤 예산이 걱정되면 sitemap 제외(sitemapPolicy.ts)와 noindex 로 다루고, robots 차단은 쓰지 않는다.
+# AI 크롤러 그룹은 색인 회수와 무관하고 순수 부하만 유발하므로 아래에서 계속 차단한다.
 
 # AI 검색 크롤러 — 본문은 허용하되(AI 검색 노출) 크롤 예산 낭비 경로는 User-agent: * 와 동일하게 차단한다.
 # robots.txt 그룹은 상속되지 않는다 — 자기 이름 그룹이 있는 봇은 User-agent: * 를 통째로 무시하므로
