@@ -3,6 +3,7 @@ import request from 'supertest';
 import express from 'express';
 
 const getRealEstateBuildingsMock = vi.fn();
+const getRealEstateBuildingCountMock = vi.fn();
 const getFacilityIdsMock = vi.fn();
 const getWasteScheduleIdsMock = vi.fn();
 const getWasteScheduleRegionsMock = vi.fn();
@@ -17,7 +18,8 @@ vi.mock('../../src/services/sitemapService.js', () => ({
   getWasteScheduleIds: () => getWasteScheduleIdsMock(),
   getWasteScheduleRegions: () => getWasteScheduleRegionsMock(),
   getRegionCategoryCombinations: () => getRegionCategoryCombinationsMock(),
-  getRealEstateBuildings: () => getRealEstateBuildingsMock(),
+  getRealEstateBuildings: (opts?: unknown) => getRealEstateBuildingsMock(opts),
+  getRealEstateBuildingCount: () => getRealEstateBuildingCountMock(),
   getSubscriptionIds: () => getSubscriptionIdsMock(),
 }));
 
@@ -31,6 +33,8 @@ app.use((err: Error & { statusCode?: number }, _req: express.Request, res: expre
 
 beforeEach(() => {
   getRealEstateBuildingsMock.mockReset();
+  getRealEstateBuildingCountMock.mockReset();
+  getRealEstateBuildingCountMock.mockResolvedValue(0);
   getFacilityIdsMock.mockReset().mockResolvedValue([]);
   getWasteScheduleIdsMock.mockReset().mockResolvedValue([]);
   getWasteScheduleRegionsMock.mockReset().mockResolvedValue([]);

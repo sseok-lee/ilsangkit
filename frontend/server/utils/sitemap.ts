@@ -79,6 +79,9 @@ export function formatDateForSitemap(date: string | Date): string {
 const cache = new Map<string, { data: unknown[]; expires: number }>()
 const CACHE_TTL = 10 * 60 * 1000 // 10분
 
+/** 청크마다 total 을 다시 받지 않도록 보관. 캐시 엔트리와 수명을 같이 한다. */
+let realEstateTotalCache: number | null = null
+
 /**
  * 사이트맵 집계 API 호출 예산.
  *
@@ -175,23 +178,43 @@ export interface SitemapRealEstateBuilding {
   lastmod?: string
 }
 
-export async function fetchRealEstateBuildings(): Promise<SitemapRealEstateBuilding[]> {
-  const cacheKey = 'real-estate-buildings'
+export interface RealEstateBuildingsPage {
+  items: SitemapRealEstateBuilding[]
+  total: number
+}
+
+/**
+ * 부동산 건물을 사이트맵 청크 단위로 가져온다.
+ *
+ * 종전에는 356,461행(50.8MB)을 통째로 받아 프론트에서 slice 했다. 그 한 번의 응답이
+ * 백엔드 메모리를 197MB → 679MB 로 밀어올려(+275MB) PM2 max_memory_restart(500MB)를
+ * 넘겼고, 사이트맵 생성 중 백엔드가 재시작되면서 자식 fetch 가 끊겨 파일이 이월됐다.
+ *
+ * total 은 청크 수 계산용이며 서버가 함께 돌려준다.
+ */
+export async function fetchRealEstateBuildings(page = 1): Promise<RealEstateBuildingsPage> {
+  const cacheKey = `real-estate-buildings:${page}`
   const cached = getCached<SitemapRealEstateBuilding>(cacheKey)
-  if (cached) return cached
+  const cachedTotal = realEstateTotalCache
+  if (cached && cachedTotal != null) return { items: cached, total: cachedTotal }
 
   try {
-    const json = await ssrFetch<{ data?: SitemapRealEstateBuilding[] }>(
-      '/api/sitemap/real-estate-buildings',
+    const json = await ssrFetch<{ data?: SitemapRealEstateBuilding[]; total?: number }>(
+      `/api/sitemap/real-estate-buildings?page=${page}&limit=${MAX_URLS_PER_SITEMAP}`,
       { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
     const raw = json.data ?? []
-    const data = raw.filter((item) => isValidBuildingName(item.buildingName))
-    if (data.length > 0) setCache(cacheKey, data)
-    return data
+    // 서버가 이미 같은 규칙으로 거른다(backend sitemapService). 규칙이 어긋나는 경우를 위한 안전망.
+    const items = raw.filter((item) => isValidBuildingName(item.buildingName))
+    const total = json.total ?? 0
+    if (items.length > 0) {
+      setCache(cacheKey, items)
+      realEstateTotalCache = total
+    }
+    return { items, total }
   } catch (err) {
     console.error('[sitemap] fetchRealEstateBuildings failed', err)
-    return []
+    return { items: [], total: 0 }
   }
 }
 
