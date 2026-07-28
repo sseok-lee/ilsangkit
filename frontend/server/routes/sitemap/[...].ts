@@ -124,17 +124,17 @@ export default defineEventHandler(async (event) => {
 
   // 부동산 건물 상세 페이지
   if (category === 'real-estate') {
-    const buildings = await fetchRealEstateBuildings()
-    if (buildings.length === 0 && page > 1) {
+    // 서버가 청크 단위로만 돌려준다 — 전량(50.8MB)을 받아 slice 하면 백엔드 메모리가
+    // +275MB 튀어 PM2 재시작을 유발한다(2026-07-28 실측).
+    const { items: pageItems, total } = await fetchRealEstateBuildings(page)
+    if (pageItems.length === 0 && page > 1) {
       throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
     }
-    const totalPages = Math.max(1, Math.ceil(buildings.length / MAX_URLS_PER_SITEMAP))
+    const totalPages = Math.max(1, Math.ceil(total / MAX_URLS_PER_SITEMAP))
     if (page > totalPages) {
       throw createError({ statusCode: 404, statusMessage: 'Not Found' })
     }
 
-    const offset = (page - 1) * MAX_URLS_PER_SITEMAP
-    const pageItems = buildings.slice(offset, offset + MAX_URLS_PER_SITEMAP)
     const weekStart = getWeekStartDate()
 
     const urls = pageItems.map((item) => ({
