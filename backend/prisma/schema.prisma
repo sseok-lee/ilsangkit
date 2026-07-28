@@ -752,20 +752,20 @@ model SyncHistory {
 
 // 가이드 콘텐츠 테이블
 model Guide {
-  id           String   @id @default(cuid())
-  title        String   @db.VarChar(200)
-  slug         String   @unique @db.VarChar(200)
-  content      String   @db.LongText
-  summary      String   @db.VarChar(500)
-  category     String   @db.VarChar(50)
-  articleType  String   @default("news") @db.VarChar(20)
-  thumbnailUrl String?  @db.VarChar(500)
-  keywords     String?  @db.VarChar(500)
-  published    Boolean  @default(true)
-  viewCount    Int      @default(0)
+  id           String    @id @default(cuid())
+  title        String    @db.VarChar(200)
+  slug         String    @unique @db.VarChar(200)
+  content      String    @db.LongText
+  summary      String    @db.VarChar(500)
+  category     String    @db.VarChar(50)
+  articleType  String    @default("news") @db.VarChar(20)
+  thumbnailUrl String?   @db.VarChar(500)
+  keywords     String?   @db.VarChar(500)
+  published    Boolean   @default(true)
+  viewCount    Int       @default(0)
   publishedAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([category])
   @@index([published, createdAt])
@@ -775,22 +775,22 @@ model Guide {
 
 // 오늘의 이슈(/article) 콘텐츠 테이블 — 시의성 뉴스/정책. 검토 워크플로우(draft→published) 지원.
 model Article {
-  id           String    @id @default(cuid())
-  title        String    @db.VarChar(200)
-  slug         String    @unique @db.VarChar(200)
-  content      String    @db.LongText
-  summary      String    @db.VarChar(500)
-  category     String    @db.VarChar(50)
-  articleType  String    @default("news-brief") @db.VarChar(20)
-  thumbnailUrl String?   @db.VarChar(500)
-  keywords     String?   @db.VarChar(500)
-  sources      Json?
-  sourceExternalId String? @db.VarChar(100)
-  status       String    @default("draft") @db.VarChar(20)
-  viewCount    Int       @default(0)
-  publishedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  title            String    @db.VarChar(200)
+  slug             String    @unique @db.VarChar(200)
+  content          String    @db.LongText
+  summary          String    @db.VarChar(500)
+  category         String    @db.VarChar(50)
+  articleType      String    @default("news-brief") @db.VarChar(20)
+  thumbnailUrl     String?   @db.VarChar(500)
+  keywords         String?   @db.VarChar(500)
+  sources          Json?
+  sourceExternalId String?   @db.VarChar(100)
+  status           String    @default("draft") @db.VarChar(20)
+  viewCount        Int       @default(0)
+  publishedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([status, publishedAt])
   @@index([category])
@@ -1205,27 +1205,27 @@ model OffitelSaleTransaction {
 // ============================================
 
 model LandSaleTransaction {
-  id             Int       @id @default(autoincrement())
-  city           String    @db.VarChar(50)
-  district       String    @db.VarChar(50)
-  bjdCode        String    @db.VarChar(10)
-  dongName       String    @db.VarChar(50)
-  jibun          String?   @db.VarChar(20)
-  jimok          String?   @db.VarChar(20)
-  landUse        String?   @db.VarChar(50)
-  dealArea       Decimal?  @db.Decimal(12, 2)
-  shareDeal      Boolean   @default(false)
+  id             Int      @id @default(autoincrement())
+  city           String   @db.VarChar(50)
+  district       String   @db.VarChar(50)
+  bjdCode        String   @db.VarChar(10)
+  dongName       String   @db.VarChar(50)
+  jibun          String?  @db.VarChar(20)
+  jimok          String?  @db.VarChar(20)
+  landUse        String?  @db.VarChar(50)
+  dealArea       Decimal? @db.Decimal(12, 2)
+  shareDeal      Boolean  @default(false)
   dealAmount     BigInt
-  dealType       String?   @db.VarChar(20)
+  dealType       String?  @db.VarChar(20)
   dealYear       Int
   dealMonth      Int
   dealDay        Int?
-  cancelDealDay  String?   @db.VarChar(10)
-  cancelDealType String?   @db.VarChar(20)
-  sourceId       String    @unique @db.VarChar(200)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  syncedAt       DateTime  @default(now())
+  cancelDealDay  String?  @db.VarChar(10)
+  cancelDealType String?  @db.VarChar(20)
+  sourceId       String   @unique @db.VarChar(200)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  syncedAt       DateTime @default(now())
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, dongName, dealYear, dealMonth])
@@ -1609,64 +1609,64 @@ model FacilityNaverBlogCache {
 
 // 부동산 단지 상세 페이지 네이버 블로그 후기 캐시 (14일 TTL, negative caching)
 model RealEstateNaverBlogCache {
-  id              Int      @id @default(autoincrement())
-  realEstateType  String   @db.VarChar(20)
-  buildingKey     String   @db.VarChar(200)
-  query           String   @db.VarChar(300)
-  posts           Json
-  itemCount       Int      @default(0)
-  fetchedAt       DateTime @default(now())
-  expiresAt       DateTime
+  id             Int      @id @default(autoincrement())
+  realEstateType String   @db.VarChar(20)
+  buildingKey    String   @db.VarChar(200)
+  query          String   @db.VarChar(300)
+  posts          Json
+  itemCount      Int      @default(0)
+  fetchedAt      DateTime @default(now())
+  expiresAt      DateTime
 
   @@unique([realEstateType, buildingKey])
   @@index([expiresAt])
 }
 
 model AuctionItem {
-  id            Int       @id @default(autoincrement())
-  cltrMngNo     String    @unique @db.VarChar(50)
-  pbctCdtnNo    String    @db.VarChar(50)
-  plnmNo        String?   @db.VarChar(50)
-  city          String    @db.VarChar(50)
-  district      String    @db.VarChar(50)
-  bjdCode       String    @db.VarChar(5)   // 5자리 시군구 코드 (Region.bjdCode VarChar(5)와 일치, land=sggCd 관례)
-  dongName      String?   @db.VarChar(50)
-  address       String    @db.VarChar(500)
-  usage         String?   @db.VarChar(100)
-  usageGroup    String    @db.VarChar(20)
-  propertyType  String?   @db.VarChar(50)
-  dpslMtdNm     String?   @db.VarChar(20)
-  bidMethod     String?   @db.VarChar(40)  // 입찰방식 bidMthodNm (최고가방식 등)
-  competitionMethod String? @db.VarChar(40) // 경쟁방식 cptnMthodNm (일반경쟁 등)
-  bidType       String?   @db.VarChar(40)  // 입찰구분 bidDivNm (전자입찰 등)
-  evictionResp  String?   @db.VarChar(40)  // 명도책임 evcRsbyTrgtCont (매수자 등)
-  isShare       Boolean   @default(false)  // 지분물건 여부 alcYn
-  thumbnailUrl  String?   @db.VarChar(500) // 썸네일 thnlImgUrlAdr
-  landArea      Decimal?  @db.Decimal(12, 2)
-  bldArea       Decimal?  @db.Decimal(12, 2)
-  apslAssAmt    BigInt?
-  minBidPrc     BigInt?
-  failCnt       Int       @default(0)
-  bidRound      Int?
-  bidBeginDtm   DateTime?
-  bidCloseDtm   DateTime?
-  orgNm         String?   @db.VarChar(100)
-  pvctTrgtYn    Boolean   @default(false)
-  status        String    @db.VarChar(20)
-  isClosed      Boolean   @default(false)
-  resultType    String?   @db.VarChar(20)
-  winBidPrc     BigInt?
-  bidRate       Decimal?  @db.Decimal(6, 2)
-  resultDate    DateTime?
-  lat           Decimal?  @db.Decimal(10, 7)
-  lng           Decimal?  @db.Decimal(10, 7)
-  geocodedAt    DateTime? // 지오코딩 시도 시각(실패 재시도 스킵용)
-  sourceId      String    @unique @db.VarChar(200)
-  firstSeenAt   DateTime  @default(now())
-  lastSeenAt    DateTime  @default(now())
-  syncedAt      DateTime  @default(now())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                Int       @id @default(autoincrement())
+  cltrMngNo         String    @unique @db.VarChar(50)
+  pbctCdtnNo        String    @db.VarChar(50)
+  plnmNo            String?   @db.VarChar(50)
+  city              String    @db.VarChar(50)
+  district          String    @db.VarChar(50)
+  bjdCode           String    @db.VarChar(5) // 5자리 시군구 코드 (Region.bjdCode VarChar(5)와 일치, land=sggCd 관례)
+  dongName          String?   @db.VarChar(50)
+  address           String    @db.VarChar(500)
+  usage             String?   @db.VarChar(100)
+  usageGroup        String    @db.VarChar(20)
+  propertyType      String?   @db.VarChar(50)
+  dpslMtdNm         String?   @db.VarChar(20)
+  bidMethod         String?   @db.VarChar(40) // 입찰방식 bidMthodNm (최고가방식 등)
+  competitionMethod String?   @db.VarChar(40) // 경쟁방식 cptnMthodNm (일반경쟁 등)
+  bidType           String?   @db.VarChar(40) // 입찰구분 bidDivNm (전자입찰 등)
+  evictionResp      String?   @db.VarChar(40) // 명도책임 evcRsbyTrgtCont (매수자 등)
+  isShare           Boolean   @default(false) // 지분물건 여부 alcYn
+  thumbnailUrl      String?   @db.VarChar(500) // 썸네일 thnlImgUrlAdr
+  landArea          Decimal?  @db.Decimal(12, 2)
+  bldArea           Decimal?  @db.Decimal(12, 2)
+  apslAssAmt        BigInt?
+  minBidPrc         BigInt?
+  failCnt           Int       @default(0)
+  bidRound          Int?
+  bidBeginDtm       DateTime?
+  bidCloseDtm       DateTime?
+  orgNm             String?   @db.VarChar(100)
+  pvctTrgtYn        Boolean   @default(false)
+  status            String    @db.VarChar(20)
+  isClosed          Boolean   @default(false)
+  resultType        String?   @db.VarChar(20)
+  winBidPrc         BigInt?
+  bidRate           Decimal?  @db.Decimal(6, 2)
+  resultDate        DateTime?
+  lat               Decimal?  @db.Decimal(10, 7)
+  lng               Decimal?  @db.Decimal(10, 7)
+  geocodedAt        DateTime? // 지오코딩 시도 시각(실패 재시도 스킵용)
+  sourceId          String    @unique @db.VarChar(200)
+  firstSeenAt       DateTime  @default(now())
+  lastSeenAt        DateTime  @default(now())
+  syncedAt          DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([bjdCode, usageGroup, status])
   @@index([city, district])
@@ -1677,25 +1677,179 @@ model AuctionItem {
 }
 
 model AuctionAreaSummary {
-  id              Int       @id @default(autoincrement())
-  bjdCode         String    @db.VarChar(5)   // 5자리 시군구 코드 (AuctionItem/Region과 일치)
-  usageGroup      String    @db.VarChar(20)
-  city            String    @db.VarChar(50)
-  district        String    @db.VarChar(50)
-  activeCount     Int       @default(0)
-  closedCount     Int       @default(0)
-  soldCount       Int       @default(0)
-  avgBidRate      Decimal?  @db.Decimal(6, 2)
-  avgApslAmt      BigInt?
-  avgWinBidPrc    BigInt?
-  failRate        Decimal?  @db.Decimal(5, 2)
+  id               Int       @id @default(autoincrement())
+  bjdCode          String    @db.VarChar(5) // 5자리 시군구 코드 (AuctionItem/Region과 일치)
+  usageGroup       String    @db.VarChar(20)
+  city             String    @db.VarChar(50)
+  district         String    @db.VarChar(50)
+  activeCount      Int       @default(0)
+  closedCount      Int       @default(0)
+  soldCount        Int       @default(0)
+  avgBidRate       Decimal?  @db.Decimal(6, 2)
+  avgApslAmt       BigInt?
+  avgWinBidPrc     BigInt?
+  failRate         Decimal?  @db.Decimal(5, 2)
   latestResultDate DateTime?
-  isIndexable     Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isIndexable      Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@unique([bjdCode, usageGroup])
   @@index([city, district])
   @@index([usageGroup, avgBidRate])
   @@index([isIndexable])
+}
+
+// ── 부동산 정규화 Phase 1 ────────────────────────────────────────────────
+// 거래 테이블 6종에 건물 속성이 중복 저장돼 있다(아파트 전월세 80배, 전체 평균 17배).
+// 6,722,253행 / 6,418MB 로 DB 전체(8,308MB)의 77%, 그중 인덱스가 4,233MB.
+//
+// 목적은 저장공간보다 집계 제거다. /api/sitemap/real-estate-buildings 가 6.7M행을
+// UNION ALL + GROUP BY 로 훑어 56초가 걸렸고, 그래서 6시간 캐시(+169MB 상주)와 배포
+// 워밍업이 필요했다. 그 메모리 스파이크가 PM2 max_memory_restart(500MB)를 넘겨
+// 사이트맵 생성 도중 백엔드를 재시작시켰고, 매 생성마다 파일 하나가 이월됐다.
+// *Property 를 그냥 SELECT 하면 이 사슬이 통째로 끊긴다.
+//
+// Phase 1 은 읽기 전용 파생 테이블만 추가한다. 기존 컬럼·인덱스는 그대로 두므로
+// 롤백은 이 세 테이블을 지우는 것으로 끝난다. 거래 테이블은 건드리지 않는다.
+//
+// 타입별로 나눈 이유: 같은 (bjdCode, buildingName) 이 여러 건물종류로 잡히는 경우가
+// 6,246건(2.5%) 있어 통합 테이블에서는 propertyType 이 단일 값을 가질 수 없다.
+// 타입별로 두면 그 충돌이 애초에 생기지 않고, 기존 realEstateService 의 타입별
+// 모델 레지스트리 구조와도 일치한다.
+//
+// 자연키 (bjdCode, buildingName) 의 그룹 수가 URL 정체성(city,district,buildingName)과
+// 전 테이블에서 정확히 일치함을 측정으로 확인했다(차이 0). 사이트맵 URL 집합 불변.
+//
+// last*DealKey = dealYear*10000 + dealMonth*100 + COALESCE(dealDay,1).
+// 현재 사이트맵 lastmod 쿼리의 MAX(...) 와 동일 정의. NULL 이면 그 유형의 거래가
+// 없다는 뜻이고 해당 URL 도 생성하지 않는다 — 이게 URL 개수를 보존하는 장치다.
+
+/// 아파트 건물. 측정 43,544행 (매매 37,842 / 전월세 39,838 의 합집합).
+model AptProperty {
+  id           Int    @id @default(autoincrement())
+  bjdCode      String @db.VarChar(10)
+  buildingName String @db.VarChar(200)
+
+  // 그룹 내 불일치 0% — 안전하게 승격
+  city     String  @db.VarChar(50)
+  district String  @db.VarChar(50)
+  roadName String? @db.VarChar(100)
+
+  // 그룹 내 불일치 1.5~2.1% — 최신 거래 기준 대표값
+  dongName  String?  @db.VarChar(50)
+  jibun     String?  @db.VarChar(20)
+  buildYear Int?
+  lat       Decimal? @db.Decimal(10, 7)
+  lng       Decimal? @db.Decimal(10, 7)
+
+  /// 속성(dongName/jibun/buildYear/lat/lng)을 채택한 거래의 dealKey.
+  /// 백필 패스 순서와 무관하게 "가장 최근 거래의 값"이 이기도록 보장한다(멱등성).
+  attrDealKey Int?
+
+  /// 건물명이 사이트맵/색인 대상인가. 백필 시 계산해 둔다.
+  /// 규칙은 sitemapService 필터 및 프론트 isValidBuildingName 과 동일해야 한다.
+  /// 지번만 있는 이름, "(123" 형태 등을 제외한다.
+  /// WARNING: Property 자체는 제외 건물도 전부 담는다 — Phase 3 에서 거래가 FK 로 붙어야 하고,
+  /// 필터로 빼면 144,823개 거래가 연결할 Property 를 잃는다.
+  isIndexable Boolean @default(false)
+
+  lastSaleDealKey Int?
+  lastRentDealKey Int?
+  saleCount       Int  @default(0)
+  rentCount       Int  @default(0)
+
+  createdAt DateTime @default(now())
+  /// ⚠️ 백필마다 갱신된다. 신선도 신호로 쓰지 말 것 — lastmod 는 last*DealKey 를 쓴다.
+  updatedAt DateTime @updatedAt
+
+  @@unique([bjdCode, buildingName])
+  @@index([city, district, buildingName])
+  @@index([isIndexable])
+  @@index([lastSaleDealKey])
+  @@index([lastRentDealKey])
+}
+
+/// 빌라(연립·다세대) 건물. 측정 175,854행.
+model VillaProperty {
+  id           Int    @id @default(autoincrement())
+  bjdCode      String @db.VarChar(10)
+  buildingName String @db.VarChar(200)
+
+  city     String  @db.VarChar(50)
+  district String  @db.VarChar(50)
+  roadName String? @db.VarChar(100)
+
+  dongName  String?  @db.VarChar(50)
+  jibun     String?  @db.VarChar(20)
+  buildYear Int?
+  lat       Decimal? @db.Decimal(10, 7)
+  lng       Decimal? @db.Decimal(10, 7)
+
+  /// 속성(dongName/jibun/buildYear/lat/lng)을 채택한 거래의 dealKey.
+  /// 백필 패스 순서와 무관하게 "가장 최근 거래의 값"이 이기도록 보장한다(멱등성).
+  attrDealKey Int?
+
+  /// 건물명이 사이트맵/색인 대상인가. 백필 시 계산해 둔다.
+  /// 규칙은 sitemapService 필터 및 프론트 isValidBuildingName 과 동일해야 한다.
+  /// 지번만 있는 이름, "(123" 형태 등을 제외한다.
+  /// WARNING: Property 자체는 제외 건물도 전부 담는다 — Phase 3 에서 거래가 FK 로 붙어야 하고,
+  /// 필터로 빼면 144,823개 거래가 연결할 Property 를 잃는다.
+  isIndexable Boolean @default(false)
+
+  lastSaleDealKey Int?
+  lastRentDealKey Int?
+  saleCount       Int  @default(0)
+  rentCount       Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([bjdCode, buildingName])
+  @@index([city, district, buildingName])
+  @@index([isIndexable])
+  @@index([lastSaleDealKey])
+  @@index([lastRentDealKey])
+}
+
+/// 오피스텔 건물. 측정 15,339행. (슬러그는 offitel — officetel 아님)
+model OffitelProperty {
+  id           Int    @id @default(autoincrement())
+  bjdCode      String @db.VarChar(10)
+  buildingName String @db.VarChar(200)
+
+  city     String  @db.VarChar(50)
+  district String  @db.VarChar(50)
+  roadName String? @db.VarChar(100)
+
+  dongName  String?  @db.VarChar(50)
+  jibun     String?  @db.VarChar(20)
+  buildYear Int?
+  lat       Decimal? @db.Decimal(10, 7)
+  lng       Decimal? @db.Decimal(10, 7)
+
+  /// 속성(dongName/jibun/buildYear/lat/lng)을 채택한 거래의 dealKey.
+  /// 백필 패스 순서와 무관하게 "가장 최근 거래의 값"이 이기도록 보장한다(멱등성).
+  attrDealKey Int?
+
+  /// 건물명이 사이트맵/색인 대상인가. 백필 시 계산해 둔다.
+  /// 규칙은 sitemapService 필터 및 프론트 isValidBuildingName 과 동일해야 한다.
+  /// 지번만 있는 이름, "(123" 형태 등을 제외한다.
+  /// WARNING: Property 자체는 제외 건물도 전부 담는다 — Phase 3 에서 거래가 FK 로 붙어야 하고,
+  /// 필터로 빼면 144,823개 거래가 연결할 Property 를 잃는다.
+  isIndexable Boolean @default(false)
+
+  lastSaleDealKey Int?
+  lastRentDealKey Int?
+  saleCount       Int  @default(0)
+  rentCount       Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([bjdCode, buildingName])
+  @@index([city, district, buildingName])
+  @@index([isIndexable])
+  @@index([lastSaleDealKey])
+  @@index([lastRentDealKey])
 }
