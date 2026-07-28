@@ -6,11 +6,14 @@ export const SITE_URL = 'https://ilsangkit.co.kr'
 
 export const MAX_URLS_PER_SITEMAP = 10_000
 
+/**
+ * changefreq / priority 는 의도적으로 없다.
+ * Google 공식 문서: "Google ignores <priority> and <changefreq> values."
+ * 크롤·색인에 아무 영향이 없으면서 URL 당 2줄씩 바이트만 차지하므로 방출하지 않는다.
+ */
 export interface SitemapUrl {
   loc: string
   lastmod?: string
-  changefreq?: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never'
-  priority?: number
   image?: {
     loc: string
     title?: string
@@ -33,8 +36,6 @@ export function generateSitemapXml(urls: SitemapUrl[]): string {
     .map((url) => {
       const parts = [`    <loc>${escapeXml(url.loc)}</loc>`]
       if (url.lastmod) parts.push(`    <lastmod>${url.lastmod}</lastmod>`)
-      if (url.changefreq) parts.push(`    <changefreq>${url.changefreq}</changefreq>`)
-      if (url.priority !== undefined) parts.push(`    <priority>${url.priority.toFixed(1)}</priority>`)
       if (url.image) {
         const imgParts = [`      <image:loc>${escapeXml(url.image.loc)}</image:loc>`]
         if (url.image.title) imgParts.push(`      <image:title>${escapeXml(url.image.title)}</image:title>`)

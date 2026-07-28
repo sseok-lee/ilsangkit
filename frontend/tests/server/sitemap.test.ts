@@ -13,15 +13,24 @@ vi.mock('../../server/utils/ssrFetch', () => ({
 }))
 
 describe('generateSitemapXml with images', () => {
-  it('image 필드 없을 때 기존 동작과 동일 (하위 호환)', () => {
+  it('image 필드 없을 때 loc/lastmod 만 방출한다', () => {
     const urls = [
-      { loc: 'https://ilsangkit.co.kr/toilet', changefreq: 'daily' as const, priority: 0.8 },
+      { loc: 'https://ilsangkit.co.kr/toilet', lastmod: '2026-07-28' },
     ]
     const xml = generateSitemapXml(urls)
     expect(xml).toContain('<loc>https://ilsangkit.co.kr/toilet</loc>')
-    expect(xml).toContain('<changefreq>daily</changefreq>')
-    expect(xml).toContain('<priority>0.8</priority>')
+    expect(xml).toContain('<lastmod>2026-07-28</lastmod>')
     expect(xml).not.toContain('<image:image>')
+  })
+
+  // Google 공식 문서: "Google ignores <priority> and <changefreq> values."
+  // 두 태그는 크롤·색인에 아무 영향이 없으면서 669,498개 URL × 2줄의 바이트만 차지한다.
+  // 경쟁 사이트(ayo.pe.kr)도 두 태그를 전혀 쓰지 않는다.
+  it('changefreq / priority 는 방출하지 않는다', () => {
+    const urls = [{ loc: 'https://ilsangkit.co.kr/toilet', lastmod: '2026-07-28' }]
+    const xml = generateSitemapXml(urls)
+    expect(xml).not.toContain('<changefreq>')
+    expect(xml).not.toContain('<priority>')
   })
 
   it('xmlns:image 네임스페이스가 urlset에 추가됨', () => {
@@ -84,7 +93,7 @@ describe('generateSitemapXml with images', () => {
 
   it('image 없는 URL과 있는 URL 혼합 시 각각 올바르게 처리', () => {
     const urls = [
-      { loc: 'https://ilsangkit.co.kr/', priority: 1.0 },
+      { loc: 'https://ilsangkit.co.kr/' },
       {
         loc: 'https://ilsangkit.co.kr/hospital/1',
         image: {

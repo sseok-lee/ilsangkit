@@ -146,8 +146,6 @@ export default defineEventHandler(async (event) => {
       }),
       // 건물별 최근 실거래월(진짜 freshness). 백엔드 미배포/구버전 응답 시 weekStart 폴백.
       lastmod: item.lastmod || weekStart,
-      changefreq: 'weekly' as const,
-      priority: 0.6,
     }))
 
     return generateSitemapXml(urls)
@@ -168,11 +166,11 @@ export default defineEventHandler(async (event) => {
       const cityUrl = `${SITE_URL}/real-estate/${hub.realEstateType}/${citySlug}`
       if (!seenCityUrls.has(cityUrl)) {
         seenCityUrls.add(cityUrl)
-        urls.push({ loc: cityUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.7 })
+        urls.push({ loc: cityUrl, lastmod: weekStart })
       }
 
       const districtUrl = `${SITE_URL}/real-estate/${hub.realEstateType}/${citySlug}/${districtSlug}`
-      urls.push({ loc: districtUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+      urls.push({ loc: districtUrl, lastmod: weekStart })
     }
 
     return generateSitemapXml(urls)
@@ -186,7 +184,7 @@ export default defineEventHandler(async (event) => {
     const urls: Parameters<typeof generateSitemapXml>[0] = []
 
     // hub
-    urls.push({ loc: `${SITE_URL}/real-estate/land`, lastmod: weekStart, changefreq: 'weekly', priority: 0.7 })
+    urls.push({ loc: `${SITE_URL}/real-estate/land`, lastmod: weekStart })
 
     // city + district (always included)
     const seenCityUrls = new Set<string>()
@@ -196,9 +194,9 @@ export default defineEventHandler(async (event) => {
       const cityUrl = `${SITE_URL}/real-estate/land/${citySlug}`
       if (!seenCityUrls.has(cityUrl)) {
         seenCityUrls.add(cityUrl)
-        urls.push({ loc: cityUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+        urls.push({ loc: cityUrl, lastmod: weekStart })
       }
-      urls.push({ loc: `${SITE_URL}/real-estate/land/${citySlug}/${districtSlug}`, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+      urls.push({ loc: `${SITE_URL}/real-estate/land/${citySlug}/${districtSlug}`, lastmod: weekStart })
     }
 
     // dong URLs — only isIndexable=true (quality gate)
@@ -206,8 +204,6 @@ export default defineEventHandler(async (event) => {
       urls.push({
         loc: `${SITE_URL}/real-estate/land/${toCitySlugByDistrict(city, district)}/${toDistrictSlug(district)}/${encodeURIComponent(dongName)}`,
         lastmod: weekStart,
-        changefreq: 'weekly',
-        priority: 0.5,
       })
     }
 
@@ -222,7 +218,7 @@ export default defineEventHandler(async (event) => {
     const urls: Parameters<typeof generateSitemapXml>[0] = []
 
     // hub
-    urls.push({ loc: `${SITE_URL}/auction`, lastmod: weekStart, changefreq: 'daily', priority: 0.8 })
+    urls.push({ loc: `${SITE_URL}/auction`, lastmod: weekStart })
 
     // indexable region pages (dedupe to unique city/district)
     const seenRegionUrls = new Set<string>()
@@ -233,13 +229,13 @@ export default defineEventHandler(async (event) => {
       const regionUrl = `${SITE_URL}/auction/${citySlug}/${districtSlug}`
       if (!seenRegionUrls.has(regionUrl)) {
         seenRegionUrls.add(regionUrl)
-        urls.push({ loc: regionUrl, lastmod: weekStart, changefreq: 'weekly', priority: 0.6 })
+        urls.push({ loc: regionUrl, lastmod: weekStart })
       }
     }
 
     // item pages
     for (const cltrMngNo of items) {
-      urls.push({ loc: `${SITE_URL}/auction/item/${cltrMngNo}`, lastmod: weekStart, changefreq: 'weekly', priority: 0.5 })
+      urls.push({ loc: `${SITE_URL}/auction/item/${cltrMngNo}`, lastmod: weekStart })
     }
 
     return generateSitemapXml(urls)
@@ -262,8 +258,6 @@ export default defineEventHandler(async (event) => {
     const urls = pageItems.map((item) => ({
       loc: `${SITE_URL}/subway/${item.slug}`,
       lastmod: formatDateForSitemap(item.updatedAt),
-      changefreq: 'monthly' as const,
-      priority: 0.5,
     }))
 
     return generateSitemapXml(urls)
@@ -282,19 +276,11 @@ export default defineEventHandler(async (event) => {
 
     const offset = (page - 1) * MAX_URLS_PER_SITEMAP
     const pageItems = subscriptions.slice(offset, offset + MAX_URLS_PER_SITEMAP)
-    const threeMonthsAgo = new Date()
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
 
-    const urls = pageItems.map((item) => {
-      const updatedAt = new Date(item.updatedAt)
-      const changefreq = updatedAt >= threeMonthsAgo ? 'monthly' : 'yearly'
-      return {
-        loc: `${SITE_URL}/subscription/${item.id}`,
-        lastmod: formatDateForSitemap(item.updatedAt),
-        changefreq: changefreq as 'monthly' | 'yearly',
-        priority: 0.6,
-      }
-    })
+    const urls = pageItems.map((item) => ({
+      loc: `${SITE_URL}/subscription/${item.id}`,
+      lastmod: formatDateForSitemap(item.updatedAt),
+    }))
 
     return generateSitemapXml(urls)
   }
@@ -317,8 +303,6 @@ export default defineEventHandler(async (event) => {
       urls.push({
         loc: `${SITE_URL}${regionPath}`,
         lastmod: formatDateForSitemap(r.updatedAt),
-        changefreq: 'weekly',
-        priority: 0.6,
       })
     }
 
@@ -353,8 +337,6 @@ export default defineEventHandler(async (event) => {
   const urls = pageItems.map((item) => ({
     loc: `${SITE_URL}/${category}/${item.id}`,
     lastmod: formatDateForSitemap(item.updatedAt),
-    changefreq: 'monthly' as const,
-    priority: 0.6,
   }))
 
   return generateSitemapXml(urls)

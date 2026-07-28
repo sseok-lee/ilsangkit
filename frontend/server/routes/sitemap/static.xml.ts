@@ -22,8 +22,6 @@ function addFallbackHubPages(urls: SitemapUrl[], lastmod: string): void {
     urls.push({
       loc: `${SITE_URL}/${citySlug}`,
       lastmod,
-      changefreq: 'weekly',
-      priority: 0.8,
     })
 
     for (const district of districts) {
@@ -31,8 +29,6 @@ function addFallbackHubPages(urls: SitemapUrl[], lastmod: string): void {
       urls.push({
         loc: `${SITE_URL}/${citySlug}/${districtSlug}`,
         lastmod,
-        changefreq: 'weekly',
-        priority: 0.7,
       })
     }
   }
@@ -78,43 +74,43 @@ export default defineEventHandler(async (event) => {
   }
 
   // 홈페이지 — 청약 + 부동산 + 시설 다 노출되므로 데이터 변경 빈도가 가장 높음
-  urls.push({ loc: SITE_URL, lastmod: today, changefreq: 'daily', priority: 1.0 })
+  urls.push({ loc: SITE_URL, lastmod: today })
 
   // 정적 페이지 — 콘텐츠 변경 시에만 STATIC_PAGE_LASTMOD 상수 갱신
-  urls.push({ loc: `${SITE_URL}/about`, lastmod: STATIC_PAGE_LASTMOD, changefreq: 'monthly', priority: 0.5 })
-  urls.push({ loc: `${SITE_URL}/faq`, lastmod: STATIC_PAGE_LASTMOD, changefreq: 'monthly', priority: 0.5 })
-  urls.push({ loc: `${SITE_URL}/contact`, lastmod: STATIC_PAGE_LASTMOD, changefreq: 'monthly', priority: 0.4 })
-  urls.push({ loc: `${SITE_URL}/privacy`, lastmod: STATIC_PAGE_LASTMOD, changefreq: 'monthly', priority: 0.3 })
-  urls.push({ loc: `${SITE_URL}/terms`, lastmod: STATIC_PAGE_LASTMOD, changefreq: 'monthly', priority: 0.3 })
+  urls.push({ loc: `${SITE_URL}/about`, lastmod: STATIC_PAGE_LASTMOD })
+  urls.push({ loc: `${SITE_URL}/faq`, lastmod: STATIC_PAGE_LASTMOD })
+  urls.push({ loc: `${SITE_URL}/contact`, lastmod: STATIC_PAGE_LASTMOD })
+  urls.push({ loc: `${SITE_URL}/privacy`, lastmod: STATIC_PAGE_LASTMOD })
+  urls.push({ loc: `${SITE_URL}/terms`, lastmod: STATIC_PAGE_LASTMOD })
 
   // /search는 noindex 페이지이므로 사이트맵에서 제외 (신호 충돌 방지)
 
   // 카테고리 랜딩 페이지 — 실제 sync 시점 (없으면 weekStart fallback)
   for (const category of CATEGORIES) {
     const lastmod = categoryLastmodMap.get(category) ?? weekStart
-    urls.push({ loc: `${SITE_URL}/${category}`, lastmod, changefreq: 'daily', priority: 0.9 })
+    urls.push({ loc: `${SITE_URL}/${category}`, lastmod })
   }
 
   // 부동산 실거래가 페이지 — 거래 데이터는 주 단위 sync (weekStart)
   const hubTypes = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent']
-  urls.push({ loc: `${SITE_URL}/real-estate`, lastmod: weekStart, changefreq: 'daily', priority: 0.8 })
+  urls.push({ loc: `${SITE_URL}/real-estate`, lastmod: weekStart })
   for (const pt of hubTypes) {
-    urls.push({ loc: `${SITE_URL}/real-estate/${pt}`, lastmod: weekStart, changefreq: 'daily', priority: 0.8 })
+    urls.push({ loc: `${SITE_URL}/real-estate/${pt}`, lastmod: weekStart })
   }
 
   // 청약 페이지 — Subscription 모델 maxUpdatedAt
-  urls.push({ loc: `${SITE_URL}/subscription`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
-  urls.push({ loc: `${SITE_URL}/subscription/sale`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
-  urls.push({ loc: `${SITE_URL}/subscription/sale/apt`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/subscription/sale/offitel`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/subscription/sale/remaining`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/subscription/sale/optional`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/subscription/rent`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.8 })
-  urls.push({ loc: `${SITE_URL}/subscription/rent/public`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
-  urls.push({ loc: `${SITE_URL}/subscription/rent/private`, lastmod: subscriptionLastmod, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/subscription`, lastmod: subscriptionLastmod })
+  urls.push({ loc: `${SITE_URL}/subscription/sale`, lastmod: subscriptionLastmod })
+  urls.push({ loc: `${SITE_URL}/subscription/sale/apt`, lastmod: subscriptionLastmod })
+  urls.push({ loc: `${SITE_URL}/subscription/sale/offitel`, lastmod: subscriptionLastmod })
+  urls.push({ loc: `${SITE_URL}/subscription/sale/remaining`, lastmod: subscriptionLastmod })
+  urls.push({ loc: `${SITE_URL}/subscription/sale/optional`, lastmod: subscriptionLastmod })
+  urls.push({ loc: `${SITE_URL}/subscription/rent`, lastmod: subscriptionLastmod })
+  urls.push({ loc: `${SITE_URL}/subscription/rent/public`, lastmod: subscriptionLastmod })
+  urls.push({ loc: `${SITE_URL}/subscription/rent/private`, lastmod: subscriptionLastmod })
 
   // 가이드 목록 페이지 — 가이드 추가 빈도 따라감 (today 유지: 신규 가이드가 자주 올라옴)
-  urls.push({ loc: `${SITE_URL}/guide`, lastmod: today, changefreq: 'daily', priority: 0.8 })
+  urls.push({ loc: `${SITE_URL}/guide`, lastmod: today })
 
   // 가이드 개별 글 — 백엔드가 페이지당 최대 100건만 반환하므로 totalPages 까지 순차 수집.
   // 100건 하드 캡을 제거해 가이드 수가 늘어나도 sitemap 에서 누락되지 않게 한다.
@@ -139,7 +135,7 @@ export default defineEventHandler(async (event) => {
         // 상세 페이지 JSON-LD(datePublished=publishedAt)·RSS 와 날짜가 어긋난다.
         const publishedAt = guide.publishedAt || guide.createdAt
         const lastmod = publishedAt ? new Date(publishedAt).toISOString().split('T')[0] : today
-        urls.push({ loc: `${SITE_URL}/guide/${guide.slug}`, lastmod, changefreq: 'weekly', priority: 0.7 })
+        urls.push({ loc: `${SITE_URL}/guide/${guide.slug}`, lastmod })
       }
       const totalPages = Number(guidesJson?.data?.totalPages ?? 1)
       if (page >= totalPages || guides.length === 0) break
@@ -149,7 +145,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 오늘의 이슈(article) 목록 페이지 — 발행 article 추가 빈도 따라감
-  urls.push({ loc: `${SITE_URL}/article`, lastmod: today, changefreq: 'daily', priority: 0.7 })
+  urls.push({ loc: `${SITE_URL}/article`, lastmod: today })
 
   // 오늘의 이슈(article) 개별 글 — 공개 API는 published 만 반환.
   // 백엔드가 페이지당 최대 100건만 반환하므로 totalPages 까지 순차 수집 (guide 루프와 동일 구조).
@@ -171,7 +167,7 @@ export default defineEventHandler(async (event) => {
       const articles: Array<{ slug: string; publishedAt: string | null }> = articlesJson?.data?.items ?? []
       for (const article of articles) {
         const lastmod = article.publishedAt ? new Date(article.publishedAt).toISOString().split('T')[0] : today
-        urls.push({ loc: `${SITE_URL}/article/${article.slug}`, lastmod, changefreq: 'weekly', priority: 0.7 })
+        urls.push({ loc: `${SITE_URL}/article/${article.slug}`, lastmod })
       }
       const totalPages = Number(articlesJson?.data?.totalPages ?? 1)
       if (page >= totalPages || articles.length === 0) break
@@ -210,7 +206,7 @@ export default defineEventHandler(async (event) => {
         urlSet.add(loc)
         // 카테고리별 sync 시점이 있으면 사용, 없으면 weekly bucket
         const lastmod = categoryLastmodMap.get(combo.category) ?? weekStart
-        urls.push({ loc, lastmod, changefreq: 'weekly', priority: 0.8 })
+        urls.push({ loc, lastmod })
       }
     }
 
@@ -219,8 +215,6 @@ export default defineEventHandler(async (event) => {
       urls.push({
         loc: `${SITE_URL}/${citySlug}`,
         lastmod: weekStart,
-        changefreq: 'weekly',
-        priority: 0.8,
       })
     })
 
@@ -229,8 +223,6 @@ export default defineEventHandler(async (event) => {
       urls.push({
         loc: `${SITE_URL}/${path}`,
         lastmod: weekStart,
-        changefreq: 'weekly',
-        priority: 0.7,
       })
     })
 
