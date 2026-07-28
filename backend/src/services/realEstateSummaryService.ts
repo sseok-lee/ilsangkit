@@ -62,13 +62,13 @@ export async function refreshSummary(type: string): Promise<number> {
           const n = await tx.$executeRawUnsafe(
             `INSERT INTO RealEstateBuildingSummary
               (type, buildingName, bjdCode, city, district, dongName,
-               latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng,
+               latestPrice, latestDealYear, latestDealMonth, latestDealDay, buildYear, lat, lng,
                transactionCount, updatedAt)
             SELECT
               ? AS type,
               buildingName, bjdCode, city, district, dongName,
               ${priceField} AS latestPrice,
-              dealYear AS latestDealYear, dealMonth AS latestDealMonth,
+              dealYear AS latestDealYear, dealMonth AS latestDealMonth, dealDay AS latestDealDay,
               ${buildYearCol} AS buildYear,
               _maxLat AS lat,
               _maxLng AS lng,

@@ -205,31 +205,9 @@ jobs:
               curl -s -o /dev/null -m 30 "https://ilsangkit.co.kr${path}" || true
             done
 
-            # backend 집계 캐시 선점 (sitemap 생성의 실질 병목).
-            #
-            # 이 두 엔드포인트는 backend 모듈 레벨 캐시(6h TTL)를 쓰는데, 배포 때 backend 가
-            # 재시작되면서 캐시가 비고 바로 아래 sitemap 생성이 콜드 쿼리를 물게 된다.
-            # real-estate-buildings 는 거래 7테이블 약 660만 행을 UNION ALL 로 집계한다 —
-            # 프로덕션 실측으로 가장 큰 블록(AptRent 3.1M행) 하나가 24.7초, 전체 약 50~55초다.
-            # 그동안 ssrFetch 예산(종전 25초) 안에 들어갈 수가 없어 abort → 빈 결과 →
-            # "200 인데 URL 0개" 로 sitemap 생성이 거부됐다(2026-07-22~27 5일 동결).
-            #
-            # 아래 sitemap chunk 워밍이 이 역할을 못 한다: 공개 도메인 요청은 디스크 우선
-            # 서빙에 걸려 정적 파일이 반환되므로(X-Sitemap-Source: static) backend 를 아예
-            # 거치지 않는다. 디스크 우선 서빙 도입 시점에 무력화된 것으로, 반드시 loopback
-            # 으로 backend 를 직접 때려야 캐시가 채워진다.
-            #
-            # 타임아웃 300초는 실측(50~55초) 대비 여유. 실패해도 생성 단계가 알아서
-            # 콜드 쿼리를 물면 되므로 배포를 막지 않는다.
-            echo "[warmup] backend 집계 캐시 선점 (sitemap 생성 병목)"
-            for api in /api/sitemap/real-estate-buildings /api/sitemap/real-estate-hubs; do
-              WARM_START=$(date +%s)
-              if curl -sf -m 300 -o /dev/null "http://localhost:8000${api}"; then
-                echo "[warmup] ${api} ready ($(( $(date +%s) - WARM_START ))s)"
-              else
-                echo "::warning::backend 캐시 선점 실패 ${api} ($(( $(date +%s) - WARM_START ))s) — sitemap 생성이 콜드 쿼리를 물어 이월될 수 있다."
-              fi
-            done
+            # backend 집계 캐시 선점은 제거됐다. /api/sitemap/real-estate-buildings 가
+            # RealEstateBuildingSummary 를 읽도록 바뀌어 0.34초(종전 56초)이고 캐시도 두지 않는다.
+            # 워밍할 캐시가 없으므로 선점 자체가 무의미하다.
 
             # sitemap.xml + 모든 sub-sitemap chunk 동적 워밍.
             # sitemap.xml 을 먼저 fetch → 안의 모든 <loc> 추출 → 각각 워밍.
