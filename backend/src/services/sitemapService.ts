@@ -25,14 +25,10 @@ type RealEstateRow = {
 // $queryRaw 원본 행: 정수식 MAX는 MySQL에서 BIGINT → Prisma가 bigint로 반환하므로 API 경계 전에 문자열로 변환한다.
 type RealEstateRawRow = Omit<RealEstateRow, 'lastmod'> & { lastDealKey: bigint | number | null };
 type HubRow = { realEstateType: string; city: string; district: string };
-let buildingsCache: { data: RealEstateRow[]; expiresAt: number } | null = null;
-let hubsCache: { data: HubRow[]; expiresAt: number } | null = null;
 let realEstateMaxDealDateCache: { data: string | null; expiresAt: number } | null = null;
 
 /** 테스트 전용 — 모듈 레벨 캐시 초기화 */
 export function _resetSitemapCacheForTests() {
-  buildingsCache = null;
-  hubsCache = null;
   realEstateMaxDealDateCache = null;
 }
 
@@ -209,90 +205,26 @@ export async function getSubscriptionIds() {
  * - city/district는 DB 원본 문자열 그대로 반환 → 프론트 사이트맵/IndexNow 단계에서 slug 변환
  */
 export async function getRealEstateBuildings() {
-  if (buildingsCache && buildingsCache.expiresAt > Date.now()) return buildingsCache.data;
-  // lastDealKey = 그룹(건물)별 가장 최근 실거래월. `@@index([buildingName, bjdCode, dealYear, dealMonth, dealDay])`가 지원.
+  // RealEstateBuildingSummary 는 refreshRealEstateSummary 가 매일 새벽 갱신하는 건물 요약이다
+  // (type × 건물, 387,013행). 종전에는 이 테이블을 두고도 거래 6.7M행을 UNION ALL + GROUP BY 로
+  // 다시 집계해 56초가 걸렸고, 그래서 6시간 캐시(+169MB 상주)와 배포 워밍업이 필요했다.
+  // 그 메모리 스파이크가 PM2 max_memory_restart(500MB)를 넘겨 사이트맵 생성 중 백엔드를
+  // 재시작시켰다(2026-07-28). 프로덕션 실측: 이 쿼리 0.34초 / 종전 56초, URL 수 356,461 동일.
+  //
+  // 캐시를 두지 않는다 — 0.34초짜리를 6시간 메모리에 들고 있을 이유가 없고,
+  // 그 상주 메모리가 애초에 문제의 원인이었다.
   const rows = await prisma.$queryRaw<RealEstateRawRow[]>`
-    SELECT realEstateType, city, district, buildingName, bjdCode, lastDealKey
-    FROM (
-      -- apt-sale
-      SELECT 'apt-sale' AS realEstateType, city, district, buildingName, bjdCode,
-        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1)) AS lastDealKey
-      FROM AptSaleTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName, bjdCode
-
-      UNION ALL
-
-      -- apt-rent
-      SELECT 'apt-rent', city, district, buildingName, bjdCode,
-        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
-      FROM AptRentTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName, bjdCode
-
-      UNION ALL
-
-      -- villa-sale
-      SELECT 'villa-sale', city, district, buildingName, bjdCode,
-        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
-      FROM VillaSaleTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName, bjdCode
-
-      UNION ALL
-
-      -- villa-rent
-      SELECT 'villa-rent', city, district, buildingName, bjdCode,
-        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
-      FROM VillaRentTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName, bjdCode
-
-      UNION ALL
-
-      -- offitel-sale
-      SELECT 'offitel-sale', city, district, buildingName, bjdCode,
-        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
-      FROM OffitelSaleTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName, bjdCode
-
-      UNION ALL
-
-      -- offitel-rent
-      SELECT 'offitel-rent', city, district, buildingName, bjdCode,
-        MAX(dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1))
-      FROM OffitelRentTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName, bjdCode
-    ) unioned
+    SELECT type AS realEstateType, city, district, buildingName, bjdCode,
+           latestDealYear * 10000 + latestDealMonth * 100 + COALESCE(latestDealDay, 1) AS lastDealKey
+    FROM RealEstateBuildingSummary
+    WHERE buildingName IS NOT NULL
+      AND buildingName != ''
+      AND CHAR_LENGTH(buildingName) >= 2
+      AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+      AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
   `;
   // BigInt(lastDealKey)를 API 경계 전에 'YYYY-MM-DD' 문자열로 변환 (res.json BigInt 직렬화 오류 방지)
-  const data: RealEstateRow[] = rows.map((r) => ({
+  return rows.map((r) => ({
     realEstateType: r.realEstateType,
     city: r.city,
     district: r.district,
@@ -300,8 +232,6 @@ export async function getRealEstateBuildings() {
     bjdCode: r.bjdCode,
     lastmod: r.lastDealKey == null ? '' : dealKeyToDateString(Number(r.lastDealKey)),
   }));
-  buildingsCache = { data, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
-  return data;
 }
 
 /**
@@ -314,75 +244,14 @@ export async function getRealEstateBuildings() {
  * district hub(/real-estate/apt-sale/seoul/gangnam/) 사이트맵 생성에 사용.
  */
 export async function getRealEstateCityDistrictHubs() {
-  if (hubsCache && hubsCache.expiresAt > Date.now()) return hubsCache.data;
-  const result = await prisma.$queryRaw<HubRow[]>`
-    SELECT DISTINCT realEstateType, city, district
-    FROM (
-      SELECT 'apt-sale' AS realEstateType, city, district, buildingName, COUNT(*) AS cnt
-      FROM AptSaleTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName
-
-      UNION ALL
-
-      SELECT 'apt-rent', city, district, buildingName, COUNT(*)
-      FROM AptRentTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName
-
-      UNION ALL
-
-      SELECT 'villa-sale', city, district, buildingName, COUNT(*)
-      FROM VillaSaleTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName
-
-      UNION ALL
-
-      SELECT 'villa-rent', city, district, buildingName, COUNT(*)
-      FROM VillaRentTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName
-
-      UNION ALL
-
-      SELECT 'offitel-sale', city, district, buildingName, COUNT(*)
-      FROM OffitelSaleTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName
-
-      UNION ALL
-
-      SELECT 'offitel-rent', city, district, buildingName, COUNT(*)
-      FROM OffitelRentTransaction
-      WHERE buildingName IS NOT NULL
-        AND buildingName != ''
-        AND CHAR_LENGTH(buildingName) >= 2
-        AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-        AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
-      GROUP BY city, district, buildingName
-    ) buildings_with_enough_tx
+  // 위와 같은 이유로 Summary 에서 읽는다. 프로덕션 실측 1.4초 / 종전 14.1초, 결과 1,463건 동일.
+  return prisma.$queryRaw<HubRow[]>`
+    SELECT DISTINCT type AS realEstateType, city, district
+    FROM RealEstateBuildingSummary
+    WHERE buildingName IS NOT NULL
+      AND buildingName != ''
+      AND CHAR_LENGTH(buildingName) >= 2
+      AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+      AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
   `;
-  hubsCache = { data: result, expiresAt: Date.now() + SITEMAP_CACHE_TTL };
-  return result;
 }

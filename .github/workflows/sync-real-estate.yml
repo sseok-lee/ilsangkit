@@ -149,25 +149,9 @@ jobs:
             set +x
             export SITEMAP_REGEN_TOKEN="${{ secrets.SITEMAP_REGEN_TOKEN }}"
             set -x
-            # backend 집계 캐시 선점 — deploy.yml 과 동일 취지.
-            # real-estate-buildings / real-estate-hubs 는 backend 모듈 캐시(6h TTL)를 쓰는데,
-            # 이 잡은 새벽 3시대라 직전 배포로부터 6h 를 넘기는 경우가 많아 콜드로 시작한다.
-            # 콜드 쿼리는 프로덕션 실측 56초(거래 7테이블 약 660만 행 UNION ALL)라
-            # ssrFetch 예산 안에서 돌면 abort → 빈 결과 → 생성 거부로 이어진다.
-            # 여기서 예산 밖에 한 번 치러 두면 이후 자식들이 캐시를 쓴다.
-            #
-            # ⚠️ region-categories 는 backend 캐시가 없어(매 호출 재쿼리) 워밍 대상이 아니다.
-            #    2026-07-28 새벽 static.xml 이 3630→402 로 급감한 건 이 엔드포인트가 빈 결과로
-            #    온 탓인데, 재측정 시 6.0초(콜드)/3.6초(워밍)로 예산과 무관했다. 원인은 미확정
-            #    (부동산 sync 직후 DB 부하 경합 가설). 이 변경으로 해결되지 않는다.
-            for api in /api/sitemap/real-estate-buildings /api/sitemap/real-estate-hubs; do
-              WARM_START=$(date +%s)
-              if curl -sf -m 300 -o /dev/null "http://localhost:8000${api}"; then
-                echo "[warmup] ${api} ready ($(( $(date +%s) - WARM_START ))s)"
-              else
-                echo "::warning::backend 캐시 선점 실패 ${api} ($(( $(date +%s) - WARM_START ))s)"
-              fi
-            done
+            # backend 집계 캐시 선점은 제거됐다. /api/sitemap/real-estate-buildings 가
+            # RealEstateBuildingSummary 를 읽도록 바뀌어 0.34초(종전 56초)이고 캐시도 두지 않는다.
+            # 워밍할 캐시가 없으므로 선점 자체가 무의미하다.
 
             # 종전에는 결과를 `|| echo "[WARN] 실패/스킵"` 로만 흘렸다. 그 결과 exit 4(부분 갱신)
             # 까지 "실패/스킵" 으로 표기되고 Actions UI 에는 success 로만 보여서, 매일 새벽
