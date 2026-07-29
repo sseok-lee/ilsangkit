@@ -194,11 +194,9 @@ if (initialData.value) {
 }
 pending.value = false
 
+// h3 의 setResponseHeader 는 server/ 전용 자동 import 라 앱 코드에서 ReferenceError 가 난다.
 if (import.meta.server && complexes.value.length === 0) {
-  const event = useRequestEvent()
-  if (event) {
-    setResponseHeader(event, 'Cache-Control', 'no-store')
-  }
+  useResponseHeader('cache-control').value = 'no-store'
 }
 
 // SEO 메타
