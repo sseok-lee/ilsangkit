@@ -51,6 +51,8 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useLand } from '~/composables/useLand'
 import { buildLandRegionTitle, buildLandRegionDescription } from '~/utils/landMeta'
+import { resolveRealEstateListSsrOutcome } from '~/utils/realEstateListSsrOutcome'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { formatManwon } from '~/types/land'
 import type { LandRegionSummary } from '~/types/land'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -69,7 +71,7 @@ if (!cityName) {
 
 const land = useLand()
 
-const { data: regionsData } = await useAsyncData(
+const { data: regionsData, error: regionsError, status: regionsStatus } = await useAsyncData(
   `land-city-${citySlug}`,
   () => land.getRegions({ city: cityName, page: 1, limit: 100 }),
   { default: () => null },
@@ -120,10 +122,21 @@ const districtCards = computed<DistrictCard[]>(() => {
   return cards
 })
 
-// SSR: no-store when no data
+// SSR 응답 판정 — 장애(degraded)와 정상 0건(empty)을 구분한다.
+// 판정 근거·회귀 배경은 utils/realEstateListSsrOutcome.ts 주석 참조.
 // h3 의 setResponseHeader 는 server/ 전용 자동 import 라 앱 코드에서 ReferenceError 가 난다.
-if (import.meta.server && (regionsData.value?.items ?? []).length === 0) {
-  useResponseHeader('cache-control').value = 'no-store'
+if (import.meta.server) {
+  const outcome = resolveRealEstateListSsrOutcome({
+    hasError: !!regionsError.value,
+    fetchSettled: regionsStatus.value === 'success',
+    hasItems: (regionsData.value?.items ?? []).length > 0,
+  })
+  if (outcome === 'degraded') {
+    // 503 + no-store. 200 으로 내보내면 빈 본문이 swr(s-maxage=300) 캐시에 박혀 색인된다.
+    markDegradedResponse()
+  } else if (outcome === 'empty') {
+    useResponseHeader('cache-control').value = 'no-store'
+  }
 }
 
 // SEO — 구·군 거래 건수·평당 시세(거래건수 가중평균)를 주입해 시 간 설명문 중복을 없앤다.

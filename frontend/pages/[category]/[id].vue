@@ -173,13 +173,6 @@
               />
 
 
-              <!-- 관련 YouTube 영상 -->
-              <FacilityYoutubeSection
-                v-if="facility"
-                :category="facility.category"
-                :facility-id="facility.id"
-              />
-
               <!-- 네이버 블로그 후기 -->
               <BlogReviewSection
                 v-if="facility"
@@ -275,7 +268,6 @@ import { formatDotDate } from '~/utils/syncFreshness'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
-import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
@@ -283,7 +275,6 @@ import { getOperatingStatus } from '~/utils/facilityStatus'
 import { resolveFacilityPhone } from '~/utils/facilityPhone'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
-import type { YoutubeVideo } from '~/types/youtube'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
@@ -296,7 +287,7 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 const route = useRoute()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro, getFacilityDisplayName, buildFacilityDescription, isUndifferentiatedFacility } from '~/composables/useFacilityMeta'
-const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
+const { setFacilitySchema, setBreadcrumbSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
@@ -349,37 +340,32 @@ watch(fetchError, (err) => {
   }
 }, { immediate: true })
 
-// Secondary fetches — youtube + sync-status를 Promise.allSettled로 병렬화.
-// 각 실패 시 null fallback, 페이지는 critical(facility) 기준으로 정상 렌더된다.
+// Secondary fetch — sync-status.
+// 실패 시 null fallback, 페이지는 critical(facility) 기준으로 정상 렌더된다.
+//
+// 2026-07-29 관련 영상(YouTube) 기능을 제거하면서 이 응답에서 youtube 도 빠졌다.
+// allSettled 는 유지한다 — 항목이 하나여도 fail-open 의미(실패해도 본문은 렌더)가
+// 그대로 필요하고, 이후 secondary 가 늘어날 때 형태를 다시 바꾸지 않아도 된다.
 const { data: secondaryResponse } = await useAsyncData(
   `facility-secondary-${category.value}-${id.value}`,
   async () => {
     const signal = AbortSignal.timeout(8000)
-    const [youtubeR, syncR] = await Promise.allSettled([
-      $fetch<{ success: boolean; data: { videos: YoutubeVideo[] } }>(
-        `${apiBase}/api/facilities/${category.value}/${id.value}/youtube?ssr=1`,
-        { signal }
-      ),
+    const syncR = await Promise.allSettled([
       $fetch<{ success: boolean; data: Record<string, string | null> }>(
         `${apiBase}/api/meta/sync-status`,
         { signal }
       ),
     ])
-    if (youtubeR.status === 'rejected') {
-      console.warn('[facility-secondary] youtube failed:', youtubeR.reason)
-    }
-    if (syncR.status === 'rejected') {
-      console.warn('[facility-secondary] sync-status failed:', syncR.reason)
+    if (syncR[0].status === 'rejected') {
+      console.warn('[facility-secondary] sync-status failed:', syncR[0].reason)
     }
     return {
-      youtube: youtubeR.status === 'fulfilled' ? youtubeR.value.data : null,
-      syncStatus: syncR.status === 'fulfilled' ? syncR.value.data : null,
+      syncStatus: syncR[0].status === 'fulfilled' ? syncR[0].value.data : null,
     }
   },
   {
     lazy: true,
     default: () => ({
-      youtube: null as { videos: YoutubeVideo[] } | null,
       syncStatus: null as Record<string, string | null> | null,
     }),
   }
@@ -405,10 +391,6 @@ watchEffect(() => {
       { name: categoryName, url: `/${facility.value.category}` },
       { name, url: `/${facility.value.category}/${facility.value.id}` },
     ])
-    const ssrVideos = secondaryResponse.value?.youtube?.videos ?? []
-    if (ssrVideos.length >= 2) {
-      setVideoListSchema(ssrVideos)
-    }
     // FAQPage JSON-LD 발행 (화면 FAQ 와 동일 소스 generateDynamicFAQ → SEO 구조화 데이터)
     const faqItems = generateDynamicFAQ(facility.value)
     if (faqItems.length > 0) {

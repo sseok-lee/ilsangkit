@@ -20,7 +20,6 @@ import transitRouter from './routes/transit.js';
 import subwayRouter from './routes/subway.js';
 import auctionRouter from './routes/auction.js';
 import searchRouter from './routes/search.js';
-import facilityYoutubeRouter from './routes/facilityYoutube.js';
 import facilityNaverBlogRouter from './routes/facilityNaverBlog.js';
 import realEstateNaverBlogRouter from './routes/realEstateNaverBlog.js';
 import adminRouter from './routes/admin.js';
@@ -68,7 +67,6 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 // API routes
 app.use('/api/facilities', facilitiesRouter);
-app.use('/api/facilities', facilityYoutubeRouter);
 app.use('/api/facilities', facilityNaverBlogRouter);
 app.use('/api/meta', metaRouter);
 app.use('/api/waste-schedules', wasteSchedulesRouter);
