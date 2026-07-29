@@ -513,6 +513,7 @@ import {
   type RealEstateDetailData,
 } from '~/utils/realEstateDetailData'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { isDetailSsrDegraded } from '~/utils/detailSsrDegraded'
 import { suppressAds } from '~/composables/useAdsPolicy'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
@@ -1161,7 +1162,14 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
     }
   },
 )
-if (import.meta.server && ssrData.value?.infoFetchFailed) {
+// 판정 근거·회귀 배경은 utils/detailSsrDegraded.ts 주석 참조.
+// 핵심: infoFetchFailed 는 핸들러 "반환값 안에" 있으므로, 핸들러가 통째로 throw 하면
+// ssrData 가 null 이라 옵셔널 체이닝이 undefined 를 내고 가드가 통과됐다.
+if (import.meta.server && isDetailSsrDegraded({
+  hasError: !!ssrError.value,
+  hasData: !!ssrData.value,
+  explicitFailure: ssrData.value?.infoFetchFailed,
+})) {
   fetchFailed.value = true
   markDegradedResponse()
 }

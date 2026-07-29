@@ -175,20 +175,23 @@ interface AreaSummary {
   lastSyncedAt: string | null
 }
 const apiBase = useApiBase()
-const { data: summary } = await useAsyncData<AreaSummary | null>(
+// 실패를 삼키지 않는다. 예전엔 try/catch 로 null 을 돌려줘 useAsyncData 가 에러를
+// 볼 수조차 없었고, 인근 구·군 블록과 건수가 빠진 얇은 본문이 HTTP 200 으로 나갔다.
+// `success:false` 도 마찬가지다 — 200 이라고 성공은 아니다.
+// trash 는 이 요약을 쓰지 않으므로 null 반환이 정상이다(에러 아님).
+const { data: summary, error: summaryError } = await useAsyncData<AreaSummary | null>(
   `area-summary-${city.value}-${district.value}-${category.value}`,
   async () => {
     if (category.value === 'trash') return null
-    try {
-      const res = await $fetch<{ success: boolean; data: AreaSummary }>(
-        `${apiBase}/api/area/${city.value}/${district.value}/${category.value}/summary`,
-      )
-      return res?.success ? res.data : null
-    } catch {
-      return null
-    }
+    const res = await $fetch<{ success: boolean; data: AreaSummary }>(
+      `${apiBase}/api/area/${city.value}/${district.value}/${category.value}/summary`,
+    )
+    if (!res?.success) throw new Error('area summary responded success:false')
+    return res.data
   },
 )
+// fail-open: SSR 페치 실패 시 503+no-store. 시설 경로와 동일 정책(#467).
+if (import.meta.server && summaryError.value) markDegradedResponse()
 
 // slug → DB 풀네임 (서울특별시 등) 역매핑 — waste-schedules 는 정식 시도명으로 정확매칭한다.
 const SLUG_TO_FULL_CITY = Object.entries(CITY_FULL_NAME_TO_SLUG).reduce(
@@ -221,7 +224,10 @@ const { data: wasteSsr, error: wasteSsrError } = await useAsyncData(
         signal: AbortSignal.timeout(8000),
       },
     )
-    if (!res?.success) return null
+    // `success:false` 를 null 로 돌려주면 error 가 안 잡혀 아래 degraded 가드를 통과한다
+    // — 200 이라고 성공은 아니다. trash 지역 본문 전체가 이 응답에서 나오므로,
+    // 조용히 빈 목록을 렌더하면 전국 구·군 페이지가 서로 같은 얇은 본문이 된다.
+    if (!res?.success) throw new Error('waste-schedules responded success:false')
     return transformToRegionSchedules(res.data)
   },
 )
