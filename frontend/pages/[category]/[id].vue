@@ -283,7 +283,6 @@ import { getOperatingStatus } from '~/utils/facilityStatus'
 import { resolveFacilityPhone } from '~/utils/facilityPhone'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
-import type { YoutubeVideo } from '~/types/youtube'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
@@ -296,7 +295,7 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 const route = useRoute()
 const { setFacilityDetailMeta } = useFacilityMeta()
 import { buildFacilityIntro, getFacilityDisplayName, buildFacilityDescription, isUndifferentiatedFacility } from '~/composables/useFacilityMeta'
-const { setFacilitySchema, setBreadcrumbSchema, setVideoListSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
+const { setFacilitySchema, setBreadcrumbSchema, setFAQSchema, setDetailProvenance } = useStructuredData()
 
 const category = computed(() => route.params.category as FacilityCategory)
 const id = computed(() => route.params.id as string)
@@ -349,37 +348,34 @@ watch(fetchError, (err) => {
   }
 }, { immediate: true })
 
-// Secondary fetches — youtube + sync-status를 Promise.allSettled로 병렬화.
-// 각 실패 시 null fallback, 페이지는 critical(facility) 기준으로 정상 렌더된다.
+// Secondary fetch — sync-status.
+// 실패 시 null fallback, 페이지는 critical(facility) 기준으로 정상 렌더된다.
+//
+// 2026-07-29 youtube SSR fetch 를 제거했다. 이 응답의 youtube 는 VideoObject 스키마
+// 발행에만 쓰였는데(그 스키마는 화면에 없는 콘텐츠를 주장해 정책 위반이라 제거),
+// 남겨두면 상세 페이지마다 쓰이지 않는 왕복이 하나 더 생긴다.
+// `?ssr=1` 은 cacheOnly 읽기라 캐시 워밍 효과도 없었다(routes/facilityYoutube.ts:26).
+// 화면의 관련 영상 섹션은 클라이언트에서 자체 fetch 하므로 영향받지 않는다.
 const { data: secondaryResponse } = await useAsyncData(
   `facility-secondary-${category.value}-${id.value}`,
   async () => {
     const signal = AbortSignal.timeout(8000)
-    const [youtubeR, syncR] = await Promise.allSettled([
-      $fetch<{ success: boolean; data: { videos: YoutubeVideo[] } }>(
-        `${apiBase}/api/facilities/${category.value}/${id.value}/youtube?ssr=1`,
-        { signal }
-      ),
+    const syncR = await Promise.allSettled([
       $fetch<{ success: boolean; data: Record<string, string | null> }>(
         `${apiBase}/api/meta/sync-status`,
         { signal }
       ),
     ])
-    if (youtubeR.status === 'rejected') {
-      console.warn('[facility-secondary] youtube failed:', youtubeR.reason)
-    }
-    if (syncR.status === 'rejected') {
-      console.warn('[facility-secondary] sync-status failed:', syncR.reason)
+    if (syncR[0].status === 'rejected') {
+      console.warn('[facility-secondary] sync-status failed:', syncR[0].reason)
     }
     return {
-      youtube: youtubeR.status === 'fulfilled' ? youtubeR.value.data : null,
-      syncStatus: syncR.status === 'fulfilled' ? syncR.value.data : null,
+      syncStatus: syncR[0].status === 'fulfilled' ? syncR[0].value.data : null,
     }
   },
   {
     lazy: true,
     default: () => ({
-      youtube: null as { videos: YoutubeVideo[] } | null,
       syncStatus: null as Record<string, string | null> | null,
     }),
   }
@@ -405,10 +401,6 @@ watchEffect(() => {
       { name: categoryName, url: `/${facility.value.category}` },
       { name, url: `/${facility.value.category}/${facility.value.id}` },
     ])
-    const ssrVideos = secondaryResponse.value?.youtube?.videos ?? []
-    if (ssrVideos.length >= 2) {
-      setVideoListSchema(ssrVideos)
-    }
     // FAQPage JSON-LD 발행 (화면 FAQ 와 동일 소스 generateDynamicFAQ → SEO 구조화 데이터)
     const faqItems = generateDynamicFAQ(facility.value)
     if (faqItems.length > 0) {
