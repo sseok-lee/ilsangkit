@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { XMLParser } from 'fast-xml-parser';
 import { SYNC } from '../constants/index.js';
 import { extractCityDistrict } from '../lib/addressParser.js';
+import { hasContentChanged } from '../services/contentChange.js';
 
 /**
  * AED API 응답 아이템 타입
@@ -322,50 +323,60 @@ export async function syncAeds(): Promise<{ totalRecords: number; newRecords: nu
               where: { id: aed.id },
             });
 
-            await tx.aed.upsert({
-              where: { id: aed.id },
-              create: {
-                ...aed,
-                sourceUrl: 'https://www.data.go.kr/data/15000652/openapi.do',
-                syncedAt: new Date(),
-              },
-              update: {
-                name: aed.name,
-                address: aed.address,
-                roadAddress: aed.roadAddress,
-                lat: aed.lat,
-                lng: aed.lng,
-                city: aed.city,
-                district: aed.district,
-                syncedAt: new Date(),
-                buildPlace: aed.buildPlace,
-                org: aed.org,
-                clerkTel: aed.clerkTel,
-                mfg: aed.mfg,
-                model: aed.model,
-                monSttTme: aed.monSttTme,
-                monEndTme: aed.monEndTme,
-                tueSttTme: aed.tueSttTme,
-                tueEndTme: aed.tueEndTme,
-                wedSttTme: aed.wedSttTme,
-                wedEndTme: aed.wedEndTme,
-                thuSttTme: aed.thuSttTme,
-                thuEndTme: aed.thuEndTme,
-                friSttTme: aed.friSttTme,
-                friEndTme: aed.friEndTme,
-                satSttTme: aed.satSttTme,
-                satEndTme: aed.satEndTme,
-                sunSttTme: aed.sunSttTme,
-                sunEndTme: aed.sunEndTme,
-                holSttTme: aed.holSttTme,
-                holEndTme: aed.holEndTme,
-              },
-            });
+            // update 페이로드를 변수로 뽑아 변경 판정의 비교 대상으로 그대로 쓴다.
+            // syncedAt 은 "확인 시각"이라 항상 달라지므로 판정에서 제외한다.
+            const updateData = {
+              name: aed.name,
+              address: aed.address,
+              roadAddress: aed.roadAddress,
+              lat: aed.lat,
+              lng: aed.lng,
+              city: aed.city,
+              district: aed.district,
+              buildPlace: aed.buildPlace,
+              org: aed.org,
+              clerkTel: aed.clerkTel,
+              mfg: aed.mfg,
+              model: aed.model,
+              monSttTme: aed.monSttTme,
+              monEndTme: aed.monEndTme,
+              tueSttTme: aed.tueSttTme,
+              tueEndTme: aed.tueEndTme,
+              wedSttTme: aed.wedSttTme,
+              wedEndTme: aed.wedEndTme,
+              thuSttTme: aed.thuSttTme,
+              thuEndTme: aed.thuEndTme,
+              friSttTme: aed.friSttTme,
+              friEndTme: aed.friEndTme,
+              satSttTme: aed.satSttTme,
+              satEndTme: aed.satEndTme,
+              sunSttTme: aed.sunSttTme,
+              sunEndTme: aed.sunEndTme,
+              holSttTme: aed.holSttTme,
+              holEndTme: aed.holEndTme,
+            };
 
-            if (existing) {
+            if (!existing) {
+              await tx.aed.create({
+                data: {
+                  ...aed,
+                  sourceUrl: 'https://www.data.go.kr/data/15000652/openapi.do',
+                  syncedAt: new Date(),
+                },
+              });
+              newRecords++;
+            } else if (hasContentChanged(existing, updateData)) {
+              await tx.aed.update({
+                where: { id: aed.id },
+                data: { ...updateData, syncedAt: new Date() },
+              });
               updatedRecords++;
             } else {
-              newRecords++;
+              // 내용 동일 — syncedAt 만 갱신한다. Prisma 의 update() 는 @updatedAt 을
+              // 함께 올려 사이트맵 lastmod 를 오염시키므로 raw UPDATE 로 우회한다
+              // (#657 조회수 플러시와 같은 패턴). 근거는 services/contentChange.ts 주석.
+              await tx.$executeRaw`UPDATE Aed SET syncedAt = NOW() WHERE id = ${aed.id}`;
+              updatedRecords++;
             }
           }
         });
