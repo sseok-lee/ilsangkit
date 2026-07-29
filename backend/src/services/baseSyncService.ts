@@ -4,6 +4,7 @@
 import { prisma } from '../lib/prisma.js';
 import type { SyncStatus, SyncHistory } from '@prisma/client';
 import { SYNC } from '../constants/index.js';
+import { buildOnDuplicateUpdateClause } from './upsertClause.js';
 
 export interface SyncStats {
   totalRecords: number;
@@ -181,7 +182,9 @@ export async function batchUpsert<T>(
  * 동작:
  *  - `id`, `sourceId`는 INSERT 컬럼에 포함되며 ON DUPLICATE KEY UPDATE에서는 제외
  *  - `viewCount`, `createdAt`은 UPDATE에서 제외 (기존 값 유지)
- *  - `updatedAt`, `syncedAt`은 UPDATE 시 NOW()로 자동 갱신
+ *  - `syncedAt`은 UPDATE 시 항상 NOW() (= 마지막 확인 시각)
+ *  - `updatedAt`은 content 컬럼이 실제로 하나라도 달라졌을 때만 NOW() (= 마지막 변경 시각).
+ *    사이트맵 lastmod 가 이 컬럼에서 나오므로 sync 활동으로 오염되면 안 된다 — upsertClause.ts 참조
  *  - 나머지 컬럼은 VALUES(col) 패턴으로 갱신
  *  - 모든 값은 파라미터 바인딩으로 처리 (SQL 인젝션 방지)
  *  - 신규/업데이트 구분 (기본): INSERT 후 ROW_COUNT()가 1이면 신규(insert), 2면 업데이트(duplicate)
@@ -284,24 +287,10 @@ export async function batchUpsertRaw<T extends Record<string, unknown>>(
       const rowPlaceholders = columns.map(() => '?').join(', ');
       const allPlaceholders = batch.map(() => `(${rowPlaceholders})`).join(', ');
 
-      // ON DUPLICATE KEY UPDATE 절: 제외 컬럼 제외, updatedAt/syncedAt은 NOW()
-      const updateClauses = columns
-        .filter((c) => !SKIP_UPDATE_COLS.has(c))
-        .map((c) => `\`${c}\` = VALUES(\`${c}\`)`)
-        .join(', ');
-
-      // updatedAt, syncedAt이 데이터에 없더라도 항상 갱신
-      const timestampUpdates: string[] = [];
-      if (columns.includes('updatedAt')) {
-        // already handled via VALUES() above if not in SKIP list — but we do skip it,
-        // so we add it explicitly as NOW()
-        timestampUpdates.push('`updatedAt` = NOW()');
-      }
-      if (columns.includes('syncedAt')) {
-        timestampUpdates.push('`syncedAt` = NOW()');
-      }
-
-      const fullUpdateClause = [updateClauses, ...timestampUpdates].filter(Boolean).join(', ');
+      // ON DUPLICATE KEY UPDATE 절.
+      // updatedAt 은 "실제 내용이 바뀐 시각", syncedAt 은 "마지막 확인 시각"으로 분리한다.
+      // 절 구성과 대입 순서 제약은 upsertClause.ts 주석 참조.
+      const fullUpdateClause = buildOnDuplicateUpdateClause(columns, SKIP_UPDATE_COLS);
 
       const sql = `INSERT INTO \`${tableName}\` (${colList}) VALUES ${allPlaceholders} ON DUPLICATE KEY UPDATE ${fullUpdateClause}`;
 
