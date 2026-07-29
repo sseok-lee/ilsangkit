@@ -95,7 +95,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import { SITE_URL } from '~/utils/seoConstants'
-import { generateAreaDescription } from '~/utils/seoHelpers'
+import { generateAreaDescription, buildDistrictMetaDescription } from '~/utils/seoHelpers'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { shouldNoindexSsr } from '~/utils/ssrIndexability'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
@@ -218,15 +218,24 @@ const isNoindex = computed(() => shouldNoindexSsr({
 
 watchEffect(() => suppressAds(fetchFailed.value || isNoindex.value))
 
+// meta description — 지역 토큰만 다른 보일러플레이트를 피하려고 실데이터를 앞세운다.
+// areaData 가 없으면(수집 실패·빈 지역) 빌더가 기존 문구로 폴백한다.
+const metaDescription = computed(() => buildDistrictMetaDescription({
+  city: cityName.value,
+  district: districtName.value,
+  facilityStats: areaData.value?.facilities?.categories as Record<string, number> | undefined,
+  totalFacilities: areaData.value?.facilities?.total,
+}))
+
 // SEO 메타
 const { setMeta } = useFacilityMeta()
 watch(
-  [cityName, districtName, isNoindex],
+  [cityName, districtName, isNoindex, metaDescription],
   ([cName, dName]) => {
     const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cName)}&district=${encodeURIComponent(dName)}&title=${encodeURIComponent(`${cName} ${dName} 생활 정보`)}`
     setMeta({
       title: `${cName} ${dName} 생활 정보`,
-      description: `${cName} ${dName}의 부동산 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 인프라 정보를 확인하세요.`,
+      description: metaDescription.value,
       path: `/${city.value}/${district.value}`,
       image: ogImage,
       canonical: isNoindex.value ? false : undefined,
