@@ -104,11 +104,9 @@ const sortedDongs = computed<LandRegionSummary[]>(() => {
 })
 
 // SSR: no-store when no data
+// h3 의 setResponseHeader 는 server/ 전용 자동 import 라 앱 코드에서 ReferenceError 가 난다.
 if (import.meta.server && (regionsData.value?.items ?? []).length === 0) {
-  const event = useRequestEvent()
-  if (event) {
-    setResponseHeader(event, 'Cache-Control', 'no-store')
-  }
+  useResponseHeader('cache-control').value = 'no-store'
 }
 
 // SEO — 동별 거래 건수·평당 시세(대지건수 가중평균)를 주입해 구·군 간 설명문 중복을 없앤다.

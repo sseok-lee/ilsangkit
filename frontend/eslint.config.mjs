@@ -49,9 +49,15 @@ export default [
         addRouteMiddleware: 'readonly',
         setPageLayout: 'readonly',
         defineNuxtRouteMiddleware: 'readonly',
-        // Nitro / h3 (server-side helpers, auto-imported by Nuxt in pages)
+        // Nuxt SSR 응답 헬퍼 (앱 코드에서 자동 import 되는 것만 등록한다)
+        //
+        // setResponseHeader 는 여기 있으면 안 된다 — h3 유틸이고 server/ 디렉터리 전용
+        // 자동 import 라서 pages/composables 에서는 번들에 import 가 붙지 않는다.
+        // 이 항목이 no-undef 를 눌러 준 탓에 SSR 에서 항상 ReferenceError 가 나는 코드가
+        // lint 초록으로 통과했다. 앱 코드에서는 useResponseHeader() 를 쓴다.
         useRequestEvent: 'readonly',
-        setResponseHeader: 'readonly',
+        useResponseHeader: 'readonly',
+        setResponseStatus: 'readonly',
         useApiBase: 'readonly',
         useAdminAuth: 'readonly',
         useAdminArticles: 'readonly',
