@@ -125,6 +125,7 @@ import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { SITE_URL } from '~/utils/seoConstants'
+import { buildCityMetaDescription } from '~/utils/seoHelpers'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { shouldNoindexSsr } from '~/utils/ssrIndexability'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
@@ -242,15 +243,23 @@ const isNoindex = computed(() => shouldNoindexSsr({
 
 watchEffect(() => suppressAds(fetchFailed.value || isNoindex.value))
 
+// meta description — 시/도 토큰만 다른 보일러플레이트를 피하려고 실데이터를 앞세운다.
+// cityData 가 없으면 빌더가 기존 문구로 폴백한다.
+const metaDescription = computed(() => buildCityMetaDescription({
+  city: cityName.value,
+  districtCount: cityData.value?.districts?.length,
+  totalFacilities: cityFacilityTotal.value,
+}))
+
 // SEO 메타
 const { setMeta } = useFacilityMeta()
 watch(
-  [cityName, isNoindex],
+  [cityName, isNoindex, metaDescription],
   ([name]) => {
     const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(name)}&title=${encodeURIComponent(`${name} 생활 정보`)}`
     setMeta({
       title: `${name} 생활 정보`,
-      description: `${name} 아파트·빌라·오피스텔·토지 실거래가와 병원, 약국, 주차장, 공공화장실 등 주요 생활 정보를 확인하세요.`,
+      description: metaDescription.value,
       path: `/${city.value}`,
       image: ogImage,
       canonical: isNoindex.value ? false : undefined,
