@@ -781,32 +781,11 @@ export function useStructuredData() {
     })
   }
 
-  /**
-   * VideoObject ItemList 스키마 (시설 YouTube 영상 캐시 히트용)
-   */
-  function setVideoListSchema(videos: { videoId: string; title: string; channelTitle: string; thumbnail: string; publishedAt: string }[]) {
-    if (!videos.length) return
-    const itemListElement = videos.slice(0, 6).map((v, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      item: {
-        '@type': 'VideoObject',
-        name: v.title,
-        description: `${v.channelTitle} 채널 영상`,
-        thumbnailUrl: v.thumbnail,
-        uploadDate: v.publishedAt,
-        embedUrl: `https://www.youtube-nocookie.com/embed/${v.videoId}`,
-        contentUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
-      },
-    }))
-    useHead({
-      script: [{
-        key: 'jsonld-videolist',
-        type: 'application/ld+json',
-        innerHTML: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement }),
-      }],
-    })
-  }
+  // setVideoListSchema 는 2026-07-29 제거됐다.
+  // 관련 영상 섹션은 onMounted + IntersectionObserver 로만 fetch 하므로 SSR HTML 에
+  // 영상이 0건인데 스키마만 SSR 에서 나가고 있었다(실측: VideoObject 6건 / iframe 0개).
+  // 페이지에 없는 콘텐츠를 구조화 데이터로 주장하는 것은 Google 정책 위반이다.
+  // 재도입 방지 가드: tests/seo/videoObjectSchemaGuard.test.ts
 
   /**
    * Dataset 스키마 — 공공데이터 출처를 명시해 AI 검색(GEO) 인용성 강화
@@ -932,7 +911,6 @@ export function useStructuredData() {
     setEventSchema,
     setAuctionListingSchema,
     setDatasetSchema,
-    setVideoListSchema,
     setDetailProvenance,
   }
 }

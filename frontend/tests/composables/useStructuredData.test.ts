@@ -714,44 +714,25 @@ describe('useStructuredData', () => {
     })
   })
 
-  // ─── P2-7: VideoObject description !== name ────────────────────────────────
-
-  describe('setVideoListSchema - VideoObject description 중복 제거', () => {
-    const makeVideo = (overrides = {}) => ({
-      videoId: 'abc123',
-      title: '강남구 도서관 이용 방법',
-      channelTitle: '일상킷TV',
-      thumbnail: 'https://i.ytimg.com/vi/abc123/hq720.jpg',
-      publishedAt: '2024-01-15T10:00:00Z',
-      ...overrides,
-    })
-
-    it('VideoObject description이 name(title)과 다르다', () => {
-      const { setVideoListSchema } = useStructuredData()
-      setVideoListSchema([makeVideo()])
-      const call = mockUseHead.mock.calls[0][0]
-      const parsed = JSON.parse(call.script[0].innerHTML)
-      const video = parsed.itemListElement[0].item
-      expect(video['@type']).toBe('VideoObject')
-      expect(video.description).not.toBe(video.name)
-    })
-
-    it('VideoObject description이 channelTitle을 포함한다', () => {
-      const { setVideoListSchema } = useStructuredData()
-      setVideoListSchema([makeVideo()])
-      const call = mockUseHead.mock.calls[0][0]
-      const parsed = JSON.parse(call.script[0].innerHTML)
-      const video = parsed.itemListElement[0].item
-      expect(video.description).toContain('일상킷TV')
-    })
-
-    it('VideoObject description이 비어있지 않다', () => {
-      const { setVideoListSchema } = useStructuredData()
-      setVideoListSchema([makeVideo({ channelTitle: 'TestChannel' })])
-      const call = mockUseHead.mock.calls[0][0]
-      const parsed = JSON.parse(call.script[0].innerHTML)
-      const video = parsed.itemListElement[0].item
-      expect(video.description.length).toBeGreaterThan(0)
+  // ─── VideoObject 스키마 제거 가드 ──────────────────────────────────────────
+  // 화면에 없는 콘텐츠를 구조화 데이터로 주장하면 Google 정책 위반이다.
+  //
+  // 제거 근거 (2026-07-29 실측):
+  //   FacilityYoutubeSection 은 onMounted + IntersectionObserver 로만 fetch 하므로
+  //   SSR HTML 에 영상이 0건이다. `SectionBlock v-if="hasResults || loading"` 이라
+  //   섹션 자체가 렌더되지 않는다. 그런데 스키마는 SSR 에서 나갔다 —
+  //   /childcare/childcare-29110000026 raw HTML: VideoObject 6건, <iframe> 0개,
+  //   본문에 'youtube' 0회.
+  //
+  //   게다가 매칭이 시설명 키워드 검색(youtubeService.ts `${name} ${region} 어린이집`)
+  //   이라 무관한 영상이 붙었다. 광주 새싹어린이집 페이지에 붙은 6건:
+  //     "🦧 새싹어린이집 오랑이반장의 칭찬도장 🌱 #인형계브이로그"  (인형놀이 채널)
+  //     "첫 꽃잎 어린이집 오전 일상🌸[음원출처:새싹이네]"          (고양이 채널 '냥이예린')
+  //
+  // 화면의 관련 영상 섹션(클라이언트 렌더)은 그대로 둔다 — 제거 대상은 스키마뿐이다.
+  describe('VideoObject 구조화 데이터를 발행하지 않는다', () => {
+    it('useStructuredData 가 setVideoListSchema 를 노출하지 않는다', () => {
+      expect('setVideoListSchema' in useStructuredData()).toBe(false)
     })
   })
 
