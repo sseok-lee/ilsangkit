@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { XMLParser } from 'fast-xml-parser';
 import { SYNC } from '../constants/index.js';
 import { extractCityDistrict, normalizeCity } from '../lib/addressParser.js';
+import { hasContentChanged } from '../services/contentChange.js';
 
 /**
  * 약국 API 응답 아이템 타입
@@ -330,52 +331,62 @@ export async function syncPharmacies(): Promise<{ totalRecords: number; newRecor
               where: { id: pharmacy.id },
             });
 
-            await tx.pharmacy.upsert({
-              where: { id: pharmacy.id },
-              create: {
-                ...pharmacy,
-                sourceUrl: 'https://www.data.go.kr/data/15000576/openapi.do',
-                syncedAt: new Date(),
-              },
-              update: {
-                name: pharmacy.name,
-                address: pharmacy.address,
-                roadAddress: pharmacy.roadAddress,
-                lat: pharmacy.lat,
-                lng: pharmacy.lng,
-                city: pharmacy.city,
-                district: pharmacy.district,
-                syncedAt: new Date(),
-                phone: pharmacy.phone,
-                dutyTel3: pharmacy.dutyTel3,
-                postCdn1: pharmacy.postCdn1,
-                postCdn2: pharmacy.postCdn2,
-                dutyTime1s: pharmacy.dutyTime1s,
-                dutyTime1c: pharmacy.dutyTime1c,
-                dutyTime2s: pharmacy.dutyTime2s,
-                dutyTime2c: pharmacy.dutyTime2c,
-                dutyTime3s: pharmacy.dutyTime3s,
-                dutyTime3c: pharmacy.dutyTime3c,
-                dutyTime4s: pharmacy.dutyTime4s,
-                dutyTime4c: pharmacy.dutyTime4c,
-                dutyTime5s: pharmacy.dutyTime5s,
-                dutyTime5c: pharmacy.dutyTime5c,
-                dutyTime6s: pharmacy.dutyTime6s,
-                dutyTime6c: pharmacy.dutyTime6c,
-                dutyTime7s: pharmacy.dutyTime7s,
-                dutyTime7c: pharmacy.dutyTime7c,
-                dutyTime8s: pharmacy.dutyTime8s,
-                dutyTime8c: pharmacy.dutyTime8c,
-                dutyMapimg: pharmacy.dutyMapimg,
-                dutyInf: pharmacy.dutyInf,
-                dutyEtc: pharmacy.dutyEtc,
-              },
-            });
+            // update 페이로드를 변수로 뽑아 변경 판정의 비교 대상으로 그대로 쓴다.
+            // syncedAt 은 "확인 시각"이라 항상 달라지므로 판정에서 제외한다.
+            const updateData = {
+              name: pharmacy.name,
+              address: pharmacy.address,
+              roadAddress: pharmacy.roadAddress,
+              lat: pharmacy.lat,
+              lng: pharmacy.lng,
+              city: pharmacy.city,
+              district: pharmacy.district,
+              phone: pharmacy.phone,
+              dutyTel3: pharmacy.dutyTel3,
+              postCdn1: pharmacy.postCdn1,
+              postCdn2: pharmacy.postCdn2,
+              dutyTime1s: pharmacy.dutyTime1s,
+              dutyTime1c: pharmacy.dutyTime1c,
+              dutyTime2s: pharmacy.dutyTime2s,
+              dutyTime2c: pharmacy.dutyTime2c,
+              dutyTime3s: pharmacy.dutyTime3s,
+              dutyTime3c: pharmacy.dutyTime3c,
+              dutyTime4s: pharmacy.dutyTime4s,
+              dutyTime4c: pharmacy.dutyTime4c,
+              dutyTime5s: pharmacy.dutyTime5s,
+              dutyTime5c: pharmacy.dutyTime5c,
+              dutyTime6s: pharmacy.dutyTime6s,
+              dutyTime6c: pharmacy.dutyTime6c,
+              dutyTime7s: pharmacy.dutyTime7s,
+              dutyTime7c: pharmacy.dutyTime7c,
+              dutyTime8s: pharmacy.dutyTime8s,
+              dutyTime8c: pharmacy.dutyTime8c,
+              dutyMapimg: pharmacy.dutyMapimg,
+              dutyInf: pharmacy.dutyInf,
+              dutyEtc: pharmacy.dutyEtc,
+            };
 
-            if (existing) {
+            if (!existing) {
+              await tx.pharmacy.create({
+                data: {
+                  ...pharmacy,
+                  sourceUrl: 'https://www.data.go.kr/data/15000576/openapi.do',
+                  syncedAt: new Date(),
+                },
+              });
+              newRecords++;
+            } else if (hasContentChanged(existing, updateData)) {
+              await tx.pharmacy.update({
+                where: { id: pharmacy.id },
+                data: { ...updateData, syncedAt: new Date() },
+              });
               updatedRecords++;
             } else {
-              newRecords++;
+              // 내용 동일 — syncedAt 만 갱신한다. Prisma 의 update() 는 @updatedAt 을
+              // 함께 올려 사이트맵 lastmod 를 오염시키므로 raw UPDATE 로 우회한다
+              // (#657 조회수 플러시와 같은 패턴). 근거는 services/contentChange.ts 주석.
+              await tx.$executeRaw`UPDATE Pharmacy SET syncedAt = NOW() WHERE id = ${pharmacy.id}`;
+              updatedRecords++;
             }
           }
         });
