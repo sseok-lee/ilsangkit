@@ -36,6 +36,7 @@ import { bufferViewCount } from './viewCountService.js';
 import { evChargerStationSearch } from './evChargerService.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
 import { buildRecovery, type Recovery } from './search/searchRecovery.js';
+import { buildStratifiedIdsSql, SITEMAP_STRATIFY_TABLES } from './sitemapStratify.js';
 
 // 정렬 옵션 매핑
 const ORDER_BY_MAP: Record<string, Record<string, string>> = {
@@ -855,20 +856,31 @@ export async function getAllIds(
   const config = CATEGORY_REGISTRY[category];
   if (!config) return [];
 
-  // ev-charger: statId 단위로 반환 (충전소 단위 사이트맵)
-  if (category === 'ev-charger') {
-    const stations = await prisma.evCharger.findMany({
-      where: { statId: { not: null } },
-      select: { statId: true, updatedAt: true },
-      distinct: ['statId'],
-      ...(limit !== undefined ? { take: limit } : {}),
-    });
-    return stations.map((s) => ({ id: s.statId!, updatedAt: s.updatedAt }));
+  const stratifyTable = SITEMAP_STRATIFY_TABLES[category];
+
+  // ev-charger: statId 단위(충전소 단위 사이트맵).
+  // GROUP BY 로 DB 안에서 접는다 — Prisma 의 distinct 는 앱 메모리 처리라
+  // 49만 행에서 위험하다(과거 지오코딩 OOM 2.07GB 와 같은 패턴).
+  if (category === 'ev-charger' && stratifyTable) {
+    return prisma.$queryRawUnsafe<{ id: string; updatedAt: Date }[]>(
+      buildStratifiedIdsSql(stratifyTable, { groupByStationId: true }),
+      limit ?? Number.MAX_SAFE_INTEGER,
+    );
   }
 
+  // 상한이 걸린 카테고리는 구·군 라운드로빈으로 뽑는다.
+  // orderBy 없는 take 는 어떤 N개가 선택되는지 미정의였고, 실제로는 지역코드
+  // 오름차순이 되어 앞 지역이 상한을 독식했다 — 근거는 sitemapStratify.ts 주석 참조.
+  if (limit !== undefined && stratifyTable) {
+    return prisma.$queryRawUnsafe<{ id: string; updatedAt: Date }[]>(
+      buildStratifiedIdsSql(stratifyTable),
+      limit,
+    );
+  }
+
+  // 상한이 없으면 전량 반환이므로 절단 순서 자체가 발생하지 않는다.
   return config.model().findMany({
     select: { id: true, updatedAt: true },
-    ...(limit !== undefined ? { take: limit } : {}),
   });
 }
 
