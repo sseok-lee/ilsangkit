@@ -132,6 +132,8 @@ import { useRealEstate } from '~/composables/useRealEstate'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
+import { resolveRealEstateListSsrOutcome } from '~/utils/realEstateListSsrOutcome'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { PAGINATION_ROBOTS_CONTENT } from '~/utils/pageQuery'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -182,7 +184,7 @@ const error = ref(false)
 // 캐시(s-maxage=300)에 박혀 5분간 모든 사용자/Googlebot 에게 "지역을 선택해주세요"
 // 만 반환되던 사고가 있었다. SSR 단계에서 complexes 가 비어있으면 응답에
 // `Cache-Control: no-store` 를 강제해 같은 사고 재발을 막는다.
-const { data: initialData } = await useAsyncData(
+const { data: initialData, error: initialFetchError, status: initialFetchStatus } = await useAsyncData(
   `re-complexes-${apiSlug.value}`,
   () => getComplexList(apiSlug.value),
 )
@@ -194,9 +196,21 @@ if (initialData.value) {
 }
 pending.value = false
 
+// SSR 응답 판정 — 장애(degraded)와 정상 0건(empty)을 구분한다.
+// 판정 근거·회귀 배경은 utils/realEstateListSsrOutcome.ts 주석 참조.
 // h3 의 setResponseHeader 는 server/ 전용 자동 import 라 앱 코드에서 ReferenceError 가 난다.
-if (import.meta.server && complexes.value.length === 0) {
-  useResponseHeader('cache-control').value = 'no-store'
+if (import.meta.server) {
+  const outcome = resolveRealEstateListSsrOutcome({
+    hasError: !!initialFetchError.value,
+    fetchSettled: initialFetchStatus.value === 'success',
+    hasItems: complexes.value.length > 0,
+  })
+  if (outcome === 'degraded') {
+    // 503 + no-store. 200 으로 내보내면 빈 본문이 swr(s-maxage=300) 캐시에 박혀 색인된다.
+    markDegradedResponse()
+  } else if (outcome === 'empty') {
+    useResponseHeader('cache-control').value = 'no-store'
+  }
 }
 
 // SEO 메타
