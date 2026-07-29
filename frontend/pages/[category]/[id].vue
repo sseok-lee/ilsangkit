@@ -173,13 +173,6 @@
               />
 
 
-              <!-- 관련 YouTube 영상 -->
-              <FacilityYoutubeSection
-                v-if="facility"
-                :category="facility.category"
-                :facility-id="facility.id"
-              />
-
               <!-- 네이버 블로그 후기 -->
               <BlogReviewSection
                 v-if="facility"
@@ -275,7 +268,6 @@ import { formatDotDate } from '~/utils/syncFreshness'
 import DetailBasicInfo from '~/components/facility/detail/DetailBasicInfo.vue'
 import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
 import DetailContextLinks from '~/components/facility/detail/DetailContextLinks.vue'
-import FacilityYoutubeSection from '~/components/facility/youtube/FacilityYoutubeSection.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 import DetailFacilityStatus from '~/components/facility/detail/DetailFacilityStatus.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
@@ -351,11 +343,9 @@ watch(fetchError, (err) => {
 // Secondary fetch — sync-status.
 // 실패 시 null fallback, 페이지는 critical(facility) 기준으로 정상 렌더된다.
 //
-// 2026-07-29 youtube SSR fetch 를 제거했다. 이 응답의 youtube 는 VideoObject 스키마
-// 발행에만 쓰였는데(그 스키마는 화면에 없는 콘텐츠를 주장해 정책 위반이라 제거),
-// 남겨두면 상세 페이지마다 쓰이지 않는 왕복이 하나 더 생긴다.
-// `?ssr=1` 은 cacheOnly 읽기라 캐시 워밍 효과도 없었다(routes/facilityYoutube.ts:26).
-// 화면의 관련 영상 섹션은 클라이언트에서 자체 fetch 하므로 영향받지 않는다.
+// 2026-07-29 관련 영상(YouTube) 기능을 제거하면서 이 응답에서 youtube 도 빠졌다.
+// allSettled 는 유지한다 — 항목이 하나여도 fail-open 의미(실패해도 본문은 렌더)가
+// 그대로 필요하고, 이후 secondary 가 늘어날 때 형태를 다시 바꾸지 않아도 된다.
 const { data: secondaryResponse } = await useAsyncData(
   `facility-secondary-${category.value}-${id.value}`,
   async () => {
