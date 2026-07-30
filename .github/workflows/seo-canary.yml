@@ -1,0 +1,70 @@
+name: SEO Canary
+
+# 프로덕션 SEO 계약을 주기적으로 확인한다.
+#
+# ## 왜 필요한가
+#
+# 2026-07 색인 오염의 원인(markDegradedResponse 의 ReferenceError)은 3개월간
+# CI 초록 상태로 살아 있었다. 테스트가 프로덕션에 존재하지 않는 전역을 stubGlobal 로
+# 만들어 줬고 ESLint 도 no-undef 를 눌렀다. 발견 경로는 네이버 중복 title 리포트였고,
+# 이미 100건 이상 잘못 색인된 뒤였다.
+#
+# CI 초록 ≠ 라이브 정상. 이 워크플로가 그 간극을 메운다.
+#
+# ## 무엇을 확인하는가
+#
+# scripts/validate-seo.sh 가 실제 HTTP 응답을 검사한다. 핵심은 8~10 절 —
+# 사이트 기본 title 이 200+index 로 나오는 오염 signature, 지역 페이지의
+# fail-closed noindex 회귀, 사이트맵의 빈 파일·지역 편향 회귀.
+#
+# ## 확인하지 못하는 것
+#
+# 프로덕션에 장애를 일부러 유발할 수는 없다. 실패 경로(503+no-store) 자체의 검증은
+# 로컬 실패 주입으로 한다 — 백엔드 종료, 또는 200+success:false 를 내는 스텁.
+# 여기서 잡히는 것은 자연 발생한 장애가 잘못 처리됐을 때의 흔적이다.
+
+on:
+  # 배포 직후 — 새 코드가 계약을 깼는지 즉시 확인한다.
+  workflow_run:
+    workflows: ['Deploy to Cafe24']
+    types: [completed]
+  # 주기 확인 — 배포와 무관한 드리프트(데이터 동기화, 캐시, 백엔드 상태)를 잡는다.
+  # 6시간 간격. 스크립트가 ~30초라 Actions 사용량은 무시할 수준이다.
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+# 동시 실행 방지 — 배포 직후와 스케줄이 겹칠 수 있다.
+concurrency:
+  group: seo-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    # 배포가 실패했으면 검사할 의미가 없다. 스케줄·수동 실행은 항상 돈다.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run SEO canary against production
+        env:
+          BASE_URL: https://ilsangkit.co.kr
+          # 프로덕션에 존재하는 대표 URL. 데이터가 바뀌어 404 가 되면 이 값을 갱신한다.
+          SAMPLE_CATEGORY_HUB: /toilet
+          SAMPLE_FACILITY_PATH: /toilet/toilet-00379099bd5d661e
+          SAMPLE_REAL_ESTATE_PATH: /real-estate
+          SAMPLE_SEARCH_PATH: /search
+          SAMPLE_PAGINATED_PATH: /toilet?page=2
+          SAMPLE_REGION_FACILITY_PATH: /seoul/gangnam/childcare
+          SAMPLE_REGION_TRASH_PATH: /gyeonggi/uiwang/trash
+          SAMPLE_CHILD_SITEMAP: /sitemap/childcare-1.xml
+          # 임계값은 여유를 둔다 — 데이터 증감으로 흔들려서 알람 피로를 만들면 안 된다.
+          # childcare-1.xml 은 10,000 URL 고정(샤드 크기), 지역코드는 실측 19개.
+          MIN_SITEMAP_URLS: '1000'
+          MIN_REGION_CODES: '10'
+        run: |
+          chmod +x scripts/validate-seo.sh
+          ./scripts/validate-seo.sh

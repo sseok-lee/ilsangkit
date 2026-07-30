@@ -22,7 +22,25 @@
  *
  * fail-open 정책(#467)을 따른다 — 일시 장애를 404 나 영구 noindex 로 굳히지 않고
  * 503 + no-store 로만 표시해 크롤러가 기존 색인을 유지한 채 재방문하게 한다.
- * 503 은 swr 에 덮이지 않는다(시설 상세 경로에서 실측 확인).
+ *
+ * 503 의 no-store 도 Nitro cachedEventHandler 가 한 번 덮어쓴다. 다만
+ * server/plugins/no-store-on-server-error.ts 가 beforeResponse 훅에서 되돌린다
+ * — 그 훅은 캐시 핸들러가 끝난 뒤에 돌기 때문이다. 5xx 에만 적용된다.
+ *
+ * ## 호출부가 판정별로 무엇을 하는가
+ *
+ *   degraded → markDegradedResponse() = 503 + no-store
+ *   empty    → 아무것도 하지 않는다
+ *   ok       → 아무것도 하지 않는다
+ *
+ * empty 가 무동작인 이유: 페치가 성공했고 진짜로 0건이면 그건 거래가 없는 지역이라는
+ * 정확한 사실이므로 캐시되어도 문제가 없다. 실패로 인한 빈 본문은 degraded 가 잡는다.
+ * (예전에는 empty 에도 no-store 를 걸었지만, 200 응답에는 위 훅이 닿지 않아 애초에
+ *  동작하지 않는 코드였다. 동작하게 만들려면 커스텀 헤더 신호 같은 기계장치가 필요한데,
+ *  얻는 것이 "빈 지역 페이지 5분 신선도"뿐이라 제거했다.)
+ *
+ * empty 와 ok 를 굳이 구분해 두는 이유는 판정을 기록해 두는 쪽이 나중에 "거래 없는
+ * 지역을 다르게 다루겠다"는 결정을 내릴 때 붙일 자리가 되기 때문이다.
  */
 export type RealEstateListSsrOutcome = 'ok' | 'empty' | 'degraded'
 
