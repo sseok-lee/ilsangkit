@@ -200,11 +200,176 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "7️⃣  /robots.txt 검증  ($BASE_URL/robots.txt)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 robots_body=$(fetch_body "$BASE_URL/robots.txt") || { fail "/robots.txt 응답 실패"; robots_body=""; }
+
+# robots.txt 의 그룹은 상속되지 않는다 — 자기 이름 그룹이 있는 봇은 `User-agent: *` 를 통째로 무시한다.
+# 따라서 "차단됐는가"는 **그룹 단위로** 봐야 한다. 파일 전체 grep 은 오답이다.
+#
+# 실제로 그렇게 틀렸다: wifi 상세는 검색엔진(Yeti·*)에는 열려 있고 AI 크롤러
+# (GPTBot·ChatGPT-User·ClaudeBot·PerplexityBot)에만 `Disallow: /wifi/wifi-` 가 걸려 있다.
+# 의도된 설정이며 robots.txt 주석에 근거가 적혀 있는데, 파일 전체 grep 이 AI 그룹 줄을
+# 잡아 이 스크립트가 프로덕션에서 항상 FAIL 했다. 그래서 CI 에 연결되지 못한 채 남아 있었다.
+#
+# 첫날부터 실패하는 검사는 무시당한다 — 그게 카나리 최악의 결말이다.
+robots_group() {
+  # robots_group "<robots.txt 본문>" "<User-agent 값>" → 그 그룹의 지시문만 출력
+  printf '%s\n' "$1" | awk -v ua="$2" '
+    /^[[:space:]]*#/ { next }
+    tolower($0) ~ /^user-agent:[[:space:]]*/ {
+      val = $0; sub(/^[^:]*:[[:space:]]*/, "", val); gsub(/[[:space:]]+$/, "", val)
+      ingroup = (tolower(val) == tolower(ua))
+      next
+    }
+    ingroup { print }
+  '
+}
+
 if [ -n "$robots_body" ]; then
   contains "$robots_body" 'Sitemap: https://ilsangkit.co.kr/sitemap.xml' && pass "Sitemap 지시문 포함" || fail "robots.txt Sitemap 지시문 누락"
-  # wifi 상세는 robots.txt 차단이 아니라 HTML noindex 로 제외한다. 그래야 Googlebot 이 noindex 를 직접 확인한다.
-  not_contains "$robots_body" 'Disallow: /wifi/' && pass "wifi robots 차단 없음 (noindex 확인 가능)" || fail "wifi가 robots에서 차단됨 — noindex-only 정책과 불일치"
-  not_contains "$robots_body" 'Disallow: /aed/' && pass "AED robots 차단 없음" || fail "AED가 robots에서 차단됨 — 현재 정책상 색인 대상"
+
+  # 검색엔진 그룹만 확인한다. AI 크롤러 그룹의 차단은 의도된 설정이다.
+  for ua in '*' 'Yeti'; do
+    group=$(robots_group "$robots_body" "$ua")
+    if [ -z "$group" ]; then
+      fail "robots.txt 에 'User-agent: $ua' 그룹이 없음"
+      continue
+    fi
+    # wifi 상세는 robots 차단이 아니라 HTML noindex 로 제외한다. 그래야 크롤러가 noindex 를 직접 확인한다.
+    # (robots 로 막으면 크롤러가 기존 사본을 재평가할 수 없어 색인이 동결된다 — 2026-07 실측.)
+    if printf '%s' "$group" | grep -qE '^[[:space:]]*Disallow:[[:space:]]*/wifi'; then
+      fail "[$ua] wifi 가 robots 에서 차단됨 — noindex-only 정책과 불일치"
+    else
+      pass "[$ua] wifi robots 차단 없음 (noindex 확인 가능)"
+    fi
+    if printf '%s' "$group" | grep -qE '^[[:space:]]*Disallow:[[:space:]]*/aed'; then
+      fail "[$ua] AED 가 robots 에서 차단됨 — 현재 정책상 색인 대상"
+    else
+      pass "[$ua] AED robots 차단 없음"
+    fi
+  done
+fi
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 8. 색인 오염 signature — 카나리의 핵심
+#
+# 2026-07 색인 오염의 원인은 SSR 일시 장애 때 useFacilityMeta 가 title 을 만들지
+# 못해 nuxt.config.ts:198 의 사이트 기본 title 이 HTTP 200 + `index, follow` 로
+# 나가고, 그게 그대로 색인된 것이었다. 서로 다른 카테고리 페이지가 바이트 단위로
+# 같아지므로 Google 이 한 canonical 로 묶었다(실측: childcare·park 이 /trash/6495 로 병합).
+#
+# 그 버그(markDegradedResponse 의 ReferenceError)는 3개월간 CI 초록 상태로 살아 있었다.
+# 테스트가 프로덕션에 없는 전역을 stubGlobal 로 만들어 줬고 ESLint 도 no-undef 를 눌렀다.
+# 발견 경로는 네이버 중복 title 리포트였다 — 이미 100건 이상 오염된 뒤였다.
+#
+# 그래서 여기서는 "구현이 맞는가"가 아니라 **오염 signature 가 나타나는가**를 직접 본다.
+# 자연 발생한 장애 순간에 응답이 올바르게 503 이었는지, 잘못된 200 이었는지가 잡힌다.
+#
+# ⚠️ 한계: 프로덕션에 장애를 일부러 유발할 수는 없다. 이 절은 (a) 정상 경로가 정상인지와
+#    (b) 오염 signature 가 없는지만 확인한다. 실패 경로 자체의 검증은 로컬 실패 주입
+#    (백엔드 종료 또는 200+success:false 스텁) 으로 한다.
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "8️⃣  색인 오염 signature 검사"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# nuxt.config.ts:198 = `${SITE_NAME} - ${SITE_TAGLINE}` (utils/seoConstants.ts)
+DEFAULT_TITLE='일상킷 - 부동산 실거래가·청약·내 주변 생활정보'
+# 구 세대 tagline. 네이버 진단에서 04-27~06-03 크롤분 50건이 이 title 로 잡혔다.
+LEGACY_DEFAULT_TITLE='일상킷 - 내 주변 생활 편의 정보'
+
+# 홈은 예외다 — 브랜드 SERP 대표결과 목적으로 기본 title 을 의도적으로 쓴다(#647/648).
+# 나머지 페이지는 전부 `… | 일상킷` 패턴이어야 한다.
+SIGNATURE_PATHS="${SIGNATURE_PATHS:-$SAMPLE_CATEGORY_HUB $SAMPLE_FACILITY_PATH $SAMPLE_REAL_ESTATE_PATH}"
+
+for path in $SIGNATURE_PATHS; do
+  sig_head=$(curl -sSL --max-time 15 -A 'ilsangkit-validate-seo/1.0' -o /tmp/_canary_body.html \
+    -w '%{http_code}' "$BASE_URL$path" 2>/dev/null) || sig_head=""
+  if [ -z "$sig_head" ]; then
+    fail "$path 응답 실패"
+    continue
+  fi
+  sig_title=$(grep -o '<title[^>]*>[^<]*' /tmp/_canary_body.html | sed 's/<[^>]*>//' | head -1)
+  sig_indexable=$(grep -qi 'content="index' /tmp/_canary_body.html && echo yes || echo no)
+
+  # ★ 핵심 단정: 기본 title + 200 + index,follow 조합이 나오면 그게 오염이다.
+  if [ "$sig_title" = "$DEFAULT_TITLE" ] || [ "$sig_title" = "$LEGACY_DEFAULT_TITLE" ]; then
+    if [ "$sig_head" = "200" ] && [ "$sig_indexable" = "yes" ]; then
+      fail "$path — 사이트 기본 title 이 200+index 로 노출 (색인 오염 signature): '$sig_title'"
+    else
+      note "$path — 기본 title 이지만 $sig_head / index=$sig_indexable (degraded 처리된 것으로 보임)"
+    fi
+  else
+    pass "$path — 고유 title ($sig_head): '$sig_title'"
+  fi
+
+  # per-page title 규약: 홈 외 모든 페이지는 ` | 일상킷` 으로 끝난다.
+  case "$sig_title" in
+    *'| 일상킷') pass "$path — per-page title 규약 준수" ;;
+    *) fail "$path — title 이 '| 일상킷' 패턴이 아님: '$sig_title'" ;;
+  esac
+done
+rm -f /tmp/_canary_body.html
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 9. 지역×카테고리 fail-closed 회귀
+#
+# #677 배포 직후, 클라이언트 전용 ref 를 SSR 시점에 읽어 모든 trash 지역 페이지가
+# noindex 로 나간 사고가 있었다. #693 에서 같은 계열이 다른 경로(200+success:false)로
+# 재발한 것도 확인됐다 — wasteSsr 가 null → wasteEmpty 참 → computeAreaNoindex noindex.
+# 데이터가 있는 지역 페이지는 절대 noindex 여서는 안 된다.
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "9️⃣  지역 페이지 fail-closed 회귀 검사"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+SAMPLE_REGION_FACILITY_PATH="${SAMPLE_REGION_FACILITY_PATH:-/seoul/gangnam/childcare}"
+SAMPLE_REGION_TRASH_PATH="${SAMPLE_REGION_TRASH_PATH:-/gyeonggi/uiwang/trash}"
+
+for path in "$SAMPLE_REGION_FACILITY_PATH" "$SAMPLE_REGION_TRASH_PATH"; do
+  region_body=$(fetch_body "$BASE_URL$path") || { fail "$path 응답 실패"; continue; }
+  if not_contains "$region_body" 'content="noindex'; then
+    pass "$path — noindex 아님 (데이터 있는 지역)"
+  else
+    fail "$path — noindex 감지. 일시 장애가 noindex 로 굳었을 수 있음 (fail-closed 회귀)"
+  fi
+done
+echo ""
+
+# ────────────────────────────────────────────────────────────
+# 10. 사이트맵 내용 — 빈 파일·지역 편향 회귀
+#
+# 자식 사이트맵이 200 이면서 URL 0개인 경우가 과거에 있었다(upstream 실패가 catch→[] 로
+# 둔갑). 그리고 #695 이전에는 상한 절단에 orderBy 가 없어 childcare 15,000 URL 이
+# 지역코드 5개만 담고 있었다(29 광주 이후 13개 시·도 누락).
+# ────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔟  사이트맵 내용 검사"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+SAMPLE_CHILD_SITEMAP="${SAMPLE_CHILD_SITEMAP:-/sitemap/childcare-1.xml}"
+MIN_SITEMAP_URLS="${MIN_SITEMAP_URLS:-1000}"
+MIN_REGION_CODES="${MIN_REGION_CODES:-10}"
+
+child_sitemap=$(fetch_body "$BASE_URL$SAMPLE_CHILD_SITEMAP") || { fail "$SAMPLE_CHILD_SITEMAP 응답 실패"; child_sitemap=""; }
+if [ -n "$child_sitemap" ]; then
+  loc_count=$(printf '%s' "$child_sitemap" | grep -c '<loc>')
+  if [ "$loc_count" -ge "$MIN_SITEMAP_URLS" ]; then
+    pass "$SAMPLE_CHILD_SITEMAP — URL ${loc_count}개 (>= $MIN_SITEMAP_URLS)"
+  else
+    fail "$SAMPLE_CHILD_SITEMAP — URL ${loc_count}개뿐. 200 인데 빈 사이트맵일 수 있음"
+  fi
+
+  contains "$child_sitemap" '<lastmod>' && pass "lastmod 포함" || fail "lastmod 누락"
+
+  # 지역 편향 회귀 — childcare id 는 `childcare-{법정동코드}` 라 앞 2자리가 시·도다.
+  region_codes=$(printf '%s' "$child_sitemap" \
+    | grep -o '<loc>[^<]*</loc>' \
+    | sed 's/.*childcare-//;s/<.*//' \
+    | cut -c1-2 | grep -E '^[0-9][0-9]$' | sort -u | wc -l | tr -d ' ')
+  if [ "${region_codes:-0}" -ge "$MIN_REGION_CODES" ]; then
+    pass "지역코드 ${region_codes}개 (>= $MIN_REGION_CODES) — 절단 층화 정상"
+  else
+    fail "지역코드 ${region_codes}개뿐 (< $MIN_REGION_CODES) — 절단이 지역 편향으로 회귀했을 수 있음"
+  fi
 fi
 echo ""
 
