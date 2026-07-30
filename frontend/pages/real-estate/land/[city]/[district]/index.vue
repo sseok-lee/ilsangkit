@@ -117,9 +117,21 @@ if (import.meta.server) {
   if (outcome === 'degraded') {
     // 503 + no-store. 200 으로 내보내면 빈 본문이 swr(s-maxage=300) 캐시에 박혀 색인된다.
     markDegradedResponse()
-  } else if (outcome === 'empty') {
-    useResponseHeader('cache-control').value = 'no-store'
   }
+  // outcome === 'empty' 는 의도적으로 아무것도 하지 않는다.
+  //
+  // 예전엔 여기서 no-store 를 걸었다. 목적은 "한 번의 fetch 실패로 생긴 빈 본문이
+  // swr 캐시에 박혀 5분간 서빙되는" 사고(2026-05 villa-sale) 방지였다.
+  // 그 실패 경로는 #686 이 degraded(503) 로 분리했고, 503 은
+  // server/plugins/no-store-on-server-error.ts 가 실제로 no-store 를 강제한다.
+  //
+  // 그래서 여기 남는 건 "페치 성공 + 진짜로 0건" = 거래가 없는 지역이다.
+  // 정확한 내용이므로 캐시되어도 문제가 없다.
+  //
+  // 게다가 그 no-store 는 애초에 동작하지도 않았다. Nitro 의 cachedEventHandler 가
+  // swr 이 걸린 경로의 cache-control 을 무조건 덮어쓰고(errorResponseCache.ts 주석 참조),
+  // beforeResponse 훅의 교정은 5xx 에만 적용된다. 200 에는 손이 닿지 않는다.
+  // 동작하지 않는 코드를 살리려 커스텀 헤더 신호 같은 기계장치를 늘리는 대신 제거했다.
 }
 
 // SEO — 동별 거래 건수·평당 시세(대지건수 가중평균)를 주입해 구·군 간 설명문 중복을 없앤다.
