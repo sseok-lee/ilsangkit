@@ -67,18 +67,49 @@ export function createSyncStats(): SyncStats {
 }
 
 /**
+ * "수집 0건" 실패 메시지. 예외 없이 끝났지만 아무것도 못 가져온 상태를 표현한다.
+ *
+ * 이 저장소의 sync 는 전부 전체 데이터셋 또는 고정 기간(예: 최근 12개월)을 매번 다시 훑는
+ * 방식이라 델타 방식이 아니다. 따라서 totalRecords=0 은 "오늘 새 데이터가 없었다"가 아니라
+ * "업스트림 응답이 비었거나 파이프라인이 끊겼다"를 뜻한다.
+ * 정상적으로 0건일 수 있는 카테고리는 runSync 의 `allowEmpty` 로 명시적으로 빠져나가야 한다.
+ */
+export function emptySyncMessage(category: string): string {
+  return `${category} 동기화가 0건을 수집했습니다 — 업스트림 응답이 비었거나 파이프라인이 끊겼을 가능성`;
+}
+
+export interface RunSyncOptions {
+  /**
+   * 수집 0건을 정상으로 취급한다. 기본 false — 0건은 `failed` 로 기록된다.
+   * 0건이 실제로 정상인 카테고리에서만 켤 것.
+   */
+  allowEmpty?: boolean;
+}
+
+/**
  * 동기화 실행 래퍼 - 공통 히스토리 관리 패턴
+ *
+ * 주의: SyncHistory 에 기록되는 카운터는 **여기서 만들어 syncFn 에 넘긴 stats** 에서 나온다.
+ * syncFn 이 이 인자를 무시하고 자체 지역 변수에 집계하면 기록은 영원히 0이 된다
+ * (실제로 부동산 sync 전 계열이 이 상태였다). 반드시 넘겨받은 stats 에 누적할 것.
  */
 export async function runSync(
   category: string,
-  syncFn: (stats: SyncStats) => Promise<void>
+  syncFn: (stats: SyncStats) => Promise<void>,
+  options: RunSyncOptions = {}
 ): Promise<SyncStats> {
+  const { allowEmpty = false } = options;
   const stats = createSyncStats();
   const syncHistory = await createSyncHistory(category);
 
   try {
     console.info(`Starting ${category} data sync...`);
     await syncFn(stats);
+
+    // 0건 수집을 success 로 기록하면 진짜 수집 중단과 구분할 수 없다 (fail-closed).
+    if (!allowEmpty && stats.totalRecords === 0) {
+      throw new Error(emptySyncMessage(category));
+    }
 
     await updateSyncHistory(syncHistory.id, {
       status: 'success',
@@ -93,8 +124,12 @@ export async function runSync(
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     stats.errors.push(errorMessage);
 
+    // 실패해도 그때까지 수집한 양은 남긴다 — 완전 중단인지 부분 실패인지 구분하는 근거가 된다.
     await updateSyncHistory(syncHistory.id, {
       status: 'failed',
+      totalRecords: stats.totalRecords,
+      newRecords: stats.newRecords,
+      updatedRecords: stats.updatedRecords,
       errorMessage,
     });
 

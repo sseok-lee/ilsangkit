@@ -10,7 +10,7 @@ import {
   generateSourceId,
   getAllLawdCodes,
 } from '../services/syncRealEstateBase.js';
-import { runSync, batchUpsert, transformAndDedupe } from '../services/baseSyncService.js';
+import { runSync, batchUpsert, transformAndDedupe, createSyncStats, type SyncStats } from '../services/baseSyncService.js';
 import { submitIndexNow, buildRealEstateUrlsV2 } from '../services/indexNowService.js';
 import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
 
@@ -153,11 +153,16 @@ async function syncByLawdAndYm(
   lawdCd: string,
   dealYmd: string,
   serviceKey: string,
-  regionMap: Map<string, { city: string; district: string }>
+  regionMap: Map<string, { city: string; district: string }>,
+  // 호출자(runSync)가 넘긴 stats 에 누적한다. 여기서 지역 변수를 새로 만들면
+  // SyncHistory 카운터가 영원히 0으로 남는다 — baseSyncService.runSync 주석 참조.
+  stats: SyncStats = createSyncStats(),
 ): Promise<void> {
   const items = await fetchRealEstateData(API_ENDPOINT, lawdCd, dealYmd, serviceKey);
 
   if (items.length === 0) return;
+
+  stats.totalRecords += items.length;
 
   const regionInfo = regionMap.get(lawdCd) ?? { city: '', district: '' };
   const enriched = items.map((item) => ({
@@ -166,7 +171,6 @@ async function syncByLawdAndYm(
     district: regionInfo.district,
   })) as RawVillaRentItem[];
 
-  const stats = { totalRecords: 0, newRecords: 0, updatedRecords: 0, skippedRecords: 0, errors: [] as string[] };
   const records = transformAndDedupe(
     enriched,
     transformVillaRentItem,
@@ -176,7 +180,7 @@ async function syncByLawdAndYm(
 
   if (records.length === 0) return;
 
-  await batchUpsert(records, async (record) => {
+  const { newCount, updateCount } = await batchUpsert(records, async (record) => {
     const existing = await prisma.villaRentTransaction.findUnique({
       where: { sourceId: record.sourceId },
       select: { id: true },
@@ -188,6 +192,9 @@ async function syncByLawdAndYm(
     });
     return existing ? 'updated' : 'new';
   });
+
+  stats.newRecords += newCount;
+  stats.updatedRecords += updateCount;
 }
 
 /**
@@ -202,9 +209,9 @@ async function syncVillaRent(options: { lawdCd?: string; dealYmd?: string; fromY
   const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } });
   const regionMap = new Map(regions.map((r) => [r.bjdCode, { city: r.city, district: r.district }]));
 
-  await runSync(CATEGORY, async (_stats) => {
+  await runSync(CATEGORY, async (stats) => {
     if (options.lawdCd && options.dealYmd) {
-      await syncByLawdAndYm(options.lawdCd, options.dealYmd, serviceKey, regionMap);
+      await syncByLawdAndYm(options.lawdCd, options.dealYmd, serviceKey, regionMap, stats);
       return;
     }
 
@@ -231,7 +238,7 @@ async function syncVillaRent(options: { lawdCd?: string; dealYmd?: string; fromY
     for (const lawdCd of lawdCodes) {
       for (const ym of ymList) {
         try {
-          await syncByLawdAndYm(lawdCd, ym, serviceKey, regionMap);
+          await syncByLawdAndYm(lawdCd, ym, serviceKey, regionMap, stats);
         } catch (error) {
           const msg = error instanceof Error ? error.message : 'Unknown error';
           console.error(`[villaRent] ${lawdCd}/${ym} 실패: ${msg}`);

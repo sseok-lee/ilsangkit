@@ -10,7 +10,7 @@ import {
   generateSourceId,
   getAllLawdCodes,
 } from '../services/syncRealEstateBase.js';
-import { runSync, batchUpsert, transformAndDedupe } from '../services/baseSyncService.js';
+import { runSync, batchUpsert, transformAndDedupe, createSyncStats, type SyncStats } from '../services/baseSyncService.js';
 import { submitIndexNow, buildRealEstateUrlsV2 } from '../services/indexNowService.js';
 import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
 
@@ -98,10 +98,20 @@ export function transformAptSaleItem(item: RawAptSaleItem) {
   };
 }
 
-export async function syncAptSaleByLawd(lawdCd: string, dealYmd: string, serviceKey: string, regionMap: Map<string, { city: string; district: string }>): Promise<void> {
+export async function syncAptSaleByLawd(
+  lawdCd: string,
+  dealYmd: string,
+  serviceKey: string,
+  regionMap: Map<string, { city: string; district: string }>,
+  // 호출자(runSync)가 넘긴 stats 에 누적한다. 여기서 지역 변수를 새로 만들면
+  // SyncHistory 카운터가 영원히 0으로 남는다 — baseSyncService.runSync 주석 참조.
+  stats: SyncStats = createSyncStats(),
+): Promise<void> {
   const items = await fetchRealEstateData(API_ENDPOINT, lawdCd, dealYmd, serviceKey);
 
   if (items.length === 0) return;
+
+  stats.totalRecords += items.length;
 
   const regionInfo = regionMap.get(lawdCd) ?? { city: '', district: '' };
   const enriched = items.map((item) => ({
@@ -110,7 +120,6 @@ export async function syncAptSaleByLawd(lawdCd: string, dealYmd: string, service
     district: regionInfo.district,
   })) as RawAptSaleItem[];
 
-  const stats = { totalRecords: 0, newRecords: 0, updatedRecords: 0, skippedRecords: 0, errors: [] as string[] };
   const records = transformAndDedupe(
     enriched,
     transformAptSaleItem,
@@ -120,7 +129,7 @@ export async function syncAptSaleByLawd(lawdCd: string, dealYmd: string, service
 
   if (records.length === 0) return;
 
-  await batchUpsert(records, async (record) => {
+  const { newCount, updateCount } = await batchUpsert(records, async (record) => {
     const existing = await prisma.aptSaleTransaction.findUnique({
       where: { sourceId: record.sourceId },
       select: { id: true },
@@ -132,6 +141,9 @@ export async function syncAptSaleByLawd(lawdCd: string, dealYmd: string, service
     });
     return existing ? 'updated' : 'new';
   });
+
+  stats.newRecords += newCount;
+  stats.updatedRecords += updateCount;
 }
 
 async function main(): Promise<void> {
@@ -153,7 +165,7 @@ async function main(): Promise<void> {
   const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } });
   const regionMap = new Map(regions.map((r) => [r.bjdCode, { city: r.city, district: r.district }]));
 
-  await runSync(CATEGORY, async (_stats) => {
+  await runSync(CATEGORY, async (stats) => {
     const lawdCodes = lawdCdArg ? [lawdCdArg] : await getAllLawdCodes();
     const now = new Date();
     const ymList: string[] = [];
@@ -178,7 +190,7 @@ async function main(): Promise<void> {
     for (const lawdCd of lawdCodes) {
       for (const ym of ymList) {
         try {
-          await syncAptSaleByLawd(lawdCd, ym, serviceKey, regionMap);
+          await syncAptSaleByLawd(lawdCd, ym, serviceKey, regionMap, stats);
         } catch (error) {
           const msg = error instanceof Error ? error.message : 'Unknown error';
           console.error(`[aptSale] ${lawdCd}/${ym} 실패: ${msg}`);
