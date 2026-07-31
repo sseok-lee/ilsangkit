@@ -7,6 +7,7 @@ import prisma from '../lib/prisma.js';
 import { derivePublicRentType } from '../utils/subscriptionUtils.js';
 import { processSubscriptions } from './geocodeSubscriptions.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
+import { emptySyncMessage } from '../services/baseSyncService.js';
 
 const API_BASE = 'https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1';
 const API_BASE_CMPET = 'https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1';
@@ -671,16 +672,21 @@ async function main() {
       const result = await syncSource(config, isDryRun);
 
       if (!isDryRun) {
+        // 0건 수집을 success 로 기록하면 진짜 수집 중단과 구분할 수 없다 (fail-closed).
+        // 실제로 2026-07-29 sub-apt/sub-offitel/sub-remaining 이 0건인데 success 로 남았다.
+        const empty = result.totalCount === 0;
         await prisma.syncHistory.create({
           data: {
             category: config.syncCategory,
-            status: 'success',
+            status: empty ? 'failed' : 'success',
             totalRecords: result.totalCount,
             newRecords: result.newCount,
             updatedRecords: result.updateCount,
+            errorMessage: empty ? emptySyncMessage(config.syncCategory) : null,
             completedAt: new Date(),
           },
         });
+        if (empty) console.error(`[${key}] ${emptySyncMessage(config.syncCategory)}`);
       }
     } catch (err) {
       console.error(`[${key}] 동기화 실패:`, err);
