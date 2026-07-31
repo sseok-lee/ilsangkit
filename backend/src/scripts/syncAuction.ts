@@ -323,6 +323,7 @@ async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
 
   // 한 페이지 적재(소재지 enrich + transform + upsert).
   const processItems = async (items: Record<string, unknown>[]) => {
+    stats.totalRecords += items.length;
     const enriched = items.map((it) => {
       const raw = it as RawAuctionItem;
       // bjdCode: ltnoPnu 앞 5자리 우선, fallback rdnmPnu
@@ -334,7 +335,7 @@ async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
       return { ...it, city, district } as unknown as RawAuctionItem;
     });
     const records = transformAndDedupe(enriched, (it) => transformAuctionItem(it, runStart), (r) => r!.sourceId, stats);
-    await batchUpsert(records, async (record) => {
+    const { newCount, updateCount } = await batchUpsert(records, async (record) => {
       const r = record as NonNullable<ReturnType<typeof transformAuctionItem>>;
       const existing = await prisma.auctionItem.findUnique({ where: { cltrMngNo: r.cltrMngNo }, select: { id: true, isClosed: true } });
       if (existing?.isClosed) return 'updated'; // 마감 물건은 active로 되돌리지 않음
@@ -348,6 +349,9 @@ async function syncAuctionSnapshot(serviceKey: string, runStart: Date,
       });
       return existing ? 'updated' : 'new';
     });
+
+    stats.newRecords += newCount;
+    stats.updatedRecords += updateCount;
   };
 
   // 한 페이지 fetch(재시도). expectFull=true면 마지막 아닌 페이지가 짧게/비어 오는 일시적 truncation도 재시도.

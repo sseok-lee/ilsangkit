@@ -245,6 +245,47 @@ describe('syncAptSaleByLawd', () => {
     expect(mockUpsert).toHaveBeenCalledOnce();
   });
 
+  // 회귀 방지: 이 함수가 넘겨받은 stats 대신 지역 변수에 집계하던 탓에
+  // SyncHistory 의 totalRecords/newRecords/updatedRecords 가 항상 0으로 기록됐다.
+  it('넘겨받은 stats 에 수집 건수를 누적한다', async () => {
+    const xmlResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header>
+  <body>
+    <totalCount>1</totalCount>
+    <items>
+      <item>
+        <dealAmount>50,000</dealAmount>
+        <buildYear>2010</buildYear>
+        <dealYear>2024</dealYear>
+        <dealMonth>3</dealMonth>
+        <dealDay>15</dealDay>
+        <umdNm>역삼동</umdNm>
+        <aptNm>래미안아파트</aptNm>
+        <excluUseAr>84.99</excluUseAr>
+        <jibun>123</jibun>
+        <sggCd>11680</sggCd>
+        <floor>10</floor>
+        <dealingGbn>중개거래</dealingGbn>
+      </item>
+    </items>
+  </body>
+</response>`;
+
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => xmlResponse });
+    mockFindUnique.mockResolvedValue(null); // 기존 행 없음 → 'new'
+    mockUpsert.mockResolvedValue({ id: 1 });
+
+    const regionMap = new Map([['11680', { city: '서울특별시', district: '강남구' }]]);
+    const stats = { totalRecords: 0, newRecords: 0, updatedRecords: 0, skippedRecords: 0, errors: [] as string[] };
+
+    await syncAptSaleByLawd('11680', '202403', 'test-service-key', regionMap, stats);
+
+    expect(stats.totalRecords).toBe(1);
+    expect(stats.newRecords).toBe(1);
+    expect(stats.updatedRecords).toBe(0);
+  });
+
   it('API 응답이 빈 items이면 upsert 안함', async () => {
     const xmlResponse = `<?xml version="1.0" encoding="UTF-8"?>
 <response>
