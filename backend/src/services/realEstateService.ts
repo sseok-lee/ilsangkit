@@ -961,44 +961,50 @@ export async function getNearbyByBjd(
   const result: NearbyResult = { apt: [], villa: [], offitel: [] };
 
   if (mode === 'sale') {
-    // Sale path: summary 테이블 — 매매가만 필요
-    for (const key of NEARBY_PROPERTY_KEYS) {
-      const type = `${key}-sale`;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const where: Record<string, any> = { type, bjdCode };
-      if (dongName) where.dongName = dongName;
-      if (excludeBuildingName) where.buildingName = { not: excludeBuildingName };
-      const rows = await prisma.realEstateBuildingSummary.findMany({
-        where,
-        orderBy: [
-          { latestDealYear: 'desc' },
-          { latestDealMonth: 'desc' },
-          { transactionCount: 'desc' },
-        ],
-        take: limitPerType,
-      });
-      result[key] = rows.map((r) => ({
-        buildingName: r.buildingName,
-        bjdCode: r.bjdCode,
-        city: r.city,
-        district: r.district,
-        dongName: r.dongName,
-        buildYear: r.buildYear ?? null,
-        transactionCount: r.transactionCount,
-        latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
-        monthlyRent: null,
-        latestDealYear: r.latestDealYear ?? null,
-        latestDealMonth: r.latestDealMonth ?? null,
-        lat: r.lat != null ? Number(r.lat) : null,
-        lng: r.lng != null ? Number(r.lng) : null,
-      }));
-    }
+    // Sale path: summary 테이블 — 매매가만 필요.
+    // 3종(apt/villa/offitel)은 서로 독립이므로 병렬로 던진다. 순차 await 이면 벽시계가
+    // max 가 아니라 합계가 된다(실측 0.096+0.196+0.037=0.329s).
+    const saleEntries = await Promise.all(
+      NEARBY_PROPERTY_KEYS.map(async (key) => {
+        const type = `${key}-sale`;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const where: Record<string, any> = { type, bjdCode };
+        if (dongName) where.dongName = dongName;
+        if (excludeBuildingName) where.buildingName = { not: excludeBuildingName };
+        const rows = await prisma.realEstateBuildingSummary.findMany({
+          where,
+          orderBy: [
+            { latestDealYear: 'desc' },
+            { latestDealMonth: 'desc' },
+            { transactionCount: 'desc' },
+          ],
+          take: limitPerType,
+        });
+        return [key, rows.map((r) => ({
+          buildingName: r.buildingName,
+          bjdCode: r.bjdCode,
+          city: r.city,
+          district: r.district,
+          dongName: r.dongName,
+          buildYear: r.buildYear ?? null,
+          transactionCount: r.transactionCount,
+          latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+          monthlyRent: null,
+          latestDealYear: r.latestDealYear ?? null,
+          latestDealMonth: r.latestDealMonth ?? null,
+          lat: r.lat != null ? Number(r.lat) : null,
+          lng: r.lng != null ? Number(r.lng) : null,
+        }))] as const;
+      }),
+    );
+    for (const [key, items] of saleEntries) result[key] = items;
     return result;
   }
 
   // Rent path (모든 rentType): transaction 테이블 raw SQL로 deposit + monthlyRent 함께 조회.
   // ROW_NUMBER() 윈도우 함수로 단지별 실제 최신 행을 추출하여 정확한 거래일/가격 반환.
-  for (const key of NEARBY_PROPERTY_KEYS) {
+  // sale 과 마찬가지로 3종은 독립이라 병렬로 던진다(실측 0.083+0.037+0.027=0.147s → max).
+  const rentEntries = await Promise.all(NEARBY_PROPERTY_KEYS.map(async (key) => {
     const tableName = RENT_TRANSACTION_TABLE[key];
     const dongFilter = dongName
       ? Prisma.sql`AND t.dongName = ${dongName}`
@@ -1084,7 +1090,7 @@ export async function getNearbyByBjd(
       LIMIT ${limitPerType}
     `;
 
-    result[key] = rows.map((r) => ({
+    return [key, rows.map((r) => ({
       buildingName: r.buildingName,
       bjdCode: r.bjdCode,
       city: r.city,
@@ -1098,8 +1104,9 @@ export async function getNearbyByBjd(
       latestDealMonth: r.latestDealMonth != null ? Number(r.latestDealMonth) : null,
       lat: null,
       lng: null,
-    }));
-  }
+    }))] as const;
+  }));
+  for (const [key, items] of rentEntries) result[key] = items;
 
   return result;
 }

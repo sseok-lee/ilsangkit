@@ -1421,6 +1421,14 @@ model RealEstateBuildingSummary {
   @@index([type, transactionCount])
   @@index([type, city, district, transactionCount])
   @@index([type, buildingName])
+  /// 인근 단지(getNearbyByBjd sale 경로) 전용.
+  /// 쿼리는 WHERE type=? AND bjdCode=? ORDER BY latestDealYear DESC, latestDealMonth DESC,
+  /// transactionCount DESC LIMIT 4 인데, 위 인덱스들 중 bjdCode 를 접두로 쓸 수 있는 게 없어
+  /// (unique 의 buildingName 이 등치 조건이 아니라 막힌다) MySQL 이 type 만으로 접근했다.
+  /// 실측: rows=70,002 스캔 + Using filesort, 3종 합계 57ms.
+  /// 이 인덱스로 (type,bjdCode) 범위 접근 + 정렬까지 인덱스가 만족 → Backward index scan, 0.8ms.
+  /// (정렬이 전부 DESC 라 ASC 인덱스를 역방향으로 읽으면 된다. dongName 필터가 붙어도 유지된다.)
+  @@index([type, bjdCode, latestDealYear, latestDealMonth, transactionCount])
 }
 
 // 청약 분양정보
