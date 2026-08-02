@@ -125,7 +125,7 @@ jobs:
             if [ $? -eq 0 ]; then
               pm2 reload ilsangkit-backend
             else
-              pm2 start dist/server.js --name ilsangkit-backend
+              pm2 start dist/server.js --name ilsangkit-backend --max-memory-restart 500M
             fi
 
             # 사이트맵 정적 서빙: reader(frontend)와 생성 스크립트가 쓰는 env.
@@ -151,7 +151,17 @@ jobs:
             if [ $? -eq 0 ]; then
               pm2 reload ilsangkit-frontend --update-env
             else
-              pm2 start .output/server/index.mjs --name ilsangkit-frontend --update-env
+              # ★ --max-memory-restart 는 반드시 --max-old-space-size 보다 낮아야 한다.
+              # 순서가 뒤집히면(2026-08-02 이전: heap 1024MB vs pm2 1200MB) V8 이 먼저
+              # heap limit 에 도달해 FATAL ERROR → SIGABRT 로 하드 크래시하고, pm2 의
+              # 정상 재시작 경로는 한 번도 발동하지 않는다. 실제로 하루 12~24 회 크래시했고
+              # 그때마다 30 초 행 + 502/504 가 크롤러에 그대로 나갔다.
+              # 850M(RSS) 는 heap 1024MB 도달 훨씬 전에 pm2 가 graceful restart 를 걸도록 하는 값.
+              # 이 폴백으로 프로세스가 재생성되면 런타임에만 있던 설정을 잃으므로 여기 명시한다.
+              pm2 start .output/server/index.mjs --name ilsangkit-frontend \
+                --node-args="--max-old-space-size=1024" \
+                --max-memory-restart 850M \
+                --update-env
             fi
 
             pm2 save
