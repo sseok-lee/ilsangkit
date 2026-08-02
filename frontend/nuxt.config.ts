@@ -69,6 +69,27 @@ export default defineNuxtConfig({
   // Security headers + API proxy
   nitro: {
     compressPublicAssets: true,
+    // routeRules 의 swr 캐시 저장소. 마운트를 지정하지 않으면 Nitro 는 기본 인메모리
+    // 드라이버로 떨어지는데, 그 드라이버는 **크기 상한이 없고** 만료를 read 시점에만
+    // 검사한다(백그라운드 청소 없음). 즉 "쓰이고 다시 안 읽히는" 엔트리는 TTL 과 무관하게
+    // 영구 잔존한다 — 크롤러가 37만 부동산 URL 을 한 번씩만 긁는 패턴이 정확히 그것이다.
+    //
+    // 2026-08-02 힙 스냅샷 2회 diff 실측: 35분간 heapUsed 70→293MB(약 6.4MB/분), 증가분
+    // 226MB 중 200MB(88%)가 string, 그 92%가 렌더된 SSR HTML 조각이었다. 결과적으로
+    // 프론트가 V8 heap limit 에 도달해 SIGABRT 로 하루 12~24회 하드 크래시했다.
+    //
+    // lruCache 로 엔트리 수를 묶어 힙을 상한 있게 만든다. 페이지당 약 200KB 이므로
+    // max 500 ≈ 100MB. 이 값은 안전망이지 근본 해결이 아니다 — 롱테일은 재방문이 없어
+    // 적중률이 거의 0 이라, 고카디널리티 라우트의 swr 을 명시 cache-control 헤더로
+    // 바꾸는 작업이 뒤따라야 한다(nginx 가 이미 디스크에서 상한 있게 캐싱 중).
+    //
+    // ⚠️ TTL 을 줄이는 것으로는 해결되지 않는다. 만료 검사가 read 시점에만 일어나므로
+    // 다시 안 읽히는 엔트리는 TTL 이 얼마든 남는다.
+    //
+    // 이 저장소의 소비자는 routeRules swr 뿐이다(defineCachedFunction 사용처 없음).
+    storage: {
+      cache: { driver: 'lruCache', max: 500 },
+    },
     routeRules: {
       '/api/**': { proxy: 'http://localhost:8000/api/**' },
       '/**': {
