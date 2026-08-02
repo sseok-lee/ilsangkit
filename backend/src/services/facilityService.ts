@@ -3,7 +3,7 @@
 
 import { prisma } from '../lib/prisma.js';
 import { FacilitySearchInput } from '../schemas/facility.js';
-import { PAGINATION, SEARCH_DEFAULTS } from '../constants/index.js';
+import { PAGINATION, SEARCH_DEFAULTS, NEARBY_SUMMARY } from '../constants/index.js';
 
 // --- Re-exports from sub-modules ---
 export type { FacilityCategory } from './categoryRegistry.js';
@@ -74,6 +74,76 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// --- 주변 시설 개수 요약 ---
+
+export interface NearbyCountEntry {
+  /** 반경 내 시설 수. exact=false 면 하한값. */
+  count: number;
+  /** 바운딩박스 스캔 상한(NEARBY_SUMMARY.SCAN_CAP)에 걸리지 않았으면 true. */
+  exact: boolean;
+}
+
+/**
+ * 좌표 주변의 카테고리별 시설 "개수"만 센다. 목록은 만들지 않는다.
+ *
+ * search()의 좌표 분기와 다른 점 — 그리고 이 함수가 따로 있는 이유:
+ *   search()는 카테고리별로 listFields 전체를 최대 1000행씩 가져와 FacilityItem 으로
+ *   매핑하고, 합쳐서 거리 정렬 + dedupe 한 뒤 페이지를 잘라낸다. 개수만 필요한 호출자가
+ *   그 경로를 쓰면 (a) 비용을 다 치르고 (b) 페이지에 담긴 20건에서 카테고리를 세게 돼
+ *   실제 개수와 어긋난다. 실제로 부동산 상세 SSR 이 그 방식이라 반경 1km 병원 893곳을
+ *   "6곳"으로 렌더하고 있었다(2026-08).
+ *
+ * 여기서는 lat/lng 두 컬럼만 select 하고 haversine 으로 세기만 한다.
+ * 정렬·dedupe·객체 매핑이 없다.
+ *
+ * dedupe 를 하지 않는 이유: dedupeByLocation 은 같은 좌표의 중복 등록을 지도 핀에서
+ * 지우기 위한 것이다. 개수 요약은 "이 근처에 몇 곳"이라는 대략치이고, 중복 제거까지
+ * 하려면 좌표 전체를 메모리에 들고 비교해야 해 이 함수의 취지와 어긋난다.
+ */
+export async function countNearby(params: {
+  lat: number;
+  lng: number;
+  radius: number;
+  categories: FacilityCategory[];
+}): Promise<Record<string, NearbyCountEntry>> {
+  const { lat, lng, radius, categories } = params;
+
+  // search()와 동일한 바운딩박스 사전 필터
+  const radiusKm = radius / 1000;
+  const latDelta = radiusKm / 111;
+  const lngDelta = radiusKm / (111 * Math.cos(toRad(lat)));
+  const approxBounds = {
+    lat: { gte: lat - latDelta, lte: lat + latDelta },
+    lng: { gte: lng - lngDelta, lte: lng + lngDelta },
+  };
+
+  const entries = await Promise.all(
+    categories.map(async (cat): Promise<[string, NearbyCountEntry]> => {
+      // lat/lng 는 스키마상 Decimal? 이라 Prisma 가 Decimal 객체로 준다.
+      // toFacilityItem 과 동일하게 Number() 로 변환해야 산술이 맞는다.
+      // (바운딩박스 where 가 NULL 을 이미 걸러내지만, 방어적으로 유한값만 센다)
+      const rows: Array<{ lat: unknown; lng: unknown }> = await CATEGORY_REGISTRY[cat]
+        .model()
+        .findMany({
+          where: approxBounds,
+          select: { lat: true, lng: true },
+          take: NEARBY_SUMMARY.SCAN_CAP,
+        });
+
+      let count = 0;
+      for (const r of rows) {
+        const rLat = Number(r.lat);
+        const rLng = Number(r.lng);
+        if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) continue;
+        if (haversineDistance(lat, lng, rLat, rLng) * 1000 <= radius) count++;
+      }
+      return [cat, { count, exact: rows.length < NEARBY_SUMMARY.SCAN_CAP }];
+    }),
+  );
+
+  return Object.fromEntries(entries);
 }
 
 // 기본 select 필드 (공통 필드)
