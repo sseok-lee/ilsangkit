@@ -113,6 +113,60 @@ describe('refreshSummary (city-chunked)', () => {
     expect(innerMatch![1]).toMatch(/MAX\(lng\)\s+OVER[\s\S]+?AS\s+_maxLng/i);
   });
 
+  // monthlyRent: 전월세는 소스 컬럼을 담고, 매매는 NULL 이어야 한다.
+  //
+  // latestPrice 는 매매면 dealAmount, 전월세면 deposit(보증금)이라 월세가 담기지 않았다.
+  // 그래서 인근 단지 rent 경로가 summary 를 못 쓰고 320만 행 거래 테이블에 ROW_NUMBER()
+  // 윈도우를 돌렸고, 야간 sync 부하와 겹치면 30초 타임아웃이 났다(2026-08-03).
+  // 매매 테이블에는 monthlyRent 컬럼 자체가 없으므로 NULL 리터럴이어야 한다 —
+  // 컬럼명을 그대로 쓰면 Unknown column 으로 INSERT 가 통째로 실패한다.
+  it('전월세는 monthlyRent 소스 컬럼을 SELECT 한다', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('apt-rent');
+
+    const sql = String(mockExecuteRawUnsafe.mock.calls[2][0]);
+    expect(sql).toMatch(/\(\s*type,[\s\S]*?latestPrice,\s*monthlyRent,/i);
+    expect(sql).toMatch(/monthlyRent\s+AS\s+monthlyRent/i);
+    expect(sql).not.toMatch(/NULL\s+AS\s+monthlyRent/i);
+  });
+
+  it('매매는 monthlyRent 를 NULL 리터럴로 넣는다 (소스에 컬럼 없음)', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('apt-sale');
+
+    const sql = String(mockExecuteRawUnsafe.mock.calls[2][0]);
+    expect(sql).toMatch(/NULL\s+AS\s+monthlyRent/i);
+  });
+
+  it('INSERT 컬럼 목록과 SELECT 식 개수가 어긋나지 않는다', async () => {
+    // 컬럼 하나를 추가하면서 한쪽만 고치면 런타임에야 터진다.
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('villa-rent');
+
+    // SQL 주석(-- …)에도 콤마가 있어(예: "outer에 있으므로,") 먼저 걷어낸다.
+    const sql = String(mockExecuteRawUnsafe.mock.calls[2][0]).replace(/--[^\n]*/g, '');
+    const cols = sql.match(/RealEstateBuildingSummary\s*\(([\s\S]+?)\)\s*SELECT/i);
+    expect(cols).not.toBeNull();
+    const colCount = cols![1].split(',').length;
+
+    const outer = sql.match(/SELECT([\s\S]+?)FROM\s+\(/i);
+    expect(outer).not.toBeNull();
+    // 최상위 콤마만 센다 (윈도우 함수 괄호 안 콤마 제외)
+    let depth = 0, exprCount = 1;
+    for (const ch of outer![1]) {
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      else if (ch === ',' && depth === 0) exprCount++;
+    }
+    expect(exprCount).toBe(colCount);
+  });
+
   it('MAX_EXECUTION_TIME은 더 이상 쓰지 않음 (MySQL에서 DML에 미적용)', async () => {
     mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
     mockExecuteRawUnsafe.mockResolvedValue(10);
