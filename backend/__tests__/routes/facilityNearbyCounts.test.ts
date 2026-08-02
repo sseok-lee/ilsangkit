@@ -9,22 +9,33 @@ import request from 'supertest';
 import app from '../../src/app';
 import prisma from '../../src/lib/prisma';
 
-const CENTER = { lat: 37.5, lng: 127.0 };
+// 서해 한복판. 실제 시설 데이터가 없는 좌표를 일부러 쓴다.
+//
+// 처음엔 (37.5, 127.0) = 강남 근처로 잡았다가 CI 에서만 깨졌다. 로컬 개발 DB 에는 실제
+// 시설이 동기화돼 있어 주변 병원이 같이 세어져 통과했고, CI 는 prisma db push 만 한 빈 DB 라
+// 시드한 행만 잡혔다. 좌표를 빈 바다로 옮기면 양쪽에서 개수가 결정적이라 정확값으로 단언할 수 있다.
+const CENTER = { lat: 36.0, lng: 125.0 };
 const SRC = 'nbc-test-';
 
-/** 중심에서 정동쪽 약 70m 간격으로 흩뿌린다 — 모두 반경 300m 안. */
+// 이 위도에서 경도 0.0001° ≈ 8.9m (111km × cos36°).
+const LNG_DEG_PER_M = 1 / (111_000 * Math.cos((36 * Math.PI) / 180));
+
+/** 중심에서 정동쪽으로 약 9m 간격 — 24번째도 약 215m 라 반경 300m 안에 전부 들어온다. */
 function nearRow(i: number, prefix: string) {
   return {
     id: `${prefix}-${i}`,
     name: `${prefix} ${i}`,
-    address: '서울시 강남구 테스트로',
+    address: '테스트 주소',
     lat: CENTER.lat,
-    lng: CENTER.lng + i * 0.0008, // ≈70m
-    city: '서울',
-    district: '강남구',
+    lng: CENTER.lng + i * 0.0001,
+    city: '테스트시',
+    district: '테스트구',
     sourceId: `${SRC}${prefix}-${i}`,
   };
 }
+
+/** 중심에서 정동쪽 약 900m — 300m 밖, 2000m 안. */
+const FAR_LNG = CENTER.lng + 900 * LNG_DEG_PER_M;
 
 describe('GET /api/facilities/nearby-counts', () => {
   beforeAll(async () => {
@@ -34,9 +45,9 @@ describe('GET /api/facilities/nearby-counts', () => {
     await prisma.pharmacy.createMany({
       data: Array.from({ length: 3 }, (_, i) => ({ ...nearRow(i, 'pha'), hpid: `${SRC}hpid-${i}` })),
     });
-    // 반경 밖(약 900m 동쪽) 학교 1곳 — 300m 조회에서 빠져야 한다
+    // 학교 2곳: 중심 근처 1곳 + 약 900m 밖 1곳 → 반경 필터가 실제로 걸리는지 본다
     await prisma.school.createMany({
-      data: [{ ...nearRow(0, 'sch'), lng: CENTER.lng + 0.0102 }],
+      data: [nearRow(0, 'sch'), { ...nearRow(1, 'sch'), lng: FAR_LNG }],
     });
   });
 
@@ -47,18 +58,19 @@ describe('GET /api/facilities/nearby-counts', () => {
   });
 
   it('페이지 크기(20)를 넘는 개수도 실제 값으로 센다', async () => {
+    // 이 단언이 회귀 가드의 핵심 — 구 구현은 목록 20건에서 세어 25 를 20 이하로 잘랐다.
     const res = await request(app)
       .get('/api/facilities/nearby-counts')
       .query({ lat: CENTER.lat, lng: CENTER.lng, radius: 300, categories: 'hospital,pharmacy' });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.counts.hospital.count).toBeGreaterThanOrEqual(25);
-    expect(res.body.data.counts.hospital.exact).toBe(true);
-    expect(res.body.data.counts.pharmacy.count).toBeGreaterThanOrEqual(3);
+    expect(res.body.data.counts.hospital).toEqual({ count: 25, exact: true });
+    expect(res.body.data.counts.pharmacy).toEqual({ count: 3, exact: true });
   });
 
   it('반경 밖 시설은 세지 않는다', async () => {
+    // 학교는 근처 1곳 + 900m 밖 1곳을 심었다.
     const near = await request(app)
       .get('/api/facilities/nearby-counts')
       .query({ lat: CENTER.lat, lng: CENTER.lng, radius: 300, categories: 'school' });
@@ -66,7 +78,8 @@ describe('GET /api/facilities/nearby-counts', () => {
       .get('/api/facilities/nearby-counts')
       .query({ lat: CENTER.lat, lng: CENTER.lng, radius: 2000, categories: 'school' });
 
-    expect(far.body.data.counts.school.count).toBeGreaterThan(near.body.data.counts.school.count);
+    expect(near.body.data.counts.school.count).toBe(1);
+    expect(far.body.data.counts.school.count).toBe(2);
   });
 
   it('categories 를 생략하면 전 카테고리 키를 돌려준다', async () => {
