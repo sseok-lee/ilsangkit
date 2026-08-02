@@ -1081,6 +1081,13 @@ async function resolveBuildingContext(): Promise<{ bjdCode: string; building: Bu
   return { bjdCode: '', building: null }
 }
 
+// 주변 생활시설 요약에 쓰는 카테고리와 라벨.
+// 배열 순서 = 문구에 노출되는 우선순위(개수순이 아니다). 앞에서부터 개수 > 0 인 두 개만 쓴다.
+const FACILITY_SUMMARY_CATS = ['school', 'hospital', 'park', 'childcare', 'sports', 'pharmacy'] as const
+const FACILITY_SUMMARY_LABELS: Record<(typeof FACILITY_SUMMARY_CATS)[number], string> = {
+  school: '학교', hospital: '병원', park: '공원', childcare: '어린이집', sports: '체육시설', pharmacy: '약국',
+}
+
 // ── SSR initial data load ─────────────────────────────────────────────────────
 
 const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData(
@@ -1114,20 +1121,32 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
     let facilitySummarySSR: string | null = null
     if (resolvedBuildingInfo?.lat && resolvedBuildingInfo?.lng) {
       try {
-        const facilityRes = await $fetch(`${apiBase}/api/facilities/search`, {
-          method: 'POST',
-          body: { lat: resolvedBuildingInfo.lat, lng: resolvedBuildingInfo.lng, radius: 1000 },
+        // 개수 전용 엔드포인트를 쓴다. 예전에는 POST /api/facilities/search (radius 1000) 로
+        // 목록을 받아 그 안의 카테고리를 셌는데, 두 가지가 잘못돼 있었다:
+        //  1) 느림 — 15개 카테고리 전부를 최대 1000행씩 훑고 거리정렬·dedupe 까지 한 뒤
+        //     20건을 돌려준다. 강남 기준 0.22~0.37s 로 이 페이지 SSR 시간의 약 80% 였다.
+        //  2) 틀림 — 돌아온 "20건 페이지"에서 카테고리를 세다 보니 실제 개수와 어긋났다.
+        //     논현프라임아파트 1km 병원 실제 893곳이 "6곳" 으로 렌더되고 있었다.
+        // nearby-counts 는 lat/lng 두 컬럼만 훑어 개수만 센다.
+        const countsRes = await $fetch<{
+          data: { radius: number; counts: Record<string, { count: number; exact: boolean }> }
+        }>(`${apiBase}/api/facilities/nearby-counts`, {
+          query: {
+            lat: resolvedBuildingInfo.lat,
+            lng: resolvedBuildingInfo.lng,
+            // 도보권(약 4분). 1km 로 넓히면 도심에서 "병원 893곳" 같은 값이 나와
+            // 생활권 정보로 읽히지 않고, 스캔 비용도 반경 제곱으로 커진다.
+            radius: 300,
+            categories: FACILITY_SUMMARY_CATS.join(','),
+          },
         })
-        const facilityItems: any[] = (facilityRes as any)?.data?.items ?? (facilityRes as any)?.items ?? []
-        const DISPLAY_CATS = ['school', 'hospital', 'park', 'childcare', 'sports', 'pharmacy'] as const
-        const FACILITY_LABELS: Record<string, string> = {
-          school: '학교', hospital: '병원', park: '공원', childcare: '어린이집', sports: '체육시설', pharmacy: '약국',
-        }
-        const parts = DISPLAY_CATS
-          .map(cat => ({ cat, count: facilityItems.filter((i: any) => i.category === cat).length }))
-          .filter(({ count }) => count > 0)
+        const counts = countsRes?.data?.counts ?? {}
+        const parts = FACILITY_SUMMARY_CATS
+          .map(cat => ({ cat, entry: counts[cat] }))
+          .filter(({ entry }) => (entry?.count ?? 0) > 0)
           .slice(0, 2)
-          .map(({ cat, count }) => `${FACILITY_LABELS[cat]} ${count}곳`)
+          .map(({ cat, entry }) =>
+            `${FACILITY_SUMMARY_LABELS[cat]} ${entry!.count}곳${entry!.exact ? '' : ' 이상'}`)
         if (parts.length > 0) facilitySummarySSR = parts.join('·')
       } catch {
         // best-effort — facility summary is optional SEO enhancement

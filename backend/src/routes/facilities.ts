@@ -9,8 +9,12 @@ import {
   RegionFacilitiesParamsSchema,
   RegionAllFacilitiesParamsSchema,
   RegionFacilitiesQuerySchema,
+  NearbyCountsSchema,
+  NearbyCountCategorySchema,
+  type NearbyCountsInput,
 } from '../schemas/facility.js';
 import * as facilityService from '../services/facilityService.js';
+import type { FacilityCategory } from '../services/categoryRegistry.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
 import { searchRateLimiter } from '../middlewares/rateLimit.js';
@@ -30,6 +34,33 @@ router.post(
     }
     const result = await facilityService.search(req.body);
     res.json({ success: true, data: result });
+  })
+);
+
+// 주변 시설 개수 요약 API
+// GET /api/facilities/nearby-counts?lat=&lng=&radius=&categories=school,hospital
+//
+// 목록이 아니라 카테고리별 개수만 돌려준다. 개수만 필요한 호출자(부동산 상세 SSR 의
+// "주변 병원 N곳" 요약 등)가 POST /search 를 쓰면 목록 생성 비용을 다 치르고도
+// 페이지에 담긴 20건에서 세게 돼 실제 개수와 어긋난다.
+//
+// :category/:id 계열보다 위에 둔다 — 단일 세그먼트라 현재는 충돌하지 않지만,
+// 나중에 '/:category' 라우트가 생겨도 여기서 먼저 잡히도록.
+router.get(
+  '/nearby-counts',
+  validate(NearbyCountsSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    // validate(…, 'query') 는 검증 결과로 req.query 를 교체한다(res.locals 가 아니다 —
+    // res.locals.validated 는 validateMultiple 쪽 규약).
+    const { lat, lng, radius, categories } = req.query as unknown as NearbyCountsInput;
+    const counts = await facilityService.countNearby({
+      lat,
+      lng,
+      radius,
+      categories: (categories ?? NearbyCountCategorySchema.options) as FacilityCategory[],
+    });
+    res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800');
+    res.json({ success: true, data: { radius, counts } });
   })
 );
 
