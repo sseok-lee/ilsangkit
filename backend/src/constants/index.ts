@@ -2,5 +2,5 @@
 // 모든 상수를 중앙에서 관리
 
 export { PAGINATION } from './pagination.js';
-export { KOREA_BOUNDS, SEARCH_DEFAULTS } from './geo.js';
+export { KOREA_BOUNDS, SEARCH_DEFAULTS, NEARBY_SUMMARY } from './geo.js';
 export { SYNC, API_TIMEOUT, NEIS } from './sync.js';
