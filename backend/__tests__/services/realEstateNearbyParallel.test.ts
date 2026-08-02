@@ -54,15 +54,32 @@ describe('getNearbyByBjd 병렬 조회', () => {
     await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [] });
   });
 
-  it('rent: 3종을 아무것도 resolve 되기 전에 모두 착수한다', async () => {
+  it('rent(all→summary): 3종을 아무것도 resolve 되기 전에 모두 착수한다', async () => {
+    // rentType 기본값 'all' 은 2026-08-03 부터 summary 경로다(findMany).
     const gates = [deferred<unknown[]>(), deferred<unknown[]>(), deferred<unknown[]>()];
     let started = 0;
-    mockQueryRaw.mockImplementation(() => gates[started++].promise);
+    mockFindMany.mockImplementation(() => gates[started++].promise);
 
     const pending = getNearbyByBjd('11680', 'rent', { limitPerType: 4 });
     await flush();
 
     expect(started).toBe(3);
+    expect(mockQueryRaw).not.toHaveBeenCalled();
+
+    gates.forEach((g) => g.resolve([]));
+    await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [] });
+  });
+
+  it('rent(전세/월세→raw): 3종을 아무것도 resolve 되기 전에 모두 착수한다', async () => {
+    const gates = [deferred<unknown[]>(), deferred<unknown[]>(), deferred<unknown[]>()];
+    let started = 0;
+    mockQueryRaw.mockImplementation(() => gates[started++].promise);
+
+    const pending = getNearbyByBjd('11680', 'rent', { limitPerType: 4, rentType: 'jeonse' });
+    await flush();
+
+    expect(started).toBe(3);
+    expect(mockFindMany).not.toHaveBeenCalled();
 
     gates.forEach((g) => g.resolve([]));
     await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [] });

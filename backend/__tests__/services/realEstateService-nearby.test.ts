@@ -23,7 +23,10 @@ beforeEach(() => {
   mockFindMany.mockReset();
 });
 
-describe('getNearbyComplexes (rent path)', () => {
+// rentType 필터가 걸린 경로(전세/월세)는 여전히 transaction 테이블 raw SQL 을 쓴다.
+// rentType='all'(SSR 기본값)은 2026-08-03 부터 summary 경로로 분리됐다 —
+// 그쪽 커버리지는 realEstateNearbyRentSummary.test.ts.
+describe('getNearbyComplexes (rent raw path — 전세/월세 필터)', () => {
   it('returns latestDealYear/Month from the actual latest row (not max of each column)', async () => {
     // Rent path runs raw SQL 3 times (apt/villa/offitel)
     mockQueryRaw.mockResolvedValue([
@@ -42,7 +45,7 @@ describe('getNearbyComplexes (rent path)', () => {
       },
     ]);
 
-    const result = await getNearbyByBjd('1168010100', 'rent', { rentType: 'all' });
+    const result = await getNearbyByBjd('1168010100', 'rent', { rentType: 'jeonse' });
 
     expect(result.apt).toHaveLength(1);
     expect(result.apt[0].latestDealYear).toBe(2026);
@@ -55,7 +58,7 @@ describe('getNearbyComplexes (rent path)', () => {
   it('calls $queryRaw 3 times (apt, villa, offitel)', async () => {
     mockQueryRaw.mockResolvedValue([]);
 
-    await getNearbyByBjd('1168010100', 'rent', { rentType: 'all' });
+    await getNearbyByBjd('1168010100', 'rent', { rentType: 'jeonse' });
 
     expect(mockQueryRaw).toHaveBeenCalledTimes(3);
   });
@@ -63,7 +66,7 @@ describe('getNearbyComplexes (rent path)', () => {
   it('returns empty arrays for all 3 keys when no rows found', async () => {
     mockQueryRaw.mockResolvedValue([]);
 
-    const result = await getNearbyByBjd('1168010100', 'rent', { rentType: 'all' });
+    const result = await getNearbyByBjd('1168010100', 'rent', { rentType: 'jeonse' });
 
     expect(result.apt).toEqual([]);
     expect(result.villa).toEqual([]);
@@ -116,7 +119,7 @@ describe('getNearbyComplexes (rent path)', () => {
       },
     ]);
 
-    const result = await getNearbyByBjd('1165010600', 'rent', { rentType: 'all' });
+    const result = await getNearbyByBjd('1165010600', 'rent', { rentType: 'jeonse' });
 
     const item = result.apt[0];
     expect(typeof item.buildYear).toBe('number');

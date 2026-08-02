@@ -37,6 +37,8 @@ export async function refreshSummary(type: string): Promise<number> {
 
   const priceField = SALE_TYPES.has(type) ? 'dealAmount' : 'deposit';
   const buildYearCol = NO_BUILD_YEAR_TYPES.has(type) ? 'NULL' : 'buildYear';
+  // 매매 테이블에는 monthlyRent 컬럼 자체가 없다. 전월세만 실제 컬럼을 읽는다.
+  const monthlyRentCol = SALE_TYPES.has(type) ? 'NULL' : 'monthlyRent';
 
   // 해당 타입 소스 테이블에 존재하는 city 나열
   const rows = await prisma.$queryRawUnsafe<Array<{ city: string | null }>>(
@@ -62,12 +64,14 @@ export async function refreshSummary(type: string): Promise<number> {
           const n = await tx.$executeRawUnsafe(
             `INSERT INTO RealEstateBuildingSummary
               (type, buildingName, bjdCode, city, district, dongName,
-               latestPrice, latestDealYear, latestDealMonth, latestDealDay, buildYear, lat, lng,
+               latestPrice, monthlyRent,
+               latestDealYear, latestDealMonth, latestDealDay, buildYear, lat, lng,
                transactionCount, updatedAt)
             SELECT
               ? AS type,
               buildingName, bjdCode, city, district, dongName,
               ${priceField} AS latestPrice,
+              ${monthlyRentCol} AS monthlyRent,
               dealYear AS latestDealYear, dealMonth AS latestDealMonth, dealDay AS latestDealDay,
               ${buildYearCol} AS buildYear,
               _maxLat AS lat,
