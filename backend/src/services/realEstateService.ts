@@ -1001,9 +1001,56 @@ export async function getNearbyByBjd(
     return result;
   }
 
-  // Rent path (모든 rentType): transaction 테이블 raw SQL로 deposit + monthlyRent 함께 조회.
+  // Rent + rentType='all': summary 테이블 경로. sale 과 동일하게 인덱스를 타므로 밀리초대다.
+  //
+  // summary 는 (type, buildingName, bjdCode) 단위로 최신 거래 1건을 들고 있어 전세/월세를
+  // 한 행으로 합친다. 따라서 rentType 필터가 걸린 경우에는 쓸 수 없고 아래 raw 경로로 간다.
+  // 다만 SSR 은 selectedRentType 기본값이 'all' 이라 **항상 이 경로**를 탄다 — 크롤러가
+  // 때리는 경로이자 야간 sync 부하에 30초 타임아웃이 나던 바로 그 경로다.
+  // (2026-08-03 03:45~04:15 KST 실측: 평균 8.08s, 타임아웃 21건, 5xx 27건 중 22건이 rent)
+  if (rentType === 'all') {
+    const entries = await Promise.all(
+      NEARBY_PROPERTY_KEYS.map(async (key) => {
+        const type = `${key}-rent`;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const where: Record<string, any> = { type, bjdCode };
+        if (dongName) where.dongName = dongName;
+        if (excludeBuildingName) where.buildingName = { not: excludeBuildingName };
+        const rows = await prisma.realEstateBuildingSummary.findMany({
+          where,
+          orderBy: [
+            { latestDealYear: 'desc' },
+            { latestDealMonth: 'desc' },
+            { transactionCount: 'desc' },
+          ],
+          take: limitPerType,
+        });
+        return [key, rows.map((r) => ({
+          buildingName: r.buildingName,
+          bjdCode: r.bjdCode,
+          city: r.city,
+          district: r.district,
+          dongName: r.dongName,
+          buildYear: r.buildYear ?? null,
+          transactionCount: r.transactionCount,
+          // 전월세 타입에서 latestPrice 는 deposit(보증금)이다.
+          latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+          monthlyRent: r.monthlyRent != null ? Number(r.monthlyRent) : null,
+          latestDealYear: r.latestDealYear ?? null,
+          latestDealMonth: r.latestDealMonth ?? null,
+          lat: r.lat != null ? Number(r.lat) : null,
+          lng: r.lng != null ? Number(r.lng) : null,
+        }))] as const;
+      }),
+    );
+    for (const [key, items] of entries) result[key] = items;
+    return result;
+  }
+
+  // Rent + 전세/월세 필터: summary 가 rentType 을 구분하지 않으므로 transaction 테이블 raw SQL.
   // ROW_NUMBER() 윈도우 함수로 단지별 실제 최신 행을 추출하여 정확한 거래일/가격 반환.
-  // sale 과 마찬가지로 3종은 독립이라 병렬로 던진다(실측 0.083+0.037+0.027=0.147s → max).
+  // 이 경로는 사용자가 UI 에서 전세/월세를 고른 뒤에만 타므로 SSR·크롤러 노출이 없다.
+  // sale 과 마찬가지로 3종은 독립이라 병렬로 던진다.
   const rentEntries = await Promise.all(NEARBY_PROPERTY_KEYS.map(async (key) => {
     const tableName = RENT_TRANSACTION_TABLE[key];
     const dongFilter = dongName

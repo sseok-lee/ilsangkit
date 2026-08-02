@@ -1415,6 +1415,13 @@ model RealEstateBuildingSummary {
   lat              Decimal? @db.Decimal(10, 7)
   lng              Decimal? @db.Decimal(10, 7)
   transactionCount Int      @default(0)
+  /// 전월세 타입의 최신 거래 월세액. 매매 타입은 항상 NULL.
+  ///
+  /// latestPrice 는 매매면 dealAmount, 전월세면 deposit(보증금)이라 월세가 담기지 않았다.
+  /// 그래서 인근 단지 rent 경로가 summary 를 못 쓰고 320만 행 거래 테이블에
+  /// ROW_NUMBER() 윈도우를 돌렸고, 야간 sync 부하와 겹치면 30초 타임아웃이 났다
+  /// (2026-08-03 03:45~04:15 KST: 평균 8.08s, 타임아웃 21건, 5xx 27건 중 22건이 rent).
+  monthlyRent      Int?
   updatedAt        DateTime @updatedAt
 
   @@unique([type, buildingName, bjdCode])
