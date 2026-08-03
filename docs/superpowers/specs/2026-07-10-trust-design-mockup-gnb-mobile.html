@@ -1,0 +1,132 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>일상킷 모바일 메뉴 — C안 적용 비교</title>
+<style>
+  :root {
+    --paper:#F7F8FA; --surface:#FFF;
+    --ink:#15213B; --strong:#0C1424; --muted:#56627A; --faint:#677087;
+    --border:#E6E9F0; --border-2:#D7DCE7;
+    --brand:#2450DC; --brand-tint:#EBF0FE; --brand-tint-2:#DCE6FD;
+  }
+  * { box-sizing:border-box; }
+  html { background:#E9ECF2; }
+  body { font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    color:var(--ink); margin:0; padding:32px 16px 80px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1020px; margin:0 auto; }
+  .chapter { margin:0 0 16px; }
+  .chapter h2 { font-size:19px; font-weight:800; letter-spacing:-.02em; color:var(--strong); margin:0 0 4px; }
+  .chapter p { font-size:13px; color:var(--muted); margin:0; max-width:78ch; }
+  .duo { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+
+  .col { flex:none; width:340px; }
+  .col .tag { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; margin-bottom:10px; }
+  .tag.cur { color:var(--faint); background:#EEF1F6; border:1px solid var(--border-2); }
+  .tag.c { color:#fff; background:var(--brand); }
+
+  .phone { background:var(--paper); border:1px solid var(--border-2); border-radius:26px; overflow:hidden;
+    box-shadow:0 6px 24px rgba(15,23,42,.10); }
+  .pbar { height:28px; background:var(--surface); display:flex; align-items:center; justify-content:center;
+    font-size:10px; color:var(--faint); border-bottom:1px solid var(--border); gap:4px; }
+  .mhd { background:var(--surface); display:flex; align-items:center; gap:7px; padding:10px 14px; border-bottom:1px solid var(--border); }
+  .pin { width:20px; height:20px; border-radius:50% 50% 50% 3px; background:var(--brand); position:relative; transform:rotate(-8deg); flex:none; }
+  .pin::after { content:''; position:absolute; inset:6px; background:#fff; border-radius:50%; }
+  .wm { font-size:16px; font-weight:800; letter-spacing:-.02em; color:var(--strong); }
+  .x { margin-left:auto; color:var(--muted); font-size:15px; }
+
+  .menu { padding:12px 14px 16px; display:flex; flex-direction:column; }
+  .gh { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted); padding:8px 4px 4px; }
+  .gh .gi { font-size:13px; color:var(--brand); }
+  .sh2 { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); padding:7px 4px 3px 12px; }
+  .lnk { display:flex; align-items:center; gap:10px; padding:10px 8px 10px 12px; border-radius:9px;
+    font-size:14px; font-weight:500; color:var(--strong); min-height:42px; }
+  .lnk.hover { background:var(--brand-tint); color:var(--brand); font-weight:600; }
+  .ci { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:9.5px; color:#fff; font-weight:800; flex:none; }
+  .mi { width:20px; text-align:center; font-size:14px; color:var(--faint); flex:none; }
+  .div { height:1px; background:var(--border-2); margin:8px 0; }
+  .fade { text-align:center; font-size:10.5px; color:var(--faint); padding:6px 0 0; }
+
+  .notes { flex:1; min-width:260px; }
+  .notes .n { display:flex; gap:9px; padding:10px 0; border-bottom:1px solid var(--border-2); font-size:12.5px; color:var(--muted); }
+  .notes .n:last-child { border-bottom:0; }
+  .notes .n b { color:var(--strong); }
+  .notes .dot { flex:none; width:7px; height:7px; border-radius:50%; background:var(--brand); margin-top:5px; }
+</style>
+
+<div class="wrap">
+  <div class="chapter">
+    <h2>모바일 햄버거 메뉴 — C안(전부 텍스트-온리) 적용 비교</h2>
+    <p>링크 구성·순서·행 높이(터치 타깃)는 그대로, 아이콘만 빠집니다. 그룹 eyebrow와 들여쓰기 리듬이 스캔을 대신합니다.</p>
+  </div>
+
+  <div class="duo">
+    <!-- 현재 -->
+    <div class="col">
+      <span class="tag cur">현재</span>
+      <div class="phone">
+        <div class="pbar">🔒 ilsangkit.co.kr</div>
+        <div class="mhd"><div class="pin"></div><span class="wm">일상킷</span><span class="x">✕</span></div>
+        <div class="menu">
+          <div class="gh"><span class="gi">🏢</span>부동산</div>
+          <div class="lnk"><span class="mi">⌂</span>아파트 실거래가</div>
+          <div class="lnk"><span class="mi">▤</span>오피스텔 실거래가</div>
+          <div class="lnk"><span class="mi">▦</span>빌라 실거래가</div>
+          <div class="gh"><span class="gi">📅</span>청약 · 임대</div>
+          <div class="lnk"><span class="mi">✓</span>청약 공고</div>
+          <div class="lnk"><span class="mi">◈</span>공매</div>
+          <div class="gh"><span class="gi">▦</span>생활시설</div>
+          <div class="sh2">교육 · 육아</div>
+          <div class="lnk"><span class="ci" style="background:#6366F1">학</span>학교</div>
+          <div class="lnk hover"><span class="ci" style="background:#EC6AA5">유</span>어린이집</div>
+          <div class="lnk"><span class="ci" style="background:#D9820B">도</span>도서관</div>
+          <div class="sh2">생활 편의</div>
+          <div class="lnk"><span class="ci" style="background:#0EA5E9">주</span>주차장</div>
+          <div class="lnk"><span class="ci" style="background:#7C4DEC">化</span>화장실</div>
+          <div class="div"></div>
+          <div class="lnk">홈</div>
+          <div class="fade">⋯ (가이드 · 소개)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C안 -->
+    <div class="col">
+      <span class="tag c">C안 적용</span>
+      <div class="phone">
+        <div class="pbar">🔒 ilsangkit.co.kr</div>
+        <div class="mhd"><div class="pin"></div><span class="wm">일상킷</span><span class="x">✕</span></div>
+        <div class="menu">
+          <div class="gh">부동산</div>
+          <div class="lnk">아파트 실거래가</div>
+          <div class="lnk">오피스텔 실거래가</div>
+          <div class="lnk">빌라 실거래가</div>
+          <div class="gh">청약 · 임대</div>
+          <div class="lnk">청약 공고</div>
+          <div class="lnk">공매</div>
+          <div class="gh">생활시설</div>
+          <div class="sh2">교육 · 육아</div>
+          <div class="lnk">학교</div>
+          <div class="lnk hover">어린이집</div>
+          <div class="lnk">도서관</div>
+          <div class="sh2">생활 편의</div>
+          <div class="lnk">주차장</div>
+          <div class="lnk">화장실</div>
+          <div class="div"></div>
+          <div class="lnk">홈</div>
+          <div class="fade">⋯ (가이드 · 소개)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 주석 -->
+    <div class="notes">
+      <div class="n"><span class="dot"></span><span><b>행 높이 유지</b> — 아이콘이 빠져도 행 높이(≥42px 터치 타깃)와 들여쓰기는 그대로. 텍스트가 왼쪽으로 당겨지지 않아 탭 위치 기억이 유지됩니다.</span></div>
+      <div class="n"><span class="dot"></span><span><b>그룹 eyebrow가 스캔 담당</b> — 아이콘 제거 후 위계는 "그룹(대문자 eyebrow) → 서브그룹 → 항목" 3단 타이포로. 그룹 사이 여백을 한 단계 키워 리듬 보강.</span></div>
+      <div class="n"><span class="dot"></span><span><b>hover/active 상태 유지</b> — 선택 피드백(브랜드 틴트 배경)은 그대로. 예시의 "어린이집" 행 참조.</span></div>
+      <div class="n"><span class="dot"></span><span><b>링크 구성 불변</b> — 목업의 링크 목록은 축약본이며, 실제 구현은 현재 메뉴의 링크·순서를 그대로 유지하고 아이콘 요소만 제거합니다.</span></div>
+      <div class="n"><span class="dot"></span><span><b>한 화면 정보량 증가</b> — 아이콘 제거로 시선 이동이 줄어 같은 높이에서 더 많은 항목이 편하게 읽히는 부수 효과(밀도↑).</span></div>
+    </div>
+  </div>
+</div>

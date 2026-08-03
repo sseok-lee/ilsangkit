@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데이터 출처 표준화 — 적용 화면</title>
+<style>
+  :root{
+    --primary:#2563eb; --primary-dark:#1d4ed8; --primary-50:#eff6ff;
+    --slate-50:#f8fafc; --slate-100:#f1f5f9; --slate-200:#e2e8f0;
+    --slate-400:#94a3b8; --slate-500:#64748b; --slate-700:#334155; --slate-800:#1e293b;
+    --bg:#f9fafb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--slate-800);
+    font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5;padding:40px 20px 80px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:24px;font-weight:700;margin:0 0 4px}
+  .sub{color:var(--slate-500);font-size:14px;margin:0 0 36px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:28px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .panel{}
+  .panel-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;
+    margin:0 0 12px;letter-spacing:.01em}
+  .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .tag-before{background:#fef2f2;color:#b91c1c}
+  .tag-after{background:var(--primary-50);color:var(--primary-dark)}
+  .note{font-size:12px;color:var(--slate-500);margin:10px 2px 0;display:flex;gap:6px;align-items:flex-start}
+  .note svg{flex-shrink:0;margin-top:1px}
+  .section-label{grid-column:1/-1;font-size:13px;font-weight:700;color:var(--slate-700);
+    margin:30px 0 -8px;padding-top:18px;border-top:1px dashed var(--slate-200)}
+  .section-label:first-of-type{border-top:none;padding-top:0;margin-top:0}
+
+  /* ── DataSource card (실제 컴포넌트 스타일 복제) ── */
+  .ds-card{background:#fff;border:1px solid var(--slate-200);border-radius:12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden}
+  .ds-head{padding:16px 20px;border-bottom:1px solid var(--slate-100);
+    display:flex;align-items:center;gap:8px}
+  .ds-head svg{color:var(--slate-500)}
+  .ds-head h2{margin:0;font-size:16px;font-weight:600;color:var(--slate-800)}
+  .ds-body{padding:20px;display:flex;flex-direction:column;gap:12px}
+  .ds-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .ds-row .k{font-size:14px;color:var(--slate-500);flex-shrink:0}
+  .ds-row .v{font-size:14px;font-weight:500;color:var(--slate-800);text-align:right}
+  .ds-row .v.link{color:var(--primary);text-decoration:none;word-break:keep-all}
+  .ds-row .v.link:hover{text-decoration:underline}
+  .ds-foot{margin-top:4px;display:flex;align-items:flex-start;gap:6px;
+    font-size:12px;color:var(--slate-500)}
+  .ds-foot svg{flex-shrink:0;margin-top:2px}
+  .new-pill{display:inline-block;background:#dcfce7;color:#15803d;font-size:10px;
+    font-weight:700;padding:1px 6px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .del{color:#b91c1c}
+  .strike{text-decoration:line-through;opacity:.5}
+
+  /* ── before: 사라진 출처(빈 상태) ── */
+  .ds-empty{border:1px dashed #fca5a5;background:#fff5f5;border-radius:12px;
+    padding:22px 20px;color:#b91c1c;font-size:13px;display:flex;gap:8px;align-items:center}
+
+  /* ── compact 노트 ── */
+  .ds-compact{background:#fff;border:1px solid var(--slate-200);border-radius:12px;
+    padding:14px 18px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--slate-500)}
+  .ds-compact svg{color:var(--slate-500);flex-shrink:0}
+  .ds-compact .lbl{color:var(--slate-700);font-weight:600}
+  .ds-compact a{color:var(--primary);text-decoration:none;font-weight:500;margin-left:auto;white-space:nowrap}
+  .ds-compact a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>데이터 출처 표준화 — 적용 화면</h1>
+  <p class="sub">DataSourceSection 컴포넌트 · 실제 마크업/색상(primary #2563eb) 기준 목업</p>
+
+  <div class="grid">
+
+    <!-- ════ 1. 부동산 단지 상세: v-if 버그 해소 ════ -->
+    <div class="section-label">1. 부동산 단지 상세 — 동기화일이 없을 때</div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="tag tag-before">BEFORE</span> <span class="del">v-if="lastSyncDate" → 출처 전체가 사라짐</span></div>
+      <div class="ds-empty">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        출처 표기 없음 (제공기관·데이터셋·공공누리 모두 비노출)
+      </div>
+      <div class="note">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        신뢰 요소인 출처가 데이터 유무에 종속돼 숨겨짐
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="tag tag-after">AFTER</span> 항상 노출 (동기화일만 조건부)</div>
+      <div class="ds-card">
+        <div class="ds-head">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          <h2>데이터 출처</h2>
+        </div>
+        <div class="ds-body">
+          <div class="ds-row"><span class="k">제공기관</span><span class="v">국토교통부</span></div>
+          <div class="ds-row"><span class="k">데이터셋</span><a class="v link" href="#">국토교통부 실거래가 공개시스템</a></div>
+          <div class="ds-foot">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span>국토교통부 실거래가 공개시스템 기준 정보입니다</span>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+        동기화일이 없어도 제공기관·데이터셋은 노출
+      </div>
+    </div>
+
+    <!-- ════ 2. 시설 상세: 라벨 통일 + 최근 동기화 + dataDate 제거 ════ -->
+    <div class="section-label">2. 시설 상세 (예: 약국) — 라벨 통일 · 기준일 제거 · 동기화일 유지</div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="tag tag-before">BEFORE</span> "데이터 정보" · 기준일+동기화 2행</div>
+      <div class="ds-card">
+        <div class="ds-head">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          <h2 class="strike">데이터 정보</h2>
+        </div>
+        <div class="ds-body">
+          <div class="ds-row strike"><span class="k">데이터 기준일</span><span class="v">2026-04-30</span></div>
+          <div class="ds-row"><span class="k">최근 동기화</span><span class="v">2026-05-28</span></div>
+          <div class="ds-row"><span class="k">제공기관</span><span class="v">건강보험심사평가원</span></div>
+          <div class="ds-row"><span class="k">데이터셋</span><a class="v link" href="#">건강보험심사평가원 약국 정보</a></div>
+        </div>
+      </div>
+      <div class="note del">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        "데이터 기준일"은 일부 페이지에만 있어 일관성 깨짐 → 제거
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="tag tag-after">AFTER</span> "데이터 출처" · 동기화 1행</div>
+      <div class="ds-card">
+        <div class="ds-head">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          <h2>데이터 출처</h2>
+        </div>
+        <div class="ds-body">
+          <div class="ds-row"><span class="k">최근 동기화</span><span class="v">2026-05-28</span></div>
+          <div class="ds-row"><span class="k">제공기관</span><span class="v">건강보험심사평가원</span></div>
+          <div class="ds-row"><span class="k">데이터셋</span><a class="v link" href="#">건강보험심사평가원 약국 정보</a></div>
+          <div class="ds-foot">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span>건강보험심사평가원 약국 정보 기준 정보입니다</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 3. 목록 페이지: 동기화일 없이 출처만 ════ -->
+    <div class="section-label">3. 목록 페이지 (예: /pharmacy) — 제공기관·데이터셋만</div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="tag tag-after">AFTER</span> domain="facility" :category="pharmacy"</div>
+      <div class="ds-card">
+        <div class="ds-head">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          <h2>데이터 출처</h2>
+        </div>
+        <div class="ds-body">
+          <div class="ds-row"><span class="k">제공기관</span><span class="v">건강보험심사평가원</span></div>
+          <div class="ds-row"><span class="k">데이터셋</span><a class="v link" href="#">건강보험심사평가원 약국 정보</a></div>
+          <div class="ds-foot">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span>건강보험심사평가원 약국 정보 기준 정보입니다</span>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+        목록·상세 동일 카드 구조 — 동기화 행만 차이
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="tag tag-after">AFTER</span> KOGL 유형 채워졌을 때 (후속 TODO)</div>
+      <div class="ds-card">
+        <div class="ds-head">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          <h2>데이터 출처</h2>
+        </div>
+        <div class="ds-body">
+          <div class="ds-row"><span class="k">제공기관</span><span class="v">행정안전부</span></div>
+          <div class="ds-row"><span class="k">데이터셋</span><a class="v link" href="#">전국 공중화장실 표준데이터</a></div>
+          <div class="ds-foot">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span>전국 공중화장실 표준데이터 기준 정보입니다 · 공공누리 제1유형</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 4. 다중 카테고리 허브: compact ════ -->
+    <div class="section-label">4. 지역 허브 (예: /seoul, /seoul/gangnam-gu) — compact 노트 신규</div>
+
+    <div class="panel" style="grid-column:1/-1">
+      <div class="panel-h"><span class="tag tag-after">AFTER</span> :compact <span class="new-pill">신규</span></div>
+      <div class="ds-compact">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span><span class="lbl">데이터 출처:</span> 공공데이터포털 (행정안전부·보건복지부 등)</span>
+        <a href="/about">자세히 보기 →</a>
+      </div>
+      <div class="note">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+        여러 카테고리를 모은 허브는 단일 데이터셋이 없으므로 한 줄 안내 + /about 위임 (현재 출처 0건 해소)
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

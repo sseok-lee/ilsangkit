@@ -1,0 +1,198 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>일상킷 GNB 아이콘 정리 비교</title>
+<style>
+  :root {
+    --paper:#F7F8FA; --surface:#FFF; --surface-2:#FBFCFE;
+    --ink:#15213B; --strong:#0C1424; --muted:#56627A; --faint:#677087;
+    --border:#E6E9F0; --border-2:#D7DCE7;
+    --brand:#2450DC; --brand-tint:#EBF0FE; --brand-tint-2:#DCE6FD;
+    --sh-1:0 1px 2px rgba(15,23,42,.04),0 2px 8px rgba(15,23,42,.05);
+    --sh-2:0 6px 24px rgba(15,23,42,.10),0 2px 6px rgba(15,23,42,.06);
+  }
+  * { box-sizing:border-box; }
+  html { background:#E9ECF2; }
+  body { font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    color:var(--ink); margin:0; padding:32px 16px 80px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1020px; margin:0 auto; }
+
+  .chapter { margin:48px 0 14px; }
+  .chapter:first-child { margin-top:0; }
+  .badge { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; }
+  .badge.a { color:var(--faint); background:#EEF1F6; border:1px solid var(--border-2); }
+  .badge.b { color:#fff; background:var(--brand); }
+  .badge.c { color:var(--brand); background:var(--brand-tint); border:1px solid var(--brand-tint-2); }
+  .chapter h2 { font-size:18px; font-weight:800; letter-spacing:-.02em; color:var(--strong); margin:9px 0 4px; }
+  .chapter p { font-size:13px; color:var(--muted); margin:0; max-width:78ch; }
+  .frame { background:var(--paper); border:1px solid var(--border-2); border-radius:16px; padding:18px; overflow-x:auto; }
+
+  /* ── 헤더 공통 ── */
+  .hd { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    display:flex; align-items:center; gap:16px; padding:12px 18px; box-shadow:var(--sh-1); min-width:880px; }
+  .logo { display:flex; align-items:center; gap:8px; flex:none; }
+  .pin { width:24px; height:24px; border-radius:50% 50% 50% 4px; background:var(--brand); position:relative; transform:rotate(-8deg); }
+  .pin::after { content:''; position:absolute; inset:7px; background:#fff; border-radius:50%; }
+  .wm { font-size:18px; font-weight:800; letter-spacing:-.02em; color:var(--strong); }
+  .mlabel { font-size:10.5px; font-weight:600; color:var(--faint); border-left:1px solid var(--border-2); padding-left:10px; }
+  nav { display:flex; align-items:center; gap:4px; font-size:14px; font-weight:600; color:var(--ink); white-space:nowrap; }
+  nav .it { display:flex; align-items:center; gap:5px; padding:7px 10px; border-radius:8px; }
+  nav .it.on { color:var(--brand); background:var(--brand-tint); }
+  nav .ic { font-size:15px; line-height:1; opacity:.75; }
+  nav .caret { font-size:10px; color:var(--faint); margin-left:1px; }
+  .searchbox { margin-left:auto; display:flex; align-items:center; gap:7px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:9px; padding:7px 12px; font-size:12.5px; color:var(--faint); min-width:180px; }
+  .util { display:flex; gap:4px; font-size:13.5px; font-weight:600; color:var(--muted); }
+  .util .it { display:flex; align-items:center; gap:5px; padding:7px 9px; }
+
+  /* ── 메가메뉴 패널 ── */
+  .panelwrap { position:relative; min-width:880px; }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--sh-2);
+    margin:8px 0 0 148px; padding:18px 22px; display:flex; gap:34px; width:max-content; }
+  .panel .col h5 { font-size:11px; font-weight:800; letter-spacing:.1em; color:var(--faint); margin:0 0 10px; text-transform:uppercase; }
+  .panel .col ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .panel .col li { display:flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600; color:var(--ink);
+    padding:6px 10px 6px 6px; border-radius:8px; }
+  .panel .col li:hover { background:var(--surface-2); }
+  .ci { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:11px; color:#fff; flex:none; font-weight:800; }
+  .panel.noicon .col li { padding-left:10px; }
+  .panel .all { align-self:flex-end; font-size:12.5px; font-weight:700; color:var(--brand); white-space:nowrap; }
+
+  .cap { font-size:12px; color:var(--faint); margin:9px 2px 0; }
+  .pros { display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; }
+  .pros .p { flex:1; min-width:240px; font-size:12.5px; color:var(--muted); background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:10px 13px; }
+  .pros .p b { color:var(--strong); }
+  .pros .p.good { border-color:#BFE8D4; background:#F4FBF7; }
+  .pros .p.bad { border-color:#F2D5C8; background:#FDF7F4; }
+</style>
+
+<div class="wrap">
+
+  <!-- ═══ A. 현재 ═══ -->
+  <div class="chapter">
+    <span class="badge a">A · 현재</span>
+    <h2>탑레벨 아이콘 + 패널 아이콘 (현행)</h2>
+    <p>모든 탑레벨 항목 앞에 18px 장식 아이콘. 비교를 위해 로고·라벨은 세 안 모두 스펙 반영 상태(코발트)로 통일했습니다 — 다른 점은 네비 처리뿐.</p>
+  </div>
+  <div class="frame">
+    <div class="hd">
+      <div class="logo"><div class="pin"></div><span class="wm">일상킷</span></div>
+      <span class="mlabel">공공데이터 기반 생활정보</span>
+      <nav>
+        <span class="it on"><span class="ic">🏢</span>부동산<span class="caret">▾</span></span>
+        <span class="it"><span class="ic">📅</span>청약·임대<span class="caret">▾</span></span>
+        <span class="it"><span class="ic">⚖️</span>공매<span class="caret">▾</span></span>
+        <span class="it"><span class="ic">▦</span>생활시설<span class="caret">▾</span></span>
+      </nav>
+      <div class="searchbox">🔍 지역·단지명·시설 검색</div>
+      <div class="util">
+        <span class="it"><span class="ic">📖</span>가이드</span>
+        <span class="it"><span class="ic">ⓘ</span>소개</span>
+      </div>
+    </div>
+    <p class="cap">아이콘 6개가 각기 다른 형태 언어(빌딩·달력·저울·그리드·책·원)로 나열 — 정보 없이 밀도만 차지</p>
+  </div>
+
+  <!-- ═══ B. 추천 ═══ -->
+  <div class="chapter">
+    <span class="badge b">B · 추천</span>
+    <h2>탑레벨 텍스트-온리 + 패널 아이콘 유지</h2>
+    <p>크롬은 조용하게, 콘텐츠 층위(15개 카테고리 패널)는 카테고리 색 아이콘으로 스캔 보조 유지. ayo·아실·KB·네이버·토스가 쓰는 구조입니다. 캐럿(▾)은 기능이므로 유지.</p>
+  </div>
+  <div class="frame">
+    <div class="panelwrap">
+      <div class="hd">
+        <div class="logo"><div class="pin"></div><span class="wm">일상킷</span></div>
+        <span class="mlabel">공공데이터 기반 생활정보</span>
+        <nav>
+          <span class="it on">부동산<span class="caret">▾</span></span>
+          <span class="it">청약·임대<span class="caret">▾</span></span>
+          <span class="it">공매<span class="caret">▾</span></span>
+          <span class="it">생활시설<span class="caret">▾</span></span>
+        </nav>
+        <div class="searchbox">🔍 지역·단지명·시설 검색</div>
+        <div class="util"><span class="it">가이드</span><span class="it">소개</span></div>
+      </div>
+      <div class="panel">
+        <div class="col">
+          <h5>교육 · 육아</h5>
+          <ul>
+            <li><span class="ci" style="background:#6366F1">학</span>학교</li>
+            <li><span class="ci" style="background:#EC6AA5">유</span>어린이집</li>
+            <li><span class="ci" style="background:#D9820B">도</span>공공도서관</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h5>생활 편의</h5>
+          <ul>
+            <li><span class="ci" style="background:#0EA5E9">주</span>공영주차장</li>
+            <li><span class="ci" style="background:#06B6D4">充</span>전기차 충전소</li>
+            <li><span class="ci" style="background:#7C4DEC">化</span>공공화장실</li>
+            <li><span class="ci" style="background:#E8920C">와</span>무료 와이파이</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h5>생활 환경</h5>
+          <ul>
+            <li><span class="ci" style="background:#22A95B">공</span>공원</li>
+            <li><span class="ci" style="background:#F2730C">시</span>전통시장</li>
+            <li><span class="ci" style="background:#3B82F6">병</span>병원</li>
+            <li><span class="ci" style="background:#14B8A6">약</span>약국</li>
+          </ul>
+        </div>
+        <span class="all">생활시설 전체 보기 →</span>
+      </div>
+    </div>
+    <p class="cap">패널 안 아이콘 = 카테고리 색 시스템과 연결된 식별 장치(장식 아님). 모바일 세로 메뉴도 동일하게 유지.</p>
+  </div>
+
+  <!-- ═══ C. 전부 제거 ═══ -->
+  <div class="chapter">
+    <span class="badge c">C · 대안</span>
+    <h2>탑레벨 + 패널 전부 텍스트-온리</h2>
+    <p>더 급진적인 미니멀리즘. 패널이 텍스트 벽이 되고, 15개 항목 스캔이 느려지며 카테고리 색 시스템의 접점 하나를 잃습니다.</p>
+  </div>
+  <div class="frame">
+    <div class="panelwrap">
+      <div class="hd">
+        <div class="logo"><div class="pin"></div><span class="wm">일상킷</span></div>
+        <span class="mlabel">공공데이터 기반 생활정보</span>
+        <nav>
+          <span class="it on">부동산<span class="caret">▾</span></span>
+          <span class="it">청약·임대<span class="caret">▾</span></span>
+          <span class="it">공매<span class="caret">▾</span></span>
+          <span class="it">생활시설<span class="caret">▾</span></span>
+        </nav>
+        <div class="searchbox">🔍 지역·단지명·시설 검색</div>
+        <div class="util"><span class="it">가이드</span><span class="it">소개</span></div>
+      </div>
+      <div class="panel noicon">
+        <div class="col">
+          <h5>교육 · 육아</h5>
+          <ul><li>학교</li><li>어린이집</li><li>공공도서관</li></ul>
+        </div>
+        <div class="col">
+          <h5>생활 편의</h5>
+          <ul><li>공영주차장</li><li>전기차 충전소</li><li>공공화장실</li><li>무료 와이파이</li></ul>
+        </div>
+        <div class="col">
+          <h5>생활 환경</h5>
+          <ul><li>공원</li><li>전통시장</li><li>병원</li><li>약국</li></ul>
+        </div>
+        <span class="all">생활시설 전체 보기 →</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 비교 요약 ═══ -->
+  <div class="chapter">
+    <h2>비교 요약</h2>
+  </div>
+  <div class="pros">
+    <div class="p bad"><b>A 현재</b> — 형태 언어가 제각각인 아이콘 6개가 크롬을 어수선하게. 레퍼런스 서비스 중 탑레벨 아이콘을 쓰는 곳 없음.</div>
+    <div class="p good"><b>B 추천</b> — 크롬은 조용, 콘텐츠 층위는 풍부. 카테고리 색 시스템 유지. 변경 범위 최소(트리거 아이콘만 제거).</div>
+    <div class="p"><b>C 대안</b> — 가장 미니멀하지만 15개 항목 패널이 텍스트 벽이 되어 스캔성 하락. 카테고리 색 접점 상실.</div>
+  </div>
+</div>

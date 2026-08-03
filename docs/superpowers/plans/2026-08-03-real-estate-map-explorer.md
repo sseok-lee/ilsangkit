@@ -1862,12 +1862,13 @@ onBeforeUnmount(() => {
     >
       <span class="block w-10 h-1 rounded-full bg-slate-300" />
     </button>
+    <!--
+      목록만 담는다. 하단 콘텐츠(유형 카드·설명·출처·AdBanner)를 여기 복제하면
+      페이지 본문 렌더와 겹쳐 모바일 DOM 에 h2 2개·AdBanner 2개가 생긴다.
+      모바일 사용자는 시트를 접거나(핸들) 페이지를 스크롤해 하단 콘텐츠에 도달한다.
+    -->
     <div class="h-[calc(100%-2.75rem)] overflow-y-auto">
       <slot />
-      <!-- 확장 시 하단 SSR 콘텐츠까지 이어져 모바일에서도 도달 가능하게 한다 -->
-      <div v-if="expanded">
-        <slot name="footer" />
-      </div>
     </div>
   </div>
 </template>
@@ -1930,9 +1931,6 @@ const expanded = ref(false)
         @hover="hoveredKey = $event"
         @select="onSelect"
       />
-      <template #footer>
-        <slot name="belowFold" />
-      </template>
     </MapBottomSheet>
   </section>
 </template>
@@ -2081,12 +2079,10 @@ Expected: FAIL — `RealEstateMapExplorer` 미포함, `setFAQSchema` 존재
       :initial-type="INITIAL_TYPE"
       :initial-items="regions ?? []"
       initial-granularity="city"
-    >
-      <template #belowFold>
-        <BelowFoldContent :hub-summaries="hubSummaries ?? undefined" />
-      </template>
-    </RealEstateMapExplorer>
+    />
 
+    <!-- 하단 콘텐츠는 여기 한 번만 렌더한다. 바텀시트에 복제하면 모바일 DOM 에
+         h2 2개·AdBanner 2개가 생긴다. 모바일은 시트를 접거나 스크롤해 도달한다. -->
     <div class="mx-auto max-w-[1200px] px-4 md:px-6 py-8 md:py-10 flex flex-col gap-3">
       <BelowFoldContent :hub-summaries="hubSummaries ?? undefined" />
     </div>

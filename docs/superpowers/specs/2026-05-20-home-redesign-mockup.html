@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>일상킷 메인 페이지 리디자인 목업 — 2026-05-20</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: { DEFAULT: '#2563eb', dark: '#1d4ed8', 50: '#eff6ff', 100: '#dbeafe', 600: '#2563eb' },
+          'background-light': '#f9fafb',
+          'surface-light': '#ffffff',
+          line: '#d8e0ea',
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.04)',
+        },
+        borderRadius: { DEFAULT: '0.5rem', lg: '0.5rem', xl: '0.5rem', '2xl': '0.5rem' },
+      },
+    },
+  }
+</script>
+<style>
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .ad-slot {
+    background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 8px, #e2e8f0 8px, #e2e8f0 16px);
+    border: 1px dashed #94a3b8;
+  }
+  .annotation {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body class="bg-background-light text-slate-900">
+
+<!-- Top banner explaining the mockup -->
+<div class="bg-slate-900 text-white text-xs px-4 py-2 text-center">
+  메인 리디자인 목업 · 2026-05-20 · <span class="annotation" style="background:#fde68a;">노란 라벨</span>은 신규/변경 표시
+</div>
+
+<div class="max-w-[1200px] mx-auto">
+
+<!-- ========================= 1. HERO ========================= -->
+<section class="relative overflow-hidden px-4 sm:px-6 pb-8 pt-6 md:pt-14 md:pb-12">
+  <div class="absolute inset-0 opacity-[0.08] bg-gradient-to-br from-primary/30 to-transparent"></div>
+
+  <div class="relative z-10 flex flex-col gap-5 md:max-w-[680px] md:mx-auto">
+    <!-- 데이터 기준 배지 + 신규 라이브 뱃지 -->
+    <div class="flex items-center gap-2 text-xs flex-wrap">
+      <span class="w-2 h-2 rounded-full bg-primary shrink-0"></span>
+      <span class="text-primary font-semibold">공공데이터 기반</span>
+      <span class="hidden md:inline text-slate-300">·</span>
+      <span class="hidden md:inline text-slate-500">공공데이터포털 · 국토교통부</span>
+      <!-- 신규: 오늘 등록 라이브 뱃지 -->
+      <span class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold">
+        <span class="relative flex w-2 h-2">
+          <span class="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-75 animate-ping"></span>
+          <span class="relative inline-flex w-2 h-2 rounded-full bg-red-500"></span>
+        </span>
+        오늘 신규 등록 1,284건
+        <span class="annotation ml-1">신규</span>
+      </span>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="tracking-tight font-bold leading-[1.15]">
+        <div class="text-slate-900 text-[38px] md:text-[62px] md:font-black">우리 동네 정보,</div>
+        <div class="text-[38px] md:text-[62px] md:font-black">
+          <span class="text-primary">일상킷에서</span><span class="text-slate-900"> 한번에.</span>
+        </div>
+      </div>
+      <p class="text-slate-500 text-lg mt-1">생활시설 · 부동산 실거래가 · 청약 정보를 한 곳에서.</p>
+    </div>
+
+    <!-- 검색바 -->
+    <div class="w-full md:max-w-[580px]">
+      <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-slate-200 md:border-2 shadow-sm">
+        <div class="flex items-center pl-4 pr-2 text-slate-400">
+          <span class="material-symbols-outlined">search</span>
+        </div>
+        <input class="flex-1 min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 px-2 text-base font-medium focus:outline-none" placeholder="단지명, 지역, 시설 검색" />
+        <div class="flex items-center pr-2">
+          <button class="h-11 px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl shadow-md">검색</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 통계 박스 (유지) -->
+    <div class="bg-white border border-line rounded-2xl shadow-card md:max-w-[580px]">
+      <div class="flex items-stretch divide-x divide-slate-100">
+        <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+          <strong class="text-slate-900 font-bold text-xl">3.2만</strong>
+          <span class="text-[11px] text-slate-400">실거래 부동산</span>
+        </div>
+        <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+          <strong class="text-primary font-bold text-xl">42건</strong>
+          <span class="text-[11px] text-slate-400">진행중 청약</span>
+        </div>
+        <div class="flex flex-1 flex-col items-center gap-0.5 py-4 px-3">
+          <strong class="text-slate-900 font-bold text-xl">18만</strong>
+          <span class="text-[11px] text-slate-400">등록 시설</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 2. 오늘의 부동산 시장 [신규] ========================= -->
+<section class="px-4 sm:px-6 lg:px-8 py-6">
+  <div class="flex items-end justify-between gap-4 mb-4">
+    <div>
+      <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-[24px]">trending_up</span>
+        오늘의 부동산 시장
+        <span class="annotation">신규</span>
+      </h2>
+      <p class="text-sm text-slate-500 mt-1">최근 7일 거래일 기준 평균과 전주 대비 변동입니다.</p>
+    </div>
+    <a class="inline-flex items-center text-sm text-primary font-bold hover:underline">전체 보기 →</a>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+
+    <!-- 카드 1: 아파트 매매 -->
+    <a class="group flex flex-col gap-3 p-5 border border-line rounded-2xl shadow-card hover:shadow-md hover:border-primary/40 transition-all bg-white">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[22px]">apartment</span>
+          <span class="font-bold text-slate-900">아파트 매매</span>
+        </div>
+        <span class="text-[11px] text-slate-400">최근 7일</span>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <strong class="text-2xl font-black tracking-tight text-slate-900">5.4억</strong>
+        <span class="text-xs text-slate-400">평균</span>
+      </div>
+      <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+        <div>
+          <div class="text-[11px] text-slate-400">거래량</div>
+          <div class="text-sm font-bold text-slate-900">2,481건</div>
+        </div>
+        <div class="text-right">
+          <div class="text-[11px] text-slate-400">전주 대비</div>
+          <div class="text-sm font-bold text-red-500 flex items-center justify-end gap-0.5">
+            <span class="material-symbols-outlined text-[14px]">arrow_drop_up</span>
+            2.3%
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <!-- 카드 2: 아파트 전세 -->
+    <a class="group flex flex-col gap-3 p-5 border border-line rounded-2xl shadow-card hover:shadow-md hover:border-primary/40 transition-all bg-white">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[22px]">domain</span>
+          <span class="font-bold text-slate-900">아파트 전세</span>
+        </div>
+        <span class="text-[11px] text-slate-400">최근 7일</span>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <strong class="text-2xl font-black tracking-tight text-slate-900">3.1억</strong>
+        <span class="text-xs text-slate-400">평균</span>
+      </div>
+      <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+        <div>
+          <div class="text-[11px] text-slate-400">거래량</div>
+          <div class="text-sm font-bold text-slate-900">1,742건</div>
+        </div>
+        <div class="text-right">
+          <div class="text-[11px] text-slate-400">전주 대비</div>
+          <div class="text-sm font-bold text-blue-500 flex items-center justify-end gap-0.5">
+            <span class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+            0.8%
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <!-- 카드 3: 오피스텔 매매 -->
+    <a class="group flex flex-col gap-3 p-5 border border-line rounded-2xl shadow-card hover:shadow-md hover:border-primary/40 transition-all bg-white">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[22px]">corporate_fare</span>
+          <span class="font-bold text-slate-900">오피스텔 매매</span>
+        </div>
+        <span class="text-[11px] text-slate-400">최근 7일</span>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <strong class="text-2xl font-black tracking-tight text-slate-900">2.2억</strong>
+        <span class="text-xs text-slate-400">평균</span>
+      </div>
+      <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+        <div>
+          <div class="text-[11px] text-slate-400">거래량</div>
+          <div class="text-sm font-bold text-slate-900">318건</div>
+        </div>
+        <div class="text-right">
+          <div class="text-[11px] text-slate-400">전주 대비</div>
+          <div class="text-sm font-bold text-slate-400">—</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- ========================= 3. 이번 주 인기 단지 TOP [신규 · 3컬럼] ========================= -->
+<section class="px-4 sm:px-6 lg:px-8 py-4">
+  <div class="flex items-end justify-between gap-4 mb-4">
+    <div>
+      <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-[24px]">local_fire_department</span>
+        이번 주 인기 단지
+        <span class="annotation">신규</span>
+      </h2>
+      <p class="text-sm text-slate-500 mt-1">최근 7일 매매·전세·월세 거래가 가장 많은 단지입니다.</p>
+    </div>
+    <a class="inline-flex items-center text-sm text-primary font-bold hover:underline">전체 보기 →</a>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+
+    <!-- 컬럼 1: 매매 -->
+    <div class="bg-white border border-line rounded-2xl shadow-card overflow-hidden flex flex-col">
+      <div class="px-4 md:px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex w-1.5 h-4 bg-primary rounded-full"></span>
+          <strong class="text-sm font-bold text-slate-900">매매 TOP</strong>
+        </div>
+        <span class="text-[11px] text-slate-400">최근 7일</span>
+      </div>
+      <ol class="divide-y divide-slate-100 flex-1">
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-primary/5 transition-colors">
+          <span class="w-5 text-center font-black text-sm text-primary">1</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">헬리오시티</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 송파구 가락동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">17건</div>
+            <div class="text-[10px] text-slate-400">18.4억</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-primary/5">
+          <span class="w-5 text-center font-black text-sm text-primary">2</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">은마아파트</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 강남구 대치동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">14건</div>
+            <div class="text-[10px] text-slate-400">26.7억</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-primary/5">
+          <span class="w-5 text-center font-black text-sm text-slate-400">3</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">래미안 원베일리</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 서초구 반포동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">12건</div>
+            <div class="text-[10px] text-slate-400">41.2억</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-primary/5">
+          <span class="w-5 text-center font-black text-sm text-slate-400">4</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">잠실엘스</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 송파구 잠실동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">11건</div>
+            <div class="text-[10px] text-slate-400">24.1억</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-primary/5">
+          <span class="w-5 text-center font-black text-sm text-slate-400">5</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">광교 자연앤힐스테이트</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">경기 수원시 영통구</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">9건</div>
+            <div class="text-[10px] text-slate-400">11.8억</div>
+          </div>
+        </a></li>
+      </ol>
+    </div>
+
+    <!-- 컬럼 2: 전세 -->
+    <div class="bg-white border border-line rounded-2xl shadow-card overflow-hidden flex flex-col">
+      <div class="px-4 md:px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+          <strong class="text-sm font-bold text-slate-900">전세 TOP</strong>
+        </div>
+        <span class="text-[11px] text-slate-400">최근 7일</span>
+      </div>
+      <ol class="divide-y divide-slate-100 flex-1">
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-emerald-50/50">
+          <span class="w-5 text-center font-black text-sm text-emerald-600">1</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">파크리오</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 송파구 신천동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">22건</div>
+            <div class="text-[10px] text-slate-400">8.4억</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-emerald-50/50">
+          <span class="w-5 text-center font-black text-sm text-emerald-600">2</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">잠실엘스</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 송파구 잠실동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">18건</div>
+            <div class="text-[10px] text-slate-400">10.2억</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-emerald-50/50">
+          <span class="w-5 text-center font-black text-sm text-slate-400">3</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">위례 자이</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">경기 하남시 학암동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">15건</div>
+            <div class="text-[10px] text-slate-400">6.7억</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-emerald-50/50">
+          <span class="w-5 text-center font-black text-sm text-slate-400">4</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">마포래미안푸르지오</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 마포구 아현동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">13건</div>
+            <div class="text-[10px] text-slate-400">9.1억</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-emerald-50/50">
+          <span class="w-5 text-center font-black text-sm text-slate-400">5</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">반포자이</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 서초구 반포동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">11건</div>
+            <div class="text-[10px] text-slate-400">14.5억</div>
+          </div>
+        </a></li>
+      </ol>
+    </div>
+
+    <!-- 컬럼 3: 월세 -->
+    <div class="bg-white border border-line rounded-2xl shadow-card overflow-hidden flex flex-col">
+      <div class="px-4 md:px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex w-1.5 h-4 bg-amber-500 rounded-full"></span>
+          <strong class="text-sm font-bold text-slate-900">월세 TOP</strong>
+        </div>
+        <span class="text-[11px] text-slate-400">최근 7일</span>
+      </div>
+      <ol class="divide-y divide-slate-100 flex-1">
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-amber-50/50">
+          <span class="w-5 text-center font-black text-sm text-amber-600">1</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">아크로리버파크</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 서초구 반포동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">9건</div>
+            <div class="text-[10px] text-slate-400">2억/120</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-amber-50/50">
+          <span class="w-5 text-center font-black text-sm text-amber-600">2</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">반포자이</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 서초구 반포동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">7건</div>
+            <div class="text-[10px] text-slate-400">3억/180</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-amber-50/50">
+          <span class="w-5 text-center font-black text-sm text-slate-400">3</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">트리마제</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 성동구 성수동1가</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">6건</div>
+            <div class="text-[10px] text-slate-400">5억/220</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-amber-50/50">
+          <span class="w-5 text-center font-black text-sm text-slate-400">4</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">디에이치 자이 개포</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 강남구 개포동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">5건</div>
+            <div class="text-[10px] text-slate-400">4억/200</div>
+          </div>
+        </a></li>
+        <li><a class="flex items-center gap-3 px-4 md:px-5 py-3 hover:bg-amber-50/50">
+          <span class="w-5 text-center font-black text-sm text-slate-400">5</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-slate-900 text-sm truncate">래미안 첼리투스</div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">서울 용산구 한남동</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-bold text-slate-900">4건</div>
+            <div class="text-[10px] text-slate-400">5억/300</div>
+          </div>
+        </a></li>
+      </ol>
+    </div>
+  </div>
+  <p class="text-[11px] text-slate-400 mt-2">월세는 보증금/월세(만원) 평균으로 표기합니다.</p>
+</section>
+
+<!-- ========================= AdBanner ========================= -->
+<div class="px-4 sm:px-6 lg:px-8 py-6">
+  <div class="ad-slot rounded-xl h-[100px] flex items-center justify-center text-slate-500 text-sm font-bold">
+    AdBanner 광고 영역
+  </div>
+</div>
+
+<!-- ========================= 4. 청약 한눈에 [강화] ========================= -->
+<section class="px-4 sm:px-6 lg:px-8 py-6">
+  <div class="flex items-end justify-between gap-4 mb-4">
+    <div>
+      <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-[24px]">calendar_month</span>
+        청약 한눈에
+        <span class="annotation">강화</span>
+      </h2>
+      <p class="text-sm text-slate-500 mt-1">지금 신청 가능한 공고와 다가오는 일정을 확인하세요.</p>
+    </div>
+    <a class="inline-flex items-center text-sm text-primary font-bold hover:underline">전체 보기 →</a>
+  </div>
+
+  <!-- 요약 1줄 -->
+  <div class="bg-white border border-line rounded-2xl shadow-card px-5 py-4 mb-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-green-500"></span>
+      <span class="text-xs text-slate-500">이번 주 마감</span>
+      <strong class="text-sm font-bold text-slate-900">8건</strong>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+      <span class="text-xs text-slate-500">다음 주 예정</span>
+      <strong class="text-sm font-bold text-slate-900">12건</strong>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-slate-500">평균 분양가</span>
+      <strong class="text-sm font-bold text-slate-900">6.8억</strong>
+    </div>
+  </div>
+
+  <!-- D-3 임박 하이라이트 -->
+  <div class="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 mb-3 flex items-center gap-3">
+    <span class="material-symbols-outlined text-red-500">notifications_active</span>
+    <div class="flex-1 min-w-0">
+      <div class="text-xs font-bold text-red-700 mb-0.5">마감 임박 (D-3 이내)</div>
+      <div class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        <a class="font-bold text-slate-900 hover:underline">래미안 강동 팰리스 <span class="text-red-600 ml-1">D-1</span></a>
+        <span class="text-slate-300">·</span>
+        <a class="font-bold text-slate-900 hover:underline">힐스테이트 광교 <span class="text-red-600 ml-1">D-2</span></a>
+        <span class="text-slate-300">·</span>
+        <a class="font-bold text-slate-900 hover:underline">이편한세상 청라 <span class="text-red-600 ml-1">D-3</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 카드 그리드 (기존) -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <a class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-green-300">
+      <span class="self-start inline-flex px-2 py-0.5 rounded-md bg-green-100 text-green-700 text-[11px] font-bold">접수중</span>
+      <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">래미안 강동 팰리스 1차</strong>
+      <p class="text-[11px] text-slate-400 mt-auto">서울 강동구 · 마감 D-1 · 540호</p>
+    </a>
+    <a class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-green-300">
+      <span class="self-start inline-flex px-2 py-0.5 rounded-md bg-green-100 text-green-700 text-[11px] font-bold">접수중</span>
+      <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">힐스테이트 광교 더 스카이</strong>
+      <p class="text-[11px] text-slate-400 mt-auto">경기 수원시 · 마감 D-2 · 818호</p>
+    </a>
+    <a class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-blue-300">
+      <span class="self-start inline-flex px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[11px] font-bold">접수예정</span>
+      <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">디에이치 방배 포레스트</strong>
+      <p class="text-[11px] text-slate-400 mt-auto">서울 서초구 · 시작 D-5 · 1,221호</p>
+    </a>
+    <a class="flex flex-col gap-1.5 p-3.5 bg-white border border-line rounded-xl shadow-card hover:shadow-md hover:border-blue-300">
+      <span class="self-start inline-flex px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[11px] font-bold">접수예정</span>
+      <strong class="text-[14px] leading-snug text-slate-900 line-clamp-2">위례 자이 더 시그니처</strong>
+      <p class="text-[11px] text-slate-400 mt-auto">경기 하남시 · 시작 D-7 · 612호</p>
+    </a>
+  </div>
+  <!-- 누락분 인지 메타 라인 -->
+  <p class="text-[11px] text-slate-400 mt-3 text-right">
+    접수중 12건 중 4건 · 예정 18건 중 4건 표시
+    <a class="ml-1 text-primary font-bold hover:underline">전체 보기 →</a>
+  </p>
+</section>
+
+<!-- ========================= AdBanner ========================= -->
+<div class="px-4 sm:px-6 lg:px-8 py-6">
+  <div class="ad-slot rounded-xl h-[100px] flex items-center justify-center text-slate-500 text-sm font-bold">
+    AdBanner 광고 영역
+  </div>
+</div>
+
+<!-- ========================= 5. 빠른 생활시설 찾기 (기존) ========================= -->
+<section class="px-4 sm:px-6 lg:px-8 py-6">
+  <div class="mb-4">
+    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-[24px]">location_on</span>
+      빠른 생활시설 찾기
+    </h2>
+    <p class="text-sm text-slate-500 mt-1">자주 찾는 시설을 바로 확인하세요.</p>
+  </div>
+  <div class="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-2.5">
+    <a v-for="i in 8" class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary">
+      <span class="material-symbols-outlined text-primary text-[28px] mb-1">local_hospital</span>
+      <span class="text-[13px] font-bold text-slate-700">병원</span>
+    </a>
+    <a class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary">
+      <span class="material-symbols-outlined text-primary text-[28px] mb-1">local_pharmacy</span>
+      <span class="text-[13px] font-bold text-slate-700">약국</span>
+    </a>
+    <a class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary">
+      <span class="material-symbols-outlined text-primary text-[28px] mb-1">local_parking</span>
+      <span class="text-[13px] font-bold text-slate-700">주차</span>
+    </a>
+    <a class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary">
+      <span class="material-symbols-outlined text-primary text-[28px] mb-1">ev_station</span>
+      <span class="text-[13px] font-bold text-slate-700">충전</span>
+    </a>
+    <a class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary">
+      <span class="material-symbols-outlined text-primary text-[28px] mb-1">subway</span>
+      <span class="text-[13px] font-bold text-slate-700">지하철</span>
+    </a>
+    <a class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary">
+      <span class="material-symbols-outlined text-primary text-[28px] mb-1">school</span>
+      <span class="text-[13px] font-bold text-slate-700">학교</span>
+    </a>
+    <a class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary">
+      <span class="material-symbols-outlined text-primary text-[28px] mb-1">child_care</span>
+      <span class="text-[13px] font-bold text-slate-700">어린이집</span>
+    </a>
+    <a class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary">
+      <span class="material-symbols-outlined text-primary text-[28px] mb-1">wc</span>
+      <span class="text-[13px] font-bold text-slate-700">화장실</span>
+    </a>
+  </div>
+</section>
+
+<!-- ========================= 6. 인기 지역 (기존) ========================= -->
+<section class="px-4 sm:px-6 lg:px-8 py-4">
+  <div class="mb-4">
+    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-[24px]">place</span>
+      인기 지역
+    </h2>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a class="inline-flex items-center px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700">서울</a>
+    <a class="inline-flex items-center px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700">경기</a>
+    <a class="inline-flex items-center px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700">인천</a>
+    <a class="inline-flex items-center px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700">부산</a>
+    <a class="inline-flex items-center px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700">대구</a>
+    <a class="inline-flex items-center px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700">광주</a>
+    <a class="inline-flex items-center px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700">대전</a>
+    <a class="inline-flex items-center px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-slate-700">울산</a>
+  </div>
+</section>
+
+<!-- ========================= 7. 생활 가이드 (기존) ========================= -->
+<section class="px-4 sm:px-6 lg:px-8 py-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-[24px]">menu_book</span>
+      생활 가이드
+    </h2>
+    <a class="text-sm text-primary font-bold hover:underline">더보기 →</a>
+  </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+    <a class="bg-white border border-line rounded-xl overflow-hidden shadow-card">
+      <div class="aspect-video bg-slate-100"></div>
+      <div class="p-3">
+        <h3 class="text-sm font-bold text-slate-900 line-clamp-2">2026 청약 가점 계산 완전 가이드</h3>
+        <p class="text-xs text-slate-500 mt-1">청약 가점제 항목별 점수 계산법을…</p>
+      </div>
+    </a>
+    <a class="bg-white border border-line rounded-xl overflow-hidden shadow-card">
+      <div class="aspect-video bg-slate-100"></div>
+      <div class="p-3">
+        <h3 class="text-sm font-bold text-slate-900 line-clamp-2">실거래가 신고기한과 해석법</h3>
+        <p class="text-xs text-slate-500 mt-1">국토부 실거래가 신고 시점과…</p>
+      </div>
+    </a>
+    <a class="bg-white border border-line rounded-xl overflow-hidden shadow-card">
+      <div class="aspect-video bg-slate-100"></div>
+      <div class="p-3">
+        <h3 class="text-sm font-bold text-slate-900 line-clamp-2">전세 사기 예방 체크리스트</h3>
+        <p class="text-xs text-slate-500 mt-1">계약 전후 확인할 핵심 8가지…</p>
+      </div>
+    </a>
+    <a class="bg-white border border-line rounded-xl overflow-hidden shadow-card">
+      <div class="aspect-video bg-slate-100"></div>
+      <div class="p-3">
+        <h3 class="text-sm font-bold text-slate-900 line-clamp-2">우리 동네 EV 충전소 찾는 법</h3>
+        <p class="text-xs text-slate-500 mt-1">충전소 위치·요금·운영시간…</p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- ========================= AdBanner ========================= -->
+<div class="px-4 sm:px-6 lg:px-8 py-6">
+  <div class="ad-slot rounded-xl h-[100px] flex items-center justify-center text-slate-500 text-sm font-bold">
+    AdBanner 광고 영역
+  </div>
+</div>
+
+<!-- ========================= 8. 데이터 출처 (기존) ========================= -->
+<section class="px-4 sm:px-6 lg:px-8 py-6">
+  <div class="bg-white border border-line rounded-2xl p-5 shadow-card flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
+    <div class="flex items-start gap-3 flex-1">
+      <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">verified</span>
+      <div>
+        <p class="text-sm font-bold text-slate-900">공공데이터 기반 서비스</p>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+          행정안전부 · 국토교통부 · 보건복지부 · 한국부동산원 등 공공데이터포털 및 각 부처 공개 API/CSV를 출처로 사용합니다.
+        </p>
+      </div>
+    </div>
+    <a class="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-bold">전체 출처 보기 →</a>
+  </div>
+</section>
+
+</div>
+
+<!-- ========================= 변경 요약 ========================= -->
+<div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="bg-slate-900 text-slate-100 rounded-2xl p-6 text-xs leading-relaxed">
+    <h3 class="text-sm font-bold mb-3 text-white">변경 요약</h3>
+    <ul class="space-y-1.5">
+      <li>· <strong class="text-yellow-300">신규</strong> Hero 라이브 뱃지 (오늘 sync 신규 등록 N건)</li>
+      <li>· <strong class="text-yellow-300">신규</strong> 오늘의 부동산 시장 (통계 3카드 — 평균 · 거래량 · 전주 대비 변동률)</li>
+      <li>· <strong class="text-yellow-300">신규</strong> 이번 주 인기 단지 (매매·전세·월세 3컬럼, 각 TOP 5 → 단지 상세 링크)</li>
+      <li>· <strong class="text-yellow-300">강화</strong> 청약 한눈에 (요약 1줄 + D-3 임박 하이라이트 + 기존 카드)</li>
+      <li>· <strong class="text-red-300">제거</strong> 기존 "오늘 확인할 정보" 3카드 (새 상단으로 대체)</li>
+      <li>· <strong class="text-red-300">제거</strong> 기존 "부동산 실거래가" 3카드 (통계 카드로 흡수)</li>
+      <li>· 광고: 3개 유지, 위치 재정렬 (인기 단지 뒤 / 청약 뒤 / 가이드 뒤)</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>
