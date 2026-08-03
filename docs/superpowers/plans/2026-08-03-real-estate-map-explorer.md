@@ -1523,7 +1523,7 @@ Expected: FAIL — `Failed to resolve import "~/components/realEstate/map/MapSid
       v-for="opt in OPTIONS"
       :key="opt.value"
       type="button"
-      class="px-3 py-1.5 min-h-[36px] rounded-lg text-sm font-medium transition-colors"
+      class="px-3 py-1.5 min-h-[44px] flex items-center justify-center rounded-lg text-sm font-medium transition-colors"
       :class="opt.value === props.type
         ? 'bg-primary text-white'
         : 'bg-background-light text-slate-700 hover:bg-slate-200'"
@@ -2098,7 +2098,7 @@ Expected: FAIL — `RealEstateMapExplorer` 미포함, `setFAQSchema` 존재
 </template>
 
 <script setup lang="ts">
-import { h, defineComponent } from 'vue'
+import { h, defineComponent, resolveComponent } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
@@ -2124,9 +2124,30 @@ const BelowFoldContent = defineComponent({
   props: { hubSummaries: { type: Object, default: undefined } },
   setup(p) {
     return () => [
+      // 유형 카드는 7개여야 한다(스펙 6.1). RealEstateCategoryCards 는 주택 6종만 렌더하므로
+      // 토지 카드를 별도로 붙인다 — 구 페이지와 동일. /real-estate/land 는 별개 크롤 경로다.
       h(SectionBlock, { subtext: '조회할 주택 유형을 선택하세요.' }, {
         heading: () => h('h2', { class: 'text-display-3 text-slate-900' }, '부동산 유형별 실거래가'),
-        default: () => h(RealEstateCategoryCards, { summaries: p.hubSummaries }),
+        default: () => [
+          h(RealEstateCategoryCards, { summaries: p.hubSummaries }),
+          h('div', { class: 'grid grid-cols-2 gap-3 md:gap-4 mt-3' }, [
+            // resolveComponent 로 받는다 — '#components' 직접 import 는 vitest 에서
+            // 별칭이 없어 깨지고, 이 방식은 tests/setup.ts 의 NuxtLink 전역 스텁과도 맞물린다.
+            h(resolveComponent('NuxtLink'), {
+              to: '/real-estate/land',
+              class: 'group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all',
+            }, () => [
+              h('div', { class: 'flex items-center gap-2' }, [
+                h('span', { class: 'flex size-9 md:size-10 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors' }, [
+                  h('img', { src: '/icons/category/land-plot.webp?v2', alt: '토지', class: 'w-6 h-6 md:w-7 md:h-7', width: 28, height: 28 }),
+                ]),
+                h('span', { class: 'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-primary-100 text-primary-700' }, '매매'),
+              ]),
+              h('p', { class: 'text-sm md:text-base font-semibold text-slate-800 group-hover:text-primary transition-colors leading-tight' }, '토지'),
+              h('p', { class: 'text-xs md:text-sm text-slate-700' }, '대지·전·답·임야 평당 시세'),
+            ]),
+          ]),
+        ],
       }),
       h(AdBanner),
       h(SectionBlock, {}, {
