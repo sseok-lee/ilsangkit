@@ -109,15 +109,24 @@ describe('useMapOverlays', () => {
       }),
     }
 
-    it('같은 지점에 몰린 라벨은 첫 번째만 남는다', () => {
+    it('같은 지점에 몰리면 첫 번째만 라벨, 나머지는 점으로 남는다', () => {
+      // 아예 건너뛰면 좌측 목록엔 있는데 지도엔 없는 건물이 생긴다(실측 강남 level 4:
+      // 목록 114 vs 라벨 76 → 38개 실종). 점으로라도 위치·클릭 대상을 유지한다.
       const { renderOverlays } = useMapOverlays()
       renderOverlays(projMap, [
         building({ buildingName: 'A', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
         building({ buildingName: 'B', latestPrice: 60000, monthlyRent: null, lat: 100, lng: 100 }),
         building({ buildingName: 'C', latestPrice: 70000, monthlyRent: null, lat: 100, lng: 100 }),
       ])
-      expect(created).toHaveLength(1)
+
+      expect(created).toHaveLength(3)
+      const classes = created.map((o) => o.opts.content.className)
+      expect(classes).toEqual(['map-price-label', 'map-price-dot', 'map-price-dot'])
+      // 라벨은 첫 번째(우선순위 최상)가 가져간다
       expect(created[0].opts.content.textContent).toBe('5억')
+      // 점은 텍스트를 비우고 값은 title 로 남긴다
+      expect(created[1].opts.content.textContent).toBe('')
+      expect(created[1].opts.content.title).toBe('6억')
     })
 
     it('충분히 떨어진 라벨은 모두 남는다', () => {

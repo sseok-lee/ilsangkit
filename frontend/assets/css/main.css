@@ -259,4 +259,21 @@
     @apply border-primary/25 bg-primary-50 px-2.5 py-1 text-[12px] text-primary-ink;
     z-index: 2;
   }
+
+  /*
+   * 라벨이 이웃과 겹쳐 들어갈 자리가 없을 때의 축약형.
+   * 좌측 목록은 항목 전부를 보여주므로 아예 지우면 "목록엔 있는데 지도엔 없는" 건물이 생긴다.
+   * 점은 자리를 거의 안 먹으면서 위치·클릭 대상·호버 툴팁(title)을 유지한다.
+   */
+  .map-price-dot {
+    @apply block h-2 w-2 rounded-full border border-white bg-primary/70
+           cursor-pointer select-none;
+    position: relative;
+    z-index: 0;
+  }
+
+  .map-price-dot:hover {
+    @apply bg-primary;
+    transform: scale(1.4);
+  }
 }

@@ -111,18 +111,29 @@ export function useMapOverlays() {
         : formatPyeongLabel(item as MapRegionItem)
 
       // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다. items 는 서버가
-      // transactionCount DESC 로 주므로 순서가 곧 우선순위 — 앞선 라벨과 겹치는 것은 건너뛴다.
+      // transactionCount DESC 로 주므로 순서가 곧 우선순위 — 앞선 라벨과 겹치면 라벨 대신 점을 찍는다.
+      //
+      // 건너뛰지 않고 점이라도 남기는 이유: 좌측 목록은 items 전부를 보여주므로, 겹친다고
+      // 아예 지우면 "목록엔 있는데 지도엔 없는" 건물이 생긴다(실측 강남 level 4: 목록 114 vs
+      // 라벨 76 → 38개 실종). 점은 자리를 차지하지 않으면서 위치와 클릭 대상을 유지한다.
+      let collapsed = false
       if (projection) {
         const box = boxAt(projection, kakao, item.lat, item.lng, text.length)
         if (box) {
-          if (placed.some((p) => intersects(p, box))) continue
-          placed.push(box)
+          if (placed.some((p) => intersects(p, box))) collapsed = true
+          else placed.push(box)
         }
       }
 
       const el = document.createElement('div')
-      el.className = building ? 'map-price-label' : 'map-region-bubble'
-      el.textContent = text
+      el.className = collapsed
+        ? 'map-price-dot'
+        : building
+          ? 'map-price-label'
+          : 'map-region-bubble'
+      // 점에도 값을 남긴다 — 호버 시 툴팁으로 뜨고, 스크린리더도 읽는다.
+      if (collapsed) el.title = text
+      else el.textContent = text
 
       if (handlers.onClick) el.addEventListener('click', () => handlers.onClick!(item))
       if (handlers.onHover) {
