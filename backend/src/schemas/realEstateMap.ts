@@ -46,6 +46,7 @@ export const MapQuerySchema = z
     swLng: lng,
     neLat: lat,
     neLng: lng,
+    prev: z.enum(['city', 'district', 'building']).optional(),
   })
   .refine((d) => d.swLat <= d.neLat && d.swLng <= d.neLng, {
     message: 'sw 좌표는 ne 좌표보다 작거나 같아야 합니다',

@@ -186,9 +186,9 @@ router.get(
   validate(MapQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
     const { type } = req.params as { type: string };
-    const { level, swLat, swLng, neLat, neLng } = req.query as unknown as MapQueryInput;
+    const { level, swLat, swLng, neLat, neLng, prev } = req.query as unknown as MapQueryInput;
 
-    const granularity = resolveGranularity(level);
+    const granularity = resolveGranularity(level, prev);
 
     if (granularity === 'building') {
       const { items, total, exact } = await fetchBuildings(type, { swLat, swLng, neLat, neLng });

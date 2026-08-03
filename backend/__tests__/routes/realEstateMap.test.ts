@@ -56,4 +56,26 @@ describe('MapQuerySchema', () => {
     expect(() => MapQuerySchema.parse({ ...valid, level: '0' })).toThrow();
     expect(() => MapQuerySchema.parse({ ...valid, level: '20' })).toThrow();
   });
+
+  it('prev 가 없어도 정상 파싱된다(하위 호환)', () => {
+    const r = MapQuerySchema.parse(valid);
+    expect(r.prev).toBeUndefined();
+  });
+
+  it('유효한 prev 값을 허용한다', () => {
+    const r = MapQuerySchema.parse({ ...valid, prev: 'district' });
+    expect(r.prev).toBe('district');
+  });
+
+  it('잘못된 prev 값을 거부한다', () => {
+    expect(() => MapQuerySchema.parse({ ...valid, prev: 'bogus' })).toThrow();
+  });
+});
+
+describe('resolveGranularity + prev 배선', () => {
+  it('prev 를 넘기면 히스테리시스가 실제로 결과를 바꾼다', () => {
+    // 이 테스트가 실패한다면 라우트 호출부에서 두 번째 인자(prev) 전달이 빠졌다는 뜻이다.
+    expect(resolveGranularity(11)).toBe('city');
+    expect(resolveGranularity(11, 'district')).toBe('district');
+  });
 });
