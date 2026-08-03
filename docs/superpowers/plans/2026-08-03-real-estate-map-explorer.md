@@ -1163,7 +1163,13 @@ export function useRealEstateMap(initial: {
     const b = clampBounds(bounds)
     try {
       const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${type.value}/map`, {
-        params: { level: lvl, swLat: b.swLat, swLng: b.swLng, neLat: b.neLat, neLng: b.neLng },
+        params: {
+          level: lvl,
+          swLat: b.swLat, swLng: b.swLng, neLat: b.neLat, neLng: b.neLng,
+          // 현재 표시 단위를 함께 보낸다. 서버는 무상태라 이걸 받아야 히스테리시스가 걸린다.
+          // 없으면 경계(10↔11, 7↔8)에서 좌측 목록과 마커가 왕복하며 깜빡인다.
+          prev: granularity.value,
+        },
       })
       if (mySeq !== seq) return // stale
       items.value = res.data.items
@@ -1593,7 +1599,7 @@ import { formatPriceLabel, formatPyeongLabel } from '~/composables/useMapOverlay
 import { itemKey } from '~/composables/useRealEstateMap'
 import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
-import AdBanner from '~/components/common/AdBanner.vue'
+import AdBanner from '~/components/ads/AdBanner.vue'
 
 const AD_AFTER_INDEX = 4 // 5번째 항목 뒤
 
@@ -2098,7 +2104,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
-import AdBanner from '~/components/common/AdBanner.vue'
+import AdBanner from '~/components/ads/AdBanner.vue'
 import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
 import type { RealEstateHubType } from '~/types/realEstate'
