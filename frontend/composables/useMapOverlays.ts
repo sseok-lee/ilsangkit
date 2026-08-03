@@ -52,7 +52,10 @@ export function useMapOverlays() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function renderOverlays(map: any, items: MapItem[], handlers: OverlayHandlers = {}): void {
-    if (!import.meta.client || !map) return
+    // import.meta.server 극성 사용(useKakaoMap.ts:124 컨벤션과 동일): 실제 Nuxt 빌드에서는
+    // server/client 가 항상 서로 반대이므로 프로덕션 동작은 !client 와 완전히 동일하다.
+    // 차이는 두 플래그가 모두 undefined 인 vitest 환경뿐 — 그때 이 극성이라야 렌더러가 실행되어 테스트 가능해진다.
+    if (import.meta.server || !map) return
     clearOverlays()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
