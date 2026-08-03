@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"export NVM_DIR=\\\"$HOME/.nvm\\\"; . \\\"$NVM_DIR/nvm.sh\\\"; nvm use 20; cd /Users/leemyeongseok/projects/ilsangkit/backend && npx vitest run __tests__/services/realEstateServiceGetBuildingInfo.t...",
-  "error": "Exit code 1\nNow using node v20.19.5 (npm v10.8.2)\n[dotenv@17.2.3] injecting env (16) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops\n\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/Users/leemyeongseok/projects/ilsangkit/backend\u001b[39m\n\n \u001b[31m❯\u001b[39m __tests__/services/realEstateServiceGetBuildingInfo.test.ts \u001b[2m(\u001b[22m\u001b[2m10 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[31m1 failed\u001b[39m\u001b[2m)\u001b[22m\u001b[32m 8\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[32m✓\u001b[39m bjdCode 가 빈 문자열이면 groupBy 로 거래 최다 bjdCode 를 찾아 사용한다\u001b...",
-  "timestamp": "2026-05-30T09:11:59.483Z",
-  "retry_count": 1
-}
