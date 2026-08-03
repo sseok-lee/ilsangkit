@@ -688,7 +688,7 @@ export async function fetchRegions(type: string, level: RegionLevel): Promise<Ma
 - [ ] **Step 4: 테스트 통과 확인**
 
 Run: `cd backend && npx vitest run __tests__/services/realEstateMapRegions.test.ts`
-Expected: PASS — 8 passed
+Expected: PASS — 7 passed
 
 - [ ] **Step 5: 로컬 DB로 실제 집계 + 소요시간 확인**
 
