@@ -21,8 +21,8 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
-import HardLink from '~/components/common/HardLink.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
+import HardLink from '~/components/common/HardLink.vue'
 import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
 import type { RealEstateHubType } from '~/types/realEstate'
@@ -50,13 +50,16 @@ const BelowFoldContent = defineComponent({
         default: () => [
           h(RealEstateCategoryCards, { summaries: p.hubSummaries }),
           h('div', { class: 'grid grid-cols-2 gap-3 md:gap-4 mt-3' }, [
+            // HardLink 를 쓴다 — 바로 위 RealEstateCategoryCards 의 6개 카드가 전부 HardLink 이고,
+            // 이 사이트의 전체 리로드 내비게이션은 광고 1뷰-1임프레션 정합을 위해 의도된 것이다.
+            // 이 카드만 NuxtLink 면 형제와 내비게이션 동작이 갈린다.
             h(HardLink, {
               to: '/real-estate/land',
               class: 'group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all',
             }, () => [
               h('div', { class: 'flex items-center gap-2' }, [
                 h('span', { class: 'flex size-9 md:size-10 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors' }, [
-                  h('img', { src: '/icons/category/land-plot.webp?v2', alt: '토지', class: 'w-6 h-6 md:w-7 md:h-7', width: '28', height: '28' }),
+                  h('img', { src: '/icons/category/land-plot.webp?v2', alt: '토지', class: 'w-6 h-6 md:w-7 md:h-7', width: 28, height: 28 }),
                 ]),
                 h('span', { class: 'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-primary-100 text-primary-700' }, '매매'),
               ]),
