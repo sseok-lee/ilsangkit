@@ -1600,6 +1600,7 @@ import { itemKey } from '~/composables/useRealEstateMap'
 import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import AdBanner from '~/components/ads/AdBanner.vue'
+import HardLink from '~/components/common/HardLink.vue'
 
 const AD_AFTER_INDEX = 4 // 5번째 항목 뒤
 
@@ -2098,13 +2099,14 @@ Expected: FAIL — `RealEstateMapExplorer` 미포함, `setFAQSchema` 존재
 </template>
 
 <script setup lang="ts">
-import { h, defineComponent, resolveComponent } from 'vue'
+import { h, defineComponent } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
+import HardLink from '~/components/common/HardLink.vue'
 import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
 import type { RealEstateHubType } from '~/types/realEstate'
@@ -2131,9 +2133,10 @@ const BelowFoldContent = defineComponent({
         default: () => [
           h(RealEstateCategoryCards, { summaries: p.hubSummaries }),
           h('div', { class: 'grid grid-cols-2 gap-3 md:gap-4 mt-3' }, [
-            // resolveComponent 로 받는다 — '#components' 직접 import 는 vitest 에서
-            // 별칭이 없어 깨지고, 이 방식은 tests/setup.ts 의 NuxtLink 전역 스텁과도 맞물린다.
-            h(resolveComponent('NuxtLink'), {
+            // HardLink 를 쓴다 — 바로 위 RealEstateCategoryCards 의 6개 카드가 전부 HardLink 이고,
+            // 이 사이트의 전체 리로드 내비게이션은 광고 1뷰-1임프레션 정합을 위해 의도된 것이다.
+            // 이 카드만 NuxtLink 면 형제와 내비게이션 동작이 갈린다.
+            h(HardLink, {
               to: '/real-estate/land',
               class: 'group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all',
             }, () => [

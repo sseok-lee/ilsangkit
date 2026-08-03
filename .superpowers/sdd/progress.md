@@ -99,3 +99,11 @@ Task 9: 구현 완료 (commit 90df9b83, base 1ea81452, DONE_WITH_CONCERNS → co
     리뷰어 ⚠️ 해소(controller 확인): renderOverlays 는 items 를 in-place 변형하지 않음(자체 배열 push 만) → readonly 위반 위험 없음.
   → Task 9 최종 complete.
 Minor/후속(DEFER→최종 triage): (T9a) hoveredKey 여전히 dead — 호버 하이라이트는 useMapOverlays 렌더 API 확장 필요, 후속 태스크 · (T9b) onNuxtReady eslint-disable(전역 목록 미변경 판정, Task 11 브라우저 검증으로 담보) · (T9c) ClientOnly 슬롯 스왑 vs 부모 onMounted 타이밍은 추론만 되고 테스트 미실행(리뷰어 ⚠️).
+Task 10: 구현 완료 (commit d8ddebda, base a80c049c, 리뷰 진행 중). /real-estate 페이지를 지도 탐색 화면으로 교체 + 정적 FAQ·FAQPage 스키마 제거. 유형 카드 7개(주택 6 + 토지)·ItemList/Dataset/Breadcrumb/DataSourceSection/AdBanner 유지. 프론트 전체 263파일 2146 green(exit 0), tests/pages 65파일 471, lint 0.
+  ★구현자 발견 3건(전부 controller 승인):
+   (1) 기존 테스트 2개가 제거 대상 동작을 검증 중 → **통째 삭제 대신**: real-estate-hub.test.ts 는 여전히 유효한 H2 단언 2개("부동산 유형별 실거래가"·"부동산 실거래가란?")를 남기고 재작성(+토지카드 단언, Explorer stub) / realEstateFaqSchema.test.ts 는 삭제(제거 대상 스키마만 검증). 통째 삭제했으면 하단 콘텐츠의 **렌더 기반 검증이 소실**될 뻔.
+   (2) 브리프의 `readFileSync(new URL(...))` 가 이 저장소 vitest 에서 TypeError → process.cwd() 기반 resolve 로 수정(landListHardLink.test.ts 관행). 브리프 오류.
+   (3) ★**토지 카드 누락 = 스펙 6.1 위반**. RealEstateCategoryCards 는 주택 6종만 렌더하고 토지는 구 페이지에서 별도 카드 → 계획 코드가 빠뜨려 6개. 구 페이지 블록 복원(commit 1df38647 로 계획도 수정). NuxtLink 는 vitest 별칭 문제로 resolveComponent 지시했으나, 구현자가 **HardLink** 채택 — 확인 결과 형제 RealEstateCategoryCards 가 이미 HardLink 이고 구 페이지 토지카드만 NuxtLink 로 어긋나 있었음 → 일관성 개선으로 수용.
+  ★구현자 추가 발견(범위 밖, 수용): realEstateHub.test.ts 가 Explorer 를 stub 안 해 useKakaoMap→shallowRef 미정의 unhandled rejection → **개별 테스트는 통과하는데 vitest run 이 exit 1** → CI 빨감. stub 4줄 추가. controller 가 "그 파일은 괜찮다"고 한 판단 착오를 구현자가 교정.
+  Step5 curl: `서울` SSR 렌더 확인 / `FAQPage` 0건 / `/real-estate/land` 2회. 지도 API 는 로컬 stale DB 로 items:[] 반환했으나 사이드바가 SIDO_CHIPS 폴백으로 전 시/도 렌더 = **fail-open 실동작 확인**.
+  ★controller 검증(onNuxtReady): Task 10 로 페이지가 컴포넌트를 참조하게 된 뒤 재빌드 → 신규 컴포넌트가 번들에 포함됨(지역별 평균 평당가·map-price-label·대지·전·답·임야 발견) **그리고 onNuxtReady 리터럴은 클라/서버 청크 양쪽 0건** = import 로 해석·리네임됨 → 자동 import 동작. 브라우저 확정 검증 진행 중.
