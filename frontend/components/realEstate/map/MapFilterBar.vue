@@ -4,7 +4,7 @@
       v-for="opt in OPTIONS"
       :key="opt.value"
       type="button"
-      class="px-3 py-1.5 min-h-[36px] rounded-lg text-sm font-medium transition-colors"
+      class="px-3 py-1.5 min-h-[44px] flex items-center justify-center rounded-lg text-sm font-medium transition-colors"
       :class="opt.value === props.type
         ? 'bg-primary text-white'
         : 'bg-background-light text-slate-700 hover:bg-slate-200'"
