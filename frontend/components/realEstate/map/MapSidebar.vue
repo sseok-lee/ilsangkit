@@ -42,6 +42,7 @@ import { formatPriceLabel, formatPyeongLabel } from '~/composables/useMapOverlay
 import { itemKey } from '~/composables/useRealEstateMap'
 import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
+import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import AdBanner from '~/components/ads/AdBanner.vue'
 
 const AD_AFTER_INDEX = 4 // 5번째 항목 뒤
@@ -121,7 +122,12 @@ const rows = computed<Row[]>(() => {
   }
 
   return SIDO_CHIPS.map((chip) => {
-    const agg = byName.get(chip.label) ?? byName.get(chip.slug)
+    // byName 은 API MapRegionItem.name, 즉 DB city 컬럼 원값으로 키가 잡힌다. 15개 도는
+    // 축약형(예: '서울')이라 chip.label 과 우연히 같지만, 통합시(전남광주통합특별시)는
+    // 축약명이 없어 DB 값이 그대로 풀네임이다 — chip.label('전남·광주')/chip.slug 어느 쪽과도
+    // 일치하지 않아 항상 폴백(0건)으로 떨어졌다. CITY_SLUG_MAP[chip.slug] 가 DB city 값과
+    // 정확히 일치하는 유일한 키이므로 최우선으로 조회하고, 나머지는 안전망으로 남긴다.
+    const agg = byName.get(CITY_SLUG_MAP[chip.slug]) ?? byName.get(chip.label) ?? byName.get(chip.slug)
     const item: MapRegionItem = agg ?? {
       name: chip.label, district: null, lat: 0, lng: 0, avgPricePerPyeong: null, transactionCount: 0,
     }

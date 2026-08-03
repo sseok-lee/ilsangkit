@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import MapSidebar from '~/components/realEstate/map/MapSidebar.vue'
-import type { MapItem } from '~/types/realEstateMap'
+import type { MapItem, MapRegionItem } from '~/types/realEstateMap'
+import { formatPyeongLabel } from '~/composables/useMapOverlays'
+import { toRealEstateListUrl } from '~/utils/realEstateUrl'
 
 const REGIONS: MapItem[] = [
   { name: '서울', district: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 12043 },
@@ -64,5 +66,49 @@ describe('MapSidebar', () => {
     const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
     const w = mountSidebar({ items: many, granularity: 'building', total: 8 })
     expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(true)
+  })
+
+  it('전남광주통합특별시는 DB city 원값(풀네임)으로 매칭되어 평당가를 표시한다 (회귀 가드)', () => {
+    // API MapRegionItem.name 은 DB city 컬럼 원값이다. 전남광주통합특별시는 축약명이 없어
+    // chip.label('전남·광주')도 chip.slug('jeonnamgwangju')도 아닌 풀네임 그대로 온다.
+    const jngj: MapItem = {
+      name: '전남광주통합특별시', district: null, lat: 35.0, lng: 126.9, avgPricePerPyeong: 1850, transactionCount: 320,
+    }
+    const w = mountSidebar({ items: [jngj], total: 1 })
+    const row = w.findAll('[data-testid="map-sidebar-item"]').find((li) => li.text().includes('전남·광주'))
+    expect(row).toBeTruthy()
+    expect(row!.text()).toContain(formatPyeongLabel(jngj as MapRegionItem))
+    expect(row!.text()).not.toContain('—')
+  })
+
+  it('items 에 없는 시/도는 링크를 유지한 채 — 를 표시한다 (fail-open)', () => {
+    const w = mountSidebar({ items: [REGIONS[0]], total: 1 }) // 서울만 옴, 세종 등 나머지는 집계 없음
+    const links = w.findAll('a')
+    expect(links.length).toBeGreaterThanOrEqual(16)
+
+    const sejongRow = w.findAll('[data-testid="map-sidebar-item"]').find((li) => li.text().includes('세종'))
+    expect(sejongRow).toBeTruthy()
+    expect(sejongRow!.find('a').exists()).toBe(true)
+    expect(sejongRow!.text()).toContain('—')
+  })
+
+  it('district 모드에서는 구/군을 제목으로, 시/도를 부제로 렌더하고 href 는 toRealEstateListUrl 결과와 일치한다', () => {
+    const districtItems: MapItem[] = [
+      { name: '전남광주통합특별시', district: '광산구', lat: 35.15, lng: 126.79, avgPricePerPyeong: 1400, transactionCount: 55 },
+      { name: '경기', district: '성남시 분당구', lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
+    ]
+    const w = mountSidebar({ items: districtItems, granularity: 'district', total: 2 })
+    const rows = w.findAll('[data-testid="map-sidebar-item"]')
+    expect(rows).toHaveLength(2)
+
+    districtItems.forEach((raw, idx) => {
+      const r = raw as MapRegionItem
+      const row = rows[idx]
+      expect(row.find('.font-medium').text()).toBe(r.district)
+      expect(row.find('.text-slate-600').text()).toBe(r.name)
+      expect(row.text()).toContain(formatPyeongLabel(r))
+      const expectedHref = toRealEstateListUrl({ type: 'apt-sale', city: r.name, district: r.district ?? '' })
+      expect(row.find('a').attributes('href')).toBe(expectedHref)
+    })
   })
 })
