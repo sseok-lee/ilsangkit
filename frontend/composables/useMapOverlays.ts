@@ -29,6 +29,41 @@ export function formatPyeongLabel(item: MapRegionItem): string {
   return `${formatManwon(item.avgPricePerPyeong)}/평`
 }
 
+interface Box { x1: number; y1: number; x2: number; y2: number }
+
+/** 라벨 한 글자당 대략 폭(px). 실측 대신 근사로 충분하다 — 겹침 판정용 여유 상자다. */
+const CHAR_PX = 7.2
+/** 좌우 패딩 + 테두리. .map-price-label 의 px-2 와 맞춘다. */
+const LABEL_PAD_PX = 18
+const LABEL_H_PX = 22
+/** 상자 사이 최소 간격. 붙어 있으면 읽기 어려워 약간 띄운다. */
+const GAP_PX = 3
+
+/**
+ * 라벨이 차지할 화면 영역. yAnchor:1 이라 좌표 위쪽에 그려지므로 상자도 위로 잡는다.
+ * projection 이 없거나(테스트 fake) 변환이 실패하면 null → 호출부가 겹침 판정을 건너뛴다.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function boxAt(projection: any, kakao: any, lat: number, lng: number, textLen: number): Box | null {
+  try {
+    const pt = projection.containerPointFromCoords(new kakao.maps.LatLng(lat, lng))
+    if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return null
+    const w = textLen * CHAR_PX + LABEL_PAD_PX
+    return {
+      x1: pt.x - w / 2 - GAP_PX,
+      y1: pt.y - LABEL_H_PX - GAP_PX,
+      x2: pt.x + w / 2 + GAP_PX,
+      y2: pt.y + GAP_PX,
+    }
+  } catch {
+    return null
+  }
+}
+
+function intersects(a: Box, b: Box): boolean {
+  return a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2
+}
+
 interface OverlayHandlers {
   onClick?: (item: MapItem) => void
   onHover?: (item: MapItem | null) => void
@@ -62,16 +97,32 @@ export function useMapOverlays() {
     const kakao = (window as any).kakao
     if (!kakao?.maps) return
 
+    // 겹침 회피용 화면좌표 변환기. 없으면(테스트 fake 등) 전부 그린다.
+    const projection = typeof map.getProjection === 'function' ? map.getProjection() : null
+    const placed: Box[] = []
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const next: any[] = []
     for (const item of items) {
       if (item.lat == null || item.lng == null) continue
       const building = isBuildingItem(item)
-      const el = document.createElement('div')
-      el.className = building ? 'map-price-label' : 'map-region-bubble'
-      el.textContent = building
+      const text = building
         ? formatPriceLabel(item as MapBuildingItem)
         : formatPyeongLabel(item as MapRegionItem)
+
+      // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다. items 는 서버가
+      // transactionCount DESC 로 주므로 순서가 곧 우선순위 — 앞선 라벨과 겹치는 것은 건너뛴다.
+      if (projection) {
+        const box = boxAt(projection, kakao, item.lat, item.lng, text.length)
+        if (box) {
+          if (placed.some((p) => intersects(p, box))) continue
+          placed.push(box)
+        }
+      }
+
+      const el = document.createElement('div')
+      el.className = building ? 'map-price-label' : 'map-region-bubble'
+      el.textContent = text
 
       if (handlers.onClick) el.addEventListener('click', () => handlers.onClick!(item))
       if (handlers.onHover) {

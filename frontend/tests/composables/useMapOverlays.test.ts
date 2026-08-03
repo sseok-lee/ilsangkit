@@ -97,6 +97,48 @@ describe('useMapOverlays', () => {
     delete (window as any).kakao
   })
 
+  // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다(대전 시내 실측: 200개 전량 렌더 시
+  // 판독 불가). projection 이 있으면 화면좌표로 겹침을 판정해 뒤엣것을 생략한다.
+  // items 는 서버가 transactionCount DESC 로 주므로 순서가 곧 우선순위다.
+  describe('겹침 회피', () => {
+    /** 위/경도를 그대로 픽셀로 쓰는 단순 투영 — 좌표 차이가 곧 픽셀 거리가 된다. */
+    const projMap = {
+      id: 'proj-map',
+      getProjection: () => ({
+        containerPointFromCoords: (ll: FakeLatLng) => ({ x: ll.lng, y: ll.lat }),
+      }),
+    }
+
+    it('같은 지점에 몰린 라벨은 첫 번째만 남는다', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(projMap, [
+        building({ buildingName: 'A', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
+        building({ buildingName: 'B', latestPrice: 60000, monthlyRent: null, lat: 100, lng: 100 }),
+        building({ buildingName: 'C', latestPrice: 70000, monthlyRent: null, lat: 100, lng: 100 }),
+      ])
+      expect(created).toHaveLength(1)
+      expect(created[0].opts.content.textContent).toBe('5억')
+    })
+
+    it('충분히 떨어진 라벨은 모두 남는다', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(projMap, [
+        building({ buildingName: 'A', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
+        building({ buildingName: 'B', latestPrice: 60000, monthlyRent: null, lat: 400, lng: 400 }),
+      ])
+      expect(created).toHaveLength(2)
+    })
+
+    it('projection 이 없으면(구형 SDK 등) 생략 없이 전부 그린다', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [
+        building({ buildingName: 'A', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
+        building({ buildingName: 'B', latestPrice: 60000, monthlyRent: null, lat: 100, lng: 100 }),
+      ])
+      expect(created).toHaveLength(2)
+    })
+  })
+
   it('건물 아이템은 가격 라벨(map-price-label), 지역 아이템은 버블(map-region-bubble) 오버레이를 그린다', () => {
     const { renderOverlays } = useMapOverlays()
     const b = building({ latestPrice: 50000, monthlyRent: null, lat: 37.1, lng: 127.1 })
