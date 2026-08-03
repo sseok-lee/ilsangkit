@@ -43,6 +43,52 @@ function assertKnownType(type: string): void {
  * total 은 items.length 가 아니라 별도 COUNT 다. 목록을 개수 용도로 재사용하면
  * "반경 1km 병원 893곳을 6곳으로" 렌더하던 2026-08 버그가 재발한다.
  */
+/** Prisma 인덱스명. FORCE INDEX 가 문자열로 참조하므로 스키마의 @@index([type, lat, lng]) 와 묶여 있다. */
+const COORD_INDEX = 'RealEstateBuildingSummary_type_lat_lng_idx';
+const INDEX_HINT = ` FORCE INDEX (${COORD_INDEX})`;
+
+/** MySQL 1176 = ER_KEY_DOES_NOT_EXIST. 힌트가 가리키는 인덱스가 없을 때 난다. */
+function isMissingIndexError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes('1176') || msg.includes("doesn't exist in table");
+}
+
+let warnedMissingIndex = false;
+
+/**
+ * FORCE INDEX 를 걸어 실행하고, 인덱스가 없으면 힌트 없이 재시도한다.
+ *
+ * 힌트가 없으면 옵티마이저가 transactionCount 역방향 스캔을 골라 16배 느려지지만(실측
+ * 357ms vs 22ms), 그건 느린 것이지 죽은 게 아니다. 반면 인덱스가 없는 상태에서 FORCE INDEX
+ * 는 쿼리 자체가 에러(1176)라 부동산 허브의 지도가 통째로 500 을 낸다.
+ *
+ * 배포는 `prisma db push` 를 pm2 restart 앞에 돌리므로 정상 경로에서는 인덱스가 먼저 생긴다.
+ * 이 폴백은 그게 실패했거나 DB 를 롤백·복원한 경우를 위한 것이다 — 조용히 넘어가지 않도록
+ * 경고를 남긴다(프로세스당 1회, 로그 폭주 방지).
+ */
+async function queryWithIndexHint<T>(
+  build: (hint: string) => string,
+  params: unknown[],
+): Promise<T[]> {
+  try {
+    return await prisma.$queryRawUnsafe<T[]>(build(INDEX_HINT), ...params);
+  } catch (err) {
+    if (!isMissingIndexError(err)) throw err;
+    if (!warnedMissingIndex) {
+      warnedMissingIndex = true;
+      console.warn(
+        `[realEstateMap] ${COORD_INDEX} 가 없어 힌트 없이 폴백합니다 — 뷰포트 조회가 크게 느려집니다. ` +
+          'prisma db push 가 적용됐는지 확인하세요.',
+      );
+    }
+    return await prisma.$queryRawUnsafe<T[]>(build(''), ...params);
+  }
+}
+
+export function __resetIndexWarningForTest(): void {
+  warnedMissingIndex = false;
+}
+
 export async function fetchBuildings(
   type: string,
   bounds: Bounds,
@@ -53,24 +99,22 @@ export async function fetchBuildings(
       AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`;
   const params = [type, bounds.swLat, bounds.neLat, bounds.swLng, bounds.neLng];
 
-  const countRows = await prisma.$queryRawUnsafe<Array<{ cnt: bigint | number }>>(
-    `SELECT COUNT(*) AS cnt FROM RealEstateBuildingSummary
-     FORCE INDEX (RealEstateBuildingSummary_type_lat_lng_idx)
+  const countRows = await queryWithIndexHint<{ cnt: bigint | number }>(
+    (hint) => `SELECT COUNT(*) AS cnt FROM RealEstateBuildingSummary${hint}
      WHERE ${where}`,
-    ...params,
+    params,
   );
   const total = Number(countRows[0]?.cnt ?? 0);
 
-  const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-    `SELECT buildingName, city, district, dongName, lat, lng,
+  const rows = await queryWithIndexHint<Record<string, unknown>>(
+    (hint) => `SELECT buildingName, city, district, dongName, lat, lng,
             latestPrice, monthlyRent, latestDealYear, latestDealMonth, latestDealDay,
             transactionCount
-     FROM RealEstateBuildingSummary
-     FORCE INDEX (RealEstateBuildingSummary_type_lat_lng_idx)
+     FROM RealEstateBuildingSummary${hint}
      WHERE ${where}
      ORDER BY transactionCount DESC
      LIMIT ${BUILDING_LIMIT}`,
-    ...params,
+    params,
   );
 
   const items = rows.map((r) => {

@@ -6,7 +6,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   default: { $queryRawUnsafe: (...a: unknown[]) => queryRawUnsafe(...a) },
 }));
 
-import { fetchBuildings, BUILDING_LIMIT } from '../../src/services/realEstateMapService.js';
+import { fetchBuildings, BUILDING_LIMIT, __resetIndexWarningForTest } from '../../src/services/realEstateMapService.js';
 
 const BOUNDS = { swLat: 37.46, swLng: 127.0, neLat: 37.54, neLng: 127.1 };
 
@@ -56,5 +56,40 @@ describe('fetchBuildings', () => {
 
   it('알 수 없는 type 은 던진다', async () => {
     await expect(fetchBuildings('bogus', BOUNDS)).rejects.toThrow();
+  });
+});
+
+// 운영 확인 중 발견(2026-08-03): 배포 전 운영 DB 에는 아직 좌표 인덱스가 없어
+// FORCE INDEX 가 MySQL 1176 을 내고 부동산 허브 지도가 통째로 500 이었다.
+// 배포는 db push 를 pm2 restart 앞에 돌리지만, 그게 실패하거나 DB 를 롤백·복원하면
+// 같은 상황이 된다. 느린 건 감수하되 죽지는 않게 폴백한다.
+describe('좌표 인덱스 부재 시 폴백', () => {
+  beforeEach(() => {
+    queryRawUnsafe.mockReset();
+    __resetIndexWarningForTest();
+  });
+
+  it('인덱스가 없으면 힌트 없이 재시도해 결과를 돌려준다', async () => {
+    const missing = new Error(
+      "Raw query failed. Code: `1176`. Message: `Key 'RealEstateBuildingSummary_type_lat_lng_idx' doesn't exist in table 'RealEstateBuildingSummary'`",
+    );
+    queryRawUnsafe
+      .mockRejectedValueOnce(missing) // COUNT + 힌트
+      .mockResolvedValueOnce([{ cnt: 3n }]) // COUNT 폴백
+      .mockRejectedValueOnce(missing) // 목록 + 힌트
+      .mockResolvedValueOnce([{ buildingName: 'A', latestPrice: 100n, monthlyRent: 0, transactionCount: 1 }]);
+
+    const r = await fetchBuildings('apt-sale', BOUNDS);
+
+    expect(r.total).toBe(3);
+    expect(r.items).toHaveLength(1);
+    // 폴백 쿼리에는 힌트가 없어야 한다
+    const fallbackSql = queryRawUnsafe.mock.calls[1][0] as string;
+    expect(fallbackSql).not.toContain('FORCE INDEX');
+  });
+
+  it('인덱스와 무관한 오류는 삼키지 않고 그대로 던진다', async () => {
+    queryRawUnsafe.mockRejectedValueOnce(new Error('Connection pool timeout'));
+    await expect(fetchBuildings('apt-sale', BOUNDS)).rejects.toThrow('Connection pool timeout');
   });
 });
