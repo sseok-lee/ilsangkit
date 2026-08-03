@@ -19,7 +19,7 @@
 - **에러는 클래스로 throw** (`NotFoundError`/`ValidationError`), 수동 `res.status().json()` 금지.
 - **BigInt/Decimal은 반드시 Number로 변환**해 응답한다. 누락 시 JSON 직렬화가 터진다.
 - **날짜 조건은 반드시 sargable 형태.** `dealYear * 100 + dealMonth >= ?`는 운영 실측 5,862ms, sargable 형태는 529ms — **11배**. 컬럼에 연산을 걸지 않는다.
-- **SSR 가드** — `document`/`window` 접근은 `if (!import.meta.client) return`. `watch`/`onMounted` 내부도 예외 아님.
+- **SSR 가드** — `document`/`window` 접근은 `if (import.meta.server) return`. `watch`/`onMounted` 내부도 예외 아님. **극성이 중요하다**: vitest 환경에서는 `import.meta.client`·`import.meta.server`가 **둘 다 `undefined`**라, `!import.meta.client` 형태로 쓰면 가드가 항상 걸려 그 아래 코드가 테스트에서 영영 실행되지 않는다(실증 확인). `import.meta.server` 형태는 실제 Nuxt 빌드에서 동작이 완전히 동일하면서 테스트에서는 통과한다. `useKakaoMap.ts:124`가 이미 이 컨벤션을 쓴다.
 - **직접 `mount`하는 컴포넌트 테스트는 `ref`/`computed`/`watch`를 명시 import.** auto-import에 기대면 로컬은 통과하고 CI에서만 `ReferenceError`가 난다.
 - **모든 변경은 PR 경유.** `main` 직접 푸시 금지. 브랜치는 `develop`에서 딴다.
 - **커밋 전 `npm run test`와 `npm run lint` 통과 확인.** 기존 실패도 즉시 고친다.
@@ -1368,7 +1368,7 @@ export function useMapOverlays() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function renderOverlays(map: any, items: MapItem[], handlers: OverlayHandlers = {}): void {
-    if (!import.meta.client || !map) return
+    if (import.meta.server || !map) return
     clearOverlays()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1803,7 +1803,7 @@ const { renderOverlays, clearOverlays } = useMapOverlays()
 let idleListener: any = null
 
 function emitIdle(): void {
-  if (!import.meta.client || !map.value) return
+  if (import.meta.server || !map.value) return
   const b = getBounds()
   if (!b) return
   emit('idle', { swLat: b.sw.lat, swLng: b.sw.lng, neLat: b.ne.lat, neLng: b.ne.lng }, map.value.getLevel())
@@ -1811,7 +1811,7 @@ function emitIdle(): void {
 
 onMounted(async () => {
   // SDK 로드를 onNuxtReady 이후로 미뤄 좌측 SSR 목록이 LCP 를 잡게 한다.
-  if (!import.meta.client || !container.value) return
+  if (import.meta.server || !container.value) return
   await new Promise<void>((r) => onNuxtReady(() => r()))
   // initMap 은 (container, { center, level }) 객체 인자를 받는다 — 위치 인자가 아니다
   await initMap(container.value, { center: props.center, level: props.level })
@@ -1829,7 +1829,7 @@ onMounted(async () => {
 watch(
   () => props.items,
   (items) => {
-    if (!import.meta.client || !map.value) return
+    if (import.meta.server || !map.value) return
     renderOverlays(map.value, items, {
       onClick: (i) => emit('select', i),
       onHover: (i) => emit('hover', i),
@@ -1838,7 +1838,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  if (!import.meta.client) return
+  if (import.meta.server) return
   clearOverlays()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const kakao = (window as any).kakao
@@ -1975,13 +1975,13 @@ let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
 // SSR 은 항상 시/도 목록을 렌더한다(하이드레이션 일치). 해시는 마운트 후에만 읽어
 // 지도를 옮기고, 지도 idle 이 좌측을 갱신한다 — post-hydration 업데이트라 mismatch 가 아니다.
 onMounted(() => {
-  if (!import.meta.client) return
+  if (import.meta.server) return
   const h = parseMapHash(window.location.hash)
   if (h.lat != null && h.lng != null) center.value = { lat: h.lat, lng: h.lng }
 })
 
 function syncHash(): void {
-  if (!import.meta.client) return
+  if (import.meta.server) return
   // 쿼리스트링이 아니라 해시다 — swr 캐시 키 분기 방지(설계문서 5.6)
   history.replaceState(null, '', buildMapHash({
     type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng,
