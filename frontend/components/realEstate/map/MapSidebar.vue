@@ -27,7 +27,11 @@
             <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </NuxtLink>
         </li>
-        <li v-if="idx === AD_AFTER_INDEX" data-testid="map-sidebar-ad" class="border-b border-line-2 p-2">
+        <li
+          v-if="idx === AD_AFTER_INDEX && props.showAd"
+          data-testid="map-sidebar-ad"
+          class="border-b border-line-2 p-2"
+        >
           <AdBanner />
         </li>
       </template>
@@ -47,14 +51,23 @@ import AdBanner from '~/components/ads/AdBanner.vue'
 
 const AD_AFTER_INDEX = 4 // 5번째 항목 뒤
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   items: MapItem[]
   granularity: Granularity
   total: number
   exact: boolean
   pending: boolean
   type: string
-}>()
+  /**
+   * 이 사이드바 사본에 인피드 광고를 렌더할지. 데스크톱(aside)과 모바일(바텀시트)에
+   * 같은 MapSidebar 가 항상 둘 다 마운트되므로(하나는 CSS 로만 숨김), 기본값 true 로 두면
+   * 두 사본이 동시에 AdBanner 를 마운트해 adsbygoogle.push() 를 중복 호출한다.
+   * 호출부(RealEstateMapExplorer)가 실제 보이는 뷰포트 한쪽에만 true 를 넘겨야 한다.
+   */
+  showAd?: boolean
+}>(), {
+  showAd: true,
+})
 
 const emit = defineEmits<{ hover: [string | null]; select: [MapItem] }>()
 

@@ -10,6 +10,7 @@
           :exact="exact"
           :pending="pending"
           :type="type"
+          :show-ad="isDesktop === true"
           @hover="hoveredKey = $event"
           @select="onSelect"
         />
@@ -44,6 +45,7 @@
         :exact="exact"
         :pending="pending"
         :type="type"
+        :show-ad="isDesktop === false"
         @hover="hoveredKey = $event"
         @select="onSelect"
       />
@@ -54,7 +56,7 @@
 <script setup lang="ts">
 // onMounted 를 명시 import 한다 — 이 컴포넌트는 테스트에서 직접 mount 되므로
 // auto-import 에 기대면 로컬은 통과하고 CI 에서만 ReferenceError 가 난다.
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import MapSidebar from './MapSidebar.vue'
 import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
@@ -82,12 +84,38 @@ const {
 
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
 
+// MapSidebar 가 데스크톱 aside 와 모바일 바텀시트 두 사본으로 항상 동시에 마운트된다
+// (안 보이는 쪽은 CSS `hidden`/`lg:hidden`일 뿐 DOM 에서 사라지지 않는다). 그 안의
+// AdBanner 가 인피드 광고를 하나만 요청하도록, 실제로 보이는 뷰포트 쪽에만
+// showAd=true 를 내려준다. 초기값 null 은 "아직 모른다"를 뜻하며, 두 사본 모두
+// `isDesktop === true` / `=== false` 비교가 false 가 되어 광고가 하나도 안 뜬다 —
+// SSR 출력과 마운트 직후 첫 클라이언트 렌더가 이 상태로 일치하므로 하이드레이션
+// mismatch 가 없다. matchMedia 결과가 들어오는 순간(this onMounted 이후) 정확히 한
+// 쪽만 true 로 바뀐다.
+const isDesktop = ref<boolean | null>(null)
+let desktopMq: MediaQueryList | null = null
+function applyIsDesktop(): void {
+  if (desktopMq) isDesktop.value = desktopMq.matches
+}
+
 // SSR 은 항상 시/도 목록을 렌더한다(하이드레이션 일치). 해시는 마운트 후에만 읽어
 // 지도를 옮기고, 지도 idle 이 좌측을 갱신한다 — post-hydration 업데이트라 mismatch 가 아니다.
 onMounted(() => {
   if (import.meta.server) return
   const h = parseMapHash(window.location.hash)
   if (h.lat != null && h.lng != null) center.value = { lat: h.lat, lng: h.lng }
+
+  // tailwind.config.js 기본 screens: lg = 1024px (프로젝트가 screens 를 오버라이드하지 않음).
+  // aside 는 `lg:block`, MapBottomSheet 는 `lg:hidden` 이므로 같은 기준선을 그대로 따른다.
+  desktopMq = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(min-width: 1024px)')
+    : null
+  applyIsDesktop()
+  desktopMq?.addEventListener('change', applyIsDesktop)
+})
+
+onBeforeUnmount(() => {
+  desktopMq?.removeEventListener('change', applyIsDesktop)
 })
 
 function syncHash(): void {

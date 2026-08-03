@@ -68,6 +68,18 @@ describe('MapSidebar', () => {
     expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(true)
   })
 
+  it('showAd 를 명시하지 않으면 기본값 true 라 인피드 광고를 렌더한다 (다른 호출부 하위호환)', () => {
+    const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
+    const w = mountSidebar({ items: many, granularity: 'building', total: 8 })
+    expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(true)
+  })
+
+  it('showAd=false 면 항목 수가 충분해도 인피드 광고를 렌더하지 않는다', () => {
+    const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
+    const w = mountSidebar({ items: many, granularity: 'building', total: 8, showAd: false })
+    expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(false)
+  })
+
   it('전남광주통합특별시는 DB city 원값(풀네임)으로 매칭되어 평당가를 표시한다 (회귀 가드)', () => {
     // API MapRegionItem.name 은 DB city 컬럼 원값이다. 전남광주통합특별시는 축약명이 없어
     // chip.label('전남·광주')도 chip.slug('jeonnamgwangju')도 아닌 풀네임 그대로 온다.
