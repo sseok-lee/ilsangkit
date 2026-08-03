@@ -15,20 +15,30 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  idle: [MapBounds, number]
+  idle: [MapBounds, number, { lat: number; lng: number }]
   select: [MapItem]
   hover: [MapItem | null]
 }>()
 
+// panTo 재진입 루프 가드용 — 위경도가 이 값 미만으로 차이나면 "이미 그 위치"로 간주한다.
+const CENTER_EPSILON = 1e-6
+
 const container = ref<HTMLElement | null>(null)
-const { map, initMap, getBounds, panTo } = useKakaoMap()
+const { map, initMap, getBounds, getCenter, panTo } = useKakaoMap()
 const { renderOverlays, clearOverlays } = useMapOverlays()
 
+// Kakao 는 Mercator 투영이라 getBounds() sw/ne 의 산술평균은 지도의 실제 중심과 다르다
+// (위도가 갈릴수록 오차 커짐). 상위(onIdle)가 이 값으로 center 를 다시 설정 → 아래
+// watch(props.center) 가 panTo → 지도 이동 → idle 재발화 → 오차 누적으로 발산하는 루프가
+// 있었다(실측: hash lat 36.19→32.20→16.26→-0.80→...). getBounds() 는 API bbox 용으로 그대로
+// 쓰고, 중심은 반드시 getCenter() 의 실제 값을 올려보낸다.
 function emitIdle(): void {
   if (import.meta.server || !map.value) return
   const b = getBounds()
   if (!b) return
-  emit('idle', { swLat: b.sw.lat, swLng: b.sw.lng, neLat: b.ne.lat, neLng: b.ne.lng }, map.value.getLevel())
+  const c = getCenter()
+  if (!c) return
+  emit('idle', { swLat: b.sw.lat, swLng: b.sw.lng, neLat: b.ne.lat, neLng: b.ne.lng }, map.value.getLevel(), c)
 }
 
 onMounted(async () => {
@@ -65,10 +75,22 @@ watch(
 
 // 사이드바/마커 선택(select) 이 상위에서 center 를 바꾸면 지도를 그 위치로 이동시킨다.
 // 최초 위치는 initMap 이 이미 반영하므로 여기서는 변경분만 처리한다.
+// 멱등성 가드: 들어온 center 가 지도의 현재 실제 중심(getCenter())과 사실상 같으면
+// panTo 를 스킵한다. emitIdle 이 이미 실제 중심을 올려보내므로 정상 왕복에서는 이 값이
+// 거의 항상 일치하지만, 위쪽 경로가 나중에 다시 어긋난 값을 내려보내더라도 이 가드가
+// idle→panTo→idle 재발화 루프를 구조적으로 끊는다.
 watch(
   () => props.center,
   (c) => {
     if (import.meta.server || !map.value) return
+    const current = getCenter()
+    if (
+      current &&
+      Math.abs(current.lat - c.lat) < CENTER_EPSILON &&
+      Math.abs(current.lng - c.lng) < CENTER_EPSILON
+    ) {
+      return
+    }
     panTo(c.lat, c.lng)
   },
 )

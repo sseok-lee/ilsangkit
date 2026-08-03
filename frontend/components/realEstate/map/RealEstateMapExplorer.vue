@@ -126,9 +126,14 @@ function syncHash(): void {
   }))
 }
 
-function onIdle(bounds: MapBounds, lvl: number): void {
+// mapCenter 는 RealEstateMapCanvas 가 getCenter() 로 올려보낸 지도의 실제 중심이다.
+// bounds.sw/ne 의 산술중점을 쓰면 Kakao 의 Mercator 투영 때문에 실제 중심과 어긋나고,
+// 그 어긋난 값이 다시 panTo → idle 재발화 → 재계산으로 이어져 발산하는 루프가 됐다
+// (실측: hash lat 36.19→32.20→16.26→-0.80→... 무한 드리프트). bounds 자체는 검색 bbox
+// 용으로 왜곡 없이 그대로 onMapIdle 에 넘긴다.
+function onIdle(bounds: MapBounds, lvl: number, mapCenter: { lat: number; lng: number }): void {
   lastBounds = bounds
-  center.value = { lat: (bounds.swLat + bounds.neLat) / 2, lng: (bounds.swLng + bounds.neLng) / 2 }
+  center.value = mapCenter
   onMapIdle(bounds, lvl)
   syncHash()
 }

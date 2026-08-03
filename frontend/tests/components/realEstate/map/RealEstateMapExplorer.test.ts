@@ -51,6 +51,34 @@ describe('RealEstateMapExplorer', () => {
     expect(w.html()).not.toContain('window.kakao')
   })
 
+  // 루프 회귀 가드: RealEstateMapCanvas 가 idle 의 3번째 인자로 올려보내는 "실제 중심"을
+  // onIdle 이 그대로 반영해야 한다. bounds.sw/ne 산술중점으로 되돌아가면(과거 버그) Kakao
+  // Mercator 투영 오차 때문에 panTo → idle 재발화가 무한 반복되는 드리프트가 재발한다.
+  // center 는 로컬 ref 라 직접 관측할 수 없으므로, syncHash() 가 그 값을 그대로 실어보내는
+  // location.hash 를 관측 지점으로 삼는다(라이브 검증 때 실제로 이 해시를 읽어 확인한 방식과 동일).
+  it('idle 의 3번째 인자(getCenter() 실제 중심)를 center 에 그대로 반영한다 — bounds 산술중점이 아니다 (루프 회귀 가드)', async () => {
+    const CanvasStub = {
+      template: '<div data-testid="canvas" />',
+      emits: ['idle', 'select', 'hover'],
+    }
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: ITEMS, initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+
+    // sw/ne 산술중점 = lat (33+41)/2=37, lng (124+132)/2=128 — getCenter() 실제값과
+    // 의도적으로 다르게 둔다(Mercator 왜곡 재현).
+    const bounds = { swLat: 33, swLng: 124, neLat: 41, neLng: 132 }
+    const realCenter = { lat: 36.5, lng: 127.8 }
+
+    await w.findComponent(CanvasStub).vm.$emit('idle', bounds, 9, realCenter)
+
+    expect(window.location.hash).toContain(`lat=${realCenter.lat}`)
+    expect(window.location.hash).toContain(`lng=${realCenter.lng}`)
+    expect(window.location.hash).not.toContain('lat=37')
+    expect(window.location.hash).not.toContain('lng=128')
+  })
+
   // MapSidebar 가 데스크톱 aside 와 모바일 바텀시트에 동시에 마운트된다(하나는 CSS 로만
   // 숨김, DOM 에서 사라지지 않음). showAd 게이팅이 없으면 두 사본이 동시에 AdBanner 를
   // 마운트해 adsbygoogle.push() 를 중복 호출한다(라이브에서 관측된 버그, availableWidth=0

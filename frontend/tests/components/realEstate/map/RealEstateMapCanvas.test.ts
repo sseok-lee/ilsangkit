@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   mapRef: { value: null as null | { getLevel: () => number } },
   initMap: vi.fn(),
   getBounds: vi.fn(),
+  getCenter: vi.fn(),
   panTo: vi.fn(),
   renderOverlays: vi.fn(),
   clearOverlays: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('~/composables/useKakaoMap', () => ({
     map: mocks.mapRef,
     initMap: mocks.initMap,
     getBounds: mocks.getBounds,
+    getCenter: mocks.getCenter,
     panTo: mocks.panTo,
   }),
 }))
@@ -74,6 +76,7 @@ describe('RealEstateMapCanvas', () => {
       mocks.mapRef.value = { getLevel: () => 9 }
     })
     mocks.getBounds.mockReturnValue({ sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } })
+    mocks.getCenter.mockReturnValue({ lat: 36.5, lng: 127.8 })
     // onNuxtReady 는 Nuxt 자동 import 전역이다 — vitest 에는 없으므로 즉시 실행하는 스텁을 심는다.
     ;(globalThis as any).onNuxtReady = (cb: () => void) => cb()
     installFakeKakao()
@@ -151,5 +154,42 @@ describe('RealEstateMapCanvas', () => {
     await w.setProps({ center: { lat: 1, lng: 1 } })
 
     expect(mocks.panTo).not.toHaveBeenCalled()
+  })
+
+  it('idle emit 은 getBounds() 산술중점이 아니라 getCenter() 의 실제 중심을 3번째 인자로 올려보낸다', async () => {
+    // getBounds() 의 sw/ne 산술중점 = (36+ (-)... ) 여기선 lat (33+41)/2=37, lng (124+132)/2=128 —
+    // getCenter() 가 반환하는 실제 중심(36.5, 127.8)과 의도적으로 다르게 한다(Mercator 왜곡 재현).
+    mocks.getBounds.mockReturnValue({ sw: { lat: 33, lng: 124 }, ne: { lat: 41, lng: 132 } })
+    mocks.getCenter.mockReturnValue({ lat: 36.5, lng: 127.8 })
+
+    const w = mountCanvas()
+    await flushPromises()
+
+    const [, , emittedCenter] = w.emitted('idle')![0] as [unknown, number, { lat: number; lng: number }]
+    expect(emittedCenter).toEqual({ lat: 36.5, lng: 127.8 })
+  })
+
+  it('루프 회귀 가드: getCenter() 가 getBounds() 산술중점과 다른 상태에서 idle 이 발화돼도, ' +
+    '그 idle 이 emit 한 실제 중심을 그대로 되돌려받으면 panTo 를 호출하지 않는다 (0회)', async () => {
+    // sw/ne 산술중점(37, 128)과 getCenter() 실제값(36.5, 127.8)을 의도적으로 다르게 둔다.
+    // 만약 가드가 (버그로) getCenter() 대신 bounds 중점과 비교하게 되면 아래 setProps 값이
+    // "다르다"고 오판해 panTo 를 호출하게 되므로, 이 테스트는 그 회귀를 잡아낸다.
+    mocks.getBounds.mockReturnValue({ sw: { lat: 33, lng: 124 }, ne: { lat: 41, lng: 132 } })
+    mocks.getCenter.mockReturnValue({ lat: 36.5, lng: 127.8 })
+
+    const w = mountCanvas({ center: { lat: 36.5, lng: 127.8 } })
+    await flushPromises()
+
+    // idle 재발화(예: kakao 리스너 콜백을 다시 호출)로 emit 된 실제 중심을 그대로
+    // 상위가 echo 해 props.center 로 되돌려주는 정상 왕복을 재현한다.
+    const kakao = (window as any).kakao
+    const idleCallback = kakao.maps.event.addListener.mock.calls[0][2]
+    idleCallback()
+    await flushPromises()
+
+    const [, , emittedCenter] = w.emitted('idle')!.at(-1) as [unknown, number, { lat: number; lng: number }]
+    await w.setProps({ center: emittedCenter })
+
+    expect(mocks.panTo).toHaveBeenCalledTimes(0)
   })
 })
