@@ -45,6 +45,10 @@ const globalStubs = {
   AdBanner: { template: '<div />' },
   RealEstateCategoryCards: { template: '<div />' },
   DataSourceSection: { template: '<div />' },
+  // Task 10: 페이지가 지도 탐색 컴포넌트로 교체됨. 이 파일은 setItemListSchema 만 검증하므로
+  // 실제 지도 서브트리(useKakaoMap → shallowRef 미정의)를 마운트할 필요가 없다 — stub 없이 두면
+  // 크래시가 unhandled rejection 으로 새어나가 `vitest run` 전체를 비정상 종료(exit 1)시킨다.
+  RealEstateMapExplorer: { template: '<div data-stub="map-explorer" />' },
 }
 
 async function mountSuspended(component: any, options?: any) {

@@ -19,7 +19,6 @@ vi.mock('~/composables/useStructuredData', () => ({
     setBreadcrumbSchema: mockSetBreadcrumbSchema,
     setItemListSchema: mockSetItemListSchema,
     setDatasetSchema: vi.fn(),
-    setFAQSchema: vi.fn(),
   }),
 }))
 
@@ -36,6 +35,16 @@ beforeEach(() => {
   mockSetItemListSchema.mockClear()
 })
 
+// RealEstateMapExplorer 는 useKakaoMap(shallowRef 등 브라우저 전제)을 물고 있어 stub 없이
+// 마운트하면 크래시한다 — 지도 자체는 이 테스트의 관심사가 아니다(별도 지도 컴포넌트 테스트가 커버).
+const globalStubs = {
+  RealEstateMapExplorer: { template: '<div data-stub="map-explorer" />' },
+  AdBanner: { template: '<div />' },
+  RealEstateCategoryCards: { template: '<div />' },
+  DataSourceSection: { template: '<div />' },
+  SectionBlock: { template: '<section><slot name="heading" /><slot /></section>' },
+}
+
 async function mountSuspended(component: any, options?: any) {
   const wrapper = mount(
     defineComponent({
@@ -45,37 +54,14 @@ async function mountSuspended(component: any, options?: any) {
         })
       },
     }),
-    options,
+    { global: { stubs: globalStubs } },
   )
   await flushPromises()
   return wrapper
 }
 
-describe('부동산 허브 페이지 콘텐츠 강화 (Task 3.3)', () => {
-  it('H2 요소가 3개 이상 존재해야 한다', async () => {
-    const wrapper = await mountSuspended(RealEstateHubPage)
-    const h2Elements = wrapper.findAll('h2')
-    expect(h2Elements.length).toBeGreaterThanOrEqual(3)
-  })
-
-  it('"자주 묻는 질문" 텍스트가 존재해야 한다', async () => {
-    const wrapper = await mountSuspended(RealEstateHubPage)
-    expect(wrapper.text()).toContain('자주 묻는 질문')
-  })
-
-  it('<details> 요소가 존재해야 한다 (FAQ 아코디언)', async () => {
-    const wrapper = await mountSuspended(RealEstateHubPage)
-    const detailsElements = wrapper.findAll('details')
-    expect(detailsElements.length).toBeGreaterThan(0)
-  })
-
-  it('<summary> 요소가 존재해야 한다', async () => {
-    const wrapper = await mountSuspended(RealEstateHubPage)
-    const summaryElements = wrapper.findAll('summary')
-    expect(summaryElements.length).toBeGreaterThan(0)
-  })
-
-  it('"부동산 유형별 실거래가" 섹션 H2가 존재해야 한다', async () => {
+describe('/real-estate 허브 페이지 하단 콘텐츠', () => {
+  it('"부동산 유형별 실거래가" H2 섹션이 존재해야 한다', async () => {
     const wrapper = await mountSuspended(RealEstateHubPage)
     const h2Elements = wrapper.findAll('h2')
     const texts = h2Elements.map(el => el.text())
@@ -89,9 +75,8 @@ describe('부동산 허브 페이지 콘텐츠 강화 (Task 3.3)', () => {
     expect(texts.some(t => t.includes('부동산 실거래가란'))).toBe(true)
   })
 
-  it('setItemListSchema가 호출되어야 한다 (ItemList 구조화 데이터)', async () => {
-    await mountSuspended(RealEstateHubPage)
-    expect(mockSetItemListSchema).toHaveBeenCalled()
+  it('토지 실거래가 카드가 /real-estate/land 로 링크되어야 한다 (유형 카드 7개 유지)', async () => {
+    const wrapper = await mountSuspended(RealEstateHubPage)
+    expect(wrapper.find('a[href="/real-estate/land"]').exists()).toBe(true)
   })
-
 })
