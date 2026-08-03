@@ -50,3 +50,4 @@ Branch: feat/real-estate-map-explorer (base = origin/develop 3e6911c4)
 시작 (base 3e6911c4). 문서 커밋 cherry-pick 복구: 7210ecc9(스펙 개정) + 5b2550a9(계획).
   ★원인: 문서 3커밋을 로컬 develop 에 했는데 브랜치를 origin/develop 에서 따 누락됨.
 Pre-flight 스캔: 충돌 1건 발견·해소(하단 콘텐츠 중복, 위 Deviations 참조).
+Task 1: complete (commit b5a35383, base 2a9bdde9, review clean — Spec ✅/Quality Approved, Critical·Important 0). recentMonthsCondition(months, now) → sql `((dealYear = ? AND dealMonth >= ?) OR dealYear > ?)` + params [cy, cm, cy]. while 루프라 다년 롤오버도 일반적으로 동작(리뷰어 수기 검증: 25개월→2024/1). months 비정수·<1 throw. 5/5 green(controller 독립 재실행 확인). Minor(DEFER→최종 triage): (T1a) now 가 Invalid Date 면 NaN params 무검증(브리프 범위 밖, 호출자 내부값) · (T1b) months 상한 없음(이론적) · (T1c) 분수·2년 롤오버 테스트 미커버(수기 검증됨).

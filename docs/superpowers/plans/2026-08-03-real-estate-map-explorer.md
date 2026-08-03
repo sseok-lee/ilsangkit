@@ -447,13 +447,14 @@ Expected: PASS — 7 passed
 - [ ] **Step 5: 로컬 DB로 실제 쿼리가 도는지 확인**
 
 ```bash
-cd backend && npx tsx -e "
+cd backend && cat > verify-tmp.ts <<'EOF'
 import { fetchBuildings } from './src/services/realEstateMapService.js';
 const r = await fetchBuildings('apt-sale', { swLat: 37.46, swLng: 127.0, neLat: 37.54, neLng: 127.1 });
 console.log('total=', r.total, 'items=', r.items.length, 'exact=', r.exact);
 console.log(r.items[0]);
 process.exit(0);
-"
+EOF
+npx tsx verify-tmp.ts; rm -f verify-tmp.ts
 ```
 Expected: `total=` 0보다 큰 수, `items=` 1 이상, 첫 항목에 `latestPrice`가 number로 찍힌다. `Unknown column` 이나 `Key ... doesn't exist` 오류가 나면 Task 2의 `db push`가 안 된 것이다.
 
@@ -692,14 +693,15 @@ Expected: PASS — 8 passed
 - [ ] **Step 5: 로컬 DB로 실제 집계 + 소요시간 확인**
 
 ```bash
-cd backend && npx tsx -e "
+cd backend && cat > verify-tmp.ts <<'EOF'
 import { fetchRegions } from './src/services/realEstateMapService.js';
 console.time('city'); const c = await fetchRegions('apt-sale', 'city'); console.timeEnd('city');
 console.log('시/도', c.length, '개'); console.log(c.slice(0, 3));
 console.time('district'); const d = await fetchRegions('apt-sale', 'district'); console.timeEnd('district');
 console.log('구/군', d.length, '개');
 process.exit(0);
-"
+EOF
+npx tsx verify-tmp.ts; rm -f verify-tmp.ts
 ```
 Expected: 시/도 15~16개, 구/군 200개 이상. 각 쿼리 1초 미만. **3초를 넘으면 sargable 조건이 안 걸린 것이므로** 생성 SQL을 찍어 확인한다.
 
