@@ -13,6 +13,7 @@ import {
   getNearbyByBjd,
 } from '../services/realEstateService.js';
 import { getHubSummary } from '../services/realEstateHubSummaryService.js';
+import { fetchRegions, fetchBuildings } from '../services/realEstateMapService.js';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
@@ -27,6 +28,7 @@ import {
   PriceAnalysisQuerySchema,
   NearbyQuerySchema,
 } from '../schemas/realEstate.js';
+import { MapQuerySchema, resolveGranularity, type MapQueryInput } from '../schemas/realEstateMap.js';
 import { z } from 'zod';
 
 const router = Router();
@@ -170,6 +172,36 @@ router.get(
     const result = await getAreaGroups(type, bjdCode, buildingName);
     res.json({ success: true, data: result });
   })
+);
+
+// GET /api/real-estate/:type/map - 지도 뷰포트 조회
+//
+// granularity 는 줌 레벨이 정한다. 줌 아웃이면 지역 집계(캐시), 줌 인이면 bbox 건물 목록.
+// rentType 파라미터는 두지 않는다 — summary 가 건물당 최신 거래 1건만 보유해
+// 전세로 필터하면 실제 전세 건물의 40~56%가 사라진다(설계문서 4장). 전세/월세 구분은
+// 응답의 monthlyRent 로 프론트가 라벨에서 처리한다.
+router.get(
+  '/:type/map',
+  validate(TypeParamsSchema, 'params'),
+  validate(MapQuerySchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { type } = req.params as { type: string };
+    const { level, swLat, swLng, neLat, neLng } = req.query as unknown as MapQueryInput;
+
+    const granularity = resolveGranularity(level);
+
+    if (granularity === 'building') {
+      const { items, total, exact } = await fetchBuildings(type, { swLat, swLng, neLat, neLng });
+      res.json({ success: true, data: { granularity, items, total, exact } });
+      return;
+    }
+
+    const items = await fetchRegions(type, granularity);
+    res.json({
+      success: true,
+      data: { granularity, items, total: items.length, exact: true },
+    });
+  }),
 );
 
 export default router;
