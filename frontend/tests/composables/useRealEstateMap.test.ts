@@ -51,4 +51,9 @@ describe('itemKey', () => {
   it('건물 항목은 buildingName+district 로 식별한다', () => {
     expect(itemKey({ buildingName: 'A', district: '강남구' } as never)).toBe('A|강남구')
   })
+
+  it('시/도 레벨 지역 항목은 district 가 null 이라 빈 문자열로 접힌다', () => {
+    // 이 폴백이 사라지면 키가 "서울|null" 이 되어 마커·목록 연동이 어긋난다
+    expect(itemKey({ name: '서울', district: null } as never)).toBe('서울|')
+  })
 })
