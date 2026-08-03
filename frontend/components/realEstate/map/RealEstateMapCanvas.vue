@@ -21,11 +21,8 @@ const emit = defineEmits<{
 }>()
 
 const container = ref<HTMLElement | null>(null)
-const { map, initMap, getBounds } = useKakaoMap()
+const { map, initMap, getBounds, panTo } = useKakaoMap()
 const { renderOverlays, clearOverlays } = useMapOverlays()
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let idleListener: any = null
 
 function emitIdle(): void {
   if (import.meta.server || !map.value) return
@@ -47,7 +44,7 @@ onMounted(async () => {
   if (!map.value) return
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const kakao = (window as any).kakao
-  idleListener = kakao.maps.event.addListener(map.value, 'idle', emitIdle)
+  kakao.maps.event.addListener(map.value, 'idle', emitIdle)
   renderOverlays(map.value, props.items, {
     onClick: (i) => emit('select', i),
     onHover: (i) => emit('hover', i),
@@ -66,12 +63,22 @@ watch(
   },
 )
 
+// 사이드바/마커 선택(select) 이 상위에서 center 를 바꾸면 지도를 그 위치로 이동시킨다.
+// 최초 위치는 initMap 이 이미 반영하므로 여기서는 변경분만 처리한다.
+watch(
+  () => props.center,
+  (c) => {
+    if (import.meta.server || !map.value) return
+    panTo(c.lat, c.lng)
+  },
+)
+
 onBeforeUnmount(() => {
   if (import.meta.server) return
   clearOverlays()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const kakao = (window as any).kakao
-  if (idleListener && map.value && kakao?.maps) {
+  if (map.value) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const kakao = (window as any).kakao
     kakao.maps.event.removeListener(map.value, 'idle', emitIdle)
   }
 })

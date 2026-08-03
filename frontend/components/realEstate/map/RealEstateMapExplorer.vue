@@ -71,6 +71,8 @@ const props = defineProps<{
 const center = ref({ lat: 36.5, lng: 127.8 })
 const {
   type, level, granularity, items, total, exact, pending,
+  // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
+  // 오버레이) 연결은 useMapOverlays 렌더 API 변경이 필요해 이 태스크 범위 밖. 의도적 보류다.
   hoveredKey, setType, onMapIdle,
 } = useRealEstateMap({
   type: props.initialType,
