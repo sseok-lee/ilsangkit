@@ -115,6 +115,14 @@ export function useRealEstateMap(initial: {
     void fetchNow(bounds, level.value)
   }
 
+  // 해시(#level=)를 마운트 시 반영하기 위한 순수 setter — onMapIdle 과 달리 fetch 를
+  // 트리거하지 않는다. RealEstateMapCanvas 가 이 level 을 props 로 받아 initMap 에 넘기고,
+  // 마운트 직후 스스로 idle 을 한 번 emit 하므로 데이터 fetch 는 그 경로로 자연히 일어난다.
+  // 여기서까지 fetch 하면 (기본 전국 bounds 로) 중복 요청이 된다.
+  function setLevel(next: number): void {
+    level.value = next
+  }
+
   return {
     type: readonly(type),
     level: readonly(level),
@@ -127,6 +135,7 @@ export function useRealEstateMap(initial: {
     selectedKey,
     isBuilding: computed(() => granularity.value === 'building'),
     setType,
+    setLevel,
     onMapIdle,
     fetchNow,
   }

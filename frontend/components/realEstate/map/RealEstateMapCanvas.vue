@@ -95,6 +95,23 @@ watch(
   },
 )
 
+// 해시(#level=)로 넘어온 레벨을 마운트 이후에도 반영한다(공유 링크 복원). initMap 은
+// props.level 을 최초 1회만 읽으므로(마운트 시점), 그 뒤에 값이 바뀌면 여기서 직접
+// setLevel 을 호출해야 지도에 반영된다.
+// 멱등성 가드: 지도가 이미 그 레벨이면 스킵한다. emitIdle 이 map.value.getLevel() 을 그대로
+// 올려보내므로, 상위(RealEstateMapExplorer)가 그 값을 다시 level prop 으로 내려보내는 정상
+// 왕복에서는 이 값이 거의 항상 일치한다 — 가드가 없으면 setLevel → idle 재발화 →
+// onMapIdle(level) → level prop 갱신 → setLevel 로 이어지는 루프가 생길 수 있다(위 center
+// 루프와 동일한 형태).
+watch(
+  () => props.level,
+  (lvl) => {
+    if (import.meta.server || !map.value) return
+    if (map.value.getLevel() === lvl) return
+    map.value.setLevel(lvl)
+  },
+)
+
 onBeforeUnmount(() => {
   if (import.meta.server) return
   clearOverlays()

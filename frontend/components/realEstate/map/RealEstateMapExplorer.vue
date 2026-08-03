@@ -75,7 +75,7 @@ const {
   type, level, granularity, items, total, exact, pending,
   // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
   // 오버레이) 연결은 useMapOverlays 렌더 API 변경이 필요해 이 태스크 범위 밖. 의도적 보류다.
-  hoveredKey, setType, onMapIdle,
+  hoveredKey, setType, setLevel, onMapIdle,
 } = useRealEstateMap({
   type: props.initialType,
   items: props.initialItems,
@@ -100,10 +100,26 @@ function applyIsDesktop(): void {
 
 // SSR 은 항상 시/도 목록을 렌더한다(하이드레이션 일치). 해시는 마운트 후에만 읽어
 // 지도를 옮기고, 지도 idle 이 좌측을 갱신한다 — post-hydration 업데이트라 mismatch 가 아니다.
+//
+// 공유 링크가 네 필드(type/level/lat/lng) 전부를 담기 때문에(buildMapHash), 여기서도
+// 네 필드 전부를 반영해야 한다. lat/lng 만 반영하면 "빌라 전월세, 강남 건물 단위" 링크를
+// 받은 사람이 "아파트 매매, 전국 단위"로 Gangnam 근처만 중심잡힌 화면을 보게 된다 — 지도
+// 중심은 맞는데 무엇을 보는지가 틀린, 반쯤만 동작하는 상태.
+//
+// - type 은 setType(next, bounds) 으로 반영한다 — 기존 필터 전환 경로(onTypeChange)와
+//   동일하게, 기본 전국 bounds(lastBounds 초기값)로 즉시 한 번 fetch 한다. RealEstateMapCanvas
+//   가 initMap 뒤 스스로 idle 을 emit 하면 실제 bounds/level 로 다시 fetch 되어 이 값을
+//   덮어쓴다(seq 가드로 안전) — 여기서 fetch 를 생략하면 지도가 초기화되기 전까지 사이드바가
+//   구 타입 데이터를 보여준다.
+// - level 은 setLevel(next) 으로 값만 세팅한다(fetch 트리거 없음) — RealEstateMapCanvas 가
+//   이 값을 props 로 받아 initMap({ center, level }) 에 그대로 넘기므로, 지도가 애초에 그
+//   레벨로 뜬다. 여기서 fetch 까지 하면(전국 bounds 로) setType 과 중복된다.
 onMounted(() => {
   if (import.meta.server) return
   const h = parseMapHash(window.location.hash)
   if (h.lat != null && h.lng != null) center.value = { lat: h.lat, lng: h.lng }
+  if (h.level != null) setLevel(h.level)
+  if (h.type != null) setType(h.type, lastBounds)
 
   // tailwind.config.js 기본 screens: lg = 1024px (프로젝트가 screens 를 오버라이드하지 않음).
   // aside 는 `lg:block`, MapBottomSheet 는 `lg:hidden` 이므로 같은 기준선을 그대로 따른다.

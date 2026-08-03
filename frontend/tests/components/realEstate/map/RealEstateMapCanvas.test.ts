@@ -8,7 +8,7 @@ import type { MapItem } from '~/types/realEstateMap'
 // 검증하는 것이 목적이므로, 두 composable 은 관측 가능한 스파이로 대체한다.
 // vi.mock 팩토리는 파일 상단으로 호이스팅되어 일반 변수를 참조할 수 없으므로 vi.hoisted 사용.
 const mocks = vi.hoisted(() => ({
-  mapRef: { value: null as null | { getLevel: () => number } },
+  mapRef: { value: null as null | { getLevel: () => number; setLevel: (level: number) => void } },
   initMap: vi.fn(),
   getBounds: vi.fn(),
   getCenter: vi.fn(),
@@ -73,7 +73,7 @@ describe('RealEstateMapCanvas', () => {
     vi.clearAllMocks()
     mocks.mapRef.value = null
     mocks.initMap.mockImplementation(async () => {
-      mocks.mapRef.value = { getLevel: () => 9 }
+      mocks.mapRef.value = { getLevel: () => 9, setLevel: vi.fn() }
     })
     mocks.getBounds.mockReturnValue({ sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } })
     mocks.getCenter.mockReturnValue({ lat: 36.5, lng: 127.8 })
@@ -191,5 +191,32 @@ describe('RealEstateMapCanvas', () => {
     await w.setProps({ center: emittedCenter })
 
     expect(mocks.panTo).toHaveBeenCalledTimes(0)
+  })
+
+  // initMap 은 props.level 을 마운트 시 한 번만 읽는다(installFakeKakao 의 Map.getLevel() 은
+  // 항상 9 를 반환하도록 고정) — 마운트 이후 레벨 변경(해시 복원 등)이 반영되려면 이 watch 가
+  // map.value.setLevel() 을 직접 호출해야 한다.
+  it('props.level 이 바뀌면 지도의 setLevel 을 호출한다', async () => {
+    const w = mountCanvas({ level: 7 })
+    await flushPromises()
+    const setLevelSpy = mocks.mapRef.value!.setLevel as ReturnType<typeof vi.fn>
+
+    await w.setProps({ level: 11 })
+
+    expect(setLevelSpy).toHaveBeenCalledTimes(1)
+    expect(setLevelSpy).toHaveBeenCalledWith(11)
+  })
+
+  // 루프 회귀 가드: setLevel → idle 재발화 → onMapIdle(level) → level prop 갱신 → setLevel 로
+  // 이어지는 사이클을 끊는다. center watch 와 동일한 형태의 멱등성 가드(위 테스트들 참고).
+  it('props.level 이 지도의 현재 레벨(getLevel())과 같으면 setLevel 을 호출하지 않는다 (멱등 가드)', async () => {
+    const w = mountCanvas({ level: 7 })
+    await flushPromises()
+    const setLevelSpy = mocks.mapRef.value!.setLevel as ReturnType<typeof vi.fn>
+
+    // installFakeKakao() 의 Map.getLevel() 은 항상 9 를 반환한다 — "이미 그 레벨"을 재현한다.
+    await w.setProps({ level: 9 })
+
+    expect(setLevelSpy).not.toHaveBeenCalled()
   })
 })

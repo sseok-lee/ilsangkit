@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
 import type { MapItem } from '~/types/realEstateMap'
@@ -77,6 +77,71 @@ describe('RealEstateMapExplorer', () => {
     expect(window.location.hash).toContain(`lng=${realCenter.lng}`)
     expect(window.location.hash).not.toContain('lat=37')
     expect(window.location.hash).not.toContain('lng=128')
+  })
+
+  // 공유 링크 복원 회귀 가드: buildMapHash 는 type/level/lat/lng 네 필드 전부를 담는데, 과거엔
+  // onMounted 가 lat/lng 만 반영하고 type/level 은 파싱만 하고 버렸다 — "빌라 전월세, 강남
+  // 건물 단위" 링크를 받은 사람이 "아파트 매매, 전국 단위" 화면을 Gangnam 근처 중심으로만
+  // 보게 되는, 겉보기엔 맞지만 실제로는 절반만 동작하는 상태였다.
+  describe('마운트 시 해시(#type/level/lat/lng) 전체를 반영한다 (공유 링크 복원)', () => {
+    afterEach(() => {
+      window.location.hash = ''
+    })
+
+    function mountWithCanvasStub() {
+      const CanvasStub = {
+        template: '<div data-testid="canvas" />',
+        props: ['items', 'center', 'level'],
+        emits: ['idle', 'select', 'hover'],
+      }
+      const w = mount(RealEstateMapExplorer, {
+        props: { initialType: 'apt-sale', initialItems: ITEMS, initialGranularity: 'city' },
+        global: {
+          stubs: {
+            RealEstateMapCanvas: CanvasStub,
+            // hash 의 type 이 setType() 을 통해 실제 fetch 를 트리거한다(기존 필터 전환 경로와
+            // 동일). 전역 $fetch 목(tests/setup.ts)이 빈 data:{} 를 반환하므로 total/exact 가
+            // undefined 로 바뀌는데, 실제 MapSidebar 는 이 조합(exact=undefined)에서
+            // total.toLocaleString() 을 호출해 깨진다 — 이 테스트는 필터바 활성 상태/캔버스
+            // props 만 검증하므로 그 무관한 크래시를 피하려고 MapSidebar 를 스텁한다.
+            MapSidebar: true,
+          },
+        },
+      })
+      return { w, canvas: w.findComponent(CanvasStub) }
+    }
+
+    it('type/level 이 있는 해시는 필터바 활성 타입과 캔버스 level prop 에 그대로 반영된다', async () => {
+      window.location.hash = '#type=villa-rent&level=5&lat=37.5&lng=127.05'
+      const { w, canvas } = mountWithCanvasStub()
+      // onMounted 안의 setLevel/setType 은 반응형 값만 동기로 바꾼다 — 그 값이 자식 prop 으로
+      // 실제 반영되는 건 Vue 의 스케줄러가 비동기로 플러시하므로 한 틱 기다려야 한다.
+      // setType 이 트리거한 fetch(mock $fetch) 도 여기서 완전히 정리한다 — 안 그러면 다음
+      // 테스트로 새는 미해결 프라미스가 남는다.
+      await nextTick()
+      await flushPromises()
+
+      expect(canvas.props('level')).toBe(5)
+      expect(canvas.props('center')).toEqual({ lat: 37.5, lng: 127.05 })
+
+      const activeBtn = w.findAll('button').find((b) => b.text() === '빌라 전월세')
+      expect(activeBtn?.attributes('aria-pressed')).toBe('true')
+      const defaultBtn = w.findAll('button').find((b) => b.text() === '아파트 매매')
+      expect(defaultBtn?.attributes('aria-pressed')).toBe('false')
+    })
+
+    it('lat/lng 만 있는 해시는(과거와 동일) 중심만 옮기고 type/level 은 기본값을 유지한다', async () => {
+      window.location.hash = '#lat=35.1&lng=129.0'
+      const { w, canvas } = mountWithCanvasStub()
+      await nextTick()
+      await flushPromises()
+
+      expect(canvas.props('center')).toEqual({ lat: 35.1, lng: 129.0 })
+      expect(canvas.props('level')).toBe(13) // useRealEstateMap 기본 레벨 — 해시에 없으니 그대로
+
+      const defaultBtn = w.findAll('button').find((b) => b.text() === '아파트 매매')
+      expect(defaultBtn?.attributes('aria-pressed')).toBe('true')
+    })
   })
 
   // MapSidebar 가 데스크톱 aside 와 모바일 바텀시트에 동시에 마운트된다(하나는 CSS 로만
