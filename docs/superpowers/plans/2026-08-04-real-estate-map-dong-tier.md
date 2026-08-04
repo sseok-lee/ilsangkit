@@ -228,7 +228,6 @@ export function resolveGranularity(level: number, prev?: Granularity): Granulari
 `prev !== 'building'` / `base !== 'building'` 가드는 타입 좁히기 겸 실제 로직이다 — `building` 은 밴드의 바닥이라 `MIN_LEVEL` 항목이 없고, 그 방향의 특례는 반대편 분기가 이미 처리한다.
 
 **이 로직이 설계문서 5.1.1 전이표와 일치하는지 손으로 한 번 따라가 본다.** 확대 12→5 는 `city, city, city, district, district, dong, dong, building`, 축소 5→12 는 `building, building, building, dong, dong, district, district, city` 가 나와야 한다. Step 1 의 테스트가 이걸 그대로 검증한다.
-```
 
 - [ ] **Step 5: 테스트가 통과하는지 확인한다**
 
