@@ -202,4 +202,31 @@ describe('MapSidebar 더보기', () => {
     const w = mountBuildings(manyBuildings(12))
     expect(w.text()).not.toContain('상위')
   })
+
+  it('구·군 모드도 자르지 않는다 — 슬라이스는 건물 모드 전용이다', () => {
+    // 지역(시/도) 모드로는 이 조건을 검증할 수 없다: SIDO_CHIPS 가 16개라 PAGE_SIZE(20)
+    // 아래여서 슬라이스를 걸어도 결과가 같다. 구·군 모드는 items 가 그대로 행이 되므로
+    // 20개를 넘겨야 granularity 조건이 살아 있는지 드러난다.
+    const districts: MapItem[] = Array.from({ length: 25 }, (_, i) => ({
+      name: '서울', district: `${i}구`, lat: 37.5, lng: 127,
+      avgPricePerPyeong: 1000 + i, transactionCount: 10,
+    }))
+    const w = mount(MapSidebar, {
+      props: {
+        items: districts, granularity: 'district', total: 25, exact: true,
+        pending: false, type: 'apt-sale',
+      },
+    })
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(25)
+    expect(w.find('[data-testid="map-sidebar-more"]').exists()).toBe(false)
+  })
+
+  it('exact 여도 목록이 잘렸으면 개수 안내를 띄운다', () => {
+    // showCountNote 가 예전의 !props.exact 였다면 exact=true 인 이 경우 안내가 사라진다.
+    // 지도는 최대 200개 라벨을 그리는데 목록은 20개 — 그 불일치가 화면에 드러나야 한다.
+    // (이 프로젝트는 과거 지도 개수와 목록 개수가 조용히 어긋나는 버그를 낸 적이 있다.)
+    const w = mountBuildings(manyBuildings(200)) // 헬퍼 기본값: total=200, exact=true
+    expect(w.text()).toContain('이 영역에 200곳')
+    expect(w.text()).toContain('상위 20곳 표시')
+  })
 })
