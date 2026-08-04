@@ -14,7 +14,11 @@
 
 ## Global Constraints
 
-- **Node 20 필수.** 각 작업 시작 전 `nvm use 20`. Node 25 로 돌리면 프론트 테스트 27건이 거짓 실패한다(Node 20 에서는 2,093건 통과).
+- **Node 20 필수.** 시스템 기본은 v25.5.0 이고, 그대로 돌리면 이 변경과 무관한 프론트 테스트 27건이 거짓 실패한다(Node 20 에서는 2,093건 통과). **`nvm use 20` 은 쓰지 않는다** — Bash 도구는 호출마다 독립 셸이라 셸 상태가 유지되지 않는다. 테스트·린트를 돌리는 모든 명령 앞에 PATH 를 직접 얹는다:
+  ```bash
+  export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
+  ```
+  각 명령 블록마다 이 줄을 포함해야 한다. `node --version` 이 `v20.19.5` 인지 먼저 확인하고 진행한다.
 - **작업 디렉터리는 `frontend/`.** 이 계획의 모든 경로와 명령은 `frontend/` 기준이다. 백엔드 변경은 없다.
 - **SSR 가드는 `import.meta.server` 극성을 쓴다.** `!import.meta.client` 는 vitest 에서 두 플래그가 모두 `undefined` 라 코드가 실행되지 않아 테스트가 불가능해진다.
 - **광고 배치를 임의로 바꾸지 않는다.** 이 페이지 광고는 사이드바 인피드 1개로 확정됐다(사용자 결정). 개수·위치를 조정하지 않는다.
@@ -100,7 +104,7 @@ describe('AppHeader wide', () => {
 - [ ] **Step 2: 테스트가 실패하는지 확인한다**
 
 ```bash
-nvm use 20
+export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
 npx vitest run tests/components/common/AppHeaderWide.test.ts
 ```
 
@@ -256,7 +260,7 @@ describe('AppFooter compact', () => {
 - [ ] **Step 2: 테스트가 실패하는지 확인한다**
 
 ```bash
-nvm use 20
+export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
 npx vitest run tests/components/common/AppFooterCompact.test.ts
 ```
 
@@ -403,7 +407,7 @@ describe('layouts/map.vue', () => {
 - [ ] **Step 2: 테스트가 실패하는지 확인한다**
 
 ```bash
-nvm use 20
+export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
 npx vitest run tests/layouts/mapLayout.test.ts
 ```
 
@@ -539,7 +543,7 @@ describe('MapFilterBar', () => {
 - [ ] **Step 2: 테스트가 실패하는지 확인한다**
 
 ```bash
-nvm use 20
+export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
 npx vitest run tests/components/realEstate/map/MapFilterBar.test.ts
 ```
 
@@ -722,7 +726,7 @@ describe('MapSidebar 더보기', () => {
 - [ ] **Step 2: 테스트가 실패하는지 확인한다**
 
 ```bash
-nvm use 20
+export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
 npx vitest run tests/components/realEstate/map/MapSidebar.test.ts
 ```
 
@@ -903,7 +907,7 @@ describe('MapSidebar 푸터', () => {
 - [ ] **Step 2: 테스트가 실패하는지 확인한다**
 
 ```bash
-nvm use 20
+export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
 npx vitest run tests/components/realEstate/map/MapSidebar.test.ts
 ```
 
@@ -1055,7 +1059,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
 - [ ] **Step 2: 테스트가 실패하는지 확인한다**
 
 ```bash
-nvm use 20
+export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
 npx vitest run tests/components/realEstate/map/RealEstateMapExplorer.test.ts
 ```
 
@@ -1189,7 +1193,7 @@ describe('GNB 토지 링크 존치', () => {
 - [ ] **Step 2: 테스트가 통과하는지 확인한다(기존 상태를 고정하는 가드다)**
 
 ```bash
-nvm use 20
+export PATH="/Users/leemyeongseok/.nvm/versions/node/v20.19.5/bin:$PATH"
 npx vitest run tests/types/navGroups.test.ts
 ```
 
