@@ -49,10 +49,15 @@ export function buildMapHash(s: { type: string; level: number; lat: number; lng:
   return `#type=${s.type}&level=${s.level}&lat=${s.lat}&lng=${s.lng}`
 }
 
+/**
+ * 목록·오버레이의 Vue :key. 같은 구 안의 동들은 name(시/도)·district(구·군)가 모두
+ * 같으므로 dong 까지 넣어야 고유해진다 — 빼면 강북구의 모든 동이 같은 키가 되어
+ * 목록 렌더가 깨진다.
+ */
 export function itemKey(item: MapItem): string {
   return isBuildingItem(item)
     ? `${item.buildingName}|${item.district}`
-    : `${item.name}|${item.district ?? ''}`
+    : `${item.name}|${item.district ?? ''}|${item.dong ?? ''}`
 }
 
 export function useRealEstateMap(initial: {
