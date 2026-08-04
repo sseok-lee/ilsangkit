@@ -139,6 +139,22 @@ describe('동 집계', () => {
     expect(sql).toMatch(/AVG\(t\.lat\)/);
     expect(sql).toMatch(/AVG\(t\.lng\)/);
     expect(sql).not.toMatch(/JOIN Region/);
+    // dong 은 JOIN Region 이 없어 별칭 r 이 존재하지 않는다. GROUP BY 꼬리에 r.lat 이
+    // 섞이면 "unknown column 'r.lat'" 로 런타임에 죽는다 — groupTail 이 dong 에서 비어
+    // 있어야 하는 이유를 직접 고정한다.
+    expect(sql).not.toMatch(/GROUP BY[\s\S]*r\.lat/);
+  });
+
+  it('district 레벨에는 좌표 NULL 필터가 없다 — 있으면 미지오코딩 거래가 평균가 집계에서도 빠진다', async () => {
+    // city/district 는 좌표를 Region JOIN 에서 가져오므로 거래 좌표(t.lat/t.lng)와
+    // 무관하다. coordFilter 가 여기까지 적용되면 좌표 없는 0.1% 거래가 평당가 평균
+    // (avgPricePerPyeong) 에서도 조용히 빠지는, 의도하지 않은 변경이 된다.
+    __resetMapCacheForTest();
+    queryRawUnsafe.mockResolvedValue([]);
+    await fetchRegions('apt-sale', 'district', KOREA_BOUNDS);
+
+    const sql = queryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).not.toMatch(/t\.lat IS NOT NULL/);
   });
 
   it('좌표 없는 거래를 평균에서 제외한다', async () => {
