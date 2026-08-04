@@ -230,3 +230,45 @@ describe('MapSidebar 더보기', () => {
     expect(w.text()).toContain('상위 20곳 표시')
   })
 })
+
+describe('MapSidebar 푸터', () => {
+  const footerStub = {
+    // props 를 배열이 아니라 객체로 선언한다. 배열 형식(무타입) stub 은 맨 속성(`<AppFooter compact />`)을
+    // 빈 문자열로 받아 props('compact') 가 '' 이 된다 — Boolean 을 명시해야 true 로 캐스팅된다.
+    AppFooter: { name: 'AppFooter', template: '<footer data-testid="sidebar-footer" />', props: { compact: Boolean } },
+  }
+
+  function mountWithFooter(showFooter: boolean) {
+    return mount(MapSidebar, {
+      props: {
+        items: REGIONS, granularity: 'city', total: 2, exact: true, pending: false,
+        type: 'apt-sale', showFooter,
+      },
+      global: { stubs: footerStub },
+    })
+  }
+
+  // MapSidebar 는 데스크톱 aside 와 모바일 바텀시트 두 사본이 항상 동시에 마운트된다
+  // (안 보이는 쪽은 CSS hidden 일 뿐 DOM 에 남는다). 기본값이 true 면 두 사본이 모두
+  // 푸터를 그려 링크 8개와 data-testid="footer-links" 가 2벌 생긴다.
+  it('기본값은 렌더하지 않는다', () => {
+    const w = mount(MapSidebar, {
+      props: { items: REGIONS, granularity: 'city', total: 2, exact: true, pending: false, type: 'apt-sale' },
+      global: { stubs: footerStub },
+    })
+    expect(w.find('[data-testid="sidebar-footer"]').exists()).toBe(false)
+  })
+
+  it('showFooter 면 목록 아래에 푸터를 렌더한다', () => {
+    expect(mountWithFooter(true).find('[data-testid="sidebar-footer"]').exists()).toBe(true)
+  })
+
+  it('푸터에 compact 를 넘긴다 — 320px 폭에 4열 그리드는 들어가지 않는다', () => {
+    expect(mountWithFooter(true).findComponent({ name: 'AppFooter' }).props('compact')).toBe(true)
+  })
+
+  it('푸터는 목록 뒤에 온다', () => {
+    const html = mountWithFooter(true).html()
+    expect(html.indexOf('map-sidebar-item')).toBeLessThan(html.indexOf('sidebar-footer'))
+  })
+})

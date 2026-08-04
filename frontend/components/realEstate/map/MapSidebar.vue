@@ -46,6 +46,12 @@
         </button>
       </li>
     </ul>
+    <!--
+      전역 푸터는 layouts/map.vue 에 없다(페이지 스크롤을 0으로 만들기 위해). 대신 여기
+      목록 하단에 둬 사이드바 스크롤 끝에서 도달하게 한다. 목록이 짧으면 위 ul 의 flex-1 이
+      밀어내 컨테이너 바닥에 붙는다.
+    -->
+    <AppFooter v-if="props.showFooter" compact />
   </div>
 </template>
 
@@ -58,6 +64,7 @@ import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import AdBanner from '~/components/ads/AdBanner.vue'
+import AppFooter from '~/components/common/AppFooter.vue'
 
 const AD_AFTER_INDEX = 4 // 5번째 항목 뒤
 
@@ -75,8 +82,16 @@ const props = withDefaults(defineProps<{
    * 호출부(RealEstateMapExplorer)가 실제 보이는 뷰포트 한쪽에만 true 를 넘겨야 한다.
    */
   showAd?: boolean
+  /**
+   * 이 사본에 푸터를 렌더할지. showAd 와 같은 이유로 게이트가 필요하다 — 두 사본이
+   * 동시에 마운트되므로 그냥 두면 링크 8개와 data-testid="footer-links" 가 2벌 생긴다.
+   *
+   * 기본값은 false 다. showAd 처럼 true 로 두면 게이트를 잊은 호출부에서 조용히 2벌이 된다.
+   */
+  showFooter?: boolean
 }>(), {
   showAd: true,
+  showFooter: false,
 })
 
 const emit = defineEmits<{ hover: [string | null]; select: [MapItem] }>()
