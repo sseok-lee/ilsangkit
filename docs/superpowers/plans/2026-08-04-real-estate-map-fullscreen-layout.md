@@ -865,7 +865,9 @@ git commit -m "feat(map): 건물 목록 더보기 페이지네이션 — 초기 
 ```ts
 describe('MapSidebar 푸터', () => {
   const footerStub = {
-    AppFooter: { name: 'AppFooter', template: '<footer data-testid="sidebar-footer" />', props: ['compact'] },
+    // props 를 배열이 아니라 객체로 선언한다. 배열 형식(무타입) stub 은 맨 속성(`<AppFooter compact />`)을
+    // 빈 문자열로 받아 props('compact') 가 '' 이 된다 — Boolean 을 명시해야 true 로 캐스팅된다.
+    AppFooter: { name: 'AppFooter', template: '<footer data-testid="sidebar-footer" />', props: { compact: Boolean } },
   }
 
   function mountWithFooter(showFooter: boolean) {
