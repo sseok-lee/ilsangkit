@@ -2,13 +2,13 @@
   <div class="flex flex-col h-full overflow-y-auto bg-white">
     <div class="px-4 py-3 border-b border-line sticky top-0 bg-white z-10">
       <p class="text-sm font-semibold text-slate-900">{{ heading }}</p>
-      <p v-if="!props.exact" class="text-xs text-slate-600 mt-0.5">
-        이 영역에 {{ props.total.toLocaleString('ko-KR') }}곳 — 거래량 상위만 표시합니다
+      <p v-if="showCountNote" class="text-xs text-slate-600 mt-0.5">
+        이 영역에 {{ props.total.toLocaleString('ko-KR') }}곳 — 상위 {{ visibleRows.length.toLocaleString('ko-KR') }}곳 표시
       </p>
     </div>
 
     <ul class="flex-1">
-      <template v-for="(row, idx) in rows" :key="row.key">
+      <template v-for="(row, idx) in visibleRows" :key="row.key">
         <li
           data-testid="map-sidebar-item"
           class="border-b border-line-2"
@@ -35,12 +35,22 @@
           <AdBanner />
         </li>
       </template>
+      <li v-if="hasMore" class="p-3">
+        <button
+          type="button"
+          data-testid="map-sidebar-more"
+          class="w-full min-h-[44px] flex items-center justify-center rounded-lg border border-line bg-white text-sm font-medium text-slate-700 hover:bg-background-light transition-colors"
+          @click="showMore"
+        >
+          더보기
+        </button>
+      </li>
     </ul>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { isBuildingItem, type Granularity, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
 import { formatPriceLabel, formatPyeongLabel } from '~/composables/useMapOverlays'
 import { itemKey } from '~/composables/useRealEstateMap'
@@ -154,4 +164,40 @@ const rows = computed<Row[]>(() => {
     }
   })
 })
+
+/** 건물 목록 초기 표시 개수. 이보다 길면 [더보기] 로 이만큼씩 늘린다. */
+const PAGE_SIZE = 20
+
+const shown = ref(PAGE_SIZE)
+
+// 뷰포트가 바뀌어 목록이 새로 오면 처음부터 다시 보여준다.
+// 안 그러면 이전 지역에서 늘려 둔 개수가 새 지역에 그대로 남는다.
+watch(() => props.items, () => { shown.value = PAGE_SIZE })
+
+/**
+ * 화면에 그릴 행.
+ *
+ * 건물 모드만 자른다. 목록을 전부 그리면(최대 200개, 항목 약 62px = 12,400px) 그 아래
+ * 푸터에 도달할 수 없다 — 데스크톱 사이드바에서도 12화면을 내려야 한다.
+ * 지역 모드(최대 16개)는 자르지 않는다. SIDO_CHIPS 링크는 이 페이지의 핵심 SSR 콘텐츠라
+ * 전부 HTML 에 있어야 한다.
+ */
+const visibleRows = computed<Row[]>(() =>
+  props.granularity === 'building' ? rows.value.slice(0, shown.value) : rows.value,
+)
+
+const hasMore = computed(() => visibleRows.value.length < rows.value.length)
+
+function showMore(): void {
+  shown.value += PAGE_SIZE
+}
+
+/**
+ * 표시 개수가 bbox 전체 개수보다 적으면 항상 알린다.
+ * 목록은 20개인데 지도엔 최대 200개 라벨이 뜨므로, 그 차이의 이유가 화면에 드러나야 한다.
+ *
+ * props.exact 는 이 판정에 쓰지 않는다 — exact=false(전체>200)면 어차피
+ * visibleRows.length < total 이 참이라 조건이 중복된다. prop 자체는 호출부 호환을 위해 남긴다.
+ */
+const showCountNote = computed(() => visibleRows.value.length < props.total)
 </script>

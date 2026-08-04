@@ -124,3 +124,82 @@ describe('MapSidebar', () => {
     })
   })
 })
+
+/** 건물 아이템 n 개를 만든다 — 이름만 다르고 나머지는 동일하다. */
+function manyBuildings(n: number): MapItem[] {
+  return Array.from({ length: n }, (_, i) => ({
+    buildingName: `건물${i}`, city: '서울', district: '강남구', dongName: '개포동',
+    lat: 37.48, lng: 127.06, latestPrice: 100000 + i, monthlyRent: null,
+    latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 200 - i,
+  }))
+}
+
+function mountBuildings(items: MapItem[], over = {}) {
+  return mount(MapSidebar, {
+    props: {
+      items, granularity: 'building', total: items.length, exact: true, pending: false,
+      type: 'apt-sale', ...over,
+    },
+  })
+}
+
+// 목록을 전부 그리면(최대 200개, 항목 약 62px = 12,400px) 그 아래 푸터에 도달할 수 없다.
+// 데스크톱 사이드바에서도 12화면을 내려야 한다(설계문서 7.5).
+describe('MapSidebar 더보기', () => {
+  it('건물 200개 중 초기 20개만 렌더한다', () => {
+    const w = mountBuildings(manyBuildings(200))
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(20)
+  })
+
+  it('더보기를 누르면 20개씩 늘어난다', async () => {
+    const w = mountBuildings(manyBuildings(200))
+    await w.find('[data-testid="map-sidebar-more"]').trigger('click')
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(40)
+    await w.find('[data-testid="map-sidebar-more"]').trigger('click')
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(60)
+  })
+
+  it('20개 이하면 더보기 버튼이 없다', () => {
+    const w = mountBuildings(manyBuildings(12))
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(12)
+    expect(w.find('[data-testid="map-sidebar-more"]').exists()).toBe(false)
+  })
+
+  it('끝까지 펼치면 더보기 버튼이 사라진다', async () => {
+    const w = mountBuildings(manyBuildings(25))
+    expect(w.find('[data-testid="map-sidebar-more"]').exists()).toBe(true)
+    await w.find('[data-testid="map-sidebar-more"]').trigger('click')
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(25)
+    expect(w.find('[data-testid="map-sidebar-more"]').exists()).toBe(false)
+  })
+
+  it('지역 모드는 자르지 않는다 — SIDO_CHIPS 16개는 전부 SSR HTML 에 있어야 한다', () => {
+    const w = mount(MapSidebar, {
+      props: { items: REGIONS, granularity: 'city', total: 2, exact: true, pending: false, type: 'apt-sale' },
+    })
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(16)
+    expect(w.find('[data-testid="map-sidebar-more"]').exists()).toBe(false)
+  })
+
+  it('목록이 새로 오면 표시 개수가 20으로 돌아간다', async () => {
+    // 안 그러면 강남에서 100개까지 늘려 둔 상태가 제주로 옮겨가도 남는다.
+    const w = mountBuildings(manyBuildings(200))
+    await w.find('[data-testid="map-sidebar-more"]').trigger('click')
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(40)
+
+    await w.setProps({ items: manyBuildings(200), total: 200 })
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(20)
+  })
+
+  it('표시 개수가 전체보다 적으면 두 수를 함께 알린다', () => {
+    // 목록 20개인데 지도엔 최대 200개 라벨이 뜨는 이유가 화면에 드러나야 한다.
+    const w = mountBuildings(manyBuildings(200), { total: 1234, exact: false })
+    expect(w.text()).toContain('이 영역에 1,234곳')
+    expect(w.text()).toContain('상위 20곳 표시')
+  })
+
+  it('전부 보이면 개수 안내를 띄우지 않는다', () => {
+    const w = mountBuildings(manyBuildings(12))
+    expect(w.text()).not.toContain('상위')
+  })
+})
