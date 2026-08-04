@@ -222,7 +222,12 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     expect(cls).toContain('bottom-0')
   })
 
-  it('내부 컨테이너는 fixed section 을 h-full 로 채운다 — vh/dvh 계산을 다시 쓰지 않는다', () => {
+  it('내부 컨테이너는 fixed section 에 inset 고정된다 — height 프로퍼티(h-full 포함)를 쓰지 않는다', () => {
+    // AdSense 가 광고 슬롯의 모든 조상에 인라인 height:auto!important 를 찍는다(라이브
+    // 실측, 1280x600). h-full(=height:100%) 은 그 주입에 곧바로 무너져 사이드바가
+    // 1448px 로 늘어나고 스크롤이 죽었다 — absolute inset-0 은 height 프로퍼티 자체를
+    // 쓰지 않으므로(section 이 이미 fixed=positioned 라 containing block) 그 주입과
+    // 무관하다.
     // `section > div` 는 MapBottomSheet 스텁의 루트(`<div><slot /></div>`)도 매칭해
     // find() 의 "첫 매치"가 템플릿 순서에 우연히 기댄다 — lg:flex 클래스를 가진 쪽을
     // 명시적으로 골라 그 우연에 기대지 않게 한다.
@@ -230,14 +235,27 @@ describe('RealEstateMapExplorer 레이아웃', () => {
       .findAll('section > div')
       .find((d) => d.classes().includes('lg:flex'))
       ?.classes()
-    expect(cls).toContain('h-full')
-    expect(cls?.some((c) => c.includes('vh'))).toBe(false)
+    expect(cls).toContain('absolute')
+    expect(cls).toContain('inset-0')
+    expect(cls).not.toContain('h-full')
+    expect(cls?.some((c) => /^(h|lg:h)-/.test(c) || c.includes('vh'))).toBe(false)
   })
 
-  it('사이드바를 고정폭으로 잡는다', () => {
-    const cls = mountForLayout().find('aside').classes()
-    expect(cls).toContain('lg:w-[320px]')
-    expect(cls).toContain('lg:shrink-0')
+  it('사이드바를 고정폭으로 잡고, flex 컨테이너로 두어 내부 MapSidebar 가 cross-axis stretch 로 높이를 채운다', () => {
+    // aside 자신도 광고의 조상이라 height:auto!important 주입을 받는다. lg:block 이면
+    // 그 밑의 MapSidebar 루트(h-full)가 무너져 스크롤이 죽는다 — lg:flex 로 두면
+    // align-items:stretch(기본값)가 height 가 auto 일 때 작동하므로 그 주입 위에서도
+    // 살아남는다(라이브 검증). row 방향 flex 의 메인축(가로)은 자동으로 안 늘어나므로
+    // MapSidebar 쪽에 w-full 을 내려 320px 폭을 유지한다.
+    const w = mountForLayout()
+    const asideCls = w.find('aside').classes()
+    expect(asideCls).toContain('lg:w-[320px]')
+    expect(asideCls).toContain('lg:shrink-0')
+    expect(asideCls).toContain('lg:flex')
+    expect(asideCls).not.toContain('lg:block')
+
+    const sidebar = w.find('aside').findComponent({ name: 'MapSidebar' })
+    expect(sidebar.classes()).toContain('w-full')
   })
 
   it('지도 영역은 h-full 이다 — 모바일 60vh 폐지 회귀 가드', () => {

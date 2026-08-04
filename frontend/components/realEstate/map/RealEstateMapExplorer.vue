@@ -12,11 +12,26 @@
     <!-- lg:min-h-[560px] 를 다시 넣지 말 것: 위 fixed inset 이 이미 높이를 확정하므로
          min-height 로 덮어쓸 필요가 없고, 덮어쓰면 세로가 짧은 창에서 explorer 가
          section 보다 커져 사이드바 하단(푸터)에 닿지 못하는 과거 버그가 재발한다. -->
-    <div class="lg:flex h-full">
+    <!-- h-full 을 쓰지 않는다: AdSense 스크립트가 광고 슬롯에서 조상을 타고 올라가며
+         모든 조상 엘리먼트에 인라인 `height: auto !important` 를 찍는다(라이브 실측,
+         1280x600). h-full(=height:100%) 은 그 주입에 곧바로 무너진다 — 이 컨테이너도
+         광고의 조상이라 예외가 아니다. `absolute inset-0` 은 height 프로퍼티 자체를
+         쓰지 않고 좌표(top/right/bottom/left)로 크기를 정하므로 주입과 무관하다.
+         section 이 이미 fixed(=positioned)라 이 absolute 의 containing block 이 된다. -->
+    <div class="absolute inset-0 lg:flex">
       <!-- 좌측: 이 페이지의 유일한 SSR 콘텐츠. ClientOnly 로 감싸지 않는다.
-           고정폭 — 화면 폭에 따라 목록 항목의 줄바꿈 지점이 달라질 이유가 없다. -->
-      <aside class="hidden lg:block lg:w-[320px] lg:shrink-0 border-r border-line">
+           고정폭 — 화면 폭에 따라 목록 항목의 줄바꿈 지점이 달라질 이유가 없다.
+           lg:block 이 아니라 lg:flex: MapSidebar 루트도 광고의 조상이라 같은 주입을
+           받는다(h-full 이 무너짐). aside 를 flex 컨테이너로 두면 기본 cross-axis
+           stretch(align-items:stretch)가 MapSidebar 루트의 height 를 채운다 —
+           stretch 는 height 가 auto 일 때 작동하므로 `auto !important` 주입과
+           충돌하지 않고 오히려 그 위에서 동작한다(라이브 검증 완료).
+           단 row 방향 flex 의 메인축(가로)은 자동으로 안 늘어나므로, MapSidebar 에
+           w-full 을 내려 320px 폭을 명시적으로 채운다(MapSidebar.vue 는 건드리지
+           않는다 — Vue 는 컴포넌트에 준 class 를 단일 루트 엘리먼트에 항상 병합한다). -->
+      <aside class="hidden lg:flex lg:w-[320px] lg:shrink-0 border-r border-line">
         <MapSidebar
+          class="w-full"
           :items="items as MapItem[]"
           :granularity="granularity"
           :total="total"
@@ -137,7 +152,7 @@ onMounted(() => {
   if (h.type != null) setType(h.type, lastBounds)
 
   // tailwind.config.js 기본 screens: lg = 1024px (프로젝트가 screens 를 오버라이드하지 않음).
-  // aside 는 `lg:block`, MapBottomSheet 는 `lg:hidden` 이므로 같은 기준선을 그대로 따른다.
+  // aside 는 `lg:flex`, MapBottomSheet 는 `lg:hidden` 이므로 같은 기준선을 그대로 따른다.
   desktopMq = typeof window.matchMedia === 'function'
     ? window.matchMedia('(min-width: 1024px)')
     : null
