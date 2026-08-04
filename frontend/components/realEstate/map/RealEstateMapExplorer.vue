@@ -204,7 +204,7 @@ function isWithinKoreaBounds(lat: number, lng: number): boolean {
 }
 
 /**
- * 사이드바 행 클릭(city/district) → 지도를 드릴다운한다. 클릭 시점의 granularity 가 곧
+ * 사이드바 행 클릭(city/district/dong) → 지도를 드릴다운한다. 클릭 시점의 granularity 가 곧
  * 클릭된 행의 단위다(목록 전체가 항상 현재 granularity 로 렌더되므로). building 행은
  * 상세 페이지로 네비게이션하므로 level 을 건드리지 않는다.
  *

@@ -91,6 +91,23 @@ describe('resolveGranularity 4계층', () => {
   });
 });
 
+describe('resolveGranularity 다단계 점프', () => {
+  // 히스테리시스는 "인접 단위" 사이에서만 걸려야 한다. 카카오맵은 줌이 완전히 멈췄을 때만
+  // idle 이벤트를 한 번 쏘므로, 사용자가 휠을 빠르게 굴려 building 뷰에서 city 뷰까지 단숨에
+  // 축소하면 이 함수는 중간 밴드를 전혀 거치지 않고 level 과 prev 가 두 칸 이상 떨어진 조합을
+  // 한 번에 받는다. resolveGranularity 의 인접 판정(`Math.abs(prevIdx - baseIdx) !== 1`)이
+  // 없으면, 두 칸 이상 점프에도 히스테리시스가 걸려 도착해야 할 단위가 아니라 이전 단위를
+  // 계속 반환한다 — 아래 두 테스트가 그 회귀를 잡는다. 이 줄을 지워도 나머지 테스트(위
+  // '4계층' 블록 등)는 전부 통과한다: 전부 "한 칸씩" 전이만 검증하기 때문에 이 갭을 못 잡는다.
+  it('building → city 로 두 칸 이상 건너뛰면 이전 단위로 되돌아가지 않고 base 를 반환한다', () => {
+    expect(resolveGranularity(11, 'building')).toBe('city');
+  });
+
+  it('city → building 으로 두 칸 이상 건너뛰면 이전 단위로 되돌아가지 않고 base 를 반환한다', () => {
+    expect(resolveGranularity(5, 'city')).toBe('building');
+  });
+});
+
 describe('MapQuerySchema', () => {
   const valid = { level: '9', swLat: '37.4', swLng: '127.0', neLat: '37.6', neLng: '127.2' };
 

@@ -110,8 +110,12 @@ export function useMapOverlays() {
         ? formatPriceLabel(item as MapBuildingItem)
         : formatPyeongLabel(item as MapRegionItem)
 
-      // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다. items 는 서버가
-      // transactionCount DESC 로 주므로 순서가 곧 우선순위 — 앞선 라벨과 겹치면 라벨 대신 점을 찍는다.
+      // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다. items 순서가 곧 우선순위 —
+      // 앞선 라벨과 겹치면 라벨 대신 점을 찍는다. 단, 그 순서의 출처는 종류별로 다르다:
+      // building 은 서버가 transactionCount DESC 로 주고(fetchBuildings), region(city/
+      // district/dong)은 뷰포트 중심에서 가까운 순으로 준다(sortRegionsByDistance) — 정렬
+      // 기준이 통일돼 있지 않으므로 여기서 "우선순위 = items 순서"라고만 가정하고, 그 기준이
+      // transactionCount 라고 단정하지 않는다.
       //
       // 건너뛰지 않고 점이라도 남기는 이유: 좌측 목록은 items 전부를 보여주므로, 겹친다고
       // 아예 지우면 "목록엔 있는데 지도엔 없는" 건물이 생긴다(실측 강남 level 4: 목록 114 vs

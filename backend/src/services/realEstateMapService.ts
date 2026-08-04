@@ -351,8 +351,9 @@ function filterAndSortRegions(items: MapRegionItem[], bounds: Bounds): MapRegion
  *
  * 캐시/in-flight dedup 은 (type, level) 조합 18개(6 타입 × 3 레벨)만 커버하면 되므로 **전국 목록**을
  * 그대로 유지한다(뷰포트를 캐시 키에 넣으면 뷰포트는 무한하므로 캐시가 무한정 커진다).
- * bbox 필터는 캐시에서 꺼낸 뒤 매 호출마다 메모리에서 적용한다 — 지역 수가 적어
- * (구·군 267 + 시/도 16) 비용이 무시할 만하다.
+ * bbox 필터 + 중심점 정렬(filterAndSortRegions, 아래 sortRegionsByDistance 참고)은 캐시에서
+ * 꺼낸 뒤 매 호출마다 메모리에서 적용한다 — 지역 수가 적어(시/도 16 + 구·군 267, 동은 타입당
+ * 최대 ~2,877) 비용이 무시할 만하다.
  *
  * 실패 시 빈 배열을 주고 **캐시하지 않는다**. 호출부(SSR)는 지역 링크를 상수에서 만들고
  * 가격만 이 값으로 채우므로, 빈 배열이어도 페이지는 링크를 온전히 렌더한다(fail-open).
