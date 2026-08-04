@@ -9,13 +9,18 @@ describe('resolveGranularity', () => {
     expect(resolveGranularity(14)).toBe('city');
   });
 
-  it('level 8~10 은 district', () => {
-    expect(resolveGranularity(8)).toBe('district');
+  it('level 9~10 은 district', () => {
+    expect(resolveGranularity(9)).toBe('district');
     expect(resolveGranularity(10)).toBe('district');
   });
 
-  it('level <= 7 은 building', () => {
-    expect(resolveGranularity(7)).toBe('building');
+  it('level 7~8 은 dong', () => {
+    expect(resolveGranularity(7)).toBe('dong');
+    expect(resolveGranularity(8)).toBe('dong');
+  });
+
+  it('level <= 6 은 building', () => {
+    expect(resolveGranularity(6)).toBe('building');
     expect(resolveGranularity(1)).toBe('building');
   });
 
@@ -28,6 +33,61 @@ describe('resolveGranularity', () => {
   it('히스테리시스: city 에서 level 10 으로 내려가도 한 단계는 버틴다', () => {
     expect(resolveGranularity(10, 'city')).toBe('city');
     expect(resolveGranularity(9, 'city')).toBe('district');
+  });
+});
+
+describe('resolveGranularity 4계층', () => {
+  it('prev 없이 레벨만으로 4단위를 가른다', () => {
+    expect(resolveGranularity(14)).toBe('city');
+    expect(resolveGranularity(11)).toBe('city');
+    expect(resolveGranularity(10)).toBe('district');
+    expect(resolveGranularity(9)).toBe('district');
+    expect(resolveGranularity(8)).toBe('dong');
+    expect(resolveGranularity(7)).toBe('dong');
+    expect(resolveGranularity(6)).toBe('building');
+    expect(resolveGranularity(1)).toBe('building');
+  });
+
+  // 설계문서 5.1.1 전이표. 각 단위가 양방향 모두 정확히 2칸을 차지하고
+  // 건너뛰는 단위가 없어야 한다 — 구·군 밴드가 9~10 두 칸뿐이라 특히 중요하다.
+  it('한 칸씩 확대할 때 city→district→dong→building 을 순서대로 거친다', () => {
+    const seen: any[] = [];
+    let prev: any = 'city';
+    for (const level of [12, 11, 10, 9, 8, 7, 6, 5]) {
+      prev = resolveGranularity(level, prev);
+      seen.push(prev);
+    }
+    expect(seen).toEqual([
+      'city', 'city', 'city', 'district', 'district', 'dong', 'dong', 'building',
+    ]);
+  });
+
+  it('한 칸씩 축소할 때 building→dong→district→city 를 순서대로 거친다', () => {
+    const seen: any[] = [];
+    let prev: any = 'building';
+    for (const level of [5, 6, 7, 8, 9, 10, 11, 12]) {
+      prev = resolveGranularity(level, prev);
+      seen.push(prev);
+    }
+    expect(seen).toEqual([
+      'building', 'building', 'building', 'dong', 'dong', 'district', 'district', 'city',
+    ]);
+  });
+
+  it('경계에서 한 칸 왕복해도 단위가 바뀌지 않는다 (깜빡임 방지)', () => {
+    // district(9~10) 에 있다가 8 로 내렸다 9 로 되돌리면 계속 district 여야 한다
+    let g: any = 'district';
+    g = resolveGranularity(8, g);
+    expect(g).toBe('district');
+    g = resolveGranularity(9, g);
+    expect(g).toBe('district');
+
+    // dong(7~8) 에 있다가 6 으로 내렸다 7 로 되돌려도 dong
+    g = 'dong';
+    g = resolveGranularity(6, g);
+    expect(g).toBe('dong');
+    g = resolveGranularity(7, g);
+    expect(g).toBe('dong');
   });
 });
 
