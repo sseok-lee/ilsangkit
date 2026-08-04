@@ -186,3 +186,57 @@ describe('RealEstateMapExplorer', () => {
     })
   })
 })
+
+describe('RealEstateMapExplorer 레이아웃', () => {
+  // MapSidebar 의 props 를 읽기 위한 전용 헬퍼. stub 에 name 을 반드시 준다 —
+  // name 이 없으면 findAllComponents({ name }) 가 아무것도 찾지 못해 검증이 조용히 무력해진다.
+  function mountForLayout() {
+    return mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: ITEMS, initialGranularity: 'city' },
+      global: {
+        stubs: {
+          MapSidebar: {
+            name: 'MapSidebar',
+            template: '<div />',
+            props: ['items', 'granularity', 'total', 'exact', 'pending', 'type', 'showAd', 'showFooter'],
+          },
+          MapFilterBar: { name: 'MapFilterBar', template: '<div />', props: ['type'] },
+          RealEstateMapCanvas: { name: 'RealEstateMapCanvas', template: '<div />', props: ['items', 'center', 'level'] },
+          MapBottomSheet: { name: 'MapBottomSheet', template: '<div><slot /></div>' },
+          ClientOnly: { template: '<div><slot /></div>' },
+        },
+      },
+    })
+  }
+
+  it('컨테이너 높이를 dvh 로 잡고 헤더 높이를 브레이크포인트별로 뺀다', () => {
+    // vh 는 모바일 주소창이 접힐 때 갱신되지 않아 스크롤 0이 깨진다.
+    // 헤더는 h-14 lg:h-16(56px/64px)이라 두 값이 필요하다.
+    const cls = mountForLayout().find('section > div').classes()
+    expect(cls).toContain('h-[calc(100dvh-3.5rem)]')
+    expect(cls).toContain('lg:h-[calc(100dvh-4rem)]')
+    expect(cls.some((c) => c.includes('100vh'))).toBe(false)
+  })
+
+  it('사이드바를 고정폭으로 잡는다', () => {
+    const cls = mountForLayout().find('aside').classes()
+    expect(cls).toContain('lg:w-[320px]')
+    expect(cls).toContain('lg:shrink-0')
+  })
+
+  it('데스크톱·모바일 두 사본에 showFooter 를 넘긴다', () => {
+    // isDesktop 초기값이 null 이라 마운트 직후엔 양쪽 모두 false — SSR 출력과 일치해
+    // 하이드레이션 mismatch 가 없다. matchMedia 결과가 들어오면 정확히 한쪽만 켜진다.
+    const sidebars = mountForLayout().findAllComponents({ name: 'MapSidebar' })
+    expect(sidebars).toHaveLength(2)
+    expect(sidebars.map((s) => s.props('showFooter'))).toEqual([false, false])
+  })
+
+  it('showAd 와 showFooter 가 같은 사본에서 같은 값이다', () => {
+    // 둘 다 "보이는 뷰포트 한쪽에만" 규칙을 따른다. 서로 어긋나면 한쪽에만 광고가,
+    // 다른 쪽에만 푸터가 뜬다. isDesktop === true 하나만 쓰면 모바일 푸터가 영영 사라진다.
+    for (const s of mountForLayout().findAllComponents({ name: 'MapSidebar' })) {
+      expect(s.props('showFooter')).toBe(s.props('showAd'))
+    }
+  })
+})

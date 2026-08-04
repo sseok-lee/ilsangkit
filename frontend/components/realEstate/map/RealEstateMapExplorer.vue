@@ -1,8 +1,13 @@
 <template>
   <section class="relative">
-    <div class="lg:flex lg:h-[calc(100vh-4rem)] lg:min-h-[560px]">
-      <!-- 좌측: 이 페이지의 유일한 SSR 콘텐츠. ClientOnly 로 감싸지 않는다. -->
-      <aside class="hidden lg:block lg:w-[22%] lg:min-w-[280px] lg:max-w-[360px] border-r border-line">
+    <!--
+      dvh 를 쓴다. vh 는 모바일 주소창이 접히고 펼쳐질 때 갱신되지 않아 스크롤 0이 깨진다.
+      헤더가 h-14 lg:h-16(56px/64px)이라 빼는 값도 브레이크포인트별로 다르다.
+    -->
+    <div class="lg:flex h-[calc(100dvh-3.5rem)] lg:h-[calc(100dvh-4rem)] lg:min-h-[560px]">
+      <!-- 좌측: 이 페이지의 유일한 SSR 콘텐츠. ClientOnly 로 감싸지 않는다.
+           고정폭 — 화면 폭에 따라 목록 항목의 줄바꿈 지점이 달라질 이유가 없다. -->
+      <aside class="hidden lg:block lg:w-[320px] lg:shrink-0 border-r border-line">
         <MapSidebar
           :items="items as MapItem[]"
           :granularity="granularity"
@@ -11,12 +16,13 @@
           :pending="pending"
           :type="type"
           :show-ad="isDesktop === true"
+          :show-footer="isDesktop === true"
           @hover="hoveredKey = $event"
           @select="onSelect"
         />
       </aside>
 
-      <div class="relative flex-1 h-[60vh] lg:h-auto">
+      <div class="relative flex-1 h-full lg:h-auto">
         <div class="absolute top-2 left-2 right-2 z-20">
           <MapFilterBar :type="type" @update:type="onTypeChange" />
         </div>
@@ -46,6 +52,7 @@
         :pending="pending"
         :type="type"
         :show-ad="isDesktop === false"
+        :show-footer="isDesktop === false"
         @hover="hoveredKey = $event"
         @select="onSelect"
       />
