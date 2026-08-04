@@ -75,7 +75,7 @@ describe('fetchRegions', () => {
     ]);
     const r = await fetchRegions('apt-sale', 'city', KOREA_BOUNDS);
     expect(r[0]).toEqual({
-      name: '서울', district: null, lat: 37.5513, lng: 126.9891,
+      name: '서울', district: null, dong: null, lat: 37.5513, lng: 126.9891,
       avgPricePerPyeong: 7732, transactionCount: 12043,
     });
   });
@@ -116,5 +116,79 @@ describe('fetchRegions', () => {
       const r = await fetchRegions('apt-sale', 'district', SEOUL_BOUNDS);
       expect(r.map((x) => x.name)).toEqual(['서울특별시']);
     });
+  });
+});
+
+describe('동 집계', () => {
+  // 이 describe 는 'fetchRegions' 블록의 beforeEach(mockReset) 를 상속받지 않는
+  // 형제 describe 다 — 목 호출 로그를 매 테스트 시작 시 직접 비워야
+  // `queryRawUnsafe.mock.calls[0][0]` 이 이전 테스트의 호출을 가리키지 않는다.
+  beforeEach(() => {
+    queryRawUnsafe.mockReset();
+  });
+
+  it("level='dong' 이면 dongName 으로 GROUP BY 하고 거래 좌표 평균을 쓴다", async () => {
+    // Region 테이블에는 동이 없다(@@unique([city, district])). JOIN 으로 좌표를
+    // 얻으려 하면 0행이 나오므로 거래의 AVG(lat)/AVG(lng) 를 써야 한다.
+    __resetMapCacheForTest();
+    queryRawUnsafe.mockResolvedValue([]);
+    await fetchRegions('apt-sale', 'dong', KOREA_BOUNDS);
+
+    const sql = queryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).toMatch(/GROUP BY[\s\S]*t\.dongName/);
+    expect(sql).toMatch(/AVG\(t\.lat\)/);
+    expect(sql).toMatch(/AVG\(t\.lng\)/);
+    expect(sql).not.toMatch(/JOIN Region/);
+  });
+
+  it('좌표 없는 거래를 평균에서 제외한다', async () => {
+    // 거래의 0.1% 는 지오코딩이 안 돼 lat/lng 가 NULL 이다. 걸러내지 않으면
+    // 동 중심이 흔들린다.
+    __resetMapCacheForTest();
+    queryRawUnsafe.mockResolvedValue([]);
+    await fetchRegions('apt-sale', 'dong', KOREA_BOUNDS);
+
+    const sql = queryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).toMatch(/t\.lat IS NOT NULL/);
+    expect(sql).toMatch(/t\.lng IS NOT NULL/);
+  });
+
+  it('dong 필드를 채워 반환한다', async () => {
+    __resetMapCacheForTest();
+    queryRawUnsafe.mockResolvedValue([
+      { name: '서울', district: '강북구', dong: '미아동', lat: '37.63', lng: '127.02',
+        avgPricePerPyeong: 3225n, transactionCount: 42n },
+    ]);
+    const items = await fetchRegions('apt-sale', 'dong', KOREA_BOUNDS);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ name: '서울', district: '강북구', dong: '미아동' });
+  });
+
+  it('city/district 레벨의 dong 은 null 이다', async () => {
+    __resetMapCacheForTest();
+    queryRawUnsafe.mockResolvedValue([
+      { name: '서울', district: null, lat: '37.55', lng: '126.99', avgPricePerPyeong: 5164n, transactionCount: 100n },
+    ]);
+    const items = await fetchRegions('apt-sale', 'city', KOREA_BOUNDS);
+    expect(items[0].dong).toBeNull();
+  });
+
+  it('캐시 키는 (type, level) 뿐 — 다른 bbox 는 재조회하지 않는다', async () => {
+    __resetMapCacheForTest();
+    queryRawUnsafe.mockResolvedValue([]);
+    await fetchRegions('apt-sale', 'dong', KOREA_BOUNDS);
+    await fetchRegions('apt-sale', 'dong', SEOUL_BOUNDS);
+    expect(queryRawUnsafe).toHaveBeenCalledTimes(1);
+  });
+
+  it('전월세 동 집계는 전세만 본다 (구·군과 동일 규칙)', async () => {
+    __resetMapCacheForTest();
+    queryRawUnsafe.mockResolvedValue([]);
+    await fetchRegions('apt-rent', 'dong', KOREA_BOUNDS);
+
+    const sql = queryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).toMatch(/t\.monthlyRent = 0/);
+    expect(sql).toMatch(/deposit/);
   });
 });

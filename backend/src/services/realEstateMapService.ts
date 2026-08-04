@@ -133,12 +133,14 @@ export async function fetchBuildings(
 // 지역 집계
 // ─────────────────────────────────────────────
 
-export type RegionLevel = 'city' | 'district';
+export type RegionLevel = 'city' | 'district' | 'dong';
 
 export interface MapRegionItem {
-  /** level='city' 면 시/도명, 'district' 면 시/도명 (district 필드와 짝) */
+  /** 항상 시/도명. district/dong 필드와 짝을 이뤄 단위를 표현한다. */
   name: string;
   district: string | null;
+  /** level='dong' 일 때만 채워진다. city/district 에서는 null. */
+  dong: string | null;
   /**
    * Region.lat/lng 는 스키마상 NOT NULL 이라 실제로는 항상 채워진다. 그래도
    * fetchBuildings/MapBuildingItem 과 같은 규약(널을 0 으로 뭉개 좌표를 조작하지
@@ -181,26 +183,49 @@ async function buildRegions(type: string, level: RegionLevel): Promise<MapRegion
   // 좌표는 Region(구·군 267행)에서 가져온다. 시/도는 그 평균을 중심으로 쓴다.
   // 시/도 상수를 새로 만들지 않는 이유: 행정구역 개편(2026-07 전남광주통합)마다
   // 하드코딩 맵이 드리프트해 404 를 냈던 이력이 있다.
-  const groupCols = level === 'city' ? 't.city' : 't.city, t.district';
-  const selectName =
-    level === 'city'
-      ? 't.city AS name, NULL AS district'
-      : 't.city AS name, t.district AS district';
-  const joinCoord =
-    level === 'city'
+  //
+  // 동은 좌표 출처가 다르다. Region 테이블은 @@unique([city, district]) 라 동이 없어
+  // JOIN 하면 0행이 된다 — 거래 좌표의 평균을 중심으로 쓴다. 거래의 99.9% 가 좌표를
+  // 갖고 있어(2026-08 운영 실측) 평균이 안정적이다.
+  const isDong = level === 'dong';
+
+  const groupCols = isDong
+    ? 't.city, t.district, t.dongName'
+    : level === 'city'
+      ? 't.city'
+      : 't.city, t.district';
+
+  const selectName = isDong
+    ? 't.city AS name, t.district AS district, t.dongName AS dong'
+    : level === 'city'
+      ? 't.city AS name, NULL AS district, NULL AS dong'
+      : 't.city AS name, t.district AS district, NULL AS dong';
+
+  const joinCoord = isDong
+    ? ''
+    : level === 'city'
       ? `JOIN (SELECT city, AVG(lat) AS lat, AVG(lng) AS lng FROM Region GROUP BY city) r
            ON r.city = t.city`
       : `JOIN Region r ON r.city = t.city AND r.district = t.district`;
 
+  // 좌표 컬럼과 GROUP BY 꼬리가 동/그 외에서 다르다. 동은 집계 함수라 GROUP BY 에
+  // 넣지 않고, 그 외는 JOIN 으로 가져온 상수라 GROUP BY 에 넣어야 한다.
+  const coordCols = isDong ? 'AVG(t.lat) AS lat, AVG(t.lng) AS lng' : 'r.lat AS lat, r.lng AS lng';
+  const groupTail = isDong ? '' : ', r.lat, r.lng';
+
+  // 좌표 없는 거래(0.1%)가 AVG 에 섞이면 동 중심이 흔들린다. 동일 때만 건다 —
+  // city/district 는 좌표를 Region 에서 가져오므로 거래 좌표와 무관하다.
+  const coordFilter = isDong ? 'AND t.lat IS NOT NULL AND t.lng IS NOT NULL' : '';
+
   const sql = `
     SELECT ${selectName},
-           r.lat AS lat, r.lng AS lng,
+           ${coordCols},
            ROUND(AVG(t.${priceCol} / (t.exclusiveArea / ${PYEONG_M2}))) AS avgPricePerPyeong,
            COUNT(*) AS transactionCount
     FROM ${table} t
     ${joinCoord}
-    WHERE t.exclusiveArea > 0 ${rentFilter} AND ${dateSql}
-    GROUP BY ${groupCols}, r.lat, r.lng
+    WHERE t.exclusiveArea > 0 ${rentFilter} ${coordFilter} AND ${dateSql}
+    GROUP BY ${groupCols}${groupTail}
   `;
 
   const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(sql, ...dateParams);
@@ -208,6 +233,7 @@ async function buildRegions(type: string, level: RegionLevel): Promise<MapRegion
   return rows.map((r) => ({
     name: String(r.name),
     district: r.district == null ? null : String(r.district),
+    dong: r.dong == null ? null : String(r.dong),
     // null 을 Number() 에 그대로 넘기면 0 이 되어 (0,0) 좌표로 둔갑한다 — bbox 필터가
     // "진짜 (0,0)"과 "좌표 없음"을 구분 못 하게 되므로 null 은 null 로 보존한다.
     lat: r.lat == null ? null : Number(r.lat),
@@ -242,7 +268,7 @@ function filterRegionsByBounds(items: MapRegionItem[], bounds: Bounds): MapRegio
 /**
  * 지역 단위 평균 평당가 — 요청 뷰포트(bbox)로 필터링해 반환한다.
  *
- * 캐시/in-flight dedup 은 (type, level) 조합 12개만 커버하면 되므로 **전국 목록**을
+ * 캐시/in-flight dedup 은 (type, level) 조합 18개(6 타입 × 3 레벨)만 커버하면 되므로 **전국 목록**을
  * 그대로 유지한다(뷰포트를 캐시 키에 넣으면 뷰포트는 무한하므로 캐시가 무한정 커진다).
  * bbox 필터는 캐시에서 꺼낸 뒤 매 호출마다 메모리에서 적용한다 — 지역 수가 적어
  * (구·군 267 + 시/도 16) 비용이 무시할 만하다.
