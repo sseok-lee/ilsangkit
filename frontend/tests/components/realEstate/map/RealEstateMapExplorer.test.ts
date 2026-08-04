@@ -124,10 +124,10 @@ describe('RealEstateMapExplorer', () => {
       expect(canvas.props('level')).toBe(5)
       expect(canvas.props('center')).toEqual({ lat: 37.5, lng: 127.05 })
 
-      const activeBtn = w.findAll('button').find((b) => b.text() === '빌라 전월세')
-      expect(activeBtn?.attributes('aria-pressed')).toBe('true')
-      const defaultBtn = w.findAll('button').find((b) => b.text() === '아파트 매매')
-      expect(defaultBtn?.attributes('aria-pressed')).toBe('false')
+      const activeBtn = w.findAll('a').find((a) => a.text() === '빌라 전월세')
+      expect(activeBtn?.attributes('aria-current')).toBe('true')
+      const defaultBtn = w.findAll('a').find((a) => a.text() === '아파트 매매')
+      expect(defaultBtn?.attributes('aria-current')).toBeUndefined()
     })
 
     it('lat/lng 만 있는 해시는(과거와 동일) 중심만 옮기고 type/level 은 기본값을 유지한다', async () => {
@@ -139,8 +139,8 @@ describe('RealEstateMapExplorer', () => {
       expect(canvas.props('center')).toEqual({ lat: 35.1, lng: 129.0 })
       expect(canvas.props('level')).toBe(13) // useRealEstateMap 기본 레벨 — 해시에 없으니 그대로
 
-      const defaultBtn = w.findAll('button').find((b) => b.text() === '아파트 매매')
-      expect(defaultBtn?.attributes('aria-pressed')).toBe('true')
+      const defaultBtn = w.findAll('a').find((a) => a.text() === '아파트 매매')
+      expect(defaultBtn?.attributes('aria-current')).toBe('true')
     })
   })
 
