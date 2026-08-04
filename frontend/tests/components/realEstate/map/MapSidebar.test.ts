@@ -29,7 +29,7 @@ describe('MapSidebar', () => {
   it('지역 모드에서 시/도 이름과 평당가를 렌더한다', () => {
     const w = mountSidebar()
     expect(w.text()).toContain('서울')
-    expect(w.text()).toContain('7,732/평')
+    expect(w.text()).toContain('7,732만/평')
   })
 
   it('데이터 없는 시/도도 링크는 렌더한다 (fail-open)', () => {

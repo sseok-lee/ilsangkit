@@ -1,13 +1,19 @@
 import { shallowRef } from 'vue'
 import { isBuildingItem, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
 
-/** 만원 단위 금액을 "16억 8,340" / "8,500" 형태로 만든다. */
+/**
+ * 만원 단위 금액을 "16억 8,340만" / "8,500만" / "3억" 형태로 만든다.
+ *
+ * 만원 자리가 보일 때만 '만' 을 붙인다 — 억 단위로 딱 떨어지면(rest=0) '3억' 이지
+ * '3억 0만' 이 아니다. 단위 없이 "8,500" 만 두면 8,500원인지 8,500만원인지 읽는 사람이
+ * 알 수 없다.
+ */
 function formatManwon(manwon: number): string {
   const eok = Math.floor(manwon / 10000)
   const rest = manwon % 10000
-  if (eok === 0) return rest.toLocaleString('ko-KR')
+  if (eok === 0) return `${rest.toLocaleString('ko-KR')}만`
   if (rest === 0) return `${eok}억`
-  return `${eok}억 ${rest.toLocaleString('ko-KR')}`
+  return `${eok}억 ${rest.toLocaleString('ko-KR')}만`
 }
 
 /**
@@ -20,7 +26,10 @@ export function formatPriceLabel(item: MapBuildingItem): string {
   const price = formatManwon(item.latestPrice)
   if (item.monthlyRent == null) return price
   if (item.monthlyRent === 0) return `전세 ${price}`
-  return `월 ${price}·${item.monthlyRent.toLocaleString('ko-KR')}`
+  // 두 숫자에 각각 무엇인지 라벨을 붙인다. 예전엔 `월 1억·80` 처럼 가운데점으로만
+  // 갈랐는데, 앞이 보증금이고 뒤가 월세라는 걸 알아야 읽혔다. 월세액도 보증금과 같은
+  // 만원 단위다.
+  return `보 ${price}/월 ${item.monthlyRent.toLocaleString('ko-KR')}만`
 }
 
 /** 지역 버블 라벨. 단위를 명시해 줌 전환 시 의미가 바뀌는 걸 알린다. */

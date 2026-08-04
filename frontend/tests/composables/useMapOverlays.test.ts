@@ -20,23 +20,23 @@ function regionItem(over: Partial<MapRegionItem>): MapRegionItem {
 
 describe('formatPriceLabel', () => {
   it('매매(monthlyRent=null)는 금액만 보여준다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 168340, monthlyRent: null }))).toBe('16억 8,340')
+    expect(formatPriceLabel(building({ latestPrice: 168340, monthlyRent: null }))).toBe('16억 8,340만')
   })
 
   it('전세는 monthlyRent=0 이다 — IS NULL 이 아니다', () => {
     expect(formatPriceLabel(building({ latestPrice: 30000, monthlyRent: 0 }))).toBe('전세 3억')
   })
 
-  it('월세는 보증금·월세를 함께 보여준다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 10000, monthlyRent: 80 }))).toBe('월 1억·80')
+  it('월세는 보증금과 월세에 각각 라벨을 붙여 보여준다', () => {
+    expect(formatPriceLabel(building({ latestPrice: 10000, monthlyRent: 80 }))).toBe('보 1억/월 80만')
   })
 
   it('억 단위가 딱 떨어지지 않으면 만원 자리를 붙인다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 45500, monthlyRent: null }))).toBe('4억 5,500')
+    expect(formatPriceLabel(building({ latestPrice: 45500, monthlyRent: null }))).toBe('4억 5,500만')
   })
 
-  it('1억 미만은 만원 단위로만 보여준다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 8500, monthlyRent: null }))).toBe('8,500')
+  it('1억 미만은 만 단위로 보여준다', () => {
+    expect(formatPriceLabel(building({ latestPrice: 8500, monthlyRent: null }))).toBe('8,500만')
   })
 
   it('가격이 없으면 대시', () => {
@@ -50,11 +50,11 @@ describe('formatPyeongLabel', () => {
   })
 
   it('평당가에 단위를 붙인다', () => {
-    expect(formatPyeongLabel(region(7732))).toBe('7,732/평')
+    expect(formatPyeongLabel(region(7732))).toBe('7,732만/평')
   })
 
   it('1억 이상이면 억 표기', () => {
-    expect(formatPyeongLabel(region(16834))).toBe('1억 6,834/평')
+    expect(formatPyeongLabel(region(16834))).toBe('1억 6,834만/평')
   })
 
   it('데이터 없는 지역은 대시', () => {
