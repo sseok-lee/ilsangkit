@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import MapFilterBar from '~/components/realEstate/map/MapFilterBar.vue'
 
 const TYPES = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent']
@@ -63,5 +64,34 @@ describe('MapFilterBar', () => {
 
   it('터치 타깃 44px 을 유지한다', () => {
     expect(mountBar().findAll('a').every((a) => a.classes().includes('min-h-[44px]'))).toBe(true)
+  })
+
+  // 모바일에서 6개 라벨이 두 줄로 감싸져 지도 상단 112px 를 덮던 문제의 회귀 가드.
+  it('가로 스크롤 1줄이다 — 줄바꿈하지 않는다', () => {
+    const classes = mountBar().find('div').classes()
+    expect(classes).toContain('flex-nowrap')
+    expect(classes).toContain('overflow-x-auto')
+    expect(classes).not.toContain('flex-wrap')
+  })
+
+  it('각 항목은 shrink-0 이다 — 압축 대신 스크롤되어야 한다', () => {
+    expect(mountBar().findAll('a').every((a) => a.classes().includes('shrink-0'))).toBe(true)
+  })
+
+  it('마운트 시 선택된 항목을 스크롤해 보이게 한다 — 공유 링크가 마지막 항목을 선택한 채 도착할 수 있다', () => {
+    const scrollIntoView = vi.fn()
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+    mountBar('offitel-rent')
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+  })
+
+  it('type 이 바뀌면 새로 선택된 항목을 스크롤해 보이게 한다', async () => {
+    const scrollIntoView = vi.fn()
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+    const w = mountBar('apt-sale')
+    scrollIntoView.mockClear()
+    await w.setProps({ type: 'offitel-rent' })
+    await nextTick() // watcher 내부에서 한 번 더 nextTick 을 기다린다 — setProps 의 flush 로는 안 잡힌다
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
   })
 })
