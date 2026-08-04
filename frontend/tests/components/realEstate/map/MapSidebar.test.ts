@@ -7,8 +7,8 @@ import { formatPyeongLabel } from '~/composables/useMapOverlays'
 import { toRealEstateListUrl } from '~/utils/realEstateUrl'
 
 const REGIONS: MapItem[] = [
-  { name: '서울', district: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 12043 },
-  { name: '세종', district: null, lat: 36.48, lng: 127.28, avgPricePerPyeong: null, transactionCount: 0 },
+  { name: '서울', district: null, dong: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 12043 },
+  { name: '세종', district: null, dong: null, lat: 36.48, lng: 127.28, avgPricePerPyeong: null, transactionCount: 0 },
 ]
 
 const BUILDINGS: MapItem[] = [
@@ -29,7 +29,7 @@ describe('MapSidebar', () => {
   it('지역 모드에서 시/도 이름과 평당가를 렌더한다', () => {
     const w = mountSidebar()
     expect(w.text()).toContain('서울')
-    expect(w.text()).toContain('7,732/평')
+    expect(w.text()).toContain('7,732만/평')
   })
 
   it('데이터 없는 시/도도 링크는 렌더한다 (fail-open)', () => {
@@ -85,7 +85,7 @@ describe('MapSidebar', () => {
     // API MapRegionItem.name 은 DB city 컬럼 원값이다. 전남광주통합특별시는 축약명이 없어
     // chip.label('전남·광주')도 chip.slug('jeonnamgwangju')도 아닌 풀네임 그대로 온다.
     const jngj: MapItem = {
-      name: '전남광주통합특별시', district: null, lat: 35.0, lng: 126.9, avgPricePerPyeong: 1850, transactionCount: 320,
+      name: '전남광주통합특별시', district: null, dong: null, lat: 35.0, lng: 126.9, avgPricePerPyeong: 1850, transactionCount: 320,
     }
     const w = mountSidebar({ items: [jngj], total: 1 })
     const row = w.findAll('[data-testid="map-sidebar-item"]').find((li) => li.text().includes('전남·광주'))
@@ -166,7 +166,7 @@ describe('MapSidebar', () => {
 
     it('district 행: href 는 유지한 채 평범한 클릭은 이동을 막고 select 를 emit 한다', async () => {
       const districtItems: MapItem[] = [
-        { name: '경기', district: '성남시 분당구', lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
+        { name: '경기', district: '성남시 분당구', dong: null, lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
       ]
       const w = mountSidebar({ items: districtItems, granularity: 'district', total: 1 })
       const a = w.find('[data-testid="map-sidebar-item"]').find('a')
@@ -182,7 +182,7 @@ describe('MapSidebar', () => {
 
     it('district 행: ⌘/Ctrl+클릭은 가로채지 않는다', async () => {
       const districtItems: MapItem[] = [
-        { name: '경기', district: '성남시 분당구', lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
+        { name: '경기', district: '성남시 분당구', dong: null, lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
       ]
       const w = mountSidebar({ items: districtItems, granularity: 'district', total: 1 })
       const a = w.find('[data-testid="map-sidebar-item"]').find('a')
@@ -194,8 +194,8 @@ describe('MapSidebar', () => {
 
   it('district 모드에서는 구/군을 제목으로, 시/도를 부제로 렌더하고 href 는 toRealEstateListUrl 결과와 일치한다', () => {
     const districtItems: MapItem[] = [
-      { name: '전남광주통합특별시', district: '광산구', lat: 35.15, lng: 126.79, avgPricePerPyeong: 1400, transactionCount: 55 },
-      { name: '경기', district: '성남시 분당구', lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
+      { name: '전남광주통합특별시', district: '광산구', dong: null, lat: 35.15, lng: 126.79, avgPricePerPyeong: 1400, transactionCount: 55 },
+      { name: '경기', district: '성남시 분당구', dong: null, lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
     ]
     const w = mountSidebar({ items: districtItems, granularity: 'district', total: 2 })
     const rows = w.findAll('[data-testid="map-sidebar-item"]')
@@ -296,7 +296,7 @@ describe('MapSidebar 더보기', () => {
     // 아래여서 슬라이스를 걸어도 결과가 같다. 구·군 모드는 items 가 그대로 행이 되므로
     // 20개를 넘겨야 granularity 조건이 살아 있는지 드러난다.
     const districts: MapItem[] = Array.from({ length: 25 }, (_, i) => ({
-      name: '서울', district: `${i}구`, lat: 37.5, lng: 127,
+      name: '서울', district: `${i}구`, dong: null, lat: 37.5, lng: 127,
       avgPricePerPyeong: 1000 + i, transactionCount: 10,
     }))
     const w = mount(MapSidebar, {
@@ -366,5 +366,72 @@ describe('MapSidebar 푸터', () => {
     // ul 의 flex-1 이 짧은 목록에서 푸터를 바닥으로 밀어내는 동작이 깨진다.
     expect(w.find('ul').find('[data-testid="sidebar-footer"]').exists()).toBe(false)
     expect(w.find('[data-testid="sidebar-footer"]').exists()).toBe(true)
+  })
+})
+
+describe('MapSidebar 동 모드', () => {
+  const DONGS: MapItem[] = [
+    { name: '서울', district: '강북구', dong: '미아동', lat: 37.63, lng: 127.02,
+      avgPricePerPyeong: 3225, transactionCount: 42 },
+    { name: '서울', district: '강북구', dong: '번동', lat: 37.64, lng: 127.03,
+      avgPricePerPyeong: 3100, transactionCount: 31 },
+  ]
+
+  function mountDong(over = {}) {
+    return mount(MapSidebar, {
+      props: {
+        items: DONGS, granularity: 'dong', total: 2, exact: true, pending: false,
+        type: 'apt-sale', ...over,
+      },
+    })
+  }
+
+  it('동 이름을 title, 시/도 구·군을 subtitle 로 그린다', () => {
+    const w = mountDong()
+    const first = w.findAll('[data-testid="map-sidebar-item"]')[0]
+    expect(first.text()).toContain('미아동')
+    expect(first.text()).toContain('서울 강북구')
+  })
+
+  it('동 행은 링크가 아니라 버튼이다 — 6종에는 동 페이지가 없다', () => {
+    // href 를 만들면 죽은 링크가 되고, 크롤러가 존재하지 않는 URL 을 따라간다.
+    const w = mountDong()
+    const first = w.findAll('[data-testid="map-sidebar-item"]')[0]
+    expect(first.find('a').exists()).toBe(false)
+    expect(first.find('button').exists()).toBe(true)
+    expect(first.find('button').attributes('type')).toBe('button')
+  })
+
+  it('동 행 클릭이 select 를 emit 한다', async () => {
+    const w = mountDong()
+    await w.findAll('[data-testid="map-sidebar-item"]')[0].find('button').trigger('click')
+    expect(w.emitted('select')?.[0]?.[0]).toMatchObject({ dong: '미아동' })
+  })
+
+  it('헤딩이 동별 평균 평당가다', () => {
+    expect(mountDong().text()).toContain('동별 평균 평당가')
+  })
+
+  it('동 목록도 20개씩 자른다 — 수도권은 뷰포트 안에도 20개를 넘는다', () => {
+    // visibleRows 조건이 `granularity !== 'city'` 라 동은 자연히 포함된다.
+    // city 만 예외인 이유는 SIDO_CHIPS 16개 링크가 핵심 SSR 콘텐츠이기 때문.
+    const many: MapItem[] = Array.from({ length: 25 }, (_, i) => ({
+      name: '서울', district: '강남구', dong: `${i}동`, lat: 37.5, lng: 127.05,
+      avgPricePerPyeong: 5000 + i, transactionCount: 10,
+    }))
+    const w = mountDong({ items: many, total: 25 })
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(20)
+    expect(w.find('[data-testid="map-sidebar-more"]').exists()).toBe(true)
+  })
+
+  it('구·군 행은 여전히 href 를 갖는다 (크롤 경로 회귀 가드)', () => {
+    const w = mount(MapSidebar, {
+      props: {
+        items: [{ name: '서울', district: '강북구', dong: null, lat: 37.63, lng: 127.02,
+          avgPricePerPyeong: 3225, transactionCount: 42 }],
+        granularity: 'district', total: 1, exact: true, pending: false, type: 'apt-sale',
+      },
+    })
+    expect(w.find('[data-testid="map-sidebar-item"] a').attributes('href')).toBeTruthy()
   })
 })

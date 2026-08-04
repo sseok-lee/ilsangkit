@@ -45,7 +45,7 @@ describe('map hash', () => {
 
 describe('itemKey', () => {
   it('지역 항목은 name+district 로 식별한다', () => {
-    expect(itemKey({ name: '서울', district: '강남구' } as never)).toBe('서울|강남구')
+    expect(itemKey({ name: '서울', district: '강남구', dong: null } as never)).toBe('서울|강남구|')
   })
 
   it('건물 항목은 buildingName+district 로 식별한다', () => {
@@ -54,6 +54,24 @@ describe('itemKey', () => {
 
   it('시/도 레벨 지역 항목은 district 가 null 이라 빈 문자열로 접힌다', () => {
     // 이 폴백이 사라지면 키가 "서울|null" 이 되어 마커·목록 연동이 어긋난다
-    expect(itemKey({ name: '서울', district: null } as never)).toBe('서울|')
+    expect(itemKey({ name: '서울', district: null, dong: null } as never)).toBe('서울||')
+  })
+})
+
+describe('itemKey 고유성', () => {
+  // 같은 구 안의 동들은 name(시/도)·district(구·군)가 모두 같다. dong 을 키에 넣지
+  // 않으면 전부 같은 문자열이 되어 Vue :key 가 충돌하고 목록 렌더가 깨진다.
+  it('같은 구의 서로 다른 동은 서로 다른 키를 갖는다', () => {
+    const mia = { name: '서울', district: '강북구', dong: '미아동',
+      lat: 37.63, lng: 127.02, avgPricePerPyeong: 3225, transactionCount: 42 }
+    const beon = { name: '서울', district: '강북구', dong: '번동',
+      lat: 37.64, lng: 127.03, avgPricePerPyeong: 3100, transactionCount: 31 }
+    expect(itemKey(mia)).not.toBe(itemKey(beon))
+  })
+
+  it('dong 이 없는 구·군 항목은 기존 키 형태를 유지한다', () => {
+    const gangbuk = { name: '서울', district: '강북구', dong: null,
+      lat: 37.63, lng: 127.02, avgPricePerPyeong: 3225, transactionCount: 42 }
+    expect(itemKey(gangbuk)).toBe('서울|강북구|')
   })
 })

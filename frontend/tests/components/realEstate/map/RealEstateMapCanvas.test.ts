@@ -35,7 +35,7 @@ vi.mock('~/composables/useMapOverlays', () => ({
 }))
 
 const ITEMS: MapItem[] = [
-  { name: '서울', district: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 100 },
+  { name: '서울', district: null, dong: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 100 },
 ]
 
 function installFakeKakao(): void {

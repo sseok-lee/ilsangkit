@@ -17,7 +17,7 @@
         >
           <NuxtLink
             v-if="props.granularity === 'building'"
-            :to="row.href"
+            :to="row.href ?? undefined"
             class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-light transition-colors"
             @click="emit('select', row.item)"
           >
@@ -37,7 +37,7 @@
             가로채지 않고 브라우저 기본 동작(새 탭 열기)이 그대로 통과한다.
           -->
           <a
-            v-else
+            v-else-if="row.href"
             :href="row.href"
             class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-light transition-colors"
             @click.exact.prevent="emit('select', row.item)"
@@ -48,6 +48,23 @@
             </span>
             <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </a>
+          <!--
+            동 행. 6종 유형에 동 라우트가 없어(land 만 있다) 갈 페이지가 없으므로
+            링크가 아니라 버튼이다 — href 를 만들면 죽은 링크가 되고 크롤러가
+            존재하지 않는 URL 을 따라간다. 클릭은 지도를 그 동으로 확대한다.
+          -->
+          <button
+            v-else
+            type="button"
+            class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-background-light transition-colors"
+            @click="emit('select', row.item)"
+          >
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
+              <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
+            </span>
+            <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+          </button>
         </li>
         <li
           v-if="idx === AD_AFTER_INDEX && props.showAd"
@@ -118,16 +135,19 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ hover: [string | null]; select: [MapItem] }>()
 
-const heading = computed(() =>
-  props.granularity === 'building' ? '이 지역 건물' : '지역별 평균 평당가',
-)
+const heading = computed(() => {
+  if (props.granularity === 'building') return '이 지역 건물'
+  if (props.granularity === 'dong') return '동별 평균 평당가'
+  return '지역별 평균 평당가'
+})
 
 interface Row {
   key: string
   title: string
   subtitle: string | null
   price: string
-  href: string
+  /** null = 갈 페이지가 없는 행(동). 템플릿이 링크 대신 버튼을 그린다. */
+  href: string | null
   item: MapItem
 }
 
@@ -176,6 +196,22 @@ const rows = computed<Row[]>(() => {
     })
   }
 
+  if (props.granularity === 'dong') {
+    return props.items.map((i) => {
+      const r = i as MapRegionItem
+      return {
+        key: itemKey(i),
+        title: r.dong ?? '',
+        subtitle: `${r.name} ${r.district ?? ''}`.trim(),
+        price: formatPyeongLabel(r),
+        // 동 페이지가 없다(6종 라우트는 구·군까지). href 를 만들면 죽은 링크가 되므로
+        // null 을 주고 템플릿이 버튼을 그리게 한다.
+        href: null,
+        item: i,
+      }
+    })
+  }
+
   const byName = new Map<string, MapRegionItem>()
   for (const i of props.items) {
     if (!isBuildingItem(i)) byName.set((i as MapRegionItem).name, i as MapRegionItem)
@@ -191,7 +227,7 @@ const rows = computed<Row[]>(() => {
     // lat/lng 는 null(좌표 없음)이다 — 0,0 을 쓰면 "없음"이 아니라 기니만 앞바다의 유효한
     // 좌표로 읽혀, 이 폴백 항목이 select 로 넘어갔을 때 지도가 실제로 그리로 튄다(회귀 실측).
     const item: MapRegionItem = agg ?? {
-      name: chip.label, district: null, lat: null, lng: null, avgPricePerPyeong: null, transactionCount: 0,
+      name: chip.label, district: null, dong: null, lat: null, lng: null, avgPricePerPyeong: null, transactionCount: 0,
     }
     return {
       key: `${chip.label}|`,

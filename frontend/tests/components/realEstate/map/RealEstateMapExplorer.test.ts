@@ -5,7 +5,7 @@ import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExpl
 import type { MapItem } from '~/types/realEstateMap'
 
 const ITEMS: MapItem[] = [
-  { name: '서울', district: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 100 },
+  { name: '서울', district: null, dong: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 100 },
 ]
 
 // MapSidebar 의 rows computed 는 granularity 에 맞는 아이템 모양을 요구한다(building
@@ -17,6 +17,11 @@ const BUILDING_ITEMS: MapItem[] = [
     lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
   },
+]
+
+const DONG_ITEMS: MapItem[] = [
+  { name: '서울', district: '강북구', dong: '미아동', lat: 37.63, lng: 127.02,
+    avgPricePerPyeong: 3225, transactionCount: 42 },
 ]
 
 function mountExplorer() {
@@ -200,7 +205,7 @@ describe('RealEstateMapExplorer', () => {
 
 // select 를 직접 emit 해 onSelect 자체의 배선(level/center)만 검증하는 공용 헬퍼.
 // RealEstateMapCanvas 를 center/level prop 을 받는 스텁으로 교체해 관측한다.
-function mountWithGranularity(granularity: 'city' | 'district' | 'building', items: MapItem[]) {
+function mountWithGranularity(granularity: 'city' | 'district' | 'dong' | 'building', items: MapItem[]) {
   const CanvasStub = {
     template: '<div data-testid="canvas" />',
     props: ['items', 'center', 'level'],
@@ -218,9 +223,10 @@ function mountWithGranularity(granularity: 'city' | 'district' | 'building', ite
 // select 를 직접 emit 해 onSelect 자체의 level 배선만 검증한다(행 클릭 인터셉트 자체는
 // MapSidebar.test.ts 담당).
 //
-// 9/6 은 backend resolveGranularity(backend/src/schemas/realEstateMap.ts)의 히스테리시스를
-// 피해 실제로 다음 단위(district/building)로 전환되는 값이다 — CITY_MIN_LEVEL=11,
-// DISTRICT_MIN_LEVEL=8 이며 city→10, district→7 은 각각 되돌림 특례에 걸려 드릴다운되지 않는다.
+// 9/7/5 는 backend resolveGranularity(backend/src/schemas/realEstateMap.ts)의 히스테리시스를
+// 피해 실제로 다음 단위로 전환되는 값이다 — CITY_MIN_LEVEL=11, DISTRICT_MIN_LEVEL=9,
+// DONG_MIN_LEVEL=7 이며 city→10, district→8, dong→6 은 각각 되돌림 특례에 걸려
+// 드릴다운되지 않는다(클릭해도 아무 일이 없는 것처럼 보인다).
 describe('RealEstateMapExplorer onSelect 드릴다운 zoom level', () => {
   it('granularity=city 에서 select 시 level 9 를 세팅한다 (district 로 드릴다운)', async () => {
     const { canvas } = mountWithGranularity('city', ITEMS)
@@ -229,11 +235,18 @@ describe('RealEstateMapExplorer onSelect 드릴다운 zoom level', () => {
     expect(canvas.props('level')).toBe(9)
   })
 
-  it('granularity=district 에서 select 시 level 6 을 세팅한다 (building 으로 드릴다운)', async () => {
+  it('granularity=district 에서 select 시 level 7 을 세팅한다 (dong 으로 드릴다운)', async () => {
     const { canvas } = mountWithGranularity('district', ITEMS)
     canvas.vm.$emit('select', ITEMS[0])
     await nextTick()
-    expect(canvas.props('level')).toBe(6)
+    expect(canvas.props('level')).toBe(7)
+  })
+
+  it('granularity=dong 에서 select 시 level 5 를 세팅한다 (building 으로 드릴다운)', async () => {
+    const { canvas } = mountWithGranularity('dong', DONG_ITEMS)
+    canvas.vm.$emit('select', DONG_ITEMS[0])
+    await nextTick()
+    expect(canvas.props('level')).toBe(5)
   })
 
   it('granularity=building 에서 select 해도 level 을 바꾸지 않는다 — 상세 페이지 이동만 한다', async () => {

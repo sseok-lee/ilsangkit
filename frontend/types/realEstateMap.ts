@@ -1,6 +1,6 @@
 import type { RealEstateType } from '~/types/realEstate'
 
-export type Granularity = 'city' | 'district' | 'building'
+export type Granularity = 'city' | 'district' | 'dong' | 'building'
 
 export interface MapBounds {
   swLat: number
@@ -12,6 +12,8 @@ export interface MapBounds {
 export interface MapRegionItem {
   name: string
   district: string | null
+  /** granularity='dong' 일 때만 채워진다. city/district 에서는 null. */
+  dong: string | null
   /**
    * null = 좌표 없음(집계 폴백). `0`을 "없음" 의미로 쓰지 않는다 — (0,0)은 기니만 앞바다의
    * 유효한 좌표라 지도가 실제로 그리로 이동해버리는 사고가 난 적이 있다
