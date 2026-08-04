@@ -212,10 +212,16 @@ describe('RealEstateMapExplorer 레이아웃', () => {
   it('컨테이너 높이를 dvh 로 잡고 헤더 높이를 브레이크포인트별로 뺀다', () => {
     // vh 는 모바일 주소창이 접힐 때 갱신되지 않아 스크롤 0이 깨진다.
     // 헤더는 h-14 lg:h-16(56px/64px)이라 두 값이 필요하다.
-    const cls = mountForLayout().find('section > div').classes()
+    // `section > div` 는 MapBottomSheet 스텁의 루트(`<div><slot /></div>`)도 매칭해
+    // find() 의 "첫 매치"가 템플릿 순서에 우연히 기댄다 — dvh 클래스를 가진 쪽을
+    // 명시적으로 골라 그 우연에 기대지 않게 한다.
+    const cls = mountForLayout()
+      .findAll('section > div')
+      .find((d) => d.classes().some((c) => c.includes('dvh')))
+      ?.classes()
     expect(cls).toContain('h-[calc(100dvh-3.5rem)]')
     expect(cls).toContain('lg:h-[calc(100dvh-4rem)]')
-    expect(cls.some((c) => c.includes('100vh'))).toBe(false)
+    expect(cls?.some((c) => c.includes('100vh'))).toBe(false)
   })
 
   it('사이드바를 고정폭으로 잡는다', () => {
@@ -224,19 +230,58 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     expect(cls).toContain('lg:shrink-0')
   })
 
-  it('데스크톱·모바일 두 사본에 showFooter 를 넘긴다', () => {
-    // isDesktop 초기값이 null 이라 마운트 직후엔 양쪽 모두 false — SSR 출력과 일치해
-    // 하이드레이션 mismatch 가 없다. matchMedia 결과가 들어오면 정확히 한쪽만 켜진다.
-    const sidebars = mountForLayout().findAllComponents({ name: 'MapSidebar' })
-    expect(sidebars).toHaveLength(2)
-    expect(sidebars.map((s) => s.props('showFooter'))).toEqual([false, false])
+  it('지도 영역은 h-full 이다 — 모바일 60vh 폐지 회귀 가드', () => {
+    // relative+flex-1 조합은 지도 영역 div 에만 존재한다(컨테이너 div·aside·필터바
+    // absolute 래퍼 어디에도 이 조합이 없다) — find('div') 의 순서가 아니라 클래스
+    // 조합으로 정밀하게 골라낸다.
+    const mapArea = mountForLayout()
+      .findAll('div')
+      .find((d) => d.classes().includes('relative') && d.classes().includes('flex-1'))
+    expect(mapArea).toBeTruthy()
+    const cls = mapArea!.classes()
+    expect(cls).toContain('h-full')
+    expect(cls).toContain('lg:h-auto')
+    expect(cls.some((c) => c.includes('vh'))).toBe(false)
   })
 
-  it('showAd 와 showFooter 가 같은 사본에서 같은 값이다', () => {
-    // 둘 다 "보이는 뷰포트 한쪽에만" 규칙을 따른다. 서로 어긋나면 한쪽에만 광고가,
-    // 다른 쪽에만 푸터가 뜬다. isDesktop === true 하나만 쓰면 모바일 푸터가 영영 사라진다.
-    for (const s of mountForLayout().findAllComponents({ name: 'MapSidebar' })) {
-      expect(s.props('showFooter')).toBe(s.props('showAd'))
-    }
+  describe('showFooter 반대조건 배선 — 데스크톱/모바일 상호배타', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('데스크톱 뷰포트에서는 데스크톱 사본만 showFooter=true 다', async () => {
+      stubDesktopViewport(true)
+      const w = mountForLayout()
+      // isDesktop 은 onMounted 안에서 matchMedia 결과로 동기 갱신되지만, 그 값이
+      // 자식 스텁의 props 로 실제 반영되는 건 Vue 스케줄러가 비동기로 플러시한다.
+      // await 없이 읽으면 isDesktop 이 아직 null 이던 프리플러시 상태([false,false])만
+      // 관측하게 되어, 반대조건이 아니라 같은 조건(`isDesktop === true` 를 양쪽에)을
+      // 넣어도 이 테스트가 똑같이 통과한다 — 그래서 반드시 한 틱을 기다린다.
+      await nextTick()
+
+      const desktopSidebar = w.find('aside').findComponent({ name: 'MapSidebar' })
+      const mobileSidebar = w.findComponent({ name: 'MapBottomSheet' }).findComponent({ name: 'MapSidebar' })
+
+      expect(desktopSidebar.props('showFooter')).toBe(true)
+      expect(mobileSidebar.props('showFooter')).toBe(false)
+      // showAd 와 showFooter 는 각 사본 내에서 항상 같은 값이어야 한다 — 어긋나면
+      // 한쪽엔 광고만, 다른 쪽엔 푸터만 뜨는 불일치가 생긴다.
+      expect(desktopSidebar.props('showAd')).toBe(desktopSidebar.props('showFooter'))
+      expect(mobileSidebar.props('showAd')).toBe(mobileSidebar.props('showFooter'))
+    })
+
+    it('모바일 뷰포트에서는 모바일 사본만 showFooter=true 다', async () => {
+      stubDesktopViewport(false)
+      const w = mountForLayout()
+      await nextTick()
+
+      const desktopSidebar = w.find('aside').findComponent({ name: 'MapSidebar' })
+      const mobileSidebar = w.findComponent({ name: 'MapBottomSheet' }).findComponent({ name: 'MapSidebar' })
+
+      expect(desktopSidebar.props('showFooter')).toBe(false)
+      expect(mobileSidebar.props('showFooter')).toBe(true)
+      expect(desktopSidebar.props('showAd')).toBe(desktopSidebar.props('showFooter'))
+      expect(mobileSidebar.props('showAd')).toBe(mobileSidebar.props('showFooter'))
+    })
   })
 })
