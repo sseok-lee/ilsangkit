@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   initMap: vi.fn(),
   getBounds: vi.fn(),
   getCenter: vi.fn(),
-  panTo: vi.fn(),
+  setCenter: vi.fn(),
   renderOverlays: vi.fn(),
   clearOverlays: vi.fn(),
 }))
@@ -23,7 +23,7 @@ vi.mock('~/composables/useKakaoMap', () => ({
     initMap: mocks.initMap,
     getBounds: mocks.getBounds,
     getCenter: mocks.getCenter,
-    panTo: mocks.panTo,
+    setCenter: mocks.setCenter,
   }),
 }))
 
@@ -134,17 +134,19 @@ describe('RealEstateMapCanvas', () => {
     expect(level).toBe(9)
   })
 
-  it('props.center 가 바뀌면 지도를 그 위치로 이동시킨다 (마커/사이드바 선택 반영)', async () => {
+  // panTo(애니메이션)가 아니라 setCenter(즉시)여야 한다. panTo 는 목표 지점이 이미 화면
+  // 안이면 사실상 움직이지 않아, 전국 뷰에서 시/도를 클릭하면 확대만 되고 중심이 그대로였다.
+  it('props.center 가 바뀌면 setCenter 로 즉시 이동시킨다 (마커/사이드바 선택 반영)', async () => {
     const w = mountCanvas({ center: { lat: 36.5, lng: 127.8 } })
     await flushPromises()
-    expect(mocks.panTo).not.toHaveBeenCalled()
+    expect(mocks.setCenter).not.toHaveBeenCalled()
 
     await w.setProps({ center: { lat: 37.5, lng: 127.0 } })
 
-    expect(mocks.panTo).toHaveBeenCalledWith(37.5, 127.0)
+    expect(mocks.setCenter).toHaveBeenCalledWith(37.5, 127.0)
   })
 
-  it('map 이 아직 준비되지 않았으면(초기화 실패 등) center 변경에도 panTo 를 호출하지 않는다', async () => {
+  it('map 이 아직 준비되지 않았으면(초기화 실패 등) center 변경에도 지도를 옮기지 않는다', async () => {
     mocks.initMap.mockImplementation(async () => {
       mocks.mapRef.value = null
     })
@@ -153,7 +155,7 @@ describe('RealEstateMapCanvas', () => {
 
     await w.setProps({ center: { lat: 1, lng: 1 } })
 
-    expect(mocks.panTo).not.toHaveBeenCalled()
+    expect(mocks.setCenter).not.toHaveBeenCalled()
   })
 
   it('idle emit 은 getBounds() 산술중점이 아니라 getCenter() 의 실제 중심을 3번째 인자로 올려보낸다', async () => {
@@ -190,7 +192,7 @@ describe('RealEstateMapCanvas', () => {
     const [, , emittedCenter] = w.emitted('idle')!.at(-1) as [unknown, number, { lat: number; lng: number }]
     await w.setProps({ center: emittedCenter })
 
-    expect(mocks.panTo).toHaveBeenCalledTimes(0)
+    expect(mocks.setCenter).toHaveBeenCalledTimes(0)
   })
 
   // initMap 은 props.level 을 마운트 시 한 번만 읽는다(installFakeKakao 의 Map.getLevel() 은
