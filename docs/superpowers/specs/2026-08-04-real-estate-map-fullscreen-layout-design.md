@@ -33,7 +33,9 @@
 
 선행 설계의 나머지(5.4 인덱스+FORCE INDEX, 5.5 sargable, 5.6 해시, 6.1 유형 카드 7개)는 다음 항목만 바뀐다.
 
-- **6.1 (유형 카드 7개 유지)** → 카드는 제거하고, 그 크롤 경로를 지도 필터바 링크 6개 + 기존 GNB 드롭다운의 토지 링크로 옮긴다. 링크 총량은 유지된다(§6).
+- **6.1 (유형 카드 7개 유지)** → 카드를 제거하고, 그 크롤 경로를 지도 필터바 링크 6개로 옮긴다(§6).
+
+**이 페이지는 6종 전용이 된다.** 토지는 별도 모델(면적·지목 단위)이라 지도 탐색기가 다루지 않고, 필터바에도 원래 없다. 카드가 사라지면 토지는 이 페이지와 아무 관계가 없어지므로 구조화 데이터에서도 뺀다(§8). 토지 접근 경로는 GNB 드롭다운(`types/facility.ts:553`)이 계속 담당한다 — **여기서 빼면 안 된다.** 하단 카드 제거 후 `/real-estate/land` 로 가는 내부 링크는 그것 하나만 남으며, 그마저 없애면 토지 허브와 그 하위 시/도·구군·동 페이지 전체가 내부 링크 0이 된다.
 
 ## 5. 레이아웃
 
@@ -100,9 +102,11 @@ h-[calc(100dvh-3.5rem)] lg:h-[calc(100dvh-4rem)] lg:min-h-[560px]
 
 전월세 3개 허브로 가는 내부 링크는 **하단 카드가 유일하다.** 지도 필터바는 `<button>`(`MapFilterBar.vue:5`)이라 크롤 경로가 아니고, 홈의 `HomeTrendingBuildings` 는 건물 상세로만 링크한다. 그냥 지우면 내부 링크 0인 페이지가 3개 생긴다(sitemap `static.xml.ts:98` 에는 남으므로 완전한 고아는 아니다).
 
+**토지는 이 표에서 유일하게 GNB 만으로 버티게 되는 항목이다.** 카드 제거 후 `/real-estate/land` 의 내부 링크는 `types/facility.ts:553` 하나뿐이며, 그 아래 시/도·구군·동 페이지 전체가 이 링크에 매달린다. 토지를 지도 페이지에서 분리하더라도 GNB 링크는 반드시 남긴다(§4).
+
 ### 6.2 해법
 
-필터바 버튼을 링크로 바꾼다. 6종 전부가 SSR HTML 에 `<a href>` 로 나타나므로 카드가 하던 역할을 그대로 대신한다. 토지는 GNB 에 이미 있다.
+필터바 버튼을 링크로 바꾼다. 6종 전부가 SSR HTML 에 `<a href>` 로 나타나므로 카드가 하던 역할을 그대로 대신한다. **필터바에 토지를 추가하지 않는다** — 지도 탐색기가 다루지 않는 유형이라 클릭해도 지도가 반응할 수 없다. 토지 링크는 GNB 담당이다.
 
 ```vue
 <a
@@ -209,7 +213,11 @@ h-[calc(100dvh-3.5rem)] lg:h-[calc(100dvh-4rem)] lg:min-h-[560px]
 | 관련 import | `SectionBlock`, `AdBanner`, `HardLink`, `DataSourceSection`, `RealEstateCategoryCards`, `REAL_ESTATE_DATA_SOURCE`, `h`/`defineComponent` | |
 | `RealEstateCategoryCards.vue` | `components/realEstate/` | 사용처가 이 페이지뿐 → dead code. 파일과 테스트 함께 삭제 |
 
-**유지**: `setBreadcrumbSchema`, `setItemListSchema`(7종), `setDatasetSchema`, `setMeta`. JSON-LD 는 화면 요소가 아니므로 하단 제거와 무관하며, `setItemListSchema` 는 7종 목록을 구조화 데이터로 계속 알린다.
+| `setItemListSchema` 의 토지 항목 | 같은 파일 `:134` | 7종 → **6종**. 아래 참조 |
+
+**`setItemListSchema` 에서 토지를 뺀다.** 지도 탐색기가 6종만 다루므로 구조화 데이터도 6종이어야 한다. 7종을 남기면 페이지가 알리는 목록과 실제 내용이 어긋난다. `setDatasetSchema` 의 설명문에도 토지가 없으므로(아파트·빌라·오피스텔만 열거) 이쪽이 원래 일관된 상태다.
+
+**유지**: `setBreadcrumbSchema`, `setItemListSchema`(6종으로 축소하되 호출은 유지), `setDatasetSchema`, `setMeta`. JSON-LD 는 화면 요소가 아니므로 하단 제거 자체와는 무관하다.
 
 **광고**: 하단 `AdBanner` 1개가 사라져 이 페이지 광고는 사이드바 인피드 1개가 된다. 사용자 결정 사항이다.
 
@@ -239,6 +247,8 @@ h-[calc(100dvh-3.5rem)] lg:h-[calc(100dvh-4rem)] lg:min-h-[560px]
 | 지역 모드는 16개 전부 렌더 · 더보기 없음 | `MapSidebar` | 지역에도 슬라이스를 걸면 실패 |
 | `items` 교체 시 표시 개수 20 으로 복귀 | `MapSidebar` | 리셋을 빼면 실패 |
 | 표시 개수 < 전체면 헤더가 두 수를 함께 표시 | `MapSidebar` | `exact` 조건만 남기면 실패 |
+| `ItemList` 가 6종이고 토지를 포함하지 않음 | `pages/real-estate/index.vue` | 토지 항목을 되돌리면 실패 |
+| GNB 드롭다운에 토지 링크가 남아 있음 | `types/facility.ts` | 지우면 실패 — 토지 허브의 마지막 내부 링크다 |
 
 ### 9.3 라이브 확인 (Playwright)
 
