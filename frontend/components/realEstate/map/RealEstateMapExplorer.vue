@@ -92,7 +92,7 @@ import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
 import MapBottomSheet from './MapBottomSheet.vue'
 import { useRealEstateMap, itemKey, buildMapHash, parseMapHash } from '~/composables/useRealEstateMap'
-import type { Granularity, MapBounds, MapItem } from '~/types/realEstateMap'
+import { KOREA_BOUNDS, type Granularity, type MapBounds, type MapItem } from '~/types/realEstateMap'
 
 const props = defineProps<{
   initialType: string
@@ -190,6 +190,20 @@ function onTypeChange(next: string): void {
 }
 
 /**
+ * 좌표가 실제로 대한민국 영역 안인지. `!= null` 만으로는 부족하다 — MapSidebar 의
+ * SIDO_CHIPS 폴백 항목처럼 좌표가 없는 아이템이 과거 `lat:0, lng:0`(기니만 앞바다, 유효한
+ * 좌표)을 들고 있었던 적이 있어 지도가 실제로 그리로 튀는 사고가 났다(라이브 실측: 해시가
+ * lat=-11363.89… 로 발산). null 은 지금 막지만, 방어적으로 KOREA_BOUNDS 범위 자체도
+ * 검증한다 — 백엔드 스키마(backend/src/schemas/realEstateMap.ts)와 값이 같다.
+ */
+function isWithinKoreaBounds(lat: number, lng: number): boolean {
+  return (
+    lat >= KOREA_BOUNDS.LAT_MIN && lat <= KOREA_BOUNDS.LAT_MAX &&
+    lng >= KOREA_BOUNDS.LNG_MIN && lng <= KOREA_BOUNDS.LNG_MAX
+  )
+}
+
+/**
  * 사이드바 행 클릭(city/district) → 지도를 드릴다운한다. 클릭 시점의 granularity 가 곧
  * 클릭된 행의 단위다(목록 전체가 항상 현재 granularity 로 렌더되므로). building 행은
  * 상세 페이지로 네비게이션하므로 level 을 건드리지 않는다.
@@ -203,9 +217,15 @@ function onTypeChange(next: string): void {
  *
  * setLevel 은 값만 세팅한다 — RealEstateMapCanvas 가 이 level 을 감시해 지도를 옮기고,
  * 그 idle 이벤트가 새 bounds/level 로 다시 fetch 한다. 여기서 fetch 를 직접 호출하지 않는다.
+ *
+ * 좌표가 유효하지 않으면(null 이거나 한국 밖) center 는 건드리지 않고 level 만 적용한다 —
+ * 목록/지도는 현재 뷰포트 bounds 기준으로 다시 조회되므로 화면이 깨지지 않는다.
  */
 function onSelect(item: MapItem): void {
-  if (item.lat != null && item.lng != null) center.value = { lat: item.lat, lng: item.lng }
+  const { lat, lng } = item
+  if (lat != null && lng != null && isWithinKoreaBounds(lat, lng)) {
+    center.value = { lat, lng }
+  }
   if (granularity.value === 'city') setLevel(9)
   else if (granularity.value === 'district') setLevel(6)
 }

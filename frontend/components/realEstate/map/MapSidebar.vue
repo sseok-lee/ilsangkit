@@ -188,8 +188,10 @@ const rows = computed<Row[]>(() => {
     // 일치하지 않아 항상 폴백(0건)으로 떨어졌다. CITY_SLUG_MAP[chip.slug] 가 DB city 값과
     // 정확히 일치하는 유일한 키이므로 최우선으로 조회하고, 나머지는 안전망으로 남긴다.
     const agg = byName.get(CITY_SLUG_MAP[chip.slug]) ?? byName.get(chip.label) ?? byName.get(chip.slug)
+    // lat/lng 는 null(좌표 없음)이다 — 0,0 을 쓰면 "없음"이 아니라 기니만 앞바다의 유효한
+    // 좌표로 읽혀, 이 폴백 항목이 select 로 넘어갔을 때 지도가 실제로 그리로 튄다(회귀 실측).
     const item: MapRegionItem = agg ?? {
-      name: chip.label, district: null, lat: 0, lng: 0, avgPricePerPyeong: null, transactionCount: 0,
+      name: chip.label, district: null, lat: null, lng: null, avgPricePerPyeong: null, transactionCount: 0,
     }
     return {
       key: `${chip.label}|`,

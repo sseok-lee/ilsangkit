@@ -105,6 +105,19 @@ describe('MapSidebar', () => {
     expect(sejongRow!.text()).toContain('—')
   })
 
+  it('items 에 없는 시/도의 폴백 좌표는 null 이다 — 0,0(기니만 앞바다)이 아니다 (회귀 가드)', async () => {
+    // (0,0)을 "좌표 없음"으로 쓰면 지도가 실제로 그 좌표(유효한 좌표라 방어되지 않음)로
+    // 튀는 사고가 났다. select 로 emit 되는 아이템의 lat/lng 가 null 인지 직접 확인한다.
+    const w = mountSidebar({ items: [REGIONS[0]], total: 1 }) // 서울만 옴, 부산은 집계 없음
+    const busanRow = w.findAll('[data-testid="map-sidebar-item"]').find((li) => li.text().includes('부산'))!
+    const a = busanRow.find('a')
+    a.element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await nextTick()
+    const [emittedItem] = w.emitted('select')![0] as [MapRegionItem]
+    expect(emittedItem.lat).toBeNull()
+    expect(emittedItem.lng).toBeNull()
+  })
+
   it('건물 모드는 select 를 emit 하지만 기본 동작(이동)을 막지 않는다 — NuxtLink 그대로다', async () => {
     // 건물 행은 이 태스크 범위 밖(변경 없음): 클릭해도 preventDefault 하지 않아야
     // 실제 브라우저에서 상세 페이지로 계속 이동한다.

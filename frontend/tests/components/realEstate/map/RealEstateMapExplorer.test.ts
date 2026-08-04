@@ -198,6 +198,21 @@ describe('RealEstateMapExplorer', () => {
   })
 })
 
+// select 를 직접 emit 해 onSelect 자체의 배선(level/center)만 검증하는 공용 헬퍼.
+// RealEstateMapCanvas 를 center/level prop 을 받는 스텁으로 교체해 관측한다.
+function mountWithGranularity(granularity: 'city' | 'district' | 'building', items: MapItem[]) {
+  const CanvasStub = {
+    template: '<div data-testid="canvas" />',
+    props: ['items', 'center', 'level'],
+    emits: ['idle', 'select', 'hover'],
+  }
+  const w = mount(RealEstateMapExplorer, {
+    props: { initialType: 'apt-sale', initialItems: items, initialGranularity: granularity },
+    global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+  })
+  return { w, canvas: w.findComponent(CanvasStub) }
+}
+
 // 사이드바 city/district 행 클릭(select emit)이 허브로 이탈하는 대신 지도를 드릴다운해야
 // 한다. onSelect 는 MapSidebar 행 클릭과 지도 마커 클릭 둘 다에서 재사용되므로, 여기서는
 // select 를 직접 emit 해 onSelect 자체의 level 배선만 검증한다(행 클릭 인터셉트 자체는
@@ -207,19 +222,6 @@ describe('RealEstateMapExplorer', () => {
 // 피해 실제로 다음 단위(district/building)로 전환되는 값이다 — CITY_MIN_LEVEL=11,
 // DISTRICT_MIN_LEVEL=8 이며 city→10, district→7 은 각각 되돌림 특례에 걸려 드릴다운되지 않는다.
 describe('RealEstateMapExplorer onSelect 드릴다운 zoom level', () => {
-  function mountWithGranularity(granularity: 'city' | 'district' | 'building', items: MapItem[]) {
-    const CanvasStub = {
-      template: '<div data-testid="canvas" />',
-      props: ['items', 'center', 'level'],
-      emits: ['idle', 'select', 'hover'],
-    }
-    const w = mount(RealEstateMapExplorer, {
-      props: { initialType: 'apt-sale', initialItems: items, initialGranularity: granularity },
-      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
-    })
-    return { w, canvas: w.findComponent(CanvasStub) }
-  }
-
   it('granularity=city 에서 select 시 level 9 를 세팅한다 (district 로 드릴다운)', async () => {
     const { canvas } = mountWithGranularity('city', ITEMS)
     canvas.vm.$emit('select', ITEMS[0])
@@ -240,6 +242,55 @@ describe('RealEstateMapExplorer onSelect 드릴다운 zoom level', () => {
     canvas.vm.$emit('select', BUILDING_ITEMS[0])
     await nextTick()
     expect(canvas.props('level')).toBe(before)
+  })
+})
+
+// 회귀 가드: MapSidebar 의 SIDO_CHIPS 폴백 항목이 과거 `lat:0, lng:0`(기니만 앞바다 —
+// null 이 아니라 유효한 좌표)을 들고 있어, 데이터 없는 시/도를 클릭하면 지도가 실제로
+// 그리로 튀어(해시 lat=-11363.89… 로 발산) 사이드바가 비고 콘솔 에러가 폭주했다(라이브 실측).
+// onSelect 는 이제 좌표가 null 이거나 KOREA_BOUNDS(위도 33~39, 경도 124~132) 밖이면
+// center 를 건드리지 않고 level 만 적용한다.
+describe('RealEstateMapExplorer onSelect 좌표 가드 — 유효하지 않은 좌표는 center 를 바꾸지 않는다', () => {
+  const DEFAULT_CENTER = { lat: 36.5, lng: 127.8 } // RealEstateMapExplorer 의 center 초기값
+
+  it('(0,0) 좌표(집계 폴백 사고 재현)를 select 해도 center 는 그대로다', async () => {
+    const { canvas } = mountWithGranularity('city', ITEMS)
+    const zeroCoordItem = {
+      name: '세종', district: null, lat: 0, lng: 0, avgPricePerPyeong: null, transactionCount: 0,
+    }
+    canvas.vm.$emit('select', zeroCoordItem)
+    await nextTick()
+    expect(canvas.props('center')).toEqual(DEFAULT_CENTER)
+  })
+
+  it('한국 영역 밖 좌표(lat 51, lng 0)를 select 해도 center 는 그대로다', async () => {
+    const { canvas } = mountWithGranularity('city', ITEMS)
+    const outsideKorea = {
+      name: '해외', district: null, lat: 51, lng: 0, avgPricePerPyeong: null, transactionCount: 0,
+    }
+    canvas.vm.$emit('select', outsideKorea)
+    await nextTick()
+    expect(canvas.props('center')).toEqual(DEFAULT_CENTER)
+  })
+
+  it('한국 영역 밖 좌표를 select 해도 level 은 여전히 적용된다 (center 만 막고 줌은 막지 않는다)', async () => {
+    const { canvas } = mountWithGranularity('city', ITEMS)
+    const outsideKorea = {
+      name: '해외', district: null, lat: 51, lng: 0, avgPricePerPyeong: null, transactionCount: 0,
+    }
+    canvas.vm.$emit('select', outsideKorea)
+    await nextTick()
+    expect(canvas.props('level')).toBe(9)
+  })
+
+  it('정상 좌표(서울 37.55/126.98)를 select 하면 center 가 바뀐다', async () => {
+    const { canvas } = mountWithGranularity('city', ITEMS)
+    const seoul = {
+      name: '서울', district: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: null, transactionCount: 0,
+    }
+    canvas.vm.$emit('select', seoul)
+    await nextTick()
+    expect(canvas.props('center')).toEqual({ lat: 37.55, lng: 126.98 })
   })
 })
 
