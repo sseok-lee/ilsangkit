@@ -4,7 +4,7 @@
       <!-- 기본 4열 / compact 1열 (사이드바 320px 폭에 4열은 들어가지 않는다) -->
       <div :class="['grid gap-8', props.compact ? 'grid-cols-1 mb-5' : 'grid-cols-2 md:grid-cols-4 mb-8 max-w-4xl mx-auto']">
         <!-- 브랜드 -->
-        <div class="col-span-2 md:col-span-1">
+        <div :class="props.compact ? 'col-span-1' : 'col-span-2 md:col-span-1'">
           <HardLink to="/" class="text-base font-semibold text-strong hover:text-primary transition-colors">
             일상킷
           </HardLink>

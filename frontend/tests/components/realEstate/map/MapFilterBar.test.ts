@@ -39,6 +39,19 @@ describe('MapFilterBar', () => {
     expect(w.emitted('update:type')).toBeUndefined()
   })
 
+  it('⌘클릭의 기본 동작(새 탭 열기)이 실제로 막히지 않는다 — @click.exact.prevent 순서 가드', () => {
+    // emit 유무만 보면 .exact 와 .prevent 순서가 바뀌어도(즉 .prevent.exact) 둘 다
+    // emit 은 안 하므로 위 테스트가 계속 통과한다 — 그 회귀를 못 잡는다. .prevent.exact 로
+    // 바뀌면 .prevent 가 먼저 실행돼 수식 키 클릭이어도 preventDefault 가 걸려 새 탭이
+    // 열리지 않는다. defaultPrevented 를 직접 확인해 순서를 가드한다.
+    const w = mountBar()
+    const el = w.findAll('a')[1].element
+    const event = new MouseEvent('click', { metaKey: true, cancelable: true, bubbles: true })
+    el.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+    expect(w.emitted('update:type')).toBeUndefined()
+  })
+
   it('선택된 항목만 aria-current 를 갖는다', () => {
     // aria-pressed 는 토글 버튼 전용 속성이라 링크에 쓰면 무효다.
     const links = mountBar('villa-rent').findAll('a')

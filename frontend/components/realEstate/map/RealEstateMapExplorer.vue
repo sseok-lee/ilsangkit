@@ -4,7 +4,12 @@
       dvh 를 쓴다. vh 는 모바일 주소창이 접히고 펼쳐질 때 갱신되지 않아 스크롤 0이 깨진다.
       헤더가 h-14 lg:h-16(56px/64px)이라 빼는 값도 브레이크포인트별로 다르다.
     -->
-    <div class="lg:flex h-[calc(100dvh-3.5rem)] lg:h-[calc(100dvh-4rem)] lg:min-h-[560px]">
+    <!-- lg:min-h-[560px] 를 다시 넣지 말 것: min-height 는 height 를 덮어써서, 데스크톱
+         폭(≥1024px)인데 세로가 짧은 창(~624px 미만)에서 explorer 가 main 보다 커진다.
+         layout root 가 overflow-hidden 이라 그 초과분은 페이지 스크롤로 복구되지 않고
+         그냥 잘려서, 사이드바 h-full 스크롤 맨 아래에 있는 푸터 하단 바(공공누리·저작권)에
+         영영 닿을 수 없게 된다. -->
+    <div class="lg:flex h-[calc(100dvh-3.5rem)] lg:h-[calc(100dvh-4rem)]">
       <!-- 좌측: 이 페이지의 유일한 SSR 콘텐츠. ClientOnly 로 감싸지 않는다.
            고정폭 — 화면 폭에 따라 목록 항목의 줄바꿈 지점이 달라질 이유가 없다. -->
       <aside class="hidden lg:block lg:w-[320px] lg:shrink-0 border-r border-line">

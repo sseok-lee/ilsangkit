@@ -21,11 +21,15 @@ function mountLayout() {
 }
 
 describe('layouts/map.vue', () => {
-  it('루트를 h-screen overflow-hidden 으로 잠가 페이지 스크롤을 없앤다', () => {
+  it('루트를 h-dvh overflow-hidden 으로 잠가 페이지 스크롤을 없앤다', () => {
     // 높이 계산이 어긋나도 스크롤바가 생기지 않게 구조로 막는다(설계문서 5.1).
-    expect(mountLayout().find('div').classes()).toEqual(
-      expect.arrayContaining(['h-screen', 'overflow-hidden', 'flex', 'flex-col']),
-    )
+    // h-screen(100vh)이 아니라 h-dvh 를 써야 한다 — iOS Safari/Chrome Android 에서
+    // 100vh 는 주소창이 접힌 large viewport 라 주소창이 보일 때 갱신되지 않는다.
+    const classes = mountLayout().find('div').classes()
+    expect(classes).toEqual(expect.arrayContaining(['h-dvh', 'overflow-hidden', 'flex', 'flex-col']))
+    // vh 기반 높이 클래스가 남아있지 않아야 한다(explorer 테스트와 동일한 가드 패턴).
+    // dvh 는 문자열에 'vh'를 포함하므로 dvh 는 제외하고 검사한다.
+    expect(classes.some((c) => c === 'h-screen' || (c.includes('vh') && !c.includes('dvh')))).toBe(false)
   })
 
   it('main 에 flex-1 min-h-0 을 준다', () => {
