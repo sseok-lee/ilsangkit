@@ -1,156 +1,71 @@
 <template>
-  <div class="bg-background-light">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <PageHero
-        eyebrow="부동산"
-        title="부동산 실거래가"
-        description="전국 아파트·빌라·오피스텔의 매매·전월세와 토지 매매 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다."
-        :stats="heroStats"
-      />
-
-      <SectionBlock subtext="조회할 주택 유형을 먼저 선택하세요.">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">부동산 유형별 실거래가</h2>
-        </template>
-        <RealEstateCategoryCards :summaries="hubSummaries ?? undefined" />
-        <div class="grid grid-cols-2 gap-3 md:gap-4 mt-3">
-          <NuxtLink
-            to="/real-estate/land"
-            class="group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
-          >
-            <div class="flex items-center gap-2">
-              <span class="flex size-9 md:size-10 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <img src="/icons/category/land-plot.webp?v2" alt="토지" class="w-6 h-6 md:w-7 md:h-7" width="28" height="28" />
-              </span>
-              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-primary-100 text-primary-700">매매</span>
-            </div>
-            <p class="text-sm md:text-base font-semibold text-slate-800 group-hover:text-primary transition-colors leading-tight">토지</p>
-            <p class="text-xs md:text-sm text-slate-700">대지·전·답·임야 평당 시세</p>
-          </NuxtLink>
-        </div>
-      </SectionBlock>
-
-      <!-- Ad: Property Type Cards 후 -->
-      <AdBanner />
-
-      <SectionBlock>
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">부동산 실거래가란?</h2>
-        </template>
-        <div class="text-base text-slate-600 leading-relaxed space-y-3">
-          <p>
-            부동산 실거래가는 실제 거래가 완료된 가격으로, 국토교통부에 신고된 공식 데이터입니다.
-            매매·전월세 계약 체결 후 30일 이내에 신고된 금액이므로, 호가(희망 가격)와 다를 수 있습니다.
-          </p>
-          <p>
-            일상킷은 국토교통부 실거래가 공개시스템의 데이터를 매일 수집하여 아파트, 연립다세대(빌라),
-            오피스텔의 매매·전월세 실거래 내역과 토지(대지·전·답·임야 등) 매매 실거래가를 제공합니다.
-            토지는 도로·지분 거래를 분리한 대지 기준 평당 시세와 지목·용도지역별 분포를 함께 제공합니다.
-          </p>
-        </div>
-      </SectionBlock>
-
-      <SectionBlock>
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">자주 묻는 질문</h2>
-        </template>
-        <div class="space-y-3">
-          <details
-            v-for="(faq, index) in realEstateFAQs"
-            :key="index"
-            class="rounded-xl bg-white border border-slate-200 overflow-hidden"
-          >
-            <summary class="flex items-center justify-between px-5 py-4 cursor-pointer text-slate-800 font-medium text-sm hover:bg-slate-50 transition-colors list-none">
-              {{ faq.question }}
-              <span class="material-symbols-outlined text-slate-500 text-lg flex-shrink-0 ml-3">expand_more</span>
-            </summary>
-            <div class="px-5 pb-4 text-slate-600 text-sm leading-relaxed border-t border-slate-100 pt-3">
-              {{ faq.answer }}
-            </div>
-          </details>
-        </div>
-      </SectionBlock>
-
-      <section>
-        <DataSourceSection domain="real-estate" />
-      </section>
-    </div>
-  </div>
+  <RealEstateMapExplorer
+    :initial-type="INITIAL_TYPE"
+    :initial-items="regions ?? []"
+    initial-granularity="city"
+  />
 </template>
 
 <script setup lang="ts">
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
+import type { MapRegionItem, MapResponse } from '~/types/realEstateMap'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
-import DataSourceSection from '~/components/common/DataSourceSection.vue'
-import PageHero from '~/components/common/PageHero.vue'
-import SectionBlock from '~/components/common/SectionBlock.vue'
-import RealEstateCategoryCards from '~/components/realEstate/RealEstateCategoryCards.vue'
-import type { RealEstateHubType } from '~/types/realEstate'
 
+// 지도 전용 레이아웃: 헤더만 있고 TrustLine·AppFooter 가 없어 페이지 스크롤이 0이다.
+// 푸터는 지도 사이드바 목록 하단으로 옮겼다(MapSidebar showFooter).
+definePageMeta({ layout: 'map' })
+
+const INITIAL_TYPE = 'apt-sale'
 const apiBase = useApiBase()
 
-interface HubSummaryResponse {
-  success: boolean
-  data: Record<RealEstateHubType, { last30dCount: number | null }>
-  generatedAt: string
-}
-
-const { data: hubSummaries } = await useAsyncData(
-  'real-estate-hub-summary',
+// 지도는 SSR 불가라 이 집계가 이 페이지의 유일한 SSR 데이터다.
+// 실패해도 [] 를 주면 MapSidebar 가 SIDO_CHIPS 16개 링크를 상수에서 렌더한다(fail-open).
+const { data: regions } = await useAsyncData<MapRegionItem[]>(
+  'real-estate-map-city',
   async () => {
     try {
-      const res = await $fetch<HubSummaryResponse>(`${apiBase}/api/real-estate/hub-summary`)
-      return res.data
+      const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${INITIAL_TYPE}/map`, {
+        params: { level: 13, swLat: 33, swLng: 124, neLat: 39, neLng: 132 },
+      })
+      return res.data.items as MapRegionItem[]
     } catch {
-      return null
+      return []
     }
   },
-  { default: () => null },
+  { default: () => [] },
 )
-
-const heroStats = [
-  { label: '데이터 출처', value: '국토교통부' },
-  { label: '거래 유형', value: '매매·전월세' },
-  { label: '주택·토지', value: '아파트·빌라·오피스텔·토지' },
-]
 
 const { setMeta } = useFacilityMeta()
 setMeta({
-  title: '부동산 실거래가',
-  description: '전국 아파트·빌라·오피스텔의 매매·전월세와 토지 매매 실거래가를 지역별로 조회하세요. 국토교통부 데이터 기반 시세 추이와 거래 내역을 한눈에 확인할 수 있습니다.',
+  title: '부동산 실거래가 지도',
+  description: '전국 아파트·빌라·오피스텔의 매매·전월세 실거래가를 지도에서 확인하세요. 지역별 평균 평당가와 건물별 최근 실거래가를 국토교통부 데이터로 제공합니다.',
   path: '/real-estate',
 })
 
-const realEstateFAQs = [
-  { question: '실거래가란 무엇인가요?', answer: '실거래가는 부동산 거래 시 실제로 거래된 금액으로, 국토교통부에 신고된 공식 데이터입니다.' },
-  { question: '실거래가 데이터는 얼마나 자주 업데이트되나요?', answer: '국토교통부 실거래가 공개시스템의 데이터를 매일 수집하여 업데이트합니다.' },
-  { question: '아파트, 빌라, 오피스텔의 차이는 무엇인가요?', answer: '아파트는 5층 이상 공동주택, 빌라는 4층 이하 다세대/다가구 주택, 오피스텔은 업무와 주거를 겸할 수 있는 건물입니다.' },
-  { question: '전세와 월세의 차이는 무엇인가요?', answer: '전세는 보증금을 맡기고 월 임대료 없이 거주하는 방식이고, 월세는 보증금과 함께 매월 임대료를 지불하는 방식입니다.' },
-  { question: '토지 실거래가도 확인할 수 있나요?', answer: '네, 토지(대지·전·답·임야 등) 매매 실거래가를 동(법정동) 단위로 제공합니다. 도로·지분 거래를 분리한 대지 기준 평당 시세와 지목·용도지역별 분포를 확인할 수 있습니다.' },
-]
-
-// Breadcrumb + ItemList JSON-LD
-const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema, setFAQSchema } = useStructuredData()
+// 정적 FAQ 와 FAQPage 스키마는 제거했다 — 보일러플레이트가 GSC 색인 감소 진단의
+// 지목 대상이었고 상세 페이지에서는 이미 제거(#625)됐다. 지역 평균 평당가 실데이터가 대체한다.
+const { setBreadcrumbSchema, setItemListSchema, setDatasetSchema } = useStructuredData()
 setBreadcrumbSchema([
   { name: '홈', url: '/' },
   { name: '부동산 실거래가', url: '/real-estate' },
 ])
+// 토지는 넣지 않는다. 지도 탐색기가 6종만 다루므로 구조화 데이터도 6종이어야 페이지가
+// 알리는 목록과 실제 내용이 일치한다. 토지 접근 경로는 GNB 드롭다운이 담당한다.
 setItemListSchema([
-  { name: '아파트 매매',     url: '/real-estate/apt-sale' },
-  { name: '아파트 전월세',   url: '/real-estate/apt-rent' },
-  { name: '오피스텔 매매',   url: '/real-estate/offitel-sale' },
+  { name: '아파트 매매', url: '/real-estate/apt-sale' },
+  { name: '아파트 전월세', url: '/real-estate/apt-rent' },
+  { name: '오피스텔 매매', url: '/real-estate/offitel-sale' },
   { name: '오피스텔 전월세', url: '/real-estate/offitel-rent' },
-  { name: '빌라 매매',       url: '/real-estate/villa-sale' },
-  { name: '빌라 전월세',     url: '/real-estate/villa-rent' },
-  { name: '토지 실거래가',   url: '/real-estate/land' },
+  { name: '빌라 매매', url: '/real-estate/villa-sale' },
+  { name: '빌라 전월세', url: '/real-estate/villa-rent' },
 ])
 setDatasetSchema({
   name: '전국 부동산 실거래가 데이터',
-  description: '국토교통부 실거래가 공개시스템 기반 전국 아파트·빌라·오피스텔의 매매·전월세 및 토지 매매 거래 데이터입니다. 지역별·단지별 시세 추이, 거래 금액, 전용면적, 층수, 토지 지목·용도지역·평당 시세 정보를 통합 제공합니다.',
+  description: '국토교통부 실거래가 공개시스템 기반 전국 아파트·빌라·오피스텔의 매매·전월세 거래 데이터입니다. 지역별 평균 평당가와 건물별 최근 실거래가를 지도로 제공합니다.',
   url: '/real-estate',
   sources: [REAL_ESTATE_DATA_SOURCE],
-  keywords: ['부동산', '실거래가', '아파트', '빌라', '오피스텔', '토지', '평당가', '국토교통부'],
+  keywords: ['부동산', '실거래가', '아파트', '빌라', '오피스텔', '평당가', '지도', '국토교통부'],
 })
-setFAQSchema(realEstateFAQs)
 </script>

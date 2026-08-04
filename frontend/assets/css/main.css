@@ -223,3 +223,57 @@
     text-wrap: balance;
   }
 }
+
+@layer components {
+  /*
+   * 지도 오버레이 — 부동산 지도 탐색(/real-estate)의 가격 라벨·지역 버블.
+   *
+   * 카카오맵 CustomOverlay 의 content 로 들어가는 소자라 Tailwind 유틸리티를 클래스로
+   * 직접 못 붙인다(문자열 className 하나만 지정). 그래서 여기서 컴포넌트 클래스로 정의한다.
+   *
+   * 배경 없는 맨 텍스트로 두면 지도 자체 라벨(아파트명·역명·도로명)과 뒤엉켜 판독이 불가능하다.
+   * 불투명 배경 + 얇은 테두리로 지도에서 확실히 분리한다. 그라데이션·네온·글래스모피즘은
+   * 프로젝트 안티패턴이라 쓰지 않는다.
+   */
+  .map-price-label,
+  .map-region-bubble {
+    @apply inline-flex items-center whitespace-nowrap rounded-full
+           border border-line bg-white px-2 py-0.5
+           text-[11px] font-semibold leading-[1.45] text-ink
+           shadow-[0_1px_3px_rgba(21,33,59,0.18)]
+           cursor-pointer select-none;
+    /* 지도 타일·자체 라벨 위로 올린다. 카카오 오버레이 기본 스택보다 확실히 위. */
+    position: relative;
+    z-index: 1;
+  }
+
+  .map-price-label:hover,
+  .map-region-bubble:hover {
+    @apply border-primary bg-primary text-white;
+    /* 겹친 이웃 위로 올라와야 호버한 값이 온전히 보인다. */
+    z-index: 3;
+  }
+
+  /* 지역 버블은 평당가 집계라 개수가 적고 의미 단위가 커서 한 급 강조한다. */
+  .map-region-bubble {
+    @apply border-primary/25 bg-primary-50 px-2.5 py-1 text-[12px] text-primary-ink;
+    z-index: 2;
+  }
+
+  /*
+   * 라벨이 이웃과 겹쳐 들어갈 자리가 없을 때의 축약형.
+   * 좌측 목록은 항목 전부를 보여주므로 아예 지우면 "목록엔 있는데 지도엔 없는" 건물이 생긴다.
+   * 점은 자리를 거의 안 먹으면서 위치·클릭 대상·호버 툴팁(title)을 유지한다.
+   */
+  .map-price-dot {
+    @apply block h-2 w-2 rounded-full border border-white bg-primary/70
+           cursor-pointer select-none;
+    position: relative;
+    z-index: 0;
+  }
+
+  .map-price-dot:hover {
+    @apply bg-primary;
+    transform: scale(1.4);
+  }
+}

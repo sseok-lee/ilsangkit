@@ -1436,6 +1436,15 @@ model RealEstateBuildingSummary {
   /// 이 인덱스로 (type,bjdCode) 범위 접근 + 정렬까지 인덱스가 만족 → Backward index scan, 0.8ms.
   /// (정렬이 전부 DESC 라 ASC 인덱스를 역방향으로 읽으면 된다. dongName 필터가 붙어도 유지된다.)
   @@index([type, bjdCode, latestDealYear, latestDealMonth, transactionCount])
+  /// 지도 뷰포트(bbox) 조회 전용.
+  ///
+  /// ⚠️ 이 인덱스만 추가하면 효과가 없다. ORDER BY transactionCount DESC LIMIT N 이
+  /// 붙으면 옵티마이저가 filesort 를 피하려고 type_transactionCount_idx 역방향 스캔을
+  /// 고르는데, 실제로는 그쪽이 훨씬 비싸다.
+  /// 실측(villa-rent 16만행, 희소 뷰포트): 자연 선택 232ms(스캔 182,317행) vs
+  /// FORCE INDEX 11ms(스캔 31,748행) — 21배.
+  /// 따라서 조회는 realEstateMapService 에서 FORCE INDEX 힌트를 건 $queryRaw 로 한다.
+  @@index([type, lat, lng])
 }
 
 // 청약 분양정보
