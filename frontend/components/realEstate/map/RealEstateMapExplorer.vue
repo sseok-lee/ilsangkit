@@ -189,7 +189,24 @@ function onTypeChange(next: string): void {
   syncHash()
 }
 
+/**
+ * 사이드바 행 클릭(city/district) → 지도를 드릴다운한다. 클릭 시점의 granularity 가 곧
+ * 클릭된 행의 단위다(목록 전체가 항상 현재 granularity 로 렌더되므로). building 행은
+ * 상세 페이지로 네비게이션하므로 level 을 건드리지 않는다.
+ *
+ * 9/6 은 임의값이 아니라 backend resolveGranularity 의 히스테리시스를 피해 실제로
+ * 다음 단위로 넘어가는 값이다(backend/src/schemas/realEstateMap.ts):
+ * - city(level>=11)에서 그냥 10으로 가면 히스테리시스가 city 로 되돌린다 → 9 를 쓴다
+ *   (9 는 district 범위 8~10 안이며 되돌림 특례(레벨 10) 밖이라 안전하게 district 로 전환).
+ * - district(8~10)에서 7 로 가면 히스테리시스가 district 로 되돌린다 → 6 을 쓴다
+ *   (6 은 building 범위이며 되돌림 특례(레벨 7) 밖).
+ *
+ * setLevel 은 값만 세팅한다 — RealEstateMapCanvas 가 이 level 을 감시해 지도를 옮기고,
+ * 그 idle 이벤트가 새 bounds/level 로 다시 fetch 한다. 여기서 fetch 를 직접 호출하지 않는다.
+ */
 function onSelect(item: MapItem): void {
   if (item.lat != null && item.lng != null) center.value = { lat: item.lat, lng: item.lng }
+  if (granularity.value === 'city') setLevel(9)
+  else if (granularity.value === 'district') setLevel(6)
 }
 </script>

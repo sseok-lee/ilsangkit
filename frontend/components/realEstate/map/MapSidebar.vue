@@ -16,6 +16,7 @@
           @mouseleave="emit('hover', null)"
         >
           <NuxtLink
+            v-if="props.granularity === 'building'"
             :to="row.href"
             class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-light transition-colors"
             @click="emit('select', row.item)"
@@ -26,6 +27,27 @@
             </span>
             <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </NuxtLink>
+          <!--
+            city/district 행은 허브 페이지로 떠나지 않고 지도를 드릴다운해야 한다(select
+            emit → RealEstateMapExplorer.onSelect 가 center+level 을 세팅). 그래도 href 는
+            SSR HTML 에 반드시 남아야 한다 — 이 16개 시/도 링크가 이 페이지의 핵심 크롤
+            가능 콘텐츠다. NuxtLink 안에서 preventDefault 하지 않는 이유: RouterLink 자체
+            핸들러와의 등록 순서에 기대게 되어 안전하지 않다 — 대신 일반 a + click.exact.prevent
+            로 가로챈다(MapFilterBar 와 동일 패턴). .exact 라서 ⌘/Ctrl+클릭 등 수정키 클릭은
+            가로채지 않고 브라우저 기본 동작(새 탭 열기)이 그대로 통과한다.
+          -->
+          <a
+            v-else
+            :href="row.href"
+            class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-light transition-colors"
+            @click.exact.prevent="emit('select', row.item)"
+          >
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
+              <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
+            </span>
+            <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+          </a>
         </li>
         <li
           v-if="idx === AD_AFTER_INDEX && props.showAd"

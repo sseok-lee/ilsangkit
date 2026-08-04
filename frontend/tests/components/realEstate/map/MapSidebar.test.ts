@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import MapSidebar from '~/components/realEstate/map/MapSidebar.vue'
 import type { MapItem, MapRegionItem } from '~/types/realEstateMap'
 import { formatPyeongLabel } from '~/composables/useMapOverlays'
@@ -102,6 +103,80 @@ describe('MapSidebar', () => {
     expect(sejongRow).toBeTruthy()
     expect(sejongRow!.find('a').exists()).toBe(true)
     expect(sejongRow!.text()).toContain('—')
+  })
+
+  it('건물 모드는 select 를 emit 하지만 기본 동작(이동)을 막지 않는다 — NuxtLink 그대로다', async () => {
+    // 건물 행은 이 태스크 범위 밖(변경 없음): 클릭해도 preventDefault 하지 않아야
+    // 실제 브라우저에서 상세 페이지로 계속 이동한다.
+    const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+    const a = w.find('[data-testid="map-sidebar-item"]').find('a')
+    const evt = new MouseEvent('click', { bubbles: true, cancelable: true })
+    a.element.dispatchEvent(evt)
+    await nextTick()
+    expect(evt.defaultPrevented).toBe(false)
+    expect(w.emitted('select')?.[0]).toEqual([BUILDINGS[0]])
+  })
+
+  describe('city/district 드릴다운 — 허브로 이탈하지 않고 지도를 확대한다', () => {
+    it('city 행: href 는 유지한 채 평범한 클릭은 이동을 막고 select 를 emit 한다', async () => {
+      const w = mountSidebar()
+      const seoulRow = w.findAll('[data-testid="map-sidebar-item"]').find((li) => li.text().includes('서울'))!
+      const a = seoulRow.find('a')
+      expect(a.attributes('href')).toBe('/real-estate/apt-sale/seoul')
+
+      const evt = new MouseEvent('click', { bubbles: true, cancelable: true })
+      a.element.dispatchEvent(evt)
+      await nextTick()
+      expect(evt.defaultPrevented).toBe(true)
+      expect(w.emitted('select')).toBeTruthy()
+      expect((w.emitted('select')![0][0] as MapRegionItem).name).toBe('서울')
+    })
+
+    it('city 행: ⌘/Ctrl+클릭은 가로채지 않는다 — 새 탭으로 허브가 열려야 한다', async () => {
+      const w = mountSidebar()
+      const seoulRow = w.findAll('[data-testid="map-sidebar-item"]').find((li) => li.text().includes('서울'))!
+      const a = seoulRow.find('a')
+      await a.trigger('click', { metaKey: true })
+      await a.trigger('click', { ctrlKey: true })
+      expect(w.emitted('select')).toBeUndefined()
+    })
+
+    it('city 행: ⌘클릭의 기본 동작(새 탭 열기)이 실제로 막히지 않는다 (.exact.prevent 순서 가드)', () => {
+      const w = mountSidebar()
+      const seoulRow = w.findAll('[data-testid="map-sidebar-item"]').find((li) => li.text().includes('서울'))!
+      const el = seoulRow.find('a').element
+      const evt = new MouseEvent('click', { metaKey: true, cancelable: true, bubbles: true })
+      el.dispatchEvent(evt)
+      expect(evt.defaultPrevented).toBe(false)
+      expect(w.emitted('select')).toBeUndefined()
+    })
+
+    it('district 행: href 는 유지한 채 평범한 클릭은 이동을 막고 select 를 emit 한다', async () => {
+      const districtItems: MapItem[] = [
+        { name: '경기', district: '성남시 분당구', lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
+      ]
+      const w = mountSidebar({ items: districtItems, granularity: 'district', total: 1 })
+      const a = w.find('[data-testid="map-sidebar-item"]').find('a')
+      const expectedHref = toRealEstateListUrl({ type: 'apt-sale', city: '경기', district: '성남시 분당구' })
+      expect(a.attributes('href')).toBe(expectedHref)
+
+      const evt = new MouseEvent('click', { bubbles: true, cancelable: true })
+      a.element.dispatchEvent(evt)
+      await nextTick()
+      expect(evt.defaultPrevented).toBe(true)
+      expect(w.emitted('select')?.[0]).toEqual([districtItems[0]])
+    })
+
+    it('district 행: ⌘/Ctrl+클릭은 가로채지 않는다', async () => {
+      const districtItems: MapItem[] = [
+        { name: '경기', district: '성남시 분당구', lat: 37.38, lng: 127.12, avgPricePerPyeong: 3200, transactionCount: 210 },
+      ]
+      const w = mountSidebar({ items: districtItems, granularity: 'district', total: 1 })
+      const a = w.find('[data-testid="map-sidebar-item"]').find('a')
+      await a.trigger('click', { metaKey: true })
+      await a.trigger('click', { ctrlKey: true })
+      expect(w.emitted('select')).toBeUndefined()
+    })
   })
 
   it('district 모드에서는 구/군을 제목으로, 시/도를 부제로 렌더하고 href 는 toRealEstateListUrl 결과와 일치한다', () => {

@@ -8,6 +8,17 @@ const ITEMS: MapItem[] = [
   { name: '서울', district: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 100 },
 ]
 
+// MapSidebar 의 rows computed 는 granularity 에 맞는 아이템 모양을 요구한다(building
+// granularity 인데 지역 아이템을 주면 toRealEstateUrl 이 city/district 를 못 읽어 깨진다).
+// onSelect 의 level 배선만 검증하는 아래 describe 는 각 granularity 에 맞는 아이템으로 마운트한다.
+const BUILDING_ITEMS: MapItem[] = [
+  {
+    buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
+    lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
+    latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
+  },
+]
+
 function mountExplorer() {
   return mount(RealEstateMapExplorer, {
     props: { initialType: 'apt-sale', initialItems: ITEMS, initialGranularity: 'city' },
@@ -184,6 +195,51 @@ describe('RealEstateMapExplorer', () => {
       // 두 사본 합쳐 광고가 2개 이상 뜨는 순간이 없어야 한다는 회귀 가드.
       expect(w.findAll(AD_SLOT_SELECTOR).length).toBeLessThanOrEqual(1)
     })
+  })
+})
+
+// 사이드바 city/district 행 클릭(select emit)이 허브로 이탈하는 대신 지도를 드릴다운해야
+// 한다. onSelect 는 MapSidebar 행 클릭과 지도 마커 클릭 둘 다에서 재사용되므로, 여기서는
+// select 를 직접 emit 해 onSelect 자체의 level 배선만 검증한다(행 클릭 인터셉트 자체는
+// MapSidebar.test.ts 담당).
+//
+// 9/6 은 backend resolveGranularity(backend/src/schemas/realEstateMap.ts)의 히스테리시스를
+// 피해 실제로 다음 단위(district/building)로 전환되는 값이다 — CITY_MIN_LEVEL=11,
+// DISTRICT_MIN_LEVEL=8 이며 city→10, district→7 은 각각 되돌림 특례에 걸려 드릴다운되지 않는다.
+describe('RealEstateMapExplorer onSelect 드릴다운 zoom level', () => {
+  function mountWithGranularity(granularity: 'city' | 'district' | 'building', items: MapItem[]) {
+    const CanvasStub = {
+      template: '<div data-testid="canvas" />',
+      props: ['items', 'center', 'level'],
+      emits: ['idle', 'select', 'hover'],
+    }
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: items, initialGranularity: granularity },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    return { w, canvas: w.findComponent(CanvasStub) }
+  }
+
+  it('granularity=city 에서 select 시 level 9 를 세팅한다 (district 로 드릴다운)', async () => {
+    const { canvas } = mountWithGranularity('city', ITEMS)
+    canvas.vm.$emit('select', ITEMS[0])
+    await nextTick()
+    expect(canvas.props('level')).toBe(9)
+  })
+
+  it('granularity=district 에서 select 시 level 6 을 세팅한다 (building 으로 드릴다운)', async () => {
+    const { canvas } = mountWithGranularity('district', ITEMS)
+    canvas.vm.$emit('select', ITEMS[0])
+    await nextTick()
+    expect(canvas.props('level')).toBe(6)
+  })
+
+  it('granularity=building 에서 select 해도 level 을 바꾸지 않는다 — 상세 페이지 이동만 한다', async () => {
+    const { canvas } = mountWithGranularity('building', BUILDING_ITEMS)
+    const before = canvas.props('level')
+    canvas.vm.$emit('select', BUILDING_ITEMS[0])
+    await nextTick()
+    expect(canvas.props('level')).toBe(before)
   })
 })
 
