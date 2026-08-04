@@ -13,7 +13,7 @@ function building(over: Partial<MapBuildingItem>): MapBuildingItem {
 
 function regionItem(over: Partial<MapRegionItem>): MapRegionItem {
   return {
-    name: '서울', district: null, lat: 37.5, lng: 127, avgPricePerPyeong: null, transactionCount: 10,
+    name: '서울', district: null, dong: null, lat: 37.5, lng: 127, avgPricePerPyeong: null, transactionCount: 10,
     ...over,
   }
 }
@@ -46,7 +46,7 @@ describe('formatPriceLabel', () => {
 
 describe('formatPyeongLabel', () => {
   const region = (p: number | null): MapRegionItem => ({
-    name: '서울', district: null, lat: 37.5, lng: 127, avgPricePerPyeong: p, transactionCount: 10,
+    name: '서울', district: null, dong: null, lat: 37.5, lng: 127, avgPricePerPyeong: p, transactionCount: 10,
   })
 
   it('평당가에 단위를 붙인다', () => {
