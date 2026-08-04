@@ -1,8 +1,8 @@
 <template>
-  <footer class="bg-background-light border-t border-line-2 py-6 md:py-10">
-    <div class="container mx-auto px-4">
-      <!-- 4-column grid -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 max-w-4xl mx-auto">
+  <footer :class="['bg-background-light border-t border-line-2', props.compact ? 'py-5' : 'py-6 md:py-10']">
+    <div :class="props.compact ? 'px-4' : 'container mx-auto px-4'">
+      <!-- 기본 4열 / compact 1열 (사이드바 320px 폭에 4열은 들어가지 않는다) -->
+      <div :class="['grid gap-8', props.compact ? 'grid-cols-1 mb-5' : 'grid-cols-2 md:grid-cols-4 mb-8 max-w-4xl mx-auto']">
         <!-- 브랜드 -->
         <div class="col-span-2 md:col-span-1">
           <HardLink to="/" class="text-base font-semibold text-strong hover:text-primary transition-colors">
@@ -88,6 +88,12 @@ import HardLink from '~/components/common/HardLink.vue'
 import { SITE_TAGLINE } from '~/utils/seoConstants'
 import { useSyncStatus } from '~/composables/useSyncStatus'
 import { formatDotDateTime, isSyncStale, RE_STALE_DAYS } from '~/utils/syncFreshness'
+
+/**
+ * 좁은 컨테이너(지도 사이드바 320px)용 1열 렌더.
+ * 링크·문구는 바꾸지 않는다 — 다른 페이지 푸터와 내용이 같아야 한다.
+ */
+const props = withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
 
 const currentYear = computed(() => new Date().getFullYear())
 
