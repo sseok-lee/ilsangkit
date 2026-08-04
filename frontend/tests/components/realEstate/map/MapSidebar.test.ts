@@ -267,8 +267,16 @@ describe('MapSidebar 푸터', () => {
     expect(mountWithFooter(true).findComponent({ name: 'AppFooter' }).props('compact')).toBe(true)
   })
 
-  it('푸터는 목록 뒤에 온다', () => {
-    const html = mountWithFooter(true).html()
+  it('푸터는 목록 뒤에 오고, ul 안에 들어가지 않는다', () => {
+    const w = mountWithFooter(true)
+
+    // 순서: 목록이 먼저, 푸터가 뒤
+    const html = w.html()
     expect(html.indexOf('map-sidebar-item')).toBeLessThan(html.indexOf('sidebar-footer'))
+
+    // 구조: ul 의 형제여야 한다. ul 안에 들어가면 위 순서 검사는 그대로 통과하지만,
+    // ul 의 flex-1 이 짧은 목록에서 푸터를 바닥으로 밀어내는 동작이 깨진다.
+    expect(w.find('ul').find('[data-testid="sidebar-footer"]').exists()).toBe(false)
+    expect(w.find('[data-testid="sidebar-footer"]').exists()).toBe(true)
   })
 })
