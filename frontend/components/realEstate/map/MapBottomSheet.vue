@@ -1,7 +1,7 @@
 <template>
   <div
-    class="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-[0_-4px_16px_rgba(0,0,0,0.12)] transition-[height] duration-200"
-    :class="expanded ? 'h-[75dvh]' : 'h-[38dvh]'"
+    class="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-[0_-4px_16px_rgba(0,0,0,0.12)] transition-[top] duration-200"
+    :class="expanded ? 'top-[25dvh]' : 'top-[62dvh]'"
   >
     <button
       type="button"
@@ -18,8 +18,13 @@
       도달하는 별도의 하단 영역은 없다. 푸터(공공누리·저작권 고지 포함)는 MapSidebar가
       show-footer 로 목록 맨 아래에 렌더한다: 모바일 사용자는 이 시트 내부를 스크롤해
       목록을 다 내려가면 푸터에 닿는다.
+
+      h-[calc(...)] 대신 top/bottom 인셋을 쓴다: 이 div도 슬롯 안 광고(AdBanner)의 DOM
+      조상이라 AdSense 스크립트가 여기에도 height:auto!important 를 주입할 수 있다.
+      퍼센트/calc 높이는 그 즉시 무력화되지만, top+bottom 인셋은 부모(fixed 시트)와
+      동일한 원리로 height 값과 무관하게 박스를 확정한다.
     -->
-    <div class="h-[calc(100%-2.75rem)] overflow-y-auto">
+    <div class="absolute inset-x-0 top-11 bottom-0 overflow-y-auto">
       <slot />
     </div>
   </div>
