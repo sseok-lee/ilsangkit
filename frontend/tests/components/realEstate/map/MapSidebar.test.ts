@@ -203,7 +203,7 @@ describe('MapSidebar 더보기', () => {
     expect(w.text()).not.toContain('상위')
   })
 
-  it('구·군 모드도 자르지 않는다 — 슬라이스는 건물 모드 전용이다', () => {
+  it('구·군 모드도 20개씩 자른다 — 수도권은 25~50개라 건물 모드와 동일하게 페이지네이션한다', () => {
     // 지역(시/도) 모드로는 이 조건을 검증할 수 없다: SIDO_CHIPS 가 16개라 PAGE_SIZE(20)
     // 아래여서 슬라이스를 걸어도 결과가 같다. 구·군 모드는 items 가 그대로 행이 되므로
     // 20개를 넘겨야 granularity 조건이 살아 있는지 드러난다.
@@ -217,8 +217,8 @@ describe('MapSidebar 더보기', () => {
         pending: false, type: 'apt-sale',
       },
     })
-    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(25)
-    expect(w.find('[data-testid="map-sidebar-more"]').exists()).toBe(false)
+    expect(w.findAll('[data-testid="map-sidebar-item"]')).toHaveLength(20)
+    expect(w.find('[data-testid="map-sidebar-more"]').exists()).toBe(true)
   })
 
   it('exact 여도 목록이 잘렸으면 개수 안내를 띄운다', () => {

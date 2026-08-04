@@ -42,6 +42,14 @@ describe('AppFooter compact', () => {
     expect(mountFooter().find('footer').classes()).toContain('md:py-10')
   })
 
+  it('compact 는 role="contentinfo" 를 명시한다 — main 안에 렌더되어 암묵 랜드마크를 잃는다', () => {
+    expect(mountFooter({ compact: true }).find('footer').attributes('role')).toBe('contentinfo')
+  })
+
+  it('기본 모드는 role 을 명시하지 않는다 — 이미 body 레벨이라 암묵 role 과 중복된다', () => {
+    expect(mountFooter().find('footer').attributes('role')).toBeUndefined()
+  })
+
   // 이 푸터는 다른 페이지 푸터와 내용이 같아야 한다. 레이아웃만 바뀐다.
   it('compact 여도 링크와 고지문은 기본 모드와 완전히 같다', () => {
     const base = mountFooter()

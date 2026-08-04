@@ -192,13 +192,18 @@ watch(() => props.items, () => { shown.value = PAGE_SIZE })
 /**
  * 화면에 그릴 행.
  *
- * 건물 모드만 자른다. 목록을 전부 그리면(최대 200개, 항목 약 62px = 12,400px) 그 아래
- * 푸터에 도달할 수 없다 — 데스크톱 사이드바에서도 12화면을 내려야 한다.
- * 지역 모드(최대 16개)는 자르지 않는다. SIDO_CHIPS 링크는 이 페이지의 핵심 SSR 콘텐츠라
- * 전부 HTML 에 있어야 한다.
+ * city(시/도) 모드만 예외로 자르지 않는다 — SIDO_CHIPS 16개 링크는 이 페이지의 핵심
+ * SSR 콘텐츠라 전부 HTML 에 있어야 한다. 그 외(building·district)는 전부 자른다:
+ * 목록을 다 그리면(건물 최대 200개, 항목 약 62px = 12,400px) 그 아래 푸터에 도달할 수
+ * 없다 — 데스크톱 사이드바에서도 12화면을 내려야 한다. district 도 수도권은 25~50개라
+ * 같은 문제가 생겨 building 과 동일하게 20개씩 페이지네이션한다.
+ *
+ * city 예외가 실제로 살아 있는지는 테스트로 관측할 수 없다 — SIDO_CHIPS 가 16개라
+ * PAGE_SIZE(20) 아래여서 슬라이스를 걸어도 안 걸어도 결과가 같다. 상수가 20을 넘으면
+ * 그때부터 검증 가능해지고, 넘기 전까지는 이 조건의 존재 자체가 방어선이다.
  */
 const visibleRows = computed<Row[]>(() =>
-  props.granularity === 'building' ? rows.value.slice(0, shown.value) : rows.value,
+  props.granularity !== 'city' ? rows.value.slice(0, shown.value) : rows.value,
 )
 
 const hasMore = computed(() => visibleRows.value.length < rows.value.length)
