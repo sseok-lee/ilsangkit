@@ -209,19 +209,29 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     })
   }
 
-  it('컨테이너 높이를 dvh 로 잡고 헤더 높이를 브레이크포인트별로 뺀다', () => {
-    // vh 는 모바일 주소창이 접힐 때 갱신되지 않아 스크롤 0이 깨진다.
-    // 헤더는 h-14 lg:h-16(56px/64px)이라 두 값이 필요하다.
+  it('section 을 헤더 아래 뷰포트에 fixed 로 고정한다 (브레이크포인트별 top)', () => {
+    // AdSense 스크립트가 layouts/map.vue 루트에 인라인 height:auto!important 를
+    // 주입해도(라이브 실측, 데스크톱 1440x900 에서 611px 스크롤 발생) section 자체가
+    // 뷰포트 좌표로 고정돼 있으면 그 주입과 무관하게 스크롤 0 이 유지된다.
+    // 헤더는 h-14 lg:h-16(56px/64px)이라 top 값도 브레이크포인트별로 필요하다.
+    const cls = mountForLayout().find('section').classes()
+    expect(cls).toContain('fixed')
+    expect(cls).toContain('inset-x-0')
+    expect(cls).toContain('top-14')
+    expect(cls).toContain('lg:top-16')
+    expect(cls).toContain('bottom-0')
+  })
+
+  it('내부 컨테이너는 fixed section 을 h-full 로 채운다 — vh/dvh 계산을 다시 쓰지 않는다', () => {
     // `section > div` 는 MapBottomSheet 스텁의 루트(`<div><slot /></div>`)도 매칭해
-    // find() 의 "첫 매치"가 템플릿 순서에 우연히 기댄다 — dvh 클래스를 가진 쪽을
+    // find() 의 "첫 매치"가 템플릿 순서에 우연히 기댄다 — lg:flex 클래스를 가진 쪽을
     // 명시적으로 골라 그 우연에 기대지 않게 한다.
     const cls = mountForLayout()
       .findAll('section > div')
-      .find((d) => d.classes().some((c) => c.includes('dvh')))
+      .find((d) => d.classes().includes('lg:flex'))
       ?.classes()
-    expect(cls).toContain('h-[calc(100dvh-3.5rem)]')
-    expect(cls).toContain('lg:h-[calc(100dvh-4rem)]')
-    expect(cls?.some((c) => c.includes('100vh'))).toBe(false)
+    expect(cls).toContain('h-full')
+    expect(cls?.some((c) => c.includes('vh'))).toBe(false)
   })
 
   it('사이드바를 고정폭으로 잡는다', () => {

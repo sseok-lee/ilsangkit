@@ -1,15 +1,18 @@
 <template>
-  <section class="relative">
+  <section class="fixed inset-x-0 top-14 lg:top-16 bottom-0">
     <!--
-      dvh 를 쓴다. vh 는 모바일 주소창이 접히고 펼쳐질 때 갱신되지 않아 스크롤 0이 깨진다.
-      헤더가 h-14 lg:h-16(56px/64px)이라 빼는 값도 브레이크포인트별로 다르다.
+      fixed 로 뷰포트에 직접 고정한다 — 더 이상 layouts/map.vue 루트의 height 에 기대지 않는다.
+      이유: 실브라우저에서 AdSense 스크립트가 그 루트 div 에 인라인 `height: auto !important`
+      를 주입해 h-dvh 클래스를 이겨버린다(라이브 실측, 데스크톱 1440x900 에서 611px 스크롤 발생).
+      fixed 포지셔닝은 뷰포트 좌표로만 크기가 정해지므로 그 주입과 무관하게 스크롤 0 을 지킨다.
+      top-14/lg:top-16 은 헤더 h-14/lg:h-16(56px/64px)과 맞춘 값이다.
+      z-index 는 주지 않는다 — 헤더가 sticky z-50 이고, fixed 는 z-index:auto 라도 새
+      스태킹 컨텍스트를 만들어(암묵적으로 z:0급) 헤더보다 항상 아래에 그려진다.
     -->
-    <!-- lg:min-h-[560px] 를 다시 넣지 말 것: min-height 는 height 를 덮어써서, 데스크톱
-         폭(≥1024px)인데 세로가 짧은 창(~624px 미만)에서 explorer 가 main 보다 커진다.
-         layout root 가 overflow-hidden 이라 그 초과분은 페이지 스크롤로 복구되지 않고
-         그냥 잘려서, 사이드바 h-full 스크롤 맨 아래에 있는 푸터 하단 바(공공누리·저작권)에
-         영영 닿을 수 없게 된다. -->
-    <div class="lg:flex h-[calc(100dvh-3.5rem)] lg:h-[calc(100dvh-4rem)]">
+    <!-- lg:min-h-[560px] 를 다시 넣지 말 것: 위 fixed inset 이 이미 높이를 확정하므로
+         min-height 로 덮어쓸 필요가 없고, 덮어쓰면 세로가 짧은 창에서 explorer 가
+         section 보다 커져 사이드바 하단(푸터)에 닿지 못하는 과거 버그가 재발한다. -->
+    <div class="lg:flex h-full">
       <!-- 좌측: 이 페이지의 유일한 SSR 콘텐츠. ClientOnly 로 감싸지 않는다.
            고정폭 — 화면 폭에 따라 목록 항목의 줄바꿈 지점이 달라질 이유가 없다. -->
       <aside class="hidden lg:block lg:w-[320px] lg:shrink-0 border-r border-line">
