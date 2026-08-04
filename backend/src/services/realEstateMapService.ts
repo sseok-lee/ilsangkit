@@ -139,8 +139,14 @@ export interface MapRegionItem {
   /** level='city' 면 시/도명, 'district' 면 시/도명 (district 필드와 짝) */
   name: string;
   district: string | null;
-  lat: number;
-  lng: number;
+  /**
+   * Region.lat/lng 는 스키마상 NOT NULL 이라 실제로는 항상 채워진다. 그래도
+   * fetchBuildings/MapBuildingItem 과 같은 규약(널을 0 으로 뭉개 좌표를 조작하지
+   * 않는다)을 따르기 위해 nullable 로 선언한다 — bbox 필터(isInBounds)가 null 을
+   * "좌표 없음"으로 명시적으로 제외할 수 있게 한다.
+   */
+  lat: number | null;
+  lng: number | null;
   /** 평당가(만원). 해당 기간 거래가 없으면 null */
   avgPricePerPyeong: number | null;
   transactionCount: number;
@@ -202,40 +208,74 @@ async function buildRegions(type: string, level: RegionLevel): Promise<MapRegion
   return rows.map((r) => ({
     name: String(r.name),
     district: r.district == null ? null : String(r.district),
-    lat: Number(r.lat),
-    lng: Number(r.lng),
+    // null 을 Number() 에 그대로 넘기면 0 이 되어 (0,0) 좌표로 둔갑한다 — bbox 필터가
+    // "진짜 (0,0)"과 "좌표 없음"을 구분 못 하게 되므로 null 은 null 로 보존한다.
+    lat: r.lat == null ? null : Number(r.lat),
+    lng: r.lng == null ? null : Number(r.lng),
     avgPricePerPyeong: r.avgPricePerPyeong == null ? null : Number(r.avgPricePerPyeong),
     transactionCount: Number(r.transactionCount ?? 0),
   }));
 }
 
 /**
- * 지역 단위 평균 평당가. 뷰포트와 무관하므로 (type, level) 조합 12개만 캐시하면 전부 커버된다.
+ * 지역 항목이 뷰포트(bbox) 안에 있는지 판정한다. fetchBuildings 의 `BETWEEN` 과 동일하게
+ * 양끝 포함(inclusive)이다 — 뷰포트 경계에 걸친 항목이 building/region 조회에서
+ * 다르게 취급되면 안 된다.
+ *
+ * Region.lat/lng 는 스키마상 NOT NULL Decimal 이라 buildRegions 의 결과가 null 좌표를
+ * 낼 일은 현재 없다. 그래도 raw SQL + JOIN 결과를 다루는 코드라 향후 JOIN 이 바뀌거나
+ * (예: LEFT JOIN) 예상과 다른 행이 섞이면 null/NaN 이 들어올 수 있다 — 그런 항목은
+ * 지도에 찍을 좌표가 없어 "뷰포트 안"이라고 판단할 근거가 없으므로, 크래시 대신
+ * 필터에서 조용히 제외한다(fail-safe, 전체 목록이 아니라 항목 하나만 누락).
+ */
+function isInBounds(item: MapRegionItem, bounds: Bounds): boolean {
+  const { lat, lng } = item;
+  if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  return lat >= bounds.swLat && lat <= bounds.neLat && lng >= bounds.swLng && lng <= bounds.neLng;
+}
+
+/** 지역 목록을 뷰포트로 좁힌다. 캐시에는 절대 이 결과가 아니라 원본(전국) 목록만 저장한다. */
+function filterRegionsByBounds(items: MapRegionItem[], bounds: Bounds): MapRegionItem[] {
+  return items.filter((item) => isInBounds(item, bounds));
+}
+
+/**
+ * 지역 단위 평균 평당가 — 요청 뷰포트(bbox)로 필터링해 반환한다.
+ *
+ * 캐시/in-flight dedup 은 (type, level) 조합 12개만 커버하면 되므로 **전국 목록**을
+ * 그대로 유지한다(뷰포트를 캐시 키에 넣으면 뷰포트는 무한하므로 캐시가 무한정 커진다).
+ * bbox 필터는 캐시에서 꺼낸 뒤 매 호출마다 메모리에서 적용한다 — 지역 수가 적어
+ * (구·군 267 + 시/도 16) 비용이 무시할 만하다.
  *
  * 실패 시 빈 배열을 주고 **캐시하지 않는다**. 호출부(SSR)는 지역 링크를 상수에서 만들고
  * 가격만 이 값으로 채우므로, 빈 배열이어도 페이지는 링크를 온전히 렌더한다(fail-open).
  */
-export async function fetchRegions(type: string, level: RegionLevel): Promise<MapRegionItem[]> {
+export async function fetchRegions(
+  type: string,
+  level: RegionLevel,
+  bounds: Bounds,
+): Promise<MapRegionItem[]> {
   const key = `${type}:${level}`;
   const hit = regionCache.get(key);
-  if (hit && hit.expiresAt > Date.now()) return hit.value;
+  if (hit && hit.expiresAt > Date.now()) return filterRegionsByBounds(hit.value, bounds);
 
-  const pending = regionInFlight.get(key);
-  if (pending) return pending;
+  let pending = regionInFlight.get(key);
+  if (!pending) {
+    pending = buildRegions(type, level)
+      .then((value) => {
+        regionCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+        return value;
+      })
+      .catch((err) => {
+        console.warn(`[realEstateMap] region aggregate failed (${key}):`, err);
+        return [] as MapRegionItem[];
+      })
+      .finally(() => {
+        regionInFlight.delete(key);
+      });
+    regionInFlight.set(key, pending);
+  }
 
-  const task = buildRegions(type, level)
-    .then((value) => {
-      regionCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
-      return value;
-    })
-    .catch((err) => {
-      console.warn(`[realEstateMap] region aggregate failed (${key}):`, err);
-      return [] as MapRegionItem[];
-    })
-    .finally(() => {
-      regionInFlight.delete(key);
-    });
-
-  regionInFlight.set(key, task);
-  return task;
+  const value = await pending;
+  return filterRegionsByBounds(value, bounds);
 }

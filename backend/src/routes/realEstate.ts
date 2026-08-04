@@ -196,7 +196,7 @@ router.get(
       return;
     }
 
-    const items = await fetchRegions(type, granularity);
+    const items = await fetchRegions(type, granularity, { swLat, swLng, neLat, neLng });
     res.json({
       success: true,
       data: { granularity, items, total: items.length, exact: true },
