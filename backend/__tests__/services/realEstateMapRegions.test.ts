@@ -6,7 +6,11 @@ vi.mock('../../src/lib/prisma.js', () => ({
   default: { $queryRawUnsafe: (...a: unknown[]) => queryRawUnsafe(...a) },
 }));
 
-import { fetchRegions, __resetMapCacheForTest } from '../../src/services/realEstateMapService.js';
+import {
+  fetchRegions,
+  __resetMapCacheForTest,
+  sortRegionsByDistance,
+} from '../../src/services/realEstateMapService.js';
 
 // 페이지의 SSR 호출이 실제로 쓰는 전국 bbox(schemas/realEstateMap.ts 의 KOREA_BOUNDS 와 동일).
 // 이 안에 들어오면 필터가 아무것도 제외하지 않아야 한다.
@@ -115,6 +119,66 @@ describe('fetchRegions', () => {
       ]);
       const r = await fetchRegions('apt-sale', 'district', SEOUL_BOUNDS);
       expect(r.map((x) => x.name)).toEqual(['서울특별시']);
+    });
+  });
+
+  describe('뷰포트 중심 정렬', () => {
+    // SEOUL_BOUNDS 의 중심은 { lat: 37.55, lng: 127.0 } 다.
+    const CENTER_ROW = { name: '서울특별시', district: '중구', lat: '37.55', lng: '127.0', avgPricePerPyeong: 5000n, transactionCount: 1n }; // 거리 0
+    const MID_ROW = { name: '서울특별시', district: '마포구', lat: '37.6', lng: '127.1', avgPricePerPyeong: 5000n, transactionCount: 1n }; // 거리제곱 0.0125
+    const FAR_ROW = { name: '서울특별시', district: '강서구', lat: '37.41', lng: '126.81', avgPricePerPyeong: 5000n, transactionCount: 1n }; // 거리제곱 ≈0.0557
+
+    it('결과가 뷰포트 중심에서 가까운 순으로 정렬된다 — DB 는 알파벳순으로 줘도 무관하다', async () => {
+      // group by 결과 순서를 흉내내 일부러 거리 순서와 무관하게(강서<마포<중 알파벳순) 준다.
+      queryRawUnsafe.mockResolvedValue([FAR_ROW, MID_ROW, CENTER_ROW]);
+      const r = await fetchRegions('apt-sale', 'district', SEOUL_BOUNDS);
+      expect(r.map((x) => x.district)).toEqual(['중구', '마포구', '강서구']);
+    });
+
+    it('좌표가 null 인 항목이 섞여도 정렬이 크래시하지 않고 결정론적으로 맨 뒤로 간다', () => {
+      // fetchRegions 를 거치면 null 좌표 항목은 이미 filterRegionsByBounds 가 걸러내
+      // sortRegionsByDistance 에 도달하지 않는다(위 '좌표가 null 인 항목은...' 테스트가 그걸
+      // 확인한다). 이 테스트는 그 방어 코드 자체 — sortRegionsByDistance 가 필터를 거치지
+      // 않은 목록에 단독으로 호출되는 경우에도 안전한지 — 를 직접 검증한다.
+      const nullRow = { name: '좌표없음', district: '어딘가', dong: null, lat: null, lng: null, avgPricePerPyeong: null, transactionCount: 1 };
+      const near = { name: '서울특별시', district: '강남구', dong: null, lat: 37.55, lng: 127.0, avgPricePerPyeong: 1000, transactionCount: 1 };
+      const far = { name: '서울특별시', district: '강북구', dong: null, lat: 37.41, lng: 126.81, avgPricePerPyeong: 1000, transactionCount: 1 };
+
+      let result: typeof near[] = [];
+      expect(() => {
+        result = sortRegionsByDistance([nullRow, far, near], SEOUL_BOUNDS) as typeof near[];
+      }).not.toThrow();
+      expect(result.map((x) => x.district)).toEqual(['강남구', '강북구', '어딘가']);
+    });
+
+    it('거리가 같은 두 항목은 name→district 로 결정론적 순서를 유지한다 — 입력 순서를 뒤집어도 같다', async () => {
+      // 중심이 (0,0) 인 bbox 를 써서 축을 하나씩만 어긋나게 한다 — lat/lng 를 둘 다
+      // 움직이면(예: SEOUL_BOUNDS 중심 기준 대칭점) "37.6-37.55" 와 "37.5-37.55" 처럼
+      // 서로 다른 뺄셈에서 나온 부동소수라 마지막 비트가 미세하게 달라 실제로는 같지
+      // 않은 "37.6"===equal 이 아닌 경우가 생긴다(실측: 7e-16 차이로 이 테스트가 깨졌었다).
+      // (0,0) 중심 + 한 축만 0.1 로 어긋나게 하면 두 항목 모두 동일한 리터럴 0.1 을 그대로
+      // 제곱하므로 부동소수 오차 없이 정확히 같은 거리가 나온다.
+      const ZERO_CENTER_BOUNDS = { swLat: -1, swLng: -1, neLat: 1, neLng: 1 };
+      const gangnam = { name: '서울특별시', district: '강남구', lat: '0.1', lng: '0', avgPricePerPyeong: 5000n, transactionCount: 1n };
+      const gangbuk = { name: '서울특별시', district: '강북구', lat: '0', lng: '0.1', avgPricePerPyeong: 5000n, transactionCount: 1n };
+
+      queryRawUnsafe.mockResolvedValueOnce([gangbuk, gangnam]);
+      const r1 = await fetchRegions('apt-sale', 'district', ZERO_CENTER_BOUNDS);
+
+      __resetMapCacheForTest();
+      queryRawUnsafe.mockResolvedValueOnce([gangnam, gangbuk]);
+      const r2 = await fetchRegions('apt-sale', 'district', ZERO_CENTER_BOUNDS);
+
+      expect(r1.map((x) => x.district)).toEqual(['강남구', '강북구']);
+      expect(r2.map((x) => x.district)).toEqual(['강남구', '강북구']);
+    });
+
+    it('캐시는 여전히 (type, level) 로만 키가 잡힌다 — 다른 bbox(다른 중심)로 다시 불러도 쿼리는 한 번만 나간다', async () => {
+      const OTHER_BOUNDS = { swLat: 34.8, swLng: 128.4, neLat: 35.4, neLng: 129.4 }; // 부산 근방, 중심이 SEOUL_BOUNDS 와 다르다
+      queryRawUnsafe.mockResolvedValue([FAR_ROW, MID_ROW, CENTER_ROW]);
+      await fetchRegions('apt-sale', 'district', SEOUL_BOUNDS);
+      await fetchRegions('apt-sale', 'district', OTHER_BOUNDS);
+      expect(queryRawUnsafe).toHaveBeenCalledTimes(1);
     });
   });
 });

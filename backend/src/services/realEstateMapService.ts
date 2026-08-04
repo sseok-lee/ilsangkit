@@ -265,6 +265,87 @@ function filterRegionsByBounds(items: MapRegionItem[], bounds: Bounds): MapRegio
   return items.filter((item) => isInBounds(item, bounds));
 }
 
+interface Point {
+  lat: number;
+  lng: number;
+}
+
+/** bbox 중심점. 요청마다 달라지므로 캐시 키에 넣지 않고(전국 목록만 캐시) 매 호출 시 계산한다. */
+function boundsCenter(bounds: Bounds): Point {
+  return { lat: (bounds.swLat + bounds.neLat) / 2, lng: (bounds.swLng + bounds.neLng) / 2 };
+}
+
+/**
+ * 중심점까지의 유클리드 거리 제곱(정렬 전용 — 표시용 실거리가 아니므로 sqrt 를 생략한다).
+ * 위경도 평면 근사라 지오데식으로는 부정확하지만, 단일 뷰포트 안의 표시 우선순위를
+ * 매기는 용도라 문제 없다(팀리드 지시).
+ *
+ * 좌표가 null 인 항목은 +Infinity 를 줘 항상 맨 뒤로 보낸다 — 정상 흐름에서는
+ * filterRegionsByBounds(isInBounds) 가 null 좌표 항목을 이미 걸러내므로 이 분기는 실제로는
+ * 타지 않는다. 그래도 이 함수가 필터를 거치지 않은 목록에 단독으로 호출될 가능성(테스트,
+ * 향후 호출부 변경)에 대비한 방어 코드다 — null 을 (0,0) 처럼 취급해 "중심에서 제일 가까움"
+ * 으로 둔갑시키면 좌표 없는 항목이 라벨 우선순위 1번을 차지하는 사고가 나므로, 크래시도
+ * 앞자리 승격도 아닌 "결정론적으로 맨 뒤" 를 택한다.
+ */
+function squaredDistanceToCenter(item: MapRegionItem, center: Point): number {
+  const { lat, lng } = item;
+  if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return Infinity;
+  const dLat = lat - center.lat;
+  const dLng = lng - center.lng;
+  return dLat * dLat + dLng * dLng;
+}
+
+/** null 을 빈 문자열로 취급해 앞쪽에 오게 한다 — 동렬 tiebreak 전용이라 표시 순서와는 무관하다. */
+function compareNullableString(a: string | null, b: string | null): number {
+  const av = a ?? '';
+  const bv = b ?? '';
+  if (av < bv) return -1;
+  if (av > bv) return 1;
+  return 0;
+}
+
+/**
+ * 거리가 동률일 때(부동소수 연산이라 실제로도 벌어진다 — 예: 시/도 레벨에서 Region 평균
+ * 좌표가 우연히 같은 경우)의 결정론적 타이브레이크. name → district → dong 순으로 비교한다.
+ * 이게 없으면 Array.prototype.sort 가 엔진/노드 버전에 따라 동률 항목의 상대 순서를 다르게
+ * 낼 수 있어(구현별 정렬 안정성 차이), 같은 요청이 응답마다 다른 순서로 돌아와 지도 라벨이
+ * 리렌더마다 재배치되는 것처럼 보인다.
+ */
+function compareRegionsTiebreak(a: MapRegionItem, b: MapRegionItem): number {
+  return (
+    compareNullableString(a.name, b.name) ||
+    compareNullableString(a.district, b.district) ||
+    compareNullableString(a.dong, b.dong)
+  );
+}
+
+/**
+ * 지역 목록을 요청 bbox 중심에서 가까운 순으로 정렬한다.
+ *
+ * 반드시 bbox 필터 뒤·캐시에서 꺼낸 뒤에 호출한다 — 캐시는 (type, level) 전국 목록만
+ * 들고 있고, 정렬 기준(중심점)은 요청마다 다르기 때문이다. 정렬된 결과를 캐시에 넣으면
+ * 다음 요청이 엉뚱한 중심 기준 순서를 그대로 돌려받는다.
+ *
+ * 이 순서가 곧 지도 라벨 우선순위다(useMapOverlays 가 items 순서대로 그리고 겹치면 뒤엣것을
+ * 점으로 접는다) — 클릭한 지역과 가장 가까운 동/구·군이 라벨을 차지하는 게 의도된 결과다.
+ */
+export function sortRegionsByDistance(items: MapRegionItem[], bounds: Bounds): MapRegionItem[] {
+  const center = boundsCenter(bounds);
+  return [...items].sort((a, b) => {
+    const da = squaredDistanceToCenter(a, center);
+    const db = squaredDistanceToCenter(b, center);
+    // da - db 로 뺄셈하지 않는다: 좌표 없는 두 항목을 비교하면 Infinity - Infinity = NaN 이
+    // 되어 정렬 결과가 정의되지 않는다. 값 비교로 -1/0/1 을 직접 낸다.
+    if (da !== db) return da < db ? -1 : 1;
+    return compareRegionsTiebreak(a, b);
+  });
+}
+
+/** bbox 필터 + 중심점 정렬을 한 번에 적용한다. fetchRegions 의 캐시 히트/미스 두 경로가 공유한다. */
+function filterAndSortRegions(items: MapRegionItem[], bounds: Bounds): MapRegionItem[] {
+  return sortRegionsByDistance(filterRegionsByBounds(items, bounds), bounds);
+}
+
 /**
  * 지역 단위 평균 평당가 — 요청 뷰포트(bbox)로 필터링해 반환한다.
  *
@@ -283,7 +364,7 @@ export async function fetchRegions(
 ): Promise<MapRegionItem[]> {
   const key = `${type}:${level}`;
   const hit = regionCache.get(key);
-  if (hit && hit.expiresAt > Date.now()) return filterRegionsByBounds(hit.value, bounds);
+  if (hit && hit.expiresAt > Date.now()) return filterAndSortRegions(hit.value, bounds);
 
   let pending = regionInFlight.get(key);
   if (!pending) {
@@ -303,5 +384,5 @@ export async function fetchRegions(
   }
 
   const value = await pending;
-  return filterRegionsByBounds(value, bounds);
+  return filterAndSortRegions(value, bounds);
 }
