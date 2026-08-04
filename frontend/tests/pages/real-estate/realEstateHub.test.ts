@@ -33,6 +33,10 @@ vi.mock('~/utils/dataSource', () => ({
   REAL_ESTATE_DATA_SOURCE: { name: '국토교통부', url: 'https://rtms.molit.go.kr' },
 }))
 
+// definePageMeta 는 Nuxt 컴파일러 매크로다. 페이지가 layout: 'map' 지정에 쓰므로
+// 이 스텁이 없으면 import 시점에 ReferenceError 가 난다.
+vi.stubGlobal('definePageMeta', vi.fn())
+
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()
@@ -40,11 +44,6 @@ beforeEach(() => {
 
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
-  PageHero: { template: '<div data-stub="hero" />' },
-  SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
-  AdBanner: { template: '<div />' },
-  RealEstateCategoryCards: { template: '<div />' },
-  DataSourceSection: { template: '<div />' },
   // Task 10: 페이지가 지도 탐색 컴포넌트로 교체됨. 이 파일은 setItemListSchema 만 검증하므로
   // 실제 지도 서브트리(useKakaoMap → shallowRef 미정의)를 마운트할 필요가 없다 — stub 없이 두면
   // 크래시가 unhandled rejection 으로 새어나가 `vitest run` 전체를 비정상 종료(exit 1)시킨다.
@@ -84,7 +83,8 @@ describe('real-estate/index.vue — hub page', () => {
     expect(urls).toContain('/real-estate/villa-rent')
     expect(urls).toContain('/real-estate/offitel-sale')
     expect(urls).toContain('/real-estate/offitel-rent')
-    expect(urls).toContain('/real-estate/land')
+    // 지도 탐색기가 6종만 다루므로 구조화 데이터도 6종이어야 한다. 토지는 GNB 담당.
+    expect(urls).not.toContain('/real-estate/land')
   })
 
   it('setItemListSchema가 레거시 hub URL을 포함하지 않아야 한다', async () => {
@@ -97,10 +97,10 @@ describe('real-estate/index.vue — hub page', () => {
     expect(urls).not.toContain('/real-estate/offitel')
   })
 
-  it('setItemListSchema 항목이 7개여야 한다 (매매+전월세 × 3 주택유형 + 토지)', async () => {
+  it('setItemListSchema 항목이 6개여야 한다 (매매+전월세 × 3 주택유형)', async () => {
     const m = await import('~/pages/real-estate/index.vue')
     await mountSuspended(m.default)
     const items = mockSetItemListSchema.mock.calls[0][0]
-    expect(items).toHaveLength(7)
+    expect(items).toHaveLength(6)
   })
 })

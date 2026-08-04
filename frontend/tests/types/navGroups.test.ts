@@ -140,3 +140,13 @@ describe('NAV_LINK_GROUPS', () => {
     expect(NAV_GROUPS.slice(0, 3)).toEqual([...NAV_LINK_GROUPS])
   })
 })
+
+// 하단 유형 카드를 제거한 뒤로 /real-estate/land 의 내부 링크는 이 GNB 항목 하나뿐이다.
+// 이걸 지우면 토지 허브와 그 아래 시/도·구군·동 페이지 전체가 내부 링크 0이 된다.
+describe('GNB 토지 링크 존치', () => {
+  it('부동산 드롭다운에 /real-estate/land 가 있다', () => {
+    const realEstate = NAV_LINK_GROUPS.find((g) => g.title === '부동산')
+    expect(realEstate).toBeDefined()
+    expect(realEstate!.links.map((l) => l.to)).toContain('/real-estate/land')
+  })
+})

@@ -19,19 +19,35 @@ describe('/real-estate 페이지', () => {
     expect(src).not.toContain('realEstateFAQs')
   })
 
-  it('크롤 경로인 유형 카드와 ItemList 스키마는 유지한다', () => {
-    expect(src).toContain('RealEstateCategoryCards')
-    expect(src).toContain('setItemListSchema')
+  it('하단 콘텐츠를 전부 제거했다 — 지도만 남는다', () => {
+    // 스크롤하면 유형 카드·설명문·출처 블록이 뷰포트를 채워 지도가 사라지던 구성을 걷어냈다.
+    expect(src).not.toContain('RealEstateCategoryCards')
+    expect(src).not.toContain('DataSourceSection')
+    expect(src).not.toContain('BelowFoldContent')
+    expect(src).not.toContain('hub-summary')
   })
 
-  it('Dataset·Breadcrumb 스키마와 출처 섹션을 유지한다', () => {
+  it('지도 전용 레이아웃을 지정한다', () => {
+    // 이게 없으면 default 레이아웃의 TrustLine·AppFooter 가 붙어 스크롤이 0이 되지 않는다.
+    expect(src).toContain("layout: 'map'")
+  })
+
+  it('ItemList 는 6종이고 토지를 포함하지 않는다', () => {
+    // 지도가 6종만 다루므로 구조화 데이터도 6종이어야 한다. 토지는 GNB 담당.
+    expect(src).toContain('setItemListSchema')
+    expect(src).not.toContain("'/real-estate/land'")
+    for (const t of ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent']) {
+      expect(src).toContain(`/real-estate/${t}`)
+    }
+  })
+
+  it('Dataset·Breadcrumb 스키마는 유지한다', () => {
     expect(src).toContain('setDatasetSchema')
     expect(src).toContain('setBreadcrumbSchema')
-    expect(src).toContain('DataSourceSection')
   })
 
-  it('기존 AdBanner 를 남긴다 (광고 축소 금지)', () => {
-    expect(src).toContain('AdBanner')
+  it('페이지 본문에 광고를 두지 않는다 — 인피드 광고는 사이드바가 담당한다', () => {
+    expect(src).not.toContain('AdBanner')
   })
 
   it('SSR 집계 실패 시 fail-open — catch 가 빈 배열을 준다', () => {
