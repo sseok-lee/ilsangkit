@@ -54,6 +54,8 @@
             :items="items as MapItem[]"
             :center="center"
             :level="level"
+            :type="type"
+            :selected-key="selectedKey"
             @idle="onIdle"
             @select="onSelect"
             @hover="hoveredKey = $event ? itemKey($event) : null"
@@ -101,6 +103,11 @@ const props = defineProps<{
 }>()
 
 const center = ref({ lat: 36.5, lng: 127.8 })
+/**
+ * 펼쳐진 건물 마커의 키. null 이면 전부 접힌 상태다.
+ * 형식은 useRealEstateMap.itemKey 의 건물 분기와 같다 — `buildingName|district`.
+ */
+const selectedKey = ref<string | null>(null)
 const {
   type, level, granularity, items, total, exact, pending,
   // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
@@ -186,6 +193,8 @@ function onIdle(bounds: MapBounds, lvl: number, mapCenter: { lat: number; lng: n
 
 function onTypeChange(next: string): void {
   setType(next, lastBounds)
+  // 다른 목록으로 갈아타므로 이전 선택 키는 의미가 없다.
+  selectedKey.value = null
   syncHash()
 }
 
@@ -228,5 +237,14 @@ function onSelect(item: MapItem): void {
   if (granularity.value === 'city') setLevel(9)
   else if (granularity.value === 'district') setLevel(7)
   else if (granularity.value === 'dong') setLevel(5)
+  else {
+    // 건물 단계에는 더 파고들 곳이 없다 — 대신 값과 상세 링크를 펼친다.
+    // 같은 것을 다시 고르면 접는다.
+    const key = itemKey(item)
+    selectedKey.value = selectedKey.value === key ? null : key
+  }
 }
+
+// 테스트가 선택 상태를 직접 확인할 수 있게 노출한다. script setup 은 기본적으로 닫혀 있다.
+defineExpose({ selectedKey })
 </script>

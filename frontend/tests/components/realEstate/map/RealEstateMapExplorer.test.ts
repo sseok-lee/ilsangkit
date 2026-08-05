@@ -434,3 +434,77 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     })
   })
 })
+
+describe('RealEstateMapExplorer — 마커 선택 토글', () => {
+  const RENT_ITEM: MapItem = {
+    buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+    lat: 37.5, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
+    latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 114,
+    jeonseDeposit: 96000, jeonseDealKey: 20260712,
+    wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+  }
+
+  const CANVAS_STUB = { RealEstateMapCanvas: { template: '<div data-testid="canvas" />' } }
+
+  function mountWithBuilding() {
+    return mount(RealEstateMapExplorer, {
+      props: {
+        initialType: 'apt-rent',
+        initialItems: [RENT_ITEM],
+        initialGranularity: 'building',
+      },
+      global: { stubs: CANVAS_STUB },
+    })
+  }
+
+  it('건물 선택 시 selectedKey 가 채워진다', async () => {
+    const w = mountWithBuilding()
+    await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', RENT_ITEM)
+    await nextTick()
+    expect(w.vm.selectedKey).toBe('은마|강남구')
+  })
+
+  it('같은 건물을 다시 고르면 접힌다', async () => {
+    const w = mountWithBuilding()
+    const sidebar = w.findComponent({ name: 'MapSidebar' })
+    await sidebar.vm.$emit('select', RENT_ITEM)
+    await nextTick()
+    await sidebar.vm.$emit('select', RENT_ITEM)
+    await nextTick()
+    expect(w.vm.selectedKey).toBeNull()
+  })
+
+  it('지역 항목 선택은 selectedKey 를 건드리지 않는다 — 지역은 펼칠 값이 없다', async () => {
+    const w = mount(RealEstateMapExplorer, {
+      props: {
+        initialType: 'apt-rent',
+        initialItems: [{ name: '서울', district: null, dong: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 100 }],
+        initialGranularity: 'city',
+      },
+      global: { stubs: CANVAS_STUB },
+    })
+    await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', w.props('initialItems')[0])
+    await nextTick()
+    expect(w.vm.selectedKey).toBeNull()
+  })
+
+  it('타입을 바꾸면 선택이 풀린다 — 다른 목록의 키가 남아 있으면 안 된다', async () => {
+    // onTypeChange 는 실제 setType→fetchNow(mocked $fetch)를 트리거한다. 전역 $fetch 목
+    // (tests/setup.ts)이 빈 data:{} 를 반환해 items 가 undefined 로 바뀌는데, 실제 MapSidebar
+    // 는 그 조합에서 `for (const i of props.items)` 로 크래시한다(위 "해시 반영" 테스트와 동일한
+    // 함정, 그쪽과 같은 이유로 MapSidebar 를 스텁한다) — selectedKey 배선과는 무관한 크래시다.
+    const w = mount(RealEstateMapExplorer, {
+      props: {
+        initialType: 'apt-rent',
+        initialItems: [RENT_ITEM],
+        initialGranularity: 'building',
+      },
+      global: { stubs: { ...CANVAS_STUB, MapSidebar: true } },
+    })
+    await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', RENT_ITEM)
+    await nextTick()
+    await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'apt-sale')
+    await nextTick()
+    expect(w.vm.selectedKey).toBeNull()
+  })
+})
