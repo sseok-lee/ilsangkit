@@ -6,6 +6,7 @@ import {
   isLinkGroup,
   type NavGroup,
   type LinkGroup,
+  type CategoryGroup,
 } from '../../types/facility'
 
 describe('NAV_GROUPS', () => {
@@ -92,7 +93,9 @@ describe('CATEGORY_GROUPS', () => {
   })
 
   it('NAV_GROUPS의 마지막 4개 그룹이 CATEGORY_GROUPS와 동일해야 한다', () => {
-    const lastFour = NAV_GROUPS.slice(3, 7)
+    // icon 은 CategoryGroup 에만 있다 — LinkGroup(부동산·청약·공매)은 GNB 텍스트온리라
+    // 아이콘 필드를 갖지 않는다. 여기 4개는 전부 CategoryGroup 이므로 좁혀서 비교한다.
+    const lastFour = NAV_GROUPS.slice(3, 7) as CategoryGroup[]
     lastFour.forEach((group, i) => {
       expect(group.title).toBe(CATEGORY_GROUPS[i].title)
       expect(group.icon).toBe(CATEGORY_GROUPS[i].icon)
@@ -104,8 +107,7 @@ describe('isLinkGroup 타입 가드', () => {
   it('links 속성이 있는 그룹을 LinkGroup으로 판별해야 한다', () => {
     const linkGroup: NavGroup = {
       title: '테스트',
-      icon: 'test',
-      links: [{ to: '/test', label: '테스트', icon: 'test_icon' }],
+      links: [{ to: '/test', label: '테스트' }],
     }
     expect(isLinkGroup(linkGroup)).toBe(true)
   })
