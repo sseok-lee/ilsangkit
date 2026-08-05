@@ -177,9 +177,10 @@ router.get(
 // GET /api/real-estate/:type/map - 지도 뷰포트 조회
 //
 // granularity 는 줌 레벨이 정한다. 줌 아웃이면 지역 집계(캐시), 줌 인이면 bbox 건물 목록.
-// rentType 파라미터는 두지 않는다 — summary 가 건물당 최신 거래 1건만 보유해
-// 전세로 필터하면 실제 전세 건물의 40~56%가 사라진다(설계문서 4장). 전세/월세 구분은
-// 응답의 monthlyRent 로 프론트가 라벨에서 처리한다.
+// rentType 파라미터는 여전히 두지 않는다 — 단 이유는 예전과 다르다. summary 는 이제
+// 건물당 전세·월세 최신 거래를 jeonseDeposit/wolseDeposit/wolseMonthlyRent 등 분리
+// 컬럼에 각각 보유한다(전세로 필터하면 건물이 사라지던 문제는 해소됨). 프론트가 한 건물
+// 행에서 두 컬럼을 동시에 렌더하므로, 서버가 rentType 으로 걸러 한쪽만 내려줄 필요가 없다.
 router.get(
   '/:type/map',
   validate(TypeParamsSchema, 'params'),

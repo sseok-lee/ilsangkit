@@ -140,15 +140,35 @@ export async function refreshSummary(type: string): Promise<number> {
             type,
             city,
           );
-          // 매매 테이블에는 rentType 컬럼 자체가 없다 — 전월세만 분리 컬럼을 채운다.
-          if (!SALE_TYPES.has(type)) {
-            await tx.$executeRawUnsafe(buildRentSplitUpdate(table), city, type, city);
-          }
           return Number(n) || 0;
         },
         { timeout: BATCH_TX_TIMEOUT_MS },
       );
       total += inserted;
+
+      // 전세/월세 분리 컬럼 UPDATE는 위 DELETE+INSERT와 별도 트랜잭션으로 분리한다.
+      // 같은 트랜잭션에 묶으면 이 UPDATE가 실패(락 대기 타임아웃 등)할 때 이미 성공한
+      // DELETE+INSERT까지 롤백돼 해당 시·도의 latestPrice/latestDealDay/transactionCount가
+      // 갱신되지 않는다 — sitemap lastmod, 인근 단지, 건물 목록, 검색 자동완성이 전부
+      // 이 레거시 컬럼만 읽으므로 기본 갱신은 분리 UPDATE의 성패와 무관하게 항상
+      // 커밋되어야 한다. 매매 테이블에는 rentType 컬럼 자체가 없어 건너뛴다.
+      if (!SALE_TYPES.has(type)) {
+        try {
+          await prisma.$transaction(
+            async (tx) => {
+              await tx.$executeRawUnsafe(
+                `SET SESSION innodb_lock_wait_timeout = ${LOCK_WAIT_TIMEOUT_SEC}`,
+              );
+              await tx.$executeRawUnsafe(buildRentSplitUpdate(table), city, type, city);
+            },
+            { timeout: BATCH_TX_TIMEOUT_MS },
+          );
+        } catch (err) {
+          // 분리 UPDATE 실패는 새 컬럼(jeonseDeposit 등)만 갱신 안 된 채로 남긴다 —
+          // 기본 갱신은 이미 위에서 커밋됐으므로 여기서 city 루프를 멈추지 않는다.
+          console.error(`[Summary] ${type}/${city} 전월세 분리 UPDATE 실패:`, err);
+        }
+      }
     } catch (err) {
       // 한 city 배치가 실패해도 나머지 city는 계속 — 치명적 장애가 여러 시·도로
       // 퍼지는 것을 차단. 실패 로그로 원인 추적.

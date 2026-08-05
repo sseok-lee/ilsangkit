@@ -57,12 +57,13 @@ describe('refreshSummary (city-chunked)', () => {
       { city: '' },
       { city: '경기' },
     ]);
-    mockExecuteRawUnsafe.mockResolvedValue(5); // SET/DELETE/INSERT 모두 5 반환
+    mockExecuteRawUnsafe.mockResolvedValue(5); // SET/DELETE/INSERT/UPDATE 모두 5 반환
 
     await refreshSummary('villa-rent');
 
-    // 서울, 경기 2개 city만 처리
-    expect(mockTransaction).toHaveBeenCalledTimes(2);
+    // 서울, 경기 2개 city만 처리. villa-rent는 전월세 타입이라 city당
+    // 기본 갱신 트랜잭션 + 분리 UPDATE 트랜잭션 2개씩 실행된다.
+    expect(mockTransaction).toHaveBeenCalledTimes(4);
   });
 
   it('각 city마다 별도 $transaction으로 SET lock_wait_timeout + DELETE + INSERT 순차 실행', async () => {
@@ -260,8 +261,9 @@ describe('refreshAllSummaries', () => {
     const types = Object.keys(TABLE_NAME_MAP);
     // 타입 수만큼 DISTINCT city 쿼리
     expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(types.length);
-    // 타입 수만큼 트랜잭션 (city 1개씩)
-    expect(mockTransaction).toHaveBeenCalledTimes(types.length);
+    // city 1개씩: 매매는 기본 갱신 트랜잭션 1개, 전월세는 기본 갱신 + 분리 UPDATE 2개.
+    const expectedTx = types.reduce((sum, t) => sum + (t.endsWith('-rent') ? 2 : 1), 0);
+    expect(mockTransaction).toHaveBeenCalledTimes(expectedTx);
   });
 
   it('한 타입의 DISTINCT city 쿼리가 실패해도 나머지 타입은 계속', async () => {
@@ -280,8 +282,12 @@ describe('refreshAllSummaries', () => {
 
     // 모든 타입에 대해 DISTINCT city 시도
     expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(types.length);
-    // 첫 타입은 트랜잭션 없음, 나머지만
-    expect(mockTransaction).toHaveBeenCalledTimes(types.length - 1);
+    // 첫 타입(쿼리 실패)은 트랜잭션 없음, 나머지 타입은 처리됨 — 매매는 1개,
+    // 전월세는 기본 갱신 + 분리 UPDATE 2개.
+    const expectedTx = types
+      .slice(1)
+      .reduce((sum, t) => sum + (t.endsWith('-rent') ? 2 : 1), 0);
+    expect(mockTransaction).toHaveBeenCalledTimes(expectedTx);
     expect(errorSpy).toHaveBeenCalled();
 
     errorSpy.mockRestore();
@@ -301,17 +307,20 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
     return mockExecuteRawUnsafe.mock.calls.map((c) => String(c[0]));
   }
 
-  it('전월세 타입은 city 배치마다 DELETE, INSERT, UPDATE 순으로 3개를 실행한다', async () => {
+  it('전월세 타입은 city 배치마다 DELETE, INSERT, UPDATE 순으로 실행한다 — UPDATE 는 별도 트랜잭션', async () => {
     mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
     mockExecuteRawUnsafe.mockResolvedValue(1);
 
     await refreshSummary('apt-rent');
 
     const sql = executedSql();
-    // [0] 은 SET SESSION innodb_lock_wait_timeout
+    // [0] 첫 트랜잭션 SET, [1] DELETE, [2] INSERT, [3] 두번째 트랜잭션 SET, [4] UPDATE.
+    // B-2: 분리 UPDATE는 DELETE+INSERT 트랜잭션이 커밋된 뒤 별도 $transaction으로 실행된다.
     expect(sql[1]).toContain('DELETE FROM RealEstateBuildingSummary');
     expect(sql[2]).toContain('INSERT INTO RealEstateBuildingSummary');
-    expect(sql[3]).toContain('UPDATE RealEstateBuildingSummary');
+    expect(sql[3]).toContain('SET SESSION innodb_lock_wait_timeout');
+    expect(sql[4]).toContain('UPDATE RealEstateBuildingSummary');
+    expect(mockTransaction).toHaveBeenCalledTimes(2);
   });
 
   it('매매 타입은 UPDATE 패스를 건너뛴다 — 매매 테이블에는 rentType 컬럼이 없다', async () => {
@@ -354,15 +363,54 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
   });
 
   it('UPDATE 가 실패해도 다음 city 로 계속한다 — 한 배치 실패가 전체를 멈추지 않는다', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }, { city: '경기' }]);
+    let updateCalls = 0;
     mockExecuteRawUnsafe.mockImplementation(async (sql: string) => {
-      if (String(sql).includes('UPDATE') && mockExecuteRawUnsafe.mock.calls.length <= 4) {
-        throw new Error('lock wait timeout');
+      if (String(sql).includes('UPDATE RealEstateBuildingSummary')) {
+        updateCalls++;
+        if (updateCalls === 1) throw new Error('lock wait timeout'); // 서울 UPDATE만 실패
       }
       return 1;
     });
 
     await expect(refreshSummary('apt-rent')).resolves.toBeTypeOf('number');
     expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(1);
+    // 서울 UPDATE 실패 후에도 경기 UPDATE 까지 시도됐다 — 루프가 멈추지 않았다는 뜻.
+    expect(updateCalls).toBe(2);
+
+    errorSpy.mockRestore();
+  });
+
+  it('UPDATE 가 던져도 DELETE+INSERT 트랜잭션은 별도로 이미 커밋된 채 남고 total 에 반영된다 (B-2)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }, { city: '경기' }]);
+    mockExecuteRawUnsafe.mockImplementation(async (sql: string) => {
+      const s = String(sql);
+      if (s.includes('UPDATE RealEstateBuildingSummary')) {
+        throw new Error('lock wait timeout'); // 모든 city 의 분리 UPDATE 를 실패시킨다
+      }
+      if (s.trim().startsWith('INSERT')) return 5;
+      return 0;
+    });
+
+    const total = await refreshSummary('apt-rent');
+
+    // UPDATE 가 매번 실패해도 INSERT 결과(city당 5)는 살아서 합산된다 —
+    // 즉 DELETE+INSERT 트랜잭션이 UPDATE 실패로 롤백되지 않았다는 뜻이다.
+    expect(total).toBe(10);
+    // city마다 기본 갱신 + 분리 UPDATE 두 트랜잭션씩, 2개 city 모두 처리(루프가 안 멈춤).
+    expect(mockTransaction).toHaveBeenCalledTimes(4);
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('전월세 분리 UPDATE 실패'),
+      expect.any(Error),
+    );
+    // 기본 갱신 실패 로그(`실패:`)는 찍히지 않는다 — UPDATE 실패는 base 트랜잭션과 무관하다.
+    expect(errorSpy).not.toHaveBeenCalledWith(
+      expect.stringMatching(/apt-rent\/(서울|경기) 실패:/),
+      expect.any(Error),
+    );
+
+    errorSpy.mockRestore();
   });
 });
