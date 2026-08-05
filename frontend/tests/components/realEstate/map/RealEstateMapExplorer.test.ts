@@ -52,15 +52,19 @@ describe('RealEstateMapExplorer', () => {
     expect(w.text()).toContain('서울')
   })
 
-  it('필터바를 렌더한다', () => {
-    expect(mountExplorer().text()).toContain('아파트 매매')
+  it('필터바를 렌더한다 — 매물 유형과 거래 유형 두 축', () => {
+    const triggers = mountExplorer().findComponent({ name: 'MapFilterBar' }).findAll('button')
+    expect(triggers).toHaveLength(2)
+    expect(triggers[0].text()).toContain('아파트')
+    expect(triggers[1].text()).toContain('매매')
   })
 
-  it('거래 축이 2종이라 전세/월세 버튼이 없다', () => {
-    const t = mountExplorer().text()
-    expect(t).toContain('아파트 전월세')
-    expect(t).not.toContain('아파트 전세')
-    expect(t).not.toContain('아파트 월세')
+  // 거래 축은 매매/전월세 2종이다. 전세와 월세를 따로 두지 않는 이유는 설계문서 4장 —
+  // summary 가 건물당 최신 1건만 보유해 전세로 필터하면 실제 전세 건물이 대량 누락된다.
+  it('거래 축이 2종이라 전세/월세를 따로 고를 수 없다', () => {
+    const bar = mountExplorer().findComponent({ name: 'MapFilterBar' })
+    const txOptions = bar.findAll('ul')[1].findAll('a').map((a) => a.text())
+    expect(txOptions).toEqual(['매매', '전월세'])
   })
 
   it('지도 캔버스는 ClientOnly 안에 있다 — SSR 에서 kakao SDK 를 건드리지 않는다', () => {
@@ -141,10 +145,13 @@ describe('RealEstateMapExplorer', () => {
       expect(canvas.props('level')).toBe(5)
       expect(canvas.props('center')).toEqual({ lat: 37.5, lng: 127.05 })
 
-      const activeBtn = w.findAll('a').find((a) => a.text() === '빌라 전월세')
-      expect(activeBtn?.attributes('aria-current')).toBe('true')
-      const defaultBtn = w.findAll('a').find((a) => a.text() === '아파트 매매')
-      expect(defaultBtn?.attributes('aria-current')).toBeUndefined()
+      // 2축 셀렉트라 활성 상태는 트리거 라벨과 각 메뉴의 aria-current 로 나타난다.
+      const bar = w.findComponent({ name: 'MapFilterBar' })
+      const triggers = bar.findAll('button')
+      expect(triggers[0].text()).toContain('빌라')
+      expect(triggers[1].text()).toContain('전월세')
+      const current = bar.findAll('a').filter((a) => a.attributes('aria-current') === 'true')
+      expect(current.map((a) => a.text())).toEqual(['빌라', '전월세'])
     })
 
     it('lat/lng 만 있는 해시는(과거와 동일) 중심만 옮기고 type/level 은 기본값을 유지한다', async () => {
@@ -156,8 +163,9 @@ describe('RealEstateMapExplorer', () => {
       expect(canvas.props('center')).toEqual({ lat: 35.1, lng: 129.0 })
       expect(canvas.props('level')).toBe(13) // useRealEstateMap 기본 레벨 — 해시에 없으니 그대로
 
-      const defaultBtn = w.findAll('a').find((a) => a.text() === '아파트 매매')
-      expect(defaultBtn?.attributes('aria-current')).toBe('true')
+      const current = w.findComponent({ name: 'MapFilterBar' })
+        .findAll('a').filter((a) => a.attributes('aria-current') === 'true')
+      expect(current.map((a) => a.text())).toEqual(['아파트', '매매'])
     })
   })
 
