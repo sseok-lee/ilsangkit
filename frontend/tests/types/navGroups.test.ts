@@ -32,7 +32,7 @@ describe('NAV_GROUPS', () => {
     const firstGroup = NAV_GROUPS[0] as LinkGroup
     const links = firstGroup.links.map(({ to, label }) => ({ to, label }))
     const expectedLinks = [
-      { to: '/real-estate', label: '부동산 전체' },
+      { to: '/real-estate', label: '실거래가 지도' },
       { to: '/real-estate/apt-sale', label: '아파트' },
       { to: '/real-estate/villa-sale', label: '빌라' },
       { to: '/real-estate/offitel-sale', label: '오피스텔' },

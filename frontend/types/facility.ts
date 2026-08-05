@@ -546,7 +546,11 @@ export const NAV_LINK_GROUPS: readonly LinkGroup[] = [
     title: '부동산',
     icon: 'apartment',
     links: [
-      { to: '/real-estate', label: '부동산 전체', icon: 'apartment', iconImg: 'apt' },
+      // '부동산 전체' 였다. /real-estate 가 목록 허브에서 지도 탐색기로 바뀌면서 '전체'가
+      // 내용과 어긋났고, 그룹명이 이미 '부동산' 이라 접두어도 중복이었다. 페이지 자신의
+      // title('부동산 실거래가 지도')과 맞춘다. 형제 항목은 전부 매물 유형이라 이 항목만
+      // 성격이 다르다는 점도 라벨로 드러난다.
+      { to: '/real-estate', label: '실거래가 지도', icon: 'apartment', iconImg: 'apt' },
       { to: '/real-estate/apt-sale', label: '아파트', icon: 'apartment', iconImg: 'apt' },
       { to: '/real-estate/villa-sale', label: '빌라', icon: 'holiday_village', iconImg: 'villa' },
       { to: '/real-estate/offitel-sale', label: '오피스텔', icon: 'business', iconImg: 'offitel' },
