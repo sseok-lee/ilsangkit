@@ -56,6 +56,28 @@ export function formatWolseLabel(item: MapBuildingItem): string | null {
   return `${formatManwon(item.wolseDeposit)} · ${item.wolseMonthlyRent.toLocaleString('ko-KR')}만`
 }
 
+/**
+ * 전세/월세 표시 값. 새 분리 컬럼(jeonseDeposit, wolseDeposit)이 **둘 다 null** 이면
+ * "거래가 없다"가 아니라 "이 시·도 배치가 아직 안 돌았다"는 뜻이다 — 전월세 요약 행은
+ * 반드시 전세 또는 월세 거래에서 나오므로, 정상적으로 갱신됐다면 둘 중 최소 하나는
+ * 채워져 있어야 한다. 배포 직후엔 `prisma db push` 만 돌아 다섯 새 컬럼이 전부 NULL
+ * 인 채로 다음 nightly sync(~03:50 KST, 최대 ~18시간 뒤)까지 남는다 — 그동안은 레거시
+ * 컬럼(latestPrice/monthlyRent, monthlyRent: null=매매/0=전세/>0=월세)으로 폴백해
+ * 예전과 같은 값을 보여준다. 둘 중 하나라도 값이 있으면 정상 갱신된 것으로 보고
+ * formatJeonseLabel/formatWolseLabel 을 그대로 쓴다.
+ */
+export function getRentDisplay(item: MapBuildingItem): { jeonse: string | null; wolse: string | null } {
+  if (item.jeonseDeposit != null || item.wolseDeposit != null) {
+    return { jeonse: formatJeonseLabel(item), wolse: formatWolseLabel(item) }
+  }
+  if (item.latestPrice == null) return { jeonse: null, wolse: null }
+  if (item.monthlyRent === 0) return { jeonse: formatManwon(item.latestPrice), wolse: null }
+  if (item.monthlyRent != null && item.monthlyRent > 0) {
+    return { jeonse: null, wolse: `${formatManwon(item.latestPrice)} · ${item.monthlyRent.toLocaleString('ko-KR')}만` }
+  }
+  return { jeonse: null, wolse: null }
+}
+
 /** 지역 버블 라벨. 단위를 명시해 줌 전환 시 의미가 바뀌는 걸 알린다. */
 export function formatPyeongLabel(item: MapRegionItem): string {
   if (item.avgPricePerPyeong == null) return '—'
@@ -130,8 +152,11 @@ function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLE
   }
 
   if (isRent) {
-    addLine('전세', formatJeonseLabel(item) ?? '거래 없음', false)
-    addLine('월세', formatWolseLabel(item) ?? '거래 없음', true)
+    const { jeonse, wolse } = getRentDisplay(item)
+    // "거래 없음"은 값이 아니다 — 전세 줄에 항상 강조 스타일(muted:false)을 주면
+    // 없는 거래가 실제 가격처럼 읽힌다(M-4). 값이 있을 때만 강조한다.
+    addLine('전세', jeonse ?? '거래 없음', jeonse == null)
+    addLine('월세', wolse ?? '거래 없음', true)
   } else {
     addLine('매매', formatPriceLabel(item), false)
   }

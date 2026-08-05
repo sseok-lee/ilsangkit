@@ -492,4 +492,39 @@ describe('MapSidebar — 전월세 두 줄 병기', () => {
     expect(w.text()).toContain('16억 8,340만')
     expect(w.text()).not.toContain('거래 없음')
   })
+
+  // B-1: 배포 직후엔 prisma db push 만 돌아 jeonseDeposit/wolseDeposit 등 5개 새 컬럼이
+  // 다음 nightly sync 전까지 전부 NULL이다. 폴백이 없으면 이 상태에서 전 건물이
+  // "전세 거래 없음 / 월세 거래 없음"으로 보여 데이터 장애처럼 읽힌다.
+  it('배포 직후처럼 새 분리 컬럼이 전부 null 이면 레거시 컬럼으로 폴백한다 (B-1)', () => {
+    const notSyncedYet = {
+      buildingName: '미갱신빌딩', city: '서울', district: '강남구', dongName: '개포동',
+      lat: 37.48, lng: 127.06, latestPrice: 60000, monthlyRent: 0,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 5,
+      jeonseDeposit: null, jeonseDealKey: null,
+      wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    }
+    const w = mountRent({ items: [notSyncedYet], total: 1 })
+    expect(w.text()).toContain('6억')
+    expect(w.text()).toContain('거래 없음')
+  })
+
+  // M-4: 폴백/미갱신으로 "거래 없음"이 뜨는 줄은 실제 가격처럼 강조되면 안 된다.
+  it('전세 거래가 없으면 "거래 없음" 줄은 가격처럼 강조하지 않는다 (M-4)', () => {
+    const noJeonse = {
+      buildingName: '월세만', city: '서울', district: '강남구', dongName: '개포동',
+      lat: 37.48, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 3,
+      jeonseDeposit: null, jeonseDealKey: null,
+      wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+    }
+    const w = mountRent({ items: [noJeonse], total: 1 })
+    const row = w.findAll('[data-testid="map-sidebar-item"]')[0]
+    // 감싸는 래퍼 span 도 텍스트가 "전세"/"거래 없음" 을 포함하므로, block 클래스로 실제
+    // 전세 줄 span(가격/거래없음 텍스트가 직접 붙는 요소)만 특정한다.
+    const jeonseLine = row.findAll('span').find((s) => s.classes().includes('block') && s.text().includes('전세') && s.text().includes('거래 없음'))
+    expect(jeonseLine?.classes()).toContain('text-slate-400')
+    expect(jeonseLine?.classes()).not.toContain('text-primary')
+    expect(jeonseLine?.classes()).not.toContain('font-semibold')
+  })
 })

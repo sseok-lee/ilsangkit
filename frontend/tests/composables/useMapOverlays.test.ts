@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatWolseLabel, useMapOverlays } from '~/composables/useMapOverlays'
+import { formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatWolseLabel, getRentDisplay, useMapOverlays } from '~/composables/useMapOverlays'
 import type { MapBuildingItem, MapRegionItem } from '~/types/realEstateMap'
 
 function building(over: Partial<MapBuildingItem>): MapBuildingItem {
@@ -77,6 +77,44 @@ describe('formatJeonseLabel / formatWolseLabel', () => {
 
   it('보증금 0원 월세도 그린다 — 0 을 "없음" 으로 쓰지 않는다', () => {
     expect(formatWolseLabel(building({ wolseDeposit: 0, wolseMonthlyRent: 50 }))).toBe('0만 · 50만')
+  })
+})
+
+describe('getRentDisplay — 배포 직후 summary 미갱신 폴백 (B-1)', () => {
+  it('새 분리 컬럼이 있으면(둘 중 하나라도) formatJeonseLabel/formatWolseLabel 그대로다', () => {
+    const item = building({
+      jeonseDeposit: 96000, jeonseDealKey: 20260712,
+      wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+      latestPrice: 75000, monthlyRent: 340,
+    })
+    expect(getRentDisplay(item)).toEqual({
+      jeonse: formatJeonseLabel(item),
+      wolse: formatWolseLabel(item),
+    })
+  })
+
+  it('둘 다 null + monthlyRent===0(레거시 전세) 이면 전세는 레거시 가격, 월세는 없음', () => {
+    const item = building({
+      jeonseDeposit: null, wolseDeposit: null, wolseMonthlyRent: null,
+      latestPrice: 60000, monthlyRent: 0,
+    })
+    expect(getRentDisplay(item)).toEqual({ jeonse: '6억', wolse: null })
+  })
+
+  it('둘 다 null + monthlyRent>0(레거시 월세) 이면 월세는 "보증금 · 월세액", 전세는 없음', () => {
+    const item = building({
+      jeonseDeposit: null, wolseDeposit: null, wolseMonthlyRent: null,
+      latestPrice: 75000, monthlyRent: 340,
+    })
+    expect(getRentDisplay(item)).toEqual({ jeonse: null, wolse: '7억 5,000만 · 340만' })
+  })
+
+  it('둘 다 null + latestPrice 도 null 이면 둘 다 없음이다', () => {
+    const item = building({
+      jeonseDeposit: null, wolseDeposit: null, wolseMonthlyRent: null,
+      latestPrice: null, monthlyRent: null,
+    })
+    expect(getRentDisplay(item)).toEqual({ jeonse: null, wolse: null })
   })
 })
 
@@ -367,6 +405,31 @@ describe('useMapOverlays', () => {
         jeonseDeposit: 60000, wolseDeposit: null, wolseMonthlyRent: null,
       })], {}, { type: 'apt-rent', selectedKey: '신동아|강남구' })
       expect(contentOf(0).textContent).toContain('거래 없음')
+    })
+
+    it('배포 직후처럼 새 분리 컬럼이 전부 null 이면 펼침 카드도 레거시 값으로 폴백한다 (B-1)', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [building({
+        buildingName: '미갱신', city: '서울', district: '강남구',
+        latestPrice: 60000, monthlyRent: 0,
+        jeonseDeposit: null, wolseDeposit: null, wolseMonthlyRent: null,
+      })], {}, { type: 'apt-rent', selectedKey: '미갱신|강남구' })
+      const el = contentOf(0)
+      expect(el.textContent).toContain('6억')
+      expect(el.textContent).toContain('거래 없음')
+    })
+
+    it('전세 거래가 없으면 펼침 카드의 전세 줄은 강조 대신 muted 스타일이다 (M-4)', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [building({
+        buildingName: '월세만', city: '서울', district: '강남구',
+        latestPrice: 75000, monthlyRent: 340,
+        jeonseDeposit: null, wolseDeposit: 75000, wolseMonthlyRent: 340,
+      })], {}, { type: 'apt-rent', selectedKey: '월세만|강남구' })
+      const el = contentOf(0)
+      const lines = Array.from(el.querySelectorAll('.map-popup-line'))
+      const jeonseLine = lines.find((l) => l.textContent?.includes('전세'))
+      expect(jeonseLine?.className).toContain('map-popup-line--sub')
     })
 
     it('선택된 항목을 맨 뒤에 그린다 — Kakao wrapper 는 DOM 순서로 페인트되므로 이웃 라벨에 가려 클릭이 막히면 안 된다', () => {

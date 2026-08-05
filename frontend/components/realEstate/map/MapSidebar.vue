@@ -26,7 +26,10 @@
               <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
             </span>
             <span v-if="row.isRent" class="text-right whitespace-nowrap leading-tight">
-              <span class="block text-sm font-semibold text-primary">
+              <span
+                class="block text-sm"
+                :class="row.jeonse != null ? 'font-semibold text-primary' : 'text-slate-400'"
+              >
                 <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
               </span>
               <span class="block text-xs text-slate-700">
@@ -105,7 +108,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { isBuildingItem, type Granularity, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
-import { formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatWolseLabel } from '~/composables/useMapOverlays'
+import { formatPriceLabel, formatPyeongLabel, getRentDisplay } from '~/composables/useMapOverlays'
 import { itemKey } from '~/composables/useRealEstateMap'
 import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
@@ -175,13 +178,15 @@ const rows = computed<Row[]>(() => {
     const isRent = props.type.endsWith('-rent')
     return props.items.map((i) => {
       const b = i as MapBuildingItem
+      // 배포 직후처럼 새 분리 컬럼이 아직 안 갱신됐으면 레거시 컬럼으로 폴백한다.
+      const rent = isRent ? getRentDisplay(b) : null
       return {
         key: itemKey(i),
         title: b.buildingName,
         subtitle: `${b.city} ${b.district} ${b.dongName}`,
         price: formatPriceLabel(b),
-        jeonse: isRent ? formatJeonseLabel(b) : null,
-        wolse: isRent ? formatWolseLabel(b) : null,
+        jeonse: rent?.jeonse ?? null,
+        wolse: rent?.wolse ?? null,
         isRent,
         // 건물 상세는 4-segment URL. 슬러그 변환·NFC 정규화·encodeURIComponent 가
         // 전부 이 유틸에 들어 있으므로 직접 문자열을 조립하지 않는다.
