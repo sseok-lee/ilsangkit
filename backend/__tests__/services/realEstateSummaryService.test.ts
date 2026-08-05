@@ -346,8 +346,11 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
 
     const idx = executedSql().findIndex((s) => s.includes('UPDATE RealEstateBuildingSummary'));
     const params = mockExecuteRawUnsafe.mock.calls[idx].slice(1);
-    expect(params).toContain('apt-rent');
-    expect(params).toContain('서울');
+    // 바인드 순서를 검증해야 함. 순서가 바뀌면 내부 WHERE city = ? 는 type 값을 받아
+    // 매칭 0건(동일 행 미변경)이 되는 사일런트 버그. toContain 은 멤버쉽만 보므로 실제로
+    // 파라미터를 바꿔도 테스트가 통과한다. toEqual로 정렬 순서까지 검증한다.
+    // buildRentSplitUpdate(table) 에서: WHERE city = ? (inner) → WHERE s.type = ? AND s.city = ? (outer)
+    expect(params).toEqual(['서울', 'apt-rent', '서울']);
   });
 
   it('UPDATE 가 실패해도 다음 city 로 계속한다 — 한 배치 실패가 전체를 멈추지 않는다', async () => {
