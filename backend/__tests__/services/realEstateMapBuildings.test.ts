@@ -57,6 +57,50 @@ describe('fetchBuildings', () => {
   it('알 수 없는 type 은 던진다', async () => {
     await expect(fetchBuildings('bogus', BOUNDS)).rejects.toThrow();
   });
+
+  it('전세/월세 분리 컬럼을 SELECT 에 싣는다', async () => {
+    queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([]);
+    await fetchBuildings('apt-rent', BOUNDS);
+    const listSql = queryRawUnsafe.mock.calls[1][0] as string;
+    for (const col of ['jeonseDeposit', 'jeonseDealKey', 'wolseDeposit', 'wolseMonthlyRent', 'wolseDealKey']) {
+      expect(listSql).toContain(col);
+    }
+  });
+
+  it('분리 컬럼 값을 그대로 항목에 담는다', async () => {
+    queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([{
+      buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+      lat: 37.5, lng: 127.06, latestPrice: 75000n, monthlyRent: 340,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 114,
+      jeonseDeposit: 96000, jeonseDealKey: 20260712,
+      wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+    }]);
+    const r = await fetchBuildings('apt-rent', BOUNDS);
+    expect(r.items[0].jeonseDeposit).toBe(96000);
+    expect(r.items[0].wolseDeposit).toBe(75000);
+    expect(r.items[0].wolseMonthlyRent).toBe(340);
+  });
+
+  it('매매는 분리 컬럼이 null 이다', async () => {
+    queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([{
+      buildingName: '도곡렉슬', city: '서울', district: '강남구', dongName: '도곡동',
+      lat: 37.48, lng: 127.05, latestPrice: 245000n, monthlyRent: null,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 83,
+      jeonseDeposit: null, jeonseDealKey: null,
+      wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    }]);
+    const r = await fetchBuildings('apt-sale', BOUNDS);
+    expect(r.items[0].jeonseDeposit).toBeNull();
+    expect(r.items[0].wolseMonthlyRent).toBeNull();
+  });
+
+  it('FORCE INDEX 와 WHERE 는 그대로다 — 컬럼 추가가 인덱스 경로를 바꾸면 안 된다', async () => {
+    queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([]);
+    await fetchBuildings('apt-rent', BOUNDS);
+    const listSql = queryRawUnsafe.mock.calls[1][0] as string;
+    expect(listSql).toContain('FORCE INDEX (RealEstateBuildingSummary_type_lat_lng_idx)');
+    expect(listSql).toContain('ORDER BY transactionCount DESC');
+  });
 });
 
 // 운영 확인 중 발견(2026-08-03): 배포 전 운영 DB 에는 아직 좌표 인덱스가 없어

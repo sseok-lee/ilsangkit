@@ -75,7 +75,6 @@ export function useRealEstateMap(initial: {
   const exact = ref(true)
   const pending = ref(false)
   const hoveredKey = ref<string | null>(null)
-  const selectedKey = ref<string | null>(null)
 
   // 빠르게 드래그하면 나중 요청이 먼저 도착한다. 시퀀스로 stale 응답을 버린다.
   let seq = 0
@@ -137,7 +136,6 @@ export function useRealEstateMap(initial: {
     exact: readonly(exact),
     pending: readonly(pending),
     hoveredKey,
-    selectedKey,
     isBuilding: computed(() => granularity.value === 'building'),
     setType,
     setLevel,

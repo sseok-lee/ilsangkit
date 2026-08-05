@@ -12,6 +12,8 @@ const props = defineProps<{
   items: MapItem[]
   center: { lat: number; lng: number }
   level: number
+  type: string
+  selectedKey: string | null
 }>()
 
 const emit = defineEmits<{
@@ -58,7 +60,7 @@ onMounted(async () => {
   renderOverlays(map.value, props.items, {
     onClick: (i) => emit('select', i),
     onHover: (i) => emit('hover', i),
-  })
+  }, { type: props.type, selectedKey: props.selectedKey })
   emitIdle()
 })
 
@@ -69,7 +71,20 @@ watch(
     renderOverlays(map.value, items, {
       onClick: (i) => emit('select', i),
       onHover: (i) => emit('hover', i),
-    })
+    }, { type: props.type, selectedKey: props.selectedKey })
+  },
+)
+
+// 선택이 바뀌면 라벨↔펼침 카드가 달라지므로 다시 그린다. items 는 그대로라
+// 위 watch 가 발화하지 않는다.
+watch(
+  () => props.selectedKey,
+  () => {
+    if (import.meta.server || !map.value) return
+    renderOverlays(map.value, props.items, {
+      onClick: (i) => emit('select', i),
+      onHover: (i) => emit('hover', i),
+    }, { type: props.type, selectedKey: props.selectedKey })
   },
 )
 

@@ -8,25 +8,54 @@
     </div>
 
     <ul class="flex-1">
-      <template v-for="(row, idx) in visibleRows" :key="row.key">
+      <template v-for="row in visibleRows" :key="row.key">
         <li
           data-testid="map-sidebar-item"
           class="border-b border-line-2"
           @mouseenter="emit('hover', row.key)"
           @mouseleave="emit('hover', null)"
         >
-          <NuxtLink
+          <!--
+            2단계 클릭: 첫 클릭은 지도에서 그 건물을 선택(마커 펼침 + 중심 이동)하고,
+            이미 선택된 행을 다시 누르면 상세로 이동한다. 지도를 보며 후보를 훑는 게
+            이 화면의 목적이라, 한 번 클릭에 바로 페이지를 떠나면 훑기가 끊긴다.
+
+            NuxtLink 가 아니라 일반 a 다 — 아래 지역 행 주석과 같은 이유이고, 실제로 밟았다.
+            NuxtLink 로 두면 RouterLink 자체 핸들러가 우리 @click 보다 먼저 실행돼 이미
+            라우터 이동을 시작하므로, preventDefault 가 걸려도(실측 defaultPrevented=true)
+            페이지는 그대로 떠난다. 두 번째 클릭의 이동은 a 의 기본 동작에 맡긴다.
+
+            @click.exact 라 ⌘/Ctrl 클릭은 핸들러를 타지 않고 곧장 새 탭으로 열린다.
+            preventDefault 를 걸어도 href 는 DOM 에 남으므로 크롤 경로는 그대로다.
+          -->
+          <a
             v-if="props.granularity === 'building'"
-            :to="row.href ?? undefined"
-            class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-light transition-colors"
-            @click="emit('select', row.item)"
+            :href="row.href ?? undefined"
+            class="flex items-center justify-between gap-3 px-4 py-3 transition-colors"
+            :class="row.key === props.selectedKey ? 'bg-primary-50' : 'hover:bg-background-light'"
+            :aria-current="row.key === props.selectedKey ? 'true' : undefined"
+            @click.exact="onRowClick($event, row)"
           >
             <span class="min-w-0">
               <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
               <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
             </span>
-            <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
-          </NuxtLink>
+            <span v-if="row.isRent" class="text-right whitespace-nowrap leading-tight">
+              <span
+                class="block text-sm"
+                :class="row.jeonse != null ? 'font-semibold text-primary' : 'text-slate-400'"
+              >
+                <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
+              </span>
+              <span
+                class="block text-xs"
+                :class="row.wolse != null ? 'text-slate-700' : 'text-slate-400'"
+              >
+                <span class="text-[11px] font-medium text-slate-500 mr-1">월세</span>{{ row.wolse ?? '거래 없음' }}
+              </span>
+            </span>
+            <span v-else class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+          </a>
           <!--
             city/district 행은 허브 페이지로 떠나지 않고 지도를 드릴다운해야 한다(select
             emit → RealEstateMapExplorer.onSelect 가 center+level 을 세팅). 그래도 href 는
@@ -66,13 +95,6 @@
             <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </button>
         </li>
-        <li
-          v-if="idx === AD_AFTER_INDEX && props.showAd"
-          data-testid="map-sidebar-ad"
-          class="border-b border-line-2 p-2"
-        >
-          <AdBanner />
-        </li>
       </template>
       <li v-if="hasMore" class="p-3">
         <button
@@ -86,26 +108,40 @@
       </li>
     </ul>
     <!--
-      전역 푸터는 layouts/map.vue 에 없다(페이지 스크롤을 0으로 만들기 위해). 대신 여기
-      목록 하단에 둬 사이드바 스크롤 끝에서 도달하게 한다. 목록이 짧으면 위 ul 의 flex-1 이
-      밀어내 컨테이너 바닥에 붙는다.
+      전역 푸터는 layouts/map.vue 에 없다(페이지 스크롤을 0으로 만들기 위해). 종전에는 여기에
+      AppFooter compact 를 통째로 넣었는데, 목록 끝에 브랜드·문의·서비스/실거래가/정보지원/
+      법적고지 링크 14개가 붙어 작업용 패널에 과했다.
+      출처·라이선스 표기만 남긴다 — 이 페이지에서 그걸 지고 있는 건 여기뿐이라 지울 수는 없다.
+      허브 링크는 다른 모든 페이지의 전역 푸터가 계속 싣고 있어 크롤 경로는 영향 없다.
+      목록이 짧으면 위 ul 의 flex-1 이 밀어내 컨테이너 바닥에 붙는다.
     -->
-    <AppFooter v-if="props.showFooter" compact />
+    <div v-if="props.showFooter" data-testid="sidebar-source" class="px-4 py-3 border-t border-line">
+      <SourceStamp
+        variant="plain"
+        provider="국토교통부"
+        :synced-at="syncedAt"
+        :stale-days="RE_STALE_DAYS"
+        source-url="https://rt.molit.go.kr"
+        link-label="원본"
+      />
+      <p class="mt-1 text-[11px] leading-tight text-faint">
+        실거래가 공개시스템 자료를 공공누리(KOGL) 조건에 따라 가공한 참고용 정보입니다.
+      </p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { isBuildingItem, type Granularity, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
-import { formatPriceLabel, formatPyeongLabel } from '~/composables/useMapOverlays'
+import { formatPriceLabel, formatPyeongLabel, getRentDisplay } from '~/composables/useMapOverlays'
 import { itemKey } from '~/composables/useRealEstateMap'
 import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
-import AdBanner from '~/components/ads/AdBanner.vue'
-import AppFooter from '~/components/common/AppFooter.vue'
-
-const AD_AFTER_INDEX = 4 // 5번째 항목 뒤
+import SourceStamp from '~/components/common/SourceStamp.vue'
+import { useSyncStatus } from '~/composables/useSyncStatus'
+import { RE_STALE_DAYS } from '~/utils/syncFreshness'
 
 const props = withDefaults(defineProps<{
   items: MapItem[]
@@ -115,25 +151,45 @@ const props = withDefaults(defineProps<{
   pending: boolean
   type: string
   /**
-   * 이 사이드바 사본에 인피드 광고를 렌더할지. 데스크톱(aside)과 모바일(바텀시트)에
-   * 같은 MapSidebar 가 항상 둘 다 마운트되므로(하나는 CSS 로만 숨김), 기본값 true 로 두면
-   * 두 사본이 동시에 AdBanner 를 마운트해 adsbygoogle.push() 를 중복 호출한다.
-   * 호출부(RealEstateMapExplorer)가 실제 보이는 뷰포트 한쪽에만 true 를 넘겨야 한다.
-   */
-  showAd?: boolean
-  /**
-   * 이 사본에 푸터를 렌더할지. showAd 와 같은 이유로 게이트가 필요하다 — 두 사본이
-   * 동시에 마운트되므로 그냥 두면 링크 8개와 data-testid="footer-links" 가 2벌 생긴다.
-   *
-   * 기본값은 false 다. showAd 처럼 true 로 두면 게이트를 잊은 호출부에서 조용히 2벌이 된다.
+   * 이 사본에 출처 표기를 렌더할지. 데스크톱(aside)과 모바일(바텀시트)에 같은 MapSidebar 가
+   * 항상 둘 다 마운트되므로(하나는 CSS 로만 숨김) 게이트가 필요하다 — 그냥 두면 2벌 생긴다.
+   * 기본값은 false 다. true 로 두면 게이트를 잊은 호출부에서 조용히 2벌이 된다.
    */
   showFooter?: boolean
+  /**
+   * 현재 지도에서 펼쳐진 건물의 키(useRealEstateMap.itemKey 형식). 목록 행의 2단계
+   * 클릭 판정에 쓴다 — 이 키와 같은 행을 누르면 '두 번째 클릭'이라 상세로 보낸다.
+   * 지도 마커로 먼저 선택한 뒤 목록에서 누르는 경우도 같은 규칙으로 바로 이동한다.
+   */
+  selectedKey?: string | null
 }>(), {
-  showAd: true,
   showFooter: false,
+  selectedKey: null,
 })
 
 const emit = defineEmits<{ hover: [string | null]; select: [MapItem] }>()
+
+/**
+ * 첫 클릭은 지도 선택, 두 번째 클릭은 상세 이동.
+ * 이미 선택된 행이면 preventDefault 하지 않고 a 의 기본 이동에 맡긴다.
+ */
+function onRowClick(ev: MouseEvent, row: Row): void {
+  if (row.key === props.selectedKey) return
+  ev.preventDefault()
+  emit('select', row.item)
+}
+
+/**
+ * 출처 표기용 동기화 시각. 전체 최신값(latestOverall)이 아니라 **현재 타입의** 값을 쓴다 —
+ * 시설 카테고리가 오늘 동기화됐다고 부동산도 최신인 것처럼 보이면 안 된다.
+ * sync-status 응답 키는 슬러그의 camelCase 다(apt-rent → aptRent, 건물 상세 페이지와 동일 규칙).
+ * SourceStamp 는 staleDays 를 넘긴 값이면 날짜를 스스로 숨긴다.
+ */
+const { syncStatus } = useSyncStatus()
+const syncedAt = computed(() => {
+  const key = props.type.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+  return syncStatus.value?.[key] ?? null
+})
 
 const heading = computed(() => {
   if (props.granularity === 'building') return '이 지역 건물'
@@ -146,6 +202,11 @@ interface Row {
   title: string
   subtitle: string | null
   price: string
+  /** 전월세 전용. null 이면 매매이거나 지역 행이라 한 줄로 그린다. */
+  jeonse: string | null
+  wolse: string | null
+  /** 전월세 행인지. jeonse/wolse 가 둘 다 null 이어도 "거래 없음" 을 그려야 하므로 별도 플래그가 필요하다. */
+  isRent: boolean
   /** null = 갈 페이지가 없는 행(동). 템플릿이 링크 대신 버튼을 그린다. */
   href: string | null
   item: MapItem
@@ -158,13 +219,20 @@ interface Row {
  */
 const rows = computed<Row[]>(() => {
   if (props.granularity === 'building') {
+    // 전월세 타입에서만 두 줄로 나눈다. 매매는 보여줄 두 번째 값이 없다.
+    const isRent = props.type.endsWith('-rent')
     return props.items.map((i) => {
       const b = i as MapBuildingItem
+      // 배포 직후처럼 새 분리 컬럼이 아직 안 갱신됐으면 레거시 컬럼으로 폴백한다.
+      const rent = isRent ? getRentDisplay(b) : null
       return {
         key: itemKey(i),
         title: b.buildingName,
         subtitle: `${b.city} ${b.district} ${b.dongName}`,
         price: formatPriceLabel(b),
+        jeonse: rent?.jeonse ?? null,
+        wolse: rent?.wolse ?? null,
+        isRent,
         // 건물 상세는 4-segment URL. 슬러그 변환·NFC 정규화·encodeURIComponent 가
         // 전부 이 유틸에 들어 있으므로 직접 문자열을 조립하지 않는다.
         href: toRealEstateUrl({
@@ -186,6 +254,9 @@ const rows = computed<Row[]>(() => {
         title: r.district ?? r.name,
         subtitle: r.name,
         price: formatPyeongLabel(r),
+        jeonse: null,
+        wolse: null,
+        isRent: false,
         href: toRealEstateListUrl({
           type: props.type as RealEstateUrlType,
           city: r.name,
@@ -204,6 +275,9 @@ const rows = computed<Row[]>(() => {
         title: r.dong ?? '',
         subtitle: `${r.name} ${r.district ?? ''}`.trim(),
         price: formatPyeongLabel(r),
+        jeonse: null,
+        wolse: null,
+        isRent: false,
         // 동 페이지가 없다(6종 라우트는 구·군까지). href 를 만들면 죽은 링크가 되므로
         // null 을 주고 템플릿이 버튼을 그리게 한다.
         href: null,
@@ -234,6 +308,9 @@ const rows = computed<Row[]>(() => {
       title: chip.label,
       subtitle: null,
       price: formatPyeongLabel(item),
+      jeonse: null,
+      wolse: null,
+      isRent: false,
       href: `/real-estate/${props.type}/${chip.slug}`,
       item,
     }

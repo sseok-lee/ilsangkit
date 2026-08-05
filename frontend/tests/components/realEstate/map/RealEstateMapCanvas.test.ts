@@ -57,12 +57,20 @@ function installFakeKakao(): void {
   }
 }
 
-function mountCanvas(props: Partial<{ items: MapItem[]; center: { lat: number; lng: number }; level: number }> = {}) {
+function mountCanvas(props: Partial<{
+  items: MapItem[]
+  center: { lat: number; lng: number }
+  level: number
+  type: string
+  selectedKey: string | null
+}> = {}) {
   return mount(RealEstateMapCanvas, {
     props: {
       items: ITEMS,
       center: { lat: 36.5, lng: 127.8 },
       level: 9,
+      type: 'apt-sale',
+      selectedKey: null,
       ...props,
     },
   })
@@ -220,5 +228,50 @@ describe('RealEstateMapCanvas', () => {
     await w.setProps({ level: 9 })
 
     expect(setLevelSpy).not.toHaveBeenCalled()
+  })
+
+  // 회귀 가드: renderOverlays 는 세 호출부(onMounted/items watch/selectedKey watch) 모두에서
+  // 네 번째 인자로 { type, selectedKey } 를 넘겨야 한다. 리뷰에서 onMounted 쪽만 이 인자를
+  // 빼도 기존 98개 테스트가 전부 통과했다 — useMapOverlays 를 목으로 대체하지만 그 인자를
+  // 검증하지 않았기 때문이다. mocks.renderOverlays 가 vi.fn() 이라 실제 호출 인자를
+  // 그대로 관측할 수 있다.
+  describe('renderOverlays 네 번째 인자(type/selectedKey) 배선', () => {
+    it('마운트(onMounted 경로)가 props.type/selectedKey 를 그대로 넘긴다', async () => {
+      mountCanvas({ type: 'villa-rent', selectedKey: '은마|강남구' })
+      await flushPromises()
+
+      expect(mocks.renderOverlays).toHaveBeenCalledTimes(1)
+      const [, , , overlayOpts] = mocks.renderOverlays.mock.calls[0]
+      expect(overlayOpts).toEqual({ type: 'villa-rent', selectedKey: '은마|강남구' })
+    })
+
+    it('items 가 바뀌면(items watch 경로) 그 호출도 현재 type/selectedKey 를 넘긴다', async () => {
+      const w = mountCanvas({ type: 'apt-rent', selectedKey: '도곡렉슬|강남구' })
+      await flushPromises()
+      mocks.renderOverlays.mockClear()
+
+      const nextItems: MapItem[] = [
+        { name: '부산', district: null, dong: null, lat: 35.18, lng: 129.08, avgPricePerPyeong: 5000, transactionCount: 50 },
+      ]
+      await w.setProps({ items: nextItems })
+
+      expect(mocks.renderOverlays).toHaveBeenCalledTimes(1)
+      const [, itemsArg, , overlayOpts] = mocks.renderOverlays.mock.calls[0]
+      // Vue 는 배열 prop 을 내부적으로 감싸므로(reference 불일치) 값 동등성으로 비교한다.
+      expect(itemsArg).toEqual(nextItems)
+      expect(overlayOpts).toEqual({ type: 'apt-rent', selectedKey: '도곡렉슬|강남구' })
+    })
+
+    it('selectedKey 가 바뀌면(selectedKey watch 경로) 그 호출이 새 키를 넘긴다', async () => {
+      const w = mountCanvas({ type: 'apt-sale', selectedKey: null })
+      await flushPromises()
+      mocks.renderOverlays.mockClear()
+
+      await w.setProps({ selectedKey: '신동아|강남구' })
+
+      expect(mocks.renderOverlays).toHaveBeenCalledTimes(1)
+      const [, , , overlayOpts] = mocks.renderOverlays.mock.calls[0]
+      expect(overlayOpts).toEqual({ type: 'apt-sale', selectedKey: '신동아|강남구' })
+    })
   })
 })

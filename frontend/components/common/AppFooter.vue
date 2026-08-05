@@ -48,6 +48,19 @@
           </nav>
         </div>
 
+        <!--
+          실거래가 6종. 지도 필터가 2축 셀렉트(유형 × 거래)로 바뀌면서 한 조합만 URL 로
+          만들 수 있게 됐다 — 기본값이 아파트 매매면 빌라·오피스텔 전월세 허브는 어느
+          메뉴에도 안 나온다. 그 6개 링크의 정식 소유자를 여기로 옮긴다. 전 페이지에
+          있으므로 지도 한 페이지에 의존하던 종전보다 크롤 경로가 오히려 넓어진다.
+        -->
+        <div>
+          <p class="text-xs font-semibold text-faint uppercase tracking-wider mb-3">실거래가</p>
+          <nav aria-label="부동산 실거래가 링크" data-testid="footer-real-estate-links" class="flex flex-col gap-2">
+            <HardLink v-for="hub in REAL_ESTATE_HUBS" :key="hub.to" :to="hub.to" class="text-sm text-muted hover:text-primary transition-colors">{{ hub.label }}</HardLink>
+          </nav>
+        </div>
+
         <!-- 정보 · 지원 -->
         <div>
           <p class="text-xs font-semibold text-faint uppercase tracking-wider mb-3">정보 · 지원</p>
@@ -100,6 +113,19 @@ import HardLink from '~/components/common/HardLink.vue'
 import { SITE_TAGLINE } from '~/utils/seoConstants'
 import { useSyncStatus } from '~/composables/useSyncStatus'
 import { formatDotDateTime, isSyncStale, RE_STALE_DAYS } from '~/utils/syncFreshness'
+
+/**
+ * 실거래가 허브 6종. 순서는 매물 유형별로 매매·전월세를 붙여 읽기 쉽게 둔다.
+ * 토지·공매는 빼고 지도 탐색기가 다루는 6종만 — GNB 드롭다운이 나머지를 담당한다.
+ */
+const REAL_ESTATE_HUBS = [
+  { to: '/real-estate/apt-sale', label: '아파트 매매' },
+  { to: '/real-estate/apt-rent', label: '아파트 전월세' },
+  { to: '/real-estate/villa-sale', label: '빌라 매매' },
+  { to: '/real-estate/villa-rent', label: '빌라 전월세' },
+  { to: '/real-estate/offitel-sale', label: '오피스텔 매매' },
+  { to: '/real-estate/offitel-rent', label: '오피스텔 전월세' },
+] as const
 
 /**
  * 좁은 컨테이너(지도 사이드바 320px)용 1열 렌더.

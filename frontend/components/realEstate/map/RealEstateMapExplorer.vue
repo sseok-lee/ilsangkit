@@ -38,8 +38,8 @@
           :exact="exact"
           :pending="pending"
           :type="type"
-          :show-ad="isDesktop === true"
           :show-footer="isDesktop === true"
+          :selected-key="selectedKey"
           @hover="hoveredKey = $event"
           @select="onSelect"
         />
@@ -54,6 +54,8 @@
             :items="items as MapItem[]"
             :center="center"
             :level="level"
+            :type="type"
+            :selected-key="selectedKey"
             @idle="onIdle"
             @select="onSelect"
             @hover="hoveredKey = $event ? itemKey($event) : null"
@@ -74,8 +76,8 @@
         :exact="exact"
         :pending="pending"
         :type="type"
-        :show-ad="isDesktop === false"
         :show-footer="isDesktop === false"
+        :selected-key="selectedKey"
         @hover="hoveredKey = $event"
         @select="onSelect"
       />
@@ -86,7 +88,7 @@
 <script setup lang="ts">
 // onMounted 를 명시 import 한다 — 이 컴포넌트는 테스트에서 직접 mount 되므로
 // auto-import 에 기대면 로컬은 통과하고 CI 에서만 ReferenceError 가 난다.
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import MapSidebar from './MapSidebar.vue'
 import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
@@ -101,6 +103,11 @@ const props = defineProps<{
 }>()
 
 const center = ref({ lat: 36.5, lng: 127.8 })
+/**
+ * 펼쳐진 건물 마커의 키. null 이면 전부 접힌 상태다.
+ * 형식은 useRealEstateMap.itemKey 의 건물 분기와 같다 — `buildingName|district`.
+ */
+const selectedKey = ref<string | null>(null)
 const {
   type, level, granularity, items, total, exact, pending,
   // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
@@ -112,16 +119,27 @@ const {
   granularity: props.initialGranularity,
 })
 
+// 같은 granularity 안의 팬/줌은 선택을 유지해야 하지만, granularity 자체가 바뀌면
+// (building→dong 등) 목록의 항목 단위가 완전히 달라진다. 이 상태에서 건물 "은마"를
+// 선택한 채 줌아웃(building→dong)했다가 다시 줌인(dong→building)하면, 새로 받아온
+// building 목록에 같은 키가 재등장해 클릭 없이 카드가 저절로 다시 펼쳐진다 — 줌
+// 왕복 자체가 선택 동작처럼 보이는 사고다. granularity 변경 시점에만 선택을 비운다.
+watch(granularity, () => {
+  selectedKey.value = null
+})
+
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
 
 // MapSidebar 가 데스크톱 aside 와 모바일 바텀시트 두 사본으로 항상 동시에 마운트된다
-// (안 보이는 쪽은 CSS `hidden`/`lg:hidden`일 뿐 DOM 에서 사라지지 않는다). 그 안의
-// AdBanner 가 인피드 광고를 하나만 요청하도록, 실제로 보이는 뷰포트 쪽에만
-// showAd=true 를 내려준다. 초기값 null 은 "아직 모른다"를 뜻하며, 두 사본 모두
-// `isDesktop === true` / `=== false` 비교가 false 가 되어 광고가 하나도 안 뜬다 —
-// SSR 출력과 마운트 직후 첫 클라이언트 렌더가 이 상태로 일치하므로 하이드레이션
-// mismatch 가 없다. matchMedia 결과가 들어오는 순간(this onMounted 이후) 정확히 한
-// 쪽만 true 로 바뀐다.
+// (안 보이는 쪽은 CSS `hidden`/`lg:hidden`일 뿐 DOM 에서 사라지지 않는다). 출처 표기가
+// 2벌 생기지 않도록 실제로 보이는 뷰포트 쪽에만 showFooter=true 를 내려준다.
+// 초기값 null 은 "아직 모른다"를 뜻하며, 두 사본 모두 `isDesktop === true` / `=== false`
+// 비교가 false 가 되어 어느 쪽도 렌더하지 않는다 — SSR 출력과 마운트 직후 첫 클라이언트
+// 렌더가 이 상태로 일치하므로 하이드레이션 mismatch 가 없다. matchMedia 결과가 들어오는
+// 순간(onMounted 이후) 정확히 한 쪽만 true 로 바뀐다.
+//
+// 종전에는 인피드 광고(showAd)도 같은 게이트를 썼는데, 이 페이지에서 광고를 전부 빼면서
+// 남은 소비처는 출처 표기뿐이다.
 const isDesktop = ref<boolean | null>(null)
 let desktopMq: MediaQueryList | null = null
 function applyIsDesktop(): void {
@@ -186,6 +204,8 @@ function onIdle(bounds: MapBounds, lvl: number, mapCenter: { lat: number; lng: n
 
 function onTypeChange(next: string): void {
   setType(next, lastBounds)
+  // 다른 목록으로 갈아타므로 이전 선택 키는 의미가 없다.
+  selectedKey.value = null
   syncHash()
 }
 
@@ -228,5 +248,14 @@ function onSelect(item: MapItem): void {
   if (granularity.value === 'city') setLevel(9)
   else if (granularity.value === 'district') setLevel(7)
   else if (granularity.value === 'dong') setLevel(5)
+  else {
+    // 건물 단계에는 더 파고들 곳이 없다 — 대신 값과 상세 링크를 펼친다.
+    // 같은 것을 다시 고르면 접는다.
+    const key = itemKey(item)
+    selectedKey.value = selectedKey.value === key ? null : key
+  }
 }
+
+// 테스트가 선택 상태를 직접 확인할 수 있게 노출한다. script setup 은 기본적으로 닫혀 있다.
+defineExpose({ selectedKey })
 </script>

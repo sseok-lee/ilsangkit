@@ -16,6 +16,25 @@ const BUILDINGS: MapItem[] = [
     buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
     lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
+    jeonseDeposit: null, jeonseDealKey: null,
+    wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+  },
+]
+
+const RENT_BUILDINGS: MapItem[] = [
+  {
+    buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+    lat: 37.5, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
+    latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 114,
+    jeonseDeposit: 96000, jeonseDealKey: 20260712,
+    wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+  },
+  {
+    buildingName: '신동아', city: '서울', district: '강남구', dongName: '수서동',
+    lat: 37.49, lng: 127.1, latestPrice: 60000, monthlyRent: 0,
+    latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 11,
+    jeonseDeposit: 60000, jeonseDealKey: 20260720,
+    wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
   },
 ]
 
@@ -63,22 +82,13 @@ describe('MapSidebar', () => {
     expect(w.emitted('hover')?.[0]).toEqual(['래미안블레스티지|강남구'])
   })
 
-  it('인피드 광고 자리를 5번째 항목 뒤에 둔다', () => {
+  // 이 페이지는 광고를 싣지 않는다(사용자 결정). 인피드 슬롯이 되돌아오면 목록 중간에
+  // 다시 끼어들므로 회귀 가드를 남긴다.
+  it('인피드 광고를 렌더하지 않는다', () => {
     const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
     const w = mountSidebar({ items: many, granularity: 'building', total: 8 })
-    expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(true)
-  })
-
-  it('showAd 를 명시하지 않으면 기본값 true 라 인피드 광고를 렌더한다 (다른 호출부 하위호환)', () => {
-    const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
-    const w = mountSidebar({ items: many, granularity: 'building', total: 8 })
-    expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(true)
-  })
-
-  it('showAd=false 면 항목 수가 충분해도 인피드 광고를 렌더하지 않는다', () => {
-    const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
-    const w = mountSidebar({ items: many, granularity: 'building', total: 8, showAd: false })
     expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(false)
+    expect(w.findComponent({ name: 'AdBanner' }).exists()).toBe(false)
   })
 
   it('전남광주통합특별시는 DB city 원값(풀네임)으로 매칭되어 평당가를 표시한다 (회귀 가드)', () => {
@@ -118,16 +128,56 @@ describe('MapSidebar', () => {
     expect(emittedItem.lng).toBeNull()
   })
 
-  it('건물 모드는 select 를 emit 하지만 기본 동작(이동)을 막지 않는다 — NuxtLink 그대로다', async () => {
-    // 건물 행은 이 태스크 범위 밖(변경 없음): 클릭해도 preventDefault 하지 않아야
-    // 실제 브라우저에서 상세 페이지로 계속 이동한다.
-    const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
-    const a = w.find('[data-testid="map-sidebar-item"]').find('a')
-    const evt = new MouseEvent('click', { bubbles: true, cancelable: true })
-    a.element.dispatchEvent(evt)
-    await nextTick()
-    expect(evt.defaultPrevented).toBe(false)
-    expect(w.emitted('select')?.[0]).toEqual([BUILDINGS[0]])
+  // 건물 행은 2단계다. 지도를 보며 후보를 훑는 게 이 화면의 목적이라 첫 클릭에
+  // 페이지를 떠나면 훑기가 끊긴다. 첫 클릭은 지도 선택, 두 번째 클릭이 이동.
+  describe('건물 행 2단계 클릭', () => {
+    const KEY = `${(BUILDINGS[0] as MapBuildingItem).buildingName}|${(BUILDINGS[0] as MapBuildingItem).district}`
+
+    function clickFirstRow(w: ReturnType<typeof mountSidebar>) {
+      const a = w.find('[data-testid="map-sidebar-item"]').find('a')
+      const evt = new MouseEvent('click', { bubbles: true, cancelable: true })
+      a.element.dispatchEvent(evt)
+      return evt
+    }
+
+    it('선택 전 클릭은 이동을 막고 select 만 emit 한다', async () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+      const evt = clickFirstRow(w)
+      await nextTick()
+      expect(evt.defaultPrevented).toBe(true)
+      expect(w.emitted('select')?.[0]).toEqual([BUILDINGS[0]])
+    })
+
+    it('이미 선택된 행의 클릭은 막지 않는다 — 상세로 이동해야 한다', async () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1, selectedKey: KEY })
+      const evt = clickFirstRow(w)
+      await nextTick()
+      expect(evt.defaultPrevented).toBe(false)
+      // 두 번째 클릭은 선택 토글을 다시 돌리지 않는다 — 이동 직전에 선택이 풀리면 안 된다.
+      expect(w.emitted('select')).toBeUndefined()
+    })
+
+    it('선택된 행만 aria-current 를 갖는다 — 왜 두 번째 클릭이 다르게 동작하는지 알려야 한다', () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1, selectedKey: KEY })
+      expect(w.find('[data-testid="map-sidebar-item"]').find('a').attributes('aria-current')).toBe('true')
+      const w2 = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+      expect(w2.find('[data-testid="map-sidebar-item"]').find('a').attributes('aria-current')).toBeUndefined()
+    })
+
+    it('⌘/Ctrl+클릭은 첫 클릭이어도 가로채지 않는다 — 새 탭으로 열려야 한다', async () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+      const a = w.find('[data-testid="map-sidebar-item"]').find('a')
+      const evt = new MouseEvent('click', { bubbles: true, cancelable: true, metaKey: true })
+      a.element.dispatchEvent(evt)
+      await nextTick()
+      expect(evt.defaultPrevented).toBe(false)
+      expect(w.emitted('select')).toBeUndefined()
+    })
+
+    it('href 는 그대로 남는다 — preventDefault 해도 크롤 경로가 사라지면 안 된다', () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+      expect(w.find('[data-testid="map-sidebar-item"]').find('a').attributes('href')).toContain('/real-estate/')
+    })
   })
 
   describe('city/district 드릴다운 — 허브로 이탈하지 않고 지도를 확대한다', () => {
@@ -219,6 +269,7 @@ function manyBuildings(n: number): MapItem[] {
     buildingName: `건물${i}`, city: '서울', district: '강남구', dongName: '개포동',
     lat: 37.48, lng: 127.06, latestPrice: 100000 + i, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 200 - i,
+    jeonseDeposit: null, jeonseDealKey: null, wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
   }))
 }
 
@@ -319,53 +370,56 @@ describe('MapSidebar 더보기', () => {
   })
 })
 
-describe('MapSidebar 푸터', () => {
-  const footerStub = {
-    // props 를 배열이 아니라 객체로 선언한다. 배열 형식(무타입) stub 은 맨 속성(`<AppFooter compact />`)을
-    // 빈 문자열로 받아 props('compact') 가 '' 이 된다 — Boolean 을 명시해야 true 로 캐스팅된다.
-    AppFooter: { name: 'AppFooter', template: '<footer data-testid="sidebar-footer" />', props: { compact: Boolean } },
-  }
-
-  function mountWithFooter(showFooter: boolean) {
+describe('MapSidebar 출처 표기', () => {
+  function mountWithSource(showFooter: boolean) {
     return mount(MapSidebar, {
       props: {
         items: REGIONS, granularity: 'city', total: 2, exact: true, pending: false,
         type: 'apt-sale', showFooter,
       },
-      global: { stubs: footerStub },
     })
   }
 
   // MapSidebar 는 데스크톱 aside 와 모바일 바텀시트 두 사본이 항상 동시에 마운트된다
-  // (안 보이는 쪽은 CSS hidden 일 뿐 DOM 에 남는다). 기본값이 true 면 두 사본이 모두
-  // 푸터를 그려 링크 8개와 data-testid="footer-links" 가 2벌 생긴다.
+  // (안 보이는 쪽은 CSS hidden 일 뿐 DOM 에 남는다). 기본값이 true 면 두 사본이 모두 그린다.
   it('기본값은 렌더하지 않는다', () => {
     const w = mount(MapSidebar, {
       props: { items: REGIONS, granularity: 'city', total: 2, exact: true, pending: false, type: 'apt-sale' },
-      global: { stubs: footerStub },
     })
-    expect(w.find('[data-testid="sidebar-footer"]').exists()).toBe(false)
+    expect(w.find('[data-testid="sidebar-source"]').exists()).toBe(false)
   })
 
-  it('showFooter 면 목록 아래에 푸터를 렌더한다', () => {
-    expect(mountWithFooter(true).find('[data-testid="sidebar-footer"]').exists()).toBe(true)
+  it('showFooter 면 목록 아래에 출처 표기를 렌더한다', () => {
+    expect(mountWithSource(true).find('[data-testid="sidebar-source"]').exists()).toBe(true)
   })
 
-  it('푸터에 compact 를 넘긴다 — 320px 폭에 4열 그리드는 들어가지 않는다', () => {
-    expect(mountWithFooter(true).findComponent({ name: 'AppFooter' }).props('compact')).toBe(true)
+  // 이 페이지는 layouts/map.vue 가 전역 푸터를 뺀 상태라(페이지 스크롤 0) 출처·라이선스를
+  // 지고 있는 게 여기뿐이다. 문구가 사라지면 공공데이터 표기 의무가 페이지에서 증발한다.
+  it('제공 기관과 공공누리 조건을 밝힌다', () => {
+    const t = mountWithSource(true).find('[data-testid="sidebar-source"]').text()
+    expect(t).toContain('국토교통부')
+    expect(t).toContain('공공누리')
   })
 
-  it('푸터는 목록 뒤에 오고, ul 안에 들어가지 않는다', () => {
-    const w = mountWithFooter(true)
+  // 종전에는 AppFooter compact 를 통째로 넣어 링크 14개가 목록 끝에 붙었다.
+  // 되돌아오면 작업용 패널이 다시 무거워진다.
+  it('전역 푸터를 통째로 넣지 않는다', () => {
+    const w = mountWithSource(true)
+    expect(w.findComponent({ name: 'AppFooter' }).exists()).toBe(false)
+    expect(w.find('[data-testid="footer-links"]').exists()).toBe(false)
+  })
 
-    // 순서: 목록이 먼저, 푸터가 뒤
+  it('출처는 목록 뒤에 오고, ul 안에 들어가지 않는다', () => {
+    const w = mountWithSource(true)
+
+    // 순서: 목록이 먼저, 출처가 뒤
     const html = w.html()
-    expect(html.indexOf('map-sidebar-item')).toBeLessThan(html.indexOf('sidebar-footer'))
+    expect(html.indexOf('map-sidebar-item')).toBeLessThan(html.indexOf('sidebar-source'))
 
     // 구조: ul 의 형제여야 한다. ul 안에 들어가면 위 순서 검사는 그대로 통과하지만,
-    // ul 의 flex-1 이 짧은 목록에서 푸터를 바닥으로 밀어내는 동작이 깨진다.
-    expect(w.find('ul').find('[data-testid="sidebar-footer"]').exists()).toBe(false)
-    expect(w.find('[data-testid="sidebar-footer"]').exists()).toBe(true)
+    // ul 의 flex-1 이 짧은 목록에서 출처를 바닥으로 밀어내는 동작이 깨진다.
+    expect(w.find('ul').find('[data-testid="sidebar-source"]').exists()).toBe(false)
+    expect(w.find('[data-testid="sidebar-source"]').exists()).toBe(true)
   })
 })
 
@@ -433,5 +487,99 @@ describe('MapSidebar 동 모드', () => {
       },
     })
     expect(w.find('[data-testid="map-sidebar-item"] a').attributes('href')).toBeTruthy()
+  })
+})
+
+describe('MapSidebar — 전월세 두 줄 병기', () => {
+  function mountRent(over = {}) {
+    return mount(MapSidebar, {
+      props: {
+        items: RENT_BUILDINGS, granularity: 'building', total: 2, exact: true,
+        pending: false, type: 'apt-rent', ...over,
+      },
+    })
+  }
+
+  it('전세와 월세를 각각 보여준다', () => {
+    const t = mountRent().text()
+    expect(t).toContain('9억 6,000만')
+    expect(t).toContain('7억 5,000만 · 340만')
+  })
+
+  it('전세/월세 라벨을 붙여 어느 쪽인지 알린다', () => {
+    const t = mountRent().text()
+    expect(t).toContain('전세')
+    expect(t).toContain('월세')
+  })
+
+  it('해당 종류 거래가 없으면 "거래 없음" 이다 — 값이 없는 건지 안 보이는 건지 구분돼야 한다', () => {
+    expect(mountRent().text()).toContain('거래 없음')
+  })
+
+  it('매매 탭은 한 줄 그대로다 — 전세/월세 라벨이 없다', () => {
+    const w = mount(MapSidebar, {
+      props: {
+        items: BUILDINGS, granularity: 'building', total: 1, exact: true,
+        pending: false, type: 'apt-sale',
+      },
+    })
+    expect(w.text()).toContain('16억 8,340만')
+    expect(w.text()).not.toContain('거래 없음')
+  })
+
+  // B-1: 배포 직후엔 prisma db push 만 돌아 jeonseDeposit/wolseDeposit 등 5개 새 컬럼이
+  // 다음 nightly sync 전까지 전부 NULL이다. 폴백이 없으면 이 상태에서 전 건물이
+  // "전세 거래 없음 / 월세 거래 없음"으로 보여 데이터 장애처럼 읽힌다.
+  it('배포 직후처럼 새 분리 컬럼이 전부 null 이면 레거시 컬럼으로 폴백한다 (B-1)', () => {
+    const notSyncedYet = {
+      buildingName: '미갱신빌딩', city: '서울', district: '강남구', dongName: '개포동',
+      lat: 37.48, lng: 127.06, latestPrice: 60000, monthlyRent: 0,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 5,
+      jeonseDeposit: null, jeonseDealKey: null,
+      wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    }
+    const w = mountRent({ items: [notSyncedYet], total: 1 })
+    expect(w.text()).toContain('6억')
+    expect(w.text()).toContain('거래 없음')
+  })
+
+  // M-4: 폴백/미갱신으로 "거래 없음"이 뜨는 줄은 실제 가격처럼 강조되면 안 된다.
+  it('전세 거래가 없으면 "거래 없음" 줄은 가격처럼 강조하지 않는다 (M-4)', () => {
+    const noJeonse = {
+      buildingName: '월세만', city: '서울', district: '강남구', dongName: '개포동',
+      lat: 37.48, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 3,
+      jeonseDeposit: null, jeonseDealKey: null,
+      wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+    }
+    const w = mountRent({ items: [noJeonse], total: 1 })
+    const row = w.findAll('[data-testid="map-sidebar-item"]')[0]
+    // 감싸는 래퍼 span 도 텍스트가 "전세"/"거래 없음" 을 포함하므로, block 클래스로 실제
+    // 전세 줄 span(가격/거래없음 텍스트가 직접 붙는 요소)만 특정한다.
+    const jeonseLine = row.findAll('span').find((s) => s.classes().includes('block') && s.text().includes('전세') && s.text().includes('거래 없음'))
+    expect(jeonseLine?.classes()).toContain('text-slate-400')
+    expect(jeonseLine?.classes()).not.toContain('text-primary')
+    expect(jeonseLine?.classes()).not.toContain('font-semibold')
+  })
+
+  // 월세 줄에도 같은 규칙이 걸려야 한다. 이 줄은 원래 항상 text-slate-700 고정이라
+  // "거래 없음"이 실제 월세 금액과 똑같은 색으로 나왔다 — 없는 값과 있는 값이
+  // 구분되지 않으면 두 줄로 나눈 의미가 없다.
+  it('월세 거래가 없으면 그 줄만 흐리게, 값이 있는 전세 줄은 그대로 강조한다 (M-4)', () => {
+    const noWolse = {
+      buildingName: '전세만', city: '서울', district: '강남구', dongName: '개포동',
+      lat: 37.48, lng: 127.06, latestPrice: 96000, monthlyRent: 0,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 5,
+      jeonseDeposit: 96000, jeonseDealKey: 20260720,
+      wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    }
+    const w = mountRent({ items: [noWolse], total: 1 })
+    const row = w.findAll('[data-testid="map-sidebar-item"]')[0]
+    const lines = row.findAll('span').filter((s) => s.classes().includes('block'))
+    const wolseLine = lines.find((s) => s.text().includes('월세') && s.text().includes('거래 없음'))
+    const jeonseLine = lines.find((s) => s.text().includes('전세') && s.text().includes('9억 6,000만'))
+    expect(wolseLine?.classes()).toContain('text-slate-400')
+    expect(wolseLine?.classes()).not.toContain('text-slate-700')
+    expect(jeonseLine?.classes()).toContain('text-primary')
   })
 })

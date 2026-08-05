@@ -39,6 +39,16 @@ export interface MapBuildingItem {
   latestDealYear: number | null
   latestDealMonth: number | null
   latestDealDay: number | null
+  /** 최신 전세 보증금(만원). 매매 타입과 전세 거래 없는 건물은 null. */
+  jeonseDeposit: number | null
+  /** 위 거래일 YYYYMMDD. 현재 화면에 쓰지 않는다. */
+  jeonseDealKey: number | null
+  /** 최신 월세 보증금(만원). */
+  wolseDeposit: number | null
+  /** 위 거래의 월세액(만원). */
+  wolseMonthlyRent: number | null
+  /** 위 거래일 YYYYMMDD. */
+  wolseDealKey: number | null
   transactionCount: number
 }
 

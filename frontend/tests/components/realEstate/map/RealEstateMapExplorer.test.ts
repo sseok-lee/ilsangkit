@@ -16,6 +16,7 @@ const BUILDING_ITEMS: MapItem[] = [
     buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
     lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
+    jeonseDeposit: null, jeonseDealKey: null, wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
   },
 ]
 
@@ -51,15 +52,19 @@ describe('RealEstateMapExplorer', () => {
     expect(w.text()).toContain('서울')
   })
 
-  it('필터바를 렌더한다', () => {
-    expect(mountExplorer().text()).toContain('아파트 매매')
+  it('필터바를 렌더한다 — 매물 유형과 거래 유형 두 축', () => {
+    const triggers = mountExplorer().findComponent({ name: 'MapFilterBar' }).findAll('button')
+    expect(triggers).toHaveLength(2)
+    expect(triggers[0].text()).toContain('아파트')
+    expect(triggers[1].text()).toContain('매매')
   })
 
-  it('거래 축이 2종이라 전세/월세 버튼이 없다', () => {
-    const t = mountExplorer().text()
-    expect(t).toContain('아파트 전월세')
-    expect(t).not.toContain('아파트 전세')
-    expect(t).not.toContain('아파트 월세')
+  // 거래 축은 매매/전월세 2종이다. 전세와 월세를 따로 두지 않는 이유는 설계문서 4장 —
+  // summary 가 건물당 최신 1건만 보유해 전세로 필터하면 실제 전세 건물이 대량 누락된다.
+  it('거래 축이 2종이라 전세/월세를 따로 고를 수 없다', () => {
+    const bar = mountExplorer().findComponent({ name: 'MapFilterBar' })
+    const txOptions = bar.findAll('ul')[1].findAll('a').map((a) => a.text())
+    expect(txOptions).toEqual(['매매', '전월세'])
   })
 
   it('지도 캔버스는 ClientOnly 안에 있다 — SSR 에서 kakao SDK 를 건드리지 않는다', () => {
@@ -140,10 +145,13 @@ describe('RealEstateMapExplorer', () => {
       expect(canvas.props('level')).toBe(5)
       expect(canvas.props('center')).toEqual({ lat: 37.5, lng: 127.05 })
 
-      const activeBtn = w.findAll('a').find((a) => a.text() === '빌라 전월세')
-      expect(activeBtn?.attributes('aria-current')).toBe('true')
-      const defaultBtn = w.findAll('a').find((a) => a.text() === '아파트 매매')
-      expect(defaultBtn?.attributes('aria-current')).toBeUndefined()
+      // 2축 셀렉트라 활성 상태는 트리거 라벨과 각 메뉴의 aria-current 로 나타난다.
+      const bar = w.findComponent({ name: 'MapFilterBar' })
+      const triggers = bar.findAll('button')
+      expect(triggers[0].text()).toContain('빌라')
+      expect(triggers[1].text()).toContain('전월세')
+      const current = bar.findAll('a').filter((a) => a.attributes('aria-current') === 'true')
+      expect(current.map((a) => a.text())).toEqual(['빌라', '전월세'])
     })
 
     it('lat/lng 만 있는 해시는(과거와 동일) 중심만 옮기고 type/level 은 기본값을 유지한다', async () => {
@@ -155,50 +163,28 @@ describe('RealEstateMapExplorer', () => {
       expect(canvas.props('center')).toEqual({ lat: 35.1, lng: 129.0 })
       expect(canvas.props('level')).toBe(13) // useRealEstateMap 기본 레벨 — 해시에 없으니 그대로
 
-      const defaultBtn = w.findAll('a').find((a) => a.text() === '아파트 매매')
-      expect(defaultBtn?.attributes('aria-current')).toBe('true')
+      const current = w.findComponent({ name: 'MapFilterBar' })
+        .findAll('a').filter((a) => a.attributes('aria-current') === 'true')
+      expect(current.map((a) => a.text())).toEqual(['아파트', '매매'])
     })
   })
 
-  // MapSidebar 가 데스크톱 aside 와 모바일 바텀시트에 동시에 마운트된다(하나는 CSS 로만
-  // 숨김, DOM 에서 사라지지 않음). showAd 게이팅이 없으면 두 사본이 동시에 AdBanner 를
-  // 마운트해 adsbygoogle.push() 를 중복 호출한다(라이브에서 관측된 버그, availableWidth=0
-  // 에러 + <ins class="adsbygoogle"> 3개). 뷰포트별로 정확히 1개만 남아야 한다.
-  describe('인피드 광고 중복 방지 (RealEstateMapExplorer 이슈)', () => {
+  // 이 페이지는 광고를 싣지 않는다(사용자 결정). 두 MapSidebar 사본이 항상 동시에
+  // 마운트되므로, 슬롯이 되돌아오면 곧바로 2벌이 된다 — 합계 0 을 가드한다.
+  describe('광고 미노출', () => {
     afterEach(() => {
       vi.unstubAllGlobals()
     })
 
-    it('데스크톱 뷰포트에서는 두 MapSidebar 사본 중 정확히 1개만 인피드 광고를 렌더한다', async () => {
-      stubDesktopViewport(true)
-      const w = mountExplorer()
-      await nextTick()
-      await nextTick()
-
-      const adSlots = w.findAll(AD_SLOT_SELECTOR)
-      expect(adSlots).toHaveLength(1)
-      // 보이는 쪽(데스크톱 aside)에 있어야 한다 — hidden lg:block 조상 안.
-      expect(w.find('aside').findAll(AD_SLOT_SELECTOR)).toHaveLength(1)
-    })
-
-    it('모바일 뷰포트에서는 두 MapSidebar 사본 중 정확히 1개만 인피드 광고를 렌더한다', async () => {
-      stubDesktopViewport(false)
-      const w = mountExplorer()
-      await nextTick()
-      await nextTick()
-
-      const adSlots = w.findAll(AD_SLOT_SELECTOR)
-      expect(adSlots).toHaveLength(1)
-      // aside(데스크톱) 쪽엔 없어야 한다 — 바텀시트 사본에만 있어야 한다.
-      expect(w.find('aside').findAll(AD_SLOT_SELECTOR)).toHaveLength(0)
-    })
-
-    it('마운트 직후(뷰포트 판정 전)에는 광고 슬롯이 최대 1개를 넘지 않는다 (합계 상한 가드)', () => {
-      stubDesktopViewport(true)
-      const w = mountExplorer()
-      // await 없이 — onMounted 의 matchMedia 갱신이 아직 patch 로 반영되기 전 시점도
-      // 두 사본 합쳐 광고가 2개 이상 뜨는 순간이 없어야 한다는 회귀 가드.
-      expect(w.findAll(AD_SLOT_SELECTOR).length).toBeLessThanOrEqual(1)
+    it('데스크톱·모바일 어느 뷰포트에서도 광고 슬롯이 없다', async () => {
+      for (const desktop of [true, false]) {
+        stubDesktopViewport(desktop)
+        const w = mountExplorer()
+        await nextTick()
+        await nextTick()
+        expect(w.findAll(AD_SLOT_SELECTOR)).toHaveLength(0)
+        expect(w.findAllComponents({ name: 'AdBanner' })).toHaveLength(0)
+      }
     })
   })
 })
@@ -318,7 +304,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
           MapSidebar: {
             name: 'MapSidebar',
             template: '<div />',
-            props: ['items', 'granularity', 'total', 'exact', 'pending', 'type', 'showAd', 'showFooter'],
+            props: ['items', 'granularity', 'total', 'exact', 'pending', 'type', 'showFooter'],
           },
           MapFilterBar: { name: 'MapFilterBar', template: '<div />', props: ['type'] },
           RealEstateMapCanvas: { name: 'RealEstateMapCanvas', template: '<div />', props: ['items', 'center', 'level'] },
@@ -412,10 +398,6 @@ describe('RealEstateMapExplorer 레이아웃', () => {
 
       expect(desktopSidebar.props('showFooter')).toBe(true)
       expect(mobileSidebar.props('showFooter')).toBe(false)
-      // showAd 와 showFooter 는 각 사본 내에서 항상 같은 값이어야 한다 — 어긋나면
-      // 한쪽엔 광고만, 다른 쪽엔 푸터만 뜨는 불일치가 생긴다.
-      expect(desktopSidebar.props('showAd')).toBe(desktopSidebar.props('showFooter'))
-      expect(mobileSidebar.props('showAd')).toBe(mobileSidebar.props('showFooter'))
     })
 
     it('모바일 뷰포트에서는 모바일 사본만 showFooter=true 다', async () => {
@@ -428,8 +410,129 @@ describe('RealEstateMapExplorer 레이아웃', () => {
 
       expect(desktopSidebar.props('showFooter')).toBe(false)
       expect(mobileSidebar.props('showFooter')).toBe(true)
-      expect(desktopSidebar.props('showAd')).toBe(desktopSidebar.props('showFooter'))
-      expect(mobileSidebar.props('showAd')).toBe(mobileSidebar.props('showFooter'))
     })
+  })
+})
+
+describe('RealEstateMapExplorer — 마커 선택 토글', () => {
+  // onTypeChange 는 syncHash() 로 history.replaceState 를 부른다. 정리하지 않으면 남은 해시가
+  // 다음 테스트의 onMounted → parseMapHash 에 stale 한 type/level/lat/lng 를 먹여 조용히
+  // 오염시킨다. 실제로 아래 granularity 테스트가 그 피해를 입어 자체 리셋을 넣어야 했다.
+  // describe 단위로 걷어내 이 블록에 추가되는 테스트가 순서에 의존하지 않게 한다.
+  afterEach(() => {
+    window.location.hash = ''
+  })
+
+  const RENT_ITEM: MapItem = {
+    buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+    lat: 37.5, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
+    latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 114,
+    jeonseDeposit: 96000, jeonseDealKey: 20260712,
+    wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+  }
+
+  const CANVAS_STUB = { RealEstateMapCanvas: { template: '<div data-testid="canvas" />' } }
+
+  function mountWithBuilding() {
+    return mount(RealEstateMapExplorer, {
+      props: {
+        initialType: 'apt-rent',
+        initialItems: [RENT_ITEM],
+        initialGranularity: 'building',
+      },
+      global: { stubs: CANVAS_STUB },
+    })
+  }
+
+  it('건물 선택 시 selectedKey 가 채워진다', async () => {
+    const w = mountWithBuilding()
+    await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', RENT_ITEM)
+    await nextTick()
+    expect(w.vm.selectedKey).toBe('은마|강남구')
+  })
+
+  it('같은 건물을 다시 고르면 접힌다', async () => {
+    const w = mountWithBuilding()
+    const sidebar = w.findComponent({ name: 'MapSidebar' })
+    await sidebar.vm.$emit('select', RENT_ITEM)
+    await nextTick()
+    await sidebar.vm.$emit('select', RENT_ITEM)
+    await nextTick()
+    expect(w.vm.selectedKey).toBeNull()
+  })
+
+  it('지역 항목 선택은 selectedKey 를 건드리지 않는다 — 지역은 펼칠 값이 없다', async () => {
+    const w = mount(RealEstateMapExplorer, {
+      props: {
+        initialType: 'apt-rent',
+        initialItems: [{ name: '서울', district: null, dong: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 7732, transactionCount: 100 }],
+        initialGranularity: 'city',
+      },
+      global: { stubs: CANVAS_STUB },
+    })
+    await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', w.props('initialItems')[0])
+    await nextTick()
+    expect(w.vm.selectedKey).toBeNull()
+  })
+
+  it('타입을 바꾸면 선택이 풀린다 — 다른 목록의 키가 남아 있으면 안 된다', async () => {
+    // onTypeChange 는 실제 setType→fetchNow(mocked $fetch)를 트리거한다. 전역 $fetch 목
+    // (tests/setup.ts)이 빈 data:{} 를 반환해 items 가 undefined 로 바뀌는데, 실제 MapSidebar
+    // 는 그 조합에서 `for (const i of props.items)` 로 크래시한다(위 "해시 반영" 테스트와 동일한
+    // 함정, 그쪽과 같은 이유로 MapSidebar 를 스텁한다) — selectedKey 배선과는 무관한 크래시다.
+    const w = mount(RealEstateMapExplorer, {
+      props: {
+        initialType: 'apt-rent',
+        initialItems: [RENT_ITEM],
+        initialGranularity: 'building',
+      },
+      global: { stubs: { ...CANVAS_STUB, MapSidebar: true } },
+    })
+    await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', RENT_ITEM)
+    await nextTick()
+    await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'apt-sale')
+    await nextTick()
+    expect(w.vm.selectedKey).toBeNull()
+  })
+
+  // 줌 왕복 회귀 가드: "은마"를 선택해 카드를 펼친 채 줌아웃하면(building→dong) 목록의
+  // 항목 단위 자체가 바뀐다. 이 시점에 선택을 비우지 않으면, 다시 줌인(dong→building)했을
+  // 때 새로 받아온 building 목록에 같은 키("은마|강남구")가 재등장해 클릭 없이 카드가
+  // 저절로 다시 펼쳐진다 — granularity 가 실제로 바뀌는 순간(fetch 응답 반영 시점)에
+  // 곧바로 선택을 지워야 이 사고를 막는다. idle→디바운스(250ms)→fetch 의 실제 경로를
+  // 그대로 태워 검증한다(가짜 타이머는 여기서 async $fetch 체인과 얽혀 신뢰도가 떨어진다).
+  it('건물 선택 중 granularity 가 바뀌면(줌아웃) selectedKey 가 초기화된다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      success: true,
+      data: { items: [], granularity: 'dong', total: 0, exact: true },
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const CanvasStub = {
+      template: '<div data-testid="canvas" />',
+      emits: ['idle', 'select', 'hover'],
+    }
+    try {
+      const w = mount(RealEstateMapExplorer, {
+        props: { initialType: 'apt-rent', initialItems: [RENT_ITEM], initialGranularity: 'building' },
+        global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+      })
+
+      await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', RENT_ITEM)
+      await nextTick()
+      expect(w.vm.selectedKey).toBe('은마|강남구')
+
+      const bounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
+      await w.findComponent(CanvasStub).vm.$emit('idle', bounds, 7, { lat: 37.5, lng: 127.06 })
+      // onMapIdle 은 fetchNow 를 250ms 디바운스한다(useRealEstateMap.ts DEBOUNCE_MS) — 실제
+      // 시간을 흘려보내 그 타이머 이후의 $fetch 응답 반영까지 정직하게 기다린다.
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      await flushPromises()
+
+      expect(w.vm.selectedKey).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+      window.location.hash = ''
+    }
   })
 })

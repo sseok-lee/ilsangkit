@@ -1422,6 +1422,21 @@ model RealEstateBuildingSummary {
   /// ROW_NUMBER() 윈도우를 돌렸고, 야간 sync 부하와 겹치면 30초 타임아웃이 났다
   /// (2026-08-03 03:45~04:15 KST: 평균 8.08s, 타임아웃 21건, 5xx 27건 중 22건이 rent).
   monthlyRent      Int?
+  /// 최신 전세 보증금(만원). 매매 타입과 전세 거래가 없는 건물은 NULL.
+  ///
+  /// latestPrice/monthlyRent 는 rentType 을 가리지 않은 "가장 최근 거래 1건" 이라
+  /// 그 거래가 월세였으면 같은 건물의 전세 시세가 어디에도 남지 않았다.
+  /// 운영 실측(강남구 2026): 전월세 건물 23,774개 중 12,237개(51%)가 두 종류를 모두
+  /// 가지고 있는데 지도에는 하나만 보였다.
+  jeonseDeposit    Int?
+  /// 위 거래일 YYYYMMDD. 현재 화면에 쓰지 않는다 — 표시 전환이나 신선도 정책의 여지를 남긴다.
+  jeonseDealKey    Int?
+  /// 최신 월세 보증금(만원). 매매 타입과 월세 거래가 없는 건물은 NULL.
+  wolseDeposit     Int?
+  /// 위 거래의 월세액(만원).
+  wolseMonthlyRent Int?
+  /// 위 거래일 YYYYMMDD.
+  wolseDealKey     Int?
   updatedAt        DateTime @updatedAt
 
   @@unique([type, buildingName, bjdCode])

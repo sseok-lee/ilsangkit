@@ -18,6 +18,49 @@ const BATCH_TX_TIMEOUT_MS = 300_000;
 const LOCK_WAIT_TIMEOUT_SEC = 15;
 
 /**
+ * 전월세 요약 행의 전세/월세 분리 컬럼을 채우는 UPDATE.
+ *
+ * 왜 INSERT 에 통합하지 않는가: 통합하면 `SELECT *` 가 윈도우 두 겹을 통과해 넓은 행
+ * 집합을 두 번 실체화한다. 로컬 운영 스냅샷 실측(경기 apt-rent 67,477행) —
+ * 현행 INSERT 3.13s / 통합 8.87s(2.8배) / 이 경량 UPDATE 0.58s. 결과 건수는 셋 다 6,218 로 동일.
+ * 배치당 증가분이 2.8배가 아니라 약 18% 로 줄고, 문장이 짧게 둘로 나뉘어 락 점유 시간도
+ * 통합안보다 짧다. 2026-04-18 에 단일 INSERT 가 버퍼풀을 10분 점유해 사이트를
+ * 무한로딩시킨 이력이 있는 함수라 기존 INSERT 는 그대로 둔다.
+ *
+ * rn=1 로 rentType 별 최신 1건을 고른 뒤 MAX(CASE ...) 로 건물당 한 행에 접는다.
+ * 여기서 MAX 는 크기 비교가 아니라 그룹당 후보가 1개뿐인 상태에서의 접기 용도다.
+ */
+function buildRentSplitUpdate(table: string): string {
+  return `UPDATE RealEstateBuildingSummary s
+    JOIN (
+      SELECT buildingName, bjdCode,
+        MAX(CASE WHEN rentType = '전세' THEN deposit END)     AS jDeposit,
+        MAX(CASE WHEN rentType = '전세' THEN dealKey END)     AS jDealKey,
+        MAX(CASE WHEN rentType = '월세' THEN deposit END)     AS wDeposit,
+        MAX(CASE WHEN rentType = '월세' THEN monthlyRent END) AS wMonthly,
+        MAX(CASE WHEN rentType = '월세' THEN dealKey END)     AS wDealKey
+      FROM (
+        SELECT buildingName, bjdCode, rentType, deposit, monthlyRent,
+          dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1) AS dealKey,
+          ROW_NUMBER() OVER (
+            PARTITION BY buildingName, bjdCode, rentType
+            ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
+          ) AS rn
+        FROM ${table}
+        WHERE city = ?
+      ) ranked
+      WHERE rn = 1
+      GROUP BY buildingName, bjdCode
+    ) t ON t.buildingName = s.buildingName AND t.bjdCode = s.bjdCode
+    SET s.jeonseDeposit    = t.jDeposit,
+        s.jeonseDealKey    = t.jDealKey,
+        s.wolseDeposit     = t.wDeposit,
+        s.wolseMonthlyRent = t.wMonthly,
+        s.wolseDealKey     = t.wDealKey
+    WHERE s.type = ? AND s.city = ?`;
+}
+
+/**
  * 특정 타입의 Summary 테이블을 **시·도 단위 청크**로 재생성.
  *
  * 2026-04-18 사고: 단일 `INSERT INTO RealEstateBuildingSummary ... SELECT`가
@@ -102,6 +145,30 @@ export async function refreshSummary(type: string): Promise<number> {
         { timeout: BATCH_TX_TIMEOUT_MS },
       );
       total += inserted;
+
+      // 전세/월세 분리 컬럼 UPDATE는 위 DELETE+INSERT와 별도 트랜잭션으로 분리한다.
+      // 같은 트랜잭션에 묶으면 이 UPDATE가 실패(락 대기 타임아웃 등)할 때 이미 성공한
+      // DELETE+INSERT까지 롤백돼 해당 시·도의 latestPrice/latestDealDay/transactionCount가
+      // 갱신되지 않는다 — sitemap lastmod, 인근 단지, 건물 목록, 검색 자동완성이 전부
+      // 이 레거시 컬럼만 읽으므로 기본 갱신은 분리 UPDATE의 성패와 무관하게 항상
+      // 커밋되어야 한다. 매매 테이블에는 rentType 컬럼 자체가 없어 건너뛴다.
+      if (!SALE_TYPES.has(type)) {
+        try {
+          await prisma.$transaction(
+            async (tx) => {
+              await tx.$executeRawUnsafe(
+                `SET SESSION innodb_lock_wait_timeout = ${LOCK_WAIT_TIMEOUT_SEC}`,
+              );
+              await tx.$executeRawUnsafe(buildRentSplitUpdate(table), city, type, city);
+            },
+            { timeout: BATCH_TX_TIMEOUT_MS },
+          );
+        } catch (err) {
+          // 분리 UPDATE 실패는 새 컬럼(jeonseDeposit 등)만 갱신 안 된 채로 남긴다 —
+          // 기본 갱신은 이미 위에서 커밋됐으므로 여기서 city 루프를 멈추지 않는다.
+          console.error(`[Summary] ${type}/${city} 전월세 분리 UPDATE 실패:`, err);
+        }
+      }
     } catch (err) {
       // 한 city 배치가 실패해도 나머지 city는 계속 — 치명적 장애가 여러 시·도로
       // 퍼지는 것을 차단. 실패 로그로 원인 추적.
