@@ -141,9 +141,16 @@ function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLE
   name.textContent = item.buildingName
   el.appendChild(name)
 
-  const addLine = (label: string, value: string, muted: boolean): void => {
+  /**
+   * `secondary` 와 `absent` 는 다른 축이다. 전세는 주값(강조), 월세는 보조값이라는 게
+   * secondary 이고, 거래 자체가 없는 건 absent 다. 하나로 합치면 "월세 거래 없음"과
+   * 실제 월세 금액이 같은 회색으로 나와 없는 값이 값처럼 읽힌다.
+   */
+  const addLine = (label: string, value: string, opts: { secondary: boolean; absent: boolean }): void => {
     const line = document.createElement('span')
-    line.className = muted ? 'map-popup-line map-popup-line--sub' : 'map-popup-line'
+    line.className = ['map-popup-line',
+      opts.secondary ? 'map-popup-line--sub' : '',
+      opts.absent ? 'map-popup-line--absent' : ''].filter(Boolean).join(' ')
     const tag = document.createElement('i')
     tag.textContent = label
     line.appendChild(tag)
@@ -153,12 +160,10 @@ function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLE
 
   if (isRent) {
     const { jeonse, wolse } = getRentDisplay(item)
-    // "거래 없음"은 값이 아니다 — 전세 줄에 항상 강조 스타일(muted:false)을 주면
-    // 없는 거래가 실제 가격처럼 읽힌다(M-4). 값이 있을 때만 강조한다.
-    addLine('전세', jeonse ?? '거래 없음', jeonse == null)
-    addLine('월세', wolse ?? '거래 없음', true)
+    addLine('전세', jeonse ?? '거래 없음', { secondary: false, absent: jeonse == null })
+    addLine('월세', wolse ?? '거래 없음', { secondary: true, absent: wolse == null })
   } else {
-    addLine('매매', formatPriceLabel(item), false)
+    addLine('매매', formatPriceLabel(item), { secondary: false, absent: false })
   }
 
   const link = document.createElement('a')

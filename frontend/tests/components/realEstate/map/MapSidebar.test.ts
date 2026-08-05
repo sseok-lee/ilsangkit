@@ -527,4 +527,25 @@ describe('MapSidebar — 전월세 두 줄 병기', () => {
     expect(jeonseLine?.classes()).not.toContain('text-primary')
     expect(jeonseLine?.classes()).not.toContain('font-semibold')
   })
+
+  // 월세 줄에도 같은 규칙이 걸려야 한다. 이 줄은 원래 항상 text-slate-700 고정이라
+  // "거래 없음"이 실제 월세 금액과 똑같은 색으로 나왔다 — 없는 값과 있는 값이
+  // 구분되지 않으면 두 줄로 나눈 의미가 없다.
+  it('월세 거래가 없으면 그 줄만 흐리게, 값이 있는 전세 줄은 그대로 강조한다 (M-4)', () => {
+    const noWolse = {
+      buildingName: '전세만', city: '서울', district: '강남구', dongName: '개포동',
+      lat: 37.48, lng: 127.06, latestPrice: 96000, monthlyRent: 0,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 5,
+      jeonseDeposit: 96000, jeonseDealKey: 20260720,
+      wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    }
+    const w = mountRent({ items: [noWolse], total: 1 })
+    const row = w.findAll('[data-testid="map-sidebar-item"]')[0]
+    const lines = row.findAll('span').filter((s) => s.classes().includes('block'))
+    const wolseLine = lines.find((s) => s.text().includes('월세') && s.text().includes('거래 없음'))
+    const jeonseLine = lines.find((s) => s.text().includes('전세') && s.text().includes('9억 6,000만'))
+    expect(wolseLine?.classes()).toContain('text-slate-400')
+    expect(wolseLine?.classes()).not.toContain('text-slate-700')
+    expect(jeonseLine?.classes()).toContain('text-primary')
+  })
 })

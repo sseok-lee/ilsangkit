@@ -32,7 +32,10 @@
               >
                 <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
               </span>
-              <span class="block text-xs text-slate-700">
+              <span
+                class="block text-xs"
+                :class="row.wolse != null ? 'text-slate-700' : 'text-slate-400'"
+              >
                 <span class="text-[11px] font-medium text-slate-500 mr-1">월세</span>{{ row.wolse ?? '거래 없음' }}
               </span>
             </span>

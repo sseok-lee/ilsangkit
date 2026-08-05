@@ -419,7 +419,11 @@ describe('useMapOverlays', () => {
       expect(el.textContent).toContain('거래 없음')
     })
 
-    it('전세 거래가 없으면 펼침 카드의 전세 줄은 강조 대신 muted 스타일이다 (M-4)', () => {
+    // "보조값이냐"(secondary)와 "값이 없냐"(absent)는 다른 축이다. 월세만 있는 건물에서
+    // 전세 줄은 없는 값이므로 --absent 여야 하고, 그 옆의 실제 월세 금액은 보조값이지만
+    // 존재하므로 --sub 만 붙어야 한다. 둘을 한 클래스로 합치면 "거래 없음"과 실제 금액이
+    // 같은 회색이 되어 없는 값이 값처럼 읽힌다.
+    it('전세 거래가 없으면 전세 줄은 --absent, 실제 값이 있는 월세 줄은 --sub 이다 (M-4)', () => {
       const { renderOverlays } = useMapOverlays()
       renderOverlays(fakeMap, [building({
         buildingName: '월세만', city: '서울', district: '강남구',
@@ -429,7 +433,10 @@ describe('useMapOverlays', () => {
       const el = contentOf(0)
       const lines = Array.from(el.querySelectorAll('.map-popup-line'))
       const jeonseLine = lines.find((l) => l.textContent?.includes('전세'))
-      expect(jeonseLine?.className).toContain('map-popup-line--sub')
+      const wolseLine = lines.find((l) => l.textContent?.includes('월세'))
+      expect(jeonseLine?.className).toContain('map-popup-line--absent')
+      expect(wolseLine?.className).toContain('map-popup-line--sub')
+      expect(wolseLine?.className).not.toContain('map-popup-line--absent')
     })
 
     it('선택된 항목을 맨 뒤에 그린다 — Kakao wrapper 는 DOM 순서로 페인트되므로 이웃 라벨에 가려 클릭이 막히면 안 된다', () => {

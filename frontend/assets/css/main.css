@@ -305,6 +305,15 @@
     @apply text-xs font-medium text-slate-700;
   }
 
+  /*
+   * 거래가 없는 줄("거래 없음"). --sub 뒤에 와야 월세 줄에서도 이 색이 이긴다.
+   * 없는 값이 실제 금액과 같은 무게로 읽히면 안 된다 — 이 페이지는 "이 건물에 전세가
+   * 있는가"를 판단하는 화면이라 있음/없음 구분이 금액 자체보다 먼저다.
+   */
+  .map-popup-line--absent {
+    @apply font-medium text-slate-400;
+  }
+
   .map-popup-line i {
     @apply mr-1 text-[11px] font-medium not-italic text-faint;
   }
