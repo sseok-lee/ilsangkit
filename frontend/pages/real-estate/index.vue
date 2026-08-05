@@ -39,7 +39,7 @@ const { data: regions } = await useAsyncData<MapRegionItem[]>(
 
 const { setMeta } = useFacilityMeta()
 setMeta({
-  title: '전국 부동산 실거래가 지도',
+  title: '전국 최근 부동산 실거래가',
   description: '전국 아파트·빌라·오피스텔의 매매·전월세 실거래가를 지도에서 확인하세요. 지역별 평균 평당가와 건물별 최근 실거래가를 국토교통부 데이터로 제공합니다.',
   path: '/real-estate',
 })
