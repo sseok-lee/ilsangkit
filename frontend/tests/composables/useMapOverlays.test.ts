@@ -55,6 +55,10 @@ describe('formatJeonseLabel / formatWolseLabel', () => {
     expect(formatJeonseLabel(building({ jeonseDeposit: null }))).toBeNull()
   })
 
+  it('전세 보증금 0원도 그린다 — 0 을 "없음" 으로 쓰지 않는다', () => {
+    expect(formatJeonseLabel(building({ jeonseDeposit: 0 }))).toBe('0만')
+  })
+
   it('월세는 보증금과 월세액을 가운뎃점으로 가른다', () => {
     expect(formatWolseLabel(building({ wolseDeposit: 75000, wolseMonthlyRent: 340 }))).toBe('7억 5,000만 · 340만')
   })
