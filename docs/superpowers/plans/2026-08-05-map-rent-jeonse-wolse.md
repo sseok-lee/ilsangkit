@@ -786,7 +786,7 @@ git commit -m "feat(map): 사이드바 전월세 행에 전세·월세 병기"
 - Test: `frontend/tests/composables/useMapOverlays.test.ts`
 
 **Interfaces:**
-- Consumes: Task 3 의 `formatJeonseLabel`, `formatWolseLabel`; `toRealEstateUrl` (`~/utils/realEstateUrl`)
+- Consumes: Task 3 의 `formatJeonseLabel`, `formatWolseLabel`; `toRealEstateUrl` (`~/utils/realEstateUrl`); `itemKey` (`~/composables/useRealEstateMap`)
 - Produces: `renderOverlays(map, items, handlers, opts?)` — 네 번째 인자 `opts?: { type?: string; selectedKey?: string | null }`. Task 6 이 이걸 넘긴다.
 
 - [ ] **Step 1: 실패하는 테스트를 쓴다**
@@ -890,17 +890,15 @@ Expected: 새 블록의 5개 FAIL (`map-popup` 클래스가 없음).
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 ```
 
-`itemKey` 와 같은 규칙으로 건물 키를 만드는 헬퍼를 `intersects` 함수 뒤에 넣는다.
+선택 키를 만드는 함수는 **새로 만들지 않고 기존 것을 가져다 쓴다.** 같은 import 문에 추가한다.
 
 ```typescript
-/**
- * 건물 항목의 선택 키. useRealEstateMap.itemKey 의 건물 분기와 같은 형식이어야 한다
- * (`buildingName|district`) — 상위에서 넘어오는 selectedKey 가 그 함수로 만들어진다.
- */
-function buildingKey(item: MapBuildingItem): string {
-  return `${item.buildingName}|${item.district}`
-}
+import { itemKey } from '~/composables/useRealEstateMap'
+```
 
+⚠️ 키 만드는 로직을 여기에 다시 구현하지 말 것. Task 6 이 `itemKey(item)` 으로 키를 **세팅**하고 이 파일이 그 키를 **대조**한다 — 두 벌이 되면 한쪽만 바뀌었을 때 선택이 조용히 동작을 멈춘다. `useRealEstateMap` 은 `useMapOverlays` 를 import 하지 않으므로 순환 참조가 아니다(확인 완료).
+
+```typescript
 /**
  * 선택된 마커의 펼침 카드. 건물명 + 값 + 상세 링크.
  *
@@ -972,8 +970,8 @@ function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLE
     const ordered = selectedKey == null
       ? items
       : [
-          ...items.filter((i) => isBuildingItem(i) && buildingKey(i as MapBuildingItem) === selectedKey),
-          ...items.filter((i) => !(isBuildingItem(i) && buildingKey(i as MapBuildingItem) === selectedKey)),
+          ...items.filter((i) => isBuildingItem(i) && itemKey(i) === selectedKey),
+          ...items.filter((i) => !(isBuildingItem(i) && itemKey(i) === selectedKey)),
         ]
     const isRent = (opts.type ?? '').endsWith('-rent')
 ```
@@ -983,7 +981,7 @@ function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLE
 루프 안, `const building = isBuildingItem(item)` 뒤에 선택 여부를 계산하고, 겹침 판정과 요소 생성을 분기한다. `let collapsed = false` 선언 **바로 위**에 넣는다.
 
 ```typescript
-      const selected = building && buildingKey(item as MapBuildingItem) === selectedKey
+      const selected = building && itemKey(item) === selectedKey
 ```
 
 `let collapsed = false` 로 시작하는 겹침 블록의 조건을 `if (projection)` 에서 `if (projection && !selected)` 로 바꾼다. 선택된 항목은 겹쳐도 접지 않는다.
@@ -1424,4 +1422,4 @@ cd frontend && npm run dev
 - 컬럼 이름 5개가 Task 1(Prisma) → 2(백엔드 인터페이스·SQL) → 3(프론트 타입) 전부 동일: `jeonseDeposit`, `jeonseDealKey`, `wolseDeposit`, `wolseMonthlyRent`, `wolseDealKey`
 - `formatJeonseLabel` / `formatWolseLabel` 이 Task 3 에서 정의되고 4·5 에서 같은 이름으로 쓰인다
 - `renderOverlays` 4번째 인자 `{ type?, selectedKey? }` 가 Task 5 정의, Task 6 사용으로 일치
-- 선택 키 형식 `buildingName|district` 가 Task 5 의 `buildingKey` 와 Task 6 의 `itemKey` 건물 분기에서 동일
+- 선택 키는 Task 5·6 이 **같은 함수** `itemKey` (`~/composables/useRealEstateMap`)를 쓴다. 초안에서는 Task 5 가 `buildingKey` 를 따로 정의했는데, 세팅 쪽과 대조 쪽이 두 벌이 되면 한쪽만 바뀌었을 때 선택이 조용히 멈춘다 — 순환 참조가 없음을 확인하고 재사용으로 바꿨다
