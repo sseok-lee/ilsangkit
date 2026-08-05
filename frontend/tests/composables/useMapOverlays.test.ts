@@ -287,4 +287,82 @@ describe('useMapOverlays', () => {
     expect(onHover).toHaveBeenNthCalledWith(2, null)
     expect(onHover).toHaveBeenCalledTimes(2)
   })
+
+  describe('선택 시 펼침', () => {
+    /** 마커 하나의 DOM 요소를 꺼낸다. */
+    function contentOf(i: number): HTMLElement {
+      return created[i].opts.content as HTMLElement
+    }
+
+    it('선택하지 않으면 라벨은 한 줄이다 — 두 줄이면 겹쳐서 접히는 마커가 늘어난다', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [building({
+        buildingName: '은마', latestPrice: 75000, monthlyRent: 340,
+        jeonseDeposit: 96000, wolseDeposit: 75000, wolseMonthlyRent: 340,
+      })], {}, { type: 'apt-rent', selectedKey: null })
+      expect(contentOf(0).className).toContain('map-price-label')
+      expect(contentOf(0).querySelector('a')).toBeNull()
+    })
+
+    it('선택된 항목은 전세·월세와 상세 링크를 펼친다', () => {
+      const { renderOverlays } = useMapOverlays()
+      const item = building({
+        buildingName: '은마', city: '서울', district: '강남구',
+        latestPrice: 75000, monthlyRent: 340,
+        jeonseDeposit: 96000, wolseDeposit: 75000, wolseMonthlyRent: 340,
+      })
+      renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: '은마|강남구' })
+      const el = contentOf(0)
+      expect(el.className).toContain('map-popup')
+      expect(el.textContent).toContain('9억 6,000만')
+      expect(el.textContent).toContain('7억 5,000만 · 340만')
+      expect(el.querySelector('a')?.getAttribute('href')).toBe('/real-estate/apt-rent/seoul/gangnam/%EC%9D%80%EB%A7%88')
+    })
+
+    it('매매도 펼쳐진다 — 값은 한 줄이고 상세 링크가 붙는다', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [building({
+        buildingName: '도곡렉슬', city: '서울', district: '강남구',
+        latestPrice: 245000, monthlyRent: null,
+      })], {}, { type: 'apt-sale', selectedKey: '도곡렉슬|강남구' })
+      const el = contentOf(0)
+      expect(el.className).toContain('map-popup')
+      expect(el.textContent).toContain('24억 5,000만')
+      expect(el.querySelector('a')).not.toBeNull()
+    })
+
+    it('거래가 없는 종류는 "거래 없음" 으로 그린다', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [building({
+        buildingName: '신동아', city: '서울', district: '강남구',
+        latestPrice: 60000, monthlyRent: 0,
+        jeonseDeposit: 60000, wolseDeposit: null, wolseMonthlyRent: null,
+      })], {}, { type: 'apt-rent', selectedKey: '신동아|강남구' })
+      expect(contentOf(0).textContent).toContain('거래 없음')
+    })
+
+    it('선택된 항목을 맨 앞에 그린다 — 사용자가 방금 지목한 라벨이 점으로 접히면 안 된다', () => {
+      const projMap = {
+        id: 'proj-map',
+        getProjection: () => ({
+          containerPointFromCoords: (ll: { lat: number; lng: number }) => ({ x: ll.lng, y: ll.lat }),
+        }),
+      }
+      const { renderOverlays } = useMapOverlays()
+      // 셋이 같은 지점 — 순서상 뒤엣것은 점이 된다. B 를 선택하면 B 가 살아남아야 한다.
+      renderOverlays(projMap, [
+        building({ buildingName: 'A', city: '서울', district: '강남구', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
+        building({ buildingName: 'B', city: '서울', district: '강남구', latestPrice: 60000, monthlyRent: null, lat: 100, lng: 100 }),
+        building({ buildingName: 'C', city: '서울', district: '강남구', latestPrice: 70000, monthlyRent: null, lat: 100, lng: 100 }),
+      ], {}, { type: 'apt-sale', selectedKey: 'B|강남구' })
+      expect(contentOf(0).className).toContain('map-popup')
+      expect(contentOf(0).textContent).toContain('6억')
+    })
+
+    it('opts 를 안 넘기면 기존 동작 그대로다 — 지역 오버레이 호출부가 깨지지 않는다', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [regionItem({ avgPricePerPyeong: 7732 })])
+      expect(contentOf(0).className).toContain('map-region-bubble')
+    })
+  })
 })

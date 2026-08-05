@@ -1,5 +1,7 @@
 import { shallowRef } from 'vue'
 import { isBuildingItem, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
+import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
+import { itemKey } from '~/composables/useRealEstateMap'
 
 /**
  * 만원 단위 금액을 "16억 8,340만" / "8,500만" / "3억" 형태로 만든다.
@@ -101,6 +103,55 @@ interface OverlayHandlers {
 }
 
 /**
+ * 선택된 마커의 펼침 카드. 건물명 + 값 + 상세 링크.
+ *
+ * 지도 마커 클릭은 지금까지 사실상 아무 일도 하지 않았다 — onSelect 는 지역 단계에서만
+ * setLevel 로 파고들고 building 분기가 없어서 지도가 그 건물로 가운데 정렬되는 게 전부였다.
+ *
+ * 링크는 SSR HTML 에 실리지 않는다(이 렌더러 자체가 클라이언트 전용이다). 크롤러용이 아니라
+ * 사용자 동선용이며, 내부 링크 역할은 사이드바 행이 계속 담당한다.
+ */
+function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLElement {
+  const el = document.createElement('div')
+  el.className = 'map-popup'
+
+  const name = document.createElement('b')
+  name.textContent = item.buildingName
+  el.appendChild(name)
+
+  const addLine = (label: string, value: string, muted: boolean): void => {
+    const line = document.createElement('span')
+    line.className = muted ? 'map-popup-line map-popup-line--sub' : 'map-popup-line'
+    const tag = document.createElement('i')
+    tag.textContent = label
+    line.appendChild(tag)
+    line.appendChild(document.createTextNode(value))
+    el.appendChild(line)
+  }
+
+  if (isRent) {
+    addLine('전세', formatJeonseLabel(item) ?? '거래 없음', false)
+    addLine('월세', formatWolseLabel(item) ?? '거래 없음', true)
+  } else {
+    addLine('매매', formatPriceLabel(item), false)
+  }
+
+  const link = document.createElement('a')
+  link.className = 'map-popup-link'
+  link.textContent = '상세 보기 →'
+  // 슬러그 변환·NFC 정규화·encodeURIComponent 가 전부 이 유틸에 있다. 직접 조립하지 않는다.
+  link.href = toRealEstateUrl({
+    type: type as RealEstateUrlType,
+    city: item.city,
+    district: item.district,
+    buildingName: item.buildingName,
+  })
+  el.appendChild(link)
+
+  return el
+}
+
+/**
  * 가격 라벨·지역 버블 오버레이를 그린다.
  *
  * useKakaoMap 을 확장하지 않고 별도로 두는 이유: useKakaoMap 의 addMarkers 는
@@ -117,12 +168,28 @@ export function useMapOverlays() {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function renderOverlays(map: any, items: MapItem[], handlers: OverlayHandlers = {}): void {
+  function renderOverlays(
+    map: any,
+    items: MapItem[],
+    handlers: OverlayHandlers = {},
+    opts: { type?: string; selectedKey?: string | null } = {},
+  ): void {
     // import.meta.server 극성 사용(useKakaoMap.ts:124 컨벤션과 동일): 실제 Nuxt 빌드에서는
     // server/client 가 항상 서로 반대이므로 프로덕션 동작은 !client 와 완전히 동일하다.
     // 차이는 두 플래그가 모두 undefined 인 vitest 환경뿐 — 그때 이 극성이라야 렌더러가 실행되어 테스트 가능해진다.
     if (import.meta.server || !map) return
     clearOverlays()
+
+    // 선택된 항목을 맨 앞으로 옮긴다. 겹침 판정이 items 순서를 우선순위로 쓰므로
+    // (아래 루프 주석 참고) 이렇게 해야 사용자가 방금 지목한 라벨이 점으로 접히지 않는다.
+    const selectedKey = opts.selectedKey ?? null
+    const ordered = selectedKey == null
+      ? items
+      : [
+          ...items.filter((i) => isBuildingItem(i) && itemKey(i) === selectedKey),
+          ...items.filter((i) => !(isBuildingItem(i) && itemKey(i) === selectedKey)),
+        ]
+    const isRent = (opts.type ?? '').endsWith('-rent')
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kakao = (window as any).kakao
@@ -134,7 +201,7 @@ export function useMapOverlays() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const next: any[] = []
-    for (const item of items) {
+    for (const item of ordered) {
       if (item.lat == null || item.lng == null) continue
       const building = isBuildingItem(item)
       const text = building
@@ -151,8 +218,9 @@ export function useMapOverlays() {
       // 건너뛰지 않고 점이라도 남기는 이유: 좌측 목록은 items 전부를 보여주므로, 겹친다고
       // 아예 지우면 "목록엔 있는데 지도엔 없는" 건물이 생긴다(실측 강남 level 4: 목록 114 vs
       // 라벨 76 → 38개 실종). 점은 자리를 차지하지 않으면서 위치와 클릭 대상을 유지한다.
+      const selected = building && itemKey(item) === selectedKey
       let collapsed = false
-      if (projection) {
+      if (projection && !selected) {
         const box = boxAt(projection, kakao, item.lat, item.lng, text.length)
         if (box) {
           if (placed.some((p) => intersects(p, box))) collapsed = true
@@ -160,17 +228,28 @@ export function useMapOverlays() {
         }
       }
 
-      const el = document.createElement('div')
-      el.className = collapsed
-        ? 'map-price-dot'
-        : building
-          ? 'map-price-label'
-          : 'map-region-bubble'
-      // 점에도 값을 남긴다 — 호버 시 툴팁으로 뜨고, 스크린리더도 읽는다.
-      if (collapsed) el.title = text
-      else el.textContent = text
+      const el = selected
+        ? buildPopup(item as MapBuildingItem, opts.type ?? '', isRent)
+        : (() => {
+            const d = document.createElement('div')
+            d.className = collapsed
+              ? 'map-price-dot'
+              : building
+                ? 'map-price-label'
+                : 'map-region-bubble'
+            // 점에도 값을 남긴다 — 호버 시 툴팁으로 뜨고, 스크린리더도 읽는다.
+            if (collapsed) d.title = text
+            else d.textContent = text
+            return d
+          })()
 
-      if (handlers.onClick) el.addEventListener('click', () => handlers.onClick!(item))
+      if (handlers.onClick) {
+        el.addEventListener('click', (ev) => {
+          // 펼침 카드의 상세 링크는 이동이 목적이다 — 토글까지 돌면 이동 직전에 카드가 접힌다.
+          if ((ev.target as HTMLElement).closest('a')) return
+          handlers.onClick!(item)
+        })
+      }
       if (handlers.onHover) {
         el.addEventListener('mouseenter', () => handlers.onHover!(item))
         el.addEventListener('mouseleave', () => handlers.onHover!(null))

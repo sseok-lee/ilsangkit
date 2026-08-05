@@ -276,4 +276,40 @@
     @apply bg-primary;
     transform: scale(1.4);
   }
+
+  /*
+   * 선택된 마커의 펼침 카드. 기본 라벨(.map-price-label)이 알약 한 줄인 반면 이것은
+   * 건물명·값·링크가 쌓이므로 사각 카드에 좌측 정렬이다.
+   *
+   * z-index 가 hover(3)보다 높다 — 펼친 카드는 이웃 라벨에 가려지면 안 된다.
+   */
+  .map-popup {
+    @apply block cursor-pointer select-none whitespace-nowrap rounded-[10px]
+           border border-line-2 bg-white px-[11px] pb-2 pt-[9px] text-left
+           shadow-[0_3px_10px_rgba(21,33,59,0.16)];
+    position: relative;
+    z-index: 4;
+    min-width: 130px;
+  }
+
+  .map-popup b {
+    @apply mb-1 block text-[12.5px] font-semibold text-ink;
+  }
+
+  .map-popup-line {
+    @apply block text-[12.5px] font-semibold leading-[1.45] text-primary;
+  }
+
+  /* 월세 줄. 전세를 주값으로 읽히게 하려고 한 급 낮춘다. */
+  .map-popup-line--sub {
+    @apply text-xs font-medium text-slate-700;
+  }
+
+  .map-popup-line i {
+    @apply mr-1 text-[11px] font-medium not-italic text-faint;
+  }
+
+  .map-popup-link {
+    @apply mt-1.5 block border-t border-line pt-1.5 text-[11.5px] font-semibold text-primary;
+  }
 }
