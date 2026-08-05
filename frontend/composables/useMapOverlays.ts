@@ -180,14 +180,23 @@ export function useMapOverlays() {
     if (import.meta.server || !map) return
     clearOverlays()
 
-    // 선택된 항목을 맨 앞으로 옮긴다. 겹침 판정이 items 순서를 우선순위로 쓰므로
-    // (아래 루프 주석 참고) 이렇게 해야 사용자가 방금 지목한 라벨이 점으로 접히지 않는다.
+    // 선택된 항목을 맨 뒤로 옮긴다. Kakao CustomOverlay 는 항목마다 절대위치 wrapper
+    // <div> 를 생성 순서대로 append 하는데, 그 wrapper 들이 전부 z-index:0 이라
+    // 각자 독립된 스태킹 컨텍스트가 된다 — .map-popup(z-index:4) vs .map-price-label
+    // (z-index:1) 규칙은 서로 경쟁할 대상이 없고, DOM 형제 순서만으로 페인트 순서가
+    // 정해진다. 그래서 펼침 카드(.map-popup)가 먼저 그려지면 나중에 그려지는 이웃
+    // 라벨이 그 위를 덮어 클릭을 가로챈다(실측: 상세 보기 링크 클릭이 이웃
+    // map-price-label 에 막혀 6회 연속 실패). 선택된 항목을 배열 맨 뒤에 둬 wrapper 를
+    // 마지막 형제로 만들면 항상 위에 그려져 클릭이 통과한다.
+    // 겹침 판정은 items 순서를 우선순위로 쓰지만(아래 루프 주석 참고) 선택된 항목은
+    // `!selected` 조건으로 그 판정 자체를 건너뛰므로, 순서를 뒤로 옮겨도 점으로
+    // 접히지 않는다는 보장은 그대로 유지된다.
     const selectedKey = opts.selectedKey ?? null
     const ordered = selectedKey == null
       ? items
       : [
-          ...items.filter((i) => isBuildingItem(i) && itemKey(i) === selectedKey),
           ...items.filter((i) => !(isBuildingItem(i) && itemKey(i) === selectedKey)),
+          ...items.filter((i) => isBuildingItem(i) && itemKey(i) === selectedKey),
         ]
     const isRent = (opts.type ?? '').endsWith('-rent')
 

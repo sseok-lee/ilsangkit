@@ -369,7 +369,7 @@ describe('useMapOverlays', () => {
       expect(contentOf(0).textContent).toContain('거래 없음')
     })
 
-    it('선택된 항목을 맨 앞에 그린다 — 사용자가 방금 지목한 라벨이 점으로 접히면 안 된다', () => {
+    it('선택된 항목을 맨 뒤에 그린다 — Kakao wrapper 는 DOM 순서로 페인트되므로 이웃 라벨에 가려 클릭이 막히면 안 된다', () => {
       const projMap = {
         id: 'proj-map',
         getProjection: () => ({
@@ -383,8 +383,12 @@ describe('useMapOverlays', () => {
         building({ buildingName: 'B', city: '서울', district: '강남구', latestPrice: 60000, monthlyRent: null, lat: 100, lng: 100 }),
         building({ buildingName: 'C', city: '서울', district: '강남구', latestPrice: 70000, monthlyRent: null, lat: 100, lng: 100 }),
       ], {}, { type: 'apt-sale', selectedKey: 'B|강남구' })
-      expect(contentOf(0).className).toContain('map-popup')
-      expect(contentOf(0).textContent).toContain('6억')
+      expect(created).toHaveLength(3)
+      // 그 wrapper 가 마지막 형제여야 이웃 라벨보다 위에 그려져 클릭을 가로채이지 않는다.
+      const lastIndex = created.length - 1
+      expect(contentOf(lastIndex).className).toContain('map-popup')
+      // 점으로 접히지 않는다는 기존 보장은 그대로 유지된다.
+      expect(contentOf(lastIndex).textContent).toContain('6억')
     })
 
     it('opts 를 안 넘기면 기존 동작 그대로다 — 지역 오버레이 호출부가 깨지지 않는다', () => {
