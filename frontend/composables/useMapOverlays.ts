@@ -32,6 +32,28 @@ export function formatPriceLabel(item: MapBuildingItem): string {
   return `보 ${price}/월 ${item.monthlyRent.toLocaleString('ko-KR')}만`
 }
 
+/**
+ * 전세 라벨. 값이 없으면 null 을 준다 — 호출부가 "거래 없음" 을 그릴지 줄을 뺄지 정한다.
+ *
+ * formatPriceLabel 과 달리 접두어("전세")를 붙이지 않는다. 목록과 펼침 카드가 라벨을
+ * 별도 요소로 그리기 때문이다 — 문자열에 넣으면 스타일을 나눠 줄 수 없다.
+ */
+export function formatJeonseLabel(item: MapBuildingItem): string | null {
+  if (item.jeonseDeposit == null) return null
+  return formatManwon(item.jeonseDeposit)
+}
+
+/**
+ * 월세 라벨 — "보증금 · 월세액".
+ *
+ * 둘 중 하나라도 없으면 null 이다. 보증금만 그리면 전세로 읽히고, 월세액만 그리면
+ * 보증금이 0인지 미상인지 알 수 없다. 0 은 유효한 값이라 `== null` 로만 판정한다.
+ */
+export function formatWolseLabel(item: MapBuildingItem): string | null {
+  if (item.wolseDeposit == null || item.wolseMonthlyRent == null) return null
+  return `${formatManwon(item.wolseDeposit)} · ${item.wolseMonthlyRent.toLocaleString('ko-KR')}만`
+}
+
 /** 지역 버블 라벨. 단위를 명시해 줌 전환 시 의미가 바뀌는 걸 알린다. */
 export function formatPyeongLabel(item: MapRegionItem): string {
   if (item.avgPricePerPyeong == null) return '—'

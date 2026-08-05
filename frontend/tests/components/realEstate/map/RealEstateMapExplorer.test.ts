@@ -16,6 +16,7 @@ const BUILDING_ITEMS: MapItem[] = [
     buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
     lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
+    jeonseDeposit: null, jeonseDealKey: null, wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
   },
 ]
 

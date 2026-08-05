@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { formatPriceLabel, formatPyeongLabel, useMapOverlays } from '~/composables/useMapOverlays'
+import { formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatWolseLabel, useMapOverlays } from '~/composables/useMapOverlays'
 import type { MapBuildingItem, MapRegionItem } from '~/types/realEstateMap'
 
 function building(over: Partial<MapBuildingItem>): MapBuildingItem {
@@ -7,6 +7,8 @@ function building(over: Partial<MapBuildingItem>): MapBuildingItem {
     buildingName: 'A', city: '서울', district: '강남구', dongName: '개포동',
     lat: 37.48, lng: 127.06, latestPrice: null, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 1,
+    jeonseDeposit: null, jeonseDealKey: null,
+    wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
     ...over,
   }
 }
@@ -41,6 +43,36 @@ describe('formatPriceLabel', () => {
 
   it('가격이 없으면 대시', () => {
     expect(formatPriceLabel(building({ latestPrice: null }))).toBe('—')
+  })
+})
+
+describe('formatJeonseLabel / formatWolseLabel', () => {
+  it('전세 보증금을 만원 단위로 보여준다', () => {
+    expect(formatJeonseLabel(building({ jeonseDeposit: 96000 }))).toBe('9억 6,000만')
+  })
+
+  it('전세 거래가 없으면 null 이다 — 호출부가 "거래 없음" 을 그릴 수 있게 한다', () => {
+    expect(formatJeonseLabel(building({ jeonseDeposit: null }))).toBeNull()
+  })
+
+  it('월세는 보증금과 월세액을 가운뎃점으로 가른다', () => {
+    expect(formatWolseLabel(building({ wolseDeposit: 75000, wolseMonthlyRent: 340 }))).toBe('7억 5,000만 · 340만')
+  })
+
+  it('월세 보증금이 억으로 딱 떨어지면 만원 자리를 붙이지 않는다', () => {
+    expect(formatWolseLabel(building({ wolseDeposit: 90000, wolseMonthlyRent: 100 }))).toBe('9억 · 100만')
+  })
+
+  it('월세 거래가 없으면 null 이다', () => {
+    expect(formatWolseLabel(building({ wolseDeposit: null, wolseMonthlyRent: null }))).toBeNull()
+  })
+
+  it('보증금은 있는데 월세액이 없으면 null 이다 — 반쪽 값을 그리지 않는다', () => {
+    expect(formatWolseLabel(building({ wolseDeposit: 75000, wolseMonthlyRent: null }))).toBeNull()
+  })
+
+  it('보증금 0원 월세도 그린다 — 0 을 "없음" 으로 쓰지 않는다', () => {
+    expect(formatWolseLabel(building({ wolseDeposit: 0, wolseMonthlyRent: 50 }))).toBe('0만 · 50만')
   })
 })
 
