@@ -16,7 +16,25 @@ const BUILDINGS: MapItem[] = [
     buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
     lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
-    jeonseDeposit: null, jeonseDealKey: null, wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    jeonseDeposit: null, jeonseDealKey: null,
+    wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+  },
+]
+
+const RENT_BUILDINGS: MapItem[] = [
+  {
+    buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+    lat: 37.5, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
+    latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 114,
+    jeonseDeposit: 96000, jeonseDealKey: 20260712,
+    wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+  },
+  {
+    buildingName: '신동아', city: '서울', district: '강남구', dongName: '수서동',
+    lat: 37.49, lng: 127.1, latestPrice: 60000, monthlyRent: 0,
+    latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 11,
+    jeonseDeposit: 60000, jeonseDealKey: 20260720,
+    wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
   },
 ]
 
@@ -435,5 +453,43 @@ describe('MapSidebar 동 모드', () => {
       },
     })
     expect(w.find('[data-testid="map-sidebar-item"] a').attributes('href')).toBeTruthy()
+  })
+})
+
+describe('MapSidebar — 전월세 두 줄 병기', () => {
+  function mountRent(over = {}) {
+    return mount(MapSidebar, {
+      props: {
+        items: RENT_BUILDINGS, granularity: 'building', total: 2, exact: true,
+        pending: false, type: 'apt-rent', ...over,
+      },
+    })
+  }
+
+  it('전세와 월세를 각각 보여준다', () => {
+    const t = mountRent().text()
+    expect(t).toContain('9억 6,000만')
+    expect(t).toContain('7억 5,000만 · 340만')
+  })
+
+  it('전세/월세 라벨을 붙여 어느 쪽인지 알린다', () => {
+    const t = mountRent().text()
+    expect(t).toContain('전세')
+    expect(t).toContain('월세')
+  })
+
+  it('해당 종류 거래가 없으면 "거래 없음" 이다 — 값이 없는 건지 안 보이는 건지 구분돼야 한다', () => {
+    expect(mountRent().text()).toContain('거래 없음')
+  })
+
+  it('매매 탭은 한 줄 그대로다 — 전세/월세 라벨이 없다', () => {
+    const w = mount(MapSidebar, {
+      props: {
+        items: BUILDINGS, granularity: 'building', total: 1, exact: true,
+        pending: false, type: 'apt-sale',
+      },
+    })
+    expect(w.text()).toContain('16억 8,340만')
+    expect(w.text()).not.toContain('거래 없음')
   })
 })

@@ -25,7 +25,15 @@
               <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
               <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
             </span>
-            <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+            <span v-if="row.isRent" class="text-right whitespace-nowrap leading-tight">
+              <span class="block text-sm font-semibold text-primary">
+                <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
+              </span>
+              <span class="block text-xs text-slate-700">
+                <span class="text-[11px] font-medium text-slate-500 mr-1">월세</span>{{ row.wolse ?? '거래 없음' }}
+              </span>
+            </span>
+            <span v-else class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </NuxtLink>
           <!--
             city/district 행은 허브 페이지로 떠나지 않고 지도를 드릴다운해야 한다(select
@@ -46,7 +54,15 @@
               <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
               <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
             </span>
-            <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+            <span v-if="row.isRent" class="text-right whitespace-nowrap leading-tight">
+              <span class="block text-sm font-semibold text-primary">
+                <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
+              </span>
+              <span class="block text-xs text-slate-700">
+                <span class="text-[11px] font-medium text-slate-500 mr-1">월세</span>{{ row.wolse ?? '거래 없음' }}
+              </span>
+            </span>
+            <span v-else class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </a>
           <!--
             동 행. 6종 유형에 동 라우트가 없어(land 만 있다) 갈 페이지가 없으므로
@@ -63,7 +79,15 @@
               <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
               <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
             </span>
-            <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+            <span v-if="row.isRent" class="text-right whitespace-nowrap leading-tight">
+              <span class="block text-sm font-semibold text-primary">
+                <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
+              </span>
+              <span class="block text-xs text-slate-700">
+                <span class="text-[11px] font-medium text-slate-500 mr-1">월세</span>{{ row.wolse ?? '거래 없음' }}
+              </span>
+            </span>
+            <span v-else class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </button>
         </li>
         <li
@@ -97,7 +121,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { isBuildingItem, type Granularity, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
-import { formatPriceLabel, formatPyeongLabel } from '~/composables/useMapOverlays'
+import { formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatWolseLabel } from '~/composables/useMapOverlays'
 import { itemKey } from '~/composables/useRealEstateMap'
 import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
@@ -146,6 +170,11 @@ interface Row {
   title: string
   subtitle: string | null
   price: string
+  /** 전월세 전용. null 이면 매매이거나 지역 행이라 한 줄로 그린다. */
+  jeonse: string | null
+  wolse: string | null
+  /** 전월세 행인지. jeonse/wolse 가 둘 다 null 이어도 "거래 없음" 을 그려야 하므로 별도 플래그가 필요하다. */
+  isRent: boolean
   /** null = 갈 페이지가 없는 행(동). 템플릿이 링크 대신 버튼을 그린다. */
   href: string | null
   item: MapItem
@@ -158,6 +187,8 @@ interface Row {
  */
 const rows = computed<Row[]>(() => {
   if (props.granularity === 'building') {
+    // 전월세 타입에서만 두 줄로 나눈다. 매매는 보여줄 두 번째 값이 없다.
+    const isRent = props.type.endsWith('-rent')
     return props.items.map((i) => {
       const b = i as MapBuildingItem
       return {
@@ -165,6 +196,9 @@ const rows = computed<Row[]>(() => {
         title: b.buildingName,
         subtitle: `${b.city} ${b.district} ${b.dongName}`,
         price: formatPriceLabel(b),
+        jeonse: isRent ? formatJeonseLabel(b) : null,
+        wolse: isRent ? formatWolseLabel(b) : null,
+        isRent,
         // 건물 상세는 4-segment URL. 슬러그 변환·NFC 정규화·encodeURIComponent 가
         // 전부 이 유틸에 들어 있으므로 직접 문자열을 조립하지 않는다.
         href: toRealEstateUrl({
@@ -186,6 +220,9 @@ const rows = computed<Row[]>(() => {
         title: r.district ?? r.name,
         subtitle: r.name,
         price: formatPyeongLabel(r),
+        jeonse: null,
+        wolse: null,
+        isRent: false,
         href: toRealEstateListUrl({
           type: props.type as RealEstateUrlType,
           city: r.name,
@@ -204,6 +241,9 @@ const rows = computed<Row[]>(() => {
         title: r.dong ?? '',
         subtitle: `${r.name} ${r.district ?? ''}`.trim(),
         price: formatPyeongLabel(r),
+        jeonse: null,
+        wolse: null,
+        isRent: false,
         // 동 페이지가 없다(6종 라우트는 구·군까지). href 를 만들면 죽은 링크가 되므로
         // null 을 주고 템플릿이 버튼을 그리게 한다.
         href: null,
@@ -234,6 +274,9 @@ const rows = computed<Row[]>(() => {
       title: chip.label,
       subtitle: null,
       price: formatPyeongLabel(item),
+      jeonse: null,
+      wolse: null,
+      isRent: false,
       href: `/real-estate/${props.type}/${chip.slug}`,
       item,
     }
