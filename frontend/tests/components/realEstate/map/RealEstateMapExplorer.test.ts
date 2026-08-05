@@ -436,6 +436,14 @@ describe('RealEstateMapExplorer 레이아웃', () => {
 })
 
 describe('RealEstateMapExplorer — 마커 선택 토글', () => {
+  // onTypeChange 는 syncHash() 로 history.replaceState 를 부른다. 정리하지 않으면 남은 해시가
+  // 다음 테스트의 onMounted → parseMapHash 에 stale 한 type/level/lat/lng 를 먹여 조용히
+  // 오염시킨다. 실제로 아래 granularity 테스트가 그 피해를 입어 자체 리셋을 넣어야 했다.
+  // describe 단위로 걷어내 이 블록에 추가되는 테스트가 순서에 의존하지 않게 한다.
+  afterEach(() => {
+    window.location.hash = ''
+  })
+
   const RENT_ITEM: MapItem = {
     buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
     lat: 37.5, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
@@ -515,12 +523,6 @@ describe('RealEstateMapExplorer — 마커 선택 토글', () => {
   // 곧바로 선택을 지워야 이 사고를 막는다. idle→디바운스(250ms)→fetch 의 실제 경로를
   // 그대로 태워 검증한다(가짜 타이머는 여기서 async $fetch 체인과 얽혀 신뢰도가 떨어진다).
   it('건물 선택 중 granularity 가 바뀌면(줌아웃) selectedKey 가 초기화된다', async () => {
-    // 이웃 테스트("타입을 바꾸면 선택이 풀린다")가 onTypeChange→syncHash() 로
-    // location.hash 를 남긴다(그 describe 에 hash 정리용 afterEach 가 없다). 여기서
-    // 정리하지 않으면 이 테스트의 onMounted 가 그 남은 해시를 읽어 예상치 못한
-    // setType 을 트리거해 granularity 관찰이 오염된다.
-    window.location.hash = ''
-
     const fetchMock = vi.fn().mockResolvedValue({
       success: true,
       data: { items: [], granularity: 'dong', total: 0, exact: true },
