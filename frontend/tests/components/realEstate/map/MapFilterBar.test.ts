@@ -138,10 +138,15 @@ describe('MapFilterBar', () => {
     expect(w.findAll('button')[0].attributes('aria-expanded')).toBe('true')
   })
 
-  it('터치 타깃 44px 을 유지한다 — 트리거와 메뉴 항목 모두', () => {
+  // 데스크톱은 프로젝트 공통 관례인 44px 을 지키고, 모바일만 36px 로 낮춘다(사용자 결정).
+  // 지도 위에 떠 있는 컨트롤이라 높이가 그대로 지도 가림 면적이 되기 때문이다. 가로는
+  // 라벨 폭만큼(약 70px) 확보돼 있어 탭 면적 자체는 좁지 않다.
+  it('모바일 36px / 데스크톱 44px 터치 타깃 — 트리거와 메뉴 항목 모두', () => {
     const w = mountBar()
-    expect(w.findAll('button').every((b) => b.classes().includes('min-h-[44px]'))).toBe(true)
-    expect(w.findAll('a').every((a) => a.classes().includes('min-h-[44px]'))).toBe(true)
+    for (const el of [...w.findAll('button'), ...w.findAll('a')]) {
+      expect(el.classes()).toContain('min-h-[36px]')
+      expect(el.classes()).toContain('sm:min-h-[44px]')
+    }
   })
 
   it('토지는 넣지 않는다 — 지도가 다루지 않는 유형이라 클릭해도 반응할 수 없다', () => {

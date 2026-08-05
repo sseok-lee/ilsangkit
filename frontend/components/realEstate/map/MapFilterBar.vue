@@ -22,7 +22,7 @@
     <div v-for="menu in MENUS" :key="menu.key" class="relative shrink-0">
       <button
         type="button"
-        class="min-h-[44px] flex items-center gap-1 px-3 rounded-lg border border-primary bg-white shadow-card text-primary text-xs sm:text-sm font-medium transition-colors hover:bg-primary-50"
+        class="min-h-[36px] sm:min-h-[44px] flex items-center gap-0.5 sm:gap-1 px-2.5 sm:px-3 rounded-lg border border-primary bg-white shadow-card text-primary text-xs sm:text-sm font-medium transition-colors hover:bg-primary-50"
         :aria-haspopup="true"
         :aria-expanded="openMenu === menu.key"
         :aria-label="`${menu.aria} 선택`"
@@ -31,7 +31,7 @@
       >
         {{ menu.currentLabel.value }}
         <span
-          class="material-symbols-outlined text-[16px] transition-transform"
+          class="material-symbols-outlined text-[14px] sm:text-[16px] transition-transform"
           :class="{ 'rotate-180': openMenu === menu.key }"
           aria-hidden="true"
         >expand_more</span>
@@ -40,12 +40,12 @@
       <!-- v-show(v-if 아님): 닫혀 있어도 링크가 SSR DOM 에 남아야 크롤러가 본다. -->
       <ul
         v-show="openMenu === menu.key"
-        class="absolute top-full left-0 mt-1 min-w-[120px] bg-white rounded-xl shadow-lg border border-line-2 p-1 z-50"
+        class="absolute top-full left-0 mt-1 min-w-[88px] sm:min-w-[120px] bg-white rounded-lg sm:rounded-xl shadow-lg border border-line-2 p-0.5 sm:p-1 z-50"
       >
         <li v-for="opt in menu.options" :key="opt.value">
           <a
             :href="`/real-estate/${menu.toType(opt.value)}`"
-            class="min-h-[44px] flex items-center px-3 rounded-lg text-sm whitespace-nowrap transition-colors"
+            class="min-h-[36px] sm:min-h-[44px] flex items-center px-2.5 sm:px-3 rounded-md sm:rounded-lg text-xs sm:text-sm whitespace-nowrap transition-colors"
             :class="opt.value === menu.current.value
               ? 'bg-primary text-white font-medium'
               : 'text-slate-700 hover:bg-background-light'"
