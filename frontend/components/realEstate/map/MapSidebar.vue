@@ -100,11 +100,26 @@
       </li>
     </ul>
     <!--
-      전역 푸터는 layouts/map.vue 에 없다(페이지 스크롤을 0으로 만들기 위해). 대신 여기
-      목록 하단에 둬 사이드바 스크롤 끝에서 도달하게 한다. 목록이 짧으면 위 ul 의 flex-1 이
-      밀어내 컨테이너 바닥에 붙는다.
+      전역 푸터는 layouts/map.vue 에 없다(페이지 스크롤을 0으로 만들기 위해). 종전에는 여기에
+      AppFooter compact 를 통째로 넣었는데, 목록 끝에 브랜드·문의·서비스/실거래가/정보지원/
+      법적고지 링크 14개가 붙어 작업용 패널에 과했다.
+      출처·라이선스 표기만 남긴다 — 이 페이지에서 그걸 지고 있는 건 여기뿐이라 지울 수는 없다.
+      허브 링크는 다른 모든 페이지의 전역 푸터가 계속 싣고 있어 크롤 경로는 영향 없다.
+      목록이 짧으면 위 ul 의 flex-1 이 밀어내 컨테이너 바닥에 붙는다.
     -->
-    <AppFooter v-if="props.showFooter" compact />
+    <div v-if="props.showFooter" data-testid="sidebar-source" class="px-4 py-3 border-t border-line">
+      <SourceStamp
+        variant="plain"
+        provider="국토교통부"
+        :synced-at="syncedAt"
+        :stale-days="RE_STALE_DAYS"
+        source-url="https://rt.molit.go.kr"
+        link-label="원본"
+      />
+      <p class="mt-1 text-[11px] leading-tight text-faint">
+        실거래가 공개시스템 자료를 공공누리(KOGL) 조건에 따라 가공한 참고용 정보입니다.
+      </p>
+    </div>
   </div>
 </template>
 
@@ -117,7 +132,9 @@ import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import AdBanner from '~/components/ads/AdBanner.vue'
-import AppFooter from '~/components/common/AppFooter.vue'
+import SourceStamp from '~/components/common/SourceStamp.vue'
+import { useSyncStatus } from '~/composables/useSyncStatus'
+import { RE_STALE_DAYS } from '~/utils/syncFreshness'
 
 const AD_AFTER_INDEX = 4 // 5번째 항목 뒤
 
@@ -148,6 +165,18 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{ hover: [string | null]; select: [MapItem] }>()
+
+/**
+ * 출처 표기용 동기화 시각. 전체 최신값(latestOverall)이 아니라 **현재 타입의** 값을 쓴다 —
+ * 시설 카테고리가 오늘 동기화됐다고 부동산도 최신인 것처럼 보이면 안 된다.
+ * sync-status 응답 키는 슬러그의 camelCase 다(apt-rent → aptRent, 건물 상세 페이지와 동일 규칙).
+ * SourceStamp 는 staleDays 를 넘긴 값이면 날짜를 스스로 숨긴다.
+ */
+const { syncStatus } = useSyncStatus()
+const syncedAt = computed(() => {
+  const key = props.type.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+  return syncStatus.value?.[key] ?? null
+})
 
 const heading = computed(() => {
   if (props.granularity === 'building') return '이 지역 건물'

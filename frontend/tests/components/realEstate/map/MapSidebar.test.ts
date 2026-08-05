@@ -339,53 +339,56 @@ describe('MapSidebar 더보기', () => {
   })
 })
 
-describe('MapSidebar 푸터', () => {
-  const footerStub = {
-    // props 를 배열이 아니라 객체로 선언한다. 배열 형식(무타입) stub 은 맨 속성(`<AppFooter compact />`)을
-    // 빈 문자열로 받아 props('compact') 가 '' 이 된다 — Boolean 을 명시해야 true 로 캐스팅된다.
-    AppFooter: { name: 'AppFooter', template: '<footer data-testid="sidebar-footer" />', props: { compact: Boolean } },
-  }
-
-  function mountWithFooter(showFooter: boolean) {
+describe('MapSidebar 출처 표기', () => {
+  function mountWithSource(showFooter: boolean) {
     return mount(MapSidebar, {
       props: {
         items: REGIONS, granularity: 'city', total: 2, exact: true, pending: false,
         type: 'apt-sale', showFooter,
       },
-      global: { stubs: footerStub },
     })
   }
 
   // MapSidebar 는 데스크톱 aside 와 모바일 바텀시트 두 사본이 항상 동시에 마운트된다
-  // (안 보이는 쪽은 CSS hidden 일 뿐 DOM 에 남는다). 기본값이 true 면 두 사본이 모두
-  // 푸터를 그려 링크 8개와 data-testid="footer-links" 가 2벌 생긴다.
+  // (안 보이는 쪽은 CSS hidden 일 뿐 DOM 에 남는다). 기본값이 true 면 두 사본이 모두 그린다.
   it('기본값은 렌더하지 않는다', () => {
     const w = mount(MapSidebar, {
       props: { items: REGIONS, granularity: 'city', total: 2, exact: true, pending: false, type: 'apt-sale' },
-      global: { stubs: footerStub },
     })
-    expect(w.find('[data-testid="sidebar-footer"]').exists()).toBe(false)
+    expect(w.find('[data-testid="sidebar-source"]').exists()).toBe(false)
   })
 
-  it('showFooter 면 목록 아래에 푸터를 렌더한다', () => {
-    expect(mountWithFooter(true).find('[data-testid="sidebar-footer"]').exists()).toBe(true)
+  it('showFooter 면 목록 아래에 출처 표기를 렌더한다', () => {
+    expect(mountWithSource(true).find('[data-testid="sidebar-source"]').exists()).toBe(true)
   })
 
-  it('푸터에 compact 를 넘긴다 — 320px 폭에 4열 그리드는 들어가지 않는다', () => {
-    expect(mountWithFooter(true).findComponent({ name: 'AppFooter' }).props('compact')).toBe(true)
+  // 이 페이지는 layouts/map.vue 가 전역 푸터를 뺀 상태라(페이지 스크롤 0) 출처·라이선스를
+  // 지고 있는 게 여기뿐이다. 문구가 사라지면 공공데이터 표기 의무가 페이지에서 증발한다.
+  it('제공 기관과 공공누리 조건을 밝힌다', () => {
+    const t = mountWithSource(true).find('[data-testid="sidebar-source"]').text()
+    expect(t).toContain('국토교통부')
+    expect(t).toContain('공공누리')
   })
 
-  it('푸터는 목록 뒤에 오고, ul 안에 들어가지 않는다', () => {
-    const w = mountWithFooter(true)
+  // 종전에는 AppFooter compact 를 통째로 넣어 링크 14개가 목록 끝에 붙었다.
+  // 되돌아오면 작업용 패널이 다시 무거워진다.
+  it('전역 푸터를 통째로 넣지 않는다', () => {
+    const w = mountWithSource(true)
+    expect(w.findComponent({ name: 'AppFooter' }).exists()).toBe(false)
+    expect(w.find('[data-testid="footer-links"]').exists()).toBe(false)
+  })
 
-    // 순서: 목록이 먼저, 푸터가 뒤
+  it('출처는 목록 뒤에 오고, ul 안에 들어가지 않는다', () => {
+    const w = mountWithSource(true)
+
+    // 순서: 목록이 먼저, 출처가 뒤
     const html = w.html()
-    expect(html.indexOf('map-sidebar-item')).toBeLessThan(html.indexOf('sidebar-footer'))
+    expect(html.indexOf('map-sidebar-item')).toBeLessThan(html.indexOf('sidebar-source'))
 
     // 구조: ul 의 형제여야 한다. ul 안에 들어가면 위 순서 검사는 그대로 통과하지만,
-    // ul 의 flex-1 이 짧은 목록에서 푸터를 바닥으로 밀어내는 동작이 깨진다.
-    expect(w.find('ul').find('[data-testid="sidebar-footer"]').exists()).toBe(false)
-    expect(w.find('[data-testid="sidebar-footer"]').exists()).toBe(true)
+    // ul 의 flex-1 이 짧은 목록에서 출처를 바닥으로 밀어내는 동작이 깨진다.
+    expect(w.find('ul').find('[data-testid="sidebar-source"]').exists()).toBe(false)
+    expect(w.find('[data-testid="sidebar-source"]').exists()).toBe(true)
   })
 })
 
