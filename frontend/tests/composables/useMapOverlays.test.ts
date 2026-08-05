@@ -296,12 +296,17 @@ describe('useMapOverlays', () => {
 
     it('선택하지 않으면 라벨은 한 줄이다 — 두 줄이면 겹쳐서 접히는 마커가 늘어난다', () => {
       const { renderOverlays } = useMapOverlays()
-      renderOverlays(fakeMap, [building({
+      const item = building({
         buildingName: '은마', latestPrice: 75000, monthlyRent: 340,
         jeonseDeposit: 96000, wolseDeposit: 75000, wolseMonthlyRent: 340,
-      })], {}, { type: 'apt-rent', selectedKey: null })
-      expect(contentOf(0).className).toContain('map-price-label')
-      expect(contentOf(0).querySelector('a')).toBeNull()
+      })
+      renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: null })
+      const el = contentOf(0)
+      expect(el.className).toContain('map-price-label')
+      expect(el.querySelector('a')).toBeNull()
+      // 한 줄이다: 자식 엘리먼트(<br> 등)가 전혀 없고, textContent 가 라벨 문자열과 정확히 같다.
+      expect(el.children.length).toBe(0)
+      expect(el.textContent).toBe(formatPriceLabel(item))
     })
 
     it('선택된 항목은 전세·월세와 상세 링크를 펼친다', () => {
@@ -317,6 +322,29 @@ describe('useMapOverlays', () => {
       expect(el.textContent).toContain('9억 6,000만')
       expect(el.textContent).toContain('7억 5,000만 · 340만')
       expect(el.querySelector('a')?.getAttribute('href')).toBe('/real-estate/apt-rent/seoul/gangnam/%EC%9D%80%EB%A7%88')
+    })
+
+    it('펼침 카드의 상세 링크 클릭은 onClick 토글을 막고, 카드의 다른 영역 클릭은 토글을 부른다', () => {
+      // 링크는 이동이 목적이다 — onClick 이 같이 돌면 이동 직전에 카드가 접힌다(useMapOverlays.ts:249 가드).
+      const { renderOverlays } = useMapOverlays()
+      const item = building({
+        buildingName: '은마', city: '서울', district: '강남구',
+        latestPrice: 75000, monthlyRent: 340,
+        jeonseDeposit: 96000, wolseDeposit: 75000, wolseMonthlyRent: 340,
+      })
+      const onClick = vi.fn()
+      renderOverlays(fakeMap, [item], { onClick }, { type: 'apt-rent', selectedKey: '은마|강남구' })
+
+      const el = contentOf(0)
+      const link = el.querySelector('a')
+      expect(link).not.toBeNull()
+
+      link!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      expect(onClick).not.toHaveBeenCalled()
+
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      expect(onClick).toHaveBeenCalledTimes(1)
+      expect(onClick).toHaveBeenCalledWith(item)
     })
 
     it('매매도 펼쳐진다 — 값은 한 줄이고 상세 링크가 붙는다', () => {
