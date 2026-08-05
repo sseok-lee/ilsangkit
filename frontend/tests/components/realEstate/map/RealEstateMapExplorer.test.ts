@@ -507,4 +507,51 @@ describe('RealEstateMapExplorer — 마커 선택 토글', () => {
     await nextTick()
     expect(w.vm.selectedKey).toBeNull()
   })
+
+  // 줌 왕복 회귀 가드: "은마"를 선택해 카드를 펼친 채 줌아웃하면(building→dong) 목록의
+  // 항목 단위 자체가 바뀐다. 이 시점에 선택을 비우지 않으면, 다시 줌인(dong→building)했을
+  // 때 새로 받아온 building 목록에 같은 키("은마|강남구")가 재등장해 클릭 없이 카드가
+  // 저절로 다시 펼쳐진다 — granularity 가 실제로 바뀌는 순간(fetch 응답 반영 시점)에
+  // 곧바로 선택을 지워야 이 사고를 막는다. idle→디바운스(250ms)→fetch 의 실제 경로를
+  // 그대로 태워 검증한다(가짜 타이머는 여기서 async $fetch 체인과 얽혀 신뢰도가 떨어진다).
+  it('건물 선택 중 granularity 가 바뀌면(줌아웃) selectedKey 가 초기화된다', async () => {
+    // 이웃 테스트("타입을 바꾸면 선택이 풀린다")가 onTypeChange→syncHash() 로
+    // location.hash 를 남긴다(그 describe 에 hash 정리용 afterEach 가 없다). 여기서
+    // 정리하지 않으면 이 테스트의 onMounted 가 그 남은 해시를 읽어 예상치 못한
+    // setType 을 트리거해 granularity 관찰이 오염된다.
+    window.location.hash = ''
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      success: true,
+      data: { items: [], granularity: 'dong', total: 0, exact: true },
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const CanvasStub = {
+      template: '<div data-testid="canvas" />',
+      emits: ['idle', 'select', 'hover'],
+    }
+    try {
+      const w = mount(RealEstateMapExplorer, {
+        props: { initialType: 'apt-rent', initialItems: [RENT_ITEM], initialGranularity: 'building' },
+        global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+      })
+
+      await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', RENT_ITEM)
+      await nextTick()
+      expect(w.vm.selectedKey).toBe('은마|강남구')
+
+      const bounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
+      await w.findComponent(CanvasStub).vm.$emit('idle', bounds, 7, { lat: 37.5, lng: 127.06 })
+      // onMapIdle 은 fetchNow 를 250ms 디바운스한다(useRealEstateMap.ts DEBOUNCE_MS) — 실제
+      // 시간을 흘려보내 그 타이머 이후의 $fetch 응답 반영까지 정직하게 기다린다.
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      await flushPromises()
+
+      expect(w.vm.selectedKey).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+      window.location.hash = ''
+    }
+  })
 })

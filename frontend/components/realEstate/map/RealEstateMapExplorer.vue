@@ -88,7 +88,7 @@
 <script setup lang="ts">
 // onMounted 를 명시 import 한다 — 이 컴포넌트는 테스트에서 직접 mount 되므로
 // auto-import 에 기대면 로컬은 통과하고 CI 에서만 ReferenceError 가 난다.
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import MapSidebar from './MapSidebar.vue'
 import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
@@ -117,6 +117,15 @@ const {
   type: props.initialType,
   items: props.initialItems,
   granularity: props.initialGranularity,
+})
+
+// 같은 granularity 안의 팬/줌은 선택을 유지해야 하지만, granularity 자체가 바뀌면
+// (building→dong 등) 목록의 항목 단위가 완전히 달라진다. 이 상태에서 건물 "은마"를
+// 선택한 채 줌아웃(building→dong)했다가 다시 줌인(dong→building)하면, 새로 받아온
+// building 목록에 같은 키가 재등장해 클릭 없이 카드가 저절로 다시 펼쳐진다 — 줌
+// 왕복 자체가 선택 동작처럼 보이는 사고다. granularity 변경 시점에만 선택을 비운다.
+watch(granularity, () => {
+  selectedKey.value = null
 })
 
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
