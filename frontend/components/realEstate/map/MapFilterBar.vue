@@ -1,9 +1,10 @@
 <template>
   <!--
-    w-fit: 컨트롤이 2개뿐이라 가로를 다 차지하면 흰 바가 지도를 그만큼 덮는다. 칩 6개일
-    때는 어차피 가득 찼지만 지금은 내용 폭만 쓰면 된다(모바일 실측 374px → 약 160px).
+    감싸는 흰 판을 두지 않는다 — 컨트롤이 2개뿐이라 판이 지도를 가리기만 한다. 이 div 는
+    배치만 담당하고(w-fit + gap), 지도 위에서의 가독성은 각 트리거가 자기 배경과 그림자로
+    책임진다. 판을 없앴으므로 트리거에 shadow 가 반드시 있어야 지도 라벨과 섞이지 않는다.
   -->
-  <div ref="root" class="w-fit flex flex-nowrap gap-1.5 p-1 sm:p-2 bg-white/95 backdrop-blur rounded-lg sm:rounded-xl border border-line shadow-card">
+  <div ref="root" class="w-fit flex flex-nowrap gap-1.5">
     <!--
       6개 조합을 한 줄에 늘어놓는 대신 "무엇을"(아파트/빌라/오피스텔) 과 "어떻게"(매매/전월세)
       두 축으로 나눈다. 390px 에서 6칩은 4개만 보이고 가로 스크롤이 필요했는데, 2축은 두 컨트롤이
@@ -21,7 +22,7 @@
     <div v-for="menu in MENUS" :key="menu.key" class="relative shrink-0">
       <button
         type="button"
-        class="min-h-[44px] flex items-center gap-1 px-3 rounded-full border border-primary bg-white text-primary text-xs sm:text-sm font-medium transition-colors hover:bg-primary-50"
+        class="min-h-[44px] flex items-center gap-1 px-3 rounded-lg border border-primary bg-white shadow-card text-primary text-xs sm:text-sm font-medium transition-colors hover:bg-primary-50"
         :aria-haspopup="true"
         :aria-expanded="openMenu === menu.key"
         :aria-label="`${menu.aria} 선택`"
