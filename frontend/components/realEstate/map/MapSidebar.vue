@@ -54,15 +54,7 @@
               <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
               <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
             </span>
-            <span v-if="row.isRent" class="text-right whitespace-nowrap leading-tight">
-              <span class="block text-sm font-semibold text-primary">
-                <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
-              </span>
-              <span class="block text-xs text-slate-700">
-                <span class="text-[11px] font-medium text-slate-500 mr-1">월세</span>{{ row.wolse ?? '거래 없음' }}
-              </span>
-            </span>
-            <span v-else class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+            <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </a>
           <!--
             동 행. 6종 유형에 동 라우트가 없어(land 만 있다) 갈 페이지가 없으므로
@@ -79,15 +71,7 @@
               <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
               <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
             </span>
-            <span v-if="row.isRent" class="text-right whitespace-nowrap leading-tight">
-              <span class="block text-sm font-semibold text-primary">
-                <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
-              </span>
-              <span class="block text-xs text-slate-700">
-                <span class="text-[11px] font-medium text-slate-500 mr-1">월세</span>{{ row.wolse ?? '거래 없음' }}
-              </span>
-            </span>
-            <span v-else class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+            <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </button>
         </li>
         <li
