@@ -287,3 +287,79 @@ describe('refreshAllSummaries', () => {
     errorSpy.mockRestore();
   });
 });
+
+describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
+  beforeEach(() => {
+    mockExecuteRawUnsafe.mockReset();
+    mockQueryRawUnsafe.mockReset();
+    mockTransaction.mockReset();
+    setupTransactionPassthrough();
+  });
+
+  /** 트랜잭션 안에서 실행된 SQL 문자열만 순서대로 뽑는다. */
+  function executedSql(): string[] {
+    return mockExecuteRawUnsafe.mock.calls.map((c) => String(c[0]));
+  }
+
+  it('전월세 타입은 city 배치마다 DELETE, INSERT, UPDATE 순으로 3개를 실행한다', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('apt-rent');
+
+    const sql = executedSql();
+    // [0] 은 SET SESSION innodb_lock_wait_timeout
+    expect(sql[1]).toContain('DELETE FROM RealEstateBuildingSummary');
+    expect(sql[2]).toContain('INSERT INTO RealEstateBuildingSummary');
+    expect(sql[3]).toContain('UPDATE RealEstateBuildingSummary');
+  });
+
+  it('매매 타입은 UPDATE 패스를 건너뛴다 — 매매 테이블에는 rentType 컬럼이 없다', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('apt-sale');
+
+    expect(executedSql().some((s) => s.includes('UPDATE RealEstateBuildingSummary'))).toBe(false);
+  });
+
+  it('UPDATE 는 rentType 별 최신 1건을 골라 5개 컬럼을 채운다', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('apt-rent');
+
+    const update = executedSql().find((s) => s.includes('UPDATE RealEstateBuildingSummary'))!;
+    // rentType 축을 넣은 ROW_NUMBER 로 종류별 최신을 고른 뒤 rn=1 만 남긴다.
+    expect(update).toContain('PARTITION BY buildingName, bjdCode, rentType');
+    expect(update).toContain('rn = 1');
+    for (const col of ['jeonseDeposit', 'jeonseDealKey', 'wolseDeposit', 'wolseMonthlyRent', 'wolseDealKey']) {
+      expect(update).toContain(col);
+    }
+  });
+
+  it('UPDATE 는 해당 type·city 로만 범위를 좁힌다 — 다른 시·도 행을 건드리면 배치 분할이 무의미해진다', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('apt-rent');
+
+    const idx = executedSql().findIndex((s) => s.includes('UPDATE RealEstateBuildingSummary'));
+    const params = mockExecuteRawUnsafe.mock.calls[idx].slice(1);
+    expect(params).toContain('apt-rent');
+    expect(params).toContain('서울');
+  });
+
+  it('UPDATE 가 실패해도 다음 city 로 계속한다 — 한 배치 실패가 전체를 멈추지 않는다', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }, { city: '경기' }]);
+    mockExecuteRawUnsafe.mockImplementation(async (sql: string) => {
+      if (String(sql).includes('UPDATE') && mockExecuteRawUnsafe.mock.calls.length <= 4) {
+        throw new Error('lock wait timeout');
+      }
+      return 1;
+    });
+
+    await expect(refreshSummary('apt-rent')).resolves.toBeTypeOf('number');
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(1);
+  });
+});
