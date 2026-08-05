@@ -8,7 +8,7 @@
     </div>
 
     <ul class="flex-1">
-      <template v-for="(row, idx) in visibleRows" :key="row.key">
+      <template v-for="row in visibleRows" :key="row.key">
         <li
           data-testid="map-sidebar-item"
           class="border-b border-line-2"
@@ -95,13 +95,6 @@
             <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </button>
         </li>
-        <li
-          v-if="idx === AD_AFTER_INDEX && props.showAd"
-          data-testid="map-sidebar-ad"
-          class="border-b border-line-2 p-2"
-        >
-          <AdBanner />
-        </li>
       </template>
       <li v-if="hasMore" class="p-3">
         <button
@@ -146,12 +139,9 @@ import { itemKey } from '~/composables/useRealEstateMap'
 import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
-import AdBanner from '~/components/ads/AdBanner.vue'
 import SourceStamp from '~/components/common/SourceStamp.vue'
 import { useSyncStatus } from '~/composables/useSyncStatus'
 import { RE_STALE_DAYS } from '~/utils/syncFreshness'
-
-const AD_AFTER_INDEX = 4 // 5번째 항목 뒤
 
 const props = withDefaults(defineProps<{
   items: MapItem[]
@@ -161,17 +151,9 @@ const props = withDefaults(defineProps<{
   pending: boolean
   type: string
   /**
-   * 이 사이드바 사본에 인피드 광고를 렌더할지. 데스크톱(aside)과 모바일(바텀시트)에
-   * 같은 MapSidebar 가 항상 둘 다 마운트되므로(하나는 CSS 로만 숨김), 기본값 true 로 두면
-   * 두 사본이 동시에 AdBanner 를 마운트해 adsbygoogle.push() 를 중복 호출한다.
-   * 호출부(RealEstateMapExplorer)가 실제 보이는 뷰포트 한쪽에만 true 를 넘겨야 한다.
-   */
-  showAd?: boolean
-  /**
-   * 이 사본에 푸터를 렌더할지. showAd 와 같은 이유로 게이트가 필요하다 — 두 사본이
-   * 동시에 마운트되므로 그냥 두면 링크 8개와 data-testid="footer-links" 가 2벌 생긴다.
-   *
-   * 기본값은 false 다. showAd 처럼 true 로 두면 게이트를 잊은 호출부에서 조용히 2벌이 된다.
+   * 이 사본에 출처 표기를 렌더할지. 데스크톱(aside)과 모바일(바텀시트)에 같은 MapSidebar 가
+   * 항상 둘 다 마운트되므로(하나는 CSS 로만 숨김) 게이트가 필요하다 — 그냥 두면 2벌 생긴다.
+   * 기본값은 false 다. true 로 두면 게이트를 잊은 호출부에서 조용히 2벌이 된다.
    */
   showFooter?: boolean
   /**
@@ -181,7 +163,6 @@ const props = withDefaults(defineProps<{
    */
   selectedKey?: string | null
 }>(), {
-  showAd: true,
   showFooter: false,
   selectedKey: null,
 })

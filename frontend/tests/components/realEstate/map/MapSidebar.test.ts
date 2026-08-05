@@ -82,22 +82,13 @@ describe('MapSidebar', () => {
     expect(w.emitted('hover')?.[0]).toEqual(['래미안블레스티지|강남구'])
   })
 
-  it('인피드 광고 자리를 5번째 항목 뒤에 둔다', () => {
+  // 이 페이지는 광고를 싣지 않는다(사용자 결정). 인피드 슬롯이 되돌아오면 목록 중간에
+  // 다시 끼어들므로 회귀 가드를 남긴다.
+  it('인피드 광고를 렌더하지 않는다', () => {
     const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
     const w = mountSidebar({ items: many, granularity: 'building', total: 8 })
-    expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(true)
-  })
-
-  it('showAd 를 명시하지 않으면 기본값 true 라 인피드 광고를 렌더한다 (다른 호출부 하위호환)', () => {
-    const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
-    const w = mountSidebar({ items: many, granularity: 'building', total: 8 })
-    expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(true)
-  })
-
-  it('showAd=false 면 항목 수가 충분해도 인피드 광고를 렌더하지 않는다', () => {
-    const many = Array.from({ length: 8 }, (_, i) => ({ ...BUILDINGS[0], buildingName: `B${i}` }))
-    const w = mountSidebar({ items: many, granularity: 'building', total: 8, showAd: false })
     expect(w.find('[data-testid="map-sidebar-ad"]').exists()).toBe(false)
+    expect(w.findComponent({ name: 'AdBanner' }).exists()).toBe(false)
   })
 
   it('전남광주통합특별시는 DB city 원값(풀네임)으로 매칭되어 평당가를 표시한다 (회귀 가드)', () => {

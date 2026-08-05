@@ -38,7 +38,6 @@
           :exact="exact"
           :pending="pending"
           :type="type"
-          :show-ad="isDesktop === true"
           :show-footer="isDesktop === true"
           :selected-key="selectedKey"
           @hover="hoveredKey = $event"
@@ -77,7 +76,6 @@
         :exact="exact"
         :pending="pending"
         :type="type"
-        :show-ad="isDesktop === false"
         :show-footer="isDesktop === false"
         :selected-key="selectedKey"
         @hover="hoveredKey = $event"
@@ -133,13 +131,15 @@ watch(granularity, () => {
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
 
 // MapSidebar 가 데스크톱 aside 와 모바일 바텀시트 두 사본으로 항상 동시에 마운트된다
-// (안 보이는 쪽은 CSS `hidden`/`lg:hidden`일 뿐 DOM 에서 사라지지 않는다). 그 안의
-// AdBanner 가 인피드 광고를 하나만 요청하도록, 실제로 보이는 뷰포트 쪽에만
-// showAd=true 를 내려준다. 초기값 null 은 "아직 모른다"를 뜻하며, 두 사본 모두
-// `isDesktop === true` / `=== false` 비교가 false 가 되어 광고가 하나도 안 뜬다 —
-// SSR 출력과 마운트 직후 첫 클라이언트 렌더가 이 상태로 일치하므로 하이드레이션
-// mismatch 가 없다. matchMedia 결과가 들어오는 순간(this onMounted 이후) 정확히 한
-// 쪽만 true 로 바뀐다.
+// (안 보이는 쪽은 CSS `hidden`/`lg:hidden`일 뿐 DOM 에서 사라지지 않는다). 출처 표기가
+// 2벌 생기지 않도록 실제로 보이는 뷰포트 쪽에만 showFooter=true 를 내려준다.
+// 초기값 null 은 "아직 모른다"를 뜻하며, 두 사본 모두 `isDesktop === true` / `=== false`
+// 비교가 false 가 되어 어느 쪽도 렌더하지 않는다 — SSR 출력과 마운트 직후 첫 클라이언트
+// 렌더가 이 상태로 일치하므로 하이드레이션 mismatch 가 없다. matchMedia 결과가 들어오는
+// 순간(onMounted 이후) 정확히 한 쪽만 true 로 바뀐다.
+//
+// 종전에는 인피드 광고(showAd)도 같은 게이트를 썼는데, 이 페이지에서 광고를 전부 빼면서
+// 남은 소비처는 출처 표기뿐이다.
 const isDesktop = ref<boolean | null>(null)
 let desktopMq: MediaQueryList | null = null
 function applyIsDesktop(): void {
