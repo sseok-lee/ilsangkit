@@ -137,16 +137,56 @@ describe('MapSidebar', () => {
     expect(emittedItem.lng).toBeNull()
   })
 
-  it('건물 모드는 select 를 emit 하지만 기본 동작(이동)을 막지 않는다 — NuxtLink 그대로다', async () => {
-    // 건물 행은 이 태스크 범위 밖(변경 없음): 클릭해도 preventDefault 하지 않아야
-    // 실제 브라우저에서 상세 페이지로 계속 이동한다.
-    const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
-    const a = w.find('[data-testid="map-sidebar-item"]').find('a')
-    const evt = new MouseEvent('click', { bubbles: true, cancelable: true })
-    a.element.dispatchEvent(evt)
-    await nextTick()
-    expect(evt.defaultPrevented).toBe(false)
-    expect(w.emitted('select')?.[0]).toEqual([BUILDINGS[0]])
+  // 건물 행은 2단계다. 지도를 보며 후보를 훑는 게 이 화면의 목적이라 첫 클릭에
+  // 페이지를 떠나면 훑기가 끊긴다. 첫 클릭은 지도 선택, 두 번째 클릭이 이동.
+  describe('건물 행 2단계 클릭', () => {
+    const KEY = `${(BUILDINGS[0] as MapBuildingItem).buildingName}|${(BUILDINGS[0] as MapBuildingItem).district}`
+
+    function clickFirstRow(w: ReturnType<typeof mountSidebar>) {
+      const a = w.find('[data-testid="map-sidebar-item"]').find('a')
+      const evt = new MouseEvent('click', { bubbles: true, cancelable: true })
+      a.element.dispatchEvent(evt)
+      return evt
+    }
+
+    it('선택 전 클릭은 이동을 막고 select 만 emit 한다', async () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+      const evt = clickFirstRow(w)
+      await nextTick()
+      expect(evt.defaultPrevented).toBe(true)
+      expect(w.emitted('select')?.[0]).toEqual([BUILDINGS[0]])
+    })
+
+    it('이미 선택된 행의 클릭은 막지 않는다 — 상세로 이동해야 한다', async () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1, selectedKey: KEY })
+      const evt = clickFirstRow(w)
+      await nextTick()
+      expect(evt.defaultPrevented).toBe(false)
+      // 두 번째 클릭은 선택 토글을 다시 돌리지 않는다 — 이동 직전에 선택이 풀리면 안 된다.
+      expect(w.emitted('select')).toBeUndefined()
+    })
+
+    it('선택된 행만 aria-current 를 갖는다 — 왜 두 번째 클릭이 다르게 동작하는지 알려야 한다', () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1, selectedKey: KEY })
+      expect(w.find('[data-testid="map-sidebar-item"]').find('a').attributes('aria-current')).toBe('true')
+      const w2 = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+      expect(w2.find('[data-testid="map-sidebar-item"]').find('a').attributes('aria-current')).toBeUndefined()
+    })
+
+    it('⌘/Ctrl+클릭은 첫 클릭이어도 가로채지 않는다 — 새 탭으로 열려야 한다', async () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+      const a = w.find('[data-testid="map-sidebar-item"]').find('a')
+      const evt = new MouseEvent('click', { bubbles: true, cancelable: true, metaKey: true })
+      a.element.dispatchEvent(evt)
+      await nextTick()
+      expect(evt.defaultPrevented).toBe(false)
+      expect(w.emitted('select')).toBeUndefined()
+    })
+
+    it('href 는 그대로 남는다 — preventDefault 해도 크롤 경로가 사라지면 안 된다', () => {
+      const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
+      expect(w.find('[data-testid="map-sidebar-item"]').find('a').attributes('href')).toContain('/real-estate/')
+    })
   })
 
   describe('city/district 드릴다운 — 허브로 이탈하지 않고 지도를 확대한다', () => {

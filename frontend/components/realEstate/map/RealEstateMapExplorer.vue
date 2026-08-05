@@ -40,6 +40,7 @@
           :type="type"
           :show-ad="isDesktop === true"
           :show-footer="isDesktop === true"
+          :selected-key="selectedKey"
           @hover="hoveredKey = $event"
           @select="onSelect"
         />
@@ -78,6 +79,7 @@
         :type="type"
         :show-ad="isDesktop === false"
         :show-footer="isDesktop === false"
+        :selected-key="selectedKey"
         @hover="hoveredKey = $event"
         @select="onSelect"
       />

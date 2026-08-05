@@ -15,11 +15,26 @@
           @mouseenter="emit('hover', row.key)"
           @mouseleave="emit('hover', null)"
         >
-          <NuxtLink
+          <!--
+            2단계 클릭: 첫 클릭은 지도에서 그 건물을 선택(마커 펼침 + 중심 이동)하고,
+            이미 선택된 행을 다시 누르면 상세로 이동한다. 지도를 보며 후보를 훑는 게
+            이 화면의 목적이라, 한 번 클릭에 바로 페이지를 떠나면 훑기가 끊긴다.
+
+            NuxtLink 가 아니라 일반 a 다 — 아래 지역 행 주석과 같은 이유이고, 실제로 밟았다.
+            NuxtLink 로 두면 RouterLink 자체 핸들러가 우리 @click 보다 먼저 실행돼 이미
+            라우터 이동을 시작하므로, preventDefault 가 걸려도(실측 defaultPrevented=true)
+            페이지는 그대로 떠난다. 두 번째 클릭의 이동은 a 의 기본 동작에 맡긴다.
+
+            @click.exact 라 ⌘/Ctrl 클릭은 핸들러를 타지 않고 곧장 새 탭으로 열린다.
+            preventDefault 를 걸어도 href 는 DOM 에 남으므로 크롤 경로는 그대로다.
+          -->
+          <a
             v-if="props.granularity === 'building'"
-            :to="row.href ?? undefined"
-            class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-light transition-colors"
-            @click="emit('select', row.item)"
+            :href="row.href ?? undefined"
+            class="flex items-center justify-between gap-3 px-4 py-3 transition-colors"
+            :class="row.key === props.selectedKey ? 'bg-primary-50' : 'hover:bg-background-light'"
+            :aria-current="row.key === props.selectedKey ? 'true' : undefined"
+            @click.exact="onRowClick($event, row)"
           >
             <span class="min-w-0">
               <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
@@ -40,7 +55,7 @@
               </span>
             </span>
             <span v-else class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
-          </NuxtLink>
+          </a>
           <!--
             city/district 행은 허브 페이지로 떠나지 않고 지도를 드릴다운해야 한다(select
             emit → RealEstateMapExplorer.onSelect 가 center+level 을 세팅). 그래도 href 는
@@ -159,12 +174,29 @@ const props = withDefaults(defineProps<{
    * 기본값은 false 다. showAd 처럼 true 로 두면 게이트를 잊은 호출부에서 조용히 2벌이 된다.
    */
   showFooter?: boolean
+  /**
+   * 현재 지도에서 펼쳐진 건물의 키(useRealEstateMap.itemKey 형식). 목록 행의 2단계
+   * 클릭 판정에 쓴다 — 이 키와 같은 행을 누르면 '두 번째 클릭'이라 상세로 보낸다.
+   * 지도 마커로 먼저 선택한 뒤 목록에서 누르는 경우도 같은 규칙으로 바로 이동한다.
+   */
+  selectedKey?: string | null
 }>(), {
   showAd: true,
   showFooter: false,
+  selectedKey: null,
 })
 
 const emit = defineEmits<{ hover: [string | null]; select: [MapItem] }>()
+
+/**
+ * 첫 클릭은 지도 선택, 두 번째 클릭은 상세 이동.
+ * 이미 선택된 행이면 preventDefault 하지 않고 a 의 기본 이동에 맡긴다.
+ */
+function onRowClick(ev: MouseEvent, row: Row): void {
+  if (row.key === props.selectedKey) return
+  ev.preventDefault()
+  emit('select', row.item)
+}
 
 /**
  * 출처 표기용 동기화 시각. 전체 최신값(latestOverall)이 아니라 **현재 타입의** 값을 쓴다 —
