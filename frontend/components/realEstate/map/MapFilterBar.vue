@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-nowrap overflow-x-auto gap-1.5 p-2 bg-white/95 backdrop-blur rounded-xl border border-line shadow-card"
+    class="flex flex-nowrap overflow-x-auto gap-1 p-1 sm:gap-1.5 sm:p-2 bg-white/95 backdrop-blur rounded-lg sm:rounded-xl border border-line shadow-card"
   >
     <!--
       button 이 아니라 a 다. 하단 유형 카드를 제거한 뒤로는 apt-rent·villa-rent·offitel-rent
@@ -15,13 +15,18 @@
       flex-nowrap + overflow-x-auto 로 바꿔 한 줄 가로 스크롤로 만든다. shrink-0 없으면
       flex 가 라벨을 스크롤 대신 압축해버린다. 데스크톱은 원래도 6개가 한 줄에 들어가서
       overflow 가 생기지 않으므로 시각적으로 그대로다.
+
+      모바일 치수는 sm 미만에서만 줄인다(패딩·간격·글자·모서리). 높이를 정하는
+      min-h-[44px] 는 반응형으로 두지 않는다 — 터치 타깃 최소치라 프로젝트 10개
+      컴포넌트가 공유하는 관례이고 이 컴포넌트 테스트가 직접 고정한다. 바를 더 낮추려면
+      그 결정을 먼저 뒤집어야 한다.
     -->
     <a
       v-for="opt in OPTIONS"
       :key="opt.value"
       :ref="(el) => setItemRef(opt.value, el)"
       :href="`/real-estate/${opt.value}`"
-      class="shrink-0 px-3 py-1.5 min-h-[44px] flex items-center justify-center rounded-lg text-sm font-medium transition-colors"
+      class="shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 min-h-[44px] flex items-center justify-center rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-colors"
       :class="opt.value === props.type
         ? 'bg-primary text-white'
         : 'bg-background-light text-slate-700 hover:bg-slate-200'"
