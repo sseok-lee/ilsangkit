@@ -8,7 +8,7 @@
       props.transparent ? 'bg-transparent border-transparent' : ''
     ]"
   >
-    <div class="mx-auto flex h-full w-full max-w-[1200px] items-center">
+    <div :class="['mx-auto flex h-full w-full items-center', props.wide ? '' : 'max-w-[1200px]']">
       <!-- Left: Back Button (if enabled) or Logo -->
       <div class="flex items-center gap-2">
         <button
@@ -309,11 +309,17 @@ import HeaderSearch from '~/components/common/HeaderSearch.vue'
 interface Props {
   transparent?: boolean
   showBackButton?: boolean
+  /**
+   * 헤더 폭 제한(max-w-[1200px])을 푼다. 지도처럼 화면 전체를 쓰는 페이지에서
+   * 본문과 헤더의 좌우 경계를 맞추기 위한 것이다 — layouts/map.vue 전용.
+   */
+  wide?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   transparent: false,
   showBackButton: false,
+  wide: false,
 })
 
 const emit = defineEmits<{

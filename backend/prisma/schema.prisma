@@ -1422,6 +1422,21 @@ model RealEstateBuildingSummary {
   /// ROW_NUMBER() 윈도우를 돌렸고, 야간 sync 부하와 겹치면 30초 타임아웃이 났다
   /// (2026-08-03 03:45~04:15 KST: 평균 8.08s, 타임아웃 21건, 5xx 27건 중 22건이 rent).
   monthlyRent      Int?
+  /// 최신 전세 보증금(만원). 매매 타입과 전세 거래가 없는 건물은 NULL.
+  ///
+  /// latestPrice/monthlyRent 는 rentType 을 가리지 않은 "가장 최근 거래 1건" 이라
+  /// 그 거래가 월세였으면 같은 건물의 전세 시세가 어디에도 남지 않았다.
+  /// 운영 실측(강남구 2026): 전월세 건물 23,774개 중 12,237개(51%)가 두 종류를 모두
+  /// 가지고 있는데 지도에는 하나만 보였다.
+  jeonseDeposit    Int?
+  /// 위 거래일 YYYYMMDD. 현재 화면에 쓰지 않는다 — 표시 전환이나 신선도 정책의 여지를 남긴다.
+  jeonseDealKey    Int?
+  /// 최신 월세 보증금(만원). 매매 타입과 월세 거래가 없는 건물은 NULL.
+  wolseDeposit     Int?
+  /// 위 거래의 월세액(만원).
+  wolseMonthlyRent Int?
+  /// 위 거래일 YYYYMMDD.
+  wolseDealKey     Int?
   updatedAt        DateTime @updatedAt
 
   @@unique([type, buildingName, bjdCode])
@@ -1436,6 +1451,15 @@ model RealEstateBuildingSummary {
   /// 이 인덱스로 (type,bjdCode) 범위 접근 + 정렬까지 인덱스가 만족 → Backward index scan, 0.8ms.
   /// (정렬이 전부 DESC 라 ASC 인덱스를 역방향으로 읽으면 된다. dongName 필터가 붙어도 유지된다.)
   @@index([type, bjdCode, latestDealYear, latestDealMonth, transactionCount])
+  /// 지도 뷰포트(bbox) 조회 전용.
+  ///
+  /// ⚠️ 이 인덱스만 추가하면 효과가 없다. ORDER BY transactionCount DESC LIMIT N 이
+  /// 붙으면 옵티마이저가 filesort 를 피하려고 type_transactionCount_idx 역방향 스캔을
+  /// 고르는데, 실제로는 그쪽이 훨씬 비싸다.
+  /// 실측(villa-rent 16만행, 희소 뷰포트): 자연 선택 232ms(스캔 182,317행) vs
+  /// FORCE INDEX 11ms(스캔 31,748행) — 21배.
+  /// 따라서 조회는 realEstateMapService 에서 FORCE INDEX 힌트를 건 $queryRaw 로 한다.
+  @@index([type, lat, lng])
 }
 
 // 청약 분양정보

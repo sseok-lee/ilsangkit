@@ -13,6 +13,7 @@ import {
   getNearbyByBjd,
 } from '../services/realEstateService.js';
 import { getHubSummary } from '../services/realEstateHubSummaryService.js';
+import { fetchRegions, fetchBuildings } from '../services/realEstateMapService.js';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
@@ -27,6 +28,7 @@ import {
   PriceAnalysisQuerySchema,
   NearbyQuerySchema,
 } from '../schemas/realEstate.js';
+import { MapQuerySchema, resolveGranularity, type MapQueryInput } from '../schemas/realEstateMap.js';
 import { z } from 'zod';
 
 const router = Router();
@@ -170,6 +172,37 @@ router.get(
     const result = await getAreaGroups(type, bjdCode, buildingName);
     res.json({ success: true, data: result });
   })
+);
+
+// GET /api/real-estate/:type/map - 지도 뷰포트 조회
+//
+// granularity 는 줌 레벨이 정한다. 줌 아웃이면 지역 집계(캐시), 줌 인이면 bbox 건물 목록.
+// rentType 파라미터는 여전히 두지 않는다 — 단 이유는 예전과 다르다. summary 는 이제
+// 건물당 전세·월세 최신 거래를 jeonseDeposit/wolseDeposit/wolseMonthlyRent 등 분리
+// 컬럼에 각각 보유한다(전세로 필터하면 건물이 사라지던 문제는 해소됨). 프론트가 한 건물
+// 행에서 두 컬럼을 동시에 렌더하므로, 서버가 rentType 으로 걸러 한쪽만 내려줄 필요가 없다.
+router.get(
+  '/:type/map',
+  validate(TypeParamsSchema, 'params'),
+  validate(MapQuerySchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { type } = req.params as { type: string };
+    const { level, swLat, swLng, neLat, neLng, prev } = req.query as unknown as MapQueryInput;
+
+    const granularity = resolveGranularity(level, prev);
+
+    if (granularity === 'building') {
+      const { items, total, exact } = await fetchBuildings(type, { swLat, swLng, neLat, neLng });
+      res.json({ success: true, data: { granularity, items, total, exact } });
+      return;
+    }
+
+    const items = await fetchRegions(type, granularity, { swLat, swLng, neLat, neLng });
+    res.json({
+      success: true,
+      data: { granularity, items, total: items.length, exact: true },
+    });
+  }),
 );
 
 export default router;

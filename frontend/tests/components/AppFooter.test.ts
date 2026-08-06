@@ -214,4 +214,29 @@ describe('AppFooter', () => {
       })
     })
   })
+
+  // 지도 필터가 2축 셀렉트가 되면서 한 번에 한 조합만 URL 로 만들 수 있게 됐다 —
+  // 기본값(아파트 매매)에서는 빌라·오피스텔 전월세 허브가 어느 메뉴에도 나오지 않는다.
+  // 그 6개 허브의 정식 링크 소유자가 여기다. 빠지면 해당 허브가 내부 링크 0이 된다.
+  describe('실거래가 허브 링크', () => {
+    const HUBS = [
+      '/real-estate/apt-sale', '/real-estate/apt-rent',
+      '/real-estate/villa-sale', '/real-estate/villa-rent',
+      '/real-estate/offitel-sale', '/real-estate/offitel-rent',
+    ]
+
+    it('6종 허브를 전부 링크한다', () => {
+      const w = mount(AppFooter)
+      const nav = w.find('[data-testid="footer-real-estate-links"]')
+      expect(nav.exists()).toBe(true)
+      const hrefs = nav.findAll('a').map((a) => a.attributes('href'))
+      for (const hub of HUBS) expect(hrefs).toContain(hub)
+    })
+
+    it('compact 모드(지도 사이드바)에서도 링크가 유지된다', () => {
+      const w = mount(AppFooter, { props: { compact: true } })
+      const hrefs = w.find('[data-testid="footer-real-estate-links"]').findAll('a').map((a) => a.attributes('href'))
+      for (const hub of HUBS) expect(hrefs).toContain(hub)
+    })
+  })
 })

@@ -289,6 +289,30 @@ describe('AppHeader', () => {
   })
 })
 
+describe('부동산 드롭다운 SSR 크롤 경로(v-show, 상호작용 없음)', () => {
+  // 하단 유형 카드를 제거한 뒤로 /real-estate/land 로 가는 내부 링크는 이 드롭다운 하나뿐이다
+  // (tests/types/navGroups.test.ts 는 NAV_LINK_GROUPS 상수에 항목이 있는지만 본다 — 그 링크가
+  // 실제로 SSR DOM에 렌더되는지, 즉 드롭다운이 v-show(항상 DOM에 존재·display:none)이지
+  // v-if(상호작용 전엔 DOM에서 아예 빠짐)가 아닌지는 검증하지 않는다). mouseenter 를 먼저
+  // 트리거하는 다른 테스트들은 v-show → v-if 로 바뀌어도 계속 통과하므로 이 속성을 못 잡는다.
+  it('mouseenter 등 어떤 상호작용도 없이 렌더된 HTML에 /real-estate/land 링크가 존재한다', () => {
+    const wrapper = mount(AppHeader, {
+      global: {
+        plugins: [router],
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to"><slot /></a>',
+            props: ['to'],
+          },
+          // HardLink 는 스텁하지 않는다 — 실제 컴포넌트(<a :href="to">)를 그대로 써야
+          // href 가 살아남는다. 이 파일의 다른 테스트들과 동일한 관례.
+        },
+      },
+    })
+    expect(wrapper.html()).toContain('href="/real-estate/land"')
+  })
+})
+
 describe('데스크톱 GNB 텍스트-온리', () => {
   const REMOVED_GLYPHS = [
     'apartment', 'calendar_month', 'gavel', 'grid_view',

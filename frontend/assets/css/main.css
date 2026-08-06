@@ -223,3 +223,102 @@
     text-wrap: balance;
   }
 }
+
+@layer components {
+  /*
+   * 지도 오버레이 — 부동산 지도 탐색(/real-estate)의 가격 라벨·지역 버블.
+   *
+   * 카카오맵 CustomOverlay 의 content 로 들어가는 소자라 Tailwind 유틸리티를 클래스로
+   * 직접 못 붙인다(문자열 className 하나만 지정). 그래서 여기서 컴포넌트 클래스로 정의한다.
+   *
+   * 배경 없는 맨 텍스트로 두면 지도 자체 라벨(아파트명·역명·도로명)과 뒤엉켜 판독이 불가능하다.
+   * 불투명 배경 + 얇은 테두리로 지도에서 확실히 분리한다. 그라데이션·네온·글래스모피즘은
+   * 프로젝트 안티패턴이라 쓰지 않는다.
+   */
+  .map-price-label,
+  .map-region-bubble {
+    @apply inline-flex items-center whitespace-nowrap rounded-full
+           border border-line bg-white px-2 py-0.5
+           text-[11px] font-semibold leading-[1.45] text-ink
+           shadow-[0_1px_3px_rgba(21,33,59,0.18)]
+           cursor-pointer select-none;
+    /* 지도 타일·자체 라벨 위로 올린다. 카카오 오버레이 기본 스택보다 확실히 위. */
+    position: relative;
+    z-index: 1;
+  }
+
+  .map-price-label:hover,
+  .map-region-bubble:hover {
+    @apply border-primary bg-primary text-white;
+    /* 겹친 이웃 위로 올라와야 호버한 값이 온전히 보인다. */
+    z-index: 3;
+  }
+
+  /* 지역 버블은 평당가 집계라 개수가 적고 의미 단위가 커서 한 급 강조한다. */
+  .map-region-bubble {
+    @apply border-primary/25 bg-primary-50 px-2.5 py-1 text-[12px] text-primary-ink;
+    z-index: 2;
+  }
+
+  /*
+   * 라벨이 이웃과 겹쳐 들어갈 자리가 없을 때의 축약형.
+   * 좌측 목록은 항목 전부를 보여주므로 아예 지우면 "목록엔 있는데 지도엔 없는" 건물이 생긴다.
+   * 점은 자리를 거의 안 먹으면서 위치·클릭 대상·호버 툴팁(title)을 유지한다.
+   */
+  .map-price-dot {
+    @apply block h-2 w-2 rounded-full border border-white bg-primary/70
+           cursor-pointer select-none;
+    position: relative;
+    z-index: 0;
+  }
+
+  .map-price-dot:hover {
+    @apply bg-primary;
+    transform: scale(1.4);
+  }
+
+  /*
+   * 선택된 마커의 펼침 카드. 기본 라벨(.map-price-label)이 알약 한 줄인 반면 이것은
+   * 건물명·값·링크가 쌓이므로 사각 카드에 좌측 정렬이다.
+   *
+   * z-index 가 hover(3)보다 높다 — 펼친 카드는 이웃 라벨에 가려지면 안 된다.
+   */
+  .map-popup {
+    @apply block cursor-pointer select-none whitespace-nowrap rounded-[10px]
+           border border-line-2 bg-white px-[11px] pb-2 pt-[9px] text-left
+           shadow-[0_3px_10px_rgba(21,33,59,0.16)];
+    position: relative;
+    z-index: 4;
+    min-width: 130px;
+  }
+
+  .map-popup b {
+    @apply mb-1 block text-[12.5px] font-semibold text-ink;
+  }
+
+  .map-popup-line {
+    @apply block text-[12.5px] font-semibold leading-[1.45] text-primary;
+  }
+
+  /* 월세 줄. 전세를 주값으로 읽히게 하려고 한 급 낮춘다. */
+  .map-popup-line--sub {
+    @apply text-xs font-medium text-slate-700;
+  }
+
+  /*
+   * 거래가 없는 줄("거래 없음"). --sub 뒤에 와야 월세 줄에서도 이 색이 이긴다.
+   * 없는 값이 실제 금액과 같은 무게로 읽히면 안 된다 — 이 페이지는 "이 건물에 전세가
+   * 있는가"를 판단하는 화면이라 있음/없음 구분이 금액 자체보다 먼저다.
+   */
+  .map-popup-line--absent {
+    @apply font-medium text-slate-400;
+  }
+
+  .map-popup-line i {
+    @apply mr-1 text-[11px] font-medium not-italic text-faint;
+  }
+
+  .map-popup-link {
+    @apply mt-1.5 block border-t border-line pt-1.5 text-[11.5px] font-semibold text-primary;
+  }
+}

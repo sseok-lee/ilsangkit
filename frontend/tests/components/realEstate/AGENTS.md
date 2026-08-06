@@ -21,7 +21,6 @@
 ## For AI Agents
 
 ### Working In This Directory
-- **누락**: `RealEstateCategoryCards.test.ts` — 진입 카드 테스트 추가 권장
 - BigInt/Decimal → Number 변환 후 비교 (테스트 fixture는 Number 사용)
 - 차트 라이브러리는 mock 또는 렌더만 확인 (계산은 별도 유닛)
 

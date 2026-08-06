@@ -25,8 +25,31 @@ export function useAdsEnabled(): boolean {
   return useRuntimeConfig().public.adsEnabled !== false
 }
 
-/** 플러그인(스크립트 주입)용 — per-page suppression은 보지 않음(전역·1회). */
+/**
+ * 광고를 전혀 싣지 않는 경로. 정확히 일치할 때만 막는다 — 하위 경로
+ * (/real-estate/apt-sale 등)는 평범한 목록 페이지라 광고를 그대로 싣는다.
+ *
+ * /real-estate 는 지도 전용 화면이라 인피드 슬롯을 뺐는데, 그것만으로는 Auto Ads 가
+ * body 에 직접 심는 앵커·오버레이 자리가 남는다(실측: ins.adsbygoogle-noablate 1개).
+ * 그건 슬롯 코드가 아니라 스크립트가 만드는 것이라 스크립트 주입 자체를 막아야 한다.
+ */
+const AD_FREE_PATHS = new Set(['/real-estate'])
+
+/** 경로 끝 슬래시만 다른 경우(/real-estate/)도 같은 페이지다. */
+export function isAdFreePath(pathname: string): boolean {
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  return AD_FREE_PATHS.has(normalized)
+}
+
+/**
+ * 플러그인(스크립트 주입)용 — per-page suppression은 보지 않음(전역·1회).
+ *
+ * ⚠️ 이 판정은 **최초 로드 시점의 경로**로만 이뤄진다. 다른 페이지에서 SPA 소프트
+ * 내비게이션으로 /real-estate 에 들어오면 스크립트가 이미 주입돼 있어 막지 못한다.
+ * GNB·푸터가 HardLink(전체 리로드)라 실사용 유입 대부분은 이 경로를 탄다.
+ */
 export function canLoadAdScript(): boolean {
+  if (import.meta.client && isAdFreePath(window.location.pathname)) return false
   return useAdsEnabled() && !isLikelyBot()
 }
 

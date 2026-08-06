@@ -17,7 +17,6 @@
 | `AreaSelector.vue` | 면적 범위 선택기 |
 | `RentTypeToggle.vue` | 전월세 전환 토글 |
 | `NearbyFacilities.vue` | 주변 시설 (교차 시너지) |
-| `RealEstateCategoryCards.vue` | 부동산 카테고리 진입 카드 |
 
 ## For AI Agents
 

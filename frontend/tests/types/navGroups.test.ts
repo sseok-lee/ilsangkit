@@ -6,6 +6,7 @@ import {
   isLinkGroup,
   type NavGroup,
   type LinkGroup,
+  type CategoryGroup,
 } from '../../types/facility'
 
 describe('NAV_GROUPS', () => {
@@ -32,7 +33,7 @@ describe('NAV_GROUPS', () => {
     const firstGroup = NAV_GROUPS[0] as LinkGroup
     const links = firstGroup.links.map(({ to, label }) => ({ to, label }))
     const expectedLinks = [
-      { to: '/real-estate', label: '부동산 전체' },
+      { to: '/real-estate', label: '실거래가 지도' },
       { to: '/real-estate/apt-sale', label: '아파트' },
       { to: '/real-estate/villa-sale', label: '빌라' },
       { to: '/real-estate/offitel-sale', label: '오피스텔' },
@@ -92,7 +93,9 @@ describe('CATEGORY_GROUPS', () => {
   })
 
   it('NAV_GROUPS의 마지막 4개 그룹이 CATEGORY_GROUPS와 동일해야 한다', () => {
-    const lastFour = NAV_GROUPS.slice(3, 7)
+    // icon 은 CategoryGroup 에만 있다 — LinkGroup(부동산·청약·공매)은 GNB 텍스트온리라
+    // 아이콘 필드를 갖지 않는다. 여기 4개는 전부 CategoryGroup 이므로 좁혀서 비교한다.
+    const lastFour = NAV_GROUPS.slice(3, 7) as CategoryGroup[]
     lastFour.forEach((group, i) => {
       expect(group.title).toBe(CATEGORY_GROUPS[i].title)
       expect(group.icon).toBe(CATEGORY_GROUPS[i].icon)
@@ -104,8 +107,7 @@ describe('isLinkGroup 타입 가드', () => {
   it('links 속성이 있는 그룹을 LinkGroup으로 판별해야 한다', () => {
     const linkGroup: NavGroup = {
       title: '테스트',
-      icon: 'test',
-      links: [{ to: '/test', label: '테스트', icon: 'test_icon' }],
+      links: [{ to: '/test', label: '테스트' }],
     }
     expect(isLinkGroup(linkGroup)).toBe(true)
   })
@@ -138,5 +140,15 @@ describe('NAV_LINK_GROUPS', () => {
 
   it('NAV_GROUPS의 앞 3개가 NAV_LINK_GROUPS와 동일해야 한다', () => {
     expect(NAV_GROUPS.slice(0, 3)).toEqual([...NAV_LINK_GROUPS])
+  })
+})
+
+// 하단 유형 카드를 제거한 뒤로 /real-estate/land 의 내부 링크는 이 GNB 항목 하나뿐이다.
+// 이걸 지우면 토지 허브와 그 아래 시/도·구군·동 페이지 전체가 내부 링크 0이 된다.
+describe('GNB 토지 링크 존치', () => {
+  it('부동산 드롭다운에 /real-estate/land 가 있다', () => {
+    const realEstate = NAV_LINK_GROUPS.find((g) => g.title === '부동산')
+    expect(realEstate).toBeDefined()
+    expect(realEstate!.links.map((l) => l.to)).toContain('/real-estate/land')
   })
 })

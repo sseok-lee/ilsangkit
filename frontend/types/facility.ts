@@ -497,11 +497,20 @@ export interface CategoryGroup {
   categories: FacilityCategory[]
 }
 
-// 부동산 링크 그룹 인터페이스
+/**
+ * GNB 드롭다운 링크 그룹 (부동산·청약/임대·공매).
+ *
+ * 아이콘 필드가 없다. GNB 는 텍스트온리이고(신뢰 디자인 #577 에서 내린 결정),
+ * AppHeader 는 링크의 label 만 렌더한다. AppHeader.test.ts 가
+ * `img[src*="/icons/category/"]` 개수를 0 으로 단언해 아이콘 복귀를 막고 있다.
+ * 종전에는 icon/iconImg 를 들고 다녔지만 어느 소비처도 읽지 않는 죽은 데이터였다.
+ * 아이콘을 다시 넣으려면 그 결정과 테스트부터 뒤집어야 한다.
+ *
+ * CategoryGroup 의 icon 은 별개다 — faq.vue 가 실제로 렌더하므로 그대로 있다.
+ */
 export interface LinkGroup {
   title: string
-  icon: string
-  links: Array<{ to: string; label: string; icon: string; iconImg?: string; section?: string }>
+  links: Array<{ to: string; label: string; section?: string }>
 }
 
 // 네비게이션 그룹 = 기존 카테고리 그룹 | 링크 그룹
@@ -544,45 +553,42 @@ export const NON_REGION_CATEGORIES: readonly string[] = ['subway']
 export const NAV_LINK_GROUPS: readonly LinkGroup[] = [
   {
     title: '부동산',
-    icon: 'apartment',
     links: [
-      { to: '/real-estate', label: '부동산 전체', icon: 'apartment', iconImg: 'apt' },
-      { to: '/real-estate/apt-sale', label: '아파트', icon: 'apartment', iconImg: 'apt' },
-      { to: '/real-estate/villa-sale', label: '빌라', icon: 'holiday_village', iconImg: 'villa' },
-      { to: '/real-estate/offitel-sale', label: '오피스텔', icon: 'business', iconImg: 'offitel' },
-      { to: '/real-estate/land', label: '토지', icon: 'landscape', iconImg: 'land-plot' },
+      // '부동산 전체' 였다. /real-estate 가 목록 허브에서 지도 탐색기로 바뀌면서 '전체'가
+      // 내용과 어긋났고, 그룹명이 이미 '부동산' 이라 접두어도 중복이었다. 페이지 자신의
+      // title('부동산 실거래가 지도')과 맞춘다. 형제 항목은 전부 매물 유형이라 이 항목만
+      // 성격이 다르다는 점도 라벨로 드러난다.
+      { to: '/real-estate', label: '실거래가 지도' },
+      { to: '/real-estate/apt-sale', label: '아파트' },
+      { to: '/real-estate/villa-sale', label: '빌라' },
+      { to: '/real-estate/offitel-sale', label: '오피스텔' },
+      { to: '/real-estate/land', label: '토지' },
     ],
   },
   {
     title: '청약·임대',
-    icon: 'calendar_month',
-    // 다른 dropdown(부동산·시설)이 webp 컬러 일러스트 아이콘을 쓰므로 톤을 맞추기 위해
-    // 청약·임대 도 webp 아이콘 사용. 같은 임대 sub-type 끼리 rent.webp 가 반복되는 건
-    // 섹션 헤딩 텍스트가 충분히 구분해 줌.
     links: [
       // 청약홈 — 모든 청약(분양+임대) 최상위 hub. 섹션 없음(헤더 역할).
-      { to: '/subscription', label: '청약홈', icon: 'calendar_month', iconImg: 'subscription' },
-      // 분양 — 청약홈 분양 공고 sub-type. 9 링크 모두 다른 webp 로 시각 차별화.
-      { to: '/subscription/sale/apt', label: '아파트 분양', icon: 'apartment', iconImg: 'apt', section: '분양' },
-      { to: '/subscription/sale/offitel', label: '오피스텔·도시형', icon: 'domain', iconImg: 'offitel', section: '분양' },
-      { to: '/subscription/sale/remaining', label: '무순위·잔여세대', icon: 'home_work', iconImg: 'sale', section: '분양' },
-      { to: '/subscription/sale/optional', label: '임의공급', icon: 'redeem', iconImg: 'kiosk', section: '분양' },
+      { to: '/subscription', label: '청약홈' },
+      { to: '/subscription/sale/apt', label: '아파트 분양', section: '분양' },
+      { to: '/subscription/sale/offitel', label: '오피스텔·도시형', section: '분양' },
+      { to: '/subscription/sale/remaining', label: '무순위·잔여세대', section: '분양' },
+      { to: '/subscription/sale/optional', label: '임의공급', section: '분양' },
       // 임대 청약 — 청약통장 사용
-      { to: '/subscription/rent/public', label: '공공임대 청약', icon: 'home', iconImg: 'rent', section: '임대 청약' },
-      { to: '/subscription/rent/private', label: '공공지원 민간임대', icon: 'bungalow', iconImg: 'villa', section: '임대 청약' },
+      { to: '/subscription/rent/public', label: '공공임대 청약', section: '임대 청약' },
+      { to: '/subscription/rent/private', label: '공공지원 민간임대', section: '임대 청약' },
     ],
   },
   {
     title: '공매',
-    icon: 'gavel',
     links: [
-      { to: '/auction', label: '공매 홈', icon: 'gavel', iconImg: 'auction' },
-      { to: '/auction/list?usage=residential', label: '아파트·주거용', icon: 'apartment', iconImg: 'auction' },
-      { to: '/auction/list?usage=land', label: '토지', icon: 'landscape', iconImg: 'auction' },
-      { to: '/auction/list?usage=commercial', label: '상가·업무', icon: 'storefront', iconImg: 'auction' },
-      { to: '/auction/list?usage=industrial', label: '공장·창고', icon: 'storefront', iconImg: 'auction' },
-      { to: '/auction/ranking', label: '낙찰가율 랭킹', icon: 'bar_chart', iconImg: 'auction' },
-      { to: '/auction/list', label: '전체 물건', icon: 'grid_view', iconImg: 'auction' },
+      { to: '/auction', label: '공매 홈' },
+      { to: '/auction/list?usage=residential', label: '아파트·주거용' },
+      { to: '/auction/list?usage=land', label: '토지' },
+      { to: '/auction/list?usage=commercial', label: '상가·업무' },
+      { to: '/auction/list?usage=industrial', label: '공장·창고' },
+      { to: '/auction/ranking', label: '낙찰가율 랭킹' },
+      { to: '/auction/list', label: '전체 물건' },
     ],
   },
 ] as const
