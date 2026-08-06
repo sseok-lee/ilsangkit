@@ -26,7 +26,7 @@
         <span
           v-if="!props.showBackButton"
           class="hidden lg:inline-flex items-center self-center pl-2.5 ml-1.5 border-l border-line-2 text-[11px] leading-none text-faint"
-        >공공데이터 기반 생활정보</span>
+        >{{ SITE_BRAND_LINE }}</span>
       </div>
 
       <!-- Center/Right: Desktop Navigation (single nav, fills remaining width) -->
@@ -304,6 +304,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { CATEGORY_META, NAV_LINK_GROUPS, CATEGORY_GROUPS } from '~/types/facility'
+import { SITE_BRAND_LINE } from '~/utils/seoConstants'
 import HeaderSearch from '~/components/common/HeaderSearch.vue'
 
 interface Props {

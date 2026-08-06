@@ -10,7 +10,25 @@ export const CONTENT_AUTHOR = '일상킷 데이터팀'
 /** 콘텐츠 조회수 표시 임계 — 이 미만이면 비노출(방문자 없는 사이트 역신호 방지, 스펙 §5-6) */
 export const VIEW_COUNT_DISPLAY_MIN = 100
 export const SITE_DESCRIPTION = '아파트·빌라·오피스텔·토지 실거래가 조회부터 내 주변 병원·약국·주차장까지, 생활 정보를 한곳에서 확인하세요.'
+/**
+ * title 용 태그라인. 홈 `<title>`(`일상킷 - {TAGLINE}`)과 title 을 안 주는 페이지의
+ * 기본값이 이 값을 쓴다. 네이버 '일상킷' 대표결과가 홈이라 바꾸면 재평가가 일어나므로
+ * 화면 문구를 손볼 때 같이 건드리지 않는다 — UI 노출용은 SITE_BRAND_LINE 이다.
+ * (nuxt.config.ts 의 정적 head.title 이 이 값을 하드코딩 복제하고 있어 함께 동기화해야 한다.)
+ */
 export const SITE_TAGLINE = '부동산 실거래가·청약·내 주변 생활정보'
+
+/**
+ * 화면에 보이는 브랜드 한 줄 — 헤더 로고 옆, 푸터 브랜드 블록.
+ *
+ * SITE_TAGLINE 과 분리한 이유: 이 둘은 노출 맥락도 제약도 다르다. title 은 SERP 에서
+ * 잘리고 대표결과 판정에 쓰이지만, 이 문구는 화면에서만 읽힌다. 종전에는 헤더가
+ * '공공데이터 기반 생활정보' 를 따로 하드코딩해 푸터(SITE_TAGLINE)와 다른 말을 하고 있었다.
+ *
+ * '청약' 을 넣지 않는다 — GSC 90일 실측 클릭 1건(순위 69)으로, 한정된 길이에서
+ * 자리를 차지할 비중이 아니다. GNB 에 '청약·임대' 그룹이 그대로 있어 접근 경로는 유지된다.
+ */
+export const SITE_BRAND_LINE = '공공데이터 기반 부동산 실거래가·생활정보'
 // 네이버/카카오 썸네일 크롤러는 webp og:image를 안정적으로 렌더링하지 못하므로 PNG를 기본값으로 사용한다.
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`
 

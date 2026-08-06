@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import AppHeader from '~/components/common/AppHeader.vue'
+import { SITE_BRAND_LINE } from '~/utils/seoConstants'
 
 const router = createRouter({
   history: createMemoryHistory(),
@@ -444,7 +445,7 @@ describe('모바일 메뉴 텍스트-온리', () => {
 })
 
 describe('데스크톱 마이크로 라벨', () => {
-  it('로고 옆에 "공공데이터 기반 생활정보" 라벨을 데스크톱 전용으로 렌더한다', () => {
+  it('로고 옆에 브랜드 한 줄을 데스크톱 전용으로 렌더한다', () => {
     const wrapper = mount(AppHeader, {
       global: {
         plugins: [router],
@@ -458,7 +459,7 @@ describe('데스크톱 마이크로 라벨', () => {
     })
     const label = wrapper
       .findAll('span')
-      .find((s) => s.text() === '공공데이터 기반 생활정보')
+      .find((s) => s.text() === SITE_BRAND_LINE)
     expect(label).toBeTruthy()
     // 데스크톱 전용(모바일 숨김)
     expect(label!.classes()).toContain('hidden')
