@@ -21,7 +21,7 @@
             일상킷
           </HardLink>
           <p class="mt-2 text-xs text-muted leading-relaxed">
-            {{ SITE_TAGLINE }}
+            {{ SITE_BRAND_LINE }}
           </p>
           <div class="mt-3 space-y-1 text-xs text-faint">
             <p>
@@ -110,7 +110,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
-import { SITE_TAGLINE } from '~/utils/seoConstants'
+import { SITE_BRAND_LINE } from '~/utils/seoConstants'
 import { useSyncStatus } from '~/composables/useSyncStatus'
 import { formatDotDateTime, isSyncStale, RE_STALE_DAYS } from '~/utils/syncFreshness'
 
