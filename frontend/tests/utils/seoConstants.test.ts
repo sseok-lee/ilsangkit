@@ -7,6 +7,7 @@ import {
   CATEGORY_SEO_TITLE,
   CATEGORY_SEO_DESCRIPTION,
   SITE_TAGLINE,
+  SITE_BRAND_LINE,
 } from '~/utils/seoConstants'
 
 describe('getCurrentYearMonth', () => {
@@ -100,6 +101,30 @@ describe('POPULAR_REGIONS', () => {
 describe('SITE_TAGLINE', () => {
   it('부동산을 앞세운 단일 부제 문장이다', () => {
     expect(SITE_TAGLINE).toBe('부동산 실거래가·청약·내 주변 생활정보')
+  })
+})
+
+// 화면 문구(SITE_BRAND_LINE)와 title 문구(SITE_TAGLINE)는 노출 맥락과 제약이 달라
+// 분리했다. 하나로 합치면 화면 문구를 손볼 때마다 홈 title 이 함께 바뀌는데, 홈은
+// 네이버 '일상킷' 대표결과라 재평가가 일어난다.
+describe('SITE_BRAND_LINE', () => {
+  it('헤더·푸터에 보이는 브랜드 한 줄이다', () => {
+    expect(SITE_BRAND_LINE).toBe('공공데이터 기반 부동산 실거래가·생활정보')
+  })
+
+  it('출처 신뢰 신호와 주력 콘텐츠를 함께 담는다', () => {
+    expect(SITE_BRAND_LINE).toContain('공공데이터')
+    expect(SITE_BRAND_LINE).toContain('부동산')
+  })
+
+  // GSC 90일 실측 클릭 1건(순위 69)이라 한정된 길이에서 자리를 내주지 않는다.
+  // 접근 경로는 GNB '청약·임대' 그룹이 담당한다.
+  it('청약은 넣지 않는다', () => {
+    expect(SITE_BRAND_LINE).not.toContain('청약')
+  })
+
+  it('title 용 태그라인과 별개 값이다', () => {
+    expect(SITE_BRAND_LINE).not.toBe(SITE_TAGLINE)
   })
 })
 
