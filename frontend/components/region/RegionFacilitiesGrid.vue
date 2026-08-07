@@ -52,6 +52,7 @@
       <Pagination
         :current-page="currentPage"
         :total-pages="totalPages"
+        :href-for="hrefFor"
         @page-change="(page) => emit('page-change', page)"
       />
     </div>
@@ -75,6 +76,8 @@ defineProps<{
   currentPage: number
   totalPages: number
   categorySlug?: string
+  /** 주면 페이지네이션이 <a href> 로 렌더돼 크롤러가 2페이지 이후로 갈 수 있다. */
+  hrefFor?: (page: number) => string
 }>()
 
 const emit = defineEmits<{

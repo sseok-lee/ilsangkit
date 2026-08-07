@@ -180,7 +180,12 @@
             </EmptyState>
 
             <!-- Pagination -->
-            <Pagination :current-page="currentPage" :total-pages="displayTotalPages" @page-change="goToPage" />
+            <Pagination
+              :current-page="currentPage"
+              :total-pages="displayTotalPages"
+              :href-for="pageHref"
+              @page-change="goToPage"
+            />
           </template>
         </SectionBlock>
       </template>
@@ -252,6 +257,7 @@ import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { RELATED_CATEGORIES, POPULAR_REGIONS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
+import { buildPageHref } from '~/utils/paginationHref'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
@@ -615,6 +621,12 @@ function syncPageQuery(page: number): LocationQueryRaw {
   if (page > 1) nextQuery.page = String(page)
   else delete nextQuery.page
   return nextQuery
+}
+
+// 페이지네이션을 <a href> 로 렌더하기 위한 URL. syncPageQuery 와 동일한 의미론이어야
+// 크롤러가 보는 URL 과 클릭 후 SPA 가 만드는 URL 이 일치한다.
+function pageHref(page: number): string {
+  return buildPageHref(route.path, route.query, page)
 }
 
 // 필터(도시·구·키워드)가 바뀌면 결과는 항상 page 1 로 되돌아간다.

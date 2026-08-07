@@ -63,6 +63,7 @@
       :current-page="currentPage"
       :total-pages="displayTotalPages"
       :category-slug="category"
+      :href-for="pageHref"
       @page-change="goToPage"
       @retry="loadFacilities"
     />
@@ -105,6 +106,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS, NON_REGION_CATEGORIES } from '~/types/facility'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 import { computeAreaNoindex } from '~/utils/areaNoindex'
+import { buildPageHref } from '~/utils/paginationHref'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { resolveRegionDisplay } from '~/utils/regionDisplayState'
 import type { FacilityCategory, Facility } from '~/types/facility'
@@ -396,6 +398,12 @@ function syncPageQuery(page: number): LocationQueryRaw {
   if (page > 1) nextQuery.page = String(page)
   else delete nextQuery.page
   return nextQuery
+}
+
+// 페이지네이션을 <a href> 로 렌더하기 위한 URL. syncPageQuery 와 동일한 의미론이어야
+// 크롤러가 보는 URL 과 클릭 후 SPA 가 만드는 URL 이 일치한다.
+function pageHref(page: number): string {
+  return buildPageHref(route.path, route.query, page)
 }
 
 async function goToWastePage(page: number) {
