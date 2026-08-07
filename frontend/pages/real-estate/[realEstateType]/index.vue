@@ -79,7 +79,12 @@
         <!-- Ad: 건물 목록 이후 -->
         <AdBanner class="mt-4" />
         <!-- 페이지네이션 -->
-        <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
+        <Pagination
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :href-for="pageHref"
+          @page-change="goToPage"
+        />
       </SectionBlock>
     </template>
 
@@ -121,6 +126,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import type { LocationQueryRaw } from 'vue-router'
 import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse, RealEstateHubType } from '~/types/realEstate'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { HUB_TYPES } from '~/types/realEstate'
@@ -134,7 +140,8 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { resolveRealEstateListSsrOutcome } from '~/utils/realEstateListSsrOutcome'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
-import { PAGINATION_ROBOTS_CONTENT } from '~/utils/pageQuery'
+import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
+import { buildPageHref } from '~/utils/paginationHref'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
@@ -184,9 +191,14 @@ const error = ref(false)
 // 캐시(s-maxage=300)에 박혀 5분간 모든 사용자/Googlebot 에게 "지역을 선택해주세요"
 // 만 반환되던 사고가 있었다. SSR 단계에서 complexes 가 비어있으면 응답에
 // `Cache-Control: no-store` 를 강제해 같은 사고 재발을 막는다.
+// SSR 시점에 `?page=N` 을 읽어 그 페이지를 렌더한다.
+// 예전에는 항상 1페이지를 가져와서 `?page=2` 가 1페이지와 같은 본문을 냈다.
+// ★ useAsyncData 키에 page 를 반드시 포함해야 한다. 키가 같으면 2페이지 요청이
+//   1페이지 캐시를 돌려받아 같은 버그가 재현된다.
+const initialPage = parsePositivePageQuery(route.query.page)
 const { data: initialData, error: initialFetchError, status: initialFetchStatus } = await useAsyncData(
-  `re-complexes-${apiSlug.value}`,
-  () => getComplexList(apiSlug.value),
+  `re-complexes-${apiSlug.value}-p${initialPage}`,
+  () => getComplexList(apiSlug.value, undefined, undefined, undefined, initialPage),
 )
 if (initialData.value) {
   complexes.value = initialData.value.items
@@ -292,10 +304,39 @@ async function loadComplexes(page: number = 1) {
   }
 }
 
-function goToPage(page: number) {
-  if (page < 1 || page > totalPages.value) return
-  loadComplexes(page)
+// URL `?page=N` 을 갱신한다. page 1 이면 page 키 자체를 제거해 canonical URL 과 동일하게 유지.
+function syncPageQuery(page: number): LocationQueryRaw {
+  const nextQuery: LocationQueryRaw = { ...route.query }
+  if (page > 1) nextQuery.page = String(page)
+  else delete nextQuery.page
+  return nextQuery
 }
+
+// 페이지네이션을 <a href> 로 렌더하기 위한 URL. syncPageQuery 와 같은 의미론이어야
+// 크롤러가 보는 URL 과 클릭 후 SPA 가 만드는 URL 이 일치한다.
+function pageHref(page: number): string {
+  return buildPageHref(route.path, route.query, page)
+}
+
+async function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  await navigateTo({ query: syncPageQuery(page) })
+  await loadComplexes(page)
+  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// URL → 상태 동기화. 뒤로/앞으로가기와 query-only 네비게이션에서도 어긋나지 않게 한다.
+// goToPage 는 상태를 먼저 갱신하므로 같은 값이면 재조회를 건너뛴다.
+watch(
+  () => route.query.page,
+  (next) => {
+    const nextPage = parsePositivePageQuery(next)
+    if (currentPage.value === nextPage) return
+    currentPage.value = nextPage
+    loadComplexes(nextPage)
+  },
+)
 
 function retryLoad() {
   loadComplexes(currentPage.value)
@@ -306,8 +347,11 @@ if (import.meta.client && !initialData.value) {
   loadComplexes()
 }
 
-// 탭 전환 시 목록 재로드
-watch(currentTab, () => {
+// 탭 전환 시 목록 재로드 — 결과가 1페이지로 돌아가므로 URL 의 `?page=N` 도 함께 지운다.
+// 안 지우면 head 의 pageQueryParam 이 여전히 noindex 를 켠 채 남는다.
+watch(currentTab, async () => {
+  currentPage.value = 1
+  if (route.query.page !== undefined) await navigateTo({ query: syncPageQuery(1) })
   loadComplexes()
 })
 

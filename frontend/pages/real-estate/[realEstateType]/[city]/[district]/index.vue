@@ -67,6 +67,7 @@
             v-if="totalPages > 1"
             :current-page="currentPage"
             :total-pages="totalPages"
+            :href-for="pageHref"
             class="mt-4"
             @page-change="goToPage"
           />
@@ -110,7 +111,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, watch, watchEffect } from 'vue'
+import type { LocationQueryRaw } from 'vue-router'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import EmptyState from '~/components/common/EmptyState.vue'
@@ -129,6 +131,8 @@ import { useNationalComplexCount } from '~/composables/useNationalComplexCount'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { shouldNoindexSsr } from '~/utils/ssrIndexability'
+import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
+import { buildPageHref } from '~/utils/paginationHref'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { suppressAds } from '~/composables/useAdsPolicy'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -216,9 +220,26 @@ const avgLatestPrice = computed<number | null>(() => {
     : null
 })
 
+const PAGE_SIZE = 24
+
+// SSR 시점에 `?page=N` 을 읽어 그 페이지를 렌더한다.
+// 예전에는 항상 1페이지를 가져왔다. 그래서 `?page=2` 가 1페이지와 바이트 단위로 같은
+// 본문을 내보냈고, 페이지네이션을 <a href> 로 열면 같은 콘텐츠가 여러 URL 로 노출되는
+// 중복이 새로 생기는 상태였다(#719 에서 부동산을 제외한 이유).
+// ★ useAsyncData 키에 page 를 반드시 포함해야 한다. 키가 같으면 2페이지 요청이
+//   1페이지 캐시를 그대로 돌려받아 같은 버그가 재현된다.
+const initialPage = parsePositivePageQuery(route.query.page)
 const { data: ssrData, error } = await useAsyncData(
-  `re-region-${realEstateType.value}-${citySlug.value}-${districtSlug.value}`,
-  () => getComplexList(realEstateType.value as never, cityName.value, districtName.value, undefined, 1, 24),
+  `re-region-${realEstateType.value}-${citySlug.value}-${districtSlug.value}-p${initialPage}`,
+  () =>
+    getComplexList(
+      realEstateType.value as never,
+      cityName.value,
+      districtName.value,
+      undefined,
+      initialPage,
+      PAGE_SIZE,
+    ),
 )
 if (import.meta.server && error.value) markDegradedResponse()
 if (ssrData.value) {
@@ -232,8 +253,7 @@ const fetchFailed = computed(() => !!error.value)
 
 watchEffect(() => suppressAds(fetchFailed.value || totalComplexes.value === 0))
 
-async function goToPage(page: number) {
-  if (page < 1 || page > totalPages.value) return
+async function loadPage(page: number) {
   pending.value = true
   try {
     const res = await getComplexList(
@@ -242,7 +262,7 @@ async function goToPage(page: number) {
       districtName.value,
       undefined,
       page,
-      24,
+      PAGE_SIZE,
     )
     complexes.value = res.items
     currentPage.value = res.page
@@ -251,6 +271,40 @@ async function goToPage(page: number) {
     pending.value = false
   }
 }
+
+// URL `?page=N` 을 갱신한다. page 1 이면 page 키 자체를 제거해 canonical URL 과 동일하게 유지.
+function syncPageQuery(page: number): LocationQueryRaw {
+  const nextQuery: LocationQueryRaw = { ...route.query }
+  if (page > 1) nextQuery.page = String(page)
+  else delete nextQuery.page
+  return nextQuery
+}
+
+// 페이지네이션을 <a href> 로 렌더하기 위한 URL. syncPageQuery 와 같은 의미론이어야
+// 크롤러가 보는 URL 과 클릭 후 SPA 가 만드는 URL 이 일치한다.
+function pageHref(page: number): string {
+  return buildPageHref(route.path, route.query, page)
+}
+
+async function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  await navigateTo({ query: syncPageQuery(page) })
+  await loadPage(page)
+  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// URL → 상태 동기화. 뒤로/앞으로가기와 query-only 네비게이션에서도 어긋나지 않게 한다.
+// goToPage 는 상태를 먼저 갱신하므로 같은 값이면 재조회를 건너뛴다.
+watch(
+  () => route.query.page,
+  (next) => {
+    const nextPage = parsePositivePageQuery(next)
+    if (currentPage.value === nextPage) return
+    currentPage.value = nextPage
+    loadPage(nextPage)
+  },
+)
 
 // 전국 등록 단지 수 — '이 지역'과 동일 단위(VALID_NAME 단지 수) 비교용.
 // fail-open 컴포저블: 실패 시 total=null → 셀 부재만, shouldNoindexSsr(아래)에는 절대 연결하지 않는다.
@@ -333,16 +387,21 @@ const canonicalPath = computed(() =>
 
 const { setMeta } = useFacilityMeta()
 
+// page 2+ 는 thin/중복 방지를 위해 noindex 하고 canonical 도 함께 제거한다(정책 통일).
+// route.query.page 에 reactive 로 연동해야 client-side 페이지 이동에서도 정책이 켜진다.
+const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
+
 watch(
-  [cityName, districtName, typeLabel, totalComplexes, complexes],
+  [cityName, districtName, typeLabel, totalComplexes, complexes, pageQueryParam],
   () => {
-    const isNoindex = shouldNoindexSsr({
-      fetchFailed: fetchFailed.value,
-      confirmedEmpty: !fetchFailed.value && totalComplexes.value === 0,
-    })
+    const isNoindex =
+      shouldNoindexSsr({
+        fetchFailed: fetchFailed.value,
+        confirmedEmpty: !fetchFailed.value && totalComplexes.value === 0,
+      }) || pageQueryParam.value > 1
     const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(`${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`)}`
     if (isNoindex) {
-      useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
+      useHead({ meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] })
     }
     setMeta({
       title: `${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`,
