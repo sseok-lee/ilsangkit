@@ -55,9 +55,21 @@ describe('robots.txt crawl policy', () => {
     expect(robots).not.toMatch(/^Disallow:\s*\/wifi$/m)
   })
 
-  it('blocks Naver Yeti from crawling query pagination URLs', () => {
-    expect(robots).toMatch(/User-agent:\s*Yeti[\s\S]*Disallow:\s*\/\*\?page=/)
-    expect(robots).toMatch(/User-agent:\s*Yeti[\s\S]*Disallow:\s*\/\*&page=/)
+  it('keeps query pagination crawlable for every search engine so detail links stay reachable', () => {
+    // 목록 2페이지 이후는 HTML 에서 이미 noindex, follow 다. 색인 비대는 noindex 가 막고 있고,
+    // 그 페이지에 남는 유일한 가치는 "상세로 가는 링크 통로"다. robots 로 크롤을 막으면
+    // 크롤러가 페이지를 가져올 수 없어 통로만 끊긴다.
+    //
+    // 2026-05-28 에 Yeti 에만 /*?page= 를 넣었다가(크롤 예산 절약 의도) 되돌린다.
+    // 같은 실수를 wifi 상세에서 이미 했다 — 07-09 차단 → 색인 동결 → 07-28 해제(3c455d63).
+    //
+    // 실측 근거: 페이지네이션이 <button> 뿐이라 크롤 경로가 없던 동안 URL Inspection 표본
+    // 225건 중 76.9% 가 'URL is unknown to Google' 이었고, 내부링크가 있는 페이지는
+    // 65.7% 가 크롤된 반면 없는 페이지는 37.1% 였다(Fisher p=0.031).
+    for (const ua of ['Yeti', '*']) {
+      expect(extractGroup(robots, ua)).not.toContain('Disallow: /*?page=')
+      expect(extractGroup(robots, ua)).not.toContain('Disallow: /*&page=')
+    }
   })
 
   it('blocks Nuxt _payload.json from crawlers to reclaim crawl budget', () => {
