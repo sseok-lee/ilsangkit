@@ -43,6 +43,7 @@
     "seed:medical-enrich": "tsx src/scripts/seedMedicalEnrich.ts",
     "sync:hira-file": "tsx src/scripts/runHiraFile.ts",
     "sync:localdata-csv": "tsx src/scripts/downloadLocaldataFiles.ts",
+    "sync:subway-csv": "tsx src/scripts/downloadSubwayFile.ts",
     "generate:guide": "tsx src/scripts/generateGuide.ts",
     "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
     "generate:article": "tsx src/scripts/generateArticle.ts",

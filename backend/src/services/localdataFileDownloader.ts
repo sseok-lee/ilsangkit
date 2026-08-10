@@ -102,6 +102,25 @@ export interface LocaldataFileResult {
 }
 
 /**
+ * 파일 내용이 다를 때만 원자적으로 교체한다 (동일하면 mtime 보존).
+ * 교체 시 직전 파일을 `.bak` 으로 남긴다. kricSubwayFileDownloader 와 공용.
+ */
+export function replaceFileIfChanged(targetPath: string, buffer: Buffer): 'updated' | 'unchanged' {
+  const existing = fs.existsSync(targetPath) ? fs.readFileSync(targetPath) : null;
+  if (existing && existing.equals(buffer)) {
+    return 'unchanged';
+  }
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  if (existing) {
+    fs.copyFileSync(targetPath, `${targetPath}.bak`);
+  }
+  const tmpPath = `${targetPath}.tmp`;
+  fs.writeFileSync(tmpPath, buffer);
+  fs.renameSync(tmpPath, targetPath);
+  return 'updated';
+}
+
+/**
  * 스펙 목록의 CSV 를 다운로드해 검증 후 교체한다.
  * - 내용 동일 → unchanged (파일 미변경 → mtime 보존, lastmod 오염 없음)
  * - 교체 시 직전 파일을 `.bak` 으로 남긴다
@@ -138,25 +157,15 @@ export async function ensureLatestLocaldataCsvs(
         continue;
       }
 
-      const existing = fs.existsSync(spec.targetPath) ? fs.readFileSync(spec.targetPath) : null;
-      if (existing && existing.equals(buffer)) {
-        results.push({ category: spec.category, status: 'unchanged', rows: validation.rows });
+      const status = replaceFileIfChanged(spec.targetPath, buffer);
+      results.push({ category: spec.category, status, rows: validation.rows });
+      if (status === 'unchanged') {
         console.info(`[localdata] ${spec.category}: 변경 없음 (${validation.rows.toLocaleString()}행)`);
-        continue;
+      } else {
+        console.info(
+          `[localdata] ${spec.category}: 갱신 완료 (${validation.rows.toLocaleString()}행, ${(buffer.length / 1024 / 1024).toFixed(1)}MB)`
+        );
       }
-
-      fs.mkdirSync(path.dirname(spec.targetPath), { recursive: true });
-      if (existing) {
-        fs.copyFileSync(spec.targetPath, `${spec.targetPath}.bak`);
-      }
-      const tmpPath = `${spec.targetPath}.tmp`;
-      fs.writeFileSync(tmpPath, buffer);
-      fs.renameSync(tmpPath, spec.targetPath);
-
-      results.push({ category: spec.category, status: 'updated', rows: validation.rows });
-      console.info(
-        `[localdata] ${spec.category}: 갱신 완료 (${validation.rows.toLocaleString()}행, ${(buffer.length / 1024 / 1024).toFixed(1)}MB)`
-      );
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       results.push({ category: spec.category, status: 'failed', reason: msg });
