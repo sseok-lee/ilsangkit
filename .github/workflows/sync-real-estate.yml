@@ -118,9 +118,20 @@ jobs:
             echo "[step:geocode-auction-end]"
 
             # Summary 테이블 갱신 (MySQL MAX_EXECUTION_TIME=60s가 내부에서 강제)
+            #
+            # 25m 인 이유: 전월세 3종에 전세/월세 분리 UPDATE 패스가 추가되면서(2026-08-06 배포)
+            # 6종 합계가 11.6분 → 14.3분이 됐고, 이후 데이터 증가가 얹혀 15분을 넘겼다.
+            # 실측 — 8/8 은 offitel-rent 1종, 8/9 는 villa-rent·offitel 2종이 안 돌고
+            # `[WARN] Summary 갱신 실패 (exit=124)` 만 남긴 채 워크플로는 success 로 끝났다
+            # (124 = timeout 이 죽인 것). 뒤 타입일수록 조용히 스킵되는 구조라 상한을 올린다.
+            #
+            # 근본 원인은 따로 있다: 분리 UPDATE 의 PARTITION BY 에 rentType 이 들어가는데
+            # 거래 테이블 인덱스가 (buildingName, bjdCode, dealYear, dealMonth, dealDay) 라
+            # 정렬을 못 받쳐 filesort 가 걸린다(운영 EXPLAIN 실측: 경기 apt-rent 117만 행
+            # Using filesort). 인덱스가 붙으면 이 상한은 다시 내려도 된다.
             echo "[step:summary-start]"
             echo "--- Summary 갱신 ---"
-            timeout --kill-after=30s 15m node dist/scripts/refreshRealEstateSummary.js \
+            timeout --kill-after=30s 25m node dist/scripts/refreshRealEstateSummary.js \
               || echo "[WARN] Summary 갱신 실패 (exit=$?)"
             echo "[step:summary-end]"
 
