@@ -129,10 +129,20 @@ jobs:
             # 거래 테이블 인덱스가 (buildingName, bjdCode, dealYear, dealMonth, dealDay) 라
             # 정렬을 못 받쳐 filesort 가 걸린다(운영 EXPLAIN 실측: 경기 apt-rent 117만 행
             # Using filesort). 인덱스가 붙으면 이 상한은 다시 내려도 된다.
+            #   0=6종 완주 / 4=일부 타입 실패 / 124=timeout 이 죽임(뒤 타입 미실행) / 그 외=예외
+            # 종전에는 `|| echo "[WARN] ..."` 로만 흘려서 Actions UI 에는 success 로만 보였고,
+            # 8/8·8/9 에 villa-rent·offitel 이 안 돌았는데 아무도 몰랐다. 사이트맵 단계와
+            # 같은 규약(::warning:: + 종료 코드 분기)으로 맞춘다.
             echo "[step:summary-start]"
             echo "--- Summary 갱신 ---"
-            timeout --kill-after=30s 25m node dist/scripts/refreshRealEstateSummary.js \
-              || echo "[WARN] Summary 갱신 실패 (exit=$?)"
+            SUMMARY_EXIT=0
+            timeout --kill-after=30s 25m node dist/scripts/refreshRealEstateSummary.js || SUMMARY_EXIT=$?
+            case "$SUMMARY_EXIT" in
+              0) echo "[sync] Summary 갱신 완료" ;;
+              4) echo "::warning::Summary 일부 타입 실패 — 위 로그의 '실패한 타입' 확인. 그 타입은 어제 값이 남는다." ;;
+              124|137) echo "::warning::Summary 가 25분 예산을 초과해 강제 종료됐다(exit=$SUMMARY_EXIT). 뒤쪽 타입(villa-rent·offitel)이 실행되지 않았을 수 있다 — 위 로그의 '완료 N/6' 확인." ;;
+              *) echo "::warning::Summary 갱신 실패 (exit=$SUMMARY_EXIT) — 전 타입이 어제 값으로 남는다." ;;
+            esac
             echo "[step:summary-end]"
 
             # 청약 분양정보 동기화 (전체 소스)
