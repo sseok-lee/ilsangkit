@@ -183,15 +183,41 @@ export async function refreshSummary(type: string): Promise<number> {
 /**
  * 모든 타입의 Summary 갱신. 한 타입이 실패해도 다음 타입으로 계속 진행.
  */
-export async function refreshAllSummaries(): Promise<void> {
+export interface RefreshAllResult {
+  /** 갱신에 성공한 타입 */
+  done: RealEstateType[];
+  /** 예외로 실패한 타입 */
+  failed: RealEstateType[];
+  /** 전체 타입 수 — 호출부가 "N/M" 을 찍을 때 쓴다 */
+  total: number;
+}
+
+/**
+ * 모든 타입의 Summary 갱신. 한 타입이 실패해도 다음 타입으로 계속 진행한다.
+ *
+ * 결과를 **반환**하는 이유: 종전에는 void 라 호출부가 완주 여부를 알 수 없었고,
+ * 실패해도 console.error 한 줄만 남아 Actions UI 에는 success 로 보였다.
+ * 실제 사고 — 2026-08-08·08-09 야간 sync 에서 바깥 `timeout` 이 스크립트를 죽여
+ * villa-rent·offitel 이 안 돌았는데 워크플로는 두 번 다 success 로 끝났다.
+ * (그 경우는 프로세스가 통째로 죽어 이 함수가 반환조차 못 하므로, 호출부가
+ *  종료 코드로도 판정해야 한다 — refreshRealEstateSummary.ts 참고.)
+ */
+export async function refreshAllSummaries(): Promise<RefreshAllResult> {
   const types = Object.keys(TABLE_NAME_MAP) as RealEstateType[];
+  const done: RealEstateType[] = [];
+  const failed: RealEstateType[] = [];
+
   for (const type of types) {
     const start = Date.now();
     try {
       const count = await refreshSummary(type);
       console.info(`[Summary] ${type}: ${count} buildings refreshed (${Date.now() - start}ms)`);
+      done.push(type);
     } catch (err) {
       console.error(`[Summary] ${type} 실패 (${Date.now() - start}ms):`, err);
+      failed.push(type);
     }
   }
+
+  return { done, failed, total: types.length };
 }
