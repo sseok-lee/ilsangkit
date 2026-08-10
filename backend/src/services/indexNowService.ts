@@ -12,20 +12,30 @@ const SITE_HOST = 'ilsangkit.co.kr';
 const KEY_LOCATION = `https://${SITE_HOST}/a874a0a13ad86694a40ca8e2dd9a5698.txt`;
 const MAX_URLS_PER_REQUEST = 10_000;
 
+export interface IndexNowResult {
+  submitted: number;
+  failed: number;
+}
+
 /**
  * IndexNow API로 URL 목록을 제출한다.
  * INDEXNOW_KEY 환경 변수가 없으면 조용히 스킵한다 (개발 환경 등).
+ * 반환값으로 배치 단위 성공/실패 URL 수를 알려준다 — 백필처럼 커서를
+ * 전진시켜야 하는 호출자가 실패 시 중단 판단에 쓴다.
  */
-export async function submitIndexNow(urls: string[]): Promise<void> {
+export async function submitIndexNow(urls: string[]): Promise<IndexNowResult> {
   const key = process.env.INDEXNOW_KEY;
   if (!key) {
     console.info('[IndexNow] INDEXNOW_KEY not set, skipping submission');
-    return;
+    return { submitted: 0, failed: 0 };
   }
 
   if (urls.length === 0) {
-    return;
+    return { submitted: 0, failed: 0 };
   }
+
+  let submitted = 0;
+  let failed = 0;
 
   // 10,000개 단위로 분할
   for (let i = 0; i < urls.length; i += MAX_URLS_PER_REQUEST) {
@@ -46,15 +56,20 @@ export async function submitIndexNow(urls: string[]): Promise<void> {
       // 200 = 성공, 202 = 수신됨 (둘 다 정상)
       if (response.ok || response.status === 202) {
         console.info(`[IndexNow] Submitted ${batch.length} URLs (status: ${response.status})`);
+        submitted += batch.length;
       } else {
         const body = await response.text().catch(() => '');
         console.error(`[IndexNow] Failed: ${response.status} ${response.statusText} — ${body}`);
+        failed += batch.length;
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error(`[IndexNow] Request error: ${msg}`);
+      failed += batch.length;
     }
   }
+
+  return { submitted, failed };
 }
 
 /**
