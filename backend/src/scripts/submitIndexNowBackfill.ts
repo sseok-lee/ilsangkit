@@ -22,7 +22,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { submitIndexNow } from '../services/indexNowService.js';
-import { ALL_CATEGORIES } from '../services/categoryRegistry.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATE_FILE = path.resolve(__dirname, '../../data/indexnow-backfill.json');
@@ -32,6 +31,8 @@ const FETCH_TIMEOUT_MS = 30_000;
 const DEFAULT_LIMIT = 20_000;
 
 // 화석(열화 스냅샷)이 관측된 카테고리와 유입 기여가 큰 카테고리를 앞에 둔다.
+// categoryRegistry.ALL_CATEGORIES 와 같은 집합 — 여기서 직접 정의해 Prisma 의존을
+// 끊는다(CI 러너에서 prisma generate 없이 실행 가능). 카테고리 추가 시 동기 필요.
 const DEFAULT_CATEGORY_ORDER = [
   'hospital',
   'pharmacy',
@@ -133,10 +134,10 @@ function parseArgs(): { limit: number; categories: string[]; dryRun: boolean; re
   const catIdx = args.indexOf('--categories');
   if (catIdx !== -1 && args[catIdx + 1]) {
     const requested = args[catIdx + 1].split(',').map((c) => c.trim());
-    const invalid = requested.filter((c) => !ALL_CATEGORIES.includes(c as never));
+    const invalid = requested.filter((c) => !DEFAULT_CATEGORY_ORDER.includes(c));
     if (invalid.length > 0) {
       console.error(`❌ 알 수 없는 카테고리: ${invalid.join(', ')}`);
-      console.error(`   사용 가능: ${ALL_CATEGORIES.join(', ')}`);
+      console.error(`   사용 가능: ${DEFAULT_CATEGORY_ORDER.join(', ')}`);
       process.exit(1);
     }
     categories = requested;

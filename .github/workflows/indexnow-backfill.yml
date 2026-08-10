@@ -1,0 +1,81 @@
+name: IndexNow Backfill
+
+# 네이버 색인의 SSR 열화 스냅샷 화석(기본 title '일상킷' + GNB/푸터 스니펫)을
+# 재수집 요청으로 세척한다. 시설 상세 ~287k URL 을 매일 2만 건씩 IndexNow 로
+# 제출 — 전체 1회전에 ~15일. 열화 유출 자체는 2026-07-29 에 수정됐으므로
+# (seo-canary.yml 헤더 참고) 이 워크플로는 잔존 화석 세척 전용이다.
+#
+# ## 커서 상태
+#
+# 러너는 매번 초기화되므로 제출 커서(backend/data/indexnow-backfill.json)를
+# actions/cache 로 이어간다. cache 키는 불변이라 run 마다 유일한 키로 저장하고
+# restore-keys 접두 매칭으로 직전 실행의 최신 상태를 가져온다(표준 패턴).
+# cache 는 best-effort — 유실되면 처음부터 다시 제출하는데, 재수집 요청 특성상
+# 중복 제출은 무해하다(전체 소요일이 늘어날 뿐). 전체 제출이 끝나면 스크립트가
+# "남은 미제출 URL 없음"으로 no-op 종료하므로 방치해도 안전하다.
+#
+# ## INDEXNOW_KEY 가 secret 이 아닌 이유
+#
+# IndexNow 키는 설계상 공개 값이다 — 검증을 위해 사이트 루트에 그대로 호스팅된다
+# (https://ilsangkit.co.kr/a874a0a13ad86694a40ca8e2dd9a5698.txt). 평문으로 둔다.
+#
+# ## 스케줄 활성화 조건
+#
+# schedule 트리거는 default 브랜치(main)의 워크플로 파일 기준으로만 동작한다.
+# develop 머지만으로는 돌지 않고 main 승격 후부터 활성화된다.
+
+on:
+  schedule:
+    # 01:37 UTC = 10:37 KST. 야간 부동산 sync 창(18:50 UTC~, sync-real-estate.yml)과
+    # 겹치지 않는 시각 — 사이트맵 fetch 가 서버를 스치므로 sync 부하 시간대를 피한다.
+    - cron: '37 1 * * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: '이번 실행 제출 상한'
+        default: '20000'
+        required: false
+
+concurrency:
+  group: indexnow-backfill
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Restore submission cursor
+        uses: actions/cache/restore@v4
+        with:
+          path: backend/data/indexnow-backfill.json
+          key: indexnow-backfill-state-${{ github.run_id }}
+          restore-keys: |
+            indexnow-backfill-state-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Submit batch
+        env:
+          INDEXNOW_KEY: a874a0a13ad86694a40ca8e2dd9a5698
+        run: npx tsx src/scripts/submitIndexNowBackfill.ts --limit ${{ github.event.inputs.limit || '20000' }}
+
+      # 스크립트는 성공한 배치까지만 커서를 기록하고 exit 0 으로 끝난다.
+      # 제출 전 단계(사이트맵 fetch 등)에서 죽으면 exit 1 → 저장 스킵(상태 파일 부재).
+      - name: Save submission cursor
+        uses: actions/cache/save@v4
+        with:
+          path: backend/data/indexnow-backfill.json
+          key: indexnow-backfill-state-${{ github.run_id }}
