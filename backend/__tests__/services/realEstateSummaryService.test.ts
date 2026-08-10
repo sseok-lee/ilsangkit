@@ -292,6 +292,44 @@ describe('refreshAllSummaries', () => {
 
     errorSpy.mockRestore();
   });
+
+  // 종전에는 void 라 호출부가 완주 여부를 알 수 없었다. 2026-08-08·08-09 야간 sync 에서
+  // 뒤쪽 타입이 안 돌았는데 워크플로가 두 번 다 success 로 끝난 사고의 감시 구멍이다.
+  describe('완주 결과 보고', () => {
+    it('전부 성공하면 done 이 전 타입, failed 는 비어 있다', async () => {
+      mockQueryRawUnsafe.mockResolvedValue([{ city: '서울' }]);
+      mockExecuteRawUnsafe.mockResolvedValue(3);
+
+      const r = await refreshAllSummaries();
+
+      const types = Object.keys(TABLE_NAME_MAP);
+      expect(r.done).toEqual(types);
+      expect(r.failed).toEqual([]);
+      expect(r.total).toBe(types.length);
+    });
+
+    it('실패한 타입만 failed 에 담고 나머지는 done 에 남긴다', async () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const types = Object.keys(TABLE_NAME_MAP);
+
+      let call = 0;
+      mockQueryRawUnsafe.mockImplementation(async () => {
+        call++;
+        if (call === 1) throw new Error('boom');
+        return [{ city: '서울' }];
+      });
+      mockExecuteRawUnsafe.mockResolvedValue(1);
+
+      const r = await refreshAllSummaries();
+
+      expect(r.failed).toEqual([types[0]]);
+      expect(r.done).toEqual(types.slice(1));
+      // done + failed 가 total 을 채워야 "N/M" 판정이 성립한다.
+      expect(r.done.length + r.failed.length).toBe(r.total);
+
+      errorSpy.mockRestore();
+    });
+  });
 });
 
 describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
