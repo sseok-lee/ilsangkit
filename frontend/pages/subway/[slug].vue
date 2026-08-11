@@ -95,8 +95,6 @@
                 :stats="heroStats"
               />
 
-              <AdBanner />
-
               <!-- Basic Info -->
               <SectionBlock heading="역정보" subtext="위치·운영기관·연락처 정보">
                 <!-- 노선 headline (대표 정보 1순위) -->
@@ -131,6 +129,7 @@
                 </dl>
               </SectionBlock>
 
+              <!-- Ad 1: 역정보 뒤 -->
               <AdBanner />
 
               <!-- 위치·로드뷰 -->
@@ -158,8 +157,6 @@
                 </div>
               </SectionBlock>
 
-              <AdBanner />
-
               <!-- 주변 시설 (다른 지하철역 + 주차장·EV충전·화장실·시장) -->
               <DetailNearby
                 :nearby-facilities="nearbyStations"
@@ -169,6 +166,7 @@
                 :category-meta="categoryMetaForNearby"
               />
 
+              <!-- Ad 2: 주변시설 뒤 -->
               <AdBanner />
 
               <!-- 관련 탐색 -->
@@ -266,10 +264,6 @@
               </div>
 
               <!-- 고지문은 모바일 인라인 배너 옆 단일 <p>로 통합됐으므로 여기선 끔 -->
-
-              <div class="mt-3">
-                <AdBanner />
-              </div>
             </aside>
           </div>
         </div>
