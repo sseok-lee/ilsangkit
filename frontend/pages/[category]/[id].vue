@@ -240,12 +240,6 @@
                   </div>
                 </div>
               </div>
-
-
-              <!-- Ad: 사이드바 (sidebar-sticky, desktop only) -->
-              <div class="mt-3">
-                <AdBanner />
-              </div>
             </aside>
           </div>
         </div>
