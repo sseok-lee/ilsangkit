@@ -17,6 +17,22 @@ describe('시설 상세 광고 밀도', () => {
   it('AdBanner는 모바일·데스크톱 공통 본문 4개다', () => {
     expect(count(src(), /<AdBanner/g)).toBe(4)
   })
+  it('광고는 히어로, 기본정보, 시설현황, 주변시설·블로그 후기 뒤에만 존재한다', () => {
+    const source = src()
+    const heroIndex = source.indexOf('<MobileDetailHeader')
+    const basicInfoIndex = source.indexOf('<DetailBasicInfo')
+    const statusIndex = source.indexOf('<DetailFacilityStatus')
+    const locationIndex = source.indexOf('heading="위치·로드뷰"')
+    const nearbyIndex = source.indexOf('<DetailNearby')
+    const contextLinksIndex = source.indexOf('<DetailContextLinks')
+
+    expect([heroIndex, basicInfoIndex, statusIndex, locationIndex, nearbyIndex, contextLinksIndex].every((i) => i >= 0)).toBe(true)
+    expect(count(source.slice(heroIndex, basicInfoIndex), /<AdBanner/g)).toBe(1)
+    expect(count(source.slice(basicInfoIndex, statusIndex), /<AdBanner/g)).toBe(1)
+    expect(count(source.slice(statusIndex, locationIndex), /<AdBanner/g)).toBe(1)
+    expect(count(source.slice(locationIndex, nearbyIndex), /<AdBanner/g)).toBe(0)
+    expect(count(source.slice(nearbyIndex, contextLinksIndex), /<AdBanner/g)).toBe(1)
+  })
   it('데스크톱 사이드바는 지도와 액션을 유지하고 광고를 포함하지 않는다', () => {
     const aside = extractBlock(src(), '<aside class="hidden md:flex', '</aside>')
     expect(aside).toContain('aria-label="시설 위치 지도"')
