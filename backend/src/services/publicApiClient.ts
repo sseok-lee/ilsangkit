@@ -99,10 +99,30 @@ export class PublicApiClient {
           throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
 
-        const data = (await response.json()) as PublicApiResponse<T>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw = (await response.json()) as any;
+
+        // data.go.kr 공통 에러(미신청·트래픽 초과 등)는 정상 응답과 전혀 다른
+        // 페이로드로 온다 — 조용히 넘어가면 원인 없는 TypeError 로 둔갑하므로
+        // 여기서 메시지를 살려 던진다.
+        const cmmHeader = raw?.OpenAPI_ServiceResponse?.cmmMsgHeader;
+        if (cmmHeader) {
+          throw new Error(
+            `API Error: ${cmmHeader.returnReasonCode} - ${cmmHeader.errMsg} (${cmmHeader.returnAuthMsg ?? ''})`
+          );
+        }
+
+        // tn_ 표준데이터 API 가 2026-07 말경 `response` 래퍼를 제거하고 루트에
+        // {header, body} 를 바로 반환하도록 바뀌었다(5개 카테고리 동시 실패의
+        // 원인). 구형/신형 모두 수용해 구형 형태로 정규화한다.
+        const root = raw?.response ?? raw;
+        if (!root?.header || !root?.body) {
+          throw new Error(`예상 밖 응답 구조: ${JSON.stringify(raw).slice(0, 300)}`);
+        }
+        const data: PublicApiResponse<T> = { response: root };
 
         // API 에러 체크 (resultCode: "00" 또는 "0" 모두 성공)
-        const resultCode = data.response?.header?.resultCode;
+        const resultCode = data.response.header.resultCode;
         if (resultCode && resultCode !== '00' && resultCode !== '0') {
           throw new Error(`API Error: ${resultCode} - ${data.response.header.resultMsg}`);
         }
