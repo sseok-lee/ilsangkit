@@ -34,6 +34,8 @@ import { syncPharmacies } from './syncPharmacy.js';
 import { runMedicalEnrich } from './seedMedicalEnrich.js';
 import { runHospitalDetail } from './seedHospitalDetail.js';
 import { ensureLatestHiraFiles, DATA_DIR as HIRA_DATA_DIR } from '../services/hiraFileDownloader.js';
+import { ensureLatestLocaldataCsvs } from '../services/localdataFileDownloader.js';
+import { ensureLatestSubwayCsv } from '../services/kricSubwayFileDownloader.js';
 import { syncChildcare } from '../services/childcareSyncService.js';
 import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
@@ -102,7 +104,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['toilet', 'toilet-geocode', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'hira-file', 'hospital-detail', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway'] as const;
+const CATEGORIES = ['localdata-file', 'toilet', 'toilet-geocode', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'hira-file', 'hospital-detail', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway-file', 'subway'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -115,6 +117,23 @@ async function syncCategory(category: Category): Promise<SyncResult> {
 
   try {
     switch (category) {
+      case 'localdata-file': {
+        // toilet·wifi 원본 CSV 를 localdata.go.kr 에서 최신화한다.
+        // 실패해도 기존 파일이 보존되므로 뒤의 toilet/wifi sync 는 직전 데이터로
+        // 계속 돌 수 있다 — 단 이 카테고리는 실패로 기록해 가시화한다(exit 1).
+        const { results } = await ensureLatestLocaldataCsvs();
+        const failed = results.filter((r) => r.status === 'failed');
+        if (failed.length > 0) {
+          throw new Error(failed.map((f) => `${f.category}: ${f.reason}`).join('; '));
+        }
+        return {
+          category,
+          success: true,
+          count: results.filter((r) => r.status === 'updated').length,
+          duration: Date.now() - start,
+        };
+      }
+
       case 'toilet': {
         const result = await syncToilets(TOILET_CSV_PATH);
         return {
@@ -359,6 +378,21 @@ async function syncCategory(category: Category): Promise<SyncResult> {
           category,
           success: true,
           count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'subway-file': {
+        // subway.csv 를 KRIC 레일포털 xlsx 에서 최신화한다. 실패해도 기존 파일이
+        // 보존되므로 뒤의 subway sync 는 직전 데이터로 계속 돈다.
+        const result = await ensureLatestSubwayCsv();
+        if (result.status === 'failed') {
+          throw new Error(result.reason);
+        }
+        return {
+          category,
+          success: true,
+          count: result.status === 'updated' ? 1 : 0,
           duration: Date.now() - start,
         };
       }

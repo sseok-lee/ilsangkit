@@ -25,6 +25,10 @@ prisma/*.db-journal
 data/indexing-log.json
 data/indexnow-backfill.json
 
+# localdata CSV 자동 다운로드 산출물 (백업/임시)
+prisma/data/*.csv.bak
+prisma/data/*.csv.tmp
+
 # Google Service Account 키 파일
 study-*.json
 
