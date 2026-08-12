@@ -5,6 +5,7 @@ import { parseCSV } from '../lib/csvParser.js';
 import prisma from '../lib/prisma.js';
 import { SyncStatus } from '@prisma/client';
 import { createHash } from 'crypto';
+import { buildWifiGroupId } from '../services/wifiGroup.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as iconv from 'iconv-lite';
@@ -48,6 +49,8 @@ export interface TransformedWifi {
   lng: number;
   city: string;
   district: string;
+  /** 장소 단위 그룹 id — 같은 장소의 AP 들이 상세 페이지 하나로 접힌다 */
+  groupId: string;
   sourceId: string;
   sourceUrl: string;
   // Wifi 전용 필드
@@ -129,6 +132,9 @@ export function transformWifiData(row: WifiCSVRow): TransformedWifi | null {
     lng,
     city,
     district,
+    // 장소 단위 그룹 id. address 를 키에 포함해야 '버스정류장'(반경 29km) 같은
+    // 비건물 이름이 하나로 오병합되지 않는다 — 근거는 wifiGroup.ts 주석 참조.
+    groupId: buildWifiGroupId({ name, city, district, address }),
     sourceId,
     sourceUrl: 'https://www.data.go.kr/data/15013116/standard.do',
     // Wifi 전용 필드 (flat)
@@ -219,6 +225,7 @@ async function batchUpsertWifi(
                 lng: wifi.lng,
                 city: wifi.city,
                 district: wifi.district,
+                groupId: wifi.groupId,
                 ssid: wifi.ssid,
                 installDate: wifi.installDate,
                 serviceProvider: wifi.serviceProvider,
@@ -243,6 +250,7 @@ async function batchUpsertWifi(
                 lng: wifi.lng,
                 city: wifi.city,
                 district: wifi.district,
+                groupId: wifi.groupId,
                 sourceId: wifi.sourceId,
                 sourceUrl: wifi.sourceUrl,
                 ssid: wifi.ssid,

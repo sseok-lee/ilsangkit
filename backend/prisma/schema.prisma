@@ -105,11 +105,17 @@ model Wifi {
   govCode               String? @db.VarChar(20)
   dataDate              String? @db.VarChar(20)
 
+  /// 장소 단위 그룹 id — buildWifiGroupId(name, city, district, address).
+  /// AP 1대=1행인 원본을 장소로 접어 상세 페이지를 하나로 만든다(ev-charger 의 statId 역할).
+  /// nullable 인 이유: db push 직후~백필 전 구간에서 NULL 이며, 그때는 리다이렉트를 하지 않는다.
+  groupId String? @db.VarChar(24)
+
   @@index([city, district])
   @@index([lat, lng])
   @@index([bjdCode])
   @@index([viewCount])
   @@index([name])
+  @@index([groupId])
   // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
   @@fulltext([name, address, roadAddress])
 }

@@ -63,8 +63,8 @@
               <ClientOnly>
                 <FacilityMap
                   :center="{ lat: facility.lat, lng: facility.lng }"
-                  :facilities="[facility]"
-                  :level="3"
+                  :facilities="mapFacilities"
+                  :level="mapLevel"
                   class="w-full h-full"
                 />
               </ClientOnly>
@@ -145,8 +145,8 @@
                   <ClientOnly>
                     <FacilityMap
                       :center="{ lat: facility.lat, lng: facility.lng }"
-                      :facilities="[facility]"
-                      :level="3"
+                      :facilities="mapFacilities"
+                      :level="mapLevel"
                       class="w-full h-full !min-h-0"
                     />
                   </ClientOnly>
@@ -203,8 +203,8 @@
                 <ClientOnly>
                   <FacilityMap
                     :center="{ lat: facility.lat, lng: facility.lng }"
-                    :facilities="[facility]"
-                    :level="3"
+                    :facilities="mapFacilities"
+                    :level="mapLevel"
                     class="w-full h-full opacity-80"
                   />
                 </ClientOnly>
@@ -276,6 +276,11 @@ import { buildHeroStats } from '~/utils/categoryHeroStats'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 import { resolveFacilitySsrOutcome } from '~/utils/facilitySsrOutcome'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import {
+  parseAccessPoints,
+  accessPointsToMapFacilities,
+  mapLevelForAccessPoints,
+} from '~/utils/wifiAccessPoints'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
@@ -573,6 +578,16 @@ const isOpen24Hours = computed(() => {
   const det = facility.value.details as FacilityDetailsAll & Record<string, unknown>
   return det.operatingHours === '24시간' || det.is24Hour
 })
+
+// --- wifi 장소 단위 통합: 지도 핀 ---
+// 백엔드가 같은 장소의 AP 를 한 페이지로 접고 details.accessPoints 로 전부 내려준다.
+// 이 값을 안 쓰면 지도에 중심점 핀 하나만 찍혀 통합의 이점이 화면에 안 나타난다.
+// (설치 지점 목록은 DetailFacilityStatus 가 "설치 장소 상세" 자리에서 직접 렌더한다.)
+const accessPoints = computed(() => parseAccessPoints(details.value))
+const mapFacilities = computed<Facility[]>(() =>
+  facility.value ? accessPointsToMapFacilities(accessPoints.value, facility.value as Facility) : [],
+)
+const mapLevel = computed(() => mapLevelForAccessPoints(accessPoints.value))
 
 // 전 카테고리 통합 전화번호
 const facilityPhone = computed(() => resolveFacilityPhone(details.value as Record<string, unknown> | undefined))
