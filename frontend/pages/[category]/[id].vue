@@ -579,16 +579,17 @@ const isOpen24Hours = computed(() => {
   return det.operatingHours === '24시간' || det.is24Hour
 })
 
-// 전 카테고리 통합 전화번호
-// --- wifi 장소 단위 통합 ---
+// --- wifi 장소 단위 통합: 지도 핀 ---
 // 백엔드가 같은 장소의 AP 를 한 페이지로 접고 details.accessPoints 로 전부 내려준다.
 // 이 값을 안 쓰면 지도에 중심점 핀 하나만 찍혀 통합의 이점이 화면에 안 나타난다.
+// (설치 지점 목록은 DetailFacilityStatus 가 "설치 장소 상세" 자리에서 직접 렌더한다.)
 const accessPoints = computed(() => parseAccessPoints(details.value))
-const accessPointCount = computed(() => {
-  // 좌표가 없는 AP 도 실제로는 존재하므로 총 개수는 서버가 센 값을 신뢰한다.
-  const n = Number((details.value as { accessPointCount?: unknown } | undefined)?.accessPointCount)
-  return Number.isFinite(n) && n > 0 ? n : accessPoints.value.length
-})
+const mapFacilities = computed<Facility[]>(() =>
+  facility.value ? accessPointsToMapFacilities(accessPoints.value, facility.value as Facility) : [],
+)
+const mapLevel = computed(() => mapLevelForAccessPoints(accessPoints.value))
+
+// 전 카테고리 통합 전화번호
 const facilityPhone = computed(() => resolveFacilityPhone(details.value as Record<string, unknown> | undefined))
 
 // Generate map URLs (길찾기)

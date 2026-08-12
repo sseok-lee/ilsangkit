@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '../lib/prisma.js';
+import { countWifiGroups, countWifiGroupsByDistrict } from './wifiService.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './cityMapping.js';
 import { CATEGORY_REGISTRY } from './categoryRegistry.js';
 import type { FacilityCategory } from './categoryRegistry.js';
@@ -45,6 +46,12 @@ export async function getStatsByCity(citySlug: string): Promise<{
   const [categoryGroupResults, trashGroups] = await Promise.all([
     Promise.all(
       ALL_CATEGORIES.map(async (cat) => {
+        // wifi 는 AP 1대=1행이라 그대로 세면 장소 수가 아니라 AP 수가 나온다.
+        // 상세·목록과 같은 장소 단위로 센다.
+        if (cat === 'wifi') {
+          const rows = await countWifiGroupsByDistrict(cityVariants);
+          return { category: cat, groups: rows.map((r) => ({ district: r.district, _count: r.count })) };
+        }
         const groups = await CATEGORY_REGISTRY[cat].model().groupBy({
           by: ['district'],
           where: { city: cityCondition },
@@ -129,6 +136,12 @@ export async function getDistrictStatsByCity(citySlug: string): Promise<Map<stri
   const [categoryGroupResults, trashGroups] = await Promise.all([
     Promise.all(
       ALL_CATEGORIES.map(async (cat) => {
+        // wifi 는 AP 1대=1행이라 그대로 세면 장소 수가 아니라 AP 수가 나온다.
+        // 상세·목록과 같은 장소 단위로 센다.
+        if (cat === 'wifi') {
+          const rows = await countWifiGroupsByDistrict(cityVariants);
+          return { category: cat, groups: rows.map((r) => ({ district: r.district, _count: r.count })) };
+        }
         const groups = await CATEGORY_REGISTRY[cat].model().groupBy({
           by: ['district'],
           where: { city: cityCondition },
@@ -209,7 +222,9 @@ export async function getStatsByDistrict(citySlug: string, districtSlug: string)
     Promise.all(
       ALL_CATEGORIES.map(async (cat) => ({
         category: cat,
-        count: await CATEGORY_REGISTRY[cat].model().count({ where }),
+        count: cat === 'wifi'
+          ? await countWifiGroups(cityVariants, region.district)
+          : await CATEGORY_REGISTRY[cat].model().count({ where }),
       }))
     ),
     prisma.wasteSchedule.count({ where }),
