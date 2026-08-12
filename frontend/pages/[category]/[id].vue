@@ -63,8 +63,8 @@
               <ClientOnly>
                 <FacilityMap
                   :center="{ lat: facility.lat, lng: facility.lng }"
-                  :facilities="[facility]"
-                  :level="3"
+                  :facilities="mapFacilities"
+                  :level="mapLevel"
                   class="w-full h-full"
                 />
               </ClientOnly>
@@ -140,13 +140,41 @@
 
               <!-- 위치·로드뷰 -->
               <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
+                <!--
+                  wifi 장소 단위 통합: 이 장소에 설치된 AP 지점 목록.
+                  한 장소에 AP 가 수십~수백 대인 경우가 흔해(서울식물원 154대) 지도 핀만으로는
+                  어디에 있는지 읽히지 않는다. 설치장소상세는 AP 식별자가 아니라 구역 라벨이라
+                  나열이 아니라 집계로 보여준다(해운대 백병원은 49대가 "본관 A동"을 공유).
+                -->
+                <div v-if="accessPointLocations.length" class="mb-3 rounded-xl border border-line bg-white p-4">
+                  <div class="flex items-center justify-between gap-2 mb-3">
+                    <p class="text-sm font-semibold text-slate-900">와이파이 설치 지점</p>
+                    <span class="shrink-0 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                      AP {{ accessPointCount }}대
+                    </span>
+                  </div>
+                  <ul class="flex flex-wrap gap-1.5">
+                    <li
+                      v-for="loc in visibleAccessPointLocations"
+                      :key="loc.label"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-line bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700"
+                    >
+                      <span>{{ loc.label }}</span>
+                      <span v-if="loc.count > 1" class="text-xs font-medium text-slate-500">{{ loc.count }}대</span>
+                    </li>
+                  </ul>
+                  <p v-if="hiddenAccessPointLocationCount" class="mt-2 text-xs text-slate-500">
+                    외 {{ hiddenAccessPointLocationCount }}곳 — 전체 위치는 지도에서 확인하세요.
+                  </p>
+                </div>
+
                 <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
                 <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
                   <ClientOnly>
                     <FacilityMap
                       :center="{ lat: facility.lat, lng: facility.lng }"
-                      :facilities="[facility]"
-                      :level="3"
+                      :facilities="mapFacilities"
+                      :level="mapLevel"
                       class="w-full h-full !min-h-0"
                     />
                   </ClientOnly>
@@ -203,8 +231,8 @@
                 <ClientOnly>
                   <FacilityMap
                     :center="{ lat: facility.lat, lng: facility.lng }"
-                    :facilities="[facility]"
-                    :level="3"
+                    :facilities="mapFacilities"
+                    :level="mapLevel"
                     class="w-full h-full opacity-80"
                   />
                 </ClientOnly>
@@ -276,6 +304,12 @@ import { buildHeroStats } from '~/utils/categoryHeroStats'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 import { resolveFacilitySsrOutcome } from '~/utils/facilitySsrOutcome'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import {
+  parseAccessPoints,
+  groupAccessPointsByLocation,
+  accessPointsToMapFacilities,
+  mapLevelForAccessPoints,
+} from '~/utils/wifiAccessPoints'
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
 const route = useRoute()
@@ -575,6 +609,30 @@ const isOpen24Hours = computed(() => {
 })
 
 // 전 카테고리 통합 전화번호
+// --- wifi 장소 단위 통합 ---
+// 백엔드가 같은 장소의 AP 를 한 페이지로 접고 details.accessPoints 로 전부 내려준다.
+// 이 값을 안 쓰면 지도에 중심점 핀 하나만 찍혀 통합의 이점이 화면에 안 나타난다.
+const accessPoints = computed(() => parseAccessPoints(details.value))
+const accessPointCount = computed(() => {
+  // 좌표가 없는 AP 도 실제로는 존재하므로 총 개수는 서버가 센 값을 신뢰한다.
+  const n = Number((details.value as { accessPointCount?: unknown } | undefined)?.accessPointCount)
+  return Number.isFinite(n) && n > 0 ? n : accessPoints.value.length
+})
+const accessPointLocations = computed(() => groupAccessPointsByLocation(accessPoints.value))
+// 설치 장소 종류는 그룹당 평균 2.2개지만 최대 117개까지 있다(165개 그룹이 12종 초과).
+// 전부 펼치면 목록이 페이지를 잡아먹어서 상한을 둔다.
+const ACCESS_POINT_LOCATION_LIMIT = 12
+const visibleAccessPointLocations = computed(() =>
+  accessPointLocations.value.slice(0, ACCESS_POINT_LOCATION_LIMIT),
+)
+const hiddenAccessPointLocationCount = computed(() =>
+  Math.max(0, accessPointLocations.value.length - ACCESS_POINT_LOCATION_LIMIT),
+)
+const mapFacilities = computed<Facility[]>(() =>
+  facility.value ? accessPointsToMapFacilities(accessPoints.value, facility.value as Facility) : [],
+)
+const mapLevel = computed(() => mapLevelForAccessPoints(accessPoints.value))
+
 const facilityPhone = computed(() => resolveFacilityPhone(details.value as Record<string, unknown> | undefined))
 
 // Generate map URLs (길찾기)
