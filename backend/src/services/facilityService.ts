@@ -31,6 +31,7 @@ export { evChargerStationSearch, getEvChargerStationDetail } from './evChargerSe
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CATEGORY_REGISTRY, ALL_CATEGORIES } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, buildRegionFilter, cityVariantList } from './cityMapping.js';
+import { isWifiGroupId } from './wifiGroup.js';
 import { FULLTEXT_TABLES, canUseFulltext, fulltextIds, fulltextCount, toBooleanPhrase } from './search/fulltextKeyword.js';
 import { bufferViewCount } from './viewCountService.js';
 import { evChargerStationSearch } from './evChargerService.js';
@@ -895,6 +896,13 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   if (category === 'ev-charger') {
     const { getEvChargerStationDetail } = await import('./evChargerService.js');
     return getEvChargerStationDetail(id);
+  }
+
+  // wifi: 장소 단위 그룹 조회. 그룹 id(wifi-g…) 일 때만 갈라지고,
+  // 기존 AP id(wifi-<hex12>) 는 아래 일반 경로로 그대로 흐른다 — 백필 전에도 안 깨진다.
+  if (category === 'wifi' && isWifiGroupId(id)) {
+    const { getWifiGroupDetail } = await import('./wifiService.js');
+    return getWifiGroupDetail(id);
   }
 
   const model = config.model();
