@@ -87,8 +87,10 @@
         </template>
       </PageHero>
 
-      <!-- Ad: Hero 직후 (fold 하단) -->
-      <AdBanner class="order-3 md:order-3" />
+      <!-- Ad: Hero 직후 (fold 하단) — 모바일 실측 384px 로 폴드 안이라 규격 상한을 둔다.
+           높이 미지정이면 AdSense 가 390×390(뷰포트의 46%)을 배정하고 full-bleed 로 번진다.
+           시설 상세 첫 슬롯과 동일 조합. 폴드 아래 슬롯은 auto 유지. -->
+      <AdBanner class="order-3 md:order-3" sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
       <SectionBlock class="order-9 md:order-7" heading="위치와 로드뷰" :subtext="hasMapCoords ? '지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.' : '원본 자료에 좌표가 없어 지도를 표시하지 못합니다.'">
