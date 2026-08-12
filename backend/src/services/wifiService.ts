@@ -123,6 +123,26 @@ export async function getWifiGroupDetail(groupId: string): Promise<FacilityDetai
 }
 
 /**
+ * 그룹의 대표 행에서 이름·지역만 가볍게 읽는다.
+ *
+ * 상세(getDetail) 말고도 id 로 시설을 찾는 라우트가 있다 — naver-blog 가 그렇다.
+ * 그쪽이 findUnique({ id }) 만 쓰면 그룹 id 에서 404 가 난다(실제로 그렇게 났다).
+ * 전체 AP 를 읽을 필요는 없으므로 상세와 분리한다.
+ */
+export async function getWifiGroupHeader(
+  groupId: string,
+): Promise<{ id: string; name: string; city: string; district: string } | null> {
+  if (!isWifiGroupId(groupId)) return null;
+
+  return prisma.wifi.findFirst({
+    where: { groupId },
+    select: { id: true, name: true, city: true, district: true },
+    // getWifiGroupDetail 과 같은 순서라 대표 행이 일치한다
+    orderBy: { id: 'asc' },
+  });
+}
+
+/**
  * 기존 AP 상세 id 가 들어오면 옮겨갈 그룹 id 를 돌려준다. 없으면 null.
  *
  * groupId 가 아직 NULL 인 행(스키마만 배포되고 백필 전)에는 null 을 준다 —

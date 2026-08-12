@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockFindMany, mockFindUnique } = vi.hoisted(() => ({
+const { mockFindMany, mockFindUnique, mockFindFirst } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
   mockFindUnique: vi.fn(),
+  mockFindFirst: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
-  const wifi = { findMany: mockFindMany, findUnique: mockFindUnique };
+  const wifi = { findMany: mockFindMany, findUnique: mockFindUnique, findFirst: mockFindFirst };
   const client = { wifi };
   return { default: client, prisma: client };
 });
@@ -15,7 +16,7 @@ vi.mock('../../src/services/viewCountService.js', () => ({
   bufferViewCount: vi.fn(),
 }));
 
-import { getWifiGroupDetail, resolveWifiGroupRedirect } from '../../src/services/wifiService.js';
+import { getWifiGroupDetail, resolveWifiGroupRedirect, getWifiGroupHeader } from '../../src/services/wifiService.js';
 import { buildWifiGroupId } from '../../src/services/wifiGroup.js';
 
 const GROUP = { name: '경의선숲길', city: '서울', district: '마포구', address: null };
@@ -55,6 +56,34 @@ function row(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   mockFindMany.mockReset();
   mockFindUnique.mockReset();
+  mockFindFirst.mockReset();
+});
+
+describe('getWifiGroupHeader', () => {
+  // 상세 말고도 id 로 시설을 찾는 라우트가 더 있다(naver-blog 등).
+  // 그쪽이 findUnique({id}) 만 쓰면 그룹 id 에서 404 가 난다 — 실제로 그렇게 났다.
+  it('그룹 id 로 대표 행의 이름·지역을 찾는다', async () => {
+    mockFindFirst.mockResolvedValue({
+      id: 'wifi-aaaaaaaaaaaa', name: '경의선숲길', city: '서울', district: '마포구',
+    });
+
+    expect(await getWifiGroupHeader(GROUP_ID)).toEqual({
+      id: 'wifi-aaaaaaaaaaaa', name: '경의선숲길', city: '서울', district: '마포구',
+    });
+    expect(mockFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { groupId: GROUP_ID } }),
+    );
+  });
+
+  it('그룹에 행이 없으면 null', async () => {
+    mockFindFirst.mockResolvedValue(null);
+    expect(await getWifiGroupHeader(GROUP_ID)).toBeNull();
+  });
+
+  it('그룹 id 형식이 아니면 조회하지 않는다', async () => {
+    expect(await getWifiGroupHeader('wifi-aaaaaaaaaaaa')).toBeNull();
+    expect(mockFindFirst).not.toHaveBeenCalled();
+  });
 });
 
 describe('getWifiGroupDetail', () => {
