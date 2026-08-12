@@ -139,3 +139,41 @@ describe('mapLevelForAccessPoints', () => {
     expect(level).toBeLessThanOrEqual(14)
   })
 })
+
+describe('FAQ 회귀 — 통합 상세에서 대표 행 값을 전체인 양 쓰지 않는다', () => {
+  it('AP 가 여럿이면 상세 위치를 단일 값이 아니라 지점 수로 말한다', async () => {
+    const { generateDynamicFAQ } = await import('~/utils/dynamicFAQ')
+    const faq = generateDynamicFAQ({
+      id: 'wifi-gaaa', category: 'wifi', name: '서울식물원',
+      address: null, roadAddress: null, lat: 37.5, lng: 127.0,
+      city: '서울', district: '강서구', bjdCode: null,
+      sourceId: 's', sourceUrl: null, viewCount: 0,
+      createdAt: '', updatedAt: '', syncedAt: '',
+      details: {
+        ssid: 'SEOUL', installLocation: '관광', installLocationDetail: '물가쉼터 주변',
+        accessPointCount: 154,
+        accessPoints: [
+          { id: '1', lat: 37.5, lng: 127.0, ssid: 'SEOUL', installLocation: '관광', installLocationDetail: '저류지 야외' },
+          { id: '2', lat: 37.5, lng: 127.0, ssid: 'SEOUL', installLocation: '관광', installLocationDetail: '물가쉼터 주변' },
+        ],
+      },
+    } as never)
+    const answer = faq.map((f) => f.answer).join(' ')
+    expect(answer).toContain('154')
+    // 26곳 중 한 곳인 "물가쉼터 주변"을 유일한 상세 위치처럼 말하면 안 된다
+    expect(answer).not.toContain('상세 위치: 물가쉼터 주변')
+  })
+
+  it('AP 가 하나면 종전처럼 상세 위치를 그대로 말한다', async () => {
+    const { generateDynamicFAQ } = await import('~/utils/dynamicFAQ')
+    const faq = generateDynamicFAQ({
+      id: 'wifi-a', category: 'wifi', name: '어느 장소',
+      address: null, roadAddress: null, lat: 37.5, lng: 127.0,
+      city: '서울', district: '강서구', bjdCode: null,
+      sourceId: 's', sourceUrl: null, viewCount: 0,
+      createdAt: '', updatedAt: '', syncedAt: '',
+      details: { ssid: 'SEOUL', installLocation: '관광', installLocationDetail: '물가쉼터 주변' },
+    } as never)
+    expect(faq.map((f) => f.answer).join(' ')).toContain('상세 위치: 물가쉼터 주변')
+  })
+})

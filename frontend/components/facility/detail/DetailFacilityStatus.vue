@@ -93,7 +93,38 @@
             <span v-if="details?.installLocation" class="text-sm font-medium text-slate-900">{{ details?.installLocation }}</span>
             <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
           </div>
-          <div class="flex items-center justify-between">
+          <!--
+            설치 장소 상세.
+
+            장소 단위로 접힌 상세(AP 여러 대)에서는 단일 값을 쓸 수 없다. 대표 행 하나의
+            값을 전체인 양 보여주게 되는데, 서울식물원은 AP 154대가 26곳에 흩어져 있는데도
+            "물가쉼터 주변" 하나만 떴다. 그래서 AP 가 여럿이면 지점별 집계로 바꾼다.
+
+            나열이 아니라 집계인 이유: 설치장소상세는 AP 식별자가 아니라 구역 라벨이라
+            해운대 백병원은 AP 116대 중 49대가 "본관 A동"을 공유한다.
+          -->
+          <div v-if="wifiAccessPointLocations.length" class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">설치 장소 상세</span>
+              <span class="shrink-0 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                AP {{ wifiAccessPointCount }}대
+              </span>
+            </div>
+            <ul class="flex flex-wrap gap-1.5">
+              <li
+                v-for="loc in wifiVisibleAccessPointLocations"
+                :key="loc.label"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700"
+              >
+                <span>{{ loc.label }}</span>
+                <span v-if="loc.count > 1" class="text-xs font-medium text-slate-500">{{ loc.count }}대</span>
+              </li>
+            </ul>
+            <p v-if="wifiHiddenAccessPointLocationCount" class="text-xs text-slate-500">
+              외 {{ wifiHiddenAccessPointLocationCount }}곳 — 전체 위치는 아래 지도에서 확인하세요.
+            </p>
+          </div>
+          <div v-else class="flex items-center justify-between">
             <span class="text-sm text-gray-600">설치 장소 상세</span>
             <span v-if="details?.installLocationDetail && details?.installLocationDetail !== details?.installLocation" class="text-sm font-medium text-slate-900">{{ details?.installLocationDetail }}</span>
             <span v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
@@ -564,12 +595,30 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import TagBadges from '~/components/facility/detail/TagBadges.vue'
 import FieldGrid from '~/components/facility/detail/FieldGrid.vue'
 import type { FacilityDetail, FacilityDetailsAll } from '~/types/facility'
+import { parseAccessPoints, groupAccessPointsByLocation } from '~/utils/wifiAccessPoints'
 
 const props = defineProps<{
   facility: FacilityDetail
 }>()
 
 const details = computed(() => props.facility?.details as FacilityDetailsAll | undefined)
+
+// --- wifi 장소 단위 통합: 설치 지점 집계 ---
+const wifiAccessPoints = computed(() => parseAccessPoints(details.value))
+const wifiAccessPointCount = computed(() => {
+  // 좌표 없는 AP 도 실제로 존재하므로 총 대수는 서버가 센 값을 신뢰한다.
+  const n = Number((details.value as { accessPointCount?: unknown } | undefined)?.accessPointCount)
+  return Number.isFinite(n) && n > 0 ? n : wifiAccessPoints.value.length
+})
+const wifiAccessPointLocations = computed(() => groupAccessPointsByLocation(wifiAccessPoints.value))
+// 설치 장소 종류는 그룹당 평균 2.2개지만 최대 117개까지 있다(165개 그룹이 12종 초과).
+const WIFI_LOCATION_LIMIT = 12
+const wifiVisibleAccessPointLocations = computed(() =>
+  wifiAccessPointLocations.value.slice(0, WIFI_LOCATION_LIMIT),
+)
+const wifiHiddenAccessPointLocationCount = computed(() =>
+  Math.max(0, wifiAccessPointLocations.value.length - WIFI_LOCATION_LIMIT),
+)
 
 const hospitalDeptBadges = computed(() => {
   const depts = details.value?.departments as Array<{ dgsbjtCdNm: string; dgsbjtPrSdrCnt?: number }> | undefined

@@ -169,3 +169,58 @@ describe('DetailFacilityStatus — 카테고리 메타데이터 제거 회귀', 
     expect(text).toContain('MRI')
   })
 })
+
+describe('DetailFacilityStatus — wifi 장소 단위 통합', () => {
+  const AP = (over: Record<string, unknown> = {}) => ({
+    id: 'wifi-a', lat: 37.5, lng: 127.0, ssid: 'SEOUL',
+    installLocation: '관광', installLocationDetail: '저류지 야외', ...over,
+  })
+
+  it('통합 상세면 설치 장소 상세 자리에 지점별 집계와 AP 총 대수를 보여준다', () => {
+    const wrapper = mount(DetailFacilityStatus, {
+      props: {
+        facility: makeFacility('wifi', {
+          ssid: 'SEOUL', installLocation: '관광', installLocationDetail: '물가쉼터 주변',
+          accessPointCount: 154,
+          accessPoints: [
+            AP({ id: '1', installLocationDetail: '저류지 야외' }),
+            AP({ id: '2', installLocationDetail: '저류지 야외' }),
+            AP({ id: '3', installLocationDetail: '방문자센터 야외' }),
+          ],
+        }),
+      },
+      global: globalConfig,
+    })
+    const text = wrapper.text()
+    expect(text).toContain('AP 154대')
+    expect(text).toContain('저류지 야외')
+    expect(text).toContain('방문자센터 야외')
+    // 대표 행 하나의 값을 전체인 양 보여주면 안 된다 — 154대가 26곳에 흩어져 있는데
+    // "물가쉼터 주변" 하나만 뜨던 것이 이 변경의 계기다
+    expect(text).not.toContain('물가쉼터 주변')
+  })
+
+  it('AP 가 하나뿐인 기존 상세는 종전처럼 단일 값을 보여준다', () => {
+    const wrapper = mount(DetailFacilityStatus, {
+      props: {
+        facility: makeFacility('wifi', {
+          ssid: 'SEOUL', installLocation: '관광', installLocationDetail: '물가쉼터 주변',
+        }),
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('물가쉼터 주변')
+    expect(wrapper.text()).not.toContain('AP ')
+  })
+
+  it('설치 장소 상세가 설치 장소와 같으면 종전처럼 숨긴다', () => {
+    const wrapper = mount(DetailFacilityStatus, {
+      props: {
+        facility: makeFacility('wifi', { ssid: 'SEOUL', installLocation: '관광', installLocationDetail: '관광' }),
+      },
+      global: globalConfig,
+    })
+    // 중복 표기를 피하는 기존 규칙이 유지되어야 한다
+    expect(wrapper.text().match(/관광/g)?.length).toBe(1)
+  })
+})

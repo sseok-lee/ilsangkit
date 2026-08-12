@@ -140,34 +140,6 @@
 
               <!-- 위치·로드뷰 -->
               <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
-                <!--
-                  wifi 장소 단위 통합: 이 장소에 설치된 AP 지점 목록.
-                  한 장소에 AP 가 수십~수백 대인 경우가 흔해(서울식물원 154대) 지도 핀만으로는
-                  어디에 있는지 읽히지 않는다. 설치장소상세는 AP 식별자가 아니라 구역 라벨이라
-                  나열이 아니라 집계로 보여준다(해운대 백병원은 49대가 "본관 A동"을 공유).
-                -->
-                <div v-if="accessPointLocations.length" class="mb-3 rounded-xl border border-line bg-white p-4">
-                  <div class="flex items-center justify-between gap-2 mb-3">
-                    <p class="text-sm font-semibold text-slate-900">와이파이 설치 지점</p>
-                    <span class="shrink-0 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                      AP {{ accessPointCount }}대
-                    </span>
-                  </div>
-                  <ul class="flex flex-wrap gap-1.5">
-                    <li
-                      v-for="loc in visibleAccessPointLocations"
-                      :key="loc.label"
-                      class="inline-flex items-center gap-1.5 rounded-lg border border-line bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700"
-                    >
-                      <span>{{ loc.label }}</span>
-                      <span v-if="loc.count > 1" class="text-xs font-medium text-slate-500">{{ loc.count }}대</span>
-                    </li>
-                  </ul>
-                  <p v-if="hiddenAccessPointLocationCount" class="mt-2 text-xs text-slate-500">
-                    외 {{ hiddenAccessPointLocationCount }}곳 — 전체 위치는 지도에서 확인하세요.
-                  </p>
-                </div>
-
                 <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
                 <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
                   <ClientOnly>
@@ -306,7 +278,6 @@ import { resolveFacilitySsrOutcome } from '~/utils/facilitySsrOutcome'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import {
   parseAccessPoints,
-  groupAccessPointsByLocation,
   accessPointsToMapFacilities,
   mapLevelForAccessPoints,
 } from '~/utils/wifiAccessPoints'
@@ -618,21 +589,6 @@ const accessPointCount = computed(() => {
   const n = Number((details.value as { accessPointCount?: unknown } | undefined)?.accessPointCount)
   return Number.isFinite(n) && n > 0 ? n : accessPoints.value.length
 })
-const accessPointLocations = computed(() => groupAccessPointsByLocation(accessPoints.value))
-// 설치 장소 종류는 그룹당 평균 2.2개지만 최대 117개까지 있다(165개 그룹이 12종 초과).
-// 전부 펼치면 목록이 페이지를 잡아먹어서 상한을 둔다.
-const ACCESS_POINT_LOCATION_LIMIT = 12
-const visibleAccessPointLocations = computed(() =>
-  accessPointLocations.value.slice(0, ACCESS_POINT_LOCATION_LIMIT),
-)
-const hiddenAccessPointLocationCount = computed(() =>
-  Math.max(0, accessPointLocations.value.length - ACCESS_POINT_LOCATION_LIMIT),
-)
-const mapFacilities = computed<Facility[]>(() =>
-  facility.value ? accessPointsToMapFacilities(accessPoints.value, facility.value as Facility) : [],
-)
-const mapLevel = computed(() => mapLevelForAccessPoints(accessPoints.value))
-
 const facilityPhone = computed(() => resolveFacilityPhone(details.value as Record<string, unknown> | undefined))
 
 // Generate map URLs (길찾기)
