@@ -1,4 +1,5 @@
 import type { FacilityCategory, FacilityDetail, FacilityDetailsAll } from '~/types/facility'
+import { parseAccessPoints, groupAccessPointsByLocation } from './wifiAccessPoints'
 import type { FAQItem } from '~/utils/categoryFAQ'
 import { formatHHMM } from '~/utils/formatTime'
 
@@ -51,9 +52,21 @@ export function generateDynamicFAQ(facility: FacilityDetail): FAQItem[] {
         })
       }
       if (d.installLocation) {
+        // 장소 단위로 접힌 상세(AP 여러 대)에서는 installLocationDetail 이 대표 행 하나의
+        // 값이라 전체를 말할 수 없다 — 서울식물원은 AP 154대가 26곳에 흩어져 있는데도
+        // "상세 위치: 물가쉼터 주변" 하나만 나갔다. 그럴 땐 지점 수로 답한다.
+        const wifiAps = parseAccessPoints(d)
+        const wifiApCount = Number(d.accessPointCount) || wifiAps.length
+        const wifiSpots = groupAccessPointsByLocation(wifiAps).length
+        const locationSentence =
+          wifiApCount > 1
+            ? ` 이 장소에는 접속 지점(AP)이 ${wifiApCount}대${wifiSpots > 1 ? ` ${wifiSpots}곳에` : ''} 설치되어 있습니다.`
+            : d.installLocationDetail
+              ? ` 상세 위치: ${d.installLocationDetail}`
+              : ''
         dynamic.push({
           question: `${name} 와이파이는 어디서 접속할 수 있나요?`,
-          answer: `${name} 와이파이는 ${d.installLocation}에 설치되어 있습니다.${d.installLocationDetail ? ` 상세 위치: ${d.installLocationDetail}` : ''} 설치 장소 주변에서 접속이 가능합니다.`,
+          answer: `${name} 와이파이는 ${d.installLocation}에 설치되어 있습니다.${locationSentence} 설치 장소 주변에서 접속이 가능합니다.`,
         })
       }
       break

@@ -31,9 +31,11 @@ export { evChargerStationSearch, getEvChargerStationDetail } from './evChargerSe
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CATEGORY_REGISTRY, ALL_CATEGORIES } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, buildRegionFilter, cityVariantList } from './cityMapping.js';
+import { isWifiGroupId } from './wifiGroup.js';
 import { FULLTEXT_TABLES, canUseFulltext, fulltextIds, fulltextCount, toBooleanPhrase } from './search/fulltextKeyword.js';
 import { bufferViewCount } from './viewCountService.js';
 import { evChargerStationSearch } from './evChargerService.js';
+import { wifiGroupSearch } from './wifiService.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
 import { buildRecovery, type Recovery } from './search/searchRecovery.js';
 import { buildStratifiedIdsSql, SITEMAP_STRATIFY_TABLES } from './sitemapStratify.js';
@@ -426,6 +428,11 @@ export async function getNearbyFacilities(
         });
         return stationResult.items;
       }
+      // wifi: 장소 단위 그룹핑 — AP 행 단위로 두면 같은 장소가 여러 개 뜬다
+      if (cat === 'wifi') {
+        const groupResult = await wifiGroupSearch({ lat, lng, radius, page: 1, limit: 10 });
+        return groupResult.items;
+      }
       const records = await CATEGORY_REGISTRY[cat].model().findMany({
         where: approxBounds,
         select: buildListSelect(cat),
@@ -487,6 +494,12 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
           keyword: nameText, city: effectiveCity, district: effectiveDistrict, page: 1, limit: 3,
         });
         return { category: cat, count: stationResult.total, items: stationResult.items };
+      }
+      if (cat === 'wifi') {
+        const groupResult = await wifiGroupSearch({
+          keyword: nameText, city: effectiveCity, district: effectiveDistrict, page: 1, limit: 3,
+        });
+        return { category: cat, count: groupResult.total, items: groupResult.items };
       }
       if (useFt && FULLTEXT_TABLES[cat]) {
         const count = await fulltextCount(FULLTEXT_TABLES[cat], nameText!, ftRegion);
@@ -591,6 +604,13 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
     return evChargerStationSearch({ keyword, city, district, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit });
   }
 
+  // wifi: 장소 단위 그룹 검색 (모든 검색 유형).
+  // 목록·주변 시설이 이 경로를 타므로, 여기서 접어야 지역 목록의 "N곳"이 AP 수가 아니라
+  // 장소 수가 되고 상세의 주변 시설에 같은 장소가 중복으로 뜨지 않는다.
+  if (category === 'wifi') {
+    return wifiGroupSearch({ keyword, city, district, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit });
+  }
+
   // trash: WasteSchedule 별도 처리 (좌표 없는 일정 데이터)
   if (category === 'trash') {
     const skip = (page - 1) * limit;
@@ -635,6 +655,14 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
             page: 1, limit: 100,
           });
           return stationResult.items;
+        }
+        // wifi: 장소 단위 그룹핑
+        if (cat === 'wifi') {
+          const groupResult = await wifiGroupSearch({
+            keyword, lat, lng, radius, swLat, swLng, neLat, neLng,
+            page: 1, limit: 100,
+          });
+          return groupResult.items;
         }
         const where = { ...keywordFilter, ...approxBounds, ...buildDepartmentFilter(cat, departments) };
         const records = await CATEGORY_REGISTRY[cat].model().findMany({
@@ -895,6 +923,13 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   if (category === 'ev-charger') {
     const { getEvChargerStationDetail } = await import('./evChargerService.js');
     return getEvChargerStationDetail(id);
+  }
+
+  // wifi: 장소 단위 그룹 조회. 그룹 id(wifi-g…) 일 때만 갈라지고,
+  // 기존 AP id(wifi-<hex12>) 는 아래 일반 경로로 그대로 흐른다 — 백필 전에도 안 깨진다.
+  if (category === 'wifi' && isWifiGroupId(id)) {
+    const { getWifiGroupDetail } = await import('./wifiService.js');
+    return getWifiGroupDetail(id);
   }
 
   const model = config.model();

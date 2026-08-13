@@ -414,6 +414,7 @@
 
 <script setup lang="ts">
 import { SITE_URL } from '~/utils/seoConstants'
+import { buildSubscriptionSeoTitle } from '~/utils/subscriptionMeta'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
@@ -544,7 +545,12 @@ const subscriptionDateRange = computed(() => {
 const subscriptionSeoTitle = computed(() => {
   if (!subscription.value) return '청약 일정'
   // 위치/유형/상태는 description에만 노출(타이틀 길이 제한 회피). setMeta가 ` | 일상킷` 접미사를 붙임.
-  return `${subscription.value.houseName} 청약 일정·경쟁률`
+  // 접수 연월은 회차 구분용 — 같은 단지가 여러 번 공고를 내므로 단지명만으로는 제목이 겹친다.
+  // 근거·수치는 buildSubscriptionSeoTitle 주석 참조.
+  return buildSubscriptionSeoTitle({
+    houseName: subscription.value.houseName,
+    receptionStartDate: subscription.value.receptionStartDate,
+  })
 })
 
 const subscriptionSeoDescription = computed(() => {

@@ -300,12 +300,15 @@ describe('search', () => {
     mockFindMany.mockResolvedValue([]);
     mockCount.mockResolvedValue(0);
 
-    await search({ category: 'wifi', city: '서울특별시', district: '강남구', page: 1, limit: 20 });
+    // wifi 는 2026-08 장소 단위 그룹 검색으로 빠졌다(wifiGroupSearch).
+    // 이 테스트가 지키려는 건 "한글 우선 raw 정렬 경로에서 지역값을 보간하지 않는다"는
+    // SQL 안전 규칙이므로, 그 경로를 여전히 타는 카테고리로 검증한다.
+    await search({ category: 'toilet', city: '서울특별시', district: '강남구', page: 1, limit: 20 });
 
     // 한글 우선 raw SQL: 테이블명만 보간, 지역값은 ? 파라미터 바인딩 인자로 전달
     const rawCall = mockQueryRaw.mock.calls[0];
     const sql = rawCall[0] as string;
-    expect(sql).toContain('`Wifi`');
+    expect(sql).toContain('`Toilet`');
     expect(sql).toContain('city IN (?');
     expect(sql).toContain('district = ?');
     expect(sql).not.toContain('서울특별시'); // 지역은 SQL 문자열에 직접 보간되지 않음
