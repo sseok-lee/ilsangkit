@@ -289,34 +289,38 @@ describe('getSubscriptionDetail', () => {
 });
 
 describe('dateBasedStatusFilter', () => {
-  const fixedNow = new Date('2026-04-25T12:00:00Z');
+  // 접수일은 시각 없는 날짜(KST 달력 날짜가 UTC 자정으로 저장)라 경계도 날짜여야 한다.
+  // 예전에는 현재 "시각"을 그대로 썼고, 그래서 마감일 당일 09:00 KST(=00:00Z)부터
+  // 목록에서 마감으로 빠졌다(2026-08-13 프로덕션 표본 100건 중 5건 실측).
+  const fixedNow = new Date('2026-04-25T12:00:00Z');   // 2026-04-25 21:00 KST
+  const kstToday = new Date('2026-04-25T00:00:00.000Z');
 
-  it('ongoing — start <= now AND (end IS NULL OR end >= now)', () => {
+  it('ongoing — start <= KST 오늘 AND (end IS NULL OR end >= KST 오늘)', () => {
     const f = dateBasedStatusFilter('ongoing', fixedNow);
     expect(f).toEqual({
       AND: [
-        { receptionStartDate: { lte: fixedNow } },
+        { receptionStartDate: { lte: kstToday } },
         {
           OR: [
             { receptionEndDate: null },
-            { receptionEndDate: { gte: fixedNow } },
+            { receptionEndDate: { gte: kstToday } },
           ],
         },
       ],
     });
   });
 
-  it('upcoming — start > now (start NULL 자동 제외)', () => {
+  it('upcoming — start > KST 오늘 (start NULL 자동 제외)', () => {
     const f = dateBasedStatusFilter('upcoming', fixedNow);
-    expect(f).toEqual({ receptionStartDate: { gt: fixedNow } });
+    expect(f).toEqual({ receptionStartDate: { gt: kstToday } });
   });
 
-  it('closed — start IS NULL OR end < now', () => {
+  it('closed — start IS NULL OR end < KST 오늘', () => {
     const f = dateBasedStatusFilter('closed', fixedNow);
     expect(f).toEqual({
       OR: [
         { receptionStartDate: null },
-        { receptionEndDate: { lt: fixedNow } },
+        { receptionEndDate: { lt: kstToday } },
       ],
     });
   });

@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js';
+import { kstCalendarToday } from '../lib/kstDate.js';
 import { NotFoundError } from '../lib/errors.js';
 import type { SubscriptionListParams } from '../schemas/subscription.js';
 import type { Prisma } from '@prisma/client';
@@ -34,8 +35,12 @@ export function computeSubscriptionStatus(
   now: Date = new Date(),
 ): 'ongoing' | 'upcoming' | 'closed' {
   if (!receptionStartDate) return 'closed';
-  if (receptionStartDate > now) return 'upcoming';
-  if (receptionEndDate && receptionEndDate < now) return 'closed';
+  // 접수일은 시각 없는 날짜(KST 달력 날짜가 UTC 자정으로 저장)라 현재 "시각"과
+  // 직접 비교하면 안 된다 — 마감일 당일 09:00 KST(=00:00Z)부터 closed 로 뒤집힌다.
+  // 비교 대상을 같은 표현("오늘 KST 의 UTC 자정")으로 맞춘다.
+  const today = kstCalendarToday(now);
+  if (receptionStartDate > today) return 'upcoming';
+  if (receptionEndDate && receptionEndDate < today) return 'closed';
   return 'ongoing';
 }
 
@@ -43,26 +48,29 @@ export function dateBasedStatusFilter(
   status: 'ongoing' | 'upcoming' | 'closed',
   now: Date = new Date(),
 ): Prisma.SubscriptionWhereInput {
+  // computeSubscriptionStatus 와 같은 경계를 써야 한다 — 목록(SQL)과 상세(재계산)가
+  // 다른 기준을 쓰면 "목록엔 마감인데 상세는 접수중" 으로 갈린다.
+  const today = kstCalendarToday(now);
   switch (status) {
     case 'ongoing':
       return {
         AND: [
-          { receptionStartDate: { lte: now } },
+          { receptionStartDate: { lte: today } },
           {
             OR: [
               { receptionEndDate: null },
-              { receptionEndDate: { gte: now } },
+              { receptionEndDate: { gte: today } },
             ],
           },
         ],
       };
     case 'upcoming':
-      return { receptionStartDate: { gt: now } };
+      return { receptionStartDate: { gt: today } };
     case 'closed':
       return {
         OR: [
           { receptionStartDate: null },
-          { receptionEndDate: { lt: now } },
+          { receptionEndDate: { lt: today } },
         ],
       };
   }
