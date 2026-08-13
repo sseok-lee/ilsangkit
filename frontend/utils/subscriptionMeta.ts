@@ -126,3 +126,43 @@ export function subscriptionTypeBadge(
   // APT 분양 (rentType null 또는 분양 rentType)
   return { label: '아파트', classes: 'bg-indigo-50 text-indigo-700', kind: 'sale' }
 }
+
+/**
+ * 청약 상세 SEO 제목.
+ *
+ * 같은 단지가 회차별로 여러 번 공고를 낸다(성산 삼정그린코아 웰레스트 16회,
+ * 서울은평뉴타운 디에트르 더 퍼스트 29회). 제목이 단지명뿐이면 그 회차들이 전부
+ * 같은 제목으로 나간다 — 2026-08 실측으로 5,671건 중 1,405건(24.8%)이 그랬고,
+ * 네이버 중복 title 진단에 잡히는 라이브 버킷이었다.
+ *
+ * 접수 연월을 넣으면 잔여 중복이 63건(-95.5%)까지 떨어진다. 연월일·공급호수까지
+ * 넣으면 11~17건이 되지만 제목이 길어져 SERP 에서 잘린다.
+ *
+ * 중복인 공고에만 붙이지 않고 항상 붙이는 이유: 상세 API 는 자기 레코드만 주므로
+ * 같은 이름의 다른 공고가 몇 건인지 프론트가 알 수 없다. 조건부로 하려면 백엔드에
+ * 중복 카운트를 실어야 하는데 문제 크기에 비해 과하다.
+ */
+export function buildSubscriptionSeoTitle(input: {
+  houseName?: string | null
+  receptionStartDate?: string | Date | null
+}): string {
+  const houseName = (input.houseName ?? '').trim()
+  // 단지명이 없으면 빈 문자열. "청약 일정" 같은 공용 문구를 만들어내면
+  // 전체 상세가 같은 제목으로 나가는 상황이 재현된다(2026-07-28 SSR 열화 사고).
+  if (!houseName) return ''
+
+  const base = `${houseName} 청약 일정·경쟁률`
+  const raw = input.receptionStartDate
+  if (!raw) return base
+
+  const d = raw instanceof Date ? raw : new Date(raw)
+  if (Number.isNaN(d.getTime())) return base
+
+  // 접수일은 시각 없는 날짜가 UTC 자정으로 직렬화돼 온다. 로컬 타임존으로 읽으면
+  // KST 기준 하루 앞으로 밀려 월 경계에서 회차가 어긋난다(2023-07-01 → 6월).
+  // 그래서 UTC 필드를 그대로 쓴다.
+  const year = d.getUTCFullYear()
+  const month = d.getUTCMonth() + 1
+
+  return `${houseName} ${year}년 ${month}월 접수 청약 일정·경쟁률`
+}

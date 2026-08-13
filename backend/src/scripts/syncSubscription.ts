@@ -3,6 +3,7 @@
 // Usage: tsx src/scripts/syncSubscription.ts [--dry-run] [--source APT|OFFITEL|REMAINING|PRIVATE_RENT|OPTIONAL|ALL]
 
 import 'dotenv/config';
+import { kstCalendarToday } from '../lib/kstDate.js';
 import prisma from '../lib/prisma.js';
 import { derivePublicRentType } from '../utils/subscriptionUtils.js';
 import { processSubscriptions } from './geocodeSubscriptions.js';
@@ -206,8 +207,9 @@ export function parseDate(s: string | null | undefined): Date | null {
 }
 
 function computeStatus(startDate: Date | null, endDate: Date | null): string {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // setHours(0,0,0,0) 은 서버 로컬 자정이라 UTC 자정으로 저장된 접수일과 어긋난다
+  // (KST 서버면 전날 15:00Z). 읽기 경로(computeSubscriptionStatus)와 같은 기준을 쓴다.
+  const today = kstCalendarToday();
   if (!startDate) return 'closed';
   if (today < startDate) return 'upcoming';
   if (endDate && today > endDate) return 'closed';
