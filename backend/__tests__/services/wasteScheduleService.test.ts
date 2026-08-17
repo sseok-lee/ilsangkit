@@ -15,7 +15,7 @@ vi.mock('../../src/lib/prisma.js', () => {
   return { prisma: { wasteSchedule }, default: { wasteSchedule } };
 });
 
-import { getByRegion, getWasteScheduleRegions } from '../../src/services/wasteScheduleService.js';
+import { getByRegion, getDistricts, getWasteScheduleRegions } from '../../src/services/wasteScheduleService.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -141,5 +141,26 @@ describe('getByRegion — city variant matching', () => {
 
     const where = findManyMock.mock.calls[0][0].where;
     expect(where.city).toBe('전남광주통합특별시');
+  });
+});
+
+describe('getDistricts — city variant matching', () => {
+  it('축약명(서울)으로도 정식명(서울특별시) 행의 구/군을 매칭한다', async () => {
+    groupByMock.mockResolvedValue([{ district: '강남구' }, { district: '강동구' }]);
+
+    const result = await getDistricts('서울');
+
+    const where = groupByMock.mock.calls[0][0].where;
+    expect(where.city).toEqual({ in: expect.arrayContaining(['서울', '서울특별시']) });
+    expect(result).toEqual(['강남구', '강동구']);
+  });
+
+  it('정식명(서울특별시)으로 조회해도 축약명을 함께 매칭한다', async () => {
+    groupByMock.mockResolvedValue([]);
+
+    await getDistricts('서울특별시');
+
+    const where = groupByMock.mock.calls[0][0].where;
+    expect(where.city).toEqual({ in: expect.arrayContaining(['서울특별시', '서울']) });
   });
 });

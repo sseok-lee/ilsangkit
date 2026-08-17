@@ -171,7 +171,7 @@ export async function getCities(): Promise<string[]> {
 export async function getDistricts(city: string): Promise<string[]> {
   const districts = await prisma.wasteSchedule.groupBy({
     by: ['district'],
-    where: { city },
+    where: buildRegionFilter(city),
     orderBy: { district: 'asc' },
   });
 
