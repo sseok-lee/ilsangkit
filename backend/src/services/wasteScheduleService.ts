@@ -1,8 +1,10 @@
 // 쓰레기 배출 일정 서비스
 // NOTE: 지도 마커가 아닌 지역별 일정 조회용
 
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { PAGINATION } from '../constants/index.js';
+import { buildRegionFilter } from './cityMapping.js';
 
 // 유형별 배출 정보 타입
 interface WasteTypeInfo {
@@ -78,13 +80,10 @@ export async function getByRegion(
 ): Promise<WasteScheduleResult> {
   const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = options;
 
-  const where: { city?: string; district?: string; targetRegion?: { contains: string } } = {};
-  if (city) {
-    where.city = city;
-  }
-  if (district) {
-    where.district = district;
-  }
+  // city variant: 축약명(서울)/정식명(서울특별시) 양쪽 매칭.
+  // WasteSchedule 행은 정식명으로 저장되는데 지역 칩은 축약명을 보내므로
+  // 정확 일치로 조회하면 0건이 된다(facilityService 와 동일 규약).
+  const where: Prisma.WasteScheduleWhereInput = buildRegionFilter(city, district);
   if (keyword) {
     where.targetRegion = { contains: keyword };
   }
