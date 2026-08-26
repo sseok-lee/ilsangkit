@@ -133,4 +133,28 @@ Disallow: /
 User-agent: Bytespider
 Disallow: /
 
+# Amazon 크롤러 계열 — 같은 이유로 차단 (2026-08-26).
+# Amazon 공식 문서(developer.amazon.com/support/amazonbot)에 수집 데이터가
+# "may be used to train Amazon AI models" 라고 명시돼 있고 나머지 용도는 Alexa 검색 지원이다.
+# 위 GPTBot·PerplexityBot 을 허용한 근거는 "AI 답변이 출처를 인용해 유입이 생긴다"인데,
+# Alexa 는 한국 사용자에게 웹 출처를 보여주지 않는다 — 인용 표면이 없으므로 그 근거가 성립하지 않는다.
+#
+# 실측(2026-08-26, 2일): Amazonbot 30,079 요청으로 이 사이트 최대 크롤러였다
+# (Yeti 8,777/일·bingbot 7,717/일을 상회). 경로는 real-estate 6,712 · og-map 6,119 ·
+# wifi 2,974 · hospital 2,805 · childcare 2,039. crawl-delay 를 지원하지 않아 감속 수단도 없다.
+# 역방향 DNS 로 진위 확인됨(상위 40 IP 중 39개가 *.crawl.amazonbot.amazon).
+#
+# IVT 와는 무관하다 — _nuxt 번들 요청이 30,079건 중 2건뿐인 순수 HTML 페처라 애드센스 스크립트를
+# 로드하지 않고 광고 노출을 만들지 않는다(대조: Googlebot 은 619건 중 142건). 차단 근거는 순수 부하다.
+#
+# 차단으로 잃는 것은 문서상 "Amazon Content Partners" 자격(어필리에이트 커미션 부스트·호스팅
+# 크레딧)뿐이고, 이 사이트는 애드센스 퍼블리셔라 해당되지 않는다.
+# robots 그룹은 상속되지 않으므로 계열 봇 Amzn-SearchBot(실측 101건)도 따로 막는다.
+# 반영에는 약 24시간이 걸린다(Amazon 문서 기준).
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Amzn-SearchBot
+Disallow: /
+
 Sitemap: https://ilsangkit.co.kr/sitemap.xml

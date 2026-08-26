@@ -26,6 +26,9 @@ function extractGroup(txt: string, ua: string): string {
       continue
     }
     inHeader = false
+    // Sitemap 은 그룹 소속이 아닌 사이트 레벨 지시문이다(RFC 9309 "non-group record").
+    // 파일 맨 끝에 있어서 걸러내지 않으면 마지막 그룹에 딸려 들어간다.
+    if (/^Sitemap:/i.test(line)) continue
     if (inGroup) out.push(line)
   }
   return out.join('\n')
@@ -147,6 +150,48 @@ describe('robots.txt crawl policy', () => {
     for (const ua of ['GPTBot', 'ChatGPT-User', 'ClaudeBot', 'PerplexityBot']) {
       const group = extractGroup(robots, ua)
       expect(group, `${ua} keeps api images allowed`).toContain('Allow: /api/images/')
+    }
+  })
+
+  it('blocks the Amazon crawler family — AI training crawl with no citation surface', () => {
+    // Amazon 공식 문서: 수집 데이터가 "may be used to train Amazon AI models" 이고 Alexa 검색을 지원한다.
+    // 즉 CCBot·Bytespider 와 같은 "훈련 전용" 범주다. GPTBot·PerplexityBot 을 허용한 근거는
+    // AI 답변이 출처를 인용해 유입이 생긴다는 것인데, Alexa 는 한국 사용자에게 웹 출처를 보여주지 않는다.
+    //
+    // 실측(2026-08-26, 2일): Amazonbot 30,079 요청 = 이 사이트 최대 크롤러(Yeti 8,777/일·bingbot 7,717/일 상회).
+    // 경로는 real-estate 6,712 · og-map 6,119 · wifi 2,974 · hospital 2,805 · childcare 2,039.
+    // crawl-delay 를 지원하지 않아 속도 조절 수단도 없다.
+    //
+    // IVT 와는 무관하다 — _nuxt 번들 요청이 30,079건 중 2건뿐인 순수 HTML 페처라
+    // 애드센스 스크립트를 로드하지 않고 광고 노출을 만들지 않는다(Googlebot 은 대조적으로 142건).
+    // 따라서 차단 근거는 광고 수익 보호가 아니라 순수 서버 부하다.
+    //
+    // 차단으로 잃는 것은 문서에 적힌 "Amazon Content Partners" 자격(어필리에이트 커미션 부스트·
+    // 호스팅 크레딧)뿐인데, 이 사이트는 애드센스 퍼블리셔라 해당되지 않는다.
+    expect(robots).toMatch(/User-agent:\s*Amazonbot\s+Disallow:\s*\//)
+    // 계열 봇도 함께 막는다 — Amazonbot 그룹은 Amzn-SearchBot 에 적용되지 않는다(실측 101건).
+    expect(robots).toMatch(/User-agent:\s*Amzn-SearchBot\s+Disallow:\s*\//)
+  })
+
+  it('does not leave the Amazon groups partially open (Disallow: / must be the whole group)', () => {
+    // Allow: / 가 섞이면 전면 차단 의도가 깨진다. CCBot·Bytespider 와 같은 형태여야 한다.
+    for (const ua of ['Amazonbot', 'Amzn-SearchBot']) {
+      const group = extractGroup(robots, ua)
+      expect(group, `${ua} group must exist`).not.toBe('')
+      expect(group, `${ua} must be a full block`).toBe('Disallow: /')
+    }
+  })
+
+  it('keeps AdSense crawlers able to read page bodies — this site monetizes with AdSense', () => {
+    // Mediapartners-Google 은 광고 관련성 판정을 위해 본문을 읽어야 한다. 전용 그룹이 없으면
+    // User-agent: * 를 따르므로, * 의 Disallow 가 본문을 막지 않는지 확인한다.
+    // (/og-map·/api/·/*_payload.json·/admin 은 광고 타겟팅에 필요한 본문이 아니다.)
+    const star = extractGroup(robots, '*')
+    expect(star).toContain('Allow: /')
+    for (const ua of ['Mediapartners-Google', 'AdsBot-Google']) {
+      const own = extractGroup(robots, ua)
+      // 전용 그룹을 두는 것도 허용하지만, 두는 순간 전면 차단이 되어선 안 된다.
+      if (own !== '') expect(own, `${ua} must not be fully blocked`).not.toBe('Disallow: /')
     }
   })
 
