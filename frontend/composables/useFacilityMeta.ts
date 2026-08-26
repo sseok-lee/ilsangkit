@@ -1,6 +1,7 @@
 import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails, ParkDetails, SchoolDetails, MarketDetails, ChildcareDetails, EvChargerDetails, SportsDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION, compactCityName } from '~/utils/seoConstants'
+import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
 
 /** 받침 유무에 따라 조사 선택 (은/는, 이/가, 을/를 등) */
 function getJosa(word: string, josaWithBatchim: string, josaWithout: string): string {
@@ -475,9 +476,9 @@ export function useFacilityMeta() {
       path: `/${facility.category}/${facility.id}`,
       category: facility.category,
       image: mapImage,
-      // /og-map 은 Naver Static Map 한계로 1024x536 으로 생성됨
-      imageWidth: mapImage ? 1024 : undefined,
-      imageHeight: mapImage ? 536 : undefined,
+      // 규격은 og-map 라우트와 같은 상수를 쓴다 — 두 곳이 각자 숫자를 들면 갈라진다(ogMapSpec 주석 참고).
+      imageWidth: mapImage ? OG_MAP_WIDTH : undefined,
+      imageHeight: mapImage ? OG_MAP_HEIGHT : undefined,
     })
   }
 

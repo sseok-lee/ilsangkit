@@ -3,6 +3,7 @@ import type { AuctionItem } from '~/types/auction'
 import { isAuctionItemIndexable } from '~/types/auction'
 import { buildAuctionItemTitle, buildAuctionItemDescription, buildAuctionRegionTitle, buildAuctionRegionDescription } from '~/utils/auctionMeta'
 import { SITE_URL } from '~/utils/seoConstants'
+import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
 
 type Head = { title: string; meta: Array<Record<string, string>>; link?: Array<Record<string, string>> }
 
@@ -41,7 +42,10 @@ export function computeAuctionItemHead(item: AuctionItem, selfUrl: string): Head
   const ogImage = (item.lat && item.lng)
     ? `${SITE_URL}/og-map?lat=${item.lat}&lng=${item.lng}&label=${encodeURIComponent(title)}&category=auction&title=${encodeURIComponent(title)}`
     : `${SITE_URL}/og-image.png`
-  const [w, h] = (item.lat && item.lng) ? ['1024', '536'] : ['1200', '630']
+  // og-map 규격은 라우트와 같은 상수를 쓴다(ogMapSpec). 정적 PNG 는 1200x630 그대로.
+  const [w, h] = (item.lat && item.lng)
+    ? [String(OG_MAP_WIDTH), String(OG_MAP_HEIGHT)]
+    : ['1200', '630']
   meta.push(...ogImageMeta(ogImage, w, h, title, description))
   return { title, meta, link: [{ rel: 'canonical', href: selfUrl }] }
 }
