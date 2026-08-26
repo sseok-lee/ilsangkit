@@ -27,6 +27,16 @@ Disallow: /api/
 # payload URL 에 ?<buildId> 쿼리가 붙으므로 $ 앵커는 쓰지 않는다(붙이면 매칭 실패).
 Disallow: /*_payload.json
 Disallow: /admin
+# og-map 은 상세 og:image 가 가리키는 소셜 미리보기 생성 라우트다. 상세마다 쿼리스트링이 달라
+# URL 이 전부 고유하므로 크롤러가 개별 리소스로 끝없이 수집한다.
+# 실측(2026-08-26): Googlebot 요청 619건 중 og-map 이 163건(26.3%)으로 1위였고, 응답이
+# 837KB/0.411초라(상세 HTML 은 71KB/0.058초) 바이트로는 og-map 136MB 대 콘텐츠 20MB —
+# 크롤 대역폭의 약 87% 였다. 같은 날 Googlebot 은 318건뿐인데 bingbot 7,717·Yeti 8,777 이었고
+# 콘텐츠 전량 크롤에 약 4.9년이 걸리는 속도였다.
+# 여기서는 wifi·페이지네이션과 달리 robots 차단이 옳은 도구다 — 바이너리 이미지라 meta robots 가
+# 없어 "크롤해야 noindex 를 확인한다"는 회수 경로 문제가 없고, 검색 결과에 나오지 않아 잃을 색인 자산도 없다.
+# 단 Yeti 와 소셜 스크레이퍼에는 넣지 않는다(아래 각 그룹 참고).
+Disallow: /og-map
 
 # wifi 상세(/wifi/wifi-) 는 크롤 차단하지 않는다 — 검색엔진 그룹(Yeti·*)에 Disallow 를 두지 말 것.
 # 이유: wifi 상세는 pages/[category]/[id].vue 에서 영구 noindex 로 나가는데, noindex 는 크롤러가
@@ -49,6 +59,7 @@ Disallow: /api/
 Disallow: /*_payload.json
 Disallow: /admin
 Disallow: /wifi/wifi-
+Disallow: /og-map
 
 User-agent: ChatGPT-User
 Allow: /
@@ -58,6 +69,7 @@ Disallow: /api/
 Disallow: /*_payload.json
 Disallow: /admin
 Disallow: /wifi/wifi-
+Disallow: /og-map
 
 User-agent: ClaudeBot
 Allow: /
@@ -67,6 +79,7 @@ Disallow: /api/
 Disallow: /*_payload.json
 Disallow: /admin
 Disallow: /wifi/wifi-
+Disallow: /og-map
 
 User-agent: PerplexityBot
 Allow: /
@@ -76,6 +89,32 @@ Disallow: /api/
 Disallow: /*_payload.json
 Disallow: /admin
 Disallow: /wifi/wifi-
+Disallow: /og-map
+
+# 소셜 공유 스크레이퍼 — og-map 을 반드시 가져갈 수 있어야 한다.
+# 이 봇들은 크롤러가 아니라 "공유되는 순간 그 URL 하나를 1회 가져가는" 소비자다. 크롤 예산과 무관하고,
+# User-agent: * 의 Disallow: /og-map 을 그대로 물려받으면 카카오톡·페이스북·X 공유 미리보기가 통째로 깨진다.
+# 그룹은 상속되지 않으므로(위 AI 크롤러 주석 참고) Allow: / 만 두면 /api/·/admin 까지 열린다 — 함께 막는다.
+User-agent: kakaotalk-scrap
+Allow: /
+Allow: /_nuxt/
+Allow: /api/images/
+Disallow: /api/
+Disallow: /admin
+
+User-agent: facebookexternalhit
+Allow: /
+Allow: /_nuxt/
+Allow: /api/images/
+Disallow: /api/
+Disallow: /admin
+
+User-agent: Twitterbot
+Allow: /
+Allow: /_nuxt/
+Allow: /api/images/
+Disallow: /api/
+Disallow: /admin
 
 # Applebot-Extended / Google-Extended 는 크롤러가 아니라 "AI 학습·grounding 사용 여부" 제어 토큰이다.
 # (수집은 Applebot / Googlebot 이 하고 위 그룹들이 이미 규칙을 갖는다.)
