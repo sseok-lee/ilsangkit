@@ -81,11 +81,57 @@ describe('robots.txt crawl policy', () => {
     expect(robots).toMatch(/User-agent:\s*Yeti[\s\S]*Disallow:\s*\/\*_payload\.json/)
   })
 
+  it('blocks /og-map for Google and AI crawlers to reclaim crawl budget', () => {
+    // og-map 은 상세 페이지 og:image 가 가리키는 소셜 미리보기 생성 라우트다.
+    // 상세마다 쿼리스트링이 달라 URL 이 전부 고유하므로 크롤러가 개별 리소스로 무한 수집한다.
+    //
+    // 실측(2026-08-26): Googlebot 요청 619건 중 og-map 이 163건(26.3%)으로 1위.
+    // 응답이 837KB/0.411초라 바이트로는 og-map 136MB 대 실제 콘텐츠 20MB —
+    // 크롤 대역폭의 약 87% 를 차지했다. 같은 기간 Googlebot 은 하루 318건만 왔고
+    // (bingbot 7,717 / Yeti 8,777), 콘텐츠 페이지 전량 크롤에 약 4.9년이 걸리는 속도였다.
+    //
+    // 페이지가 아니라 바이너리 이미지이므로 wifi·페이지네이션 때와 달리 robots 차단이 옳은 도구다:
+    // meta robots 가 없어 "크롤해야 noindex 를 확인한다"는 회수 경로 문제가 성립하지 않고,
+    // 검색 결과에 나오지 않으므로 차단해도 잃는 색인 자산이 없다.
+    expect(extractGroup(robots, '*')).toContain('Disallow: /og-map')
+  })
+
+  it('keeps /og-map crawlable for Naver Yeti — og:image is rendered, not indexed', () => {
+    // 네이버는 og:image 를 실제로 가져가 검색 결과 카드에 렌더링한다(project_naver_seo_og_image).
+    // 네이버가 유입의 약 89% 이므로 여기서 차단하면 크롤 예산보다 큰 것을 잃는다.
+    // Yeti 쪽 비용은 차단이 아니라 응답 경량화로 다룬다.
+    expect(extractGroup(robots, 'Yeti')).not.toContain('Disallow: /og-map')
+  })
+
+  it('keeps /og-map fetchable for social preview scrapers so share cards keep rendering', () => {
+    // 이 스크레이퍼들은 자기 이름 그룹이 없으면 User-agent: * 를 따른다.
+    // og-map 을 * 에서 차단하는 순간 카카오톡·페이스북·X 공유 미리보기가 통째로 깨진다.
+    // 크롤러가 아니라 "공유 시점에 1회 가져가는" 소비자이므로 크롤 예산과 무관하다.
+    const SOCIAL_SCRAPERS = ['kakaotalk-scrap', 'facebookexternalhit', 'Twitterbot']
+    for (const ua of SOCIAL_SCRAPERS) {
+      const group = extractGroup(robots, ua)
+      expect(group, `${ua} group must exist`).not.toBe('')
+      expect(group, `${ua} must reach og-map`).not.toContain('Disallow: /og-map')
+      expect(group, `${ua} must reach the page body`).toContain('Allow: /')
+    }
+  })
+
+  it('social scraper groups still block the non-public surface (groups do not inherit from *)', () => {
+    // og-map 을 열어주려고 만든 그룹이 /api/ 와 /admin 까지 열어버리면 안 된다.
+    // AI 크롤러 그룹에서 이미 겪은 함정과 동일하다.
+    for (const ua of ['kakaotalk-scrap', 'facebookexternalhit', 'Twitterbot']) {
+      const group = extractGroup(robots, ua)
+      for (const rule of ['/api/', '/admin']) {
+        expect(group, `${ua} must disallow ${rule}`).toContain(`Disallow: ${rule}`)
+      }
+    }
+  })
+
   it('applies the crawl-budget Disallow set to every AI crawler group (groups do not inherit from *)', () => {
     // robots.txt 그룹은 상속되지 않는다 — 자기 이름 그룹이 있는 봇은 User-agent: * 를 통째로 무시한다.
     // AI 봇 그룹에 Allow: / 만 두면 _payload.json·wifi 상세 같은 차단 대상이 그 봇에게만 열린다.
     const AI_CRAWLERS = ['GPTBot', 'ChatGPT-User', 'ClaudeBot', 'PerplexityBot']
-    const REQUIRED_DISALLOW = ['/api/', '/*_payload.json', '/admin', '/wifi/wifi-']
+    const REQUIRED_DISALLOW = ['/api/', '/*_payload.json', '/admin', '/wifi/wifi-', '/og-map']
     for (const ua of AI_CRAWLERS) {
       const group = extractGroup(robots, ua)
       expect(group, `${ua} group must exist`).not.toBe('')
