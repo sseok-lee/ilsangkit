@@ -2,10 +2,15 @@ import { defineEventHandler, getQuery, setHeader } from 'h3'
 import type { H3Event } from 'h3'
 import { generateOgImageSvg } from '../utils/ogImage'
 import { CATEGORY_META, type FacilityCategory } from '~/types/facility'
+import {
+  OG_MAP_WIDTH,
+  OG_MAP_HEIGHT,
+  OG_MAP_SCALE,
+  OG_MAP_FORMAT,
+  OG_MAP_CONTENT_TYPE,
+} from '~/utils/ogMapSpec'
 
 const NAVER_API_BASE = 'https://maps.apigw.ntruss.com/map-static/v2/raster'
-const MAP_WIDTH = 1024
-const MAP_HEIGHT = 536
 const DEFAULT_LEVEL = 16
 const KOREA_LAT_MIN = 33
 const KOREA_LAT_MAX = 39
@@ -80,13 +85,14 @@ export default defineEventHandler(async (event) => {
     ? `type:d|size:mid|pos:${lng} ${lat}|label:${label}`
     : `type:d|size:mid|pos:${lng} ${lat}`
 
+  // scale 은 1 이어야 출력이 og:image:width/height 선언값과 일치한다 — ogMapSpec 주석 참고.
   const params = new URLSearchParams({
-    w: String(MAP_WIDTH),
-    h: String(MAP_HEIGHT),
+    w: String(OG_MAP_WIDTH),
+    h: String(OG_MAP_HEIGHT),
     center: `${lng},${lat}`,
     level: String(level),
-    scale: '2',
-    format: 'png',
+    scale: String(OG_MAP_SCALE),
+    format: OG_MAP_FORMAT,
     markers: markerSpec,
   })
 
@@ -102,7 +108,7 @@ export default defineEventHandler(async (event) => {
       return inlineFallback(event, query)
     }
     const buffer = Buffer.from(await response.arrayBuffer())
-    setHeader(event, 'Content-Type', 'image/png')
+    setHeader(event, 'Content-Type', OG_MAP_CONTENT_TYPE)
     setHeader(event, 'Cache-Control', 'public, max-age=86400, s-maxage=86400')
     return buffer
   }
