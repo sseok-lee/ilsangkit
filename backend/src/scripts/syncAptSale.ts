@@ -11,8 +11,7 @@ import {
   getAllLawdCodes,
 } from '../services/syncRealEstateBase.js';
 import { runSync, batchUpsert, transformAndDedupe, createSyncStats, type SyncStats } from '../services/baseSyncService.js';
-import { submitIndexNow, buildRealEstateUrlsV2 } from '../services/indexNowService.js';
-import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
+import { submitNewlyTransactedBuildings } from '../services/indexNowService.js';
 
 const API_ENDPOINT = 'RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade';
 const CATEGORY = 'aptSale';
@@ -199,24 +198,14 @@ async function main(): Promise<void> {
     }
   });
 
-  // IndexNow: 동기화된 건물 URL 제출
-  const buildings = await prisma.aptSaleTransaction.findMany({
-    where: { syncedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) } },
-    select: { buildingName: true, city: true, district: true },
-    distinct: ['buildingName', 'city', 'district'],
-  });
-  // 지번/thin buildingName 제외 — SEO 저품질 URL 제출 방지
-  const validBuildings = buildings.filter((b) => isValidBuildingName(b.buildingName));
-  if (validBuildings.length > 0) {
-    const urls = buildRealEstateUrlsV2(validBuildings.map(b => ({
-      realEstateType: 'apt-sale' as const,
-      city: b.city,
-      district: b.district,
-      buildingName: b.buildingName,
-    })));
-    console.info(`[aptSale] IndexNow: ${buildings.length} candidates → ${validBuildings.length} valid (filtered ${buildings.length - validBuildings.length})`);
-    await submitIndexNow(urls);
-  }
+  // IndexNow: 신규 거래가 생긴 건물만 제출한다 — 재수집만 된 건물은 제외
+  // (조건 근거는 submitNewlyTransactedBuildings 주석 참고)
+  await submitNewlyTransactedBuildings(
+    prisma.aptSaleTransaction,
+    'apt-sale',
+    'aptSale',
+    new Date(Date.now() - 2 * 60 * 60 * 1000),
+  );
 
   console.info('\n=== aptSale sync completed ===');
 }
