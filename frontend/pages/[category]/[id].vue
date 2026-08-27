@@ -322,6 +322,11 @@ if (import.meta.server) {
   if (outcome === 'not-found') {
     throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
   }
+  if (outcome === 'gone') {
+    // 원천에서 영구히 사라진 시설(폐업·전환). 404 로도 de-index 되지만 410 이 더 빠르고
+    // 의미상 정확하다. 백엔드가 FacilityGone 조회로 확정한 경우에만 여기 도달한다.
+    throw createError({ statusCode: 410, statusMessage: 'Facility permanently removed' })
+  }
   if (outcome === 'degraded') {
     // 5xx·네트워크 실패·미해결 상태. throw 하면 정상 URL 이 하드 404 로 둔갑하고,
     // 그냥 두면 facility=null 인 채 렌더돼 사이트 기본 title 이 200 + index,follow 로 색인된다.
@@ -334,6 +339,9 @@ if (import.meta.server) {
 watch(fetchError, (err) => {
   if (!err) return
   const errStatus = err.statusCode
+  if (errStatus === 410) {
+    throw createError({ statusCode: 410, statusMessage: 'Facility permanently removed' })
+  }
   if (errStatus === 404 || errStatus === 422) {
     throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
   }
