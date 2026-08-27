@@ -15,7 +15,7 @@
  * fail-open 정책(#467)을 따른다 — 일시 장애를 noindex 나 하드 404 로 굳히지 않고
  * 503 + no-store 로만 표시해 크롤러가 기존 색인을 유지한 채 재방문하게 한다.
  */
-export type FacilitySsrOutcome = 'ok' | 'not-found' | 'degraded'
+export type FacilitySsrOutcome = 'ok' | 'not-found' | 'gone' | 'degraded'
 
 export interface FacilitySsrInput {
   /** useAsyncData error 의 statusCode. 에러가 없으면 undefined. */
@@ -28,6 +28,11 @@ export interface FacilitySsrInput {
 
 export function resolveFacilitySsrOutcome(input: FacilitySsrInput): FacilitySsrOutcome {
   const { errorStatusCode, fetchSettled, hasData } = input
+
+  // 백엔드가 FacilityGone 조회로 "영구히 제거됐다"고 확정한 경우.
+  // 404 보다 먼저 본다 — 둘 다 확정 신호지만 410 이 더 구체적이다.
+  // 데이터 유무와 무관하게 gone 이다(확정 신호가 본문보다 우선).
+  if (errorStatusCode === 410) return 'gone'
 
   // 백엔드가 "이 시설은 없다"고 확정한 경우만 진짜 404.
   if (errorStatusCode === 404 || errorStatusCode === 422) return 'not-found'
