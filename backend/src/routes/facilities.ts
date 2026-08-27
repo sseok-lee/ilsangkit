@@ -16,7 +16,8 @@ import {
 import * as facilityService from '../services/facilityService.js';
 import type { FacilityCategory } from '../services/categoryRegistry.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { NotFoundError } from '../lib/errors.js';
+import { NotFoundError, GoneError } from '../lib/errors.js';
+import { isFacilityGone } from '../services/facilityGoneService.js';
 import { searchRateLimiter } from '../middlewares/rateLimit.js';
 
 const router = Router();
@@ -159,6 +160,12 @@ router.get(
     const facility = await facilityService.getDetail(category, id);
 
     if (!facility) {
+      // 원천에서 사라진 시설(폐업·전환)은 행을 삭제한 뒤에도 410 을 내 색인에서 빠지게 한다.
+      // 404 로도 de-index 되지만 410 이 더 빠르고 의미상 정확하다.
+      // 조회는 이 경로(시설 부재)에서만 일어나므로 정상 트래픽에 쿼리가 추가되지 않는다.
+      if (await isFacilityGone(id)) {
+        throw new GoneError('영구히 제거된 시설입니다');
+      }
       throw new NotFoundError('시설을 찾을 수 없습니다');
     }
 
