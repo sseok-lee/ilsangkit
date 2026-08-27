@@ -758,20 +758,20 @@ model SyncHistory {
 
 // 가이드 콘텐츠 테이블
 model Guide {
-  id           String   @id @default(cuid())
-  title        String   @db.VarChar(200)
-  slug         String   @unique @db.VarChar(200)
-  content      String   @db.LongText
-  summary      String   @db.VarChar(500)
-  category     String   @db.VarChar(50)
-  articleType  String   @default("news") @db.VarChar(20)
-  thumbnailUrl String?  @db.VarChar(500)
-  keywords     String?  @db.VarChar(500)
-  published    Boolean  @default(true)
-  viewCount    Int      @default(0)
+  id           String    @id @default(cuid())
+  title        String    @db.VarChar(200)
+  slug         String    @unique @db.VarChar(200)
+  content      String    @db.LongText
+  summary      String    @db.VarChar(500)
+  category     String    @db.VarChar(50)
+  articleType  String    @default("news") @db.VarChar(20)
+  thumbnailUrl String?   @db.VarChar(500)
+  keywords     String?   @db.VarChar(500)
+  published    Boolean   @default(true)
+  viewCount    Int       @default(0)
   publishedAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([category])
   @@index([published, createdAt])
@@ -781,22 +781,22 @@ model Guide {
 
 // 오늘의 이슈(/article) 콘텐츠 테이블 — 시의성 뉴스/정책. 검토 워크플로우(draft→published) 지원.
 model Article {
-  id           String    @id @default(cuid())
-  title        String    @db.VarChar(200)
-  slug         String    @unique @db.VarChar(200)
-  content      String    @db.LongText
-  summary      String    @db.VarChar(500)
-  category     String    @db.VarChar(50)
-  articleType  String    @default("news-brief") @db.VarChar(20)
-  thumbnailUrl String?   @db.VarChar(500)
-  keywords     String?   @db.VarChar(500)
-  sources      Json?
-  sourceExternalId String? @db.VarChar(100)
-  status       String    @default("draft") @db.VarChar(20)
-  viewCount    Int       @default(0)
-  publishedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  title            String    @db.VarChar(200)
+  slug             String    @unique @db.VarChar(200)
+  content          String    @db.LongText
+  summary          String    @db.VarChar(500)
+  category         String    @db.VarChar(50)
+  articleType      String    @default("news-brief") @db.VarChar(20)
+  thumbnailUrl     String?   @db.VarChar(500)
+  keywords         String?   @db.VarChar(500)
+  sources          Json?
+  sourceExternalId String?   @db.VarChar(100)
+  status           String    @default("draft") @db.VarChar(20)
+  viewCount        Int       @default(0)
+  publishedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([status, publishedAt])
   @@index([category])
@@ -1211,27 +1211,27 @@ model OffitelSaleTransaction {
 // ============================================
 
 model LandSaleTransaction {
-  id             Int       @id @default(autoincrement())
-  city           String    @db.VarChar(50)
-  district       String    @db.VarChar(50)
-  bjdCode        String    @db.VarChar(10)
-  dongName       String    @db.VarChar(50)
-  jibun          String?   @db.VarChar(20)
-  jimok          String?   @db.VarChar(20)
-  landUse        String?   @db.VarChar(50)
-  dealArea       Decimal?  @db.Decimal(12, 2)
-  shareDeal      Boolean   @default(false)
+  id             Int      @id @default(autoincrement())
+  city           String   @db.VarChar(50)
+  district       String   @db.VarChar(50)
+  bjdCode        String   @db.VarChar(10)
+  dongName       String   @db.VarChar(50)
+  jibun          String?  @db.VarChar(20)
+  jimok          String?  @db.VarChar(20)
+  landUse        String?  @db.VarChar(50)
+  dealArea       Decimal? @db.Decimal(12, 2)
+  shareDeal      Boolean  @default(false)
   dealAmount     BigInt
-  dealType       String?   @db.VarChar(20)
+  dealType       String?  @db.VarChar(20)
   dealYear       Int
   dealMonth      Int
   dealDay        Int?
-  cancelDealDay  String?   @db.VarChar(10)
-  cancelDealType String?   @db.VarChar(20)
-  sourceId       String    @unique @db.VarChar(200)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  syncedAt       DateTime  @default(now())
+  cancelDealDay  String?  @db.VarChar(10)
+  cancelDealType String?  @db.VarChar(20)
+  sourceId       String   @unique @db.VarChar(200)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  syncedAt       DateTime @default(now())
 
   @@index([bjdCode, dealYear, dealMonth])
   @@index([bjdCode, dongName, dealYear, dealMonth])
@@ -1643,64 +1643,64 @@ model FacilityNaverBlogCache {
 
 // 부동산 단지 상세 페이지 네이버 블로그 후기 캐시 (14일 TTL, negative caching)
 model RealEstateNaverBlogCache {
-  id              Int      @id @default(autoincrement())
-  realEstateType  String   @db.VarChar(20)
-  buildingKey     String   @db.VarChar(200)
-  query           String   @db.VarChar(300)
-  posts           Json
-  itemCount       Int      @default(0)
-  fetchedAt       DateTime @default(now())
-  expiresAt       DateTime
+  id             Int      @id @default(autoincrement())
+  realEstateType String   @db.VarChar(20)
+  buildingKey    String   @db.VarChar(200)
+  query          String   @db.VarChar(300)
+  posts          Json
+  itemCount      Int      @default(0)
+  fetchedAt      DateTime @default(now())
+  expiresAt      DateTime
 
   @@unique([realEstateType, buildingKey])
   @@index([expiresAt])
 }
 
 model AuctionItem {
-  id            Int       @id @default(autoincrement())
-  cltrMngNo     String    @unique @db.VarChar(50)
-  pbctCdtnNo    String    @db.VarChar(50)
-  plnmNo        String?   @db.VarChar(50)
-  city          String    @db.VarChar(50)
-  district      String    @db.VarChar(50)
-  bjdCode       String    @db.VarChar(5)   // 5자리 시군구 코드 (Region.bjdCode VarChar(5)와 일치, land=sggCd 관례)
-  dongName      String?   @db.VarChar(50)
-  address       String    @db.VarChar(500)
-  usage         String?   @db.VarChar(100)
-  usageGroup    String    @db.VarChar(20)
-  propertyType  String?   @db.VarChar(50)
-  dpslMtdNm     String?   @db.VarChar(20)
-  bidMethod     String?   @db.VarChar(40)  // 입찰방식 bidMthodNm (최고가방식 등)
-  competitionMethod String? @db.VarChar(40) // 경쟁방식 cptnMthodNm (일반경쟁 등)
-  bidType       String?   @db.VarChar(40)  // 입찰구분 bidDivNm (전자입찰 등)
-  evictionResp  String?   @db.VarChar(40)  // 명도책임 evcRsbyTrgtCont (매수자 등)
-  isShare       Boolean   @default(false)  // 지분물건 여부 alcYn
-  thumbnailUrl  String?   @db.VarChar(500) // 썸네일 thnlImgUrlAdr
-  landArea      Decimal?  @db.Decimal(12, 2)
-  bldArea       Decimal?  @db.Decimal(12, 2)
-  apslAssAmt    BigInt?
-  minBidPrc     BigInt?
-  failCnt       Int       @default(0)
-  bidRound      Int?
-  bidBeginDtm   DateTime?
-  bidCloseDtm   DateTime?
-  orgNm         String?   @db.VarChar(100)
-  pvctTrgtYn    Boolean   @default(false)
-  status        String    @db.VarChar(20)
-  isClosed      Boolean   @default(false)
-  resultType    String?   @db.VarChar(20)
-  winBidPrc     BigInt?
-  bidRate       Decimal?  @db.Decimal(6, 2)
-  resultDate    DateTime?
-  lat           Decimal?  @db.Decimal(10, 7)
-  lng           Decimal?  @db.Decimal(10, 7)
-  geocodedAt    DateTime? // 지오코딩 시도 시각(실패 재시도 스킵용)
-  sourceId      String    @unique @db.VarChar(200)
-  firstSeenAt   DateTime  @default(now())
-  lastSeenAt    DateTime  @default(now())
-  syncedAt      DateTime  @default(now())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                Int       @id @default(autoincrement())
+  cltrMngNo         String    @unique @db.VarChar(50)
+  pbctCdtnNo        String    @db.VarChar(50)
+  plnmNo            String?   @db.VarChar(50)
+  city              String    @db.VarChar(50)
+  district          String    @db.VarChar(50)
+  bjdCode           String    @db.VarChar(5) // 5자리 시군구 코드 (Region.bjdCode VarChar(5)와 일치, land=sggCd 관례)
+  dongName          String?   @db.VarChar(50)
+  address           String    @db.VarChar(500)
+  usage             String?   @db.VarChar(100)
+  usageGroup        String    @db.VarChar(20)
+  propertyType      String?   @db.VarChar(50)
+  dpslMtdNm         String?   @db.VarChar(20)
+  bidMethod         String?   @db.VarChar(40) // 입찰방식 bidMthodNm (최고가방식 등)
+  competitionMethod String?   @db.VarChar(40) // 경쟁방식 cptnMthodNm (일반경쟁 등)
+  bidType           String?   @db.VarChar(40) // 입찰구분 bidDivNm (전자입찰 등)
+  evictionResp      String?   @db.VarChar(40) // 명도책임 evcRsbyTrgtCont (매수자 등)
+  isShare           Boolean   @default(false) // 지분물건 여부 alcYn
+  thumbnailUrl      String?   @db.VarChar(500) // 썸네일 thnlImgUrlAdr
+  landArea          Decimal?  @db.Decimal(12, 2)
+  bldArea           Decimal?  @db.Decimal(12, 2)
+  apslAssAmt        BigInt?
+  minBidPrc         BigInt?
+  failCnt           Int       @default(0)
+  bidRound          Int?
+  bidBeginDtm       DateTime?
+  bidCloseDtm       DateTime?
+  orgNm             String?   @db.VarChar(100)
+  pvctTrgtYn        Boolean   @default(false)
+  status            String    @db.VarChar(20)
+  isClosed          Boolean   @default(false)
+  resultType        String?   @db.VarChar(20)
+  winBidPrc         BigInt?
+  bidRate           Decimal?  @db.Decimal(6, 2)
+  resultDate        DateTime?
+  lat               Decimal?  @db.Decimal(10, 7)
+  lng               Decimal?  @db.Decimal(10, 7)
+  geocodedAt        DateTime? // 지오코딩 시도 시각(실패 재시도 스킵용)
+  sourceId          String    @unique @db.VarChar(200)
+  firstSeenAt       DateTime  @default(now())
+  lastSeenAt        DateTime  @default(now())
+  syncedAt          DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([bjdCode, usageGroup, status])
   @@index([city, district])
@@ -1711,25 +1711,43 @@ model AuctionItem {
 }
 
 model AuctionAreaSummary {
-  id              Int       @id @default(autoincrement())
-  bjdCode         String    @db.VarChar(5)   // 5자리 시군구 코드 (AuctionItem/Region과 일치)
-  usageGroup      String    @db.VarChar(20)
-  city            String    @db.VarChar(50)
-  district        String    @db.VarChar(50)
-  activeCount     Int       @default(0)
-  closedCount     Int       @default(0)
-  soldCount       Int       @default(0)
-  avgBidRate      Decimal?  @db.Decimal(6, 2)
-  avgApslAmt      BigInt?
-  avgWinBidPrc    BigInt?
-  failRate        Decimal?  @db.Decimal(5, 2)
+  id               Int       @id @default(autoincrement())
+  bjdCode          String    @db.VarChar(5) // 5자리 시군구 코드 (AuctionItem/Region과 일치)
+  usageGroup       String    @db.VarChar(20)
+  city             String    @db.VarChar(50)
+  district         String    @db.VarChar(50)
+  activeCount      Int       @default(0)
+  closedCount      Int       @default(0)
+  soldCount        Int       @default(0)
+  avgBidRate       Decimal?  @db.Decimal(6, 2)
+  avgApslAmt       BigInt?
+  avgWinBidPrc     BigInt?
+  failRate         Decimal?  @db.Decimal(5, 2)
   latestResultDate DateTime?
-  isIndexable     Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isIndexable      Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@unique([bjdCode, usageGroup])
   @@index([city, district])
   @@index([usageGroup, avgBidRate])
   @@index([isIndexable])
+}
+
+/// 영구 제거된 시설 상세 URL. 행이 삭제된 뒤에도 410 Gone 을 응답해 색인에서 빠지게 한다.
+///
+/// 404 로도 결국 de-index 되지만 410 이 더 빠르고 의미상 정확하다("영구히 없어졌다").
+/// 정적 목록 대신 테이블로 둔 이유: 원천 드리프트(폐업·전환·키 재발급)는 반복되므로
+/// 목록이 계속 커지는데, 서버 번들에 넣으면 배포마다 무거워지고 갱신에 배포가 필요하다.
+/// 조회는 시설을 못 찾은 경로에서만 일어나므로 정상 트래픽에 오버헤드가 없다.
+model FacilityGone {
+  /// 시설 상세 URL 의 마지막 세그먼트 (예: childcare-11110000009)
+  id       String   @id @db.VarChar(64)
+  category String   @db.VarChar(32)
+  /// 제거 사유 — closed(폐업) / api-dropped(원천 응답 중단) 등
+  reason   String?  @db.VarChar(64)
+  goneAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([goneAt])
 }
