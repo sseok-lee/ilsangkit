@@ -542,7 +542,8 @@
             <a :href="(details as any).crhome" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-primary hover:underline truncate max-w-[200px]">{{ (details as any).crhome }}</a>
           </div>
         </template>
-        <template v-if="(details as any)?.crcnfmdt || (details as any)?.crrepname || (details as any)?.crfaxno || (details as any)?.crcargbname || ((details as any)?.crpausebegindt && (details as any)?.crpauseenddt) || (details as any)?.crspec || (details as any)?.datastdrdt">
+        <!-- 폐지 시설은 다른 행정 메타가 전부 결측이어도 폐지일 표기를 위해 이 그룹을 렌더한다 -->
+        <template v-if="(details as any)?.crcnfmdt || (details as any)?.crrepname || (details as any)?.crfaxno || (details as any)?.crcargbname || ((details as any)?.crpausebegindt && (details as any)?.crpauseenddt) || (details as any)?.crspec || (details as any)?.datastdrdt || (details as any)?.crstatusname === '폐지'">
           <div class="mt-1 pt-3 border-t border-slate-100">
             <p class="text-xs font-medium text-slate-500 mb-2">기타 정보</p>
             <div class="flex flex-col gap-2">
@@ -564,6 +565,17 @@
               <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-500">통학차량</span>
                 <span v-if="(details as any)?.crcargbname" class="text-xs text-slate-500">{{ (details as any).crcargbname }}</span>
+                <span v-else class="text-xs text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
+              </div>
+              <!--
+                폐지 시설만 폐지일을 노출한다. 보육통합정보 API 가 2026-04 에 폐지 시설 응답을
+                중단해 그 이전 적재분은 날짜가 없는 경우가 있으므로(576건), 결측이면 다른 필드와
+                같은 EMPTY_FIELD_TEXT 로 표기해 "날짜를 모른다"는 사실을 드러낸다.
+                운영 중인 시설에 폐지일 행이 뜨면 오해를 주므로 상태로 게이트한다.
+              -->
+              <div v-if="(details as any)?.crstatusname === '폐지'" class="flex items-center justify-between">
+                <span class="text-xs text-slate-500">폐지일</span>
+                <span v-if="(details as any)?.crabldt" class="text-xs text-slate-500">{{ formatKoreanDate((details as any).crabldt) }}</span>
                 <span v-else class="text-xs text-slate-500">{{ EMPTY_FIELD_TEXT }}</span>
               </div>
             </div>

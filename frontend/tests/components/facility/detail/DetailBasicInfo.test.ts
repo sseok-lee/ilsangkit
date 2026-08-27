@@ -166,6 +166,50 @@ describe('DetailBasicInfo', () => {
     expect(wrapper.text()).toContain('02-1-2')
   })
 
+  // 보육통합정보 API 가 2026-04 에 폐지 시설 응답을 중단해, 그 이전에 적재된 폐지 건은
+  // 폐지일(crabldt)이 없는 경우가 있다(576건). 상태만 '폐지'로 남기고 날짜는 결측이므로
+  // 다른 결측 필드와 같은 EMPTY_FIELD_TEXT 로 표기해 "날짜를 모른다"는 사실을 드러낸다.
+  it('childcare 폐지: 폐지일이 있으면 날짜를 표기한다', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('childcare', {
+          crtypename: '민간', crstatusname: '폐지', crabldt: '20220304',
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('폐지일')
+    expect(wrapper.text()).toContain('2022년 3월 4일')
+  })
+
+  it('childcare 폐지: 폐지일이 없으면 "정보 없음"으로 표기한다', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('childcare', {
+          crtypename: '민간', crstatusname: '폐지',
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).toContain('폐지일')
+    expect(wrapper.text()).toContain('정보 없음 · 현장 확인 필요')
+  })
+
+  it('childcare 운영 중: 폐지일 행을 렌더하지 않는다', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('childcare', {
+          crtypename: '국공립', crstatusname: '정상',
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.text()).not.toContain('폐지일')
+  })
+
   it('school: 교육청·팩스가 muted 그룹에 남아 SSR에 노출', () => {
     const wrapper = mount(DetailBasicInfo, {
       props: {
