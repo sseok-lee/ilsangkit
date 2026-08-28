@@ -302,6 +302,33 @@ describe('runGeneration', () => {
         expect(result.carriedForward).toEqual([])
         // force 는 회귀를 무시하고 새 내용(빈 것)을 그대로 반영한다
         expect(await readFile(join(dir, 'sitemap', 'toilet.xml'), 'utf-8')).toBe(EMPTY)
+        // 스왑에 성공했으면 ok 여야 한다. 종전에는 force 로 가드 블록을 건너뛰면서
+        // guard.ok 를 재계산하지 않아 false 가 그대로 반환됐고, CLI 가 그걸 exit 2
+        // (거부·실패)로 매핑해 파일은 바뀌었는데 워크플로는 빨간불로 끝났다
+        // (2026-08-28 Regen Sitemaps run 33132457088).
+        expect(result.ok).toBe(true)
+        expect(result.forced).toBe(true)
+        // 무시했을 뿐이므로 회귀 내역은 결과에 남아야 한다 — 무엇을 덮었는지 로그로 남길 근거.
+        expect(result.regressions).toEqual([{ file: 'sitemap/toilet.xml', old: 2, next: 0 }])
+        // 새 기준선이 기록되어야 다음 정기 실행이 같은 회귀로 다시 걸리지 않는다.
+        const counts = JSON.parse(await readFile(join(dir, '.counts.json'), 'utf-8'))
+        expect(counts['sitemap/toilet.xml']).toBe(0)
+      } finally {
+        delete process.env.SITEMAP_FORCE_SWAP
+      }
+    })
+
+    it('force=1 이지만 회귀가 없으면 forced 는 false — 정상 실행을 강제로 오표기하지 않는다', async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'smap-'))
+      process.env.SITEMAP_FORCE_SWAP = '1'
+      try {
+        const result = await runGeneration({
+          dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2, sleep: () => Promise.resolve(),
+          fetcher: mockFetcher({ '/sitemap.xml': INDEX, '/sitemap/static.xml': STATIC, '/sitemap/toilet.xml': TOILET }),
+        })
+        expect(result.ok).toBe(true)
+        expect(result.forced).toBeFalsy()
+        expect(result.regressions).toEqual([])
       } finally {
         delete process.env.SITEMAP_FORCE_SWAP
       }

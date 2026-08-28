@@ -62,6 +62,12 @@ export interface GenerationResult extends CountGuardResult {
    * 비어있지 않으면 "부분 갱신" — 호출부는 이를 조용히 성공으로 처리하면 안 된다.
    */
   carriedForward: string[]
+  /**
+   * SITEMAP_FORCE_SWAP=1 로 개수 회귀 가드를 무시하고 스왑했는가.
+   * true 면 `ok` 는 true 지만 `regressions` 에 무시한 항목이 남아 있다 —
+   * 호출부는 "성공했으나 사람이 가드를 껐다"로 읽어야 한다.
+   */
+  forced?: boolean
 }
 
 const REGEN_TOKEN_HEADER = 'X-Sitemap-Regen-Token'
@@ -163,7 +169,25 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
 
   const force = process.env.SITEMAP_FORCE_SWAP === '1'
   let guard = evaluateCountGuard(oldCounts, nextCounts, opts.threshold)
-  if (!guard.ok && !force) {
+  let forced = false
+
+  if (!guard.ok && force) {
+    // 사람이 의도적 대량 변경(예: 고아 URL 301 정리로 상세가 수천 건 빠짐)임을 알고 켠 우회로.
+    // 가드를 건너뛰되 무시한 회귀는 결과에 남긴다.
+    //
+    // 종전에는 아래 블록을 `!guard.ok && !force` 로 건너뛰기만 하고 guard.ok 를 재계산하지
+    // 않아, 스왑에 성공하고도 ok:false 를 반환했다. CLI 가 그걸 exit 2(거부·실패)로 매핑해
+    // 파일은 정상 교체됐는데 워크플로는 "실패/거부 — 기존 sitemap 유지"로 끝났다
+    // (2026-08-28 run 33132457088: hospital-9 879·school-2 4214 로 실제 스왑됨).
+    // 강제 실행이 늘 빨간불이면 진짜 실패와 구분이 안 된다.
+    forced = true
+    console.warn(
+      `[generateSitemaps] FORCE — 개수 회귀 ${guard.regressions.length}건을 무시하고 스왑: ${JSON.stringify(guard.regressions)}`,
+    )
+    guard = { ...guard, ok: true }
+  }
+
+  if (!guard.ok) {
     // 자식이 200 이어도 URL 이 0/급감으로 올 수 있다. 프론트 fetch 헬퍼가 upstream 실패를
     // catch 해서 빈 배열을 반환하기 때문이다(2026-07-27 재생성 실패의 실제 원인).
     // 이 경로는 child.ok=true 라 위의 이월이 발동하지 않으므로 여기서 한 번 더 막는다.
@@ -182,7 +206,7 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
     guard = evaluateCountGuard(oldCounts, nextCounts, opts.threshold)
     if (!guard.ok) {
       await rm(tmp, { recursive: true, force: true })
-      return { ...guard, carriedForward }
+      return { ...guard, carriedForward, forced }
     }
   }
 
@@ -206,7 +230,7 @@ export async function runGeneration(opts: GenerationOptions): Promise<Generation
   }
   await rm(old, { recursive: true, force: true })
 
-  return { ...guard, carriedForward }
+  return { ...guard, carriedForward, forced }
 }
 
 // --- CLI 엔트리 ---
@@ -225,6 +249,14 @@ if (isMain) {
       if (!r.ok) {
         console.error('[generateSitemaps] 실패/거부 — 기존 sitemap 유지:', r.error || JSON.stringify(r.regressions))
         process.exit(2)
+      }
+      if (r.forced) {
+        // 사람이 가드를 껐고 스왑은 됐다 → 성공(exit 0). 다만 무엇을 덮었는지는 남긴다.
+        // 종전에는 이 경우가 exit 2 로 떨어져 워크플로가 빨간불이었고, 파일이 실제로
+        // 바뀌었는지 로그만 보고는 알 수 없었다.
+        console.warn(
+          `[generateSitemaps] 강제 스왑 — 개수 회귀 ${r.regressions.length}건 무시: ${JSON.stringify(r.regressions)}`,
+        )
       }
       if (r.carriedForward.length > 0) {
         // 스왑은 됐지만 일부는 갱신되지 않았다. 호출부(배포 워크플로)가 성공과 구분할 수 있도록
