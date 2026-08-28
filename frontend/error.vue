@@ -18,16 +18,30 @@
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-3">{{ title }}</h1>
         <p class="text-slate-500 mb-8">{{ description }}</p>
 
-        <a
-          href="/"
-          class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-medium shadow-sm"
-        >
-          <span class="material-symbols-outlined text-[20px]">home</span>
-          홈으로 돌아가기
-        </a>
+        <!-- 410 은 폐업·폐원한 시설이므로 같은 카테고리 목록이 홈보다 유용한 다음 행동이다.
+             그때만 CTA 순서를 바꾸고, 나머지 상태에서는 기존대로 홈이 primary 다. -->
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <a
+            v-if="copy.categoryCta"
+            :href="copy.categoryCta.href"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-medium shadow-sm"
+          >
+            <span class="material-symbols-outlined text-[20px]">grid_view</span>
+            {{ copy.categoryCta.label }}
+          </a>
+          <a
+            href="/"
+            :class="copy.categoryCta
+              ? 'inline-flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl hover:border-primary/30 hover:shadow-md transition-all font-medium'
+              : 'inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-medium shadow-sm'"
+          >
+            <span class="material-symbols-outlined text-[20px]">home</span>
+            홈으로 돌아가기
+          </a>
+        </div>
 
-        <!-- 404일 때 바로가기 -->
-        <div v-if="statusCode === 404" class="mt-12">
+        <!-- 영구 응답(404·410)일 때만 탈출구를 띄운다. 5xx 는 재시도가 정답이라 제외. -->
+        <div v-if="copy.showRecovery" class="mt-12">
           <p class="text-sm text-slate-500 mb-5">찾으시는 정보가 있으신가요?</p>
 
           <!-- 재검색 -->
@@ -43,7 +57,7 @@
                 inputmode="search"
                 enterkeyhint="search"
                 aria-label="사이트 검색"
-                placeholder="단지명·지역으로 검색"
+                :placeholder="searchPlaceholder"
                 class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-20 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
               />
               <button
@@ -97,24 +111,45 @@
 import { ref } from 'vue'
 import AppHeader from '~/components/common/AppHeader.vue'
 import AppFooter from '~/components/common/AppFooter.vue'
+import { resolveErrorPageCopy, errorPagePath, facilityCategoryFromPath } from '~/utils/errorPageCopy'
+import { resolveSearchScope, buildSearchDestination, scopePlaceholder } from '~/utils/searchScope'
 
 const props = defineProps<{
-  error: { statusCode?: number; statusMessage?: string }
+  error: { statusCode?: number; statusMessage?: string; url?: string }
 }>()
 
-// 404 재검색: 에러 상태를 해제하며 검색 결과로 이동
+const statusCode = props.error?.statusCode ?? 500
+
+// 에러가 난 경로. error.url 이 1순위이고 useRoute() 는 fallback —
+// 근거는 errorPagePath 주석 참조. useRoute() 는 error.vue 가 라우터 밖에서
+// 렌더될 수 있어 try/catch 로 감싼다(에러 페이지가 스스로 던지면 안 된다).
+let routePath: string | undefined
+try {
+  routePath = useRoute()?.path
+} catch {
+  routePath = undefined
+}
+const errorPath = errorPagePath(props.error, routePath)
+
+// 410 문구를 위한 카테고리. 검색 목적지 스코프는 별도 규칙(subway 제외)이라 분리한다.
+const goneCategory = facilityCategoryFromPath(errorPath)
+const copy = resolveErrorPageCopy({ statusCode, facilityCategory: goneCategory })
+
+const title = copy.title
+const description = copy.description
+
+// 재검색 목적지는 경로 컨텍스트를 따른다 — `/search` 는 부동산 전용이므로
+// 시설 상세에서 온 사용자를 거기로 보내면 검색이 빈손으로 끝난다(#617 스코프 규칙).
+const searchScope = resolveSearchScope({ path: errorPath })
+const searchPlaceholder = scopePlaceholder(searchScope)
+
+// 재검색: 에러 상태를 해제하며 스코프에 맞는 결과로 이동
 const searchQuery = ref('')
 function onSearch() {
   const q = searchQuery.value.trim()
   if (!q) return
-  clearError({ redirect: `/search?keyword=${encodeURIComponent(q)}` })
+  clearError({ redirect: buildSearchDestination(searchScope, q) })
 }
-
-const statusCode = props.error?.statusCode ?? 500
-const title = statusCode === 404 ? '페이지를 찾을 수 없습니다' : '오류가 발생했습니다'
-const description = statusCode === 404
-  ? '요청하신 페이지가 존재하지 않거나 이동되었을 수 있습니다.'
-  : '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
 
 const realEstateLinks = [
   { slug: '/real-estate/apt-sale', label: '아파트' },
