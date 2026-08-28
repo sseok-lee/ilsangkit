@@ -52,6 +52,11 @@ const createErrorMock = vi.fn((opts: any) => {
   return err
 })
 vi.stubGlobal('createError', createErrorMock)
+// showError: 클라이언트 네비게이션에서 에러 페이지를 띄우는 Nuxt 자동 import.
+// watch 콜백 안에서는 throw 가 Vue 에 삼켜지므로 이걸 불러야 한다 —
+// 아래 "에러 페이지를 띄운다" 테스트들이 그 배선을 고정한다.
+const showErrorMock = vi.fn()
+vi.stubGlobal('showError', showErrorMock)
 
 // Mock useKakaoMap
 vi.mock('~/composables/useKakaoMap', () => ({
@@ -169,10 +174,14 @@ describe('DetailPage', () => {
     expect(wrapper.text()).toContain('불러오는 중')
   })
 
-  it('실제 404 에러 시 createError로 404 반환', async () => {
+  // 클라이언트 네비게이션 에러 처리를 mount 해서 검증한다.
+  // showError 어서션이 핵심 회귀 잠금 — throw createError 로 되돌리면 createError 는
+  // 불려도 showError 는 안 불리고, 실제 브라우저에서는 에러 페이지 대신 빈 페이지가 뜬다
+  // (2026-08-28 프로덕션 실측: 사이트 기본 title + h1 없음 + robots index,follow).
+  async function mountForClientError(error: unknown) {
     createErrorMock.mockClear()
-    const notFoundError = Object.assign(new Error('Not Found'), { statusCode: 404 })
-    mockUseAsyncDataWith(null, 'error', notFoundError)
+    showErrorMock.mockClear()
+    mockUseAsyncDataWith(null, 'error', error)
 
     const wrapper = mount(
       defineComponent({
@@ -191,10 +200,46 @@ describe('DetailPage', () => {
       },
     )
     await flushPromises()
+    return wrapper
+  }
+
+  it('실제 404 에러 시 showError 로 404 에러 페이지를 띄운다', async () => {
+    const wrapper = await mountForClientError(
+      Object.assign(new Error('Not Found'), { statusCode: 404 }),
+    )
 
     expect(createErrorMock).toHaveBeenCalledWith(
       expect.objectContaining({ statusCode: 404, statusMessage: 'Facility not found' })
     )
+    expect(showErrorMock).toHaveBeenCalledTimes(1)
+    expect(showErrorMock.mock.calls[0][0]).toMatchObject({ statusCode: 404 })
+
+    wrapper.unmount()
+  })
+
+  it('422 도 404 에러 페이지로 띄운다', async () => {
+    const wrapper = await mountForClientError(
+      Object.assign(new Error('Unprocessable'), { statusCode: 422 }),
+    )
+
+    expect(createErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 404, statusMessage: 'Facility not found' })
+    )
+    expect(showErrorMock).toHaveBeenCalledTimes(1)
+
+    wrapper.unmount()
+  })
+
+  it('410 Gone 시 showError 로 410 에러 페이지를 띄운다 (폐업·폐원 시설)', async () => {
+    const wrapper = await mountForClientError(
+      Object.assign(new Error('Gone'), { statusCode: 410 }),
+    )
+
+    expect(createErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 410, statusMessage: 'Facility permanently removed' })
+    )
+    expect(showErrorMock).toHaveBeenCalledTimes(1)
+    expect(showErrorMock.mock.calls[0][0]).toMatchObject({ statusCode: 410 })
 
     wrapper.unmount()
   })
@@ -249,30 +294,24 @@ describe('DetailPage', () => {
   })
 
   it('네트워크/서버 에러 시 404를 반환하지 않음 (SEO 보호)', async () => {
-    createErrorMock.mockClear()
-    mockUseAsyncDataWith(null, 'error', new Error('Failed to fetch'))
-
-    const wrapper = mount(
-      defineComponent({
-        setup() {
-          onErrorCaptured(() => true)
-          return () => h(Suspense, null, {
-            default: () => h(DetailPage),
-          })
-        },
-      }),
-      {
-        global: {
-          stubs: globalStubs,
-          config: { errorHandler: () => {} },
-        },
-      },
-    )
-    await flushPromises()
+    const wrapper = await mountForClientError(new Error('Failed to fetch'))
 
     expect(createErrorMock).not.toHaveBeenCalled()
+    // 일시 장애를 에러 페이지로 굳히지 않는다 — fail-open
+    expect(showErrorMock).not.toHaveBeenCalled()
 
     wrapper.unmount()
+  })
+
+  it('5xx 는 에러 페이지를 띄우지 않는다 (fail-open)', async () => {
+    for (const statusCode of [500, 502, 503, 504]) {
+      const wrapper = await mountForClientError(
+        Object.assign(new Error('Server Error'), { statusCode }),
+      )
+      expect(createErrorMock, `statusCode=${statusCode}`).not.toHaveBeenCalled()
+      expect(showErrorMock, `statusCode=${statusCode}`).not.toHaveBeenCalled()
+      wrapper.unmount()
+    }
   })
 
   // ---------------- FAQPage JSON-LD 발행 가드 (spec §3.4·§6 결정4) ----------------

@@ -42,6 +42,10 @@ export default [
         useError: 'readonly',
         clearError: 'readonly',
         createError: 'readonly',
+        // showError: clearError·createError 와 같은 #app/composables/error 모듈의
+        // 자동 import 다(.nuxt/imports.d.ts 에서 한 줄로 함께 export 됨).
+        // setup 본문 밖(watch 콜백 등)에서 에러 페이지를 띄우려면 throw 가 아니라 이걸 써야 한다.
+        showError: 'readonly',
         defineNuxtComponent: 'readonly',
         definePageMeta: 'readonly',
         navigateTo: 'readonly',
