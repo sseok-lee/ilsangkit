@@ -275,6 +275,7 @@ import { formatOperatingHours } from '~/utils/formatOperatingHours'
 import { buildHeroStats } from '~/utils/categoryHeroStats'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
 import { resolveFacilitySsrOutcome } from '~/utils/facilitySsrOutcome'
+import { resolveFacilityClientError } from '~/utils/facilityClientError'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import {
   parseAccessPoints,
@@ -335,16 +336,15 @@ if (import.meta.server) {
     markDegradedResponse()
   }
 }
-// 클라이언트 네비게이션 시 lazy 로드 후 에러 처리
+// 클라이언트 네비게이션 시 lazy 로드 후 에러 처리.
+//
+// throw 가 아니라 showError() 다 — 여기서 throw 하면 Vue 의 watcher 에러 핸들링이
+// 예외를 잡아 콘솔에만 남기고 Nuxt 까지 전달하지 않아 에러 페이지가 안 뜬다.
+// 판정은 순수 함수(resolveFacilityClientError)에 위임한다 — 실측 근거는 그쪽 주석 참조.
 watch(fetchError, (err) => {
   if (!err) return
-  const errStatus = err.statusCode
-  if (errStatus === 410) {
-    throw createError({ statusCode: 410, statusMessage: 'Facility permanently removed' })
-  }
-  if (errStatus === 404 || errStatus === 422) {
-    throw createError({ statusCode: 404, statusMessage: 'Facility not found' })
-  }
+  const clientError = resolveFacilityClientError(err.statusCode)
+  if (clientError) showError(createError(clientError))
 }, { immediate: true })
 
 // Secondary fetch — sync-status.
