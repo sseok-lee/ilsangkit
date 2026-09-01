@@ -11,7 +11,8 @@ import {
   getAllLawdCodes,
 } from '../services/syncRealEstateBase.js';
 import { runSync, batchUpsert, transformAndDedupe, createSyncStats, type SyncStats } from '../services/baseSyncService.js';
-import { submitNewlyTransactedBuildings } from '../services/indexNowService.js';
+// IndexNow 제출 비활성화 (2026-09-01) — 아래 호출부 주석 참고.
+// import { submitNewlyTransactedBuildings } from '../services/indexNowService.js';
 
 const API_ENDPOINT = 'RTMSDataSvcOffiRent/getRTMSDataSvcOffiRent';
 const CATEGORY = 'offitelRent';
@@ -206,14 +207,15 @@ async function main(): Promise<void> {
     }
   });
 
-  // IndexNow: 신규 거래가 생긴 건물만 제출한다 — 재수집만 된 건물은 제외
-  // (조건 근거는 submitNewlyTransactedBuildings 주석 참고)
-  await submitNewlyTransactedBuildings(
-    prisma.offitelRentTransaction,
-    'offitel-rent',
-    'offitelRent',
-    new Date(Date.now() - 2 * 60 * 60 * 1000),
-  );
+  // IndexNow 제출 비활성화 (2026-09-01) — 부동산이 크롤 큐 앞자리를 독점해
+  // 시설 상세 화석의 재크롤이 밀린다. 근거와 복구 조건은
+  // submitNewlyTransactedBuildings 주석의 "2026-09-01 호출부 비활성화" 참고.
+  // await submitNewlyTransactedBuildings(
+  //   prisma.offitelRentTransaction,
+  //   'offitel-rent',
+  //   'offitelRent',
+  //   new Date(Date.now() - 2 * 60 * 60 * 1000),
+  // );
 
   console.info('\n=== offitelRent sync completed ===');
 }
