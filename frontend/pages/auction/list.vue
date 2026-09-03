@@ -23,6 +23,9 @@
         />
       </SectionBlock>
 
+      <!-- Ad: 필터 직후 (시설·부동산 목록 페이지와 동일 위치) -->
+      <AdBanner />
+
       <!-- 결과 -->
       <SectionBlock
         v-if="data && data.items.length > 0"
@@ -70,8 +73,6 @@
           <p class="text-muted text-sm">데이터를 불러오는 중입니다.</p>
         </div>
       </SectionBlock>
-
-      <AdBanner />
 
       <DataSourceSection domain="auction" />
     </div>
