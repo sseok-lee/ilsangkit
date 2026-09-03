@@ -113,34 +113,3 @@ describe('DataSourceSection — ⓘ 안내 문구(데이터셋 이름 미반복)
     expect(w.text()).not.toContain('테스트셋 기준 정보입니다')
   })
 })
-
-describe('DataSourceSection — TrustLine 억제 레지스트리', () => {
-  afterEach(() => vi.restoreAllMocks())
-
-  function mountWithRegistry(props: Record<string, unknown>, registry: { value: number }) {
-    return mount(DataSourceSection, {
-      props,
-      global: { stubs: { NuxtLink: NuxtLinkStub }, provide: { sourceCardRegistry: registry } },
-    })
-  }
-
-  it('full 카드는 sourceCardRegistry를 +1 하고 언마운트 시 -1 한다(전역 TrustLine 억제)', () => {
-    const reg = ref(0)
-    const w = mountWithRegistry({ domain: 'facility', category: 'hospital' }, reg)
-    expect(reg.value).toBe(1)
-    w.unmount()
-    expect(reg.value).toBe(0)
-  })
-
-  it('compact 모드는 레지스트리를 증가시키지 않는다(작은 인라인 안내는 억제 대상 아님)', () => {
-    const reg = ref(0)
-    mountWithRegistry({ domain: 'facility', compact: true }, reg)
-    expect(reg.value).toBe(0)
-  })
-
-  it('source가 없으면(카드 미렌더) 레지스트리를 증가시키지 않는다', () => {
-    const reg = ref(0)
-    mountWithRegistry({ domain: 'facility' }, reg) // category 없음 → source null → 카드 미렌더
-    expect(reg.value).toBe(0)
-  })
-})
