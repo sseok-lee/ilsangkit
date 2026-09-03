@@ -9,11 +9,10 @@
         :description="`${cityName} 구·군별 부동산 공매 물건과 낙찰가율 통계를 확인하세요.`"
       />
 
-      <SectionBlock :subtext="`${cityName} 내 구·군을 선택하면 공매 물건과 낙찰가율 통계를 확인할 수 있습니다.`">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">{{ cityName }} 구·군 목록</h2>
-        </template>
-
+      <SectionBlock
+        :heading="`${cityName} 구·군 목록`"
+        :subtext="`${cityName} 내 구·군을 선택하면 공매 물건과 낙찰가율 통계를 확인할 수 있습니다.`"
+      >
         <div v-if="districtCards.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <NuxtLink
             v-for="card in districtCards"

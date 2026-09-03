@@ -10,10 +10,7 @@
       />
 
       <!-- 용도별 집계 카드 -->
-      <SectionBlock v-if="usageGroups.length > 0" subtext="용도별 낙찰가율과 물건 현황입니다.">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">용도별 현황</h2>
-        </template>
+      <SectionBlock v-if="usageGroups.length > 0" heading="용도별 현황" subtext="용도별 낙찰가율과 물건 현황입니다.">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <div
             v-for="g in usageGroups"
@@ -28,11 +25,8 @@
       </SectionBlock>
 
       <!-- 진행중 물건 -->
-      <SectionBlock v-if="activeItems.length > 0" subtext="현재 입찰 진행 중인 공매 물건입니다.">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">진행중 물건</h2>
-        </template>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+      <SectionBlock v-if="activeItems.length > 0" heading="진행중 물건" subtext="현재 입찰 진행 중인 공매 물건입니다.">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AuctionCard v-for="item in activeItems" :key="item.cltrMngNo" :item="item" />
         </div>
         <div class="mt-3 text-right">
@@ -41,11 +35,8 @@
       </SectionBlock>
 
       <!-- 최근 낙찰 물건 -->
-      <SectionBlock v-if="recentSold.length > 0" subtext="최근 낙찰된 공매 물건입니다.">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">최근 낙찰</h2>
-        </template>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+      <SectionBlock v-if="recentSold.length > 0" heading="최근 낙찰" subtext="최근 낙찰된 공매 물건입니다.">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AuctionCard v-for="item in recentSold" :key="item.cltrMngNo" :item="item" />
         </div>
       </SectionBlock>
@@ -53,16 +44,20 @@
       <AdBanner />
 
       <!-- FAQ -->
-      <SectionBlock>
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">자주 묻는 질문</h2>
-        </template>
-        <dl class="flex flex-col gap-4">
-          <div v-for="faq in AUCTION_FAQ" :key="faq.q" class="rounded-xl border border-line bg-white p-4">
-            <dt class="text-body font-semibold text-slate-800">{{ faq.q }}</dt>
-            <dd class="mt-2 text-body text-slate-600 leading-relaxed">{{ faq.a }}</dd>
-          </div>
-        </dl>
+      <SectionBlock heading="자주 묻는 질문">
+        <div class="space-y-1">
+          <details
+            v-for="faq in AUCTION_FAQ"
+            :key="faq.q"
+            class="group border-b border-line last:border-b-0"
+          >
+            <summary class="cursor-pointer py-3 text-base font-medium text-slate-800 flex items-center justify-between hover:text-primary">
+              {{ faq.q }}
+              <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
+            </summary>
+            <p class="pb-3 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
+          </details>
+        </div>
       </SectionBlock>
 
 
