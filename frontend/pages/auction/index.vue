@@ -26,10 +26,7 @@
       </div>
 
       <!-- 용도별 진입 카드 -->
-      <SectionBlock subtext="용도별로 공매 물건을 조회하세요.">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">용도별 공매 물건</h2>
-        </template>
+      <SectionBlock heading="용도별 공매 물건" subtext="용도별로 공매 물건을 조회하세요.">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <NuxtLink
             v-for="usage in usageCards"
@@ -51,11 +48,8 @@
       </SectionBlock>
 
       <!-- 부가④ 마감임박 물건 -->
-      <SectionBlock v-if="deadline && deadline.items.length > 0" subtext="입찰 마감이 가까운 물건입니다.">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">마감 임박 물건</h2>
-        </template>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <SectionBlock v-if="deadline && deadline.items.length > 0" heading="마감 임박 물건" subtext="입찰 마감이 가까운 물건입니다.">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AuctionCard v-for="item in deadline.items" :key="item.cltrMngNo" :item="item" />
         </div>
         <div class="mt-3 text-right">
@@ -77,23 +71,18 @@
       <AdBanner />
 
       <!-- FAQ -->
-      <SectionBlock>
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">자주 묻는 질문</h2>
-        </template>
-        <div class="space-y-3">
+      <SectionBlock heading="자주 묻는 질문">
+        <div class="space-y-1">
           <details
             v-for="(faq, index) in AUCTION_FAQ"
             :key="index"
-            class="rounded-xl bg-white border border-slate-200 overflow-hidden"
+            class="group border-b border-line last:border-b-0"
           >
-            <summary class="flex items-center justify-between px-5 py-4 cursor-pointer text-slate-800 font-medium text-sm hover:bg-slate-50 transition-colors list-none">
+            <summary class="cursor-pointer py-3 text-base font-medium text-slate-800 flex items-center justify-between hover:text-primary">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-slate-500 text-lg flex-shrink-0 ml-3">expand_more</span>
+              <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
             </summary>
-            <div class="px-5 pb-4 text-slate-600 text-sm leading-relaxed border-t border-slate-100 pt-3">
-              {{ faq.a }}
-            </div>
+            <p class="pb-3 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
           </details>
         </div>
       </SectionBlock>
@@ -109,7 +98,6 @@ import { computed } from 'vue'
 import { useAuction } from '~/composables/useAuction'
 import { AUCTION_META, AUCTION_FAQ } from '~/utils/auctionMeta'
 import { USAGE_GROUP_LABEL } from '~/types/auction'
-import { buildAuctionListTitle } from '~/utils/auctionHead'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import AuctionCard from '~/components/auction/AuctionCard.vue'

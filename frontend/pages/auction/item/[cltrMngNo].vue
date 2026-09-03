@@ -248,12 +248,19 @@ setAuctionListingSchema({
 
       <!-- FAQ -->
       <SectionBlock heading="자주 묻는 질문" subtext="공매와 관련된 자주 묻는 질문입니다.">
-        <dl class="flex flex-col gap-4">
-          <div v-for="faq in AUCTION_FAQ" :key="faq.q" class="rounded-xl border border-line bg-white p-4">
-            <dt class="text-body font-semibold text-ink">{{ faq.q }}</dt>
-            <dd class="mt-2 text-body text-muted leading-relaxed">{{ faq.a }}</dd>
-          </div>
-        </dl>
+        <div class="space-y-1">
+          <details
+            v-for="faq in AUCTION_FAQ"
+            :key="faq.q"
+            class="group border-b border-line last:border-b-0"
+          >
+            <summary class="cursor-pointer py-3 text-base font-medium text-slate-800 flex items-center justify-between hover:text-primary">
+              {{ faq.q }}
+              <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
+            </summary>
+            <p class="pb-3 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
+          </details>
+        </div>
       </SectionBlock>
 
       <!-- 온비드 입찰 외부 CTA (order-9) -->
