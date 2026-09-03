@@ -38,6 +38,11 @@ const mockRuntimeConfig = {
 ;(globalThis as any).useHead = vi.fn()
 ;(globalThis as any).useServerSeoMeta = vi.fn()
 
+// definePageMeta 는 Nuxt 컴파일러 매크로라 빌드 시 제거되지만,
+// 페이지 컴포넌트를 직접 mount 하는 테스트에선 런타임에 호출돼 ReferenceError 가 난다.
+// (라우트 meta 자체는 useRoute 스텁이 담당 — 여기선 no-op 이면 충분)
+;(globalThis as any).definePageMeta = vi.fn()
+
 // Mock useRoute (AdBanner 및 다수 컴포넌트가 사용)
 ;(globalThis as any).useRoute = () => ({
   fullPath: '/',

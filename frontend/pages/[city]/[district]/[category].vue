@@ -93,6 +93,9 @@
 </template>
 
 <script setup lang="ts">
+// 전역 TrustLine 억제 — 이 페이지는 자체 데이터 출처 카드를 렌더한다 (#766)
+definePageMeta({ hasSourceCard: true })
+
 import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { LocationQueryRaw } from 'vue-router'

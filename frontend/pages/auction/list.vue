@@ -1,28 +1,43 @@
 <template>
   <div class="bg-background-light min-h-screen">
     <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+      <Breadcrumb :items="breadcrumbItems" />
+
       <PageHero
         eyebrow="공매"
-        :title="pageTitle"
+        :title="pageHeading"
         :description="`온비드 부동산 공매 물건을 지역·용도·상태별로 조회하세요.`"
       />
 
       <!-- 필터 -->
-      <AuctionFilters
-        :usage="usage"
-        :status="filterStatus"
-        :city="filterCity"
-        :district="filterDistrict"
-        @update:usage="onUsage"
-        @update:status="onStatus"
-        @update:city="onCity"
-        @update:district="onDistrict"
-      />
+      <SectionBlock heading="필터" subtext="용도·상태·지역으로 공매 물건을 좁혀보세요.">
+        <AuctionFilters
+          :usage="usage"
+          :status="filterStatus"
+          :city="filterCity"
+          :district="filterDistrict"
+          @update:usage="onUsage"
+          @update:status="onStatus"
+          @update:city="onCity"
+          @update:district="onDistrict"
+        />
+      </SectionBlock>
+
+      <!-- Ad: 필터 직후 (시설·부동산 목록 페이지와 동일 위치) -->
+      <AdBanner />
 
       <!-- 결과 -->
-      <div v-if="data && data.items.length > 0">
-        <p class="text-caption text-muted mb-3">총 <span class="font-display tabular-nums">{{ data.total.toLocaleString('ko-KR') }}</span>건</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <SectionBlock
+        v-if="data && data.items.length > 0"
+        :heading="`${pageHeading} 목록`"
+        subtext="감정가·최저가와 입찰 마감일을 확인하세요."
+      >
+        <template #right>
+          <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+            {{ data.total.toLocaleString('ko-KR') }}건
+          </span>
+        </template>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AuctionCard v-for="item in data.items" :key="item.cltrMngNo" :item="item" />
         </div>
         <Pagination
@@ -30,8 +45,9 @@
           :total-pages="data.totalPages"
           @page-change="onPageChange"
         />
-      </div>
-      <div v-else-if="data && data.items.length === 0">
+      </SectionBlock>
+
+      <SectionBlock v-else-if="data && data.items.length === 0" :heading="`${pageHeading} 목록`">
         <EmptyState icon="gavel" title="조회된 공매 물건이 없습니다" description="필터를 변경하거나 전체 목록을 확인해 보세요.">
           <div class="flex items-center justify-center gap-3">
             <button
@@ -50,27 +66,36 @@
             </NuxtLink>
           </div>
         </EmptyState>
-      </div>
-      <div v-else class="rounded-xl bg-background-light p-12 text-center">
-        <p class="text-muted text-sm">데이터를 불러오는 중입니다.</p>
-      </div>
+      </SectionBlock>
 
-      <AdBanner />
+      <SectionBlock v-else :heading="`${pageHeading} 목록`">
+        <div class="rounded-xl bg-background-light p-12 text-center">
+          <p class="text-muted text-sm">데이터를 불러오는 중입니다.</p>
+        </div>
+      </SectionBlock>
 
+      <DataSourceSection domain="auction" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+// 전역 TrustLine 억제 — 이 페이지는 자체 데이터 출처 카드를 렌더한다 (#766)
+definePageMeta({ hasSourceCard: true })
+
 import { computed, nextTick } from 'vue'
 import type { LocationQueryRaw } from 'vue-router'
 import { useAuction } from '~/composables/useAuction'
-import { buildAuctionListTitle } from '~/utils/auctionHead'
+import { buildAuctionListTitle, buildAuctionListHeading } from '~/utils/auctionHead'
 import { SITE_URL } from '~/utils/seoConstants'
+import { useStructuredData } from '~/composables/useStructuredData'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
 import AuctionFilters from '~/components/auction/AuctionFilters.vue'
 import Pagination from '~/components/common/Pagination.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
+import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 
 const route = useRoute()
@@ -91,7 +116,15 @@ const isIndexable = computed(() => {
   return nonIndexableKeys.length === 0
 })
 
+// H1(pageHeading)과 <title>(pageTitle)은 분리 — 사이트명 suffix 는 <title> 에만 붙는다.
+const pageHeading = computed(() => buildAuctionListHeading(usage.value))
 const pageTitle = computed(() => buildAuctionListTitle(usage.value))
+
+const breadcrumbItems = computed(() => [
+  { label: '홈', href: '/', current: false },
+  { label: '공매', href: '/auction', current: false },
+  { label: pageHeading.value, href: '/auction/list', current: true },
+])
 
 const auction = useAuction()
 
@@ -157,6 +190,13 @@ const selfUrl = computed(() => {
   const base = `${SITE_URL}/auction/list`
   return usage.value ? `${base}?usage=${usage.value}` : base
 })
+
+const { setBreadcrumbSchema } = useStructuredData()
+setBreadcrumbSchema([
+  { name: '홈', url: '/' },
+  { name: '공매', url: '/auction' },
+  { name: pageHeading.value, url: '/auction/list' },
+])
 
 useHead(() => {
   const title = pageTitle.value

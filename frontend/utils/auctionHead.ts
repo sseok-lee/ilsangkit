@@ -91,7 +91,26 @@ export function computeAuctionCityHead(
   return { title, meta }
 }
 
+const LIST_USAGE_LABEL: Record<string, string> = {
+  residential: '아파트·주거용',
+  land: '토지',
+  commercial: '상가·업무',
+  industrial: '공장·창고',
+  complex: '복합',
+  etc: '기타',
+}
+
+/**
+ * 목록 페이지의 화면 제목(H1). 사이트명 suffix 를 붙이지 않는다.
+ * ⚠️ PageHero 등 화면 제목엔 반드시 이 쪽을 쓸 것 —
+ *    buildAuctionListTitle 을 H1 에 재사용하면 "… | 일상킷" 이 그대로 노출된다.
+ */
+export function buildAuctionListHeading(usage: string): string {
+  const label = usage ? LIST_USAGE_LABEL[usage] : undefined
+  return label ? `${label} 공매 물건` : '부동산 공매 물건'
+}
+
+/** 목록 페이지의 <title>. 헤딩에 사이트명을 붙인 형태. */
 export function buildAuctionListTitle(usage: string): string {
-  const map: Record<string, string> = { residential: '아파트·주거용', land: '토지', commercial: '상가·업무', industrial: '공장·창고', complex: '복합', etc: '기타' }
-  return usage && map[usage] ? `${map[usage]} 공매 물건 | 일상킷` : '부동산 공매 물건 | 일상킷'
+  return `${buildAuctionListHeading(usage)} | 일상킷`
 }

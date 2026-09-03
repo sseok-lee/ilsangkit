@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, type Ref } from 'vue'
+import { computed } from 'vue'
 import { resolveDataSource, type DataSourceDomain } from '~/utils/dataSource'
 import type { FacilityCategory } from '~/types/facility'
 
@@ -64,13 +64,7 @@ const props = defineProps<{
 
 const source = computed(() => resolveDataSource({ domain: props.domain, category: props.category }))
 
-// 풀카드(비-compact + source 존재)를 렌더하면 레이아웃의 전역 TrustLine을 억제한다(출처 정보 중복 방지).
-// setup 시점 등록이라 SSR에서도 TrustLine(<slot/> 뒤) 렌더 전에 반영된다.
-const sourceCardRegistry = inject<Ref<number> | null>('sourceCardRegistry', null)
-if (sourceCardRegistry && !props.compact && source.value) {
-  sourceCardRegistry.value++
-  onUnmounted(() => {
-    sourceCardRegistry.value--
-  })
-}
+// 전역 TrustLine 억제는 여기서 하지 않는다.
+// 이 컴포넌트의 setup 은 async 페이지에서 레이아웃의 v-if 평가보다 늦게 실행돼(Suspense)
+// SSR 에서 신뢰할 수 없었다(#766). 페이지가 definePageMeta({ hasSourceCard: true }) 로 선언한다.
 </script>

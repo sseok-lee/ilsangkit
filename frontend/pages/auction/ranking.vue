@@ -10,30 +10,35 @@
       />
 
       <!-- 용도/정렬 토글 -->
-      <div class="flex flex-wrap gap-2">
-        <select
-          v-model="selectedUsage"
-          class="rounded-lg border border-line px-3 py-2 text-sm"
-        >
-          <option value="">전체 용도</option>
-          <option v-for="[k, v] in usageOptions" :key="k" :value="k">{{ v }}</option>
-        </select>
-        <select
-          v-model="selectedOrder"
-          class="rounded-lg border border-line px-3 py-2 text-sm"
-        >
-          <option value="high">낙찰가율 높은 순</option>
-          <option value="low">낙찰가율 낮은 순</option>
-          <option value="count">낙찰 건수 많은 순</option>
-        </select>
-      </div>
+      <SectionBlock heading="용도·정렬" subtext="용도를 고르고 정렬 기준을 바꿔 랭킹을 확인하세요.">
+        <div class="flex flex-wrap gap-2">
+          <select
+            v-model="selectedUsage"
+            class="rounded-lg border border-line px-3 py-2 text-sm"
+          >
+            <option value="">전체 용도</option>
+            <option v-for="[k, v] in usageOptions" :key="k" :value="k">{{ v }}</option>
+          </select>
+          <select
+            v-model="selectedOrder"
+            class="rounded-lg border border-line px-3 py-2 text-sm"
+          >
+            <option value="high">낙찰가율 높은 순</option>
+            <option value="low">낙찰가율 낮은 순</option>
+            <option value="count">낙찰 건수 많은 순</option>
+          </select>
+        </div>
+      </SectionBlock>
 
       <!-- 랭킹 테이블 -->
-      <div v-if="rows && rows.length > 0" class="bg-white rounded-xl border border-line shadow-card p-4">
-        <AuctionRankingTable :rows="rows" />
-      </div>
-      <div v-else>
-        <EmptyState icon="gavel" title="낙찰 데이터가 없습니다" description="데이터가 충분히 쌓이면 랭킹이 표시됩니다.">
+      <SectionBlock heading="지역별 낙찰가율" subtext="감정가 대비 낙찰가 비율입니다. 온비드 공식 데이터 기반.">
+        <AuctionRankingTable v-if="rows && rows.length > 0" :rows="rows" />
+        <EmptyState
+          v-else
+          icon="gavel"
+          title="낙찰 데이터가 없습니다"
+          description="데이터가 충분히 쌓이면 랭킹이 표시됩니다."
+        >
           <NuxtLink
             to="/auction"
             class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -41,7 +46,7 @@
             전체 공매 보기
           </NuxtLink>
         </EmptyState>
-      </div>
+      </SectionBlock>
 
       <AdBanner />
 
@@ -52,6 +57,9 @@
 </template>
 
 <script setup lang="ts">
+// 전역 TrustLine 억제 — 이 페이지는 자체 데이터 출처 카드를 렌더한다 (#766)
+definePageMeta({ hasSourceCard: true })
+
 import { computed, ref, watch } from 'vue'
 import { useAuction } from '~/composables/useAuction'
 import { USAGE_GROUP_LABEL } from '~/types/auction'
@@ -59,6 +67,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import AuctionRankingTable from '~/components/auction/AuctionRankingTable.vue'
 import PageHero from '~/components/common/PageHero.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
