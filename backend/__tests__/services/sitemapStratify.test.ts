@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildStratifiedIdsSql,
+  buildCanonicalDedupeWhere,
+  buildDedupedIdsSql,
+  buildDedupedCountSql,
   SITEMAP_STRATIFY_TABLES,
 } from '../../src/services/sitemapStratify.js';
 
@@ -89,5 +92,79 @@ describe('SITEMAP_STRATIFY_TABLES — SQL 안전', () => {
   it('화이트리스트 밖 카테고리는 undefined — 호출부가 기존 경로로 폴백한다', () => {
     expect(SITEMAP_STRATIFY_TABLES['wifi-detail']).toBeUndefined();
     expect(SITEMAP_STRATIFY_TABLES['../etc/passwd']).toBeUndefined();
+  });
+});
+
+describe('중복 통합 대표행 선별 (rel=canonical 대상 제외)', () => {
+  const AED_COLUMNS = ['name', 'city', 'district', 'address', 'roadAddress', 'buildPlace', 'org'];
+
+  // 다른 URL 로 canonical 되는 페이지를 사이트맵에 광고하면 안 된다 —
+  // 사이트맵은 "200 · 색인가능 · 자기참조 canonical" URL 만 담는 자리다.
+  it('NOT EXISTS 로 자기보다 작은 id 의 동일 형제가 있는 행을 뺀다', () => {
+    const where = buildCanonicalDedupeWhere('Aed', AED_COLUMNS, 't0');
+    expect(where).toContain('WHERE NOT EXISTS');
+    expect(where).toContain('s.id < t0.id');
+  });
+
+  // ★ NULL-safe equality. `=` 로 쓰면 address 가 NULL 인 형제끼리 매칭되지 않아
+  // 중복이 그대로 남는다 (MySQL 의 NULL = NULL 은 NULL).
+  it('모든 키 비교가 `<=>` (NULL-safe) 다', () => {
+    const where = buildCanonicalDedupeWhere('Aed', AED_COLUMNS, 't0');
+    for (const col of AED_COLUMNS) {
+      expect(where).toContain(`s.\`${col}\` <=> t0.\`${col}\``);
+    }
+    // id 비교(<)를 제외하면 `=` 단독 비교가 남아 있으면 안 된다
+    expect(where).not.toMatch(/[^<>]=[^>]/);
+  });
+
+  // 컬럼명도 테이블명과 똑같이 raw SQL 에 보간된다.
+  it('컬럼명 화이트리스트를 벗어나면 throw 한다 (SQL 인젝션 차단)', () => {
+    expect(() => buildCanonicalDedupeWhere('Aed', ['name; DROP TABLE Aed'], 't0')).toThrow();
+    expect(() => buildCanonicalDedupeWhere('Aed', ['`name`'], 't0')).toThrow();
+    expect(() => buildCanonicalDedupeWhere('Aed', [], 't0')).toThrow();
+  });
+
+  // ★ 가장 중요한 규칙.
+  // 상한 바깥에서 거르면 aed 15,000 이 "15,000 뽑고 그중 비대표를 뺀" 수가 되어 줄어들고,
+  // regen-sitemaps.yml 의 파일별 20% count-drop 가드가 교체를 거부한다.
+  it('층화 SQL 에서 dedupe 는 ROW_NUMBER·LIMIT 안쪽에 들어간다', () => {
+    const sql = buildStratifiedIdsSql('Aed', { dedupeGroupColumns: AED_COLUMNS });
+    const notExistsAt = sql.indexOf('NOT EXISTS');
+    const rowNumberAt = sql.indexOf('ROW_NUMBER()');
+    const limitAt = sql.indexOf('LIMIT ?');
+    expect(notExistsAt).toBeGreaterThan(rowNumberAt);
+    expect(notExistsAt).toBeLessThan(limitAt);
+    expect(sql).toMatch(/ORDER BY\s+rn,\s*id/);
+  });
+
+  it('dedupeGroupColumns 를 주지 않으면 SQL 이 그대로다 (비참여 카테고리 무영향)', () => {
+    expect(buildStratifiedIdsSql('Childcare')).toBe(
+      buildStratifiedIdsSql('Childcare', { dedupeGroupColumns: [] })
+    );
+    expect(buildStratifiedIdsSql('Childcare')).not.toContain('NOT EXISTS');
+  });
+
+  it('ev-charger 그룹핑 경로는 dedupe 를 적용하지 않는다', () => {
+    const sql = buildStratifiedIdsSql('EvCharger', {
+      groupByStationId: true,
+      dedupeGroupColumns: AED_COLUMNS,
+    });
+    expect(sql).not.toContain('NOT EXISTS');
+    expect(sql).toContain('GROUP BY statId');
+  });
+
+  it('상한 없는 경로(parking)는 대표행의 id·updatedAt 만 뽑는다', () => {
+    const sql = buildDedupedIdsSql('Parking', ['name', 'city']);
+    expect(sql).toContain('SELECT id, updatedAt FROM `Parking` t0');
+    expect(sql).toContain('NOT EXISTS');
+    expect(sql).not.toContain('LIMIT');
+  });
+
+  // 인덱스와 청크가 다른 모수를 쓰면 광고만 되고 비어 있는 청크가 생기고,
+  // 그건 fail-closed 503 으로 사이트맵 재생성을 막는다.
+  it('COUNT 도 같은 술어를 쓴다 — 인덱스와 청크의 모수 일치', () => {
+    const countSql = buildDedupedCountSql('Parking', ['name', 'city']);
+    expect(countSql).toContain('COUNT(*) AS cnt');
+    expect(countSql).toContain(buildCanonicalDedupeWhere('Parking', ['name', 'city'], 't0'));
   });
 });

@@ -1,5 +1,10 @@
 import { isValidBuildingName } from '../../utils/realEstateBuildingName'
+// 고아 시설 id → 현행 id 301 매핑(7,535건, 370KB JSON)을 판정 규칙째로 재사용한다.
+// 미들웨어가 이미 모듈 스코프에서 한 번 로드하므로 ESM 모듈 캐시를 공유해 추가 파싱이 없다.
+// 규칙을 여기서 다시 구현하면 미들웨어와 어긋나는 순간 사이트맵이 301 URL 을 다시 흘린다.
+import { resolveFacilityRedirect } from '../middleware/facility-redirect'
 import { ssrFetch } from './ssrFetch'
+import { rejectSitemapLoc, SITEMAP_LOC_ORIGIN, type SitemapLocRejectReason } from './sitemapPolicy'
 import { escapeXml } from './xml'
 
 export const SITE_URL = 'https://ilsangkit.co.kr'
@@ -26,7 +31,81 @@ interface SitemapIndexEntry {
   lastmod?: string
 }
 
-export function generateSitemapXml(urls: SitemapUrl[]): string {
+/** 게이트가 걸러낸 사유. sitemapPolicy 가 판정하지 못하는 두 가지를 덧붙인다. */
+export type SitemapDropReason = SitemapLocRejectReason | 'facility-301' | 'duplicate'
+
+/**
+ * `<loc>` 로 내보내면 안 되는 URL 이면 사유를, 문제없으면 null 을 반환한다.
+ *
+ * 문자열 규칙(쿼리·빈 세그먼트·미인코딩 한글·og 엔드포인트·폐지 city slug)은 sitemapPolicy 가,
+ * 데이터 기반 판정(고아 시설 301 매핑)은 facility-redirect 미들웨어가 맡는다.
+ * 백엔드 왕복은 없다 — 66만 URL × 1 쿼리는 사이트맵 생성 자체를 죽인다.
+ */
+export function sitemapLocDropReason(loc: string): SitemapDropReason | null {
+  const policyReason = rejectSitemapLoc(loc)
+  if (policyReason) return policyReason
+  // rejectSitemapLoc 이 origin 일치를 이미 보장하므로 slice 결과는 항상 '/...' 또는 ''.
+  if (resolveFacilityRedirect(loc.slice(SITEMAP_LOC_ORIGIN.length))) return 'facility-301'
+  return null
+}
+
+export interface SitemapFilterResult {
+  urls: SitemapUrl[]
+  /** 통째로 버려진 항목 수 */
+  dropped: number
+  /** 항목은 살리고 image:image 블록만 뗀 수 */
+  imagesStripped: number
+  reasons: Partial<Record<SitemapDropReason, number>>
+  /** 로그용 표본 (최대 5건) */
+  samples: string[]
+}
+
+/**
+ * 사이트맵 방출 직전 하드 게이트.
+ *
+ * 조용히 쿼리를 떼거나 슬래시를 고치지 않고 **항목 자체를 버린다** — 쿼리 URL 을 만들어낸
+ * 호출부는 버그가 있다는 뜻이고, 문자열만 손봐 살려두면 그 버그가 다음 배포까지 숨는다.
+ * 버린 건수와 사유는 로그로 남겨 회귀를 눈에 보이게 한다.
+ */
+export function filterSitemapUrls(urls: SitemapUrl[]): SitemapFilterResult {
+  const kept: SitemapUrl[] = []
+  const reasons: Partial<Record<SitemapDropReason, number>> = {}
+  const samples: string[] = []
+  const seen = new Set<string>()
+  let imagesStripped = 0
+
+  for (const url of urls) {
+    const reason = seen.has(url.loc) ? 'duplicate' : sitemapLocDropReason(url.loc)
+    if (reason) {
+      reasons[reason] = (reasons[reason] ?? 0) + 1
+      if (samples.length < 5) samples.push(`${reason}: ${url.loc}`)
+      continue
+    }
+    seen.add(url.loc)
+
+    // image:loc 도 크롤러가 따라가는 URL 이다. 부적격이면 항목은 살리고 이미지만 뗀다
+    // — 페이지 자체는 정상인데 이미지 하나 때문에 URL 을 잃을 이유가 없다.
+    if (url.image && sitemapLocDropReason(url.image.loc)) {
+      imagesStripped++
+      kept.push({ loc: url.loc, ...(url.lastmod ? { lastmod: url.lastmod } : {}) })
+      continue
+    }
+    kept.push(url)
+  }
+
+  return { urls: kept, dropped: urls.length - kept.length, imagesStripped, reasons, samples }
+}
+
+export function generateSitemapXml(rawUrls: SitemapUrl[]): string {
+  const filtered = filterSitemapUrls(rawUrls)
+  if (filtered.dropped > 0 || filtered.imagesStripped > 0) {
+    console.warn(
+      `[sitemap] loc 제외 ${filtered.dropped}/${rawUrls.length}, image 제거 ${filtered.imagesStripped}`,
+      filtered.reasons,
+      filtered.samples,
+    )
+  }
+  const urls = filtered.urls
   const hasImages = urls.some((url) => url.image !== undefined)
   const imageNs = hasImages
     ? ` xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"`
@@ -53,7 +132,15 @@ ${urlElements}
 }
 
 export function generateSitemapIndexXml(sitemaps: SitemapIndexEntry[]): string {
+  // 인덱스도 같은 게이트를 통과해야 한다 — 여기서 새는 순간 크롤러는 자식 사이트맵 URL 을
+  // 통째로 잃거나(오탈자) 쿼리 URL 을 크롤한다. 자식 loc 은 고아 시설 매핑과 무관하므로
+  // 문자열 규칙만 본다.
   const entries = sitemaps
+    .filter((s) => {
+      const reason = rejectSitemapLoc(s.loc)
+      if (reason) console.warn(`[sitemap] index loc 제외(${reason}): ${s.loc}`)
+      return !reason
+    })
     .map((s) => {
       const parts = [`    <loc>${escapeXml(s.loc)}</loc>`]
       if (s.lastmod) parts.push(`    <lastmod>${s.lastmod}</lastmod>`)
@@ -335,7 +422,13 @@ export async function fetchLandSitemap(): Promise<LandSitemapData> {
 }
 
 export interface AuctionSitemapData {
-  regions: Array<{ city: string; district: string; bjdCode: string; usageGroup: string; isIndexable?: boolean }>
+  /**
+   * 백엔드 getSitemapEntries 가 `where: { isIndexable: true }` 로 이미 거른 행들이다.
+   * select 는 city/district/bjdCode/usageGroup 만 담으므로 isIndexable 필드는 오지 않는다 —
+   * 종전 타입에 `isIndexable?: boolean` 이 남아 있어서 호출부가 그걸 재검사했고,
+   * 모든 행이 undefined 라 공매 지역 URL 이 전량 탈락했다. 필드를 지워 재검사를 컴파일 에러로 만든다.
+   */
+  regions: Array<{ city: string; district: string; bjdCode: string; usageGroup: string }>
   items: string[]
 }
 
