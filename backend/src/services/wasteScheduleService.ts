@@ -83,7 +83,12 @@ export async function getByRegion(
   // city variant: 축약명(서울)/정식명(서울특별시) 양쪽 매칭.
   // WasteSchedule 행은 정식명으로 저장되는데 지역 칩은 축약명을 보내므로
   // 정확 일치로 조회하면 0건이 된다(facilityService 와 동일 규약).
-  const where: Prisma.WasteScheduleWhereInput = buildRegionFilter(city, district);
+  // districtVariants: WasteSchedule 만 원본 표기를 그대로 담아 경기 남양주·동두천이
+  // 접미사 없이 저장돼 있다. 허브는 slug 를 Region 정식명('남양주시')으로 되돌려 보내므로
+  // 정확 일치로는 0건이 되고, 허브가 빈 페이지로 나간다(cityMapping.districtVariantList 주석).
+  const where: Prisma.WasteScheduleWhereInput = buildRegionFilter(city, district, {
+    districtVariants: true,
+  });
   if (keyword) {
     where.targetRegion = { contains: keyword };
   }

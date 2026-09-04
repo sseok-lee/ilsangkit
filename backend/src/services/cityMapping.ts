@@ -106,9 +106,36 @@ export function cityVariantList(city?: string): string[] {
 }
 
 /**
- * 지역 필터 조건 생성
+ * 구·군 표기 변형 — 정식명('남양주시') ↔ 접미사 없는 표기('남양주').
+ *
+ * WasteSchedule 은 원본 공공데이터의 표기를 그대로 저장하는데 경기도 남양주·동두천 두 곳만
+ * 접미사 없이 들어온다(실측 2026-09-04 프로덕션: Region 에 없는 WasteSchedule.district 는
+ * 이 둘과 세종의 '없음' 뿐). 지역 허브는 slug 를 Region 정식명으로 되돌려 조회하므로
+ * 정확 일치로는 그 두 지역이 0건이 되고, 허브가 "등록된 배출 일정이 없습니다" 인 채
+ * 200 + noindex 로 나간다.
+ *
+ * 접미사를 떼어도 같은 시/도 안에서 두 구·군이 하나로 뭉치는 사례는 없다
+ * (실측: Region 전수 대상 충돌 0건).
+ *
+ * ⚠️ 그래도 전역 기본값으로 켜지 않는다. 표기가 실제로 갈라진 것은 WasteSchedule 뿐이고,
+ * 나머지 테이블은 정식명으로 일관돼 있어 전역으로 넓히면 얻는 것 없이 매칭만 느슨해진다.
  */
-export function buildRegionFilter(city?: string, district?: string): Record<string, unknown> {
+export function districtVariantList(district: string): string[] {
+  const stem = district.replace(/[시군구]$/, '');
+  return stem && stem !== district ? [district, stem] : [district];
+}
+
+/**
+ * 지역 필터 조건 생성
+ *
+ * @param options.districtVariants 구·군을 접미사 유무 양쪽으로 매칭한다.
+ *        표기가 갈라진 WasteSchedule 전용 — districtVariantList 주석 참고.
+ */
+export function buildRegionFilter(
+  city?: string,
+  district?: string,
+  options: { districtVariants?: boolean } = {}
+): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
   if (city) {
     // city variants: short(서울) ↔ full(서울특별시) 모두 매칭 + 2026 통합명(공유 규칙)
@@ -120,6 +147,9 @@ export function buildRegionFilter(city?: string, district?: string): Record<stri
       filter.city = city;
     }
   }
-  if (district) filter.district = district;
+  if (district) {
+    const variants = options.districtVariants ? districtVariantList(district) : [district];
+    filter.district = variants.length > 1 ? { in: variants } : district;
+  }
   return filter;
 }
