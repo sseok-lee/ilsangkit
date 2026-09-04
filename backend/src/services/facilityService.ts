@@ -42,6 +42,7 @@ import {
   buildStratifiedIdsSql,
   buildDedupedIdsSql,
   buildDedupedCountSql,
+  buildDedupedMaxUpdatedAtSql,
   SITEMAP_STRATIFY_TABLES,
 } from './sitemapStratify.js';
 
@@ -1124,7 +1125,16 @@ export async function getCategoryCountAndMaxDate(
         .$queryRawUnsafe<[{ cnt: bigint }]>(buildDedupedCountSql(dedupeTable, dedupeColumns))
         .then((rows) => Number(rows[0].cnt))
       : model.count(),
-    model.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
+    // lastmod 도 같은 모수에서 뽑는다. 종전엔 전체 행에서 MAX(updatedAt) 을 가져와,
+    // 사이트맵에 실리지도 않는 비대표 행이 갱신되면 인덱스가 그 날짜를 광고했다 —
+    // 크롤러에겐 거짓 신선도이고, 크롤 예산이 병목인 이 사이트에선 그대로 낭비가 된다.
+    dedupeColumns && dedupeTable
+      ? prisma
+        .$queryRawUnsafe<[{ maxUpdatedAt: Date | null }]>(
+          buildDedupedMaxUpdatedAtSql(dedupeTable, dedupeColumns),
+        )
+        .then((rows) => (rows[0]?.maxUpdatedAt ? { updatedAt: rows[0].maxUpdatedAt } : null))
+      : model.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
   ]);
   return {
     count: limit ? Math.min(rawCount, limit) : rawCount,

@@ -395,6 +395,11 @@ describe('빈 page 1 은 fail-closed (503) — 빈 sitemap 이 디스크로 구�
     ['부동산 허브', '/sitemap/real-estate-hub.xml'],
     ['청약', '/sitemap/subscription.xml'],
     ['지하철', '/sitemap/subway.xml'],
+    // land·auction 은 이 가드에서 빠져 있었다. 두 분기는 상류 실패와 무관하게 허브 URL 을
+    // 먼저 push 하므로 urls.length 가 0 이 되지 않아, `length === 0` 검사가 영원히 거짓이었다.
+    // 결과: 상류가 죽어도 URL 1개짜리 <urlset> 이 200 으로 나가고 그대로 디스크에 구워진다.
+    ['토지', '/sitemap/land.xml'],
+    ['공매', '/sitemap/auction.xml'],
   ]
 
   for (const [label, path] of cases) {

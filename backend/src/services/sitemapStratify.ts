@@ -164,3 +164,17 @@ export function buildDedupedIdsSql(table: string, columns: string[]): string {
 export function buildDedupedCountSql(table: string, columns: string[]): string {
   return `SELECT COUNT(*) AS cnt FROM \`${table}\` t0 ${buildCanonicalDedupeWhere(table, columns, 't0')}`;
 }
+
+/**
+ * 사이트맵 lastmod 용 MAX(updatedAt) — 대표행만 본다.
+ *
+ * count 는 대표행만 세는데 maxUpdatedAt 은 전체 행에서 뽑고 있었다. 사이트맵에 실리지도 않는
+ * 비대표 행이 갱신되면 인덱스가 그 날짜를 lastmod 로 광고하게 된다 — 크롤러에겐 거짓 신선도라
+ * 바뀐 것도 없는 청크를 다시 크롤한다. 이 사이트의 병목이 크롤 예산이라 그냥 둘 수 없다.
+ *
+ * 술어는 buildDedupedCountSql 과 같아야 한다(갈라지면 다시 어긋난다) — 같은
+ * buildCanonicalDedupeWhere 를 쓴다.
+ */
+export function buildDedupedMaxUpdatedAtSql(table: string, columns: string[]): string {
+  return `SELECT MAX(t0.\`updatedAt\`) AS maxUpdatedAt FROM \`${table}\` t0 ${buildCanonicalDedupeWhere(table, columns, 't0')}`;
+}
