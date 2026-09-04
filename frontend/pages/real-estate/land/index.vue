@@ -72,22 +72,18 @@ import HardLink from '~/components/common/HardLink.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
-const { data: hub } = await useAsyncData(
+const { data: hub, error: hubError } = await useAsyncData(
   'land-hub',
-  async () => {
-    try {
-      return await useLand().getHubSummary()
-    }
-    catch {
-      // 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
-      // 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다. 이 catch 가 예외를 통째로
-      // 삼키는 바람에, 백엔드가 죽어도 결과 0건 문서가 self-canonical 을 달고 200 으로 나갔다.
-      if (import.meta.server) markDegradedResponse()
-      return null
-    }
-  },
+  () => useLand().getHubSummary(),
   { default: () => null },
 )
+
+// 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
+// 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다.
+//
+// ⚠️ useAsyncData 핸들러 **밖**에서 불러야 한다. 핸들러 본문은 중첩 async 라 Nuxt 인스턴스
+// 컨텍스트가 없고, 그 안에서 부르면 useNuxtApp() 이 throw 해 503 이 영영 나가지 않는다.
+if (hubError.value && import.meta.server) markDegradedResponse()
 
 const { setMeta } = useFacilityMeta()
 setMeta({

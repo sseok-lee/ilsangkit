@@ -142,31 +142,40 @@ const breadcrumbItems = computed(() => [
 
 const auction = useAuction()
 
-const { data } = await useAsyncData(
+const { data, error: itemsError } = await useAsyncData(
   `auction-list-${usage.value}-${filterStatus.value}-${filterCity.value}-${filterDistrict.value}-${currentPage.value}`,
-  async () => {
-    try {
-      return await auction.getItems({
-        usage: usage.value || undefined,
-        status: filterStatus.value || undefined,
-        city: filterCity.value || undefined,
-        district: filterDistrict.value || undefined,
-        page: currentPage.value,
-        limit: 20,
-      })
-    }
-    catch {
-      // 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
-      // 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다. 이 catch 가 예외를 통째로
-      // 삼키는 바람에, 백엔드가 죽어도 결과 0건 문서가 self-canonical 을 달고 200 으로 나갔다.
-      if (import.meta.server) markDegradedResponse()
-      return null
-    }
-  },
+  () => auction.getItems({
+    usage: usage.value || undefined,
+    status: filterStatus.value || undefined,
+    city: filterCity.value || undefined,
+    district: filterDistrict.value || undefined,
+    page: currentPage.value,
+    limit: 20,
+  }),
   // ⚠️ 쿼리파라미터 필터/페이지는 같은 페이지에서 바뀌므로(컴포넌트 unmount 안 됨)
   //    watch 없으면 재요청이 안 일어나 필터·페이징이 전부 죽는다.
   { watch: [usage, filterStatus, filterCity, filterDistrict, currentPage], default: () => null },
 )
+
+// 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
+// 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다.
+//
+// ⚠️ 이 호출은 반드시 useAsyncData 핸들러 **밖**이어야 한다. 핸들러 본문은 중첩 async 라
+// Nuxt 인스턴스 컨텍스트가 없고, 그 안에서 부르면 useNuxtApp() 이 그 자리에서 throw 해
+// 503 이 영영 나가지 않는다. 실측 2026-09-04: 핸들러 안에 두었더니 `/auction/list?page=abc`
+// 가 200 으로 응답하면서 payload 에 "A composable that requires access to the Nuxt
+// instance" 를 싣고 있었다 — degraded 신호는 한 번도 나가지 않았다.
+//
+// 422 는 일시 장애가 아니다. 백엔드가 "이 파라미터로는 불가능하다"고 확정한 것이므로
+// 503 으로 내보내면 절대 유효해지지 않을 URL 을 크롤러가 계속 재방문한다. 확정 부재는
+// 404 로 끊는다 — 상세 페이지들(trash/[id], subway/[slug], guide/[slug])과 같은 규칙이다.
+const itemsErrStatus = (itemsError.value as { statusCode?: number } | null)?.statusCode
+if (itemsErrStatus === 422) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
+else if (itemsError.value && import.meta.server) {
+  markDegradedResponse()
+}
 
 // 한 번의 사용자 동작이 여러 emit을 낼 수 있다(예: 시/도 변경 시 시군구 리셋까지 동반 emit).
 // 각 emit마다 router.push하면 두 번째 push가 stale route.query를 펼쳐 첫 push를 덮어써(=clobber)
