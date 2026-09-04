@@ -117,20 +117,25 @@ describe('getRegionDetail', () => {
 describe('getHubSummary', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('시·도별 색인가능 동 수와 거래 합계 집계', async () => {
+  // 색인가능 판정은 저장된 isIndexable 이 아니라 transactionCount >= 3 이다
+  // (상세 페이지의 판정과 같은 술어여야 한다 — landIndexabilityParity.test.ts 참고).
+  // 아래 fixture 의 `isIndexable: false, transactionCount: 3` 은 sync 시점 규칙
+  // (recent>=5 || total>=10)으로는 제외였지만 지금은 색인 대상이다.
+  it('시·도별 색인가능 동 수와 거래 합계 집계 — 저장된 플래그가 아닌 거래 건수로 센다', async () => {
     mockSummaryFindMany.mockResolvedValue([
       { city: '서울특별시', transactionCount: 12, isIndexable: true },
       { city: '서울특별시', transactionCount: 3, isIndexable: false },
+      { city: '서울특별시', transactionCount: 2, isIndexable: false },
       { city: '경기도', transactionCount: 20, isIndexable: true },
     ]);
 
     const r = await getHubSummary();
 
     const seoul = r.cities.find((c) => c.city === '서울특별시');
-    expect(seoul?.indexableDongCount).toBe(1);
-    expect(seoul?.totalTransactions).toBe(15);
+    expect(seoul?.indexableDongCount).toBe(2);
+    expect(seoul?.totalTransactions).toBe(17);
     expect(seoul?.slug).toBe('seoul');
-    expect(r.totalTransactions).toBe(35);
+    expect(r.totalTransactions).toBe(37);
   });
 });
 
@@ -187,7 +192,7 @@ describe('getTransactions', () => {
 describe('getSitemapEntries', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('distinct (city, district) pairs와 isIndexable 동만 반환', async () => {
+  it('distinct (city, district) pairs와 거래 3건 이상 동만 반환', async () => {
     // First call: distinct city/district pairs
     mockSummaryFindMany.mockResolvedValueOnce([
       { city: '서울', district: '강남구' },
@@ -221,14 +226,14 @@ describe('getSitemapEntries', () => {
       distinct: ['city', 'district'],
       select: { city: true, district: true },
     }));
-    // Second call: isIndexable filter
+    // Second call: 거래 건수 임계값 필터 (저장된 isIndexable 이 아니다)
     expect(mockSummaryFindMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      where: { isIndexable: true },
+      where: { transactionCount: { gte: 3 } },
       select: { city: true, district: true, dongName: true },
     }));
   });
 
-  it('isIndexable=false인 동은 indexableDongs에 포함되지 않는다', async () => {
+  it('임계값 미만 동은 indexableDongs에 포함되지 않는다', async () => {
     mockSummaryFindMany.mockResolvedValueOnce([
       { city: '서울', district: '강남구' },
     ]);

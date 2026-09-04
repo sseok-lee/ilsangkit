@@ -417,10 +417,18 @@ export function getDistrictSlug(koreanName: string): string {
  * 301 리다이렉트 타겟과 byte-match 보장용.
  */
 export function trashDistrictSlug(district: string): string {
-  return (
-    DISTRICT_SLUG_MAP[district] ||
-    district.replace(/[시군구]/g, '').replace(/[가-힣]/g, '').toLowerCase().replace(/\s+/g, '-')
-  )
+  const direct = DISTRICT_SLUG_MAP[district]
+  if (direct) return direct
+
+  // 배출 일정 원본은 구·군을 접미사 없이 적는 경우가 있다('남양주', '동두천'). 지도에는
+  // '남양주시'·'동두천시' 로 들어 있어 직접 조회가 빗나가고, 아래 폴백이 한글을 전부 지워
+  // 빈 문자열을 낸다 → `/gyeonggi//trash` 같은 404 경로가 됐다. 접미사를 붙여 한 번 더 본다.
+  for (const suffix of ['시', '군', '구']) {
+    const withSuffix = DISTRICT_SLUG_MAP[`${district}${suffix}`]
+    if (withSuffix) return withSuffix
+  }
+
+  return district.replace(/[시군구]/g, '').replace(/[가-힣]/g, '').toLowerCase().replace(/\s+/g, '-')
 }
 
 /**
@@ -431,5 +439,11 @@ export function buildTrashRegionPath(city: string, district: string): string | n
   const shortCity = city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
   const citySlug = CITY_FULL_NAME_TO_SLUG[city] || CITY_SLUGS[city] || CITY_SLUGS[shortCity]
   if (!citySlug) return null
-  return `/${citySlug}/${trashDistrictSlug(district)}/trash`
+  // trashDistrictSlug 의 폴백은 시/군/구를 떼고 한글을 전부 지운다. DISTRICT_SLUG_MAP 에 없는
+  // 순한글 이름이면 결과가 '' 이라 `/gyeonggi//trash` 같은 빈 세그먼트 경로가 나온다 — 그건
+  // 404 다. 여기서 null 을 주면 호출부(301 · canonical)가 아예 손을 떼고 200 을 그대로 낸다.
+  // 404 로 301 하느니 원래 문서를 유지하는 편이 언제나 낫다.
+  const districtSlug = trashDistrictSlug(district)
+  if (!districtSlug) return null
+  return `/${citySlug}/${districtSlug}/trash`
 }

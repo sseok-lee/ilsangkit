@@ -143,15 +143,24 @@ describe('카테고리 목록 canonical — /trash?schedule=N, /toilet?city=seou
 describe('noindex 응답에는 canonical 이 없다 — 카테고리 목록', () => {
   const src = read(PAGES.category)
 
-  it('초기 setCategoryMeta 의 canonical 게이트가 noindex 술어와 같은 함수를 쓴다', () => {
-    // 회귀 방지: 예전엔 page>=2 만 봐서 `?keyword=X`(page 없음) 진입 시
-    // robots=noindex 와 rel=canonical 이 한 응답에 같이 나갔다.
-    expect(src).toMatch(/const initialNoindex = shouldNoindexFacilityList\(\{[\s\S]{0,120}keyword: initialKeyword,/)
-    expect(src).toContain('{ canonical: initialNoindex ? false : undefined }')
+  // 종전 이 자리의 두 테스트는 "setup 시점 값으로 canonical 게이트를 건다"는 구조를
+  // 고정하고 있었다. 그 구조 자체가 결함이었다 — setup 값은 첫 렌더에 얼어붙고, setMeta 는
+  // canonical 이 있을 때만 useHead 를 부르므로 나중에 canonical:false 로 불러도 앞서 등록된
+  // 항목이 거둬지지 않는다. `/toilet` → 클라이언트 `?page=2` 에서 noindex + canonical 이
+  // 함께 나갔다. 이제는 "소유자가 하나"라는 더 강한 성질을 고정한다.
+  it('canonical 소유자는 reactive useHead 하나뿐이다 — setMeta 는 canonical 을 등록하지 않는다', () => {
+    const setMetaCalls = src.match(/setCategoryMeta\([\s\S]*?\}, \{ canonical: [^}]*\}\)/g) ?? []
+
+    expect(setMetaCalls.length).toBeGreaterThan(0)
+    for (const call of setMetaCalls) {
+      // canonical: false 이외의 값을 넘기면 소유자가 둘이 된다.
+      expect(call).toContain('canonical: false')
+    }
   })
 
-  it('city 변경 watch 도 같은 canonical 정책을 넘긴다', () => {
-    expect(src).toContain('{ canonical: isNoindex.value ? false : canonicalHref.value }')
+  it('setup 시점에 얼어붙는 canonical 게이트로 돌아가지 않는다 (회귀 핵심)', () => {
+    expect(src).not.toContain('canonical: initialNoindex ? false : undefined')
+    expect(src).not.toContain('canonical: isNoindex.value ? false : canonicalHref.value')
   })
 
   it('reactive head 의 noindex 분기는 canonical 을 포함하지 않는다', () => {

@@ -167,6 +167,7 @@
 definePageMeta({ hasSourceCard: true })
 
 import { SITE_URL } from '~/utils/seoConstants'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, SUBSCRIPTION_HUB_DESCRIPTION, type RentGroup } from '~/utils/subscriptionMeta'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -206,14 +207,18 @@ const { getUpcomingSubscriptions, getSubscriptionList } = useSubscription()
 const upcomingItems = ref<Subscription[]>([])
 const ongoingItems = ref<Subscription[]>([])
 
-const { data: upcomingData } = await useAsyncData('subscription-upcoming', () => getUpcomingSubscriptions())
+const { data: upcomingData, error: upcomingError } = await useAsyncData('subscription-upcoming', () => getUpcomingSubscriptions())
 if (upcomingData.value) {
   upcomingItems.value = upcomingData.value
 }
 
-const { data: ongoingData } = await useAsyncData('subscription-ongoing', () =>
+const { data: ongoingData, error: ongoingError } = await useAsyncData('subscription-ongoing', () =>
   getSubscriptionList({ status: 'ongoing', page: 1, limit: 6 })
 )
+
+// 상류 실패를 색인 신호로 굳히지 않는다 (#467 / #674) — 서버에서만 503 + no-store.
+// 종전엔 두 호출 다 error 를 보지 않아, 백엔드가 죽으면 빈 청약 목록이 200 + index 로 나갔다.
+if (import.meta.server && (upcomingError.value || ongoingError.value)) markDegradedResponse()
 if (ongoingData.value) {
   ongoingItems.value = ongoingData.value.items
 }

@@ -217,7 +217,13 @@ export default defineEventHandler(async (event) => {
 
   // 토지 실거래가 — hub + city + district 항상 포함, 동(dong)은 isIndexable=true인 것만 포함
   if (category === 'land') {
-    const { cities, indexableDongs } = await fetchLandSitemap()
+    const { cities, indexableDongs, ok } = await fetchLandSitemap()
+    // 이 분기는 상류 결과와 무관하게 허브 URL 을 먼저 push 하므로 urls.length 가 0 이 되지
+    // 않는다. 다른 분기가 쓰는 `length === 0` 검사가 여기선 영원히 거짓이라, 상류가 죽어도
+    // URL 1개짜리 사이트맵이 200 으로 나가 디스크에 구워졌다. 실패는 실패로 응답한다.
+    if (ok === false) {
+      return sitemapUpstreamUnavailable(event, 'land')
+    }
     const weekStart = getWeekStartDate()
 
     const urls: Parameters<typeof generateSitemapXml>[0] = []
@@ -251,7 +257,11 @@ export default defineEventHandler(async (event) => {
 
   // 공매(온비드) — 색인 가능 시군구 + 물건 상세
   if (category === 'auction') {
-    const { regions, items } = await fetchAuctionSitemap()
+    const { regions, items, ok } = await fetchAuctionSitemap()
+    // land 와 같은 이유 — 허브 URL 을 먼저 push 해서 length 검사가 무력하다.
+    if (ok === false) {
+      return sitemapUpstreamUnavailable(event, 'auction')
+    }
     const weekStart = getWeekStartDate()
 
     const urls: Parameters<typeof generateSitemapXml>[0] = []

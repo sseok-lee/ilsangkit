@@ -406,6 +406,8 @@ export async function fetchSubwaySlugs(): Promise<{ slug: string; updatedAt: str
 export interface LandSitemapData {
   cities: Array<{ city: string; district: string }>
   indexableDongs: Array<{ city: string; district: string; dongName: string }>
+  /** 상류 조회가 성공했는지. false 면 아래 배열이 비어 있어도 "데이터 없음"이 아니라 "장애"다. */
+  ok?: boolean
 }
 
 export async function fetchLandSitemap(): Promise<LandSitemapData> {
@@ -414,10 +416,13 @@ export async function fetchLandSitemap(): Promise<LandSitemapData> {
       '/api/real-estate/land/sitemap',
       { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
-    return json.data ?? { cities: [], indexableDongs: [] }
+    return { ...(json.data ?? { cities: [], indexableDongs: [] }), ok: true }
   } catch (err) {
     console.error('[sitemap] fetchLandSitemap failed', err)
-    return { cities: [], indexableDongs: [] }
+    // ok:false 로 "상류가 죽었다"와 "상류가 빈 결과를 줬다"를 구분한다. 빈 구조만 돌려주면
+    // 호출부가 둘을 구분할 수 없어, 장애 상황에서도 허브 URL 1개짜리 사이트맵을 200 으로
+    // 구워 낸다(그리고 정적 baker 가 그 상태를 동결시킨다).
+    return { cities: [], indexableDongs: [], ok: false }
   }
 }
 
@@ -430,6 +435,8 @@ export interface AuctionSitemapData {
    */
   regions: Array<{ city: string; district: string; bjdCode: string; usageGroup: string }>
   items: string[]
+  /** 상류 조회가 성공했는지. false 면 아래 배열이 비어 있어도 "데이터 없음"이 아니라 "장애"다. */
+  ok?: boolean
 }
 
 export async function fetchAuctionSitemap(): Promise<AuctionSitemapData> {
@@ -438,10 +445,11 @@ export async function fetchAuctionSitemap(): Promise<AuctionSitemapData> {
       '/api/auction/sitemap',
       { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
     )
-    return json.data ?? { regions: [], items: [] }
+    return { ...(json.data ?? { regions: [], items: [] }), ok: true }
   } catch (err) {
     console.error('[sitemap] fetchAuctionSitemap failed', err)
-    return { regions: [], items: [] }
+    // land 와 같은 이유로 실패를 드러낸다 — 상세는 fetchLandSitemap 주석 참고.
+    return { regions: [], items: [], ok: false }
   }
 }
 

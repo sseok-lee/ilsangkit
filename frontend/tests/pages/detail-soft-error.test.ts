@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -265,5 +265,122 @@ describe('TRASH_ID_PATTERN — 양의 정수만 통과한다', () => {
 
   it('페이지가 이 리터럴을 그대로 쓴다', () => {
     expect(trashDetail).toContain(`const TRASH_ID_PATTERN = ${pattern.toString()}`)
+  })
+})
+
+/**
+ * ── 전역 불변식 ──────────────────────────────────────────────────────────────
+ *
+ * 위 describe 들은 페이지를 하나씩 손으로 등록하는 로스터다. 그래서 새 페이지가 같은 실수를
+ * 해도 아무도 알려주지 않았다 — 실제로 그렇게 놓쳤다. PR #770 이 상세 6종을 고치는 동안
+ * 지하철 상세(사이트맵 제출 985개 URL)는 로스터에 없어서 그대로 남았고, `catch { return null }`
+ * 로 에러를 통째로 삼키는 페이지가 4개 더 있었다(공매 목록·공매 허브·공매 시/도·토지 허브).
+ *
+ * 로스터 대신 불변식으로 고정한다. 페이지가 SSR 조회 실패를 삼키면서 fail-open 신호를
+ * 내지 않으면, 파일을 등록하지 않아도 여기서 깨진다.
+ */
+describe('fail-open 전역 불변식 — 삼킨 에러는 반드시 degraded 신호를 낸다', () => {
+  function allPageSources(): Array<{ path: string; source: string }> {
+    const out: Array<{ path: string; source: string }> = []
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) walk(full)
+        else if (entry.name.endsWith('.vue')) {
+          out.push({ path: relative(frontendRoot, full), source: readFileSync(full, 'utf8') })
+        }
+      }
+    }
+    walk(resolve(frontendRoot, 'pages'))
+    return out
+  }
+
+  it('`catch { return null }` 로 조회 실패를 삼키는 곳은 markDegradedResponse 를 부른다', () => {
+    // catch 블록 본문에 `return null` 이 있는데 markDegradedResponse 가 없는 경우를 찾는다.
+    const swallowing = /catch\s*(?:\([^)]*\))?\s*\{([^}]*)\}/g
+    const offenders: string[] = []
+
+    for (const { path, source } of allPageSources()) {
+      for (const match of source.matchAll(swallowing)) {
+        const body = match[1] ?? ''
+        if (!/return\s+null/.test(body)) continue
+        if (/markDegradedResponse/.test(body)) continue
+        offenders.push(`${path} :: catch {${body.trim().slice(0, 60)}}`)
+      }
+    }
+
+    expect(offenders, [
+      '조회 실패를 삼키면서 degraded 신호를 내지 않는 페이지가 있다.',
+      '백엔드가 죽으면 그 페이지는 빈 본문 + HTTP 200 + index 로 색인된다(소프트 404).',
+      '사용자에게는 페이지를 그대로 보여주되, 서버에서는 markDegradedResponse() 를 불러라:',
+      '  catch { if (import.meta.server) markDegradedResponse(); return null }',
+    ].join('\n')).toEqual([])
+  })
+
+  it('markDegradedResponse 를 쓰는 페이지는 그 헬퍼를 import 한다', () => {
+    const missing = allPageSources()
+      .filter(({ source }) => /markDegradedResponse\(\)/.test(source))
+      .filter(({ source }) => !source.includes("from '~/composables/useDegradedResponse'"))
+      .map(({ path }) => path)
+
+    expect(missing, '호출은 하는데 import 가 없다 — 런타임 ReferenceError 가 된다').toEqual([])
+  })
+})
+
+describe('지하철 상세 — 일시 장애를 하드 404 로 굳히지 않는다', () => {
+  const subwayDetail = readFileSync(resolve(frontendRoot, 'pages/subway/[slug].vue'), 'utf8')
+
+  it('확정 부재(404/422)와 일시 장애를 갈라서 처리한다', () => {
+    expect(subwayDetail).toMatch(/stationErrStatus === 404 \|\| stationErrStatus === 422/)
+    expect(subwayDetail).toMatch(/else if \(error\.value\) \{[\s\S]{0,120}markDegradedResponse\(\)/)
+  })
+
+  it('error 와 data 없음을 한 덩어리로 묶어 404 를 던지던 형태로 돌아가지 않는다 (회귀 핵심)', () => {
+    // 이 형태가 사이트맵 제출 985개 역 URL 을 백엔드 blip 마다 404 로 만들었다.
+    expect(subwayDetail).not.toMatch(/if \(\(error\.value \|\| !data\.value\?\.data\) && !pending\.value\)/)
+  })
+
+  it('fail-open 헬퍼를 import 한다', () => {
+    expect(subwayDetail).toContain("import { markDegradedResponse } from '~/composables/useDegradedResponse'")
+  })
+})
+
+/**
+ * 허브·목록 페이지의 fail-open.
+ *
+ * 상세 페이지만 보다가 놓친 계열이다. 이 페이지들은 `await useAsyncData(...)` 를 하면서
+ * error ref 를 구조분해조차 하지 않았다(또는 빨간 알림 렌더에만 썼다). 백엔드가 흔들리면
+ * 스켈레톤·빈 목록·에러 알림만 든 문서가 HTTP 200 + index, follow + self-canonical 로 나간다.
+ * 하필 사이트에서 내부링크가 가장 많이 몰리는 페이지들이라 소프트 404 로는 최악의 위치다.
+ *
+ * 상세와 달리 404 를 던지면 안 된다 — 정상 상태에서 색인 대상인 페이지이므로 fail-open
+ * (503 + no-store)만 건다. noindex 도 걸지 않는다.
+ */
+describe('허브·목록 — 상류 실패를 200 + index 로 굳히지 않는다', () => {
+  const HUB_PAGES: Array<[string, string]> = [
+    ['시설 허브 15종', 'pages/[category]/index.vue'],
+    ['가이드 목록', 'pages/guide/index.vue'],
+    ['오늘의 이슈 목록', 'pages/article/index.vue'],
+    ['청약 목록', 'pages/subscription/index.vue'],
+    ['지하철 목록', 'pages/subway/index.vue'],
+    ['공매 허브', 'pages/auction/index.vue'],
+    ['공매 목록', 'pages/auction/list.vue'],
+    ['공매 시/도', 'pages/auction/[city]/index.vue'],
+    ['토지 허브', 'pages/real-estate/land/index.vue'],
+  ]
+
+  it.each(HUB_PAGES)('%s 는 상류 실패 시 markDegradedResponse 를 부른다', (_label, relative) => {
+    const source = readFileSync(resolve(frontendRoot, relative), 'utf8')
+
+    expect(source).toContain("import { markDegradedResponse } from '~/composables/useDegradedResponse'")
+    expect(source).toMatch(/import\.meta\.server[\s\S]{0,80}markDegradedResponse\(\)/)
+  })
+
+  it.each(HUB_PAGES)('%s 는 상류 실패를 noindex 로 굳히지 않는다', (_label, relative) => {
+    const source = readFileSync(resolve(frontendRoot, relative), 'utf8')
+
+    // 일시 장애로 noindex 를 내면 재크롤 전까지 색인에서 빠진다. degraded 신호와 noindex 가
+    // 같은 조건에 함께 붙어 있으면 안 된다.
+    expect(source).not.toMatch(/markDegradedResponse\(\)[\s\S]{0,200}robots['"`\s:]+['"`]noindex/)
   })
 })

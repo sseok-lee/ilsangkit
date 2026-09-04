@@ -251,6 +251,7 @@
 definePageMeta({ hasSourceCard: true })
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useRoute, useRouter } from 'vue-router'
 import type { LocationQueryRaw } from 'vue-router'
 import { UI_MESSAGES } from '~/utils/uiMessages'
@@ -337,13 +338,19 @@ const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema }
 const isTrash = categoryParam.value === 'trash'
 const initialPage = parsePositivePageQuery(route.query.page)
 const initialKeyword = ((route.query.keyword as string) || '').trim()
-const { data: ssrData } = await useAsyncData(
+const { data: ssrData, error: ssrError } = await useAsyncData(
   `cat-list-${categoryParam.value}-${queryCitySlug.value || 'all'}-k${initialKeyword || 'none'}-p${initialPage}`,
   () => {
     const { url, options } = buildListFetch(categoryParam.value, queryCitySlug.value, initialPage, initialKeyword || undefined)
     return $fetch<any>(url, options)
   },
 )
+
+// 상류 조회 실패를 색인 신호로 굳히지 않는다 (#467 / #674). 이 페이지들은 정상 상태에서
+// 색인 대상이므로 noindex 를 걸지 않고, 서버에서만 503 + no-store 로 알린다. 종전엔 error 를
+// 보지도 않아 백엔드가 죽으면 스켈레톤(또는 빈 목록·빨간 알림)만 든 문서가 HTTP 200 +
+// index, follow + self-canonical 로 나갔다 — 가장 내부링크가 많은 페이지들에서 소프트 404 다.
+if (import.meta.server && ssrError.value) markDegradedResponse()
 
 // SSR 데이터가 있으면 초기 로딩 완료
 const initialLoading = ref(!ssrData.value?.data)
@@ -479,19 +486,21 @@ const resultTitle = computed(() => cityName.value || '전체 지역')
 
 // SEO meta (top-level for SSR)
 const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label || (route.params.category as string)
-const initialPageQueryParam = parsePositivePageQuery(route.query.page)
 
-// canonical 발행 조건은 noindex 판정과 "정확히 같은 술어"여야 한다.
-// 예전엔 page>=2 만 봤다. 그래서 `?keyword=X` (page 없음) 진입 시 아래 reactive head 는
-// robots=noindex 를 내는데 여기서는 canonical 이 함께 등록돼, 한 응답에 noindex+canonical 이
-// 동시에 나갔다(정책 위반: .omc/notes/noindex-canonical-policy.md).
-const initialNoindex = shouldNoindexFacilityList({
-  page: initialPageQueryParam,
-  keyword: initialKeyword,
-})
+// canonical 소유자는 아래 reactive useHead 하나뿐이다 (아래 isNoindex 와 같은 술어를 쓴다).
+//
+// setup 시점 값으로 판정하던 `initialNoindex` 는 없앴다. 그 값은 첫 렌더에 얼어붙어서
+// 클라이언트 네비게이션을 따라가지 못한다 — 판정은 route.query 에 연동된 isNoindex 가 한다.
+//
+// 종전엔 여기서 setup 시점 값(initialNoindex)으로 canonical 을 등록했다. 그런데 setMeta 는
+// canonical 이 있을 때만 useHead 를 부르므로 나중에 canonical:false 로 다시 불러도 이미
+// 등록된 항목은 거둬지지 않는다. `/toilet` 로 들어와 클라이언트에서 `?page=2` 로 이동하면
+// reactive 항목은 자기 canonical 만 거두고 noindex 를 내는데, 여기서 등록한 canonical 이
+// 그대로 살아남아 한 문서에 noindex + canonical 이 함께 나갔다
+// (정책 위반: .omc/notes/noindex-canonical-policy.md).
 setCategoryMeta(route.params.category as FacilityCategory, {
   cityName: cityName.value || undefined,
-}, { canonical: initialNoindex ? false : undefined })
+}, { canonical: false })
 
 // Breadcrumb JSON-LD
 setBreadcrumbSchema([
@@ -780,7 +789,8 @@ watch(selectedWasteScheduleId, (id) => {
 watch(cityName, () => {
   setCategoryMeta(categoryParam.value, {
     cityName: cityName.value || undefined,
-  }, { canonical: isNoindex.value ? false : canonicalHref.value })
+    // canonical 은 reactive useHead 가 소유한다 — 여기서 다시 등록하면 소유자가 둘이 된다.
+  }, { canonical: false })
 })
 
 // ItemList structured data + 페이지네이션 rel link 태그

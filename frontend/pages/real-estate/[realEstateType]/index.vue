@@ -244,22 +244,36 @@ if (import.meta.server) {
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 const { setMeta } = useFacilityMeta()
 
+// 페이지 2 이상은 noindex (thin content 방지). 정책상 canonical 도 함께 제거
+// (.omc/notes/noindex-canonical-policy.md).
+//
+// ★ 이 두 신호는 반드시 **하나의 반응형 항목**이 소유해야 한다.
+// 종전엔 watch 콜백 안에서 `if (isNoindex) useHead({ robots })` 를 명령형으로 불렀다.
+// useHead 는 부를 때마다 새 항목을 등록하고, 조건이 거짓이 돼도 이미 등록된 항목을
+// 거두지 않는다. 그래서 1페이지 → 2페이지 → 다시 1페이지로 가면 noindex 가 그대로 남고,
+// 그 다음 이동한 페이지까지 따라갔다.
+// canonical 쪽도 같은 병이다 — setMeta 는 `resolvedCanonical` 이 있을 때만 useHead 를
+// 부르므로, 나중에 canonical:false 로 다시 불러도 앞서 등록된 canonical 이 살아남는다.
+// 결과적으로 클라이언트 페이지네이션에서 noindex 와 canonical 이 함께 나갔다.
+const listIsNoindex = computed(() => currentPage.value > 1)
+const listCanonicalHref = computed(() => `${SITE_URL}/real-estate/${realEstateTypeParam.value}`)
+
+useHead(computed(() => (listIsNoindex.value
+  ? { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
+  : { link: [{ rel: 'canonical', href: listCanonicalHref.value, key: 'canonical' }] })))
+
 watch(
   [tabLabel, realEstateTypeParam, currentPage],
   () => {
     const tab = tabLabel.value
     const propertyLabel = propertyMeta.value?.label || ''
-    // 페이지 2 이상은 noindex (thin content 방지). 정책상 canonical 도 함께 제거
-    // (.omc/notes/noindex-canonical-policy.md).
-    const isNoindex = currentPage.value > 1
-    if (isNoindex) {
-      useHead({ meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] })
-    }
     setMeta({
       title: `${propertyLabel} ${tab} 실거래가`,
       description: `전국 ${propertyLabel} ${tab} 실거래가와 시세, 최근 거래 내역을 확인하세요.`,
       path: `/real-estate/${realEstateTypeParam.value}`,
-      canonical: isNoindex ? false : undefined,
+      // canonical 소유자는 위 반응형 useHead 하나다. 여기서 등록하면 소유자가 둘이 되고,
+      // 거두지 못하는 항목이 다시 생긴다.
+      canonical: false,
     })
   },
   { immediate: true },

@@ -4,6 +4,7 @@ import {
   buildCanonicalDedupeWhere,
   buildDedupedIdsSql,
   buildDedupedCountSql,
+  buildDedupedMaxUpdatedAtSql,
   SITEMAP_STRATIFY_TABLES,
 } from '../../src/services/sitemapStratify.js';
 
@@ -166,5 +167,34 @@ describe('중복 통합 대표행 선별 (rel=canonical 대상 제외)', () => {
     const countSql = buildDedupedCountSql('Parking', ['name', 'city']);
     expect(countSql).toContain('COUNT(*) AS cnt');
     expect(countSql).toContain(buildCanonicalDedupeWhere('Parking', ['name', 'city'], 't0'));
+  });
+});
+
+describe('buildDedupedMaxUpdatedAtSql — lastmod 도 사이트맵에 실리는 행에서만 뽑는다', () => {
+  /**
+   * count 는 대표행만 세는데 maxUpdatedAt 은 `model.findFirst({ orderBy: updatedAt desc })` 로
+   * 전체 행에서 뽑고 있었다. 그래서 사이트맵에 실리지도 않는 비대표 행이 갱신되면
+   * 인덱스가 그 날짜를 lastmod 로 광고한다 — 크롤러에게 거짓 신선도를 주고 재크롤을 부른다.
+   * 크롤 예산이 이 사이트의 병목이라 그냥 두면 안 된다.
+   */
+  it('대표행 조건(NOT EXISTS)을 그대로 달고 MAX(updatedAt) 을 구한다', () => {
+    const sql = buildDedupedMaxUpdatedAtSql('Aed', ['name', 'city']);
+
+    expect(sql).toContain('MAX(t0.`updatedAt`)');
+    expect(sql).toContain('NOT EXISTS');
+    // count 와 같은 술어여야 한다 — 갈라지면 다시 어긋난다.
+    expect(sql.slice(sql.indexOf('WHERE'))).toBe(
+      buildDedupedCountSql('Aed', ['name', 'city']).slice(
+        buildDedupedCountSql('Aed', ['name', 'city']).indexOf('WHERE'),
+      ),
+    );
+  });
+
+  it('NULL-safe 비교를 쓴다 (그룹 키에 NULL 이 흔하다)', () => {
+    expect(buildDedupedMaxUpdatedAtSql('Clothes', ['name', 'roadAddress'])).toContain('<=>');
+  });
+
+  it('컬럼 화이트리스트를 위반하면 던진다', () => {
+    expect(() => buildDedupedMaxUpdatedAtSql('Aed', ['name; DROP TABLE Aed'])).toThrow();
   });
 });

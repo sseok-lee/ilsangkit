@@ -145,6 +145,21 @@ export interface RegionDetailResult {
   daeSamples: LandTransaction[];
 }
 
+/**
+ * 토지 문서를 색인 대상으로 볼 최소 거래 건수.
+ *
+ * SOURCE OF TRUTH: `frontend/utils/indexability.ts` 의 MIN_INDEXABLE_TRANSACTIONS.
+ * backend tsconfig 에서 frontend 를 직접 import 할 수 없어 값을 복제한다
+ * (저장소 선례: `backend/src/lib/regionSlugs.ts`). 드리프트는
+ * `__tests__/services/landIndexabilityParity.test.ts` 가 소스 대조로 잡는다.
+ *
+ * 저장 컬럼 `isIndexable`(sync 시점 `recentCount >= 5 || transactionCount >= 10`)을 쓰지
+ * 않는 이유: 그 값은 sync 시점 규칙에 묶여 있어 상세 페이지의 판정과 갈라진다. 실제로
+ * 갈라졌다 — 실측 2026-09-04 로컬 DB 기준 `index, follow` 로 렌더되면서 사이트맵에는 없는
+ * 동(dong)이 53개였다(188 → 241). 사이트맵은 페이지가 실제로 내보내는 신호를 따라야 한다.
+ */
+const MIN_INDEXABLE_TRANSACTIONS = 3;
+
 export interface HubSummaryResult {
   cities: Array<{ slug: string; city: string; indexableDongCount: number; totalTransactions: number }>;
   totalTransactions: number;
@@ -152,7 +167,7 @@ export interface HubSummaryResult {
 
 export async function getHubSummary(): Promise<HubSummaryResult> {
   const rows = await prisma.landAreaSummary.findMany({
-    select: { city: true, transactionCount: true, isIndexable: true },
+    select: { city: true, transactionCount: true },
   });
 
   const slugMap = new Map<string, { city: string; indexableDongCount: number; totalTransactions: number }>();
@@ -164,7 +179,7 @@ export async function getHubSummary(): Promise<HubSummaryResult> {
       indexableDongCount: 0,
       totalTransactions: 0,
     };
-    if (r.isIndexable) e.indexableDongCount++;
+    if (r.transactionCount >= MIN_INDEXABLE_TRANSACTIONS) e.indexableDongCount++;
     e.totalTransactions += r.transactionCount;
     totalTransactions += r.transactionCount;
     slugMap.set(slug, e);
@@ -189,7 +204,7 @@ export async function getSitemapEntries(): Promise<LandSitemapEntries> {
       select: { city: true, district: true },
     }),
     prisma.landAreaSummary.findMany({
-      where: { isIndexable: true },
+      where: { transactionCount: { gte: MIN_INDEXABLE_TRANSACTIONS } },
       select: { city: true, district: true, dongName: true },
     }),
   ]);

@@ -11,6 +11,7 @@
  * "크롤러가 그 공간을 계속 발견하는 내부 링크"뿐이다.
  */
 import { describe, it, expect } from 'vitest'
+import { buildTrashRegionPath } from '~/shared/regionSlugs'
 import {
   buildPageHref,
   isUiStateQueryKey,
@@ -112,5 +113,56 @@ describe('href 와 SPA URL 의 일치 (syncPageQuery 계약)', () => {
     const path = '/chungnam/buyeo/trash'
     const query = { schedule: '13343', page: '4' }
     expect(toHref(path, syncPageQuery(query, 1))).toBe(buildPageHref(path, query, 1))
+  })
+})
+
+describe('buildTrashRegionPath — 빈 세그먼트 경로를 만들지 않는다', () => {
+  /**
+   * trashDistrictSlug 는 DISTRICT_SLUG_MAP 에 없는 이름을 만나면 시/군/구를 떼고 한글을 전부
+   * 지운다. 순한글 이름이면 결과가 '' 이라 `/gyeonggi//trash` 같은 빈 세그먼트 경로가 나왔다.
+   * 그 경로는 404 다 — /trash/{id} 가 301 로 404 를 가리키는 셈이고, 네이버 진단에서
+   * "리디렉션"과 "접근 불가"를 동시에 올린다.
+   *
+   * 같은 PR 이 사이트맵 게이트에 `empty-segment` 사유를 추가했으면서 정작 이 생성기는
+   * 그대로 뒀다. 생성기가 null 을 주면 호출부는 리다이렉트하지 않고 그냥 200 을 렌더한다 —
+   * 404 로 보내는 것보다 언제나 낫다.
+   */
+  it('district slug 를 만들 수 없으면 null 이다 (빈 세그먼트 금지)', () => {
+    expect(buildTrashRegionPath('경기도', '없는구이름')).toBeNull()
+  })
+
+  it('알려진 구·군은 정상 경로를 만든다 (과교정 방지)', () => {
+    expect(buildTrashRegionPath('충청남도', '부여군')).toBe('/chungnam/buyeo/trash')
+  })
+
+  it('city 를 해결할 수 없으면 여전히 null 이다', () => {
+    expect(buildTrashRegionPath('없는도', '부여군')).toBeNull()
+  })
+
+  it('어떤 입력도 빈 세그먼트(//)를 만들지 않는다', () => {
+    const inputs: Array<[string, string]> = [
+      ['경기도', '없는구이름'],
+      ['서울특별시', '가나다구'],
+      ['제주특별자치도', '어떤군'],
+      ['충청남도', '부여군'],
+    ]
+    for (const [city, district] of inputs) {
+      const path = buildTrashRegionPath(city, district)
+      if (path !== null) expect(path).not.toContain('//')
+    }
+  })
+})
+
+describe('trashDistrictSlug — 접미사 없는 원본 표기도 정규 허브로 보낸다', () => {
+  // 배출 일정 원본이 '남양주'·'동두천' 처럼 시/군/구 접미사 없이 적는 경우가 있다.
+  // 지도에는 '남양주시'·'동두천시' 로 있어 조회가 빗나갔고, 폴백이 한글을 전부 지워
+  // 빈 슬러그가 됐다. 실측 2026-09-04: WasteSchedule 의 217개 (시도, 구·군) 조합 중 3개.
+  it('접미사를 붙여 지도에서 찾는다', () => {
+    expect(buildTrashRegionPath('경기도', '남양주')).toBe('/gyeonggi/namyangju/trash')
+    expect(buildTrashRegionPath('경기도', '동두천')).toBe('/gyeonggi/dongducheon/trash')
+  })
+
+  it('그래도 못 찾으면 null 이다 (404 로 301 하지 않는다)', () => {
+    expect(buildTrashRegionPath('세종특별자치시', '없음')).toBeNull()
   })
 })
