@@ -142,7 +142,12 @@ const usageGroups = computed(() => data.value?.detail.usageGroups ?? [])
 const activeItems = computed(() => data.value?.detail.activeItems ?? [])
 const recentSold = computed(() => data.value?.detail.recentSold ?? [])
 
-const isIndexable = computed(() => usageGroups.value.some((g) => g.isIndexable))
+// 일시 장애는 절대 noindex 로 굳히지 않는다 (utils/indexability.ts 원칙 1, #467).
+// regionFetchFailed 는 위에서 계산해 두고도 색인 판정에 연결되어 있지 않았다. 그래서
+// 조회가 실패하면 usageGroups 가 [] → some() false → **503 + noindex** 가 함께 나갔다.
+const isIndexable = computed(() =>
+  regionFetchFailed.value || usageGroups.value.some((g) => g.isIndexable),
+)
 const avgBidRate = computed(() => usageGroups.value.find((g) => g.avgBidRate != null)?.avgBidRate ?? null)
 const totalActiveCount = computed(() => usageGroups.value.reduce((sum, g) => sum + g.activeCount, 0))
 
