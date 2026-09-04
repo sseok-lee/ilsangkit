@@ -50,7 +50,15 @@ describe('/real-estate 페이지', () => {
     expect(src).not.toContain('AdBanner')
   })
 
-  it('SSR 집계 실패 시 fail-open — catch 가 빈 배열을 준다', () => {
-    expect(src).toMatch(/catch\s*\{[\s\S]*?return \[\]/)
+  it('SSR 집계 실패 시 fail-open — 사용자에겐 빈 배열, 크롤러에겐 503', () => {
+    // 예전 계약은 `catch { return [] }` 였다. 사용자 쪽은 맞지만 크롤러 쪽이 빠져 있었다 —
+    // 이 집계가 이 페이지의 유일한 SSR 데이터라, 실패하면 정적 크롬만 남은 얇은 문서가
+    // 200 + index 로 색인된다(#467). default 로 빈 배열을 주되 degraded 도 함께 알린다.
+    expect(src).toContain('default: () => []')
+    expect(src).toContain('error: regionsError')
+    expect(src).toMatch(/if \(regionsError\.value && import\.meta\.server\) markDegradedResponse\(\)/)
+    // ⚠️ 호출은 useAsyncData 핸들러 밖이어야 한다(핸들러 안엔 Nuxt 컨텍스트가 없다).
+    // 위치 불변식은 tests/pages/detail-soft-error.test.ts 가 전역으로 강제한다.
+    expect(src).not.toMatch(/useAsyncData[\s\S]{0,400}markDegradedResponse/)
   })
 })

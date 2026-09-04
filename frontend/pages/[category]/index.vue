@@ -279,7 +279,8 @@ import { useSearchSuggest } from '~/composables/useSearchSuggest'
 import type { RegionSchedule, WasteScheduleDetail } from '~/composables/useWasteSchedule'
 import type { FacilityCategory } from '~/types/facility'
 import { useAnalytics } from '~/composables/useAnalytics'
-import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
+import { parsePositivePageQuery } from '~/utils/pageQuery'
+import { buildFacilityListHead, buildFacilityListCanonicalPath } from '~/utils/facilityListHead'
 
 const route = useRoute()
 const router = useRouter()
@@ -560,14 +561,13 @@ const breadcrumbItems = computed(() => [
 //
 // city+district 는 `/{city}/{district}/{category}` 라는 등가 라우트가 실재하므로 그쪽으로,
 // city 만 있으면 2-segment `/{city}/{category}` 라우트가 없으므로 전국 목록으로 통합한다.
-const canonicalPath = computed(() => {
-  const citySlug = queryCitySlug.value
-  const districtSlug = (route.query.district as string) || ''
-  if (citySlug && districtSlug) {
-    return `/${citySlug}/${districtSlug}/${categoryParam.value}`
-  }
-  return `/${categoryParam.value}`
-})
+// 판정은 utils/facilityListHead.ts 한곳에서만 한다(그 함수 주석에 district slug 정규화
+// 배경이 있다). 여기 인라인으로 두면 테스트가 실물 대신 사본을 검사하게 된다.
+const canonicalPath = computed(() => buildFacilityListCanonicalPath({
+  category: categoryParam.value,
+  citySlug: queryCitySlug.value,
+  district: (route.query.district as string) || '',
+}))
 const canonicalHref = computed(() => `${SITE_URL}${canonicalPath.value}`)
 // Pagination: page 2+ 는 noindex 하고 canonical 은 함께 제거 (noindex/canonical 정책 통일)
 // pageQueryParam 은 route.query.page 에 reactive 로 연동해야 client-side 페이지 이동 시에도 정책이 켜진다.
@@ -576,14 +576,13 @@ const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
 // `?city=` 만 있는 경우는 기존과 동일하게 색인 유지된다.
 const isNoindex = computed(() => shouldNoindexFacilityList({ page: pageQueryParam.value, keyword: queryKeyword.value }))
 
-useHead(computed(() => {
-  if (isNoindex.value) {
-    return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
-  }
-  return {
-    link: [{ rel: 'canonical', href: canonicalHref.value, key: 'canonical' }],
-  }
-}))
+// 판정은 utils/facilityListHead.ts 한곳에서만 한다. 여기 인라인으로 두면 테스트가 실물을
+// 부르지 못하고 사본을 검사하게 된다(그 함수 주석 참고).
+useHead(computed(() => buildFacilityListHead({
+  page: pageQueryParam.value,
+  keyword: queryKeyword.value,
+  canonicalHref: canonicalHref.value,
+})))
 
 // Methods
 async function performSearch() {

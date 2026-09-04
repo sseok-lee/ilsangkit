@@ -278,6 +278,22 @@ describe('TRASH_ID_PATTERN — 양의 정수만 통과한다', () => {
  *
  * 로스터 대신 불변식으로 고정한다. 페이지가 SSR 조회 실패를 삼키면서 fail-open 신호를
  * 내지 않으면, 파일을 등록하지 않아도 여기서 깨진다.
+ *
+ * ## ⚠️ 이 파일이 증명하지 못하는 것
+ *
+ * 여기 있는 검사는 전부 **소스 텍스트**를 읽는다. 프로덕션 코드를 한 줄도 실행하지 않는다.
+ * 따라서 "호출이 소스에 있다"까지만 보장하고 "런타임에 그 호출이 실제로 일어난다"는
+ * 보장하지 못한다. 예를 들어 `if (false && import.meta.server) markDegradedResponse()`
+ * 로 죽여 놓아도 여기서는 통과한다.
+ *
+ * 이 한계를 적어 두는 이유는, 이 저장소가 정확히 그 오독으로 결함을 오래 놓쳤기 때문이다
+ * (커밋 076a1a82 은 호출을 useAsyncData 핸들러 안에 두어 503 이 한 번도 나가지 않았는데
+ *  테스트는 전부 초록이었다). "이 파일이 통과했으니 fail-open 이 동작한다"고 읽지 마라.
+ * 동작 확인은 실제 요청으로 한다 — 백엔드를 내리거나 잘못된 파라미터를 주고
+ * 응답 코드가 503 인지 본다.
+ *
+ * 아래 첫 불변식은 그 한계 안에서 할 수 있는 가장 강한 것이다: 실행하지 않고도
+ * "이 위치에 있으면 반드시 죽는다"는 성질(핸들러 안 = Nuxt 컨텍스트 없음)을 잡는다.
  */
 describe('fail-open 전역 불변식 — 삼킨 에러는 반드시 degraded 신호를 낸다', () => {
   function allPageSources(): Array<{ path: string; source: string }> {
@@ -295,25 +311,107 @@ describe('fail-open 전역 불변식 — 삼킨 에러는 반드시 degraded 신
     return out
   }
 
-  it('`catch { return null }` 로 조회 실패를 삼키는 곳은 markDegradedResponse 를 부른다', () => {
-    // catch 블록 본문에 `return null` 이 있는데 markDegradedResponse 가 없는 경우를 찾는다.
-    const swallowing = /catch\s*(?:\([^)]*\))?\s*\{([^}]*)\}/g
+  /**
+   * `source[openIdx]` 의 여는 괄호와 짝이 되는 닫는 괄호까지를 잘라낸다.
+   * 문자열 리터럴 안의 괄호는 세지 않는다.
+   */
+  function sliceBalanced(source: string, openIdx: number, open: string, close: string): string {
+    let depth = 0
+    let quote: string | null = null
+    for (let i = openIdx; i < source.length; i++) {
+      const c = source[i]
+      if (quote) {
+        if (c === '\\') { i++; continue }
+        if (c === quote) quote = null
+        continue
+      }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue }
+      if (c === open) depth++
+      else if (c === close) {
+        depth--
+        if (depth === 0) return source.slice(openIdx, i + 1)
+      }
+    }
+    return source.slice(openIdx)
+  }
+
+  /**
+   * ★ 실제로 배포된 결함을 잡는 불변식.
+   *
+   * markDegradedResponse() 는 useNuxtApp() 을 부른다. useAsyncData 핸들러 본문은 중첩
+   * async 라 Nuxt 인스턴스 컨텍스트가 없고, 그 안에서 부르면 useNuxtApp() 이 그 자리에서
+   * throw 한다 — 503 은 영영 나가지 않는다.
+   *
+   * 종전 이 자리의 불변식은 `catch { return null }` 안에 markDegradedResponse 라는
+   * **문자열이 있는지**만 봤다. 그래서 호출을 핸들러 안에 두는 것을 막기는커녕 오히려
+   * 그 형태를 요구했고, 커밋 076a1a82 의 5개 호출부가 전부 죽은 채로 통과했다
+   * (실측 2026-09-04: `/auction/list?page=abc` 가 200 + payload 에
+   * "A composable that requires access to the Nuxt instance").
+   */
+  it('markDegradedResponse 를 useAsyncData 핸들러 안에서 부르지 않는다 (부르면 컨텍스트가 없어 죽는다)', () => {
     const offenders: string[] = []
 
     for (const { path, source } of allPageSources()) {
-      for (const match of source.matchAll(swallowing)) {
-        const body = match[1] ?? ''
-        if (!/return\s+null/.test(body)) continue
-        if (/markDegradedResponse/.test(body)) continue
-        offenders.push(`${path} :: catch {${body.trim().slice(0, 60)}}`)
+      for (const m of source.matchAll(/use(?:Lazy)?AsyncData\s*\(/g)) {
+        const openIdx = m.index! + m[0].length - 1
+        const call = sliceBalanced(source, openIdx, '(', ')')
+        if (call.includes('markDegradedResponse')) {
+          const line = source.slice(0, m.index!).split('\n').length
+          offenders.push(`${path}:${line}`)
+        }
       }
+    }
+
+    expect(offenders, [
+      'useAsyncData 핸들러 안에서 markDegradedResponse() 를 부르는 곳이 있다.',
+      '핸들러 본문에는 Nuxt 컨텍스트가 없어 useNuxtApp() 이 throw 하고, 503 은 나가지 않는다.',
+      '핸들러 밖에서 useAsyncData 가 돌려주는 error 를 보고 불러라:',
+      "  const { data, error } = await useAsyncData(key, () => fetch())",
+      '  if (error.value && import.meta.server) markDegradedResponse()',
+    ].join('\n')).toEqual([])
+  })
+
+  /**
+   * 조회 실패를 삼키면서 아무 신호도 내지 않는 페이지를 찾는다.
+   *
+   * 종전 정규식은 `catch\s*\{([^}]*)\}` 였다. 거짓 음성이 셋 있었다.
+   *  - 본문에 중괄호가 있으면 `[^}]*` 가 조기 종료돼 통째로 놓친다
+   *  - `return undefined` / `return []` / `return {}` 형태를 못 본다
+   *  - `.catch(() => null)` 체인을 못 본다
+   */
+  it('조회 실패를 삼키는 페이지는 degraded 신호를 낸다 (삼킨 자리와 무관하게 파일 안에 존재해야 한다)', () => {
+    const SENTINEL = /return\s*(?:null|undefined|\[\s*\]|\{\s*\})\s*[;\n}]/
+    const offenders: string[] = []
+
+    for (const { path, source } of allPageSources()) {
+      const swallows: string[] = []
+
+      // 1) try/catch — 본문을 중괄호 짝으로 정확히 잘라낸다.
+      for (const m of source.matchAll(/catch\s*(?:\([^)]*\))?\s*\{/g)) {
+        const openIdx = m.index! + m[0].length - 1
+        const body = sliceBalanced(source, openIdx, '{', '}')
+        if (SENTINEL.test(body)) swallows.push('catch')
+      }
+      // 2) .catch(() => null) 체인
+      if (/\.catch\(\s*\([^)]*\)\s*=>\s*(?:null|undefined|\[\s*\]|\{\s*\})\s*\)/.test(source)) {
+        swallows.push('.catch(() => null)')
+      }
+
+      if (swallows.length === 0) continue
+      // 삼키더라도 그 페이지가 어딘가에서 degraded 를 알리면 된다.
+      // (핸들러 밖에서 error 를 보고 부르는 형태가 정상이므로 위치는 따지지 않는다.
+      //  위치 규칙은 바로 위 불변식이 따로 강제한다.)
+      if (/markDegradedResponse\(\)/.test(source)) continue
+      // 명시적 면제. 색인 대상이 아닌 페이지(무조건 noindex)처럼 degraded 신호가 의미 없는
+      // 경우가 있다. 소스에서 noindex 여부를 정규식으로 추정하면 조건부 noindex 페이지 9곳을
+      // 잘못 면제하게 되므로, 추정하지 않고 현장에 이유를 적게 한다.
+      if (/fail-open-exempt:/.test(source)) continue
+      offenders.push(`${path} :: ${[...new Set(swallows)].join(', ')}`)
     }
 
     expect(offenders, [
       '조회 실패를 삼키면서 degraded 신호를 내지 않는 페이지가 있다.',
       '백엔드가 죽으면 그 페이지는 빈 본문 + HTTP 200 + index 로 색인된다(소프트 404).',
-      '사용자에게는 페이지를 그대로 보여주되, 서버에서는 markDegradedResponse() 를 불러라:',
-      '  catch { if (import.meta.server) markDegradedResponse(); return null }',
     ].join('\n')).toEqual([])
   })
 

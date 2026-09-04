@@ -17,7 +17,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { shouldNoindexFacilityList } from '~/utils/facilityListRobots'
+import { buildFacilityListHead, buildFacilityListCanonicalPath } from '~/utils/facilityListHead'
 
 const SITE_URL = 'https://ilsangkit.co.kr'
 
@@ -96,26 +96,50 @@ describe('구·군 목록 canonical — /{city}/{district}/trash?schedule=N', ()
 
 describe('카테고리 목록 canonical — /trash?schedule=N, /toilet?city=seoul', () => {
   const src = read(PAGES.category)
-  const canonicalBody = extractComputedBody(src, 'canonicalPath')
-
-  it('canonicalPath 는 쿼리 문자열을 만들지 않는다', () => {
-    expect(canonicalBody).not.toContain('?')
-    expect(canonicalBody).not.toContain('schedule')
+  // 계약은 실물 함수(buildFacilityListCanonicalPath)로 검사한다. 예전엔 이 자리에
+  // 같은 규칙을 다시 구현한 `canonicalPathFor` 가 있었고, 그 사본만 검사하고 있었다.
+  it('페이지는 canonical 경로 판정을 공용 빌더에 위임한다', () => {
+    expect(src).toContain('buildFacilityListCanonicalPath({')
   })
 
-  it('canonical href 는 SITE_URL + 쿼리 없는 경로다', () => {
+  it('canonical href 는 SITE_URL + 경로다', () => {
     expect(src).toContain('const canonicalHref = computed(() => `${SITE_URL}${canonicalPath.value}`)')
-    expect(src).toContain("link: [{ rel: 'canonical', href: canonicalHref.value, key: 'canonical' }]")
+  })
+
+  it('canonical 경로는 어떤 입력에서도 쿼리 문자열을 만들지 않는다', () => {
+    const inputs = [
+      { category: 'trash' },
+      { category: 'trash', citySlug: 'seoul' },
+      { category: 'toilet', citySlug: 'seoul', district: 'gangnam' },
+      { category: 'toilet', citySlug: 'seoul', district: '강남구' },
+      { category: 'toilet', citySlug: 'seoul', district: '없는구' },
+    ]
+    for (const input of inputs) {
+      const path = buildFacilityListCanonicalPath(input)
+      expect(path, JSON.stringify(input)).not.toContain('?')
+      expect(path).not.toContain('schedule')
+    }
   })
 
   it('`?city=` 필터 변형이 자기 자신을 canonical 로 선언하지 않는다', () => {
     // 회귀 방지: 예전엔 `/${categoryParam.value}?city=${citySlug}` 를 canonical 로 냈다.
     // 시설 15종 × 시·도 18개 = 270개 파라미터 URL 이 "정본"으로 선언돼 있었다.
-    expect(canonicalBody).not.toMatch(/city=\$\{/)
+    expect(buildFacilityListCanonicalPath({ category: 'toilet', citySlug: 'seoul' })).toBe('/toilet')
   })
 
   it('city+district 는 실재하는 3-segment 라우트로 통합한다', () => {
-    expect(canonicalBody).toContain('`/${citySlug}/${districtSlug}/${categoryParam.value}`')
+    expect(buildFacilityListCanonicalPath({ category: 'toilet', citySlug: 'seoul', district: 'gangnam' }))
+      .toBe('/seoul/gangnam/toilet')
+  })
+
+  it('한글 구·군명은 slug 로 정규화한다 — canonical 이 301 을 가리키지 않게', () => {
+    expect(buildFacilityListCanonicalPath({ category: 'toilet', citySlug: 'seoul', district: '강남구' }))
+      .toBe('/seoul/gangnam/toilet')
+  })
+
+  it('해석되지 않는 구·군은 전국 목록으로 통합한다 (404 를 canonical 로 내지 않는다)', () => {
+    expect(buildFacilityListCanonicalPath({ category: 'toilet', citySlug: 'seoul', district: '없는구' }))
+      .toBe('/toilet')
   })
 
   it('지역 필터 자체는 남아 있다 (noindex 로 죽이지 않는다)', () => {
@@ -123,20 +147,13 @@ describe('카테고리 목록 canonical — /trash?schedule=N, /toilet?city=seou
     expect(src).toContain('regionChipHref')
   })
 
-  /** 소스에서 확인한 규칙을 값으로 재현 — `?schedule=` 은 canonical 에 영향이 없다. */
-  function canonicalPathFor(input: { category: string; city?: string; district?: string }): string {
-    if (input.city && input.district) return `/${input.city}/${input.district}/${input.category}`
-    return `/${input.category}`
-  }
-
   it('/trash?schedule=13343 의 canonical 은 https://ilsangkit.co.kr/trash', () => {
-    expect(`${SITE_URL}${canonicalPathFor({ category: 'trash' })}`).toBe(`${SITE_URL}/trash`)
+    expect(`${SITE_URL}${buildFacilityListCanonicalPath({ category: 'trash' })}`).toBe(`${SITE_URL}/trash`)
   })
 
   it('/toilet?city=seoul 의 canonical 은 전국 목록으로 통합된다', () => {
-    expect(`${SITE_URL}${canonicalPathFor({ category: 'toilet', city: 'seoul' })}`).toBe(
-      `${SITE_URL}/toilet`,
-    )
+    expect(`${SITE_URL}${buildFacilityListCanonicalPath({ category: 'toilet', citySlug: 'seoul' })}`)
+      .toBe(`${SITE_URL}/toilet`)
   })
 })
 
@@ -163,38 +180,55 @@ describe('noindex 응답에는 canonical 이 없다 — 카테고리 목록', ()
     expect(src).not.toContain('canonical: isNoindex.value ? false : canonicalHref.value')
   })
 
-  it('reactive head 의 noindex 분기는 canonical 을 포함하지 않는다', () => {
-    const headBlock = src.slice(src.indexOf('useHead(computed(() => {'))
-    const noindexBranch = headBlock.slice(0, headBlock.indexOf('return {\n    link:'))
-    expect(noindexBranch).toContain('PAGINATION_ROBOTS_CONTENT')
-    expect(noindexBranch).not.toContain('canonical')
+  // ⚠️ 아래 값 수준 테스트가 실물을 부르려면 페이지가 판정을 인라인으로 되돌리면 안 된다.
+  // 예전엔 이 계약이 페이지 안에 인라인으로 있었고, 테스트는 같은 분기를 파일 안에 다시
+  // 구현해서(`function buildHead`) 그 사본을 검사했다 — 페이지를 "항상 noindex" 로 바꿔도
+  // 119개가 전부 통과했다(실측 2026-09-04).
+  it('목록 head 판정은 공용 빌더에 위임한다 — 페이지에 인라인 분기를 되살리지 않는다', () => {
+    expect(src).toContain('useHead(computed(() => buildFacilityListHead({')
+    // 위임했다는 증거는 "빌더를 부른다"가 아니라 "페이지가 robots 를 직접 쓰지 않는다"다.
+    // 문자열 포함만 보면 빌더 호출을 남겨둔 채 그 옆에 인라인 분기를 되살려도 통과한다.
+    expect(src).not.toMatch(/name:\s*['"]robots['"]/)
+    expect(src).not.toContain('PAGINATION_ROBOTS_CONTENT')
+    // canonical link 도 빌더만 만든다.
+    expect(src).not.toMatch(/rel:\s*['"]canonical['"]/)
   })
 
   /**
-   * 페이지가 따르는 계약을 값 수준에서 재현:
+   * 계약을 값 수준에서 확인 — 재구현이 아니라 페이지가 실제로 쓰는 함수를 부른다.
    * noindex 술어가 true 면 canonical 은 어느 경로로도 발행되지 않는다.
    */
-  function buildHead(input: { page: number; keyword?: string }) {
-    if (shouldNoindexFacilityList(input)) {
-      return { robots: 'noindex, follow' as const, canonical: null }
-    }
-    return { robots: null, canonical: `${SITE_URL}/toilet` }
-  }
-
   it('키워드 검색(page 1) 은 noindex 이고 canonical 이 없다', () => {
-    const head = buildHead({ page: 1, keyword: '역삼' })
-    expect(head.robots).toBe('noindex, follow')
-    expect(head.canonical).toBeNull()
+    const head = buildFacilityListHead({ page: 1, keyword: '역삼', canonicalHref: `${SITE_URL}/toilet` })
+    expect(head.meta?.[0]).toMatchObject({ name: 'robots', content: expect.stringContaining('noindex') })
+    expect(head.link).toBeUndefined()
   })
 
   it('page 2+ 는 noindex 이고 canonical 이 없다', () => {
-    expect(buildHead({ page: 2 }).canonical).toBeNull()
+    const head = buildFacilityListHead({ page: 2, canonicalHref: `${SITE_URL}/toilet` })
+    expect(head.meta?.[0]?.content).toContain('noindex')
+    expect(head.link).toBeUndefined()
   })
 
   it('필터 없는 1페이지는 canonical 만 낸다', () => {
-    const head = buildHead({ page: 1 })
-    expect(head.robots).toBeNull()
-    expect(head.canonical).toBe(`${SITE_URL}/toilet`)
+    const head = buildFacilityListHead({ page: 1, canonicalHref: `${SITE_URL}/toilet` })
+    expect(head.meta).toBeUndefined()
+    expect(head.link?.[0]).toMatchObject({ rel: 'canonical', href: `${SITE_URL}/toilet` })
+  })
+
+  // noindex 와 canonical 이 함께 나가는 조합은 어떤 입력에서도 없어야 한다
+  // (.omc/notes/noindex-canonical-policy.md). 위 3개는 대표 입력만 보므로 전수로 한 번 더 건다.
+  it('어떤 입력에서도 robots=noindex 와 canonical 이 동시에 나가지 않는다', () => {
+    for (const page of [1, 2, 3, 10]) {
+      for (const keyword of [undefined, '', '  ', '역삼']) {
+        const head = buildFacilityListHead({ page, keyword, canonicalHref: `${SITE_URL}/toilet` })
+        const hasNoindex = !!head.meta?.some((m) => m.content?.includes('noindex'))
+        const hasCanonical = !!head.link?.some((l) => l.rel === 'canonical')
+        expect(hasNoindex && hasCanonical, `page=${page} keyword=${JSON.stringify(keyword)}`).toBe(false)
+        // 둘 중 하나는 반드시 나가야 한다 — 아무것도 안 내면 정본 신호가 사라진다.
+        expect(hasNoindex || hasCanonical).toBe(true)
+      }
+    }
   })
 })
 
