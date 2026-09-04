@@ -215,14 +215,24 @@ export default defineEventHandler(async (event) => {
     return generateSitemapXml(urls)
   }
 
-  // 토지 실거래가 — hub + city + district 항상 포함, 동(dong)은 isIndexable=true인 것만 포함
+  // 토지 실거래가 — hub + city + district 항상 포함, 동(dong)은 거래 3건 이상인 것만 포함.
+  // (기준은 백엔드 getSitemapEntries 의 MIN_INDEXABLE_TRANSACTIONS. sync 시점 스냅샷인
+  //  isIndexable 컬럼이 아니라 요청 시점 거래 건수로 판정한다 — utils/indexability.ts 원칙 3.)
   if (category === 'land') {
     const { cities, indexableDongs, ok } = await fetchLandSitemap()
     // 이 분기는 상류 결과와 무관하게 허브 URL 을 먼저 push 하므로 urls.length 가 0 이 되지
     // 않는다. 다른 분기가 쓰는 `length === 0` 검사가 여기선 영원히 거짓이라, 상류가 죽어도
     // URL 1개짜리 사이트맵이 200 으로 나가 디스크에 구워졌다. 실패는 실패로 응답한다.
+    //
+    // ok 플래그만으로는 부족하다. 그건 상류가 **예외를 던진** 경우만 잡는다. 집계 테이블이
+    // 비었거나 쿼리가 조용히 0행을 돌려주면 상류는 200 을 주고 ok 는 true 인데 payload 는
+    // 텅 비어 있다 — 그때도 허브 1개짜리 사이트맵이 정상인 척 구워진다.
+    // 전국 토지 집계가 통째로 0행인 정상 상태는 없으므로, 그 경우도 실패로 취급한다.
     if (ok === false) {
       return sitemapUpstreamUnavailable(event, 'land')
+    }
+    if (cities.length === 0 && indexableDongs.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'land (empty payload)')
     }
     const weekStart = getWeekStartDate()
 
@@ -244,7 +254,7 @@ export default defineEventHandler(async (event) => {
       urls.push({ loc: `${SITE_URL}/real-estate/land/${citySlug}/${districtSlug}`, lastmod: weekStart })
     }
 
-    // dong URLs — only isIndexable=true (quality gate)
+    // dong URLs — 거래 3건 이상만 (품질 게이트). 상류가 이미 걸러 보낸다.
     for (const { city, district, dongName } of indexableDongs) {
       urls.push({
         loc: `${SITE_URL}/real-estate/land/${toCitySlugByDistrict(city, district)}/${toDistrictSlug(district)}/${encodeURIComponent(dongName)}`,
@@ -259,8 +269,12 @@ export default defineEventHandler(async (event) => {
   if (category === 'auction') {
     const { regions, items, ok } = await fetchAuctionSitemap()
     // land 와 같은 이유 — 허브 URL 을 먼저 push 해서 length 검사가 무력하다.
+    // ok 는 예외만 잡으므로 "상류 200 + 빈 payload" 도 함께 막는다(land 분기 주석 참고).
     if (ok === false) {
       return sitemapUpstreamUnavailable(event, 'auction')
+    }
+    if (regions.length === 0 && items.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'auction (empty payload)')
     }
     const weekStart = getWeekStartDate()
 
