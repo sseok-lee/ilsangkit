@@ -386,26 +386,6 @@ const error = ref<{ message: string } | null>(null)
 // 템플릿용 타입 안전 details 접근 (v-if 카테고리 가드로 런타임 보호)
 const details = computed(() => facility.value?.details as FacilityDetailsAll | undefined)
 
-// SSR에서 메타태그 및 JSON-LD 설정
-watchEffect(() => {
-  if (facility.value) {
-    setFacilityDetailMeta(facility.value)
-    setFacilitySchema(facility.value)
-    const categoryName = CATEGORY_META[facility.value.category]?.label || facility.value.category
-    const name = getFacilityDisplayName(facility.value)
-    setBreadcrumbSchema([
-      { name: '홈', url: '/' },
-      { name: categoryName, url: `/${facility.value.category}` },
-      { name, url: `/${facility.value.category}/${facility.value.id}` },
-    ])
-    // FAQPage JSON-LD 발행 (화면 FAQ 와 동일 소스 generateDynamicFAQ → SEO 구조화 데이터)
-    const faqItems = generateDynamicFAQ(facility.value)
-    if (faqItems.length > 0) {
-      setFAQSchema(faqItems)
-    }
-  }
-})
-
 // wifi 상세 페이지 noindex (같은 건물/장소 단위 중복이 많아 sitemap 제외)
 // robots.txt 로 막지 않고 크롤은 허용해야 Googlebot 이 noindex 를 직접 확인할 수 있다.
 // AED 상세 페이지는 색인 대상이며, 아래 thin-content 규칙에만 따른다.
@@ -437,15 +417,64 @@ const isThinContent = computed(() => {
 
 // noindex/canonical 정책 통일 — robots=noindex 를 내보낼 때는 canonical 을 동시에 내보내지 않는다.
 // (정책: .omc/notes/noindex-canonical-policy.md)
-// 이름·기관·주소가 모두 없어 제목이 `{지역} {카테고리}` 뿐이라 지역 내 중복이 불가피한 시설.
+// 이름·기관·주소가 모두 없거나, 구분자 후보가 전부 이름과 중복이라 형제 레코드와 제목·설명이
+// 같아지는 시설.
 const isUndifferentiated = computed(() => (facility.value ? isUndifferentiatedFacility(facility.value) : false))
 const isFacilityNoindex = computed(() => isLowValueCategory.value || isThinContent.value || isUndifferentiated.value)
+
+// 원본에 같은 레코드가 여러 번 들어와 형제 URL 과 제목·설명이 단어 하나까지 같아지는 행.
+// 백엔드가 그룹 대표 id 를 canonicalId 로 실어 준다(실측 2026-09-04: AED 62,707행 중 361행,
+// 예를 들어 '양구군보건소 보건정책과 사무실' 18행이 서로 완전히 동일).
+//
+// 처방은 noindex 가 아니라 대표 URL 로의 rel=canonical 이다 — 둘을 같이 내보내면 구글이
+// 신호 충돌로 보고 canonical 을 무시한다(.omc/notes/noindex-canonical-policy.md).
+// 그래서 여기서는 robots 를 건드리지 않고 canonical 목적지만 바꾼다.
+//
+// 반대로 같은 건물의 층별 AED(㈜녹십자 1~5층처럼 설치장소가 다른 행)는 제목이 갈라져
+// 애초에 그룹에 들어오지 않는다 — 판정 근거는 백엔드 CANONICAL_GROUP_FIELDS 주석 참고.
+const crossCanonicalHref = computed(() => {
+  const f = facility.value
+  if (!f?.canonicalId || f.canonicalId === f.id) return null
+  return `https://ilsangkit.co.kr/${f.category}/${f.canonicalId}`
+})
+
+// SSR에서 메타태그 및 JSON-LD 설정
+// ⚠️ setFacilityDetailMeta 는 setMeta 를 거쳐 rel=canonical 을 스스로 발행한다. noindex 일 때
+// canonical=false 를 넘기지 않으면 아래 useHead 가 canonical 을 빼도 이쪽이 그대로 내보내
+// noindex+canonical 동시 송출이 된다(정책 위반). 그래서 판정 computed 를 이 위로 올렸다.
+watchEffect(() => {
+  if (facility.value) {
+    // canonical 발행처는 setMeta 한 곳이고, 아래 useHead 는 같은 key('canonical')로 같은 href 를
+    // 낸다 — 두 곳이 다른 href 를 내면 unhead 가 한쪽을 덮어써 순서에 따라 결과가 달라진다.
+    setFacilityDetailMeta(facility.value, {
+      canonical: isFacilityNoindex.value ? false : (crossCanonicalHref.value ?? undefined),
+    })
+    setFacilitySchema(facility.value)
+    const categoryName = CATEGORY_META[facility.value.category]?.label || facility.value.category
+    const name = getFacilityDisplayName(facility.value)
+    setBreadcrumbSchema([
+      { name: '홈', url: '/' },
+      { name: categoryName, url: `/${facility.value.category}` },
+      { name, url: `/${facility.value.category}/${facility.value.id}` },
+    ])
+    // FAQPage JSON-LD 발행 (화면 FAQ 와 동일 소스 generateDynamicFAQ → SEO 구조화 데이터)
+    const faqItems = generateDynamicFAQ(facility.value)
+    if (faqItems.length > 0) {
+      setFAQSchema(faqItems)
+    }
+  }
+})
+
 useHead(computed(() => {
   if (isFacilityNoindex.value) {
     return { meta: [{ name: 'robots', content: 'noindex, follow' }] }
   }
   return {
-    link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${route.path}`, key: 'canonical' }],
+    link: [{
+      rel: 'canonical',
+      href: crossCanonicalHref.value ?? `https://ilsangkit.co.kr${route.path}`,
+      key: 'canonical',
+    }],
   }
 }))
 

@@ -5,6 +5,7 @@ definePageMeta({ hasSourceCard: true })
 
 import { computed } from 'vue'
 import { useAuction } from '~/composables/useAuction'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { SITE_URL } from '~/utils/seoConstants'
 import { computeAuctionItemHead } from '~/utils/auctionHead'
 import { AUCTION_FAQ } from '~/utils/auctionMeta'
@@ -28,37 +29,54 @@ import DataSourceSection from '~/components/common/DataSourceSection.vue'
 const route = useRoute()
 const cltrMngNo = String(route.params.cltrMngNo)
 const auction = useAuction()
-const { data } = await useAsyncData(
+const { data, error: itemError } = await useAsyncData(
   `auction-item-${cltrMngNo}`,
-  async () => {
-    try {
-      return await auction.getItemDetail(cltrMngNo)
-    } catch {
-      return null
-    }
-  },
+  () => auction.getItemDetail(cltrMngNo),
   { default: () => null },
 )
-if (import.meta.server || !data.value) {
-  if (!data.value) throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+
+// 확정 부재(백엔드 404/422)만 하드 404. 일시 장애(5xx·네트워크·타임아웃)는 fail-open.
+//
+// 기존엔 핸들러 안 try/catch 가 모든 실패를 null 로 뭉갠 뒤 `!data.value` 로 404 를 던졌다.
+// 그래서 백엔드가 잠깐 흔들리면 사이트맵에 살아있는 정상 URL 이 하드 404 로 굳었다 —
+// 2026-09-04 네이버 진단 "접근 불가" 523건의 그 경로다.
+//
+// ⚠️ getItemDetail 은 $fetch 예외를 삼키지 않으므로 백엔드 404 도 itemError 로 올라온다.
+//    상태코드를 보지 않고 전부 degraded 로 넘기면 청약 상세가 겪은 반대편 사고
+//    (없는 물건이 503 + 공유 title 로 나감)를 그대로 재현하게 된다.
+// 정책은 #467(fail-open) / #674(시설 상세) / land [dong].vue 와 동일하다.
+const itemErrStatus = itemError.value?.statusCode
+if (itemErrStatus === 404 || itemErrStatus === 422) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+} else if (itemError.value) {
+  if (import.meta.server) markDegradedResponse()
+} else if (!data.value) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
-const item = computed(() => data.value!.item)
-const nearby = computed(() => data.value!.nearby)
-const marketCompare = computed(() => data.value!.marketCompare ?? null)
+// fail-open 경로에서는 data 가 null 이다 — 아래 파생값·head·JSON-LD 는 전부 null 안전해야 한다.
+const item = computed(() => data.value?.item ?? null)
+const nearby = computed(() => data.value?.nearby ?? [])
+const marketCompare = computed(() => data.value?.marketCompare ?? null)
 // land: apslAssAmtForCompare(원/평)가 있으면 그 값을 컴포넌트에 주입해 단위 일치
 const compareApslAmt = computed(() =>
-  marketCompare.value?.apslAssAmtForCompare ?? item.value.apslAssAmt ?? null,
+  marketCompare.value?.apslAssAmtForCompare ?? item.value?.apslAssAmt ?? null,
 )
 const selfUrl = `${SITE_URL}/auction/item/${cltrMngNo}`
-useHead(() => computeAuctionItemHead(item.value, selfUrl))
+useHead(() => item.value
+  ? computeAuctionItemHead(item.value, selfUrl)
+  // 일시 장애(503) 경로. head 를 비워두면 사이트 기본 title 이 그대로 나가고,
+  // 그게 2026-07 구글 색인 감소 때의 카테고리 교차 canonical 병합을 만든 신호였다.
+  // 503 이라 색인되진 않지만 기본 title 유출 자체를 만들지 않는다.
+  : { title: '공매 물건 정보를 불러오지 못했습니다' })
 
 // ── 모바일 헤더: eyebrow(용도/배지) + stat 칩(감정가/최저가/할인율/유찰) ──────────
 const headerEyebrow = computed(() =>
-  [item.value.usage, item.value.propertyType].filter(Boolean).join(' · ') || '공매 물건',
+  [item.value?.usage, item.value?.propertyType].filter(Boolean).join(' · ') || '공매 물건',
 )
 const headerStats = computed(() => {
   const out: Array<{ label: string; value: string; color?: string }> = []
+  if (!item.value) return out
   if (item.value.apslAssAmt != null) out.push({ label: '감정가', value: formatWonKorean(item.value.apslAssAmt) })
   if (item.value.minBidPrc != null) out.push({ label: '최저가', value: formatWonKorean(item.value.minBidPrc), color: 'text-primary' })
   const discount = formatDiscount(item.value.apslAssAmt, item.value.minBidPrc)
@@ -68,17 +86,17 @@ const headerStats = computed(() => {
 })
 
 // ── 길찾기 URL (좌표 우선, 없으면 주소 검색) ──────────────────────────────────
-const hasCoords = computed(() => item.value.lat != null && item.value.lng != null)
+const hasCoords = computed(() => item.value?.lat != null && item.value?.lng != null)
 const kakaoMapUrl = computed(() => {
-  const label = encodeURIComponent(item.value.address || '공매 물건')
+  const label = encodeURIComponent(item.value?.address || '공매 물건')
   return hasCoords.value
-    ? `https://map.kakao.com/link/to/${label},${item.value.lat},${item.value.lng}`
+    ? `https://map.kakao.com/link/to/${label},${item.value!.lat},${item.value!.lng}`
     : `https://map.kakao.com/link/search/${label}`
 })
 const naverMapUrl = computed(() => {
-  const label = encodeURIComponent(item.value.address || '공매 물건')
+  const label = encodeURIComponent(item.value?.address || '공매 물건')
   return hasCoords.value
-    ? `https://map.naver.com/v5/directions/-/${item.value.lng},${item.value.lat},${label}/-/walk`
+    ? `https://map.naver.com/v5/directions/-/${item.value!.lng},${item.value!.lat},${label}/-/walk`
     : `https://map.naver.com/v5/search/${label}`
 })
 function openNavigation(provider: 'kakao' | 'naver') {
@@ -87,7 +105,7 @@ function openNavigation(provider: 'kakao' | 'naver') {
 }
 async function handleShare() {
   if (!import.meta.client) return
-  const shareData = { title: item.value.address || '공매 물건', url: selfUrl }
+  const shareData = { title: item.value?.address || '공매 물건', url: selfUrl }
   try {
     if (navigator.share) await navigator.share(shareData)
     else {
@@ -137,28 +155,39 @@ const breadcrumbItems = computed(() => {
 })
 
 const { setBreadcrumbSchema, setFAQSchema, setDetailProvenance, setAuctionListingSchema } = useStructuredData()
-// ── FAQ 구조화 데이터(FAQPage JSON-LD) — spec §3.4 / 결정4 ────────────────────
-setFAQSchema(AUCTION_FAQ.map((f) => ({ question: f.q, answer: f.a })))
-setBreadcrumbSchema(
-  breadcrumbItems.value.map((b) => ({ name: b.label, url: b.href })),
-)
-setDetailProvenance({
-  domain: 'auction', path: `/auction/item/${item.value.cltrMngNo}`,
-  description: `${item.value.address ?? '공매 물건'} ${item.value.usage ? item.value.usage + ' ' : ''}물건의 온비드 공매 정보 데이터입니다. 한국자산관리공사 기반으로 감정가·최저입찰가·입찰일정 등 공매 정보를 제공합니다.`,
-  updatedAt: null,
-  noindex: !isAuctionItemIndexable(item.value),
-})
-setAuctionListingSchema({
-  address: item.value.address,
-  usage: item.value.usage,
-  minBidPrc: item.value.minBidPrc,
-  appraisalAmt: item.value.apslAssAmt,
-})
+// 일시 장애(503)로 내려가는 응답에는 물건 JSON-LD 를 붙이지 않는다 —
+// 내용 없는 Dataset/Listing 마크업이 색인에 남으면 그것 자체가 중복 신호가 된다.
+if (item.value) {
+  // ── FAQ 구조화 데이터(FAQPage JSON-LD) — spec §3.4 / 결정4 ────────────────────
+  setFAQSchema(AUCTION_FAQ.map((f) => ({ question: f.q, answer: f.a })))
+  setBreadcrumbSchema(
+    breadcrumbItems.value.map((b) => ({ name: b.label, url: b.href })),
+  )
+  setDetailProvenance({
+    domain: 'auction', path: `/auction/item/${item.value.cltrMngNo}`,
+    description: `${item.value.address ?? '공매 물건'} ${item.value.usage ? item.value.usage + ' ' : ''}물건의 온비드 공매 정보 데이터입니다. 한국자산관리공사 기반으로 감정가·최저입찰가·입찰일정 등 공매 정보를 제공합니다.`,
+    updatedAt: null,
+    noindex: !isAuctionItemIndexable(item.value),
+  })
+  setAuctionListingSchema({
+    address: item.value.address,
+    usage: item.value.usage,
+    minBidPrc: item.value.minBidPrc,
+    appraisalAmt: item.value.apslAssAmt,
+  })
+}
 </script>
 
 <template>
   <div class="bg-background-light min-h-screen">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+    <!-- fail-open: 일시 장애(503)면 item 이 null 이다. 빈 본문 200 대신 재시도 안내를 그린다. -->
+    <div v-if="!item" class="mx-auto max-w-[1200px] px-4 md:px-6 py-20 text-center">
+      <p class="text-slate-600 font-medium">공매 물건 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+      <NuxtLink to="/auction" class="mt-4 inline-block text-primary hover:text-primary/80 font-medium text-sm">
+        공매 목록으로
+      </NuxtLink>
+    </div>
+    <div v-else class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <!-- 모바일: 공용 핵심정보 헤더(literal h1 1개 소유) -->

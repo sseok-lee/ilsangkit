@@ -292,6 +292,8 @@ import { buildSubwayDescription, buildSubwayJsonLd, buildSubwayTitle } from '~/u
 import { formatDotDate } from '~/utils/syncFreshness'
 import { subwayCanonicalUrl } from '~/utils/subwayCanonical'
 import { SITE_URL, RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
+import { buildOgMapImageUrl, staticOgImageUrl } from '~/utils/ogImageUrl'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
@@ -547,12 +549,17 @@ async function handleShare() {
 }
 
 // SEO
+// og:image 조립은 공용 빌더 한곳에서만 한다 — 예전엔 역명을 label 과 title 에 두 번 싣고
+// 자르지도 않았다(라우트는 title 을 읽지 않는다). category 도 'area'(지역 생활 정보)가 아니라
+// 실제 키인 'subway' 를 넘겨야 폴백 카드 라벨·색이 맞는다.
 const subwayOgImage = computed(() => {
   const s = station.value
-  if (!s?.lat || !s?.lng) return undefined
-  const stationLabel = s.name.endsWith('역') ? s.name : `${s.name}역`
-  return `${SITE_URL}/og-map?lat=${s.lat}&lng=${s.lng}&label=${encodeURIComponent(stationLabel)}&category=area&title=${encodeURIComponent(s.name)}`
+  const stationLabel = s ? (s.name.endsWith('역') ? s.name : `${s.name}역`) : ''
+  return buildOgMapImageUrl({ lat: s?.lat, lng: s?.lng, label: stationLabel, category: 'subway' })
 })
+// 정적 PNG 로 떨어졌으면 실제 파일 규격은 1200x630 이다. 예전엔 폴백이어도 1024x536 을
+// 선언해, 소셜 플랫폼이 선언값으로 카드를 잡고 다른 비율의 이미지를 받았다.
+const subwayOgImageIsStatic = computed(() => subwayOgImage.value === staticOgImageUrl())
 
 const { setMeta } = useFacilityMeta()
 
@@ -561,8 +568,8 @@ setMeta({
   description: buildSubwayDescription(station.value),
   path: `/subway/${slug.value}`,
   image: subwayOgImage.value,
-  imageWidth: 1024,
-  imageHeight: 536,
+  imageWidth: subwayOgImageIsStatic.value ? undefined : OG_MAP_WIDTH,
+  imageHeight: subwayOgImageIsStatic.value ? undefined : OG_MAP_HEIGHT,
   canonical: subwayCanonicalUrl(slug.value),
 })
 

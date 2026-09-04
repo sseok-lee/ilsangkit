@@ -187,6 +187,7 @@ definePageMeta({ hasSourceCard: true })
 
 import { computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
@@ -243,26 +244,45 @@ interface ScheduleDetail {
   } | null
 }
 
+// ── id 형식 검증은 useAsyncData 보다 "먼저", setup 최상단에서 던진다 ──────────────
+//
+// 실측(2026-09-04 라이브): /trash/abc 가 HTTP 200 을 반환했다 — 네이버 진단의 소프트 404 경로.
+// 원인은 검증 위치였다. 400 을 useAsyncData 핸들러 "안에서" 던지면 Nuxt 는 그 예외를
+// 렌더 중단이 아니라 fetchError 로 담아두고 렌더를 계속한다. 게다가 아래 상태코드 분기는
+// 404/422 만 재던지므로 400 은 어디에도 걸리지 않아, 결국 errorMsg 블록이
+// HTTP 200 + index,follow 로 나갔다("잘못된 요청입니다"가 200 으로 색인되는 상태).
+// setup 최상단에서 던져야 Nuxt 가 실제로 400 응답을 보낸다.
+//
+// ⚠️ router 레벨 정규식(`/trash/:id(\\d+)`)으로 대체하면 안 된다. trash 는
+//    app/router.options.ts 의 validCategories 에도 들어 있어서, 매칭에서 빠진 /trash/abc 가
+//    `/:category(...)/:id()` (시설 상세)로 흘러가 또 다른 200 을 만든다.
+const TRASH_ID_PATTERN = /^[1-9]\d*$/
+const rawScheduleId = String(route.params.id ?? '')
+if (!TRASH_ID_PATTERN.test(rawScheduleId)) {
+  throw createError({ statusCode: 400, statusMessage: '잘못된 요청입니다' })
+}
+
 // SSR: useAsyncData로 서버에서 데이터 fetch
-const scheduleId = computed(() => parseInt(route.params.id as string, 10))
+const scheduleId = computed(() => Number(rawScheduleId))
 const { data: scheduleResponse, status, error: fetchError } = await useAsyncData(
   `trash-${route.params.id}`,
-  () => {
-    if (isNaN(scheduleId.value)) {
-      throw createError({ statusCode: 400, message: '잘못된 요청입니다' })
-    }
-    return $fetch<{ success: boolean; data: ScheduleDetail }>(
-      `/api/waste-schedules/${scheduleId.value}`
-    )
-  }
+  () => $fetch<{ success: boolean; data: ScheduleDetail }>(
+    `/api/waste-schedules/${scheduleId.value}`
+  )
 )
-// fetch 에러 처리: 실제 404만 hard 404, 네트워크/서버 에러는 soft error로 처리 (SEO 보호)
+// fetch 에러 처리: 백엔드가 "없다"고 확정한 경우(404/422)만 하드 404.
+// 그 외(5xx·타임아웃·네트워크)는 fail-open — 503 + no-store 로만 표시한다(#467/#674).
 if (fetchError.value) {
   const errStatus = fetchError.value.statusCode
   if (errStatus === 404 || errStatus === 422) {
     throw createError({ statusCode: 404, statusMessage: '배출 정보를 찾을 수 없습니다' })
+  } else if (import.meta.server) {
+    // 실측(2026-09-04): 이 분기가 비어 있어서 백엔드 5xx 때
+    // loading=false · errorMsg=null · data=null 이 되고 템플릿 세 갈래가 모두 거짓 →
+    // 본문 없는 페이지가 HTTP 200 + index,follow + 사이트 기본 title 로 나갔다.
+    // (기본 title 유출은 카테고리 교차 canonical 병합의 원인이기도 하다.)
+    markDegradedResponse()
   }
-  // 5xx/네트워크 에러는 페이지를 유지하여 Googlebot이 404로 인식하지 않도록 함
 }
 
 const data = computed(() => scheduleResponse.value?.data ?? null)
@@ -287,7 +307,9 @@ if (import.meta.server && trashRegionPath.value) {
 
 const loading = computed(() => status.value === 'pending')
 const errorMsg = computed(() => {
-  if (isNaN(scheduleId.value)) return '잘못된 요청입니다'
+  // 일시 장애(위에서 503 으로 표시한 경우)에도 반드시 무언가를 그린다.
+  // 빈 본문 200 이 아니라 "다시 시도" 안내가 보여야 사용자도 크롤러도 오해하지 않는다.
+  if (fetchError.value) return '배출 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
   return null
 })
 
