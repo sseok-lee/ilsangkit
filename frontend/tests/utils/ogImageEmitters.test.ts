@@ -119,6 +119,51 @@ describe('og:image emitter — 발행값', () => {
     expect(isRedirectingOgUrl(url)).toBe(false)
   })
 
+  // ★ 위 테스트는 프로덕션에 존재하지 않는 상태(lat/lng = null)를 단언해 왔다.
+  // 백엔드 toDetail 은 `lat: Number(record.lat)` 이고 Number(null) === 0 이라, 좌표가 없는 행은
+  // 프론트에 0 으로 도착한다. 실측 2026-09-04: 로컬 DB 기준 좌표 없는 색인 대상 행 7,591개
+  // (의류수거함 918·주차장 1,954·학교 1,140·어린이집 2,511·도서관 177·체육시설 891).
+  // 프로덕션 확인: /og-map?lat=0&lng=0 → 200 image/svg+xml (정상 좌표는 image/jpeg).
+  // 네이버 크롤러는 SVG 를 렌더하지 않는다(규칙 #441) — 즉 이 7,591 페이지의 썸네일이 죽는다.
+  it('시설 상세: 백엔드가 좌표 없음을 0 으로 직렬화해도 정적 PNG 로 떨어진다', () => {
+    const { setFacilityDetailMeta } = useFacilityMeta()
+    setFacilityDetailMeta(facility({ lat: 0, lng: 0 }))
+
+    const url = lastOgImage()
+    expect(url).toBe(staticOgImageUrl())
+
+    // 부수 효과까지 고정한다. 정적 PNG 로 떨어지면 치수 선언도 실제 파일 규격(1200x630)이어야
+    // 한다. 좌표 0 을 유효로 통과시키던 동안에는 og-map 규격(1024x536)이 선언돼 있었다.
+    const call = mockUseSeoMeta.mock.calls.at(-1)![0] as { ogImageWidth?: number; ogImageHeight?: number }
+    expect(call.ogImageWidth).toBe(1200)
+    expect(call.ogImageHeight).toBe(630)
+  })
+
+  // /og-map 라우트는 한국 범위(lat 33~39, lng 124~131) 밖이면 inlineFallback 으로 떨어지고,
+  // Cafe24 에는 sharp 가 없어 그 폴백이 SVG 로 나간다. 생성기가 같은 범위를 보지 않으면
+  // "라우트는 못 그리는데 메타는 가리키는" URL 을 계속 발행하게 된다.
+  it.each([
+    ['위도만 0', 0, 127.0],
+    ['경도만 0', 37.5, 0],
+    ['국외 좌표(런던)', 51.5074, -0.1278],
+    ['위도 범위 밖', 32.9, 127.0],
+    ['경도 범위 밖', 37.5, 131.1],
+  ])('시설 상세: 한국 좌표 범위 밖이면 정적 PNG 로 떨어진다 — %s', (_label, lat, lng) => {
+    const { setFacilityDetailMeta } = useFacilityMeta()
+    setFacilityDetailMeta(facility({ lat, lng }))
+
+    expect(lastOgImage()).toBe(staticOgImageUrl())
+  })
+
+  it('시설 상세: 한국 범위 안 좌표는 그대로 /og-map 을 쓴다(과교정 방지)', () => {
+    const { setFacilityDetailMeta } = useFacilityMeta()
+    setFacilityDetailMeta(facility({ lat: 33.4996, lng: 126.5312 }))
+
+    const url = lastOgImage()
+    expect(url).toContain('/og-map?')
+    expect(url).not.toBe(staticOgImageUrl())
+  })
+
   it('시설 상세: og:image 와 twitter:image 가 같은 값이다', () => {
     const { setFacilityDetailMeta } = useFacilityMeta()
     setFacilityDetailMeta(facility())

@@ -24,7 +24,7 @@
  * 규칙이 한곳에 있으므로 길이 상한을 테스트로 강제할 수 있다.
  */
 import { SITE_URL, DEFAULT_OG_IMAGE } from './seoConstants'
-import { OG_MAP_LABEL_MAX } from './ogMapSpec'
+import { OG_MAP_LABEL_MAX, isMappableCoord } from './ogMapSpec'
 
 /**
  * og:image URL 길이 상한.
@@ -59,10 +59,10 @@ export interface OgMapImageInput {
  */
 export function buildOgMapImageUrl(input: OgMapImageInput): string {
   const { lat, lng } = input
-  if (
-    lat === null || lat === undefined || lng === null || lng === undefined
-    || !Number.isFinite(lat) || !Number.isFinite(lng)
-  ) {
+  // 판정은 ogMapSpec 의 isMappableCoord 하나로 한다. 여기서 자체 검사를 하면 라우트와 갈라지고,
+  // 갈라진 결과가 곧 "라우트는 SVG 로 떨어지는데 메타는 그 URL 을 가리키는" og:image 다.
+  // 특히 0 을 걸러야 한다 — 백엔드가 좌표 없음을 0 으로 직렬화한다(Number(null) === 0).
+  if (!isMappableCoord(lat, lng)) {
     return DEFAULT_OG_IMAGE
   }
 

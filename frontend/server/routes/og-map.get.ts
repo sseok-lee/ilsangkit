@@ -8,14 +8,11 @@ import {
   OG_MAP_SCALE,
   OG_MAP_FORMAT,
   OG_MAP_CONTENT_TYPE,
+  isMappableCoord,
 } from '~/utils/ogMapSpec'
 
 const NAVER_API_BASE = 'https://maps.apigw.ntruss.com/map-static/v2/raster'
 const DEFAULT_LEVEL = 16
-const KOREA_LAT_MIN = 33
-const KOREA_LAT_MAX = 39
-const KOREA_LNG_MIN = 124
-const KOREA_LNG_MAX = 131
 
 // NCP Static Map markers spec uses | : SPACE as delimiters.
 // Label must not contain those, and is capped at 20 chars by NCP recommendation.
@@ -80,10 +77,9 @@ export default defineEventHandler(async (event) => {
   const level = Number.parseInt(String(query.level ?? DEFAULT_LEVEL), 10)
   const label = sanitizeLabel(query.label ? String(query.label) : undefined)
 
-  const validCoords
-    = Number.isFinite(lat) && Number.isFinite(lng)
-    && lat >= KOREA_LAT_MIN && lat <= KOREA_LAT_MAX
-    && lng >= KOREA_LNG_MIN && lng <= KOREA_LNG_MAX
+  // 범위 판정은 ogMapSpec 한 곳에서만 한다 — og:image URL 생성기와 같은 함수를 봐야
+  // "라우트는 폴백(SVG)으로 떨어지는데 메타는 그 URL 을 가리키는" 상태가 생기지 않는다.
+  const validCoords = isMappableCoord(lat, lng)
 
   const config = useRuntimeConfig(event)
   const clientId = (config as { ncpMapClientId?: string }).ncpMapClientId
