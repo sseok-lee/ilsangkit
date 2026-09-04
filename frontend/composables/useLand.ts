@@ -12,12 +12,15 @@ export function useLand() {
   async function getRegions(params: {
     city?: string
     district?: string
+    /** 지정 시 그 동 하나만 조회. 상세 페이지가 목록 창에 갇히지 않게 한다. */
+    dongName?: string
     page?: number
     limit?: number
   }): Promise<LandRegionListResult> {
     const query = new URLSearchParams()
     if (params.city) query.set('city', params.city)
     if (params.district) query.set('district', params.district)
+    if (params.dongName) query.set('dongName', params.dongName)
     if (params.page != null) query.set('page', String(params.page))
     if (params.limit != null) query.set('limit', String(params.limit))
 
