@@ -86,6 +86,7 @@ definePageMeta({ hasSourceCard: true })
 import { computed, nextTick } from 'vue'
 import type { LocationQueryRaw } from 'vue-router'
 import { useAuction } from '~/composables/useAuction'
+import { USAGE_GROUP_LABEL } from '~/types/auction'
 import { buildAuctionListTitle, buildAuctionListHeading } from '~/utils/auctionHead'
 import { SITE_URL } from '~/utils/seoConstants'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -108,12 +109,24 @@ const filterCity = computed(() => (route.query.city as string) ?? '')
 const filterDistrict = computed(() => (route.query.district as string) ?? '')
 const currentPage = computed(() => Number(route.query.page ?? 1))
 
-// noindex for arbitrary filter combos (only base list and ?usage= are indexed)
+// 알려진 용도 키인가. 빈 값(필터 없음)도 정상으로 본다.
+//
+// 예전 isIndexable 은 파라미터 '이름'만 화이트리스트했고 '값'은 한 번도 검증하지 않았다.
+// 그래서 크롤러가 지어낸 ?usage=zzz 가 HTTP 200 + index,follow + self-canonical 로 나갔다.
+// 알 수 없는 값은 buildAuctionListHeading 이 라벨 폴백('부동산 공매 물건')을 쓰므로
+// 그 URL 들의 title/description 이 전부 바닥 목록과 동일하다 —
+// 파라미터 값 하나당 중복 title 문서가 하나씩 늘어나는 무한 증식 경로였다.
+const isKnownUsage = computed(
+  () => !usage.value || Object.prototype.hasOwnProperty.call(USAGE_GROUP_LABEL, usage.value),
+)
+
+// noindex for arbitrary filter combos (only base list and known ?usage= values are indexed)
 const isIndexable = computed(() => {
   const q = route.query
   const keys = Object.keys(q).filter((k) => q[k] !== '' && q[k] != null)
   const nonIndexableKeys = keys.filter((k) => !['usage'].includes(k))
-  return nonIndexableKeys.length === 0
+  if (nonIndexableKeys.length > 0) return false
+  return isKnownUsage.value
 })
 
 // H1(pageHeading)과 <title>(pageTitle)은 분리 — 사이트명 suffix 는 <title> 에만 붙는다.
@@ -188,7 +201,9 @@ function resetFilters() {
 
 const selfUrl = computed(() => {
   const base = `${SITE_URL}/auction/list`
-  return usage.value ? `${base}?usage=${usage.value}` : base
+  // 알 수 없는 usage 값은 URL 신호에서도 뺀다. noindex 를 걸어도 og:url 이 그 주소를
+  // 대표 URL 로 광고하면 크롤러에 중복 주소가 계속 노출되기 때문이다.
+  return isKnownUsage.value && usage.value ? `${base}?usage=${encodeURIComponent(usage.value)}` : base
 })
 
 const { setBreadcrumbSchema } = useStructuredData()
@@ -227,6 +242,11 @@ useHead(() => {
   else {
     meta.push({ name: 'robots', content: 'noindex, follow' })
   }
+  // noindex-canonical-policy: noindex 페이지는 canonical 을 생략한다.
+  // 알 수 없는 usage 값을 bare /auction/list 로 canonical 하지 않는 이유 — noindex 와
+  // canonical 을 함께 내보내면 크롤러가 두 신호 중 하나를 임의로 무시한다(프로젝트 정책).
+  // 파라미터 URL 은 어차피 색인 대상이 아니고, 'noindex, follow' 가 링크만 흘려보내
+  // 바닥 목록으로 통합되게 하는 편이 신호가 하나뿐이라 더 안전하다.
   return {
     title,
     meta,

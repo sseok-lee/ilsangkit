@@ -55,6 +55,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useLand } from '~/composables/useLand'
 import { buildLandRegionTitle, buildLandRegionDescription } from '~/utils/landMeta'
 import { resolveRealEstateListSsrOutcome } from '~/utils/realEstateListSsrOutcome'
+import { isListingDocumentIndexable } from '~/utils/indexability'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { formatManwon } from '~/types/land'
 import type { LandRegionSummary } from '~/types/land'
@@ -125,16 +126,18 @@ const districtCards = computed<DistrictCard[]>(() => {
   return cards
 })
 
-// SSR 응답 판정 — 장애(degraded)와 정상 0건(empty)을 구분한다.
+// 응답 판정 — 장애(degraded)와 정상 0건(empty)을 구분한다.
 // 판정 근거·회귀 배경은 utils/realEstateListSsrOutcome.ts 주석 참조.
+// 아래 색인 판정(fail-open)도 같은 결과를 쓴다 — 503 과 noindex 가 서로 어긋나지 않게 하기 위해서다.
 // h3 의 setResponseHeader 는 server/ 전용 자동 import 라 앱 코드에서 ReferenceError 가 난다.
+const listOutcome = resolveRealEstateListSsrOutcome({
+  hasError: !!regionsError.value,
+  fetchSettled: regionsStatus.value === 'success',
+  hasItems: (regionsData.value?.items ?? []).length > 0,
+})
+
 if (import.meta.server) {
-  const outcome = resolveRealEstateListSsrOutcome({
-    hasError: !!regionsError.value,
-    fetchSettled: regionsStatus.value === 'success',
-    hasItems: (regionsData.value?.items ?? []).length > 0,
-  })
-  if (outcome === 'degraded') {
+  if (listOutcome === 'degraded') {
     // 503 + no-store. 200 으로 내보내면 빈 본문이 swr(s-maxage=300) 캐시에 박혀 색인된다.
     markDegradedResponse()
   }
@@ -167,6 +170,15 @@ const landCityAvgPerPyeong = (() => {
   }
   return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : null
 })()
+// 색인 판정 — 실제로 렌더되는 구·군 카드 수 기준(utils/indexability.ts).
+// 구·군이 0개면 본문이 "아직 토지 거래 데이터가 없습니다" 한 줄로 무너지는데도
+// 이 허브는 조건 없이 색인·사이트맵 대상이었다.
+// 장애(degraded)는 fail-open — 일시 장애가 정상 허브를 색인에서 떨어뜨리면 안 된다.
+const cityIndexable = isListingDocumentIndexable({
+  itemCount: districtCards.value.length,
+  fetchFailed: listOutcome === 'degraded',
+})
+
 const { setMeta } = useFacilityMeta()
 setMeta({
   title: buildLandRegionTitle({ city: cityName }),
@@ -176,7 +188,13 @@ setMeta({
     count: landCityTotalTx,
   }),
   path: `/real-estate/land/${citySlug}`,
+  // noindex-canonical-policy: noindex 문서는 canonical 을 함께 내보내지 않는다(혼합 신호 방지).
+  canonical: cityIndexable ? undefined : false,
 })
+
+if (!cityIndexable) {
+  useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
+}
 
 // Breadcrumb
 const breadcrumbItems = [

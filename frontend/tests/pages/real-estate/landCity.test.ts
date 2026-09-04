@@ -105,6 +105,8 @@ vi.mock('~/utils/seoConstants', () => ({
   SITE_TAGLINE: '생활정보 플랫폼',
   SITE_DESCRIPTION: '일상킷 - 생활정보 플랫폼',
   DEFAULT_OG_IMAGE: 'https://ilsangkit.co.kr/og.png',
+  // landMeta 가 구·동 지역 라벨을 축약 시도명으로 만든다(동일 구 이름의 시도 간 중복 방지).
+  compactCityName: (city: string) => (city || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, ''),
 }))
 
 beforeEach(() => {
