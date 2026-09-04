@@ -264,8 +264,12 @@ const land = useLand()
 const { data, error: landError } = await useAsyncData(
   `land-dong-${citySlug}-${districtSlug}-${dong}`,
   async () => {
-    const list = await land.getRegions({ city: cityName, district: districtName, page: 1, limit: 100 })
-    const summary = list.items.find((i) => i.dongName === dong)
+    // 목록을 받아 find 하지 않는다. 목록은 transactionCount desc 정렬이라 `limit: 100` 은
+    // "구·군당 상위 100개만 존재한다"는 뜻이었고, 101위부터는 실재하는 동인데도 하드 404 가 됐다.
+    // 실측 2026-09-04(프로덕션): 사이트맵에 실린 URL 113개가 이 창 밖이라 전부 404.
+    // 단건은 단건으로 조회한다 — 창 크기와 무관해진다.
+    const list = await land.getRegions({ city: cityName, district: districtName, dongName: dong, limit: 1 })
+    const summary = list.items[0]
     if (!summary) return null
     const detail = await land.getRegionDetail({
       bjdCode: summary.bjdCode,

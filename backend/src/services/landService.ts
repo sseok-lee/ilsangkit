@@ -70,6 +70,8 @@ export async function getTransactions(params: TransactionsParams): Promise<Trans
 export interface RegionListParams {
   city?: string;
   district?: string;
+  /** 지정 시 그 동 하나만. 상세 페이지의 단건 해석 경로 — 아래 getRegionList 주석 참고. */
+  dongName?: string;
   page: number;
   limit: number;
 }
@@ -83,8 +85,16 @@ export interface RegionListResult {
 }
 
 export async function getRegionList(params: RegionListParams): Promise<RegionListResult> {
-  const { city, district, page, limit } = params;
+  const { city, district, dongName, page, limit } = params;
   const where = buildRegionFilter(city, district);
+
+  // 동 상세 페이지는 bjdCode 를 얻으려고 이 목록을 `limit: 100` 으로 받아 find 했다.
+  // 정렬이 transactionCount desc 라 도달 가능한 건 구·군당 상위 100개뿐이었고,
+  // 101위부터는 목록에 없다는 이유로 하드 404 가 됐다. 사이트맵 조건을
+  // transactionCount>=3 으로 넓히자 그 구간이 그대로 드러났다 —
+  // 실측 2026-09-04(프로덕션): 도달 불가 URL 이 구 조건 0개에서 113개로.
+  // 단건 해석에 목록을 쓰지 않으면 창 크기와 무관해진다.
+  if (dongName) where.dongName = dongName;
 
   const skip = (page - 1) * limit;
   const [rows, total] = await Promise.all([

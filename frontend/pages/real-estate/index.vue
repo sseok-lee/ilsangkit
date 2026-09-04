@@ -12,6 +12,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
 import type { MapRegionItem, MapResponse } from '~/types/realEstateMap'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 
 // 지도 전용 레이아웃: 헤더만 있고 TrustLine·AppFooter 가 없어 페이지 스크롤이 0이다.
 // 푸터는 지도 사이드바 목록 하단으로 옮겼다(MapSidebar showFooter).
@@ -22,20 +23,22 @@ const apiBase = useApiBase()
 
 // 지도는 SSR 불가라 이 집계가 이 페이지의 유일한 SSR 데이터다.
 // 실패해도 [] 를 주면 MapSidebar 가 SIDO_CHIPS 16개 링크를 상수에서 렌더한다(fail-open).
-const { data: regions } = await useAsyncData<MapRegionItem[]>(
+const { data: regions, error: regionsError } = await useAsyncData<MapRegionItem[]>(
   'real-estate-map-city',
   async () => {
-    try {
-      const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${INITIAL_TYPE}/map`, {
-        params: { level: 13, swLat: 33, swLng: 124, neLat: 39, neLng: 132 },
-      })
-      return res.data.items as MapRegionItem[]
-    } catch {
-      return []
-    }
+    const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${INITIAL_TYPE}/map`, {
+      params: { level: 13, swLat: 33, swLng: 124, neLat: 39, neLng: 132 },
+    })
+    return res.data.items as MapRegionItem[]
   },
   { default: () => [] },
 )
+
+// 이 집계가 이 페이지의 유일한 SSR 데이터다. 실패하면 SSR HTML 에 남는 건 정적 크롬과
+// SIDO_CHIPS 16개 링크뿐이라, 평소보다 확연히 얇은 문서가 200 + index 로 색인된다(#467).
+// 사용자에겐 그대로 보여주되(default: [] → 칩은 상수에서 렌더) 크롤러에겐 503 + no-store 로
+// 알린다. ⚠️ 호출은 핸들러 밖 — 핸들러 안에는 Nuxt 컨텍스트가 없다.
+if (regionsError.value && import.meta.server) markDegradedResponse()
 
 const { setMeta } = useFacilityMeta()
 setMeta({

@@ -73,22 +73,19 @@ if (!cityName) {
 
 const auction = useAuction()
 
-const { data: regionsData } = await useAsyncData(
+const { data: regionsData, error: regionsError } = await useAsyncData(
   `auction-city-${citySlug}`,
-  async () => {
-    try {
-      return await auction.getCityDetail(cityName)
-    }
-    catch {
-      // 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
-      // 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다. 이 catch 가 예외를 통째로
-      // 삼키는 바람에, 백엔드가 죽어도 결과 0건 문서가 self-canonical 을 달고 200 으로 나갔다.
-      if (import.meta.server) markDegradedResponse()
-      return null
-    }
-  },
+  () => auction.getCityDetail(cityName),
   { default: () => null },
 )
+
+// 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
+// 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다.
+//
+// ⚠️ useAsyncData 핸들러 **밖**에서 불러야 한다. 핸들러 본문은 중첩 async 라 Nuxt 인스턴스
+// 컨텍스트가 없고, 그 안에서 부르면 useNuxtApp() 이 throw 해 503 이 영영 나가지 않는다.
+const regionsFetchFailed = computed(() => Boolean(regionsError.value))
+if (regionsFetchFailed.value && import.meta.server) markDegradedResponse()
 
 interface DistrictCard {
   district: string
@@ -122,7 +119,13 @@ setBreadcrumbSchema([
   { name: cityName, url: `/auction/${citySlug}` },
 ])
 
-const anyIndexable = computed(() => districtCards.value.some((d) => d.isIndexable))
+// 일시 장애는 절대 noindex 로 굳히지 않는다 (utils/indexability.ts 원칙 1, #467).
+// regionsData 가 null 이면 districtCards 가 [] 가 되어 some() 이 false 를 내고,
+// 그 결과 이 허브가 **503 + noindex** 로 나갔다 — 503 은 "잠시 후 다시 오라"인데
+// noindex 는 "빼라"라서 서로 어긋난다. 백엔드가 한 번 흔들린 것으로 색인을 잃는 형태다.
+const anyIndexable = computed(() =>
+  regionsFetchFailed.value || districtCards.value.some((d) => d.isIndexable),
+)
 
 const selfUrl = `${SITE_URL}/auction/${citySlug}`
 
