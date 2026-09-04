@@ -1,7 +1,8 @@
 import type { FacilityCategory, FacilityDetail, ToiletDetails, WifiDetails, ParkingDetails, HospitalDetails, PharmacyDetails, AedDetails, LibraryDetails, ClothesDetails, ParkDetails, SchoolDetails, MarketDetails, ChildcareDetails, EvChargerDetails, SportsDetails } from '~/types/facility'
 import { CATEGORY_META } from '~/types/facility'
-import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION, compactCityName } from '~/utils/seoConstants'
+import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION, compactCityName } from '~/utils/seoConstants'
 import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
+import { buildOgMapImageUrl, staticOgImageUrl } from '~/utils/ogImageUrl'
 
 /** 받침 유무에 따라 조사 선택 (은/는, 이/가, 을/를 등) */
 function getJosa(word: string, josaWithBatchim: string, josaWithout: string): string {
@@ -59,32 +60,71 @@ function granularAddressTail(facility: FacilityDetail): string {
   return granular.slice(-2).join(' ').trim()
 }
 
-/** name 에 이미 포함된(또는 name 을 포함하는) 보조어는 중복이므로 제외 */
+/**
+ * 보조어에서 이름과 겹치는 부분을 걷어내고 남는 정보만 돌려준다.
+ *
+ * 종전에는 `raw.includes(name)` 이면 통째로 버렸다. 그런데 공공데이터의 설치장소는
+ * "{시설명} {세부위치}" 로 적히는 관행이 있어서, 정작 device 를 구분해 주는 유일한 값이
+ * 그 규칙에 걸려 전부 폐기됐다.
+ *
+ * 실측(2026-09-04, 로컬 DB 26,277행 = 같은 이름·주소를 공유하는 AED 전량):
+ * '해양경찰교육원' 23대는 설치장소가 전부 다른데("숙영관", "본관1층", "생활관 3동" …)
+ * 그중 8대가 "해양경찰교육원 …" 접두사를 달고 있어 보조어가 버려졌고, 폴백인 granular
+ * 주소는 23대가 동일해서 8대의 title 이 완전히 같아졌다.
+ * 이름 접두/접미를 떼면 "숙영관"·"본관1층" 이 남아 여덟 문서가 서로 달라진다.
+ *
+ * name 이 raw 를 포함하는 반대 방향(raw="1층", name="…1층")은 여전히 버린다 — 그건 정말로
+ * 새 정보가 없다.
+ */
 function usableDisambiguator(raw: string, name: string): string {
   if (!raw) return ''
-  if (name.includes(raw) || raw.includes(name)) return ''
-  return raw
+  if (name.includes(raw)) return ''
+  if (!raw.includes(name)) return raw
+  // 이름을 걷어내고 남은 조각. 구분자로 쓰이는 공백·괄호·쉼표·하이픈을 양끝에서 정리한다.
+  const stripped = raw.split(name).join(' ').replace(/\s+/g, ' ').replace(/^[\s,\-–—/·()]+|[\s,\-–—/·()]+$/g, '').trim()
+  // 한 글자짜리 잔여물("동", "1")은 구분 정보로 보기 어렵다.
+  return stripped.length >= 2 ? stripped : ''
 }
 
 // 동일·유사 이름이 지역 내 다수 레코드에 공유되는(→ 중복 제목) 카테고리. granular 주소로 구분한다.
 const ADDRESS_DISAMBIGUATE_CATEGORIES = new Set<FacilityCategory>(['parking', 'aed', 'clothes'])
 
 /**
- * 동일·유사 시설명이 지역 내 다수 레코드에 공유될 때(예: 한 건물의 AED 다수, "{동} 공영주차장"
- * 동명 주차장 다수) 제목을 구분하는 보조어.
- * - aed: 설치장소(buildPlace) 우선, 없으면 granular 주소.
+ * 제목 보조어 후보를 우선순위대로 모은다 (데이터에 값이 있는 것만. 이름과의 중복 판정은 안 함).
+ * - aed: 설치 상세위치(buildPlace) → 설치기관(org) → granular 주소.
  * - parking/clothes: granular 주소.
- * 그 외 카테고리는 고유 이름 비중이 높아 보조어를 붙이지 않는다(''). 이름과 중복되면 ''.
+ *
+ * 옛 구현은 aed 에서 buildPlace 하나만 보고, 그게 이름과 겹치면 곧장 포기했다.
+ * 실측(2026-09-04): AED 26,277행(41.9%)이 같은 건물의 별개 URL 이고 그중 614행은
+ * title·description 이 byte 단위로 동일했다 — 대개 buildPlace 가 이름을 그대로 되풀이한
+ * 레코드다. 후보를 이어 붙여, 데이터에 구분자가 하나라도 있으면 반드시 찾아내게 한다.
  */
-function getTitleDisambiguator(facility: FacilityDetail, name: string): string {
+function disambiguatorCandidates(facility: FacilityDetail): string[] {
   const d = (facility.details ?? {}) as Record<string, unknown>
+  const candidates: string[] = []
   if (facility.category === 'aed') {
-    const bp = usableDisambiguator(cleanFacilityName(d.buildPlace as string | null | undefined) ?? '', name)
-    if (bp) return bp
+    const buildPlace = cleanFacilityName(d.buildPlace as string | null | undefined)
+    if (buildPlace) candidates.push(buildPlace)
+    const org = cleanFacilityName(d.org as string | null | undefined)
+    if (org) candidates.push(org)
   }
   if (ADDRESS_DISAMBIGUATE_CATEGORIES.has(facility.category)) {
-    const tail = usableDisambiguator(granularAddressTail(facility), name)
-    if (tail) return tail
+    const tail = granularAddressTail(facility)
+    if (tail) candidates.push(tail)
+  }
+  return candidates
+}
+
+/**
+ * 동일·유사 시설명이 지역 내 다수 레코드에 공유될 때(예: 한 건물의 AED 다수, "{동} 공영주차장"
+ * 동명 주차장 다수) 제목을 구분하는 보조어.
+ * 그 외 카테고리는 고유 이름 비중이 높아 보조어를 붙이지 않는다(''). 후보가 전부 이름과
+ * 중복이면 '' — 그때는 isUndifferentiatedFacility 가 noindex 로 받는다(가짜 구분자 금지).
+ */
+function getTitleDisambiguator(facility: FacilityDetail, name: string): string {
+  for (const candidate of disambiguatorCandidates(facility)) {
+    const usable = usableDisambiguator(candidate, name)
+    if (usable) return usable
   }
   return ''
 }
@@ -110,10 +150,24 @@ export function getFacilityDisplayName(facility: FacilityDetail): string {
 }
 
 /**
- * 이름·관리기관·granular 주소가 모두 없어 제목이 `{지역} {카테고리}` 형태로만 생성되는,
  * 지역 내 중복이 불가피한 시설. 색인해도 중복 제목/설명으로 분류되므로 noindex 대상이다.
+ *
+ * 두 경우를 잡는다.
+ * (a) 이름·관리기관·granular 주소가 모두 없어 제목이 `{지역} {카테고리}` 형태로만 생성되는 경우.
+ * (b) parking/aed/clothes 에서 구분자 후보가 데이터에 분명히 있는데도 전부 이름을 되풀이해서
+ *     제목에 붙일 게 남지 않는 경우. 같은 건물의 형제 레코드와 title·description 이 byte 단위로
+ *     같아진다(실측 AED 614행). ID·URL 조각 같은 가짜 구분자를 지어내 중복 경고만 피하는 대신
+ *     색인에서 뺀다. 단 이름 자체가 granular 주소를 품고 있으면(주소를 이름으로 쓰는
+ *     의류수거함 등) 제목은 여전히 고유하므로 예외다.
  */
 export function isUndifferentiatedFacility(facility: FacilityDetail): boolean {
+  if (ADDRESS_DISAMBIGUATE_CATEGORIES.has(facility.category)) {
+    const name = getFacilityDisplayName(facility)
+    if (disambiguatorCandidates(facility).length > 0 && !getTitleDisambiguator(facility, name)) {
+      const tail = granularAddressTail(facility)
+      if (!tail || !name.includes(tail)) return true
+    }
+  }
   if (cleanFacilityName(facility.name)) return false
   if (orgOf(facility)) return false
   if (granularAddressTail(facility)) return false
@@ -132,7 +186,6 @@ interface MetaOptions {
   imageHeight?: number
   imageAlt?: string
   type?: 'website' | 'article'
-  category?: string
   /** false → canonical 태그 미삽입 (noindex 페이지용). string → 해당 URL을 canonical로 사용 */
   canonical?: string | false
 }
@@ -163,10 +216,16 @@ export function buildFacilityDescription(facility: FacilityDetail): string {
   const address = facility.roadAddress || facility.address || location
   const intent = CATEGORY_SEO_INTENT[facility.category] || '정보'
 
-  // 시설명 + 지역 + 카테고리 개요 문장
+  // 시설명 + 지역 + 카테고리 개요 문장.
+  // parking/aed/clothes 는 동일·유사 이름이 지역 내 다수 레코드에 공유돼, 시·구까지만 쓰면
+  // 제목뿐 아니라 설명문까지 형제 레코드와 겹친다(실측: AED 614행이 title·description 모두
+  // byte 동일). 제목 보조어와 같은 granular 주소 꼬리를 개요 문장에 넣어 155자 절단 전에
+  // 살아남게 한다 — 주소는 facts 맨 뒤에도 들어가지만 거기서 먼저 잘려나간다.
   const name = getFacilityDisplayName(facility)
   const josa = getJosa(name, '은', '는')
-  const openingSentence = `${name}${josa} ${location}에 위치한 ${categoryName}입니다.`
+  const addressTail = ADDRESS_DISAMBIGUATE_CATEGORIES.has(facility.category) ? granularAddressTail(facility) : ''
+  const locationDetail = addressTail && !location.includes(addressTail) ? `${location} ${addressTail}` : location
+  const openingSentence = `${name}${josa} ${locationDetail}에 위치한 ${categoryName}입니다.`
 
   // 카테고리별 facts 수집
   const facts: string[] = []
@@ -303,9 +362,11 @@ export function useFacilityMeta() {
       ? null
       : (typeof options.canonical === 'string' ? options.canonical : defaultUrl)
 
-    const dynamicOgImage = options.image || (options.category
-      ? `${SITE_URL}/og?category=${encodeURIComponent(options.category)}&title=${encodeURIComponent(options.title || '')}`
-      : DEFAULT_OG_IMAGE)
+    // og:image 로 `/og?...` 를 절대 만들지 않는다. 그 라우트는 SVG→PNG 변환에 sharp 를 쓰는데
+    // Cafe24 에 네이티브 바인딩이 없어 프로덕션에서 100% /og-image.png 로 302 한다 —
+    // 페이지마다 고유한 영구 리다이렉트 URL 을 하나씩 발행해 온 셈이고, 네이버 진단의
+    // 리디렉션 3,193건이 여기서 나왔다. 최종 도착지를 그대로 쓴다(utils/ogImageUrl.ts 주석).
+    const dynamicOgImage = options.image || staticOgImageUrl()
 
     useSeoMeta({
       title: fullTitle,
@@ -458,27 +519,37 @@ export function useFacilityMeta() {
   }
 
   /**
-   * 시설 상세 페이지 메타태그
+   * 시설 상세 페이지 메타태그.
+   * canonical=false 로 호출하면 rel=canonical 태그가 생략된다 — robots=noindex 를 내보내는
+   * 상세(wifi·thin content·구분 불가 시설)는 canonical 을 동시에 내보내면 안 된다
+   * (정책: .omc/notes/noindex-canonical-policy.md).
    */
-  function setFacilityDetailMeta(facility: FacilityDetail) {
+  function setFacilityDetailMeta(facility: FacilityDetail, options?: { canonical?: string | false }) {
     const title = buildDetailTitle(facility)
     const description = buildFacilityDescription(facility)
     const name = getFacilityDisplayName(facility)
 
-    // 좌표가 있으면 네이버 Static Map 썸네일(/og-map) 사용, 없으면 setMeta 기본값(/og SVG 카드)
-    const mapImage = (facility.lat && facility.lng)
-      ? `${SITE_URL}/og-map?lat=${facility.lat}&lng=${facility.lng}&label=${encodeURIComponent(name)}&category=${facility.category}&title=${encodeURIComponent(name)}`
-      : undefined
+    // 좌표가 있으면 네이버 Static Map 썸네일(/og-map), 없으면 정적 대표 PNG.
+    // 조립은 공용 빌더 한곳에서만 한다 — 예전엔 같은 시설명을 label 과 title 에 두 번 싣고
+    // 자르지도 않아 실측 2,004자짜리 og:image URL 이 나왔다(라우트는 title 을 읽지도 않는다).
+    const ogImage = buildOgMapImageUrl({
+      lat: facility.lat,
+      lng: facility.lng,
+      label: name,
+      category: facility.category,
+    })
+    const isStaticOgImage = ogImage === staticOgImageUrl()
 
     setMeta({
       title,
       description,
       path: `/${facility.category}/${facility.id}`,
-      category: facility.category,
-      image: mapImage,
+      image: ogImage,
       // 규격은 og-map 라우트와 같은 상수를 쓴다 — 두 곳이 각자 숫자를 들면 갈라진다(ogMapSpec 주석 참고).
-      imageWidth: mapImage ? OG_MAP_WIDTH : undefined,
-      imageHeight: mapImage ? OG_MAP_HEIGHT : undefined,
+      // 정적 PNG 로 떨어진 경우엔 setMeta 기본값(1200x630)이 실제 파일 규격이다.
+      imageWidth: isStaticOgImage ? undefined : OG_MAP_WIDTH,
+      imageHeight: isStaticOgImage ? undefined : OG_MAP_HEIGHT,
+      canonical: options?.canonical,
     })
   }
 

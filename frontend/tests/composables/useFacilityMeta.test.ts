@@ -842,4 +842,93 @@ describe('useFacilityMeta', () => {
       expect(isUndifferentiatedFacility(base({ name: '', details: { managingOrg: '강남구청' } }))).toBe(false)
     })
   })
+  /**
+   * 실측(2026-09-04): AED 26,277행(41.9%)이 같은 건물의 별개 URL 이고, 그중 614행은
+   * title 과 description 이 byte 단위로 동일했다. 주차장은 139행이 69개의 byte-동일 그룹.
+   * 원인은 보조어 후보를 buildPlace 하나만 보고, 그게 이름과 겹치면 곧장 포기한 것.
+   * 백엔드 dedup 쿼리·스키마 변경 없이 "데이터에 있는 구분자를 끝까지 찾고, 정말 없으면
+   * 가짜를 짓는 대신 noindex" 로 처리한다.
+   */
+  describe('같은 건물 중복 문서 — 보조어 폴백 체인', () => {
+    const aed = (over: Partial<FacilityDetail> & { details?: Record<string, unknown> }): FacilityDetail => ({
+      id: 'aed-x', category: 'aed', name: '한국전력공사 남서울본부',
+      address: '서울특별시 강남구 봉은사로 215', roadAddress: '서울특별시 강남구 봉은사로 215',
+      lat: 37.5, lng: 127.05, city: '서울특별시', district: '강남구', bjdCode: '11680',
+      details: {}, sourceId: 'aed-src', sourceUrl: null, viewCount: 0,
+      createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z', syncedAt: '2024-01-01T00:00:00Z',
+      ...over,
+    } as FacilityDetail)
+    const lastMeta = () => mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string; description: string }
+
+    it('한 건물의 두 AED 는 buildPlace 로 title 과 description 이 모두 달라진다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(aed({ id: 'aed-1', details: { buildPlace: '본관 1층 안내데스크' } }))
+      const first = lastMeta()
+      setFacilityDetailMeta(aed({ id: 'aed-2', details: { buildPlace: '별관 지하1층 주차장' } }))
+      const second = lastMeta()
+
+      expect(first.title).not.toBe(second.title)
+      expect(first.description).not.toBe(second.description)
+      expect(first.description).toContain('본관 1층 안내데스크')
+      expect(second.description).toContain('별관 지하1층 주차장')
+    })
+
+    it('buildPlace 가 이름을 되풀이하면 설치기관(org)으로 넘어간다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(aed({
+        roadAddress: null, address: null,
+        details: { buildPlace: '한국전력공사 남서울본부', org: '강남소방서' },
+      }))
+      expect(lastMeta().title).toContain('강남소방서')
+    })
+
+    it('buildPlace·org 가 모두 이름과 겹치면 granular 주소 꼬리로 넘어간다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(aed({
+        details: { buildPlace: '한국전력공사 남서울본부', org: '한국전력공사' },
+      }))
+      expect(lastMeta().title).toContain('봉은사로 215')
+    })
+
+    it('구분자 후보가 전부 이름과 겹치고 주소도 없으면 undifferentiated(=noindex) 로 본다', () => {
+      const f = aed({
+        roadAddress: null, address: null,
+        details: { buildPlace: '한국전력공사 남서울본부', org: '한국전력공사' },
+      })
+      // 가짜 구분자(ID·URL 조각)를 지어내 중복 경고만 피하지 않는다 — 색인에서 뺀다.
+      expect(isUndifferentiatedFacility(f)).toBe(true)
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      setFacilityDetailMeta(f)
+      expect(lastMeta().title).not.toContain('aed-x')
+    })
+
+    it('구분자 후보 자체가 데이터에 없으면(고유 이름) 색인 대상으로 남긴다 — 과잉 noindex 방지', () => {
+      expect(isUndifferentiatedFacility(aed({
+        name: '역삼동주민센터', roadAddress: null, address: null, details: {},
+      }))).toBe(false)
+    })
+
+    it('이름이 곧 주소인 의류수거함은 보조어가 없어도 색인 대상이다', () => {
+      // 이름 자체가 granular 주소를 품고 있으면 형제 레코드와 제목이 겹치지 않는다.
+      expect(isUndifferentiatedFacility(aed({
+        category: 'clothes', name: '봉은사로 215', details: {},
+      }))).toBe(false)
+    })
+
+    it('주차장 description 에도 granular 주소 꼬리가 들어가 형제 레코드와 갈린다', () => {
+      const { setFacilityDetailMeta } = useFacilityMeta()
+      const lot = (road: string): FacilityDetail => aed({
+        category: 'parking', name: '조천읍 공영주차장', city: '제주특별자치도', district: '제주시',
+        roadAddress: road, address: road, details: {},
+      })
+      setFacilityDetailMeta(lot('제주특별자치도 제주시 조천읍 신북로 456'))
+      const first = lastMeta().description
+      setFacilityDetailMeta(lot('제주특별자치도 제주시 조천읍 함덕로 12'))
+      const second = lastMeta().description
+
+      expect(first).toContain('신북로 456')
+      expect(second).toContain('함덕로 12')
+      expect(first).not.toBe(second)
+    })
+  })
 })
