@@ -156,6 +156,7 @@
 definePageMeta({ hasSourceCard: true })
 
 import { computed, ref, watch } from 'vue'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useStructuredData } from '~/composables/useStructuredData'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
@@ -241,6 +242,10 @@ const { data: stations, pending, error } = await useAsyncData<ListResponse>(
   () => $fetch<{ success: boolean; data: ListResponse }>(`${apiBase}/api/subway/stations?${queryParams.value}`).then((r) => r.data),
   { watch: [queryParams] },
 )
+
+// error 를 빨간 알림 렌더에만 쓰고 있었다. 그 알림이 붙은 문서가 HTTP 200 + index 로 나가면
+// 크롤러에겐 그냥 얇은 페이지다 — 서버에서는 503 + no-store 로 알린다 (#467 / #674).
+if (import.meta.server && error.value) markDegradedResponse()
 
 // CSV에 "가산디지털단지" / "가산디지털단지역" 같이 끝 "역" 유무가 혼재 — 항상 "역" 1개 보장
 function withStationSuffix(name: string): string {

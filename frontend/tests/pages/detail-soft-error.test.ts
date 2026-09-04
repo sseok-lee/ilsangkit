@@ -344,3 +344,43 @@ describe('지하철 상세 — 일시 장애를 하드 404 로 굳히지 않는�
     expect(subwayDetail).toContain("import { markDegradedResponse } from '~/composables/useDegradedResponse'")
   })
 })
+
+/**
+ * 허브·목록 페이지의 fail-open.
+ *
+ * 상세 페이지만 보다가 놓친 계열이다. 이 페이지들은 `await useAsyncData(...)` 를 하면서
+ * error ref 를 구조분해조차 하지 않았다(또는 빨간 알림 렌더에만 썼다). 백엔드가 흔들리면
+ * 스켈레톤·빈 목록·에러 알림만 든 문서가 HTTP 200 + index, follow + self-canonical 로 나간다.
+ * 하필 사이트에서 내부링크가 가장 많이 몰리는 페이지들이라 소프트 404 로는 최악의 위치다.
+ *
+ * 상세와 달리 404 를 던지면 안 된다 — 정상 상태에서 색인 대상인 페이지이므로 fail-open
+ * (503 + no-store)만 건다. noindex 도 걸지 않는다.
+ */
+describe('허브·목록 — 상류 실패를 200 + index 로 굳히지 않는다', () => {
+  const HUB_PAGES: Array<[string, string]> = [
+    ['시설 허브 15종', 'pages/[category]/index.vue'],
+    ['가이드 목록', 'pages/guide/index.vue'],
+    ['오늘의 이슈 목록', 'pages/article/index.vue'],
+    ['청약 목록', 'pages/subscription/index.vue'],
+    ['지하철 목록', 'pages/subway/index.vue'],
+    ['공매 허브', 'pages/auction/index.vue'],
+    ['공매 목록', 'pages/auction/list.vue'],
+    ['공매 시/도', 'pages/auction/[city]/index.vue'],
+    ['토지 허브', 'pages/real-estate/land/index.vue'],
+  ]
+
+  it.each(HUB_PAGES)('%s 는 상류 실패 시 markDegradedResponse 를 부른다', (_label, relative) => {
+    const source = readFileSync(resolve(frontendRoot, relative), 'utf8')
+
+    expect(source).toContain("import { markDegradedResponse } from '~/composables/useDegradedResponse'")
+    expect(source).toMatch(/import\.meta\.server[\s\S]{0,80}markDegradedResponse\(\)/)
+  })
+
+  it.each(HUB_PAGES)('%s 는 상류 실패를 noindex 로 굳히지 않는다', (_label, relative) => {
+    const source = readFileSync(resolve(frontendRoot, relative), 'utf8')
+
+    // 일시 장애로 noindex 를 내면 재크롤 전까지 색인에서 빠진다. degraded 신호와 noindex 가
+    // 같은 조건에 함께 붙어 있으면 안 된다.
+    expect(source).not.toMatch(/markDegradedResponse\(\)[\s\S]{0,200}robots['"`\s:]+['"`]noindex/)
+  })
+})
