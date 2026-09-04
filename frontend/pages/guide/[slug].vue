@@ -145,6 +145,14 @@
         </NuxtLink>
       </div>
     </article>
+
+    <!-- fail-open: 일시 장애(503)면 guide 가 null 이다. 빈 본문 대신 재시도 안내를 그린다. -->
+    <div v-else class="max-w-3xl mx-auto px-4 md:px-6 py-20 text-center">
+      <p class="text-muted font-medium">가이드를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+      <NuxtLink to="/guide" class="mt-4 inline-block text-primary hover:text-primary/80 font-medium text-sm">
+        가이드 목록으로
+      </NuxtLink>
+    </div>
   </div>
 </template>
 
@@ -155,6 +163,7 @@ import { UI_MESSAGES } from '~/utils/uiMessages'
 import DOMPurify from 'isomorphic-dompurify'
 import { useGuides } from '~/composables/useGuides'
 import { useArticles } from '~/composables/useArticles'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -178,16 +187,34 @@ const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema, setArticleSchema, setFAQSchema, setHowToSchema } = useStructuredData()
 
 // SSR 호환: useAsyncData로 가이드 데이터 가져오기 (서버에서도 실행)
-const { data: guide, status } = await useAsyncData(
+const { data: guide, status, error: guideError } = await useAsyncData(
   `guide-${slug.value}`,
   () => fetchGuideBySlug(slug.value),
 )
 
-// 가이드를 찾을 수 없으면 404 반환 (SSR에서 HTTP 404 상태 코드 전송)
-if (!guide.value) {
+// 확정 부재(백엔드 404/422 또는 에러 없이 빈 응답)만 하드 404.
+// 일시 장애(5xx·네트워크·타임아웃)는 fail-open — 503 + no-store 로만 표시한다.
+//
+// fetchGuideBySlug 는 $fetch 예외를 삼키지 않으므로 실패가 전부 guideError 로 올라오는데,
+// 기존엔 error ref 를 구조분해조차 하지 않고 `!guide.value` 만 봤다. 그 결과 백엔드 5xx 와
+// "없는 slug" 가 구분되지 않아, 잠깐의 장애가 살아있는 가이드 URL 을 하드 404 로 굳혔다
+// (2026-09-04 네이버 진단 "접근 불가" 523건). 정책은 #467 / #674 / land [dong].vue 와 동일.
+const guideErrStatus = guideError.value?.statusCode
+const guideTransientFailure = !!guideError.value && guideErrStatus !== 404 && guideErrStatus !== 422
+const guideConfirmedMissing = !guideTransientFailure && !guide.value
+if (guideTransientFailure) {
+  if (import.meta.server) markDegradedResponse()
+} else if (guideConfirmedMissing) {
   // 이전된 news 가이드: 같은 slug의 published Article이 있으면 /article로 영구(301) 이동.
-  const migrated = await fetchArticleBySlug(slug.value).catch(() => null)
-  if (migrated) {
+  // ⚠️ 이 조회가 "실패"한 것과 "없다"고 확인된 것은 다르다. 실패를 부재로 뭉개면
+  //    301 로 살려야 할 URL 이 404 로 굳는다 — 그래서 상태코드를 보고 갈라낸다.
+  const migrated = await fetchArticleBySlug(slug.value).catch((err: { statusCode?: number }) => {
+    const s = err?.statusCode
+    return (s === 404 || s === 422) ? null : { transientFailure: true as const }
+  })
+  if (migrated && 'transientFailure' in migrated) {
+    if (import.meta.server) markDegradedResponse()
+  } else if (migrated) {
     await navigateTo(`/article/${slug.value}`, { redirectCode: 301, replace: true })
   } else {
     throw createError({ statusCode: 404, statusMessage: '가이드를 찾을 수 없습니다' })

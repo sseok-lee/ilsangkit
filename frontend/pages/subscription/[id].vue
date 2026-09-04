@@ -417,6 +417,8 @@
 definePageMeta({ hasSourceCard: true })
 
 import { SITE_URL } from '~/utils/seoConstants'
+import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
+import { buildOgMapImageUrl, staticOgImageUrl } from '~/utils/ogImageUrl'
 import { buildSubscriptionSeoTitle } from '~/utils/subscriptionMeta'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
@@ -814,11 +816,16 @@ if (subscription.value) {
 }
 
 // SEO
-const subscriptionOgImage = computed(() => {
-  if (!subscription.value || !hasCoords.value) return undefined
-  const name = subscription.value.houseName
-  return `${SITE_URL}/og-map?lat=${mapCenter.value!.lat}&lng=${mapCenter.value!.lng}&label=${encodeURIComponent(name)}&category=subscription&title=${encodeURIComponent(name)}`
-})
+// og:image 조립은 공용 빌더 한곳에서만 한다 — 예전엔 단지명을 label 과 title 에 두 번 싣고
+// 자르지도 않아 URL 이 불필요하게 길었다(라우트는 title 을 읽지 않는다).
+const subscriptionOgImage = computed(() => buildOgMapImageUrl({
+  lat: mapCenter.value?.lat,
+  lng: mapCenter.value?.lng,
+  label: subscription.value?.houseName,
+  category: 'subscription',
+}))
+// 정적 PNG 로 떨어졌으면 실제 파일 규격은 1200x630 (setMeta 기본값).
+const subscriptionOgImageIsStatic = computed(() => subscriptionOgImage.value === staticOgImageUrl())
 
 const { setMeta } = useFacilityMeta()
 setMeta({
@@ -826,8 +833,8 @@ setMeta({
   description: subscriptionSeoDescription.value,
   path: `/subscription/${id}`,
   image: subscriptionOgImage.value,
-  imageWidth: hasCoords.value ? 1024 : undefined,
-  imageHeight: hasCoords.value ? 536 : undefined,
+  imageWidth: subscriptionOgImageIsStatic.value ? undefined : OG_MAP_WIDTH,
+  imageHeight: subscriptionOgImageIsStatic.value ? undefined : OG_MAP_HEIGHT,
 })
 </script>
 

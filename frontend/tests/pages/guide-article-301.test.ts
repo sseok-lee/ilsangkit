@@ -164,14 +164,27 @@ describe('GuidePage - /article 301 폴백 (컷오버 inert)', () => {
     expect(mockCreateError).not.toHaveBeenCalled()
   })
 
-  it('guide도 없고 Article도 없으면 createError(404)를 호출한다', async () => {
-    mockFetchArticleBySlug.mockRejectedValue(new Error('not found'))
+  it('guide도 없고 Article도 없으면(백엔드 404) createError(404)를 호출한다', async () => {
+    // ⚠️ 상태코드 없는 맨 Error 로 바꾸지 말 것. 그건 "없다"가 아니라 "못 물어봤다"이고,
+    //    프로덕션에서 $fetch 가 백엔드 404 를 줄 때는 statusCode 가 실려 온다.
+    mockFetchArticleBySlug.mockRejectedValue(Object.assign(new Error('not found'), { statusCode: 404 }))
 
     await mountGuidePage(null)
 
     expect(mockCreateError).toHaveBeenCalledWith(
       expect.objectContaining({ statusCode: 404 }),
     )
+    expect(mockNavigateTo).not.toHaveBeenCalled()
+  })
+
+  it('301 판정용 Article 조회가 일시 실패하면 404 로 굳히지 않는다 (fail-open)', async () => {
+    // 5xx·타임아웃처럼 상태코드가 404/422 가 아닌 실패. 이걸 부재로 뭉개면
+    // /article 로 301 해줘야 할 URL 이 하드 404 로 색인된다.
+    mockFetchArticleBySlug.mockRejectedValue(Object.assign(new Error('boom'), { statusCode: 503 }))
+
+    await mountGuidePage(null)
+
+    expect(mockCreateError).not.toHaveBeenCalled()
     expect(mockNavigateTo).not.toHaveBeenCalled()
   })
 })

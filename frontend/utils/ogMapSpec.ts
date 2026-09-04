@@ -21,3 +21,13 @@ export const OG_MAP_SCALE = 1
  */
 export const OG_MAP_FORMAT = 'jpg'
 export const OG_MAP_CONTENT_TYPE = 'image/jpeg'
+
+/**
+ * NCP Static Map 마커 label 최대 길이(문자 수).
+ *
+ * 라우트(`server/routes/og-map.get.ts` 의 sanitizeLabel)가 어차피 여기서 자른다.
+ * 생산 쪽(`utils/ogImageUrl.ts`)이 같은 상수를 쓰지 않으면, 잘려나갈 문자열을
+ * 크롤러가 percent-encoding 된 채 실어나르게 된다 — 실측 2,004자짜리 og:image URL이
+ * 그렇게 나왔다. 두 쪽이 같은 값을 보게 여기서만 정의한다.
+ */
+export const OG_MAP_LABEL_MAX = 20

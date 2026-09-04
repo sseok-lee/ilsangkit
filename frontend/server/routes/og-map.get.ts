@@ -1,6 +1,6 @@
 import { defineEventHandler, getQuery, setHeader } from 'h3'
 import type { H3Event } from 'h3'
-import { generateOgImageSvg } from '../utils/ogImage'
+import { generateOgImageSvg, SPECIAL_OG_LABELS } from '../utils/ogImage'
 import { CATEGORY_META, type FacilityCategory } from '~/types/facility'
 import {
   OG_MAP_WIDTH,
@@ -30,11 +30,23 @@ const REAL_ESTATE_TO_OG: Record<string, string> = {
   'villa-sale': 'villa', 'villa-rent': 'villa',
   'offitel-sale': 'offitel', 'offitel-rent': 'offitel',
 }
-function normalizeOgCategory(raw: string): string {
+/**
+ * 폴백 카드(NCP 실패·좌표 무효 시)의 라벨·색을 고르는 키로 정규화한다.
+ *
+ * 옛 구현은 모르는 키를 전부 'apt' 로 떨어뜨렸다. 그래서 공매 물건(category=auction),
+ * 청약 단지(subscription), 지하철역(area)이 모두 '아파트 실거래가' 카드로 렌더됐다 —
+ * 폴백이 비어 보이는 정도가 아니라 사실과 다른 라벨을 붙이고 있었다.
+ * 라벨이 실제로 존재하는 키(CATEGORY_META·부동산·SPECIAL)는 그대로 통과시키고,
+ * 나머지는 도메인 중립인 'area'(지역 생활 정보)로 보낸다.
+ * auction·subscription 라벨은 server/utils/ogImage.ts 의 SPECIAL_OG_LABELS 에 있다 —
+ * 새 도메인을 추가할 때는 그쪽에 라벨·색을 먼저 넣어야 여기 통과 조건이 성립한다.
+ */
+export function normalizeOgCategory(raw: string): string {
   if (REAL_ESTATE_TO_OG[raw]) return REAL_ESTATE_TO_OG[raw]
   if (raw in CATEGORY_META) return raw
   if (raw === 'apt' || raw === 'villa' || raw === 'offitel') return raw
-  return 'apt'
+  if (raw in SPECIAL_OG_LABELS) return raw
+  return 'area'
 }
 
 async function inlineFallback(

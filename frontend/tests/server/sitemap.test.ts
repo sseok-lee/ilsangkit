@@ -228,7 +228,10 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
 
   interface MockEvent {
     path: string
-    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+    node: {
+      req: { url: string }
+      res: { setHeader: (name: string, value: string) => void; statusCode?: number }
+    }
   }
 
   function createMockEvent(path: string): MockEvent {
@@ -278,12 +281,14 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
       expect(xml as string).toContain('<urlset')
     }
 
-    // page N+1 → 404
-    await expect(
-      chunkHandler(
-        createMockEvent(`/sitemap/ev-charger-${advertised + 1}.xml`) as never,
-      ),
-    ).rejects.toMatchObject({ statusCode: 404 })
+    // page N+1 → 404. 본문은 Nuxt 에러 페이지(HTML 약 26KB)가 아니라 최소 XML 이어야 한다 —
+    // .xml 을 요청한 크롤러에게 26KB HTML 을 돌려주면 그 자체가 크롤 예산 낭비다.
+    const overflowEvent = createMockEvent(`/sitemap/ev-charger-${advertised + 1}.xml`)
+    const overflowBody = (await chunkHandler(overflowEvent as never)) as string
+    expect(overflowEvent.node.res.statusCode).toBe(404)
+    expect(overflowBody).not.toContain('<urlset')
+    expect(overflowBody).not.toContain('<html')
+    expect(overflowBody.length).toBeLessThan(200)
   })
 
   it('제한이 없는 단일-청크 카테고리(toilet)는 index에 1개, handler도 page 1만 200', async () => {
@@ -297,9 +302,9 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     const xml = await chunkHandler(createMockEvent('/sitemap/toilet.xml') as never)
     expect(xml as string).toContain('<urlset')
 
-    await expect(
-      chunkHandler(createMockEvent('/sitemap/toilet-2.xml') as never),
-    ).rejects.toMatchObject({ statusCode: 404 })
+    const overflowEvent = createMockEvent('/sitemap/toilet-2.xml')
+    await chunkHandler(overflowEvent as never)
+    expect(overflowEvent.node.res.statusCode).toBe(404)
   })
 
   it('색인 대상인 aed는 index에 노출되고 handler도 chunk sitemap을 반환한다', async () => {
@@ -332,9 +337,9 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     const advertised = countChunksForCategory(indexXml, 'trash')
     expect(advertised).toBe(1)
 
-    await expect(
-      chunkHandler(createMockEvent('/sitemap/trash-2.xml') as never),
-    ).rejects.toMatchObject({ statusCode: 404 })
+    const overflowEvent = createMockEvent('/sitemap/trash-2.xml')
+    await chunkHandler(overflowEvent as never)
+    expect(overflowEvent.node.res.statusCode).toBe(404)
   })
 
   // static.xml.ts 는 utils/sitemap.ts 의 fetch 헬퍼를 쓰지 않고 ssrFetch 를 직접 호출한다.
@@ -646,9 +651,9 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     const indexXml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
     expect(indexXml).not.toMatch(/\/sitemap\/wifi(?:-\d+)?\.xml/)
 
-    await expect(
-      chunkHandler(createMockEvent('/sitemap/wifi.xml') as never),
-    ).rejects.toMatchObject({ statusCode: 404 })
+    const wifiEvent = createMockEvent('/sitemap/wifi.xml')
+    await chunkHandler(wifiEvent as never)
+    expect(wifiEvent.node.res.statusCode).toBe(404)
   })
 
 })
@@ -687,7 +692,10 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
 
   interface MockEvent {
     path: string
-    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+    node: {
+      req: { url: string }
+      res: { setHeader: (name: string, value: string) => void; statusCode?: number }
+    }
   }
 
   function createMockEvent(path: string): MockEvent {
@@ -757,7 +765,10 @@ describe('real-estate sitemap — invalid building name filtering', () => {
 
   interface MockEvent {
     path: string
-    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+    node: {
+      req: { url: string }
+      res: { setHeader: (name: string, value: string) => void; statusCode?: number }
+    }
   }
 
   function createMockEvent(path: string): MockEvent {
@@ -805,7 +816,10 @@ describe('real-estate sitemap — invalid building name filtering', () => {
 describe('real-estate sitemap — lastmod fallback when backend omits lastmod', () => {
   interface MockEvent {
     path: string
-    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+    node: {
+      req: { url: string }
+      res: { setHeader: (name: string, value: string) => void; statusCode?: number }
+    }
   }
   function createMockEvent(path: string): MockEvent {
     return { path, node: { req: { url: path }, res: { setHeader: () => {} } } }
@@ -839,7 +853,10 @@ describe('real-estate sitemap — lastmod fallback when backend omits lastmod', 
 describe('land sitemap — isIndexable quality gate', () => {
   interface MockEvent {
     path: string
-    node: { req: { url: string }; res: { setHeader: (name: string, value: string) => void } }
+    node: {
+      req: { url: string }
+      res: { setHeader: (name: string, value: string) => void; statusCode?: number }
+    }
   }
 
   function createMockEvent(path: string): MockEvent {
@@ -895,8 +912,16 @@ describe('land sitemap — isIndexable quality gate', () => {
     const xml = (await chunkHandler(createMockEvent('/sitemap/land.xml') as never)) as string
     expect(xml).toContain('<loc>https://ilsangkit.co.kr/real-estate/land/seoul/gangnam</loc>')
     expect(xml).toContain('<loc>https://ilsangkit.co.kr/real-estate/land/seoul/gangbuk</loc>')
-    // 성남시분당구 has no slug mapping → toDistrictSlug returns the Korean string as-is (lowercased)
-    expect(xml).toContain('<loc>https://ilsangkit.co.kr/real-estate/land/gyeonggi/성남시분당구</loc>')
+  })
+
+  // 종전에는 "성남시분당구가 한글 원문 그대로 나온다"를 기대값으로 못박고 있었다.
+  // 그 URL 은 사이트맵 스펙(<loc> = percent-encoding 된 ASCII) 위반이면서 매칭되는 라우트도
+  // 없어 404 다. slug 맵 미스는 사이트맵에서 조용히 빠져야 하고, 고칠 곳은 DISTRICT_SLUG_MAP 이다.
+  it('slug 맵에 없는 한글 district URL 은 방출되지 않는다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/land.xml') as never)) as string
+    expect(xml).not.toContain('성남시분당구')
+    expect(xml).not.toContain('<loc>https://ilsangkit.co.kr/real-estate/land/gyeonggi/성남시분당구</loc>')
   })
 
   it('isIndexable=true인 동 URL이 포함된다', async () => {

@@ -58,6 +58,14 @@ export interface FacilityDetail {
   createdAt: string
   updatedAt: string
   syncedAt: string
+  /**
+   * 제목·설명이 이 행과 완전히 같은 형제 그룹의 대표 id. 이 행이 대표거나 참여하지 않는
+   * 카테고리(aed·parking·clothes 외)면 null/미포함.
+   * 값이 있고 id 와 다르면 상세 페이지가 rel=canonical 을 대표 URL 로 내보낸다 —
+   * 백엔드 facilityService 의 CANONICAL_GROUP_FIELDS 주석에 실측 근거가 있다.
+   * 백엔드 미배포 구버전 응답과도 섞이므로 옵셔널이다.
+   */
+  canonicalId?: string | null
 }
 
 // 카테고리별 상세 정보

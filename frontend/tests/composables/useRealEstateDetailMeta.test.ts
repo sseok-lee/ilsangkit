@@ -19,32 +19,34 @@ describe('buildRealEstateDetailMeta - title', () => {
     expect(title.endsWith(' | 일상킷')).toBe(true)
     expect(title.match(/일상킷/g)).toHaveLength(1)
   })
-  it('아파트는 "아파트" 타입어를 생략한다', () => {
-    expect(buildRealEstateDetailMeta(base).title).toBe('래미안대치팰리스 매매 실거래가·시세 | 서울 강남구 | 일상킷')
+  it('아파트도 타입어를 유지한다 — 지역이 앞, 브랜드가 뒤', () => {
+    expect(buildRealEstateDetailMeta(base).title).toBe('서울 강남구 래미안대치팰리스 아파트 매매 실거래가·시세 | 일상킷')
   })
   it('타이틀에 시세 인텐트가 포함된다', () => {
     expect(buildRealEstateDetailMeta(base).title).toContain('실거래가·시세')
   })
   it('빌라/오피스텔은 타입어를 유지한다', () => {
     const { title } = buildRealEstateDetailMeta({ ...base, buildingName: '역삼e편한세상', propertyType: 'villa', transactionMode: 'rent' })
-    expect(title).toBe('역삼e편한세상 빌라 전월세 실거래가·시세 | 서울 강남구 | 일상킷')
+    expect(title).toBe('서울 강남구 대치동 역삼e편한세상 빌라 전월세 실거래가·시세 | 일상킷')
   })
-  it('이름이 길면 타입어를 생략해 30자에 근접시킨다', () => {
+  // 회귀: 예전 22자 가드가 타입어를 조용히 지워, 같은 구의 동명이 빌라/오피스텔이
+  // 아파트와 완전히 같은 title 을 갖게 만들었다(중복 문서 1건 추가 생산).
+  it('이름이 길어도 타입어를 생략하지 않는다', () => {
     const { title } = buildRealEstateDetailMeta({ ...base, buildingName: '강남역푸르지오시티', propertyType: 'offitel', transactionMode: 'rent' })
-    expect(title).toBe('강남역푸르지오시티 전월세 실거래가·시세 | 서울 강남구 | 일상킷')
+    expect(title).toBe('서울 강남구 대치동 강남역푸르지오시티 오피스텔 전월세 실거래가·시세 | 일상킷')
   })
-  it('지역(시축약 구)을 헤드라인 뒤 접미사로 넣는다', () => {
+  it('지역(시축약 구)을 헤드라인 앞 접두사로 넣는다', () => {
     const { title } = buildRealEstateDetailMeta(base)
-    expect(title).toContain('| 서울 강남구 |')
-    expect(title.indexOf('실거래가')).toBeLessThan(title.indexOf('서울 강남구'))
+    expect(title.startsWith('서울 강남구 ')).toBe(true)
+    expect(title.indexOf('서울 강남구')).toBeLessThan(title.indexOf('실거래가'))
   })
   it('지역 정보가 없으면 지역 세그먼트를 생략한다', () => {
     const { title } = buildRealEstateDetailMeta({ ...base, region: { city: '', district: '', dong: null } })
-    expect(title).toBe('래미안대치팰리스 매매 실거래가·시세 | 일상킷')
+    expect(title).toBe('래미안대치팰리스 아파트 매매 실거래가·시세 | 일상킷')
   })
   it('도 단위 시도는 사이트 공용 축약형으로 표기한다 (경상남도 → 경남)', () => {
     const { title } = buildRealEstateDetailMeta({ ...base, region: { city: '경상남도', district: '창원시', dong: null } })
-    expect(title).toContain('| 경남 창원시 |')
+    expect(title.startsWith('경남 창원시 ')).toBe(true)
     expect(title).not.toContain('경상남 ')
   })
 })
@@ -58,8 +60,9 @@ describe('buildRealEstateDetailMeta - description', () => {
     expect(facIdx).toBeLessThan(areaIdx)
     expect(description).toContain('학교 4곳·병원 6곳 등 주변 생활시설')
   })
-  it('준공년도 문구를 더는 넣지 않는다(압축)', () => {
-    expect(buildRealEstateDetailMeta(base).description).not.toContain('준공')
+  // 준공년도는 같은 이름·같은 구의 두 단지를 가르는 실데이터 토큰이라 다시 싣는다.
+  it('준공년도를 description 에 싣는다', () => {
+    expect(buildRealEstateDetailMeta(base).description).toContain('2015년 준공')
   })
   it('전체 길이 120자 이하', () => {
     expect(buildRealEstateDetailMeta(base).description.length).toBeLessThanOrEqual(120)
@@ -104,7 +107,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
         recentDeal: { amount: 10700, dealDate: '2026년 5월' },
       },
     })
-    expect(title).toBe('새한A 매매 실거래가·시세 | 광주 북구 | 일상킷')
+    expect(title).toBe('광주 북구 용봉동 새한A 아파트 매매 실거래가·시세 | 일상킷')
   })
 
   it('full payload — description has 실거래 count and recent price', () => {
@@ -115,10 +118,10 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
         recentDeal: { amount: 10700, dealDate: '2026년 5월' },
       },
     })
-    expect(description).toContain('광주 북구 새한A 아파트 매매 실거래 30건')
+    expect(description).toContain('광주 북구 용봉동 새한A 아파트 매매 실거래 30건')
     expect(description).toContain('1억 700만원(2026년 5월)')
     expect(description).toContain('전용 60㎡')
-    expect(description).not.toContain('준공')
+    expect(description).toContain('1996년 준공')
   })
 
   it('totalCount 0 — description omits count clause', () => {

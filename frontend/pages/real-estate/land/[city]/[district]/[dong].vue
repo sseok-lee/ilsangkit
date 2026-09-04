@@ -226,6 +226,7 @@ import { useLand } from '~/composables/useLand'
 import { buildLandRegionTitle, buildLandRegionDescription, LAND_FAQ } from '~/utils/landMeta'
 import { pyeongToSqm, formatManwonKorean, formatLandDealDate } from '~/types/land'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
+import { isTransactionDocumentIndexable } from '~/utils/indexability'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
@@ -352,8 +353,24 @@ async function handleShare() {
 
 // ── SEO / Head ────────────────────────────────────────────────────────────────
 
-// noindex: if data not found or not indexable
-const noindex = computed(() => !(data.value?.summary?.isIndexable))
+// 색인 판정 — 요청 시점 거래 건수로 평가한다(utils/indexability.ts).
+//
+// 예전엔 `!(data.value?.summary?.isIndexable)` 였고 두 방향으로 동시에 틀렸다.
+//
+// 1) 과잉 제외: summary.isIndexable 은 backend/src/scripts/syncLandSale.ts 가 sync 시점에
+//    "최근 12개월 5건 이상 또는 누적 10건 이상"으로 계산한 스냅샷이다. 거래 5건 중 3건이
+//    최근인 동은 두 조건 모두 미달 → 지목별 시세 그리드와 대지 거래 사례 카드를 전부
+//    렌더하면서도 noindex 로 나갔다. 임계값을 요청 시점 3건으로 낮춰 회복한다.
+// 2) fail-open 위반: landError 가 있으면 data.value 는 null 이라 옵셔널 체이닝이
+//    undefined → noindex=true 가 됐다. 즉 위(70줄 위)에서 markDegradedResponse() 로
+//    503 을 찍어 놓고 같은 응답에 'noindex, follow' 를 함께 실어 보냈다.
+//    일시 장애는 절대 색인 신호를 건드리면 안 되므로 fetchFailed 로 넘겨 fail-open 시킨다.
+const noindex = computed(() =>
+  !isTransactionDocumentIndexable({
+    transactionCount: summary.value?.transactionCount,
+    fetchFailed: !!landError.value,
+  }),
+)
 
 const pageTitle = buildLandRegionTitle({ city: cityName, district: districtName, dong })
 

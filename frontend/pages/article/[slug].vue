@@ -143,6 +143,14 @@
         </NuxtLink>
       </div>
     </article>
+
+    <!-- fail-open: 일시 장애(503)면 article 이 null 이다. 빈 본문 대신 재시도 안내를 그린다. -->
+    <div v-else class="max-w-3xl mx-auto px-4 md:px-6 py-20 text-center">
+      <p class="text-muted font-medium">오늘의 이슈를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+      <NuxtLink to="/article" class="mt-4 inline-block text-primary hover:text-primary/80 font-medium text-sm">
+        오늘의 이슈 목록으로
+      </NuxtLink>
+    </div>
   </div>
 </template>
 
@@ -152,6 +160,7 @@ import { marked } from 'marked'
 import DOMPurify from 'isomorphic-dompurify'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useArticles } from '~/composables/useArticles'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { getContentCategoryLabel } from '~/utils/contentCategoryLabel'
@@ -171,13 +180,23 @@ const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema, setArticleSchema } = useStructuredData()
 
 // SSR 호환: useAsyncData로 article 데이터 가져오기 (서버에서도 실행)
-const { data: article, status } = await useAsyncData(
+const { data: article, status, error: articleError } = await useAsyncData(
   `article-${slug.value}`,
   () => fetchArticleBySlug(slug.value),
 )
 
-// article을 찾을 수 없으면(미발행 포함) 404 반환 (SSR에서 HTTP 404 상태 코드 전송)
-if (!article.value) {
+// 확정 부재(백엔드 404/422 — 미발행 포함)만 하드 404. 일시 장애는 fail-open.
+//
+// fetchArticleBySlug 는 $fetch 예외를 삼키지 않으므로 실패가 전부 articleError 로 올라오는데,
+// 기존엔 error ref 를 구조분해조차 하지 않고 `!article.value` 만 봤다. 그래서 백엔드 5xx 와
+// "없는 slug" 가 구분되지 않아, 잠깐의 장애가 살아있는 이슈 URL 을 하드 404 로 굳혔다
+// (2026-09-04 네이버 진단 "접근 불가" 523건). 정책은 #467 / #674 / land [dong].vue 와 동일.
+const articleErrStatus = articleError.value?.statusCode
+if (articleErrStatus === 404 || articleErrStatus === 422) {
+  throw createError({ statusCode: 404, statusMessage: '오늘의 이슈를 찾을 수 없습니다' })
+} else if (articleError.value) {
+  if (import.meta.server) markDegradedResponse()
+} else if (!article.value) {
   throw createError({ statusCode: 404, statusMessage: '오늘의 이슈를 찾을 수 없습니다' })
 }
 

@@ -16,6 +16,13 @@ const TRANSACTION_LABEL: Record<TransactionMode, string> = {
   rent: '전월세',
 }
 
+/**
+ * description 길이 상한. 넘으면 정보가치가 낮은 절부터 뺀다(아래 DESCRIPTION_LADDER).
+ * 길이를 채우려고 URL·id 같은 무의미 토큰을 붙이지 않는다 — 그건 중복 지표만 속이고
+ * 스니펫 품질은 떨어뜨린다.
+ */
+const DESCRIPTION_MAX = 120
+
 export interface DetailMetaInput {
   buildingName: string
   region: { city: string; district: string; dong?: string | null }
@@ -44,49 +51,102 @@ function formatArea(range: { min: number; max?: number } | null | undefined): st
   return `${min}㎡`
 }
 
+/**
+ * title·description 맨 앞에 세우는 지역 접두 — `{시도 축약} {시군구} [{읍면동}]`.
+ *
+ * 지역을 파이프 뒤가 아니라 **앞**에 두는 이유(프로덕션 실측 2026-09-04): 예전 포맷
+ * `{단지명} {거래} 실거래가·시세 | {시} {구} | 일상킷` 은 전국 270개 '현대' 문서의 앞 12자가
+ * 전부 같아, 네이버 SEO 진단이 중복 title 22.5만 건으로 셌다. 지역이 앞으로 오면 같은
+ * 단지명이라도 첫 토큰부터 갈린다.
+ *
+ * 동(洞)까지 넣는 건 같은 구 안 동명이 단지를 가르기 위해서다. 단, 단지명이 이미 동 이름을
+ * 품고 있으면(예: 역삼동 '역삼e편한세상') 같은 토큰을 두 번 쓰는 셈이라 뺀다 — 길이만 먹고
+ * 변별력은 0이다.
+ */
+function buildRegionPrefix(input: DetailMetaInput): string {
+  const parts = [compactCityName(input.region.city), input.region.district].filter(Boolean)
+  const dong = (input.region.dong ?? '').trim()
+  if (dong) {
+    // 단지명에는 보통 '동' 접미사 없이 들어간다('역삼동' → '역삼e편한세상')
+    const stem = dong.replace(/(읍|면|동|가|리)$/, '')
+    const redundant = input.buildingName.includes(dong)
+      || (stem.length > 1 && input.buildingName.includes(stem))
+    if (!redundant) parts.push(dong)
+  }
+  return parts.join(' ')
+}
+
 function buildTitle(input: DetailMetaInput): string {
   const propertyLabel = PROPERTY_LABEL[input.propertyType]
   const transactionLabel = TRANSACTION_LABEL[input.transactionMode]
-  // 아파트는 이름이 타입을 암시 → 타입어 생략. 빌라/오피스텔은 유지
-  const typePart = input.propertyType === 'apt' ? '' : `${propertyLabel} `
-  let core = `${input.buildingName} ${typePart}${transactionLabel} 실거래가`
-  // 핵심 헤드라인 길이 가드: 30자(지역·브랜드 제외 ~22자) 초과 + 타입어 있으면 타입어 생략
-  if (core.length > 22 && typePart) {
-    core = `${input.buildingName} ${transactionLabel} 실거래가`
-  }
-  // 지역(시축약 구)을 헤드라인 뒤에 접미사로 (길이 가드 이후). 제목이 길어 잘려도 핵심 키워드
-  // (단지명·실거래가)는 앞에 보존되고 지역/브랜드만 우아하게 잘린다. 지역 정보가 없으면 세그먼트 생략.
-  const regionLabel = [compactCityName(input.region.city), input.region.district].filter(Boolean).join(' ')
-  const regionPart = regionLabel ? ` | ${regionLabel}` : ''
-  return `${core}·시세${regionPart} | ${SITE_NAME}`
+  // 타입어(아파트/빌라/오피스텔)는 어떤 경우에도 생략하지 않는다.
+  // 예전엔 22자 가드가 조용히 지웠는데, 그러면 같은 구의 동명이 빌라가 아파트와 완전히 같은
+  // title 이 돼(‘{이름} 매매 실거래가·시세’) 중복 문서를 하나 더 찍어냈다.
+  const head = [buildRegionPrefix(input), input.buildingName, propertyLabel, transactionLabel]
+    .filter(Boolean)
+    .join(' ')
+  return `${head} 실거래가·시세 | ${SITE_NAME}`
 }
 
-function buildDescription(input: DetailMetaInput): string {
+interface DescriptionOptions {
+  withBuildYear: boolean
+  withArea: boolean
+  withFacility: boolean
+}
+
+/**
+ * description 을 한 번 렌더한다. 모든 토큰은 실데이터(지역·동·단지명·거래종류·거래건수·
+ * 최근 거래가/거래월·전용면적·준공년도·주변 생활시설)에서만 나온다.
+ */
+function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): string {
   const propertyLabel = PROPERTY_LABEL[input.propertyType]
   const transactionLabel = TRANSACTION_LABEL[input.transactionMode]
-  const cityShort = compactCityName(input.region.city)
-  const regionLabel = [cityShort, input.region.district].filter(Boolean).join(' ')
+  const head = [buildRegionPrefix(input), input.buildingName, propertyLabel, transactionLabel]
+    .filter(Boolean)
+    .join(' ')
 
   const totalCount = input.summary?.totalCount ?? 0
   const recentDeal = input.summary?.recentDeal
-  const areaText = formatArea(input.areaRange)
-
-  const facilityClause = input.facilitySummary
-    ? `${input.facilitySummary} 등 주변 생활시설과 `
-    : '주변 생활시설과 '
-  const areaClause = areaText ? `전용 ${areaText} ` : ''
-
-  if (totalCount === 0) {
-    return `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래가. ${facilityClause}${areaClause}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
-  }
-
   // 유효 금액(>0)일 때만 최근 거래가 절을 붙인다(utils formatKoreanPrice 는 0/음수도 "0만원" 반환).
   const hasPrice = !!recentDeal && Number.isFinite(recentDeal.amount) && recentDeal.amount > 0
-  const priceText = hasPrice ? formatKoreanPrice(recentDeal!.amount) : ''
-  const priceClause = priceText ? `, 최근 ${priceText}(${recentDeal!.dealDate})` : ''
-  const opening = `${regionLabel} ${input.buildingName} ${propertyLabel} ${transactionLabel} 실거래 ${totalCount.toLocaleString()}건${priceClause}.`
+  const priceClause = hasPrice
+    ? `, 최근 ${formatKoreanPrice(recentDeal!.amount)}(${recentDeal!.dealDate})`
+    : ''
+  const lead = totalCount > 0
+    ? `${head} 실거래 ${totalCount.toLocaleString()}건${priceClause}.`
+    : `${head} 실거래가.`
 
-  return `${opening} ${facilityClause}${areaClause}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
+  const facts: string[] = []
+  const areaText = opts.withArea ? formatArea(input.areaRange) : null
+  if (areaText) facts.push(`전용 ${areaText}`)
+  if (opts.withBuildYear && input.buildYear && Number.isFinite(input.buildYear)) {
+    facts.push(`${input.buildYear}년 준공`)
+  }
+  const factClause = facts.length > 0 ? ` ${facts.join(', ')}.` : ''
+
+  const facilityClause = opts.withFacility && input.facilitySummary
+    ? `${input.facilitySummary} 등 주변 생활시설과 `
+    : '주변 생활시설과 '
+
+  return `${lead}${factClause} ${facilityClause}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
+}
+
+// 길이 상한을 넘을 때 떨어뜨리는 순서 — 준공년도 → 주변 시설 상세 → 전용면적.
+// 앞쪽(지역·단지명·거래건수·최근 거래가)은 문서를 서로 구별시키는 축이라 절대 빼지 않는다.
+const DESCRIPTION_LADDER: DescriptionOptions[] = [
+  { withBuildYear: true, withArea: true, withFacility: true },
+  { withBuildYear: false, withArea: true, withFacility: true },
+  { withBuildYear: false, withArea: true, withFacility: false },
+  { withBuildYear: false, withArea: false, withFacility: false },
+]
+
+function buildDescription(input: DetailMetaInput): string {
+  let rendered = ''
+  for (const opts of DESCRIPTION_LADDER) {
+    rendered = renderDescription(input, opts)
+    if (rendered.length <= DESCRIPTION_MAX) return rendered
+  }
+  return rendered
 }
 
 export function buildRealEstateDetailMeta(input: DetailMetaInput): DetailMetaResult {

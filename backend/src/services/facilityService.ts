@@ -38,7 +38,12 @@ import { evChargerStationSearch } from './evChargerService.js';
 import { wifiGroupSearch } from './wifiService.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
 import { buildRecovery, type Recovery } from './search/searchRecovery.js';
-import { buildStratifiedIdsSql, SITEMAP_STRATIFY_TABLES } from './sitemapStratify.js';
+import {
+  buildStratifiedIdsSql,
+  buildDedupedIdsSql,
+  buildDedupedCountSql,
+  SITEMAP_STRATIFY_TABLES,
+} from './sitemapStratify.js';
 
 // 정렬 옵션 매핑
 const ORDER_BY_MAP: Record<string, Record<string, string>> = {
@@ -845,6 +850,83 @@ interface FacilityDetail {
   createdAt: Date;
   updatedAt: Date;
   syncedAt: Date;
+  /**
+   * 이 행과 제목·설명이 완전히 같은 형제 그룹의 대표 id. 이 행이 대표면 null.
+   * 프론트가 rel=canonical 을 대표 페이지로 돌려 색인을 한 문서로 모으는 데 쓴다.
+   * 참여하지 않는 카테고리(대부분)에서는 항상 null — 옵셔널이라 wifi 그룹·ev-charger
+   * 조기 return 경로의 반환 객체는 손대지 않는다.
+   */
+  canonicalId?: string | null;
+}
+
+/**
+ * 제목·설명이 형제 행과 byte 단위로 같아지는 "진짜 동일 레코드"를 판정하는 그룹 키.
+ *
+ * ## 배경 (실측 2026-09-04, 로컬 DB)
+ * 같은 (name, roadAddress) 를 공유하는 AED 26,277행에 실제 title 생성기를 돌리면,
+ * buildPlace 접두사 정리(useFacilityMeta 의 usableDisambiguator) 이후에도 284그룹 662행이
+ * 여전히 같은 title 을 낸다. 그중 다수는 별개 장비가 아니라 원본이 그대로 여러 번 들어온
+ * 동일 레코드다 — name='양구군보건소' · buildPlace='보건정책과 사무실' · org='양구군보건소'
+ * · 같은 주소인 18행처럼. 이런 URL 들은 대표 하나만 색인하고 나머지는 rel=canonical 로
+ * 모아야 한다(noindex 가 아니다 — noindex+canonical 동시 송출은 금지: .omc/notes/
+ * noindex-canonical-policy.md).
+ *
+ * ## 키에 무엇이 들어가는가 — frontend/composables/useFacilityMeta.ts 가 실제로 읽는 것 전부
+ * 키가 제목·설명 입력보다 **좁으면 서로 다른 페이지가 통합된다** — 여기서 최악의 결과다.
+ * 예: ㈜녹십자의 AED 6대는 buildPlace 가 1층/2층/…/임원식당(4층)으로 갈라져 제목이 다르다.
+ * buildPlace 를 키에서 빼면 그 6개가 하나로 접힌다. 그래서 다음을 전부 넣는다.
+ * - 공통: name, city, district, address, roadAddress
+ *   (buildDetailTitle 의 loc·getFacilityDisplayName·granularAddressTail 입력)
+ * - aed: buildPlace, org — disambiguatorCandidates 와 description facts 가 둘 다 읽는다.
+ * - parking: managingOrg·providerName(이름이 비었을 때 orgOf 폴백) + capacity·baseFee·
+ *   baseTime·operatingHours(buildFacilityDescription 의 parking facts).
+ * - clothes: providerName(orgOf 폴백) + managementAgency·detailLocation(clothes facts).
+ * 참여 카테고리는 이 셋뿐이다 — ADDRESS_DISAMBIGUATE_CATEGORIES 와 같은 집합이고,
+ * 나머지 카테고리는 고유 이름 비중이 높아 형제 중복 자체가 문제가 아니었다.
+ *
+ * description 은 155자에서 잘리므로 뒤쪽만 다른 두 행은 실제로는 같은 설명을 낼 수 있지만,
+ * 그때 이 키는 둘을 "다르다"고 본다. 통합을 놓칠 뿐 잘못 합치지는 않는 방향이라 그대로 둔다.
+ */
+const CANONICAL_GROUP_FIELDS: Partial<Record<FacilityCategory, string[]>> = {
+  aed: ['name', 'city', 'district', 'address', 'roadAddress', 'buildPlace', 'org'],
+  parking: [
+    'name', 'city', 'district', 'address', 'roadAddress',
+    'managingOrg', 'providerName', 'capacity', 'baseFee', 'baseTime', 'operatingHours',
+  ],
+  clothes: [
+    'name', 'city', 'district', 'address', 'roadAddress',
+    'providerName', 'managementAgency', 'detailLocation',
+  ],
+};
+
+/**
+ * 이 행이 속한 동일 레코드 그룹의 대표 id(그룹 내 최소 id)를 돌려준다.
+ * 이 행 자신이 대표거나, 참여하지 않는 카테고리면 null.
+ *
+ * 쿼리는 최대 한 번이다. 중복이 없는 정상 경로에서도 findFirst 한 번이 추가되지만,
+ * Aed·Parking·Clothes 모두 `@@index([name])` 가 있어 name 술어로 좁힌 뒤 나머지를
+ * 필터하는 형태다(schema.prisma 확인 완료).
+ *
+ * ⚠️ 값이 없는 키 필드는 반드시 `null` 을 넣는다. Prisma 에서 `undefined` 는 "필터 없음"
+ * 이라, 한 필드라도 undefined 로 새면 그룹이 조용히 넓어져 서로 다른 페이지를 합쳐 버린다.
+ */
+export async function findCanonicalId(
+  category: FacilityCategory,
+  record: Record<string, unknown>
+): Promise<string | null> {
+  const fields = CANONICAL_GROUP_FIELDS[category];
+  if (!fields) return null;
+
+  const where: Record<string, unknown> = { id: { lt: record.id as string } };
+  for (const field of fields) {
+    where[field] = record[field] ?? null;
+  }
+
+  const representative: { id: string } | null = await CATEGORY_REGISTRY[category]
+    .model()
+    .findFirst({ where, orderBy: { id: 'asc' }, select: { id: true } });
+
+  return representative?.id ?? null;
 }
 
 /**
@@ -946,7 +1028,11 @@ export async function getDetail(category: string, id: string): Promise<FacilityD
   // 조회수 증가 (배치 처리 — 인메모리 버퍼에 누적 후 일괄 flush)
   bufferViewCount(category as FacilityCategory, id);
 
-  return toDetail(record, category as FacilityCategory);
+  const detail = toDetail(record, category as FacilityCategory);
+  // 형제와 제목·설명이 완전히 같은 행이면 대표 id 를 실어 보낸다(프론트가 rel=canonical).
+  // 참여 카테고리(aed·parking·clothes)가 아니면 쿼리 없이 null.
+  detail.canonicalId = await findCanonicalId(category as FacilityCategory, record);
+  return detail;
 }
 
 /**
@@ -962,6 +1048,11 @@ export async function getAllIds(
   if (!config) return [];
 
   const stratifyTable = SITEMAP_STRATIFY_TABLES[category];
+  // 다른 URL 로 canonical 되는 페이지는 사이트맵에 광고하면 안 된다 —
+  // 사이트맵은 "200 · 색인가능 · 자기참조 canonical" URL 만 담는 자리다(sitemapPolicy.ts).
+  // 테이블명은 raw SQL 에 보간되므로 기존 고정 화이트리스트(NAME_SORT_TABLES)에서만 꺼낸다.
+  const dedupeColumns = CANONICAL_GROUP_FIELDS[category];
+  const dedupeTable = dedupeColumns ? NAME_SORT_TABLES[category] : undefined;
 
   // ev-charger: statId 단위(충전소 단위 사이트맵).
   // GROUP BY 로 DB 안에서 접는다 — Prisma 의 distinct 는 앱 메모리 처리라
@@ -978,8 +1069,15 @@ export async function getAllIds(
   // 오름차순이 되어 앞 지역이 상한을 독식했다 — 근거는 sitemapStratify.ts 주석 참조.
   if (limit !== undefined && stratifyTable) {
     return prisma.$queryRawUnsafe<{ id: string; updatedAt: Date }[]>(
-      buildStratifiedIdsSql(stratifyTable),
+      buildStratifiedIdsSql(stratifyTable, { dedupeGroupColumns: dedupeColumns }),
       limit,
+    );
+  }
+
+  // 중복 통합 대상인데 상한이 없는 경우(parking 은 층화 표에 없다) — 대표행만 전량 반환.
+  if (dedupeColumns && dedupeTable) {
+    return prisma.$queryRawUnsafe<{ id: string; updatedAt: Date }[]>(
+      buildDedupedIdsSql(dedupeTable, dedupeColumns),
     );
   }
 
@@ -1014,8 +1112,18 @@ export async function getCategoryCountAndMaxDate(
     count(): Promise<number>;
     findFirst(args: object): Promise<{ updatedAt: Date } | null>;
   };
+  // 중복 통합 대상은 getAllIds 와 같은 모수(대표행)를 세야 한다. 인덱스가 광고하는 청크 수와
+  // 실제 청크의 URL 수가 어긋나면 광고만 되고 비어 있는 청크가 생기고, 그건 fail-closed 503
+  // 으로 떨어져 사이트맵 재생성 자체를 막는다(sitemap/[...].ts 의 sitemapUpstreamUnavailable).
+  const dedupeColumns = CANONICAL_GROUP_FIELDS[category];
+  const dedupeTable = dedupeColumns ? NAME_SORT_TABLES[category] : undefined;
+
   const [rawCount, latest] = await Promise.all([
-    model.count(),
+    dedupeColumns && dedupeTable
+      ? prisma
+        .$queryRawUnsafe<[{ cnt: bigint }]>(buildDedupedCountSql(dedupeTable, dedupeColumns))
+        .then((rows) => Number(rows[0].cnt))
+      : model.count(),
     model.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
   ]);
   return {
