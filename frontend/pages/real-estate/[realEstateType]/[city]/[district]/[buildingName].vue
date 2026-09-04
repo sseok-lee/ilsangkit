@@ -498,6 +498,7 @@ import {
   resolveRegionRedirectPath,
 } from '~/utils/realEstateRegion'
 import { buildOgMapImageUrl } from '~/utils/ogImageUrl'
+import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
 import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
@@ -713,10 +714,14 @@ useHead(() => {
     buildingName: buildingName.value,
   })}`
 
-  const hasCoords = !!(buildingInfo.value?.lat && buildingInfo.value?.lng)
+  // 치수는 실제로 만들어진 URL 에서 되읽는다. 예전엔 좌표 유무를 truthy 로 따로 판정했는데,
+  // 빌더는 isMappableCoord(대한민국 범위)로 판정하므로 둘이 어긋날 수 있었다 —
+  // 범위 밖 좌표면 빌더는 정적 PNG(1200x630)를 내놓는데 선언은 1024x536 이 된다.
+  // 판정을 두 번 하지 않으면 어긋날 수도 없다(auctionHead.ts 와 같은 방식).
   const ogImage = buildOgImage(buildingInfo.value)
-  const ogImageWidth = hasCoords ? '1024' : '1200'
-  const ogImageHeight = hasCoords ? '536' : '630'
+  const isOgMap = ogImage !== DEFAULT_OG_IMAGE
+  const ogImageWidth = isOgMap ? String(OG_MAP_WIDTH) : '1200'
+  const ogImageHeight = isOgMap ? String(OG_MAP_HEIGHT) : '630'
 
   const meta: Array<Record<string, string>> = [
     { name: 'description', content: description },
