@@ -47,6 +47,7 @@
       :schedules="displayWasteSchedules"
       :current-page="wasteCurrentPage"
       :total-pages="displayWasteTotalPages"
+      :href-for="pageHref"
       @page-change="goToWastePage"
       @select="openWasteSchedule"
     />
@@ -109,7 +110,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS, NON_REGION_CATEGORIES } from '~/types/facility'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 import { computeAreaNoindex } from '~/utils/areaNoindex'
-import { buildPageHref } from '~/utils/paginationHref'
+import { buildPageHref, stripUiStateQuery } from '~/utils/paginationHref'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { resolveRegionDisplay } from '~/utils/regionDisplayState'
 import type { FacilityCategory, Facility } from '~/types/facility'
@@ -396,8 +397,10 @@ async function loadWasteSchedules() {
 }
 
 // URL query 를 함께 갱신해야 reactive noindex 가 정확히 동작한다.
+// UI 상태 키(`?schedule=`)는 stripUiStateQuery 로 떨군다 — buildPageHref 가 만드는 href 와
+// 클릭 후 SPA 가 만드는 URL 이 문자 단위로 같아야 크롤러/사용자가 같은 페이지를 본다.
 function syncPageQuery(page: number): LocationQueryRaw {
-  const nextQuery: LocationQueryRaw = { ...route.query }
+  const nextQuery: LocationQueryRaw = stripUiStateQuery(route.query)
   if (page > 1) nextQuery.page = String(page)
   else delete nextQuery.page
   return nextQuery
@@ -411,8 +414,9 @@ function pageHref(page: number): string {
 
 async function goToWastePage(page: number) {
   wasteCurrentPage.value = page
+  // schedule 제거는 syncPageQuery(stripUiStateQuery) 가 담당한다 — 여기서 또 지우면
+  // href 와 SPA URL 의 단일 소스가 둘로 갈라진다.
   const nextQuery = syncPageQuery(page)
-  delete nextQuery.schedule
   await navigateTo({ query: nextQuery })
   loadWasteSchedules()
   if (import.meta.client) {
@@ -604,14 +608,16 @@ watch([wasteSchedules, wasteCurrentPage, wasteTotalPages], () => {
   // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
   if (isPageNoindex.value) return
 
-  const paginationLinks: Array<{ rel: string; href: string }> = []
+  // 비-trash 블록과 동일하게 key 를 붙인다. unkeyed 로 두면 client 네비게이션마다
+  // rel=prev/next 태그가 head 에 누적돼 한 문서가 여러 페이지를 동시에 가리킨다.
+  const paginationLinks: Array<{ rel: string; href: string; key: string }> = []
   const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
 
   if (wasteCurrentPage.value > 1) {
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${wasteCurrentPage.value - 1}` })
+    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${wasteCurrentPage.value - 1}`, key: 'seo-rel-prev' })
   }
   if (wasteCurrentPage.value < wasteTotalPages.value) {
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${wasteCurrentPage.value + 1}` })
+    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${wasteCurrentPage.value + 1}`, key: 'seo-rel-next' })
   }
 
   useHead({ link: paginationLinks })

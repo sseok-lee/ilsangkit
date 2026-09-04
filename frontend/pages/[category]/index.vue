@@ -93,7 +93,9 @@
           </div>
 
           <!-- 페이지네이션 -->
-          <Pagination v-if="!wasteLoading && !initialLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" @page-change="goToWastePage" />
+          <!-- href-for 를 넘겨야 <a href> 로 렌더된다. 없으면 <button> 만 나가서 크롤러에게
+               2페이지 이후 경로가 없다(시설 그리드는 이미 넘기는데 trash 만 빠져 있었다). -->
+          <Pagination v-if="!wasteLoading && !initialLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" :href-for="pageHref" @page-change="goToWastePage" />
 
           <!-- 결과 없음 -->
           <EmptyState
@@ -258,9 +260,9 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
-import { RELATED_CATEGORIES, POPULAR_REGIONS } from '~/utils/seoConstants'
+import { RELATED_CATEGORIES, POPULAR_REGIONS, SITE_URL } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
-import { buildPageHref } from '~/utils/paginationHref'
+import { buildPageHref, stripUiStateQuery } from '~/utils/paginationHref'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
@@ -479,16 +481,17 @@ const resultTitle = computed(() => cityName.value || '전체 지역')
 const catLabel = CATEGORY_META[route.params.category as FacilityCategory]?.label || (route.params.category as string)
 const initialPageQueryParam = parsePositivePageQuery(route.query.page)
 
-if (initialPageQueryParam >= 2) {
-  // 2페이지+ 는 noindex 정책 — setCategoryMeta에 canonical:false 위임
-  setCategoryMeta(route.params.category as FacilityCategory, {
-    cityName: cityName.value || undefined,
-  }, { canonical: false })
-} else {
-  setCategoryMeta(route.params.category as FacilityCategory, {
-    cityName: cityName.value || undefined,
-  })
-}
+// canonical 발행 조건은 noindex 판정과 "정확히 같은 술어"여야 한다.
+// 예전엔 page>=2 만 봤다. 그래서 `?keyword=X` (page 없음) 진입 시 아래 reactive head 는
+// robots=noindex 를 내는데 여기서는 canonical 이 함께 등록돼, 한 응답에 noindex+canonical 이
+// 동시에 나갔다(정책 위반: .omc/notes/noindex-canonical-policy.md).
+const initialNoindex = shouldNoindexFacilityList({
+  page: initialPageQueryParam,
+  keyword: initialKeyword,
+})
+setCategoryMeta(route.params.category as FacilityCategory, {
+  cityName: cityName.value || undefined,
+}, { canonical: initialNoindex ? false : undefined })
 
 // Breadcrumb JSON-LD
 setBreadcrumbSchema([
@@ -533,20 +536,30 @@ const breadcrumbItems = computed(() => [
 ])
 
 
-// Canonical URL: city+district → region route, city only → city route, otherwise self
+// Canonical URL 은 반드시 "쿼리 없는 경로"다.
+//
+// 예전엔 `?city=` 필터 페이지가 자기 자신(`/toilet?city=seoul`)을 canonical 로 선언했다.
+// 시설 15종 × 시·도 18개 = 270개 파라미터 URL 을 "이게 정본"이라고 크롤러에게 알린 셈이라,
+// 파라미터 공간이 색인 대상으로 승격되고 중복 title/description 을 키웠다.
+//
+// 선택지는 두 가지였다.
+//  (i)  쿼리 없는 경로로 canonical + 필터 변형은 noindex
+//  (ii) 색인은 유지하되 canonical 만 등가의 깨끗한 경로로 통합   ← 채택
+// (ii) 를 고른 이유: `?city=` 목록은 SSR 로 실제 다른 시설을 렌더하고(thin-dup 해소 작업의
+// 결과물) RegionChips 내부링크의 도착지다. noindex 를 걸면 지금 붙어 있는 유입까지 같이
+// 죽는다. canonical 통합은 파라미터 URL 을 색인에서 빼면서 신호는 정본 문서로 넘긴다.
+//
+// city+district 는 `/{city}/{district}/{category}` 라는 등가 라우트가 실재하므로 그쪽으로,
+// city 만 있으면 2-segment `/{city}/{category}` 라우트가 없으므로 전국 목록으로 통합한다.
 const canonicalPath = computed(() => {
   const citySlug = queryCitySlug.value
   const districtSlug = (route.query.district as string) || ''
   if (citySlug && districtSlug) {
     return `/${citySlug}/${districtSlug}/${categoryParam.value}`
   }
-  if (citySlug) {
-    // 2-segment /[city]/[category] 라우트는 실재하지 않으므로(과거엔 404·noindex 페이지를 가리켜 색인 손실)
-    // 도시-only 필터 페이지는 자기 자신을 canonical 로 지정한다.
-    return `/${categoryParam.value}?city=${citySlug}`
-  }
   return `/${categoryParam.value}`
 })
+const canonicalHref = computed(() => `${SITE_URL}${canonicalPath.value}`)
 // Pagination: page 2+ 는 noindex 하고 canonical 은 함께 제거 (noindex/canonical 정책 통일)
 // pageQueryParam 은 route.query.page 에 reactive 로 연동해야 client-side 페이지 이동 시에도 정책이 켜진다.
 const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
@@ -559,7 +572,7 @@ useHead(computed(() => {
     return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
   }
   return {
-    link: [{ rel: 'canonical', href: `https://ilsangkit.co.kr${canonicalPath.value}`, key: 'canonical' }],
+    link: [{ rel: 'canonical', href: canonicalHref.value, key: 'canonical' }],
   }
 }))
 
@@ -619,8 +632,10 @@ async function loadWasteSchedules() {
 
 // URL `?page=N` 을 갱신해 reactive noindex/canonical 이 정확히 켜지도록 한다.
 // page=1 이면 query 에서 page 키 자체를 제거해 canonical URL 과 동일하게 유지한다.
+// UI 상태 키(`?schedule=`)는 stripUiStateQuery 로 떨군다 — buildPageHref 가 만드는 href 와
+// 클릭 후 SPA 가 만드는 URL 이 문자 단위로 같아야 한다.
 function syncPageQuery(page: number): LocationQueryRaw {
-  const nextQuery: LocationQueryRaw = { ...route.query }
+  const nextQuery: LocationQueryRaw = stripUiStateQuery(route.query)
   if (page > 1) nextQuery.page = String(page)
   else delete nextQuery.page
   return nextQuery
@@ -651,8 +666,9 @@ async function resetCityFilter() {
 
 async function goToWastePage(page: number) {
   wasteCurrentPage.value = page
+  // schedule 제거는 syncPageQuery(stripUiStateQuery) 가 담당한다 — 여기서 또 지우면
+  // href 와 SPA URL 의 단일 소스가 둘로 갈라진다.
   const nextQuery = syncPageQuery(page)
-  delete nextQuery.schedule
   await navigateTo({ query: nextQuery })
   loadWasteSchedules()
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -757,11 +773,14 @@ watch(selectedWasteScheduleId, (id) => {
   loadWasteScheduleDetail(id)
 }, { immediate: true })
 
-// Update meta when city filter changes
+// Update meta when city filter changes.
+// canonical 정책을 여기서도 그대로 넘겨야 한다. 정책 없이 재호출하면 setCategoryMeta 가
+// noindex 페이지에 canonical 을 다시 등록해(같은 key 라 나중 등록이 이긴다) 위 reactive head 의
+// 판단을 덮어쓴다 — client 지역 전환에서만 재현되던 noindex+canonical 동시 송출.
 watch(cityName, () => {
   setCategoryMeta(categoryParam.value, {
     cityName: cityName.value || undefined,
-  })
+  }, { canonical: isNoindex.value ? false : canonicalHref.value })
 })
 
 // ItemList structured data + 페이지네이션 rel link 태그
@@ -776,16 +795,20 @@ watch([facilities, currentPage, totalPages], () => {
     )
   }
 
-  // 페이지네이션 rel link 태그
-  const paginationLinks: Array<{ rel: string; href: string }> = []
-  const siteUrl = useRuntimeConfig().public.siteUrl || 'https://ilsangkit.co.kr'
+  // noindex 페이지(page 2+ · 키워드 검색)에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
+  if (isNoindex.value) return
+
+  // key 를 붙여야 client 네비게이션마다 unkeyed link 태그가 head 에 누적되지 않는다
+  // (누적되면 한 문서가 prev/next 를 여러 개 달고 페이지 시퀀스를 스스로 흐린다).
+  const paginationLinks: Array<{ rel: string; href: string; key: string }> = []
+  const siteUrl = useRuntimeConfig().public.siteUrl || SITE_URL
   const baseUrl = `${siteUrl}/${categoryParam.value}`
 
   if (currentPage.value > 1) {
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${currentPage.value - 1}` })
+    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${currentPage.value - 1}`, key: 'seo-rel-prev' })
   }
   if (currentPage.value < totalPages.value) {
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${currentPage.value + 1}` })
+    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${currentPage.value + 1}`, key: 'seo-rel-next' })
   }
 
   useHead({ link: paginationLinks })

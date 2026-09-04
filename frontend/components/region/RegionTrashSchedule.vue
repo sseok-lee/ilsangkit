@@ -55,6 +55,7 @@
         v-if="totalPages > 1"
         :current-page="currentPage"
         :total-pages="totalPages"
+        :href-for="hrefFor"
         @page-change="(page) => emit('page-change', page)"
       />
     </div>
@@ -72,6 +73,14 @@ defineProps<{
   schedules: RegionSchedule[]
   currentPage: number
   totalPages: number
+  /**
+   * 페이지 번호 → URL 변환기. 주면 Pagination 이 `<button>` 대신 `<a href>` 로 렌더된다.
+   *
+   * 미제공 시 `<button>` 만 나가서 크롤러에게 2페이지 이후로 가는 경로가 아예 없었다
+   * (시설 그리드는 이미 href-for 를 넘기는데 trash 만 빠져 있었다).
+   * 그 결과 구·군 trash 목록의 21건째부터가 내부 링크 0 인 "사이트맵 전용 고아"가 된다.
+   */
+  hrefFor?: (page: number) => string
 }>()
 
 const emit = defineEmits<{

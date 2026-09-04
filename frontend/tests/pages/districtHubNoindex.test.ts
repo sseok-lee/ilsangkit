@@ -55,18 +55,28 @@ const stubs = {
   DataSourceSection: true,
 }
 
+// 이 페이지는 useAsyncData 를 두 번 쓴다 — 지역 목록(`hub-regions-*`)과 area API.
+// 페이지는 "지역 목록을 실제로 받아왔는가"로 확정 부재를 판정하므로(fail-open, #467),
+// 목록까지 빈 값으로 stub 하면 area 결과와 무관하게 degraded 로 빠져 테스트 의도가 사라진다.
+// 그래서 목록은 항상 정상 응답으로 두고, area 쪽만 케이스별로 바꾼다.
+const REGION_ROWS = [
+  { city: '서울', district: '강남구', slug: 'gangnam', lat: 37.5, lng: 127.0, bjdCode: '1168000000' },
+]
+
+function stubUseAsyncData(area: { data?: unknown; error?: unknown }) {
+  vi.stubGlobal('useAsyncData', (key: string) => {
+    const isRegions = key.startsWith('hub-regions-')
+    const data = ref<any>(isRegions ? REGION_ROWS : (area.data ?? null))
+    const error = ref<any>(isRegions ? null : (area.error ?? null))
+    const result = { data, pending: ref(false), error, refresh: vi.fn() }
+    return Object.assign(Promise.resolve(result), result)
+  })
+}
+
 describe('district hub — noindex guard (Issue E)', () => {
   it('areaData가 null이면 useHead에 noindex 메타가 포함되어야 한다', async () => {
-    // null 데이터 — API 실패 시뮬레이션
-    vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
-      const data = ref<any>(null)
-      return Object.assign(Promise.resolve({ data, pending: ref(false), error: ref(null), refresh: vi.fn() }), {
-        data,
-        pending: ref(false),
-        error: ref(null),
-        refresh: vi.fn(),
-      })
-    })
+    // null 데이터 — area API 가 성공했는데 내용이 비어 있는 확정 빈값
+    stubUseAsyncData({ data: null })
 
     const useHeadSpy = vi.fn()
     ;(globalThis as any).useHead = useHeadSpy
@@ -93,13 +103,7 @@ describe('district hub — noindex guard (Issue E)', () => {
   })
 
   it('fetch 실패(error 있음)면 데이터가 null이어도 noindex가 없어야 한다 (fail-open)', async () => {
-    vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
-      const data = ref<any>(null)
-      const error = ref<any>(new Error('boom'))
-      return Object.assign(Promise.resolve({ data, pending: ref(false), error, refresh: vi.fn() }), {
-        data, pending: ref(false), error, refresh: vi.fn(),
-      })
-    })
+    stubUseAsyncData({ data: null, error: new Error('boom') })
     const useHeadSpy = vi.fn()
     ;(globalThis as any).useHead = useHeadSpy
     vi.resetModules()
@@ -119,19 +123,13 @@ describe('district hub — noindex guard (Issue E)', () => {
   })
 
   it('areaData가 있으면 useHead에 noindex 메타가 없어야 한다', async () => {
-    vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
-      const data = ref<any>({
+    stubUseAsyncData({
+      data: {
         data: {
           facilities: { total: 50, categories: { toilet: 10 }, topCategories: [] },
           realEstate: null,
         },
-      })
-      return Object.assign(Promise.resolve({ data, pending: ref(false), error: ref(null), refresh: vi.fn() }), {
-        data,
-        pending: ref(false),
-        error: ref(null),
-        refresh: vi.fn(),
-      })
+      },
     })
 
     const useHeadSpy = vi.fn()

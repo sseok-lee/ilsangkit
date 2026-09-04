@@ -94,7 +94,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
-import { SITE_URL } from '~/utils/seoConstants'
+import { staticOgImageUrl } from '~/utils/ogImageUrl'
 import { generateAreaDescription, buildDistrictMetaDescription } from '~/utils/seoHelpers'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { shouldNoindexSsr } from '~/utils/ssrIndexability'
@@ -114,15 +114,24 @@ if (!CITY_SLUG_MAP[city.value]) {
 // 지역 이름 해석
 const { loadRegions, syncFromHydration, getCityName, getDistrictName, getDistrictsByCity } = useRegions()
 
-const { data: regionsData } = await useAsyncData(
+const { data: regionsData, error: regionsError } = await useAsyncData(
   `hub-regions-${city.value}`,
   () => loadRegions()
 )
 syncFromHydration(regionsData)
 
-// district slug 유효성 검사
+// district slug 유효성 검사 — 단, "목록을 못 받았다"를 "그런 구는 없다"로 읽지 않는다.
+//
+// useRegions.loadRegions() 는 내부 try/catch 로 실패를 [] 로 삼킨다(그 파일은 이 PR 소유가
+// 아니라 페이지 쪽에서 막는다). 그래서 백엔드가 한 번 흔들리면 regionsData 가 빈 배열이 되고,
+// 기존의 `validDistricts.length === 0 || ...` 조건이 그 blip 을 전량 하드 404 로 굳혔다 —
+// 지역 허브 약 250개가 한꺼번에 "접근 불가"로 기록되는 경로다(2026-09-04 네이버 진단 523건).
+// 확정 부재 판정은 "목록을 실제로 받아왔다"가 전제일 때만 성립한다.
+const regionsLoaded = !regionsError.value && (regionsData.value?.length ?? 0) > 0
 const validDistricts = getDistrictsByCity(city.value)
-if (validDistricts.length === 0 || !validDistricts.some(d => d.slug === district.value)) {
+if (!regionsLoaded) {
+  if (import.meta.server) markDegradedResponse()
+} else if (!validDistricts.some(d => d.slug === district.value)) {
   throw createError({ statusCode: 404, statusMessage: '페이지를 찾을 수 없습니다' })
 }
 
@@ -141,7 +150,9 @@ const { data: response, pending, error, refresh } = await useAsyncData(
   `area-${city.value}-${district.value}`,
   () => $fetch<any>(`/api/area/${encodeURIComponent(city.value)}/${encodeURIComponent(district.value)}`)
 )
-const fetchFailed = computed(() => !!error.value)
+// 지역 목록 실패도 "일시 실패"에 포함한다. 그러지 않으면 목록만 죽은 상태에서
+// areaData 가 비었을 때 confirmedEmpty 로 잘못 굳어 noindex 가 나간다(fail-open 위반).
+const fetchFailed = computed(() => !!error.value || !regionsLoaded)
 if (import.meta.server && error.value) markDegradedResponse()
 
 function retryFetch() {
@@ -232,7 +243,9 @@ const { setMeta } = useFacilityMeta()
 watch(
   [cityName, districtName, isNoindex, metaDescription],
   ([cName, dName]) => {
-    const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(cName)}&district=${encodeURIComponent(dName)}&title=${encodeURIComponent(`${cName} ${dName} 생활 정보`)}`
+    // 구·군 허브는 대표 좌표가 없다 — 동적 `/og?...` 는 프로덕션에서 100% 302 이므로
+    // 최종 도착지(정적 PNG)를 그대로 쓴다. utils/ogImageUrl.ts 주석 참고.
+    const ogImage = staticOgImageUrl()
     setMeta({
       title: `${cName} ${dName} 생활 정보`,
       description: metaDescription.value,
