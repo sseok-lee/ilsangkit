@@ -279,6 +279,7 @@ definePageMeta({ hasSourceCard: true })
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import { UI_MESSAGES } from '~/utils/uiMessages'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
@@ -307,12 +308,22 @@ const slug = computed(() => String(route.params.slug ?? ''))
 
 const { data, error, pending } = await useSubwayStation(slug.value)
 
-if ((error.value || !data.value?.data) && !pending.value) {
-  throw createError({
-    statusCode: 404,
-    statusMessage: 'Station not found',
-    fatal: true,
-  })
+// 확정 부재(백엔드 404/422)만 하드 404. 일시 장애는 fail-open (#467 / #674).
+//
+// 기존엔 `error.value || !data.value?.data` 를 한 덩어리로 묶어 404 를 던졌다. 그래서 5xx·
+// 타임아웃·ECONNREFUSED 가 전부 하드 404 가 됐다 — 사이트맵에 제출된 985개 역 URL 이
+// 백엔드가 잠깐 흔들릴 때마다 "없는 페이지"로 응답한 것이다. 형제 상세(guide·article·
+// subscription·auction-item·land [dong])는 이미 이 정책으로 갈라 놨는데 지하철만 빠져 있었다.
+//
+// `&& !pending.value` 는 살아있는 가드가 아니다 — await useAsyncData 이후 pending 은 항상
+// false 다. 실질 조건은 `error.value || !data.value?.data` 였다.
+const stationErrStatus = (error.value as { statusCode?: number } | null)?.statusCode
+if (stationErrStatus === 404 || stationErrStatus === 422) {
+  throw createError({ statusCode: 404, statusMessage: '지하철역을 찾을 수 없습니다', fatal: true })
+} else if (error.value) {
+  if (import.meta.server) markDegradedResponse()
+} else if (!data.value?.data) {
+  throw createError({ statusCode: 404, statusMessage: '지하철역을 찾을 수 없습니다', fatal: true })
 }
 
 const station = computed(() => data.value?.data ?? null)

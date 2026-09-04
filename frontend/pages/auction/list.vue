@@ -84,6 +84,7 @@
 definePageMeta({ hasSourceCard: true })
 
 import { computed, nextTick } from 'vue'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import type { LocationQueryRaw } from 'vue-router'
 import { useAuction } from '~/composables/useAuction'
 import { USAGE_GROUP_LABEL } from '~/types/auction'
@@ -153,7 +154,12 @@ const { data } = await useAsyncData(
         page: currentPage.value,
         limit: 20,
       })
-    } catch {
+    }
+    catch {
+      // 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
+      // 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다. 이 catch 가 예외를 통째로
+      // 삼키는 바람에, 백엔드가 죽어도 결과 0건 문서가 self-canonical 을 달고 200 으로 나갔다.
+      if (import.meta.server) markDegradedResponse()
       return null
     }
   },
