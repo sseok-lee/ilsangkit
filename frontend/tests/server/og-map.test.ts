@@ -131,4 +131,37 @@ describe('og-map.get handler', () => {
     expect(event.node.res.statusCode).not.toBe(302)
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  /**
+   * 폴백 카드는 category 키로 라벨·색을 고른다. 옛 구현은 모르는 키를 전부 'apt' 로 떨어뜨려
+   * 공매 물건·청약 단지·지하철역이 모두 '아파트 실거래가' 카드로 렌더됐다 — 비어 보이는 게
+   * 아니라 사실과 다른 라벨을 붙이는 상태였다.
+   */
+  describe('normalizeOgCategory — 폴백 카드 라벨', () => {
+    let normalizeOgCategory: (raw: string) => string
+
+    beforeEach(async () => {
+      const mod = await import('../../server/routes/og-map.get')
+      normalizeOgCategory = mod.normalizeOgCategory
+    })
+
+    it('부동산 slug 는 대표 키로 접는다', () => {
+      expect(normalizeOgCategory('apt-rent')).toBe('apt')
+      expect(normalizeOgCategory('offitel-sale')).toBe('offitel')
+    })
+
+    it('시설 카테고리 키는 그대로 통과한다 (지하철역 포함)', () => {
+      expect(normalizeOgCategory('toilet')).toBe('toilet')
+      expect(normalizeOgCategory('subway')).toBe('subway')
+    })
+
+    it('SPECIAL 키(area)는 아파트로 둔갑하지 않는다', () => {
+      expect(normalizeOgCategory('area')).toBe('area')
+    })
+
+    it('라벨이 없는 도메인(공매·청약)은 아파트가 아니라 도메인 중립 키로 간다', () => {
+      expect(normalizeOgCategory('auction')).not.toBe('apt')
+      expect(normalizeOgCategory('subscription')).not.toBe('apt')
+    })
+  })
 })
