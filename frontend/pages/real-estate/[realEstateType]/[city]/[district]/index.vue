@@ -128,7 +128,7 @@ import {
 } from '~/utils/realEstateUrl'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { PROPERTY_TYPE_META, buildReRegionDescription } from '~/utils/realEstateMeta'
-import { SITE_URL } from '~/utils/seoConstants'
+import { staticOgImageUrl } from '~/utils/ogImageUrl'
 import { useRealEstate } from '~/composables/useRealEstate'
 import { useNationalComplexCount } from '~/composables/useNationalComplexCount'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -402,7 +402,9 @@ watch(
         fetchFailed: fetchFailed.value,
         confirmedEmpty: !fetchFailed.value && totalComplexes.value === 0,
       }) || pageQueryParam.value > 1
-    const ogImage = `${SITE_URL}/og?category=${propertyType}&city=${encodeURIComponent(cityName.value)}&district=${encodeURIComponent(districtName.value)}&title=${encodeURIComponent(`${cityName.value} ${districtName.value} ${typeLabel.value} 실거래가`)}`
+    // 지역 허브는 대표 좌표가 없다 — 동적 `/og?...` 는 프로덕션에서 100% 302 이므로
+    // 최종 도착지(정적 PNG)를 그대로 쓴다. utils/ogImageUrl.ts 주석 참고.
+    const ogImage = staticOgImageUrl()
     if (isNoindex) {
       useHead({ meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] })
     }

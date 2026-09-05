@@ -1,7 +1,7 @@
 // catch-all 동적 카테고리 사이트맵 — Nitro가 [slug].xml.ts를 인식 못하는 문제 우회.
 // 카테고리 목록과 per-category limit 은 sitemapPolicy 를 단일 소스로 참조해
 // 인덱스(sitemap.xml.ts)와 완전히 동일한 청크 구성을 반환한다.
-import { defineEventHandler, setHeader, createError } from 'h3'
+import { defineEventHandler, setHeader, setResponseStatus, type H3Event } from 'h3'
 import { isRegenRequest, tryServeStaticSitemap } from '../../utils/sitemapStatic'
 import {
   SITE_URL,
@@ -93,6 +93,41 @@ function parseSlug(slug: string): { category: string; page: number } | null {
   return { category, page }
 }
 
+/**
+ * `.xml` 요청의 오류 응답 본문.
+ *
+ * 종전에는 createError 로 던져 Nuxt 에러 페이지(HTML 약 26KB)가 렌더됐다. 크롤러는 XML 을
+ * 요청하고 26KB HTML 을 받았고, 일 수집량이 33,000 → 3,000 으로 무너진 상태에서 존재하지도
+ * 않는 청크 하나가 정상 사이트맵 한 편만큼의 크롤 예산을 먹었다.
+ * 상태코드 의미는 그대로 두고 본문만 최소 XML 로 바꾼다.
+ */
+function sitemapErrorXml(event: H3Event, statusCode: number, reason: string): string {
+  setResponseStatus(event, statusCode)
+  setHeader(event, 'Content-Type', 'application/xml')
+  // 빈/오류 응답이 캐시되거나 디스크로 구워지지 않게 한다.
+  // generateSitemaps 는 non-2xx 자식을 직전 생성본으로 이월하므로 이 헤더가 안전판이다.
+  setHeader(event, 'cache-control', 'no-store')
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<!-- ${reason} -->\n`
+}
+
+/** 인덱스가 광고하지 않는 청크 번호·카테고리. 구조적 404 라 재시도 유도 대상이 아니다. */
+function sitemapNotFound(event: H3Event): string {
+  return sitemapErrorXml(event, 404, 'sitemap chunk not found')
+}
+
+/**
+ * page 1 이 0건이면 상류(백엔드 집계 API) 장애다 — fail-closed.
+ *
+ * 종전에는 `length === 0 && page > 1` 만 503 이라 page 1 은 그대로 빠져나갔다.
+ * items 0건 → `totalPages = Math.max(1, 0) = 1` → `page > totalPages` 가 거짓 → 형식은
+ * 멀쩡한 **빈 `<urlset>`** 이 200 으로 나갔고, 정적 baker 가 그걸 디스크에 구워 빈 상태를
+ * 동결시켰다. 그 뒤로는 크롤러가 "이 카테고리엔 URL 이 없다"를 계속 확인만 하게 된다.
+ * 503 + no-store 면 아무것도 캐시·베이크되지 않고 직전 생성본이 이월된다.
+ */
+function sitemapUpstreamUnavailable(event: H3Event, what: string): string {
+  return sitemapErrorXml(event, 503, `upstream empty: ${what}`)
+}
+
 export default defineEventHandler(async (event) => {
   if (!isRegenRequest(event)) {
     const cached = await tryServeStaticSitemap(event)
@@ -105,17 +140,17 @@ export default defineEventHandler(async (event) => {
 
   // .xml 확장자 필수
   if (!lastSegment.endsWith('.xml')) {
-    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    return sitemapNotFound(event)
   }
 
   const slug = lastSegment.replace(/\.xml$/, '')
   if (!slug) {
-    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    return sitemapNotFound(event)
   }
 
   const parsed = parseSlug(slug)
   if (!parsed) {
-    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    return sitemapNotFound(event)
   }
 
   const { category, page } = parsed
@@ -127,12 +162,12 @@ export default defineEventHandler(async (event) => {
     // 서버가 청크 단위로만 돌려준다 — 전량(50.8MB)을 받아 slice 하면 백엔드 메모리가
     // +275MB 튀어 PM2 재시작을 유발한다(2026-07-28 실측).
     const { items: pageItems, total } = await fetchRealEstateBuildings(page)
-    if (pageItems.length === 0 && page > 1) {
-      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    if (pageItems.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'real-estate-buildings')
     }
     const totalPages = Math.max(1, Math.ceil(total / MAX_URLS_PER_SITEMAP))
     if (page > totalPages) {
-      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+      return sitemapNotFound(event)
     }
 
     const weekStart = getWeekStartDate()
@@ -154,6 +189,10 @@ export default defineEventHandler(async (event) => {
   // 부동산 city/district 허브 페이지
   if (category === 'real-estate-hub') {
     const hubs = await fetchRealEstateCityDistrictHubs()
+    // 허브는 늘 수백 건이다. 0건 = 상류 장애 — 빈 urlset 을 200 으로 구워두면 안 된다.
+    if (hubs.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'real-estate-hubs')
+    }
     const weekStart = getWeekStartDate()
 
     const seenCityUrls = new Set<string>()
@@ -176,9 +215,25 @@ export default defineEventHandler(async (event) => {
     return generateSitemapXml(urls)
   }
 
-  // 토지 실거래가 — hub + city + district 항상 포함, 동(dong)은 isIndexable=true인 것만 포함
+  // 토지 실거래가 — hub + city + district 항상 포함, 동(dong)은 거래 3건 이상인 것만 포함.
+  // (기준은 백엔드 getSitemapEntries 의 MIN_INDEXABLE_TRANSACTIONS. sync 시점 스냅샷인
+  //  isIndexable 컬럼이 아니라 요청 시점 거래 건수로 판정한다 — utils/indexability.ts 원칙 3.)
   if (category === 'land') {
-    const { cities, indexableDongs } = await fetchLandSitemap()
+    const { cities, indexableDongs, ok } = await fetchLandSitemap()
+    // 이 분기는 상류 결과와 무관하게 허브 URL 을 먼저 push 하므로 urls.length 가 0 이 되지
+    // 않는다. 다른 분기가 쓰는 `length === 0` 검사가 여기선 영원히 거짓이라, 상류가 죽어도
+    // URL 1개짜리 사이트맵이 200 으로 나가 디스크에 구워졌다. 실패는 실패로 응답한다.
+    //
+    // ok 플래그만으로는 부족하다. 그건 상류가 **예외를 던진** 경우만 잡는다. 집계 테이블이
+    // 비었거나 쿼리가 조용히 0행을 돌려주면 상류는 200 을 주고 ok 는 true 인데 payload 는
+    // 텅 비어 있다 — 그때도 허브 1개짜리 사이트맵이 정상인 척 구워진다.
+    // 전국 토지 집계가 통째로 0행인 정상 상태는 없으므로, 그 경우도 실패로 취급한다.
+    if (ok === false) {
+      return sitemapUpstreamUnavailable(event, 'land')
+    }
+    if (cities.length === 0 && indexableDongs.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'land (empty payload)')
+    }
     const weekStart = getWeekStartDate()
 
     const urls: Parameters<typeof generateSitemapXml>[0] = []
@@ -199,7 +254,7 @@ export default defineEventHandler(async (event) => {
       urls.push({ loc: `${SITE_URL}/real-estate/land/${citySlug}/${districtSlug}`, lastmod: weekStart })
     }
 
-    // dong URLs — only isIndexable=true (quality gate)
+    // dong URLs — 거래 3건 이상만 (품질 게이트). 상류가 이미 걸러 보낸다.
     for (const { city, district, dongName } of indexableDongs) {
       urls.push({
         loc: `${SITE_URL}/real-estate/land/${toCitySlugByDistrict(city, district)}/${toDistrictSlug(district)}/${encodeURIComponent(dongName)}`,
@@ -212,7 +267,15 @@ export default defineEventHandler(async (event) => {
 
   // 공매(온비드) — 색인 가능 시군구 + 물건 상세
   if (category === 'auction') {
-    const { regions, items } = await fetchAuctionSitemap()
+    const { regions, items, ok } = await fetchAuctionSitemap()
+    // land 와 같은 이유 — 허브 URL 을 먼저 push 해서 length 검사가 무력하다.
+    // ok 는 예외만 잡으므로 "상류 200 + 빈 payload" 도 함께 막는다(land 분기 주석 참고).
+    if (ok === false) {
+      return sitemapUpstreamUnavailable(event, 'auction')
+    }
+    if (regions.length === 0 && items.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'auction (empty payload)')
+    }
     const weekStart = getWeekStartDate()
 
     const urls: Parameters<typeof generateSitemapXml>[0] = []
@@ -221,9 +284,16 @@ export default defineEventHandler(async (event) => {
     urls.push({ loc: `${SITE_URL}/auction`, lastmod: weekStart })
 
     // indexable region pages (dedupe to unique city/district)
+    //
+    // isIndexable 재검사를 하지 않는다. 백엔드 getSitemapEntries 가 이미
+    // `where: { isIndexable: true }` 로 거른 뒤 select 에서 그 컬럼을 빼고 돌려주기 때문에,
+    // 프론트에서 `if (!region.isIndexable) continue` 를 걸면 **모든 행이 undefined 라 전부
+    // 탈락**했다. 그래서 /sitemap/auction.xml 에는 /auction/{city}/{district} 가 0건이었다
+    // (페이지 자체는 색인 가능하게 렌더되는데도). 게이트를 한 겹 더 쌓는 대신 이미 게이트를
+    // 통과한 페이로드를 그대로 신뢰한다 — 백엔드 select 에 컬럼을 추가하는 건 이 그룹의
+    // 소유 파일 밖이고, 이중 게이트는 다시 어긋날 수 있다.
     const seenRegionUrls = new Set<string>()
     for (const region of regions) {
-      if (!region.isIndexable) continue
       const citySlug = toCitySlugByDistrict(region.city, region.district)
       const districtSlug = toDistrictSlug(region.district)
       const regionUrl = `${SITE_URL}/auction/${citySlug}/${districtSlug}`
@@ -244,12 +314,12 @@ export default defineEventHandler(async (event) => {
   // 지하철역 SEO 페이지 — self-canonical + sitemap 등록으로 정식 색인 대상
   if (category === 'subway') {
     const stations = await fetchSubwaySlugs()
-    if (stations.length === 0 && page > 1) {
-      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    if (stations.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'subway-stations')
     }
     const totalPages = Math.max(1, Math.ceil(stations.length / MAX_URLS_PER_SITEMAP))
     if (page > totalPages) {
-      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+      return sitemapNotFound(event)
     }
 
     const offset = (page - 1) * MAX_URLS_PER_SITEMAP
@@ -266,12 +336,12 @@ export default defineEventHandler(async (event) => {
   // 청약 일정 상세 페이지
   if (category === 'subscription') {
     const subscriptions = await fetchSubscriptionIds()
-    if (subscriptions.length === 0 && page > 1) {
-      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    if (subscriptions.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'subscriptions')
     }
     const totalPages = Math.max(1, Math.ceil(subscriptions.length / MAX_URLS_PER_SITEMAP))
     if (page > totalPages) {
-      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+      return sitemapNotFound(event)
     }
 
     const offset = (page - 1) * MAX_URLS_PER_SITEMAP
@@ -289,9 +359,9 @@ export default defineEventHandler(async (event) => {
   // buildTrashRegionPath 출력이 개별 상세의 301 타겟·집계 페이지 canonical과 byte-match 되어야 한다.
   if (category === 'trash') {
     const regions = await fetchWasteScheduleRegions()
-    // API 실패로 데이터 없음 — page>1 요청은 503으로 크롤러 재시도 유도 (빈 sitemap 캐시 방지)
-    if (regions.length === 0 && page > 1) {
-      throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+    // API 실패로 데이터 없음 — 503으로 크롤러 재시도 유도 (빈 sitemap 캐시·베이크 방지)
+    if (regions.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'waste-schedule-regions')
     }
 
     const seen = new Set<string>()
@@ -309,7 +379,7 @@ export default defineEventHandler(async (event) => {
     // region 수(~250)는 MAX_URLS_PER_SITEMAP 이하라 단일 청크. page>totalPages 404 유지.
     const totalPages = Math.max(1, Math.ceil(urls.length / MAX_URLS_PER_SITEMAP))
     if (page > totalPages) {
-      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+      return sitemapNotFound(event)
     }
     const offset = (page - 1) * MAX_URLS_PER_SITEMAP
     return generateSitemapXml(urls.slice(offset, offset + MAX_URLS_PER_SITEMAP))
@@ -321,13 +391,15 @@ export default defineEventHandler(async (event) => {
     isSitemapFacilityCategory(category) ? getSitemapFacilityLimit(category) : undefined,
   )
 
-  // API 실패로 데이터 없음 — 503으로 크롤러 재시도 유도 (빈 sitemap 캐시 방지)
-  if (items.length === 0 && page > 1) {
-    throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+  // API 실패로 데이터 없음 — 503으로 크롤러 재시도 유도 (빈 sitemap 캐시·베이크 방지)
+  if (items.length === 0) {
+    return sitemapUpstreamUnavailable(event, `facilities/${category}`)
   }
+  // totalPages 는 게이트 적용 전 원본 건수로 센다 — 인덱스(sitemap.xml)가 백엔드 count 로
+  // 광고하는 청크 수와 어긋나면 존재하지 않는 청크가 인덱스에 남는다.
   const totalPages = Math.max(1, Math.ceil(items.length / MAX_URLS_PER_SITEMAP))
   if (page > totalPages) {
-    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    return sitemapNotFound(event)
   }
 
   // slice로 해당 페이지 항목 추출

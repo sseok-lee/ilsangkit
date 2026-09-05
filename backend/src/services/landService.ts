@@ -70,6 +70,8 @@ export async function getTransactions(params: TransactionsParams): Promise<Trans
 export interface RegionListParams {
   city?: string;
   district?: string;
+  /** 지정 시 그 동 하나만. 상세 페이지의 단건 해석 경로 — 아래 getRegionList 주석 참고. */
+  dongName?: string;
   page: number;
   limit: number;
 }
@@ -83,8 +85,16 @@ export interface RegionListResult {
 }
 
 export async function getRegionList(params: RegionListParams): Promise<RegionListResult> {
-  const { city, district, page, limit } = params;
+  const { city, district, dongName, page, limit } = params;
   const where = buildRegionFilter(city, district);
+
+  // 동 상세 페이지는 bjdCode 를 얻으려고 이 목록을 `limit: 100` 으로 받아 find 했다.
+  // 정렬이 transactionCount desc 라 도달 가능한 건 구·군당 상위 100개뿐이었고,
+  // 101위부터는 목록에 없다는 이유로 하드 404 가 됐다. 사이트맵 조건을
+  // transactionCount>=3 으로 넓히자 그 구간이 그대로 드러났다 —
+  // 실측 2026-09-04(프로덕션): 도달 불가 URL 이 구 조건 0개에서 113개로.
+  // 단건 해석에 목록을 쓰지 않으면 창 크기와 무관해진다.
+  if (dongName) where.dongName = dongName;
 
   const skip = (page - 1) * limit;
   const [rows, total] = await Promise.all([
@@ -145,6 +155,21 @@ export interface RegionDetailResult {
   daeSamples: LandTransaction[];
 }
 
+/**
+ * 토지 문서를 색인 대상으로 볼 최소 거래 건수.
+ *
+ * SOURCE OF TRUTH: `frontend/utils/indexability.ts` 의 MIN_INDEXABLE_TRANSACTIONS.
+ * backend tsconfig 에서 frontend 를 직접 import 할 수 없어 값을 복제한다
+ * (저장소 선례: `backend/src/lib/regionSlugs.ts`). 드리프트는
+ * `__tests__/services/landIndexabilityParity.test.ts` 가 소스 대조로 잡는다.
+ *
+ * 저장 컬럼 `isIndexable`(sync 시점 `recentCount >= 5 || transactionCount >= 10`)을 쓰지
+ * 않는 이유: 그 값은 sync 시점 규칙에 묶여 있어 상세 페이지의 판정과 갈라진다. 실제로
+ * 갈라졌다 — 실측 2026-09-04 로컬 DB 기준 `index, follow` 로 렌더되면서 사이트맵에는 없는
+ * 동(dong)이 53개였다(188 → 241). 사이트맵은 페이지가 실제로 내보내는 신호를 따라야 한다.
+ */
+const MIN_INDEXABLE_TRANSACTIONS = 3;
+
 export interface HubSummaryResult {
   cities: Array<{ slug: string; city: string; indexableDongCount: number; totalTransactions: number }>;
   totalTransactions: number;
@@ -152,7 +177,7 @@ export interface HubSummaryResult {
 
 export async function getHubSummary(): Promise<HubSummaryResult> {
   const rows = await prisma.landAreaSummary.findMany({
-    select: { city: true, transactionCount: true, isIndexable: true },
+    select: { city: true, transactionCount: true },
   });
 
   const slugMap = new Map<string, { city: string; indexableDongCount: number; totalTransactions: number }>();
@@ -164,7 +189,7 @@ export async function getHubSummary(): Promise<HubSummaryResult> {
       indexableDongCount: 0,
       totalTransactions: 0,
     };
-    if (r.isIndexable) e.indexableDongCount++;
+    if (r.transactionCount >= MIN_INDEXABLE_TRANSACTIONS) e.indexableDongCount++;
     e.totalTransactions += r.transactionCount;
     totalTransactions += r.transactionCount;
     slugMap.set(slug, e);
@@ -189,7 +214,7 @@ export async function getSitemapEntries(): Promise<LandSitemapEntries> {
       select: { city: true, district: true },
     }),
     prisma.landAreaSummary.findMany({
-      where: { isIndexable: true },
+      where: { transactionCount: { gte: MIN_INDEXABLE_TRANSACTIONS } },
       select: { city: true, district: true, dongName: true },
     }),
   ]);

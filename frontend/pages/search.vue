@@ -359,6 +359,9 @@ const heroTitle = computed(() => (searchKeyword.value ? `'${searchKeyword.value}
 const heroDescription = computed(() => searchKeyword.value
   ? '생활시설과 부동산 실거래가를 한 번에 찾았어요.'
   : '장소·단지명·시설명으로 생활시설과 부동산을 함께 검색하세요.')
+// fail-open-exempt: 이 페이지는 무조건 `robots: noindex, follow` 다(아래 useHead).
+// 색인 대상이 아니므로 조회 실패가 얇은 문서를 색인에 남길 위험이 없고, degraded(503)로
+// 알릴 대상도 없다. 검색은 실패해도 사용자에게 빈 결과를 보여주는 편이 낫다.
 // Methods
 async function performSearch() {
   loading.value = true

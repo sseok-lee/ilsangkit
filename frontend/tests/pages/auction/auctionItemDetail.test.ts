@@ -22,8 +22,11 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
 }))
 
 // useAsyncData: 핸들러를 즉시 실행해 data ref 를 채운다(페이지가 await useAsyncData 사용).
+// error ref 도 함께 준다 — 페이지가 fail-open 분기(#467)를 위해 error 를 구조분해하므로,
+// 이게 없으면 실제 코드가 아니라 mock 이 부실해서 터진다.
 ;(globalThis as any).useAsyncData = vi.fn(async (_key: string, handler: any) => ({
   data: ref(await handler()),
+  error: ref(null),
 }))
 
 const item = {

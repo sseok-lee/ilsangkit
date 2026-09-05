@@ -491,6 +491,14 @@ import type { FacilitySearchItem } from '~/types'
 import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
+import {
+  isRegionMismatch,
+  resolveCitySlugStrict,
+  resolveDistrictSlugStrict,
+  resolveRegionRedirectPath,
+} from '~/utils/realEstateRegion'
+import { buildOgMapImageUrl } from '~/utils/ogImageUrl'
+import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
 import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
@@ -610,6 +618,11 @@ const facilitySummary = ref<string | null>(null)
 const areaGroups = ref<AreaGroup[]>([])
 const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
 
+// 요청 지역 ≠ 실제 건물 지역인데 301 목적지도 만들 수 없는 경우(= 합칠 곳이 없는 중복 문서).
+// SSR 데이터가 도착하는 지점(아래 지역 통합 블록)에서 채운다. 선언이 noindex 위에 있어야
+// 하는 이유는 바로 아래 watchEffect 가 즉시 noindex 를 평가하기 때문이다(위 TDZ 주석 참조).
+const regionUnresolvable = ref(false)
+
 // noindex 판정 (canonical 정책과 함께 사용) — .omc/notes/noindex-canonical-policy.md
 const noindex = computed(() =>
   shouldNoindexRealEstateDetail({
@@ -617,7 +630,7 @@ const noindex = computed(() =>
     loaded: !statsLoading.value && !txLoading.value,
     hasBuildingInfo: buildingInfo.value !== null,
     fetchFailed: fetchFailed.value,
-  }),
+  }) || regionUnresolvable.value,
 )
 
 // degraded(503) 또는 noindex(빈 건물) 페이지에선 광고 발화를 억제한다 (SSR·클라 네비 모두).
@@ -625,13 +638,20 @@ watchEffect(() => suppressAds(fetchFailed.value || noindex.value))
 
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 
+// og:image 는 공용 빌더만 쓴다 (utils/ogImageUrl.ts).
+// 종전 구현은 두 결함을 동시에 갖고 있었다.
+//  - 좌표가 없으면 `/og?...` 를 발행했는데, 그 라우트는 sharp 미설치 환경(Cafe24)에서
+//    항상 /og-image.png 로 302 한다 → 문서마다 고유한 영구 리다이렉트 URL 을 하나씩 발행.
+//  - 좌표가 있으면 건물명을 label 과 title 에 두 번, 자르지 않고 실었다(한글 percent-encoding
+//    3배 팽창). NCP 성공 경로는 title/city/district 를 읽지도 않는다.
 function buildOgImage(info: BuildingInfo | null | undefined): string {
   if (!info) return DEFAULT_OG_IMAGE
-  const hasCoords = !!(info.lat && info.lng)
-  if (hasCoords) {
-    return `${SITE_URL}/og-map?lat=${info.lat}&lng=${info.lng}&label=${encodeURIComponent(buildingName.value)}&category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
-  }
-  return `${SITE_URL}/og?category=${propertyTypeParam}&title=${encodeURIComponent(buildingName.value)}&city=${encodeURIComponent(info.city || '')}&district=${encodeURIComponent(info.district || '')}`
+  return buildOgMapImageUrl({
+    lat: info.lat,
+    lng: info.lng,
+    label: buildingName.value,
+    category: propertyTypeParam,
+  })
 }
 
 // 최근 거래가 단일 소스: meta description·헤더(heroStats·latestPrice)가 반드시 동일 값을
@@ -694,10 +714,14 @@ useHead(() => {
     buildingName: buildingName.value,
   })}`
 
-  const hasCoords = !!(buildingInfo.value?.lat && buildingInfo.value?.lng)
+  // 치수는 실제로 만들어진 URL 에서 되읽는다. 예전엔 좌표 유무를 truthy 로 따로 판정했는데,
+  // 빌더는 isMappableCoord(대한민국 범위)로 판정하므로 둘이 어긋날 수 있었다 —
+  // 범위 밖 좌표면 빌더는 정적 PNG(1200x630)를 내놓는데 선언은 1024x536 이 된다.
+  // 판정을 두 번 하지 않으면 어긋날 수도 없다(auctionHead.ts 와 같은 방식).
   const ogImage = buildOgImage(buildingInfo.value)
-  const ogImageWidth = hasCoords ? '1024' : '1200'
-  const ogImageHeight = hasCoords ? '536' : '630'
+  const isOgMap = ogImage !== DEFAULT_OG_IMAGE
+  const ogImageWidth = isOgMap ? String(OG_MAP_WIDTH) : '1200'
+  const ogImageHeight = isOgMap ? String(OG_MAP_HEIGHT) : '630'
 
   const meta: Array<Record<string, string>> = [
     { name: 'description', content: description },
@@ -1197,6 +1221,56 @@ if (import.meta.server && isDetailSsrDegraded({
   fetchFailed.value = true
   markDegradedResponse()
 }
+
+// ── 지역 불일치 문서 통합 (301) ───────────────────────────────────────────────
+//
+// 배경·프로덕션 실측(2026-09-04)은 utils/realEstateRegion.ts 상단 주석 참조. 요약하면
+// 백엔드 getBuildingInfo 가 요청 지역에 그 이름의 건물이 없을 때 buildingName 만으로 전국에서
+// bjdCode 를 재해석해, /villa-sale/{seoul/gangnam, busan/haeundae, daegu/suseong}/현대 세 URL 이
+// 전부 200·index·self-canonical 로 "제주 서귀포시 현대" 문서를 렌더하고 있었다. 흔한 건물명
+// 하나가 (구·군 250 × 타입 6) 만큼 동일 문서를 발행한 셈이고, 이게 중복 title 22.5만 건의 주범이다.
+//
+// 이미 색인된 URL 을 404 로 죽이지 않는다. 실제 지역 URL 로 301 해 한 문서로 합친다.
+// 헬퍼가 루프(목적지 == 현재 경로)와 slug 로 못 되돌리는 지역을 이미 null 로 걸러주므로,
+// null 이면 오늘 동작 그대로 통과시킨다.
+//
+// fail-open: SSR 이 일시 실패(fetchFailed)면 지역 판정 근거가 없으므로 301 도, noindex 도 하지 않는다.
+const regionSourceInfo = ssrData.value?.buildingInfo as (BuildingInfo & { regionMatched?: boolean }) | null | undefined
+// regionMatched 는 백엔드가 새로 실은 선택 필드(공유 타입 파일은 이 작업 범위 밖이라 지역 확장으로 읽는다).
+if (regionSourceInfo && !fetchFailed.value) {
+  const redirectPath = resolveRegionRedirectPath({
+    type: realEstateType,
+    buildingName: buildingName.value,
+    actualCity: regionSourceInfo.city,
+    actualDistrict: regionSourceInfo.district,
+    requestedCitySlug: citySlugParam,
+    requestedDistrictSlug: districtSlugParam,
+    currentPath: route.path,
+  })
+
+  if (import.meta.server && redirectPath) {
+    await navigateTo(redirectPath, { redirectCode: 301 })
+  }
+
+  // 301 을 만들 수 없는 불일치는 색인에서 뺀다. 그대로 두면 self-canonical 중복 문서가 계속 색인된다.
+  //
+  // 실제 지역명을 slug 로 되돌릴 수 있으면 isRegionMismatch 가 정확한 판정이다. 되돌릴 수 없으면
+  // (매핑에 없는 지역명) isRegionMismatch 는 "근거 없음"으로 false 를 주므로, 그때만 백엔드
+  // regionMatched=false 를 증거로 쓴다.
+  // ⚠️ 두 신호를 그냥 OR 하지 않는 이유: 백엔드의 regionMatched 는 법정동코드 앞 5자리(시군구)
+  // 비교라 "URL slug 기준으로 맞는가"를 답하지 못한다. slug 를 읽을 수 있을 때는 slug 비교가
+  // 더 정확한 판정이므로 그쪽을 쓰고, 읽을 수 없을 때만 백엔드 신호로 내려간다.
+  const regionSlugsResolvable = !!resolveCitySlugStrict(regionSourceInfo.city)
+    && !!resolveDistrictSlugStrict(regionSourceInfo.district)
+  const mismatched = isRegionMismatch({
+    requestedCitySlug: citySlugParam,
+    requestedDistrictSlug: districtSlugParam,
+    actualCity: regionSourceInfo.city,
+    actualDistrict: regionSourceInfo.district,
+  }) || (!regionSlugsResolvable && regionSourceInfo.regionMatched === false)
+  regionUnresolvable.value = mismatched && !redirectPath
+}
+
 const ssrLoading = computed(() => ssrStatus.value === 'pending')
 
 watch(ssrData, (data) => {

@@ -601,6 +601,37 @@ export interface BuildingInfo {
   /** rent 타입에서만 채워지는 건물-레벨 전세/월세 거래 건수 */
   jeonseCount?: number;
   wolseCount?: number;
+  /**
+   * 반환된 건물이 요청한 시군구 안에 있는가.
+   *
+   * false = buildingName 만으로 전국에서 재해석한 결과라 요청 지역과 시군구가 다르다.
+   * 프론트가 이 신호로 실제 지역 URL 로 301 하거나(통합) noindex 로 떨어뜨린다.
+   * null 로 되돌리지 않는 이유: 프론트가 "어디로 합칠지"를 알려면 실제 지역이 필요하다.
+   */
+  regionMatched?: boolean;
+}
+
+/** 법정동코드의 시군구 부분(시도 2 + 시군구 3 = 앞 5자리). 근거가 없으면 null. */
+export function sigunguPrefix(bjdCode: string | null | undefined): string | null {
+  if (!bjdCode) return null;
+  const prefix = bjdCode.trim().slice(0, 5);
+  return prefix.length === 5 ? prefix : null;
+}
+
+/**
+ * 이름으로 재해석한 bjdCode 가 요청한 시군구와 같은가.
+ *
+ * 어느 한쪽의 시군구 코드를 못 읽으면(빈 힌트 등) "어긋났다고 단정하지 않는다"(true).
+ * 근거 없는 false 는 멀쩡한 상세를 301/noindex 로 보내버리므로 fail-open 이 안전하다.
+ */
+export function isSameSigunguBjdCode(
+  requestedBjdCode: string | null | undefined,
+  resolvedBjdCode: string | null | undefined
+): boolean {
+  const requested = sigunguPrefix(requestedBjdCode);
+  const resolved = sigunguPrefix(resolvedBjdCode);
+  if (!requested || !resolved) return true;
+  return requested === resolved;
 }
 
 /**
@@ -608,6 +639,13 @@ export interface BuildingInfo {
  *
  * bjdCode가 비어 있으면 buildingName만으로 거래가 가장 많은 bjdCode를 선택한다.
  * 외부 유입(쿼리 파라미터 누락)에서도 canonical/색인이 가능하도록 하기 위함.
+ *
+ * ⚠️ 그 재해석은 전국 groupBy 라서 요청 지역 밖의 건물을 돌려줄 수 있다. 프로덕션 실측
+ * (2026-09-04): /villa-sale/{seoul/gangnam, busan/haeundae, daegu/suseong}/현대 세 URL이
+ * 모두 200·index·self-canonical 로 "제주 서귀포시 현대" 문서를 렌더했다 — 흔한 건물명 하나가
+ * (구·군 250 × 타입 6) 만큼의 동일 title 문서를 발행한 셈이다(중복 title 22.5만 건의 주범).
+ * 그래서 재해석 자체는 유지하되(stale summary 회수용) `regionMatched` 로 드러내, 호출부가
+ * 301 통합/noindex 를 선택할 수 있게 한다.
  */
 export async function getBuildingInfo(
   type: string,
@@ -635,7 +673,10 @@ export async function getBuildingInfo(
   const orderBy = [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }, { id: 'desc' }];
 
   // 특정 bjdCode 로 BuildingInfo 를 조립한다. 해당 bjdCode 에 거래가 없으면 null.
-  const buildForBjdCode = async (effectiveBjdCode: string): Promise<BuildingInfo | null> => {
+  const buildForBjdCode = async (
+    effectiveBjdCode: string,
+    regionMatched: boolean
+  ): Promise<BuildingInfo | null> => {
     // sale 은 취소거래(cancelDealDay)를 제외 — searchTransactions/getTransactionStats 와 정렬.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: Record<string, any> = { bjdCode: effectiveBjdCode, buildingName };
@@ -715,6 +756,7 @@ export async function getBuildingInfo(
       lng: lng !== null ? Number(lng) : null,
       jeonseCount,
       wolseCount,
+      regionMatched,
     };
   };
 
@@ -724,13 +766,15 @@ export async function getBuildingInfo(
   // 사이트맵엔 있는데 상세는 buildingInfo=null → false noindex 가 되는 것을 막는다.
   // happy-path(힌트 유효)에는 추가 쿼리가 없고, 힌트가 빗나간 경우에만 1회 재해석한다.
   if (bjdCode) {
-    const fromHint = await buildForBjdCode(bjdCode);
+    // 힌트가 그대로 통했으면 요청 지역 그대로다 — 추가 쿼리도, 지역 비교도 필요 없다.
+    const fromHint = await buildForBjdCode(bjdCode, true);
     if (fromHint) return fromHint;
   }
 
   const resolvedBjdCode = await resolveBjdCodeByName();
   if (!resolvedBjdCode || resolvedBjdCode === bjdCode) return null;
-  return buildForBjdCode(resolvedBjdCode);
+  // 재해석 결과가 요청 시군구를 벗어났으면 regionMatched=false 로 드러낸다(호출부가 301/noindex 결정).
+  return buildForBjdCode(resolvedBjdCode, isSameSigunguBjdCode(bjdCode, resolvedBjdCode));
 }
 
 // ─────────────────────────────────────────────

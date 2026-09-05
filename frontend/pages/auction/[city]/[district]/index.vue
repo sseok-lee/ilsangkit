@@ -9,6 +9,11 @@
         :description="`${cityName} ${districtName} 부동산 공매 물건과 용도별 낙찰가율 통계를 확인하세요.`"
       />
 
+      <!-- fail-open: 일시 장애(503)면 집계가 비어 보인다. 빈 화면 대신 이유를 밝힌다. -->
+      <p v-if="regionFetchFailed" class="py-6 text-center text-sm text-slate-600">
+        공매 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+      </p>
+
       <!-- 용도별 집계 카드 -->
       <SectionBlock v-if="usageGroups.length > 0" heading="용도별 현황" subtext="용도별 낙찰가율과 물건 현황입니다.">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -73,6 +78,7 @@ definePageMeta({ hasSourceCard: true })
 import { computed } from 'vue'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useAuction } from '~/composables/useAuction'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { USAGE_GROUP_LABEL, formatBidRate } from '~/types/auction'
 import { AUCTION_FAQ } from '~/utils/auctionMeta'
 import { computeAuctionRegionHead } from '~/utils/auctionHead'
@@ -105,32 +111,43 @@ if (!districtName) {
 
 const auction = useAuction()
 
-const { data } = await useAsyncData(
+const { data, error: regionError } = await useAsyncData(
   `auction-region-${citySlug}-${districtSlug}`,
   async () => {
-    try {
-      // derive bjdCode from /regions list then fetch detail
-      const list = await auction.getRegions({ city: cityName })
-      const row = list.items.find((i) => i.district === districtName)
-      if (!row) return null
-      const detail = await auction.getRegionDetail(row.bjdCode)
-      return { row, detail }
-    } catch {
-      return null
-    }
+    // derive bjdCode from /regions list then fetch detail
+    const list = await auction.getRegions({ city: cityName })
+    const row = list.items.find((i) => i.district === districtName)
+    if (!row) return null
+    const detail = await auction.getRegionDetail(row.bjdCode)
+    return { row, detail }
   },
   { default: () => null },
 )
 
-if (import.meta.server || !data.value) {
-  if (!data.value) throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+// 확정 부재(지역 목록에 그 구·군이 없음)만 하드 404. 일시 장애는 fail-open.
+//
+// 기존엔 핸들러 안 try/catch 가 실패를 null 로 뭉갠 뒤 `!data.value` 로 404 를 던져,
+// 백엔드가 한 번 흔들리면 사이트맵에 살아있는 공매 지역 허브가 통째로 하드 404 로 굳었다
+// (2026-09-04 네이버 진단 "접근 불가" 523건의 경로 중 하나).
+// getRegions/getRegionDetail 은 $fetch 예외를 삼키지 않으므로 실패가 regionError 로 올라오고,
+// "그 구·군이 목록에 없음"은 예외 없이 null 로 구분된다 — land [dong].vue 와 같은 형태.
+const regionFetchFailed = computed(() => !!regionError.value)
+if (regionError.value) {
+  if (import.meta.server) markDegradedResponse()
+} else if (!data.value) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
 const usageGroups = computed(() => data.value?.detail.usageGroups ?? [])
 const activeItems = computed(() => data.value?.detail.activeItems ?? [])
 const recentSold = computed(() => data.value?.detail.recentSold ?? [])
 
-const isIndexable = computed(() => usageGroups.value.some((g) => g.isIndexable))
+// 일시 장애는 절대 noindex 로 굳히지 않는다 (utils/indexability.ts 원칙 1, #467).
+// regionFetchFailed 는 위에서 계산해 두고도 색인 판정에 연결되어 있지 않았다. 그래서
+// 조회가 실패하면 usageGroups 가 [] → some() false → **503 + noindex** 가 함께 나갔다.
+const isIndexable = computed(() =>
+  regionFetchFailed.value || usageGroups.value.some((g) => g.isIndexable),
+)
 const avgBidRate = computed(() => usageGroups.value.find((g) => g.avgBidRate != null)?.avgBidRate ?? null)
 const totalActiveCount = computed(() => usageGroups.value.reduce((sum, g) => sum + g.activeCount, 0))
 

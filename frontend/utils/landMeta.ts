@@ -25,7 +25,9 @@ export function buildLandRegionTitle({ city, district, dong }: LandRegionTitlePa
     return `${dong} 토지 시세·실거래가 | ${compactCityName(city)} ${district} | 일상킷`
   }
   if (district && city) {
-    return `${district} 토지 실거래가 | ${city} | 일상킷`
+    // 구 페이지도 compactCityName 을 쓴다. 동 페이지는 축약형, 구 페이지는 원문이라
+    // 형제 문서의 지역 표기가 서로 어긋났다('서울 강남구 역삼동' vs '강남구 … | 서울').
+    return `${district} 토지 실거래가 | ${compactCityName(city)} | 일상킷`
   }
   if (city) {
     return `${city} 토지 실거래가 | 일상킷`
@@ -48,7 +50,14 @@ export function buildLandRegionDescription({
   avgPricePerPyeong,
   count,
 }: LandRegionDescriptionParams = {}): string {
-  const regionName = dong ?? district ?? city ?? '전국'
+  // 지역 라벨에 시도를 반드시 포함한다.
+  // '중구'는 6개 시도에, '동/남/북/서구'도 여러 시도에 동시에 존재한다. 시도를 빼면
+  // /land/seoul/jung 과 /land/busan/jung 의 설명문이 평당가 없는 분기에서 바이트 단위로
+  // 같아져, 2026-09-04 실측 '중복 설명 225,388건' 에 그대로 합류한다.
+  const regionName =
+    district && city
+      ? [compactCityName(city), district, dong].filter(Boolean).join(' ')
+      : (dong ?? district ?? city ?? '전국')
 
   if (avgPricePerPyeong != null) {
     const priceStr = avgPricePerPyeong.toLocaleString('ko-KR')

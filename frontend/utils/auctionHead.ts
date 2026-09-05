@@ -2,8 +2,8 @@
 import type { AuctionItem } from '~/types/auction'
 import { isAuctionItemIndexable } from '~/types/auction'
 import { buildAuctionItemTitle, buildAuctionItemDescription, buildAuctionRegionTitle, buildAuctionRegionDescription } from '~/utils/auctionMeta'
-import { SITE_URL } from '~/utils/seoConstants'
 import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
+import { buildOgMapImageUrl, staticOgImageUrl } from '~/utils/ogImageUrl'
 
 type Head = { title: string; meta: Array<Record<string, string>>; link?: Array<Record<string, string>> }
 
@@ -39,13 +39,13 @@ export function computeAuctionItemHead(item: AuctionItem, selfUrl: string): Head
     return { title, meta }
   }
   // 색인 페이지: 좌표 있으면 네이버 Static Map(/og-map), 없으면 정적 PNG.
-  const ogImage = (item.lat && item.lng)
-    ? `${SITE_URL}/og-map?lat=${item.lat}&lng=${item.lng}&label=${encodeURIComponent(title)}&category=auction&title=${encodeURIComponent(title)}`
-    : `${SITE_URL}/og-image.png`
-  // og-map 규격은 라우트와 같은 상수를 쓴다(ogMapSpec). 정적 PNG 는 1200x630 그대로.
-  const [w, h] = (item.lat && item.lng)
-    ? [String(OG_MAP_WIDTH), String(OG_MAP_HEIGHT)]
-    : ['1200', '630']
+  // 조립은 공용 빌더 한곳에서만 한다 — 예전엔 물건명을 label 과 title 에 두 번, 자르지도 않고
+  // 실었다(라우트는 title 을 읽지 않는다). 프로덕션 형태의 공매 og-map URL 이 실측 2,004자였다.
+  const ogImage = buildOgMapImageUrl({ lat: item.lat, lng: item.lng, label: title, category: 'auction' })
+  // og-map 규격은 라우트와 같은 상수를 쓴다(ogMapSpec). 정적 PNG 로 떨어지면 1200x630.
+  const [w, h] = ogImage === staticOgImageUrl()
+    ? ['1200', '630']
+    : [String(OG_MAP_WIDTH), String(OG_MAP_HEIGHT)]
   meta.push(...ogImageMeta(ogImage, w, h, title, description))
   return { title, meta, link: [{ rel: 'canonical', href: selfUrl }] }
 }
@@ -64,7 +64,7 @@ export function computeAuctionRegionHead(
   ]
   if (o.isIndexable) {
     meta.push({ property: 'og:type', content: 'website' })
-    meta.push(...ogImageMeta(`${SITE_URL}/og-image.png`, '1200', '630', title, description))
+    meta.push(...ogImageMeta(staticOgImageUrl(), '1200', '630', title, description))
     return { title, meta, link: [{ rel: 'canonical', href: selfUrl }] }
   }
   meta.push({ name: 'robots', content: 'noindex, follow' })
@@ -84,7 +84,7 @@ export function computeAuctionCityHead(
   ]
   if (o.anyIndexable) {
     meta.push({ property: 'og:type', content: 'website' })
-    meta.push(...ogImageMeta(`${SITE_URL}/og-image.png`, '1200', '630', title, description))
+    meta.push(...ogImageMeta(staticOgImageUrl(), '1200', '630', title, description))
     return { title, meta, link: [{ rel: 'canonical', href: selfUrl }] }
   }
   meta.push({ name: 'robots', content: 'noindex, follow' })

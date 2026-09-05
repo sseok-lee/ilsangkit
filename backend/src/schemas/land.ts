@@ -6,6 +6,8 @@ import { z } from 'zod';
 export const LandRegionListSchema = z.object({
   city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
+  // 동 단건 조회용. 상세 페이지가 목록을 받아 find 하는 대신 이 필터로 그 동만 가져간다.
+  dongName: z.string().max(50).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });

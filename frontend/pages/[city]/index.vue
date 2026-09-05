@@ -124,7 +124,7 @@ import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
-import { SITE_URL } from '~/utils/seoConstants'
+import { staticOgImageUrl } from '~/utils/ogImageUrl'
 import { buildCityMetaDescription } from '~/utils/seoHelpers'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { shouldNoindexSsr } from '~/utils/ssrIndexability'
@@ -256,7 +256,9 @@ const { setMeta } = useFacilityMeta()
 watch(
   [cityName, isNoindex, metaDescription],
   ([name]) => {
-    const ogImage = `${SITE_URL}/og?category=area&city=${encodeURIComponent(name)}&title=${encodeURIComponent(`${name} 생활 정보`)}`
+    // 시/도 허브는 대표 좌표가 없다 — 동적 `/og?...` 는 프로덕션에서 100% 302 이므로
+    // 최종 도착지(정적 PNG)를 그대로 쓴다. utils/ogImageUrl.ts 주석 참고.
+    const ogImage = staticOgImageUrl()
     setMeta({
       title: `${name} 생활 정보`,
       description: metaDescription.value,

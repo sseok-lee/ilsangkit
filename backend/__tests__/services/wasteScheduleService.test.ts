@@ -108,11 +108,22 @@ describe('getByRegion — city variant matching', () => {
     expect(where).not.toHaveProperty('city');
   });
 
-  it('district 는 정확 일치로 함께 전달한다', async () => {
+  it('district 는 접미사 유무 양쪽으로 매칭한다', async () => {
+    // WasteSchedule 만 원본 공공데이터 표기를 그대로 담아, 경기 남양주·동두천 두 곳이
+    // 접미사 없이('남양주') 저장돼 있다. 허브는 slug 를 Region 정식명('남양주시')으로
+    // 되돌려 보내므로 정확 일치로는 0건이 되고, 허브가 "등록된 배출 일정이 없습니다" 인 채
+    // 200 + noindex 로 나갔다(실측 2026-09-04 프로덕션).
     await getByRegion('서울', '강남구');
 
     const where = findManyMock.mock.calls[0][0].where;
-    expect(where.district).toBe('강남구');
+    expect(where.district).toEqual({ in: ['강남구', '강남'] });
+  });
+
+  it('접미사 없는 구·군은 그대로 정확 일치로 조회한다', async () => {
+    await getByRegion('세종특별자치시', '없음');
+
+    const where = findManyMock.mock.calls[0][0].where;
+    expect(where.district).toBe('없음');
   });
 
   it('keyword 는 city variant 필터와 공존한다', async () => {

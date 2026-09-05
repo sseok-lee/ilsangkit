@@ -98,6 +98,7 @@
 definePageMeta({ hasSourceCard: true })
 
 import { computed } from 'vue'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useAuction } from '~/composables/useAuction'
 import { AUCTION_META, AUCTION_FAQ } from '~/utils/auctionMeta'
 import { USAGE_GROUP_LABEL } from '~/types/auction'
@@ -111,29 +112,24 @@ import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const auction = useAuction()
 
-const { data: hub } = await useAsyncData(
+const { data: hub, error: hubError } = await useAsyncData(
   'auction-hub-summary',
-  async () => {
-    try {
-      return await auction.getHubSummary()
-    } catch {
-      return null
-    }
-  },
+  () => auction.getHubSummary(),
   { default: () => null },
 )
 
-const { data: deadline } = await useAsyncData(
+const { data: deadline, error: deadlineError } = await useAsyncData(
   'auction-deadline',
-  async () => {
-    try {
-      return await auction.getItems({ status: 'ongoing', sort: 'deadline', limit: 8 })
-    } catch {
-      return null
-    }
-  },
+  () => auction.getItems({ status: 'ongoing', sort: 'deadline', limit: 8 }),
   { default: () => null },
 )
+
+// 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
+// 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다.
+//
+// ⚠️ useAsyncData 핸들러 **밖**에서 불러야 한다. 핸들러 본문은 중첩 async 라 Nuxt 인스턴스
+// 컨텍스트가 없고, 그 안에서 부르면 useNuxtApp() 이 throw 해 503 이 영영 나가지 않는다.
+if ((hubError.value || deadlineError.value) && import.meta.server) markDegradedResponse()
 
 const usageCards = computed(() =>
   (Object.entries(USAGE_GROUP_LABEL) as [string, string][]).map(([key, label]) => ({ key, label })),

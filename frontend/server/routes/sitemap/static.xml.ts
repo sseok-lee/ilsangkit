@@ -201,6 +201,23 @@ export default defineEventHandler(async (event) => {
       citySet.add(combo.citySlug)
       districtSet.add(`${combo.citySlug}/${combo.districtSlug}`)
 
+      // trash 지역 URL 은 /sitemap/trash.xml 이 단독 소유한다.
+      //
+      // 같은 `/{city}/{district}/trash` 가 여기서 한 번, trash 청크에서 또 한 번 나갔고
+      // lastmod 도 서로 달랐다(여기: 카테고리 sync 시점 폴백 / 저기: WasteSchedule.updatedAt).
+      // 크롤러 입장에서는 같은 URL 에 대해 두 개의 신선도 신호가 오는 셈이라 lastmod 를
+      // 통째로 못 믿게 된다. 진짜 콘텐츠 변경 시점을 들고 있는 trash 청크를 소유자로 둔다.
+      //
+      // 행 커버리지는 trash 청크가 넓다: 여기 소스(region-categories)는 Region 테이블에서
+      // slug 해석에 성공한 조합만 담는 부분집합이고, trash 청크 소스(waste-schedule-regions)는
+      // WasteSchedule 전 구·군을 group by 로 훑는다.
+      // 단, slug 산출 규칙은 다르다 — 여기는 DB Region.slug, 저기는 buildTrashRegionPath
+      // (DISTRICT_SLUG_MAP). DISTRICT_SLUG_MAP 에 없는 구·군은 저쪽에서 빈 세그먼트가 되어
+      // 게이트에 걸린다. 그런 구·군은 애초에 두 URL 이 byte-match 하지 않아 한쪽은 404 였고,
+      // 301 타겟·집계 페이지 canonical 과 맞는 건 buildTrashRegionPath 쪽이다.
+      // 누락이 보이면 고칠 곳은 이 파일이 아니라 shared/regionSlugs.ts 의 DISTRICT_SLUG_MAP 이다.
+      if (combo.category === 'trash') continue
+
       const loc = `${SITE_URL}/${combo.citySlug}/${combo.districtSlug}/${combo.category}`
       if (!urlSet.has(loc)) {
         urlSet.add(loc)

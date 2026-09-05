@@ -63,6 +63,7 @@
 definePageMeta({ hasSourceCard: true })
 
 import { useStructuredData } from '~/composables/useStructuredData'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useLand } from '~/composables/useLand'
 import { LAND_META, LAND_FAQ, buildLandRegionTitle } from '~/utils/landMeta'
@@ -71,17 +72,18 @@ import HardLink from '~/components/common/HardLink.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
-const { data: hub } = await useAsyncData(
+const { data: hub, error: hubError } = await useAsyncData(
   'land-hub',
-  async () => {
-    try {
-      return await useLand().getHubSummary()
-    } catch {
-      return null
-    }
-  },
+  () => useLand().getHubSummary(),
   { default: () => null },
 )
+
+// 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
+// 보여주되(fail-open) 크롤러에겐 503 + no-store 로 알린다.
+//
+// ⚠️ useAsyncData 핸들러 **밖**에서 불러야 한다. 핸들러 본문은 중첩 async 라 Nuxt 인스턴스
+// 컨텍스트가 없고, 그 안에서 부르면 useNuxtApp() 이 throw 해 503 이 영영 나가지 않는다.
+if (hubError.value && import.meta.server) markDegradedResponse()
 
 const { setMeta } = useFacilityMeta()
 setMeta({

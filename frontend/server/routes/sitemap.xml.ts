@@ -192,7 +192,10 @@ export default defineEventHandler(async (event) => {
   // 공매(온비드) — 색인 가능 항목이 있을 때만 추가
   try {
     const auctionData = await fetchAuctionSitemap()
-    const hasAuctionUrls = auctionData.regions.some((r) => r.isIndexable) || auctionData.items.length > 0
+    // `regions.some((r) => r.isIndexable)` 였다. 백엔드가 이미 isIndexable=true 로 거른 뒤
+    // 그 컬럼을 select 에서 빼고 돌려주므로 모든 행이 undefined 였고, 조건은 items 유무만
+    // 보고 있었다. 페이로드에 행이 있다는 것 자체가 "색인 가능"의 의미다.
+    const hasAuctionUrls = auctionData.regions.length > 0 || auctionData.items.length > 0
     if (hasAuctionUrls) {
       sitemaps.push({ loc: `${SITE_URL}/sitemap/auction.xml`, lastmod: weekStart })
     }

@@ -38,12 +38,20 @@ export const REAL_ESTATE_LABELS: Record<string, string> = {
   offitel: '오피스텔 실거래가',
 }
 
+// 부동산/시설 어느 쪽도 아닌 도메인의 폴백 카드 라벨.
+// auction·subscription 이 없던 동안 og-map 의 normalizeOgCategory 가 이들을 'apt' 로
+// 떨어뜨려, 공매 물건과 청약 단지가 '아파트 실거래가' 카드로 렌더됐다 — 폴백이 비는 게
+// 아니라 사실과 다른 라벨을 붙이는 상태였다. 실제 도메인 라벨을 여기서 준다.
 export const SPECIAL_OG_LABELS: Record<string, string> = {
   area: '지역 생활 정보',
+  auction: '공매 물건',
+  subscription: '청약 정보',
 }
 
 export const SPECIAL_OG_COLORS: Record<string, string> = {
   area: '#2563eb',
+  auction: '#b45309',      // amber-700
+  subscription: '#7c3aed', // violet-600
 }
 
 const FALLBACK_COLOR = '#6366f1' // indigo-500

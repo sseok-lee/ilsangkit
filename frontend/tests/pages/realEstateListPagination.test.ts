@@ -74,7 +74,7 @@ describe('부동산 목록 SSR 페이지네이션', () => {
 
   it('두 페이지 모두 page 2+ 에 noindex 를 적용한다', () => {
     // 전국은 currentPage, 지역은 pageQueryParam 으로 판정한다(둘 다 route.query.page 에 연동됨).
-    expect(read(PAGES.national)).toMatch(/isNoindex\s*=\s*currentPage\.value\s*>\s*1/)
+    expect(read(PAGES.national)).toMatch(/listIsNoindex = computed\(\(\) => currentPage\.value > 1\)/)
     expect(read(PAGES.district)).toMatch(/pageQueryParam\.value\s*>\s*1/)
   })
 })
