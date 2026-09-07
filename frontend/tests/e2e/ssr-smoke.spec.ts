@@ -31,9 +31,15 @@ test('시설 상세 페이지가 정상 200 + h1 렌더된다 (Phase 2 refactor 
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
 })
 
-test('부동산 상세 — 존재하지 않는 building에 대해 404 gate가 정확히 동작한다', async ({ page }) => {
-  // 명백히 존재하지 않을 slug (timestamp) — 404 gate가 비활성화되면 200으로 통과해버리는 회귀 차단
-  const slug = `__nonexistent-phase2-smoke-${Date.now()}__`
-  const res = await page.goto(`/real-estate/apt-sale/seoul/gangnam-gu/${slug}`, { waitUntil: 'domcontentloaded' })
-  expect(res?.status()).toBe(404)
-})
+for (const type of ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent']) {
+  test(`부동산 상세 ${type} — 존재하지 않는 건물은 SSR 404`, async ({ request }) => {
+    // 유효한 지역 slug를 써야 건물 조회까지 도달한다. gangnam-gu는 지역 검증에서 먼저 404가 난다.
+    const slug = `__nonexistent-building-${Date.now()}__`
+    const res = await request.get(`/real-estate/${type}/seoul/gangnam/${slug}`)
+    expect(res.status()).toBe(404)
+    const html = await res.text()
+    expect(html).toContain('페이지를 찾을 수 없습니다')
+    expect(html).toMatch(/<meta\b[^>]*name="robots"[^>]*content="noindex, nofollow"/)
+    expect(html).not.toMatch(/<link\b[^>]*rel="canonical"/)
+  })
+}
