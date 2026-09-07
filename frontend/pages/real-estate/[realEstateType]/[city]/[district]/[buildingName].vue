@@ -1222,6 +1222,14 @@ if (import.meta.server && isDetailSsrDegraded({
   markDegradedResponse()
 }
 
+// building-info의 확정 404만 null로 반환된다. 일시 장애나 누락된 SSR 응답은 부재 근거가 아니다.
+// useAsyncData 밖에서 던져야 Nuxt가 실제 HTTP 404를 반환한다.
+if (!ssrError.value
+  && ssrData.value?.infoFetchFailed === false
+  && ssrData.value?.buildingInfo === null) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
+
 // ── 지역 불일치 문서 통합 (301) ───────────────────────────────────────────────
 //
 // 배경·프로덕션 실측(2026-09-04)은 utils/realEstateRegion.ts 상단 주석 참조. 요약하면
