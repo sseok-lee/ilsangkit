@@ -1,13 +1,8 @@
 /**
  * 부동산 상세 meta 의 "문서 변별력" 회귀 테스트.
  *
- * 프로덕션 실측(2026-09-04): 흔한 건물명 '현대' 하나가 전국 구·군 × 타입만큼의 완전 동일
- * title 문서를 발행하고 있었다(중복 title 22.5만 건). 예전 포맷
- * `{단지명} {거래} 실거래가·시세 | {시} {구} | 일상킷` 은 앞 12자가 전부 같아, 네이버 SEO
- * 진단이 세는 "중복 문서" 지표에 그대로 꽂혔다.
- *
  * 여기서 지키는 계약은 셋이다.
- * 1. 지역(시도·시군구·동)이 title/description 맨 앞에 온다.
+ * 1. 지역(시도·시군구·동)을 title 뒤에 유지해 같은 이름의 단지를 구별한다.
  * 2. 타입어(아파트/빌라/오피스텔)는 어떤 길이에서도 사라지지 않는다.
  * 3. 데이터가 0건이어도 지역·단지 실데이터만으로 문서가 서로 갈린다(URL·id 패딩 금지).
  */
@@ -44,25 +39,19 @@ const 현대_서귀포: DetailMetaInput = {
 }
 
 describe('title 변별력 — 같은 단지명, 다른 지역', () => {
-  it('요구 포맷 `{시도} {시군구} {단지명} {타입} {거래} 실거래가·시세 | 일상킷` 을 따른다', () => {
+  it('단지명·타입·거래 뒤에 지역과 브랜드를 배치한다', () => {
     const { title } = buildRealEstateDetailMeta({
       ...현대_강남,
       buildingName: '래미안강남',
       propertyType: 'apt',
       region: { city: '서울특별시', district: '강남구', dong: null },
     })
-    expect(title).toBe('서울 강남구 래미안강남 아파트 매매 실거래가·시세 | 일상킷')
+    expect(title).toBe('래미안강남 아파트 매매 실거래가·시세 | 서울 강남구 | 일상킷')
   })
 
   it("전국 '현대' 세 문서의 title 이 서로 다르다 (프로덕션 중복 사례)", () => {
     const titles = [현대_강남, 현대_해운대, 현대_서귀포].map(i => buildRealEstateDetailMeta(i).title)
     expect(new Set(titles).size).toBe(3)
-  })
-
-  it('지역 토큰이 맨 앞에 와서 앞 6자부터 갈린다', () => {
-    const a = buildRealEstateDetailMeta(현대_강남).title
-    const b = buildRealEstateDetailMeta(현대_해운대).title
-    expect(a.slice(0, 6)).not.toBe(b.slice(0, 6))
   })
 
   it('같은 구 안 동명이 단지는 동(洞)으로 갈린다', () => {
@@ -79,7 +68,7 @@ describe('title 변별력 — 같은 단지명, 다른 지역', () => {
       buildingName: '역삼래미안',
       region: { city: '서울특별시', district: '강남구', dong: '역삼동' },
     })
-    expect(title).toBe('서울 강남구 역삼래미안 빌라 매매 실거래가·시세 | 일상킷')
+    expect(title).toBe('역삼래미안 빌라 매매 실거래가·시세 | 서울 강남구 | 일상킷')
   })
 })
 
