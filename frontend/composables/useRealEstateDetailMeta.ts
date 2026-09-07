@@ -52,18 +52,12 @@ function formatArea(range: { min: number; max?: number } | null | undefined): st
 }
 
 /**
- * title·description 맨 앞에 세우는 지역 접두 — `{시도 축약} {시군구} [{읍면동}]`.
+ * 제목 뒤와 설명 앞에 쓰는 지역 표기 — `{시도 축약} {시군구} [{읍면동}]`.
  *
- * 지역을 파이프 뒤가 아니라 **앞**에 두는 이유(프로덕션 실측 2026-09-04): 예전 포맷
- * `{단지명} {거래} 실거래가·시세 | {시} {구} | 일상킷` 은 전국 270개 '현대' 문서의 앞 12자가
- * 전부 같아, 네이버 SEO 진단이 중복 title 22.5만 건으로 셌다. 지역이 앞으로 오면 같은
- * 단지명이라도 첫 토큰부터 갈린다.
- *
- * 동(洞)까지 넣는 건 같은 구 안 동명이 단지를 가르기 위해서다. 단, 단지명이 이미 동 이름을
- * 품고 있으면(예: 역삼동 '역삼e편한세상') 같은 토큰을 두 번 쓰는 셈이라 뺀다 — 길이만 먹고
- * 변별력은 0이다.
+ * 같은 구 안의 동명이 단지를 구별하도록 동을 포함하되,
+ * 단지명에 이미 동 이름이 있으면 중복 표기를 생략한다.
  */
-function buildRegionPrefix(input: DetailMetaInput): string {
+function buildRegionLabel(input: DetailMetaInput): string {
   const parts = [compactCityName(input.region.city), input.region.district].filter(Boolean)
   const dong = (input.region.dong ?? '').trim()
   if (dong) {
@@ -82,10 +76,12 @@ function buildTitle(input: DetailMetaInput): string {
   // 타입어(아파트/빌라/오피스텔)는 어떤 경우에도 생략하지 않는다.
   // 예전엔 22자 가드가 조용히 지웠는데, 그러면 같은 구의 동명이 빌라가 아파트와 완전히 같은
   // title 이 돼(‘{이름} 매매 실거래가·시세’) 중복 문서를 하나 더 찍어냈다.
-  const head = [buildRegionPrefix(input), input.buildingName, propertyLabel, transactionLabel]
+  const head = [input.buildingName, propertyLabel, transactionLabel]
     .filter(Boolean)
     .join(' ')
-  return `${head} 실거래가·시세 | ${SITE_NAME}`
+  return [`${head} 실거래가·시세`, buildRegionLabel(input), SITE_NAME]
+    .filter(Boolean)
+    .join(' | ')
 }
 
 interface DescriptionOptions {
@@ -101,7 +97,7 @@ interface DescriptionOptions {
 function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): string {
   const propertyLabel = PROPERTY_LABEL[input.propertyType]
   const transactionLabel = TRANSACTION_LABEL[input.transactionMode]
-  const head = [buildRegionPrefix(input), input.buildingName, propertyLabel, transactionLabel]
+  const head = [buildRegionLabel(input), input.buildingName, propertyLabel, transactionLabel]
     .filter(Boolean)
     .join(' ')
 

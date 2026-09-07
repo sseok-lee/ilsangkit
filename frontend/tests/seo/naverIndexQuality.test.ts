@@ -232,16 +232,8 @@ describe('6. 동일 단지명 × 다른 지역 → 고유 title/description', ()
     expect(new Set([seoul.description, busan.description, jeju.description]).size).toBe(3)
   })
 
-  it('title 이 요구 형식 — {시도} {시군구} … {단지명} … 실거래가·시세 | 일상킷', () => {
-    expect(seoul.title.startsWith('서울 강남구')).toBe(true)
-    expect(seoul.title).toContain('현대')
-    expect(seoul.title).toContain('실거래가·시세')
-    expect(seoul.title.endsWith('| 일상킷')).toBe(true)
-  })
-
-  it('지역 토큰이 앞에 있어 첫 6자만으로도 구분된다 (SERP 절단 대비)', () => {
-    const heads = [seoul.title, busan.title, jeju.title].map((t) => t.slice(0, 6))
-    expect(new Set(heads).size).toBe(3)
+  it('title 은 단지명부터 시작하고 지역과 브랜드를 뒤에 둔다', () => {
+    expect(seoul.title).toBe('현대 아파트 매매 실거래가·시세 | 서울 강남구 역삼동 | 일상킷')
   })
 
   it('거래유형이 title 에 드러난다 (매매 ≠ 전월세)', () => {
