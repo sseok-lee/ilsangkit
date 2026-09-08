@@ -19,6 +19,9 @@ export type WasteType = '일반쓰레기' | '음식물쓰레기' | '재활용' |
 export interface WasteTypeBadge {
   type: WasteType
   dayOfWeek: string[]
+  beginTime?: string
+  endTime?: string
+  method?: string
 }
 
 export interface RegionSchedule {
@@ -28,7 +31,10 @@ export interface RegionSchedule {
   targetRegion: string
   emissionPlace?: string
   emissionPlaceType?: string
+  managementZone?: string
   uncollectedDay?: string
+  /** 원본 공공데이터의 자료 기준일. DB syncedAt(동기화 시각)과 다르다. */
+  dataCreatedDate?: string
   wasteTypes: WasteTypeBadge[]
 }
 
@@ -74,9 +80,21 @@ export interface BackendScheduleData {
   totalPages: number
 }
 
+// 원본은 요일을 '월+수+금' 처럼 '+' 로 잇는다. '+' 를 나누지 않으면
+// 배열 원소 하나('월+수+금')가 그대로 남아 카드가 요일을 렌더할 수 없다.
 function parseDayOfWeek(dayStr?: string): string[] {
   if (!dayStr) return []
-  return dayStr.split(/[,\s]+/).filter(Boolean)
+  return dayStr.split(/[+,\s]+/).filter(Boolean)
+}
+
+function toBadge(type: WasteType, info: WasteTypeInfo): WasteTypeBadge {
+  return {
+    type,
+    dayOfWeek: parseDayOfWeek(info.dayOfWeek),
+    beginTime: info.beginTime || undefined,
+    endTime: info.endTime || undefined,
+    method: info.method || undefined,
+  }
 }
 
 export function transformToRegionSchedules(data: BackendScheduleData): RegionScheduleResponse {
@@ -84,17 +102,17 @@ export function transformToRegionSchedules(data: BackendScheduleData): RegionSch
     const details = item.details
     const wasteTypes: WasteTypeBadge[] = []
 
-    if (details?.livingWaste) {
-      wasteTypes.push({ type: '일반쓰레기', dayOfWeek: parseDayOfWeek(details.livingWaste.dayOfWeek) })
-    }
-    if (details?.foodWaste) {
-      wasteTypes.push({ type: '음식물쓰레기', dayOfWeek: parseDayOfWeek(details.foodWaste.dayOfWeek) })
-    }
-    if (details?.recyclable) {
-      wasteTypes.push({ type: '재활용', dayOfWeek: parseDayOfWeek(details.recyclable.dayOfWeek) })
-    }
+    if (details?.livingWaste) wasteTypes.push(toBadge('일반쓰레기', details.livingWaste))
+    if (details?.foodWaste) wasteTypes.push(toBadge('음식물쓰레기', details.foodWaste))
+    if (details?.recyclable) wasteTypes.push(toBadge('재활용', details.recyclable))
     if (details?.bulkWaste) {
-      wasteTypes.push({ type: '대형폐기물', dayOfWeek: [] })
+      wasteTypes.push({
+        type: '대형폐기물',
+        dayOfWeek: [],
+        beginTime: details.bulkWaste.beginTime || undefined,
+        endTime: details.bulkWaste.endTime || undefined,
+        method: details.bulkWaste.method || undefined,
+      })
     }
 
     return {
@@ -104,7 +122,9 @@ export function transformToRegionSchedules(data: BackendScheduleData): RegionSch
       targetRegion: item.targetRegion || '지역 미상',
       emissionPlace: item.emissionPlace || undefined,
       emissionPlaceType: details?.emissionPlaceType || undefined,
+      managementZone: details?.managementZone || undefined,
       uncollectedDay: details?.uncollectedDay || undefined,
+      dataCreatedDate: details?.dataCreatedDate || undefined,
       wasteTypes,
     }
   })
@@ -168,9 +188,12 @@ export function useWasteSchedule() {
       const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(url)
       return transformToRegionSchedules(response.data)
     } catch (e) {
+      // 예전 구현은 여기서 '서울특별시', '{구} 1동~3동', '02-1234-5678' 과 임의 요일
+      // 2건을 만들어 실제 공공데이터처럼 반환했다(운영 배포본에서 재현됨).
+      // 조회 실패는 데이터가 아니다 — 호출부가 오류로 다루도록 그대로 올린다.
       console.error('Failed to fetch schedules:', e)
       error.value = e as Error
-      return getMockSchedules(options?.district || '전체')
+      throw e
     } finally {
       isLoading.value = false
     }
@@ -239,45 +262,4 @@ function getMockDistricts(city: string): string[] {
   }
 
   return districtMap[city] || ['중구', '동구', '서구', '남구', '북구']
-}
-
-function getMockSchedules(district: string): RegionScheduleResponse {
-  return {
-    schedules: [
-      {
-        id: 1,
-        city: '서울특별시',
-        district,
-        targetRegion: `${district} 1동~3동`,
-        emissionPlace: '각 세대 앞',
-        emissionPlaceType: '문전수거',
-        uncollectedDay: '명절(설 및 추석)',
-        wasteTypes: [
-          { type: '일반쓰레기', dayOfWeek: ['월', '수', '금'] },
-          { type: '음식물쓰레기', dayOfWeek: ['화', '목', '토'] },
-          { type: '재활용', dayOfWeek: ['수', '토'] },
-          { type: '대형폐기물', dayOfWeek: [] },
-        ],
-      },
-      {
-        id: 2,
-        city: '서울특별시',
-        district,
-        targetRegion: `${district} 4동~6동`,
-        emissionPlace: '거점 수거',
-        emissionPlaceType: '거점수거',
-        wasteTypes: [
-          { type: '일반쓰레기', dayOfWeek: ['월', '수', '금'] },
-          { type: '재활용', dayOfWeek: ['화', '목'] },
-        ],
-      },
-    ],
-    contact: {
-      name: `${district} 청소행정과`,
-      phone: '02-1234-5678',
-    },
-    total: 2,
-    page: 1,
-    totalPages: 1,
-  }
 }

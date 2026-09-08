@@ -48,8 +48,10 @@
       :current-page="wasteCurrentPage"
       :total-pages="displayWasteTotalPages"
       :href-for="pageHref"
+      :error="wasteLoadError ? '배출 일정을 불러오지 못했습니다' : null"
       @page-change="goToWastePage"
       @select="openWasteSchedule"
+      @retry="loadWasteSchedules"
     />
 
     <!-- 일반 시설 그리드 -->
@@ -314,6 +316,9 @@ const wasteTotal = ref(0)
 // SSR 목록 우선, 클라이언트가 페이지네이션 등으로 재조회하면 그때부터 client 우선.
 // 규칙은 시설 목록과 동일한 순수 함수(resolveRegionDisplay)에 위임한다.
 const wasteSsrConsumed = ref(false)
+// 클라이언트 재조회 실패. getSchedules 가 더는 가짜 일정을 만들지 않으므로
+// 여기서 잡지 않으면 unhandled rejection 이 되고 목록이 조용히 이전 상태로 남는다.
+const wasteLoadError = ref(false)
 const wasteDisplay = computed(() =>
   resolveRegionDisplay<RegionSchedule>({
     ssrConsumed: wasteSsrConsumed.value,
@@ -383,17 +388,28 @@ function closeWasteSchedule() {
 
 async function loadWasteSchedules() {
   wasteSsrConsumed.value = true
+  wasteLoadError.value = false
   const fullCityName = SLUG_TO_FULL_CITY[city.value] || cityName.value
-  const result = await getSchedules({
-    city: fullCityName || undefined,
-    district: districtName.value || undefined,
-    page: wasteCurrentPage.value,
-    limit: 20,
-  })
-  wasteSchedules.value = result.schedules
-  wasteContact.value = result.contact || null
-  wasteTotal.value = result.total
-  wasteTotalPages.value = result.totalPages
+  try {
+    const result = await getSchedules({
+      city: fullCityName || undefined,
+      district: districtName.value || undefined,
+      page: wasteCurrentPage.value,
+      limit: 20,
+    })
+    wasteSchedules.value = result.schedules
+    wasteContact.value = result.contact || null
+    wasteTotal.value = result.total
+    wasteTotalPages.value = result.totalPages
+  } catch {
+    // 실패한 조회를 다른 지역·페이지의 마지막 결과로 대체하지 않는다.
+    // 비우고 오류 배너 + 재시도로 넘긴다.
+    wasteSchedules.value = []
+    wasteContact.value = null
+    wasteTotal.value = 0
+    wasteTotalPages.value = 1
+    wasteLoadError.value = true
+  }
 }
 
 // URL query 를 함께 갱신해야 reactive noindex 가 정확히 동작한다.

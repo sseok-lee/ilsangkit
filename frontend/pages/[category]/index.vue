@@ -97,9 +97,24 @@
                2페이지 이후 경로가 없다(시설 그리드는 이미 넘기는데 trash 만 빠져 있었다). -->
           <Pagination v-if="!wasteLoading && !initialLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" :href-for="pageHref" @page-change="goToWastePage" />
 
+          <!-- 조회 실패: 데이터 없는 지역과 장애를 구분해서 보여준다 -->
+          <div
+            v-if="wasteLoadError && !wasteLoading && !initialLoading"
+            class="bg-red-50 border border-red-200 rounded-xl p-6 text-center"
+          >
+            <p class="text-red-800">배출 일정을 불러오지 못했습니다</p>
+            <button
+              type="button"
+              class="mt-3 px-4 py-2 min-h-[44px] rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+              @click="loadWasteSchedules"
+            >
+              다시 시도
+            </button>
+          </div>
+
           <!-- 결과 없음 -->
           <EmptyState
-            v-if="wasteSchedules.length === 0 && !wasteLoading && !initialLoading"
+            v-if="!wasteLoadError && wasteSchedules.length === 0 && !wasteLoading && !initialLoading"
             icon="delete"
             title="등록된 배출 일정이 없습니다"
             description="해당 지역의 배출 정보가 아직 등록되지 않았어요"
@@ -365,6 +380,9 @@ const ssrItems = ssrData.value?.data
 const ssrTransformed = isTrash && ssrItems && !ssrItems.schedules
   ? transformToRegionSchedules(ssrItems)
   : null
+// 클라이언트 재조회 실패. getSchedules 가 더는 가짜 일정을 만들지 않으므로
+// 여기서 잡지 않으면 unhandled rejection 이 되고 목록이 조용히 이전 상태로 남는다.
+const wasteLoadError = ref(false)
 const wasteSchedules = ref<RegionSchedule[]>(
   isTrash && ssrItems
     ? (ssrTransformed?.schedules ?? ssrItems.schedules ?? [])
@@ -614,18 +632,29 @@ async function loadWasteSchedules() {
   // 인터랙티브 지역 재조회(여기) 진입 시점에 동기 설정 — SSR 직후 딥링크 onMounted 는
   // `!ssrData.value?.data` 가드로 이 함수 호출 자체가 스킵되므로 영향받지 않는다(전국 등록 유지).
   ssrConsumed.value = true
+  wasteLoadError.value = false
 
-  const result = await getSchedules({
-    city: cityName.value || undefined,
-    district: undefined,
-    keyword: queryKeyword.value || undefined,
-    page: wasteCurrentPage.value,
-    limit: 20,
-  })
-  wasteSchedules.value = result.schedules
-  wasteContact.value = result.contact || null
-  wasteTotal.value = result.total
-  wasteTotalPages.value = result.totalPages
+  try {
+    const result = await getSchedules({
+      city: cityName.value || undefined,
+      district: undefined,
+      keyword: queryKeyword.value || undefined,
+      page: wasteCurrentPage.value,
+      limit: 20,
+    })
+    wasteSchedules.value = result.schedules
+    wasteContact.value = result.contact || null
+    wasteTotal.value = result.total
+    wasteTotalPages.value = result.totalPages
+  } catch {
+    // 실패한 조회를 다른 지역·키워드의 마지막 결과로 대체하지 않는다.
+    wasteSchedules.value = []
+    wasteContact.value = null
+    wasteTotal.value = 0
+    wasteTotalPages.value = 1
+    wasteLoadError.value = true
+    return
+  }
 
   // 검색 로깅(§3 D6) — trash 는 `loading` 이 아닌 이 함수의 완료 시점이 곧 결과 확정 시점이다.
   if (queryKeyword.value) {

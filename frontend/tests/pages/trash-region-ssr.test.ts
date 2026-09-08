@@ -82,3 +82,25 @@ describe('구·군 trash 집계 페이지 SSR', () => {
     )
   })
 })
+
+describe('클라이언트 재조회 실패 처리', () => {
+  /**
+   * useWasteSchedule.getSchedules 는 실패를 가짜 일정으로 덮지 않고 throw 한다
+   * (예전 구현은 '{구} 1동~3동' 2건과 '02-1234-5678' 을 반환했다).
+   * 따라서 페이지네이션·지역 변경으로 재조회하는 이 호출부가 오류를 받아야 하며,
+   * 잡지 않으면 unhandled rejection 이 되고 목록은 조용히 이전 상태로 남는다.
+   */
+  it('재조회 실패를 잡아 오류 상태로 남긴다', () => {
+    expect(regionCategory).toMatch(/catch\s*\{[\s\S]*?wasteLoadError\.value = true/)
+  })
+
+  it('실패한 조회를 이전/다른 조건의 목록으로 대체하지 않는다', () => {
+    // 빈 목록 + 오류 배너로 간다 — 다른 지역·페이지 결과를 현재 결과처럼 보여주지 않는다.
+    expect(regionCategory).toMatch(/catch\s*\{[\s\S]*?wasteSchedules\.value = \[\]/)
+  })
+
+  it('오류와 재시도를 배출 일정 섹션에 전달한다', () => {
+    expect(regionCategory).toContain(':error="wasteLoadError ? ')
+    expect(regionCategory).toContain('@retry="loadWasteSchedules"')
+  })
+})
