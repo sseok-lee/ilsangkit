@@ -41,7 +41,6 @@ import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
 import { syncSubwayStations } from '../services/subwaySyncService.js';
 import { prisma } from '../lib/prisma.js';
-import { submitIndexNow, buildFacilityUrls, buildSubwayUrls } from '../services/indexNowService.js';
 
 // 공공화장실 기본 CSV 파일 경로
 const TOILET_CSV_PATH = path.resolve(
@@ -72,22 +71,6 @@ function readMarkerFile(filePath: string): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * IndexNow용 최근 동기화 ev-charger 충전소(station) ID 목록 조회.
- * EvCharger는 충전기(row) 단위(`id` = statId-chgerId, ~51만행)지만
- * 상세페이지/사이트맵은 충전소(statId) 단위이므로, DISTINCT statId를
- * `{ id: statId }` 형태로 반환해 기존 modelQueries 소비 로직(items.map(i => i.id))과
- * 그대로 호환되게 한다.
- */
-export async function getEvChargerIndexNowItems(syncCutoff: Date): Promise<{ id: string }[]> {
-  const rows = await prisma.evCharger.findMany({
-    where: { syncedAt: { gte: syncCutoff }, statId: { not: null } },
-    select: { statId: true },
-    distinct: ['statId'],
-  });
-  return rows.map((r) => ({ id: r.statId! }));
 }
 
 /**
@@ -482,83 +465,13 @@ async function main(): Promise<void> {
     console.log(`\n✅ 성공: ${successList.join(', ')}`);
   }
 
-  // 실패한 카테고리 상세 (exit는 IndexNow/요약 갱신 이후로 미룬다 — 아래 참고)
+  // 실패한 카테고리 상세 (exit는 부동산 요약 갱신 이후로 미룬다 — 아래 참고)
   const failedResults = results.filter(r => !r.success);
   if (failedResults.length > 0) {
     console.log('\n❌ 실패한 카테고리:');
     failedResults.forEach(r => {
       console.log(`  - ${r.category}: ${r.error}`);
     });
-  }
-
-  // IndexNow: 동기화된 시설 URL 제출
-  const syncedCategories = results.filter(r => r.success && (r.count ?? 0) > 0);
-  if (syncedCategories.length > 0) {
-    console.log('\n[IndexNow] 변경된 URL 제출 중...');
-    const syncCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000); // 2시간 이내
-
-    const modelQueries: Record<string, () => Promise<{ id: string | number }[]>> = {
-      toilet: () => prisma.toilet.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      trash: () => prisma.wasteSchedule.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      wifi: () => prisma.wifi.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      clothes: () => prisma.clothes.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      hospital: () => prisma.hospital.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      pharmacy: () => prisma.pharmacy.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      parking: () => prisma.parking.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      aed: () => prisma.aed.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      library: () => prisma.library.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      park: () => prisma.park.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      school: () => prisma.school.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      market: () => prisma.market.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      childcare: () => prisma.childcare.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-      'ev-charger': () => getEvChargerIndexNowItems(syncCutoff),
-      sports: () => prisma.sports.findMany({ where: { syncedAt: { gte: syncCutoff } }, select: { id: true } }),
-    };
-
-    const allUrls: string[] = [];
-    for (const { category } of syncedCategories) {
-      // subway는 facility 패턴(/{category}/{id})과 다른 URL — Phase 1 noindex 정책으로 별도 게이트.
-      if (category === 'subway') continue;
-
-      const queryFn = modelQueries[category];
-      if (!queryFn) continue;
-      try {
-        const items = await queryFn();
-        const urls = buildFacilityUrls(category, items.map(i => String(i.id)));
-        allUrls.push(...urls);
-        console.log(`[IndexNow] ${category}: ${urls.length}개 URL`);
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.error(`[IndexNow] ${category} URL 조회 실패: ${msg}`);
-      }
-    }
-
-    // 지하철 URL은 SUBWAY_INDEX_NOW_ENABLED 플래그로 게이트.
-    // Phase 1: 모든 /subway/* 페이지에 noindex 메타가 적용되므로 색인 신호를 보내지 않음.
-    // Phase 2: 콘텐츠 충실화 후 플래그를 해제.
-    if (
-      process.env.SUBWAY_INDEX_NOW_ENABLED === 'true'
-      && syncedCategories.some((r) => r.category === 'subway')
-    ) {
-      try {
-        const subwaySynced = await prisma.subwayStation.findMany({
-          where: { syncedAt: { gte: syncCutoff } },
-          select: { nameSlug: true },
-        });
-        if (subwaySynced.length > 0) {
-          const subwayUrls = buildSubwayUrls(subwaySynced.map((s) => s.nameSlug));
-          allUrls.push(...subwayUrls);
-          console.log(`[IndexNow] subway: ${subwayUrls.length}개 URL`);
-        }
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.error(`[IndexNow] subway URL 조회 실패: ${msg}`);
-      }
-    }
-
-    if (allUrls.length > 0) {
-      await submitIndexNow(allUrls);
-    }
   }
 
   // 부동산 Summary 테이블 갱신
@@ -574,8 +487,8 @@ async function main(): Promise<void> {
     console.log('\n모든 동기화가 성공적으로 완료되었습니다.');
   }
 
-  // 실패한 카테고리가 있었으면 IndexNow/요약 갱신을 모두 마친 뒤 이제 exit(1)로 반영한다.
-  // (성공한 카테고리의 IndexNow 제출·부동산 요약 갱신을 건너뛰지 않기 위해 위쪽의
+  // 실패한 카테고리가 있었으면 요약 갱신을 마친 뒤 이제 exit(1)로 반영한다.
+  // (성공한 카테고리의 부동산 요약 갱신을 건너뛰지 않기 위해 위쪽의
   // early exit를 제거하고 여기로 옮김)
   if (failedResults.length > 0) {
     console.error(`\n일부 카테고리 실패(${failedResults.length}개)로 종료 코드 1을 반환합니다.`);
