@@ -177,3 +177,41 @@ describe('CATEGORY_SEO_DESCRIPTION', () => {
     expect(CATEGORY_SEO_DESCRIPTION['hospital']).toContain('병원')
   })
 })
+
+/**
+ * 검색 설명이 사이트에 없는 기능을 약속하고 있었다(라이브 실측 2026-09-08).
+ *
+ * 실사 결과:
+ *  - `navigator.geolocation`/`getCurrentPosition`/`watchPosition` 호출부가
+ *    pages·components·composables·utils 전체에 0건 → "현재 위치 기준" 은 이용할 수 없다.
+ *    서버에는 좌표·반경 거리순 검색이 있지만(facilityService.ts:455) 허브에서 그리로 가는 동선이 없다.
+ *  - 허브 검색은 category/page/limit/city/keyword/departments 만 보낸다 → 거리순 정렬 없음.
+ *  - API 스키마(backend/src/schemas/facility.ts:73~)에 영업중·야간·24시간 필터 필드가 없다.
+ *
+ * 있는 기능까지 지우지는 않는다: 병원 진료과목 필터, 카드 운영상태 배지,
+ * 상세의 지도·길찾기·요일별 시간표, 화장실 24시간·장애인 배지는 실재한다.
+ * (RESEARCH/naver-decline-2026-09-08/recheck-metadata.md)
+ */
+describe('CATEGORY_SEO_DESCRIPTION - 없는 기능을 약속하지 않는다', () => {
+  const entries = Object.entries(CATEGORY_SEO_DESCRIPTION)
+
+  it.each(entries)('%s: 현재 위치 기반 탐색을 약속하지 않는다', (_category, description) => {
+    expect(description).not.toMatch(/현재 위치|내 위치|가까운 순/)
+  })
+
+  it.each(entries)('%s: 거리순 정렬을 약속하지 않는다', (_category, description) => {
+    expect(description).not.toMatch(/거리순/)
+  })
+
+  it.each(entries)('%s: 영업시간 기반 필터를 약속하지 않는다', (_category, description) => {
+    expect(description).not.toMatch(/(운영 중인|영업 중인|영업중|야간|24시간)[^.]*필터/)
+  })
+
+  it('병원은 실제로 제공하는 진료과별 검색 설명을 유지한다', () => {
+    expect(CATEGORY_SEO_DESCRIPTION.hospital).toContain('진료과')
+  })
+
+  it('화장실은 실제로 표시하는 개방시간 설명을 유지한다', () => {
+    expect(CATEGORY_SEO_DESCRIPTION.toilet).toContain('개방시간')
+  })
+})
