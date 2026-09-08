@@ -74,8 +74,26 @@ npm run sync:school:department
 npm run sync:school:geocode
 ```
 
-`sync:school:geocode` 는 `lat IS NULL` 인 행만 본다. 학교가 이전해 주소가 바뀐 경우
-좌표는 갱신되지 않으므로 필요하면 해당 행의 좌표를 비우고 다시 돌려야 한다.
+`sync:school:geocode` 는 두 가지를 대상으로 잡는다:
+
+1. 좌표가 없는 행 — 신규 학교
+2. `geocodedAddress`(좌표를 만든 주소)와 현재 주소가 달라진 행 — 학교 이전
+
+`syncAll` 의 카테고리 순서가 `school` → `school-geocode` 라 한 번의 실행 안에서 닫힌다.
+주소가 바뀌면 바로 다음 단계가 재지오코딩한다.
+
+`geocodedAddress` 가 NULL 인 행은 건드리지 않는다. 표준데이터 CSV 의 측량 좌표라
+카카오 도로명 중심점보다 정확한 경우가 많다 — 2026-09-09 실측에서 200m 초과 95건을
+학교명 키워드 검색으로 교차검증하니 32건은 저장 좌표가 더 정확했다(평택고는 주소
+지오코딩이 1,746m 벗어남, 인천 석정로 165 는 5개교가 한 주소라 단지 입구로 찍힘).
+
+```bash
+# 일회성: 기존 좌표의 출처를 현재 주소로 기록해 이후 변경을 감지할 수 있게 한다
+npx tsx src/scripts/geocodeSchool.ts --backfill-geocoded-address
+```
+
+지오코딩에 실패해도 기존 좌표는 남긴다. 비우면 카카오가 못 찾는 주소(실측 73건)에서
+지도가 아예 사라진다.
 
 ### 은퇴한 스크립트
 
