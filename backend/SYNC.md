@@ -48,39 +48,44 @@ npm run seed:hospital-detail  # 병원 상세정보 (건강보험심사평가원
 
 ## 학교 동기화 (NEIS API)
 
+**NEIS 가 학교의 단일 소스다.** 표준데이터(전국초중등학교위치표준데이터) CSV·tn_ API 는
+쓰지 않는다 — referenceDate 2026-03-20 에 멈춰 2026 인천 행정구역 개편을 반영하지 않는다
+(제물포·영종·서해·검단구 0건). 그 값으로 지역을 쓰면 채택한 신설구가 되돌아간다.
+
 환경 변수: `NEIS_API_KEY` 필요 (https://open.neis.go.kr)
 
 ```bash
 npm run sync:school              # 학교 기본정보 (sync:facilities에 포함)
 npm run sync:school:enrollment   # 학년별 학급(반) 수
 npm run sync:school:department   # 고등학교 계열 정보
-```
-
-### 최초 1회 전용
-```bash
-npm run sync:school:merge        # CSV 학교에 NEIS 데이터 병합 + 중복 삭제
 npm run sync:school:geocode      # 좌표 없는 학교 카카오 geocoding (KAKAO_REST_API_KEY 필요)
-npm run sync:school:csv          # 기존 CSV 기반 (deprecated)
 ```
 
-### 최초 프로덕션 학교 셋업 순서
-1. `.env`에 `NEIS_API_KEY` 설정
-2. `npx prisma db push` (스키마 반영)
-3. 순서대로 실행:
+### 실행 순서
+
+`sync:school` 을 먼저 돌린다. 자식 데이터는 `neisEduCode`(교육청) + `neisSchoolCode`(학교)
+쌍으로 조회하므로, 새로 연결된 학교는 `sync:school` 이 `neisEduCode` 를 채운 뒤에야
+학급·계열이 붙는다.
+
 ```bash
 npm run sync:school
-npm run sync:school:merge
-npm run sync:school:geocode
 npm run sync:school:enrollment
 npm run sync:school:department
+npm run sync:school:geocode
 ```
 
-### 이후 재동기화
-```bash
-npm run sync:school              # 기본정보 갱신 (neisSchoolCode로 매칭)
-npm run sync:school:enrollment   # 학급 데이터 갱신 (선택)
-npm run sync:school:department   # 계열 데이터 갱신 (선택)
-```
+`sync:school:geocode` 는 `lat IS NULL` 인 행만 본다. 학교가 이전해 주소가 바뀐 경우
+좌표는 갱신되지 않으므로 필요하면 해당 행의 좌표를 비우고 다시 돌려야 한다.
+
+### 은퇴한 스크립트
+
+| 스크립트 | 은퇴 이유 |
+|---|---|
+| `sync:school:merge` | NEIS 를 학교명만으로 매칭해(`Map.set(n.name, n)`) 940행에 남의 학교 코드를 박았다. 동명 학교가 1,069개 이름·2,615행이라 이름 단독 매칭은 성립하지 않는다 (#789) |
+| `sync:school:csv` | 표준데이터 CSV 로 School 12,014행을 덮어써 신원을 2026-03-20 값으로 되돌린다 |
+
+표준데이터 CSV(`prisma/data/school.csv`)는 `reconcileSchoolNeisRows` 의 학교ID ↔ NEIS 코드
+매핑 입력으로만 남아 있다. 읽기 전용이다.
 
 ---
 
