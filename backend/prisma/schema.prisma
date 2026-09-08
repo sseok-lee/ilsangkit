@@ -207,6 +207,10 @@ model School {
   roadAddress String?  @db.VarChar(500)
   lat         Decimal? @db.Decimal(10, 7)
   lng         Decimal? @db.Decimal(10, 7)
+  // lat/lng 을 만들어낸 주소. 학교가 이전해 주소가 바뀌면 이 값과 달라지므로
+  // 좌표를 비우지 않고도 재지오코딩 대상을 고를 수 있다(geocodeSchool.needsGeocoding).
+  // NULL 이면 출처 불명(표준데이터 CSV 측량 좌표)이라 건드리지 않는다.
+  geocodedAddress String? @db.VarChar(500)
   city        String   @db.VarChar(50)
   district    String   @db.VarChar(50)
   bjdCode     String?  @db.VarChar(5)
