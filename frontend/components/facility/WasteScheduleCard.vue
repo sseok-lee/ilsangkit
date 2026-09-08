@@ -23,28 +23,37 @@
           {{ region.targetRegion?.replaceAll('+', ', ') }}
         </h3>
 
-        <!-- Subtitle: emission place + type -->
-        <p v-if="region.emissionPlace || region.emissionPlaceType" class="text-slate-500 text-xs font-normal mt-1 truncate">
-          {{ region.emissionPlace }}
-          <span v-if="region.emissionPlace && region.emissionPlaceType"> · </span>
-          {{ region.emissionPlaceType }}
+        <!-- Subtitle: emission place + type + management zone -->
+        <p v-if="subtitle" class="text-slate-500 text-xs font-normal mt-1 truncate">
+          {{ subtitle }}
         </p>
 
-        <!-- Waste type badges + uncollected warning -->
-        <div class="mt-2.5 flex items-center gap-1.5 flex-wrap">
-          <span
-            v-for="wt in region.wasteTypes"
-            :key="wt.type"
-            :class="['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', badgeClass(wt.type)]"
-          >
-            {{ wt.type }}
-          </span>
+        <!-- 유형별 배출 요일·시간·방법.
+             배지만 렌더하던 때는 크롤러가 받는 구·군 본문이 전국 어디나 같았다. -->
+        <ul class="mt-2.5 space-y-1.5">
+          <li v-for="row in wasteRows" :key="row.type" class="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span
+              :class="['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', badgeClass(row.type)]"
+            >
+              {{ row.type }}
+            </span>
+            <span v-if="row.days" class="text-slate-700 text-xs font-medium">{{ row.days }}</span>
+            <span v-if="row.time" class="text-slate-500 text-xs">{{ row.time }}</span>
+            <span v-if="row.method" class="basis-full text-slate-500 text-xs line-clamp-2">{{ row.method }}</span>
+          </li>
+        </ul>
+
+        <div class="mt-2 flex items-center gap-1.5 flex-wrap">
           <span
             v-if="region.uncollectedDay"
             class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700"
           >
             <span class="material-symbols-outlined text-[14px]">warning</span>
             미수거
+          </span>
+          <!-- 원본 자료 기준일. DB 동기화 시각(syncedAt)과 다르므로 라벨로 구분한다. -->
+          <span v-if="region.dataCreatedDate" class="text-slate-400 text-[11px]">
+            자료 기준일 {{ region.dataCreatedDate }}
           </span>
         </div>
       </div>
@@ -55,6 +64,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { RegionSchedule, WasteType } from '~/composables/useWasteSchedule'
+import { formatDays, formatTimeRange, normalizeProvidedText } from '~/utils/wasteSchedule'
 
 const props = defineProps<{
   region: RegionSchedule
@@ -66,6 +76,25 @@ const emit = defineEmits<{
 
 const shortCity = computed(() =>
   props.region.city?.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '') || ''
+)
+
+const subtitle = computed(() =>
+  [props.region.emissionPlace, props.region.emissionPlaceType, props.region.managementZone]
+    .map(value => normalizeProvidedText(value))
+    .filter(Boolean)
+    .join(' · ')
+)
+
+const wasteRows = computed(() =>
+  props.region.wasteTypes.map(wt => ({
+    type: wt.type,
+    // 대형폐기물은 원본에 배출 요일이 없다(신청·장소 기준) — 없는 요일을 안내로 만들지 않는다.
+    days: wt.dayOfWeek.length > 0
+      ? formatDays(wt.dayOfWeek)
+      : (wt.type === '대형폐기물' ? '' : '요일 정보 없음'),
+    time: formatTimeRange(wt.beginTime, wt.endTime),
+    method: normalizeProvidedText(wt.method),
+  }))
 )
 
 const badgeClass = (type: WasteType): string => {

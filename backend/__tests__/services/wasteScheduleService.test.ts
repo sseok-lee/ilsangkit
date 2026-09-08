@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { groupByMock, findManyMock, countMock } = vi.hoisted(() => ({
+const { groupByMock, findManyMock, countMock, findFirstMock } = vi.hoisted(() => ({
   groupByMock: vi.fn(),
   findManyMock: vi.fn(),
   countMock: vi.fn(),
+  findFirstMock: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -11,11 +12,20 @@ vi.mock('../../src/lib/prisma.js', () => {
     groupBy: groupByMock,
     findMany: findManyMock,
     count: countMock,
+    findFirst: findFirstMock,
   };
   return { prisma: { wasteSchedule }, default: { wasteSchedule } };
 });
 
-import { getByRegion, getDistricts, getWasteScheduleRegions } from '../../src/services/wasteScheduleService.js';
+import {
+  getByRegion,
+  getDistricts,
+  getWasteScheduleRegions,
+  getRegions,
+  getCities,
+  getAllIds,
+  getById,
+} from '../../src/services/wasteScheduleService.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -173,5 +183,88 @@ describe('getDistricts — city variant matching', () => {
 
     const where = groupByMock.mock.calls[0][0].where;
     expect(where.city).toEqual({ in: expect.arrayContaining(['서울특별시', '서울']) });
+  });
+});
+
+// 운영 DB 에 seed 5건(sourceId `seed-waste-schedule-1`~`5`, id 15345~15349)이 남아
+// 종로 등의 공개 목록에 검증되지 않은 예시 일정으로 섞여 나갔다(RESEARCH/naver-decline-2026-09-08).
+// 구형 `emissionDays`/`emissionTime` 구조라 상세 모달도 요일·시간을 읽지 못한다.
+// 원본은 보존하고 공개 조회 경로에서만 제외한다.
+const SEED_EXCLUDED = { not: { startsWith: 'seed-' } };
+
+describe('seed 데이터 공개 노출 제외', () => {
+  beforeEach(() => {
+    findManyMock.mockResolvedValue([]);
+    countMock.mockResolvedValue(0);
+    groupByMock.mockResolvedValue([]);
+    findFirstMock.mockResolvedValue(null);
+  });
+
+  it('getByRegion 목록에서 seed sourceId 를 제외한다', async () => {
+    await getByRegion('서울', '종로구');
+
+    expect(findManyMock.mock.calls[0][0].where.sourceId).toEqual(SEED_EXCLUDED);
+  });
+
+  it('getByRegion 의 total 카운트도 같은 제외 조건을 쓴다', async () => {
+    await getByRegion('서울', '종로구');
+
+    expect(countMock.mock.calls[0][0].where.sourceId).toEqual(SEED_EXCLUDED);
+  });
+
+  it('getRegions 지역 집계에서 seed 를 제외한다', async () => {
+    await getRegions();
+
+    expect(groupByMock.mock.calls[0][0].where.sourceId).toEqual(SEED_EXCLUDED);
+  });
+
+  it('getCities 시/도 목록에서 seed 를 제외한다', async () => {
+    await getCities();
+
+    expect(groupByMock.mock.calls[0][0].where.sourceId).toEqual(SEED_EXCLUDED);
+  });
+
+  it('getDistricts 구/군 목록에서 seed 를 제외한다', async () => {
+    await getDistricts('서울');
+
+    expect(groupByMock.mock.calls[0][0].where.sourceId).toEqual(SEED_EXCLUDED);
+  });
+
+  it('getAllIds 사이트맵 ID 에서 seed 를 제외한다', async () => {
+    await getAllIds();
+
+    expect(findManyMock.mock.calls[0][0].where.sourceId).toEqual(SEED_EXCLUDED);
+  });
+
+  it('getWasteScheduleRegions 사이트맵 지역에서 seed 를 제외한다', async () => {
+    await getWasteScheduleRegions();
+
+    expect(groupByMock.mock.calls[0][0].where.sourceId).toEqual(SEED_EXCLUDED);
+  });
+
+  it('getById 는 seed 행을 조회 대상에서 빼고 null 을 반환한다', async () => {
+    const result = await getById(15346);
+
+    expect(findFirstMock.mock.calls[0][0].where).toEqual({
+      id: 15346,
+      sourceId: SEED_EXCLUDED,
+    });
+    expect(result).toBeNull();
+  });
+
+  it('getById 는 정상 행을 그대로 반환한다', async () => {
+    findFirstMock.mockResolvedValue({
+      id: 13198,
+      city: '서울특별시',
+      district: '종로구',
+      targetRegion: '청운효자동',
+      emissionPlace: '문전배출',
+      details: { livingWaste: { dayOfWeek: '일+월+화+수+목+금' } },
+    });
+
+    const result = await getById(13198);
+
+    expect(result?.id).toBe(13198);
+    expect(result?.details?.livingWaste?.dayOfWeek).toBe('일+월+화+수+목+금');
   });
 });

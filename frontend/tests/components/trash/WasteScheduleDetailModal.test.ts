@@ -74,3 +74,39 @@ describe('WasteScheduleDetailModal', () => {
     wrapper.unmount()
   })
 })
+
+describe('WasteScheduleDetailModal 미제공 값 처리', () => {
+  // 원본은 미제공을 빈 문자열이 아니라 '빈칸' 같은 자리표시자로 담는다(달서 10817).
+  // 그대로 렌더하면 "배출 방법: 빈칸" 이라는 틀린 안내가 된다.
+  const placeholderSchedule = {
+    id: 10817,
+    city: '대구광역시',
+    district: '달서구',
+    targetRegion: '본리동',
+    emissionPlace: '문전배출',
+    details: {
+      livingWaste: { dayOfWeek: '월+수+금', beginTime: '20:00', endTime: '02:00', method: '빈칸' },
+      recyclable: { dayOfWeek: '월+수+금', beginTime: '20:00', endTime: '02:00', method: '투명봉투 배출' },
+    },
+  }
+
+  it("'빈칸' 을 배출 방법으로 노출하지 않는다", () => {
+    const wrapper = mount(WasteScheduleDetailModal, {
+      attachTo: document.body,
+      props: { open: true, schedule: placeholderSchedule as never, loading: false },
+      global: { stubs: { teleport: true } },
+    })
+
+    expect(wrapper.text()).not.toContain('빈칸')
+  })
+
+  it('실제 배출 방법은 그대로 보여준다', () => {
+    const wrapper = mount(WasteScheduleDetailModal, {
+      attachTo: document.body,
+      props: { open: true, schedule: placeholderSchedule as never, loading: false },
+      global: { stubs: { teleport: true } },
+    })
+
+    expect(wrapper.text()).toContain('투명봉투 배출')
+  })
+})

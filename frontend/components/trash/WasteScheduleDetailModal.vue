@@ -92,7 +92,7 @@
               >
                 <span class="material-symbols-outlined text-[19px] text-red-500">warning</span>
                 <span class="font-bold text-red-600">미수거일</span>
-                <span class="text-red-700">{{ formatDays(schedule.details.uncollectedDay) }}</span>
+                <span class="text-red-700">{{ formatDayString(schedule.details.uncollectedDay) }}</span>
               </div>
 
               <div
@@ -151,6 +151,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { BulkWasteInfo, WasteScheduleDetail, WasteTypeInfo } from '~/composables/useWasteSchedule'
+import { formatDays, formatTimeRange, normalizeProvidedText } from '~/utils/wasteSchedule'
 
 const props = defineProps<{
   open: boolean
@@ -183,17 +184,9 @@ const shortCity = computed(() =>
 )
 const displayTargetRegion = computed(() => props.schedule?.targetRegion?.replaceAll('+', ', ') || '지역')
 
-function formatDays(value?: string): string {
+function formatDayString(value?: string): string {
   if (!value) return ''
-  return value.split(/[+,\s]+/).filter(Boolean).join(' · ')
-}
-
-function formatTimeRange(beginTime?: string, endTime?: string): string {
-  if (!beginTime && !endTime) return ''
-  if (!beginTime) return endTime || ''
-  if (!endTime) return beginTime
-  const nextDay = endTime < beginTime ? '익일 ' : ''
-  return `${beginTime} ~ ${nextDay}${endTime}`
+  return formatDays(value.split(/[+,\s]+/))
 }
 
 function createWasteSection(
@@ -204,15 +197,15 @@ function createWasteSection(
 ): WasteSection | null {
   if (!info) return null
   const primary = isBulk
-    ? (info as BulkWasteInfo).place || '지정 장소'
-    : formatDays((info as WasteTypeInfo).dayOfWeek) || '요일 정보 없음'
+    ? normalizeProvidedText((info as BulkWasteInfo).place) || '지정 장소'
+    : formatDayString((info as WasteTypeInfo).dayOfWeek) || '요일 정보 없음'
 
   return {
     label,
     ...style,
     primary,
     time: formatTimeRange(info.beginTime, info.endTime),
-    method: info.method || '',
+    method: normalizeProvidedText(info.method) || '',
   }
 }
 

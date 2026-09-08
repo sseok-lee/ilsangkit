@@ -97,9 +97,24 @@
                2페이지 이후 경로가 없다(시설 그리드는 이미 넘기는데 trash 만 빠져 있었다). -->
           <Pagination v-if="!wasteLoading && !initialLoading" :current-page="wasteCurrentPage" :total-pages="wasteTotalPages" :href-for="pageHref" @page-change="goToWastePage" />
 
+          <!-- 조회 실패: 데이터 없는 지역과 장애를 구분해서 보여준다 -->
+          <div
+            v-if="wasteLoadError && !wasteLoading && !initialLoading"
+            class="bg-red-50 border border-red-200 rounded-xl p-6 text-center"
+          >
+            <p class="text-red-800">배출 일정을 불러오지 못했습니다</p>
+            <button
+              type="button"
+              class="mt-3 px-4 py-2 min-h-[44px] rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+              @click="loadWasteSchedules"
+            >
+              다시 시도
+            </button>
+          </div>
+
           <!-- 결과 없음 -->
           <EmptyState
-            v-if="wasteSchedules.length === 0 && !wasteLoading && !initialLoading"
+            v-if="!wasteLoadError && wasteSchedules.length === 0 && !wasteLoading && !initialLoading"
             icon="delete"
             title="등록된 배출 일정이 없습니다"
             description="해당 지역의 배출 정보가 아직 등록되지 않았어요"
@@ -365,6 +380,9 @@ const ssrItems = ssrData.value?.data
 const ssrTransformed = isTrash && ssrItems && !ssrItems.schedules
   ? transformToRegionSchedules(ssrItems)
   : null
+// 클라이언트 재조회 실패. getSchedules 가 더는 가짜 일정을 만들지 않으므로
+// 여기서 잡지 않으면 unhandled rejection 이 되고 목록이 조용히 이전 상태로 남는다.
+const wasteLoadError = ref(false)
 const wasteSchedules = ref<RegionSchedule[]>(
   isTrash && ssrItems
     ? (ssrTransformed?.schedules ?? ssrItems.schedules ?? [])
@@ -451,15 +469,15 @@ const displayTotalPages = computed(() => {
 })
 
 const SEO_DESCRIPTIONS: Record<string, string> = {
-  toilet: '지금 이용 가능한 주변 공공화장실과 개방화장실 위치를 확인하세요. 24시간 운영 여부와 장애인화장실 정보를 제공합니다.',
+  toilet: '주변 공공화장실과 개방화장실 위치를 확인하세요. 24시간 운영 여부와 장애인화장실 정보를 제공합니다.',
   parking: '목적지 근처 공영주차장의 위치와 요금을 한눈에 비교하세요. 무료 주차 여부와 주차 가능 면수 정보를 제공합니다.',
   'ev-charger': '주변 전기차 충전소 위치와 급속/완속 충전기 대수를 확인하세요. 운영기관, 주차 요금, 이용 시간 정보를 제공합니다.',
   park: '산책하기 좋은 주변 공원을 찾아보세요. 운동시설, 놀이시설, 편의시설 정보와 면적을 한눈에 확인할 수 있습니다.',
   school: '주변 초등학교, 중학교, 고등학교 위치와 학교 정보를 검색하세요. 설립유형, 교육청 정보를 제공합니다.',
   childcare: '집 근처 어린이집의 정원, 현원, 빈자리 현황을 확인하세요. 국공립/민간/가정 유형별 검색이 가능합니다.',
   library: '가까운 공공도서관의 운영시간과 휴관일을 확인하세요. 좌석수, 장서 정보를 한눈에 볼 수 있습니다.',
-  hospital: '현재 진료 중인 가까운 병원을 빠르게 찾으세요. 진료과목별 검색과 야간/주말 진료 여부를 확인할 수 있습니다.',
-  pharmacy: '지금 문 연 주변 약국을 찾아보세요. 야간 운영, 주말/공휴일 영업 약국 위치와 연락처를 제공합니다.',
+  hospital: '가까운 병원을 진료과목별로 찾아보세요. 상세에서 요일별 진료시간과 야간/주말 진료 여부를 확인할 수 있습니다.',
+  pharmacy: '주변 약국을 찾아보세요. 상세에서 요일별 영업시간과 야간·주말 영업 여부, 연락처를 확인할 수 있습니다.',
   aed: '골든타임을 지키는 가장 가까운 자동심장충격기(AED) 위치를 미리 확인하세요. 설치 장소와 이용 시간을 안내합니다.',
   sports: '운동하기 좋은 주변 공공체육시설을 검색하세요. 시설 종류, 규모, 관리기관 정보를 제공합니다.',
   market: '주변 전통시장의 위치와 개장 정보를 확인하세요. 취급품목, 주차장/화장실 유무, 상점 수 정보를 제공합니다.',
@@ -614,18 +632,29 @@ async function loadWasteSchedules() {
   // 인터랙티브 지역 재조회(여기) 진입 시점에 동기 설정 — SSR 직후 딥링크 onMounted 는
   // `!ssrData.value?.data` 가드로 이 함수 호출 자체가 스킵되므로 영향받지 않는다(전국 등록 유지).
   ssrConsumed.value = true
+  wasteLoadError.value = false
 
-  const result = await getSchedules({
-    city: cityName.value || undefined,
-    district: undefined,
-    keyword: queryKeyword.value || undefined,
-    page: wasteCurrentPage.value,
-    limit: 20,
-  })
-  wasteSchedules.value = result.schedules
-  wasteContact.value = result.contact || null
-  wasteTotal.value = result.total
-  wasteTotalPages.value = result.totalPages
+  try {
+    const result = await getSchedules({
+      city: cityName.value || undefined,
+      district: undefined,
+      keyword: queryKeyword.value || undefined,
+      page: wasteCurrentPage.value,
+      limit: 20,
+    })
+    wasteSchedules.value = result.schedules
+    wasteContact.value = result.contact || null
+    wasteTotal.value = result.total
+    wasteTotalPages.value = result.totalPages
+  } catch {
+    // 실패한 조회를 다른 지역·키워드의 마지막 결과로 대체하지 않는다.
+    wasteSchedules.value = []
+    wasteContact.value = null
+    wasteTotal.value = 0
+    wasteTotalPages.value = 1
+    wasteLoadError.value = true
+    return
+  }
 
   // 검색 로깅(§3 D6) — trash 는 `loading` 이 아닌 이 함수의 완료 시점이 곧 결과 확정 시점이다.
   if (queryKeyword.value) {

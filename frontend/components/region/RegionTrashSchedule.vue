@@ -14,6 +14,18 @@
       </div>
     </div>
 
+    <!-- 조회 실패: "등록된 배출 일정이 없습니다" 로 덮으면 데이터 없는 지역과 장애를 구분할 수 없다 -->
+    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+      <p class="text-red-800">{{ error }}</p>
+      <button
+        type="button"
+        class="mt-3 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+        @click="emit('retry')"
+      >
+        다시 시도
+      </button>
+    </div>
+
     <div v-else>
       <!-- 담당 부서 연락처 -->
       <div v-if="contact" class="bg-primary-50 rounded-xl p-4 border border-primary-100 mb-4">
@@ -69,6 +81,7 @@ import type { RegionSchedule } from '~/composables/useWasteSchedule'
 defineProps<{
   total: number
   loading: boolean
+  error: string | null
   contact: { name: string; phone?: string } | null
   schedules: RegionSchedule[]
   currentPage: number
@@ -86,5 +99,6 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'page-change', page: number): void
   (e: 'select', schedule: RegionSchedule): void
+  (e: 'retry'): void
 }>()
 </script>

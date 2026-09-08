@@ -16,7 +16,7 @@ import {
 import { CITY_NAME_MAP } from '../services/csvParser.js';
 import { normalizeRegionName } from '../lib/normalizeRegionName.js';
 
-interface NeisSchoolRow {
+export interface NeisSchoolRow {
   ATPT_OFCDC_SC_CODE: string;   // 시도교육청코드
   ATPT_OFCDC_SC_NM: string;     // 시도교육청명
   SD_SCHUL_CODE: string;        // 표준학교코드
@@ -82,6 +82,140 @@ function mapHighSchoolType(row: NeisSchoolRow): string | null {
   return hsType || '일반고';
 }
 
+/**
+ * 전국초중등학교위치표준데이터가 소유하는 행의 판별.
+ *
+ * 표준데이터의 학교ID는 'B' + 9자리(총 10자)이고, 원본 12,014건 전부 이 형식이다(예외 0건).
+ * NEIS의 SD_SCHUL_CODE는 7자리 숫자이므로 sourceId 형태만으로 소유 소스가 갈린다.
+ * 운영 DB에서 만든 행(재외한국학교 B555317, 국립대부설 C035902 등)은 길이가 달라 NEIS 소유로 판별된다.
+ */
+export function isStandardDataSourceId(sourceId: string): boolean {
+  return /^B\d{9}$/.test(sourceId?.trim() ?? '');
+}
+
+/**
+ * 표준데이터가 소유하는 학교급. 이 세 학교급의 신규 행은 표준 sync가 만든다.
+ * NEIS가 만들면 2026-03-20처럼 표준 행과 나란히 중복 페이지가 생긴다(당시 12,563행 생성).
+ * 특수학교·각종학교·평생학교·외국인학교·공동실습소 등은 표준데이터에 없어 NEIS만이 소스다.
+ */
+const STANDARD_DATA_SCHOOL_KINDS = new Set(['초등학교', '중학교', '고등학교']);
+
+/** 표준데이터 20열에 대응하는 필드 — 표준데이터가 소유한다. */
+export interface NeisIdentityFields {
+  name: string;
+  address: string;
+  roadAddress: string;
+  city: string;
+  district: string;
+  schoolLevel: string;
+  foundedDate: string | null;
+  foundationType: string | null;
+  operationStatus: string;
+  sidoEduCode: string | null;
+  sidoEduName: string | null;
+  localEduName: string | null;
+  modifiedDate: string | null;
+}
+
+/** 표준데이터에 없는 필드 — NEIS가 소유한다. */
+export interface NeisEnrichmentFields {
+  neisEduCode: string | null;
+  phoneNumber: string | null;
+  faxNumber: string | null;
+  homepageUrl: string | null;
+  coeducationType: string | null;
+  highSchoolType: string | null;
+  dayNightType: string | null;
+}
+
+export interface NeisSchoolData {
+  sourceId: string;
+  schoolKind: string;
+  identity: NeisIdentityFields;
+  enrichment: NeisEnrichmentFields;
+}
+
+/**
+ * NEIS 레코드를 신원/보강으로 분리해 만든다. 학교로 볼 수 없는 레코드는 null.
+ */
+export function buildNeisSchoolData(row: NeisSchoolRow): NeisSchoolData | null {
+  const sourceId = row.SD_SCHUL_CODE?.trim();
+  const name = row.SCHUL_NM?.trim();
+  if (!sourceId || !name) return null;
+
+  // 검정고시/비학교 데이터 필터링
+  const schoolKind = row.SCHUL_KND_SC_NM?.trim() || '';
+  if (!schoolKind || name.includes('검정고시')) return null;
+
+  const roadAddress = [row.ORG_RDNMA?.trim(), row.ORG_RDNDA?.trim()]
+    .filter(Boolean)
+    .join(' ');
+  if (!roadAddress) return null;
+
+  const { city, district } = resolveSchoolRegion(roadAddress);
+  if (!city || !district) return null;
+
+  return {
+    sourceId,
+    schoolKind,
+    identity: {
+      name,
+      address: roadAddress,
+      roadAddress,
+      city,
+      district,
+      schoolLevel: mapSchoolLevel(schoolKind),
+      foundedDate: row.FOND_YMD?.trim() || null,
+      foundationType: row.FOND_SC_NM?.trim() || null,
+      operationStatus: '운영',
+      sidoEduCode: row.ATPT_OFCDC_SC_CODE?.trim() || null,
+      sidoEduName: row.ATPT_OFCDC_SC_NM?.trim() || null,
+      localEduName: row.JU_ORG_NM?.trim() || null,
+      modifiedDate: row.LOAD_DTM?.trim() || null,
+    },
+    enrichment: {
+      neisEduCode: row.ATPT_OFCDC_SC_CODE?.trim() || null,
+      phoneNumber: row.ORG_TELNO?.trim() || null,
+      faxNumber: row.ORG_FAXNO?.trim() || null,
+      homepageUrl: row.HMPG_ADRES?.trim() || null,
+      coeducationType: row.COEDU_SC_NM?.trim() || null,
+      highSchoolType: mapHighSchoolType(row),
+      dayNightType: row.DGHT_SC_NM?.trim() || null,
+    },
+  };
+}
+
+/**
+ * 기존 행의 소유 소스에 따라 실제로 쓸 데이터를 결정한다.
+ *
+ * 표준데이터 행에는 보강 필드만 쓴다. mergeSchoolNeis가 학교명만으로 매칭해 남의 학교
+ * neisSchoolCode를 박은 행이 1,234건 있고, 신원까지 쓰면 그 링크를 따라 city/district/
+ * roadAddress/교육청이 매번 다른 학교 값으로 덮인다(좌표는 CSV 값이라 그대로여서
+ * 지도와 지역 표기가 어긋난 채 같은 학교가 2페이지로 노출됐다).
+ *
+ * syncedAt도 소유 소스만 갱신한다. NEIS가 대신 찍으면 표준 sync가 멈춰도 신선도 지표로
+ * 감지할 수 없다 — 이번 사고가 6개월간 그렇게 가려졌다.
+ */
+export function resolveNeisWriteData(
+  existingSourceId: string,
+  built: Pick<NeisSchoolData, 'identity' | 'enrichment'>
+): Record<string, unknown> {
+  if (isStandardDataSourceId(existingSourceId)) {
+    return { ...built.enrichment };
+  }
+  return { ...built.identity, ...built.enrichment, syncedAt: new Date() };
+}
+
+/**
+ * NEIS가 이 학교급의 신규 행을 만들어도 되는지.
+ *
+ * 초·중·고는 표준 sync가 소유하므로 만들지 않는다. 원본 학교급(SCHUL_KND_SC_NM)을 그대로 보므로
+ * mapSchoolLevel이 '고등학교'로 접는 방송통신고등학교 같은 학교급은 생성 대상으로 남는다.
+ */
+export function mayNeisCreateRow(schoolKind: string): boolean {
+  return !STANDARD_DATA_SCHOOL_KINDS.has(schoolKind?.trim() ?? '');
+}
+
 export async function syncSchoolsNeis(): Promise<SyncStats> {
   const apiKey = process.env.NEIS_API_KEY;
   if (!apiKey) {
@@ -108,6 +242,11 @@ export async function syncSchoolsNeis(): Promise<SyncStats> {
     let newCount = 0;
     let updateCount = 0;
     let skipCount = 0;
+    // 같은 neisSchoolCode 를 여러 행이 물어 어느 행을 갱신할지 결정할 수 없었던 건수.
+    let ambiguousLinkCount = 0;
+    // 표준 sync 가 소유하는 학교급(초·중·고)인데 DB에 행이 없어 생성을 넘긴 건수.
+    // 표준 sync 가 멈춰 있으면 이 값이 커진다 — 신선도 신호로 쓴다.
+    let standardOwnedMissingCount = 0;
     const batchSize = 50;
     const totalBatches = Math.ceil(rows.length / batchSize);
 
@@ -116,99 +255,64 @@ export async function syncSchoolsNeis(): Promise<SyncStats> {
       const batchNum = Math.floor(i / batchSize) + 1;
 
       for (const row of batch) {
-        const sourceId = row.SD_SCHUL_CODE?.trim();
-        const name = row.SCHUL_NM?.trim();
-
-        if (!sourceId || !name) {
+        const built = buildNeisSchoolData(row);
+        if (!built) {
           skipCount++;
           continue;
         }
 
-        // 검정고시/비학교 데이터 필터링
-        const schoolKind = row.SCHUL_KND_SC_NM?.trim() || '';
-        if (!schoolKind || name.includes('검정고시')) {
-          skipCount++;
-          continue;
-        }
+        const { sourceId, schoolKind } = built;
 
-        const roadAddress = [row.ORG_RDNMA?.trim(), row.ORG_RDNDA?.trim()]
-          .filter(Boolean)
-          .join(' ');
-
-        if (!roadAddress) {
-          skipCount++;
-          continue;
-        }
-
-        const { city: normalizedCity, district } = resolveSchoolRegion(roadAddress);
-
-        if (!normalizedCity || !district) {
-          skipCount++;
-          continue;
-        }
-
-        const schoolData = {
-          name,
-          address: roadAddress,
-          roadAddress,
-          city: normalizedCity,
-          district,
-          schoolLevel: mapSchoolLevel(row.SCHUL_KND_SC_NM?.trim() || ''),
-          foundedDate: row.FOND_YMD?.trim() || null,
-          foundationType: row.FOND_SC_NM?.trim() || null,
-          operationStatus: '운영',
-          sidoEduCode: row.ATPT_OFCDC_SC_CODE?.trim() || null,
-          sidoEduName: row.ATPT_OFCDC_SC_NM?.trim() || null,
-          localEduName: row.JU_ORG_NM?.trim() || null,
-          modifiedDate: row.LOAD_DTM?.trim() || null,
-          // NEIS 추가 필드
-          neisEduCode: row.ATPT_OFCDC_SC_CODE?.trim() || null,
-          phoneNumber: row.ORG_TELNO?.trim() || null,
-          faxNumber: row.ORG_FAXNO?.trim() || null,
-          homepageUrl: row.HMPG_ADRES?.trim() || null,
-          coeducationType: row.COEDU_SC_NM?.trim() || null,
-          highSchoolType: mapHighSchoolType(row),
-          dayNightType: row.DGHT_SC_NM?.trim() || null,
-          syncedAt: new Date(),
-        };
-
-        // neisSchoolCode로 기존 학교 매칭 (CSV 병합된 학교 포함)
-        const existing = await prisma.school.findFirst({
+        // neisSchoolCode 에는 unique 제약이 없다. 여러 행이 같은 코드를 물면 어느 행이
+        // 갱신될지 실행마다 달라지므로(기존 findFirst) 모호한 링크는 건드리지 않는다.
+        const linked = await prisma.school.findMany({
           where: { neisSchoolCode: sourceId },
           select: { id: true, sourceId: true },
+          orderBy: { id: 'asc' },
+          take: 2,
         });
 
-        if (existing) {
-          await prisma.school.update({
-            where: { id: existing.id },
-            data: schoolData,
-          });
-          updateCount++;
-        } else {
-          // sourceId로도 한번 더 확인 (NEIS 전용 학교)
-          const bySourceId = await prisma.school.findUnique({
-            where: { sourceId },
-            select: { id: true },
-          });
-
-          if (bySourceId) {
-            await prisma.school.update({
-              where: { sourceId },
-              data: { ...schoolData, neisSchoolCode: sourceId },
-            });
-            updateCount++;
-          } else {
-            await prisma.school.create({
-              data: {
-                id: `school-${sourceId}`,
-                sourceId,
-                neisSchoolCode: sourceId,
-                ...schoolData,
-              },
-            });
-            newCount++;
-          }
+        if (linked.length > 1) {
+          ambiguousLinkCount++;
+          skipCount++;
+          continue;
         }
+
+        const target = linked[0]
+          ?? (await prisma.school.findUnique({
+            where: { sourceId },
+            select: { id: true, sourceId: true },
+          }));
+
+        if (target) {
+          const data = resolveNeisWriteData(target.sourceId, built);
+          // 링크 없이 sourceId 로 찾은 행은 NEIS 전용 행이므로 자기 코드로 링크를 채운다.
+          if (!linked[0]) {
+            data.neisSchoolCode = sourceId;
+          }
+          await prisma.school.update({ where: { id: target.id }, data });
+          updateCount++;
+          continue;
+        }
+
+        // 초·중·고 신규 행은 표준 sync 소유다. 여기서 만들면 표준 행과 나란히 중복 페이지가 된다.
+        if (!mayNeisCreateRow(schoolKind)) {
+          standardOwnedMissingCount++;
+          skipCount++;
+          continue;
+        }
+
+        await prisma.school.create({
+          data: {
+            id: `school-${sourceId}`,
+            sourceId,
+            neisSchoolCode: sourceId,
+            ...built.identity,
+            ...built.enrichment,
+            syncedAt: new Date(),
+          },
+        });
+        newCount++;
       }
 
       console.info(
@@ -231,6 +335,10 @@ export async function syncSchoolsNeis(): Promise<SyncStats> {
 
     console.info(`\n=== 동기화 완료 ===`);
     console.info(`총: ${stats.totalRecords}, 신규: ${newCount}, 업데이트: ${updateCount}, 스킵: ${skipCount}`);
+    console.info(
+      `표준데이터 소유 학교급인데 DB에 없음: ${standardOwnedMissingCount}건 (표준 sync 가 만든다) | ` +
+      `링크 모호로 건너뜀: ${ambiguousLinkCount}건`
+    );
     return stats;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

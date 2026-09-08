@@ -30,7 +30,13 @@ export interface DetailMetaInput {
   transactionMode: TransactionMode
   summary: {
     totalCount?: number
-    recentDeal?: { amount: number; dealDate: string }
+    /**
+     * 최신 1건. rent 에서 `amount` 는 보증금이고 `monthlyRent` 가 월세다.
+     * `monthlyRent` 는 0(전세)과 null(미상)을 구분해야 한다 — sync 는 빈 월세를
+     * null 로 보존하면서 rentType 만 전세로 세팅하고(syncAptRent.ts 등),
+     * BuildingInfo 는 rentType 을 돌려주지 않는다.
+     */
+    recentDeal?: { amount: number; dealDate: string; monthlyRent?: number | null }
   } | null
   buildYear?: number | null
   areaRange?: { min: number; max?: number } | null
@@ -84,6 +90,33 @@ function buildTitle(input: DetailMetaInput): string {
     .join(' | ')
 }
 
+/**
+ * 최근 거래 금액 표기.
+ *
+ * 매매는 거래가 하나뿐이지만 전월세는 보증금과 월세가 따로다. 예전엔 보증금만 실어
+ * "최근 2,000만원" 으로 나갔고, 같은 페이지 본문은 "2,000만원 / 80만원" 이라 어긋났다.
+ *
+ * 유효 금액(>0)일 때만 절을 붙인다 — formatKoreanPrice 는 0/음수도 "0만원" 을 만든다.
+ */
+function formatRecentPrice(
+  recentDeal: { amount: number; monthlyRent?: number | null },
+  mode: TransactionMode,
+): string {
+  const { amount, monthlyRent } = recentDeal
+  const hasDeposit = Number.isFinite(amount) && amount > 0
+  if (mode === 'sale') return hasDeposit ? formatKoreanPrice(amount) : ''
+
+  const hasRent = monthlyRent != null && Number.isFinite(monthlyRent) && monthlyRent > 0
+  if (hasRent) {
+    const rentText = `월세 ${formatKoreanPrice(monthlyRent as number)}`
+    // 보증금 0 인 무보증 월세를 "거래 없음" 으로 숨기지 않는다.
+    return hasDeposit ? `보증금 ${formatKoreanPrice(amount)}·${rentText}` : `보증금 없음·${rentText}`
+  }
+  if (!hasDeposit) return ''
+  // 월세 0 은 전세로 확정할 수 있지만, null(미상)은 전세로 단정하지 않는다.
+  return monthlyRent === 0 ? `전세 ${formatKoreanPrice(amount)}` : `보증금 ${formatKoreanPrice(amount)}`
+}
+
 interface DescriptionOptions {
   withBuildYear: boolean
   withArea: boolean
@@ -103,11 +136,8 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
 
   const totalCount = input.summary?.totalCount ?? 0
   const recentDeal = input.summary?.recentDeal
-  // 유효 금액(>0)일 때만 최근 거래가 절을 붙인다(utils formatKoreanPrice 는 0/음수도 "0만원" 반환).
-  const hasPrice = !!recentDeal && Number.isFinite(recentDeal.amount) && recentDeal.amount > 0
-  const priceClause = hasPrice
-    ? `, 최근 ${formatKoreanPrice(recentDeal!.amount)}(${recentDeal!.dealDate})`
-    : ''
+  const priceText = recentDeal ? formatRecentPrice(recentDeal, input.transactionMode) : ''
+  const priceClause = priceText ? `, 최근 ${priceText}(${recentDeal!.dealDate})` : ''
   const lead = totalCount > 0
     ? `${head} 실거래 ${totalCount.toLocaleString()}건${priceClause}.`
     : `${head} 실거래가.`

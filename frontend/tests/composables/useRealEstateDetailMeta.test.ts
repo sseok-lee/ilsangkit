@@ -218,3 +218,92 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     expect(title).toContain('오피스텔')
   })
 })
+
+/**
+ * 전월세 상세의 description 이 보증금만 싣고 월세를 빠뜨렸다.
+ * 라이브 실측(2026-09-08): 부평 현대 메타 "최근 2,000만원(2026년 8월)" ↔ 본문 2,000만원/80만원,
+ * 서초 현대 메타 "최근 4억(2026년 9월)" ↔ 본문 4억/215만원.
+ * API·타입에는 latestMonthlyRent 가 이미 있고 메타 입력 타입에서만 잃고 있었다.
+ * (RESEARCH/naver-decline-2026-09-08/recheck-metadata.md)
+ */
+const rentBase: DetailMetaInput = {
+  ...base,
+  buildingName: '현대',
+  propertyType: 'apt',
+  transactionMode: 'rent',
+  region: { city: '인천광역시', district: '부평구', dong: null },
+  summary: { totalCount: 412, recentDeal: { amount: 2000, dealDate: '2026년 8월', monthlyRent: 80 } },
+}
+
+describe('buildRealEstateDetailMeta - 전월세 거래 종류와 금액', () => {
+  it('월세는 보증금과 월세를 함께 싣는다', () => {
+    const { description } = buildRealEstateDetailMeta(rentBase)
+    expect(description).toContain('최근 보증금 2,000만원·월세 80만원(2026년 8월)')
+  })
+
+  it('억 단위 보증금도 같은 형식으로 싣는다', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...rentBase,
+      region: { city: '서울특별시', district: '서초구', dong: null },
+      summary: { totalCount: 300, recentDeal: { amount: 40000, dealDate: '2026년 9월', monthlyRent: 215 } },
+    })
+    expect(description).toContain('최근 보증금 4억·월세 215만원(2026년 9월)')
+  })
+
+  it('월세가 명시적 0 이면 전세로 표기한다', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...rentBase,
+      summary: { totalCount: 300, recentDeal: { amount: 40000, dealDate: '2026년 9월', monthlyRent: 0 } },
+    })
+    expect(description).toContain('최근 전세 4억(2026년 9월)')
+  })
+
+  it('월세가 null 이면 전세로 단정하지 않는다', () => {
+    // sync 는 빈 월세를 null 로 보존하면서 rentType 만 전세로 세팅한다
+    // (syncAptRent.ts:66 등). BuildingInfo 는 rentType 을 돌려주지 않으므로 단정 금지.
+    const { description } = buildRealEstateDetailMeta({
+      ...rentBase,
+      summary: { totalCount: 300, recentDeal: { amount: 40000, dealDate: '2026년 9월', monthlyRent: null } },
+    })
+    expect(description).toContain('최근 보증금 4억(2026년 9월)')
+    expect(description).not.toContain('전세')
+  })
+
+  it('보증금 0·월세 양수 거래를 숨기지 않는다', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...rentBase,
+      summary: { totalCount: 12, recentDeal: { amount: 0, dealDate: '2026년 8월', monthlyRent: 80 } },
+    })
+    expect(description).toContain('최근 보증금 없음·월세 80만원(2026년 8월)')
+  })
+
+  it('보증금·월세가 모두 없으면 금액 절을 생략한다', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...rentBase,
+      summary: { totalCount: 12, recentDeal: { amount: 0, dealDate: '2026년 8월', monthlyRent: 0 } },
+    })
+    expect(description).not.toContain('최근')
+    expect(description).toContain('실거래 12건')
+  })
+
+  it('매매 표기는 바뀌지 않는다 — 보증금·월세를 붙이지 않는다', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...base,
+      summary: { totalCount: 30, recentDeal: { amount: 50000, dealDate: '2026년 5월' } },
+    })
+    expect(description).toContain('최근 5억(2026년 5월)')
+    expect(description).not.toContain('보증금')
+    expect(description).not.toContain('월세')
+  })
+
+  it('월세를 붙여도 120자 예산을 지킨다', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...rentBase,
+      buildingName: '힐스테이트푸르지오수원권선센트럴파크',
+      region: { city: '경기도', district: '수원시권선구', dong: '권선동' },
+      summary: { totalCount: 1234, recentDeal: { amount: 40000, dealDate: '2026년 9월', monthlyRent: 215 } },
+    })
+    expect(description.length).toBeLessThanOrEqual(120)
+    expect(description).toContain('보증금 4억·월세 215만원')
+  })
+})
