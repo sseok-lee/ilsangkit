@@ -503,6 +503,7 @@ import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
 import { buildYearLabel, formatKoreanPrice } from '~/utils/formatters'
+import { resolveRecentDeal, formatLatestPrice } from '~/utils/realEstateRecentDeal'
 import { RE_STALE_DAYS, formatDotDate } from '~/utils/syncFreshness'
 import {
   getPeriodTradeLabel,
@@ -657,14 +658,7 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
 // 최근 거래가 단일 소스: meta description·헤더(heroStats·latestPrice)가 반드시 동일 값을
 // 쓰도록 buildingInfo(latestDealAmount/Year/Month)에서만 산출한다. currentTab/apiSlug 가 URL
 // 고정이라 buildingInfo 는 페이지당 불변 → transactions 페이지네이션·필터와 무관하게 meta==헤더.
-const recentDealForDisplay = computed<{ amount: number | null; dealDate: string | null }>(() => {
-  const info = buildingInfo.value
-  const amount = info?.latestDealAmount ? Number(info.latestDealAmount) : null
-  const dealDate = info?.latestDealYear && info?.latestDealMonth
-    ? `${info.latestDealYear}년 ${info.latestDealMonth}월`
-    : null
-  return { amount, dealDate }
-})
+const recentDealForDisplay = computed(() => resolveRecentDeal(buildingInfo.value))
 
 const detailMeta = computed(() => {
   const mode = currentTab.value
@@ -680,9 +674,12 @@ const detailMeta = computed(() => {
   }
 
   // 헤더와 동일 소스(buildingInfo)에서만 최근 거래를 뽑는다 — transactions.items[0] 의존 제거.
+  // 보증금 0(무보증 월세)도 거래다. amount 를 truthy 로 거르면 통째로 사라진다.
   const rd = recentDealForDisplay.value
-  const recentDeal: { amount: number; dealDate: string } | undefined =
-    rd.amount && rd.dealDate ? { amount: rd.amount, dealDate: rd.dealDate } : undefined
+  const recentDeal: { amount: number; dealDate: string; monthlyRent?: number | null } | undefined =
+    rd.amount != null && rd.dealDate
+      ? { amount: rd.amount, dealDate: rd.dealDate, monthlyRent: rd.monthlyRent }
+      : undefined
 
   const totalCount = summary.value?.totalCount ?? 0
   const buildYearVal = buildingInfo.value?.buildYear ?? null
@@ -915,16 +912,7 @@ const areaRange = computed(() => {
   return `${minArea ?? '?'}~${maxArea ?? '?'}㎡`
 })
 
-const latestPrice = computed(() => {
-  const amount = recentDealForDisplay.value.amount
-  if (!amount) return '-'
-  const deposit = formatKoreanPrice(amount)
-  const monthlyRent = buildingInfo.value?.latestMonthlyRent
-  if (monthlyRent && monthlyRent > 0) {
-    return `${deposit} / ${formatKoreanPrice(monthlyRent)}`
-  }
-  return deposit
-})
+const latestPrice = computed(() => formatLatestPrice(recentDealForDisplay.value))
 
 const compactFacilitySummary = computed(() => normalizeFacilitySummary(facilitySummary.value))
 
