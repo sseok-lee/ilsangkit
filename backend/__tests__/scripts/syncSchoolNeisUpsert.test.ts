@@ -98,9 +98,12 @@ beforeEach(() => {
   mockUpdateSyncHistory.mockResolvedValue(undefined);
 });
 
-describe('syncSchoolsNeis - 표준데이터 행 신원 보호', () => {
-  it('표준데이터 행에는 보강 필드만 update 한다', async () => {
-    // 실제 사고 행: 서울 영등포 영신고(B000012035)가 대구 영신고 코드에 연결돼 있었다.
+describe('syncSchoolsNeis - 단일 소스이므로 sourceId 형태와 무관하게 신원까지 쓴다', () => {
+  it('표준 형태 sourceId 행에도 신원과 syncedAt 을 update 한다', async () => {
+    // #783 은 이 행에 보강 필드만 썼다. 표준데이터가 신원의 권위였을 때는 맞았지만,
+    // 그 전제가 깨져(2026 인천 개편 미반영) NEIS 단일 소스로 재구성했다.
+    // 링크는 reconcileSchoolNeisRows 가 정확 매핑으로 다시 맺었으므로 따라 써도 안전하고,
+    // 쓰지 않으면 오염된 지역·주소 932건이 영구히 남는다.
     mockFindMany.mockResolvedValue([{ id: 'school-B000012035', sourceId: 'B000012035' }]);
     mockFetchAllPages.mockResolvedValue([neisRow()]);
 
@@ -108,19 +111,15 @@ describe('syncSchoolsNeis - 표준데이터 행 신원 보호', () => {
 
     expect(mockUpdate).toHaveBeenCalledTimes(1);
     const data = mockUpdate.mock.calls[0][0].data;
-    expect(data).not.toHaveProperty('name');
-    expect(data).not.toHaveProperty('city');
-    expect(data).not.toHaveProperty('district');
-    expect(data).not.toHaveProperty('roadAddress');
-    expect(data).not.toHaveProperty('address');
-    expect(data).not.toHaveProperty('sidoEduName');
-    expect(data).not.toHaveProperty('operationStatus');
-    expect(data).not.toHaveProperty('syncedAt');
+    expect(data.name).toBe('영신고등학교');
+    expect(data.city).toBe('대구');
+    expect(data.district).toBe('동구');
+    expect(data.roadAddress).toBe('대구광역시 동구 팔공로50길 32 (봉무동)');
     expect(data.phoneNumber).toBe('053-235-4700');
-    expect(JSON.stringify(data)).not.toContain('대구');
+    expect(data.syncedAt).toBeInstanceOf(Date);
   });
 
-  it('NEIS 소유 행에는 신원까지 update 한다', async () => {
+  it('NEIS 형태 sourceId 행에도 같은 필드를 update 한다', async () => {
     mockFindMany.mockResolvedValue([{ id: 'school-7240097', sourceId: '7240097' }]);
     mockFetchAllPages.mockResolvedValue([neisRow()]);
 
@@ -133,20 +132,26 @@ describe('syncSchoolsNeis - 표준데이터 행 신원 보호', () => {
   });
 });
 
-describe('syncSchoolsNeis - 신규 행 생성 게이트', () => {
-  it('초·중·고는 매칭 행이 없어도 새로 만들지 않는다', async () => {
+describe('syncSchoolsNeis - 신규 행 생성', () => {
+  it('초·중·고도 매칭 행이 없으면 새로 만든다', async () => {
+    // #783 은 표준 sync 가 초·중·고를 만든다는 전제로 생성을 막았다. 단일 소스에서는
+    // 그 sync 가 없으므로 막으면 NEIS 에만 있는 학교(운영 실측 32건)가 영구히 누락된다.
     mockFindMany.mockResolvedValue([]);
     mockFindUnique.mockResolvedValue(null);
     mockFetchAllPages.mockResolvedValue([neisRow({ SCHUL_KND_SC_NM: '고등학교' })]);
 
     const stats = await syncSchoolsNeis();
 
-    expect(mockCreate).not.toHaveBeenCalled();
-    expect(stats.newRecords).toBe(0);
-    expect(stats.skippedRecords).toBe(1);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const data = mockCreate.mock.calls[0][0].data;
+    expect(data.id).toBe('school-7240097');
+    expect(data.sourceId).toBe('7240097');
+    expect(data.neisSchoolCode).toBe('7240097');
+    expect(stats.newRecords).toBe(1);
+    expect(stats.skippedRecords).toBe(0);
   });
 
-  it('표준데이터에 없는 학교급은 새로 만든다', async () => {
+  it('표준데이터에 없는 학교급도 새로 만든다', async () => {
     mockFindMany.mockResolvedValue([]);
     mockFindUnique.mockResolvedValue(null);
     mockFetchAllPages.mockResolvedValue([

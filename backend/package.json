@@ -35,7 +35,6 @@
     "sync:school:csv": "tsx src/scripts/syncSchool.ts",
     "sync:school:enrollment": "tsx src/scripts/syncSchoolEnrollment.ts",
     "sync:school:department": "tsx src/scripts/syncSchoolDepartment.ts",
-    "sync:school:merge": "tsx src/scripts/mergeSchoolNeis.ts",
     "sync:school:geocode": "tsx src/scripts/geocodeSchool.ts",
     "sync:market": "tsx src/scripts/syncMarket.ts",
     "sync:facilities": "tsx src/scripts/syncAll.ts",

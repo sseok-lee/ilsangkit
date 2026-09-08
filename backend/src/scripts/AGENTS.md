@@ -14,7 +14,7 @@ CLI 스크립트 모음. 공공데이터 동기화 (`sync*.ts`), 지오코딩 (`
 | `syncToilet.ts`/`syncPark.ts`/`syncSchool.ts`/... | 카테고리별 동기화 (총 20+개 스크립트) |
 | `syncAptSale.ts`/`syncAptRent.ts`/`syncVillaSale.ts`/`syncVillaRent.ts`/`syncOffitelSale.ts`/`syncOffitelRent.ts` | 부동산 실거래가 동기화 (6종) |
 | `syncSubscription.ts` | 청약 동기화 |
-| `syncSchoolNeis.ts`/`syncSchoolDepartment.ts`/`syncSchoolEnrollment.ts`/`mergeSchoolNeis.ts` | 학교 NEIS 다단계 동기화 |
+| `syncSchoolNeis.ts`/`syncSchoolDepartment.ts`/`syncSchoolEnrollment.ts` | 학교 NEIS 동기화 (NEIS 가 단일 소스) |
 | `syncRegion.ts` | 지역 마스터 데이터 |
 | `geocodeRealEstate.ts`/`geocodeSchool.ts`/`geocodeSubscriptions.ts` | 주소 → 좌표 지오코딩 |
 | `seedHospitalDetail.ts`/`seedSubscription.ts` | 상세 정보 시드 |
