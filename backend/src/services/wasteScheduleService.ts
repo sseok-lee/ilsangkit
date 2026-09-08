@@ -6,6 +6,16 @@ import { prisma } from '../lib/prisma.js';
 import { PAGINATION } from '../constants/index.js';
 import { buildRegionFilter } from './cityMapping.js';
 
+// 검증되지 않은 seed 데이터(`prisma/seed.ts`)를 공개 조회에서 제외한다.
+// 운영 DB 에 id 15345~15349 (sourceId `seed-waste-schedule-1`~`5`) 5건이 남아
+// 서울 중구·종로구·용산구, 경기 수원시, 부산 중구 목록에 예시 일정으로 섞여 나갔다
+// (실측 2026-09-08, RESEARCH/naver-decline-2026-09-08/recheck-waste.md).
+// 구형 `emissionDays`/`emissionTime` 구조라 상세 모달에서도 요일·시간이 렌더되지 않는다.
+// 원본 행은 보존하고 조회 경로에서만 뺀다 — 사이트맵/상세도 같은 기준이라야
+// sitemap 은 광고하는데 상세는 없는 불일치가 생기지 않는다.
+// sourceId 는 NOT NULL 이므로 `not startsWith` 가 정상 행을 떨구지 않는다.
+const EXCLUDE_SEED: Prisma.StringFilter = { not: { startsWith: 'seed-' } };
+
 // 유형별 배출 정보 타입
 interface WasteTypeInfo {
   dayOfWeek?: string;
@@ -89,6 +99,7 @@ export async function getByRegion(
   const where: Prisma.WasteScheduleWhereInput = buildRegionFilter(city, district, {
     districtVariants: true,
   });
+  where.sourceId = EXCLUDE_SEED;
   if (keyword) {
     where.targetRegion = { contains: keyword };
   }
@@ -135,6 +146,7 @@ export async function getRegions(
   // 그룹별 카운트 조회
   const grouped = await prisma.wasteSchedule.groupBy({
     by: ['city', 'district'],
+    where: { sourceId: EXCLUDE_SEED },
     _count: { id: true },
     orderBy: [{ city: 'asc' }, { district: 'asc' }],
   });
@@ -162,6 +174,7 @@ export async function getRegions(
 export async function getCities(): Promise<string[]> {
   const cities = await prisma.wasteSchedule.groupBy({
     by: ['city'],
+    where: { sourceId: EXCLUDE_SEED },
     orderBy: { city: 'asc' },
   });
 
@@ -176,7 +189,7 @@ export async function getCities(): Promise<string[]> {
 export async function getDistricts(city: string): Promise<string[]> {
   const districts = await prisma.wasteSchedule.groupBy({
     by: ['district'],
-    where: buildRegionFilter(city),
+    where: { ...buildRegionFilter(city), sourceId: EXCLUDE_SEED },
     orderBy: { district: 'asc' },
   });
 
@@ -188,7 +201,10 @@ export async function getDistricts(city: string): Promise<string[]> {
  * @returns { id, updatedAt } 배열
  */
 export async function getAllIds(): Promise<{ id: number; updatedAt: Date }[]> {
-  return prisma.wasteSchedule.findMany({ select: { id: true, updatedAt: true } });
+  return prisma.wasteSchedule.findMany({
+    where: { sourceId: EXCLUDE_SEED },
+    select: { id: true, updatedAt: true },
+  });
 }
 
 /**
@@ -201,6 +217,7 @@ export async function getWasteScheduleRegions(): Promise<
 > {
   const grouped = await prisma.wasteSchedule.groupBy({
     by: ['city', 'district'],
+    where: { sourceId: EXCLUDE_SEED },
     _max: { updatedAt: true },
     orderBy: [{ city: 'asc' }, { district: 'asc' }],
   });
@@ -220,8 +237,8 @@ export async function getWasteScheduleRegions(): Promise<
  * @returns 배출 일정 아이템 또는 null
  */
 export async function getById(id: number): Promise<WasteScheduleItem | null> {
-  const item = await prisma.wasteSchedule.findUnique({
-    where: { id },
+  const item = await prisma.wasteSchedule.findFirst({
+    where: { id, sourceId: EXCLUDE_SEED },
     select: {
       id: true,
       city: true,
