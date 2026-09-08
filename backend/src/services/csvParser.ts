@@ -1007,34 +1007,6 @@ export interface SchoolCSVRow {
   [key: string]: string | undefined;
 }
 
-// School 변환 결과 타입
-export interface TransformedSchool {
-  id: string;
-  name: string;
-  address: string;
-  roadAddress: string | null;
-  lat: number | null;
-  lng: number | null;
-  city: string;
-  district: string;
-  sourceId: string;
-  // School 전용 필드
-  schoolLevel: string;
-  foundedDate: string;
-  foundationType: string;
-  branchType: string;
-  operationStatus: string;
-  sidoEduCode: string;
-  sidoEduName: string;
-  localEduCode: string;
-  localEduName: string;
-  createdDate: string;
-  modifiedDate: string;
-  dataDate: string;
-  providerCode: string;
-  providerName: string;
-}
-
 // Market CSV 로우 타입
 export interface MarketCSVRow {
   mrktNm: string;
@@ -1201,66 +1173,6 @@ export async function parseSchoolCSV(filePath: string): Promise<SchoolCSVRow[]> 
 }
 
 /**
- * 학교 CSV 로우를 School 형식으로 변환
- */
-export function transformSchoolRow(row: SchoolCSVRow): TransformedSchool | null {
-  const sourceId = row['학교ID']?.trim() || '';
-  const name = row['학교명']?.trim() || '';
-  const roadAddress = row['소재지도로명주소']?.trim() || '';
-  const jibunAddress = row['소재지지번주소']?.trim() || '';
-  const latStr = row['위도']?.trim() || '';
-  const lngStr = row['경도']?.trim() || '';
-
-  if (!name) return null;
-  if (!sourceId) return null;
-
-  const lat = parseFloat(latStr);
-  const lng = parseFloat(lngStr);
-
-  if (isNaN(lat) || isNaN(lng)) return null;
-
-  if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX || lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) {
-    return null;
-  }
-
-  const primaryAddress = roadAddress || jibunAddress;
-  if (!primaryAddress) return null;
-
-  const parsed = parseAddress(primaryAddress);
-  // 광주/전남 변종을 전남광주통합특별시로 통합 (재드리프트 방지). normalizeCityName은
-  // 다른 지역 축약(전라남도→전남 등)용이라 유지하고 그 결과를 normalizeRegionName에 넘긴다.
-  const { city: normalizedCity, district } = normalizeRegionName(normalizeCityName(parsed.city), parsed.district);
-
-  if (!normalizedCity || !district) return null;
-
-  return {
-    id: `school-${sourceId}`,
-    name,
-    address: jibunAddress || roadAddress,
-    roadAddress: roadAddress || null,
-    lat,
-    lng,
-    city: normalizedCity,
-    district,
-    sourceId,
-    schoolLevel: row['학교급구분']?.trim() || '',
-    foundedDate: row['설립일자']?.trim() || '',
-    foundationType: row['설립형태']?.trim() || '',
-    branchType: row['본교분교구분']?.trim() || '',
-    operationStatus: row['운영상태']?.trim() || '',
-    sidoEduCode: row['시도교육청코드']?.trim() || '',
-    sidoEduName: row['시도교육청명']?.trim() || '',
-    localEduCode: row['교육지원청코드']?.trim() || '',
-    localEduName: row['교육지원청명']?.trim() || '',
-    createdDate: row['생성일자']?.trim() || '',
-    modifiedDate: row['변경일자']?.trim() || '',
-    dataDate: row['데이터기준일자']?.trim() || '',
-    providerCode: row['제공기관코드']?.trim() || '',
-    providerName: row['제공기관명']?.trim() || '',
-  };
-}
-
-/**
  * Y/N 문자열을 Boolean 또는 null로 변환
  */
 function parseYN(val: string | undefined): boolean | null {
@@ -1356,7 +1268,6 @@ export default {
   parseParkCSV,
   transformParkRow,
   parseSchoolCSV,
-  transformSchoolRow,
   parseMarketCSV,
   transformMarketRow,
 };

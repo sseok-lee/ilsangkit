@@ -32,7 +32,6 @@
     "sync:regions": "tsx src/scripts/syncRegion.ts",
     "sync:park": "tsx src/scripts/syncPark.ts",
     "sync:school": "tsx src/scripts/syncSchoolNeis.ts",
-    "sync:school:csv": "tsx src/scripts/syncSchool.ts",
     "sync:school:enrollment": "tsx src/scripts/syncSchoolEnrollment.ts",
     "sync:school:department": "tsx src/scripts/syncSchoolDepartment.ts",
     "sync:school:geocode": "tsx src/scripts/geocodeSchool.ts",

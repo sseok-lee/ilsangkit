@@ -11,7 +11,7 @@ CLI 스크립트 모음. 공공데이터 동기화 (`sync*.ts`), 지오코딩 (`
 |------|-------------|
 | `README.md` | 동기화 스크립트 실행 순서/옵션 가이드 |
 | `syncAll.ts` | 15개 시설 + 부동산 전체 동기화 orchestrator |
-| `syncToilet.ts`/`syncPark.ts`/`syncSchool.ts`/... | 카테고리별 동기화 (총 20+개 스크립트) |
+| `syncToilet.ts`/`syncPark.ts`/`syncAed.ts`/... | 카테고리별 동기화 (총 20+개 스크립트) |
 | `syncAptSale.ts`/`syncAptRent.ts`/`syncVillaSale.ts`/`syncVillaRent.ts`/`syncOffitelSale.ts`/`syncOffitelRent.ts` | 부동산 실거래가 동기화 (6종) |
 | `syncSubscription.ts` | 청약 동기화 |
 | `syncSchoolNeis.ts`/`syncSchoolDepartment.ts`/`syncSchoolEnrollment.ts` | 학교 NEIS 동기화 (NEIS 가 단일 소스) |
