@@ -50,12 +50,10 @@ describe('layouts/map.vue', () => {
     expect(skip.text()).toBe('본문 바로가기')
   })
 
-  it('푸터와 TrustLine 을 렌더하지 않는다', () => {
-    // 이 둘이 남아 있으면 페이지 스크롤을 0으로 만들 수 없다(실측 합계 약 410px).
+  it('푸터를 렌더하지 않는다', () => {
+    // 푸터가 남아 있으면 페이지 스크롤을 0으로 만들 수 없다.
     // 푸터는 사이드바 목록 하단이 대신한다.
-    const w = mountLayout()
-    expect(w.find('footer').exists()).toBe(false)
-    expect(w.text()).not.toContain('공공데이터 기반 서비스')
+    expect(mountLayout().find('footer').exists()).toBe(false)
   })
 
   it('헤더에 wide 를 넘긴다', () => {

@@ -14,7 +14,7 @@ import type { MapRegionItem, MapResponse } from '~/types/realEstateMap'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 
-// 지도 전용 레이아웃: 헤더만 있고 TrustLine·AppFooter 가 없어 페이지 스크롤이 0이다.
+// 지도 전용 레이아웃: 헤더만 있고 AppFooter 가 없어 페이지 스크롤이 0이다.
 // 푸터는 지도 사이드바 목록 하단으로 옮겼다(MapSidebar showFooter).
 definePageMeta({ layout: 'map' })
 

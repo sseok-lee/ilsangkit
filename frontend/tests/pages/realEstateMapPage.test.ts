@@ -28,7 +28,7 @@ describe('/real-estate 페이지', () => {
   })
 
   it('지도 전용 레이아웃을 지정한다', () => {
-    // 이게 없으면 default 레이아웃의 TrustLine·AppFooter 가 붙어 스크롤이 0이 되지 않는다.
+    // 이게 없으면 default 레이아웃의 AppFooter 가 붙어 스크롤이 0이 되지 않는다.
     expect(src).toContain("layout: 'map'")
   })
 
