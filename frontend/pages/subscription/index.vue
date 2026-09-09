@@ -163,9 +163,6 @@
 </template>
 
 <script setup lang="ts">
-// 전역 TrustLine 억제 — 이 페이지는 자체 데이터 출처 카드를 렌더한다 (#766)
-definePageMeta({ hasSourceCard: true })
-
 import { SITE_URL } from '~/utils/seoConstants'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, SUBSCRIPTION_HUB_DESCRIPTION, type RentGroup } from '~/utils/subscriptionMeta'

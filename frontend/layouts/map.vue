@@ -4,8 +4,8 @@
     1) 루트가 h-dvh overflow-hidden — 페이지 스크롤이 구조적으로 0이다. h-screen(100vh)이
        아니라 h-dvh 를 쓴다 — iOS Safari/Chrome Android 에서 100vh 는 툴바가 접혔을 때의
        large viewport 라 툴바가 보이는 상태에서 갱신되지 않는다(explorer 내부는 이미 dvh).
-    2) TrustLine·AppFooter 를 렌더하지 않는다. 둘이 남으면 지도 아래로 약 410px 의
-       스크롤이 생긴다. 푸터는 지도 사이드바 목록 하단으로 옮겼다(설계문서 7).
+    2) AppFooter 를 렌더하지 않는다. 푸터가 남으면 지도 아래로 스크롤이 생긴다.
+       푸터는 지도 사이드바 목록 하단이 대신한다(설계문서 7).
   -->
   <div class="h-dvh overflow-hidden flex flex-col">
     <!-- 본문 바로가기(스킵 링크): 키보드 포커스 시에만 노출 -->

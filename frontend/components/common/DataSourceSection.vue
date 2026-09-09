@@ -63,8 +63,4 @@ const props = defineProps<{
 }>()
 
 const source = computed(() => resolveDataSource({ domain: props.domain, category: props.category }))
-
-// 전역 TrustLine 억제는 여기서 하지 않는다.
-// 이 컴포넌트의 setup 은 async 페이지에서 레이아웃의 v-if 평가보다 늦게 실행돼(Suspense)
-// SSR 에서 신뢰할 수 없었다(#766). 페이지가 definePageMeta({ hasSourceCard: true }) 로 선언한다.
 </script>
