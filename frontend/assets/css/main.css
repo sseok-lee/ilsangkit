@@ -57,19 +57,6 @@
     .od-hero-stats > .s:nth-child(3):last-child { grid-column: 1 / -1; }
   }
 
-  /* 현황 타일 (DetailFacilityStatus) */
-  .od-stile {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: var(--r-sm); padding: 14px 15px;
-  }
-  .od-stile .k { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
-  .od-stile .k .material-symbols-outlined { font-size: 18px; color: var(--cat, var(--brand)); }
-  .od-stile .v {
-    font-family: 'Public Sans', 'Pretendard Variable', sans-serif; font-weight: 800; font-size: 17px;
-    color: var(--strong); margin-top: 6px; letter-spacing: -.01em;
-    font-variant-numeric: tabular-nums;
-  }
-
   /* 편의시설 칩 (DetailFacilityStatus / DetailBasicInfo) */
   .od-amen {
     display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px;
