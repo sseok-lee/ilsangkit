@@ -64,7 +64,10 @@ export default {
         battery: '#06b6d4',
         kiosk: '#6366f1',
         // Semantic colors (OD)
-        success: '#0FA968',
+        // 전경(글자) 가독성 기준으로 정한 값. 실사용 4곳 중 3곳이 text-success 이고
+        // 이전 값 #0FA968 은 green-50 위 2.91:1, 흰 배경 3.05:1 로 AA(4.5:1) 미달이었다.
+        // 현재 5.13:1 / 5.37:1. main.css 의 --success 와 값을 맞출 것.
+        success: '#0F7A4C',
         warning: '#E8920C',
         error: '#E0443B',
         info: '#2450DC',
