@@ -197,9 +197,15 @@
 
 @layer base {
   /* Global focus-visible styles for all interactive elements */
+  /* 폼 컨트롤 포함: input 3곳이 focus:outline-none 으로 표시를 지우고 대체가 없었고
+     (WCAG 2.4.7 실패), select 9곳·textarea 4곳은 브라우저 기본 링만 남아 프로젝트
+     처리와 어긋나 있었다. ring 은 box-shadow 라 focus:outline-none 과 충돌하지 않는다. */
   a:focus-visible,
   button:focus-visible,
-  [role="button"]:focus-visible {
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
     @apply ring-2 ring-primary/50 ring-offset-1 outline-none rounded;
   }
 }

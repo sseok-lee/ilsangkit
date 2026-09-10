@@ -39,7 +39,7 @@
         data-test="call-pill"
         class="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-900 active:scale-[0.98] transition"
       >
-        <span class="material-symbols-outlined text-[18px]">call</span>전화
+        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">call</span>전화
       </a>
       <button
         v-if="copyable"
@@ -47,7 +47,7 @@
         class="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-900 active:scale-[0.98] transition"
         @click="$emit('copy')"
       >
-        <span class="material-symbols-outlined text-[18px]">content_copy</span>복사
+        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">content_copy</span>복사
       </button>
       <button
         data-test="share-pill"
@@ -65,7 +65,7 @@
           class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-lg shadow-primary-500/30 active:scale-[0.98] transition"
           @click="showNav = !showNav"
         >
-          <span class="material-symbols-outlined text-[18px]">directions</span>길찾기
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">directions</span>길찾기
         </button>
         <div v-if="showNav" class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
           <button data-test="directions-kakao" class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3" @click="emitDirections('kakao')">
