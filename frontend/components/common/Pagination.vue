@@ -185,6 +185,11 @@ const visiblePages = computed(() => {
 a.pagination-btn {
   @apply no-underline;
 }
+/* 현재 페이지: .pagination-btn 의 text-muted 가 유틸리티 text-white 를 이기므로
+   이미 존재하는 aria-current 로 특이도를 높여 되돌린다. (대비 1.1:1 -> 8.6:1) */
+.pagination-btn[aria-current='page'] {
+  @apply text-white;
+}
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
