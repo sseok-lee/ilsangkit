@@ -76,7 +76,9 @@ export default {
         'line-2': '#D7DCE7',
       },
       fontFamily: {
-        display: ['Public Sans', 'Noto Sans KR', 'sans-serif'],
+        // Public Sans 는 로드되지 않아 폴백으로 떨어진다. Pretendard 를 폴백에 넣어
+        // font-display 유틸(66곳)이 시스템 한글 폰트로 튀지 않게 한다.
+        display: ['Public Sans', 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'sans-serif'],
         sans: [
           'Pretendard Variable',
           'Pretendard',

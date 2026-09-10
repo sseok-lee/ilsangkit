@@ -586,7 +586,7 @@
               <p class="text-xs font-medium text-slate-500 mb-1">특이사항</p>
               <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{{ (details as any).crspec }}</p>
             </div>
-            <p v-if="(details as any)?.datastdrdt" class="mt-2 text-xs text-[#9ca3af]">데이터 기준일: {{ (details as any).datastdrdt }}</p>
+            <p v-if="(details as any)?.datastdrdt" class="mt-2 text-xs text-muted">데이터 기준일: {{ (details as any).datastdrdt }}</p>
           </div>
         </template>
       </template>

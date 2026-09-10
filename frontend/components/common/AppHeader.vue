@@ -17,7 +17,7 @@
           aria-label="뒤로가기"
           @click="handleBack"
         >
-          <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+          <span class="material-symbols-outlined text-[24px]" aria-hidden="true">arrow_back</span>
         </button>
 
         <HardLink v-if="!props.showBackButton" to="/" class="flex items-center">
@@ -52,7 +52,7 @@
             @keydown.space.prevent="openDropdown(group.title)"
           >
             {{ group.title }}
-            <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === group.title }">expand_more</span>
+            <span class="material-symbols-outlined text-[16px] transition-transform" aria-hidden="true" :class="{ 'rotate-180': activeDropdown === group.title }">expand_more</span>
           </button>
           <Transition
             enter-active-class="transition duration-150 ease-out"
@@ -113,7 +113,7 @@
             @keydown.space.prevent="openDropdown('생활시설')"
           >
             생활시설
-            <span class="material-symbols-outlined text-[16px] transition-transform" :class="{ 'rotate-180': activeDropdown === '생활시설' }">expand_more</span>
+            <span class="material-symbols-outlined text-[16px] transition-transform" aria-hidden="true" :class="{ 'rotate-180': activeDropdown === '생활시설' }">expand_more</span>
           </button>
           <Transition
             enter-active-class="transition duration-150 ease-out"
@@ -181,7 +181,7 @@
           :aria-expanded="isMobileMenuOpen"
           @click="toggleMobileMenu($event)"
         >
-          <span class="material-symbols-outlined text-[28px]">menu</span>
+          <span class="material-symbols-outlined text-[28px]" aria-hidden="true">menu</span>
         </button>
       </div>
     </div>
