@@ -29,7 +29,7 @@
               <span class="material-symbols-outlined text-[18px]">cancel</span>
             </button>
             <button
-              class="inline-flex items-center justify-center min-w-[72px] min-h-[40px] px-3 bg-primary text-white rounded-lg text-sm font-bold"
+              class="inline-flex items-center justify-center min-w-[72px] min-h-[44px] px-3 bg-primary text-white rounded-lg text-sm font-bold"
               @click="handleSearch"
             >
               다시 검색

@@ -158,5 +158,7 @@ const currentBundle = computed(() => {
     : property[txnType.value];
 });
 
-const cardGridCols = computed(() => (txnType.value === 'wolse' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'));
+// 패널 3개는 lg 부터 동시에 보인다(:60 :71 :80 의 lg:block, 토글은 :43 lg:hidden).
+// 그리드가 md 에서 3열이 되면 768~1023px 구간에 카드 1장만 첫 칸에 남아 2/3 가 빈다.
+const cardGridCols = computed(() => (txnType.value === 'wolse' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'));
 </script>
