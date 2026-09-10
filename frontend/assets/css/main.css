@@ -11,7 +11,7 @@
   --border: #E6E9F0; --border-2: #D7DCE7;
   --brand: #2450DC; --brand-strong: #1A3CB0; --brand-press: #16358F;
   --brand-tint: #EBF0FE; --brand-tint-2: #DCE6FD; --brand-ink: #0F2C8C;
-  --success: #0FA968; --warning: #E8920C; --danger: #E0443B;
+  --success: #0F7A4C; --warning: #E8920C; --danger: #E0443B;
   /* 등락(상승/하락) 전용 — semantic success/danger와 분리(spec §6-4, 한국 금융 관례) */
   --delta-up: #DC2626;
   --delta-down: #2563EB;
