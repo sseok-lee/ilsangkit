@@ -496,6 +496,7 @@ import {
 } from '~/utils/realEstateRegion'
 import { buildOgMapImageUrl } from '~/utils/ogImageUrl'
 import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
+import { useNearbyComplexes } from '~/composables/useNearbyComplexes'
 import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
 import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
@@ -1031,14 +1032,9 @@ function summaryBadgeClass(tone: RealEstateSummaryBadge['tone']): string {
 // `transactions`는 useHead TDZ 회피를 위해 파일 상단(useHead 위)에서 이미 선언됨.
 const currentPage = ref(1)
 const nearbyComplexes = ref<ComplexInfo[]>([])
-const nearbyByType = ref<NearbyResponse>({ apt: [], villa: [], offitel: [] })
 
 /** 좌표·인근단지 결측 판정 — 섹션을 숨기는 대신 빈 상태로 렌더할지 가른다. */
 const hasMapCoords = computed(() => !!(buildingInfo.value?.lat && buildingInfo.value?.lng))
-const hasNearby = computed(() =>
-  nearbyByType.value.apt.length > 0
-  || nearbyByType.value.offitel.length > 0
-  || nearbyByType.value.villa.length > 0)
 
 // 좌표가 없을 때의 대안 — 길찾기(좌표 필요) 대신 주소 검색으로 보낸다.
 const kakaoSearchUrl = computed(() =>
@@ -1168,7 +1164,7 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
     }
     // 인근 단지 — SSR best-effort. 내부링크·SEO 보조이므로 실패/지연이 페이지·noindex에 영향 X.
     // (Yeti는 client-only JS를 못 봐 기존엔 SSR HTML에 인근 섹션이 비어 나갔다)
-    let nearbySSR: NearbyResponse = { apt: [], villa: [], offitel: [] }
+    let nearbySSR = { nearby: { apt: [], villa: [], offitel: [] } as NearbyResponse, loaded: false }
     if (bjdCode) {
       const nearbyMode = currentTab.value
       const nearbyRentType = nearbyMode === 'rent'
@@ -1190,7 +1186,8 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
       buildingInfo: resolvedBuildingInfo,
       areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
       facilitySummary: facilitySummarySSR,
-      nearby: nearbySSR,
+      nearby: nearbySSR.nearby,
+      nearbyLoaded: nearbySSR.loaded,
       infoFetchFailed,
     }
   },
@@ -1275,7 +1272,6 @@ watch(ssrData, (data) => {
   buildingInfo.value = data.buildingInfo as BuildingInfo | null
   areaGroups.value = (data.areaGroups ?? []) as AreaGroup[]
   facilitySummary.value = data.facilitySummary ?? null
-  nearbyByType.value = (data.nearby ?? { apt: [], villa: [], offitel: [] }) as NearbyResponse
   statsLoading.value = false
   txLoading.value = false
   fetchFailed.value = data.infoFetchFailed ?? false
@@ -1476,39 +1472,24 @@ function nearbyHeading(propertyType: 'apt' | 'villa' | 'offitel'): string {
   return `주변 ${label} 전월세`
 }
 
-async function loadNearby() {
-  // SSR 단계의 인근 데이터는 useAsyncData(re-detail)에서 best-effort로 채운다.
-  // 서버에서 또 부르면 버려지는 중복 fetch라 풀 부하만 키운다 → 클라이언트 갱신 전용.
-  if (import.meta.server) return
-  const bjd = resolvedBjdCode.value
-  if (!bjd) {
-    nearbyByType.value = { apt: [], villa: [], offitel: [] }
-    return
-  }
-  const mode = currentTab.value
-  const rentTypeKey = mode === 'rent'
-    ? (selectedRentType.value === 'jeonse' ? 'jeonse'
-       : selectedRentType.value === 'wolse' ? 'wolse'
-       : 'all') as 'all' | 'jeonse' | 'wolse'
-    : undefined
-  try {
-    nearbyByType.value = await getNearby(bjd, mode, {
-      rentType: rentTypeKey,
-      dongName: buildingInfo.value?.dongName,
-      excludeBuildingName: buildingName.value,
-      limitPerType: 4,
-    })
-  } catch (err) {
-    console.error('Failed to load nearby:', err)
-    nearbyByType.value = { apt: [], villa: [], offitel: [] }
-  }
-}
-
-watch(
-  () => [resolvedBjdCode.value, currentTab.value, selectedRentType.value, buildingInfo.value?.dongName] as const,
-  () => { loadNearby() },
-  { immediate: true }
+// Reuse successful SSR data (including empty results); retry failed/missing SSR once.
+const { nearby: nearbyByType } = useNearbyComplexes(
+  computed(() => ({
+    bjdCode: resolvedBjdCode.value,
+    mode: currentTab.value,
+    rentType: currentTab.value === 'rent' ? selectedRentType.value : undefined,
+    dongName: buildingInfo.value?.dongName,
+    excludeBuildingName: buildingName.value,
+    limitPerType: 4,
+  })),
+  getNearby,
+  ssrData.value?.nearbyLoaded ? ssrData.value.nearby : undefined,
 )
+
+const hasNearby = computed(() =>
+  nearbyByType.value.apt.length > 0
+  || nearbyByType.value.offitel.length > 0
+  || nearbyByType.value.villa.length > 0)
 
 // noindex / robots 는 상단 useHead 팩토리에서 canonical 과 함께 처리한다
 // (.omc/notes/noindex-canonical-policy.md).

@@ -13,8 +13,7 @@ Allow: /
 Allow: /_nuxt/
 Allow: /api/images/
 Disallow: /api/
-# Nuxt _payload.json 은 SSR HTML 의 중복 데이터 — 크롤 예산 낭비 차단 (?buildId 쿼리 때문에 $ 앵커 미사용)
-Disallow: /*_payload.json
+# Nuxt payload는 hydration 시 SSR 본문을 유지하는 데 필요하므로 허용한다.
 Disallow: /admin
 
 User-agent: *
@@ -22,10 +21,7 @@ Allow: /
 Allow: /_nuxt/
 Allow: /api/images/
 Disallow: /api/
-# Nuxt _payload.json 은 SSR HTML 의 중복 데이터(종종 HTML 보다 큼). 크롤만 차단해 크롤 예산을
-# 본문 HTML 색인에 집중시킨다. 브라우저 클라이언트 네비게이션은 robots 영향을 받지 않는다.
-# payload URL 에 ?<buildId> 쿼리가 붙으므로 $ 앵커는 쓰지 않는다(붙이면 매칭 실패).
-Disallow: /*_payload.json
+# 쿼리 문자열이 붙은 Nuxt payload도 렌더링에 필요하므로 허용한다.
 Disallow: /admin
 # og-map 은 상세 og:image 가 가리키는 소셜 미리보기 생성 라우트다. 상세마다 쿼리스트링이 달라
 # URL 이 전부 고유하므로 크롤러가 개별 리소스로 끝없이 수집한다.
@@ -47,9 +43,9 @@ Disallow: /og-map
 # 크롤 예산이 걱정되면 sitemap 제외(sitemapPolicy.ts)와 noindex 로 다루고, robots 차단은 쓰지 않는다.
 # AI 크롤러 그룹은 색인 회수와 무관하고 순수 부하만 유발하므로 아래에서 계속 차단한다.
 
-# AI 검색 크롤러 — 본문은 허용하되(AI 검색 노출) 크롤 예산 낭비 경로는 User-agent: * 와 동일하게 차단한다.
+# AI 검색 크롤러 — 본문은 허용하되(AI 검색 노출) 별도의 크롤 예산 규칙을 적용한다.
 # robots.txt 그룹은 상속되지 않는다 — 자기 이름 그룹이 있는 봇은 User-agent: * 를 통째로 무시하므로
-# Allow: / 만 두면 _payload.json·wifi 상세가 이 봇들에게만 열린다. 실제로 GPTBot 이 하루 79,579 요청 중
+# Allow: / 만 두면 이 그룹의 _payload.json·wifi 상세 차단 정책이 빠진다. 실제로 GPTBot 이 하루 79,579 요청 중
 # 41,741 회(52%)를 _payload.json(28,814)·/wifi/wifi-(12,927)에 쏟아 서버 부하만 유발하고 있었다.
 User-agent: GPTBot
 Allow: /

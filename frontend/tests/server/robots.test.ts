@@ -75,13 +75,27 @@ describe('robots.txt crawl policy', () => {
     }
   })
 
-  it('blocks Nuxt _payload.json from crawlers to reclaim crawl budget', () => {
-    // payload URLs carry a ?<buildId> query, so no $ anchor — it would miss the query string.
-    expect(robots).toContain('Disallow: /*_payload.json')
-    expect(robots).not.toContain('Disallow: /*_payload.json$')
-    // applied to the default (Googlebot) group and to Naver Yeti — robots groups do not inherit.
-    expect(robots).toMatch(/User-agent:\s*\*[\s\S]*Disallow:\s*\/\*_payload\.json/)
-    expect(robots).toMatch(/User-agent:\s*Yeti[\s\S]*Disallow:\s*\/\*_payload\.json/)
+  it.each(['Yeti', '*'])('allows payload hydration for %s while keeping private routes blocked', (ua) => {
+    const group = extractGroup(robots, ua)
+    // Resolve wildcard paths, query strings, longest match and Allow ties.
+    const allowed = (path: string) => {
+      const matches = group.split('\n').flatMap(line => {
+        const match = /^(Allow|Disallow):\s*(.+)$/.exec(line)
+        if (!match) return []
+        const pattern = match[2].split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')
+        return new RegExp(`^${pattern}`).test(path)
+          ? [{ allow: match[1] === 'Allow', length: match[2].length }] : []
+      }).sort((a, b) => b.length - a.length || Number(b.allow) - Number(a.allow))
+      return matches[0]?.allow ?? true
+    }
+    for (const path of ['/hospital/example/_payload.json', '/real-estate/apt-sale/seoul/gangnam/example/_payload.json?buildId=123', '/_payload.json?abc']) {
+      expect(allowed(path), `${ua}: ${path}`).toBe(true)
+    }
+    for (const path of ['/admin', '/admin/settings?x=1', '/api/real-estate/nearby?mode=sale', '/api/facilities/search']) {
+      expect(allowed(path), `${ua}: ${path}`).toBe(false)
+    }
+    expect(allowed('/api/images/example.jpg')).toBe(true)
+    expect(allowed('/_nuxt/app.js')).toBe(true)
   })
 
   it('blocks /og-map for Google and AI crawlers to reclaim crawl budget', () => {

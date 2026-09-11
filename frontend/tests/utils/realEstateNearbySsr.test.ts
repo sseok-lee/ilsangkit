@@ -32,32 +32,36 @@ describe('fetchNearbyForSsr — SSR best-effort 인근 단지 (fail-open · non-
   it('성공 시 로더 결과를 그대로 반환한다', async () => {
     const data = sample()
     const r = await fetchNearbyForSsr(async () => data)
-    expect(r).toEqual(data)
+    expect(r).toEqual({ nearby: data, loaded: true })
   })
 
   it('로더가 reject해도 throw하지 않고 빈 결과를 반환한다 (풀고갈이 페이지를 깨선 안 됨)', async () => {
     const r = await fetchNearbyForSsr(async () => {
       throw new Error('P2024 pool exhausted')
     })
-    expect(r).toEqual(EMPTY)
+    expect(r).toEqual({ nearby: EMPTY, loaded: false })
   })
 
   it('로더가 타임아웃을 초과하면 빈 결과를 반환한다', async () => {
     const slow = () => new Promise<NearbyResponse>((resolve) => setTimeout(() => resolve(sample()), 80))
     const r = await fetchNearbyForSsr(slow, 15)
-    expect(r).toEqual(EMPTY)
+    expect(r).toEqual({ nearby: EMPTY, loaded: false })
   })
 
   it('로더가 영원히 settle 안 돼도 SSR을 매달지 않고 즉시 빈 결과로 끝낸다', async () => {
     const never = () => new Promise<NearbyResponse>(() => {})
     const start = Date.now()
     const r = await fetchNearbyForSsr(never, 25)
-    expect(r).toEqual(EMPTY)
+    expect(r).toEqual({ nearby: EMPTY, loaded: false })
     expect(Date.now() - start).toBeLessThan(500)
   })
 
   it('로더가 nullish를 반환하면 빈 결과로 정규화한다', async () => {
     const r = await fetchNearbyForSsr(async () => null as unknown as NearbyResponse)
-    expect(r).toEqual(EMPTY)
+    expect(r).toEqual({ nearby: EMPTY, loaded: false })
+  })
+
+  it('distinguishes a successful empty result from failure so hydration does not retry it', async () => {
+    expect(await fetchNearbyForSsr(async () => EMPTY)).toEqual({ nearby: EMPTY, loaded: true })
   })
 })

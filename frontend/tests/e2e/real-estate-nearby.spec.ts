@@ -1,200 +1,39 @@
 import { test, expect } from '@playwright/test'
 
-// Building: 리버뷰신안인스빌2단지, 서울 영등포구 (transactionCount >= 5 in DB)
-const CITY_SLUG = 'seoul'
-const DISTRICT_SLUG = 'yeongdeungpo'
-const BUILDING_NAME = '리버뷰신안인스빌2단지'
-const SALE_PATH = `/real-estate/apt-sale/${CITY_SLUG}/${DISTRICT_SLUG}/${encodeURIComponent(BUILDING_NAME)}`
-const RENT_PATH = `/real-estate/apt-rent/${CITY_SLUG}/${DISTRICT_SLUG}/${encodeURIComponent(BUILDING_NAME)}`
+// Run with playwright.seo.config.ts: the fixed API supplies SSR and browser data.
+const SALE_PATH = '/real-estate/apt-sale/seoul/gangnam/회복아파트'
+const RENT_PATH = '/real-estate/apt-rent/seoul/gangnam/회복아파트'
 
-// Shared mock nearby response (apt only)
-const NEARBY_APT_ITEM = {
-  buildingName: '인근아파트단지',
-  city: '서울특별시',
-  district: '영등포구',
-  dongName: '당산동',
-  bjdCode: '1156011100',
-  latestPrice: 500000000,
-}
-
-function makeNearbyResponse(apt: typeof NEARBY_APT_ITEM[]) {
-  return {
-    success: true,
-    data: { apt, villa: [], offitel: [] },
-  }
-}
-
-function makeComplexListResponse(bjdCode: string) {
-  return {
-    success: true,
-    data: {
-      items: [
-        {
-          buildingName: BUILDING_NAME,
-          bjdCode,
-          city: '서울특별시',
-          district: '영등포구',
-        },
-      ],
-      total: 1,
-      page: 1,
-      totalPages: 1,
-    },
-  }
-}
-
-async function setupBaseMocks(page: import('@playwright/test').Page) {
-  // Provide a bjdCode so the page can call loadNearby
-  await page.route('**/api/real-estate/*/complexes**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(makeComplexListResponse('1156011100')),
-    })
-  })
-
-  // Stub out stats / transactions / building-info so they return gracefully
-  await page.route('**/api/real-estate/*/stats**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: { monthly: [], summary: null } }),
-    })
-  })
-  await page.route('**/api/real-estate/*/transactions**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: { items: [], total: 0, page: 1, totalPages: 0 } }),
-    })
-  })
-  await page.route('**/api/real-estate/*/building-info**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        success: true,
-        data: {
-          buildingName: BUILDING_NAME,
-          bjdCode: '1156011100',
-          city: '서울특별시',
-          district: '영등포구',
-          dongName: '당산동',
-          lat: 37.52,
-          lng: 126.9,
-          buildYear: 2000,
-          minArea: 59,
-          maxArea: 84,
-          latestDealAmount: 500000000,
-          latestDealYear: 2025,
-          latestDealMonth: 1,
-        },
-      }),
-    })
-  })
-  await page.route('**/api/real-estate/*/area-groups**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: [] }),
-    })
-  })
-  await page.route('**/api/meta/sync-status**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: {} }),
-    })
-  })
-  await page.route('**/api/facilities/search**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: { items: [] } }),
-    })
-  })
-  await page.route('**/api/real-estate/price-analysis**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: null }),
-    })
-  })
-}
+test.beforeEach(async ({ page }) => {
+  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1'
+    ? route.continue() : route.abort('blockedbyclient'))
+})
 
 test.describe('부동산 상세 — 인근 단지 cross-property', () => {
-  test('매매 페이지 → 인근 카드에 "최근 거래가" 라벨', async ({ page }) => {
-    await setupBaseMocks(page)
-    await page.route('**/api/real-estate/nearby**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(makeNearbyResponse([NEARBY_APT_ITEM])),
-      })
+  for (const [mode, path] of [['매매', SALE_PATH], ['전월세', RENT_PATH]]) {
+    test(`${mode} 페이지 → SSR 인근 카드에 최근 거래가 라벨`, async ({ page }) => {
+      await page.goto(path)
+      await page.waitForLoadState('networkidle')
+      const card = page.getByRole('link').filter({ has: page.getByRole('heading', { name: '이웃아파트', exact: true }) })
+      await expect(card).toBeVisible()
+      await expect(card).toContainText('최근 거래가')
+      await expect(card).toContainText('8억 5,000만')
     })
+  }
 
-    await page.goto(SALE_PATH)
-    await expect(page.locator('text=주변 아파트 매매가').first()).toBeVisible({ timeout: 15000 })
-    await expect(page.locator('text=인근아파트단지').first()).toBeVisible()
-    await expect(page.locator('p:has-text("최근 거래가")').first()).toBeVisible()
-  })
-
-  test('전월세 페이지 → 인근 카드에 "최근 거래가" 라벨', async ({ page }) => {
-    await setupBaseMocks(page)
-    await page.route('**/api/real-estate/nearby**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(makeNearbyResponse([NEARBY_APT_ITEM])),
+  for (const [label, rentType] of [['전세', 'jeonse'], ['월세', 'wolse']]) {
+    test(`전월세 페이지 → ${label} 토글 → nearby rentType=${rentType}`, async ({ page }) => {
+      const requestedRentTypes: string[] = []
+      await page.route('**/api/real-estate/nearby?**', route => {
+        requestedRentTypes.push(new URL(route.request().url()).searchParams.get('rentType') ?? '(missing)')
+        return route.fulfill({ json: { success: true, data: { apt: [], villa: [], offitel: [] } } })
       })
+      await page.goto(RENT_PATH)
+      await page.waitForLoadState('networkidle')
+      expect(requestedRentTypes).toEqual([])
+      await page.getByRole('button', { name: label, exact: true }).click()
+      await expect.poll(() => requestedRentTypes).toEqual([rentType])
+      await expect(page.getByRole('heading', { name: '이웃아파트', exact: true })).toHaveCount(0)
     })
-
-    await page.goto(RENT_PATH)
-    await expect(page.locator('text=주변 아파트 전월세').first()).toBeVisible({ timeout: 15000 })
-    await expect(page.locator('p:has-text("최근 거래가")').first()).toBeVisible()
-  })
-
-  test('전월세 페이지 → 전세 토글 클릭 → nearby API에 rentType=jeonse 전달', async ({ page }) => {
-    const requestedRentTypes: string[] = []
-
-    await setupBaseMocks(page)
-    await page.route('**/api/real-estate/nearby**', async (route) => {
-      const url = route.request().url()
-      const rentType = new URL(url).searchParams.get('rentType') ?? '(missing)'
-      requestedRentTypes.push(rentType)
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(makeNearbyResponse([NEARBY_APT_ITEM])),
-      })
-    })
-
-    await page.goto(RENT_PATH)
-    await expect(page.locator('text=주변 아파트 전월세').first()).toBeVisible({ timeout: 15000 })
-
-    await page.getByRole('button', { name: '전세', exact: true }).click()
-    await expect.poll(() => requestedRentTypes).toContain('jeonse')
-  })
-
-  test('전월세 페이지 → 월세 토글 클릭 → nearby API에 rentType=wolse 전달', async ({ page }) => {
-    const requestedRentTypes: string[] = []
-
-    await setupBaseMocks(page)
-    await page.route('**/api/real-estate/nearby**', async (route) => {
-      const url = route.request().url()
-      const rentType = new URL(url).searchParams.get('rentType') ?? '(missing)'
-      requestedRentTypes.push(rentType)
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(makeNearbyResponse([NEARBY_APT_ITEM])),
-      })
-    })
-
-    await page.goto(RENT_PATH)
-    await expect(page.locator('text=주변 아파트 전월세').first()).toBeVisible({ timeout: 15000 })
-
-    await page.getByRole('button', { name: '월세', exact: true }).click()
-    await expect.poll(() => requestedRentTypes).toContain('wolse')
-  })
+  }
 })
