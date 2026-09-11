@@ -319,7 +319,10 @@ const queryCitySlug = computed(() => (route.query.city as string) || '')
 const cityName = computed(() => resolveCityParam(queryCitySlug.value) || '')
 // 헤더 검색(Task 2)이 `/{category}?keyword=` 로 보내는 검색어. 이 페이지는 인-페이지 키워드
 // 인풋을 신설하지 않고 이 값을 읽어 SSR/재조회 fetch 에 반영하기만 한다(진입로는 헤더가 담당).
-const queryKeyword = computed(() => ((route.query.keyword as string) || '').trim())
+const queryKeyword = computed(() => {
+  const value = Array.isArray(route.query.keyword) ? route.query.keyword[0] : route.query.keyword
+  return typeof value === 'string' ? value.trim() : ''
+})
 
 // RegionChips 클릭(지역 전환) 시에도 현재 검색어를 유지한다(사용자 결정 ②: 플랜 기본값인
 // "키워드 버림" 대신 채택). 예: "미소" 검색 후 "서울" 칩 클릭 → `/childcare?city=seoul&keyword=미소`.
@@ -350,7 +353,7 @@ const { setItemListSchema, setBreadcrumbSchema, setFAQSchema, setDatasetSchema }
 // SSR HTML이 전국 목록이 아닌 키워드 검색 결과로 렌더된다(헤더 검색 진입 경로, Task 2/4).
 const isTrash = categoryParam.value === 'trash'
 const initialPage = parsePositivePageQuery(route.query.page)
-const initialKeyword = ((route.query.keyword as string) || '').trim()
+const initialKeyword = queryKeyword.value
 const { data: ssrData, error: ssrError } = await useAsyncData(
   `cat-list-${categoryParam.value}-${queryCitySlug.value || 'all'}-k${initialKeyword || 'none'}-p${initialPage}`,
   () => {
@@ -589,13 +592,14 @@ const canonicalHref = computed(() => `${SITE_URL}${canonicalPath.value}`)
 const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
 // keyword 검색 결과는(city 만 있는 경우와 달리) noindex — shouldNoindexFacilityList(순수 함수)로 판정.
 // `?city=` 만 있는 경우는 기존과 동일하게 색인 유지된다.
-const isNoindex = computed(() => shouldNoindexFacilityList({ page: pageQueryParam.value, keyword: queryKeyword.value }))
+const isNoindex = computed(() => shouldNoindexFacilityList({ page: pageQueryParam.value, keyword: queryKeyword.value, query: route.query }))
 
 // 판정은 utils/facilityListHead.ts 한곳에서만 한다. 여기 인라인으로 두면 테스트가 실물을
 // 부르지 못하고 사본을 검사하게 된다(그 함수 주석 참고).
 useHead(computed(() => buildFacilityListHead({
   page: pageQueryParam.value,
   keyword: queryKeyword.value,
+  query: route.query,
   canonicalHref: canonicalHref.value,
 })))
 
