@@ -168,6 +168,7 @@ import FacilityCard from '~/components/facility/FacilityCard.vue'
 import { useRegions } from '~/composables/useRegions'
 import { CITY_SLUGS } from '~/shared/regionSlugs'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'
+import { buildFacilityListHead } from '~/utils/facilityListHead'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
@@ -352,10 +353,19 @@ function applySubwayIndexMeta() {
     title: pageTitle.value,
     description: '전국 지하철역의 위치·노선·환승 정보를 지도에서 확인하세요. 환승역은 모든 노선이 함께 표시됩니다.',
     path: '/subway',
+    canonical: false,
   })
 }
 
 applySubwayIndexMeta()
+
+// Subway retains its existing page/keyword policy; only lat/lng/q are excluded.
+// One reactive owner removes and restores canonical on query navigation.
+useHead(computed(() => buildFacilityListHead({
+  page: 1,
+  query: route.query,
+  canonicalHref: 'https://ilsangkit.co.kr/subway',
+})))
 
 watch(pageTitle, () => {
   applySubwayIndexMeta()

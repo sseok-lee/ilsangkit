@@ -108,6 +108,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { CATEGORY_META, CATEGORY_GROUPS, NON_REGION_CATEGORIES } from '~/types/facility'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
+import { shouldNoindexFacilityList } from '~/utils/facilityListRobots'
 import { computeAreaNoindex } from '~/utils/areaNoindex'
 import { buildPageHref, stripUiStateQuery } from '~/utils/paginationHref'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
@@ -550,6 +551,7 @@ watch(selectedWasteScheduleId, (id) => {
 const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
 // isPageNoindex 를 shared computed 로 추출해 rel=prev/next 게이팅에도 재사용한다.
 const isPageNoindex = computed(() =>
+  shouldNoindexFacilityList({ page: pageQueryParam.value, query: route.query }) ||
   computeAreaNoindex({
     isTrash: isTrash.value,
     summaryCount: summary.value?.count,
