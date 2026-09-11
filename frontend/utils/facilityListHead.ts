@@ -19,7 +19,7 @@
  * (.omc/notes/noindex-canonical-policy.md). 둘을 같이 내보내면 "색인하지 마라" 와
  * "이걸 정본으로 삼아라" 가 동시에 나가 신호가 서로 충돌한다.
  */
-import { shouldNoindexFacilityList } from './facilityListRobots'
+import { shouldNoindexFacilityList, type FacilityListRobotsInput } from './facilityListRobots'
 import { PAGINATION_ROBOTS_CONTENT } from './pageQuery'
 import { DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 
@@ -55,11 +55,7 @@ export function buildFacilityListCanonicalPath(input: FacilityListCanonicalInput
   return `/${category}`
 }
 
-export interface FacilityListHeadInput {
-  /** 현재 페이지 번호(1-base). 2 이상이면 noindex. */
-  page: number
-  /** 키워드 검색어. 있으면 noindex. */
-  keyword?: string
+export interface FacilityListHeadInput extends FacilityListRobotsInput {
   /** 색인 대상일 때 쓸 canonical 절대 URL. */
   canonicalHref: string
 }
@@ -73,7 +69,7 @@ export interface FacilityListHead {
  * noindex 면 robots 만, 색인 대상이면 canonical 만 — 둘이 함께 나가는 조합은 없다.
  */
 export function buildFacilityListHead(input: FacilityListHeadInput): FacilityListHead {
-  if (shouldNoindexFacilityList({ page: input.page, keyword: input.keyword })) {
+  if (shouldNoindexFacilityList(input)) {
     return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
   }
   return { link: [{ rel: 'canonical', href: input.canonicalHref, key: 'canonical' }] }
