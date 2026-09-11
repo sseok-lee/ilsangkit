@@ -15,6 +15,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test:e2e": "playwright test",
+    "test:e2e:seo": "playwright test --config playwright.seo.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "postinstall": "node scripts/patch-pinia.mjs"
   },

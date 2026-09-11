@@ -4,6 +4,11 @@ function emptyNearby(): NearbyResponse {
   return { apt: [], villa: [], offitel: [] }
 }
 
+export interface NearbySsrResult {
+  nearby: NearbyResponse
+  loaded: boolean
+}
+
 /**
  * SSR 전용 best-effort 인근 단지 로더.
  *
@@ -14,11 +19,12 @@ function emptyNearby(): NearbyResponse {
  *
  * 이 래퍼는 (1) 로더 rejection → 빈 결과, (2) timeout(기본 4s) 초과 → 빈 결과로
  * 처리하고 절대 throw하지 않으며 렌더를 매달지 않는다.
+ * loaded로 정상 빈 결과와 실패를 구분해 클라이언트가 실패한 최초 조회만 재시도한다.
  */
 export async function fetchNearbyForSsr(
   loader: () => Promise<NearbyResponse>,
   timeoutMs = 4000,
-): Promise<NearbyResponse> {
+): Promise<NearbySsrResult> {
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
     const loaderPromise = loader()
@@ -28,9 +34,9 @@ export async function fetchNearbyForSsr(
       timer = setTimeout(() => reject(new Error('nearby-ssr-timeout')), timeoutMs)
     })
     const result = await Promise.race([loaderPromise, timeout])
-    return result ?? emptyNearby()
+    return { nearby: result ?? emptyNearby(), loaded: result != null }
   } catch {
-    return emptyNearby()
+    return { nearby: emptyNearby(), loaded: false }
   } finally {
     if (timer) clearTimeout(timer)
   }
