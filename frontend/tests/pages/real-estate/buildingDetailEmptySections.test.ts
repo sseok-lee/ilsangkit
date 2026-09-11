@@ -83,7 +83,7 @@ describe('부동산 상세 빈 섹션', () => {
 
   it('hasMapCoords/hasNearby 는 의존 선언 뒤에 온다 (TDZ)', () => {
     const s = source()
-    expect(s.indexOf('const nearbyByType')).toBeLessThan(s.indexOf('const hasNearby = computed'))
+    expect(s.indexOf('const { nearby: nearbyByType }')).toBeLessThan(s.indexOf('const hasNearby = computed'))
     expect(s.indexOf('const fullAddress')).toBeLessThan(s.indexOf('const kakaoSearchUrl'))
   })
 })
