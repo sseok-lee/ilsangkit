@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
 const gaId = process.env.NUXT_PUBLIC_GA_ID || ''
 
@@ -69,6 +71,13 @@ export default defineNuxtConfig({
   // Security headers + API proxy
   nitro: {
     compressPublicAssets: true,
+    serverAssets: [
+      {
+        baseName: 'og-map-fallback',
+        dir: fileURLToPath(new URL('./public', import.meta.url)),
+        pattern: 'og-image.png',
+      },
+    ],
     // routeRules 의 swr 캐시 저장소. 마운트를 지정하지 않으면 Nitro 는 기본 인메모리
     // 드라이버로 떨어지는데, 그 드라이버는 **크기 상한이 없고** 만료를 read 시점에만
     // 검사한다(백그라운드 청소 없음). 즉 "쓰이고 다시 안 읽히는" 엔트리는 TTL 과 무관하게
