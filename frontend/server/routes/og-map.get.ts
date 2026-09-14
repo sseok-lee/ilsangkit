@@ -1,6 +1,8 @@
 import { defineEventHandler, getQuery, setHeader } from 'h3'
 import type { H3Event } from 'h3'
 import { generateOgImageSvg, SPECIAL_OG_LABELS } from '../utils/ogImage'
+import { coalesceOgMapRequest, getCachedOgMapImage, setCachedOgMapImage } from '../utils/ogMapCache'
+import { readStaticOgFallbackPng } from '../utils/ogMapFallback'
 import { CATEGORY_META, type FacilityCategory } from '~/types/facility'
 import {
   OG_MAP_WIDTH,
@@ -13,6 +15,12 @@ import {
 
 const NAVER_API_BASE = 'https://maps.apigw.ntruss.com/map-static/v2/raster'
 const DEFAULT_LEVEL = 16
+const MIN_LEVEL = 1
+const MAX_LEVEL = 20
+const UPSTREAM_TIMEOUT_MS = 2000
+const SUCCESS_CACHE_CONTROL = 'public, max-age=86400, s-maxage=86400'
+const FALLBACK_CACHE_CONTROL = 'public, max-age=60, s-maxage=60'
+const CACHE_STATUS_HEADER = 'X-OG-Map-Cache'
 
 // NCP Static Map markers spec uses | : SPACE as delimiters.
 // Label must not contain those, and is capped at 20 chars by NCP recommendation.
@@ -46,10 +54,44 @@ export function normalizeOgCategory(raw: string): string {
   return 'area'
 }
 
+function normalizeCoordinate(value: number): string {
+  return value.toFixed(6).replace(/\.?0+$/, '')
+}
+
+function normalizeLevel(raw: number): number {
+  if (!Number.isFinite(raw)) return DEFAULT_LEVEL
+  return Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, Math.round(raw)))
+}
+
+function buildCacheKey(lat: number, lng: number, level: number, label: string | undefined): string {
+  return [
+    normalizeCoordinate(lat),
+    normalizeCoordinate(lng),
+    String(level),
+    label ?? '',
+  ].join('|')
+}
+
+function setSuccessHeaders(event: H3Event, contentType: string) {
+  setHeader(event, 'Content-Type', contentType)
+  setHeader(event, 'Cache-Control', SUCCESS_CACHE_CONTROL)
+}
+
+function setFallbackHeaders(event: H3Event) {
+  setHeader(event, 'Content-Type', 'image/png')
+  setHeader(event, 'Cache-Control', FALLBACK_CACHE_CONTROL)
+  setHeader(event, CACHE_STATUS_HEADER, 'FALLBACK')
+}
+
+async function staticFallback(event: H3Event): Promise<Buffer> {
+  setFallbackHeaders(event)
+  return await readStaticOgFallbackPng()
+}
+
 async function inlineFallback(
   event: H3Event,
   query: Record<string, unknown>,
-): Promise<Buffer | string> {
+): Promise<Buffer> {
   const category = normalizeOgCategory(String(query.category ?? 'apt')) as FacilityCategory
   const title = String(query.title ?? '')
   const city = query.city ? String(query.city) : undefined
@@ -58,14 +100,35 @@ async function inlineFallback(
   try {
     const sharp = await import('sharp').then((m) => m.default)
     const png = await sharp(Buffer.from(svg)).png().toBuffer()
-    setHeader(event, 'Content-Type', 'image/png')
-    setHeader(event, 'Cache-Control', 'public, max-age=86400, s-maxage=86400')
+    setFallbackHeaders(event)
     return png
   }
   catch {
-    setHeader(event, 'Content-Type', 'image/svg+xml')
-    setHeader(event, 'Cache-Control', 'public, max-age=86400, s-maxage=86400')
-    return svg
+    return staticFallback(event)
+  }
+}
+
+async function fetchNaverMap(url: string, clientId: string, clientSecret: string): Promise<Buffer> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'X-NCP-APIGW-API-KEY-ID': clientId,
+        'X-NCP-APIGW-API-KEY': clientSecret,
+      },
+    })
+    if (!response.ok) {
+      console.warn('[og-map] NCP non-2xx', { status: response.status })
+      throw new Error(`NCP non-2xx ${response.status}`)
+    }
+
+    return Buffer.from(await response.arrayBuffer())
+  }
+  finally {
+    clearTimeout(timeout)
   }
 }
 
@@ -74,11 +137,13 @@ export default defineEventHandler(async (event) => {
 
   const lat = Number.parseFloat(String(query.lat ?? ''))
   const lng = Number.parseFloat(String(query.lng ?? ''))
-  const level = Number.parseInt(String(query.level ?? DEFAULT_LEVEL), 10)
+  const level = normalizeLevel(Number.parseInt(String(query.level ?? DEFAULT_LEVEL), 10))
   const label = sanitizeLabel(query.label ? String(query.label) : undefined)
+  const normalizedLat = normalizeCoordinate(lat)
+  const normalizedLng = normalizeCoordinate(lng)
 
   // 범위 판정은 ogMapSpec 한 곳에서만 한다 — og:image URL 생성기와 같은 함수를 봐야
-  // "라우트는 폴백(SVG)으로 떨어지는데 메타는 그 URL 을 가리키는" 상태가 생기지 않는다.
+  // "라우트는 폴백(PNG)으로 떨어지는데 메타는 그 URL 을 가리키는" 상태가 생기지 않는다.
   const validCoords = isMappableCoord(lat, lng)
 
   const config = useRuntimeConfig(event)
@@ -89,15 +154,23 @@ export default defineEventHandler(async (event) => {
     return inlineFallback(event, query)
   }
 
+  const cacheKey = buildCacheKey(lat, lng, level, label)
+  const cached = getCachedOgMapImage(cacheKey)
+  if (cached) {
+    setSuccessHeaders(event, cached.contentType)
+    setHeader(event, CACHE_STATUS_HEADER, 'HIT')
+    return cached.body
+  }
+
   const markerSpec = label
-    ? `type:d|size:mid|pos:${lng} ${lat}|label:${label}`
-    : `type:d|size:mid|pos:${lng} ${lat}`
+    ? `type:d|size:mid|pos:${normalizedLng} ${normalizedLat}|label:${label}`
+    : `type:d|size:mid|pos:${normalizedLng} ${normalizedLat}`
 
   // scale 은 1 이어야 출력이 og:image:width/height 선언값과 일치한다 — ogMapSpec 주석 참고.
   const params = new URLSearchParams({
     w: String(OG_MAP_WIDTH),
     h: String(OG_MAP_HEIGHT),
-    center: `${lng},${lat}`,
+    center: `${normalizedLng},${normalizedLat}`,
     level: String(level),
     scale: String(OG_MAP_SCALE),
     format: OG_MAP_FORMAT,
@@ -105,20 +178,15 @@ export default defineEventHandler(async (event) => {
   })
 
   try {
-    const response = await fetch(`${NAVER_API_BASE}?${params.toString()}`, {
-      headers: {
-        'X-NCP-APIGW-API-KEY-ID': clientId,
-        'X-NCP-APIGW-API-KEY': clientSecret,
-      },
+    const image = await coalesceOgMapRequest(cacheKey, async () => {
+      const body = await fetchNaverMap(`${NAVER_API_BASE}?${params.toString()}`, clientId, clientSecret)
+      const entry = { body, contentType: OG_MAP_CONTENT_TYPE }
+      setCachedOgMapImage(cacheKey, entry)
+      return entry
     })
-    if (!response.ok) {
-      console.warn('[og-map] NCP non-2xx', { status: response.status, lat, lng })
-      return inlineFallback(event, query)
-    }
-    const buffer = Buffer.from(await response.arrayBuffer())
-    setHeader(event, 'Content-Type', OG_MAP_CONTENT_TYPE)
-    setHeader(event, 'Cache-Control', 'public, max-age=86400, s-maxage=86400')
-    return buffer
+    setSuccessHeaders(event, image.contentType)
+    setHeader(event, CACHE_STATUS_HEADER, 'MISS')
+    return image.body
   }
   catch (err) {
     console.warn('[og-map] NCP exception', { lat, lng, error: String(err) })
