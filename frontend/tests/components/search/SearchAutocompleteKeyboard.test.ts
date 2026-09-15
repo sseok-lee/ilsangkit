@@ -45,4 +45,20 @@ describe('SearchAutocomplete 키보드', () => {
     vm.onKeydown(makeKey('Escape'));
     expect(wrapper.emitted('close')).toBeTruthy();
   });
+
+  it('키보드 활성 항목 id를 active-descendant-change로 emit한다', async () => {
+    const wrapper = mount(SearchAutocomplete, {
+      props: { open: true, modelValue: '강남', listboxId: 'header-search-listbox' },
+    });
+    await flushPromises();
+    await new Promise((r) => setTimeout(r, 250));
+    await flushPromises();
+    const vm = wrapper.vm as unknown as { onKeydown: (e: KeyboardEvent) => boolean };
+
+    vm.onKeydown(makeKey('ArrowDown'));
+    await wrapper.vm.$nextTick();
+
+    const emitted = wrapper.emitted('active-descendant-change');
+    expect(emitted?.at(-1)?.[0]).toBe('header-search-listbox-option-0');
+  });
 });

@@ -117,7 +117,41 @@ describe('getSubscriptionList', () => {
     await getSubscriptionList({ status: 'upcoming', region: '서울', page: 1, limit: 20 });
 
     const whereArg = mockFindMany.mock.calls[0][0].where;
-    expect(baseFromAndWhere(whereArg).regionName).toEqual({ contains: '서울' });
+    expect(baseFromAndWhere(whereArg).AND).toEqual([
+      {
+        OR: [
+          { regionName: { contains: '서울특별시' } },
+          { supplyLocation: { contains: '서울특별시' } },
+          { regionName: { contains: '서울' } },
+          { supplyLocation: { contains: '서울' } },
+        ],
+      },
+    ]);
+  });
+
+  it('시도+구군 region 필터는 청약 가능 지역명과 공급 위치를 함께 매칭해야 한다', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await getSubscriptionList({ status: 'upcoming', region: '경기 성남시 분당구', page: 1, limit: 20 });
+
+    const whereArg = mockFindMany.mock.calls[0][0].where;
+    expect(baseFromAndWhere(whereArg).AND).toEqual([
+      {
+        OR: [
+          { regionName: { contains: '경기도' } },
+          { supplyLocation: { contains: '경기도' } },
+          { regionName: { contains: '경기' } },
+          { supplyLocation: { contains: '경기' } },
+        ],
+      },
+      {
+        OR: [
+          { regionName: { contains: '성남시 분당구' } },
+          { supplyLocation: { contains: '성남시 분당구' } },
+        ],
+      },
+    ]);
   });
 
   it('sourceType 필터를 적용해야 한다', async () => {

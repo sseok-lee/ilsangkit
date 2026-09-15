@@ -20,6 +20,18 @@ vi.mock('../../src/services/search/fulltextKeyword.js', async (orig) => {
   return { ...actual, fulltextIds: mockFtIds, fulltextCount: mockFtCount };
 });
 
+vi.mock('../../src/services/search/searchRegionIndex.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/search/searchRegionIndex.js');
+  return {
+    ...actual,
+    getRegionIndex: async () =>
+      actual.buildRegionIndex([
+        { city: '서울특별시', district: '강남구' },
+        { city: '서울특별시', district: '송파구' },
+      ]),
+  };
+});
+
 vi.mock('../../src/lib/prisma.js', () => {
   const model = {
     findMany: mockFindMany,
@@ -259,7 +271,7 @@ describe('search', () => {
     mockFtCount.mockResolvedValue(2);
     mockFindMany.mockResolvedValue([]);
 
-    await search({ category: 'toilet', keyword: '강남', page: 1, limit: 20 });
+    await search({ category: 'toilet', keyword: '역삼', page: 1, limit: 20 });
 
     // 2자 이상 키워드는 fulltext 경로 사용
     expect(mockFtIds).toHaveBeenCalled();
@@ -351,6 +363,28 @@ describe('search', () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0].category).toBe('pharmacy');
+  });
+
+  it('카테고리 페이지 검색은 통합검색과 같이 지역·카테고리 토큰을 검색어에서 분리한다', async () => {
+    mockQueryRaw.mockResolvedValue([{ id: 'test-1' }]);
+    mockFindMany.mockResolvedValue([sampleRecord]);
+    mockCount.mockResolvedValue(526);
+
+    const result = await search({ category: 'pharmacy', keyword: '강남 약국', page: 1, limit: 20 });
+
+    expect(mockFtIds).not.toHaveBeenCalled();
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: { in: ['test-1'] } },
+      })
+    );
+    const rawCall = mockQueryRaw.mock.calls[0];
+    const sql = rawCall[0] as string;
+    expect(sql).toContain('city IN');
+    expect(sql).toContain('district = ?');
+    expect(sql).not.toContain('강남 약국');
+    expect(rawCall).toContain('강남구');
+    expect(result.total).toBe(526);
   });
 
   it('전국 시설 목록은 한글 우선 정렬 raw SQL을 사용한다', async () => {

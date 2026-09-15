@@ -2,6 +2,7 @@
 
 import type {
   RealEstateType,
+  RealEstatePropertyType,
   RealEstateSearchResponse,
   ComplexListResponse,
   BuildingInfo,
@@ -111,6 +112,24 @@ export function useRealEstate() {
     return res.data
   }
 
+  async function searchPropertyComplexesByKeyword(
+    propertyType: RealEstatePropertyType,
+    keyword: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<ComplexListResponse> {
+    const query = new URLSearchParams()
+    query.set('propertyType', propertyType)
+    query.set('keyword', keyword)
+    query.set('page', String(page))
+    query.set('limit', String(limit))
+
+    const res = await $fetch<{ success: boolean; data: ComplexListResponse }>(
+      `${apiBase}/api/real-estate/complexes/search?${query.toString()}`
+    )
+    return res.data
+  }
+
   async function getBuildingInfo(
     type: RealEstateType,
     bjdCode: string,
@@ -204,6 +223,7 @@ export function useRealEstate() {
     getTransactionStats,
     getComplexList,
     searchComplexesByKeyword,
+    searchPropertyComplexesByKeyword,
     getBuildingInfo,
     searchAll,
     getAreaGroups,

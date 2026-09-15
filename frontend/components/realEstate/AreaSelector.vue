@@ -2,6 +2,7 @@
   <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
     <button
       class="flex-shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+      :aria-pressed="modelValue === null"
       :class="modelValue === null
         ? 'bg-primary-500 text-white font-bold'
         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
@@ -13,6 +14,7 @@
       v-for="group in areas"
       :key="group.area"
       class="flex-shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+      :aria-pressed="modelValue === group.area"
       :class="modelValue === group.area
         ? 'bg-primary-500 text-white font-bold'
         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"

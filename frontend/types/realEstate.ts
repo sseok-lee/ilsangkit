@@ -111,6 +111,7 @@ export interface StatsResponse {
 
 // 건물 정보
 export interface ComplexInfo {
+  type?: RealEstateType
   buildingName: string
   bjdCode: string
   dongName: string

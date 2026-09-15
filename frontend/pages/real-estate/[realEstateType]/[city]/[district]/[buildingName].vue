@@ -197,6 +197,7 @@
             <button
               v-for="opt in periodOptions"
               :key="opt.value ?? 'all'"
+              :aria-pressed="selectedMonths === opt.value"
               :class="[
                 'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                 selectedMonths === opt.value

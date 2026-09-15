@@ -604,28 +604,38 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
  */
 export async function search(params: FacilitySearchInput): Promise<SearchResult> {
   const { category, keyword, lat, lng, radius = SEARCH_DEFAULTS.RADIUS_METERS, swLat, swLng, neLat, neLng, city, district, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT, sort = 'name', departments } = params;
+  let effectiveCity = city;
+  let effectiveDistrict = district;
+  let scopedKeyword = keyword;
+  if (keyword) {
+    const parsed = await parseSearchQueryCached(keyword);
+    const scope = resolveScope({ city, district }, parsed);
+    effectiveCity = scope.effectiveCity;
+    effectiveDistrict = scope.effectiveDistrict;
+    scopedKeyword = scope.nameText;
+  }
 
   // ev-charger: 충전소 단위 그룹 검색 (모든 검색 유형)
   if (category === 'ev-charger') {
-    return evChargerStationSearch({ keyword, city, district, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit });
+    return evChargerStationSearch({ keyword: scopedKeyword, city: effectiveCity, district: effectiveDistrict, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit });
   }
 
   // wifi: 장소 단위 그룹 검색 (모든 검색 유형).
   // 목록·주변 시설이 이 경로를 타므로, 여기서 접어야 지역 목록의 "N곳"이 AP 수가 아니라
   // 장소 수가 되고 상세의 주변 시설에 같은 장소가 중복으로 뜨지 않는다.
   if (category === 'wifi') {
-    return wifiGroupSearch({ keyword, city, district, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit });
+    return wifiGroupSearch({ keyword: scopedKeyword, city: effectiveCity, district: effectiveDistrict, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit });
   }
 
   // trash: WasteSchedule 별도 처리 (좌표 없는 일정 데이터)
   if (category === 'trash') {
     const skip = (page - 1) * limit;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const trashWhere: any = { ...buildRegionFilter(city, district) };
-    if (keyword) {
+    const trashWhere: any = { ...buildRegionFilter(effectiveCity, effectiveDistrict) };
+    if (scopedKeyword) {
       trashWhere.OR = [
-        { targetRegion: { contains: keyword } },
-        { emissionPlace: { contains: keyword } },
+        { targetRegion: { contains: scopedKeyword } },
+        { emissionPlace: { contains: scopedKeyword } },
       ];
     }
     const [records, total] = await Promise.all([
@@ -639,7 +649,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
   // --- 좌표 기반 검색: Haversine 거리 계산 ---
   if (lat !== undefined && lng !== undefined) {
     const categories = category ? [category as FacilityCategory] : ALL_CATEGORIES;
-    const keywordFilter = buildKeywordFilter(keyword);
+    const keywordFilter = buildKeywordFilter(scopedKeyword);
     const radiusKm = radius / 1000;
 
     // 대략적인 위경도 범위로 사전 필터링 (성능 최적화)
@@ -657,7 +667,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         // ev-charger: 충전소 단위 그룹핑
         if (cat === 'ev-charger') {
           const stationResult = await evChargerStationSearch({
-            keyword, lat, lng, radius, swLat, swLng, neLat, neLng,
+            keyword: scopedKeyword, lat, lng, radius, swLat, swLng, neLat, neLng,
             page: 1, limit: 100,
           });
           return stationResult.items;
@@ -665,7 +675,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
         // wifi: 장소 단위 그룹핑
         if (cat === 'wifi') {
           const groupResult = await wifiGroupSearch({
-            keyword, lat, lng, radius, swLat, swLng, neLat, neLng,
+            keyword: scopedKeyword, lat, lng, radius, swLat, swLng, neLat, neLng,
             page: 1, limit: 100,
           });
           return groupResult.items;
@@ -707,7 +717,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
   // --- bounds 기반 검색 ---
   if (swLat !== undefined && swLng !== undefined && neLat !== undefined && neLng !== undefined) {
     const categories = category ? [category as FacilityCategory] : ALL_CATEGORIES;
-    const keywordFilter = buildKeywordFilter(keyword);
+    const keywordFilter = buildKeywordFilter(scopedKeyword);
     const boundsFilter = buildBoundsFilter(swLat, swLng, neLat, neLng);
 
     const allItems: FacilityItem[] = [];
@@ -739,8 +749,8 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
   const skip = (page - 1) * limit;
 
   const where = {
-    ...buildKeywordFilter(keyword),
-    ...buildRegionFilter(city, district),
+    ...buildKeywordFilter(scopedKeyword),
+    ...buildRegionFilter(effectiveCity, effectiveDistrict),
     ...buildDepartmentFilter(category, departments),
   };
 
@@ -749,14 +759,14 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
   if (category) {
     const model = CATEGORY_REGISTRY[category as FacilityCategory].model();
     if (
-      canUseFulltext(keyword) && FULLTEXT_TABLES[category]
+      canUseFulltext(scopedKeyword) && FULLTEXT_TABLES[category]
       && !departments?.length && (!sort || sort === 'name')
     ) {
       // FULLTEXT 경로: 키워드 매칭 id를 인덱스로 추출 후 기존 select/매핑 재사용
-      const ftRegion = { cityVariants: cityVariantList(city), district };
+      const ftRegion = { cityVariants: cityVariantList(effectiveCity), district: effectiveDistrict };
       const [ids, total] = await Promise.all([
-        fulltextIds(FULLTEXT_TABLES[category], keyword!, ftRegion, limit, skip),
-        fulltextCount(FULLTEXT_TABLES[category], keyword!, ftRegion),
+        fulltextIds(FULLTEXT_TABLES[category], scopedKeyword!, ftRegion, limit, skip),
+        fulltextCount(FULLTEXT_TABLES[category], scopedKeyword!, ftRegion),
       ]);
       // fulltextIds의 name ASC 순서 보존 (findMany in은 순서 비보장)
       const items = await fetchByIdsInOrder(model, ids, category as FacilityCategory);
@@ -764,9 +774,9 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
     }
     // 한글 우선 정렬 경로: 키워드 없음 + 기본 name 정렬 + 진료과목 없음.
     // MySQL 콜레이션상 기호·숫자·라틴이 한글보다 앞서므로 raw SQL로 한글 시작 실명을 앞으로.
-    if (!keyword && !departments?.length && (!sort || sort === 'name') && NAME_SORT_TABLES[category]) {
+    if (!scopedKeyword && !departments?.length && (!sort || sort === 'name') && NAME_SORT_TABLES[category]) {
       const [ids, total] = await Promise.all([
-        koreanNameFirstIds(category, cityVariantList(city), district, limit, skip),
+        koreanNameFirstIds(category, cityVariantList(effectiveCity), effectiveDistrict, limit, skip),
         model.count({ where }),
       ]);
       if (ids) {

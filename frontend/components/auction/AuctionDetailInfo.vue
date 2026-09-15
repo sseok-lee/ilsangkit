@@ -15,6 +15,8 @@ const present = (v: string | null | undefined) => (v && v.trim() ? v.trim() : nu
 const basicRows = computed<Row[]>(() =>
   [
     { label: '물건관리번호', value: props.item.cltrMngNo },
+    { label: '공매조건번호', value: present(props.item.pbctCdtnNo) },
+    { label: '공고번호', value: present(props.item.plnmNo) },
     { label: '물건유형', value: present(props.item.propertyType) },
     { label: '처분방식', value: present(props.item.dpslMtdNm) },
     { label: '입찰방식', value: present(props.item.bidMethod) },

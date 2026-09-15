@@ -86,4 +86,20 @@ describe('SearchAutocomplete', () => {
     const rootClasses = wrapper.get('.search-ac').classes();
     expect(rootClasses.some((c) => /^text-(slate|gray|zinc|neutral|ink|strong)/.test(c))).toBe(true);
   });
+
+  it('listbox와 option에 부모 input이 참조할 수 있는 고유 id를 렌더한다', async () => {
+    const wrapper = mount(SearchAutocomplete, {
+      props: { open: true, modelValue: '강남', listboxId: 'hero-search-listbox' },
+    });
+    await flushPromises();
+    await new Promise((r) => setTimeout(r, 250));
+    await flushPromises();
+
+    expect(wrapper.get('[role="listbox"]').attributes('id')).toBe('hero-search-listbox');
+    const options = wrapper.findAll('[role="option"]');
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.map((option) => option.attributes('id'))).toEqual(
+      options.map((_, index) => `hero-search-listbox-option-${index}`),
+    );
+  });
 });

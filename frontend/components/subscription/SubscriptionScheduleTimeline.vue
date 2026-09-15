@@ -28,14 +28,26 @@
       />
       <TimelineItem
         v-if="subscription.rank1AreaStartDate && subscription.rank1AreaEndDate"
-        title="1순위 접수"
+        :title="hasRank1OtherSchedule ? '1순위 접수(해당지역)' : '1순위 접수'"
         :date="`${subscription.rank1AreaStartDate} ~ ${subscription.rank1AreaEndDate}`"
         icon="first_page"
       />
       <TimelineItem
+        v-if="subscription.rank1OtherStartDate && subscription.rank1OtherEndDate"
+        title="1순위 접수(기타지역)"
+        :date="`${subscription.rank1OtherStartDate} ~ ${subscription.rank1OtherEndDate}`"
+        icon="first_page"
+      />
+      <TimelineItem
         v-if="subscription.rank2AreaStartDate && subscription.rank2AreaEndDate"
-        title="2순위 접수"
+        :title="hasRank2OtherSchedule ? '2순위 접수(해당지역)' : '2순위 접수'"
         :date="`${subscription.rank2AreaStartDate} ~ ${subscription.rank2AreaEndDate}`"
+        icon="last_page"
+      />
+      <TimelineItem
+        v-if="subscription.rank2OtherStartDate && subscription.rank2OtherEndDate"
+        title="2순위 접수(기타지역)"
+        :date="`${subscription.rank2OtherStartDate} ~ ${subscription.rank2OtherEndDate}`"
         icon="last_page"
       />
       <TimelineItem
@@ -75,8 +87,18 @@ const hasRankSchedule = computed(() =>
   Boolean(
     props.subscription.specialStartDate ||
     props.subscription.rank1AreaStartDate ||
-    props.subscription.rank2AreaStartDate,
+    props.subscription.rank1OtherStartDate ||
+    props.subscription.rank2AreaStartDate ||
+    props.subscription.rank2OtherStartDate,
   ),
+)
+
+const hasRank1OtherSchedule = computed(() =>
+  Boolean(props.subscription.rank1OtherStartDate && props.subscription.rank1OtherEndDate),
+)
+
+const hasRank2OtherSchedule = computed(() =>
+  Boolean(props.subscription.rank2OtherStartDate && props.subscription.rank2OtherEndDate),
 )
 
 // 시작일~종료일. 종료일이 없으면(무순위 상시 접수 등) 시작일만.

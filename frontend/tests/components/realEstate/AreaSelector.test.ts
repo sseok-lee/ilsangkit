@@ -73,4 +73,14 @@ describe('AreaSelector', () => {
     expect(buttons.length).toBe(1)
     expect(buttons[0].text()).toContain('전체')
   })
+
+  it('현재 선택된 면적 버튼을 aria-pressed로 노출한다', () => {
+    const wrapper = mount(AreaSelector, {
+      props: { areas: mockAreas, modelValue: 59 },
+    })
+    const buttons = wrapper.findAll('button')
+    expect(buttons[0].attributes('aria-pressed')).toBe('false')
+    expect(buttons[1].attributes('aria-pressed')).toBe('true')
+    expect(buttons[2].attributes('aria-pressed')).toBe('false')
+  })
 })

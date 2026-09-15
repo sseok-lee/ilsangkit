@@ -229,6 +229,32 @@ describe('AppHeader', () => {
       // size-11 = 44px (2.75rem)
       expect(menuButton.classes()).toContain('size-11')
     })
+
+    it('Escape로 데스크톱 드롭다운을 닫으면 원래 트리거에 포커스를 복구한다', async () => {
+      const attachedWrapper = mount(AppHeader, {
+        attachTo: document.body,
+        global: {
+          plugins: [router],
+          stubs: {
+            NuxtLink: {
+              template: '<a :href="to"><slot /></a>',
+              props: ['to'],
+            },
+          },
+        },
+      })
+      const group = attachedWrapper.findAll('nav.hidden.lg\\:flex [data-testid="nav-group"]')[0]
+      const trigger = group.find('button')
+      trigger.element.focus()
+      await trigger.trigger('click')
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      await attachedWrapper.vm.$nextTick()
+
+      expect(trigger.attributes('aria-expanded')).toBe('false')
+      expect(document.activeElement).toBe(trigger.element)
+      attachedWrapper.unmount()
+    })
   })
 
   describe('Props', () => {

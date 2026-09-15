@@ -63,6 +63,13 @@ export const RealEstateComplexSchema = z.object({
   limit: z.coerce.number().default(15),
 });
 
+export const RealEstatePropertyComplexSchema = z.object({
+  propertyType: RealEstatePropertyTypeSchema,
+  keyword: z.string().max(100).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 // 부동산 건물 정보 스키마
 export const RealEstateBuildingInfoSchema = z.object({
   bjdCode: z.string().max(10),
@@ -70,6 +77,7 @@ export const RealEstateBuildingInfoSchema = z.object({
 });
 
 export type RealEstateComplex = z.infer<typeof RealEstateComplexSchema>;
+export type RealEstatePropertyComplex = z.infer<typeof RealEstatePropertyComplexSchema>;
 
 // 부동산 통합 검색 스키마
 export const RealEstateUnifiedSearchSchema = z.object({
