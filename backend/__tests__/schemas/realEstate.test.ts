@@ -7,6 +7,7 @@ import {
   RealEstateSearchSchema,
   RealEstateStatsSchema,
   RealEstateComplexSchema,
+  RealEstatePropertyComplexSchema,
   RealEstateUnifiedSearchSchema,
   NearbyQuerySchema,
 } from '../../src/schemas/realEstate.js';
@@ -198,6 +199,24 @@ describe('RealEstatePropertyTypeSchema', () => {
     expect(() => RealEstatePropertyTypeSchema.parse('house')).toThrow();
     expect(() => RealEstatePropertyTypeSchema.parse('apt-sale')).toThrow();
     expect(() => RealEstatePropertyTypeSchema.parse('')).toThrow();
+  });
+});
+
+describe('RealEstatePropertyComplexSchema', () => {
+  it('propertyType과 기본 page/limit을 파싱한다', () => {
+    const parsed = RealEstatePropertyComplexSchema.parse({ propertyType: 'apt', keyword: '잠실' });
+    expect(parsed.propertyType).toBe('apt');
+    expect(parsed.keyword).toBe('잠실');
+    expect(parsed.page).toBe(1);
+    expect(parsed.limit).toBe(20);
+  });
+
+  it('page/limit은 양의 정수이며 limit은 100 이하만 허용한다', () => {
+    expect(RealEstatePropertyComplexSchema.safeParse({ propertyType: 'apt', page: '2', limit: '100' }).success).toBe(true);
+    expect(RealEstatePropertyComplexSchema.safeParse({ propertyType: 'apt', page: 0 }).success).toBe(false);
+    expect(RealEstatePropertyComplexSchema.safeParse({ propertyType: 'apt', page: 1.5 }).success).toBe(false);
+    expect(RealEstatePropertyComplexSchema.safeParse({ propertyType: 'apt', limit: 101 }).success).toBe(false);
+    expect(RealEstatePropertyComplexSchema.safeParse({ propertyType: 'apt', limit: -1 }).success).toBe(false);
   });
 });
 

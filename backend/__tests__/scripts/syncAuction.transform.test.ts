@@ -53,8 +53,11 @@ describe('transformAuctionItem (차세대 Srvc2 필드명)', () => {
 
   it('입찰일시 파싱(YYYYMMDDhhmm → Date UTC)', () => {
     const r = transformAuctionItem(base)!;
+    expect(r.bidBeginDtm?.toISOString()).toBe('2026-01-01T11:00:00.000Z');
+    expect(r.bidCloseDtm?.toISOString()).toBe('2026-12-01T16:00:00.000Z');
     expect(r.bidCloseDtm?.getUTCFullYear()).toBe(2026);
     expect(r.bidCloseDtm?.getUTCMonth()).toBe(11); // 12월 = index 11
+    expect(r.bidCloseDtm?.getUTCHours()).toBe(16);
   });
 
   it('미래 마감 → status ongoing (진행중)', () => {

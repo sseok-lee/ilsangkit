@@ -56,11 +56,13 @@ const searchAllMock = vi.fn().mockResolvedValue({ categories: [], buildingCounts
 const getComplexListMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
 // 드릴다운은 키워드를 지역/이름으로 해석하는 searchComplexesByKeyword를 사용(미리보기와 일관)
 const searchComplexesByKeywordMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
+const searchPropertyComplexesByKeywordMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
     searchAll: searchAllMock,
     getComplexList: getComplexListMock,
     searchComplexesByKeyword: searchComplexesByKeywordMock,
+    searchPropertyComplexesByKeyword: searchPropertyComplexesByKeywordMock,
   }),
 }))
 
@@ -79,6 +81,7 @@ describe('SearchPage', () => {
     searchAllMock.mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
     getComplexListMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
     searchComplexesByKeywordMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
+    searchPropertyComplexesByKeywordMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
     searchGroupedMock.mockResolvedValue(undefined)
     groupedResultsRef.value = []
     groupedTotalRef.value = 0
@@ -221,7 +224,7 @@ describe('SearchPage', () => {
       }],
       buildingCounts: { apt: 3, villa: 0, offitel: 0 },
     })
-    searchComplexesByKeywordMock.mockResolvedValue({
+    searchPropertyComplexesByKeywordMock.mockResolvedValue({
       items: [{
         buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
         dongName: '역삼동', latestPrice: 150000, transactionCount: 12,
@@ -240,9 +243,8 @@ describe('SearchPage', () => {
     await aptGroup!.find('button').trigger('click')
     await flushPromises()
 
-    // 드릴다운은 키워드를 지역/이름으로 해석하는 searchComplexesByKeyword로 조회한다
-    // (getComplexList의 buildingName-prefix가 아님 — 지역 키워드가 0건이 되던 버그 방지).
-    expect(searchComplexesByKeywordMock).toHaveBeenCalledWith('apt-sale', '강남', 1, 20)
+    // 드릴다운은 키워드를 지역/이름으로 해석하고 property 단위 합집합으로 조회한다.
+    expect(searchPropertyComplexesByKeywordMock).toHaveBeenCalledWith('apt', '강남', 1, 20)
     expect(getComplexListMock).not.toHaveBeenCalled()
 
     // 드릴다운 상태: 통합 도메인 섹션(h2)은 사라지고 페이징 뷰가 표시된다
@@ -335,5 +337,50 @@ describe('SearchPage', () => {
     const domainCount = wrapper.find('[data-testid="domain"] .dc')
     expect(domainCount.exists()).toBe(true)
     expect(domainCount.text()).toBe('8')
+  })
+
+  it('부동산 더보기 상태에서 새 검색을 실행하면 통합 검색 범위로 초기화한다', async () => {
+    routeQuery.keyword = '잠실'
+    searchAllMock.mockResolvedValue({
+      categories: [{
+        type: 'apt-sale',
+        count: 12,
+        items: [{
+          buildingName: '잠실엘스', bjdCode: '11710', city: '서울', district: '송파구',
+          dongName: '잠실동', dealAmount: 180000, deposit: null,
+          dealYear: 2026, dealMonth: 8, buildYear: 2008, transactionCount: 40,
+        }],
+      }],
+      buildingCounts: { apt: 12, villa: 0, offitel: 0 },
+    })
+    searchPropertyComplexesByKeywordMock.mockResolvedValue({
+      items: [{
+        buildingName: '잠실엘스', bjdCode: '11710', city: '서울', district: '송파구',
+        dongName: '잠실동', latestPrice: 180000, transactionCount: 40,
+      }],
+      page: 1, totalPages: 1, total: 10,
+    })
+    groupedResultsRef.value = [{ category: 'pharmacy', label: '약국', count: 25251, items: [] }]
+    groupedTotalRef.value = 25251
+
+    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+    await flushPromises()
+
+    const aptGroup = wrapper.findAllComponents(SearchResultGroup).find(g => g.props('label') === '아파트')
+    await aptGroup!.find('button').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('button').some(b => b.text().includes('통합 검색 결과로'))).toBe(true)
+
+    vi.clearAllMocks()
+    searchAllMock.mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
+    const input = wrapper.find('input[aria-label="통합 검색"]')
+    await input.setValue('약국')
+    await wrapper.findAll('button').find(b => b.text().includes('다시 검색'))!.trigger('click')
+    await flushPromises()
+
+    expect(searchAllMock).toHaveBeenCalledWith('약국')
+    expect(searchGroupedMock).toHaveBeenCalledWith({ keyword: '약국', limit: 20 })
+    expect(searchPropertyComplexesByKeywordMock).not.toHaveBeenCalled()
+    expect(wrapper.findAll('button').some(b => b.text().includes('통합 검색 결과로'))).toBe(false)
   })
 })

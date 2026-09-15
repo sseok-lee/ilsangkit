@@ -24,8 +24,12 @@ const base = {
   specialEndDate: null,
   rank1AreaStartDate: null,
   rank1AreaEndDate: null,
+  rank1OtherStartDate: null,
+  rank1OtherEndDate: null,
   rank2AreaStartDate: null,
   rank2AreaEndDate: null,
+  rank2OtherStartDate: null,
+  rank2OtherEndDate: null,
   winnerDate: '2026-06-05',
   contractStartDate: '2026-06-06',
   contractEndDate: '2026-06-06',
@@ -61,6 +65,24 @@ describe('SubscriptionScheduleTimeline', () => {
     expect(text).toContain('1순위 접수')
     expect(text).toContain('2순위 접수')
     // 일반 청약 접수 행은 순위 데이터 있을 때 숨김(중복 방지)
+    expect(text).not.toContain('청약 접수')
+  })
+
+  it('해당지역과 기타지역 1순위 일정이 다르면 행을 분리해 렌더한다', () => {
+    const w = mountWith({
+      ...base,
+      receptionStartDate: '2026-09-22',
+      receptionEndDate: '2026-09-23',
+      rank1AreaStartDate: '2026-09-22',
+      rank1AreaEndDate: '2026-09-22',
+      rank1OtherStartDate: '2026-09-23',
+      rank1OtherEndDate: '2026-09-23',
+    })
+    const text = w.text()
+    expect(text).toContain('1순위 접수(해당지역)')
+    expect(text).toContain('2026-09-22 ~ 2026-09-22')
+    expect(text).toContain('1순위 접수(기타지역)')
+    expect(text).toContain('2026-09-23 ~ 2026-09-23')
     expect(text).not.toContain('청약 접수')
   })
 

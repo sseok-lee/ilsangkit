@@ -47,9 +47,9 @@
             class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
             aria-haspopup="true"
             :aria-expanded="activeDropdown === group.title"
-            @click="toggleDropdown(group.title)"
-            @keydown.enter.prevent="openDropdown(group.title)"
-            @keydown.space.prevent="openDropdown(group.title)"
+            @click="toggleDropdown(group.title, $event)"
+            @keydown.enter.prevent="openDropdown(group.title, $event)"
+            @keydown.space.prevent="openDropdown(group.title, $event)"
           >
             {{ group.title }}
             <span class="material-symbols-outlined text-[16px] transition-transform" aria-hidden="true" :class="{ 'rotate-180': activeDropdown === group.title }">expand_more</span>
@@ -108,9 +108,9 @@
             class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
             aria-haspopup="true"
             :aria-expanded="activeDropdown === '생활시설'"
-            @click="toggleDropdown('생활시설')"
-            @keydown.enter.prevent="openDropdown('생활시설')"
-            @keydown.space.prevent="openDropdown('생활시설')"
+            @click="toggleDropdown('생활시설', $event)"
+            @keydown.enter.prevent="openDropdown('생활시설', $event)"
+            @keydown.space.prevent="openDropdown('생활시설', $event)"
           >
             생활시설
             <span class="material-symbols-outlined text-[16px] transition-transform" aria-hidden="true" :class="{ 'rotate-180': activeDropdown === '생활시설' }">expand_more</span>
@@ -331,6 +331,7 @@ const isMobileMenuOpen = ref(false)
 const activeDropdown = ref<string | null>(null)
 const mobileMenuRef = ref<HTMLElement | null>(null)
 const mobileMenuTriggerRef = ref<HTMLElement | null>(null)
+const dropdownTriggerRef = ref<HTMLElement | null>(null)
 let dropdownTimer: ReturnType<typeof setTimeout> | null = null
 
 const route = useRoute()
@@ -383,11 +384,17 @@ const handleMobileMenuTab = (event: KeyboardEvent) => {
   }
 }
 
-const toggleDropdown = (title: string) => {
+const rememberDropdownTrigger = (event?: Event) => {
+  const target = event?.currentTarget
+  if (target instanceof HTMLElement) dropdownTriggerRef.value = target
+}
+
+const toggleDropdown = (title: string, event?: Event) => {
+  rememberDropdownTrigger(event)
   if (activeDropdown.value === title) {
     closeDropdown()
   } else {
-    openDropdown(title)
+    openDropdown(title, event)
   }
 }
 
@@ -400,7 +407,8 @@ const handleDropdownFocusout = (event: FocusEvent, title: string) => {
   }
 }
 
-const openDropdown = (title: string) => {
+const openDropdown = (title: string, event?: Event) => {
+  rememberDropdownTrigger(event)
   cancelCloseDropdown()
   activeDropdown.value = title
 }
@@ -418,9 +426,10 @@ const cancelCloseDropdown = () => {
   }
 }
 
-const closeDropdown = () => {
+const closeDropdown = (restoreFocus = false) => {
   cancelCloseDropdown()
   activeDropdown.value = null
+  if (restoreFocus === true) dropdownTriggerRef.value?.focus()
 }
 
 const handleBack = () => {
@@ -431,7 +440,7 @@ const handleBack = () => {
 const handleKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
     if (activeDropdown.value) {
-      closeDropdown()
+      closeDropdown(true)
     } else if (isMobileMenuOpen.value) {
       closeMobileMenu()
     }

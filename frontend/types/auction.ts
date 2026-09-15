@@ -77,6 +77,16 @@ export function formatAuctionDate(value: string | null | undefined): string {
   const y = d.getUTCFullYear(), m = String(d.getUTCMonth() + 1).padStart(2, '0'), day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}.${m}.${day}`;
 }
+// syncAuction.parseDtm stores the Onbid YYYYMMDDhhmm wall-clock value in UTC fields.
+// Read UTC fields here to preserve the source time instead of adding the browser's timezone.
+export function formatAuctionDateTime(value: string | null | undefined): string {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '-';
+  const y = d.getUTCFullYear(), m = String(d.getUTCMonth() + 1).padStart(2, '0'), day = String(d.getUTCDate()).padStart(2, '0');
+  const h = String(d.getUTCHours()).padStart(2, '0'), mi = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${y}.${m}.${day} ${h}:${mi}`;
+}
 /** ㎡ → "62.45㎡ (19평)" 표기. 1평 = 3.305785㎡ */
 export function formatArea(sqm: number | null | undefined): string {
   if (sqm == null || sqm <= 0) return '-';

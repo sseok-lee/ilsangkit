@@ -26,12 +26,12 @@ vi.mock('../../src/services/search/searchRegionIndex.js', async (orig) => {
   };
 });
 
-import { searchComplexesByKeyword } from '../../src/services/realEstateService.js';
+import { searchComplexesByKeyword, searchPropertyComplexesByKeyword } from '../../src/services/realEstateService.js';
 
 // SELECT(paginated) 호출을 찾아 SQL + 바인딩 파라미터를 돌려준다.
 function selectCall() {
   const call = mockQueryRawUnsafe.mock.calls.find((c) =>
-    String(c[0]).includes('ORDER BY transactionCount'),
+    String(c[0]).includes('SELECT buildingName') && String(c[0]).includes('LIMIT ? OFFSET ?'),
   );
   return { sql: String(call?.[0] ?? ''), params: (call ?? []).slice(1) };
 }
@@ -107,7 +107,51 @@ describe('searchComplexesByKeyword (드릴다운 지역 해석)', () => {
     });
   });
 
+  it('목록은 안내 문구와 같이 최신 거래월부터 정렬한다', async () => {
+    await searchComplexesByKeyword('apt-sale', '강남', 1, 20);
+    const { sql } = selectCall();
+    expect(sql).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC');
+  });
+
   it('알 수 없는 type이면 에러를 던진다', async () => {
     await expect(searchComplexesByKeyword('bogus-type', '강남')).rejects.toThrow(/Unknown real estate type/);
+  });
+});
+
+describe('searchPropertyComplexesByKeyword (통합검색 부동산 더보기)', () => {
+  it('property 단위로 sale/rent 합집합을 조회하고 건물 단위로 dedupe한다', async () => {
+    await searchPropertyComplexesByKeyword('apt', '잠실', 1, 20);
+
+    const select = mockQueryRawUnsafe.mock.calls.find((c) => String(c[0]).includes('ROW_NUMBER() OVER'));
+    const count = mockQueryRawUnsafe.mock.calls.find((c) => String(c[0]).includes('COUNT(DISTINCT buildingName, bjdCode)'));
+    expect(String(select?.[0] ?? '')).toContain('type IN (?, ?)');
+    expect(String(select?.[0] ?? '')).toContain('PARTITION BY buildingName, bjdCode');
+    expect(String(select?.[0] ?? '')).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC');
+    expect(select).toContain('apt-sale');
+    expect(select).toContain('apt-rent');
+    expect(count).toContain('apt-sale');
+    expect(count).toContain('apt-rent');
+  });
+
+  it('응답 행의 type을 보존해 프론트가 rent 링크를 만들 수 있다', async () => {
+    mockQueryRawUnsafe.mockImplementation((sql: string) => {
+      if (String(sql).includes('COUNT(DISTINCT')) return Promise.resolve([{ total: 1n }]);
+      return Promise.resolve([{
+        type: 'apt-rent',
+        buildingName: '잠실엘스', bjdCode: '11710', city: '서울', district: '송파구',
+        dongName: '잠실동', transactionCount: 2, latestPrice: 90000n,
+        latestDealYear: 2026, latestDealMonth: 9, buildYear: 2008, lat: null, lng: null,
+      }]);
+    });
+
+    const res = await searchPropertyComplexesByKeyword('apt', '잠실', 1, 20);
+    expect(res.total).toBe(1);
+    expect(res.items[0]).toMatchObject({
+      type: 'apt-rent',
+      buildingName: '잠실엘스',
+      lastDealYear: 2026,
+      lastDealMonth: 9,
+      latestPrice: 90000,
+    });
   });
 });

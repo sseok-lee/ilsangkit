@@ -86,7 +86,7 @@
                 :key="`${item.buildingName}-${item.bjdCode}`"
                 :complex="item"
                 :property-type="(selectedRealEstateType as RealEstatePropertyType)"
-                tab="sale"
+                :tab="item.type?.endsWith('-rent') ? 'rent' : 'sale'"
               />
             </div>
             <Pagination :current-page="reCurrentPage" :total-pages="reTotalPages" @page-change="goToRealEstatePage" />
@@ -208,7 +208,7 @@ import ComplexCard from '~/components/realEstate/ComplexCard.vue'
 import FacilityCard from '~/components/facility/FacilityCard.vue'
 
 const route = useRoute()
-const { searchAll: searchRealEstate, searchComplexesByKeyword } = useRealEstate()
+const { searchAll: searchRealEstate, searchPropertyComplexesByKeyword } = useRealEstate()
 const { searchGrouped: searchFacilitiesGrouped, groupedResults, groupedTotalCount } = useFacilitySearch()
 const { setSearchMeta } = useFacilityMeta()
 const { trackSearchResultsView, trackSearchNoResults } = useAnalytics()
@@ -315,10 +315,9 @@ const reLoading = ref(false)
 async function searchRealEstatePaged(propertyType: string, page: number = 1) {
   reLoading.value = true
   try {
-    const type = `${propertyType}-sale` as RealEstateType
-    // 드릴다운은 키워드를 지역/이름으로 해석(미리보기 searchAll과 일관) — 건물명 prefix가 아님.
-    const result = await searchComplexesByKeyword(
-      type,
+    // 드릴다운은 키워드를 지역/이름으로 해석하고 매매/전월세 합집합을 property 단위로 dedupe한다.
+    const result = await searchPropertyComplexesByKeyword(
+      propertyType as RealEstatePropertyType,
       searchKeyword.value || '',
       page,
       20
@@ -389,6 +388,11 @@ async function performSearch() {
 }
 
 function handleSearch() {
+  selectedRealEstateType.value = ''
+  reComplexItems.value = []
+  reCurrentPage.value = 1
+  reTotalPages.value = 0
+  reTotal.value = 0
   performSearch()
 }
 

@@ -55,6 +55,8 @@ if (itemErrStatus === 404 || itemErrStatus === 422) {
 const item = computed(() => data.value?.item ?? null)
 const nearby = computed(() => data.value?.nearby ?? [])
 const marketCompare = computed(() => data.value?.marketCompare ?? null)
+// 온비드 상세는 공식 HTML상 POST + 복수 식별자 의존이라 검증된 직접 링크 대신 조건검색으로 보낸다.
+const onbidSearchUrl = 'https://www.onbid.co.kr/op/cltrpbancinf/cltr/cltrcdtnsrch/CltrCdtnSrchController/mvmnCltrCdtnSrchClg.do'
 // land: apslAssAmtForCompare(원/평)가 있으면 그 값을 컴포넌트에 주입해 단위 일치
 const compareApslAmt = computed(() =>
   marketCompare.value?.apslAssAmtForCompare ?? item.value?.apslAssAmt ?? null,
@@ -294,12 +296,15 @@ if (item.value) {
 
       <!-- 온비드 입찰 외부 CTA (order-9) -->
       <div class="order-9">
-        <a :href="`https://www.onbid.co.kr/op/cta/cltrMgNo/ctaCltrMgNoInfo.do?cltrMgNo=${item.cltrMngNo}`"
+        <a :href="onbidSearchUrl"
            target="_blank" rel="noopener noreferrer"
            class="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
           <span class="material-symbols-outlined text-[20px]">gavel</span>
-          온비드에서 입찰하기
+          온비드에서 물건번호로 검색하기
         </a>
+        <p class="mt-2 text-center text-caption text-faint">
+          물건관리번호 {{ item.cltrMngNo }}<template v-if="item.pbctCdtnNo"> · 공매조건번호 {{ item.pbctCdtnNo }}</template><template v-if="item.plnmNo"> · 공고번호 {{ item.plnmNo }}</template>
+        </p>
       </div>
 
 

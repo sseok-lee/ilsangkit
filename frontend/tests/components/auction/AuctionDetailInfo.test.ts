@@ -41,4 +41,15 @@ describe('AuctionDetailInfo — 집행기관 빈값 (§5-8 rule4)', () => {
     expect(fallback).toBeTruthy()
     expect(fallback!.classes()).not.toContain('truncate')
   })
+
+  it('온비드 조회에 필요한 물건·조건·공고 식별자를 노출한다', () => {
+    const w = mountInfo(makeItem({ pbctCdtnNo: '6001661', plnmNo: '20260400021484' }))
+    const text = w.text()
+    expect(text).toContain('물건관리번호')
+    expect(text).toContain('2024-00001-001')
+    expect(text).toContain('공매조건번호')
+    expect(text).toContain('6001661')
+    expect(text).toContain('공고번호')
+    expect(text).toContain('20260400021484')
+  })
 })

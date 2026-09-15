@@ -39,7 +39,12 @@
               </div>
               <input
                 v-model="searchKeyword"
+                role="combobox"
+                aria-autocomplete="list"
                 aria-label="단지명·동네·시설 검색"
+                :aria-expanded="heroFocused"
+                :aria-controls="heroListboxId"
+                :aria-activedescendant="heroActiveDescendant"
                 class="flex-1 min-w-0 bg-transparent text-ink placeholder:text-faint px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
                 placeholder="단지명, 지역, 시설 검색"
                 @keydown="onHeroKeydown"
@@ -59,7 +64,14 @@
               </div>
             </div>
             <div class="absolute left-0 right-0 top-full z-50">
-              <SearchAutocomplete ref="heroAcRef" :open="heroFocused" :model-value="searchKeyword" @close="heroFocused = false" />
+              <SearchAutocomplete
+                ref="heroAcRef"
+                :open="heroFocused"
+                :model-value="searchKeyword"
+                :listbox-id="heroListboxId"
+                @active-descendant-change="heroActiveDescendant = $event"
+                @close="heroFocused = false"
+              />
             </div>
           </label>
         </div>
@@ -280,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useId } from 'vue'
 import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
 // heroAcRef typed as any to avoid circular InstanceType complexity in pages
 
@@ -331,6 +343,8 @@ setDatasetSchema({
 
 const searchKeyword = ref('')
 const heroFocused = ref(false)
+const heroListboxId = `home-search-${useId()}-listbox`
+const heroActiveDescendant = ref<string | undefined>(undefined)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const heroAcRef = ref<any>(null)
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatWon, formatWonKorean, formatBidRate, formatDiscount, statusLabel, AUCTION_SLUG } from '~/types/auction';
+import { formatWon, formatWonKorean, formatBidRate, formatDiscount, formatAuctionDateTime, statusLabel, AUCTION_SLUG } from '~/types/auction';
 
 describe('auction helpers', () => {
   it('formatWon: 천단위 콤마', () => {
@@ -18,6 +18,11 @@ describe('auction helpers', () => {
   it('formatDiscount: 감정가 대비 할인율(음수=할인)', () => {
     expect(formatDiscount(1000, 800)).toBe('-20%'); // 최저가가 감정가보다 20% 낮음
     expect(formatDiscount(null, 800)).toBe('-');
+  });
+  it('formatAuctionDateTime: 온비드 원문 벽시계 시간을 보존한다', () => {
+    expect(formatAuctionDateTime('2026-10-06T14:00:00.000Z')).toBe('2026.10.06 14:00');
+    expect(formatAuctionDateTime(null)).toBe('-');
+    expect(formatAuctionDateTime('INVALID')).toBe('-');
   });
   it('statusLabel: 상태 한글', () => {
     expect(statusLabel('ongoing')).toBe('진행중');

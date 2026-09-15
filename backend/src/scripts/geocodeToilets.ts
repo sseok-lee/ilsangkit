@@ -6,20 +6,28 @@
 
 import 'dotenv/config';
 import { prisma } from '../lib/prisma.js';
+import { cityVariantList } from '../services/cityMapping.js';
 
 interface KakaoResponse {
   documents: Array<{
     x: string;
     y: string;
     address_name?: string;
+    road_address_name?: string;
   }>;
+}
+
+interface GeocodeResult {
+  lat: number;
+  lng: number;
+  addressName: string;
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function searchByAddress(query: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
+async function searchByAddress(query: string, apiKey: string): Promise<GeocodeResult | null> {
   try {
     const url = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}&size=1`;
     const res = await fetch(url, { headers: { Authorization: `KakaoAK ${apiKey}` } });
@@ -30,11 +38,11 @@ async function searchByAddress(query: string, apiKey: string): Promise<{ lat: nu
     const lat = parseFloat(doc.y);
     const lng = parseFloat(doc.x);
     if (isNaN(lat) || isNaN(lng)) return null;
-    return { lat, lng };
+    return { lat, lng, addressName: doc.road_address_name || doc.address_name || '' };
   } catch { return null; }
 }
 
-async function searchByKeyword(query: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
+async function searchByKeyword(query: string, apiKey: string): Promise<GeocodeResult | null> {
   try {
     const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=1`;
     const res = await fetch(url, { headers: { Authorization: `KakaoAK ${apiKey}` } });
@@ -45,8 +53,18 @@ async function searchByKeyword(query: string, apiKey: string): Promise<{ lat: nu
     const lat = parseFloat(doc.y);
     const lng = parseFloat(doc.x);
     if (isNaN(lat) || isNaN(lng)) return null;
-    return { lat, lng };
+    return { lat, lng, addressName: doc.road_address_name || doc.address_name || '' };
   } catch { return null; }
+}
+
+export function geocodeResultMatchesRegion(
+  result: GeocodeResult,
+  expected: { city: string; district: string }
+): boolean {
+  const addressName = result.addressName.trim();
+  if (!addressName) return false;
+  const cityMatches = cityVariantList(expected.city).some((city) => addressName.includes(city));
+  return cityMatches && addressName.includes(expected.district);
 }
 
 export async function geocodeToilets(): Promise<{
@@ -77,7 +95,7 @@ export async function geocodeToilets(): Promise<{
     // 도로명 주소 우선, 없으면 지번 주소로 폴백
     const address = toilet.roadAddress || toilet.address;
 
-    let coords: { lat: number; lng: number } | null = null;
+    let coords: GeocodeResult | null = null;
 
     // 1차: 주소로 검색
     if (address) {
@@ -89,7 +107,7 @@ export async function geocodeToilets(): Promise<{
       coords = await searchByKeyword(toilet.name, apiKey);
     }
 
-    if (coords) {
+    if (coords && geocodeResultMatchesRegion(coords, toilet)) {
       await prisma.toilet.update({
         where: { id: toilet.id },
         data: { lat: coords.lat, lng: coords.lng },

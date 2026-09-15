@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { kstCalendarToday } from '../lib/kstDate.js';
 import { NotFoundError } from '../lib/errors.js';
+import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, FULL_TO_SLUG, SHORT_TO_SLUG } from './cityMapping.js';
 import type { SubscriptionListParams } from '../schemas/subscription.js';
 import type { Prisma } from '@prisma/client';
 
@@ -84,6 +85,34 @@ function buildOrderBy(sort?: SubscriptionSort): Prisma.SubscriptionOrderByWithRe
   return { announcementDate: 'desc' };
 }
 
+function buildContainsAnyRegionClause(terms: string[]): Prisma.SubscriptionWhereInput {
+  return {
+    OR: terms.flatMap((term) => [
+      { regionName: { contains: term } },
+      { supplyLocation: { contains: term } },
+    ]),
+  };
+}
+
+function buildSubscriptionRegionClauses(region: string): Prisma.SubscriptionWhereInput[] {
+  const normalized = region.trim().replace(/\s+/g, ' ');
+  if (!normalized) return [];
+
+  const [cityToken, ...districtTokens] = normalized.split(' ');
+  const slug = SHORT_TO_SLUG[cityToken] || FULL_TO_SLUG[cityToken];
+  if (!slug) {
+    return [buildContainsAnyRegionClause([normalized])];
+  }
+
+  const cityTerms = [CITY_SLUG_TO_FULL[slug], CITY_SLUG_TO_SHORT[slug]].filter(
+    (term, index, arr): term is string => Boolean(term) && arr.indexOf(term) === index,
+  );
+  const clauses = [buildContainsAnyRegionClause(cityTerms)];
+  const district = districtTokens.join(' ').trim();
+  if (district) clauses.push(buildContainsAnyRegionClause([district]));
+  return clauses;
+}
+
 export async function getSubscriptionList(params: SubscriptionListParams) {
   const { status, region, houseType, rentType, sourceType, category, page, limit, sort } = params;
 
@@ -91,7 +120,10 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   // 공공임대 실제 rentType 값 (청약홈 API가 '임대주택' 대신 이 값들을 반환함)
   const PUBLIC_RENT_TYPES = ['분양전환 가능임대', '분양전환 불가임대'];
 
-  if (region) where.regionName = { contains: region };
+  if (region) {
+    const regionClauses = buildSubscriptionRegionClauses(region);
+    if (regionClauses.length > 0) where.AND = regionClauses;
+  }
   if (houseType) where.houseType = houseType;
   if (rentType) {
     // '임대주택'은 실제 API 값인 '분양전환 가능임대'/'분양전환 불가임대'로 변환

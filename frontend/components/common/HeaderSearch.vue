@@ -8,7 +8,12 @@
       <span class="material-symbols-outlined text-faint text-[20px]" aria-hidden="true">search</span>
       <input
         v-model="keyword"
+        role="combobox"
+        aria-autocomplete="list"
         aria-label="통합 검색"
+        :aria-expanded="focused"
+        :aria-controls="desktopListboxId"
+        :aria-activedescendant="desktopActiveDescendant"
         class="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
         :placeholder="placeholder"
         @focus="focused = true"
@@ -18,7 +23,14 @@
       />
     </div>
     <div v-if="variant === 'desktop'" class="hidden md:block absolute left-0 right-0 top-full z-50">
-      <SearchAutocomplete ref="acDesktopRef" :open="focused" :model-value="keyword" @close="focused = false" />
+      <SearchAutocomplete
+        ref="acDesktopRef"
+        :open="focused"
+        :model-value="keyword"
+        :listbox-id="desktopListboxId"
+        @active-descendant-change="desktopActiveDescendant = $event"
+        @close="focused = false"
+      />
     </div>
 
     <!-- 모바일 아이콘 + 전체화면 오버레이 -->
@@ -41,7 +53,12 @@
             <input
               ref="overlayInput"
               v-model="keyword"
+              role="combobox"
+              aria-autocomplete="list"
               aria-label="통합 검색"
+              :aria-expanded="overlayOpen"
+              :aria-controls="mobileListboxId"
+              :aria-activedescendant="mobileActiveDescendant"
               class="flex-1 bg-transparent text-sm focus:outline-none"
               :placeholder="placeholder"
               @input="(e) => acMobileRef?.setQuery?.((e.target as HTMLInputElement).value)"
@@ -49,14 +66,21 @@
             />
           </div>
         </div>
-        <SearchAutocomplete ref="acMobileRef" :open="overlayOpen" :model-value="keyword" @close="overlayOpen = false" />
+        <SearchAutocomplete
+          ref="acMobileRef"
+          :open="overlayOpen"
+          :model-value="keyword"
+          :listbox-id="mobileListboxId"
+          @active-descendant-change="mobileActiveDescendant = $event"
+          @close="overlayOpen = false"
+        />
       </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, useId } from 'vue'
 import { useAnalytics } from '~/composables/useAnalytics'
 import SearchAutocomplete from '~/components/search/SearchAutocomplete.vue'
 
@@ -67,6 +91,11 @@ withDefaults(defineProps<{ variant?: 'desktop' | 'mobile' }>(), {
 const keyword = ref('')
 const overlayOpen = ref(false)
 const focused = ref(false)
+const idBase = useId()
+const desktopListboxId = `header-search-${idBase}-desktop-listbox`
+const mobileListboxId = `header-search-${idBase}-mobile-listbox`
+const desktopActiveDescendant = ref<string | undefined>(undefined)
+const mobileActiveDescendant = ref<string | undefined>(undefined)
 const overlayInput = ref<HTMLInputElement | null>(null)
 const acDesktopRef = ref<InstanceType<typeof SearchAutocomplete> | null>(null)
 const acMobileRef = ref<InstanceType<typeof SearchAutocomplete> | null>(null)
