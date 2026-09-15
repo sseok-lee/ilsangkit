@@ -1,6 +1,7 @@
 <template>
   <div
     v-if="open"
+    :id="listboxId"
     class="search-ac bg-white text-slate-800 border border-line rounded-b-xl shadow-lg overflow-hidden"
     role="listbox"
   >
@@ -15,6 +16,7 @@
           <li
             v-for="(kw, idx) in recent"
             :key="kw"
+            :id="optionId(recentEntryIndex(idx))"
             role="option"
             :aria-selected="recentEntryIndex(idx) === activeIndex"
             class="flex items-center justify-between px-4 py-2 hover:bg-slate-50 cursor-pointer"
@@ -44,6 +46,7 @@ close
           <button
             v-for="(kw, i) in popular"
             :key="kw"
+            :id="optionId(popularEntryIndex(i))"
             role="option"
             :aria-selected="popularEntryIndex(i) === activeIndex"
             class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-line rounded-full text-xs hover:border-primary/40 hover:text-primary"
@@ -63,6 +66,7 @@ close
         <li
           v-for="(it, idx) in items"
           :key="idx"
+          :id="optionId(idx)"
           role="option"
           :aria-selected="idx === activeIndex"
           :data-suggest-type="it.type"
@@ -79,6 +83,7 @@ close
         </li>
       </ul>
       <div
+        :id="optionId(items.length)"
         role="option"
         :aria-selected="items.length === activeIndex"
         class="px-4 py-2.5 hover:bg-slate-50 cursor-pointer flex items-center gap-2.5 border-t border-slate-100"
@@ -94,7 +99,7 @@ close
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, useId } from 'vue'
 import { useSearchSuggest, type SuggestItem } from '~/composables/useSearchSuggest'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CITY_FULL_NAME_TO_SLUG, CITY_SLUGS, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
@@ -102,8 +107,10 @@ import { toRealEstateUrl, isRealEstateUrlType } from '~/utils/realEstateUrl'
 import type { SearchScope } from '~/utils/searchScope'
 import { buildSearchDestination, scopeSuggestParam } from '~/utils/searchScope'
 
-const props = defineProps<{ open: boolean; modelValue: string; scope?: SearchScope }>()
-const emit = defineEmits<{ close: [] }>()
+const props = defineProps<{ open: boolean; modelValue: string; scope?: SearchScope; listboxId?: string }>()
+const emit = defineEmits<{ close: []; 'active-descendant-change': [id: string | undefined] }>()
+const fallbackListboxId = `search-autocomplete-${useId()}`
+const listboxId = computed(() => props.listboxId ?? fallbackListboxId)
 
 // scope 미지정(homepage 히어로 외 일부 사용처 등)이어도 무회귀: suggest scope param 생략 +
 // freeText 목적지는 기존 '/search?keyword=' 고정 경로로 폴백.
@@ -137,8 +144,16 @@ const entries = computed<Entry[]>(() => {
   const itemEntries: Entry[] = items.value.map((it) => ({ kind: 'item', item: it }))
   return [...itemEntries, { kind: 'search', keyword: query.value }]
 })
+const activeOptionId = computed(() =>
+  activeIndex.value >= 0 && activeIndex.value < entries.value.length
+    ? optionId(activeIndex.value)
+    : undefined,
+)
 
 // Helper: map section-local index back to flat entries index for ARIA
+function optionId(index: number): string {
+  return `${listboxId.value}-option-${index}`
+}
 function recentEntryIndex(localIdx: number): number {
   return localIdx
 }
@@ -168,6 +183,10 @@ watch(
   },
   { immediate: true },
 )
+
+watch(activeOptionId, (id) => {
+  emit('active-descendant-change', id)
+}, { immediate: true })
 
 function onKeydown(e: KeyboardEvent): boolean {
   const key = e.key.toLowerCase()

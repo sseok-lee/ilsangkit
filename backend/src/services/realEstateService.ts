@@ -62,6 +62,7 @@ export interface StatsResponse {
 }
 
 export interface ComplexItem {
+  type?: RealEstateType;
   buildingName: string;
   bjdCode: string;
   city: string;
@@ -407,6 +408,7 @@ const VALID_NAME_SQL = `
 `;
 
 interface SummaryRawRow {
+  type?: RealEstateType;
   buildingName: string;
   bjdCode: string;
   city: string;
@@ -420,6 +422,19 @@ interface SummaryRawRow {
   lat: string | null;
   lng: string | null;
 }
+
+function buildSummarySearch(type: string, city?: string, district?: string, nameText?: string): { whereClause: string; params: unknown[] } {
+  const region = regionFilterToSql(buildRegionFilter(city, district));
+  const conditions: string[] = ['type = ?', VALID_NAME_SQL, ...region.clauses];
+  const params: unknown[] = [type, ...region.params];
+  if (nameText) {
+    conditions.push('buildingName LIKE CONCAT(?, \'%\')');
+    params.push(nameText);
+  }
+  return { whereClause: conditions.join(' AND '), params };
+}
+
+const SUMMARY_RECENT_ORDER_SQL = 'latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC';
 
 /**
  * 건물 목록 조회 — RealEstateBuildingSummary 테이블.
@@ -436,24 +451,7 @@ export async function getComplexList(
 ): Promise<ComplexListResult> {
   if (!TABLE_NAME_MAP[type]) throw new Error(`Unknown real estate type: ${type}`);
 
-  // Build parameterised WHERE clauses
-  const conditions: string[] = ['type = ?', VALID_NAME_SQL];
-  const params: unknown[] = [type];
-
-  if (city) {
-    conditions.push('city = ?');
-    params.push(city);
-  }
-  if (district) {
-    conditions.push('district = ?');
-    params.push(district);
-  }
-  if (buildingName) {
-    conditions.push('buildingName LIKE CONCAT(?, \'%\')');
-    params.push(buildingName);
-  }
-
-  const whereClause = conditions.join(' AND ');
+  const { whereClause, params } = buildSummarySearch(type, city, district, buildingName);
   const offset = (page - 1) * limit;
 
   const [rows, countRows] = await Promise.all([
@@ -462,7 +460,7 @@ export async function getComplexList(
               latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
        FROM RealEstateBuildingSummary
        WHERE ${whereClause}
-       ORDER BY transactionCount DESC
+       ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
        LIMIT ? OFFSET ?`,
       ...params,
       limit,
@@ -523,15 +521,7 @@ export async function searchComplexesByKeyword(
   // 순수 카테고리어/1자 등 지역·이름 어느 쪽으로도 해석 안 되면 전체 스캔 방지 — DB 접근 없이 종료.
   if (!hasName && !hasRegion) return { items: [], total: 0, page, totalPages: 0 };
 
-  const region = regionFilterToSql(buildRegionFilter(effectiveCity, effectiveDistrict));
-  const conditions: string[] = ['type = ?', VALID_NAME_SQL, ...region.clauses];
-  const params: unknown[] = [type, ...region.params];
-  if (hasName) {
-    conditions.push('buildingName LIKE CONCAT(?, \'%\')');
-    params.push(nameText);
-  }
-
-  const whereClause = conditions.join(' AND ');
+  const { whereClause, params } = buildSummarySearch(type, effectiveCity, effectiveDistrict, hasName ? nameText : undefined);
   const offset = (page - 1) * limit;
 
   const [rows, countRows] = await Promise.all([
@@ -540,7 +530,7 @@ export async function searchComplexesByKeyword(
               latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
        FROM RealEstateBuildingSummary
        WHERE ${whereClause}
-       ORDER BY transactionCount DESC
+       ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
        LIMIT ? OFFSET ?`,
       ...params,
       limit,
@@ -556,6 +546,82 @@ export async function searchComplexesByKeyword(
 
   return {
     items: rows.map((row) => ({
+      buildingName: row.buildingName,
+      bjdCode: row.bjdCode,
+      city: row.city,
+      district: row.district,
+      dongName: row.dongName,
+      transactionCount: Number(row.transactionCount),
+      latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
+      lat: row.lat != null ? Number(row.lat) : null,
+      lng: row.lng != null ? Number(row.lng) : null,
+      lastDealYear: row.latestDealYear,
+      lastDealMonth: row.latestDealMonth,
+      buildYear: row.buildYear,
+    })),
+    total,
+    page,
+    totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+  };
+}
+
+export async function searchPropertyComplexesByKeyword(
+  propertyType: RealEstatePropertyType,
+  keyword: string | undefined,
+  page: number = 1,
+  limit: number = 20
+): Promise<ComplexListResult> {
+  const types = PROPERTY_TYPES[propertyType];
+  if (!types) throw new Error(`Unknown real estate property type: ${propertyType}`);
+
+  const parsed = await parseSearchQueryCached(keyword);
+  const { effectiveCity, effectiveDistrict, nameText } = resolveScope({}, parsed);
+  const hasName = !!(nameText && nameText.length >= 2);
+  const hasRegion = !!(effectiveCity || effectiveDistrict);
+  if (!hasName && !hasRegion) return { items: [], total: 0, page, totalPages: 0 };
+
+  const region = regionFilterToSql(buildRegionFilter(effectiveCity, effectiveDistrict));
+  const conditions = [`type IN (${types.map(() => '?').join(', ')})`, VALID_NAME_SQL, ...region.clauses];
+  const params: unknown[] = [...types, ...region.params];
+  if (hasName) {
+    conditions.push('buildingName LIKE CONCAT(?, \'%\')');
+    params.push(nameText);
+  }
+
+  const whereClause = conditions.join(' AND ');
+  const offset = (page - 1) * limit;
+
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRawUnsafe<SummaryRawRow[]>(
+      `SELECT type, buildingName, bjdCode, city, district, dongName, transactionCount,
+              latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
+       FROM (
+         SELECT s.*,
+                ROW_NUMBER() OVER (
+                  PARTITION BY buildingName, bjdCode
+                  ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
+                ) AS rn
+         FROM RealEstateBuildingSummary s
+         WHERE ${whereClause}
+       ) ranked
+       WHERE rn = 1
+       ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
+       LIMIT ? OFFSET ?`,
+      ...params,
+      limit,
+      offset,
+    ),
+    prisma.$queryRawUnsafe<[{ total: bigint }]>(
+      `SELECT COUNT(DISTINCT buildingName, bjdCode) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+      ...params,
+    ),
+  ]);
+
+  const total = Number(countRows[0]?.total ?? 0);
+
+  return {
+    items: rows.map((row) => ({
+      type: row.type,
       buildingName: row.buildingName,
       bjdCode: row.bjdCode,
       city: row.city,
@@ -876,6 +942,14 @@ const PROPERTY_GROUPS = [
   { pt: 'offitel' as const, types: ['offitel-sale', 'offitel-rent'] },
 ];
 
+const PROPERTY_TYPES = {
+  apt: ['apt-sale', 'apt-rent'],
+  villa: ['villa-sale', 'villa-rent'],
+  offitel: ['offitel-sale', 'offitel-rent'],
+} as const;
+
+export type RealEstatePropertyType = keyof typeof PROPERTY_TYPES;
+
 /**
  * 통합 검색 - 6개 테이블 buildingName LIKE 검색 (병렬)
  */
@@ -898,25 +972,24 @@ export async function searchAll(
   const results = await Promise.all(
     ALL_TYPES.map(async (type) => {
       const isSale = isSaleType(type);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const summaryWhere: Record<string, any> = { type, ...buildRegionFilter(effectiveCity, effectiveDistrict) };
-      if (hasName) {
-        summaryWhere.buildingName = { startsWith: nameText };
-      }
+      const { whereClause, params } = buildSummarySearch(type, effectiveCity, effectiveDistrict, hasName ? nameText : undefined);
 
       // 거래 원본 groupBy(수백만 행) 대신 사전집계 summary(인덱스 커버) 사용
       const [rows, buildingCount] = await Promise.all([
-        prisma.realEstateBuildingSummary.findMany({
-          where: summaryWhere,
-          orderBy: { transactionCount: 'desc' },
-          take: 3,
-          select: {
-            buildingName: true, bjdCode: true, city: true, district: true,
-            dongName: true, buildYear: true, latestDealYear: true,
-            latestDealMonth: true, latestPrice: true, transactionCount: true,
-          },
-        }),
-        prisma.realEstateBuildingSummary.count({ where: summaryWhere }),
+        prisma.$queryRawUnsafe<SummaryRawRow[]>(
+          `SELECT buildingName, bjdCode, city, district, dongName, transactionCount,
+                  latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
+           FROM RealEstateBuildingSummary
+           WHERE ${whereClause}
+           ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
+           LIMIT ?`,
+          ...params,
+          3,
+        ),
+        prisma.$queryRawUnsafe<Array<{ total: bigint }>>(
+          `SELECT COUNT(*) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+          ...params,
+        ),
       ]);
 
       const items = rows.map((r) => serializeRow({
@@ -933,7 +1006,7 @@ export async function searchAll(
         transactionCount: r.transactionCount,
       }));
 
-      return { type, count: buildingCount, items };
+      return { type, count: Number(buildingCount[0]?.total ?? 0), items };
     })
   );
 
@@ -943,7 +1016,7 @@ export async function searchAll(
   // type IN (?, ?)는 고정 상수 배열 값이라 안전, region/name 파라미터는 바인딩으로 전달.
   const region = regionFilterToSql(buildRegionFilter(effectiveCity, effectiveDistrict));
   const distinctCounts = await Promise.all(PROPERTY_GROUPS.map(async ({ types }) => {
-    const clauses = ['type IN (?, ?)', ...region.clauses];
+    const clauses = ['type IN (?, ?)', VALID_NAME_SQL, ...region.clauses];
     const params: unknown[] = [types[0], types[1], ...region.params];
     if (hasName) { clauses.push(`buildingName LIKE CONCAT(?, '%')`); params.push(nameText); }
     const rows = await prisma.$queryRawUnsafe<Array<{ c: bigint }>>(

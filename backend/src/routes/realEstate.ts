@@ -6,6 +6,7 @@ import {
   getTransactionStats,
   getComplexList,
   searchComplexesByKeyword,
+  searchPropertyComplexesByKeyword,
   getBuildingInfo,
   searchAll,
   getAreaGroups,
@@ -22,6 +23,7 @@ import {
   RealEstateSearchSchema,
   RealEstateStatsSchema,
   RealEstateComplexSchema,
+  RealEstatePropertyComplexSchema,
   RealEstateBuildingInfoSchema,
   RealEstateUnifiedSearchSchema,
   AreaGroupsQuerySchema,
@@ -79,6 +81,18 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { keyword, city, district } = req.query as unknown as z.infer<typeof RealEstateUnifiedSearchSchema>;
     const result = await searchAll(keyword, city, district);
+    res.json({ success: true, data: result });
+  })
+);
+
+// GET /api/real-estate/complexes/search - 통합 검색 부동산 그룹 더보기
+router.get(
+  '/complexes/search',
+  validate(RealEstatePropertyComplexSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { propertyType, keyword, page, limit } =
+      req.query as unknown as z.infer<typeof RealEstatePropertyComplexSchema>;
+    const result = await searchPropertyComplexesByKeyword(propertyType, keyword, page, limit);
     res.json({ success: true, data: result });
   })
 );

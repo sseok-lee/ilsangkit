@@ -99,4 +99,20 @@ describe('메인 히어로 자동완성', () => {
     // 그러나 @input → setQuery 경로로 자동완성은 실시간 값 '강남'으로 동작한다
     expect(wrapper.text()).toContain('"강남"');
   });
+
+  it('히어로 입력과 자동완성 listbox를 combobox ARIA로 연결한다', async () => {
+    const wrapper = await mountSuspended(IndexPage);
+    const input = wrapper.find('input[aria-label="단지명·동네·시설 검색"]');
+    await input.trigger('focus');
+    const ac = wrapper.findComponent({ name: 'SearchAutocomplete' });
+
+    expect(input.attributes('role')).toBe('combobox');
+    expect(input.attributes('aria-autocomplete')).toBe('list');
+    expect(input.attributes('aria-expanded')).toBe('true');
+    expect(ac.props('listboxId')).toBe(input.attributes('aria-controls'));
+
+    ac.vm.$emit('active-descendant-change', `${ac.props('listboxId')}-option-0`);
+    await wrapper.vm.$nextTick();
+    expect(input.attributes('aria-activedescendant')).toBe(`${ac.props('listboxId')}-option-0`);
+  });
 });

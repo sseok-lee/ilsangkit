@@ -21,8 +21,12 @@ export interface Subscription {
   specialEndDate: string | null
   rank1AreaStartDate: string | null
   rank1AreaEndDate: string | null
+  rank1OtherStartDate: string | null
+  rank1OtherEndDate: string | null
   rank2AreaStartDate: string | null
   rank2AreaEndDate: string | null
+  rank2OtherStartDate: string | null
+  rank2OtherEndDate: string | null
   winnerDate: string | null
   contractStartDate: string | null
   contractEndDate: string | null

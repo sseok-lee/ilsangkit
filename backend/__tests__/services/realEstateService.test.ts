@@ -866,36 +866,56 @@ describe('searchAll', () => {
     transactionCount: 3,
   };
 
+  const mockSearchAllRaw = (
+    rowsByType: Record<string, unknown[]> = {},
+    countsByType: Record<string, number | bigint> = {},
+    distinctCounts: Array<number | bigint> = [0n, 0n, 0n]
+  ) => {
+    let distinctIndex = 0;
+    mockQueryRawUnsafe.mockImplementation((sql: string, ...params: unknown[]) => {
+      const text = String(sql);
+      if (text.includes('COUNT(DISTINCT')) {
+        const value = distinctCounts[distinctIndex++] ?? 0n;
+        return Promise.resolve([{ c: BigInt(value) }]);
+      }
+      const type = params[0] as string;
+      if (text.includes('COUNT(*)')) {
+        return Promise.resolve([{ total: BigInt(countsByType[type] ?? 0) }]);
+      }
+      return Promise.resolve(rowsByType[type] ?? []);
+    });
+  };
+
+  const rawCalls = (needle: string) =>
+    mockQueryRawUnsafe.mock.calls.filter((c) => String(c[0]).includes(needle));
+
   beforeEach(() => {
     mockSummaryFindMany.mockResolvedValue([]);
     mockSummaryCount.mockResolvedValue(0);
-    // 유형별 유니크 건물수 COUNT(DISTINCT ...) — DB-free 기본값
-    mockQueryRawUnsafe.mockResolvedValue([{ c: 0n }]);
+    mockSearchAllRaw();
   });
 
-  it('calls findMany on summary for all 6 types in parallel', async () => {
+  it('summary raw SELECT/COUNT를 6개 거래 타입별로 호출한다', async () => {
     await searchAll('래미안');
 
-    // summary findMany가 6번(타입마다) 호출됨 — groupBy 대신 summary 사용
-    expect(mockSummaryFindMany).toHaveBeenCalledTimes(6);
+    expect(rawCalls('SELECT buildingName')).toHaveLength(6);
+    expect(rawCalls('COUNT(*)')).toHaveLength(6);
+    expect(rawCalls('COUNT(DISTINCT')).toHaveLength(3);
+    expect(mockSummaryFindMany).not.toHaveBeenCalled();
+    expect(mockSummaryCount).not.toHaveBeenCalled();
     expect(mockAptSaleGroupBy).not.toHaveBeenCalled();
   });
 
-  it('searches buildingName with startsWith for each model', async () => {
+  it('buildingName은 prefix LIKE 바인딩으로 검색한다', async () => {
     await searchAll('래미안');
 
-    expect(mockSummaryFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          buildingName: expect.objectContaining({ startsWith: '래미안' }),
-        }),
-      })
-    );
+    const select = rawCalls('SELECT buildingName')[0];
+    expect(String(select[0])).toContain("buildingName LIKE CONCAT(?, '%')");
+    expect(select).toContain('래미안');
   });
 
   it('returns categories array with type, count, items for each model', async () => {
-    mockSummaryFindMany.mockResolvedValue([sampleSummaryRow]);
-    mockSummaryCount.mockResolvedValue(3);
+    mockSearchAllRaw({ 'apt-sale': [sampleSummaryRow] }, { 'apt-sale': 3 });
 
     const result = await searchAll('래미안');
 
@@ -905,24 +925,24 @@ describe('searchAll', () => {
     expect(aptSale).toBeDefined();
     expect(aptSale!.count).toBe(3);
     expect(aptSale!.items).toHaveLength(1);
+    expect(aptSale!.items[0]).toMatchObject({
+      buildingName: '래미안',
+      dongName: '역삼동',
+      dealYear: 2024,
+      dealMonth: 1,
+      dealAmount: 82500,
+      deposit: null,
+      transactionCount: 3,
+    });
   });
 
   it('limits preview items to 3 per category', async () => {
-    const manyRows = [
-      sampleSummaryRow,
-      { ...sampleSummaryRow, bjdCode: '11681' },
-      { ...sampleSummaryRow, bjdCode: '11682' },
-    ];
-    mockSummaryFindMany.mockResolvedValue(manyRows);
-    mockSummaryCount.mockResolvedValue(10);
+    await searchAll('래미안');
 
-    const result = await searchAll('래미안');
-
-    const aptSale = result.categories.find((c) => c.type === 'apt-sale');
-    expect(mockSummaryFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 3 })
-    );
-    expect(aptSale!.items).toHaveLength(3);
+    for (const select of rawCalls('SELECT buildingName')) {
+      expect(String(select[0])).toContain('LIMIT ?');
+      expect(select[select.length - 1]).toBe(3);
+    }
   });
 
   it('returns all 6 categories in result', async () => {
@@ -941,54 +961,44 @@ describe('searchAll', () => {
   it('filters by city when provided', async () => {
     await searchAll('래미안', '서울특별시');
 
-    expect(mockSummaryFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          city: expect.objectContaining({ in: expect.arrayContaining(['서울특별시', '서울']) }),
-        }),
-      })
-    );
+    const select = rawCalls('SELECT buildingName')[0];
+    expect(String(select[0])).toContain('city IN');
+    expect(select).toContain('서울특별시');
+    expect(select).toContain('서울');
   });
 
   it('filters by district when provided', async () => {
     await searchAll('래미안', undefined, '강남구');
 
-    expect(mockSummaryFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ district: '강남구' }),
-      })
-    );
+    const select = rawCalls('SELECT buildingName')[0];
+    expect(String(select[0])).toContain('district = ?');
+    expect(select).toContain('강남구');
   });
 
-  it('runs all 6 model groupBy+count queries in parallel (Promise.all)', async () => {
-    const callOrder: string[] = [];
-    mockSummaryFindMany.mockImplementation(async (args: { where?: { type?: string } }) => {
-      callOrder.push(`${args?.where?.type ?? 'unknown'}-findMany`);
-      return [];
-    });
-    mockSummaryCount.mockImplementation(async (args: { where?: { type?: string } }) => {
-      callOrder.push(`${args?.where?.type ?? 'unknown'}-count`);
-      return 0;
-    });
-
+  it('6개 타입 preview/count와 3개 property buildingCounts를 raw SQL로 조회한다', async () => {
     await searchAll('래미안');
 
-    expect(callOrder.filter((c) => c.endsWith('-findMany'))).toHaveLength(6);
+    expect(rawCalls('SELECT buildingName')).toHaveLength(6);
+    expect(rawCalls('COUNT(*)')).toHaveLength(6);
+    expect(rawCalls('COUNT(DISTINCT')).toHaveLength(3);
+    expect(mockAptSaleGroupBy).not.toHaveBeenCalled();
   });
 
   it('유형별 유니크 건물수를 COUNT(DISTINCT) raw로 조회해 buildingCounts로 반환한다', async () => {
-    mockQueryRawUnsafe
-      .mockResolvedValueOnce([{ c: 6n }])   // apt
-      .mockResolvedValueOnce([{ c: 2n }])   // villa
-      .mockResolvedValueOnce([{ c: 1n }]);  // offitel
+    mockSearchAllRaw({}, {}, [6n, 2n, 1n]);
 
     const result = await searchAll('래미안');
 
     expect(result.buildingCounts).toEqual({ apt: 6, villa: 2, offitel: 1 });
-    // 유형 묶음당 1회 = 3회, 앱메모리 groupBy/distinct가 아니라 COUNT(DISTINCT) SQL 사용
-    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(3);
-    const sql = mockQueryRawUnsafe.mock.calls[0][0] as string;
+    const distinctCalls = rawCalls('COUNT(DISTINCT');
+    expect(distinctCalls).toHaveLength(3);
+    const sql = String(distinctCalls[0][0]);
     expect(sql).toContain('COUNT(DISTINCT buildingName, bjdCode)');
+    expect(sql).toContain('FROM RealEstateBuildingSummary');
+    expect(sql).toContain('buildingName NOT REGEXP');
+    expect(sql).toContain('type IN (?, ?)');
+    expect(distinctCalls[0]).toContain('apt-sale');
+    expect(distinctCalls[0]).toContain('apt-rent');
   });
 });
 

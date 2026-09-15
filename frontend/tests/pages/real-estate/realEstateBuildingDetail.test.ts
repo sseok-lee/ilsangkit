@@ -311,4 +311,14 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     const wrapper = await mountSuspended(m.default)
     expect(wrapper.findAll('h1').length).toBe(1)
   })
+
+  it('기간 필터 버튼은 선택 상태를 aria-pressed로 노출한다', () => {
+    const targetPath = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../../pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue',
+    )
+    const src = readFileSync(targetPath, 'utf-8')
+
+    expect(src).toContain(':aria-pressed="selectedMonths === opt.value"')
+  })
 })

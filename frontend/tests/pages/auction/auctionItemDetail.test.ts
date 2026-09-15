@@ -30,14 +30,14 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
 }))
 
 const item = {
-  id: 1, cltrMngNo: '2024-00001-001', pbctCdtnNo: 'X', plnmNo: null,
+  id: 1, cltrMngNo: '2024-00001-001', pbctCdtnNo: '6001661', plnmNo: '20260400021484',
   city: '서울특별시', district: '강남구', bjdCode: '1168000000', dongName: '역삼동',
   address: '서울 강남구 역삼동 123-4', usage: '아파트', usageGroup: 'residential',
   propertyType: '주거용', dpslMtdNm: '매각', bidMethod: null, competitionMethod: null,
   bidType: null, evictionResp: null, isShare: false, thumbnailUrl: null,
   landArea: null, bldArea: 84.5,
   apslAssAmt: 980000000, minBidPrc: 686000000, failCnt: 2, bidRound: 3,
-  bidBeginDtm: null, bidCloseDtm: null, orgNm: '한국자산관리공사', pvctTrgtYn: false,
+  bidBeginDtm: '2026-10-06T14:00:00.000Z', bidCloseDtm: '2026-10-07T17:00:00.000Z', orgNm: '한국자산관리공사', pvctTrgtYn: false,
   status: 'ongoing', isClosed: false,
   resultType: null, winBidPrc: null, bidRate: null, resultDate: null,
   lat: 37.5, lng: 127.04,
@@ -162,11 +162,24 @@ describe('auction/item/[cltrMngNo].vue — 입찰정보 상세 재배치', () =>
     expect(faqs[0]).toHaveProperty('answer')
   })
 
-  it('온비드 입찰 외부 링크(onbid.co.kr)가 렌더된다', async () => {
+  it('온비드 조건검색 링크와 조회 식별자가 렌더된다', async () => {
     const m = await import('~/pages/auction/item/[cltrMngNo].vue')
     const wrapper = await mountSuspended(m.default)
     const onbidLink = wrapper.find('a[href*="onbid.co.kr"]')
     expect(onbidLink.exists()).toBe(true)
-    expect(onbidLink.attributes('href')).toContain('2024-00001-001')
+    expect(onbidLink.attributes('href')).toContain('/op/cltrpbancinf/cltr/cltrcdtnsrch/CltrCdtnSrchController/mvmnCltrCdtnSrchClg.do')
+    expect(wrapper.text()).toContain('물건관리번호 2024-00001-001')
+    expect(wrapper.text()).toContain('공매조건번호 6001661')
+    expect(wrapper.text()).toContain('공고번호 20260400021484')
+  })
+
+  it('입찰 시작·마감 일시가 렌더된다', async () => {
+    const m = await import('~/pages/auction/item/[cltrMngNo].vue')
+    const wrapper = await mountSuspended(m.default)
+    const text = wrapper.text()
+    expect(text).toContain('입찰 시작')
+    expect(text).toContain('2026.10.06 14:00')
+    expect(text).toContain('입찰 마감')
+    expect(text).toContain('2026.10.07 17:00')
   })
 })
