@@ -26,6 +26,28 @@
   --c-library: #D9820B; --c-park: #22A95B; --c-market: #F2730C; --c-sports: #8B5CF6;
 }
 
+@layer base {
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    width: 1em;
+    overflow: hidden;
+    flex-shrink: 0;
+    -webkit-font-feature-settings: 'liga';
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
 /* ── OD 진화판 상세 페이지 반복 패턴 (Tailwind 유틸로 표현이 번거로운 것만) ──
    --cat: 페이지 루트([id].vue)에서 카테고리 색을 주입. 미주입 시 브랜드로 폴백. */
 @layer components {
