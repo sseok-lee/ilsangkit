@@ -1,27 +1,35 @@
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="property-redesign bg-white min-h-screen">
     <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <PageHero
+        class="property-hero"
         eyebrow="공매"
         title="지역별 낙찰가율 랭킹"
         description="지역별·용도별 공매 낙찰가율 통계를 확인하세요. 온비드 공식 데이터 기반."
       />
 
       <!-- 용도/정렬 토글 -->
-      <SectionBlock heading="용도·정렬" subtext="용도를 고르고 정렬 기준을 바꿔 랭킹을 확인하세요.">
+      <SectionBlock class="property-section" heading="용도·정렬" subtext="용도를 고르고 정렬 기준을 바꿔 랭킹을 확인하세요.">
+        <form class="mb-4 flex flex-wrap gap-2" @submit.prevent="submitKeyword">
+          <label class="sr-only" for="auction-ranking-keyword">지역명 검색</label>
+          <input id="auction-ranking-keyword" v-model="keywordDraft" maxlength="100" placeholder="시·도 또는 구·군" class="min-h-[44px] min-w-0 flex-1 rounded-lg border border-line px-3 py-2 text-sm">
+          <button type="submit" class="min-h-[44px] rounded-lg bg-primary px-4 text-sm font-semibold text-white">검색</button>
+        </form>
         <div class="flex flex-wrap gap-2">
           <select
             v-model="selectedUsage"
-            class="rounded-lg border border-line px-3 py-2 text-sm"
+            aria-label="용도"
+            class="min-h-[44px] max-w-full rounded-lg border border-line px-3 py-2 text-sm"
           >
             <option value="">전체 용도</option>
             <option v-for="[k, v] in usageOptions" :key="k" :value="k">{{ v }}</option>
           </select>
           <select
             v-model="selectedOrder"
-            class="rounded-lg border border-line px-3 py-2 text-sm"
+            aria-label="정렬 기준"
+            class="min-h-[44px] max-w-full rounded-lg border border-line px-3 py-2 text-sm"
           >
             <option value="high">낙찰가율 높은 순</option>
             <option value="low">낙찰가율 낮은 순</option>
@@ -31,8 +39,13 @@
       </SectionBlock>
 
       <!-- 랭킹 테이블 -->
-      <SectionBlock heading="지역별 낙찰가율" subtext="감정가 대비 낙찰가 비율입니다. 온비드 공식 데이터 기반.">
-        <AuctionRankingTable v-if="rows && rows.length > 0" :rows="rows" />
+      <SectionBlock class="property-section" heading="지역별 낙찰가율" :subtext="`조건에 맞는 상위 ${rows?.length ?? 0}개 지역·용도 · 감정가 대비 낙찰가 비율`">
+        <div v-if="rankingError" role="alert" class="py-8 text-center">
+          <p class="text-sm text-slate-600">랭킹을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+          <button type="button" class="mt-3 min-h-[44px] rounded-lg border border-line px-4 text-sm" @click="refresh()">다시 시도</button>
+        </div>
+        <p v-else-if="pending" role="status" class="py-8 text-center text-sm text-slate-600">랭킹을 불러오는 중입니다.</p>
+        <AuctionRankingTable v-else-if="rows && rows.length > 0" :rows="rows" />
         <EmptyState
           v-else
           icon="gavel"
@@ -57,7 +70,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, watchEffect } from 'vue'
+import { suppressAds } from '~/composables/useAdsPolicy'
 import { useAuction } from '~/composables/useAuction'
 import { USAGE_GROUP_LABEL } from '~/types/auction'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -73,8 +87,23 @@ import EmptyState from '~/components/common/EmptyState.vue'
 
 const auction = useAuction()
 
-const selectedUsage = ref('')
-const selectedOrder = ref('high')
+const route = useRoute()
+const router = useRouter()
+const queryText = (value: unknown) => typeof value === 'string' ? value : ''
+const selectedUsage = computed({
+  get: () => queryText(route.query.usage),
+  set: (value: string) => { router.push({ query: { ...route.query, usage: value || undefined } }) },
+})
+const selectedOrder = computed({
+  get: () => queryText(route.query.order) || 'high',
+  set: (value: string) => { router.push({ query: { ...route.query, order: value === 'high' ? undefined : value } }) },
+})
+const keyword = computed(() => queryText(route.query.q).trim())
+const keywordDraft = ref(keyword.value)
+watch(keyword, value => { keywordDraft.value = value })
+function submitKeyword() {
+  router.push({ query: { ...route.query, q: keywordDraft.value.trim() || undefined } })
+}
 
 const usageOptions = computed(() =>
   Object.entries(USAGE_GROUP_LABEL) as [string, string][],
@@ -84,9 +113,10 @@ const usageOptions = computed(() =>
 // 예전 코드가 그랬고, 그래서 "백엔드 장애"와 "아직 낙찰 데이터가 없음"이 호출부에서
 // 완전히 같은 모양(빈 배열)이 됐다. 아래 색인 판정이 그 둘을 구분해야 하므로
 // 실패는 삼키지 않고 error 로 올린다. 실패해도 default 가 [] 라 본문은 그대로 렌더된다.
-const { data: rows, error: rankingError, refresh } = await useAsyncData(
-  'auction-ranking',
-  () => auction.getRanking({ usage: selectedUsage.value || undefined, order: selectedOrder.value, limit: 50 }),
+const dataKey = computed(() => `auction-ranking-${JSON.stringify([keyword.value, selectedUsage.value, selectedOrder.value])}`)
+const { data: rows, error: rankingError, pending, refresh } = await useAsyncData(
+  dataKey,
+  () => auction.getRanking({ keyword: keyword.value || undefined, usage: selectedUsage.value || undefined, order: selectedOrder.value, limit: 50 }),
   { default: () => [] },
 )
 
@@ -102,12 +132,10 @@ if (import.meta.server && rankingFetchFailed.value) {
 // 판정은 요청 시점 행 수로 하므로, 데이터가 쌓이면 다음 요청부터 자동으로 색인 대상이 된다
 // (수동 플래그·재배포 불필요). fetch 실패는 fail-open 이라 장애가 색인을 떨어뜨리지 않는다.
 const rankingIndexable = computed(() =>
-  isListingDocumentIndexable({ itemCount: rows.value?.length, fetchFailed: rankingFetchFailed.value }),
+  Object.keys(route.query).length === 0 && isListingDocumentIndexable({ itemCount: rows.value?.length, fetchFailed: rankingFetchFailed.value }),
 )
 
-watch([selectedUsage, selectedOrder], () => {
-  refresh()
-})
+watchEffect(() => suppressAds(!rankingIndexable.value || rankingFetchFailed.value || !!pending.value || !rows.value?.length))
 
 const breadcrumbItems = [
   { label: '홈', href: '/', current: false },
@@ -151,7 +179,9 @@ useHead(() => {
   return {
     title: rankingTitle,
     meta,
-    ...(rankingIndexable.value ? { link: [{ rel: 'canonical', href: rankingUrl }] } : {}),
+    link: rankingIndexable.value ? [{ rel: 'canonical', href: rankingUrl }] : [],
   }
 })
 </script>
+
+<style src="~/assets/css/remaining-property.css"></style>

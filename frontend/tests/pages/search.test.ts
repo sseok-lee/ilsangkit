@@ -1,386 +1,256 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import { ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { nextTick, reactive, ref } from 'vue'
 import SearchPage from '~/pages/search.vue'
+import FacilitySearchRow from '~/components/search/FacilitySearchRow.vue'
 import SearchResultGroup from '~/components/search/SearchResultGroup.vue'
+import type { Facility, GroupedSearchResponse } from '~/types/facility'
 
-// Mock vue-router — query는 테스트별로 변경 가능하도록 mutable 객체 사용
-const routeQuery: Record<string, string> = {}
-vi.mock('vue-router', () => ({
-  useRoute: () => ({
-    query: routeQuery,
-  }),
-  useRouter: () => ({
-    push: vi.fn(),
-  }),
+enableAutoUnmount(afterEach)
+
+const routeQuery = reactive<Record<string, string>>({})
+const api = vi.hoisted(() => ({
+  searchAll: vi.fn(),
+  searchProperty: vi.fn(),
+  requestGrouped: vi.fn(),
+  logSearch: vi.fn(),
 }))
 
-// Mock useFacilitySearch — 통합 검색: 시설 grouped 병렬 fetch
-const searchGroupedMock = vi.fn().mockResolvedValue(undefined)
-const groupedResultsRef = ref<any[]>([])
-const groupedTotalRef = ref(0)
-vi.mock('~/composables/useFacilitySearch', () => ({
-  useFacilitySearch: () => ({
-    searchGrouped: searchGroupedMock,
-    groupedResults: groupedResultsRef,
-    groupedTotalCount: groupedTotalRef,
-    recovery: ref(null),
-  }),
-}))
-
-// Mock useFacilityMeta
-vi.mock('~/composables/useFacilityMeta', () => ({
-  useFacilityMeta: () => ({
-    setMeta: vi.fn(),
-    setSearchMeta: vi.fn(),
-    setCategoryMeta: vi.fn(),
-    setDetailMeta: vi.fn(),
-    setRegionMeta: vi.fn(),
-    SITE_NAME: '일상킷',
-  }),
-}))
-
-// Mock useWasteSchedule
-vi.mock('~/composables/useWasteSchedule', () => ({
-  useWasteSchedule: () => ({
-    isLoading: { value: false },
-    error: { value: null },
-    getCities: vi.fn().mockResolvedValue([]),
-    getDistricts: vi.fn().mockResolvedValue([]),
-    getSchedules: vi.fn().mockResolvedValue({ schedules: [] }),
-  }),
-}))
-
-// Mock useRealEstate — /search는 부동산 전용이므로 이 페이지가 소비하는 유일한 검색 소스
-const searchAllMock = vi.fn().mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
-const getComplexListMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
-// 드릴다운은 키워드를 지역/이름으로 해석하는 searchComplexesByKeyword를 사용(미리보기와 일관)
-const searchComplexesByKeywordMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
-const searchPropertyComplexesByKeywordMock = vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
+vi.mock('vue-router', () => ({ useRoute: () => ({ query: routeQuery }) }))
 vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => ({
-    searchAll: searchAllMock,
-    getComplexList: getComplexListMock,
-    searchComplexesByKeyword: searchComplexesByKeywordMock,
-    searchPropertyComplexesByKeyword: searchPropertyComplexesByKeywordMock,
+    searchAll: api.searchAll,
+    searchPropertyComplexesByKeyword: api.searchProperty,
   }),
 }))
+vi.mock('~/composables/useFacilitySearch', () => ({
+  useFacilitySearch: () => ({ requestGrouped: api.requestGrouped }),
+}))
+vi.mock('~/composables/useFacilityMeta', () => ({
+  useFacilityMeta: () => ({ setSearchMeta: vi.fn() }),
+}))
+vi.mock('~/composables/useAnalytics', () => ({
+  useAnalytics: () => ({ trackSearchResultsView: vi.fn(), trackSearchNoResults: vi.fn() }),
+}))
+vi.mock('~/composables/useSearchSuggest', () => ({
+  useSearchSuggest: () => ({ logSearch: api.logSearch, items: ref([]), popular: ref([]), recent: ref([]) }),
+}))
 
-// Global stubs for Nuxt components
-const globalStubs = {
-  FacilityCard: { template: '<div data-testid="facility-card">FacilityCard</div>' },
-  CategoryIcon: { template: '<span>Icon</span>' },
-  AdBanner: { template: '<div />' },
-  Pagination: { template: '<div />' },
+function facility(id: string, category: Facility['category']): Facility {
+  return {
+    id,
+    name: `${category}-${id}`,
+    category,
+    address: `서울 ${id}`,
+    roadAddress: null,
+    lat: 37.5,
+    lng: 127,
+    city: '서울',
+    district: '강남구',
+    extras: {},
+  }
 }
 
-describe('SearchPage', () => {
+const buildings = {
+  categories: [{
+    type: 'apt-sale',
+    count: 4,
+    items: Array.from({ length: 4 }, (_, index) => ({
+      type: 'apt-sale',
+      buildingName: `검증아파트${index}`,
+      bjdCode: `1168${index}`,
+      city: '서울',
+      district: '강남구',
+      dongName: '삼성동',
+      latestPrice: 100000,
+      transactionCount: 1,
+      lat: null,
+      lng: null,
+      lastDealYear: 2026,
+      lastDealMonth: 9,
+      buildYear: 2020,
+      latestDeals: {
+        sale: { kind: 'sale', amount: 100000, deposit: null, monthlyRent: null, exclusiveArea: 84, floor: 10, dealYear: 2026, dealMonth: 9, dealDay: 1 },
+        jeonse: null,
+        wolse: null,
+      },
+    })),
+  }],
+  buildingCounts: { apt: 4, villa: 0, offitel: 0 },
+}
+
+const grouped: GroupedSearchResponse = {
+  totalCount: 9,
+  categories: [
+    { category: 'trash', label: '쓰레기', count: 2, unit: '지역', items: [facility('trash-1', 'trash')] },
+    { category: 'toilet', label: '화장실', count: 2, items: [facility('toilet-1', 'toilet')] },
+    { category: 'hospital', label: '병원', count: 5, items: Array.from({ length: 4 }, (_, index) => facility(`hospital-${index}`, 'hospital')) },
+  ],
+}
+
+const stubs = {
+  AdBanner: { template: '<div data-testid="ad" />' },
+  EmptyState: { props: ['title', 'description'], template: '<div data-testid="empty">{{ title }}</div>' },
+  CategoryIcon: { template: '<span />' },
+}
+
+describe('SearchPage Task 7', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     for (const key of Object.keys(routeQuery)) delete routeQuery[key]
-    searchAllMock.mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
-    getComplexListMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
-    searchComplexesByKeywordMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
-    searchPropertyComplexesByKeywordMock.mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 })
-    searchGroupedMock.mockResolvedValue(undefined)
-    groupedResultsRef.value = []
-    groupedTotalRef.value = 0
+    routeQuery.q = '강남'
+    api.searchAll.mockResolvedValue(buildings)
+    api.requestGrouped.mockResolvedValue(grouped)
+    api.searchProperty.mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0 })
+    ;(globalThis as typeof globalThis & { navigateTo: ReturnType<typeof vi.fn> }).navigateTo = vi.fn()
   })
 
-  it('페이지가 올바르게 렌더링되는지 확인', () => {
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    // Page renders with min-h-screen layout
-    expect(wrapper.find('.min-h-screen').exists()).toBe(true)
-  })
-
-  it('통합 검색 입력이 렌더된다', () => {
-    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
-    expect(wrapper.find('input[aria-label="통합 검색"]').exists()).toBe(true)
-  })
-
-  it('마운트 시 키워드가 있으면 부동산·시설 검색을 모두 호출한다', async () => {
-    routeQuery.keyword = '강남'
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
+  it('Task 6 overview를 q로 한 번 호출하고 시설 preview limit 3을 사용한다', async () => {
+    const wrapper = mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    expect(searchAllMock).toHaveBeenCalled()
-    expect(searchGroupedMock).toHaveBeenCalled() // 시설 병렬 fetch 복원
-    expect(wrapper.exists()).toBe(true)
+    expect(api.searchAll).toHaveBeenCalledOnce()
+    expect(api.searchAll).toHaveBeenCalledWith('강남')
+    expect(api.requestGrouped).toHaveBeenCalledWith({ keyword: '강남', limit: 3 })
+    expect(wrapper.get('h1').text()).toBe('어떤 곳을 찾으세요?')
   })
 
-  it('키워드가 없으면 시설 grouped 팬아웃은 호출되지 않는다(전국 팬아웃 방지)', async () => {
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
+  it('true count를 표시하고 그룹 preview는 최대 3개이며 동률은 FACILITY_CATEGORIES 순서다', async () => {
+    const wrapper = mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    expect(searchAllMock).toHaveBeenCalled()
-    expect(searchGroupedMock).not.toHaveBeenCalled()
-    expect(wrapper.exists()).toBe(true)
+    expect(wrapper.text()).toContain('생활시설 9곳')
+    expect(wrapper.text()).toContain('2지역')
+    const facilityGroups = wrapper.findAllComponents(SearchResultGroup)
+      .filter(group => ['병원', '화장실', '쓰레기'].includes(group.props('label')))
+    expect(facilityGroups.map(group => group.props('label'))).toEqual(['병원', '화장실', '쓰레기'])
+    expect(facilityGroups[0].props('count')).toBe(5)
+    expect(facilityGroups[0].findAllComponents(FacilitySearchRow)).toHaveLength(3)
+    expect(facilityGroups[0].props('moreLabel')).toBe('전체 보기')
+    expect(wrapper.text()).toContain('‘강남’ 검색 결과에서')
+    expect(wrapper.text()).toContain('전체 결과 기준')
+    expect(wrapper.text()).toContain('카테고리별 최대 3개 미리보기')
+    expect(wrapper.text()).not.toContain('표본')
   })
 
-  it('페이지네이션이 렌더링되는지 확인', () => {
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    // 페이지네이션은 유형 선택 후 결과가 있을 때만 렌더링됨
-    // 기본 mock에서는 결과가 없으므로 렌더링되지 않음
-    expect(wrapper.find('[data-testid="pagination"]').exists()).toBe(false)
-  })
-
-  it('지역 필터 섹션이 제거되었는지 확인 (키워드 파서가 지역을 처리)', () => {
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    // Region filter selects(시/도, 구/군)는 더 이상 렌더되지 않는다
-    expect(wrapper.findAll('select').length).toBe(0)
-    // '지역' 섹션 헤딩도 사라져야 한다
-    expect(wrapper.text()).not.toContain('시·도·구·군으로 결과를 좁힐 수 있습니다')
-  })
-
-  it('검색 결과 개수가 표시되는지 확인', async () => {
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    // 기본 레이아웃이 렌더링됨 (검색 결과 영역은 isMounted 후 표시)
-    expect(wrapper.find('.min-h-screen').exists()).toBe(true)
-  })
-
-  it('에러 발생 시 에러 메시지를 표시하는지 확인', async () => {
-    // This test needs to be skipped as it's complex to mock composables in pages
-    expect(true).toBe(true)
-  })
-
-  it('URL 쿼리 파라미터를 읽어서 검색을 실행하는지 확인', () => {
-    // useRoute mock이 필요함
-    expect(true).toBe(true)
-  })
-
-  it('카드 그리드 레이아웃이 표시되는지 확인', () => {
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    // 부동산 결과가 비어있으면 빈 상태가 표시되고, 그리드는 결과가 있을 때 렌더링됨
-    expect(wrapper.find('.min-h-screen').exists()).toBe(true)
-  })
-
-  it('결과가 있으면 부동산·생활시설 도메인 섹션을 렌더한다 (부동산 먼저)', async () => {
-    routeQuery.keyword = '강남'
-    groupedResultsRef.value = [{ category: 'toilet', label: '화장실', count: 12, items: [] }]
-    groupedTotalRef.value = 12
-    searchAllMock.mockResolvedValue({ categories: [{ type: 'apt-sale', count: 3, items: [] }], buildingCounts: { apt: 3, villa: 0, offitel: 0 } })
-
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: {
-          ...globalStubs,
-          SearchDomainSection: { template: '<section><h2>{{ title }}</h2><slot/></section>', props: ['title', 'count', 'countLabel'] },
-          SearchResultGroup: { template: '<div><slot/></div>', props: ['label', 'count', 'moreHref', 'iconImg', 'catColor', 'countUnit', 'catCategory'] },
-        },
-      },
-    })
+  it('실패 domain을 전체 탭 count·광고·빈 결과에 합산하지 않고 성공 domain count와 재시도를 유지한다', async () => {
+    api.requestGrouped.mockRejectedValueOnce(new Error('unavailable')).mockResolvedValueOnce(grouped)
+    const wrapper = mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    const h2s = wrapper.findAll('h2').map(h => h.text())
-    expect(h2s).toContain('부동산')
-    expect(h2s).toContain('생활시설')
-    expect(h2s.indexOf('부동산')).toBeLessThan(h2s.indexOf('생활시설'))
+    expect(wrapper.text()).toContain('부동산 4곳')
+    expect(wrapper.text()).not.toContain('생활시설 0곳')
+    expect(wrapper.text()).toContain('생활시설을 불러오지 못했습니다')
+    expect(wrapper.findAll('.search-tab')[0].text()).toBe('전체')
+    expect(wrapper.find('[data-testid="ad"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="empty"]').exists()).toBe(false)
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(api.requestGrouped).toHaveBeenCalledTimes(2)
   })
 
-  it('부동산 유형 드릴다운 후 뒤로가기로 통합 결과 뷰로 복귀한다', async () => {
-    routeQuery.keyword = '강남'
-    searchAllMock.mockResolvedValue({
-      categories: [{
-        type: 'apt-sale',
-        count: 3,
-        items: [{
-          buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
-          dongName: '역삼동', dealAmount: 150000, deposit: null,
-          dealYear: 2026, dealMonth: 5, buildYear: 2010, transactionCount: 12,
-        }],
-      }],
-      buildingCounts: { apt: 3, villa: 0, offitel: 0 },
-    })
-    searchPropertyComplexesByKeywordMock.mockResolvedValue({
-      items: [{
-        buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
-        dongName: '역삼동', latestPrice: 150000, transactionCount: 12,
-      }],
-      page: 1, totalPages: 1, total: 1,
-    })
-    groupedResultsRef.value = [{ category: 'toilet', label: '화장실', count: 12, items: [] }]
-    groupedTotalRef.value = 12
-
-    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+  it('전부 실패하면 광고와 결과 없음 상태를 렌더하지 않고 영역별 오류를 보인다', async () => {
+    api.searchAll.mockRejectedValueOnce(new Error('building unavailable'))
+    api.requestGrouped.mockRejectedValueOnce(new Error('facility unavailable'))
+    const wrapper = mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    // 부동산 "아파트" 그룹의 더보기 클릭 → 페이징 드릴다운 뷰로 전환
-    const aptGroup = wrapper.findAllComponents(SearchResultGroup).find(g => g.props('label') === '아파트')
-    expect(aptGroup, '아파트 그룹이 렌더되어야 함').toBeTruthy()
-    await aptGroup!.find('button').trigger('click')
-    await flushPromises()
-
-    // 드릴다운은 키워드를 지역/이름으로 해석하고 property 단위 합집합으로 조회한다.
-    expect(searchPropertyComplexesByKeywordMock).toHaveBeenCalledWith('apt', '강남', 1, 20)
-    expect(getComplexListMock).not.toHaveBeenCalled()
-
-    // 드릴다운 상태: 통합 도메인 섹션(h2)은 사라지고 페이징 뷰가 표시된다
-    expect(wrapper.findAll('h2').map(h => h.text())).not.toContain('부동산')
-
-    // (a) 페이징 뷰 상단에 "통합 검색 결과로" 뒤로가기 컨트롤이 존재한다
-    const backButton = wrapper.findAll('button').find(b => b.text().includes('통합 검색 결과로'))
-    expect(backButton, '뒤로가기 버튼이 렌더되어야 함').toBeTruthy()
-
-    // (b) 뒤로가기 클릭 → selectedRealEstateType이 초기화되고 통합 뷰(부동산+생활시설)가 다시 렌더된다
-    await backButton!.trigger('click')
-    await flushPromises()
-
-    expect(wrapper.findAll('button').some(b => b.text().includes('통합 검색 결과로'))).toBe(false)
-    const h2sAfterBack = wrapper.findAll('h2').map(h => h.text())
-    expect(h2sAfterBack).toContain('부동산')
-    expect(h2sAfterBack).toContain('생활시설')
+    expect(wrapper.find('[data-testid="ad"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="empty"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('부동산을 불러오지 못했습니다')
+    expect(wrapper.text()).toContain('생활시설을 불러오지 못했습니다')
   })
 
-  it('통합뷰 부동산 프리뷰 카드는 전세/월세(rent) 원본 아이템을 -rent URL로 링크한다 (하드코딩된 tab="sale" 회귀 방지)', async () => {
-    routeQuery.keyword = '역삼'
-    searchAllMock.mockResolvedValue({
-      categories: [{
-        type: 'villa-rent',
-        count: 1,
-        items: [{
-          buildingName: '○○빌라', bjdCode: '11680', city: '서울특별시', district: '강남구',
-          dongName: '역삼동', dealAmount: null, deposit: 5000,
-          dealYear: 2026, dealMonth: 5, buildYear: 2005, transactionCount: 3,
-        }],
-      }],
-      buildingCounts: { apt: 0, villa: 1, offitel: 0 },
-    })
+  it('전체 탭에서는 URL의 비활성 property/page/facilityCategory를 렌더링과 요청에서 무시한다', async () => {
+    routeQuery.tab = 'all'
+    routeQuery.property = 'apt'
+    routeQuery.page = '4'
+    routeQuery.facilityCategory = 'hospital'
 
-    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+    const wrapper = mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    const cardLink = wrapper
-      .findAll('a')
-      .find(a => (a.attributes('href') || '').includes('/real-estate/') && a.text().includes('○○빌라'))
-    expect(cardLink, '빌라 프리뷰 카드 링크가 렌더되어야 함').toBeTruthy()
-
-    const href = cardLink!.attributes('href')!
-    expect(href).toBe(`/real-estate/villa-rent/seoul/gangnam/${encodeURIComponent('○○빌라')}`)
-    expect(href).not.toContain('villa-sale')
+    expect(api.searchProperty).not.toHaveBeenCalled()
+    const labels = wrapper.findAllComponents(SearchResultGroup).map(group => group.props('label'))
+    expect(labels).toContain('아파트')
+    expect(labels).toContain('병원')
+    expect(labels).toContain('화장실')
+    expect(labels).toContain('쓰레기')
   })
 
-  it('아파트 그룹 총계는 sale+rent 유니크 건물수(buildingCounts)로 표시된다 (매매+전월세 이중카운트 방지)', async () => {
-    routeQuery.keyword = '강남'
-    // apt-sale 5 + apt-rent 4 = 9지만, 두 테이블에 걸친 동일 건물을 제외한 유니크는 6.
-    searchAllMock.mockResolvedValue({
-      categories: [
-        { type: 'apt-sale', count: 5, items: [] },
-        { type: 'apt-rent', count: 4, items: [] },
-      ],
-      buildingCounts: { apt: 6, villa: 0, offitel: 0 },
-    })
-
-    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+  it('부동산 유형 페이지에서 q만 바뀌어도 현재 property/page를 새 q로 다시 요청한다', async () => {
+    routeQuery.tab = 'buildings'
+    routeQuery.property = 'apt'
+    routeQuery.page = '2'
+    const propertyPage = { items: [], total: 0, page: 2, totalPages: 0 }
+    api.searchProperty.mockResolvedValue(propertyPage)
+    mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    const aptGroup = wrapper.findAllComponents(SearchResultGroup).find(g => g.props('label') === '아파트')
-    expect(aptGroup, '아파트 그룹이 렌더되어야 함').toBeTruthy()
-    // 5+4=9(이중카운트)가 아니라 유니크 건물수 6
-    expect(aptGroup!.props('count')).toBe(6)
+    expect(api.searchProperty).toHaveBeenCalledWith('apt', '강남', 2, 20)
+
+    routeQuery.q = '잠실'
+    await nextTick()
+    await flushPromises()
+
+    expect(api.searchProperty).toHaveBeenLastCalledWith('apt', '잠실', 2, 20)
   })
 
-  it('부동산 도메인 총계는 buildingCounts(apt+villa+offitel) 합계로 표시된다', async () => {
-    routeQuery.keyword = '강남'
-    searchAllMock.mockResolvedValue({
-      categories: [
-        { type: 'apt-sale', count: 5, items: [] },
-        { type: 'apt-rent', count: 4, items: [] },
-        { type: 'villa-sale', count: 2, items: [] },
-      ],
-      buildingCounts: { apt: 6, villa: 2, offitel: 0 },
+  it('활성 property 성공 결과는 overview 부동산 실패와 독립적으로 표시하고 그 결과로 광고를 판단한다', async () => {
+    routeQuery.tab = 'buildings'
+    routeQuery.property = 'apt'
+    api.searchAll.mockRejectedValueOnce(new Error('overview unavailable'))
+    api.searchProperty.mockResolvedValueOnce({
+      items: [buildings.categories[0].items[0]],
+      total: 1,
+      page: 1,
+      totalPages: 1,
     })
 
-    const wrapper = mount(SearchPage, {
-      global: {
-        stubs: {
-          ...globalStubs,
-          SearchDomainSection: { template: '<section data-testid="domain"><span class="dc">{{ count }}</span><slot/></section>', props: ['title', 'count', 'countLabel'] },
-        },
-      },
-    })
+    const wrapper = mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    // 도메인 총계 = 6 + 2 + 0 = 8 (per-type 합 5+4+2=11 아님)
-    const domainCount = wrapper.find('[data-testid="domain"] .dc')
-    expect(domainCount.exists()).toBe(true)
-    expect(domainCount.text()).toBe('8')
+    expect(wrapper.text()).toContain('검증아파트0')
+    expect(wrapper.text()).not.toContain('부동산을 불러오지 못했습니다')
+    expect(wrapper.find('[data-testid="ad"]').exists()).toBe(true)
   })
 
-  it('부동산 더보기 상태에서 새 검색을 실행하면 통합 검색 범위로 초기화한다', async () => {
-    routeQuery.keyword = '잠실'
-    searchAllMock.mockResolvedValue({
-      categories: [{
-        type: 'apt-sale',
-        count: 12,
-        items: [{
-          buildingName: '잠실엘스', bjdCode: '11710', city: '서울', district: '송파구',
-          dongName: '잠실동', dealAmount: 180000, deposit: null,
-          dealYear: 2026, dealMonth: 8, buildYear: 2008, transactionCount: 40,
-        }],
-      }],
-      buildingCounts: { apt: 12, villa: 0, offitel: 0 },
-    })
-    searchPropertyComplexesByKeywordMock.mockResolvedValue({
-      items: [{
-        buildingName: '잠실엘스', bjdCode: '11710', city: '서울', district: '송파구',
-        dongName: '잠실동', latestPrice: 180000, transactionCount: 40,
-      }],
-      page: 1, totalPages: 1, total: 10,
-    })
-    groupedResultsRef.value = [{ category: 'pharmacy', label: '약국', count: 25251, items: [] }]
-    groupedTotalRef.value = 25251
+  it('활성 property 실패는 overview의 양수 count로 가려지거나 광고·빈 결과로 바뀌지 않는다', async () => {
+    routeQuery.tab = 'buildings'
+    routeQuery.property = 'apt'
+    api.searchProperty.mockRejectedValueOnce(new Error('property unavailable'))
 
-    const wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+    const wrapper = mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    const aptGroup = wrapper.findAllComponents(SearchResultGroup).find(g => g.props('label') === '아파트')
-    await aptGroup!.find('button').trigger('click')
-    await flushPromises()
-    expect(wrapper.findAll('button').some(b => b.text().includes('통합 검색 결과로'))).toBe(true)
+    expect(wrapper.text()).toContain('부동산 목록을 불러오지 못했습니다')
+    expect(wrapper.find('[data-testid="ad"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="empty"]').exists()).toBe(false)
+  })
 
-    vi.clearAllMocks()
-    searchAllMock.mockResolvedValue({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
-    const input = wrapper.find('input[aria-label="통합 검색"]')
-    await input.setValue('약국')
-    await wrapper.findAll('button').find(b => b.text().includes('다시 검색'))!.trigger('click')
+  it('탭과 부동산 전체 보기는 q를 보존한 실제 URL 상태를 제공한다', async () => {
+    const wrapper = mount(SearchPage, { global: { stubs } })
     await flushPromises()
 
-    expect(searchAllMock).toHaveBeenCalledWith('약국')
-    expect(searchGroupedMock).toHaveBeenCalledWith({ keyword: '약국', limit: 20 })
-    expect(searchPropertyComplexesByKeywordMock).not.toHaveBeenCalled()
-    expect(wrapper.findAll('button').some(b => b.text().includes('통합 검색 결과로'))).toBe(false)
+    const tabTos = wrapper.findAll('.search-tab').map(link => link.attributes('href'))
+    expect(tabTos).toHaveLength(3)
+    const apartment = wrapper.findAllComponents(SearchResultGroup).find(group => group.props('label') === '아파트')!
+    expect(apartment.props('moreHref')).toEqual({ path: '/search', query: { q: '강남', tab: 'buildings', property: 'apt' } })
+  })
+
+  it('legacy keyword를 q처럼 읽고 noindex follow metadata에서 canonical을 생략한다', async () => {
+    delete routeQuery.q
+    routeQuery.keyword = '삼성'
+    const wrapper = mount(SearchPage, { global: { stubs } })
+    await flushPromises()
+
+    expect(wrapper.get('input').element.value).toBe('삼성')
+    expect(api.searchAll).toHaveBeenCalledWith('삼성')
+    const headFactory = vi.mocked(useHead).mock.calls.at(-1)?.[0] as () => Record<string, unknown>
+    const head = headFactory()
+    expect(head.title).toBe('삼성 검색 결과 | 일상킷')
+    expect(head).not.toHaveProperty('link')
+    expect(head.meta).toContainEqual({ name: 'robots', content: 'noindex, follow' })
   })
 })

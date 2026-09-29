@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockFindMany = vi.fn();
 const mockFindUnique = vi.fn();
@@ -6,6 +6,7 @@ const mockCount = vi.fn();
 
 vi.mock('../../src/lib/prisma', () => ({
   default: {
+    $queryRaw: vi.fn().mockResolvedValue([]),
     subscription: {
       findMany: (...args: unknown[]) => mockFindMany(...args),
       findUnique: (...args: unknown[]) => mockFindUnique(...args),
@@ -29,7 +30,7 @@ import {
 //   closed  : { OR: [{ receptionStartDate: null }, { receptionEndDate: { lt } }] }
 function statusFromWhere(
   where: Record<string, unknown>,
-): 'ongoing' | 'upcoming' | 'closed' | null {
+): 'ongoing' | 'upcoming' | 'unknown' | 'closed' | null {
   const outerAnd = (where as { AND?: unknown[] }).AND;
   const filter = (Array.isArray(outerAnd) ? outerAnd[1] : where) as Record<string, unknown>;
   const start = filter.receptionStartDate as { gt?: Date; lte?: Date } | undefined;
@@ -44,6 +45,9 @@ function statusFromWhere(
   const orList = filter.OR as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(orList) && orList.some((o) => o.receptionStartDate === null)) {
     return 'closed';
+  }
+  if (filter.sourceType === 'PUBLIC_RENT' && filter.receptionStartDate === null && filter.status === 'unknown') {
+    return 'unknown';
   }
   return null;
 }
@@ -81,6 +85,10 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe('getSubscriptionList', () => {
   it('필터 없이 목록을 조회해야 한다', async () => {
     mockFindMany.mockResolvedValueOnce([makeSubscription({ status: 'ongoing' })]);
@@ -97,7 +105,7 @@ describe('getSubscriptionList', () => {
     expect(result.page).toBe(1);
     expect(mockFindMany).toHaveBeenCalledOnce();
     expect(statusFromWhere(mockFindMany.mock.calls[0][0].where)).toBe('ongoing');
-    expect(mockCount).toHaveBeenCalledTimes(4);
+    expect(mockCount).toHaveBeenCalledTimes(5);
   });
 
   it('status 필터를 적용해야 한다', async () => {
@@ -117,7 +125,7 @@ describe('getSubscriptionList', () => {
     await getSubscriptionList({ status: 'upcoming', region: '서울', page: 1, limit: 20 });
 
     const whereArg = mockFindMany.mock.calls[0][0].where;
-    expect(baseFromAndWhere(whereArg).AND).toEqual([
+    expect(baseFromAndWhere(whereArg).AND[0].OR[0].AND).toEqual([
       {
         OR: [
           { regionName: { contains: '서울특별시' } },
@@ -136,7 +144,7 @@ describe('getSubscriptionList', () => {
     await getSubscriptionList({ status: 'upcoming', region: '경기 성남시 분당구', page: 1, limit: 20 });
 
     const whereArg = mockFindMany.mock.calls[0][0].where;
-    expect(baseFromAndWhere(whereArg).AND).toEqual([
+    expect(baseFromAndWhere(whereArg).AND[0].OR[0].AND).toEqual([
       {
         OR: [
           { regionName: { contains: '경기도' } },
@@ -176,7 +184,7 @@ describe('getSubscriptionList', () => {
     expect(baseFromAndWhere(whereArg).OR).toEqual([
       { sourceType: { in: ['OFFITEL', 'REMAINING', 'OPTIONAL'] } },
       { sourceType: 'APT', rentType: null },
-      { sourceType: 'APT', rentType: { notIn: ['분양전환 가능임대', '분양전환 불가임대'] } },
+      { sourceType: 'APT', rentType: { notIn: ['분양전환 가능임대', '분양전환 불가임대', '임대주택'] } },
     ]);
   });
 
@@ -189,7 +197,8 @@ describe('getSubscriptionList', () => {
     const whereArg = mockFindMany.mock.calls[0][0].where;
     expect(baseFromAndWhere(whereArg).OR).toEqual([
       { sourceType: 'PRIVATE_RENT' },
-      { sourceType: 'APT', rentType: { in: ['분양전환 가능임대', '분양전환 불가임대'] } },
+      { sourceType: 'APT', rentType: { in: ['분양전환 가능임대', '분양전환 불가임대', '임대주택'] } },
+      { sourceType: 'PUBLIC_RENT' },
     ]);
   });
 
@@ -204,6 +213,7 @@ describe('getSubscriptionList', () => {
       .mockResolvedValueOnce(4)
       .mockResolvedValueOnce(1)
       .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0) // unknown
       .mockResolvedValueOnce(2);
 
     const result = await getSubscriptionList({ page: 1, limit: 2 });
@@ -211,12 +221,12 @@ describe('getSubscriptionList', () => {
     expect(result.items.map((item) => item.status)).toEqual(['ongoing', 'upcoming']);
     const firstCall = mockFindMany.mock.calls[0][0];
     expect(statusFromWhere(firstCall.where)).toBe('ongoing');
-    expect(firstCall.orderBy).toEqual({ announcementDate: 'desc' });
+    expect(firstCall.orderBy).toEqual([{ announcementDate: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }]);
     expect(firstCall.skip).toBe(0);
     expect(firstCall.take).toBe(1);
     const secondCall = mockFindMany.mock.calls[1][0];
     expect(statusFromWhere(secondCall.where)).toBe('upcoming');
-    expect(secondCall.orderBy).toEqual({ announcementDate: 'desc' });
+    expect(secondCall.orderBy).toEqual([{ announcementDate: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }]);
     expect(secondCall.skip).toBe(0);
     expect(secondCall.take).toBe(1);
   });
@@ -232,6 +242,7 @@ describe('getSubscriptionList', () => {
       .mockResolvedValueOnce(4)
       .mockResolvedValueOnce(1)
       .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0) // unknown
       .mockResolvedValueOnce(2);
 
     const result = await getSubscriptionList({ page: 2, limit: 2 });
@@ -241,7 +252,7 @@ describe('getSubscriptionList', () => {
     expect(result.totalPages).toBe(2);
     const lastCall = mockFindMany.mock.calls[mockFindMany.mock.calls.length - 1][0];
     expect(statusFromWhere(lastCall.where)).toBe('closed');
-    expect(lastCall.orderBy).toEqual({ announcementDate: 'desc' });
+    expect(lastCall.orderBy).toEqual([{ announcementDate: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }]);
     expect(lastCall.skip).toBe(0);
     expect(lastCall.take).toBe(2);
   });
@@ -264,9 +275,10 @@ describe('getSubscriptionList', () => {
 
     await getSubscriptionList({ status: 'ongoing', sort: 'deadline', page: 1, limit: 5 });
 
-    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual({
-      receptionEndDate: { sort: 'asc', nulls: 'last' },
-    });
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual([
+      { receptionEndDate: { sort: 'asc', nulls: 'last' } },
+      { id: 'desc' },
+    ]);
   });
 
   it('sort=startSoon 이면 receptionStartDate 오름차순(nulls last)으로 정렬한다', async () => {
@@ -275,9 +287,65 @@ describe('getSubscriptionList', () => {
 
     await getSubscriptionList({ status: 'upcoming', sort: 'startSoon', page: 1, limit: 5 });
 
-    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual({
-      receptionStartDate: { sort: 'asc', nulls: 'last' },
-    });
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual([
+      { receptionStartDate: { sort: 'asc', nulls: 'last' } },
+      { id: 'desc' },
+    ]);
+  });
+
+  it('priority sort uses the active status date and always breaks ties by newest id', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await getSubscriptionList({ status: 'ongoing', sort: 'priority', page: 1, limit: 5 });
+    await getSubscriptionList({ status: 'upcoming', sort: 'priority', page: 1, limit: 5 });
+
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual([
+      { receptionEndDate: { sort: 'asc', nulls: 'last' } },
+      { id: 'desc' },
+    ]);
+    expect(mockFindMany.mock.calls[1][0].orderBy).toEqual([
+      { receptionStartDate: { sort: 'asc', nulls: 'last' } },
+      { id: 'desc' },
+    ]);
+  });
+
+  it('recent sort bypasses grouped status counts and recomputes item status at query time', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-21T03:00:00.000Z'));
+    mockFindMany.mockResolvedValueOnce([
+      makeSubscription({
+        id: 31,
+        status: 'upcoming',
+        receptionStartDate: new Date('2026-04-20T00:00:00.000Z'),
+        receptionEndDate: new Date('2026-04-22T00:00:00.000Z'),
+      }),
+      makeSubscription({
+        id: 32,
+        sourceType: 'PUBLIC_RENT',
+        status: 'unknown',
+        receptionStartDate: null,
+        receptionEndDate: null,
+      }),
+      makeSubscription({
+        id: 33,
+        sourceType: 'PUBLIC_RENT',
+        status: 'closed',
+        receptionStartDate: null,
+        receptionEndDate: null,
+      }),
+    ]);
+    mockCount.mockResolvedValueOnce(3);
+
+    const result = await getSubscriptionList({ sort: 'recent', page: 1, limit: 20 });
+
+    expect(mockFindMany).toHaveBeenCalledOnce();
+    expect(mockCount).toHaveBeenCalledOnce();
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual([
+      { announcementDate: { sort: 'desc', nulls: 'last' } },
+      { id: 'desc' },
+    ]);
+    expect(result.items.map((item) => item.status)).toEqual(['ongoing', 'unknown', 'closed']);
   });
 
   it('status 없이 sort=deadline 이면 그룹 분기도 buildOrderBy를 사용한다', async () => {
@@ -286,13 +354,15 @@ describe('getSubscriptionList', () => {
       .mockResolvedValueOnce(1) // total
       .mockResolvedValueOnce(1) // ongoing
       .mockResolvedValueOnce(0) // upcoming
+      .mockResolvedValueOnce(0) // unknown
       .mockResolvedValueOnce(0); // closed
 
     await getSubscriptionList({ sort: 'deadline', page: 1, limit: 5 });
 
-    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual({
-      receptionEndDate: { sort: 'asc', nulls: 'last' },
-    });
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual([
+      { receptionEndDate: { sort: 'asc', nulls: 'last' } },
+      { id: 'desc' },
+    ]);
   });
 });
 
@@ -353,7 +423,7 @@ describe('dateBasedStatusFilter', () => {
     const f = dateBasedStatusFilter('closed', fixedNow);
     expect(f).toEqual({
       OR: [
-        { receptionStartDate: null },
+        { receptionStartDate: null, NOT: { sourceType: 'PUBLIC_RENT', status: 'unknown' } },
         { receptionEndDate: { lt: kstToday } },
       ],
     });
@@ -368,7 +438,7 @@ describe('getUpcomingSubscriptions', () => {
 
     expect(result).toHaveLength(1);
     const args = mockFindMany.mock.calls[0][0];
-    expect(args.where.receptionStartDate).toEqual(expect.objectContaining({ gt: expect.any(Date) }));
+    expect(args.where.AND[1].receptionStartDate).toEqual(expect.objectContaining({ gt: expect.any(Date) }));
     expect(args.take).toBe(5);
     expect(args.orderBy.receptionStartDate).toBe('asc');
   });

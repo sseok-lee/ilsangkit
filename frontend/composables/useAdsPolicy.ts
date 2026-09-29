@@ -34,11 +34,12 @@ export function useAdsEnabled(): boolean {
  * 그건 슬롯 코드가 아니라 스크립트가 만드는 것이라 스크립트 주입 자체를 막아야 한다.
  */
 const AD_FREE_PATHS = new Set(['/real-estate'])
+const AD_FREE_PATTERNS = [/^\/trash\/areas\/[1-9]\d*$/, /^\/trash\/[1-9]\d*$/]
 
 /** 경로 끝 슬래시만 다른 경우(/real-estate/)도 같은 페이지다. */
 export function isAdFreePath(pathname: string): boolean {
   const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
-  return AD_FREE_PATHS.has(normalized)
+  return AD_FREE_PATHS.has(normalized) || AD_FREE_PATTERNS.some((pattern) => pattern.test(normalized))
 }
 
 /**
@@ -74,8 +75,14 @@ export function useAdsPolicy(): { shouldServeAds: ComputedRef<boolean> } {
   const adsEnabled = useAdsEnabled()
   const suppressed = useState<boolean>('ads:suppressed', () => false)
   const blocked = useState<boolean>('ads:blocked', () => false)
-  const shouldServeAds = computed(
-    () => adsEnabled && !isLikelyBot() && !suppressed.value && !blocked.value
-  )
+  const route = useRoute()
+  const shouldServeAds = computed(() => {
+    const currentPath = typeof route.path === 'string' ? route.path : ''
+    return adsEnabled
+      && !isLikelyBot()
+      && !suppressed.value
+      && !blocked.value
+      && !isAdFreePath(currentPath)
+  })
   return { shouldServeAds }
 }

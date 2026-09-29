@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import MapSidebar from '~/components/realEstate/map/MapSidebar.vue'
-import type { MapItem, MapRegionItem } from '~/types/realEstateMap'
+import type { MapBuildingItem, MapItem, MapRegionItem } from '~/types/realEstateMap'
 import { formatPyeongLabel } from '~/composables/useMapOverlays'
 import { toRealEstateListUrl } from '~/utils/realEstateUrl'
 
@@ -14,27 +14,57 @@ const REGIONS: MapItem[] = [
 const BUILDINGS: MapItem[] = [
   {
     buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
+    bjdCode: '1168010300',
     lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
     jeonseDeposit: null, jeonseDealKey: null,
     wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    latestDeals: {
+      sale: {
+        kind: 'sale', amount: 168340, deposit: null, monthlyRent: null,
+        exclusiveArea: 84.9, floor: 16, dealYear: 2026, dealMonth: 8, dealDay: 1,
+      },
+      jeonse: null,
+      wolse: null,
+    },
   },
 ]
 
 const RENT_BUILDINGS: MapItem[] = [
   {
     buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+    bjdCode: '1168010100',
     lat: 37.5, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
     latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 114,
     jeonseDeposit: 96000, jeonseDealKey: 20260712,
     wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+    latestDeals: {
+      sale: null,
+      jeonse: {
+        kind: 'jeonse', amount: null, deposit: 96000, monthlyRent: null,
+        exclusiveArea: 84.9, floor: 12, dealYear: 2026, dealMonth: 7, dealDay: 12,
+      },
+      wolse: {
+        kind: 'wolse', amount: null, deposit: 75000, monthlyRent: 340,
+        exclusiveArea: 59.4, floor: 8, dealYear: 2026, dealMonth: 7, dealDay: 25,
+      },
+    },
   },
   {
     buildingName: '신동아', city: '서울', district: '강남구', dongName: '수서동',
+    bjdCode: '1168011500',
     lat: 37.49, lng: 127.1, latestPrice: 60000, monthlyRent: 0,
     latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 11,
     jeonseDeposit: 60000, jeonseDealKey: 20260720,
     wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    latestDeals: {
+      sale: null,
+      jeonse: {
+        kind: 'jeonse', amount: null, deposit: 60000, monthlyRent: null,
+        exclusiveArea: 84.9, floor: 7, dealYear: 2026, dealMonth: 7, dealDay: 20,
+      },
+      wolse: null,
+    },
   },
 ]
 
@@ -71,6 +101,52 @@ describe('MapSidebar', () => {
     expect(w.text()).toContain('16억 8,340')
   })
 
+  it('buildingKey 주소 식별 경로와 지번을 렌더한다', () => {
+    const buildingKey = 'a'.repeat(64)
+    const keyedBuilding: MapItem = {
+      ...(BUILDINGS[0] as MapBuildingItem),
+      buildingKey,
+      jibun: '1280',
+    }
+    const w = mountSidebar({ items: [keyedBuilding], granularity: 'building', total: 1 })
+    const link = w.get('[data-testid="map-sidebar-item"] a')
+
+    expect(w.text()).toContain('개포동 1280')
+    expect(link.attributes('href')).toBe(
+      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안블레스티지')}/${buildingKey}`,
+    )
+  })
+
+  it('건물 행은 최신 거래 bundle 을 DealSnapshot 으로 렌더한다', () => {
+    const base = BUILDINGS[0] as MapBuildingItem
+    const withSnapshot: MapItem[] = [{
+      ...base,
+      latestPrice: 168340,
+      latestDeals: {
+        sale: {
+          kind: 'sale',
+          amount: 170000,
+          deposit: null,
+          monthlyRent: null,
+          exclusiveArea: 84.9,
+          floor: 16,
+          dealYear: 2026,
+          dealMonth: 9,
+          dealDay: null,
+        },
+        jeonse: null,
+        wolse: null,
+      },
+    }]
+    const w = mountSidebar({ items: withSnapshot, granularity: 'building', total: 1 })
+
+    expect(w.findComponent({ name: 'DealSnapshot' }).exists()).toBe(true)
+    expect(w.text()).toContain('17억')
+    expect(w.text()).toContain('84.9㎡')
+    expect(w.text()).toContain('16층')
+    expect(w.text()).not.toContain('16억 8,340')
+  })
+
   it('절단되면 total 과 함께 알린다', () => {
     const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1820, exact: false })
     expect(w.text()).toContain('1,820')
@@ -79,7 +155,20 @@ describe('MapSidebar', () => {
   it('항목 hover 시 키를 emit 한다', async () => {
     const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
     await w.find('[data-testid="map-sidebar-item"]').trigger('mouseenter')
-    expect(w.emitted('hover')?.[0]).toEqual(['래미안블레스티지|강남구'])
+    expect(w.emitted('hover')?.[0]).toEqual(['래미안블레스티지|1168010300'])
+  })
+
+  it('오류 상태에서 재시도와 목록 fallback 링크를 보여준다', async () => {
+    const w = mountSidebar({
+      error: 'network down',
+      listHref: '/real-estate/apt-sale',
+      listLabel: '전국 목록 보기',
+    })
+
+    expect(w.find('[data-testid="map-sidebar-error"]').text()).toContain('network down')
+    expect(w.find('[data-testid="map-sidebar-error"] a').attributes('href')).toBe('/real-estate/apt-sale')
+    await w.find('[data-testid="map-sidebar-error"] button').trigger('click')
+    expect(w.emitted('retry')).toHaveLength(1)
   })
 
   // 이 페이지는 광고를 싣지 않는다(사용자 결정). 인피드 슬롯이 되돌아오면 목록 중간에
@@ -131,7 +220,7 @@ describe('MapSidebar', () => {
   // 건물 행은 2단계다. 지도를 보며 후보를 훑는 게 이 화면의 목적이라 첫 클릭에
   // 페이지를 떠나면 훑기가 끊긴다. 첫 클릭은 지도 선택, 두 번째 클릭이 이동.
   describe('건물 행 2단계 클릭', () => {
-    const KEY = `${(BUILDINGS[0] as MapBuildingItem).buildingName}|${(BUILDINGS[0] as MapBuildingItem).district}`
+    const KEY = `${(BUILDINGS[0] as MapBuildingItem).buildingName}|${(BUILDINGS[0] as MapBuildingItem).bjdCode}`
 
     function clickFirstRow(w: ReturnType<typeof mountSidebar>) {
       const a = w.find('[data-testid="map-sidebar-item"]').find('a')
@@ -177,6 +266,42 @@ describe('MapSidebar', () => {
     it('href 는 그대로 남는다 — preventDefault 해도 크롤 경로가 사라지면 안 된다', () => {
       const w = mountSidebar({ items: BUILDINGS, granularity: 'building', total: 1 })
       expect(w.find('[data-testid="map-sidebar-item"]').find('a').attributes('href')).toContain('/real-estate/')
+    })
+
+    it('같은 이름·구에서 bjdCode 가 다른 건물은 서로 다른 행이고 선택도 한 행에만 적용된다', async () => {
+      const sameNameDifferentCodes: MapBuildingItem[] = [
+        { ...(BUILDINGS[0] as MapBuildingItem), buildingName: '은마', dongName: '대치동', bjdCode: '1168010100' },
+        { ...(BUILDINGS[0] as MapBuildingItem), buildingName: '은마', dongName: '도곡동', bjdCode: '1168010300' },
+      ]
+      const w = mountSidebar({
+        items: sameNameDifferentCodes,
+        granularity: 'building',
+        total: 2,
+        selectedKey: '은마|1168010300',
+      })
+      const rows = w.findAll('[data-testid="map-sidebar-item"]')
+
+      expect(rows).toHaveLength(2)
+      expect(rows.map((row) => row.find('a').attributes('aria-current'))).toEqual([undefined, 'true'])
+
+      await rows[0].trigger('mouseenter')
+      await rows[1].trigger('mouseenter')
+      expect(w.emitted('hover')).toEqual([
+        ['은마|1168010100'],
+        ['은마|1168010300'],
+      ])
+
+      const firstClick = new MouseEvent('click', { bubbles: true, cancelable: true })
+      rows[0].find('a').element.dispatchEvent(firstClick)
+      await nextTick()
+      expect(firstClick.defaultPrevented).toBe(true)
+      expect(w.emitted('select')?.at(-1)).toEqual([sameNameDifferentCodes[0]])
+
+      const selectedClick = new MouseEvent('click', { bubbles: true, cancelable: true })
+      rows[1].find('a').element.dispatchEvent(selectedClick)
+      await nextTick()
+      expect(selectedClick.defaultPrevented).toBe(false)
+      expect(w.emitted('select')).toHaveLength(1)
     })
   })
 
@@ -267,9 +392,18 @@ describe('MapSidebar', () => {
 function manyBuildings(n: number): MapItem[] {
   return Array.from({ length: n }, (_, i) => ({
     buildingName: `건물${i}`, city: '서울', district: '강남구', dongName: '개포동',
+    bjdCode: `11680103${String(i).padStart(2, '0')}`,
     lat: 37.48, lng: 127.06, latestPrice: 100000 + i, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 200 - i,
     jeonseDeposit: null, jeonseDealKey: null, wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    latestDeals: {
+      sale: {
+        kind: 'sale' as const, amount: 100000 + i, deposit: null, monthlyRent: null,
+        exclusiveArea: 84.9, floor: 10, dealYear: 2026, dealMonth: 8, dealDay: 1,
+      },
+      jeonse: null,
+      wolse: null,
+    },
   }))
 }
 
@@ -503,7 +637,7 @@ describe('MapSidebar — 전월세 두 줄 병기', () => {
   it('전세와 월세를 각각 보여준다', () => {
     const t = mountRent().text()
     expect(t).toContain('9억 6,000만')
-    expect(t).toContain('7억 5,000만 · 340만')
+    expect(t).toContain('보증금 7억 5,000만원 / 월세 340만원')
   })
 
   it('전세/월세 라벨을 붙여 어느 쪽인지 알린다', () => {
@@ -527,39 +661,65 @@ describe('MapSidebar — 전월세 두 줄 병기', () => {
     expect(w.text()).not.toContain('거래 없음')
   })
 
-  // B-1: 배포 직후엔 prisma db push 만 돌아 jeonseDeposit/wolseDeposit 등 5개 새 컬럼이
-  // 다음 nightly sync 전까지 전부 NULL이다. 폴백이 없으면 이 상태에서 전 건물이
-  // "전세 거래 없음 / 월세 거래 없음"으로 보여 데이터 장애처럼 읽힌다.
-  it('배포 직후처럼 새 분리 컬럼이 전부 null 이면 레거시 컬럼으로 폴백한다 (B-1)', () => {
-    const notSyncedYet = {
-      buildingName: '미갱신빌딩', city: '서울', district: '강남구', dongName: '개포동',
-      lat: 37.48, lng: 127.06, latestPrice: 60000, monthlyRent: 0,
+  it('latestDeals 슬롯이 모두 null 이면 stale flat 금액 대신 전세·월세 거래 없음을 표시한다', () => {
+    const verifiedEmpty: MapBuildingItem = {
+      buildingName: '거래없음', city: '서울', district: '강남구', dongName: '개포동',
+      bjdCode: '1168010300',
+      lat: 37.48, lng: 127.06, latestPrice: 98765, monthlyRent: 432,
       latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 5,
-      jeonseDeposit: null, jeonseDealKey: null,
-      wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+      jeonseDeposit: 87654, jeonseDealKey: 20260720,
+      wolseDeposit: 76543, wolseMonthlyRent: 321, wolseDealKey: 20260721,
+      latestDeals: { sale: null, jeonse: null, wolse: null },
     }
-    const w = mountRent({ items: [notSyncedYet], total: 1 })
-    expect(w.text()).toContain('6억')
-    expect(w.text()).toContain('거래 없음')
+    const w = mountRent({ items: [verifiedEmpty], total: 1 })
+
+    expect(w.text()).toContain('전세 거래 없음')
+    expect(w.text()).toContain('월세 거래 없음')
+    expect(w.text()).not.toContain('9억 8,765만')
+    expect(w.text()).not.toContain('8억 7,654만')
+    expect(w.text()).not.toContain('7억 6,543만')
+  })
+
+  it('latestDeals bundle 이 없으면 stale flat 금액 대신 거래 정보 로드 실패를 표시한다', () => {
+    const unavailable: MapBuildingItem = {
+      buildingName: 'bundle누락', city: '서울', district: '강남구', dongName: '개포동',
+      bjdCode: '1168010300',
+      lat: 37.48, lng: 127.06, latestPrice: 98765, monthlyRent: 432,
+      latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 5,
+      jeonseDeposit: 87654, jeonseDealKey: 20260720,
+      wolseDeposit: 76543, wolseMonthlyRent: 321, wolseDealKey: 20260721,
+    }
+    const w = mountRent({ items: [unavailable], total: 1 })
+
+    expect(w.text()).toContain('거래 정보를 불러오지 못했습니다')
+    expect(w.text()).not.toContain('9억 8,765만')
+    expect(w.text()).not.toContain('8억 7,654만')
+    expect(w.text()).not.toContain('7억 6,543만')
   })
 
   // M-4: 폴백/미갱신으로 "거래 없음"이 뜨는 줄은 실제 가격처럼 강조되면 안 된다.
   it('전세 거래가 없으면 "거래 없음" 줄은 가격처럼 강조하지 않는다 (M-4)', () => {
     const noJeonse = {
       buildingName: '월세만', city: '서울', district: '강남구', dongName: '개포동',
+      bjdCode: '1168010300',
       lat: 37.48, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
       latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 3,
       jeonseDeposit: null, jeonseDealKey: null,
       wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
+      latestDeals: {
+        sale: null,
+        jeonse: null,
+        wolse: {
+          kind: 'wolse', amount: null, deposit: 75000, monthlyRent: 340,
+          exclusiveArea: 59.4, floor: 8, dealYear: 2026, dealMonth: 7, dealDay: 25,
+        },
+      },
     }
     const w = mountRent({ items: [noJeonse], total: 1 })
     const row = w.findAll('[data-testid="map-sidebar-item"]')[0]
-    // 감싸는 래퍼 span 도 텍스트가 "전세"/"거래 없음" 을 포함하므로, block 클래스로 실제
-    // 전세 줄 span(가격/거래없음 텍스트가 직접 붙는 요소)만 특정한다.
-    const jeonseLine = row.findAll('span').find((s) => s.classes().includes('block') && s.text().includes('전세') && s.text().includes('거래 없음'))
-    expect(jeonseLine?.classes()).toContain('text-slate-400')
-    expect(jeonseLine?.classes()).not.toContain('text-primary')
-    expect(jeonseLine?.classes()).not.toContain('font-semibold')
+    const jeonseEmpty = row.findAll('.deal-empty').find((p) => p.text().includes('전세 거래 없음'))
+    expect(jeonseEmpty?.exists()).toBe(true)
+    expect(row.text()).toContain('보증금 7억 5,000만원 / 월세 340만원')
   })
 
   // 월세 줄에도 같은 규칙이 걸려야 한다. 이 줄은 원래 항상 text-slate-700 고정이라
@@ -568,18 +728,25 @@ describe('MapSidebar — 전월세 두 줄 병기', () => {
   it('월세 거래가 없으면 그 줄만 흐리게, 값이 있는 전세 줄은 그대로 강조한다 (M-4)', () => {
     const noWolse = {
       buildingName: '전세만', city: '서울', district: '강남구', dongName: '개포동',
+      bjdCode: '1168010300',
       lat: 37.48, lng: 127.06, latestPrice: 96000, monthlyRent: 0,
       latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 20, transactionCount: 5,
       jeonseDeposit: 96000, jeonseDealKey: 20260720,
       wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+      latestDeals: {
+        sale: null,
+        jeonse: {
+          kind: 'jeonse', amount: null, deposit: 96000, monthlyRent: null,
+          exclusiveArea: 84.9, floor: 12, dealYear: 2026, dealMonth: 7, dealDay: 20,
+        },
+        wolse: null,
+      },
     }
     const w = mountRent({ items: [noWolse], total: 1 })
     const row = w.findAll('[data-testid="map-sidebar-item"]')[0]
-    const lines = row.findAll('span').filter((s) => s.classes().includes('block'))
-    const wolseLine = lines.find((s) => s.text().includes('월세') && s.text().includes('거래 없음'))
-    const jeonseLine = lines.find((s) => s.text().includes('전세') && s.text().includes('9억 6,000만'))
-    expect(wolseLine?.classes()).toContain('text-slate-400')
-    expect(wolseLine?.classes()).not.toContain('text-slate-700')
-    expect(jeonseLine?.classes()).toContain('text-primary')
+    const wolseEmpty = row.findAll('.deal-empty').find((p) => p.text().includes('월세 거래 없음'))
+    const jeonseAmount = row.findAll('.deal-amount').find((p) => p.text().includes('9억 6,000만'))
+    expect(wolseEmpty?.exists()).toBe(true)
+    expect(jeonseAmount?.exists()).toBe(true)
   })
 })

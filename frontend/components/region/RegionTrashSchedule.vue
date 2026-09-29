@@ -49,7 +49,6 @@
           v-for="region in schedules"
           :key="region.id"
           :region="region"
-          @select="emit('select', $event)"
         />
       </div>
 
@@ -98,7 +97,6 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: 'page-change', page: number): void
-  (e: 'select', schedule: RegionSchedule): void
   (e: 'retry'): void
 }>()
 </script>

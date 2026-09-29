@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import FacilityMap from '~/components/map/FacilityMap.vue'
 import type { FacilitySearchItem } from '~/types'
 
@@ -9,6 +9,7 @@ const mockAddMarkers = vi.fn()
 const mockClearMarkers = vi.fn()
 const mockSetCenter = vi.fn()
 const mockPanTo = vi.fn()
+const mockSetUserLocationMarker = vi.fn()
 
 vi.mock('~/composables/useKakaoMap', () => ({
   useKakaoMap: () => ({
@@ -19,6 +20,7 @@ vi.mock('~/composables/useKakaoMap', () => ({
     clearMarkers: mockClearMarkers,
     setCenter: mockSetCenter,
     panTo: mockPanTo,
+    setUserLocationMarker: mockSetUserLocationMarker,
   }),
 }))
 
@@ -98,6 +100,40 @@ describe('FacilityMap', () => {
       )
     })
 
+
+    it('좌표가 없으면 SDK 초기화 실패와 달리 initMap에 NaN 좌표를 넘기지 않는다', async () => {
+      const wrapper = mount(FacilityMap, {
+        props: {
+          center: { lat: Number.NaN, lng: Number.NaN },
+        },
+      })
+
+      await flushPromises()
+
+      expect(mockInitMap).not.toHaveBeenCalled()
+      expect(wrapper.text()).toContain('좌표 정보가 없어 지도를 표시할 수 없습니다')
+      expect(wrapper.find('[data-testid="map-container"]').exists()).toBe(false)
+    })
+
+    it('SDK 초기화 실패는 좌표 미제공 상태와 다른 안내로 표시한다', async () => {
+      mockInitMap.mockRejectedValueOnce(new Error('SDK load failed'))
+
+      const wrapper = mount(FacilityMap, {
+        props: {
+          center: { lat: 37.5665, lng: 126.9780 },
+        },
+      })
+
+      await flushPromises()
+
+      expect(mockInitMap).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ center: { lat: 37.5665, lng: 126.9780 } })
+      )
+      expect(wrapper.text()).toContain('지도 SDK를 불러오지 못했습니다')
+      expect(wrapper.text()).not.toContain('좌표 정보가 없어')
+    })
+
     it('기본 줌 레벨이 적용되는지 확인', async () => {
       mount(FacilityMap, {
         props: {
@@ -149,7 +185,7 @@ describe('FacilityMap', () => {
         },
       ]
 
-      const wrapper = mount(FacilityMap, {
+      mount(FacilityMap, {
         props: {
           center: { lat: 37.5665, lng: 126.9780 },
           facilities: toiletFacilities,

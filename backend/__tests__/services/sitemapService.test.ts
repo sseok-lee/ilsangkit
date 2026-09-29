@@ -5,36 +5,48 @@ const {
   getCategoryCountAndMaxDateMock,
   wasteCountMock,
   wasteLatestMock,
+  subscriptionIdsMock,
   subscriptionCountMock,
   subscriptionLatestMock,
+  getWasteScheduleRegionsMock,
+  getActiveWasteGenerationMock,
+  listIndexableWasteAreasMock,
 } = vi.hoisted(() => ({
   mockQueryRaw: vi.fn(),
   getCategoryCountAndMaxDateMock: vi.fn(),
   wasteCountMock: vi.fn(),
   wasteLatestMock: vi.fn(),
+  subscriptionIdsMock: vi.fn(),
   subscriptionCountMock: vi.fn(),
   subscriptionLatestMock: vi.fn(),
+  getWasteScheduleRegionsMock: vi.fn(),
+  getActiveWasteGenerationMock: vi.fn(),
+  listIndexableWasteAreasMock: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {
     $queryRaw: mockQueryRaw,
+    $queryRawUnsafe: mockQueryRaw,
     wasteSchedule: {
       count: wasteCountMock,
       findFirst: wasteLatestMock,
     },
     subscription: {
+      findMany: subscriptionIdsMock,
       count: subscriptionCountMock,
       findFirst: subscriptionLatestMock,
     },
   },
   default: {
     $queryRaw: mockQueryRaw,
+    $queryRawUnsafe: mockQueryRaw,
     wasteSchedule: {
       count: wasteCountMock,
       findFirst: wasteLatestMock,
     },
     subscription: {
+      findMany: subscriptionIdsMock,
       count: subscriptionCountMock,
       findFirst: subscriptionLatestMock,
     },
@@ -48,13 +60,19 @@ vi.mock('../../src/services/facilityService.js', () => ({
 }));
 vi.mock('../../src/services/wasteScheduleService.js', () => ({
   getAllIds: vi.fn(),
-  getWasteScheduleRegions: vi.fn(),
+  getWasteScheduleRegions: getWasteScheduleRegionsMock,
+}));
+vi.mock('../../src/services/wasteAreaService.js', () => ({
+  isWasteAreaDiscoveryEnabled: () => process.env.WASTE_AREA_DISCOVERY_ENABLED === 'true',
+  getActiveWasteGeneration: getActiveWasteGenerationMock,
+  listIndexableWasteAreas: listIndexableWasteAreasMock,
 }));
 vi.mock('../../src/services/categoryRegistry.js', () => ({
   ALL_CATEGORIES: [],
 }));
 
 import {
+  getSubscriptionIds,
   getRealEstateBuildings,
   getRealEstateCityDistrictHubs,
   getSitemapPageCounts,
@@ -63,7 +81,9 @@ import {
 } from '../../src/services/sitemapService.js';
 
 function flattenSql(call: unknown[]): string {
-  const strings = call[0] as unknown as readonly string[];
+  const first = call[0];
+  if (typeof first === 'string') return first;
+  const strings = first as unknown as readonly string[];
   return strings.join('?');
 }
 
@@ -78,7 +98,12 @@ beforeEach(() => {
   wasteLatestMock.mockResolvedValue(null);
   subscriptionCountMock.mockResolvedValue(0);
   subscriptionLatestMock.mockResolvedValue(null);
+  getWasteScheduleRegionsMock.mockResolvedValue([]);
+  getActiveWasteGenerationMock.mockResolvedValue(null);
+  listIndexableWasteAreasMock.mockResolvedValue([]);
   mockQueryRaw.mockResolvedValue([{ cnt: 0n }]);
+  delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
+  process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
 });
 
 describe('getSitemapPageCounts facility policy', () => {
@@ -89,6 +114,35 @@ describe('getSitemapPageCounts facility policy', () => {
     expect(categories).toContain('aed');
     expect(categories).not.toContain('wifi');
     expect(getCategoryCountAndMaxDateMock).toHaveBeenCalledWith('aed', 15000);
+  });
+
+  it('uses legacy waste regions when discovery is disabled without reading area tables', async () => {
+    getWasteScheduleRegionsMock.mockResolvedValue([
+      { city: '서울특별시', district: '강남구', updatedAt: new Date('2026-09-20T00:00:00.000Z') },
+    ]);
+
+    const result = await getSitemapPageCounts();
+
+    expect(result.waste).toEqual({ count: 1, maxUpdatedAt: '2026-09-20' });
+    expect(getActiveWasteGenerationMock).not.toHaveBeenCalled();
+    expect(listIndexableWasteAreasMock).not.toHaveBeenCalled();
+  });
+
+  it('adds W9 eligible area URLs to the waste sitemap count when discovery is enabled', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    getActiveWasteGenerationMock.mockResolvedValue('generation-1');
+    getWasteScheduleRegionsMock.mockResolvedValue([
+      { city: '서울특별시', district: '강남구', updatedAt: new Date('2026-09-20T00:00:00.000Z') },
+    ]);
+    listIndexableWasteAreasMock.mockResolvedValue([
+      { areaId: 101, contentUpdatedAt: '2026-09-22T00:00:00.000Z' },
+      { areaId: 102, contentUpdatedAt: '2026-09-21T00:00:00.000Z' },
+    ]);
+
+    const result = await getSitemapPageCounts();
+
+    expect(result.waste).toEqual({ count: 3, maxUpdatedAt: '2026-09-22' });
+    expect(listIndexableWasteAreasMock).toHaveBeenCalledWith('generation-1');
   });
 });
 
@@ -241,3 +295,9 @@ describe('getRealEstateCityDistrictHubs — RealEstateBuildingSummary 기반', (
     expect(mockQueryRaw).toHaveBeenCalledTimes(2);
   });
 });
+
+ it('excludes superseded public rental detail URLs from the sitemap', async () => {
+   subscriptionIdsMock.mockResolvedValue([]);
+   await getSubscriptionIds();
+   expect(subscriptionIdsMock).toHaveBeenCalledWith(expect.objectContaining({ where: { supersededById: null } }));
+ });

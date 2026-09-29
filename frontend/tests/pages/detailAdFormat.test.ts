@@ -94,7 +94,16 @@ describe('상세 폴드 첫 광고 규격 상한', () => {
 
   it('폴드 아래 슬롯은 auto 를 유지한다 — 부동산 상세 나머지 3개', () => {
     const s = source('pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
-    const plainSlots = (s.match(/<AdBanner class="order-[^"]*"\s*\/>/g) || []).length
-    expect(plainSlots).toBe(3)
+    const slots = [...s.matchAll(/<AdBanner\b[^>]*>/g)].map(match => match[0])
+    expect(slots).toHaveLength(4)
+
+    const fixedSlots = slots.filter(tag => tag.includes('sizing="fixed"'))
+    expect(fixedSlots).toHaveLength(1)
+    expect(fixedSlots[0]).toContain(':fixed-height="280"')
+    expect(fixedSlots[0]).toContain('estate-ad-slot--first')
+
+    const autoSlots = slots.filter(tag => !tag.includes('sizing="fixed"'))
+    expect(autoSlots).toHaveLength(3)
+    expect(autoSlots.every(tag => tag.includes('estate-ad-slot'))).toBe(true)
   })
 })

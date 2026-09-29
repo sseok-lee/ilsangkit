@@ -134,7 +134,7 @@
       </div>
 
       <!-- 모바일 카드 리스트 -->
-      <div class="md:hidden space-y-3 px-1">
+      <div v-if="!isDetailPresentation" class="md:hidden space-y-3 px-1">
         <div
           v-for="tx in saleTransactions"
           :key="tx.id"
@@ -181,6 +181,59 @@
             매수 {{ tx.buyerType || '-' }} / 매도 {{ tx.sellerType || '-' }}
           </div>
         </div>
+      </div>
+      <div v-else class="md:hidden space-y-3 px-1">
+        <article
+          v-for="tx in saleTransactions"
+          :key="tx.id"
+          data-testid="detail-transaction-card"
+          :class="[
+            'rounded-lg border bg-white p-4',
+            tx.cancelDealDay ? 'border-red-200 opacity-60' : 'border-line',
+          ]"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-sm text-muted">{{ formatDate(tx) }}</p>
+              <strong class="mt-1 block font-display text-lg text-strong tabular-nums">
+                {{ formatDetailKoreanPrice(tx.dealAmount) }}
+              </strong>
+            </div>
+            <span
+              v-if="tx.cancelDealDay"
+              class="inline-flex items-center rounded bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-600"
+            >
+              취소
+            </span>
+          </div>
+          <details class="mt-3 border-t border-line pt-3 text-sm text-muted">
+            <summary class="min-h-11 cursor-pointer py-2 font-medium text-primary-700">
+              거래 정보 보기
+            </summary>
+            <dl class="grid gap-2 pt-2">
+              <div v-if="!hideBuilding" class="flex justify-between gap-3">
+                <dt>건물</dt>
+                <dd class="text-right text-strong">{{ tx.buildingName }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>층</dt>
+                <dd class="text-right text-strong">{{ floorDetailLabel(tx.floor) }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>면적</dt>
+                <dd class="text-right text-strong">전용 {{ formatArea(tx) }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>거래유형</dt>
+                <dd class="text-right text-strong">{{ tx.dealType || '-' }}</dd>
+              </div>
+              <div v-if="tx.buyerType || tx.sellerType" class="flex justify-between gap-3">
+                <dt>매수/매도</dt>
+                <dd class="text-right text-strong">{{ tx.buyerType || '-' }} / {{ tx.sellerType || '-' }}</dd>
+              </div>
+            </dl>
+          </details>
+        </article>
       </div>
     </template>
 
@@ -280,7 +333,7 @@
       </div>
 
       <!-- 모바일 카드 리스트 -->
-      <div class="md:hidden space-y-3 px-1">
+      <div v-if="!isDetailPresentation" class="md:hidden space-y-3 px-1">
         <div
           v-for="tx in rentTransactions"
           :key="tx.id"
@@ -348,6 +401,68 @@
           </div>
         </div>
       </div>
+      <div v-else class="md:hidden space-y-3 px-1">
+        <article
+          v-for="tx in rentTransactions"
+          :key="tx.id"
+          data-testid="detail-transaction-card"
+          class="rounded-lg border border-line bg-white p-4"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-sm text-muted">{{ formatDate(tx) }}</p>
+              <strong class="mt-1 block font-display text-lg text-strong tabular-nums">
+                {{ formatRentDetailPrice(tx) }}
+              </strong>
+            </div>
+            <span
+              :class="[
+                'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium',
+                tx.rentType === '전세'
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'bg-orange-50 text-orange-700',
+              ]"
+            >
+              {{ tx.rentType }}
+            </span>
+          </div>
+          <details class="mt-3 border-t border-line pt-3 text-sm text-muted">
+            <summary class="min-h-11 cursor-pointer py-2 font-medium text-primary-700">
+              거래 정보 보기
+            </summary>
+            <dl class="grid gap-2 pt-2">
+              <div v-if="!hideBuilding" class="flex justify-between gap-3">
+                <dt>건물</dt>
+                <dd class="text-right text-strong">{{ tx.buildingName }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>층</dt>
+                <dd class="text-right text-strong">{{ floorDetailLabel(tx.floor) }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>면적</dt>
+                <dd class="text-right text-strong">전용 {{ formatArea(tx) }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>계약구분</dt>
+                <dd class="text-right text-strong">{{ tx.contractType || '-' }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>갱신권</dt>
+                <dd class="text-right text-strong">{{ tx.useRenewalRight || '-' }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>종전금액</dt>
+                <dd class="text-right text-strong">{{ previousRentLabel(tx) }}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt>기간</dt>
+                <dd class="text-right text-strong">{{ tx.contractTerm ? `계약 ${tx.contractTerm}개월` : '-' }}</dd>
+              </div>
+            </dl>
+          </details>
+        </article>
+      </div>
     </template>
   </div>
 </template>
@@ -368,12 +483,14 @@ interface Props {
   type: 'sale' | 'rent'
   loading: boolean
   hideBuilding?: boolean
+  presentation?: 'default' | 'detail'
 }
 
 const props = defineProps<Props>()
 
 const saleTransactions = computed(() => props.transactions as SaleTransaction[])
 const rentTransactions = computed(() => props.transactions as RentTransaction[])
+const isDetailPresentation = computed(() => props.presentation === 'detail')
 
 const saleColumnsAll: Column[] = [
   { key: 'date', label: '거래일' },
@@ -430,6 +547,38 @@ function getArea(tx: SaleTransaction | RentTransaction): number | null {
 function formatArea(tx: SaleTransaction | RentTransaction): string {
   const area = getArea(tx)
   return area != null ? `${area}㎡` : '-'
+}
+
+function formatDetailKoreanPrice(amount: number): string {
+  const roundedAmount = Math.round(amount)
+  const eok = Math.floor(roundedAmount / 10000)
+  const man = roundedAmount % 10000
+  const jo = Math.floor(eok / 10000)
+  const eokRemainder = eok % 10000
+  if (jo > 0) {
+    const eokLabel = `${eokRemainder}억`
+    return man > 0
+      ? `${jo}만 ${eokLabel} ${man.toLocaleString()}만원`
+      : `${jo}만 ${eokLabel}`
+  }
+  return formatKoreanPrice(amount)
+}
+
+function floorDetailLabel(floor: number | null): string {
+  return floor == null ? '층 정보 없음' : `${floor}층`
+}
+
+function formatRentDetailPrice(tx: RentTransaction): string {
+  if (tx.rentType === '전세') return formatDetailKoreanPrice(tx.deposit)
+  return `${formatDetailKoreanPrice(tx.deposit)} / ${formatDetailKoreanPrice(tx.monthlyRent ?? 0)}`
+}
+
+function previousRentLabel(tx: RentTransaction): string {
+  if (tx.preDeposit == null && tx.preMonthlyRent == null) return '-'
+  if (tx.rentType === '전세') {
+    return tx.preDeposit == null ? '-' : `이전 ${formatDetailKoreanPrice(tx.preDeposit)}`
+  }
+  return `이전 ${formatDetailKoreanPrice(tx.preDeposit ?? 0)} / ${formatDetailKoreanPrice(tx.preMonthlyRent ?? 0)}`
 }
 
 function pricePerPyeong(tx: SaleTransaction): string | null {

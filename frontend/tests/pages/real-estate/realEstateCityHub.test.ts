@@ -33,8 +33,8 @@ vi.mock('~/shared/regionSlugs', () => ({
   CITY_SLUG_MAP: { seoul: '서울' },
   DISTRICT_SLUG_MAP: { '강남구': 'gangnam', '강북구': 'gangbuk' },
   REGIONS: { '서울': ['강남구', '강북구'] },
-  CITY_FULL_NAME_TO_SLUG: {},
-  CITY_SLUGS: {},
+  CITY_FULL_NAME_TO_SLUG: { '서울특별시': 'seoul' },
+  CITY_SLUGS: { '서울': 'seoul' },
 }))
 
 vi.mock('~/utils/seoConstants', () => ({
@@ -48,14 +48,39 @@ vi.mock('~/utils/seoConstants', () => ({
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()
+  ;(globalThis as any).useAsyncData = vi.fn((key: string) => {
+    const data = ref<any>(key.startsWith('re-city-map-center-')
+      ? null
+      : { items: [], total: 0, page: 1, totalPages: 0 })
+    const result = {
+      data,
+      pending: ref(false),
+      error: ref(null),
+      status: ref('success'),
+      refresh: vi.fn(),
+    }
+    return Object.assign(Promise.resolve(result), result)
+  })
 })
 
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  PageHero: { template: '<div data-stub="hero" />' },
-  SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
+  PageHero: {
+    props: ['title', 'description'],
+    template: '<div data-stub="hero"><h1>{{ title }}</h1><p>{{ description }}</p></div>',
+  },
+  SectionBlock: {
+    props: ['heading', 'subtext'],
+    template: '<section><h2 v-if="heading">{{ heading }}</h2><p v-if="subtext">{{ subtext }}</p><slot /><slot name="heading" /></section>',
+  },
   AdBanner: { template: '<div />' },
+  DataSourceSection: { template: '<div>국토교통부</div>' },
+  ExplorationFilters: { template: '<div data-stub="filters" />' },
+  ExplorationBuildingRow: {
+    props: ['building'],
+    template: '<div data-stub="building-row">{{ building.buildingName }}</div>',
+  },
 }
 
 describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
@@ -138,10 +163,11 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
     expect(text).toContain('서울')
   })
 
-  it('주요 단지 섹션을 ComplexCard로 렌더한다', async () => {
-    ;(globalThis as any).useAsyncData = vi.fn((_k: string, _h: () => Promise<unknown>) => {
-      const data = ref<any>([
-        {
+  it('주요 건물 섹션을 ExplorationBuildingRow로 렌더한다', async () => {
+    ;(globalThis as any).useAsyncData = vi.fn((key: string) => {
+      const data = ref<any>(key.startsWith('re-city-map-center-')
+        ? null
+        : { items: [{
           buildingName: '강남타워',
           bjdCode: '11680',
           dongName: '역삼동',
@@ -154,12 +180,18 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
           lastDealYear: 2026,
           lastDealMonth: 5,
           buildYear: 2015,
-        },
-      ])
-      return Object.assign(Promise.resolve({ data }), { data, pending: ref(false), error: ref(null), refresh: vi.fn() })
+        }], total: 1, page: 1, totalPages: 1 })
+      const result = {
+        data,
+        pending: ref(false),
+        error: ref(null),
+        status: ref('success'),
+        refresh: vi.fn(),
+      }
+      return Object.assign(Promise.resolve(result), result)
     })
     const wrapper = await mountPage()
-    expect(wrapper.text()).toContain('주요 단지')
+    expect(wrapper.text()).toContain('주요 건물')
     expect(wrapper.text()).toContain('강남타워')
   })
 })

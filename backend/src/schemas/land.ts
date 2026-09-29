@@ -2,6 +2,13 @@
 
 import { z } from 'zod';
 
+const optionalTrimmed = (max: number): z.ZodType<string | undefined> =>
+  z.preprocess((value) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }, z.string().max(max).optional());
+
 // GET /api/real-estate/land/regions — 동 목록
 export const LandRegionListSchema = z.object({
   city: z.string().max(50).optional(),
@@ -29,6 +36,9 @@ export type LandRegionDetail = z.infer<typeof LandRegionDetailSchema>;
 export const LandTransactionsSchema = z.object({
   bjdCode: z.string().min(1).max(10),
   dongName: z.string().min(1).max(50),
+  keyword: optionalTrimmed(100),
+  jimok: optionalTrimmed(50),
+  landUse: optionalTrimmed(100),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });

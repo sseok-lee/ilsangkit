@@ -88,6 +88,23 @@ describe('getAreaSummary', () => {
       expect(result!.count).toBe(48);
     });
 
+    it('trash 요약은 staged 후보를 공개 count와 인근 구 집계에서 제외한다', async () => {
+      await getAreaSummary('seoul', 'gangnam', 'trash');
+
+      expect(mockCount.mock.calls.at(0)?.[0].where).toMatchObject({
+        district: '강남구',
+        stagedMarker: null,
+      });
+      expect(mockCount.mock.calls.at(1)?.[0].where).toMatchObject({
+        district: '강남구',
+        stagedMarker: null,
+        createdAt: expect.any(Object),
+      });
+      expect(mockGroupBy.mock.calls.at(0)?.[0].where).toMatchObject({
+        stagedMarker: null,
+      });
+    });
+
     it('toilet 카테고리 highlights 3개 반환 (disabled/diaper/open24h)', async () => {
       const callCounts: number[] = [48, 31, 12, 23, 0]; // total, disabled, diaper, open24h, countDiff
       let idx = 0;

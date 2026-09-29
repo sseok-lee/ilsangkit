@@ -1,6 +1,6 @@
 import type {
   AuctionItemsResult, AuctionItemDetailResult, AuctionRegionDetailResult,
-  AuctionCityDetailResult, AuctionHubSummary, AuctionAreaSummary, AuctionRegionListItem,
+  AuctionCityDetailResult, AuctionHubSummary, AuctionAreaSummary, AuctionRegionListItem, AuctionStatusMode,
 } from '~/types/auction'
 import { useApiBase } from '~/composables/useApiBase'
 
@@ -11,7 +11,7 @@ export function useAuction() {
     for (const [k, v] of Object.entries(obj)) if (v != null && v !== '') p.set(k, String(v))
     return p.toString()
   }
-  async function getItems(params: { city?: string; district?: string; usage?: string; status?: string; sort?: string; page?: number; limit?: number }): Promise<AuctionItemsResult> {
+  async function getItems(params: { city?: string; district?: string; usage?: string; status?: string; statusMode?: AuctionStatusMode; keyword?: string; sort?: string; page?: number; limit?: number }): Promise<AuctionItemsResult> {
     const res = await $fetch<{ success: boolean; data: AuctionItemsResult }>(`${apiBase}/api/auction/items?${q(params)}`)
     return res.data
   }
@@ -31,7 +31,7 @@ export function useAuction() {
     const res = await $fetch<{ success: boolean; data: AuctionHubSummary }>(`${apiBase}/api/auction/hub-summary`)
     return res.data
   }
-  async function getRanking(params: { usage?: string; order?: string; limit?: number }): Promise<AuctionAreaSummary[]> {
+  async function getRanking(params: { keyword?: string; usage?: string; order?: string; limit?: number }): Promise<AuctionAreaSummary[]> {
     const res = await $fetch<{ success: boolean; data: AuctionAreaSummary[] }>(`${apiBase}/api/auction/ranking?${q(params)}`)
     return res.data
   }

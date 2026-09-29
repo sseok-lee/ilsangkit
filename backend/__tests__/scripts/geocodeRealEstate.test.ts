@@ -1,5 +1,8 @@
 // @TASK Phase2-8 - 카카오 Geocoding 좌표 보강 스크립트 테스트 (TDD)
 
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // apiKey가 모듈 로드 시점에 캡처되므로 import 전에 제거해야 함
@@ -15,6 +18,18 @@ const mockFindMany = vi.fn();
 const mockUpdateMany = vi.fn();
 const mockFindFirst = vi.fn();
 const mockQueryRawUnsafe = vi.fn();
+let lockDir: string;
+
+beforeEach(() => {
+  lockDir = mkdtempSync(join(tmpdir(), 'geocode-lock-'));
+  process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
+});
+
+afterEach(() => {
+  delete process.env.REAL_ESTATE_WRITE_LOCK_TOKEN;
+  delete process.env.REAL_ESTATE_WRITE_LOCK_DIR;
+  rmSync(lockDir, { recursive: true, force: true });
+});
 
 vi.mock('@prisma/client', () => {
   const model = () => ({

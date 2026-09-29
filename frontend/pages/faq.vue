@@ -1,15 +1,18 @@
 <template>
-  <div class="bg-background-light text-strong font-display min-h-screen">
-    <div class="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8">
+  <div class="bg-white text-strong font-display min-h-screen">
+    <div class="faq-page max-w-[1040px] mx-auto px-5 md:px-8 py-8 md:py-12">
       <StaticPageHeader
         title="자주 묻는 질문"
         lead="일상킷에서 제공하는 부동산 실거래가와 생활시설 정보에 대해 자주 묻는 질문을 모았습니다."
       />
 
+      <nav aria-label="질문 주제" class="my-8 flex flex-wrap gap-2 border-b border-line pb-6">
+        <button v-for="tab in tabs" :key="tab.key" type="button" :aria-pressed="activeTab === tab.key" class="min-h-11 rounded-full border px-5 text-sm font-semibold" :class="activeTab === tab.key ? 'border-primary bg-primary text-white' : 'border-line text-muted hover:text-primary'" @click="activeTab = tab.key">{{ tab.label }}</button>
+      </nav>
       <AdBanner class="my-3" />
 
       <!-- 부동산 실거래가 FAQ -->
-      <div class="mb-6">
+      <div v-show="activeTab !== 'facility'" class="mb-10">
         <h2 class="text-display-2 text-strong mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">apartment</span>
           부동산 실거래가
@@ -19,17 +22,17 @@
           <details
             v-for="(faq, index) in realEstateFaqItems"
             :key="`re-${index}`"
-            class="group bg-white rounded-lg border border-line"
+            class="group border-b border-line"
           >
             <summary
-              class="flex items-center justify-between gap-2 cursor-pointer px-4 py-3 text-sm font-medium text-strong select-none list-none [&::-webkit-details-marker]:hidden"
+              class="flex items-center justify-between gap-2 min-h-14 cursor-pointer px-1 py-4 text-sm font-medium text-strong select-none list-none [&::-webkit-details-marker]:hidden"
             >
               <span>Q. {{ faq.question }}</span>
               <span
                 class="material-symbols-outlined text-[18px] text-muted transition-transform group-open:rotate-180 shrink-0"
               >expand_more</span>
             </summary>
-            <div class="px-4 pb-4 text-sm text-muted leading-relaxed">
+            <div class="px-1 pb-5 text-sm text-muted leading-relaxed">
               {{ faq.answer }}
             </div>
           </details>
@@ -37,7 +40,7 @@
       </div>
 
       <!-- 시설 카테고리 FAQ -->
-      <div v-for="group in groups" :key="group.title" class="mb-6">
+      <div v-for="group in groups" v-show="activeTab !== 'real-estate'" :key="group.title" class="mb-10">
         <h2 class="text-display-2 text-strong mb-3 flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">{{ group.icon }}</span>
           {{ group.title }}
@@ -56,17 +59,17 @@
             <details
               v-for="(faq, index) in CATEGORY_FAQ[cat]"
               :key="index"
-              class="group bg-white rounded-lg border border-line"
+              class="group border-b border-line"
             >
               <summary
-                class="flex items-center justify-between gap-2 cursor-pointer px-4 py-3 text-sm font-medium text-strong select-none list-none [&::-webkit-details-marker]:hidden"
+                class="flex items-center justify-between gap-2 min-h-14 cursor-pointer px-1 py-4 text-sm font-medium text-strong select-none list-none [&::-webkit-details-marker]:hidden"
               >
                 <span>Q. {{ faq.question }}</span>
                 <span
                   class="material-symbols-outlined text-[18px] text-muted transition-transform group-open:rotate-180 shrink-0"
                 >expand_more</span>
               </summary>
-              <div class="px-4 pb-4 text-sm text-muted leading-relaxed">
+              <div class="px-1 pb-5 text-sm text-muted leading-relaxed">
                 {{ faq.answer }}
               </div>
             </details>
@@ -78,6 +81,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+const tabs = [{ key: 'all', label: '전체' }, { key: 'real-estate', label: '부동산' }, { key: 'facility', label: '생활시설' }] as const
+const activeTab = ref<typeof tabs[number]['key']>('all')
 import StaticPageHeader from '~/components/common/StaticPageHeader.vue'
 import type { FacilityCategory } from '~/types/facility'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
@@ -135,3 +141,9 @@ function categoryColorClass(cat: FacilityCategory): string {
   return colorMap[CATEGORY_META[cat].color] || 'text-muted'
 }
 </script>
+
+<style scoped>
+.faq-page :deep(h1) { font-size: 28px; line-height: 1.25; }
+.faq-page summary:focus-visible, .faq-page button:focus-visible { outline: 2px solid #2450dc; outline-offset: 3px; }
+@media (min-width: 768px) { .faq-page :deep(h1) { font-size: 36px; } }
+</style>

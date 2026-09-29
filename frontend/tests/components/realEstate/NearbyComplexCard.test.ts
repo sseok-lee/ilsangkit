@@ -5,8 +5,9 @@ import type { NearbyComplexItem } from '~/types/realEstate'
 
 // latestPrice는 만원 단위 (예: 150_000 = 15억)
 const baseItem: NearbyComplexItem = {
+  buildingKey: 'a'.repeat(64),
   buildingName: '래미안', bjdCode: '1144012700',
-  city: '서울특별시', district: '마포구', dongName: '한강로동',
+  city: '서울특별시', district: '마포구', dongName: '한강로동', jibun: '123-4',
   buildYear: 2018, transactionCount: 3,
   latestPrice: 150_000, monthlyRent: null, latestDealYear: 2026, latestDealMonth: 4,
   lat: 37.55, lng: 126.96,
@@ -16,7 +17,7 @@ describe('NearbyComplexCard', () => {
   it('단지명과 주소를 표시한다', () => {
     const wrapper = mount(NearbyComplexCard, { props: { item: baseItem, propertyType: 'apt', mode: 'sale', rentType: 'all' } })
     expect(wrapper.text()).toContain('래미안')
-    expect(wrapper.text()).toContain('한강로동')
+    expect(wrapper.text()).toContain('한강로동 123-4')
   })
 
   it('라벨은 항상 "최근 거래가"', () => {
@@ -35,7 +36,9 @@ describe('NearbyComplexCard', () => {
   it('링크 URL이 propertyType+mode 조합', () => {
     const wrapper = mount(NearbyComplexCard, { props: { item: baseItem, propertyType: 'villa', mode: 'sale', rentType: 'all' } })
     const link = wrapper.find('a')
-    expect(link.attributes('href')).toContain('/real-estate/villa-sale/')
+    expect(link.attributes('href')).toBe(
+      `/real-estate/villa-sale/seoul/mapo/${encodeURIComponent('래미안')}/${baseItem.buildingKey}`,
+    )
   })
 
   it('가격 포맷팅 — 150000만원 → "15억"', () => {

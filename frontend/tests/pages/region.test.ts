@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { describe, it, expect, vi } from 'vitest';
 import { ref } from 'vue';
 
 // Mock composables
@@ -144,3 +145,25 @@ describe('Region Page Logic', () => {
     expect(links).toContain('/seoul/gangnam/trash');
   });
 });
+
+
+describe('지역 허브 L5 생활시설 탐색 연결', () => {
+  const frontendRoot = process.cwd().endsWith('/frontend')
+    ? process.cwd()
+    : join(process.cwd(), 'frontend')
+  const citySource = readFileSync(resolve(frontendRoot, 'pages/[city]/index.vue'), 'utf8')
+  const districtSource = readFileSync(resolve(frontendRoot, 'pages/[city]/[district]/index.vue'), 'utf8')
+
+  it('시도 허브는 현재 city query 를 담아 /facilities 탐색으로 연결한다', () => {
+    expect(citySource).toContain("path: '/facilities'")
+    expect(citySource).toContain('query: { city }')
+    expect(citySource).toContain('생활시설 전체 보기')
+  })
+
+  it('구군 허브는 city/district query 를 담아 /facilities 탐색으로 연결하고 시세 섹션도 유지한다', () => {
+    expect(districtSource).toContain("path: '/facilities'")
+    expect(districtSource).toContain('query: { city, district }')
+    expect(districtSource).toContain('<RegionRealEstatePrices')
+    expect(districtSource).toContain('<RegionFacilityCategoryGrid')
+  })
+})

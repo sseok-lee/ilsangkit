@@ -116,6 +116,22 @@ describe('ComplexCard', () => {
   })
 
   describe('NuxtLink', () => {
+    it('buildingKey가 있으면 주소 식별 경로와 지번을 사용한다', () => {
+      const buildingKey = 'a'.repeat(64)
+      const wrapper = mount(ComplexCard, {
+        props: {
+          complex: { ...mockComplex, buildingKey, jibun: '316' },
+          propertyType: 'apt',
+          tab: 'sale',
+        },
+      })
+
+      expect(wrapper.text()).toContain('대치동 316')
+      expect(wrapper.get('a').attributes('href')).toBe(
+        `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('대치아이파크')}/${buildingKey}`,
+      )
+    })
+
     it('신규 URL: sale 탭은 /real-estate/{apt-sale}/{city}/{district}/{bldg}', () => {
       const wrapper = mount(ComplexCard, {
         props: { complex: mockComplex, propertyType: 'apt', tab: 'sale' },

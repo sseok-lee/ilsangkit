@@ -1,13 +1,15 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
+  <div class="bg-white text-strong">
+  <main class="help-page mx-auto max-w-[1200px] px-5 py-8 md:px-8 md:py-12">
     <StaticPageHeader
       title="일상킷 소개"
       lead="부동산 실거래가와 내 주변 생활시설을 한곳에서."
     />
 
-    <div class="space-y-5 md:space-y-6 text-muted text-sm md:text-base leading-relaxed">
-      <section>
-        <h2 class="text-lg font-semibold text-strong mb-3">
+    <div class="grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
+    <div class="min-w-0 space-y-10 text-muted text-sm md:text-base leading-relaxed">
+      <section class="border-b border-line pb-8">
+        <h2 class="text-[28px] font-semibold leading-snug text-strong mb-5 md:text-[36px]">
           서비스 소개
         </h2>
         <p class="mb-3">
@@ -28,7 +30,7 @@
         </p>
       </section>
 
-      <section>
+      <section class="border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-strong mb-3">
           운영 목적
         </h2>
@@ -44,7 +46,7 @@
         </p>
       </section>
 
-      <section>
+      <section class="border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-strong mb-3">
           제공 정보
         </h2>
@@ -74,7 +76,7 @@
         </ul>
       </section>
 
-      <section>
+      <section class="border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-strong mb-3">
           서비스 특징
         </h2>
@@ -148,7 +150,7 @@
         </div>
       </section>
 
-      <section>
+      <section class="border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-strong mb-3">
           운영팀
         </h2>
@@ -163,7 +165,7 @@
         </p>
       </section>
 
-      <section>
+      <section class="border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-strong mb-3">
           문의
         </h2>
@@ -176,6 +178,17 @@
         </ul>
       </section>
     </div>
+      <aside class="self-start rounded-lg bg-[#F7F8FA] p-6 lg:sticky lg:top-28">
+        <h2 class="mb-4 text-base font-bold">정보 확인과 문의</h2>
+        <p class="text-sm leading-7 text-muted">데이터 출처와 이용 안내를 확인하고, 잘못된 정보나 개선 의견을 알려주세요.</p>
+        <nav aria-label="도움말 바로가기" class="mt-4 flex flex-col">
+          <NuxtLink to="/about#data-sources" class="flex min-h-11 items-center text-sm font-semibold text-primary">데이터 출처 확인</NuxtLink>
+          <NuxtLink to="/faq" class="flex min-h-11 items-center text-sm font-semibold text-primary">자주 묻는 질문</NuxtLink>
+          <NuxtLink to="/contact#data-fix" class="flex min-h-11 items-center text-sm font-semibold text-primary">정보 수정 요청</NuxtLink>
+        </nav>
+      </aside>
+    </div>
+  </main>
   </div>
 </template>
 
@@ -212,3 +225,11 @@ setBreadcrumbSchema([
   { name: '소개', url: '/about' },
 ])
 </script>
+
+<style scoped>
+.help-page :deep(h1) { font-size: 28px; line-height: 1.25; }
+.help-page :deep(h1 + p) { margin-top: 16px; }
+.help-page :deep(a:focus-visible), .help-page summary:focus-visible { outline: 2px solid #2450dc; outline-offset: 3px; }
+.help-page :deep(table) { min-width: 540px; }
+@media (min-width: 768px) { .help-page :deep(h1) { font-size: 36px; } }
+</style>

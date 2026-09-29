@@ -1,4 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
+
+const frontendRoot = process.cwd().endsWith('/frontend')
+  ? process.cwd()
+  : join(process.cwd(), 'frontend')
+const source = readFileSync(resolve(frontendRoot, 'pages/trash/[id].vue'), 'utf8')
 
 // ─── Task 1.3: HowTo 스키마 데이터 구조 검증 ─────────────────────────────
 // 페이지 컴포넌트 마운트 대신 HowTo에 전달될 데이터 구조를 직접 검증
@@ -42,5 +49,21 @@ describe('TrashDetailPage - HowTo 스키마 구조', () => {
 
   it('첫 번째 step은 종량제 봉투 구매이다', () => {
     expect(howToData.steps[0].name).toBe('종량제 봉투 구매')
+  })
+})
+
+describe('TrashDetailPage - 원본 상세 직접 접근', () => {
+  it('서버 직접 진입을 지역 301로 바꾸지 않고 원본 본문을 렌더한다', () => {
+    expect(source).not.toContain('redirectCode: 301')
+    expect(source).not.toContain('await navigateTo(trashRegionPath.value')
+    expect(source).toContain('<WasteScheduleContent')
+    expect(source).toContain("content: 'noindex, follow'")
+    expect(source).not.toContain("rel: 'canonical'")
+    expect(source).not.toContain('<AdBanner')
+  })
+
+  it('legacy fragment를 임시 복귀 문맥으로 소비하고 공유 URL에서는 제거한다', () => {
+    expect(source).toMatch(/consumeLegacyTrashFromFragment\s*\(\s*scheduleId\.value/)
+    expect(source).toContain('readTrashReturnContext(scheduleId.value)')
   })
 })

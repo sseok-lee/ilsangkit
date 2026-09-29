@@ -6,14 +6,32 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PublicApiClient } from '../../src/services/publicApiClient.js';
 import {
+  fetchCompleteTrashPages,
   transformTrashData,
   syncTrashData,
   TrashApiResponse,
+  reserveRawWasteSchedules,
+  redactSyncResultForLog,
 } from '../../src/scripts/syncTrash.js';
 
+const publicationMock = vi.hoisted(() => ({
+  assertWasteAreaDiscoveryWriteEnabled: vi.fn(),
+  prepareWasteGeneration: vi.fn().mockResolvedValue({
+    generationId: 'prepared-generation',
+    reportHash: 'a'.repeat(64),
+    canPublish: true,
+    reviewReport: { reportHash: 'a'.repeat(64), sourceChanges: [] },
+  }),
+  publishWasteGeneration: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../src/services/wastePublicationService.js', () => publicationMock);
+
 // Create persistent mock functions for transaction context
-const mockTxUpsert = vi.fn().mockResolvedValue({});
+const mockTxCreate = vi.fn().mockResolvedValue({ id: 1 });
 const mockTxFindUnique = vi.fn().mockResolvedValue(null);
+const mockTxCreateMany = vi.fn().mockResolvedValue({ count: 1 });
+const mockTxMarkerCreate = vi.fn().mockResolvedValue({});
 
 // Mock Prisma
 vi.mock('../../src/lib/prisma.js', () => {
@@ -27,12 +45,19 @@ vi.mock('../../src/lib/prisma.js', () => {
       create: vi.fn().mockResolvedValue({ id: 1 }),
       update: vi.fn().mockResolvedValue({}),
     },
+    wastePublication: {
+      findUnique: vi.fn().mockResolvedValue({ activeGenerationId: null }),
+    },
     $transaction: vi.fn().mockImplementation(async (callback) => {
       // Mock transaction context with persistent mocks
       const tx = {
         wasteSchedule: {
-          upsert: mockTxUpsert,
+          create: mockTxCreate,
           findUnique: mockTxFindUnique,
+        },
+        wasteStagedSchedule: {
+          createMany: mockTxCreateMany,
+          create: mockTxMarkerCreate,
         },
       };
       return callback(tx);
@@ -44,6 +69,8 @@ vi.mock('../../src/lib/prisma.js', () => {
 // Mock fetch for API calls
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+const emptyRefs = { version: 'test', areas: [], relations: [], sourceAreaKinds: {} };
 
 describe('PublicApiClient', () => {
   const baseUrl = 'https://apis.data.go.kr/1741000/household_waste_info';
@@ -391,14 +418,35 @@ describe('transformTrashData', () => {
 });
 
 describe('syncTrashData', () => {
+  const originalDiscoveryEnabled = process.env.WASTE_AREA_DISCOVERY_ENABLED;
+
   beforeEach(() => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
     vi.clearAllMocks();
     mockFetch.mockReset();
-    mockTxUpsert.mockClear();
+    mockTxCreate.mockClear();
     mockTxFindUnique.mockClear();
+    mockTxCreateMany.mockClear();
+    mockTxMarkerCreate.mockClear();
+    publicationMock.prepareWasteGeneration.mockClear().mockResolvedValue({
+      generationId: 'prepared-generation',
+      reportHash: 'a'.repeat(64),
+      canPublish: true,
+      reviewReport: { reportHash: 'a'.repeat(64), sourceChanges: [] },
+    });
+    publicationMock.publishWasteGeneration.mockClear().mockResolvedValue(undefined);
+    publicationMock.assertWasteAreaDiscoveryWriteEnabled.mockClear();
   });
 
-  it('should create SyncHistory record at start', async () => {
+  afterEach(() => {
+    if (originalDiscoveryEnabled === undefined) {
+      delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
+    } else {
+      process.env.WASTE_AREA_DISCOVERY_ENABLED = originalDiscoveryEnabled;
+    }
+  });
+
+  it('does not create SyncHistory during dry-run validation', async () => {
     const prisma = (await import('../../src/lib/prisma.js')).default;
 
     // Mock successful API response
@@ -420,15 +468,11 @@ describe('syncTrashData', () => {
 
     await syncTrashData({ serviceKey: 'test-key', dryRun: true });
 
-    expect(prisma.syncHistory.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        category: 'waste_schedule',
-        status: 'running',
-      }),
-    });
+    expect(prisma.syncHistory.create).not.toHaveBeenCalled();
+    expect(prisma.syncHistory.update).not.toHaveBeenCalled();
   });
 
-  it('should update SyncHistory with success status on completion', async () => {
+  it('prepares a generation without publishing on completion', async () => {
     const prisma = (await import('../../src/lib/prisma.js')).default;
 
     mockFetch.mockResolvedValueOnce({
@@ -457,15 +501,17 @@ describe('syncTrashData', () => {
 
     vi.mocked(prisma.syncHistory.create).mockResolvedValueOnce({ id: 1 } as never);
 
-    await syncTrashData({ serviceKey: 'test-key', dryRun: true });
-
-    expect(prisma.syncHistory.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: expect.objectContaining({
-        status: 'success',
-        completedAt: expect.any(Date),
-      }),
+    await syncTrashData({
+      serviceKey: 'test-key',
+      dryRun: false,
+      references: emptyRefs,
     });
+
+    expect(publicationMock.prepareWasteGeneration).toHaveBeenCalledWith(expect.objectContaining({
+      dryRun: false,
+      sourceComplete: true,
+    }));
+    expect(publicationMock.publishWasteGeneration).not.toHaveBeenCalled();
   });
 
   it('should update SyncHistory with failed status on error', async () => {
@@ -475,10 +521,9 @@ describe('syncTrashData', () => {
 
     vi.mocked(prisma.syncHistory.create).mockResolvedValueOnce({ id: 1 } as never);
 
-    await expect(syncTrashData({ serviceKey: 'test-key', dryRun: true })).rejects.toThrow();
+    await expect(syncTrashData({ serviceKey: 'test-key', dryRun: false, references: emptyRefs })).rejects.toThrow();
 
-    expect(prisma.syncHistory.update).toHaveBeenCalledWith({
-      where: { id: 1 },
+    expect(prisma.syncHistory.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         status: 'failed',
         errorMessage: expect.stringContaining('API Error'),
@@ -519,11 +564,52 @@ describe('syncTrashData', () => {
 
     // In dry run mode, transaction should not be called
     expect(prisma.$transaction).not.toHaveBeenCalled();
-    expect(mockTxUpsert).not.toHaveBeenCalled();
+    expect(mockTxCreate).not.toHaveBeenCalled();
     expect(result.totalRecords).toBe(1);
   });
 
-  it('should call wasteSchedule.upsert when not in dry run mode', async () => {
+  it('rejects incomplete page evidence before treating a collection as publishable', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          response: {
+            header: { resultCode: '00' },
+            body: {
+              items: [{ CTPV_NM: '서울특별시', SGG_NM: '강남구', MNG_NO: 'GN-001' }],
+              numOfRows: 1,
+              pageNo: 2,
+              totalCount: 1,
+            },
+          },
+        }),
+    });
+
+    await expect(fetchCompleteTrashPages('test-key', 1)).rejects.toThrow(/page index/i);
+  });
+
+  it('rejects parse failures instead of publishing skipped success', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          response: {
+            header: { resultCode: '00' },
+            body: {
+              items: [{ CTPV_NM: '', SGG_NM: '강남구', MNG_NO: 'GN-001' }],
+              numOfRows: 1,
+              pageNo: 1,
+              totalCount: 1,
+            },
+          },
+        }),
+    });
+
+    await expect(syncTrashData({ serviceKey: 'test-key', dryRun: true, pageSize: 1 }))
+      .rejects.toThrow(/parse/i);
+  });
+
+  it('should prepare through the generation pipeline when not in dry run mode', async () => {
     const prisma = (await import('../../src/lib/prisma.js')).default;
 
     mockFetch.mockResolvedValueOnce({
@@ -552,11 +638,35 @@ describe('syncTrashData', () => {
 
     vi.mocked(prisma.syncHistory.create).mockResolvedValueOnce({ id: 1 } as never);
 
-    await syncTrashData({ serviceKey: 'test-key', dryRun: false });
+    await syncTrashData({
+      serviceKey: 'test-key',
+      dryRun: false,
+      references: emptyRefs,
+    });
 
-    // Should call transaction and upsert within transaction context
-    expect(prisma.$transaction).toHaveBeenCalled();
-    expect(mockTxUpsert).toHaveBeenCalled();
+    expect(publicationMock.prepareWasteGeneration).toHaveBeenCalledWith(expect.objectContaining({
+      provenance: 'raw',
+      sourceComplete: true,
+      dryRun: false,
+    }));
+    expect(publicationMock.publishWasteGeneration).not.toHaveBeenCalled();
+    expect(mockTxCreate).toHaveBeenCalled();
+    expect(mockTxMarkerCreate).toHaveBeenCalledWith({
+      data: { scheduleId: 1 },
+    });
+  });
+
+  it('rejects legacy approval flags before fetching source data', async () => {
+    await expect(syncTrashData({
+      serviceKey: 'test-key',
+      dryRun: false,
+      references: emptyRefs,
+      approvalReportHash: 'a'.repeat(64),
+    })).rejects.toThrow(/waste:publish/);
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(publicationMock.prepareWasteGeneration).not.toHaveBeenCalled();
+    expect(publicationMock.publishWasteGeneration).not.toHaveBeenCalled();
   });
 
   it('should count new and updated records correctly', async () => {
@@ -601,10 +711,58 @@ describe('syncTrashData', () => {
       .mockResolvedValueOnce({ id: 1, city: '서울특별시', district: '강남구', sourceId: 'GN-003' } as never)
       .mockResolvedValueOnce(null);
 
-    const result = await syncTrashData({ serviceKey: 'test-key', dryRun: false });
+    const result = await syncTrashData({
+      serviceKey: 'test-key',
+      dryRun: false,
+      references: emptyRefs,
+    });
 
     expect(result.totalRecords).toBe(2);
-    expect(result.newRecords).toBe(1);
-    expect(result.updatedRecords).toBe(1);
+    expect(result.newRecords).toBe(0);
+    expect(result.updatedRecords).toBe(0);
   });
+
+  it('treats an existing source identity as revision input without mutating the legacy row or adding a marker', async () => {
+    mockTxFindUnique.mockResolvedValueOnce({ id: 42 });
+    const item = transformTrashData({
+      CTPV_NM: '서울특별시',
+      SGG_NM: '강남구',
+      MNG_ZONE_TRGT_RGN_NM: '역삼1동',
+      EMSN_PLC: '변경된 장소',
+      MNG_NO: 'existing-source',
+    })!;
+
+    const prepared = await reserveRawWasteSchedules([item], [{
+      CTPV_NM: '서울특별시',
+      SGG_NM: '강남구',
+      MNG_ZONE_TRGT_RGN_NM: '역삼1동',
+      EMSN_PLC: '변경된 장소',
+      MNG_NO: 'existing-source',
+    }]);
+
+    expect(prepared[0]).toMatchObject({ scheduleId: 42, emissionPlace: '변경된 장소' });
+    expect(mockTxCreate).not.toHaveBeenCalled();
+    expect(mockTxMarkerCreate).not.toHaveBeenCalled();
+  });
+
+
+  it('redacts reviewReport from CLI-safe sync results', () => {
+    expect(redactSyncResultForLog({
+      totalRecords: 1,
+      newRecords: 0,
+      updatedRecords: 0,
+      skippedRecords: 0,
+      reportHash: 'a'.repeat(64),
+      canPublish: true,
+      reviewReport: { sourceChanges: [{ sourceId: 'secret-ish-source-id' }] },
+    })).toEqual({
+      totalRecords: 1,
+      newRecords: 0,
+      updatedRecords: 0,
+      skippedRecords: 0,
+      reportHash: 'a'.repeat(64),
+      canPublish: true,
+    });
+  });
+
 });

@@ -16,6 +16,48 @@ enum SyncStatus {
   failed
 }
 
+enum WasteAreaKind {
+  administrative
+  legal
+}
+
+enum WasteAreaLevel {
+  province
+  district
+  dong
+  ri
+}
+
+enum WasteGenerationStatus {
+  staging
+  ready
+  published
+  failed
+}
+
+enum WasteScheduleProvenance {
+  legacy
+  raw
+}
+
+enum WasteRevisionState {
+  active
+  inactive
+  conflict
+}
+
+enum WasteCoverageScope {
+  whole
+  partial
+  conditional
+}
+
+enum WasteMatchState {
+  verified
+  unresolved
+  conflict
+}
+
 // @TASK T0.4 - 공공화장실 테이블
 model Toilet {
   id          String   @id @db.VarChar(50)
@@ -879,10 +921,149 @@ model WasteSchedule {
   updatedAt     DateTime @updatedAt
   syncedAt      DateTime @default(now())
 
+  stagedMarker WasteStagedSchedule?
+  revisions    WasteScheduleRevision[]
+
   @@unique([city, district, sourceId])
   @@index([city, district])
   // 실제 인덱스는 ngram 파서로 생성됨(scripts/applyFulltextNgram.ts) — 선언은 db push의 드랍 방지용
   @@fulltext([targetRegion, emissionPlace])
+}
+
+model WasteStagedSchedule {
+  scheduleId Int           @id
+  schedule   WasteSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+}
+
+model WastePublication {
+  id                 Int              @id @default(1)
+  activeGenerationId String?
+  updatedAt          DateTime         @default(now()) @updatedAt
+  activeGeneration   WasteGeneration? @relation(fields: [activeGenerationId], references: [id])
+}
+
+model WasteGeneration {
+  id                String                  @id @db.VarChar(36)
+  baseGenerationId  String?                 @db.VarChar(36)
+  status            WasteGenerationStatus
+  referenceVersion  String                  @db.VarChar(128)
+  inputHash         String                  @db.VarChar(64)
+  reportHash        String                  @db.VarChar(64)
+  sourceComplete    Boolean
+  createdAt         DateTime                @default(now())
+  publishedAt       DateTime?
+  baseGeneration    WasteGeneration?        @relation("WasteGenerationBase", fields: [baseGenerationId], references: [id])
+  derivedGenerations WasteGeneration[]      @relation("WasteGenerationBase")
+  publications       WastePublication[]
+  areaEntries        WasteAreaEntry[]
+  areaRelations      WasteAreaRelation[]
+  revisions          WasteScheduleRevision[]
+
+  @@index([baseGenerationId])
+  @@index([status])
+  @@index([inputHash])
+}
+
+model WasteArea {
+  id        Int                 @id @default(autoincrement())
+  kind      WasteAreaKind
+  code      String              @db.VarChar(20)
+  entries   WasteAreaEntry[]
+  relations WasteAreaRelation[] @relation("WasteArea")
+
+  @@unique([kind, code])
+}
+
+model WasteAreaEntry {
+  generationId       String               @db.VarChar(36)
+  areaId             Int
+  level              WasteAreaLevel
+  city               String               @db.VarChar(50)
+  district           String               @db.VarChar(50)
+  districtCode       String               @db.VarChar(20)
+  name               String               @db.VarChar(100)
+  validFrom          DateTime             @db.Date
+  validTo            DateTime?            @db.Date
+  evidence           Json
+  indexEligible      Boolean              @default(false)
+  indexReason        String?              @db.VarChar(255)
+  contentFingerprint String               @db.VarChar(64)
+  contentUpdatedAt   DateTime
+  generation         WasteGeneration      @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  area               WasteArea            @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  fromRelations      WasteAreaRelation[]  @relation("WasteAreaRelationFrom")
+  toRelations        WasteAreaRelation[]  @relation("WasteAreaRelationTo")
+  coverages          WasteScheduleCoverage[]
+
+  @@id([generationId, areaId])
+  @@index([generationId, city, district, name])
+}
+
+model WasteAreaRelation {
+  generationId String          @db.VarChar(36)
+  relationKey  String          @db.VarChar(64)
+  fromAreaId   Int?
+  alias        String?         @db.VarChar(100)
+  toAreaId     Int
+  evidence     Json
+  validFrom    DateTime        @db.Date
+  validTo      DateTime?       @db.Date
+  generation   WasteGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade, map: "WasteAreaRelation_generationId_fkey")
+  fromEntry    WasteAreaEntry? @relation("WasteAreaRelationFrom", fields: [generationId, fromAreaId], references: [generationId, areaId], onDelete: NoAction, onUpdate: NoAction, map: "WasteAreaRelation_fromEntry_fkey")
+  toEntry      WasteAreaEntry  @relation("WasteAreaRelationTo", fields: [generationId, toAreaId], references: [generationId, areaId], onDelete: NoAction, onUpdate: NoAction, map: "WasteAreaRelation_toEntry_fkey")
+  toArea       WasteArea       @relation("WasteArea", fields: [toAreaId], references: [id], onDelete: Cascade)
+
+  @@id([generationId, relationKey])
+  @@index([generationId, fromAreaId])
+  @@index([generationId, toAreaId])
+}
+
+model WasteScheduleRevision {
+  generationId        String                  @db.VarChar(36)
+  scheduleId          Int
+  city                String                  @db.VarChar(50)
+  district            String                  @db.VarChar(50)
+  sourceId            String                  @db.VarChar(100)
+  targetRegion        String?                 @db.Text
+  emissionPlace       String?                 @db.VarChar(100)
+  details             Json?
+  sourceUrl           String?                 @db.VarChar(500)
+  govCode             String?                 @db.VarChar(20)
+  rawPayload          Json?
+  provenance          WasteScheduleProvenance
+  contentHash         String                  @db.VarChar(64)
+  sourceModifiedAt    DateTime?
+  observedAt          DateTime
+  contentUpdatedAt    DateTime
+  state               WasteRevisionState
+  missingCompleteRuns Int
+  terminationEvidence Json?
+  generation          WasteGeneration         @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  schedule            WasteSchedule           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  coverages           WasteScheduleCoverage[]
+
+  @@id([generationId, scheduleId])
+  @@index([generationId, city, district, state])
+  @@index([scheduleId])
+}
+
+model WasteScheduleCoverage {
+  generationId  String                @db.VarChar(36)
+  scheduleId    Int
+  coverageKey   String                @db.VarChar(64)
+  areaId        Int?
+  districtCode  String?               @db.VarChar(20)
+  scope         WasteCoverageScope
+  conditionText String                @db.Text
+  state         WasteMatchState
+  reason        String                @db.VarChar(255)
+  evidence      Json
+  revision      WasteScheduleRevision @relation(fields: [generationId, scheduleId], references: [generationId, scheduleId], onDelete: Cascade)
+  areaEntry     WasteAreaEntry?       @relation(fields: [generationId, areaId], references: [generationId, areaId], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([generationId, scheduleId, coverageKey])
+  @@index([generationId, areaId, state])
+  @@index([generationId, districtCode, state])
 }
 
 // 병원 테이블
@@ -1472,6 +1653,85 @@ model RealEstateBuildingSummary {
   @@index([type, lat, lng])
 }
 
+model RealEstateBuildingSummaryV2 {
+  id               Int      @id @default(autoincrement())
+  type             String   @db.VarChar(20)
+  buildingKey      String   @db.Char(64)
+  buildingName     String   @db.VarChar(200)
+  bjdCode          String   @db.VarChar(10)
+  city             String   @db.VarChar(50)
+  district         String   @db.VarChar(50)
+  dongName         String   @db.VarChar(50)
+  jibun            String?  @db.VarChar(20)
+  latestPrice      BigInt?
+  latestDealYear   Int?
+  latestDealMonth  Int?
+  /// 사이트맵 lastmod 가 일(day)까지 쓰므로 저장한다. 없으면 356,461개 URL 의 lastmod 가
+  /// 일제히 월초로 바뀐다. refresh 쿼리는 이미 dealDay 로 정렬해 대표 행을 고르고 있었고
+  /// 값만 버리고 있었다. NULL 이면 소비처에서 COALESCE(.,1) — 원본 dealDay 가 NULL 일 때와 같다.
+  latestDealDay    Int?
+  buildYear        Int?
+  lat              Decimal? @db.Decimal(10, 7)
+  lng              Decimal? @db.Decimal(10, 7)
+  transactionCount Int      @default(0)
+  /// 전월세 타입의 최신 거래 월세액. 매매 타입은 항상 NULL.
+  ///
+  /// latestPrice 는 매매면 dealAmount, 전월세면 deposit(보증금)이라 월세가 담기지 않았다.
+  /// 그래서 인근 단지 rent 경로가 summary 를 못 쓰고 320만 행 거래 테이블에
+  /// ROW_NUMBER() 윈도우를 돌렸고, 야간 sync 부하와 겹치면 30초 타임아웃이 났다
+  /// (2026-08-03 03:45~04:15 KST: 평균 8.08s, 타임아웃 21건, 5xx 27건 중 22건이 rent).
+  monthlyRent      Int?
+  /// 최신 전세 보증금(만원). 매매 타입과 전세 거래가 없는 건물은 NULL.
+  ///
+  /// latestPrice/monthlyRent 는 rentType 을 가리지 않은 "가장 최근 거래 1건" 이라
+  /// 그 거래가 월세였으면 같은 건물의 전세 시세가 어디에도 남지 않았다.
+  /// 운영 실측(강남구 2026): 전월세 건물 23,774개 중 12,237개(51%)가 두 종류를 모두
+  /// 가지고 있는데 지도에는 하나만 보였다.
+  jeonseDeposit    Int?
+  /// 위 거래일 YYYYMMDD. 현재 화면에 쓰지 않는다 — 표시 전환이나 신선도 정책의 여지를 남긴다.
+  jeonseDealKey    Int?
+  /// 최신 월세 보증금(만원). 매매 타입과 월세 거래가 없는 건물은 NULL.
+  wolseDeposit     Int?
+  /// 위 거래의 월세액(만원).
+  wolseMonthlyRent Int?
+  /// 위 거래일 YYYYMMDD.
+  wolseDealKey     Int?
+  updatedAt        DateTime @updatedAt
+
+  @@unique([type, buildingKey])
+  @@index([type, transactionCount])
+  @@index([type, city, district, transactionCount])
+  @@index([type, buildingName])
+  /// 인근 단지(getNearbyByBjd sale 경로) 전용.
+  /// 쿼리는 WHERE type=? AND bjdCode=? ORDER BY latestDealYear DESC, latestDealMonth DESC,
+  /// transactionCount DESC LIMIT 4 인데, 위 인덱스들 중 bjdCode 를 접두로 쓸 수 있는 게 없어
+  /// (unique 의 buildingName 이 등치 조건이 아니라 막힌다) MySQL 이 type 만으로 접근했다.
+  /// 실측: rows=70,002 스캔 + Using filesort, 3종 합계 57ms.
+  /// 이 인덱스로 (type,bjdCode) 범위 접근 + 정렬까지 인덱스가 만족 → Backward index scan, 0.8ms.
+  /// (정렬이 전부 DESC 라 ASC 인덱스를 역방향으로 읽으면 된다. dongName 필터가 붙어도 유지된다.)
+  @@index([type, bjdCode, latestDealYear, latestDealMonth, transactionCount])
+  /// 지도 뷰포트(bbox) 조회 전용.
+  ///
+  /// ⚠️ 이 인덱스만 추가하면 효과가 없다. ORDER BY transactionCount DESC LIMIT N 이
+  /// 붙으면 옵티마이저가 filesort 를 피하려고 type_transactionCount_idx 역방향 스캔을
+  /// 고르는데, 실제로는 그쪽이 훨씬 비싸다.
+  /// 실측(villa-rent 16만행, 희소 뷰포트): 자연 선택 232ms(스캔 182,317행) vs
+  /// FORCE INDEX 11ms(스캔 31,748행) — 21배.
+  /// 따라서 조회는 realEstateMapService 에서 FORCE INDEX 힌트를 건 $queryRaw 로 한다.
+  @@index([type, lat, lng])
+}
+
+model RealEstateSummaryState {
+  id                Int       @id
+  status            String    @db.VarChar(20)
+  runId             String    @db.VarChar(64)
+  sourceFingerprint String    @db.Char(64)
+  report            Json
+  validatedAt       DateTime?
+  updatedAt         DateTime  @updatedAt
+}
+
+
 // 청약 분양정보
 model Subscription {
   id                  Int       @id @default(autoincrement())
@@ -1483,6 +1743,10 @@ model Subscription {
   houseDetailType     String?   @db.VarChar(20) // 민영, 국민
   rentType            String?   @db.VarChar(20) // 분양주택, 임대주택
   publicRentType      String?   @db.VarChar(20) // 영구임대|국민임대|장기전세|공공임대|행복주택|역세권청년주택|재개발임대
+  // 마이홈/LH 공고의 출처 식별자, 정정 연결, 지역·단지별 공급정보. 금액은 원 단위.
+  publicRental        Json?
+  // 뒤늦게 동일 공고임이 확인된 경우 기존 상세 URL은 유지하고 대표 공고로 연결한다.
+  supersededById      Int?
   regionName          String    @db.VarChar(100)
   supplyLocation      String?   @db.VarChar(500)
   supplyZipCode       String?   @db.VarChar(10)
@@ -1530,6 +1794,7 @@ model Subscription {
   @@index([status])
   @@index([announcementDate])
   @@index([regionName])
+  @@index([supersededById])
 }
 
 model SubscriptionUnitType {

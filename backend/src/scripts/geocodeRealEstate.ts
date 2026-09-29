@@ -1,7 +1,11 @@
 #!/usr/bin/env tsx
 // @TASK Phase2-8 - 카카오 Geocoding 좌표 보강 스크립트
 
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 import { PrismaClient } from '@prisma/client';
+import { installRuntimeGuard } from './_runtimeGuard.js';
+import { withRealEstateWriteLock } from '../utils/realEstateWriteLock.js';
 
 export interface UniqueBuilding {
   buildingName: string;
@@ -290,6 +294,7 @@ export async function updateBuildingCoordinates(
   building: UniqueBuilding,
   coords: Coordinates
 ): Promise<number> {
+  return withRealEstateWriteLock('updateBuildingCoordinates', async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const model = (prisma as any)[table];
   const result = await model.updateMany({
@@ -297,6 +302,8 @@ export async function updateBuildingCoordinates(
     data: { lat: coords.lat, lng: coords.lng, geocodedAt: new Date() },
   });
   return result.count;
+
+  });
 }
 
 /**
@@ -307,11 +314,14 @@ export async function markGeocodeAttempted(
   table: RealEstateTable,
   building: UniqueBuilding,
 ): Promise<void> {
+  return withRealEstateWriteLock('markGeocodeAttempted', async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const model = (prisma as any)[table];
   await model.updateMany({
     where: { buildingName: building.buildingName, bjdCode: building.bjdCode, lat: null },
     data: { geocodedAt: new Date() },
+  });
+
   });
 }
 
@@ -357,9 +367,12 @@ export async function copyCoordsWithinTable(
   prisma: PrismaClient,
   table: RealEstateTable,
 ): Promise<number> {
+  return withRealEstateWriteLock('copyCoordsWithinTable', async () => {
   const targets = await getBuildingsNeedingCoords(prisma, table);
   if (targets.length === 0) return 0;
   return copyCoordsFor(prisma, table, table, targets);
+
+  });
 }
 
 /**
@@ -370,12 +383,15 @@ export async function copyCoordsFromSibling(
   prisma: PrismaClient,
   table: RealEstateTable,
 ): Promise<number> {
+  return withRealEstateWriteLock('copyCoordsFromSibling', async () => {
   const sibling = SIBLING_TABLE[table];
   if (!sibling) return 0;
 
   const targets = await getBuildingsNeedingCoords(prisma, table);
   if (targets.length === 0) return 0;
   return copyCoordsFor(prisma, table, sibling, targets);
+
+  });
 }
 
 // 하위 호환
@@ -388,6 +404,7 @@ export function parseKakaoCoordinates(response: KakaoResponse): Coordinates | nu
 }
 
 export async function processTable(prisma: PrismaClient, table: RealEstateTable): Promise<void> {
+  return withRealEstateWriteLock('processTable', async () => {
   // 0) 사전 복사 단계 — 카카오 호출 없이 '알려진 건물' 좌표 채우기
   console.info(`\n[${table}] 같은 테이블 좌표 복사 중...`);
   const copiedSame = await copyCoordsWithinTable(prisma, table);
@@ -430,6 +447,8 @@ export async function processTable(prisma: PrismaClient, table: RealEstateTable)
 
   const rate = buildings.length > 0 ? ((successCount / buildings.length) * 100).toFixed(1) : '0';
   console.info(`[${table}] 완료 — 성공: ${successCount}, 실패: ${failCount} (${rate}%)`);
+
+  });
 }
 
 async function main(): Promise<void> {
@@ -453,14 +472,11 @@ async function main(): Promise<void> {
   }
 }
 
-import { fileURLToPath } from 'url';
-import { resolve } from 'path';
-import { installRuntimeGuard } from './_runtimeGuard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
   installRuntimeGuard({ maxMinutes: 45, name: 'geocodeRealEstate' });
-  main().catch((error) => {
+  withRealEstateWriteLock('geocodeRealEstate', main).catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
   });

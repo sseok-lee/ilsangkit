@@ -133,9 +133,11 @@ export function useRealEstate() {
   async function getBuildingInfo(
     type: RealEstateType,
     bjdCode: string,
-    buildingName: string
+    buildingName: string,
+    buildingKey?: string,
   ): Promise<BuildingInfo | null> {
     const query = new URLSearchParams({ bjdCode, buildingName })
+    if (buildingKey) query.set('buildingKey', buildingKey)
 
     try {
       const res = await $fetch<{ success: boolean; data: BuildingInfo }>(

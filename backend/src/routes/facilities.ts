@@ -13,7 +13,9 @@ import {
   NearbyCountCategorySchema,
   type NearbyCountsInput,
 } from '../schemas/facility.js';
+import { FacilityBrowseSchema, type FacilityBrowseInput } from '../schemas/facilityBrowse.js';
 import * as facilityService from '../services/facilityService.js';
+import { browseFacilities } from '../services/facilityBrowseService.js';
 import type { FacilityCategory } from '../services/categoryRegistry.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError, GoneError } from '../lib/errors.js';
@@ -22,12 +24,36 @@ import { searchRateLimiter } from '../middlewares/rateLimit.js';
 
 const router = Router();
 
+function firstString(value: unknown): string | undefined {
+  if (Array.isArray(value)) return firstString(value[0]);
+  return typeof value === 'string' ? value : undefined;
+}
+
+function canIncludeWasteCategory(category: unknown): boolean {
+  const normalized = firstString(category)?.trim();
+  return normalized === undefined || normalized === '' || normalized === 'trash';
+}
+
+function applyNoStoreIfWasteBearingSharedFacilityRequest(req: Request, res: Response): void {
+  const category = req.method === 'GET' ? req.query.category : req.body?.category;
+  if (canIncludeWasteCategory(category)) {
+    res.set('Cache-Control', 'no-store');
+  }
+}
+
+function applyNoStoreIfWasteBearingCategory(category: unknown, res: Response): void {
+  if (canIncludeWasteCategory(category)) {
+    res.set('Cache-Control', 'no-store');
+  }
+}
+
 // POST /api/facilities/search
 router.post(
   '/search',
   searchRateLimiter, // Apply stricter rate limit for search endpoint
   validate(FacilitySearchSchema, 'body'),
   asyncHandler(async (req: Request, res: Response) => {
+    applyNoStoreIfWasteBearingSharedFacilityRequest(req, res);
     if (req.body.grouped) {
       const result = await facilityService.searchGrouped(req.body);
       res.json({ success: true, data: result });
@@ -35,6 +61,18 @@ router.post(
     }
     const result = await facilityService.search(req.body);
     res.json({ success: true, data: result });
+  })
+);
+
+// GET /api/facilities/browse
+router.get(
+  '/browse',
+  searchRateLimiter,
+  validate(FacilityBrowseSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    applyNoStoreIfWasteBearingSharedFacilityRequest(req, res);
+    const data = await browseFacilities(req.query as unknown as FacilityBrowseInput);
+    res.json({ success: true, data });
   })
 );
 
@@ -74,6 +112,7 @@ router.get(
     query: RegionFacilitiesQuerySchema,
   }),
   asyncHandler(async (_req: Request, res: Response) => {
+    res.set('Cache-Control', 'no-store');
     const { params, query } = res.locals.validated as {
       params: { city: string; district: string };
       query: { page: number; limit: number };
@@ -102,6 +141,7 @@ router.get(
     const { city, district, category } = params;
     const { page, limit, departments } = query;
 
+    applyNoStoreIfWasteBearingCategory(category, res);
     const result = await facilityService.getByRegion(city, district, category, { page, limit, departments });
     res.json({ success: true, data: result });
   })

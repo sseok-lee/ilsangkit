@@ -147,9 +147,9 @@ export const REAL_ESTATE_DATASETS: DataSourceInfo[] = [
 ]
 
 export const SUBSCRIPTION_DATA_SOURCE: DataSourceInfo = {
-  datasetName: '한국부동산원_청약Home 청약정보 API',
-  provider: '한국부동산원',
-  url: 'https://www.applyhome.co.kr',
+  datasetName: '청약Home·마이홈·LH 청약·공공임대 공고',
+  provider: '한국부동산원·국토교통부·한국토지주택공사',
+  url: 'https://www.data.go.kr',
 }
 
 export const AUCTION_DATA_SOURCE: DataSourceInfo = {

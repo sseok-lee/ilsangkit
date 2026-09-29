@@ -2,7 +2,8 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 // ⚠️ buildRegionFilter는 src/services/cityMapping.ts에 있음 (landService.ts:2와 동일 — '../lib/' 아님!)
-import { buildRegionFilter } from './cityMapping.js';
+import { buildRegionFilter, cityVariantList } from './cityMapping.js';
+import { escapeSqlLikeKeyword, containsSqlLikeKeyword } from './search/sqlLike.js';
 
 const PYEONG_PER_SQM = 3.305;
 
@@ -100,17 +101,53 @@ function serializeRow<T extends Record<string, any>>(row: T): any {
   return out;
 }
 
+export type AuctionStatusMode = 'legacy' | 'exact';
 export interface ItemsParams {
-  city?: string; district?: string; usage?: string; status?: string;
+  city?: string; district?: string; usage?: string;
+  status?: 'ongoing' | 'scheduled' | 'negotiable' | 'closed' | 'sold' | 'failed' | 'cancelled';
+  statusMode?: AuctionStatusMode;
+  keyword?: string;
   sort?: 'deadline' | 'apsl' | 'bidRate'; page: number; limit: number;
 }
+
+// Build both representations together so count and deadline ordering share each filter.
+function buildAuctionItemConditions(p: ItemsParams) {
+  const region = buildRegionFilter(p.city, p.district);
+  const where: Prisma.AuctionItemWhereInput = { ...region };
+  const sql: Prisma.Sql[] = [];
+  if (p.city) sql.push(Prisma.sql`city IN (${Prisma.join(cityVariantList(p.city))})`);
+  if (p.district) sql.push(Prisma.sql`district = ${p.district}`);
+  if (p.usage) {
+    where.usageGroup = p.usage;
+    sql.push(Prisma.sql`usageGroup = ${p.usage}`);
+  }
+  if (p.status) {
+    if (p.statusMode !== 'exact' && p.status === 'ongoing') {
+      where.status = { in: ['ongoing', 'scheduled'] };
+      sql.push(Prisma.sql`status IN ('ongoing', 'scheduled')`);
+    } else if (p.statusMode !== 'exact' && p.status === 'closed') {
+      where.OR = [{ isClosed: true }, { status: 'closed' }];
+      sql.push(Prisma.sql`(isClosed = true OR status = 'closed')`);
+    } else {
+      where.status = p.status;
+      sql.push(Prisma.sql`status = ${p.status}`);
+    }
+  }
+  if (p.keyword) {
+    const contains = escapeSqlLikeKeyword(p.keyword);
+    const keywordOr = [{ address: { contains } }, { usage: { contains } }, { cltrMngNo: { contains } }];
+    if (where.OR) {
+      where.AND = [{ OR: where.OR }, { OR: keywordOr }];
+      delete where.OR;
+    } else where.OR = keywordOr;
+    const pattern = containsSqlLikeKeyword(p.keyword);
+    sql.push(Prisma.sql`(address LIKE ${pattern} OR \`usage\` LIKE ${pattern} OR cltrMngNo LIKE ${pattern})`);
+  }
+  return { where, whereSql: sql.length ? Prisma.sql`WHERE ${Prisma.join(sql, ' AND ')}` : Prisma.empty };
+}
+
 export async function getItems(p: ItemsParams) {
-  const where: Record<string, any> = { ...buildRegionFilter(p.city, p.district) };
-  if (p.usage) where.usageGroup = p.usage;
-  if (p.status === 'ongoing') where.status = { in: ['ongoing', 'scheduled'] };
-  else if (p.status === 'negotiable') where.status = 'negotiable';
-  // 마감: close-capture로 확정된 낙찰/유찰/취소(isClosed=true) + API가 직접 '입찰마감'으로 준 것(status='closed')
-  else if (p.status === 'closed') where.OR = [{ isClosed: true }, { status: 'closed' }];
+  const { where, whereSql } = buildAuctionItemConditions(p);
   const skip = (p.page - 1) * p.limit;
 
   // 명시적 정렬(감정가·낙찰가율)은 단순 컬럼 정렬 — Prisma orderBy 그대로.
@@ -127,21 +164,6 @@ export async function getItems(p: ItemsParams) {
   // (bidCloseDtm asc, null은 뒤). 기존 'bidCloseDtm asc'는 null(예정·수의계약)을 최상단에 올려
   // 진행중 물건을 아래로 묻는 문제가 있었다. Prisma orderBy는 CASE를 못 쓰므로 정렬된 id만 raw로
   // 뽑고, 실제 행은 Prisma findMany로 조회해 Decimal/BigInt 직렬화(serializeRow)를 보존한다.
-  const conds: Prisma.Sql[] = [];
-  const rf = buildRegionFilter(p.city, p.district) as { city?: unknown; district?: string };
-  if (rf.city != null) {
-    if (typeof rf.city === 'object' && 'in' in (rf.city as Record<string, unknown>)) {
-      conds.push(Prisma.sql`city IN (${Prisma.join((rf.city as { in: string[] }).in)})`);
-    } else {
-      conds.push(Prisma.sql`city = ${rf.city as string}`);
-    }
-  }
-  if (rf.district) conds.push(Prisma.sql`district = ${rf.district}`);
-  if (p.usage) conds.push(Prisma.sql`usageGroup = ${p.usage}`);
-  if (p.status === 'ongoing') conds.push(Prisma.sql`status IN ('ongoing', 'scheduled')`);
-  else if (p.status === 'negotiable') conds.push(Prisma.sql`status = 'negotiable'`);
-  else if (p.status === 'closed') conds.push(Prisma.sql`(isClosed = true OR status = 'closed')`);
-  const whereSql = conds.length ? Prisma.sql`WHERE ${Prisma.join(conds, ' AND ')}` : Prisma.empty;
 
   const [total, idRows] = await Promise.all([
     prisma.auctionItem.count({ where }),
@@ -156,7 +178,7 @@ export async function getItems(p: ItemsParams) {
           ELSE 3
         END,
         (bidCloseDtm IS NULL),
-        bidCloseDtm ASC
+        bidCloseDtm ASC, id ASC
       LIMIT ${p.limit} OFFSET ${skip}
     `,
   ]);
@@ -234,10 +256,14 @@ export async function getHubSummary() {
   return { totalActive, totalSold, regionCount: new Set(summaries.map((s) => s.bjdCode)).size };
 }
 
-export interface RankingParams { usage?: string; order: 'high' | 'low' | 'count'; limit: number; }
+export interface RankingParams { keyword?: string; usage?: string; order: 'high' | 'low' | 'count'; limit: number; }
 export async function getRanking(p: RankingParams) {
   const where: Record<string, any> = { isIndexable: true, soldCount: { gte: 3 }, avgBidRate: { not: null } };
   if (p.usage) where.usageGroup = p.usage;
+  if (p.keyword) {
+    const contains = escapeSqlLikeKeyword(p.keyword);
+    where.OR = [{ city: { contains } }, { district: { contains } }];
+  }
   const orderBy = p.order === 'count' ? { soldCount: 'desc' as const } : { avgBidRate: p.order === 'high' ? 'desc' as const : 'asc' as const };
   const rows = await prisma.auctionAreaSummary.findMany({
     where, orderBy, take: p.limit,

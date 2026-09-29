@@ -409,4 +409,79 @@ describe('TransactionTable', () => {
       expect(wrapper.html()).not.toContain('text-primary-500')
     })
   })
+
+  describe('상세 화면 표현', () => {
+    it('presentation을 지정하지 않으면 기존 모바일 카드를 유지한다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: mockSaleTransactions, type: 'sale', loading: false },
+      })
+
+      expect(wrapper.find('details').exists()).toBe(false)
+      expect(wrapper.text()).toContain('평당')
+    })
+
+    it('detail 표현에서는 모바일에서 날짜와 금액을 먼저 보여주고 나머지는 details에 둔다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: {
+          transactions: [
+            {
+              ...mockSaleTransactions[0],
+              floor: 0,
+              dealAmount: 123456789,
+            },
+          ],
+          type: 'sale',
+          loading: false,
+          presentation: 'detail',
+        },
+      })
+
+      const detailCard = wrapper.get('[data-testid="detail-transaction-card"]')
+      expect(detailCard.text()).toContain('24.03.15')
+      expect(detailCard.text()).toContain('1만 2345억 6,789만원')
+      expect(detailCard.get('details').text()).toContain('0층')
+      expect(detailCard.get('details').text()).toContain('전용 84.5㎡')
+      expect(detailCard.get('details').text()).toContain('중개거래')
+    })
+
+    it('detail 표현이어도 loading=true이면 거래 카드를 표시하지 않는다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: {
+          transactions: mockSaleTransactions,
+          type: 'sale',
+          loading: true,
+          presentation: 'detail',
+        },
+      })
+
+      expect(wrapper.find('[data-testid="skeleton-card"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="detail-transaction-card"]').exists()).toBe(false)
+    })
+
+    it('detail 표현에서 월세 120만원과 0 보증금을 표시한다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: {
+          transactions: [
+            {
+              ...mockRentTransactions[0],
+              deposit: 0,
+              monthlyRent: 120,
+              floor: null,
+            },
+          ],
+          type: 'rent',
+          loading: false,
+          presentation: 'detail',
+        },
+      })
+
+      const detailCard = wrapper.get('[data-testid="detail-transaction-card"]')
+      expect(detailCard.text()).toContain('0만원 / 120만원')
+      expect(detailCard.get('details').text()).toContain('층 정보 없음')
+      expect(detailCard.get('details').text()).toContain('전용 84.5㎡')
+      expect(detailCard.get('details').text()).toContain('갱신')
+      expect(detailCard.get('details').text()).toContain('이전 4,500만원 / 180만원')
+      expect(detailCard.get('details').text()).toContain('계약 24개월')
+    })
+  })
 })

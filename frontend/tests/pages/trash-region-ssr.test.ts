@@ -22,22 +22,43 @@ const frontendRoot = process.cwd().endsWith('/frontend')
 const trashDetail = readFileSync(resolve(frontendRoot, 'pages/trash/[id].vue'), 'utf8')
 const regionCategory = readFileSync(resolve(frontendRoot, 'pages/[city]/[district]/[category].vue'), 'utf8')
 
-describe('/trash/{id} → 구·군 집계 301', () => {
-  it('301 목적지에 쿼리를 붙이지 않는다 (경로 문자열만 전달)', () => {
-    expect(trashDetail).toContain('await navigateTo(trashRegionPath.value, { redirectCode: 301 })')
+describe('/trash/{id} 원본 상세 문서', () => {
+  it('소스 상세 URL은 301 없이 직접 SSR 문서로 유지한다', () => {
+    expect(trashDetail).not.toContain('redirectCode: 301')
+    expect(trashDetail).not.toContain('await navigateTo(trashRegionPath.value')
+    expect(trashDetail).toContain('원본 배출 일정')
   })
 
-  it('schedule 쿼리를 리다이렉트 목적지에 되붙이지 않는다 (회귀 핵심)', () => {
-    // 과거 구현: navigateTo({ path, query: { schedule: String(scheduleId.value) } }, ...)
+  it('원본 상세는 noindex/follow만 출력하고 canonical이나 schedule 쿼리를 되붙이지 않는다', () => {
+    expect(trashDetail).toContain("{ name: 'robots', content: 'noindex, follow'")
+    expect(trashDetail).not.toContain("rel: 'canonical'")
     expect(trashDetail).not.toMatch(/query:\s*\{\s*schedule/)
   })
 
-  it('301 코드를 유지한다 (302 로 약화 금지 — 색인 통합 신호)', () => {
-    expect(trashDetail).toContain('redirectCode: 301')
+  it('legacy #from 과 trusted navigation state 로 돌아갈 목록 맥락을 복원한다', () => {
+    expect(trashDetail).toContain('consumeLegacyTrashFromFragment')
+    expect(trashDetail).toContain('readTrashReturnContext')
   })
 })
 
 describe('구·군 trash 집계 페이지 SSR', () => {
+  it('flag-on 동별 목록은 area API를 useAsyncData key/dedupe로 로드한다', () => {
+    expect(regionCategory).toContain('<WasteAreaList')
+    expect(regionCategory).toContain('wasteAreaRequestKey(wasteAreaQuery.value)')
+    expect(regionCategory).toContain("dedupe: 'cancel'")
+    expect(regionCategory).toContain('wasteAreas.list(wasteAreaQuery.value)')
+  })
+
+  it('경로 city/district와 query가 충돌하면 400으로 처리한다', () => {
+    expect(regionCategory).toContain('경로 지역과 city query가 충돌합니다')
+    expect(regionCategory).toContain('경로 지역과 district query가 충돌합니다')
+  })
+
+  it('area mode에서는 legacy source 목록 SSR을 호출하지 않고 unresolved mode만 source로 남긴다', () => {
+    expect(regionCategory).toContain("wasteAreaDiscoveryEnabled && wasteAreaQuery.value.coverage !== 'unresolved'")
+    expect(regionCategory).toContain('/api/waste-schedules')
+  })
+
   it('배출 일정 목록을 useAsyncData 로 SSR 로드한다', () => {
     expect(regionCategory).toMatch(/useAsyncData\(\s*\n?\s*`waste-region-/)
     expect(regionCategory).toContain('transformToRegionSchedules(res.data)')
@@ -66,7 +87,7 @@ describe('구·군 trash 집계 페이지 SSR', () => {
   })
 
   it('클라이언트 재조회 시 SSR 데이터를 소비 처리한다', () => {
-    expect(regionCategory).toMatch(/async function loadWasteSchedules\(\)\s*\{\s*\n\s*wasteSsrConsumed\.value = true/)
+    expect(regionCategory).toMatch(/async function loadWasteSchedules\(\)[\s\S]*?wasteSsrConsumed\.value = true/)
   })
 
   it('noindex 판정이 SSR 반영 값을 읽는다 — 클라이언트 전용 ref 금지 (전 trash 지역 noindex 회귀)', () => {

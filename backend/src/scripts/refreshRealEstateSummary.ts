@@ -1,13 +1,21 @@
-import { refreshAllSummaries } from '../services/realEstateSummaryService.js';
+import { refreshSummariesForActiveMode } from '../services/realEstateSummaryService.js';
+import { readSummaryMode } from '../lib/realEstateSummaryStore.js';
+import { TABLE_NAME_MAP, type RealEstateType } from '../services/realEstateService.js';
 import { prisma } from '../lib/prisma.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 
 installRuntimeGuard({ maxMinutes: 30, name: 'refreshSummary', prisma });
 
 const start = Date.now();
-console.info('[Summary] Starting full refresh...');
+const mode = readSummaryMode(process.env);
+console.info(`[Summary] Starting full refresh in ${mode} mode...`);
 
-const { done, failed, total } = await refreshAllSummaries();
+const types = Object.keys(TABLE_NAME_MAP) as RealEstateType[];
+const result = await refreshSummariesForActiveMode(types);
+const failedSet = new Set(result.batches.filter((batch) => batch.status === 'failed').map((batch) => batch.type as RealEstateType));
+const done = types.filter((type) => !failedSet.has(type));
+const failed = types.filter((type) => failedSet.has(type));
+const total = types.length;
 
 // 완주 여부를 한 줄로 남긴다. 종전에는 타입별 성공 로그만 있어서, 뒤쪽 타입이
 // 아예 안 돌았을 때 "없는 줄" 을 눈치채야 알 수 있었다 — 아무도 못 봤다.

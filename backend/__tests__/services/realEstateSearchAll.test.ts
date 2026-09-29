@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ─── Prisma mock ────────────────────────────────────────────────────────────
-const { mockGroupBy, mockCount, mockSummaryFindMany, mockQueryRawUnsafe } = vi.hoisted(() => ({
+const { mockGroupBy, mockCount, mockSummaryFindMany, mockQueryRawUnsafe, mockGetLatestDeals } = vi.hoisted(() => ({
   mockGroupBy: vi.fn(),
   mockCount: vi.fn(),
   mockSummaryFindMany: vi.fn(),
   mockQueryRawUnsafe: vi.fn(),
+  mockGetLatestDeals: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -38,13 +39,32 @@ vi.mock('../../src/services/search/searchRegionIndex.js', async (orig) => {
   };
 });
 
+vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/realEstateLatestDeals.js');
+  return {
+    ...actual,
+    getLatestDeals: mockGetLatestDeals,
+  };
+});
+
 import { searchAll } from '../../src/services/realEstateService.js';
+import { latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
+import type { BuildingKey, LatestDeals } from '../../src/types/realEstateExploration.js';
+
+function emptyLatestDeals(): LatestDeals {
+  return { sale: null, jeonse: null, wolse: null };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockGroupBy.mockResolvedValue([]);
   mockCount.mockResolvedValue(0);
   mockSummaryFindMany.mockResolvedValue([]);
+  mockGetLatestDeals.mockImplementation((keys: BuildingKey[]) => {
+    const bundles = new Map<string, LatestDeals>();
+    for (const key of keys) bundles.set(latestDealsKey(key), emptyLatestDeals());
+    return Promise.resolve(bundles);
+  });
   mockQueryRawUnsafe.mockImplementation((sql: string) => {
     const text = String(sql);
     if (text.includes('COUNT(DISTINCT')) return Promise.resolve([{ c: 0n }]);
@@ -126,8 +146,9 @@ describe('searchAll (파서 연동)', () => {
       if (text.includes('COUNT(*)')) return Promise.resolve([{ total: 1n }]);
       if (type === 'apt-sale') {
         return Promise.resolve([{
+          buildingKey: 'key-ramian-1',
           buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
-          dongName: '역삼동', buildYear: 2010, latestDealYear: 2026, latestDealMonth: 5,
+          dongName: '역삼동', jibun: '123-1', buildYear: 2010, latestDealYear: 2026, latestDealMonth: 5,
           latestPrice: 150000n, transactionCount: 12,
         }]);
       }
@@ -139,7 +160,7 @@ describe('searchAll (파서 연동)', () => {
     const aptSale = res.categories.find((c) => c.type === 'apt-sale');
     // 응답 shape 불변: dealYear/dealAmount 키 유지, BigInt → Number 직렬화
     expect(aptSale!.items[0]).toMatchObject({
-      buildingName: '래미안강남', dongName: '역삼동',
+      buildingKey: 'key-ramian-1', buildingName: '래미안강남', dongName: '역삼동', jibun: '123-1',
       dealYear: 2026, dealMonth: 5, dealAmount: 150000, deposit: null, transactionCount: 12,
     });
   });
@@ -161,6 +182,58 @@ describe('searchAll (파서 연동)', () => {
     const res = await searchAll('래미안');
     const aptRent = res.categories.find((c) => c.type === 'apt-rent');
     expect(aptRent!.items[0]).toMatchObject({ dealAmount: null, deposit: 50000 });
+  });
+
+  it('미리보기 후보 합집합을 한 번만 all scope로 보완한다', async () => {
+    mockQueryRawUnsafe.mockImplementation((sql: string, type?: string) => {
+      const text = String(sql);
+      if (text.includes('COUNT(DISTINCT')) return Promise.resolve([{ c: 0n }]);
+      if (text.includes('COUNT(*)')) return Promise.resolve([{ total: 1n }]);
+      if (type === 'apt-sale') {
+        return Promise.resolve([{
+          buildingKey: 'key-ramian',
+          buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
+          dongName: '역삼동', jibun: '123-1', buildYear: 2010, latestDealYear: 2026, latestDealMonth: 5,
+          latestPrice: 150000n, transactionCount: 12,
+        }]);
+      }
+      if (type === 'apt-rent') {
+        return Promise.resolve([{
+          buildingKey: 'key-jamsil',
+          buildingName: '잠실엘스', bjdCode: '11710', city: '서울', district: '송파구',
+          dongName: '잠실동', jibun: '19', buildYear: 2008, latestDealYear: 2026, latestDealMonth: 6,
+          latestPrice: 90000n, transactionCount: 7,
+        }]);
+      }
+      return Promise.resolve([]);
+    });
+    mockGetLatestDeals.mockImplementation((keys: BuildingKey[]) => {
+      const bundles = new Map<string, LatestDeals>();
+      for (const key of keys) {
+        bundles.set(latestDealsKey(key), {
+          sale: key.buildingName === '래미안강남'
+            ? { kind: 'sale', amount: 150000, deposit: null, monthlyRent: null, exclusiveArea: 84.9, floor: 12, dealYear: 2026, dealMonth: 5, dealDay: 20 }
+            : null,
+          jeonse: null,
+          wolse: key.buildingName === '잠실엘스'
+            ? { kind: 'wolse', amount: null, deposit: 70000, monthlyRent: 250, exclusiveArea: 59.8, floor: 8, dealYear: 2026, dealMonth: 6, dealDay: 3 }
+            : null,
+        });
+      }
+      return Promise.resolve(bundles);
+    });
+
+    const res = await searchAll('래미안');
+
+    expect(mockGetLatestDeals).toHaveBeenCalledTimes(1);
+    expect(mockGetLatestDeals).toHaveBeenCalledWith([
+      { propertyType: 'apt', buildingName: '래미안강남', bjdCode: '11680', dongName: '역삼동', jibun: '123-1' },
+      { propertyType: 'apt', buildingName: '잠실엘스', bjdCode: '11710', dongName: '잠실동', jibun: '19' },
+    ], 'all');
+    const aptSale = res.categories.find((c) => c.type === 'apt-sale');
+    const aptRent = res.categories.find((c) => c.type === 'apt-rent');
+    expect(aptSale!.items[0]).toMatchObject({ latestDeals: { sale: { exclusiveArea: 84.9 }, jeonse: null } });
+    expect(aptRent!.items[0]).toMatchObject({ latestDeals: { wolse: { monthlyRent: 250 }, sale: null } });
   });
 
   it('latest 필드가 null이어도 응답 shape를 유지한다', async () => {
@@ -205,7 +278,7 @@ describe('searchAll (파서 연동)', () => {
     expect(mockGroupBy).not.toHaveBeenCalled();
     const distinctCall = mockQueryRawUnsafe.mock.calls.find((c) => String(c[0]).includes('COUNT(DISTINCT'));
     const sql = distinctCall![0] as string;
-    expect(sql).toContain('COUNT(DISTINCT buildingName, bjdCode)');
+    expect(sql).toContain('COUNT(DISTINCT buildingKey)');
     expect(sql).toContain('FROM RealEstateBuildingSummary');
     expect(sql).toContain('buildingName NOT REGEXP');
     // type IN (?, ?) — apt 묶음 두 타입이 파라미터로 바인딩된다
@@ -222,7 +295,7 @@ describe('searchAll (파서 연동)', () => {
     const previewCall = mockQueryRawUnsafe.mock.calls.find((c) => String(c[0]).includes('SELECT buildingName'));
     const sql = String(previewCall?.[0] ?? '');
     expect(sql).toContain('buildingName NOT REGEXP');
-    expect(sql).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC');
+    expect(sql).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC, bjdCode ASC');
   });
 
   it('freeText/지역이 없으면 buildingCounts는 0이고 raw SQL을 호출하지 않는다', async () => {

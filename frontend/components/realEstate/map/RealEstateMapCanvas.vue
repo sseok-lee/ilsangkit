@@ -1,5 +1,24 @@
 <template>
-  <div ref="container" class="w-full h-full bg-background-light" />
+  <div class="relative w-full h-full bg-background-light">
+    <div ref="container" class="w-full h-full" />
+    <div
+      v-if="loadError"
+      data-testid="map-canvas-error"
+      class="absolute inset-0 z-10 flex items-center justify-center bg-background-light/95 px-4"
+    >
+      <div class="max-w-sm rounded-lg border border-line bg-white p-4 text-center shadow-card">
+        <p class="text-sm font-semibold text-slate-900">지도를 불러오지 못했습니다</p>
+        <p class="mt-1 text-xs leading-relaxed text-slate-600">{{ loadError }}</p>
+        <button
+          type="button"
+          class="mt-3 min-h-[44px] rounded-lg bg-primary px-4 text-sm font-semibold text-white"
+          @click="retry"
+        >
+          다시 시도
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -20,14 +39,18 @@ const emit = defineEmits<{
   idle: [MapBounds, number, { lat: number; lng: number }]
   select: [MapItem]
   hover: [MapItem | null]
+  loaded: []
+  'load-error': [string]
 }>()
 
 // panTo 재진입 루프 가드용 — 위경도가 이 값 미만으로 차이나면 "이미 그 위치"로 간주한다.
 const CENTER_EPSILON = 1e-6
 
 const container = ref<HTMLElement | null>(null)
+const loadError = ref<string | null>(null)
 const { map, initMap, getBounds, getCenter, setCenter } = useKakaoMap()
 const { renderOverlays, clearOverlays } = useMapOverlays()
+let idleListenerAttached = false
 
 // Kakao 는 Mercator 투영이라 getBounds() sw/ne 의 산술평균은 지도의 실제 중심과 다르다
 // (위도가 갈릴수록 오차 커짐). 상위(onIdle)가 이 값으로 center 를 다시 설정 → 아래
@@ -43,25 +66,44 @@ function emitIdle(): void {
   emit('idle', { swLat: b.sw.lat, swLng: b.sw.lng, neLat: b.ne.lat, neLng: b.ne.lng }, map.value.getLevel(), c)
 }
 
-onMounted(async () => {
+async function initializeMap(): Promise<void> {
   // SDK 로드를 onNuxtReady 이후로 미뤄 좌측 SSR 목록이 LCP 를 잡게 한다.
   if (import.meta.server || !container.value) return
-  // onNuxtReady 는 Nuxt 자동 import 전역이지만 eslint.config 의 .vue 전역 allowlist에는
-  // 없다(이 태스크는 eslint.config 변경 범위 밖) — 명시 import(#app)는 vitest 모듈 해석이
-  // 안 되어 테스트가 깨진다. 억제 주석으로 해결한다.
-  // eslint-disable-next-line no-undef
-  await new Promise<void>((r) => onNuxtReady(() => r()))
-  // initMap 은 (container, { center, level }) 객체 인자를 받는다 — 위치 인자가 아니다
-  await initMap(container.value, { center: props.center, level: props.level })
-  if (!map.value) return
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const kakao = (window as any).kakao
-  kakao.maps.event.addListener(map.value, 'idle', emitIdle)
-  renderOverlays(map.value, props.items, {
-    onClick: (i) => emit('select', i),
-    onHover: (i) => emit('hover', i),
-  }, { type: props.type, selectedKey: props.selectedKey })
-  emitIdle()
+  try {
+    loadError.value = null
+    // onNuxtReady 는 Nuxt 자동 import 전역이지만 eslint.config 의 .vue 전역 allowlist에는
+    // 없다(이 태스크는 eslint.config 변경 범위 밖) — 명시 import(#app)는 vitest 모듈 해석이
+    // 안 되어 테스트가 깨진다. 억제 주석으로 해결한다.
+    // eslint-disable-next-line no-undef
+    await new Promise<void>((r) => onNuxtReady(() => r()))
+    // initMap 은 (container, { center, level }) 객체 인자를 받는다 — 위치 인자가 아니다
+    await initMap(container.value, { center: props.center, level: props.level })
+    if (!map.value) throw new Error('Kakao 지도 SDK를 초기화하지 못했습니다.')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const kakao = (window as any).kakao
+    if (!idleListenerAttached) {
+      kakao.maps.event.addListener(map.value, 'idle', emitIdle)
+      idleListenerAttached = true
+    }
+    renderOverlays(map.value, props.items, {
+      onClick: (i) => emit('select', i),
+      onHover: (i) => emit('hover', i),
+    }, { type: props.type, selectedKey: props.selectedKey })
+    emit('loaded')
+    emitIdle()
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Kakao 지도 SDK를 불러오지 못했습니다.'
+    loadError.value = message
+    emit('load-error', message)
+  }
+}
+
+async function retry(): Promise<void> {
+  await initializeMap()
+}
+
+onMounted(async () => {
+  await initializeMap()
 })
 
 watch(
@@ -137,10 +179,13 @@ watch(
 onBeforeUnmount(() => {
   if (import.meta.server) return
   clearOverlays()
-  if (map.value) {
+  if (map.value && idleListenerAttached) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kakao = (window as any).kakao
     kakao.maps.event.removeListener(map.value, 'idle', emitIdle)
+    idleListenerAttached = false
   }
 })
+
+defineExpose({ retry })
 </script>

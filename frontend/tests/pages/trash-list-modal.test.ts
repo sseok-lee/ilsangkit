@@ -7,13 +7,24 @@ const frontendRoot = process.cwd().endsWith('/frontend')
   : join(process.cwd(), 'frontend')
 const source = readFileSync(resolve(frontendRoot, 'pages/[category]/index.vue'), 'utf8')
 
-describe('/trash 목록 상세 모달 연결', () => {
-  it('카드 선택을 query 기반 상세 모달로 연결한다', () => {
-    expect(source).toContain('@select="openWasteSchedule"')
-    expect(source).toContain('<WasteScheduleDetailModal')
-    expect(source).toContain(':open="selectedWasteScheduleId !== null"')
-    expect(source).toContain('getScheduleDetail')
-    expect(source).toContain('route.query.schedule')
+describe('/trash 동별 목록 URL 탐색', () => {
+  it('flag-on 동별 목록은 shared list와 실제 URL을 사용한다', () => {
+    expect(source).toContain('<WasteAreaList')
+    expect(source).toContain(':href-for="wasteAreaPageHref"')
+    expect(source).toContain('@search="searchWasteAreas"')
+    expect(source).toContain('wasteAreaPathForQuery(route.path')
+  })
+
+  it('area mode는 Nuxt async-data key와 dedupe cancel로 query race를 막는다', () => {
+    expect(source).toContain('wasteAreaRequestKey(wasteAreaQuery.value)')
+    expect(source).toContain("dedupe: 'cancel'")
+    expect(source).toContain('watch: [wasteAreaQuery]')
+  })
+
+  it('기본 flag-off와 unresolved 원문 모드는 legacy source API를 유지한다', () => {
+    expect(source).toContain('runtimeConfig.public.wasteAreaDiscoveryEnabled === true')
+    expect(source).toContain("query.coverage !== 'unresolved'")
+    expect(source).toContain("'/api/waste-schedules'")
   })
 })
 

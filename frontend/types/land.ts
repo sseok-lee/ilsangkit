@@ -44,6 +44,18 @@ export interface LandRegionListResult {
   totalPages: number;
 }
 
+export interface LandFilterOptions {
+  jimok: string[]
+  landUse: string[]
+}
+
+export interface LandStatsMeta {
+  totalTransactions: number
+  sampleLimit: number
+  sampledTransactions: number
+  isSampleCapped: boolean
+}
+
 export interface LandRegionDetailResult {
   items: LandTransaction[];
   total: number;
@@ -55,9 +67,12 @@ export interface LandRegionDetailResult {
   landUseDistribution: Array<{ landUse: string; count: number }>;
   priceTimeline: LandTimelinePoint[];
   daeCount: number;
+  filterOptions: LandFilterOptions
+  statsMeta: LandStatsMeta
 }
 
 export interface LandTransactionsResult {
+  filterOptions: LandFilterOptions
   items: LandTransaction[];
   total: number;
   page: number;

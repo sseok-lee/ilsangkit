@@ -1,16 +1,16 @@
 <template>
   <header
     :class="[
-      'sticky top-0 z-50 px-4 md:px-6 h-14 lg:h-16',
-      'bg-background-light',
-      'border-b border-transparent',
+      'sticky top-0 z-50 h-16 px-5 lg:h-20 lg:px-8',
+      'bg-white',
+      'border-b border-line',
       'transition-colors duration-300',
       props.transparent ? 'bg-transparent border-transparent' : ''
     ]"
   >
     <div :class="['mx-auto flex h-full w-full items-center', props.wide ? '' : 'max-w-[1200px]']">
       <!-- Left: Back Button (if enabled) or Logo -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
         <button
           v-if="props.showBackButton"
           class="flex size-11 items-center justify-center rounded-full hover:bg-black/5 transition-colors text-strong"
@@ -21,16 +21,16 @@
         </button>
 
         <HardLink v-if="!props.showBackButton" to="/" class="flex items-center">
-          <img src="/icons/logo.webp" alt="일상킷" class="h-9 lg:h-12 w-auto shrink-0" width="91" height="36" />
+          <img src="/icons/logo.webp" alt="일상킷" class="h-10 w-auto shrink-0" width="91" height="36" />
         </HardLink>
         <span
           v-if="!props.showBackButton"
-          class="hidden lg:inline-flex items-center self-center pl-2.5 ml-1.5 border-l border-line-2 text-[11px] leading-none text-faint"
+          class="hidden xl:inline-flex items-center self-center pl-3 border-l border-line text-sm leading-none text-muted whitespace-nowrap"
         >{{ SITE_BRAND_LINE }}</span>
       </div>
 
       <!-- Center/Right: Desktop Navigation (single nav, fills remaining width) -->
-      <nav class="hidden lg:flex items-center flex-1 gap-1 ml-4">
+      <nav class="hidden xl:flex items-center flex-1 gap-2 ml-8">
         <!-- 좌측 로고와 우측 정렬 네비 클러스터 사이 여백 -->
         <div class="flex-1" aria-hidden="true"></div>
         <!-- 개별 드롭다운: NAV_LINK_GROUPS (부동산, 청약·임대) -->
@@ -44,7 +44,7 @@
           @focusout="handleDropdownFocusout($event, group.title)"
         >
           <button
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
+            class="flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-2 text-[15px] font-semibold text-ink hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
             aria-haspopup="true"
             :aria-expanded="activeDropdown === group.title"
             @click="toggleDropdown(group.title, $event)"
@@ -65,7 +65,7 @@
             <!-- v-show(v-if 아님): 링크를 SSR DOM에 항상 노출해 크롤러/사이트링크 후보로 잡히게 함. 시각적으로는 hover 전 display:none -->
             <div
               v-show="activeDropdown === group.title"
-              class="absolute top-full left-0 mt-1 min-w-[180px] bg-white rounded-xl shadow-lg border border-line-2 p-2 z-50"
+              class="absolute top-full left-0 mt-2 min-w-[196px] bg-white rounded-lg shadow-lg border border-line p-2 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
             >
@@ -86,7 +86,7 @@
                 </template>
                 <HardLink
                   :to="link.to"
-                  class="flex items-center px-3 py-2 rounded-lg hover:bg-background-light text-[15px] font-medium text-ink transition-colors"
+                  class="flex min-h-10 items-center px-3 py-2 rounded-md hover:bg-background-light text-[15px] font-medium text-ink transition-colors"
                   @click="closeDropdown"
                 >
                   {{ link.label }}
@@ -105,7 +105,7 @@
           @focusout="handleDropdownFocusout($event, '생활시설')"
         >
           <button
-            class="flex items-center gap-1.5 px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
+            class="flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-2 text-[15px] font-semibold text-ink hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
             aria-haspopup="true"
             :aria-expanded="activeDropdown === '생활시설'"
             @click="toggleDropdown('생활시설', $event)"
@@ -129,7 +129,7 @@
               data-testid="nav-mega-menu"
               role="region"
               aria-label="생활시설 메뉴"
-              class="absolute top-full right-0 mt-1 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-line-2 p-4 z-50"
+              class="absolute top-full right-0 mt-2 grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-lg shadow-lg border border-line p-5 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
             >
@@ -141,7 +141,7 @@
                   v-for="catId in group.categories"
                   :key="catId"
                   :to="`/${catId}`"
-                  class="flex items-center px-2 py-1.5 rounded-lg hover:bg-background-light text-[15px] font-medium text-ink transition-colors"
+                  class="flex min-h-9 items-center px-2 py-1.5 rounded-md hover:bg-background-light text-[15px] font-medium text-ink transition-colors"
                   @click="closeDropdown"
                 >
                   {{ CATEGORY_META[catId].shortLabel }}
@@ -152,20 +152,20 @@
         </div>
 
         <!-- 통합 검색창 (메가메뉴와 유틸리티 링크 사이 자체 영역) -->
-        <HeaderSearch variant="desktop" v-show="showHeaderSearch" class="w-48 lg:w-56" />
+        <HeaderSearch variant="desktop" v-show="showHeaderSearch" class="w-56 shrink-0 2xl:w-64" />
 
         <!-- Utility Links (우측 정렬 클러스터 내부) -->
-        <div class="flex items-center gap-1">
-          <div class="h-5 w-px bg-line-2 mx-1"></div>
+        <div class="flex shrink-0 items-center gap-1">
+          <div class="h-5 w-px bg-line mx-2"></div>
           <HardLink
             to="/guide"
-            class="flex items-center px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
+            class="flex min-h-11 items-center whitespace-nowrap px-2.5 py-2 text-[15px] font-semibold text-ink hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
           >
             가이드
           </HardLink>
           <HardLink
             to="/about"
-            class="flex items-center px-3 py-2 text-base font-medium text-muted hover:text-primary rounded-lg hover:bg-background-light transition-colors"
+            class="flex min-h-11 items-center whitespace-nowrap px-2.5 py-2 text-[15px] font-semibold text-ink hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
           >
             소개
           </HardLink>
@@ -173,7 +173,7 @@
       </nav>
 
       <!-- Mobile Cluster: 검색 + 메뉴 (우측 정렬) -->
-      <div class="lg:hidden ml-auto flex items-center gap-0.5">
+      <div class="xl:hidden ml-auto flex items-center gap-1">
         <HeaderSearch variant="mobile" v-show="showHeaderSearch" />
         <button
           class="flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full hover:bg-black/5 transition-colors text-strong"
@@ -202,7 +202,7 @@
       data-testid="mobile-menu"
       role="navigation"
       aria-label="모바일 메뉴"
-      class="lg:hidden fixed top-[56px] left-0 right-0 bottom-0 z-40 bg-background-light border-b border-line-2 shadow-lg overflow-y-auto"
+      class="xl:hidden fixed top-16 lg:top-20 left-0 right-0 bottom-0 z-40 bg-white border-b border-line shadow-lg overflow-y-auto"
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">

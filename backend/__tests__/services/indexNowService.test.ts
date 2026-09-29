@@ -121,3 +121,12 @@ describe('buildFacilityUrls', () => {
     ]);
   });
 });
+
+it('retains address identity when generating property indexing URLs', () => {
+  const urls = buildRealEstateUrlsV2([
+    { realEstateType: 'villa-sale', city: '서울특별시', district: '강남구', buildingName: '스톤빌리지', buildingKey: 'a'.repeat(64) },
+    { realEstateType: 'villa-sale', city: '서울특별시', district: '강남구', buildingName: '스톤빌리지', buildingKey: 'b'.repeat(64) },
+  ]);
+  expect(urls[0]).toMatch(/\/a{64}$/);
+  expect(urls[1]).toMatch(/\/b{64}$/);
+});

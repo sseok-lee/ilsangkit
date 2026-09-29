@@ -1,13 +1,28 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
+  <div class="bg-white text-strong">
+  <main class="help-page mx-auto max-w-[1200px] px-5 py-8 md:px-8 md:py-12">
     <StaticPageHeader
       title="이용약관"
       lead="일상킷 서비스 이용 조건과 절차를 규정합니다."
       updated-at="2026.06.01"
     />
 
-    <div class="space-y-5 md:space-y-6 text-slate-600 text-sm md:text-base leading-relaxed">
-      <section>
+    <LegalDocumentNav current="terms" />
+    <div class="grid min-w-0 gap-8 md:grid-cols-[220px_minmax(0,1fr)] md:gap-12">
+      <aside class="min-w-0">
+        <details class="border-y border-line md:hidden">
+          <summary class="min-h-11 cursor-pointer py-3 text-sm font-semibold">문서 목차</summary>
+          <nav aria-label="문서 목차" class="pb-3">
+            <a v-for="(heading, index) in headings" :key="heading" :href="`#clause-${index + 1}`" class="flex min-h-11 items-center py-2 text-sm text-muted hover:text-primary">{{ heading }}</a>
+          </nav>
+        </details>
+        <nav aria-label="문서 목차" class="hidden md:sticky md:top-28 md:block">
+          <p class="mb-3 text-sm font-bold">목차</p>
+          <a v-for="(heading, index) in headings" :key="heading" :href="`#clause-${index + 1}`" class="flex min-h-11 items-center py-2 text-sm text-muted hover:text-primary">{{ heading }}</a>
+        </nav>
+      </aside>
+    <div class="min-w-0 space-y-8 text-muted text-sm leading-7 md:text-base md:leading-8">
+      <section id="clause-1" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제1조 (목적)
         </h2>
@@ -17,7 +32,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-2" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제2조 (서비스의 내용)
         </h2>
@@ -52,7 +67,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-3" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제3조 (서비스 이용)
         </h2>
@@ -62,7 +77,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-4" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제4조 (지도 서비스)
         </h2>
@@ -76,7 +91,7 @@
         </ul>
       </section>
 
-      <section>
+      <section id="clause-5" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제5조 (정보의 정확성)
         </h2>
@@ -88,7 +103,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-6" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제6조 (지적재산권)
         </h2>
@@ -98,7 +113,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-7" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제7조 (면책 조항)
         </h2>
@@ -110,7 +125,7 @@
         </ul>
       </section>
 
-      <section>
+      <section id="clause-8" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제8조 (이용자의 의무)
         </h2>
@@ -122,7 +137,7 @@
         </ul>
       </section>
 
-      <section>
+      <section id="clause-9" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           제9조 (약관의 변경)
         </h2>
@@ -133,17 +148,22 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-10" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           부칙
         </h2>
         <p>이 약관은 2026년 3월 14일부터 시행합니다.</p>
       </section>
     </div>
+    </div>
+  </main>
   </div>
 </template>
 
 <script setup lang="ts">
+import LegalDocumentNav from '~/components/common/LegalDocumentNav.vue'
+const headings = ['제1조 (목적)', '제2조 (서비스의 내용)', '제3조 (서비스 이용)', '제4조 (지도 서비스)', '제5조 (정보의 정확성)', '제6조 (지적재산권)', '제7조 (면책 조항)', '제8조 (이용자의 의무)', '제9조 (약관의 변경)', '부칙']
+
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
@@ -161,3 +181,11 @@ setBreadcrumbSchema([
   { name: '이용약관', url: '/terms' },
 ])
 </script>
+
+<style scoped>
+.help-page :deep(h1) { font-size: 28px; line-height: 1.25; }
+.help-page :deep(h1 + p) { margin-top: 16px; }
+.help-page :deep(a:focus-visible), .help-page summary:focus-visible { outline: 2px solid #2450dc; outline-offset: 3px; }
+.help-page :deep(table) { min-width: 540px; }
+@media (min-width: 768px) { .help-page :deep(h1) { font-size: 36px; } }
+</style>

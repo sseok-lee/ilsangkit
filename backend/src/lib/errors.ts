@@ -34,6 +34,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class ServiceUnavailableError extends AppError {
+  constructor(message = 'Service unavailable', code = 'SERVICE_UNAVAILABLE') {
+    super(503, message, code);
+  }
+}
+
 /**
  * 410 Gone — 영구히 제거된 리소스.
  *

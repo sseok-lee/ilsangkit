@@ -2,6 +2,28 @@ import { prisma } from '../lib/prisma.js';
 import { buildRegionFilter, SHORT_TO_SLUG, FULL_TO_SLUG, CITY_SLUG_TO_FULL } from './cityMapping.js';
 
 const PYEONG_PER_SQM = 3.305;
+const LAND_STATS_SAMPLE_LIMIT = 5000;
+
+const transactionSelect = {
+  id: true,
+  jibun: true,
+  jimok: true,
+  landUse: true,
+  dealArea: true,
+  shareDeal: true,
+  dealAmount: true,
+  dealType: true,
+  dealYear: true,
+  dealMonth: true,
+  dealDay: true,
+};
+
+const transactionOrderBy = [
+  { dealYear: 'desc' as const },
+  { dealMonth: 'desc' as const },
+  { dealDay: 'desc' as const },
+  { id: 'desc' as const },
+];
 
 function pricePerPyeong(dealAmount: number, dealArea: number | null): number | null {
   if (!dealArea || dealArea <= 0) return null;
@@ -19,12 +41,41 @@ function serializeRow(row: any): any {
   return result;
 }
 
-export interface TransactionsParams {
+export interface LandTransactionFilters {
+  keyword?: string;
+  jimok?: string;
+  landUse?: string;
+}
+
+export interface LandFilterOptions {
+  jimok: string[];
+  landUse: string[];
+}
+
+export interface LandStatsMeta {
+  totalTransactions: number;
+  sampleLimit: number;
+  sampledTransactions: number;
+  isSampleCapped: boolean;
+}
+
+export interface TransactionsParams extends LandTransactionFilters {
   bjdCode: string;
   dongName: string;
   page: number;
   limit: number;
 }
+
+type LandBaseDongWhere = { bjdCode: string; dongName: string; cancelDealDay: null };
+type LandKeywordWhere =
+  | { jibun: { contains: string } }
+  | { jimok: { contains: string } }
+  | { landUse: { contains: string } };
+type LandTransactionWhere = LandBaseDongWhere & {
+  jimok?: string;
+  landUse?: string;
+  OR?: LandKeywordWhere[];
+};
 
 export interface TransactionsResult {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,25 +83,68 @@ export interface TransactionsResult {
   total: number;
   page: number;
   totalPages: number;
+  filterOptions: LandFilterOptions;
+}
+
+function buildBaseDongWhere(params: { bjdCode: string; dongName: string }): LandBaseDongWhere {
+  return { bjdCode: params.bjdCode, dongName: params.dongName, cancelDealDay: null };
+}
+
+function buildTransactionWhere(params: {
+  bjdCode: string;
+  dongName: string;
+  keyword?: string;
+  jimok?: string;
+  landUse?: string;
+}): LandTransactionWhere {
+  const where: LandTransactionWhere = buildBaseDongWhere(params);
+  if (params.jimok) where.jimok = params.jimok;
+  if (params.landUse) where.landUse = params.landUse;
+  if (params.keyword) {
+    where.OR = [
+      { jibun: { contains: params.keyword } },
+      { jimok: { contains: params.keyword } },
+      { landUse: { contains: params.keyword } },
+    ];
+  }
+  return where;
+}
+
+function buildFilterOptions(rows: Array<{ jimok: string | null; landUse: string | null }> = []): LandFilterOptions {
+  const jimok = new Set<string>();
+  const landUse = new Set<string>();
+  for (const row of rows) {
+    const j = row.jimok?.trim();
+    const u = row.landUse?.trim();
+    if (j) jimok.add(j);
+    if (u) landUse.add(u);
+  }
+  return {
+    jimok: Array.from(jimok).sort((a, b) => a.localeCompare(b, 'ko-KR')),
+    landUse: Array.from(landUse).sort((a, b) => a.localeCompare(b, 'ko-KR')),
+  };
 }
 
 export async function getTransactions(params: TransactionsParams): Promise<TransactionsResult> {
-  const { bjdCode, dongName, page, limit } = params;
-  const where = { bjdCode, dongName, cancelDealDay: null };
+  const { page, limit } = params;
+  const where = buildTransactionWhere(params);
+  const baseDongWhere = buildBaseDongWhere(params);
   const skip = (page - 1) * limit;
 
-  const [rows, total] = await Promise.all([
+  const [rows, total, optionRows] = await Promise.all([
     prisma.landSaleTransaction.findMany({
       where,
-      select: {
-        id: true, jibun: true, jimok: true, landUse: true, dealArea: true, shareDeal: true,
-        dealAmount: true, dealType: true, dealYear: true, dealMonth: true, dealDay: true,
-      },
-      orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
+      select: transactionSelect,
+      orderBy: transactionOrderBy,
       skip,
       take: limit,
     }),
     prisma.landSaleTransaction.count({ where }),
+    prisma.landSaleTransaction.findMany({
+      where: baseDongWhere,
+      select: { jimok: true, landUse: true },
+      orderBy: transactionOrderBy,
+    }),
   ]);
 
   const items = rows.map((r) => {
@@ -64,6 +158,7 @@ export async function getTransactions(params: TransactionsParams): Promise<Trans
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+    filterOptions: buildFilterOptions(optionRows),
   };
 }
 
@@ -153,6 +248,8 @@ export interface RegionDetailResult {
   daeCount: number;
   daeNonShareCount: number;
   daeSamples: LandTransaction[];
+  filterOptions: LandFilterOptions;
+  statsMeta: LandStatsMeta;
 }
 
 /**
@@ -222,33 +319,31 @@ export async function getSitemapEntries(): Promise<LandSitemapEntries> {
 }
 
 export async function getRegionDetail(params: RegionDetailParams): Promise<RegionDetailResult> {
-  const { bjdCode, dongName, page, limit } = params;
-  const where = { bjdCode, dongName, cancelDealDay: null };
+  const { page, limit } = params;
+  const where = buildBaseDongWhere(params);
   const skip = (page - 1) * limit;
 
-  const [rows, total] = await Promise.all([
+  const [rows, total, allRows, optionRows] = await Promise.all([
     prisma.landSaleTransaction.findMany({
       where,
-      select: {
-        id: true, jibun: true, jimok: true, landUse: true, dealArea: true, shareDeal: true,
-        dealAmount: true, dealType: true, dealYear: true, dealMonth: true, dealDay: true,
-      },
-      orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
+      select: transactionSelect,
+      orderBy: transactionOrderBy,
       skip,
       take: limit,
     }),
     prisma.landSaleTransaction.count({ where }),
+    prisma.landSaleTransaction.findMany({
+      where,
+      select: transactionSelect,
+      orderBy: transactionOrderBy,
+      take: LAND_STATS_SAMPLE_LIMIT,
+    }),
+    prisma.landSaleTransaction.findMany({
+      where,
+      select: { jimok: true, landUse: true },
+      orderBy: transactionOrderBy,
+    }),
   ]);
-
-  const allRows = await prisma.landSaleTransaction.findMany({
-    where,
-    select: {
-      id: true, jibun: true, jimok: true, landUse: true, dealArea: true, dealAmount: true,
-      shareDeal: true, dealType: true, dealYear: true, dealMonth: true, dealDay: true,
-    },
-    orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
-    take: 5000, // 안전 상한: 동 단위 토지 거래량은 이보다 훨씬 적음(미초과 시 전수). unbounded 쿼리로 버퍼풀 점유 방지.
-  });
 
   const items = rows.map((r) => {
     const s = serializeRow(r);
@@ -341,5 +436,12 @@ export async function getRegionDetail(params: RegionDetailParams): Promise<Regio
     daeCount,
     daeNonShareCount,
     daeSamples,
+    filterOptions: buildFilterOptions(optionRows),
+    statsMeta: {
+      totalTransactions: total,
+      sampleLimit: LAND_STATS_SAMPLE_LIMIT,
+      sampledTransactions: allRows.length,
+      isSampleCapped: total > LAND_STATS_SAMPLE_LIMIT,
+    },
   };
 }

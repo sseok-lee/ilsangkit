@@ -1,4 +1,5 @@
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
+import { normalizeWasteAreaCity } from '~/utils/wasteAreaQuery'
 
 export interface SidoChip {
   slug: string
@@ -56,6 +57,20 @@ export function buildListFetch(category: string, citySlug: string | undefined, p
   const cityKorean = resolveCityParam(citySlug)
   const kw = keyword?.trim()
   if (category === 'trash') {
+    const config = useRuntimeConfig()
+    if (config.public.wasteAreaDiscoveryEnabled === true) {
+      return {
+        url: '/api/waste-areas',
+        options: {
+          params: {
+            page,
+            limit: 20,
+            ...(cityKorean ? { city: normalizeWasteAreaCity(cityKorean) } : {}),
+            ...(kw ? { keyword: kw } : {}),
+          },
+        },
+      }
+    }
     return {
       url: '/api/waste-schedules',
       options: { params: { page, limit: 20, ...(cityKorean ? { city: cityKorean } : {}), ...(kw ? { keyword: kw } : {}) } },

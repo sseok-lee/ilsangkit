@@ -62,7 +62,7 @@ export async function getStatsByCity(citySlug: string): Promise<{
     ),
     prisma.wasteSchedule.groupBy({
       by: ['district'],
-      where: { city: cityCondition },
+      where: { city: cityCondition, stagedMarker: null },
       _count: true,
     }),
   ]);
@@ -152,7 +152,7 @@ export async function getDistrictStatsByCity(citySlug: string): Promise<Map<stri
     ),
     prisma.wasteSchedule.groupBy({
       by: ['district'],
-      where: { city: cityCondition },
+      where: { city: cityCondition, stagedMarker: null },
       _count: true,
     }),
   ]);
@@ -217,6 +217,7 @@ export async function getStatsByDistrict(citySlug: string, districtSlug: string)
 
   const cityCondition = cityVariants.length > 1 ? { in: cityVariants } : fullName;
   const where = { city: cityCondition, district: region.district };
+  const trashWhere = { ...where, stagedMarker: null };
 
   const [categoryCounts, trashCount] = await Promise.all([
     Promise.all(
@@ -227,7 +228,7 @@ export async function getStatsByDistrict(citySlug: string, districtSlug: string)
           : await CATEGORY_REGISTRY[cat].model().count({ where }),
       }))
     ),
-    prisma.wasteSchedule.count({ where }),
+    prisma.wasteSchedule.count({ where: trashWhere }),
   ]);
 
   const categories: Record<string, number> = {};

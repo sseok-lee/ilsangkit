@@ -68,7 +68,12 @@ export function useRegions() {
   /**
    * API에서 전체 지역 정보 로드
    */
-  async function loadRegions(): Promise<RegionInfo[]> {
+  async function loadRegions(force = false): Promise<RegionInfo[]> {
+    if (force) {
+      cachedRegions.value = []
+      isLoaded.value = false
+    }
+
     if (isLoaded.value) {
       return cachedRegions.value
     }

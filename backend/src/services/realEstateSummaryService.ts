@@ -1,13 +1,12 @@
 import { prisma } from '../lib/prisma.js';
+import { readSummaryMode, type SummaryReadMode } from '../lib/realEstateSummaryStore.js';
+import { withRealEstateWriteLock } from '../utils/realEstateWriteLock.js';
 import { TABLE_NAME_MAP, type RealEstateType } from './realEstateService.js';
+import { refreshLegacySummariesUnlocked } from './realEstateLegacySummaryService.js';
 
 const SALE_TYPES = new Set(['apt-sale', 'villa-sale', 'offitel-sale']);
 // buildYear 컬럼이 없는 타입
 const NO_BUILD_YEAR_TYPES = new Set<string>();
-
-// 배치 간 짧은 sleep — 백엔드 쿼리가 MySQL에 들어갈 틈을 준다.
-// 총 부하: 시·도 약 17 × 타입 6 × 50ms ≈ 5초. cron 15분 예산 대비 무시 가능.
-const BATCH_PAUSE_MS = 50;
 
 // 배치당 Prisma 트랜잭션 타임아웃. inner 서브쿼리에 윈도우 함수 4개
 // (ROW_NUMBER + COUNT + MAX(lat) + MAX(lng))를 평가하므로 거래량 많은 시·도
@@ -16,6 +15,38 @@ const BATCH_TX_TIMEOUT_MS = 300_000;
 
 // InnoDB 락 대기 한도(초). 경합이 오래 가지 않도록 짧게 두어 실패 시 다음 city로 바로 넘어감.
 const LOCK_WAIT_TIMEOUT_SEC = 15;
+
+export interface SummaryBatchResult {
+  type: string;
+  city: string;
+  rowCount: number;
+  status: 'complete' | 'failed';
+  error?: string;
+}
+
+export interface SummaryRefreshResult {
+  batches: SummaryBatchResult[];
+  complete: boolean;
+}
+
+type SummaryRefreshEnv = typeof process.env;
+
+function batchPauseMs(): number {
+  if (process.env.NODE_ENV === 'test') return 0;
+  const raw = process.env.SUMMARY_BATCH_PAUSE_MS;
+  if (raw === undefined || raw === '') return 250;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0 || value > 10_000) throw new Error('Invalid SUMMARY_BATCH_PAUSE_MS');
+  return value;
+}
+
+function batchTimeoutMs(): number {
+  const raw = process.env.SUMMARY_BATCH_TIMEOUT_MS;
+  if (raw === undefined || raw === '') return BATCH_TX_TIMEOUT_MS;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1_000 || value > 1_800_000) throw new Error('Invalid SUMMARY_BATCH_TIMEOUT_MS');
+  return value;
+}
 
 /**
  * 전월세 요약 행의 전세/월세 분리 컬럼을 채우는 UPDATE.
@@ -30,34 +61,42 @@ const LOCK_WAIT_TIMEOUT_SEC = 15;
  * rn=1 로 rentType 별 최신 1건을 고른 뒤 MAX(CASE ...) 로 건물당 한 행에 접는다.
  * 여기서 MAX 는 크기 비교가 아니라 그룹당 후보가 1개뿐인 상태에서의 접기 용도다.
  */
-function buildRentSplitUpdate(table: string): string {
-  return `UPDATE RealEstateBuildingSummary s
+function buildRentSplitUpdate(table: string, summaryTable = 'RealEstateBuildingSummary'): string {
+  return `UPDATE ${summaryTable} s
     JOIN (
-      SELECT buildingName, bjdCode,
+      SELECT buildingName, bjdCode, dongKey, jibunKey,
         MAX(CASE WHEN rentType = '전세' THEN deposit END)     AS jDeposit,
         MAX(CASE WHEN rentType = '전세' THEN dealKey END)     AS jDealKey,
         MAX(CASE WHEN rentType = '월세' THEN deposit END)     AS wDeposit,
         MAX(CASE WHEN rentType = '월세' THEN monthlyRent END) AS wMonthly,
         MAX(CASE WHEN rentType = '월세' THEN dealKey END)     AS wDealKey
       FROM (
-        SELECT buildingName, bjdCode, rentType, deposit, monthlyRent,
+        SELECT buildingName, bjdCode, TRIM(dongName) AS dongKey, COALESCE(TRIM(jibun), '') AS jibunKey,
+          rentType, deposit, monthlyRent,
           dealYear * 10000 + dealMonth * 100 + COALESCE(dealDay, 1) AS dealKey,
           ROW_NUMBER() OVER (
-            PARTITION BY buildingName, bjdCode, rentType
-            ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
+            PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), ''), rentType
+            ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
           ) AS rn
         FROM ${table}
         WHERE city = ?
       ) ranked
       WHERE rn = 1
-      GROUP BY buildingName, bjdCode
-    ) t ON t.buildingName = s.buildingName AND t.bjdCode = s.bjdCode
+      GROUP BY buildingName, bjdCode, dongKey, jibunKey
+    ) t ON t.buildingName = s.buildingName
+      AND t.bjdCode = s.bjdCode
+      AND t.dongKey = TRIM(s.dongName)
+      AND t.jibunKey = COALESCE(TRIM(s.jibun), '')
     SET s.jeonseDeposit    = t.jDeposit,
         s.jeonseDealKey    = t.jDealKey,
         s.wolseDeposit     = t.wDeposit,
         s.wolseMonthlyRent = t.wMonthly,
         s.wolseDealKey     = t.wDealKey
     WHERE s.type = ? AND s.city = ?`;
+}
+
+function propertyTypeForSummary(type: string): string {
+  return type.split('-')[0] ?? type;
 }
 
 /**
@@ -74,111 +113,150 @@ function buildRentSplitUpdate(table: string): string {
  * bjdCode(10자리 법정동 코드)는 시·도를 넘지 않으므로 window function의
  * `PARTITION BY buildingName, bjdCode` 은 city 단위로 분할해도 결과 동일.
  */
-export async function refreshSummary(type: string): Promise<number> {
+async function refreshAddressSummaryType(type: string): Promise<SummaryBatchResult[]> {
   const table = TABLE_NAME_MAP[type];
   if (!table) throw new Error(`Unknown real estate type: ${type}`);
 
   const priceField = SALE_TYPES.has(type) ? 'dealAmount' : 'deposit';
   const buildYearCol = NO_BUILD_YEAR_TYPES.has(type) ? 'NULL' : 'buildYear';
-  // 매매 테이블에는 monthlyRent 컬럼 자체가 없다. 전월세만 실제 컬럼을 읽는다.
+  const propertyType = propertyTypeForSummary(type);
   const monthlyRentCol = SALE_TYPES.has(type) ? 'NULL' : 'monthlyRent';
-
-  // 해당 타입 소스 테이블에 존재하는 city 나열
   const rows = await prisma.$queryRawUnsafe<Array<{ city: string | null }>>(
-    `SELECT DISTINCT city FROM ${table} WHERE city IS NOT NULL AND city != ''`,
+    `SELECT DISTINCT city
+     FROM (
+       SELECT DISTINCT city FROM ${table} WHERE city IS NOT NULL AND city != ''
+       UNION
+       SELECT DISTINCT city FROM RealEstateBuildingSummaryV2 WHERE type = ? AND city IS NOT NULL AND city != ''
+     ) city_inventory
+     ORDER BY city`,
+    type,
   );
-  const cities = rows
-    .map((r) => r.city)
-    .filter((c): c is string => typeof c === 'string' && c.length > 0);
+  const cities = rows.map((r) => r.city).filter((c): c is string => typeof c === 'string' && c.length > 0);
+  const batches: SummaryBatchResult[] = [];
 
-  let total = 0;
   for (const city of cities) {
     try {
       const inserted = await prisma.$transaction(
         async (tx) => {
+          await tx.$executeRawUnsafe(`SET SESSION innodb_lock_wait_timeout = ${LOCK_WAIT_TIMEOUT_SEC}`);
           await tx.$executeRawUnsafe(
-            `SET SESSION innodb_lock_wait_timeout = ${LOCK_WAIT_TIMEOUT_SEC}`,
-          );
-          await tx.$executeRawUnsafe(
-            `DELETE FROM RealEstateBuildingSummary WHERE type = ? AND city = ?`,
+            `DELETE FROM RealEstateBuildingSummaryV2 WHERE type = ? AND city = ?`,
             type,
             city,
           );
           const n = await tx.$executeRawUnsafe(
-            `INSERT INTO RealEstateBuildingSummary
-              (type, buildingName, bjdCode, city, district, dongName,
+            `INSERT INTO RealEstateBuildingSummaryV2
+              (type, buildingKey, buildingName, bjdCode, city, district, dongName, jibun,
                latestPrice, monthlyRent,
                latestDealYear, latestDealMonth, latestDealDay, buildYear, lat, lng,
                transactionCount, updatedAt)
             SELECT
               ? AS type,
-              buildingName, bjdCode, city, district, dongName,
+              SHA2(CONCAT_WS(CHAR(31), ?, bjdCode, buildingName, TRIM(dongName), COALESCE(TRIM(jibun), '')), 256) AS buildingKey,
+              buildingName, bjdCode, city, district, TRIM(dongName) AS dongName, NULLIF(TRIM(jibun), '') AS jibun,
               ${priceField} AS latestPrice,
               ${monthlyRentCol} AS monthlyRent,
               dealYear AS latestDealYear, dealMonth AS latestDealMonth, dealDay AS latestDealDay,
               ${buildYearCol} AS buildYear,
-              _maxLat AS lat,
-              _maxLng AS lng,
+              _lat AS lat,
+              _lng AS lng,
               _txCount AS transactionCount,
               NOW()
-            -- 윈도우 함수는 inner 서브쿼리에서 평가되어야 함.
-            -- WHERE _rn = 1 이 outer에 있으므로, COUNT/MAX OVER 를 outer로 옮기면
-            -- 파티션당 1행만 남은 상태에서 집계되어 transactionCount가 항상 1이 된다.
             FROM (
               SELECT *,
                 ROW_NUMBER() OVER (
-                  PARTITION BY buildingName, bjdCode
-                  ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
+                  PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
+                  ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
                 ) AS _rn,
-                COUNT(*) OVER (PARTITION BY buildingName, bjdCode) AS _txCount,
-                MAX(lat) OVER (PARTITION BY buildingName, bjdCode) AS _maxLat,
-                MAX(lng) OVER (PARTITION BY buildingName, bjdCode) AS _maxLng
+                COUNT(*) OVER (PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')) AS _txCount,
+                FIRST_VALUE(lat) OVER (
+                  PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
+                  ORDER BY (lat IS NULL OR lng IS NULL) ASC, dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
+                ) AS _lat,
+                FIRST_VALUE(lng) OVER (
+                  PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
+                  ORDER BY (lat IS NULL OR lng IS NULL) ASC, dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
+                ) AS _lng
               FROM ${table}
               WHERE city = ?
             ) ranked
             WHERE _rn = 1`,
             type,
+            propertyType,
             city,
           );
+          if (!SALE_TYPES.has(type)) {
+            await tx.$executeRawUnsafe(buildRentSplitUpdate(table, 'RealEstateBuildingSummaryV2'), city, type, city);
+          }
           return Number(n) || 0;
         },
-        { timeout: BATCH_TX_TIMEOUT_MS },
+        { timeout: batchTimeoutMs() },
       );
-      total += inserted;
-
-      // 전세/월세 분리 컬럼 UPDATE는 위 DELETE+INSERT와 별도 트랜잭션으로 분리한다.
-      // 같은 트랜잭션에 묶으면 이 UPDATE가 실패(락 대기 타임아웃 등)할 때 이미 성공한
-      // DELETE+INSERT까지 롤백돼 해당 시·도의 latestPrice/latestDealDay/transactionCount가
-      // 갱신되지 않는다 — sitemap lastmod, 인근 단지, 건물 목록, 검색 자동완성이 전부
-      // 이 레거시 컬럼만 읽으므로 기본 갱신은 분리 UPDATE의 성패와 무관하게 항상
-      // 커밋되어야 한다. 매매 테이블에는 rentType 컬럼 자체가 없어 건너뛴다.
-      if (!SALE_TYPES.has(type)) {
-        try {
-          await prisma.$transaction(
-            async (tx) => {
-              await tx.$executeRawUnsafe(
-                `SET SESSION innodb_lock_wait_timeout = ${LOCK_WAIT_TIMEOUT_SEC}`,
-              );
-              await tx.$executeRawUnsafe(buildRentSplitUpdate(table), city, type, city);
-            },
-            { timeout: BATCH_TX_TIMEOUT_MS },
-          );
-        } catch (err) {
-          // 분리 UPDATE 실패는 새 컬럼(jeonseDeposit 등)만 갱신 안 된 채로 남긴다 —
-          // 기본 갱신은 이미 위에서 커밋됐으므로 여기서 city 루프를 멈추지 않는다.
-          console.error(`[Summary] ${type}/${city} 전월세 분리 UPDATE 실패:`, err);
-        }
-      }
-    } catch (err) {
-      // 한 city 배치가 실패해도 나머지 city는 계속 — 치명적 장애가 여러 시·도로
-      // 퍼지는 것을 차단. 실패 로그로 원인 추적.
-      console.error(`[Summary] ${type}/${city} 실패:`, err);
+      batches.push({ type, city, rowCount: inserted, status: 'complete' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[SummaryV2] ${type}/${city} 실패:`, error);
+      batches.push({ type, city, rowCount: 0, status: 'failed', error: message });
     }
-    await new Promise((resolve) => setTimeout(resolve, BATCH_PAUSE_MS));
+    const pause = batchPauseMs();
+    if (pause > 0) await new Promise((resolve) => setTimeout(resolve, pause));
   }
 
-  return total;
+  return batches;
 }
+
+export async function refreshAddressSummariesUnlocked(types: string[] = Object.keys(TABLE_NAME_MAP)): Promise<SummaryRefreshResult> {
+  const batches: SummaryBatchResult[] = [];
+  for (const type of types) {
+    try {
+      batches.push(...await refreshAddressSummaryType(type));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[SummaryV2] ${type} city inventory failed:`, error);
+      batches.push({ type, city: '*', rowCount: 0, status: 'failed', error: message });
+    }
+  }
+  return { batches, complete: batches.every((batch) => batch.status === 'complete') };
+}
+
+export async function refreshAddressSummaries(types: string[] = Object.keys(TABLE_NAME_MAP)): Promise<SummaryRefreshResult> {
+  return withRealEstateWriteLock('refreshAddressSummaries', () => refreshAddressSummariesUnlocked(types));
+}
+
+export async function refreshSummariesForModeUnlocked(
+  mode: SummaryReadMode,
+  types: string[] = Object.keys(TABLE_NAME_MAP),
+): Promise<SummaryRefreshResult> {
+  if (mode === 'address') {
+    return refreshAddressSummariesUnlocked(types);
+  }
+
+  const address = await refreshAddressSummariesUnlocked(types);
+  const legacy = await refreshLegacySummariesUnlocked(types);
+
+  return {
+    batches: [...address.batches, ...legacy.batches],
+    complete: address.complete && legacy.complete,
+  };
+}
+
+export async function refreshSummariesForActiveMode(
+  types: string[] = Object.keys(TABLE_NAME_MAP),
+  env: SummaryRefreshEnv = process.env,
+): Promise<SummaryRefreshResult> {
+  const mode = readSummaryMode(env);
+  return withRealEstateWriteLock('refreshRealEstateSummaries', () => refreshSummariesForModeUnlocked(mode, types));
+}
+
+export async function refreshSummary(type: string): Promise<number> {
+  const table = TABLE_NAME_MAP[type];
+  if (!table) throw new Error(`Unknown real estate type: ${type}`);
+  const result = await refreshAddressSummariesUnlocked([type]);
+  return result.batches
+    .filter((batch) => batch.status === 'complete')
+    .reduce((sum, batch) => sum + batch.rowCount, 0);
+}
+
 
 /**
  * 모든 타입의 Summary 갱신. 한 타입이 실패해도 다음 타입으로 계속 진행.
@@ -204,20 +282,12 @@ export interface RefreshAllResult {
  */
 export async function refreshAllSummaries(): Promise<RefreshAllResult> {
   const types = Object.keys(TABLE_NAME_MAP) as RealEstateType[];
-  const done: RealEstateType[] = [];
-  const failed: RealEstateType[] = [];
-
-  for (const type of types) {
-    const start = Date.now();
-    try {
-      const count = await refreshSummary(type);
-      console.info(`[Summary] ${type}: ${count} buildings refreshed (${Date.now() - start}ms)`);
-      done.push(type);
-    } catch (err) {
-      console.error(`[Summary] ${type} 실패 (${Date.now() - start}ms):`, err);
-      failed.push(type);
-    }
-  }
-
+  const result = await refreshSummariesForActiveMode(types);
+  const failedSet = new Set(result.batches.filter((batch) => batch.status === 'failed').map((batch) => batch.type as RealEstateType));
+  const done = types.filter((type) => !failedSet.has(type));
+  const failed = types.filter((type) => failedSet.has(type));
+  const mode = readSummaryMode(process.env);
+  for (const type of done) console.info(`[Summary] ${type}: ${mode} summaries refreshed`);
+  for (const type of failed) console.error(`[Summary] ${type} 실패`);
   return { done, failed, total: types.length };
 }

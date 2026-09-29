@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { clampBounds, parseMapHash, buildMapHash, itemKey } from '~/composables/useRealEstateMap'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
+import { clampBounds, parseMapHash, buildMapHash, itemKey, useRealEstateMap } from '~/composables/useRealEstateMap'
 
 describe('clampBounds', () => {
   it('한국 영역 밖으로 나간 bbox 를 클램프한다', () => {
@@ -48,8 +49,10 @@ describe('itemKey', () => {
     expect(itemKey({ name: '서울', district: '강남구', dong: null } as never)).toBe('서울|강남구|')
   })
 
-  it('건물 항목은 buildingName+district 로 식별한다', () => {
-    expect(itemKey({ buildingName: 'A', district: '강남구' } as never)).toBe('A|강남구')
+  it('건물 항목은 buildingKey 로 식별한다', () => {
+    const buildingKey = 'a'.repeat(64)
+    expect(itemKey({ buildingName: 'A', district: '강남구', bjdCode: '1168010100', buildingKey } as never))
+      .toBe(buildingKey)
   })
 
   it('시/도 레벨 지역 항목은 district 가 null 이라 빈 문자열로 접힌다', () => {
@@ -69,9 +72,111 @@ describe('itemKey 고유성', () => {
     expect(itemKey(mia)).not.toBe(itemKey(beon))
   })
 
+  it('같은 이름·법정동코드라도 지번별 buildingKey가 다르면 서로 다른 키를 갖는다', () => {
+    const daechi = { buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+      bjdCode: '1168010100', buildingKey: 'a'.repeat(64), jibun: '316', lat: 37.5, lng: 127.06 }
+    const dogok = { buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+      bjdCode: '1168010100', buildingKey: 'b'.repeat(64), jibun: '317', lat: 37.49, lng: 127.05 }
+
+    expect(itemKey(daechi as never)).toBe('a'.repeat(64))
+    expect(itemKey(dogok as never)).toBe('b'.repeat(64))
+    expect(itemKey(daechi as never)).not.toBe(itemKey(dogok as never))
+  })
+
   it('dong 이 없는 구·군 항목은 기존 키 형태를 유지한다', () => {
     const gangbuk = { name: '서울', district: '강북구', dong: null,
       lat: 37.63, lng: 127.02, avgPricePerPyeong: 3225, transactionCount: 42 }
     expect(itemKey(gangbuk)).toBe('서울|강북구|')
+  })
+})
+
+describe('useRealEstateMap fetch lifecycle', () => {
+  const bounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('debounce 대기 시작 시점에 이전 요청을 stale 처리한다', async () => {
+    vi.useFakeTimers()
+    let resolveFirst: (value: unknown) => void = () => {}
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve }))
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          granularity: 'district',
+          items: [{ name: '부산', district: null, dong: null, lat: 35.1, lng: 129.0, avgPricePerPyeong: 5000, transactionCount: 1 }],
+          total: 1,
+          exact: true,
+        },
+      })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const map = useRealEstateMap({ type: 'apt-sale', items: [], granularity: 'city' })
+    const first = map.fetchNow(bounds, 13)
+    map.onMapIdle(bounds, 9)
+
+    resolveFirst({
+      success: true,
+      data: {
+        granularity: 'building',
+        items: [{ name: '서울', district: null, dong: null, lat: 37.5, lng: 127, avgPricePerPyeong: 7000, transactionCount: 1 }],
+        total: 1,
+        exact: true,
+      },
+    })
+    await first
+    expect(map.items.value).toEqual([])
+
+    await vi.advanceTimersByTimeAsync(250)
+    await flushPromises()
+    expect(map.granularity.value).toBe('district')
+    expect(map.items.value[0]).toMatchObject({ name: '부산' })
+  })
+
+  it('같은 조건 실패는 이전 결과를 유지하고 error 와 retry 를 제공한다', async () => {
+    const initial = [{ name: '서울', district: null, dong: null, lat: 37.5, lng: 127, avgPricePerPyeong: 7000, transactionCount: 1 }]
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          granularity: 'city',
+          items: [{ name: '부산', district: null, dong: null, lat: 35.1, lng: 129.0, avgPricePerPyeong: 5000, transactionCount: 1 }],
+          total: 1,
+          exact: true,
+        },
+      })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const map = useRealEstateMap({ type: 'apt-sale', items: initial, granularity: 'city' })
+    await map.fetchNow(bounds, 13)
+    expect(map.error.value).toBe('network down')
+    expect(map.items.value).toEqual(initial)
+
+    await map.retry()
+    expect(map.error.value).toBeNull()
+    expect(map.items.value[0]).toMatchObject({ name: '부산' })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, expect.stringContaining('/api/real-estate/apt-sale/map'), expect.any(Object))
+  })
+
+  it('다른 type 으로 전환한 요청이 실패하면 이전 type 결과를 숨긴다', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('type failed'))
+    vi.stubGlobal('$fetch', fetchMock)
+    const map = useRealEstateMap({
+      type: 'apt-sale',
+      items: [{ name: '서울', district: null, dong: null, lat: 37.5, lng: 127, avgPricePerPyeong: 7000, transactionCount: 1 }],
+      granularity: 'city',
+    })
+
+    map.setType('villa-rent', bounds)
+    await flushPromises()
+
+    expect(map.type.value).toBe('villa-rent')
+    expect(map.items.value).toEqual([])
+    expect(map.total.value).toBe(0)
+    expect(map.error.value).toBe('type failed')
   })
 })

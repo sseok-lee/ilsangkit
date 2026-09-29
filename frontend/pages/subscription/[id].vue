@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background-light">
+  <div class="subscription-detail-page bg-white">
     <template v-if="subscription">
       <!-- Fullscreen Map Overlay (Mobile) -->
       <Teleport to="body">
@@ -44,31 +44,52 @@
         </Transition>
       </Teleport>
 
-      <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
+      <div class="max-w-[1120px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
         <!-- Breadcrumb (데스크톱만 — chrome, order 미부여로 소스 최상단 유지) -->
         <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
-        <!-- T0 모바일 헤더 (literal h1 소유) -->
-        <MobileDetailHeader
-          class="order-1 md:order-1"
-          :title="subscription.houseName"
-          :eyebrow="heroEyebrow"
-          :stats="heroStats"
-          :kakao-map-url="kakaoMapUrl"
-          :naver-map-url="naverMapUrl"
-          @share="handleShare"
-          @directions="(p: string) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
-        />
-
-        <!-- T0 데스크톱 헤더 (title-tag="div"로 강등 → literal h1 아님) -->
-        <PageHero
-          class="hidden md:block order-1 md:order-1"
-          title-tag="div"
-          :eyebrow="heroEyebrow"
-          :title="subscription.houseName"
-          :description="subscription.supplyLocation || subscription.regionName"
-          :stats="heroStats"
-        />
+        <!-- T0 헤더 (literal h1 소유) -->
+        <section class="order-1 md:order-1 py-5 md:py-10 border-b border-line">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <span class="inline-flex items-center mb-3 rounded bg-primary-50 px-2.5 py-1 text-xs font-bold text-primary">
+                {{ heroEyebrow }}
+              </span>
+              <h1 class="text-[27px] md:text-[36px] leading-[1.15] font-extrabold text-strong break-keep [overflow-wrap:anywhere]">
+                {{ subscription.houseName }}
+              </h1>
+              <p class="mt-3 text-sm md:text-base text-muted">
+                {{ subscription.supplyLocation || subscription.regionName }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm font-bold text-ink hover:bg-background-light"
+              aria-label="공유하기"
+              @click="handleShare"
+            >
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">share</span>
+              <span class="hidden sm:inline">공유</span>
+            </button>
+          </div>
+          <dl v-if="heroStats.length" class="mt-6 grid grid-cols-1 border-y border-line md:grid-cols-2">
+            <div
+              v-for="stat in heroStats"
+              :key="stat.label"
+              :data-testid="stat.prominent ? 'hero-price-stat' : undefined"
+              class="border-t border-line py-4 first:border-t-0 md:px-5 md:[&:nth-child(2)]:border-l md:[&:nth-child(2)]:border-line"
+              :class="stat.prominent ? 'md:col-span-2 md:px-0' : 'first:md:pl-0'"
+            >
+              <dt class="text-xs font-semibold text-faint">{{ stat.label }}</dt>
+              <dd
+                class="mt-2 font-extrabold text-strong font-display tabular-nums break-keep"
+                :class="stat.prominent ? 'text-[36px] leading-tight whitespace-normal [overflow-wrap:anywhere]' : 'text-xl md:text-2xl'"
+              >
+                {{ stat.value }}
+              </dd>
+            </div>
+          </dl>
+        </section>
 
         <!-- 광고① : 헤더 직후 (최고 가시성) -->
         <AdBanner class="order-2 md:order-2" />
@@ -79,8 +100,21 @@
         </SectionBlock>
 
         <!-- T1b "면적별 공급정보" 블록 (일정과 인접 — 사이에 광고 없음) -->
-        <SectionBlock v-if="unitTypes && unitTypes.length > 0" class="order-4 md:order-4" heading="면적별 공급정보" subtext="주택형별 공급 규모와 분양가를 비교합니다.">
-          <div class="overflow-x-auto">
+        <SectionBlock v-if="unitTypes && unitTypes.length > 0" class="order-4 md:order-4" heading="면적별 공급정보" :subtext="supplySectionSubtext">
+          <div data-testid="unit-summary-list" class="md:hidden border-t border-line">
+            <div v-for="unit in unitTypes" :key="`summary-${unit.id}`" class="border-b border-line bg-white py-3">
+              <div class="flex items-baseline justify-between gap-3">
+                <span class="font-semibold text-strong">{{ formatHouseType(unit.houseType) }}</span>
+                <span class="text-xs text-faint">{{ formatSupplyArea(unit.supplyArea) }}</span>
+              </div>
+              <div class="mt-2 grid grid-cols-3 gap-2 text-xs">
+                <span class="text-muted">일반 <strong class="text-strong font-display tabular-nums">{{ formatCount(unit.generalCount, '호') }}</strong></span>
+                <span class="text-muted">특별 <strong class="text-strong font-display tabular-nums">{{ formatCount(unit.specialCount, '호') }}</strong></span>
+                <span class="text-muted">{{ unitPriceShortLabel }} <strong class="text-strong font-display tabular-nums">{{ formatUnitPrice(unit) }}</strong></span>
+              </div>
+            </div>
+          </div>
+          <div class="overflow-x-auto" role="region" aria-label="면적별 공급정보 전체 표" tabindex="0">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr class="border-b-2 border-line-2 bg-background-light">
@@ -90,8 +124,8 @@
                   <th class="text-right py-3 px-4 font-semibold text-faint">일반공급</th>
                   <th class="text-right py-3 px-4 font-semibold text-faint">특별공급</th>
                   <th class="text-right py-3 px-4 font-semibold text-faint">합계</th>
-                  <th class="text-right py-3 px-4 font-semibold text-faint">분양최고가</th>
-                  <th class="text-right py-3 px-4 font-semibold text-faint">평당가</th>
+                  <th class="text-right py-3 px-4 font-semibold text-faint">{{ unitPriceHeader }}</th>
+                  <th v-if="!isPublicRent" class="text-right py-3 px-4 font-semibold text-faint">평당가</th>
                 </tr>
               </thead>
               <tbody>
@@ -99,13 +133,13 @@
                   <td class="py-3 px-4 text-strong font-medium">{{ formatHouseType(unit.houseType) }}</td>
                   <td class="py-3 px-4 text-muted text-right">{{ formatExclusiveArea(unit.houseType) }}</td>
                   <td class="py-3 px-4 text-muted text-right">{{ formatSupplyArea(unit.supplyArea) }}</td>
-                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">{{ unit.generalCount?.toLocaleString() || '-' }}호</td>
-                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">{{ unit.specialCount?.toLocaleString() || '-' }}호</td>
-                  <td class="py-3 px-4 text-primary font-bold text-right font-display tabular-nums">{{ ((unit.generalCount || 0) + (unit.specialCount || 0)).toLocaleString() }}호</td>
+                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">{{ formatCount(unit.generalCount, '호') }}</td>
+                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">{{ formatCount(unit.specialCount, '호') }}</td>
+                  <td class="py-3 px-4 text-primary font-bold text-right font-display tabular-nums">{{ formatCount(unitTotal(unit), '호') }}</td>
                   <td class="py-3 px-4 text-strong font-semibold text-right font-display tabular-nums">
-                    {{ unit.topAmount ? formatPrice(unit.topAmount) : '-' }}
+                    {{ formatUnitPrice(unit) }}
                   </td>
-                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">
+                  <td v-if="!isPublicRent" class="py-3 px-4 text-muted text-right font-display tabular-nums">
                     {{ calcPricePerPyeong(unit) }}
                   </td>
                 </tr>
@@ -113,10 +147,11 @@
               <tfoot v-if="unitTypes.length > 1">
                 <tr class="border-t-2 border-line-2 bg-background-light">
                   <td class="py-3 px-4 font-bold text-ink" colspan="3">합계</td>
-                  <td class="py-3 px-4 font-bold text-ink text-right font-display tabular-nums">{{ totalGeneral.toLocaleString() }}호</td>
-                  <td class="py-3 px-4 font-bold text-ink text-right font-display tabular-nums">{{ totalSpecial.toLocaleString() }}호</td>
-                  <td class="py-3 px-4 font-bold text-primary text-right font-display tabular-nums">{{ (totalGeneral + totalSpecial).toLocaleString() }}호</td>
+                  <td class="py-3 px-4 font-bold text-ink text-right font-display tabular-nums">{{ formatCount(totalGeneral, '호') }}</td>
+                  <td class="py-3 px-4 font-bold text-ink text-right font-display tabular-nums">{{ formatCount(totalSpecial, '호') }}</td>
+                  <td class="py-3 px-4 font-bold text-primary text-right font-display tabular-nums">{{ formatCount(totalSupplyTotal, '호') }}</td>
                   <td class="py-3 px-4"></td>
+                  <td v-if="!isPublicRent" class="py-3 px-4"></td>
                 </tr>
               </tfoot>
             </table>
@@ -201,18 +236,18 @@
                 <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-line hover:bg-background-light">
                   <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(unit.houseType) }}</td>
                   <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 text-muted text-right font-display tabular-nums">
-                    {{ (unit[col.key as keyof SubscriptionUnitType] as number) || '-' }}
+                    {{ formatCount(unit[col.key as keyof SubscriptionUnitType] as number | null, '세대') }}
                   </td>
-                  <td class="py-3 px-3 text-primary font-bold text-right font-display tabular-nums">{{ unit.specialCount || 0 }}</td>
+                  <td class="py-3 px-3 text-primary font-bold text-right font-display tabular-nums">{{ formatCount(unit.specialCount, '세대') }}</td>
                 </tr>
               </tbody>
               <tfoot v-if="unitTypes.length > 1">
                 <tr class="border-t-2 border-line-2 bg-background-light">
                   <td class="py-3 px-3 font-bold text-ink">합계</td>
                   <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 font-bold text-ink text-right font-display tabular-nums">
-                    {{ specialColumnTotal(col.key) }}
+                    {{ formatCount(specialColumnTotal(col.key), '세대') }}
                   </td>
-                  <td class="py-3 px-3 font-bold text-primary text-right font-display tabular-nums">{{ totalSpecial }}</td>
+                  <td class="py-3 px-3 font-bold text-primary text-right font-display tabular-nums">{{ formatCount(totalSpecial, '세대') }}</td>
                 </tr>
               </tfoot>
             </table>
@@ -233,7 +268,7 @@
                 <tr v-for="status in specialStatuses" :key="status.houseType ?? status.id" class="border-b border-line hover:bg-background-light">
                   <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(status.houseType) }}</td>
                   <td v-for="col in activeSpecialStatusColumns" :key="col.key" class="py-3 px-3 text-right text-muted">
-                    <span class="block text-xs text-faint font-display tabular-nums">{{ (status[col.applyKey] as number) || 0 }}명 / {{ (status[col.supplyKey] as number) || 0 }}세대</span>
+                    <span class="block text-xs text-faint font-display tabular-nums">{{ formatCount(status[col.applyKey] as number | null, '명') }} / {{ formatCount(status[col.supplyKey] as number | null, '세대') }}</span>
                   </td>
                 </tr>
               </tbody>
@@ -242,7 +277,7 @@
         </SectionBlock>
 
         <!-- 전월세 시세 (임대주택만) -->
-        <RentalPriceStatsBox v-if="subscription?.rentType === '임대주택'" class="order-7 md:order-7" :subscription-id="subscription.id" :region-name="subscription.regionName" />
+        <RentalPriceStatsBox v-if="showRentalPriceStats" class="order-7 md:order-7" :subscription-id="subscription.id" :region-name="subscription.regionName" />
 
         <!-- "위치와 로드뷰" 데스크톱 -->
         <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block order-8 md:order-8">
@@ -314,6 +349,56 @@
           <p class="text-sm text-muted">위치 정보가 제공되지 않아 지도를 표시할 수 없습니다.</p>
         </div>
 
+
+        <SectionBlock
+          v-if="subscription.publicRental"
+          class="order-8 md:order-8"
+          heading="공공임대 공급정보"
+          subtext="공급지역·단지별 모집 수량과 임대 조건입니다. 금액이 비어 있으면 원문 확인으로 표시합니다."
+        >
+          <div class="mb-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+            <div class="rounded-lg border border-line bg-background-light p-3">
+              <span class="block text-xs font-semibold text-faint">공급기관</span>
+              <strong class="mt-1 block text-strong">{{ subscription.publicRental.provider || subscription.developerName || '원문 확인' }}</strong>
+            </div>
+            <div class="rounded-lg border border-line bg-background-light p-3">
+              <span class="block text-xs font-semibold text-faint">출처</span>
+              <strong class="mt-1 block text-strong">{{ publicRentalSourceLabel }}</strong>
+            </div>
+            <div class="rounded-lg border border-line bg-background-light p-3">
+              <span class="block text-xs font-semibold text-faint">원문 상태</span>
+              <strong class="mt-1 block text-strong">{{ subscription.publicRental.sourceStatus || '원문 확인' }}</strong>
+            </div>
+          </div>
+          <div v-if="publicRentalSupplies.length > 0" class="overflow-x-auto" role="region" aria-label="공공임대 공급지역별 조건 표" tabindex="0">
+            <table class="w-full text-sm whitespace-nowrap">
+              <thead>
+                <tr class="border-b-2 border-line-2 bg-background-light">
+                  <th class="px-4 py-3 text-left font-semibold text-faint">단지/공급</th>
+                  <th class="px-4 py-3 text-left font-semibold text-faint">지역</th>
+                  <th class="px-4 py-3 text-left font-semibold text-faint">주소</th>
+                  <th class="px-4 py-3 text-right font-semibold text-faint">수량</th>
+                  <th class="px-4 py-3 text-right font-semibold text-faint">최소 보증금</th>
+                  <th class="px-4 py-3 text-right font-semibold text-faint">최소 월임대료</th>
+                  <th class="px-4 py-3 text-left font-semibold text-faint">모집기간</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="supply in publicRentalSupplies" :key="supply.key" class="border-b border-line hover:bg-background-light">
+                  <td class="px-4 py-3 font-medium text-strong">{{ supply.name || '원문 확인' }}</td>
+                  <td class="px-4 py-3 text-muted">{{ supply.region || '원문 확인' }}</td>
+                  <td class="px-4 py-3 text-muted">{{ supply.address || '원문 확인' }}</td>
+                  <td class="px-4 py-3 text-right font-display tabular-nums">{{ formatPublicRentalCount(supply.supplyCount) }}</td>
+                  <td class="px-4 py-3 text-right font-display tabular-nums">{{ formatWonAmount(supply.deposit) }}</td>
+                  <td class="px-4 py-3 text-right font-display tabular-nums">{{ formatWonAmount(supply.monthlyRent) }}</td>
+                  <td class="px-4 py-3 text-muted">{{ formatPublicRentalPeriod(supply) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-else class="rounded-lg border border-line bg-background-light p-4 text-sm text-muted">단지별 공급 조건은 원문 확인이 필요합니다.</p>
+        </SectionBlock>
+
         <!-- "기본정보" 블록 -->
         <SectionBlock class="order-9 md:order-9" heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
@@ -329,7 +414,7 @@
               <span class="text-muted shrink-0">공급위치</span>
               <span class="font-medium text-strong md:text-right">{{ subscription.supplyLocation }}</span>
             </div>
-            <div v-if="subscription.totalSupplyCount" class="flex justify-between py-2 border-b border-line">
+            <div v-if="subscription.totalSupplyCount != null" class="flex justify-between py-2 border-b border-line">
               <span class="text-muted">총 공급호수</span>
               <span class="font-medium text-strong font-display tabular-nums">{{ subscription.totalSupplyCount.toLocaleString() }}호</span>
             </div>
@@ -372,7 +457,7 @@
             class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-line-2 text-ink font-medium rounded-xl hover:bg-background-light transition-colors shadow-sm"
           >
             <span class="material-symbols-outlined text-[20px]">description</span>
-            청약홈 공고 보기
+            원문 확인
           </a>
         </div>
 
@@ -389,7 +474,6 @@
         <div class="order-12 md:order-12">
           <DataSourceSection domain="subscription" :last-sync-date="subscription?.updatedAt ? formatDotDate(subscription.updatedAt) : null" />
         </div>
-
       </div>
     </template>
 
@@ -416,9 +500,9 @@
 import { SITE_URL } from '~/utils/seoConstants'
 import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
 import { buildOgMapImageUrl, staticOgImageUrl } from '~/utils/ogImageUrl'
-import { buildSubscriptionSeoTitle } from '~/utils/subscriptionMeta'
+import { buildSubscriptionSeoTitle, PUBLIC_RENT_TYPES } from '~/utils/subscriptionMeta'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
-import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus } from '~/types/subscription'
+import type { Subscription, SubscriptionUnitType, SubscriptionCompetition, SubscriptionScore, SubscriptionSpecialStatus, PublicRentalSupply } from '~/types/subscription'
 import { useSubscription } from '~/composables/useSubscription'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { formatDotDate } from '~/utils/syncFreshness'
@@ -427,8 +511,6 @@ import RentalPriceStatsBox from '~/components/subscription/RentalPriceStatsBox.v
 import SubscriptionScheduleTimeline from '~/components/subscription/SubscriptionScheduleTimeline.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
-import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
@@ -447,7 +529,15 @@ const error = ref<string | null>(null)
 const isMapExpanded = ref(false)
 const showNavDropdown = ref(false)
 
-const hasCoords = computed(() => !!(subscription.value?.lat && subscription.value?.lng))
+const publicRentalSupplies = computed(() => subscription.value?.publicRental?.supplies ?? [])
+const isPublicRentalMultiRegion = computed(() =>
+  subscription.value?.sourceType === 'PUBLIC_RENT' && (
+    subscription.value.regionName === '전국' ||
+    publicRentalSupplies.value.length !== 1 ||
+    new Set(publicRentalSupplies.value.map(supply => supply.region).filter(Boolean)).size > 1
+  )
+)
+const hasCoords = computed(() => !!(subscription.value?.lat && subscription.value?.lng) && !isPublicRentalMultiRegion.value)
 
 const mapCenter = computed(() => {
   if (!hasCoords.value) return null
@@ -501,38 +591,62 @@ const priceRange = computed(() => {
   const min = Math.min(...amounts)
   const max = Math.max(...amounts)
   if (min === max) return formatPrice(min)
-  // ~ 양쪽도 non-breaking space — 분양가 전체를 한 줄에 유지.
-  return `${formatPrice(min)}\u00A0~\u00A0${formatPrice(max)}`
+  // 범위 구분자는 일반 공백으로 둔다. 36px 대표 금액은 좁은 폭에서 여기서 자연스럽게 줄바꿈된다.
+  return `${formatPrice(min)} ~ ${formatPrice(max)}`
 })
+
+const isApplyHomePublicRent = computed(() =>
+  subscription.value?.sourceType === 'APT' &&
+  subscription.value.rentType != null &&
+  PUBLIC_RENT_TYPES.includes(subscription.value.rentType),
+)
+
+const isPublicRent = computed(() =>
+  isApplyHomePublicRent.value || subscription.value?.sourceType === 'PUBLIC_RENT',
+)
+
+const isRentSubscription = computed(() =>
+  isPublicRent.value || subscription.value?.sourceType === 'PRIVATE_RENT',
+)
+
+const showRentalPriceStats = computed(() => isApplyHomePublicRent.value)
+
+const unitPriceHeader = computed(() => isPublicRent.value ? '임대 조건' : '분양최고가')
+const unitPriceShortLabel = computed(() => isPublicRent.value ? '조건' : '가격')
+const supplySectionSubtext = computed(() =>
+  isPublicRent.value
+    ? '주택형별 공급 규모와 임대 조건을 비교합니다.'
+    : '주택형별 공급 규모와 분양가를 비교합니다.',
+)
 
 const heroEyebrow = computed(() => {
   if (!subscription.value) return '청약'
-  const rent = subscription.value.rentType === '임대주택' ? '임대' : '분양'
+  const rent = isPublicRent.value ? '공공임대' : isRentSubscription.value ? '임대' : '분양'
   return `${rent} · ${getStatusLabel(subscription.value.status)}`
 })
 
 const heroStats = computed(() => {
   if (!subscription.value) return []
-  const items: { label: string; value: string }[] = []
-  if (subscription.value.totalSupplyCount) {
+  const items: { label: string; value: string; prominent?: boolean }[] = []
+  if (subscription.value.totalSupplyCount != null) {
     items.push({ label: '총 공급', value: `${subscription.value.totalSupplyCount.toLocaleString()}호` })
   }
   if (subscription.value.moveInMonth) {
     items.push({ label: '입주 예정', value: formatMoveInMonth(subscription.value.moveInMonth) })
   }
-  if (priceRange.value) {
-    items.push({ label: '분양가', value: priceRange.value })
+  if (!isPublicRent.value && priceRange.value) {
+    items.push({ label: '분양가', value: priceRange.value, prominent: true })
   }
   return items
 })
 
 const subscriptionTypeLabel = computed(() => {
   if (!subscription.value) return '청약'
+  if (isPublicRent.value) return '공공임대'
   if (subscription.value.houseType) return subscription.value.houseType
   if (subscription.value.sourceType === 'PRIVATE_RENT') return '민간임대'
   if (subscription.value.sourceType === 'OFFITEL') return '오피스텔'
   if (subscription.value.sourceType === 'REMAINING') return '무순위·잔여세대'
-  if (subscription.value.rentType === '임대주택') return '공공임대'
   return '아파트'
 })
 
@@ -561,7 +675,7 @@ const subscriptionSeoDescription = computed(() => {
   const location = subscription.value.regionName || '전국'
   const facts = [getStatusLabel(subscription.value.status)]
 
-  if (subscription.value.totalSupplyCount) {
+  if (subscription.value.totalSupplyCount != null) {
     facts.push(`공급 ${subscription.value.totalSupplyCount.toLocaleString()}호`)
   }
   if (subscriptionDateRange.value) {
@@ -573,7 +687,7 @@ const subscriptionSeoDescription = computed(() => {
   else if (subscription.value.moveInMonth) {
     facts.push(`입주 ${formatMoveInMonth(subscription.value.moveInMonth)}`)
   }
-  if (priceRange.value) {
+  if (!isPublicRent.value && priceRange.value) {
     facts.push(`분양가 ${priceRange.value}`)
   }
 
@@ -582,7 +696,7 @@ const subscriptionSeoDescription = computed(() => {
 
 const breadcrumbItems = computed(() => {
   if (!subscription.value) return []
-  const isRent = subscription.value.rentType === '임대주택' || subscription.value.sourceType === 'PRIVATE_RENT'
+  const isRent = isRentSubscription.value
   const items: { label: string; href?: string; current?: boolean }[] = [
     { label: '홈', href: '/', current: false },
     { label: '청약 정보', href: '/subscription', current: false },
@@ -593,9 +707,50 @@ const breadcrumbItems = computed(() => {
   return items
 })
 
+const publicRentalSourceLabel = computed(() => {
+  const sources = subscription.value?.publicRental?.sources ?? []
+  if (sources.length === 0) return '원문 확인'
+  return sources.map(source => source === 'MYHOME' ? '마이홈' : 'LH').join(' · ')
+})
+
+function formatPublicRentalCount(value: number | null): string {
+  return value == null ? '원문 확인' : `${value.toLocaleString()}호`
+}
+
+function formatWonAmount(value: number | null): string {
+  if (value == null || value === 0) return '원문 확인'
+  const manwon = Math.round(value / 10000)
+  if (manwon >= 10000) {
+    const eok = Math.floor(manwon / 10000)
+    const man = manwon % 10000
+    return man > 0 ? `${eok}억 ${man.toLocaleString()}만원` : `${eok}억`
+  }
+  return `${manwon.toLocaleString()}만원`
+}
+
+function formatPublicRentalPeriod(supply: PublicRentalSupply): string {
+  if (!supply.receptionStartDate || !supply.receptionEndDate) return '원문 확인'
+  return `${supply.receptionStartDate.slice(0, 10)} ~ ${supply.receptionEndDate.slice(0, 10)}`
+}
+
 // 합계 계산
-const totalGeneral = computed(() => unitTypes.value.reduce((sum, u) => sum + (u.generalCount || 0), 0))
-const totalSpecial = computed(() => unitTypes.value.reduce((sum, u) => sum + (u.specialCount || 0), 0))
+function nullableUnitSum(key: 'generalCount' | 'specialCount'): number | null {
+  let hasValue = false
+  const total = unitTypes.value.reduce((sum, unit) => {
+    const value = unit[key]
+    if (value == null) return sum
+    hasValue = true
+    return sum + value
+  }, 0)
+  return hasValue ? total : null
+}
+
+const totalGeneral = computed(() => nullableUnitSum('generalCount'))
+const totalSpecial = computed(() => nullableUnitSum('specialCount'))
+const totalSupplyTotal = computed(() => {
+  if (totalGeneral.value == null && totalSpecial.value == null) return null
+  return (totalGeneral.value ?? 0) + (totalSpecial.value ?? 0)
+})
 
 // 특별공급 매트릭스
 const allSpecialColumns = [
@@ -612,12 +767,19 @@ const allSpecialColumns = [
 
 const activeSpecialColumns = computed(() =>
   allSpecialColumns.filter(col =>
-    unitTypes.value.some(u => (u[col.key as keyof SubscriptionUnitType] as number) > 0)
+    unitTypes.value.some(u => (u[col.key as keyof SubscriptionUnitType] as number | null) != null)
   )
 )
 
-function specialColumnTotal(key: string): number {
-  return unitTypes.value.reduce((sum, u) => sum + ((u[key as keyof SubscriptionUnitType] as number) || 0), 0)
+function specialColumnTotal(key: string): number | null {
+  let hasValue = false
+  const total = unitTypes.value.reduce((sum, u) => {
+    const value = u[key as keyof SubscriptionUnitType] as number | null
+    if (value == null) return sum
+    hasValue = true
+    return sum + value
+  }, 0)
+  return hasValue ? total : null
 }
 
 const hasSpecialSupply = computed(() => activeSpecialColumns.value.length > 0)
@@ -672,7 +834,7 @@ const allSpecialStatusColumns = [
 
 const activeSpecialStatusColumns = computed(() =>
   allSpecialStatusColumns.filter(col =>
-    specialStatuses.value.some(s => (s[col.supplyKey] as number) > 0 || (s[col.applyKey] as number) > 0)
+    specialStatuses.value.some(s => (s[col.supplyKey] as number | null) != null || (s[col.applyKey] as number | null) != null)
   )
 )
 
@@ -680,6 +842,7 @@ const activeSpecialStatusColumns = computed(() =>
 function getStatusLabel(status: string): string {
   if (status === 'upcoming') return '접수예정'
   if (status === 'ongoing') return '청약중'
+  if (status === 'unknown') return '일정 확인 필요'
   return '마감'
 }
 
@@ -718,8 +881,22 @@ function formatSupplyArea(area: string | null): string {
   return `${sqm.toFixed(1)}㎡ (${pyeong}평)`
 }
 
+function formatCount(value: number | null, unit: string): string {
+  return value == null ? '미제공' : `${value.toLocaleString()}${unit}`
+}
+
+function unitTotal(unit: SubscriptionUnitType): number | null {
+  if (unit.generalCount == null && unit.specialCount == null) return null
+  return (unit.generalCount ?? 0) + (unit.specialCount ?? 0)
+}
+
+function formatUnitPrice(unit: SubscriptionUnitType): string {
+  if (isPublicRent.value) return '원문 확인'
+  return unit.topAmount == null ? '미제공' : formatPrice(unit.topAmount)
+}
+
 function calcPricePerPyeong(unit: SubscriptionUnitType): string {
-  if (!unit.topAmount || !unit.supplyArea) return '-'
+  if (unit.topAmount == null || !unit.supplyArea) return '-'
   const sqm = parseFloat(unit.supplyArea)
   if (isNaN(sqm) || sqm === 0) return '-'
   const pyeong = sqm / 3.3058
@@ -776,7 +953,7 @@ const { trackSubscriptionView } = useAnalytics()
 
 if (subscription.value) {
   const sub = subscription.value
-  const isRent = sub.sourceType === 'PRIVATE_RENT' || (sub.sourceType === 'APT' && sub.rentType === '임대주택')
+  const isRent = sub.sourceType === 'PRIVATE_RENT' || sub.sourceType === 'PUBLIC_RENT' || (sub.sourceType === 'APT' && sub.rentType != null && PUBLIC_RENT_TYPES.includes(sub.rentType))
   const categoryName = isRent ? '임대' : '분양'
   const categoryPath = isRent ? '/subscription/rent' : '/subscription/sale'
 
@@ -836,6 +1013,23 @@ setMeta({
 </script>
 
 <style scoped>
+.subscription-detail-page :deep(.shadow-card) {
+  box-shadow: none;
+}
+
+.subscription-detail-page :deep(section.bg-white.border.rounded-xl) {
+  border-width: 0;
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+  box-shadow: none;
+}
+
+.subscription-detail-page :deep(section.bg-white.border.rounded-xl + section.bg-white.border.rounded-xl) {
+  border-top: 1px solid rgb(var(--color-line, 226 232 240));
+  padding-top: 20px;
+}
+
 .roadview-wrapper :deep(> div) {
   height: 100% !important;
 }

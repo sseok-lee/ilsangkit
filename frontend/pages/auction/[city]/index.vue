@@ -1,24 +1,26 @@
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="property-redesign bg-white min-h-screen">
     <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <PageHero
+        class="property-hero"
         eyebrow="공매"
         :title="`${cityName} 공매 물건`"
         :description="`${cityName} 구·군별 부동산 공매 물건과 낙찰가율 통계를 확인하세요.`"
       />
 
       <SectionBlock
+        class="property-section"
         :heading="`${cityName} 구·군 목록`"
         :subtext="`${cityName} 내 구·군을 선택하면 공매 물건과 낙찰가율 통계를 확인할 수 있습니다.`"
       >
-        <div v-if="districtCards.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div v-if="districtCards.length > 0" class="property-region-list">
           <NuxtLink
             v-for="card in districtCards"
             :key="card.district"
             :to="`/auction/${citySlug}/${card.districtSlug}`"
-            class="group bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
+            class="property-region-link"
           >
             <span class="text-display-3 text-slate-800">{{ card.district }}</span>
             <span class="text-caption text-slate-500">진행 {{ card.activeCount }}건</span>
@@ -128,3 +130,5 @@ const selfUrl = `${SITE_URL}/auction/${citySlug}`
 
 useHead(() => computeAuctionCityHead({ city: cityName, anyIndexable: anyIndexable.value }, selfUrl))
 </script>
+
+<style src="~/assets/css/remaining-property.css"></style>

@@ -1,6 +1,6 @@
 // Subscription (청약) types
 
-export type SubscriptionSourceType = 'APT' | 'OFFITEL' | 'REMAINING' | 'PRIVATE_RENT' | 'OPTIONAL'
+export type SubscriptionSourceType = 'APT' | 'OFFITEL' | 'REMAINING' | 'PRIVATE_RENT' | 'OPTIONAL' | 'PUBLIC_RENT'
 
 export interface Subscription {
   id: number
@@ -36,11 +36,35 @@ export interface Subscription {
   homepage: string | null
   pblancUrl: string | null
   inquiryTel: string | null
-  status: 'upcoming' | 'ongoing' | 'closed'
+  status: 'upcoming' | 'ongoing' | 'closed' | 'unknown'
   lat?: number | null
   lng?: number | null
   createdAt?: string
   updatedAt?: string
+  publicRental?: PublicRentalInfo | null
+}
+
+
+export interface PublicRentalSupply {
+  key: string
+  name: string | null
+  region: string
+  address: string | null
+  supplyCount: number | null
+  deposit: number | null
+  monthlyRent: number | null
+  receptionStartDate: string | null
+  receptionEndDate: string | null
+}
+
+export interface PublicRentalInfo {
+  provider: string
+  sources: Array<'MYHOME' | 'LH'>
+  sourceIds: { myhome: string[]; lh: string[] }
+  sourceStatus: string | null
+  lastSyncedAt: string
+  supplies: PublicRentalSupply[]
+  isCorrection: boolean
 }
 
 export interface SubscriptionUnitType {

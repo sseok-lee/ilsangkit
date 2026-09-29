@@ -2,7 +2,7 @@
  * 부동산 상세/목록 URL 생성 유틸 (frontend).
  *
  * URL 스펙:
- *   /real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingNameNFC}
+ *   /real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingNameNFC}/{buildingKey?}
  *
  * Backend `backend/src/lib/realEstateUrl.ts` 와 **동일 시그니처/동일 동작**을 유지.
  * 규칙이 변경되면 양쪽 파일을 함께 수정하고 vitest 양쪽을 실행할 것.
@@ -37,6 +37,8 @@ export interface RealEstateUrlParts {
   district: string
   /** 건물명. NFD/NFC 어느 쪽이어도 입력 가능 — 내부에서 NFC로 정규화. */
   buildingName: string
+  /** 동일 이름 건물을 주소 단위로 구분하는 SHA-256 키. */
+  buildingKey?: string | null
 }
 
 export function toCitySlug(city: string): string {
@@ -72,7 +74,8 @@ export function toRealEstateUrl(parts: RealEstateUrlParts): string {
   const citySlug = toCitySlugByDistrict(parts.city, parts.district)
   const districtSlug = toDistrictSlug(parts.district)
   const nfcName = parts.buildingName.normalize('NFC')
-  return `/real-estate/${parts.type}/${citySlug}/${districtSlug}/${encodeURIComponent(nfcName)}`
+  const base = `/real-estate/${parts.type}/${citySlug}/${districtSlug}/${encodeURIComponent(nfcName)}`
+  return parts.buildingKey ? `${base}/${parts.buildingKey}` : base
 }
 
 export function toRealEstateListUrl(parts: Omit<RealEstateUrlParts, 'buildingName'>): string {

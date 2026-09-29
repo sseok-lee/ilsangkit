@@ -163,3 +163,11 @@ describe('전남광주통합특별시 flat jeonnamgwangju (backend, 사이트맵
     expect(url).toContain('/jeonnamgwangju/seo/');
   });
 });
+
+it('keeps different parcel keys in distinct canonical paths', () => {
+  const parts = { type: 'villa-sale' as const, city: '서울특별시', district: '강남구', buildingName: '스톤빌리지' };
+  const a = toRealEstateUrl({ ...parts, buildingKey: 'a'.repeat(64) });
+  const b = toRealEstateUrl({ ...parts, buildingKey: 'b'.repeat(64) });
+  expect(a).toBe(`/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}/${'a'.repeat(64)}`);
+  expect(a).not.toBe(b);
+});

@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { readSummaryMode, summaryTableFor } from '../lib/realEstateSummaryStore.js';
 import { dateBasedStatusFilter } from './subscriptionService.js';
 import { getPropertyHotspots } from './realEstateHotspotService.js';
 import { dealDateRangeFilter } from './realEstateDateFilter.js';
@@ -73,6 +74,20 @@ export async function getStats(): Promise<{ cached: boolean; data: StatsData }> 
   return inflightStats;
 }
 
+
+async function fetchRealEstateBuildingCounts(): Promise<[{ apt: bigint; villa: bigint; offitel: bigint }]> {
+  const mode = readSummaryMode(process.env);
+  const table = summaryTableFor('list', mode);
+  const distinctExpr = mode === 'address' ? 'buildingKey' : "CONCAT(buildingName,'|',bjdCode)";
+  return prisma.$queryRawUnsafe<[{ apt: bigint; villa: bigint; offitel: bigint }]>(
+    `SELECT
+      COUNT(DISTINCT CASE WHEN type IN ('apt-sale','apt-rent') THEN ${distinctExpr} END) AS apt,
+      COUNT(DISTINCT CASE WHEN type IN ('villa-sale','villa-rent') THEN ${distinctExpr} END) AS villa,
+      COUNT(DISTINCT CASE WHEN type IN ('offitel-sale','offitel-rent') THEN ${distinctExpr} END) AS offitel
+     FROM ${table}`,
+  );
+}
+
 async function fetchFreshStats(): Promise<{ cached: boolean; data: StatsData }> {
   const [
     toiletCount, wifiCount, clothesCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount,
@@ -83,7 +98,7 @@ async function fetchFreshStats(): Promise<{ cached: boolean; data: StatsData }> 
     prisma.toilet.count(),
     prisma.wifi.count(),
     prisma.clothes.count(),
-    prisma.wasteSchedule.count(),
+    prisma.wasteSchedule.count({ where: { stagedMarker: null } }),
     prisma.parking.count(),
     prisma.aed.count(),
     prisma.library.count(),
@@ -101,12 +116,7 @@ async function fetchFreshStats(): Promise<{ cached: boolean; data: StatsData }> 
     prisma.villaRentTransaction.count(),
     prisma.offitelSaleTransaction.count(),
     prisma.offitelRentTransaction.count(),
-    prisma.$queryRaw<[{ apt: bigint; villa: bigint; offitel: bigint }]>`
-      SELECT
-        COUNT(DISTINCT CASE WHEN type IN ('apt-sale','apt-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS apt,
-        COUNT(DISTINCT CASE WHEN type IN ('villa-sale','villa-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS villa,
-        COUNT(DISTINCT CASE WHEN type IN ('offitel-sale','offitel-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS offitel
-      FROM RealEstateBuildingSummary`,
+    fetchRealEstateBuildingCounts(),
     prisma.region.count(),
     prisma.subscription.count({
       where: {

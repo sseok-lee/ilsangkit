@@ -46,6 +46,14 @@ jobs:
       - name: Seed minimal DB data
         run: cd backend && npm run db:seed
 
+      - name: Prepare real estate summary readiness
+        run: |
+          mkdir -p "$REAL_ESTATE_WRITE_LOCK_DIR"
+          cd backend
+          npx tsx src/scripts/seedCiSummaryReadiness.ts
+        env:
+          REAL_ESTATE_WRITE_LOCK_DIR: ${{ runner.temp }}/real-estate-locks
+
       - name: Start backend in background
         run: cd backend && (npm run dev &) && sleep 8
 

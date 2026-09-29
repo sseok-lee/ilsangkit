@@ -2,12 +2,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { AuctionItem } from '~/types/auction'
-import { formatWonKorean, formatDiscount, formatAuctionDate, USAGE_GROUP_LABEL } from '~/types/auction'
+import { formatWonKorean, formatDiscount, formatAuctionDate, formatAuctionDateTime, USAGE_GROUP_LABEL } from '~/types/auction'
 import AuctionStatusBadge from '~/components/auction/AuctionStatusBadge.vue'
 // 목록→상세 이동을 전체 새로고침(MPA)으로 — SPA soft-nav 시 AdSense가 unfill-optimized로
 // 광고를 안 채우는 문제 회피. 기존 카드(FacilityCard 등)와 동일하게 HardLink 사용.
 import HardLink from '~/components/common/HardLink.vue'
-const props = defineProps<{ item: AuctionItem }>()
+const props = withDefaults(defineProps<{ item: AuctionItem; variant?: 'card' | 'row' }>(), { variant: 'card' })
 const to = computed(() => `/auction/item/${props.item.cltrMngNo}`)
 const apsl = computed(() => props.item.apslAssAmt)
 const minBid = computed(() => props.item.minBidPrc)
@@ -22,7 +22,19 @@ const hasDiscount = computed(() => !!apsl.value && apsl.value > 0 && !!minBid.va
 const discount = computed(() => formatDiscount(props.item.apslAssAmt, props.item.minBidPrc))
 </script>
 <template>
-  <HardLink :to="to" class="block bg-white rounded-xl border border-line p-4 shadow-card hover:border-primary/30 transition-[box-shadow,border-color]">
+  <HardLink v-if="variant === 'row'" :to="to" class="auction-property-row">
+    <div class="min-w-0 flex-1">
+      <div class="mb-2 flex flex-wrap items-center gap-2"><AuctionStatusBadge :status="item.status" /><span class="text-xs text-muted">{{ item.usage ?? USAGE_GROUP_LABEL[item.usageGroup] }}</span></div>
+      <p class="font-semibold text-strong break-words">{{ item.address }}</p>
+      <p class="mt-2 text-xs text-muted">{{ item.cltrMngNo }}<span v-if="item.failCnt"> · 유찰 {{ item.failCnt }}회</span><span v-if="item.bidRound"> · {{ item.bidRound }}차</span></p>
+    </div>
+    <div class="min-w-0 md:text-right">
+      <p class="font-semibold text-strong">최저입찰가 {{ minDisplay }}</p>
+      <p class="mt-1 text-xs text-muted">감정가 {{ apslDisplay }}<span v-if="hasDiscount"> · {{ discount }}</span></p>
+      <p class="mt-2 text-xs text-muted">{{ item.bidCloseDtm ? `${formatAuctionDateTime(item.bidCloseDtm)} 마감` : '일정 미제공' }}</p>
+    </div>
+  </HardLink>
+  <HardLink v-else :to="to" class="block bg-white rounded-xl border border-line p-4 shadow-card hover:border-primary/30 transition-[box-shadow,border-color]">
     <div class="flex items-center gap-2 mb-2">
       <AuctionStatusBadge :status="item.status" />
       <span v-if="item.propertyType" class="text-caption text-muted">{{ item.propertyType }}</span>
@@ -43,3 +55,10 @@ const discount = computed(() => formatDiscount(props.item.apslAssAmt, props.item
     </div>
   </HardLink>
 </template>
+
+<style scoped>
+.auction-property-row { display:flex; flex-wrap:wrap; gap:20px; padding:22px 4px; border-bottom:1px solid #e6e9f0; background:white; }
+.auction-property-row:hover { background:#f7f8fa; }
+.auction-property-row:focus-visible { outline:2px solid #2450dc; outline-offset:3px; }
+@media(max-width:767px) { .auction-property-row { flex-direction:column; gap:12px; } }
+</style>

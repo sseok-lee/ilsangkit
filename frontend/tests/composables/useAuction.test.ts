@@ -26,3 +26,19 @@ describe('useAuction', () => {
     expect((globalThis as any).$fetch.mock.calls[0][0]).toContain('/api/auction/ranking');
   });
 });
+
+
+it('serializes keyword, exact status and page together', async () => {
+  globalThis.$fetch = vi.fn().mockResolvedValue({ success: true, data: {} }) as any
+  await useAuction().getItems({ keyword: 'CLTR-1', status: 'scheduled', statusMode: 'exact', usage: 'land', page: 2 })
+  const url = new URL((globalThis.$fetch as any).mock.calls[0][0], 'http://localhost')
+  expect(Object.fromEntries(url.searchParams)).toMatchObject({ keyword: 'CLTR-1', status: 'scheduled', statusMode: 'exact', usage: 'land', page: '2' })
+})
+
+
+it('serializes ranking search with server ordering and limit', async () => {
+  globalThis.$fetch = vi.fn().mockResolvedValue({ success: true, data: [] }) as any
+  await useAuction().getRanking({ keyword: '강남', usage: 'land', order: 'count', limit: 50 })
+  const url = new URL((globalThis.$fetch as any).mock.calls[0][0], 'http://localhost')
+  expect(Object.fromEntries(url.searchParams)).toEqual({ keyword: '강남', usage: 'land', order: 'count', limit: '50' })
+})

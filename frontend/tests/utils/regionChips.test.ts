@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { SIDO_CHIPS, resolveCityParam, buildListFetch } from '~/utils/regionChips'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('SIDO_CHIPS', () => {
   it('16개이며 레거시 광주/전남 slug를 제외하고 전남광주를 포함한다', () => {
@@ -38,5 +42,13 @@ describe('buildListFetch keyword', () => {
     const { url, options } = buildListFetch('trash', 'seoul', 1, '삼성동')
     expect(url).toBe('/api/waste-schedules')
     expect(options.params).toMatchObject({ city: '서울', keyword: '삼성동' })
+  })
+
+  it('trash: discovery flag가 true일 때만 waste-areas params 로 바꾼다', () => {
+    vi.stubGlobal('useRuntimeConfig', () => ({ public: { wasteAreaDiscoveryEnabled: true } }))
+    const { url, options } = buildListFetch('trash', 'seoul', 1, '삼성동')
+
+    expect(url).toBe('/api/waste-areas')
+    expect(options.params).toMatchObject({ city: '서울특별시', keyword: '삼성동' })
   })
 })

@@ -7,6 +7,27 @@
       </p>
     </div>
 
+    <div v-if="props.error" data-testid="map-sidebar-error" class="mx-4 mt-3 rounded-lg border border-line bg-background-light p-3">
+      <p class="text-sm font-semibold text-slate-900">지도 데이터를 불러오지 못했습니다</p>
+      <p class="mt-1 text-xs leading-relaxed text-slate-600">{{ props.error }}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="min-h-[44px] rounded-lg bg-primary px-3 text-xs font-semibold text-white"
+          @click="emit('retry')"
+        >
+          다시 시도
+        </button>
+        <a
+          v-if="props.listHref"
+          :href="props.listHref"
+          class="min-h-[44px] inline-flex items-center rounded-lg border border-line bg-white px-3 text-xs font-semibold text-slate-700"
+        >
+          {{ props.listLabel }}
+        </a>
+      </div>
+    </div>
+
     <ul class="flex-1">
       <template v-for="row in visibleRows" :key="row.key">
         <li
@@ -31,30 +52,34 @@
           <a
             v-if="props.granularity === 'building'"
             :href="row.href ?? undefined"
-            class="flex items-center justify-between gap-3 px-4 py-3 transition-colors"
+            class="block px-4 py-3 transition-colors"
             :class="row.key === props.selectedKey ? 'bg-primary-50' : 'hover:bg-background-light'"
             :aria-current="row.key === props.selectedKey ? 'true' : undefined"
             @click.exact="onRowClick($event, row)"
           >
-            <span class="min-w-0">
+            <span class="flex items-start justify-between gap-3">
+              <span class="min-w-0">
               <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
               <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
-            </span>
-            <span v-if="row.isRent" class="text-right whitespace-nowrap leading-tight">
-              <span
-                class="block text-sm"
-                :class="row.jeonse != null ? 'font-semibold text-primary' : 'text-slate-400'"
-              >
-                <span class="text-[11px] font-medium text-slate-500 mr-1">전세</span>{{ row.jeonse ?? '거래 없음' }}
               </span>
-              <span
-                class="block text-xs"
-                :class="row.wolse != null ? 'text-slate-700' : 'text-slate-400'"
-              >
-                <span class="text-[11px] font-medium text-slate-500 mr-1">월세</span>{{ row.wolse ?? '거래 없음' }}
-              </span>
+              <span class="material-symbols-outlined text-[18px] text-faint" aria-hidden="true">chevron_right</span>
             </span>
-            <span v-else class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
+            <span class="mt-2 block space-y-2">
+              <p
+                v-if="row.dealsUnavailable"
+                data-testid="deal-bundle-error"
+                class="text-sm text-slate-600"
+              >
+                거래 정보를 불러오지 못했습니다
+              </p>
+              <template v-else>
+                <DealSnapshot v-if="!row.isRent" compact kind="sale" :deal="row.saleDeal" />
+                <template v-else>
+                  <DealSnapshot compact kind="jeonse" :deal="row.jeonseDeal" />
+                  <DealSnapshot compact kind="wolse" :deal="row.wolseDeal" />
+                </template>
+              </template>
+            </span>
           </a>
           <!--
             city/district 행은 허브 페이지로 떠나지 않고 지도를 드릴다운해야 한다(select
@@ -134,14 +159,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { isBuildingItem, type Granularity, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
-import { formatPriceLabel, formatPyeongLabel, getRentDisplay } from '~/composables/useMapOverlays'
+import { formatPriceLabel, formatPyeongLabel } from '~/composables/useMapOverlays'
 import { itemKey } from '~/composables/useRealEstateMap'
 import { SIDO_CHIPS } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import SourceStamp from '~/components/common/SourceStamp.vue'
+import DealSnapshot from '~/components/realEstate/DealSnapshot.vue'
 import { useSyncStatus } from '~/composables/useSyncStatus'
 import { RE_STALE_DAYS } from '~/utils/syncFreshness'
+import type { DealSnapshot as DealSnapshotData } from '~/types/realEstateExploration'
 
 const props = withDefaults(defineProps<{
   items: MapItem[]
@@ -162,12 +189,18 @@ const props = withDefaults(defineProps<{
    * 지도 마커로 먼저 선택한 뒤 목록에서 누르는 경우도 같은 규칙으로 바로 이동한다.
    */
   selectedKey?: string | null
+  error?: string | null
+  listHref?: string | null
+  listLabel?: string
 }>(), {
   showFooter: false,
   selectedKey: null,
+  error: null,
+  listHref: null,
+  listLabel: '목록으로 보기',
 })
 
-const emit = defineEmits<{ hover: [string | null]; select: [MapItem] }>()
+const emit = defineEmits<{ hover: [string | null]; select: [MapItem]; retry: [] }>()
 
 /**
  * 첫 클릭은 지도 선택, 두 번째 클릭은 상세 이동.
@@ -202,11 +235,13 @@ interface Row {
   title: string
   subtitle: string | null
   price: string
-  /** 전월세 전용. null 이면 매매이거나 지역 행이라 한 줄로 그린다. */
-  jeonse: string | null
-  wolse: string | null
+  saleDeal: DealSnapshotData | null
+  jeonseDeal: DealSnapshotData | null
+  wolseDeal: DealSnapshotData | null
   /** 전월세 행인지. jeonse/wolse 가 둘 다 null 이어도 "거래 없음" 을 그려야 하므로 별도 플래그가 필요하다. */
   isRent: boolean
+  /** latestDeals 자체가 빠진 응답. null 슬롯(검증된 거래 없음)과 구분해 오류를 표시한다. */
+  dealsUnavailable: boolean
   /** null = 갈 페이지가 없는 행(동). 템플릿이 링크 대신 버튼을 그린다. */
   href: string | null
   item: MapItem
@@ -223,16 +258,16 @@ const rows = computed<Row[]>(() => {
     const isRent = props.type.endsWith('-rent')
     return props.items.map((i) => {
       const b = i as MapBuildingItem
-      // 배포 직후처럼 새 분리 컬럼이 아직 안 갱신됐으면 레거시 컬럼으로 폴백한다.
-      const rent = isRent ? getRentDisplay(b) : null
       return {
         key: itemKey(i),
         title: b.buildingName,
-        subtitle: `${b.city} ${b.district} ${b.dongName}`,
-        price: formatPriceLabel(b),
-        jeonse: rent?.jeonse ?? null,
-        wolse: rent?.wolse ?? null,
+        subtitle: [b.city, b.district, b.dongName, b.jibun].filter(Boolean).join(' '),
+        price: formatPriceLabel(b, props.type),
+        saleDeal: b.latestDeals?.sale ?? null,
+        jeonseDeal: b.latestDeals?.jeonse ?? null,
+        wolseDeal: b.latestDeals?.wolse ?? null,
         isRent,
+        dealsUnavailable: b.latestDeals == null,
         // 건물 상세는 4-segment URL. 슬러그 변환·NFC 정규화·encodeURIComponent 가
         // 전부 이 유틸에 들어 있으므로 직접 문자열을 조립하지 않는다.
         href: toRealEstateUrl({
@@ -240,6 +275,7 @@ const rows = computed<Row[]>(() => {
           city: b.city,
           district: b.district,
           buildingName: b.buildingName,
+          buildingKey: b.buildingKey,
         }),
         item: i,
       }
@@ -254,9 +290,11 @@ const rows = computed<Row[]>(() => {
         title: r.district ?? r.name,
         subtitle: r.name,
         price: formatPyeongLabel(r),
-        jeonse: null,
-        wolse: null,
+        saleDeal: null,
+        jeonseDeal: null,
+        wolseDeal: null,
         isRent: false,
+        dealsUnavailable: false,
         href: toRealEstateListUrl({
           type: props.type as RealEstateUrlType,
           city: r.name,
@@ -275,9 +313,11 @@ const rows = computed<Row[]>(() => {
         title: r.dong ?? '',
         subtitle: `${r.name} ${r.district ?? ''}`.trim(),
         price: formatPyeongLabel(r),
-        jeonse: null,
-        wolse: null,
+        saleDeal: null,
+        jeonseDeal: null,
+        wolseDeal: null,
         isRent: false,
+        dealsUnavailable: false,
         // 동 페이지가 없다(6종 라우트는 구·군까지). href 를 만들면 죽은 링크가 되므로
         // null 을 주고 템플릿이 버튼을 그리게 한다.
         href: null,
@@ -308,9 +348,11 @@ const rows = computed<Row[]>(() => {
       title: chip.label,
       subtitle: null,
       price: formatPyeongLabel(item),
-      jeonse: null,
-      wolse: null,
+      saleDeal: null,
+      jeonseDeal: null,
+      wolseDeal: null,
       isRent: false,
+      dealsUnavailable: false,
       href: `/real-estate/${props.type}/${chip.slug}`,
       item,
     }

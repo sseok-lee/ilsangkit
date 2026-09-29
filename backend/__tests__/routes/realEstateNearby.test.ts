@@ -2,21 +2,24 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import app from '../../src/app.js';
 import prisma from '../../src/lib/prisma.js';
+import { assertLocalTestDatabaseUrl } from '../../src/utils/testDatabaseGuard.js';
 
 const TEST_BJD = '1144012799';
+const guardedDatabaseUrl = assertLocalTestDatabaseUrl(process.env.HOUSING_TEST_DATABASE_URL ?? process.env.DATABASE_URL);
 
 describe('GET /api/real-estate/nearby', () => {
   beforeAll(async () => {
-    await prisma.realEstateBuildingSummary.deleteMany({ where: { bjdCode: TEST_BJD } });
-    await prisma.realEstateBuildingSummary.createMany({
+    expect(guardedDatabaseUrl).toContain('_test');
+    await prisma.realEstateBuildingSummaryV2.deleteMany({ where: { bjdCode: TEST_BJD } });
+    await prisma.realEstateBuildingSummaryV2.createMany({
       data: [
-        { type: 'apt-sale', buildingName: 'A아파트', bjdCode: TEST_BJD, city: '서울특별시', district: '마포구', dongName: '한강로동', transactionCount: 5, latestPrice: 1_500_000_000, latestDealYear: 2026, latestDealMonth: 4 },
-        { type: 'villa-sale', buildingName: 'B빌라', bjdCode: TEST_BJD, city: '서울특별시', district: '마포구', dongName: '한강로동', transactionCount: 2, latestPrice: 300_000_000, latestDealYear: 2026, latestDealMonth: 3 },
+        { type: 'apt-sale', buildingKey: 'route-apt'.padEnd(64, '0'), buildingName: 'A아파트', bjdCode: TEST_BJD, city: '서울특별시', district: '마포구', dongName: '한강로동', jibun: '1-1', transactionCount: 5, latestPrice: 1_500_000_000, latestDealYear: 2026, latestDealMonth: 4 },
+        { type: 'villa-sale', buildingKey: 'route-villa'.padEnd(64, '0'), buildingName: 'B빌라', bjdCode: TEST_BJD, city: '서울특별시', district: '마포구', dongName: '한강로동', jibun: '2-1', transactionCount: 2, latestPrice: 300_000_000, latestDealYear: 2026, latestDealMonth: 3 },
       ],
     });
   });
   afterAll(async () => {
-    await prisma.realEstateBuildingSummary.deleteMany({ where: { bjdCode: TEST_BJD } });
+    await prisma.realEstateBuildingSummaryV2.deleteMany({ where: { bjdCode: TEST_BJD } });
   });
 
   it('필수 파라미터 없으면 422', async () => {

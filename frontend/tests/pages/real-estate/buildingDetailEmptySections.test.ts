@@ -69,6 +69,30 @@ describe('부동산 상세 빈 섹션', () => {
     expect(t).toContain('${districtName}')
   })
 
+
+
+  it('overview와 table 실패 상태를 보이면서 각각 독립 재시도 버튼을 제공한다', () => {
+    const t = template()
+    expect(t).toContain('v-if="overviewError"')
+    expect(t).toContain('@click="refreshOverview"')
+    expect(t).toContain('v-if="tableError"')
+    expect(t).toContain('@click="retryExactPage"')
+  })
+
+  it('차트와 표 메타데이터 근처에 필수 신고 정보 기준 caveat를 노출한다', () => {
+    const t = template()
+    expect(t).toContain('필수 신고 정보가 있는 거래 기준')
+  })
+
+  it('좌표 기반 생활시설 요약은 overview 위치가 확정된 뒤에만 요청한다', () => {
+    const s = source()
+    const firstLoader = s.split('const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData(')[1]
+      ?.split('// 판정 근거·회귀 배경은 utils/detailSsrDegraded.ts 주석 참조.')[0] ?? ''
+    expect(firstLoader).not.toContain('/api/facilities/nearby-counts')
+    expect(firstLoader).not.toContain('resolvedBuildingInfo.lat')
+    expect(s).toContain('overviewFacilitySummary')
+  })
+
   it('빈 상태에서도 지역 페이지로 내부 링크를 낸다', () => {
     const t = template()
     expect(t).toContain('`/${citySlugParam}/${districtSlugParam}`')

@@ -8,7 +8,7 @@
  * 이 값을 안 쓰면 통합의 이점이 화면에 하나도 나타나지 않는다 — 지도에 중심점 핀
  * 하나만 찍히고, AP 가 몇 대인지도 안 보인다.
  */
-import type { Facility } from '~/types/facility'
+import type { LocatedFacility } from '~/types/facility'
 
 export interface WifiAccessPoint {
   id: string
@@ -88,7 +88,7 @@ export function groupAccessPointsByLocation(aps: WifiAccessPoint[]): WifiLocatio
  *
  * AP 가 없으면(기존 AP 단일 상세) 대표 시설 하나를 그대로 돌려줘 종전 동작을 유지한다.
  */
-export function accessPointsToMapFacilities(aps: WifiAccessPoint[], base: Facility): Facility[] {
+export function accessPointsToMapFacilities(aps: WifiAccessPoint[], base: LocatedFacility): LocatedFacility[] {
   if (aps.length === 0) return [base]
 
   return aps.map((ap) => {

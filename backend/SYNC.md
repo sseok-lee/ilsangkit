@@ -2,6 +2,36 @@
 
 모든 명령어는 `cd backend` 후 실행.
 
+## 공공임대: 마이홈 + LH
+
+`OPENAPI_SERVICE_KEY`에 두 서비스의 활용 승인이 필요하다.
+- 마이홈 공공주택 모집공고: https://www.data.go.kr/data/15108420/openapi.do
+- LH 임대공고: https://www.data.go.kr/data/15058530/openapi.do (임대주택 06 + 주거복지 13)
+
+```bash
+npm run sync:public-rental               # API 조회·정규화만, DB/동기화 이력 변경 없음
+npm run sync:public-rental -- --write    # Subscription 저장 + sub-public-rent 동기화 이력
+```
+
+처음 배포하기 전에 대상 DB에 `prisma/sql/20260922_public_rental.sql`을 한 번 적용하고
+`npm run db:generate` 및 빌드를 수행한다. 기존 공고를 유지하는 컬럼·인덱스 추가다.
+저장 대상은 `.env`의 `DATABASE_URL`이므로 로컬 검증 시 localhost:3307/ilsangkit을 사용한다.
+일일 `sync-real-estate.yml`에 공공임대 단계가 포함되며 수동 동기화와 동시 실행하지 않는다.
+
+`PUBLIC_RENT` 소스로 기존 청약홈 임대 공고와 함께 제공한다. LH panId와 마이홈
+정정 전 공고 ID를 이용해 중복을 병합하고, 기존 상세 URL은 유지한다. 대체된 URL은
+새 공고 정보를 반환하고 목록·사이트맵에서 제외한다. 제목 유사도로 합치지 않는다.
+공고별 여러 지역·공급조건은 `publicRental.supplies`에 보존하고 각 지역으로 검색한다.
+공고를 한 건물로 간주하는 지오코딩은 하지 않는다.
+
+마이홈 공급별 실제 접수기간이 모두 동일할 때만 공고의 접수기간으로 사용한다.
+LH 목록의 게시일·게시종료일을 접수기간으로 해석하지 않는다. 접수일이 불명확하면
+`unknown`(일정 확인 필요), 원천에서 접수마감이 확인되면 `closed`로 제공한다.
+보증금·월임대료는 원 단위의 원천 최저금액이며 0/미제공은 `null`(원문 확인)이다.
+두 API 조회를 모두 완료한 뒤 저장하므로 한 원천 실패 시 공고를 부분 갱신하지 않는다.
+DB 저장 중 실패하면 완료된 공고는 남고 이력은 실패로 기록된다. 재실행은 기존 ID를 갱신한다.
+현재 응답에 없는 과거 공고는 삭제하지 않으며 SH/GH 등 전국 모든 기관의 포함을 보장하지 않는다.
+
 ---
 
 ## 통합 동기화
@@ -33,11 +63,31 @@ npm run sync:regions      # 지역(시/군/구) 데이터
 
 ### API 기반
 ```bash
-npm run sync:trash        # 쓰레기배출 (공공데이터 API, OPENAPI_SERVICE_KEY 필요)
+npm run sync:trash        # 쓰레기배출 후보 준비 (OPENAPI_SERVICE_KEY + WASTE_* 참조 파일 필요)
 npm run sync:childcare    # 어린이집 (childcare.go.kr API, CHILDCARE_*_API_KEY 필요)
 npm run sync:ev-charger   # 전기차충전소 (공공데이터 API)
 npm run sync:sports       # 체육시설 (공공데이터 API)
 ```
+
+쓰레기 배출정보는 수집 직후 바로 공개하지 않는다. 먼저 후보 generation과 검토 리포트를 만들고,
+리포트의 `reportHash`와 현재 공개 generation을 확인한 뒤 별도 명령으로 포인터만 발행한다.
+
+```bash
+npm run sync:trash -- \
+  --reference-path=./data/waste/reference.json \
+  --reference-manifest-path=./data/waste/manifest.json \
+  --reference-checksums-path=./data/waste/checksums.json \
+  --report-out=./data/waste/review-report.json
+
+npm run waste:publish -- \
+  --generation-id=<prepared-id> \
+  --approval-report-hash=<report-hash> \
+  --expected-base=<active-id|none>
+```
+
+`sync:facilities -- --only trash`도 같은 후보 준비만 수행한다. `--dry-run`은 통합 명령에서
+`--only trash --dry-run` 조합만 허용한다. 기존 `sync:trash --approval-report-hash`와
+`--expected-base`는 더 이상 수집 명령에서 받지 않는다.
 
 ### 병원/약국
 ```bash
@@ -165,3 +215,42 @@ npm run sync:geocode-real-estate
 | `CHILDCARE_BASIC_API_KEY` | 어린이집 기본정보 | api.childcare.go.kr |
 | `CHILDCARE_LIST_API_KEY` | 어린이집 목록 | api.childcare.go.kr |
 | `OPENAI_API_KEY` | 가이드 콘텐츠 생성 | platform.openai.com |
+
+쓰레기 후보 준비용 선택 값:
+
+```bash
+WASTE_REFERENCE_PATH=
+WASTE_REFERENCE_MANIFEST_PATH=
+WASTE_REFERENCE_CHECKSUMS_PATH=
+WASTE_REPORT_OUT=
+WASTE_AREA_DISCOVERY_ENABLED=
+```
+
+## Waste area discovery W10 rollback and publication notes
+
+Waste area discovery publication is pointer-based. Rollback should move `WastePublication.activeGenerationId` back to a previously published, complete generation through the guarded rollback path; do not delete waste area tables, staged rows, revision rows, coverage rows, or source history as a rollback mechanism. Table deletion would destroy auditability and can break older source/detail URLs.
+
+If staged writes have already begun, keep runtime write flags enabled until the staged generation is either marked failed or the pointer transaction is completed/rolled back. Turning flags off midway can strand a partially staged generation and make operator recovery ambiguous. After the staged operation is closed, disable write flags again if publication is not continuing.
+
+For a stale approved report hash or base-generation mismatch, rerun the read-only builder/review and approve a fresh report hash instead of forcing the pointer. The W10 publication path intentionally retries only MySQL 1213 deadlock during pointer publication, then lets the expected-base guard return 409.
+
+Targeted cache handling for waste routes should preserve the production no-store rules for `/trash`, `/trash/**`, and city/district trash routes. If a live dev/server process still serves a stale legacy redirect, treat it as a running-build/cache limitation and verify with a fresh isolated SSR build rather than deleting application data or service DB rows.
+
+## Real estate summary V2 preparation and validation
+
+Address-level summary V2 preparation is a guarded write path. Operators must set `REAL_ESTATE_WRITE_LOCK_DIR` to a local writable lock directory before running any summary writer or verification command. Batch knobs are optional: `SUMMARY_BATCH_PAUSE_MS` accepts `0..10000`, and `SUMMARY_BATCH_TIMEOUT_MS` accepts `1000..1800000`.
+
+Prepare V2 once and review the JSON report before switching readers:
+
+```bash
+npm run summary:prepare-v2 -- --report-out=/absolute/path/summary-v2-prepare-report.json
+npm run summary:verify-v2 -- --report-out=/absolute/path/summary-v2-verify-report.json
+```
+
+The prepare command acquires the shared real-estate write lock, marks the singleton state `preparing`, refreshes complete type/city batches into `RealEstateBuildingSummaryV2`, validates V2 against the six source transaction tables, and sets state `ready` only when validation is complete. If state is already `ready`, prepare verifies the existing run and does not rebuild V2.
+
+Stale lock recovery is explicit and token-checked; there is no automatic TTL recovery:
+
+```bash
+npx tsx src/scripts/recoverRealEstateWriteLock.ts --token <owner-token-from-owner.json>
+```
